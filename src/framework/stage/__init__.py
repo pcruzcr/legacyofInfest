@@ -1,0 +1,1 @@
+"""Framework stage package."""
