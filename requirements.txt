@@ -10,3 +10,4 @@ pyscroll~=2.31
 pytweening~=1.2
 joblib~=1.4
 matplotlib~=3.9
+pytest~=9.1
