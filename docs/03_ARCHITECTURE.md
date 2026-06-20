@@ -1,0 +1,708 @@
+# Legacy of InFest — Architecture
+
+**Document ID:** LOI-ARCH-003  
+**Version:** 1.0.0  
+**Status:** Official  
+**Audience:** Professor, Teaching Assistants, AI coding assistants
+
+---
+
+## 1. Complete Folder Structure
+
+**Corrected per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.6 and §7.** All paths below are relative to the actual private GitHub repository root. `engine/`, `framework/`, and `stages/` are relocated under `src/`; `student_templates/` is added. Every module, responsibility, and dependency rule documented elsewhere in this file is otherwise unchanged from the original design — only the path prefix changes.
+
+```
+legacy-of-infest/                      # Actual repo root
+│
+├── main.py                            # Entry point. Instantiates App and calls run().
+├── requirements.txt
+├── README.md
+├── LICENSE
+│
+├── docs/                              # Official documentation package (00–21)
+│
+├── assets/                            # PROFESSOR-OWNED. Read-only for students.
+│   ├── sprites/
+│   │   ├── player/
+│   │   ├── enemies/
+│   │   ├── bosses/
+│   │   └── shared/
+│   ├── tilesets/
+│   ├── backgrounds/
+│   ├── music/
+│   ├── sfx/
+│   ├── fonts/
+│   └── ui/
+│
+├── src/                                # All Python source code
+│   │
+│   ├── engine/                         # PROFESSOR-OWNED. Do not modify.
+│   │   │
+│   │   ├── core/
+│   │   │   ├── __init__.py
+│   │   │   ├── app.py                     # App class: display init, main loop, scene pump
+│   │   │   ├── settings.py                # All global constants
+│   │   │   ├── clock.py                   # DeltaClock: delta time, FPS cap, time scale
+│   │   │   └── event_bus.py               # EventBus: pub/sub event dispatch
+│   │   │
+│   │   ├── scene/
+│   │   │   ├── __init__.py
+│   │   │   ├── scene_manager.py           # SceneManager: push/pop/replace scene stack
+│   │   │   ├── base_scene.py              # BaseScene: abstract interface all scenes implement
+│   │   │   └── transitions.py            # FadeTransition, WipeTransition
+│   │   │
+│   │   ├── input/
+│   │   │   ├── __init__.py
+│   │   │   ├── input_manager.py           # InputManager: unified keyboard + controller
+│   │   │   └── action_map.py              # ActionMap: abstract action → device binding
+│   │   │
+│   │   ├── audio/
+│   │   │   ├── __init__.py
+│   │   │   ├── audio_manager.py           # AudioManager: music + sfx, channel control
+│   │   │   └── sound_bank.py              # SoundBank: named sound registry
+│   │   │
+│   │   ├── ui/
+│   │   │   ├── __init__.py
+│   │   │   ├── hud.py                     # HUD: hearts, timer, portrait, score
+│   │   │   ├── message_box.py             # MessageBox: scrolling text, tutorial messages
+│   │   │   └── screen_banner.py           # ScreenBanner: stage title animation
+│   │   │
+│   │   └── utils/
+│   │       ├── __init__.py
+│   │       ├── asset_loader.py            # AssetLoader: load+cache images, sounds, fonts
+│   │       ├── spritesheet.py             # SpriteSheet: slice frames from sheet
+│   │       └── math_utils.py             # Vector2, lerp, clamp, ease functions
+│   │
+│   ├── framework/                      # PROFESSOR-OWNED. Do not modify.
+│   │   │
+│   │   ├── entities/
+│   │   │   ├── __init__.py
+│   │   │   ├── base_entity.py             # BaseEntity: position, rect, update, draw lifecycle
+│   │   │   ├── player.py                  # Player: state machine, input response, damage
+│   │   │   ├── enemy_base.py              # EnemyBase: abstract enemy with health + state
+│   │   │   ├── enemy_walker.py            # EnemyWalker: horizontal patrol, player detection
+│   │   │   ├── enemy_flying.py            # EnemyFlying: sine-wave or waypoint flight
+│   │   │   ├── enemy_shooter.py           # EnemyShooter: projectile emission, range trigger
+│   │   │   └── boss_base.py               # BossBase: phase manager, boss health bar event
+│   │   │
+│   │   ├── stage/
+│   │   │   ├── __init__.py
+│   │   │   ├── stage_loader.py            # StageLoader: parse TMX, build layer stack, spawn
+│   │   │   ├── camera.py                  # Camera: viewport, parallax, follow target
+│   │   │   └── checkpoint.py              # Checkpoint: trigger zone, respawn anchor
+│   │   │
+│   │   └── processing/
+│   │       ├── __init__.py
+│   │       ├── color_tools.py             # ColorTools: RGB↔HSV↔HSL↔CMYK, alpha blend
+│   │       ├── filter_tools.py            # FilterTools: convolution, blur, Sobel, Canny
+│   │       ├── curve_tools.py             # CurveTools: Bézier, B-Spline, NURBS, sample
+│   │       ├── vision_tools.py            # VisionTools: threshold, morphology, features
+│   │       └── pattern_recognition_tools.py  # PatternRecognitionTools: training, inference
+│   │
+│   └── stages/
+│       ├── stage0/                        # PROFESSOR-OWNED. Executable documentation.
+│       │   ├── __init__.py
+│       │   ├── stage0.py                  # Stage0Scene class
+│       │   ├── stage0.tmx                 # Tiled map
+│       │   └── README.md
+│       └── <student_assignment>/          # ONE folder per individually-assigned Stage/Boss
+│           ├── __init__.py
+│           ├── <assignment>.py
+│           ├── <assignment>.tmx           # (Stages only — Bosses use a fixed arena, no TMX scroll)
+│           └── README.md
+│
+├── student_templates/                  # Canonical starter scaffold (copied into src/stages/ by each student)
+│   ├── stage_template/
+│   │   ├── stage_template.py
+│   │   ├── stage_template.tmx
+│   │   └── README_template.md
+│   └── boss_template/
+│       ├── boss_template.py
+│       └── README_template.md
+│
+└── tests/                              # Unit and integration tests.
+    ├── test_color_tools.py
+    ├── test_filter_tools.py
+    ├── test_curve_tools.py
+    ├── test_vision_tools.py
+    └── test_pattern_recognition_tools.py
+```
+
+**Clarification on individual assignment (per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.1):** Each student is assigned exactly one Stage or Boss in Class 1 (see `21_COURSE_SCHEDULE.md`). They copy the appropriate template from `student_templates/` into a new folder under `src/stages/` named for their assignment (e.g., `src/stages/stage1_2_la_soda/` or `src/stages/boss_venado/`). They develop that single folder through all three Evaluación Práctica checkpoints. No student creates more than one assignment folder.
+
+## 2. Module Responsibilities
+
+### 2.1 Engine Core
+
+#### `engine/core/app.py` — `App`
+
+The root application class. It owns the Pygame display surface, the `DeltaClock`, the `SceneManager`, the `InputManager`, and the `AudioManager`. It runs the main loop, pumps events into the `InputManager` and `EventBus`, calls `update()` and `draw()` on the active scene, and handles display scaling from internal resolution to window resolution.
+
+**Public Interface:**
+- `App()` — Initialize Pygame, create internal surface at 320×224, create all engine singletons
+- `App.run()` — Enter the main loop. Does not return until the application exits.
+
+**Constraints:**
+- Only one `App` instance may exist.
+- `App` is instantiated in `main.py` only.
+- No other module calls `pygame.init()` or `pygame.display.set_mode()`.
+
+#### `engine/core/settings.py` — Constants
+
+A flat module of uppercase constants. No classes, no functions.
+
+| Constant | Type | Value | Description |
+|---|---|---|---|
+| `INTERNAL_WIDTH` | int | 320 | Internal render width in pixels |
+| `INTERNAL_HEIGHT` | int | 224 | Internal render height in pixels |
+| `TARGET_FPS` | int | 60 | Target frames per second |
+| `DISPLAY_SCALE` | int | 3 | Default window scale multiplier |
+| `TILE_SIZE` | int | 16 | Standard tile size in pixels |
+| `ASSETS_DIR` | Path | `Path("assets")` | Root asset directory |
+| `STAGES_DIR` | Path | `Path("stages")` | Root stages directory |
+| `STUDENT_ASSETS_DIR` | Path | `Path("student_assets")` | Student asset directory |
+| `PLAYER_MAX_HEALTH` | float | 5.0 | Maximum player hearts |
+| `GRAVITY` | float | 800.0 | Pixels per second squared |
+| `PLAYER_WALK_SPEED` | float | 90.0 | Pixels per second |
+| `PLAYER_JUMP_FORCE` | float | -380.0 | Initial vertical jump velocity |
+
+#### `engine/core/clock.py` — `DeltaClock`
+
+Wraps `pygame.time.Clock`. Provides delta time in seconds, accumulated time, a time scale multiplier (for slow-motion effects), and an FPS accessor.
+
+**Public Interface:**
+- `DeltaClock.tick() → float` — Tick the clock. Returns delta time in seconds, scaled by `time_scale`.
+- `DeltaClock.fps → float` — Current frames per second.
+- `DeltaClock.time_scale: float` — Multiplier. 1.0 is normal. 0.5 is half speed.
+
+#### `engine/core/event_bus.py` — `EventBus`
+
+A global pub/sub event dispatcher. Entities and systems communicate through the event bus rather than holding direct references to each other.
+
+**Public Interface:**
+- `EventBus.subscribe(event_name: str, callback: Callable)` — Register a listener.
+- `EventBus.unsubscribe(event_name: str, callback: Callable)` — Remove a listener.
+- `EventBus.emit(event_name: str, **data)` — Dispatch an event to all registered listeners.
+
+**Standard Events:**
+
+| Event Name | Data Keys | Emitted By | Consumed By |
+|---|---|---|---|
+| `PLAYER_DAMAGED` | `amount`, `source` | Player | HUD, AudioManager |
+| `PLAYER_DIED` | — | Player | SceneManager |
+| `PLAYER_HEALED` | `amount` | Checkpoint | Player, HUD |
+| `CHECKPOINT_REACHED` | `checkpoint_id` | Checkpoint | StageLoader |
+| `ENEMY_DIED` | `entity_id`, `position` | EnemyBase | Stage, AudioManager |
+| `STAGE_COMPLETE` | — | NextTrigger | SceneManager |
+| `BOSS_PHASE_CHANGED` | `phase` | BossBase | Stage, HUD |
+| `SHOW_MESSAGE` | `text`, `duration` | Stage | MessageBox |
+| `HIDE_MESSAGE` | — | Stage | MessageBox |
+
+---
+
+### 2.2 Engine Scene
+
+#### `engine/scene/scene_manager.py` — `SceneManager`
+
+Manages a stack of `BaseScene` objects. Supports push (overlay a scene), pop (return to previous), and replace (transition to new scene). Only the top scene receives `update()` and `draw()` calls.
+
+**Public Interface:**
+- `SceneManager.push(scene: BaseScene)` — Push a scene onto the stack.
+- `SceneManager.pop()` — Pop the top scene. Resumes the scene below.
+- `SceneManager.replace(scene: BaseScene)` — Replace the top scene with a new one.
+- `SceneManager.current → BaseScene` — The currently active scene.
+
+#### `engine/scene/base_scene.py` — `BaseScene`
+
+Abstract base class for all scenes (splash, title, story screens, stages).
+
+**Required Implementation by Subclasses:**
+- `on_enter()` — Called when the scene becomes active.
+- `on_exit()` — Called when the scene is deactivated or removed.
+- `update(dt: float)` — Update scene state. `dt` is delta time in seconds.
+- `draw(surface: pygame.Surface)` — Draw the scene to the provided surface.
+
+**Optional Override:**
+- `on_pause()` — Called when another scene is pushed on top.
+- `on_resume()` — Called when the scene is resumed after a pop.
+
+---
+
+### 2.3 Engine Input
+
+#### `engine/input/input_manager.py` — `InputManager`
+
+Unified input abstraction. Handles keyboard and gamepad input through the `ActionMap`. Entities query actions, not raw keys or buttons.
+
+**Public Interface:**
+- `InputManager.is_action_pressed(action: str) → bool` — True on the frame the action was activated.
+- `InputManager.is_action_held(action: str) → bool` — True while the action is held.
+- `InputManager.is_action_released(action: str) → bool` — True on the frame the action was released.
+- `InputManager.pump(events: list)` — Called once per frame by `App` with the current event list.
+
+**Standard Actions:**
+
+| Action | Default Keyboard | Default Controller |
+|---|---|---|
+| `MOVE_LEFT` | Left Arrow / A | D-Pad Left / Left Stick Left |
+| `MOVE_RIGHT` | Right Arrow / D | D-Pad Right / Left Stick Right |
+| `JUMP` | Space / Up / W | A (Xbox) / Cross (PS) |
+| `CROUCH` | Down / S | D-Pad Down / Left Stick Down |
+| `SHORT_ATTACK` | Z / J | X (Xbox) / Square (PS) |
+| `LONG_ATTACK` | X / K | Y (Xbox) / Triangle (PS) |
+| `PAUSE` | Escape / P | Start |
+| `CONFIRM` | Enter / Z | A (Xbox) |
+| `CANCEL` | Backspace / X | B (Xbox) |
+
+---
+
+### 2.4 Engine Audio
+
+#### `engine/audio/audio_manager.py` — `AudioManager`
+
+Wraps `pygame.mixer`. Manages music playback (one track at a time) and SFX playback (multiple simultaneous channels). Volume control is applied globally.
+
+**Public Interface:**
+- `AudioManager.play_music(name: str, loop: bool = True, fade_ms: int = 0)` — Play named BGM track.
+- `AudioManager.stop_music(fade_ms: int = 0)` — Stop BGM.
+- `AudioManager.play_sfx(name: str, volume: float = 1.0)` — Play named sound effect.
+- `AudioManager.set_music_volume(volume: float)` — Set music volume 0.0–1.0.
+- `AudioManager.set_sfx_volume(volume: float)` — Set SFX volume 0.0–1.0.
+
+---
+
+### 2.5 Engine UI
+
+#### `engine/ui/hud.py` — `HUD`
+
+Renders the player HUD: portrait, heart meter, timer, and score. The HUD is drawn on top of all stage content on every frame. It subscribes to `PLAYER_DAMAGED`, `PLAYER_HEALED`, and `PLAYER_DIED` events to update the heart display.
+
+**Public Interface:**
+- `HUD.update(dt: float)` — Animate timer, flash states.
+- `HUD.draw(surface: pygame.Surface)` — Blit HUD elements onto the surface.
+- `HUD.start_timer(seconds: int)` — Initialize and start the countdown timer.
+- `HUD.pause_timer()` / `HUD.resume_timer()` — Pause/resume the timer.
+
+See `09_HUD_SPEC.md` for full layout specification.
+
+#### `engine/ui/message_box.py` — `MessageBox`
+
+Displays tutorial messages at the bottom of the screen. Subscribes to `SHOW_MESSAGE` and `HIDE_MESSAGE` events. Supports scrolling text reveal and auto-dismiss after a configurable duration.
+
+#### `engine/ui/screen_banner.py` — `ScreenBanner`
+
+Animates the stage entry banner. A two-part banner slides in from both sides of the screen, displays the stage name and number, holds for a beat, then slides out. Triggered at stage start.
+
+---
+
+### 2.6 Engine Utils
+
+#### `engine/utils/asset_loader.py` — `AssetLoader`
+
+Centralizes asset loading. Maintains an in-memory cache keyed by path string. Supports images, sounds, and fonts.
+
+**Public Interface:**
+- `AssetLoader.load_image(path: str | Path) → pygame.Surface` — Load and cache a PNG image.
+- `AssetLoader.load_sound(path: str | Path) → pygame.mixer.Sound` — Load and cache audio.
+- `AssetLoader.load_spritesheet(path: str | Path, frame_w: int, frame_h: int) → SpriteSheet`
+
+#### `engine/utils/spritesheet.py` — `SpriteSheet`
+
+Slices a horizontal sprite sheet into individual frames.
+
+**Public Interface:**
+- `SpriteSheet.get_frame(index: int) → pygame.Surface` — Return the nth frame.
+- `SpriteSheet.get_frames(start: int, end: int) → list[pygame.Surface]` — Return a range of frames.
+- `SpriteSheet.frame_count → int` — Total number of frames in the sheet.
+
+#### `engine/utils/math_utils.py` — Math Utilities
+
+A collection of pure functions for common mathematical operations used throughout the framework.
+
+| Function | Signature | Description |
+|---|---|---|
+| `lerp` | `(a, b, t) → float` | Linear interpolation |
+| `clamp` | `(value, min_v, max_v) → float` | Clamp value to range |
+| `ease_in_quad` | `(t) → float` | Quadratic ease-in |
+| `ease_out_quad` | `(t) → float` | Quadratic ease-out |
+| `vec2_normalize` | `(v: tuple) → tuple` | Normalize a 2D vector |
+| `vec2_length` | `(v: tuple) → float` | Length of a 2D vector |
+| `vec2_dot` | `(a, b: tuple) → float` | Dot product of two 2D vectors |
+| `vec2_distance` | `(a, b: tuple) → float` | Distance between two points |
+
+---
+
+### 2.7 Framework Entities
+
+#### `framework/entities/base_entity.py` — `BaseEntity`
+
+Root class for all game objects. Manages world position, a Pygame `Rect` for collision, visibility, active state, and the basic `update` / `draw` lifecycle.
+
+**Properties:**
+- `position: pygame.Vector2` — World-space position (top-left of bounding rect)
+- `rect: pygame.Rect` — Collision and render bounding rectangle
+- `is_active: bool` — Whether the entity participates in updates
+- `is_visible: bool` — Whether the entity participates in drawing
+- `layer: int` — Draw order layer
+
+**Required Override:**
+- `update(dt: float)` — Update entity state
+- `draw(surface: pygame.Surface, camera_offset: pygame.Vector2)` — Draw the entity
+
+#### `framework/entities/player.py` — `Player`
+
+See `04_PLAYER_SPEC.md` for the complete specification.
+
+#### `framework/entities/enemy_base.py` — `EnemyBase`
+
+See `05_ENEMY_SPEC.md` for the complete specification.
+
+---
+
+### 2.8 Framework Stage
+
+#### `framework/stage/stage_loader.py` — `StageLoader`
+
+Parses a TMX file using `pytmx`, constructs the layer stack using `pyscroll`, spawns entities from object layers, registers checkpoints, and returns a fully assembled stage scene state.
+
+**Public Interface:**
+- `StageLoader.load(tmx_path: Path) → StageData` — Load a TMX file and return the stage data structure.
+
+**`StageData` Contents:**
+- `map_layer` — The `pyscroll` scrolling group
+- `collision_rects: list[pygame.Rect]` — All solid collision rectangles
+- `entity_list: list[BaseEntity]` — All spawned entities
+- `checkpoints: list[Checkpoint]` — All checkpoint objects
+- `spawn_point: pygame.Vector2` — Player start position
+- `next_trigger: pygame.Rect` — Stage completion trigger zone
+- `background_layers: list[pygame.Surface]` — Parallax background layers
+
+#### `framework/stage/camera.py` — `Camera`
+
+Manages the viewport offset. Follows the player entity smoothly using configurable lerp speed. Supports parallax factor per background layer. Clamps the viewport to the map bounds.
+
+**Public Interface:**
+- `Camera.follow(target: BaseEntity)` — Set the entity the camera follows.
+- `Camera.update(dt: float)` — Smooth the camera position.
+- `Camera.world_to_screen(pos: pygame.Vector2) → pygame.Vector2` — Convert world to screen coordinates.
+- `Camera.screen_to_world(pos: pygame.Vector2) → pygame.Vector2` — Convert screen to world coordinates.
+- `Camera.offset → pygame.Vector2` — Current pixel offset to apply to all world-space draws.
+
+#### `framework/stage/checkpoint.py` — `Checkpoint`
+
+A trigger zone that records the player's current position as a respawn anchor. When the player enters the checkpoint's rect, it emits `CHECKPOINT_REACHED`. If the player subsequently dies, the stage restores the player to the last checkpoint position.
+
+---
+
+### 2.9 Framework Processing
+
+#### `framework/processing/color_tools.py` — `ColorTools`
+
+Pure functions for color space conversions and per-pixel operations on Pygame surfaces.
+
+| Function | Input | Output | Academic Unit |
+|---|---|---|---|
+| `rgb_to_hsv(r, g, b)` | 0–255 ints | (0–360, 0–1, 0–1) | Unit V |
+| `hsv_to_rgb(h, s, v)` | floats | (0–255 ints) | Unit V |
+| `rgb_to_hsl(r, g, b)` | 0–255 ints | (0–360, 0–1, 0–1) | Unit V |
+| `hsl_to_rgb(h, s, l)` | floats | (0–255 ints) | Unit V |
+| `rgb_to_cmyk(r, g, b)` | 0–255 ints | (0–1 floats) | Unit V |
+| `cmyk_to_rgb(c, m, y, k)` | 0–1 floats | (0–255 ints) | Unit V |
+| `alpha_blend(src, dst, alpha)` | surfaces, float | surface | Unit V |
+| `apply_tint(surface, color)` | surface, RGB | surface | Unit V |
+| `surface_to_array(surface)` | surface | numpy ndarray | Unit VI |
+| `array_to_surface(array)` | numpy ndarray | surface | Unit VI |
+
+#### `framework/processing/filter_tools.py` — `FilterTools`
+
+Convolution and edge detection filters applied to Pygame surfaces via NumPy and SciPy.
+
+| Function | Description | Academic Unit |
+|---|---|---|
+| `apply_kernel(surface, kernel)` | Apply custom convolution kernel | Unit VII |
+| `gaussian_blur(surface, sigma)` | Gaussian blur by sigma | Unit VII |
+| `sobel_edge(surface)` | Sobel edge detection, returns grayscale | Unit VII |
+| `canny_edge(surface, low, high)` | Canny edge detection | Unit VII |
+| `adjust_brightness(surface, factor)` | Multiply pixel values by factor | Unit VII |
+| `adjust_contrast(surface, factor)` | Stretch histogram by factor | Unit VII |
+| `compute_histogram(surface)` | Return RGB histogram as dict | Unit VII |
+
+#### `framework/processing/curve_tools.py` — `CurveTools`
+
+Mathematical curve computation. All functions return lists of `(x, y)` tuples representing sampled points.
+
+| Function | Description | Academic Unit |
+|---|---|---|
+| `bezier(control_points, n_samples)` | Compute Bézier curve via Bernstein polynomials | Unit III |
+| `b_spline(control_points, degree, n_samples)` | Compute B-Spline curve | Unit III |
+| `nurbs(control_points, weights, knots, degree, n_samples)` | Compute NURBS curve | Unit III |
+| `catmull_rom(control_points, n_samples)` | Compute Catmull-Rom spline | Unit III |
+| `sample_path(points, t)` | Interpolate position on a sampled path at parameter t (0–1) | Unit III |
+
+#### `framework/processing/vision_tools.py` — `VisionTools`
+
+Image segmentation and pattern recognition utilities.
+
+| Function | Description | Academic Unit |
+|---|---|---|
+| `threshold_binary(surface, thresh)` | Binary threshold | Unit VIII |
+| `threshold_otsu(surface)` | Otsu automatic threshold | Unit VIII |
+| `morphological_erode(surface, kernel_size)` | Morphological erosion | Unit VIII |
+| `morphological_dilate(surface, kernel_size)` | Morphological dilation | Unit VIII |
+| `watershed_segment(surface)` | Watershed segmentation | Unit VIII |
+| `extract_features(surface)` | Extract HOG or LBP feature vector | Unit IX |
+| `classify_region(features, model)` | Classify feature vector using scikit-learn model | Unit IX |
+
+---
+
+## 3. Dependency Rules
+
+### 3.1 Import Hierarchy
+
+The following imports are permitted. Cross-layer imports (going upward) are prohibited.
+
+```
+main.py
+  → engine.core.app
+
+engine.core.app
+  → engine.core.settings
+  → engine.core.clock
+  → engine.core.event_bus
+  → engine.scene.scene_manager
+  → engine.input.input_manager
+  → engine.audio.audio_manager
+
+engine.scene.scene_manager
+  → engine.scene.base_scene
+  → engine.scene.transitions
+
+framework.entities.*
+  → engine.core.settings
+  → engine.core.event_bus
+  → engine.utils.*
+
+framework.stage.*
+  → engine.core.settings
+  → engine.utils.*
+  → framework.entities.*
+
+framework.processing.*
+  → (no engine or framework imports — pure functions only)
+
+stages.stage0.stage0
+  → engine.scene.base_scene
+  → framework.entities.*
+  → framework.stage.*
+  → framework.processing.*
+  → engine.core.event_bus
+```
+
+### 3.2 Prohibited Cross-Stage Imports
+
+Stage modules must never import from other stage modules. Each stage is isolated.
+
+```python
+# PROHIBITED:
+from stages.stage1.stage1 import MyCustomEnemy  # Never in stage2 or stage3
+```
+
+---
+
+## 4. Data Flow
+
+### 4.1 Per-Frame Data Flow
+
+```
+pygame.event.get()
+    ↓
+InputManager.pump(events)        # Process raw input → action states
+    ↓
+EventBus (queued events)         # Events from previous frame resolved
+    ↓
+SceneManager.current.update(dt)  # Active scene updates all entities
+    |
+    ├── Player.update(dt)        # Input → velocity → position → state
+    ├── EnemyX.update(dt)        # AI → velocity → position → state
+    ├── Checkpoint.update(dt)    # Trigger zone detection
+    └── Camera.update(dt)        # Smooth follow
+    ↓
+App.internal_surface.fill(BG)   # Clear internal 320×224 buffer
+    ↓
+SceneManager.current.draw(surface)
+    |
+    ├── Background layers (parallax)
+    ├── pyscroll map render
+    ├── Entity renders (world-space, camera offset applied)
+    └── HUD render (screen-space, no offset)
+    ↓
+pygame.transform.scale(internal, window_size)
+    ↓
+pygame.display.flip()
+```
+
+### 4.2 Event Data Flow
+
+Events are not processed immediately when emitted. They are queued and dispatched at the start of the next frame update. This prevents mid-frame state corruption.
+
+```
+Entity emits event              (e.g., Player dies → PLAYER_DIED)
+    ↓
+EventBus.queue(event)           (stored in pending list)
+    ↓
+Next frame: EventBus.dispatch() (called at start of update)
+    ↓
+All registered listeners receive the event data
+```
+
+---
+
+## 5. Application Lifecycle
+
+```
+main.py: App()
+    ├── pygame.init()
+    ├── pygame.mixer.init()
+    ├── Create internal surface (320×224)
+    ├── Create window surface (scaled)
+    ├── Instantiate DeltaClock
+    ├── Instantiate EventBus (singleton)
+    ├── Instantiate InputManager
+    ├── Instantiate AudioManager
+    ├── Instantiate SceneManager
+    └── Push SplashScene
+
+App.run()
+    └── Main Loop:
+        ├── for event in pygame.event.get():
+        │       if event.QUIT → App.quit()
+        ├── InputManager.pump(events)
+        ├── EventBus.dispatch()
+        ├── dt = DeltaClock.tick()
+        ├── SceneManager.current.update(dt)
+        ├── internal_surface.fill(BLACK)
+        ├── SceneManager.current.draw(internal_surface)
+        ├── Scale internal_surface → window_surface
+        └── pygame.display.flip()
+
+App.quit()
+    ├── AudioManager.stop_music()
+    ├── pygame.quit()
+    └── sys.exit(0)
+```
+
+---
+
+## 6. Initialization Flow
+
+### 6.1 Engine Initialization Order
+
+1. `pygame.init()` — Initialize all Pygame subsystems
+2. `pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)` — Audio
+3. `pygame.display.set_mode(window_size)` — Create OS window
+4. `internal_surface = pygame.Surface((320, 224))` — Create render target
+5. `DeltaClock()` — Wrap `pygame.time.Clock`
+6. `EventBus()` — Singleton event dispatcher
+7. `AssetLoader()` — Singleton asset cache
+8. `InputManager(action_map)` — Load default action bindings
+9. `AudioManager()` — Initialize mixer channels
+10. `SceneManager()` — Initialize empty scene stack
+11. `SceneManager.push(SplashScene())` — Start the application
+
+### 6.2 Stage Initialization Order
+
+When a stage scene is pushed or replaced onto the scene manager:
+
+1. `Stage.on_enter()` called
+2. `AudioManager.play_music(stage_bgm)`
+3. `StageLoader.load(tmx_path)` — Parse map, build layers, collect spawn data
+4. Spawn `Player` at `StageData.spawn_point`
+5. Spawn all entities from `StageData.entity_list`
+6. Register all `StageData.checkpoints`
+7. `Camera.follow(player)`
+8. `HUD.start_timer(stage_time_limit)`
+9. `ScreenBanner.play(stage_name)`
+
+---
+
+## 7. Scene Flow
+
+```
+SplashScene          (professor logo, framework logo)
+    ↓ (auto-advance after 3 seconds)
+TitleScene           (game title, main menu: Start / Options / Quit)
+    ↓ (player selects Start)
+StoryScene1          (story text with background illustration)
+    ↓ (player confirms)
+StoryScene2
+    ↓
+StoryScene3
+    ↓
+Stage0Scene          (professor-built demonstration stage)
+    ↓ (next trigger reached)
+Stage1Scene          (student stage)
+    ↓ (next trigger reached)
+Stage2Scene
+    ↓
+Stage3Scene
+    ↓
+EndScene             (credits / completion screen)
+```
+
+**Game Over Flow:**
+```
+Player health reaches 0
+    ↓ EventBus emits PLAYER_DIED
+GameOverScene pushed on top of active stage
+    ↓ Player selects Continue
+GameOverScene popped → Stage resumes from last checkpoint
+    ↓ Player selects Quit
+GameOverScene popped → TitleScene
+```
+
+---
+
+## 8. System Integration
+
+### 8.1 Player ↔ HUD Integration
+
+The `Player` entity emits `PLAYER_DAMAGED` and `PLAYER_HEALED` events via the `EventBus`. The `HUD` subscribes to these events and updates the heart meter display. The `HUD` does not hold a direct reference to the `Player`.
+
+### 8.2 Stage ↔ Camera Integration
+
+The `Camera` holds a reference to the `Player` entity as its follow target. The `Camera.update(dt)` method smoothly moves the viewport toward the player's position. All world-space entities receive `camera.offset` as a parameter in their `draw()` call and subtract it from their world position to compute screen position.
+
+### 8.3 TMX ↔ StageLoader ↔ Entity Spawn Integration
+
+The TMX file defines entity spawn points as Tiled object layer entries with `type` and `properties` attributes. `StageLoader` reads these objects, looks up the entity class in a registered factory dictionary, and instantiates the entity with the properties from the TMX object. This decouples entity implementation from map design.
+
+**Entity Factory Registration:**
+```python
+# In App or stage initialization — professor registers defaults:
+StageLoader.register_entity("Walker", EnemyWalker)
+StageLoader.register_entity("Flying", EnemyFlying)
+StageLoader.register_entity("Shooter", EnemyShooter)
+StageLoader.register_entity("Checkpoint", Checkpoint)
+
+# Students register custom entities in their stage:
+StageLoader.register_entity("MyCustomEnemy", MyCustomEnemy)
+```
+
+### 8.4 Processing Tools ↔ Entity Integration
+
+Processing utilities in `framework/processing/` are used by entities and stages to transform visual data. For example, a student stage might apply a Gaussian blur to a background layer, or use `CurveTools.bezier()` to generate an enemy patrol path. The tools return data; the calling code decides how to use it.
+
+### 8.5 EventBus Integration Diagram
+
+```
+[Player]          → emits → PLAYER_DAMAGED, PLAYER_HEALED, PLAYER_DIED
+[EnemyBase]       → emits → ENEMY_DIED
+[Checkpoint]      → emits → CHECKPOINT_REACHED
+[NextTrigger]     → emits → STAGE_COMPLETE
+[Stage]           → emits → SHOW_MESSAGE, HIDE_MESSAGE
+[HUD]             → listens → PLAYER_DAMAGED, PLAYER_HEALED
+[AudioManager]    → listens → PLAYER_DAMAGED, ENEMY_DIED, STAGE_COMPLETE
+[SceneManager]    → listens → PLAYER_DIED, STAGE_COMPLETE
+[MessageBox]      → listens → SHOW_MESSAGE, HIDE_MESSAGE
+[StageLoader]     → listens → CHECKPOINT_REACHED
+```
