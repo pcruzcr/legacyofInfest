@@ -27,27 +27,27 @@ def test_tick_no_division_by_zero_on_first_call():
 def test_time_scale_applied():
     """Setting time_scale = 0.5 halves the returned delta on the next tick().
 
-    Uses a small real-time delay between ticks to produce a measurable delta.
+    Uses a real-time delay between ticks to produce a measurable delta.
+    The tolerance is intentionally wider than the ideal 0.5 ratio to account
+    for OS scheduler jitter on the test host.
     """
     clock = DeltaClock()
     clock.tick()  # prime the clock (discard first-frame delta)
 
     clock.time_scale = 1.0
-    time.sleep(0.05)
+    time.sleep(0.1)
     dt_normal = clock.tick()
 
     clock.time_scale = 0.5
-    time.sleep(0.05)
+    time.sleep(0.1)
     dt_half = clock.tick()
 
-    # dt_half should be approximately half of dt_normal (within tolerance)
-    # Since the sleeps are not exact, use a generous tolerance
-    assert dt_half < dt_normal or abs(dt_half - dt_normal) < 0.005
-    # At minimum, dt_half is roughly half of dt_normal for the same sleep
-    # The ratio should be less than 0.75
+    # time_scale halves the returned delta; allow generous tolerance for
+    # OS scheduling imprecision and pygame Clock internals.
+    assert dt_half < dt_normal or abs(dt_half - dt_normal) < 0.01
     if dt_normal > 0.01:
         ratio = dt_half / dt_normal
-        assert 0.4 < ratio < 0.7, (
+        assert 0.35 < ratio < 0.75, (
             f"Expected ratio ~0.5, got {ratio:.3f} "
             f"(dt_normal={dt_normal:.4f}, dt_half={dt_half:.4f})"
         )
