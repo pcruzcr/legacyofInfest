@@ -2,15 +2,22 @@
 Module: main
 System: engine
 Academic Unit: Framework scaffold
-Description: Minimal executable entry point used during repository setup.
+Description: Application entry point.  Constructs the App (which
+initialises pygame and all subsystems) but does NOT call App.run()
+during Phase 1 — that will be wired in Phase 3 once the scene
+system is complete.
 """
 
 import sys
 
+# Importing App triggers pygame init via App.__init__ when constructed.
+from src.engine.core.app import App
+
 
 def main() -> None:
-    """Run the Phase 0 scaffold entry point."""
-    print("Legacy of InFest — scaffold only")
+    """Construct the App instance to verify the skeleton is healthy."""
+    print("Legacy of InFest — App constructed (run() not yet wired)")
+    _app = App()  # noqa: F841 — instance kept alive for smoke-test
 
 
 if __name__ == "__main__":
