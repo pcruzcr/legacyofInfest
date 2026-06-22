@@ -11,6 +11,7 @@ import pygame
 
 from src.engine.utils.math_utils import clamp
 from src.framework.entities.base_entity import BaseEntity
+from src.framework.entities.player_state import PlayerState
 from src.engine.core import settings
 
 
@@ -40,6 +41,9 @@ class Player(BaseEntity):
 
         self._health: float = settings.PLAYER_MAX_HEALTH
         self._crouching: bool = False
+        self._direction: int = 0
+        self._attack_input: str = ""
+        self.state: PlayerState = PlayerState.IDLE
 
     # -- helpers ----------------------------------------------------------
 
@@ -118,8 +122,35 @@ class Player(BaseEntity):
         elif self._coyote_timer > 0:
             self._coyote_timer -= dt
 
+        # Direction-driven transitions
+        if self.state in (PlayerState.IDLE, PlayerState.WALKING):
+            if self._crouching:
+                self.state = PlayerState.CROUCHING
+            elif self._direction != 0:
+                self.state = PlayerState.WALKING
+            else:
+                self.state = PlayerState.IDLE
+        elif self.state == PlayerState.JUMPING:
+            if self.vel.y > 0:
+                self.state = PlayerState.FALLING
+        elif self.state == PlayerState.FALLING:
+            if self.is_grounded:
+                self.state = PlayerState.IDLE
+        elif self.state == PlayerState.CROUCHING:
+            if not self._crouching:
+                self.state = PlayerState.IDLE
+            elif self._attack_input == "short":
+                self.state = PlayerState.SHORT_ATTACK
+            elif self._attack_input == "long":
+                self.state = PlayerState.LONG_ATTACK
+        elif self.state == PlayerState.HURT:
+            if self._invincibility_timer <= 0:
+                self.state = PlayerState.IDLE
+        elif self.state == PlayerState.DYING:
+            pass  # terminal state
+
         # Horizontal input placeholder (direction from InputManager later)
-        direction = 0 if self._crouching else 0
+        direction = self._direction
 
         self.vel.x = direction * self.WALK_SPEED * dt
 
@@ -136,6 +167,7 @@ class Player(BaseEntity):
             self.vel.y = self.JUMP_VELOCITY
             self.is_grounded = False
             self._coyote_timer = 0.0
+            self.state = PlayerState.JUMPING
 
     def release_jump(self) -> None:
         """Apply jump cut if still ascending."""
@@ -165,6 +197,9 @@ class Player(BaseEntity):
             self.vel.y = -200.0
         if self._health <= 0.0:
             self._health = 0.0
+            self.state = PlayerState.DYING
+        else:
+            self.state = PlayerState.HURT
 
     def draw(self, surface: pygame.Surface) -> None:
         """Render the player as a placeholder coloured rect."""
