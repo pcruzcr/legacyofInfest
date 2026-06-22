@@ -20,6 +20,8 @@ from src.engine.core.settings import (
     INTERNAL_HEIGHT,
     INTERNAL_WIDTH,
 )
+from src.engine.scene.scene_manager import SceneManager
+from src.engine.scenes.splash_scene import SplashScene
 
 # ---------------------------------------------------------------------------
 # Placeholder stubs for subsystems that do not yet exist.
@@ -73,42 +75,6 @@ class AudioManager:
 
     def set_sfx_volume(self, volume: float) -> None:
         """Placeholder: no-op."""
-
-
-class SceneManager:
-    """Placeholder stub — replaced in Phase 3 (T3.2)."""
-
-    def __init__(self) -> None:
-        self._stack: list[object] = []
-
-    def push(self, scene: object) -> None:
-        """Placeholder: stores the scene on the internal stack."""
-        self._stack.append(scene)
-
-    @property
-    def current(self) -> object | None:
-        """Return the top scene on the stack, or None if empty."""
-        if self._stack:
-            return self._stack[-1]
-        return None
-
-
-class SplashScene:
-    """Placeholder stub — replaced by a proper BaseScene subclass
-    in Phase 3."""
-
-    def on_enter(self) -> None:
-        """Placeholder: no-op."""
-
-    def on_exit(self) -> None:
-        """Placeholder: no-op."""
-
-    def update(self, dt: float) -> None:
-        """Placeholder: no-op."""
-
-    def draw(self, surface: pygame.Surface) -> None:
-        """Placeholder: fill with a solid colour (window not blank)."""
-        surface.fill((32, 32, 64))
 
 
 # ---------------------------------------------------------------------------
