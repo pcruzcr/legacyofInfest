@@ -14,6 +14,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import pygame
+
 from src.engine.core import settings
 from src.engine.core.event_bus import EventBus
 
@@ -63,6 +65,12 @@ class HUD:
         self._health: float = settings.PLAYER_MAX_HEALTH
         self._portrait_state: str = "NORMAL"
         self._hurt_timer: float = 0.0
+        self._flash_timer: float = 0.0
+        self._timer_seconds: int = 0
+        self._timer_elapsed: float = 0.0
+        self._timer_paused: bool = False
+        self._timer_ascending: bool = True
+        self._player: object | None = None
 
         EventBus.subscribe(
             "PLAYER_DAMAGED", self._on_player_damaged
@@ -105,17 +113,68 @@ class HUD:
         else:
             self._portrait_state = "NORMAL"
 
-    def draw(self, surface: object) -> None:
-        """Render HUD elements onto *surface* (placeholder)."""
+    def bind_player(self, player: object) -> None:
+        """Store a reference to the player for portrait state."""
+        self._player = player
 
     def start_timer(self, seconds: int) -> None:
-        """Start the HUD timer (placeholder)."""
+        """Start the HUD timer at *seconds*.  Defaults to ascending."""
+        self._timer_seconds = seconds
+        self._timer_elapsed = 0.0
+        self._timer_paused = False
+        self._timer_ascending = True
 
     def pause_timer(self) -> None:
-        """Pause the HUD timer (placeholder)."""
+        """Pause the HUD timer."""
+        self._timer_paused = True
 
     def resume_timer(self) -> None:
-        """Resume the HUD timer (placeholder)."""
+        """Resume the HUD timer after ``pause_timer``."""
+        self._timer_paused = False
 
-    def bind_player(self, player: object) -> None:
-        """Store a reference to the player for portrait state (placeholder)."""
+    def draw(self, surface: object) -> None:  # type: ignore[override]
+        """Render HUD elements onto *surface*.
+
+        Draws 5 heart sprites at the positions defined in
+        ``09_HUD_SPEC.md`` §4.3 and the M:SS timer in the top-right.
+        """
+        if not isinstance(surface, pygame.Surface):
+            return
+
+        # Hearts
+        for i in range(5):
+            state = heart_slot_state(self._health, i)
+            sprite_name = f"ui/heart_{state}.png"
+            sprite: pygame.Surface | None = None
+            try:
+                sprite = pygame.image.load(sprite_name).convert_alpha()
+            except FileNotFoundError:
+                # Fallback: draw a coloured rectangle
+                sprite = pygame.Surface((16, 8))
+                colour = {
+                    "full": (220, 40, 40),
+                    "three_quarter": (220, 80, 40),
+                    "half": (200, 140, 40),
+                    "quarter": (160, 160, 40),
+                    "empty": (60, 60, 60),
+                }[state]
+                sprite.fill(colour)
+            surface.blit(sprite, (38 + i * 16, 6))
+
+        # Timer (placeholder text rendered with pygame.font)
+        try:
+            font = pygame.font.SysFont(
+                "Courier New", 10, bold=True
+            )
+        except Exception:
+            font = pygame.font.Font(None, 12)
+
+        elapsed = self._timer_seconds - int(
+            self._timer_elapsed
+        )
+        if self._timer_ascending:
+            elapsed = int(self._timer_elapsed)
+        minutes, seconds = divmod(max(0, elapsed), 60)
+        timer_text = f"{minutes}:{seconds:02d}"
+        text_surf = font.render(timer_text, True, (255, 255, 255))
+        surface.blit(text_surf, (272, 2))
