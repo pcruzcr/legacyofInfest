@@ -12,6 +12,7 @@ import pygame
 from src.engine.utils.math_utils import clamp
 from src.framework.entities.base_entity import BaseEntity
 from src.framework.entities.player_state import PlayerState
+from src.engine.core.event_bus import EventBus
 from src.engine.core import settings
 
 
@@ -44,6 +45,7 @@ class Player(BaseEntity):
         self._direction: int = 0
         self._attack_input: str = ""
         self.state: PlayerState = PlayerState.IDLE
+        self._knockback_timer: float = 0.0
 
     # -- helpers ----------------------------------------------------------
 
@@ -117,6 +119,8 @@ class Player(BaseEntity):
         # Timers
         if self._invincibility_timer > 0:
             self._invincibility_timer -= dt
+        if self._knockback_timer > 0:
+            self._knockback_timer -= dt
         if self.is_grounded:
             self._coyote_timer = self.COYOTE_FRAMES / 60.0
         elif self._coyote_timer > 0:
@@ -149,8 +153,13 @@ class Player(BaseEntity):
         elif self.state == PlayerState.DYING:
             pass  # terminal state
 
+        # Ignore input during knockback
+        if self._knockback_timer > 0:
+            direction = 0
+            self._attack_input = ""
+
         # Horizontal input placeholder (direction from InputManager later)
-        direction = self._direction
+        direction = self._direction if self._knockback_timer <= 0 else 0
 
         self.vel.x = direction * self.WALK_SPEED * dt
 
@@ -195,9 +204,12 @@ class Player(BaseEntity):
             dx = self.pos.x - source[0]
             self.vel.x = (1.0 if dx >= 0 else -1.0) * 150.0
             self.vel.y = -200.0
+        self._knockback_timer = 0.3
+        EventBus.emit("PLAYER_DAMAGED", amount=amount, source=source)
         if self._health <= 0.0:
             self._health = 0.0
             self.state = PlayerState.DYING
+            EventBus.emit("PLAYER_DIED")
         else:
             self.state = PlayerState.HURT
 
