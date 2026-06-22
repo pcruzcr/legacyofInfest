@@ -213,6 +213,58 @@ class Player(BaseEntity):
         else:
             self.state = PlayerState.HURT
 
+    def get_hurtbox(self) -> pygame.Rect:
+        """Return the player's current hurtbox rect in world space.
+
+        Standard hurtbox: offset (6, 4) from sprite top-left, size 20×28.
+        Crouching hurtbox: offset (6, 14) from sprite top-left, size 20×18.
+        """
+        if self._crouching:
+            return pygame.Rect(
+                int(self.pos.x + 6), int(self.pos.y + 14), 20, 18
+            )
+        return pygame.Rect(
+            int(self.pos.x + 6), int(self.pos.y + 4), 20, 28
+        )
+
+    def get_attack_hitbox(
+        self, attack_type: str, frame: int
+    ) -> pygame.Rect | None:
+        """Return the active hitbox for *attack_type* at *frame*.
+
+        Returns ``None`` if the hitbox is not active on this frame.
+        Frame indices are 1-based per the spec's active-frame lists.
+        """
+        if attack_type == "short":
+            if frame in (2, 3, 4):
+                cx = int(self.pos.x + self._width // 2)
+                cy = int(self.pos.y - self._height // 2)
+                ox = 8 * self.facing_direction
+                oy = -4 if not self._crouching else 8
+                return pygame.Rect(cx + ox - 10, cy + oy - 8, 20, 16)
+        elif attack_type == "long":
+            if frame in (4, 5, 6, 7):
+                cx = int(self.pos.x + self._width // 2)
+                cy = int(self.pos.y - self._height // 2)
+                ox = 0
+                oy = 0
+                if frame == 4:
+                    ox = 12 * self.facing_direction
+                    oy = -10
+                elif frame in (5, 6):
+                    ox = 18 * self.facing_direction
+                    oy = -4 if frame == 5 else 0
+                elif frame == 7:
+                    ox = 12 * self.facing_direction
+                    oy = 6
+                w = 36
+                h = 20
+                if self._crouching:
+                    h = 12
+                    oy += 12
+                return pygame.Rect(cx + ox - w // 2, cy + oy - h // 2, w, h)
+        return None
+
     def draw(self, surface: pygame.Surface) -> None:
         """Render the player as a placeholder coloured rect."""
         if (
