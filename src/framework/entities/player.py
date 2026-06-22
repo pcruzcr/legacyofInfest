@@ -12,6 +12,7 @@ import pygame
 from src.engine.utils.math_utils import clamp
 from src.framework.entities.base_entity import BaseEntity
 from src.framework.entities.player_state import PlayerState
+from src.framework.entities.animation_controller import AnimationController
 from src.engine.core.event_bus import EventBus
 from src.engine.core import settings
 
@@ -46,6 +47,7 @@ class Player(BaseEntity):
         self._attack_input: str = ""
         self.state: PlayerState = PlayerState.IDLE
         self._knockback_timer: float = 0.0
+        self.anim: AnimationController = AnimationController()
 
     # -- helpers ----------------------------------------------------------
 
@@ -152,6 +154,26 @@ class Player(BaseEntity):
                 self.state = PlayerState.IDLE
         elif self.state == PlayerState.DYING:
             pass  # terminal state
+
+        # Animation state mapping per 04_PLAYER_SPEC.md §9
+        if self.state == PlayerState.IDLE:
+            self.anim.play("idle", 4, 8, loop=True)
+        elif self.state == PlayerState.WALKING:
+            self.anim.play("walk", 8, 12, loop=True)
+        elif self.state == PlayerState.JUMPING:
+            self.anim.play("jump", 3, 12, loop=False)
+        elif self.state == PlayerState.FALLING:
+            self.anim.play("fall", 2, 8, loop=True)
+        elif self.state == PlayerState.CROUCHING:
+            self.anim.play("crouch", 2, 8, loop=False)
+        elif self.state == PlayerState.SHORT_ATTACK:
+            self.anim.play("short_attack", 6, 18, loop=False)
+        elif self.state == PlayerState.LONG_ATTACK:
+            self.anim.play("long_attack", 10, 16, loop=False)
+        elif self.state == PlayerState.HURT:
+            self.anim.play("hurt", 4, 12, loop=False)
+        elif self.state == PlayerState.DYING:
+            self.anim.play("die", 8, 10, loop=False)
 
         # Ignore input during knockback
         if self._knockback_timer > 0:
@@ -266,11 +288,11 @@ class Player(BaseEntity):
         return None
 
     def draw(self, surface: pygame.Surface) -> None:
-        """Render the player as a placeholder coloured rect."""
-        if (
-            self._invincibility_timer > 0
-            and int(self._invincibility_timer * 10) % 2 == 0
-        ):
+        """Render the player using the animation controller."""
+        flash = self._invincibility_timer > 0
+        self.anim.set_facing(self.facing_direction < 0)
+        self.anim.set_flash(flash)
+        if flash and int(self._invincibility_timer * 10) % 2 == 0:
             return
         colour = (180, 60, 60) if not self._crouching else (140, 40, 40)
         pygame.draw.rect(surface, colour, self.rect)
