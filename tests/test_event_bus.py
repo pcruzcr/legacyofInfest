@@ -18,7 +18,7 @@ def reset_event_bus():
 
 
 def test_subscribe_and_emit():
-    """A subscribed callback receives the exact **data kwargs passed to emit()."""
+    """A subscribed callback receives the exact **data kwargs from emit()."""
     received = {}
 
     def callback(**data):
@@ -32,7 +32,7 @@ def test_subscribe_and_emit():
 
 
 def test_emit_queues_not_immediate():
-    """Calling emit() does not invoke the callback until dispatch() is called."""
+    """emit() queues the event; callback runs only after dispatch()."""
     invoked = False
 
     def callback(**data):

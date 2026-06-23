@@ -78,7 +78,7 @@ def test_any_to_hurt_on_damage(player):
     """take_damage() transitions to HURT from any non-DYING state."""
     player.state = PlayerState.IDLE
     player._invincibility_timer = 0.0
-    player.take_damage(0.5, source=(0.0, player.pos.y))
+    player.take_damage(0.5, source=(0.0, player.position.y))
     assert player.state == PlayerState.HURT
 
 
@@ -95,5 +95,5 @@ def test_dying_when_health_zero(player):
     player.state = PlayerState.IDLE
     player._invincibility_timer = 0.0
     player._health = 0.5
-    player.take_damage(0.5, source=(0.0, player.pos.y))
+    player.take_damage(0.5, source=(0.0, player.position.y))
     assert player.state == PlayerState.DYING

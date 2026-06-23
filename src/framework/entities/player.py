@@ -27,9 +27,9 @@ class Player(BaseEntity):
     JUMP_CUT_MULT: float = 0.5
     INVINCIBILITY_DURATION: float = 1.5
 
-    def __init__(self, x: float, y: float) -> None:
+    def __init__(self, x: float = 0.0, y: float = 0.0) -> None:
         """Spawn the player at (*x*, *y*) in world coordinates."""
-        self.pos: pygame.Vector2 = pygame.Vector2(x, y)
+        super().__init__(pygame.Vector2(x, y))
         self.vel: pygame.Vector2 = pygame.Vector2(0.0, 0.0)
         self.facing_direction: int = 1
 
@@ -56,25 +56,25 @@ class Player(BaseEntity):
         """Axis-aligned bounding box for collision queries."""
         h = self._crouch_height if self._crouching else self._height
         return pygame.Rect(
-            int(self.pos.x), int(self.pos.y - h), self._width, h
+            int(self.position.x), int(self.position.y - h), self._width, h
         )
 
     def _resolve_collisions(self, rects: list[pygame.Rect]) -> None:
         """Axis-separated collision resolution against *rects*."""
         # Horizontal pass
-        self.pos.x += self.vel.x
+        self.position.x += self.vel.x
         hit = self.rect
         for r in rects:
             if hit.colliderect(r):
                 if self.vel.x > 0:
-                    self.pos.x = r.left - self._width
+                    self.position.x = r.left - self._width
                 elif self.vel.x < 0:
-                    self.pos.x = r.right
+                    self.position.x = r.right
                 self.vel.x = 0.0
                 hit = self.rect
 
         # Vertical pass
-        self.pos.y += self.vel.y
+        self.position.y += self.vel.y
         hit = self.rect
         self.is_grounded = False
         for r in rects:
@@ -85,19 +85,17 @@ class Player(BaseEntity):
                         if self._crouching
                         else self._height
                     )
-                    self.pos.y = r.top - h
+                    self.position.y = r.top - h
                     self.vel.y = 0.0
                     self.is_grounded = True
-                    self._coyote_timer = (
-                        self.COYOTE_FRAMES / 60.0
-                    )
+                    self._coyote_timer = self.COYOTE_FRAMES / 60.0
                 elif self.vel.y < 0:
                     h = (
                         self._crouch_height
                         if self._crouching
                         else self._height
                     )
-                    self.pos.y = r.bottom + h
+                    self.position.y = r.bottom + h
                     self.vel.y = 0.0
                 hit = self.rect
 
@@ -180,7 +178,7 @@ class Player(BaseEntity):
             direction = 0
             self._attack_input = ""
 
-        # Horizontal input placeholder (direction from InputManager later)
+        # Horizontal input placeholder
         direction = self._direction if self._knockback_timer <= 0 else 0
 
         self.vel.x = direction * self.WALK_SPEED * dt
@@ -223,7 +221,7 @@ class Player(BaseEntity):
         )
         self._invincibility_timer = self.INVINCIBILITY_DURATION
         if source is not None:
-            dx = self.pos.x - source[0]
+            dx = self.position.x - source[0]
             self.vel.x = (1.0 if dx >= 0 else -1.0) * 150.0
             self.vel.y = -200.0
         self._knockback_timer = 0.3
@@ -236,38 +234,30 @@ class Player(BaseEntity):
             self.state = PlayerState.HURT
 
     def get_hurtbox(self) -> pygame.Rect:
-        """Return the player's current hurtbox rect in world space.
-
-        Standard hurtbox: offset (6, 4) from sprite top-left, size 20×28.
-        Crouching hurtbox: offset (6, 14) from sprite top-left, size 20×18.
-        """
+        """Return the player's current hurtbox rect in world space."""
         if self._crouching:
             return pygame.Rect(
-                int(self.pos.x + 6), int(self.pos.y + 14), 20, 18
+                int(self.position.x + 6), int(self.position.y + 14), 20, 18
             )
         return pygame.Rect(
-            int(self.pos.x + 6), int(self.pos.y + 4), 20, 28
+            int(self.position.x + 6), int(self.position.y + 4), 20, 28
         )
 
     def get_attack_hitbox(
         self, attack_type: str, frame: int
     ) -> pygame.Rect | None:
-        """Return the active hitbox for *attack_type* at *frame*.
-
-        Returns ``None`` if the hitbox is not active on this frame.
-        Frame indices are 1-based per the spec's active-frame lists.
-        """
+        """Return the active hitbox for *attack_type* at *frame*."""
         if attack_type == "short":
             if frame in (2, 3, 4):
-                cx = int(self.pos.x + self._width // 2)
-                cy = int(self.pos.y - self._height // 2)
+                cx = int(self.position.x + self._width // 2)
+                cy = int(self.position.y - self._height // 2)
                 ox = 8 * self.facing_direction
                 oy = -4 if not self._crouching else 8
                 return pygame.Rect(cx + ox - 10, cy + oy - 8, 20, 16)
         elif attack_type == "long":
             if frame in (4, 5, 6, 7):
-                cx = int(self.pos.x + self._width // 2)
-                cy = int(self.pos.y - self._height // 2)
+                cx = int(self.position.x + self._width // 2)
+                cy = int(self.position.y - self._height // 2)
                 ox = 0
                 oy = 0
                 if frame == 4:
@@ -287,7 +277,9 @@ class Player(BaseEntity):
                 return pygame.Rect(cx + ox - w // 2, cy + oy - h // 2, w, h)
         return None
 
-    def draw(self, surface: pygame.Surface) -> None:
+    def draw(
+        self, surface: pygame.Surface, camera_offset: pygame.Vector2
+    ) -> None:
         """Render the player using the animation controller."""
         flash = self._invincibility_timer > 0
         self.anim.set_facing(self.facing_direction < 0)
