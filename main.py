@@ -15,9 +15,9 @@ from src.engine.core.app import App
 
 
 def main() -> None:
-    """Construct the App instance to verify the skeleton is healthy."""
-    print("Legacy of InFest — App constructed (run() not yet wired)")
-    _app = App()  # noqa: F841 — instance kept alive for smoke-test
+    """Construct the App instance and enter the main loop."""
+    _app = App()
+    _app.run()
 
 
 if __name__ == "__main__":
