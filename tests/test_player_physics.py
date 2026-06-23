@@ -61,7 +61,7 @@ def test_take_damage_applies_knockback():
     """take_damage with a source applies knockback velocities."""
     p = Player(100.0, 100.0)
     p._invincibility_timer = 0.0
-    p.take_damage(0.5, source=(0.0, p.pos.y))
+    p.take_damage(0.5, source=(0.0, p.position.y))
     assert abs(p.vel.x) == pytest.approx(150.0)
     assert p.vel.y == pytest.approx(-200.0)
 
