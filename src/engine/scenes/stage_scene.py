@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pygame
 
+from src.engine.core.settings import INTERNAL_HEIGHT, INTERNAL_WIDTH
 from src.engine.scene.base_scene import BaseScene
 from src.framework.stage.camera import Camera
 from src.framework.stage.stage_loader import StageLoader
@@ -115,7 +116,13 @@ class StageScene(BaseScene):
         # pyscroll handles camera offset internally when we set the layer's
         # view; we compensate by passing the negative camera offset.
         offset = self._camera.offset if self._camera else pygame.Vector2(0, 0)
-        self._data.map_layer.draw(surface, offset)
+        if self._camera is not None:
+            # pyscroll uses a center-point camera, not a top-left offset.
+            # Convert our top-left offset to center coordinates.
+            cx = offset.x + INTERNAL_WIDTH / 2
+            cy = offset.y + INTERNAL_HEIGHT / 2
+            self._data.map_layer.center = (cx, cy)
+        self._data.map_layer.draw(surface)
 
         # Draw entities (sorted by layer depth if needed)
         for enemy in self._enemies:
