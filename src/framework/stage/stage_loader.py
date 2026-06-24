@@ -113,7 +113,8 @@ class StageLoader:
                                  or duplicated.
         """
         import pytmx
-        from pyscroll import PyscrollGroup, data
+        from pyscroll import BufferedRenderer, PyscrollGroup, data
+        from src.engine.core.settings import INTERNAL_HEIGHT, INTERNAL_WIDTH
 
         if not tmx_path.exists():
             raise FrameworkUsageError(
@@ -151,9 +152,14 @@ class StageLoader:
         time_limit: int = cls._get_int_prop(tmx, "time_limit", 0)
         bgm_track: str = cls._get_str_prop(tmx, "bgm_track", "")
 
-        # 3. Build pyscroll group from tile layers
+        # 3. Build pyscroll render pipeline from tile layers
         map_data = data.TiledMapData(tmx)
-        map_layer = PyscrollGroup(map_data, default_layer=4)
+        renderer = BufferedRenderer(
+            map_data,
+            size=(INTERNAL_WIDTH, INTERNAL_HEIGHT),
+            clamp_camera=True,
+        )
+        map_layer = PyscrollGroup(renderer, default_layer=4)
 
         # 4. Parse Objects layer
         objects_layer = tmx.get_layer_by_name("Objects")
