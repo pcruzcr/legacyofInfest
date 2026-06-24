@@ -287,4 +287,7 @@ class Player(BaseEntity):
         if flash and int(self._invincibility_timer * 10) % 2 == 0:
             return
         colour = (180, 60, 60) if not self._crouching else (140, 40, 40)
-        pygame.draw.rect(surface, colour, self.rect)
+        screen_rect = self.rect.move(
+            -int(camera_offset.x), -int(camera_offset.y)
+        )
+        pygame.draw.rect(surface, colour, screen_rect)
