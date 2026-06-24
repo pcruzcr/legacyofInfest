@@ -21,6 +21,7 @@ from src.engine.core.settings import (
     INTERNAL_HEIGHT,
     INTERNAL_WIDTH,
 )
+from src.engine.input.input_manager import InputManager as RealInputManager
 from src.engine.scene.scene_manager import SceneManager
 from src.engine.scenes.stage_scene import StageScene
 
@@ -47,13 +48,6 @@ class AssetLoader:
     def load_spritesheet(
         cls, path: str | object, frame_w: int, frame_h: int
     ) -> None:
-        """Placeholder: no-op."""
-
-
-class InputManager:
-    """Placeholder stub — replaced in Phase 2 (T2.5)."""
-
-    def pump(self, events: list[pygame.event.Event]) -> None:
         """Placeholder: no-op."""
 
 
@@ -114,13 +108,16 @@ class App:
         self.clock: DeltaClock = DeltaClock()
         # EventBus is a static class — no instance needed.
         self.asset_loader: AssetLoader = AssetLoader()
-        self.input_manager: InputManager = InputManager()
+        self.input_manager: RealInputManager = RealInputManager()
         self.audio_manager: AudioManager = AudioManager()
         self.scene_manager: SceneManager = SceneManager()
 
         # Push the stage scene so the scene stack is non-empty.
         self.scene_manager.push(
-            StageScene(Path("tests/fixtures/minimal_stage.tmx"))
+            StageScene(
+                Path("tests/fixtures/minimal_stage.tmx"),
+                input_manager=self.input_manager,
+            )
         )
 
     def run(self) -> None:

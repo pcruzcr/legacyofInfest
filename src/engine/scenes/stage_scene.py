@@ -13,6 +13,8 @@ from pathlib import Path
 import pygame
 
 from src.engine.core.settings import INTERNAL_HEIGHT, INTERNAL_WIDTH
+from src.engine.input.action_map import Action
+from src.engine.input.input_manager import InputManager
 from src.engine.scene.base_scene import BaseScene
 from src.framework.stage.camera import Camera
 from src.framework.stage.stage_loader import StageLoader
@@ -25,18 +27,23 @@ from src.framework.entities.player import Player
 class StageScene(BaseScene):
     """Playable stage scene that loads and renders a TMX stage."""
 
-    def __init__(self, tmx_path: Path) -> None:
+    def __init__(
+        self, tmx_path: Path, input_manager: InputManager | None = None
+    ) -> None:
         """Create the stage scene.
 
         Args:
             tmx_path: Path to the ``.tmx`` file to load.
+            input_manager: InputManager for player controls.
         """
         self._tmx_path: Path = tmx_path
+        self._input_manager: InputManager | None = input_manager
         self._data = None
         self._player: Player | None = None
         self._camera: Camera | None = None
         self._enemies: list = []
         self._checkpoints: list = []
+        self._jump_held: bool = False
 
     # ── Lifecycle ────────────────────────────────────────────────────
 
@@ -78,6 +85,9 @@ class StageScene(BaseScene):
         """Run one frame of stage logic."""
         if self._player is None or self._camera is None or self._data is None:
             return
+
+        # Read input and apply to player
+        self._process_input()
 
         # Update camera
         self._camera.update(dt)
@@ -137,3 +147,42 @@ class StageScene(BaseScene):
         # Draw checkpoints (debug / visual marker)
         for cp in self._checkpoints:
             cp.draw(surface, offset)
+
+    # ── Input processing ────────────────────────────────────────────
+
+    def _process_input(self) -> None:
+        """Poll InputManager and forward to player."""
+        if self._player is None or self._input_manager is None:
+            return
+
+        im = self._input_manager
+
+        # Horizontal movement
+        if im.is_action_held(Action.MOVE_LEFT):
+            self._player._direction = -1
+        elif im.is_action_held(Action.MOVE_RIGHT):
+            self._player._direction = 1
+        else:
+            self._player._direction = 0
+
+        # Jump (pressed and released)
+        if im.is_action_pressed(Action.JUMP):
+            self._player.start_jump()
+            self._jump_held = True
+        if self._jump_held and not im.is_action_held(Action.JUMP):
+            self._player.release_jump()
+            self._jump_held = False
+
+        # Crouch
+        if im.is_action_held(Action.CROUCH):
+            self._player.set_crouch(True)
+        else:
+            self._player.set_crouch(False)
+
+        # Attacks
+        if im.is_action_pressed(Action.SHORT_ATTACK):
+            self._player._attack_input = "short"
+        elif im.is_action_pressed(Action.LONG_ATTACK):
+            self._player._attack_input = "long"
+        else:
+            self._player._attack_input = ""

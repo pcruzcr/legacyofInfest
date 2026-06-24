@@ -158,7 +158,7 @@ class EnemyBase(BaseEntity, ABC):
             self._contact_cooldown = 0.3
 
     def _update_rects(self) -> None:
-        """Recompute world-space hitbox and hurtbox from local offsets."""
+        """Recompute world-space hitbox, hurtbox, and base rect."""
         self.hitbox = self._build_hitbox()
         self.hurtbox = self._build_hurtbox()
         self.hitbox.topleft = (
@@ -168,6 +168,10 @@ class EnemyBase(BaseEntity, ABC):
         self.hurtbox.topleft = (
             self.hurtbox.x + self.position.x,
             self.hurtbox.y + self.position.y,
+        )
+        self.rect.topleft = (
+            int(self.position.x),
+            int(self.position.y),
         )
 
     def update(self, dt: float) -> None:
@@ -211,4 +215,7 @@ class EnemyBase(BaseEntity, ABC):
             and int(self._invincibility_timer * 60 / 4) % 2 == 0
         ):
             return
-        pygame.draw.rect(surface, (120, 160, 120), self.rect)
+        screen_rect = self.rect.move(
+            -int(camera_offset.x), -int(camera_offset.y)
+        )
+        pygame.draw.rect(surface, (120, 160, 120), screen_rect)
