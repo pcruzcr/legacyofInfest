@@ -10,6 +10,7 @@ loop, the internal render surface, and all top-level engine subsystems
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 
 import pygame
 
@@ -21,7 +22,7 @@ from src.engine.core.settings import (
     INTERNAL_WIDTH,
 )
 from src.engine.scene.scene_manager import SceneManager
-from src.engine.scenes.splash_scene import SplashScene
+from src.engine.scenes.stage_scene import StageScene
 
 # ---------------------------------------------------------------------------
 # Placeholder stubs for subsystems that do not yet exist.
@@ -117,8 +118,10 @@ class App:
         self.audio_manager: AudioManager = AudioManager()
         self.scene_manager: SceneManager = SceneManager()
 
-        # Push the splash scene so the scene stack is non-empty.
-        self.scene_manager.push(SplashScene())
+        # Push the stage scene so the scene stack is non-empty.
+        self.scene_manager.push(
+            StageScene(Path("tests/fixtures/minimal_stage.tmx"))
+        )
 
     def run(self) -> None:
         """Enter the main game loop.
