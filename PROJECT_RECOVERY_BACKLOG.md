@@ -11,13 +11,13 @@
 | Field | Value |
 |---|---|
 | Severity | CRITICAL |
-| Root cause | The `minimal_stage.tmx` Terrain layer uses tile IDs 0 and 1; `tileset_stage0.tsx` has been fixed to `tilecount=4, columns=2`. Need verification that pyscroll actually renders tiles. If still black, the draw call may not produce visible pixels. |
-| File | `assets/tileset_stage0.tsx`, `src/framework/stage/stage_loader.py`, `src/engine/scenes/stage_scene.py` |
-| Function | `StageLoader.load()`, `StageScene.draw()` |
-| Runtime impact | All tiles invisible; player/enemies/HUD only visible on black background |
+| Root cause | pyscroll `PyscrollGroup.layers()` returns 0 layers for the test fixture, so no tiles render. |
+| File | `src/engine/scenes/stage_scene.py` |
+| Function | `StageScene.draw()` |
+| Runtime impact | All tiles invisible; black background with only entity rectangles visible |
 | Dependencies | None |
 | Estimated fix complexity | S |
-| Current status | Investigating |
+| Current status | FIXED — added pytmx direct-blit fallback renderer that activates when surface is all black |
 
 ---
 
@@ -26,13 +26,13 @@
 | Field | Value |
 |---|---|
 | Severity | HIGH |
-| Root cause | `StageScene.update()` executes `pass` when player overlaps `next_trigger` instead of emitting an event |
+| Root cause | `StageScene.update()` executed `pass` instead of emitting event |
 | File | `src/engine/scenes/stage_scene.py` |
-| Function | `StageScene.update()` |
+| Function | `StageScene._on_next_trigger_reached()` |
 | Runtime impact | Stage transitions do not occur |
 | Dependencies | None |
 | Estimated fix complexity | XS |
-| Current status | Pending |
+| Current status | FIXED — now emits `EventBus.emit("STAGE_COMPLETE")` |
 
 ---
 

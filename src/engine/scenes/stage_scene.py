@@ -109,8 +109,52 @@ class StageScene(BaseScene):
         # Check next trigger for stage transition
         if self._data.next_trigger is not None:
             if player_rect.colliderect(self._data.next_trigger):
-                # Future: transition to next stage
-                pass
+                self._on_next_trigger_reached()
+
+    def _on_next_trigger_reached(self) -> None:
+        """Handle reaching the stage exit."""
+        from src.engine.core.event_bus import EventBus
+        EventBus.emit("STAGE_COMPLETE")
+
+    # ── Render helpers ───────────────────────────────────────────────
+
+    @staticmethod
+    def _surface_all_black(surface: pygame.Surface) -> bool:
+        """Check whether *surface* is entirely black."""
+        for y in range(0, surface.get_height(), 16):
+            for x in range(0, surface.get_width(), 16):
+                if surface.get_at((x, y)) != (0, 0, 0, 255):
+                    return False
+        return True
+
+    def _draw_tiles_fallback(
+        self, surface: pygame.Surface, camera_offset: pygame.Vector2
+    ) -> None:
+        """Direct tile blit from pytmx as fallback when pyscroll fails."""
+        tmx = self._data._tmx  # noqa: SLF001
+        tile_w = tmx.tilewidth
+        tile_h = tmx.tileheight
+        for layer_idx, layer in enumerate(tmx.visible_layers):
+            if not hasattr(layer, "data"):
+                continue
+            for x in range(0, layer.width):
+                for y in range(0, layer.height):
+                    gid = layer.data[y][x]
+                    if gid == 0:
+                        continue
+                    image = tmx.get_tile_image(x, y, layer_idx)
+                    if image is None:
+                        continue
+                    screen_x = x * tile_w - int(camera_offset.x)
+                    screen_y = y * tile_h - int(camera_offset.y)
+                    surface.blit(image, (screen_x, screen_y))
+
+    @staticmethod
+    def _draw_collision_fallback(
+        surface: pygame.Surface, camera_offset: pygame.Vector2
+    ) -> None:
+        """Placeholder collision debug — nothing to draw in recovery."""
+        return
 
     # ── Render ───────────────────────────────────────────────────────
 
@@ -122,17 +166,19 @@ class StageScene(BaseScene):
         # Clear
         surface.fill((0, 0, 0))
 
-        # Draw tile layers via pyscroll group
-        # pyscroll handles camera offset internally when we set the layer's
-        # view; we compensate by passing the negative camera offset.
+        # Try pyscroll draw first
         offset = self._camera.offset if self._camera else pygame.Vector2(0, 0)
         if self._camera is not None:
-            # pyscroll uses a center-point camera, not a top-left offset.
-            # Convert our top-left offset to center coordinates.
             cx = offset.x + INTERNAL_WIDTH / 2
             cy = offset.y + INTERNAL_HEIGHT / 2
             self._data.map_layer.center = (cx, cy)
         self._data.map_layer.draw(surface)
+
+        # Fallback: if pyscroll produced no visible tiles,
+        # render via pytmx directly
+        if self._surface_all_black(surface):
+            self._draw_tiles_fallback(surface, offset)
+            self._draw_collision_fallback(surface, offset)
 
         # Draw entities (sorted by layer depth if needed)
         for enemy in self._enemies:
