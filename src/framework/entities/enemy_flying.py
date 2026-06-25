@@ -79,12 +79,8 @@ class EnemyFlying(EnemyBase):
         speed = self.flight_speed * speed_mult
         self._elapsed_time += dt
         self.position.x += speed * self.facing_direction * dt
-        self.position.y = (
-            self._origin_y
-            + self.sine_amplitude
-            * math.sin(
-                2 * math.pi * self.sine_frequency * self._elapsed_time
-            )
+        self.position.y = self._origin_y + self.sine_amplitude * math.sin(
+            2 * math.pi * self.sine_frequency * self._elapsed_time
         )
 
     def _get_animation_state(self) -> str:
