@@ -1,13 +1,13 @@
 """
 Legacy of InFest — main.py
-Phase 0 scaffold placeholder. Exits cleanly without imports.
+Entry point. Instantiates App and calls run().
 """
-import sys
+from src.engine.core.app import App
 
 
 def main() -> None:
-    print("Legacy of InFest — scaffold only")
-    sys.exit(0)
+    app = App()
+    app.run()
 
 
 if __name__ == "__main__":
