@@ -43,17 +43,14 @@ class AssetLoader:
 
         Returns the cached surface if the same path has been loaded
         before. Raises FileNotFoundError if the file does not exist.
-        On missing file, logs a WARNING and returns a placeholder
-        surface of the documented dimensions (16x16) per Rule 8.
         """
         key = cls._cache_key(path)
         if key not in cls._cache:
             try:
                 surface = pygame.image.load(key).convert_alpha()
             except FileNotFoundError:
-                _logger.warning("Asset not found: %s — using placeholder", key)
-                surface = pygame.Surface((16, 16))
-                surface.fill((255, 0, 255))  # magenta = missing texture
+                _logger.warning("Asset not found: %s", key)
+                raise
             cls._cache[key] = surface
         return cls._cache[key]
 
@@ -62,16 +59,14 @@ class AssetLoader:
         """Load and cache a sound object.
 
         Raises FileNotFoundError if the file does not exist.
-        On missing file, logs a WARNING and returns a silent Sound.
         """
         key = cls._cache_key(path)
         if key not in cls._cache:
             try:
                 sound = pygame.mixer.Sound(key)
             except FileNotFoundError:
-                _logger.warning("Sound not found: %s — using silent placeholder", key)
-                # Create a 1-frame silent sound
-                sound = pygame.mixer.Sound(buffer=bytes(4))
+                _logger.warning("Sound not found: %s", key)
+                raise
             cls._cache[key] = sound
         return cls._cache[key]
 
