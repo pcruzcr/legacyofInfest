@@ -2,7 +2,9 @@
 Module: settings
 System: engine
 Academic Unit: N/A
-Description: All global constants for the Legacy of InFest engine. Every module in the engine and framework imports these constants rather than hardcoding values. No logic — declarations only.
+Description: All global constants for the Legacy of InFest engine.
+Every module in the engine and framework imports these constants
+rather than hardcoding values. No logic — declarations only.
 """
 
 from pathlib import Path
@@ -13,6 +15,7 @@ INTERNAL_HEIGHT: int = 224
 TARGET_FPS: int = 60
 DISPLAY_SCALE: int = 3
 TILE_SIZE: int = 16
+BACKGROUND_COLOR: tuple[int, int, int] = (15, 15, 40)  # dark navy per Rule 10
 
 # Paths
 ASSETS_DIR: Path = Path("assets")
