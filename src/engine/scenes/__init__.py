@@ -1,1 +1,0 @@
-"""Engine scenes package — imported by app.py (Phase 1 / T1.4)."""

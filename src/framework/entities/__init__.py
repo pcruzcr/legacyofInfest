@@ -1,1 +1,0 @@
-"""Framework entity package."""
