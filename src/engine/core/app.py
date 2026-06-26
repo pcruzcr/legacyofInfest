@@ -2,7 +2,9 @@
 Module: app
 System: engine
 Academic Unit: N/A
-Description: Main application class for Legacy of InFest. Owns the game loop, the internal render surface, and all top-level engine subsystems (clock, event bus, asset loader, input, audio, scene manager).
+Description: Main application class for Legacy of InFest. Owns the game
+loop, the internal render surface, and all top-level engine subsystems
+(clock, event bus, asset loader, input, audio, scene manager).
 """
 
 import sys
@@ -17,72 +19,10 @@ from src.engine.core.settings import (
     INTERNAL_HEIGHT,
     INTERNAL_WIDTH,
 )
-
-# Placeholder stubs for subsystems that do not yet exist.
-# These will be replaced by their real implementations in later phases.
-# See 25_IMPLEMENTATION_ROADMAP.md §4.
-
-
-class _PlaceholderSceneManager:
-    """Minimal SceneManager stub so App constructs."""
-
-    def __init__(self) -> None:
-        self._current = None
-
-    @property
-    def current(self):
-        return self._current
-
-    def push(self, scene) -> None:
-        self._current = scene
-        if hasattr(scene, "on_enter"):
-            scene.on_enter()
-
-
-class _PlaceholderInputManager:
-    """Minimal InputManager stub so App constructs."""
-
-    def __init__(self) -> None:
-        pass
-
-    def pump(self, events) -> None:
-        pass
-
-    def is_action_pressed(self, action) -> bool:
-        return False
-
-    def is_action_held(self, action) -> bool:
-        return False
-
-    def is_action_released(self, action) -> bool:
-        return False
-
-
-class _PlaceholderAudioManager:
-    """Minimal AudioManager stub so App constructs."""
-
-    def __init__(self) -> None:
-        pass
-
-    def play_music(self, name: str, loop: bool = True, fade_ms: int = 0) -> None:
-        pass
-
-    def stop_music(self, fade_ms: int = 0) -> None:
-        pass
-
-    def play_sfx(self, name: str, volume: float = 1.0) -> None:
-        pass
-
-    def set_music_volume(self, volume: float) -> None:
-        pass
-
-    def set_sfx_volume(self, volume: float) -> None:
-        pass
-
-
-# ---------------------------------------------------------------------------
-# App
-# ---------------------------------------------------------------------------
+from src.engine.input.input_manager import InputManager
+from src.engine.audio.audio_manager import AudioManager
+from src.engine.scene.scene_manager import SceneManager
+from src.engine.scenes.splash_scene import SplashScene
 
 
 class App:
@@ -116,37 +56,26 @@ class App:
         # Subsystems.
         self.clock: DeltaClock = DeltaClock()
         # EventBus is a static class — no instance needed.
-        self.scene_manager: _PlaceholderSceneManager = _PlaceholderSceneManager()
-        self.input_manager: _PlaceholderInputManager = _PlaceholderInputManager()
-        self.audio_manager: _PlaceholderAudioManager = _PlaceholderAudioManager()
+        self.scene_manager: SceneManager = SceneManager()
+        self.input_manager: InputManager = InputManager()
+        self.audio_manager: AudioManager = AudioManager()
 
-        # Push a minimal splash scene so the scene stack is non-empty.
-        # Real SplashScene will be wired in Phase 3.
-        class _SplashStub:
-            def on_enter(self) -> None:
-                pass
-
-            def on_exit(self) -> None:
-                pass
-
-            def update(self, dt: float) -> None:
-                pass
-
-            def draw(self, surface: pygame.Surface) -> None:
-                surface.fill((15, 15, 40))  # dark navy — Rule 10
-
-        self.scene_manager.push(_SplashStub())
+        # Push the splash scene so the scene stack is non-empty.
+        self.scene_manager.push(SplashScene())
 
     def run(self) -> None:
         """Enter the main game loop.
 
-        The loop runs at *TARGET_FPS* frames per second and does not
-        return until the user quits.  Each frame:
-        1. Dispatches queued EventBus events.
+        The loop runs at TARGET_FPS frames per second and does not return until the
+        user quits.  Each frame:
+        1. Processes pygame events.
         2. Pumps input.
-        3. Updates the current scene.
-        4. Draws the current scene to the internal surface.
-        5. Scales and blits to the window surface.
+        3. Dispatches queued EventBus events.
+        4. Updates the current scene.
+        5. Clears internal surface with non-black background.
+        6. Draws the current scene to the internal surface.
+        7. Scales and blits to the window surface.
+        8. Flips the display.
         """
         running = True
         while running:
