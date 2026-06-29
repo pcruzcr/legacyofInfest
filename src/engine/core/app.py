@@ -12,35 +12,16 @@ import sys
 from src.engine.core import settings
 from src.engine.core.clock import DeltaClock
 from src.engine.core.event_bus import EventBus
-
-
-class _PlaceholderInput:
-    """Temporary — replaced by InputManager in Phase 2."""
-    def pump(self, events: list[pygame.event.Event]) -> None:
-        pass
-
-
-class _PlaceholderAudio:
-    """Temporary — replaced by AudioManager in Phase 2."""
-    pass
-
-
-class _PlaceholderScene:
-    """Temporary — replaced by real scenes in Phase 3."""
-    def update(self, dt: float) -> None:
-        pass
-    def draw(self, surface: pygame.Surface) -> None:
-        pass
-
-
-class _PlaceholderSceneManager:
-    """Temporary — replaced by SceneManager in Phase 3."""
-    def __init__(self) -> None:
-        self.current: _PlaceholderScene = _PlaceholderScene()
+from src.engine.input.input_manager import InputManager
+from src.engine.audio.audio_manager import AudioManager
+from src.engine.scene.scene_manager import SceneManager
 
 
 class App:
-    """Owns the game loop, display, and all engine subsystems."""
+    """Owns the game loop, display, and all engine subsystems.
+    Stores a class-level _instance reference so scenes can access the SceneManager."""
+
+    _instance: App | None = None
 
     def __init__(self) -> None:
         pygame.init()
@@ -59,9 +40,14 @@ class App:
 
         self.clock: DeltaClock = DeltaClock()
         self.event_bus: type[EventBus] = EventBus
-        self.input_manager: _PlaceholderInput = _PlaceholderInput()
-        self.audio_manager: _PlaceholderAudio = _PlaceholderAudio()
-        self.scene_manager: _PlaceholderSceneManager = _PlaceholderSceneManager()
+        self.input_manager: InputManager = InputManager()
+        self.audio_manager: AudioManager = AudioManager()
+        self.scene_manager: SceneManager = SceneManager()
+        App._instance = self
+
+        # Push SplashScene as the first scene
+        from src.engine.scenes.splash_scene import SplashScene
+        self.scene_manager.push(SplashScene())
 
         self._running: bool = False
 
@@ -103,3 +89,10 @@ class App:
 
         pygame.quit()
         sys.exit(0)
+
+
+def _get_scene_manager() -> SceneManager | None:
+    """Helper function for scenes to access the SceneManager."""
+    if App._instance is not None:
+        return App._instance.scene_manager
+    return None
