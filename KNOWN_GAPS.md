@@ -1,10 +1,5 @@
-# Legacy of InFest — Known Gaps
+# KNOWN GAPS — Legacy of InFest
 
-This file tracks all intentionally deferred or incomplete features across the codebase.
-Entries follow the schema defined in `docs/23_DATA_SCHEMAS.md` §8.
+Formato: docs/23_DATA_SCHEMAS.md sec 8
 
----
-
-*No entries yet.*
-Format per docs/23_DATA_SCHEMAS.md section 8. Add entries below as work is deferred.
-Never delete entries - mark them resolved instead.
+Nunca borrar entradas — marcar como resueltas.
