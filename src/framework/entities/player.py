@@ -312,20 +312,19 @@ class Player(BaseEntity):
         short_attack = False
         long_attack = False
 
-        try:
-            from src.engine.input.input_manager import InputManager
-            im = InputManager()
-            if im.is_held("MOVE_LEFT"):
+        from src.engine.core.app import App
+        from src.engine.input.action_map import Action
+        im = App._input_manager
+        if im is not None:
+            if im.is_held(Action.MOVE_LEFT):
                 move_x -= 1
-            if im.is_held("MOVE_RIGHT"):
+            if im.is_held(Action.MOVE_RIGHT):
                 move_x += 1
-            jump_pressed = im.is_pressed("JUMP")
-            jump_held = im.is_held("JUMP")
-            crouch_held = im.is_held("CROUCH")
-            short_attack = im.is_pressed("SHORT_ATTACK")
-            long_attack = im.is_pressed("LONG_ATTACK")
-        except Exception:
-            pass
+            jump_pressed = im.is_pressed(Action.JUMP)
+            jump_held = im.is_held(Action.JUMP)
+            crouch_held = im.is_held(Action.CROUCH)
+            short_attack = im.is_pressed(Action.SHORT_ATTACK)
+            long_attack = im.is_pressed(Action.LONG_ATTACK)
 
         # Attack input has priority
         if short_attack:

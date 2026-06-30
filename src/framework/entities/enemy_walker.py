@@ -66,6 +66,8 @@ class EnemyWalker(EnemyBase):
 
     def _patrol_behavior(self, dt: float) -> None:
         """Move at patrol speed. Reverse at patrol limit or ledge edge."""
+        reversed_this_frame = False
+
         # Ledge detection: probe ahead and below before moving
         if self._collision_rects:
             probe_x = self.position.x + (
@@ -78,11 +80,13 @@ class EnemyWalker(EnemyBase):
             )
             if not has_floor:
                 self.facing_direction *= -1
+                reversed_this_frame = True
 
-        # Patrol limit reversal
-        distance = abs(self.position.x - self._patrol_origin.x)
-        if distance >= self.patrol_length / 2:
-            self.facing_direction *= -1
+        # Patrol limit reversal (skip if already reversed for ledge)
+        if not reversed_this_frame:
+            distance = abs(self.position.x - self._patrol_origin.x)
+            if distance >= self.patrol_length / 2:
+                self.facing_direction *= -1
 
         # Move
         self.position.x += self.facing_direction * self.patrol_speed * dt
