@@ -26,6 +26,7 @@ from src.framework.entities.base_entity import BaseEntity
 class StageData:
     """Complete stage data structure returned by StageLoader.load()."""
     map_layer: pyscroll.PyscrollGroup
+    map_pixel_size: tuple[int, int] = (0, 0)
     collision_rects: list[pygame.Rect] = field(default_factory=list)
     entity_list: list[BaseEntity] = field(default_factory=list)
     checkpoints: list = field(default_factory=list)
@@ -88,8 +89,12 @@ class StageLoader:
         )
         group = pyscroll.PyscrollGroup(map_layer=renderer, default_layer=4)
 
+        map_w = tmx_data.width * tmx_data.tilewidth
+        map_h = tmx_data.height * tmx_data.tileheight
+
         stage = StageData(
             map_layer=group,
+            map_pixel_size=(map_w, map_h),
             stage_id=stage_id,
             stage_name=stage_name,
             time_limit=time_limit,
