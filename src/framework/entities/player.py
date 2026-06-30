@@ -530,11 +530,15 @@ class Player(BaseEntity):
         player_rect.x = int(self.position.x)
 
         # --- Y axis ---
+        # Use an inflated rect so touching edges (bottom == floor top)
+        # are detected as collisions. Pygame's colliderect uses strict
+        # comparisons (<, >), so it misses edge-aligned overlaps.
+        collision_check_rect = player_rect.inflate(0, 2)
         self.is_grounded = False
         for tile in collision_rects:
-            if player_rect.colliderect(tile):
-                if self.velocity.y > 0:
-                    # Falling: land on top
+            if collision_check_rect.colliderect(tile):
+                if self.velocity.y >= 0:
+                    # Falling or stationary: land on top
                     player_rect.bottom = tile.top
                     self.velocity.y = 0.0
                     self.is_grounded = True
@@ -550,14 +554,15 @@ class Player(BaseEntity):
     # ──────────────────────────────────────────────
 
     def _update_rect_size(self) -> None:
-        """Update rect size based on current state (crouching vs standing)."""
+        """Update rect size based on current state (crouching vs standing).
+        Shifts position.y so the rect bottom (feet) stays at the same height."""
+        old_bottom = self.rect.bottom
         if self._state == PlayerState.CROUCHING:
             self.rect.width = 20
             self.rect.height = 20
         else:
             self.rect.width = 20
             self.rect.height = 32
-
-        # Keep rect aligned to position
+        self.position.y += old_bottom - (self.position.y + self.rect.height)
         self.rect.x = int(self.position.x)
         self.rect.y = int(self.position.y)

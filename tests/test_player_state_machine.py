@@ -95,6 +95,25 @@ class TestCrouch:
         player.update(1.0 / 60.0, [pygame.Rect(0, 224, 640, 32)])
         assert player.state == PlayerState.CROUCHING
 
+    def test_crouch_keeps_feet_on_floor(self) -> None:
+        _setup_input()
+        player = Player(pygame.Vector2(50.0, 161.0))
+        player.is_grounded = True
+        player._state = PlayerState.IDLE
+        player.velocity.y = 300.0
+        rects = [pygame.Rect(0, 192, 640, 32)]
+        player.update(1.0 / 60.0, rects)
+        assert player.is_grounded
+        assert player.rect.bottom == 192
+        standing_bottom = player.rect.bottom
+        from src.engine.core.app import App
+        im = App._input_manager
+        im._pressed_this_frame.add(pygame.K_DOWN)
+        im._held.add(pygame.K_DOWN)
+        player.update(1.0 / 60.0, rects)
+        assert player.state == PlayerState.CROUCHING
+        assert player.rect.bottom == standing_bottom
+
 
 class TestAttack:
     """Tests for attack state input locking."""
