@@ -58,6 +58,9 @@ class StageScene(BaseScene):
         self._stage_data = None
         self._player = None
 
+    def _respawn(self) -> None:
+        self.on_enter()
+
     def update(self, dt: float) -> None:
         if self._stage_data is None or self._player is None:
             return
@@ -74,6 +77,8 @@ class StageScene(BaseScene):
             if isinstance(entity, EnemyBase):
                 if hasattr(entity, "_player_ref"):
                     entity._player_ref = player.rect
+                if entity.is_alive:
+                    entity._check_player_contact(player)
             entity.update(dt)
 
         self._camera.update(dt)
@@ -93,7 +98,8 @@ class StageScene(BaseScene):
             EventBus.emit("STAGE_COMPLETE", stage_id=stage.stage_id)
 
         if self._player.current_health <= 0:
-            self._stage_complete = True
+            self._respawn()
+            return
 
         self._hud.update(dt)
 

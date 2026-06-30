@@ -53,10 +53,12 @@ class StoryScene(BaseScene):
         self._font_hint = AssetLoader.load_font(Path("fonts") / "game.ttf", 11)
 
     def on_enter(self) -> None:
-        AssetLoader.play_music(self._music, volume=0.50)
+        if self._chapter == 1:
+            AssetLoader.play_music(self._music, volume=0.50)
 
     def on_exit(self) -> None:
-        AssetLoader.fadeout(300)
+        if self._chapter == 3:
+            AssetLoader.fadeout(300)
 
     def _get_input(self):
         from src.engine.core.app import App
