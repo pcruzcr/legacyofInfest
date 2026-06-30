@@ -19,9 +19,10 @@ from src.engine.scene.scene_manager import SceneManager
 
 class App:
     """Owns the game loop, display, and all engine subsystems.
-    Stores a class-level _instance reference so scenes can access the SceneManager."""
+    Stores class-level references so subsystems (Player, scenes) can access shared state."""
 
     _instance: App | None = None
+    _input_manager: InputManager | None = None
 
     def __init__(self) -> None:
         pygame.init()
@@ -41,6 +42,7 @@ class App:
         self.clock: DeltaClock = DeltaClock()
         self.event_bus: type[EventBus] = EventBus
         self.input_manager: InputManager = InputManager()
+        App._input_manager = self.input_manager
         self.audio_manager: AudioManager = AudioManager()
         self.scene_manager: SceneManager = SceneManager()
         App._instance = self
