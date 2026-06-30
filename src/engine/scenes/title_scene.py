@@ -1,31 +1,48 @@
-"""
-Module: title_scene
-System: engine.scenes
-Academic Unit: N/A
-Description: Title screen with game title and START/QUIT options.
-CONFIRM action advances to the first StoryScene.
-"""
 from __future__ import annotations
+
+from pathlib import Path
+
 import pygame
-from src.engine.scene.base_scene import BaseScene
+
 from src.engine.core import settings
+from src.engine.scene.base_scene import BaseScene
 from src.engine.input.action_map import Action
+from src.engine.utils.asset_loader import AssetLoader
 
 
 class TitleScene(BaseScene):
-    """Main title screen."""
+    """Main title screen with background, logo, music, and custom font."""
 
     def __init__(self) -> None:
-        self._font_title = pygame.font.Font(None, 30)
-        self._font_option = pygame.font.Font(None, 18)
+        assets = Path("assets") / "title"
+
+        self._background = AssetLoader.load_image(
+            assets / "bck1.png",
+            size=(settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
+        )
+
+        raw_logo = AssetLoader.load_image(assets / "logo.png")
+        max_logo_w = settings.INTERNAL_WIDTH - 40
+        max_logo_h = 80
+        lw, lh = raw_logo.get_size()
+        scale = min(max_logo_w / lw, max_logo_h / lh, 1.0)
+        self._logo = AssetLoader.load_image(
+            assets / "logo.png",
+            size=(int(lw * scale), int(lh * scale)),
+        )
+
+        self._music = assets / "title.mp3"
+
+        self._font_game = AssetLoader.load_font(Path("fonts") / "game.ttf", 14)
         self._selected: int = 0
         self._options: list[str] = ["START", "QUIT"]
 
     def on_enter(self) -> None:
         self._selected = 0
+        AssetLoader.play_music(self._music, volume=0.50)
 
     def on_exit(self) -> None:
-        pass
+        AssetLoader.fadeout(300)
 
     def _get_input(self):
         from src.engine.core.app import App
@@ -55,17 +72,17 @@ class TitleScene(BaseScene):
                 App._instance._running = False
 
     def draw(self, surface: pygame.Surface) -> None:
-        surface.fill((10, 10, 30))
+        surface.blit(self._background, (0, 0))
 
-        title = self._font_title.render("LEGACY OF INFEST", True, (200, 200, 255))
-        tx = (settings.INTERNAL_WIDTH - title.get_width()) // 2
-        ty = settings.INTERNAL_HEIGHT // 3
-        surface.blit(title, (tx, ty))
+        logo_rect = self._logo.get_rect(
+            center=(settings.INTERNAL_WIDTH // 2, settings.INTERNAL_HEIGHT // 3),
+        )
+        surface.blit(self._logo, logo_rect)
 
         for i, opt in enumerate(self._options):
             color = (255, 255, 100) if i == self._selected else (150, 150, 150)
             prefix = "> " if i == self._selected else "  "
-            text = self._font_option.render(f"{prefix}{opt}", True, color)
+            text = self._font_game.render(f"{prefix}{opt}", True, color)
             ox = (settings.INTERNAL_WIDTH - text.get_width()) // 2
-            oy = ty + 50 + i * 25
+            oy = logo_rect.bottom + 30 + i * 22
             surface.blit(text, (ox, oy))
