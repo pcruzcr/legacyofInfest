@@ -76,8 +76,13 @@ class SceneManager:
             self.replace(TitleScene())
 
     def _on_player_died(self, **data: object) -> None:
-        """Handle player death — for now log and replace with title."""
-        logging.info("SceneManager: player died")
+        """Handle player death. If the current scene has a _respawn
+        method (e.g. StageScene), let it handle death internally."""
+        current = self._stack[-1] if self._stack else None
+        if current is not None and hasattr(current, "_respawn"):
+            logging.info("SceneManager: player died — scene handles respawn")
+            return
+        logging.info("SceneManager: player died — returning to title")
         from src.engine.scenes.title_scene import TitleScene
         self.replace(TitleScene())
 
