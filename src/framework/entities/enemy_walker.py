@@ -28,6 +28,7 @@ class EnemyWalker(EnemyBase):
         alert_speed: float = 75.0,
         damage_on_contact: float = 0.5,
         max_health: float = 2.0,
+        zone: int = 0,
     ) -> None:
         """Initialize the walker enemy."""
         super().__init__(
@@ -51,6 +52,9 @@ class EnemyWalker(EnemyBase):
         # Set rect size
         self.rect.width = 24
         self.rect.height = 28
+
+        # Load sprites
+        self._load_zone_sprites(zone, "walk", 16, 12)
 
     def set_collision_rects(self, rects: list[pygame.Rect]) -> None:
         """Provide collision rects for ledge detection."""
@@ -106,8 +110,10 @@ class EnemyWalker(EnemyBase):
 
     def _get_animation_state(self) -> str:
         """Return animation key for current state."""
-        if self.state == EnemyState.ALERT:
-            return "alert"
+        if self.state == EnemyState.DYING:
+            return "die"
+        if self.state == EnemyState.HURT:
+            return "hurt"
         return "walk"
 
     def _build_hitbox(self) -> pygame.Rect:
@@ -118,30 +124,4 @@ class EnemyWalker(EnemyBase):
         """Return local-space hurtbox rect."""
         return pygame.Rect(4, 2, 24, 28)
 
-    # ──────────────────────────────────────────────
-    # Custom draw (red placeholder)
-    # ──────────────────────────────────────────────
-
-    def draw(
-        self,
-        surface: pygame.Surface,
-        camera_offset: pygame.Vector2,
-    ) -> None:
-        """Draw the walker as a red rectangle with white border."""
-        if not self.is_visible or not self.is_alive:
-            return
-
-        screen_x = int(self.position.x - camera_offset.x)
-        screen_y = int(self.position.y - camera_offset.y)
-
-        pygame.draw.rect(
-            surface,
-            (200, 0, 0),
-            (screen_x, screen_y, self.rect.width, self.rect.height),
-        )
-        pygame.draw.rect(
-            surface,
-            (255, 255, 255),
-            (screen_x, screen_y, self.rect.width, self.rect.height),
-            1,
-        )
+    # Sprite rendering handled by EnemyBase.draw()

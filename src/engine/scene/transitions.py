@@ -6,15 +6,16 @@ Description: Visual transitions between scenes: FadeTransition and WipeTransitio
 """
 from __future__ import annotations
 import pygame
-from src.engine.core import settings
 
 
 class FadeTransition:
-    """Fade to/from black over a given duration."""
+    """Fade to/from a color over a given duration."""
 
-    def __init__(self, duration: float = 0.5, fade_in: bool = True) -> None:
+    def __init__(self, duration: float = 0.5, fade_in: bool = True,
+                 color: tuple[int, int, int] = (0, 0, 0)) -> None:
         self.duration: float = duration
         self.fade_in: bool = fade_in
+        self._color: tuple[int, int, int] = color
         self.elapsed: float = 0.0
         self.active: bool = False
 
@@ -40,20 +41,26 @@ class FadeTransition:
             alpha = int(progress * 255)
         alpha = max(0, min(255, alpha))
         overlay = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, alpha))
+        overlay.fill((*self._color, alpha))
         surface.blit(overlay, (0, 0))
 
     @property
-    def is_done(self) -> bool:
+    def is_complete(self) -> bool:
         return not self.active
+
+    @property
+    def is_done(self) -> bool:
+        return self.is_complete
 
 
 class WipeTransition:
     """Horizontal wipe transition between scenes."""
 
-    def __init__(self, duration: float = 0.5, direction: str = "left") -> None:
+    def __init__(self, duration: float = 0.5,
+                 direction: str = "left_to_right") -> None:
         self.duration: float = duration
-        self.direction: str = direction
+        dir_map = {"left_to_right": "left", "right_to_left": "right"}
+        self.direction: str = dir_map.get(direction, "left")
         self.elapsed: float = 0.0
         self.active: bool = False
         self._old_surface: pygame.Surface | None = None
@@ -84,5 +91,9 @@ class WipeTransition:
                          (offset, 0, width, surface.get_height()))
 
     @property
-    def is_done(self) -> bool:
+    def is_complete(self) -> bool:
         return not self.active
+
+    @property
+    def is_done(self) -> bool:
+        return self.is_complete

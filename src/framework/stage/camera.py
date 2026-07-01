@@ -4,23 +4,37 @@ System: framework.stage
 Academic Unit: Unit II (Vectors, Transformations)
 Description: Viewport camera that follows a target entity (the player).
 Converts world-space coordinates to screen-space coordinates via
-offset. Supports map boundary clamping.
+offset. Supports map boundary clamping and per-layer parallax factors.
 """
 from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import pygame
 
 from src.engine.core import settings
 
+if TYPE_CHECKING:
+    from src.framework.entities.base_entity import BaseEntity
+
 
 class Camera:
     """Viewport camera that follows a target entity with smooth LERP."""
 
-    def __init__(self) -> None:
+    def __init__(self, lerp_speed: float = 8.0) -> None:
         self.offset: pygame.Vector2 = pygame.Vector2(0, 0)
-        self._target: pygame.Vector2 | None = None
+        self._target: BaseEntity | None = None
         self._map_width: int = 0
         self._map_height: int = 0
+        self.lerp_speed: float = lerp_speed
+        self._parallax_factors: dict[str, float] = {
+            "BG_Far": 0.15,
+            "BG_Mid": 0.40,
+            "BG_Near": 0.70,
+            "Terrain": 1.0,
+            "Terrain_Detail": 1.0,
+            "FG_Overlay": 1.0,
+        }
 
     def follow(self, target) -> None:
         """Set the entity the camera follows."""
@@ -44,8 +58,20 @@ class Camera:
         if self._map_height > 0:
             target_y = max(0, min(target_y, self._map_height - settings.INTERNAL_HEIGHT))
 
-        self.offset.x += (target_x - self.offset.x) * 8.0 * dt
-        self.offset.y += (target_y - self.offset.y) * 8.0 * dt
+        self.offset.x += (target_x - self.offset.x) * self.lerp_speed * dt
+        self.offset.y += (target_y - self.offset.y) * self.lerp_speed * dt
+
+    def set_parallax_factor(self, layer_name: str, factor: float) -> None:
+        """Set the parallax factor for a named layer (0.0 = static, 1.0 = full follow)."""
+        self._parallax_factors[layer_name] = factor
+
+    def layer_offset(self, layer_name: str) -> pygame.Vector2:
+        """Return the camera offset adjusted for a layer's parallax factor."""
+        factor = self._parallax_factors.get(layer_name, 1.0)
+        return pygame.Vector2(
+            self.offset.x * factor,
+            self.offset.y * factor,
+        )
 
     def world_to_screen(self, pos: pygame.Vector2) -> pygame.Vector2:
         """Convert world-space coordinates to screen-space."""

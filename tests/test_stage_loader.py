@@ -7,9 +7,7 @@ collision rects, missing layer/PlayerSpawn errors.
 """
 from pathlib import Path
 
-import pygame
 
-from src.framework import FrameworkUsageError
 from src.framework.entities.enemy_walker import EnemyWalker
 from src.framework.stage.stage_loader import StageLoader, StageData
 

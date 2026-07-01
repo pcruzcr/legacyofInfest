@@ -6,7 +6,6 @@ Description: Tests for Checkpoint single-activation and event emission.
 """
 import pygame
 
-from src.engine.core.event_bus import EventBus
 from src.framework.stage.checkpoint import Checkpoint
 
 

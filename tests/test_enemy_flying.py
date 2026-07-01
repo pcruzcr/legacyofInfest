@@ -3,9 +3,9 @@ Module: test_enemy_flying
 System: tests
 Academic Unit: N/A
 Description: Tests for EnemyFlying sine movement, alert acceleration,
-and deferred modes (Bézier/patrol).
+and path modes (Bézier / waypoint patrol).
 """
-import pytest
+import math
 
 import pygame
 
@@ -55,19 +55,88 @@ class TestFlyingSineMovement:
         assert abs(x_after - x_before) > 0.0
 
 
-class TestFlyingDeferredModes:
-    """Tests for modes deferred to Phase 8."""
+class TestFlyingBezierMode:
+    """Tests for Bézier spline path mode."""
 
-    def test_bezier_raises_not_implemented(self) -> None:
+    def test_bezier_moves_along_path(self) -> None:
+        waypoints = [(0.0, 0.0), (64.0, -48.0), (128.0, 0.0)]
         e = EnemyFlying(
-            pygame.Vector2(0.0, 0.0), flight_mode="bezier"
+            pygame.Vector2(0.0, 0.0),
+            flight_mode="bezier",
+            waypoints=waypoints,
         )
-        with pytest.raises(NotImplementedError):
+        x_before = e.position.x
+        # Advance along the path
+        for _ in range(60):
             e._patrol_behavior(1.0 / 60.0)
+        # Should have moved, and progress should have advanced
+        assert e.position.x != x_before, (
+            f"Expected x to change, got {e.position.x}"
+        )
+        assert e._path_progress > 0.0
 
-    def test_patrol_raises_not_implemented(self) -> None:
+    def test_bezier_loops_at_end(self) -> None:
+        waypoints = [(0.0, 0.0), (32.0, -24.0), (64.0, 0.0)]
         e = EnemyFlying(
-            pygame.Vector2(0.0, 0.0), flight_mode="patrol"
+            pygame.Vector2(0.0, 0.0),
+            flight_mode="bezier",
+            waypoints=waypoints,
         )
-        with pytest.raises(NotImplementedError):
+        # Run many frames to wrap around
+        for _ in range(300):
             e._patrol_behavior(1.0 / 60.0)
+        # Should still be in valid range
+        assert 0.0 <= e._path_progress <= 1.0
+        assert not math.isnan(e.position.x)
+        assert not math.isnan(e.position.y)
+
+    def test_bezier_default_waypoints(self) -> None:
+        """Without explicit waypoints, bezier mode uses a diamond path."""
+        e = EnemyFlying(
+            pygame.Vector2(100.0, 100.0),
+            flight_mode="bezier",
+        )
+        e._patrol_behavior(1.0 / 60.0)
+        assert not math.isnan(e.position.x)
+        assert not math.isnan(e.position.y)
+
+
+class TestFlyingPatrolMode:
+    """Tests for linear waypoint patrol mode."""
+
+    def test_patrol_moves_toward_first_waypoint(self) -> None:
+        """Spawn at origin, target at (100,0) — moves right."""
+        waypoints = [(100.0, 0.0), (200.0, 0.0)]
+        e = EnemyFlying(
+            pygame.Vector2(0.0, 0.0),
+            flight_mode="patrol",
+            waypoints=waypoints,
+        )
+        e._patrol_behavior(1.0 / 60.0)
+        assert e.position.x > 0.0
+        assert e.facing_direction == 1
+
+    def test_patrol_loops_through_waypoints(self) -> None:
+        waypoints = [(0.0, 0.0), (100.0, 0.0), (100.0, 100.0)]
+        e = EnemyFlying(
+            pygame.Vector2(0.0, 0.0),
+            flight_mode="patrol",
+            waypoints=waypoints,
+            flight_speed=200.0,
+        )
+        # Run enough frames to reach all waypoints and loop
+        for _ in range(200):
+            e._patrol_behavior(1.0 / 60.0)
+        # Should have wrapped waypoint_index back to 0
+        assert e._waypoint_index == 0 or e._waypoint_index == 1
+
+    def test_patrol_faces_target_direction(self) -> None:
+        waypoints = [(100.0, 0.0), (0.0, 0.0)]
+        e = EnemyFlying(
+            pygame.Vector2(100.0, 0.0),
+            flight_mode="patrol",
+            waypoints=waypoints,
+        )
+        e._patrol_behavior(1.0 / 60.0)
+        # Should move left toward (0, 0)
+        assert e.facing_direction == -1

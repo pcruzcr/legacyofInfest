@@ -13,10 +13,19 @@ import pygame
 class BaseScene(abc.ABC):
     """Abstract scene that all game scenes must implement."""
 
+    def awake(self) -> None:
+        """Called once when the scene is first instantiated (before on_enter)."""
+
+    def start(self) -> None:
+        """Called after awake, when the scene becomes active."""
+
     @abc.abstractmethod
     def on_enter(self) -> None:
         """Called when the scene becomes active."""
         ...
+
+    def destroy(self) -> None:
+        """Called when the scene is permanently removed. Override to clean up."""
 
     @abc.abstractmethod
     def on_exit(self) -> None:

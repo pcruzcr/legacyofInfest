@@ -6,7 +6,6 @@ Description: Pure math utility functions: lerp, clamp, ease curves,
 and vector operations used across the engine and framework.
 """
 from __future__ import annotations
-import math
 import pygame
 
 

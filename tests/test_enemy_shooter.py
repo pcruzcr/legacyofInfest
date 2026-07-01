@@ -5,7 +5,6 @@ Academic Unit: N/A
 Description: Tests for EnemyShooter firing, projectile creation,
 aiming (atan2), and fire rate limiting.
 """
-import math
 
 import pygame
 
