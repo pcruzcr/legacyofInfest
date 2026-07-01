@@ -3,16 +3,13 @@ from __future__ import annotations
 import pygame
 
 from src.engine.core import settings
-from src.engine.core.app import App
 from src.engine.input.input_manager import InputManager
 from src.framework.entities.player import Player, PlayerState
 
 
-def _setup_input() -> InputManager:
-    """Set up App._input_manager with a fresh InputManager for testing."""
-    im = InputManager()
-    App._input_manager = im
-    return im
+def _make_input() -> InputManager:
+    """Create a fresh InputManager for testing."""
+    return InputManager()
 
 
 def _press_key(im: InputManager, key: int) -> None:
@@ -25,17 +22,17 @@ class TestIdleWalking:
     """Tests for IDLE and WALKING state transitions via real input."""
 
     def test_idle_to_walking_on_move_input(self) -> None:
-        im = _setup_input()
+        im = _make_input()
         player = Player(pygame.Vector2(50.0, 192.0))
         player.is_grounded = True
         player._state = PlayerState.IDLE
         _press_key(im, pygame.K_RIGHT)
-        player.update(1.0 / 60.0, [pygame.Rect(0, 224, 640, 32)])
+        player.update(1.0 / 60.0, [pygame.Rect(0, 224, 640, 32)], im)
         assert player.state == PlayerState.WALKING
         assert player.velocity.x > 0
 
     def test_walking_to_idle_on_input_release(self) -> None:
-        _setup_input()
+        _make_input()
         player = Player(pygame.Vector2(50.0, 192.0))
         player.is_grounded = True
         player._state = PlayerState.WALKING
@@ -48,16 +45,16 @@ class TestJumpingFalling:
     """Tests for JUMPING and FALLING state transitions."""
 
     def test_grounded_jump_input_to_jumping(self) -> None:
-        im = _setup_input()
+        im = _make_input()
         player = Player(pygame.Vector2(50.0, 192.0))
         player.is_grounded = True
         player._state = PlayerState.IDLE
         _press_key(im, pygame.K_SPACE)
-        player.update(1.0 / 60.0, [pygame.Rect(0, 224, 640, 32)])
+        player.update(1.0 / 60.0, [pygame.Rect(0, 224, 640, 32)], im)
         assert player.state == PlayerState.JUMPING
 
     def test_jumping_to_falling_at_peak(self) -> None:
-        _setup_input()
+        _make_input()
         player = Player(pygame.Vector2(50.0, 0.0))
         player.is_grounded = False
         player._state = PlayerState.JUMPING
@@ -68,17 +65,14 @@ class TestJumpingFalling:
         assert player.state == PlayerState.FALLING
 
     def test_falling_to_idle_on_land(self) -> None:
-        _setup_input()
+        _make_input()
         player = Player(pygame.Vector2(50.0, 160.0))
         player.is_grounded = False
         player._state = PlayerState.FALLING
         player.velocity.y = 200.0
         dt = 1.0 / 60.0
         rects = [pygame.Rect(0, 192, 640, 32)]
-        # Frame 1: state machine runs (sees not grounded + vy>0 → stays FALLING),
-        # then physics applies vy, collision lands player, sets grounded=True
         player.update(dt, rects)
-        # Frame 2: state machine sees grounded + move_x=0 → IDLE
         player.update(dt, rects)
         assert player.state == PlayerState.IDLE
 
@@ -87,16 +81,16 @@ class TestCrouch:
     """Tests for CROUCHING state."""
 
     def test_crouch_locks_horizontal_velocity(self) -> None:
-        im = _setup_input()
+        im = _make_input()
         player = Player(pygame.Vector2(50.0, 192.0))
         player.is_grounded = True
         player._state = PlayerState.IDLE
         _press_key(im, pygame.K_DOWN)
-        player.update(1.0 / 60.0, [pygame.Rect(0, 224, 640, 32)])
+        player.update(1.0 / 60.0, [pygame.Rect(0, 224, 640, 32)], im)
         assert player.state == PlayerState.CROUCHING
 
     def test_crouch_keeps_feet_on_floor(self) -> None:
-        _setup_input()
+        im = _make_input()
         player = Player(pygame.Vector2(50.0, 161.0))
         player.is_grounded = True
         player._state = PlayerState.IDLE
@@ -106,11 +100,9 @@ class TestCrouch:
         assert player.is_grounded
         assert player.rect.bottom == 192
         standing_bottom = player.rect.bottom
-        from src.engine.core.app import App
-        im = App._input_manager
         im._pressed_this_frame.add(pygame.K_DOWN)
         im._held.add(pygame.K_DOWN)
-        player.update(1.0 / 60.0, rects)
+        player.update(1.0 / 60.0, rects, im)
         assert player.state == PlayerState.CROUCHING
         assert player.rect.bottom == standing_bottom
 

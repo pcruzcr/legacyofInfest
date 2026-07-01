@@ -7,8 +7,7 @@ Description: Tests for AssetLoader: caching, fallback placeholders for missing a
 from __future__ import annotations
 import pygame
 import pytest
-from pathlib import Path
-from src.engine.utils.asset_loader import AssetLoader, PLACEHOLDER_SIZES
+from src.engine.utils.asset_loader import AssetLoader
 
 
 @pytest.fixture(autouse=True)

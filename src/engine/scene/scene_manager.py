@@ -5,6 +5,7 @@ Academic Unit: N/A
 Description: Manages the scene stack with push/pop/replace semantics.
 Also listens for STAGE_COMPLETE and PLAYER_DIED events to advance
 or trigger game-over flow via StageRegistry.
+Automatically cleans up EventBus subscriptions when scenes exit.
 """
 from __future__ import annotations
 import logging
@@ -18,6 +19,8 @@ if TYPE_CHECKING:
 class SceneManager:
     """Manages a stack of scenes with push/pop/replace semantics."""
 
+    _subscribed_events: list[str] = ["STAGE_COMPLETE", "PLAYER_DIED"]
+
     def __init__(self) -> None:
         self._stack: list[BaseScene] = []
         self._stage_queue: list[type[BaseScene]] = []
@@ -25,6 +28,11 @@ class SceneManager:
         # Subscribe to global events
         EventBus.subscribe("STAGE_COMPLETE", self._on_stage_complete)
         EventBus.subscribe("PLAYER_DIED", self._on_player_died)
+
+    def cleanup(self) -> None:
+        """Unsubscribe all event listeners. Call when SceneManager is discarded."""
+        for event in self._subscribed_events:
+            EventBus.unsubscribe(event, getattr(self, f"_on_{event.lower()}"))
 
     @property
     def current(self) -> BaseScene:
@@ -38,6 +46,8 @@ class SceneManager:
         if self._stack:
             self._stack[-1].on_pause()
         self._stack.append(scene)
+        scene.awake()
+        scene.start()
         scene.on_enter()
 
     def pop(self) -> None:
@@ -46,6 +56,7 @@ class SceneManager:
             return
         top = self._stack.pop()
         top.on_exit()
+        top.destroy()
         if self._stack:
             self._stack[-1].on_resume()
 
@@ -54,7 +65,10 @@ class SceneManager:
         if self._stack:
             top = self._stack.pop()
             top.on_exit()
+            top.destroy()
         self._stack.append(scene)
+        scene.awake()
+        scene.start()
         scene.on_enter()
 
     def set_stage_queue(self, stages: list[type[BaseScene]]) -> None:

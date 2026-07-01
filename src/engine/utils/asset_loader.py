@@ -224,47 +224,6 @@ class AssetLoader:
     # -------------------------------------------------------
 
     @classmethod
-    def play_music(
-        cls,
-        path: str | Path,
-        *,
-        volume: float = 1.0,
-        loop: bool = True,
-    ):
-
-        try:
-
-            pygame.mixer.music.load(
-                str(cls._resolve(path))
-            )
-
-            pygame.mixer.music.set_volume(volume)
-
-            pygame.mixer.music.play(
-                -1 if loop else 0
-            )
-
-        except Exception as exc:
-
-            logging.warning(exc)
-
-    # -------------------------------------------------------
-
-    @staticmethod
-    def stop_music():
-
-        pygame.mixer.music.stop()
-
-    # -------------------------------------------------------
-
-    @staticmethod
-    def fadeout(ms: int = 500):
-
-        pygame.mixer.music.fadeout(ms)
-
-    # -------------------------------------------------------
-
-    @classmethod
     def load_sprite_sheet(
         cls,
         path: str | Path,

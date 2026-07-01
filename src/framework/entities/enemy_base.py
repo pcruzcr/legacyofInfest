@@ -13,7 +13,9 @@ from enum import Enum
 
 import pygame
 
+from src.engine.core import settings
 from src.engine.core.event_bus import EventBus
+from src.engine.utils.asset_loader import AssetLoader
 from src.framework.entities.base_entity import BaseEntity
 
 
@@ -62,6 +64,7 @@ class EnemyBase(BaseEntity):
         self.detection_range_x: float = detection_range_x
         self.detection_range_y: float = detection_range_y
         self._deaggro_margin: float = 32.0
+        self._player_ref: pygame.Rect | None = None
 
         # --- State ---
         self.state: EnemyState = EnemyState.PATROL
@@ -74,6 +77,12 @@ class EnemyBase(BaseEntity):
         # --- Animation ---
         self._animation_timer: float = 0.0
         self._animation_frame: int = 0
+
+        # --- Sprite ---
+        self._sprite_zone: int = 0
+        self._sprite_frames: dict[str, list[pygame.Surface]] = {}
+        self._sprite_fw: int = 16
+        self._sprite_fh: int = 12
 
         # --- Rect ---
         self.rect = pygame.Rect(
@@ -98,14 +107,36 @@ class EnemyBase(BaseEntity):
         self._update_rects()
         self._tick_cooldowns(dt)
 
+    def _load_zone_sprites(self, zone: int, sprite_name: str, fw: int, fh: int) -> None:
+        """Load zone-specific enemy sprite sheets."""
+        self._sprite_zone = zone
+        self._sprite_fw = fw
+        self._sprite_fh = fh
+        zone_key = f"zone{zone}" if zone > 0 else "zone1"
+        base = settings.ASSETS_DIR / "sprites" / "enemies" / zone_key
+        for key, fname in [("walk", f"enemy_{zone_key}_walk.png"),
+                           ("hurt", f"enemy_{zone_key}_hurt.png"),
+                           ("die", f"enemy_{zone_key}_die.png")]:
+            path = base / fname
+            frames = AssetLoader.load_sprite_sheet(path, fw, fh)
+            self._sprite_frames[key] = frames
+        # Also try fly/shoot sprites
+        extra = {"fly": f"enemy_fly_{zone_key}.png", "shoot": f"enemy_shoot_{zone_key}.png"}
+        for key, fname in extra.items():
+            path = base / fname
+            try:
+                frames = AssetLoader.load_sprite_sheet(path, fw, fh)
+                self._sprite_frames[key] = frames
+            except Exception:
+                pass
+
     def draw(
         self,
         surface: pygame.Surface,
         camera_offset: pygame.Vector2,
     ) -> None:
         """
-        Draw the enemy placeholder to the surface.
-        Subclasses may override for custom rendering.
+        Draw the enemy via sprite sheet or placeholder fallback.
         """
         if not self.is_visible or not self.is_alive:
             return
@@ -113,7 +144,20 @@ class EnemyBase(BaseEntity):
         screen_x = int(self.position.x - camera_offset.x)
         screen_y = int(self.position.y - camera_offset.y)
 
-        # Default placeholder: red rect with white border
+        # Try sprite rendering
+        anim_key = self._get_animation_state()
+        frames = self._sprite_frames.get(anim_key)
+        if frames:
+            frame_idx = min(self._animation_frame, len(frames) - 1)
+            frame = frames[frame_idx]
+            if self.facing_direction < 0:
+                frame = pygame.transform.flip(frame, True, False)
+            ox = (self.rect.width - self._sprite_fw) // 2
+            oy = self.rect.height - self._sprite_fh
+            surface.blit(frame, (screen_x + ox, screen_y + oy))
+            return
+
+        # Fallback placeholder
         pygame.draw.rect(
             surface,
             (200, 0, 0),
@@ -274,16 +318,18 @@ class EnemyBase(BaseEntity):
             self.state = EnemyState.PATROL
             self._patrol_behavior(dt)
 
+    def set_player_ref(self, player_rect: pygame.Rect) -> None:
+        """Set or update the reference to the player's rect for detection."""
+        self._player_ref = player_rect
+
     def _check_detection_range(self) -> bool:
         """
         Check if player is within detection range.
         Returns True if player is close enough.
         """
-        # This is a simplified check — the actual player reference
-        # must be provided by the stage collision system.
-        # Returns False by default; subclasses or stage code
-        # should override or provide player reference.
-        return False
+        if self._player_ref is None:
+            return False
+        return self._player_in_range(self._player_ref)
 
     def _player_in_range(self, player_rect: pygame.Rect) -> bool:
         """

@@ -10,7 +10,6 @@ import logging
 from pathlib import Path
 import pygame
 
-from src.engine.utils.asset_loader import AssetLoader
 from src.engine.audio.sound_bank import SoundBank
 
 

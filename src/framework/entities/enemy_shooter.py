@@ -101,6 +101,7 @@ class EnemyShooter(EnemyBase):
         patrol_length: float = 0.0,
         max_health: float = 3.0,
         damage_on_contact: float = 0.25,
+        zone: int = 0,
     ) -> None:
         """Initialize the shooter enemy."""
         super().__init__(
@@ -124,6 +125,9 @@ class EnemyShooter(EnemyBase):
         # Rect size
         self.rect.width = 16
         self.rect.height = 24
+
+        # Load sprites
+        self._load_zone_sprites(zone, "shoot", 12, 12)
 
     def set_player_ref(self, player_rect: pygame.Rect) -> None:
         """Provide the player rect for aiming."""
@@ -209,9 +213,13 @@ class EnemyShooter(EnemyBase):
 
     def _get_animation_state(self) -> str:
         """Return animation key for current state."""
+        if self.state == EnemyState.DYING:
+            return "die"
+        if self.state == EnemyState.HURT:
+            return "hurt"
         if self.state == EnemyState.ALERT:
-            return "aim"
-        return "idle"
+            return "shoot"
+        return "walk"
 
     def _build_hitbox(self) -> pygame.Rect:
         """Shooter has no active attack hitbox."""
@@ -222,7 +230,7 @@ class EnemyShooter(EnemyBase):
         return pygame.Rect(4, 2, 24, 30)
 
     # ──────────────────────────────────────────────
-    # Custom draw (purple placeholder)
+    # Sprite rendering
     # ──────────────────────────────────────────────
 
     def draw(
@@ -230,24 +238,28 @@ class EnemyShooter(EnemyBase):
         surface: pygame.Surface,
         camera_offset: pygame.Vector2,
     ) -> None:
-        """Draw the shooter as a purple rectangle with white border."""
+        """Draw shooter using sprite, then overlay projectiles."""
         if not self.is_visible or not self.is_alive:
             return
 
         screen_x = int(self.position.x - camera_offset.x)
         screen_y = int(self.position.y - camera_offset.y)
 
-        pygame.draw.rect(
-            surface,
-            (150, 0, 200),
-            (screen_x, screen_y, self.rect.width, self.rect.height),
-        )
-        pygame.draw.rect(
-            surface,
-            (255, 255, 255),
-            (screen_x, screen_y, self.rect.width, self.rect.height),
-            1,
-        )
+        # Sprite or fallback
+        frames = self._sprite_frames.get(self._get_animation_state())
+        if frames:
+            frame_idx = min(self._animation_frame, len(frames) - 1)
+            frame = frames[frame_idx]
+            if self.facing_direction < 0:
+                frame = pygame.transform.flip(frame, True, False)
+            ox = (self.rect.width - self._sprite_fw) // 2
+            oy = self.rect.height - self._sprite_fh
+            surface.blit(frame, (screen_x + ox, screen_y + oy))
+        else:
+            pygame.draw.rect(surface, (150, 0, 200),
+                             (screen_x, screen_y, self.rect.width, self.rect.height))
+            pygame.draw.rect(surface, (255, 255, 255),
+                             (screen_x, screen_y, self.rect.width, self.rect.height), 1)
 
         # Draw active projectiles
         self.clear_expired_projectiles()

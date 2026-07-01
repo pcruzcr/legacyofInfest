@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import pygame
 
 from src.engine.core import settings
@@ -17,7 +15,7 @@ class SplashScene(BaseScene):
 
     def __init__(self) -> None:
         self._timer = 0.0
-        assets = Path("assets") / "splash"
+        assets = settings.ASSETS_DIR / "splash"
 
         self._background = AssetLoader.load_image(
             assets / "bck1.png",
@@ -34,21 +32,29 @@ class SplashScene(BaseScene):
             size=(int(lw * scale), int(lh * scale)),
         )
 
-        self._music = assets / "bck.mp3"
+        self._music = assets / "bck.wav"
 
         self._font_game = AssetLoader.load_font(
-            Path("fonts") / "game.ttf", 14,
+            settings.ASSETS_DIR / "fonts" / "game.ttf", 14,
         )
         self._font_small = AssetLoader.load_font(
-            Path("fonts") / "game.ttf", 10,
+            settings.ASSETS_DIR / "fonts" / "game.ttf", 10,
         )
+
+    def _get_audio(self):
+        from src.engine.core.app import App
+        return App._audio_manager if App._instance is not None else None
 
     def on_enter(self) -> None:
         self._timer = 0.0
-        AssetLoader.play_music(self._music, volume=0.60, loop=False)
+        audio = self._get_audio()
+        if audio is not None:
+            audio.play_music(self._music, loops=0)
 
     def on_exit(self) -> None:
-        AssetLoader.fadeout(500)
+        audio = self._get_audio()
+        if audio is not None:
+            audio.stop_music()
 
     def update(self, dt: float) -> None:
         self._timer += dt

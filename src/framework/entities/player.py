@@ -12,9 +12,31 @@ from enum import Enum
 
 import pygame
 
+from typing import TYPE_CHECKING
 from src.engine.core import settings
 from src.engine.core.event_bus import EventBus
+from src.engine.utils.asset_loader import AssetLoader
 from src.framework.entities.base_entity import BaseEntity
+
+if TYPE_CHECKING:
+    from src.engine.input.input_manager import InputManager
+
+
+SPRITE_W = 32
+SPRITE_H = 32
+
+# State -> (filename, frame_count)
+_PLAYER_SPRITE_MAP: dict[str, tuple[str, int]] = {
+    "IDLE": ("player_idle.png", 4),
+    "WALKING": ("player_walk.png", 8),
+    "JUMPING": ("player_jump.png", 3),
+    "FALLING": ("player_fall.png", 2),
+    "CROUCHING": ("player_crouch.png", 2),
+    "SHORT_ATTACK": ("player_short_attack.png", 6),
+    "LONG_ATTACK": ("player_long_attack.png", 10),
+    "HURT": ("player_hurt.png", 4),
+    "DYING": ("player_die.png", 8),
+}
 
 
 class PlayerState(str, Enum):
@@ -32,7 +54,7 @@ class PlayerState(str, Enum):
 
 class Player(BaseEntity):
     """
-    Player entity with physics, state machine, damage, and combat systems.
+    Player entity with physics, state machine, damage, combat, and sprite rendering.
     Inherits from BaseEntity.
     """
 
@@ -76,6 +98,18 @@ class Player(BaseEntity):
             20,
             32,
         )
+
+        # --- Sprite frames ---
+        self._sprite_frames: dict[str, list[pygame.Surface]] = {}
+        self._load_sprites()
+
+    def _load_sprites(self) -> None:
+        """Load all player sprite sheets into frame lists."""
+        sprite_dir = settings.ASSETS_DIR / "sprites" / "player"
+        for state_name, (filename, _) in _PLAYER_SPRITE_MAP.items():
+            path = sprite_dir / filename
+            frames = AssetLoader.load_sprite_sheet(path, SPRITE_W, SPRITE_H)
+            self._sprite_frames[state_name] = frames
 
     # ──────────────────────────────────────────────
     # Properties (read-only public API)
@@ -184,10 +218,12 @@ class Player(BaseEntity):
         self,
         dt: float,
         collision_rects: list[pygame.Rect] | None = None,
+        input_manager: InputManager | None = None,
     ) -> None:
         """
         Main update loop. Called every frame.
         If collision_rects is provided, performs AABB collision resolution.
+        input_manager is injected by the stage — never accessed via App singleton.
         """
         if collision_rects is None:
             collision_rects = []
@@ -196,7 +232,7 @@ class Player(BaseEntity):
         self._tick_timers(dt)
 
         # State machine
-        self._run_state_machine(dt)
+        self._run_state_machine(dt, input_manager)
 
         # Physics (gravity + movement)
         self._apply_physics(dt)
@@ -217,7 +253,7 @@ class Player(BaseEntity):
         camera_offset: pygame.Vector2,
     ) -> None:
         """
-        Draw the player placeholder (blue rectangle) to the surface.
+        Draw the player sprite to the surface.
         camera_offset is subtracted from world position.
         """
         if not self.is_visible:
@@ -232,39 +268,24 @@ class Player(BaseEntity):
             if not self._flash_visible:
                 return
 
+        frames = self._sprite_frames.get(self._state.value)
+        if not frames:
+            return
+
+        frame_idx = min(self._animation_frame, len(frames) - 1)
+        frame = frames[frame_idx]
+
+        if self.facing_direction < 0:
+            frame = pygame.transform.flip(frame, True, False)
+
         screen_x = int(self.position.x - camera_offset.x)
         screen_y = int(self.position.y - camera_offset.y)
 
-        # Determine size based on state
-        if self._state == PlayerState.CROUCHING:
-            w, h = 20, 20
-        else:
-            w, h = 20, 32
+        # Center the 32-wide sprite on the 20-wide collision rect
+        offset_x = (self.rect.width - SPRITE_W) // 2  # -6
+        offset_y = self.rect.height - SPRITE_H  # 0 or -12 (sprite bottom aligns with rect bottom)
 
-        # Blue placeholder rect
-        pygame.draw.rect(
-            surface,
-            (0, 120, 255),
-            (screen_x, screen_y, w, h),
-        )
-        # White border
-        pygame.draw.rect(
-            surface,
-            (255, 255, 255),
-            (screen_x, screen_y, w, h),
-            1,
-        )
-
-        # Direction indicator (yellow line)
-        cx = screen_x + w // 2
-        tip_x = cx + (8 * self.facing_direction)
-        pygame.draw.line(
-            surface,
-            (255, 255, 0),
-            (cx, screen_y + 8),
-            (tip_x, screen_y + 8),
-            2,
-        )
+        surface.blit(frame, (screen_x + offset_x, screen_y + offset_y))
 
     # ──────────────────────────────────────────────
     # Timer ticking
@@ -283,12 +304,14 @@ class Player(BaseEntity):
     # State machine
     # ──────────────────────────────────────────────
 
-    def _run_state_machine(self, dt: float) -> None:
+    def _run_state_machine(self, dt: float, input_manager: InputManager | None = None) -> None:
         """
         Evaluate current state and handle transitions.
-        Input is read from InputManager via action checks.
+        Input is read from the injected InputManager.
         Falls back to no-input state (IDLE) if InputManager is unavailable.
         """
+        from src.engine.input.action_map import Action
+
         # DYING is terminal
         if self._state == PlayerState.DYING:
             return
@@ -304,7 +327,7 @@ class Player(BaseEntity):
             self._update_attack_state(dt)
             return
 
-        # Read input from InputManager (graceful fallback if unavailable)
+        # Read input from injected InputManager (graceful fallback if unavailable)
         move_x = 0
         jump_pressed = False
         jump_held = False
@@ -312,19 +335,17 @@ class Player(BaseEntity):
         short_attack = False
         long_attack = False
 
-        from src.engine.core.app import App
-        from src.engine.input.action_map import Action
-        im = App._input_manager
+        im = input_manager
         if im is not None:
-            if im.is_held(Action.MOVE_LEFT):
+            if im.is_action_held(Action.MOVE_LEFT):
                 move_x -= 1
-            if im.is_held(Action.MOVE_RIGHT):
+            if im.is_action_held(Action.MOVE_RIGHT):
                 move_x += 1
-            jump_pressed = im.is_pressed(Action.JUMP)
-            jump_held = im.is_held(Action.JUMP)
-            crouch_held = im.is_held(Action.CROUCH)
-            short_attack = im.is_pressed(Action.SHORT_ATTACK)
-            long_attack = im.is_pressed(Action.LONG_ATTACK)
+            jump_pressed = im.is_action_pressed(Action.JUMP)
+            jump_held = im.is_action_held(Action.JUMP)
+            crouch_held = im.is_action_held(Action.CROUCH)
+            short_attack = im.is_action_pressed(Action.SHORT_ATTACK)
+            long_attack = im.is_action_pressed(Action.LONG_ATTACK)
 
         # Attack input has priority
         if short_attack:
@@ -400,15 +421,24 @@ class Player(BaseEntity):
         self.velocity.x = 0.0
 
         if attack_type == PlayerState.SHORT_ATTACK:
-            self._attack_active_frames = [2, 3, 4]  # 1-indexed active frames
+            self._attack_active_frames = [2, 3, 4]
         else:
             self._attack_active_frames = [4, 5, 6, 7]
+
+    @property
+    def short_attack_duration(self) -> float:
+        return settings.PLAYER_SHORT_ATTACK_DURATION
+
+    @property
+    def long_attack_duration(self) -> float:
+        return settings.PLAYER_LONG_ATTACK_DURATION
 
     def _update_attack_state(self, dt: float) -> None:
         """Update attack animation and hitbox."""
         total_frames = 6 if self._state == PlayerState.SHORT_ATTACK else 10
         fps = 18.0 if self._state == PlayerState.SHORT_ATTACK else 16.0
-        cooldown = 0 if self._state == PlayerState.SHORT_ATTACK else (4 / fps)
+        cooldown = (settings.PLAYER_COOLDOWN_SHORT if self._state == PlayerState.SHORT_ATTACK
+                    else settings.PLAYER_COOLDOWN_LONG)
 
         self._attack_timer += dt
         frame_duration = 1.0 / fps
@@ -516,18 +546,26 @@ class Player(BaseEntity):
         )
 
         # --- X axis ---
+        collided_x = False
         for tile in collision_rects:
             if player_rect.colliderect(tile):
-                if self.velocity.x > 0:
-                    # Moving right: push left
+                # Skip floor tiles: rects entirely below player center are
+                # floors, not walls — they should only block Y, not X.
+                if tile.top >= player_rect.centery:
+                    continue
+                collided_x = True
+                # Push in the direction of smallest overlap
+                overlap_left = player_rect.right - tile.left
+                overlap_right = tile.right - player_rect.left
+                if overlap_left < overlap_right:
                     player_rect.right = tile.left
-                elif self.velocity.x < 0:
-                    # Moving left: push right
+                else:
                     player_rect.left = tile.right
                 self.velocity.x = 0.0
 
-        self.position.x = float(player_rect.x)
-        player_rect.x = int(self.position.x)
+        if collided_x:
+            self.position.x = float(player_rect.x)
+            player_rect.x = int(self.position.x)
 
         # --- Y axis ---
         # Use an inflated rect so touching edges (bottom == floor top)
@@ -535,8 +573,10 @@ class Player(BaseEntity):
         # comparisons (<, >), so it misses edge-aligned overlaps.
         collision_check_rect = player_rect.inflate(0, 2)
         self.is_grounded = False
+        collided_y = False
         for tile in collision_rects:
             if collision_check_rect.colliderect(tile):
+                collided_y = True
                 if self.velocity.y >= 0:
                     # Falling or stationary: land on top
                     player_rect.bottom = tile.top
@@ -547,7 +587,8 @@ class Player(BaseEntity):
                     player_rect.top = tile.bottom
                     self.velocity.y = 0.0
 
-        self.position.y = float(player_rect.y)
+        if collided_y:
+            self.position.y = float(player_rect.y)
 
     # ──────────────────────────────────────────────
     # Rect / Hurtbox sizing

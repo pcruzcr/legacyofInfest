@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import pygame
 
 from src.engine.core import settings
@@ -34,44 +32,69 @@ STORY_TEXTS: dict[int, tuple[str, str]] = {
 STORY_BG: dict[int, str] = {1: "h01.png", 2: "h02.png", 3: "h03.png"}
 
 
+class EmptyFallbackStage(BaseScene):
+    """Shown when no stages are discovered in src/stages/."""
+
+    def on_enter(self) -> None:
+        pass
+
+    def on_exit(self) -> None:
+        pass
+
+    def update(self, dt: float) -> None:
+        pass
+
+    def draw(self, surface: pygame.Surface) -> None:
+        surface.fill(settings.BG_COLOR)
+        f = pygame.font.Font(None, 16)
+        t = f.render("No stages found. Add a stage in src/stages/", True, (255, 255, 200))
+        surface.blit(t, (10, 100))
+
+
 class StoryScene(BaseScene):
     """Narrative story screen with chapter background and music."""
 
     def __init__(self, chapter: int) -> None:
         self._chapter: int = chapter
-        self._assets = Path("assets") / "story"
+        self._assets = settings.ASSETS_DIR / "story"
 
         self._background = AssetLoader.load_image(
             self._assets / STORY_BG[chapter],
             size=(settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
         )
 
-        self._music = self._assets / "story.mp3"
+        self._music = self._assets / "story.wav"
 
-        self._font_title = AssetLoader.load_font(Path("fonts") / "game.ttf", 20)
-        self._font_text = AssetLoader.load_font(Path("fonts") / "game.ttf", 14)
-        self._font_hint = AssetLoader.load_font(Path("fonts") / "game.ttf", 11)
+        self._font_title = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", 20)
+        self._font_text = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", 14)
+        self._font_hint = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", 11)
 
-    def on_enter(self) -> None:
-        if self._chapter == 1:
-            AssetLoader.play_music(self._music, volume=0.50)
-
-    def on_exit(self) -> None:
-        if self._chapter == 3:
-            AssetLoader.fadeout(300)
+    def _get_audio(self):
+        from src.engine.core.app import App
+        return App._audio_manager if App._instance is not None else None
 
     def _get_input(self):
         from src.engine.core.app import App
-        if App._instance is not None:
-            return App._instance.input_manager
-        return None
+        return App._input_manager if App._instance is not None else None
+
+    def on_enter(self) -> None:
+        if self._chapter == 1:
+            audio = self._get_audio()
+            if audio is not None:
+                audio.play_music(self._music)
+
+    def on_exit(self) -> None:
+        if self._chapter == 3:
+            audio = self._get_audio()
+            if audio is not None:
+                audio.stop_music()
 
     def update(self, dt: float) -> None:
         im = self._get_input()
         if im is None:
             return
 
-        if im.is_pressed(Action.CONFIRM):
+        if im.is_action_pressed(Action.CONFIRM):
             if self._chapter < 3:
                 from src.engine.core.app import App
                 if App._instance is not None:
@@ -79,23 +102,13 @@ class StoryScene(BaseScene):
             else:
                 from src.engine.core.app import App
                 from src.engine.core.stage_registry import discover_stages
-                from src.engine.scene.base_scene import BaseScene
                 if App._instance is not None:
                     stages = discover_stages()
                     if stages:
                         App._instance.scene_manager.set_stage_queue(stages)
                         App._instance.scene_manager.replace(stages[0]())
                     else:
-                        class EmptyStage(BaseScene):
-                            def on_enter(self): pass
-                            def on_exit(self): pass
-                            def update(self, dt): pass
-                            def draw(self, surface):
-                                surface.fill(settings.BG_COLOR)
-                                f = pygame.font.Font(None, 16)
-                                t = f.render("No stages found. Add a stage in src/stages/", True, (255, 255, 200))
-                                surface.blit(t, (10, 100))
-                        App._instance.scene_manager.replace(EmptyStage())
+                        App._instance.scene_manager.replace(EmptyFallbackStage())
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.blit(self._background, (0, 0))

@@ -25,9 +25,14 @@ class Checkpoint(BaseEntity):
         self.layer = 3
 
     def update(self, dt: float) -> None:
-        """Checks player overlap; emits CHECKPOINT_REACHED on first activation."""
+        """Checkpoint state is driven by check_collision() — no per-frame logic needed."""
+
+    def check_collision(self, player_rect: pygame.Rect) -> None:
+        """Check if player overlaps this checkpoint rect."""
         if self._activated:
             return
+        if self.rect.colliderect(player_rect):
+            self.activate()
 
     def activate(self) -> None:
         """Activate this checkpoint and emit the event."""

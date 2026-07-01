@@ -5,7 +5,6 @@ Academic Unit: N/A
 Description: Tests for math utility functions (lerp, clamp, ease, vector ops).
 """
 from __future__ import annotations
-import math
 import pygame
 import pytest
 from src.engine.utils.math_utils import (

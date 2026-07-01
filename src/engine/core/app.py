@@ -15,6 +15,7 @@ from src.engine.core.event_bus import EventBus
 from src.engine.input.input_manager import InputManager
 from src.engine.audio.audio_manager import AudioManager
 from src.engine.scene.scene_manager import SceneManager
+from src.engine.scene.transition_manager import TransitionManager
 
 
 class App:
@@ -23,6 +24,9 @@ class App:
 
     _instance: App | None = None
     _input_manager: InputManager | None = None
+    _audio_manager: AudioManager | None = None
+    _scene_manager: SceneManager | None = None
+    _transition_manager: TransitionManager | None = None
 
     def __init__(self) -> None:
         pygame.init()
@@ -44,7 +48,11 @@ class App:
         self.input_manager: InputManager = InputManager()
         App._input_manager = self.input_manager
         self.audio_manager: AudioManager = AudioManager()
+        App._audio_manager = self.audio_manager
         self.scene_manager: SceneManager = SceneManager()
+        App._scene_manager = self.scene_manager
+        self.transition_manager: TransitionManager = TransitionManager()
+        App._transition_manager = self.transition_manager
         App._instance = self
 
         # Push SplashScene as the first scene
@@ -75,11 +83,17 @@ class App:
             # 5. Update current scene
             self.scene_manager.current.update(dt)
 
+            # 5a. Update transitions
+            self.transition_manager.update(dt)
+
             # 6. Fill internal surface (background never black)
             self.internal_surface.fill(settings.BG_COLOR)
 
             # 7. Draw current scene
             self.scene_manager.current.draw(self.internal_surface)
+
+            # 7a. Draw transitions on top
+            self.transition_manager.draw(self.internal_surface)
 
             # 8. Scale and present
             scaled = pygame.transform.scale(

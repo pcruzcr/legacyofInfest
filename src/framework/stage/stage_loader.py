@@ -23,6 +23,37 @@ from src.framework.entities.base_entity import BaseEntity
 
 
 @dataclass
+class MessageTrigger:
+    """Tutorial message triggered when player enters a zone."""
+    rect: pygame.Rect
+    text: str
+    triggered: bool = False
+
+
+@dataclass
+class HazardZone:
+    """Area that deals damage to the player periodically."""
+    rect: pygame.Rect
+    damage: float = 0.25
+    cooldown: float = 0.5
+    _timer: float = 0.0
+
+
+@dataclass
+class DeathPit:
+    """Instant-death zone (bypasses damage)."""
+    rect: pygame.Rect
+
+
+@dataclass
+class CameraLock:
+    """Restrict camera movement during certain sections."""
+    rect: pygame.Rect
+    lock_x: bool = False
+    lock_y: bool = False
+
+
+@dataclass
 class StageData:
     """Complete stage data structure returned by StageLoader.load()."""
     map_layer: pyscroll.PyscrollGroup
@@ -33,6 +64,10 @@ class StageData:
     spawn_point: pygame.Vector2 = field(default_factory=lambda: pygame.Vector2(0, 0))
     next_trigger: pygame.Rect | None = None
     background_layers: list[pygame.Surface] = field(default_factory=list)
+    message_triggers: list[MessageTrigger] = field(default_factory=list)
+    hazard_zones: list[HazardZone] = field(default_factory=list)
+    death_pits: list[DeathPit] = field(default_factory=list)
+    camera_locks: list[CameraLock] = field(default_factory=list)
     stage_id: str = ""
     stage_name: str = ""
     time_limit: int = 0
@@ -52,35 +87,27 @@ class StageLoader:
 
     @classmethod
     def register_entity(cls, type_name: str, entity_class: type[BaseEntity]) -> None:
-        """Register an entity class for spawning from TMX objects."""
         cls._entity_registry[type_name] = entity_class
 
     @classmethod
     def load(cls, tmx_path: Path) -> StageData:
-        """
-        Load a TMX file and return a fully assembled StageData instance.
-        Raises FrameworkUsageError on missing required layers or PlayerSpawn.
-        """
         tmx_path = Path(tmx_path)
         if not tmx_path.exists():
             raise FrameworkUsageError(f"TMX file not found: {tmx_path}")
 
-        tmx_data = load_pygame(str(tmx_path))
+        tmx_data = load_pygame(str(tmx_path.resolve()))
 
-        # Validate required layers
-        tmx_layer_names = {l.name for l in tmx_data.visible_layers}
-        tmx_layer_names.update({l.name for l in tmx_data.layers})
+        tmx_layer_names = {layer.name for layer in tmx_data.visible_layers}
+        tmx_layer_names.update({layer.name for layer in tmx_data.layers})
         for name in REQUIRED_LAYERS:
             if name not in tmx_layer_names:
                 raise FrameworkUsageError(f"Missing required layer: {name}")
 
-        # Read map custom properties
         stage_id = tmx_data.properties.get("stage_id", "")
         stage_name = tmx_data.properties.get("stage_name", "")
         time_limit = int(tmx_data.properties.get("time_limit", 0))
         bgm_track = tmx_data.properties.get("bgm_track", "")
 
-        # Build pyscroll
         map_data = pyscroll.data.TiledMapData(tmx_data)
         renderer = pyscroll.BufferedRenderer(
             map_data,
@@ -101,11 +128,11 @@ class StageLoader:
             bgm_track=bgm_track,
         )
 
-        # Parse objects layer
         player_spawn_found = False
         for obj in tmx_data.get_layer_by_name("Objects"):
             obj_type = getattr(obj, "type", None) or ""
             obj_name = getattr(obj, "name", "") or ""
+            props = dict(obj.properties) if obj.properties else {}
 
             if obj_type == "PlayerSpawn":
                 if player_spawn_found:
@@ -113,14 +140,35 @@ class StageLoader:
                 stage.spawn_point = pygame.Vector2(obj.x, obj.y)
                 player_spawn_found = True
 
+            elif obj_type == "MessageTrigger":
+                rect = pygame.Rect(obj.x, obj.y, obj.width or 32, obj.height or 32)
+                text = props.get("text", "")
+                stage.message_triggers.append(MessageTrigger(rect=rect, text=text))
+
+            elif obj_type == "MessageTrigger_Once":
+                rect = pygame.Rect(obj.x, obj.y, obj.width or 32, obj.height or 32)
+                text = props.get("text", "")
+                stage.message_triggers.append(MessageTrigger(rect=rect, text=text))
+
             elif obj_type in cls._entity_registry:
-                props = dict(obj.properties) if obj.properties else {}
                 entity_class = cls._entity_registry[obj_type]
-                entity = entity_class(pygame.Vector2(obj.x, obj.y), **props)
+                # Convert TMX string props to expected types
+                cleaned = {}
+                for k, v in props.items():
+                    if k in ("zone",):
+                        cleaned[k] = int(v)
+                    elif k in ("max_health", "damage_on_contact", "patrol_length",
+                               "fire_rate", "projectile_speed", "projectile_damage",
+                               "sine_amplitude", "sine_frequency", "flight_speed",
+                               "patrol_speed", "alert_speed", "contact_knockback",
+                               "detection_range_x", "detection_range_y"):
+                        cleaned[k] = float(v)
+                    else:
+                        cleaned[k] = v
+                entity = entity_class(pygame.Vector2(obj.x, obj.y), **cleaned)
                 stage.entity_list.append(entity)
 
             elif obj_type == "Checkpoint":
-                props = dict(obj.properties) if obj.properties else {}
                 if "checkpoint_id" not in props:
                     raise FrameworkUsageError("Checkpoint missing required property: checkpoint_id")
                 rect = pygame.Rect(obj.x, obj.y, obj.width or 24, obj.height or 32)
@@ -131,10 +179,23 @@ class StageLoader:
             elif obj_type == "NextTrigger":
                 stage.next_trigger = pygame.Rect(obj.x, obj.y, obj.width, obj.height)
 
+            elif obj_type == "HazardZone":
+                rect = pygame.Rect(obj.x, obj.y, obj.width, obj.height)
+                damage = float(props.get("damage", 0.25))
+                stage.hazard_zones.append(HazardZone(rect=rect, damage=damage))
+
+            elif obj_type == "DeathPit":
+                stage.death_pits.append(DeathPit(rect=pygame.Rect(obj.x, obj.y, obj.width, obj.height)))
+
+            elif obj_type == "CameraLock":
+                rect = pygame.Rect(obj.x, obj.y, obj.width, obj.height)
+                lock_x = props.get("lock_x", False) in (True, "true", "True", 1, "1")
+                lock_y = props.get("lock_y", False) in (True, "true", "True", 1, "1")
+                stage.camera_locks.append(CameraLock(rect=rect, lock_x=lock_x, lock_y=lock_y))
+
         if not player_spawn_found:
             raise FrameworkUsageError("No PlayerSpawn found in TMX")
 
-        # Parse collision layer
         try:
             collision_layer = tmx_data.get_layer_by_name("Collision")
             for obj in collision_layer:
@@ -142,6 +203,6 @@ class StageLoader:
                 if rect.width > 0 and rect.height > 0:
                     stage.collision_rects.append(rect)
         except ValueError:
-            pass
+            logging.warning("StageLoader: Collision layer not found")
 
         return stage

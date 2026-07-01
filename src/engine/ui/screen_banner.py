@@ -20,8 +20,8 @@ class ScreenBanner:
         self._state: str = "idle"  # idle | slide_in | hold | slide_out
         self._timer: float = 0.0
         self._slide_in_duration: float = 0.5
-        self._hold_duration: float = 1.5
-        self._slide_out_duration: float = 0.5
+        self._hold_duration: float = 2.0
+        self._slide_out_duration: float = 0.4
         self._font = pygame.font.Font(None, 18)
         self._banner_height: int = 30
         self._offset: float = float(settings.INTERNAL_WIDTH)
