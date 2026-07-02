@@ -2,8 +2,12 @@
 Module: event_bus
 System: engine.core
 Academic Unit: N/A
-Description: Singleton-style pub/sub event dispatch system. Queue-based:
+Description: Pub/sub event dispatch system. Queue-based:
 emit() queues the event, dispatch() drains the queue at the start of each frame.
+
+DI NOTE (Fase 1): Now instance-based. Module-level convenience functions
+subscribe() / unsubscribe() / emit() / etc. delegate to a default instance
+for backward compatibility with existing callers.
 """
 from __future__ import annotations
 import logging
@@ -11,61 +15,118 @@ from typing import Callable, Any
 
 
 class EventBus:
-    """Singleton-style static class. All methods are classmethods."""
+    """
+    Instance-based publish/subscribe event bus.
+    Each instance has independent subscriber lists and event queues.
+    """
 
-    _subscribers: dict[str, list[Callable[..., None]]] = {}
-    _queue: list[tuple[str, dict[str, Any]]] = []
+    def __init__(self) -> None:
+        self._subscribers: dict[str, list[Callable[..., None]]] = {}
+        self._queue: list[tuple[str, dict[str, Any]]] = []
 
-    @classmethod
-    def subscribe(cls, event_name: str, callback: Callable[..., None]) -> None:
+    def subscribe(self, event_name: str, callback: Callable[..., None]) -> None:
         """Subscribe a callback to an event name. Logs warning on duplicate."""
-        if event_name not in cls._subscribers:
-            cls._subscribers[event_name] = []
-        if callback not in cls._subscribers[event_name]:
-            cls._subscribers[event_name].append(callback)
+        if event_name not in self._subscribers:
+            self._subscribers[event_name] = []
+        if callback not in self._subscribers[event_name]:
+            self._subscribers[event_name].append(callback)
         else:
             logging.warning(
                 f"EventBus: duplicate subscribe for '{event_name}' — "
                 f"callback {callback.__name__} already registered"
             )
 
-    @classmethod
-    def unsubscribe(cls, event_name: str, callback: Callable[..., None]) -> None:
+    def unsubscribe(self, event_name: str, callback: Callable[..., None]) -> None:
         """Unsubscribe a callback from an event name."""
-        if event_name in cls._subscribers:
-            if callback in cls._subscribers[event_name]:
-                cls._subscribers[event_name].remove(callback)
-            if not cls._subscribers[event_name]:
-                del cls._subscribers[event_name]
+        if event_name in self._subscribers:
+            if callback in self._subscribers[event_name]:
+                self._subscribers[event_name].remove(callback)
+            if not self._subscribers[event_name]:
+                del self._subscribers[event_name]
 
-    @classmethod
-    def unsubscribe_all(cls, events: list[str], callback: Callable[..., None]) -> None:
-        """Unsubscribe a callback from multiple events at once. Useful for scene cleanup."""
+    def unsubscribe_all(self, events: list[str], callback: Callable[..., None]) -> None:
+        """Unsubscribe a callback from multiple events at once."""
         for event_name in events:
-            cls.unsubscribe(event_name, callback)
+            self.unsubscribe(event_name, callback)
 
-    @classmethod
-    def subscriber_count(cls) -> int:
+    def subscriber_count(self) -> int:
         """Return total number of registered callbacks across all events."""
-        return sum(len(cbs) for cbs in cls._subscribers.values())
+        return sum(len(cbs) for cbs in self._subscribers.values())
 
-    @classmethod
-    def emit(cls, event_name: str, **data: Any) -> None:
+    def emit(self, event_name: str, **data: Any) -> None:
         """Queues the event; dispatched at the start of the next frame."""
-        cls._queue.append((event_name, data))
+        self._queue.append((event_name, data))
 
-    @classmethod
-    def dispatch(cls) -> None:
+    def dispatch(self) -> None:
         """Called once per frame by App, before scene update. Drains the queue."""
-        queue = cls._queue[:]
-        cls._queue.clear()
+        queue = self._queue[:]
+        self._queue.clear()
         for event_name, data in queue:
-            if event_name in cls._subscribers:
-                for callback in cls._subscribers[event_name]:
+            if event_name in self._subscribers:
+                for callback in self._subscribers[event_name]:
                     callback(**data)
 
-    @classmethod
-    def clear(cls) -> None:
+    def clear(self) -> None:
         """Clear all subscribers and pending events. Useful for testing."""
-        cls._subscribers.clear()
-        cls._queue.clear()
+        self._subscribers.clear()
+        self._queue.clear()
+
+
+# ── Module-level default instance for backward compatibility ────────────
+
+_default_bus: EventBus | None = None
+
+
+def set_default_bus(bus: EventBus) -> None:
+    """Set the module-level default EventBus instance (called by App)."""
+    global _default_bus
+    _default_bus = bus
+
+
+def _get_bus() -> EventBus:
+    """Lazy-init and return the default EventBus instance."""
+    global _default_bus
+    if _default_bus is None:
+        _default_bus = EventBus()
+    return _default_bus
+
+
+# ── Backward-compatible convenience functions ──────────────────────────
+# These replace old EventBus.subscribe(...) calls with subscribe(...).
+# Both import paths are supported for migration:
+#   from src.engine.core.event_bus import EventBus  →  EventBus().subscribe()
+#   from src.engine.core.event_bus import subscribe  →  subscribe()
+
+def subscribe(event_name: str, callback: Callable[..., None]) -> None:
+    """Subscribe via the default EventBus instance."""
+    _get_bus().subscribe(event_name, callback)
+
+
+def unsubscribe(event_name: str, callback: Callable[..., None]) -> None:
+    """Unsubscribe via the default EventBus instance."""
+    _get_bus().unsubscribe(event_name, callback)
+
+
+def unsubscribe_all(events: list[str], callback: Callable[..., None]) -> None:
+    """Unsubscribe from multiple events via the default EventBus instance."""
+    _get_bus().unsubscribe_all(events, callback)
+
+
+def subscriber_count() -> int:
+    """Return total subscriber count on the default EventBus instance."""
+    return _get_bus().subscriber_count()
+
+
+def emit(event_name: str, **data: Any) -> None:
+    """Emit an event via the default EventBus instance."""
+    _get_bus().emit(event_name, **data)
+
+
+def dispatch() -> None:
+    """Dispatch queued events on the default EventBus instance."""
+    _get_bus().dispatch()
+
+
+def clear() -> None:
+    """Clear subscribers and queue on the default EventBus instance."""
+    _get_bus().clear()

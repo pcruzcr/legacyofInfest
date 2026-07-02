@@ -4,14 +4,40 @@ System: engine.scene
 Academic Unit: N/A
 Description: Abstract base class for all scenes. Defines the lifecycle
 interface: on_enter, on_exit, update, draw, plus optional on_pause/on_resume.
+
+DI NOTE (Fase 1): Every scene now receives a GameContext via __init__,
+eliminating global App._instance lookups. Subclasses must call super().__init__(context).
 """
 from __future__ import annotations
 import abc
 import pygame
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.engine.core.game_context import GameContext
 
 
 class BaseScene(abc.ABC):
     """Abstract scene that all game scenes must implement."""
+
+    def __init__(self, context: GameContext) -> None:
+        """Every scene receives the shared GameContext for dependency injection."""
+        self.context: GameContext = context
+
+    @property
+    def input(self):
+        """Shortcut to the input manager."""
+        return self.context.input_manager
+
+    @property
+    def audio(self):
+        """Shortcut to the audio manager."""
+        return self.context.audio_manager
+
+    @property
+    def events(self):
+        """Shortcut to the event bus."""
+        return self.context.event_bus
 
     def awake(self) -> None:
         """Called once when the scene is first instantiated (before on_enter)."""

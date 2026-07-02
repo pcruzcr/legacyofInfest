@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 
 import pygame
 import numpy as np
 
 from src.engine.core import settings
 from src.engine.input.action_map import Action
-from src.engine.input.input_manager import InputManager
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
     COLOR_BG,
@@ -41,6 +41,9 @@ from src.engine.scenes.demo_common import (
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.processing.filter_tools import FilterTools
 
+if TYPE_CHECKING:
+    from src.engine.core.game_context import GameContext
+
 
 MODE_NAMES = [
     "HISTOGRAM", "BRIGHTNESS", "CONTRAST", "STRETCH", "KERNEL",
@@ -54,7 +57,8 @@ STANDARD_KERNEL_NAMES = [
 
 
 class FilterDemoScene(BaseScene):
-    def __init__(self) -> None:
+    def __init__(self, context: GameContext) -> None:
+        super().__init__(context)
         self._mode: int = 0
         self._sources: SourceSurfaceManager = build_default_sources()
         self._throttle = FrameThrottle()
@@ -87,12 +91,6 @@ class FilterDemoScene(BaseScene):
         self._font_medium = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_MEDIUM)
         self._font_large = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_LARGE)
 
-    def _get_im(self) -> InputManager | None:
-        from src.engine.core.app import App
-        if App._instance is not None:
-            return App._instance.input_manager
-        return None
-
     def on_enter(self) -> None:
         self._mode = 0
         self._throttle.reset()
@@ -102,7 +100,7 @@ class FilterDemoScene(BaseScene):
         pass
 
     def update(self, dt: float) -> None:
-        im = self._get_im()
+        im = self.input
         if im is None:
             return
 
@@ -158,9 +156,7 @@ class FilterDemoScene(BaseScene):
         # ESC — back to menu
         if im.is_action_pressed(Action.CANCEL):
             from src.engine.scenes.demo_menu_scene import DemoMenuScene
-            from src.engine.core.app import App
-            if App._instance is not None:
-                App._instance.scene_manager.replace(DemoMenuScene())
+            self.context.scene_manager.replace(DemoMenuScene(self.context))
             return
 
         # Mode-specific input
@@ -170,7 +166,7 @@ class FilterDemoScene(BaseScene):
         if self._param_changed or self._cached_result is None:
             self._compute_result()
 
-    def _handle_mode_input(self, im: InputManager) -> None:
+    def _handle_mode_input(self, im):
         key_left = im.is_raw_key_pressed(pygame.K_LEFT)
         key_right = im.is_raw_key_pressed(pygame.K_RIGHT)
         key_up = im.is_raw_key_pressed(pygame.K_UP)
@@ -305,7 +301,6 @@ class FilterDemoScene(BaseScene):
         surface.blit(mode_label, (4, TOP_BAR_Y + TOP_BAR_H - 14))
 
         # Source + name label
-        src = self._sources.current_source
         src_label = self._font_small.render(
             f"  Source: {self._sources.current_name}{' [FROZEN]' if self._sources.is_frozen else ''}  ",
             True, COLOR_ACCENT,
@@ -327,7 +322,7 @@ class FilterDemoScene(BaseScene):
             draw_save_notification(surface, self._save_msg, self._font_small)
 
     def _draw_left_panel(self, surface: pygame.Surface) -> None:
-        rect = pygame.Rect(LEFT_PANEL_W - PANEL_SIZE[0], TOP_BAR_Y + 2, PANEL_SIZE[0], PANEL_H - 4)
+        pygame.Rect(LEFT_PANEL_W - PANEL_SIZE[0], TOP_BAR_Y + 2, PANEL_SIZE[0], PANEL_H - 4)
         src = self._sources.current_source
         if src is not None:
             scaled = pygame.transform.scale(src, PANEL_SIZE)

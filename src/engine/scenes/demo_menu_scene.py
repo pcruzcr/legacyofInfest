@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pygame
 
 from src.engine.core import settings
 from src.engine.input.action_map import Action
-from src.engine.input.input_manager import InputManager
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
     COLOR_BG,
@@ -17,9 +18,13 @@ from src.engine.scenes.demo_common import (
 )
 from src.engine.utils.asset_loader import AssetLoader
 
+if TYPE_CHECKING:
+    from src.engine.core.game_context import GameContext
+
 
 class DemoMenuScene(BaseScene):
-    def __init__(self) -> None:
+    def __init__(self, context: GameContext) -> None:
+        super().__init__(context)
         self._options: list[tuple[str, str, type[BaseScene]]] = [
             ("Unit VII", "Digital Image Processing", self._scene_for("filter")),
             ("Unit VIII", "Segmentation & Analysis", self._scene_for("vision")),
@@ -47,14 +52,8 @@ class DemoMenuScene(BaseScene):
     def on_exit(self) -> None:
         pass
 
-    def _get_im(self) -> InputManager | None:
-        from src.engine.core.app import App
-        if App._instance is not None:
-            return App._instance.input_manager
-        return None
-
     def update(self, dt: float) -> None:
-        im = self._get_im()
+        im = self.input
         if im is None:
             return
 
@@ -65,15 +64,11 @@ class DemoMenuScene(BaseScene):
 
         if im.is_action_pressed(Action.CONFIRM):
             scene_cls = self._options[self._selected][2]
-            from src.engine.core.app import App
-            if App._instance is not None:
-                App._instance.scene_manager.push(scene_cls())
+            self.context.scene_manager.push(scene_cls(self.context))
 
         if im.is_action_pressed(Action.CANCEL):
             from src.engine.scenes.title_scene import TitleScene
-            from src.engine.core.app import App
-            if App._instance is not None:
-                App._instance.scene_manager.replace(TitleScene())
+            self.context.scene_manager.replace(TitleScene(self.context))
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill(COLOR_BG)

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pygame
 import numpy as np
 
 from src.engine.core import settings
 from src.engine.input.action_map import Action
-from src.engine.input.input_manager import InputManager
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
     COLOR_BG,
@@ -38,6 +39,9 @@ from src.engine.scenes.demo_common import (
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.processing.vision_tools import VisionTools
 
+if TYPE_CHECKING:
+    from src.engine.core.game_context import GameContext
+
 
 MODE_NAMES = [
     "THRESHOLD", "OTSU", "ERODE", "DILATE", "OPEN",
@@ -48,7 +52,8 @@ FEATURE_METHODS = ["hog", "lbp", "color_hist", "combined"]
 
 
 class VisionDemoScene(BaseScene):
-    def __init__(self) -> None:
+    def __init__(self, context: GameContext) -> None:
+        super().__init__(context)
         self._mode: int = 0
         self._sources: SourceSurfaceManager = build_default_sources()
         self._throttle = FrameThrottle()
@@ -78,12 +83,6 @@ class VisionDemoScene(BaseScene):
         self._font_medium = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_MEDIUM)
         self._font_large = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_LARGE)
 
-    def _get_im(self) -> InputManager | None:
-        from src.engine.core.app import App
-        if App._instance is not None:
-            return App._instance.input_manager
-        return None
-
     def on_enter(self) -> None:
         self._mode = 0
         self._throttle.reset()
@@ -93,7 +92,7 @@ class VisionDemoScene(BaseScene):
         pass
 
     def update(self, dt: float) -> None:
-        im = self._get_im()
+        im = self.input
         if im is None:
             return
 
@@ -147,9 +146,7 @@ class VisionDemoScene(BaseScene):
 
         if im.is_action_pressed(Action.CANCEL):
             from src.engine.scenes.demo_menu_scene import DemoMenuScene
-            from src.engine.core.app import App
-            if App._instance is not None:
-                App._instance.scene_manager.replace(DemoMenuScene())
+            self.context.scene_manager.replace(DemoMenuScene(self.context))
             return
 
         self._handle_mode_input(im)
@@ -157,7 +154,7 @@ class VisionDemoScene(BaseScene):
         if self._param_changed or self._cached_result is None:
             self._compute_result()
 
-    def _handle_mode_input(self, im: InputManager) -> None:
+    def _handle_mode_input(self, im):
         key_left = im.is_raw_key_pressed(pygame.K_LEFT)
         key_right = im.is_raw_key_pressed(pygame.K_RIGHT)
 

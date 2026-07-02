@@ -8,10 +8,17 @@ state from inactive (grey) to active (gold).
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import pygame
 
-from src.engine.core.event_bus import EventBus
+from src.engine.core.event_bus import emit
+from src.engine.core.events import Events
+from src.engine.utils.asset_loader import AssetLoader
 from src.framework.entities.base_entity import BaseEntity
+
+
+CHECKPOINT_SPRITE_PATH: str = "assets/sprites/shared/checkpoint.png"
 
 
 class Checkpoint(BaseEntity):
@@ -23,35 +30,50 @@ class Checkpoint(BaseEntity):
         self._checkpoint_id: int = checkpoint_id
         self._activated: bool = False
         self.layer = 3
+        self._sprite: pygame.Surface | None = None
+        try:
+            self._sprite = AssetLoader.load_image(Path(CHECKPOINT_SPRITE_PATH))
+        except Exception:
+            self._sprite = None
 
     def update(self, dt: float) -> None:
         """Checkpoint state is driven by check_collision() — no per-frame logic needed."""
 
-    def check_collision(self, player_rect: pygame.Rect) -> None:
-        """Check if player overlaps this checkpoint rect."""
+    def check_collision(self, player_rect: pygame.Rect) -> bool:
+        """Check if player overlaps this checkpoint rect. Returns True just-activated."""
         if self._activated:
-            return
+            return False
         if self.rect.colliderect(player_rect):
             self.activate()
+            return True
+        return False
 
     def activate(self) -> None:
         """Activate this checkpoint and emit the event."""
         if self._activated:
             return
         self._activated = True
-        EventBus.emit("CHECKPOINT_REACHED", checkpoint_id=self._checkpoint_id)
+        emit(Events.CHECKPOINT_REACHED, checkpoint_id=self._checkpoint_id)
 
     def draw(self, surface: pygame.Surface, camera_offset: pygame.Vector2) -> None:
-        """Draw checkpoint placeholder: grey when inactive, gold when active."""
+        """Draw checkpoint: sprite when available, colored rect fallback."""
         if not self.is_visible:
             return
 
         screen_x = int(self.rect.x - camera_offset.x)
         screen_y = int(self.rect.y - camera_offset.y)
 
-        color = (255, 215, 0) if self._activated else (100, 100, 100)
-        pygame.draw.rect(surface, color, (screen_x, screen_y, self.rect.width, self.rect.height))
-        pygame.draw.rect(surface, (255, 255, 255), (screen_x, screen_y, self.rect.width, self.rect.height), 1)
+        if self._sprite is not None:
+            sprite = self._sprite.copy()
+            if not self._activated:
+                grey = pygame.Surface(sprite.get_size(), pygame.SRCALPHA)
+                grey.fill((100, 100, 100, 180))
+                sprite.blit(grey, (0, 0))
+            surface.blit(sprite, (screen_x, screen_y))
+        else:
+            color = (255, 215, 0) if self._activated else (100, 100, 100)
+            pygame.draw.rect(surface, color, (screen_x, screen_y, self.rect.width, self.rect.height))
+            pygame.draw.rect(surface, (255, 255, 255), (screen_x, screen_y, self.rect.width, self.rect.height), 1)
 
     @property
     def is_activated(self) -> bool:

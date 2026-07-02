@@ -6,7 +6,23 @@ Description: Tests verifying that student templates import correctly and
 provide the expected interface.
 """
 from pathlib import Path
+from unittest.mock import MagicMock
 
+import pytest
+
+from src.engine.core.event_bus import EventBus
+from src.engine.core.game_context import GameContext
+
+
+@pytest.fixture
+def context():
+    """Minimal GameContext for template instantiation."""
+    return GameContext(
+        input_manager=MagicMock(),
+        audio_manager=MagicMock(),
+        scene_manager=MagicMock(),
+        event_bus=EventBus(),
+    )
 
 
 class TestStageTemplate:
@@ -14,9 +30,9 @@ class TestStageTemplate:
         from student_templates.stage_template.stage_template import CustomStageScene
         assert CustomStageScene is not None
 
-    def test_can_instantiate_with_default_tmx(self) -> None:
+    def test_can_instantiate_with_default_tmx(self, context) -> None:
         from student_templates.stage_template.stage_template import CustomStageScene
-        scene = CustomStageScene()
+        scene = CustomStageScene(context)
         assert scene._tmx_path is not None
         tmx_path: Path = scene._tmx_path  # type: ignore[assignment]
         assert tmx_path.name == "stage_template.tmx"
@@ -34,20 +50,20 @@ class TestStageTemplate:
                       "Terrain_Detail", "Objects", "Collision", "FG_Overlay"):
             assert layer in content, f"Missing layer '{layer}' in stage_template.tmx"
 
-    def test_load_model_method(self) -> None:
+    def test_load_model_method(self, context) -> None:
         from student_templates.stage_template.stage_template import CustomStageScene
-        scene = CustomStageScene()
+        scene = CustomStageScene(context)
         assert hasattr(scene, "load_model")
 
-    def test_has_custom_timer(self) -> None:
+    def test_has_custom_timer(self, context) -> None:
         from student_templates.stage_template.stage_template import CustomStageScene
-        scene = CustomStageScene()
+        scene = CustomStageScene(context)
         assert hasattr(scene, "_custom_timer")
         assert scene._custom_timer == 0.0
 
-    def test_update_increments_timer(self) -> None:
+    def test_update_increments_timer(self, context) -> None:
         from student_templates.stage_template.stage_template import CustomStageScene
-        scene = CustomStageScene()
+        scene = CustomStageScene(context)
         scene.update(0.016)
         assert scene._custom_timer > 0.0
 

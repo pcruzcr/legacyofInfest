@@ -12,3 +12,17 @@ Nunca borrar entradas - marcar como resueltas.
 - **Resolution:** Implementado en `src/framework/processing/curve_tools.py` con
   Catmull-Rom spline + waypoint patrol. Activado vía `flight_mode="bezier"` o
   `flight_mode="patrol"`.
+
+## [GAP-002] Collision rect depth usada para X-skip heurística
+
+- **File:** `src/framework/entities/player.py` (línea 582)
+- **Phase:** FIX-2
+- **Reason:** La heurística `tile.top >= player_rect.centery` asume que rectos
+  con top debajo del centro del jugador son "pisos". Con rectos de colisión
+  fusionados (FIX-1), un recto de plataforma de 16px de alto se salta
+  correctamente en X cuando el jugador está parado encima. Sin embargo, si un
+  recto de colisión es anormalmente alto (ej. merged que abarca piso + pared),
+  el skip podría fallar. Hasta ahora no hay casos que rompan esta heurística.
+- **Nota:** Si en el futuro se crean stage TMX con rectos de colisión que
+  mezclen piso y pared vertical en un solo objeto, esta heurística podría
+  necesitar refinamiento (ej. dividir rectos por pendiente o etiqueta).

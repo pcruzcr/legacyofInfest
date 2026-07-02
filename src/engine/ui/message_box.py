@@ -1,18 +1,12 @@
-"""
-Module: message_box
-System: engine.ui
-Academic Unit: N/A
-Description: Scrolling message box with typewriter effect for tutorial
-messages and dialog. Subscribes to SHOW_MESSAGE and HIDE_MESSAGE events.
-"""
 from __future__ import annotations
 import pygame
 from src.engine.core import settings
-from src.engine.core.event_bus import EventBus
+from src.engine.core.event_bus import emit, subscribe, unsubscribe
+from src.engine.core.events import Events
 
 
 class MessageBox:
-    """Typewriter message box with auto-dismiss."""
+    """Typewriter message box with auto-dismiss and message queue."""
 
     def __init__(self) -> None:
         self._text: str = ""
@@ -23,53 +17,113 @@ class MessageBox:
         self._elapsed: float = 0.0
         self._chars_per_second: float = 30.0
         self._font = pygame.font.Font(None, 12)
+        self._dismiss_on_confirm: bool = False
+        self._queue: list[dict] = []
+        self._destroyed: bool = False
+        if hasattr(settings, 'ASSETS_DIR'):
+            try:
+                from src.engine.utils.asset_loader import AssetLoader
+                self._arrow = AssetLoader.load_image(
+                    settings.ASSETS_DIR / "ui" / "message_arrow.png", size=(5, 7),
+                )
+            except Exception:
+                self._arrow = None
+        else:
+            self._arrow = None
+        self._arrow_timer: float = 0.0
 
-        EventBus.subscribe("SHOW_MESSAGE", self._on_show_message)
-        EventBus.subscribe("HIDE_MESSAGE", self._on_hide_message)
+        subscribe(Events.SHOW_MESSAGE, self._on_show_message)
+        subscribe(Events.HIDE_MESSAGE, self._on_hide_message)
+
+    def destroy(self) -> None:
+        if self._destroyed:
+            return
+        self._destroyed = True
+        unsubscribe(Events.SHOW_MESSAGE, self._on_show_message)
+        unsubscribe(Events.HIDE_MESSAGE, self._on_hide_message)
 
     def _on_show_message(self, **data: object) -> None:
+        if self._destroyed:
+            return
+        if self._visible:
+            self._queue.append(dict(data))
+            return
+        self._show(data)
+
+    def _show(self, data: dict) -> None:
         self._full_text = str(data.get("text", ""))
         self._display_duration = float(data.get("duration", 3.0))
+        self._dismiss_on_confirm = self._display_duration <= 0
         self._text = ""
         self._char_timer = 0.0
         self._elapsed = 0.0
+        self._arrow_timer = 0.0
         self._visible = True
 
     def _on_hide_message(self, **data: object) -> None:
+        if self._destroyed:
+            return
         self._visible = False
         self._text = ""
         self._full_text = ""
+        self._queue.clear()
+
+    def hide(self) -> None:
+        self._visible = False
+        self._text = ""
+        self._full_text = ""
+        emit(Events.HIDE_MESSAGE)
 
     def update(self, dt: float) -> None:
         if not self._visible:
+            if self._queue:
+                self._show(self._queue.pop(0))
             return
 
         # Typewriter effect
         if len(self._text) < len(self._full_text):
             self._char_timer += dt
             chars_to_add = int(self._char_timer * self._chars_per_second)
+            chars_to_add = min(chars_to_add, len(self._full_text))
             self._text = self._full_text[:chars_to_add]
-        else:
+        elif not self._dismiss_on_confirm:
             # Auto-dismiss after duration
             self._elapsed += dt
             if self._elapsed >= self._display_duration:
                 self._visible = False
+                emit(Events.HIDE_MESSAGE)
+
+        if self._dismiss_on_confirm and len(self._text) >= len(self._full_text):
+            self._arrow_timer += dt
 
     def draw(self, surface: pygame.Surface) -> None:
         if not self._visible or not self._text:
             return
 
-        # Draw message box at bottom of screen
-        box_height = 40
-        box_rect = pygame.Rect(4, settings.INTERNAL_HEIGHT - box_height - 4,
-                                settings.INTERNAL_WIDTH - 8, box_height)
-        pygame.draw.rect(surface, (20, 20, 50), box_rect)
-        pygame.draw.rect(surface, (100, 100, 150), box_rect, 1)
+        box_height = 28
+        box_rect = pygame.Rect(0, settings.INTERNAL_HEIGHT - box_height,
+                                settings.INTERNAL_WIDTH, box_height)
+        overlay = pygame.Surface((box_rect.width, box_rect.height))
+        overlay.set_alpha(180)
+        overlay.fill((10, 10, 30))
+        surface.blit(overlay, box_rect)
+        pygame.draw.rect(surface, (200, 180, 100), box_rect, 1)
 
-        # Render text
         text_surf = self._font.render(self._text, True, (220, 220, 220))
-        surface.blit(text_surf, (box_rect.x + 4, box_rect.y + 4))
+        surface.blit(text_surf, (box_rect.x + 6, box_rect.y + 6))
+
+        # Arrow indicator when waiting for confirm
+        if self._dismiss_on_confirm and len(self._text) >= len(self._full_text):
+            arrow_visible = int(self._arrow_timer * 4) % 2 == 0
+            if arrow_visible and self._arrow:
+                ax = box_rect.x + 6
+                ay = box_rect.y + box_height - 10
+                surface.blit(self._arrow, (ax, ay))
 
     @property
     def is_visible(self) -> bool:
         return self._visible
+
+    @property
+    def is_dismiss_on_confirm(self) -> bool:
+        return self._dismiss_on_confirm

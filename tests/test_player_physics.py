@@ -96,12 +96,14 @@ class TestCollision:
         player = _make_player(y=180.0)
         player.rect.height = 32
         player.rect.width = 20
-        wall = pygame.Rect(70, 170, 16, 64)
-        player.velocity.x = 100.0
-        player.position.x = 60.0
+        # Wall + floor so player stays grounded and intersects the wall
+        wall = pygame.Rect(200, 170, 16, 64)
+        floor = pygame.Rect(0, 212, 640, 32)
+        player.velocity.x = 300.0
+        player.position.x = 100.0
         dt = 1.0 / 60.0
-        player.update(dt, [wall])
-        # Player should be pushed to the left of the wall
+        for _ in range(90):
+            player.update(dt, [wall, floor])
         assert player.rect.right <= wall.left + 1, (
             f"Player rect.right {player.rect.right} should be <= "
             f"wall.left {wall.left}"

@@ -11,22 +11,17 @@ import sys
 
 from src.engine.core import settings
 from src.engine.core.clock import DeltaClock
-from src.engine.core.event_bus import EventBus
+from src.engine.core.event_bus import EventBus, set_default_bus
+from src.engine.core.game_context import GameContext
 from src.engine.input.input_manager import InputManager
 from src.engine.audio.audio_manager import AudioManager
 from src.engine.scene.scene_manager import SceneManager
+from src.framework.entities.entity_factory import ensure_registered
 from src.engine.scene.transition_manager import TransitionManager
 
 
 class App:
-    """Owns the game loop, display, and all engine subsystems.
-    Stores class-level references so subsystems (Player, scenes) can access shared state."""
-
-    _instance: App | None = None
-    _input_manager: InputManager | None = None
-    _audio_manager: AudioManager | None = None
-    _scene_manager: SceneManager | None = None
-    _transition_manager: TransitionManager | None = None
+    """Owns the game loop, display, and all engine subsystems."""
 
     def __init__(self) -> None:
         pygame.init()
@@ -44,71 +39,74 @@ class App:
         )
 
         self.clock: DeltaClock = DeltaClock()
-        self.event_bus: type[EventBus] = EventBus
+        self.event_bus = EventBus()
+        set_default_bus(self.event_bus)
         self.input_manager: InputManager = InputManager()
-        App._input_manager = self.input_manager
         self.audio_manager: AudioManager = AudioManager()
-        App._audio_manager = self.audio_manager
-        self.scene_manager: SceneManager = SceneManager()
-        App._scene_manager = self.scene_manager
         self.transition_manager: TransitionManager = TransitionManager()
-        App._transition_manager = self.transition_manager
-        App._instance = self
+        self.context = GameContext(
+            input_manager=self.input_manager,
+            audio_manager=self.audio_manager,
+            scene_manager=None,
+            event_bus=self.event_bus,
+            clock=self.clock,
+        )
+        self.scene_manager: SceneManager = SceneManager(self.context)
+        self.context.scene_manager = self.scene_manager
+
+        # Register all known entity types before any scene loads
+        ensure_registered()
 
         # Push SplashScene as the first scene
         from src.engine.scenes.splash_scene import SplashScene
-        self.scene_manager.push(SplashScene())
-
-        self._running: bool = False
+        self.scene_manager.push(SplashScene(self.context))
 
     def run(self) -> None:
         """Main game loop. The order of operations is sacred — do not reorder."""
-        self._running = True
-        while self._running:
-            # 1. Process OS events
-            events = pygame.event.get()
-            for e in events:
-                if e.type == pygame.QUIT:
-                    self._running = False
+        self.context.running = True
+        while self.context.running:
+            try:
+                # 1. Process OS events
+                events = pygame.event.get()
+                for e in events:
+                    if e.type == pygame.QUIT:
+                        self.context.quit()
 
-            # 2. Pump input
-            self.input_manager.pump(events)
+                # 2. Pump input
+                self.input_manager.pump(events)
 
-            # 3. Dispatch queued events (before update)
-            self.event_bus.dispatch()
+                # 3. Dispatch queued events (before update)
+                self.context.event_bus.dispatch()
 
-            # 4. Compute delta time
-            dt = self.clock.tick()
+                # 4. Compute delta time
+                dt = self.clock.tick()
 
-            # 5. Update current scene
-            self.scene_manager.current.update(dt)
+                # 5. Update current scene
+                self.scene_manager.current.update(dt)
 
-            # 5a. Update transitions
-            self.transition_manager.update(dt)
+                # 5a. Update transitions
+                self.transition_manager.update(dt)
 
-            # 6. Fill internal surface (background never black)
-            self.internal_surface.fill(settings.BG_COLOR)
+                # 6. Fill internal surface (background never black)
+                self.internal_surface.fill(settings.BG_COLOR)
 
-            # 7. Draw current scene
-            self.scene_manager.current.draw(self.internal_surface)
+                # 7. Draw current scene
+                self.scene_manager.current.draw(self.internal_surface)
 
-            # 7a. Draw transitions on top
-            self.transition_manager.draw(self.internal_surface)
+                # 7a. Draw transitions on top
+                self.transition_manager.draw(self.internal_surface)
 
-            # 8. Scale and present
-            scaled = pygame.transform.scale(
-                self.internal_surface,
-                self.window_surface.get_size(),
-            )
-            self.window_surface.blit(scaled, (0, 0))
-            pygame.display.flip()
+                # 8. Scale and present
+                scaled = pygame.transform.scale(
+                    self.internal_surface,
+                    self.window_surface.get_size(),
+                )
+                self.window_surface.blit(scaled, (0, 0))
+                pygame.display.flip()
+            except Exception:
+                import traceback
+                traceback.print_exc()
+                self.context.quit()
 
         pygame.quit()
         sys.exit(0)
-
-
-def _get_scene_manager() -> SceneManager | None:
-    """Helper function for scenes to access the SceneManager."""
-    if App._instance is not None:
-        return App._instance.scene_manager
-    return None

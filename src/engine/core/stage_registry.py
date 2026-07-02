@@ -23,6 +23,12 @@ STAGE_ORDER: list[str] = [
     "stage4_1", "stage4_2_boss_paburu",
 ]
 
+# Custom module import paths for stages that don't follow the {id}.{id} convention.
+# Key: stage_id from STAGE_ORDER. Value: dotted module path.
+_STAGE_MODULE_MAP: dict[str, str] = {
+    "stage1_4_boss_venado": "src.stages.boss_venado.boss_venado_scene",
+}
+
 
 def discover_stages() -> list[type["BaseScene"]]:
     """Scans src/stages/ in STAGE_ORDER. Imports each module that exists
@@ -31,8 +37,11 @@ def discover_stages() -> list[type["BaseScene"]]:
 
     stages: list[type[BaseScene]] = []
     for stage_id in STAGE_ORDER:
+        module_path = _STAGE_MODULE_MAP.get(
+            stage_id, f"src.stages.{stage_id}.{stage_id}"
+        )
         try:
-            module = importlib.import_module(f"src.stages.{stage_id}.{stage_id}")
+            module = importlib.import_module(module_path)
             found = False
             for name in dir(module):
                 obj = getattr(module, name)

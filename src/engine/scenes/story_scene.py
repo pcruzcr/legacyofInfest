@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pygame
 
 from src.engine.core import settings
-from src.engine.scene.base_scene import BaseScene
+from src.engine.core.stage_registry import discover_stages
 from src.engine.input.action_map import Action
+from src.engine.scene.base_scene import BaseScene
 from src.engine.utils.asset_loader import AssetLoader
+
+if TYPE_CHECKING:
+    from src.engine.core.game_context import GameContext
 
 
 STORY_TEXTS: dict[int, tuple[str, str]] = {
@@ -35,6 +41,9 @@ STORY_BG: dict[int, str] = {1: "h01.png", 2: "h02.png", 3: "h03.png"}
 class EmptyFallbackStage(BaseScene):
     """Shown when no stages are discovered in src/stages/."""
 
+    def __init__(self, context: GameContext) -> None:
+        super().__init__(context)
+
     def on_enter(self) -> None:
         pass
 
@@ -54,7 +63,8 @@ class EmptyFallbackStage(BaseScene):
 class StoryScene(BaseScene):
     """Narrative story screen with chapter background and music."""
 
-    def __init__(self, chapter: int) -> None:
+    def __init__(self, context: GameContext, chapter: int) -> None:
+        super().__init__(context)
         self._chapter: int = chapter
         self._assets = settings.ASSETS_DIR / "story"
 
@@ -69,46 +79,33 @@ class StoryScene(BaseScene):
         self._font_text = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", 14)
         self._font_hint = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", 11)
 
-    def _get_audio(self):
-        from src.engine.core.app import App
-        return App._audio_manager if App._instance is not None else None
-
-    def _get_input(self):
-        from src.engine.core.app import App
-        return App._input_manager if App._instance is not None else None
-
     def on_enter(self) -> None:
         if self._chapter == 1:
-            audio = self._get_audio()
+            audio = self.audio
             if audio is not None:
                 audio.play_music(self._music)
 
     def on_exit(self) -> None:
         if self._chapter == 3:
-            audio = self._get_audio()
+            audio = self.audio
             if audio is not None:
                 audio.stop_music()
 
     def update(self, dt: float) -> None:
-        im = self._get_input()
+        im = self.input
         if im is None:
             return
 
         if im.is_action_pressed(Action.CONFIRM):
             if self._chapter < 3:
-                from src.engine.core.app import App
-                if App._instance is not None:
-                    App._instance.scene_manager.replace(StoryScene(self._chapter + 1))
+                self.context.scene_manager.replace(StoryScene(self.context, self._chapter + 1))
             else:
-                from src.engine.core.app import App
-                from src.engine.core.stage_registry import discover_stages
-                if App._instance is not None:
-                    stages = discover_stages()
-                    if stages:
-                        App._instance.scene_manager.set_stage_queue(stages)
-                        App._instance.scene_manager.replace(stages[0]())
-                    else:
-                        App._instance.scene_manager.replace(EmptyFallbackStage())
+                stages = discover_stages()
+                if stages:
+                    self.context.scene_manager.set_stage_queue(stages)
+                    self.context.scene_manager.replace(stages[0](self.context))
+                else:
+                    self.context.scene_manager.replace(EmptyFallbackStage(self.context))
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.blit(self._background, (0, 0))

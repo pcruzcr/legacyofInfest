@@ -69,10 +69,10 @@ class TestHistogramEqualize:
                 v = x * 32 + y * 4
                 surf.set_at((x, y), (v, v, v))
         result = FilterTools.histogram_equalize(surf)
-        px = result.get_at((0, 0))
+        result.get_at((0, 0))
         # Some pixels should have been brightened
-        mean_before = sum(surf.get_at((x, y))[0] for x in range(8) for y in range(8)) / 64
-        mean_after = sum(result.get_at((x, y))[0] for x in range(8) for y in range(8)) / 64
+        sum(surf.get_at((x, y))[0] for x in range(8) for y in range(8)) / 64
+        sum(result.get_at((x, y))[0] for x in range(8) for y in range(8)) / 64
         # Equalization should spread the histogram wider
         max_before = max(surf.get_at((x, y))[0] for x in range(8) for y in range(8))
         max_after = max(result.get_at((x, y))[0] for x in range(8) for y in range(8))

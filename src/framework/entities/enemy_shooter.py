@@ -90,6 +90,8 @@ class EnemyShooter(EnemyBase):
     """
     Shooter enemy — fires projectiles at the player when detected.
     May be stationary or perform slow patrol.
+    States: PATROL, ALERT (aim → fire cycle), HURT, DYING.
+    FIRING sub-state handled via internal timer within ALERT.
     """
 
     def __init__(
@@ -110,6 +112,8 @@ class EnemyShooter(EnemyBase):
             damage_on_contact=damage_on_contact,
             detection_range_x=200.0,
             detection_range_y=64.0,
+            hurt_duration=0.4,
+            invincibility_duration=0.4,
         )
 
         self.fire_rate: float = fire_rate  # shots per second
@@ -120,7 +124,8 @@ class EnemyShooter(EnemyBase):
         self._fire_cooldown: float = 0.0
         self._active_projectiles: list[Projectile] = []
         self._max_projectiles: int = 3
-        self._player_ref: pygame.Rect | None = None
+        self._aim_timer: float = 0.0
+        self._collision_rects: list[pygame.Rect] = []
 
         # Rect size
         self.rect.width = 16
@@ -129,9 +134,13 @@ class EnemyShooter(EnemyBase):
         # Load sprites
         self._load_zone_sprites(zone, "shoot", 12, 12)
 
-    def set_player_ref(self, player_rect: pygame.Rect) -> None:
-        """Provide the player rect for aiming."""
-        self._player_ref = player_rect
+    def check_player_contact(self, player) -> None:
+        """Check body contact AND projectile hits against the player."""
+        super().check_player_contact(player)
+        for p in self._active_projectiles:
+            if p.is_active and p.rect.colliderect(player.rect):
+                player.apply_damage(p.damage, (self.position.x, self.position.y))
+                p.on_collision()
 
     def get_projectiles(self) -> list[Projectile]:
         """Return the list of active projectiles."""
@@ -142,6 +151,9 @@ class EnemyShooter(EnemyBase):
         self._active_projectiles = [
             p for p in self._active_projectiles if p.is_active
         ]
+
+    def set_collision_rects(self, rects: list[pygame.Rect]) -> None:
+        self._collision_rects = rects
 
     # ──────────────────────────────────────────────
     # Behavior implementations
@@ -155,37 +167,29 @@ class EnemyShooter(EnemyBase):
             distance = abs(self.position.x - self._patrol_origin.x)
             if distance >= self.patrol_length / 2:
                 self.facing_direction *= -1
-            self.rect.x = int(self.position.x)
-            self.rect.y = int(self.position.y)
 
     def _alert_behavior(self, dt: float) -> None:
-        """Face player and fire projectiles."""
-        # Face the player
-        if self._player_ref is not None:
-            if self._player_ref.centerx < self.rect.centerx:
-                self.facing_direction = -1
-            else:
-                self.facing_direction = 1
-
-        # Fire rate
-        self._fire_cooldown -= dt
-        if self._fire_cooldown <= 0:
-            self._fire()
-            self._fire_cooldown = 1.0 / self.fire_rate
-
+        """Aim for 0.5s, then fire at the player on cooldown."""
+        self._face_player()
+        self._aim_timer -= dt
         # Slow patrol while alert
         if self.patrol_length > 0:
             self.position.x += self.facing_direction * 20.0 * dt
-            self.rect.x = int(self.position.x)
-            self.rect.y = int(self.position.y)
+        if self._aim_timer <= 0:
+            self._fire_cooldown -= dt
+            if self._fire_cooldown <= 0:
+                if self._fire():
+                    self._fire_cooldown = 1.0 / self.fire_rate
+                else:
+                    self._fire_cooldown = 0.0
 
-    def _fire(self) -> None:
-        """Fire a projectile toward the player."""
+    def _fire(self) -> bool:
+        """Fire a projectile toward the player. Returns True if fired."""
         if len(self._active_projectiles) >= self._max_projectiles:
-            return
+            return False
 
         if self._player_ref is None:
-            return
+            return False
 
         # Calculate angle to player (atan2)
         dx = self._player_ref.centerx - self.rect.centerx
@@ -210,20 +214,13 @@ class EnemyShooter(EnemyBase):
             lifetime=3.0,
         )
         self._active_projectiles.append(projectile)
+        return True
 
-    def _get_animation_state(self) -> str:
-        """Return animation key for current state."""
-        if self.state == EnemyState.DYING:
-            return "die"
-        if self.state == EnemyState.HURT:
-            return "hurt"
+    def _get_animation_key(self) -> str:
+        """Return animation key for non-DYING, non-HURT state."""
         if self.state == EnemyState.ALERT:
             return "shoot"
         return "walk"
-
-    def _build_hitbox(self) -> pygame.Rect:
-        """Shooter has no active attack hitbox."""
-        return pygame.Rect(0, 0, 0, 0)
 
     def _build_hurtbox(self) -> pygame.Rect:
         """Return local-space hurtbox rect."""
@@ -266,10 +263,14 @@ class EnemyShooter(EnemyBase):
         for p in self._active_projectiles:
             p.draw(surface, camera_offset)
 
-    def update(self, dt: float) -> None:
-        """Extend base update with projectile updates."""
-        super().update(dt)
-        # Update projectiles
+    def _post_update(self, dt: float) -> None:
+        """Update projectiles after the base template finishes."""
         for p in self._active_projectiles:
             p.update(dt)
+            # Check projectile collision with tiles
+            if p.is_active and self._collision_rects:
+                for rect in self._collision_rects:
+                    if p.rect.colliderect(rect):
+                        p.on_collision()
+                        break
         self.clear_expired_projectiles()

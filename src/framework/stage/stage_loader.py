@@ -18,6 +18,7 @@ import pyscroll.data
 from pytmx.util_pygame import load_pygame
 
 from src.engine.core import settings
+from src.engine.utils.asset_loader import AssetLoader
 from src.framework import FrameworkUsageError
 from src.framework.entities.base_entity import BaseEntity
 
@@ -36,7 +37,7 @@ class HazardZone:
     rect: pygame.Rect
     damage: float = 0.25
     cooldown: float = 0.5
-    _timer: float = 0.0
+    timer: float = 0.0
 
 
 @dataclass
@@ -59,6 +60,7 @@ class StageData:
     map_layer: pyscroll.PyscrollGroup
     map_pixel_size: tuple[int, int] = (0, 0)
     collision_rects: list[pygame.Rect] = field(default_factory=list)
+    one_way_rects: list[pygame.Rect] = field(default_factory=list)
     entity_list: list[BaseEntity] = field(default_factory=list)
     checkpoints: list = field(default_factory=list)
     spawn_point: pygame.Vector2 = field(default_factory=lambda: pygame.Vector2(0, 0))
@@ -107,6 +109,7 @@ class StageLoader:
         stage_name = tmx_data.properties.get("stage_name", "")
         time_limit = int(tmx_data.properties.get("time_limit", 0))
         bgm_track = tmx_data.properties.get("bgm_track", "")
+        background_zone = tmx_data.properties.get("background_zone", "")
 
         map_data = pyscroll.data.TiledMapData(tmx_data)
         renderer = pyscroll.BufferedRenderer(
@@ -128,10 +131,35 @@ class StageLoader:
             bgm_track=bgm_track,
         )
 
+        # Load parallax background images if zone is specified
+        if background_zone:
+            bg_dir = settings.ASSETS_DIR / "backgrounds" / background_zone
+            if bg_dir.is_dir():
+                for bg_name in ("far", "mid", "near"):
+                    bg_path = bg_dir / f"bg_{background_zone}_{bg_name}.png"
+                    try:
+                        bg_surf = AssetLoader.load_image(
+                            bg_path, size=(settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
+                        )
+                        stage.background_layers.append(bg_surf)
+                    except Exception:
+                        pass
+                # Also try direct zone name (non-nested)
+            else:
+                for bg_name in ("far", "mid", "near"):
+                    bg_path = settings.ASSETS_DIR / "backgrounds" / f"bg_{background_zone}_{bg_name}.png"
+                    try:
+                        bg_surf = AssetLoader.load_image(
+                            bg_path, size=(settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
+                        )
+                        stage.background_layers.append(bg_surf)
+                    except Exception:
+                        pass
+
         player_spawn_found = False
         for obj in tmx_data.get_layer_by_name("Objects"):
             obj_type = getattr(obj, "type", None) or ""
-            obj_name = getattr(obj, "name", "") or ""
+            getattr(obj, "name", "") or ""
             props = dict(obj.properties) if obj.properties else {}
 
             if obj_type == "PlayerSpawn":
@@ -201,7 +229,11 @@ class StageLoader:
             for obj in collision_layer:
                 rect = pygame.Rect(obj.x, obj.y, obj.width, obj.height)
                 if rect.width > 0 and rect.height > 0:
-                    stage.collision_rects.append(rect)
+                    obj_type = getattr(obj, "type", None) or ""
+                    if obj_type == "Platform":
+                        stage.one_way_rects.append(rect)
+                    else:
+                        stage.collision_rects.append(rect)
         except ValueError:
             logging.warning("StageLoader: Collision layer not found")
 

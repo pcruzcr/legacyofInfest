@@ -48,10 +48,10 @@ class AudioManager:
         pygame.mixer.music.unpause()
 
     def play_sfx(self, name: str) -> None:
-        """Play a sound effect from the sound bank."""
+        """Play a sound effect from the sound bank at the current SFX volume."""
         if self._muted:
             return
-        self.sound_bank.play(name)
+        self.sound_bank.play(name, volume=self._sfx_volume)
 
     def set_music_volume(self, volume: float) -> None:
         """Set music volume (0.0 to 1.0)."""

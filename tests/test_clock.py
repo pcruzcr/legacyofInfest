@@ -39,10 +39,12 @@ def test_tick_scaled_by_time_scale():
     clock = DeltaClock()
     clock.time_scale = 2.0
     dt = clock.tick()
-    assert dt >= 0.0
-    # Can't assert exact value since tick rate varies,
-    # but the property should be accessible and a float
     assert isinstance(dt, float)
+    assert dt >= 0.0
+    # With time_scale=2.0, raw_dt gets doubled; verify by checking
+    # that estimated raw_dt (dt / 2.0) is a plausible frame time
+    raw_estimate = dt / 2.0
+    assert 0.0 < raw_estimate < 1.0
 
 
 def test_time_scale_default():

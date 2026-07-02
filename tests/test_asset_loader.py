@@ -41,11 +41,12 @@ def test_missing_image_returns_surface():
 
 
 def test_missing_image_has_white_border():
-    """Fallback placeholder has a 1px white border (last pixel row is white)."""
+    """Fallback placeholder has a 1px white border."""
     surface = AssetLoader.load_image("missing_tile.png")
-    # Top-left pixel is the fill color, not white (border is 1px drawn)
-    width, height = surface.get_size()
-    assert width > 0 and height > 0
+    w, h = surface.get_size()
+    assert w > 0 and h > 0
+    assert surface.get_at((0, 0)) == (255, 255, 255, 255), "top-left corner should be white (border)"
+    assert surface.get_at((w - 1, h - 1)) == (255, 255, 255, 255), "bottom-right corner should be white"
 
 
 def test_load_font_default():

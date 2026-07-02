@@ -1,16 +1,23 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pygame
 
 from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
+from src.engine.scenes.title_scene import TitleScene
+
+if TYPE_CHECKING:
+    from src.engine.core.game_context import GameContext
 
 
 class GameOverScene(BaseScene):
     """Game Over screen shown on player death. Offers Continue and Quit."""
 
-    def __init__(self, stage_scene: BaseScene) -> None:
+    def __init__(self, context: GameContext, stage_scene: BaseScene) -> None:
+        super().__init__(context)
         self._stage_scene = stage_scene
         self._selected: int = 0
         self._options: list[str] = ["CONTINUE", "QUIT"]
@@ -24,33 +31,24 @@ class GameOverScene(BaseScene):
     def on_exit(self) -> None:
         pass
 
-    def _get_input(self):
-        from src.engine.core.app import App
-        return App._input_manager if App._instance is not None else None
-
     def update(self, dt: float) -> None:
         self._elapsed += dt
-        im = self._get_input()
+        im = self.input
         if im is None:
             return
 
         if self._elapsed > 0.5:
-            if im.is_raw_key_pressed(pygame.K_DOWN):
+            if im.is_action_just_pressed(Action.MOVE_DOWN):
                 self._selected = (self._selected + 1) % len(self._options)
-            if im.is_raw_key_pressed(pygame.K_UP):
+            if im.is_action_just_pressed(Action.MOVE_UP):
                 self._selected = (self._selected - 1) % len(self._options)
 
             if im.is_action_pressed(Action.CONFIRM):
                 if self._selected == 0:
-                    from src.engine.core.app import App
-                    if App._instance is not None:
-                        App._instance.scene_manager.pop()
-                        self._stage_scene._respawn()
+                    self.context.scene_manager.pop()
+                    self._stage_scene.respawn()
                 elif self._selected == 1:
-                    from src.engine.core.app import App
-                    from src.engine.scenes.title_scene import TitleScene
-                    if App._instance is not None:
-                        App._instance.scene_manager.replace(TitleScene())
+                    self.context.scene_manager.replace(TitleScene(self.context))
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill((10, 5, 20))
