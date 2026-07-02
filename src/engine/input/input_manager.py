@@ -79,7 +79,7 @@ class InputManager:
             elif e.type == pygame.JOYAXISMOTION:
                 self._poll_axes()
 
-    def is_action_pressed(self, action: Action) -> bool:
+    def is_action_just_pressed(self, action: Action) -> bool:
         """True only on the frame the action's key was first pressed."""
         if action in self._consumed_actions:
             return False
@@ -87,6 +87,8 @@ class InputManager:
         if any(k in self._pressed_this_frame for k in keys):
             return True
         return self._action_from_controller(action)
+
+    is_action_pressed = is_action_just_pressed
 
     def is_action_held(self, action: Action) -> bool:
         """True every frame while the action's key is held down."""
