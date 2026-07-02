@@ -34,15 +34,17 @@ class TestShooterFiring:
         """Shooter should not exceed max projectiles (_max_projectiles=3)."""
         shooter = EnemyShooter(
             pygame.Vector2(0.0, 0.0),
-            fire_rate=10.0,  # very fast
+            fire_rate=10.0,  # 0.1s cooldown
         )
         player_rect = pygame.Rect(100, 0, 20, 32)
         shooter.set_player_ref(player_rect)
-        # Fire 5 times — should only keep 3
+        shooter.state = "ALERT"
+        # Trigger alert behavior with enough dt to fire 5 times
         for _ in range(5):
-            shooter._fire()
+            shooter._alert_behavior(0.15)  # 150ms > 100ms cooldown
         projectiles = shooter.get_projectiles()
         assert len(projectiles) <= 3, "Should not exceed max_projectiles"
+        assert len(projectiles) == 3, "All 5 fires should be capped at 3"
 
     def test_projectile_lifetime(self) -> None:
         """Projectile expires after lifetime."""

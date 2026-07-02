@@ -5,6 +5,10 @@ import pygame
 from src.engine.core import settings
 from src.engine.input.input_manager import InputManager
 from src.framework.entities.player import Player, PlayerState
+from src.framework.entities.player_states import (
+    ShortAttackState, DyingState, IdleState,
+    WalkingState, JumpingState, FallingState,
+)
 
 
 def _make_input() -> InputManager:
@@ -25,7 +29,7 @@ class TestIdleWalking:
         im = _make_input()
         player = Player(pygame.Vector2(50.0, 192.0))
         player.is_grounded = True
-        player._state = PlayerState.IDLE
+        player._change_state_instance(IdleState())
         _press_key(im, pygame.K_RIGHT)
         player.update(1.0 / 60.0, [pygame.Rect(0, 224, 640, 32)], im)
         assert player.state == PlayerState.WALKING
@@ -35,7 +39,7 @@ class TestIdleWalking:
         _make_input()
         player = Player(pygame.Vector2(50.0, 192.0))
         player.is_grounded = True
-        player._state = PlayerState.WALKING
+        player._change_state_instance(WalkingState())
         player.velocity.x = settings.PLAYER_WALK_SPEED
         player.update(1.0 / 60.0, [pygame.Rect(0, 224, 640, 32)])
         assert player.state == PlayerState.IDLE
@@ -48,7 +52,7 @@ class TestJumpingFalling:
         im = _make_input()
         player = Player(pygame.Vector2(50.0, 192.0))
         player.is_grounded = True
-        player._state = PlayerState.IDLE
+        player._change_state_instance(IdleState())
         _press_key(im, pygame.K_SPACE)
         player.update(1.0 / 60.0, [pygame.Rect(0, 224, 640, 32)], im)
         assert player.state == PlayerState.JUMPING
@@ -57,7 +61,7 @@ class TestJumpingFalling:
         _make_input()
         player = Player(pygame.Vector2(50.0, 0.0))
         player.is_grounded = False
-        player._state = PlayerState.JUMPING
+        player._change_state_instance(JumpingState())
         player._jump_cut_applied = True
         player.velocity.y = 100.0
         dt = 1.0 / 60.0
@@ -68,7 +72,7 @@ class TestJumpingFalling:
         _make_input()
         player = Player(pygame.Vector2(50.0, 160.0))
         player.is_grounded = False
-        player._state = PlayerState.FALLING
+        player._change_state_instance(FallingState())
         player.velocity.y = 200.0
         dt = 1.0 / 60.0
         rects = [pygame.Rect(0, 192, 640, 32)]
@@ -84,7 +88,7 @@ class TestCrouch:
         im = _make_input()
         player = Player(pygame.Vector2(50.0, 192.0))
         player.is_grounded = True
-        player._state = PlayerState.IDLE
+        player._change_state_instance(IdleState())
         _press_key(im, pygame.K_DOWN)
         player.update(1.0 / 60.0, [pygame.Rect(0, 224, 640, 32)], im)
         assert player.state == PlayerState.CROUCHING
@@ -93,7 +97,7 @@ class TestCrouch:
         im = _make_input()
         player = Player(pygame.Vector2(50.0, 161.0))
         player.is_grounded = True
-        player._state = PlayerState.IDLE
+        player._change_state_instance(IdleState())
         player.velocity.y = 300.0
         rects = [pygame.Rect(0, 192, 640, 32)]
         player.update(1.0 / 60.0, rects)
@@ -113,7 +117,7 @@ class TestAttack:
     def test_attack_state_locks_input(self) -> None:
         player = Player(pygame.Vector2(50.0, 0.0))
         player.is_grounded = True
-        player._state = PlayerState.SHORT_ATTACK
+        player._change_state_instance(ShortAttackState())
         player.velocity.x = settings.PLAYER_WALK_SPEED
         assert player.state == PlayerState.SHORT_ATTACK
 
@@ -123,18 +127,18 @@ class TestHurtDying:
 
     def test_damage_forces_hurt_state(self) -> None:
         player = Player(pygame.Vector2(50.0, 0.0))
-        player._state = PlayerState.IDLE
+        player._change_state_instance(IdleState())
         player.apply_damage(0.5, (50.0, 0.0))
         assert player.state == PlayerState.HURT
 
     def test_health_zero_forces_dying_state(self) -> None:
         player = Player(pygame.Vector2(50.0, 0.0))
-        player._state = PlayerState.IDLE
+        player._change_state_instance(IdleState())
         player.apply_damage(settings.PLAYER_MAX_HEALTH, (50.0, 0.0))
         assert player.state == PlayerState.DYING
 
     def test_dying_state_is_terminal(self) -> None:
         player = Player(pygame.Vector2(50.0, 0.0))
-        player._state = PlayerState.DYING
+        player._change_state_instance(DyingState())
         player.apply_damage(0.5, (50.0, 0.0))
         assert player.state == PlayerState.DYING

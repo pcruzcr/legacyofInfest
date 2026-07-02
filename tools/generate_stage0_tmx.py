@@ -50,35 +50,51 @@ for y in range(12):
 
 def _gen_collision_rects():
     """Generate TMX rect objects from the terrain grid, merging contiguous solid tiles.
-    Tile 1=floor, 2=wall, 3=platform — all produce collision rects."""
-    rects = []
+    Tile 1=floor, 2=wall → type Solid.
+    Tile 3=platform → type Platform (one-way: passable from below)."""
+    solid_rects = []
+    platform_rects = []
     oid = 100
     for y in range(MH):
         start_x = None
+        tile_type = None
         for x in range(MW):
-            if terrain[y][x] in (1, 2, 3):
+            t = terrain[y][x]
+            if t in (1, 2, 3):
                 if start_x is None:
                     start_x = x
+                    tile_type = t
             else:
                 if start_x is not None:
                     rx = start_x * TS
                     rw = (x - start_x) * TS
-                    rects.append((oid, rx, y * TS, rw, TS))
+                    entry = (oid, rx, y * TS, rw, TS)
+                    if tile_type == 3:
+                        platform_rects.append(entry)
+                    else:
+                        solid_rects.append(entry)
                     oid += 1
                     start_x = None
+                    tile_type = None
         if start_x is not None:
             rx = start_x * TS
             rw = (MW - start_x) * TS
-            rects.append((oid, rx, y * TS, rw, TS))
+            entry = (oid, rx, y * TS, rw, TS)
+            if tile_type == 3:
+                platform_rects.append(entry)
+            else:
+                solid_rects.append(entry)
             oid += 1
-    for oid, rx, ry, rw, rh in rects:
+    for oid, rx, ry, rw, rh in solid_rects:
         yield f'  <object id="{oid}" name="Solid" type="Solid" x="{rx}" y="{ry}" width="{rw}" height="{rh}"/>'
+    for oid, rx, ry, rw, rh in platform_rects:
+        yield f'  <object id="{oid}" name="Platform" type="Platform" x="{rx}" y="{ry}" width="{rw}" height="{rh}"/>'
 
 
 def _iter_objects():
     """Yield TMX object entries for all entities, triggers, and zones."""
     # PlayerSpawn (y = floor_y - player_height = 192 - 32 = 160)
-    yield f"""  <object id="1" name="PlayerSpawn" type="PlayerSpawn" x="48" y="160" width="16" height="16"/>"""
+    yield """  <object id="1" name="PlayerSpawn" type="PlayerSpawn" x="48" y="160" width="16" height="16"/>"""
 
     # ── Zone A: Messages ──
     objs = [
@@ -243,8 +259,8 @@ def generate_tmx():
     n_collision = sum(1 for _ in _gen_collision_rects())
     print(f"Created Stage 0 TMX: {TMX_PATH}")
     print(f"  Map: {MW}x{MH} tiles ({MW*TS}x{MH*TS} px)")
-    print(f"  Zones: A-G with 27 message triggers, 8 walkers, 2 flying, 2 shooters")
-    print(f"  Checkpoints: 5, Death pits: 1, Hazard zones: 1")
+    print("  Zones: A-G with 27 message triggers, 8 walkers, 2 flying, 2 shooters")
+    print("  Checkpoints: 5, Death pits: 1, Hazard zones: 1")
     print(f"  Collision rects: {n_collision} (merged from terrain grid)")
 
 

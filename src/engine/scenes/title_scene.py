@@ -1,17 +1,25 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pygame
 
 from src.engine.core import settings
-from src.engine.scene.base_scene import BaseScene
 from src.engine.input.action_map import Action
+from src.engine.scene.base_scene import BaseScene
+from src.engine.scenes.demo_menu_scene import DemoMenuScene
+from src.engine.scenes.story_scene import StoryScene
 from src.engine.utils.asset_loader import AssetLoader
+
+if TYPE_CHECKING:
+    from src.engine.core.game_context import GameContext
 
 
 class TitleScene(BaseScene):
     """Main title screen with background, logo, music, and custom font."""
 
-    def __init__(self) -> None:
+    def __init__(self, context: GameContext) -> None:
+        super().__init__(context)
         assets = settings.ASSETS_DIR / "title"
 
         self._background = AssetLoader.load_image(
@@ -35,55 +43,37 @@ class TitleScene(BaseScene):
         self._selected: int = 0
         self._options: list[str] = ["START", "ACADEMIC DEMOS", "QUIT"]
 
-    def _get_audio(self):
-        from src.engine.core.app import App
-        return App._audio_manager if App._instance is not None else None
-
-    def _get_input(self):
-        from src.engine.core.app import App
-        return App._input_manager if App._instance is not None else None
-
     def on_enter(self) -> None:
         self._selected = 0
-        audio = self._get_audio()
+        audio = self.audio
         if audio is not None:
             audio.play_music(self._music)
 
     def on_exit(self) -> None:
-        audio = self._get_audio()
+        audio = self.audio
         if audio is not None:
             audio.stop_music()
 
     def update(self, dt: float) -> None:
-        im = self._get_input()
+        im = self.input
         if im is None:
             return
 
-        if im.is_raw_key_pressed(pygame.K_DOWN):
+        if im.is_action_just_pressed(Action.MOVE_DOWN):
             self._selected = (self._selected + 1) % len(self._options)
-        if im.is_raw_key_pressed(pygame.K_UP):
+        if im.is_action_just_pressed(Action.MOVE_UP):
             self._selected = (self._selected - 1) % len(self._options)
 
         if im.is_action_pressed(Action.CONFIRM):
             if self._selected == 0:
-                from src.engine.scenes.story_scene import StoryScene
-                from src.engine.core.app import App
-                if App._instance is not None:
-                    App._instance.scene_manager.replace(StoryScene(1))
+                self.context.scene_manager.replace(StoryScene(self.context, 1))
             elif self._selected == 1:
-                from src.engine.scenes.demo_menu_scene import DemoMenuScene
-                from src.engine.core.app import App
-                if App._instance is not None:
-                    App._instance.scene_manager.replace(DemoMenuScene())
+                self.context.scene_manager.replace(DemoMenuScene(self.context))
             elif self._selected == 2:
-                from src.engine.core.app import App
-                if App._instance is not None:
-                    App._instance._running = False
+                self.context.quit()
 
         if im.is_action_pressed(Action.CANCEL):
-            from src.engine.core.app import App
-            if App._instance is not None:
-                App._instance._running = False
+            self.context.quit()
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.blit(self._background, (0, 0))

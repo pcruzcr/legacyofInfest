@@ -14,7 +14,8 @@ from enum import Enum
 import pygame
 
 from src.engine.core import settings
-from src.engine.core.event_bus import EventBus
+from src.engine.core.event_bus import emit
+from src.engine.core.events import Events
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.entities.base_entity import BaseEntity
 
@@ -43,6 +44,8 @@ class EnemyBase(BaseEntity):
         contact_knockback: float = 120.0,
         detection_range_x: float = 160.0,
         detection_range_y: float = 64.0,
+        hurt_duration: float = 0.25,
+        invincibility_duration: float = 0.5,
     ) -> None:
         """Initialize the enemy at the given spawn position."""
         super().__init__(spawn_position)
@@ -59,6 +62,8 @@ class EnemyBase(BaseEntity):
         self._contact_cooldown: float = 0.0
         self._hurt_timer: float = 0.0
         self._death_timer: float = 0.0
+        self._hurt_duration: float = hurt_duration
+        self._invincibility_duration: float = invincibility_duration
 
         # --- Detection ---
         self.detection_range_x: float = detection_range_x
@@ -77,6 +82,10 @@ class EnemyBase(BaseEntity):
         # --- Animation ---
         self._animation_timer: float = 0.0
         self._animation_frame: int = 0
+
+        # --- Invincibility flash ---
+        self._flash_counter: float = 0.0
+        self._flash_visible: bool = True
 
         # --- Sprite ---
         self._sprite_zone: int = 0
@@ -99,13 +108,33 @@ class EnemyBase(BaseEntity):
     def update(self, dt: float) -> None:
         """
         Master update. Called every frame.
-        Order: invincibility -> state machine -> rects -> contact.
-        Subclasses do NOT override this method.
+        Order: pre_update -> invincibility -> state machine -> rects ->
+               contact -> animation -> post_update.
+        Subclasses override _pre_update or _post_update instead.
+        TEMPLATE METHOD: algorithm skeleton fixed; hook methods supply
+        per-subclass behavior without overriding the skeleton.
         """
+        if self._pre_update(dt):
+            return
         self._update_invincibility(dt)
         self._run_state_machine(dt)
         self._update_rects()
         self._tick_cooldowns(dt)
+        self._advance_animation(dt)
+        self._post_update(dt)
+
+    def _pre_update(self, dt: float) -> bool:
+        """
+        Optional pre-update hook. Return True to skip the rest of update().
+        Used by BossBase for phase transitions.
+        """
+        return False
+
+    def _post_update(self, dt: float) -> None:
+        """
+        Optional post-update hook.
+        Used by EnemyShooter to update projectiles.
+        """
 
     def _load_zone_sprites(self, zone: int, sprite_name: str, fw: int, fh: int) -> None:
         """Load zone-specific enemy sprite sheets."""
@@ -130,6 +159,19 @@ class EnemyBase(BaseEntity):
             except Exception:
                 pass
 
+    def _advance_animation(self, dt: float) -> None:
+        """Advance the sprite animation frame at ~10 FPS."""
+        fps = 10.0
+        frame_duration = 1.0 / fps
+        self._animation_timer += dt
+        anim_key = self._get_animation_state()
+        frames = self._sprite_frames.get(anim_key)
+        if not frames:
+            return
+        if self._animation_timer >= frame_duration:
+            self._animation_timer -= frame_duration
+            self._animation_frame = (self._animation_frame + 1) % len(frames)
+
     def draw(
         self,
         surface: pygame.Surface,
@@ -139,6 +181,10 @@ class EnemyBase(BaseEntity):
         Draw the enemy via sprite sheet or placeholder fallback.
         """
         if not self.is_visible or not self.is_alive:
+            return
+
+        # Invincibility flash: skip draw when invisible
+        if not self._flash_visible:
             return
 
         screen_x = int(self.position.x - camera_offset.x)
@@ -189,8 +235,8 @@ class EnemyBase(BaseEntity):
             return
 
         self.current_health -= damage
-        self._invincibility_timer = 0.5
-        self._hurt_timer = 0.25
+        self._invincibility_timer = self._invincibility_duration
+        self._hurt_timer = self._hurt_duration
 
         if self.current_health <= 0:
             self._die()
@@ -202,8 +248,8 @@ class EnemyBase(BaseEntity):
         self.state = EnemyState.DYING
         self.is_alive = False
         self._death_timer = 0.5
-        EventBus.emit(
-            "ENEMY_DIED",
+        emit(
+            Events.ENEMY_DIED,
             entity_id=f"{type(self).__name__}_{id(self)}",
             position=(self.position.x, self.position.y),
         )
@@ -221,27 +267,61 @@ class EnemyBase(BaseEntity):
         """AI when player is within detection range."""
 
     @abstractmethod
-    def _get_animation_state(self) -> str:
-        """Return animation key for current state."""
-
-    @abstractmethod
-    def _build_hitbox(self) -> pygame.Rect:
-        """Returns LOCAL-space rect (offset from entity position)."""
+    def _get_animation_key(self) -> str:
+        """Return animation key for the current non-DYING, non-HURT state."""
 
     @abstractmethod
     def _build_hurtbox(self) -> pygame.Rect:
         """Returns LOCAL-space rect (offset from entity position)."""
 
     # ──────────────────────────────────────────────
+    # Concrete hooks with sensible defaults
+    # ──────────────────────────────────────────────
+
+    def _get_animation_state(self) -> str:
+        """
+        TEMPLATE METHOD: fixed mapping for DYING/HURT states;
+        subclasses provide _get_animation_key() for the rest.
+        """
+        if self.state == EnemyState.DYING:
+            return "die"
+        if self.state == EnemyState.HURT:
+            return "hurt"
+        return self._get_animation_key()
+
+    def _build_hitbox(self) -> pygame.Rect:
+        """
+        Default: no active attack hitbox — damage is contact-based.
+        Subclasses override to introduce weapon hitboxes.
+        """
+        return pygame.Rect(0, 0, 0, 0)
+
+    def _face_player(self) -> None:
+        """Face toward the player's horizontal position."""
+        if self._player_ref is not None:
+            self.facing_direction = (
+                1 if self._player_ref.centerx >= self.rect.centerx else -1
+            )
+
+    # ──────────────────────────────────────────────
     # Provided methods (do not override)
     # ──────────────────────────────────────────────
 
+    _INV_FLASH_INTERVAL: float = 4.0 / 60.0
+
     def _update_invincibility(self, dt: float) -> None:
-        """Tick down invincibility timer."""
+        """Tick down invincibility timer and toggle flash."""
         if self._invincibility_timer > 0:
             self._invincibility_timer -= dt
+            self._flash_counter += dt
+            if self._flash_counter >= self._INV_FLASH_INTERVAL:
+                self._flash_counter -= self._INV_FLASH_INTERVAL
+                self._flash_visible = not self._flash_visible
+        else:
+            self._flash_visible = True
+            self._flash_counter = 0.0
 
-    def _check_player_contact(self, player) -> None:
+    def check_player_contact(self, player) -> None:
         """
         Check if this enemy's hurtbox overlaps the player's hurtbox.
         If so, deal contact damage (respecting cooldown).
@@ -299,6 +379,8 @@ class EnemyBase(BaseEntity):
         """
         Evaluate current state and dispatch to the appropriate behavior.
         Priority: DYING > HURT > ALERT > PATROL
+        Deaggro hysteresis: once ALERT, player must leave detection range
+        + deaggro_margin to return to PATROL.
         """
         if self.state == EnemyState.DYING:
             return
@@ -314,6 +396,14 @@ class EnemyBase(BaseEntity):
         if player_in_range:
             self.state = EnemyState.ALERT
             self._alert_behavior(dt)
+        elif self.state == EnemyState.ALERT:
+            # Deaggro hysteresis: use extended range before leaving ALERT
+            still_in_range = self._player_in_range(
+                self._player_ref, margin=self._deaggro_margin
+            )
+            if not still_in_range:
+                self.state = EnemyState.PATROL
+                self._patrol_behavior(dt)
         else:
             self.state = EnemyState.PATROL
             self._patrol_behavior(dt)
@@ -331,11 +421,20 @@ class EnemyBase(BaseEntity):
             return False
         return self._player_in_range(self._player_ref)
 
-    def _player_in_range(self, player_rect: pygame.Rect) -> bool:
+    def _player_in_range(
+        self, player_rect: pygame.Rect | None = None, margin: float = 0.0
+    ) -> bool:
         """
         Check if the given player rect is within detection range.
+        Optional margin extends the detection zone (for deaggro hysteresis).
         Called by stage code.
         """
-        dx = abs(player_rect.centerx - self.rect.centerx)
-        dy = abs(player_rect.centery - self.rect.centery)
-        return dx <= self.detection_range_x and dy <= self.detection_range_y
+        pr = player_rect if player_rect is not None else self._player_ref
+        if pr is None:
+            return False
+        dx = abs(pr.centerx - self.rect.centerx)
+        dy = abs(pr.centery - self.rect.centery)
+        return (
+            dx <= self.detection_range_x + margin
+            and dy <= self.detection_range_y + margin
+        )

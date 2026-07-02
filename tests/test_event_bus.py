@@ -8,13 +8,13 @@ and unrelated event isolation.
 """
 from __future__ import annotations
 import pytest
-from src.engine.core.event_bus import EventBus
+from src.engine.core.event_bus import subscribe, unsubscribe, emit, dispatch, clear
 
 
 @pytest.fixture(autouse=True)
 def reset_event_bus():
     """Clear EventBus state before each test."""
-    EventBus.clear()
+    clear()
     yield
 
 
@@ -26,9 +26,9 @@ def test_subscribe_and_emit():
         nonlocal received
         received = data
 
-    EventBus.subscribe("TEST_EVENT", callback)
-    EventBus.emit("TEST_EVENT", value=42, name="foo")
-    EventBus.dispatch()
+    subscribe("TEST_EVENT", callback)
+    emit("TEST_EVENT", value=42, name="foo")
+    dispatch()
     assert received == {"value": 42, "name": "foo"}
 
 
@@ -40,10 +40,10 @@ def test_emit_queues_not_immediate():
         nonlocal invoked
         invoked = True
 
-    EventBus.subscribe("TEST_EVENT", callback)
-    EventBus.emit("TEST_EVENT")
+    subscribe("TEST_EVENT", callback)
+    emit("TEST_EVENT")
     assert not invoked, "Callback was invoked before dispatch()"
-    EventBus.dispatch()
+    dispatch()
     assert invoked, "Callback was not invoked after dispatch()"
 
 
@@ -55,10 +55,10 @@ def test_unsubscribe_stops_delivery():
         nonlocal invoked
         invoked = True
 
-    EventBus.subscribe("TEST_EVENT", callback)
-    EventBus.unsubscribe("TEST_EVENT", callback)
-    EventBus.emit("TEST_EVENT")
-    EventBus.dispatch()
+    subscribe("TEST_EVENT", callback)
+    unsubscribe("TEST_EVENT", callback)
+    emit("TEST_EVENT")
+    dispatch()
     assert not invoked
 
 
@@ -72,10 +72,10 @@ def test_multiple_subscribers():
     def cb2(**data):
         results.append("cb2")
 
-    EventBus.subscribe("TEST_EVENT", cb1)
-    EventBus.subscribe("TEST_EVENT", cb2)
-    EventBus.emit("TEST_EVENT")
-    EventBus.dispatch()
+    subscribe("TEST_EVENT", cb1)
+    subscribe("TEST_EVENT", cb2)
+    emit("TEST_EVENT")
+    dispatch()
     assert results == ["cb1", "cb2"]
 
 
@@ -87,7 +87,7 @@ def test_unrelated_event_not_delivered():
         nonlocal invoked
         invoked = True
 
-    EventBus.subscribe("FOO", callback)
-    EventBus.emit("BAR")
-    EventBus.dispatch()
+    subscribe("FOO", callback)
+    emit("BAR")
+    dispatch()
     assert not invoked

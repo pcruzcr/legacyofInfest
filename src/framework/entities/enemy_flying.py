@@ -4,22 +4,26 @@ System: framework.entities
 Academic Unit: Unit III (Curve Mathematics, Sine-wave Motion)
 Description: Flying enemy that travels through the air along a computed
 path. Supports sine-wave oscillation, Bézier (spline through waypoints),
-and linear waypoint patrol modes.
+and linear waypoint patrol modes via the Strategy Pattern.
+
+STRATEGY PATTERN (Fase 3): Each flight mode (sine, bezier, patrol) is a
+separate strategy class implementing IFlightStrategy. EnemyFlying delegates
+both _patrol_behavior and _alert_behavior to its strategy, making it
+trivially extensible with new movement algorithms.
 """
 from __future__ import annotations
 
-import math
-
 import pygame
 
-from src.framework.entities.enemy_base import EnemyBase, EnemyState
-from src.framework.processing.curve_tools import CurveTools
+from src.framework.entities.enemy_base import EnemyBase
+from src.framework.entities.flight_strategies import IFlightStrategy, make_strategy
+
 
 
 class EnemyFlying(EnemyBase):
     """
     Flying enemy — sine-wave, Bézier spline, or waypoint flight path.
-    Inherits from EnemyBase.
+    Inherits from EnemyBase. Movement algorithm selected via Strategy Pattern.
     """
 
     def __init__(
@@ -41,6 +45,8 @@ class EnemyFlying(EnemyBase):
             damage_on_contact=damage_on_contact,
             detection_range_x=180.0,
             detection_range_y=96.0,
+            hurt_duration=0.3,
+            invincibility_duration=0.3,
         )
 
         self.flight_mode: str = flight_mode
@@ -48,6 +54,9 @@ class EnemyFlying(EnemyBase):
         self.sine_amplitude: float = sine_amplitude
         self.sine_frequency: float = sine_frequency
         self.waypoints: list[tuple[float, float]] | None = waypoints
+
+        # Strategy Pattern: delegate movement to the selected strategy
+        self._strategy: IFlightStrategy = make_strategy(flight_mode)
 
         # Sine mode state
         self._origin: pygame.Vector2 = pygame.Vector2(spawn_position)
@@ -75,130 +84,34 @@ class EnemyFlying(EnemyBase):
         self.rect.width = 20
         self.rect.height = 20
 
-        # Validate mode
-        if self.flight_mode not in ("sine", "bezier", "patrol"):
-            self.flight_mode = "sine"
-
         # Load sprites
         self._load_zone_sprites(zone, "fly", 14, 10)
 
     # ──────────────────────────────────────────────
-    # Behavior implementations
+    # Behavior implementations (Strategy delegation)
     # ──────────────────────────────────────────────
 
     def _patrol_behavior(self, dt: float) -> None:
-        """Execute flight behavior based on flight_mode."""
-        if self.flight_mode == "sine":
-            self._sine_patrol(dt)
-        elif self.flight_mode == "bezier":
-            self._bezier_patrol(dt)
-        elif self.flight_mode == "patrol":
-            self._waypoint_patrol(dt)
+        """Delegate patrol movement to the current flight strategy."""
+        self._strategy.execute(self, dt)
 
     def _alert_behavior(self, dt: float) -> None:
-        """Accelerate path speed by 1.5x when alert."""
-        speed_mult = 1.5
-        if self.flight_mode == "sine":
-            self._sine_patrol(dt, speed_mult=speed_mult)
-        elif self.flight_mode == "bezier":
-            self._bezier_patrol(dt, speed_mult=speed_mult)
-        elif self.flight_mode == "patrol":
-            self._waypoint_patrol(dt, speed_mult=speed_mult)
+        """Delegate alert movement, then track player Y axis."""
+        self._strategy.execute(self, dt, speed_mult=1.5)
+        self._face_player()
+        if self._player_ref is not None:
+            dy = self._player_ref.centery - self.rect.centery
+            track_speed = self.flight_speed * 0.5
+            if abs(dy) > 4:
+                self.position.y += (track_speed * dt) if dy > 0 else -(track_speed * dt)
 
-    def _sine_patrol(self, dt: float, speed_mult: float = 1.0) -> None:
-        """
-        Sine-wave movement: horizontal movement with sinusoidal
-        vertical oscillation.
-        """
-        self._t += dt
+    # ──────────────────────────────────────────────
+    # Required overrides
+    # ──────────────────────────────────────────────
 
-        # Horizontal movement
-        self.position.x += (
-            self.facing_direction * self.flight_speed * speed_mult * dt
-        )
-
-        # Vertical sine oscillation
-        self.position.y = (
-            self._origin.y
-            + self.sine_amplitude
-            * math.sin(2.0 * math.pi * self.sine_frequency * self._t)
-        )
-
-        # Reverse at boundaries (simple bounce)
-        dx = self.position.x - self._origin.x
-        if abs(dx) > 96.0:
-            self.facing_direction *= -1
-
-        self.rect.x = int(self.position.x)
-        self.rect.y = int(self.position.y)
-
-    def _bezier_patrol(self, dt: float, speed_mult: float = 1.0) -> None:
-        """
-        Bézier path traversal: follow a smooth closed curve through all
-        waypoints using Catmull-Rom spline segments.
-        """
-        if not self._path_waypoints:
-            return
-
-        arc_length = self.flight_speed * speed_mult * dt
-        total_path = 64.0 * max(len(self._path_waypoints), 1)
-        self._path_progress += arc_length / total_path
-
-        # Loop when done
-        if self._path_progress > 1.0:
-            self._path_progress -= 1.0
-
-        pos = CurveTools.build_bezier_path(
-            self._path_waypoints, self._path_progress
-        )
-        self.position.x = pos.x
-        self.position.y = pos.y
-        self.rect.x = int(self.position.x)
-        self.rect.y = int(self.position.y)
-
-    def _waypoint_patrol(self, dt: float, speed_mult: float = 1.0) -> None:
-        """Linear waypoint patrol: move from waypoint to waypoint in order."""
-        if len(self._path_waypoints) < 2:
-            return
-
-        target = self._path_waypoints[self._waypoint_index]
-        dx = target.x - self.position.x
-        dy = target.y - self.position.y
-        dist = math.sqrt(dx * dx + dy * dy)
-
-        step = self.flight_speed * speed_mult * dt
-
-        if dist <= step:
-            # Reached waypoint — advance to next
-            self.position.x = target.x
-            self.position.y = target.y
-            self._waypoint_index += 1
-            if self._waypoint_index >= len(self._path_waypoints):
-                self._waypoint_index = 0
-            # Face direction of travel
-            next_target = self._path_waypoints[self._waypoint_index]
-            if next_target.x != self.position.x:
-                self.facing_direction = 1 if next_target.x > self.position.x else -1
-        else:
-            # Move toward target
-            self.position.x += (dx / dist) * step
-            self.position.y += (dy / dist) * step
-            self.facing_direction = 1 if dx > 0 else -1
-
-        self.rect.x = int(self.position.x)
-        self.rect.y = int(self.position.y)
-
-    def _get_animation_state(self) -> str:
-        """Return animation key for current state."""
-        if self.state == EnemyState.DYING:
-            return "die"
-        if self.state == EnemyState.HURT:
-            return "hurt"
+    def _get_animation_key(self) -> str:
+        """Return animation key for non-DYING, non-HURT state."""
         return "fly"
-
-    def _build_hitbox(self) -> pygame.Rect:
-        """Flying enemy has no active attack hitbox."""
-        return pygame.Rect(0, 0, 0, 0)
 
     def _build_hurtbox(self) -> pygame.Rect:
         """Return local-space hurtbox rect."""

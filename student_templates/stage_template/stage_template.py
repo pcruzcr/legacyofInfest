@@ -14,6 +14,7 @@ from src.framework.processing.pattern_recognition_tools import (
     PatternRecognitionTools,
     TrainedModel,
 )
+from src.engine.core.game_context import GameContext
 from src.framework.scenes.stage_scene import StageScene
 
 
@@ -27,10 +28,10 @@ class CustomStageScene(StageScene):
     4. Override draw() to add custom rendering.
     """
 
-    def __init__(self, tmx_path: Path | None = None) -> None:
+    def __init__(self, context: GameContext, tmx_path: Path | None = None) -> None:
         if tmx_path is None:
             tmx_path = Path("student_templates/stage_template/stage_template.tmx")
-        super().__init__(tmx_path)
+        super().__init__(context, tmx_path)
         self._stage_model: TrainedModel | None = None
         self._custom_timer: float = 0.0
 

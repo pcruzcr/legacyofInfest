@@ -1,17 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from src.framework.entities.enemy_walker import EnemyWalker
-from src.framework.entities.enemy_flying import EnemyFlying
-from src.framework.entities.enemy_shooter import EnemyShooter
 from src.framework.scenes.stage_scene import StageScene
-from src.framework.stage.stage_loader import StageLoader
 
-# Register entity types for Stage 0 TMX object parsing
-StageLoader.register_entity("Walker", EnemyWalker)
-StageLoader.register_entity("Flying", EnemyFlying)
-StageLoader.register_entity("Shooter", EnemyShooter)
+if TYPE_CHECKING:
+    from src.engine.core.game_context import GameContext
 
 
 class Stage0(StageScene):
@@ -24,5 +19,5 @@ class Stage0(StageScene):
     TIME_LIMIT: int = 0
     BGM_TRACK: str = "bgm_stage0"
 
-    def __init__(self) -> None:
-        super().__init__(Path("assets/maps/stage0/stage0.tmx"))
+    def __init__(self, context: GameContext) -> None:
+        super().__init__(context, Path("assets/maps/stage0/stage0.tmx"))

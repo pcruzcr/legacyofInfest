@@ -5,6 +5,11 @@ Academic Unit: Unit II (Vectors, Collision), Unit IV (Sprite Animation)
 Description: Player entity with full state machine (9 states), physics
 (gravity, coyote time, jump cut), damage system (invincibility, knockback),
 attack hitboxes (short/long), and hurtbox (standard/crouching).
+
+STATE PATTERN (Fase 2): Per-frame behavior is delegated to a
+PlayerStateBase instance (see player_states.py). The Player class
+owns shared infrastructure (physics, collision, animation, sprites)
+while each state encapsulates its own update logic and transitions.
 """
 from __future__ import annotations
 
@@ -14,12 +19,14 @@ import pygame
 
 from typing import TYPE_CHECKING
 from src.engine.core import settings
-from src.engine.core.event_bus import EventBus
+from src.engine.core.event_bus import emit
+from src.engine.core.events import Events
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.entities.base_entity import BaseEntity
 
 if TYPE_CHECKING:
     from src.engine.input.input_manager import InputManager
+    from src.framework.entities.player_states import PlayerStateBase
 
 
 SPRITE_W = 32
@@ -36,6 +43,21 @@ _PLAYER_SPRITE_MAP: dict[str, tuple[str, int]] = {
     "LONG_ATTACK": ("player_long_attack.png", 10),
     "HURT": ("player_hurt.png", 4),
     "DYING": ("player_die.png", 8),
+    "DASHING": ("player_walk.png", 4),
+}
+
+# Per-state animation playback rate (frames per second)
+_PLAYER_ANIM_FPS: dict[str, float] = {
+    "IDLE": 8.0,
+    "WALKING": 12.0,
+    "JUMPING": 12.0,
+    "FALLING": 8.0,
+    "CROUCHING": 8.0,
+    "SHORT_ATTACK": 18.0,
+    "LONG_ATTACK": 16.0,
+    "HURT": 12.0,
+    "DYING": 10.0,
+    "DASHING": 12.0,
 }
 
 
@@ -50,13 +72,22 @@ class PlayerState(str, Enum):
     LONG_ATTACK = "LONG_ATTACK"
     HURT = "HURT"
     DYING = "DYING"
+    DASHING = "DASHING"
 
 
 class Player(BaseEntity):
     """
     Player entity with physics, state machine, damage, combat, and sprite rendering.
     Inherits from BaseEntity.
+
+    STATE PATTERN: self._state_instance holds the current PlayerStateBase
+    subclass. Every frame, update() calls _state_instance.update() which
+    handles state-specific logic and transitions. Shared infrastructure
+    (physics, collision, animation frame advancement) remains in Player.
     """
+
+    SHORT_ATTACK = PlayerState.SHORT_ATTACK
+    LONG_ATTACK = PlayerState.LONG_ATTACK
 
     def __init__(self, spawn_position: pygame.Vector2) -> None:
         """Initialize the player at the given spawn position."""
@@ -68,10 +99,10 @@ class Player(BaseEntity):
         self._coyote_counter: int = 0
         self._jump_cut_applied: bool = False
 
-        # --- State machine ---
-        self._state: PlayerState = PlayerState.IDLE
-        self._animation_timer: float = 0.0
-        self._animation_frame: int = 0
+        # --- State pattern ---
+        self._state_instance: PlayerStateBase
+        self._prev_state_instance: PlayerStateBase | None = None
+        self._init_state()
 
         # --- Attack state ---
         self._attack_timer: float = 0.0
@@ -80,6 +111,11 @@ class Player(BaseEntity):
         self._active_hitbox: pygame.Rect | None = None
         self._hitbox_consumed: bool = False
         self._cooldown_timer: float = 0.0
+
+        # --- Dash state ---
+        self._air_dash_count: int = 0
+        self._dash_timer: float = 0.0
+        self._dash_cooldown: float = 0.0
 
         # --- Damage state ---
         self._health: float = settings.PLAYER_MAX_HEALTH
@@ -103,6 +139,16 @@ class Player(BaseEntity):
         self._sprite_frames: dict[str, list[pygame.Surface]] = {}
         self._load_sprites()
 
+        # --- Animation state ---
+        self._animation_timer: float = 0.0
+        self._animation_frame: int = 0
+
+    def _init_state(self) -> None:
+        """Create the initial idle state instance."""
+        from src.framework.entities.player_states import IdleState
+        self._state_instance = IdleState()
+        self._state_instance.enter(self)
+
     def _load_sprites(self) -> None:
         """Load all player sprite sheets into frame lists."""
         sprite_dir = settings.ASSETS_DIR / "sprites" / "player"
@@ -111,9 +157,7 @@ class Player(BaseEntity):
             frames = AssetLoader.load_sprite_sheet(path, SPRITE_W, SPRITE_H)
             self._sprite_frames[state_name] = frames
 
-    # ──────────────────────────────────────────────
-    # Properties (read-only public API)
-    # ──────────────────────────────────────────────
+    # ── Properties ──────────────────────────────────────────────
 
     @property
     def current_health(self) -> float:
@@ -122,8 +166,8 @@ class Player(BaseEntity):
 
     @property
     def state(self) -> PlayerState:
-        """Read-only current state."""
-        return self._state
+        """Read-only current state enum value."""
+        return PlayerState(self._state_instance.state_enum.value)
 
     @property
     def active_hitbox(self) -> pygame.Rect | None:
@@ -143,17 +187,15 @@ class Player(BaseEntity):
         1.00 during LONG_ATTACK active frames,
         0.0 otherwise.
         """
-        if (self._state == PlayerState.SHORT_ATTACK
+        if (self._state_instance.state_enum == PlayerState.SHORT_ATTACK
                 and self._active_hitbox is not None):
             return 0.5
-        if (self._state == PlayerState.LONG_ATTACK
+        if (self._state_instance.state_enum == PlayerState.LONG_ATTACK
                 and self._active_hitbox is not None):
             return 1.0
         return 0.0
 
-    # ──────────────────────────────────────────────
-    # Public methods
-    # ──────────────────────────────────────────────
+    # ── Public methods ──────────────────────────────────────────
 
     def set_spawn(self, position: pygame.Vector2) -> None:
         """The ONLY sanctioned way to reposition the player."""
@@ -161,6 +203,9 @@ class Player(BaseEntity):
         self.rect.x = int(self.position.x)
         self.rect.y = int(self.position.y)
         self.velocity = pygame.Vector2(0.0, 0.0)
+
+    def heal(self, amount: float) -> None:
+        self._health = min(settings.PLAYER_MAX_HEALTH, self._health + amount)
 
     def consume_hitbox(self) -> None:
         """
@@ -181,7 +226,7 @@ class Player(BaseEntity):
         """
         if self._invincibility_timer > 0:
             return
-        if self._state == PlayerState.DYING:
+        if self._state_instance.state_enum == PlayerState.DYING:
             return
 
         self._health = max(0.0, self._health - amount)
@@ -194,21 +239,31 @@ class Player(BaseEntity):
         self.velocity.y = -200.0
         self._knockback_timer = 0.3
 
-        EventBus.emit(
-            "PLAYER_DAMAGED",
+        emit(
+            Events.PLAYER_DAMAGED,
             amount=amount,
             source=source_position,
         )
 
         if self._health <= 0.0:
-            self._state = PlayerState.DYING
-            self._animation_timer = 0.0
-            self._animation_frame = 0
-            EventBus.emit("PLAYER_DIED")
+            from src.framework.entities.player_states import DyingState
+            self._change_state_instance(DyingState())
+            emit(Events.PLAYER_DIED)
         else:
-            self._state = PlayerState.HURT
-            self._animation_timer = 0.0
-            self._animation_frame = 0
+            from src.framework.entities.player_states import HurtState
+            self._change_state_instance(HurtState())
+
+    def _change_state_instance(self, new_state: PlayerStateBase) -> None:
+        """
+        Transition to a new state instance.
+        Calls exit() on the current state, then enter() on the new state.
+        """
+        if self._state_instance.state_enum == new_state.state_enum:
+            return
+        self._prev_state_instance = self._state_instance
+        self._state_instance.exit(self)
+        self._state_instance = new_state
+        self._state_instance.enter(self)
 
     # ──────────────────────────────────────────────
     # Update
@@ -219,26 +274,40 @@ class Player(BaseEntity):
         dt: float,
         collision_rects: list[pygame.Rect] | None = None,
         input_manager: InputManager | None = None,
+        one_way_rects: list[pygame.Rect] | None = None,
     ) -> None:
         """
         Main update loop. Called every frame.
         If collision_rects is provided, performs AABB collision resolution.
         input_manager is injected by the stage — never accessed via App singleton.
+        one_way_rects are platforms passable from below.
         """
         if collision_rects is None:
             collision_rects = []
+        if one_way_rects is None:
+            one_way_rects = []
 
-        # Tick timers
+        # Tick timers (includes animation_timer)
         self._tick_timers(dt)
 
-        # State machine
-        self._run_state_machine(dt, input_manager)
+        # State machine — delegate to current state
+        self._state_instance.update(self, dt, input_manager)
+
+        # Advance animation frame (attack states handle their own animation)
+        if self._state_instance.state_enum not in (
+            PlayerState.SHORT_ATTACK,
+            PlayerState.LONG_ATTACK,
+        ):
+            self._advance_animation(dt)
 
         # Physics (gravity + movement)
         self._apply_physics(dt)
 
-        # Collision resolution (axis-separated)
+        # Collision resolution (axis-separated) — solid first
         self._resolve_collision(dt, collision_rects)
+
+        # One-way platforms (only resolve Y when falling)
+        self._resolve_one_way_collision(dt, one_way_rects)
 
         # Update rect position
         self.rect.x = int(self.position.x)
@@ -268,24 +337,34 @@ class Player(BaseEntity):
             if not self._flash_visible:
                 return
 
-        frames = self._sprite_frames.get(self._state.value)
-        if not frames:
-            return
-
-        frame_idx = min(self._animation_frame, len(frames) - 1)
-        frame = frames[frame_idx]
-
-        if self.facing_direction < 0:
-            frame = pygame.transform.flip(frame, True, False)
-
+        frames = self._sprite_frames.get(self._state_instance.state_enum.value)
         screen_x = int(self.position.x - camera_offset.x)
         screen_y = int(self.position.y - camera_offset.y)
 
-        # Center the 32-wide sprite on the 20-wide collision rect
-        offset_x = (self.rect.width - SPRITE_W) // 2  # -6
-        offset_y = self.rect.height - SPRITE_H  # 0 or -12 (sprite bottom aligns with rect bottom)
+        if frames:
+            frame_idx = min(self._animation_frame, len(frames) - 1)
+            frame = frames[frame_idx]
 
-        surface.blit(frame, (screen_x + offset_x, screen_y + offset_y))
+            if self.facing_direction < 0:
+                frame = pygame.transform.flip(frame, True, False)
+
+            # Center the 32-wide sprite on the 20-wide collision rect
+            offset_x = (self.rect.width - SPRITE_W) // 2
+            offset_y = self.rect.height - SPRITE_H
+
+            surface.blit(frame, (screen_x + offset_x, screen_y + offset_y))
+            return
+
+        # Fallback: colored rectangle when sprites are unavailable
+        w = 20
+        h = 20 if self._state_instance.state_enum == PlayerState.CROUCHING else 32
+        color = (0, 120, 255)
+        if self._state_instance.state_enum == PlayerState.HURT:
+            color = (255, 100, 100)
+        elif self._state_instance.state_enum == PlayerState.DYING:
+            color = (100, 100, 100)
+        pygame.draw.rect(surface, color, (screen_x, screen_y, w, h))
+        pygame.draw.rect(surface, (255, 255, 255), (screen_x, screen_y, w, h), 1)
 
     # ──────────────────────────────────────────────
     # Timer ticking
@@ -299,205 +378,37 @@ class Player(BaseEntity):
             self._knockback_timer -= dt
         if self._cooldown_timer > 0:
             self._cooldown_timer -= dt
+        if self._dash_cooldown > 0:
+            self._dash_cooldown -= dt
+        self._animation_timer += dt
+
+    def _advance_animation(self, dt: float) -> None:
+        """Advance the sprite animation frame based on per-state FPS."""
+        fps = _PLAYER_ANIM_FPS.get(self._state_instance.state_enum.value, 10.0)
+        frame_duration = 1.0 / fps
+        total_frames = _PLAYER_SPRITE_MAP.get(
+            self._state_instance.state_enum.value, (None, 1),
+        )[1]
+        if self._animation_timer >= frame_duration:
+            self._animation_timer -= frame_duration
+            self._animation_frame = (self._animation_frame + 1) % total_frames
 
     # ──────────────────────────────────────────────
-    # State machine
+    # State machine (delegated to player_states.py)
     # ──────────────────────────────────────────────
 
-    def _run_state_machine(self, dt: float, input_manager: InputManager | None = None) -> None:
-        """
-        Evaluate current state and handle transitions.
-        Input is read from the injected InputManager.
-        Falls back to no-input state (IDLE) if InputManager is unavailable.
-        """
-        from src.engine.input.action_map import Action
-
-        # DYING is terminal
-        if self._state == PlayerState.DYING:
-            return
-
-        # HURT: wait for knockback timer
-        if self._state == PlayerState.HURT:
-            if self._knockback_timer <= 0:
-                self._change_state(PlayerState.IDLE)
-            return
-
-        # Attack states: animation-driven, input locked
-        if self._state in (PlayerState.SHORT_ATTACK, PlayerState.LONG_ATTACK):
-            self._update_attack_state(dt)
-            return
-
-        # Read input from injected InputManager (graceful fallback if unavailable)
-        move_x = 0
-        jump_pressed = False
-        jump_held = False
-        crouch_held = False
-        short_attack = False
-        long_attack = False
-
-        im = input_manager
-        if im is not None:
-            if im.is_action_held(Action.MOVE_LEFT):
-                move_x -= 1
-            if im.is_action_held(Action.MOVE_RIGHT):
-                move_x += 1
-            jump_pressed = im.is_action_pressed(Action.JUMP)
-            jump_held = im.is_action_held(Action.JUMP)
-            crouch_held = im.is_action_held(Action.CROUCH)
-            short_attack = im.is_action_pressed(Action.SHORT_ATTACK)
-            long_attack = im.is_action_pressed(Action.LONG_ATTACK)
-
-        # Attack input has priority
-        if short_attack:
-            self._start_attack(PlayerState.SHORT_ATTACK)
-            return
-        if long_attack:
-            self._start_attack(PlayerState.LONG_ATTACK)
-            return
-
-        # Crouch
-        if crouch_held and self.is_grounded:
-            self._change_state(PlayerState.CROUCHING)
-            self.velocity.x = 0.0
-            return
-
-        # Jump
-        if jump_pressed and self._can_jump():
-            self._do_jump()
-            return
-
-        # Horizontal movement
-        if move_x != 0 and self.is_grounded:
-            self.facing_direction = move_x
-            self._change_state(PlayerState.WALKING)
-            self.velocity.x = float(move_x) * settings.PLAYER_WALK_SPEED
-        elif move_x == 0 and self.is_grounded:
-            self._change_state(PlayerState.IDLE)
-            self.velocity.x = 0.0
-
-        # Airborne state tracking
-        if not self.is_grounded:
-            if self.velocity.y < 0:
-                self._change_state(PlayerState.JUMPING)
-            else:
-                self._change_state(PlayerState.FALLING)
-
-        # Jump cut
-        if not jump_held and self.velocity.y < 0 and not self._jump_cut_applied:
-            self.velocity.y *= 0.5
-            self._jump_cut_applied = True
-
-    def _can_jump(self) -> bool:
-        """Check if the player can jump (grounded or within coyote time)."""
-        return self.is_grounded or self._coyote_counter < settings.PLAYER_COYOTE_FRAMES
+    # All state-specific logic moved to PlayerStateBase subclasses
+    # in player_states.py. The Player class handles shared infrastructure.
 
     def _do_jump(self) -> None:
-        """Execute a jump."""
-        self.velocity.y = settings.PLAYER_JUMP_FORCE
-        self.is_grounded = False
-        self._coyote_counter = settings.PLAYER_COYOTE_FRAMES + 1  # exhaust coyote
-        self._jump_cut_applied = False
-        self._change_state(PlayerState.JUMPING)
+        """Execute a jump (forwarder to module-level helper)."""
+        from src.framework.entities.player_states import _do_jump as _do_jump_fn
+        _do_jump_fn(self)
 
-    def _change_state(self, new_state: PlayerState) -> None:
-        """Change state and reset animation state."""
-        if self._state == new_state:
-            return
-        self._state = new_state
-        self._animation_timer = 0.0
-        self._animation_frame = 0
-
-    # ──────────────────────────────────────────────
-    # Attack system
-    # ──────────────────────────────────────────────
-
-    def _start_attack(self, attack_type: PlayerState) -> None:
-        """Begin an attack animation."""
-        self._change_state(attack_type)
-        self._attack_timer = 0.0
-        self._attack_current_frame = 0
-        self._active_hitbox = None
-        self._hitbox_consumed = False
-        self.velocity.x = 0.0
-
-        if attack_type == PlayerState.SHORT_ATTACK:
-            self._attack_active_frames = [2, 3, 4]
-        else:
-            self._attack_active_frames = [4, 5, 6, 7]
-
-    @property
-    def short_attack_duration(self) -> float:
-        return settings.PLAYER_SHORT_ATTACK_DURATION
-
-    @property
-    def long_attack_duration(self) -> float:
-        return settings.PLAYER_LONG_ATTACK_DURATION
-
-    def _update_attack_state(self, dt: float) -> None:
-        """Update attack animation and hitbox."""
-        total_frames = 6 if self._state == PlayerState.SHORT_ATTACK else 10
-        fps = 18.0 if self._state == PlayerState.SHORT_ATTACK else 16.0
-        cooldown = (settings.PLAYER_COOLDOWN_SHORT if self._state == PlayerState.SHORT_ATTACK
-                    else settings.PLAYER_COOLDOWN_LONG)
-
-        self._attack_timer += dt
-        frame_duration = 1.0 / fps
-
-        if self._attack_timer >= frame_duration:
-            self._attack_timer -= frame_duration
-            self._attack_current_frame += 1
-
-        # Current 1-indexed frame
-        current_frame = self._attack_current_frame + 1
-
-        # Check if hitbox should be active
-        if current_frame in self._attack_active_frames and not self._hitbox_consumed:
-            self._active_hitbox = self._build_attack_hitbox(current_frame)
-        else:
-            self._active_hitbox = None
-
-        # Animation complete
-        if self._attack_current_frame >= total_frames:
-            self._active_hitbox = None
-            if cooldown > 0:
-                self._cooldown_timer = cooldown
-            self._change_state(PlayerState.IDLE)
-
-    def _build_attack_hitbox(self, frame: int) -> pygame.Rect:
-        """
-        Build the attack hitbox rect for the given 1-indexed frame.
-        Uses offsets from 04_PLAYER_SPEC.md §10.
-        """
-        is_crouching = self._state == PlayerState.CROUCHING
-        cx = self.rect.centerx
-        cy = self.rect.centery
-
-        if self._state == PlayerState.SHORT_ATTACK:
-            offset_x = 8
-            offset_y = -4 if not is_crouching else 8
-            w, h = 20, 16
-        else:
-            # Long attack frame-by-frame offsets
-            frame_offsets = {
-                4: (12, -10, 36, 20),
-                5: (18, -4, 36, 20),
-                6: (18, 0, 36, 20),
-                7: (12, 6, 36, 20),
-            }
-            if frame in frame_offsets:
-                offset_x, offset_y, w, h = frame_offsets[frame]
-            else:
-                return pygame.Rect(0, 0, 0, 0)
-
-            if is_crouching:
-                offset_y += 12
-                h = 12
-
-        # Apply facing direction
-        hx = cx + (offset_x * self.facing_direction) - (w // 2)
-        hy = cy + offset_y - (h // 2)
-
-        return pygame.Rect(hx, hy, w, h)
+    def _can_jump(self) -> bool:
+        """Check if the player can jump (forwarder to module-level helper)."""
+        from src.framework.entities.player_states import _can_jump as _can_jump_fn
+        return _can_jump_fn(self)
 
     # ──────────────────────────────────────────────
     # Physics
@@ -569,8 +480,7 @@ class Player(BaseEntity):
 
         # --- Y axis ---
         # Use an inflated rect so touching edges (bottom == floor top)
-        # are detected as collisions. Pygame's colliderect uses strict
-        # comparisons (<, >), so it misses edge-aligned overlaps.
+        # are detected as collisions.
         collision_check_rect = player_rect.inflate(0, 2)
         self.is_grounded = False
         collided_y = False
@@ -582,6 +492,7 @@ class Player(BaseEntity):
                     player_rect.bottom = tile.top
                     self.velocity.y = 0.0
                     self.is_grounded = True
+                    self._air_dash_count = 0
                 elif self.velocity.y < 0:
                     # Moving up: push down
                     player_rect.top = tile.bottom
@@ -590,6 +501,30 @@ class Player(BaseEntity):
         if collided_y:
             self.position.y = float(player_rect.y)
 
+    def _resolve_one_way_collision(self, dt: float, one_way_rects: list[pygame.Rect]) -> None:
+        """Resolve Y-axis collision for one-way platforms (passable from below).
+        Only resolves when the player is falling (velocity.y >= 0)."""
+        if not one_way_rects:
+            return
+        if self.velocity.y < 0:
+            return  # Jumping up through — no collision
+
+        player_rect = pygame.Rect(
+            int(self.position.x),
+            int(self.position.y),
+            self.rect.width,
+            self.rect.height,
+        )
+        collision_check_rect = player_rect.inflate(0, 2)
+        for plat in one_way_rects:
+            if collision_check_rect.colliderect(plat):
+                player_rect.bottom = plat.top
+                self.velocity.y = 0.0
+                self.is_grounded = True
+                self._air_dash_count = 0
+                self.position.y = float(player_rect.y)
+                break
+
     # ──────────────────────────────────────────────
     # Rect / Hurtbox sizing
     # ──────────────────────────────────────────────
@@ -597,8 +532,8 @@ class Player(BaseEntity):
     def _update_rect_size(self) -> None:
         """Update rect size based on current state (crouching vs standing).
         Shifts position.y so the rect bottom (feet) stays at the same height."""
-        old_bottom = self.rect.bottom
-        if self._state == PlayerState.CROUCHING:
+        old_bottom = self.position.y + self.rect.height
+        if self._state_instance.state_enum == PlayerState.CROUCHING:
             self.rect.width = 20
             self.rect.height = 20
         else:

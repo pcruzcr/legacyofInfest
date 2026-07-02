@@ -8,7 +8,7 @@ invincibility, knockback, and event emission.
 import pygame
 
 from src.engine.core import settings
-from src.engine.core.event_bus import EventBus
+from src.engine.core.event_bus import subscribe, emit, dispatch, clear
 from src.framework.entities.player import Player
 
 
@@ -65,7 +65,7 @@ class TestEvents:
     """Tests for event emission on damage."""
 
     def test_player_died_emitted_at_zero_health(self) -> None:
-        EventBus.clear()
+        clear()
         player = Player(pygame.Vector2(50.0, 0.0))
         died_emitted = False
 
@@ -73,13 +73,13 @@ class TestEvents:
             nonlocal died_emitted
             died_emitted = True
 
-        EventBus.subscribe("PLAYER_DIED", _on_died)
+        subscribe("PLAYER_DIED", _on_died)
         player.apply_damage(settings.PLAYER_MAX_HEALTH, (50.0, 0.0))
-        EventBus.dispatch()
+        dispatch()
         assert died_emitted is True, "PLAYER_DIED should have been emitted"
 
     def test_player_damaged_always_emitted_on_successful_hit(self) -> None:
-        EventBus.clear()
+        clear()
         player = Player(pygame.Vector2(50.0, 0.0))
         damaged_data: dict = {}
 
@@ -87,9 +87,9 @@ class TestEvents:
             nonlocal damaged_data
             damaged_data = dict(data)
 
-        EventBus.subscribe("PLAYER_DAMAGED", _on_damaged)
+        subscribe("PLAYER_DAMAGED", _on_damaged)
         player.apply_damage(0.5, (100.0, 0.0))
-        EventBus.dispatch()
+        dispatch()
         assert "amount" in damaged_data, "PLAYER_DAMAGED should have amount"
         assert abs(damaged_data["amount"] - 0.5) < 0.01, (
             f"Expected amount 0.5, got {damaged_data.get('amount')}"
@@ -113,3 +113,26 @@ class TestKnockback:
         assert abs(player.velocity.y - (-200.0)) < 0.01, (
             f"Expected knockback y=-200, got {player.velocity.y}"
         )
+
+
+class TestPlayerDraw:
+    """Test draw fallback when sprite frames are empty."""
+
+    def test_fallback_draw_does_not_crash(self) -> None:
+        player = Player(pygame.Vector2(50.0, 0.0))
+        # Clear all sprite frames to force the fallback code path
+        player._sprite_frames = {}
+        surface = pygame.Surface((320, 224))
+        cam = pygame.Vector2(0, 0)
+        player.draw(surface, cam)
+
+    def test_fallback_draw_colored_rect(self) -> None:
+        player = Player(pygame.Vector2(50.0, 0.0))
+        player._sprite_frames = {}
+        surface = pygame.Surface((320, 224))
+        surface.fill((0, 0, 0))
+        cam = pygame.Vector2(0, 0)
+        player.draw(surface, cam)
+        # Blue rect (0, 120, 255) should be drawn at (50, 0)
+        px = surface.get_at((55, 10))[:3]
+        assert px == (0, 120, 255), f"Expected blue fallback rect, got {px}"

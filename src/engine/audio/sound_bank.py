@@ -27,10 +27,11 @@ class SoundBank:
         """Retrieve a registered sound by name. Returns None if not found."""
         return self._sounds.get(name)
 
-    def play(self, name: str, loops: int = 0) -> None:
-        """Play a registered sound. Silently skip if not found."""
+    def play(self, name: str, loops: int = 0, volume: float = 1.0) -> None:
+        """Play a registered sound at the given volume. Silently skip if not found."""
         sound = self._sounds.get(name)
         if sound is not None:
+            sound.set_volume(max(0.0, min(1.0, volume)))
             sound.play(loops=loops)
 
     def contains(self, name: str) -> bool:

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pygame
 
-from src.framework.entities.enemy_base import EnemyBase, EnemyState
+from src.framework.entities.enemy_base import EnemyBase
 
 
 class EnemyWalker(EnemyBase):
@@ -44,7 +44,6 @@ class EnemyWalker(EnemyBase):
         self.alert_speed: float = alert_speed
         self._patrol_origin: pygame.Vector2 = pygame.Vector2(spawn_position)
         self._collision_rects: list[pygame.Rect] = []
-        self._player_ref: pygame.Rect | None = None
 
         # Set initial facing direction
         self.facing_direction = 1 if facing == "right" else -1
@@ -59,10 +58,6 @@ class EnemyWalker(EnemyBase):
     def set_collision_rects(self, rects: list[pygame.Rect]) -> None:
         """Provide collision rects for ledge detection."""
         self._collision_rects = rects
-
-    def set_player_ref(self, player_rect: pygame.Rect) -> None:
-        """Provide the player rect for alert behavior."""
-        self._player_ref = player_rect
 
     # ──────────────────────────────────────────────
     # Behavior implementations
@@ -94,31 +89,15 @@ class EnemyWalker(EnemyBase):
 
         # Move
         self.position.x += self.facing_direction * self.patrol_speed * dt
-        self.rect.x = int(self.position.x)
-        self.rect.y = int(self.position.y)
 
     def _alert_behavior(self, dt: float) -> None:
         """Move toward player at alert speed."""
-        if self._player_ref is not None:
-            if self._player_ref.centerx < self.rect.centerx:
-                self.facing_direction = -1
-            else:
-                self.facing_direction = 1
+        self._face_player()
         self.position.x += self.facing_direction * self.alert_speed * dt
-        self.rect.x = int(self.position.x)
-        self.rect.y = int(self.position.y)
 
-    def _get_animation_state(self) -> str:
-        """Return animation key for current state."""
-        if self.state == EnemyState.DYING:
-            return "die"
-        if self.state == EnemyState.HURT:
-            return "hurt"
+    def _get_animation_key(self) -> str:
+        """Return animation key for non-DYING, non-HURT state."""
         return "walk"
-
-    def _build_hitbox(self) -> pygame.Rect:
-        """Walker has no active attack hitbox — damage is contact-based."""
-        return pygame.Rect(0, 0, 0, 0)
 
     def _build_hurtbox(self) -> pygame.Rect:
         """Return local-space hurtbox rect."""

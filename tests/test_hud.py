@@ -9,13 +9,13 @@ from __future__ import annotations
 import pygame
 import pytest
 from src.engine.ui.hud import HUD, _heart_slot_state
-from src.engine.core.event_bus import EventBus
+from src.engine.core.event_bus import emit, dispatch, clear, subscriber_count
 from src.engine.core import settings
 
 
 @pytest.fixture(autouse=True)
 def reset_bus():
-    EventBus.clear()
+    clear()
     yield
 
 
@@ -61,28 +61,28 @@ class TestHUD:
 
     def test_damage_event(self):
         hud = HUD()
-        EventBus.emit("PLAYER_DAMAGED", amount=1.0, source=(0, 0))
-        EventBus.dispatch()
+        emit("PLAYER_DAMAGED", amount=1.0, source=(0, 0))
+        dispatch()
         assert hud._health == settings.PLAYER_MAX_HEALTH - 1.0
 
     def test_heal_event(self):
         hud = HUD()
-        EventBus.emit("PLAYER_DAMAGED", amount=3.0, source=(0, 0))
-        EventBus.dispatch()
-        EventBus.emit("PLAYER_HEALED", amount=1.0)
-        EventBus.dispatch()
+        emit("PLAYER_DAMAGED", amount=3.0, source=(0, 0))
+        dispatch()
+        emit("PLAYER_HEALED", amount=1.0)
+        dispatch()
         assert hud._health == settings.PLAYER_MAX_HEALTH - 2.0
 
     def test_damage_below_zero(self):
         hud = HUD()
-        EventBus.emit("PLAYER_DAMAGED", amount=100.0, source=(0, 0))
-        EventBus.dispatch()
+        emit("PLAYER_DAMAGED", amount=100.0, source=(0, 0))
+        dispatch()
         assert hud._health == 0.0
 
     def test_heal_above_max(self):
         hud = HUD()
-        EventBus.emit("PLAYER_HEALED", amount=100.0)
-        EventBus.dispatch()
+        emit("PLAYER_HEALED", amount=100.0)
+        dispatch()
         assert hud._health == settings.PLAYER_MAX_HEALTH
 
     def test_timer_starts_at_zero(self):
@@ -97,8 +97,42 @@ class TestHUD:
         assert hud.current_time == pytest.approx(1.0)
 
     def test_draw_does_not_crash(self):
-        """HUD.draw() with a surface does not raise."""
+        """HUD.draw() renders content on the surface."""
         hud = HUD()
         surface = pygame.Surface((320, 224))
         hud.draw(surface)
-        # No assertion needed — just verifying no crash
+        # Content should be drawn (not all-black)
+        assert surface.get_at((3, 3))[:3] != (0, 0, 0), "Portrait area should be drawn"
+
+
+class TestHUDDestroy:
+    """Destroy must unsubscribe all events to prevent callback accumulation."""
+
+    def test_destroy_removes_subscriptions(self):
+        hud = HUD()
+        before = subscriber_count()
+        hud.destroy()
+        after = subscriber_count()
+        assert after == before - 4, (
+            f"Expected 4 fewer subscribers, got {before} -> {after}"
+        )
+
+    def test_destroy_is_idempotent(self):
+        hud = HUD()
+        hud.destroy()
+        count_after_first = subscriber_count()
+        hud.destroy()
+        count_after_second = subscriber_count()
+        assert count_after_second == count_after_first, (
+            "Second destroy() should not change subscriber count"
+        )
+
+    def test_destroyed_hud_ignores_events(self):
+        hud = HUD()
+        initial_health = hud._health
+        hud.destroy()
+        emit("PLAYER_DAMAGED", amount=1.0, source=(0, 0))
+        dispatch()
+        assert hud._health == initial_health, (
+            "Destroyed HUD should not process events"
+        )

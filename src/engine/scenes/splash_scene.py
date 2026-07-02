@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pygame
 
 from src.engine.core import settings
-from src.engine.core.app import _get_scene_manager
 from src.engine.scene.base_scene import BaseScene
+from src.engine.scenes.title_scene import TitleScene
 from src.engine.utils.asset_loader import AssetLoader
+
+if TYPE_CHECKING:
+    from src.engine.core.game_context import GameContext
 
 
 class SplashScene(BaseScene):
@@ -13,7 +18,8 @@ class SplashScene(BaseScene):
 
     SPLASH_TIME = 3.0
 
-    def __init__(self) -> None:
+    def __init__(self, context: GameContext) -> None:
+        super().__init__(context)
         self._timer = 0.0
         assets = settings.ASSETS_DIR / "splash"
 
@@ -41,28 +47,22 @@ class SplashScene(BaseScene):
             settings.ASSETS_DIR / "fonts" / "game.ttf", 10,
         )
 
-    def _get_audio(self):
-        from src.engine.core.app import App
-        return App._audio_manager if App._instance is not None else None
-
     def on_enter(self) -> None:
         self._timer = 0.0
-        audio = self._get_audio()
+        audio = self.audio
         if audio is not None:
             audio.play_music(self._music, loops=0)
 
     def on_exit(self) -> None:
-        audio = self._get_audio()
+        audio = self.audio
         if audio is not None:
             audio.stop_music()
 
     def update(self, dt: float) -> None:
         self._timer += dt
         if self._timer >= self.SPLASH_TIME:
-            from src.engine.scenes.title_scene import TitleScene
-            manager = _get_scene_manager()
-            if manager is not None:
-                manager.replace(TitleScene())
+            if self.context.scene_manager is not None:
+                self.context.scene_manager.replace(TitleScene(self.context))
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.blit(self._background, (0, 0))

@@ -1,7 +1,12 @@
 from __future__ import annotations
+from unittest.mock import MagicMock
 
 import pygame
 import pytest
+
+from src.engine.core.event_bus import EventBus
+from src.engine.core.game_context import GameContext
+from src.engine.input.action_map import Action
 
 
 @pytest.fixture(autouse=True)
@@ -10,6 +15,18 @@ def pygame_init():
         pygame.init()
     if not pygame.font.get_init():
         pygame.font.init()
+
+
+@pytest.fixture
+def context():
+    bus = EventBus()
+    ctx = GameContext(
+        input_manager=MagicMock(),
+        audio_manager=MagicMock(),
+        scene_manager=MagicMock(),
+        event_bus=bus,
+    )
+    return ctx
 
 
 from src.engine.scenes.demo_menu_scene import DemoMenuScene
@@ -30,20 +47,20 @@ class TestDemoMenuScene:
     def test_import_succeeds(self) -> None:
         assert DemoMenuScene is not None
 
-    def test_instantiate(self) -> None:
-        scene = DemoMenuScene()
+    def test_instantiate(self, context) -> None:
+        scene = DemoMenuScene(context)
         assert scene is not None
         assert hasattr(scene, "_options")
         assert len(scene._options) == 3
 
-    def test_on_enter_exit(self) -> None:
-        scene = DemoMenuScene()
+    def test_on_enter_exit(self, context) -> None:
+        scene = DemoMenuScene(context)
         scene.on_enter()
         assert scene._selected == 0
         scene.on_exit()
 
-    def test_draw_no_crash(self) -> None:
-        scene = DemoMenuScene()
+    def test_draw_no_crash(self, context) -> None:
+        scene = DemoMenuScene(context)
         surf = pygame.Surface((320, 224))
         scene.draw(surf)
         assert surf.get_at((0, 0)) is not None
@@ -53,35 +70,34 @@ class TestFilterDemoScene:
     def test_import_succeeds(self) -> None:
         assert FilterDemoScene is not None
 
-    def test_instantiate(self) -> None:
-        scene = FilterDemoScene()
+    def test_instantiate(self, context) -> None:
+        scene = FilterDemoScene(context)
         assert scene is not None
         assert hasattr(scene, "_mode")
         assert scene._mode == 0
 
-    def test_on_enter_exit(self) -> None:
-        scene = FilterDemoScene()
+    def test_on_enter_exit(self, context) -> None:
+        scene = FilterDemoScene(context)
         scene.on_enter()
         assert scene._mode == 0
         scene.on_exit()
 
-    def test_draw_no_crash(self) -> None:
-        scene = FilterDemoScene()
+    def test_draw_no_crash(self, context) -> None:
+        scene = FilterDemoScene(context)
         surf = pygame.Surface((320, 224))
         scene.draw(surf)
         assert surf.get_at((0, 0)) is not None
 
-    def test_mode_cycle(self) -> None:
+    def test_mode_cycle(self, context) -> None:
         from src.engine.scenes.filter_demo_scene import MODE_NAMES
-        scene = FilterDemoScene()
+        scene = FilterDemoScene(context)
         scene.on_enter()
         for _ in range(len(MODE_NAMES) * 2):
-            # Simulate TAB press via internal state
             scene._mode = (scene._mode + 1) % len(MODE_NAMES)
         assert scene._mode < len(MODE_NAMES)
 
-    def test_reset_params(self) -> None:
-        scene = FilterDemoScene()
+    def test_reset_params(self, context) -> None:
+        scene = FilterDemoScene(context)
         scene._brightness_factor = 3.0
         scene._contrast_factor = 2.5
         scene._reset_params()
@@ -94,27 +110,27 @@ class TestVisionDemoScene:
     def test_import_succeeds(self) -> None:
         assert VisionDemoScene is not None
 
-    def test_instantiate(self) -> None:
-        scene = VisionDemoScene()
+    def test_instantiate(self, context) -> None:
+        scene = VisionDemoScene(context)
         assert scene is not None
         assert hasattr(scene, "_mode")
         assert scene._mode == 0
 
-    def test_on_enter_exit(self) -> None:
-        scene = VisionDemoScene()
+    def test_on_enter_exit(self, context) -> None:
+        scene = VisionDemoScene(context)
         scene.on_enter()
         assert scene._mode == 0
         scene.on_exit()
 
-    def test_draw_no_crash(self) -> None:
-        scene = VisionDemoScene()
+    def test_draw_no_crash(self, context) -> None:
+        scene = VisionDemoScene(context)
         surf = pygame.Surface((320, 224))
         scene.draw(surf)
         assert surf.get_at((0, 0)) is not None
 
-    def test_mode_cycle(self) -> None:
+    def test_mode_cycle(self, context) -> None:
         from src.engine.scenes.vision_demo_scene import MODE_NAMES
-        scene = VisionDemoScene()
+        scene = VisionDemoScene(context)
         scene.on_enter()
         for _ in range(len(MODE_NAMES) * 2):
             scene._mode = (scene._mode + 1) % len(MODE_NAMES)
@@ -125,27 +141,27 @@ class TestPatternDemoScene:
     def test_import_succeeds(self) -> None:
         assert PatternDemoScene is not None
 
-    def test_instantiate(self) -> None:
-        scene = PatternDemoScene()
+    def test_instantiate(self, context) -> None:
+        scene = PatternDemoScene(context)
         assert scene is not None
         assert hasattr(scene, "_mode")
         assert scene._mode == 0
 
-    def test_on_enter_exit(self) -> None:
-        scene = PatternDemoScene()
+    def test_on_enter_exit(self, context) -> None:
+        scene = PatternDemoScene(context)
         scene.on_enter()
         assert scene._mode == 0
         scene.on_exit()
 
-    def test_draw_no_crash(self) -> None:
-        scene = PatternDemoScene()
+    def test_draw_no_crash(self, context) -> None:
+        scene = PatternDemoScene(context)
         surf = pygame.Surface((320, 224))
         scene.draw(surf)
         assert surf.get_at((0, 0)) is not None
 
-    def test_mode_cycle(self) -> None:
+    def test_mode_cycle(self, context) -> None:
         from src.engine.scenes.pattern_demo_scene import MODE_NAMES
-        scene = PatternDemoScene()
+        scene = PatternDemoScene(context)
         scene.on_enter()
         for _ in range(len(MODE_NAMES) * 2):
             scene._mode = (scene._mode + 1) % len(MODE_NAMES)
@@ -214,16 +230,28 @@ class TestDemoCommon:
 
 
 class TestTitleSceneIntegration:
-    def test_title_has_demo_option(self) -> None:
+    def test_title_has_demo_option(self, context) -> None:
         from src.engine.scenes.title_scene import TitleScene
-        scene = TitleScene()
+        scene = TitleScene(context)
         assert "ACADEMIC DEMOS" in scene._options
         assert scene._options.index("ACADEMIC DEMOS") == 1
 
-    def test_title_demo_select(self) -> None:
+    def test_title_demo_select(self, context) -> None:
         from src.engine.scenes.title_scene import TitleScene
-        scene = TitleScene()
+        from src.engine.scenes.demo_menu_scene import DemoMenuScene
+
+        mock_replace_calls: list = []
+        context.scene_manager.replace = lambda sc: mock_replace_calls.append(sc)
+
+        scene = TitleScene(context)
         scene._selected = 1
-        assert scene._selected == 1
-        # Verify it would navigate to DemoMenuScene
-        assert True
+
+        mock_input = type("MockInput", (), {
+            "is_raw_key_pressed": lambda self, k: False,
+            "is_action_pressed": lambda self, a: a == Action.CONFIRM,
+        })()
+        scene._get_input = lambda: mock_input
+
+        scene.update(1.0)
+        assert len(mock_replace_calls) == 1
+        assert isinstance(mock_replace_calls[0], DemoMenuScene)

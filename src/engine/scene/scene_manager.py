@@ -10,29 +10,34 @@ Automatically cleans up EventBus subscriptions when scenes exit.
 from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
-from src.engine.core.event_bus import EventBus
+
+from src.engine.core.event_bus import subscribe, unsubscribe
+from src.engine.core.events import Events
+from src.engine.scenes.title_scene import TitleScene
 
 if TYPE_CHECKING:
     from src.engine.scene.base_scene import BaseScene
+    from src.engine.core.game_context import GameContext
 
 
 class SceneManager:
     """Manages a stack of scenes with push/pop/replace semantics."""
 
-    _subscribed_events: list[str] = ["STAGE_COMPLETE", "PLAYER_DIED"]
+    _subscribed_events: list[str] = [Events.STAGE_COMPLETE, Events.PLAYER_DIED]
 
-    def __init__(self) -> None:
+    def __init__(self, context: GameContext) -> None:
+        self._context = context
         self._stack: list[BaseScene] = []
         self._stage_queue: list[type[BaseScene]] = []
         self._stage_index: int = 0
         # Subscribe to global events
-        EventBus.subscribe("STAGE_COMPLETE", self._on_stage_complete)
-        EventBus.subscribe("PLAYER_DIED", self._on_player_died)
+        subscribe(Events.STAGE_COMPLETE, self._on_stage_complete)
+        subscribe(Events.PLAYER_DIED, self._on_player_died)
 
     def cleanup(self) -> None:
         """Unsubscribe all event listeners. Call when SceneManager is discarded."""
         for event in self._subscribed_events:
-            EventBus.unsubscribe(event, getattr(self, f"_on_{event.lower()}"))
+            unsubscribe(event, getattr(self, f"_on_{event.lower()}"))
 
     @property
     def current(self) -> BaseScene:
@@ -82,23 +87,21 @@ class SceneManager:
         if self._stage_index < len(self._stage_queue):
             next_stage_class = self._stage_queue[self._stage_index]
             logging.info(f"SceneManager: advancing to stage {next_stage_class.__name__}")
-            self.replace(next_stage_class())
+            self.replace(next_stage_class(self._context))
         else:
             # No more stages — push End Credits (placeholder for now)
             logging.info("SceneManager: no more stages — returning to title")
-            from src.engine.scenes.title_scene import TitleScene
-            self.replace(TitleScene())
+            self.replace(TitleScene(self._context))
 
     def _on_player_died(self, **data: object) -> None:
         """Handle player death. If the current scene has a _respawn
         method (e.g. StageScene), let it handle death internally."""
         current = self._stack[-1] if self._stack else None
-        if current is not None and hasattr(current, "_respawn"):
+        if current is not None and hasattr(current, "respawn"):
             logging.info("SceneManager: player died — scene handles respawn")
             return
         logging.info("SceneManager: player died — returning to title")
-        from src.engine.scenes.title_scene import TitleScene
-        self.replace(TitleScene())
+        self.replace(TitleScene(self._context))
 
     @property
     def stack_size(self) -> int:

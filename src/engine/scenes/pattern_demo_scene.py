@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pygame
 import numpy as np
 
 from src.engine.core import settings
 from src.engine.input.action_map import Action
-from src.engine.input.input_manager import InputManager
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
     COLOR_BG,
@@ -45,6 +45,9 @@ from src.framework.processing.pattern_recognition_tools import (
     TrainedModel,
 )
 
+if TYPE_CHECKING:
+    from src.engine.core.game_context import GameContext
+
 
 MODE_NAMES = [
     "INFERENCE", "FEATURE_COMPARE", "CLASS_GRID", "CONFUSION", "PIPELINE",
@@ -62,7 +65,8 @@ _DEFAULT_MODEL = _MODEL_DIR / "professor_sample.pkl"
 
 
 class PatternDemoScene(BaseScene):
-    def __init__(self) -> None:
+    def __init__(self, context: GameContext) -> None:
+        super().__init__(context)
         self._mode: int = 0
         self._sources: SourceSurfaceManager = build_default_sources()
         self._throttle = FrameThrottle()
@@ -107,12 +111,6 @@ class PatternDemoScene(BaseScene):
         self._dataset_samples: list[tuple[np.ndarray, str]] = []
         self._class_grid_generated: bool = False
 
-    def _get_im(self) -> InputManager | None:
-        from src.engine.core.app import App
-        if App._instance is not None:
-            return App._instance.input_manager
-        return None
-
     def _load_default_model(self) -> None:
         try:
             if _DEFAULT_MODEL.exists():
@@ -137,7 +135,7 @@ class PatternDemoScene(BaseScene):
         pass
 
     def update(self, dt: float) -> None:
-        im = self._get_im()
+        im = self.input
         if im is None:
             return
 
@@ -212,9 +210,7 @@ class PatternDemoScene(BaseScene):
         if im.is_action_pressed(Action.CANCEL):
             self._text_input_active = False
             from src.engine.scenes.demo_menu_scene import DemoMenuScene
-            from src.engine.core.app import App
-            if App._instance is not None:
-                App._instance.scene_manager.replace(DemoMenuScene())
+            self.context.scene_manager.replace(DemoMenuScene(self.context))
             return
 
         # Analysis rect movement (modes 0, 1)
@@ -243,7 +239,7 @@ class PatternDemoScene(BaseScene):
         if self._param_changed or self._frame_count % 3 == 0:
             self._compute_result()
 
-    def _handle_text_input(self, im: InputManager) -> None:
+    def _handle_text_input(self, im):
         if im.is_raw_key_pressed(pygame.K_RETURN):
             self._text_input_active = False
             filename = self._text_buffer.strip()
@@ -474,7 +470,7 @@ class PatternDemoScene(BaseScene):
             return surf
 
         cm = ev["confusion_matrix"]
-        classes = ev.get("class_names", [f"C{i}" for i in range(len(cm))])
+        ev.get("class_names", [f"C{i}" for i in range(len(cm))])
         accuracy = ev.get("accuracy", 0.0)
         n = len(cm)
         cell_sz = 20
@@ -657,7 +653,7 @@ class PatternDemoScene(BaseScene):
         surface.blit(text, (4, BOTTOM_BAR_Y + 2))
 
 
-def _get_printable_keys(im: InputManager) -> list[tuple[int, str]]:
+def _get_printable_keys(im) -> list[tuple[int, str]]:
     result = []
     for key, char in _KEY_CHAR_MAP.items():
         if im.is_raw_key_pressed(key):

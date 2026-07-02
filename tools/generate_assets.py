@@ -7,15 +7,12 @@ using Python's Pillow + wave + struct + math + random — no AI APIs needed.
 
 from __future__ import annotations
 
-import json
-import math
-import os
 import random
 import struct
 import wave
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from PIL import Image, ImageDraw, ImageFont
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ASSETS = PROJECT_ROOT / "assets"
@@ -427,55 +424,6 @@ def _tileset(path: Path, tile_size: int = 16, cols: int = 8, rows: int = 8) -> N
 # 5. TMX Map (minimal valid pytmx-compatible XML)
 # ──────────────────────────────────────────────
 
-def _tmx_stage0(path: Path) -> None:
-    _ensure(path)
-    map_w, map_h = 40, 15
-    tile_w = tile_h = 16
-
-    # Simple map data: 0 = empty, 1 = grass, 2 = dirt floor
-    data = [[0] * map_w for _ in range(map_h)]
-    # Ground layer (bottom 2 rows)
-    for y in range(map_h - 2, map_h):
-        for x in range(map_w):
-            data[y][x] = 1  # grass
-    # Dirt floor (row above ground)
-    for x in range(map_w):
-        data[map_h - 3][x] = 2  # dirt
-    # Platform
-    for x in range(8, 18):
-        data[8][x] = 2
-    for x in range(22, 32):
-        data[6][x] = 2
-
-    csv_lines = []
-    for y in range(map_h):
-        csv_lines.append(",".join(str(data[y][x]) for x in range(map_w)))
-    csv_data = "\n".join(csv_lines)
-
-    tmx_content = f"""<?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.0" orientation="orthogonal"
-     renderorder="right-down" width="{map_w}" height="{map_h}"
-     tilewidth="{tile_w}" tileheight="{tile_h}" infinite="0"
-     nextlayerid="2" nextobjectid="2">
- <tileset firstgid="1" name="tileset_stage0" tilewidth="{tile_w}"
-          tileheight="{tile_h}" tilecount="64" columns="8">
-  <image source="../../assets/tilesets/tileset_stage0.png"
-         width="{tile_w * 8}" height="{tile_h * 8}"/>
- </tileset>
- <layer id="1" name="Ground" width="{map_w}" height="{map_h}">
-  <data encoding="csv">
-{csv_data}
-  </data>
- </layer>
- <objectgroup id="2" name="Objects">
-  <object id="1" name="PlayerSpawn" type="SpawnPoint" x="32" y="160"
-          width="16" height="16"/>
- </objectgroup>
-</map>"""
-    path.write_text(tmx_content, encoding="utf-8")
-    print(f"  Created {path}")
-
-
 # ──────────────────────────────────────────────
 # 6. Audio: Chiptune Music (.wav)
 # ──────────────────────────────────────────────
@@ -754,9 +702,8 @@ def main() -> None:
     _tileset(ASSETS / "tilesets" / "tileset_stage0.png")
     _tileset(ASSETS / "tileset_stage0.png")  # root fallback copy
 
-    # 5. TMX Map
-    print("\n[5/7] Stage 0 TMX map...")
-    _tmx_stage0(ASSETS / "maps" / "stage0" / "stage0.tmx")
+    # 5. TMX Map — SKIPPED: use tools/generate_stage0_tmx.py instead
+    # (generate_assets.py would overwrite the full 240×14 TMX with a 40×15 placeholder)
 
     # 6. Music
     print("\n[6/7] Music tracks...")

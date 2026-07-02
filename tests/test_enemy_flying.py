@@ -23,7 +23,7 @@ class TestFlyingSineMovement:
         )
         # directly test the math: sine should produce oscillating y
         e._t = 0.25  # quarter period
-        e._sine_patrol(0.0)  # no dt increment, just apply current t
+        e._patrol_behavior(0.0)  # delegates to SineFlight strategy
         # sin(2*pi*1.0*0.25) = sin(pi/2) = 1.0
         expected_y = 100.0 + 40.0 * 1.0
         assert abs(e.position.y - expected_y) < 0.1, (
@@ -48,11 +48,17 @@ class TestFlyingSineMovement:
         )
         e.state = type(e.state).ALERT  # force ALERT
         dt = 1.0 / 60.0
+
+        x_before = e.position.x
+        e._patrol_behavior(dt)
+        patrol_dx = abs(e.position.x - x_before)
+
+        e.position.x = 100.0
         x_before = e.position.x
         e._alert_behavior(dt)
-        x_after = e.position.x
-        # Should have moved
-        assert abs(x_after - x_before) > 0.0
+        alert_dx = abs(e.position.x - x_before)
+
+        assert alert_dx > patrol_dx, "Alert speed should exceed patrol speed"
 
 
 class TestFlyingBezierMode:

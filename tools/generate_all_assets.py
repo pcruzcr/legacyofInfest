@@ -5,7 +5,9 @@ Generates ALL 250+ professor-owned assets per the Asset Bible (20_ASSET_BIBLE.md
 """
 from __future__ import annotations
 
-import math, os, random, struct, wave, json, itertools
+import random
+import struct
+import wave
 from pathlib import Path
 from PIL import Image, ImageDraw
 
@@ -659,7 +661,7 @@ def main():
     print("=" * 60)
     print("  Legacy of InFest — Complete Asset Generator")
     print("=" * 60)
-    print(f"\nTotal asset count target: ~250+ files")
+    print("\nTotal asset count target: ~250+ files")
     
     print("\n[1/9] Player sprites...")
     _gen_player_all()
