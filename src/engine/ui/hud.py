@@ -38,6 +38,7 @@ class HUD:
         self._timer_running: bool = False
         self._time_limit: int = 0
         self._is_countdown: bool = False
+        self._timer_paused: bool = False
         self._hurt_portrait_timer: float = 0.0
         self._destroyed: bool = False
 
@@ -75,18 +76,33 @@ class HUD:
         self._hearts_x: int = 38
         self._hearts_y: int = 6
         self._heart_spacing: int = 16
-        self._timer_rect = pygame.Rect(272, 2, 46, 12)
+        # Timer frame (reuse hud_frame.png 9-slice at timer size 54x16)
+        self._timer_bg_rect = pygame.Rect(266, 1, 54, 16)
+        self._timer_rect = pygame.Rect(272, 3, 46, 12)
+        self._timer_label_rect = pygame.Rect(266, 3, 24, 12)
+        self._timer_flash_timer: float = 0.0
+        self._timer_flash_on: bool = False
+        # Load timer font (TTF preferred for readability)
+        self._timer_digit_font: pygame.font.Font | None = None
+        try:
+            self._timer_digit_font = pygame.font.Font(
+                settings.ASSETS_DIR / "fonts" / "game.ttf", 12,
+            )
+        except Exception:
+            self._timer_digit_font = None
 
         # Heart damage flash state
         self._heart_flash_timer: float = 0.0
         self._heart_flash_old_state: str = ""
         self._heart_flash_slot: int = -1
 
-        # Heart heal animation state
+        # Heart heal animation state (right→left, sequential multi-heart)
         self._heal_anim_timer: float = 0.0
-        self._heal_anim_target: float = 0.0
-        self._heal_anim_slot: int = -1
+        self._heal_anim_slot_index: int = 0
+        self._heal_anim_slots: list[int] = []
         self._heal_anim_active: bool = False
+        self._sparkle_frames: list[pygame.Surface] = []
+        self._sparkle_frame: int = 0
 
         # Load heart sprites
         self._heart_sprites: dict[str, pygame.Surface] = {}
@@ -96,11 +112,10 @@ class HUD:
             self._heart_sprites[state] = surf
 
         try:
-            self._heart_sparkle = AssetLoader.load_image(
-                settings.ASSETS_DIR / "ui" / "heart_sparkle.png", size=(14, 8),
-            )
+            sparkle_path = settings.ASSETS_DIR / "ui" / "heart_sparkle.png"
+            self._sparkle_frames = AssetLoader.load_sprite_sheet(sparkle_path, 8, 8)
         except Exception:
-            self._heart_sparkle = None
+            self._sparkle_frames = []
 
         # Load portrait sprites
         self._portraits: dict[str, pygame.Surface] = {}
@@ -126,6 +141,8 @@ class HUD:
         subscribe(Events.PLAYER_HEALED, self._on_player_healed)
         subscribe(Events.PLAYER_DIED, self._on_player_died)
         subscribe(Events.BOSS_PHASE_CHANGED, self._on_boss_phase_changed)
+        subscribe(Events.CHECKPOINT_REACHED, self._on_checkpoint_reached)
+        subscribe(Events.STAGE_COMPLETE, self._on_stage_complete)
 
     #
     # destroy(): MUST be called before discarding this HUD instance.
@@ -145,6 +162,8 @@ class HUD:
         unsubscribe(Events.PLAYER_HEALED, self._on_player_healed)
         unsubscribe(Events.PLAYER_DIED, self._on_player_died)
         unsubscribe(Events.BOSS_PHASE_CHANGED, self._on_boss_phase_changed)
+        unsubscribe(Events.CHECKPOINT_REACHED, self._on_checkpoint_reached)
+        unsubscribe(Events.STAGE_COMPLETE, self._on_stage_complete)
 
     def _on_player_damaged(self, **data: object) -> None:
         if self._destroyed:
@@ -169,21 +188,25 @@ class HUD:
         old_health = self._health
         amount = float(data.get("amount", 1.0))
         self._health = min(self._max_health, self._health + amount)
-        # Heal animation: track which slot increased
-        for slot in range(int(self._max_health)):
+        # Heal animation: scan right→left, collect ALL changed slots
+        changed_slots: list[int] = []
+        for slot in range(int(self._max_health) - 1, -1, -1):
             old_state = _heart_slot_state(old_health, slot)
             new_state = _heart_slot_state(self._health, slot)
             if old_state != new_state:
-                self._heal_anim_timer = 0.0
-                self._heal_anim_slot = slot
-                self._heal_anim_active = True
-                break
+                changed_slots.append(slot)
+        if changed_slots:
+            self._heal_anim_timer = 0.0
+            self._heal_anim_slot_index = 0
+            self._heal_anim_slots = changed_slots
+            self._heal_anim_active = True
 
     def _on_player_died(self, **data: object) -> None:
         if self._destroyed:
             return
         self._health = 0.0
         self._timer_running = False
+        self._timer_paused = False
 
     def set_boss_hud(self, name: str, health: float, max_health: float, phase: int, phase_count: int) -> None:
         self._boss_name = name
@@ -202,6 +225,16 @@ class HUD:
         self._boss_name = str(data.get("boss_name", ""))
         self._boss_phase_count = int(data.get("phase_count", 1))
 
+    def _on_checkpoint_reached(self, **data: object) -> None:
+        if self._destroyed:
+            return
+        # Timer keeps running through checkpoints — no op
+
+    def _on_stage_complete(self, **data: object) -> None:
+        if self._destroyed:
+            return
+        self.stop_timer()
+
     def start_timer(self, time_limit: int = 0) -> None:
         self._time_limit = time_limit
         self._is_countdown = time_limit > 0
@@ -213,9 +246,11 @@ class HUD:
 
     def pause_timer(self) -> None:
         self._timer_running = False
+        self._timer_paused = True
 
     def resume_timer(self) -> None:
         self._timer_running = True
+        self._timer_paused = False
 
     def update(self, dt: float) -> None:
         if self._timer_running:
@@ -231,10 +266,26 @@ class HUD:
         self._heart_flash_timer = max(0.0, self._heart_flash_timer - dt)
         if self._heart_flash_timer <= 0:
             self._heart_flash_slot = -1
+        # Timer flash at 2Hz when countdown ≤30s
+        if self._timer_running or self._timer_paused:
+            total_seconds = int(self._timer)
+            if self._is_countdown and total_seconds <= 30:
+                self._timer_flash_timer += dt
+                if self._timer_flash_timer >= 0.25:
+                    self._timer_flash_on = not self._timer_flash_on
+                    self._timer_flash_timer = 0.0
+            else:
+                self._timer_flash_on = False
+                self._timer_flash_timer = 0.0
+
         if self._heal_anim_active:
+            self._sparkle_frame = int(self._heal_anim_timer * 12) % max(len(self._sparkle_frames), 1)
             self._heal_anim_timer += dt
             if self._heal_anim_timer >= 0.1:
-                self._heal_anim_active = False
+                self._heal_anim_timer = 0.0
+                self._heal_anim_slot_index += 1
+                if self._heal_anim_slot_index >= len(self._heal_anim_slots):
+                    self._heal_anim_active = False
 
     def _get_portrait_state(self) -> str:
         if self._health <= 0:
@@ -322,9 +373,12 @@ class HUD:
                 pygame.draw.rect(surface, color, rect)
                 pygame.draw.rect(surface, (255, 50, 50), rect, 1)
 
-            # Heal sparkle effect on recently filled slot
-            if self._heal_anim_active and slot == self._heal_anim_slot and self._heart_sparkle:
-                surface.blit(self._heart_sparkle, (x, y))
+            # Heal sparkle effect on current animated slot (right→left, sequential)
+            if self._heal_anim_active and self._sparkle_frames and self._heal_anim_slot_index < len(self._heal_anim_slots):
+                current_slot = self._heal_anim_slots[self._heal_anim_slot_index]
+                if slot == current_slot:
+                    frame_idx = min(self._sparkle_frame, len(self._sparkle_frames) - 1)
+                    surface.blit(self._sparkle_frames[frame_idx], (x, y))
 
     def _draw_boss_hud(self, surface: pygame.Surface) -> None:
         """Draw boss health bar and name at top of screen."""
@@ -349,19 +403,55 @@ class HUD:
             if fill_w > 0:
                 pygame.draw.rect(surface, color, (bar_x, bar_y + 10, fill_w, bar_height))
 
+    def _draw_timer_background(self, surface: pygame.Surface) -> None:
+        r = self._timer_bg_rect
+        c = 2
+        if self._frame_corners:
+            surface.blit(self._frame_corners["tl"], (r.x, r.y))
+            surface.blit(self._frame_corners["tr"], (r.right - c, r.y))
+            surface.blit(self._frame_corners["bl"], (r.x, r.bottom - c))
+            surface.blit(self._frame_corners["br"], (r.right - c, r.bottom - c))
+            top_edge = pygame.transform.scale(self._frame_edges["top"], (r.width - 2*c, c))
+            surface.blit(top_edge, (r.x + c, r.y))
+            bottom_edge = pygame.transform.scale(self._frame_edges["bottom"], (r.width - 2*c, c))
+            surface.blit(bottom_edge, (r.x + c, r.bottom - c))
+            left_edge = pygame.transform.scale(self._frame_edges["left"], (c, r.height - 2*c))
+            surface.blit(left_edge, (r.x, r.y + c))
+            right_edge = pygame.transform.scale(self._frame_edges["right"], (c, r.height - 2*c))
+            surface.blit(right_edge, (r.right - c, r.y + c))
+            fill = pygame.transform.scale(self._frame_fill, (r.width, r.height))
+            surface.blit(fill, r, special_flags=pygame.BLEND_ALPHA_SDL2)
+        else:
+            pygame.draw.rect(surface, (10, 10, 30), r)
+            pygame.draw.rect(surface, (100, 100, 140), r, 1)
+
     def _draw_timer(self, surface: pygame.Surface) -> None:
-        if not self._timer_running:
+        if not self._timer_running and not self._timer_paused:
             return
+        self._draw_timer_background(surface)
+        # Draw "TIME" label at left side of timer background
+        label_surf = self._font.render("TIME", True, (200, 200, 200))
+        surface.blit(label_surf, (266, 3))
         total_seconds = int(self._timer)
         minutes = total_seconds // 60
         seconds = total_seconds % 60
         time_str = f"{minutes}:{seconds:02d}"
-        # Flash red when ≤ 30s in countdown
-        color = (255, 60, 60) if self._is_countdown and total_seconds <= 30 else (200, 200, 200)
-        text = self._font.render(time_str, True, color)
-        tx = self._timer_rect.x + (self._timer_rect.width - text.get_width()) // 2
-        ty = self._timer_rect.y + (self._timer_rect.height - text.get_height()) // 2
-        surface.blit(text, (tx, ty))
+        # 2Hz flash: hide text when flashing
+        flash = self._is_countdown and total_seconds <= 30
+        if flash and not self._timer_flash_on:
+            return
+        color = (255, 255, 255)
+        if self._timer_digit_font:
+            time_surf = self._timer_digit_font.render(time_str, True, color)
+            if time_surf.get_width() > 0:
+                tx = self._timer_rect.x + (self._timer_rect.width - time_surf.get_width()) // 2
+                ty = self._timer_rect.y + (self._timer_rect.height - time_surf.get_height()) // 2
+                surface.blit(time_surf, (tx, ty))
+        else:
+            text = self._font.render(time_str, True, color)
+            tx = self._timer_rect.x + (self._timer_rect.width - text.get_width()) // 2
+            ty = self._timer_rect.y + (self._timer_rect.height - text.get_height()) // 2
+            surface.blit(text, (tx, ty))
 
     @property
     def current_time(self) -> float:

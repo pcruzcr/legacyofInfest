@@ -38,13 +38,12 @@ class TestShooterFiring:
         )
         player_rect = pygame.Rect(100, 0, 20, 32)
         shooter.set_player_ref(player_rect)
-        shooter.state = "ALERT"
-        # Trigger alert behavior with enough dt to fire 5 times
-        for _ in range(5):
-            shooter._alert_behavior(0.15)  # 150ms > 100ms cooldown
+        # Run the full state machine to drive ALERT→FIRING→ALERT cycle
+        for _ in range(20):
+            shooter._run_state_machine(0.15)
         projectiles = shooter.get_projectiles()
         assert len(projectiles) <= 3, "Should not exceed max_projectiles"
-        assert len(projectiles) == 3, "All 5 fires should be capped at 3"
+        assert len(projectiles) == 3, "Should be capped at max_projectiles"
 
     def test_projectile_lifetime(self) -> None:
         """Projectile expires after lifetime."""

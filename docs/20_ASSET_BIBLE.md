@@ -78,11 +78,8 @@ assets/
 │   └── shared/
 │       ├── checkpoint.png
 │       ├── torch_anim.png
-│       ├── heart_full.png
-│       ├── heart_three_quarter.png
-│       ├── heart_half.png
-│       ├── heart_quarter.png
-│       └── heart_empty.png
+│       ├── fountain_anim.png
+│       └── spirit_echo_overlay.png
 ├── tilesets/
 │   ├── tileset_stage0.png
 │   ├── tileset_jungle_stone.png
@@ -176,106 +173,32 @@ The player (hooded protagonist) uses a restricted palette of exactly 12 colors:
 
 ## 5. Enemy Sprites
 
-### 5.1 Zone 1 Enemy Sprites
+Enemy sprites use generic zone-based naming. Zone-specific thematic variants
+are aspirational; the sprites on disk are shared across all enemy types within
+a zone and use the concrete type prefix (`walker`, `fly`, `shoot`).
 
-Location: `assets/sprites/enemies/zone1/`
+### 5.1 Walker (universal)
 
-| File | Enemy | Frame Size | Frames | FPS | Loop |
-|---|---|---|---|---|---|
-| `enemy_insecto_walk.png` | WalkerInsect | 16×12 | 6 | 10 | Yes |
-| `enemy_insecto_hurt.png` | WalkerInsect | 16×12 | 3 | 12 | No |
-| `enemy_insecto_die.png` | WalkerInsect | 16×12 | 5 | 10 | No |
-| `enemy_pajaro_fly.png` | FlyingBird | 14×10 | 4 | 12 | Yes |
-| `enemy_pajaro_hurt.png` | FlyingBird | 14×10 | 3 | 12 | No |
-| `enemy_pajaro_die.png` | FlyingBird | 14×10 | 6 | 10 | No |
-| `enemy_rana_idle.png` | ShooterFrog | 12×12 | 4 | 6 | Yes |
-| `enemy_rana_aim.png` | ShooterFrog | 12×12 | 3 | 8 | No |
-| `enemy_rana_fire.png` | ShooterFrog | 12×12 | 4 | 14 | No |
-| `enemy_rana_hurt.png` | ShooterFrog | 12×12 | 3 | 12 | No |
-| `enemy_rana_die.png` | ShooterFrog | 12×12 | 6 | 10 | No |
-| `enemy_rana_proyectil.png` | Frog projectile | 4×4 | 2 | 8 | Yes |
-| `enemy_raton_walk.png` | WalkerRaton | 14×10 | 6 | 14 | Yes |
-| `enemy_raton_hurt.png` | WalkerRaton | 14×10 | 3 | 12 | No |
-| `enemy_raton_die.png` | WalkerRaton | 14×10 | 5 | 10 | No |
-| `enemy_cucaracha_fly.png` | FlyingCucaracha | 12×8 | 4 | 16 | Yes |
-| `enemy_cucaracha_hurt.png` | FlyingCucaracha | 12×8 | 3 | 12 | No |
-| `enemy_cucaracha_die.png` | FlyingCucaracha | 12×8 | 5 | 10 | No |
-| `enemy_cocinero_idle.png` | ShooterCocinero | 16×24 | 4 | 6 | Yes |
-| `enemy_cocinero_throw.png` | ShooterCocinero | 16×24 | 6 | 14 | No |
-| `enemy_cocinero_hurt.png` | ShooterCocinero | 16×24 | 3 | 12 | No |
-| `enemy_cocinero_die.png` | ShooterCocinero | 16×24 | 8 | 8 | No |
-| `enemy_cocinero_tray.png` | Cook projectile | 12×6 | 2 | 8 | Yes |
-| `enemy_estudiante_walk.png` | WalkerEstudiante | 16×24 | 8 | 10 | Yes |
-| `enemy_estudiante_hurt.png` | WalkerEstudiante | 16×24 | 3 | 12 | No |
-| `enemy_estudiante_die.png` | WalkerEstudiante | 16×24 | 7 | 8 | No |
-| `enemy_hoja_fly.png` | FlyingNotebook | 10×14 | 4 | 8 | Yes |
-| `enemy_hoja_hurt.png` | FlyingNotebook | 10×14 | 2 | 12 | No |
-| `enemy_hoja_die.png` | FlyingNotebook | 10×14 | 4 | 10 | No |
-| `enemy_tiza_idle.png` | ShooterTiza | 14×14 | 4 | 6 | Yes |
-| `enemy_tiza_fire.png` | ShooterTiza | 14×14 | 5 | 14 | No |
-| `enemy_tiza_hurt.png` | ShooterTiza | 14×14 | 3 | 12 | No |
-| `enemy_tiza_die.png` | ShooterTiza | 14×14 | 6 | 10 | No |
-| `enemy_tiza_proyectil.png` | Chalk projectile | 4×4 | 1 | — | — |
-
-### 5.2 Zone 2 Enemy Sprites
-
-Location: `assets/sprites/enemies/zone2/`
+Location: `assets/sprites/enemies/`
 
 | File | Enemy | Frame Size | Frames | FPS | Loop |
 |---|---|---|---|---|---|
-| `enemy_terciopelo_small_walk.png` | WalkerSerpientePequena | 20×8 | 6 | 12 | Yes |
-| `enemy_terciopelo_small_hurt.png` | WalkerSerpientePequena | 20×8 | 3 | 12 | No |
-| `enemy_terciopelo_small_die.png` | WalkerSerpientePequena | 20×8 | 6 | 10 | No |
-| `enemy_boa_fly.png` | FlyingBoa | 32×12 | 6 | 10 | Yes |
-| `enemy_boa_hurt.png` | FlyingBoa | 32×12 | 3 | 12 | No |
-| `enemy_boa_die.png` | FlyingBoa | 32×12 | 7 | 8 | No |
-| `enemy_serpiente_arbol_idle.png` | ShooterSerpienteArbol | 14×16 | 4 | 6 | Yes |
-| `enemy_serpiente_arbol_fire.png` | ShooterSerpienteArbol | 14×16 | 5 | 12 | No |
-| `enemy_serpiente_arbol_hurt.png` | ShooterSerpienteArbol | 14×16 | 3 | 12 | No |
-| `enemy_serpiente_arbol_die.png` | ShooterSerpienteArbol | 14×16 | 6 | 10 | No |
-| `enemy_venom_proyectil.png` | Venom projectile | 5×5 | 2 | 8 | Yes |
-| `enemy_terciopelo_large_walk.png` | WalkerTerciopelo | 28×12 | 6 | 8 | Yes |
-| `enemy_terciopelo_large_hurt.png` | WalkerTerciopelo | 28×12 | 3 | 12 | No |
-| `enemy_terciopelo_large_die.png` | WalkerTerciopelo | 28×12 | 7 | 8 | No |
-| `enemy_cobra_idle.png` | ShooterVenomoLargo | 16×20 | 4 | 5 | Yes |
-| `enemy_cobra_fire.png` | ShooterVenomoLargo | 16×20 | 6 | 12 | No |
-| `enemy_cobra_hurt.png` | ShooterVenomoLargo | 16×20 | 3 | 12 | No |
-| `enemy_cobra_die.png` | ShooterVenomoLargo | 16×20 | 7 | 8 | No |
-| `enemy_venom_stream.png` | Long venom projectile | 8×4 | 4 | 12 | Yes |
-| `enemy_terciovolador_fly.png` | FlyingTerciovolador | 18×14 | 6 | 12 | Yes |
-| `enemy_terciovolador_hurt.png` | FlyingTerciovolador | 18×14 | 3 | 12 | No |
-| `enemy_terciovolador_die.png` | FlyingTerciovolador | 18×14 | 6 | 8 | No |
-| `enemy_guardia_walk.png` | WalkerGuardia | 16×24 | 8 | 10 | Yes |
-| `enemy_guardia_hurt.png` | WalkerGuardia | 16×24 | 3 | 12 | No |
-| `enemy_guardia_die.png` | WalkerGuardia | 16×24 | 7 | 8 | No |
+| `enemy_walker_walk.png` | Walker | 20×16 | 6 | 10 | Yes |
 
-### 5.3 Zone 3 Enemy Sprites
+### 5.2 Zone-sprited Enemies
 
-Location: `assets/sprites/enemies/zone3/`
+Location: `assets/sprites/enemies/zoneN/`
 
-| File | Enemy | Frame Size | Frames | FPS | Loop |
-|---|---|---|---|---|---|
-| `enemy_garza_walk.png` | WalkerGarza | 18×28 | 6 | 7 | Yes |
-| `enemy_garza_hurt.png` | WalkerGarza | 18×28 | 3 | 12 | No |
-| `enemy_garza_die.png` | WalkerGarza | 18×28 | 7 | 8 | No |
-| `enemy_halcon_fly.png` | FlyingHalcon (glide) | 20×14 | 6 | 12 | Yes |
-| `enemy_halcon_dive.png` | FlyingHalcon (dive) | 14×20 | 4 | 18 | No |
-| `enemy_halcon_hurt.png` | FlyingHalcon | 20×14 | 3 | 12 | No |
-| `enemy_halcon_die.png` | FlyingHalcon | 20×14 | 7 | 8 | No |
-| `enemy_quetzal_idle.png` | ShooterQuetzal | 12×20 | 4 | 6 | Yes |
-| `enemy_quetzal_aim.png` | ShooterQuetzal | 12×20 | 3 | 8 | No |
-| `enemy_quetzal_fire.png` | ShooterQuetzal | 12×20 | 4 | 14 | No |
-| `enemy_quetzal_hurt.png` | ShooterQuetzal | 12×20 | 3 | 12 | No |
-| `enemy_quetzal_die.png` | ShooterQuetzal | 12×20 | 6 | 8 | No |
-| `enemy_quetzal_feather.png` | Quetzal feather projectile | 3×10 | 2 | 12 | Yes |
-| `enemy_palom_walk.png` | WalkerPalom | 16×16 | 6 | 8 | Yes |
-| `enemy_palom_hurt.png` | WalkerPalom | 16×16 | 3 | 12 | No |
-| `enemy_palom_die.png` | WalkerPalom | 16×16 | 6 | 8 | No |
-| `enemy_buitre_idle.png` | ShooterBuitre | 18×22 | 4 | 5 | Yes |
-| `enemy_buitre_fire.png` | ShooterBuitre | 18×22 | 5 | 12 | No |
-| `enemy_buitre_hurt.png` | ShooterBuitre | 18×22 | 3 | 12 | No |
-| `enemy_buitre_die.png` | ShooterBuitre | 18×22 | 7 | 8 | No |
-| `enemy_buitre_proyectil.png` | Bone projectile | 8×6 | 2 | 8 | Yes |
+| File | Enemy | Frames | FPS |
+|---|---|---|---|
+| `enemy_zoneN_walk.png` | Zone walker | 6 | 10 |
+| `enemy_zoneN_hurt.png` | Any (damage) | 3 | 12 |
+| `enemy_zoneN_die.png` | Any (death) | 6 | 8 |
+| `enemy_fly_zoneN.png` | Zone flyer | 4 | 12 |
+| `enemy_shoot_zoneN.png` | Zone shooter | 4 | 6 |
+
+Where `N` is the zone number (1–3). All sprites use 16×16 frame size
+(placeholder; actual frame sizes depend on the thematic replacement).
 
 ---
 
@@ -287,17 +210,17 @@ Location: `assets/sprites/bosses/`
 
 Frame size: 48×48 px
 
-| File | Frames | FPS | Loop |
-|---|---|---|---|
-| `boss_venado_drift.png` | 6 | 8 | Yes |
-| `boss_venado_stomp.png` | 8 | 12 | No |
-| `boss_venado_charge.png` | 6 | 14 | No |
-| `boss_venado_frenzy_drift.png` | 6 | 14 | Yes |
-| `boss_venado_vine.png` | 10 | 12 | No |
-| `boss_venado_hurt.png` | 4 | 12 | No |
-| `boss_venado_death.png` | 12 | 8 | No |
-| `boss_venado_skull.png` | 1 | — | — |
-| `boss_venado_proyectil_vine.png` | 4 | 10 | Yes |
+| File | Frames | FPS | Loop | Status |
+|---|---|---|---|---|
+| `boss_venado_drift.png` | 6 | 8 | Yes | ✅ |
+| `boss_venado_stomp.png` | 8 | 12 | No | ✅ |
+| `boss_venado_charge.png` | 6 | 14 | No | ✅ |
+| `boss_venado_frenzy_drift.png` | 6 | 14 | Yes | ✅ |
+| `boss_venado_vine.png` | 10 | 12 | No | ✅ |
+| `boss_venado_hurt.png` | 4 | 12 | No | ✅ |
+| `boss_venado_death.png` | 12 | 8 | No | ✅ |
+| `boss_venado_skull.png` | 1 | — | — | ⚠️ Placeholder |
+| `boss_venado_proyectil_vine.png` | 4 | 10 | Yes | ⚠️ Placeholder |
 
 **Palette Notes:** Bone white (`#E8DCC8`), moss dark (`#2D4A1E`), moss mid (`#4A7832`), earth brown (`#6B4423`), fungus cream (`#C8B896`), beetle black (`#0A0A0A`), root tan (`#8C6E3C`), shadow (`#1A1A2E`) + transparent.
 
@@ -305,17 +228,17 @@ Frame size: 48×48 px
 
 Phase 1 frame size: 40×56 px. Sub-boss (Phase 2) frame size: 24×28 px.
 
-| File | Frames | FPS | Loop |
-|---|---|---|---|
-| `boss_rey_walk.png` | 8 | 10 | Yes |
-| `boss_rey_spit.png` | 6 | 12 | No |
-| `boss_rey_split.png` | 8 | 10 | Yes |
-| `boss_rey_metad_walk.png` | 6 | 12 | Yes |
-| `boss_rey_merge.png` | 6 | 8 | No |
-| `boss_rey_rampage.png` | 8 | 16 | Yes |
-| `boss_rey_hurt.png` | 4 | 12 | No |
-| `boss_rey_death.png` | 14 | 8 | No |
-| `boss_rey_venom_glob.png` | 3 | 8 | Yes |
+| File | Frames | FPS | Loop | Status |
+|---|---|---|---|---|
+| `boss_rey_walk.png` | 8 | 10 | Yes | ✅ |
+| `boss_rey_spit.png` | 6 | 12 | No | ✅ |
+| `boss_rey_split.png` | 8 | 10 | Yes | ✅ |
+| `boss_rey_metad_walk.png` | 6 | 12 | Yes | ⚠️ Placeholder |
+| `boss_rey_merge.png` | 6 | 8 | No | ✅ |
+| `boss_rey_rampage.png` | 8 | 16 | Yes | ✅ |
+| `boss_rey_hurt.png` | 4 | 12 | No | ✅ |
+| `boss_rey_death.png` | 14 | 8 | No | ✅ |
+| `boss_rey_venom_glob.png` | 3 | 8 | Yes | ⚠️ Placeholder |
 
 **Palette Notes:** Terciopelo tan (`#C8A264`), terciopelo dark (`#4A3218`), terciopelo mid (`#8C6432`), decay gray (`#7D7D7D`), decay dark (`#3C3C3C`), venom green (`#32A050`), venom bright (`#50C878`), shadow (`#0A0A14`).
 
@@ -323,17 +246,17 @@ Phase 1 frame size: 40×56 px. Sub-boss (Phase 2) frame size: 24×28 px.
 
 Frame size: 56×40 px (wide — wingspan)
 
-| File | Frames | FPS | Loop |
-|---|---|---|---|
-| `boss_gavilan_glide.png` | 8 | 10 | Yes |
-| `boss_gavilan_dive.png` | 6 | 16 | No |
-| `boss_gavilan_hover.png` | 4 | 8 | Yes |
-| `boss_gavilan_storm.png` | 8 | 12 | No |
-| `boss_gavilan_masked.png` | 6 | 14 | Yes |
-| `boss_gavilan_hurt.png` | 4 | 12 | No |
-| `boss_gavilan_death.png` | 16 | 8 | No |
-| `boss_gavilan_mask_frag.png` | 4 | 12 | No |
-| `boss_gavilan_feather.png` | 3 | 10 | Yes |
+| File | Frames | FPS | Loop | Status |
+|---|---|---|---|---|
+| `boss_gavilan_glide.png` | 8 | 10 | Yes | ✅ |
+| `boss_gavilan_dive.png` | 6 | 16 | No | ✅ |
+| `boss_gavilan_hover.png` | 4 | 8 | Yes | ✅ |
+| `boss_gavilan_storm.png` | 8 | 12 | No | ✅ |
+| `boss_gavilan_masked.png` | 6 | 14 | Yes | ✅ |
+| `boss_gavilan_hurt.png` | 4 | 12 | No | ✅ |
+| `boss_gavilan_death.png` | 16 | 8 | No | ✅ |
+| `boss_gavilan_mask_frag.png` | 4 | 12 | No | ⚠️ Placeholder |
+| `boss_gavilan_feather.png` | 3 | 10 | Yes | ⚠️ Placeholder |
 
 **Palette Notes:** Hawk brown (`#8C5A28`), hawk tan (`#C88C3C`), hawk white (`#E8DCC8`), mask gold (`#D4A017`), mask dark gold (`#8C6800`), mask teal (`#1E6B6B`), mask red-orange (`#D45A00`), eye glow (`#50FF50`), shadow black (`#0A0A0A`).
 
@@ -341,23 +264,23 @@ Frame size: 56×40 px (wide — wingspan)
 
 Multiple frame sizes per form.
 
-| File | Form | Frame Size | Frames | FPS | Loop |
-|---|---|---|---|---|---|
-| `boss_paburu_stone.png` | 1 | 64×64 | 4 | 6 | Yes |
-| `boss_paburu_stone_slam.png` | 1 | 64×64 | 8 | 12 | No |
-| `boss_paburu_stone_crack.png` | 1→2 | 64×64 | 8 | 8 | No |
-| `boss_paburu_mask.png` | 2 | 56×72 | 6 | 10 | Yes |
-| `boss_paburu_mask_wave.png` | 2 | 56×72 | 8 | 12 | No |
-| `boss_paburu_gold.png` | 3A | 32×32 | 6 | 14 | Yes |
-| `boss_paburu_black.png` | 3B | 32×32 | 6 | 14 | Yes |
-| `boss_paburu_relic_atk.png` | 3A/B | 32×32 | 10 | 14 | No |
-| `boss_paburu_spirit.png` | 4 | 64×80 | 8 | 10 | Yes |
-| `boss_paburu_spirit_surge.png` | 4 | 64×80 | 12 | 14 | No |
-| `boss_paburu_hurt.png` | All | 64×64 | 4 | 12 | No |
-| `boss_paburu_transcend.png` | Death | 64×80 | 20 | 8 | No |
-| `boss_paburu_stone_proyectil.png` | Form 1 | 8×8 | 3 | 8 | Yes |
-| `boss_paburu_gold_orb.png` | Form 3A | 6×6 | 3 | 12 | Yes |
-| `boss_paburu_black_orb.png` | Form 3B | 6×6 | 3 | 12 | Yes |
+| File | Form | Frame Size | Frames | FPS | Loop | Status |
+|---|---|---|---|---|---|---|
+| `boss_paburu_stone.png` | 1 | 64×64 | 4 | 6 | Yes | ✅ |
+| `boss_paburu_stone_slam.png` | 1 | 64×64 | 8 | 12 | No | ✅ |
+| `boss_paburu_stone_crack.png` | 1→2 | 64×64 | 8 | 8 | No | ⚠️ Placeholder |
+| `boss_paburu_mask.png` | 2 | 56×72 | 6 | 10 | Yes | ✅ |
+| `boss_paburu_mask_wave.png` | 2 | 56×72 | 8 | 12 | No | ⚠️ Placeholder |
+| `boss_paburu_gold.png` | 3A | 32×32 | 6 | 14 | Yes | ✅ |
+| `boss_paburu_black.png` | 3B | 32×32 | 6 | 14 | Yes | ✅ |
+| `boss_paburu_relic_atk.png` | 3A/B | 32×32 | 10 | 14 | No | ⚠️ Placeholder |
+| `boss_paburu_spirit.png` | 4 | 64×80 | 8 | 10 | Yes | ✅ |
+| `boss_paburu_spirit_surge.png` | 4 | 64×80 | 12 | 14 | No | ⚠️ Placeholder |
+| `boss_paburu_hurt.png` | All | 64×64 | 4 | 12 | No | ✅ |
+| `boss_paburu_transcend.png` | Death | 64×80 | 20 | 8 | No | ✅ |
+| `boss_paburu_stone_proyectil.png` | Form 1 | 8×8 | 3 | 8 | Yes | ⚠️ Placeholder |
+| `boss_paburu_gold_orb.png` | Form 3A | 6×6 | 3 | 12 | Yes | ⚠️ Placeholder |
+| `boss_paburu_black_orb.png` | Form 3B | 6×6 | 3 | 12 | Yes | ⚠️ Placeholder |
 
 **Palette Notes — Form 1 (Stone):** Stone green (`#3C6432`), stone mid (`#5A8C50`), stone light (`#8CB496`), carving shadow (`#1E3C1E`), eye glow green (`#50FF50`), moss accent (`#2D5A28`), outline (`#0A0A0A`).
 
@@ -417,47 +340,42 @@ Each stage requires three background layers: `_far`, `_mid`, `_near`. Dimensions
 | `stage0/bg_stage0_mid.png` | BG_Mid | 640×224 | 0.40× |
 | `stage0/bg_stage0_near.png` | BG_Near | 960×224 | 0.70× |
 
+Each zone uses a single generic background set loaded by `StageLoader` using
+the pattern `bg_{zone}_{layer}.png` (e.g. `bg_zone1_far.png`). Thematic
+background variants (cafeteria, aulas, planicie, etc.) are aspirational;
+all stages within a zone currently share the same generic background.
+
 ### 8.2 Zone 1
 
-| File | Layer | Used In |
+| File | Layer | Size |
 |---|---|---|
-| `zone1/bg_jungle_far.png` | BG_Far | Stages 1-1, 1-4 |
-| `zone1/bg_jungle_mid.png` | BG_Mid | Stages 1-1, 1-4 |
-| `zone1/bg_jungle_near.png` | BG_Near | Stages 1-1, 1-4 |
-| `zone1/bg_cafeteria_far.png` | BG_Far | Stage 1-2 |
-| `zone1/bg_cafeteria_mid.png` | BG_Mid | Stage 1-2 |
-| `zone1/bg_cafeteria_near.png` | BG_Near | Stage 1-2 |
-| `zone1/bg_aulas_far.png` | BG_Far | Stage 1-3 |
-| `zone1/bg_aulas_mid.png` | BG_Mid | Stage 1-3 |
-| `zone1/bg_aulas_near.png` | BG_Near | Stage 1-3 |
+| `zone1/bg_zone1_far.png` | BG_Far | 320×224 |
+| `zone1/bg_zone1_mid.png` | BG_Mid | 640×224 |
+| `zone1/bg_zone1_near.png` | BG_Near | 960×224 |
 
 ### 8.3 Zone 2
 
-| File | Layer | Used In |
+| File | Layer | Size |
 |---|---|---|
-| `zone2/bg_planicie_far.png` | BG_Far | Stage 2-1 |
-| `zone2/bg_planicie_mid.png` | BG_Mid | Stage 2-1 |
-| `zone2/bg_planicie_near.png` | BG_Near | Stage 2-1 |
-| `zone2/bg_datacenter_far.png` | BG_Far | Stages 2-2, 2-3, 2-4 |
-| `zone2/bg_datacenter_mid.png` | BG_Mid | Stages 2-2, 2-3, 2-4 |
-| `zone2/bg_datacenter_near.png` | BG_Near | Stages 2-2, 2-3, 2-4 |
+| `zone2/bg_zone2_far.png` | BG_Far | 320×224 |
+| `zone2/bg_zone2_mid.png` | BG_Mid | 640×224 |
+| `zone2/bg_zone2_near.png` | BG_Near | 960×224 |
 
 ### 8.4 Zone 3
 
-| File | Layer | Used In |
+| File | Layer | Size |
 |---|---|---|
-| `zone3/bg_heredia_far.png` | BG_Far | All Zone 3 stages |
-| `zone3/bg_heredia_mid.png` | BG_Mid | All Zone 3 stages |
-| `zone3/bg_heredia_near.png` | BG_Near | All Zone 3 stages |
-| `zone3/bg_patio_sky.png` | BG_Far | Stage 3-3 only (open sky) |
+| `zone3/bg_zone3_far.png` | BG_Far | 320×224 |
+| `zone3/bg_zone3_mid.png` | BG_Mid | 640×224 |
+| `zone3/bg_zone3_near.png` | BG_Near | 960×224 |
 
 ### 8.5 Zone Final
 
-| File | Layer | Used In |
+| File | Layer | Size |
 |---|---|---|
-| `final/bg_cemetery_far.png` | BG_Far | Stages 4-1, 4-2 |
-| `final/bg_cemetery_mid.png` | BG_Mid | Stages 4-1, 4-2 |
-| `final/bg_cemetery_near.png` | BG_Near | Stages 4-1, 4-2 |
+| `final/bg_final_far.png` | BG_Far | 320×224 |
+| `final/bg_final_mid.png` | BG_Mid | 640×224 |
+| `final/bg_final_near.png` | BG_Near | 960×224 |
 
 **Cemetery background palette:** Deep purple-black (`#0A0014`), cemetery stone (`#4A4A5A`), spirit green glow (`#28C850`), pale moonlight (`#C8D4C8`), dark soil (`#1E1410`).
 
@@ -515,20 +433,26 @@ Location: `assets/music/`
 
 | File | Used In | Mood | Loop |
 |---|---|---|---|
-| `bgm_splash.ogg` | Splash screen | Ambient, brief | No |
-| `bgm_title.ogg` | Title screen | Heroic, inviting | Yes |
-| `bgm_story.ogg` | Story screens 1-3 | Atmospheric, mysterious | Yes |
-| `bgm_stage0.ogg` | Stage 0 | Tense, instructional | Yes |
-| `bgm_zone1_traverse.ogg` | Stages 1-1, 1-2, 1-3 | Jungle percussion, humid tension | Yes |
-| `bgm_zone1_boss.ogg` | Stage 1-4 (Venado) | Forest spirit, ancient rhythm | Yes |
-| `bgm_zone2_traverse.ogg` | Stages 2-1, 2-2, 2-3 | Electronic drone, industrial | Yes |
-| `bgm_zone2_boss.ogg` | Stage 2-4 (Rey) | Collective whisper, metallic | Yes |
-| `bgm_zone3_traverse.ogg` | Stages 3-1, 3-2, 3-3 | Aerial, hunting tension | Yes |
-| `bgm_zone3_boss.ogg` | Stage 3-4 (Gavilán) | Wing beats, ceremonial | Yes |
-| `bgm_final_approach.ogg` | Stage 4-1 | Silence punctuated by ritual drums | Yes |
-| `bgm_paburu.ogg` | Stage 4-2 | Four-part adaptive track (one section per form) | Yes |
+All tracks are stored as **WAV** (not OGG). The engine's `stage_scene.py`
+loads music via `assets/music/{bgm_track}.wav`. Conversion to OGG is deferred
+until the final asset pipeline (Phase 3.6 in the remediation plan).
 
-**`bgm_paburu.ogg` — Adaptive Note:** This track is structured with a loop point that the `AudioManager` advances manually at each `BOSS_PHASE_CHANGED` event for Paburu. The track has four internally consistent sections that each loop independently. The `AudioManager.advance_music_section()` method (Paburu-specific) skips to the next section's loop point.
+| File | Used In | Mood | Loop |
+|---|---|---|---|
+| `bgm_splash.wav` | Splash screen | Ambient, brief | No |
+| `bgm_title.wav` | Title screen | Heroic, inviting | Yes |
+| `bgm_story.wav` | Story screens 1-3 | Atmospheric, mysterious | Yes |
+| `bgm_stage0.wav` | Stage 0 | Tense, instructional | Yes |
+| `bgm_zone1_traverse.wav` | Zone 1 stages | Jungle percussion, humid tension | Yes |
+| `bgm_zone1_boss.wav` | Stage 1-4 (Venado) | Forest spirit, ancient rhythm | Yes |
+| `bgm_zone2_traverse.wav` | Zone 2 stages | Electronic drone, industrial | Yes |
+| `bgm_zone2_boss.wav` | Stage 2-4 (Rey) | Collective whisper, metallic | Yes |
+| `bgm_zone3_traverse.wav` | Zone 3 stages | Aerial, hunting tension | Yes |
+| `bgm_zone3_boss.wav` | Stage 3-4 (Gavilán) | Wing beats, ceremonial | Yes |
+| `bgm_final_approach.wav` | Stage 4-1 | Silence punctuated by ritual drums | Yes |
+| `bgm_paburu.wav` | Stage 4-2 | Four-part adaptive track (one section per form) | Yes |
+
+**`bgm_paburu.wav` — Adaptive Note:** This track is structured with a loop point that the `AudioManager` advances manually at each `BOSS_PHASE_CHANGED` event for Paburu. The track has four internally consistent sections that each loop independently. The `AudioManager.advance_music_section()` method (Paburu-specific) skips to the next section's loop point.
 
 ---
 
@@ -540,75 +464,75 @@ Location: `assets/sfx/`
 
 | File | Trigger |
 |---|---|
-| `sfx/player/sfx_player_jump.wav` | Jump action |
-| `sfx/player/sfx_player_land.wav` | Landing after fall |
-| `sfx/player/sfx_player_short_attack.wav` | Short attack swing |
-| `sfx/player/sfx_player_long_attack.wav` | Long attack swing |
-| `sfx/player/sfx_player_hit_connect.wav` | Player attack hits enemy |
-| `sfx/player/sfx_player_hurt.wav` | Player receives damage |
-| `sfx/player/sfx_player_die.wav` | Player death |
-| `sfx/player/sfx_player_crouch.wav` | Crouch start |
+| `player/sfx_player_jump.wav` | Jump action |
+| `player/sfx_player_land.wav` | Landing after fall |
+| `player/sfx_player_short_attack.wav` | Short attack swing |
+| `player/sfx_player_long_attack.wav` | Long attack swing |
+| `player/sfx_player_hit_connect.wav` | Player attack hits enemy |
+| `player/sfx_player_hurt.wav` | Player receives damage |
+| `player/sfx_player_die.wav` | Player death |
+| `player/sfx_player_crouch.wav` | Crouch start |
 
 ### 12.2 Enemy SFX
 
+All paths relative to `assets/sfx/enemies/`.
+
 | File | Trigger |
 |---|---|
-| `sfx/enemies/sfx_enemy_hit.wav` | Any enemy receives damage |
-| `sfx/enemies/sfx_enemy_die_small.wav` | Small enemies (health ≤ 1.0) |
-| `sfx/enemies/sfx_enemy_die_large.wav` | Larger enemies (health ≥ 2.0) |
-| `sfx/enemies/sfx_projectile_fire.wav` | Any projectile fired |
-| `sfx/enemies/sfx_projectile_hit_wall.wav` | Projectile hits terrain |
-| `sfx/enemies/sfx_serpent_hiss.wav` | Zone 2 serpent alert |
-| `sfx/enemies/sfx_bird_cry.wav` | Zone 3 bird alert |
+| `sfx_enemies_hit.wav` | Any enemy receives damage |
+| `sfx_enemies_die_small.wav` | Small enemies (health ≤ 1.0) |
+| `sfx_enemies_die_large.wav` | Larger enemies (health ≥ 2.0) |
+| `sfx_enemies_projectile_fire.wav` | Any projectile fired |
+| `sfx_enemies_projectile_hit_wall.wav` | Projectile hits terrain |
 
 ### 12.3 Boss SFX
 
+All paths relative to `assets/sfx/bosses/`.
+
 | File | Trigger |
 |---|---|
-| `sfx/bosses/sfx_venado_stomp.wav` | Venado stomp attack |
-| `sfx/bosses/sfx_venado_charge.wav` | Venado charge |
-| `sfx/bosses/sfx_venado_vine.wav` | Venado vine toss |
-| `sfx/bosses/sfx_venado_die.wav` | Venado death |
-| `sfx/bosses/sfx_rey_spit.wav` | Rey venom spit |
-| `sfx/bosses/sfx_rey_split.wav` | Rey Phase 2 split |
-| `sfx/bosses/sfx_rey_die.wav` | Rey death |
-| `sfx/bosses/sfx_gavilan_dive.wav` | Gavilán dive bomb |
-| `sfx/bosses/sfx_gavilan_mask_beam.wav` | Gavilán mask beam |
-| `sfx/bosses/sfx_gavilan_die.wav` | Gavilán death |
-| `sfx/bosses/sfx_paburu_eye_beam.wav` | Paburu eye beam (Form 1) |
-| `sfx/bosses/sfx_paburu_wave.wav` | Paburu spirit wave (Form 2) |
-| `sfx/bosses/sfx_paburu_gold_rush.wav` | Gold sphere rush (Form 3A) |
-| `sfx/bosses/sfx_paburu_pull.wav` | Pearl pull (Form 3B) |
-| `sfx/bosses/sfx_paburu_convergence.wav` | Convergence attack (Form 4) |
-| `sfx/bosses/sfx_paburu_transcend.wav` | Paburu defeat / ascension |
-| `sfx/bosses/sfx_phase_change.wav` | Any boss phase transition |
-| `sfx/bosses/sfx_relic_appear.wav` | Relic fragment appears post-boss |
+| `sfx_bosses_venado_stomp.wav` | Venado stomp attack |
+| `sfx_bosses_venado_charge.wav` | Venado charge |
+| `sfx_bosses_venado_vine.wav` | Venado vine toss |
+| `sfx_bosses_rey_spit.wav` | Rey venom spit |
+| `sfx_bosses_rey_split.wav` | Rey Phase 2 split |
+| `sfx_bosses_gavilan_dive.wav` | Gavilán dive bomb |
+| `sfx_bosses_gavilan_mask_beam.wav` | Gavilán mask beam |
+| `sfx_bosses_paburu_eye_beam.wav` | Paburu eye beam (Form 1) |
+| `sfx_bosses_paburu_wave.wav` | Paburu spirit wave (Form 2) |
+| `sfx_bosses_phase_change.wav` | Any boss phase transition |
+| `sfx_bosses_relic_appear.wav` | Relic fragment appears post-boss |
+
+Missing aspirational boss SFX (not yet on disk): `sfx_venado_die`, `sfx_rey_die`, `sfx_gavilan_die`, `sfx_paburu_gold_rush`, `sfx_paburu_pull`, `sfx_paburu_convergence`, `sfx_paburu_transcend`.
 
 ### 12.4 UI SFX
 
+All paths relative to `assets/sfx/ui/`.
+
 | File | Trigger |
 |---|---|
-| `sfx/ui/sfx_menu_move.wav` | Menu cursor navigation |
-| `sfx/ui/sfx_menu_confirm.wav` | Menu selection confirm |
-| `sfx/ui/sfx_menu_cancel.wav` | Menu back |
-| `sfx/ui/sfx_checkpoint.wav` | Checkpoint activated |
-| `sfx/ui/sfx_checkpoint_restore.wav` | Respawn at checkpoint |
-| `sfx/ui/sfx_stage_banner.wav` | Stage banner slide-in |
-| `sfx/ui/sfx_game_over.wav` | Game Over screen |
-| `sfx/ui/sfx_heart_restore.wav` | Heart refill animation |
-| `sfx/ui/sfx_stage_complete.wav` | Stage completion |
+| `sfx_ui_menu_move.wav` | Menu cursor navigation |
+| `sfx_ui_menu_confirm.wav` | Menu selection confirm |
+| `sfx_ui_menu_cancel.wav` | Menu back |
+| `sfx_ui_checkpoint.wav` | Checkpoint activated |
+| `sfx_ui_stage_banner.wav` | Stage banner slide-in |
+| `sfx_ui_game_over.wav` | Game Over screen |
+| `sfx_ui_heart_restore.wav` | Heart refill animation |
+| `sfx_ui_stage_complete.wav` | Stage completion |
 
 ### 12.5 Environment SFX
 
+All paths relative to `assets/sfx/environment/`.
+
 | File | Trigger |
 |---|---|
-| `sfx/environment/sfx_jungle_ambient.wav` | Zone 1 ambient loop |
-| `sfx/environment/sfx_datacenter_hum.wav` | Zone 2 ambient loop |
-| `sfx/environment/sfx_wind_indoor.wav` | Zone 3 ambient loop |
-| `sfx/environment/sfx_cemetery_silence.wav` | Zone Final ambient (minimal) |
-| `sfx/environment/sfx_screen_shake.wav` | Screen shake events |
-| `sfx/environment/sfx_hazard_zone.wav` | Hazard zone damage tick |
-| `sfx/environment/sfx_one_way_platform.wav` | Landing on one-way platform |
+| `sfx_environment_jungle_ambient.wav` | Zone 1 ambient loop |
+| `sfx_environment_datacenter_hum.wav` | Zone 2 ambient loop |
+| `sfx_environment_wind_indoor.wav` | Zone 3 ambient loop |
+| `sfx_environment_cemetery_silence.wav` | Zone Final ambient (minimal) |
+| `sfx_environment_screen_shake.wav` | Screen shake events |
+| `sfx_environment_hazard_zone.wav` | Hazard zone damage tick |
+| `sfx_environment_one_way_platform.wav` | Landing on one-way platform |
 
 ---
 
@@ -620,8 +544,8 @@ Location: `assets/sprites/shared/`
 |---|---|---|---|---|
 | `checkpoint.png` | 16×32 | 6 (animated), 1 (inactive) | 8 | Checkpoint post — glows when active |
 | `torch_anim.png` | 8×16 | 4 | 8 | Torch flame animation |
-| `fountain_anim.png` | 24×24 | 6 | 10 | Fountain water animation (Zone 3-3) |
-| `spirit_echo_overlay.png` | 1×1 | 1 | — | Alpha overlay tint for spirit echoes |
+| `fountain_anim.png` | 24×24 | 6 | 10 | Fountain water animation (Zone 3-3) — ⚠️ Placeholder |
+| `spirit_echo_overlay.png` | 1×1 | 1 | — | Alpha overlay tint for spirit echoes — ⚠️ Placeholder |
 
 ---
 
@@ -659,7 +583,10 @@ sheet = AssetLoader.load_spritesheet(
 sound = AssetLoader.load_sound(ASSETS_DIR / "sfx" / "player" / "sfx_player_jump.wav")
 
 # Background loading (direct image):
-bg_far = AssetLoader.load_image(ASSETS_DIR / "backgrounds" / "zone1" / "bg_jungle_far.png")
+bg_far = AssetLoader.load_image(ASSETS_DIR / "backgrounds" / "zone1" / "bg_zone1_far.png")
+
+# UI image loading:
+heart = AssetLoader.load_image(ASSETS_DIR / "ui" / "heart_full.png")
 ```
 
 Students use the same `AssetLoader` API for their student assets:

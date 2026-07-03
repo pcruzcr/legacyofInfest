@@ -40,6 +40,7 @@ Each TMX file must declare the following custom properties at the map level:
 | `stage_name` | string | Yes | Display name for the HUD banner (e.g., `"The Awakening"`) |
 | `time_limit` | int | Yes | Stage time limit in seconds |
 | `bgm_track` | string | Yes | Name of the BGM file (without extension) |
+| `background_zone` | string | No | Zone key for loading parallax backgrounds (`assets/backgrounds/{background_zone}/`). If set, `StageLoader` loads `bg_{zone}_{far,mid,near}.png`. If absent or empty, no background layers are loaded. |
 | `background_color` | color | No | Sky/background fill color (default: `#000000`) |
 | `gravity_multiplier` | float | No | Stage-level gravity scale (default: `1.0`) |
 | `debug_mode` | bool | No | Enable debug overlay rendering (default: `false`) |
@@ -288,12 +289,16 @@ All solid collision geometry is defined in the `Collision` object layer as recta
 
 ### 9.2 Collision Object Types
 
-| Object Name Prefix | Type Designation | Behavior |
-|---|---|---|
-| `Solid_` | Solid platform | Full AABB resolution for player and Walker/Shooter |
-| `OneWay_` | One-way platform | Passable from below; solid from above |
-| `Hazard_` | Hazard zone | Does not block movement; deals damage |
-| `Death_` | Kill zone | Instant death on contact (pit, spike floor) |
+Each object in the `Collision` layer has a `type` attribute. `StageLoader` uses the `type` attribute to classify the object:
+
+| `type` Attribute | Behavior |
+|---|---|
+| `Solid` | Full AABB resolution for player and Walker/Shooter |
+| `Platform` | One-way platform — passable from below, solid from above |
+
+Any object type other than `Platform` is treated as `Solid`. Objects with `type="Solid"`, or objects left with no type, all resolve as solid ground.
+
+For hazards, death pits, camera locks, and similar non-collision zones, place those objects in the `Objects` layer (not the `Collision` layer) with the appropriate `type` value (`HazardZone`, `DeathPit`, `CameraLock`, etc.).
 
 **Note:** Collision objects should align to the 16-pixel tile grid. Sub-tile-precision collision is permitted but must be justified (e.g., a sloped surface approximated with thin rectangles).
 

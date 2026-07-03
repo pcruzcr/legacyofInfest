@@ -113,8 +113,9 @@ class TestHUDDestroy:
         before = subscriber_count()
         hud.destroy()
         after = subscriber_count()
-        assert after == before - 4, (
-            f"Expected 4 fewer subscribers, got {before} -> {after}"
+        expected_delta = 6  # PLAYER_DAMAGED, PLAYER_HEALED, PLAYER_DIED, BOSS_PHASE_CHANGED, CHECKPOINT_REACHED, STAGE_COMPLETE
+        assert after == before - expected_delta, (
+            f"Expected {expected_delta} fewer subscribers, got {before} -> {after}"
         )
 
     def test_destroy_is_idempotent(self):

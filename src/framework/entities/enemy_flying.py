@@ -110,9 +110,10 @@ class EnemyFlying(EnemyBase):
     # ──────────────────────────────────────────────
 
     def _get_animation_key(self) -> str:
-        """Return animation key for non-DYING, non-HURT state."""
         return "fly"
 
     def _build_hurtbox(self) -> pygame.Rect:
-        """Return local-space hurtbox rect."""
         return pygame.Rect(6, 4, 20, 20)
+
+    def _build_hitbox(self) -> pygame.Rect:
+        return self._build_hurtbox()

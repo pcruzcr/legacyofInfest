@@ -18,6 +18,13 @@ def reset_bus():
     yield
 
 
+@pytest.fixture(scope="class", autouse=True)
+def _pygame_init():
+    pygame.init()
+    yield
+    pygame.quit()
+
+
 class TestMessageBox:
     def test_initial_state(self):
         mb = MessageBox()
@@ -97,6 +104,32 @@ class TestMessageBox:
         emit("SHOW_MESSAGE", text="Should not appear", duration=3.0)
         dispatch()
         assert not mb.is_visible
+
+    def test_queue_maintains_order_after_dismiss(self):
+        mb = MessageBox()
+        mb._chars_per_second = 1000.0
+        # Show first message (dismiss_on_confirm style)
+        emit("SHOW_MESSAGE", text="First", duration=0.0)
+        dispatch()
+        assert mb._full_text == "First"
+        # Queue two more while first is visible
+        emit("SHOW_MESSAGE", text="Second", duration=0.0)
+        dispatch()
+        emit("SHOW_MESSAGE", text="Third", duration=0.0)
+        dispatch()
+        assert len(mb._queue) == 2, "Should have 2 queued messages"
+        # Hide first → queue must NOT be cleared
+        emit("HIDE_MESSAGE")
+        dispatch()
+        assert len(mb._queue) == 2, "Queue should survive dismiss"
+        # Update should pick next from queue
+        mb.update(0.0)
+        assert mb._full_text == "Second", f"Expected 'Second', got '{mb._full_text}'"
+        # Dismiss second → third should appear
+        emit("HIDE_MESSAGE")
+        dispatch()
+        mb.update(0.0)
+        assert mb._full_text == "Third", f"Expected 'Third', got '{mb._full_text}'"
 
     def test_chars_to_add_never_exceeds_full_text(self):
         mb = MessageBox()

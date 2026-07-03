@@ -165,6 +165,22 @@ class Player(BaseEntity):
         return self._health
 
     @property
+    def hurtbox(self) -> pygame.Rect:
+        """
+        Damage-receiving hitbox. Smaller than the collision rect so that
+        enemy sprites can overlap visually without dealing contact damage.
+          Standing:  20×28, offsetY=4  (top = rect.y + 4, bottom = rect.y + 32)
+          Crouching: 20×18, offsetY=14 (top = rect.y + 14, bottom = rect.y + 32)
+        """
+        if self._state_instance.state_enum == PlayerState.CROUCHING:
+            off_y = 14
+            h = 18
+        else:
+            off_y = 4
+            h = 28
+        return pygame.Rect(self.rect.x, self.rect.y + off_y, self.rect.width, h)
+
+    @property
     def state(self) -> PlayerState:
         """Read-only current state enum value."""
         return PlayerState(self._state_instance.state_enum.value)
@@ -441,9 +457,12 @@ class Player(BaseEntity):
     def _resolve_collision(self, dt: float, collision_rects: list[pygame.Rect]) -> None:
         """
         Axis-separated AABB collision resolution.
-        1. Resolve X axis
-        2. Resolve Y axis
+        1. Resolve Y axis (vertical landing/push-out first)
+        2. Resolve X axis (horizontal push-out second)
         3. Update grounded state
+
+        Y-before-X order prevents floor tiles from being treated as
+        walls when the player rect overlaps them vertically.
         """
         if not collision_rects:
             return
@@ -455,28 +474,6 @@ class Player(BaseEntity):
             self.rect.width,
             self.rect.height,
         )
-
-        # --- X axis ---
-        collided_x = False
-        for tile in collision_rects:
-            if player_rect.colliderect(tile):
-                # Skip floor tiles: rects entirely below player center are
-                # floors, not walls — they should only block Y, not X.
-                if tile.top >= player_rect.centery:
-                    continue
-                collided_x = True
-                # Push in the direction of smallest overlap
-                overlap_left = player_rect.right - tile.left
-                overlap_right = tile.right - player_rect.left
-                if overlap_left < overlap_right:
-                    player_rect.right = tile.left
-                else:
-                    player_rect.left = tile.right
-                self.velocity.x = 0.0
-
-        if collided_x:
-            self.position.x = float(player_rect.x)
-            player_rect.x = int(self.position.x)
 
         # --- Y axis ---
         # Use an inflated rect so touching edges (bottom == floor top)
@@ -500,6 +497,28 @@ class Player(BaseEntity):
 
         if collided_y:
             self.position.y = float(player_rect.y)
+            player_rect.y = int(self.position.y)
+
+        # --- X axis ---
+        collided_x = False
+        for tile in collision_rects:
+            if player_rect.colliderect(tile):
+                # Skip floor tiles: after Y resolution, the player's feet
+                # sit on the floor, so these are clearly floors, not walls.
+                if tile.top >= player_rect.centery:
+                    continue
+                collided_x = True
+                # Push in the direction of smallest overlap
+                overlap_left = player_rect.right - tile.left
+                overlap_right = tile.right - player_rect.left
+                if overlap_left < overlap_right:
+                    player_rect.right = tile.left
+                else:
+                    player_rect.left = tile.right
+                self.velocity.x = 0.0
+
+        if collided_x:
+            self.position.x = float(player_rect.x)
 
     def _resolve_one_way_collision(self, dt: float, one_way_rects: list[pygame.Rect]) -> None:
         """Resolve Y-axis collision for one-way platforms (passable from below).
@@ -515,9 +534,10 @@ class Player(BaseEntity):
             self.rect.width,
             self.rect.height,
         )
+        prev_bottom = player_rect.bottom - self.velocity.y * dt
         collision_check_rect = player_rect.inflate(0, 2)
         for plat in one_way_rects:
-            if collision_check_rect.colliderect(plat):
+            if collision_check_rect.colliderect(plat) and prev_bottom <= plat.top:
                 player_rect.bottom = plat.top
                 self.velocity.y = 0.0
                 self.is_grounded = True

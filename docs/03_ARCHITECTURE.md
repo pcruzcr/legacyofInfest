@@ -368,14 +368,24 @@ Parses a TMX file using `pytmx`, constructs the layer stack using `pyscroll`, sp
 **Public Interface:**
 - `StageLoader.load(tmx_path: Path) → StageData` — Load a TMX file and return the stage data structure.
 
-**`StageData` Contents:**
+**`StageData` Contents (17 fields — see `src/framework/stage/stage_loader.py` for the exact `@dataclass`):**
 - `map_layer` — The `pyscroll` scrolling group
+- `map_pixel_size: tuple[int, int]` — Total map dimensions in pixels
 - `collision_rects: list[pygame.Rect]` — All solid collision rectangles
+- `one_way_rects: list[pygame.Rect]` — One-way platform collision rectangles
 - `entity_list: list[BaseEntity]` — All spawned entities
 - `checkpoints: list[Checkpoint]` — All checkpoint objects
 - `spawn_point: pygame.Vector2` — Player start position
-- `next_trigger: pygame.Rect` — Stage completion trigger zone
+- `next_trigger: pygame.Rect | None` — Stage completion trigger zone
 - `background_layers: list[pygame.Surface]` — Parallax background layers
+- `message_triggers: list[MessageTrigger]` — Message trigger zones
+- `hazard_zones: list[HazardZone]` — Hazard zones
+- `death_pits: list[DeathPit]` — Death pit rects
+- `camera_locks: list[CameraLock]` — Camera lock zones
+- `stage_id: str` — Unique stage identifier
+- `stage_name: str` — Display name
+- `time_limit: int` — Countdown time in seconds (0 = no limit)
+- `bgm_track: str` — Background music track name
 
 #### `framework/stage/camera.py` — `Camera`
 

@@ -41,6 +41,7 @@ class StageScene(BaseScene):
         self._stage_complete: bool = False
         self._game_over: bool = False
         self._paused: bool = False
+        self._debug: bool = False
 
     def on_enter(self) -> None:
         self._stage_data = StageLoader.load(self._tmx_path)
@@ -133,9 +134,12 @@ class StageScene(BaseScene):
         stage = self._stage_data
         im = self.input
 
-        if im and im.is_action_just_pressed(Action.PAUSE):
-            self._paused = not getattr(self, '_paused', False)
-        if getattr(self, '_paused', False):
+        if im:
+            if im.is_action_just_pressed(Action.PAUSE):
+                self._paused = not self._paused
+            if hasattr(pygame.key, 'get_just_pressed') and pygame.key.get_just_pressed()[pygame.K_F1]:
+                self._debug = not self._debug
+        if self._paused:
             return
 
         player.update(dt, stage.collision_rects, im, one_way_rects=stage.one_way_rects)
@@ -145,7 +149,7 @@ class StageScene(BaseScene):
                 if hasattr(entity, "set_player_ref"):
                     entity.set_player_ref(player.rect)
                 if entity.is_alive:
-                    entity.check_player_contact(player)
+                    entity._check_player_contact(player)
             entity.update(dt)
 
         # Player attack hitbox → enemy hurtbox collision
@@ -176,22 +180,26 @@ class StageScene(BaseScene):
         center_y = self._camera.offset.y + settings.INTERNAL_HEIGHT / 2
         stage.map_layer.center((center_x, center_y))
 
+        # Use inflated rect so edge-aligned triggers (bottom == trigger top)
+        # are detected with colliderect's strict comparison.
+        trigger_rect = player.rect.inflate(0, 2)
+
         # Check message triggers
         for mt in stage.message_triggers:
-            if not mt.triggered and player.rect.colliderect(mt.rect):
+            if not mt.triggered and trigger_rect.colliderect(mt.rect):
                 mt.triggered = True
                 emit(Events.SHOW_MESSAGE, text=mt.text, duration=4.0)
 
         # Check hazard zones
         for hz in stage.hazard_zones:
             hz.timer -= dt
-            if hz.timer <= 0 and player.rect.colliderect(hz.rect):
+            if hz.timer <= 0 and trigger_rect.colliderect(hz.rect):
                 player.apply_damage(hz.damage, player.rect.center)
                 hz.timer = hz.cooldown
 
         # Check death pits
         for dp in stage.death_pits:
-            if player.rect.colliderect(dp.rect):
+            if trigger_rect.colliderect(dp.rect):
                 self._kill_player()
                 return
 
@@ -319,3 +327,36 @@ class StageScene(BaseScene):
             pt_x = (settings.INTERNAL_WIDTH - pause_text.get_width()) // 2
             pt_y = (settings.INTERNAL_HEIGHT - pause_text.get_height()) // 2
             surface.blit(pause_text, (pt_x, pt_y))
+
+        if self._debug:
+            player = self._player
+            stage = self._stage_data
+            lx = -int(cam_offset.x)
+            ly = -int(cam_offset.y)
+            font = pygame.font.Font(None, 14)
+            y = 4
+            for r in stage.collision_rects:
+                pygame.draw.rect(surface, (0, 255, 0), (r.x + lx, r.y + ly, r.w, r.h), 1)
+            for r in stage.one_way_rects:
+                pygame.draw.rect(surface, (0, 128, 255), (r.x + lx, r.y + ly, r.w, r.h), 1)
+            for mt in stage.message_triggers:
+                r = mt.rect
+                pygame.draw.rect(surface, (255, 255, 0), (r.x + lx, r.y + ly, r.w, r.h), 1)
+            for hz in stage.hazard_zones:
+                r = hz.rect
+                pygame.draw.rect(surface, (255, 0, 0), (r.x + lx, r.y + ly, r.w, r.h), 1)
+            for dp in stage.death_pits:
+                r = dp.rect
+                pygame.draw.rect(surface, (255, 0, 128), (r.x + lx, r.y + ly, r.w, r.h), 1)
+            info = [
+                f"Pos: ({player.position.x:.0f}, {player.position.y:.0f})",
+                f"Vel: ({player.velocity.x:.1f}, {player.velocity.y:.1f})",
+                f"State: {player.state}",
+                f"HP: {player.current_health}/{player.max_health}",
+                f"Grounded: {player.is_grounded}",
+                f"Paused: {self._paused}",
+            ]
+            for line in info:
+                txt = font.render(line, True, (255, 255, 255))
+                surface.blit(txt, (4, y))
+                y += 16
