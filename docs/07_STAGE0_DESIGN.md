@@ -62,9 +62,9 @@ The stage is a flat, single-elevation corridor with the following vertical eleme
 **Layout:**
 - Flat floor, no enemies
 - Two elevated platforms at Y=160 (32 px above floor)
-- Platform 1: X=280–360 (80 px wide)
-- Platform 2: X=420–500 (80 px wide)
-- Gap between platforms: 60 px (jumpable with normal jump)
+- Platform 1: X=272–368 (96 px wide)
+- Platform 2: X=416–512 (96 px wide)
+- Gap between platforms: 48 px (jumpable with normal jump)
 
 **Messages:**
 
@@ -111,9 +111,9 @@ The stage is a flat, single-elevation corridor with the following vertical eleme
 **Layout:**
 - Flat floor
 - Two elevated platforms creating an elevated walkway section
-  - Platform 1: X=1200–1360 (160 px wide, Y=160)
-  - Gap: X=1360–1440 (80 px — Walker will turn here due to ledge detection)
-  - Platform 2: X=1440–1600 (160 px wide, Y=160)
+  - Platform 1: X=1200–1376 (176 px wide, Y=160)
+  - Gap: X=1376–1440 (64 px — Walker will turn here due to ledge detection)
+  - Platform 2: X=1440–1616 (176 px wide, Y=160)
 - Walker A: on Platform 1, patrol_length=160, facing=right
 - Walker B: at floor level, patrol_length=128, facing=left
 
@@ -140,9 +140,9 @@ The stage is a flat, single-elevation corridor with the following vertical eleme
 - Flying_A: sine mode, amplitude=28, frequency=1.2, X=1700, patrol horizontal range 200 px
 - Flying_B: bezier mode, control points forming an S-curve across the zone
   - Waypoint 0: X=1900, Y=80
-  - Waypoint 1: X=2000, Y=140
-  - Waypoint 2: X=1950, Y=60
-  - Waypoint 3: X=2060, Y=110
+  - Waypoint 1: X=1800, Y=40
+  - Waypoint 2: X=1700, Y=80
+  - Waypoint 3: X=1800, Y=120
 
 **Messages:**
 
@@ -163,9 +163,9 @@ The stage is a flat, single-elevation corridor with the following vertical eleme
 
 **Layout:**
 - Floor with a death pit at X=2240–2304 (64 px wide)
-- One-way platform spanning the pit: X=2240–2304, Y=176
+- One-way platform spanning the pit: X=2240–2320, Y=176
 - Shooter_A: stationary, X=2400, facing=left, fire_rate=0.6
-- Shooter_B: slow patrol, X=2480–2520 patrol segment, fire_rate=0.4
+- Shooter_B: slow patrol, spawn at X=2500, fire_rate=0.4
 
 **Messages:**
 
@@ -189,7 +189,7 @@ The stage is a flat, single-elevation corridor with the following vertical eleme
 - Walker_A: X=2680, patrol_length=128, damage_on_contact=1.0 (heavy damage enemy — marked with a visual indicator)
 - Walker_B: X=2820, patrol_length=96
 - Walker_C: X=2960, patrol_length=64
-- HazardZone_A: X=3040–3088, damage=0.25, damage_type=floor_spikes (visible spike tiles in Terrain_Detail)
+- HazardZone_A: X=3040–3088 (48 px wide), damage=0.25, damage_type=floor_spikes (visible spike tiles in Terrain_Detail)
 
 **Messages:**
 
@@ -211,7 +211,7 @@ The stage is a flat, single-elevation corridor with the following vertical eleme
 **Layout:**
 - Flat corridor, no enemies
 - Decorative arch tilework in `FG_Overlay` at X=3600
-- `NextTrigger` rect: X=3720–3760, Y=160–224
+- `NextTrigger` rect: X=3720–3760 (40 px wide), Y=160–224 (64 px tall)
 - A torch animation plays at X=3640 (sprite: `shared/torch_anim.png`, 4 frames, 8 fps)
 
 **Messages:**
@@ -264,7 +264,7 @@ All tutorial messages in Stage 0 are `trigger_once=true`. They appear once and d
 
 | Name | Type | X | Y | Width | Height | Properties |
 |---|---|---|---|---|---|---|
-| `PlayerSpawn_01` | PlayerSpawn | 48 | 192 | — | — | — |
+| `PlayerSpawn_01` | PlayerSpawn | 48 | 160 | — | — | — |
 | `Checkpoint_01` | Checkpoint | 1080 | 160 | 24 | 32 | `checkpoint_id=0` |
 | `Checkpoint_02` | Checkpoint | 1560 | 160 | 24 | 32 | `checkpoint_id=1` |
 | `Checkpoint_03` | Checkpoint | 2040 | 160 | 24 | 32 | `checkpoint_id=2` |

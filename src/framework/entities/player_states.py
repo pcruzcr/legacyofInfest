@@ -548,9 +548,9 @@ def _build_attack_hitbox(player: Player, frame: int) -> pygame.Rect:
     cy = player.rect.centery
 
     if is_short:
-        offset_x = 8
+        offset_x = 12
         offset_y = -4 if not is_crouching else 8
-        w, h = 20, 16
+        w, h = 24, 20
     elif is_long:
         frame_offsets = {
             4: (12, -10, 36, 20),

@@ -273,6 +273,7 @@ The player is governed by a finite state machine. Only one state is active at a 
 | `SHORT_ATTACK` | Short attack input | Animation complete | None (locked) |
 | `LONG_ATTACK` | Long attack input | Animation complete + cooldown | None (locked) |
 | `HURT` | Damage received | Knockback timer expires | None (locked) |
+| `DASHING` | Dash input while grounded or within air dash limit | Dash timer expires (0.15s) | None (locked) |
 | `DYING` | Health == 0 | Death animation complete | None (locked) |
 
 ### 8.2 State Transition Diagram
@@ -295,6 +296,12 @@ The player is governed by a finite state machine. Only one state is active at a 
 
 [JUMPING] ──── peak velocity ────────────────────────► [FALLING]
 [FALLING] ──── land ─────────────────────────────────► [IDLE]
+
+[IDLE] [WALKING] [CROUCHING]
+       [JUMPING] [FALLING] ──── dash input ────────► [DASHING]
+
+[DASHING] ──── timer expires + grounded ────────────► [IDLE]
+[DASHING] ──── timer expires + airborne ────────────► [FALLING]
 
 any state (except DYING) ──── damage ───────────────► [HURT]
 [HURT] ──── knockback end ───────────────────────────► [IDLE]
@@ -321,6 +328,7 @@ All player animations are horizontal sprite sheets stored in `assets/sprites/pla
 | Short Attack | `player_short_attack.png` | 6 | 18 | No |
 | Long Attack | `player_long_attack.png` | 10 | 16 | No |
 | Hurt | `player_hurt.png` | 4 | 12 | No |
+| Dash | `player_walk.png` | 4 | 12 | No (hold last frame) |
 | Die | `player_die.png` | 8 | 10 | No |
 
 ### 9.2 Animation Rules

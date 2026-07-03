@@ -3,6 +3,8 @@ Shared test fixtures for the Legacy of InFest test suite.
 """
 from __future__ import annotations
 
+import os
+
 import pytest
 import pygame
 
@@ -10,6 +12,7 @@ import pygame
 @pytest.fixture(scope="session")
 def _pygame_init():
     """Initialize pygame once per test session for surface-dependent tests."""
+    os.environ["SDL_VIDEODRIVER"] = "dummy"
     pygame.init()
     yield
     pygame.quit()

@@ -432,6 +432,7 @@ class PlayerState(str, Enum):
     JUMPING = "JUMPING"
     FALLING = "FALLING"
     CROUCHING = "CROUCHING"
+    DASHING = "DASHING"
     SHORT_ATTACK = "SHORT_ATTACK"
     LONG_ATTACK = "LONG_ATTACK"
     HURT = "HURT"
@@ -501,6 +502,8 @@ class EnemyBase(BaseEntity):
         contact_knockback: float = 120.0,
         detection_range_x: float = 160.0,
         detection_range_y: float = 64.0,
+        hurt_duration: float = 0.3,
+        invincibility_duration: float = 0.5,
     ) -> None: ...
 
     def update(self, dt: float) -> None:
@@ -520,7 +523,8 @@ class EnemyBase(BaseEntity):
     def _alert_behavior(self, dt: float) -> None: ...
 
     @abstractmethod
-    def _get_animation_state(self) -> str: ...
+    def _get_animation_key(self) -> str:
+        """Return the base animation key for the current non-DYING, non-HURT state."""
 
     @abstractmethod
     def _build_hitbox(self) -> pygame.Rect:
@@ -530,10 +534,17 @@ class EnemyBase(BaseEntity):
     def _build_hurtbox(self) -> pygame.Rect:
         """Returns LOCAL-space rect (offset from entity position)."""
 
+    # --- Template method (override only via _get_animation_key) ---
+    def _get_animation_state(self) -> str:
+        """Concrete template method — fixed mapping for DYING/HURT;
+        delegates to _get_animation_key() for the rest."""
+
+    # --- Provided hooks (may override for custom projectile logic) ---
+    def _check_player_contact(self, player: "Player") -> None: ...
+
     # --- Provided, do not override ---
     def _die(self) -> None: ...
     def _update_invincibility(self, dt: float) -> None: ...
-    def _check_player_contact(self, player: "Player") -> None: ...
     def _update_rects(self) -> None: ...
 
     current_health: float
@@ -557,6 +568,7 @@ class EnemyWalker(EnemyBase):
         alert_speed: float = 75.0,
         damage_on_contact: float = 0.5,
         max_health: float = 2.0,
+        zone: int = 0,
     ) -> None: ...
 
     # Inherited abstracts implemented; no new public methods.
@@ -576,6 +588,7 @@ class EnemyFlying(EnemyBase):
         waypoints: list[tuple[float, float]] | None = None,  # required for "bezier"/"patrol"
         max_health: float = 1.5,
         damage_on_contact: float = 0.5,
+        zone: int = 0,
     ) -> None: ...
 
     # Inherited abstracts implemented; no new public methods.
@@ -594,6 +607,7 @@ class EnemyShooter(EnemyBase):
         patrol_length: float = 0.0,         # 0 = stationary
         max_health: float = 3.0,
         damage_on_contact: float = 0.25,
+        zone: int = 0,
     ) -> None: ...
 
     # Inherited abstracts implemented; no new public methods.
@@ -772,6 +786,16 @@ class CurveTools:
         control_points: list[tuple[float, float]],
         n_samples: int,
     ) -> list[tuple[float, float]]: ...
+
+    @classmethod
+    def build_bezier_path(
+        cls,
+        waypoints: list[pygame.Vector2],
+        t: float,
+    ) -> pygame.Vector2:
+        """Catmull-Rom smooth interpolation through waypoints at parameter t [0, 1].
+        Despite the name, this uses Catmull-Rom splines, not true Bézier.
+        Used by BezierStrategy in flight_strategies.py."""
 
     @classmethod
     def sample_path(

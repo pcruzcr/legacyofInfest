@@ -156,10 +156,20 @@ class StageLoader:
                     except Exception:
                         pass
 
+        # First pass: collect Waypoint objects grouped by owner name
+        waypoints_by_owner: dict[str, list[tuple[float, float]]] = {}
+        for obj in tmx_data.get_layer_by_name("Objects"):
+            obj_type = getattr(obj, "type", None) or ""
+            if obj_type == "Waypoint":
+                props = dict(obj.properties) if obj.properties else {}
+                owner_id = props.get("owner_id", "")
+                if owner_id:
+                    waypoints_by_owner.setdefault(owner_id, []).append((float(obj.x), float(obj.y)))
+
         player_spawn_found = False
         for obj in tmx_data.get_layer_by_name("Objects"):
             obj_type = getattr(obj, "type", None) or ""
-            getattr(obj, "name", "") or ""
+            obj_name = getattr(obj, "name", "") or ""
             props = dict(obj.properties) if obj.properties else {}
 
             if obj_type == "PlayerSpawn":
@@ -193,6 +203,9 @@ class StageLoader:
                         cleaned[k] = float(v)
                     else:
                         cleaned[k] = v
+                # Inject waypoints if defined in the TMX
+                if obj_name and obj_name in waypoints_by_owner:
+                    cleaned["waypoints"] = waypoints_by_owner[obj_name]
                 entity = entity_class(pygame.Vector2(obj.x, obj.y), **cleaned)
                 stage.entity_list.append(entity)
 

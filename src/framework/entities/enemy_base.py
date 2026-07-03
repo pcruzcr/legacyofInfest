@@ -24,6 +24,7 @@ class EnemyState(str, Enum):
     """All possible enemy states as defined in 05_ENEMY_SPEC.md §7."""
     PATROL = "PATROL"
     ALERT = "ALERT"
+    FIRING = "FIRING"
     HURT = "HURT"
     DYING = "DYING"
 
@@ -159,12 +160,24 @@ class EnemyBase(BaseEntity):
             except Exception:
                 pass
 
+    # Per-state animation FPS (subclasses override as needed)
+    _ANIM_FPS: dict[str, float] = {
+        "walk": 10.0, "fly": 12.0, "shoot": 16.0,
+        "hurt": 12.0, "die": 10.0,
+    }
+    # Alert-mode FPS override (same animation keys, faster playback)
+    _ALERT_ANIM_FPS: dict[str, float] = {
+        "walk": 14.0, "fly": 16.0,
+    }
+
     def _advance_animation(self, dt: float) -> None:
-        """Advance the sprite animation frame at ~10 FPS."""
-        fps = 10.0
+        """Advance the sprite animation frame at state-specific FPS."""
+        anim_key = self._get_animation_state()
+        fps = self._ANIM_FPS.get(anim_key, 10.0)
+        if self.state == EnemyState.ALERT and anim_key in self._ALERT_ANIM_FPS:
+            fps = self._ALERT_ANIM_FPS[anim_key]
         frame_duration = 1.0 / fps
         self._animation_timer += dt
-        anim_key = self._get_animation_state()
         frames = self._sprite_frames.get(anim_key)
         if not frames:
             return
@@ -266,6 +279,10 @@ class EnemyBase(BaseEntity):
     def _alert_behavior(self, dt: float) -> None:
         """AI when player is within detection range."""
 
+    def _firing_behavior(self, dt: float) -> None:
+        """AI during FIRING state. Default: return to ALERT."""
+        self.state = EnemyState.ALERT
+
     @abstractmethod
     def _get_animation_key(self) -> str:
         """Return animation key for the current non-DYING, non-HURT state."""
@@ -321,7 +338,11 @@ class EnemyBase(BaseEntity):
             self._flash_visible = True
             self._flash_counter = 0.0
 
-    def check_player_contact(self, player) -> None:
+    @abstractmethod
+    def _build_hitbox(self) -> pygame.Rect:
+        """Returns LOCAL-space rect for the enemy's active damage zone."""
+
+    def _check_player_contact(self, player) -> None:
         """
         Check if this enemy's hurtbox overlaps the player's hurtbox.
         If so, deal contact damage (respecting cooldown).
@@ -331,12 +352,17 @@ class EnemyBase(BaseEntity):
             return
         if self._contact_cooldown > 0:
             return
-        if self.hurtbox.colliderect(player.rect):
+        player_hurtbox = player.hurtbox if hasattr(player, "hurtbox") else player.rect
+        if self.hurtbox.colliderect(player_hurtbox):
             player.apply_damage(
                 self.damage_on_contact,
                 self.rect.center,
             )
             self._contact_cooldown = 0.3
+
+    def check_player_contact(self, player) -> None:
+        """Deprecated alias for _check_player_contact."""
+        self._check_player_contact(player)
 
     def _update_rects(self) -> None:
         """Recompute hitbox and hurtbox world positions from local offsets."""
@@ -388,6 +414,10 @@ class EnemyBase(BaseEntity):
         if self.state == EnemyState.HURT:
             if self._hurt_timer <= 0:
                 self.state = EnemyState.PATROL
+            return
+
+        if self.state == EnemyState.FIRING:
+            self._firing_behavior(dt)
             return
 
         # Check if player is in detection range

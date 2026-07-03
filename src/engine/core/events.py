@@ -36,7 +36,7 @@ class Events:
     SHOW_MESSAGE: str = "SHOW_MESSAGE"
     """Emitted by StageScene on trigger overlap. Payload: text, duration."""
     HIDE_MESSAGE: str = "HIDE_MESSAGE"
-    """Reserved — not yet emitted."""
+    """Emitted by MessageBox.hide(). Payload: none."""
 
     # ── Stage / progression ───────────────────────────────────────
     CHECKPOINT_REACHED: str = "CHECKPOINT_REACHED"

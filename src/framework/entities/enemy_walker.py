@@ -72,7 +72,7 @@ class EnemyWalker(EnemyBase):
             probe_x = self.position.x + (
                 self.facing_direction * (self.rect.width // 2 + 2)
             )
-            probe_y = self.position.y + self.rect.height + 4
+            probe_y = self.position.y + self.rect.height + 2
             has_floor = any(
                 r.collidepoint(probe_x, probe_y)
                 for r in self._collision_rects
@@ -90,17 +90,27 @@ class EnemyWalker(EnemyBase):
         # Move
         self.position.x += self.facing_direction * self.patrol_speed * dt
 
+    def _post_update(self, dt: float) -> None:
+        if self._collision_rects:
+            feet_y = self.position.y + self.rect.height
+            for rect in self._collision_rects:
+                if (rect.top < feet_y < rect.bottom
+                        and rect.left < self.rect.centerx < rect.right):
+                    self.position.y = rect.top - self.rect.height
+                    break
+
     def _alert_behavior(self, dt: float) -> None:
         """Move toward player at alert speed."""
         self._face_player()
         self.position.x += self.facing_direction * self.alert_speed * dt
 
     def _get_animation_key(self) -> str:
-        """Return animation key for non-DYING, non-HURT state."""
         return "walk"
 
     def _build_hurtbox(self) -> pygame.Rect:
-        """Return local-space hurtbox rect."""
         return pygame.Rect(4, 2, 24, 28)
+
+    def _build_hitbox(self) -> pygame.Rect:
+        return self._build_hurtbox()
 
     # Sprite rendering handled by EnemyBase.draw()

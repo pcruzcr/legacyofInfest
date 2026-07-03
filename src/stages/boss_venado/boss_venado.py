@@ -303,21 +303,22 @@ class BossVenado(BossBase):
         if self._stomp_rect is not None and self._stomp_rect.y < self.rect.bottom:
             self._stomp_rect = None
 
-    def check_player_contact(self, player) -> None:
-        super().check_player_contact(player)
+    def _check_player_contact(self, player) -> None:
+        super()._check_player_contact(player)
+        player_hurtbox = player.hurtbox if hasattr(player, "hurtbox") else player.rect
         for proj in self._projectiles:
             if not proj.get("alive", False) or "pos" not in proj:
                 continue
             proj_rect = pygame.Rect(int(proj["pos"].x - 4), int(proj["pos"].y - 4), 8, 8)
-            if proj_rect.colliderect(player.rect):
+            if proj_rect.colliderect(player_hurtbox):
                 player.apply_damage(proj.get("damage", 0.5), self.rect.center)
                 proj["alive"] = False
-        if self._stomp_rect and self._stomp_rect.colliderect(player.rect):
+        if self._stomp_rect and self._stomp_rect.colliderect(player_hurtbox):
             player.apply_damage(1.0, self.rect.center)
             self._stomp_rect = None
         if self._sweep_active:
             sweep_rect = pygame.Rect(0, self.rect.bottom - 12, self.ARENA_W, 24)
-            if sweep_rect.colliderect(player.rect):
+            if sweep_rect.colliderect(player_hurtbox):
                 player.apply_damage(0.5, self.rect.center)
 
     def draw(self, surface: pygame.Surface, camera_offset: pygame.Vector2) -> None:
@@ -344,7 +345,10 @@ class BossVenado(BossBase):
             return
         if self._invincibility_timer > 0:
             return
-        super().apply_hit(damage, source_position)
+        self.current_health -= damage
+        self._invincibility_timer = self._invincibility_duration
+        self._hurt_timer = self._hurt_duration
+        self._filter_frame = 0
         if self.current_health <= 0:
             self.on_defeated()
             return

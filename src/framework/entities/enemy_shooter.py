@@ -12,6 +12,8 @@ import math
 
 import pygame
 
+from src.engine.core import settings
+from src.engine.utils.asset_loader import AssetLoader
 from src.framework.entities.base_entity import BaseEntity
 from src.framework.entities.enemy_base import EnemyBase, EnemyState
 
@@ -90,9 +92,14 @@ class EnemyShooter(EnemyBase):
     """
     Shooter enemy — fires projectiles at the player when detected.
     May be stationary or perform slow patrol.
-    States: PATROL, ALERT (aim → fire cycle), HURT, DYING.
-    FIRING sub-state handled via internal timer within ALERT.
+    States: PATROL, ALERT (aim), FIRING (fire animation + projectile), HURT, DYING.
+    FIRING state added per 05_ENEMY_SPEC.md §5.5.
     """
+
+    _ANIM_FPS = {
+        "walk": 6.0, "aim": 8.0, "fire": 16.0, "shoot": 16.0,
+        "hurt": 12.0, "die": 10.0,
+    }
 
     def __init__(
         self,
@@ -121,10 +128,10 @@ class EnemyShooter(EnemyBase):
         self.projectile_damage: float = projectile_damage
         self.patrol_length: float = patrol_length
         self._patrol_origin: pygame.Vector2 = pygame.Vector2(spawn_position)
-        self._fire_cooldown: float = 0.0
         self._active_projectiles: list[Projectile] = []
         self._max_projectiles: int = 3
-        self._aim_timer: float = 0.0
+        self._shoot_cooldown: float = 0.0
+        self._fire_anim_timer: float = 0.0
         self._collision_rects: list[pygame.Rect] = []
 
         # Rect size
@@ -133,14 +140,32 @@ class EnemyShooter(EnemyBase):
 
         # Load sprites
         self._load_zone_sprites(zone, "shoot", 12, 12)
+        self._load_aim_fire_sprites(zone)
 
-    def check_player_contact(self, player) -> None:
-        """Check body contact AND projectile hits against the player."""
-        super().check_player_contact(player)
+    def _load_aim_fire_sprites(self, zone: int) -> None:
+        """Load aim and fire animation sprites (optional, may not exist for all zones)."""
+        zone_key = f"zone{zone}" if zone > 0 else "zone1"
+        base = settings.ASSETS_DIR / "sprites" / "enemies" / zone_key
+        for key, fname in [("aim", f"enemy_aim_{zone_key}.png"),
+                           ("fire", f"enemy_fire_{zone_key}.png")]:
+            path = base / fname
+            try:
+                frames = AssetLoader.load_sprite_sheet(path, 12, 12)
+                self._sprite_frames[key] = frames
+            except Exception:
+                pass
+
+    def _check_player_contact(self, player) -> None:
+        """Check body contact against the player."""
+        super()._check_player_contact(player)
+        player_hurtbox = player.hurtbox if hasattr(player, "hurtbox") else player.rect
         for p in self._active_projectiles:
-            if p.is_active and p.rect.colliderect(player.rect):
+            if p.is_active and p.rect.colliderect(player_hurtbox):
                 player.apply_damage(p.damage, (self.position.x, self.position.y))
                 p.on_collision()
+
+    def check_player_contact(self, player) -> None:
+        self._check_player_contact(player)
 
     def get_projectiles(self) -> list[Projectile]:
         """Return the list of active projectiles."""
@@ -160,7 +185,7 @@ class EnemyShooter(EnemyBase):
     # ──────────────────────────────────────────────
 
     def _patrol_behavior(self, dt: float) -> None:
-        """Slow horizontal movement or stationary."""
+        """Slow horizontal movement or stationary (walk animation)."""
         speed = self.facing_direction * 20.0 * dt
         if self.patrol_length > 0:
             self.position.x += speed
@@ -169,19 +194,24 @@ class EnemyShooter(EnemyBase):
                 self.facing_direction *= -1
 
     def _alert_behavior(self, dt: float) -> None:
-        """Aim for 0.5s, then fire at the player on cooldown."""
+        """Aim phase: face player, aim animation, then transition to FIRING."""
         self._face_player()
-        self._aim_timer -= dt
+        self._shoot_cooldown -= dt
         # Slow patrol while alert
         if self.patrol_length > 0:
             self.position.x += self.facing_direction * 20.0 * dt
-        if self._aim_timer <= 0:
-            self._fire_cooldown -= dt
-            if self._fire_cooldown <= 0:
-                if self._fire():
-                    self._fire_cooldown = 1.0 / self.fire_rate
-                else:
-                    self._fire_cooldown = 0.0
+        if self._shoot_cooldown <= 0:
+            self._fire_anim_timer = 0.3  # ~5 frames at 16 FPS fire animation
+            self.state = EnemyState.FIRING
+
+    def _firing_behavior(self, dt: float) -> None:
+        """Fire phase: fire projectile, stay in FIRING for animation duration."""
+        self._face_player()
+        self._fire_anim_timer -= dt
+        if self._fire_anim_timer <= 0:
+            self._fire()
+            self._shoot_cooldown = 1.0 / self.fire_rate
+            self.state = EnemyState.ALERT
 
     def _fire(self) -> bool:
         """Fire a projectile toward the player. Returns True if fired."""
@@ -204,7 +234,7 @@ class EnemyShooter(EnemyBase):
 
         spawn_pos = pygame.Vector2(
             self.rect.centerx + (self.facing_direction * 10),
-            self.rect.centery,
+            self.rect.y + 4,
         )
 
         projectile = Projectile(
@@ -216,10 +246,15 @@ class EnemyShooter(EnemyBase):
         self._active_projectiles.append(projectile)
         return True
 
+    def _build_hitbox(self) -> pygame.Rect:
+        return self._build_hurtbox()
+
     def _get_animation_key(self) -> str:
         """Return animation key for non-DYING, non-HURT state."""
+        if self.state == EnemyState.FIRING:
+            return "fire"
         if self.state == EnemyState.ALERT:
-            return "shoot"
+            return "aim"
         return "walk"
 
     def _build_hurtbox(self) -> pygame.Rect:

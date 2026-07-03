@@ -93,8 +93,8 @@ def _gen_collision_rects():
 
 def _iter_objects():
     """Yield TMX object entries for all entities, triggers, and zones."""
-    # PlayerSpawn (y = floor_y - player_height = 192 - 32 = 160)
-    yield """  <object id="1" name="PlayerSpawn" type="PlayerSpawn" x="48" y="160" width="16" height="16"/>"""
+    # PlayerSpawn (y = floor surface = terrain row 12 * TS = 192)
+    yield """  <object id="1" name="PlayerSpawn" type="PlayerSpawn" x="48" y="192" width="16" height="16"/>"""
 
     # ── Zone A: Messages ──
     objs = [
@@ -140,6 +140,11 @@ def _iter_objects():
         # Flying enemies
         (25, "Flying_01", "Flying", 1700, 112, 16, 12, {"flight_mode": "sine"}),
         (26, "Flying_02", "Flying", 1900, 80, 16, 12, {"flight_mode": "bezier"}),
+        # Waypoints for Flying_02 (S-curve)
+        (49, "Waypoint_01", "Waypoint", 1900, 80, 8, 8, {"owner_id": "Flying_02"}),
+        (50, "Waypoint_02", "Waypoint", 1800, 40, 8, 8, {"owner_id": "Flying_02"}),
+        (51, "Waypoint_03", "Waypoint", 1700, 80, 8, 8, {"owner_id": "Flying_02"}),
+        (52, "Waypoint_04", "Waypoint", 1800, 120, 8, 8, {"owner_id": "Flying_02"}),
         # Checkpoint 3
         (27, "Checkpoint_03", "Checkpoint", 2040, 160, 24, 32, {"checkpoint_id": "2"}),
     ]
@@ -166,7 +171,7 @@ def _iter_objects():
         (38, "MSG_23", "MessageTrigger", 2760, 192, 32, 32, {"text": "If health reaches 0, Game Over appears. You can continue from the last checkpoint."}),
         (39, "MSG_24", "MessageTrigger", 3040, 192, 32, 32, {"text": "The spike floor deals 0.25 heart damage per tick. This is the Light damage tier."}),
         # Walkers in Zone F
-        (40, "Walker_06", "Walker", 2680, 192, 16, 16, {}),
+        (40, "Walker_06", "Walker", 2680, 192, 16, 16, {"damage_on_contact": "1.0"}),
         (41, "Walker_07", "Walker", 2820, 192, 16, 16, {}),
         (42, "Walker_08", "Walker", 2960, 192, 16, 16, {}),
         # Hazard zone
