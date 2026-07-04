@@ -30,7 +30,7 @@ class CustomStageScene(StageScene):
 
     def __init__(self, context: GameContext, tmx_path: Path | None = None) -> None:
         if tmx_path is None:
-            tmx_path = Path("student_templates/stage_template/stage_template.tmx")
+            tmx_path = Path(__file__).parent / "stage_template.tmx"
         super().__init__(context, tmx_path)
         self._stage_model: TrainedModel | None = None
         self._custom_timer: float = 0.0
