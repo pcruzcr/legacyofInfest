@@ -132,21 +132,28 @@ Black screen = broken. Background (15,15,40) must always be visible.
 Every student stage must conform to:
 
 `python
-class StageScene(BaseScene):  # or BossScene(BaseScene)
-    STAGE_ID: str = stage1_1
-    STAGE_NAME: str = La Entrada
+from pathlib import Path
+from src.framework.scenes.stage_scene import StageScene
+
+class CustomStageScene(StageScene):
+    STAGE_ID: str = "stage1_1"
+    STAGE_NAME: str = "La Entrada"
     ZONE: int = 1
     TIME_LIMIT: int = 180
-    BGM_TRACK: str = bgm_zone1
+    BGM_TRACK: str = "bgm_zone1"
 
-    def __init__(self) -> None: ...
+    def __init__(self, context, tmx_path: Path | None = None) -> None:
+        if tmx_path is None:
+            tmx_path = Path(__file__).parent / "your_map.tmx"
+        super().__init__(context, tmx_path)
+
     def on_enter(self) -> None: ...
     def on_exit(self) -> None: ...
     def update(self, dt: float) -> None: ...
-    def draw(self, surface: pygame.Surface) -> None: ...
+    def draw(self, surface) -> None: ...
 `
 
-Engine discovers stages by scanning src/stages/ for subfolders with a BaseScene subclass.
+Engine discovers stages by scanning src/stages/ for subfolders with a StageScene subclass.
 
 ---
 

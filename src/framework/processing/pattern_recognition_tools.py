@@ -14,7 +14,6 @@ import logging
 import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
 
 import joblib
 import numpy as np
@@ -215,9 +214,10 @@ class PatternRecognitionTools:
         cls,
         model: TrainedModel,
         surface,
-        method: Literal["hog", "lbp", "color_hist", "combined"] = "hog",
+        method: str | None = None,
     ) -> str:
         cls._validate_model(model)
+        method = method or model.feature_method
         features = VisionTools.extract_features(surface, method=method)
         return cls.classify(features, model)
 
