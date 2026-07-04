@@ -228,7 +228,7 @@ class StageScene(BaseScene):
         for mt in stage.message_triggers:
             if not mt.triggered and trigger_rect.colliderect(mt.rect):
                 mt.triggered = True
-                emit(Events.SHOW_MESSAGE, text=mt.text, duration=4.0)
+                emit(Events.SHOW_MESSAGE, text=mt.text, duration=8.0)
 
         # Check hazard zones
         for hz in stage.hazard_zones:
