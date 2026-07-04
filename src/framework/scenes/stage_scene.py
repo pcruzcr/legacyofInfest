@@ -392,23 +392,26 @@ class StageScene(BaseScene):
                 r = dp.rect
                 pygame.draw.rect(surface, (255, 0, 128), (r.x + lx, r.y + ly, r.w, r.h), 1)
             # Enemy hurtboxes
-            for enemy in self._enemies:
+            for enemy in self._stage_data.entity_list:
+                if not isinstance(enemy, EnemyBase) or not enemy.is_alive:
+                    continue
                 hb = enemy.hurtbox
                 pygame.draw.rect(surface, (255, 128, 0), (hb.x + lx, hb.y + ly, hb.w, hb.h), 1)
                 hb2 = enemy.hitbox
                 pygame.draw.rect(surface, (255, 0, 0), (hb2.x + lx, hb2.y + ly, hb2.w, hb2.h), 1)
             # Player hitbox
-            if hasattr(player, "hitbox"):
-                hb3 = player.hitbox
+            if hasattr(player, "active_hitbox") and player.active_hitbox is not None:
+                hb3 = player.active_hitbox
                 pygame.draw.rect(surface, (0, 255, 255), (hb3.x + lx, hb3.y + ly, hb3.w, hb3.h), 1)
             if hasattr(player, "hurtbox"):
                 hb4 = player.hurtbox
                 pygame.draw.rect(surface, (0, 200, 0), (hb4.x + lx, hb4.y + ly, hb4.w, hb4.h), 1)
+            max_hp = getattr(player, "max_health", player.current_health)
             info = [
                 f"Pos: ({player.position.x:.0f}, {player.position.y:.0f})",
                 f"Vel: ({player.velocity.x:.1f}, {player.velocity.y:.1f})",
                 f"State: {player.state}",
-                f"HP: {player.current_health}/{player.max_health}",
+                f"HP: {player.current_health}/{max_hp}",
                 f"Grounded: {player.is_grounded}",
                 f"Paused: {self._paused}",
             ]

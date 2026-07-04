@@ -190,7 +190,6 @@ class CurveTools:
 
     @classmethod
     def _eval_catmull(cls, p0: pygame.Vector2, p1: pygame.Vector2, p2: pygame.Vector2, p3: pygame.Vector2, t: float) -> pygame.Vector2:
-        1.0 - t
         return (
             0.5 * (
                 (2.0 * p1)
