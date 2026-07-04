@@ -76,10 +76,10 @@ class HUD:
         self._hearts_x: int = 38
         self._hearts_y: int = 6
         self._heart_spacing: int = 16
-        # Timer frame (reuse hud_frame.png 9-slice at timer size 54x16)
-        self._timer_bg_rect = pygame.Rect(266, 1, 54, 16)
-        self._timer_rect = pygame.Rect(272, 3, 46, 12)
-        self._timer_label_rect = pygame.Rect(266, 3, 24, 12)
+        # Timer frame (reuse hud_frame.png 9-slice at timer size 90x16)
+        self._timer_bg_rect = pygame.Rect(260, 1, 90, 16)
+        self._timer_rect = pygame.Rect(290, 2, 56, 14)
+        self._timer_label_rect = pygame.Rect(262, 2, 26, 12)
         self._timer_flash_timer: float = 0.0
         self._timer_flash_on: bool = False
         # Load timer font (TTF preferred for readability)
@@ -429,9 +429,10 @@ class HUD:
         if not self._timer_running and not self._timer_paused:
             return
         self._draw_timer_background(surface)
-        # Draw "TIME" label at left side of timer background
-        label_surf = self._font.render("TIME", True, (200, 200, 200))
-        surface.blit(label_surf, (266, 3))
+        # Draw "TIME" label at left side of timer background — use same TTF font as digits
+        label_font = self._timer_digit_font or self._font
+        label_surf = label_font.render("TIME", True, (200, 200, 200))
+        surface.blit(label_surf, (self._timer_label_rect.x, self._timer_label_rect.y))
         total_seconds = int(self._timer)
         minutes = total_seconds // 60
         seconds = total_seconds % 60
@@ -444,12 +445,12 @@ class HUD:
         if self._timer_digit_font:
             time_surf = self._timer_digit_font.render(time_str, True, color)
             if time_surf.get_width() > 0:
-                tx = self._timer_rect.x + (self._timer_rect.width - time_surf.get_width()) // 2
+                tx = self._timer_rect.x + max(0, (self._timer_rect.width - time_surf.get_width()) // 2)
                 ty = self._timer_rect.y + (self._timer_rect.height - time_surf.get_height()) // 2
                 surface.blit(time_surf, (tx, ty))
         else:
             text = self._font.render(time_str, True, color)
-            tx = self._timer_rect.x + (self._timer_rect.width - text.get_width()) // 2
+            tx = self._timer_rect.x + max(0, (self._timer_rect.width - text.get_width()) // 2)
             ty = self._timer_rect.y + (self._timer_rect.height - text.get_height()) // 2
             surface.blit(text, (tx, ty))
 
