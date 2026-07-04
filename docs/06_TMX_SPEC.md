@@ -374,8 +374,8 @@ A `Message` object is a rectangle trigger in the `Objects` layer. When the playe
   <layer name="Terrain_Detail" .../>
 
   <objectgroup name="Objects">
-    <object id="1" type="PlayerSpawn" name="PlayerSpawn_01" x="48" y="192"/>
-    <object id="2" type="Walker" name="Walker_01" x="256" y="192">
+    <object id="1" type="PlayerSpawn" name="PlayerSpawn_01" x="48" y="160"/>
+    <object id="2" type="Walker" name="Walker_01" x="256" y="164">
       <properties>
         <property name="patrol_length" type="int" value="128"/>
         <property name="facing" value="left"/>

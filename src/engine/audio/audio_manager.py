@@ -18,6 +18,7 @@ class AudioManager:
 
     def __init__(self) -> None:
         self.sound_bank: SoundBank = SoundBank()
+        self.sound_bank.load_all()
         self._current_music: str | None = None
         self._music_volume: float = 0.7
         self._sfx_volume: float = 1.0

@@ -66,6 +66,7 @@ The professor builds ONLY:
 | Splash/Title/Story graphics | Game intro | P1 - nice to have |
 | HUD graphics (hearts, portrait, timer) | In-game display | P0 - needed for Stage 0 |
 | Stage 0 BGM + basic SFX | Audio | P2 - can use placeholder |
+| End Credits scene | Game closure | P2 - implemented as `EndCreditsScene` in `scene_manager.py` fallback |
 
 Students create ALL assets for their own stage or boss.
 

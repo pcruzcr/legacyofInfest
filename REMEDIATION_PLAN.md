@@ -9,7 +9,7 @@
 ## Fase 0 — Críticos (runtime crashes)
 
 - [x] 0.1 Mover `fonts/game.ttf` → `assets/fonts/game.ttf`
-- [x] 0.2 Corregir `PlayerSpawn_01` Y=160 → Y=192 en `stage0.tmx`
+- [x] 0.2 Corregir `PlayerSpawn_01` Y=192 → Y=160 en `stage0.tmx`
 - [x] 0.3 Agregar 4 Waypoints para Flying_02 (bezier) en `stage0.tmx`
 - [x] 0.4 MessageBox: hacer pop de la cola en vez de limpiarla al descartar
 - [x] 0.5 Alinear nombres de SFX en SoundBank con los archivos reales en disco (eliminados flat files obsoletos `assets/sfx/*.wav`)

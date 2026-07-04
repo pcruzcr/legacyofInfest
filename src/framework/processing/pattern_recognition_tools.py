@@ -74,6 +74,7 @@ class PatternRecognitionTools:
         X: np.ndarray,
         y: np.ndarray,
         model_type: str,
+        feature_method: str = "hog",
         **kwargs,
     ) -> TrainedModel:
         cls._validate_dataset(X, y)
@@ -93,7 +94,7 @@ class PatternRecognitionTools:
             model_type=model_type,
             estimator=pipeline,
             classes=classes,
-            feature_method="external",
+            feature_method=feature_method,
             feature_length=X.shape[1],
             training_accuracy=float(train_acc),
             metadata={"kwargs": kwargs},

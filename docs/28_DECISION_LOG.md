@@ -188,6 +188,54 @@ Each entry follows this structure: Title · Status · Context · Decision · Con
 
 ---
 
+## ADR-011: Flying Enemy Y-Tracking via Leaky-Integrator Offset
+
+**Status:** Accepted
+
+**Context:** The Flying enemy's alert mode must track the player's Y position, but sine and Bézier flight strategies fully reset `position.y` each frame. A direct push to `position.y` would be overwritten by the next strategy execution.
+
+**Decision:** Use a persistent `_y_track_offset` (leaky integrator, damping 0.98). Each alert frame: strategy runs (reset position.y), Y error is computed against player center, offset is pushed toward the error at `0.4 × flight_speed`, damped by 0.98, then added to `position.y`. The offset resets to 0.0 on return to PATROL.
+
+**Consequences:** Y-tracking survives all strategy modes. The 0.98 damping prevents windup while keeping the enemy centered near the player vertically. Simple, minimal change (3 lines in `_alert_behavior` plus field).
+
+**Alternatives Considered:**
+- **Push `velocity.y` instead of `position.y`** — rejected: flying enemies don't use velocity-based movement; strategies set position directly
+- **Post-process `position.y` after every strategy** — equivalent to the chosen approach; `_y_track_offset` makes the separation explicit and traceable
+
+---
+
+## ADR-012: EventBus-Based SFX Wiring (SoundBank Activation)
+
+**Status:** Accepted
+
+**Context:** The SoundBank existed but had zero call sites — the game was completely mute. Wiring audio required deciding how entities reach the audio system.
+
+**Decision:** Entities emit EventBus events (`Events.SFX_*`) with no knowledge of the audio system. `StageScene.on_enter()` subscribes to all 15 SFX events via a static event→filename map, calling `self.audio.play_sfx(filename)`. Stored handler references in `_sfx_handlers` dict enable clean `unsubscribe()` on exit. `SoundBank.load_all()` scans `assets/sfx/` recursively at `AudioManager` init.
+
+**Consequences:** No audio reference passed into the entity tree. New stages that extend `StageScene` get SFX for free. Student stages with custom scenes must subscribe manually or inherit from `StageScene`. 38 `.wav` files auto-registered.
+
+**Alternatives Considered:**
+- **Audio reference in every entity** — rejected: would require threading `audio` through the entire entity constructor chain
+- **Singleton AudioManager** — rejected: anti-pattern, breaks testability; EventBus approach is decoupled and testable via `emit()` assertions
+
+---
+
+## ADR-013: `prev_bottom` Heuristic for One-Way Platform Collision
+
+**Status:** Accepted
+
+**Context:** One-way platforms (passable from below) need to distinguish landing-from-above from walking-under. Prior approaches (checking `player_rect.bottom <= plat.top` or `player_rect.centery < plat.top`) failed when the player's rect was already overlapping after X-resolution.
+
+**Decision:** Use `prev_bottom = player_rect.bottom - self.velocity.y * dt` to reconstruct the player's bottom position on the previous frame. The collision check triggers only when `prev_bottom <= plat.top` (was above or at platform top) and `velocity.y >= 0` (falling or stationary).
+
+**Consequences:** Works for all cases: land from above (prev_bottom above), walk under (prev_bottom below), jump up through (velocity.y < 0 early return), fall through from below (prev_bottom below). Tested with headless verification.
+
+**Alternatives Considered:**
+- **`player_rect.bottom <= plat.top`** — rejected: fails when player rect overlaps platform after X-movement
+- **`player_rect.centery < plat.top`** — rejected: fails when player steps onto platform from ground level (centery is below top)
+
+---
+
 ## 4. Decisions Explicitly Deferred (Not Yet Made)
 
 These are flagged here rather than silently decided by whichever AI session encounters them first.
