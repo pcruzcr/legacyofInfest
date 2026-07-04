@@ -461,6 +461,21 @@ class PatternDemoScene(BaseScene):
         surf.fill((5, 5, 15))
         meta = getattr(self._model, "metadata", {}) if self._model else {}
         ev = meta.get("evaluation", {})
+
+        # Try matplotlib report first
+        if self._model is not None and ev and "confusion_matrix" in ev:
+            try:
+                classes = list(self._model.classes)
+                report_surf = PatternRecognitionTools.generate_training_report(
+                    self._model, figure_size=(8, 6), dpi=80,
+                )
+                if report_surf is not None:
+                    scaled = pygame.transform.scale(report_surf, PANEL_SIZE)
+                    return scaled
+            except Exception:
+                pass
+
+        # Fallback: manual grid rendering
         if not ev or "confusion_matrix" not in ev:
             msg = self._font_small.render(
                 "Confusion matrix not available — run evaluate() during training",
@@ -470,7 +485,6 @@ class PatternDemoScene(BaseScene):
             return surf
 
         cm = ev["confusion_matrix"]
-        ev.get("class_names", [f"C{i}" for i in range(len(cm))])
         accuracy = ev.get("accuracy", 0.0)
         n = len(cm)
         cell_sz = 20
