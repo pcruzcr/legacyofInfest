@@ -13,11 +13,12 @@ trivially extensible with new movement algorithms.
 """
 from __future__ import annotations
 
+import math
+
 import pygame
 
 from src.framework.entities.enemy_base import EnemyBase
 from src.framework.entities.flight_strategies import IFlightStrategy, make_strategy
-
 
 
 class EnemyFlying(EnemyBase):
@@ -82,7 +83,10 @@ class EnemyFlying(EnemyBase):
 
         # Rect size
         self.rect.width = 20
-        self.rect.height = 20
+        self.rect.height = 14
+
+        # Y-tracking offset for alert mode (persistent across strategy resets)
+        self._y_track_offset: float = 0.0
 
         # Load sprites
         self._load_zone_sprites(zone, "fly", 14, 10)
@@ -93,17 +97,24 @@ class EnemyFlying(EnemyBase):
 
     def _patrol_behavior(self, dt: float) -> None:
         """Delegate patrol movement to the current flight strategy."""
+        self._y_track_offset = 0.0
         self._strategy.execute(self, dt)
 
     def _alert_behavior(self, dt: float) -> None:
-        """Delegate alert movement, then track player Y axis."""
+        """Delegate alert movement, then track player Y axis.
+        Uses a persistent Y offset so tracking survives strategies
+        that fully reset position.y each frame (Sine, Bezier)."""
         self._strategy.execute(self, dt, speed_mult=1.5)
         self._face_player()
         if self._player_ref is not None:
-            dy = self._player_ref.centery - self.rect.centery
-            track_speed = self.flight_speed * 0.5
+            dy = self._player_ref.centery - (self.position.y + self._y_track_offset + self.rect.height / 2)
             if abs(dy) > 4:
-                self.position.y += (track_speed * dt) if dy > 0 else -(track_speed * dt)
+                track_speed = self.flight_speed * 0.4
+                self._y_track_offset += math.copysign(track_speed * dt, dy)
+            self._y_track_offset *= 0.98
+        else:
+            self._y_track_offset *= 0.9
+        self.position.y += self._y_track_offset
 
     # ──────────────────────────────────────────────
     # Required overrides
@@ -113,7 +124,7 @@ class EnemyFlying(EnemyBase):
         return "fly"
 
     def _build_hurtbox(self) -> pygame.Rect:
-        return pygame.Rect(6, 4, 20, 20)
+        return pygame.Rect(6, 4, 20, 14)
 
     def _build_hitbox(self) -> pygame.Rect:
         return self._build_hurtbox()

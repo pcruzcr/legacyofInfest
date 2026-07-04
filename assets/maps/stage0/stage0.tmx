@@ -80,7 +80,7 @@
   <object id="127" name="Platform" type="Platform" x="2240" y="176" width="80" height="16"/>
  </objectgroup>
  <objectgroup id="8" name="Objects">
-   <object id="1" name="PlayerSpawn" type="PlayerSpawn" x="48" y="160" width="16" height="16"/>
+  <object id="1" name="PlayerSpawn" type="PlayerSpawn" x="48" y="192" width="16" height="16"/>
   <object id="2" name="MSG_01" type="MessageTrigger" x="160" y="192" width="32" height="32"> <properties><property name="text" value="Use arrow keys or left stick to walk. Press Space or A to jump."/></properties></object>
   <object id="3" name="MSG_02" type="MessageTrigger" x="260" y="192" width="32" height="32"> <properties><property name="text" value="Jump to reach elevated platforms. You have 6 frames of coyote time at ledge edges."/></properties></object>
   <object id="4" name="MSG_03" type="MessageTrigger" x="400" y="192" width="32" height="32"> <properties><property name="text" value="Hold jump longer for a higher jump. Release early for a short hop."/></properties></object>
@@ -89,43 +89,43 @@
   <object id="7" name="MSG_06" type="MessageTrigger" x="700" y="192" width="32" height="32"> <properties><property name="text" value="Short Attack: 0.5 heart damage, fast recovery. Long Attack: 1.0 heart damage, wider reach."/></properties></object>
   <object id="8" name="MSG_07" type="MessageTrigger" x="840" y="192" width="32" height="32"> <properties><property name="text" value="Notice the hitstop effect on hit. Time briefly slows."/></properties></object>
   <object id="9" name="MSG_08" type="MessageTrigger" x="1000" y="192" width="32" height="32"> <properties><property name="text" value="Try crouching then attacking. The hitbox shifts to hit low targets."/></properties></object>
-   <object id="10" name="Walker_01" type="Walker" x="760" y="164" width="16" height="16"></object>
-   <object id="11" name="Walker_02" type="Walker" x="900" y="164" width="16" height="16"></object>
-   <object id="12" name="Walker_03" type="Walker" x="1040" y="164" width="16" height="16"></object>
+  <object id="10" name="Walker_01" type="Walker" x="760" y="164" width="16" height="16"></object>
+  <object id="11" name="Walker_02" type="Walker" x="900" y="164" width="16" height="16"></object>
+  <object id="12" name="Walker_03" type="Walker" x="1040" y="164" width="16" height="16"></object>
   <object id="13" name="Checkpoint_01" type="Checkpoint" x="1080" y="160" width="24" height="32"> <properties><property name="checkpoint_id" value="0"/></properties></object>
   <object id="14" name="MSG_09" type="MessageTrigger" x="1120" y="192" width="32" height="32"> <properties><property name="text" value="Walker enemies patrol back and forth. They detect ledge edges automatically."/></properties></object>
   <object id="15" name="MSG_10" type="MessageTrigger" x="1200" y="192" width="32" height="32"> <properties><property name="text" value="When you enter their detection range, Walkers accelerate toward you."/></properties></object>
   <object id="16" name="MSG_11" type="MessageTrigger" x="1360" y="192" width="32" height="32"> <properties><property name="text" value="If a Walker touches you, you lose 0.5 hearts. You become invincible briefly."/></properties></object>
   <object id="17" name="MSG_12" type="MessageTrigger" x="1520" y="192" width="32" height="32"> <properties><property name="text" value="Watch the sprite flash during invincibility. This is damage feedback."/></properties></object>
-   <object id="18" name="Walker_04" type="Walker" x="1260" y="132" width="16" height="16"></object>
-   <object id="19" name="Walker_05" type="Walker" x="1480" y="164" width="16" height="16"></object>
+  <object id="18" name="Walker_04" type="Walker" x="1260" y="132" width="16" height="16"></object>
+  <object id="19" name="Walker_05" type="Walker" x="1480" y="164" width="16" height="16"></object>
   <object id="20" name="Checkpoint_02" type="Checkpoint" x="1560" y="160" width="24" height="32"> <properties><property name="checkpoint_id" value="1"/></properties></object>
   <object id="21" name="MSG_13" type="MessageTrigger" x="1600" y="192" width="32" height="32"> <properties><property name="text" value="Flying enemies move along computed paths. The first uses a sine wave trajectory."/></properties></object>
   <object id="22" name="MSG_14" type="MessageTrigger" x="1780" y="192" width="32" height="32"> <properties><property name="text" value="Sine wave: pos.y = origin + A * sin(2*pi*f*t). Amplitude and frequency are TMX properties."/></properties></object>
   <object id="23" name="MSG_15" type="MessageTrigger" x="1880" y="192" width="32" height="32"> <properties><property name="text" value="The second Flying enemy uses a Bezier curve path. Four control points define the trajectory."/></properties></object>
   <object id="24" name="MSG_16" type="MessageTrigger" x="2000" y="192" width="32" height="32"> <properties><property name="text" value="Press F1 to toggle debug view. You can see Bezier control points and sampled path."/></properties></object>
   <object id="25" name="Flying_01" type="Flying" x="1700" y="112" width="16" height="12"> <properties><property name="flight_mode" value="sine"/></properties></object>
-   <object id="26" name="Flying_02" type="Flying" x="1900" y="80" width="16" height="12"> <properties><property name="flight_mode" value="bezier"/></properties></object>
-   <object id="49" name="Waypoint_01" type="Waypoint" x="1900" y="80" width="8" height="8"> <properties><property name="owner_id" value="Flying_02"/></properties></object>
-   <object id="50" name="Waypoint_02" type="Waypoint" x="1800" y="40" width="8" height="8"> <properties><property name="owner_id" value="Flying_02"/></properties></object>
-   <object id="51" name="Waypoint_03" type="Waypoint" x="1700" y="80" width="8" height="8"> <properties><property name="owner_id" value="Flying_02"/></properties></object>
-   <object id="52" name="Waypoint_04" type="Waypoint" x="1800" y="120" width="8" height="8"> <properties><property name="owner_id" value="Flying_02"/></properties></object>
+  <object id="26" name="Flying_02" type="Flying" x="1900" y="80" width="16" height="12"> <properties><property name="flight_mode" value="bezier"/></properties></object>
+  <object id="49" name="Waypoint_01" type="Waypoint" x="1900" y="80" width="8" height="8"> <properties><property name="owner_id" value="Flying_02"/></properties></object>
+  <object id="50" name="Waypoint_02" type="Waypoint" x="1800" y="40" width="8" height="8"> <properties><property name="owner_id" value="Flying_02"/></properties></object>
+  <object id="51" name="Waypoint_03" type="Waypoint" x="1700" y="80" width="8" height="8"> <properties><property name="owner_id" value="Flying_02"/></properties></object>
+  <object id="52" name="Waypoint_04" type="Waypoint" x="1800" y="120" width="8" height="8"> <properties><property name="owner_id" value="Flying_02"/></properties></object>
   <object id="27" name="Checkpoint_03" type="Checkpoint" x="2040" y="160" width="24" height="32"> <properties><property name="checkpoint_id" value="2"/></properties></object>
   <object id="28" name="MSG_17" type="MessageTrigger" x="2080" y="192" width="32" height="32"> <properties><property name="text" value="Shooter enemies fire projectiles when you enter range. Angle computed with atan2."/></properties></object>
   <object id="29" name="MSG_18" type="MessageTrigger" x="2160" y="192" width="32" height="32"> <properties><property name="text" value="angle = atan2(dy, dx) from shooter to player. This is Unit II vector math."/></properties></object>
   <object id="30" name="MSG_19" type="MessageTrigger" x="2240" y="192" width="32" height="32"> <properties><property name="text" value="The gap ahead has a one-way platform. Jump up through it; fall back down."/></properties></object>
   <object id="31" name="MSG_20" type="MessageTrigger" x="2360" y="192" width="32" height="32"> <properties><property name="text" value="Crouch to avoid projectiles that fly high. Time movement between shots."/></properties></object>
-   <object id="32" name="Shooter_01" type="Shooter" x="2400" y="168" width="16" height="16"></object>
-   <object id="33" name="Shooter_02" type="Shooter" x="2500" y="168" width="16" height="16"></object>
+  <object id="32" name="Shooter_01" type="Shooter" x="2400" y="192" width="16" height="16"></object>
+  <object id="33" name="Shooter_02" type="Shooter" x="2500" y="192" width="16" height="16"></object>
   <object id="34" name="DeathPit_01" type="DeathPit" x="2240" y="208" width="64" height="16"></object>
   <object id="35" name="Checkpoint_04" type="Checkpoint" x="2520" y="160" width="24" height="32"> <properties><property name="checkpoint_id" value="3"/></properties></object>
   <object id="36" name="MSG_21" type="MessageTrigger" x="2560" y="192" width="32" height="32"> <properties><property name="text" value="The HUD shows health (hearts) and the stage timer. Portrait is the player avatar."/></properties></object>
   <object id="37" name="MSG_22" type="MessageTrigger" x="2640" y="192" width="32" height="32"> <properties><property name="text" value="The red Walker deals 1.0 heart damage. Heavy damage enemies are marked differently."/></properties></object>
   <object id="38" name="MSG_23" type="MessageTrigger" x="2760" y="192" width="32" height="32"> <properties><property name="text" value="If health reaches 0, Game Over appears. You can continue from the last checkpoint."/></properties></object>
   <object id="39" name="MSG_24" type="MessageTrigger" x="3040" y="192" width="32" height="32"> <properties><property name="text" value="The spike floor deals 0.25 heart damage per tick. This is the Light damage tier."/></properties></object>
-   <object id="40" name="Walker_06" type="Walker" x="2680" y="164" width="16" height="16"> <properties><property name="damage_on_contact" value="1.0"/></properties></object>
-   <object id="41" name="Walker_07" type="Walker" x="2820" y="164" width="16" height="16"></object>
-   <object id="42" name="Walker_08" type="Walker" x="2960" y="164" width="16" height="16"></object>
+  <object id="40" name="Walker_06" type="Walker" x="2680" y="164" width="16" height="16"> <properties><property name="damage_on_contact" value="1.0"/></properties></object>
+  <object id="41" name="Walker_07" type="Walker" x="2820" y="164" width="16" height="16"></object>
+  <object id="42" name="Walker_08" type="Walker" x="2960" y="164" width="16" height="16"></object>
   <object id="43" name="HazardZone_A" type="HazardZone" x="3040" y="176" width="48" height="16"> <properties><property name="damage" value="0.25"/></properties></object>
   <object id="44" name="Checkpoint_05" type="Checkpoint" x="3160" y="160" width="24" height="32"> <properties><property name="checkpoint_id" value="4"/></properties></object>
   <object id="45" name="MSG_25" type="MessageTrigger" x="3200" y="192" width="32" height="32"> <properties><property name="text" value="You have demonstrated all framework systems. Walk right to complete Stage 0."/></properties></object>

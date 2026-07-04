@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.engine.core import settings
-from src.engine.core.event_bus import emit
+from src.engine.core.event_bus import emit, subscribe, unsubscribe
 from src.engine.input.action_map import Action
 from src.engine.core.events import Events
 from src.engine.scene.base_scene import BaseScene
@@ -76,6 +76,7 @@ class StageScene(BaseScene):
         self._banner = ScreenBanner()
         if self._stage_data.stage_name:
             self._banner.play(self._stage_data.stage_id, self._stage_data.stage_name)
+            emit(Events.SFX_STAGE_BANNER)
 
         self._hud = HUD()
         if self._stage_data.time_limit > 0:
@@ -83,11 +84,48 @@ class StageScene(BaseScene):
         else:
             self._hud.start_timer()
 
+        # Subscribe SFX events
+        self._sfx_handlers: dict[str, object] = {}
+        sfx_map = {
+            Events.SFX_PLAYER_JUMP: "sfx_player_jump",
+            Events.SFX_PLAYER_LAND: "sfx_player_land",
+            Events.SFX_PLAYER_SHORT_ATTACK: "sfx_player_short_attack",
+            Events.SFX_PLAYER_LONG_ATTACK: "sfx_player_long_attack",
+            Events.SFX_PLAYER_HURT: "sfx_player_hurt",
+            Events.SFX_PLAYER_DIE: "sfx_player_die",
+            Events.SFX_HIT_CONNECT: "sfx_player_hit_connect",
+            Events.SFX_ENEMY_HIT: "sfx_enemies_hit",
+            Events.SFX_ENEMY_DIE_SMALL: "sfx_enemies_die_small",
+            Events.SFX_ENEMY_DIE_LARGE: "sfx_enemies_die_large",
+            Events.SFX_PROJECTILE_FIRE: "sfx_enemies_projectile_fire",
+            Events.SFX_CHECKPOINT: "sfx_ui_checkpoint",
+            Events.SFX_STAGE_BANNER: "sfx_ui_stage_banner",
+            Events.SFX_STAGE_COMPLETE: "sfx_ui_stage_complete",
+            Events.SFX_HAZARD_ZONE: "sfx_environment_hazard_zone",
+        }
+        self._sfx_names = sfx_map
+        for evt, sname in sfx_map.items():
+            def _make_handler(n):
+                def handler(**d):
+                    self._play_sfx_named(n)
+                return handler
+            handler = _make_handler(sname)
+            subscribe(evt, handler)
+            self._sfx_handlers[evt] = handler
+
+    def _play_sfx_named(self, name: str) -> None:
+        audio = self.audio
+        if audio is not None:
+            audio.play_sfx(name)
+
     def on_exit(self) -> None:
         #
         # Cleanup: destruir HUD y MessageBox antes de descartarlos
         # para evitar acumulación de suscripciones al EventBus.
         #
+        for evt, handler in self._sfx_handlers.items():
+            unsubscribe(evt, handler)
+        self._sfx_handlers.clear()
         if self._hud is not None:
             self._hud.destroy()
             self._hud = None
@@ -160,6 +198,8 @@ class StageScene(BaseScene):
                     if hitbox.colliderect(entity.hurtbox):
                         entity.apply_hit(player.current_attack_damage, player.rect.center)
                         player.consume_hitbox()
+                        emit(Events.SFX_HIT_CONNECT)
+                        emit(Events.SFX_ENEMY_HIT)
                         # Hitstop: 2 frames for short attack (0.5), 4 frames for long attack (1.0)
                         hitstop_frames = 4.0 if player.current_attack_damage >= 1.0 else 2.0
                         if hasattr(self.context, "clock") and self.context.clock is not None:
@@ -196,6 +236,7 @@ class StageScene(BaseScene):
             if hz.timer <= 0 and trigger_rect.colliderect(hz.rect):
                 player.apply_damage(hz.damage, player.rect.center)
                 hz.timer = hz.cooldown
+                emit(Events.SFX_HAZARD_ZONE)
 
         # Check death pits
         for dp in stage.death_pits:
@@ -210,6 +251,7 @@ class StageScene(BaseScene):
         for cp in self._checkpoints:
             if cp.check_collision(player.rect):
                 self._checkpoint_position = pygame.Vector2(cp.rect.center)
+                emit(Events.SFX_CHECKPOINT)
                 if player.current_health < settings.PLAYER_MAX_HEALTH:
                     heal_amount = settings.PLAYER_MAX_HEALTH - player.current_health
                     player.heal(heal_amount)
@@ -220,6 +262,7 @@ class StageScene(BaseScene):
             self._stage_complete = True
             self._stage_complete_timer = 2.0
             self._banner.play("STAGE_COMPLETE", "STAGE COMPLETE")
+            emit(Events.SFX_STAGE_COMPLETE)
 
         # Delayed stage complete emission (gives banner time to display)
         if self._stage_complete and hasattr(self, "_stage_complete_timer"):
@@ -348,6 +391,19 @@ class StageScene(BaseScene):
             for dp in stage.death_pits:
                 r = dp.rect
                 pygame.draw.rect(surface, (255, 0, 128), (r.x + lx, r.y + ly, r.w, r.h), 1)
+            # Enemy hurtboxes
+            for enemy in self._enemies:
+                hb = enemy.hurtbox
+                pygame.draw.rect(surface, (255, 128, 0), (hb.x + lx, hb.y + ly, hb.w, hb.h), 1)
+                hb2 = enemy.hitbox
+                pygame.draw.rect(surface, (255, 0, 0), (hb2.x + lx, hb2.y + ly, hb2.w, hb2.h), 1)
+            # Player hitbox
+            if hasattr(player, "hitbox"):
+                hb3 = player.hitbox
+                pygame.draw.rect(surface, (0, 255, 255), (hb3.x + lx, hb3.y + ly, hb3.w, hb3.h), 1)
+            if hasattr(player, "hurtbox"):
+                hb4 = player.hurtbox
+                pygame.draw.rect(surface, (0, 200, 0), (hb4.x + lx, hb4.y + ly, hb4.w, hb4.h), 1)
             info = [
                 f"Pos: ({player.position.x:.0f}, {player.position.y:.0f})",
                 f"Vel: ({player.velocity.x:.1f}, {player.velocity.y:.1f})",

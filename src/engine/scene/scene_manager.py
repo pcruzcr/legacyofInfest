@@ -90,8 +90,9 @@ class SceneManager:
             self.replace(next_stage_class(self._context))
         else:
             # No more stages — push End Credits (placeholder for now)
-            logging.info("SceneManager: no more stages — returning to title")
-            self.replace(TitleScene(self._context))
+            from src.engine.scenes.end_credits_scene import EndCreditsScene
+            logging.info("SceneManager: no more stages — end credits")
+            self.replace(EndCreditsScene(self._context))
 
     def _on_player_died(self, **data: object) -> None:
         """Handle player death. If the current scene has a _respawn

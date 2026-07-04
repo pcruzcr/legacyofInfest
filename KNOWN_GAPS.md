@@ -27,7 +27,7 @@ Nunca borrar entradas - marcar como resueltas.
   mezclen piso y pared vertical en un solo objeto, esta heurística podría
   necesitar refinamiento (ej. dividir rectos por pendiente o etiqueta).
 
-## [GAP-003] SoundBank no conectado — sin llamadas a `play_sfx()`
+## ~~[GAP-003] SoundBank no conectado — sin llamadas a `play_sfx()`~~ *(Resuelto)*
 
 - **File:** Todo el codebase
 - **Phase:** 3
@@ -35,9 +35,12 @@ Nunca borrar entradas - marcar como resueltas.
   nunca se invoca `sound_bank.load()` ni `play_sfx()` en ningún Scene o Entity.
   Los nombres de SFX en `ASSET_BIBLE.md` §12 fueron limpiados contra disco pero
   no hay código que los reproduzca.
-- **Resolution:** Pendiente — requiere integración con EventBus (escuchar
-  `PLAYER_DAMAGED`, `ENEMY_DIED`, etc.) o llamadas manuales en stages/bosses.
-  Marcar como baja prioridad hasta Fase 14+.
+- **Resolution:** Integrado vía EventBus: `SoundBank.load_all()` escanea `assets/sfx/`
+  recursivamente en `AudioManager.__init__()`. 15 eventos SFX definidos en
+  `Events` class, emitidos desde entidades y escuchados por `StageScene.on_enter()`
+  que mapea evento → filename y llama `self.audio.play_sfx()`. Ver
+  `src/engine/core/events.py`, `src/engine/audio/sound_bank.py`,
+  `src/framework/scenes/stage_scene.py`.
 
 ## [GAP-004] `background_zone` implementado en StageLoader pero ausente en Stage 0 TMX
 

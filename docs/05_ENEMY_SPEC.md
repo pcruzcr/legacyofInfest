@@ -213,7 +213,22 @@ The Flying enemy travels through the air along a computed path. In its default i
 | Detection range X | 180 px |
 | Detection range Y | 96 px |
 
-### 4.3 Flight Modes
+### 4.3 Y-Tracking (Alert Mode)
+
+When the player enters detection range, the flying enemy accelerates path speed by 1.5× and actively tracks the player's Y position. This uses a **leaky-integrator offset** (`_y_track_offset`) that persists across strategy frames:
+
+```
+# Each alert frame:
+# 1. Strategy executes (fully resets position.y for sine/bezier modes)
+# 2. Compute Y error: player_center_y - (position.y + _y_track_offset + rect.height/2)
+# 3. Push offset toward player at 0.4 × flight_speed
+# 4. Damp offset: _y_track_offset *= 0.98
+# 5. Apply: position.y += _y_track_offset
+```
+
+The 0.98 damping prevents windup while keeping the enemy near the player's vertical position. The offset resets to 0.0 when returning to PATROL state.
+
+### 4.4 Flight Modes
 
 The flight mode is specified in the TMX object properties:
 
@@ -237,7 +252,7 @@ The TMX object layer defines control points as `Waypoint` objects tagged to this
 | State | Behavior |
 |---|---|
 | `PATROL` | Follow defined flight path continuously |
-| `ALERT` | Accelerate path speed by 1.5×, move toward player's Y axis |
+| `ALERT` | Accelerate path speed by 1.5×, track player's Y axis via leaky-integrator offset (`_y_track_offset`, damping 0.98) that survives strategy position resets |
 | `HURT` | Halt for 0.2 seconds. Flash. |
 | `DYING` | Slow fall animation with horizontal drift. No path following. |
 
@@ -254,7 +269,7 @@ The TMX object layer defines control points as `Waypoint` objects tagged to this
 
 | Box | Offset X | Offset Y | Width | Height |
 |---|---|---|---|---|
-| Hurtbox | 6 px from sprite left | 4 px from sprite top | 20 px | 20 px |
+| Hurtbox | 6 px from sprite left | 4 px from sprite top | 20 px | 14 px |
 
 ---
 
@@ -422,7 +437,7 @@ Walkers and Shooters participate in gravity and platform collision identically t
 
 Every frame, each active enemy calls `_check_player_contact(player)`. If the enemy's `hurtbox` rect overlaps the player's `hurtbox` rect, and the player is not invincible:
 
-1. `player.apply_damage(self.damage_on_contact, source_position=self.rect.center)` is called.
+1. `player.apply_damage(self.damage_on_contact, self.rect.center, self.contact_knockback)` is called (the knockback force defaults to 120.0 and can be overridden per enemy).
 2. A 0.3-second cooldown prevents repeated damage application from sustained overlap.
 
 ### 9.3 Player Attack vs. Enemy Hurtbox

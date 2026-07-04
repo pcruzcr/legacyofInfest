@@ -251,9 +251,14 @@ The long attack swings a stick in a wider arc.
 ### 7.3 Hitstop
 
 When a player attack connects with an enemy:
-1. `DeltaClock.time_scale` is set to `0.15` for the hitstop duration.
-2. After the hitstop duration, `time_scale` is restored to `1.0`.
-3. The enemy's `apply_hit()` method is called with the damage amount.
+1. The game loop's `DeltaClock.time_scale` is set to `0.15` for the hitstop duration, slowing all game-time updates (physics, animations, AI) to 15% speed.
+2. Hitstop duration is `frames / 60.0` seconds: **2 frames** for Short Attack (0.5 damage), **4 frames** for Long Attack (1.0 damage).
+3. After the hitstop duration expires, `time_scale` is restored to `1.0`.
+4. The enemy's `apply_hit()` method is called with the damage amount.
+5. The player's hitbox is consumed on any connect — only one enemy per swing takes damage.
+6. Only the first enemy hitbox collision triggers hitstop — later enemies hitting the same frame are damaged without re-triggering slowdown (break after first hit).
+
+Implementation: `stage_scene.py` lines 199-211. The timer decrements each frame regardless of `time_scale` so the real-world slowdown persists for the intended number of display frames.
 
 ---
 

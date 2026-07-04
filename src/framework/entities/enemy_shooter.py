@@ -13,6 +13,8 @@ import math
 import pygame
 
 from src.engine.core import settings
+from src.engine.core.event_bus import emit
+from src.engine.core.events import Events
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.entities.base_entity import BaseEntity
 from src.framework.entities.enemy_base import EnemyBase, EnemyState
@@ -143,9 +145,10 @@ class EnemyShooter(EnemyBase):
         self._load_aim_fire_sprites(zone)
 
     def _load_aim_fire_sprites(self, zone: int) -> None:
-        """Load aim and fire animation sprites (optional, may not exist for all zones)."""
+        """Load aim and fire animation sprites. Generate placeholder if missing."""
         zone_key = f"zone{zone}" if zone > 0 else "zone1"
         base = settings.ASSETS_DIR / "sprites" / "enemies" / zone_key
+        colors = {"aim": (180, 100, 220), "fire": (220, 80, 80)}
         for key, fname in [("aim", f"enemy_aim_{zone_key}.png"),
                            ("fire", f"enemy_fire_{zone_key}.png")]:
             path = base / fname
@@ -153,7 +156,9 @@ class EnemyShooter(EnemyBase):
                 frames = AssetLoader.load_sprite_sheet(path, 12, 12)
                 self._sprite_frames[key] = frames
             except Exception:
-                pass
+                placeholder = pygame.Surface((12, 12), pygame.SRCALPHA)
+                placeholder.fill(colors.get(key, (200, 0, 200)))
+                self._sprite_frames[key] = [placeholder]
 
     def _check_player_contact(self, player) -> None:
         """Check body contact against the player."""
@@ -244,6 +249,7 @@ class EnemyShooter(EnemyBase):
             lifetime=3.0,
         )
         self._active_projectiles.append(projectile)
+        emit(Events.SFX_PROJECTILE_FIRE)
         return True
 
     def _build_hitbox(self) -> pygame.Rect:

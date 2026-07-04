@@ -444,11 +444,12 @@ class Player(BaseEntity):
     def update(self, dt: float) -> None: ...
     def draw(self, surface: pygame.Surface, camera_offset: pygame.Vector2) -> None: ...
 
-    def apply_damage(self, amount: float, source_position: tuple[float, float]) -> None:
+    def apply_damage(self, amount: float, source_position: tuple[float, float], knockback_force: float = 150.0) -> None:
         """
         No-op if invincibility_timer > 0. Otherwise: subtracts amount, clamps to
         [0, PLAYER_MAX_HEALTH], sets invincibility_timer, emits PLAYER_DAMAGED,
-        transitions to HURT, applies knockback. Emits PLAYER_DIED if health reaches 0.
+        transitions to HURT, applies knockback with given force away from source.
+        Emits PLAYER_DIED if health reaches 0.
         """
 
     def set_spawn(self, position: pygame.Vector2) -> None:

@@ -19,6 +19,8 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.engine.core import settings
+from src.engine.core.event_bus import emit
+from src.engine.core.events import Events
 from src.engine.input.action_map import Action
 
 if TYPE_CHECKING:
@@ -145,6 +147,7 @@ def _do_jump(player: Player) -> None:
     player._jump_cut_applied = False
     from src.framework.entities.player_states import JumpingState
     player._change_state_instance(JumpingState())
+    emit(Events.SFX_PLAYER_JUMP)
 
 
 def _start_attack(player: Player, attack_type: object) -> None:
@@ -156,8 +159,10 @@ def _start_attack(player: Player, attack_type: object) -> None:
     )
     if attack_type == player.SHORT_ATTACK:
         player._change_state_instance(ShortAttackState())
+        emit(Events.SFX_PLAYER_SHORT_ATTACK)
     else:
         player._change_state_instance(LongAttackState())
+        emit(Events.SFX_PLAYER_LONG_ATTACK)
 
 
 # ── Concrete states ───────────────────────────────────────────────
@@ -217,12 +222,6 @@ class IdleState(PlayerStateBase):
                 from src.framework.entities.player_states import FallingState
                 player._change_state_instance(FallingState())
 
-        # Jump cut
-        if not inp.jump_held and player.velocity.y < 0 and not player._jump_cut_applied:
-            player.velocity.y *= 0.5
-            player._jump_cut_applied = True
-
-
 class WalkingState(PlayerStateBase):
     """Player walking on ground. Same inputs as idle but maintains velocity."""
 
@@ -271,10 +270,6 @@ class WalkingState(PlayerStateBase):
             else:
                 from src.framework.entities.player_states import FallingState
                 player._change_state_instance(FallingState())
-
-        if not inp.jump_held and player.velocity.y < 0 and not player._jump_cut_applied:
-            player.velocity.y *= 0.5
-            player._jump_cut_applied = True
 
 
 class CrouchingState(PlayerStateBase):

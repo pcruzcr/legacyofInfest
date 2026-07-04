@@ -111,9 +111,9 @@ def _iter_objects():
         (8, "MSG_07", "MessageTrigger", 840, 192, 32, 32, {"text": "Notice the hitstop effect on hit. Time briefly slows."}),
         (9, "MSG_08", "MessageTrigger", 1000, 192, 32, 32, {"text": "Try crouching then attacking. The hitbox shifts to hit low targets."}),
         # Walkers in Zone B
-        (10, "Walker_01", "Walker", 760, 192, 16, 16, {}),
-        (11, "Walker_02", "Walker", 900, 192, 16, 16, {}),
-        (12, "Walker_03", "Walker", 1040, 192, 16, 16, {}),
+        (10, "Walker_01", "Walker", 760, 164, 16, 16, {}),
+        (11, "Walker_02", "Walker", 900, 164, 16, 16, {}),
+        (12, "Walker_03", "Walker", 1040, 164, 16, 16, {}),
         # Checkpoint 1
         (13, "Checkpoint_01", "Checkpoint", 1080, 160, 24, 32, {"checkpoint_id": "0"}),
     ]
@@ -125,8 +125,8 @@ def _iter_objects():
         (16, "MSG_11", "MessageTrigger", 1360, 192, 32, 32, {"text": "If a Walker touches you, you lose 0.5 hearts. You become invincible briefly."}),
         (17, "MSG_12", "MessageTrigger", 1520, 192, 32, 32, {"text": "Watch the sprite flash during invincibility. This is damage feedback."}),
         # Walkers in Zone C
-        (18, "Walker_04", "Walker", 1260, 160, 16, 16, {}),
-        (19, "Walker_05", "Walker", 1480, 192, 16, 16, {}),
+        (18, "Walker_04", "Walker", 1260, 132, 16, 16, {}),
+        (19, "Walker_05", "Walker", 1480, 164, 16, 16, {}),
         # Checkpoint 2
         (20, "Checkpoint_02", "Checkpoint", 1560, 160, 24, 32, {"checkpoint_id": "1"}),
     ]
@@ -171,9 +171,9 @@ def _iter_objects():
         (38, "MSG_23", "MessageTrigger", 2760, 192, 32, 32, {"text": "If health reaches 0, Game Over appears. You can continue from the last checkpoint."}),
         (39, "MSG_24", "MessageTrigger", 3040, 192, 32, 32, {"text": "The spike floor deals 0.25 heart damage per tick. This is the Light damage tier."}),
         # Walkers in Zone F
-        (40, "Walker_06", "Walker", 2680, 192, 16, 16, {"damage_on_contact": "1.0"}),
-        (41, "Walker_07", "Walker", 2820, 192, 16, 16, {}),
-        (42, "Walker_08", "Walker", 2960, 192, 16, 16, {}),
+        (40, "Walker_06", "Walker", 2680, 164, 16, 16, {"damage_on_contact": "1.0"}),
+        (41, "Walker_07", "Walker", 2820, 164, 16, 16, {}),
+        (42, "Walker_08", "Walker", 2960, 164, 16, 16, {}),
         # Hazard zone
         (43, "HazardZone_A", "HazardZone", 3040, 176, 48, 16, {"damage": "0.25"}),
         # Checkpoint 5

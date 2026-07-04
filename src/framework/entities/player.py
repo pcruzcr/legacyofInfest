@@ -235,6 +235,7 @@ class Player(BaseEntity):
         self,
         amount: float,
         source_position: tuple[float, float],
+        knockback_force: float = 150.0,
     ) -> None:
         """
         Apply damage to the player. No-op if invincibility is active.
@@ -251,7 +252,7 @@ class Player(BaseEntity):
 
         # Knockback away from source
         dx = self.position.x - source_position[0]
-        self.velocity.x = 150.0 * (1 if dx >= 0 else -1)
+        self.velocity.x = knockback_force * (1 if dx >= 0 else -1)
         self.velocity.y = -200.0
         self._knockback_timer = 0.3
 
@@ -265,9 +266,11 @@ class Player(BaseEntity):
             from src.framework.entities.player_states import DyingState
             self._change_state_instance(DyingState())
             emit(Events.PLAYER_DIED)
+            emit(Events.SFX_PLAYER_DIE)
         else:
             from src.framework.entities.player_states import HurtState
             self._change_state_instance(HurtState())
+            emit(Events.SFX_PLAYER_HURT)
 
     def _change_state_instance(self, new_state: PlayerStateBase) -> None:
         """
@@ -479,6 +482,7 @@ class Player(BaseEntity):
         # Use an inflated rect so touching edges (bottom == floor top)
         # are detected as collisions.
         collision_check_rect = player_rect.inflate(0, 2)
+        was_grounded = self.is_grounded
         self.is_grounded = False
         collided_y = False
         for tile in collision_rects:
@@ -486,6 +490,8 @@ class Player(BaseEntity):
                 collided_y = True
                 if self.velocity.y >= 0:
                     # Falling or stationary: land on top
+                    if not was_grounded and self.velocity.y > 0:
+                        emit(Events.SFX_PLAYER_LAND)
                     player_rect.bottom = tile.top
                     self.velocity.y = 0.0
                     self.is_grounded = True

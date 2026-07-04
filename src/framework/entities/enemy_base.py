@@ -266,6 +266,8 @@ class EnemyBase(BaseEntity):
             entity_id=f"{type(self).__name__}_{id(self)}",
             position=(self.position.x, self.position.y),
         )
+        is_large = self.rect.width > 24 or self.rect.height > 28
+        emit(Events.SFX_ENEMY_DIE_LARGE if is_large else Events.SFX_ENEMY_DIE_SMALL)
 
     # ──────────────────────────────────────────────
     # Required overrides (abstract)
@@ -305,13 +307,6 @@ class EnemyBase(BaseEntity):
         if self.state == EnemyState.HURT:
             return "hurt"
         return self._get_animation_key()
-
-    def _build_hitbox(self) -> pygame.Rect:
-        """
-        Default: no active attack hitbox — damage is contact-based.
-        Subclasses override to introduce weapon hitboxes.
-        """
-        return pygame.Rect(0, 0, 0, 0)
 
     def _face_player(self) -> None:
         """Face toward the player's horizontal position."""
@@ -357,6 +352,7 @@ class EnemyBase(BaseEntity):
             player.apply_damage(
                 self.damage_on_contact,
                 self.rect.center,
+                self.contact_knockback,
             )
             self._contact_cooldown = 0.3
 
