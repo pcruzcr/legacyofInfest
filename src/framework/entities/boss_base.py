@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-import numpy as np
 import pygame
 
 from src.engine.core.event_bus import emit
 from src.engine.core.events import Events
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.entities.enemy_base import EnemyBase, EnemyState
-from src.framework.processing.filter_tools import FilterTools
 
 
 @dataclass
@@ -179,9 +177,11 @@ class BossBase(EnemyBase):
         effect = phase.filter_effect
         if effect is None:
             return frame
+        from src.framework.processing.filter_tools import FilterTools
         if effect == "sobel":
             return FilterTools.sobel_edge(frame)
         if effect == "sobel_x":
+            import numpy as np
             k = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], dtype=np.float32)
             return FilterTools.apply_kernel(frame, k)
         return frame
