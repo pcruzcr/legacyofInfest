@@ -56,7 +56,8 @@ class StageScene(BaseScene):
             if hasattr(enemy, "set_player_ref"):
                 enemy.set_player_ref(self._player.rect)
             if hasattr(enemy, "set_collision_rects"):
-                enemy.set_collision_rects(self._stage_data.collision_rects)
+                enemy.set_collision_rects(self._stage_data.collision_rects,
+                                          one_way=self._stage_data.one_way_rects)
 
         self._checkpoints = list(self._stage_data.checkpoints)
         self._checkpoint_position: pygame.Vector2 | None = None
@@ -193,19 +194,21 @@ class StageScene(BaseScene):
         # Player attack hitbox → enemy hurtbox collision
         hitbox = player.active_hitbox
         if hitbox is not None:
+            hit_any = False
             for entity in stage.entity_list:
                 if isinstance(entity, EnemyBase) and entity.is_alive:
                     if hitbox.colliderect(entity.hurtbox):
                         entity.apply_hit(player.current_attack_damage, player.rect.center)
-                        player.consume_hitbox()
-                        emit(Events.SFX_HIT_CONNECT)
+                        hit_any = True
                         emit(Events.SFX_ENEMY_HIT)
-                        # Hitstop: 2 frames for short attack (0.5), 4 frames for long attack (1.0)
-                        hitstop_frames = 4.0 if player.current_attack_damage >= 1.0 else 2.0
-                        if hasattr(self.context, "clock") and self.context.clock is not None:
-                            self.context.clock.time_scale = 0.15
-                            self._hitstop_timer = hitstop_frames / 60.0
-                        break
+            if hit_any:
+                player.consume_hitbox()
+                emit(Events.SFX_HIT_CONNECT)
+                # Hitstop: 2 frames for short attack (0.5), 4 frames for long attack (1.0)
+                hitstop_frames = 4.0 if player.current_attack_damage >= 1.0 else 2.0
+                if hasattr(self.context, "clock") and self.context.clock is not None:
+                    self.context.clock.time_scale = 0.15
+                    self._hitstop_timer = hitstop_frames / 60.0
 
         # Hitstop timer — restore time_scale when expired
         if self._hitstop_timer > 0:

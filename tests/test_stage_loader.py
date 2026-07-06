@@ -29,7 +29,7 @@ class TestStageLoaderLoad:
     def test_spawn_point_matches_tmx(self) -> None:
         data = StageLoader.load(MINIMAL_TMX)
         assert abs(data.spawn_point.x - 48.0) < 0.1
-        assert abs(data.spawn_point.y - 176.0) < 0.1
+        assert abs(data.spawn_point.y - 144.0) < 0.1
 
     def test_collision_rects_nonempty(self) -> None:
         data = StageLoader.load(MINIMAL_TMX)

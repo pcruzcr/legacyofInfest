@@ -16,7 +16,7 @@ class ScreenBanner:
         self._slide_in_duration: float = 0.5
         self._hold_duration: float = 2.0
         self._slide_out_duration: float = 0.4
-        self._offset: float = float(settings.INTERNAL_WIDTH)
+        self._offset: float = float(settings.INTERNAL_WIDTH * 2)
         self._banner_height: int = 40
 
         self._banner_top: pygame.Surface | None = None
@@ -55,7 +55,7 @@ class ScreenBanner:
         self._stage_name = stage_name
         self._state = "slide_in"
         self._timer = 0.0
-        self._offset = float(settings.INTERNAL_WIDTH)
+        self._offset = float(settings.INTERNAL_WIDTH * 2)
 
     def update(self, dt: float) -> None:
         if self._state == "idle":
@@ -66,7 +66,7 @@ class ScreenBanner:
         if self._state == "slide_in":
             progress = min(self._timer / self._slide_in_duration, 1.0)
             t = ease_out_quad(progress)
-            self._offset = settings.INTERNAL_WIDTH * (1.0 - t)
+            self._offset = settings.INTERNAL_WIDTH * (2.0 - t)
             if progress >= 1.0:
                 self._state = "hold"
                 self._timer = 0.0
@@ -79,7 +79,7 @@ class ScreenBanner:
         elif self._state == "slide_out":
             progress = min(self._timer / self._slide_out_duration, 1.0)
             t = ease_in_quad(progress)
-            self._offset = settings.INTERNAL_WIDTH * t
+            self._offset = settings.INTERNAL_WIDTH * (1.0 + t)
             if progress >= 1.0:
                 self._state = "idle"
 

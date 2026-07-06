@@ -17,6 +17,8 @@ import math
 
 import pygame
 
+from src.engine.core import settings
+from src.engine.utils.asset_loader import AssetLoader
 from src.framework.entities.enemy_base import EnemyBase
 from src.framework.entities.flight_strategies import IFlightStrategy, make_strategy
 
@@ -90,6 +92,18 @@ class EnemyFlying(EnemyBase):
 
         # Load sprites
         self._load_zone_sprites(zone, "fly", 14, 10)
+        self._load_extra_sprites(zone, 14, 10)
+
+    def _load_extra_sprites(self, zone: int, fw: int, fh: int) -> None:
+        zone_key = f"zone{zone}" if zone > 0 else "zone1"
+        base = settings.ASSETS_DIR / "sprites" / "enemies" / zone_key
+        for key, fname in [("fly", f"enemy_fly_{zone_key}.png")]:
+            path = base / fname
+            try:
+                frames = AssetLoader.load_sprite_sheet(path, fw, fh)
+                self._sprite_frames[key] = frames
+            except Exception:
+                pass
 
     # ──────────────────────────────────────────────
     # Behavior implementations (Strategy delegation)
