@@ -1,7 +1,7 @@
 # Legacy of InFest — HUD Specification
 
 **Document ID:** LOI-HUD-009  
-**Version:** 1.0.0  
+**Version:** 1.1.0  
 **Status:** Official  
 **Audience:** Professor, Teaching Assistants, AI coding assistants
 
@@ -23,28 +23,29 @@ The HUD occupies fixed regions of the 320×224 internal screen. All coordinates 
 
 ```
 ┌──────────────────────────────────────────────────────────────┐  Y=0
-│  [PORTRAIT]  [♥♥♥♥♥]                          [TIMER: 0:00] │  Y=2
-│   32×32       76×8                               40×8        │
-│                                                               │  Y=14
-│                                                               │
 │  ═══════════════════════════════════════════════════════════  │
-│  │         TUTORIAL / STORY MESSAGE BOX (if active)         ││ Y=196
-│  │  320×28 pixels, bottom of screen                         ││
-│  └─────────────────────────────────────────────────────────┘ │  Y=224
+│  │   TUTORIAL / STORY MESSAGE BOX (if active)               │  Y=0
+│  │   320×28 pixels, top of screen                          ││
+│  │                                                           │  Y=14
+│  └─────────────────────────────────────────────────────────┘ │
+│  [PORTRAIT]  [♥♥♥♥♥]                          [TIMER: 0:00] │  Y=16
+│   32×32       76×8                               54×12       │
+│                                                               │  Y=28
+│                                                               │
+│                                                               │  Y=224
 └──────────────────────────────────────────────────────────────┘
 ```
 
 ### 2.1 HUD Regions
 
 | Element | X | Y | Width | Height | Notes |
-|---|---|---|---|---|---|
-| Portrait frame | 2 | 2 | 34 | 34 | Includes 1px border |
-| Portrait sprite | 3 | 3 | 32 | 32 | Inner sprite |
-| Heart row | 38 | 6 | 76 | 8 | Five hearts at 14px each + 2px gap |
-| Timer box | 272 | 2 | 46 | 12 | Right-aligned |
-| Timer label `TIME` | 272 | 3 | — | — | 4-char label |
-| Timer digits | 272 | 10 | — | — | Format: `M:SS` |
-| Message box | 0 | 196 | 320 | 28 | Bottom overlay |
+|---|---|---|---|---|---|---|
+| Message box | 0 | 0 | 320 | 28 | Top overlay (moved from bottom in v1.1.0) |
+| Portrait frame | 2 | 16 | 34 | 34 | Shifted down to accommodate message box |
+| Portrait sprite | 3 | 17 | 32 | 32 | Inner sprite |
+| Heart row | 38 | 20 | 76 | 8 | Five hearts at 14px each + 2px gap |
+| Timer box | 262 | 16 | 56 | 12 | Right-aligned |
+| Timer digits | 264 | 24 | — | — | Format: `M:SS` |
 | Stage banner | 0 | 88 | 320 | 48 | Center screen, slide-in |
 
 ---
@@ -153,12 +154,12 @@ The timer is displayed in the top-right corner of the HUD. It shows elapsed time
 
 | Property | Value |
 |---|---|
-| Position | X=272, Y=2 |
-| Width | 46 px |
+| Position | X=264, Y=24 (adjusted in v1.1.0 for message box at top) |
+| Width | 54 px |
 | Format | `M:SS` (e.g., `2:34`) |
-| Font | `fonts/hud_digits.png` (pixel font, 5×7 per character) |
+| Font | **TTF font** — `fonts/PixeloidSans.ttf` (size 12) renders via `pygame.font.Font` (in v1.1.0, replaced the pixel-font spritesheet) |
 | Color | White on dark background |
-| Background | Solid 6×6 dark tile from `ui/hud_frame.png` |
+| Background | Solid dark rectangle behind digits |
 
 ### 5.3 Timer Behavior
 
@@ -169,7 +170,7 @@ The timer is displayed in the top-right corner of the HUD. It shows elapsed time
 
 ### 5.4 Timer Font
 
-The timer uses a dedicated digit sprite sheet: `fonts/hud_digits.png`. This sheet contains the characters `0–9`, `:`, and space, each 6 pixels wide by 8 pixels tall, arranged horizontally.
+The timer renders via `pygame.font.Font` using the TTF font `fonts/PixeloidSans.ttf` at size 12 (changed in v1.1.0; previously used a pixel-font spritesheet `fonts/hud_digits.png`).
 
 ---
 
@@ -229,16 +230,16 @@ Tutorial messages are text boxes that appear at the bottom of the screen. They a
 ### 7.2 Message Box Layout
 
 ```
-┌──────────────────────────────────────────────────────────────┐ Y=196
+┌──────────────────────────────────────────────────────────────┐ Y=0
 │  ▶  Walk right to continue.                                  │
 │     Use Z to attack enemies.                                 │
 │                                                              │
-└──────────────────────────────────────────────────────────────┘ Y=224
+└──────────────────────────────────────────────────────────────┘ Y=28
 ```
 
 | Property | Value |
 |---|---|
-| Position | X=0, Y=196 |
+| Position | X=0, Y=0 |
 | Size | 320×28 px |
 | Background | Semi-transparent dark (alpha 180/255) |
 | Border | 1px solid gold |
@@ -266,14 +267,15 @@ If a second `SHOW_MESSAGE` event is emitted while a message is already displayed
 ### 7.6 Event Interface
 
 ```python
-# Trigger a message from a stage:
-EventBus.emit("SHOW_MESSAGE", text="Walk right to continue.\nUse Z to attack.", duration=5.0)
+# Trigger a message from a stage (module-level emit works as well):
+from src.engine.core.event_bus import emit
+emit("SHOW_MESSAGE", text="Walk right to continue.\nUse Z to attack.", duration=5.0)
 
 # Trigger a message requiring confirmation:
-EventBus.emit("SHOW_MESSAGE", text="Press Enter to continue.", duration=0)
+emit("SHOW_MESSAGE", text="Press Enter to continue.", duration=0)
 
 # Clear all messages:
-EventBus.emit("HIDE_MESSAGE")
+emit("HIDE_MESSAGE")
 ```
 
 ---
@@ -366,7 +368,7 @@ The HUD is instantiated once per application session by `App`. It is passed to e
 
 ```python
 # In App initialization:
-self.hud = HUD(asset_loader=self.asset_loader, event_bus=self.event_bus)
+self.hud = HUD()
 
 # In stage on_enter():
 self.hud.start_timer(seconds=self.time_limit)  # 0 for ascending (Stage 0)

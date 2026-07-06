@@ -1,7 +1,7 @@
 # Legacy of InFest — API Contracts
 
 **Document ID:** LOI-API-022  
-**Version:** 1.0.0  
+**Version:** 1.1.0  
 **Status:** Official  
 **Compatibility:** Authoritative signature reference for all of `03_ARCHITECTURE.md` through `17_BOSS_SPEC.md`  
 **Audience:** AI coding assistants (Claude Code, Cline, OpenCode, Codex)
@@ -44,6 +44,12 @@ PLAYER_JUMP_FORCE: float = -380.0
 PLAYER_MAX_FALL_SPEED: float = 500.0
 PLAYER_COYOTE_FRAMES: int = 6
 PLAYER_INVINCIBILITY_DURATION: float = 1.5
+PLAYER_DASH_SPEED: float = 200.0
+PLAYER_AIR_DASH_LIMIT: int = 1
+PLAYER_SHORT_ATTACK_DURATION: float = 0.15
+PLAYER_LONG_ATTACK_DURATION: float = 0.4
+PLAYER_COOLDOWN_SHORT: float = 0.0
+PLAYER_COOLDOWN_LONG: float = 0.067
 ```
 
 ### 2.2 `src/engine/core/clock.py`
@@ -67,21 +73,33 @@ class DeltaClock:
 from typing import Callable, Any
 
 class EventBus:
-    """Singleton-style static class. All methods are classmethods."""
+    """Instance-based publish/subscribe event bus (v1.1.0: changed from static class)."""
 
-    @classmethod
-    def subscribe(cls, event_name: str, callback: Callable[..., None]) -> None: ...
+    def __init__(self) -> None: ...
 
-    @classmethod
-    def unsubscribe(cls, event_name: str, callback: Callable[..., None]) -> None: ...
+    def subscribe(self, event_name: str, callback: Callable[..., None]) -> None: ...
+    def unsubscribe(self, event_name: str, callback: Callable[..., None]) -> None: ...
+    def unsubscribe_all(self, events: list[str], callback: Callable[..., None]) -> None: ...
+    def subscriber_count(self) -> int: ...
 
-    @classmethod
-    def emit(cls, event_name: str, **data: Any) -> None:
+    def emit(self, event_name: str, **data: Any) -> None:
         """Queues the event; dispatched at the start of the next frame."""
 
-    @classmethod
-    def dispatch(cls) -> None:
+    def dispatch(self) -> None:
         """Called once per frame by App, before scene update. Drains the queue."""
+
+    def clear(self) -> None:
+        """Clear all subscribers and pending events. Useful for testing."""
+
+
+# Module-level convenience functions delegate to a default instance:
+def subscribe(event_name: str, callback: Callable[..., None]) -> None: ...
+def unsubscribe(event_name: str, callback: Callable[..., None]) -> None: ...
+def unsubscribe_all(events: list[str], callback: Callable[..., None]) -> None: ...
+def subscriber_count() -> int: ...
+def emit(event_name: str, **data: Any) -> None: ...
+def dispatch() -> None: ...
+def clear() -> None: ...
 ```
 
 **Standard event payloads** (exact `**data` keys — see `23_DATA_SCHEMAS.md` §2 for the full table):
@@ -133,21 +151,24 @@ class App:
 ### 3.1 `src/engine/input/action_map.py`
 
 ```python
-from enum import Enum
+from enum import Enum, auto
 
-class Action(str, Enum):
-    MOVE_LEFT = "MOVE_LEFT"
-    MOVE_RIGHT = "MOVE_RIGHT"
-    JUMP = "JUMP"
-    CROUCH = "CROUCH"
-    SHORT_ATTACK = "SHORT_ATTACK"
-    LONG_ATTACK = "LONG_ATTACK"
-    PAUSE = "PAUSE"
-    CONFIRM = "CONFIRM"
-    CANCEL = "CANCEL"
+class Action(Enum):
+    """Abstract game actions. Bindings map physical keys to these actions."""
+    MOVE_LEFT = auto()
+    MOVE_RIGHT = auto()
+    MOVE_UP = auto()
+    MOVE_DOWN = auto()
+    JUMP = auto()
+    CROUCH = auto()
+    SHORT_ATTACK = auto()
+    LONG_ATTACK = auto()
+    DASH = auto()
+    CONFIRM = auto()
+    CANCEL = auto()
+    PAUSE = auto()
 
-DEFAULT_KEYBOARD_BINDINGS: dict[Action, list[int]]   # pygame key constants
-DEFAULT_CONTROLLER_BINDINGS: dict[Action, list[int]]  # pygame joystick button indices
+DEFAULT_KEY_BINDINGS: dict[Action, list[int]]   # pygame key constants
 ```
 
 ### 3.2 `src/engine/input/input_manager.py`
@@ -177,9 +198,20 @@ class InputManager:
 
 ```python
 class SoundBank:
-    def __init__(self, asset_loader: "AssetLoader") -> None: ...
-    def get(self, name: str) -> pygame.mixer.Sound:
-        """Raises KeyError with available names list if not found."""
+    def __init__(self) -> None:
+        """Scans assets/sfx/ for .wav files on construction."""
+
+    def load_all(self) -> None:
+        """Scan assets/sfx/ recursively and register every .wav file."""
+
+    def load(self, name: str, path: str | Path) -> None:
+        """Register a sound by name, loading from the given path."""
+
+    def get(self, name: str) -> pygame.mixer.Sound | None:
+        """Retrieve a registered sound by name. Returns None if not found."""
+
+    def play(self, name: str, loops: int = 0, volume: float = 1.0) -> None:
+        """Play a registered sound at the given volume. Silently skip if not found."""
 ```
 
 ### 4.2 `src/engine/audio/audio_manager.py`
@@ -190,10 +222,15 @@ class AudioManager:
 
     def play_music(self, name: str, loop: bool = True, fade_ms: int = 0) -> None: ...
     def stop_music(self, fade_ms: int = 0) -> None: ...
-    def play_sfx(self, name: str, volume: float = 1.0) -> None: ...
+    def resume_music(self) -> None: ...
+    def play_sfx(self, name: str) -> None:
+        """Play a sound effect from the sound bank at the current SFX volume."""
     def set_music_volume(self, volume: float) -> None:
         """volume clamped to [0.0, 1.0]."""
     def set_sfx_volume(self, volume: float) -> None: ...
+    def toggle_mute(self) -> None: ...
+    @property
+    def is_muted(self) -> bool: ...
 ```
 
 ---
@@ -232,7 +269,14 @@ class AssetLoader:
     """All methods classmethods; internal cache is a class-level dict keyed by str(path)."""
 
     @classmethod
-    def load_image(cls, path: str | Path) -> pygame.Surface: ...
+    def load_image(
+        cls,
+        path: str | Path,
+        *,
+        scale: float | None = None,
+        size: tuple[int, int] | None = None,
+        alpha: bool = True,
+    ) -> pygame.Surface: ...
 
     @classmethod
     def load_sound(cls, path: str | Path) -> pygame.mixer.Sound: ...
