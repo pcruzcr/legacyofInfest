@@ -1,7 +1,7 @@
 # Legacy of InFest — TMX Specification
 
 **Document ID:** LOI-TMX-006  
-**Version:** 1.0.0  
+**Version:** 1.1.0  
 **Status:** Official  
 **Audience:** Professor, Teaching Assistants, Students, AI coding assistants
 
@@ -101,7 +101,9 @@ The `Objects` layer contains all non-tile game data. Each object is a Tiled rect
 
 ### 4.1 Object Coordinate System
 
-All object positions in Tiled use pixel coordinates with the origin at the top-left of the map. The `StageLoader` reads these coordinates directly and converts them to world-space `pygame.Vector2` positions.
+All object positions in Tiled use pixel coordinates with the origin at the top-left of the map. The `StageLoader` reads these coordinates and converts them to world-space `pygame.Vector2` positions.
+
+**Spawn Y convention:** The TMX Y coordinate of `PlayerSpawn` (and all enemy spawns) represents the entity's **feet** position (bottom edge of the sprite). `StageLoader` converts this to the top-left origin expected by pygame rects by subtracting the entity's tile height: `spawn_point.y = obj.y - 32`. This conversion aligns the visual sprite bottom with the intended surface. See §6.1 for details.
 
 ### 4.2 Object Type Registry
 
@@ -161,7 +163,8 @@ All custom object properties use `snake_case`. No spaces, no hyphens. Property n
 
 - Exactly one `PlayerSpawn` object must exist per TMX map.
 - It is a point object placed on a solid tile surface (player spawns on the ground).
-- Its Y position represents the player's feet, not center.
+- **Its Y position represents the player's feet (bottom edge of the 32px-tall sprite), not the top-left corner.** The TMX designer places the point where the player's feet should rest.
+- `StageLoader` converts feet→top-left by subtracting the player's pixel height: `stage.spawn_point = pygame.Vector2(obj.x, obj.y - 32)`. This places the player rect correctly above the ground.
 - If no `PlayerSpawn` is found, `StageLoader` raises `FrameworkUsageError("No PlayerSpawn found in TMX")`.
 
 ### 6.2 Enemy Spawn
@@ -302,20 +305,34 @@ For hazards, death pits, camera locks, and similar non-collision zones, place th
 
 **Note:** Collision objects should align to the 16-pixel tile grid. Sub-tile-precision collision is permitted but must be justified (e.g., a sloped surface approximated with thin rectangles).
 
-### 9.3 Collision Resolution Priority
+### 9.3 Collision Resolution Order (Axis-Separated AABB)
 
-When multiple collision rects overlap simultaneously, resolution priority is:
+The player's `_resolve_collision` resolves collisions in **axis-separated** order — X first, then Y — as specified in `04_PLAYER_SPEC.md` §4.3:
+
+1. **Integrate X** — `self.position.x += self.velocity.x * dt`
+2. **Resolve X** — For each overlapping `Solid` rect, resolve the X penetration. Grazing contacts (`v_overlap <= 2px`) are skipped to prevent floor/ceiling tiles from blocking lateral movement.
+3. **Integrate Y** — `self.position.y += self.velocity.y * dt`
+4. **Resolve Y** — For each overlapping `Solid` rect, determine direction of motion:
+   - **Coming from above** (`velocity.y >= 0` and `prev_bottom <= tile.top + 1`): land on the tile (set `py.bottom = tile.top`, `velocity.y = 0`, `is_grounded = True`).
+   - **Coming from below** (`velocity.y < 0` and `prev_top >= tile.bottom - 1`): bonk head (set `py.top = tile.bottom`, `velocity.y = 0`).
+
+One-way platforms (`Platform` type) are resolved separately in `_resolve_one_way_collision`:
+- Only when falling (`velocity.y >= 0`) and the player's previous-frame bottom was at or above the platform top (`prev_bottom <= plat.top`).
+
+### 9.4 Resolution Priority
+
+When multiple collision rects overlap simultaneously:
 
 1. `Death_` — applied first (overrides everything)
-2. `Solid_` — standard physics resolution
-3. `OneWay_` — applied only if downward movement
+2. `Solid_` — axis-separated AABB resolution (X→Y)
+3. `Platform` — resolved in separate pass, only if descending and prev_bottom ≤ plat.top
 4. `Hazard_` — damage applied, no movement resolution
 
-### 9.4 Terrain vs. Collision Layer
+### 9.5 Terrain vs. Collision Layer
 
-The `Terrain` tile layer is **not** used for collision. Collision is derived exclusively from the `Collision` object layer. This separation is intentional: it allows visual terrain to be shaped freely without being constrained by collision geometry, and it allows collision zones (like invisible walls or death pits) to exist without visual tiles.
+The `Terrain` and `Terrain_Detail` tile layers are **not** used for collision. Collision is derived exclusively from the `Collision` object layer. This separation is intentional: it allows visual terrain to be shaped freely without being constrained by collision geometry, and it allows collision zones (like invisible walls or death pits) to exist without visual tiles.
 
-### 9.5 Tileset Collision Override
+### 9.6 Tileset Collision Override
 
 If a student wishes to define per-tile collision in Tiled (rather than placing individual collision objects), they must:
 
@@ -374,7 +391,8 @@ A `Message` object is a rectangle trigger in the `Objects` layer. When the playe
   <layer name="Terrain_Detail" .../>
 
   <objectgroup name="Objects">
-    <object id="1" type="PlayerSpawn" name="PlayerSpawn_01" x="48" y="160"/>
+    <!-- PlayerSpawn Y = FEET position; StageLoader converts to top-left -->
+    <object id="1" type="PlayerSpawn" name="PlayerSpawn_01" x="48" y="192"/>
     <object id="2" type="Walker" name="Walker_01" x="256" y="164">
       <properties>
         <property name="patrol_length" type="int" value="128"/>
