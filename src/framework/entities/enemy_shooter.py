@@ -136,9 +136,11 @@ class EnemyShooter(EnemyBase):
         self._fire_anim_timer: float = 0.0
         self._collision_rects: list[pygame.Rect] = []
 
-        # Rect size
+        # Rect size — offset Y so the bottom aligns with spawn Y (feet on floor)
         self.rect.width = 16
         self.rect.height = 24
+        self.position.y -= self.rect.height
+        self.rect.y = int(self.position.y)
 
         # Load sprites
         self._load_zone_sprites(zone, "shoot", 12, 12)
@@ -182,8 +184,13 @@ class EnemyShooter(EnemyBase):
             p for p in self._active_projectiles if p.is_active
         ]
 
-    def set_collision_rects(self, rects: list[pygame.Rect]) -> None:
+    def set_collision_rects(
+        self,
+        rects: list[pygame.Rect],
+        one_way: list[pygame.Rect] | None = None,
+    ) -> None:
         self._collision_rects = rects
+        self._one_way_rects = one_way if one_way is not None else []
 
     # ──────────────────────────────────────────────
     # Behavior implementations

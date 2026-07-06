@@ -175,7 +175,8 @@ class StageLoader:
             if obj_type == "PlayerSpawn":
                 if player_spawn_found:
                     raise FrameworkUsageError("More than one PlayerSpawn object found")
-                stage.spawn_point = pygame.Vector2(obj.x, obj.y)
+                # TMX Y is the player's FEET position (§6.1); convert to top-left
+                stage.spawn_point = pygame.Vector2(obj.x, obj.y - 32)
                 player_spawn_found = True
 
             elif obj_type == "MessageTrigger":

@@ -150,7 +150,7 @@ class MessageBox:
             return
 
         box_height = 28
-        box_rect = pygame.Rect(0, 0,
+        box_rect = pygame.Rect(0, 40,
                                 settings.INTERNAL_WIDTH, box_height)
         overlay = pygame.Surface((box_rect.width, box_rect.height))
         overlay.set_alpha(180)

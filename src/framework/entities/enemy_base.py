@@ -150,15 +150,11 @@ class EnemyBase(BaseEntity):
             path = base / fname
             frames = AssetLoader.load_sprite_sheet(path, fw, fh)
             self._sprite_frames[key] = frames
-        # Also try fly/shoot sprites
-        extra = {"fly": f"enemy_fly_{zone_key}.png", "shoot": f"enemy_shoot_{zone_key}.png"}
-        for key, fname in extra.items():
-            path = base / fname
-            try:
-                frames = AssetLoader.load_sprite_sheet(path, fw, fh)
-                self._sprite_frames[key] = frames
-            except Exception:
-                pass
+        # Subclasses load their own extra sprites (fly, aim, fire, shoot)
+        self._load_extra_sprites(zone, fw, fh)
+
+    def _load_extra_sprites(self, zone: int, fw: int, fh: int) -> None:
+        """Hook for subclasses to load extra sprites beyond walk/hurt/die."""
 
     # Per-state animation FPS (subclasses override as needed)
     _ANIM_FPS: dict[str, float] = {
@@ -320,6 +316,15 @@ class EnemyBase(BaseEntity):
     # ──────────────────────────────────────────────
 
     _INV_FLASH_INTERVAL: float = 4.0 / 60.0
+
+    def set_collision_rects(
+        self,
+        rects: list[pygame.Rect],
+        one_way: list[pygame.Rect] | None = None,
+    ) -> None:
+        """Store collision rects for Y-snapping and movement."""
+        self._collision_rects = rects
+        self._one_way_rects = one_way if one_way is not None else []
 
     def _update_invincibility(self, dt: float) -> None:
         """Tick down invincibility timer and toggle flash."""

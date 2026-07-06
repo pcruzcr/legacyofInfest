@@ -44,6 +44,7 @@ class EnemyWalker(EnemyBase):
         self.alert_speed: float = alert_speed
         self._patrol_origin: pygame.Vector2 = pygame.Vector2(spawn_position)
         self._collision_rects: list[pygame.Rect] = []
+        self._one_way_rects: list[pygame.Rect] = []
 
         # Set initial facing direction
         self.facing_direction = 1 if facing == "right" else -1
@@ -55,9 +56,10 @@ class EnemyWalker(EnemyBase):
         # Load sprites
         self._load_zone_sprites(zone, "walk", 16, 12)
 
-    def set_collision_rects(self, rects: list[pygame.Rect]) -> None:
-        """Provide collision rects for ledge detection."""
+    def set_collision_rects(self, rects: list[pygame.Rect], one_way: list[pygame.Rect] | None = None) -> None:
+        """Provide collision rects for ledge detection and Y-snapping."""
         self._collision_rects = rects
+        self._one_way_rects = one_way or []
 
     # ──────────────────────────────────────────────
     # Behavior implementations
@@ -67,15 +69,17 @@ class EnemyWalker(EnemyBase):
         """Move at patrol speed. Reverse at patrol limit or ledge edge."""
         reversed_this_frame = False
 
+        all_ground = self._collision_rects + self._one_way_rects
+
         # Ledge detection: probe ahead and below before moving
-        if self._collision_rects:
+        if all_ground:
             probe_x = self.position.x + (
                 self.facing_direction * (self.rect.width // 2 + 2)
             )
             probe_y = self.position.y + self.rect.height + 2
             has_floor = any(
                 r.collidepoint(probe_x, probe_y)
-                for r in self._collision_rects
+                for r in all_ground
             )
             if not has_floor:
                 self.facing_direction *= -1
@@ -91,9 +95,10 @@ class EnemyWalker(EnemyBase):
         self.position.x += self.facing_direction * self.patrol_speed * dt
 
     def _post_update(self, dt: float) -> None:
-        if self._collision_rects:
+        all_rects = self._collision_rects + self._one_way_rects
+        if all_rects:
             feet_y = self.position.y + self.rect.height
-            for rect in self._collision_rects:
+            for rect in all_rects:
                 if (rect.top < feet_y < rect.bottom
                         and rect.left < self.rect.centerx < rect.right):
                     self.position.y = rect.top - self.rect.height

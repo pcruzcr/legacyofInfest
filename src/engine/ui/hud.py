@@ -77,9 +77,9 @@ class HUD:
         self._hearts_y: int = 6
         self._heart_spacing: int = 16
         # Timer frame (reuse hud_frame.png 9-slice at timer size 90x16)
-        self._timer_bg_rect = pygame.Rect(260, 1, 90, 16)
-        self._timer_rect = pygame.Rect(290, 2, 56, 14)
-        self._timer_label_rect = pygame.Rect(262, 2, 26, 12)
+        self._timer_bg_rect = pygame.Rect(258, 1, 62, 16)
+        self._timer_rect = pygame.Rect(288, 2, 32, 14)
+        self._timer_label_rect = pygame.Rect(260, 2, 26, 12)
         self._timer_flash_timer: float = 0.0
         self._timer_flash_on: bool = False
         # Load timer font (TTF preferred for readability)
@@ -436,7 +436,7 @@ class HUD:
         total_seconds = int(self._timer)
         minutes = total_seconds // 60
         seconds = total_seconds % 60
-        time_str = f"{minutes}:{seconds:02d}"
+        time_str = f"{minutes:02d}:{seconds:02d}"
         # 2Hz flash: hide text when flashing
         flash = self._is_countdown and total_seconds <= 30
         if flash and not self._timer_flash_on:

@@ -340,6 +340,14 @@ class AirborneState(PlayerStateBase):
         if _handle_grounded_attack_input(player, inp):
             return
 
+        # Buffer jump: if jump pressed while airborne, save it for when we land
+        # Timer (~8 frames) prevents bouncing off platforms when the player
+        # pressed jump far above the ground while still giving coyote time.
+        import src.engine.core.settings as settings
+        if inp.jump_pressed:
+            player._pending_jump = True
+            player._pending_jump_timer = 8.0 / 60.0
+
         # Air control (reduced)
         if inp.move_x != 0:
             player.facing_direction = inp.move_x
@@ -543,9 +551,9 @@ def _build_attack_hitbox(player: Player, frame: int) -> pygame.Rect:
     cy = player.rect.centery
 
     if is_short:
-        offset_x = 12
+        offset_x = 18
         offset_y = -4 if not is_crouching else 8
-        w, h = 24, 20
+        w, h = 36, 20
     elif is_long:
         frame_offsets = {
             4: (12, -10, 36, 20),

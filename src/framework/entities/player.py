@@ -124,6 +124,10 @@ class Player(BaseEntity):
         self._flash_timer: float = 0.0
         self._flash_visible: bool = True
 
+        # --- Jump buffering ---
+        self._pending_jump: bool = False
+        self._pending_jump_timer: float = 0.0
+
         # --- Direction ---
         self.facing_direction: int = 1  # -1 left, 1 right
 
@@ -312,6 +316,11 @@ class Player(BaseEntity):
         # State machine — delegate to current state
         self._state_instance.update(self, dt, input_manager)
 
+        # Update rect dimensions for current state BEFORE collision
+        # so _resolve_collision and _resolve_one_way_collision use
+        # correct width/height for the current stance.
+        self._update_rect_size()
+
         # Advance animation frame (attack states handle their own animation)
         if self._state_instance.state_enum not in (
             PlayerState.SHORT_ATTACK,
@@ -322,18 +331,28 @@ class Player(BaseEntity):
         # Physics (gravity + movement)
         self._apply_physics(dt)
 
-        # Collision resolution (axis-separated) — solid first
+        # Collision resolution (axis-separated) — X then Y
         self._resolve_collision(dt, collision_rects)
 
         # One-way platforms (only resolve Y when falling)
         self._resolve_one_way_collision(dt, one_way_rects)
 
-        # Update rect position
+        # Decay pending jump timer so the buffer only lasts ~5 frames
+        if self._pending_jump:
+            self._pending_jump_timer -= dt
+            if self._pending_jump_timer <= 0:
+                self._pending_jump = False
+
+        # Buffered jump: fires only if the buffer hasn't expired
+        if self._pending_jump and self.is_grounded:
+            self._pending_jump = False
+            self._pending_jump_timer = 0.0
+            from src.framework.entities.player_states import _do_jump
+            _do_jump(self)
+
+        # Sync rect position to final resolved position
         self.rect.x = int(self.position.x)
         self.rect.y = int(self.position.y)
-
-        # Update hurtbox size based on state
-        self._update_rect_size()
 
     def draw(
         self,
@@ -434,18 +453,13 @@ class Player(BaseEntity):
     # ──────────────────────────────────────────────
 
     def _apply_physics(self, dt: float) -> None:
-        """Apply gravity and movement velocity."""
-        # Gravity (only if not grounded and not in knockback)
+        """Apply gravity. Movement integration happens per-axis in _resolve_collision."""
         if not self.is_grounded and self._knockback_timer <= 0:
             self.velocity.y += settings.GRAVITY * dt
             self.velocity.y = min(
                 self.velocity.y,
                 settings.PLAYER_MAX_FALL_SPEED,
             )
-
-        # Apply velocity to position
-        self.position.x += self.velocity.x * dt
-        self.position.y += self.velocity.y * dt
 
         # Coyote time
         if self.is_grounded:
@@ -459,80 +473,75 @@ class Player(BaseEntity):
 
     def _resolve_collision(self, dt: float, collision_rects: list[pygame.Rect]) -> None:
         """
-        Axis-separated AABB collision resolution.
-        1. Resolve Y axis (vertical landing/push-out first)
-        2. Resolve X axis (horizontal push-out second)
-        3. Update grounded state
-
-        Y-before-X order prevents floor tiles from being treated as
-        walls when the player rect overlaps them vertically.
+        True axis-separated AABB resolution:
+        1. Integrate X, resolve X against overlapping rects.
+        2. Integrate Y, resolve Y against overlapping rects, using the
+           direction of motion (came-from-above lands, came-from-below bonks).
+        No heuristics needed: each axis only sees penetration caused by
+        its own movement.
         """
-        if not collision_rects:
-            return
-
-        # Build player rect at new position
-        player_rect = pygame.Rect(
-            int(self.position.x),
-            int(self.position.y),
-            self.rect.width,
-            self.rect.height,
-        )
-
-        # --- Y axis ---
-        # Use an inflated rect so touching edges (bottom == floor top)
-        # are detected as collisions.
-        collision_check_rect = player_rect.inflate(0, 2)
-        was_grounded = self.is_grounded
-        self.is_grounded = False
-        collided_y = False
-        for tile in collision_rects:
-            if collision_check_rect.colliderect(tile):
-                collided_y = True
-                if self.velocity.y >= 0:
-                    # Falling or stationary: land on top
-                    if not was_grounded and self.velocity.y > 0:
-                        emit(Events.SFX_PLAYER_LAND)
-                    player_rect.bottom = tile.top
-                    self.velocity.y = 0.0
-                    self.is_grounded = True
-                    self._air_dash_count = 0
-                elif self.velocity.y < 0:
-                    # Moving up: push down
-                    player_rect.top = tile.bottom
-                    self.velocity.y = 0.0
-
-        if collided_y:
-            self.position.y = float(player_rect.y)
-            player_rect.y = int(self.position.y)
+        w, h = self.rect.width, self.rect.height
 
         # --- X axis ---
-        collided_x = False
-        for tile in collision_rects:
-            if player_rect.colliderect(tile):
-                # Skip floor tiles: after Y resolution, the player's feet
-                # sit on the floor, so these are clearly floors, not walls.
-                if tile.top >= player_rect.centery:
-                    continue
-                collided_x = True
-                # Push in the direction of smallest overlap
-                overlap_left = player_rect.right - tile.left
-                overlap_right = tile.right - player_rect.left
-                if overlap_left < overlap_right:
-                    player_rect.right = tile.left
-                else:
-                    player_rect.left = tile.right
-                self.velocity.x = 0.0
+        self.position.x += self.velocity.x * dt
+        if collision_rects:
+            px = pygame.Rect(int(self.position.x), int(self.position.y), w, h)
+            for tile in collision_rects:
+                if px.colliderect(tile):
+                    # Skip grazing contacts (<=2px vertical overlap): these are
+                    # floor/ceiling tiles the player is embedded in by int
+                    # truncation, not walls.
+                    v_overlap = min(px.bottom, tile.bottom) - max(px.top, tile.top)
+                    if v_overlap <= 2:
+                        continue
+                    if self.velocity.x > 0:
+                        px.right = tile.left
+                    elif self.velocity.x < 0:
+                        px.left = tile.right
+                    else:
+                        if (px.right - tile.left) < (tile.right - px.left):
+                            px.right = tile.left
+                        else:
+                            px.left = tile.right
+                    self.velocity.x = 0.0
+                    self.position.x = float(px.x)
 
-        if collided_x:
-            self.position.x = float(player_rect.x)
+        # --- Y axis ---
+        prev_bottom = self.position.y + h
+        prev_top = self.position.y
+        self.position.y += self.velocity.y * dt
+        was_grounded = self.is_grounded
+        self.is_grounded = False
+        if collision_rects:
+            py = pygame.Rect(int(self.position.x), int(self.position.y), w, h)
+            check = py.inflate(0, 2)
+            check.y = py.y - 1
+            for tile in collision_rects:
+                if check.colliderect(tile):
+                    if self.velocity.y >= 0 and prev_bottom <= tile.top + 1:
+                        # Came from above: land
+                        if not was_grounded and self.velocity.y > 0:
+                            emit(Events.SFX_PLAYER_LAND)
+                        py.bottom = tile.top
+                        self.velocity.y = 0.0
+                        self.is_grounded = True
+                        self._air_dash_count = 0
+                    elif self.velocity.y < 0 and prev_top >= tile.bottom - 1:
+                        # Came from below: bonk
+                        py.top = tile.bottom
+                        self.velocity.y = 0.0
+                    self.position.y = float(py.y)
+                    check.y = py.y - 1
+                    check.height = py.height + 2
 
     def _resolve_one_way_collision(self, dt: float, one_way_rects: list[pygame.Rect]) -> None:
         """Resolve Y-axis collision for one-way platforms (passable from below).
-        Only resolves when the player is falling (velocity.y >= 0)."""
+        Only resolves when falling (velocity.y >= 0) and the player was above
+        the platform before this frame's Y integration (prev_bottom <= plat.top)."""
         if not one_way_rects:
             return
         if self.velocity.y < 0:
-            return  # Jumping up through — no collision
+            return
 
         player_rect = pygame.Rect(
             int(self.position.x),
