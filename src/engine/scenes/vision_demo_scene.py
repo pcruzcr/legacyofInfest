@@ -348,7 +348,7 @@ class VisionDemoScene(BaseScene):
             lines = [f"Regions found: {len(regions)}"]
             for i, ri in enumerate(regions[:3]):
                 lines.append(f"#{i+1}  A={ri.area}  C=({int(ri.centroid[0])},{int(ri.centroid[1])})  "
-                             f"Rect={ri.width}x{ri.height}")
+                             f"Rect={ri.bounding_rect.width}x{ri.bounding_rect.height}")
             for li, line in enumerate(lines):
                 rt = self._font_small.render(line, True, COLOR_GOLD)
                 surface.blit(rt, (RIGHT_PANEL_X + 4, TOP_BAR_H + 4 + li * 10))

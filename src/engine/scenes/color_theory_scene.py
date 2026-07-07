@@ -469,7 +469,7 @@ class ColorTheoryScene(BaseScene):
         # Blend
         blended = pygame.Surface((160, 40), pygame.SRCALPHA)
         blended.blit(checker, (0, 0))
-        top = pygame.Surface((160, 40), pygame.SRCALPHA)
+        top = pygame.Surface((160, 40))
         top.fill((lr, lg, lb))
         top.set_alpha(int(self._alpha * 255))
         blended.blit(top, (0, 0))

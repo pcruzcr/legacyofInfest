@@ -40,6 +40,7 @@ from src.engine.scenes.demo_common import (
     FrameThrottle,
 )
 from src.engine.utils.asset_loader import AssetLoader
+from src.framework.processing.vision_tools import VisionTools
 from src.framework.processing.pattern_recognition_tools import (
     PatternRecognitionTools,
     TrainedModel,
@@ -305,7 +306,7 @@ class PatternDemoScene(BaseScene):
             region = src.subsurface(rect)
             method = FEATURE_METHODS[self._method_idx]
             scaled = pygame.transform.scale(region, (32, 32))
-            features = PatternRecognitionTools.extract_features(scaled, method=method)
+            features = VisionTools.extract_features(scaled, method=method)
 
             self._cached_feature = features
 
@@ -566,6 +567,8 @@ class PatternDemoScene(BaseScene):
                 step_surf = self._font_small.render(step_data, True, COLOR_HIGHLIGHT)
             elif isinstance(step_data, tuple):
                 step_surf = step_data[0]
+            elif isinstance(step_data, pygame.Surface):
+                step_surf = step_data
             else:
                 step_surf = self._font_small.render("(empty)", True, COLOR_TEXT)
 

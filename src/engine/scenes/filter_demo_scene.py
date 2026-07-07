@@ -510,9 +510,9 @@ class FilterDemoScene(BaseScene):
         elif mode == 4:
             kname = STANDARD_KERNEL_NAMES[self._kernel_idx]
             kernel = FilterTools.get_standard_kernel(kname)
-            k_str = f"[[{kernel[0][0]:2d} {kernel[0][1]:2d} {kernel[0][2]:2d}]"
-            k_str += f"[{kernel[1][0]:2d} {kernel[1][1]:2d} {kernel[1][2]:2d}]"
-            k_str += f"[{kernel[2][0]:2d} {kernel[2][1]:2d} {kernel[2][2]:2d}]]"
+            k_str = f"[[{kernel[0][0]:6.2f} {kernel[0][1]:6.2f} {kernel[0][2]:6.2f}]"
+            k_str += f"[{kernel[1][0]:6.2f} {kernel[1][1]:6.2f} {kernel[1][2]:6.2f}]"
+            k_str += f"[{kernel[2][0]:6.2f} {kernel[2][1]:6.2f} {kernel[2][2]:6.2f}]]"
             return f"  Kernel: {kname}  |  Size: 3x3  |  {k_str}  |  [TAB: mode]"
         elif mode == 5:
             return f"  sigma = {self._sigma:.1f}  |  Range: [0.1, 5.0]  |  [TAB: mode]"
