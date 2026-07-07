@@ -147,9 +147,6 @@ class DebugOverlay:
                 "  test_pattern_recognition_tools.py",
             ]
 
-        for item in tree_items:
-            tree_items.append(item)
-
         lines.extend(tree_items)
 
         for line in lines:

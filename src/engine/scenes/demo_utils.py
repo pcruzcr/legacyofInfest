@@ -43,7 +43,10 @@ class SourceSurfaceManager:
     def current_name(self) -> str:
         if not self.source_names:
             return "none"
-        return self.source_names[self._current_index]
+        idx = self._current_index
+        if idx >= len(self.source_names):
+            return "unknown"
+        return self.source_names[idx]
 
     def freeze(self) -> None:
         src = self.current_source
@@ -133,6 +136,8 @@ class FrameThrottle:
         return self._counter
 
     def should_update(self, interval: int) -> bool:
+        if interval <= 0:
+            return True
         return self._counter > 0 and self._counter % interval == 0
 
     def reset(self) -> None:
@@ -177,7 +182,9 @@ class ErrorDisplay:
 
 
 # ── Save helper ───────────────────────────────────────────────────
-def save_png(scene_prefix: str, mode_name: str, surface: pygame.Surface) -> str:
+def save_png(scene_prefix: str, mode_name: str, surface: pygame.Surface | None) -> str:
+    if surface is None:
+        return ""
     out_dir = Path("tests") / "output" / "demo"
     out_dir.mkdir(parents=True, exist_ok=True)
     ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
