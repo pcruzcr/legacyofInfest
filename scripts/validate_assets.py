@@ -18,10 +18,108 @@ import pygame
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 
 REQUIRED_FONTS = ["fonts/game.ttf"]
-REQUIRED_IMAGES = []
+REQUIRED_IMAGES = [
+    # Title screen
+    "title/logo.png",
+    "title/bck1.png",
+    # Splash screen
+    "splash/logo.png",
+    "splash/bck1.png",
+    # Story backgrounds
+    "story/h01.png",
+    "story/h02.png",
+    "story/h03.png",
+    # Stage0 tileset / backgrounds
+    "tilesets/tileset_stage0.png",
+    "backgrounds/stage0/bg_stage0_far.png",
+    "backgrounds/stage0/bg_stage0_mid.png",
+    "backgrounds/stage0/bg_stage0_near.png",
+    # Zone backgrounds
+    "backgrounds/zone1/bg_zone1_far.png",
+    "backgrounds/zone2/bg_zone2_far.png",
+    "backgrounds/zone3/bg_zone3_far.png",
+    # Player sprites
+    "sprites/player/player_idle.png",
+    "sprites/player/player_walk.png",
+    "sprites/player/player_jump.png",
+    "sprites/player/player_fall.png",
+    "sprites/player/player_hurt.png",
+    "sprites/player/player_die.png",
+    "sprites/player/player_crouch.png",
+    "sprites/player/player_short_attack.png",
+    "sprites/player/player_long_attack.png",
+    # UI
+    "ui/hud_frame.png",
+    "ui/heart_full.png",
+    "ui/heart_empty.png",
+    "ui/heart_half.png",
+    "ui/heart_quarter.png",
+    "ui/heart_three_quarter.png",
+    "ui/heart_sparkle.png",
+    "ui/menu_arrow.png",
+    "ui/message_arrow.png",
+    "ui/portrait_normal.png",
+    "ui/portrait_hurt.png",
+    "ui/portrait_critical.png",
+    "ui/portrait_dead.png",
+    "ui/banner_top.png",
+    "ui/banner_bottom.png",
+]
 REQUIRED_MODELS = ["models/professor_sample.pkl"]
-REQUIRED_SOUNDS = []
-REQUIRED_MAPS = []
+REQUIRED_SOUNDS = [
+    # Music
+    "music/bgm_title.wav",
+    "music/bgm_story.wav",
+    "music/bgm_splash.wav",
+    "music/bgm_stage0.wav",
+    "music/bgm_zone1_traverse.wav",
+    "music/bgm_zone1_boss.wav",
+    "music/bgm_zone2_traverse.wav",
+    "music/bgm_zone2_boss.wav",
+    "music/bgm_zone3_traverse.wav",
+    "music/bgm_zone3_boss.wav",
+    "music/bgm_paburu.wav",
+    "music/bgm_final_approach.wav",
+    # UI SFX
+    "sfx/ui/sfx_ui_menu_move.wav",
+    "sfx/ui/sfx_ui_menu_confirm.wav",
+    "sfx/ui/sfx_ui_menu_cancel.wav",
+    "sfx/ui/sfx_ui_stage_complete.wav",
+    "sfx/ui/sfx_ui_stage_banner.wav",
+    "sfx/ui/sfx_ui_game_over.wav",
+    "sfx/ui/sfx_ui_checkpoint.wav",
+    "sfx/ui/sfx_ui_heart_restore.wav",
+    # Player SFX
+    "sfx/player/sfx_player_jump.wav",
+    "sfx/player/sfx_player_land.wav",
+    "sfx/player/sfx_player_hurt.wav",
+    "sfx/player/sfx_player_die.wav",
+    "sfx/player/sfx_player_crouch.wav",
+    "sfx/player/sfx_player_short_attack.wav",
+    "sfx/player/sfx_player_long_attack.wav",
+    "sfx/player/sfx_player_hit_connect.wav",
+    # Enemies SFX
+    "sfx/enemies/sfx_enemies_hit.wav",
+    "sfx/enemies/sfx_enemies_die_small.wav",
+    "sfx/enemies/sfx_enemies_projectile_fire.wav",
+    "sfx/enemies/sfx_enemies_projectile_hit_wall.wav",
+    # Boss SFX
+    "sfx/bosses/sfx_bosses_venado_charge.wav",
+    "sfx/bosses/sfx_bosses_venado_stomp.wav",
+    "sfx/bosses/sfx_bosses_venado_vine.wav",
+    "sfx/bosses/sfx_bosses_gavilan_dive.wav",
+    "sfx/bosses/sfx_bosses_gavilan_mask_beam.wav",
+    "sfx/bosses/sfx_bosses_paburu_eye_beam.wav",
+    "sfx/bosses/sfx_bosses_paburu_wave.wav",
+    "sfx/bosses/sfx_bosses_phase_change.wav",
+    "sfx/bosses/sfx_bosses_relic_appear.wav",
+    "sfx/bosses/sfx_bosses_rey_spit.wav",
+    "sfx/bosses/sfx_bosses_rey_split.wav",
+]
+REQUIRED_MAPS = [
+    "maps/stage0/stage0.tmx",
+    "maps/boss_venado/boss_venado.tmx",
+]
 
 WARNINGS: list[str] = []
 ERRORS: list[str] = []

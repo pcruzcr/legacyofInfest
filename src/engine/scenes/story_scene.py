@@ -68,8 +68,11 @@ class StoryScene(BaseScene):
         self._chapter: int = chapter
         self._assets = settings.ASSETS_DIR / "story"
 
+        bg_filename = STORY_BG.get(chapter)
+        if bg_filename is None:
+            bg_filename = "h01.png"
         self._background = AssetLoader.load_image(
-            self._assets / STORY_BG[chapter],
+            self._assets / bg_filename,
             size=(settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
         )
 
