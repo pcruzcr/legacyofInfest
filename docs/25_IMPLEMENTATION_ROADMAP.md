@@ -33,9 +33,10 @@ PHASE 10  Framework Processing — FilterTools (Unit VII)
 PHASE 11  Framework Processing — VisionTools (Unit VIII)
 PHASE 12  Framework Processing — PatternRecognitionTools (Unit IX)
 PHASE 13  Academic Demo Scenes (Filter/Vision/Pattern)
-PHASE 14  Framework Entities — BossBase + one reference boss (El Venado Sagrado)
-PHASE 15  student_templates/ scaffolding
-PHASE 16  Full regression pass + tooling (validate_assets.py, build_dataset.py)
+PHASE 14  Interactive Theory Labs (Vector/Collision/Color/Curve) ← NEW
+PHASE 15  Framework Entities — BossBase + one reference boss (El Venado Sagrado)
+PHASE 16  student_templates/ scaffolding
+PHASE 17  Full regression pass + tooling (validate_assets.py, build_dataset.py)
 ```
 
 Each phase is gated: its Definition of Done (DoD) must be met before the next phase begins. Phases 10–12 may be parallelized across separate AI sessions **only if** Phase 9 is already complete, since all three depend on Stage 0 existing as an integration smoke-test target.
@@ -307,17 +308,145 @@ Each phase is gated: its Definition of Done (DoD) must be met before the next ph
 **Prerequisite:** Phases 10, 11, and 12 must all be complete (Demo Scenes exercise all three processing modules).
 
 **Definition of Done:**
-- [ ] `DemoMenuScene` navigates to all three demos and back to `TitleScene`.
-- [ ] `FilterDemoScene`: all 9 modes from §3.3 functional, including live histogram bars and kernel matrix text display.
-- [ ] `VisionDemoScene`: all 10 modes from §4.3 functional, including HOG cell visualization and watershed pre-computation (not per-frame).
-- [ ] `PatternDemoScene`: all 5 modes from §5.3 functional, including the `L`-key model loader text input and probability bars.
-- [ ] Frame throttling pattern from §8.1 implemented for all expensive operations (no mode drops below 30 FPS on the reference development machine).
-- [ ] `S` key save-to-PNG works in all three demo scenes, writing to `tests/output/demo/`.
-- [ ] Manual smoke test: each demo scene run for 60 seconds with all modes cycled — no crashes.
+- [x] `DemoMenuScene` navigates to all three demos and back to `TitleScene`.
+- [x] `FilterDemoScene`: all 9 modes from §3.3 functional, including live histogram bars and kernel matrix text display.
+- [x] `VisionDemoScene`: all 10 modes from §4.3 functional, including HOG cell visualization and watershed pre-computation (not per-frame).
+- [x] `PatternDemoScene`: all 5 modes from §5.3 functional, including the `L`-key model loader text input and probability bars.
+- [x] Frame throttling pattern from §8.1 implemented for all expensive operations (no mode drops below 30 FPS on the reference development machine).
+- [x] `S` key save-to-PNG works in all three demo scenes, writing to `tests/output/demo/`.
+- [x] Manual smoke test: each demo scene run for 60 seconds with all modes cycled — no crashes.
 
 ---
 
-## 17. Phase 14 — BossBase and Reference Boss
+## 17. Phase 14 — Interactive Theory Lab Scenes (Units II–VIII)
+
+**Builds:** `src/engine/scenes/vector_lab_scene.py`, `transform_lab_scene.py`, `collision_lab_scene.py`, `color_theory_scene.py`, `curve_editor_scene.py`, `interpolation_lab_scene.py`, `noise_lab_scene.py`
+
+**Reference documents:** `15_ACADEMIC_DEMO_SCENES.md` (full document — v1.2)
+
+**Prerequisite:** Phases 8 (CurveTools, ColorTools) and 5 (Player physics/collision). Demos use engine infrastructure from Phases 1–3.
+
+### Phase 14.1 — VectorLabScene (Unit II — Vectors)
+Interactive laboratory for vector arithmetic, normalization, dot product, pursuit movement. Modes: FREE MOVE, CHASE (normalized), ORBIT (dot product), DISTANCE CHECK. Students see normalized vectors, dot products, and angles in real time.
+
+**Definition of Done:**
+- [x] Two draggable/controllable points (Player + Enemy) rendered as circles.
+- [x] Vector AB arrow drawn from Enemy to Player with arrow head.
+- [x] Mode 0 (FREE MOVE): both points move via keyboard independent of vector math.
+- [x] Mode 1 (CHASE): Enemy moves toward Player using `vec2_normalize()`.
+- [x] Mode 2 (ORBIT): manual control with dot product readout.
+- [x] Math info panel shows: vector components, length, normalized form, dot product, angle.
+- [x] `N` key toggles normalized vector display.
+- [x] `TAB` cycles modes, `R` resets positions, `ESC` returns to menu.
+- [x] No crash on draw with any mode combination.
+
+### Phase 14.2 — CollisionLabScene (Unit VI — AABB Collision)
+Interactive laboratory demonstrating axis-separated collision resolution. Three modes: NO COLLISION, Y-FIRST (the wall-climb bug from GAP-005), X-FIRST (correct). Teaches why `prev_bottom <= tile.top + 1` matters.
+
+**Definition of Done:**
+- [x] Three resolution modes cycled via `TAB`.
+- [x] Simple test level with platforms, a wall gap, and one-way platform.
+- [x] Y-first mode shows the wall-climb bug when walking into a wall.
+- [x] X-first (axis-separated) mode resolves correctly.
+- [x] `B` key auto-demonstrates the wall-climb bug in Y-first mode.
+- [x] Collision info overlay shows prev_bottom, velocity, grounded state.
+- [x] One-way platform collision works in X-first mode.
+- [x] Gravity, jumping, and grounded detection implemented.
+- [x] `R` resets player position, `ESC` returns to menu.
+
+### Phase 14.3 — ColorTheoryScene (Unit V — Color Spaces)
+Interactive laboratory for RGB, HSV, HSL, CMYK color spaces and alpha blending. Shows step-by-step conversion algorithms, not just final values. Includes a "Achieve the target color" challenge exercise.
+
+**Definition of Done:**
+- [x] Mode 0 (RGB Explorer): R/G/B sliders with live color swatch and hex readout.
+- [x] Mode 1 (HSV Explorer): H/S/V sliders. `SHIFT` toggles step-by-step conversion algorithm display (RGB→HSV).
+- [x] Mode 2 (HSL Explorer): H/S/L sliders. `SHIFT` toggles step-by-step conversion display (RGB→HSL).
+- [x] Mode 3 (CMYK Explorer): C/M/Y/K sliders with live RGB preview.
+- [x] Mode 4 (Alpha Blend): Two-layer blending with alpha slider. Formula `out = src*a + dst*(1-a)` displayed with live values.
+- [x] Mode 5 (Challenge): Random target color displayed. Student adjusts RGB sliders to match. `SPACE` submits; diff score shown.
+- [x] All space readouts (HSV, HSL, CMYK) shown simultaneously in each mode.
+- [x] `TAB` cycles modes, `R` resets / new challenge, `ESC` returns to menu.
+
+### Phase 14.4 — CurveEditorScene (Unit III — Bézier Curves & Splines)
+Interactive curve editor with draggable control points. Supports quadratic/cubic/high-degree Bézier, Catmull-Rom spline, B-Spline. Step-by-step de Casteljau animation mode.
+
+**Definition of Done:**
+- [x] Six curve modes: BEZIER_QUAD, BEZIER_CUBIC, BEZIER_HIGH, CATMULL_ROM, BSPLINE, DE_CASTELJAU.
+- [x] Control points draggable with mouse click+drag.
+- [x] Curve rendered using `CurveTools.bezier()`, `catmull_rom()`, `b_spline()`.
+- [x] Control polygon lines shown behind curve.
+- [x] `D` key toggles de Casteljau visualization (modes 0–2): all interpolation levels + final point.
+- [x] `+/-` add/remove control points (modes 2, 4).
+- [x] `1-5` keys jump directly to modes.
+- [x] Grid background for spatial reference.
+- [x] Info panel shows degree, point count, mode name.
+- [x] `TAB` cycles modes, `R` resets points, `ESC` returns to menu.
+
+### Phase 14.5 — TransformLabScene (Unit II/III — 2D Transformations)
+Interactive laboratory for 2D affine transformations: translation, rotation, scaling, shearing, and composite (translate+rotate). Live matrix display toggled with `N`.
+
+**Definition of Done:**
+- [x] Five transform modes: TRANSLATE, ROTATE, SCALE, SHEAR, COMPOSITE (translate then rotate).
+- [x] Keyboard controls per mode (arrows translate, LEFT/RIGHT rotate/scale/shear).
+- [x] Original shape drawn as ghost outline; transformed shape filled.
+- [x] Matrix display shows the current 3×3 transformation matrix with live values.
+- [x] `N` toggles matrix panel, `R` resets, `TAB` cycles modes.
+- [x] Composite mode demonstrates non-commutativity (translate then rotate vs rotate then translate).
+
+### Phase 14.6 — InterpolationLabScene (Unit III/IV — Interpolation & Easing)
+Interactive laboratory for linear interpolation, easing functions, and keyframe animation curves.
+
+**Definition of Done:**
+- [x] Three modes: LERP (LINEAR), EASING CURVES, KEYFRAME ANIM.
+- [x] LERP mode: point A, point B, lerped point with formula and live x/t readout.
+- [x] EASING CURVES mode: graph of current easing function (10 functions: Linear, In/Out/InOut Quad, In/Out Cubic, Out Bounce, Out Elastic, In/Out Sine).
+- [x] KEYFRAME ANIM mode: animated point traverses 3 keyframes with eased interpolation.
+- [x] `UP/DOWN` cycle easing function, `LEFT/RIGHT` adjust t, `SPACE` toggles auto-animation.
+- [x] `R` resets, `TAB` cycles display modes.
+
+### Phase 14.7 — NoiseLabScene (Unit V/VIII — Noise & Procedural Generation)
+Interactive laboratory for value noise, Perlin noise, and fractal noise with parameter controls.
+
+**Definition of Done:**
+- [x] Three noise types: VALUE NOISE, PERLIN NOISE, FRACTAL NOISE.
+- [x] Five adjustable parameters: Octaves (1-8), Persistence (0-1), Lacunarity (1-8), Scale (0.005-0.5), Seed (0-9999).
+- [x] UP/DOWN cycle selected parameter, LEFT/RIGHT adjust value.
+- [x] SPACE randomizes seed for new noise pattern.
+- [x] R resets all parameters to defaults.
+- [x] Noise map rendered live as grayscale texture.
+
+### Phase 14.8 — Demo Menu Integration
+Extend the existing `DemoMenuScene` to include all 10 lab/demo scenes.
+
+**Definition of Done:**
+- [x] `DemoMenuScene._options` lists exactly 10 entries: Vector (II), Transform (II/III), Curve (III), Interpolate (III/IV), Color (V), Noise (V/VIII), Collision (VI), Filter (VII), Vision (VIII), Pattern (IX).
+- [x] UP/DOWN navigation wraps correctly through 10 options.
+- [x] ENTER/CONFIRM navigates to selected scene.
+- [x] ESC returns to TitleScene.
+- [x] All 10 scenes pass smoke test (import → instantiate → draw → no crash).
+
+### Phase 14.9 — Engine/Infrastructure Improvements
+
+**Builds:** `src/engine/scenes/scene_registry.py`, `param_panel.py`, `demo_layout.py`, `demo_utils.py`, `debug_overlay.py`, `scripts/validate_assets.py`, `scripts/generate_exam.py`; `src/engine/scene/base_scene.py` (params field)
+
+**Definition of Done:**
+- [x] `SceneRegistry` (DI Container) replaces the `_try_scene()` elif chain. `register_demo_scenes()` called once in `App.__init__`.
+- [x] `ParamPanel` widget with `add_int()`/`add_float()`/`handle_input()`/`draw()` for reuse across lab scenes.
+- [x] `demo_common.py` split into `demo_layout.py` (layout/draw helpers) + `demo_utils.py` (sources, throttle, save). Legacy re-exports preserved.
+- [x] `BaseScene.params: dict[str, Any]` for cross-scene data passing.
+- [x] `DebugOverlay` (F3) with FPS, event queue snapshot, and module tree browser (F4/F5/F6).
+- [x] `scripts/validate_assets.py` validates fonts, models, maps; exits 0 on success.
+- [x] `scripts/generate_exam.py` generates practice exams from 16-question bank (Units II-IX) with `--unit` and `--num-questions` flags.
+
+**Overall Phase 14 DoD:**
+- [x] All 7 theory lab scenes implement all documented modes.
+- [x] All 10 scenes pass import/instantiate/draw tests in `tests/test_demo_scenes.py`.
+- [x] Existing 364 tests all pass.
+- [x] Manual smoke test: each scene cycled through all modes for 30 seconds — no crashes.
+
+---
+
+## 18. Phase 15 — BossBase and Reference Boss
 
 **Builds:** `src/framework/entities/boss_base.py`, `src/stages/boss_venado/boss_venado.py` (+ TMX arena)
 
@@ -337,7 +466,7 @@ Each phase is gated: its Definition of Done (DoD) must be met before the next ph
 
 ---
 
-## 18. Phase 15 — student_templates/ Scaffolding
+## 19. Phase 16 — student_templates/ Scaffolding
 
 **Builds:** `student_templates/stage_template/`, `student_templates/boss_template/`
 
@@ -352,12 +481,13 @@ Each phase is gated: its Definition of Done (DoD) must be met before the next ph
 
 ---
 
-## 19. Phase 16 — Regression Pass and Tooling
+## 20. Phase 17 — Regression Pass and Tooling
 
-**Builds:** `tools/validate_assets.py`; final cleanup of all "early development fallback" code paths flagged in earlier phases
+**Builds:** `scripts/validate_assets.py`; final cleanup of all "early development fallback" code paths flagged in earlier phases
 
 **Definition of Done:**
-- [ ] `tools/validate_assets.py` implemented per `10_LIBRARIES_AND_DEPENDENCIES.md` §8.5 (Pillow-based palette validation).
+- [ ] `scripts/validate_assets.py` implemented per `10_LIBRARIES_AND_DEPENDENCIES.md` §8.5 (Pillow-based palette validation).
+  - **Status update:** initial version created at `scripts/validate_assets.py` (exits 0 on success; validates font loading and model loading).
 - [ ] All "graceful fallback" code paths flagged during Phase 2 (missing audio files) are reviewed: either real assets now exist (preferred) or the fallback is intentionally retained and documented as such in code comments.
 - [ ] Full test suite (`tests/`) passes with zero failures and zero skips that aren't explicitly justified in `24_TEST_PLAN.md`.
 - [ ] Stage 0 full playthrough repeated one final time end-to-end with all final (non-placeholder) assets.
@@ -393,13 +523,16 @@ Phase 9 (STAGE 0 — FIRST FULL INTEGRATION) ◄── requires Phases 1-8 compl
     ├──► Phase 11 (VisionTools)
     └──► Phase 12 (PatternRecognitionTools)
               ↓ (all three required)
-         Phase 13 (Demo Scenes)
-    ↓
-Phase 14 (BossBase + El Venado Sagrado) ◄── requires FilterTools (Phase 10) for Sobel aura
-    ↓
-Phase 15 (student_templates/)
-    ↓
-Phase 16 (Regression + Tooling)
+          Phase 13 (Academic Demo Scenes VII–IX)
+     ↓
+Phase 14 (Interactive Theory Labs II–VI)
+     ↓   ◄── requires CurveTools/ColorTools (Phase 8) + entity collision (Phase 5)
+     ↓
+Phase 15 (BossBase + El Venado Sagrado) ◄── requires FilterTools (Phase 10) for Sobel aura
+     ↓
+Phase 16 (student_templates/)
+     ↓
+Phase 17 (Regression + Tooling)
 ```
 
 ---
@@ -431,7 +564,8 @@ Because this roadmap is designed to be executed across multiple AI coding sessio
 | 10 | `11_FILTER_TOOLS_SPEC.md` | `22_API_CONTRACTS.md` §13 |
 | 11 | `12_VISION_TOOLS_SPEC.md` | `22_API_CONTRACTS.md` §14 |
 | 12 | `13_PATTERN_RECOGNITION_SPEC.md` | `22_API_CONTRACTS.md` §15 |
-| 13 | `15_ACADEMIC_DEMO_SCENES.md` | `22_API_CONTRACTS.md` §16 |
-| 14 | `17_BOSS_SPEC.md` §2-3 | `22_API_CONTRACTS.md` §17 |
-| 15 | `26_STUDENT_TEMPLATE_SPEC.md` | n/a |
-| 16 | All documents | n/a — regression phase |
+| 13 | `15_ACADEMIC_DEMO_SCENES.md` (original 3 demos VII–IX) | `22_API_CONTRACTS.md` §16 |
+| 14 | `15_ACADEMIC_DEMO_SCENES.md` v1.1 (theory labs II–VI) | n/a — teaching extension |
+| 15 | `17_BOSS_SPEC.md` §2-3 | `22_API_CONTRACTS.md` §17 |
+| 16 | `26_STUDENT_TEMPLATE_SPEC.md` | n/a |
+| 17 | All documents | n/a — regression phase |

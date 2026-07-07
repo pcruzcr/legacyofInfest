@@ -1,0 +1,14 @@
+============================================================
+  PRACTICE EXAM — Legacy of InFest
+  Questions: 5
+============================================================
+
+1. [VI] (10 pts) Describe the axis-separated (X-first) collision resolution algorithm.
+
+2. [VII] (5 pts) What is histogram equalization and when would you use it?
+
+3. [VIII] (5 pts) What is the watershed algorithm used for in image segmentation?
+
+4. [II] (5 pts) Explain the difference between a vector and a scalar.
+
+5. [IX] (5 pts) What is a confusion matrix and how is accuracy derived from it?

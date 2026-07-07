@@ -52,3 +52,19 @@ class CustomStageScene(StageScene):
     def draw(self, surface: pygame.Surface) -> None:
         """Render all visual elements for this stage."""
         super().draw(surface)
+
+    # ── Exercise: EventBus queue_snapshot ─────────────────────────────────
+    #
+    # Goal: Use EventBus.queue_snapshot to log pending events each frame.
+    #
+    # Starter code — uncomment and implement:
+    #
+    # def _debug_event_queue(self) -> None:
+    #     from src.engine.core.event_bus import _get_bus
+    #     bus = _get_bus()
+    #     snapshot = bus.queue_snapshot
+    #     for event_name, data in snapshot:
+    #         print(f"[EventBus] {event_name} -> {data}")
+    #
+    # Challenge: Render the snapshot as on-screen text instead of print().
+    # Hint: call self._debug_event_queue() from update() every N frames.

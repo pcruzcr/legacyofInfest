@@ -69,6 +69,8 @@ class VisionDemoScene(BaseScene):
         self._cached_comp_result: object | None = None  # ComponentResult
         self._cached_watershed: pygame.Surface | None = None
         self._otsu_value: int = 128
+        self._otsu_curve: list[float] = []
+        self._otsu_histogram: list[int] = []
         self._param_changed: bool = True
 
         # Save notification
@@ -190,6 +192,31 @@ class VisionDemoScene(BaseScene):
                 self._feat_method_idx = (self._feat_method_idx - 1) % len(FEATURE_METHODS)
                 self._param_changed = True
 
+    def _compute_otsu_curve(self, gray_surface: pygame.Surface) -> tuple[list[float], list[int]]:
+        arr = pygame.surfarray.pixels3d(gray_surface)
+        gray = np.mean(arr, axis=2).astype(np.uint8).flatten()
+        del arr
+        total = len(gray)
+        hist = np.bincount(gray, minlength=256).tolist()
+        total_sum = sum(t * hist[t] for t in range(256))
+        curve = []
+        cum_sum = 0.0
+        w0 = 0
+        for t in range(256):
+            w0 += hist[t]
+            cum_sum += t * hist[t]
+            if w0 == 0 or w0 == total:
+                curve.append(0.0)
+                continue
+            w1 = total - w0
+            mu0 = cum_sum / w0
+            mu1 = (total_sum - cum_sum) / w1
+            var_between = w0 * w1 * (mu0 - mu1) ** 2
+            curve.append(var_between)
+        norm = max(curve) if max(curve) > 0 else 1.0
+        curve = [v / norm for v in curve]
+        return curve, hist
+
     def _compute_result(self) -> None:
         src = self._sources.current_source
         if src is None:
@@ -219,6 +246,8 @@ class VisionDemoScene(BaseScene):
         elif mode == 1:  # OTSU
             mask, otsu_val = VisionTools.threshold_otsu(src_gray)
             self._otsu_value = int(otsu_val)
+            # Compute full variance curve for visualization
+            self._otsu_curve, self._otsu_histogram = self._compute_otsu_curve(src_gray)
             return mask, None, None, None
 
         elif mode == 2:  # ERODE
@@ -324,6 +353,10 @@ class VisionDemoScene(BaseScene):
                 rt = self._font_small.render(line, True, COLOR_GOLD)
                 surface.blit(rt, (RIGHT_PANEL_X + 4, TOP_BAR_H + 4 + li * 10))
 
+        # Otsu curve overlay (mode 1)
+        if self._mode == 1 and self._otsu_curve:
+            self._draw_otsu_curve(surface, rect)
+
         # Component count (mode 6)
         if self._mode == 6 and self._cached_comp_result is not None:
             comp = self._cached_comp_result
@@ -334,6 +367,44 @@ class VisionDemoScene(BaseScene):
         if self._error_msg:
             err = self._font_small.render(self._error_msg, True, COLOR_ERROR)
             surface.blit(err, (RIGHT_PANEL_X + 4, TOP_BAR_H + 4))
+
+    def _draw_otsu_curve(self, surface: pygame.Surface, rect: pygame.Rect) -> None:
+        curve = self._otsu_curve
+        hist = self._otsu_histogram
+        if not curve:
+            return
+        w, h = rect.width, rect.height
+        ox, oy = rect.x, rect.y
+        margin = 10
+        plot_w = w - 2 * margin
+        plot_h = h - 2 * margin - 24
+        # Histogram bars (thin, dim)
+        max_hist = max(hist) if max(hist) > 0 else 1
+        for t in range(256):
+            if t >= len(hist):
+                break
+            bar_h = int(hist[t] / max_hist * plot_h * 0.4)
+            x = ox + margin + int(t / 255 * plot_w)
+            pygame.draw.line(surface, (40, 40, 60), (x, oy + h - margin - bar_h), (x, oy + h - margin), 1)
+        # Variance curve
+        pts = []
+        for t, v in enumerate(curve):
+            x = ox + margin + int(t / 255 * plot_w)
+            y = oy + h - margin - int(v * plot_h)
+            pts.append((x, y))
+        if len(pts) > 1:
+            pygame.draw.lines(surface, (80, 200, 255), False, pts, 1)
+        # Otsu threshold marker
+        ot = self._otsu_value
+        mx = ox + margin + int(ot / 255 * plot_w)
+        pygame.draw.line(surface, COLOR_GOLD, (mx, oy + margin), (mx, oy + h - margin), 2)
+        label = self._font_small.render(f"Otsu t={ot}", True, COLOR_GOLD)
+        surface.blit(label, (mx - 20, oy + margin))
+        # Axis labels
+        xlabel = self._font_small.render("Threshold  t  ->", True, COLOR_ACCENT)
+        surface.blit(xlabel, (ox + margin, oy + h - 10))
+        ylabel = self._font_small.render("sigma^2_B", True, COLOR_ACCENT)
+        surface.blit(ylabel, (ox + 2, oy + margin))
 
     def _draw_bottom_bar(self, surface: pygame.Surface) -> None:
         if self._error_msg:

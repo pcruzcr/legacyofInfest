@@ -29,7 +29,7 @@
 - Pixel-perfect visual rendering (sprite appearance, animation smoothness)
 - Audio playback correctness (file plays, sounds correct — verified by manual listening)
 - Frame-rate / performance benchmarks (logged for awareness, not a CI gate — see §7)
-- Demo scene visual layouts (`FilterDemoScene`, `VisionDemoScene`, `PatternDemoScene` — verified by manual smoke test per `25_IMPLEMENTATION_ROADMAP.md` Phase 13 DoD)
+- Demo scene visual layouts (all 10 scenes — 7 theory labs + 3 academic demos — verified by automated import/instantiate/draw smoke tests in `test_demo_scenes.py`, plus manual visual verification per phase DoDs)
 - Full boss combat balance/feel (verified by manual playthrough)
 
 ### 2.3 Test Framework
@@ -60,6 +60,7 @@ tests/
 ├── test_vision_tools.py
 ├── test_pattern_recognition_tools.py
 ├── test_boss_base.py
+├── test_demo_scenes.py     # All 10 demo/lab scenes: import, instantiate, draw
 ├── fixtures/
 │   ├── minimal_stage.tmx
 │   ├── reference_sprite_32x32.png

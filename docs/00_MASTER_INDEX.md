@@ -36,7 +36,7 @@ Documents marked **[SUPERSEDED]** below exist in their originating package (v1, 
 | 12 | `12_VISION_TOOLS_SPEC.md` | v2 (`legacy_of_infest_docs_v2/`) | Current — unchanged since v2 |
 | 13 | `13_PATTERN_RECOGNITION_SPEC.md` | v2 (`legacy_of_infest_docs_v2/`) | Current — unchanged since v2 |
 | 14 | `14_PROFESSOR_DELIVERABLE_MATRIX.md` | v4 (`legacy_of_infest_docs_corrected/`) | Current — supersedes v2 original |
-| 15 | `15_ACADEMIC_DEMO_SCENES.md` | v2 (`legacy_of_infest_docs_v2/`) | Current — unchanged since v2 |
+| 15 | `15_ACADEMIC_DEMO_SCENES.md` | v2 (`legacy_of_infest_docs_v2/`) | Updated — v1.1 adds 4 theory lab scenes (Units II, III, V, VI) |
 | 16 | `16_WORLD_DESIGN.md` | v4 (`legacy_of_infest_docs_corrected/`) | Current — supersedes v3 original (terminology only) |
 | 17 | `17_BOSS_SPEC.md` | v4 (`legacy_of_infest_docs_corrected/`) | Current — supersedes v3 original |
 | 18 | `18_ENEMY_ROSTER.md` | v3 (`legacy_of_infest_docs_v3/`) | Current — unchanged since v3 |
@@ -101,7 +101,7 @@ This documentation set covers four distinct layers. Every document is classified
 | `11_FILTER_TOOLS_SPEC.md` | Unit VII image processing subsystem |
 | `12_VISION_TOOLS_SPEC.md` | Unit VIII segmentation subsystem |
 | `13_PATTERN_RECOGNITION_SPEC.md` | Unit IX machine learning subsystem |
-| `15_ACADEMIC_DEMO_SCENES.md` | The 3 interactive laboratory demo scenes |
+| `15_ACADEMIC_DEMO_SCENES.md` | 10 interactive demo/lab scenes (7 theory labs + 3 academic demos) |
 
 ### 3.4 Code/Build Layer — "What do I actually write, in what order, and how do I know it's correct?"
 
@@ -153,8 +153,9 @@ This documentation set covers four distinct layers. Every document is classified
    (or 17_BOSS_SPEC.md if assigned a boss)
 4. 18_ENEMY_ROSTER.md               — find your zone's enemies (Stage assignments)
 5. 08_SYLLABUS_MAPPING.md           — understand what each milestone requires
-6. 27_ACADEMIC_RUBRICS.md §2-4      — understand exactly how you'll be scored
-7. 29_GIT_WORKFLOW_AND_STANDARDS.md — understand the branch/commit/PR process
+6. 15_ACADEMIC_DEMO_SCENES.md        — explore the 10 interactive theory labs (Units II–IX)
+7. 27_ACADEMIC_RUBRICS.md §2-4      — understand exactly how you'll be scored
+8. 29_GIT_WORKFLOW_AND_STANDARDS.md — understand the branch/commit/PR process
 ```
 
 ### 4.4 "I am reviewing a student submission"
@@ -194,7 +195,9 @@ When two documents appear to disagree, resolve using this table (also stated loc
 | v4 (`legacy_of_infest_docs_corrected/`) | 00, 01, 03, 08, 14, 16, 17, 19, 21 | 2 new (00, 21) + 7 corrected | — |
 | v5 (`legacy_of_infest_docs_v5/`) | 22–26 | 5 | — |
 | v6 (`legacy_of_infest_docs_v6/`) | 27–32 | 6 | — |
-| **Total unique, current documents** | **33** (00–32) | | |
+| **Total unique, current documents** | **34** (00–33) | | |
+| v7 (in-repo updates) | 15, 25, 03, 28, 24, 21, 08, 22, 30 | 9 updated | — |
+| v8 (current session) | 10 lab scenes, scene_registry, param_panel, demo_layout, demo_utils, debug_overlay, validate_assets.py, generate_exam.py | all docs re-audited | — |
 
 ---
 

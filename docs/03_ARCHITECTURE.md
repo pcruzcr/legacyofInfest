@@ -640,7 +640,7 @@ When a stage scene is pushed or replaced onto the scene manager:
 ```
 SplashScene          (professor logo, framework logo)
     ↓ (auto-advance after 3 seconds)
-TitleScene           (game title, main menu: Start / Options / Quit)
+TitleScene           (game title, main menu: Start / Options / Academic Demos / Quit)
     ↓ (player selects Start)
 StoryScene1          (story text with background illustration)
     ↓ (player confirms)
@@ -657,6 +657,23 @@ Stage2Scene
 Stage3Scene
     ↓
 EndScene             (credits / completion screen)
+
+**Academic Demos Flow (accessible from TitleScene menu):**
+```
+TitleScene
+    ↓ (player selects "ACADEMIC DEMOS")
+DemoMenuScene        (10 options: Units II–IX)
+    ↓      ↓         ↓           ↓            ↓
+Vector   Transform  Curve       Interpolate  Color
+(II)     (II/III)   (III)       (III/IV)     (V)
+    ↓      ↓         ↓           ↓            ↓
+Noise    Collision  Filter      Vision       Pattern
+(V/VIII) (VI)       (VII)       (VIII)       (IX)
+    ↓ (ESC)
+DemoMenuScene
+    ↓ (ESC)
+TitleScene
+```
 ```
 
 **Game Over Flow:**

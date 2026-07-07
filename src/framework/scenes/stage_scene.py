@@ -42,6 +42,24 @@ class StageScene(BaseScene):
         self._game_over: bool = False
         self._paused: bool = False
         self._debug: bool = False
+        self._was_grounded: bool = False
+
+    # ── Student hooks (empty by default, override in subclasses) ──
+
+    def on_stage_start(self) -> None:
+        """Called after the stage has been fully initialized."""
+
+    def on_player_landed(self) -> None:
+        """Called when the player lands on a surface."""
+
+    def on_enemy_died(self, enemy: "EnemyBase") -> None:
+        """Called when an enemy dies."""
+
+    def on_next_trigger_entered(self) -> None:
+        """Called when the player enters the next-trigger zone."""
+
+    def on_debug_toggle(self, enabled: bool) -> None:
+        """Called when debug mode is toggled on/off."""
 
     def on_enter(self) -> None:
         self._stage_data = StageLoader.load(self._tmx_path)
@@ -64,6 +82,7 @@ class StageScene(BaseScene):
         self._stage_complete = False
         self._game_over = False
         self._hitstop_timer: float = 0.0
+        self._was_grounded = False
 
         # Play BGM if specified in TMX
         if self._stage_data.bgm_track:
@@ -84,6 +103,8 @@ class StageScene(BaseScene):
             self._hud.start_timer(self._stage_data.time_limit)
         else:
             self._hud.start_timer()
+
+        self.on_stage_start()
 
         # Subscribe SFX events
         self._sfx_handlers: dict[str, object] = {}
@@ -178,10 +199,23 @@ class StageScene(BaseScene):
                 self._paused = not self._paused
             if hasattr(pygame.key, 'get_just_pressed') and pygame.key.get_just_pressed()[pygame.K_F1]:
                 self._debug = not self._debug
+                self.on_debug_toggle(self._debug)
         if self._paused:
             return
 
         player.update(dt, stage.collision_rects, im, one_way_rects=stage.one_way_rects)
+
+        # Hook: player just landed
+        if player.is_grounded and not self._was_grounded:
+            self.on_player_landed()
+        self._was_grounded = player.is_grounded
+
+        # Hook: enemy died this frame (track alive state)
+        for entity in stage.entity_list:
+            if isinstance(entity, EnemyBase) and not entity.is_alive:
+                if getattr(entity, "_was_alive", True):
+                    entity._was_alive = False
+                    self.on_enemy_died(entity)
 
         for entity in stage.entity_list:
             if isinstance(entity, EnemyBase):
@@ -263,6 +297,7 @@ class StageScene(BaseScene):
         # Next trigger
         if not self._stage_complete and stage.next_trigger and player.rect.colliderect(stage.next_trigger):
             self._stage_complete = True
+            self.on_next_trigger_entered()
             self._stage_complete_timer = 2.0
             self._banner.play("STAGE_COMPLETE", "STAGE COMPLETE")
             emit(Events.SFX_STAGE_COMPLETE)

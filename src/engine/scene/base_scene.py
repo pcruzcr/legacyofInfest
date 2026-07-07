@@ -11,7 +11,7 @@ eliminating global App._instance lookups. Subclasses must call super().__init__(
 from __future__ import annotations
 import abc
 import pygame
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -23,6 +23,7 @@ class BaseScene(abc.ABC):
     def __init__(self, context: GameContext) -> None:
         """Every scene receives the shared GameContext for dependency injection."""
         self.context: GameContext = context
+        self.params: dict[str, Any] = {}
 
     @property
     def input(self):

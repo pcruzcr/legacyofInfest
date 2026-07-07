@@ -18,6 +18,8 @@ from src.engine.audio.audio_manager import AudioManager
 from src.engine.scene.scene_manager import SceneManager
 from src.framework.entities.entity_factory import ensure_registered
 from src.engine.scene.transition_manager import TransitionManager
+from src.engine.scenes.debug_overlay import DebugOverlay
+from src.engine.scenes.scene_registry import register_demo_scenes
 
 
 class App:
@@ -57,6 +59,12 @@ class App:
         # Register all known entity types before any scene loads
         ensure_registered()
 
+        # Register all demo/lab scenes for the registry
+        register_demo_scenes()
+
+        # Debug overlay
+        self._debug_overlay: DebugOverlay = DebugOverlay()
+
         # Push SplashScene as the first scene
         from src.engine.scenes.splash_scene import SplashScene
         self.scene_manager.push(SplashScene(self.context))
@@ -74,6 +82,9 @@ class App:
 
                 # 2. Pump input
                 self.input_manager.pump(events)
+
+                # 2a. Debug overlay input
+                self._debug_overlay.handle_input(pygame.key.get_pressed(), dt)
 
                 # 3. Dispatch queued events (before update)
                 self.context.event_bus.dispatch()
@@ -95,6 +106,9 @@ class App:
 
                 # 7a. Draw transitions on top
                 self.transition_manager.draw(self.internal_surface)
+
+                # 7b. Debug overlay (F3-F6)
+                self._debug_overlay.draw(self.internal_surface, self.clock.fps)
 
                 # 8. Scale and present
                 scaled = pygame.transform.scale(

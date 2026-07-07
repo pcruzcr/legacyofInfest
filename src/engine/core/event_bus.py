@@ -71,6 +71,17 @@ class EventBus:
         self._subscribers.clear()
         self._queue.clear()
 
+    @property
+    def queue_snapshot(self) -> list[tuple[str, dict[str, object]]]:
+        """Read-only snapshot of the pending event queue."""
+        return list(self._queue)
+
+    @property
+    def subscribers_snapshot(self) -> dict[str, list[str]]:
+        """Read-only snapshot of subscribers, mapping event_name -> callback names."""
+        return {evt: [cb.__name__ for cb in cbs]
+                for evt, cbs in self._subscribers.items()}
+
 
 # ── Module-level default instance for backward compatibility ────────────
 

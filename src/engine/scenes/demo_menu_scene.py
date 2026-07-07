@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 import pygame
 
@@ -18,38 +18,28 @@ from src.engine.scenes.demo_common import (
     draw_top_bar,
     draw_bottom_bar,
 )
+from src.engine.scenes.scene_registry import get_registry
 from src.engine.utils.asset_loader import AssetLoader
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
 
 
-def _try_scene(name: str) -> Callable[[GameContext], BaseScene | None]:
-    """Return a factory that tries to build the demo scene.
-    Returns None if import or construction fails."""
-    def factory(ctx: GameContext) -> BaseScene | None:
-        try:
-            if name == "filter":
-                from src.engine.scenes.filter_demo_scene import FilterDemoScene
-                return FilterDemoScene(ctx)
-            elif name == "vision":
-                from src.engine.scenes.vision_demo_scene import VisionDemoScene
-                return VisionDemoScene(ctx)
-            else:
-                from src.engine.scenes.pattern_demo_scene import PatternDemoScene
-                return PatternDemoScene(ctx)
-        except Exception as exc:
-            return None
-    return factory
-
-
 class DemoMenuScene(BaseScene):
     def __init__(self, context: GameContext) -> None:
         super().__init__(context)
-        self._options: list[tuple[str, str, Callable[[GameContext], BaseScene | None]]] = [
-            ("Unit VII", "Digital Image Processing", _try_scene("filter")),
-            ("Unit VIII", "Segmentation & Analysis", _try_scene("vision")),
-            ("Unit IX", "Pattern Recognition", _try_scene("pattern")),
+        registry = get_registry()
+        self._options: list[tuple[str, str, str]] = [
+            ("Unit II", "Vectors & Transformations", "vector"),
+            ("Unit II/III", "2D Transformations", "transform"),
+            ("Unit III", "Bézier Curves & Splines", "curve"),
+            ("Unit III/IV", "Interpolation & Easing", "interpolate"),
+            ("Unit V", "Color Spaces & Alpha Blending", "color"),
+            ("Unit V/VIII", "Noise & Procedural Generation", "noise"),
+            ("Unit VI", "AABB Collision Resolution", "collision"),
+            ("Unit VII", "Digital Image Processing", "filter"),
+            ("Unit VIII", "Segmentation & Analysis", "vision"),
+            ("Unit IX", "Pattern Recognition", "pattern"),
         ]
         self._selected: int = 0
         self._error_msg: str = ""
@@ -82,8 +72,9 @@ class DemoMenuScene(BaseScene):
             self._selected = (self._selected - 1) % len(self._options)
 
         if im.is_action_pressed(Action.CONFIRM):
-            factory = self._options[self._selected][2]
-            scene = factory(self.context)
+            registry = get_registry()
+            key = self._options[self._selected][2]
+            scene = registry.build(key, self.context)
             if scene is not None:
                 self.context.scene_manager.push(scene)
             else:
@@ -98,17 +89,17 @@ class DemoMenuScene(BaseScene):
         surface.fill(COLOR_BG)
         draw_top_bar(surface, "ACADEMIC DEMONSTRATIONS", "MENU")
 
-        cy = 55
-        cx = 40
+        cy = 28
+        cx = 20
         for i, (unit, desc, _) in enumerate(self._options):
             selected = i == self._selected
             prefix = "\u25b6" if selected else " "
             color = COLOR_HIGHLIGHT if selected else COLOR_TEXT
-            text = self._font_large.render(f"  {prefix}  {unit}", True, color)
+            text = self._font_medium.render(f" {prefix} {unit}", True, color)
             surface.blit(text, (cx, cy))
-            desc_text = self._font_medium.render(f"        {desc}", True, (150, 150, 150))
-            surface.blit(desc_text, (cx, cy + 14))
-            cy += 40
+            desc_text = self._font_small.render(f"  {desc}", True, (150, 150, 150))
+            surface.blit(desc_text, (cx, cy + 11))
+            cy += 24
 
         if self._error_msg:
             err = self._font_small.render(self._error_msg, True, COLOR_ERROR)
