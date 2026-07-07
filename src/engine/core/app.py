@@ -83,14 +83,14 @@ class App:
                 # 2. Pump input
                 self.input_manager.pump(events)
 
-                # 2a. Debug overlay input
-                self._debug_overlay.handle_input(pygame.key.get_pressed(), dt)
-
                 # 3. Dispatch queued events (before update)
                 self.context.event_bus.dispatch()
 
                 # 4. Compute delta time
                 dt = self.clock.tick()
+
+                # 4a. Debug overlay input (before scene update, after dt)
+                self._debug_overlay.handle_input(pygame.key.get_pressed(), dt)
 
                 # 5. Update current scene
                 self.scene_manager.current.update(dt)
