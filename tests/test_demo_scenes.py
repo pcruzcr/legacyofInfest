@@ -33,6 +33,10 @@ from src.engine.scenes.demo_menu_scene import DemoMenuScene
 from src.engine.scenes.filter_demo_scene import FilterDemoScene
 from src.engine.scenes.vision_demo_scene import VisionDemoScene
 from src.engine.scenes.pattern_demo_scene import PatternDemoScene
+from src.engine.scenes.collision_lab_scene import CollisionLabScene
+from src.engine.scenes.vector_lab_scene import VectorLabScene
+from src.engine.scenes.color_theory_scene import ColorTheoryScene
+from src.engine.scenes.curve_editor_scene import CurveEditorScene
 from src.engine.scenes.demo_common import (
     build_default_sources,
     SourceSurfaceManager,
@@ -51,7 +55,7 @@ class TestDemoMenuScene:
         scene = DemoMenuScene(context)
         assert scene is not None
         assert hasattr(scene, "_options")
-        assert len(scene._options) == 3
+        assert len(scene._options) == 10
 
     def test_on_enter_exit(self, context) -> None:
         scene = DemoMenuScene(context)
@@ -171,6 +175,98 @@ class TestPatternDemoScene:
         c1 = PatternDemoScene._class_color("dark_zone")
         c2 = PatternDemoScene._class_color("dark_zone")
         assert c1 == c2
+
+
+class TestCollisionLabScene:
+    def test_import_succeeds(self) -> None:
+        assert CollisionLabScene is not None
+
+    def test_instantiate(self, context) -> None:
+        scene = CollisionLabScene(context)
+        assert scene is not None
+        assert hasattr(scene, "_mode")
+        assert scene._mode == 2
+
+    def test_on_enter_exit(self, context) -> None:
+        scene = CollisionLabScene(context)
+        scene.on_enter()
+        scene.on_exit()
+
+    def test_draw_no_crash(self, context) -> None:
+        scene = CollisionLabScene(context)
+        surf = pygame.Surface((320, 224))
+        scene.draw(surf)
+        assert surf.get_at((0, 0)) is not None
+
+    def test_mode_cycle(self, context) -> None:
+        scene = CollisionLabScene(context)
+        scene.on_enter()
+        for _ in range(6):
+            scene._mode = (scene._mode + 1) % 3
+        assert scene._mode < 3
+
+
+class TestVectorLabScene:
+    def test_import_succeeds(self) -> None:
+        assert VectorLabScene is not None
+
+    def test_instantiate(self, context) -> None:
+        scene = VectorLabScene(context)
+        assert scene is not None
+        assert hasattr(scene, "_mode")
+
+    def test_on_enter_exit(self, context) -> None:
+        scene = VectorLabScene(context)
+        scene.on_enter()
+        scene.on_exit()
+
+    def test_draw_no_crash(self, context) -> None:
+        scene = VectorLabScene(context)
+        surf = pygame.Surface((320, 224))
+        scene.draw(surf)
+        assert surf.get_at((0, 0)) is not None
+
+
+class TestColorTheoryScene:
+    def test_import_succeeds(self) -> None:
+        assert ColorTheoryScene is not None
+
+    def test_instantiate(self, context) -> None:
+        scene = ColorTheoryScene(context)
+        assert scene is not None
+        assert hasattr(scene, "_mode")
+
+    def test_on_enter_exit(self, context) -> None:
+        scene = ColorTheoryScene(context)
+        scene.on_enter()
+        scene.on_exit()
+
+    def test_draw_no_crash(self, context) -> None:
+        scene = ColorTheoryScene(context)
+        surf = pygame.Surface((320, 224))
+        scene.draw(surf)
+        assert surf.get_at((0, 0)) is not None
+
+
+class TestCurveEditorScene:
+    def test_import_succeeds(self) -> None:
+        assert CurveEditorScene is not None
+
+    def test_instantiate(self, context) -> None:
+        scene = CurveEditorScene(context)
+        assert scene is not None
+        assert hasattr(scene, "_mode")
+
+    def test_on_enter_exit(self, context) -> None:
+        scene = CurveEditorScene(context)
+        scene.on_enter()
+        scene.on_exit()
+
+    def test_draw_no_crash(self, context) -> None:
+        scene = CurveEditorScene(context)
+        surf = pygame.Surface((320, 224))
+        scene.draw(surf)
+        assert surf.get_at((0, 0)) is not None
 
 
 class TestDemoCommon:

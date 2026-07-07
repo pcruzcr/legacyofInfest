@@ -1,0 +1,8 @@
+============================================================
+  PRACTICE EXAM — Legacy of InFest
+  Questions: 2
+============================================================
+
+1. [VII] (5 pts) What is histogram equalization and when would you use it?
+
+2. [VII] (10 pts) Write the formula for a 3x3 convolution kernel operation on a grayscale image.

@@ -1,7 +1,7 @@
 # Legacy of InFest — Academic Demo Scenes
 
 **Document ID:** LOI-DEMO-015  
-**Version:** 1.0.0  
+**Version:** 1.2.0  
 **Status:** Official  
 **Compatibility:** Requires LOI-ARCH-003, LOI-FILTER-011, LOI-VISION-012, LOI-PATTERN-013, LOI-HUD-009, LOI-STAGE0-007  
 **Audience:** Professor, Teaching Assistants, AI coding assistants (Claude Code, Cline, OpenCode, Codex)
@@ -10,7 +10,7 @@
 
 ## 1. Overview
 
-The Academic Demo Scenes are three professor-built interactive scenes — one per advanced course unit (VII, VIII, IX) — that function as **living laboratories** within the Legacy of InFest framework. They are accessible from the Title Scene's main menu under a dedicated **"Academic Demos"** submenu.
+The Academic Demo Scenes are ten professor-built interactive scenes — 7 theory labs (Units II–VI/VIII) plus 3 advanced demos (Units VII–IX) — that function as **living laboratories** within the Legacy of InFest framework. They are accessible from the Title Scene's main menu under a dedicated **"Academic Demos"** submenu.
 
 Unlike Stage 0, which demonstrates gameplay systems, the Academic Demo Scenes demonstrate **image processing and machine learning operations** directly on game surfaces. Each scene is fully interactive: students adjust parameters using keyboard controls and observe results in real time. Output values are displayed on screen to reinforce the mathematical connection between parameter and effect.
 
@@ -31,11 +31,15 @@ Demo Scenes are standard `BaseScene` subclasses. They follow all scene lifecycle
 ```
 TitleScene
     ↓ (menu: Academic Demos)
-DemoMenuScene              ← Selector for the three demos
-    ↓ (Unit VII)           ↓ (Unit VIII)          ↓ (Unit IX)
-FilterDemoScene        VisionDemoScene        PatternDemoScene
-    ↓ (ESC)                ↓ (ESC)                ↓ (ESC)
-DemoMenuScene          DemoMenuScene          DemoMenuScene
+DemoMenuScene              ← Selector for the ten demo/lab scenes (Units II–IX)
+    ↓      ↓         ↓           ↓            ↓
+Vector   Transform  Curve       Interpolate  Color
+(II)     (II/III)   (III)       (III/IV)     (V)
+    ↓      ↓         ↓           ↓            ↓
+Noise    Collision  Filter      Vision       Pattern
+(V/VIII) (VI)       (VII)       (VIII)       (IX)
+    ↓ (ESC)
+DemoMenuScene
 ```
 
 ### 2.2 File Locations
@@ -43,13 +47,31 @@ DemoMenuScene          DemoMenuScene          DemoMenuScene
 ```
 engine/
 └── scenes/
-    ├── demo_menu_scene.py         ← Selector for three demos
-    ├── filter_demo_scene.py       ← Unit VII
-    ├── vision_demo_scene.py       ← Unit VIII
-    └── pattern_demo_scene.py      ← Unit IX
+    ├── demo_menu_scene.py              ← Selector for all 10 scenes
+    ├── vector_lab_scene.py             ← Unit II  (Vectors)
+    ├── transform_lab_scene.py          ← Unit II/III (2D Transformations)
+    ├── curve_editor_scene.py           ← Unit III (Bézier, Splines)
+    ├── interpolation_lab_scene.py      ← Unit III/IV (Interpolation & Easing)
+    ├── color_theory_scene.py           ← Unit V (Color Spaces)
+    ├── noise_lab_scene.py              ← Unit V/VIII (Noise & Procedural)
+    ├── collision_lab_scene.py          ← Unit VI (AABB Collision)
+    ├── filter_demo_scene.py            ← Unit VII
+    ├── vision_demo_scene.py            ← Unit VIII
+    └── pattern_demo_scene.py           ← Unit IX
 ```
 
-All demo scene files are in `engine/scenes/`. They are professor-owned. Students do not modify them.
+Utility modules (shared by all scenes):
+```
+engine/scenes/
+    ├── demo_layout.py                  ← Layout constants & draw helpers
+    ├── demo_utils.py                   ← SourceSurfaceManager, FrameThrottle, ErrorDisplay, save_png
+    ├── demo_common.py                  ← Legacy re-exports from demo_layout + demo_utils
+    ├── scene_registry.py               ← DI Container: register → build pattern
+    ├── param_panel.py                  ← Reusable ParamPanel widget
+    └── debug_overlay.py                ← F3 debug console (app-wide, not scene-specific)
+```
+
+All demo/lab scene files are in `engine/scenes/`. They are professor-owned. Students do not modify them.
 
 ### 2.3 Shared Demo Scene Layout
 
@@ -734,7 +756,7 @@ A student has engaged with `PatternDemoScene` effectively when:
 
 ### 6.1 Purpose
 
-`DemoMenuScene` is the entry point for the Academic Demos. It presents three options and navigates to the selected demo scene.
+`DemoMenuScene` is the entry point for the Academic Demos. It presents ten options (7 theory labs + 3 academic demos) and navigates to the selected scene.
 
 ### 6.2 Layout
 
@@ -742,11 +764,17 @@ A student has engaged with `PatternDemoScene` effectively when:
 ┌─────────────────────────────────────────────────────────────────┐
 │                                                                 │
 │              ACADEMIC DEMONSTRATIONS                            │
-│              Legacy of InFest                                   │
 │                                                                 │
-│         ▶  Unit VII — Digital Image Processing                  │
-│            Unit VIII — Segmentation & Analysis                  │
-│            Unit IX — Pattern Recognition                        │
+│         ▶  Unit II            — Vectors & Transformations       │
+│            Unit II/III        — 2D Transformations              │
+│            Unit III           — Bézier Curves & Splines         │
+│            Unit III/IV        — Interpolation & Easing          │
+│            Unit V             — Color Spaces & Alpha Blending   │
+│            Unit V/VIII        — Noise & Procedural Generation   │
+│            Unit VI            — AABB Collision Resolution       │
+│            Unit VII           — Digital Image Processing        │
+│            Unit VIII          — Segmentation & Analysis          │
+│            Unit IX            — Pattern Recognition             │
 │                                                                 │
 │                        [ESC: Back to Title]                     │
 └─────────────────────────────────────────────────────────────────┘

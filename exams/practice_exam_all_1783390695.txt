@@ -1,0 +1,10 @@
+============================================================
+  PRACTICE EXAM — Legacy of InFest
+  Questions: 3
+============================================================
+
+1. [VII] (5 pts) What is histogram equalization and when would you use it?
+
+2. [II] (5 pts) Explain the difference between a vector and a scalar.
+
+3. [VI] (5 pts) What is the wall-climb bug, and how does it occur in Y-first resolution?

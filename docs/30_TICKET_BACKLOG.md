@@ -226,19 +226,20 @@ This phase is large enough that tickets are grouped by Stage 0 zone (per `07_STA
 
 ---
 
-## 16. Phase 14 — BossBase and El Venado Sagrado
+## 16. Phase 14 — Interactive Theory Lab Scenes (Units II–VIII)
 
 | Ticket | Files | Acceptance Criteria | Size |
 |---|---|---|---|
-| **T14.1** Implement `BossPhase` dataclass + `BossBase` phase transition protocol | `src/framework/entities/boss_base.py` | Matches `22_API_CONTRACTS.md` §17.1; invincibility during transition, `BOSS_PHASE_CHANGED` emitted | M |
-| **T14.2** Implement boss HUD element | `src/engine/ui/hud.py` or a dedicated `boss_hud.py` | Separate health bar per `17_BOSS_SPEC.md` §2.4 | S |
-| **T14.3** Implement `BossVenado` Phase 1 | `src/stages/boss_venado/boss_venado.py` | `STOMP`/`CHARGE`/`VINE_TOSS` per `17_BOSS_SPEC.md` §3.3 Phase 1 | M |
-| **T14.4** Implement `BossVenado` Phase 2 | `src/stages/boss_venado/boss_venado.py` | `VINE_SWEEP`/`MUSHROOM_SPORE` per §3.3 Phase 2 | M |
-| **T14.5** Wire Sobel aura visual effect | `src/stages/boss_venado/boss_venado.py` | Uses completed `FilterTools.sobel_edge()` per §3.3 | S |
-| **T14.6** Implement defeat sequence | `src/stages/boss_venado/boss_venado.py` | Dissolve, skull, Relic Fragment 1, `STAGE_COMPLETE` per §3.6 | S |
-| **T14.7** Build boss arena (TMX or static geometry) | `src/stages/boss_venado/` arena file(s) | Arena per `16_WORLD_DESIGN.md` §3.5 layout | M |
-| **T14.8** Write Phase 14 tests | `tests/test_boss_base.py` | All assertions from `24_TEST_PLAN.md` §15 present and passing | M |
-| **T14.9** Full boss fight manual playthrough | (no new files) | Boss reachable and defeatable from a fresh game launch | XS |
+| **T14.1** Implement `VectorLabScene` | `src/engine/scenes/vector_lab_scene.py` | 4 modes (FREE MOVE, CHASE, ORBIT, DISTANCE), vector math info panel, normalized toggle | M |
+| **T14.2** Implement `TransformLabScene` | `src/engine/scenes/transform_lab_scene.py` | 5 modes (TRANSLATE, ROTATE, SCALE, SHEAR, COMPOSITE), live matrix display | M |
+| **T14.3** Implement `CurveEditorScene` | `src/engine/scenes/curve_editor_scene.py` | 6 curve modes, draggable control points, de Casteljau animation | M |
+| **T14.4** Implement `InterpolationLabScene` | `src/engine/scenes/interpolation_lab_scene.py` | 3 modes (LERP, EASING CURVES, KEYFRAME ANIM), 10 easing functions | M |
+| **T14.5** Implement `ColorTheoryScene` | `src/engine/scenes/color_theory_scene.py` | 6 modes (RGB/HSV/HSL/CMYK/Alpha Blend/Challenge) | M |
+| **T14.6** Implement `NoiseLabScene` | `src/engine/scenes/noise_lab_scene.py` | 3 noise types, 5 adjustable parameters, live noise map texture | M |
+| **T14.7** Implement `CollisionLabScene` | `src/engine/scenes/collision_lab_scene.py` | 3 resolution modes, wall-climb bug demo, one-way platforms | M |
+| **T14.8** DemoMenuScene integration | `src/engine/scenes/demo_menu_scene.py` | 10 options, uses SceneRegistry for DI | S |
+| **T14.9** Engine infrastructure improvements | Multiple files | SceneRegistry, ParamPanel, demo_layout, demo_utils, debug_overlay, validate_assets.py, generate_exam.py | L |
+| **T14.10** Write Phase 14 tests | `tests/test_demo_scenes.py` | All 10 scenes: import/instantiate/draw smoke tests pass | M |
 
 ---
 
@@ -259,7 +260,7 @@ This phase is large enough that tickets are grouped by Stage 0 zone (per `07_STA
 
 | Ticket | Files | Acceptance Criteria | Size |
 |---|---|---|---|
-| **T16.1** Implement `tools/validate_assets.py` | `tools/validate_assets.py` | Pillow-based palette validation per `10_LIBRARIES_AND_DEPENDENCIES.md` §8.5 | S |
+| **T16.1** Implement `scripts/validate_assets.py` | `scripts/validate_assets.py` | Validates font + model loading; exits 0 on success | S |
 | **T16.2** Review and resolve/document all early-development fallbacks | Various (flagged in T2.7) | Each fallback either removed (real asset now exists) or documented in `KNOWN_GAPS.md` | M |
 | **T16.3** Full test suite pass | All `tests/` | Zero failures, zero unjustified skips | XS |
 | **T16.4** Final Stage 0 playthrough with final assets | (no new files) | End-to-end, no placeholder assets remaining | XS |

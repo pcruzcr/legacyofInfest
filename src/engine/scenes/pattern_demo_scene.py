@@ -50,7 +50,7 @@ if TYPE_CHECKING:
 
 
 MODE_NAMES = [
-    "INFERENCE", "FEATURE_COMPARE", "CLASS_GRID", "CONFUSION", "PIPELINE",
+    "INFERENCE", "FEATURE_COMPARE", "CLASS_GRID", "CONFUSION", "PIPELINE", "TREE_VIEW",
 ]
 
 FEATURE_METHODS = ["hog", "lbp", "color_hist", "combined"]
@@ -94,6 +94,10 @@ class PatternDemoScene(BaseScene):
         self._cached_result_surf: pygame.Surface | None = None
         self._param_changed: bool = True
         self._frame_count: int = 0
+
+        # TREE_VIEW state
+        self._tree_depth: int = 2
+        self._tree_structure: list[dict] | None = None
 
         # Save / error / notifications
         self._save_msg: str = ""
@@ -171,6 +175,8 @@ class PatternDemoScene(BaseScene):
             self._cached_result_surf = None
             self._param_changed = True
             self._throttle.reset()
+            if self._mode == 5:
+                self._extract_tree()
 
         if im.is_raw_key_pressed(pygame.K_SPACE):
             self._sources.cycle()
@@ -195,6 +201,7 @@ class PatternDemoScene(BaseScene):
             self._load_default_model()
             self._cached_result_surf = None
             self._param_changed = True
+            self._tree_structure = None
 
         if im.is_raw_key_pressed(pygame.K_l):
             self._text_input_active = True
@@ -212,6 +219,15 @@ class PatternDemoScene(BaseScene):
             from src.engine.scenes.demo_menu_scene import DemoMenuScene
             self.context.scene_manager.replace(DemoMenuScene(self.context))
             return
+
+        # TREE_VIEW depth control
+        if self._mode == 5 and self._tree_structure:
+            if im.is_raw_key_pressed(pygame.K_LEFT):
+                self._tree_depth = max(0, self._tree_depth - 1)
+                self._param_changed = True
+            if im.is_raw_key_pressed(pygame.K_RIGHT):
+                self._tree_depth = min(6, self._tree_depth + 1)
+                self._param_changed = True
 
         # Analysis rect movement (modes 0, 1)
         if self._mode in (0, 1):
@@ -316,6 +332,10 @@ class PatternDemoScene(BaseScene):
 
             elif self._mode == 4:  # PIPELINE
                 self._cached_result_surf = self._render_pipeline(src, rect, features, method)
+
+            elif self._mode == 5:  # TREE_VIEW
+                if self._tree_structure:
+                    self._cached_result_surf = self._render_tree()
 
             self._error_msg = ""
         except Exception as e:
@@ -637,6 +657,111 @@ class PatternDemoScene(BaseScene):
             pygame.draw.rect(surface, COLOR_TOP_BAR_BG,
                              (0, BOTTOM_BAR_Y, settings.INTERNAL_WIDTH, BOTTOM_BAR_H))
             draw_save_notification(surface, self._save_msg, self._font_small)
+
+    def _extract_tree(self) -> None:
+        if self._model is None:
+            self._tree_structure = None
+            return
+        model = getattr(self._model, "model", self._model)
+        # Check for sklearn tree attributes
+        if hasattr(model, "tree_"):
+            self._tree_structure = self._extract_sklearn_tree(model)
+        elif hasattr(model, "estimators_"):
+            # Random Forest — use first tree
+            try:
+                self._tree_structure = self._extract_sklearn_tree(model.estimators_[0])
+            except Exception:
+                self._tree_structure = None
+        else:
+            self._tree_structure = None
+
+    @staticmethod
+    def _extract_sklearn_tree(tree_model) -> list[dict] | None:
+        tree = tree_model.tree_
+        n_nodes = tree.node_count
+        features = tree.feature
+        thresholds = tree.threshold
+        children_left = tree.children_left
+        children_right = tree.children_right
+        try:
+            values = tree.value
+        except Exception:
+            values = None
+        classes = getattr(tree_model, "classes_", None)
+        if classes is not None:
+            class_names = [str(c) for c in classes]
+        elif values is not None:
+            class_names = [f"C{i}" for i in range(values.shape[1])]
+        else:
+            class_names = []
+        nodes = []
+        for i in range(n_nodes):
+            is_leaf = children_left[i] == -1 and children_right[i] == -1
+            feat = int(features[i]) if features[i] >= 0 else -1
+            vals = values[i].ravel().tolist() if values is not None else []
+            nodes.append({
+                "id": i,
+                "feature": feat,
+                "threshold": float(thresholds[i]),
+                "left": int(children_left[i]),
+                "right": int(children_right[i]),
+                "is_leaf": is_leaf,
+                "values": vals,
+                "class_names": list(class_names),
+            })
+        return nodes
+
+    def _render_tree(self) -> pygame.Surface:
+        surf = pygame.Surface(PANEL_SIZE)
+        surf.fill((5, 5, 15))
+        if not self._tree_structure:
+            msg = self._font_small.render("No tree structure available for this model", True, COLOR_TEXT)
+            surf.blit(msg, (10, 30))
+            return surf
+        self._draw_tree_nodes(surf, self._tree_structure, 0, 0, PANEL_SIZE[0] - 10, 0)
+        depth_label = self._font_small.render(
+            f"  Max Depth: {self._tree_depth}  |  [LEFT/RIGHT] adjust  |  Pruning depth shown",
+            True, COLOR_ACCENT,
+        )
+        surf.blit(depth_label, (4, PANEL_H - 12))
+        return surf
+
+    def _draw_tree_nodes(self, surf: pygame.Surface, nodes: list[dict],
+                         node_id: int, x: int, w: int, depth: int) -> None:
+        if node_id < 0 or node_id >= len(nodes) or depth > self._tree_depth:
+            return
+        node = nodes[node_id]
+        y = 16 + depth * 24
+        cx = x + w // 2
+
+        # Node box
+        if node["is_leaf"]:
+            major = max(node["values"]) if node["values"] else 0
+            majority_idx = node["values"].index(major) if node["values"] else 0
+            color = self._class_color(str(majority_idx))
+            label = node["class_names"][majority_idx] if node["class_names"] and majority_idx < len(node["class_names"]) else str(majority_idx)
+            pygame.draw.rect(surf, color, (cx - 20, y, 40, 18))
+            lbl = self._font_small.render(label, True, (0, 0, 0))
+            surf.blit(lbl, (cx - 18, y + 2))
+        else:
+            feat = node["feature"]
+            thresh = node["threshold"]
+            label = f"f[{feat}]<={thresh:.1f}"
+            pygame.draw.rect(surf, COLOR_HIGHLIGHT, (cx - 36, y, 72, 18), 1)
+            lbl = self._font_small.render(label, True, COLOR_HIGHLIGHT)
+            surf.blit(lbl, (cx - 34, y + 2))
+            # Draw branches
+            left = node["left"]
+            right = node["right"]
+            lw = w // 2
+            if left >= 0:
+                lx = x + lw // 2
+                pygame.draw.line(surf, (60, 180, 60), (cx - 10, y + 18), (lx, y + 44), 1)
+                self._draw_tree_nodes(surf, nodes, left, x, lw, depth + 1)
+            if right >= 0:
+                rx = x + w // 2 + lw // 2
+                pygame.draw.line(surf, (180, 60, 60), (cx + 10, y + 18), (rx, y + 44), 1)
+                self._draw_tree_nodes(surf, nodes, right, x + lw, lw, depth + 1)
 
     def _draw_bottom_bar(self, surface: pygame.Surface) -> None:
         if self._error_msg:

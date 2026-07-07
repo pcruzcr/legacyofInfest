@@ -46,3 +46,22 @@ class CustomBoss(BossBase):
 
     def on_defeated(self) -> None:
         """Called when the boss's health reaches zero."""
+
+    # ── Exercise: EventBus queue_snapshot ─────────────────────────────────
+    #
+    # Goal: Monitor attack events via EventBus.queue_snapshot to react to
+    # incoming projectiles before they are dispatched.
+    #
+    # Starter code — uncomment and implement:
+    #
+    # def _detect_incoming_attacks(self) -> list[dict]:
+    #     from src.engine.core.event_bus import _get_bus
+    #     bus = _get_bus()
+    #     attacks = []
+    #     for event_name, data in bus.queue_snapshot:
+    #         if event_name == "boss_attack":
+    #             attacks.append(data)
+    #     return attacks
+    #
+    # Challenge: Use the detected attacks to trigger a dodge or shield
+    # animation. Call _detect_incoming_attacks() at the start of update().

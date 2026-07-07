@@ -47,7 +47,7 @@ if TYPE_CHECKING:
 
 MODE_NAMES = [
     "HISTOGRAM", "BRIGHTNESS", "CONTRAST", "STRETCH", "KERNEL",
-    "GAUSSIAN", "SOBEL", "CANNY", "EQUALIZE",
+    "GAUSSIAN", "SOBEL", "CANNY", "EQUALIZE", "CONV_STEP",
 ]
 
 STANDARD_KERNEL_NAMES = [
@@ -87,6 +87,14 @@ class FilterDemoScene(BaseScene):
         # Recent param flash
         self._param_flash_timer: float = 0.0
 
+        # CONV_STEP state
+        self._conv_x: int = 1
+        self._conv_y: int = 1
+        self._conv_paused: bool = True
+        self._conv_speed: float = 16.0  # px per second
+        self._conv_step_acc: float = 0.0
+        self._conv_show_formula: bool = True
+
         self._font_small = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_SMALL)
         self._font_medium = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_MEDIUM)
         self._font_large = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_LARGE)
@@ -125,8 +133,8 @@ class FilterDemoScene(BaseScene):
             self._cached_result = None
             self._throttle.reset()
 
-        # SPACE — cycle source
-        if im.is_raw_key_pressed(pygame.K_SPACE):
+        # SPACE — cycle source (except in CONV_STEP mode where it pauses)
+        if im.is_raw_key_pressed(pygame.K_SPACE) and self._mode != 9:
             self._sources.cycle()
             self._cached_result = None
             self._param_changed = True
@@ -162,6 +170,22 @@ class FilterDemoScene(BaseScene):
         # Mode-specific input
         self._handle_mode_input(im)
 
+        # CONV_STEP animation
+        if self._mode == 9 and not self._conv_paused:
+            src = self._sources.current_source
+            if src is not None:
+                w, h = src.get_size()
+                self._conv_step_acc += self._conv_speed * dt
+                while self._conv_step_acc >= 1.0:
+                    self._conv_step_acc -= 1.0
+                    self._conv_x += 1
+                    if self._conv_x >= w - 2:
+                        self._conv_x = 1
+                        self._conv_y += 1
+                    if self._conv_y >= h - 2:
+                        self._conv_x, self._conv_y = 1, 1
+                self._param_changed = True
+
         # Recompute if needed
         if self._param_changed or self._cached_result is None:
             self._compute_result()
@@ -171,6 +195,7 @@ class FilterDemoScene(BaseScene):
         key_right = im.is_raw_key_pressed(pygame.K_RIGHT)
         key_up = im.is_raw_key_pressed(pygame.K_UP)
         key_down = im.is_raw_key_pressed(pygame.K_DOWN)
+        key_space = im.is_raw_key_pressed(pygame.K_SPACE)
 
         if self._mode == 0:  # HISTOGRAM
             if key_left:
@@ -232,6 +257,23 @@ class FilterDemoScene(BaseScene):
                 self._canny_high = max(0, self._canny_high - 5)
                 self._param_changed = True
 
+        elif self._mode == 9:  # CONV_STEP
+            if key_space:
+                self._conv_paused = not self._conv_paused
+                self._param_changed = True
+            if key_left:
+                self._conv_speed = max(2.0, self._conv_speed - 4.0)
+            if key_right:
+                self._conv_speed = min(64.0, self._conv_speed + 4.0)
+            if key_up:
+                self._kernel_idx = (self._kernel_idx + 1) % len(STANDARD_KERNEL_NAMES)
+                self._conv_x, self._conv_y = 1, 1
+                self._param_changed = True
+            if key_down:
+                self._kernel_idx = (self._kernel_idx - 1) % len(STANDARD_KERNEL_NAMES)
+                self._conv_x, self._conv_y = 1, 1
+                self._param_changed = True
+
     def _compute_result(self) -> None:
         src = self._sources.current_source
         if src is None:
@@ -277,6 +319,9 @@ class FilterDemoScene(BaseScene):
         elif self._mode == 8:  # EQUALIZE
             return FilterTools.histogram_equalize(surface)
 
+        elif self._mode == 9:  # CONV_STEP — full result for right panel
+            return surface.copy()
+
         return surface.copy()
 
     def _reset_params(self) -> None:
@@ -287,6 +332,10 @@ class FilterDemoScene(BaseScene):
         self._canny_low = 50
         self._canny_high = 150
         self._hist_threshold = 128
+        self._conv_x, self._conv_y = 1, 1
+        self._conv_paused = True
+        self._conv_speed = 16.0
+        self._conv_step_acc = 0.0
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill(COLOR_BG)
@@ -344,6 +393,10 @@ class FilterDemoScene(BaseScene):
         if self._mode == 0 and self._cached_result is not None:
             self._draw_histogram(surface, rect)
 
+        # CONV_STEP overlay
+        if self._mode == 9:
+            self._draw_conv_step(surface, rect)
+
         # Error overlay
         if self._error_msg:
             err_text = self._font_small.render(self._error_msg, True, COLOR_ERROR)
@@ -376,6 +429,60 @@ class FilterDemoScene(BaseScene):
             right_rect = pygame.Rect(RIGHT_PANEL_X, TOP_BAR_H, PANEL_SIZE[0], PANEL_H)
             draw_histogram_bars(surface, right_rect,
                                 h2_r.tolist(), h2_g.tolist(), h2_b.tolist(), bar_w=2, max_h=40)
+
+    def _draw_conv_step(self, surface: pygame.Surface, panel_rect: pygame.Rect) -> None:
+        src = self._sources.current_source
+        if src is None:
+            return
+        sw, sh = src.get_size()
+        kx, ky = self._conv_x, self._conv_y
+        kname = STANDARD_KERNEL_NAMES[self._kernel_idx]
+        kernel = FilterTools.get_standard_kernel(kname)
+        k_size = len(kernel)
+        half = k_size // 2
+
+        # Clamp
+        kx = max(half, min(sw - half - 1, kx))
+        ky = max(half, min(sh - half - 1, ky))
+
+        # Overlay on left panel (scaled)
+        sx = int(kx / sw * LEFT_PANEL_W)
+        sy = int(ky / sh * PANEL_H)
+        cell_w = max(2, LEFT_PANEL_W // sw)
+        cell_h = max(2, PANEL_H // sh)
+        kw = k_size * cell_w
+        kh = k_size * cell_h
+
+        # Highlight kernel window
+        k_rect = pygame.Rect(sx - half * cell_w, sy - half * cell_h, kw, kh)
+        pygame.draw.rect(surface, (255, 220, 80), k_rect, 2)
+
+        # Draw kernel grid overlay
+        for ki in range(k_size):
+            for kj in range(k_size):
+                cx = k_rect.x + kj * cell_w
+                cy = k_rect.y + ki * cell_h
+                val = kernel[ki][kj]
+                color = (100, 200, 100) if val > 0 else (200, 100, 100) if val < 0 else (100, 100, 100)
+                pygame.draw.rect(surface, color, (cx, cy, cell_w, cell_h), 1)
+
+        # Result pixel highlight on right panel
+        rx = int(kx / sw * PANEL_SIZE[0])
+        ry = int(ky / sh * PANEL_H)
+        pygame.draw.circle(surface, (255, 220, 80), (RIGHT_PANEL_X + rx, TOP_BAR_H + ry), 4)
+        pygame.draw.circle(surface, (255, 255, 255), (RIGHT_PANEL_X + rx, TOP_BAR_H + ry), 4, 1)
+
+        # Formula text
+        k_str = f"{kname}"
+        formula = self._font_small.render(
+            f"  Kernel: {k_str}  |  Pos: ({kx},{ky})  |  Speed: {self._conv_speed:.0f} px/s",
+            True, COLOR_HIGHLIGHT)
+        surface.blit(formula, (4, TOP_BAR_H + PANEL_H - 18))
+
+        pause_label = self._font_small.render(
+            "  [SPACE] pause/resume  [UP/DOWN] kernel  [LEFT/RIGHT] speed",
+            True, COLOR_ACCENT)
+        surface.blit(pause_label, (RIGHT_PANEL_X, TOP_BAR_H + 2))
 
     def _draw_bottom_bar(self, surface: pygame.Surface) -> None:
         if self._error_msg:
@@ -418,4 +525,9 @@ class FilterDemoScene(BaseScene):
                     f"[TAB: mode]")
         elif mode == 8:
             return "  No parameters  |  [TAB: mode]  |  [SPACE: source]"
+        elif mode == 9:
+            kname = STANDARD_KERNEL_NAMES[self._kernel_idx]
+            paused = "PAUSED" if self._conv_paused else "RUNNING"
+            return (f"  {kname}  |  ({self._conv_x},{self._conv_y})  |  "
+                    f"{paused}  |  [SPACE] toggle  |  [TAB: mode]")
         return ""

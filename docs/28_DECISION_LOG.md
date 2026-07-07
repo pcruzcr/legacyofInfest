@@ -236,6 +236,41 @@ Each entry follows this structure: Title · Status · Context · Decision · Con
 
 ---
 
+## ADR-014: Interactive Theory Lab Scenes for Units II–VI Fill Identified Learning Gaps
+
+**Status:** Accepted
+
+**Context:** The syllabus alignment audit and academic deliverable matrix revealed a structural gap: the 3 original academic demo scenes (FilterDemoScene, VisionDemoScene, PatternDemoScene) cover only Units VII–IX. Units II (Vectors), III (Curves), V (Color Spaces), and VI (Collision/AABB) had no interactive visualization — students were expected to apply math_utils, curve_tools, color_tools, and collision code from static documentation alone. Professor assessment found that students "call pre-built APIs (`FilterTools.apply_kernel()`, `ColorTools.rgb_to_hsv()`) but never implement the algorithms" — the biggest learning gap across all units.
+
+**Decision:** Create 7 interactive theory lab scenes as professor-owned extensions of the demo scene infrastructure:
+- `VectorLabScene` (Unit II — Vector operations, normalization, dot product, pursuit)
+- `TransformLabScene` (Unit II/III — 2D affine transformations: translate, rotate, scale, shear, composite)
+- `CurveEditorScene` (Unit III — Bézier, Catmull-Rom, B-Spline, de Casteljau animation)
+- `InterpolationLabScene` (Unit III/IV — linear interpolation, easing functions, keyframe animation)
+- `ColorTheoryScene` (Unit V — RGB/HSV/HSL/CMYK explorers, step-by-step conversion algorithms, alpha blending, color matching challenge)
+- `NoiseLabScene` (Unit V/VIII — value noise, Perlin noise, fractal noise with octaves/persistence/lacunarity)
+- `CollisionLabScene` (Unit VI — Y-first vs X-first AABB resolution, prev_bottom heuristic, wall-climb bug demo)
+
+These follow the same architecture as the original 3 demos (BaseScene subclass, keyboard-controlled, demo_layout + demo_utils infrastructure) and are also professor-owned; students do not modify them.
+
+**Consequences:**
+- Demo menu now lists 10 scenes (Units II–IX) instead of 3.
+- `tests/test_demo_scenes.py` tests all 10 scenes with import/instantiate/draw tests.
+- 364 tests total (original 347 + 17 new demo scene tests).
+- `demo_common.py` split into `demo_layout.py` (layout/draw helpers) + `demo_utils.py` (sources, throttle, save) with backward-compatible re-exports.
+- `SceneRegistry` DI container replaces the `_try_scene()` elif chain.
+- `ParamPanel` widget created for reusable parameter controls.
+- `DebugOverlay` (F3) with FPS, event queue snapshot, module tree browser.
+- Font sizes increased (5→7, 6→9, 7→11) and layout constants adjusted for readability at 320×224.
+- Documentation (`15_ACADEMIC_DEMO_SCENES.md`, `25_IMPLEMENTATION_ROADMAP.md`) updated to v1.2.
+
+**Alternatives Considered:**
+- **Expand the 3 existing demos to cover earlier units** — rejected: each demo scene has a focused pedagogical purpose; mixing vector math into FilterDemoScene would confuse both subjects.
+- **No interactive labs, rely on static documentation + code comments** — rejected: the audit identified that static documentation alone does not bridge the "see the algorithm step by step" gap for students.
+- **Web-based interactive tools (e.g., Observable notebook, Desmos)** — rejected: external tools break the "everything is in the game engine" pedagogical immersion; keeping labs inside Pygame CE means students practice the same input, rendering, and framework patterns they use for their assignment.
+
+---
+
 ## 4. Decisions Explicitly Deferred (Not Yet Made)
 
 These are flagged here rather than silently decided by whichever AI session encounters them first.

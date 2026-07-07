@@ -308,6 +308,10 @@ class SpriteSheet:
 from abc import ABC, abstractmethod
 
 class BaseScene(ABC):
+    def __init__(self, context: GameContext) -> None:
+        self.context: GameContext = context
+        self.params: dict[str, Any] = {}
+
     @abstractmethod
     def on_enter(self) -> None: ...
 

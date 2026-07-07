@@ -137,4 +137,29 @@ Nunca borrar entradas - marcar como resueltas.
   parámetros `scale`, `size`, `alpha` que la implementación soporta.
 - **Resolution:** Se actualizó `22_API_CONTRACTS.md` §5.2 con la firma completa.
 
+## [GAP-013] Sin acceso programático al estado del EventBus para debugging
+
+- **File:** `src/engine/core/event_bus.py`
+- **Phase:** UX
+- **Reason:** El EventBus no expone la cola de eventos pendientes ni la lista de
+  suscriptores por evento. Para un overlay de debugging (F3) que muestre el flujo
+  de eventos en tiempo real, se necesita acceso de solo lectura a `_queue` y
+  `_subscribers`.
+- **Resolution:** Agregar propiedades de solo lectura `queue_snapshot` y
+  `subscribers_snapshot` a `EventBus`. El overlay F3 en StageScene puede entonces
+  mostrar: cola actual, suscriptores por evento, eventos despachados en el
+  último frame.
+
+## [GAP-014] Faltan visualización de rects de colisión en runtime
+
+- **File:** `src/framework/stage/stage_loader.py`, `src/framework/scenes/stage_scene.py`
+- **Phase:** UX
+- **Reason:** El debug overlay (F1) ya dibuja rects de colisión en verde, pero
+  no hay feedback visual del `prev_bottom` vs `tile.top` que determina el
+  landing. Cuando un estudiante diseña un TMX con rects mal posicionados, no
+  entiende por qué el jugador atraviesa paredes o cae al vacío.
+- **Resolution:** El debug overlay existente (F1) es suficiente para ver rects.
+  Pendiente: agregar tooltip en los rects que muestre `prev_bottom`, `tile.top`,
+  `velocity.y` al hacer hover o pausa.
+
 

@@ -21,13 +21,13 @@ Each student selects **one** Legacy of InFest Stage or Boss in Class 1 and devel
 | Class | Theory Focus (2h) | Practice Focus (2h) | Evaluation Event |
 |---|---|---|---|
 | 1 | Unit I — Intro to Computer Graphics | Framework orientation, Stage/Boss selection, environment setup | — |
-| 2 | Unit II — Coordinate Systems & Transformations | Vector math labs in framework context | Quiz 1 |
+| 2 | Unit II — Coordinate Systems & Transformations | Vector math labs + TransformLabScene (Unit II/III) | Quiz 1 |
 | 3 | Unit II (cont.) — Matrices, Homogeneous Coords | Hitbox/hurtbox transform exercises | Lab 1 |
-| 4 | Unit III — Curves & Geometric Modeling | Bézier/B-Spline path exercises | Quiz 2 |
+| 4 | Unit III — Curves & Geometric Modeling | Bézier/B-Spline path exercises + InterpolationLabScene | Quiz 2 |
 | 5 | Unit IV — Objects, Scenes, Layers | TMX layer construction, sprite/scene labs | **Evaluación Práctica I — Prototipo Funcional** |
 | 6 | Unit V — Color, Transparency, Lighting | Color space conversion labs, alpha blending | Quiz 3 + Lab 2 |
 | 7 | Unit VI — Texturing, Animation, Interaction | Sprite sheets, easing, collision labs | — |
-| 8 | Unit VII — Digital Image Processing | Histogram, brightness/contrast, convolution, Sobel/Canny labs | **Evaluación Práctica II — Vertical Slice** |
+| 8 | Unit VII — Digital Image Processing | Histogram, brightness/contrast, convolution, Sobel/Canny labs + NoiseLabScene | **Evaluación Práctica II — Vertical Slice** |
 | 9 | Unit VIII — Segmentation & Image Analysis | Threshold, Otsu, morphology, region analysis labs | Quiz 4 + Lab 3 |
 | 10 | Unit IX — Integrative Applications | Pattern recognition pipeline, classifier training labs | — |
 | 11 | Course Integration & Review | Final stage/boss polishing, integration testing | **Evaluación Práctica III — Integración Final** |
@@ -66,6 +66,7 @@ Each student selects **one** Legacy of InFest Stage or Boss in Class 1 and devel
 - Vectors and matrices
 
 **Practice (2h)**
+- **VectorLabScene** (Unit II theory lab): interactive vector arithmetic, normalization, dot product, pursuit movement
 - Lab exercises using `engine/utils/math_utils.py`: `vec2_normalize`, `vec2_dot`, `vec2_distance`
 - Applying vector math to a custom entity's movement within the student's assigned Stage/Boss scaffold
 
@@ -99,6 +100,7 @@ Each student selects **one** Legacy of InFest Stage or Boss in Class 1 and devel
 - Trajectory representation
 
 **Practice (2h)**
+- **CurveEditorScene** (Unit III theory lab): interactive Bézier, Catmull-Rom, B-Spline with draggable control points
 - `CurveTools.bezier()`, `CurveTools.b_spline()`, `CurveTools.sample_path()` exercises
 - Designing a patrol path or projectile trajectory for the student's assigned Stage/Boss using curve mathematics
 
@@ -145,6 +147,7 @@ Producto esperado: Primer avance funcional del nivel o jefe asignado dentro del 
 - Basic shading models
 
 **Practice (2h)**
+- **ColorTheoryScene** (Unit V theory lab): interactive RGB/HSV/HSL/CMYK explorers, step-by-step algorithm view, alpha blending demo, color matching challenge
 - `ColorTools` conversion exercises (RGB↔HSV↔HSL↔CMYK)
 - Alpha blending exercises applied to the student's assigned Stage/Boss visuals
 
@@ -165,6 +168,7 @@ Producto esperado: Primer avance funcional del nivel o jefe asignado dentro del 
 - Interaction between graphic objects
 
 **Practice (2h)**
+- **CollisionLabScene** (Unit VI theory lab): interactive AABB collision with Y-first bug vs X-first correct, one-way platforms
 - Sprite sheet animation implementation for the student's custom entity
 - Easing function exercises (`pytweening`-backed `math_utils` functions)
 - AABB collision and EventBus interaction exercises
