@@ -109,7 +109,7 @@ def draw_histogram_bars(
     bar_area = pygame.Rect(rect.x, rect.y + rect.h - max_h - 2, rect.w, max_h + 2)
     pygame.draw.rect(surface, (5, 5, 15), bar_area)
     n = min(len(hist_r), bar_area.w // bar_w)
-    if n == 0:
+    if n == 0 or not hist_g or not hist_b:
         return
     step = len(hist_r) // n
     max_val = max(max(hist_r), max(hist_g), max(hist_b)) + 1

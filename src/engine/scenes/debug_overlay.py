@@ -39,7 +39,7 @@ class DebugOverlay:
     def visible(self) -> bool:
         return self._visible
 
-    def handle_input(self, held: list[int], dt: float) -> None:
+    def handle_input(self, held: tuple[bool, ...], dt: float) -> None:
         # Cool-downs to avoid repeat fire
         for k in list(self._key_cooldown.keys()):
             self._key_cooldown[k] -= dt
@@ -47,7 +47,7 @@ class DebugOverlay:
                 del self._key_cooldown[k]
 
         def consume(key: int) -> bool:
-            if key not in held:
+            if not held[key]:
                 return False
             if key in self._key_cooldown:
                 return False

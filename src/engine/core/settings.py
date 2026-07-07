@@ -10,7 +10,8 @@ from pathlib import Path
 INTERNAL_WIDTH: int = 320
 INTERNAL_HEIGHT: int = 224
 TARGET_FPS: int = 60
-DISPLAY_SCALE: int = int(os.environ.get("LOI_DISPLAY_SCALE", "3"))
+_raw_scale = os.environ.get("LOI_DISPLAY_SCALE", "3")
+DISPLAY_SCALE: int = int(_raw_scale) if _raw_scale.isdigit() else 3
 TILE_SIZE: int = 16
 
 ASSETS_DIR: Path = Path("assets")
