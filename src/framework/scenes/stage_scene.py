@@ -418,7 +418,7 @@ class StageScene(BaseScene):
             s.fill((0, 0, 0))
             surface.blit(s, (0, 0))
             pause_font = pygame.font.Font(None, 20)
-            pause_text = pause_font.render("PAUSED", False, (255, 255, 255))
+            pause_text = pause_font.render("PAUSED", True, (255, 255, 255))
             pt_x = (settings.INTERNAL_WIDTH - pause_text.get_width()) // 2
             pt_y = (settings.INTERNAL_HEIGHT - pause_text.get_height()) // 2
             surface.blit(pause_text, (pt_x, pt_y))
@@ -468,6 +468,6 @@ class StageScene(BaseScene):
                 f"Paused: {self._paused}",
             ]
             for line in info:
-                txt = font.render(line, False, (255, 255, 255))
+                txt = font.render(line, True, (255, 255, 255))
                 surface.blit(txt, (4, y))
                 y += 16

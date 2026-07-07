@@ -102,7 +102,7 @@ class ParamPanel:
             selected = i == self._selected
             prefix = ">" if selected else " "
             color = COLOR_HIGHLIGHT if selected else COLOR_TEXT
-            txt = fnt.render(f"  {prefix} {p.name}: {p.fmt()}", False, color)
+            txt = fnt.render(f"  {prefix} {p.name}: {p.fmt()}", True, color)
             surface.blit(txt, (x, y + i * 14))
 
 

@@ -355,12 +355,12 @@ class CollisionLabScene(BaseScene):
         mode_color = COLOR_HIGHLIGHT if self._mode == 2 else (
             COLOR_ERROR if self._mode == 1 else COLOR_ACCENT)
         mode_label = self._font_medium.render(
-            f"  Mode: {MODE_NAMES[self._mode]}  ", False, mode_color)
+            f"  Mode: {MODE_NAMES[self._mode]}  ", True, mode_color)
         surface.blit(mode_label, (4, 24))
 
         # Controls hint
         hint = self._font_small.render(
-            "  Arrows: move  |  SPACE: jump  |  TAB: mode  |  B: auto-bug  |  R: reset  |  ESC: exit", False, COLOR_TEXT)
+            "  Arrows: move  |  SPACE: jump  |  TAB: mode  |  B: auto-bug  |  R: reset  |  ESC: exit", True, COLOR_TEXT)
         surface.blit(hint, (4, 42))
 
         # Collision info panel (bottom area)
@@ -399,12 +399,12 @@ class CollisionLabScene(BaseScene):
             lines += ["", "[AUTO-BUG] Player walks right — watch the wall-climb!"]
 
         for i, line in enumerate(lines):
-            txt = self._font_small.render(line, False, COLOR_TEXT)
+            txt = self._font_small.render(line, True, COLOR_TEXT)
             surface.blit(txt, (4, info_y + i * 14))
 
         # Status message
         if self._status_msg:
-            st = self._font_small.render(self._status_msg, False, COLOR_HIGHLIGHT)
+            st = self._font_small.render(self._status_msg, True, COLOR_HIGHLIGHT)
             surface.blit(st, (4, settings.INTERNAL_HEIGHT - 20))
 
         # Bottom bar

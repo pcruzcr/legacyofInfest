@@ -389,7 +389,7 @@ class HUD:
         # Boss name
         phase_text = f"PHASE {self._boss_phase_count}" if self._boss_phase_count > 0 else ""
         label = f"{self._boss_name}  {phase_text}" if phase_text else self._boss_name
-        name_surf = self._font.render(label, False, (200, 180, 120))
+        name_surf = self._font.render(label, True, (200, 180, 120))
         nx = bar_x + (bar_width - name_surf.get_width()) // 2
         surface.blit(name_surf, (nx, bar_y - 2))
         # Background bar
@@ -431,7 +431,7 @@ class HUD:
         self._draw_timer_background(surface)
         # Draw "TIME" label at left side of timer background — use same TTF font as digits
         label_font = self._timer_digit_font or self._font
-        label_surf = label_font.render("TIME", False, (200, 200, 200))
+        label_surf = label_font.render("TIME", True, (200, 200, 200))
         surface.blit(label_surf, (self._timer_label_rect.x, self._timer_label_rect.y))
         total_seconds = int(self._timer)
         minutes = total_seconds // 60
@@ -443,13 +443,13 @@ class HUD:
             return
         color = (255, 255, 255)
         if self._timer_digit_font:
-            time_surf = self._timer_digit_font.render(time_str, False, color)
+            time_surf = self._timer_digit_font.render(time_str, True, color)
             if time_surf.get_width() > 0:
                 tx = self._timer_rect.x + max(0, (self._timer_rect.width - time_surf.get_width()) // 2)
                 ty = self._timer_rect.y + (self._timer_rect.height - time_surf.get_height()) // 2
                 surface.blit(time_surf, (tx, ty))
         else:
-            text = self._font.render(time_str, False, color)
+            text = self._font.render(time_str, True, color)
             tx = self._timer_rect.x + max(0, (self._timer_rect.width - text.get_width()) // 2)
             ty = self._timer_rect.y + (self._timer_rect.height - text.get_height()) // 2
             surface.blit(text, (tx, ty))
