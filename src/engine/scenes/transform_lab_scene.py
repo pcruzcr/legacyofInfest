@@ -203,30 +203,30 @@ class TransformLabScene(BaseScene):
         pygame.draw.polygon(surface, (80, 200, 255, 60), tpts, 1)
 
         # Label
-        label = self._font_medium.render(f"  Mode: {MODE_NAMES[self._mode]}  ", True, COLOR_HIGHLIGHT)
+        label = self._font_medium.render(f"  Mode: {MODE_NAMES[self._mode]}  ", False, COLOR_HIGHLIGHT)
         surface.blit(label, (4, 24))
 
         # Matrix info
         if self._show_matrix:
             matrix_lines = self._build_matrix_lines()
             for i, line in enumerate(matrix_lines):
-                txt = self._font_small.render(line, True, COLOR_ACCENT)
+                txt = self._font_small.render(line, False, COLOR_ACCENT)
                 surface.blit(txt, (4, 44 + i * 14))
 
         # Current values
         val_lines = self._build_value_lines()
         for i, line in enumerate(val_lines):
-            txt = self._font_small.render(line, True, COLOR_TEXT)
+            txt = self._font_small.render(line, False, COLOR_TEXT)
             surface.blit(txt, (4, 110 + i * 14))
 
         # Controls
         controls = self._build_controls_text()
-        ct = self._font_small.render(controls, True, COLOR_TEXT)
+        ct = self._font_small.render(controls, False, COLOR_TEXT)
         surface.blit(ct, (4, 190))
 
         # Status
         if self._status_msg:
-            st = self._font_small.render(self._status_msg, True, COLOR_HIGHLIGHT)
+            st = self._font_small.render(self._status_msg, False, COLOR_HIGHLIGHT)
             surface.blit(st, (4, settings.INTERNAL_HEIGHT - 20))
 
         draw_bottom_bar(surface, f"MODE: {MODE_NAMES[self._mode]}")

@@ -6,8 +6,13 @@ Description: Main application class. Owns the game loop, display,
 clock, event bus, input, audio, and scene management.
 """
 from __future__ import annotations
+import os
+
 import pygame
 import sys
+
+# Force nearest-neighbor scaling for pixel-art crispness (no bilinear from SDL2)
+os.environ["SDL_HINT_RENDER_SCALE_QUALITY"] = "0"
 
 from src.engine.core import settings
 from src.engine.core.clock import DeltaClock
@@ -110,10 +115,9 @@ class App:
                 # 7b. Debug overlay (F3-F6)
                 self._debug_overlay.draw(self.internal_surface, self.clock.fps)
 
-                # 8. Scale and present
-                scaled = pygame.transform.scale(
-                    self.internal_surface,
-                    self.window_surface.get_size(),
+                # 8. Scale and present (nearest-neighbor for pixel-art)
+                scaled = pygame.transform.scale_by(
+                    self.internal_surface, settings.DISPLAY_SCALE,
                 )
                 self.window_surface.blit(scaled, (0, 0))
                 pygame.display.flip()

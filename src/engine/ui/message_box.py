@@ -132,7 +132,7 @@ class MessageBox:
             return None
         chunks: list[pygame.Surface] = []
         for line in lines:
-            chunks.append(self._font.render(line, True, (255, 255, 255)))
+            chunks.append(self._font.render(line, False, (255, 255, 255)))
         total_h = sum(s.get_height() for s in chunks) + 2 * (len(chunks) - 1)
         w = max(s.get_width() for s in chunks) if chunks else 0
         if w == 0 or total_h == 0:

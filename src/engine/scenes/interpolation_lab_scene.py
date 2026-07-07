@@ -160,17 +160,17 @@ class InterpolationLabScene(BaseScene):
 
         # Controls
         controls = self._build_controls_text()
-        ct = self._font_small.render(controls, True, COLOR_TEXT)
+        ct = self._font_small.render(controls, False, COLOR_TEXT)
         surface.blit(ct, (4, settings.INTERNAL_HEIGHT - 32))
 
         if self._status_msg:
-            st = self._font_small.render(self._status_msg, True, COLOR_HIGHLIGHT)
+            st = self._font_small.render(self._status_msg, False, COLOR_HIGHLIGHT)
             surface.blit(st, (4, settings.INTERNAL_HEIGHT - 20))
 
         draw_bottom_bar(surface, f"MODE: {MODE_NAMES[self._mode]}")
 
     def _draw_lerp(self, surface: pygame.Surface) -> None:
-        label = self._font_medium.render("  LERP: Linear Interpolation  ", True, COLOR_HIGHLIGHT)
+        label = self._font_medium.render("  LERP: Linear Interpolation  ", False, COLOR_HIGHLIGHT)
         surface.blit(label, (4, 24))
 
         # Two points
@@ -191,11 +191,11 @@ class InterpolationLabScene(BaseScene):
         pygame.draw.circle(surface, (255, 255, 255), (lx, ly), 8, 1)
 
         # Labels
-        la = self._font_small.render("A (start)", True, COLOR_TEXT)
+        la = self._font_small.render("A (start)", False, COLOR_TEXT)
         surface.blit(la, (start_a[0] + 10, start_a[1] - 6))
-        lb = self._font_small.render("B (end)", True, COLOR_TEXT)
+        lb = self._font_small.render("B (end)", False, COLOR_TEXT)
         surface.blit(lb, (end_b[0] + 10, end_b[1] - 6))
-        lt = self._font_small.render(f"t = {self._t:.3f}", True, lerp_color)
+        lt = self._font_small.render(f"t = {self._t:.3f}", False, lerp_color)
         surface.blit(lt, (lx + 12, ly - 8))
 
         # Formula
@@ -206,13 +206,12 @@ class InterpolationLabScene(BaseScene):
         computed_x = 40.0 + (280.0 - 40.0) * self._t
         result = self._font_small.render(
             f"  = ({start_a[0]} + ({end_b[0]} - {start_a[0]}) * {self._t:.3f})"
-            f"  =>  x = {computed_x:.1f}",
-            True, COLOR_TEXT)
+            f"  =>  x = {computed_x:.1f}", False, COLOR_TEXT)
         surface.blit(result, (4, 66))
 
     def _draw_easing_curves(self, surface: pygame.Surface) -> None:
         name, func = EASING_FUNCS[self._easing_idx]
-        label = self._font_medium.render(f"  EASING: {name}  ", True, COLOR_HIGHLIGHT)
+        label = self._font_medium.render(f"  EASING: {name}  ", False, COLOR_HIGHLIGHT)
         surface.blit(label, (4, 24))
 
         # Graph area
@@ -221,9 +220,9 @@ class InterpolationLabScene(BaseScene):
         pygame.draw.rect(surface, (10, 10, 25), (gx, gy, gw, gh), 1)
 
         # Axis labels
-        xl = self._font_small.render("t ->", True, COLOR_ACCENT)
+        xl = self._font_small.render("t ->", False, COLOR_ACCENT)
         surface.blit(xl, (gx + gw - 20, gy + gh - 2))
-        yl = self._font_small.render("f(t)", True, COLOR_ACCENT)
+        yl = self._font_small.render("f(t)", False, COLOR_ACCENT)
         surface.blit(yl, (gx - 30, gy + 2))
 
         # Draw curve
@@ -251,12 +250,11 @@ class InterpolationLabScene(BaseScene):
 
         info = self._font_small.render(
             f"  f({self._t:.2f}) = {mv:.3f}  |  "
-            f"[UP/DOWN: cycle easing]  |  [SPACE: animate]",
-            True, COLOR_TEXT)
+            f"[UP/DOWN: cycle easing]  |  [SPACE: animate]", False, COLOR_TEXT)
         surface.blit(info, (4, gy + gh + 8))
 
     def _draw_keyframe(self, surface: pygame.Surface) -> None:
-        label = self._font_medium.render("  KEYFRAME ANIMATION  ", True, COLOR_HIGHLIGHT)
+        label = self._font_medium.render("  KEYFRAME ANIMATION  ", False, COLOR_HIGHLIGHT)
         surface.blit(label, (4, 24))
 
         # Keyframes
@@ -283,8 +281,7 @@ class InterpolationLabScene(BaseScene):
 
             info = self._font_small.render(
                 f"  Segment {idx}: t={local_t:.2f} (eased={eased_t:.2f})  |  "
-                f"[LEFT/RIGHT: t]  |  [SPACE: animate]",
-                True, COLOR_TEXT)
+                f"[LEFT/RIGHT: t]  |  [SPACE: animate]", False, COLOR_TEXT)
             surface.blit(info, (4, 200))
 
     def _get_keyframe_segment(self, n: int) -> tuple[int, float]:

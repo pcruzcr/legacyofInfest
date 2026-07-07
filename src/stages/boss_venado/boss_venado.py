@@ -287,7 +287,7 @@ class BossVenado(BossBase):
                     emit(Events.ENEMY_DIED,
                          entity_id=f"BossVenado_{id(self)}",
                          position=(self.position.x, self.position.y))
-                    emit(Events.STAGE_COMPLETE, stage_id="")
+                    # Stage scene handles STAGE_COMPLETE with 2s banner
                     self.is_alive = False
                     self.is_active = False
             return

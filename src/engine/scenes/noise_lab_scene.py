@@ -274,7 +274,7 @@ class NoiseLabScene(BaseScene):
         surface.fill(COLOR_BG)
         draw_top_bar(surface, "NOISE LAB", "UNIT V/VIII")
 
-        label = self._font_medium.render(f"  {MODE_NAMES[self._mode]}  ", True, COLOR_HIGHLIGHT)
+        label = self._font_medium.render(f"  {MODE_NAMES[self._mode]}  ", False, COLOR_HIGHLIGHT)
         surface.blit(label, (4, 24))
 
         # Noise map
@@ -293,17 +293,17 @@ class NoiseLabScene(BaseScene):
             prefix = ">" if selected else " "
             val = self._get_param_value_for(i)
             color = COLOR_HIGHLIGHT if selected else COLOR_TEXT
-            txt = self._font_small.render(f"  {prefix} {pname}: {val}", True, color)
+            txt = self._font_small.render(f"  {prefix} {pname}: {val}", False, color)
             surface.blit(txt, (4, param_y + i * 14))
 
         # Controls
         controls = ("  [UP/DOWN] param  |  [LEFT/RIGHT] value  |  "
                     "[SPACE] random seed  |  [TAB] mode  |  [R] reset")
-        ct = self._font_small.render(controls, True, COLOR_TEXT)
+        ct = self._font_small.render(controls, False, COLOR_TEXT)
         surface.blit(ct, (4, param_y + len(PARAM_NAMES) * 14 + 4))
 
         if self._status_msg:
-            st = self._font_small.render(self._status_msg, True, COLOR_HIGHLIGHT)
+            st = self._font_small.render(self._status_msg, False, COLOR_HIGHLIGHT)
             surface.blit(st, (4, settings.INTERNAL_HEIGHT - 20))
 
         draw_bottom_bar(surface, f"MODE: {MODE_NAMES[self._mode]}")

@@ -141,9 +141,10 @@ class BossBase(EnemyBase):
             pass
 
         # Update phase max health to current threshold for HUD bar
+        # Do NOT reset health to max — the boss keeps its current health
         if self.current_phase < len(self.phase_health_thresholds):
             self._phase_max_health = self.phase_health_thresholds[self.current_phase]
-        self.current_health = self._phase_max_health
+        self.current_health = min(self.current_health, self._phase_max_health)
 
         emit(
             Events.BOSS_PHASE_CHANGED,

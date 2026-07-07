@@ -95,14 +95,14 @@ class DemoMenuScene(BaseScene):
             selected = i == self._selected
             prefix = "\u25b6" if selected else " "
             color = COLOR_HIGHLIGHT if selected else COLOR_TEXT
-            text = self._font_medium.render(f" {prefix} {unit}", True, color)
+            text = self._font_medium.render(f" {prefix} {unit}", False, color)
             surface.blit(text, (cx, cy))
-            desc_text = self._font_small.render(f"  {desc}", True, (150, 150, 150))
+            desc_text = self._font_small.render(f"  {desc}", False, (150, 150, 150))
             surface.blit(desc_text, (cx, cy + 11))
             cy += 24
 
         if self._error_msg:
-            err = self._font_small.render(self._error_msg, True, COLOR_ERROR)
+            err = self._font_small.render(self._error_msg, False, COLOR_ERROR)
             ex = (settings.INTERNAL_WIDTH - err.get_width()) // 2
             surface.blit(err, (ex, 170))
 
