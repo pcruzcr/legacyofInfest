@@ -121,7 +121,7 @@ def _make_fallback_surface(label: str, color: tuple[int, int, int]) -> pygame.Su
     surf = pygame.Surface(PANEL_SIZE)
     surf.fill(color)
     fnt = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_LARGE)
-    ts = fnt.render(label, True, (255, 255, 255))
+    ts = fnt.render(label, False, (255, 255, 255))
     surf.blit(ts, (4, 4))
     return surf
 
@@ -172,7 +172,7 @@ class ErrorDisplay:
     def draw(self, surface: pygame.Surface, font: pygame.font.Font, x: int, y: int) -> None:
         from src.engine.scenes.demo_layout import COLOR_ERROR
         if self._message:
-            text = font.render(self._message, True, COLOR_ERROR)
+            text = font.render(self._message, False, COLOR_ERROR)
             surface.blit(text, (x, y))
         else:
             self._draw_default(surface, font, x, y)

@@ -252,7 +252,7 @@ class CurveEditorScene(BaseScene):
             color = CTRL_PT_ACTIVE if i == self._drag_idx else CTRL_PT_COLOR
             pygame.draw.circle(surface, color, (int(px), int(py)), CTRL_PT_RADIUS)
             pygame.draw.circle(surface, (255, 255, 255), (int(px), int(py)), CTRL_PT_RADIUS, 1)
-            label = self._font_small.render(f"P{i}", True, color)
+            label = self._font_small.render(f"P{i}", False, color)
             surface.blit(label, (int(px) + 8, int(py) - 8))
 
         # Info panel
@@ -274,16 +274,16 @@ class CurveEditorScene(BaseScene):
 
         for mi, mname in enumerate(MODE_NAMES):
             hl = COLOR_HIGHLIGHT if mi == self._mode else (COLOR_TEXT if mi < 5 else COLOR_ACCENT)
-            label = self._font_small.render(f"[{mi+1}] {mname[:4]}", True, hl)
+            label = self._font_small.render(f"[{mi+1}] {mname[:4]}", False, hl)
             surface.blit(label, (info_y + mi * 40, 26))
 
         for i, line in enumerate(infos):
-            txt = self._font_small.render(line, True, COLOR_TEXT)
+            txt = self._font_small.render(line, False, COLOR_TEXT)
             surface.blit(txt, (4, info_y + i * 14))
 
         # Status
         if self._status_msg:
-            st = self._font_small.render(self._status_msg, True, COLOR_HIGHLIGHT)
+            st = self._font_small.render(self._status_msg, False, COLOR_HIGHLIGHT)
             surface.blit(st, (4, settings.INTERNAL_HEIGHT - 20))
 
         draw_bottom_bar(surface, (
@@ -339,11 +339,11 @@ class CurveEditorScene(BaseScene):
 
         # Annotation
         label = self._font_small.render(
-            f"t={t:.2f}  —  Move mouse X to change t", True, CURVE_ACTIVE_COLOR)
+            f"t={t:.2f}  —  Move mouse X to change t", False, CURVE_ACTIVE_COLOR)
         surface.blit(label, (CURVE_AREA.left + 4, CURVE_AREA.top + 4))
 
         # Levels info
         info_lines = [f"Level {i}: {len(lv)} pts" for i, lv in enumerate(levels)]
         for i, line in enumerate(info_lines):
-            txt = self._font_small.render(line, True, colors[i % len(colors)])
+            txt = self._font_small.render(line, False, colors[i % len(colors)])
             surface.blit(txt, (CURVE_AREA.right - 70, CURVE_AREA.top + 4 + i * 12))

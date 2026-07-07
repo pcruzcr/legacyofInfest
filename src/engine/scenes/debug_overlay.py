@@ -150,12 +150,11 @@ class DebugOverlay:
         lines.extend(tree_items)
 
         for line in lines:
-            txt = self._font.render(line, True, (80, 200, 255))
+            txt = self._font.render(line, False, (80, 200, 255))
             surface.blit(txt, (4, y))
             y += 10
 
         if y < settings.INTERNAL_HEIGHT - 20:
             hint = self._font.render(
-                "  Debug Console  |  [F3] toggle  |  [F4] engine  |  [F5] framework  |  [F6] tests",
-                True, (80, 200, 255))
+                "  Debug Console  |  [F3] toggle  |  [F4] engine  |  [F5] framework  |  [F6] tests", False, (80, 200, 255))
             surface.blit(hint, (4, settings.INTERNAL_HEIGHT - 14))

@@ -386,36 +386,36 @@ class PatternDemoScene(BaseScene):
 
         # Class label
         lc = self._class_color(label)
-        cls_text = self._font_large.render(f"  CLASS: {label}", True, lc)
+        cls_text = self._font_large.render(f"  CLASS: {label}", False, lc)
         surf.blit(cls_text, (10, y))
         y += 16
 
         # Confidence
         conf = max(probas.values()) if probas else 0.0
-        conf_text = self._font_medium.render(f"  Confidence: {conf:.2f}", True, COLOR_TEXT)
+        conf_text = self._font_medium.render(f"  Confidence: {conf:.2f}", False, COLOR_TEXT)
         surf.blit(conf_text, (10, y))
         y += 14
 
         # Top 3 predictions
         sorted_p = sorted(probas.items(), key=lambda x: -x[1])[:3]
         y += 4
-        section_label = self._font_small.render("  TOP 3 PREDICTIONS", True, COLOR_ACCENT)
+        section_label = self._font_small.render("  TOP 3 PREDICTIONS", False, COLOR_ACCENT)
         surf.blit(section_label, (10, y))
         y += 10
         for p_label, p_val in sorted_p:
             pc = self._class_color(p_label)
             bar_w = int(p_val * 120)
-            label_t = self._font_small.render(f"  {p_label:15s}", True, pc)
+            label_t = self._font_small.render(f"  {p_label:15s}", False, pc)
             surf.blit(label_t, (10, y))
             if bar_w > 0:
                 pygame.draw.rect(surf, pc, (80, y + 1, bar_w, 6))
-            pct_t = self._font_small.render(f" {p_val * 100:.0f}%", True, COLOR_TEXT)
+            pct_t = self._font_small.render(f" {p_val * 100:.0f}%", False, COLOR_TEXT)
             surf.blit(pct_t, (210, y))
             y += 10
 
         # Feature vector bar chart
         y += 4
-        fv_label = self._font_small.render("  FEATURE VECTOR", True, COLOR_ACCENT)
+        fv_label = self._font_small.render("  FEATURE VECTOR", False, COLOR_ACCENT)
         surf.blit(fv_label, (10, y))
         y += 10
         self._draw_feature_bars(surf, features, 10, y, 140, 30, _method_color(method))
@@ -423,8 +423,7 @@ class PatternDemoScene(BaseScene):
         # Info
         y += 36
         info = self._font_small.render(
-            f"  Model: {self._model_name}  |  Method: {method}  |  Vector: {len(features)}",
-            True, COLOR_TEXT,
+            f"  Model: {self._model_name}  |  Method: {method}  |  Vector: {len(features)}", False, COLOR_TEXT,
         )
         surf.blit(info, (10, y))
 
@@ -437,13 +436,13 @@ class PatternDemoScene(BaseScene):
         surf.fill((5, 5, 15))
         y = 10
 
-        src_label = self._font_small.render("Source Feature Vector:", True, COLOR_ACCENT)
+        src_label = self._font_small.render("Source Feature Vector:", False, COLOR_ACCENT)
         surf.blit(src_label, (10, y))
         y += 10
         self._draw_feature_bars(surf, features, 10, y, 140, 25, _method_color(method))
 
         y += 30
-        nrst_label = self._font_small.render("Nearest Training Sample:", True, COLOR_ACCENT)
+        nrst_label = self._font_small.render("Nearest Training Sample:", False, COLOR_ACCENT)
         surf.blit(nrst_label, (10, y))
         y += 10
         self._draw_feature_bars(surf, nearest_feat, 10, y, 140, 25,
@@ -451,8 +450,7 @@ class PatternDemoScene(BaseScene):
 
         y += 30
         info = self._font_small.render(
-            f"  Distance: {distance:.3f}  |  Nearest: {nearest_label}",
-            True, COLOR_TEXT,
+            f"  Distance: {distance:.3f}  |  Nearest: {nearest_label}", False, COLOR_TEXT,
         )
         surf.blit(info, (10, y))
 
@@ -473,7 +471,7 @@ class PatternDemoScene(BaseScene):
             # Cell background
             pygame.draw.rect(surf, color, (x, y, cell_w - 2, cell_h - 2), 2)
             # Class label
-            lt = self._font_small.render(label[:8], True, COLOR_TEXT)
+            lt = self._font_small.render(label[:8], False, COLOR_TEXT)
             surf.blit(lt, (x + 2, y + cell_h - 14))
         return surf
 
@@ -499,8 +497,7 @@ class PatternDemoScene(BaseScene):
         # Fallback: manual grid rendering
         if not ev or "confusion_matrix" not in ev:
             msg = self._font_small.render(
-                "Confusion matrix not available — run evaluate() during training",
-                True, COLOR_TEXT,
+                "Confusion matrix not available — run evaluate() during training", False, COLOR_TEXT,
             )
             surf.blit(msg, (10, 30))
             return surf
@@ -525,13 +522,12 @@ class PatternDemoScene(BaseScene):
                     intensity = min(val / max_off, 1.0)
                     color = (int(180 * intensity), 40, 40)
                 pygame.draw.rect(surf, color, (x, y, cell_sz - 1, cell_sz - 1))
-                vt = self._font_small.render(str(val), True, COLOR_TEXT)
+                vt = self._font_small.render(str(val), False, COLOR_TEXT)
                 surf.blit(vt, (x + 2, y + 2))
 
         bottom = oy + n * cell_sz + 4
         acc_text = self._font_small.render(
-            f"  Accuracy: {accuracy:.1%}  |  Classes: {n}",
-            True, COLOR_HIGHLIGHT,
+            f"  Accuracy: {accuracy:.1%}  |  Classes: {n}", False, COLOR_HIGHLIGHT,
         )
         surf.blit(acc_text, (ox, bottom))
 
@@ -564,15 +560,15 @@ class PatternDemoScene(BaseScene):
                 step_surf = pygame.Surface((80, 20))
                 self._draw_feature_bars(step_surf, step_data, 0, 0, 80, 20, _method_color(method))
             elif isinstance(step_data, str):
-                step_surf = self._font_small.render(step_data, True, COLOR_HIGHLIGHT)
+                step_surf = self._font_small.render(step_data, False, COLOR_HIGHLIGHT)
             elif isinstance(step_data, tuple):
                 step_surf = step_data[0]
             elif isinstance(step_data, pygame.Surface):
                 step_surf = step_data
             else:
-                step_surf = self._font_small.render("(empty)", True, COLOR_TEXT)
+                step_surf = self._font_small.render("(empty)", False, COLOR_TEXT)
 
-            label_t = self._font_small.render(f"  {step_name}", True, COLOR_ACCENT)
+            label_t = self._font_small.render(f"  {step_name}", False, COLOR_ACCENT)
             surf.blit(label_t, (4, y))
             y += 10
             if hasattr(step_surf, 'get_width'):
@@ -583,7 +579,7 @@ class PatternDemoScene(BaseScene):
 
             # Arrow
             if step_name != "Class Label":
-                arr_t = self._font_small.render("     v", True, COLOR_DIVIDER)
+                arr_t = self._font_small.render("     v", False, COLOR_DIVIDER)
                 surf.blit(arr_t, (4, y))
                 y += 10
 
@@ -625,7 +621,7 @@ class PatternDemoScene(BaseScene):
 
         # Top info
         info_line = f"  Model: {self._model_name}  |  Method: {FEATURE_METHODS[self._method_idx]}  |  Mode: {MODE_NAMES[self._mode]}"
-        top_info = self._font_small.render(info_line, True, COLOR_HIGHLIGHT)
+        top_info = self._font_small.render(info_line, False, COLOR_HIGHLIGHT)
         surface.blit(top_info, (4, TOP_BAR_Y + TOP_BAR_H - 14))
 
         # Left panel (source with analysis rect)
@@ -639,8 +635,7 @@ class PatternDemoScene(BaseScene):
         draw_panel_border(surface, pygame.Rect(0, TOP_BAR_H, PANEL_SIZE[0], PANEL_H))
 
         src_label = self._font_small.render(
-            f"  {self._sources.current_name}{' [FROZEN]' if self._sources.is_frozen else ''}  ",
-            True, COLOR_ACCENT,
+            f"  {self._sources.current_name}{' [FROZEN]' if self._sources.is_frozen else ''}  ", False, COLOR_ACCENT,
         )
         surface.blit(src_label, (4, TOP_BAR_H + PANEL_H - 12))
 
@@ -718,13 +713,12 @@ class PatternDemoScene(BaseScene):
         surf = pygame.Surface(PANEL_SIZE)
         surf.fill((5, 5, 15))
         if not self._tree_structure:
-            msg = self._font_small.render("No tree structure available for this model", True, COLOR_TEXT)
+            msg = self._font_small.render("No tree structure available for this model", False, COLOR_TEXT)
             surf.blit(msg, (10, 30))
             return surf
         self._draw_tree_nodes(surf, self._tree_structure, 0, 0, PANEL_SIZE[0] - 10, 0)
         depth_label = self._font_small.render(
-            f"  Max Depth: {self._tree_depth}  |  [LEFT/RIGHT] adjust  |  Pruning depth shown",
-            True, COLOR_ACCENT,
+            f"  Max Depth: {self._tree_depth}  |  [LEFT/RIGHT] adjust  |  Pruning depth shown", False, COLOR_ACCENT,
         )
         surf.blit(depth_label, (4, PANEL_H - 12))
         return surf
@@ -744,14 +738,14 @@ class PatternDemoScene(BaseScene):
             color = self._class_color(str(majority_idx))
             label = node["class_names"][majority_idx] if node["class_names"] and majority_idx < len(node["class_names"]) else str(majority_idx)
             pygame.draw.rect(surf, color, (cx - 20, y, 40, 18))
-            lbl = self._font_small.render(label, True, (0, 0, 0))
+            lbl = self._font_small.render(label, False, (0, 0, 0))
             surf.blit(lbl, (cx - 18, y + 2))
         else:
             feat = node["feature"]
             thresh = node["threshold"]
             label = f"f[{feat}]<={thresh:.1f}"
             pygame.draw.rect(surf, COLOR_HIGHLIGHT, (cx - 36, y, 72, 18), 1)
-            lbl = self._font_small.render(label, True, COLOR_HIGHLIGHT)
+            lbl = self._font_small.render(label, False, COLOR_HIGHLIGHT)
             surf.blit(lbl, (cx - 34, y + 2))
             # Draw branches
             left = node["left"]
@@ -791,7 +785,7 @@ class PatternDemoScene(BaseScene):
             display += "|"
         pygame.draw.rect(surface, COLOR_BOTTOM_BAR_BG,
                          (0, BOTTOM_BAR_Y, settings.INTERNAL_WIDTH, BOTTOM_BAR_H))
-        text = self._font_small.render(display, True, COLOR_HIGHLIGHT)
+        text = self._font_small.render(display, False, COLOR_HIGHLIGHT)
         surface.blit(text, (4, BOTTOM_BAR_Y + 2))
 
 

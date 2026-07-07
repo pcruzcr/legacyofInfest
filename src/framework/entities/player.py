@@ -536,8 +536,8 @@ class Player(BaseEntity):
 
     def _resolve_one_way_collision(self, dt: float, one_way_rects: list[pygame.Rect]) -> None:
         """Resolve Y-axis collision for one-way platforms (passable from below).
-        Only resolves when falling (velocity.y >= 0) and the player was above
-        the platform before this frame's Y integration (prev_bottom <= plat.top)."""
+        Only resolves when falling (velocity.y >= 0) and the player is
+        straddling the platform's top edge (bottom > top AND top < top)."""
         if not one_way_rects:
             return
         if self.velocity.y < 0:
@@ -549,10 +549,13 @@ class Player(BaseEntity):
             self.rect.width,
             self.rect.height,
         )
-        prev_bottom = player_rect.bottom - self.velocity.y * dt
+        # Inflate by 2px so edge-aligned platforms (player bottom == plat top)
+        # are detected via colliderect's strict comparison.
         collision_check_rect = player_rect.inflate(0, 2)
         for plat in one_way_rects:
-            if collision_check_rect.colliderect(plat) and prev_bottom <= plat.top:
+            if (collision_check_rect.colliderect(plat)
+                    and player_rect.bottom >= plat.top
+                    and player_rect.top < plat.top):
                 player_rect.bottom = plat.top
                 self.velocity.y = 0.0
                 self.is_grounded = True
