@@ -90,18 +90,18 @@ class EndCreditsScene(BaseScene):
                 y += 22
                 continue
             if text.startswith("---"):
-                surf = self._font_title.render(text, False, (200, 200, 100))
+                surf = self._font_title.render(text, True, (200, 200, 100))
             elif text.startswith("LEGACY"):
-                surf = self._font_title.render(text, False, (255, 215, 0))
+                surf = self._font_title.render(text, True, (255, 215, 0))
             elif ":" in text:
-                surf = self._font_text.render(text, False, (220, 220, 220))
+                surf = self._font_text.render(text, True, (220, 220, 220))
             else:
-                surf = self._font_text.render(text, False, (180, 180, 180))
+                surf = self._font_text.render(text, True, (180, 180, 180))
             sx = (settings.INTERNAL_WIDTH - surf.get_width()) // 2
             surface.blit(surf, (sx, y))
             y += 22
 
         if self._done:
-            hint = self._font_hint.render("Press CONFIRM to return to title", False, (150, 150, 150))
+            hint = self._font_hint.render("Press CONFIRM to return to title", True, (150, 150, 150))
             hx = (settings.INTERNAL_WIDTH - hint.get_width()) // 2
             surface.blit(hint, (hx, settings.INTERNAL_HEIGHT - 20))

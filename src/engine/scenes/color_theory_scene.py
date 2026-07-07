@@ -350,7 +350,7 @@ class ColorTheoryScene(BaseScene):
 
         # Status
         if self._status_msg:
-            st = self._font_small.render(self._status_msg, False, COLOR_HIGHLIGHT)
+            st = self._font_small.render(self._status_msg, True, COLOR_HIGHLIGHT)
             surface.blit(st, (4, settings.INTERNAL_HEIGHT - 20))
 
         draw_bottom_bar(surface, (
@@ -373,7 +373,7 @@ class ColorTheoryScene(BaseScene):
                      "S", f"{self._s:.2f}")
         _draw_slider(surface, 10, y + 24, 300, self._v, (100, 200, 255),
                      "V", f"{self._v:.2f}")
-        hint = self._font_small.render("SHIFT to toggle step-by-step algorithm", False, COLOR_ACCENT)
+        hint = self._font_small.render("SHIFT to toggle step-by-step algorithm", True, COLOR_ACCENT)
         surface.blit(hint, (10, y + 38))
 
     def _draw_hsl_ui(self, surface: pygame.Surface, y: int) -> None:
@@ -383,7 +383,7 @@ class ColorTheoryScene(BaseScene):
                      "S", f"{self._s:.2f}")
         _draw_slider(surface, 10, y + 24, 300, self._lightness, (100, 200, 200),
                      "L", f"{self._lightness:.2f}")
-        hint = self._font_small.render("SHIFT to toggle step-by-step algorithm", False, COLOR_ACCENT)
+        hint = self._font_small.render("SHIFT to toggle step-by-step algorithm", True, COLOR_ACCENT)
         surface.blit(hint, (10, y + 38))
 
     def _draw_cmyk_ui(self, surface: pygame.Surface, y: int) -> None:
@@ -403,7 +403,7 @@ class ColorTheoryScene(BaseScene):
             f"CMYK: C={self._c:.3f} M={self._m:.3f} Y={self._y:.3f} K={self._k:.3f}",
         ]
         for i, line in enumerate(lines):
-            txt = self._font_small.render(line, False, COLOR_TEXT)
+            txt = self._font_small.render(line, True, COLOR_TEXT)
             surface.blit(txt, (10, y + i * 11))
 
     def _draw_hsv_conversion_steps(self, surface: pygame.Surface, y: int) -> None:
@@ -430,7 +430,7 @@ class ColorTheoryScene(BaseScene):
             steps.append("Step 3:  delta≈0  =>  H=0°, S=0%  (achromatic)")
             steps.append(f"Step 4:  V={mx:.3f} (only value carries info)")
         for i, line in enumerate(steps):
-            txt = self._font_small.render(line, False, COLOR_ACCENT if i < 2 else COLOR_TEXT)
+            txt = self._font_small.render(line, True, COLOR_ACCENT if i < 2 else COLOR_TEXT)
             surface.blit(txt, (10, y + i * 11))
 
     def _draw_hsl_conversion_steps(self, surface: pygame.Surface, y: int) -> None:
@@ -451,7 +451,7 @@ class ColorTheoryScene(BaseScene):
         else:
             steps.append("Step 4:  delta≈0  =>  S=0%  (achromatic)")
         for i, line in enumerate(steps):
-            txt = self._font_small.render(line, False, COLOR_ACCENT if i < 3 else COLOR_TEXT)
+            txt = self._font_small.render(line, True, COLOR_ACCENT if i < 3 else COLOR_TEXT)
             surface.blit(txt, (10, y + i * 11))
 
     def _draw_alpha_blend_ui(self, surface: pygame.Surface, y: int) -> None:
@@ -481,7 +481,7 @@ class ColorTheoryScene(BaseScene):
             f"Layer B (color):  RGB({lr},{lg},{lb})  alpha={self._alpha:.2f}",
         ]
         for i, line in enumerate(labels):
-            txt = self._font_small.render(line, False, COLOR_TEXT)
+            txt = self._font_small.render(line, True, COLOR_TEXT)
             surface.blit(txt, (10, y + 90 + i * 14))
 
         _draw_slider(surface, 80, y + 116, 160, self._alpha, (200, 200, 255),
@@ -489,7 +489,7 @@ class ColorTheoryScene(BaseScene):
 
     def _draw_alpha_formula(self, surface: pygame.Surface, y: int) -> None:
         formula = "out = src * alpha + dst * (1 - alpha)"
-        txt = self._font_small.render(formula, False, COLOR_HIGHLIGHT)
+        txt = self._font_small.render(formula, True, COLOR_HIGHLIGHT)
         surface.blit(txt, (10, y))
 
         a = self._alpha
@@ -498,7 +498,7 @@ class ColorTheoryScene(BaseScene):
             f"= ({r:3d},{g:3d},{b:3d}) * {a:.2f} + checker * {1-a:.2f}",
         ]
         for i, line in enumerate(lines):
-            txt = self._font_small.render(line, False, COLOR_TEXT)
+            txt = self._font_small.render(line, True, COLOR_TEXT)
             surface.blit(txt, (10, y + 14 + i * 12))
 
     def _draw_challenge_ui(self, surface: pygame.Surface, y: int) -> None:
@@ -510,7 +510,7 @@ class ColorTheoryScene(BaseScene):
         pygame.draw.rect(surface, (self._r, self._g, self._b), (190, y, tw, th))
         pygame.draw.rect(surface, (255, 255, 255), (190, y, tw, th), 1)
 
-        labels = self._font_small.render("TARGET  YOURS", False, COLOR_HIGHLIGHT)
+        labels = self._font_small.render("TARGET  YOURS", True, COLOR_HIGHLIGHT)
         surface.blit(labels, (118, y - 10))
         hex_lbl = self._font_small.render(f"{hex_t}  {_rgb_to_hex(self._r, self._g, self._b)}", True, COLOR_ACCENT)
         surface.blit(hex_lbl, (118, y + th + 2))
@@ -518,5 +518,5 @@ class ColorTheoryScene(BaseScene):
         self._draw_rgb_ui(surface, y + 46)
         diff = abs(self._r - t[0]) + abs(self._g - t[1]) + abs(self._b - t[2])
         info = self._font_small.render(
-            f"Attempts: {self._challenge_attempts}  Diff: {diff:.0f}  [SPACE] submit", False, COLOR_TEXT)
+            f"Attempts: {self._challenge_attempts}  Diff: {diff:.0f}  [SPACE] submit", True, COLOR_TEXT)
         surface.blit(info, (10, y + 108))

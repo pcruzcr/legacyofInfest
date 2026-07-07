@@ -54,7 +54,7 @@ class GameOverScene(BaseScene):
         surface.fill((10, 5, 20))
 
         # GAME OVER title
-        title = self._font.render("GAME OVER", False, (255, 80, 80))
+        title = self._font.render("GAME OVER", True, (255, 80, 80))
         tx = (settings.INTERNAL_WIDTH - title.get_width()) // 2
         surface.blit(title, (tx, 60))
 
@@ -62,7 +62,7 @@ class GameOverScene(BaseScene):
         for i, opt in enumerate(self._options):
             color = (255, 215, 0) if i == self._selected else (150, 150, 150)
             prefix = "> " if i == self._selected else "  "
-            text = self._font.render(f"{prefix}{opt}", False, color)
+            text = self._font.render(f"{prefix}{opt}", True, color)
             ox = (settings.INTERNAL_WIDTH - text.get_width()) // 2
             oy = 100 + i * 22
             surface.blit(text, (ox, oy))

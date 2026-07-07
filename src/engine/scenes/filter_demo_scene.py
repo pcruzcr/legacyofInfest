@@ -344,13 +344,13 @@ class FilterDemoScene(BaseScene):
         # Mode label
         mode_color = COLOR_HIGHLIGHT if self._param_flash_timer > 0 else COLOR_TEXT
         mode_label = self._font_medium.render(
-            f"  Mode: {MODE_NAMES[self._mode]}  ", False, mode_color,
+            f"  Mode: {MODE_NAMES[self._mode]}  ", True, mode_color,
         )
         surface.blit(mode_label, (4, TOP_BAR_Y + TOP_BAR_H - 14))
 
         # Source + name label
         src_label = self._font_small.render(
-            f"  Source: {self._sources.current_name}{' [FROZEN]' if self._sources.is_frozen else ''}  ", False, COLOR_ACCENT,
+            f"  Source: {self._sources.current_name}{' [FROZEN]' if self._sources.is_frozen else ''}  ", True, COLOR_ACCENT,
         )
         surface.blit(src_label, (90, TOP_BAR_Y + TOP_BAR_H - 14))
 
@@ -377,7 +377,7 @@ class FilterDemoScene(BaseScene):
         draw_panel_border(surface, pygame.Rect(0, TOP_BAR_H, PANEL_SIZE[0], PANEL_H))
 
         if self._sources.is_frozen:
-            freeze_text = self._font_small.render("FROZEN", False, COLOR_HIGHLIGHT)
+            freeze_text = self._font_small.render("FROZEN", True, COLOR_HIGHLIGHT)
             surface.blit(freeze_text, (4, TOP_BAR_H + 2))
 
     def _draw_right_panel(self, surface: pygame.Surface) -> None:
@@ -397,7 +397,7 @@ class FilterDemoScene(BaseScene):
 
         # Error overlay
         if self._error_msg:
-            err_text = self._font_small.render(self._error_msg, False, COLOR_ERROR)
+            err_text = self._font_small.render(self._error_msg, True, COLOR_ERROR)
             surface.blit(err_text, (RIGHT_PANEL_X + 4, TOP_BAR_H + 4))
 
     def _draw_histogram(self, surface: pygame.Surface, panel_rect: pygame.Rect) -> None:
@@ -478,7 +478,7 @@ class FilterDemoScene(BaseScene):
         surface.blit(formula, (4, TOP_BAR_H + PANEL_H - 18))
 
         pause_label = self._font_small.render(
-            "  [SPACE] pause/resume  [UP/DOWN] kernel  [LEFT/RIGHT] speed", False, COLOR_ACCENT)
+            "  [SPACE] pause/resume  [UP/DOWN] kernel  [LEFT/RIGHT] speed", True, COLOR_ACCENT)
         surface.blit(pause_label, (RIGHT_PANEL_X, TOP_BAR_H + 2))
 
     def _draw_bottom_bar(self, surface: pygame.Surface) -> None:

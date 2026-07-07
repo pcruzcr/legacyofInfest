@@ -12,10 +12,10 @@ from src.engine.utils.asset_loader import AssetLoader
 
 
 # ── Layout Constants ──────────────────────────────────────────────
-TOP_BAR_H = 24
+TOP_BAR_H = 26
 LEFT_PANEL_W = 160
 RIGHT_PANEL_W = 160
-PANEL_H = 176
+PANEL_H = 174
 BOTTOM_BAR_H = 24
 
 TOP_BAR_Y = 0
@@ -39,10 +39,10 @@ COLOR_ACCENT = (100, 180, 255)
 COLOR_ERROR = (255, 60, 60)
 COLOR_GOLD = (255, 200, 50)
 
-# Font sizes
-FONT_SMALL = 7
-FONT_MEDIUM = 9
-FONT_LARGE = 11
+# Font sizes (increased for readability at 320x224 with antialiased rendering)
+FONT_SMALL = 12
+FONT_MEDIUM = 15
+FONT_LARGE = 18
 
 # Shared font cache (per-size singleton fonts)
 _FONT_CACHE: dict[int, pygame.font.Font] = {}
@@ -60,9 +60,9 @@ def draw_top_bar(surface: pygame.Surface, title: str, unit: str) -> None:
     pygame.draw.rect(surface, COLOR_TOP_BAR_BG,
                      (0, TOP_BAR_Y, settings.INTERNAL_WIDTH, TOP_BAR_H))
     fnt = _get_demo_font(FONT_MEDIUM)
-    ts = fnt.render(f"  {title}", False, COLOR_HIGHLIGHT)
+    ts = fnt.render(f"  {title}", True, COLOR_HIGHLIGHT)
     surface.blit(ts, (4, TOP_BAR_Y + 2))
-    ts2 = fnt.render(f"{unit}  ", False, COLOR_ACCENT)
+    ts2 = fnt.render(f"{unit}  ", True, COLOR_ACCENT)
     tw = ts2.get_width()
     surface.blit(ts2, (settings.INTERNAL_WIDTH - tw - 4, TOP_BAR_Y + 2))
 
@@ -71,7 +71,7 @@ def draw_bottom_bar(surface: pygame.Surface, text: str) -> None:
     pygame.draw.rect(surface, COLOR_BOTTOM_BAR_BG,
                      (0, BOTTOM_BAR_Y, settings.INTERNAL_WIDTH, BOTTOM_BAR_H))
     fnt = _get_demo_font(FONT_SMALL)
-    ts = fnt.render(text, False, COLOR_TEXT)
+    ts = fnt.render(text, True, COLOR_TEXT)
     surface.blit(ts, (4, BOTTOM_BAR_Y + 2))
 
 
@@ -79,7 +79,7 @@ def draw_bottom_bar_error(surface: pygame.Surface, error: str) -> None:
     pygame.draw.rect(surface, (40, 10, 10),
                      (0, BOTTOM_BAR_Y, settings.INTERNAL_WIDTH, BOTTOM_BAR_H))
     fnt = _get_demo_font(FONT_SMALL)
-    ts = fnt.render(error, False, COLOR_ERROR)
+    ts = fnt.render(error, True, COLOR_ERROR)
     surface.blit(ts, (4, BOTTOM_BAR_Y + 2))
 
 
@@ -93,7 +93,7 @@ def draw_divider(surface: pygame.Surface) -> None:
 
 
 def draw_save_notification(surface: pygame.Surface, saved_path: str, font: pygame.font.Font) -> None:
-    ts = font.render(f"Saved: {saved_path}", False, COLOR_GOLD)
+    ts = font.render(f"Saved: {saved_path}", True, COLOR_GOLD)
     surface.blit(ts, (4, BOTTOM_BAR_Y + 2))
 
 

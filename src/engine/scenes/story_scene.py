@@ -56,7 +56,7 @@ class EmptyFallbackStage(BaseScene):
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill(settings.BG_COLOR)
         f = pygame.font.Font(None, 16)
-        t = f.render("No stages found. Add a stage in src/stages/", False, (255, 255, 200))
+        t = f.render("No stages found. Add a stage in src/stages/", True, (255, 255, 200))
         surface.blit(t, (10, 100))
 
 
@@ -114,18 +114,18 @@ class StoryScene(BaseScene):
         surface.blit(self._background, (0, 0))
 
         title, text = STORY_TEXTS.get(self._chapter, ("DESCONOCIDO", ""))
-        title_surf = self._font_title.render(title, False, (255, 255, 240))
+        title_surf = self._font_title.render(title, True, (255, 255, 240))
         tx = (settings.INTERNAL_WIDTH - title_surf.get_width()) // 2
         surface.blit(title_surf, (tx, 30))
 
         lines = text.split("\n")
         y = 70
         for line in lines:
-            text_surf = self._font_text.render(line, False, (240, 240, 230))
+            text_surf = self._font_text.render(line, True, (240, 240, 230))
             text_x = (settings.INTERNAL_WIDTH - text_surf.get_width()) // 2
             surface.blit(text_surf, (text_x, y))
             y += 22
 
-        hint = self._font_hint.render("Presiona CONFIRM para continuar", False, (180, 180, 160))
+        hint = self._font_hint.render("Presiona CONFIRM para continuar", True, (180, 180, 160))
         hx = (settings.INTERNAL_WIDTH - hint.get_width()) // 2
         surface.blit(hint, (hx, settings.INTERNAL_HEIGHT - 25))

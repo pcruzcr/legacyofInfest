@@ -86,7 +86,7 @@ class TitleScene(BaseScene):
         for i, opt in enumerate(self._options):
             color = (255, 255, 100) if i == self._selected else (150, 150, 150)
             prefix = "> " if i == self._selected else "  "
-            text = self._font_game.render(f"{prefix}{opt}", False, color)
+            text = self._font_game.render(f"{prefix}{opt}", True, color)
             ox = (settings.INTERNAL_WIDTH - text.get_width()) // 2
             oy = logo_rect.bottom + 30 + i * 22
             surface.blit(text, (ox, oy))

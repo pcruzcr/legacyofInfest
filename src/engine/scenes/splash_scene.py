@@ -81,7 +81,7 @@ class SplashScene(BaseScene):
         surface.blit(shadow, (logo_rect.x + 3, logo_rect.y + 3))
         surface.blit(logo, logo_rect)
 
-        loading = self._font_game.render("Cargando...", False, (255, 255, 255))
+        loading = self._font_game.render("Cargando...", True, (255, 255, 255))
         loading.set_alpha(alpha)
         lr = loading.get_rect(center=(settings.INTERNAL_WIDTH // 2, settings.INTERNAL_HEIGHT - 40))
         surface.blit(loading, lr)
@@ -99,8 +99,8 @@ class SplashScene(BaseScene):
             border_radius=3,
         )
 
-        version = self._font_small.render("Prototype v0.1", False, (180, 180, 180))
+        version = self._font_small.render("Prototype v0.1", True, (180, 180, 180))
         surface.blit(version, (6, settings.INTERNAL_HEIGHT - 12))
 
-        cr = self._font_small.render("© 2026 Legacy of InFest", False, (180, 180, 180))
+        cr = self._font_small.render("© 2026 Legacy of InFest", True, (180, 180, 180))
         surface.blit(cr, (settings.INTERNAL_WIDTH - cr.get_width() - 6, settings.INTERNAL_HEIGHT - 12))

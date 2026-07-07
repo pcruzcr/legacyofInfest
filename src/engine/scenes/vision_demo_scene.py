@@ -303,13 +303,13 @@ class VisionDemoScene(BaseScene):
         draw_top_bar(surface, "VISION DEMO", "UNIT VIII")
 
         mode_label = self._font_medium.render(
-            f"  Mode: {MODE_NAMES[self._mode]}  ", False, COLOR_HIGHLIGHT,
+            f"  Mode: {MODE_NAMES[self._mode]}  ", True, COLOR_HIGHLIGHT,
         )
         surface.blit(mode_label, (4, TOP_BAR_Y + TOP_BAR_H - 14))
 
         src_label = self._font_small.render(
             f"  Source: {self._sources.current_name}"
-            f"{' [FROZEN]' if self._sources.is_frozen else ''}  ", False, COLOR_ACCENT,
+            f"{' [FROZEN]' if self._sources.is_frozen else ''}  ", True, COLOR_ACCENT,
         )
         surface.blit(src_label, (90, TOP_BAR_Y + TOP_BAR_H - 14))
 
@@ -331,7 +331,7 @@ class VisionDemoScene(BaseScene):
         draw_panel_border(surface, pygame.Rect(0, TOP_BAR_H, PANEL_SIZE[0], PANEL_H))
 
         if self._sources.is_frozen:
-            ft = self._font_small.render("FROZEN", False, COLOR_HIGHLIGHT)
+            ft = self._font_small.render("FROZEN", True, COLOR_HIGHLIGHT)
             surface.blit(ft, (4, TOP_BAR_H + 2))
 
     def _draw_right_panel(self, surface: pygame.Surface) -> None:
@@ -349,7 +349,7 @@ class VisionDemoScene(BaseScene):
                 lines.append(f"#{i+1}  A={ri.area}  C=({int(ri.centroid[0])},{int(ri.centroid[1])})  "
                              f"Rect={ri.bounding_rect.width}x{ri.bounding_rect.height}")
             for li, line in enumerate(lines):
-                rt = self._font_small.render(line, False, COLOR_GOLD)
+                rt = self._font_small.render(line, True, COLOR_GOLD)
                 surface.blit(rt, (RIGHT_PANEL_X + 4, TOP_BAR_H + 4 + li * 10))
 
         # Otsu curve overlay (mode 1)
@@ -359,12 +359,12 @@ class VisionDemoScene(BaseScene):
         # Component count (mode 6)
         if self._mode == 6 and self._cached_comp_result is not None:
             comp = self._cached_comp_result
-            ct = self._font_small.render(f"Components: {comp.num_components}", False, COLOR_HIGHLIGHT)
+            ct = self._font_small.render(f"Components: {comp.num_components}", True, COLOR_HIGHLIGHT)
             surface.blit(ct, (RIGHT_PANEL_X + 4, TOP_BAR_H + 4))
 
         # Error overlay
         if self._error_msg:
-            err = self._font_small.render(self._error_msg, False, COLOR_ERROR)
+            err = self._font_small.render(self._error_msg, True, COLOR_ERROR)
             surface.blit(err, (RIGHT_PANEL_X + 4, TOP_BAR_H + 4))
 
     def _draw_otsu_curve(self, surface: pygame.Surface, rect: pygame.Rect) -> None:
@@ -397,12 +397,12 @@ class VisionDemoScene(BaseScene):
         ot = self._otsu_value
         mx = ox + margin + int(ot / 255 * plot_w)
         pygame.draw.line(surface, COLOR_GOLD, (mx, oy + margin), (mx, oy + h - margin), 2)
-        label = self._font_small.render(f"Otsu t={ot}", False, COLOR_GOLD)
+        label = self._font_small.render(f"Otsu t={ot}", True, COLOR_GOLD)
         surface.blit(label, (mx - 20, oy + margin))
         # Axis labels
-        xlabel = self._font_small.render("Threshold  t  ->", False, COLOR_ACCENT)
+        xlabel = self._font_small.render("Threshold  t  ->", True, COLOR_ACCENT)
         surface.blit(xlabel, (ox + margin, oy + h - 10))
-        ylabel = self._font_small.render("sigma^2_B", False, COLOR_ACCENT)
+        ylabel = self._font_small.render("sigma^2_B", True, COLOR_ACCENT)
         surface.blit(ylabel, (ox + 2, oy + margin))
 
     def _draw_bottom_bar(self, surface: pygame.Surface) -> None:

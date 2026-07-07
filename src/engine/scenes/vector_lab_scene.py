@@ -193,24 +193,24 @@ class VectorLabScene(BaseScene):
                 n_end = (ei[0] + int(nn.x * 40), ei[1] + int(nn.y * 40))
                 pygame.draw.line(surface, DOT_COLORS["normalized"],
                                  ei, n_end, 3)
-                nlabel = self._font_small.render("normalized", False, DOT_COLORS["normalized"])
+                nlabel = self._font_small.render("normalized", True, DOT_COLORS["normalized"])
                 surface.blit(nlabel, (n_end[0] + 4, n_end[1] - 8))
 
         # Draw Player and Enemy
         pygame.draw.circle(surface, DOT_COLORS["player"], pi, 8)
         pygame.draw.circle(surface, (255, 255, 255), pi, 8, 1)
-        label_p = self._font_small.render("Player", False, DOT_COLORS["player"])
+        label_p = self._font_small.render("Player", True, DOT_COLORS["player"])
         surface.blit(label_p, (pi[0] + 12, pi[1] - 6))
 
         pygame.draw.circle(surface, DOT_COLORS["enemy"], ei, 8)
         pygame.draw.circle(surface, (255, 255, 255), ei, 8, 1)
-        label_e = self._font_small.render("Enemy", False, DOT_COLORS["enemy"])
+        label_e = self._font_small.render("Enemy", True, DOT_COLORS["enemy"])
         surface.blit(label_e, (ei[0] + 12, ei[1] - 6))
 
         # Mode label
         mode_color = COLOR_HIGHLIGHT if self._mode >= 1 else COLOR_ACCENT
         mode_label = self._font_medium.render(
-            f"  Mode: {MODE_NAMES[self._mode]}  ", False, mode_color)
+            f"  Mode: {MODE_NAMES[self._mode]}  ", True, mode_color)
         surface.blit(mode_label, (4, 24))
 
         # Math info panel
@@ -231,17 +231,17 @@ class VectorLabScene(BaseScene):
         ]
 
         for i, line in enumerate(info_lines):
-            txt = self._font_small.render(line, False, COLOR_TEXT)
+            txt = self._font_small.render(line, True, COLOR_TEXT)
             surface.blit(txt, (4, info_y + i * 16))
 
         # Controls hint
         hint = self._font_small.render(
-            "  Arrows: Player  |  WASD: Enemy  |  TAB: mode  |  N: toggle norm  |  R: reset  |  ESC: exit", False, COLOR_TEXT)
+            "  Arrows: Player  |  WASD: Enemy  |  TAB: mode  |  N: toggle norm  |  R: reset  |  ESC: exit", True, COLOR_TEXT)
         surface.blit(hint, (4, 50))
 
         # Status
         if self._status_msg:
-            st = self._font_small.render(self._status_msg, False, COLOR_HIGHLIGHT)
+            st = self._font_small.render(self._status_msg, True, COLOR_HIGHLIGHT)
             surface.blit(st, (4, settings.INTERNAL_HEIGHT - 20))
 
         draw_bottom_bar(surface, f"MODE: {MODE_NAMES[self._mode]}")

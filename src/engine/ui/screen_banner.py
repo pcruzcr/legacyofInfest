@@ -106,9 +106,9 @@ class ScreenBanner:
         # Draw stage name with banner fonts
         name_surf: pygame.Surface | None = None
         if self._font_large:
-            name_surf = self._font_large.render(self._stage_name, False, (255, 255, 200))
+            name_surf = self._font_large.render(self._stage_name, True, (255, 255, 200))
         if name_surf is None or name_surf.get_width() == 0:
-            name_surf = self._fallback_font.render(self._stage_name, False, (255, 255, 200))
+            name_surf = self._fallback_font.render(self._stage_name, True, (255, 255, 200))
 
         nx = bx + (bw - name_surf.get_width()) // 2
         ny = by + (self._banner_height - name_surf.get_height()) // 2
