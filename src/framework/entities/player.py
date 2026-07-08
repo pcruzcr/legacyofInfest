@@ -371,15 +371,9 @@ class Player(BaseEntity):
         if not self.is_visible:
             return
 
-        # Invincibility flash: toggle visibility periodically
-        if self._invincibility_timer > 0:
-            self._flash_timer += dt
-            period = 6.0 / 60.0
-            if self._flash_timer >= period:
-                self._flash_timer -= period
-                self._flash_visible = not self._flash_visible
-            if not self._flash_visible:
-                return
+        # Invincibility flash: skip drawing every other period
+        if self._invincibility_timer > 0 and not self._flash_visible:
+            return
 
         frames = self._sprite_frames.get(self._state_instance.state_enum.value)
         screen_x = int(self.position.x - camera_offset.x)
@@ -418,6 +412,11 @@ class Player(BaseEntity):
         """Tick all cooldown and duration timers."""
         if self._invincibility_timer > 0:
             self._invincibility_timer -= dt
+            period = 6.0 / 60.0
+            self._flash_timer += dt
+            if self._flash_timer >= period:
+                self._flash_timer -= period
+                self._flash_visible = not self._flash_visible
         if self._knockback_timer > 0:
             self._knockback_timer -= dt
         if self._cooldown_timer > 0:
