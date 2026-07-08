@@ -1,7 +1,7 @@
 # Legacy of InFest — Implementation Roadmap
 
 **Document ID:** LOI-ROADMAP-025  
-**Version:** 1.0.0  
+**Version:** 1.1.0  
 **Status:** Official  
 **Compatibility:** Requires all prior LOI documents (00–21)  
 **Audience:** Professor, AI coding assistants (Claude Code, Cline, OpenCode, Codex)
@@ -496,7 +496,72 @@ Extend the existing `DemoMenuScene` to include all 10 lab/demo scenes.
 
 ---
 
-## 20. Dependency Graph Summary
+## 21. Phase 18 — Bug Fix and Audit Remediation Session
+
+**Date:** July 2026  
+**Applies to:** All prior phases (1–17)  
+**Reference documents:** `PHASE_FIX_REPORT.md`, `KNOWN_GAPS.md`, `REMEDIATION_PLAN.md`
+
+**Scope:** Systematic audit and correction of defects found during documentation-driven testing, code audit, and student playthroughs.
+
+### 21.1 fix_plataformas (Gameplay)
+
+| File | Before (regression) | After (fix) |
+|---|---|---|
+| `player.py` (one-way collision) | Straddle-based detection — entity could be trapped from below | `_prev_foot_y` comparison — only traps if feet came from above |
+| `generate_stage0_tmx.py` (collision rect classifier) | Tile type 3 mapped uniformly to `Platform` | Pit cover (2240,176,80,16) → Platform; Zones A/C platforms → Solid |
+| `stage0.tmx` | 4 one-way platforms in Zones A/C | All Solid — blocks walking through |
+| `test_stage0_platform_solidity.py` | Did not exist | 5 regression tests (369 total, up from 364) |
+
+### 21.2 Crash Bug Fixes (3 commits: 8bd5c1d, e9a37f9, 58311db)
+
+- 14 crash bugs corrected across engine core, entity framework, and stage loading
+- ZeroDivisionError guards (division by zero in timing/cooldown calculations)
+- None-type guards in sprite loading and collision detection paths
+
+### 21.3 Blurry Text Fix (commit 70df788)
+
+| Asset | Previous Size | New Size |
+|---|---|---|
+| Font `5x7` (HUD/hearts) | 5×7 px | 5×7 px (unchanged) |
+| Font `6x9` (banners) | 6×9 px | 6×15 px |
+| Font `7x11` (dialogs) | 7×11 px | 7×18 px |
+
+- Antialiasing enabled on all font rendering
+- `SDL_HINT_RENDER_SCALE_QUALITY=0` set at process start
+
+### 21.4 Auditoría Remediation (8 issues)
+
+| # | Issue | Fix |
+|---|---|---|
+| 1 | Walker `_alert_behavior` lacks ledge detection (floats over pits) | Added same probe/reverse logic as `_patrol_behavior` |
+| 2 | No fault isolation in `App.run()` — single `except Exception` wraps entire loop | Individual try/except around scene `update()` and `draw()` per stage |
+| 3 | Dual EventBus — no test isolation | Fixture `_reset_eventbus` (autouse) in `conftest.py` |
+| 4 | `fire_rate=0` → ALERT→FIRING loop | Both `_alert_behavior` (guards transition) and `_firing_behavior` (min cooldown) |
+| 5 | `hasattr(entity, "_boss_name")` duck-typing → `isinstance(entity, BossBase)` | Import `BossBase`, explicit type check; `_completion_fired` initialized in `BossBase.__init__` |
+| 6 | `_run_state_machine` docstring omits FIRING priority | `DYING > HURT > FIRING > ALERT > PATROL` |
+| 7 | Player invincibility flash uses `1.0/60.0` hardcoded | `self._flash_timer += dt` with configurable period |
+| 8 | Missing zone0 zone1 aim/fire sprites | False positive — sprites exist at `assets/sprites/enemies/zone1/` |
+
+### 21.5 Test Count Evolution
+
+| Milestone | Tests |
+|---|---|
+| End of Phase 17 | 364 |
+| After fix_plataformas (5 new regression tests) | 369 |
+| After auditoría remediation (no test count change) | 369 (still) |
+
+**Definition of Done:**
+- [x] `fix_plataformas` applied to all 4 files; TMX regenerated with 33 collision rects
+- [x] 14 crash bugs resolved (3 commits)
+- [x] Blurry text fix applied (font sizes, antialiasing, SDL_HINT)
+- [x] 8 auditoría remediation items verified against current code
+- [x] Full test suite: 369 passed, 0 failures
+- [x] Documentation updated across `03_ARCHITECTURE.md` (v1.1.0), `22_API_CONTRACTS.md` (v1.2.0), `15_ACADEMIC_DEMO_SCENES.md` (v1.3.0), `25_IMPLEMENTATION_ROADMAP.md` (v1.1.0), `README.md`
+
+---
+
+## 22. Dependency Graph Summary
 
 ```
 Phase 0 (scaffold)
@@ -533,6 +598,8 @@ Phase 15 (BossBase + El Venado Sagrado) ◄── requires FilterTools (Phase 10
 Phase 16 (student_templates/)
      ↓
 Phase 17 (Regression + Tooling)
+     ↓
+Phase 18 (Bug fix + Audit remediation)
 ```
 
 ---
@@ -569,3 +636,4 @@ Because this roadmap is designed to be executed across multiple AI coding sessio
 | 15 | `17_BOSS_SPEC.md` §2-3 | `22_API_CONTRACTS.md` §17 |
 | 16 | `26_STUDENT_TEMPLATE_SPEC.md` | n/a |
 | 17 | All documents | n/a — regression phase |
+| 18 | `PHASE_FIX_REPORT.md`, `KNOWN_GAPS.md`, `REMEDIATION_PLAN.md` | n/a — audit with fixes against all prior phases |

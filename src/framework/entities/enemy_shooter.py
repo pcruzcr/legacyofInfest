@@ -143,10 +143,9 @@ class EnemyShooter(EnemyBase):
         self.rect.y = int(self.position.y)
 
         # Load sprites
-        self._load_zone_sprites(zone, "shoot", 12, 12)
-        self._load_aim_fire_sprites(zone)
+        self._load_zone_sprites(zone, 12, 12)
 
-    def _load_aim_fire_sprites(self, zone: int) -> None:
+    def _load_extra_sprites(self, zone: int, fw: int, fh: int) -> None:
         """Load aim and fire animation sprites. Generate placeholder if missing."""
         zone_key = f"zone{zone}" if zone > 0 else "zone1"
         base = settings.ASSETS_DIR / "sprites" / "enemies" / zone_key
@@ -155,10 +154,10 @@ class EnemyShooter(EnemyBase):
                            ("fire", f"enemy_fire_{zone_key}.png")]:
             path = base / fname
             try:
-                frames = AssetLoader.load_sprite_sheet(path, 12, 12)
+                frames = AssetLoader.load_sprite_sheet(path, fw, fh)
                 self._sprite_frames[key] = frames
             except Exception:
-                placeholder = pygame.Surface((12, 12), pygame.SRCALPHA)
+                placeholder = pygame.Surface((fw, fh), pygame.SRCALPHA)
                 placeholder.fill(colors.get(key, (200, 0, 200)))
                 self._sprite_frames[key] = [placeholder]
 
@@ -212,7 +211,7 @@ class EnemyShooter(EnemyBase):
         # Slow patrol while alert
         if self.patrol_length > 0:
             self.position.x += self.facing_direction * 20.0 * dt
-        if self._shoot_cooldown <= 0:
+        if self._shoot_cooldown <= 0 and self.fire_rate > 0:
             self._fire_anim_timer = 0.3  # ~5 frames at 16 FPS fire animation
             self.state = EnemyState.FIRING
 
@@ -222,7 +221,7 @@ class EnemyShooter(EnemyBase):
         self._fire_anim_timer -= dt
         if self._fire_anim_timer <= 0:
             self._fire()
-            self._shoot_cooldown = 1.0 / self.fire_rate
+            self._shoot_cooldown = 1.0 / self.fire_rate if self.fire_rate > 0 else 1.0
             self.state = EnemyState.ALERT
 
     def _fire(self) -> bool:

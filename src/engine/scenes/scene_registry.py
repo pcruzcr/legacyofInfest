@@ -10,8 +10,9 @@ from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
+    from src.engine.scene.base_scene import BaseScene
 
-SceneFactory = Callable  # type: ignore[type-arg]
+SceneFactory = Callable[..., "BaseScene"]
 
 
 class SceneRegistry:
@@ -65,10 +66,10 @@ def register_demo_scenes() -> None:
     reg.register("pattern", lambda ctx: _build_scene(ctx, "pattern_demo_scene", "PatternDemoScene"))
 
 
-def _build_scene(ctx, module_name: str, class_name: str):
+def _build_scene(ctx, module_name: str, class_name: str) -> BaseScene | None:
     import importlib
     mod = importlib.import_module(f"src.engine.scenes.{module_name}")
     cls = getattr(mod, class_name, None)
     if cls is None:
         return None
-    return cls(ctx)  # type: ignore[no-any-return]
+    return cls(ctx)

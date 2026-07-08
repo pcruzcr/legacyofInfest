@@ -1137,7 +1137,253 @@ class PatternDemoScene(BaseScene):
     # on_enter() by default.
 ```
 
+### 16.5 Theory Lab Scenes (Units II–VI/VIII)
+
+All lab scenes are `BaseScene` subclasses in `src/engine/scenes/`. Internal mode cycling via `TAB`, reset via `R`, return via `ESC`.
+
+#### `src/engine/scenes/vector_lab_scene.py`
+```python
+class VectorLabScene(BaseScene):
+    # Modes: FREE_MOVE, CHASE, ORBIT, DISTANCE_CHECK
+    # Interactive vector arithmetic: normalization, dot product, pursuit movement
+    # Two draggable points with vector AB arrow drawn between them
+    # N key toggles normalized vector display
+```
+
+#### `src/engine/scenes/transform_lab_scene.py`
+```python
+class TransformLabScene(BaseScene):
+    # Modes: TRANSLATE, ROTATE, SCALE, SHEAR, COMPOSITE
+    # 2D affine transformations with live 3x3 matrix display
+    # Original shape ghost outline, transformed shape filled
+    # N toggles matrix panel
+```
+
+#### `src/engine/scenes/curve_editor_scene.py`
+```python
+class CurveEditorScene(BaseScene):
+    # Modes: BEZIER_QUAD, BEZIER_CUBIC, BEZIER_HIGH, CATMULL_ROM, BSPLINE, DE_CASTELJAU
+    # Control points draggable via mouse; D toggles de Casteljau visualization
+    # +/- add/remove control points (BEZIER_HIGH, BSPLINE modes)
+    # 1-5 keys jump directly to modes
+```
+
+#### `src/engine/scenes/interpolation_lab_scene.py`
+```python
+class InterpolationLabScene(BaseScene):
+    # Modes: LERP, EASING_CURVES, KEYFRAME_ANIM
+    # Easing functions: 10 functions (Linear, Quad, Cubic, Bounce, Elastic, Sine)
+    # UP/DOWN cycle easing function, LEFT/RIGHT adjust t, SPACE toggles auto-animation
+```
+
+#### `src/engine/scenes/color_theory_scene.py`
+```python
+class ColorTheoryScene(BaseScene):
+    # Modes: RGB, HSV, HSL, CMYK, ALPHA_BLEND, CHALLENGE
+    # Sliders per color component, live swatch, hex readout
+    # SHIFT toggles step-by-step conversion algorithm display
+    # SPACE submits challenge attempt
+```
+
+#### `src/engine/scenes/noise_lab_scene.py`
+```python
+class NoiseLabScene(BaseScene):
+    # Modes: VALUE_NOISE, PERLIN_NOISE, FRACTAL_NOISE
+    # Parameters: Octaves (1-8), Persistence (0-1), Lacunarity (1-8), Scale (0.005-0.5), Seed (0-9999)
+    # SPACE randomizes seed, R resets to defaults
+```
+
+#### `src/engine/scenes/collision_lab_scene.py`
+```python
+class CollisionLabScene(BaseScene):
+    # Modes: NO_COLLISION, Y_FIRST, X_FIRST
+    # Demonstrates axis-separated collision resolution vs Y-first wall-climb bug
+    # B key auto-demonstrates wall-climb bug in Y_FIRST mode
+    # One-way platforms, gravity, jumping, collision info overlay
+```
+
 ---
+
+## 17. Engine Scenes — Infrastructure
+
+### 17.1 `src/engine/scenes/scene_registry.py`
+
+```python
+from typing import Callable
+
+class SceneRegistry:
+    """Dependency-injection container for lazy scene construction."""
+
+    @classmethod
+    def register(cls, name: str, builder: Callable[[], "BaseScene"]) -> None:
+        """Register a scene builder function under a name."""
+
+    @classmethod
+    def build(cls, name: str) -> "BaseScene":
+        """Build and return a scene instance. Raises KeyError if not registered."""
+
+    @classmethod
+    def list_scenes(cls) -> list[str]:
+        """Return sorted list of registered scene names."""
+
+    @classmethod
+    def register_demo_scenes(cls) -> None:
+        """Register all 10 academic demo/lab scenes."""
+
+
+class GameContext:
+    """Holds shared references to engine singletons, passed to each BaseScene.__init__."""
+    def __init__(self) -> None: ...
+    app: "App"
+    scene_manager: "SceneManager"
+    input_manager: "InputManager"
+    audio_manager: "AudioManager"
+    asset_loader: "AssetLoader"
+    event_bus: "EventBus"
+```
+
+### 17.2 `src/engine/scenes/debug_overlay.py`
+
+```python
+class DebugOverlay:
+    """F3-toggleable debug console. Renders on top of all other scene content."""
+
+    def __init__(self, app: "App") -> None: ...
+
+    def toggle(self) -> None: ...
+
+    def update(self, dt: float) -> None: ...
+
+    def draw(self, surface: pygame.Surface) -> None: ...
+
+    @property
+    def is_active(self) -> bool: ...
+    # F3: toggle overlay
+    # F4: event queue snapshot
+    # F5: registered scenes list
+    # F6: module dependency tree browser
+```
+
+### 17.3 `src/engine/scenes/param_panel.py`
+
+```python
+class ParamPanel:
+    """Reusable parameter control panel for lab/demo scenes."""
+
+    def __init__(self, x: int, y: int, width: int, font: pygame.font.Font) -> None: ...
+
+    def add_int(self, name: str, value: int, min_v: int, max_v: int, step: int = 1) -> None: ...
+    def add_float(self, name: str, value: float, min_v: float, max_v: float, step: float = 0.1) -> None: ...
+
+    def handle_input(self, input_manager: "InputManager") -> None:
+        """Cycle focused parameter with TAB, adjust with LEFT/RIGHT/UP/DOWN."""
+
+    def draw(self, surface: pygame.Surface) -> None: ...
+```
+
+### 17.4 `src/engine/scenes/demo_layout.py`
+
+```python
+# Module-level layout constants and draw helper functions.
+# Used by all academic demo/lab scenes.
+
+LEFT_PANEL_X: int = 0
+LEFT_PANEL_Y: int = 22
+LEFT_PANEL_W: int = 160
+LEFT_PANEL_H: int = 180
+RIGHT_PANEL_X: int = 160
+RIGHT_PANEL_Y: int = 22
+RIGHT_PANEL_W: int = 160
+RIGHT_PANEL_H: int = 180
+TOP_BAR_H: int = 22
+BOTTOM_BAR_H: int = 22
+
+def draw_top_bar(surface: pygame.Surface, title: str, unit: str, font) -> None: ...
+def draw_bottom_bar(surface: pygame.Surface, text: str, font) -> None: ...
+def draw_divider(surface: pygame.Surface) -> None: ...
+def draw_panel_label(surface: pygame.Surface, panel_rect, label: str, font) -> None: ...
+```
+
+### 17.5 `src/engine/scenes/demo_utils.py`
+
+```python
+class SourceSurfaceManager:
+    """Manages the 5 source surface options cycled via SPACE in demo scenes."""
+
+    def __init__(self) -> None:
+        """Pre-loads player, background, tileset, enemy sprites. Stage 0 live capture is optional."""
+
+    def next(self) -> pygame.Surface:
+        """Cycle to next source. Returns current source surface."""
+
+    def current(self) -> pygame.Surface:
+        """Return the current source surface without cycling."""
+
+    @property
+    def source_name(self) -> str: ...
+
+    @property
+    def index(self) -> int: ...
+
+
+class FrameThrottle:
+    """Throttles expensive operations to every Nth frame."""
+
+    def __init__(self, interval: int = 1) -> None: ...
+
+    def should_update(self) -> bool:
+        """Returns True once every N frames."""
+
+    def reset(self) -> None: ...
+
+
+class ErrorDisplay:
+    """Displays transient error messages in the bottom bar."""
+
+    def show(self, message: str, duration: float = 2.0) -> None: ...
+    def update(self, dt: float) -> None: ...
+    def draw(self, surface: pygame.Surface, font, rect) -> None: ...
+    @property
+    def active(self) -> bool: ...
+
+
+def save_png(surface: pygame.Surface, scene_prefix: str, mode_name: str) -> str:
+    """Save to tests/output/demo/{prefix}_{mode}_{timestamp}.png. Returns path string."""
+```
+
+### 17.6 `src/engine/scenes/demo_common.py`
+
+```python
+# Legacy compatibility module. Re-exports all public symbols from
+# demo_layout and demo_utils so that existing imports in demo scene
+# code continue to work without modification.
+```
+
+---
+
+## 18. Scripts API
+
+### 18.1 `scripts/validate_assets.py`
+
+```python
+# Validates font loading, model loading, and map file integrity.
+# Exit code 0 on success, non-zero on failure.
+# No public classes — run as `python scripts/validate_assets.py`.
+```
+
+### 18.2 `scripts/generate_exam.py`
+
+```python
+# Generates practice exams from a 16-question bank (Units II–IX).
+# CLI flags:
+#   --unit UNIT       Filter by academic unit (e.g., "VII", "IX")
+#   --num-questions N  Number of questions to include (default: 10)
+# Run as `python scripts/generate_exam.py`.
+```
+
+---
+
+## 19. Exception Types Reference
 
 ## 17. Boss Framework
 

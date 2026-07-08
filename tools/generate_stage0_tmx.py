@@ -51,7 +51,11 @@ for y in range(12):
 def _gen_collision_rects():
     """Generate TMX rect objects from the terrain grid, merging contiguous solid tiles.
     Tile 1=floor, 2=wall → type Solid.
-    Tile 3=platform → type Platform (one-way: passable from below)."""
+    Tile 3=platform → type Solid by default; ONLY the Zone E pit cover is
+    one-way (type Platform), per 07_STAGE0_DESIGN §Zone E ("one-way platform
+    spanning the pit"). Zone A/C elevated platforms are solid ground the
+    player jumps ONTO and cannot walk through (§Zone A/C)."""
+    ONE_WAY_RECTS = {(2240, 176, 80, 16)}
     solid_rects = []
     platform_rects = []
     oid = 100
@@ -69,7 +73,7 @@ def _gen_collision_rects():
                     rx = start_x * TS
                     rw = (x - start_x) * TS
                     entry = (oid, rx, y * TS, rw, TS)
-                    if tile_type == 3:
+                    if tile_type == 3 and entry[1:] in ONE_WAY_RECTS:
                         platform_rects.append(entry)
                     else:
                         solid_rects.append(entry)
@@ -80,7 +84,7 @@ def _gen_collision_rects():
             rx = start_x * TS
             rw = (MW - start_x) * TS
             entry = (oid, rx, y * TS, rw, TS)
-            if tile_type == 3:
+            if tile_type == 3 and entry[1:] in ONE_WAY_RECTS:
                 platform_rects.append(entry)
             else:
                 solid_rects.append(entry)

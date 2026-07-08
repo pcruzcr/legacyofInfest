@@ -11,7 +11,7 @@ import pytest
 from unittest.mock import MagicMock
 
 from src.engine.core.game_context import GameContext
-from src.engine.core.event_bus import EventBus, emit, dispatch, clear
+from src.engine.core.event_bus import EventBus
 from src.engine.scene.scene_manager import SceneManager
 from src.engine.scene.base_scene import BaseScene
 
@@ -60,12 +60,6 @@ class _TestSceneB(BaseScene):
 
     def draw(self, surface: pygame.Surface) -> None:
         pass
-
-
-@pytest.fixture(autouse=True)
-def reset_bus():
-    clear()
-    yield
 
 
 @pytest.fixture
@@ -145,8 +139,8 @@ class TestSceneManager:
         manager.set_stage_queue([_TestSceneA, _TestSceneB])
         a = _TestSceneA(context)
         manager.push(a)
-        emit("STAGE_COMPLETE")
-        dispatch()
+        context.event_bus.emit("STAGE_COMPLETE")
+        context.event_bus.dispatch()
         # Should have advanced to next stage
         assert manager._stage_index == 1
         assert isinstance(manager.current, _TestSceneB)

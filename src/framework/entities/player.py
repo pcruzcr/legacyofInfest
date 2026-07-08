@@ -125,6 +125,7 @@ class Player(BaseEntity):
         self._flash_visible: bool = True
 
         # --- Jump buffering ---
+        self._prev_foot_y: float = spawn_position.y + 32.0
         self._pending_jump: bool = False
         self._pending_jump_timer: float = 0.0
 
@@ -321,6 +322,10 @@ class Player(BaseEntity):
         # correct width/height for the current stance.
         self._update_rect_size()
 
+        # Feet position BEFORE integration — one-way platforms only catch
+        # the player if they were at/above the platform top last frame.
+        self._prev_foot_y = self.position.y + self.rect.height
+
         # Advance animation frame (attack states handle their own animation)
         if self._state_instance.state_enum not in (
             PlayerState.SHORT_ATTACK,
@@ -366,11 +371,12 @@ class Player(BaseEntity):
         if not self.is_visible:
             return
 
-        # Invincibility flash: skip draw every 6 frames when flashing
+        # Invincibility flash: toggle visibility periodically
         if self._invincibility_timer > 0:
-            self._flash_timer += 1.0 / 60.0
-            if self._flash_timer >= 6.0 / 60.0:
-                self._flash_timer = 0.0
+            self._flash_timer += dt
+            period = 6.0 / 60.0
+            if self._flash_timer >= period:
+                self._flash_timer -= period
                 self._flash_visible = not self._flash_visible
             if not self._flash_visible:
                 return
@@ -536,8 +542,10 @@ class Player(BaseEntity):
 
     def _resolve_one_way_collision(self, dt: float, one_way_rects: list[pygame.Rect]) -> None:
         """Resolve Y-axis collision for one-way platforms (passable from below).
-        Only resolves when falling (velocity.y >= 0) and the player is
-        straddling the platform's top edge (bottom > top AND top < top)."""
+        Only resolves when falling (velocity.y >= 0) AND the player's feet
+        were at or above the platform top on the previous frame. Walking into
+        a platform from lower ground passes through (true one-way semantics:
+        07_STAGE0_DESIGN §Zone E — "Jump up through it; fall back down")."""
         if not one_way_rects:
             return
         if self.velocity.y < 0:
@@ -554,8 +562,7 @@ class Player(BaseEntity):
         collision_check_rect = player_rect.inflate(0, 2)
         for plat in one_way_rects:
             if (collision_check_rect.colliderect(plat)
-                    and player_rect.bottom >= plat.top
-                    and player_rect.top < plat.top):
+                    and self._prev_foot_y <= plat.top + 1):
                 player_rect.bottom = plat.top
                 self.velocity.y = 0.0
                 self.is_grounded = True

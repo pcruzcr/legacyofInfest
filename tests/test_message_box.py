@@ -9,133 +9,112 @@ from __future__ import annotations
 import pygame
 import pytest
 from src.engine.ui.message_box import MessageBox
-from src.engine.core.event_bus import emit, dispatch, clear, subscriber_count
-
-
-@pytest.fixture(autouse=True)
-def reset_bus():
-    clear()
-    yield
-
-
-@pytest.fixture(scope="class", autouse=True)
-def _pygame_init():
-    pygame.init()
-    yield
-    pygame.quit()
 
 
 class TestMessageBox:
-    def test_initial_state(self):
-        mb = MessageBox()
+    def test_initial_state(self, event_bus):
+        mb = MessageBox(event_bus)
         assert not mb.is_visible
         assert mb._text == ""
 
-    def test_show_message_event(self):
-        mb = MessageBox()
-        emit("SHOW_MESSAGE", text="Hello", duration=3.0)
-        dispatch()
+    def test_show_message_event(self, event_bus):
+        mb = MessageBox(event_bus)
+        event_bus.emit("SHOW_MESSAGE", text="Hello", duration=3.0)
+        event_bus.dispatch()
         assert mb.is_visible
         assert mb._full_text == "Hello"
 
-    def test_hide_message_event(self):
-        mb = MessageBox()
-        emit("SHOW_MESSAGE", text="Hello", duration=3.0)
-        dispatch()
+    def test_hide_message_event(self, event_bus):
+        mb = MessageBox(event_bus)
+        event_bus.emit("SHOW_MESSAGE", text="Hello", duration=3.0)
+        event_bus.dispatch()
         assert mb.is_visible
-        emit("HIDE_MESSAGE")
-        dispatch()
+        event_bus.emit("HIDE_MESSAGE")
+        event_bus.dispatch()
         assert not mb.is_visible
         assert mb._text == ""
 
-    def test_typewriter_reveals_text_over_time(self):
-        mb = MessageBox()
+    def test_typewriter_reveals_text_over_time(self, event_bus):
+        mb = MessageBox(event_bus)
         mb._full_text = "Hello"
         mb._visible = True
         mb._chars_per_second = 10.0
-        mb.update(0.1)  # 0.1s * 10 = 1 char
+        mb.update(0.1)
         assert len(mb._text) == 1
-        mb.update(0.3)  # total 0.4s * 10 = 4 chars
+        mb.update(0.3)
         assert len(mb._text) == 4
-        mb.update(1.0)  # total well beyond length
+        mb.update(1.0)
         assert mb._text == "Hello"
 
-    def test_auto_dismiss_after_duration(self):
-        mb = MessageBox()
-        mb._chars_per_second = 1000.0  # instant typewriter
-        emit("SHOW_MESSAGE", text="Hi", duration=0.5)
-        dispatch()
+    def test_auto_dismiss_after_duration(self, event_bus):
+        mb = MessageBox(event_bus)
+        mb._chars_per_second = 1000.0
+        event_bus.emit("SHOW_MESSAGE", text="Hi", duration=0.5)
+        event_bus.dispatch()
         assert mb.is_visible
-        mb.update(0.01)  # finish typewriter
-        assert mb.is_visible  # still within display_duration
-        mb.update(0.6)  # beyond display_duration
+        mb.update(0.01)
+        assert mb.is_visible
+        mb.update(0.6)
         assert not mb.is_visible
 
-    def test_draw_does_not_crash_when_visible(self):
-        mb = MessageBox()
+    def test_draw_does_not_crash_when_visible(self, event_bus):
+        mb = MessageBox(event_bus)
         surface = pygame.Surface((320, 224))
-        mb.draw(surface)  # not visible, should be no-op
-        emit("SHOW_MESSAGE", text="Test", duration=3.0)
-        dispatch()
-        # Advance typewriter so text is revealed
+        mb.draw(surface)
+        event_bus.emit("SHOW_MESSAGE", text="Test", duration=3.0)
+        event_bus.dispatch()
         mb.update(1.0)
-        mb.draw(surface)  # visible with text, should not crash
+        mb.draw(surface)
 
-    def test_destroy_removes_subscriptions(self):
-        mb = MessageBox()
-        before = subscriber_count()
+    def test_destroy_removes_subscriptions(self, event_bus):
+        mb = MessageBox(event_bus)
+        before = event_bus.subscriber_count()
         mb.destroy()
-        after = subscriber_count()
+        after = event_bus.subscriber_count()
         assert after == before - 2, (
             f"Expected 2 fewer subscribers, got {before} -> {after}"
         )
 
-    def test_destroy_is_idempotent(self):
-        mb = MessageBox()
+    def test_destroy_is_idempotent(self, event_bus):
+        mb = MessageBox(event_bus)
         mb.destroy()
-        count_after_first = subscriber_count()
+        count_after_first = event_bus.subscriber_count()
         mb.destroy()
-        count_after_second = subscriber_count()
+        count_after_second = event_bus.subscriber_count()
         assert count_after_second == count_after_first
 
-    def test_destroyed_message_box_ignores_events(self):
-        mb = MessageBox()
+    def test_destroyed_message_box_ignores_events(self, event_bus):
+        mb = MessageBox(event_bus)
         mb.destroy()
-        emit("SHOW_MESSAGE", text="Should not appear", duration=3.0)
-        dispatch()
+        event_bus.emit("SHOW_MESSAGE", text="Should not appear", duration=3.0)
+        event_bus.dispatch()
         assert not mb.is_visible
 
-    def test_queue_maintains_order_after_dismiss(self):
-        mb = MessageBox()
+    def test_queue_maintains_order_after_dismiss(self, event_bus):
+        mb = MessageBox(event_bus)
         mb._chars_per_second = 1000.0
-        # Show first message (dismiss_on_confirm style)
-        emit("SHOW_MESSAGE", text="First", duration=0.0)
-        dispatch()
+        event_bus.emit("SHOW_MESSAGE", text="First", duration=0.0)
+        event_bus.dispatch()
         assert mb._full_text == "First"
-        # Queue two more while first is visible
-        emit("SHOW_MESSAGE", text="Second", duration=0.0)
-        dispatch()
-        emit("SHOW_MESSAGE", text="Third", duration=0.0)
-        dispatch()
+        event_bus.emit("SHOW_MESSAGE", text="Second", duration=0.0)
+        event_bus.dispatch()
+        event_bus.emit("SHOW_MESSAGE", text="Third", duration=0.0)
+        event_bus.dispatch()
         assert len(mb._queue) == 2, "Should have 2 queued messages"
-        # Hide first → queue must NOT be cleared
-        emit("HIDE_MESSAGE")
-        dispatch()
+        event_bus.emit("HIDE_MESSAGE")
+        event_bus.dispatch()
         assert len(mb._queue) == 2, "Queue should survive dismiss"
-        # Update should pick next from queue
         mb.update(0.0)
         assert mb._full_text == "Second", f"Expected 'Second', got '{mb._full_text}'"
-        # Dismiss second → third should appear
-        emit("HIDE_MESSAGE")
-        dispatch()
+        event_bus.emit("HIDE_MESSAGE")
+        event_bus.dispatch()
         mb.update(0.0)
         assert mb._full_text == "Third", f"Expected 'Third', got '{mb._full_text}'"
 
-    def test_chars_to_add_never_exceeds_full_text(self):
-        mb = MessageBox()
+    def test_chars_to_add_never_exceeds_full_text(self, event_bus):
+        mb = MessageBox(event_bus)
         mb._full_text = "Hi"
         mb._visible = True
-        # Simulate a large dt so chars_to_add would exceed the string length
         mb._char_timer = 100.0
         mb._chars_per_second = 30.0
         mb.update(0.0)

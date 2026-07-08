@@ -9,14 +9,8 @@ from __future__ import annotations
 import pygame
 import pytest
 from src.engine.ui.hud import HUD, _heart_slot_state
-from src.engine.core.event_bus import emit, dispatch, clear, subscriber_count
+from src.engine.core.event_bus import dispatch
 from src.engine.core import settings
-
-
-@pytest.fixture(autouse=True)
-def reset_bus():
-    clear()
-    yield
 
 
 class TestHeartSlotState:
@@ -55,85 +49,84 @@ class TestHeartSlotState:
 
 
 class TestHUD:
-    def test_initial_health(self):
-        hud = HUD()
+    def test_initial_health(self, event_bus):
+        hud = HUD(event_bus)
         assert hud._health == settings.PLAYER_MAX_HEALTH
 
-    def test_damage_event(self):
-        hud = HUD()
-        emit("PLAYER_DAMAGED", amount=1.0, source=(0, 0))
-        dispatch()
+    def test_damage_event(self, event_bus):
+        hud = HUD(event_bus)
+        event_bus.emit("PLAYER_DAMAGED", amount=1.0, source=(0, 0))
+        event_bus.dispatch()
         assert hud._health == settings.PLAYER_MAX_HEALTH - 1.0
 
-    def test_heal_event(self):
-        hud = HUD()
-        emit("PLAYER_DAMAGED", amount=3.0, source=(0, 0))
-        dispatch()
-        emit("PLAYER_HEALED", amount=1.0)
-        dispatch()
+    def test_heal_event(self, event_bus):
+        hud = HUD(event_bus)
+        event_bus.emit("PLAYER_DAMAGED", amount=3.0, source=(0, 0))
+        event_bus.dispatch()
+        event_bus.emit("PLAYER_HEALED", amount=1.0)
+        event_bus.dispatch()
         assert hud._health == settings.PLAYER_MAX_HEALTH - 2.0
 
-    def test_damage_below_zero(self):
-        hud = HUD()
-        emit("PLAYER_DAMAGED", amount=100.0, source=(0, 0))
-        dispatch()
+    def test_damage_below_zero(self, event_bus):
+        hud = HUD(event_bus)
+        event_bus.emit("PLAYER_DAMAGED", amount=100.0, source=(0, 0))
+        event_bus.dispatch()
         assert hud._health == 0.0
 
-    def test_heal_above_max(self):
-        hud = HUD()
-        emit("PLAYER_HEALED", amount=100.0)
-        dispatch()
+    def test_heal_above_max(self, event_bus):
+        hud = HUD(event_bus)
+        event_bus.emit("PLAYER_HEALED", amount=100.0)
+        event_bus.dispatch()
         assert hud._health == settings.PLAYER_MAX_HEALTH
 
-    def test_timer_starts_at_zero(self):
-        hud = HUD()
+    def test_timer_starts_at_zero(self, event_bus):
+        hud = HUD(event_bus)
         hud.start_timer()
         assert hud.current_time == 0.0
 
-    def test_timer_increases(self):
-        hud = HUD()
+    def test_timer_increases(self, event_bus):
+        hud = HUD(event_bus)
         hud.start_timer()
         hud.update(1.0)
         assert hud.current_time == pytest.approx(1.0)
 
-    def test_draw_does_not_crash(self):
+    def test_draw_does_not_crash(self, event_bus):
         """HUD.draw() renders content on the surface."""
-        hud = HUD()
+        hud = HUD(event_bus)
         surface = pygame.Surface((320, 224))
         hud.draw(surface)
-        # Content should be drawn (not all-black)
         assert surface.get_at((3, 3))[:3] != (0, 0, 0), "Portrait area should be drawn"
 
 
 class TestHUDDestroy:
     """Destroy must unsubscribe all events to prevent callback accumulation."""
 
-    def test_destroy_removes_subscriptions(self):
-        hud = HUD()
-        before = subscriber_count()
+    def test_destroy_removes_subscriptions(self, event_bus):
+        hud = HUD(event_bus)
+        before = event_bus.subscriber_count()
         hud.destroy()
-        after = subscriber_count()
-        expected_delta = 6  # PLAYER_DAMAGED, PLAYER_HEALED, PLAYER_DIED, BOSS_PHASE_CHANGED, CHECKPOINT_REACHED, STAGE_COMPLETE
+        after = event_bus.subscriber_count()
+        expected_delta = 6
         assert after == before - expected_delta, (
             f"Expected {expected_delta} fewer subscribers, got {before} -> {after}"
         )
 
-    def test_destroy_is_idempotent(self):
-        hud = HUD()
+    def test_destroy_is_idempotent(self, event_bus):
+        hud = HUD(event_bus)
         hud.destroy()
-        count_after_first = subscriber_count()
+        count_after_first = event_bus.subscriber_count()
         hud.destroy()
-        count_after_second = subscriber_count()
+        count_after_second = event_bus.subscriber_count()
         assert count_after_second == count_after_first, (
             "Second destroy() should not change subscriber count"
         )
 
-    def test_destroyed_hud_ignores_events(self):
-        hud = HUD()
+    def test_destroyed_hud_ignores_events(self, event_bus):
+        hud = HUD(event_bus)
         initial_health = hud._health
         hud.destroy()
-        emit("PLAYER_DAMAGED", amount=1.0, source=(0, 0))
-        dispatch()
+        event_bus.emit("PLAYER_DAMAGED", amount=1.0, source=(0, 0))
+        event_bus.dispatch()
         assert hud._health == initial_health, (
             "Destroyed HUD should not process events"
         )

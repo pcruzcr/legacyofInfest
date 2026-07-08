@@ -137,7 +137,7 @@ class EnemyBase(BaseEntity):
         Used by EnemyShooter to update projectiles.
         """
 
-    def _load_zone_sprites(self, zone: int, sprite_name: str, fw: int, fh: int) -> None:
+    def _load_zone_sprites(self, zone: int, fw: int, fh: int) -> None:
         """Load zone-specific enemy sprite sheets."""
         self._sprite_zone = zone
         self._sprite_fw = fw
@@ -150,7 +150,6 @@ class EnemyBase(BaseEntity):
             path = base / fname
             frames = AssetLoader.load_sprite_sheet(path, fw, fh)
             self._sprite_frames[key] = frames
-        # Subclasses load their own extra sprites (fly, aim, fire, shoot)
         self._load_extra_sprites(zone, fw, fh)
 
     def _load_extra_sprites(self, zone: int, fw: int, fh: int) -> None:
@@ -405,7 +404,7 @@ class EnemyBase(BaseEntity):
     def _run_state_machine(self, dt: float) -> None:
         """
         Evaluate current state and dispatch to the appropriate behavior.
-        Priority: DYING > HURT > ALERT > PATROL
+        Priority: DYING > HURT > FIRING > ALERT > PATROL
         Deaggro hysteresis: once ALERT, player must leave detection range
         + deaggro_margin to return to PATROL.
         """

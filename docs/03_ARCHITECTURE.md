@@ -1,7 +1,7 @@
 # Legacy of InFest — Architecture
 
 **Document ID:** LOI-ARCH-003  
-**Version:** 1.0.0  
+**Version:** 1.1.0  
 **Status:** Official  
 **Audience:** Professor, Teaching Assistants, AI coding assistants
 
@@ -43,13 +43,39 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── app.py                     # App class: display init, main loop, scene pump
 │   │   │   ├── settings.py                # All global constants
 │   │   │   ├── clock.py                   # DeltaClock: delta time, FPS cap, time scale
-│   │   │   └── event_bus.py               # EventBus: pub/sub event dispatch
+│   │   │   ├── event_bus.py               # EventBus: pub/sub event dispatch
+│   │   │   └── events.py                  # Event name constants
 │   │   │
 │   │   ├── scene/
 │   │   │   ├── __init__.py
 │   │   │   ├── scene_manager.py           # SceneManager: push/pop/replace scene stack
 │   │   │   ├── base_scene.py              # BaseScene: abstract interface all scenes implement
 │   │   │   └── transitions.py            # FadeTransition, WipeTransition
+│   │   │
+│   │   ├── scenes/                        # All scene implementations
+│   │   │   ├── __init__.py
+│   │   │   ├── splash_scene.py            # Professor logo, auto-advance
+│   │   │   ├── title_scene.py             # Main menu: Start / Academic Demos / Quit
+│   │   │   ├── story_scene.py             # Story sequence (scenes 1–3)
+│   │   │   ├── game_over_scene.py         # Death screen with continue/quit
+│   │   │   ├── end_credits_scene.py       # Credits / completion screen
+│   │   │   ├── demo_menu_scene.py         # Academic Demos selector (10 scenes)
+│   │   │   ├── scene_registry.py          # DI Container: register → build pattern
+│   │   │   ├── debug_overlay.py           # F3 debug console (FPS, events, modules)
+│   │   │   ├── param_panel.py             # Reusable ParamPanel widget
+│   │   │   ├── demo_layout.py            # Layout constants & draw helpers
+│   │   │   ├── demo_utils.py             # SourceSurfaceManager, FrameThrottle, etc.
+│   │   │   ├── demo_common.py            # Legacy re-exports from demo_layout + demo_utils
+│   │   │   ├── filter_demo_scene.py       # Unit VII — Filter demo (9 modes)
+│   │   │   ├── vision_demo_scene.py       # Unit VIII — Vision demo (10 modes)
+│   │   │   ├── pattern_demo_scene.py      # Unit IX — Pattern demo (5 modes)
+│   │   │   ├── vector_lab_scene.py        # Unit II — Vector lab
+│   │   │   ├── transform_lab_scene.py     # Unit II/III — Transform lab
+│   │   │   ├── curve_editor_scene.py      # Unit III — Curve editor
+│   │   │   ├── interpolation_lab_scene.py # Unit III/IV — Interpolation lab
+│   │   │   ├── color_theory_scene.py      # Unit V — Color theory lab
+│   │   │   ├── noise_lab_scene.py         # Unit V/VIII — Noise lab
+│   │   │   └── collision_lab_scene.py     # Unit VI — Collision lab
 │   │   │
 │   │   ├── input/
 │   │   │   ├── __init__.py
@@ -111,6 +137,10 @@ legacy-of-infest/                      # Actual repo root
 │           ├── <assignment>.tmx           # (Stages only — Bosses use a fixed arena, no TMX scroll)
 │           └── README.md
 │
+├── scripts/                            # Tooling scripts
+│   ├── validate_assets.py              # Validates fonts, models, maps
+│   └── generate_exam.py                # Generates practice exams from question bank
+│
 ├── student_templates/                  # Canonical starter scaffold (copied into src/stages/ by each student)
 │   ├── stage_template/
 │   │   ├── stage_template.py
@@ -120,12 +150,51 @@ legacy-of-infest/                      # Actual repo root
 │       ├── boss_template.py
 │       └── README_template.md
 │
-└── tests/                              # Unit and integration tests.
+├── student_assets/                      # Student-generated assets
+│   ├── datasets/
+│   │   └── sample_dataset.npz
+│   └── models/
+│       └── professor_sample.pkl
+│
+├── PHASE_FIX_REPORT.md                 # Stage 0 collision/spawn fixes
+├── KNOWN_GAPS.md                       # Known gaps and their resolutions
+├── REMEDIATION_PLAN.md                 # 8-phase remediation plan
+│
+└── tests/                              # Unit and integration tests (33 files, 364+ tests)
+    ├── __init__.py
+    ├── conftest.py
+    ├── test_event_bus.py
+    ├── test_clock.py
+    ├── test_asset_loader.py
+    ├── test_input_manager.py
+    ├── test_input_injection.py
+    ├── test_scene_manager.py
+    ├── test_math_utils.py
+    ├── test_message_box.py
+    ├── test_hud.py
+    ├── test_player_physics.py
+    ├── test_player_state_machine.py
+    ├── test_player_damage.py
+    ├── test_player_hurtbox.py
+    ├── test_enemy_walker.py
+    ├── test_enemy_flying.py
+    ├── test_enemy_shooter.py
+    ├── test_camera.py
+    ├── test_stage_loader.py
+    ├── test_checkpoint.py
+    ├── test_stage0_smoke.py
     ├── test_color_tools.py
-    ├── test_filter_tools.py
     ├── test_curve_tools.py
+    ├── test_filter_tools.py
     ├── test_vision_tools.py
-    └── test_pattern_recognition_tools.py
+    ├── test_pattern_recognition_tools.py
+    ├── test_demo_scenes.py
+    ├── test_boss_base.py
+    ├── test_student_template.py
+    ├── test_collision_edge_detect.py
+    ├── test_floor_x_skip.py
+    ├── test_spawn_no_pop.py
+    └── fixtures/
 ```
 
 **Clarification on individual assignment (per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.1):** Each student is assigned exactly one Stage or Boss in Class 1 (see `21_COURSE_SCHEDULE.md`). They copy the appropriate template from `student_templates/` into a new folder under `src/stages/` named for their assignment (e.g., `src/stages/stage1_2_la_soda/` or `src/stages/boss_venado/`). They develop that single folder through all three Evaluación Práctica checkpoints. No student creates more than one assignment folder.
@@ -159,8 +228,8 @@ A flat module of uppercase constants. No classes, no functions.
 | `DISPLAY_SCALE` | int | 3 | Default window scale multiplier |
 | `TILE_SIZE` | int | 16 | Standard tile size in pixels |
 | `ASSETS_DIR` | Path | `Path("assets")` | Root asset directory |
-| `STAGES_DIR` | Path | `Path("stages")` | Root stages directory |
-| `STUDENT_ASSETS_DIR` | Path | `Path("student_assets")` | Student asset directory |
+| `STAGES_DIR` | Path | `Path("src/stages")` | Root stages directory |
+| `STUDENT_TEMPLATES_DIR` | Path | `Path("student_templates")` | Student templates directory |
 | `PLAYER_MAX_HEALTH` | float | 5.0 | Maximum player hearts |
 | `GRAVITY` | float | 800.0 | Pixels per second squared |
 | `PLAYER_WALK_SPEED` | float | 90.0 | Pixels per second |

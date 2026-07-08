@@ -1,7 +1,7 @@
 # Legacy of InFest — Academic Demo Scenes
 
 **Document ID:** LOI-DEMO-015  
-**Version:** 1.2.0  
+**Version:** 1.3.0  
 **Status:** Official  
 **Compatibility:** Requires LOI-ARCH-003, LOI-FILTER-011, LOI-VISION-012, LOI-PATTERN-013, LOI-HUD-009, LOI-STAGE0-007  
 **Audience:** Professor, Teaching Assistants, AI coding assistants (Claude Code, Cline, OpenCode, Codex)
@@ -75,7 +75,9 @@ All demo/lab scene files are in `engine/scenes/`. They are professor-owned. Stud
 
 ### 2.3 Shared Demo Scene Layout
 
-All three demo scenes share a common layout structure:
+The three academic demo scenes (Filter, Vision, Pattern) share a common layout structure.
+The seven theory lab scenes (Units II–VI/VIII) use simpler layouts tailored to each topic.
+A shared layout reference is available for the three academic demos:
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐ Y=0
@@ -115,7 +117,7 @@ All three demo scenes share a common layout structure:
 
 ### 2.5 Source Surface Options
 
-All three demo scenes share the same source surface pool. `SPACE` cycles through these options:
+The three academic demo scenes (Filter, Vision, Pattern) share the same source surface pool. `SPACE` cycles through these options:
 
 | Index | Source | Description |
 |---|---|---|
@@ -752,9 +754,383 @@ A student has engaged with `PatternDemoScene` effectively when:
 
 ---
 
-## 6. Demo Menu Scene — `DemoMenuScene`
+## 6. Unit II Lab Scene — `VectorLabScene`
 
-### 6.1 Purpose
+### 6.1 Scene Purpose
+
+`VectorLabScene` is an interactive laboratory for vector arithmetic, normalization, dot product, and pursuit movement. It is the primary interactive reference for Unit II vector concepts.
+
+Students use this scene to:
+- Visualize vector components, magnitude, and direction.
+- Observe normalized vectors and their relationship to movement.
+- Calculate and read dot product and angle between two vectors in real time.
+- Complete Practical Exam II vector tasks.
+
+### 6.2 Layout
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  VECTOR LAB                                           UNIT II    │
+│  [Mode: FREE MOVE]                         [ESC: Back]           │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│      [Experimental Area — 320×180 px]                           │
+│      Two draggable/controllable points (Player, Enemy)           │
+│      Vector arrow from Enemy to Player with arrow head           │
+│                                                                  │
+│      Math Info Panel (bottom right corner of area):              │
+│      v = (dx, dy)  |v| = N   ^v = (nx, ny)                     │
+│      Dot = D   Angle = θ°                                       │
+│                                                                  │
+├──────────────────────────────────────────────────────────────────┤
+│  v=(24, -36)  |v|=43.3  ^v=(0.55,-0.83)  Dot= -0.27  θ=106°    │
+│  [TAB: mode]  [N: norm toggle]  [R: reset]  [arrows: move]      │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### 6.3 Operation Modes
+
+| Mode | Name | Description |
+|---|---|---|
+| 0 | FREE MOVE | Both points move independently. Vector AB updates live. |
+| 1 | CHASE | Enemy moves toward Player using `vec2_normalize()` every frame. |
+| 2 | ORBIT | Player orbits around center; Enemy faces Player. Dot product readout. |
+| 3 | DISTANCE CHECK | Distance between points displayed with threshold indicator. |
+
+### 6.4 Controls
+
+| Key | Action |
+|---|---|
+| `ARROWS` | Move Player point (modes 0, 1) / orbit (mode 2) |
+| `W/A/S/D` | Move Enemy point (mode 0 only) |
+| `TAB` | Cycle modes |
+| `N` | Toggle normalized vector display |
+| `R` | Reset positions to defaults |
+| `S` | Save screenshot |
+| `ESC` | Return to DemoMenuScene |
+
+### 6.5 Pedagogical Purpose
+
+Students learn to connect the abstract vector formulas (`|v|`, `v̂`, `a·b`, `θ`) with visible spatial outcomes. The CHASE mode demonstrates why normalized vectors are essential for consistent-speed pursuit. The math info panel reinforces the mapping between formula and visual.
+
+---
+
+## 7. Unit II/III Lab Scene — `TransformLabScene`
+
+### 7.1 Scene Purpose
+
+`TransformLabScene` demonstrates 2D affine transformations: translation, rotation, scaling, shearing, and composite transforms. It is the primary interactive reference for Unit II/III transformation concepts.
+
+Students use this scene to:
+- See the effect of each transformation matrix on a shape.
+- Understand the difference between translation and rotation matrices.
+- Observe that matrix composition is not commutative (translate→rotate ≠ rotate→translate).
+- Read and interpret a live 3×3 transformation matrix.
+
+### 7.2 Layout
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  TRANSFORM LAB                                  UNIT II/III      │
+│  [Mode: TRANSLATE]                           [ESC: Back]         │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│      [Experimental Area — 320×160 px]                           │
+│      Original shape (ghost outline) + transformed shape (filled) │
+│      Coordinate grid background                                 │
+│                                                                  │
+│      ┌──────────────────────┐                                    │
+│      │  TRANSFORMATION      │  3×3 matrix display               │
+│      │  [1.00 0.00 32.00]  │  (toggle with N)                   │
+│      │  [0.00 1.00 16.00]  │                                    │
+│      │  [0.00 0.00  1.00]  │                                    │
+│      └──────────────────────┘                                    │
+│                                                                  │
+├──────────────────────────────────────────────────────────────────┤
+│  dx=32  dy=16  |  [TAB:mode]  [arrows:translate]  [N:matrix]    │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### 7.3 Operation Modes
+
+| Mode | Name | Description |
+|---|---|---|
+| 0 | TRANSLATE | Move shape with arrow keys. Matrix shows translation components. |
+| 1 | ROTATE | Rotate shape around its center. Matrix shows sin/cos values. |
+| 2 | SCALE | Scale shape (arrow keys change scale factor). |
+| 3 | SHEAR | Shear shape horizontally/vertically. |
+| 4 | COMPOSITE | Apply translate then rotate vs rotate then translate (toggle). |
+
+### 7.4 Controls
+
+| Key | Action |
+|---|---|
+| `LEFT/RIGHT` | Primary parameter (translate X, rotate angle, scale X, shear X) |
+| `UP/DOWN` | Secondary parameter (translate Y, scale Y, shear Y) |
+| `TAB` | Cycle modes |
+| `N` | Toggle 3×3 matrix panel |
+| `R` | Reset shape to origin |
+| `S` | Save screenshot |
+| `ESC` | Return to DemoMenuScene |
+
+### 7.5 Pedagogical Purpose
+
+The ghost outline of the original shape makes the transformation visually obvious. The live 3×3 matrix display connects visual effects to linear algebra. COMPOSITE mode demonstrates non-commutativity — students see visibly different results from translate→rotate vs rotate→translate.
+
+---
+
+## 8. Unit III Lab Scene — `CurveEditorScene`
+
+### 8.1 Scene Purpose
+
+`CurveEditorScene` is an interactive Bézier and spline editor. Students place control points and watch the curve update in real time. Supports quadratic Bézier, cubic Bézier, high-degree Bézier, Catmull-Rom spline, B-Spline, and a de Casteljau step-by-step animation mode.
+
+Students use this scene to:
+- Understand how control points define curve shape.
+- Visualize the de Casteljau algorithm one iteration at a time.
+- Compare Bézier vs Catmull-Rom vs B-Spline interpolation behavior.
+- Prepare for Unit III curve exam tasks.
+
+### 8.2 Layout
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  CURVE EDITOR                                      UNIT III      │
+│  [Mode: BEZIER_CUBIC (degree 3)]              [ESC: Back]        │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│      [Canvas — 320×180 px]                                      │
+│      Control points (draggable circles)                          │
+│      Control polygon (lines between points)                      │
+│      Curve (thick line through interpolation)                    │
+│      De Casteljau lines (if toggled)                            │
+│                                                                  │
+│      Grid background with 16px spacing                          │
+│                                                                  │
+├──────────────────────────────────────────────────────────────────┤
+│  Points: 4  |  Deg: 3  |  [TAB:mode]  [D:de Casteljau]  [+/-]  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### 8.3 Operation Modes
+
+| Mode | Name | Description |
+|---|---|---|
+| 0 | BEZIER_QUAD | 3 control points, quadratic Bézier |
+| 1 | BEZIER_CUBIC | 4 control points, cubic Bézier |
+| 2 | BEZIER_HIGH | N control points, high-degree Bézier |
+| 3 | CATMULL_ROM | Catmull-Rom spline (passes through all points) |
+| 4 | BSPLINE | B-Spline (control points influence but do not pass through) |
+| 5 | DE_CASTELJAU | Step-by-step de Casteljau animation |
+
+### 8.4 Controls
+
+| Key | Action |
+|---|---|
+| `MOUSE CLICK+DRAG` | Move control point |
+| `TAB` | Cycle modes |
+| `D` | Toggle de Casteljau visualization (modes 0–2) |
+| `+` / `-` | Add / remove control point (modes 2, 4) |
+| `1`–`5` | Jump directly to mode |
+| `R` | Reset control points to default positions |
+| `S` | Save screenshot |
+| `ESC` | Return to DemoMenuScene |
+
+### 8.5 Pedagogical Purpose
+
+Dragging control points provides immediate visual feedback of how each point influences the curve. The de Casteljau animation mode reveals the recursive linear interpolation behind Bézier curves. Comparing Bézier, Catmull-Rom, and B-Spline on the same control points clarifies the mathematical difference between approximation (Bézier) and interpolation (Catmull-Rom).
+
+---
+
+## 9. Unit III/IV Lab Scene — `InterpolationLabScene`
+
+### 9.1 Scene Purpose
+
+`InterpolationLabScene` demonstrates linear interpolation, easing functions, and keyframe animation curves. Students adjust `t` and watch the interpolated value move between endpoints.
+
+Students use this scene to:
+- Understand the lerp formula `P = A + t(B - A)`.
+- Compare 10 easing functions (Linear, Quad In/Out/InOut, Cubic In/Out, Bounce Out, Elastic Out, Sine In/Out).
+- Build a multi-keyframe animation and watch eased interpolation between frames.
+- Prepare for animation-related tasks in their stages.
+
+### 9.2 Operation Modes
+
+| Mode | Name | Description |
+|---|---|---|
+| 0 | LERP | Two endpoints A and B. `t` slider moves a point between them. Formula displayed. |
+| 1 | EASING CURVES | Graph of current easing function. 10 functions cycled via UP/DOWN. |
+| 2 | KEYFRAME ANIM | 3 keyframes with eased animation loop. SPACE to toggle auto-play. |
+
+### 9.3 Controls
+
+| Key | Action |
+|---|---|
+| `LEFT/RIGHT` | Adjust `t` value (mode 0) |
+| `UP/DOWN` | Cycle easing function (modes 1, 2) |
+| `SPACE` | Toggle auto-animation (mode 2) |
+| `TAB` | Cycle modes |
+| `R` | Reset |
+| `S` | Save screenshot |
+| `ESC` | Return to DemoMenuScene |
+
+### 9.4 Pedagogical Purpose
+
+The LERP mode demystifies the formula by showing every intermediate position. The easing curves graph provides an intuitive visual of "slow in, fast out" vs linear. Keyframe animation mode connects interpolation theory to game animation practice.
+
+---
+
+## 10. Unit V Lab Scene — `ColorTheoryScene`
+
+### 10.1 Scene Purpose
+
+`ColorTheoryScene` is an interactive color space explorer for RGB, HSV, HSL, CMYK, and alpha blending. It shows step-by-step conversion algorithms, not just final values.
+
+Students use this scene to:
+- Explore how R/G/B sliders affect the resulting color.
+- Understand HSV and HSL as perceptual color spaces.
+- Follow the step-by-step RGB→HSV and RGB→HSL conversion math.
+- Practice alpha blending with the formula `out = src·α + dst·(1-α)`.
+
+### 10.2 Operation Modes
+
+| Mode | Name | Description |
+|---|---|---|
+| 0 | RGB EXPLORER | R/G/B sliders with live color swatch and hex readout |
+| 1 | HSV EXPLORER | H/S/V sliders. `SHIFT` toggles step-by-step conversion display |
+| 2 | HSL EXPLORER | H/S/L sliders. `SHIFT` toggles step-by-step conversion display |
+| 3 | CMYK EXPLORER | C/M/Y/K sliders with live RGB preview |
+| 4 | ALPHA BLEND | Two-layer blending with α slider. Formula displayed with live values |
+| 5 | CHALLENGE | Match a random target color using RGB sliders. `SPACE` submits, diff shown |
+
+### 10.3 Controls
+
+| Key | Action |
+|---|---|
+| `LEFT/RIGHT` | Decrease/increase selected channel |
+| `UP/DOWN` | Cycle to next/previous channel |
+| `TAB` | Cycle modes |
+| `SHIFT` | Toggle step-by-step algorithm display (modes 1, 2) |
+| `SPACE` | Submit challenge attempt (mode 5) |
+| `R` | Reset / new challenge |
+| `S` | Save screenshot |
+| `ESC` | Return to DemoMenuScene |
+
+### 10.4 Pedagogical Purpose
+
+The color explorer modes let students build intuition for each color space by direct manipulation. The step-by-step conversion display reveals the math behind RGB→HSV/HSL, making the algorithm concrete rather than opaque. The Challenge mode gamifies color matching and reinforces perceptual color distance.
+
+---
+
+## 11. Unit V/VIII Lab Scene — `NoiseLabScene`
+
+### 11.1 Scene Purpose
+
+`NoiseLabScene` demonstrates value noise, Perlin noise, and fractal noise generation. Students adjust parameters and see the noise map update in real time.
+
+Students use this scene to:
+- Understand how octaves, persistence, and lacunarity affect fractal noise.
+- Compare value noise (blocky) vs Perlin noise (smooth) visually.
+- Observe how scale changes the frequency of the noise pattern.
+- Prepare for procedural generation tasks in their stages.
+
+### 11.2 Operation Modes
+
+| Mode | Name | Description |
+|---|---|---|
+| 0 | VALUE NOISE | Grayscale value noise texture |
+| 1 | PERLIN NOISE | Smoother Perlin noise texture |
+| 2 | FRACTAL NOISE | Multi-octave fractal noise (value or Perlin base) |
+
+### 11.3 Parameters
+
+| Parameter | Range | Step | Description |
+|---|---|---|---|
+| Octaves | 1–8 | 1 | Number of noise layers summed |
+| Persistence | 0–1 | 0.05 | Amplitude decay per octave |
+| Lacunarity | 1–8 | 0.1 | Frequency multiplier per octave |
+| Scale | 0.005–0.5 | 0.005 | Base frequency of the noise |
+| Seed | 0–9999 | 1 | Random seed for noise pattern |
+
+### 11.4 Controls
+
+| Key | Action |
+|---|---|
+| `UP/DOWN` | Cycle selected parameter |
+| `LEFT/RIGHT` | Adjust selected parameter value |
+| `SPACE` | Randomize seed |
+| `TAB` | Cycle noise type |
+| `R` | Reset all parameters to defaults |
+| `S` | Save screenshot |
+| `ESC` | Return to DemoMenuScene |
+
+### 11.5 Pedagogical Purpose
+
+The real-time noise map provides immediate visual feedback for each parameter. Students can see how increasing octaves adds detail, how persistence controls roughness, and how lacunarity changes feature frequency. Comparing value noise directly against Perlin noise clarifies why Perlin's smoother output is preferred for natural terrains.
+
+---
+
+## 12. Unit VI Lab Scene — `CollisionLabScene`
+
+### 12.1 Scene Purpose
+
+`CollisionLabScene` demonstrates axis-separated AABB collision resolution. Students observe why the order of axis resolution matters: resolving Y before X causes the wall-climb bug (entity walks up walls), while X before Y resolves correctly.
+
+Students use this scene to:
+- Understand axis-separated collision resolution.
+- See the wall-climb bug in action and understand its root cause.
+- Observe one-way platform collision behavior.
+- Prepare for collision implementation in their own stages.
+
+### 12.2 Layout
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  COLLISION LAB                                       UNIT VI     │
+│  [Mode: Y-FIRST (wall-climb bug)]             [ESC: Back]        │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│      [Test Level — 320×180 px]                                  │
+│      Floor, wall gap, platforms, one-way platform               │
+│      Player rect (20×32 px, colored)                            │
+│                                                                  │
+│      Collision info overlay (top-right):                        │
+│      prev_bottom=184  velocity=(64,-120)  grounded=YES          │
+│                                                                  │
+├──────────────────────────────────────────────────────────────────┤
+│  Mode: Y-FIRST  |  prev_bottom: 184  |  [B: demo bug]  [R]     │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### 12.3 Operation Modes
+
+| Mode | Name | Description |
+|---|---|---|
+| 0 | NO COLLISION | Player passes through everything |
+| 1 | Y-FIRST | Resolve Y axis first — shows wall-climb bug when walking into wall |
+| 2 | X-FIRST | Resolve X axis first — correct resolution |
+
+### 12.4 Controls
+
+| Key | Action |
+|---|---|
+| `LEFT/RIGHT` | Move player horizontally |
+| `SPACE`/`UP` | Jump |
+| `TAB` | Cycle collision mode |
+| `B` | Auto-demonstrate wall-climb bug in Y-FIRST mode |
+| `R` | Reset player position |
+| `S` | Save screenshot |
+| `ESC` | Return to DemoMenuScene |
+
+### 12.5 Pedagogical Purpose
+
+The three modes (no collision → buggy → correct) scaffold understanding of axis-separated collision. Students first see the problem (wall-climb in Y-FIRST), then the correct behavior (X-FIRST). The collision info overlay (`prev_bottom`, velocity, grounded) provides the data needed to understand why the bug occurs.
+
+---
+
+## 13. Demo Menu Scene — `DemoMenuScene`
+
+### 13.1 Purpose
 
 `DemoMenuScene` is the entry point for the Academic Demos. It presents ten options (7 theory labs + 3 academic demos) and navigates to the selected scene.
 
@@ -790,9 +1166,9 @@ A student has engaged with `PatternDemoScene` effectively when:
 
 ---
 
-## 7. Integration with Evaluation Instruments
+## 14. Integration with Evaluation Instruments
 
-### 7.1 Practical Exam II — Units VII and VIII
+### 14.1 Practical Exam II — Units VII and VIII
 
 The exam is conducted in the laboratory. Students receive:
 1. A target output PNG (saved from the demo scene by the professor).
@@ -801,7 +1177,7 @@ The exam is conducted in the laboratory. Students receive:
 
 They must document the parameters used (kernel, sigma, threshold, kernel size) on their exam sheet.
 
-### 7.2 Practical Exam III — Unit IX
+### 14.2 Practical Exam III — Unit IX
 
 The exam is conducted in the laboratory. Students receive:
 1. A dataset file (`.npz`).
@@ -810,7 +1186,7 @@ The exam is conducted in the laboratory. Students receive:
 
 They submit: the `.pkl` model, a screenshot of the confusion matrix, and a screenshot of the inference in Mode 0.
 
-### 7.3 Final Presentation Integration
+### 14.3 Final Presentation Integration
 
 During the final presentation, students use the demo scenes as a live reference to:
 - Show how they calibrated their parameters before implementing them in their stage.
@@ -819,11 +1195,11 @@ During the final presentation, students use the demo scenes as a live reference 
 
 ---
 
-## 8. Technical Implementation Notes
+## 15. Technical Implementation Notes
 
 These notes are directed at the AI coding assistant implementing the demo scenes.
 
-### 8.1 Frame Throttling Pattern
+### 15.1 Frame Throttling Pattern
 
 All expensive operations in the demo scenes use a shared throttle pattern:
 
@@ -840,13 +1216,13 @@ on update():
 
 `should_update(mode, counter)` returns True based on the mode's update frequency table (see §3.7 for FilterDemoScene, equivalent tables apply to VisionDemoScene and PatternDemoScene).
 
-### 8.2 Source Surface Management
+### 15.2 Source Surface Management
 
 The source surface is always rendered at 160×180 pixels in the left panel. If the original source is larger (e.g., 320×224 live capture), it is scaled to 160×180 using `pygame.transform.scale()` for display only. The actual operation is applied to the original size unless it exceeds the performance ceiling.
 
 For the WATERSHED and CANNY operations on large surfaces, the source is scaled to a maximum of 160×112 before processing (maintaining aspect ratio).
 
-### 8.3 Text Input for Model Loading
+### 15.3 Text Input for Model Loading
 
 The model loading text input in `PatternDemoScene` is implemented as a simple character buffer:
 
@@ -865,7 +1241,7 @@ Render:
 
 Only `.pkl` extension input is accepted. If the student enters a name without `.pkl`, it is appended automatically.
 
-### 8.4 Save Functionality
+### 15.4 Save Functionality
 
 The `S` key saves the right panel surface to disk:
 
@@ -877,7 +1253,17 @@ pygame.image.save(right_panel_surface, str(path))
 
 The `tests/output/demo/` directory is created if it does not exist.
 
-### 8.5 Error Display
+### 15.5 Font Sizing
+
+| Context | Previous Size | Current Size |
+|---|---|---|
+| HUD bitmap font (small text, hearts, numbers) | 5×7 px | 5×7 px (unchanged) |
+| Banner font (stage/boss names) | 6×9 px | 6×15 px |
+| Dialog/UI font (message boxes, menus) | 7×11 px | 7×18 px |
+
+Larger font sizes improve readability on modern displays. SDL_HINT_RENDER_SCALE_QUALITY=0 ensures nearest-neighbor scaling for pixel-art crispness. Antialiasing is enabled on all font rendering.
+
+### 15.6 Error Display
 
 All exceptions caught during demo operations (invalid parameter, failed load, processing error) are displayed in the bottom bar for 2 seconds:
 
@@ -904,7 +1290,7 @@ On draw:
 
 ---
 
-## 9. Restrictions
+## 16. Restrictions
 
 | Restriction | Scope |
 |---|---|
@@ -917,7 +1303,7 @@ On draw:
 
 ---
 
-## 10. Future Extensions
+## 17. Future Extensions
 
 | Extension | Description | Target |
 |---|---|---|
