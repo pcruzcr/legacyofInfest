@@ -54,6 +54,10 @@ Documents marked **[SUPERSEDED]** below exist in their originating package (v1, 
 | 30 | `30_TICKET_BACKLOG.md` | v6 (`legacy_of_infest_docs_v6/`) | Current |
 | 31 | `31_RISK_REGISTER.md` | v6 (`legacy_of_infest_docs_v6/`) | Current |
 | 32 | `32_ENVIRONMENT_SETUP_GUIDE.md` | v6 (`legacy_of_infest_docs_v6/`) | Current |
+| 35 | `35_USER_MANUAL.md` | v7 (in-repo) | Current — new |
+| 36 | `36_STUDENT_MANUAL.md` | v7 (in-repo) | Current — new |
+| 37 | `37_DEMO_QUICK_GUIDE.md` | v7 (in-repo) | Current — new |
+| 38 | `38_STAGE_BOSS_GUIDE.md` | v7 (in-repo) | Current — new |
 
 **Recommended action before implementation begins:** Consolidate all 33 current-status documents into a single flat `docs/` folder in the actual repository (per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §7's structure), discarding the superseded v1/v2/v3 originals of the six documents listed as "supersedes" above. This index becomes redundant once that consolidation happens — at that point, a simple numbered `docs/` folder listing is self-explanatory.
 
@@ -153,9 +157,12 @@ This documentation set covers four distinct layers. Every document is classified
    (or 17_BOSS_SPEC.md if assigned a boss)
 4. 18_ENEMY_ROSTER.md               — find your zone's enemies (Stage assignments)
 5. 08_SYLLABUS_MAPPING.md           — understand what each milestone requires
-6. 15_ACADEMIC_DEMO_SCENES.md        — explore the 10 interactive theory labs (Units II–IX)
-7. 27_ACADEMIC_RUBRICS.md §2-4      — understand exactly how you'll be scored
-8. 29_GIT_WORKFLOW_AND_STANDARDS.md — understand the branch/commit/PR process
+6. 36_STUDENT_MANUAL.md             — complete student manual with all references
+7. 15_ACADEMIC_DEMO_SCENES.md       — explore the 10 interactive theory labs (Units II–IX)
+8. 37_DEMO_QUICK_GUIDE.md           — quick reference for using the 10 demos
+9. 38_STAGE_BOSS_GUIDE.md           — quick reference for building your stage/boss
+10. 27_ACADEMIC_RUBRICS.md §2-4     — understand exactly how you'll be scored
+11. 29_GIT_WORKFLOW_AND_STANDARDS.md — understand the branch/commit/PR process
 ```
 
 ### 4.4 "I am reviewing a student submission"
@@ -195,9 +202,10 @@ When two documents appear to disagree, resolve using this table (also stated loc
 | v4 (`legacy_of_infest_docs_corrected/`) | 00, 01, 03, 08, 14, 16, 17, 19, 21 | 2 new (00, 21) + 7 corrected | — |
 | v5 (`legacy_of_infest_docs_v5/`) | 22–26 | 5 | — |
 | v6 (`legacy_of_infest_docs_v6/`) | 27–32 | 6 | — |
-| **Total unique, current documents** | **34** (00–33) | | |
+| **Total unique, current documents** | **39** (00–38) | | |
 | v7 (in-repo updates) | 15, 25, 03, 28, 24, 21, 08, 22, 30 | 9 updated | — |
 | v8 (current session) | 10 lab scenes, scene_registry, param_panel, demo_layout, demo_utils, debug_overlay, validate_assets.py, generate_exam.py | all docs re-audited | — |
+| v9 (current session) | 35, 36, 37, 38 | 4 new — user manual, student manual, demo quick guide, stage/boss guide | — |
 
 ---
 
