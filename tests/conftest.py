@@ -19,6 +19,22 @@ def _pygame_init():
 
 
 @pytest.fixture
+def event_bus():
+    """Provide a fresh EventBus instance for each test."""
+    from src.engine.core.event_bus import EventBus
+    return EventBus()
+
+
+@pytest.fixture(autouse=True)
+def _reset_global_state():
+    """Reset global singletons before each test to prevent cross-test contamination."""
+    from src.engine.core.event_bus import clear as clear_eventbus
+    from src.engine.utils.asset_loader import AssetLoader
+    clear_eventbus()
+    AssetLoader.clear_cache()
+
+
+@pytest.fixture
 def sample_surface_32x32(_pygame_init) -> pygame.Surface:
     """A 32×32 solid gray surface — canonical input for processing tools."""
     surf = pygame.Surface((32, 32))

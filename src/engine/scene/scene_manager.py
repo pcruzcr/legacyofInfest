@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from src.engine.core.event_bus import subscribe, unsubscribe
+from src.engine.core.event_bus import EventBus
 from src.engine.core.events import Events
 from src.engine.scenes.title_scene import TitleScene
 
@@ -30,14 +30,13 @@ class SceneManager:
         self._stack: list[BaseScene] = []
         self._stage_queue: list[type[BaseScene]] = []
         self._stage_index: int = 0
-        # Subscribe to global events
-        subscribe(Events.STAGE_COMPLETE, self._on_stage_complete)
-        subscribe(Events.PLAYER_DIED, self._on_player_died)
+        self._context.event_bus.subscribe(Events.STAGE_COMPLETE, self._on_stage_complete)
+        self._context.event_bus.subscribe(Events.PLAYER_DIED, self._on_player_died)
 
     def cleanup(self) -> None:
         """Unsubscribe all event listeners. Call when SceneManager is discarded."""
         for event in self._subscribed_events:
-            unsubscribe(event, getattr(self, f"_on_{event.lower()}"))
+            self._context.event_bus.unsubscribe(event, getattr(self, f"_on_{event.lower()}"))
 
     @property
     def current(self) -> BaseScene:

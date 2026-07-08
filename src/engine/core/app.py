@@ -97,8 +97,12 @@ class App:
                 # 4a. Debug overlay input (before scene update, after dt)
                 self._debug_overlay.handle_input(pygame.key.get_pressed(), dt)
 
-                # 5. Update current scene
-                self.scene_manager.current.update(dt)
+                # 5. Update current scene (isolated per stage)
+                try:
+                    self.scene_manager.current.update(dt)
+                except Exception:
+                    import traceback
+                    traceback.print_exc()
 
                 # 5a. Update transitions
                 self.transition_manager.update(dt)
@@ -106,8 +110,12 @@ class App:
                 # 6. Fill internal surface (background never black)
                 self.internal_surface.fill(settings.BG_COLOR)
 
-                # 7. Draw current scene
-                self.scene_manager.current.draw(self.internal_surface)
+                # 7. Draw current scene (isolated per stage)
+                try:
+                    self.scene_manager.current.draw(self.internal_surface)
+                except Exception:
+                    import traceback
+                    traceback.print_exc()
 
                 # 7a. Draw transitions on top
                 self.transition_manager.draw(self.internal_surface)

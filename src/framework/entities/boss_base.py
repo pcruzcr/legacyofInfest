@@ -56,6 +56,7 @@ class BossBase(EnemyBase):
         self._boss_name: str = "BOSS"
         self._filter_frame: int = 0
         self._boss_sprite_prefix: str = ""
+        self._completion_fired: bool = False
 
     def _load_boss_sprites(
         self, prefix: str, fw: int = 48, fh: int = 48,

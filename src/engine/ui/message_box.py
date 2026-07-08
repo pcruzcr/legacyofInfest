@@ -1,7 +1,7 @@
 from __future__ import annotations
 import pygame
 from src.engine.core import settings
-from src.engine.core.event_bus import emit, subscribe, unsubscribe
+from src.engine.core.event_bus import EventBus
 from src.engine.core.events import Events
 _MAX_LINES = 3
 _MAX_CHARS_PER_LINE = 58
@@ -10,7 +10,8 @@ _MAX_CHARS_PER_LINE = 58
 class MessageBox:
     """Typewriter message box with auto-dismiss and message queue."""
 
-    def __init__(self) -> None:
+    def __init__(self, event_bus: EventBus) -> None:
+        self._event_bus = event_bus
         self._text: str = ""
         self._full_text: str = ""
         self._visible: bool = False
@@ -43,15 +44,15 @@ class MessageBox:
             self._arrow = None
         self._arrow_timer: float = 0.0
 
-        subscribe(Events.SHOW_MESSAGE, self._on_show_message)
-        subscribe(Events.HIDE_MESSAGE, self._on_hide_message)
+        self._event_bus.subscribe(Events.SHOW_MESSAGE, self._on_show_message)
+        self._event_bus.subscribe(Events.HIDE_MESSAGE, self._on_hide_message)
 
     def destroy(self) -> None:
         if self._destroyed:
             return
         self._destroyed = True
-        unsubscribe(Events.SHOW_MESSAGE, self._on_show_message)
-        unsubscribe(Events.HIDE_MESSAGE, self._on_hide_message)
+        self._event_bus.unsubscribe(Events.SHOW_MESSAGE, self._on_show_message)
+        self._event_bus.unsubscribe(Events.HIDE_MESSAGE, self._on_hide_message)
 
     def _on_show_message(self, **data: object) -> None:
         if self._destroyed:
@@ -82,7 +83,7 @@ class MessageBox:
         self._visible = False
         self._text = ""
         self._full_text = ""
-        emit(Events.HIDE_MESSAGE)
+        self._event_bus.emit(Events.HIDE_MESSAGE)
 
     @staticmethod
     def _wrap_text(text: str) -> list[str]:

@@ -34,7 +34,7 @@ class TestStageTemplate:
         from student_templates.stage_template.stage_template import CustomStageScene
         scene = CustomStageScene(context)
         assert scene._tmx_path is not None
-        tmx_path: Path = scene._tmx_path  # type: ignore[assignment]
+        tmx_path: Path = scene._tmx_path
         assert tmx_path.name == "stage_template.tmx"
         assert tmx_path.exists()
 

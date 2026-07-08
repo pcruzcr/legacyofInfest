@@ -7,7 +7,7 @@ Uses sprite-based hearts from assets/ui/ with font fallback.
 from __future__ import annotations
 import pygame
 from src.engine.core import settings
-from src.engine.core.event_bus import subscribe, unsubscribe, emit
+from src.engine.core.event_bus import EventBus
 from src.engine.core.events import Events
 from src.engine.utils.asset_loader import AssetLoader
 
@@ -31,7 +31,8 @@ _PORTRAIT_STATES = ("normal", "hurt", "critical", "dead")
 class HUD:
     """Heads-up display: hearts, timer, portrait."""
 
-    def __init__(self) -> None:
+    def __init__(self, event_bus: EventBus) -> None:
+        self._event_bus = event_bus
         self._health: float = settings.PLAYER_MAX_HEALTH
         self._max_health: float = settings.PLAYER_MAX_HEALTH
         self._timer: float = 0.0
@@ -137,12 +138,12 @@ class HUD:
 
         self._font = pygame.font.Font(None, 12)
 
-        subscribe(Events.PLAYER_DAMAGED, self._on_player_damaged)
-        subscribe(Events.PLAYER_HEALED, self._on_player_healed)
-        subscribe(Events.PLAYER_DIED, self._on_player_died)
-        subscribe(Events.BOSS_PHASE_CHANGED, self._on_boss_phase_changed)
-        subscribe(Events.CHECKPOINT_REACHED, self._on_checkpoint_reached)
-        subscribe(Events.STAGE_COMPLETE, self._on_stage_complete)
+        self._event_bus.subscribe(Events.PLAYER_DAMAGED, self._on_player_damaged)
+        self._event_bus.subscribe(Events.PLAYER_HEALED, self._on_player_healed)
+        self._event_bus.subscribe(Events.PLAYER_DIED, self._on_player_died)
+        self._event_bus.subscribe(Events.BOSS_PHASE_CHANGED, self._on_boss_phase_changed)
+        self._event_bus.subscribe(Events.CHECKPOINT_REACHED, self._on_checkpoint_reached)
+        self._event_bus.subscribe(Events.STAGE_COMPLETE, self._on_stage_complete)
 
     #
     # destroy(): MUST be called before discarding this HUD instance.
@@ -158,12 +159,12 @@ class HUD:
         if self._destroyed:
             return
         self._destroyed = True
-        unsubscribe(Events.PLAYER_DAMAGED, self._on_player_damaged)
-        unsubscribe(Events.PLAYER_HEALED, self._on_player_healed)
-        unsubscribe(Events.PLAYER_DIED, self._on_player_died)
-        unsubscribe(Events.BOSS_PHASE_CHANGED, self._on_boss_phase_changed)
-        unsubscribe(Events.CHECKPOINT_REACHED, self._on_checkpoint_reached)
-        unsubscribe(Events.STAGE_COMPLETE, self._on_stage_complete)
+        self._event_bus.unsubscribe(Events.PLAYER_DAMAGED, self._on_player_damaged)
+        self._event_bus.unsubscribe(Events.PLAYER_HEALED, self._on_player_healed)
+        self._event_bus.unsubscribe(Events.PLAYER_DIED, self._on_player_died)
+        self._event_bus.unsubscribe(Events.BOSS_PHASE_CHANGED, self._on_boss_phase_changed)
+        self._event_bus.unsubscribe(Events.CHECKPOINT_REACHED, self._on_checkpoint_reached)
+        self._event_bus.unsubscribe(Events.STAGE_COMPLETE, self._on_stage_complete)
 
     def _on_player_damaged(self, **data: object) -> None:
         if self._destroyed:
@@ -258,7 +259,7 @@ class HUD:
                 self._timer -= dt
                 if self._timer <= 0.0:
                     self._timer = 0.0
-                    emit(Events.PLAYER_DIED)
+                    self._event_bus.emit(Events.PLAYER_DIED)
                     self._timer_running = False
             else:
                 self._timer += dt

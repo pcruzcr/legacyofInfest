@@ -54,12 +54,16 @@ class EnemyWalker(EnemyBase):
         self.rect.height = 28
 
         # Load sprites
-        self._load_zone_sprites(zone, "walk", 16, 12)
+        self._load_zone_sprites(zone, 16, 12)
 
     def set_collision_rects(self, rects: list[pygame.Rect], one_way: list[pygame.Rect] | None = None) -> None:
         """Provide collision rects for ledge detection and Y-snapping."""
         self._collision_rects = rects
         self._one_way_rects = one_way or []
+
+    @property
+    def _all_ground_rects(self) -> list[pygame.Rect]:
+        return self._collision_rects + self._one_way_rects
 
     # ──────────────────────────────────────────────
     # Behavior implementations
@@ -69,7 +73,7 @@ class EnemyWalker(EnemyBase):
         """Move at patrol speed. Reverse at patrol limit or ledge edge."""
         reversed_this_frame = False
 
-        all_ground = self._collision_rects + self._one_way_rects
+        all_ground = self._all_ground_rects
 
         # Ledge detection: probe ahead and below before moving
         if all_ground:
@@ -95,7 +99,7 @@ class EnemyWalker(EnemyBase):
         self.position.x += self.facing_direction * self.patrol_speed * dt
 
     def _post_update(self, dt: float) -> None:
-        all_rects = self._collision_rects + self._one_way_rects
+        all_rects = self._all_ground_rects
         if all_rects:
             feet_y = self.position.y + self.rect.height
             for rect in all_rects:
@@ -105,8 +109,22 @@ class EnemyWalker(EnemyBase):
                     break
 
     def _alert_behavior(self, dt: float) -> None:
-        """Move toward player at alert speed."""
+        """Move toward player at alert speed. Reverse at ledge edges."""
         self._face_player()
+
+        all_ground = self._all_ground_rects
+        if all_ground:
+            probe_x = self.position.x + (
+                self.facing_direction * (self.rect.width // 2 + 2)
+            )
+            probe_y = self.position.y + self.rect.height + 2
+            has_floor = any(
+                r.collidepoint(probe_x, probe_y)
+                for r in all_ground
+            )
+            if not has_floor:
+                self.facing_direction *= -1
+
         self.position.x += self.facing_direction * self.alert_speed * dt
 
     def _get_animation_key(self) -> str:

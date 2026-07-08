@@ -91,8 +91,7 @@ class EnemyFlying(EnemyBase):
         self._y_track_offset: float = 0.0
 
         # Load sprites
-        self._load_zone_sprites(zone, "fly", 14, 10)
-        self._load_extra_sprites(zone, 14, 10)
+        self._load_zone_sprites(zone, 14, 10)
 
     def _load_extra_sprites(self, zone: int, fw: int, fh: int) -> None:
         zone_key = f"zone{zone}" if zone > 0 else "zone1"

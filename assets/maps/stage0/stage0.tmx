@@ -66,6 +66,10 @@
   <object id="118" name="Solid" type="Solid" x="0" y="144" width="16" height="16"/>
   <object id="119" name="Solid" type="Solid" x="3824" y="144" width="16" height="16"/>
   <object id="120" name="Solid" type="Solid" x="0" y="160" width="16" height="16"/>
+  <object id="121" name="Solid" type="Solid" x="272" y="160" width="96" height="16"/>
+  <object id="122" name="Solid" type="Solid" x="416" y="160" width="96" height="16"/>
+  <object id="123" name="Solid" type="Solid" x="1200" y="160" width="176" height="16"/>
+  <object id="124" name="Solid" type="Solid" x="1440" y="160" width="176" height="16"/>
   <object id="125" name="Solid" type="Solid" x="3824" y="160" width="16" height="16"/>
   <object id="126" name="Solid" type="Solid" x="0" y="176" width="16" height="16"/>
   <object id="128" name="Solid" type="Solid" x="3824" y="176" width="16" height="16"/>
@@ -73,10 +77,6 @@
   <object id="130" name="Solid" type="Solid" x="2320" y="192" width="1520" height="16"/>
   <object id="131" name="Solid" type="Solid" x="0" y="208" width="2240" height="16"/>
   <object id="132" name="Solid" type="Solid" x="2320" y="208" width="1520" height="16"/>
-  <object id="121" name="Platform" type="Platform" x="272" y="160" width="96" height="16"/>
-  <object id="122" name="Platform" type="Platform" x="416" y="160" width="96" height="16"/>
-  <object id="123" name="Platform" type="Platform" x="1200" y="160" width="176" height="16"/>
-  <object id="124" name="Platform" type="Platform" x="1440" y="160" width="176" height="16"/>
   <object id="127" name="Platform" type="Platform" x="2240" y="176" width="80" height="16"/>
  </objectgroup>
  <objectgroup id="8" name="Objects">

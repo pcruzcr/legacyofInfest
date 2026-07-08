@@ -6,13 +6,14 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.engine.core import settings
-from src.engine.core.event_bus import emit, subscribe, unsubscribe
+from src.engine.core.event_bus import EventBus
 from src.engine.input.action_map import Action
 from src.engine.core.events import Events
 from src.engine.scene.base_scene import BaseScene
 from src.engine.ui.hud import HUD
 from src.engine.ui.message_box import MessageBox
 from src.engine.ui.screen_banner import ScreenBanner
+from src.framework.entities.boss_base import BossBase
 from src.framework.entities.enemy_base import EnemyBase
 from src.framework.entities.player import Player
 from src.framework.stage.camera import Camera
@@ -92,13 +93,13 @@ class StageScene(BaseScene):
                 bgm_path = Path("assets/music") / f"{self._stage_data.bgm_track}.wav"
                 audio.play_music(bgm_path)
 
-        self._msg_box = MessageBox()
+        self._msg_box = MessageBox(self.context.event_bus)
         self._banner = ScreenBanner()
         if self._stage_data.stage_name:
             self._banner.play(self._stage_data.stage_id, self._stage_data.stage_name)
-            emit(Events.SFX_STAGE_BANNER)
+            self.context.event_bus.emit(Events.SFX_STAGE_BANNER)
 
-        self._hud = HUD()
+        self._hud = HUD(self.context.event_bus)
         if self._stage_data.time_limit > 0:
             self._hud.start_timer(self._stage_data.time_limit)
         else:
@@ -132,7 +133,7 @@ class StageScene(BaseScene):
                     self._play_sfx_named(n)
                 return handler
             handler = _make_handler(sname)
-            subscribe(evt, handler)
+            self.context.event_bus.subscribe(evt, handler)
             self._sfx_handlers[evt] = handler
 
     def _play_sfx_named(self, name: str) -> None:
@@ -146,7 +147,7 @@ class StageScene(BaseScene):
         # para evitar acumulación de suscripciones al EventBus.
         #
         for evt, handler in self._sfx_handlers.items():
-            unsubscribe(evt, handler)
+            self.context.event_bus.unsubscribe(evt, handler)
         self._sfx_handlers.clear()
         if self._hud is not None:
             self._hud.destroy()
@@ -234,10 +235,10 @@ class StageScene(BaseScene):
                     if hitbox.colliderect(entity.hurtbox):
                         entity.apply_hit(player.current_attack_damage, player.rect.center)
                         hit_any = True
-                        emit(Events.SFX_ENEMY_HIT)
+                        self.context.event_bus.emit(Events.SFX_ENEMY_HIT)
             if hit_any:
                 player.consume_hitbox()
-                emit(Events.SFX_HIT_CONNECT)
+                self.context.event_bus.emit(Events.SFX_HIT_CONNECT)
                 # Hitstop: 2 frames for short attack (0.5), 4 frames for long attack (1.0)
                 hitstop_frames = 4.0 if player.current_attack_damage >= 1.0 else 2.0
                 if hasattr(self.context, "clock") and self.context.clock is not None:
@@ -265,7 +266,7 @@ class StageScene(BaseScene):
         for mt in stage.message_triggers:
             if not mt.triggered and trigger_rect.colliderect(mt.rect):
                 mt.triggered = True
-                emit(Events.SHOW_MESSAGE, text=mt.text, duration=8.0)
+                self.context.event_bus.emit(Events.SHOW_MESSAGE, text=mt.text, duration=8.0)
 
         # Check hazard zones
         for hz in stage.hazard_zones:
@@ -273,7 +274,7 @@ class StageScene(BaseScene):
             if hz.timer <= 0 and trigger_rect.colliderect(hz.rect):
                 player.apply_damage(hz.damage, player.rect.center)
                 hz.timer = hz.cooldown
-                emit(Events.SFX_HAZARD_ZONE)
+                self.context.event_bus.emit(Events.SFX_HAZARD_ZONE)
 
         # Check death pits
         for dp in stage.death_pits:
@@ -288,11 +289,11 @@ class StageScene(BaseScene):
         for cp in self._checkpoints:
             if cp.check_collision(player.rect):
                 self._checkpoint_position = pygame.Vector2(cp.rect.center)
-                emit(Events.SFX_CHECKPOINT)
+                self.context.event_bus.emit(Events.SFX_CHECKPOINT)
                 if player.current_health < settings.PLAYER_MAX_HEALTH:
                     heal_amount = settings.PLAYER_MAX_HEALTH - player.current_health
                     player.heal(heal_amount)
-                    emit(Events.PLAYER_HEALED, amount=heal_amount)
+                    self.context.event_bus.emit(Events.PLAYER_HEALED, amount=heal_amount)
 
         # Next trigger
         if not self._stage_complete and stage.next_trigger and player.rect.colliderect(stage.next_trigger):
@@ -300,20 +301,20 @@ class StageScene(BaseScene):
             self.on_next_trigger_entered()
             self._stage_complete_timer = 2.0
             self._banner.play("STAGE_COMPLETE", "STAGE COMPLETE")
-            emit(Events.SFX_STAGE_COMPLETE)
+            self.context.event_bus.emit(Events.SFX_STAGE_COMPLETE)
 
         # Boss defeat: detect when the boss dies and start completion timer
         if not self._stage_complete:
             for entity in stage.entity_list:
-                if (hasattr(entity, "_boss_name")
+                if (isinstance(entity, BossBase)
                         and not entity.is_alive
-                        and getattr(entity, "_death_timer", 0) <= 0
-                        and not getattr(entity, "_completion_fired", False)):
+                        and entity._death_timer <= 0
+                        and not entity._completion_fired):
                     entity._completion_fired = True
                     self._stage_complete = True
                     self._stage_complete_timer = 2.0
                     self._banner.play("STAGE_COMPLETE", "STAGE COMPLETE")
-                    emit(Events.SFX_STAGE_COMPLETE)
+                    self.context.event_bus.emit(Events.SFX_STAGE_COMPLETE)
                     break
 
         # Delayed stage complete emission (gives banner time to display)
@@ -324,7 +325,7 @@ class StageScene(BaseScene):
             if self._banner:
                 self._banner.update(dt)
             if self._stage_complete_timer <= 0:
-                emit(Events.STAGE_COMPLETE, stage_id=stage.stage_id)
+                self.context.event_bus.emit(Events.STAGE_COMPLETE, stage_id=stage.stage_id)
                 return
             return
 
@@ -332,7 +333,7 @@ class StageScene(BaseScene):
         if self._hud:
             boss_found = False
             for entity in stage.entity_list:
-                if hasattr(entity, "_boss_name") and entity.is_alive:
+                if isinstance(entity, BossBase) and entity.is_alive:
                     self._hud.set_boss_hud(
                         entity._boss_name,
                         entity.current_health,
@@ -366,7 +367,7 @@ class StageScene(BaseScene):
 
     def _kill_player(self) -> None:
         self._game_over = True
-        emit(Events.PLAYER_DIED)
+        self.context.event_bus.emit(Events.PLAYER_DIED)
         from src.engine.scenes.game_over_scene import GameOverScene
         self.context.scene_manager.push(GameOverScene(self.context, self))
 
