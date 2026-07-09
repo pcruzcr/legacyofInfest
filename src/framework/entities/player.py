@@ -112,6 +112,12 @@ class Player(BaseEntity):
         self._hitbox_consumed: bool = False
         self._cooldown_timer: float = 0.0
 
+        # --- Combo state ---
+        self.combo_count: int = 0
+        self.combo_timer: float = 0.0
+        self.last_attack_type: str = ""
+        self.combo_active: bool = False
+
         # --- Dash state ---
         self._air_dash_count: int = 0
         self._dash_timer: float = 0.0
@@ -203,18 +209,24 @@ class Player(BaseEntity):
     @property
     def current_attack_damage(self) -> float:
         """
-        Damage value for the current attack state.
+        Damage value for the current attack state, scaled by combo.
         0.50 during SHORT_ATTACK active frames,
         1.00 during LONG_ATTACK active frames,
         0.0 otherwise.
+        Combo multiplier from settings.COMBO_DAMAGE_MULT[combo_count - 1].
         """
+        base = 0.0
         if (self._state_instance.state_enum == PlayerState.SHORT_ATTACK
                 and self._active_hitbox is not None):
-            return 0.5
-        if (self._state_instance.state_enum == PlayerState.LONG_ATTACK
+            base = 0.5
+        elif (self._state_instance.state_enum == PlayerState.LONG_ATTACK
                 and self._active_hitbox is not None):
-            return 1.0
-        return 0.0
+            base = 1.0
+        if base > 0.0 and self.combo_active and self.combo_count > 0:
+            import src.engine.core.settings as settings
+            idx = min(self.combo_count - 1, len(settings.COMBO_DAMAGE_MULT) - 1)
+            return base * settings.COMBO_DAMAGE_MULT[idx]
+        return base
 
     # ── Public methods ──────────────────────────────────────────
 
@@ -417,12 +429,20 @@ class Player(BaseEntity):
             if self._flash_timer >= period:
                 self._flash_timer -= period
                 self._flash_visible = not self._flash_visible
+        else:
+            self._flash_visible = True
+            self._flash_timer = 0.0
         if self._knockback_timer > 0:
             self._knockback_timer -= dt
         if self._cooldown_timer > 0:
             self._cooldown_timer -= dt
         if self._dash_cooldown > 0:
             self._dash_cooldown -= dt
+        if self.combo_timer > 0:
+            self.combo_timer -= dt
+            if self.combo_timer <= 0:
+                self.combo_active = False
+                self.combo_count = 0
         self._animation_timer += dt
 
     def _advance_animation(self, dt: float) -> None:

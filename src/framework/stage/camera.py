@@ -49,6 +49,8 @@ class Camera:
         self._locked_x: bool = False
         self._locked_y: bool = False
         self._lock_rect: pygame.Rect | None = None
+        self._shake_timer: float = 0.0
+        self._shake_amplitude: float = 0.0
 
     def follow(self, target) -> None:
         """Set the entity the camera follows."""
@@ -75,6 +77,11 @@ class Camera:
                 self._lock_rect = rect
                 break
 
+    def apply_shake(self, amplitude: float = 2.0, duration: float = 0.1) -> None:
+        """Apply a screen shake offset that decays over `duration` seconds."""
+        self._shake_timer = duration
+        self._shake_amplitude = amplitude
+
     def update(self, dt: float) -> None:
         """Smoothly move the camera toward the target, clamped to map bounds."""
         if self._target is None:
@@ -96,6 +103,15 @@ class Camera:
 
         self.offset.x += (target_x - self.offset.x) * self.lerp_speed * dt
         self.offset.y += (target_y - self.offset.y) * self.lerp_speed * dt
+
+        # Screen shake
+        if self._shake_timer > 0:
+            self._shake_timer -= dt
+            import random
+            sx = random.uniform(-self._shake_amplitude, self._shake_amplitude)
+            sy = random.uniform(-self._shake_amplitude, self._shake_amplitude)
+            self.offset.x += sx
+            self.offset.y += sy
 
     def set_parallax_factor(self, layer_name: str, factor: float) -> None:
         """Set the parallax factor for a named layer (0.0 = static, 1.0 = full follow)."""

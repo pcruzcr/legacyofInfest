@@ -70,6 +70,22 @@ class AudioManager:
         pygame.mixer.music.set_volume(0.0 if self._muted else self._music_volume)
 
     @property
+    def music_volume(self) -> float:
+        return self._music_volume
+
+    @music_volume.setter
+    def music_volume(self, value: float) -> None:
+        self.set_music_volume(value)
+
+    @property
+    def sfx_volume(self) -> float:
+        return self._sfx_volume
+
+    @sfx_volume.setter
+    def sfx_volume(self, value: float) -> None:
+        self.set_sfx_volume(value)
+
+    @property
     def is_muted(self) -> bool:
         return self._muted
 

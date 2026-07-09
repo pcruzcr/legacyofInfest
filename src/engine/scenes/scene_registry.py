@@ -64,6 +64,7 @@ def register_demo_scenes() -> None:
     reg.register("filter", lambda ctx: _build_scene(ctx, "filter_demo_scene", "FilterDemoScene"))
     reg.register("vision", lambda ctx: _build_scene(ctx, "vision_demo_scene", "VisionDemoScene"))
     reg.register("pattern", lambda ctx: _build_scene(ctx, "pattern_demo_scene", "PatternDemoScene"))
+    reg.register("combo", lambda ctx: _build_scene(ctx, "combo_demo_scene", "ComboDemoScene"))
 
 
 def _build_scene(ctx, module_name: str, class_name: str) -> BaseScene | None:

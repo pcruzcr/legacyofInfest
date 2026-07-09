@@ -30,9 +30,10 @@ def _ensure_sample_dataset() -> None:
     n_per_class = 30
     X_list: list[np.ndarray] = []
     y_list: list[str] = []
+    feature_dim = 288  # HOG features for 32×32 image (orientations=8, ppc=8, cpb=2)
     for label, center in [("dark_zone", 50), ("neutral", 128), ("light_zone", 200)]:
         for _ in range(n_per_class):
-            features = rng.randn(512) * 10 + center
+            features = rng.randn(feature_dim) * 10 + center
             X_list.append(features)
             y_list.append(label)
     X = np.array(X_list, dtype=np.float32)
@@ -175,7 +176,7 @@ class TestSerialization:
     def test_sample_model_classifies(self) -> None:
         _ensure_sample_dataset()
         model = _ensure_sample_model()
-        features = np.random.randn(512).astype(np.float32)
+        features = np.random.randn(288).astype(np.float32)
         label = PatternRecognitionTools.classify(features, model)
         assert isinstance(label, str)
         assert label in ["dark_zone", "neutral", "light_zone"]

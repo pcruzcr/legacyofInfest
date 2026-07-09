@@ -144,6 +144,62 @@ class App:
     audio_manager: "AudioManager"
 ```
 
+### 2.5 `src/engine/core/save_data.py`
+
+```python
+from dataclasses import dataclass, field
+
+SAVE_VERSION: int = 1
+MAX_SLOTS: int = 5
+
+@dataclass
+class SaveData:
+    slot_id: int = 0
+    timestamp: str = ""
+    version: int = SAVE_VERSION
+    stage_id: str = ""
+    stage_index: int = 0
+    checkpoint_x: float = 0.0
+    checkpoint_y: float = 0.0
+    health: float = 5.0
+    max_health: float = 5.0
+    zone_flags: dict[str, bool] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]: ...
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> SaveData: ...
+    @staticmethod
+    def migrate(data: dict[str, Any]) -> dict[str, Any]: ...
+```
+
+### 2.6 `src/engine/core/save_manager.py`
+
+```python
+class SaveManager:
+    SAVES_DIR: Path = Path("saves")
+
+    def __init__(self) -> None: ...
+
+    def save(self, slot: int, data: SaveData) -> str:
+        """Persists to slot_{slot}.json. Raises ValueError if slot ∉ [1, MAX_SLOTS]."""
+
+    def load(self, slot: int) -> SaveData | None:
+        """Returns None if missing or corrupt."""
+
+    def delete(self, slot: int) -> None: ...
+
+    def list_slots(self) -> list[dict[str, Any]]:
+        """Returns metadata for non-empty slots (slot, stage_id, timestamp, health, max_health)."""
+
+    def has_saves(self) -> bool: ...
+
+    def newest_slot(self) -> int | None: ...
+
+    def auto_save(self, stage_id: str, stage_index: int,
+                  checkpoint_x: float, checkpoint_y: float,
+                  health: float, max_health: float) -> str | None: ...
+```
+
 ---
 
 ## 3. Engine Input
@@ -229,6 +285,17 @@ class AudioManager:
         """volume clamped to [0.0, 1.0]."""
     def set_sfx_volume(self, volume: float) -> None: ...
     def toggle_mute(self) -> None: ...
+
+    @property
+    def music_volume(self) -> float: ...
+    @music_volume.setter
+    def music_volume(self, value: float) -> None: ...
+
+    @property
+    def sfx_volume(self) -> float: ...
+    @sfx_volume.setter
+    def sfx_volume(self, value: float) -> None: ...
+
     @property
     def is_muted(self) -> bool: ...
 ```
@@ -329,25 +396,45 @@ class BaseScene(ABC):
 
     def on_resume(self) -> None:
         """Optional override. Default: no-op."""
+
+    def destroy(self) -> None:
+        """Called once after on_exit() for final cleanup."""
 ```
 
 ### 6.2 `src/engine/scene/scene_manager.py`
 
 ```python
 class SceneManager:
-    def __init__(self) -> None: ...
+    def __init__(self, context: "GameContext") -> None:
+        """Creates the TransitionManager and subscribes to STAGE_COMPLETE / PLAYER_DIED events."""
+
+    def cleanup(self) -> None:
+        """Unsubscribes all event listeners."""
 
     def push(self, scene: "BaseScene") -> None:
-        """Calls current.on_pause() if a scene exists, then scene.on_enter()."""
+        """Calls current.on_pause() if a scene exists, then scene.awake() → start() → on_enter()."""
 
     def pop(self) -> None:
-        """Calls current.on_exit(), then new current.on_resume()."""
+        """Calls current.on_exit() → destroy(), then new current.on_resume()."""
 
     def replace(self, scene: "BaseScene") -> None:
-        """Calls current.on_exit(), then scene.on_enter(). No pause/resume."""
+        """Calls current.on_exit() → destroy(), then scene.awake() → start() → on_enter()."""
+
+    def set_stage_queue(self, stages: list[type["BaseScene"]]) -> None: ...
+
+    def set_stage_index(self, index: int) -> None: ...
 
     @property
-    def current(self) -> "BaseScene | None": ...
+    def current(self) -> "BaseScene": ...
+
+    @property
+    def stack_size(self) -> int: ...
+
+    @property
+    def stage_index(self) -> int: ...
+
+    @property
+    def transition(self) -> "TransitionManager": ...
 ```
 
 **Call-order guarantee (sequence diagram):**
@@ -369,6 +456,20 @@ replace(C) while A is current:
     # current is now C, A is discarded (not on the stack)
 ```
 
+### 6.2b `BaseScene` lifecycle call-order
+
+```
+awake()     → called once when scene is first pushed onto the stack (before on_enter)
+start()     → called once after awake() (before on_enter)
+on_enter()  → called every time the scene becomes the top of the stack
+update(dt)  → called every frame while the scene is active
+draw(surf)  → called every frame while the scene is active
+on_pause()  → called when another scene is pushed on top
+on_resume() → called when the scene above is popped, returning to this scene
+on_exit()   → called when the scene is removed from the stack
+destroy()   → called once after on_exit() for final cleanup
+```
+
 ### 6.3 `src/engine/scene/transitions.py`
 
 ```python
@@ -385,6 +486,31 @@ class WipeTransition:
     def draw(self, surface: pygame.Surface) -> None: ...
     @property
     def is_complete(self) -> bool: ...
+```
+
+### 6.4 `src/engine/scenes/transition_manager.py`
+
+```python
+from __future__ import annotations
+
+import pygame
+
+FADE_DURATION: float = 0.35
+
+class TransitionManager:
+    """Simple fade-to-black overlay controller. Used by SceneManager.transition."""
+
+    def __init__(self) -> None: ...
+    def start_fade_out(self, duration: float = FADE_DURATION) -> None: ...
+    def start_fade_in(self, duration: float = FADE_DURATION) -> None: ...
+    def update(self, dt: float) -> None: ...
+    def draw(self, surface: pygame.Surface) -> None: ...
+
+    @property
+    def active(self) -> bool: ...
+    @property
+    def finished(self) -> bool:
+        """True if a transition was started and has completed."""
 ```
 
 ---
@@ -408,6 +534,17 @@ class HUD:
     def resume_timer(self) -> None: ...
     def bind_player(self, player: "Player") -> None:
         """Stores a weak reference for portrait-state queries only; HUD never mutates Player."""
+
+    def set_combo_count(self, count: int) -> None:
+        """Updates the combo counter for display."""
+
+    def set_boss_hud(self, name: str, health: float, max_health: float,
+                     phase: int, phase_count: int) -> None: ...
+
+    def clear_boss_hud(self) -> None: ...
+
+    def trigger_save_notification(self) -> None:
+        """Shows a 'Game Saved' indicator for 2 seconds."""
 ```
 
 ### 7.2 `src/engine/ui/message_box.py`
@@ -691,9 +828,13 @@ class Camera:
 
     def follow(self, target: "BaseEntity") -> None: ...
     def update(self, dt: float) -> None: ...
+    def set_map_size(self, map_w: int, map_h: int) -> None: ...
+    def set_camera_locks(self, locks: list["CameraLock"]) -> None: ...
+    def apply_shake(self, amplitude: float = 2.0, duration: float = 0.1) -> None: ...
 
     def world_to_screen(self, pos: pygame.Vector2) -> pygame.Vector2: ...
     def screen_to_world(self, pos: pygame.Vector2) -> pygame.Vector2: ...
+    def layer_offset(self, layer_name: str) -> pygame.Vector2: ...
 
     @property
     def offset(self) -> pygame.Vector2: ...
@@ -722,12 +863,18 @@ from dataclasses import dataclass, field
 @dataclass
 class StageData:
     map_layer: "pyscroll.PyscrollGroup"
+    map_pixel_size: tuple[int, int] = (0, 0)
     collision_rects: list[pygame.Rect] = field(default_factory=list)
+    one_way_rects: list[pygame.Rect] = field(default_factory=list)
     entity_list: list["BaseEntity"] = field(default_factory=list)
     checkpoints: list["Checkpoint"] = field(default_factory=list)
     spawn_point: pygame.Vector2 = field(default_factory=lambda: pygame.Vector2(0, 0))
     next_trigger: pygame.Rect | None = None
     background_layers: list[pygame.Surface] = field(default_factory=list)
+    message_triggers: list["MessageTrigger"] = field(default_factory=list)
+    hazard_zones: list["HazardZone"] = field(default_factory=list)
+    death_pits: list["DeathPit"] = field(default_factory=list)
+    camera_locks: list["CameraLock"] = field(default_factory=list)
     stage_id: str = ""
     stage_name: str = ""
     time_limit: int = 0
@@ -752,6 +899,67 @@ class StageLoader:
 
 class FrameworkUsageError(Exception):
     """Raised when student/stage code misuses the framework API."""
+```
+
+### 11.4 `src/framework/stage/collision_system.py`
+
+```python
+class CollisionSystem:
+    """Handles enemy updates, attack hitbox → enemy hurtbox, hitstop, and screen shake."""
+
+    def __init__(self, context: "GameContext") -> None: ...
+    def update_enemies(self, dt: float, player: "Player", stage: "StageData") -> None: ...
+    def process_attack(self, dt: float, player: "Player", stage: "StageData",
+                       camera: "Camera", clock: "DeltaClock | None") -> None: ...
+    def update_hitstop(self, dt: float, clock: "DeltaClock | None") -> None: ...
+    def reset(self) -> None: ...
+```
+
+### 11.5 `src/framework/stage/hazard_system.py`
+
+```python
+class HazardSystem:
+    """Processes message triggers, hazard zones, and death pits."""
+
+    def __init__(self, context: "GameContext") -> None: ...
+    def update(self, dt: float, player: "Player", stage: "StageData") -> None: ...
+    def reset(self) -> None: ...
+```
+
+### 11.6 `src/framework/stage/progression_system.py`
+
+```python
+class ProgressionSystem:
+    """Manages checkpoints, next-trigger, boss defeat, and stage complete flow."""
+
+    def __init__(self, context: "GameContext") -> None: ...
+    def process_checkpoints(self, player: "Player", stage: "StageData",
+                            checkpoints: list, hud: "HUD | None") -> "pygame.Vector2 | None":
+        """Returns the checkpoint position if a new checkpoint was activated."""
+
+    def check_next_trigger(self, player: "Player", stage: "StageData") -> bool: ...
+    def check_boss_defeat(self, stage: "StageData") -> bool: ...
+    def update_complete_timer(self, dt: float) -> bool:
+        """Returns True when the stage-complete timer expires and STAGE_COMPLETE should fire."""
+
+    @property
+    def stage_complete(self) -> bool: ...
+    @property
+    def complete_timer(self) -> float: ...
+    def reset(self) -> None: ...
+```
+
+### 11.7 `src/framework/stage/drawing_system.py`
+
+```python
+class DrawingSystem:
+    """Handles all rendering: background parallax, map, Y-sorted entities, UI overlays, debug."""
+
+    def __init__(self) -> None: ...
+    def draw(self, surface: pygame.Surface, stage: "StageData | None",
+             player: "Player | None", checkpoints: list, camera: "Camera",
+             hud: "HUD | None", msg_box: "MessageBox | None",
+             banner: "ScreenBanner | None", paused: bool, debug: bool) -> None: ...
 ```
 
 ---
@@ -1351,7 +1559,23 @@ def save_png(surface: pygame.Surface, scene_prefix: str, mode_name: str) -> str:
     """Save to tests/output/demo/{prefix}_{mode}_{timestamp}.png. Returns path string."""
 ```
 
-### 17.6 `src/engine/scenes/demo_common.py`
+### 17.6 `src/engine/scenes/options_scene.py`
+
+```python
+class OptionsScene(BaseScene):
+    """Options menu with MUSIC VOLUME, SFX VOLUME, and DISPLAY SCALE settings."""
+
+    def __init__(self, context: GameContext) -> None: ...
+    def on_enter(self) -> None:
+        """Loads saved config from APPDATA/legacyofinfest/config.json, or defaults."""
+    def on_exit(self) -> None:
+        """Persists config to JSON. Updates settings.DISPLAY_SCALE if changed."""
+    def update(self, dt: float) -> None:
+        """UP/DOWN cycle options, LEFT/RIGHT adjust value, ESC returns to TitleScene."""
+    def draw(self, surface: pygame.Surface) -> None: ...
+```
+
+### 17.7 `src/engine/scenes/demo_common.py`
 
 ```python
 # Legacy compatibility module. Re-exports all public symbols from
@@ -1366,9 +1590,16 @@ def save_png(surface: pygame.Surface, scene_prefix: str, mode_name: str) -> str:
 ### 18.1 `scripts/validate_assets.py`
 
 ```python
-# Validates font loading, model loading, and map file integrity.
+# Validates font loading, model loading, map file integrity, and sprite palette.
 # Exit code 0 on success, non-zero on failure.
 # No public classes — run as `python scripts/validate_assets.py`.
+
+# Module-level palette definitions (glob pattern → allowed RGB set):
+SPRITE_PALETTES: list[tuple[str, set[tuple[int, int, int]]]]
+
+def check_palette(path: Path) -> None:
+    """Verifies all pixels in a sprite use only allowed palette colors.
+    Skips fully-transparent (0,0,0) pixels on SRCALPHA surfaces."""
 ```
 
 ### 18.2 `scripts/generate_exam.py`

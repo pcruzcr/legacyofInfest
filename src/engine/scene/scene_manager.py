@@ -9,11 +9,15 @@ Automatically cleans up EventBus subscriptions when scenes exit.
 """
 from __future__ import annotations
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 
-from src.engine.core.event_bus import EventBus
 from src.engine.core.events import Events
+from src.engine.scenes.transition_manager import TransitionManager
 from src.engine.scenes.title_scene import TitleScene
+
+
+class _SceneWithRespawn(Protocol):
+    def respawn(self) -> None: ...
 
 if TYPE_CHECKING:
     from src.engine.scene.base_scene import BaseScene
@@ -30,6 +34,8 @@ class SceneManager:
         self._stack: list[BaseScene] = []
         self._stage_queue: list[type[BaseScene]] = []
         self._stage_index: int = 0
+        self._transition = TransitionManager()
+        self._pending_replace_cb = None
         self._context.event_bus.subscribe(Events.STAGE_COMPLETE, self._on_stage_complete)
         self._context.event_bus.subscribe(Events.PLAYER_DIED, self._on_player_died)
 
@@ -82,13 +88,21 @@ class SceneManager:
 
     def _on_stage_complete(self, **data: object) -> None:
         """Advance to the next stage in the queue."""
+        stage_id = str(data.get("stage_id", ""))
+        sm = self._context.save_manager
+        if sm is not None and stage_id:
+            sm.auto_save(
+                stage_id=f"{stage_id}_completed",
+                stage_index=self._stage_index,
+                checkpoint_x=0.0, checkpoint_y=0.0,
+                health=5.0, max_health=5.0,
+            )
         self._stage_index += 1
         if self._stage_index < len(self._stage_queue):
             next_stage_class = self._stage_queue[self._stage_index]
             logging.info(f"SceneManager: advancing to stage {next_stage_class.__name__}")
             self.replace(next_stage_class(self._context))
         else:
-            # No more stages — push End Credits (placeholder for now)
             from src.engine.scenes.end_credits_scene import EndCreditsScene
             logging.info("SceneManager: no more stages — end credits")
             self.replace(EndCreditsScene(self._context))
@@ -97,7 +111,7 @@ class SceneManager:
         """Handle player death. If the current scene has a _respawn
         method (e.g. StageScene), let it handle death internally."""
         current = self._stack[-1] if self._stack else None
-        if current is not None and hasattr(current, "respawn"):
+        if current is not None and isinstance(current, _SceneWithRespawn):
             logging.info("SceneManager: player died — scene handles respawn")
             return
         logging.info("SceneManager: player died — returning to title")
@@ -106,3 +120,17 @@ class SceneManager:
     @property
     def stack_size(self) -> int:
         return len(self._stack)
+
+    @property
+    def stage_index(self) -> int:
+        """Zero-based index into the stage queue (for save/load)."""
+        return self._stage_index
+
+    @property
+    def transition(self) -> TransitionManager:
+        return self._transition
+
+    def set_stage_index(self, index: int) -> None:
+        """Set the stage queue index (for load-game restore)."""
+        if 0 <= index < max(len(self._stage_queue), 1):
+            self._stage_index = index

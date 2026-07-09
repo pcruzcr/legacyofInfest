@@ -39,6 +39,7 @@ from src.engine.scenes.demo_common import (
     SourceSurfaceManager,
     FrameThrottle,
 )
+from src.engine.scenes.demo_layout import COLOR_ERROR
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.processing.vision_tools import VisionTools
 from src.framework.processing.pattern_recognition_tools import (
@@ -295,7 +296,7 @@ class PatternDemoScene(BaseScene):
 
     def _compute_result(self) -> None:
         src = self._sources.current_source
-        if src is None or self._model is None:
+        if src is None:
             self._cached_result_surf = pygame.Surface(PANEL_SIZE)
             self._cached_result_surf.fill((0, 0, 0))
             return
@@ -311,6 +312,11 @@ class PatternDemoScene(BaseScene):
             self._cached_feature = features
 
             if self._mode == 0:  # INFERENCE
+                if self._model is None:
+                    self._cached_result_surf = self._render_error_surface(
+                        "No model loaded — train or load a model first"
+                    )
+                    return
                 label = PatternRecognitionTools.classify(features, self._model)
                 probas = PatternRecognitionTools.classify_proba(features, self._model)
                 self._cached_class_label = label
@@ -318,23 +324,34 @@ class PatternDemoScene(BaseScene):
                 self._cached_result_surf = self._render_inference(probas, label, method, features)
 
             elif self._mode == 1:  # FEATURE_COMPARE
-                # Find nearest training sample (brute force)
+                if self._model is None:
+                    self._cached_result_surf = self._render_error_surface(
+                        "No model loaded — cannot compare features")
+                    return
                 nearest_dist, nearest_label, nearest_feat = self._find_nearest(features)
                 self._cached_result_surf = self._render_feature_compare(
                     features, nearest_feat, nearest_label, nearest_dist, method,
                 )
 
             elif self._mode == 2:  # CLASS_GRID
-                self._generate_class_grid()
+                self._generate_class_grid(features)
                 self._cached_result_surf = self._render_class_grid()
 
             elif self._mode == 3:  # CONFUSION
+                if self._model is None:
+                    self._cached_result_surf = self._render_error_surface(
+                        "No model loaded — confusion matrix not available")
+                    return
                 self._cached_result_surf = self._render_confusion()
 
             elif self._mode == 4:  # PIPELINE
                 self._cached_result_surf = self._render_pipeline(src, rect, features, method)
 
             elif self._mode == 5:  # TREE_VIEW
+                if self._model is None:
+                    self._cached_result_surf = self._render_error_surface(
+                        "No model loaded — decision tree not available")
+                    return
                 if self._tree_structure:
                     self._cached_result_surf = self._render_tree()
 
@@ -350,6 +367,8 @@ class PatternDemoScene(BaseScene):
         if not self._dataset_samples:
             return 0.0, "unknown", best_feat
         for feat, label in self._dataset_samples:
+            if len(feat) != len(features):
+                continue
             d = float(np.linalg.norm(features - feat))
             if d < best_dist:
                 best_dist = d
@@ -357,7 +376,12 @@ class PatternDemoScene(BaseScene):
                 best_feat = feat
         return best_dist, best_label, best_feat
 
-    def _generate_class_grid(self) -> None:
+    def _expected_feature_dim(self) -> int:
+        method = FEATURE_METHODS[self._method_idx]
+        dims = {"hog": 288, "lbp": 256, "color_hist": 768, "combined": 1312}
+        return dims.get(method, 288)
+
+    def _generate_class_grid(self, reference_features: np.ndarray | None = None) -> None:
         if self._class_grid_generated and self._dataset_samples:
             return
         # Try to load from sample_dataset.npz
@@ -372,9 +396,10 @@ class PatternDemoScene(BaseScene):
                 pass
         # Generate random if empty
         if not self._dataset_samples:
+            feat_dim = len(reference_features) if reference_features is not None else self._expected_feature_dim()
             rng = np.random.RandomState(42)
             for i in range(16):
-                feat = rng.randn(512).astype(np.float32)
+                feat = rng.randn(feat_dim).astype(np.float32)
                 self._dataset_samples.append((feat, f"class_{i % 3}"))
         self._class_grid_generated = True
 
@@ -462,18 +487,22 @@ class PatternDemoScene(BaseScene):
         cell_w = 36
         cell_h = 44
         cols = 4
-        for i, (feat, label) in enumerate(self._dataset_samples[:16]):
+        total = min(len(self._dataset_samples), 16)
+        for i in range(16):
             col = i % cols
             row = i // cols
             x = 4 + col * cell_w
             y = 4 + row * cell_h
-            color = self._class_color(label)
-            # Cell background
-            pygame.draw.rect(surf, color, (x, y, cell_w - 2, cell_h - 2), 2)
-            # Class label
-            lt = self._font_small.render(label[:8], True, COLOR_TEXT)
-            surf.blit(lt, (x + 2, y + cell_h - 14))
-        return surf
+            if i < total:
+                _feat, label = self._dataset_samples[i]
+                color = self._class_color(label)
+                pygame.draw.rect(surf, color, (x, y, cell_w - 2, cell_h - 2), 2)
+                lt = self._font_small.render(label[:8], True, COLOR_TEXT)
+                surf.blit(lt, (x + 2, y + cell_h - 14))
+            else:
+                pygame.draw.rect(surf, (30, 30, 40), (x, y, cell_w - 2, cell_h - 2), 1)
+                lt = self._font_small.render("empty", True, (60, 60, 70))
+                surf.blit(lt, (x + 2, y + cell_h - 14))
 
     def _render_confusion(self) -> pygame.Surface:
         surf = pygame.Surface(PANEL_SIZE)
@@ -484,7 +513,7 @@ class PatternDemoScene(BaseScene):
         # Try matplotlib report first
         if self._model is not None and ev and "confusion_matrix" in ev:
             try:
-                classes = list(self._model.classes)
+                _classes = list(getattr(self._model, "classes", []))
                 report_surf = PatternRecognitionTools.generate_training_report(
                     self._model, figure_size=(8, 6), dpi=80,
                 )
@@ -610,6 +639,13 @@ class PatternDemoScene(BaseScene):
             else:
                 pygame.draw.rect(surf, color, (bx, cy, bar_w, -bar_h))
 
+    def _render_error_surface(self, message: str) -> pygame.Surface:
+        surf = pygame.Surface(PANEL_SIZE)
+        surf.fill((5, 5, 15))
+        msg = self._font_small.render(message, True, COLOR_ERROR)
+        surf.blit(msg, (10, 30))
+        return surf
+
     @staticmethod
     def _class_color(label: str) -> tuple[int, int, int]:
         idx = hash(label) % len(CLASS_COLORS)
@@ -620,7 +656,10 @@ class PatternDemoScene(BaseScene):
         draw_top_bar(surface, "PATTERN DEMO", "UNIT IX")
 
         # Top info
-        info_line = f"  Model: {self._model_name}  |  Method: {FEATURE_METHODS[self._method_idx]}  |  Mode: {MODE_NAMES[self._mode]}"
+        info_line = (
+            f"  Model: {self._model_name}  |  Method: {FEATURE_METHODS[self._method_idx]}"
+            f"  |  Mode: {MODE_NAMES[self._mode]}"
+        )
         top_info = self._font_small.render(info_line, True, COLOR_HIGHLIGHT)
         surface.blit(top_info, (4, TOP_BAR_Y + TOP_BAR_H - 14))
 
@@ -685,9 +724,9 @@ class PatternDemoScene(BaseScene):
             values = tree.value
         except Exception:
             values = None
-        classes = getattr(tree_model, "classes_", None)
-        if classes is not None:
-            class_names = [str(c) for c in classes]
+        _classes = getattr(tree_model, "classes_", None)
+        if _classes is not None:
+            class_names = [str(c) for c in _classes]
         elif values is not None:
             class_names = [f"C{i}" for i in range(values.shape[1])]
         else:
@@ -736,7 +775,11 @@ class PatternDemoScene(BaseScene):
             major = max(node["values"]) if node["values"] else 0
             majority_idx = node["values"].index(major) if node["values"] else 0
             color = self._class_color(str(majority_idx))
-            label = node["class_names"][majority_idx] if node["class_names"] and majority_idx < len(node["class_names"]) else str(majority_idx)
+            label = (
+                node["class_names"][majority_idx]
+                if node["class_names"] and majority_idx < len(node["class_names"])
+                else str(majority_idx)
+            )
             pygame.draw.rect(surf, color, (cx - 20, y, 40, 18))
             lbl = self._font_small.render(label, True, (0, 0, 0))
             surf.blit(lbl, (cx - 18, y + 2))
@@ -774,8 +817,10 @@ class PatternDemoScene(BaseScene):
             return
 
         method = FEATURE_METHODS[self._method_idx]
-        text = (f"  [L] Load model  |  [M] Cycle method ({method})  |  "
-                f"[WASD] Move rect  |  [+/-] Resize  |  [TAB] Mode  |  [R] Reload default")
+        text = (
+            "  [L] Load model  |  [M] Cycle method ({method})  |  "
+            "[WASD] Move rect  |  [+/-] Resize  |  [TAB] Mode  |  [R] Reload default"
+        ).format(method=method)
         draw_bottom_bar(surface, text)
 
     def _draw_text_input(self, surface: pygame.Surface) -> None:

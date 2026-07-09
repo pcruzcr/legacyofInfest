@@ -12,6 +12,8 @@ rather than accessed through global state.
 from __future__ import annotations
 
 from src.engine.core.clock import DeltaClock
+from src.engine.core.save_data import SaveData
+from src.engine.core.save_manager import SaveManager
 
 
 class GameContext:
@@ -25,6 +27,8 @@ class GameContext:
         scene_manager:   Scene stack (push/pop/replace)
         event_bus:       Pub/sub event dispatch
         clock:           Global delta-time clock with time_scale
+        save_manager:    Save/load persistence (5 slots, JSON)
+        pending_load:    SaveData to apply on next stage start (used by LoadGameScene)
         running:         Whether the game loop should continue
     """
 
@@ -41,6 +45,8 @@ class GameContext:
         self.scene_manager = scene_manager
         self.event_bus = event_bus
         self.clock: DeltaClock | None = clock
+        self.save_manager: SaveManager = SaveManager()
+        self.pending_load: SaveData | None = None
         self.running: bool = True
 
     def quit(self) -> None:

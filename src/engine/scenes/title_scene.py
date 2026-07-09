@@ -8,6 +8,7 @@ from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_menu_scene import DemoMenuScene
+from src.engine.scenes.options_scene import OptionsScene
 from src.engine.scenes.story_scene import StoryScene
 from src.engine.utils.asset_loader import AssetLoader
 
@@ -41,13 +42,24 @@ class TitleScene(BaseScene):
 
         self._font_game = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", 14)
         self._selected: int = 0
-        self._options: list[str] = ["START", "ACADEMIC DEMOS", "QUIT"]
+        self._options: list[str] = ["START", "ACADEMIC DEMOS", "OPTIONS", "QUIT"]
 
     def on_enter(self) -> None:
         self._selected = 0
+        self._update_options()
+        self.context.scene_manager.transition.start_fade_in(0.5)
         audio = self.audio
         if audio is not None:
             audio.play_music(self._music)
+
+    def _update_options(self) -> None:
+        sm = self.context.save_manager
+        if sm is not None and sm.has_saves():
+            if "CONTINUE" not in self._options:
+                self._options.insert(0, "CONTINUE")
+        else:
+            if "CONTINUE" in self._options:
+                self._options.remove("CONTINUE")
 
     def on_exit(self) -> None:
         audio = self.audio
@@ -65,11 +77,21 @@ class TitleScene(BaseScene):
             self._selected = (self._selected - 1) % len(self._options)
 
         if im.is_action_pressed(Action.CONFIRM):
-            if self._selected == 0:
+            opt = self._options[self._selected]
+            if opt == "CONTINUE":
+                from src.engine.scenes.load_game_scene import LoadGameScene
+                self.context.scene_manager.transition.start_fade_out(0.4)
+                self.context.scene_manager.replace(LoadGameScene(self.context))
+            elif opt == "START":
+                self.context.scene_manager.transition.start_fade_out(0.4)
                 self.context.scene_manager.replace(StoryScene(self.context, 1))
-            elif self._selected == 1:
+            elif opt == "ACADEMIC DEMOS":
+                self.context.scene_manager.transition.start_fade_out(0.4)
                 self.context.scene_manager.replace(DemoMenuScene(self.context))
-            elif self._selected == 2:
+            elif opt == "OPTIONS":
+                self.context.scene_manager.transition.start_fade_out(0.4)
+                self.context.scene_manager.replace(OptionsScene(self.context))
+            elif opt == "QUIT":
                 self.context.quit()
 
         if im.is_action_pressed(Action.CANCEL):
@@ -82,6 +104,8 @@ class TitleScene(BaseScene):
             center=(settings.INTERNAL_WIDTH // 2, settings.INTERNAL_HEIGHT // 3),
         )
         surface.blit(self._logo, logo_rect)
+
+        self.context.scene_manager.transition.draw(surface)
 
         for i, opt in enumerate(self._options):
             color = (255, 255, 100) if i == self._selected else (150, 150, 150)

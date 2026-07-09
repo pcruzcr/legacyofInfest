@@ -152,6 +152,21 @@ def _do_jump(player: Player) -> None:
 
 def _start_attack(player: Player, attack_type: object) -> None:
     """Create and transition to the appropriate attack state."""
+    import src.engine.core.settings as settings
+    atk_name = "SHORT_ATTACK" if attack_type == player.SHORT_ATTACK else "LONG_ATTACK"
+
+    # Combo logic: window + type match
+    if (player.combo_active
+            and player.combo_timer > 0
+            and player.last_attack_type == atk_name
+            and player.combo_count < settings.COMBO_MAX):
+        player.combo_count += 1
+    else:
+        player.combo_count = 1
+    player.combo_timer = settings.COMBO_WINDOW
+    player.last_attack_type = atk_name
+    player.combo_active = True
+
     player.velocity.x = 0.0
     from src.framework.entities.player_states import (
         ShortAttackState,
@@ -540,6 +555,12 @@ class LongAttackState(_AttackState):
         self.COOLDOWN = settings.PLAYER_COOLDOWN_LONG
 
 
+def _reset_combo(player: Player) -> None:
+    player.combo_count = 0
+    player.combo_timer = 0.0
+    player.combo_active = False
+
+
 def _build_attack_hitbox(player: Player, frame: int) -> pygame.Rect:
     """Build the attack hitbox rect for the given 1-indexed frame."""
     attack_state = player._state_instance
@@ -551,9 +572,11 @@ def _build_attack_hitbox(player: Player, frame: int) -> pygame.Rect:
     cy = player.rect.centery
 
     if is_short:
-        offset_x = 18
+        offset_x = 8
         offset_y = -4 if not is_crouching else 8
         w, h = 36, 20
+        if not is_crouching:
+            h = 20
     elif is_long:
         frame_offsets = {
             4: (12, -10, 36, 20),

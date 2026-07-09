@@ -10,6 +10,7 @@ from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
     COLOR_BG,
+    COLOR_TEXT,
     COLOR_HIGHLIGHT,
     COLOR_ACCENT,
     COLOR_TOP_BAR_BG,
@@ -306,6 +307,26 @@ class VisionDemoScene(BaseScene):
             f"  Mode: {MODE_NAMES[self._mode]}  ", True, COLOR_HIGHLIGHT,
         )
         surface.blit(mode_label, (4, TOP_BAR_Y + TOP_BAR_H - 14))
+
+        # Education overlay
+        _edu = {
+            0: ("Threshold", "Binary segmentation: pixels above/below threshold → white/black."),
+            1: ("Otsu", "Automatic threshold by maximizing inter-class variance."),
+            2: ("Erode", "Morphological erosion: removes small white noise; shrinks foreground."),
+            3: ("Dilate", "Morphological dilation: expands foreground; fills small holes."),
+            4: ("Open", "Erode then dilate: removes noise without shrinking objects much."),
+            5: ("Close", "Dilate then erode: fills gaps/holes inside objects."),
+            6: ("Components", "Connected-component labeling: unique IDs for contiguous regions."),
+            7: ("Regions", "Region properties: area, centroid, bounding box per component."),
+            8: ("Watershed", "Segmentation treating gradient as topography; basins = segments."),
+            9: ("Features", "Feature visualization for HOG/LBP/color_hist/combined descriptors."),
+        }
+        if self._mode in _edu:
+            edu_title, edu_desc = _edu[self._mode]
+            t1 = self._font_small.render(f"  {edu_title}", True, COLOR_HIGHLIGHT)
+            t2 = self._font_small.render(f"  {edu_desc}", True, COLOR_TEXT)
+            surface.blit(t1, (RIGHT_PANEL_X, TOP_BAR_Y + 2))
+            surface.blit(t2, (RIGHT_PANEL_X, TOP_BAR_Y + 14))
 
         src_label = self._font_small.render(
             f"  Source: {self._sources.current_name}"

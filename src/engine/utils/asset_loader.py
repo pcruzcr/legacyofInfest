@@ -59,12 +59,27 @@ class AssetLoader:
     # -------------------------------------------------------
 
     @classmethod
+    def clear_cache(cls) -> None:
+        """Release all cached images/fonts/sounds to free memory."""
+        cls._images.clear()
+        cls._fonts.clear()
+        cls._sounds.clear()
+        cls._missing.clear()
+
+    # -------------------------------------------------------
+
+    @classmethod
     def _resolve(cls, path: str | Path) -> Path:
 
         path = Path(path)
 
         if path.is_absolute():
             return path
+
+        # Check custom_assets/ first for student overrides
+        custom = (PROJECT_ROOT / "custom_assets" / path).resolve()
+        if custom.exists():
+            return custom
 
         return (PROJECT_ROOT / path).resolve()
 
@@ -266,9 +281,3 @@ class AssetLoader:
 
     # -------------------------------------------------------
 
-    @classmethod
-    def clear_cache(cls):
-
-        cls._images.clear()
-        cls._fonts.clear()
-        cls._sounds.clear()

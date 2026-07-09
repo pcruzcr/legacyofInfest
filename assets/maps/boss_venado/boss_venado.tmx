@@ -28,7 +28,7 @@
  <objectgroup id="6" name="Objects">
   <object id="1" type="PlayerSpawn" name="PlayerSpawn_01" x="64" y="160"/>
   <object id="2" type="BossVenado" name="BossVenado_01" x="320" y="96"/>
-  <object id="3" type="NextTrigger" name="NextTrigger_01" x="624" y="272" width="16" height="32"/>
+   <object id="3" type="NextTrigger" name="NextTrigger_01" x="624" y="-32" width="16" height="16"/>
  </objectgroup>
   <objectgroup id="7" name="Collision">
    <object id="10" name="Floor" x="0" y="304" width="640" height="16"/>

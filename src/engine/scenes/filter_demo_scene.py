@@ -348,6 +348,26 @@ class FilterDemoScene(BaseScene):
         )
         surface.blit(mode_label, (4, TOP_BAR_Y + TOP_BAR_H - 14))
 
+        # Education overlay
+        _edu = {
+            0: ("Histogram", "Shows per-channel intensity distribution (R/G/B)."),
+            1: ("Brightness", "Formula: out = in + beta"),
+            2: ("Contrast", "Formula: out = (in - 128) x alpha + 128"),
+            3: ("Stretch", "Linear remap [min, max] → [0, 255] to improve contrast."),
+            4: ("Kernel", "3x3 convolution: weighted sum of neighborhood pixels."),
+            5: ("Gaussian", "Smoothing kernel reduces noise via local averaging."),
+            6: ("Sobel", "Gradient magnitude filter for edge detection."),
+            7: ("Canny", "Multi-stage edge detector: blur → Sobel → NMS → hysteresis."),
+            8: ("Equalize", "Histogram equalization redistributes intensities."),
+            9: ("Conv Step", "Visualizes kernel sliding across the image."),
+        }
+        if self._mode in _edu:
+            edu_title, edu_desc = _edu[self._mode]
+            t1 = self._font_small.render(f"  {edu_title}", True, COLOR_HIGHLIGHT)
+            t2 = self._font_small.render(f"  {edu_desc}", True, COLOR_TEXT)
+            surface.blit(t1, (RIGHT_PANEL_X, TOP_BAR_Y + 2))
+            surface.blit(t2, (RIGHT_PANEL_X, TOP_BAR_Y + 14))
+
         # Source + name label
         src_label = self._font_small.render(
             f"  Source: {self._sources.current_name}{' [FROZEN]' if self._sources.is_frozen else ''}  ", True, COLOR_ACCENT,

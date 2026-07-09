@@ -42,18 +42,13 @@ class FilterTools:
         arr = pygame.surfarray.array3d(surface)
         h, w, _ = arr.shape
         total = h * w
-        r = np.zeros(256, dtype=np.int64)
-        g = np.zeros(256, dtype=np.int64)
-        b = np.zeros(256, dtype=np.int64)
-        for i in range(256):
-            r[i] = np.count_nonzero(arr[:, :, 0] == i)
-            g[i] = np.count_nonzero(arr[:, :, 1] == i)
-            b[i] = np.count_nonzero(arr[:, :, 2] == i)
+        r, _ = np.histogram(arr[:, :, 0], bins=256, range=(0, 255))
+        g, _ = np.histogram(arr[:, :, 1], bins=256, range=(0, 255))
+        b, _ = np.histogram(arr[:, :, 2], bins=256, range=(0, 255))
         lum = np.clip(0.299 * arr[:, :, 0] + 0.587 * arr[:, :, 1] + 0.114 * arr[:, :, 2], 0, 255).astype(np.uint8)
-        luminance = np.zeros(256, dtype=np.int64)
-        for i in range(256):
-            luminance[i] = np.count_nonzero(lum == i)
-        return {"r": r, "g": g, "b": b, "luminance": luminance, "total_pixels": total}
+        luminance, _ = np.histogram(lum, bins=256, range=(0, 255))
+        return {"r": r.astype(np.int64), "g": g.astype(np.int64), "b": b.astype(np.int64),
+                "luminance": luminance.astype(np.int64), "total_pixels": total}
 
     @classmethod
     def histogram_equalize(cls, surface: pygame.Surface) -> pygame.Surface:

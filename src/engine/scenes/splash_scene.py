@@ -21,6 +21,7 @@ class SplashScene(BaseScene):
     def __init__(self, context: GameContext) -> None:
         super().__init__(context)
         self._timer = 0.0
+        self._fading_out: bool = False
         assets = settings.ASSETS_DIR / "splash"
 
         self._background = AssetLoader.load_image(
@@ -59,31 +60,30 @@ class SplashScene(BaseScene):
             audio.stop_music()
 
     def update(self, dt: float) -> None:
+        if self._fading_out:
+            if self.context.scene_manager.transition.finished:
+                self.context.scene_manager.replace(TitleScene(self.context))
+            return
         self._timer += dt
         if self._timer >= self.SPLASH_TIME:
-            if self.context.scene_manager is not None:
-                self.context.scene_manager.replace(TitleScene(self.context))
+            self.context.scene_manager.transition.start_fade_out(0.5)
+            self._fading_out = True
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.blit(self._background, (0, 0))
 
-        fade = min(self._timer / 0.60, 1.0)
-        alpha = int(fade * 255)
-
-        logo = self._logo.copy()
-        logo.set_alpha(alpha)
-        logo_rect = logo.get_rect(
+        logo_rect = self._logo.get_rect(
             center=(settings.INTERNAL_WIDTH // 2, settings.INTERNAL_HEIGHT // 2 - 35),
         )
 
-        shadow = logo.copy()
+        shadow = self._logo.copy()
         shadow.fill((0, 0, 0, 150), special_flags=pygame.BLEND_RGBA_MULT)
         surface.blit(shadow, (logo_rect.x + 3, logo_rect.y + 3))
-        surface.blit(logo, logo_rect)
+        surface.blit(self._logo, logo_rect)
 
         loading = self._font_game.render("Cargando...", True, (255, 255, 255))
-        loading.set_alpha(alpha)
         lr = loading.get_rect(center=(settings.INTERNAL_WIDTH // 2, settings.INTERNAL_HEIGHT - 40))
+        loading.set_alpha(int(min(self._timer / self.SPLASH_TIME, 1.0) * 255))
         surface.blit(loading, lr)
 
         progress = min(self._timer / self.SPLASH_TIME, 1.0)
@@ -101,6 +101,8 @@ class SplashScene(BaseScene):
 
         version = self._font_small.render("Prototype v0.1", True, (180, 180, 180))
         surface.blit(version, (6, settings.INTERNAL_HEIGHT - 12))
+
+        self.context.scene_manager.transition.draw(surface)
 
         cr = self._font_small.render("© 2026 Legacy of InFest", True, (180, 180, 180))
         surface.blit(cr, (settings.INTERNAL_WIDTH - cr.get_width() - 6, settings.INTERNAL_HEIGHT - 12))

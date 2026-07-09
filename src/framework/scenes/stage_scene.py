@@ -6,28 +6,28 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.engine.core import settings
-from src.engine.core.event_bus import EventBus
 from src.engine.input.action_map import Action
 from src.engine.core.events import Events
 from src.engine.scene.base_scene import BaseScene
 from src.engine.ui.hud import HUD
+from src.engine.utils.asset_loader import AssetLoader
 from src.engine.ui.message_box import MessageBox
 from src.engine.ui.screen_banner import ScreenBanner
 from src.framework.entities.boss_base import BossBase
 from src.framework.entities.enemy_base import EnemyBase
 from src.framework.entities.player import Player
 from src.framework.stage.camera import Camera
-from src.framework.stage.stage_loader import (
-    StageLoader,
-)
+from src.framework.stage.stage_loader import StageLoader
+from src.framework.stage.collision_system import CollisionSystem
+from src.framework.stage.hazard_system import HazardSystem
+from src.framework.stage.progression_system import ProgressionSystem
+from src.framework.stage.drawing_system import DrawingSystem
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
 
 
 class StageScene(BaseScene):
-    """Gameplay scene — loads a TMX stage and runs the full game loop."""
-
     def __init__(self, context: GameContext, tmx_path: Path) -> None:
         super().__init__(context)
         self._tmx_path = tmx_path
@@ -39,33 +39,38 @@ class StageScene(BaseScene):
         self._banner: ScreenBanner | None = None
         self._checkpoints: list = []
         self._checkpoint_reached: int | None = None
+        self._checkpoint_position: pygame.Vector2 | None = None
         self._stage_complete: bool = False
         self._game_over: bool = False
         self._paused: bool = False
+        self._pause_selected: int = 0
+        self._pause_options: list[str] = ["Resume", "Save & Quit", "Quit to Title"]
         self._debug: bool = False
         self._was_grounded: bool = False
+        self._pending_game_over: bool = False
 
-    # ── Student hooks (empty by default, override in subclasses) ──
+        self._collision = CollisionSystem(context)
+        self._hazards = HazardSystem(context)
+        self._progression = ProgressionSystem(context)
+        self._drawing = DrawingSystem()
 
-    def on_stage_start(self) -> None:
-        """Called after the stage has been fully initialized."""
-
-    def on_player_landed(self) -> None:
-        """Called when the player lands on a surface."""
-
-    def on_enemy_died(self, enemy: "EnemyBase") -> None:
-        """Called when an enemy dies."""
-
-    def on_next_trigger_entered(self) -> None:
-        """Called when the player enters the next-trigger zone."""
-
-    def on_debug_toggle(self, enabled: bool) -> None:
-        """Called when debug mode is toggled on/off."""
+    def on_stage_start(self) -> None: ...
+    def on_player_landed(self) -> None: ...
+    def on_enemy_died(self, enemy: EnemyBase) -> None: ...
+    def on_next_trigger_entered(self) -> None: ...
+    def on_debug_toggle(self, enabled: bool) -> None: ...
 
     def on_enter(self) -> None:
         self._stage_data = StageLoader.load(self._tmx_path)
         spawn = self._stage_data.spawn_point
         self._player = Player(spawn)
+
+        pending = self.context.pending_load
+        if pending is not None and pending.stage_id == self._stage_data.stage_id:
+            self._player.set_spawn(pygame.Vector2(pending.checkpoint_x, pending.checkpoint_y))
+            self._player._health = min(pending.health, pending.max_health)
+            self._checkpoint_position = pygame.Vector2(pending.checkpoint_x, pending.checkpoint_y)
+            self.context.pending_load = None
 
         self._camera = Camera()
         self._camera.follow(self._player)
@@ -75,21 +80,24 @@ class StageScene(BaseScene):
             if hasattr(enemy, "set_player_ref"):
                 enemy.set_player_ref(self._player.rect)
             if hasattr(enemy, "set_collision_rects"):
-                enemy.set_collision_rects(self._stage_data.collision_rects,
-                                          one_way=self._stage_data.one_way_rects)
+                enemy.set_collision_rects(
+                    self._stage_data.collision_rects,
+                    one_way=self._stage_data.one_way_rects,
+                )
 
         self._checkpoints = list(self._stage_data.checkpoints)
-        self._checkpoint_position: pygame.Vector2 | None = None
+        self._checkpoint_position = None
         self._stage_complete = False
         self._game_over = False
-        self._hitstop_timer: float = 0.0
+        self._pending_game_over = False
         self._was_grounded = False
+        self._collision.reset()
+        self._hazards.reset()
+        self._progression.reset()
 
-        # Play BGM if specified in TMX
         if self._stage_data.bgm_track:
             audio = self.audio
             if audio is not None:
-                from pathlib import Path
                 bgm_path = Path("assets/music") / f"{self._stage_data.bgm_track}.wav"
                 audio.play_music(bgm_path)
 
@@ -107,7 +115,6 @@ class StageScene(BaseScene):
 
         self.on_stage_start()
 
-        # Subscribe SFX events
         self._sfx_handlers: dict[str, object] = {}
         sfx_map = {
             Events.SFX_PLAYER_JUMP: "sfx_player_jump",
@@ -142,10 +149,8 @@ class StageScene(BaseScene):
             audio.play_sfx(name)
 
     def on_exit(self) -> None:
-        #
-        # Cleanup: destruir HUD y MessageBox antes de descartarlos
-        # para evitar acumulación de suscripciones al EventBus.
-        #
+        if self.context.clock is not None:
+            self.context.clock.time_scale = 1.0
         for evt, handler in self._sfx_handlers.items():
             self.context.event_bus.unsubscribe(evt, handler)
         self._sfx_handlers.clear()
@@ -158,13 +163,14 @@ class StageScene(BaseScene):
         audio = self.audio
         if audio is not None:
             audio.stop_music()
+        AssetLoader.clear_cache()
         self._stage_data = None
         self._player = None
 
     def respawn(self) -> None:
-        """Reload the stage and place player at last checkpoint (or spawn point)."""
+        if self.context.clock is not None:
+            self.context.clock.time_scale = 1.0
         self._game_over = False
-        # Preserve timer and checkpoint across respawn
         saved_time = self._hud.current_time if self._hud is not None else 0.0
         saved_time_limit = self._hud.time_limit if self._hud is not None else 0
         cp = self._checkpoint_position
@@ -175,14 +181,11 @@ class StageScene(BaseScene):
             self._msg_box.destroy()
             self._msg_box = None
         self.on_enter()
-        # Restore timer from before death
         self._hud.current_time = saved_time
         self._hud.is_countdown = saved_time_limit > 0
         if cp is not None:
             self._player.position = pygame.Vector2(cp)
             self._player.rect.center = (int(cp.x), int(cp.y))
-
-        # 2 seconds of invincibility after respawn
         self._player._invincibility_timer = 2.0
 
     def update(self, dt: float) -> None:
@@ -198,59 +201,51 @@ class StageScene(BaseScene):
         if im:
             if im.is_action_just_pressed(Action.PAUSE):
                 self._paused = not self._paused
+                self._pause_selected = 0
             if hasattr(pygame.key, 'get_just_pressed') and pygame.key.get_just_pressed()[pygame.K_F1]:
                 self._debug = not self._debug
                 self.on_debug_toggle(self._debug)
+
         if self._paused:
+            if im:
+                if im.is_action_just_pressed(Action.MOVE_DOWN):
+                    self._pause_selected = (self._pause_selected + 1) % len(self._pause_options)
+                if im.is_action_just_pressed(Action.MOVE_UP):
+                    self._pause_selected = (self._pause_selected - 1) % len(self._pause_options)
+                if im.is_action_just_pressed(Action.CANCEL):
+                    self._paused = False
+                if im.is_action_pressed(Action.CONFIRM):
+                    choice = self._pause_options[self._pause_selected]
+                    if choice == "Resume":
+                        self._paused = False
+                    elif choice == "Save & Quit":
+                        self._save_and_quit()
+                    elif choice == "Quit to Title":
+                        self._quit_to_title()
             return
 
-        player.update(dt, stage.collision_rects, im, one_way_rects=stage.one_way_rects)
+        original_time_scale = 1.0
+        if self.context.clock is not None:
+            original_time_scale = self.context.clock.time_scale
+        try:
+            player.update(dt, stage.collision_rects, im, one_way_rects=stage.one_way_rects)
 
-        # Hook: player just landed
-        if player.is_grounded and not self._was_grounded:
-            self.on_player_landed()
-        self._was_grounded = player.is_grounded
+            if player.is_grounded and not self._was_grounded:
+                self.on_player_landed()
+            self._was_grounded = player.is_grounded
 
-        # Hook: enemy died this frame (track alive state)
-        for entity in stage.entity_list:
-            if isinstance(entity, EnemyBase) and not entity.is_alive:
-                if getattr(entity, "_was_alive", True):
-                    entity._was_alive = False
-                    self.on_enemy_died(entity)
-
-        for entity in stage.entity_list:
-            if isinstance(entity, EnemyBase):
-                if hasattr(entity, "set_player_ref"):
-                    entity.set_player_ref(player.rect)
-                if entity.is_alive:
-                    entity._check_player_contact(player)
-            entity.update(dt)
-
-        # Player attack hitbox → enemy hurtbox collision
-        hitbox = player.active_hitbox
-        if hitbox is not None:
-            hit_any = False
             for entity in stage.entity_list:
-                if isinstance(entity, EnemyBase) and entity.is_alive:
-                    if hitbox.colliderect(entity.hurtbox):
-                        entity.apply_hit(player.current_attack_damage, player.rect.center)
-                        hit_any = True
-                        self.context.event_bus.emit(Events.SFX_ENEMY_HIT)
-            if hit_any:
-                player.consume_hitbox()
-                self.context.event_bus.emit(Events.SFX_HIT_CONNECT)
-                # Hitstop: 2 frames for short attack (0.5), 4 frames for long attack (1.0)
-                hitstop_frames = 4.0 if player.current_attack_damage >= 1.0 else 2.0
-                if hasattr(self.context, "clock") and self.context.clock is not None:
-                    self.context.clock.time_scale = 0.15
-                    self._hitstop_timer = hitstop_frames / 60.0
+                if isinstance(entity, EnemyBase) and not entity.is_alive:
+                    if getattr(entity, "_was_alive", True):
+                        entity._was_alive = False
+                        self.on_enemy_died(entity)
 
-        # Hitstop timer — restore time_scale when expired
-        if self._hitstop_timer > 0:
-            self._hitstop_timer -= dt
-            if self._hitstop_timer <= 0:
-                if self.context.clock is not None:
-                    self.context.clock.time_scale = 1.0
+            self._collision.update_enemies(dt, player, stage)
+            self._collision.process_attack(dt, player, stage, self._camera, self.context.clock)
+        finally:
+            self._collision.update_hitstop(dt, self.context.clock)
+            if self._collision._hitstop_timer <= 0 and self.context.clock is not None:
+                self.context.clock.time_scale = original_time_scale
 
         self._camera.update(dt)
 
@@ -258,78 +253,32 @@ class StageScene(BaseScene):
         center_y = self._camera.offset.y + settings.INTERNAL_HEIGHT / 2
         stage.map_layer.center((center_x, center_y))
 
-        # Use inflated rect so edge-aligned triggers (bottom == trigger top)
-        # are detected with colliderect's strict comparison.
-        trigger_rect = player.rect.inflate(0, 2)
-
-        # Check message triggers
-        for mt in stage.message_triggers:
-            if not mt.triggered and trigger_rect.colliderect(mt.rect):
-                mt.triggered = True
-                self.context.event_bus.emit(Events.SHOW_MESSAGE, text=mt.text, duration=8.0)
-
-        # Check hazard zones
-        for hz in stage.hazard_zones:
-            hz.timer -= dt
-            if hz.timer <= 0 and trigger_rect.colliderect(hz.rect):
-                player.apply_damage(hz.damage, player.rect.center)
-                hz.timer = hz.cooldown
-                self.context.event_bus.emit(Events.SFX_HAZARD_ZONE)
-
-        # Check death pits
-        for dp in stage.death_pits:
-            if trigger_rect.colliderect(dp.rect):
-                self._kill_player()
-                return
-
-        # Camera locks — enforce lock zones
         self._camera.set_camera_locks(stage.camera_locks)
 
-        # Checkpoints — restore health and track latest activated position
-        for cp in self._checkpoints:
-            if cp.check_collision(player.rect):
-                self._checkpoint_position = pygame.Vector2(cp.rect.center)
-                self.context.event_bus.emit(Events.SFX_CHECKPOINT)
-                if player.current_health < settings.PLAYER_MAX_HEALTH:
-                    heal_amount = settings.PLAYER_MAX_HEALTH - player.current_health
-                    player.heal(heal_amount)
-                    self.context.event_bus.emit(Events.PLAYER_HEALED, amount=heal_amount)
+        cp_pos = self._progression.process_checkpoints(player, stage, self._checkpoints, self._hud)
+        if cp_pos is not None:
+            self._checkpoint_position = cp_pos
 
-        # Next trigger
-        if not self._stage_complete and stage.next_trigger and player.rect.colliderect(stage.next_trigger):
-            self._stage_complete = True
+        if self._progression.check_next_trigger(player, stage):
             self.on_next_trigger_entered()
-            self._stage_complete_timer = 2.0
             self._banner.play("STAGE_COMPLETE", "STAGE COMPLETE")
             self.context.event_bus.emit(Events.SFX_STAGE_COMPLETE)
 
-        # Boss defeat: detect when the boss dies and start completion timer
-        if not self._stage_complete:
-            for entity in stage.entity_list:
-                if (isinstance(entity, BossBase)
-                        and not entity.is_alive
-                        and entity._death_timer <= 0
-                        and not entity._completion_fired):
-                    entity._completion_fired = True
-                    self._stage_complete = True
-                    self._stage_complete_timer = 2.0
-                    self._banner.play("STAGE_COMPLETE", "STAGE COMPLETE")
-                    self.context.event_bus.emit(Events.SFX_STAGE_COMPLETE)
-                    break
+        if self._progression.check_boss_defeat(stage):
+            self._banner.play("STAGE_COMPLETE", "STAGE COMPLETE")
+            self.context.event_bus.emit(Events.SFX_STAGE_COMPLETE)
 
-        # Delayed stage complete emission (gives banner time to display)
-        if self._stage_complete and hasattr(self, "_stage_complete_timer"):
-            self._stage_complete_timer -= dt
+        if self._progression.update_complete_timer(dt):
+            self.context.event_bus.emit(Events.STAGE_COMPLETE, stage_id=stage.stage_id)
+            return
+
+        if self._progression.stage_complete:
             if self._msg_box:
                 self._msg_box.update(dt)
             if self._banner:
                 self._banner.update(dt)
-            if self._stage_complete_timer <= 0:
-                self.context.event_bus.emit(Events.STAGE_COMPLETE, stage_id=stage.stage_id)
-                return
             return
 
-        # Update boss HUD
         if self._hud:
             boss_found = False
             for entity in stage.entity_list:
@@ -353,17 +302,35 @@ class StageScene(BaseScene):
         if self._banner:
             self._banner.update(dt)
         if self._hud:
+            self._hud.set_combo_count(player.combo_count)
             self._hud.update(dt)
 
-        # Player death (health-based)
+        self._hazards.update(dt, player, stage)
+
         if player.current_health <= 0 and not self._game_over:
             self._kill_player()
             return
 
-        # Timer expiry death (HUD emits PLAYER_DIED for portrait update)
         if self._hud and self._hud.current_time <= 0 and self._hud.is_countdown and not self._game_over:
             self._kill_player()
             return
+
+    def _save_and_quit(self) -> None:
+        sm = self.context.save_manager
+        if sm is not None and self._stage_data is not None and self._player is not None:
+            sm.auto_save(
+                stage_id=self._stage_data.stage_id,
+                stage_index=self.context.scene_manager.stage_index,
+                checkpoint_x=self._player.rect.centerx,
+                checkpoint_y=self._player.rect.centery,
+                health=self._player.current_health,
+                max_health=settings.PLAYER_MAX_HEALTH,
+            )
+        self._quit_to_title()
+
+    def _quit_to_title(self) -> None:
+        from src.engine.scenes.title_scene import TitleScene
+        self.context.scene_manager.replace(TitleScene(self.context))
 
     def _kill_player(self) -> None:
         self._game_over = True
@@ -372,103 +339,8 @@ class StageScene(BaseScene):
         self.context.scene_manager.push(GameOverScene(self.context, self))
 
     def draw(self, surface: pygame.Surface) -> None:
-        if self._stage_data is None or self._player is None:
-            return
-        if self._game_over:
-            return
-
-        surface.fill(settings.BG_COLOR)
-        stage = self._stage_data
-        # Draw parallax background layers (loaded from assets/backgrounds/)
-        bg_layers = stage.background_layers
-        bg_names = ("BG_Far", "BG_Mid", "BG_Near")
-        for i, bg_surf in enumerate(bg_layers):
-            layer_name = bg_names[i] if i < len(bg_names) else "BG_Far"
-            off = self._camera.layer_offset(layer_name)
-            bg_w = bg_surf.get_width()
-            bg_h = bg_surf.get_height()
-            # Tile the background to fill the screen
-            for bx in range(0, settings.INTERNAL_WIDTH, bg_w):
-                for by in range(0, settings.INTERNAL_HEIGHT, bg_h):
-                    surface.blit(bg_surf, (bx - int(off.x * 0.15 * (i + 1)),
-                                           by - int(off.y * 0.15 * (i + 1))))
-        stage.map_layer.draw(surface)
-        cam_offset = self._camera.offset
-
-        # Y-sort all world-space entities (player + enemies + checkpoints)
-        drawables = [(self._player, self._player.rect.centery)]
-        for entity in stage.entity_list:
-            if not isinstance(entity, EnemyBase) or entity.is_alive:
-                drawables.append((entity, entity.rect.centery))
-        for cp in self._checkpoints:
-            drawables.append((cp, cp.rect.centery))
-        drawables.sort(key=lambda x: x[1])
-        for obj, _ in drawables:
-            obj.draw(surface, cam_offset)
-
-        if self._msg_box:
-            self._msg_box.draw(surface)
-        if self._banner:
-            self._banner.draw(surface)
-        if self._hud:
-            self._hud.draw(surface)
-
-        if getattr(self, '_paused', False):
-            s = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
-            s.set_alpha(160)
-            s.fill((0, 0, 0))
-            surface.blit(s, (0, 0))
-            pause_font = pygame.font.Font(None, 20)
-            pause_text = pause_font.render("PAUSED", True, (255, 255, 255))
-            pt_x = (settings.INTERNAL_WIDTH - pause_text.get_width()) // 2
-            pt_y = (settings.INTERNAL_HEIGHT - pause_text.get_height()) // 2
-            surface.blit(pause_text, (pt_x, pt_y))
-
-        if self._debug:
-            player = self._player
-            stage = self._stage_data
-            lx = -int(cam_offset.x)
-            ly = -int(cam_offset.y)
-            font = pygame.font.Font(None, 14)
-            y = 4
-            for r in stage.collision_rects:
-                pygame.draw.rect(surface, (0, 255, 0), (r.x + lx, r.y + ly, r.w, r.h), 1)
-            for r in stage.one_way_rects:
-                pygame.draw.rect(surface, (0, 128, 255), (r.x + lx, r.y + ly, r.w, r.h), 1)
-            for mt in stage.message_triggers:
-                r = mt.rect
-                pygame.draw.rect(surface, (255, 255, 0), (r.x + lx, r.y + ly, r.w, r.h), 1)
-            for hz in stage.hazard_zones:
-                r = hz.rect
-                pygame.draw.rect(surface, (255, 0, 0), (r.x + lx, r.y + ly, r.w, r.h), 1)
-            for dp in stage.death_pits:
-                r = dp.rect
-                pygame.draw.rect(surface, (255, 0, 128), (r.x + lx, r.y + ly, r.w, r.h), 1)
-            # Enemy hurtboxes
-            for enemy in self._stage_data.entity_list:
-                if not isinstance(enemy, EnemyBase) or not enemy.is_alive:
-                    continue
-                hb = enemy.hurtbox
-                pygame.draw.rect(surface, (255, 128, 0), (hb.x + lx, hb.y + ly, hb.w, hb.h), 1)
-                hb2 = enemy.hitbox
-                pygame.draw.rect(surface, (255, 0, 0), (hb2.x + lx, hb2.y + ly, hb2.w, hb2.h), 1)
-            # Player hitbox
-            if hasattr(player, "active_hitbox") and player.active_hitbox is not None:
-                hb3 = player.active_hitbox
-                pygame.draw.rect(surface, (0, 255, 255), (hb3.x + lx, hb3.y + ly, hb3.w, hb3.h), 1)
-            if hasattr(player, "hurtbox"):
-                hb4 = player.hurtbox
-                pygame.draw.rect(surface, (0, 200, 0), (hb4.x + lx, hb4.y + ly, hb4.w, hb4.h), 1)
-            max_hp = getattr(player, "max_health", player.current_health)
-            info = [
-                f"Pos: ({player.position.x:.0f}, {player.position.y:.0f})",
-                f"Vel: ({player.velocity.x:.1f}, {player.velocity.y:.1f})",
-                f"State: {player.state}",
-                f"HP: {player.current_health}/{max_hp}",
-                f"Grounded: {player.is_grounded}",
-                f"Paused: {self._paused}",
-            ]
-            for line in info:
-                txt = font.render(line, True, (255, 255, 255))
-                surface.blit(txt, (4, y))
-                y += 16
+        self._drawing.draw(
+            surface, self._stage_data, self._player, self._checkpoints,
+            self._camera, self._hud, self._msg_box, self._banner,
+            self._paused, self._debug, self._pause_selected, self._pause_options,
+        )
