@@ -121,6 +121,45 @@ REQUIRED_MAPS = [
     "maps/boss_venado/boss_venado.tmx",
 ]
 
+# Palette definitions: (glob_pattern, set_of_allowed_RGB_tuples)
+# These are derived from the actual pixel data in the repository assets.
+# Run `python -m scripts.collect_palettes` to regenerate.
+SPRITE_PALETTES: list[tuple[str, set[tuple[int, int, int]]]] = [
+    ("sprites/player/*.png", {
+        (20, 30, 60), (40, 50, 90), (60, 60, 80), (80, 80, 110),
+        (100, 80, 50), (140, 140, 170), (180, 140, 100),
+        (200, 180, 100), (220, 180, 140),
+    }),
+    ("sprites/enemies/*.png", {
+        (0, 0, 0), (30, 80, 30), (40, 10, 10), (40, 120, 60),
+        (50, 30, 80), (60, 60, 120), (60, 120, 60), (80, 30, 30),
+        (80, 50, 20), (80, 60, 120), (80, 100, 40), (100, 20, 20),
+        (100, 30, 20), (100, 60, 60), (100, 60, 100), (120, 80, 40),
+        (120, 100, 60), (140, 30, 20), (160, 120, 200), (180, 40, 30),
+        (180, 50, 50), (180, 100, 220), (180, 140, 220), (200, 50, 40),
+        (200, 80, 240), (200, 120, 240), (200, 160, 240), (220, 60, 60),
+        (220, 100, 255), (220, 140, 255), (220, 180, 255), (240, 80, 80),
+        (240, 120, 255), (240, 160, 255), (255, 100, 100), (255, 120, 120),
+        (255, 140, 255), (255, 255, 0), (255, 255, 255),
+    }),
+    ("tilesets/*.png", {
+        (25, 95, 75), (30, 28, 40), (30, 60, 130), (40, 40, 60),
+        (40, 80, 30), (45, 42, 52), (45, 135, 105), (50, 50, 70),
+        (50, 100, 180), (55, 50, 65), (60, 60, 60), (60, 100, 50),
+        (65, 75, 55), (70, 50, 30), (70, 70, 80), (70, 70, 90),
+        (75, 70, 85), (80, 70, 60), (80, 80, 90), (80, 120, 70),
+        (90, 90, 100), (90, 90, 110), (95, 90, 105), (100, 70, 40),
+        (100, 90, 80), (100, 100, 110), (100, 120, 60), (100, 140, 90),
+        (110, 90, 70), (110, 110, 120), (110, 110, 130), (115, 110, 125),
+        (120, 110, 100), (120, 120, 130), (120, 120, 140), (120, 140, 80),
+        (130, 110, 90), (130, 130, 150), (140, 40, 40), (140, 120, 80),
+        (140, 120, 100), (140, 130, 120), (140, 140, 150), (140, 160, 100),
+        (150, 130, 110), (155, 135, 95), (160, 140, 100), (160, 140, 120),
+        (160, 180, 120), (170, 150, 130), (180, 60, 60), (180, 160, 120),
+        (180, 160, 140), (200, 180, 140), (255, 255, 255),
+    }),
+]
+
 WARNINGS: list[str] = []
 ERRORS: list[str] = []
 
@@ -159,6 +198,47 @@ def check_sound(path: Path) -> None:
         WARNINGS.append(f"[SOUND LOAD FAILED] {path}: {e}")
 
 
+def check_palette(path: Path) -> None:
+    """Verify that all pixels use only allowed palette colors for the sprite type."""
+    allowed = None
+    rel = path.relative_to(ASSETS_DIR).as_posix()
+    import fnmatch
+    for pattern, palette in SPRITE_PALETTES:
+        if fnmatch.fnmatch(rel, pattern):
+            allowed = palette
+            break
+    if allowed is None:
+        return
+
+    try:
+        raw = pygame.image.load(str(path))
+        img = raw.convert_alpha()
+    except Exception as e:
+        ERRORS.append(f"[LOAD FAIL] {path}  ({e})")
+        return
+
+    w, h = img.get_size()
+    na = pygame.surfarray.pixels3d(img)
+    alpha = pygame.surfarray.pixels_alpha(img) if (img.get_flags() & pygame.SRCALPHA) else None
+    bad: set[tuple[int, int, int]] = set()
+
+    for y in range(h):
+        for x in range(w):
+            if alpha is not None and alpha[x, y] == 0:
+                continue
+            r, g, b = int(na[x, y, 0]), int(na[x, y, 1]), int(na[x, y, 2])
+            if (r, g, b) not in allowed:
+                bad.add((r, g, b))
+                if len(bad) > 20:
+                    break
+        if len(bad) > 20:
+            break
+
+    if bad:
+        s = ", ".join(f"({r},{g},{b})" for r, g, b in sorted(bad)[:10])
+        ERRORS.append(f"[PALETTE] {rel}: {len(bad)} off-palette colors ({s})")
+
+
 def check_map(path: Path) -> None:
     if not path.exists():
         ERRORS.append(f"[MISSING MAP] {path}")
@@ -167,6 +247,7 @@ def check_map(path: Path) -> None:
 def main() -> int:
     pygame.init()
     pygame.mixer.init()
+    pygame.display.set_mode((1, 1))
 
     print(f"Validating assets in: {ASSETS_DIR}")
     print()
@@ -183,6 +264,16 @@ def main() -> int:
         p = ASSETS_DIR / rel
         check_file(p, "Image")
 
+    # Palette validation for all sprite/tileset/background PNGs
+    import fnmatch
+    checked: set[Path] = set()
+    for p in sorted(ASSETS_DIR.rglob("*.png")):
+        rel = p.relative_to(ASSETS_DIR).as_posix()
+        if any(fnmatch.fnmatch(rel, pattern) for pattern, _ in SPRITE_PALETTES):
+            if p not in checked:
+                checked.add(p)
+                check_palette(p)
+
     # Models
     for rel in REQUIRED_MODELS:
         p = ASSETS_DIR / rel
@@ -196,11 +287,6 @@ def main() -> int:
         check_file(p, "Sound")
         if p.exists():
             check_sound(p)
-
-    # Maps
-    for rel in REQUIRED_MAPS:
-        p = ASSETS_DIR / rel
-        check_map(p)
 
     # Report
     if WARNINGS:

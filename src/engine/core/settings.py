@@ -32,3 +32,7 @@ PLAYER_LONG_ATTACK_DURATION: float = 0.4
 PLAYER_COOLDOWN_SHORT: float = 0.0
 PLAYER_COOLDOWN_LONG: float = 0.067
 BG_COLOR: tuple[int, int, int] = (15, 15, 40)
+
+COMBO_WINDOW: float = 0.5
+COMBO_DAMAGE_MULT: list[float] = [1.0, 1.5, 2.0]
+COMBO_MAX: int = 3

@@ -341,15 +341,6 @@ class BossVenado(BossBase):
             pygame.draw.rect(surface, (80, 180, 60), (sx, sy, self.ARENA_W, 24), 2)
 
     def apply_hit(self, damage: float, source_position: tuple[float, float]) -> None:
-        if not self.is_alive or self.is_transitioning:
-            return
-        if self._invincibility_timer > 0:
-            return
-        self.current_health -= damage
-        self._invincibility_timer = self._invincibility_duration
-        self._hurt_timer = self._hurt_duration
-        self._filter_frame = 0
-        if self.current_health <= 0:
+        super().apply_hit(damage, source_position)
+        if self.current_health <= 0 and self.is_alive:
             self.on_defeated()
-            return
-        self._check_phase_transition()

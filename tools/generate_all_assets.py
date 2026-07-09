@@ -5,6 +5,7 @@ Generates ALL 250+ professor-owned assets per the Asset Bible (20_ASSET_BIBLE.md
 """
 from __future__ import annotations
 
+import math
 import random
 import struct
 import wave
@@ -86,34 +87,215 @@ PLAYER_PAL = {
     9: (200, 180, 100, 255),
 }
 
+# ── Base poses: 32 rows × 32 cols, '.'=transparent, digit=palette index ──
+
 PLAYER_IDLE = """
-..55555....55555..
-.5666665..5666665.
-.5333335..5333335.
-.5343435..5343435.
-..55555....55555..
-...565......565...
-..555555..555555..
-.56323365356323365
-.56323365356323365
-..555555..555555..
-...565......565...
-..566666..566666..
-.56333365356333365
-.56333365356333365
-..566666..566666..
-...5335....5335...
-..535535..535535..
-.5666665..5666665.
-..55555....55555..
-...6.6......6.6...
-..55555....55555..
-.5666665..5666665.
-.5333335..5333335.
-.5634335..5634335.
-..55555....55555..
-...5.5......5.5...
-..5...5....5...5..
+................................
+................................
+...........55555.............
+..........5566655............
+..........5311135............
+..........5397935............
+..........5311135............
+...........55555.............
+..........556655.............
+........5566..6655...........
+.......55..55..55............
+......55...55...55............
+......55..113355..55..........
+......55..113355..55..........
+......55..113355..55..........
+......55..113355..55..........
+.......55..99..55............
+.......5555995555............
+........55.99.55.............
+........55.55.55.............
+.......55..55..55............
+.......55..55..55............
+......55...55...55............
+......55...55...55............
+.....55....55....55............
+.....55....55....55............
+....555....55....555...........
+....55....5555....55...........
+...55.....55..55....55..........
+................................
+................................
+................................
+"""
+
+PLAYER_WALK_A = """
+................................
+................................
+...........55555.............
+..........5566655............
+..........5311135............
+..........5397935............
+..........5311135............
+...........55555.............
+..........556655.............
+........5566..6655...........
+.......55..55..55............
+......55...55...55............
+......55..113355..55..........
+......55..113355..55..........
+......55..113355..55..........
+......55..113355..55..........
+.......55..99..55............
+.......5555995555............
+........55.99.55.............
+........55.55.55.............
+......55..55..55..............
+......55..55..55..............
+.....55...55...55..............
+.....55...55...55..............
+....55....55....55..............
+....55....55....55..............
+...555....55....555............
+..55.....5555.....55...........
+..55.....55..55...55............
+................................
+................................
+................................
+"""
+
+PLAYER_WALK_B = """
+................................
+................................
+...........55555.............
+..........5566655............
+..........5311135............
+..........5397935............
+..........5311135............
+...........55555.............
+..........556655.............
+........5566..6655...........
+.......55..55..55............
+......55...55...55............
+......55..113355..55..........
+......55..113355..55..........
+......55..113355..55..........
+......55..113355..55..........
+.......55..99..55............
+.......5555995555............
+........55.99.55.............
+........55.55.55.............
+.......55..55..55............
+.......55..55..55............
+......55...55...55............
+......55...55...55............
+.....55....55....55............
+.....55....55....55............
+....555....55....555...........
+...55.....5555.....55..........
+...55.....55..55....55.........
+................................
+................................
+................................
+"""
+
+PLAYER_JUMP = """
+................................
+................................
+...........55555.............
+..........5566655............
+..........5311135............
+..........5397935............
+..........5311135............
+...........55555.............
+..........556655.............
+........5566..6655...........
+.......55..55..55............
+......55...55...55............
+......55001155................
+......55..113355................
+......55..113355................
+......55..113355................
+.......55..99..55............
+.......5555995555............
+........55.99.55.............
+........55.55.55.............
+.......55..55..55............
+.......55..55..55............
+......55...55...55............
+.....55....55....55............
+.....55....55....55............
+....55......55......55..........
+....55......55......55..........
+................................
+................................
+................................
+................................
+................................
+"""
+
+PLAYER_CROUCH = """
+................................
+................................
+...........55555.............
+..........5566655............
+..........5311135............
+..........5397935............
+..........5311135............
+...........55555.............
+..........556655.............
+........5566..6655...........
+.......55..55..55............
+......55..113355..55..........
+......55..113355..55..........
+......55..113355..55..........
+.......55..99..55............
+.......5555995555............
+........55.99.55.............
+........55.55.55.............
+.......55..55..55............
+......55...55...55............
+.....55....55....55............
+....555....55....555...........
+....55....5555....55...........
+...55.....55..55....55..........
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""
+
+PLAYER_ATTACK = """
+................................
+................................
+...........55555.............
+..........5566655............
+..........5311135............
+..........5397935............
+..........5311135............
+...........55555.............
+..........556655.............
+........5566..6655...........
+.......55..55..55............
+......55...113355..55..........
+......55...113355..55..........
+......55...113355..55..........
+......55...113355..55..........
+.......55..99..55............
+.......5555995555............
+........55.99.55.............
+........55.55.55.............
+.......55..55..55............
+.......55..55..55............
+......55...55...55............
+......55...55...55............
+.....55....55....55............
+.....55....55....55............
+....555....55....555...........
+....55....5555....55...........
+...55.....55..55....55..........
+...55.....55..55....55..........
+................................
+................................
+................................
 """
 
 def _gen_player_sprite(frames, base_data, fw=32, fh=32):
@@ -126,33 +308,79 @@ def _gen_player_sprite(frames, base_data, fw=32, fh=32):
         result.append(img)
     return result
 
+def _gen_player_walk(frames=8, fw=32, fh=32):
+    """Generate walk frames alternating between leg-forward poses."""
+    result = []
+    for fi in range(frames):
+        base = PLAYER_WALK_A if fi % 2 == 0 else PLAYER_WALK_B
+        img = Image.new("RGBA", (fw, fh), (0,0,0,0))
+        draw = ImageDraw.Draw(img)
+        _pixel_art(draw, 0, 0, base, PLAYER_PAL)
+        result.append(img)
+    # Add subtle body bob per frame
+    for i, img in enumerate(result):
+        offset = [0, -1, 0, 1, 0, -1, 0, 1][i] if i < 8 else 0
+        if offset != 0:
+            shifted = Image.new("RGBA", (fw, fh), (0,0,0,0))
+            shifted.paste(img, (0, offset))
+            result[i] = shifted
+    return result
+
+def _gen_player_slashing(sheet_name, frames, fw=32, fh=32):
+    """Generate attack frames with progressive arm/sword extension."""
+    result = []
+    for fi in range(frames):
+        data = PLAYER_ATTACK if fi < frames // 2 else PLAYER_IDLE
+        img = Image.new("RGBA", (fw, fh), (0,0,0,0))
+        draw = ImageDraw.Draw(img)
+        _pixel_art(draw, 0, 0, data, PLAYER_PAL)
+        # Add sword arc on the right side
+        sword_x = 26 + fi * 2
+        if sword_x < 34:
+            for sy in range(10, 18):
+                draw.point((sword_x, sy), fill=(200, 180, 100, 255))
+        result.append(img)
+    return result
+
+def _gen_player_die(frames=8, fw=32, fh=32):
+    """Generate death frames: character collapses."""
+    result = []
+    for fi in range(frames):
+        img = Image.new("RGBA", (fw, fh), (0,0,0,0))
+        draw = ImageDraw.Draw(img)
+        # Gradually shrink and rotate by cropping
+        scale = 1.0 - (fi / frames) * 0.5
+        _pixel_art(draw, 0, int(8 * fi / frames), PLAYER_IDLE, PLAYER_PAL)
+        result.append(img)
+    return result
+
 def _gen_player_all():
     print("  Player sprites...")
-    base = _gen_player_sprite(4, PLAYER_IDLE)
+    base = _gen_player_sprite(6, PLAYER_IDLE)
     _save_sheet(A/"sprites"/"player"/"player_idle.png", base, 32, 32)
 
-    walk = _gen_player_sprite(8, PLAYER_IDLE)
+    walk = _gen_player_walk(8)
     _save_sheet(A/"sprites"/"player"/"player_walk.png", walk, 32, 32)
 
-    jump = _gen_player_sprite(3, PLAYER_IDLE)
+    jump = _gen_player_sprite(4, PLAYER_JUMP)
     _save_sheet(A/"sprites"/"player"/"player_jump.png", jump, 32, 32)
 
-    fall = _gen_player_sprite(2, PLAYER_IDLE)
+    fall = _gen_player_sprite(3, PLAYER_JUMP)
     _save_sheet(A/"sprites"/"player"/"player_fall.png", fall, 32, 32)
 
-    crouch = _gen_player_sprite(2, PLAYER_IDLE)
+    crouch = _gen_player_sprite(3, PLAYER_CROUCH)
     _save_sheet(A/"sprites"/"player"/"player_crouch.png", crouch, 32, 32)
 
-    s_atk = _gen_player_sprite(6, PLAYER_IDLE)
+    s_atk = _gen_player_slashing("short_attack", 6)
     _save_sheet(A/"sprites"/"player"/"player_short_attack.png", s_atk, 32, 32)
 
-    l_atk = _gen_player_sprite(10, PLAYER_IDLE)
+    l_atk = _gen_player_slashing("long_attack", 10)
     _save_sheet(A/"sprites"/"player"/"player_long_attack.png", l_atk, 32, 32)
 
     hurt = _gen_player_sprite(4, PLAYER_IDLE)
     _save_sheet(A/"sprites"/"player"/"player_hurt.png", hurt, 32, 32)
 
-    die = _gen_player_sprite(8, PLAYER_IDLE)
+    die = _gen_player_die(8)
     _save_sheet(A/"sprites"/"player"/"player_die.png", die, 32, 32)
 
 # ════════════════════════════════════════
@@ -208,6 +436,92 @@ def _gen_all_enemies():
 # SECTION 3: BOSS SPRITES
 # ════════════════════════════════════════
 
+def _draw_venado_deer(draw, w, h, pal, sheet, frame, total):
+    """Draw a 48x48 deer/venado facing right using PIL primitives."""
+    ivory, dk_green, md_green, brown, tan, black, red_brown = pal
+
+    import math
+    t = frame / max(total - 1, 1)
+
+    # Pose parameters per sheet
+    leg_cycle = 0.0
+    head_lower = 0
+    front_up = 0
+    collapse = 0
+
+    if sheet == "drift":
+        leg_cycle = math.sin(t * math.pi * 2)
+    elif sheet == "stomp":
+        front_up = 1 if frame < total // 2 else 0
+    elif sheet == "charge":
+        head_lower = 3
+    elif sheet == "frenzy_drift":
+        leg_cycle = math.sin(t * math.pi * 4)
+    elif sheet == "vine":
+        leg_cycle = math.sin(t * math.pi * 3)
+    elif sheet == "hurt":
+        head_lower = 2
+    elif sheet == "death":
+        collapse = t * 16
+
+    def _clamp(y): return max(0, min(h - 1, y))
+    cy = int(collapse)
+
+    # Tail
+    draw.ellipse((4, _clamp(18 + cy), 8, _clamp(22 + cy)), fill=ivory)
+
+    # Body
+    body_y = 16 + cy
+    draw.ellipse((10, _clamp(body_y), 38, _clamp(36 + cy)), fill=md_green, outline=dk_green)
+    draw.ellipse((14, _clamp(24 + cy), 34, _clamp(34 + cy)), fill=tan)
+
+    # Neck
+    ny = 10 + cy + head_lower
+    draw.polygon([(34, _clamp(18 + cy)), (38, _clamp(ny)), (42, _clamp(12 + cy)), (38, _clamp(22 + cy))], fill=md_green, outline=dk_green)
+
+    # Head
+    draw.ellipse((36, _clamp(6 + cy + head_lower), 46, _clamp(16 + cy + head_lower)), fill=md_green, outline=dk_green)
+    draw.ellipse((42, _clamp(10 + cy + head_lower), 48, _clamp(14 + cy + head_lower)), fill=tan)
+    draw.point((39, _clamp(10 + cy + head_lower)), fill=black)
+    draw.point((40, _clamp(10 + cy + head_lower)), fill=black)
+    draw.polygon([(36, _clamp(8 + cy + head_lower)), (34, _clamp(4 + cy + head_lower)), (38, _clamp(6 + cy + head_lower))], fill=md_green, outline=dk_green)
+
+    # Antlers
+    ay = cy + head_lower
+    for (x1,y1,x2,y2) in [(40, 6 + ay, 38, 0), (38, 3 + ay, 42, 0), (38, 3 + ay, 34, 0),
+                           (40, 4 + ay, 42, 2), (38, 5 + ay, 34, 3)]:
+        draw.line((x1, _clamp(y1), x2, _clamp(y2)), fill=ivory)
+
+    # Front legs
+    fl_off = int(leg_cycle * 2)
+    if front_up:
+        draw.rectangle((14, _clamp(body_y - 4), 18, _clamp(body_y + 4)), fill=dk_green)
+        draw.rectangle((20 + fl_off, _clamp(body_y - 2), 24 + fl_off, _clamp(body_y + 6)), fill=dk_green)
+    else:
+        draw.rectangle((12, _clamp(34 + cy), 16, _clamp(min(h, 46 + cy))), fill=dk_green)
+        draw.rectangle((18 + fl_off, _clamp(34 + cy), 22 + fl_off, _clamp(min(h, 46 + cy))), fill=dk_green)
+
+    # Back legs
+    bl_off = int(-leg_cycle * 2)
+    draw.rectangle((26 + bl_off, _clamp(34 + cy), 30 + bl_off, _clamp(min(h, 46 + cy))), fill=dk_green)
+    draw.rectangle((32, _clamp(34 + cy), 36, _clamp(min(h, 46 + cy))), fill=dk_green)
+
+    # Hooves
+    if not front_up:
+        draw.rectangle((12, _clamp(44 + cy), 16, h - 1), fill=brown)
+        draw.rectangle((18 + fl_off, _clamp(44 + cy), 22 + fl_off, h - 1), fill=brown)
+    draw.rectangle((26 + bl_off, _clamp(44 + cy), 30 + bl_off, h - 1), fill=brown)
+    draw.rectangle((32, _clamp(44 + cy), 36, h - 1), fill=brown)
+
+
+def _draw_boss_generic(draw, w, h, pal, bname, sheet, frame, total):
+    """Fallback: draw a colored boss creature for non-venado bosses."""
+    cols = pal
+    c = cols[frame % len(cols)]
+    draw.rectangle((2, 2, w - 3, h - 3), fill=c, outline=(255, 255, 255))
+    draw.ellipse((w // 4, h // 4, w * 3 // 4, h * 3 // 4), fill=cols[(frame + 1) % len(cols)])
+
+
 BOSS_DEFS = {
     "venado": {
         "fw": 48, "fh": 48,
@@ -240,11 +554,10 @@ def _gen_all_bosses():
             for f in range(frames):
                 img = Image.new("RGBA", (bd["fw"], bd["fh"]), (0,0,0,0))
                 draw = ImageDraw.Draw(img)
-                # Boss body placeholder: colored rect with palette colors
-                cols = bd["pal"]
-                c = cols[f % len(cols)]
-                draw.rectangle((2, 2, bd["fw"]-3, bd["fh"]-3), fill=c, outline=(255,255,255))
-                draw.ellipse((bd["fw"]//4, bd["fh"]//4, bd["fw"]*3//4, bd["fh"]*3//4), fill=cols[(f+1)%len(cols)])
+                if bname == "venado":
+                    _draw_venado_deer(draw, bd["fw"], bd["fh"], bd["pal"], sname, f, frames)
+                else:
+                    _draw_boss_generic(draw, bd["fw"], bd["fh"], bd["pal"], bname, sname, f, frames)
                 imgs.append(img)
             fname = f"boss_{bname}_{sname}.png"
             _save_sheet(bdir / fname, imgs, bd["fw"], bd["fh"])
@@ -253,8 +566,170 @@ def _gen_all_bosses():
 # SECTION 4: TILESETS (all 10 zones)
 # ════════════════════════════════════════
 
+# ── Tileset pixel art palette for stage0 (gothic castle/cave) ──
+TILESET_PAL = {
+    0: (30, 28, 40), 1: (55, 50, 65), 2: (75, 70, 85), 3: (95, 90, 105),
+    4: (45, 42, 52), 5: (65, 75, 55), 6: (115, 110, 125), 7: (25, 95, 75),
+    8: (45, 135, 105), 9: (155, 135, 95),
+}
+
+# 16×16 gothic castle/cave tiles (8 types)
+TILE_FLOOR = """
+..1221..1221..
+.233332.233332.
+13333331333331
+13333331333331
+.233332.233332.
+..1221..1221..
+....22....22...
+...233...233...
+..13331.13331..
+.1333331333331.
+133333313333331
+133333313333331
+.1333331333331.
+..13331.13331..
+...1221.1221...
+....22....22...
+"""
+
+TILE_WALL = """
+1111111111111111
+1000000000000001
+1011101110111011
+1000000000000001
+1011101110111011
+1000000000000001
+1011101110111011
+1000000000000001
+1011101110111011
+1000000000000001
+1011101110111011
+1000000000000001
+1011101110111011
+1000000000000001
+1111111111111111
+1111111111111111
+"""
+
+TILE_DECO_FLOOR = """
+..1221..1221..
+.233332.233332.
+13333331333331
+13333931333931
+.233332.233332.
+..1221..1221..
+....22....22...
+...233...233...
+..13331.13331..
+.1333331333331.
+133333313333331
+13333931333931
+.1333331333331.
+..13331.13331..
+...1221.1221...
+....22....22...
+"""
+
+TILE_PLATFORM = """
+5555555555555555
+5555555555555555
+1111111111111111
+1000000000000001
+1011101110111011
+1000000000000001
+1011101110111011
+1000000000000001
+1011101110111011
+1000000000000001
+1011101110111011
+1000000000000001
+1011101110111011
+1000000000000001
+1111111111111111
+1111111111111111
+"""
+
+TILE_WATER = """
+7777777777777777
+8787878787878787
+7777777777777777
+7878787878787878
+7777777777777777
+8787878787878787
+7777777777777777
+7878787878787878
+7777777777777777
+8787878787878787
+7777777777777777
+7878787878787878
+7777777777777777
+8787878787878787
+7777777777777777
+7878787878787878
+"""
+
+TILE_BRIDGE = """
+..11..11..11..
+.1111.1111.1111.
+1111111111111111
+.1221.1221.1221.
+..11..11..11...
+.1111.1111.1111.
+1111111111111111
+.1221.1221.1221.
+..11..11..11...
+.1111.1111.1111.
+1111111111111111
+.1221.1221.1221.
+..11..11..11...
+.1111.1111.1111.
+1111111111111111
+.1221.1221.1221.
+"""
+
+TILE_SPIKE = """
+.......44.......
+......4644......
+.....466644.....
+....46666644....
+...4666666644...
+..466666666644..
+.46666666666644.
+4666666666666644
+4666666666666644
+.46666666666644.
+..466666666644..
+...4666666644...
+....46666644....
+.....466644.....
+......4644......
+.......44.......
+"""
+
+TILE_EMPTY = """
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+"""
+
+_GOTHIC_TILES = [TILE_FLOOR, TILE_WALL, TILE_DECO_FLOOR, TILE_PLATFORM, TILE_WATER, TILE_BRIDGE, TILE_SPIKE, TILE_EMPTY]
+
 TILESET_THEMES = {
-    "tileset_stage0": {"floor": (70,70,80), "wall": (90,90,100), "deco": (120,120,140)},
+    "tileset_stage0": "gothic",
     "tileset_jungle_stone": {"floor": (60,100,50), "wall": (80,120,70), "deco": (40,80,30)},
     "tileset_cafeteria": {"floor": (140,120,100), "wall": (160,140,120), "deco": (180,160,140)},
     "tileset_aulas": {"floor": (160,140,100), "wall": (180,160,120), "deco": (140,120,80)},
@@ -266,7 +741,19 @@ TILESET_THEMES = {
     "tileset_cemetery": {"floor": (50,50,70), "wall": (70,70,90), "deco": (40,40,60)},
 }
 
-def _gen_tileset(path, theme, ts=16, cols=8, rows=8):
+def _gen_gothic_tileset(path, ts=16, cols=8, rows=8):
+    _ensure(path)
+    img = Image.new("RGBA", (ts*cols, ts*rows), (0,0,0,0))
+    for gy in range(rows):
+        for gx in range(cols):
+            ox, oy = gx * ts, gy * ts
+            tile_idx = (gy * cols + gx) % len(_GOTHIC_TILES)
+            tile_data = _GOTHIC_TILES[tile_idx]
+            draw = ImageDraw.Draw(img)
+            _pixel_art(draw, ox, oy, tile_data, TILESET_PAL)
+    img.save(path)
+
+def _gen_procedural_tileset(path, theme, ts=16, cols=8, rows=8):
     _ensure(path)
     img = Image.new("RGBA", (ts*cols, ts*rows), (0,0,0,0))
     draw = ImageDraw.Draw(img)
@@ -274,33 +761,33 @@ def _gen_tileset(path, theme, ts=16, cols=8, rows=8):
         for gx in range(cols):
             ox, oy = gx * ts, gy * ts
             ttype = (gy * cols + gx) % 8
-            if ttype == 0:  # floor
+            if ttype == 0:
                 draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=theme["floor"])
-            elif ttype == 1:  # wall
+            elif ttype == 1:
                 draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=theme["wall"])
                 for i in range(3):
                     wc = tuple(min(255,c+20) for c in theme["wall"])
                     draw.line((ox+3+i*5, oy+2, ox+3+i*5, oy+ts-3), fill=wc)
-            elif ttype == 2:  # decorated floor
+            elif ttype == 2:
                 draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=theme["floor"])
                 draw.rectangle((ox+2, oy+2, ox+ts-3, oy+ts-3), fill=theme["deco"])
-            elif ttype == 3:  # platform
+            elif ttype == 3:
                 draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=theme["wall"])
                 wc2 = tuple(min(255,c+30) for c in theme["wall"])
                 draw.line((ox, oy, ox+ts-1, oy), fill=wc2)
-            elif ttype == 4:  # water/lava
+            elif ttype == 4:
                 draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=(30,60,130))
                 for i in range(3):
                     draw.line((ox+2+i*5, oy+6, ox+6+i*5, oy+6), fill=(50,100,180))
-            elif ttype == 5:  # bridge
+            elif ttype == 5:
                 draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=(100,70,40))
                 for i in range(4):
                     draw.line((ox+2, oy+2+i*4, ox+ts-3, oy+2+i*4), fill=(70,50,30))
-            elif ttype == 6:  # spike
+            elif ttype == 6:
                 draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=(140,40,40))
                 for i in range(4):
                     draw.polygon([(ox+2+i*4, oy+ts-2), (ox+4+i*4, oy+2), (ox+6+i*4, oy+ts-2)], fill=(180,60,60))
-            elif ttype == 7:  # empty
+            elif ttype == 7:
                 pass
             outline_color = tuple(min(255,c-20) for c in theme["wall"])
             draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), outline=outline_color, width=1)
@@ -309,21 +796,182 @@ def _gen_tileset(path, theme, ts=16, cols=8, rows=8):
 def _gen_all_tilesets():
     print("  Tilesets...")
     for name, theme in TILESET_THEMES.items():
-        _gen_tileset(A / "tilesets" / f"{name}.png", theme)
+        if theme == "gothic":
+            _gen_gothic_tileset(A / "tilesets" / f"{name}.png")
+        else:
+            _gen_procedural_tileset(A / "tilesets" / f"{name}.png", theme)
 
 # ════════════════════════════════════════
 # SECTION 5: BACKGROUNDS (all zones, 3 layers each)
 # ════════════════════════════════════════
 
+# ── Stage 0 backgrounds: gothic cave/castle parallax layers ──
+
+def _gen_bg_stage0_far(path, w=320, h=224):
+    """Far layer: night sky with stars and crescent moon."""
+    _ensure(path)
+    img = Image.new("RGB", (w, h))
+    draw = ImageDraw.Draw(img)
+    for y in range(h):
+        t = y / h
+        r = int(8 + t * 20)
+        g = int(12 + t * 30)
+        b = int(28 + t * 48)
+        draw.line((0, y, w - 1, y), fill=(r, g, b))
+    rng = random.Random(42)
+    for _ in range(80):
+        sx = rng.randint(0, w - 1)
+        sy = rng.randint(0, h // 2)
+        br = rng.randint(120, 255)
+        draw.point((sx, sy), fill=(br, br, br))
+    draw.ellipse((230, 20, 280, 70), fill=(190, 190, 175))
+    draw.ellipse((238, 22, 285, 72), fill=(8, 12, 28))
+    img.save(path)
+
+
+def _gen_bg_stage0_mid(path, w=640, h=224):
+    """Mid layer: gothic castle silhouette."""
+    _ensure(path)
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    castle = (22, 18, 38)
+    tower = (18, 14, 32)
+    spire = (14, 10, 26)
+
+    def _draw_castle(cx, cy, cw, ch):
+        draw.rectangle((cx, cy, cx + cw, cy + ch), fill=castle)
+        for bx in range(cx, cx + cw, 8):
+            draw.rectangle((bx, cy, bx + 5, cy + 8), fill=tower)
+    def _draw_tower(tx, ty, tw, th, sp=20):
+        draw.rectangle((tx, ty, tx + tw, ty + th), fill=tower)
+        draw.polygon([(tx, ty), (tx + tw // 2, ty - sp), (tx + tw, ty)], fill=spire)
+
+    _draw_castle(180, 75, 120, 149)
+    _draw_tower(170, 55, 25, 169, 16)
+    _draw_tower(285, 45, 25, 179, 20)
+    _draw_tower(400, 80, 30, 144, 22)
+    draw.rectangle((420, 90, 480, 224), fill=castle)
+    _draw_tower(470, 60, 25, 164, 18)
+    _draw_castle(40, 100, 80, 124)
+    _draw_tower(30, 85, 22, 139, 14)
+    img.save(path)
+
+
+def _gen_bg_stage0_near(path, w=960, h=224):
+    """Near layer: cave interior with stone pillars and torches."""
+    _ensure(path)
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    rng = random.Random(99)
+    pillar_color = (30, 28, 40)
+    for px in range(0, w, 120):
+        rw = rng.randint(14, 20)
+        # Pillar
+        draw.rectangle((px, 0, px + rw, h), fill=pillar_color)
+        draw.rectangle((px - 2, 0, px + rw + 2, 10), fill=(35, 33, 45))
+        # Torch glow
+        tx = px + rw // 2
+        torch_h = 100 + rng.randint(-20, 40)
+        for rad, alpha in [(40, 20), (25, 40), (15, 80)]:
+            glow = Image.new("RGBA", (rad * 2, rad * 2), (0, 0, 0, 0))
+            ImageDraw.Draw(glow).ellipse((0, 0, rad * 2, rad * 2),
+                                         fill=(255, 200, 50, alpha))
+            img.paste(glow, (tx - rad, torch_h - rad), glow)
+        draw.rectangle((tx - 2, torch_h, tx + 2, torch_h + 20), fill=(60, 40, 20))
+        draw.ellipse((tx - 4, torch_h - 10, tx + 4, torch_h + 4),
+                     fill=(255, 200, 50))
+    # Floor silhouette
+    draw.rectangle((0, h - 40, w, h), fill=(18, 16, 28))
+    img.save(path)
+
+
+# ── Splash/title/story backgrounds ──
+
+def _gen_bg_splash(path, w=320, h=224):
+    """Splash screen: dark atmospheric gradient."""
+    _ensure(path)
+    img = Image.new("RGB", (w, h))
+    draw = ImageDraw.Draw(img)
+    for y in range(h):
+        t = y / h
+        r = int(10 + t * 5)
+        g = int(8 + t * 4)
+        b = int(25 + t * 15)
+        draw.line((0, y, w - 1, y), fill=(r, g, b))
+    # Radial glow at center
+    cx, cy = w // 2, h // 2
+    for rad in range(100, 0, -5):
+        alpha = max(0, 30 - (100 - rad))
+        glow = Image.new("RGBA", (rad * 2, rad * 2), (0, 0, 0, 0))
+        c = int(15 * (1 - rad / 100))
+        ImageDraw.Draw(glow).ellipse((0, 0, rad * 2, rad * 2),
+                                     fill=(40 + c, 30 + c, 60 + c, alpha))
+        img.paste(glow, (cx - rad, cy - rad), glow)
+    img.save(path)
+
+
+def _gen_bg_title(path, w=320, h=224):
+    """Title screen: dramatic gradient with light rays."""
+    _ensure(path)
+    img = Image.new("RGB", (w, h))
+    draw = ImageDraw.Draw(img)
+    rng = random.Random(7)
+    for y in range(h):
+        t = y / h
+        r = int(15 + t * 30)
+        g = int(10 + t * 20)
+        b = int(35 + t * 45)
+        draw.line((0, y, w - 1, y), fill=(r, g, b))
+    # Light rays from top center
+    for i in range(6):
+        angle = rng.uniform(-0.4, 0.4)
+        x_off = int(math.tan(angle) * h * 0.6)
+        cx = w // 2
+        for y in range(0, h, 4):
+            t = y / h
+            x = int(cx + x_off * t)
+            alpha = int(20 * (1 - t))
+            for dx in range(-2, 3):
+                px = x + dx
+                if 0 <= px < w:
+                    rp, gp, bp = img.getpixel((px, y))
+                    img.putpixel((px, y), (min(255, rp + alpha),
+                                           min(255, gp + alpha),
+                                           min(255, bp + alpha)))
+    img.save(path)
+
+
+def _gen_bg_story(path, w=320, h=224):
+    """Story screen: dark mysterious."""
+    _ensure(path)
+    img = Image.new("RGB", (w, h))
+    draw = ImageDraw.Draw(img)
+    for y in range(h):
+        t = y / h
+        r = int(5 + t * 12)
+        g = int(4 + t * 8)
+        b = int(18 + t * 25)
+        draw.line((0, y, w - 1, y), fill=(r, g, b))
+    # Subtle fog bands
+    rng = random.Random(13)
+    for _ in range(4):
+        fy = rng.randint(40, 180)
+        fw = rng.randint(60, 120)
+        for y in range(fy, min(fy + 20, h)):
+            t = (y - fy) / 20
+            alpha = int(15 * (1 - abs(t - 0.5) * 2))
+            draw.line((0, y, w - 1, y), fill=(alpha + 5, alpha + 4, alpha + 18))
+    img.save(path)
+
+
 BG_ZONES = {
-    "stage0": [(20,30,50), (30,40,60)],
     "zone1": [(40,70,30), (20,40,15)],
     "zone2": [(70,50,40), (40,30,20)],
     "zone3": [(80,60,90), (40,30,50)],
     "final": [(15,10,30), (10,5,20)],
 }
 
-def _gen_bg(path, w, h, top, bot, has_mountains=True, has_trees=True):
+def _gen_procedural_bg(path, w, h, top, bot, has_mountains=True, has_trees=True):
     _ensure(path)
     img = _gradient(w, h, top, bot)
     draw = ImageDraw.Draw(img)
@@ -345,17 +993,35 @@ def _gen_bg(path, w, h, top, bot, has_mountains=True, has_trees=True):
     img.save(path)
 
 BG_SIZES = {"far": (W, H), "mid": (W*2, H), "near": (W*3, H)}
-BG_PARALLAX = {"far": 0.15, "mid": 0.40, "near": 0.70}
 
 def _gen_all_backgrounds():
     print("  Backgrounds...")
+    # Stage 0 gothic parallax
+    for layer, (bw, bh) in BG_SIZES.items():
+        p = A / "backgrounds" / "stage0"
+        _ensure(p)
+        if layer == "far":
+            _gen_bg_stage0_far(p / "bg_stage0_far.png", bw, bh)
+        elif layer == "mid":
+            _gen_bg_stage0_mid(p / "bg_stage0_mid.png", bw, bh)
+        else:
+            _gen_bg_stage0_near(p / "bg_stage0_near.png", bw, bh)
+
+    # Other zones (procedural)
     for zone, (top, bot) in BG_ZONES.items():
         for layer, (bw, bh) in BG_SIZES.items():
             p = A / "backgrounds" / zone
             _ensure(p)
-            _gen_bg(p / f"bg_{zone}_{layer}.png", bw, bh, top, bot,
+            _gen_procedural_bg(p / f"bg_{zone}_{layer}.png", bw, bh, top, bot,
                     has_mountains=zone in ("stage0","zone1","zone3"),
                     has_trees=zone in ("stage0","zone1","zone2"))
+
+    # Splash / title / story
+    p = A / "backgrounds"
+    _ensure(p)
+    _gen_bg_splash(p / "bg_splash.png", W, H)
+    _gen_bg_title(p / "bg_title.png", W, H)
+    _gen_bg_story(p / "bg_story.png", W, H)
 
 # ════════════════════════════════════════
 # SECTION 6: UI SPRITES

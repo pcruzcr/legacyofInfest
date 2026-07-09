@@ -42,6 +42,7 @@ class HUD:
         self._timer_paused: bool = False
         self._hurt_portrait_timer: float = 0.0
         self._destroyed: bool = False
+        self._save_notify_timer: float = 0.0
 
         # Portrait frame (34x34 with 1px border, inner sprite at 3,3)
         self._portrait_frame_rect = pygame.Rect(2, 2, 34, 34)
@@ -136,6 +137,9 @@ class HUD:
         self._boss_phase_count: int = 0
         self._boss_active: bool = False
 
+        # Combo state
+        self._combo_count: int = 0
+
         self._font = pygame.font.Font(None, 12)
 
         self._event_bus.subscribe(Events.PLAYER_DAMAGED, self._on_player_damaged)
@@ -220,6 +224,9 @@ class HUD:
         self._boss_active = False
         self._boss_name = ""
 
+    def set_combo_count(self, count: int) -> None:
+        self._combo_count = max(0, count)
+
     def _on_boss_phase_changed(self, **data: object) -> None:
         if self._destroyed:
             return
@@ -235,6 +242,11 @@ class HUD:
         if self._destroyed:
             return
         self.stop_timer()
+
+    def trigger_save_notification(self) -> None:
+        if self._destroyed:
+            return
+        self._save_notify_timer = 2.0
 
     def start_timer(self, time_limit: int = 0) -> None:
         self._time_limit = time_limit
@@ -264,6 +276,7 @@ class HUD:
             else:
                 self._timer += dt
         self._hurt_portrait_timer = max(0.0, self._hurt_portrait_timer - dt)
+        self._save_notify_timer = max(0.0, self._save_notify_timer - dt)
         self._heart_flash_timer = max(0.0, self._heart_flash_timer - dt)
         if self._heart_flash_timer <= 0:
             self._heart_flash_slot = -1
@@ -303,6 +316,28 @@ class HUD:
         self._draw_timer(surface)
         if self._boss_active:
             self._draw_boss_hud(surface)
+        if self._combo_count > 1:
+            self._draw_combo_indicator(surface)
+        self._draw_save_notification(surface)
+
+    def _draw_save_notification(self, surface: pygame.Surface) -> None:
+        if self._save_notify_timer <= 0:
+            return
+        alpha = int(255 * min(1.0, self._save_notify_timer / 0.5))
+        txt = self._font.render("SAVED", True, (100, 255, 100))
+        txt.set_alpha(alpha)
+        tx = (settings.INTERNAL_WIDTH - txt.get_width()) // 2
+        ty = settings.INTERNAL_HEIGHT - 20
+        surface.blit(txt, (tx, ty))
+
+    def _draw_combo_indicator(self, surface: pygame.Surface) -> None:
+        import src.engine.core.settings as settings
+        idx = min(self._combo_count - 1, len(settings.COMBO_DAMAGE_MULT) - 1)
+        mult = settings.COMBO_DAMAGE_MULT[idx]
+        txt = self._font.render(f"COMBO x{self._combo_count}! {mult}x", True, (255, 220, 100))
+        tx = (settings.INTERNAL_WIDTH - txt.get_width()) // 2
+        ty = settings.INTERNAL_HEIGHT - 32
+        surface.blit(txt, (tx, ty))
 
     def _draw_portrait(self, surface: pygame.Surface) -> None:
         state = self._get_portrait_state()

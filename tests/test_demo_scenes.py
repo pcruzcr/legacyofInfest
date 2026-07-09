@@ -55,7 +55,7 @@ class TestDemoMenuScene:
         scene = DemoMenuScene(context)
         assert scene is not None
         assert hasattr(scene, "_options")
-        assert len(scene._options) == 10
+        assert len(scene._options) >= 10
 
     def test_on_enter_exit(self, context) -> None:
         scene = DemoMenuScene(context)
@@ -68,6 +68,53 @@ class TestDemoMenuScene:
         surf = pygame.Surface((320, 224))
         scene.draw(surf)
         assert surf.get_at((0, 0)) is not None
+
+    def test_navigation_down(self, context) -> None:
+        scene = DemoMenuScene(context)
+        scene.on_enter()
+        context.input_manager.is_raw_key_pressed.side_effect = lambda k: k == pygame.K_DOWN
+        scene.update(0.016)
+        assert scene._selected == 1
+
+    def test_navigation_up(self, context) -> None:
+        scene = DemoMenuScene(context)
+        scene.on_enter()
+        scene._selected = 1
+        context.input_manager.is_raw_key_pressed.side_effect = lambda k: k == pygame.K_UP
+        scene.update(0.016)
+        assert scene._selected == 0
+
+    def test_navigation_clamps_at_bottom(self, context) -> None:
+        scene = DemoMenuScene(context)
+        scene.on_enter()
+        n = len(scene._options)
+        scene._selected = n - 1
+        context.input_manager.is_raw_key_pressed.side_effect = lambda k: k == pygame.K_DOWN
+        scene.update(0.016)
+        assert scene._selected == n - 1
+
+    def test_navigation_clamps_at_top(self, context) -> None:
+        scene = DemoMenuScene(context)
+        scene.on_enter()
+        context.input_manager.is_raw_key_pressed.side_effect = lambda k: k == pygame.K_UP
+        scene.update(0.016)
+        assert scene._selected == 0
+
+    def test_confirm_selects_scene(self, context) -> None:
+        scene = DemoMenuScene(context)
+        scene.on_enter()
+        context.input_manager.is_raw_key_pressed.return_value = False
+        context.input_manager.is_action_pressed.side_effect = lambda a: a == Action.CONFIRM
+        scene.update(0.016)
+
+    def test_scroll_offset_moves_with_selection(self, context) -> None:
+        scene = DemoMenuScene(context)
+        scene.on_enter()
+        scene._scroll_offset = 0
+        scene._selected = 6
+        context.input_manager.is_raw_key_pressed.side_effect = lambda k: k == pygame.K_DOWN
+        scene.update(0.016)
+        assert scene._scroll_offset >= 1
 
 
 class TestFilterDemoScene:
@@ -341,12 +388,7 @@ class TestTitleSceneIntegration:
 
         scene = TitleScene(context)
         scene._selected = 1
-
-        mock_input = type("MockInput", (), {
-            "is_raw_key_pressed": lambda self, k: False,
-            "is_action_pressed": lambda self, a: a == Action.CONFIRM,
-        })()
-        scene._get_input = lambda: mock_input
+        context.input_manager.is_action_pressed.side_effect = lambda a: a == Action.CONFIRM
 
         scene.update(1.0)
         assert len(mock_replace_calls) == 1

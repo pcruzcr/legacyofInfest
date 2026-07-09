@@ -25,6 +25,12 @@ if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
 
 
+ITEM_H = 24
+VISIBLE_Y_START = 30
+VISIBLE_Y_END = 194
+VISIBLE_ITEMS = (VISIBLE_Y_END - VISIBLE_Y_START) // ITEM_H
+
+
 class DemoMenuScene(BaseScene):
     def __init__(self, context: GameContext) -> None:
         super().__init__(context)
@@ -40,8 +46,10 @@ class DemoMenuScene(BaseScene):
             ("Unit VII", "Digital Image Processing", "filter"),
             ("Unit VIII", "Segmentation & Analysis", "vision"),
             ("Unit IX", "Pattern Recognition", "pattern"),
+            ("Combo System", "State Machine & Damage Scaling", "combo"),
         ]
         self._selected: int = 0
+        self._scroll_offset: int = 0
         self._error_msg: str = ""
         self._error_timer: float = 0.0
         self._font_large = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_LARGE)
@@ -50,11 +58,15 @@ class DemoMenuScene(BaseScene):
 
     def on_enter(self) -> None:
         self._selected = 0
+        self._scroll_offset = 0
         self._error_msg = ""
         self._error_timer = 0.0
 
     def on_exit(self) -> None:
         pass
+
+    def _max_scroll(self) -> int:
+        return max(0, len(self._options) - VISIBLE_ITEMS)
 
     def update(self, dt: float) -> None:
         im = self.input
@@ -67,13 +79,20 @@ class DemoMenuScene(BaseScene):
                 self._error_msg = ""
 
         if im.is_raw_key_pressed(pygame.K_DOWN):
-            self._selected = (self._selected + 1) % len(self._options)
+            if self._selected < len(self._options) - 1:
+                self._selected += 1
+                if self._selected - self._scroll_offset >= VISIBLE_ITEMS:
+                    self._scroll_offset = min(self._scroll_offset + 1, self._max_scroll())
+
         if im.is_raw_key_pressed(pygame.K_UP):
-            self._selected = (self._selected - 1) % len(self._options)
+            if self._selected > 0:
+                self._selected -= 1
+                if self._selected < self._scroll_offset:
+                    self._scroll_offset = max(self._scroll_offset - 1, 0)
 
         if im.is_action_pressed(Action.CONFIRM):
-            registry = get_registry()
             key = self._options[self._selected][2]
+            registry = get_registry()
             scene = registry.build(key, self.context)
             if scene is not None:
                 self.context.scene_manager.push(scene)
@@ -89,17 +108,24 @@ class DemoMenuScene(BaseScene):
         surface.fill(COLOR_BG)
         draw_top_bar(surface, "ACADEMIC DEMONSTRATIONS", "MENU")
 
-        cy = 28
-        cx = 20
-        for i, (unit, desc, _) in enumerate(self._options):
+        for i in range(self._scroll_offset, min(self._scroll_offset + VISIBLE_ITEMS, len(self._options))):
+            unit, desc, _ = self._options[i]
+            idx = i - self._scroll_offset
+            cy = VISIBLE_Y_START + idx * ITEM_H
             selected = i == self._selected
-            prefix = "\u25b6" if selected else " "
+
+            # Background highlight for selected item
+            if selected:
+                highlight_rect = pygame.Rect(8, cy - 2, settings.INTERNAL_WIDTH - 16, ITEM_H + 2)
+                pygame.draw.rect(surface, (40, 40, 80), highlight_rect, border_radius=3)
+
             color = COLOR_HIGHLIGHT if selected else COLOR_TEXT
-            text = self._font_medium.render(f" {prefix} {unit}", True, color)
-            surface.blit(text, (cx, cy))
-            desc_text = self._font_small.render(f"  {desc}", True, (150, 150, 150))
-            surface.blit(desc_text, (cx, cy + 11))
-            cy += 24
+            unit_text = self._font_medium.render(f" {unit}", True, color)
+            surface.blit(unit_text, (20, cy))
+
+            desc_color = (180, 180, 200) if selected else (130, 130, 130)
+            desc_text = self._font_small.render(f"  {desc}", True, desc_color)
+            surface.blit(desc_text, (20, cy + 12))
 
         if self._error_msg:
             err = self._font_small.render(self._error_msg, True, COLOR_ERROR)

@@ -104,8 +104,9 @@ class App:
                     import traceback
                     traceback.print_exc()
 
-                # 5a. Update transitions
+                # 5a. Update transitions (both App-level and scene-level)
                 self.transition_manager.update(dt)
+                self.scene_manager.transition.update(dt)
 
                 # 6. Fill internal surface (background never black)
                 self.internal_surface.fill(settings.BG_COLOR)
