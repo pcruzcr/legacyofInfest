@@ -22,12 +22,15 @@ def _parse_args() -> argparse.Namespace:
 if __name__ == "__main__":
     args = _parse_args()
 
+    import importlib
+
     if args.stage:
-        # Direct stage launch: import the module and push its scene
-        from src.engine.core.app import App
-        app = App()
-        import importlib
-        mod = importlib.import_module(f"src.stages.{args.stage}.{args.stage}")
+        # Validate stage module exists before initializing pygame
+        try:
+            mod = importlib.import_module(f"src.stages.{args.stage}.{args.stage}")
+        except ModuleNotFoundError:
+            print(f"ERROR: Stage module not found: src.stages.{args.stage}")
+            sys.exit(1)
         from src.framework.scenes.stage_scene import StageScene
         scene_cls = None
         for name in dir(mod):
@@ -38,16 +41,18 @@ if __name__ == "__main__":
         if scene_cls is None:
             print(f"ERROR: No StageScene subclass found in src.stages.{args.stage}")
             sys.exit(1)
-        # Skip splash/title and go straight to the stage via scene manager
+        from src.engine.core.app import App
+        app = App()
         app.scene_manager.push(scene_cls(app.context))
         app.run()
 
     elif args.boss:
-        # Direct boss launch: import the _scene module
-        from src.engine.core.app import App
-        app = App()
-        import importlib
-        mod = importlib.import_module(f"src.stages.{args.boss}.{args.boss}_scene")
+        # Validate boss module exists before initializing pygame
+        try:
+            mod = importlib.import_module(f"src.stages.{args.boss}.{args.boss}_scene")
+        except ModuleNotFoundError:
+            print(f"ERROR: Boss module not found: src.stages.{args.boss}")
+            sys.exit(1)
         from src.framework.scenes.stage_scene import StageScene
         scene_cls = None
         for name in dir(mod):
@@ -58,6 +63,8 @@ if __name__ == "__main__":
         if scene_cls is None:
             print(f"ERROR: No StageScene subclass found in src.stages.{args.boss}.{args.boss}_scene")
             sys.exit(1)
+        from src.engine.core.app import App
+        app = App()
         app.scene_manager.push(scene_cls(app.context))
         app.run()
 
