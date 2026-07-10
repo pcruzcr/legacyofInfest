@@ -74,7 +74,7 @@ class LoadGameScene(BaseScene):
         if im.is_action_just_pressed(Action.MOVE_UP):
             self._selected = (self._selected - 1) % MAX_SLOTS
 
-        if im.is_action_pressed(Action.CONFIRM):
+        if im.is_action_just_pressed(Action.CONFIRM):
             data = self._slots[self._selected]
             if data is None:
                 self._error_msg = "Slot vacío — elige un slot con datos"
@@ -82,7 +82,7 @@ class LoadGameScene(BaseScene):
             else:
                 self._load_save(data)
 
-        if im.is_action_pressed(Action.CANCEL):
+        if im.is_action_just_pressed(Action.CANCEL):
             from src.engine.scenes.title_scene import TitleScene
             self.context.scene_manager.replace(TitleScene(self.context))
 

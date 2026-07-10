@@ -43,10 +43,16 @@ class GameOverScene(BaseScene):
             if im.is_action_just_pressed(Action.MOVE_UP):
                 self._selected = (self._selected - 1) % len(self._options)
 
-            if im.is_action_pressed(Action.CONFIRM):
+            if im.is_action_just_pressed(Action.CONFIRM):
                 if self._selected == 0:
                     self.context.scene_manager.pop()
-                    self._stage_scene.respawn()
+                    try:
+                        self._stage_scene.respawn()
+                    except Exception:
+                        import traceback
+                        traceback.print_exc()
+                        from src.engine.scenes.title_scene import TitleScene
+                        self.context.scene_manager.replace(TitleScene(self.context))
                 elif self._selected == 1:
                     self.context.scene_manager.replace(TitleScene(self.context))
 

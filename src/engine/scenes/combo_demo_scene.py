@@ -21,6 +21,7 @@ import pygame
 from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
+from src.engine.utils.asset_loader import AssetLoader
 from src.engine.scenes.demo_common import (
     COLOR_BG, COLOR_TEXT, COLOR_HIGHLIGHT, COLOR_ACCENT,
     FONT_SMALL, FONT_MEDIUM, FONT_LARGE,
@@ -43,9 +44,12 @@ class ComboDemoScene(BaseScene):
         self._combo_timer: float = 0.0
         self._last_type: str = ""
         self._hit_log: list[str] = []
-        self._font_large = pygame.font.Font(None, FONT_LARGE)
-        self._font_medium = pygame.font.Font(None, FONT_MEDIUM)
-        self._font_small = pygame.font.Font(None, FONT_SMALL)
+        self._font_large = AssetLoader.load_font(
+            settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_LARGE)
+        self._font_medium = AssetLoader.load_font(
+            settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_MEDIUM)
+        self._font_small = AssetLoader.load_font(
+            settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_SMALL)
 
     def on_enter(self) -> None:
         self._combo_count = 0
@@ -70,7 +74,7 @@ class ComboDemoScene(BaseScene):
         if im.is_action_pressed(Action.LONG_ATTACK):
             self._register_hit("LONG")
 
-        if im.is_action_pressed(Action.CANCEL):
+        if im.is_action_just_pressed(Action.CANCEL):
             self.context.scene_manager.pop()
 
     def _register_hit(self, atk_type: str) -> None:

@@ -413,7 +413,10 @@ class EnemyBase(BaseEntity):
 
         if self.state == EnemyState.HURT:
             if self._hurt_timer <= 0:
-                self.state = EnemyState.PATROL
+                if self._check_detection_range():
+                    self.state = EnemyState.ALERT
+                else:
+                    self.state = EnemyState.PATROL
             return
 
         if self.state == EnemyState.FIRING:

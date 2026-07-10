@@ -180,6 +180,9 @@ class StageScene(BaseScene):
         if self._msg_box is not None:
             self._msg_box.destroy()
             self._msg_box = None
+        for evt, handler in self._sfx_handlers.items():
+            self.context.event_bus.unsubscribe(evt, handler)
+        self._sfx_handlers.clear()
         self.on_enter()
         self._hud.current_time = saved_time
         self._hud.is_countdown = saved_time_limit > 0
@@ -214,7 +217,7 @@ class StageScene(BaseScene):
                     self._pause_selected = (self._pause_selected - 1) % len(self._pause_options)
                 if im.is_action_just_pressed(Action.CANCEL):
                     self._paused = False
-                if im.is_action_pressed(Action.CONFIRM):
+                if im.is_action_just_pressed(Action.CONFIRM):
                     choice = self._pause_options[self._pause_selected]
                     if choice == "Resume":
                         self._paused = False
@@ -273,6 +276,8 @@ class StageScene(BaseScene):
             return
 
         if self._progression.stage_complete:
+            if self._hud:
+                self._hud.clear_boss_hud()
             if self._msg_box:
                 self._msg_box.update(dt)
             if self._banner:

@@ -162,7 +162,7 @@ class FilterDemoScene(BaseScene):
             self._param_changed = True
 
         # ESC — back to menu
-        if im.is_action_pressed(Action.CANCEL):
+        if im.is_action_just_pressed(Action.CANCEL):
             from src.engine.scenes.demo_menu_scene import DemoMenuScene
             self.context.scene_manager.replace(DemoMenuScene(self.context))
             return
