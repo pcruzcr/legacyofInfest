@@ -76,7 +76,7 @@ class TitleScene(BaseScene):
         if im.is_action_just_pressed(Action.MOVE_UP):
             self._selected = (self._selected - 1) % len(self._options)
 
-        if im.is_action_pressed(Action.CONFIRM):
+        if im.is_action_just_pressed(Action.CONFIRM):
             opt = self._options[self._selected]
             if opt == "CONTINUE":
                 from src.engine.scenes.load_game_scene import LoadGameScene
@@ -94,7 +94,7 @@ class TitleScene(BaseScene):
             elif opt == "QUIT":
                 self.context.quit()
 
-        if im.is_action_pressed(Action.CANCEL):
+        if im.is_action_just_pressed(Action.CANCEL):
             self.context.quit()
 
     def draw(self, surface: pygame.Surface) -> None:

@@ -147,7 +147,7 @@ class VisionDemoScene(BaseScene):
             self._cached_result = None
             self._param_changed = True
 
-        if im.is_action_pressed(Action.CANCEL):
+        if im.is_action_just_pressed(Action.CANCEL):
             from src.engine.scenes.demo_menu_scene import DemoMenuScene
             self.context.scene_manager.replace(DemoMenuScene(self.context))
             return
@@ -252,19 +252,19 @@ class VisionDemoScene(BaseScene):
             return mask, None, None, None
 
         elif mode == 2:  # ERODE
-            mask = VisionTools.threshold_binary(src_gray, 128)
+            mask = VisionTools.threshold_binary(src_gray, self._threshold)
             return VisionTools.morphological_erode(mask, self._kernel_size), None, None, None
 
         elif mode == 3:  # DILATE
-            mask = VisionTools.threshold_binary(src_gray, 128)
+            mask = VisionTools.threshold_binary(src_gray, self._threshold)
             return VisionTools.morphological_dilate(mask, self._kernel_size), None, None, None
 
         elif mode == 4:  # OPEN
-            mask = VisionTools.threshold_binary(src_gray, 128)
+            mask = VisionTools.threshold_binary(src_gray, self._threshold)
             return VisionTools.morphological_open(mask, self._kernel_size), None, None, None
 
         elif mode == 5:  # CLOSE
-            mask = VisionTools.threshold_binary(src_gray, 128)
+            mask = VisionTools.threshold_binary(src_gray, self._threshold)
             return VisionTools.morphological_close(mask, self._kernel_size), None, None, None
 
         elif mode == 6:  # COMPONENTS

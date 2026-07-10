@@ -101,8 +101,8 @@ class DrawingSystem:
                 for by in range(0, settings.INTERNAL_HEIGHT, bg_h):
                     surface.blit(
                         bg_surf,
-                        (bx - int(off.x * 0.15 * (i + 1)),
-                         by - int(off.y * 0.15 * (i + 1))),
+                        (bx - int(off.x),
+                         by - int(off.y)),
                     )
 
     def _draw_debug(

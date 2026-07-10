@@ -55,7 +55,7 @@ class ProgressionSystem:
         if not self._stage_complete and stage.next_trigger is not None:
             if player.rect.colliderect(stage.next_trigger):
                 self._stage_complete = True
-                self._complete_timer = 2.0
+                self._complete_timer = 2.9
                 return True
         return False
 
@@ -71,7 +71,7 @@ class ProgressionSystem:
             ):
                 entity._completion_fired = True
                 self._stage_complete = True
-                self._complete_timer = 2.0
+                self._complete_timer = 2.9
                 return True
         return False
 

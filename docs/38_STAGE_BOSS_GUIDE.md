@@ -34,7 +34,7 @@ cp student_templates/boss_template/boss_template.py src/stages/<tu_id>/<tu_id>.p
 
 ```
 src/stages/<tu_id>/
-├── <tu_id>.py          # Clase del stage (hereda de BaseScene)
+├── <tu_id>.py          # Clase del stage (hereda de StageScene)
 ├── <tu_id>.tmx         # Mapa hecho en Tiled Map Editor
 └── README.md           # Documentación de tu stage
 ```
@@ -92,50 +92,40 @@ Abre Tiled → Nuevo mapa:
 
 ### 2.3 Escribir la Clase del Stage
 
+La clase hereda de `StageScene`, que provee automáticamente: sistema de colisiones, hazards, progression system (checkpoints/triggers), boss HUD, save/load, menú de pausa, SFX, y time scaling.
+
 ```python
-from src.engine.scene.base_scene import BaseScene
-from src.engine.core.settings import STAGES_DIR
-from src.framework.entities.player import Player
-from src.framework.entities.enemy_walker import EnemyWalker
-from src.framework.stage.stage_loader import StageLoader
-from src.framework.stage.camera import Camera
-from src.engine.ui.hud import HUD
+from __future__ import annotations
+from pathlib import Path
+from typing import TYPE_CHECKING
+from src.framework.scenes.stage_scene import StageScene
 
-class MiStage(BaseScene):
-    TMX_PATH = STAGES_DIR / "<tu_id>" / "<tu_id>.tmx"
+if TYPE_CHECKING:
+    from src.engine.core.game_context import GameContext
 
-    def __init__(self):
-        self.stage_data = None
-        self.player = None
-        self.camera = Camera()
-        self.hud = HUD()
-        # ... message_box, screen_banner, etc.
+class MiStage(StageScene):
+    STAGE_ID: str = "<tu_id>"
+    STAGE_NAME: str = "NOMBRE DE TU STAGE"
+    ZONE: int = 1
 
-    def on_enter(self):
-        self.stage_data = StageLoader.load(self.TMX_PATH)
-        self.player = Player(spawn_position=self.stage_data.spawn_point)
-        self.camera.follow(self.player)
-        self.hud.bind_player(self.player)
-        # ... banner, timer, etc.
+    def __init__(self, context: GameContext) -> None:
+        super().__init__(context, Path("assets/maps/<tu_id>/<tu_id>.tmx"))
 
-    def update(self, dt):
-        self.player.update(dt)
-        for entity in self.stage_data.entity_list:
-            if entity.is_active:
-                entity.update(dt)
-        self.camera.update(dt)
-        self.hud.update(dt)
-        self._check_attack_collisions()
-        self._check_next_trigger()
+    # ── Hooks opcionales ────────────────────────────────────────────
+    def on_stage_start(self) -> None:
+        pass  # Setup adicional al cargar el stage
 
-    def draw(self, surface):
-        offset = self.camera.offset
-        self.stage_data.map_layer.draw(surface)
-        for entity in self.stage_data.entity_list:
-            if entity.is_visible:
-                entity.draw(surface, offset)
-        self.player.draw(surface, offset)
-        self.hud.draw(surface)
+    def on_player_landed(self) -> None:
+        pass  # Cuando el jugador toca suelo tras estar en aire
+
+    def on_enemy_died(self, enemy) -> None:
+        pass  # Cuando un enemigo muere
+
+    def on_next_trigger_entered(self) -> None:
+        pass  # Cuando el jugador toca NextTrigger
+
+    def on_debug_toggle(self, enabled: bool) -> None:
+        pass  # F1 toggle
 ```
 
 ### 2.4 Agregar Enemigos
@@ -163,10 +153,7 @@ edges = VisionTools.canny_edge(
 ### 2.6 Probar tu Stage
 
 ```bash
-# Sin flag de stage (si es el default)
-python main.py
-
-# Con flag específico (según implementación)
+# Lanzar tu stage directamente (sin pasar por título)
 python main.py --stage <tu_id>
 
 # Pruebas unitarias
@@ -277,10 +264,7 @@ Cada PNG es un spritesheet con frames ordenados horizontalmente. `BossBase` carg
 ### 3.6 Probar tu Boss
 
 ```bash
-# Lleva al jugador al boss (jugar el stage previo)
-python main.py
-
-# O usa flag de debug (si está implementado)
+# Lanzar tu boss directamente
 python main.py --boss <tu_id>
 ```
 
@@ -295,10 +279,10 @@ python main.py --boss <tu_id>
 - [ ] Colisiones `Solid`, `Solid_OneWay`, etc. en Collision
 - [ ] Al menos 2 tipos de enemigos (de los 3 disponibles)
 - [ ] Propiedades de mapa completas (stage_id, stage_name, time_limit, bgm_track)
-- [ ] Clase del stage hereda de `BaseScene`
-- [ ] `_check_attack_collisions()` implementado
-- [ ] `_check_next_trigger()` implementado
-- [ ] HUD, cámara, message_box funcionando
+- [ ] Clase del stage hereda de `StageScene`
+- [ ] `STAGE_ID`, `STAGE_NAME`, `ZONE` definidos como class attributes
+- [ ] TMX con ruta correcta en `super().__init__()`
+- [ ] Hooks opcionales sobreescritos según necesidad (`on_stage_start`, `on_player_landed`, `on_enemy_died`, `on_next_trigger_entered`)
 - [ ] Funcionalidad académica de las unidades requeridas (filtros, visión, patrones)
 - [ ] README.md con front-matter YAML, screenshots, explicación académica
 

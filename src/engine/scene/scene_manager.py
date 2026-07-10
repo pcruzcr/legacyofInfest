@@ -9,13 +9,14 @@ Automatically cleans up EventBus subscriptions when scenes exit.
 """
 from __future__ import annotations
 import logging
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from src.engine.core.events import Events
 from src.engine.scenes.transition_manager import TransitionManager
 from src.engine.scenes.title_scene import TitleScene
 
 
+@runtime_checkable
 class _SceneWithRespawn(Protocol):
     def respawn(self) -> None: ...
 
@@ -91,11 +92,14 @@ class SceneManager:
         stage_id = str(data.get("stage_id", ""))
         sm = self._context.save_manager
         if sm is not None and stage_id:
+            current_scene = self._stack[-1] if self._stack else None
+            player_health = getattr(getattr(current_scene, '_player', None), 'current_health', 5.0)
+            player_max = getattr(getattr(current_scene, '_player', None), 'max_health', 5.0)
             sm.auto_save(
                 stage_id=f"{stage_id}_completed",
                 stage_index=self._stage_index,
                 checkpoint_x=0.0, checkpoint_y=0.0,
-                health=5.0, max_health=5.0,
+                health=player_health, max_health=player_max,
             )
         self._stage_index += 1
         if self._stage_index < len(self._stage_queue):

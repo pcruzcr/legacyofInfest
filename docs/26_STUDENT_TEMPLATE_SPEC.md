@@ -35,7 +35,9 @@ Bosses do not get a `.tmx` template — per `17_BOSS_SPEC.md` §6.2, boss arenas
 
 ## 3. `stage_template.py`
 
-This is the exact file content an AI assistant generates at `student_templates/stage_template/stage_template.py`. Every `# TODO(student):` comment marks a required student edit. Everything else must work unmodified the first time the student runs it.
+This is the exact file content at `student_templates/stage_template/stage_template.py`. Every `# TODO(student):` comment marks a required student edit. Everything else must work unmodified the first time the student runs it.
+
+The template inherits from `StageScene` (not `BaseScene`), which provides all engine integration: collision system, hazard system, progression system, SFX, boss HUD, save/load, pause menu, camera locks, and time scaling — students only override lifecycle hooks.
 
 ```python
 """
@@ -45,133 +47,70 @@ Academic Unit: See README.md front-matter for units_demonstrated.
 
 STUDENT INSTRUCTIONS:
 1. Copy this entire folder to src/stages/<your_assignment_id>/
-2. Rename this file and the .tmx file to match your assignment_id
-   (e.g., stage1_2_la_soda.py, stage1_2_la_soda.tmx)
-3. Rename the class below from StageTemplate to a descriptive name
-   (e.g., Stage1_2_LaSoda)
-4. Fill in every # TODO(student) marker.
-5. Do NOT modify anything outside the marked sections — the engine
-   and framework integration points below are required exactly as written.
+2. Rename this file to <your_assignment_id>.py
+3. Rename stage_template.tmx to <your_assignment_id>.tmx
+4. Update TMX_PATH and class attributes (STAGE_ID, STAGE_NAME, ZONE)
+5. Fill in every # TODO(student) marker.
+6. Do NOT modify StageScene or any engine/framework code.
+
+Test with:
+   python main.py --stage <your_assignment_id>
 """
+from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from src.engine.scene.base_scene import BaseScene
-from src.engine.core.event_bus import EventBus
-from src.engine.core.settings import STAGES_DIR
-from src.framework.entities.player import Player
-from src.framework.entities.enemy_walker import EnemyWalker
-from src.framework.entities.enemy_flying import EnemyFlying
-from src.framework.entities.enemy_shooter import EnemyShooter
-from src.framework.stage.stage_loader import StageLoader, StageData
-from src.framework.stage.camera import Camera
-from src.framework.stage.checkpoint import Checkpoint
-from src.engine.ui.hud import HUD
-from src.engine.ui.message_box import MessageBox
-from src.engine.ui.screen_banner import ScreenBanner
+from src.framework.scenes.stage_scene import StageScene
+
+if TYPE_CHECKING:
+    from src.engine.core.game_context import GameContext
 
 
 # TODO(student): Rename this class to match your assignment
-# (e.g., class Stage1_2_LaSoda(BaseScene):)
-class StageTemplate(BaseScene):
-    """
-    TODO(student): One-paragraph description of your stage's zone,
-    narrative context (see 16_WORLD_DESIGN.md for your assigned zone),
-    and the academic concepts it demonstrates.
-    """
+# (e.g., class Stage1_2_LaSoda(StageScene):)
+class StageTemplate(StageScene):
+    """TODO(student): Describe your stage's zone, narrative context,
+    and the academic concepts it demonstrates."""
 
-    # TODO(student): Point this at your renamed .tmx file
-    TMX_PATH = STAGES_DIR / "stage_template" / "stage_template.tmx"
+    # TODO(student): Change these to match your assignment
+    STAGE_ID: str = "stage_template"
+    STAGE_NAME: str = "UNTITLED STAGE"
+    ZONE: int = 1
 
-    def __init__(self) -> None:
-        self.stage_data: StageData | None = None
-        self.player: Player | None = None
-        self.camera = Camera()
-        self.hud = HUD()
-        self.message_box = MessageBox()
-        self.screen_banner = ScreenBanner()
-        self._register_entities()
+    # TODO(student): Update this path after moving your .tmx to assets/maps/<id>/
+    TMX_PATH = "student_templates/stage_template/stage_template.tmx"
 
-    def _register_entities(self) -> None:
-        """
-        Required framework entity registration. Do not remove these three.
-        TODO(student): Add StageLoader.register_entity(...) calls here for
-        any CUSTOM entity subclasses you create (see 05_ENEMY_SPEC.md §11.2
-        for the pattern). Do not duplicate Walker/Flying/Shooter — they are
-        already registered globally by the engine.
-        """
-        pass  # Custom entity registrations go here, if any.
+    def __init__(self, context: GameContext) -> None:
+        super().__init__(context, Path(self.TMX_PATH))
 
-    def on_enter(self) -> None:
-        self.stage_data = StageLoader.load(self.TMX_PATH)
+    # ── Optional lifecycle hooks ────────────────────────────────────
+    # Override any of these to add custom behavior:
 
-        self.player = Player(spawn_position=self.stage_data.spawn_point)
-        self.camera.follow(self.player)
-        self.hud.bind_player(self.player)
-        self.hud.start_timer(seconds=self.stage_data.time_limit)
-        self.screen_banner.play(
-            stage_id=self.stage_data.stage_id,
-            stage_name=self.stage_data.stage_name,
-        )
-
-        # TODO(student): If your stage needs setup beyond what StageLoader
-        # already does (e.g., spawning a custom entity not driven by TMX),
-        # do it here.
-
-    def on_exit(self) -> None:
+    def on_stage_start(self) -> None:
+        """Called after the stage loads and setup completes.
+        TODO(student): e.g., register custom entities, set initial state."""
         pass
 
-    def update(self, dt: float) -> None:
-        self.player.update(dt)
-        for entity in self.stage_data.entity_list:
-            if entity.is_active:
-                entity.update(dt)
-        for checkpoint in self.stage_data.checkpoints:
-            checkpoint.update(dt)
-        self.camera.update(dt)
-        self.hud.update(dt)
-        self.message_box.update(dt)
-        self.screen_banner.update(dt)
+    def on_player_landed(self) -> None:
+        """Called when the player first touches ground after being airborne.
+        TODO(student): e.g., trigger a message."""
+        pass
 
-        self._check_attack_collisions()
-        self._check_next_trigger()
+    def on_enemy_died(self, enemy) -> None:
+        """Called when an enemy dies.
+        TODO(student): e.g., unlock a door."""
+        pass
 
-        # TODO(student): Any additional per-frame logic specific to your
-        # stage's academic feature (e.g., a FilterTools/VisionTools call
-        # driving a custom mechanic) goes here.
+    def on_next_trigger_entered(self) -> None:
+        """Called when the player touches NextTrigger.
+        TODO(student): e.g., play a cutscene."""
+        pass
 
-    def draw(self, surface) -> None:
-        offset = self.camera.offset
-        self.stage_data.map_layer.draw(surface)
-        for entity in self.stage_data.entity_list:
-            if entity.is_visible:
-                entity.draw(surface, offset)
-        self.player.draw(surface, offset)
-        self.hud.draw(surface)
-        self.message_box.draw(surface)
-        self.screen_banner.draw(surface)
-
-    def _check_attack_collisions(self) -> None:
-        """Provided. Matches the pattern in 05_ENEMY_SPEC.md §9.3. Do not modify."""
-        if self.player.active_hitbox:
-            for entity in self.stage_data.entity_list:
-                if (
-                    entity.is_active
-                    and hasattr(entity, "hurtbox")
-                    and self.player.active_hitbox.colliderect(entity.hurtbox)
-                ):
-                    entity.apply_hit(
-                        damage=self.player.current_attack_damage,
-                        source_position=self.player.rect.center,
-                    )
-                    self.player.consume_hitbox()
-
-    def _check_next_trigger(self) -> None:
-        """Provided. Do not modify."""
-        if self.stage_data.next_trigger and self.player.rect.colliderect(
-            self.stage_data.next_trigger
-        ):
-            EventBus.emit("STAGE_COMPLETE")
+    def on_debug_toggle(self, enabled: bool) -> None:
+        """Called when F1 is pressed.
+        TODO(student): e.g., show/hide debug info."""
+        pass
 ```
 
 ---
@@ -217,15 +156,16 @@ STUDENT INSTRUCTIONS:
 1. Copy this file to src/stages/<your_assignment_id>/<your_assignment_id>.py
 2. Rename the class below from BossTemplate to your boss's name
    (e.g., class BossRey(BossBase): for El Rey Terciopelo).
-3. Define your boss's phases following the BossPhase pattern shown.
+3. Define your boss's phases via set_phases() with BossPhase objects.
 4. Fill in every # TODO(student) marker.
-5. See 17_BOSS_SPEC.md for the full design contract of your assigned boss
-   (if it is a syllabus-official or project-defined boss already documented
-   there) — your implementation must match that specification's attack
-   patterns, health values, and phase structure exactly. If your assigned
-   boss is NOT yet documented in 17_BOSS_SPEC.md, work with the professor
-   to define its design before writing combat logic.
+5. See 17_BOSS_SPEC.md for the full design contract of your assigned boss.
+6. Create a companion scene file <your_assignment_id>_scene.py that
+   inherits from StageScene and points to your boss's arena TMX.
+
+Test with:
+   python main.py --boss <your_assignment_id>
 """
+from __future__ import annotations
 
 import pygame
 
@@ -252,10 +192,11 @@ class BossTemplate(BossBase):
             spawn_position=spawn_position,
             # TODO(student): Set your boss's total health per its spec document
             max_health=10.0,
-            phases=phases,
-            # TODO(student): Set your boss's display name (used in the boss HUD)
-            boss_name="Untitled Boss",
+            damage_on_contact=0.5,
         )
+        # TODO(student): Set your boss's display name (used in the boss HUD)
+        self.set_boss_name("Untitled Boss")
+        self.set_phases(phases)
 
     def _patrol_behavior(self, dt: float) -> None:
         # TODO(student): Implement this phase's idle/patrol movement.
@@ -266,124 +207,121 @@ class BossTemplate(BossBase):
         # and attack-pattern triggering, per your BossPhase.attack_patterns.
         pass
 
-    def _get_animation_state(self) -> str:
-        # TODO(student): Return the animation key matching self.state
-        # and self.current_phase.
-        return "idle"
+    def _get_animation_key(self) -> str:
+        # TODO(student): Return the sprite animation key matching
+        # self.state and self.current_phase (e.g., "drift", "idle").
+        return "drift"
 
     def _build_hitbox(self) -> pygame.Rect:
         # TODO(student): Define your boss's attack hitbox in LOCAL space
-        # (offset from self.position). See 04_PLAYER_SPEC.md §10 for the
-        # local-space hitbox pattern this mirrors.
-        return pygame.Rect(0, 0, 32, 32)
+        # (offset from self.position). See boss_venado.py for reference.
+        return pygame.Rect(6, 4, 36, 44)
 
     def _build_hurtbox(self) -> pygame.Rect:
         # TODO(student): Define your boss's damage-receiving hurtbox in
         # LOCAL space.
-        return pygame.Rect(0, 0, 32, 32)
+        ox = (self.rect.width - 30) // 2
+        oy = (self.rect.height - 40) // 2
+        return pygame.Rect(ox, oy, 30, 40)
 ```
 
 ---
 
 ## 6. `README_template.md` (Stage Variant)
 
+Located at `student_templates/stage_template/README_template.md`. This is a worksheet format — students fill in each section by hand.
+
 ```markdown
----
-assignment_type: stage
-assignment_name: "TODO: Your stage's display name, e.g. La Soda"
-assignment_id: "TODO: your_folder_name, e.g. stage1_2_la_soda"
-zone: 1
-student_name: "TODO: Your full name"
-units_demonstrated: []
-evaluation_milestone: "Evaluación Práctica I"
+# Custom Stage Design — Student Worksheet
+
+**Student Name:** ___________________________
+**Stage ID:** ___________________________
+
 ---
 
-# TODO: Stage Title
+## 1. Stage Concept (3–5 sentences)
 
-## Narrative Context
+Describe the theme, environment, and atmosphere of your custom stage.
 
-TODO(student): Describe how your stage fits into its zone per
-`16_WORLD_DESIGN.md`. What is this place? What happened here?
+___________________________
 
-## Academic Concepts Demonstrated
+## 2. Tileset Requirements
 
-TODO(student): For each unit listed in `units_demonstrated` above, explain
-in 2-4 sentences which framework API you used and why. Follow the format
-required by `08_SYLLABUS_MAPPING.md` for each unit — state the formula or
-algorithm, not just the feature name.
+| Tile ID | Description | Collision? |
+|---------|-------------|------------|
+| 0       | Empty / Air | No         |
+| 1       | ____________ | ______     |
+| 2       | ____________ | ______     |
 
-### Unit II — Coordinate Systems and Transformations
-TODO
+## 3. Enemy / Entity Placements
 
-### Unit III — Curves and Geometric Modeling
-TODO
+| X   | Y   | Type    | Properties             |
+|-----|-----|---------|------------------------|
+| ___ | ___ | ________ | ______________________ |
 
-### Unit IV — Object and Scene Representation
-TODO
+## 4. Checkpoints
 
-### Unit V — Color, Transparency, and Lighting
-TODO
+| ID | X   | Y   |
+|----|-----|-----|
+| 0  | ___ | ___ |
 
-(Add sections for Unit VI, VII, VIII, IX as your assignment progresses
-through Evaluación Práctica II and III.)
+## 5. Custom Logic Notes
 
-## How to Run
+Describe any custom behavior (moving platforms, conditional spawns, etc.).
 
-```bash
-python main.py --stage <your_assignment_id>
-```
+___________________________
 
-(TODO(student): confirm this matches the actual CLI/debug-launch mechanism
-your professor's `main.py` exposes — see `25_IMPLEMENTATION_ROADMAP.md`
-Phase 16 for the final launch flow.)
+## 6. Reflection (2–3 sentences)
 
-## Screenshots
+What was the hardest part? What would you improve?
 
-TODO(student): Add before/after screenshots for any FilterTools/VisionTools
-operations once you reach Evaluación Práctica II/III.
+___________________________
 ```
 
 ---
 
 ## 7. `README_template.md` (Boss Variant)
 
+Located at `student_templates/boss_template/README_template.md`. Worksheet format:
+
 ```markdown
----
-assignment_type: boss
-assignment_name: "TODO: Your boss's display name"
-assignment_id: "TODO: your_folder_name, e.g. boss_rey"
-zone: 2
-student_name: "TODO: Your full name"
-units_demonstrated: []
-evaluation_milestone: "Evaluación Práctica I"
+# Boss Battle Design — Student Worksheet
+
+**Student Name:** ___________________________
+**Boss Name:** ___________________________
+
 ---
 
-# TODO: Boss Title
+## 1. Boss Concept (3–5 sentences)
 
-## Narrative Context
+Describe your boss's appearance, personality, and role in the game world.
 
-TODO(student): Per `17_BOSS_SPEC.md` (if your boss is already documented
-there) or your professor-approved design — describe this boss's origin,
-nature, and role in the story.
+___________________________
 
-## Phase Structure
+## 2. Attack Patterns
 
-TODO(student): Document each phase: health range, attack patterns, movement
-type, and which academic unit each visual/mathematical effect demonstrates.
+| Attack Name | Type       | Damage | Cooldown | Description               |
+|-------------|------------|--------|----------|---------------------------|
+| ____________ | projectile | ____   | ________ | _________________________ |
 
-| Phase | Health Range | Attack Patterns | Academic Concept |
-|---|---|---|---|
-| 1 | TODO | TODO | TODO |
+## 3. Phase Transitions
 
-## Academic Concepts Demonstrated
+| Phase | HP %   | New Behaviour                      |
+|-------|--------|------------------------------------|
+| 1     | 100–51 | __________________________________ |
+| 2     | 50–26  | __________________________________ |
 
-(Same structure as the stage template — see `08_SYLLABUS_MAPPING.md`.)
+## 4. Visual / Audio Design
 
-## How to Run / Debug-Fight This Boss
+Describe sprites, animations, screen effects, and sound.
 
-TODO(student): document the debug-skip mechanism for testing your boss
-without playing through the full game (see `25_IMPLEMENTATION_ROADMAP.md`
-Phase 16 for what this mechanism is once implemented).
+___________________________
+
+## 5. Reflection (2–3 sentences)
+
+What was the most challenging aspect? What would you improve?
+
+___________________________
 ```
 
 ---
@@ -392,23 +330,25 @@ Phase 16 for what this mechanism is once implemented).
 
 (Restated and expanded from `25_IMPLEMENTATION_ROADMAP.md` Phase 15.)
 
-- [ ] `stage_template.py` imports cleanly with zero changes (`python -c "import src.stages.stage_template.stage_template"` succeeds once copied into `src/stages/`).
-- [ ] `stage_template.tmx` opens in Tiled with no validation errors and passes `StageLoader.load()` with zero exceptions (verified by a dedicated `tests/test_student_template.py` smoke test — see §9 below).
+- [ ] `stage_template.py` imports cleanly with zero changes (`python -c "from student_templates.stage_template.stage_template import StageTemplate"` succeeds).
+- [ ] `stage_template.tmx` opens in Tiled with no validation errors and passes `StageLoader.load()` with zero exceptions (verified by `tests/test_student_template.py`).
 - [ ] `boss_template.py` imports cleanly and `BossTemplate(pygame.Vector2(0, 0))` constructs without exception.
-- [ ] Both `README_template.md` files contain valid YAML front-matter parseable by a basic `yaml.safe_load()` call (no syntax errors in the placeholder values).
-- [ ] **15-minute onboarding test:** the professor (or a TA acting as a test student) copies `stage_template/` to a new `src/stages/test_assignment/` folder, renames the file/class/TMX, runs it, and reaches a playable (if empty) stage with working player movement and a functioning `NextTrigger` — within 15 minutes, without consulting any document beyond this one and `21_COURSE_SCHEDULE.md` Class 1 instructions.
+- [ ] Both README template files exist as worksheets (no YAML front-matter requirement — simple Markdown).
+- [ ] **15-minute onboarding test:** the professor (or a TA acting as a test student) copies `stage_template/` to a new `src/stages/test_assignment/` folder, renames the file/class, updates `TMX_PATH`, runs `python main.py --stage test_assignment`, and reaches a playable (if empty) stage with working player movement and a functioning `NextTrigger` — within 15 minutes.
 
 ### 8.1 `tests/test_student_template.py`
 
 | Test | Assertion |
 |---|---|
-| `test_stage_template_tmx_loads` | `StageLoader.load(student_templates/stage_template/stage_template.tmx)` completes without exception |
-| `test_stage_template_has_required_objects` | The loaded `StageData` has exactly one `PlayerSpawn`-derived `spawn_point`, one `next_trigger`, and `len(checkpoints) == 1` |
-| `test_boss_template_constructs` | `BossTemplate(pygame.Vector2(0,0))` does not raise |
-| `test_boss_template_has_one_phase` | `len(BossTemplate(...).phases) == 1` (the placeholder phase — confirms the template itself, not a partially-filled student copy) |
-| `test_readme_templates_parse_as_yaml` | Both `README_template.md` front-matter blocks parse via `yaml.safe_load()` without error |
-
-This test file is added to the Phase 15 gate in `24_TEST_PLAN.md`'s execution summary (§16) under a row for Phase 15, which was previously listed as "manual onboarding test only" — the automatable subset above now supplements that manual check.
+| `test_stage_template_import` | `StageTemplate` can be imported |
+| `test_stage_template_instantiate` | `StageTemplate(context)` constructs without exception |
+| `test_stage_template_tmx_exists` | The default TMX file exists at `TMX_PATH` |
+| `test_stage_template_has_required_layers` | The TMX contains all 8 required layer names |
+| `test_stage_template_has_stage_scene_attrs` | Instance has `_stage_data`, `_player`, `_camera` (inherited from StageScene) |
+| `test_boss_template_import` | `BossTemplate` can be imported |
+| `test_boss_template_constructs` | `BossTemplate(pygame.Vector2(0, 0))` does not raise |
+| `test_boss_template_has_required_methods` | Instance has `_patrol_behavior`, `_alert_behavior`, `_get_animation_key`, `_build_hitbox`, `_build_hurtbox` |
+| `test_boss_template_has_one_phase` | `len(BossTemplate(...).phases) == 1` (the placeholder phase) |
 
 ---
 

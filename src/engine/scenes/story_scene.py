@@ -121,7 +121,7 @@ class StoryScene(BaseScene):
 
         self._typewriter_timer -= dt
 
-        if im.is_action_pressed(Action.CONFIRM):
+        if im.is_action_just_pressed(Action.CONFIRM):
             duration = 0.6 if self._chapter == 3 else 0.5
             self.context.scene_manager.transition.start_fade_out(duration)
             self._pending_transition = True
@@ -134,11 +134,10 @@ class StoryScene(BaseScene):
 
         title, text = STORY_TEXTS.get(self._chapter, ("DESCONOCIDO", ""))
 
-        if self._typewriter_timer <= 0 and "_typewriter_full" not in self.__dict__:
-            self._typewriter_full = True
-        if not hasattr(self, "_typewriter_buffer"):
+        if not hasattr(self, "_typewriter_full"):
+            self._typewriter_full = False
             self._typewriter_buffer = ""
-        if not hasattr(self, "_typewriter_full") or not self._typewriter_full:
+        if not self._typewriter_full:
             if self._typewriter_timer <= 0:
                 self._typewriter_timer = self._typewriter_speed
                 if len(self._typewriter_buffer) < len(text):

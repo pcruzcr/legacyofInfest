@@ -479,7 +479,7 @@ class Player(BaseEntity):
 
     def _apply_physics(self, dt: float) -> None:
         """Apply gravity. Movement integration happens per-axis in _resolve_collision."""
-        if not self.is_grounded and self._knockback_timer <= 0:
+        if not self.is_grounded:
             self.velocity.y += settings.GRAVITY * dt
             self.velocity.y = min(
                 self.velocity.y,

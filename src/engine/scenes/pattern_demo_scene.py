@@ -216,7 +216,7 @@ class PatternDemoScene(BaseScene):
             self._cached_result_surf = None
             self._param_changed = True
 
-        if im.is_action_pressed(Action.CANCEL):
+        if im.is_action_just_pressed(Action.CANCEL):
             self._text_input_active = False
             from src.engine.scenes.demo_menu_scene import DemoMenuScene
             self.context.scene_manager.replace(DemoMenuScene(self.context))
@@ -503,6 +503,7 @@ class PatternDemoScene(BaseScene):
                 pygame.draw.rect(surf, (30, 30, 40), (x, y, cell_w - 2, cell_h - 2), 1)
                 lt = self._font_small.render("empty", True, (60, 60, 70))
                 surf.blit(lt, (x + 2, y + cell_h - 14))
+        return surf
 
     def _render_confusion(self) -> pygame.Surface:
         surf = pygame.Surface(PANEL_SIZE)

@@ -90,7 +90,7 @@ class DemoMenuScene(BaseScene):
                 if self._selected < self._scroll_offset:
                     self._scroll_offset = max(self._scroll_offset - 1, 0)
 
-        if im.is_action_pressed(Action.CONFIRM):
+        if im.is_action_just_pressed(Action.CONFIRM):
             key = self._options[self._selected][2]
             registry = get_registry()
             scene = registry.build(key, self.context)
@@ -100,7 +100,7 @@ class DemoMenuScene(BaseScene):
                 self._error_msg = "Failed to load demo scene — missing assets?"
                 self._error_timer = 3.0
 
-        if im.is_action_pressed(Action.CANCEL):
+        if im.is_action_just_pressed(Action.CANCEL):
             from src.engine.scenes.title_scene import TitleScene
             self.context.scene_manager.replace(TitleScene(self.context))
 

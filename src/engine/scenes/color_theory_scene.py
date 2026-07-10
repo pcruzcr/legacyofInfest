@@ -182,7 +182,7 @@ class ColorTheoryScene(BaseScene):
                 self._alpha = 0.5
                 self._step_index = 0
 
-        if im.is_action_pressed(Action.CANCEL):
+        if im.is_action_just_pressed(Action.CANCEL):
             from src.engine.scenes.demo_menu_scene import DemoMenuScene
             self.context.scene_manager.replace(DemoMenuScene(self.context))
             return

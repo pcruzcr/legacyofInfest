@@ -67,11 +67,11 @@ class EndCreditsScene(BaseScene):
         if im is None:
             return
 
-        if self._done and im.is_action_pressed(Action.CONFIRM):
+        if self._done and im.is_action_just_pressed(Action.CONFIRM):
             self.context.scene_manager.replace(TitleScene(self.context))
             return
 
-        if self._elapsed > 1.0 and im.is_action_pressed(Action.CONFIRM):
+        if self._elapsed > 1.0 and im.is_action_just_pressed(Action.CONFIRM):
             self._done = True
             return
 
