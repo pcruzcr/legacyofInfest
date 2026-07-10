@@ -164,11 +164,11 @@ class TransformLabScene(BaseScene):
         elif self._mode == 1:
             rad = math.radians(self._angle)
             c, s = math.cos(rad), math.sin(rad)
-            return (x * c - y * s, x * s + y * c)
+            return (x * c - y * s + self._tx, x * s + y * c + self._ty)
         elif self._mode == 2:
-            return (x * self._sx, y * self._sy)
+            return (x * self._sx + self._tx, y * self._sy + self._ty)
         elif self._mode == 3:
-            return (x + self._shx * y, y + self._shy * x)
+            return (x + self._shx * y + self._tx, y + self._shy * x + self._ty)
         elif self._mode == 4:
             rad = math.radians(self._angle)
             c, s = math.cos(rad), math.sin(rad)
