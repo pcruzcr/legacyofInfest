@@ -26,17 +26,17 @@ class BaseScene(abc.ABC):
         self.params: dict[str, Any] = {}
 
     @property
-    def input(self):
+    def input(self) -> Any:
         """Shortcut to the input manager."""
         return self.context.input_manager
 
     @property
-    def audio(self):
+    def audio(self) -> Any:
         """Shortcut to the audio manager."""
         return self.context.audio_manager
 
     @property
-    def events(self):
+    def events(self) -> Any:
         """Shortcut to the event bus."""
         return self.context.event_bus
 

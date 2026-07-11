@@ -35,7 +35,7 @@ from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
-    COLOR_BG, COLOR_TEXT, COLOR_HIGHLIGHT, COLOR_ACCENT, COLOR_ERROR,
+    COLOR_BG, COLOR_TEXT, COLOR_HIGHLIGHT, COLOR_ACCENT,
     FONT_SMALL, FONT_MEDIUM,
     draw_top_bar, draw_bottom_bar,
     save_png,
@@ -87,7 +87,9 @@ def _lerp(a: tuple[float, float], b: tuple[float, float], t: float) -> tuple[flo
     return (a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t)
 
 
-def _de_casteljau(pts: list[tuple[float, float]], t: float) -> tuple[list[list[tuple[float, float]]], tuple[float, float]]:
+def _de_casteljau(
+    pts: list[tuple[float, float]], t: float
+) -> tuple[list[list[tuple[float, float]]], tuple[float, float]]:
     """Run full de Casteljau, return all levels and final point."""
     levels: list[list[tuple[float, float]]] = [list(pts)]
     current = list(pts)
@@ -269,9 +271,9 @@ class CurveEditorScene(BaseScene):
         degree = len(pts) - 1
         mode = self._mode
         if mode == 0:
-            infos = [f"Degree: 2 (quadratic)  |  Points: 3"]
+            infos = ["Degree: 2 (quadratic)  |  Points: 3"]
         elif mode == 1:
-            infos = [f"Degree: 3 (cubic)  |  Points: 4"]
+            infos = ["Degree: 3 (cubic)  |  Points: 4"]
         elif mode == 2:
             infos = [f"Degree: {degree}  |  Points: {len(pts)}"]
         elif mode == 3:
@@ -283,7 +285,7 @@ class CurveEditorScene(BaseScene):
 
         for mi, mname in enumerate(MODE_NAMES):
             hl = COLOR_HIGHLIGHT if mi == self._mode else (COLOR_TEXT if mi < 5 else COLOR_ACCENT)
-            label = self._font_small.render(f"[{mi+1}] {mname[:4]}", True, hl)
+            label = self._font_small.render(f"[{mi + 1}] {mname[:4]}", True, hl)
             surface.blit(label, (info_y + mi * 40, 26))
 
         for i, line in enumerate(infos):

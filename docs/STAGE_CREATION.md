@@ -1,0 +1,179 @@
+# Stage Creation Guide
+
+## 1. TMX Map Requirements
+
+Create your map in **Tiled** with the following settings:
+
+| Property | Value |
+|---|---|
+| Orientation | Orthogonal |
+| Tile width | 16 px |
+| Tile height | 16 px |
+| Render order | Right-down |
+| Infinite | No |
+
+### Required Layers (bottom-to-top)
+
+| Order | Name | Type | Purpose |
+|---|---|---|---|
+| 1 | `BG_Far` | Tile | Distant background (slowest parallax) |
+| 2 | `BG_Mid` | Tile | Mid-distance background |
+| 3 | `BG_Near` | Tile | Near background (fast parallax) |
+| 4 | `Terrain` | Tile | Primary solid terrain |
+| 5 | `Terrain_Detail` | Tile | Decorative non-solid overlays |
+| 6 | `Objects` | Object | Entity spawns, triggers, checkpoints |
+| 7 | `Collision` | Object | Collision rectangles |
+| 8 | `FG_Overlay` | Tile | Foreground (renders above entities) |
+
+### Required Map-Level Custom Properties
+
+| Property | Type | Example |
+|---|---|---|
+| `stage_id` | string | `"stage1"` |
+| `stage_name` | string | `"The Descent"` |
+| `time_limit` | int | `180` (0 = no limit) |
+| `bgm_track` | string | `"bgm_stage1"` |
+| `background_zone` | string (optional) | `"cave"` — loads `assets/backgrounds/bg_cave_{far,mid,near}.png` |
+| `gravity_multiplier` | float (optional) | `1.0` |
+
+---
+
+## 2. Object Layer Conventions
+
+Place all objects in the `Objects` layer as rectangles or points with the correct **type** field.
+
+### PlayerSpawn (Point)
+
+Exactly one point object. **The Y coordinate is the player's feet position** — the engine subtracts 32 px automatically.
+
+```
+type: PlayerSpawn
+```
+
+### Enemy Spawns (Point)
+
+| Type | Required Properties | Optional Properties |
+|---|---|---|
+| `Walker` | — | `patrol_length`, `facing`, `patrol_speed`, `alert_speed`, `damage_on_contact` |
+| `Flying` | — | `flight_mode`, `flight_speed`, `sine_amplitude`, `sine_frequency` |
+| `Shooter` | — | `fire_rate`, `projectile_speed`, `projectile_damage`, `patrol_length` |
+| `Charger` | — | `charge_speed`, `patrol_speed`, `alert_speed` |
+| `Archer` | — | `fire_rate`, `projectile_speed` |
+| `Brute` | — | `patrol_speed`, `alert_speed`, `max_health` |
+| `Caster` | — | `fire_rate`, `projectile_damage` |
+| `Assassin` | — | `patrol_speed`, `alert_speed` |
+
+Numeric properties in TMX (`patrol_length`, `max_health`, etc.) are automatically cast to `float` by `StageLoader`.
+
+### Checkpoint (Rectangle)
+
+```
+type: Checkpoint
+properties:
+  - checkpoint_id (int, 0-based)
+```
+
+### NextTrigger (Rectangle)
+
+```
+type: NextTrigger
+```
+No properties required. Player touches it → stage complete.
+
+### MessageTrigger (Rectangle)
+
+```
+type: MessageTrigger
+properties:
+  - text (string)
+```
+
+Alternatively, use `type: MessageTrigger_Once` for one-time triggers.
+
+### HazardZone (Rectangle)
+
+```
+type: HazardZone
+properties:
+  - damage (float, default: 0.25)
+```
+
+### DeathPit (Rectangle)
+
+```
+type: DeathPit
+```
+
+### CameraLock (Rectangle)
+
+```
+type: CameraLock
+properties:
+  - lock_x (bool, default: false)
+  - lock_y (bool, default: false)
+```
+
+### Waypoint (Point) — for Flying enemies
+
+```
+type: Waypoint
+properties:
+  - owner_id (string) — must match the Flying entity's **name**
+  - waypoint_index (int) — 0-based sort order
+```
+
+### Collision Layer Objects
+
+In the `Collision` layer, each rectangle object's `type` determines behavior:
+
+| Type | Behavior |
+|---|---|
+| *(none or `Solid`)* | Full AABB collision |
+| `Platform` | One-way platform (passable from below) |
+
+---
+
+## 3. Stage Registration
+
+### 3.1 Create a Stage Class
+
+Create a file like `src/stages/<your_stage>/<your_stage>.py`:
+
+```python
+from pathlib import Path
+from typing import TYPE_CHECKING
+from src.framework.scenes.stage_scene import StageScene
+
+if TYPE_CHECKING:
+    from src.engine.core.game_context import GameContext
+
+class Stage1(StageScene):
+    STAGE_ID: str = "stage1"
+    STAGE_NAME: str = "The Descent"
+    ZONE: int = 1
+
+    def __init__(self, context: GameContext) -> None:
+        super().__init__(context, Path("assets/maps/stage1/stage1.tmx"))
+```
+
+Place the TMX file at `assets/maps/<your_stage>/<your_stage>.tmx`.
+
+### 3.2 Wire Up Navigation
+
+The `ProgressionSystem` emits `Events.STAGE_COMPLETE` when the stage ends. A `WorldMapScene` or story scene should listen for this and transition to the next stage.
+
+---
+
+## 4. Testing Your Stage
+
+1. **Validate the TMX** — ensure all 8 required layers exist and properties are set.
+2. **Check for `PlayerSpawn`** — exactly one must exist.
+3. **Place at least one `Checkpoint`** — otherwise death sends you to the start.
+4. **Verify collision** — draw `Collision` layer rectangles so the player can't fall through.
+5. **Run the game** — navigate to your stage and observe:
+   - Sprites render correctly
+   - Enemies move and detect the player
+   - Checkpoints activate and persist on death
+   - `NextTrigger` ends the stage
+
+For reference, see `src/stages/stage0/stage0.py` and `assets/maps/stage0/`.

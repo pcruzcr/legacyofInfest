@@ -6,7 +6,7 @@ Replaces the _try_scene() elif chain with a register → build pattern.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, cast
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -65,12 +65,15 @@ def register_demo_scenes() -> None:
     reg.register("vision", lambda ctx: _build_scene(ctx, "vision_demo_scene", "VisionDemoScene"))
     reg.register("pattern", lambda ctx: _build_scene(ctx, "pattern_demo_scene", "PatternDemoScene"))
     reg.register("combo", lambda ctx: _build_scene(ctx, "combo_demo_scene", "ComboDemoScene"))
+    reg.register("inventory", lambda ctx: _build_scene(ctx, "inventory_scene", "InventoryScene"))
+    reg.register("achievement", lambda ctx: _build_scene(ctx, "achievement_screen", "AchievementScene"))
+    reg.register("worldmap", lambda ctx: _build_scene(ctx, "world_map_scene", "WorldMapScene"))
 
 
-def _build_scene(ctx, module_name: str, class_name: str) -> BaseScene | None:
+def _build_scene(ctx: GameContext, module_name: str, class_name: str) -> BaseScene | None:
     import importlib
     mod = importlib.import_module(f"src.engine.scenes.{module_name}")
     cls = getattr(mod, class_name, None)
     if cls is None:
         return None
-    return cls(ctx)
+    return cast("BaseScene", cls(ctx))

@@ -18,7 +18,9 @@ from src.engine.scenes.title_scene import TitleScene
 
 @runtime_checkable
 class _SceneWithRespawn(Protocol):
-    def respawn(self) -> None: ...
+    def respawn(self) -> None:
+        ...
+
 
 if TYPE_CHECKING:
     from src.engine.scene.base_scene import BaseScene

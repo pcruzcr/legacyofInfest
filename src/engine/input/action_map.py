@@ -20,6 +20,7 @@ class Action(Enum):
     SHORT_ATTACK = auto()
     LONG_ATTACK = auto()
     DASH = auto()
+    GRAB = auto()
     CONFIRM = auto()
     CANCEL = auto()
     PAUSE = auto()
@@ -34,6 +35,7 @@ DEFAULT_KEY_BINDINGS: dict[Action, list[int]] = {
     Action.JUMP: [pygame.K_SPACE, pygame.K_UP, pygame.K_w],
     Action.CROUCH: [pygame.K_DOWN, pygame.K_s],
     Action.DASH: [pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_LALT],
+    Action.GRAB: [pygame.K_g, pygame.K_c],
     Action.SHORT_ATTACK: [pygame.K_z, pygame.K_j],
     Action.LONG_ATTACK: [pygame.K_x, pygame.K_k],
     Action.CONFIRM: [pygame.K_RETURN, pygame.K_SPACE, pygame.K_z],
@@ -50,6 +52,7 @@ _CONTROLLER_BUTTON_MAP: dict[int, Action] = {
     1: Action.SHORT_ATTACK,   # B
     2: Action.LONG_ATTACK,    # X
     3: Action.CROUCH,         # Y
+    4: Action.GRAB,           # LB
     7: Action.PAUSE,          # START
     6: Action.CANCEL,         # SELECT/BACK
 }

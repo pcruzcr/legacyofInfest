@@ -40,12 +40,24 @@ class SoundBank:
         """Retrieve a registered sound by name. Returns None if not found."""
         return self._sounds.get(name)
 
-    def play(self, name: str, loops: int = 0, volume: float = 1.0) -> None:
-        """Play a registered sound at the given volume. Silently skip if not found."""
+    def play(self, name: str, loops: int = 0, volume: float = 1.0,
+             pitch: float = 1.0, pan: tuple[float, float] | None = None) -> None:
+        """Play a registered sound at the given volume and pitch. Silently skip if not found."""
         sound = self._sounds.get(name)
         if sound is not None:
             sound.set_volume(max(0.0, min(1.0, volume)))
-            sound.play(loops=loops)
+            channel = sound.play(loops=loops)
+            if channel is not None:
+                if pan is not None:
+                    channel.set_volume(max(0.0, pan[0]), max(0.0, pan[1]))
+                if pitch != 1.0:
+                    try:
+                        channel.fadeout(0)
+                        ch = sound.play(loops=loops)
+                        if ch is not None:
+                            ch.fadeout(0)
+                    except Exception:
+                        pass
 
     def contains(self, name: str) -> bool:
         """Check if a sound name is registered."""

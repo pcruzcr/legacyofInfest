@@ -8,7 +8,7 @@ offset. Supports map boundary clamping and per-layer parallax factors.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pygame
 
@@ -54,7 +54,7 @@ class Camera:
         self.look_ahead_x: float = 0.0
         self.look_ahead_y: float = 0.0
 
-    def follow(self, target) -> None:
+    def follow(self, target: BaseEntity) -> None:
         """Set the entity the camera follows."""
         self._target = target
 
@@ -63,7 +63,7 @@ class Camera:
         self._map_width = width_px
         self._map_height = height_px
 
-    def set_camera_locks(self, locks: list) -> None:
+    def set_camera_locks(self, locks: list[Any]) -> None:
         """Set camera lock zones from a list of CameraLock-like objects."""
         self._locked_x = False
         self._locked_y = False
@@ -72,11 +72,10 @@ class Camera:
             return
         target_rect = self._target.rect
         for lock in locks:
-            rect = getattr(lock, "rect", lock)
-            if rect.colliderect(target_rect):
-                self._locked_x = getattr(lock, "lock_x", False)
-                self._locked_y = getattr(lock, "lock_y", False)
-                self._lock_rect = rect
+            if lock.rect.colliderect(target_rect):
+                self._locked_x = lock.lock_x
+                self._locked_y = lock.lock_y
+                self._lock_rect = lock.rect
                 break
 
     def apply_shake(self, amplitude: float = 2.0, duration: float = 0.1) -> None:

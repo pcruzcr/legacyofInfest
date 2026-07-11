@@ -5,6 +5,8 @@ Description: Heads-Up Display showing hearts (health), timer, and stage info.
 Uses sprite-based hearts from assets/ui/ with font fallback.
 """
 from __future__ import annotations
+from typing import cast
+
 import pygame
 from src.engine.core import settings
 from src.engine.core.event_bus import EventBus
@@ -55,17 +57,17 @@ class HUD:
                 c = 2  # corner size
                 self._frame_corners = {
                     "tl": raw_frame.subsurface((0, 0, c, c)),
-                    "tr": raw_frame.subsurface((fw-c, 0, c, c)),
-                    "bl": raw_frame.subsurface((0, fh-c, c, c)),
-                    "br": raw_frame.subsurface((fw-c, fh-c, c, c)),
+                    "tr": raw_frame.subsurface((fw - c, 0, c, c)),
+                    "bl": raw_frame.subsurface((0, fh - c, c, c)),
+                    "br": raw_frame.subsurface((fw - c, fh - c, c, c)),
                 }
                 self._frame_edges = {
-                    "top": raw_frame.subsurface((c, 0, fw-2*c, c)),
-                    "bottom": raw_frame.subsurface((c, fh-c, fw-2*c, c)),
-                    "left": raw_frame.subsurface((0, c, c, fh-2*c)),
-                    "right": raw_frame.subsurface((fw-c, c, c, fh-2*c)),
+                    "top": raw_frame.subsurface((c, 0, fw - 2 * c, c)),
+                    "bottom": raw_frame.subsurface((c, fh - c, fw - 2 * c, c)),
+                    "left": raw_frame.subsurface((0, c, c, fh - 2 * c)),
+                    "right": raw_frame.subsurface((fw - c, c, c, fh - 2 * c)),
                 }
-                self._frame_fill = raw_frame.subsurface((c, c, fw-2*c, fh-2*c))
+                self._frame_fill = raw_frame.subsurface((c, c, fw - 2 * c, fh - 2 * c))
             else:
                 self._frame_corners = {}
                 self._frame_edges = {}
@@ -139,6 +141,8 @@ class HUD:
 
         # Combo state
         self._combo_count: int = 0
+        self._special_current: float = 0.0
+        self._special_max: float = 100.0
 
         self._font = pygame.font.Font(None, 12)
 
@@ -174,7 +178,7 @@ class HUD:
         if self._destroyed:
             return
         old_health = self._health
-        amount = float(data.get("amount", 1.0))
+        amount = cast(float, data.get("amount", 1.0))
         self._health = max(0.0, self._health - amount)
         self._hurt_portrait_timer = 0.8
         # Heart flash: track which slot decreased
@@ -191,7 +195,7 @@ class HUD:
         if self._destroyed:
             return
         old_health = self._health
-        amount = float(data.get("amount", 1.0))
+        amount = cast(float, data.get("amount", 1.0))
         self._health = min(self._max_health, self._health + amount)
         # Heal animation: scan right→left, collect ALL changed slots
         changed_slots: list[int] = []
@@ -231,7 +235,7 @@ class HUD:
         if self._destroyed:
             return
         self._boss_name = str(data.get("boss_name", ""))
-        self._boss_phase_count = int(data.get("phase_count", 1))
+        self._boss_phase_count = cast(int, data.get("phase_count", 1))
 
     def _on_checkpoint_reached(self, **data: object) -> None:
         if self._destroyed:
@@ -313,12 +317,35 @@ class HUD:
     def draw(self, surface: pygame.Surface) -> None:
         self._draw_portrait(surface)
         self._draw_hearts(surface)
+        self._draw_special_meter(surface)
         self._draw_timer(surface)
         if self._boss_active:
             self._draw_boss_hud(surface)
         if self._combo_count > 1:
             self._draw_combo_indicator(surface)
         self._draw_save_notification(surface)
+
+    def set_special_meter(self, current: float, max_val: float) -> None:
+        self._special_current = current
+        self._special_max = max_val
+
+    def _draw_special_meter(self, surface: pygame.Surface) -> None:
+        bar_w = 60
+        bar_h = 6
+        bar_x = 84
+        bar_y = 30
+        pct = min(1.0, self._special_current / max(self._special_max, 1.0))
+        bg_color = (40, 20, 60)
+        fill_color = (100, 150, 255) if pct < 1.0 else (255, 220, 50)
+        pygame.draw.rect(surface, bg_color, (bar_x, bar_y, bar_w, bar_h))
+        if pct > 0:
+            pygame.draw.rect(surface, fill_color, (bar_x, bar_y, int(bar_w * pct), bar_h))
+        pygame.draw.rect(surface, (200, 200, 255), (bar_x, bar_y, bar_w, bar_h), 1)
+        if pct >= 1.0:
+            flash = (int(pygame.time.get_ticks() / 200) % 2 == 0)
+            if flash:
+                label = self._font.render("ULTIMATE READY", True, (255, 220, 50))
+                surface.blit(label, (bar_x, bar_y - 14))
 
     def _draw_save_notification(self, surface: pygame.Surface) -> None:
         if self._save_notify_timer <= 0:
@@ -369,13 +396,13 @@ class HUD:
             surface.blit(self._frame_corners["bl"], (r.x, r.bottom - c))
             surface.blit(self._frame_corners["br"], (r.right - c, r.bottom - c))
             # Edges
-            top_edge = pygame.transform.scale(self._frame_edges["top"], (r.width - 2*c, c))
+            top_edge = pygame.transform.scale(self._frame_edges["top"], (r.width - 2 * c, c))
             surface.blit(top_edge, (r.x + c, r.y))
-            bottom_edge = pygame.transform.scale(self._frame_edges["bottom"], (r.width - 2*c, c))
+            bottom_edge = pygame.transform.scale(self._frame_edges["bottom"], (r.width - 2 * c, c))
             surface.blit(bottom_edge, (r.x + c, r.bottom - c))
-            left_edge = pygame.transform.scale(self._frame_edges["left"], (c, r.height - 2*c))
+            left_edge = pygame.transform.scale(self._frame_edges["left"], (c, r.height - 2 * c))
             surface.blit(left_edge, (r.x, r.y + c))
-            right_edge = pygame.transform.scale(self._frame_edges["right"], (c, r.height - 2*c))
+            right_edge = pygame.transform.scale(self._frame_edges["right"], (c, r.height - 2 * c))
             surface.blit(right_edge, (r.right - c, r.y + c))
         else:
             pygame.draw.rect(surface, (100, 100, 140), self._portrait_frame_rect, 1)
@@ -410,7 +437,8 @@ class HUD:
                 pygame.draw.rect(surface, (255, 50, 50), rect, 1)
 
             # Heal sparkle effect on current animated slot (right→left, sequential)
-            if self._heal_anim_active and self._sparkle_frames and self._heal_anim_slot_index < len(self._heal_anim_slots):
+            if (self._heal_anim_active and self._sparkle_frames
+                    and self._heal_anim_slot_index < len(self._heal_anim_slots)):
                 current_slot = self._heal_anim_slots[self._heal_anim_slot_index]
                 if slot == current_slot:
                     frame_idx = min(self._sparkle_frame, len(self._sparkle_frames) - 1)
@@ -447,13 +475,13 @@ class HUD:
             surface.blit(self._frame_corners["tr"], (r.right - c, r.y))
             surface.blit(self._frame_corners["bl"], (r.x, r.bottom - c))
             surface.blit(self._frame_corners["br"], (r.right - c, r.bottom - c))
-            top_edge = pygame.transform.scale(self._frame_edges["top"], (r.width - 2*c, c))
+            top_edge = pygame.transform.scale(self._frame_edges["top"], (r.width - 2 * c, c))
             surface.blit(top_edge, (r.x + c, r.y))
-            bottom_edge = pygame.transform.scale(self._frame_edges["bottom"], (r.width - 2*c, c))
+            bottom_edge = pygame.transform.scale(self._frame_edges["bottom"], (r.width - 2 * c, c))
             surface.blit(bottom_edge, (r.x + c, r.bottom - c))
-            left_edge = pygame.transform.scale(self._frame_edges["left"], (c, r.height - 2*c))
+            left_edge = pygame.transform.scale(self._frame_edges["left"], (c, r.height - 2 * c))
             surface.blit(left_edge, (r.x, r.y + c))
-            right_edge = pygame.transform.scale(self._frame_edges["right"], (c, r.height - 2*c))
+            right_edge = pygame.transform.scale(self._frame_edges["right"], (c, r.height - 2 * c))
             surface.blit(right_edge, (r.right - c, r.y + c))
             fill = pygame.transform.scale(self._frame_fill, (r.width, r.height))
             surface.blit(fill, r, special_flags=pygame.BLEND_ALPHA_SDL2)

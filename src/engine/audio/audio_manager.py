@@ -167,18 +167,17 @@ class AudioManager:
     def crossfade_ambient(self, path: str | Path, duration: float = 2.0, volume: float = 0.5) -> None:
         """Crossfade from current ambient to new ambient sound."""
         old_channel = self._ambient_channel
-        old_volume = self._ambient_volume
         try:
             new_sound = pygame.mixer.Sound(str(path))
             new_channel = pygame.mixer.find_channel()
-            if new_channel:
+            if new_channel is not None:
                 new_channel.play(new_sound, loops=-1)
                 new_channel.set_volume(volume * self._sfx_volume)
                 self._ambient_sound = new_sound
                 self._ambient_channel = new_channel
                 self._ambient_volume = volume
                 self._ambient_active = True
-                if old_channel:
+                if old_channel is not None:
                     old_channel.fadeout(int(duration * 1000))
         except pygame.error as e:
             logging.warning(f"AudioManager: no se pudo crossfade audio ambiental: {e}")

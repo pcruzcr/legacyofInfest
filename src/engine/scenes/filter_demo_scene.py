@@ -43,6 +43,7 @@ from src.framework.processing.filter_tools import FilterTools
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
+    from src.engine.input.input_manager import InputManager
 
 
 MODE_NAMES = [
@@ -190,7 +191,7 @@ class FilterDemoScene(BaseScene):
         if self._param_changed or self._cached_result is None:
             self._compute_result()
 
-    def _handle_mode_input(self, im):
+    def _handle_mode_input(self, im: InputManager) -> None:
         key_left = im.is_raw_key_pressed(pygame.K_LEFT)
         key_right = im.is_raw_key_pressed(pygame.K_RIGHT)
         key_up = im.is_raw_key_pressed(pygame.K_UP)
@@ -370,7 +371,8 @@ class FilterDemoScene(BaseScene):
 
         # Source + name label
         src_label = self._font_small.render(
-            f"  Source: {self._sources.current_name}{' [FROZEN]' if self._sources.is_frozen else ''}  ", True, COLOR_ACCENT,
+            f"  Source: {self._sources.current_name}"
+            f"{' [FROZEN]' if self._sources.is_frozen else ''}  ", True, COLOR_ACCENT,
         )
         surface.blit(src_label, (90, TOP_BAR_Y + TOP_BAR_H - 14))
 

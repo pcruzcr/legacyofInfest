@@ -63,7 +63,7 @@ class EventBus:
         self._queue.clear()
         for event_name, data in queue:
             if event_name in self._subscribers:
-                for callback in self._subscribers[event_name]:
+                for callback in list(self._subscribers[event_name]):
                     callback(**data)
 
     def clear(self) -> None:

@@ -19,6 +19,7 @@ class GameOverScene(BaseScene):
     def __init__(self, context: GameContext, stage_scene: BaseScene) -> None:
         super().__init__(context)
         self._stage_scene = stage_scene
+        self._stage_scene_respawn = stage_scene.respawn if hasattr(stage_scene, "respawn") else None
         self._selected: int = 0
         self._options: list[str] = ["CONTINUE", "QUIT"]
         self._font = pygame.font.Font(None, 16)
@@ -47,11 +48,11 @@ class GameOverScene(BaseScene):
                 if self._selected == 0:
                     self.context.scene_manager.pop()
                     try:
-                        self._stage_scene.respawn()
+                        if self._stage_scene_respawn:
+                            self._stage_scene_respawn()
                     except Exception:
                         import traceback
                         traceback.print_exc()
-                        from src.engine.scenes.title_scene import TitleScene
                         self.context.scene_manager.replace(TitleScene(self.context))
                 elif self._selected == 1:
                     self.context.scene_manager.replace(TitleScene(self.context))

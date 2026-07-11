@@ -37,7 +37,7 @@ class FilterTools:
     """Image filtering operations. All methods are classmethods."""
 
     @classmethod
-    def compute_histogram(cls, surface: pygame.Surface) -> dict:
+    def compute_histogram(cls, surface: pygame.Surface) -> dict[str, int]:
         cls._validate_surface(surface)
         arr = pygame.surfarray.array3d(surface)
         h, w, _ = arr.shape
@@ -60,9 +60,14 @@ class FilterTools:
             hist, _ = np.histogram(channel, 256, (0, 255))
             cdf = hist.cumsum()
             cdf_masked = np.ma.masked_equal(cdf, 0)
-            cdf_masked = (cdf_masked - cdf_masked.min()) * 255 / (cdf_masked.max() - cdf_masked.min())
-            cdf = np.ma.filled(cdf_masked, 0).astype(np.uint8)
-            result[:, :, c] = cdf[channel]
+            cdf_min = cdf_masked.min()
+            cdf_max = cdf_masked.max()
+            if cdf_max - cdf_min < 1:
+                result[:, :, c] = channel
+            else:
+                cdf_masked = (cdf_masked - cdf_min) * 255 / (cdf_max - cdf_min)
+                cdf = np.ma.filled(cdf_masked, 0).astype(np.uint8)
+                result[:, :, c] = cdf[channel]
         return pygame.surfarray.make_surface(result)
 
     @classmethod
@@ -70,11 +75,12 @@ class FilterTools:
         cls._validate_surface(surface)
         if factor < 0.0 or factor > 4.0:
             raise ValueError(f"FilterTools.adjust_brightness: factor must be in [0.0, 4.0], got {factor}")
-        arr = pygame.surfarray.array3d(surface).astype(np.float32)
+        arr: np.ndarray = pygame.surfarray.array3d(surface).astype(np.float32)
         arr = (arr * factor).clip(0, 255).astype(np.uint8)
         result = pygame.surfarray.make_surface(arr)
-        if surface.get_alpha():
-            result.set_alpha(surface.get_alpha())
+        src_alpha = surface.get_alpha()
+        if src_alpha is not None:
+            result.set_alpha(src_alpha)
         return result
 
     @classmethod
@@ -82,21 +88,23 @@ class FilterTools:
         cls._validate_surface(surface)
         if factor < 0.0 or factor > 4.0:
             raise ValueError(f"FilterTools.adjust_contrast: factor must be in [0.0, 4.0], got {factor}")
-        arr = pygame.surfarray.array3d(surface).astype(np.float32)
+        arr: np.ndarray = pygame.surfarray.array3d(surface).astype(np.float32)
         arr = ((arr - 128.0) * factor + 128.0).clip(0, 255).astype(np.uint8)
         result = pygame.surfarray.make_surface(arr)
-        if surface.get_alpha():
-            result.set_alpha(surface.get_alpha())
+        src_alpha = surface.get_alpha()
+        if src_alpha is not None:
+            result.set_alpha(src_alpha)
         return result
 
     @classmethod
     def stretch_contrast(cls, surface: pygame.Surface) -> pygame.Surface:
         cls._validate_surface(surface)
-        arr = pygame.surfarray.array3d(surface).astype(np.float32)
+        arr: np.ndarray = pygame.surfarray.array3d(surface).astype(np.float32)
         result = np.zeros_like(arr)
         for c in range(3):
             ch = arr[:, :, c]
-            mn, mx = ch.min(), ch.max()
+            mn: np.ndarray = ch.min()
+            mx: np.ndarray = ch.max()
             if mx - mn < 1.0:
                 result[:, :, c] = ch
             else:
@@ -111,7 +119,7 @@ class FilterTools:
         n = kernel.shape[0]
         if n < 3 or n > 15 or n % 2 != 1:
             raise ValueError(f"FilterTools.apply_kernel: kernel must be odd-sized 3-15, got {n}")
-        arr = pygame.surfarray.array3d(surface).astype(np.float32)
+        arr: np.ndarray = pygame.surfarray.array3d(surface).astype(np.float32)
         result = np.zeros_like(arr)
         for c in range(3):
             result[:, :, c] = convolve(arr[:, :, c], kernel, mode="reflect")
@@ -129,13 +137,14 @@ class FilterTools:
         cls._validate_surface(surface)
         if sigma <= 0.0 or sigma > 10.0:
             raise ValueError(f"FilterTools.gaussian_blur: sigma must be in (0.0, 10.0], got {sigma}")
-        arr = pygame.surfarray.array3d(surface).astype(np.float32)
+        arr: np.ndarray = pygame.surfarray.array3d(surface).astype(np.float32)
         result = np.zeros_like(arr)
         for c in range(3):
             result[:, :, c] = gaussian_filter(arr[:, :, c], sigma=sigma, mode="reflect")
         out = pygame.surfarray.make_surface(result.clip(0, 255).astype(np.uint8))
-        if surface.get_alpha():
-            out.set_alpha(surface.get_alpha())
+        src_alpha = surface.get_alpha()
+        if src_alpha is not None:
+            out.set_alpha(src_alpha)
         return out
 
     @classmethod

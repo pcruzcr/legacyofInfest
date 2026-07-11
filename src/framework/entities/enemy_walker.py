@@ -56,6 +56,14 @@ class EnemyWalker(EnemyBase):
         # Load sprites
         self._load_zone_sprites(zone, 16, 12)
 
+        # --- Charge attack state ---
+        self._charge_timer: float = 0.0
+        self._charge_duration: float = 0.6
+        self._charge_cooldown: float = 0.0
+        self._charge_speed: float = alert_speed * 3.0
+        self._is_charging: bool = False
+        self._charge_damage_mult: float = 1.5
+
     def set_collision_rects(self, rects: list[pygame.Rect], one_way: list[pygame.Rect] | None = None) -> None:
         """Provide collision rects for ledge detection and Y-snapping."""
         self._collision_rects = rects
@@ -109,8 +117,30 @@ class EnemyWalker(EnemyBase):
                     break
 
     def _alert_behavior(self, dt: float) -> None:
-        """Move toward player at alert speed. Reverse at ledge edges."""
+        """Move toward player at alert speed. Use charge attack at range."""
         self._face_player()
+
+        # Charge attack logic
+        self._charge_cooldown = max(0.0, self._charge_cooldown - dt)
+        if self._is_charging:
+            self._charge_timer -= dt
+            if self._charge_timer <= 0:
+                self._is_charging = False
+                self._charge_cooldown = 2.0
+                self.damage_on_contact = 0.5
+            else:
+                self.position.x += self.facing_direction * self._charge_speed * dt
+                return
+
+        # Start charge when at medium range and cooldown ready
+        if self._player_ref is not None:
+            dx = self._player_ref.centerx - self.rect.centerx
+            dist = abs(dx)
+            if 60 <= dist <= 140 and self._charge_cooldown <= 0 and not self._is_charging:
+                self._is_charging = True
+                self._charge_timer = self._charge_duration
+                self.damage_on_contact = 1.5
+                return
 
         all_ground = self._all_ground_rects
         if all_ground:
@@ -136,4 +166,16 @@ class EnemyWalker(EnemyBase):
     def _build_hitbox(self) -> pygame.Rect:
         return self._build_hurtbox()
 
-    # Sprite rendering handled by EnemyBase.draw()
+    def draw(self, surface: pygame.Surface, camera_offset: pygame.Vector2) -> None:
+        super().draw(surface, camera_offset)
+        if self._is_charging:
+            progress = 1.0 - (self._charge_timer / self._charge_duration)
+            sx = int(self.position.x - camera_offset.x - 16)
+            sy = int(self.position.y - camera_offset.y - 20 - progress * 10)
+            w = int(32 + progress * 16)
+            h = 4
+            alpha = int(180 + 75 * (1.0 - progress))
+            warn = pygame.Surface((w, h))
+            warn.set_alpha(alpha)
+            warn.fill((255, 50, 50))
+            surface.blit(warn, (sx, sy))

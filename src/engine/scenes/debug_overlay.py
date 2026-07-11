@@ -26,7 +26,7 @@ class DebugOverlay:
         self._visible: bool = False
         self._tree_level: int = 0
         self._key_cooldown: dict[int, float] = {}
-        self._font = None
+        self._font: pygame.font.Font | None = None
 
     def _ensure_font(self) -> None:
         if self._font is not None:
@@ -156,5 +156,6 @@ class DebugOverlay:
 
         if y < settings.INTERNAL_HEIGHT - 20:
             hint = self._font.render(
-                "  Debug Console  |  [F3] toggle  |  [F4] engine  |  [F5] framework  |  [F6] tests", True, (80, 200, 255))
+                "  Debug Console  |  [F3] toggle  |  [F4] engine  |"
+                "  [F5] framework  |  [F6] tests", True, (80, 200, 255))
             surface.blit(hint, (4, settings.INTERNAL_HEIGHT - 14))

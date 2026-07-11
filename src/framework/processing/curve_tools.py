@@ -6,6 +6,7 @@ Description: CurveTools class with Bézier, B-spline, NURBS, Catmull-Rom
 spline evaluation utilities.
 """
 from __future__ import annotations
+from typing import Sequence
 
 import math
 
@@ -97,13 +98,14 @@ class CurveTools:
     @classmethod
     def sample_path(
         cls,
-        points: list[tuple[float, float]],
+        points: Sequence[tuple[float, float] | pygame.Vector2],
         t: float,
     ) -> tuple[float, float]:
         """Interpolate along a pre-sampled path. t in [0, 1]."""
         n = len(points)
         if n < 2:
-            return points[0] if n == 1 else (0.0, 0.0)
+            pt = points[0]
+            return (pt[0], pt[1]) if n == 1 else (0.0, 0.0)
         clamped_t = max(0.0, min(1.0, t))
         index = clamped_t * (n - 1)
         i0 = min(int(index), n - 2)
@@ -177,7 +179,10 @@ class CurveTools:
         return (result.x, result.y)
 
     @classmethod
-    def _eval_nurbs(cls, pts: list[pygame.Vector2], weights: list[float], knots: list[float], degree: int, t: float) -> tuple[float, float]:
+    def _eval_nurbs(
+        cls, pts: list[pygame.Vector2], weights: list[float],
+        knots: list[float], degree: int, t: float
+    ) -> tuple[float, float]:
         numerator = pygame.Vector2(0, 0)
         denominator = 0.0
         for i, p in enumerate(pts):
@@ -189,7 +194,10 @@ class CurveTools:
         return (numerator.x / denominator, numerator.y / denominator)
 
     @classmethod
-    def _eval_catmull(cls, p0: pygame.Vector2, p1: pygame.Vector2, p2: pygame.Vector2, p3: pygame.Vector2, t: float) -> pygame.Vector2:
+    def _eval_catmull(
+        cls, p0: pygame.Vector2, p1: pygame.Vector2,
+        p2: pygame.Vector2, p3: pygame.Vector2, t: float
+    ) -> pygame.Vector2:
         return (
             0.5 * (
                 (2.0 * p1)

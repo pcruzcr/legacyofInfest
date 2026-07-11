@@ -24,7 +24,7 @@ from src.engine.core.events import Events
 from src.engine.input.action_map import Action
 
 if TYPE_CHECKING:
-    from src.framework.entities.player import Player
+    from src.framework.entities.player import Player, PlayerState
     from src.engine.input.input_manager import InputManager
 
 
@@ -38,9 +38,9 @@ class PlayerStateBase(ABC):
     handles update logic, input processing, and transitions.
     """
 
-    def __init__(self, state_enum: object) -> None:
+    def __init__(self, state_enum: PlayerState) -> None:
         """Store the PlayerState enum value this state represents."""
-        self.state_enum = state_enum
+        self.state_enum: PlayerState = state_enum
 
     def enter(self, player: Player) -> None:
         """Called when entering this state. Resets animation by default."""
@@ -322,6 +322,7 @@ class IdleState(PlayerStateBase):
                 from src.framework.entities.player_states import FallingState
                 player._change_state_instance(FallingState())
 
+
 class WalkingState(PlayerStateBase):
     """Player walking on ground. Same inputs as idle but maintains velocity."""
 
@@ -459,7 +460,7 @@ class SlideState(PlayerStateBase):
     def enter(self, player: Player) -> None:
         super().enter(player)
         self._timer = player._slide_duration
-        self._slide_dir = 1.0 if abs(player.velocity.x) > 0 else float(player.facing)
+        self._slide_dir = 1.0 if abs(player.velocity.x) > 0 else float(player.facing_direction)
         player.velocity.x = self._slide_dir * player._slide_speed
         # Lower hurtbox while sliding
         orig_h = player.rect.h
@@ -1410,7 +1411,7 @@ class LedgeGrabState(PlayerStateBase):
             return
 
         # Drop down
-        if inp.move_y > 0 or self._timer > 1.5:
+        if inp.crouch_held or self._timer > 1.5:
             player._wall_side = 0
             player._can_wall_jump = False
             from src.framework.entities.player_states import FallingState

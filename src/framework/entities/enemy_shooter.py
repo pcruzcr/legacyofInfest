@@ -7,8 +7,12 @@ detected. Uses atan2 for angle calculation. Projectile is a lightweight
 sub-entity with velocity, lifetime, and collision.
 """
 from __future__ import annotations
+from typing import TYPE_CHECKING
 
 import math
+
+if TYPE_CHECKING:
+    from src.framework.entities.player import Player
 
 import pygame
 
@@ -136,6 +140,15 @@ class EnemyShooter(EnemyBase):
         self._fire_anim_timer: float = 0.0
         self._collision_rects: list[pygame.Rect] = []
 
+        # Burst fire state
+        self._burst_count: int = 0
+        self._burst_max: int = 2
+        self._burst_delay: float = 0.12
+        self._burst_timer: float = 0.0
+        self._in_burst: bool = False
+        self._use_burst: bool = False
+        self._predictive_aim: bool = True
+
         # Rect size — offset Y so the bottom aligns with spawn Y (feet on floor)
         self.rect.width = 16
         self.rect.height = 24
@@ -161,16 +174,26 @@ class EnemyShooter(EnemyBase):
                 placeholder.fill(colors.get(key, (200, 0, 200)))
                 self._sprite_frames[key] = [placeholder]
 
-    def _check_player_contact(self, player) -> None:
-        """Check body contact against the player."""
+    def _check_player_contact(self, player: Player) -> None:
+        """Check body contact against the player. Projectiles can be parried."""
         super()._check_player_contact(player)
         player_hurtbox = player.hurtbox if hasattr(player, "hurtbox") else player.rect
-        for p in self._active_projectiles:
+        for p in list(self._active_projectiles):
             if p.is_active and p.rect.colliderect(player_hurtbox):
-                player.apply_damage(p.damage, (self.position.x, self.position.y))
-                p.on_collision()
+                if getattr(player, "_parry_active", False) and getattr(player, "_parry_window", 0) > 0:
+                    from src.engine.core.event_bus import emit
+                    from src.engine.core.events import Events
+                    p._expired = True
+                    p.is_active = False
+                    player._parry_success = True
+                    player._parry_active = False
+                    player._parry_window = 0.0
+                    emit(Events.VFX_PARRY, pos=(p.position.x, p.position.y))
+                else:
+                    player.apply_damage(p.damage, (self.position.x, self.position.y))
+                    p.on_collision()
 
-    def check_player_contact(self, player) -> None:
+    def check_player_contact(self, player: Player) -> None:
         self._check_player_contact(player)
 
     def get_projectiles(self) -> list[Projectile]:
@@ -205,24 +228,45 @@ class EnemyShooter(EnemyBase):
                 self.facing_direction *= -1
 
     def _alert_behavior(self, dt: float) -> None:
-        """Aim phase: face player, aim animation, then transition to FIRING."""
+        """Aim phase: face player, aim animation, then transition to TELEGRAPHING."""
         self._face_player()
         self._shoot_cooldown -= dt
-        # Slow patrol while alert
         if self.patrol_length > 0:
             self.position.x += self.facing_direction * 20.0 * dt
         if self._shoot_cooldown <= 0 and self.fire_rate > 0:
-            self._fire_anim_timer = 0.3  # ~5 frames at 16 FPS fire animation
-            self.state = EnemyState.FIRING
+            self._telegraph_timer = self._telegraph_duration
+            self.state = EnemyState.TELEGRAPHING
 
     def _firing_behavior(self, dt: float) -> None:
-        """Fire phase: fire projectile, stay in FIRING for animation duration."""
+        """Fire phase: burst fire or single shot."""
         self._face_player()
-        self._fire_anim_timer -= dt
-        if self._fire_anim_timer <= 0:
-            self._fire()
-            self._shoot_cooldown = 1.0 / self.fire_rate if self.fire_rate > 0 else 1.0
-            self.state = EnemyState.ALERT
+        if self._in_burst:
+            self._burst_timer -= dt
+            if self._burst_timer <= 0:
+                self._fire()
+                self._burst_count += 1
+                if self._burst_count >= self._burst_max:
+                    self._in_burst = False
+                    self._burst_count = 0
+                    self._shoot_cooldown = 2.0 / self.fire_rate if self.fire_rate > 0 else 2.0
+                    self.state = EnemyState.ALERT
+                else:
+                    self._burst_timer = self._burst_delay
+                    self._telegraph_timer = self._telegraph_duration
+                    self.state = EnemyState.TELEGRAPHING
+        else:
+            self._fire_anim_timer -= dt
+            if self._fire_anim_timer <= 0:
+                self._fire()
+                if self._use_burst:
+                    self._in_burst = True
+                    self._burst_count = 1
+                    self._burst_timer = self._burst_delay
+                    self._telegraph_timer = self._telegraph_duration * 0.5
+                    self.state = EnemyState.TELEGRAPHING
+                else:
+                    self._shoot_cooldown = 1.0 / self.fire_rate if self.fire_rate > 0 else 1.0
+                    self.state = EnemyState.ALERT
 
     def _fire(self) -> bool:
         """Fire a projectile toward the player. Returns True if fired."""
@@ -263,7 +307,7 @@ class EnemyShooter(EnemyBase):
 
     def _get_animation_key(self) -> str:
         """Return animation key for non-DYING, non-HURT state."""
-        if self.state == EnemyState.FIRING:
+        if self.state in (EnemyState.TELEGRAPHING, EnemyState.FIRING):
             return "fire"
         if self.state == EnemyState.ALERT:
             return "aim"
@@ -305,7 +349,15 @@ class EnemyShooter(EnemyBase):
             pygame.draw.rect(surface, (255, 255, 255),
                              (screen_x, screen_y, self.rect.width, self.rect.height), 1)
 
-        # Draw active projectiles
+        if self.state == EnemyState.TELEGRAPHING and self._telegraph_timer > 0:
+            progress = 1.0 - (self._telegraph_timer / self._telegraph_duration)
+            radius = 14 + int(progress * 10)
+            alpha = int(200 - progress * 150)
+            warn = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+            pygame.draw.circle(warn, (255, 150, 0, alpha), (radius, radius), radius, 2)
+            pygame.draw.circle(warn, (255, 100, 0, alpha // 3), (radius, radius), radius - 1)
+            surface.blit(warn, (screen_x + self.rect.width // 2 - radius, screen_y - radius))
+
         self.clear_expired_projectiles()
         for p in self._active_projectiles:
             p.draw(surface, camera_offset)

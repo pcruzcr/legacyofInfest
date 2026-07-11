@@ -6,14 +6,17 @@ and automatic rendering.
 """
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
 import pygame
 
 from src.engine.scenes.demo_layout import (
-    COLOR_TEXT, COLOR_HIGHLIGHT, COLOR_ACCENT,
+    COLOR_TEXT, COLOR_HIGHLIGHT,
     FONT_SMALL, _get_demo_font,
 )
+
+if TYPE_CHECKING:
+    from src.engine.input.input_manager import InputManager
 
 
 class ParamPanel:
@@ -84,7 +87,7 @@ class ParamPanel:
         p = self._params[self._selected]
         p.adjust(direction)
 
-    def handle_input(self, im, dt: float) -> None:
+    def handle_input(self, im: InputManager, dt: float) -> None:
         # UP/DOWN — cycle param
         if im.is_raw_key_pressed(pygame.K_UP):
             self.cycle_selected(-1)
@@ -108,26 +111,27 @@ class ParamPanel:
 
 class _ParamDef:
     def __init__(self, name: str, default: Any, vmin: Any, vmax: Any,
-                 step: Any, on_change: Callable | None, fmt: str | None,
-                 getter: Callable, setter: Callable) -> None:
+                 step: Any, on_change: Callable[..., None] | None, fmt: str | None,
+                 getter: Callable[..., Any], setter: Callable[..., None]) -> None:
         self.name = name
         self.default = default
         self.vmin = vmin
         self.vmax = vmax
         self.step = step
         self.on_change = on_change
-        self.fmt = fmt if fmt else (lambda: str(default))
         self._getter = getter
         self._setter = setter
+        self.fmt: Callable[[], str] = lambda: str(default)
         self._value = default
-        self._setup_fmt()
+        self._setup_fmt(fmt)
 
-    def _setup_fmt(self) -> None:
-        if self.fmt is None:
-            if isinstance(self.default, float):
-                self.fmt = lambda: f"{self._value:.2f}"
-            else:
-                self.fmt = lambda: str(self._value)
+    def _setup_fmt(self, fmt: str | None) -> None:
+        if fmt:
+            self.fmt = lambda: fmt % self._value
+        elif isinstance(self.default, float):
+            self.fmt = lambda: f"{self._value:.2f}"
+        else:
+            self.fmt = lambda: str(self._value)
 
     def get(self) -> Any:
         return self._getter(self)

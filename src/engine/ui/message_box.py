@@ -20,7 +20,7 @@ class MessageBox:
         self._elapsed: float = 0.0
         self._chars_per_second: float = 30.0
         self._dismiss_on_confirm: bool = False
-        self._queue: list[dict] = []
+        self._queue: list[dict[str, object]] = []
         self._destroyed: bool = False
 
         self._font: pygame.font.Font = pygame.font.Font(None, 12)
@@ -62,9 +62,10 @@ class MessageBox:
             return
         self._show(data)
 
-    def _show(self, data: dict) -> None:
+    def _show(self, data: dict[str, object]) -> None:
         self._full_text = str(data.get("text", ""))
-        self._display_duration = float(data.get("duration", 3.0))
+        duration = data.get("duration", 3.0)
+        self._display_duration = float(duration) if isinstance(duration, (int, float)) else 3.0
         self._dismiss_on_confirm = self._display_duration <= 0
         self._text = ""
         self._char_timer = 0.0
@@ -152,7 +153,7 @@ class MessageBox:
 
         box_height = 28
         box_rect = pygame.Rect(0, 40,
-                                settings.INTERNAL_WIDTH, box_height)
+                               settings.INTERNAL_WIDTH, box_height)
         overlay = pygame.Surface((box_rect.width, box_rect.height))
         overlay.set_alpha(180)
         overlay.fill((10, 10, 30))

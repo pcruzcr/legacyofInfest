@@ -147,6 +147,10 @@ class Player(BaseEntity):
         self.special_meter_max: float = 100.0
         self._damage_mult: float = 1.0
 
+        # --- Slide state ---
+        self._slide_speed: float = 300.0
+        self._slide_duration: float = 0.4
+
         # --- Dash state ---
         self._air_dash_count: int = 0
         self._dash_timer: float = 0.0
@@ -297,6 +301,9 @@ class Player(BaseEntity):
     def heal(self, amount: float) -> None:
         from src.engine.core.difficulty import get_config
         self._health = min(settings.PLAYER_MAX_HEALTH, self._health + amount * get_config().heal_mult)
+
+    def set_health(self, amount: float) -> None:
+        self._health = max(0.0, min(settings.PLAYER_MAX_HEALTH, amount))
 
     def consume_hitbox(self) -> None:
         """

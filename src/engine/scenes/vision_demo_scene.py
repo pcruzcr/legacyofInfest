@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import pygame
 import numpy as np
@@ -38,10 +38,11 @@ from src.engine.scenes.demo_common import (
     FrameThrottle,
 )
 from src.engine.utils.asset_loader import AssetLoader
-from src.framework.processing.vision_tools import VisionTools
+from src.framework.processing.vision_tools import ComponentResult, RegionInfo, VisionTools
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
+    from src.engine.input.input_manager import InputManager
 
 
 MODE_NAMES = [
@@ -49,7 +50,7 @@ MODE_NAMES = [
     "CLOSE", "COMPONENTS", "REGIONS", "WATERSHED", "FEATURES",
 ]
 
-FEATURE_METHODS = ["hog", "lbp", "color_hist", "combined"]
+FEATURE_METHODS: list[Literal["hog", "lbp", "color_hist", "combined"]] = ["hog", "lbp", "color_hist", "combined"]
 
 
 class VisionDemoScene(BaseScene):
@@ -66,8 +67,8 @@ class VisionDemoScene(BaseScene):
 
         # Cached results
         self._cached_result: pygame.Surface | None = None
-        self._cached_regions: list | None = None
-        self._cached_comp_result: object | None = None  # ComponentResult
+        self._cached_regions: list[RegionInfo] | None = None
+        self._cached_comp_result: ComponentResult | None = None
         self._cached_watershed: pygame.Surface | None = None
         self._otsu_value: int = 128
         self._otsu_curve: list[float] = []
@@ -157,7 +158,7 @@ class VisionDemoScene(BaseScene):
         if self._param_changed or self._cached_result is None:
             self._compute_result()
 
-    def _handle_mode_input(self, im):
+    def _handle_mode_input(self, im: InputManager) -> None:
         key_left = im.is_raw_key_pressed(pygame.K_LEFT)
         key_right = im.is_raw_key_pressed(pygame.K_RIGHT)
 
@@ -236,7 +237,9 @@ class VisionDemoScene(BaseScene):
             self._error_msg = f"Error: {e}"[:60]
             self._error_timer = 2.0
 
-    def _apply_mode(self, src: pygame.Surface) -> tuple:
+    def _apply_mode(
+        self, src: pygame.Surface
+    ) -> tuple[pygame.Surface | None, list[RegionInfo] | None, ComponentResult | None, pygame.Surface | None]:
         mode = self._mode
         src_gray = _to_grayscale(src)
 
@@ -367,7 +370,7 @@ class VisionDemoScene(BaseScene):
             regions = self._cached_regions
             lines = [f"Regions found: {len(regions)}"]
             for i, ri in enumerate(regions[:3]):
-                lines.append(f"#{i+1}  A={ri.area}  C=({int(ri.centroid[0])},{int(ri.centroid[1])})  "
+                lines.append(f"#{i + 1}  A={ri.area}  C=({int(ri.centroid[0])},{int(ri.centroid[1])})  "
                              f"Rect={ri.bounding_rect.width}x{ri.bounding_rect.height}")
             for li, line in enumerate(lines):
                 rt = self._font_small.render(line, True, COLOR_GOLD)

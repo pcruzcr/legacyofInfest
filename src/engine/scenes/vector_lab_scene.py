@@ -32,7 +32,7 @@ from src.engine.scenes.demo_common import (
     draw_top_bar, draw_bottom_bar,
 )
 from src.engine.utils.asset_loader import AssetLoader
-from src.engine.utils.math_utils import vec2_length, vec2_dot, vec2_distance
+from src.engine.utils.math_utils import vec2_dot
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -236,7 +236,8 @@ class VectorLabScene(BaseScene):
 
         # Controls hint
         hint = self._font_small.render(
-            "  Arrows: Player  |  WASD: Enemy  |  TAB: mode  |  N: toggle norm  |  R: reset  |  ESC: exit", True, COLOR_TEXT)
+            "  Arrows: Player  |  WASD: Enemy  |  TAB: mode  |  N: toggle norm  |"
+            "  R: reset  |  ESC: exit", True, COLOR_TEXT)
         surface.blit(hint, (4, 50))
 
         # Status

@@ -24,7 +24,6 @@ Controls:
 """
 from __future__ import annotations
 
-import math
 from typing import TYPE_CHECKING
 
 import pygame
@@ -33,7 +32,7 @@ from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
-    COLOR_BG, COLOR_TEXT, COLOR_HIGHLIGHT, COLOR_ACCENT, COLOR_ERROR,
+    COLOR_BG, COLOR_TEXT, COLOR_HIGHLIGHT, COLOR_ACCENT,
     FONT_SMALL, FONT_MEDIUM,
     draw_top_bar, draw_bottom_bar,
 )
@@ -438,16 +437,16 @@ class ColorTheoryScene(BaseScene):
         mx = max(rn, gn, bn)
         mn = min(rn, gn, bn)
         diff = mx - mn
-        L = (mx + mn) / 2
+        L_val = (mx + mn) / 2
         steps = [
             f"Step 1:  R'={rn:.3f}  G'={gn:.3f}  B'={bn:.3f}",
             f"Step 2:  max={mx:.3f}  min={mn:.3f}  delta={diff:.3f}",
-            f"Step 3:  L={L:.3f} = (max+min)/2  (lightness)",
+            f"Step 3:  L={L_val:.3f} = (max+min)/2  (lightness)",
         ]
         if diff > 0.001:
-            s_calc = diff / (1 - abs(2 * L - 1))
+            s_calc = diff / (1 - abs(2 * L_val - 1))
             steps.append(f"Step 4:  S={s_calc:.3f} = delta/(1-|2L-1|)")
-            steps.append(f"Step 5:  S!=0 => H calculated from dominant channel (same as HSV)")
+            steps.append("Step 5:  S!=0 => H calculated from dominant channel (same as HSV)")
         else:
             steps.append("Step 4:  delta≈0  =>  S=0%  (achromatic)")
         for i, line in enumerate(steps):
@@ -456,7 +455,7 @@ class ColorTheoryScene(BaseScene):
 
     def _draw_alpha_blend_ui(self, surface: pygame.Surface, y: int) -> None:
         # Top layer color
-        lr, lg, lb = cr, cg, cb = self._r, self._g, self._b
+        lr, lg, lb = self._r, self._g, self._b
         # Bottom layer: fixed checkerboard
         bw, bh = 16, 16
         checker = pygame.Surface((160, 40))
@@ -477,7 +476,7 @@ class ColorTheoryScene(BaseScene):
 
         # Labels
         labels = [
-            f"Layer A (checker): fixed background",
+            "Layer A (checker): fixed background",
             f"Layer B (color):  RGB({lr},{lg},{lb})  alpha={self._alpha:.2f}",
         ]
         for i, line in enumerate(labels):
@@ -495,7 +494,7 @@ class ColorTheoryScene(BaseScene):
         a = self._alpha
         r, g, b = self._r, self._g, self._b
         lines = [
-            f"= ({r:3d},{g:3d},{b:3d}) * {a:.2f} + checker * {1-a:.2f}",
+            f"= ({r:3d},{g:3d},{b:3d}) * {a:.2f} + checker * {1 - a:.2f}",
         ]
         for i, line in enumerate(lines):
             txt = self._font_small.render(line, True, COLOR_TEXT)

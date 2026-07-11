@@ -181,7 +181,7 @@ class NoiseLabScene(BaseScene):
 
     def _generate_noise(self) -> None:
         w, h = 320, 180
-        noise_map = np.zeros((h, w), dtype=np.float32)
+        noise_map: np.ndarray = np.zeros((h, w), dtype=np.float32)
         rng = np.random.RandomState(self._seed)
 
         if self._mode == 0:  # VALUE NOISE
@@ -288,7 +288,7 @@ class NoiseLabScene(BaseScene):
 
         # Noise map
         if self._cached_noise is not None:
-            noise_8 = (self._cached_noise * 255).astype(np.uint8)
+            noise_8: np.ndarray = (self._cached_noise * 255).astype(np.uint8)
             noise_rgb = np.stack([noise_8] * 3, axis=-1)
             noise_surf = pygame.surfarray.make_surface(noise_rgb.transpose(1, 0, 2))
             noise_surf = pygame.transform.scale(noise_surf, (320, 180))

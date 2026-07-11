@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from typing import TYPE_CHECKING, Any
 
 import pygame
 
@@ -9,6 +10,9 @@ from src.engine.core.events import Events
 from src.framework.entities.boss_base import BossBase, BossPhase
 from src.framework.entities.enemy_base import EnemyState
 from src.framework.processing.curve_tools import CurveTools
+
+if TYPE_CHECKING:
+    from src.engine.entities.player import Player
 
 
 class BossVenado(BossBase):
@@ -34,7 +38,7 @@ class BossVenado(BossBase):
         self._elapsed: float = 0.0
         self._base_y: float = spawn_position.y
 
-        self._projectiles: list[dict] = []
+        self._projectiles: list[dict[str, Any]] = []
 
         self._attack_timers: dict[str, float] = {
             "STOMP": 0.0,
@@ -65,6 +69,9 @@ class BossVenado(BossBase):
         self._stomp_rect: pygame.Rect | None = None
         self._defeat_stage: int = -1
 
+        self._combo_queue: list[str] = []
+        self._combo_timer: float = 0.0
+
         self._load_boss_sprites("boss_venado", 48, 48)
         self.set_phases()
         self.on_enter_stage()
@@ -75,11 +82,13 @@ class BossVenado(BossBase):
                 BossPhase(phase_index=0, health_threshold=12.0,
                           attack_patterns=["STOMP", "CHARGE", "VINE_TOSS"],
                           movement_type="sine", speed_multiplier=1.0,
-                          filter_effect="sobel"),
+                          filter_effect="sobel",
+                          combos={"STOMP": ["COMBO_STOMP_CHARGE"]}),
                 BossPhase(phase_index=1, health_threshold=6.0,
                           attack_patterns=["VINE_SWEEP", "MUSHROOM_SPORE", "CHARGE"],
                           movement_type="bezier", speed_multiplier=1.5,
-                          filter_effect="sobel_x"),
+                          filter_effect="sobel_x",
+                          combos={"VINE_SWEEP": ["COMBO_SWEEP_SPORE"]}),
             ]
         super().set_phases(phases)
 
@@ -93,6 +102,8 @@ class BossVenado(BossBase):
         self._sweep_active = False
         self._stomp_rect = None
         self._filter_frame = 0
+        self._combo_queue.clear()
+        self._combo_timer = 0.0
 
     def _build_figure8_path(self) -> list[pygame.Vector2]:
         cx = self.ARENA_CENTER_X
@@ -166,22 +177,56 @@ class BossVenado(BossBase):
             self._attack_timers[k] = max(0.0, self._attack_timers[k] - dt)
 
     def _try_attack(self, pattern: str, dt: float) -> None:
+        # Process combo queue first
+        if self._combo_queue and self._combo_timer > 0:
+            self._combo_timer -= dt
+            if self._combo_timer <= 0:
+                next_combo = self._combo_queue.pop(0)
+                combo_method = getattr(self, f"_do_{next_combo.lower()}", None)
+                if combo_method:
+                    combo_method()
+                if not self._combo_queue:
+                    self._combo_timer = 0.0
+            return
         if self._attack_timers.get(pattern, 0) > 0:
             return
         player_ref = self._player_ref
         if player_ref is None:
             return
         dx = abs(player_ref.centerx - self.rect.centerx)
+        phase = self.phases[self.current_phase] if self.phases else None
+        phase_combos = phase.combos if phase else {}
         if pattern == "STOMP" and dx <= 96:
             self._do_stomp()
+            if "STOMP" in phase_combos:
+                self._queue_combo(phase_combos["STOMP"])
         elif pattern == "CHARGE" and dx >= self.ARENA_W // 2:
             self._do_charge(player_ref)
         elif pattern == "VINE_TOSS" and dx <= 200:
             self._do_vine_toss(player_ref)
         elif pattern == "VINE_SWEEP":
             self._do_vine_sweep()
+            if "VINE_SWEEP" in phase_combos:
+                self._queue_combo(phase_combos["VINE_SWEEP"])
         elif pattern == "MUSHROOM_SPORE" and dx <= 200:
             self._do_mushroom_spore()
+
+    def _queue_combo(self, combo_names: list[str]) -> None:
+        self._combo_queue = list(combo_names)
+        self._combo_timer = 0.5
+
+    def _do_combo_stomp_charge(self) -> None:
+        self._attack_timers["CHARGE"] = 0.0
+        player_ref = self._player_ref
+        if player_ref is None:
+            return
+        self._do_charge(player_ref)
+        emit(Events.BOSS_ATTACK, pattern="COMBO_STOMP_CHARGE", rect=self.rect)
+
+    def _do_combo_sweep_spore(self) -> None:
+        self._attack_timers["MUSHROOM_SPORE"] = 0.0
+        self._do_mushroom_spore()
+        emit(Events.BOSS_ATTACK, pattern="COMBO_SWEEP_SPORE", rect=self.rect)
 
     def _do_stomp(self) -> None:
         self._attack_timers["STOMP"] = self._attack_cooldowns["STOMP"]
@@ -243,6 +288,9 @@ class BossVenado(BossBase):
         if (self._charge_direction > 0 and self.position.x >= self._charge_target_x) or \
            (self._charge_direction < 0 and self.position.x <= self._charge_target_x):
             self._charge_active = False
+            if self.current_phase == 0:
+                self._do_stomp()
+                emit(Events.BOSS_ATTACK, pattern="CHARGE_STOMP", rect=self.rect)
 
     def _update_projectiles(self, dt: float) -> None:
         for proj in self._projectiles[:]:
@@ -303,7 +351,7 @@ class BossVenado(BossBase):
         if self._stomp_rect is not None and self._stomp_rect.y < self.rect.bottom:
             self._stomp_rect = None
 
-    def _check_player_contact(self, player) -> None:
+    def _check_player_contact(self, player: Player) -> None:
         super()._check_player_contact(player)
         player_hurtbox = player.hurtbox if hasattr(player, "hurtbox") else player.rect
         for proj in self._projectiles:

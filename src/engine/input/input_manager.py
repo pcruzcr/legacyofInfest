@@ -6,6 +6,8 @@ Description: Unified keyboard + controller input manager. Tracks pressed/held/re
 states for abstract Actions defined in action_map.py.
 """
 from __future__ import annotations
+from typing import Any
+
 import pygame
 
 from src.engine.input.action_map import (
@@ -32,7 +34,7 @@ class InputManager:
         self._raw_keys_pressed: set[int] = set()
 
         # Controller state
-        self._joystick: pygame.joystick.Joystick | None = None
+        self._joystick: Any | None = None
         self._init_joystick()
         self._controller_buttons_held: set[int] = set()
         self._controller_buttons_pressed: set[int] = set()
