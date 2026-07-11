@@ -45,20 +45,42 @@ class TitleScene(BaseScene):
         self._logo_y_offset: float = 0.0
         self._logo_timer: float = 0.0
 
-        self._music = assets / "title.wav"
+        title_wav = assets / "title.wav"
+        title_ogg = assets / "title.ogg"
+        if title_wav.exists():
+            self._music = title_wav
+        else:
+            self._music = title_ogg
 
-        self._font_game = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", 12)
         self._selected: int = 0
+        self._scroll_offset: int = 0
         self._options: list[str] = [
             "START", "TUTORIAL", "WORLD MAP", "INVENTORY",
             "ACHIEVEMENTS", "ACADEMIC DEMOS", "OPTIONS", "QUIT",
         ]
+        self._recalc_layout()
 
         self._particle_system = ParticleSystem()
         self._particle_timer: float = 0.0
 
+    def _recalc_layout(self) -> None:
+        h = settings.INTERNAL_HEIGHT
+        logo_bottom = h // 3 + 20
+        available = h - logo_bottom - 16
+        n = len(self._options)
+        line_h = max(11, min(18, available // max(n, 1)))
+        self._font_size = max(8, line_h - 2)
+        self._font_game = AssetLoader.load_font(
+            settings.ASSETS_DIR / "fonts" / "game.ttf",
+            self._font_size,
+        )
+        self._option_spacing = line_h
+        self._max_visible = max(1, available // line_h)
+
     def on_enter(self) -> None:
         self._selected = 0
+        self._scroll_offset = 0
+        self._recalc_layout()
         self._update_options()
         self.context.scene_manager.transition.start_fade_in(0.5)
         audio = self.audio
@@ -85,28 +107,17 @@ class TitleScene(BaseScene):
         self._particle_system.update(dt)
 
         prev_selected = self._selected
-        # Mouse hover detection
-        import pygame
-        if pygame.mouse.get_focused():
-            mx, my = pygame.mouse.get_pos()
-
-            logo_rect_bottom = settings.INTERNAL_HEIGHT // 3
-            for i, opt in enumerate(self._options):
-                ox = (settings.INTERNAL_WIDTH - len(opt) * 12) // 2
-                oy = logo_rect_bottom + 30 + i * 22
-                if ox <= mx <= ox + len(opt) * 12 and oy - 10 <= my <= oy + 10:
-                    self._selected = i
-                    if pygame.mouse.get_pressed()[0]:
-                        emit(Events.SFX_MENU_CONFIRM)
-                        self._activate_option(opt)
-                        return
-
+        n = len(self._options)
         if im.is_action_just_pressed(Action.MOVE_DOWN):
-            self._selected = (self._selected + 1) % len(self._options)
+            self._selected = (self._selected + 1) % n
         if im.is_action_just_pressed(Action.MOVE_UP):
-            self._selected = (self._selected - 1) % len(self._options)
+            self._selected = (self._selected - 1) % n
         if self._selected != prev_selected:
             emit(Events.SFX_MENU_HOVER)
+        if self._selected < self._scroll_offset:
+            self._scroll_offset = self._selected
+        elif self._selected >= self._scroll_offset + self._max_visible:
+            self._scroll_offset = self._selected - self._max_visible + 1
 
         if im.is_action_just_pressed(Action.CONFIRM):
             emit(Events.SFX_MENU_CONFIRM)
@@ -199,10 +210,28 @@ class TitleScene(BaseScene):
 
         self.context.scene_manager.transition.draw(surface)
 
-        for i, opt in enumerate(self._options):
+        start_y = logo_rect.bottom + 8
+        visible = self._options[self._scroll_offset:self._scroll_offset + self._max_visible]
+        for idx, opt in enumerate(visible):
+            i = self._scroll_offset + idx
             color = (255, 255, 100) if i == self._selected else (150, 150, 150)
             prefix = "> " if i == self._selected else "  "
             text = self._font_game.render(f"{prefix}{opt}", True, color)
             ox = (settings.INTERNAL_WIDTH - text.get_width()) // 2
-            oy = logo_rect.bottom + 20 + i * 18
-            surface.blit(text, (ox, oy))
+            oy = start_y + idx * self._option_spacing
+            if oy + self._font_size <= settings.INTERNAL_HEIGHT:
+                surface.blit(text, (ox, oy))
+
+        if self._scroll_offset > 0:
+            pygame.draw.polygon(surface, (200, 200, 200), [
+                (settings.INTERNAL_WIDTH // 2, start_y - 4),
+                (settings.INTERNAL_WIDTH // 2 - 6, start_y - 10),
+                (settings.INTERNAL_WIDTH // 2 + 6, start_y - 10),
+            ])
+        if self._scroll_offset + self._max_visible < len(self._options):
+            bot = settings.INTERNAL_HEIGHT - 2
+            pygame.draw.polygon(surface, (200, 200, 200), [
+                (settings.INTERNAL_WIDTH // 2, bot),
+                (settings.INTERNAL_WIDTH // 2 - 6, bot + 6),
+                (settings.INTERNAL_WIDTH // 2 + 6, bot + 6),
+            ])
