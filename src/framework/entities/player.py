@@ -26,6 +26,7 @@ from src.framework.entities.base_entity import BaseEntity
 
 if TYPE_CHECKING:
     from src.engine.input.input_manager import InputManager
+    from src.framework.entities.enemy_base import EnemyBase
     from src.framework.entities.player_states import PlayerStateBase
 
 
@@ -44,6 +45,13 @@ _PLAYER_SPRITE_MAP: dict[str, tuple[str, int]] = {
     "HURT": ("player_hurt.png", 4),
     "DYING": ("player_die.png", 8),
     "DASHING": ("player_walk.png", 4),
+    "PARRY": ("player_hurt.png", 4),
+    "CHARGE_ATTACK": ("player_short_attack.png", 4),
+    "DASH_ATTACK": ("player_short_attack.png", 4),
+    "WALL_SLIDE": ("player_jump.png", 2),
+    "GRAB": ("player_short_attack.png", 4),
+    "THROW": ("player_short_attack.png", 4),
+    "SLIDE": ("player_crouch.png", 4),
 }
 
 # Per-state animation playback rate (frames per second)
@@ -58,6 +66,13 @@ _PLAYER_ANIM_FPS: dict[str, float] = {
     "HURT": 12.0,
     "DYING": 10.0,
     "DASHING": 12.0,
+    "PARRY": 16.0,
+    "CHARGE_ATTACK": 14.0,
+    "DASH_ATTACK": 16.0,
+    "WALL_SLIDE": 8.0,
+    "GRAB": 14.0,
+    "THROW": 16.0,
+    "SLIDE": 14.0,
 }
 
 
@@ -73,6 +88,14 @@ class PlayerState(str, Enum):
     HURT = "HURT"
     DYING = "DYING"
     DASHING = "DASHING"
+    PARRY = "PARRY"
+    CHARGE_ATTACK = "CHARGE_ATTACK"
+    DASH_ATTACK = "DASH_ATTACK"
+    WALL_SLIDE = "WALL_SLIDE"
+    LEDGE_GRAB = "LEDGE_GRAB"
+    GRAB = "GRAB"
+    THROW = "THROW"
+    SLIDE = "SLIDE"
 
 
 class Player(BaseEntity):
@@ -117,11 +140,21 @@ class Player(BaseEntity):
         self.combo_timer: float = 0.0
         self.last_attack_type: str = ""
         self.combo_active: bool = False
+        self._combo_air_hits: int = 0
+
+        # --- Special meter ---
+        self.special_meter: float = 0.0
+        self.special_meter_max: float = 100.0
+        self._damage_mult: float = 1.0
 
         # --- Dash state ---
         self._air_dash_count: int = 0
         self._dash_timer: float = 0.0
         self._dash_cooldown: float = 0.0
+
+        # --- Air jump state ---
+        self._air_jumps_used: int = 0
+        self.gravity_multiplier: float = 1.0
 
         # --- Damage state ---
         self._health: float = settings.PLAYER_MAX_HEALTH
@@ -137,6 +170,27 @@ class Player(BaseEntity):
 
         # --- Direction ---
         self.facing_direction: int = 1  # -1 left, 1 right
+
+        # --- Parry ---
+        self._parry_window: float = 0.0
+        self._parry_active: bool = False
+        self._parry_success: bool = False
+
+        # --- Grab/Throw ---
+        self._grab_target: EnemyBase | None = None
+        self._grab_timer: float = 0.0
+
+        # --- Charge attack ---
+        self._charge_timer: float = 0.0
+        self._charge_level: int = 0
+        self._charging: bool = False
+
+        # --- Wall slide/jump ---
+        self._wall_side: int = 0
+        self._wall_slide_timer: float = 0.0
+        self._can_wall_jump: bool = False
+        self._can_ledge_grab: bool = False
+        self._ledge_grab_timer: float = 0.0
 
         # --- Rect setup ---
         self.rect = pygame.Rect(
@@ -216,17 +270,20 @@ class Player(BaseEntity):
         Combo multiplier from settings.COMBO_DAMAGE_MULT[combo_count - 1].
         """
         base = 0.0
+        dmg_mult = getattr(self, "_damage_mult", 1.0)
         if (self._state_instance.state_enum == PlayerState.SHORT_ATTACK
                 and self._active_hitbox is not None):
             base = 0.5
         elif (self._state_instance.state_enum == PlayerState.LONG_ATTACK
                 and self._active_hitbox is not None):
             base = 1.0
+        from src.engine.core.difficulty import get_config
+        cfg = get_config()
         if base > 0.0 and self.combo_active and self.combo_count > 0:
             import src.engine.core.settings as settings
             idx = min(self.combo_count - 1, len(settings.COMBO_DAMAGE_MULT) - 1)
-            return base * settings.COMBO_DAMAGE_MULT[idx]
-        return base
+            return base * settings.COMBO_DAMAGE_MULT[idx] * cfg.outgoing_damage_mult * dmg_mult
+        return base * cfg.outgoing_damage_mult * dmg_mult
 
     # ── Public methods ──────────────────────────────────────────
 
@@ -238,7 +295,8 @@ class Player(BaseEntity):
         self.velocity = pygame.Vector2(0.0, 0.0)
 
     def heal(self, amount: float) -> None:
-        self._health = min(settings.PLAYER_MAX_HEALTH, self._health + amount)
+        from src.engine.core.difficulty import get_config
+        self._health = min(settings.PLAYER_MAX_HEALTH, self._health + amount * get_config().heal_mult)
 
     def consume_hitbox(self) -> None:
         """
@@ -263,14 +321,18 @@ class Player(BaseEntity):
         if self._state_instance.state_enum == PlayerState.DYING:
             return
 
-        self._health = max(0.0, self._health - amount)
-        self._invincibility_timer = settings.PLAYER_INVINCIBILITY_DURATION
+        from src.engine.core.difficulty import get_config
+        cfg = get_config()
+        effective_damage = amount * cfg.incoming_damage_mult
+        self._health = max(0.0, self._health - effective_damage)
+        self._invincibility_timer = cfg.invincibility_duration
         self._flash_timer = 0.0
 
         # Knockback away from source
         dx = self.position.x - source_position[0]
-        self.velocity.x = knockback_force * (1 if dx >= 0 else -1)
-        self.velocity.y = -200.0
+        kb = knockback_force * cfg.knockback_mult
+        self.velocity.x = kb * (1 if dx >= 0 else -1)
+        self.velocity.y = -200.0 * cfg.knockback_mult
         self._knockback_timer = 0.3
 
         emit(
@@ -480,15 +542,27 @@ class Player(BaseEntity):
     def _apply_physics(self, dt: float) -> None:
         """Apply gravity. Movement integration happens per-axis in _resolve_collision."""
         if not self.is_grounded:
-            self.velocity.y += settings.GRAVITY * dt
-            self.velocity.y = min(
-                self.velocity.y,
-                settings.PLAYER_MAX_FALL_SPEED,
-            )
+            # Wall slide: reduced gravity when touching wall
+            gm = self.gravity_multiplier
+            if self._wall_side != 0 and self.velocity.y > 0:
+                self.velocity.y += settings.GRAVITY * gm * 0.3 * dt
+                self.velocity.y = min(
+                    self.velocity.y,
+                    settings.PLAYER_MAX_FALL_SPEED * gm * 0.5,
+                )
+                self._wall_slide_timer += dt
+            else:
+                self.velocity.y += settings.GRAVITY * gm * dt
+                self.velocity.y = min(
+                    self.velocity.y,
+                    settings.PLAYER_MAX_FALL_SPEED * gm,
+                )
+                self._wall_slide_timer = 0.0
 
         # Coyote time
         if self.is_grounded:
             self._coyote_counter = 0
+            self._wall_side = 0
         else:
             self._coyote_counter += 1
 
@@ -508,6 +582,9 @@ class Player(BaseEntity):
         w, h = self.rect.width, self.rect.height
 
         # --- X axis ---
+        self._wall_side = 0
+        self._can_wall_jump = False
+        self._can_ledge_grab = False
         self.position.x += self.velocity.x * dt
         if collision_rects:
             px = pygame.Rect(int(self.position.x), int(self.position.y), w, h)
@@ -521,13 +598,37 @@ class Player(BaseEntity):
                         continue
                     if self.velocity.x > 0:
                         px.right = tile.left
+                        self._wall_side = 1
                     elif self.velocity.x < 0:
                         px.left = tile.right
+                        self._wall_side = -1
                     else:
                         if (px.right - tile.left) < (tile.right - px.left):
                             px.right = tile.left
+                            self._wall_side = 1
                         else:
                             px.left = tile.right
+                            self._wall_side = -1
+                    if self._wall_side != 0 and not self.is_grounded:
+                        self._can_wall_jump = True
+                        # Check for ledge above: if no tile above this wall
+                        # tile, the top edge is a grabable ledge.
+                        ledge_check = pygame.Rect(
+                            tile.left if self._wall_side == 1 else tile.right - 2,
+                            tile.top - 16,
+                            max(tile.width, 2),
+                            16,
+                        )
+                        ledge_found = False
+                        for t2 in collision_rects:
+                            if ledge_check.colliderect(t2):
+                                ledge_found = True
+                                break
+                        self._can_ledge_grab = (
+                            not ledge_found
+                            and px.top <= tile.top + 8
+                            and px.top >= tile.top - 16
+                        )
                     self.velocity.x = 0.0
                     self.position.x = float(px.x)
 
@@ -551,6 +652,7 @@ class Player(BaseEntity):
                         self.velocity.y = 0.0
                         self.is_grounded = True
                         self._air_dash_count = 0
+                        self._air_jumps_used = 0
                     elif self.velocity.y < 0 and prev_top >= tile.bottom - 1:
                         # Came from below: bonk
                         py.top = tile.bottom
@@ -586,6 +688,7 @@ class Player(BaseEntity):
                 self.velocity.y = 0.0
                 self.is_grounded = True
                 self._air_dash_count = 0
+                self._air_jumps_used = 0
                 self.position.y = float(player_rect.y)
                 break
 

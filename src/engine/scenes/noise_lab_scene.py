@@ -31,6 +31,7 @@ from src.engine.scenes.demo_common import (
     COLOR_BG, COLOR_TEXT, COLOR_HIGHLIGHT, COLOR_ACCENT,
     FONT_SMALL, FONT_MEDIUM,
     draw_top_bar, draw_bottom_bar,
+    save_png,
 )
 from src.engine.utils.asset_loader import AssetLoader
 
@@ -132,6 +133,14 @@ class NoiseLabScene(BaseScene):
             self._param_changed = True
             self._status_msg = "Reset defaults"
             self._status_timer = 1.0
+
+        # S — save screenshot
+        if im.is_raw_key_pressed(pygame.K_s):
+            ss = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
+            self.draw(ss)
+            path = save_png("noise", MODE_NAMES[self._mode].lower(), ss)
+            self._status_msg = f"Saved: {path.split('/')[-1].split(chr(92))[-1]}"
+            self._status_timer = 2.0
 
         # ESC — back
         if im.is_action_just_pressed(Action.CANCEL):

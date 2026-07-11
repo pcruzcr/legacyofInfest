@@ -370,21 +370,247 @@ Expiration:
 
 ---
 
-## 6. Attributes Summary Table
+## 6. Charger Enemy — `EnemyCharger`
 
-| Attribute | EnemyWalker | EnemyFlying | EnemyShooter |
-|---|---|---|---|
-| Max health | 2.0 | 1.5 | 3.0 |
-| Contact damage | 0.50 | 0.50 | 0.25 |
-| Invincibility after hit | 0.5 s | 0.3 s | 0.4 s |
-| Death SFX | `sfx_walker_die` | `sfx_flying_die` | `sfx_shooter_die` |
-| Has projectiles | No | No | Yes |
-| Gravity affected | Yes | No | Yes (if mobile) |
-| Patrol limit (default) | 96 px | Path-based | 48 px |
+### 6.1 Description
+
+The Charger rushes the player at high speed with a wind-up telegraph. Its attack cycle has three phases: WIND_UP (red bar telegraph) → CHARGE (fast) → STUN (recovery). This enemy demonstrates:
+
+- Multi-phase attack state machine with timing
+- Telegraph indicators for player readability
+- Variable damage output depending on state
+
+### 6.2 Attributes
+
+| Attribute | Value |
+|---|---|
+| Max health | 4.0 hearts |
+| Patrol speed | 30.0 px/s |
+| Charge speed | 250.0 px/s |
+| Wind-up duration | 0.4 s |
+| Charge duration | 0.7 s |
+| Stun duration | 1.0 s |
+| Damage on contact (charge) | 1.50 hearts |
+| Damage on contact (stun) | 0.50 hearts |
+| Detection range X | 200 px |
+| Detection range Y | 48 px |
+| Hurt duration | 0.3 s |
+| Invincibility after hit | 0.4 s |
+
+### 6.3 States
+
+| State | Behavior |
+|---|---|
+| `PATROL` | Slow back-and-forth movement, turns at ±48px from origin |
+| `ALERT` | Faces player; if 40-180px away, begins WIND_UP → CHARGE → STUN cycle |
+| `WIND_UP` | 0.4s telegraph period (red bar indicator), then enters CHARGE |
+| `CHARGE` | Dashes at 250.0 px/s for 0.7s, damage 1.5, then enters STUN |
+| `STUN` | Recovers for 1.0s, damage reduced to 0.5, returns to ALERT |
+| `HURT` | Halt for 0.3s |
+| `DYING` | Play death animation |
+
+### 6.4 Charge Range
+
+The charge only triggers when the player is between 40 and 180 pixels from the Charger. This proximity check prevents charging from off-screen or when the player is already too close.
 
 ---
 
-## 7. States Reference
+## 7. Archer Enemy — `EnemyArcher`
+
+### 7.1 Description
+
+The Archer fires arcing projectiles at the player with predictive aim and variable arc height. This enemy demonstrates:
+
+- Projectile physics with gravity and arc trajectory
+- Predictive targeting (lead) based on player distance
+- Telegraphed ranged attacks
+
+### 7.2 Attributes
+
+| Attribute | Value |
+|---|---|
+| Max health | 2.5 hearts |
+| Patrol speed | 15.0 px/s |
+| Projectile speed | 90.0 px/s |
+| Projectile damage | 0.75 hearts |
+| Fire rate | 1 shot per 3.75 s |
+| Max active projectiles | 4 |
+| Projectile lifetime | 3.0 s |
+| Detection range X | 220 px |
+| Detection range Y | 80 px |
+| Contact damage | 0.25 hearts |
+
+### 7.3 States
+
+| State | Behavior |
+|---|---|
+| `PATROL` | Slow horizontal patrol, turns at ±48px from origin |
+| `ALERT` | Faces player, counts down shoot cooldown |
+| `TELEGRAPHING` | 0.4s telegraph (orange glow), then FIRING |
+| `FIRING` | Fires arcing projectile with predictive aim, sets cooldown |
+| `HURT` | Interrupt firing for 0.35s |
+| `DYING` | Play death animation |
+
+### 7.4 Predictive Aim
+
+The Archer uses a `predict_factor` of 0.3 to lead the target based on player distance. The projectile follows an arc trajectory: initial upward velocity with gravity applied each frame to create a parabolic arc.
+
+---
+
+## 8. Brute Enemy — `EnemyBrute`
+
+### 8.1 Description
+
+The Brute is a heavy melee enemy with a ground-slam shockwave attack. Large, slow, and dangerous. This enemy demonstrates:
+
+- Area-of-effect (AOE) attack with delayed damage zone
+- Multi-frame telegraph indicator (yellow rectangle)
+- Custom draw() with shockwave ellipse visual
+
+### 8.2 Attributes
+
+| Attribute | Value |
+|---|---|
+| Max health | 5.0 hearts |
+| Patrol speed | 40.0 px/s |
+| Slam cooldown | 3.0 s |
+| Telegraph duration | 0.3 s |
+| Shockwave duration | 0.4 s |
+| Shockwave damage | 1.50 hearts |
+| Contact damage | 0.50 hearts |
+| Detection range X | 120 px |
+| Detection range Y | 60 px |
+
+### 8.3 States
+
+| State | Behavior |
+|---|---|
+| `PATROL` | Slow patrol, turns at ±64px from origin |
+| `ALERT` | Faces player, counts down slam cooldown (3.0s) |
+| `TELEGRAPHING` | 0.3s telegraph with yellow warning bar, then FIRING |
+| `FIRING` | Activates shockwave for 0.4s, deals 1.5 AOE damage |
+| `HURT` | Halt for 0.35s |
+| `DYING` | Play death animation |
+
+### 8.4 Shockwave
+
+The shockwave is a damage zone (60x20 px at the Brute's feet) that remains active for 0.4 seconds. A visual ellipse (orange/yellow with alpha fade) is drawn on the ground. Damage is applied only once per shockwave via a `_shockwave_has_hit` flag.
+
+### 8.5 Telegraph Visual
+
+A yellow rectangle grows horizontally during the telegraph phase, starting from the Brute's position and expanding to indicate the AOE area.
+
+---
+
+## 9. Caster Enemy — `EnemyCaster`
+
+### 9.1 Description
+
+The Caster is a ranged magic enemy that fires homing orbs at the player. It actively maintains an ideal distance. This enemy demonstrates:
+
+- Homing projectile with acceleration
+- Distance management AI (maintain ideal combat range)
+- Telegraphed charge-up with purple circle visual
+
+### 9.2 Attributes
+
+| Attribute | Value |
+|---|---|
+| Max health | 2.0 hearts |
+| Patrol speed | 15.0 px/s |
+| Orb speed | 120.0 px/s (accelerates to cap) |
+| Orb damage | 0.75 hearts |
+| Fire rate | 1 orb per 2.5 s |
+| Max active orbs | 5 |
+| Orb lifetime | 3.0 s |
+| Ideal distance | 150 px from player |
+| Detection range X | 250 px |
+| Detection range Y | 80 px |
+
+### 9.3 States
+
+| State | Behavior |
+|---|---|
+| `PATROL` | Slow patrol, turns at ±48px from origin |
+| `ALERT` | Faces player, maintains ideal distance, counts down cooldown |
+| `TELEGRAPHING` | 0.3s telegraph (purple charging circle), then FIRING |
+| `FIRING` | Fires homing orb, resets cooldown to 2.5s |
+| `HURT` | Halt for 0.3s |
+| `DYING` | Play death animation |
+
+### 9.4 Homing Orb
+
+HomingOrb accelerates toward the player at 60.0 px/s², capped at 120.0 px/s. Each orb has a 3-second lifetime and can be parried or destroyed by collision with world geometry.
+
+### 9.5 Distance Management
+
+In ALERT state, the Caster checks distance to the player. If closer than 150px, it moves away. If farther, it moves closer. This keeps the Caster in effective combat range.
+
+---
+
+## 10. Assassin Enemy — `EnemyAssassin`
+
+### 10.1 Description
+
+The Assassin is a stealthy enemy that cloaks, flanks, and lunges at the player. It retreats after a failed strike. This enemy demonstrates:
+
+- Cloaking/stealth mechanic with alpha transparency
+- Multi-phase attack AI (flank → lunge → retreat)
+- Stateful melee attack cycle
+
+### 10.2 Attributes
+
+| Attribute | Value |
+|---|---|
+| Max health | 1.5 hearts |
+| Patrol speed | 120.0 px/s |
+| Flank speed | 80.0 px/s |
+| Lunge speed | 200.0 px/s |
+| Retreat speed | 120.0 px/s |
+| Lunge damage | 1.00 hearts |
+| Lunge duration | 0.3 s |
+| Retreat duration | 2.0 s |
+| Approach range | 40 px (triggers lunge) |
+| Detection range X | 280 px (longest) |
+| Detection range Y | 80 px |
+
+### 10.3 States
+
+| State | Behavior |
+|---|---|
+| `PATROL` | Fast patrol at 120.0 px/s, turns at ±64px from origin |
+| `ALERT` | Full FSM: flank (cloaked) → lunge → retreat (cloaked) |
+| `HURT` | Halt for 0.25s |
+| `DYING` | Play death animation |
+
+### 10.4 Cloaking
+
+When flanking or retreating, the Assassin renders with semi-transparent alpha (80). While cloaked, contact damage is suppressed. The cloak visually distinguishes stealth vs. aggressive phases.
+
+### 10.5 Attack Cycle
+
+1. **Flank**: Move opposite to player direction (cloaked) until within 40px
+2. **Lunge**: Uncloak, dash at 200 px/s toward player for 0.3s, dealing 1.0 damage
+3. **Retreat**: Cloak and move away at 120 px/s for 2.0s
+4. Repeat from step 1
+
+---
+
+## 11. Attributes Summary Table
+
+| Attribute | EnemyWalker | EnemyFlying | EnemyShooter | EnemyCharger | EnemyArcher | EnemyBrute | EnemyCaster | EnemyAssassin |
+|---|---|---|---|
+| Max health | 2.0 | 1.5 | 3.0 | 4.0 | 2.5 | 5.0 | 2.0 | 1.5 |
+| Contact damage | 0.50 | 0.50 | 0.25 | 1.50 (charge) | 0.25 | 0.50 | 0.25 | 0.25 |
+| Invincibility after hit | 0.5 s | 0.3 s | 0.4 s | 0.4 s | 0.35 s | 0.5 s | 0.35 s | 0.35 s |
+| Death SFX | `sfx_walker_die` | `sfx_flying_die` | `sfx_shooter_die` | `sfx_enemies_die_large` | `sfx_enemies_die_small` | `sfx_enemies_die_large` | `sfx_enemies_die_small` | `sfx_enemies_die_small` |
+| Has projectiles | No | No | Yes | No | Yes (arc) | No | Yes (homing) | No |
+| Gravity affected | Yes | No | Yes (if mobile) | Yes | Yes | Yes | Yes | Yes |
+| Patrol limit (default) | 96 px | Path-based | 48 px | 96 px | 96 px | 128 px | 96 px | 128 px |
+
+---
+
+## 12. States Reference
 
 All enemies share the base state names listed below. Subclasses may add additional states.
 
@@ -392,13 +618,17 @@ All enemies share the base state names listed below. Subclasses may add addition
 |---|---|---|
 | `PATROL` | All | Default movement behavior |
 | `ALERT` | All | Player detected, reactive behavior |
-| `FIRING` | Shooter only | Emitting a projectile |
+| `TELEGRAPHING` | Archer, Brute, Caster | Pre-attack warning period |
+| `FIRING` | Shooter, Archer, Caster | Emitting a projectile |
+| `WIND_UP` | Charger only | Charge telegraph phase |
+| `CHARGE` | Charger only | High-speed rush |
+| `STUN` | Charger only | Post-charge recovery |
 | `HURT` | All | Damage received, brief stun |
 | `DYING` | All | Death animation playing |
 
 ---
 
-## 8. Animation Rules
+## 13. Animation Rules
 
 ### 8.1 General Rules
 
@@ -427,7 +657,7 @@ Students creating custom enemy subclasses must:
 
 ---
 
-## 9. Collision Rules
+## 14. Collision Rules
 
 ### 9.1 Enemy vs. Solid Tiles
 
@@ -470,7 +700,7 @@ Enemies do not collide with each other. They pass through each other's rects. Th
 
 ---
 
-## 10. AI Rules
+## 15. AI Rules
 
 ### 10.1 Detection Rule
 
@@ -514,7 +744,7 @@ Students may extend enemy AI within their stage by subclassing the provided enem
 
 ---
 
-## 11. Examples
+## 16. Examples
 
 ### 11.1 Spawning a Walker via TMX
 

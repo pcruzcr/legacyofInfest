@@ -20,6 +20,7 @@ class BossPhase:
     speed_multiplier: float = 1.0
     sprite_override: str | None = None
     filter_effect: str | None = None
+    combos: dict[str, list[str]] = field(default_factory=dict)
 
 
 _APPLY_FILTER_EVERY_N_FRAMES = 5
@@ -132,7 +133,7 @@ class BossBase(EnemyBase):
         self.transition_timer = 2.5
 
     def _finish_phase_transition(self) -> None:
-        """Complete phase transition: advance phase, emit event."""
+        """Complete phase transition: advance phase, emit event, trigger VFX."""
         self.current_phase += 1
         self.is_transitioning = False
         self._invincibility_timer = 0.0
@@ -154,6 +155,19 @@ class BossBase(EnemyBase):
             phase_count=self.phase_count,
             new_max_health=self._phase_max_health,
         )
+        emit(
+            Events.VFX_ULTIMATE,
+            pos=(self.position.x, self.position.y - 20),
+        )
+        emit(
+            Events.VFX_PARRY,
+            pos=(self.position.x, self.position.y - 20),
+        )
+        emit(
+            Events.MUSIC_STINGER,
+            name=f"stinger_boss_phase_{self.current_phase}",
+            volume=0.8,
+        )
 
     def _pre_update(self, dt: float) -> bool:
         """Handle phase transitions. Return True to skip normal update."""
@@ -168,6 +182,19 @@ class BossBase(EnemyBase):
             self.phases[self.current_phase]
 
         return False
+
+    _PHASE_COLORS = [
+        (200, 100, 0),
+        (200, 0, 0),
+        (150, 0, 200),
+    ]
+
+    def _get_ambient_tint(self) -> tuple[int, int, int] | None:
+        if not self.phases or self.current_phase >= len(self.phases):
+            return None
+        if self.current_phase < len(self._PHASE_COLORS):
+            return self._PHASE_COLORS[self.current_phase]
+        return None
 
     def _apply_filter(self, frame: pygame.Surface) -> pygame.Surface:
         """Apply the current phase's filter effect to a sprite frame."""

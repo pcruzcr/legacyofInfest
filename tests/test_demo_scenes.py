@@ -37,6 +37,9 @@ from src.engine.scenes.collision_lab_scene import CollisionLabScene
 from src.engine.scenes.vector_lab_scene import VectorLabScene
 from src.engine.scenes.color_theory_scene import ColorTheoryScene
 from src.engine.scenes.curve_editor_scene import CurveEditorScene
+from src.engine.scenes.transform_lab_scene import TransformLabScene
+from src.engine.scenes.interpolation_lab_scene import InterpolationLabScene
+from src.engine.scenes.noise_lab_scene import NoiseLabScene
 from src.engine.scenes.demo_common import (
     build_default_sources,
     SourceSurfaceManager,
@@ -377,7 +380,8 @@ class TestTitleSceneIntegration:
         from src.engine.scenes.title_scene import TitleScene
         scene = TitleScene(context)
         assert "ACADEMIC DEMOS" in scene._options
-        assert scene._options.index("ACADEMIC DEMOS") == 1
+        assert "TUTORIAL" in scene._options
+        assert scene._options.index("ACADEMIC DEMOS") == 5
 
     def test_title_demo_select(self, context) -> None:
         from src.engine.scenes.title_scene import TitleScene
@@ -387,9 +391,114 @@ class TestTitleSceneIntegration:
         context.scene_manager.replace = lambda sc: mock_replace_calls.append(sc)
 
         scene = TitleScene(context)
-        scene._selected = 1
+        scene._selected = scene._options.index("ACADEMIC DEMOS")
         context.input_manager.is_action_pressed.side_effect = lambda a: a == Action.CONFIRM
 
         scene.update(1.0)
         assert len(mock_replace_calls) == 1
         assert isinstance(mock_replace_calls[0], DemoMenuScene)
+
+
+class TestTransformLabScene:
+    def test_import_succeeds(self) -> None:
+        assert TransformLabScene is not None
+
+    def test_instantiate(self, context) -> None:
+        scene = TransformLabScene(context)
+        assert scene is not None
+        assert hasattr(scene, "_mode")
+        assert scene._mode == 0
+
+    def test_on_enter_exit(self, context) -> None:
+        scene = TransformLabScene(context)
+        scene.on_enter()
+        assert scene._mode == 0
+        scene.on_exit()
+
+    def test_draw_no_crash(self, context) -> None:
+        scene = TransformLabScene(context)
+        surf = pygame.Surface((320, 224))
+        scene.draw(surf)
+        assert surf.get_at((0, 0)) is not None
+
+    def test_mode_cycle(self, context) -> None:
+        from src.engine.scenes.transform_lab_scene import MODE_NAMES
+        scene = TransformLabScene(context)
+        scene.on_enter()
+        for _ in range(len(MODE_NAMES) * 2):
+            scene._mode = (scene._mode + 1) % len(MODE_NAMES)
+        assert scene._mode < len(MODE_NAMES)
+
+    def test_reset(self, context) -> None:
+        scene = TransformLabScene(context)
+        old_tx = scene._tx
+        scene._tx = 500.0
+        scene._reset()
+        assert scene._tx == old_tx
+
+
+class TestInterpolationLabScene:
+    def test_import_succeeds(self) -> None:
+        assert InterpolationLabScene is not None
+
+    def test_instantiate(self, context) -> None:
+        scene = InterpolationLabScene(context)
+        assert scene is not None
+        assert hasattr(scene, "_mode")
+        assert scene._mode == 0
+
+    def test_on_enter_exit(self, context) -> None:
+        scene = InterpolationLabScene(context)
+        scene.on_enter()
+        assert scene._mode == 0
+        scene.on_exit()
+
+    def test_draw_no_crash(self, context) -> None:
+        scene = InterpolationLabScene(context)
+        surf = pygame.Surface((320, 224))
+        scene.draw(surf)
+        assert surf.get_at((0, 0)) is not None
+
+    def test_mode_cycle(self, context) -> None:
+        from src.engine.scenes.interpolation_lab_scene import MODE_NAMES
+        scene = InterpolationLabScene(context)
+        scene.on_enter()
+        for _ in range(len(MODE_NAMES) * 2):
+            scene._mode = (scene._mode + 1) % len(MODE_NAMES)
+        assert scene._mode < len(MODE_NAMES)
+
+    def test_animate_toggle(self, context) -> None:
+        scene = InterpolationLabScene(context)
+        scene._auto_animate = False
+        assert scene._auto_animate is False
+
+
+class TestNoiseLabScene:
+    def test_import_succeeds(self) -> None:
+        assert NoiseLabScene is not None
+
+    def test_instantiate(self, context) -> None:
+        scene = NoiseLabScene(context)
+        assert scene is not None
+        assert hasattr(scene, "_mode")
+        assert scene._mode == 0
+
+    def test_on_enter_exit(self, context) -> None:
+        scene = NoiseLabScene(context)
+        scene.on_enter()
+        assert scene._mode == 0
+        scene.on_exit()
+
+    def test_draw_no_crash(self, context) -> None:
+        scene = NoiseLabScene(context)
+        surf = pygame.Surface((320, 224))
+        scene.draw(surf)
+        assert surf.get_at((0, 0)) is not None
+
+    def test_mode_cycle(self, context) -> None:
+        from src.engine.scenes.noise_lab_scene import MODE_NAMES
+        scene = NoiseLabScene(context)
+        scene.on_enter()
+        for _ in range(len(MODE_NAMES) * 2):
+            scene._mode = (scene._mode + 1) % len(MODE_NAMES)
+        assert scene._mode < len(MODE_NAMES)
