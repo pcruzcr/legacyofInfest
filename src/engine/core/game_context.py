@@ -11,9 +11,16 @@ rather than accessed through global state.
 """
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
 from src.engine.core.clock import DeltaClock
 from src.engine.core.save_data import SaveData
 from src.engine.core.save_manager import SaveManager
+
+if TYPE_CHECKING:
+    from src.engine.audio.audio_manager import AudioManager
+    from src.engine.core.event_bus import EventBus
+    from src.engine.input.input_manager import InputManager
+    from src.engine.scene.scene_manager import SceneManager
 
 
 class GameContext:
@@ -34,10 +41,10 @@ class GameContext:
 
     def __init__(
         self,
-        input_manager,
-        audio_manager,
-        scene_manager,
-        event_bus,
+        input_manager: InputManager,
+        audio_manager: AudioManager,
+        scene_manager: SceneManager,
+        event_bus: EventBus,
         clock: DeltaClock | None = None,
     ) -> None:
         self.input_manager = input_manager
@@ -48,6 +55,10 @@ class GameContext:
         self.save_manager: SaveManager = SaveManager()
         self.pending_load: SaveData | None = None
         self.running: bool = True
+
+    @property
+    def audio(self) -> Any:
+        return self.audio_manager
 
     def quit(self) -> None:
         """Signal the game loop to exit."""

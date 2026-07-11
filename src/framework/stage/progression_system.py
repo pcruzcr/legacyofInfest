@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from src.engine.ui.hud import HUD
     from src.framework.entities.player import Player
     from src.framework.stage.stage_loader import StageData
+    from src.framework.stage.checkpoint import Checkpoint
 
 
 class ProgressionSystem:
@@ -23,12 +24,11 @@ class ProgressionSystem:
 
     def process_checkpoints(
         self, player: Player, stage: StageData,
-        checkpoints: list, hud: HUD | None,
+        checkpoints: list[Checkpoint], hud: HUD | None,
     ) -> pygame.Vector2 | None:
         checkpoint_position: pygame.Vector2 | None = None
         for cp in checkpoints:
-            if not getattr(cp, "activated", False) and cp.check_collision(player.rect):
-                cp.activated = True
+            if not cp.is_activated and cp.check_collision(player.rect):
                 checkpoint_position = pygame.Vector2(cp.rect.center)
                 self._context.event_bus.emit(Events.SFX_CHECKPOINT)
                 if player.current_health < settings.PLAYER_MAX_HEALTH:

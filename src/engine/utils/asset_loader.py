@@ -217,7 +217,7 @@ class AssetLoader:
     def load_sound(
         cls,
         path: str | Path,
-    ):
+    ) -> pygame.mixer.Sound | None:
 
         real = str(cls._resolve(path))
 
@@ -280,4 +280,3 @@ class AssetLoader:
         return frames
 
     # -------------------------------------------------------
-

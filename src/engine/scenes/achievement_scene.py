@@ -35,6 +35,9 @@ class AchievementScene(BaseScene):
         self._scroll_offset = 0
         self.context.scene_manager.transition.start_fade_in(0.5)
 
+    def on_exit(self) -> None:
+        pass
+
     def update(self, dt: float) -> None:
         im = self.input
         if im is None:

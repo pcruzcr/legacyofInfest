@@ -90,6 +90,17 @@ class EnemyFlying(EnemyBase):
         # Y-tracking offset for alert mode (persistent across strategy resets)
         self._y_track_offset: float = 0.0
 
+        # Dive bomb state
+        self._dive_timer: float = 0.0
+        self._dive_cooldown: float = 0.0
+        self._is_diving: bool = False
+        self._dive_speed: float = flight_speed * 3.0
+        self._dive_angle: float = 0.0
+
+        # Homing projectile state
+        self._spread_cooldown: float = 0.0
+        self._can_shoot: bool = False
+
         # Load sprites
         self._load_zone_sprites(zone, 14, 10)
 
@@ -115,15 +126,40 @@ class EnemyFlying(EnemyBase):
 
     def _alert_behavior(self, dt: float) -> None:
         """Delegate alert movement, then track player Y axis.
-        Uses a persistent Y offset so tracking survives strategies
-        that fully reset position.y each frame (Sine, Bezier)."""
+        Uses dive bomb and spread attack patterns."""
+        self._dive_cooldown = max(0.0, self._dive_cooldown - dt)
+        self._spread_cooldown = max(0.0, self._spread_cooldown - dt)
+
+        # Dive bomb — swoop down at player
+        if self._is_diving:
+            self._dive_timer -= dt
+            if self._dive_timer <= 0:
+                self._is_diving = False
+                self._dive_cooldown = 3.0
+            else:
+                self.position.x += math.cos(self._dive_angle) * self._dive_speed * dt
+                self.position.y += math.sin(self._dive_angle) * self._dive_speed * dt
+                return
+
+        # Start dive when above player at medium range
+        if self._player_ref is not None:
+            dx = self._player_ref.centerx - self.rect.centerx
+            dy = self._player_ref.centery - self.rect.centery
+            dist = math.sqrt(dx * dx + dy * dy)
+            if (dy < -20 and 60 <= dist <= 150 and self._dive_cooldown <= 0
+                    and not self._is_diving):
+                self._is_diving = True
+                self._dive_timer = 0.5
+                self._dive_angle = math.atan2(dy, dx)
+                return
+
         self._strategy.execute(self, dt, speed_mult=1.5)
         self._face_player()
         if self._player_ref is not None:
-            dy = self._player_ref.centery - (self.position.y + self._y_track_offset + self.rect.height / 2)
-            if abs(dy) > 4:
+            track_dy = self._player_ref.centery - (self.position.y + self._y_track_offset + self.rect.height / 2)
+            if abs(track_dy) > 4:
                 track_speed = self.flight_speed * 0.4
-                self._y_track_offset += math.copysign(track_speed * dt, dy)
+                self._y_track_offset += math.copysign(track_speed * dt, track_dy)
             self._y_track_offset *= 0.98
         else:
             self._y_track_offset *= 0.9
@@ -141,3 +177,17 @@ class EnemyFlying(EnemyBase):
 
     def _build_hitbox(self) -> pygame.Rect:
         return self._build_hurtbox()
+
+    def draw(self, surface: pygame.Surface, camera_offset: pygame.Vector2) -> None:
+        super().draw(surface, camera_offset)
+        if self._is_diving:
+            progress = 1.0 - (self._dive_timer / 0.5)
+            sx = int(self.position.x - camera_offset.x - 12)
+            sy = int(self.position.y - camera_offset.y + 20 + progress * 40)
+            radius = 12 + int(progress * 8)
+            alpha = int(200 - progress * 150)
+            warn = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+            pygame.draw.circle(warn, (255, 255, 0, alpha), (radius, radius), radius, 2)
+            if progress > 0.5:
+                pygame.draw.circle(warn, (255, 200, 0, alpha // 2), (radius, radius), radius - 2)
+            surface.blit(warn, (sx, sy))

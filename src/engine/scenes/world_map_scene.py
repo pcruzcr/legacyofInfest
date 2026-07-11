@@ -5,8 +5,10 @@ Academic Unit: N/A
 Description: World map scene with nodes connected by paths.
 """
 from __future__ import annotations
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
 import pygame
-from typing import TYPE_CHECKING
 from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
@@ -20,7 +22,7 @@ class WorldMapScene(BaseScene):
 
     def __init__(self, context: GameContext) -> None:
         super().__init__(context)
-        self._nodes: list[dict] = [
+        self._nodes: list[dict[str, Any]] = [
             {"id": "stage0", "name": "Forest", "x": 80, "y": 100, "unlocked": True},
             {"id": "stage1", "name": "Caves", "x": 200, "y": 80, "unlocked": True},
             {"id": "stage2", "name": "Ruins", "x": 320, "y": 120, "unlocked": False},
@@ -34,6 +36,9 @@ class WorldMapScene(BaseScene):
         self._font_hint = pygame.font.Font(None, 14)
 
     def on_enter(self) -> None:
+        pass
+
+    def on_exit(self) -> None:
         pass
 
     def update(self, dt: float) -> None:
@@ -59,6 +64,11 @@ class WorldMapScene(BaseScene):
                 from src.engine.core.event_bus import emit
                 from src.engine.core.events import Events
                 emit(Events.SFX_MENU_CONFIRM)
+                node_id = node["id"]
+                tmx_path = Path(settings.ASSETS_DIR / "maps" / node_id / f"{node_id}.tmx")
+                if tmx_path.exists():
+                    from src.framework.scenes.stage_scene import StageScene
+                    self.context.scene_manager.replace(StageScene(self.context, tmx_path))
         if im.is_action_just_pressed(Action.CANCEL):
             from src.engine.scenes.title_scene import TitleScene
             self.context.scene_manager.replace(TitleScene(self.context))
@@ -72,9 +82,12 @@ class WorldMapScene(BaseScene):
             nb = self._nodes[b]
             pygame.draw.line(surface, (60, 60, 80), (na["x"], na["y"]), (nb["x"], nb["y"]), 2)
         for idx, node in enumerate(self._nodes):
-            color = (200, 200, 100) if idx == self._selected else ((80, 160, 80) if node.get("unlocked") else (80, 80, 80))
+            color = (200, 200, 100) if idx == self._selected \
+                else ((80, 160, 80) if node.get("unlocked") else (80, 80, 80))
             pygame.draw.circle(surface, color, (node["x"], node["y"]), 10)
-            label = self._font_name.render(node["name"], True, (220, 220, 220) if node.get("unlocked") else (120, 120, 120))
+            label = self._font_name.render(
+                node["name"], True,
+                (220, 220, 220) if node.get("unlocked") else (120, 120, 120))
             surface.blit(label, (node["x"] + 16, node["y"] - 8))
         hint = self._font_hint.render("[ESC] Back  [ARROWS] Navigate  [ENTER] Select", True, (120, 120, 130))
         surface.blit(hint, ((settings.INTERNAL_WIDTH - hint.get_width()) // 2, settings.INTERNAL_HEIGHT - 18))

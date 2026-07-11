@@ -21,7 +21,7 @@ class TransitionManager:
         self._fade_alpha: int = 0
         self._fade_duration: float = FADE_DURATION
         self._fade_timer: float = 0.0
-        self._direction: int = 0
+        self._direction: int | str = 0
         self._active: bool = False
         self._has_been_active: bool = False
         self._mode: str = "fade"
@@ -47,7 +47,7 @@ class TransitionManager:
         self._active = True
         self._has_been_active = True
 
-    def start_wipe(self, direction: str = "left", duration: float = 0.4, old_surface: pygame.Surface | None = None) -> None:
+    def start_wipe(self, direction: str = "left", duration: float = 0.4, old_surface: pygame.Surface | None = None) -> None:  # noqa: E501
         """Wipe transition: old scene slides away revealing new scene beneath.
         direction: 'left', 'right', 'up', 'down'"""
         self._mode = "wipe"
@@ -59,7 +59,7 @@ class TransitionManager:
         self._has_been_active = True
         self._old_surface = old_surface
 
-    def start_slide(self, direction: str = "left", duration: float = 0.4, old_surface: pygame.Surface | None = None) -> None:
+    def start_slide(self, direction: str = "left", duration: float = 0.4, old_surface: pygame.Surface | None = None) -> None:  # noqa: E501
         """Slide transition: entire old scene slides out to reveal new scene.
         direction: 'left', 'right', 'up', 'down'"""
         self._mode = "slide"
@@ -71,7 +71,7 @@ class TransitionManager:
         self._has_been_active = True
         self._old_surface = old_surface
 
-    def start_circle(self, expanding: bool = True, duration: float = 0.4, old_surface: pygame.Surface | None = None) -> None:
+    def start_circle(self, expanding: bool = True, duration: float = 0.4, old_surface: pygame.Surface | None = None) -> None:  # noqa: E501
         """Circle wipe: expanding or contracting circle reveal.
         expanding=True: circle grows from center. expanding=False: circle shrinks to center."""
         self._mode = "circle"

@@ -19,7 +19,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable
 
-import math
 import pygame
 
 from src.engine.core import settings
@@ -236,7 +235,6 @@ class InterpolationLabScene(BaseScene):
 
         # Draw curve
         pts = []
-        prev_pt = None
         for i in range(gw + 1):
             t = i / gw
             v = func(t)

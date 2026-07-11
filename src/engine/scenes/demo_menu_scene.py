@@ -34,7 +34,6 @@ VISIBLE_ITEMS = (VISIBLE_Y_END - VISIBLE_Y_START) // ITEM_H
 class DemoMenuScene(BaseScene):
     def __init__(self, context: GameContext) -> None:
         super().__init__(context)
-        registry = get_registry()
         self._options: list[tuple[str, str, str]] = [
             ("Unit II", "Vectors & Transformations", "vector"),
             ("Unit II/III", "2D Transformations", "transform"),
@@ -52,9 +51,15 @@ class DemoMenuScene(BaseScene):
         self._scroll_offset: int = 0
         self._error_msg: str = ""
         self._error_timer: float = 0.0
-        self._font_large = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_LARGE)
-        self._font_medium = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_MEDIUM)
-        self._font_small = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_SMALL)
+        self._font_large = AssetLoader.load_font(
+            settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_LARGE
+        )
+        self._font_medium = AssetLoader.load_font(
+            settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_MEDIUM
+        )
+        self._font_small = AssetLoader.load_font(
+            settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_SMALL
+        )
 
     def on_enter(self) -> None:
         self._selected = 0
@@ -78,6 +83,7 @@ class DemoMenuScene(BaseScene):
             if self._error_timer <= 0:
                 self._error_msg = ""
 
+        prev_selected = self._selected
         if im.is_raw_key_pressed(pygame.K_DOWN):
             if self._selected < len(self._options) - 1:
                 self._selected += 1
@@ -89,8 +95,15 @@ class DemoMenuScene(BaseScene):
                 self._selected -= 1
                 if self._selected < self._scroll_offset:
                     self._scroll_offset = max(self._scroll_offset - 1, 0)
+        if self._selected != prev_selected:
+            from src.engine.core.event_bus import emit
+            from src.engine.core.events import Events
+            emit(Events.SFX_MENU_HOVER)
 
         if im.is_action_just_pressed(Action.CONFIRM):
+            from src.engine.core.event_bus import emit
+            from src.engine.core.events import Events
+            emit(Events.SFX_MENU_CONFIRM)
             key = self._options[self._selected][2]
             registry = get_registry()
             scene = registry.build(key, self.context)
@@ -101,6 +114,9 @@ class DemoMenuScene(BaseScene):
                 self._error_timer = 3.0
 
         if im.is_action_just_pressed(Action.CANCEL):
+            from src.engine.core.event_bus import emit
+            from src.engine.core.events import Events
+            emit(Events.SFX_MENU_CANCEL)
             from src.engine.scenes.title_scene import TitleScene
             self.context.scene_manager.replace(TitleScene(self.context))
 

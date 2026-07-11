@@ -7,12 +7,9 @@ clock, event bus, input, audio, and scene management.
 """
 from __future__ import annotations
 import os
-
-import pygame
 import sys
 
-# Force nearest-neighbor scaling for pixel-art crispness (no bilinear from SDL2)
-os.environ["SDL_HINT_RENDER_SCALE_QUALITY"] = "0"
+import pygame
 
 from src.engine.core import settings
 from src.engine.core.clock import DeltaClock
@@ -22,9 +19,12 @@ from src.engine.input.input_manager import InputManager
 from src.engine.audio.audio_manager import AudioManager
 from src.engine.scene.scene_manager import SceneManager
 from src.framework.entities.entity_factory import ensure_registered
-from src.engine.scene.transition_manager import TransitionManager
+from src.engine.scenes.transition_manager import TransitionManager
 from src.engine.scenes.debug_overlay import DebugOverlay
 from src.engine.scenes.scene_registry import register_demo_scenes
+
+# Force nearest-neighbor scaling for pixel-art crispness (no bilinear from SDL2)
+os.environ["SDL_HINT_RENDER_SCALE_QUALITY"] = "0"
 
 
 class App:
@@ -135,5 +135,7 @@ class App:
                 traceback.print_exc()
                 self.context.quit()
 
+        self.scene_manager.cleanup()
+        self.event_bus.clear()
         pygame.quit()
         sys.exit(0)

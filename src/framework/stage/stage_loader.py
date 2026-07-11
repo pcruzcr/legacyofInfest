@@ -7,6 +7,7 @@ a complete stage environment: tile layers, entity spawn points, collision
 zones, checkpoints, and the next-trigger portal.
 """
 from __future__ import annotations
+from typing import Any
 
 import logging
 from dataclasses import dataclass, field
@@ -17,10 +18,15 @@ import pyscroll
 import pyscroll.data
 from pytmx.util_pygame import load_pygame
 
+from typing import TYPE_CHECKING
+
 from src.engine.core import settings
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework import FrameworkUsageError
 from src.framework.entities.base_entity import BaseEntity
+
+if TYPE_CHECKING:
+    from src.framework.stage.checkpoint import Checkpoint
 
 
 @dataclass
@@ -62,7 +68,7 @@ class StageData:
     collision_rects: list[pygame.Rect] = field(default_factory=list)
     one_way_rects: list[pygame.Rect] = field(default_factory=list)
     entity_list: list[BaseEntity] = field(default_factory=list)
-    checkpoints: list = field(default_factory=list)
+    checkpoints: list[Checkpoint] = field(default_factory=list)
     spawn_point: pygame.Vector2 = field(default_factory=lambda: pygame.Vector2(0, 0))
     next_trigger: pygame.Rect | None = None
     background_layers: list[pygame.Surface] = field(default_factory=list)
@@ -195,7 +201,7 @@ class StageLoader:
             elif obj_type in cls._entity_registry:
                 entity_class = cls._entity_registry[obj_type]
                 # Convert TMX string props to expected types
-                cleaned = {}
+                cleaned: dict[str, Any] = {}
                 for k, v in props.items():
                     if k in ("zone",):
                         cleaned[k] = int(v)
@@ -219,7 +225,7 @@ class StageLoader:
                     raise FrameworkUsageError("Checkpoint missing required property: checkpoint_id")
                 rect = pygame.Rect(obj.x, obj.y, obj.width or 24, obj.height or 32)
                 from src.framework.stage.checkpoint import Checkpoint
-                cp = Checkpoint(pygame.Vector2(obj.x, obj.y), rect, props["checkpoint_id"])
+                cp = Checkpoint(pygame.Vector2(obj.x, obj.y), rect, int(props["checkpoint_id"]))
                 stage.checkpoints.append(cp)
 
             elif obj_type == "NextTrigger":

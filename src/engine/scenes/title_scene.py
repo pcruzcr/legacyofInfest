@@ -47,9 +47,12 @@ class TitleScene(BaseScene):
 
         self._music = assets / "title.wav"
 
-        self._font_game = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", 14)
+        self._font_game = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", 12)
         self._selected: int = 0
-        self._options: list[str] = ["START", "TUTORIAL", "WORLD MAP", "INVENTORY", "ACHIEVEMENTS", "ACADEMIC DEMOS", "OPTIONS", "QUIT"]
+        self._options: list[str] = [
+            "START", "TUTORIAL", "WORLD MAP", "INVENTORY",
+            "ACHIEVEMENTS", "ACADEMIC DEMOS", "OPTIONS", "QUIT",
+        ]
 
         self._particle_system = ParticleSystem()
         self._particle_timer: float = 0.0
@@ -86,8 +89,7 @@ class TitleScene(BaseScene):
         import pygame
         if pygame.mouse.get_focused():
             mx, my = pygame.mouse.get_pos()
-            mx = int(mx * settings.INTERNAL_WIDTH / self.context.display.get_width()) if hasattr(self.context, 'display') else mx
-            my = int(my * settings.INTERNAL_HEIGHT / self.context.display.get_height()) if hasattr(self.context, 'display') else my
+
             logo_rect_bottom = settings.INTERNAL_HEIGHT // 3
             for i, opt in enumerate(self._options):
                 ox = (settings.INTERNAL_WIDTH - len(opt) * 12) // 2
@@ -95,8 +97,6 @@ class TitleScene(BaseScene):
                 if ox <= mx <= ox + len(opt) * 12 and oy - 10 <= my <= oy + 10:
                     self._selected = i
                     if pygame.mouse.get_pressed()[0]:
-                        from src.engine.core.event_bus import emit
-                        from src.engine.core.events import Events
                         emit(Events.SFX_MENU_CONFIRM)
                         self._activate_option(opt)
                         return
@@ -106,19 +106,13 @@ class TitleScene(BaseScene):
         if im.is_action_just_pressed(Action.MOVE_UP):
             self._selected = (self._selected - 1) % len(self._options)
         if self._selected != prev_selected:
-            from src.engine.core.event_bus import emit
-            from src.engine.core.events import Events
             emit(Events.SFX_MENU_HOVER)
 
         if im.is_action_just_pressed(Action.CONFIRM):
-            from src.engine.core.event_bus import emit
-            from src.engine.core.events import Events
             emit(Events.SFX_MENU_CONFIRM)
             self._activate_option(self._options[self._selected])
 
         if im.is_action_just_pressed(Action.CANCEL):
-            from src.engine.core.event_bus import emit
-            from src.engine.core.events import Events
             emit(Events.SFX_MENU_CANCEL)
             self.context.quit()
 
@@ -169,18 +163,20 @@ class TitleScene(BaseScene):
 
     def _has_seen_tutorial(self) -> bool:
         from pathlib import Path
-        import json, os
+        import json
+        import os
         flag_path = Path(os.environ.get("APPDATA", "~/.config")) / "legacyofinfest" / "tutorial_seen.json"
         try:
             with open(flag_path) as f:
                 data = json.load(f)
-                return data.get("seen", False)
+                return bool(data.get("seen", False))
         except (FileNotFoundError, json.JSONDecodeError):
             return False
 
     def _mark_tutorial_seen(self) -> None:
         from pathlib import Path
-        import json, os
+        import json
+        import os
         flag_path = Path(os.environ.get("APPDATA", "~/.config")) / "legacyofinfest" / "tutorial_seen.json"
         flag_path.parent.mkdir(parents=True, exist_ok=True)
         with open(flag_path, "w") as f:
@@ -190,8 +186,6 @@ class TitleScene(BaseScene):
         audio = self.audio
         if audio is not None:
             audio.stop_music()
-
-
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.blit(self._background, (0, 0))
@@ -210,5 +204,5 @@ class TitleScene(BaseScene):
             prefix = "> " if i == self._selected else "  "
             text = self._font_game.render(f"{prefix}{opt}", True, color)
             ox = (settings.INTERNAL_WIDTH - text.get_width()) // 2
-            oy = logo_rect.bottom + 30 + i * 22
+            oy = logo_rect.bottom + 20 + i * 18
             surface.blit(text, (ox, oy))

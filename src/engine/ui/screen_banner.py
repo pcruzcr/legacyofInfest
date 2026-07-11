@@ -98,7 +98,7 @@ class ScreenBanner:
         else:
             top_half = pygame.Rect(bx, by, bw, self._banner_height // 2)
             bottom_half = pygame.Rect(bx, by + self._banner_height // 2,
-                                       bw, self._banner_height // 2)
+                                      bw, self._banner_height // 2)
             pygame.draw.rect(surface, (40, 30, 60), top_half)
             pygame.draw.rect(surface, (60, 40, 80), bottom_half)
             pygame.draw.rect(surface, (100, 80, 140), (bx, by, bw, self._banner_height), 1)

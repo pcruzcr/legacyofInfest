@@ -2,12 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import pygame
-
 from src.engine.core.events import Events
 
 if TYPE_CHECKING:
-    from src.engine.core.event_bus import EventBus
     from src.engine.core.game_context import GameContext
     from src.framework.entities.player import Player
     from src.framework.stage.stage_loader import StageData

@@ -68,7 +68,7 @@ def ease_out_elastic(t: float) -> float:
         return 0.0
     if t > 1.0 - 1e-10:
         return 1.0
-    return 2.0 ** (-10.0 * t) * math.sin((t * 10.0 - 0.75) * 2.094) + 1.0
+    return float(2.0 ** (-10.0 * t) * math.sin((t * 10.0 - 0.75) * 2.094) + 1.0)
 
 
 def ease_in_sine(t: float) -> float:

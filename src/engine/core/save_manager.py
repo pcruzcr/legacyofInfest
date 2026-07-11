@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from src.engine.core.save_data import MAX_SLOTS, SAVE_VERSION, SaveData
+from src.engine.core.save_data import MAX_SLOTS, SaveData
 
 
 class SaveManager:

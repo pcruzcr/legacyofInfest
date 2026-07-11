@@ -13,19 +13,26 @@ from enum import Enum
 
 import pygame
 
+from typing import TYPE_CHECKING
+
 from src.engine.core import settings
 from src.engine.core.event_bus import emit
 from src.engine.core.events import Events
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.entities.base_entity import BaseEntity
 
+if TYPE_CHECKING:
+    from src.engine.entities.player import Player
+
 
 class EnemyState(str, Enum):
     """All possible enemy states as defined in 05_ENEMY_SPEC.md §7."""
     PATROL = "PATROL"
     ALERT = "ALERT"
+    TELEGRAPHING = "TELEGRAPHING"
     FIRING = "FIRING"
     HURT = "HURT"
+    LAUNCHED = "LAUNCHED"
     DYING = "DYING"
 
 
@@ -52,8 +59,10 @@ class EnemyBase(BaseEntity):
         super().__init__(spawn_position)
 
         # --- Health ---
-        self.max_health: float = max_health
-        self.current_health: float = max_health
+        from src.engine.core.difficulty import get_config
+        scaled_max = max_health * get_config().enemy_health_mult
+        self.max_health: float = scaled_max
+        self.current_health: float = scaled_max
         self.is_alive: bool = True
 
         # --- Combat ---
@@ -65,6 +74,12 @@ class EnemyBase(BaseEntity):
         self._death_timer: float = 0.0
         self._hurt_duration: float = hurt_duration
         self._invincibility_duration: float = invincibility_duration
+        self._knockback_velocity: pygame.Vector2 = pygame.Vector2(0.0, 0.0)
+        self._hitstun_type: str = "light"  # light, heavy, launch
+        self._telegraph_timer: float = 0.0
+        self._telegraph_duration: float = 0.4
+        self._ground_y: float = spawn_position.y
+        self._is_airborne: bool = False
 
         # --- Detection ---
         self.detection_range_x: float = detection_range_x
@@ -87,6 +102,9 @@ class EnemyBase(BaseEntity):
         # --- Invincibility flash ---
         self._flash_counter: float = 0.0
         self._flash_visible: bool = True
+        self._was_alive: bool = True
+        self._hit_tint_color: tuple[int, int, int] = (255, 255, 255)  # Tint during hitstun
+        self._hit_tint_timer: float = 0.0
 
         # --- Sprite ---
         self._sprite_zone: int = 0
@@ -119,10 +137,22 @@ class EnemyBase(BaseEntity):
             return
         self._update_invincibility(dt)
         self._run_state_machine(dt)
+        self._apply_knockback(dt)
         self._update_rects()
         self._tick_cooldowns(dt)
         self._advance_animation(dt)
         self._post_update(dt)
+
+    def _apply_knockback(self, dt: float) -> None:
+        """Apply knockback velocity and decelerate."""
+        if self._knockback_velocity.length_squared() > 0:
+            self.position.x += self._knockback_velocity.x * dt
+            self.position.y += self._knockback_velocity.y * dt
+            self._knockback_velocity.x *= 0.85
+            self._knockback_velocity.y *= 0.85
+            if abs(self._knockback_velocity.x) < 1.0 and abs(self._knockback_velocity.y) < 1.0:
+                self._knockback_velocity.x = 0.0
+                self._knockback_velocity.y = 0.0
 
     def _pre_update(self, dt: float) -> bool:
         """
@@ -198,6 +228,19 @@ class EnemyBase(BaseEntity):
         screen_x = int(self.position.x - camera_offset.x)
         screen_y = int(self.position.y - camera_offset.y)
 
+        # Telegraph warning indicator
+        if self.state == EnemyState.TELEGRAPHING:
+            elapsed = self._telegraph_duration - self._telegraph_timer
+            radius = 4 + int(elapsed * 40)
+            alpha = 128 + int(127 * (1.0 - self._telegraph_timer / self._telegraph_duration))
+            if int(pygame.time.get_ticks() / 80) % 2 == 0:
+                warning_surf = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+                pygame.draw.circle(warning_surf, (255, 50, 50, alpha), (radius, radius), radius, 2)
+                surface.blit(
+                    warning_surf,
+                    (screen_x + self.rect.width // 2 - radius,
+                     screen_y + self.rect.height // 2 - radius))
+
         # Try sprite rendering
         anim_key = self._get_animation_state()
         frames = self._sprite_frames.get(anim_key)
@@ -210,6 +253,13 @@ class EnemyBase(BaseEntity):
             oy = self.rect.height - self._sprite_fh
             surface.blit(frame, (screen_x + ox, screen_y + oy))
             return
+
+        # Hit reaction tint overlay
+        if self._hit_tint_timer > 0:
+            tint = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
+            tint_alpha = int(min(255, (self._hit_tint_timer / max(self._hurt_timer * 0.6, 0.01)) * 120))
+            tint.fill((*self._hit_tint_color, tint_alpha))
+            surface.blit(tint, (screen_x, screen_y))
 
         # Fallback placeholder
         pygame.draw.rect(
@@ -236,6 +286,10 @@ class EnemyBase(BaseEntity):
         """
         Apply damage to the enemy. No-op if invincibility is active
         or if already dying. Emits ENEMY_DIED on death.
+        Hitstun type depends on damage amount:
+          light  (< 0.8)  -> short stun, small knockback
+          heavy  (>= 0.8) -> long stun, big knockback
+          launch (>= 1.5) -> airborne knockback
         """
         if self._invincibility_timer > 0:
             return
@@ -244,10 +298,42 @@ class EnemyBase(BaseEntity):
 
         self.current_health -= damage
         self._invincibility_timer = self._invincibility_duration
-        self._hurt_timer = self._hurt_duration
+
+        # Determine hitstun type
+        if damage >= 1.5:
+            self._hitstun_type = "launch"
+            self._hurt_timer = 0.5
+            self._hit_tint_color = (255, 80, 80)
+        elif damage >= 0.8:
+            self._hitstun_type = "heavy"
+            self._hurt_timer = 0.35
+            self._hit_tint_color = (255, 200, 80)
+        else:
+            self._hitstun_type = "light"
+            self._hurt_timer = 0.15
+            self._hit_tint_color = (255, 255, 200)
+        self._hit_tint_timer = self._hurt_timer * 0.6
+
+        # Knockback direction from source
+        dx = self.position.x - source_position[0]
+        dir_x = 1 if dx >= 0 else -1
+        kb_power = 80.0 if self._hitstun_type == "light" else 150.0
+        if self._hitstun_type == "launch":
+            self._knockback_velocity.x = dir_x * kb_power * 0.5
+            self._knockback_velocity.y = -250.0
+        elif self._hitstun_type == "heavy":
+            self._knockback_velocity.x = dir_x * kb_power
+            self._knockback_velocity.y = -100.0
+        else:
+            self._knockback_velocity.x = dir_x * kb_power
+            self._knockback_velocity.y = -30.0
 
         if self.current_health <= 0:
             self._die()
+        elif self._hitstun_type == "launch":
+            self._ground_y = self.position.y
+            self._is_airborne = True
+            self.state = EnemyState.LAUNCHED
         else:
             self.state = EnemyState.HURT
 
@@ -336,15 +422,20 @@ class EnemyBase(BaseEntity):
         else:
             self._flash_visible = True
             self._flash_counter = 0.0
+        if self._hit_tint_timer > 0:
+            self._hit_tint_timer -= dt
+        else:
+            self._hit_tint_timer = 0.0
 
     @abstractmethod
     def _build_hitbox(self) -> pygame.Rect:
         """Returns LOCAL-space rect for the enemy's active damage zone."""
 
-    def _check_player_contact(self, player) -> None:
+    def _check_player_contact(self, player: Player) -> None:
         """
         Check if this enemy's hurtbox overlaps the player's hurtbox.
         If so, deal contact damage (respecting cooldown).
+        Respects player parry — parried enemies get deflected.
         player: Player — imported locally to avoid circular imports.
         """
         if not self.is_alive:
@@ -353,6 +444,23 @@ class EnemyBase(BaseEntity):
             return
         player_hurtbox = player.hurtbox if hasattr(player, "hurtbox") else player.rect
         if self.hurtbox.colliderect(player_hurtbox):
+            # Parry check — deflect the enemy instead of taking damage
+            if getattr(player, "_parry_active", False) and getattr(player, "_parry_window", 0) > 0:
+                dx = self.position.x - player.position.x
+                dir_x = 1 if dx >= 0 else -1
+                self._knockback_velocity.x = dir_x * 200.0
+                self._knockback_velocity.y = -150.0
+                self._hurt_timer = 0.3
+                if self.state not in (EnemyState.DYING, EnemyState.LAUNCHED):
+                    self.state = EnemyState.HURT
+                player._parry_success = True
+                player._parry_active = False
+                player._parry_window = 0.0
+                from src.engine.core.event_bus import emit
+                from src.engine.core.events import Events
+                emit(Events.VFX_PARRY, pos=(self.position.x, self.position.y))
+                self._contact_cooldown = 0.3
+                return
             player.apply_damage(
                 self.damage_on_contact,
                 self.rect.center,
@@ -360,7 +468,7 @@ class EnemyBase(BaseEntity):
             )
             self._contact_cooldown = 0.3
 
-    def check_player_contact(self, player) -> None:
+    def check_player_contact(self, player: Player) -> None:
         """Deprecated alias for _check_player_contact."""
         self._check_player_contact(player)
 
@@ -404,11 +512,24 @@ class EnemyBase(BaseEntity):
     def _run_state_machine(self, dt: float) -> None:
         """
         Evaluate current state and dispatch to the appropriate behavior.
-        Priority: DYING > HURT > FIRING > ALERT > PATROL
+        Priority: DYING > LAUNCHED > HURT > TELEGRAPHING > FIRING > ALERT > PATROL
         Deaggro hysteresis: once ALERT, player must leave detection range
         + deaggro_margin to return to PATROL.
         """
         if self.state == EnemyState.DYING:
+            return
+
+        if self.state == EnemyState.LAUNCHED:
+            self._knockback_velocity.y += 600.0 * dt  # gravity during launch
+            if self.position.y >= self._ground_y:
+                self.position.y = self._ground_y
+                self._knockback_velocity.y = 0.0
+                self._knockback_velocity.x = 0.0
+                if self._hurt_timer <= 0:
+                    if self._check_detection_range():
+                        self.state = EnemyState.ALERT
+                    else:
+                        self.state = EnemyState.PATROL
             return
 
         if self.state == EnemyState.HURT:
@@ -417,6 +538,13 @@ class EnemyBase(BaseEntity):
                     self.state = EnemyState.ALERT
                 else:
                     self.state = EnemyState.PATROL
+            return
+
+        if self.state == EnemyState.TELEGRAPHING:
+            self._telegraph_timer -= dt
+            if self._telegraph_timer <= 0:
+                self.state = EnemyState.FIRING
+                self._firing_behavior(dt)
             return
 
         if self.state == EnemyState.FIRING:

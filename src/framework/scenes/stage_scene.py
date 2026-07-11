@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable
 
 import pygame
 
@@ -36,6 +36,8 @@ from src.engine.core.achievements import AchievementSystem
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
+    from src.framework.stage.checkpoint import Checkpoint
+    from src.framework.stage.stage_loader import StageData
 
 
 class StageScene(BaseScene):
@@ -43,13 +45,13 @@ class StageScene(BaseScene):
         self._tutorial_shown: set[str] = set()
         super().__init__(context)
         self._tmx_path = tmx_path
-        self._stage_data = None
+        self._stage_data: StageData | None = None
         self._player: Player | None = None
         self._camera: Camera = Camera()
         self._hud: HUD | None = None
         self._msg_box: MessageBox | None = None
         self._banner: ScreenBanner | None = None
-        self._checkpoints: list = []
+        self._checkpoints: list[Checkpoint] = []
         self._checkpoint_reached: int | None = None
         self._checkpoint_position: pygame.Vector2 | None = None
         self._stage_complete: bool = False
@@ -87,20 +89,25 @@ class StageScene(BaseScene):
         if "move" not in self._tutorial_shown:
             self._tutorial.show("move", duration=6.0)
             self._tutorial_shown.add("move")
+
     def on_player_landed(self) -> None:
         if "landed" not in self._tutorial_shown and hasattr(self, '_player') and self._player is not None:
             if abs(self._player.velocity.x) > 0:
                 self._tutorial.show("attack", duration=5.0)
                 self._tutorial_shown.add("landed")
+
     def on_enemy_died(self, enemy: EnemyBase) -> None:
         if "enemy_kill" not in self._tutorial_shown:
             self._tutorial.show("advanced", duration=5.0)
             self._tutorial_shown.add("enemy_kill")
+
     def on_next_trigger_entered(self) -> None:
         if "checkpoint" not in self._tutorial_shown:
             self._tutorial.show("checkpoint", duration=3.0)
             self._tutorial_shown.add("checkpoint")
-    def on_debug_toggle(self, enabled: bool) -> None: ...
+
+    def on_debug_toggle(self, enabled: bool) -> None:
+        ...
 
     def on_enter(self) -> None:
         self._stage_data = StageLoader.load(self._tmx_path)
@@ -112,7 +119,7 @@ class StageScene(BaseScene):
         pending = self.context.pending_load
         if pending is not None and pending.stage_id == self._stage_data.stage_id:
             self._player.set_spawn(pygame.Vector2(pending.checkpoint_x, pending.checkpoint_y))
-            self._player._health = min(pending.health, pending.max_health)
+            self._player.set_health(pending.health)
             self._checkpoint_position = pygame.Vector2(pending.checkpoint_x, pending.checkpoint_y)
             self.context.pending_load = None
 
@@ -130,6 +137,8 @@ class StageScene(BaseScene):
                 )
 
         self._checkpoints = list(self._stage_data.checkpoints)
+        for cp in self._checkpoints:
+            cp._event_bus = self.context.event_bus
         self._checkpoint_position = None
         self._stage_complete = False
         self._game_over = False
@@ -226,31 +235,15 @@ class StageScene(BaseScene):
         for sl in self._stage_lights:
             self._lighting.add_light(sl)
 
-        self._vfx_handlers: dict[str, object] = {}
+        self._vfx_handlers: dict[str, Callable[..., None]] = {}
 
-        def _on_hit_connect(**data):
-            pos = data.get("pos", [0, 0])
-            dmg = data.get("damage", 1.0)
-            self._particle_system.get_emitter("hits").emit(
-                pos[0], pos[1], HitEffects.get_for_damage(dmg),
-            )
-            self._damage_numbers.add(pos[0], pos[1], str(int(dmg)))
-
-        def _on_enemy_hit(**data):
-            pos = data.get("pos", [0, 0])
-            dmg = data.get("damage", 1.0)
-            self._particle_system.get_emitter("blood").emit(
-                pos[0], pos[1], HitEffects.get_blood_for_damage(dmg),
-            )
-            self._camera.apply_shake(amplitude=1.5, duration=0.06)
-
-        def _on_enemy_died(**data):
+        def _on_enemy_died(**data: Any) -> None:
             pos = data.get("position", (0, 0))
             self._particle_system.get_emitter("death").emit(
                 float(pos[0]), float(pos[1]), HitEffects.DEATH,
             )
 
-        def _on_hit_connect(**data):
+        def _on_hit_connect(**data: Any) -> None:
             pos = data.get("pos", [0, 0])
             dmg = data.get("damage", 1.0)
             self._particle_system.get_emitter("hits").emit(
@@ -258,7 +251,7 @@ class StageScene(BaseScene):
             )
             self._damage_numbers.add(pos[0], pos[1], str(int(dmg)))
 
-        def _on_enemy_hit(**data):
+        def _on_enemy_hit(**data: Any) -> None:
             pos = data.get("pos", [0, 0])
             dmg = data.get("damage", 1.0)
             self._particle_system.get_emitter("blood").emit(
@@ -266,7 +259,7 @@ class StageScene(BaseScene):
             )
             self._camera.apply_shake(amplitude=1.5, duration=0.06)
 
-        def _on_player_damaged(**data):
+        def _on_player_damaged(**data: Any) -> None:
             src = data.get("source", (0, 0))
             self._particle_system.get_emitter("blood").emit(
                 float(src[0]), float(src[1]), HitEffects.BLOOD_BIG,
@@ -276,7 +269,7 @@ class StageScene(BaseScene):
             health_pct = self._player.current_health / max(settings.PLAYER_MAX_HEALTH, 1)
             self._post_processing.set_damage_vignette(max(0, 0.5 - health_pct * 0.5))
 
-        def _on_vfx_parry(**data):
+        def _on_vfx_parry(**data: Any) -> None:
             pos = data.get("pos", (0, 0))
             self._particle_system.get_emitter("parry").emit(
                 float(pos[0]), float(pos[1]), HitEffects.PARRY,
@@ -285,20 +278,20 @@ class StageScene(BaseScene):
             self._post_processing.flash((100, 200, 255), alpha=120, duration=0.1)
             self._post_processing.set_bloom(0.3, duration=0.15)
 
-        def _on_vfx_charge(**data):
+        def _on_vfx_charge(**data: Any) -> None:
             pos = data.get("pos", (0, 0))
             self._particle_system.get_emitter("charge").emit(
                 float(pos[0]), float(pos[1]), HitEffects.CHARGE_GLOW,
             )
 
-        def _on_vfx_slam(**data):
+        def _on_vfx_slam(**data: Any) -> None:
             pos = data.get("pos", (0, 0))
             self._particle_system.get_emitter("slam").emit(
                 float(pos[0]), float(pos[1]), HitEffects.SPARK_BIG,
             )
             self._camera.apply_shake(amplitude=4.0, duration=0.2)
 
-        def _on_vfx_ultimate(**data):
+        def _on_vfx_ultimate(**data: Any) -> None:
             pos = data.get("pos", (0, 0))
             self._particle_system.get_emitter("parry").emit(
                 float(pos[0]), float(pos[1]), HitEffects.SPARK_BIG,
@@ -310,13 +303,14 @@ class StageScene(BaseScene):
         self.context.event_bus.subscribe(Events.SFX_HIT_CONNECT, _on_hit_connect)
         self.context.event_bus.subscribe(Events.SFX_ENEMY_HIT, _on_enemy_hit)
         self.context.event_bus.subscribe(Events.ENEMY_DIED, _on_enemy_died)
-        def _on_player_died(**data):
+
+        def _on_player_died(**data: Any) -> None:
             pos = data.get("pos", [0, 0])
             self._particle_system.get_emitter("death").emit(
                 float(pos[0]), float(pos[1]), HitEffects.get_blood_for_damage(10),
             )
+            import random
             for _ in range(3):
-                import random
                 self._particle_system.get_emitter("death").emit(
                     float(pos[0]) + random.uniform(-8, 8),
                     float(pos[1]) + random.uniform(-8, 8),
@@ -332,7 +326,7 @@ class StageScene(BaseScene):
         self.context.event_bus.subscribe(Events.VFX_SLAM, _on_vfx_slam)
         self.context.event_bus.subscribe(Events.VFX_ULTIMATE, _on_vfx_ultimate)
 
-        def _on_music_stinger(**data):
+        def _on_music_stinger(**data: Any) -> None:
             name = data.get("name", "stinger_boss_phase")
             vol = data.get("volume", 0.8)
             self.context.audio.play_stinger(name, volume=vol)
@@ -341,13 +335,15 @@ class StageScene(BaseScene):
         self._vfx_handlers[Events.SFX_ENEMY_HIT] = _on_enemy_hit
         self._vfx_handlers[Events.ENEMY_DIED] = _on_enemy_died
         self._vfx_handlers[Events.PLAYER_DAMAGED] = _on_player_damaged
+        self._vfx_handlers[Events.PLAYER_DIED] = _on_player_died
+        self._vfx_handlers[Events.MUSIC_STINGER] = _on_music_stinger
         self._vfx_handlers[Events.VFX_PARRY] = _on_vfx_parry
         self._vfx_handlers[Events.VFX_CHARGE] = _on_vfx_charge
         self._vfx_handlers[Events.VFX_SLAM] = _on_vfx_slam
         self._vfx_handlers[Events.VFX_ULTIMATE] = _on_vfx_ultimate
 
         import random
-        self._sfx_handlers: dict[str, object] = {}
+        self._sfx_handlers: dict[str, Callable[..., None]] = {}
         sfx_map = {
             Events.SFX_PLAYER_JUMP: "sfx_player_jump",
             Events.SFX_PLAYER_LAND: "sfx_player_land",
@@ -371,8 +367,8 @@ class StageScene(BaseScene):
         }
         self._sfx_names = sfx_map
         for evt, sname in sfx_map.items():
-            def _make_handler(n):
-                def handler(**d):
+            def _make_handler(n: str) -> Any:
+                def handler(**d: Any) -> None:
                     vol = 1.0
                     if "damage" in d:
                         vol = 0.8 + random.random() * 0.4
@@ -446,6 +442,7 @@ class StageScene(BaseScene):
             self.context.event_bus.unsubscribe(evt, handler)
         self._vfx_handlers.clear()
         self.on_enter()
+        assert self._hud is not None
         self._hud.current_time = saved_time
         self._hud.is_countdown = saved_time_limit > 0
         if cp is not None:
@@ -628,7 +625,7 @@ class StageScene(BaseScene):
                 (cp.rect.centerx, cp.rect.centery)
                 for cp in self._checkpoints
             ]
-            activated = {i for i, cp in enumerate(self._checkpoints) if cp.activated}
+            activated = {i for i, cp in enumerate(self._checkpoints) if cp.is_activated}
             self._minimap.update(
                 player_pos=(player.position.x, player.position.y),
                 player_dir=player.facing_direction,

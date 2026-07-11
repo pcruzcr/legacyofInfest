@@ -9,7 +9,7 @@ color histogram), contours, and bounding boxes.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, cast
 
 import cv2
 import numpy as np
@@ -97,7 +97,9 @@ class VisionTools:
         if min_area < 0:
             raise ValueError(f"VisionTools.filter_components_by_area: min_area must be >= 0, got {min_area}")
         if max_area <= min_area:
-            raise ValueError(f"VisionTools.filter_components_by_area: max_area must be > min_area, got max={max_area}, min={min_area}")
+            raise ValueError(
+                f"VisionTools.filter_components_by_area: "
+                f"max_area must be > min_area, got max={max_area}, min={min_area}")
         filtered = np.zeros_like(result.label_array)
         sizes: dict[int, int] = {}
         for label_id, area in result.component_sizes.items():
@@ -106,7 +108,9 @@ class VisionTools:
                 sizes[label_id] = area
         num = len(sizes)
         label_surface = cls._label_array_to_color_surface(filtered, num + 1)
-        return ComponentResult(label_array=filtered, num_components=num, component_sizes=sizes, label_surface=label_surface)
+        return ComponentResult(
+            label_array=filtered, num_components=num,
+            component_sizes=sizes, label_surface=label_surface)
 
     @classmethod
     def analyze_regions(cls, mask_surface: pygame.Surface) -> list[RegionInfo]:
@@ -139,7 +143,8 @@ class VisionTools:
         cls._validate_surface(surface)
         arr = cls._to_gray_array(surface)
         blurred = cv2.GaussianBlur(arr, (5, 5), 1.0)
-        dist = cv2.distanceTransform(blurred, cv2.DIST_L2, 5)
+        _, binary = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        dist = cv2.distanceTransform(binary, cv2.DIST_L2, 5)
         _, sure_fg = cv2.threshold(dist, 0.7 * dist.max(), 255, cv2.THRESH_BINARY)
         sure_fg = sure_fg.astype(np.uint8)
         unknown = cv2.subtract(cv2.dilate(blurred, np.ones((3, 3), np.uint8), iterations=2), sure_fg)
@@ -152,7 +157,10 @@ class VisionTools:
         return (label_surface, markers)
 
     @classmethod
-    def extract_features(cls, surface: pygame.Surface, method: Literal["hog", "lbp", "color_hist", "combined"] = "hog") -> np.ndarray:
+    def extract_features(
+        cls, surface: pygame.Surface,
+        method: Literal["hog", "lbp", "color_hist", "combined"] = "hog"
+    ) -> np.ndarray:
         cls._validate_surface(surface)
         if method == "hog":
             return cls.extract_hog(surface)
@@ -164,9 +172,11 @@ class VisionTools:
             hog_feat = cls.extract_hog(surface)
             lbp_feat = cls.extract_lbp(surface)
             hist_feat = cls.extract_color_histogram(surface)
-            return np.concatenate([hog_feat, lbp_feat, hist_feat])
+            return cast(np.ndarray, np.concatenate([hog_feat, lbp_feat, hist_feat]))
         else:
-            raise ValueError(f"VisionTools.extract_features: unknown method '{method}'. Use 'hog', 'lbp', 'color_hist', or 'combined'.")
+            raise ValueError(
+                f"VisionTools.extract_features: unknown method '{method}'. "
+                f"Use 'hog', 'lbp', 'color_hist', or 'combined'.")
 
     @classmethod
     def extract_hog(cls, surface: pygame.Surface) -> np.ndarray:
@@ -180,7 +190,7 @@ class VisionTools:
             cells_per_block=(2, 2),
             block_norm="L2-Hys",
         )
-        return features
+        return np.asarray(features) if isinstance(features, np.ndarray) else np.array(features)
 
     @classmethod
     def extract_lbp(cls, surface: pygame.Surface) -> np.ndarray:
@@ -189,7 +199,7 @@ class VisionTools:
         gray = cls._to_gray_array(resized)
         lbp = local_binary_pattern(gray, 8, 1, method="uniform")
         hist, _ = np.histogram(lbp.ravel(), bins=256, range=(0, 256), density=True)
-        return hist
+        return np.asarray(hist) if isinstance(hist, np.ndarray) else np.array(hist)
 
     @classmethod
     def extract_color_histogram(cls, surface: pygame.Surface, bins: int = 256) -> np.ndarray:
@@ -201,7 +211,7 @@ class VisionTools:
         for c in range(3):
             hist, _ = np.histogram(arr[:, :, c].ravel(), bins=bins, range=(0, 255), density=True)
             result.append(hist)
-        return np.concatenate(result)
+        return cast(np.ndarray, np.concatenate(result))
 
     @classmethod
     def find_contours(cls, mask_surface: pygame.Surface) -> list[np.ndarray]:
@@ -238,14 +248,14 @@ class VisionTools:
     def _to_gray_array(cls, surface: pygame.Surface) -> np.ndarray:
         arr = pygame.surfarray.array3d(surface)
         gray = (0.299 * arr[:, :, 0] + 0.587 * arr[:, :, 1] + 0.114 * arr[:, :, 2]).astype(np.uint8)
-        return gray.T
+        return np.asarray(gray.T) if isinstance(gray, np.ndarray) else np.array(gray.T)
 
     @classmethod
     def _to_binary_array(cls, mask_surface: pygame.Surface) -> np.ndarray:
         arr = pygame.surfarray.array3d(mask_surface)
         gray = (0.299 * arr[:, :, 0] + 0.587 * arr[:, :, 1] + 0.114 * arr[:, :, 2]).astype(np.uint8)
         _, binary = cv2.threshold(gray.T, 127, 255, cv2.THRESH_BINARY)
-        return binary
+        return np.asarray(binary)
 
     @classmethod
     def _label_array_to_color_surface(cls, label_array: np.ndarray, num_labels: int) -> pygame.Surface:
@@ -280,7 +290,7 @@ class VisionTools:
         if kernel_size < 1:
             raise ValueError(f"VisionTools: kernel_size must be >= 1, got {kernel_size}")
         binary = cls._to_binary_array(surface)
-        kernel = np.ones((kernel_size, kernel_size), np.uint8)
+        kernel: np.ndarray = np.ones((kernel_size, kernel_size), np.uint8)
         result = cv2.morphologyEx(binary, op, kernel)
         rgb = np.stack([result, result, result], axis=-1)
         return pygame.surfarray.make_surface(rgb.transpose(1, 0, 2))

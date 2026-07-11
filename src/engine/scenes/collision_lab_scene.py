@@ -29,8 +29,7 @@ from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
     COLOR_BG, COLOR_TEXT, COLOR_HIGHLIGHT, COLOR_ACCENT, COLOR_ERROR,
-    COLOR_TOP_BAR_BG, COLOR_BOTTOM_BAR_BG, COLOR_DIVIDER,
-    FONT_SMALL, FONT_MEDIUM, FONT_LARGE,
+    FONT_SMALL, FONT_MEDIUM,
     draw_top_bar, draw_bottom_bar,
     save_png,
 )
@@ -200,7 +199,6 @@ class CollisionLabScene(BaseScene):
     def _resolve_y_first(self, dt: float) -> None:
         """Y-first resolution (the BUG from GAP-005)."""
         w, h = PLAYER_W, PLAYER_H
-        player_rect = pygame.Rect(int(self._px), int(self._py), w, h)
 
         # --- Y first ---
         prev_bottom = self._py + h
@@ -378,7 +376,7 @@ class CollisionLabScene(BaseScene):
             f"Player pos: ({self._px:.0f}, {self._py:.0f})",
             f"Velocity: ({self._vx:.1f}, {self._vy:.1f})",
             f"Grounded: {self._is_grounded}",
-            f"",
+            "",
         ]
 
         if self._mode == 1:
@@ -386,7 +384,7 @@ class CollisionLabScene(BaseScene):
                 "BUG: Y-first resolution treats ANY overlapping rect as floor.",
                 "Walk right into the wall -> wall is treated as floor ->",
                 "player teleports UP tile by tile -> passes through wall.",
-                f"",
+                "",
                 self._collision_info,
             ]
         elif self._mode == 2:
@@ -395,7 +393,7 @@ class CollisionLabScene(BaseScene):
                 "Then Y resolved with prev_bottom check:",
                 "  landing when prev_bottom <= tile.top + 1",
                 "  bonk when prev_top >= tile.bottom - 1",
-                f"",
+                "",
                 self._collision_info,
             ]
         else:

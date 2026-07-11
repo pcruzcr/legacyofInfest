@@ -30,6 +30,9 @@ class InventoryScene(BaseScene):
     def on_enter(self) -> None:
         pass
 
+    def on_exit(self) -> None:
+        pass
+
     def update(self, dt: float) -> None:
         im = self.input
         if im is None:
@@ -53,8 +56,8 @@ class InventoryScene(BaseScene):
         surface.fill((20, 20, 30))
         title = self._font_title.render("INVENTORY", True, (255, 255, 240))
         surface.blit(title, ((settings.INTERNAL_WIDTH - title.get_width()) // 2, 20))
-        items = self._inventory.items
-        if not items:
+        item_ids = list(self._inventory.items.keys())
+        if not item_ids:
             empty = self._font_item.render("No items collected yet.", True, (160, 160, 160))
             surface.blit(empty, ((settings.INTERNAL_WIDTH - empty.get_width()) // 2, 96))
         else:
@@ -62,7 +65,7 @@ class InventoryScene(BaseScene):
             slot_size = 48
             start_x = (settings.INTERNAL_WIDTH - cols * slot_size) // 2
             start_y = 70
-            for idx, item in enumerate(items):
+            for idx, item_id in enumerate(item_ids):
                 col = idx % cols
                 row = idx // cols
                 sx = start_x + col * slot_size
@@ -70,18 +73,11 @@ class InventoryScene(BaseScene):
                 rect = pygame.Rect(sx + 4, sy + 4, slot_size - 8, slot_size - 8)
                 color_bg = (60, 60, 90) if idx == self._selected_slot else (40, 40, 60)
                 pygame.draw.rect(surface, color_bg, rect, border_radius=4)
-                if item.get("icon"):
-                    try:
-                        icon = pygame.image.load(item["icon"]).convert_alpha()
-                        icon = pygame.transform.scale(icon, (32, 32))
-                        surface.blit(icon, (sx + 8, sy + 8))
-                    except Exception:
-                        pass
-                name = item.get("name", "Item")
+                defn = self._inventory.get_def(item_id)
+                name = defn.name if defn else item_id
                 label = self._font_item.render(name[:10], True, (220, 220, 220))
                 surface.blit(label, (sx + 4, sy + slot_size - 14))
-                desc = item.get("description", "")
-                if desc and idx == self._selected_slot:
-                    desc_surf = self._font_desc.render(desc, True, (180, 180, 180))
+                if defn and defn.description and idx == self._selected_slot:
+                    desc_surf = self._font_desc.render(defn.description, True, (180, 180, 180))
                     dx = (settings.INTERNAL_WIDTH - desc_surf.get_width()) // 2
                     surface.blit(desc_surf, (dx, settings.INTERNAL_HEIGHT - 40))

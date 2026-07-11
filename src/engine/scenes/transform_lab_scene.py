@@ -271,10 +271,10 @@ class TransformLabScene(BaseScene):
             rad = math.radians(self._angle)
             c, s = math.cos(rad), math.sin(rad)
             return [
-                f"Rot then Translate:",
+                "Rot then Translate:",
                 f"  tx={self._tx:.0f}  ty={self._ty:.0f}",
                 f"  cos={c:.2f}  sin={s:.2f}  angle={self._angle:.0f}deg",
-                f"  [Composite matrix not shown — see paper]",
+                "  [Composite matrix not shown — see paper]",
             ]
         return []
 

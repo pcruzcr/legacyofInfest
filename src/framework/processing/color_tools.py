@@ -118,18 +118,24 @@ class ColorTools:
     @classmethod
     def alpha_blend(cls, src: pygame.Surface, dst: pygame.Surface, alpha: float) -> pygame.Surface:
         if src.get_size() != dst.get_size():
-            raise ValueError(f"ColorTools.alpha_blend: surfaces must be same size, got {src.get_size()} and {dst.get_size()}")
+            raise ValueError(
+                f"ColorTools.alpha_blend: surfaces must be same size,"
+                f" got {src.get_size()} and {dst.get_size()}")
         alpha = max(0.0, min(1.0, alpha))
-        src_arr = pygame.surfarray.array3d(src).astype(np.float32)
-        dst_arr = pygame.surfarray.array3d(dst).astype(np.float32)
+        src_arr: np.ndarray = pygame.surfarray.array3d(src).astype(np.float32)
+        dst_arr: np.ndarray = pygame.surfarray.array3d(dst).astype(np.float32)
         result = (src_arr * alpha + dst_arr * (1.0 - alpha)).astype(np.uint8)
-        return pygame.surfarray.make_surface(result)
+        out = pygame.surfarray.make_surface(result)
+        src_alpha = src.get_alpha()
+        if src_alpha is not None:
+            out.set_alpha(src_alpha)
+        return out
 
     @classmethod
     def apply_tint(cls, surface: pygame.Surface, color: tuple[int, int, int]) -> pygame.Surface:
         surf = surface.copy()
         r, g, b = color
-        arr = pygame.surfarray.array3d(surf).astype(np.float32)
+        arr: np.ndarray = pygame.surfarray.array3d(surf).astype(np.float32)
         arr[:, :, 0] = (arr[:, :, 0] * r / 255.0).clip(0, 255)
         arr[:, :, 1] = (arr[:, :, 1] * g / 255.0).clip(0, 255)
         arr[:, :, 2] = (arr[:, :, 2] * b / 255.0).clip(0, 255)

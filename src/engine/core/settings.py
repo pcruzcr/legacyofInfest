@@ -11,12 +11,13 @@ INTERNAL_WIDTH: int = 320
 INTERNAL_HEIGHT: int = 224
 TARGET_FPS: int = 60
 _raw_scale = os.environ.get("LOI_DISPLAY_SCALE", "3")
-DISPLAY_SCALE: int = int(_raw_scale) if _raw_scale.isdigit() else 3
+DISPLAY_SCALE: int = max(1, int(_raw_scale) if _raw_scale.isdigit() else 3)
 TILE_SIZE: int = 16
 
-ASSETS_DIR: Path = Path("assets")
-STAGES_DIR: Path = Path("src/stages")
-STUDENT_TEMPLATES_DIR: Path = Path("student_templates")
+_PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent.parent.parent
+ASSETS_DIR: Path = _PROJECT_ROOT / "assets"
+STAGES_DIR: Path = _PROJECT_ROOT / "src/stages"
+STUDENT_TEMPLATES_DIR: Path = _PROJECT_ROOT / "student_templates"
 
 PLAYER_MAX_HEALTH: float = 5.0
 GRAVITY: float = 800.0

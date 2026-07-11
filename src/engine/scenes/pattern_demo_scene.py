@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Literal
 
 import pygame
 import numpy as np
@@ -49,13 +49,14 @@ from src.framework.processing.pattern_recognition_tools import (
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
+    from src.engine.input.input_manager import InputManager
 
 
 MODE_NAMES = [
     "INFERENCE", "FEATURE_COMPARE", "CLASS_GRID", "CONFUSION", "PIPELINE", "TREE_VIEW",
 ]
 
-FEATURE_METHODS = ["hog", "lbp", "color_hist", "combined"]
+FEATURE_METHODS: list[Literal["hog", "lbp", "color_hist", "combined"]] = ["hog", "lbp", "color_hist", "combined"]
 
 CLASS_COLORS: list[tuple[int, int, int]] = [
     (255, 80, 80), (80, 255, 80), (80, 160, 255), (255, 200, 80),
@@ -99,7 +100,7 @@ class PatternDemoScene(BaseScene):
 
         # TREE_VIEW state
         self._tree_depth: int = 2
-        self._tree_structure: list[dict] | None = None
+        self._tree_structure: list[dict[str, object]] | None = None
 
         # Save / error / notifications
         self._save_msg: str = ""
@@ -257,7 +258,7 @@ class PatternDemoScene(BaseScene):
         if self._param_changed or self._frame_count % 3 == 0:
             self._compute_result()
 
-    def _handle_text_input(self, im):
+    def _handle_text_input(self, im: InputManager) -> None:
         if im.is_raw_key_pressed(pygame.K_RETURN):
             self._text_input_active = False
             filename = self._text_buffer.strip()
@@ -403,7 +404,7 @@ class PatternDemoScene(BaseScene):
                 self._dataset_samples.append((feat, f"class_{i % 3}"))
         self._class_grid_generated = True
 
-    def _render_inference(self, probas: dict, label: str, method: str,
+    def _render_inference(self, probas: dict[str, float], label: str, method: str,
                           features: np.ndarray) -> pygame.Surface:
         surf = pygame.Surface(PANEL_SIZE)
         surf.fill((5, 5, 15))
@@ -514,7 +515,6 @@ class PatternDemoScene(BaseScene):
         # Try matplotlib report first
         if self._model is not None and ev and "confusion_matrix" in ev:
             try:
-                _classes = list(getattr(self._model, "classes", []))
                 report_surf = PatternRecognitionTools.generate_training_report(
                     self._model, figure_size=(8, 6), dpi=80,
                 )
@@ -627,7 +627,7 @@ class PatternDemoScene(BaseScene):
             return s
 
     def _draw_feature_bars(self, surf: pygame.Surface, feat: np.ndarray,
-                           x: int, y: int, w: int, h: int, color: tuple) -> None:
+                           x: int, y: int, w: int, h: int, color: tuple[int, int, int]) -> None:
         n = min(len(feat), w)
         max_val = max(abs(feat).max(), 1e-6)
         bar_w = max(w // n, 1)
@@ -714,7 +714,7 @@ class PatternDemoScene(BaseScene):
             self._tree_structure = None
 
     @staticmethod
-    def _extract_sklearn_tree(tree_model) -> list[dict] | None:
+    def _extract_sklearn_tree(tree_model: Any) -> list[dict[str, Any]] | None:
         tree = tree_model.tree_
         n_nodes = tree.node_count
         features = tree.feature
@@ -763,7 +763,7 @@ class PatternDemoScene(BaseScene):
         surf.blit(depth_label, (4, PANEL_H - 12))
         return surf
 
-    def _draw_tree_nodes(self, surf: pygame.Surface, nodes: list[dict],
+    def _draw_tree_nodes(self, surf: pygame.Surface, nodes: list[dict[str, Any]],
                          node_id: int, x: int, w: int, depth: int) -> None:
         if node_id < 0 or node_id >= len(nodes) or depth > self._tree_depth:
             return
@@ -835,7 +835,7 @@ class PatternDemoScene(BaseScene):
         surface.blit(text, (4, BOTTOM_BAR_Y + 2))
 
 
-def _get_printable_keys(im) -> list[tuple[int, str]]:
+def _get_printable_keys(im: InputManager) -> list[tuple[int, str]]:
     result = []
     for key, char in _KEY_CHAR_MAP.items():
         if im.is_raw_key_pressed(key):

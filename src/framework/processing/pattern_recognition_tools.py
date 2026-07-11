@@ -8,6 +8,7 @@ matplotlib-based training report generation (confusion matrix,
 per-class accuracy, feature importance).
 """
 from __future__ import annotations
+from typing import Any
 
 import io
 import logging
@@ -40,7 +41,7 @@ class TrainedModel:
     feature_method: str
     feature_length: int
     training_accuracy: float
-    metadata: dict = field(default_factory=dict)
+    metadata: dict[str, object] = field(default_factory=dict)
 
 
 @dataclass
@@ -57,19 +58,19 @@ class PatternRecognitionTools:
     _model_registry: dict[str, TrainedModel] = {}
 
     @classmethod
-    def extract_hog(cls, surface) -> np.ndarray:
+    def extract_hog(cls, surface: pygame.Surface) -> np.ndarray:
         return VisionTools.extract_hog(surface)
 
     @classmethod
-    def extract_lbp(cls, surface) -> np.ndarray:
+    def extract_lbp(cls, surface: pygame.Surface) -> np.ndarray:
         return VisionTools.extract_lbp(surface)
 
     @classmethod
-    def extract_color_histogram(cls, surface, bins: int = 256) -> np.ndarray:
+    def extract_color_histogram(cls, surface: pygame.Surface, bins: int = 256) -> np.ndarray:
         return VisionTools.extract_color_histogram(surface, bins)
 
     @classmethod
-    def extract_combined(cls, surface) -> np.ndarray:
+    def extract_combined(cls, surface: pygame.Surface) -> np.ndarray:
         return VisionTools.extract_features(surface, method="combined")
 
     @classmethod
@@ -79,7 +80,7 @@ class PatternRecognitionTools:
         y: np.ndarray,
         model_type: str,
         feature_method: str = "hog",
-        **kwargs,
+        **kwargs: Any,
     ) -> TrainedModel:
         cls._validate_dataset(X, y)
         X = X.astype(np.float32)
@@ -213,16 +214,16 @@ class PatternRecognitionTools:
     def predict(
         cls,
         model: TrainedModel,
-        surface,
+        surface: pygame.Surface,
         method: str | None = None,
     ) -> str:
         cls._validate_model(model)
         method = method or model.feature_method
-        features = VisionTools.extract_features(surface, method=method)
+        features = VisionTools.extract_features(surface, method=method)  # type: ignore[arg-type]
         return cls.classify(features, model)
 
     @classmethod
-    def _build_model(cls, model_type: str, **kwargs) -> object:
+    def _build_model(cls, model_type: str, **kwargs: Any) -> Any:
         if model_type == "knn":
             return KNeighborsClassifier(**kwargs)
         elif model_type == "tree":
@@ -294,7 +295,6 @@ class PatternRecognitionTools:
             import matplotlib
             matplotlib.use("Agg")
             import matplotlib.pyplot as plt
-            import matplotlib.ticker as mticker
         except ImportError:
             logger.warning("matplotlib not installed — training report unavailable")
             return None

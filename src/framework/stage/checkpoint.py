@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pygame
 
-from src.engine.core.event_bus import emit
+from src.engine.core.event_bus import EventBus, emit
 from src.engine.core.events import Events
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.entities.base_entity import BaseEntity
@@ -24,12 +24,14 @@ CHECKPOINT_SPRITE_PATH: str = "assets/sprites/shared/checkpoint.png"
 class Checkpoint(BaseEntity):
     """Single-activation checkpoint zone."""
 
-    def __init__(self, position: pygame.Vector2, rect: pygame.Rect, checkpoint_id: int) -> None:
+    def __init__(self, position: pygame.Vector2, rect: pygame.Rect, checkpoint_id: int,
+                 event_bus: EventBus | None = None) -> None:
         super().__init__(position)
         self.rect = pygame.Rect(rect)
         self._checkpoint_id: int = checkpoint_id
         self._activated: bool = False
         self.layer = 3
+        self._event_bus: EventBus | None = event_bus
         self._sprite: pygame.Surface | None = None
         try:
             self._sprite = AssetLoader.load_image(Path(CHECKPOINT_SPRITE_PATH))
@@ -53,7 +55,10 @@ class Checkpoint(BaseEntity):
         if self._activated:
             return
         self._activated = True
-        emit(Events.CHECKPOINT_REACHED, checkpoint_id=self._checkpoint_id)
+        if self._event_bus is not None:
+            self._event_bus.emit(Events.CHECKPOINT_REACHED, checkpoint_id=self._checkpoint_id)
+        else:
+            emit(Events.CHECKPOINT_REACHED, checkpoint_id=self._checkpoint_id)
 
     def draw(self, surface: pygame.Surface, camera_offset: pygame.Vector2) -> None:
         """Draw checkpoint: sprite when available, colored rect fallback."""
