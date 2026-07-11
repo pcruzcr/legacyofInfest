@@ -72,9 +72,19 @@ class TestJump:
     def test_coyote_time_expires(self) -> None:
         player = _make_player(y=0.0)
         player.is_grounded = False
+        player._air_jumps_used = settings.PLAYER_AIR_JUMPS  # Exhaust air jumps
         player._coyote_counter = settings.PLAYER_COYOTE_FRAMES + 1
         assert player._can_jump() is False, (
-            "Player should NOT be able to jump after coyote time expires"
+            "Player should NOT be able to jump after coyote time expires when air jumps exhausted"
+        )
+
+    def test_air_jump_allowed(self) -> None:
+        player = _make_player(y=0.0)
+        player.is_grounded = False
+        player._coyote_counter = settings.PLAYER_COYOTE_FRAMES + 1
+        player._air_jumps_used = 0
+        assert player._can_jump() is True, (
+            "Player should be able to air jump after coyote time expires"
         )
 
     def test_jump_cut_halves_velocity(self) -> None:

@@ -47,6 +47,21 @@ class Events:
     # ── SFX events (emitted by entities, played by StageScene) ────
     SFX_PLAYER_JUMP: str = "SFX_PLAYER_JUMP"
     SFX_PLAYER_LAND: str = "SFX_PLAYER_LAND"
+    SFX_PLAYER_FOOTSTEP: str = "SFX_PLAYER_FOOTSTEP"
+    SFX_MENU_HOVER: str = "SFX_MENU_HOVER"
+    SFX_MENU_CONFIRM: str = "SFX_MENU_CONFIRM"
+    SFX_MENU_CANCEL: str = "SFX_MENU_CANCEL"
+    MUSIC_STINGER: str = "MUSIC_STINGER"
+
+    # ── VFX events (emitted by entities, consumed by StageScene) ─
+    VFX_PARRY: str = "VFX_PARRY"
+    """Emitted by ParryState. Payload: pos."""
+    VFX_CHARGE: str = "VFX_CHARGE"
+    """Emitted by ChargingState. Payload: pos, level."""
+    VFX_SLAM: str = "VFX_SLAM"
+    """Emitted on slam attack. Payload: pos."""
+    VFX_ULTIMATE: str = "VFX_ULTIMATE"
+    """Emitted on ultimate attack. Payload: pos."""
     SFX_PLAYER_SHORT_ATTACK: str = "SFX_PLAYER_SHORT_ATTACK"
     SFX_PLAYER_LONG_ATTACK: str = "SFX_PLAYER_LONG_ATTACK"
     SFX_PLAYER_HURT: str = "SFX_PLAYER_HURT"
@@ -60,3 +75,9 @@ class Events:
     SFX_STAGE_BANNER: str = "SFX_STAGE_BANNER"
     SFX_STAGE_COMPLETE: str = "SFX_STAGE_COMPLETE"
     SFX_HAZARD_ZONE: str = "SFX_HAZARD_ZONE"
+
+    # ── Achievement events ─────────────────────────────────────────
+    ACHIEVEMENT_UNLOCKED: str = "ACHIEVEMENT_UNLOCKED"
+    """Emitted when an achievement is unlocked. Payload: achievement_id, name."""
+    ACHIEVEMENT_PROGRESS: str = "ACHIEVEMENT_PROGRESS"
+    """Emitted on progress toward achievement. Payload: achievement_id, progress, target."""

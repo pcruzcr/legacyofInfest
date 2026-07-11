@@ -26,6 +26,7 @@ from src.engine.scenes.demo_common import (
     COLOR_BG, COLOR_TEXT, COLOR_HIGHLIGHT, COLOR_ACCENT,
     FONT_SMALL, FONT_MEDIUM, FONT_LARGE,
     draw_top_bar, draw_bottom_bar,
+    save_png,
 )
 
 if TYPE_CHECKING:
@@ -73,6 +74,12 @@ class ComboDemoScene(BaseScene):
             self._register_hit("SHORT")
         if im.is_action_pressed(Action.LONG_ATTACK):
             self._register_hit("LONG")
+
+        # S — save screenshot
+        if im.is_raw_key_pressed(pygame.K_s):
+            ss = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
+            self.draw(ss)
+            save_png("combo", "main", ss)
 
         if im.is_action_just_pressed(Action.CANCEL):
             self.context.scene_manager.pop()

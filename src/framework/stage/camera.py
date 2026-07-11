@@ -51,6 +51,8 @@ class Camera:
         self._lock_rect: pygame.Rect | None = None
         self._shake_timer: float = 0.0
         self._shake_amplitude: float = 0.0
+        self.look_ahead_x: float = 0.0
+        self.look_ahead_y: float = 0.0
 
     def follow(self, target) -> None:
         """Set the entity the camera follows."""
@@ -89,6 +91,12 @@ class Camera:
 
         target_x = self._target.rect.centerx - settings.INTERNAL_WIDTH / 2
         target_y = self._target.rect.centery - settings.INTERNAL_HEIGHT / 2
+        # Look-ahead: shift target by player velocity
+        if hasattr(self._target, "velocity"):
+            self.look_ahead_x += (self._target.velocity.x * 0.12 - self.look_ahead_x) * dt * 4.0
+            self.look_ahead_y += (self._target.velocity.y * 0.08 - self.look_ahead_y) * dt * 4.0
+            target_x += self.look_ahead_x
+            target_y += self.look_ahead_y
 
         if self._map_width > 0:
             target_x = max(0, min(target_x, self._map_width - settings.INTERNAL_WIDTH))

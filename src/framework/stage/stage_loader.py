@@ -74,6 +74,7 @@ class StageData:
     stage_name: str = ""
     time_limit: int = 0
     bgm_track: str = ""
+    gravity_multiplier: float = 1.0
 
 
 REQUIRED_LAYERS: tuple[str, ...] = (
@@ -110,6 +111,7 @@ class StageLoader:
         time_limit = int(tmx_data.properties.get("time_limit", 0))
         bgm_track = tmx_data.properties.get("bgm_track", "")
         background_zone = tmx_data.properties.get("background_zone", "")
+        gravity_multiplier = float(tmx_data.properties.get("gravity_multiplier", 1.0))
 
         map_data = pyscroll.data.TiledMapData(tmx_data)
         renderer = pyscroll.BufferedRenderer(
@@ -129,6 +131,7 @@ class StageLoader:
             stage_name=stage_name,
             time_limit=time_limit,
             bgm_track=bgm_track,
+            gravity_multiplier=gravity_multiplier,
         )
 
         # Load parallax background images if zone is specified
@@ -200,7 +203,8 @@ class StageLoader:
                                "fire_rate", "projectile_speed", "projectile_damage",
                                "sine_amplitude", "sine_frequency", "flight_speed",
                                "patrol_speed", "alert_speed", "contact_knockback",
-                               "detection_range_x", "detection_range_y"):
+                               "detection_range_x", "detection_range_y",
+                               "charge_speed"):
                         cleaned[k] = float(v)
                     else:
                         cleaned[k] = v

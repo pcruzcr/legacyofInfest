@@ -38,6 +38,7 @@ from src.engine.scenes.demo_common import (
     COLOR_BG, COLOR_TEXT, COLOR_HIGHLIGHT, COLOR_ACCENT, COLOR_ERROR,
     FONT_SMALL, FONT_MEDIUM,
     draw_top_bar, draw_bottom_bar,
+    save_png,
 )
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.processing.curve_tools import CurveTools
@@ -159,6 +160,14 @@ class CurveEditorScene(BaseScene):
             self._reset_to_mode(self._mode)
             self._status_msg = "Reset control points"
             self._status_timer = 1.0
+
+        # S — save screenshot
+        if im.is_raw_key_pressed(pygame.K_s):
+            ss = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
+            self.draw(ss)
+            path = save_png("curve", MODE_NAMES[self._mode].lower(), ss)
+            self._status_msg = f"Saved: {path.split('/')[-1].split(chr(92))[-1]}"
+            self._status_timer = 2.0
 
         # D — toggle de Casteljau (modes 0-2)
         if im.is_raw_key_pressed(pygame.K_d) and self._mode in (0, 1, 2):
