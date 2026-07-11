@@ -152,6 +152,8 @@ class StageScene(BaseScene):
             audio = self.audio
             if audio is not None:
                 bgm_path = Path("assets/music") / f"{self._stage_data.bgm_track}.wav"
+                if not bgm_path.exists():
+                    bgm_path = Path("assets/music") / f"{self._stage_data.bgm_track}.ogg"
                 audio.play_music(bgm_path)
             if self._dynamic_music is not None:
                 zone = getattr(self._stage_data, "zone", 0)
@@ -189,18 +191,18 @@ class StageScene(BaseScene):
         self._ambient_particles.clear()
         self._trail_system.clear()
         zone = getattr(self._stage_data, "zone", 0)
-        if zone == 0:
-            self._ambient_particles.set_effect("dust", rate=8.0)
-            if self.context.audio is not None:
-                self.context.audio.play_ambient(settings.ASSETS_DIR / "sfx" / "ambient" / "wind.wav", volume=0.3)
-        elif zone == 1:
-            self._ambient_particles.set_effect("leaves", rate=6.0)
-            if self.context.audio is not None:
-                self.context.audio.play_ambient(settings.ASSETS_DIR / "sfx" / "ambient" / "forest.wav", volume=0.4)
-        elif zone >= 3:
-            self._ambient_particles.set_effect("embers", rate=12.0)
-            if self.context.audio is not None:
-                self.context.audio.play_ambient(settings.ASSETS_DIR / "sfx" / "ambient" / "volcanic.wav", volume=0.5)
+        ambient_map = {
+            0: ("dust", settings.ASSETS_DIR / "sfx" / "ambient" / "wind.wav", 0.3),
+            1: ("leaves", settings.ASSETS_DIR / "sfx" / "ambient" / "forest.wav", 0.4),
+            2: ("leaves", settings.ASSETS_DIR / "sfx" / "ambient" / "forest.wav", 0.4),
+        }
+        if zone >= 3:
+            ambient_map[zone] = ("embers", settings.ASSETS_DIR / "sfx" / "ambient" / "volcanic.wav", 0.5)
+        if zone in ambient_map:
+            particle_effect, ambient_path, ambient_vol = ambient_map[zone]
+            self._ambient_particles.set_effect(particle_effect, rate=8.0)
+            if self.context.audio is not None and ambient_path.exists():
+                self.context.audio.play_ambient(ambient_path, volume=ambient_vol)
 
         # Set up stage lighting
         self._lighting.clear()

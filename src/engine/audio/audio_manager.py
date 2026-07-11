@@ -146,7 +146,7 @@ class AudioManager:
                 self._ambient_active = True
                 if not self._muted:
                     self._ambient_channel.set_volume(self._ambient_volume * self._sfx_volume)
-        except pygame.error as e:
+        except (pygame.error, FileNotFoundError, OSError) as e:
             logging.warning(f"AudioManager: no se pudo cargar audio ambiental: {e}")
             self._ambient_active = False
 
