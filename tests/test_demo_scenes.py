@@ -110,14 +110,14 @@ class TestDemoMenuScene:
         context.input_manager.is_action_pressed.side_effect = lambda a: a == Action.CONFIRM
         scene.update(0.016)
 
-    def test_scroll_offset_moves_with_selection(self, context) -> None:
+    def test_scroll_offset_stays_zero_when_all_visible(self, context) -> None:
         scene = DemoMenuScene(context)
         scene.on_enter()
         scene._scroll_offset = 0
         scene._selected = 6
         context.input_manager.is_raw_key_pressed.side_effect = lambda k: k == pygame.K_DOWN
         scene.update(0.016)
-        assert scene._scroll_offset >= 1
+        assert scene._scroll_offset == 0
 
 
 class TestFilterDemoScene:

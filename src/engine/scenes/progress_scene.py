@@ -21,7 +21,7 @@ from src.engine.scenes.demo_common import (
     COLOR_BG, COLOR_TEXT, COLOR_HIGHLIGHT, COLOR_ACCENT,
     FONT_SMALL, FONT_MEDIUM,
     draw_top_bar, draw_bottom_bar,
-    TOP_BAR_H, BOTTOM_BAR_Y, LEFT_PANEL_W, CENTER_X,
+    TOP_BAR_H, CENTER_X,
 )
 from src.engine.utils.asset_loader import AssetLoader
 
@@ -70,11 +70,6 @@ class ProgressScene(BaseScene):
         ach_sys = AchievementSystem.get_instance()
 
         ach_unlocked = sum(1 for _, p in ach_sys.get_all_achievements() if p.unlocked)
-
-        from src.engine.core.save_manager import SaveManager
-        save = SaveManager.get_instance()
-
-        stages_cleared = len(getattr(save, "_saves", {}).get(getattr(save, "_current_slot", 0), {}).get("completed_stages", [])) if hasattr(save, "_saves") else 0
 
         return {
             "lab": (self._total_labs, self._total_labs),

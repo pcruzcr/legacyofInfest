@@ -16,7 +16,7 @@ from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
-    COLOR_BG, COLOR_TEXT, COLOR_HIGHLIGHT, COLOR_ACCENT,
+    COLOR_BG, COLOR_TEXT, COLOR_HIGHLIGHT,
     FONT_SMALL, FONT_MEDIUM,
     draw_top_bar, draw_bottom_bar,
     TOP_BAR_H,

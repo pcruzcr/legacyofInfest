@@ -7,7 +7,7 @@ and choice-based progression. Supports multiple NPCs and dialogue trees.
 """
 from __future__ import annotations
 import pygame
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from src.engine.core import settings
 from src.engine.utils.asset_loader import AssetLoader
 

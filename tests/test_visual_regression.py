@@ -40,6 +40,8 @@ SWATCH_32 = (32, 32)
 def _init_pygame():
     if not pygame.get_init():
         pygame.init()
+    if not pygame.font.get_init():
+        pygame.font.init()
 
 
 # === Filter output invariants ===

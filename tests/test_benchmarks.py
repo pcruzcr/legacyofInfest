@@ -25,15 +25,17 @@ def test_load_time_vector_lab():
     from src.engine.core.game_context import GameContext
     from src.engine.input.input_manager import InputManager
     from src.engine.scene.scene_manager import SceneManager
-    from src.engine.event_bus import EventBus
+    from src.engine.core.event_bus import EventBus
 
     bus = EventBus()
+    sm = SceneManager.__new__(SceneManager)
     ctx = GameContext(
         input_manager=InputManager(),
-        scene_manager=SceneManager(),
+        scene_manager=sm,
         event_bus=bus,
         audio_manager=None,
     )
+    SceneManager.__init__(sm, ctx)
 
     start = time.perf_counter()
     _ = VectorLabScene(ctx)
@@ -50,15 +52,17 @@ def test_load_time_filter_demo():
     from src.engine.core.game_context import GameContext
     from src.engine.input.input_manager import InputManager
     from src.engine.scene.scene_manager import SceneManager
-    from src.engine.event_bus import EventBus
+    from src.engine.core.event_bus import EventBus
 
     bus = EventBus()
+    sm = SceneManager.__new__(SceneManager)
     ctx = GameContext(
         input_manager=InputManager(),
-        scene_manager=SceneManager(),
+        scene_manager=sm,
         event_bus=bus,
         audio_manager=None,
     )
+    SceneManager.__init__(sm, ctx)
 
     start = time.perf_counter()
     _ = FilterDemoScene(ctx)
@@ -118,7 +122,7 @@ def test_source_surface_manager_switching():
 
     start = time.perf_counter()
     for _ in range(modes * 2):
-        mgr.cycle_source()
+        mgr.cycle()
     elapsed = time.perf_counter() - start
 
     assert elapsed < 0.5, (

@@ -8,7 +8,10 @@ class BitmapFont:
 
     def __init__(self, path: Path | str, char_width: int = 0, char_height: int = 0,
                  chars: str = "", first_ascii: int = 0) -> None:
-        sheet = pygame.image.load(str(path))
+        try:
+            sheet = pygame.image.load(str(path))
+        except pygame.error:
+            raise FileNotFoundError(f"Bitmap font sheet not found or corrupt: {path}")
         sheet_w, sheet_h = sheet.get_size()
         char_height = char_height or sheet_h
 
