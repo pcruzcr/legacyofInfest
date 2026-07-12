@@ -30,8 +30,10 @@ def _reset_global_state():
     """Reset global singletons before each test to prevent cross-test contamination."""
     from src.engine.core.event_bus import clear as clear_eventbus
     from src.engine.utils.asset_loader import AssetLoader
+    from src.engine.scenes.demo_layout import clear_demo_font_cache
     clear_eventbus()
     AssetLoader.clear_cache()
+    clear_demo_font_cache()
 
 
 @pytest.fixture

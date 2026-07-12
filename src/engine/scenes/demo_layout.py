@@ -81,6 +81,10 @@ __all__ = [
 ]
 
 
+def clear_demo_font_cache() -> None:
+    _FONT_CACHE.clear()
+
+
 def _get_demo_font(size: int) -> pygame.font.Font:
     key = size
     if key not in _FONT_CACHE:

@@ -6,7 +6,6 @@ Description: Speedrun mode with global timer, splits per stage, and ghost data.
 """
 from __future__ import annotations
 import json
-import time
 from pathlib import Path
 from typing import Any
 

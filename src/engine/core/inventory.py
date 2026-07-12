@@ -8,8 +8,6 @@ from typing import TypedDict
 import pygame
 
 from src.engine.core import settings
-from src.engine.core.event_bus import emit
-from src.engine.core.events import Events
 
 
 class _NotificationData(TypedDict):

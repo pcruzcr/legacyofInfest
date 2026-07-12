@@ -1561,7 +1561,6 @@ class SwimmingState(PlayerStateBase):
         dt: float,
         input_manager: InputManager | None,
     ) -> None:
-        from src.framework.entities.player import PlayerState
         inp = _InputSnapshot(input_manager)
         self._swim_timer += dt
         self._bubble_timer += dt

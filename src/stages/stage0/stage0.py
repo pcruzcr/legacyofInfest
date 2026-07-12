@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pygame
 
-from src.engine.core import settings
-from src.engine.core.events import Events
 from src.framework.scenes.stage_scene import StageScene
 from src.framework.stage.cutscene_system import (
     CutsceneScript, CameraMoveAction, WaitAction, FadeAction,
