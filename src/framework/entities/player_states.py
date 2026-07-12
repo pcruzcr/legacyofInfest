@@ -1535,3 +1535,73 @@ class DyingState(PlayerStateBase):
         input_manager: InputManager | None,
     ) -> None:
         pass  # Terminal state — no update logic needed
+
+
+class SwimmingState(PlayerStateBase):
+    """Player swimming in water. Buoyancy, reduced gravity, bubbles."""
+
+    def __init__(self) -> None:
+        from src.framework.entities.player import PlayerState
+        super().__init__(PlayerState.SWIMMING)
+        self._swim_timer: float = 0.0
+        self._bubble_timer: float = 0.0
+        self._surface_y: float = 0.0
+
+    def enter(self, player: Player) -> None:
+        super().enter(player)
+        player.velocity.y = 0.0
+        player.velocity.x *= 0.5
+        self._swim_timer = 0.0
+        self._bubble_timer = 0.0
+        self._surface_y = player.position.y - 16.0
+
+    def update(
+        self,
+        player: Player,
+        dt: float,
+        input_manager: InputManager | None,
+    ) -> None:
+        from src.framework.entities.player import PlayerState
+        inp = _InputSnapshot(input_manager)
+        self._swim_timer += dt
+        self._bubble_timer += dt
+
+        # Buoyancy: float up slowly
+        player.velocity.y += settings.GRAVITY * 0.3 * dt
+        player.velocity.y = max(-80.0, min(80.0, player.velocity.y))
+
+        # Horizontal movement (slower in water)
+        if inp.move_x != 0:
+            player.velocity.x += inp.move_x * 60.0 * dt
+            player.velocity.x = max(-120.0, min(120.0, player.velocity.x))
+            player.facing_direction = inp.move_x
+        else:
+            player.velocity.x *= 0.9
+
+        # Swim upward (jump in water)
+        if inp.jump_pressed and player._air_jumps_used < 1:
+            player.velocity.y = -120.0
+            player._air_jumps_used += 1
+            emit(Events.SFX_PLAYER_JUMP)
+
+        # Swim downward
+        if inp.crouch_held:
+            player.velocity.y += 200.0 * dt
+
+        # Emit bubbles periodically
+        if self._bubble_timer >= 0.3:
+            self._bubble_timer = 0.0
+            emit(Events.VFX_CHARGE, pos=(player.position.x, player.position.y))
+
+        # Transition: leave water (jump above surface)
+        if player.position.y < self._surface_y - 8.0:
+            player.velocity.y = -200.0
+            from src.framework.entities.player_states import JumpingState
+            player._change_state_instance(JumpingState())
+            return
+
+        # Transition: land on ground
+        if player.is_grounded:
+            from src.framework.entities.player_states import IdleState
+            player._change_state_instance(IdleState())
+            return

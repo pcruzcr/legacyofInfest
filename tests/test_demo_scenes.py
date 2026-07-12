@@ -381,7 +381,7 @@ class TestTitleSceneIntegration:
         scene = TitleScene(context)
         assert "ACADEMIC DEMOS" in scene._options
         assert "TUTORIAL" in scene._options
-        assert scene._options.index("ACADEMIC DEMOS") == 5
+        assert scene._options.index("ACADEMIC DEMOS") == 6
 
     def test_title_demo_select(self, context) -> None:
         from src.engine.scenes.title_scene import TitleScene

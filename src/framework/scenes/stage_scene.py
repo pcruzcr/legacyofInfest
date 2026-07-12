@@ -28,11 +28,17 @@ from src.framework.vfx.hit_effects import HitEffects
 from src.framework.vfx.post_processing import PostProcessing
 from src.framework.vfx.lighting import LightSystem, LightSource
 from src.framework.vfx.ambient_particles import AmbientParticleSystem
+from src.framework.vfx.weather_system import WeatherSystem
 from src.framework.vfx.trail_system import TrailSystem
 from src.framework.audio.dynamic_music import DynamicMusicSystem
 from src.framework.ui.tutorial_overlay import TutorialOverlay
+from src.framework.ui.learning_overlay import LearningOverlay
+from src.framework.ui.dialogue_system import DialogueSystem
+from src.framework.entities.bestiary import Bestiary
+from src.framework.stage.speedrun_mode import SpeedrunTimer
 from src.engine.ui.minimap import Minimap
 from src.engine.core.achievements import AchievementSystem
+from src.engine.core.inventory import get_inventory
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -71,6 +77,7 @@ class StageScene(BaseScene):
         self._damage_numbers = DamageNumberManager()
         self._post_processing = PostProcessing()
         self._ambient_particles = AmbientParticleSystem()
+        self._weather = WeatherSystem()
         self._trail_system = TrailSystem()
         self._lighting = LightSystem(ambient_brightness=0.7)
         self._player_light: LightSource | None = None
@@ -78,9 +85,13 @@ class StageScene(BaseScene):
         audio_mgr = self.context.audio_manager if hasattr(self.context, 'audio_manager') else None
         self._dynamic_music = DynamicMusicSystem(audio_mgr) if audio_mgr is not None else None
         self._tutorial = TutorialOverlay()
+        self._learning = LearningOverlay()
         self._minimap = Minimap()
         self._achievements = AchievementSystem.get_instance()
         self._achievements.load()
+        self._bestiary = Bestiary.get_instance()
+        self._speedrun = SpeedrunTimer()
+        self._dialogue = DialogueSystem(self.context)
         self._player_spawned: bool = False
         self._damage_taken_this_stage: float = 0.0
         self._stage_start_time: float = 0.0
@@ -97,6 +108,8 @@ class StageScene(BaseScene):
                 self._tutorial_shown.add("landed")
 
     def on_enemy_died(self, enemy: EnemyBase) -> None:
+        if hasattr(enemy, "enemy_id"):
+            self._bestiary.record_kill(enemy.enemy_id)
         if "enemy_kill" not in self._tutorial_shown:
             self._tutorial.show("advanced", duration=5.0)
             self._tutorial_shown.add("enemy_kill")
@@ -123,6 +136,8 @@ class StageScene(BaseScene):
             self._checkpoint_position = pygame.Vector2(pending.checkpoint_x, pending.checkpoint_y)
             self.context.pending_load = None
 
+        self._achievements.mark_explorer(self._stage_data.stage_id)
+
         self._camera = Camera()
         self._camera.follow(self._player)
         self._camera.set_map_size(*self._stage_data.map_pixel_size)
@@ -135,6 +150,8 @@ class StageScene(BaseScene):
                     self._stage_data.collision_rects,
                     one_way=self._stage_data.one_way_rects,
                 )
+            if hasattr(enemy, "enemy_id"):
+                self._bestiary.record_encounter(enemy.enemy_id)
 
         self._checkpoints = list(self._stage_data.checkpoints)
         for cp in self._checkpoints:
@@ -177,6 +194,10 @@ class StageScene(BaseScene):
         if self._stage_data is not None:
             self._minimap.set_map_size(*self._stage_data.map_pixel_size)
 
+        # Speedrun timer
+        self._speedrun.start()
+        self._speedrun.start_stage(self._stage_data.stage_id)
+
         # Track stage start for achievement timing
         self._player_spawned = True
         self._damage_taken_this_stage = 0.0
@@ -190,25 +211,21 @@ class StageScene(BaseScene):
         self._tutorial.show("move", duration=6.0)
         self._ambient_particles.clear()
         self._trail_system.clear()
-        zone = getattr(self._stage_data, "zone", 0)
-        ambient_map = {
-            0: ("dust", settings.ASSETS_DIR / "sfx" / "ambient" / "wind.wav", 0.3),
-            1: ("leaves", settings.ASSETS_DIR / "sfx" / "ambient" / "forest.wav", 0.4),
-            2: ("leaves", settings.ASSETS_DIR / "sfx" / "ambient" / "forest.wav", 0.4),
-        }
-        if zone >= 3:
-            ambient_map[zone] = ("embers", settings.ASSETS_DIR / "sfx" / "ambient" / "volcanic.wav", 0.5)
-        if zone in ambient_map:
-            particle_effect, ambient_path, ambient_vol = ambient_map[zone]
-            self._ambient_particles.set_effect(particle_effect, rate=8.0)
-            if self.context.audio is not None and ambient_path.exists():
-                self.context.audio.play_ambient(ambient_path, volume=ambient_vol)
+        self._weather.clear()
+        climate = getattr(self._stage_data, "climate", "")
+        self._weather.set_climate(climate)
+        if climate:
+            audio_key = self._weather.get_ambient_audio_key()
+            if audio_key and self.context.audio is not None:
+                ambient_path = settings.ASSETS_DIR / "sfx" / "ambient" / f"{audio_key}.wav"
+                if ambient_path.exists():
+                    self.context.audio.play_ambient(ambient_path, volume=0.3)
 
         # Set up stage lighting
         self._lighting.clear()
         self._player_light = None
         if zone == 0:
-            self._lighting.ambient_brightness = 0.5
+            self._lighting.ambient_brightness = 0.8
             self._stage_lights = [
                 LightSource(pygame.Vector2(80, 80), radius=70, color=(255, 220, 180), intensity=0.7),
                 LightSource(pygame.Vector2(240, 80), radius=70, color=(255, 220, 180), intensity=0.7),
@@ -415,6 +432,7 @@ class StageScene(BaseScene):
         if self._msg_box is not None:
             self._msg_box.destroy()
             self._msg_box = None
+        self._dialogue.end_dialogue()
         audio = self.audio
         if audio is not None:
             audio.stop_music()
@@ -471,6 +489,14 @@ class StageScene(BaseScene):
             if hasattr(pygame.key, 'get_just_pressed') and pygame.key.get_just_pressed()[pygame.K_F1]:
                 self._debug = not self._debug
                 self.on_debug_toggle(self._debug)
+            if hasattr(pygame.key, 'get_just_pressed'):
+                just_pressed = pygame.key.get_just_pressed()
+                for fkey in (pygame.K_F2, pygame.K_F3, pygame.K_F4, pygame.K_F5,
+                             pygame.K_F6, pygame.K_F7, pygame.K_F8, pygame.K_F9,
+                             pygame.K_F10):
+                    if just_pressed[fkey]:
+                        self._learning.toggle(fkey)
+                        break
 
         if self._paused:
             if im:
@@ -495,6 +521,10 @@ class StageScene(BaseScene):
             original_time_scale = self.context.clock.time_scale
         try:
             player.update(dt, stage.collision_rects, im, one_way_rects=stage.one_way_rects)
+
+            if player.combo_active and player.combo_count > 0:
+                self._achievements.mark_air_assault(player._combo_air_hits)
+                self._achievements.mark_combo_king(player.combo_count)
 
             if player.is_grounded and not self._was_grounded:
                 self.on_player_landed()
@@ -535,6 +565,12 @@ class StageScene(BaseScene):
             self.context.event_bus.emit(Events.SFX_STAGE_COMPLETE)
 
         if self._progression.update_complete_timer(dt):
+            if self._damage_taken_this_stage == 0:
+                self._achievements.mark_untouchable()
+            if self._stage_start_time < 60.0:
+                self._achievements.mark_speed_demon()
+            self._speedrun.split(self._stage_data.stage_id)
+            self._speedrun.stop()
             self.context.event_bus.emit(Events.STAGE_COMPLETE, stage_id=stage.stage_id)
             return
 
@@ -581,12 +617,15 @@ class StageScene(BaseScene):
             self._hud.set_special_meter(player.special_meter, player.special_meter_max)
             self._hud.update(dt)
 
+        self._speedrun.update(dt)
         self._hazards.update(dt, player, stage)
         self._tutorial.update(dt, im)
         self._particle_system.update(dt)
         self._damage_numbers.update(dt)
         self._post_processing.update(dt)
         self._ambient_particles.update(dt, self._camera.offset)
+        self._weather.update(dt, self._camera.offset)
+        self._dialogue.update(dt)
 
         # Update lighting
         if self._player is not None:
@@ -600,8 +639,9 @@ class StageScene(BaseScene):
                 self._player_light.radius = 100 if combat else 60
         self._lighting.update(dt, self._camera.offset)
 
-        # Update achievements
+        # Update achievements & inventory notifications
         self._achievements.update_notifications(dt)
+        get_inventory().update_notifications(dt)
         if self._player_spawned:
             self._stage_start_time += dt
             # Track damage for untouchable achievement
@@ -610,6 +650,9 @@ class StageScene(BaseScene):
                 if old_health > self._player.current_health:
                     self._damage_taken_this_stage += old_health - self._player.current_health
                 self._last_player_health = self._player.current_health
+                # survivor: survive with 0.5 health or less
+                if self._player.current_health <= 0.5 and self._player.current_health > 0:
+                    self._achievements.mark_survived_low_health()
 
         # Update minimap
         if self._player is not None and self._stage_data is not None:
@@ -690,10 +733,14 @@ class StageScene(BaseScene):
             particle_system=self._particle_system,
             damage_numbers=self._damage_numbers,
             ambient_particles=self._ambient_particles,
+            weather_system=self._weather,
             trail_system=self._trail_system,
             tutorial_overlay=self._tutorial,
+            learning_overlay=self._learning,
+            dialogue_system=self._dialogue,
         )
         self._lighting.render(surface, self._camera.offset)
         self._post_processing.apply(surface)
         self._minimap.draw(surface)
         self._achievements.draw_notifications(surface)
+        get_inventory().draw_notifications(surface)

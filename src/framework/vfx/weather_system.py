@@ -1,0 +1,155 @@
+from __future__ import annotations
+
+import math
+import random
+
+import pygame
+
+from src.engine.core import settings
+
+
+class WeatherParticle:
+    __slots__ = ("x", "y", "vx", "vy", "life", "max_life", "size", "alpha")
+
+    def __init__(self, x: float, y: float, vx: float, vy: float,
+                 life: float, size: int) -> None:
+        self.x = x
+        self.y = y
+        self.vx = vx
+        self.vy = vy
+        self.life = life
+        self.max_life = life
+        self.size = size
+        self.alpha = 255
+
+    @property
+    def is_dead(self) -> bool:
+        return self.life <= 0
+
+    def update(self, dt: float) -> None:
+        self.life -= dt
+        self.alpha = max(0, int(255 * (self.life / self.max_life)))
+        self.x += self.vx * dt
+        self.y += self.vy * dt
+
+
+class WeatherSystem:
+    """Stage weather effects (rain, snow, fog, storm) driven by TMX climate property."""
+
+    CLIMATE_PARAMS: dict[str, dict] = {
+        "clear":  {"particles": 0,  "overlay_alpha": 0,   "overlay_color": (0, 0, 0)},
+        "rain":   {"particles": 60, "overlay_alpha": 30,  "overlay_color": (60, 70, 90)},
+        "snow":   {"particles": 40, "overlay_alpha": 50,  "overlay_color": (200, 210, 220)},
+        "fog":    {"particles": 0,  "overlay_alpha": 80,  "overlay_color": (180, 180, 190)},
+        "storm":  {"particles": 100,"overlay_alpha": 60,  "overlay_color": (40, 40, 50)},
+    }
+
+    def __init__(self, climate: str = "clear") -> None:
+        self._particles: list[WeatherParticle] = []
+        self._timer: float = 0.0
+        self._climate: str = climate
+        self._overlay = pygame.Surface(
+            (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT), pygame.SRCALPHA
+        )
+        self._wind: float = 0.0
+        self._set_climate_params()
+
+    def _set_climate_params(self) -> None:
+        params = self.CLIMATE_PARAMS.get(self._climate, self.CLIMATE_PARAMS["clear"])
+        self._particle_rate: float = float(params["particles"])
+        self._overlay_alpha: int = params["overlay_alpha"]
+        self._overlay_color: tuple[int, int, int] = params["overlay_color"]
+        self._wind = random.uniform(-30, 30) if self._climate == "storm" else 0.0
+
+    def set_climate(self, climate: str) -> None:
+        if climate == self._climate:
+            return
+        self._climate = climate
+        self._particles.clear()
+        self._set_climate_params()
+
+    @property
+    def climate(self) -> str:
+        return self._climate
+
+    def update(self, dt: float, camera_offset: pygame.Vector2) -> None:
+        self._timer += dt
+        if self._particle_rate > 0:
+            spawn_interval = 1.0 / self._particle_rate
+            while self._timer >= spawn_interval:
+                self._timer -= spawn_interval
+                self._spawn_particle(camera_offset)
+
+        for p in list(self._particles):
+            p.update(dt)
+            if p.is_dead:
+                self._particles.remove(p)
+
+    def draw(self, surface: pygame.Surface, camera_offset: pygame.Vector2) -> None:
+        for p in self._particles:
+            sx = int(p.x - camera_offset.x)
+            sy = int(p.y - camera_offset.y)
+            if sx < -10 or sx > settings.INTERNAL_WIDTH + 10:
+                continue
+            if sy < -10 or sy > settings.INTERNAL_HEIGHT + 10:
+                continue
+            color = self._get_particle_color()
+            ps = pygame.Surface((p.size, p.size), pygame.SRCALPHA)
+            ps.fill((*color, p.alpha))
+            surface.blit(ps, (sx, sy))
+
+        if self._overlay_alpha > 0:
+            self._overlay.fill((*self._overlay_color, self._overlay_alpha))
+            surface.blit(self._overlay, (0, 0))
+
+    def clear(self) -> None:
+        self._particles.clear()
+
+    def _spawn_particle(self, camera_offset: pygame.Vector2) -> None:
+        sx = camera_offset.x + random.uniform(-20, settings.INTERNAL_WIDTH + 20)
+        sy = camera_offset.y - 10
+
+        if self._climate == "rain":
+            self._particles.append(WeatherParticle(
+                sx, sy,
+                -20 + self._wind, 280 + random.uniform(-40, 40),
+                random.uniform(0.3, 0.6),
+                random.randint(1, 2),
+            ))
+        elif self._climate == "snow":
+            self._particles.append(WeatherParticle(
+                sx, sy,
+                random.uniform(-10, 10) + self._wind * 0.3,
+                random.uniform(30, 60),
+                random.uniform(2.0, 4.0),
+                random.randint(2, 4),
+            ))
+        elif self._climate == "storm":
+            gust = random.choice([-1, 1]) * random.uniform(50, 100)
+            self._particles.append(WeatherParticle(
+                sx, sy,
+                gust,
+                280 + random.uniform(-60, 60),
+                random.uniform(0.2, 0.5),
+                random.randint(1, 3),
+            ))
+
+    def _get_particle_color(self) -> tuple[int, int, int]:
+        if self._climate == "rain":
+            return (150, 170, 200)
+        elif self._climate == "snow":
+            return (230, 235, 240)
+        elif self._climate == "storm":
+            return (120, 130, 150)
+        return (200, 200, 200)
+
+    def get_ambient_audio_key(self) -> str | None:
+        """Return the ambient audio filename (no extension) for this climate, or None."""
+        audio_map: dict[str, str | None] = {
+            "clear": None,
+            "rain": "rain",
+            "snow": "wind",
+            "fog": "wind",
+            "storm": "storm",
+        }
+        return audio_map.get(self._climate)

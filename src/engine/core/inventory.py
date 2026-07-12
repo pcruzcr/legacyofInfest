@@ -7,6 +7,7 @@ from typing import TypedDict
 
 import pygame
 
+from src.engine.core import settings
 from src.engine.core.event_bus import emit
 from src.engine.core.events import Events
 
@@ -98,10 +99,9 @@ class Inventory:
             "color": defn.icon_color,
             "timer": 3.0,
         })
-        emit(Events.ACHIEVEMENT_PROGRESS,
-             achievement_id="collector",
-             progress=len(self._items),
-             target=5)
+        self.save()
+        from src.engine.core.achievements import AchievementSystem
+        AchievementSystem.get_instance().progress("collector")
         return True
 
     def has(self, item_id: str) -> bool:
@@ -170,7 +170,6 @@ class Inventory:
         if self._current_notify is None:
             return
         n = self._current_notify
-        from src.engine.engine_config import settings
         w = settings.INTERNAL_WIDTH
         bar_w = 240
         bar_h = 32
@@ -181,8 +180,7 @@ class Inventory:
         bg.fill((10, 10, 10))
         surface.blit(bg, (bx, by))
         pygame.draw.rect(surface, n["color"], (bx, by, bar_w, bar_h), 2)
-        from src.engine.utils.assets import get_font
-        font = get_font(12)
+        font = pygame.font.Font(None, 14)
         parts = [
             (font.render("ITEM: ", True, (200, 200, 200)), 8),
             (font.render(n["name"], True, n["color"]), None),

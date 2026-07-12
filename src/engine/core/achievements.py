@@ -12,7 +12,7 @@ from src.engine.core import settings
 from src.engine.core.event_bus import emit, subscribe, unsubscribe
 from src.engine.core.events import Events
 
-ACHIEVEMENTS_PATH = Path(os.environ.get("APPDATA", "~/.config")) / "legacyofinfest" / "achievements.json"
+ACHIEVEMENTS_PATH = Path(os.environ.get("APPDATA", str(Path("~/.config").expanduser()))) / "legacyofinfest" / "achievements.json"
 
 
 @dataclass
@@ -125,6 +125,7 @@ class AchievementSystem:
     def _on_enemy_died(self, **data: object) -> None:
         self._stats["enemies_killed"] = self._stats.get("enemies_killed", 0) + 1
         self.progress("exterminator")
+        self.progress("first_blood")
 
     def _on_parry(self, **data: object) -> None:
         self._stats["parries"] = self._stats.get("parries", 0) + 1
@@ -182,6 +183,26 @@ class AchievementSystem:
         if not self.is_unlocked("speed_demon"):
             self._set_progress("speed_demon", 1)
             self._unlock("speed_demon")
+
+    def mark_air_assault(self, combo_count: int) -> None:
+        if not self.is_unlocked("air_assault") and combo_count >= 5:
+            self._set_progress("air_assault", 1)
+            self._unlock("air_assault")
+
+    def mark_combo_king(self, combo_count: int) -> None:
+        if not self.is_unlocked("combo_king") and combo_count >= 10:
+            self._set_progress("combo_king", 1)
+            self._unlock("combo_king")
+
+    def mark_explorer(self, stage_id: str) -> None:
+        if not self.is_unlocked("explorer"):
+            seen: list[str] = self._stats.get("explored_stages", [])
+            if stage_id not in seen:
+                seen.append(stage_id)
+                self._stats["explored_stages"] = seen
+            self._set_progress("explorer", len(seen))
+            if len(seen) >= 15:
+                self._unlock("explorer")
 
     @property
     def achievements(self) -> list[tuple[AchievementDef, AchievementProgress]]:

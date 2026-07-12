@@ -128,7 +128,7 @@ class App:
                 scaled = pygame.transform.scale_by(
                     self.internal_surface, settings.DISPLAY_SCALE,
                 )
-                self.window_surface.blit(scaled, (0, 0))
+                pygame.display.get_surface().blit(scaled, (0, 0))
                 pygame.display.flip()
             except Exception:
                 import traceback

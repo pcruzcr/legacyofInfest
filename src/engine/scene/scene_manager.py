@@ -97,9 +97,16 @@ class SceneManager:
             current_scene = self._stack[-1] if self._stack else None
             player_health = getattr(getattr(current_scene, '_player', None), 'current_health', 5.0)
             player_max = getattr(getattr(current_scene, '_player', None), 'max_health', 5.0)
+            next_index = min(self._stage_index + 1, max(len(self._stage_queue) - 1, 0)) if self._stage_queue else 0
+            slot = sm.newest_slot()
+            if slot is not None:
+                save_data = sm.load(slot)
+                if save_data is not None and stage_id not in save_data.completed_stages:
+                    save_data.completed_stages.append(stage_id)
+                    sm.save(slot, save_data)
             sm.auto_save(
-                stage_id=f"{stage_id}_completed",
-                stage_index=self._stage_index,
+                stage_id=stage_id,
+                stage_index=next_index,
                 checkpoint_x=0.0, checkpoint_y=0.0,
                 health=player_health, max_health=player_max,
             )
