@@ -52,18 +52,26 @@ class TestSaveData:
         assert restored.max_health == 5.0
         assert restored.zone_flags == {"zone_a": True, "zone_b": False}
 
-    def test_migrate_v0_to_v1(self) -> None:
+    def test_migrate_v0_to_v2(self) -> None:
         old = {"version": 0, "stage_id": "stage0"}
         migrated = SaveData.migrate(old)
-        assert migrated["version"] == 1
+        assert migrated["version"] == 2
         assert "zone_flags" in migrated
         assert migrated["zone_flags"] == {}
+        assert "completed_stages" in migrated
+        assert migrated["completed_stages"] == []
 
-    def test_migrate_already_v1(self) -> None:
+    def test_migrate_v1_to_v2(self) -> None:
         data = {"version": 1, "stage_id": "stage0", "zone_flags": {"a": True}}
         migrated = SaveData.migrate(data)
-        assert migrated["version"] == 1
+        assert migrated["version"] == 2
         assert migrated["zone_flags"] == {"a": True}
+        assert migrated["completed_stages"] == []
+
+    def test_migrate_already_v2(self) -> None:
+        data = {"version": 2, "stage_id": "stage0", "zone_flags": {"a": True}, "completed_stages": []}
+        migrated = SaveData.migrate(data)
+        assert migrated["version"] == 2
 
     def test_timestamp_auto_fill(self) -> None:
         data = SaveData(stage_id="test")

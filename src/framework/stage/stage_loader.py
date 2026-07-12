@@ -81,6 +81,7 @@ class StageData:
     time_limit: int = 0
     bgm_track: str = ""
     gravity_multiplier: float = 1.0
+    climate: str = ""
 
 
 REQUIRED_LAYERS: tuple[str, ...] = (
@@ -118,6 +119,7 @@ class StageLoader:
         bgm_track = tmx_data.properties.get("bgm_track", "")
         background_zone = tmx_data.properties.get("background_zone", "")
         gravity_multiplier = float(tmx_data.properties.get("gravity_multiplier", 1.0))
+        climate = tmx_data.properties.get("climate", "")
 
         map_data = pyscroll.data.TiledMapData(tmx_data)
         renderer = pyscroll.BufferedRenderer(
@@ -138,6 +140,7 @@ class StageLoader:
             time_limit=time_limit,
             bgm_track=bgm_track,
             gravity_multiplier=gravity_multiplier,
+            climate=climate,
         )
 
         # Load parallax background images if zone is specified

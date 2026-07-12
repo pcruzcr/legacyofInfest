@@ -50,7 +50,7 @@ class LightSource:
         if r <= 0:
             r = 1
         size = r * 2
-        surf = pygame.Surface((size, size), pygame.SRCALPHA)
+        surf = pygame.Surface((size, size))
         cx, cy = r, r
         for x in range(size):
             for y in range(size):
@@ -58,10 +58,10 @@ class LightSource:
                 dist = math.sqrt(dx * dx + dy * dy)
                 if dist > r:
                     continue
-                # Alpha: 0 at center (fully transparent light), 255 at edge (darkness)
-                falloff = min(1.0, dist / r)
-                alpha = int(falloff * 255 * (1.0 - self.intensity * 0.6))
-                surf.set_at((x, y), (color[0], color[1], color[2], alpha))
+                falloff = max(0.0, 1.0 - dist / r)
+                brightness = int(self.intensity * falloff * 255)
+                val = min(255, max(0, brightness))
+                surf.set_at((x, y), (val, val, val, 255))
         return surf
 
     def get_cached_gradient(self) -> pygame.Surface:
@@ -102,13 +102,10 @@ class LightSystem:
     def render(self, target: pygame.Surface, camera_offset: pygame.Vector2) -> None:
         w, h = target.get_size()
 
-        # Base darkness overlay (semi-transparent black for ambient
-        # darkness, then light sources cut holes)
-        darkness = pygame.Surface((w, h), pygame.SRCALPHA)
-        ambient_alpha = int(255 * (1.0 - self.ambient_brightness))
-        darkness.fill((0, 0, 0, ambient_alpha))
+        ambient_val = int(self.ambient_brightness * 255)
+        multiplier = pygame.Surface((w, h))
+        multiplier.fill((ambient_val, ambient_val, ambient_val))
 
-        # For each light, cut a hole in the darkness
         for light in self.lights:
             screen_pos = (
                 int(light.position.x - camera_offset.x),
@@ -118,10 +115,9 @@ class LightSystem:
             gw, gh = gradient.get_size()
             blit_x = screen_pos[0] - gw // 2
             blit_y = screen_pos[1] - gh // 2
-            darkness.blit(gradient, (blit_x, blit_y), special_flags=pygame.BLEND_RGBA_SUB)
+            multiplier.blit(gradient, (blit_x, blit_y), special_flags=pygame.BLEND_RGBA_MAX)
 
-        # Apply darkness overlay onto target
-        target.blit(darkness, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        target.blit(multiplier, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
     def get_player_light(self, player_pos: pygame.Vector2, is_combat: bool) -> LightSource:
         """Create/return a dynamic light for the player."""

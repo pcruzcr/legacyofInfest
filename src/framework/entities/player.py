@@ -52,6 +52,7 @@ _PLAYER_SPRITE_MAP: dict[str, tuple[str, int]] = {
     "GRAB": ("player_short_attack.png", 4),
     "THROW": ("player_short_attack.png", 4),
     "SLIDE": ("player_crouch.png", 4),
+    "SWIMMING": ("player_jump.png", 4),
 }
 
 # Per-state animation playback rate (frames per second)
@@ -73,6 +74,7 @@ _PLAYER_ANIM_FPS: dict[str, float] = {
     "GRAB": 14.0,
     "THROW": 16.0,
     "SLIDE": 14.0,
+    "SWIMMING": 10.0,
 }
 
 
@@ -96,6 +98,7 @@ class PlayerState(str, Enum):
     GRAB = "GRAB"
     THROW = "THROW"
     SLIDE = "SLIDE"
+    SWIMMING = "SWIMMING"
 
 
 class Player(BaseEntity):
@@ -586,6 +589,8 @@ class Player(BaseEntity):
         No heuristics needed: each axis only sees penetration caused by
         its own movement.
         """
+        if not collision_rects:
+            return
         w, h = self.rect.width, self.rect.height
 
         # --- X axis ---

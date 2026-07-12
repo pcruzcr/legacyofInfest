@@ -27,7 +27,7 @@ Every enemy class is intentionally simple enough to be read and understood by a 
 
 ### 1.3 Enemy Taxonomy
 
-The framework provides three enemy archetypes. Students may subclass any of these to create variations for their stages.
+The framework provides three enemy archetypes (plus five advanced specialist types). Students may subclass any of these to create variations for their stages.
 
 | Class | Movement | Attack | Academic Focus |
 |---|---|---|---|
@@ -62,10 +62,10 @@ The framework provides three enemy archetypes. Students may subclass any of thes
 Subclasses must implement:
 
 | Method | Signature | Description |
-|---|---|---|
+|---|---|---|---|
 | `_patrol_behavior(dt)` | `(float) → None` | Default movement/AI when no player detected |
 | `_alert_behavior(dt)` | `(float) → None` | AI when player is within detection range |
-| `_get_animation_state()` | `() → str` | Return animation key for current state |
+| `_get_animation_key()` | `() → str` | Return animation key for current state (subclasses override this; base `_get_animation_state()` calls it) |
 | `_build_hitbox()` | `() → pygame.Rect` | Define the local-space hitbox rect |
 | `_build_hurtbox()` | `() → pygame.Rect` | Define the local-space hurtbox rect |
 
@@ -612,19 +612,20 @@ When flanking or retreating, the Assassin renders with semi-transparent alpha (8
 
 ## 12. States Reference
 
-All enemies share the base state names listed below. Subclasses may add additional states.
+All enemies share the base state names listed below. `EnemyState` enum (`enemy_base.py:28-36`) defines the base set: `PATROL`, `ALERT`, `TELEGRAPHING`, `FIRING`, `HURT`, `LAUNCHED`, `DYING`. Subclasses may add additional states (Charger adds `WIND_UP`/`CHARGE`/`STUN` which are not in the base enum).
 
-| State Name | Applicable To | Description |
-|---|---|---|
-| `PATROL` | All | Default movement behavior |
-| `ALERT` | All | Player detected, reactive behavior |
-| `TELEGRAPHING` | Archer, Brute, Caster | Pre-attack warning period |
-| `FIRING` | Shooter, Archer, Caster | Emitting a projectile |
-| `WIND_UP` | Charger only | Charge telegraph phase |
-| `CHARGE` | Charger only | High-speed rush |
-| `STUN` | Charger only | Post-charge recovery |
-| `HURT` | All | Damage received, brief stun |
-| `DYING` | All | Death animation playing |
+| State Name | Base Enum | Applicable To | Description |
+|---|---|---|---|
+| `PATROL` | ✅ Yes | All | Default movement behavior |
+| `ALERT` | ✅ Yes | All | Player detected, reactive behavior |
+| `TELEGRAPHING` | ✅ Yes | Archer, Brute, Caster | Pre-attack warning period |
+| `FIRING` | ✅ Yes | Shooter, Archer, Caster | Emitting a projectile |
+| `LAUNCHED` | ✅ Yes | Pushed/knocked back | Enemy is airborne from knockback (undocumented in earlier docs) |
+| `HURT` | ✅ Yes | All | Damage received, brief stun |
+| `DYING` | ✅ Yes | All | Death animation playing |
+| `WIND_UP` | ❌ Subclass only | Charger only | Charge telegraph phase |
+| `CHARGE` | ❌ Subclass only | Charger only | High-speed rush |
+| `STUN` | ❌ Subclass only | Charger only | Post-charge recovery |
 
 ---
 

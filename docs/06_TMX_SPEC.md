@@ -43,6 +43,7 @@ Each TMX file must declare the following custom properties at the map level:
 | `background_zone` | string | No | Zone key for loading parallax backgrounds (`assets/backgrounds/{background_zone}/`). If set, `StageLoader` loads `bg_{zone}_{far,mid,near}.png`. If absent or empty, no background layers are loaded. |
 | `background_color` | color | No | Sky/background fill color (default: `#000000`) |
 | `gravity_multiplier` | float | No | Stage-level gravity scale (default: `1.0`) |
+| `climate` | string | No | Weather climate key (`"clear"`, `"rain"`, `"snow"`, `"fog"`, `"storm"`). Empty string = `"clear"`. Drives `WeatherSystem` particles + ambient audio (default: `""`) |
 | `debug_mode` | bool | No | Enable debug overlay rendering (default: `false`) |
 
 ---

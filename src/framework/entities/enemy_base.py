@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 
 class EnemyState(str, Enum):
-    """All possible enemy states as defined in 05_ENEMY_SPEC.md §7."""
+    """All possible enemy states as defined in 05_ENEMY_SPEC.md §12."""
     PATROL = "PATROL"
     ALERT = "ALERT"
     TELEGRAPHING = "TELEGRAPHING"
@@ -40,7 +40,7 @@ class EnemyBase(BaseEntity):
     """
     Abstract root class for all enemies. Inherits from BaseEntity.
     Subclasses implement _patrol_behavior, _alert_behavior,
-    _get_animation_state, _build_hitbox, _build_hurtbox.
+    _get_animation_key, _build_hitbox, _build_hurtbox.
     Do NOT override update() — use the master update pattern.
     """
 

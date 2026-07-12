@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any
 
 
-SAVE_VERSION = 1
+SAVE_VERSION = 2
 MAX_SLOTS = 5
 
 
@@ -24,6 +24,7 @@ class SaveData:
     max_health: float = 5.0
 
     zone_flags: dict[str, bool] = field(default_factory=dict)
+    completed_stages: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -37,6 +38,7 @@ class SaveData:
             "health": round(self.health, 1),
             "max_health": round(self.max_health, 1),
             "zone_flags": dict(self.zone_flags),
+            "completed_stages": list(self.completed_stages),
         }
 
     @classmethod
@@ -52,6 +54,7 @@ class SaveData:
             health=float(data.get("health", 5.0)),
             max_health=float(data.get("max_health", 5.0)),
             zone_flags=data.get("zone_flags", {}),
+            completed_stages=data.get("completed_stages", []),
         )
 
     @staticmethod
@@ -60,4 +63,7 @@ class SaveData:
         if ver < 1:
             data.setdefault("zone_flags", {})
             data["version"] = 1
+        if ver < 2:
+            data.setdefault("completed_stages", [])
+            data["version"] = 2
         return data

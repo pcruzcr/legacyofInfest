@@ -15,8 +15,11 @@ if TYPE_CHECKING:
     from src.framework.vfx.particle_system import ParticleSystem
     from src.framework.vfx.damage_numbers import DamageNumberManager
     from src.framework.vfx.ambient_particles import AmbientParticleSystem
+    from src.framework.vfx.weather_system import WeatherSystem
     from src.framework.vfx.trail_system import TrailSystem
     from src.framework.ui.tutorial_overlay import TutorialOverlay
+    from src.framework.ui.learning_overlay import LearningOverlay
+    from src.framework.ui.dialogue_system import DialogueSystem
     from src.engine.ui.hud import HUD
     from src.engine.ui.message_box import MessageBox
     from src.engine.ui.screen_banner import ScreenBanner
@@ -42,8 +45,11 @@ class DrawingSystem:
         particle_system: ParticleSystem | None = None,
         damage_numbers: DamageNumberManager | None = None,
         ambient_particles: AmbientParticleSystem | None = None,
+        weather_system: WeatherSystem | None = None,
         trail_system: TrailSystem | None = None,
         tutorial_overlay: TutorialOverlay | None = None,
+        learning_overlay: LearningOverlay | None = None,
+        dialogue_system: DialogueSystem | None = None,
     ) -> None:
         if stage is None or player is None:
             return
@@ -56,6 +62,10 @@ class DrawingSystem:
         # Ambient particles behind entities
         if ambient_particles is not None:
             ambient_particles.draw(surface, cam_offset)
+
+        # Weather effects (rain, snow, fog, storm)
+        if weather_system is not None:
+            weather_system.draw(surface, cam_offset)
 
         # Trails behind entities
         if trail_system is not None:
@@ -87,6 +97,12 @@ class DrawingSystem:
 
         if tutorial_overlay:
             tutorial_overlay.draw(surface)
+
+        if learning_overlay:
+            learning_overlay.draw(surface)
+
+        if dialogue_system:
+            dialogue_system.draw(surface)
 
         if paused:
             self._draw_pause_menu(surface, pause_selected, pause_options or [])
