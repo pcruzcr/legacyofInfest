@@ -50,16 +50,21 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── __init__.py
 │   │   │   ├── scene_manager.py           # SceneManager: push/pop/replace scene stack
 │   │   │   ├── base_scene.py              # BaseScene: abstract interface all scenes implement
-│   │   │   └── transitions.py            # FadeTransition, WipeTransition
+│   │   │   └── transitions.py            # FadeTransition, WipeTransition, SlideTransition, CircleTransition
 │   │   │
-│   │   ├── scenes/                        # All scene implementations
+│   │   ├── scenes/                        # All scene implementations (34 files)
 │   │   │   ├── __init__.py
 │   │   │   ├── splash_scene.py            # Professor logo, auto-advance
 │   │   │   ├── title_scene.py             # Main menu: Start / Academic Demos / Quit
 │   │   │   ├── story_scene.py             # Story sequence (scenes 1–3)
+│   │   │   ├── loading_scene.py           # Loading screen with progress indicator
+│   │   │   ├── tutorial_scene.py          # Controls tutorial overlay
+│   │   │   ├── options_scene.py           # Options: volume, difficulty, colorblind mode
+│   │   │   ├── keybinding_scene.py        # Rebind controls
+│   │   │   ├── load_game_scene.py         # Save file selector
 │   │   │   ├── game_over_scene.py         # Death screen with continue/quit
 │   │   │   ├── end_credits_scene.py       # Credits / completion screen
-│   │   │   ├── demo_menu_scene.py         # Academic Demos selector (10 scenes)
+│   │   │   ├── demo_menu_scene.py         # Academic Demos selector (10+ scenes)
 │   │   │   ├── scene_registry.py          # DI Container: register → build pattern
 │   │   │   ├── debug_overlay.py           # F3 debug console (FPS, events, modules)
 │   │   │   ├── param_panel.py             # Reusable ParamPanel widget
@@ -75,7 +80,17 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── interpolation_lab_scene.py # Unit III/IV — Interpolation lab
 │   │   │   ├── color_theory_scene.py      # Unit V — Color theory lab
 │   │   │   ├── noise_lab_scene.py         # Unit V/VIII — Noise lab
-│   │   │   └── collision_lab_scene.py     # Unit VI — Collision lab
+│   │   │   ├── collision_lab_scene.py     # Unit VI — Collision lab
+│   │   │   ├── combo_demo_scene.py        # Combo system state machine demo
+│   │   │   ├── inventory_scene.py         # Inventory screen (grid of collected items)
+│   │   │   ├── achievement_scene.py       # Achievement screen (locked/unlocked)
+│   │   │   ├── achievement_screen.py      # Achievement unlock overlay
+│   │   │   ├── bestiary_scene.py          # Bestiary: enemy catalog
+│   │   │   ├── world_map_scene.py         # World map (connected nodes)
+│   │   │   ├── progress_scene.py          # Student progress dashboard (% per category)
+│   │   │   ├── leaderboard_scene.py       # Local speedrun / boss rush leaderboards
+│   │   │   ├── pipeline_builder_scene.py  # Visual filter chain builder (Unit VII/VIII)
+│   │   │   └── quiz_system.py             # Quiz overlay for academic labs
 │   │   │
 │   │   ├── input/
 │   │   │   ├── __init__.py
@@ -84,14 +99,15 @@ legacy-of-infest/                      # Actual repo root
 │   │   │
 │   │   ├── audio/
 │   │   │   ├── __init__.py
-│   │   │   ├── audio_manager.py           # AudioManager: music + sfx, channel control
-│   │   │   └── sound_bank.py              # SoundBank: named sound registry
+│   │   │   ├── sound_bank.py              # SoundBank: named sound registry
+│   │   │   └── audio_manager.py           # AudioManager: music + sfx + ambient + stingers
 │   │   │
 │   │   ├── ui/
 │   │   │   ├── __init__.py
 │   │   │   ├── hud.py                     # HUD: hearts, timer, portrait, score
 │   │   │   ├── message_box.py             # MessageBox: scrolling text, tutorial messages
-│   │   │   └── screen_banner.py           # ScreenBanner: stage title animation
+│   │   │   ├── screen_banner.py           # ScreenBanner: stage title animation
+│   │   │   └── minimap.py                 # Minimap: fog-of-war exploration map
 │   │   │
 │   │   └── utils/
 │   │       ├── __init__.py
@@ -109,13 +125,50 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── enemy_walker.py            # EnemyWalker: horizontal patrol, player detection
 │   │   │   ├── enemy_flying.py            # EnemyFlying: sine-wave or waypoint flight
 │   │   │   ├── enemy_shooter.py           # EnemyShooter: projectile emission, range trigger
-│   │   │   └── boss_base.py               # BossBase: phase manager, boss health bar event
+│   │   │   ├── boss_base.py               # BossBase: phase manager, boss health bar event
+│   │   │   ├── enemy_charger.py           # EnemyCharger: wind-up + charge attack
+│   │   │   ├── enemy_archer.py            # EnemyArcher: ranged with arc shot
+│   │   │   ├── enemy_brute.py             # EnemyBrute: heavy melee + ground slam
+│   │   │   ├── enemy_caster.py            # EnemyCaster: homing orb magic
+│   │   │   ├── enemy_assassin.py          # EnemyAssassin: cloak + lunge
+│   │   │   ├── entity_factory.py          # EntityFactory: registry-based enemy creation
+│   │   │   ├── flight_strategies.py       # FlightStrategy: sine/bezier/random flight patterns
+│   │   │   ├── ai_predictor.py            # AIPredictor: ML-based player action prediction
+│   │   │   └── bestiary.py                # Bestiary: enemy encounter/kill tracking
 │   │   │
 │   │   ├── stage/
 │   │   │   ├── __init__.py
 │   │   │   ├── stage_loader.py            # StageLoader: parse TMX, build layer stack, spawn
 │   │   │   ├── camera.py                  # Camera: viewport, parallax, follow target
-│   │   │   └── checkpoint.py              # Checkpoint: trigger zone, respawn anchor
+│   │   │   ├── checkpoint.py              # Checkpoint: trigger zone, respawn anchor
+│   │   │   ├── collision_system.py        # CollisionSystem: hitstop, attack processing
+│   │   │   ├── hazard_system.py           # HazardSystem: damage zones, death pits
+│   │   │   ├── progression_system.py      # ProgressionSystem: stage completion, triggers
+│   │   │   ├── drawing_system.py          # DrawingSystem: layered rendering pipeline
+│   │   │   ├── cutscene_system.py         # CutsceneSystem: scripted cutscenes
+│   │   │   ├── speedrun_mode.py           # SpeedrunTimer: global timer + ghost data
+│   │   │   └── boss_rush_mode.py          # BossRushMode: consecutive boss gauntlet
+│   │   │
+│   │   ├── ui/
+│   │   │   ├── __init__.py
+│   │   │   ├── tutorial_overlay.py        # TutorialOverlay: contextual help popups
+│   │   │   └── dialogue_system.py         # DialogueSystem: branching dialogue with portraits
+│   │   │
+│   │   ├── scenes/
+│   │   │   ├── __init__.py
+│   │   │   └── stage_scene.py             # StageScene: main gameplay scene
+│   │   │
+│   │   ├── vfx/
+│   │   │   ├── __init__.py
+│   │   │   ├── particle_system.py         # ParticleSystem: emitters, bursts
+│   │   │   ├── hit_effects.py             # HitEffects: burst configs per hit type
+│   │   │   ├── damage_numbers.py          # DamageNumberManager: floating damage text
+│   │   │   ├── post_processing.py         # PostProcessing: bloom, vignette, motion blur
+│   │   │   ├── lighting.py                # LightSystem: 2D dynamic lighting
+│   │   │   ├── ambient_particles.py       # AmbientParticleSystem: dust, leaves, embers
+│   │   │   ├── trail_system.py            # TrailSystem: motion trails
+│   │   │   ├── fog_of_war.py              # FogOfWar: black overlay with revealed holes
+│   │   │   └── water_effect.py            # WaterEffect: animated sine wave overlay
 │   │   │
 │   │   └── processing/
 │   │       ├── __init__.py
@@ -139,7 +192,15 @@ legacy-of-infest/                      # Actual repo root
 │
 ├── scripts/                            # Tooling scripts
 │   ├── validate_assets.py              # Validates fonts, models, maps
+│   ├── validate_tmx.py                 # Validates TMX map files for common errors
+│   ├── grade_stage.py                  # Auto-grades student stage TMX files
+│   ├── grade_boss.py                   # Auto-grades student boss Python files
 │   └── generate_exam.py                # Generates practice exams from question bank
+│
+├── colab/                              # Google Colab notebooks for interactive exercises
+│   ├── 01_vector_math_exercises.ipynb  # Unit II — Vector mathematics exercises
+│   ├── 02_color_spaces_exercises.ipynb # Unit V — Color space conversion exercises
+│   └── 03_filter_kernels_exercises.ipynb# Unit VII — Convolution kernel exercises
 │
 ├── student_templates/                  # Canonical starter scaffold (copied into src/stages/ by each student)
 │   ├── stage_template/
@@ -208,7 +269,7 @@ legacy-of-infest/                      # Actual repo root
 The root application class. It owns the Pygame display surface, the `DeltaClock`, the `SceneManager`, the `InputManager`, and the `AudioManager`. It runs the main loop, pumps events into the `InputManager` and `EventBus`, calls `update()` and `draw()` on the active scene, and handles display scaling from internal resolution to window resolution.
 
 **Public Interface:**
-- `App()` — Initialize Pygame, create internal surface at 320×224, create all engine singletons
+- `App()` — Initialize Pygame, create internal surface at settings.INTERNAL_WIDTH×settings.INTERNAL_HEIGHT, create all engine singletons
 - `App.run()` — Enter the main loop. Does not return until the application exits.
 
 **Constraints:**
@@ -222,10 +283,10 @@ A flat module of uppercase constants. No classes, no functions.
 
 | Constant | Type | Value | Description |
 |---|---|---|---|
-| `INTERNAL_WIDTH` | int | 320 | Internal render width in pixels |
-| `INTERNAL_HEIGHT` | int | 224 | Internal render height in pixels |
+| `INTERNAL_WIDTH` | int | 800 | Internal render width in pixels |
+| `INTERNAL_HEIGHT` | int | 600 | Internal render height in pixels |
 | `TARGET_FPS` | int | 60 | Target frames per second |
-| `DISPLAY_SCALE` | int | 3 | Default window scale multiplier |
+| `DISPLAY_SCALE` | int | 1 | Default window scale multiplier — set to 2-4 on high-DPI displays |
 | `TILE_SIZE` | int | 16 | Standard tile size in pixels |
 | `ASSETS_DIR` | Path | `Path("assets")` | Root asset directory |
 | `STAGES_DIR` | Path | `Path("src/stages")` | Root stages directory |
@@ -283,15 +344,20 @@ Manages a stack of `BaseScene` objects. Supports push (overlay a scene), pop (re
 
 #### `engine/scene/base_scene.py` — `BaseScene`
 
-Abstract base class for all scenes (splash, title, story screens, stages).
+Abstract base class for all scenes (splash, title, story screens, stages). Constructor receives the `GameContext` dependency injection container.
 
-**Required Implementation by Subclasses:**
+```python
+class BaseScene:
+    def __init__(self, context: GameContext) -> None: ...
+```
+
+**Lifecycle Methods (called by SceneManager in this order):**
+- `awake()` — Called once when the scene is first instantiated (before `on_enter`).
+- `start()` — Called once on the first `update()` after `on_enter`.
 - `on_enter()` — Called when the scene becomes active.
 - `on_exit()` — Called when the scene is deactivated or removed.
 - `update(dt: float)` — Update scene state. `dt` is delta time in seconds.
 - `draw(surface: pygame.Surface)` — Draw the scene to the provided surface.
-
-**Optional Override:**
 - `on_pause()` — Called when another scene is pushed on top.
 - `on_resume()` — Called when the scene is resumed after a pop.
 
@@ -606,7 +672,7 @@ SceneManager.current.update(dt)  # Active scene updates all entities
     ├── Checkpoint.update(dt)    # Trigger zone detection
     └── Camera.update(dt)        # Smooth follow
     ↓
-App.internal_surface.fill(BG)   # Clear internal 320×224 buffer
+App.internal_surface.fill(BG)   # Clear internal buffer
     ↓
 SceneManager.current.draw(surface)
     |
@@ -642,8 +708,8 @@ All registered listeners receive the event data
 main.py: App()
     ├── pygame.init()
     ├── pygame.mixer.init()
-    ├── Create internal surface (320×224)
-    ├── Create window surface (scaled)
+    ├── Create internal surface (settings.INTERNAL_WIDTH × settings.INTERNAL_HEIGHT)
+    ├── Create window surface (scaled by settings.DISPLAY_SCALE)
     ├── Instantiate DeltaClock
     ├── Instantiate EventBus (singleton)
     ├── Instantiate InputManager
@@ -679,7 +745,7 @@ App.quit()
 1. `pygame.init()` — Initialize all Pygame subsystems
 2. `pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)` — Audio
 3. `pygame.display.set_mode(window_size)` — Create OS window
-4. `internal_surface = pygame.Surface((320, 224))` — Create render target
+4. `internal_surface = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))` — Create render target
 5. `DeltaClock()` — Wrap `pygame.time.Clock`
 6. `EventBus()` — Singleton event dispatcher
 7. `AssetLoader()` — Singleton asset cache

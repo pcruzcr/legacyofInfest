@@ -264,7 +264,7 @@ Implementation: `stage_scene.py` lines 199-211. The timer decrements each frame 
 
 ## 8. States
 
-The player is governed by a finite state machine. Only one state is active at a time.
+The player is governed by a finite state machine. Only one state is active at a time. The implementation provides **25 concrete states** (plus one abstract base) in `src/framework/entities/player_states.py`.
 
 ### 8.1 State Table
 
@@ -280,8 +280,26 @@ The player is governed by a finite state machine. Only one state is active at a 
 | `HURT` | Damage received | Knockback timer expires | None (locked) |
 | `DASHING` | Dash input while grounded or within air dash limit | Dash timer expires (0.15s) | None (locked) |
 | `DYING` | Health == 0 | Death animation complete | None (locked) |
+| `SLIDE` | Crouch + momentum while running | Timer expires or crouch released | None (locked) |
+| `SWIMMING` | Enter water zone | Leave water (surface/ground) | Move, Jump |
+| `WALL_SLIDE` | Touch wall while falling + holding toward wall | Move away from wall or land | Jump, Attack |
+| `LEDGE_GRAB` | Reach ledge edge while wall sliding | Jump up or drop down | Jump |
+| `PARRY` | Attack + crouch simultaneously | Timer expires (0.2s) | None |
+| `CHARGE_ATTACK` | Hold long attack | Release long attack | Parry |
+| `CHARGE_RELEASE` | Release during charge | Animation complete | None |
+| `GRAB` | Long attack + crouch (no short attack) | Hit connects | Attack (throw) |
+| `THROW` | Attack while grabbing | Animation complete | None |
+| `AERIAL_ATTACK` | Attack while airborne | Animation or land | None (locked) |
+| `AIR_CHASE` | Attack after aerial hit | Animation complete | None (locked) |
+| `AERIAL_SLAM` | Down + attack while airborne | Animation complete or land | None (locked) |
+| `DASH_ATTACK` | Attack while dashing | Animation complete | None (locked) |
+| `AIRBORNE` | Generic fall state (no jump input) | Land on ground | All |
 
-### 8.2 State Transition Diagram
+**Note:** The previous `ULTIMATE` state has been removed from the codebase. The `CHARGING` state is named `CHARGE_ATTACK` in the enum, with a separate `CHARGE_RELEASE` follow-up state. Twenty-five concrete state classes exist in `player_states.py` (`IdleState`, `WalkingState`, `CrouchingState`, `SlideState`, `AirborneState`, `JumpingState`, `FallingState`, `DashingState`, `ShortAttackState`, `LongAttackState`, `UltimateState`, `GrabState`, `ThrowState`, `ParryState`, `ChargingState`, `ChargeReleaseState`, `AerialAttackState`, `AirChaseState`, `AerialSlamState`, `DashAttackState`, `WallSlideState`, `LedgeGrabState`, `HurtState`, `DyingState`, `SwimmingState`).
+
+### 8.2 State Transition Diagram (Simplified — Subset of Core States)
+
+The full state machine spans 25 concrete states. The diagram below shows the most common transitions. Additional states (AERIAL_ATTACK, AIR_CHASE, AERIAL_SLAM, CHARGE_ATTACK, CHARGE_RELEASE, GRAB, THROW, PARRY, SLIDE, SWIMMING, LEDGE_GRAB) follow similar patterns — see `src/framework/entities/player_states.py` for complete implementation.
 
 ```
               ┌─────────────────────────────────────────────┐
@@ -297,7 +315,7 @@ The player is governed by a finite state machine. Only one state is active at a 
          crouch input ──────────────────────────────► [CROUCHING]   ─► [SHORT_ATTACK]
               │                                                        ─► [LONG_ATTACK]
          attack inputs ─────────────────────────────► [SHORT_ATTACK]
-                                                     ► [LONG_ATTACK]
+                                                      ► [LONG_ATTACK]
 
 [JUMPING] ──── peak velocity ────────────────────────► [FALLING]
 [FALLING] ──── land ─────────────────────────────────► [IDLE]
