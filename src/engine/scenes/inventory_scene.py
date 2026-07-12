@@ -11,6 +11,7 @@ from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.core.inventory import Inventory
+from src.engine.scenes.demo_common import BOTTOM_BAR_Y
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -80,4 +81,5 @@ class InventoryScene(BaseScene):
                 if defn and defn.description and idx == self._selected_slot:
                     desc_surf = self._font_desc.render(defn.description, True, (180, 180, 180))
                     dx = (settings.INTERNAL_WIDTH - desc_surf.get_width()) // 2
-                    surface.blit(desc_surf, (dx, settings.INTERNAL_HEIGHT - 40))
+                    surface.blit(desc_surf, (dx, BOTTOM_BAR_Y - 36))
+

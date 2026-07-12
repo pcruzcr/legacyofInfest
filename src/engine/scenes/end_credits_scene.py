@@ -8,6 +8,7 @@ from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.title_scene import TitleScene
+from src.engine.scenes.demo_common import BOTTOM_BAR_Y
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -104,4 +105,5 @@ class EndCreditsScene(BaseScene):
         if self._done:
             hint = self._font_hint.render("Press CONFIRM to return to title", True, (150, 150, 150))
             hx = (settings.INTERNAL_WIDTH - hint.get_width()) // 2
-            surface.blit(hint, (hx, settings.INTERNAL_HEIGHT - 20))
+            surface.blit(hint, (hx, BOTTOM_BAR_Y - 16))
+

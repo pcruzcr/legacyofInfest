@@ -7,11 +7,14 @@ Description: All global constants for the Legacy of InFest engine.
 import os
 from pathlib import Path
 
-INTERNAL_WIDTH: int = 320
-INTERNAL_HEIGHT: int = 224
+INTERNAL_WIDTH: int = 800
+INTERNAL_HEIGHT: int = 600
 TARGET_FPS: int = 60
-_raw_scale = os.environ.get("LOI_DISPLAY_SCALE", "3")
-DISPLAY_SCALE: int = max(1, int(_raw_scale) if _raw_scale.isdigit() else 3)
+_raw_scale = os.environ.get("LOI_DISPLAY_SCALE", "1")
+DISPLAY_SCALE: int = max(1, int(_raw_scale) if _raw_scale.isdigit() else 1)
+# For legacy 320x224 content, adjust display scale to maintain window size
+if INTERNAL_WIDTH == 320 and INTERNAL_HEIGHT == 224 and DISPLAY_SCALE == 1:
+    DISPLAY_SCALE = 3
 TILE_SIZE: int = 16
 
 _PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent.parent.parent

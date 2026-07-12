@@ -11,11 +11,12 @@ from src.engine.core import settings
 from src.engine.core.difficulty import Difficulty, set_difficulty
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
+from src.engine.scenes.demo_common import BOTTOM_BAR_Y
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
 
-CONFIG_PATH = Path(os.environ.get("APPDATA", "~/.config")) / "legacyofinfest" / "config.json"
+CONFIG_PATH = Path(os.environ.get("APPDATA", str(Path("~/.config").expanduser()))) / "legacyofinfest" / "config.json"
 
 
 class OptionsScene(BaseScene):
@@ -52,6 +53,7 @@ class OptionsScene(BaseScene):
             "display_scale": int(self._options[2]["value"]),
             "fullscreen": self._options[3].get("value", "off"),
             "vsync": self._options[4].get("value", "off"),
+            "resolution": self._options[5].get("value", "320x224"),
             "difficulty": self._options[6].get("value", "normal"),
             "colorblind_mode": self._options[8].get("value", "off"),
             "subtitles": self._options[9].get("value", "off"),
@@ -68,6 +70,7 @@ class OptionsScene(BaseScene):
         self._options[2]["value"] = float(cfg.get("display_scale", settings.DISPLAY_SCALE))
         self._options[3]["value"] = cfg.get("fullscreen", "off")
         self._options[4]["value"] = cfg.get("vsync", "off")
+        self._options[5]["value"] = cfg.get("resolution", "320x224")
         self._options[6]["value"] = cfg.get("difficulty", "normal")
         self._options[8]["value"] = cfg.get("colorblind_mode", "off")
         self._options[9]["value"] = cfg.get("subtitles", "off")
@@ -85,9 +88,8 @@ class OptionsScene(BaseScene):
             res_w = int(res_parts[0]) if len(res_parts) == 2 else settings.INTERNAL_WIDTH * scale
             res_h = int(res_parts[1]) if len(res_parts) == 2 else settings.INTERNAL_HEIGHT * scale
             flags = pygame.FULLSCREEN if fullscreen else 0
-            if vsync:
-                flags |= pygame.SCALED
-            pygame.display.set_mode((res_w, res_h), flags)
+            flags |= pygame.SCALED
+            pygame.display.set_mode((res_w, res_h), flags, vsync=1 if vsync else 0)
             diff_val = self._options[6].get("value", "normal")
             for d in Difficulty:
                 if d.value == diff_val:
@@ -160,7 +162,7 @@ class OptionsScene(BaseScene):
         title = font.render("OPTIONS", True, (255, 255, 240))
         surface.blit(title, ((settings.INTERNAL_WIDTH - title.get_width()) // 2, 20))
         hint = pygame.font.Font(None, 16).render("[ESC] Back  [LEFT/RIGHT] Change", True, (160, 160, 170))
-        surface.blit(hint, ((settings.INTERNAL_WIDTH - hint.get_width()) // 2, settings.INTERNAL_HEIGHT - 26))
+        surface.blit(hint, ((settings.INTERNAL_WIDTH - hint.get_width()) // 2, BOTTOM_BAR_Y - 22))
         y = 70
         for i, opt in enumerate(self._options):
             color = (255, 255, 100) if i == self._selected else (200, 200, 200)
@@ -179,3 +181,4 @@ class OptionsScene(BaseScene):
                 val_surf = pygame.font.Font(None, 18).render(val_s, True, color)
                 surface.blit(val_surf, (settings.INTERNAL_WIDTH - 90, y))
             y += 28
+

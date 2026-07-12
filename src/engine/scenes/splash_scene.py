@@ -8,6 +8,7 @@ from src.engine.core import settings
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.title_scene import TitleScene
 from src.engine.utils.asset_loader import AssetLoader
+from src.engine.scenes.demo_common import BOTTOM_BAR_Y
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -82,14 +83,14 @@ class SplashScene(BaseScene):
         surface.blit(self._logo, logo_rect)
 
         loading = self._font_game.render("Cargando...", True, (255, 255, 255))
-        lr = loading.get_rect(center=(settings.INTERNAL_WIDTH // 2, settings.INTERNAL_HEIGHT - 40))
+        lr = loading.get_rect(center=(settings.INTERNAL_WIDTH // 2, BOTTOM_BAR_Y - 36))
         loading.set_alpha(int(min(self._timer / self.SPLASH_TIME, 1.0) * 255))
         surface.blit(loading, lr)
 
         progress = min(self._timer / self.SPLASH_TIME, 1.0)
         BAR_W, BAR_H = 170, 6
         bar_rect = pygame.Rect(
-            (settings.INTERNAL_WIDTH - BAR_W) // 2, settings.INTERNAL_HEIGHT - 22,
+            (settings.INTERNAL_WIDTH - BAR_W) // 2, BOTTOM_BAR_Y - 18,
             BAR_W, BAR_H,
         )
         pygame.draw.rect(surface, (45, 45, 45), bar_rect, border_radius=3)
@@ -100,9 +101,10 @@ class SplashScene(BaseScene):
         )
 
         version = self._font_small.render("Prototype v0.1", True, (180, 180, 180))
-        surface.blit(version, (6, settings.INTERNAL_HEIGHT - 12))
+        surface.blit(version, (6, BOTTOM_BAR_Y - 8))
 
         self.context.scene_manager.transition.draw(surface)
 
         cr = self._font_small.render("© 2026 Legacy of InFest", True, (180, 180, 180))
-        surface.blit(cr, (settings.INTERNAL_WIDTH - cr.get_width() - 6, settings.INTERNAL_HEIGHT - 12))
+        surface.blit(cr, (settings.INTERNAL_WIDTH - cr.get_width() - 6, BOTTOM_BAR_Y - 8))
+

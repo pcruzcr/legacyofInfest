@@ -32,6 +32,7 @@ from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
+    BOTTOM_BAR_Y,
     COLOR_BG, COLOR_TEXT, COLOR_HIGHLIGHT, COLOR_ACCENT,
     FONT_SMALL, FONT_MEDIUM,
     draw_top_bar, draw_bottom_bar,
@@ -350,7 +351,7 @@ class ColorTheoryScene(BaseScene):
         # Status
         if self._status_msg:
             st = self._font_small.render(self._status_msg, True, COLOR_HIGHLIGHT)
-            surface.blit(st, (4, settings.INTERNAL_HEIGHT - 20))
+            surface.blit(st, (4, BOTTOM_BAR_Y - 16))
 
         draw_bottom_bar(surface, (
             "  [LEFT/RIGHT] adj  [UP/DOWN] adj2  [E/Q] adj3  "
@@ -519,3 +520,4 @@ class ColorTheoryScene(BaseScene):
         info = self._font_small.render(
             f"Attempts: {self._challenge_attempts}  Diff: {diff:.0f}  [SPACE] submit", True, COLOR_TEXT)
         surface.blit(info, (10, y + 108))
+

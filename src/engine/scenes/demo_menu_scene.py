@@ -1,3 +1,9 @@
+"""
+DemoMenuScene — Academic demonstration lab selector.
+
+Lists all available lab scenes by unit. Navigate with UP/DOWN,
+select with ENTER, return to title with ESC.
+"""
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -17,6 +23,7 @@ from src.engine.scenes.demo_common import (
     FONT_SMALL,
     draw_top_bar,
     draw_bottom_bar,
+    TOP_BAR_H, BOTTOM_BAR_Y,
 )
 from src.engine.scenes.scene_registry import get_registry
 from src.engine.utils.asset_loader import AssetLoader
@@ -26,8 +33,8 @@ if TYPE_CHECKING:
 
 
 ITEM_H = 24
-VISIBLE_Y_START = 30
-VISIBLE_Y_END = 194
+VISIBLE_Y_START = TOP_BAR_H + 6
+VISIBLE_Y_END = BOTTOM_BAR_Y - 6
 VISIBLE_ITEMS = (VISIBLE_Y_END - VISIBLE_Y_START) // ITEM_H
 
 
@@ -46,6 +53,12 @@ class DemoMenuScene(BaseScene):
             ("Unit VIII", "Segmentation & Analysis", "vision"),
             ("Unit IX", "Pattern Recognition", "pattern"),
             ("Combo System", "State Machine & Damage Scaling", "combo"),
+            ("", "", ""),
+            ("--- PROGRESS ---", "Track your learning", "progress"),
+            ("--- LEADERBOARDS ---", "Speedrun & boss rush records", "leaderboard"),
+            ("--- PIPELINE BUILDER ---", "Build visual filter chains", "pipeline"),
+            ("--- SANDBOX ---", "Unrestricted playground", "sandbox"),
+            ("--- WIZARD ---", "Stage Builder Tutorial", "wizard"),
         ]
         self._selected: int = 0
         self._scroll_offset: int = 0
@@ -133,6 +146,7 @@ class DemoMenuScene(BaseScene):
             # Background highlight for selected item
             if selected:
                 highlight_rect = pygame.Rect(8, cy - 2, settings.INTERNAL_WIDTH - 16, ITEM_H + 2)
+
                 pygame.draw.rect(surface, (40, 40, 80), highlight_rect, border_radius=3)
 
             color = COLOR_HIGHLIGHT if selected else COLOR_TEXT
@@ -146,6 +160,6 @@ class DemoMenuScene(BaseScene):
         if self._error_msg:
             err = self._font_small.render(self._error_msg, True, COLOR_ERROR)
             ex = (settings.INTERNAL_WIDTH - err.get_width()) // 2
-            surface.blit(err, (ex, 170))
+            surface.blit(err, (ex, BOTTOM_BAR_Y - 30))
 
         draw_bottom_bar(surface, "  UP/DOWN: Navigate  |  ENTER: Select  |  ESC: Back to Title")

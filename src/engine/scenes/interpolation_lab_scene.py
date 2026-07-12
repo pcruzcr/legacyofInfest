@@ -25,6 +25,7 @@ from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
+    BOTTOM_BAR_Y,
     COLOR_BG, COLOR_TEXT, COLOR_HIGHLIGHT, COLOR_ACCENT,
     COLOR_DIVIDER, FONT_SMALL, FONT_MEDIUM,
     draw_top_bar, draw_bottom_bar,
@@ -169,11 +170,11 @@ class InterpolationLabScene(BaseScene):
         # Controls
         controls = self._build_controls_text()
         ct = self._font_small.render(controls, True, COLOR_TEXT)
-        surface.blit(ct, (4, settings.INTERNAL_HEIGHT - 32))
+        surface.blit(ct, (4, BOTTOM_BAR_Y - 28))
 
         if self._status_msg:
             st = self._font_small.render(self._status_msg, True, COLOR_HIGHLIGHT)
-            surface.blit(st, (4, settings.INTERNAL_HEIGHT - 20))
+            surface.blit(st, (4, BOTTOM_BAR_Y - 16))
 
         draw_bottom_bar(surface, f"MODE: {MODE_NAMES[self._mode]}")
 
@@ -311,3 +312,4 @@ class InterpolationLabScene(BaseScene):
         if self._mode == 1:
             base = "  [LEFT/RIGHT] t  |  [UP/DOWN] easing  |  [SPACE] animate  |  [TAB] mode  |  [R] reset"
         return base
+

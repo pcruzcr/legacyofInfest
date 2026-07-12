@@ -35,6 +35,7 @@ from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
+    BOTTOM_BAR_Y,
     COLOR_BG, COLOR_TEXT, COLOR_HIGHLIGHT, COLOR_ACCENT,
     FONT_SMALL, FONT_MEDIUM,
     draw_top_bar, draw_bottom_bar,
@@ -295,7 +296,7 @@ class CurveEditorScene(BaseScene):
         # Status
         if self._status_msg:
             st = self._font_small.render(self._status_msg, True, COLOR_HIGHLIGHT)
-            surface.blit(st, (4, settings.INTERNAL_HEIGHT - 20))
+            surface.blit(st, (4, BOTTOM_BAR_Y - 16))
 
         draw_bottom_bar(surface, (
             "  [Drag] point  [TAB] mode  [1-5] jump  [D] de Casteljau  "
@@ -358,3 +359,4 @@ class CurveEditorScene(BaseScene):
         for i, line in enumerate(info_lines):
             txt = self._font_small.render(line, True, colors[i % len(colors)])
             surface.blit(txt, (CURVE_AREA.right - 70, CURVE_AREA.top + 4 + i * 12))
+

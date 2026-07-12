@@ -30,6 +30,7 @@ from src.engine.scenes.demo_common import (
     COLOR_BG, COLOR_TEXT, COLOR_HIGHLIGHT, COLOR_ACCENT,
     FONT_SMALL, FONT_MEDIUM,
     draw_top_bar, draw_bottom_bar,
+    TOP_BAR_H, BOTTOM_BAR_Y,
 )
 from src.engine.utils.asset_loader import AssetLoader
 from src.engine.utils.math_utils import vec2_dot
@@ -37,8 +38,25 @@ from src.engine.utils.math_utils import vec2_dot
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
 
+from src.engine.scenes.quiz_system import QuizManager
+from src.engine.scenes.code_panel import CodePanel
+from src.engine.scenes.tutorial_overlay import TutorialOverlay
+
+# Responsive layout offsets (resolvable to demo_layout constants)
+_MARGIN = 8
+_CONTENT_TOP = TOP_BAR_H + 4
+_PANEL_TOP = TOP_BAR_H
 
 MODE_NAMES = ["FREE MOVE", "CHASE (normalized)", "ORBIT (dot product)", "DISTANCE CHECK"]
+
+VECTOR_QUIZZES = [
+    {"question": "What does Vector2.normalize() return?", "options": ["A zero vector", "A unit vector (length=1)", "The vector scaled by 2", "The vector's angle"], "answer": 1},
+    {"question": "What is the dot product of two perpendicular vectors?", "options": ["1", "0", "Their product", "Undefined"], "answer": 1},
+    {"question": "What curve uses 4 control points?", "options": ["Linear", "Quadratic Bezier", "Cubic Bezier", "Catmull-Rom"], "answer": 2},
+    {"question": "What does distance() between two points return?", "options": ["The straight-line length", "The X difference", "The Y difference", "The sum of coordinates"], "answer": 0},
+    {"question": "What does a normalized vector represent?", "options": ["Magnitude only", "Direction only", "Position only", "Speed only"], "answer": 1},
+    {"question": "What is cos(90 degrees)?", "options": ["0", "1", "-1", "0.5"], "answer": 0},
+]
 
 DOT_COLORS = {
     "player": (80, 200, 120),
@@ -66,6 +84,10 @@ class VectorLabScene(BaseScene):
         self._status_msg: str = ""
         self._status_timer: float = 0.0
 
+        self._quiz = QuizManager(VECTOR_QUIZZES)
+        self._code_panel = CodePanel("normalize")
+        self._tutorial = TutorialOverlay("vector_lab")
+
     def on_enter(self) -> None:
         self._mode = 0
         self._show_normalized = False
@@ -82,6 +104,37 @@ class VectorLabScene(BaseScene):
             self._status_timer -= dt
             if self._status_timer <= 0:
                 self._status_msg = ""
+
+        # Quiz, Code Panel, Tutorial handlers (non-blocking)
+        if im and im.is_raw_key_pressed(pygame.K_q):
+            self._quiz.toggle()
+
+        if im and im.is_raw_key_pressed(pygame.K_c):
+            self._code_panel.toggle()
+
+        if im and im.is_raw_key_pressed(pygame.K_t):
+            self._tutorial.toggle()
+
+        if self._tutorial.active:
+            if im and im.is_raw_key_pressed(pygame.K_RIGHT):
+                self._tutorial.next_step()
+            if im and im.is_raw_key_pressed(pygame.K_LEFT):
+                self._tutorial.prev_step()
+
+        if self._quiz.active:
+            self._quiz.handle_input(im)
+            self._quiz.update(dt)
+            return  # freeze game while quiz is open
+
+        if self._code_panel.active:
+            return  # freeze game while code panel is open
+
+        if self._tutorial.active:
+            return  # freeze game while tutorial is open
+
+        # Update code panel content based on mode
+        mode_code_keys = ["distance", "normalize", "dot_product", "distance"]
+        self._code_panel.set_code(mode_code_keys[self._mode])
 
         # TAB — cycle modes
         if im.is_raw_key_pressed(pygame.K_TAB):
@@ -117,7 +170,7 @@ class VectorLabScene(BaseScene):
 
         self._player += move_dir * self._speed * dt
         self._player.x = max(10, min(settings.INTERNAL_WIDTH - 10, self._player.x))
-        self._player.y = max(10, min(settings.INTERNAL_HEIGHT - 40, self._player.y))
+        self._player.y = max(TOP_BAR_H + 10, min(BOTTOM_BAR_Y - 10, self._player.y))
 
         # Enemy movement (WASD via raw keys)
         enemy_dir = pygame.Vector2(0.0, 0.0)
@@ -147,16 +200,16 @@ class VectorLabScene(BaseScene):
             self._enemy += enemy_dir * self._speed * dt
 
         self._enemy.x = max(10, min(settings.INTERNAL_WIDTH - 10, self._enemy.x))
-        self._enemy.y = max(10, min(settings.INTERNAL_HEIGHT - 40, self._enemy.y))
+        self._enemy.y = max(TOP_BAR_H + 10, min(BOTTOM_BAR_Y - 10, self._enemy.y))
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill(COLOR_BG)
         draw_top_bar(surface, "VECTOR LAB", "UNIT II")
 
-        # Draw grid
+        # Draw grid (only in content area below top bar)
         for x in range(0, settings.INTERNAL_WIDTH, 32):
-            pygame.draw.line(surface, (20, 20, 40), (x, 0), (x, settings.INTERNAL_HEIGHT), 1)
-        for y in range(0, settings.INTERNAL_HEIGHT, 32):
+            pygame.draw.line(surface, (20, 20, 40), (x, TOP_BAR_H), (x, BOTTOM_BAR_Y), 1)
+        for y in range(TOP_BAR_H, BOTTOM_BAR_Y, 32):
             pygame.draw.line(surface, (20, 20, 40), (0, y), (settings.INTERNAL_WIDTH, y), 1)
 
         # Draw vector from enemy to player
@@ -211,10 +264,10 @@ class VectorLabScene(BaseScene):
         mode_color = COLOR_HIGHLIGHT if self._mode >= 1 else COLOR_ACCENT
         mode_label = self._font_medium.render(
             f"  Mode: {MODE_NAMES[self._mode]}  ", True, mode_color)
-        surface.blit(mode_label, (4, 24))
+        surface.blit(mode_label, (_MARGIN, _CONTENT_TOP))
 
         # Math info panel
-        info_y = 80
+        info_y = _PANEL_TOP + 52
         dot_x = vec2_dot(vec_ab, pygame.Vector2(1, 0))
         angle = math.degrees(math.atan2(vec_ab.y, vec_ab.x)) if vec_len > 0.01 else 0.0
         info_lines = [
@@ -232,17 +285,24 @@ class VectorLabScene(BaseScene):
 
         for i, line in enumerate(info_lines):
             txt = self._font_small.render(line, True, COLOR_TEXT)
-            surface.blit(txt, (4, info_y + i * 16))
+            surface.blit(txt, (_MARGIN, info_y + i * 16))
 
         # Controls hint
         hint = self._font_small.render(
             "  Arrows: Player  |  WASD: Enemy  |  TAB: mode  |  N: toggle norm  |"
             "  R: reset  |  ESC: exit", True, COLOR_TEXT)
-        surface.blit(hint, (4, 50))
+        surface.blit(hint, (_MARGIN, _CONTENT_TOP + 24))
 
         # Status
         if self._status_msg:
             st = self._font_small.render(self._status_msg, True, COLOR_HIGHLIGHT)
-            surface.blit(st, (4, settings.INTERNAL_HEIGHT - 20))
+            surface.blit(st, (_MARGIN, BOTTOM_BAR_Y - 16))
 
-        draw_bottom_bar(surface, f"MODE: {MODE_NAMES[self._mode]}")
+        # Quiz, Code Panel, Tutorial overlays
+        self._quiz.draw(surface)
+        self._code_panel.draw(surface)
+        self._tutorial.draw(surface)
+
+        draw_bottom_bar(surface, (
+            "  MODE: {} | [Q] Quiz [C] Code [T] Tutorial".format(MODE_NAMES[self._mode])
+        ))

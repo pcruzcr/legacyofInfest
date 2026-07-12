@@ -28,6 +28,7 @@ from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
+    BOTTOM_BAR_Y,
     COLOR_BG, COLOR_TEXT, COLOR_HIGHLIGHT, COLOR_ACCENT, COLOR_ERROR,
     FONT_SMALL, FONT_MEDIUM,
     draw_top_bar, draw_bottom_bar,
@@ -412,7 +413,7 @@ class CollisionLabScene(BaseScene):
         # Status message
         if self._status_msg:
             st = self._font_small.render(self._status_msg, True, COLOR_HIGHLIGHT)
-            surface.blit(st, (4, settings.INTERNAL_HEIGHT - 20))
+            surface.blit(st, (4, BOTTOM_BAR_Y - 16))
 
         # Bottom bar
         bar_text = (
@@ -420,3 +421,4 @@ class CollisionLabScene(BaseScene):
             f"[TAB] cycle  [B] bug demo  [R] reset  [ESC] menu"
         )
         draw_bottom_bar(surface, bar_text)
+
