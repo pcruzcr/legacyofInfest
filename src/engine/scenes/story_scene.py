@@ -8,6 +8,7 @@ from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.utils.asset_loader import AssetLoader
+from src.engine.scenes.demo_common import BOTTOM_BAR_Y
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -161,6 +162,7 @@ class StoryScene(BaseScene):
         if self._typewriter_full:
             hint = self._font_hint.render("Presiona CONFIRM para continuar", True, (180, 180, 160))
             hx = (settings.INTERNAL_WIDTH - hint.get_width()) // 2
-            surface.blit(hint, (hx, settings.INTERNAL_HEIGHT - 25))
+            surface.blit(hint, (hx, BOTTOM_BAR_Y - 21))
 
         self.context.scene_manager.transition.draw(surface)
+

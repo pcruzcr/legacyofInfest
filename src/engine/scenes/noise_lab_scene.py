@@ -28,6 +28,7 @@ from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
+    BOTTOM_BAR_Y,
     COLOR_BG, COLOR_TEXT, COLOR_HIGHLIGHT, COLOR_ACCENT,
     FONT_SMALL, FONT_MEDIUM,
     draw_top_bar, draw_bottom_bar,
@@ -313,7 +314,7 @@ class NoiseLabScene(BaseScene):
 
         if self._status_msg:
             st = self._font_small.render(self._status_msg, True, COLOR_HIGHLIGHT)
-            surface.blit(st, (4, settings.INTERNAL_HEIGHT - 20))
+            surface.blit(st, (4, BOTTOM_BAR_Y - 16))
 
         draw_bottom_bar(surface, f"MODE: {MODE_NAMES[self._mode]}")
 
@@ -329,3 +330,4 @@ class NoiseLabScene(BaseScene):
         elif idx == 4:
             return str(self._seed)
         return ""
+

@@ -7,6 +7,7 @@ import pygame
 from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
+from src.engine.scenes.demo_common import BOTTOM_BAR_Y
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -119,11 +120,12 @@ class TutorialScene(BaseScene):
             f"{self._step_index + 1} / {len(_TUTORIAL_STEPS)}",
             True, (120, 120, 140),
         )
-        surface.blit(page_text, ((settings.INTERNAL_WIDTH - page_text.get_width()) // 2, settings.INTERNAL_HEIGHT - 60))
+        surface.blit(page_text, ((settings.INTERNAL_WIDTH - page_text.get_width()) // 2, BOTTOM_BAR_Y - 56))
         hint = font_small.render("[ENTER/Z/SPACE] Next  [ESC] Skip", True, (140, 140, 160))
-        surface.blit(hint, ((settings.INTERNAL_WIDTH - hint.get_width()) // 2, settings.INTERNAL_HEIGHT - 30))
+        surface.blit(hint, ((settings.INTERNAL_WIDTH - hint.get_width()) // 2, BOTTOM_BAR_Y - 26))
         if self._fade_alpha > 0:
             overlay = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
             overlay.set_alpha(self._fade_alpha)
             overlay.fill((0, 0, 0))
             surface.blit(overlay, (0, 0))
+

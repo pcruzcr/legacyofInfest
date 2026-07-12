@@ -1,7 +1,11 @@
 """
 Module: demo_layout
-Description: Layout constants and drawing helpers shared by all
-academic demonstration scenes.
+Description: Resolution-responsive layout constants and drawing helpers
+shared by all academic demonstration scenes.
+
+All constants are computed from settings.INTERNAL_WIDTH and
+settings.INTERNAL_HEIGHT so the UI adapts to any resolution.
+Minimum tested: 800x600.
 """
 from __future__ import annotations
 
@@ -11,22 +15,39 @@ from src.engine.core import settings
 from src.engine.utils.asset_loader import AssetLoader
 
 
-# ── Layout Constants ──────────────────────────────────────────────
-TOP_BAR_H = 26
-LEFT_PANEL_W = 160
-RIGHT_PANEL_W = 160
-PANEL_H = 174
-BOTTOM_BAR_H = 24
+# ── Computed Layout Constants ──────────────────────────────────────
+# These scale with INTERNAL_WIDTH and INTERNAL_HEIGHT.
+# Override via env vars: LOI_TOP_BAR_H=40 LOI_PANEL_W=300 etc.
 
-TOP_BAR_Y = 0
-LEFT_PANEL_X = 0
-LEFT_PANEL_Y = TOP_BAR_H
-RIGHT_PANEL_X = LEFT_PANEL_W
-RIGHT_PANEL_Y = TOP_BAR_H
-BOTTOM_BAR_Y = TOP_BAR_H + PANEL_H
+def _env_int(key: str, default: int) -> int:
+    import os
+    val = os.environ.get(key)
+    return int(val) if val and val.lstrip("-").isdigit() else default
 
-PANEL_W = LEFT_PANEL_W
-PANEL_SIZE = (PANEL_W, PANEL_H)
+# Top bar: 5% of height, min 28px, max 48px
+TOP_BAR_H: int = max(28, min(48, int(settings.INTERNAL_HEIGHT * 0.055)))
+# Bottom bar: 4% of height, min 20px, max 32px
+BOTTOM_BAR_H: int = max(20, min(32, int(settings.INTERNAL_HEIGHT * 0.04)))
+# Panel width: 32% of total width each, min 200px
+PANEL_W: int = max(200, int(settings.INTERNAL_WIDTH * 0.32))
+LEFT_PANEL_W: int = PANEL_W
+RIGHT_PANEL_W: int = PANEL_W
+# Panel height: fill space between top bar and bottom bar minus reserves
+_RESERVE_Y: int = max(60, int(settings.INTERNAL_HEIGHT * 0.10))
+PANEL_H: int = max(180, settings.INTERNAL_HEIGHT - TOP_BAR_H - BOTTOM_BAR_H - _RESERVE_Y)
+
+TOP_BAR_Y: int = 0
+LEFT_PANEL_X: int = 0
+LEFT_PANEL_Y: int = TOP_BAR_H
+RIGHT_PANEL_X: int = settings.INTERNAL_WIDTH - RIGHT_PANEL_W
+RIGHT_PANEL_Y: int = TOP_BAR_H
+BOTTOM_BAR_Y: int = settings.INTERNAL_HEIGHT - BOTTOM_BAR_H
+
+PANEL_SIZE: tuple[int, int] = (PANEL_W, PANEL_H)
+
+# Center area (between panels) for controls/info
+CENTER_X: int = LEFT_PANEL_W + 8
+CENTER_W: int = max(100, RIGHT_PANEL_X - LEFT_PANEL_W - 16)
 
 # Colors
 COLOR_BG = (10, 10, 30)
@@ -39,13 +60,25 @@ COLOR_ACCENT = (100, 180, 255)
 COLOR_ERROR = (255, 60, 60)
 COLOR_GOLD = (255, 200, 50)
 
-# Font sizes (increased for readability at 320x224 with antialiased rendering)
-FONT_SMALL = 12
-FONT_MEDIUM = 15
-FONT_LARGE = 18
+# Font sizes — scale with resolution
+FONT_SMALL: int = max(12, settings.INTERNAL_WIDTH // 55)
+FONT_MEDIUM: int = max(15, settings.INTERNAL_WIDTH // 42)
+FONT_LARGE: int = max(18, settings.INTERNAL_WIDTH // 35)
 
-# Shared font cache (per-size singleton fonts)
+# Shared font cache
 _FONT_CACHE: dict[int, pygame.font.Font] = {}
+
+# ── Public: re-export everything that demo_common exposes ──────────
+__all__ = [
+    "TOP_BAR_H", "LEFT_PANEL_W", "RIGHT_PANEL_W", "PANEL_H", "BOTTOM_BAR_H",
+    "TOP_BAR_Y", "LEFT_PANEL_X", "LEFT_PANEL_Y", "RIGHT_PANEL_X", "RIGHT_PANEL_Y",
+    "BOTTOM_BAR_Y", "PANEL_W", "PANEL_SIZE", "CENTER_X", "CENTER_W",
+    "COLOR_BG", "COLOR_TOP_BAR_BG", "COLOR_BOTTOM_BAR_BG", "COLOR_DIVIDER",
+    "COLOR_TEXT", "COLOR_HIGHLIGHT", "COLOR_ACCENT", "COLOR_ERROR", "COLOR_GOLD",
+    "FONT_SMALL", "FONT_MEDIUM", "FONT_LARGE",
+    "draw_top_bar", "draw_bottom_bar", "draw_bottom_bar_error",
+    "draw_panel_border", "draw_divider", "draw_save_notification", "draw_histogram_bars",
+]
 
 
 def _get_demo_font(size: int) -> pygame.font.Font:
@@ -61,10 +94,10 @@ def draw_top_bar(surface: pygame.Surface, title: str, unit: str) -> None:
                      (0, TOP_BAR_Y, settings.INTERNAL_WIDTH, TOP_BAR_H))
     fnt = _get_demo_font(FONT_MEDIUM)
     ts = fnt.render(f"  {title}", True, COLOR_HIGHLIGHT)
-    surface.blit(ts, (4, TOP_BAR_Y + 2))
+    surface.blit(ts, (8, TOP_BAR_Y + (TOP_BAR_H - ts.get_height()) // 2))
     ts2 = fnt.render(f"{unit}  ", True, COLOR_ACCENT)
     tw = ts2.get_width()
-    surface.blit(ts2, (settings.INTERNAL_WIDTH - tw - 4, TOP_BAR_Y + 2))
+    surface.blit(ts2, (settings.INTERNAL_WIDTH - tw - 8, TOP_BAR_Y + (TOP_BAR_H - ts2.get_height()) // 2))
 
 
 def draw_bottom_bar(surface: pygame.Surface, text: str) -> None:
@@ -72,7 +105,7 @@ def draw_bottom_bar(surface: pygame.Surface, text: str) -> None:
                      (0, BOTTOM_BAR_Y, settings.INTERNAL_WIDTH, BOTTOM_BAR_H))
     fnt = _get_demo_font(FONT_SMALL)
     ts = fnt.render(text, True, COLOR_TEXT)
-    surface.blit(ts, (4, BOTTOM_BAR_Y + 2))
+    surface.blit(ts, (8, BOTTOM_BAR_Y + (BOTTOM_BAR_H - ts.get_height()) // 2))
 
 
 def draw_bottom_bar_error(surface: pygame.Surface, error: str) -> None:
@@ -80,7 +113,7 @@ def draw_bottom_bar_error(surface: pygame.Surface, error: str) -> None:
                      (0, BOTTOM_BAR_Y, settings.INTERNAL_WIDTH, BOTTOM_BAR_H))
     fnt = _get_demo_font(FONT_SMALL)
     ts = fnt.render(error, True, COLOR_ERROR)
-    surface.blit(ts, (4, BOTTOM_BAR_Y + 2))
+    surface.blit(ts, (8, BOTTOM_BAR_Y + (BOTTOM_BAR_H - ts.get_height()) // 2))
 
 
 def draw_panel_border(surface: pygame.Surface, panel_rect: pygame.Rect) -> None:
@@ -88,13 +121,14 @@ def draw_panel_border(surface: pygame.Surface, panel_rect: pygame.Rect) -> None:
 
 
 def draw_divider(surface: pygame.Surface) -> None:
-    x = LEFT_PANEL_W
-    pygame.draw.line(surface, COLOR_DIVIDER, (x, TOP_BAR_Y), (x, TOP_BAR_Y + PANEL_H), 1)
+    pygame.draw.line(surface, COLOR_DIVIDER, (LEFT_PANEL_W, TOP_BAR_Y), (LEFT_PANEL_W, TOP_BAR_Y + PANEL_H), 1)
+    pygame.draw.line(surface, COLOR_DIVIDER,
+                     (RIGHT_PANEL_X, TOP_BAR_Y), (RIGHT_PANEL_X, TOP_BAR_Y + PANEL_H), 1)
 
 
 def draw_save_notification(surface: pygame.Surface, saved_path: str, font: pygame.font.Font) -> None:
     ts = font.render(f"Saved: {saved_path}", True, COLOR_GOLD)
-    surface.blit(ts, (4, BOTTOM_BAR_Y + 2))
+    surface.blit(ts, (8, BOTTOM_BAR_Y + 2))
 
 
 def draw_histogram_bars(

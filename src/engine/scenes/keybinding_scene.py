@@ -10,11 +10,12 @@ import pygame
 from src.engine.core import settings
 from src.engine.input.action_map import Action, DEFAULT_KEY_BINDINGS
 from src.engine.scene.base_scene import BaseScene
+from src.engine.scenes.demo_common import BOTTOM_BAR_Y
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
 
-CONFIG_PATH = Path(os.environ.get("APPDATA", "~/.config")) / "legacyofinfest" / "keybindings.json"
+CONFIG_PATH = Path(os.environ.get("APPDATA", str(Path("~/.config").expanduser()))) / "legacyofinfest" / "keybindings.json"
 
 _KEY_NAMES: dict[int, str] = {
     pygame.K_a: "A", pygame.K_b: "B", pygame.K_c: "C", pygame.K_d: "D",
@@ -183,9 +184,10 @@ class KeybindingScene(BaseScene):
             key_display = small.render(key_str, True, key_color)
             surface.blit(key_display, (x, y + 18))
 
-        hint_y = settings.INTERNAL_HEIGHT - 26
+        hint_y = BOTTOM_BAR_Y - 22
         if self._waiting_for_key:
             hint = small.render("Press any key to bind | ESC to cancel", True, (255, 200, 100))
         else:
             hint = small.render("[ARROWS] Navigate  [ENTER] Rebind  [ESC] Back", True, (160, 160, 170))
         surface.blit(hint, ((settings.INTERNAL_WIDTH - hint.get_width()) // 2, hint_y))
+

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
 
 import pygame
@@ -9,6 +10,7 @@ from src.engine.core.event_bus import emit
 from src.engine.core.events import Events
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
+from src.engine.scenes.demo_common import BOTTOM_BAR_Y
 from src.engine.scenes.demo_menu_scene import DemoMenuScene
 from src.engine.scenes.options_scene import OptionsScene
 from src.engine.scenes.story_scene import StoryScene
@@ -56,7 +58,7 @@ class TitleScene(BaseScene):
         self._scroll_offset: int = 0
         self._options: list[str] = [
             "START", "TUTORIAL", "WORLD MAP", "INVENTORY",
-            "ACHIEVEMENTS", "ACADEMIC DEMOS", "OPTIONS", "QUIT",
+            "BESTIARY", "ACHIEVEMENTS", "ACADEMIC DEMOS", "OPTIONS", "QUIT",
         ]
         self._recalc_layout()
 
@@ -150,6 +152,10 @@ class TitleScene(BaseScene):
             from src.engine.scenes.inventory_scene import InventoryScene
             self.context.scene_manager.transition.start_fade_out(0.4)
             self.context.scene_manager.replace(InventoryScene(self.context))
+        elif opt == "BESTIARY":
+            from src.engine.scenes.bestiary_scene import BestiaryScene
+            self.context.scene_manager.transition.start_fade_out(0.4)
+            self.context.scene_manager.replace(BestiaryScene(self.context))
         elif opt == "ACHIEVEMENTS":
             from src.engine.scenes.achievement_scene import AchievementScene
             self.context.scene_manager.transition.start_fade_out(0.4)
@@ -176,7 +182,7 @@ class TitleScene(BaseScene):
         from pathlib import Path
         import json
         import os
-        flag_path = Path(os.environ.get("APPDATA", "~/.config")) / "legacyofinfest" / "tutorial_seen.json"
+        flag_path = Path(os.environ.get("APPDATA", str(Path("~/.config").expanduser()))) / "legacyofinfest" / "tutorial_seen.json"
         try:
             with open(flag_path) as f:
                 data = json.load(f)
@@ -188,7 +194,7 @@ class TitleScene(BaseScene):
         from pathlib import Path
         import json
         import os
-        flag_path = Path(os.environ.get("APPDATA", "~/.config")) / "legacyofinfest" / "tutorial_seen.json"
+        flag_path = Path(os.environ.get("APPDATA", str(Path("~/.config").expanduser()))) / "legacyofinfest" / "tutorial_seen.json"
         flag_path.parent.mkdir(parents=True, exist_ok=True)
         with open(flag_path, "w") as f:
             json.dump({"seen": True}, f)
@@ -229,9 +235,10 @@ class TitleScene(BaseScene):
                 (settings.INTERNAL_WIDTH // 2 + 6, start_y - 10),
             ])
         if self._scroll_offset + self._max_visible < len(self._options):
-            bot = settings.INTERNAL_HEIGHT - 2
+            bot = BOTTOM_BAR_Y - 2
             pygame.draw.polygon(surface, (200, 200, 200), [
                 (settings.INTERNAL_WIDTH // 2, bot),
                 (settings.INTERNAL_WIDTH // 2 - 6, bot + 6),
                 (settings.INTERNAL_WIDTH // 2 + 6, bot + 6),
             ])
+

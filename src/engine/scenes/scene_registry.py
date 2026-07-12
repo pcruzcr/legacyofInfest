@@ -68,6 +68,12 @@ def register_demo_scenes() -> None:
     reg.register("inventory", lambda ctx: _build_scene(ctx, "inventory_scene", "InventoryScene"))
     reg.register("achievement", lambda ctx: _build_scene(ctx, "achievement_screen", "AchievementScene"))
     reg.register("worldmap", lambda ctx: _build_scene(ctx, "world_map_scene", "WorldMapScene"))
+    reg.register("bestiary", lambda ctx: _build_scene(ctx, "bestiary_scene", "BestiaryScene"))
+    reg.register("progress", lambda ctx: _build_scene(ctx, "progress_scene", "ProgressScene"))
+    reg.register("leaderboard", lambda ctx: _build_scene(ctx, "leaderboard_scene", "LeaderboardScene"))
+    reg.register("pipeline", lambda ctx: _build_scene(ctx, "pipeline_builder_scene", "PipelineBuilderScene"))
+    reg.register("sandbox", lambda ctx: _build_scene(ctx, "sandbox_scene", "SandboxScene"))
+    reg.register("wizard", lambda ctx: _build_scene(ctx, "stage_wizard_scene", "StageWizardScene"))
 
 
 def _build_scene(ctx: GameContext, module_name: str, class_name: str) -> BaseScene | None:

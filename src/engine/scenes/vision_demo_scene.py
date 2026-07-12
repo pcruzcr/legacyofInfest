@@ -83,6 +83,14 @@ class VisionDemoScene(BaseScene):
         self._error_msg: str = ""
         self._error_timer: float = 0.0
 
+        # Intermediate overlay state
+        self._show_intermediate: bool = False
+        self._inter_mask: pygame.Surface | None = None
+        self._inter_histogram: list[int] = []
+        self._inter_threshold: int = 128
+        self._inter_pipeline_label: str = ""
+        self._inter_pipeline_desc: str = ""
+
         self._font_small = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_SMALL)
         self._font_medium = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_MEDIUM)
         self._font_large = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_LARGE)
@@ -147,6 +155,9 @@ class VisionDemoScene(BaseScene):
             self._feat_method_idx = 0
             self._cached_result = None
             self._param_changed = True
+
+        if im.is_raw_key_pressed(pygame.K_i):
+            self._show_intermediate = not self._show_intermediate
 
         if im.is_action_just_pressed(Action.CANCEL):
             from src.engine.scenes.demo_menu_scene import DemoMenuScene
@@ -227,80 +238,110 @@ class VisionDemoScene(BaseScene):
             return
 
         try:
-            result, regions, comp_info, ws = self._apply_mode(src)
+            result, regions, comp_info, ws, mask, hist = self._apply_mode(src)
             self._cached_result = result
             self._cached_regions = regions
             self._cached_comp_result = comp_info
             self._cached_watershed = ws
+            self._inter_mask = mask
+            self._inter_histogram = hist
+            self._inter_threshold = self._threshold
+            self._update_intermediate_label()
             self._error_msg = ""
         except Exception as e:
             self._error_msg = f"Error: {e}"[:60]
             self._error_timer = 2.0
 
+    def _update_intermediate_label(self) -> None:
+        mode = self._mode
+        labels = {
+            0: ("Threshold", "Binary: pixels > T are white"),
+            1: ("Otsu", "Auto-threshold via variance"),
+            2: ("Erode", "Erode(Threshold(src))"),
+            3: ("Dilate", "Dilate(Threshold(src))"),
+            4: ("Open", "Erode(Dilate(Threshold(src)))"),
+            5: ("Close", "Dilate(Erode(Threshold(src)))"),
+            6: ("Components", "Label(Threshold(src))"),
+            7: ("Regions", "Analyze(Label(Threshold(src)))"),
+            8: ("Watershed", "Segment(Gradient(src))"),
+            9: ("Features", "Extract(" + FEATURE_METHODS[self._feat_method_idx] + ")"),
+        }
+        if mode in labels:
+            self._inter_pipeline_label, self._inter_pipeline_desc = labels[mode]
+
+    def _compute_histogram(self, src: pygame.Surface) -> list[int]:
+        """Compute luminance histogram (256 bins) for intermediate overlay."""
+        gray = _to_grayscale(src)
+        arr = pygame.surfarray.pixels3d(gray)
+        lum = np.mean(arr[:, :, 0], axis=1).astype(np.uint8)
+        del arr
+        hist = np.bincount(lum, minlength=256).tolist()
+        return hist
+
     def _apply_mode(
         self, src: pygame.Surface
-    ) -> tuple[pygame.Surface | None, list[RegionInfo] | None, ComponentResult | None, pygame.Surface | None]:
+    ) -> tuple[pygame.Surface | None, list[RegionInfo] | None, ComponentResult | None, pygame.Surface | None, pygame.Surface | None, list[int]]:
+        """Apply the current vision mode. Returns (result, regions, comp, watershed, intermediate_mask, histogram)."""
         mode = self._mode
         src_gray = _to_grayscale(src)
+        hist = self._compute_histogram(src)
+        inter_mask: pygame.Surface | None = None
 
         if mode == 0:  # THRESHOLD
+            inter_mask = src_gray
             mask = VisionTools.threshold_binary(src_gray, self._threshold)
-            return mask, None, None, None
+            return mask, None, None, None, inter_mask, hist
 
         elif mode == 1:  # OTSU
+            inter_mask = src_gray
             mask, otsu_val = VisionTools.threshold_otsu(src_gray)
             self._otsu_value = int(otsu_val)
-            # Compute full variance curve for visualization
             self._otsu_curve, self._otsu_histogram = self._compute_otsu_curve(src_gray)
-            return mask, None, None, None
+            return mask, None, None, None, inter_mask, hist
 
-        elif mode == 2:  # ERODE
+        elif mode in (2, 3, 4, 5):  # ERODE, DILATE, OPEN, CLOSE
             mask = VisionTools.threshold_binary(src_gray, self._threshold)
-            return VisionTools.morphological_erode(mask, self._kernel_size), None, None, None
+            inter_mask = mask
+            if mode == 2:
+                result = VisionTools.morphological_erode(mask, self._kernel_size)
+            elif mode == 3:
+                result = VisionTools.morphological_dilate(mask, self._kernel_size)
+            elif mode == 4:
+                result = VisionTools.morphological_open(mask, self._kernel_size)
+            else:
+                result = VisionTools.morphological_close(mask, self._kernel_size)
+            return result, None, None, None, inter_mask, hist
 
-        elif mode == 3:  # DILATE
+        elif mode in (6, 7):  # COMPONENTS, REGIONS
             mask = VisionTools.threshold_binary(src_gray, self._threshold)
-            return VisionTools.morphological_dilate(mask, self._kernel_size), None, None, None
-
-        elif mode == 4:  # OPEN
-            mask = VisionTools.threshold_binary(src_gray, self._threshold)
-            return VisionTools.morphological_open(mask, self._kernel_size), None, None, None
-
-        elif mode == 5:  # CLOSE
-            mask = VisionTools.threshold_binary(src_gray, self._threshold)
-            return VisionTools.morphological_close(mask, self._kernel_size), None, None, None
-
-        elif mode == 6:  # COMPONENTS
-            mask = VisionTools.threshold_binary(src_gray, self._threshold)
+            inter_mask = mask
             comp = VisionTools.connected_components(mask)
-            return comp.label_surface, None, comp, None
-
-        elif mode == 7:  # REGIONS
-            mask = VisionTools.threshold_binary(src_gray, self._threshold)
-            regions = VisionTools.analyze_regions(mask)
-            comp = VisionTools.connected_components(mask)
-            # Draw bounding rects on label surface
-            result = comp.label_surface.copy()
-            for ri in regions[:3]:
-                bbox = ri.bounding_rect
-                pygame.draw.rect(result, (255, 255, 255), bbox, 1)
-                cx, cy = int(ri.centroid[0]), int(ri.centroid[1])
-                pygame.draw.line(result, (255, 255, 255), (cx - 2, cy), (cx + 2, cy))
-                pygame.draw.line(result, (255, 255, 255), (cx, cy - 2), (cx, cy + 2))
-            return result, regions, comp, None
+            if mode == 6:
+                return comp.label_surface, None, comp, None, inter_mask, hist
+            else:
+                regions = VisionTools.analyze_regions(mask)
+                result = comp.label_surface.copy()
+                for ri in regions[:3]:
+                    bbox = ri.bounding_rect
+                    pygame.draw.rect(result, (255, 255, 255), bbox, 1)
+                    cx, cy = int(ri.centroid[0]), int(ri.centroid[1])
+                    pygame.draw.line(result, (255, 255, 255), (cx - 2, cy), (cx + 2, cy))
+                    pygame.draw.line(result, (255, 255, 255), (cx, cy - 2), (cx, cy + 2))
+                return result, regions, comp, None, inter_mask, hist
 
         elif mode == 8:  # WATERSHED
             if self._cached_watershed is not None:
-                return self._cached_watershed, None, None, self._cached_watershed
+                return self._cached_watershed, None, None, self._cached_watershed, src_gray, hist
             ws_surf, _ = VisionTools.watershed_segment(src)
-            return ws_surf, None, None, ws_surf
+            return ws_surf, None, None, ws_surf, src_gray, hist
 
         elif mode == 9:  # FEATURES
             method = FEATURE_METHODS[self._feat_method_idx]
             feat = VisionTools.extract_features(src, method=method)
-            return _render_feature_vis(feat, method), None, None, None
+            inter_mask = src_gray
+            return _render_feature_vis(feat, method), None, None, None, inter_mask, hist
 
-        return pygame.Surface(PANEL_SIZE), None, None, None
+        return pygame.Surface(PANEL_SIZE), None, None, None, None, hist
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill(COLOR_BG)
@@ -386,6 +427,10 @@ class VisionDemoScene(BaseScene):
             ct = self._font_small.render(f"Components: {comp.num_components}", True, COLOR_HIGHLIGHT)
             surface.blit(ct, (RIGHT_PANEL_X + 4, TOP_BAR_H + 4))
 
+        # Intermediate overlay (if toggled)
+        if self._show_intermediate:
+            self._draw_intermediate_overlay(surface)
+
         # Error overlay
         if self._error_msg:
             err = self._font_small.render(self._error_msg, True, COLOR_ERROR)
@@ -429,6 +474,119 @@ class VisionDemoScene(BaseScene):
         ylabel = self._font_small.render("sigma^2_B", True, COLOR_ACCENT)
         surface.blit(ylabel, (ox + 2, oy + margin))
 
+    def _draw_intermediate_overlay(self, surface: pygame.Surface) -> None:
+        """Draw a semi-transparent overlay showing intermediate steps (histogram, mask, pipeline)."""
+        overlay = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 190))
+
+        box_w = 300
+        box_h = 180
+        bx = (settings.INTERNAL_WIDTH - box_w) // 2
+        by = (settings.INTERNAL_HEIGHT - box_h) // 2 - 10
+
+        pygame.draw.rect(overlay, (15, 15, 45), (bx, by, box_w, box_h))
+        pygame.draw.rect(overlay, COLOR_HIGHLIGHT, (bx, by, box_w, box_h), 1)
+
+        font = pygame.font.Font(None, 11)
+        font_title = pygame.font.Font(None, 13)
+
+        # Pipeline label
+        pipe_label = font_title.render(f"Pipeline: {self._inter_pipeline_label}", True, COLOR_HIGHLIGHT)
+        overlay.blit(pipe_label, (bx + 6, by + 4))
+        pipe_desc = font.render(self._inter_pipeline_desc, True, COLOR_ACCENT)
+        overlay.blit(pipe_desc, (bx + 6, by + 18))
+
+        # Histogram (if available)
+        if self._inter_histogram:
+            hist = self._inter_histogram
+            max_hist = max(hist) if max(hist) > 0 else 1
+            hist_w = box_w - 100
+            hist_h = 50
+            hx = bx + 50
+            hy = by + 34
+            pygame.draw.rect(overlay, (10, 10, 30), (hx, hy, hist_w, hist_h))
+            for t in range(256):
+                bar_h = int(hist[t] / max_hist * hist_h)
+                px = hx + int(t / 255 * hist_w)
+                pygame.draw.line(overlay, (80, 140, 200), (px, hy + hist_h), (px, hy + hist_h - bar_h), 1)
+            # Threshold marker
+            if self._mode in (0, 2, 3, 4, 5, 6, 7):
+                tx = hx + int(self._inter_threshold / 255 * hist_w)
+                pygame.draw.line(overlay, COLOR_GOLD, (tx, hy), (tx, hy + hist_h), 2)
+                tlabel = font.render(f"T={self._inter_threshold}", True, COLOR_GOLD)
+                overlay.blit(tlabel, (tx - 14, hy + hist_h + 2))
+            # Otsu marker
+            if self._mode == 1:
+                tx = hx + int(self._otsu_value / 255 * hist_w)
+                pygame.draw.line(overlay, (80, 200, 80), (tx, hy), (tx, hy + hist_h), 2)
+                tlabel = font.render(f"Otsu T={self._otsu_value}", True, (80, 200, 80))
+                overlay.blit(tlabel, (tx - 18, hy + hist_h + 2))
+            h_label = font.render("Histogram", True, COLOR_TEXT)
+            overlay.blit(h_label, (bx + 6, hy + 2))
+
+        # Binary mask thumbnail (if available)
+        if self._inter_mask is not None and self._mode not in (8, 9):
+            thumb_size = 60
+            tx = bx + 6
+            ty = by + box_h - thumb_size - 6
+            thumb = pygame.transform.scale(self._inter_mask, (thumb_size, thumb_size))
+            overlay.blit(thumb, (tx, ty))
+            pygame.draw.rect(overlay, COLOR_ACCENT, (tx, ty, thumb_size, thumb_size), 1)
+            ml = font.render("Mask", True, COLOR_TEXT)
+            overlay.blit(ml, (tx, ty - 10))
+
+        # White/black pixel stats for threshold modes
+        if self._inter_mask is not None and self._mode in (0, 1, 2, 3, 4, 5):
+            try:
+                arr = pygame.surfarray.pixels3d(self._inter_mask)
+                total = arr.shape[0] * arr.shape[1]
+                white = int(np.sum(arr[:, :, 0] > 127))
+                black = total - white
+                del arr
+                stats_y = by + box_h - 16
+                stats = font.render(f"White: {white}px ({white*100//total}%)  Black: {black}px ({black*100//total}%)", True, COLOR_TEXT)
+                overlay.blit(stats, (bx + 6, stats_y))
+            except Exception:
+                pass
+
+        # Kernel overlay for morph modes
+        if self._mode in (2, 3, 4, 5):
+            k_label = font.render(f"Kernel: {self._kernel_size}x{self._kernel_size}", True, COLOR_HIGHLIGHT)
+            overlay.blit(k_label, (bx + box_w - 90, by + 4))
+            # Draw kernel grid
+            kx = bx + box_w - 80
+            ky = by + 18
+            cell = 4
+            kernel_w = self._kernel_size * cell
+            for row in range(self._kernel_size):
+                for col in range(self._kernel_size):
+                    pygame.draw.rect(overlay, (200, 200, 100), (kx + col * cell, ky + row * cell, cell, cell))
+            pygame.draw.rect(overlay, COLOR_ACCENT, (kx, ky, kernel_w, kernel_w), 1)
+
+        # Component sizes for COMPONENTS mode
+        if self._mode == 6 and self._cached_comp_result is not None:
+            comp = self._cached_comp_result
+            sizes = sorted(comp.component_sizes.values(), reverse=True)[:8]
+            max_sz = max(sizes) if sizes else 1
+            bar_x = bx + box_w - 80
+            bar_y = by + 80
+            for i, sz in enumerate(sizes):
+                bw = int(sz / max_sz * 30)
+                pygame.draw.rect(overlay, (80 + i * 20, 160, 200 - i * 15), (bar_x, bar_y + i * 6, bw, 4))
+            sz_label = font.render(f"Top {len(sizes)} comps", True, COLOR_TEXT)
+            overlay.blit(sz_label, (bar_x, bar_y - 10))
+
+        # Feature method info
+        if self._mode == 9:
+            method = FEATURE_METHODS[self._feat_method_idx]
+            feat_label = font.render(f"Descriptor: {method.upper()}", True, COLOR_HIGHLIGHT)
+            overlay.blit(feat_label, (bx + 6, by + box_h - 30))
+
+        hint = font.render("Press I to close intermediate view", True, (100, 100, 140))
+        overlay.blit(hint, (bx + 6, by + box_h - 12))
+
+        surface.blit(overlay, (0, 0))
+
     def _draw_bottom_bar(self, surface: pygame.Surface) -> None:
         if self._error_msg:
             draw_bottom_bar_error(surface, self._error_msg)
@@ -440,26 +598,27 @@ class VisionDemoScene(BaseScene):
 
     def _bottom_bar_text(self) -> str:
         mode = self._mode
+        base_hint = " [I] intermediate view"
         if mode == 0:
-            return (f"  Threshold: {self._threshold}  |  White pixels: ?  |  Black pixels: ?  |  "
-                    f"[TAB: mode]")
+            return (f"  Threshold: {self._threshold}  |  "
+                    f"[LEFT/RIGHT: adjust]{base_hint}  |  [TAB] mode")
         elif mode == 1:
             return (f"  Otsu threshold: {self._otsu_value}  |  "
-                    f"Inter-class variance maximized at this value  |  [TAB: mode]")
+                    f"[TAB]{base_hint}")
         elif mode in (2, 3, 4, 5):
-            return (f"  Pre-applied threshold: 128  |  Kernel: {self._kernel_size}x{self._kernel_size}  |  "
-                    f"[TAB: mode]")
+            return (f"  Pre-threshold: 128  |  Kernel: {self._kernel_size}x{self._kernel_size}  |  "
+                    f"[LEFT/RIGHT: adjust]{base_hint}  |  [TAB] mode")
         elif mode == 6:
-            return (f"  Components: ?  |  Threshold: {self._threshold}  |  "
-                    f"[Color key: each color = distinct region]  |  [TAB: mode]")
+            return (f"  Threshold: {self._threshold}  |  "
+                    f"[LEFT/RIGHT: adjust]{base_hint}  |  [TAB] mode")
         elif mode == 7:
             n = len(self._cached_regions) if self._cached_regions else 0
-            return f"  Regions: {n}  |  Threshold: {self._threshold}  |  [TAB: mode]"
+            return f"  Regions: {n}{base_hint}  |  [TAB] mode"
         elif mode == 8:
-            return "  Watershed: pre-computed  |  Press S to save overlay  |  [TAB: mode]"
+            return f"  Watershed{base_hint}  |  [TAB] mode"
         elif mode == 9:
             method = FEATURE_METHODS[self._feat_method_idx]
-            return f"  Method: {method}  |  Vector: ?  |  [UP/DOWN: cycle method]  |  [TAB: mode]"
+            return f"  Method: {method}{base_hint}  |  [UP/DOWN: cycle]  |  [TAB] mode"
         return ""
 
 

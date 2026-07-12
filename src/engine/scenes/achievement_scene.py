@@ -112,3 +112,4 @@ class AchievementScene(BaseScene):
         hint = self._font.render("CANCEL: Back", True, (120, 120, 140))
         surface.blit(hint, (8, h - 20))
         self.context.scene_manager.transition.draw(surface)
+
