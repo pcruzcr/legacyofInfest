@@ -74,8 +74,8 @@ class AchievementSystem:
         ))
         self.register(AchievementDef(
             id="air_assault", name="Air Assault",
-            description="Perform a 5-hit aerial combo",
-            target=5,
+            description="Perform a 2-hit aerial combo",
+            target=2,
         ))
         self.register(AchievementDef(
             id="speed_demon", name="Speed Demon",

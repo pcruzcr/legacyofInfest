@@ -12,7 +12,7 @@ from src.framework.entities.enemy_base import EnemyState
 from src.framework.processing.curve_tools import CurveTools
 
 if TYPE_CHECKING:
-    from src.engine.entities.player import Player
+    from src.framework.entities.player import Player
 
 
 class BossVenado(BossBase):

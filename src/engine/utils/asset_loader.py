@@ -151,14 +151,14 @@ class AssetLoader:
 
         if size:
 
-            image = pygame.transform.smoothscale(
+            image = pygame.transform.scale(
                 image,
                 size,
             )
 
         elif scale:
 
-            image = pygame.transform.smoothscale(
+            image = pygame.transform.scale(
                 image,
                 (
                     int(image.get_width() * scale),

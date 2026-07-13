@@ -58,6 +58,8 @@ class TestWalkerDamage:
         w = EnemyWalker(pygame.Vector2(0.0, 0.0), max_health=1.0)
         w.apply_hit(1.0, (0.0, 0.0))
         assert w.state == EnemyState.DYING
+        assert w.is_alive is True  # alive during death animation
+        w._tick_cooldowns(0.6)
         assert w.is_alive is False
 
     def test_charge_attack_sets_state(self) -> None:
