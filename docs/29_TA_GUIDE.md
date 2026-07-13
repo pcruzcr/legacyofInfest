@@ -216,3 +216,18 @@ To collect student progress, you can:
 1. Use GitHub Actions to run graders on each push
 2. Collect screenshots via pull request artifacts
 3. Use `grade_stage.py --json` for bulk grading
+
+
+--- Traducción al Español ---
+
+## Guía para Asistentes de Cátedra
+
+Esta guía cubre las responsabilidades del asistente de cátedra en el curso Legacy of InFest.
+
+### Responsabilidades
+- Apoyo a estudiantes durante laboratorios
+- Asistencia en calificación
+- Reporte de bugs
+- Mantenimiento del entorno de desarrollo
+
+Para la guía completa con procedimientos detallados, consultar el documento original en inglés.

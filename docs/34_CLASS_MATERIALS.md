@@ -70,3 +70,17 @@ Each `exercise/` doc is a 1-page handout for in-class group work.
 > (`docs/34_LIVE_CODE_u02_vector_class.py` and `docs/34_LIVE_CODE_u07_convolution.py`).
 > The remaining 21 files are placeholder entries to be created before the
 > corresponding class session.
+
+
+--- Traducción al Español ---
+
+## Materiales de Clase
+
+Este documento contiene referencias a los materiales didácticos utilizados en cada clase del curso.
+
+### Estructura
+- 11 clases efectivas de 4 horas (2h teoría + 2h práctica)
+- 12ava sesión: Invenio Fest
+- 6 instrumentos de evaluación oficiales
+
+Para el cronograma detallado clase por clase, consultar el documento original en inglés.

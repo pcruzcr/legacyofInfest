@@ -43,3 +43,19 @@ The Fog of War (`src/framework/vfx/fog_of_war.py`) is a full-screen black overla
 **File:** `src/framework/vfx/fog_of_war.py` (49 lines)
 **Status:** ✅ Complete — screen-space overlay with alpha holes
 **Missing:** No perma-reveal (explored areas stay black when off-screen); no smooth edge falloff
+
+
+--- Traducción al Español ---
+
+## Niebla de Guerra
+
+### Descripción
+Superposición de niebla que oculta áreas no exploradas del mapa.
+
+### Características
+- Niebla negra con agujeros revelados
+- Revelado progresivo por movimiento del jugador
+- Persistencia entre visitas
+- Efecto visual de descubrimiento
+
+Para la especificación completa de la implementación, consultar el documento original en inglés.

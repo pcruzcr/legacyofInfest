@@ -1,17 +1,15 @@
 """
 Module: test_pattern_recognition_tools
 System: tests
-Academic Unit: N/A
 Description: Tests for PatternRecognitionTools: train, evaluate,
 save/load, registry, classify, classify_proba, predict.
 """
+from __future__ import annotations
 import os
 import tempfile
 from pathlib import Path
-
 import numpy as np
 import pygame
-
 from src.framework.processing.pattern_recognition_tools import (
     PatternRecognitionTools,
     TrainedModel,
@@ -23,14 +21,13 @@ SAMPLE_MODEL_PATH = Path("assets/models/professor_sample.pkl")
 
 
 def _ensure_sample_dataset() -> None:
-    """Generate sample dataset if it doesn't exist."""
     if SAMPLE_DATASET_PATH.exists():
         return
     rng = np.random.RandomState(42)
     n_per_class = 30
     X_list: list[np.ndarray] = []
     y_list: list[str] = []
-    feature_dim = 288  # HOG features for 32×32 image (orientations=8, ppc=8, cpb=2)
+    feature_dim = 288
     for label, center in [("dark_zone", 50), ("neutral", 128), ("light_zone", 200)]:
         for _ in range(n_per_class):
             features = rng.randn(feature_dim) * 10 + center
@@ -43,7 +40,6 @@ def _ensure_sample_dataset() -> None:
 
 
 def _ensure_sample_model() -> TrainedModel:
-    """Train and save sample model if it doesn't exist."""
     if SAMPLE_MODEL_PATH.exists():
         return PatternRecognitionTools.load_model(SAMPLE_MODEL_PATH)
     data = np.load(str(SAMPLE_DATASET_PATH))
@@ -247,14 +243,13 @@ class TestClassifyProba:
 
 class TestPredict:
     def test_predict_returns_label(self) -> None:
-        from src.framework.processing.vision_tools import VisionTools
         rng = np.random.RandomState(42)
         surfs: list[pygame.Surface] = []
         for _ in range(12):
             s = pygame.Surface((32, 32))
             s.fill((rng.randint(0, 255), rng.randint(0, 255), rng.randint(0, 255)))
             surfs.append(s)
-        X = np.array([VisionTools.extract_hog(s) for s in surfs], dtype=np.float32)
+        X = np.array([PatternRecognitionTools.extract_hog(s) for s in surfs], dtype=np.float32)
         y = np.array(["a"] * 6 + ["b"] * 6, dtype=str)
         model = PatternRecognitionTools.train(X, y, model_type="knn", n_neighbors=3)
         label = PatternRecognitionTools.predict(model, surfs[0], method="hog")

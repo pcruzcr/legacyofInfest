@@ -57,3 +57,19 @@ No dedicated bestiary scene exists yet. The singleton stores data; a future `Bes
 **File:** `src/framework/entities/bestiary.py` (123 lines)
 **Status:** ✅ Complete — data model, singleton, JSON persistence
 **Missing:** No `bestiary_scene.py` — UI viewer class not implemented
+
+
+--- Traducción al Español ---
+
+## Bestiario / Códex
+
+### Descripción
+Sistema de seguimiento de enemigos que registra encuentros y derrotas.
+
+### Características
+- Catálogo de enemigos encontrados
+- Estadísticas de derrotas
+- Información de cada tipo de enemigo
+- Desbloqueo progresivo
+
+Para la especificación completa, consultar el documento original en inglés.

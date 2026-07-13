@@ -380,3 +380,23 @@ self.hud.draw(self.internal_surface)
 ```
 
 Students do not call `HUD.draw()` directly. The stage base class calls it automatically after the stage's own `draw()` method completes.
+
+
+--- Traducción al Español ---
+
+## Especificación del HUD
+
+El HUD es la capa persistente en pantalla que comunica el estado del jugador, información del escenario y eventos del juego.
+
+### Diseño
+El HUD ocupa regiones fijas de la pantalla interna de 320×224. Todos los elementos se dibujan en espacio de pantalla (no se mueven con la cámara).
+
+### Elementos
+- **Retrato** — 32×32 px, esquina superior izquierda
+- **Corazones** — 5 corazones, 14×8 px cada uno
+- **Temporizador** — Formato M:SS, esquina superior derecha
+- **Banner de Escenario** — Animación de entrada/salida
+- **Mensajes Tutoriales** — Cuadro de texto en parte superior
+- **Pantalla de Game Over** — Opciones Continuar / Salir al Título
+
+Para la especificación completa de cada elemento con coordenadas, sprites y lógica de eventos, consultar el documento original en inglés.

@@ -51,3 +51,9 @@
 - **GAP-014 — Collision rect runtime visualization:** Debug overlay (F1) draws collision rects but no tooltip shows `prev_bottom`, `tile.top`, or `velocity.y` on hover/pause.
 
 For full gap tracking, see `KNOWN_GAPS.md`.
+
+
+
+--- Traducción al Español ---
+
+*Este documento está disponible en inglés. Para una traducción completa al español, contacte al profesor.*

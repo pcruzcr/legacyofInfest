@@ -27,3 +27,20 @@
 - Screenshots of 3 different easing functions in action
 - Your custom easing function code
 - A comparison of ease_in_quad vs ease_out_elastic (when is each appropriate?)
+
+
+--- Traducción al Español ---
+
+## Laboratorio 2: Interpolación y Animación (Unidad V)
+
+**Objetivo:** Dominar funciones de easing y animación por fotogramas clave.
+
+### Tareas
+1. **Funciones de Easing** — Explorar las 10 funciones de easing
+2. **Animación por Fotogramas Clave** — Configurar 3 fotogramas clave con diferentes easing
+3. **Easing Personalizado** — Implementar función ease_in_out_back
+
+### Entregables
+- Capturas de 3 funciones de easing diferentes
+- Código de función de easing personalizada
+- Comparación de ease_in_quad vs ease_out_elastic

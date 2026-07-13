@@ -355,3 +355,21 @@ ___________________________
 ## 9. Relationship to Student Assignment Folders
 
 Once a student completes the 15-minute onboarding copy-and-rename, their working folder lives at `src/stages/<assignment_id>/` (per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §7 and `03_ARCHITECTURE.md` §1) and is **no longer** part of `student_templates/`. The template directory itself is never modified after initial professor setup — it is read-only scaffolding that every student copies from independently, so one student's in-progress work never collides with another's, consistent with the individual-assignment model confirmed in `00_SYLLABUS_ALIGNMENT_AUDIT.md` §2 A.1.
+
+
+--- Traducción al Español ---
+
+## Especificación de Plantillas para Estudiantes
+
+Este documento especifica los archivos de plantilla que los estudiantes copian para comenzar sus asignaciones.
+
+### Plantilla de Escenario
+- `stage_template.py` — Clase base de escenario
+- `stage_template.tmx` — Mapa Tiled con estructura de capas
+- `README_template.md` — Documentación requerida
+
+### Plantilla de Jefe
+- `boss_template.py` — Clase base de jefe
+- `README_template.md` — Documentación requerida
+
+Para instrucciones detalladas de uso y verificación, consultar el documento original en inglés.

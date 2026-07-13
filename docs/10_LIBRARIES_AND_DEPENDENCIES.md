@@ -788,3 +788,26 @@ python -c "import numpy; print(numpy.__version__)"
 | `pytmx` map loading fails | Ensure Tiled exported with `.tsx` tileset files relative to the `.tmx` |
 | Controller not detected | Update `pygame-ce` to the latest version; CE has improved controller support |
 | NumPy version conflict with scikit-learn | Ensure all packages installed in the same virtual environment |
+
+
+--- Traducción al Español ---
+
+## Librerías y Dependencias
+
+Este documento especifica cada librería utilizada en Legacy of InFest.
+
+| Librería | Propósito |
+|----------|-----------|
+| pygame-ce | Framework de juego principal |
+| numpy | Arreglos N-dimensionales para procesamiento de imágenes |
+| scipy | Convolución espacial y filtros |
+| opencv-python | Visión por computadora avanzada |
+| scikit-image | Procesamiento de imágenes (HOG, LBP) |
+| scikit-learn | Algoritmos de clasificación (k-NN, árboles, SVM) |
+| Pillow | Validación de assets (solo herramientas) |
+| pytmx | Carga de archivos de mapa Tiled |
+| pyscroll | Renderizado eficiente de mapas |
+| pytweening | Funciones de easing para animación |
+| joblib | Serialización de modelos ML |
+
+Para reglas de uso, ejemplos de integración y configuración de entorno, consultar el documento original en inglés.

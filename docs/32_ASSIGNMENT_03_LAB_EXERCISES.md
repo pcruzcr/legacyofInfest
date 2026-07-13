@@ -74,3 +74,23 @@ A lab is marked complete when:
 # Or run from CLI
 python -c "from src.engine.scenes.progress_scene import ProgressScene; print('Progress checked')"
 ```
+
+
+--- Traducción al Español ---
+
+## Asignación 03: Ejercicios de Laboratorio
+
+### Evaluación Práctica III — Integración Final (Clase 11)
+**Valor:** 15% de la nota final
+
+### Requisitos
+- Todos los entregables de Eval I + II mantenidos
+- threshold_binary() o threshold_otsu() aplicado
+- Operación morfológica aplicada
+- connected_components() o analyze_regions() usado
+- extract_features() produce características de entrenamiento
+- Dataset etiquetado en assets/datasets/
+- Modelo entrenado (.pkl) en carpeta de asignación
+- Clasificador se ejecuta en tiempo de ejecución
+
+Para la rúbrica detallada, consultar el documento original en inglés.

@@ -388,3 +388,24 @@ The following table confirms that every framework system documented in this spec
 | Entity spawn from TMX | All | `06_TMX_SPEC.md` §6 |
 | EventBus communication | All | `03_ARCHITECTURE.md` §8.5 |
 | Audio (BGM + SFX) | All | `03_ARCHITECTURE.md` §2.4 |
+
+
+--- Traducción al Español ---
+
+## Diseño del Escenario 0
+
+El Escenario 0 es la documentación ejecutable del framework. Cada sistema que un estudiante usará está demostrado en el Escenario 0.
+
+### Diseño del Escenario
+Escenario horizontal de una sola pantalla dividido en 7 zonas de demostración. Ancho total: 3840 píxeles (240 tiles). Alto: 224 píxeles (14 tiles).
+
+### Zonas
+- **Zona A** — Movimiento y Salto (X: 160–640)
+- **Zona B** — Ataque Corto y Largo (X: 640–1120)
+- **Zona C** — Enemigo Walker y Daño por Contacto (X: 1120–1600)
+- **Zona D** — Enemigo Volador y Curvas (X: 1600–2080)
+- **Zona E** — Enemigo Shooter y Proyectiles (X: 2080–2560)
+- **Zona F** — HUD y Demostración del Temporizador (X: 2560–3200)
+- **Zona G** — Banner de Escenario y Finalización (X: 3200–3760)
+
+Para la lista completa de mensajes, disparadores, colocación de enemigos y condiciones de finalización, consultar el documento original en inglés.

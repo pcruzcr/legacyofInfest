@@ -520,3 +520,31 @@ In matrix form (homogeneous 2D coordinates):
 ```
 
 Where `tx, ty = player.position`. Students are expected to recognize this pattern and document it in their stage README when implementing custom entity hitboxes.
+
+
+--- Traducción al Español ---
+
+## Especificación del Jugador
+
+### Concepto
+El personaje jugable es una figura encapuchada de identidad indeterminada. El diseño visual debe comunicar agilidad, misterio y autenticidad SNES.
+
+### Propósitos
+1. **Ancla de interacción** — El jugador es el agente principal que interactúa con todos los sistemas del escenario.
+2. **Referencia de máquina de estados** — La máquina de estados finitos del jugador es el ejemplo más completo de gestión de estados en el framework.
+3. **Portador de conceptos académicos** — El movimiento, la física y la animación incorporan conceptos de las Unidades II a VI.
+
+### Controles
+| Acción | Teclado | Control |
+|--------|---------|---------|
+| Caminar Izquierda | Flecha Izquierda / A | D-Pad Izquierdo / Stick Izquierdo |
+| Caminar Derecha | Flecha Derecha / D | D-Pad Derecho / Stick Derecho |
+| Saltar | Espacio / W / Flecha Arriba | A (Xbox) |
+| Agacharse | Flecha Abajo / S | D-Pad Abajo |
+| Ataque Corto | Z / J | X (Xbox) |
+| Ataque Largo | X / K | Y (Xbox) |
+
+### Estados del Jugador
+El jugador tiene 19 estados: IDLE, WALKING, JUMPING, FALLING, CROUCHING, SHORT_ATTACK, LONG_ATTACK, HURT, DYING, DASHING, PARRY, CHARGE_ATTACK, DASH_ATTACK, WALL_SLIDE, LEDGE_GRAB, GRAB, THROW, SLIDE, SWIMMING.
+
+Para la especificación completa con tablas de física, sistema de daño, hitboxes y ejemplos de código, consultar el documento original en inglés.

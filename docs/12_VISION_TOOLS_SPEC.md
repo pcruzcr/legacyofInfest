@@ -848,3 +848,21 @@ A student has demonstrated Unit VIII learning when they can:
 | `convex_hull(mask_surface)` | Convex hull of foreground regions | Unit VIII |
 | `texture_segmentation(surface, method)` | LBP-based texture-driven segmentation | Unit VIII |
 | `depth_from_stereo(left, right)` | Stereo disparity map | Beyond course scope |
+
+
+--- Traducción al Español ---
+
+## Especificación de VisionTools
+
+VisionTools proporciona utilidades de segmentación de imágenes y reconocimiento de patrones para las Unidades VIII y IX.
+
+### Funciones
+- `threshold_binary(surface, thresh)` — Umbral binario
+- `threshold_otsu(surface)` — Umbral automático de Otsu
+- `morphological_erode(surface, kernel_size)` — Erosión morfológica
+- `morphological_dilate(surface, kernel_size)` — Dilatación morfológica
+- `watershed_segment(surface)` — Segmentación Watershed
+- `extract_features(surface)` — Extracción de características HOG o LBP
+- `classify_region(features, model)` — Clasificación con modelo scikit-learn
+
+Para ejemplos detallados y parámetros, consultar el documento original en inglés.

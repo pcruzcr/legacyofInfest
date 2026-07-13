@@ -1,16 +1,14 @@
 """
 Module: test_vision_tools
 System: tests
-Academic Unit: N/A
 Description: Tests for VisionTools: threshold, morphology, connected
 components, region analysis, watershed, feature extraction, contours,
 bounding boxes.
 """
+from __future__ import annotations
 from pathlib import Path
-
 import numpy as np
 import pygame
-
 from src.framework.processing.vision_tools import VisionTools, ComponentResult, RegionInfo
 
 OUTPUT_DIR = Path("tests/output/vision")
@@ -21,7 +19,6 @@ def _ensure_output_dir() -> None:
 
 
 def _mask_surface(w: int = 32, h: int = 32) -> pygame.Surface:
-    """Create a binary mask with two distinct white squares."""
     surf = pygame.Surface((w, h))
     surf.fill((0, 0, 0))
     pygame.draw.rect(surf, (255, 255, 255), (2, 2, 8, 8))
@@ -211,7 +208,6 @@ class TestFeatureExtraction:
         surf.fill((100, 100, 100))
         features = VisionTools.extract_hog(surf)
         assert isinstance(features, np.ndarray)
-        # HOG: 4*4*2*2*8 = 512
         assert len(features) > 0
 
     def test_extract_lbp(self) -> None:

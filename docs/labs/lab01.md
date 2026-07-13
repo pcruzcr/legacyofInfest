@@ -24,3 +24,19 @@
 ## Deliverables
 - Screenshots showing your vector chase behavior and Bézier curve
 - A brief explanation (2-3 sentences) of how de Casteljau's algorithm works
+
+
+--- Traducción al Español ---
+
+## Laboratorio 1: Vectores y Curvas (Unidad II)
+
+**Objetivo:** Implementar operaciones vectoriales y curvas Bézier.
+
+### Tareas
+1. **Aritmética Vectorial** — Observar y modificar comportamiento de persecución vectorial
+2. **Curvas Bézier** — Crear curva Bézier cuadrática con 3 puntos de control
+3. **Trayectoria Catmull-Rom** — Crear trayectoria con 5+ puntos de control
+
+### Entregables
+- Capturas de pantalla del comportamiento vectorial y curva Bézier
+- Explicación breve del algoritmo de de Casteljau

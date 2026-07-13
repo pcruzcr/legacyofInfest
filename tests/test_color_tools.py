@@ -1,19 +1,16 @@
 """
 Module: test_color_tools
 System: tests
-Academic Unit: N/A
 Description: Tests for ColorTools: RGB↔HSV↔HSL↔CMYK round-trips,
 alpha_blend, apply_tint, surface_to_array.
 """
+from __future__ import annotations
 import numpy as np
 import pygame
-
 from src.framework.processing.color_tools import ColorTools
 
 
 class TestColorConversions:
-    """Verify all color conversions round-trip within ±1 unit."""
-
     TEST_COLORS = [
         (255, 0, 0),
         (0, 255, 0),
@@ -33,29 +30,29 @@ class TestColorConversions:
         for r, g, b in self.TEST_COLORS:
             h, s, v = ColorTools.rgb_to_hsv(r, g, b)
             r2, g2, b2 = ColorTools.hsv_to_rgb(h, s, v)
-            assert abs(r - r2) <= 1, f"R diff too large for ({r},{g},{b}): got ({r2},{g2},{b2})"
-            assert abs(g - g2) <= 1, f"G diff too large for ({r},{g},{b}): got ({r2},{g2},{b2})"
-            assert abs(b - b2) <= 1, f"B diff too large for ({r},{g},{b}): got ({r2},{g2},{b2})"
+            assert abs(r - r2) <= 1
+            assert abs(g - g2) <= 1
+            assert abs(b - b2) <= 1
 
     def test_rgb_to_hsl_and_back(self) -> None:
         for r, g, b in self.TEST_COLORS:
             h, s, lightness = ColorTools.rgb_to_hsl(r, g, b)
             r2, g2, b2 = ColorTools.hsl_to_rgb(h, s, lightness)
-            assert abs(r - r2) <= 1, f"R diff too large for ({r},{g},{b}): got ({r2},{g2},{b2})"
-            assert abs(g - g2) <= 1, f"G diff too large for ({r},{g},{b}): got ({r2},{g2},{b2})"
-            assert abs(b - b2) <= 1, f"B diff too large for ({r},{g},{b}): got ({r2},{g2},{b2})"
+            assert abs(r - r2) <= 1
+            assert abs(g - g2) <= 1
+            assert abs(b - b2) <= 1
 
     def test_rgb_to_cmyk_and_back(self) -> None:
         for r, g, b in self.TEST_COLORS:
             c, m, y, k = ColorTools.rgb_to_cmyk(r, g, b)
             r2, g2, b2 = ColorTools.cmyk_to_rgb(c, m, y, k)
-            assert abs(r - r2) <= 1, f"R diff too large for ({r},{g},{b}): got ({r2},{g2},{b2})"
-            assert abs(g - g2) <= 1, f"G diff too large for ({r},{g},{b}): got ({r2},{g2},{b2})"
-            assert abs(b - b2) <= 1, f"B diff too large for ({r},{g},{b}): got ({r2},{g2},{b2})"
+            assert abs(r - r2) <= 1
+            assert abs(g - g2) <= 1
+            assert abs(b - b2) <= 1
 
     def test_black_cmyk(self) -> None:
         c, m, y, k = ColorTools.rgb_to_cmyk(0, 0, 0)
-        assert k == 1.0, f"Black CMYK k should be 1.0, got {k}"
+        assert k == 1.0
         assert c == 0.0 and m == 0.0 and y == 0.0
 
     def test_hsv_black_and_white(self) -> None:
@@ -79,7 +76,7 @@ class TestAlphaBlend:
         dst.fill((0, 0, 255))
         result = ColorTools.alpha_blend(src, dst, 0.5)
         px = result.get_at((0, 0))
-        assert px[0] == 127 or px[0] == 128, f"Expected ~127, got {px}"
+        assert px[0] == 127 or px[0] == 128
         assert px[2] == 127 or px[2] == 128
 
     def test_alpha_blend_full_src(self) -> None:
@@ -105,7 +102,7 @@ class TestAlphaBlend:
         dst = pygame.Surface((8, 8))
         try:
             ColorTools.alpha_blend(src, dst, 0.5)
-            assert False, "Should have raised ValueError"
+            assert False
         except ValueError:
             pass
 

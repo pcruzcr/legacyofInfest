@@ -60,3 +60,19 @@ update() loop:
 **File:** `src/framework/stage/cutscene_system.py` (178 lines)
 **Status:** ✅ Complete — 5 action types, sequential playback, callback on finish
 **Missing:** No visual scripting editor; actions must be coded manually
+
+
+--- Traducción al Español ---
+
+## Sistema de Cinemáticas
+
+### Descripción
+Sistema de cinemáticas guionizadas para secuencias narrativas.
+
+### Características
+- Cinemáticas guionizadas con temporización
+- Transiciones entre escenas
+- Efectos visuales (fundidos, barras)
+- Soporte de audio sincronizado
+
+Para la especificación completa de la API, consultar el documento original en inglés.

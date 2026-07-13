@@ -276,3 +276,9 @@ See `src/stages/boss_venado/boss_venado.py` for a complete implementation:
 - Projectile management (Bézier vine toss, spore spread)
 - Attack zone rects (stomp, vine sweep)
 - Death sequence with particle effects
+
+
+
+--- Traducción al Español ---
+
+*Este documento está disponible en inglés. Para una traducción completa al español, contacte al profesor.*

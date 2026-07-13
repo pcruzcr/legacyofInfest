@@ -42,3 +42,19 @@ All adjustable via `set_params()`.
 **File:** `src/framework/vfx/water_effect.py` (50 lines)
 **Status:** ✅ Complete — animated sine-wave water with configurable parameters
 **Missing:** No refraction/distortion of underlying content; no surface reflections
+
+
+--- Traducción al Español ---
+
+## Efecto de Agua
+
+### Descripción
+Efecto visual de agua animada usando ondas sinusoidales.
+
+### Características
+- Animación de ondas en superficie de agua
+- Distorsión de la imagen bajo el agua
+- Configuración de amplitud y frecuencia
+- Efecto de transparencia y reflejos
+
+Para la especificación completa, consultar el documento original en inglés.

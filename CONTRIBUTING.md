@@ -103,3 +103,40 @@ Key patterns:
 2. Implement `handle_events()`, `update(dt)`, `draw(screen)`.
 3. Register with `SceneRegistry` for lazy-loading.
 4. Create demo entry in academic lab system if applicable.
+
+
+--- Traducción al Español ---
+
+## Guía de Contribución
+
+### Configuración de Desarrollo
+```powershell
+git clone <repo>
+python -m venv .venv
+.venv\Scripts\Activate
+pip install -r requirements.txt
+python main.py
+```
+
+Dependencias: `pygame-ce`, `numpy`, `scipy`, `opencv-python`, `scikit-image`, `scikit-learn`, `Pillow`, `pytmx`, `pyscroll`, `pytweening`, `joblib`, `matplotlib` (Python >= 3.11).
+
+### Ejecutar Pruebas
+```powershell
+pytest
+pytest tests/ -v
+pytest tests/test_player_physics.py -k "test_specific"
+```
+
+369 pruebas distribuidas en física, colisiones, entidades, escenas, entrada, HUD, carga de escenarios, herramientas de procesamiento y más.
+
+### Estilo de Código
+- PEP 8 con líneas de 120 caracteres
+- Type hints en todas las funciones y métodos públicos
+- Sin `except:` sin especificar excepción
+
+### Proceso de PR
+1. Crear rama desde `main` con prefijo `fix/`, `feat/`, `docs/`
+2. Ejecutar `pytest` y `flake8` antes de consolidar
+3. Mantener commits pequeños y atómicos
+
+Para más detalles, leer el archivo completo en su versión en inglés.

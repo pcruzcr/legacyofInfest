@@ -489,3 +489,31 @@ A `Message` object is a rectangle trigger in the `Objects` layer. When the playe
 ```
 
 When the player is inside this zone, the camera's X offset is clamped to keep the room viewport fixed (useful for vertical-scroll room segments or boss arenas).
+
+
+--- Traducción al Español ---
+
+## Especificación TMX
+
+Los mapas se diseñan en Tiled Map Editor y se exportan como archivos .tmx (formato XML). El módulo StageLoader procesa estos archivos para ensamblar el entorno completo del escenario.
+
+### Propiedades del Mapa
+- Orientación: Ortogonal
+- Tamaño de tile: 16×16 píxeles
+- Ancho mínimo: 20 tiles (320 px)
+- Alto mínimo: 14 tiles (224 px)
+
+### Capas Requeridas (de abajo a arriba)
+1. BG_Far (Tile) — Fondo distante
+2. BG_Mid (Tile) — Fondo medio
+3. BG_Near (Tile) — Fondo cercano
+4. Terrain (Tile) — Terreno sólido principal
+5. Terrain_Detail (Tile) — Decoración no sólida
+6. Objects (Object) — Spawns, disparadores, checkpoints
+7. Collision (Object) — Rectángulos de colisión
+8. FG_Overlay (Tile) — Primer plano (opcional)
+
+### Registro de Tipos de Objeto
+PlayerSpawn, Walker, Flying, Shooter, Checkpoint, NextTrigger, Message, Waypoint, HazardZone, OneWayPlatform, CameraLock, BossSpawn.
+
+Para la especificación completa de propiedades, reglas de spawn, checkpoints y formato XML, consultar el documento original en inglés.

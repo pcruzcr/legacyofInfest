@@ -28,3 +28,20 @@
 - Screenshots showing thresholded masks, connected components, and inference results
 - The optimal threshold value found in Task 1
 - A short explanation of the classification pipeline (source → preprocessing → feature extraction → classification)
+
+
+--- Traducción al Español ---
+
+## Laboratorio 3: Visión y Reconocimiento de Patrones (Unidad VIII)
+
+**Objetivo:** Aplicar técnicas de procesamiento de imágenes y reconocimiento de patrones.
+
+### Tareas
+1. **Umbralizado y Morfología** — Ajustar umbral, observar efectos de erosión/dilatación
+2. **Componentes Conectados** — Contar regiones conectadas, analizar propiedades
+3. **Pipeline de Clasificación** — Observar inferencia, comparar características
+
+### Entregables
+- Capturas de máscaras umbralizadas, componentes conectados e inferencia
+- Valor óptimo de umbral encontrado
+- Explicación del pipeline de clasificación

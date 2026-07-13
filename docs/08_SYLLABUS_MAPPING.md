@@ -501,3 +501,23 @@ Not demonstrated directly in Stage 0. Unit IX is demonstrated in the unit test `
 | "Stage 3" | Evaluación Práctica III – Integración Final | Class 11 | + VIII, IX |
 
 A student's single assigned Stage or Boss must demonstrate Units II–V by Evaluación Práctica I, add Units VI–VII by Evaluación Práctica II, and add Units VIII–IX by Evaluación Práctica III — all within the **same** piece of work, progressively elaborated. Unit I is foundational and demonstrated implicitly from the start (see Section 2 of this document).
+
+
+--- Traducción al Español ---
+
+## Mapeo del Sílabo
+
+Este documento mapea cada tema del sílabo del curso a su componente correspondiente en el framework, el entregable del estudiante, la demostración en el Escenario 0 y los criterios de evaluación.
+
+### Unidades Cubiertas
+I. Introducción a Gráficas por Computadora
+II. Sistemas de Coordenadas, Vectores, Matrices, Transformaciones
+III. Curvas de Bézier, Bernstein, B-Splines, NURBS
+IV. Objetos, Escenas, Capas, Sprites, Buffers
+V. RGB, HSV, HSL, CMYK, Transparencia, Iluminación
+VI. Texturas, Animación, Interpolación, Colisiones
+VII. Histograma, Brillo, Convolución, Gaussian Blur, Sobel, Canny
+VIII. Segmentación, Threshold, Morfología, Watershed
+IX. Reconocimiento de Patrones, Clasificación
+
+Para la tabla completa de mapeo con criterios de evaluación detallados, consultar el documento original en inglés.
