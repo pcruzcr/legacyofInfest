@@ -22,7 +22,7 @@ from src.engine.utils.asset_loader import AssetLoader
 from src.framework.entities.base_entity import BaseEntity
 
 if TYPE_CHECKING:
-    from src.engine.entities.player import Player
+    from src.framework.entities.player import Player
 
 
 class EnemyState(str, Enum):

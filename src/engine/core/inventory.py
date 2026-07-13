@@ -173,9 +173,8 @@ class Inventory:
         bar_h = 32
         bx = (w - bar_w) // 2
         by = 8
-        bg = pygame.Surface((bar_w, bar_h))
-        bg.set_alpha(200)
-        bg.fill((10, 10, 10))
+        bg = pygame.Surface((bar_w, bar_h), pygame.SRCALPHA)
+        bg.fill((10, 10, 10, 200))
         surface.blit(bg, (bx, by))
         pygame.draw.rect(surface, n["color"], (bx, by, bar_w, bar_h), 2)
         font = pygame.font.Font(None, 14)

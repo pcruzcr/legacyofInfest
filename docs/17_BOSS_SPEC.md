@@ -12,14 +12,14 @@
 
 Legacy of InFest features four boss encounters — one per zone. **Corrected per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.1 and §5:** the course syllabus explicitly allows a student to individually select a **Boss** (not only a Stage) as their trimester assignment — *"Cada estudiante selecciona un Stage o Boss durante la primera clase."* This document's boss designs therefore serve two purposes: (1) Stage 0 and any boss **not** claimed by a student remain professor-owned, implemented as reference/executable documentation; (2) any boss **claimed by a student** is built by that student, using this specification as the required design contract, in the same way `07_STAGE0_DESIGN.md` and `16_WORLD_DESIGN.md` define the contract for Stage assignments. `BossBase` and the academic pipeline integration points described below apply identically regardless of who implements a given boss.
 
-**Boss origin classification (required by `00_SYLLABUS_ALIGNMENT_AUDIT.md` §5):**
+**Boss origin classification and implementation status (required by `00_SYLLABUS_ALIGNMENT_AUDIT.md` §5):**
 
-| Boss | Origin |
-|---|---|
-| El Venado Sagrado (Zone 1) | **Syllabus-official.** Defined verbatim in the course syllabus. |
-| El Rey Terciopelo (Zone 2) | **Syllabus-official.** Defined verbatim in the course syllabus. |
-| El Gavilán Camionero Mascarero (Zone 3) | **Confirmed official (project-defined, now professor-confirmed final).** The syllabus originally stated the Zone 3 boss was *"Pendiente de definición final dentro de la narrativa general."* This design was authored by the documentation project to fill that open item and has since been **reviewed and confirmed as final by the professor** (see `28_DECISION_LOG.md` ADR-008). It is the permanent Zone 3 boss — no longer subject to reassignment risk. |
-| Gran Shaman Paburu (Final Boss) | **Syllabus-official** (core identity and role) **+ project-defined elaboration** (the specific 4-form structure). The syllabus confirms Paburu as *"el guardián ancestral que busca restaurar el equilibrio natural y recuperar las reliquias que provocaron su despertar"* but gives no phase-by-phase detail; the 4-form design below elaborates on that one-paragraph description and is preserved as a legitimate extension. |
+| Boss | Origin | Implementation Status |
+|---|---|---|
+| El Venado Sagrado (Zone 1) | **Syllabus-official.** Defined verbatim in the course syllabus. | **Implemented** — `BossVenado` in `src/stages/boss_venado/boss_venado.py` |
+| El Rey Terciopelo (Zone 2) | **Syllabus-official.** Defined verbatim in the course syllabus. | **Planned** — design specified below, implementation by assigned student |
+| El Gavilán Camionero Mascarero (Zone 3) | **Confirmed official (project-defined, now professor-confirmed final).** The syllabus originally stated the Zone 3 boss was *"Pendiente de definición final dentro de la narrativa general."* This design was authored by the documentation project to fill that open item and has since been **reviewed and confirmed as final by the professor** (see `28_DECISION_LOG.md` ADR-008). It is the permanent Zone 3 boss — no longer subject to reassignment risk. | **Planned** — design specified below, implementation by assigned student |
+| Gran Shaman Paburu (Final Boss) | **Syllabus-official** (core identity and role) **+ project-defined elaboration** (the specific 4-form structure). The syllabus confirms Paburu as *"el guardián ancestral que busca restaurar el equilibrio natural y recuperar las reliquias que provocaron su despertar"* but gives no phase-by-phase detail; the 4-form design below elaborates on that one-paragraph description and is preserved as a legitimate extension. | **Planned** — design specified below, implementation reserved for professor |
 
 Each boss is a multi-phase entity that demonstrates the full academic pipeline of the course:
 - Phase transitions use **Unit III** curve mathematics for movement

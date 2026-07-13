@@ -268,6 +268,11 @@ class AchievementSystem:
         desc = font.render(n['description'], True, (200, 200, 200))
         surface.blit(desc, (bx + 8, by + 17))
 
+    @classmethod
+    def _reset_instance(cls) -> None:
+        """Reset the singleton instance. Used by conftest.py to prevent cross-test contamination."""
+        cls._instance = None
+
     def get_progress(self, achievement_id: str) -> int:
         prog = self._progress.get(achievement_id)
         return prog.current if prog else 0

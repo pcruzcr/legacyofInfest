@@ -90,7 +90,8 @@ class InputManager:
             return True
         return self._action_from_controller(action)
 
-    is_action_pressed = is_action_just_pressed
+    def is_action_pressed(self, action: Action) -> bool:
+        return self.is_action_just_pressed(action)
 
     def is_action_held(self, action: Action) -> bool:
         """True every frame while the action's key is held down."""

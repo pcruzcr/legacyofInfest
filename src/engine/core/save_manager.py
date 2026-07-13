@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -22,7 +24,15 @@ class SaveManager:
             raise ValueError(f"Slot must be 1-{MAX_SLOTS}, got {slot}")
         data.slot_id = slot
         path = self._slot_path(slot)
-        path.write_text(json.dumps(data.to_dict(), indent=2), encoding="utf-8")
+        fd, tmp = tempfile.mkstemp(dir=str(self.SAVES_DIR), suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(data.to_dict(), f, indent=2)
+            os.replace(tmp, str(path))
+        except Exception:
+            if os.path.exists(tmp):
+                os.unlink(tmp)
+            raise
         logging.info(f"SaveManager: saved slot {slot} -> {path}")
         return str(path)
 
@@ -78,7 +88,9 @@ class SaveManager:
                   checkpoint_x: float, checkpoint_y: float,
                   health: float, max_health: float) -> str | None:
         from datetime import datetime
-        slot = self.newest_slot() or 1
+        slot = self.newest_slot()
+        if slot is None:
+            slot = 1
         data = SaveData(
             slot_id=slot,
             timestamp=datetime.now().isoformat(),

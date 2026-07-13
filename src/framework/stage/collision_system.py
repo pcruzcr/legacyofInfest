@@ -35,8 +35,8 @@ class CollisionSystem:
             return
 
         hit_any = False
-        is_slam = getattr(player, "_state_instance", None) is not None and \
-            type(player._state_instance).__name__ == "AerialSlamState"
+        state_instance = getattr(player, "_state_instance", None)
+        is_slam = state_instance is not None and type(state_instance).__name__ == "AerialSlamState"
 
         for entity in stage.entity_list:
             from src.framework.entities.enemy_base import EnemyBase

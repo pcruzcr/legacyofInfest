@@ -9,7 +9,6 @@ from __future__ import annotations
 import pygame
 import pytest
 from src.engine.ui.hud import HUD, _heart_slot_state
-from src.engine.core.event_bus import dispatch
 from src.engine.core import settings
 
 

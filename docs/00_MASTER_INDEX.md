@@ -50,12 +50,19 @@ Documents marked **[SUPERSEDED]** below exist in their originating package (v1, 
 | 26 | `26_STUDENT_TEMPLATE_SPEC.md` | v5 (`legacy_of_infest_docs_v5/`) | Current |
 | 27 | `27_ACADEMIC_RUBRICS.md` | v6 (`legacy_of_infest_docs_v6/`) | Current |
 | 28 | `28_DECISION_LOG.md` | v6 (`legacy_of_infest_docs_v6/`) | Current |
+| 28b | `28_SAMPLE_SYLLABUS.md` | v6 (`legacy_of_infest_docs_v6/`) | Current |
 | 29 | `29_GIT_WORKFLOW_AND_STANDARDS.md` | v6 (`legacy_of_infest_docs_v6/`) | Current |
+| 29b | `29_TA_GUIDE.md` | v6 (`legacy_of_infest_docs_v6/`) | Current |
 | 30 | `30_TICKET_BACKLOG.md` | v6 (`legacy_of_infest_docs_v6/`) | Current |
+| 30b | `30_ASSIGNMENT_01_STAGE_DESIGN.md` | v6 (`legacy_of_infest_docs_v6/`) | Current |
 | 31 | `31_RISK_REGISTER.md` | v6 (`legacy_of_infest_docs_v6/`) | Current |
+| 31b | `31_ASSIGNMENT_02_BOSS_DESIGN.md` | v6 (`legacy_of_infest_docs_v6/`) | Current |
 | 32 | `32_ENVIRONMENT_SETUP_GUIDE.md` | v6 (`legacy_of_infest_docs_v6/`) | Current |
+| 32b | `32_ASSIGNMENT_03_LAB_EXERCISES.md` | v6 (`legacy_of_infest_docs_v6/`) | Current |
 | 33 | `33_SCOPE_ADJUSTMENT.md` | v6 (`legacy_of_infest_docs_v6/`) | Current |
+| 33b | `33_ASSIGNMENT_04_FINAL_PROJECT.md` | v6 (`legacy_of_infest_docs_v6/`) | Current |
 | 34 | `34_CLASS_MATERIALS.md` | v11 (in-repo, 2026-07-11) | Current — corrected: real file status indicators |
+| 34b | `34_EDUCATIONAL_ROADMAP.md` | v11 (in-repo, 2026-07-11) | Current — educational roadmap |
 | 35 | `35_USER_MANUAL.md` | v7 (in-repo) | Current — new |
 | 36 | `36_STUDENT_MANUAL.md` | v7 (in-repo) | Current — new |
 | 37 | `37_DEMO_QUICK_GUIDE.md` | v7 (in-repo) | Current — new |
@@ -73,6 +80,10 @@ Documents marked **[SUPERSEDED]** below exist in their originating package (v1, 
 | 49 | `49_AMBIENT_AUDIO.md` | v10 (in-repo) | Current — ambient audio system |
 | 50 | `50_IMPROVEMENT_ROADMAP.md` | v11 (in-repo, 2026-07-11) | Current — corrected: P0 items resolved, accurate metrics |
 | 51 | `51_IMPLEMENTATION_AUDIT.md` | v10 (in-repo) | Current — evidence-based gap analysis (corrected 2026-07-11) |
+| — | `BOSS_CREATION.md` | v10 (in-repo) | Current — boss creation guide |
+| — | `ENEMY_CREATION.md` | v10 (in-repo) | Current — enemy creation guide |
+| — | `SCENE_CREATION.md` | v10 (in-repo) | Current — scene creation guide |
+| — | `STAGE_CREATION.md` | v10 (in-repo) | Current — stage creation guide |
 
 **Recommended action before implementation begins:** Consolidate all current-status documents into a single flat `docs/` folder in the actual repository (per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §7's structure), discarding the superseded v1/v2/v3 originals of the six documents listed as "supersedes" above. This index becomes redundant once that consolidation happens — at that point, a simple numbered `docs/` folder listing is self-explanatory.
 
@@ -112,7 +123,7 @@ This documentation set covers four distinct layers. Every document is classified
 |---|---|
 | `03_ARCHITECTURE.md` | Full folder structure, module responsibilities, data flow |
 | `04_PLAYER_SPEC.md` | Player physics, states (19 states incl. SWIMMING), combat — complete behavioral spec |
-| `05_ENEMY_SPEC.md` | Enemy base class and 9 enemy types (Walker, Flying, Shooter, Charger, Archer, Brute, Caster, Assassin, Boss) |
+| `05_ENEMY_SPEC.md` | Enemy base class and 8 enemy types (Walker, Flying, Shooter, Charger, Archer, Brute, Caster, Assassin) |
 | `06_TMX_SPEC.md` | Map file format, layers, object types |
 | `07_STAGE0_DESIGN.md` | The professor's reference-implementation stage, zone by zone |
 | `09_HUD_SPEC.md` | HUD layout, hearts, timer, messages, Game Over |
@@ -216,10 +227,10 @@ When two documents appear to disagree, resolve using this table (also stated loc
 | v3 (`legacy_of_infest_docs_v3/`) | 16–20 | 5 | 16, 17, 19 (by v4) |
 | v4 (`legacy_of_infest_docs_corrected/`) | 00, 01, 03, 08, 14, 16, 17, 19, 21 | 2 new (00, 21) + 7 corrected | — |
 | v5 (`legacy_of_infest_docs_v5/`) | 22–26 | 5 | — |
-| v6 (`legacy_of_infest_docs_v6/`) | 27–32 | 6 | — |
-| **Total unique, current documents** | **39** (00–38) | | |
+| v6 (`legacy_of_infest_docs_v6/`) | 27–33, 28b–33b | 11 | — |
+| **Total unique, current documents** | **60** (00–51, 28b–34b, creation guides) | | |
 | v7 (in-repo updates) | 15, 25, 03, 28, 24, 21, 08, 22, 30 | 9 updated | — |
-| v8–v10 (sessions) | 10 lab scenes, registry, panels, layouts, debug, scripts, docs 35–51 | 16 new + all re-audited | — |
+| v8–v10 (sessions) | 10 lab scenes, registry, panels, layouts, debug, scripts, docs 35–51, creation guides | 20 new + all re-audited | — |
 | v11 (2026-07-11 alignment) | 03, 04, 05, 22, 34, 50, 00 | 7 corrected | — |
 
 ---

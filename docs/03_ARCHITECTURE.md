@@ -266,7 +266,7 @@ legacy-of-infest/                      # Actual repo root
 
 #### `engine/core/app.py` — `App`
 
-The root application class. It owns the Pygame display surface, the `DeltaClock`, the `SceneManager`, the `InputManager`, and the `AudioManager`. It runs the main loop, pumps events into the `InputManager` and `EventBus`, calls `update()` and `draw()` on the active scene, and handles display scaling from internal resolution to window resolution.
+The root application class. It owns the Pygame display surface, the `DeltaClock`, the `SceneManager`, the `InputManager`, and the `AudioManager`. It runs the main loop, pumps events into the `InputManager` and `EventBus`, calls `update()` and `draw()` on the active scene, and handles display scaling from internal resolution to window resolution. The UI layout uses a responsive system based on percentage calculations rather than fixed pixel coordinates, ensuring consistent proportions across display scales.
 
 **Public Interface:**
 - `App()` — Initialize Pygame, create internal surface at settings.INTERNAL_WIDTH×settings.INTERNAL_HEIGHT, create all engine singletons
@@ -307,7 +307,7 @@ Wraps `pygame.time.Clock`. Provides delta time in seconds, accumulated time, a t
 
 #### `engine/core/event_bus.py` — `EventBus`
 
-A global pub/sub event dispatcher. Entities and systems communicate through the event bus rather than holding direct references to each other.
+An instance-based pub/sub event dispatcher. Entities and systems communicate through the event bus rather than holding direct references to each other. Module-level convenience functions (`emit`, `subscribe`, `unsubscribe`) delegate to a default module-level instance for ergonomic single-instance usage.
 
 **Public Interface:**
 - `EventBus.subscribe(event_name: str, callback: Callable)` — Register a listener.
@@ -398,8 +398,8 @@ Unified input abstraction. Handles keyboard and gamepad input through the `Actio
 Wraps `pygame.mixer`. Manages music playback (one track at a time) and SFX playback (multiple simultaneous channels). Volume control is applied globally.
 
 **Public Interface:**
-- `AudioManager.play_music(name: str, loop: bool = True, fade_ms: int = 0)` — Play named BGM track.
-- `AudioManager.stop_music(fade_ms: int = 0)` — Stop BGM.
+- `AudioManager.play_music(path: str | Path, loops: int = -1)` — Play named BGM track.
+- `AudioManager.stop_music()` — Stop BGM.
 - `AudioManager.play_sfx(name: str, volume: float = 1.0)` — Play named sound effect.
 - `AudioManager.set_music_volume(volume: float)` — Set music volume 0.0–1.0.
 - `AudioManager.set_sfx_volume(volume: float)` — Set SFX volume 0.0–1.0.
@@ -681,7 +681,7 @@ SceneManager.current.draw(surface)
     ├── Entity renders (world-space, camera offset applied)
     └── HUD render (screen-space, no offset)
     ↓
-pygame.transform.scale(internal, window_size)
+pygame.transform.scale(internal, window_size)  # Responsive scaling — UI uses %-based layout
     ↓
 pygame.display.flip()
 ```

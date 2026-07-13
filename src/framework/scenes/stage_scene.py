@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
@@ -224,6 +225,7 @@ class StageScene(BaseScene):
         # Set up stage lighting
         self._lighting.clear()
         self._player_light = None
+        zone = int(getattr(self._stage_data, "zone", 0))
         if zone == 0:
             self._lighting.ambient_brightness = 0.8
             self._stage_lights = [
@@ -328,7 +330,6 @@ class StageScene(BaseScene):
             self._particle_system.get_emitter("death").emit(
                 float(pos[0]), float(pos[1]), HitEffects.get_blood_for_damage(10),
             )
-            import random
             for _ in range(3):
                 self._particle_system.get_emitter("death").emit(
                     float(pos[0]) + random.uniform(-8, 8),
@@ -361,7 +362,6 @@ class StageScene(BaseScene):
         self._vfx_handlers[Events.VFX_SLAM] = _on_vfx_slam
         self._vfx_handlers[Events.VFX_ULTIMATE] = _on_vfx_ultimate
 
-        import random
         self._sfx_handlers: dict[str, Callable[..., None]] = {}
         sfx_map = {
             Events.SFX_PLAYER_JUMP: "sfx_player_jump",
@@ -414,8 +414,7 @@ class StageScene(BaseScene):
 
     def _play_sfx_varied(self, names: list[str], volume: float = 1.0) -> None:
         """Pick a random sound from a list for variation."""
-        from random import choice
-        self._play_sfx_named(choice(names), volume=volume)
+        self._play_sfx_named(random.choice(names), volume=volume)
 
     def on_exit(self) -> None:
         if self.context.clock is not None:
@@ -486,17 +485,15 @@ class StageScene(BaseScene):
             if im.is_action_just_pressed(Action.PAUSE):
                 self._paused = not self._paused
                 self._pause_selected = 0
-            if hasattr(pygame.key, 'get_just_pressed') and pygame.key.get_just_pressed()[pygame.K_F1]:
+            if im and im.is_raw_key_pressed(pygame.K_F1):
                 self._debug = not self._debug
                 self.on_debug_toggle(self._debug)
-            if hasattr(pygame.key, 'get_just_pressed'):
-                just_pressed = pygame.key.get_just_pressed()
-                for fkey in (pygame.K_F2, pygame.K_F3, pygame.K_F4, pygame.K_F5,
-                             pygame.K_F6, pygame.K_F7, pygame.K_F8, pygame.K_F9,
-                             pygame.K_F10):
-                    if just_pressed[fkey]:
-                        self._learning.toggle(fkey)
-                        break
+            for fkey in (pygame.K_F2, pygame.K_F3, pygame.K_F4, pygame.K_F5,
+                         pygame.K_F6, pygame.K_F7, pygame.K_F8, pygame.K_F9,
+                         pygame.K_F10):
+                if im and im.is_raw_key_pressed(fkey):
+                    self._learning.toggle(fkey)
+                    break
 
         if self._paused:
             if im:

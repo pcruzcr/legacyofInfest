@@ -2,132 +2,145 @@
 Module: test_event_bus
 System: tests
 Academic Unit: N/A
-Description: Tests for EventBus singleton-style pub/sub dispatch system.
-Covers: subscribe, emit (queued), unsubscribe, multiple subscribers,
-and unrelated event isolation.
+Description: Tests for EventBus instance-based pub/sub dispatch system.
+Covers: subscribe, emit (queued), dispatch, unsubscribe, multiple
+subscribers, wildcard literal, clear(), and recursion guard.
 """
 from __future__ import annotations
+
 import pytest
-from src.engine.core.event_bus import EventBus, set_default_bus, subscribe, unsubscribe, emit, dispatch, clear
+from src.engine.core.event_bus import EventBus
 
 
-@pytest.fixture(autouse=True)
-def reset_event_bus():
-    """Clear EventBus state before each test."""
-    clear()
-    yield
+@pytest.fixture
+def bus() -> EventBus:
+    return EventBus()
 
 
-def test_subscribe_and_emit():
-    """A subscribed callback receives the exact **data kwargs passed to emit()."""
-    received = {}
+def test_subscribe_emit_dispatch_calls_callback(bus: EventBus) -> None:
+    received: dict = {}
 
-    def callback(**data):
+    def callback(**data: object) -> None:
         nonlocal received
         received = data
 
-    subscribe("TEST_EVENT", callback)
-    emit("TEST_EVENT", value=42, name="foo")
-    dispatch()
+    bus.subscribe("TEST_EVENT", callback)
+    bus.emit("TEST_EVENT", value=42, name="foo")
+    bus.dispatch()
     assert received == {"value": 42, "name": "foo"}
 
 
-def test_emit_queues_not_immediate():
-    """Calling emit() does not invoke the callback until dispatch() is called."""
+def test_unsubscribe_stops_delivery(bus: EventBus) -> None:
     invoked = False
 
-    def callback(**data):
+    def callback(**data: object) -> None:
         nonlocal invoked
         invoked = True
 
-    subscribe("TEST_EVENT", callback)
-    emit("TEST_EVENT")
-    assert not invoked, "Callback was invoked before dispatch()"
-    dispatch()
-    assert invoked, "Callback was not invoked after dispatch()"
-
-
-def test_unsubscribe_stops_delivery():
-    """After unsubscribe(), a subsequent emit() + dispatch() does not invoke the callback."""
-    invoked = False
-
-    def callback(**data):
-        nonlocal invoked
-        invoked = True
-
-    subscribe("TEST_EVENT", callback)
-    unsubscribe("TEST_EVENT", callback)
-    emit("TEST_EVENT")
-    dispatch()
+    bus.subscribe("TEST_EVENT", callback)
+    bus.unsubscribe("TEST_EVENT", callback)
+    bus.emit("TEST_EVENT")
+    bus.dispatch()
     assert not invoked
 
 
-def test_multiple_subscribers():
-    """Two callbacks subscribed to the same event both receive it."""
-    results = []
+def test_multiple_subscribers_all_called(bus: EventBus) -> None:
+    results: list[int] = []
 
-    def cb1(**data):
-        results.append("cb1")
+    def cb1(**data: object) -> None:
+        results.append(1)
 
-    def cb2(**data):
-        results.append("cb2")
+    def cb2(**data: object) -> None:
+        results.append(2)
 
-    subscribe("TEST_EVENT", cb1)
-    subscribe("TEST_EVENT", cb2)
-    emit("TEST_EVENT")
-    dispatch()
-    assert results == ["cb1", "cb2"]
+    bus.subscribe("TEST_EVENT", cb1)
+    bus.subscribe("TEST_EVENT", cb2)
+    bus.emit("TEST_EVENT")
+    bus.dispatch()
+    assert results == [1, 2]
 
 
-def test_unrelated_event_not_delivered():
-    """A callback subscribed to 'FOO' does not fire when 'BAR' is emitted."""
+def test_wildcard_as_literal_event_name(bus: EventBus) -> None:
+    wildcard_called = False
+    other_called = False
+
+    def wildcard_cb(**data: object) -> None:
+        nonlocal wildcard_called
+        wildcard_called = True
+
+    def other_cb(**data: object) -> None:
+        nonlocal other_called
+        other_called = True
+
+    bus.subscribe("*", wildcard_cb)
+    bus.subscribe("SPECIFIC", other_cb)
+
+    bus.emit("SPECIFIC")
+    bus.dispatch()
+    assert other_called
+    assert not wildcard_called
+
+
+def test_clear_removes_all_subscribers_and_queue(bus: EventBus) -> None:
     invoked = False
 
-    def callback(**data):
+    def callback(**data: object) -> None:
         nonlocal invoked
         invoked = True
 
-    subscribe("FOO", callback)
-    emit("BAR")
-    dispatch()
+    bus.subscribe("TEST", callback)
+    bus.emit("TEST")
+    bus.clear()
+    bus.dispatch()
     assert not invoked
-
-
-def test_cross_test_isolation_via_clear():
-    """
-    After clear(), all subscribers are removed.
-    Simulates the effect of conftest._reset_global_state between tests.
-    """
-    invoked = False
-
-    def callback(**data):
-        nonlocal invoked
-        invoked = True
-
-    subscribe("ISOLATION_TEST", callback)
-    clear()
-    emit("ISOLATION_TEST")
-    dispatch()
-    assert not invoked, "Callback was invoked after clear()"
-
-
-def test_set_default_bus_routes_global_emit():
-    """
-    set_default_bus() configures the module-level convenience functions
-    to use a specific EventBus instance. Verifies App's init sequence.
-    """
-    bus = EventBus()
-    set_default_bus(bus)
-    results: list[str] = []
-
-    def callback(**data):
-        results.append(data["val"])
-
-    subscribe("ROUTE_TEST", callback)
-    emit("ROUTE_TEST", val="a")
-    dispatch()
-    assert results == ["a"]
-    assert bus.subscriber_count() == 1
-    # Confirm the bus we set is the one used
+    assert bus.subscriber_count() == 0
     assert bus.queue_snapshot == []
-    assert "ROUTE_TEST" in bus.subscribers_snapshot
+
+
+def test_recursion_guard_via_queue_snapshot(bus: EventBus) -> None:
+    inner_invoked = False
+
+    def inner_cb(**data: object) -> None:
+        nonlocal inner_invoked
+        inner_invoked = True
+
+    def outer_cb(**data: object) -> None:
+        bus.emit("INNER")
+
+    bus.subscribe("OUTER", outer_cb)
+    bus.subscribe("INNER", inner_cb)
+
+    bus.emit("OUTER")
+    bus.dispatch()
+
+    assert not inner_invoked, "Inner event should NOT be dispatched in same cycle"
+
+    bus.dispatch()
+    assert inner_invoked, "Inner event should be dispatched in next cycle"
+
+
+def test_unsubscribe_nonexistent_does_not_raise(bus: EventBus) -> None:
+    def callback(**data: object) -> None:
+        pass
+
+    bus.unsubscribe("NONEXISTENT", callback)
+
+
+def test_duplicate_subscribe_logs_warning(bus: EventBus, caplog: pytest.LogCaptureFixture) -> None:
+    def callback(**data: object) -> None:
+        pass
+
+    bus.subscribe("EVENT", callback)
+    bus.subscribe("EVENT", callback)
+
+    assert "duplicate" in caplog.text.lower()
+
+
+def test_subscribers_snapshot_returns_names(bus: EventBus) -> None:
+    def my_cb(**data: object) -> None:
+        pass
+
+    bus.subscribe("EVT", my_cb)
+    snap = bus.subscribers_snapshot
+    assert "EVT" in snap
+    assert "my_cb" in snap["EVT"]

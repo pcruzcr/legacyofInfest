@@ -774,12 +774,9 @@ class UltimateState(PlayerStateBase):
         player.velocity.x = 0.0
         player.velocity.y = 0.0
         player.special_meter = 0.0
-        try:
-            from src.engine.core.event_bus import emit
-            from src.engine.core.events import Events
-            emit(Events.VFX_ULTIMATE, pos=(player.position.x, player.position.y))
-        except Exception:
-            pass
+        from src.engine.core.event_bus import emit
+        from src.engine.core.events import Events
+        emit(Events.VFX_ULTIMATE, pos=(player.position.x, player.position.y))
 
     def update(
         self,

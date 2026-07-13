@@ -7,7 +7,6 @@ and destroy cleanup.
 """
 from __future__ import annotations
 import pygame
-import pytest
 from src.engine.ui.message_box import MessageBox
 
 
