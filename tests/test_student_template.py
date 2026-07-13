@@ -26,7 +26,6 @@ def _init_pygame():
 @pytest.fixture
 def context():
     """Minimal GameContext for template instantiation."""
-    import pygame
     return GameContext(
         MagicMock(),  # input_manager
         MagicMock(),  # audio_manager

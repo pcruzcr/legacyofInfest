@@ -1,12 +1,18 @@
+"""
+Module: test_save_manager
+System: tests
+Academic Unit: N/A
+Description: Tests for SaveManager and SaveData classes.
+Covers: save/load round-trip, corrupt data, missing field defaults,
+migration, max slots, and slot validation.
+"""
 from __future__ import annotations
 
-import json
-import shutil
 from pathlib import Path
 
 import pytest
 
-from src.engine.core.save_data import MAX_SLOTS, SAVE_VERSION, SaveData
+from src.engine.core.save_data import MAX_SLOTS, SaveData
 from src.engine.core.save_manager import SaveManager
 
 
@@ -40,6 +46,7 @@ class TestSaveData:
             checkpoint_x=50.0, checkpoint_y=80.0,
             health=3.0, max_health=5.0,
             zone_flags={"zone_a": True, "zone_b": False},
+            completed_stages=["stage0"],
         )
         d = data.to_dict()
         restored = SaveData.from_dict(d)
@@ -51,6 +58,31 @@ class TestSaveData:
         assert restored.health == 3.0
         assert restored.max_health == 5.0
         assert restored.zone_flags == {"zone_a": True, "zone_b": False}
+        assert restored.completed_stages == ["stage0"]
+
+    def test_from_dict_missing_fields_get_defaults(self) -> None:
+        data: dict = {}
+        restored = SaveData.from_dict(data)
+        assert restored.slot_id == 0
+        assert restored.timestamp == ""
+        assert restored.version == 2
+        assert restored.stage_id == ""
+        assert restored.stage_index == 0
+        assert restored.checkpoint_x == 0.0
+        assert restored.checkpoint_y == 0.0
+        assert restored.health == 5.0
+        assert restored.max_health == 5.0
+        assert restored.zone_flags == {}
+        assert restored.completed_stages == []
+
+    def test_from_dict_with_partial_data(self) -> None:
+        data = {"slot_id": 3, "stage_id": "stage2", "health": 3.0}
+        restored = SaveData.from_dict(data)
+        assert restored.slot_id == 3
+        assert restored.stage_id == "stage2"
+        assert restored.health == 3.0
+        assert restored.max_health == 5.0
+        assert restored.zone_flags == {}
 
     def test_migrate_v0_to_v2(self) -> None:
         old = {"version": 0, "stage_id": "stage0"}
@@ -78,6 +110,13 @@ class TestSaveData:
         d = data.to_dict()
         assert d["timestamp"] != ""
 
+    def test_max_slots_constant(self) -> None:
+        assert MAX_SLOTS == 5
+
+    def test_version_constant(self) -> None:
+        from src.engine.core.save_data import SAVE_VERSION
+        assert SAVE_VERSION == 2
+
 
 class TestSaveManager:
     def test_save_and_load(self, save_manager: SaveManager, sample_data: SaveData) -> None:
@@ -89,6 +128,33 @@ class TestSaveManager:
         assert loaded.health == 4.5
         assert loaded.checkpoint_x == 100.0
 
+    def test_round_trip_preserves_all_fields(self, save_manager: SaveManager, sample_data: SaveData) -> None:
+        save_manager.save(1, sample_data)
+        loaded = save_manager.load(1)
+        assert loaded is not None
+        assert loaded.slot_id == 1
+        assert loaded.timestamp == "2026-07-08T12:00:00"
+        assert loaded.stage_id == "stage0"
+        assert loaded.stage_index == 0
+        assert loaded.checkpoint_x == 100.0
+        assert loaded.checkpoint_y == 200.0
+        assert loaded.health == 4.5
+        assert loaded.max_health == 5.0
+        assert loaded.zone_flags == {"zone_a": True}
+
+    def test_load_empty_slot_returns_none(self, save_manager: SaveManager) -> None:
+        assert save_manager.load(1) is None
+
+    def test_corrupt_save_returns_none(self, save_manager: SaveManager) -> None:
+        path = save_manager._slot_path(1)
+        path.write_text("not valid json", encoding="utf-8")
+        assert save_manager.load(1) is None
+
+    def test_corrupt_with_empty_file_returns_none(self, save_manager: SaveManager) -> None:
+        path = save_manager._slot_path(1)
+        path.write_text("", encoding="utf-8")
+        assert save_manager.load(1) is None
+
     def test_all_5_slots(self, save_manager: SaveManager, sample_data: SaveData) -> None:
         for slot in range(1, MAX_SLOTS + 1):
             d = SaveData(slot_id=slot, stage_id=f"stage{slot}")
@@ -98,8 +164,11 @@ class TestSaveManager:
             assert loaded is not None
             assert loaded.stage_id == f"stage{slot}"
 
-    def test_load_empty_slot(self, save_manager: SaveManager) -> None:
-        assert save_manager.load(1) is None
+    def test_invalid_slot_raises(self, save_manager: SaveManager, sample_data: SaveData) -> None:
+        with pytest.raises(ValueError):
+            save_manager.save(0, sample_data)
+        with pytest.raises(ValueError):
+            save_manager.save(6, sample_data)
 
     def test_delete(self, save_manager: SaveManager, sample_data: SaveData) -> None:
         save_manager.save(1, sample_data)
@@ -144,17 +213,6 @@ class TestSaveManager:
         loaded = save_manager.load(1)
         assert loaded is not None
         assert loaded.stage_id == "stage0"
-
-    def test_corrupt_save_returns_none(self, save_manager: SaveManager) -> None:
-        path = save_manager._slot_path(1)
-        path.write_text("not valid json", encoding="utf-8")
-        assert save_manager.load(1) is None
-
-    def test_invalid_slot_raises(self, save_manager: SaveManager, sample_data: SaveData) -> None:
-        with pytest.raises(ValueError):
-            save_manager.save(0, sample_data)
-        with pytest.raises(ValueError):
-            save_manager.save(6, sample_data)
 
     def test_overwrite_slot(self, save_manager: SaveManager, sample_data: SaveData) -> None:
         save_manager.save(1, sample_data)

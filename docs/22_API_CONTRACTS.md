@@ -276,13 +276,23 @@ class SoundBank:
 class AudioManager:
     def __init__(self) -> None: ...
 
-    def play_music(self, name: str, loop: bool = True, fade_ms: int = 0) -> None: ...
-    def stop_music(self, fade_ms: int = 0) -> None: ...
+    def play_music(self, path: str | Path, loops: int = -1) -> None:
+        """Play background music. -1 loops = infinite. Falls back silently."""
+    def stop_music(self) -> None: ...
+    def pause_music(self) -> None: ...
     def resume_music(self) -> None: ...
     def play_sfx(self, name: str, volume: float = 1.0) -> None:
         """Play a sound effect from the sound bank at the current SFX volume."""
-    def set_music_volume(self, volume: float) -> None:
-        """volume clamped to [0.0, 1.0]."""
+    def play_stinger(self, name: str, volume: float = 0.8) -> None: ...
+    def play_ambient(self, path: str | Path, volume: float = 0.5, loops: int = -1) -> None: ...
+    def stop_ambient(self) -> None: ...
+    def crossfade_ambient(self, path: str | Path, duration: float = 2.0, volume: float = 0.5) -> None: ...
+    def play_dynamic_music(self, calm_path: str | Path, combat_path: str | Path) -> None: ...
+    def stop_dynamic_music(self) -> None: ...
+    def set_music_intensity(self, target: float, crossfade_speed: float = 1.0) -> None: ...
+    def update_dynamic_music(self, dt: float) -> None: ...
+    def play_sfx_at(self, name: str, world_x: float, screen_center_x: float = 160, volume: float = 1.0) -> None: ...
+    def set_music_volume(self, volume: float) -> None: ...
     def set_sfx_volume(self, volume: float) -> None: ...
     def toggle_mute(self) -> None: ...
 
@@ -298,6 +308,8 @@ class AudioManager:
 
     @property
     def is_muted(self) -> bool: ...
+    @property
+    def current_music(self) -> str | None: ...
 ```
 
 ---
@@ -641,11 +653,20 @@ class PlayerState(str, Enum):
     JUMPING = "JUMPING"
     FALLING = "FALLING"
     CROUCHING = "CROUCHING"
-    DASHING = "DASHING"
     SHORT_ATTACK = "SHORT_ATTACK"
     LONG_ATTACK = "LONG_ATTACK"
     HURT = "HURT"
     DYING = "DYING"
+    DASHING = "DASHING"
+    PARRY = "PARRY"
+    CHARGE_ATTACK = "CHARGE_ATTACK"
+    DASH_ATTACK = "DASH_ATTACK"
+    WALL_SLIDE = "WALL_SLIDE"
+    LEDGE_GRAB = "LEDGE_GRAB"
+    GRAB = "GRAB"
+    THROW = "THROW"
+    SLIDE = "SLIDE"
+    SWIMMING = "SWIMMING"
 
 class Player(BaseEntity):
     def __init__(self, spawn_position: pygame.Vector2) -> None: ...
@@ -1662,10 +1683,13 @@ class BossBase(EnemyBase):
     def __init__(
         self,
         spawn_position: pygame.Vector2,
-        max_health: float,
-        phases: list["BossPhase"],
-        boss_name: str,
+        max_health: float = 20.0,
+        damage_on_contact: float = 1.0,
     ) -> None: ...
+
+    def set_phases(self, phases: list["BossPhase"]) -> None: ...
+    def set_boss_name(self, name: str) -> None: ...
+    def _load_boss_sprites(self, prefix: str, fw: int = 48, fh: int = 48) -> None: ...
 
     def update(self, dt: float) -> None:
         """Extends EnemyBase.update with phase-transition checking."""
@@ -1680,11 +1704,17 @@ class BossBase(EnemyBase):
     boss_name: str
 ```
 
-**Reference subclass example** (El Venado Sagrado, Phase 1 only, illustrative):
+**Reference subclass example** (El Venado Sagrado, actual code):
 
 ```python
 class BossVenado(BossBase):
     def __init__(self, spawn_position: pygame.Vector2) -> None:
+        super().__init__(
+            spawn_position=spawn_position,
+            max_health=12.0,
+            damage_on_contact=0.75,
+        )
+        self.set_boss_name("VENADO SAGRADO")
         phases = [
             BossPhase(
                 phase_index=0,
@@ -1704,7 +1734,7 @@ class BossVenado(BossBase):
                 filter_effect="sobel",
             ),
         ]
-        super().__init__(spawn_position, max_health=12.0, phases=phases, boss_name="El Venado Sagrado")
+        self.set_phases(phases)
 ```
 
 ---

@@ -31,9 +31,11 @@ def _reset_global_state():
     from src.engine.core.event_bus import clear as clear_eventbus
     from src.engine.utils.asset_loader import AssetLoader
     from src.engine.scenes.demo_layout import clear_demo_font_cache
+    from src.engine.core.achievements import AchievementSystem
     clear_eventbus()
     AssetLoader.clear_cache()
     clear_demo_font_cache()
+    AchievementSystem._reset_instance()
 
 
 @pytest.fixture

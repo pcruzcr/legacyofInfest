@@ -7,6 +7,7 @@ scaled by a time_scale factor.
 """
 from __future__ import annotations
 import pygame
+from src.engine.core import settings
 
 
 class DeltaClock:
@@ -19,7 +20,7 @@ class DeltaClock:
 
     def tick(self) -> float:
         """Returns delta time in seconds, scaled by self.time_scale."""
-        raw_dt = self._clock.tick(60) / 1000.0
+        raw_dt = self._clock.tick(settings.TARGET_FPS) / 1000.0
         self._dt = raw_dt * self.time_scale
         return self._dt
 

@@ -8,6 +8,7 @@ offset. Supports map boundary clamping and per-layer parallax factors.
 """
 from __future__ import annotations
 
+import random
 from typing import TYPE_CHECKING, Any
 
 import pygame
@@ -114,7 +115,6 @@ class Camera:
         # Screen shake
         if self._shake_timer > 0:
             self._shake_timer -= dt
-            import random
             sx = random.uniform(-self._shake_amplitude, self._shake_amplitude)
             sy = random.uniform(-self._shake_amplitude, self._shake_amplitude)
             self.offset.x += sx
