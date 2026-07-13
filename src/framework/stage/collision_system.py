@@ -36,17 +36,20 @@ class CollisionSystem:
 
         hit_any = False
         state_instance = getattr(player, "_state_instance", None)
-        is_slam = state_instance is not None and type(state_instance).__name__ == "AerialSlamState"
+        is_slam = False
+        if state_instance is not None:
+            from src.framework.entities.player_states import AerialSlamState
+            is_slam = isinstance(state_instance, AerialSlamState)
 
         for entity in stage.entity_list:
             from src.framework.entities.enemy_base import EnemyBase
             if isinstance(entity, EnemyBase) and entity.is_alive:
                 if hitbox.colliderect(entity.hurtbox):
+                    entity.apply_hit(player.current_attack_damage, player.rect.center)
                     if is_slam:
                         entity._knockback_velocity.y = 400.0
                         entity._knockback_velocity.x = 0.0
                         entity._hurt_timer = 0.4
-                    entity.apply_hit(player.current_attack_damage, player.rect.center)
                     hit_any = True
                     hit_pos = list(entity.rect.center)
                     self._context.event_bus.emit(

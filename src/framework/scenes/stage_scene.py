@@ -379,10 +379,10 @@ class StageScene(BaseScene):
             Events.SFX_STAGE_BANNER: "sfx_ui_stage_banner",
             Events.SFX_STAGE_COMPLETE: "sfx_ui_stage_complete",
             Events.SFX_HAZARD_ZONE: "sfx_environment_hazard_zone",
-            Events.SFX_PLAYER_FOOTSTEP: "sfx_player_footstep",
-            Events.SFX_MENU_HOVER: "sfx_ui_hover",
-            Events.SFX_MENU_CONFIRM: "sfx_ui_confirm",
-            Events.SFX_MENU_CANCEL: "sfx_ui_cancel",
+            Events.SFX_PLAYER_FOOTSTEP: "sfx_step",
+            Events.SFX_MENU_HOVER: "sfx_ui_menu_move",
+            Events.SFX_MENU_CONFIRM: "sfx_ui_menu_confirm",
+            Events.SFX_MENU_CANCEL: "sfx_ui_menu_cancel",
         }
         self._sfx_names = sfx_map
         for evt, sname in sfx_map.items():
@@ -535,10 +535,17 @@ class StageScene(BaseScene):
 
             self._collision.update_enemies(dt, player, stage)
             self._collision.process_attack(dt, player, stage, self._camera, self.context.clock)
+
+            if player.current_health <= 0 and not self._game_over:
+                self._kill_player()
+                return
         finally:
             self._collision.update_hitstop(dt, self.context.clock)
             if self._collision._hitstop_timer <= 0 and self.context.clock is not None:
                 self.context.clock.time_scale = original_time_scale
+
+        if self._game_over:
+            return
 
         self._camera.update(dt)
 
@@ -690,10 +697,6 @@ class StageScene(BaseScene):
             if is_dashing or (is_moving and not self._player.is_grounded):
                 self._trail_system.capture(self._player)
         self._trail_system.update(dt)
-
-        if player.current_health <= 0 and not self._game_over:
-            self._kill_player()
-            return
 
         if self._hud and self._hud.current_time <= 0 and self._hud.is_countdown and not self._game_over:
             self._kill_player()

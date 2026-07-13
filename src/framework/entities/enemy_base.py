@@ -218,7 +218,9 @@ class EnemyBase(BaseEntity):
         """
         Draw the enemy via sprite sheet or placeholder fallback.
         """
-        if not self.is_visible or not self.is_alive:
+        if not self.is_visible:
+            return
+        if not self.is_alive and self.state != EnemyState.DYING:
             return
 
         # Invincibility flash: skip draw when invisible
@@ -340,7 +342,6 @@ class EnemyBase(BaseEntity):
     def _die(self) -> None:
         """Handle death: set state, emit event, schedule removal."""
         self.state = EnemyState.DYING
-        self.is_alive = False
         self._death_timer = 0.5
         emit(
             Events.ENEMY_DIED,
@@ -503,6 +504,7 @@ class EnemyBase(BaseEntity):
         if self._death_timer > 0:
             self._death_timer -= dt
             if self._death_timer <= 0:
+                self.is_alive = False
                 self.is_active = False
 
     # ──────────────────────────────────────────────
@@ -541,6 +543,8 @@ class EnemyBase(BaseEntity):
             return
 
         if self.state == EnemyState.TELEGRAPHING:
+            if self._telegraph_timer <= 0:
+                self._telegraph_timer = self._telegraph_duration
             self._telegraph_timer -= dt
             if self._telegraph_timer <= 0:
                 self.state = EnemyState.FIRING

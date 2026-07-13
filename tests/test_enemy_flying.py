@@ -132,4 +132,7 @@ class TestFlyingDamage:
         e = EnemyFlying(pygame.Vector2(0.0, 0.0), max_health=1.0)
         e.apply_hit(1.0, (0.0, 0.0))
         assert e.state == EnemyState.DYING
+        assert e.is_alive is True  # alive during death animation
+        # After death timer expires, is_alive becomes False
+        e._tick_cooldowns(0.6)
         assert e.is_alive is False

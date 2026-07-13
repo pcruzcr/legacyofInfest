@@ -89,6 +89,8 @@ class TestShooterState:
         )
         shooter.apply_hit(1.0, (0.0, 0.0))
         assert shooter.state == EnemyState.DYING
+        assert shooter.is_alive is True  # alive during death animation
+        shooter._tick_cooldowns(0.6)
         assert shooter.is_alive is False
 
     def test_transitions_from_alert_to_telegraphing(self) -> None:

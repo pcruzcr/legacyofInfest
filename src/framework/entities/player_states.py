@@ -204,11 +204,12 @@ def _can_jump(player: Player) -> bool:
 
 
 def _do_jump(player: Player) -> None:
+    was_grounded = player.is_grounded
     player.velocity.y = settings.PLAYER_JUMP_FORCE
     player.is_grounded = False
     player._coyote_counter = settings.PLAYER_COYOTE_FRAMES + 1
     player._jump_cut_applied = False
-    if not player.is_grounded and player._air_jumps_used < settings.PLAYER_AIR_JUMPS:
+    if not was_grounded and player._air_jumps_used < settings.PLAYER_AIR_JUMPS:
         player._air_jumps_used += 1
     from src.framework.entities.player_states import JumpingState
     player._change_state_instance(JumpingState())
@@ -1000,7 +1001,7 @@ class ChargingState(PlayerStateBase):
         player._charge_timer += dt
         if player._charge_timer >= _CHARGE_MAX_TIME:
             player._charge_level = 2
-        elif player._charge_timer >= _CHARGE_LEVELS[1][0]:
+        elif player._charge_timer >= _CHARGE_LEVELS[0][0]:
             player._charge_level = 1
 
         # Emit charge glow particles periodically
@@ -1355,7 +1356,7 @@ class WallSlideState(PlayerStateBase):
             return
 
         # Drop off wall when moving away
-        if inp.move_x == player._wall_side:
+        if inp.move_x == -player._wall_side:
             player._wall_side = 0
             player._can_wall_jump = False
             from src.framework.entities.player_states import FallingState

@@ -70,7 +70,7 @@ class TitleScene(BaseScene):
         available = h - logo_bottom - 16
         n = len(self._options)
         line_h = max(11, min(18, available // max(n, 1)))
-        self._font_size = max(8, line_h - 2)
+        self._font_size = max(12, line_h - 2)
         self._font_game = AssetLoader.load_font(
             settings.ASSETS_DIR / "fonts" / "game.ttf",
             self._font_size,
