@@ -64,3 +64,19 @@ tm.start_fade_in()
 - `src/engine/scene/transitions.py` (199 lines) — 4 transition effect classes
 - `src/engine/scenes/transition_manager.py` (164 lines) — orchestration controller
 **Status:** ✅ Complete — fade, wipe, slide, circle transitions
+
+
+--- Traducción al Español ---
+
+## Transiciones de Pantalla
+
+### Descripción
+Sistema de transiciones entre escenas: fundido, barrido, deslizamiento y círculo.
+
+### Tipos de Transición
+- Fundido (Fade) — entrada/salida en negro
+- Barrido (Wipe) — barrido horizontal o vertical
+- Deslizamiento (Slide) — diapositiva desde un borde
+- Círculo (Circle) — revelado circular
+
+Para la especificación completa de duraciones y easing, consultar el documento original en inglés.

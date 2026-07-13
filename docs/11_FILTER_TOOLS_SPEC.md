@@ -856,3 +856,21 @@ The following extensions are identified for potential future semesters. They are
 | `barrel_distortion(surface, coefficient)` | Lens distortion effect | Unit VII |
 | `apply_kernel_to_sprite(entity, kernel)` | Apply filter to a specific entity's surface | Unit VII |
 | `compute_optical_flow(surface_a, surface_b)` | Dense optical flow between two frames | Unit IX |
+
+
+--- Traducción al Español ---
+
+## Especificación de FilterTools
+
+FilterTools proporciona funciones de convolución y detección de bordes aplicadas a superficies de Pygame mediante NumPy y SciPy.
+
+### Funciones
+- `apply_kernel(surface, kernel)` — Aplicar kernel de convolución personalizado
+- `gaussian_blur(surface, sigma)` — Desenfoque gaussiano
+- `sobel_edge(surface)` — Detección de bordes Sobel
+- `canny_edge(surface, low, high)` — Detección de bordes Canny
+- `adjust_brightness(surface, factor)` — Ajuste de brillo
+- `adjust_contrast(surface, factor)` — Ajuste de contraste
+- `compute_histogram(surface)` — Histograma RGB
+
+Todas las funciones son de la Unidad VII del sílabo. Para ejemplos detallados de uso y kernels estándar, consultar el documento original en inglés.

@@ -1,7 +1,10 @@
+"""
+Module: test_combo_system
+System: tests
+Description: Tests for combo counting, combo timer, and multiplier calculation.
+"""
 from __future__ import annotations
-
 import pygame
-
 from src.engine.core import settings
 from src.framework.entities.player import Player
 from src.framework.entities.player_states import (
@@ -75,22 +78,15 @@ class TestComboSystem:
         _start_attack(player, Player.SHORT_ATTACK)
         assert player.combo_count == 1
 
-
-class TestComboDamageScaling:
-    def test_damage_multiplier_short_attack(self) -> None:
+    def test_current_attack_damage_scales_with_combo(self) -> None:
         player = Player(pygame.Vector2(0, 0))
         _start_attack(player, Player.SHORT_ATTACK)
         player.combo_count = 2
         player.combo_active = True
-        player._state_instance._active_hitbox = pygame.Rect(0, 0, 10, 10)
-        setattr(player._state_instance, 'state_enum', Player.SHORT_ATTACK)
-
-        from src.framework.entities.player import PlayerState
-        class FakeState:
-            state_enum = PlayerState.SHORT_ATTACK
-        player._state_instance = FakeState()
+        from src.framework.entities.player_states import ShortAttackState
+        player._state_instance = ShortAttackState()
         player._active_hitbox = pygame.Rect(0, 0, 10, 10)
         dmg = player.current_attack_damage
         expected_base = 0.5
-        expected_mult = settings.COMBO_DAMAGE_MULT[min(1, len(settings.COMBO_DAMAGE_MULT) - 1)]
-        assert dmg == expected_base * expected_mult
+        idx = min(1, len(settings.COMBO_DAMAGE_MULT) - 1)
+        assert dmg == expected_base * settings.COMBO_DAMAGE_MULT[idx]

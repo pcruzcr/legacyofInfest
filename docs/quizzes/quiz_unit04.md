@@ -25,3 +25,18 @@ Why would you use a Catmull-Rom spline instead of linear interpolation for a cam
 
 ### 6. Time Scaling (1 pt)
 If deltaTime doubles, what happens to a lerp-based animation? How can you fix it?
+
+
+--- Traducción al Español ---
+
+## Quiz — Unidad IV: Interpolación y Animación
+
+**Duración:** 15 minutos | **Total:** 10 puntos
+
+### Preguntas
+1. Interpolación lineal (2 pts)
+2. Funciones de easing (2 pts)
+3. Animación por fotogramas clave (2 pts)
+4. Curvas Bézier (2 pts)
+5. Spline vs Lineal (1 pt)
+6. Escalado de tiempo (1 pt)

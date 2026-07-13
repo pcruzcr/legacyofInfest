@@ -868,3 +868,9 @@ Processing utilities in `framework/processing/` are used by entities and stages 
 [MessageBox]      → listens → SHOW_MESSAGE, HIDE_MESSAGE
 [StageLoader]     → listens → CHECKPOINT_REACHED
 ```
+
+
+
+--- Traducción al Español ---
+
+*Este documento está disponible en inglés. Para una traducción completa al español, contacte al profesor.*

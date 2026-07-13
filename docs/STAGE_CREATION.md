@@ -177,3 +177,22 @@ The `ProgressionSystem` emits `Events.STAGE_COMPLETE` when the stage ends. A `Wo
    - `NextTrigger` ends the stage
 
 For reference, see `src/stages/stage0/stage0.py` and `assets/maps/stage0/`.
+
+
+--- Traducción al Español ---
+
+## Guía de Creación de Escenarios
+
+### Requisitos del Mapa TMX
+- Orientación: Ortogonal
+- Tiles: 16×16 px
+- 8 capas requeridas (BG_Far a FG_Overlay)
+- Propiedades personalizadas: stage_id, stage_name, time_limit, bgm_track
+
+### Convenciones de la Capa de Objetos
+- PlayerSpawn: Un punto, Y = posición de pies
+- Enemigos: Puntos con propiedades
+- Checkpoints: Rectángulos con checkpoint_id
+- NextTrigger: Rectángulo para finalizar escenario
+
+Para instrucciones detalladas de registro y pruebas, consultar el documento original en inglés.

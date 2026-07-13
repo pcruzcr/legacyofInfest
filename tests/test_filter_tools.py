@@ -1,15 +1,13 @@
 """
 Module: test_filter_tools
 System: tests
-Academic Unit: N/A
 Description: Tests for FilterTools: histogram, brightness, contrast,
 convolution, standard kernels, gaussian_blur, sobel_edge, canny_edge.
 """
+from __future__ import annotations
 from pathlib import Path
-
 import numpy as np
 import pygame
-
 from src.framework.processing.filter_tools import FilterTools
 
 OUTPUT_DIR = Path("tests/output/filter")
@@ -58,22 +56,14 @@ class TestHistogramEqualize:
         result = FilterTools.histogram_equalize(surf)
         assert isinstance(result, pygame.Surface)
         assert result.get_size() == (16, 16)
-        _ensure_output_dir()
-        pygame.image.save(result, str(OUTPUT_DIR / "histogram_equalize.png"))
 
     def test_equalize_brightens_dark(self) -> None:
         surf = pygame.Surface((8, 8))
-        # Use gradient-like surface (non-uniform) so equalization has range to work with
         for y in range(8):
             for x in range(8):
                 v = x * 32 + y * 4
                 surf.set_at((x, y), (v, v, v))
         result = FilterTools.histogram_equalize(surf)
-        result.get_at((0, 0))
-        # Some pixels should have been brightened
-        sum(surf.get_at((x, y))[0] for x in range(8) for y in range(8)) / 64
-        sum(result.get_at((x, y))[0] for x in range(8) for y in range(8)) / 64
-        # Equalization should spread the histogram wider
         max_before = max(surf.get_at((x, y))[0] for x in range(8) for y in range(8))
         max_after = max(result.get_at((x, y))[0] for x in range(8) for y in range(8))
         assert max_after >= max_before
@@ -145,7 +135,6 @@ class TestStretchContrast:
     def test_stretch_full_range(self) -> None:
         surf = pygame.Surface((8, 8))
         surf.fill((50, 50, 50))
-        # Add one bright pixel to create range
         surf.set_at((0, 0), (200, 200, 200))
         result = FilterTools.stretch_contrast(surf)
         px_min = result.get_at((1, 0))
@@ -252,7 +241,6 @@ class TestSobelEdge:
     def test_sobel_grayscale_output(self) -> None:
         surf = pygame.Surface((16, 16))
         surf.fill((100, 100, 100))
-        # Add a vertical line for edge detection
         for y in range(16):
             surf.set_at((8, y), (255, 255, 255))
         result = FilterTools.sobel_edge(surf)

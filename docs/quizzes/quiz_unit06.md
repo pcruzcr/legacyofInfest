@@ -27,3 +27,18 @@ Given a player at position (100, 100) hit by an enemy at (80, 120) with knockbac
 
 ### 6. Collision Layers (1 pt)
 Why might a game use multiple collision layers (e.g., player vs enemies, projectiles vs terrain)?
+
+
+--- Traducción al Español ---
+
+## Quiz — Unidad VI: Detección y Resolución de Colisiones
+
+**Duración:** 15 minutos | **Total:** 10 puntos
+
+### Preguntas
+1. Superposición AABB (2 pts)
+2. Separación de ejes (2 pts)
+3. Plataformas unidireccionales (2 pts)
+4. Hitstop (1 pt)
+5. Knockback (2 pts)
+6. Capas de colisión (1 pt)

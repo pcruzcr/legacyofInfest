@@ -182,3 +182,19 @@ No phase is complete based on tests alone - the game must also be run.
 | 9 | Manual playthrough checklist | Stage 0 traversable with real sprites |
 
 If the visual gate fails, the phase is NOT complete. Stop. Fix before continuing.
+
+
+--- Traducción al Español ---
+
+## Ajuste de Alcance
+
+Este documento detalla los ajustes de alcance realizados durante el desarrollo del proyecto Legacy of InFest.
+
+### Cambios Principales
+- Migración de resolución de 320×224 a 800×600
+- Adición de 5 tipos de enemigos avanzados
+- Sistema VFX completo (partículas, iluminación, niebla)
+- Sistema de audio dinámico
+- Sistema de logros y minimapa
+
+Para la lista completa de cambios y justificación, consultar el documento original en inglés.

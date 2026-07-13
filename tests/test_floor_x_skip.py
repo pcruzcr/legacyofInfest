@@ -4,8 +4,8 @@ System: tests
 Description: Regression — FIX-1/FIX-2: floor tiles (tile.top >=
 player_rect.centery) must NOT block X-axis movement.
 """
+from __future__ import annotations
 import pygame
-
 from src.engine.input.input_manager import InputManager
 from src.engine.input.action_map import Action
 from src.framework.entities.player import Player
@@ -24,8 +24,6 @@ def _input_holding(*actions: Action) -> InputManager:
 
 
 class TestFloorXSkip:
-    """Floor rects must be skipped during X-axis collision resolution."""
-
     def test_floor_does_not_block_x_movement(self) -> None:
         player = _make_player(x=50.0, y=160.0)
         im = _input_holding(Action.MOVE_RIGHT)
@@ -33,9 +31,7 @@ class TestFloorXSkip:
         floor = [pygame.Rect(0, 192, 640, 16)]
         for _ in range(60):
             player.update(dt, floor, im)
-        assert player.position.x > 60.0, (
-            f"Player should move right through floor, got x={player.position.x}"
-        )
+        assert player.position.x > 60.0
 
     def test_wall_blocks_x_movement(self) -> None:
         player = _make_player(x=50.0, y=160.0)
@@ -45,10 +41,7 @@ class TestFloorXSkip:
         player.velocity.x = 90.0
         for _ in range(90):
             player.update(dt, [wall, floor])
-        assert player.rect.right <= wall.left + 2, (
-            f"Wall should block X movement: rect.right={player.rect.right} "
-            f"> wall.left={wall.left}"
-        )
+        assert player.rect.right <= wall.left + 2
 
     def test_x_skip_does_not_break_y_grounding(self) -> None:
         player = _make_player(x=50.0, y=160.0)
@@ -56,4 +49,4 @@ class TestFloorXSkip:
         floor = [pygame.Rect(0, 192, 640, 16)]
         for _ in range(10):
             player.update(dt, floor)
-        assert player.is_grounded, "Player should be grounded after landing on floor"
+        assert player.is_grounded

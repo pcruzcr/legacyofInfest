@@ -56,3 +56,19 @@ Ambient Audio is managed by `AudioManager` in `src/engine/audio/audio_manager.py
 **File:** `src/engine/audio/audio_manager.py` (231 lines) — all audio functionality in one class
 **Status:** ✅ Complete — music, dynamic crossfade, SFX with panning, ambient layers, mute, volume control
 **Note:** Visual `ambient_particles.py` is a separate VFX system; see `docs/20_ASSET_BIBLE.md` for audio asset conventions.
+
+
+--- Traducción al Español ---
+
+## Audio Ambiental
+
+### Descripción
+Sistema de audio ambiental que reproduce sonidos de fondo contextuales.
+
+### Características
+- Sonidos ambientales por zona
+- Mezcla de capas de audio
+- Transiciones suaves (crossfade)
+- Audio posicional (pan estéreo)
+
+Para la especificación completa de la API, consultar el documento original en inglés.

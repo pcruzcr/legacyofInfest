@@ -47,3 +47,19 @@ Bubble timer spawns visual bubble particles at regular intervals while swimming.
 **Class:** `SwimmingState(PlayerStateBase)` with `PlayerState.SWIMMING`
 **Status:** ✅ Complete — swimming physics, buoyancy, bubble timer
 **Missing:** No dedicated water zone detection; depends on stage collision system to trigger state change
+
+
+--- Traducción al Español ---
+
+## Especificación de Natación
+
+### Descripción
+Mecánica de natación para el jugador en zonas de agua.
+
+### Características
+- Movimiento vertical y horizontal en agua
+- Flotabilidad y gravedad reducida
+- Transición entrada/salida del agua
+- Animaciones de natación
+
+Para la especificación completa con atributos físicos y estados, consultar el documento original en inglés.

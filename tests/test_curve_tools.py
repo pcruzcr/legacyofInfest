@@ -1,14 +1,12 @@
 """
 Module: test_curve_tools
 System: tests
-Academic Unit: N/A
 Description: Tests for CurveTools: bezier, b_spline, nurbs, catmull_rom,
 sample_path, build_bezier_path.
 """
+from __future__ import annotations
 import math
-
 import pygame
-
 from src.framework.processing.curve_tools import CurveTools
 
 
@@ -24,9 +22,13 @@ class TestBezier:
         pts = [(0.0, 0.0), (50.0, 100.0), (100.0, 0.0)]
         samples = CurveTools.bezier(pts, 3)
         assert len(samples) == 3
-        # At t=0.5: (0*0.25 + 50*0.5 + 100*0.25 = 50, 0*0.25 + 100*0.5 + 0*0.25 = 50)
         assert abs(samples[1][0] - 50.0) < 0.1
         assert abs(samples[1][1] - 50.0) < 0.1
+
+    def test_bezier_single_point(self) -> None:
+        pts = [(42.0, 99.0)]
+        samples = CurveTools.bezier(pts, 5)
+        assert samples == [(42.0, 99.0)]
 
 
 class TestCatmullRom:
@@ -41,9 +43,13 @@ class TestCatmullRom:
         pts = [(0.0, 0.0), (50.0, 100.0), (100.0, 0.0)]
         samples = CurveTools.catmull_rom(pts, 11)
         assert len(samples) == 11
-        # t=0 should be start, t=1 should be end
         assert abs(samples[0][0]) < 0.1
         assert abs(samples[-1][0] - 100.0) < 0.1
+
+    def test_catmull_single_point(self) -> None:
+        pts = [(42.0, 99.0)]
+        samples = CurveTools.catmull_rom(pts, 5)
+        assert len(samples) == 1
 
 
 class TestBSpline:
@@ -67,7 +73,10 @@ class TestNURBS:
         assert len(samples) == 10
 
     def test_nurbs_too_few_points(self) -> None:
-        samples = CurveTools.nurbs([(0.0, 0.0)], [1.0], [0.0, 0.0, 0.0, 1.0, 1.0, 1.0], degree=2, n_samples=5)
+        samples = CurveTools.nurbs(
+            [(0.0, 0.0)], [1.0], [0.0, 0.0, 0.0, 1.0, 1.0, 1.0],
+            degree=2, n_samples=5,
+        )
         assert len(samples) == 1
 
 
@@ -88,6 +97,13 @@ class TestSamplePath:
         p = CurveTools.sample_path([(42.0, 99.0)], 0.5)
         assert p == (42.0, 99.0)
 
+    def test_sample_path_clamped(self) -> None:
+        pts = [(0.0, 0.0), (100.0, 0.0)]
+        p0 = CurveTools.sample_path(pts, -0.5)
+        p1 = CurveTools.sample_path(pts, 1.5)
+        assert abs(p0[0]) < 0.1
+        assert abs(p1[0] - 100.0) < 0.1
+
 
 class TestBuildBezierPath:
     def test_two_points(self) -> None:
@@ -105,3 +121,7 @@ class TestBuildBezierPath:
         pts = [pygame.Vector2(42, 99)]
         pos = CurveTools.build_bezier_path(pts, 0.5)
         assert pos.x == 42 and pos.y == 99
+
+    def test_empty_returns_zero(self) -> None:
+        pos = CurveTools.build_bezier_path([], 0.5)
+        assert pos.x == 0 and pos.y == 0

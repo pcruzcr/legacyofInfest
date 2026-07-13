@@ -861,3 +861,18 @@ A student has demonstrated Unit IX learning when they can:
 | `explain_prediction(features, model)` | LIME/SHAP local explanation | Beyond scope |
 | `online_learning(model, new_X, new_y)` | Incremental model update at runtime | Beyond scope |
 | `neural_net(X, y, layers)` | Simple MLP via scikit-learn | Unit IX extension |
+
+
+--- Traducción al Español ---
+
+## Especificación de PatternRecognitionTools
+
+PatternRecognitionTools proporciona entrenamiento, evaluación e inferencia de modelos de clasificación para la Unidad IX.
+
+### Funcionalidades
+- Entrenamiento de clasificadores (k-NN, árbol de decisión, random forest, SVM)
+- Evaluación con matriz de confusión y precisión
+- Serialización de modelos (joblib)
+- Inferencia en tiempo de ejecución
+
+Para la especificación completa de la API con ejemplos de código, consultar el documento original en inglés.

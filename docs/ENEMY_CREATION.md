@@ -203,3 +203,23 @@ The string key (`"MyType"`) is what you use as the `type` field on TMX objects.
 ## 9. Full Example (EnemyWalker)
 
 See `src/framework/entities/enemy_walker.py` for a complete walker implementation with patrol, ledge detection, alert pursuit, and charge attack.
+
+
+--- Traducción al Español ---
+
+## Guía de Creación de Enemigos
+
+### Resumen
+Todos los enemigos heredan de `EnemyBase`, que a su vez hereda de `BaseEntity`.
+
+### Métodos Requeridos
+- `_build_hitbox()` — Rectángulo de zona de daño activa
+- `_build_hurtbox()` — Rectángulo donde recibe daño
+- `_get_animation_key()` — Clave de animación
+- `_patrol_behavior(dt)` — IA en modo patrulla
+- `_alert_behavior(dt)` — IA cuando detecta al jugador
+
+### Estados del FSM
+PATROL, ALERT, TELEGRAPHING, FIRING, HURT, LAUNCHED, DYING
+
+Para ejemplos completos de código y registro en EntityFactory, consultar el documento original en inglés.

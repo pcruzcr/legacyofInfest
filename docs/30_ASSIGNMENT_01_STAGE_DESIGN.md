@@ -75,3 +75,21 @@ git push
 ```
 
 Check your grade in the CI Actions tab.
+
+
+--- Traducción al Español ---
+
+## Asignación 01: Diseño de Escenario
+
+### Evaluación Práctica I — Prototipo Funcional (Clase 5)
+**Valor:** 15% de la nota final
+
+### Requisitos
+- Archivo TMX con las 8 capas requeridas
+- Clase de escenario que herede de StageScene o BossBase
+- Entidad personalizada que use matemática vectorial
+- Entidad que siga una trayectoria curva
+- Operación de espacio de color en una superficie
+- README.md con conceptos académicos documentados
+
+Para la rúbrica detallada y criterios de evaluación, consultar el documento original en inglés.

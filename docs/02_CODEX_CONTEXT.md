@@ -338,3 +338,27 @@ All AI-generated code must be reviewed against:
 - The absolute restrictions in Section 11.1
 
 AI-generated code that violates any of the above must be corrected before committing.
+
+
+--- Traducción al Español ---
+
+## Contexto del Códice
+
+### Identidad del Proyecto
+Legacy of InFest es un motor de videojuegos académico construido con Python 3.14+ y Pygame CE, de estilo SNES (resolución 320×224), para el contexto académico de Gráficas por Computadora, Procesamiento de Imágenes y Reconocimiento de Patrones.
+
+### Filosofía Académica
+El framework es un instrumento de enseñanza. Cada sistema se construyó con un objetivo de aprendizaje específico. Los estudiantes construyen escenarios, no sistemas. El profesor es dueño del motor (`engine/` y `framework/`).
+
+### Reglas de Programación
+- Python 3.14+ solamente
+- Type hints obligatorios en código del motor
+- Docstrings estilo Google
+- `snake_case` para funciones, `PascalCase` para clases
+
+### Restricciones Absolutas
+- No modificar archivos en `engine/` o `framework/`
+- No consolidar directamente a `main`
+- No eludir `InputManager`, `AudioManager` o `AssetLoader`
+
+Para la especificación completa, consultar el documento original en inglés.

@@ -31,3 +31,19 @@ What are the standard basis vectors in 2D space? How do they change under a shea
 
 ### 7. Affine vs Linear (1 pt)
 What distinguishes an affine transformation from a purely linear one?
+
+
+--- Traducción al Español ---
+
+## Quiz — Unidad II: Vectores y Transformaciones 2D
+
+**Duración:** 15 minutos | **Total:** 10 puntos
+
+### Preguntas
+1. Operaciones vectoriales (2 pts) — Suma, producto punto, magnitud
+2. Normalización (1 pt) — Versión normalizada de un vector
+3. Matriz de traslación (2 pts) — Matriz 3×3 que mueve un punto
+4. Rotación (1 pt) — Rotación de 90° sobre el origen
+5. Transformaciones compuestas (2 pts) — Orden de multiplicación de matrices
+6. Vectores base (1 pt) — Vectores base estándar en 2D
+7. Afín vs Lineal (1 pt) — Diferencia entre transformación afín y lineal

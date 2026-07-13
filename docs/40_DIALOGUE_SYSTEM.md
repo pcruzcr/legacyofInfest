@@ -59,3 +59,19 @@ Dialogue box: 20px inset from screen edges, 100px tall, anchored at bottom (scre
 **File:** `src/framework/ui/dialogue_system.py` (175 lines)
 **Status:** ✅ Complete — functional branching dialogue with portraits
 **Missing:** No dedicated scene/renderer outside the system class; dialogue is drawn inline by the hosting scene.
+
+
+--- Traducción al Español ---
+
+## Sistema de Diálogo
+
+### Descripción
+Sistema de diálogo ramificado con retratos para conversaciones dentro del juego.
+
+### Características
+- Diálogo con ramificaciones (opciones múltiples)
+- Retratos de personajes
+- Texto con efecto máquina de escribir
+- Avance automático o manual
+
+Para la especificación completa de la API con ejemplos de código, consultar el documento original en inglés.

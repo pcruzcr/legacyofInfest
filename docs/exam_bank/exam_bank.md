@@ -41,3 +41,27 @@ Each question targets one of four skill levels:
 2. Shuffle questions within each unit
 3. Pick `--num-questions` (default: 10) distributing evenly across units
 4. Output randomized exam with answer key
+
+
+--- Traducción al Español ---
+
+## Banco de Exámenes — Generador de Exámenes de Práctica
+
+**Fuente:** Compilado de los quizzes (Unidades II, IV, VI, IX)
+
+### Uso
+```
+python scripts/generate_exam.py                    # 10 preguntas aleatorias
+python scripts/generate_exam.py --unit II           # Solo Unidad II
+python scripts/generate_exam.py --num-questions 5   # 5 preguntas
+```
+
+### Banco de Preguntas
+- Unidad II (Vectores): 7 preguntas
+- Unidad IV (Interpolación): 6 preguntas
+- Unidad VI (Colisiones): 6 preguntas
+- Unidad IX (Patrones): 7 preguntas
+**Total:** 26 preguntas en 4 unidades.
+
+### Formato de Preguntas
+Cada pregunta apunta a uno de cuatro niveles: Precisión conceptual (40%), Razonamiento aplicado (30%), Corrección matemática (20%), Claridad de expresión (10%).

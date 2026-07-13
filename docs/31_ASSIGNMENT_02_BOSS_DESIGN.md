@@ -98,3 +98,22 @@ git push
 - +5: Third phase with unique attack
 - +5: Screen shake on phase transition
 - +5: Custom sprite/animation for boss
+
+
+--- Traducción al Español ---
+
+## Asignación 02: Diseño de Jefe
+
+### Evaluación Práctica II — Vertical Slice (Clase 8)
+**Valor:** 15% de la nota final
+
+### Requisitos
+- Todos los entregables de Eval I mantenidos
+- Función de easing usada en animación
+- FilterTools.compute_histogram() impulsa lógica
+- adjust_brightness() o adjust_contrast() aplicado
+- apply_kernel() o gaussian_blur() aplicado
+- Detección de bordes (Sobel o Canny)
+- README con matriz de kernel y capturas de pantalla
+
+Para la rúbrica detallada, consultar el documento original en inglés.

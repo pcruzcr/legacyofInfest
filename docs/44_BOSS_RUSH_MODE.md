@@ -45,3 +45,19 @@ Per boss: `max(0, 1000 − int(time * 10)) − hits_taken * 50`
 **File:** `src/framework/stage/boss_rush_mode.py` (92 lines)
 **Status:** ✅ Complete — gauntlet logic, scoring, health carry-over
 **Missing:** No UI overlay (boss name cards, score display, intermission screens)
+
+
+--- Traducción al Español ---
+
+## Modo Boss Rush
+
+### Descripción
+Modo de juego de jefes consecutivos donde el jugador enfrenta a todos los jefes en secuencia.
+
+### Características
+- Jefes consecutivos sin descanso
+- Salud persistente entre combates
+- Tabla de clasificación por tiempo
+- Dificultad progresiva
+
+Para la especificación completa, consultar el documento original en inglés.

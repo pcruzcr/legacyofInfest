@@ -185,3 +185,25 @@ See `src/engine/scenes/title_scene.py` for a complete scene implementation with:
 - Scene transitions (push/replace)
 - Audio playback
 - Save manager integration
+
+
+--- Traducción al Español ---
+
+## Guía de Creación de Escenas
+
+### Resumen
+Todas las escenas heredan de `BaseScene`. El ciclo de vida es gestionado por `SceneManager`.
+
+### Métodos del Ciclo de Vida
+- `on_enter()` — Configurar estado, cargar assets, reproducir música
+- `update(dt)` — Lógica por frame, manejo de entrada
+- `draw(surface)` — Renderizado a la superficie dada
+- `on_exit()` — Limpiar recursos
+
+### Inyección de Dependencias (GameContext)
+- `self.input` — InputManager
+- `self.audio` — AudioManager
+- `self.events` — EventBus
+- `self.context.scene_manager` — SceneManager
+
+Para ejemplos completos de código, consultar el documento original en inglés.

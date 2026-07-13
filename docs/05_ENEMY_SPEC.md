@@ -795,3 +795,26 @@ class PatrolGuard(EnemyWalker):
 ### 11.3 Shooter Firing Range Visualization (Stage 0 Debug Mode)
 
 In Stage 0, debug mode renders the Shooter's detection rect as a semi-transparent yellow overlay, and draws a line from the Shooter's muzzle to the player's center when in ALERT state. This visualization is toggled with the `F1` key and serves as a live demonstration of vector distance calculation from Unit II.
+
+
+--- Traducción al Español ---
+
+## Especificación de Enemigos
+
+### Filosofía
+Los enemigos no están diseñados para máxima dificultad, sino para máxima claridad educativa. Cada tipo de enemigo demuestra una combinación distinta de conceptos del curso.
+
+### Taxonomía de Enemigos
+El framework provee 8 tipos de enemigos: Walker, Flying, Shooter, Charger, Archer, Brute, Caster, Assassin.
+
+### Clase Base — EnemyBase
+Todos los enemigos heredan de `EnemyBase`, que extiende `BaseEntity` y agrega sistema de salud, recepción de daño, manejo de muerte, infraestructura de hitbox/hurtbox y gestión de animaciones.
+
+### Métodos Requeridos
+Las subclases deben implementar:
+- `_patrol_behavior(dt)` — Movimiento/IA por defecto
+- `_alert_behavior(dt)` — IA cuando detecta al jugador
+- `_get_animation_key()` — Clave de animación actual
+- `_build_hitbox()` / `_build_hurtbox()` — Definir rectángulos de daño
+
+Para la especificación completa de cada tipo de enemigo con atributos, estados, animaciones y ejemplos, consultar el documento original en inglés.

@@ -1,13 +1,11 @@
 """
 Module: test_stage_loader
 System: tests
-Academic Unit: N/A
 Description: Tests for StageLoader — TMX parsing, entity spawning,
 collision rects, missing layer/PlayerSpawn errors.
 """
+from __future__ import annotations
 from pathlib import Path
-
-
 from src.framework.entities.enemy_walker import EnemyWalker
 from src.framework.stage.stage_loader import StageLoader, StageData
 
@@ -16,8 +14,6 @@ MINIMAL_TMX = FIXTURE_DIR / "minimal_stage.tmx"
 
 
 class TestStageLoaderLoad:
-    """Tests for StageLoader.load()."""
-
     def setup_method(self) -> None:
         StageLoader._entity_registry.clear()
         StageLoader.register_entity("Walker", EnemyWalker)
@@ -53,3 +49,11 @@ class TestStageLoaderLoad:
         data = StageLoader.load(MINIMAL_TMX)
         assert data.stage_id == "minimal_test"
         assert data.stage_name == "Minimal Test Stage"
+
+    def test_background_layers_is_list(self) -> None:
+        data = StageLoader.load(MINIMAL_TMX)
+        assert isinstance(data.background_layers, list)
+
+    def test_map_pixel_size_matches(self) -> None:
+        data = StageLoader.load(MINIMAL_TMX)
+        assert data.map_pixel_size == (640, 224)

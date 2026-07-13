@@ -82,3 +82,18 @@ git push
 ```
 
 The CI pipeline will run auto-grading on all TMX and boss files.
+
+
+--- Traducción al Español ---
+
+## Asignación 04: Proyecto Final
+
+### Proyecto Integrador Invenio Fest (Clase 12)
+**Valor:** 20% de la nota final
+
+### Requisitos
+- Integración completa de todas las unidades
+- Presentación interdisciplinaria
+- Demostración funcional del proyecto
+
+Para la rúbrica completa y criterios de evaluación, consultar el documento original en inglés.

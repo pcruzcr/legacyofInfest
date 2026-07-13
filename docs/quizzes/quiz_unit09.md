@@ -28,3 +28,19 @@ Given accuracy = 0.95 on training and 0.60 on test data, is the model likely ove
 
 ### 7. Feature Vector (1 pt)
 Why must feature vectors have the same dimension at training and inference time? What would `_find_nearest()` do if dimensions differ?
+
+
+--- Traducción al Español ---
+
+## Quiz — Unidad IX: Reconocimiento de Patrones
+
+**Duración:** 15 minutos | **Total:** 10 puntos
+
+### Preguntas
+1. Extracción de características (2 pts)
+2. Descriptor HOG (2 pts)
+3. Clasificación KNN (2 pts)
+4. Sobreajuste (1 pt)
+5. Matriz de confusión (2 pts)
+6. Evaluación de modelo (1 pt)
+7. Vector de características (1 pt)

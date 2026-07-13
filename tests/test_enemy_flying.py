@@ -1,43 +1,35 @@
 """
 Module: test_enemy_flying
 System: tests
-Academic Unit: N/A
 Description: Tests for EnemyFlying sine movement, alert acceleration,
 and path modes (Bézier / waypoint patrol).
 """
+from __future__ import annotations
 import math
-
 import pygame
-
 from src.framework.entities.enemy_flying import EnemyFlying
+from src.framework.entities.enemy_base import EnemyState
 
 
 class TestFlyingSineMovement:
-    """Tests for sine-wave patrol."""
-
     def test_sine_oscillates_vertically(self) -> None:
         e = EnemyFlying(
             pygame.Vector2(100.0, 100.0),
             sine_amplitude=40.0,
             sine_frequency=1.0,
         )
-        # directly test the math: sine should produce oscillating y
-        e._t = 0.25  # quarter period
-        e._patrol_behavior(0.0)  # delegates to SineFlight strategy
-        # sin(2*pi*1.0*0.25) = sin(pi/2) = 1.0
+        e._t = 0.25
+        e._patrol_behavior(0.0)
         expected_y = 100.0 + 40.0 * 1.0
-        assert abs(e.position.y - expected_y) < 0.1, (
-            f"Expected y≈{expected_y}, got {e.position.y}"
-        )
+        assert abs(e.position.y - expected_y) < 0.1
 
     def test_sine_reverses_at_boundary(self) -> None:
         e = EnemyFlying(pygame.Vector2(100.0, 100.0))
         e.facing_direction = 1
         e.update(1.0 / 60.0)
-        # Simulate reaching boundary
         e.position.x = e._origin.x + 100.0
         e.update(1.0 / 60.0)
-        assert e.facing_direction == -1, "Should reverse at boundary"
+        assert e.facing_direction == -1
 
     def test_alert_increases_speed(self) -> None:
         e = EnemyFlying(
@@ -46,24 +38,19 @@ class TestFlyingSineMovement:
             sine_amplitude=10.0,
             sine_frequency=0.5,
         )
-        e.state = type(e.state).ALERT  # force ALERT
+        e.state = EnemyState.ALERT
         dt = 1.0 / 60.0
-
         x_before = e.position.x
         e._patrol_behavior(dt)
         patrol_dx = abs(e.position.x - x_before)
-
         e.position.x = 100.0
         x_before = e.position.x
         e._alert_behavior(dt)
         alert_dx = abs(e.position.x - x_before)
-
-        assert alert_dx > patrol_dx, "Alert speed should exceed patrol speed"
+        assert alert_dx > patrol_dx
 
 
 class TestFlyingBezierMode:
-    """Tests for Bézier spline path mode."""
-
     def test_bezier_moves_along_path(self) -> None:
         waypoints = [(0.0, 0.0), (64.0, -48.0), (128.0, 0.0)]
         e = EnemyFlying(
@@ -72,13 +59,9 @@ class TestFlyingBezierMode:
             waypoints=waypoints,
         )
         x_before = e.position.x
-        # Advance along the path
         for _ in range(60):
             e._patrol_behavior(1.0 / 60.0)
-        # Should have moved, and progress should have advanced
-        assert e.position.x != x_before, (
-            f"Expected x to change, got {e.position.x}"
-        )
+        assert e.position.x != x_before
         assert e._path_progress > 0.0
 
     def test_bezier_loops_at_end(self) -> None:
@@ -88,16 +71,13 @@ class TestFlyingBezierMode:
             flight_mode="bezier",
             waypoints=waypoints,
         )
-        # Run many frames to wrap around
         for _ in range(300):
             e._patrol_behavior(1.0 / 60.0)
-        # Should still be in valid range
         assert 0.0 <= e._path_progress <= 1.0
         assert not math.isnan(e.position.x)
         assert not math.isnan(e.position.y)
 
     def test_bezier_default_waypoints(self) -> None:
-        """Without explicit waypoints, bezier mode uses a diamond path."""
         e = EnemyFlying(
             pygame.Vector2(100.0, 100.0),
             flight_mode="bezier",
@@ -108,10 +88,7 @@ class TestFlyingBezierMode:
 
 
 class TestFlyingPatrolMode:
-    """Tests for linear waypoint patrol mode."""
-
     def test_patrol_moves_toward_first_waypoint(self) -> None:
-        """Spawn at origin, target at (100,0) — moves right."""
         waypoints = [(100.0, 0.0), (200.0, 0.0)]
         e = EnemyFlying(
             pygame.Vector2(0.0, 0.0),
@@ -130,10 +107,8 @@ class TestFlyingPatrolMode:
             waypoints=waypoints,
             flight_speed=200.0,
         )
-        # Run enough frames to reach all waypoints and loop
         for _ in range(200):
             e._patrol_behavior(1.0 / 60.0)
-        # Should have wrapped waypoint_index back to 0
         assert e._waypoint_index == 0 or e._waypoint_index == 1
 
     def test_patrol_faces_target_direction(self) -> None:
@@ -144,5 +119,17 @@ class TestFlyingPatrolMode:
             waypoints=waypoints,
         )
         e._patrol_behavior(1.0 / 60.0)
-        # Should move left toward (0, 0)
         assert e.facing_direction == -1
+
+
+class TestFlyingDamage:
+    def test_apply_hit_reduces_health(self) -> None:
+        e = EnemyFlying(pygame.Vector2(0.0, 0.0), max_health=1.5)
+        e.apply_hit(1.0, (0.0, 0.0))
+        assert abs(e.current_health - 0.5) < 0.01
+
+    def test_death_on_zero_health(self) -> None:
+        e = EnemyFlying(pygame.Vector2(0.0, 0.0), max_health=1.0)
+        e.apply_hit(1.0, (0.0, 0.0))
+        assert e.state == EnemyState.DYING
+        assert e.is_alive is False

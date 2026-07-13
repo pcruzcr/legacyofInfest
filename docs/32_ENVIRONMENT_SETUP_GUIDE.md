@@ -285,3 +285,22 @@ A student has completed environment setup successfully when **all** of the follo
 - [ ] `git status` inside the repo shows you're on your own `student/<assignment_id>` branch, not `main`
 
 Once all boxes are checked, proceed to `26_STUDENT_TEMPLATE_SPEC.md` §8's 15-minute template onboarding.
+
+
+--- Traducción al Español ---
+
+## Guía de Configuración del Entorno
+
+### Requisitos
+- Python 3.14+
+- Git
+- VS Code (recomendado)
+
+### Pasos de Instalación
+1. Clonar el repositorio: `git clone <repo-url>`
+2. Crear entorno virtual: `python -m venv .venv`
+3. Activar: `.venv\Scripts\Activate` (Windows) o `source .venv/bin/activate` (macOS/Linux)
+4. Instalar dependencias: `pip install -r requirements.txt`
+5. Verificar: `python main.py`
+
+Para solución de problemas y configuración adicional, consultar el documento original en inglés.

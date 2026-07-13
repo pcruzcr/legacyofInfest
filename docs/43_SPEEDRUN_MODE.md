@@ -48,3 +48,19 @@ Timer splits and ghost data are saved to `saves/speedrun.json` as JSON arrays. F
 **File:** `src/framework/stage/speedrun_mode.py` (118 lines)
 **Class Name:** `SpeedrunTimer` (⚠️ documented as `SpeedrunMode` in Doc 51)
 **Status:** ✅ Complete — timer with splits, ghost data recording, JSON save/load
+
+
+--- Traducción al Español ---
+
+## Modo Speedrun
+
+### Descripción
+Modo de juego contrarreloj con seguimiento de mejores tiempos y datos fantasma.
+
+### Características
+- Temporizador global
+- Datos fantasma del mejor tiempo
+- Tabla de clasificación local
+- División por zonas/checkpoints
+
+Para la especificación completa, consultar el documento original en inglés.
