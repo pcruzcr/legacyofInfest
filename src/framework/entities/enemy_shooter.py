@@ -7,6 +7,7 @@ detected. Uses atan2 for angle calculation. Projectile is a lightweight
 sub-entity with velocity, lifetime, and collision.
 """
 from __future__ import annotations
+import logging
 from typing import TYPE_CHECKING
 
 import math
@@ -17,7 +18,8 @@ if TYPE_CHECKING:
 import pygame
 
 from src.engine.core import settings
-from src.engine.core.event_bus import emit
+from src.engine.core.event_bus import _get_bus as _bus
+_emit = lambda *a, **kw: _bus().emit(*a, **kw)
 from src.engine.core.events import Events
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.entities.base_entity import BaseEntity
@@ -54,6 +56,7 @@ class Projectile(BaseEntity):
             4,
         )
         self.layer = 5
+        self._spawn_position: pygame.Vector2 = pygame.Vector2(spawn_position)
 
     def update(self, dt: float) -> None:
         """Move projectile and check expiration."""
@@ -70,6 +73,13 @@ class Projectile(BaseEntity):
         self.position.x += self.velocity.x * dt
         self.position.y += self.velocity.y * dt
         self.rect.center = (int(self.position.x), int(self.position.y))
+
+        # Off-screen cleanup: expire if too far from spawn
+        dx = self.position.x - self._spawn_position.x
+        dy = self.position.y - self._spawn_position.y
+        if (dx * dx + dy * dy) > 4000000:  # 2000px from spawn
+            self._expired = True
+            self.is_active = False
 
     def draw(
         self,
@@ -117,6 +127,7 @@ class EnemyShooter(EnemyBase):
         max_health: float = 3.0,
         damage_on_contact: float = 0.25,
         zone: int = 0,
+        **kwargs,
     ) -> None:
         """Initialize the shooter enemy."""
         super().__init__(
@@ -155,6 +166,10 @@ class EnemyShooter(EnemyBase):
         self.position.y -= self.rect.height
         self.rect.y = int(self.position.y)
 
+        # Cached surfaces
+        self._telegraph_warn_surf: pygame.Surface | None = None
+        self._telegraph_warn_size: tuple[int, int] = (0, 0)
+
         # Load sprites
         self._load_zone_sprites(zone, 12, 12)
 
@@ -169,7 +184,8 @@ class EnemyShooter(EnemyBase):
             try:
                 frames = AssetLoader.load_sprite_sheet(path, fw, fh)
                 self._sprite_frames[key] = frames
-            except Exception:
+            except (pygame.error, FileNotFoundError, PermissionError):
+                logging.warning("enemy_shooter: failed to load sprite %s", path)
                 placeholder = pygame.Surface((fw, fh), pygame.SRCALPHA)
                 placeholder.fill(colors.get(key, (200, 0, 200)))
                 self._sprite_frames[key] = [placeholder]
@@ -181,14 +197,12 @@ class EnemyShooter(EnemyBase):
         for p in list(self._active_projectiles):
             if p.is_active and p.rect.colliderect(player_hurtbox):
                 if getattr(player, "_parry_active", False) and getattr(player, "_parry_window", 0) > 0:
-                    from src.engine.core.event_bus import emit
-                    from src.engine.core.events import Events
                     p._expired = True
                     p.is_active = False
                     player._parry_success = True
                     player._parry_active = False
                     player._parry_window = 0.0
-                    emit(Events.VFX_PARRY, pos=(p.position.x, p.position.y))
+                    _emit(Events.VFX_PARRY, pos=(p.position.x, p.position.y))
                 else:
                     player.apply_damage(p.damage, (self.position.x, self.position.y))
                     p.on_collision()
@@ -299,7 +313,7 @@ class EnemyShooter(EnemyBase):
             lifetime=3.0,
         )
         self._active_projectiles.append(projectile)
-        emit(Events.SFX_PROJECTILE_FIRE)
+        _emit(Events.SFX_PROJECTILE_FIRE)
         return True
 
     def _build_hitbox(self) -> pygame.Rect:
@@ -353,7 +367,13 @@ class EnemyShooter(EnemyBase):
             progress = 1.0 - (self._telegraph_timer / self._telegraph_duration)
             radius = 14 + int(progress * 10)
             alpha = int(200 - progress * 150)
-            warn = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+            size = (radius * 2, radius * 2)
+            if (self._telegraph_warn_surf is None
+                    or self._telegraph_warn_size != size):
+                self._telegraph_warn_surf = pygame.Surface(size, pygame.SRCALPHA)
+                self._telegraph_warn_size = size
+            warn = self._telegraph_warn_surf
+            warn.fill((0, 0, 0, 0))
             pygame.draw.circle(warn, (255, 150, 0, alpha), (radius, radius), radius, 2)
             pygame.draw.circle(warn, (255, 100, 0, alpha // 3), (radius, radius), radius - 1)
             surface.blit(warn, (screen_x + self.rect.width // 2 - radius, screen_y - radius))

@@ -79,17 +79,19 @@ def test_load_missing_sound_returns_none() -> None:
 
 
 def test_clear_cache_empties_all_caches() -> None:
+    inst = AssetLoader.load_image  # access default instance via closure
+    default = AssetLoader._get_instance()
     s1 = AssetLoader.load_image("img_a.png")
     f1 = AssetLoader.load_font(None, 10)
-    assert AssetLoader._images
-    assert AssetLoader._fonts
+    assert default._images
+    assert default._fonts
 
     AssetLoader.clear_cache()
 
-    assert not AssetLoader._images
-    assert not AssetLoader._fonts
-    assert not AssetLoader._sounds
-    assert not AssetLoader._missing
+    assert not default._images
+    assert not default._fonts
+    assert not default._sounds
+    assert not default._missing
 
     s2 = AssetLoader.load_image("img_a.png")
     assert s1 is not s2
@@ -103,3 +105,24 @@ def test_load_image_with_scale() -> None:
 def test_load_image_with_size() -> None:
     surface = AssetLoader.load_image("missing.png", size=(64, 64))
     assert surface.get_size() == (64, 64)
+
+
+def test_instance_isolation() -> None:
+    """Verify that separate AssetLoader instances have independent caches."""
+    loader_a = AssetLoader()
+    loader_b = AssetLoader()
+    s1 = loader_a._load_image("img_c.png")  # missing → placeholder
+    s2 = loader_b._load_image("img_c.png")
+    # Same missing path, different instances → different objects
+    assert s1 is not s2
+    # Default singleton should remain unaffected
+    assert "img_c.png" not in str(list(AssetLoader._get_instance()._images.keys()))
+
+
+def test_instance_vs_classmethod_independence() -> None:
+    """Verify that explicit instance and default singleton have separate caches."""
+    loader = AssetLoader()
+    img_inst = loader._load_image("missing_instance_test.png")
+    img_cls = AssetLoader.load_image("missing_instance_test.png")
+    # Different instances → different objects
+    assert img_inst is not img_cls

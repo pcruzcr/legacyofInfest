@@ -1,3 +1,13 @@
+---
+document_id: "LOI-RUBRIC-027"
+title: "Legacy of InFest — Academic Rubrics"
+aliases: ["Academic Rubrics"]
+tags: ["rubric", "grading", "academic"]
+description: "Scoring criteria for every graded instrument"
+source: "docs/27_ACADEMIC_RUBRICS.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Academic Rubrics
 
 **Document ID:** LOI-RUBRIC-027  
@@ -172,3 +182,12 @@ If a Teaching Assistant grades any portion of these rubrics:
 | §5 | Evaluación Práctica II | 15% | `08_SYLLABUS_MAPPING.md` §12, `14_PROFESSOR_DELIVERABLE_MATRIX.md` §14.2 |
 | §6 | Evaluación Práctica III | 15% | `08_SYLLABUS_MAPPING.md` §12, `14_PROFESSOR_DELIVERABLE_MATRIX.md` §14.3 |
 | §7 | Invenio Fest | 20% | `21_COURSE_SCHEDULE.md` §3 Class 12 |
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[30_ASSIGNMENT_01_STAGE_DESIGN.md|Assignment 1: Stage Design]]
+- [[31_ASSIGNMENT_02_BOSS_DESIGN.md|Assignment 2: Boss Design]]
+- [[32_ASSIGNMENT_03_LAB_EXERCISES.md|Assignment 3: Lab Exercises]]
+- [[33_ASSIGNMENT_04_FINAL_PROJECT.md|Assignment 4: Final Project]]

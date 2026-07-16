@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -95,6 +96,10 @@ class PatternDemoScene(BaseScene):
         self._cached_probas: dict[str, float] = {}
         self._cached_feature: np.ndarray | None = None
         self._cached_result_surf: pygame.Surface | None = None
+        self._cached_left_scaled: pygame.Surface | None = None
+        self._cached_left_src: pygame.Surface | None = None
+        self._cached_right_scaled: pygame.Surface | None = None
+        self._cached_right_src: pygame.Surface | None = None
         self._param_changed: bool = True
         self._frame_count: int = 0
 
@@ -128,7 +133,8 @@ class PatternDemoScene(BaseScene):
             else:
                 self._error_msg = "Default model not found"
                 self._error_timer = 2.0
-        except Exception as e:
+        except (OSError, ValueError, ImportError) as e:
+            logging.warning("pattern_demo: model load error: %s", e)
             self._error_msg = f"Model load error: {e}"[:60]
             self._error_timer = 2.0
 
@@ -274,7 +280,8 @@ class PatternDemoScene(BaseScene):
                 self._status_timer = 2.0
                 self._cached_result_surf = None
                 self._param_changed = True
-            except Exception as e:
+            except (OSError, ValueError, ImportError) as e:
+                logging.warning("pattern_demo: text input model load failed: %s", e)
                 self._error_msg = f"Failed: {e}"[:60]
                 self._error_timer = 2.0
                 self._load_default_model()
@@ -357,7 +364,8 @@ class PatternDemoScene(BaseScene):
                     self._cached_result_surf = self._render_tree()
 
             self._error_msg = ""
-        except Exception as e:
+        except (ValueError, IndexError, ZeroDivisionError, pygame.error, np.linalg.LinAlgError) as e:
+            logging.warning("pattern_demo: compute error: %s", e)
             self._error_msg = f"Error: {e}"[:60]
             self._error_timer = 2.0
 
@@ -393,8 +401,8 @@ class PatternDemoScene(BaseScene):
                 X = data["features"]
                 y = data["labels"]
                 self._dataset_samples = [(X[i], str(y[i])) for i in range(min(len(X), 16))]
-            except Exception:
-                pass
+            except (ValueError, OSError, KeyError) as e:
+                logging.warning("pattern_demo: dataset load failed: %s", e)
         # Generate random if empty
         if not self._dataset_samples:
             feat_dim = len(reference_features) if reference_features is not None else self._expected_feature_dim()
@@ -521,8 +529,8 @@ class PatternDemoScene(BaseScene):
                 if report_surf is not None:
                     scaled = pygame.transform.scale(report_surf, PANEL_SIZE)
                     return scaled
-            except Exception:
-                pass
+            except (ImportError, RuntimeError, ValueError) as e:
+                logging.warning("pattern_demo: confusion report failed: %s", e)
 
         # Fallback: manual grid rendering
         if not ev or "confusion_matrix" not in ev:
@@ -621,7 +629,8 @@ class PatternDemoScene(BaseScene):
         try:
             sub = src.subsurface(rect)
             return pygame.transform.scale(sub, size)
-        except Exception:
+        except (pygame.error, ValueError, IndexError) as e:
+            logging.warning("pattern_demo: subsurface failed: %s", e)
             s = pygame.Surface(size)
             s.fill((40, 40, 60))
             return s
@@ -667,8 +676,10 @@ class PatternDemoScene(BaseScene):
         # Left panel (source with analysis rect)
         src = self._sources.current_source
         if src is not None:
-            scaled = pygame.transform.scale(src, PANEL_SIZE)
-            surface.blit(scaled, (0, TOP_BAR_H))
+            if self._cached_left_src is not src:
+                self._cached_left_scaled = pygame.transform.scale(src, PANEL_SIZE)
+                self._cached_left_src = src
+            surface.blit(self._cached_left_scaled, (0, TOP_BAR_H))
             # Draw analysis rect
             rect = pygame.Rect(self._rect_x, self._rect_y, self._rect_size, self._rect_size)
             pygame.draw.rect(surface, (255, 220, 80), rect, 1)
@@ -682,8 +693,10 @@ class PatternDemoScene(BaseScene):
         # Right panel
         right_rect = pygame.Rect(RIGHT_PANEL_X, TOP_BAR_H, PANEL_SIZE[0], PANEL_H)
         if self._cached_result_surf is not None:
-            scaled_r = pygame.transform.scale(self._cached_result_surf, PANEL_SIZE)
-            surface.blit(scaled_r, (RIGHT_PANEL_X, TOP_BAR_H))
+            if self._cached_right_src is not self._cached_result_surf:
+                self._cached_right_scaled = pygame.transform.scale(self._cached_result_surf, PANEL_SIZE)
+                self._cached_right_src = self._cached_result_surf
+            surface.blit(self._cached_right_scaled, (RIGHT_PANEL_X, TOP_BAR_H))
         draw_panel_border(surface, right_rect)
 
         draw_divider(surface)
@@ -708,7 +721,8 @@ class PatternDemoScene(BaseScene):
             # Random Forest — use first tree
             try:
                 self._tree_structure = self._extract_sklearn_tree(model.estimators_[0])
-            except Exception:
+            except (AttributeError, IndexError, ValueError) as e:
+                logging.warning("pattern_demo: tree extraction failed: %s", e)
                 self._tree_structure = None
         else:
             self._tree_structure = None
@@ -723,7 +737,8 @@ class PatternDemoScene(BaseScene):
         children_right = tree.children_right
         try:
             values = tree.value
-        except Exception:
+        except (AttributeError, IndexError) as e:
+            logging.warning("pattern_demo: sklearn tree value access failed: %s", e)
             values = None
         _classes = getattr(tree_model, "classes_", None)
         if _classes is not None:

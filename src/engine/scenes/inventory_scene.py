@@ -29,7 +29,7 @@ class InventoryScene(BaseScene):
         self._font_desc = pygame.font.Font(None, 14)
 
     def on_enter(self) -> None:
-        pass
+        self.context.scene_manager.transition.start_fade_in(0.5)
 
     def on_exit(self) -> None:
         pass
@@ -37,6 +37,10 @@ class InventoryScene(BaseScene):
     def update(self, dt: float) -> None:
         im = self.input
         if im is None:
+            return
+        if im.is_action_just_pressed(Action.CANCEL) or im.is_action_just_pressed(Action.CONFIRM):
+            from src.engine.scenes.title_scene import TitleScene
+            self.context.scene_manager.replace(TitleScene(self.context))
             return
         items = self._inventory.items
         if not items:
@@ -49,9 +53,6 @@ class InventoryScene(BaseScene):
             self._selected_slot = min(self._selected_slot + 4, len(items) - 1)
         if im.is_action_just_pressed(Action.MOVE_UP):
             self._selected_slot = max(self._selected_slot - 4, 0)
-        if im.is_action_just_pressed(Action.CANCEL) or im.is_action_just_pressed(Action.CONFIRM):
-            from src.engine.scenes.title_scene import TitleScene
-            self.context.scene_manager.replace(TitleScene(self.context))
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill((20, 20, 30))

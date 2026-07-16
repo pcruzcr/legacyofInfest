@@ -67,12 +67,16 @@ class TutorialScene(BaseScene):
         self._fade_dir: int = -1
         self._ready: bool = False
         self._exit_requested: bool = False
+        self._overlay: pygame.Surface | None = None
+        self._font_title = pygame.font.Font(None, 26)
+        self._font_text = pygame.font.Font(None, 18)
 
     def on_enter(self) -> None:
         self._fade_alpha = 255
         self._fade_dir = -1
         self._ready = False
         self._exit_requested = False
+        self.context.scene_manager.transition.start_fade_in(0.5)
 
     def on_exit(self) -> None:
         pass
@@ -107,24 +111,24 @@ class TutorialScene(BaseScene):
         if not _TUTORIAL_STEPS:
             return
         step = _TUTORIAL_STEPS[self._step_index]
-        font_large = pygame.font.Font(None, 26)
-        font_small = pygame.font.Font(None, 18)
-        title = font_large.render(step["title"], True, (255, 200, 80))
+        title = self._font_title.render(step["title"], True, (255, 200, 80))
         surface.blit(title, ((settings.INTERNAL_WIDTH - title.get_width()) // 2, 40))
         y = 90
         for line in step["lines"]:
-            text = font_small.render(line, True, (200, 200, 220))
+            text = self._font_text.render(line, True, (200, 200, 220))
             surface.blit(text, ((settings.INTERNAL_WIDTH - text.get_width()) // 2, y))
             y += 28
-        page_text = font_small.render(
+        page_text = self._font_text.render(
             f"{self._step_index + 1} / {len(_TUTORIAL_STEPS)}",
             True, (120, 120, 140),
         )
         surface.blit(page_text, ((settings.INTERNAL_WIDTH - page_text.get_width()) // 2, BOTTOM_BAR_Y - 56))
-        hint = font_small.render("[ENTER/Z/SPACE] Next  [ESC] Skip", True, (140, 140, 160))
+        hint = self._font_text.render("[ENTER/Z/SPACE] Next  [ESC] Skip", True, (140, 140, 160))
         surface.blit(hint, ((settings.INTERNAL_WIDTH - hint.get_width()) // 2, BOTTOM_BAR_Y - 26))
         if self._fade_alpha > 0:
-            overlay = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
+            if self._overlay is None or self._overlay.get_size() != (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT):
+                self._overlay = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
+            overlay = self._overlay
             overlay.set_alpha(self._fade_alpha)
             overlay.fill((0, 0, 0))
             surface.blit(overlay, (0, 0))

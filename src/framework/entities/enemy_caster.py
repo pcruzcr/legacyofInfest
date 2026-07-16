@@ -8,7 +8,8 @@ import pygame
 if TYPE_CHECKING:
     from src.framework.entities.player import Player
 
-from src.engine.core.event_bus import emit
+from src.engine.core.event_bus import _get_bus as _bus
+_emit = lambda *a, **kw: _bus().emit(*a, **kw)
 from src.engine.core.events import Events
 from src.framework.entities.base_entity import BaseEntity
 from src.framework.entities.enemy_base import EnemyBase, EnemyState
@@ -92,6 +93,7 @@ class EnemyCaster(EnemyBase):
         max_health: float = 2.0,
         damage_on_contact: float = 0.25,
         zone: int = 0,
+        **kwargs,
     ) -> None:
         super().__init__(
             spawn_position=spawn_position,
@@ -119,6 +121,9 @@ class EnemyCaster(EnemyBase):
         self._telegraph_duration = 0.3
         self._ideal_distance: float = 150.0
 
+        # Cached surfaces
+        self._charge_surf: pygame.Surface | None = None
+
         self._load_zone_sprites(zone, 14, 14)
 
     def _patrol_behavior(self, dt: float) -> None:
@@ -141,7 +146,7 @@ class EnemyCaster(EnemyBase):
         if self._shoot_cooldown <= 0:
             self._telegraph_timer = self._telegraph_duration
             self.state = EnemyState.TELEGRAPHING
-            emit(Events.BOSS_ATTACK, pattern="caster_charge", rect=self.rect)
+            _emit(Events.BOSS_ATTACK, pattern="caster_charge", rect=self.rect)
 
     def _firing_behavior(self, dt: float) -> None:
         self._face_player()
@@ -174,7 +179,7 @@ class EnemyCaster(EnemyBase):
         )
         orb.set_player_ref(self._player_ref)
         self._active_orbs.append(orb)
-        emit(Events.SFX_PROJECTILE_FIRE)
+        _emit(Events.SFX_PROJECTILE_FIRE)
         return True
 
     def _post_update(self, dt: float) -> None:
@@ -202,7 +207,7 @@ class EnemyCaster(EnemyBase):
                     player._parry_success = True
                     player._parry_active = False
                     player._parry_window = 0.0
-                    emit(Events.VFX_PARRY, pos=(o.position.x, o.position.y))
+                    _emit(Events.VFX_PARRY, pos=(o.position.x, o.position.y))
                 else:
                     player.apply_damage(o.damage, (self.position.x, self.position.y))
                     o.on_collision()
@@ -227,7 +232,10 @@ class EnemyCaster(EnemyBase):
             radius = 16
             center_x = screen_x + self.rect.width // 2
             center_y = screen_y + self.rect.height // 2
-            charge_surf = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+            if self._charge_surf is None:
+                self._charge_surf = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+            charge_surf = self._charge_surf
+            charge_surf.fill((0, 0, 0, 0))
             alpha = int(200 * (1.0 - self._telegraph_timer / max(self._telegraph_duration, 0.001)))
             pygame.draw.circle(charge_surf, (160, 60, 255, alpha), (radius, radius), radius)
             pygame.draw.circle(charge_surf, (200, 140, 255, min(255, alpha + 40)), (radius, radius), radius, 2)

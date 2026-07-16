@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 import pygame
@@ -27,8 +28,8 @@ class AchievementScene(BaseScene):
         try:
             bg_path = settings.ASSETS_DIR / "title" / "bck1.png"
             self._bg = AssetLoader.load_image(bg_path, size=(settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
-        except Exception:
-            pass
+        except (pygame.error, FileNotFoundError, PermissionError):
+            logging.warning("achievement_scene: failed to load background %s", bg_path)
 
     def on_enter(self) -> None:
         self._selected = 0

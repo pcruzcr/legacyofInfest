@@ -19,7 +19,8 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.engine.core import settings
-from src.engine.core.event_bus import emit
+from src.engine.core.event_bus import _get_bus as _bus
+_emit = lambda *a, **kw: _bus().emit(*a, **kw)
 from src.engine.core.events import Events
 from src.engine.input.action_map import Action
 
@@ -84,6 +85,7 @@ class _InputSnapshot:
         short_attack = False
         long_attack = False
         dash_pressed = False
+        grab_pressed = False
 
         if im is not None:
             if im.is_action_held(Action.MOVE_LEFT):
@@ -96,11 +98,7 @@ class _InputSnapshot:
             short_attack = im.is_action_pressed(Action.SHORT_ATTACK)
             long_attack = im.is_action_pressed(Action.LONG_ATTACK)
             dash_pressed = im.is_action_pressed(Action.DASH)
-
-        grab_pressed = False
-        if im is not None:
-            if im.is_action_pressed(Action.GRAB):
-                grab_pressed = True
+            grab_pressed = im.is_action_pressed(Action.GRAB)
 
         self.move_x = move_x
         self.jump_pressed = jump_pressed
@@ -146,7 +144,7 @@ def _handle_wall_jump(player: Player, inp: _InputSnapshot) -> bool:
         player.facing_direction = -wall_dir
         from src.framework.entities.player_states import JumpingState
         player._change_state_instance(JumpingState())
-        emit(Events.SFX_PLAYER_JUMP)
+        _emit(Events.SFX_PLAYER_JUMP)
         return True
     return False
 
@@ -175,12 +173,12 @@ def _handle_aerial_attack_input(
     if inp.short_attack:
         from src.framework.entities.player_states import AerialAttackState
         player._change_state_instance(AerialAttackState(short=True))
-        emit(Events.SFX_PLAYER_SHORT_ATTACK)
+        _emit(Events.SFX_PLAYER_SHORT_ATTACK)
         return True
     if inp.long_attack:
         from src.framework.entities.player_states import AerialAttackState
         player._change_state_instance(AerialAttackState(short=False))
-        emit(Events.SFX_PLAYER_LONG_ATTACK)
+        _emit(Events.SFX_PLAYER_LONG_ATTACK)
         return True
     return False
 
@@ -205,19 +203,26 @@ def _can_jump(player: Player) -> bool:
 
 def _do_jump(player: Player) -> None:
     was_grounded = player.is_grounded
+    # BUG-012 FIX: Coyote-time jumps should not consume an air jump
+    was_truly_airborne = not was_grounded and player._coyote_counter >= settings.PLAYER_COYOTE_FRAMES
     player.velocity.y = settings.PLAYER_JUMP_FORCE
     player.is_grounded = False
     player._coyote_counter = settings.PLAYER_COYOTE_FRAMES + 1
     player._jump_cut_applied = False
-    if not was_grounded and player._air_jumps_used < settings.PLAYER_AIR_JUMPS:
+    # Only consume air jump if truly airborne (not in coyote time)
+    if was_truly_airborne and player._air_jumps_used < settings.PLAYER_AIR_JUMPS:
         player._air_jumps_used += 1
     from src.framework.entities.player_states import JumpingState
     player._change_state_instance(JumpingState())
 
 
 def _reset_air_jumps(player: Player) -> None:
+    """
+    Reset air jumps when player lands.
+    BUG-025 FIX: No longer emits SFX_PLAYER_JUMP since no jump occurs.
+    Landing sound is handled by the collision system.
+    """
     player._air_jumps_used = 0
-    emit(Events.SFX_PLAYER_JUMP)
 
 
 def _start_attack(player: Player, attack_type: object) -> None:
@@ -225,29 +230,38 @@ def _start_attack(player: Player, attack_type: object) -> None:
     import src.engine.core.settings as settings
     atk_name = "SHORT_ATTACK" if attack_type == player.SHORT_ATTACK else "LONG_ATTACK"
 
-    # Combo logic: window + type match
-    if (player.combo_active
-            and player.combo_timer > 0
-            and player.last_attack_type == atk_name
-            and player.combo_count < settings.COMBO_MAX):
-        player.combo_count += 1
-    else:
-        player.combo_count = 1
-    player.combo_timer = settings.COMBO_WINDOW
-    player.last_attack_type = atk_name
-    player.combo_active = True
-
-    player.velocity.x = 0.0
+    # BUG-027: Keep horizontal momentum for better gameplay feel
+    # player.velocity.x = 0.0  # Removed to allow running attacks
     from src.framework.entities.player_states import (
         ShortAttackState,
         LongAttackState,
     )
+    changed = False
     if attack_type == player.SHORT_ATTACK:
-        player._change_state_instance(ShortAttackState())
-        emit(Events.SFX_PLAYER_SHORT_ATTACK)
+        changed = player._change_state_instance(ShortAttackState())
+        _emit(Events.SFX_PLAYER_SHORT_ATTACK)
     else:
-        player._change_state_instance(LongAttackState())
-        emit(Events.SFX_PLAYER_LONG_ATTACK)
+        changed = player._change_state_instance(LongAttackState())
+        _emit(Events.SFX_PLAYER_LONG_ATTACK)
+
+    if changed:
+        # Combo logic: window + type match
+        if (player.combo_active
+                and player.combo_timer > 0
+                and player.last_attack_type == atk_name
+                and player.combo_count < settings.COMBO_MAX):
+            player.combo_count += 1
+        else:
+            player.combo_count = 1
+        player.combo_timer = settings.COMBO_WINDOW
+        player.last_attack_type = atk_name
+        player.combo_active = True
+
+        # Snapshot crouching state for hitbox calculation (BUG-021)
+        player._crouching_at_attack_start = isinstance(
+            player._state_instance,
+            CrouchingState,
+        ) if hasattr(player, "_state_instance") else False
 
 
 # ── Concrete states ───────────────────────────────────────────────
@@ -288,6 +302,9 @@ class IdleState(PlayerStateBase):
         if _handle_grounded_attack_input(player, inp):
             return
 
+        if inp.move_x != 0:
+            player.facing_direction = inp.move_x
+
         # Dash
         if inp.dash_pressed and _can_dash(player, inp):
             from src.framework.entities.player_states import DashingState
@@ -307,7 +324,6 @@ class IdleState(PlayerStateBase):
 
         # Horizontal movement
         if inp.move_x != 0 and player.is_grounded:
-            player.facing_direction = inp.move_x
             from src.framework.entities.player_states import WalkingState
             player._change_state_instance(WalkingState())
             player.velocity.x = float(inp.move_x) * settings.PLAYER_WALK_SPEED
@@ -341,7 +357,7 @@ class WalkingState(PlayerStateBase):
         self._footstep_timer += dt
         if self._footstep_timer >= 0.35:
             self._footstep_timer = 0.0
-            emit(Events.SFX_PLAYER_FOOTSTEP)
+            _emit(Events.SFX_PLAYER_FOOTSTEP)
         inp = _InputSnapshot(input_manager)
         # Ultimate input (both attacks + full meter)
         if _handle_ultimate_input(player, inp):
@@ -361,6 +377,9 @@ class WalkingState(PlayerStateBase):
 
         if _handle_grounded_attack_input(player, inp):
             return
+
+        if inp.move_x != 0:
+            player.facing_direction = inp.move_x
 
         # Dash
         if inp.dash_pressed and _can_dash(player, inp):
@@ -384,7 +403,6 @@ class WalkingState(PlayerStateBase):
             return
 
         if inp.move_x != 0 and player.is_grounded:
-            player.facing_direction = inp.move_x
             player.velocity.x = float(inp.move_x) * settings.PLAYER_WALK_SPEED
         elif inp.move_x == 0 and player.is_grounded:
             from src.framework.entities.player_states import IdleState
@@ -463,10 +481,10 @@ class SlideState(PlayerStateBase):
         self._timer = player._slide_duration
         self._slide_dir = 1.0 if abs(player.velocity.x) > 0 else float(player.facing_direction)
         player.velocity.x = self._slide_dir * player._slide_speed
-        # Lower hurtbox while sliding
-        orig_h = player.rect.h
-        player.rect.h = int(orig_h * 0.6)
-        player.rect.y = player.rect.bottom - player.rect.h
+        old_bottom = player.rect.bottom
+        player.rect.h = 18
+        player.rect.y = old_bottom - 18
+        player.position.y = float(player.rect.y)
 
     def update(
         self,
@@ -480,7 +498,7 @@ class SlideState(PlayerStateBase):
         player.velocity.x = self._slide_dir * player._slide_speed
 
         if self._timer <= 0.0 or (player.is_grounded and not inp.crouch_held):
-            player.velocity.x *= 0.3
+            player.velocity.x *= 0.3 ** (dt * 60.0)
             from src.framework.entities.player_states import IdleState
             player._change_state_instance(IdleState())
             return
@@ -516,6 +534,9 @@ class AirborneState(PlayerStateBase):
         if _handle_ultimate_input(player, inp):
             return
 
+        if inp.move_x != 0:
+            player.facing_direction = inp.move_x
+
         # Air dash
         if inp.dash_pressed and _can_dash(player, inp):
             from src.framework.entities.player_states import DashingState
@@ -540,10 +561,9 @@ class AirborneState(PlayerStateBase):
 
         # Air control (reduced)
         if inp.move_x != 0:
-            player.facing_direction = inp.move_x
             player.velocity.x = float(inp.move_x) * settings.PLAYER_WALK_SPEED * 0.5
 
-        # Wall slide detection
+        # Wall slide initiation
         if player._wall_side != 0 and player.velocity.y > 0 and inp.move_x == player._wall_side:
             from src.framework.entities.player_states import WallSlideState
             player._change_state_instance(WallSlideState())
@@ -555,19 +575,21 @@ class AirborneState(PlayerStateBase):
             player._change_state_instance(IdleState())
             return
 
-        # Fall-through: update air state type if vertical direction changed
-        from src.framework.entities.player_states import JumpingState, FallingState
-        if isinstance(self, JumpingState) and player.velocity.y >= 0:
+        # BUG-016 FIX: Use velocity.y sign instead of isinstance for Jumping/Falling transition
+        # This handles AirChaseState and any other state that uses JUMPING enum
+        if player.velocity.y >= 0 and self.state_enum.value == "JUMPING":
+            from src.framework.entities.player_states import FallingState
             player._change_state_instance(FallingState())
             return
 
-        if isinstance(self, FallingState) and player.velocity.y < 0:
+        if player.velocity.y < 0 and self.state_enum.value == "FALLING":
+            from src.framework.entities.player_states import JumpingState
             player._change_state_instance(JumpingState())
             return
 
         # Jump cut
         if not inp.jump_held and player.velocity.y < 0 and not player._jump_cut_applied:
-            player.velocity.y *= 0.5
+            player.velocity.y *= 0.5 ** (dt * 60.0)
             player._jump_cut_applied = True
 
 
@@ -688,7 +710,6 @@ class _AttackState(PlayerStateBase):
         player._attack_current_frame = 0
         player._active_hitbox = None
         player._hitbox_consumed = False
-        player.velocity.x = 0.0
 
     def update(
         self,
@@ -699,7 +720,8 @@ class _AttackState(PlayerStateBase):
         player._attack_timer += dt
         frame_duration = 1.0 / self.FPS
 
-        if player._attack_timer >= frame_duration:
+        # BUG-017 FIX: Handle high dt by consuming multiple frames
+        while player._attack_timer >= frame_duration and player._attack_current_frame < self.TOTAL_FRAMES:
             player._attack_timer -= frame_duration
             player._attack_current_frame += 1
             player._animation_frame = player._attack_current_frame
@@ -765,7 +787,7 @@ class UltimateState(PlayerStateBase):
 
     def __init__(self) -> None:
         from src.framework.entities.player import PlayerState
-        super().__init__(PlayerState.LONG_ATTACK)
+        super().__init__(PlayerState.ULTIMATE)
         self._timer: float = 0.0
         self._duration: float = 0.6
         self._has_hit: bool = False
@@ -775,9 +797,7 @@ class UltimateState(PlayerStateBase):
         player.velocity.x = 0.0
         player.velocity.y = 0.0
         player.special_meter = 0.0
-        from src.engine.core.event_bus import emit
-        from src.engine.core.events import Events
-        emit(Events.VFX_ULTIMATE, pos=(player.position.x, player.position.y))
+        _emit(Events.VFX_ULTIMATE, pos=(player.position.x, player.position.y))
 
     def update(
         self,
@@ -819,7 +839,7 @@ class GrabState(PlayerStateBase):
 
     def __init__(self) -> None:
         from src.framework.entities.player import PlayerState
-        super().__init__(PlayerState.SHORT_ATTACK)
+        super().__init__(PlayerState.GRAB)
         self._timer: float = 0.0
         self._has_grabbed: bool = False
 
@@ -873,7 +893,7 @@ class ThrowState(PlayerStateBase):
 
     def __init__(self) -> None:
         from src.framework.entities.player import PlayerState
-        super().__init__(PlayerState.SHORT_ATTACK)
+        super().__init__(PlayerState.THROW)
         self._timer: float = 0.0
 
     def enter(self, player: Player) -> None:
@@ -950,9 +970,7 @@ class ParryState(PlayerStateBase):
         player._parry_success = False
         player.velocity.x = 0.0
         player.velocity.y = 0.0
-        from src.engine.core.events import Events
-        from src.engine.core.event_bus import emit
-        emit(Events.VFX_PARRY, pos=(player.position.x, player.position.y))
+        _emit(Events.VFX_PARRY, pos=(player.position.x, player.position.y))
 
     def update(
         self,
@@ -999,15 +1017,14 @@ class ChargingState(PlayerStateBase):
         input_manager: InputManager | None,
     ) -> None:
         player._charge_timer += dt
+        # BUG-026 FIX: Check level 0→1 at 0.5s, level 2 at 1.0s
         if player._charge_timer >= _CHARGE_MAX_TIME:
             player._charge_level = 2
-        elif player._charge_timer >= _CHARGE_LEVELS[0][0]:
+        elif player._charge_timer >= 0.5:
             player._charge_level = 1
 
         # Emit charge glow particles periodically
-        from src.engine.core.events import Events
-        from src.engine.core.event_bus import emit
-        emit(Events.VFX_CHARGE, pos=(player.position.x, player.position.y), level=player._charge_level)
+        _emit(Events.VFX_CHARGE, pos=(player.position.x, player.position.y), level=player._charge_level)
 
         # Check for release (long attack released)
         inp = _InputSnapshot(input_manager)
@@ -1038,7 +1055,7 @@ class ChargeReleaseState(PlayerStateBase):
 
     def __init__(self, damage_mult: float = 1.0) -> None:
         from src.framework.entities.player import PlayerState
-        super().__init__(PlayerState.SHORT_ATTACK)
+        super().__init__(PlayerState.CHARGE_RELEASE)
         self._dmg_mult = damage_mult
         self._timer: float = 0.0
         self._has_hit: bool = False
@@ -1101,7 +1118,7 @@ class AerialAttackState(PlayerStateBase):
 
     def __init__(self, short: bool = True) -> None:
         from src.framework.entities.player import PlayerState
-        super().__init__(PlayerState.SHORT_ATTACK if short else PlayerState.LONG_ATTACK)
+        super().__init__(PlayerState.AERIAL_ATTACK)
         self._short = short
         self._timer: float = 0.0
         self._frames: int = 6 if short else 10
@@ -1170,7 +1187,7 @@ class AirChaseState(PlayerStateBase):
 
     def __init__(self) -> None:
         from src.framework.entities.player import PlayerState
-        super().__init__(PlayerState.JUMPING)
+        super().__init__(PlayerState.AIR_CHASE)
 
     def enter(self, player: Player) -> None:
         super().enter(player)
@@ -1214,7 +1231,7 @@ class AerialSlamState(PlayerStateBase):
 
     def __init__(self) -> None:
         from src.framework.entities.player import PlayerState
-        super().__init__(PlayerState.SHORT_ATTACK)
+        super().__init__(PlayerState.AERIAL_SLAM)
         self._timer: float = 0.0
         self._has_hit: bool = False
 
@@ -1250,9 +1267,7 @@ class AerialSlamState(PlayerStateBase):
         if player.is_grounded:
             player._active_hitbox = None
             player._combo_air_hits = 0
-            from src.engine.core.events import Events
-            from src.engine.core.event_bus import emit
-            emit(Events.VFX_SLAM, pos=(player.position.x, player.position.y))
+            _emit(Events.VFX_SLAM, pos=(player.position.x, player.position.y))
             from src.framework.entities.player_states import IdleState
             player._change_state_instance(IdleState())
             return
@@ -1305,7 +1320,7 @@ class DashAttackState(PlayerStateBase):
         else:
             player._active_hitbox = None
 
-        player.velocity.x *= 0.92  # Deceleration
+        player.velocity.x *= 0.92 ** (dt * 60.0)  # Frame-rate-independent deceleration
 
         if self._timer >= 0.25:
             player._active_hitbox = None
@@ -1355,7 +1370,7 @@ class WallSlideState(PlayerStateBase):
             player._change_state_instance(AerialAttackState(short=True))
             return
 
-        # Drop off wall when moving away
+        # Drop off wall when pressing away from wall
         if inp.move_x == -player._wall_side:
             player._wall_side = 0
             player._can_wall_jump = False
@@ -1444,7 +1459,9 @@ def _build_attack_hitbox(player: Player, frame: int) -> pygame.Rect:
     attack_state = player._state_instance
     is_short = isinstance(attack_state, ShortAttackState)
     is_long = isinstance(attack_state, LongAttackState)
-    is_crouching = isinstance(player._prev_state_instance, CrouchingState)
+    # BUG-021 FIX: Cache crouching state at attack start to avoid mid-attack changes
+    is_crouching = getattr(player, "_crouching_at_attack_start",
+                           isinstance(player._prev_state_instance, CrouchingState))
 
     cx = player.rect.centerx
     cy = player.rect.centery
@@ -1544,6 +1561,7 @@ class SwimmingState(PlayerStateBase):
         self._swim_timer: float = 0.0
         self._bubble_timer: float = 0.0
         self._surface_y: float = 0.0
+        self._swim_boosts_used: int = 0
 
     def enter(self, player: Player) -> None:
         super().enter(player)
@@ -1552,6 +1570,7 @@ class SwimmingState(PlayerStateBase):
         self._swim_timer = 0.0
         self._bubble_timer = 0.0
         self._surface_y = player.position.y - 16.0
+        player._swim_boosts = 0
 
     def update(
         self,
@@ -1565,7 +1584,8 @@ class SwimmingState(PlayerStateBase):
 
         # Buoyancy: float up slowly
         player.velocity.y += settings.GRAVITY * 0.3 * dt
-        player.velocity.y = max(-80.0, min(80.0, player.velocity.y))
+        # BUG-024: Asymmetric velocity clamp (sink faster than swim up)
+        player.velocity.y = max(-60.0, min(120.0, player.velocity.y))
 
         # Horizontal movement (slower in water)
         if inp.move_x != 0:
@@ -1573,13 +1593,13 @@ class SwimmingState(PlayerStateBase):
             player.velocity.x = max(-120.0, min(120.0, player.velocity.x))
             player.facing_direction = inp.move_x
         else:
-            player.velocity.x *= 0.9
+            player.velocity.x *= 0.9 ** (dt * 60.0)
 
-        # Swim upward (jump in water)
-        if inp.jump_pressed and player._air_jumps_used < 1:
+        # BUG-022 FIX: Use separate swim boost counter to avoid conflict with air jumps
+        if inp.jump_pressed and player._swim_boosts < 1:
             player.velocity.y = -120.0
-            player._air_jumps_used += 1
-            emit(Events.SFX_PLAYER_JUMP)
+            player._swim_boosts += 1
+            _emit(Events.SFX_PLAYER_JUMP)
 
         # Swim downward
         if inp.crouch_held:
@@ -1588,7 +1608,7 @@ class SwimmingState(PlayerStateBase):
         # Emit bubbles periodically
         if self._bubble_timer >= 0.3:
             self._bubble_timer = 0.0
-            emit(Events.VFX_CHARGE, pos=(player.position.x, player.position.y))
+            _emit(Events.VFX_CHARGE, pos=(player.position.x, player.position.y))
 
         # Transition: leave water (jump above surface)
         if player.position.y < self._surface_y - 8.0:

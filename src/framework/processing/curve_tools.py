@@ -103,9 +103,11 @@ class CurveTools:
     ) -> tuple[float, float]:
         """Interpolate along a pre-sampled path. t in [0, 1]."""
         n = len(points)
-        if n < 2:
+        if n == 0:
+            return (0.0, 0.0)
+        if n == 1:
             pt = points[0]
-            return (pt[0], pt[1]) if n == 1 else (0.0, 0.0)
+            return (pt[0], pt[1])
         clamped_t = max(0.0, min(1.0, t))
         index = clamped_t * (n - 1)
         i0 = min(int(index), n - 2)

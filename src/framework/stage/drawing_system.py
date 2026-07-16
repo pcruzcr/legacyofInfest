@@ -27,7 +27,10 @@ if TYPE_CHECKING:
 
 class DrawingSystem:
     def __init__(self) -> None:
-        pass
+        self._bg_tiles: dict[int, pygame.Surface] = {}
+        self._pause_overlay: pygame.Surface | None = None
+        self._pause_font = pygame.font.Font(None, 20)
+        self._debug_font = pygame.font.Font(None, 14)
 
     def draw(
         self, surface: pygame.Surface,
@@ -56,7 +59,8 @@ class DrawingSystem:
 
         surface.fill(settings.BG_COLOR)
         self._draw_background(surface, stage, camera)
-        stage.map_layer.draw(surface)
+        if stage.map_layer is not None:
+            stage.map_layer.draw(surface)
         cam_offset = camera.offset
 
         # Ambient particles behind entities
@@ -114,20 +118,20 @@ class DrawingSystem:
         self, surface: pygame.Surface,
         selected: int, options: list[str],
     ) -> None:
-        overlay = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
-        overlay.set_alpha(160)
-        overlay.fill((0, 0, 0))
-        surface.blit(overlay, (0, 0))
+        if self._pause_overlay is None:
+            self._pause_overlay = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
+            self._pause_overlay.set_alpha(160)
+            self._pause_overlay.fill((0, 0, 0))
+        surface.blit(self._pause_overlay, (0, 0))
 
-        font = pygame.font.Font(None, 20)
-        title = font.render("PAUSED", True, (255, 255, 255))
+        title = self._pause_font.render("PAUSED", True, (255, 255, 255))
         tx = (settings.INTERNAL_WIDTH - title.get_width()) // 2
         surface.blit(title, (tx, 40))
 
         for i, opt in enumerate(options):
             color = (255, 255, 100) if i == selected else (180, 180, 180)
             prefix = "> " if i == selected else "  "
-            text = font.render(f"{prefix}{opt}", True, color)
+            text = self._pause_font.render(f"{prefix}{opt}", True, color)
             ox = (settings.INTERNAL_WIDTH - text.get_width()) // 2
             oy = 80 + i * 24
             surface.blit(text, (ox, oy))
@@ -142,13 +146,17 @@ class DrawingSystem:
             off = camera.layer_offset(layer_name)
             bg_w = bg_surf.get_width()
             bg_h = bg_surf.get_height()
-            for bx in range(0, settings.INTERNAL_WIDTH, bg_w):
-                for by in range(0, settings.INTERNAL_HEIGHT, bg_h):
-                    surface.blit(
-                        bg_surf,
-                        (bx - int(off.x),
-                         by - int(off.y)),
-                    )
+            if i not in self._bg_tiles:
+                tw = settings.INTERNAL_WIDTH + bg_w
+                th = settings.INTERNAL_HEIGHT + bg_h
+                tiled = pygame.Surface((tw, th))
+                for bx in range(0, tw, bg_w):
+                    for by in range(0, th, bg_h):
+                        tiled.blit(bg_surf, (bx, by))
+                self._bg_tiles[i] = tiled
+            ox = int(off.x) % bg_w
+            oy = int(off.y) % bg_h
+            surface.blit(self._bg_tiles[i], (-ox, -oy))
 
     def _draw_debug(
         self, surface: pygame.Surface,
@@ -158,7 +166,6 @@ class DrawingSystem:
         cam_offset = camera.offset
         lx = -int(cam_offset.x)
         ly = -int(cam_offset.y)
-        font = pygame.font.Font(None, 14)
         y = 4
 
         for r in stage.collision_rects:
@@ -200,6 +207,6 @@ class DrawingSystem:
             f"Paused: {paused}",
         ]
         for line in info:
-            txt = font.render(line, True, (255, 255, 255))
+            txt = self._debug_font.render(line, True, (255, 255, 255))
             surface.blit(txt, (4, y))
             y += 16

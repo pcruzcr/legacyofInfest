@@ -1,3 +1,13 @@
+---
+document_id: "LOI-CUTSCENE-042"
+title: "Legacy of InFest — Cutscene System Specification"
+aliases: ["Cutscene System"]
+tags: ["cutscene", "system", "cinematic"]
+description: "Scripted cutscene system"
+source: "docs/42_CUTSCENE_SYSTEM.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Cutscene System Specification
 
 **Document ID:** LOI-CUTSCENE-042
@@ -76,3 +86,10 @@ Sistema de cinemáticas guionizadas para secuencias narrativas.
 - Soporte de audio sincronizado
 
 Para la especificación completa de la API, consultar el documento original en inglés.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[40_DIALOGUE_SYSTEM.md|Dialogue System]]
+- [[48_SCREEN_TRANSITIONS.md|Screen Transitions]]

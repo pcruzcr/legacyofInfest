@@ -62,12 +62,12 @@ class SpeedrunTimer:
             "splits": self._splits,
         }
         Path(path).parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
 
     def load(self, path: str | Path = "saves/speedrun.json") -> None:
         try:
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 data = json.load(f)
             self._global_time = data.get("global_time", 0.0)
             self._splits = data.get("splits", [])
@@ -102,12 +102,12 @@ class GhostData:
 
     def save(self, path: str | Path) -> None:
         Path(path).parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(self._frames, f, indent=2)
 
     def load(self, path: str | Path) -> None:
         try:
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 self._frames = json.load(f)
         except (FileNotFoundError, json.JSONDecodeError):
             pass

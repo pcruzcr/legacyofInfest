@@ -1,3 +1,13 @@
+---
+document_id: "LOI-ASSET-020"
+title: "Legacy of InFest — Asset Bible"
+aliases: ["Asset Bible"]
+tags: ["asset", "bible", "art", "audio"]
+description: "Every visual/audio asset, path, dimensions, palette"
+source: "docs/20_ASSET_BIBLE.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Asset Bible
 
 **Document ID:** LOI-ASSET-020  
@@ -594,3 +604,201 @@ Students use the same `AssetLoader` API for their student assets:
 # Student asset loading:
 custom_sprite = AssetLoader.load_image(STUDENT_ASSETS_DIR / "sprites" / "my_enemy.png")
 ```
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[06_TMX_SPEC.md|TMX Specification]]
+- [[07_STAGE0_DESIGN.md|Stage 0 Design]]
+- [[16_WORLD_DESIGN.md|World Design]]
+
+---
+--- Traducción al Español ---
+
+*This document is also available in English above.*
+
+# Legacy of InFest — Biblia de Recursos
+
+**ID del Documento:** LOI-ASSET-020
+**Versión:** 1.0.0
+**Estado:** Oficial
+**Compatibilidad:** Requiere LOI-CODEX-002, LOI-WORLD-016, LOI-BOSS-017, LOI-ROSTER-018
+**Audiencia:** Profesor, Estudiantes, Artistas, asistentes de codificación IA
+
+---
+
+## 1. Descripción General
+
+Este documento define cada recurso visual y de audio requerido por Legacy of InFest. Es la referencia autoritativa para artistas, estudiantes que crean recursos personalizados y asistentes de codificación IA que generan código de carga de recursos.
+
+Cada recurso listado aquí tiene una ruta, formato, dimensiones, restricciones de paleta y contexto de uso definidos. Los recursos no listados aquí son creados por estudiantes (ubicados en student_assets/) o son generados en tiempo de ejecución por el pipeline de procesamiento.
+
+---
+
+## 2. Estándares Globales de Recursos
+
+### 2.1 Estándares Visuales
+
+| Propiedad | Estándar |
+|---|---|
+| Formato de píxel | PNG con canal alfa (RGBA) |
+| Profundidad de color | 8 bits por canal |
+| Restricción de paleta | Máximo 16 colores por hoja de sprites |
+| Paleta global | Máximo 256 colores en todo el juego |
+| Tamaño de píxel | 1:1 — sin renderizado de subpíxeles |
+| Anti-aliasing | Nunca |
+| Transparencia | Binaria (totalmente transparente u opaca) O alfa suave (solo para efectos) |
+| Resolución interna | Todos los recursos diseñados para visualización 320x224 |
+
+### 2.2 Formato de Hoja de Sprites
+
+Todos los sprites animados son hojas de sprites horizontales: fotogramas dispuestos de izquierda a derecha, ancho igual, origen en la esquina superior izquierda.
+
+### 2.3 Formato de Tiles
+
+| Propiedad | Estándar |
+|---|---|
+| Tamaño de tile | 16x16 píxeles |
+| Disposición de hoja | Cuadrícula de orden mayor de fila |
+| Máximo de tiles por conjunto | 256 |
+| Dimensiones de hoja | 128x128 px |
+
+### 2.4 Estándares de Audio
+
+| Propiedad | Música | SFX |
+|---|---|---|
+| Formato | OGG Vorbis | WAV u OGG |
+| Tasa de muestreo | 44100 Hz | 22050 Hz |
+| Profundidad de bits | 16 bits | 16 bits |
+| Canales | Estéreo | Mono |
+| Punto de bucle | Debe definirse para BGM | N/A |
+| Normalización de volumen | Pico -12 dBFS | Pico -6 dBFS |
+
+---
+
+## 3. Estructura de Directorios
+
+assets/sprites/player/, assets/sprites/enemies/, assets/sprites/bosses/, assets/tilesets/, assets/backgrounds/, assets/ui/, assets/fonts/, assets/music/, assets/sfx/
+
+---
+
+## 4. Sprites del Jugador
+
+Todos los sprites del jugador están ubicados en assets/sprites/player/. Tamaño de fotograma: 32x32 píxeles para todas las animaciones.
+
+| Archivo | Fotogramas | FPS | Bucle | Estado |
+|---|---|---|---|---|
+| player_idle.png | 4 | 8 | Sí | IDLE |
+| player_walk.png | 8 | 12 | Sí | WALKING |
+| player_jump.png | 3 | 12 | No | JUMPING |
+| player_fall.png | 2 | 8 | Sí | FALLING |
+| player_crouch.png | 2 | 8 | No | CROUCHING |
+| player_short_attack.png | 6 | 18 | No | SHORT_ATTACK |
+| player_long_attack.png | 10 | 16 | No | LONG_ATTACK |
+| player_hurt.png | 4 | 12 | No | HURT |
+| player_die.png | 8 | 10 | No | DYING |
+
+---
+
+## 5. Sprites de Enemigos
+
+Los sprites de enemigos usan nombres genéricos basados en zonas.
+
+### 5.1 Walker (universal)
+
+Ubicación: assets/sprites/enemies/
+
+| Archivo | Enemigo | Tamaño | Fotogramas | FPS |
+|---|---|---|---|---|
+| enemy_walker_walk.png | Walker | 20x16 | 6 | 10 |
+
+### 5.2 Enemigos con Sprites por Zona
+
+Ubicación: assets/sprites/enemies/zoneN/
+
+| Archivo | Enemigo | Fotogramas | FPS |
+|---|---|---|---|
+| enemy_zoneN_walk.png | Walker de zona | 6 | 10 |
+| enemy_zoneN_hurt.png | Cualquiera | 3 | 12 |
+| enemy_zoneN_die.png | Cualquiera | 6 | 8 |
+| enemy_fly_zoneN.png | Volador | 4 | 12 |
+| enemy_shoot_zoneN.png | Disparador | 4 | 6 |
+
+---
+
+## 6. Sprites de Jefes
+
+Ubicación: assets/sprites/bosses/
+
+### 6.1 El Venado Sagrado — Tamaño: 48x48 px
+
+| Archivo | Fotogramas | FPS |
+|---|---|---|
+| boss_venado_drift.png | 6 | 8 |
+| boss_venado_stomp.png | 8 | 12 |
+| boss_venado_charge.png | 6 | 14 |
+| boss_venado_frenzy_drift.png | 6 | 14 |
+| boss_venado_vine.png | 10 | 12 |
+| boss_venado_hurt.png | 4 | 12 |
+| boss_venado_death.png | 12 | 8 |
+
+### 6.2 El Rey Terciopelo — Fase 1: 40x56 px, Subjefe: 24x28 px
+
+### 6.3 El Gavilán Camionero Mascarero — 56x40 px
+
+### 6.4 El Gran Shaman Paburu — Múltiples tamaños por forma
+
+---
+
+## 7. Tilesets
+
+Ubicación: assets/tilesets/. 10 tilesets para los diferentes niveles y zonas. Cada tileset usa formato de cuadrícula 8x8 con categorías que incluyen suelo sólido, pared sólida, borde de plataforma, etc.
+
+---
+
+## 8. Capas de Fondo
+
+Ubicación: assets/backgrounds/. Cada nivel requiere tres capas: _far, _mid, _near con tamaños 320x224, 640x224, y 960x224 respectivamente.
+
+---
+
+## 9. Sprites de UI
+
+Ubicación: assets/ui/. Incluye retratos del jugador (32x32), banners (320x24), marco de HUD (36x36), flechas animadas, iconos de corazón (14x8) y fragmentos de reliquia.
+
+---
+
+## 10. Fuentes
+
+Ubicación: assets/fonts/. Fuentes de mapa de bits para HUD, mensajes, banners, texto GAME OVER y menús.
+
+---
+
+## 11. Pistas de Música
+
+Ubicación: assets/music/. 12 pistas en formato WAV para pantalla de presentación, título, historia, niveles de zona y jefes. bgm_paburu.wav tiene 4 secciones adaptativas.
+
+---
+
+## 12. Efectos de Sonido
+
+Ubicación: assets/sfx/. Efectos categorizados por jugador, enemigos, jefes, UI y entorno.
+
+---
+
+## 13. Sprites Compartidos
+
+Ubicación: assets/sprites/shared/. Incluye checkpoint, antorcha, fuente y superposición de eco espiritual.
+
+---
+
+## 14. Directrices para Estudiantes
+
+Los estudiantes añaden recursos a student_assets/ cumpliendo reglas de validación de paleta, convención de nombres, formato PNG/WAV/OGG, máximo 20 hojas de sprites por nivel y 16 colores por hoja.
+
+---
+
+## 15. Referencia de Carga de Recursos
+
+Todos los recursos se cargan a través de AssetLoader con métodos load_image, load_sound y load_spritesheet. Los estudiantes usan la misma API con STUDENT_ASSETS_DIR.

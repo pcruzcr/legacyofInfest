@@ -1,3 +1,13 @@
+---
+document_id: "LOI-DIALOGUE-040"
+title: "Legacy of InFest — Dialogue System Specification"
+aliases: ["Dialogue System"]
+tags: ["dialogue", "system", "ui"]
+description: "Branching dialogue with portraits"
+source: "docs/40_DIALOGUE_SYSTEM.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Dialogue System Specification
 
 **Document ID:** LOI-DIALOGUE-040
@@ -75,3 +85,10 @@ Sistema de diálogo ramificado con retratos para conversaciones dentro del juego
 - Avance automático o manual
 
 Para la especificación completa de la API con ejemplos de código, consultar el documento original en inglés.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[42_CUTSCENE_SYSTEM.md|Cutscene System]]
+- [[09_HUD_SPEC.md|HUD Specification]]

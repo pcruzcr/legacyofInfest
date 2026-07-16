@@ -1,3 +1,13 @@
+---
+document_id: "LOI-ASGN01-030B"
+title: "Assignment 1: Stage Design (TMX)"
+aliases: ["Assignment 1: Stage Design"]
+tags: ["assignment", "stage", "design", "academic"]
+description: "Stage design assignment"
+source: "docs/30_ASSIGNMENT_01_STAGE_DESIGN.md"
+date_processed: "2026-07-14"
+---
+
 # Assignment 1: Stage Design (TMX)
 
 **Due:** Week 4 | **Points:** 100 | **Unit:** II (Vectors & Tilemaps)
@@ -93,3 +103,11 @@ Check your grade in the CI Actions tab.
 - README.md con conceptos académicos documentados
 
 Para la rúbrica detallada y criterios de evaluación, consultar el documento original en inglés.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[07_STAGE0_DESIGN.md|Stage 0 Design]]
+- [[06_TMX_SPEC.md|TMX Specification]]
+- [[27_ACADEMIC_RUBRICS.md|Academic Rubrics]]

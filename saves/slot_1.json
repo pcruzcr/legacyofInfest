@@ -1,12 +1,13 @@
 {
   "slot_id": 1,
-  "timestamp": "2026-07-10T22:00:16.198022",
-  "version": 1,
+  "timestamp": "2026-07-16T06:19:35.153894",
+  "version": 2,
   "stage_id": "stage0",
   "stage_index": 0,
-  "checkpoint_x": 1090,
-  "checkpoint_y": 145,
+  "checkpoint_x": 695,
+  "checkpoint_y": 496,
   "health": 5.0,
   "max_health": 5.0,
-  "zone_flags": {}
+  "zone_flags": {},
+  "completed_stages": []
 }

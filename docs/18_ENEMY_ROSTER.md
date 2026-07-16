@@ -1,3 +1,13 @@
+---
+document_id: "LOI-ENEMIES-018"
+title: "Legacy of InFest — Enemy Roster"
+aliases: ["Enemy Roster"]
+tags: ["enemy", "roster", "entities"]
+description: "Every standard enemy, by zone"
+source: "docs/18_ENEMY_ROSTER.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Enemy Roster
 
 **Document ID:** LOI-ROSTER-018  

@@ -1,3 +1,13 @@
+---
+document_id: "LOI-AUDIO-049"
+title: "Legacy of InFest — Ambient Audio Specification"
+aliases: ["Ambient Audio"]
+tags: ["ambient", "audio", "sound"]
+description: "Ambient audio system"
+source: "docs/49_AMBIENT_AUDIO.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Ambient Audio Specification
 
 **Document ID:** LOI-AUDIO-049
@@ -72,3 +82,10 @@ Sistema de audio ambiental que reproduce sonidos de fondo contextuales.
 - Audio posicional (pan estéreo)
 
 Para la especificación completa de la API, consultar el documento original en inglés.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[40_DIALOGUE_SYSTEM.md|Dialogue System]]
+- [[42_CUTSCENE_SYSTEM.md|Cutscene System]]

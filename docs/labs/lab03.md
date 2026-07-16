@@ -1,3 +1,13 @@
+---
+document_id: "LOI-LABS-LAB03"
+title: "Lab 3: Vision & Pattern Recognition (Unit VIII)"
+aliases: ["Lab03", "lab03"]
+tags: ["lab", "academic", "exercise"]
+description: "Labs document: lab03"
+source: "docs/docs\labs/lab03.md"
+date_processed: "2026-07-14"
+---
+
 # Lab 3: Vision & Pattern Recognition (Unit VIII)
 
 **Objective:** Apply image processing and pattern recognition techniques using VisionDemoScene and PatternDemoScene.

@@ -1,3 +1,13 @@
+---
+document_id: "LOI-STAGE0-007"
+title: "Legacy of InFest — Stage 0 Design Document"
+aliases: ["Stage 0 Design", "Reference Stage"]
+tags: ["stage0", "reference", "design"]
+description: "Professor's reference-implementation stage"
+source: "docs/07_STAGE0_DESIGN.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Stage 0 Design Document
 
 **Document ID:** LOI-STAGE0-007  
@@ -409,3 +419,10 @@ Escenario horizontal de una sola pantalla dividido en 7 zonas de demostración. 
 - **Zona G** — Banner de Escenario y Finalización (X: 3200–3760)
 
 Para la lista completa de mensajes, disparadores, colocación de enemigos y condiciones de finalización, consultar el documento original en inglés.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[06_TMX_SPEC.md|TMX Specification]]
+- [[30_ASSIGNMENT_01_STAGE_DESIGN.md|Assignment 1: Stage Design]]

@@ -108,12 +108,12 @@ class Bestiary:
     def save(self, path: str | Path = "saves/bestiary.json") -> None:
         data = {eid: entry.to_dict() for eid, entry in self._entries.items()}
         Path(path).parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
 
     def load(self, path: str | Path = "saves/bestiary.json") -> None:
         try:
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 data = json.load(f)
             for eid, entry_data in data.items():
                 base = self._entries.get(eid)

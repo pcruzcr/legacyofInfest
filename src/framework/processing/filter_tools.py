@@ -9,8 +9,6 @@ from __future__ import annotations
 
 import numpy as np
 import pygame
-from scipy.ndimage import convolve, gaussian_filter
-import cv2
 
 _STANDARD_KERNELS: dict[str, np.ndarray] = {}
 
@@ -113,6 +111,7 @@ class FilterTools:
 
     @classmethod
     def apply_kernel(cls, surface: pygame.Surface, kernel: np.ndarray) -> pygame.Surface:
+        from scipy.ndimage import convolve
         cls._validate_surface(surface)
         if kernel.ndim != 2 or kernel.shape[0] != kernel.shape[1]:
             raise ValueError(f"FilterTools.apply_kernel: kernel must be square, got shape {kernel.shape}")
@@ -134,6 +133,7 @@ class FilterTools:
 
     @classmethod
     def gaussian_blur(cls, surface: pygame.Surface, sigma: float) -> pygame.Surface:
+        from scipy.ndimage import gaussian_filter
         cls._validate_surface(surface)
         if sigma <= 0.0 or sigma > 10.0:
             raise ValueError(f"FilterTools.gaussian_blur: sigma must be in (0.0, 10.0], got {sigma}")
@@ -149,6 +149,7 @@ class FilterTools:
 
     @classmethod
     def sobel_edge(cls, surface: pygame.Surface) -> pygame.Surface:
+        import cv2
         cls._validate_surface(surface)
         arr = pygame.surfarray.array3d(surface)
         gray = (0.299 * arr[:, :, 0] + 0.587 * arr[:, :, 1] + 0.114 * arr[:, :, 2]).astype(np.uint8)
@@ -163,6 +164,7 @@ class FilterTools:
 
     @classmethod
     def canny_edge(cls, surface: pygame.Surface, low_threshold: int, high_threshold: int) -> pygame.Surface:
+        import cv2
         cls._validate_surface(surface)
         if low_threshold < 1 or high_threshold > 255 or low_threshold >= high_threshold:
             raise ValueError(

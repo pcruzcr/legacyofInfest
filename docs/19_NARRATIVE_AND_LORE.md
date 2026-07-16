@@ -1,3 +1,13 @@
+---
+document_id: "LOI-LORE-019"
+title: "Legacy of InFest — Narrative and Lore"
+aliases: ["Narrative and Lore"]
+tags: ["narrative", "lore", "story"]
+description: "Story, characters, cultural grounding (Tilawa)"
+source: "docs/19_NARRATIVE_AND_LORE.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Narrative and Lore
 
 **Document ID:** LOI-LORE-019  
@@ -236,3 +246,10 @@ Students building traversal stages must maintain the following narrative consist
 | **Gavilán camionero** | Colloquial name for the roadside hawk (Buteo magnirostris) |
 | **Tilawa** | The official fictional ancestral culture named in the course syllabus; Paburu's people |
 | **InFest** | The name of the game and the implied infestation — the relics have "infested" the land with awakened spirits |
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[16_WORLD_DESIGN.md|World Design]]
+- [[17_BOSS_SPEC.md|Boss Specification]]

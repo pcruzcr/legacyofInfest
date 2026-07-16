@@ -1,3 +1,13 @@
+---
+document_id: "LOI-TEMPLATE-026"
+title: "Legacy of InFest — Student Template Specification"
+aliases: ["Student Template Spec"]
+tags: ["template", "student", "starter"]
+description: "Exact starter files every student copies"
+source: "docs/26_STUDENT_TEMPLATE_SPEC.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Student Template Specification
 
 **Document ID:** LOI-TEMPLATE-026  

@@ -27,37 +27,85 @@ class SoundBank:
         if not self.SFX_DIR.is_dir():
             logging.warning(f"SoundBank: SFX dir not found: {self.SFX_DIR}")
             return
-        for wav_path in self.SFX_DIR.rglob("*.wav"):
-            name = wav_path.stem  # e.g. "sfx_player_jump"
-            self._sounds[name] = AssetLoader.load_sound(wav_path)
+        if pygame.mixer.get_init() is None:
+            logging.warning("SoundBank: pygame.mixer not initialized, skipping load_all")
+            return
+        try:
+            for wav_path in self.SFX_DIR.rglob("*.wav"):
+                try:
+                    name = wav_path.stem
+                    self._sounds[name] = AssetLoader.load_sound(wav_path)
+                except (pygame.error, PermissionError, OSError) as e:
+                    logging.warning(f"SoundBank: failed to load {wav_path}: {e}")
+        except PermissionError as e:
+            logging.warning(f"SoundBank: cannot scan SFX dir: {e}")
+        try:
+            for ogg_path in self.SFX_DIR.rglob("*.ogg"):
+                try:
+                    name = ogg_path.stem
+                    self._sounds[name] = AssetLoader.load_sound(ogg_path)
+                except (pygame.error, PermissionError, OSError) as e:
+                    logging.warning(f"SoundBank: failed to load {ogg_path}: {e}")
+        except PermissionError as e:
+            logging.warning(f"SoundBank: cannot scan SFX dir: {e}")
 
     def load(self, name: str, path: str | Path) -> None:
         """Register a sound by name, loading from the given path."""
-        sound = AssetLoader.load_sound(path)
-        self._sounds[name] = sound
+        try:
+            sound = AssetLoader.load_sound(path)
+            self._sounds[name] = sound
+        except (pygame.error, PermissionError, OSError) as e:
+            logging.warning(f"SoundBank: failed to load sound '{name}' from {path}: {e}")
+            self._sounds[name] = None
 
     def get(self, name: str) -> pygame.mixer.Sound | None:
         """Retrieve a registered sound by name. Returns None if not found."""
         return self._sounds.get(name)
 
+    _MAX_PITCH_CACHE = 20
+
     def play(self, name: str, loops: int = 0, volume: float = 1.0,
              pitch: float = 1.0, pan: tuple[float, float] | None = None) -> None:
         """Play a registered sound at the given volume and pitch. Silently skip if not found."""
+        if pitch <= 0.0:
+            logging.warning("SoundBank: invalid pitch %f for '%s', using 1.0", pitch, name)
+            pitch = 1.0
         sound = self._sounds.get(name)
         if sound is not None:
-            sound.set_volume(max(0.0, min(1.0, volume)))
-            channel = sound.play(loops=loops)
-            if channel is not None:
-                if pan is not None:
-                    channel.set_volume(max(0.0, pan[0]), max(0.0, pan[1]))
+            try:
+                sound.set_volume(max(0.0, min(1.0, volume)))
                 if pitch != 1.0:
-                    try:
-                        channel.fadeout(0)
-                        ch = sound.play(loops=loops)
-                        if ch is not None:
-                            ch.fadeout(0)
-                    except Exception:
-                        pass
+                    import pygame.sndarray
+                    import numpy as np
+                    pitch_key = f"{name}_p{round(pitch, 2) * 100:.0f}"
+                    pitched = self._sounds.get(pitch_key)
+                    if pitched is None:
+                        if sum(1 for k in self._sounds if k.endswith("_p")) >= self._MAX_PITCH_CACHE:
+                            for k in list(self._sounds):
+                                if k.endswith("_p"):
+                                    del self._sounds[k]
+                                    break
+                        arr = pygame.sndarray.samples(sound)
+                        if arr.ndim == 1:
+                            arr = arr.reshape(-1, 1)
+                        src_len = arr.shape[0]
+                        dst_len = int(src_len / pitch)
+                        indices = (np.arange(dst_len) * pitch).astype(np.int32)
+                        indices = np.clip(indices, 0, src_len - 1)
+                        pitched_arr = arr[indices]
+                        pitched = pygame.sndarray.make_sound(pitched_arr)
+                        self._sounds[pitch_key] = pitched
+                    channel = pitched.play(loops=loops)
+                else:
+                    channel = sound.play(loops=loops)
+                if channel is not None:
+                    if pan is not None:
+                        channel.set_volume(max(0.0, pan[0]), max(0.0, pan[1]))
+            except (ImportError, ValueError, IndexError, TypeError) as _exc:
+                logging.warning("SoundBank: pitch shift failed for '%s': %s", name, _exc)
+                channel = sound.play(loops=loops)
+                if channel is not None and pan is not None:
+                    channel.set_volume(max(0.0, pan[0]), max(0.0, pan[1]))
 
     def contains(self, name: str) -> bool:
         """Check if a sound name is registered."""

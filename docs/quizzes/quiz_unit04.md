@@ -1,3 +1,13 @@
+---
+document_id: "LOI-QUIZZES-QUIZ_UNIT04"
+title: "Quiz — Unit IV: Interpolation & Animation"
+aliases: ["Quiz Unit04", "quiz_unit04"]
+tags: ["quiz", "academic", "evaluation"]
+description: "Quizzes document: quiz_unit04"
+source: "docs/docs\quizzes/quiz_unit04.md"
+date_processed: "2026-07-14"
+---
+
 # Quiz — Unit IV: Interpolation & Animation
 
 **Course:** Legacy of InFest  

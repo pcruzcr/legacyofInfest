@@ -1,3 +1,13 @@
+---
+document_id: "LOI-BOSS-017"
+title: "Legacy of InFest — Boss Specification"
+aliases: ["Boss Specification", "Boss Spec"]
+tags: ["boss", "specification", "entity"]
+description: "All 4 boss designs, phase-by-phase"
+source: "docs/17_BOSS_SPEC.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Boss Specification
 
 **Document ID:** LOI-BOSS-017  
@@ -637,3 +647,10 @@ On boss stage entry:
 - Boss health bar appears (bottom of screen)
 - Boss name displayed in the bar
 - `BOSS_PHASE_CHANGED` event updates the phase indicator and re-fills the bar segment
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[44_BOSS_RUSH_MODE.md|Boss Rush Mode]]
+- [[05_ENEMY_SPEC.md|Enemy Specification]]

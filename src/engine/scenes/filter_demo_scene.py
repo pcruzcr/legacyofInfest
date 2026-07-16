@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 import pygame
@@ -75,6 +76,10 @@ class FilterDemoScene(BaseScene):
 
         # Cached result
         self._cached_result: pygame.Surface | None = None
+        self._cached_left_scaled: pygame.Surface | None = None
+        self._cached_left_src: pygame.Surface | None = None
+        self._cached_right_scaled: pygame.Surface | None = None
+        self._cached_right_src: pygame.Surface | None = None
         self._param_changed: bool = True
 
         # Save notification
@@ -287,7 +292,8 @@ class FilterDemoScene(BaseScene):
             result = pygame.transform.scale(result, PANEL_SIZE)
             self._cached_result = result
             self._error_msg = ""
-        except Exception as e:
+        except (pygame.error, ValueError, ZeroDivisionError) as e:
+            logging.warning("filter_demo: compute error: %s", e)
             self._error_msg = f"Error: {e}"[:60]
             self._error_timer = 2.0
 
@@ -394,8 +400,10 @@ class FilterDemoScene(BaseScene):
         pygame.Rect(LEFT_PANEL_W - PANEL_SIZE[0], TOP_BAR_Y + 2, PANEL_SIZE[0], PANEL_H - 4)
         src = self._sources.current_source
         if src is not None:
-            scaled = pygame.transform.scale(src, PANEL_SIZE)
-            surface.blit(scaled, (0, TOP_BAR_H))
+            if self._cached_left_src is not src:
+                self._cached_left_scaled = pygame.transform.scale(src, PANEL_SIZE)
+                self._cached_left_src = src
+            surface.blit(self._cached_left_scaled, (0, TOP_BAR_H))
         draw_panel_border(surface, pygame.Rect(0, TOP_BAR_H, PANEL_SIZE[0], PANEL_H))
 
         if self._sources.is_frozen:
@@ -405,8 +413,10 @@ class FilterDemoScene(BaseScene):
     def _draw_right_panel(self, surface: pygame.Surface) -> None:
         rect = pygame.Rect(RIGHT_PANEL_X, TOP_BAR_H, PANEL_SIZE[0], PANEL_H)
         if self._cached_result is not None:
-            scaled = pygame.transform.scale(self._cached_result, PANEL_SIZE)
-            surface.blit(scaled, (RIGHT_PANEL_X, TOP_BAR_H))
+            if self._cached_right_src is not self._cached_result:
+                self._cached_right_scaled = pygame.transform.scale(self._cached_result, PANEL_SIZE)
+                self._cached_right_src = self._cached_result
+            surface.blit(self._cached_right_scaled, (RIGHT_PANEL_X, TOP_BAR_H))
         draw_panel_border(surface, rect)
 
         # Histogram bars for mode 0
@@ -427,11 +437,13 @@ class FilterDemoScene(BaseScene):
         if src is None:
             return
         # Compute histograms for source (left) and result (right)
-        arr = pygame.surfarray.pixels3d(src)
-        h_r, _ = np.histogram(arr[:, :, 0], bins=80, range=(0, 256))
-        h_g, _ = np.histogram(arr[:, :, 1], bins=80, range=(0, 256))
-        h_b, _ = np.histogram(arr[:, :, 2], bins=80, range=(0, 256))
-        del arr
+        try:
+            arr = pygame.surfarray.pixels3d(src)
+            h_r, _ = np.histogram(arr[:, :, 0], bins=80, range=(0, 256))
+            h_g, _ = np.histogram(arr[:, :, 1], bins=80, range=(0, 256))
+            h_b, _ = np.histogram(arr[:, :, 2], bins=80, range=(0, 256))
+        finally:
+            del arr
 
         # Draw source histogram in left panel
         left_rect = pygame.Rect(0, TOP_BAR_H, PANEL_SIZE[0], PANEL_H)
@@ -440,11 +452,13 @@ class FilterDemoScene(BaseScene):
 
         # Draw result histogram in right panel
         if self._cached_result is not None:
-            arr2 = pygame.surfarray.pixels3d(self._cached_result)
-            h2_r, _ = np.histogram(arr2[:, :, 0], bins=80, range=(0, 256))
-            h2_g, _ = np.histogram(arr2[:, :, 1], bins=80, range=(0, 256))
-            h2_b, _ = np.histogram(arr2[:, :, 2], bins=80, range=(0, 256))
-            del arr2
+            try:
+                arr2 = pygame.surfarray.pixels3d(self._cached_result)
+                h2_r, _ = np.histogram(arr2[:, :, 0], bins=80, range=(0, 256))
+                h2_g, _ = np.histogram(arr2[:, :, 1], bins=80, range=(0, 256))
+                h2_b, _ = np.histogram(arr2[:, :, 2], bins=80, range=(0, 256))
+            finally:
+                del arr2
 
             right_rect = pygame.Rect(RIGHT_PANEL_X, TOP_BAR_H, PANEL_SIZE[0], PANEL_H)
             draw_histogram_bars(surface, right_rect,

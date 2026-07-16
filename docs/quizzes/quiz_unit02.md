@@ -1,3 +1,13 @@
+---
+document_id: "LOI-QUIZZES-QUIZ_UNIT02"
+title: "Quiz — Unit II: Vectors & 2D Transformations"
+aliases: ["Quiz Unit02", "quiz_unit02"]
+tags: ["quiz", "academic", "evaluation"]
+description: "Quizzes document: quiz_unit02"
+source: "docs/docs\quizzes/quiz_unit02.md"
+date_processed: "2026-07-14"
+---
+
 # Quiz — Unit II: Vectors & 2D Transformations
 
 **Course:** Legacy of InFest  

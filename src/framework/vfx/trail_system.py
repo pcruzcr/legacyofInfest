@@ -25,6 +25,8 @@ class TrailSystem:
         self._points: list[TrailPoint] = []
         self._capture_interval: float = 0.03
         self._timer: float = 0.0
+        self._capture_surf: pygame.Surface | None = None
+        self._capture_surf_size: tuple[int, int] = (0, 0)
 
     def capture(self, player: Player) -> None:
         """Capture a snapshot of the player for the trail."""
@@ -39,17 +41,21 @@ class TrailSystem:
     def _capture_player_surface(self, player: Player) -> pygame.Surface:
         """Render the player silhouette for the trail."""
         w, h = player.rect.width, player.rect.height
-        surf = pygame.Surface((w, h), pygame.SRCALPHA)
+        size = (w, h)
+        if self._capture_surf is None or self._capture_surf_size != size:
+            self._capture_surf = pygame.Surface(size, pygame.SRCALPHA)
+            self._capture_surf_size = size
+        surf = self._capture_surf
+        surf.fill((0, 0, 0, 0))
         color = (100, 150, 255, 120) if player._dash_timer > 0 else (200, 200, 255, 80)
         pygame.draw.rect(surf, color, (0, 0, w, h))
         return surf
 
     def update(self, dt: float) -> None:
         self._timer += dt
-        for p in list(self._points):
+        for p in self._points:
             p.alpha -= int(400 * dt)
-            if p.alpha <= 0:
-                self._points.remove(p)
+        self._points = [p for p in self._points if p.alpha > 0]
 
     def draw(self, surface: pygame.Surface, offset: pygame.Vector2) -> None:
         for p in self._points:

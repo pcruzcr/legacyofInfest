@@ -43,6 +43,7 @@ class EmptyFallbackStage(BaseScene):
 
     def __init__(self, context: GameContext) -> None:
         super().__init__(context)
+        self._font = pygame.font.Font(None, 16)
 
     def on_enter(self) -> None:
         pass
@@ -55,8 +56,7 @@ class EmptyFallbackStage(BaseScene):
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill(settings.BG_COLOR)
-        f = pygame.font.Font(None, 16)
-        t = f.render("No stages found. Add a stage in src/stages/", True, (255, 255, 200))
+        t = self._font.render("No stages found. Add a stage in src/stages/", True, (255, 255, 200))
         surface.blit(t, (10, 100))
 
 

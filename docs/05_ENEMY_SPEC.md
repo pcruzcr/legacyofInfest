@@ -1,3 +1,13 @@
+---
+document_id: "LOI-ENEMY-005"
+title: "Legacy of InFest — Enemy Specification"
+aliases: ["Enemy Specification", "Enemy Spec"]
+tags: ["enemy", "specification", "entity"]
+description: "Enemy base class and 8 enemy types"
+source: "docs/05_ENEMY_SPEC.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Enemy Specification
 
 **Document ID:** LOI-ENEMY-005  
@@ -818,3 +828,11 @@ Las subclases deben implementar:
 - `_build_hitbox()` / `_build_hurtbox()` — Definir rectángulos de daño
 
 Para la especificación completa de cada tipo de enemigo con atributos, estados, animaciones y ejemplos, consultar el documento original en inglés.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[18_ENEMY_ROSTER.md|Enemy Roster]]
+- [[17_BOSS_SPEC.md|Boss Specification]]
+- [[03_ARCHITECTURE.md|Architecture]]

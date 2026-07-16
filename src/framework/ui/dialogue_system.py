@@ -6,9 +6,13 @@ Description: Branching dialogue system with speaker portraits, name labels,
 and choice-based progression. Supports multiple NPCs and dialogue trees.
 """
 from __future__ import annotations
+import logging
+
 import pygame
 from typing import TYPE_CHECKING
 from src.engine.core import settings
+from src.engine.core.events import Events
+from src.engine.input.action_map import Action
 from src.engine.utils.asset_loader import AssetLoader
 
 if TYPE_CHECKING:
@@ -55,9 +59,9 @@ class DialogueSystem:
         self._text_speed: float = 30.0
         self._full_text_visible: bool = False
         self._portrait_cache: dict[str, pygame.Surface] = {}
-        self._font_name = pygame.font.Font(None, 16)
-        self._font_text = pygame.font.Font(None, 14)
-        self._font_choice = pygame.font.Font(None, 14)
+        self._font_name = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", 18)
+        self._font_text = pygame.font.Font(None, 16)
+        self._font_choice = pygame.font.Font(None, 16)
         self._bg = pygame.Surface((settings.INTERNAL_WIDTH - 40, 100), pygame.SRCALPHA)
         self._bg.fill((0, 0, 0, 200))
 
@@ -89,13 +93,9 @@ class DialogueSystem:
             return
         cmd, arg = parts[0], ":".join(parts[1:])
         if cmd == "give_item":
-            from src.engine.core.event_bus import emit
-            from src.engine.core.events import Events
-            emit(Events.ITEM_COLLECTED, item_id=arg)
+            self._context.event_bus.emit(Events.ITEM_COLLECTED, item_id=arg)
         elif cmd == "set_flag":
-            from src.engine.core.event_bus import emit
-            from src.engine.core.events import Events
-            emit(Events.FLAG_SET, flag=arg)
+            self._context.event_bus.emit(Events.FLAG_SET, flag=arg)
 
     def end_dialogue(self) -> None:
         """End the current dialogue."""
@@ -118,15 +118,15 @@ class DialogueSystem:
             return
         if self._full_text_visible:
             if self._current_node.choices:
-                if im.is_action_just_pressed("MOVE_DOWN"):
+                if im.is_action_just_pressed(Action.MOVE_DOWN):
                     self._selected_choice = (self._selected_choice + 1) % len(self._current_node.choices)
-                if im.is_action_just_pressed("MOVE_UP"):
+                if im.is_action_just_pressed(Action.MOVE_UP):
                     self._selected_choice = (self._selected_choice - 1) % len(self._current_node.choices)
-                if im.is_action_just_pressed("CONFIRM"):
+                if im.is_action_just_pressed(Action.CONFIRM):
                     _, next_id = self._current_node.choices[self._selected_choice]
                     self._go_to_node(next_id)
             else:
-                if im.is_action_just_pressed("CONFIRM") or im.is_action_just_pressed("CANCEL"):
+                if im.is_action_just_pressed(Action.CONFIRM) or im.is_action_just_pressed(Action.CANCEL):
                     self.end_dialogue()
 
     def draw(self, surface: pygame.Surface) -> None:
@@ -148,7 +148,8 @@ class DialogueSystem:
                         size=(48, 48),
                     )
                     self._portrait_cache[portrait] = img
-                except Exception:
+                except (pygame.error, FileNotFoundError, PermissionError):
+                    logging.warning("dialogue_system: failed to load portrait %s", portrait)
                     self._portrait_cache[portrait] = pygame.Surface((48, 48))
                     self._portrait_cache[portrait].fill((80, 80, 100))
             surface.blit(self._portrait_cache[portrait], (px, py))

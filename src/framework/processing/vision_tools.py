@@ -11,11 +11,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal, cast
 
-import cv2
 import numpy as np
 import pygame
-from skimage.feature import hog, local_binary_pattern
-from skimage.measure import regionprops
 
 
 @dataclass
@@ -42,6 +39,7 @@ class VisionTools:
 
     @classmethod
     def threshold_binary(cls, surface: pygame.Surface, threshold: int) -> pygame.Surface:
+        import cv2
         cls._validate_surface(surface)
         if threshold < 0 or threshold > 255:
             raise ValueError(f"VisionTools.threshold_binary: threshold must be in [0, 255], got {threshold}")
@@ -52,6 +50,7 @@ class VisionTools:
 
     @classmethod
     def threshold_otsu(cls, surface: pygame.Surface) -> tuple[pygame.Surface, int]:
+        import cv2
         cls._validate_surface(surface)
         arr = cls._to_gray_array(surface)
         _, binary, = cv2.threshold(arr, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
@@ -62,22 +61,27 @@ class VisionTools:
 
     @classmethod
     def morphological_erode(cls, surface: pygame.Surface, kernel_size: int) -> pygame.Surface:
+        import cv2
         return cls._morph_op(surface, kernel_size, cv2.MORPH_ERODE)
 
     @classmethod
     def morphological_dilate(cls, surface: pygame.Surface, kernel_size: int) -> pygame.Surface:
+        import cv2
         return cls._morph_op(surface, kernel_size, cv2.MORPH_DILATE)
 
     @classmethod
     def morphological_open(cls, surface: pygame.Surface, kernel_size: int) -> pygame.Surface:
+        import cv2
         return cls._morph_op(surface, kernel_size, cv2.MORPH_OPEN)
 
     @classmethod
     def morphological_close(cls, surface: pygame.Surface, kernel_size: int) -> pygame.Surface:
+        import cv2
         return cls._morph_op(surface, kernel_size, cv2.MORPH_CLOSE)
 
     @classmethod
     def connected_components(cls, mask_surface: pygame.Surface) -> ComponentResult:
+        import cv2
         cls._validate_surface(mask_surface)
         binary = cls._to_binary_array(mask_surface)
         num_labels, label_array, stats, _ = cv2.connectedComponentsWithStats(binary, connectivity=8)
@@ -114,6 +118,8 @@ class VisionTools:
 
     @classmethod
     def analyze_regions(cls, mask_surface: pygame.Surface) -> list[RegionInfo]:
+        import cv2
+        from skimage.measure import regionprops
         cls._validate_surface(mask_surface)
         binary = cls._to_binary_array(mask_surface)
         num_labels, label_array = cv2.connectedComponents(binary, connectivity=8)
@@ -140,6 +146,7 @@ class VisionTools:
 
     @classmethod
     def watershed_segment(cls, surface: pygame.Surface) -> tuple[pygame.Surface, np.ndarray]:
+        import cv2
         cls._validate_surface(surface)
         arr = cls._to_gray_array(surface)
         blurred = cv2.GaussianBlur(arr, (5, 5), 1.0)
@@ -180,6 +187,7 @@ class VisionTools:
 
     @classmethod
     def extract_hog(cls, surface: pygame.Surface) -> np.ndarray:
+        from skimage.feature import hog
         cls._validate_surface(surface)
         resized = cls._resize_canonical(surface)
         gray = cls._to_gray_array(resized)
@@ -194,6 +202,7 @@ class VisionTools:
 
     @classmethod
     def extract_lbp(cls, surface: pygame.Surface) -> np.ndarray:
+        from skimage.feature import local_binary_pattern
         cls._validate_surface(surface)
         resized = cls._resize_canonical(surface)
         gray = cls._to_gray_array(resized)
@@ -215,6 +224,7 @@ class VisionTools:
 
     @classmethod
     def find_contours(cls, mask_surface: pygame.Surface) -> list[np.ndarray]:
+        import cv2
         cls._validate_surface(mask_surface)
         binary = cls._to_binary_array(mask_surface)
         contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -222,6 +232,7 @@ class VisionTools:
 
     @classmethod
     def bounding_boxes_from_mask(cls, mask_surface: pygame.Surface) -> list[pygame.Rect]:
+        import cv2
         cls._validate_surface(mask_surface)
         binary = cls._to_binary_array(mask_surface)
         num_labels, _, stats, _ = cv2.connectedComponentsWithStats(binary, connectivity=8)
@@ -252,6 +263,7 @@ class VisionTools:
 
     @classmethod
     def _to_binary_array(cls, mask_surface: pygame.Surface) -> np.ndarray:
+        import cv2
         arr = pygame.surfarray.array3d(mask_surface)
         gray = (0.299 * arr[:, :, 0] + 0.587 * arr[:, :, 1] + 0.114 * arr[:, :, 2]).astype(np.uint8)
         _, binary = cv2.threshold(gray.T, 127, 255, cv2.THRESH_BINARY)
@@ -275,6 +287,7 @@ class VisionTools:
 
     @classmethod
     def _resize_canonical(cls, surface: pygame.Surface) -> pygame.Surface:
+        import cv2
         w, h = surface.get_size()
         if w == 32 and h == 32:
             return surface
@@ -286,6 +299,7 @@ class VisionTools:
 
     @classmethod
     def _morph_op(cls, surface: pygame.Surface, kernel_size: int, op: int) -> pygame.Surface:
+        import cv2
         cls._validate_surface(surface)
         if kernel_size < 1:
             raise ValueError(f"VisionTools: kernel_size must be >= 1, got {kernel_size}")

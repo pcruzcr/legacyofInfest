@@ -3,7 +3,8 @@ from typing import TYPE_CHECKING
 
 import pygame
 
-from src.engine.core.event_bus import emit
+from src.engine.core.event_bus import _get_bus as _bus
+_emit = lambda *a, **kw: _bus().emit(*a, **kw)
 from src.engine.core.events import Events
 from src.framework.entities.enemy_base import EnemyBase, EnemyState
 
@@ -19,6 +20,7 @@ class EnemyBrute(EnemyBase):
         max_health: float = 5.0,
         damage_on_contact: float = 0.5,
         zone: int = 0,
+        **kwargs,
     ) -> None:
         super().__init__(
             spawn_position=spawn_position,
@@ -43,6 +45,11 @@ class EnemyBrute(EnemyBase):
         self._shockwave_has_hit: bool = False
         self._shockwave_duration: float = 0.4
 
+        # Cached surfaces
+        self._brute_warning_surf: pygame.Surface | None = None
+        self._brute_warning_size: tuple[int, int] = (0, 0)
+        self._shock_surf: pygame.Surface | None = None
+
         self._load_zone_sprites(zone, 24, 18)
 
     def _patrol_behavior(self, dt: float) -> None:
@@ -58,14 +65,14 @@ class EnemyBrute(EnemyBase):
         if self._slam_cooldown <= 0:
             self._telegraph_timer = self._telegraph_duration
             self.state = EnemyState.TELEGRAPHING
-            emit(Events.BOSS_ATTACK, pattern="ground_slam", rect=self.rect)
+            _emit(Events.BOSS_ATTACK, pattern="ground_slam", rect=self.rect)
 
     def _firing_behavior(self, dt: float) -> None:
         self._shockwave_active = True
         self._shockwave_timer = self._shockwave_duration
         self._shockwave_has_hit = False
         self._slam_cooldown = 3.0
-        emit(Events.SFX_HIT_CONNECT)
+        _emit(Events.SFX_HIT_CONNECT)
         self.state = EnemyState.ALERT
 
     def _post_update(self, dt: float) -> None:
@@ -86,7 +93,6 @@ class EnemyBrute(EnemyBase):
         return self._build_hurtbox()
 
     def check_player_contact(self, player: Player) -> None:
-        super()._check_player_contact(player)
         if self._shockwave_active and not self._shockwave_has_hit:
             shockwave_rect = pygame.Rect(
                 self.position.x + (self.rect.width - 60) // 2,
@@ -97,6 +103,7 @@ class EnemyBrute(EnemyBase):
             if shockwave_rect.colliderect(player_hurtbox):
                 player.apply_damage(1.5, (self.position.x, self.position.y))
                 self._shockwave_has_hit = True
+        super()._check_player_contact(player)
 
     def draw(self, surface: pygame.Surface, camera_offset: pygame.Vector2) -> None:
         super().draw(surface, camera_offset)
@@ -111,14 +118,23 @@ class EnemyBrute(EnemyBase):
             height = 8
             indicator_x = screen_x + (self.rect.width - width) // 2
             indicator_y = screen_y - 16
-            warning_surf = pygame.Surface((width, height), pygame.SRCALPHA)
+            size = (width, height)
+            if (self._brute_warning_surf is None
+                    or self._brute_warning_size != size):
+                self._brute_warning_surf = pygame.Surface(size, pygame.SRCALPHA)
+                self._brute_warning_size = size
+            warning_surf = self._brute_warning_surf
+            warning_surf.fill((0, 0, 0, 0))
             pygame.draw.rect(warning_surf, (255, 255, 0, 200), (0, 0, width, height))
             surface.blit(warning_surf, (indicator_x, indicator_y))
 
         if self._shockwave_active:
             shock_x = screen_x + (self.rect.width - 60) // 2
             shock_y = screen_y + self.rect.height - 20
-            shock_surf = pygame.Surface((60, 20), pygame.SRCALPHA)
+            if self._shock_surf is None:
+                self._shock_surf = pygame.Surface((60, 20), pygame.SRCALPHA)
+            shock_surf = self._shock_surf
+            shock_surf.fill((0, 0, 0, 0))
             alpha = int(180 * (self._shockwave_timer / max(self._shockwave_duration, 0.001)))
             pygame.draw.ellipse(shock_surf, (200, 180, 100, alpha), (0, 0, 60, 20))
             surface.blit(shock_surf, (shock_x, shock_y))

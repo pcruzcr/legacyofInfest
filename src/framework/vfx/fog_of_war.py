@@ -21,29 +21,30 @@ class FogOfWar:
         self._radius = radius
         self._hardness = hardness
         self._overlay = pygame.Surface((width, height), pygame.SRCALPHA)
-        self._overlay.fill((0, 0, 0, 220))
-        self._mask = pygame.Surface((width, height), pygame.SRCALPHA)
-        self._mask.fill((0, 0, 0, 0))
-        self._revealed: list[tuple[float, float]] = []
+        self._revealed: set[tuple[int, int]] = set()
+        self._hole_mask = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+        self._hole_mask.fill((0, 0, 0, 0))
+        pygame.draw.circle(self._hole_mask, (0, 0, 0, 255), (radius, radius), radius)
 
     def clear(self) -> None:
         self._revealed.clear()
 
     def reveal(self, x: float, y: float) -> None:
-        self._revealed.append((float(x), float(y)))
+        self._revealed.add((int(x), int(y)))
 
     def reveal_all(self, points: list[tuple[float, float]]) -> None:
-        self._revealed.extend((float(x), float(y)) for x, y in points)
+        for x, y in points:
+            self._revealed.add((int(x), int(y)))
 
     def update(self, dt: float) -> None:
         """No-op placeholder for future fading."""
 
     def draw(self, surface: pygame.Surface, offset: pygame.Vector2) -> None:
-        self._mask.fill((0, 0, 0, 0))
-        for x, y in self._revealed:
-            sx = int(x - offset.x)
-            sy = int(y - offset.y)
-            pygame.draw.circle(self._mask, (0, 0, 0, 255), (sx, sy), self._radius)
         self._overlay.fill((0, 0, 0, 220))
-        self._overlay.blit(self._mask, (0, 0), special_flags=pygame.BLEND_RGBA_SUB)
+        for x, y in self._revealed:
+            sx = x - int(offset.x)
+            sy = y - int(offset.y)
+            self._overlay.blit(self._hole_mask,
+                               (sx - self._radius, sy - self._radius),
+                               special_flags=pygame.BLEND_RGBA_SUB)
         surface.blit(self._overlay, (0, 0))

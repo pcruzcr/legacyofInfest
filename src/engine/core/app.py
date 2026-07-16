@@ -2,140 +2,131 @@
 Module: app
 System: engine.core
 Academic Unit: N/A
-Description: Main application class. Owns the game loop, display,
-clock, event bus, input, audio, and scene management.
+Description: Main application entry point. Owns the game loop:
+process input -> dispatch events -> update -> draw -> present.
+Standard Pygame loop with EventBus integration.
 """
 from __future__ import annotations
-import os
-import sys
+
+import logging
 
 import pygame
 
 from src.engine.core import settings
 from src.engine.core.clock import DeltaClock
-from src.engine.core.event_bus import EventBus, set_default_bus
+from src.engine.core.event_bus import set_default_bus, EventBus
 from src.engine.core.game_context import GameContext
+from src.engine.scene.scene_manager import SceneManager
 from src.engine.input.input_manager import InputManager
 from src.engine.audio.audio_manager import AudioManager
-from src.engine.scene.scene_manager import SceneManager
-from src.framework.entities.entity_factory import ensure_registered
-from src.engine.scenes.transition_manager import TransitionManager
-from src.engine.scenes.debug_overlay import DebugOverlay
-from src.engine.scenes.scene_registry import register_demo_scenes
-
-# Force nearest-neighbor scaling for pixel-art crispness (no bilinear from SDL2)
-os.environ["SDL_HINT_RENDER_SCALE_QUALITY"] = "0"
+from src.engine.core.save_manager import SaveManager
 
 
 class App:
-    """Owns the game loop, display, and all engine subsystems."""
+    """
+    Top-level game application. Creates the window, initializes subsystems,
+    and runs the main loop.
+    """
 
     def __init__(self) -> None:
         pygame.init()
-        pygame.mixer.init()
+        pygame.display.set_caption("Legacy of InFest")
+        pygame.mixer.init(frequency=44100, size=-16, channels=8, buffer=512)
 
-        self.window_surface: pygame.Surface = pygame.display.set_mode(
-            (settings.INTERNAL_WIDTH * settings.DISPLAY_SCALE,
-             settings.INTERNAL_HEIGHT * settings.DISPLAY_SCALE),
+        self.window_surface = pygame.display.set_mode(
+            (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
             pygame.SCALED,
         )
-        pygame.display.set_caption("Legacy of InFest")
-
-        self.internal_surface: pygame.Surface = pygame.Surface(
-            (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT)
+        self.internal_surface = pygame.Surface(
+            (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
         )
+        self.clock = DeltaClock()
+        self.running: bool = False
 
-        self.clock: DeltaClock = DeltaClock()
         self.event_bus = EventBus()
         set_default_bus(self.event_bus)
-        self.input_manager: InputManager = InputManager()
-        self.audio_manager: AudioManager = AudioManager()
-        self.transition_manager: TransitionManager = TransitionManager()
+
+        self.input_manager = InputManager()
+        self.audio_manager = AudioManager()
+        self.save_manager = SaveManager()
+
         self.context = GameContext(
             input_manager=self.input_manager,
             audio_manager=self.audio_manager,
             scene_manager=None,
             event_bus=self.event_bus,
             clock=self.clock,
+            save_manager=self.save_manager,
         )
-        self.scene_manager: SceneManager = SceneManager(self.context)
+
+        self.scene_manager = SceneManager(self.context)
         self.context.scene_manager = self.scene_manager
 
-        # Register all known entity types before any scene loads
+        from src.framework.entities.entity_factory import ensure_registered
         ensure_registered()
-
-        # Register all demo/lab scenes for the registry
+        from src.engine.scenes.scene_registry import register_demo_scenes
         register_demo_scenes()
 
-        # Debug overlay
-        self._debug_overlay: DebugOverlay = DebugOverlay()
-
-        # Push SplashScene as the first scene
         from src.engine.scenes.splash_scene import SplashScene
         self.scene_manager.push(SplashScene(self.context))
 
     def run(self) -> None:
-        """Main game loop. The order of operations is sacred — do not reorder."""
-        self.context.running = True
-        while self.context.running:
+        """Main game loop. Checks both App.running and GameContext.running
+        so that scenes can signal quit via context.quit()."""
+        self.running = True
+        while self.running and self.context.running:
+            dt = self.clock.tick()
+            self._process_events()
+            self.event_bus.dispatch()
             try:
-                # 1. Process OS events
-                events = pygame.event.get()
-                for e in events:
-                    if e.type == pygame.QUIT:
-                        self.context.quit()
-
-                # 2. Pump input
-                self.input_manager.pump(events)
-
-                # 3. Dispatch queued events (before update)
-                self.context.event_bus.dispatch()
-
-                # 4. Compute delta time
-                dt = self.clock.tick()
-
-                # 4a. Debug overlay input (before scene update, after dt)
-                self._debug_overlay.handle_input(pygame.key.get_pressed(), dt)
-
-                # 5. Update current scene (isolated per stage)
-                try:
-                    self.scene_manager.current.update(dt)
-                except Exception:
-                    import traceback
-                    traceback.print_exc()
-
-                # 5a. Update transitions (both App-level and scene-level)
-                self.transition_manager.update(dt)
+                self.scene_manager.update(dt)
                 self.scene_manager.transition.update(dt)
-
-                # 6. Fill internal surface (background never black)
-                self.internal_surface.fill(settings.BG_COLOR)
-
-                # 7. Draw current scene (isolated per stage)
-                try:
-                    self.scene_manager.current.draw(self.internal_surface)
-                except Exception:
-                    import traceback
-                    traceback.print_exc()
-
-                # 7a. Draw transitions on top
-                self.transition_manager.draw(self.internal_surface)
-
-                # 7b. Debug overlay (F3-F6)
-                self._debug_overlay.draw(self.internal_surface, self.clock.fps)
-
-                # 8. Scale and present (nearest-neighbor for pixel-art)
-                scaled = pygame.transform.scale_by(
-                    self.internal_surface, settings.DISPLAY_SCALE,
-                )
-                pygame.display.get_surface().blit(scaled, (0, 0))
-                pygame.display.flip()
             except Exception:
-                import traceback
-                traceback.print_exc()
-                self.context.quit()
+                logging.error("Unhandled exception in scene update", exc_info=True)
+                self._fallback_to_title()
+            try:
+                self._draw()
+            except Exception:
+                logging.error("Unhandled exception in scene draw", exc_info=True)
+                self._fallback_to_title()
+            pygame.display.flip()
+        self._shutdown()
 
+    def _process_events(self) -> None:
+        """Collect pygame events, filter QUIT at app level, then
+        pump the remainder through InputManager so scenes can
+        handle CANCEL, CONFIRM, etc."""
+        events = pygame.event.get()
+        for e in events:
+            if e.type == pygame.QUIT:
+                self.running = False
+                return
+        self.input_manager.pump(events)
+
+    def _draw(self) -> None:
+        """Render the current scene onto the internal surface, then scale
+        and present to the display.  The two-surface pipeline (internal →
+        display) avoids driver inconsistencies with pygame.SCALED."""
+        self.internal_surface.fill(settings.BG_COLOR)
+        if self.scene_manager.stack_size > 0:
+            self.scene_manager.current.draw(self.internal_surface)
+        self.scene_manager.transition.draw(self.internal_surface)
+        scaled = pygame.transform.scale_by(
+            self.internal_surface, settings.DISPLAY_SCALE,
+        )
+        pygame.display.get_surface().blit(scaled, (0, 0))
+
+    def _fallback_to_title(self) -> None:
+        """Fallback to title screen on unhandled exception."""
+        from src.engine.scenes.title_scene import TitleScene
+        try:
+            self.context.scene_manager.replace(TitleScene(self.context))
+        except Exception:
+            logging.error("Fallback to title also failed", exc_info=True)
+            self.running = False
+
+    def _shutdown(self) -> None:
+        """Graceful shutdown."""
+        self.context.quit()
         self.scene_manager.cleanup()
-        self.event_bus.clear()
         pygame.quit()
-        sys.exit(0)

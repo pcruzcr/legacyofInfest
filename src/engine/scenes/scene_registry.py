@@ -6,6 +6,7 @@ Replaces the _try_scene() elif chain with a register → build pattern.
 """
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Callable, cast
 
 if TYPE_CHECKING:
@@ -30,7 +31,8 @@ class SceneRegistry:
             return None
         try:
             return factory(ctx)
-        except Exception:
+        except (ImportError, RuntimeError, TypeError) as e:
+            logging.warning("scene_registry: failed to build '%s': %s", key, e)
             return None
 
     @property

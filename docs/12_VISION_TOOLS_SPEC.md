@@ -1,3 +1,13 @@
+---
+document_id: "LOI-VISION-012"
+title: "Legacy of InFest — Vision Tools Specification"
+aliases: ["Vision Tools Spec"]
+tags: ["vision", "segmentation", "processing"]
+description: "Unit VIII segmentation subsystem"
+source: "docs/12_VISION_TOOLS_SPEC.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Vision Tools Specification
 
 **Document ID:** LOI-VISION-012  
@@ -866,3 +876,10 @@ VisionTools proporciona utilidades de segmentación de imágenes y reconocimient
 - `classify_region(features, model)` — Clasificación con modelo scikit-learn
 
 Para ejemplos detallados y parámetros, consultar el documento original en inglés.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[11_FILTER_TOOLS_SPEC.md|Filter Tools Spec]]
+- [[13_PATTERN_RECOGNITION_SPEC.md|Pattern Recognition Spec]]

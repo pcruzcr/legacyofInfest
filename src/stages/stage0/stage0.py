@@ -5,31 +5,34 @@ from typing import TYPE_CHECKING
 
 import pygame
 
+from src.engine.core.events import Events
+from src.engine.input.action_map import Action
 from src.framework.scenes.stage_scene import StageScene
-from src.framework.stage.cutscene_system import (
-    CutsceneScript, CameraMoveAction, WaitAction, FadeAction,
-)
-from src.framework.ui.dialogue_system import DialogueTree, DialogueNode
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
 
 
 class Stage0(StageScene):
-    """Stage 0 — executable documentation / tutorial stage.
-    Demonstrates all framework systems across 7 zones (A–G)."""
+    """Stage 0 — Prologue / Learning Hub.
+    6 progressive zones teaching every framework feature through play:
+      A: Movement     B: Basic Combat   C: Ranged Combat
+      D: Verticality  E: Hazards        F: Culmination
+    """
 
     STAGE_ID: str = "stage0"
-    STAGE_NAME: str = "STAGE 0  PROLOGUE"
+    STAGE_NAME: str = "STAGE 0 — PROLOGUE"
     ZONE: int = 0
     TIME_LIMIT: int = 0
     BGM_TRACK: str = "bgm_stage0"
+    TILE: int = 16
 
     def __init__(self, context: GameContext) -> None:
         super().__init__(context, Path("assets/maps/stage0/stage0.tmx"))
-        self._cutscene: CutsceneScript | None = None
-        self._collectibles: list[pygame.Rect] = []
+        self._cutscene = None
+        self._collectibles: list[dict] = []
         self._collected: set[int] = set()
+        self._zone_entered: set[int] = set()
 
     def on_stage_start(self) -> None:
         super().on_stage_start()
@@ -38,6 +41,9 @@ class Stage0(StageScene):
         self._register_dialogue_trees()
 
     def _start_intro_cutscene(self) -> None:
+        from src.framework.stage.cutscene_system import (
+            CutsceneScript, CameraMoveAction, WaitAction, FadeAction,
+        )
         script = CutsceneScript()
         script.add_action(FadeAction(duration=0.5, fade_in=False))
         script.add_action(WaitAction(0.3))
@@ -47,79 +53,82 @@ class Stage0(StageScene):
         self._cutscene = script
 
     def _place_collectibles(self) -> None:
-        positions = [
-            (320, 160, "heart_vessel"),
-            (640, 128, "swift_feather"),
-            (960, 144, "hollow_eye"),
-            (1280, 112, "ancients_rib"),
-            (1600, 96, "thorn_ring"),
+        items = [
+            (48, 27, "swift_feather"),
+            (62, 29, "heart_vessel"),
+            (82, 28, "ancients_rib"),
+            (94, 26, "sunken_crown"),
         ]
-        for x, y, item_id in positions:
-            r = pygame.Rect(x - 8, y - 8, 16, 16)
-            r._item_id = item_id
-            self._collectibles.append(r)
+        for col, row, item_id in items:
+            x = col * self.TILE
+            y = row * self.TILE
+            self._collectibles.append({
+                "rect": pygame.Rect(x - 8, y - 8, self.TILE, self.TILE),
+                "item_id": item_id,
+            })
 
     def _register_dialogue_trees(self) -> None:
-        intro_tree = DialogueTree(
-            "intro_narrator",
-            "start",
+        from src.framework.ui.dialogue_system import DialogueTree, DialogueNode
+
+        intro = DialogueTree(
+            "intro_narrator", "start",
             {
                 "start": DialogueNode(
                     "start", "Narrator",
-                    "The world lies in ruin. Ancient echoes stir beneath the hollow earth. "
-                    "You are the last Legacy — reborn to reclaim what was lost.",
+                    "The world lies in ruin. You are the last Legacy. "
+                    "Each zone teaches you the skills you need. "
+                    "Press F2-F10 anytime for educational panels.",
                     choices=[("Continue...", "zone_a")],
                 ),
                 "zone_a": DialogueNode(
                     "zone_a", "Narrator",
-                    "Zone A — The Awakening. Learn to move, jump, and strike. "
-                    "The path ahead is treacherous, but the echoes will guide you.",
+                    "Zone A — Movement. A/D to walk, W to jump, "
+                    "S to crouch. Master your body.",
                     choices=[("I am ready.", "__end__")],
                 ),
             },
         )
-        lore_tree = DialogueTree(
-            "lore_echo",
-            "echo_1",
+
+        bestiary = DialogueTree(
+            "bestiary_intro", "start",
             {
-                "echo_1": DialogueNode(
-                    "echo_1", "Echo",
-                    "I remember... a city of spires that touched the sky. "
-                    "Now only dust and memory remain.",
-                    choices=[("Tell me more.", "echo_2"), ("I must go.", "__end__")],
-                ),
-                "echo_2": DialogueNode(
-                    "echo_2", "Echo",
-                    "The Infestation came from below — a wound in the world's heart. "
-                    "Seal it, and perhaps there is still hope.",
-                    choices=[("I will.", "__end__")],
+                "start": DialogueNode(
+                    "start", "Echo",
+                    "You defeated your first foe! The Bestiary records "
+                    "every enemy. Press TAB to view it.",
+                    choices=[("I will study them.", "__end__")],
                 ),
             },
         )
-        self._dialogue_trees: dict[str, DialogueTree] = {
-            "intro": intro_tree,
-            "lore": lore_tree,
-        }
+
+        self._dialogue_trees = {"intro": intro, "bestiary": bestiary}
 
     def update(self, dt: float) -> None:
         if self._cutscene and self._cutscene.active:
             self._cutscene.update(dt)
+            im = self.input
+            if im and im.is_action_just_pressed(Action.CANCEL):
+                self._cutscene._active = False
+                self._cutscene = None
+            if im and im.is_action_just_pressed(Action.PAUSE):
+                self._cutscene._active = False
+                self._cutscene = None
+                self._paused = True
             return
         super().update(dt)
         self._check_collectibles()
         self._check_dialogue_triggers()
+        self._check_zone_progression()
 
     def _check_collectibles(self) -> None:
         if self._player is None or self._stage_data is None:
             return
-        for i, rect in enumerate(self._collectibles):
+        for i, entry in enumerate(self._collectibles):
             if i in self._collected:
                 continue
-            if self._player.rect.colliderect(rect):
-                item_id = getattr(rect, "_item_id", "heart_vessel")
+            if self._player.rect.colliderect(entry["rect"]):
                 from src.engine.core.inventory import get_inventory
-                inv = get_inventory()
-                if inv.collect(item_id):
+                if get_inventory().collect(entry["item_id"]):
                     self._collected.add(i)
 
     def _check_dialogue_triggers(self) -> None:
@@ -133,6 +142,28 @@ class Stage0(StageScene):
                 if tree_id and tree_id in self._dialogue_trees:
                     self._dialogue.start_dialogue(self._dialogue_trees[tree_id])
 
+    def _check_zone_progression(self) -> None:
+        if self._player is None:
+            return
+        px = self._player.position.x
+        # Zone B — first enemy encounter
+        if px > 16 * self.TILE and 1 not in self._zone_entered:
+            self._zone_entered.add(1)
+            self._tutorial.show("combat", 5.0)
+        # Zone D — verticality
+        if px > 52 * self.TILE and 2 not in self._zone_entered:
+            self._zone_entered.add(2)
+            self._tutorial.show("advanced", 4.0)
+        # Zone F — storm finale
+        if px > 85 * self.TILE and 3 not in self._zone_entered:
+            self._zone_entered.add(3)
+            self._weather.set_climate("storm")
+            self._context.event_bus.emit(
+                Events.SHOW_MESSAGE,
+                text="¡Tormenta activada! Usa todo lo aprendido.",
+                duration=6.0,
+            )
+
     def draw(self, surface: pygame.Surface) -> None:
         super().draw(surface)
         if self._cutscene:
@@ -140,10 +171,11 @@ class Stage0(StageScene):
 
     def on_debug_toggle(self, enabled: bool) -> None:
         if enabled and self._collectibles:
-            for i, rect in enumerate(self._collectibles):
+            cam_off = self._camera.offset
+            for i, entry in enumerate(self._collectibles):
+                r = entry["rect"]
                 color = (100, 200, 255) if i not in self._collected else (100, 255, 100)
                 pygame.draw.rect(
                     pygame.display.get_surface(), color,
-                    (rect.x - self._camera.offset.x, rect.y - self._camera.offset.y,
-                     rect.w, rect.h),
+                    (r.x - cam_off.x, r.y - cam_off.y, r.w, r.h),
                 )

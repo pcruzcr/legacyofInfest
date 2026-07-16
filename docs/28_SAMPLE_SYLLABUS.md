@@ -1,3 +1,13 @@
+---
+document_id: "LOI-SYLLABUS-028B"
+title: "Sample Syllabus — Legacy of InFest: Game Development Practicum"
+aliases: ["Sample Syllabus"]
+tags: ["syllabus", "sample", "academic"]
+description: "Sample course syllabus"
+source: "docs/28_SAMPLE_SYLLABUS.md"
+date_processed: "2026-07-14"
+---
+
 # Sample Syllabus — Legacy of InFest: Game Development Practicum
 
 **Course:** CS 4XXX / GDD 4XXX — Game Development & Digital Image Processing  

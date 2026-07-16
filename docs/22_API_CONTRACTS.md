@@ -1,3 +1,13 @@
+---
+document_id: "LOI-API-022"
+title: "Legacy of InFest — API Contracts"
+aliases: ["API Contracts"]
+tags: ["api", "contracts", "syntax"]
+description: "Exact function/class signatures"
+source: "docs/22_API_CONTRACTS.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — API Contracts
 
 **Document ID:** LOI-API-022  
@@ -1769,3 +1779,214 @@ class EngineError(RuntimeError):
 | Private | leading underscore | `_collision_rect` |
 | Event name string | `UPPER_SNAKE_CASE` | `"PLAYER_DAMAGED"` |
 | Enum member | `UPPER_SNAKE_CASE` | `PlayerState.IDLE` |
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[23_DATA_SCHEMAS.md|Data Schemas]]
+- [[03_ARCHITECTURE.md|Architecture]]
+
+---
+--- Traducción al Español ---
+
+*This document is also available in English above.*
+
+# Legacy of InFest — Contratos de API
+
+**ID del Documento:** LOI-API-022
+**Versión:** 1.1.0
+**Estado:** Oficial
+**Compatibilidad:** Referencia de firmas autoritativa para 03_ARCHITECTURE.md hasta 17_BOSS_SPEC.md
+**Audiencia:** Asistentes de codificación IA
+
+---
+
+## 1. Propósito y Regla de Precedencia
+
+Este documento es la única fuente de verdad para firmas exactas de funciones y clases en toda la base de código. Las descripciones narrativas en Documentos 03-17 son autoritativas para comportamiento; este documento es autoritativo para sintaxis. Si hay conflicto, este documento gana para sintaxis y el documento narrativo gana para comportamiento.
+
+---
+
+## 2. Núcleo del Motor (src/engine/core/)
+
+### 2.1 settings.py — Constantes a nivel de módulo: INTERNAL_WIDTH=800, INTERNAL_HEIGHT=600, TARGET_FPS=60, TILE_SIZE=16, PLAYER_MAX_HEALTH=5.0, GRAVITY=800.0, PLAYER_WALK_SPEED=90.0, PLAYER_JUMP_FORCE=-380.0, etc.
+
+### 2.2 clock.py — Clase DeltaClock con tick(), fps, time_scale.
+
+### 2.3 event_bus.py — Clase EventBus con subscribe, unsubscribe, emit (cola), dispatch, clear. Funciones de conveniencia a nivel de módulo. Eventos estándar: PLAYER_DAMAGED, PLAYER_HEALED, PLAYER_DIED, CHECKPOINT_REACHED, ENEMY_DIED, STAGE_COMPLETE, BOSS_PHASE_CHANGED, SHOW_MESSAGE, HIDE_MESSAGE.
+
+### 2.4 app.py — Clase App que inicializa pygame, crea superficies, construye DeltaClock, EventBus, AssetLoader, InputManager, AudioManager, SceneManager.
+
+### 2.5 save_data.py — Dataclass SaveData con slot_id, timestamp, stage_id, health, etc. MAX_SLOTS=5.
+
+### 2.6 save_manager.py — Clase SaveManager con save, load, delete, list_slots, auto_save.
+
+---
+
+## 3. Entrada del Motor (src/engine/input/)
+
+### 3.1 action_map.py — Enum Action con MOVE_LEFT, MOVE_RIGHT, JUMP, CROUCH, SHORT_ATTACK, LONG_ATTACK, DASH, etc.
+
+### 3.2 input_manager.py — Clase InputManager con pump, is_action_pressed, is_action_held, is_action_released.
+
+---
+
+## 4. Audio del Motor (src/engine/audio/)
+
+### 4.1 sound_bank.py — Clase SoundBank con load_all, load, get, play.
+
+### 4.2 audio_manager.py — Clase AudioManager con play_music, stop_music, play_sfx, play_ambient, crossfade_ambient, play_dynamic_music, control de volumen, mute.
+
+---
+
+## 5. Utilidades del Motor (src/engine/utils/)
+
+### 5.1 math_utils.py — Funciones: lerp, clamp, ease_in_quad, ease_out_quad, ease_in_out_quad, ease_in_cubic, ease_out_cubic, ease_out_bounce, ease_out_elastic, ease_in_sine, ease_out_sine, vec2_normalize, vec2_length, vec2_dot, vec2_distance.
+
+### 5.2 asset_loader.py — Clase AssetLoader con load_image, load_sound, load_spritesheet (todos classmethods con caché).
+
+### 5.3 spritesheet.py — Clase SpriteSheet con get_frame, get_frames, frame_count.
+
+---
+
+## 6. Escena del Motor (src/engine/scene/)
+
+### 6.1 base_scene.py — Clase abstracta BaseScene con on_enter, on_exit, update, draw, on_pause, on_resume, destroy. Parámetros en self.params.
+
+### 6.2 scene_manager.py — Clase SceneManager con push, pop, replace, set_stage_queue. Orden de llamada garantizado: push llama on_pause + on_enter, pop llama on_exit + on_resume, replace llama on_exit + on_enter.
+
+### 6.3 transitions.py — Clases FadeTransition, WipeTransition, SlideTransition, CircleTransition con start, update, draw, is_complete.
+
+### 6.4 transition_manager.py — Clase TransitionManager con start_fade_out, start_fade_in, start_wipe, start_slide, start_circle.
+
+---
+
+## 7. UI del Motor (src/engine/ui/)
+
+### 7.1 hud.py — Clase HUD que se suscribe a eventos del jugador. Métodos: update, draw, start_timer, bind_player, set_combo_count, set_boss_hud, clear_boss_hud, trigger_save_notification.
+
+### 7.2 message_box.py — Clase MessageBox para mostrar mensajes tipo máquina de escribir.
+
+### 7.3 screen_banner.py — Clase ScreenBanner con animación de deslizamiento para títulos de nivel.
+
+---
+
+## 8. Entidades del Marco (src/framework/entities/)
+
+### 8.1 base_entity.py — Clase abstracta BaseEntity con position, rect, is_active, is_visible, layer.
+
+### 9.1 player.py — Clase Player con 19 estados (PlayerState): IDLE, WALKING, JUMPING, FALLING, CROUCHING, SHORT_ATTACK, LONG_ATTACK, HURT, DYING, DASHING, PARRY, CHARGE_ATTACK, DASH_ATTACK, WALL_SLIDE, LEDGE_GRAB, GRAB, THROW, SLIDE, SWIMMING. Métodos: apply_damage, set_spawn, consume_hitbox.
+
+---
+
+## 10. Enemigos (src/framework/entities/)
+
+### 10.1 enemy_base.py — Clase EnemyBase con estados PATROL, ALERT, HURT, DYING. Métodos abstractos: _patrol_behavior, _alert_behavior, _get_animation_key, _build_hitbox, _build_hurtbox.
+
+### 10.2 enemy_walker.py — Clase EnemyWalker con patrol_length, facing, patrol_speed, alert_speed.
+
+### 10.3 enemy_flying.py — Clase EnemyFlying con modos sine, bezier, patrol.
+
+### 10.4 enemy_shooter.py — Clase EnemyShooter con fire_rate, projectile_speed. Clase Projectile con lifetime.
+
+---
+
+## 11. Nivel del Marco (src/framework/stage/)
+
+### 11.1 camera.py — Clase Camera con follow, update, world_to_screen, screen_to_world, layer_offset, apply_shake.
+
+### 11.2 checkpoint.py — Clase Checkpoint que se activa una vez y emite CHECKPOINT_REACHED.
+
+### 11.3 stage_loader.py — Dataclass StageData con map_layer, collision_rects, entity_list, checkpoints, spawn_point, etc. Clase StageLoader con register_entity y load. FrameworkUsageError para errores de uso.
+
+### 11.4 collision_system.py — Sistema de colisiones para enemigos, ataques, hitstop y vibración.
+
+### 11.5 hazard_system.py — Procesa zonas de peligro, fosas mortales y disparadores de mensajes.
+
+### 11.6 progression_system.py — Gestiona puntos de control, next_trigger, derrota de jefe y flujo de finalización.
+
+### 11.7 drawing_system.py — Renderizado de fondo, mapa, entidades, UI y depuración.
+
+---
+
+## 12. Procesamiento del Marco (src/framework/processing/)
+
+### 12.1 color_tools.py — Clase ColorTools: rgb_to_hsv, hsv_to_rgb, rgb_to_hsl, hsl_to_rgb, rgb_to_cmyk, cmyk_to_rgb, alpha_blend, apply_tint, surface_to_array, array_to_surface.
+
+### 12.2 curve_tools.py — Clase CurveTools: bezier, b_spline, nurbs, catmull_rom, build_bezier_path, sample_path.
+
+---
+
+## 13. FilterTools (src/framework/processing/filter_tools.py)
+
+### 13.1 filter_tools.py — Clase FilterTools: compute_histogram, histogram_equalize, adjust_brightness, adjust_contrast, stretch_contrast, apply_kernel, get_standard_kernel (9 kernels), gaussian_blur, sobel_edge, canny_edge.
+
+---
+
+## 14. VisionTools (src/framework/processing/vision_tools.py)
+
+### 14.1 vision_tools.py — Dataclasses ComponentResult y RegionInfo. Clase VisionTools: threshold_binary, threshold_otsu, morphological_erode/dilate/open/close, connected_components, filter_components_by_area, analyze_regions, largest_region, watershed_segment, extract_features/hog/lbp/color_histogram, find_contours, bounding_boxes_from_mask.
+
+---
+
+## 15. PatternRecognitionTools (src/framework/processing/pattern_recognition_tools.py)
+
+### 15.1 pattern_recognition_tools.py — Dataclasses TrainedModel y EvaluationResult. Clase PatternRecognitionTools: train, evaluate, save_model, load_model, register_model, get_model, list_models, classify, classify_proba, predict.
+
+---
+
+## 16. Escenas de Demostración Académica
+
+DemoMenuScene, FilterDemoScene (9 modos), VisionDemoScene (10 modos), PatternDemoScene (5 modos). Escenas de laboratorio teórico: VectorLabScene, TransformLabScene, CurveEditorScene, InterpolationLabScene, ColorTheoryScene, NoiseLabScene, CollisionLabScene.
+
+---
+
+## 17. Escenas de Infraestructura
+
+### 17.1 scene_registry.py — SceneRegistry (contenedor DI) y GameContext.
+
+### 17.2 debug_overlay.py — DebugOverlay con F3-F6.
+
+### 17.3 param_panel.py — ParamPanel con add_int, add_float, handle_input.
+
+### 17.4 demo_layout.py — Constantes de diseño y funciones de dibujo.
+
+### 17.5 demo_utils.py — SourceSurfaceManager, FrameThrottle, ErrorDisplay, save_png.
+
+### 17.6 options_scene.py — OptionsScene para volumen y escala.
+
+---
+
+## 18. Scripts
+
+### 18.1 scripts/validate_assets.py — Valida fuentes, modelos, mapas y paletas.
+
+### 18.2 scripts/generate_exam.py — Genera exámenes de práctica con flags --unit y --num-questions.
+
+---
+
+## 17. Marco de Jefes
+
+### 17.1 boss_base.py — Dataclass BossPhase. Clase BossBase que extiende EnemyBase con set_phases, set_boss_name, _check_phase_transition. Ejemplo: BossVenado con 2 fases (STOMP/CHARGE/VINE_TOSS y VINE_SWEEP/MUSHROOM_SPORE/CHARGE).
+
+---
+
+## 18. Tipos de Excepción
+
+FrameworkUsageError para mal uso de API del marco. EngineError para fallos irrecoverables del motor. FilterTools/VisionTools/PatternRecognitionTools lanzan TypeError/ValueError/KeyError/RuntimeError según el método.
+
+---
+
+## 19. Referencia Rápida de Convenciones de Nombres
+
+| Elemento | Convención | Ejemplo |
+|---|---|---|
+| Módulo | snake_case | enemy_walker.py |
+| Clase | PascalCase | EnemyWalker |
+| Método/función | snake_case | apply_damage() |
+| Propiedad | snake_case | current_health |
+| Constante | UPPER_SNAKE_CASE | PLAYER_MAX_HEALTH |
+| Privado | guión bajo inicial | _collision_rect |
+| Evento | UPPER_SNAKE_CASE | PLAYER_DAMAGED |
+| Enum | UPPER_SNAKE_CASE | PlayerState.IDLE |

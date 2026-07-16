@@ -25,6 +25,7 @@ class BestiaryScene(BaseScene):
     def on_enter(self) -> None:
         self._scroll_offset = 0
         self._selected = 0
+        self.context.scene_manager.transition.start_fade_in(0.5)
 
     def on_exit(self) -> None:
         pass
@@ -44,8 +45,7 @@ class BestiaryScene(BaseScene):
         if im.is_action_just_pressed(Action.MOVE_UP):
             self._selected = max(self._selected - 1, 0)
         if im.is_action_just_pressed(Action.CANCEL):
-            from src.engine.scenes.title_scene import TitleScene
-            self.context.scene_manager.replace(TitleScene(self.context))
+            self.context.scene_manager.pop()
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill((10, 10, 20))

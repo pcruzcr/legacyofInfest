@@ -39,8 +39,8 @@ class Particle:
         t = max(0.0, self.life / self.max_life) if self.max_life > 0 else 0.0
         self.alpha = int(255 * t)
         self.vy += self.gravity * dt
-        self.vx *= self.friction
-        self.vy *= self.friction
+        self.vx *= self.friction ** dt
+        self.vy *= self.friction ** dt
         self.x += self.vx * dt
         self.y += self.vy * dt
 
@@ -51,8 +51,7 @@ class Particle:
             return
         c = (*self.color, min(255, self.alpha))
         sz = max(1, int(self.size * (0.5 + 0.5 * t))) if (t := self.life / max(self.max_life, 0.001)) > 0 else 1
-        r = pygame.Rect(sx - sz // 2, sy - sz // 2, sz, sz)
-        pygame.draw.rect(surface, c, r)
+        pygame.draw.rect(surface, c, (sx - sz // 2, sy - sz // 2, sz, sz))
 
 
 class BurstConfig:

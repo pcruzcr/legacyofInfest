@@ -23,6 +23,7 @@ class EventBus:
     def __init__(self) -> None:
         self._subscribers: dict[str, list[Callable[..., None]]] = {}
         self._queue: list[tuple[str, dict[str, Any]]] = []
+        self._dispatching: bool = False
 
     def subscribe(self, event_name: str, callback: Callable[..., None]) -> None:
         """Subscribe a callback to an event name. Logs warning on duplicate."""
@@ -41,8 +42,17 @@ class EventBus:
         if event_name in self._subscribers:
             if callback in self._subscribers[event_name]:
                 self._subscribers[event_name].remove(callback)
+            else:
+                logging.warning(
+                    f"EventBus: callback not found for '{event_name}' — "
+                    f"callback {callback.__name__} not registered"
+                )
             if not self._subscribers[event_name]:
                 del self._subscribers[event_name]
+        else:
+            logging.warning(
+                f"EventBus: no subscribers for '{event_name}'"
+            )
 
     def unsubscribe_all(self, events: list[str], callback: Callable[..., None]) -> None:
         """Unsubscribe a callback from multiple events at once."""
@@ -58,13 +68,28 @@ class EventBus:
         self._queue.append((event_name, data))
 
     def dispatch(self) -> None:
-        """Called once per frame by App, before scene update. Drains the queue."""
-        queue = self._queue[:]
-        self._queue.clear()
-        for event_name, data in queue:
-            if event_name in self._subscribers:
-                for callback in list(self._subscribers[event_name]):
-                    callback(**data)
+        """
+        Called once per frame by App, before scene update. Drains the queue.
+        BUG-048: Recursion guard prevents re-entrant dispatch.
+        """
+        if self._dispatching:
+            return
+        self._dispatching = True
+        try:
+            queue = self._queue[:]
+            self._queue.clear()
+            for event_name, data in queue:
+                if event_name in self._subscribers:
+                    for callback in list(self._subscribers[event_name]):
+                        try:
+                            callback(**data)
+                        except Exception:
+                            logging.error(
+                                f"EventBus: callback {callback.__name__} failed for '{event_name}'",
+                                exc_info=True,
+                            )
+        finally:
+            self._dispatching = False
 
     def clear(self) -> None:
         """Clear all subscribers and pending events. Useful for testing."""
@@ -83,7 +108,7 @@ class EventBus:
                 for evt, cbs in self._subscribers.items()}
 
 
-# ── Module-level default instance for backward compatibility ────────────
+# ── Module-level default instance for infrastructure ──────────────────
 
 _default_bus: EventBus | None = None
 
@@ -100,44 +125,3 @@ def _get_bus() -> EventBus:
     if _default_bus is None:
         _default_bus = EventBus()
     return _default_bus
-
-
-# ── Backward-compatible convenience functions ──────────────────────────
-# These replace old EventBus.subscribe(...) calls with subscribe(...).
-# Both import paths are supported for migration:
-#   from src.engine.core.event_bus import EventBus  →  EventBus().subscribe()
-#   from src.engine.core.event_bus import subscribe  →  subscribe()
-
-def subscribe(event_name: str, callback: Callable[..., None]) -> None:
-    """Subscribe via the default EventBus instance."""
-    _get_bus().subscribe(event_name, callback)
-
-
-def unsubscribe(event_name: str, callback: Callable[..., None]) -> None:
-    """Unsubscribe via the default EventBus instance."""
-    _get_bus().unsubscribe(event_name, callback)
-
-
-def unsubscribe_all(events: list[str], callback: Callable[..., None]) -> None:
-    """Unsubscribe from multiple events via the default EventBus instance."""
-    _get_bus().unsubscribe_all(events, callback)
-
-
-def subscriber_count() -> int:
-    """Return total subscriber count on the default EventBus instance."""
-    return _get_bus().subscriber_count()
-
-
-def emit(event_name: str, **data: Any) -> None:
-    """Emit an event via the default EventBus instance."""
-    _get_bus().emit(event_name, **data)
-
-
-def dispatch() -> None:
-    """Dispatch queued events on the default EventBus instance."""
-    _get_bus().dispatch()
-
-
-def clear() -> None:
-    """Clear subscribers and queue on the default EventBus instance."""
-    _get_bus().clear()

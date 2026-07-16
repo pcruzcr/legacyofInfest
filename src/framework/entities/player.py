@@ -19,7 +19,8 @@ import pygame
 
 from typing import TYPE_CHECKING
 from src.engine.core import settings
-from src.engine.core.event_bus import emit
+from src.engine.core.event_bus import _get_bus as _bus
+_emit = lambda *a, **kw: _bus().emit(*a, **kw)
 from src.engine.core.events import Events
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.entities.base_entity import BaseEntity
@@ -53,6 +54,11 @@ _PLAYER_SPRITE_MAP: dict[str, tuple[str, int]] = {
     "THROW": ("player_short_attack.png", 4),
     "SLIDE": ("player_crouch.png", 4),
     "SWIMMING": ("player_jump.png", 4),
+    "ULTIMATE": ("player_long_attack.png", 10),
+    "AERIAL_ATTACK": ("player_short_attack.png", 6),
+    "AERIAL_SLAM": ("player_short_attack.png", 6),
+    "AIR_CHASE": ("player_jump.png", 3),
+    "CHARGE_RELEASE": ("player_short_attack.png", 4),
 }
 
 # Per-state animation playback rate (frames per second)
@@ -75,6 +81,11 @@ _PLAYER_ANIM_FPS: dict[str, float] = {
     "THROW": 16.0,
     "SLIDE": 14.0,
     "SWIMMING": 10.0,
+    "ULTIMATE": 16.0,
+    "AERIAL_ATTACK": 18.0,
+    "AERIAL_SLAM": 16.0,
+    "AIR_CHASE": 12.0,
+    "CHARGE_RELEASE": 14.0,
 }
 
 
@@ -99,6 +110,11 @@ class PlayerState(str, Enum):
     THROW = "THROW"
     SLIDE = "SLIDE"
     SWIMMING = "SWIMMING"
+    ULTIMATE = "ULTIMATE"
+    AERIAL_ATTACK = "AERIAL_ATTACK"
+    AERIAL_SLAM = "AERIAL_SLAM"
+    AIR_CHASE = "AIR_CHASE"
+    CHARGE_RELEASE = "CHARGE_RELEASE"
 
 
 class Player(BaseEntity):
@@ -122,7 +138,8 @@ class Player(BaseEntity):
         # --- Physics state ---
         self.velocity: pygame.Vector2 = pygame.Vector2(0.0, 0.0)
         self.is_grounded: bool = False
-        self._coyote_counter: int = 0
+        # BUG-012 FIX: Initialize coyote counter above threshold so fresh player is not in coyote time
+        self._coyote_counter: int = settings.PLAYER_COYOTE_FRAMES + 1
         self._jump_cut_applied: bool = False
 
         # --- State pattern ---
@@ -144,6 +161,7 @@ class Player(BaseEntity):
         self.last_attack_type: str = ""
         self.combo_active: bool = False
         self._combo_air_hits: int = 0
+        self._crouching_at_attack_start: bool = False
 
         # --- Special meter ---
         self.special_meter: float = 0.0
@@ -161,6 +179,7 @@ class Player(BaseEntity):
 
         # --- Air jump state ---
         self._air_jumps_used: int = 0
+        self._swim_boosts: int = 0
         self.gravity_multiplier: float = 1.0
 
         # --- Damage state ---
@@ -345,7 +364,7 @@ class Player(BaseEntity):
         self.velocity.y = -200.0 * cfg.knockback_mult
         self._knockback_timer = 0.3
 
-        emit(
+        _emit(
             Events.PLAYER_DAMAGED,
             amount=amount,
             source=source_position,
@@ -353,25 +372,29 @@ class Player(BaseEntity):
 
         if self._health <= 0.0:
             from src.framework.entities.player_states import DyingState
-            self._change_state_instance(DyingState())
-            emit(Events.PLAYER_DIED)
-            emit(Events.SFX_PLAYER_DIE)
+            self._change_state_instance(DyingState(), force=True)
+            _emit(Events.PLAYER_DIED)
+            _emit(Events.SFX_PLAYER_DIE)
         else:
             from src.framework.entities.player_states import HurtState
-            self._change_state_instance(HurtState())
-            emit(Events.SFX_PLAYER_HURT)
+            self._change_state_instance(HurtState(), force=True)
+            _emit(Events.SFX_PLAYER_HURT)
 
-    def _change_state_instance(self, new_state: PlayerStateBase) -> None:
+    def _change_state_instance(self, new_state: PlayerStateBase, force: bool = False) -> bool:
         """
         Transition to a new state instance.
         Calls exit() on the current state, then enter() on the new state.
+        BUG-001 FIX: force=True skips the same-state early return so states
+        that need re-entry (e.g. HURT, DYING) get fresh exit/enter calls.
+        Returns True if state was changed, False if it was skipped (same state).
         """
-        if self._state_instance.state_enum == new_state.state_enum:
-            return
+        if self._state_instance.state_enum == new_state.state_enum and not force:
+            return False
         self._prev_state_instance = self._state_instance
         self._state_instance.exit(self)
         self._state_instance = new_state
         self._state_instance.enter(self)
+        return True
 
     # ──────────────────────────────────────────────
     # Update
@@ -414,6 +437,7 @@ class Player(BaseEntity):
         if self._state_instance.state_enum not in (
             PlayerState.SHORT_ATTACK,
             PlayerState.LONG_ATTACK,
+            PlayerState.DASH_ATTACK,
         ):
             self._advance_animation(dt)
 
@@ -472,7 +496,7 @@ class Player(BaseEntity):
 
             # Center the 32-wide sprite on the 20-wide collision rect
             offset_x = (self.rect.width - SPRITE_W) // 2
-            offset_y = self.rect.height - SPRITE_H
+            offset_y = 0 if self._state_instance.state_enum == PlayerState.CROUCHING else self.rect.height - SPRITE_H
 
             surface.blit(frame, (screen_x + offset_x, screen_y + offset_y))
             return
@@ -496,7 +520,7 @@ class Player(BaseEntity):
         """Tick all cooldown and duration timers."""
         if self._invincibility_timer > 0:
             self._invincibility_timer -= dt
-            period = 6.0 / 60.0
+            period = 0.1
             self._flash_timer += dt
             if self._flash_timer >= period:
                 self._flash_timer -= period
@@ -551,10 +575,12 @@ class Player(BaseEntity):
 
     def _apply_physics(self, dt: float) -> None:
         """Apply gravity. Movement integration happens per-axis in _resolve_collision."""
+        wall_side = self._wall_side
+        self._wall_side = 0
         if not self.is_grounded:
-            # Wall slide: reduced gravity when touching wall
             gm = self.gravity_multiplier
-            if self._wall_side != 0 and self.velocity.y > 0:
+            # Wall slide: reduced gravity when touching wall
+            if wall_side != 0 and self.velocity.y > 0:
                 self.velocity.y += settings.GRAVITY * gm * 0.3 * dt
                 self.velocity.y = min(
                     self.velocity.y,
@@ -599,13 +625,13 @@ class Player(BaseEntity):
         self._can_ledge_grab = False
         self.position.x += self.velocity.x * dt
         if collision_rects:
-            px = pygame.Rect(int(self.position.x), int(self.position.y), w, h)
             for tile in collision_rects:
+                px = pygame.Rect(int(self.position.x), int(self.position.y), w, h)
                 if px.colliderect(tile):
-                    # Skip grazing contacts (<=2px vertical overlap): these are
-                    # floor/ceiling tiles the player is embedded in by int
-                    # truncation, not walls.
-                    v_overlap = min(px.bottom, tile.bottom) - max(px.top, tile.top)
+                    # BUG-003 FIX: Save pre-mutation top for ledge grab check
+                    pre_mutate_top = px.top
+                    pre_px = pygame.Rect(int(self.position.x - self.velocity.x * dt), int(self.position.y), w, h)
+                    v_overlap = min(pre_px.bottom, tile.bottom) - max(pre_px.top, tile.top)
                     if v_overlap <= 2:
                         continue
                     if self.velocity.x > 0:
@@ -623,8 +649,6 @@ class Player(BaseEntity):
                             self._wall_side = -1
                     if self._wall_side != 0 and not self.is_grounded:
                         self._can_wall_jump = True
-                        # Check for ledge above: if no tile above this wall
-                        # tile, the top edge is a grabable ledge.
                         ledge_check = pygame.Rect(
                             tile.left if self._wall_side == 1 else tile.right - 2,
                             tile.top - 16,
@@ -638,8 +662,8 @@ class Player(BaseEntity):
                                 break
                         self._can_ledge_grab = (
                             not ledge_found
-                            and px.top <= tile.top + 8
-                            and px.top >= tile.top - 16
+                            and pre_mutate_top <= tile.top + 8
+                            and pre_mutate_top >= tile.top - 16
                         )
                     self.velocity.x = 0.0
                     self.position.x = float(px.x)
@@ -659,7 +683,7 @@ class Player(BaseEntity):
                     if self.velocity.y >= 0 and prev_bottom <= tile.top + 1:
                         # Came from above: land
                         if not was_grounded and self.velocity.y > 0:
-                            emit(Events.SFX_PLAYER_LAND)
+                            _emit(Events.SFX_PLAYER_LAND)
                         py.bottom = tile.top
                         self.velocity.y = 0.0
                         self.is_grounded = True
@@ -702,6 +726,8 @@ class Player(BaseEntity):
                 self._air_dash_count = 0
                 self._air_jumps_used = 0
                 self.position.y = float(player_rect.y)
+                if self.position.y + self.rect.height > plat.top + 4:
+                    self.position.y = float(plat.top - self.rect.height)
                 break
 
     # ──────────────────────────────────────────────
@@ -712,12 +738,13 @@ class Player(BaseEntity):
         """Update rect size based on current state (crouching vs standing).
         Shifts position.y so the rect bottom (feet) stays at the same height."""
         old_bottom = self.position.y + self.rect.height
-        if self._state_instance.state_enum == PlayerState.CROUCHING:
-            self.rect.width = 20
-            self.rect.height = 20
-        else:
-            self.rect.width = 20
-            self.rect.height = 32
+        target_h = 20 if self._state_instance.state_enum == PlayerState.CROUCHING else 32
+        if self.rect.height == target_h:
+            self.rect.x = int(self.position.x)
+            self.rect.y = int(self.position.y)
+            return
+        self.rect.width = 20
+        self.rect.height = target_h
         self.position.y += old_bottom - (self.position.y + self.rect.height)
         self.rect.x = int(self.position.x)
         self.rect.y = int(self.position.y)

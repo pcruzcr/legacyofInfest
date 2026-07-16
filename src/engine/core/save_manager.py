@@ -7,11 +7,12 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from src.engine.core import settings
 from src.engine.core.save_data import MAX_SLOTS, SaveData
 
 
 class SaveManager:
-    SAVES_DIR = Path("saves")
+    SAVES_DIR = settings._PROJECT_ROOT / "saves"
 
     def __init__(self) -> None:
         self.SAVES_DIR.mkdir(parents=True, exist_ok=True)
@@ -26,7 +27,13 @@ class SaveManager:
         path = self._slot_path(slot)
         fd, tmp = tempfile.mkstemp(dir=str(self.SAVES_DIR), suffix=".tmp")
         try:
-            with os.fdopen(fd, "w", encoding="utf-8") as f:
+            try:
+                f = os.fdopen(fd, "w", encoding="utf-8")
+            except Exception:
+                os.close(fd)
+                os.unlink(tmp)
+                raise
+            with f:
                 json.dump(data.to_dict(), f, indent=2)
             os.replace(tmp, str(path))
         except Exception:
@@ -37,6 +44,8 @@ class SaveManager:
         return str(path)
 
     def load(self, slot: int) -> SaveData | None:
+        if slot < 1 or slot > MAX_SLOTS:
+            return None
         path = self._slot_path(slot)
         if not path.exists():
             return None
@@ -44,11 +53,13 @@ class SaveManager:
             raw = json.loads(path.read_text(encoding="utf-8"))
             raw = SaveData.migrate(raw)
             return SaveData.from_dict(raw)
-        except Exception as e:
+        except (json.JSONDecodeError, OSError, KeyError, ValueError) as e:
             logging.warning(f"SaveManager: corrupt save slot {slot}: {e}")
             return None
 
     def delete(self, slot: int) -> None:
+        if slot < 1 or slot > MAX_SLOTS:
+            return
         path = self._slot_path(slot)
         if path.exists():
             path.unlink()

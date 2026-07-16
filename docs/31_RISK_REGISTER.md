@@ -1,3 +1,13 @@
+---
+document_id: "LOI-RISK-031"
+title: "Legacy of InFest — Risk Register"
+aliases: ["Risk Register"]
+tags: ["risk", "register", "management"]
+description: "Academic/pedagogical risks and mitigation"
+source: "docs/31_RISK_REGISTER.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Risk Register
 
 **Document ID:** LOI-RISK-031  

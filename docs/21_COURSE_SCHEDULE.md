@@ -1,3 +1,13 @@
+---
+document_id: "LOI-SCHEDULE-021"
+title: "Legacy of InFest — Course Schedule"
+aliases: ["Course Schedule"]
+tags: ["course", "schedule", "academic"]
+description: "11 classes + Invenio Fest schedule"
+source: "docs/21_COURSE_SCHEDULE.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Course Schedule
 
 **Document ID:** LOI-SCHEDULE-021  
@@ -366,3 +376,12 @@ The three Evaluación Práctica checkpoints in this schedule (Class 5, 8, 11) co
 ## Appendix A — Corrected Repository Structure Reference
 
 See `00_SYLLABUS_ALIGNMENT_AUDIT.md` §7 for the full corrected repository tree reflecting the real GitHub structure (`docs/`, `assets/`, `src/`, `student_templates/`, `main.py`, `requirements.txt`).
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[30_ASSIGNMENT_01_STAGE_DESIGN.md|Assignment 1: Stage Design]]
+- [[31_ASSIGNMENT_02_BOSS_DESIGN.md|Assignment 2: Boss Design]]
+- [[32_ASSIGNMENT_03_LAB_EXERCISES.md|Assignment 3: Lab Exercises]]
+- [[33_ASSIGNMENT_04_FINAL_PROJECT.md|Assignment 4: Final Project]]

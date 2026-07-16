@@ -1,3 +1,13 @@
+---
+document_id: "LOI-GUIDE-BOSS"
+title: "Boss Creation Guide"
+aliases: ["Boss Creation Guide"]
+tags: ["boss", "creation", "guide", "tutorial"]
+description: "Boss creation tutorial"
+source: "docs/BOSS_CREATION.md"
+date_processed: "2026-07-14"
+---
+
 # Boss Creation Guide
 
 ## 1. Overview
@@ -282,3 +292,10 @@ See `src/stages/boss_venado/boss_venado.py` for a complete implementation:
 --- Traducción al Español ---
 
 *Este documento está disponible en inglés. Para una traducción completa al español, contacte al profesor.*
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[17_BOSS_SPEC.md|Boss Specification]]
+- [[ENEMY_CREATION.md|Enemy Creation Guide]]

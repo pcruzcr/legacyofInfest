@@ -1,3 +1,13 @@
+---
+document_id: "LOI-CHARTER-001"
+title: "Legacy of InFest — Project Charter"
+aliases: ["Project Charter"]
+tags: ["project", "charter", "academic"]
+description: "Project scope, vision, stakeholders, repository structure"
+source: "docs/01_PROJECT_CHARTER.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Project Charter
 
 **Document ID:** LOI-CHARTER-001  

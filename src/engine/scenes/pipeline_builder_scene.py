@@ -6,6 +6,7 @@ in sequence and seeing the result in real-time.
 """
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 import pygame
@@ -67,6 +68,10 @@ class PipelineBuilderScene(BaseScene):
         self._font_medium = AssetLoader.load_font(
             settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_MEDIUM)
         self._cached_result: pygame.Surface | None = None
+        self._cached_left_scaled: pygame.Surface | None = None
+        self._cached_left_src: pygame.Surface | None = None
+        self._cached_right_scaled: pygame.Surface | None = None
+        self._cached_right_src: pygame.Surface | None = None
         self._save_msg: str = ""
         self._save_timer: float = 0.0
         self._error_msg: str = ""
@@ -99,7 +104,8 @@ class PipelineBuilderScene(BaseScene):
             result = pygame.transform.scale(result, PANEL_SIZE)
             self._cached_result = result
             self._error_msg = ""
-        except Exception as e:
+        except (pygame.error, ValueError, ZeroDivisionError) as e:
+            logging.warning("pipeline_builder: recompute error: %s", e)
             self._error_msg = f"Pipeline error: {e}"[:60]
             self._error_timer = 2.0
 
@@ -176,8 +182,10 @@ class PipelineBuilderScene(BaseScene):
         # Left panel: source image
         src = self._sources.current_source
         if src is not None:
-            scaled = pygame.transform.scale(src, PANEL_SIZE)
-            surface.blit(scaled, (0, left_panel_y))
+            if self._cached_left_src is not src:
+                self._cached_left_scaled = pygame.transform.scale(src, PANEL_SIZE)
+                self._cached_left_src = src
+            surface.blit(self._cached_left_scaled, (0, left_panel_y))
         draw_panel_border(surface, pygame.Rect(0, left_panel_y, PANEL_SIZE[0], PANEL_H))
 
         src_label = self._font_small.render(
@@ -191,8 +199,10 @@ class PipelineBuilderScene(BaseScene):
         # Right panel: result
         right_rect = pygame.Rect(right_panel_x, left_panel_y, PANEL_SIZE[0], PANEL_H)
         if self._cached_result is not None:
-            scaled = pygame.transform.scale(self._cached_result, PANEL_SIZE)
-            surface.blit(scaled, (right_panel_x, left_panel_y))
+            if self._cached_right_src is not self._cached_result:
+                self._cached_right_scaled = pygame.transform.scale(self._cached_result, PANEL_SIZE)
+                self._cached_right_src = self._cached_result
+            surface.blit(self._cached_right_scaled, (right_panel_x, left_panel_y))
         else:
             no_result = self._font_medium.render("  Press SPACE to add filters", True, COLOR_TEXT)
             surface.blit(no_result, (right_panel_x + 10, left_panel_y + 40))

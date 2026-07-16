@@ -1,3 +1,13 @@
+---
+document_id: "LOI-FOG-046"
+title: "Legacy of InFest — Fog of War Specification"
+aliases: ["Fog of War"]
+tags: ["fog", "war", "vfx", "visibility"]
+description: "Fog of war overlay"
+source: "docs/46_FOG_OF_WAR.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Fog of War Specification
 
 **Document ID:** LOI-FOG-046
@@ -59,3 +69,10 @@ Superposición de niebla que oculta áreas no exploradas del mapa.
 - Efecto visual de descubrimiento
 
 Para la especificación completa de la implementación, consultar el documento original en inglés.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[47_WATER_EFFECT.md|Water Effect]]
+- [[48_SCREEN_TRANSITIONS.md|Screen Transitions]]

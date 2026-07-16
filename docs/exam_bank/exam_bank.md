@@ -1,3 +1,13 @@
+---
+document_id: "LOI-EXAM_BANK-EXAM_BANK"
+title: "Exam Bank — Practice Exam Generator"
+aliases: ["Exam Bank", "exam_bank"]
+tags: ["exam", "bank", "academic"]
+description: "Exam Bank document: exam_bank"
+source: "docs/docs\exam_bank/exam_bank.md"
+date_processed: "2026-07-14"
+---
+
 # Exam Bank — Practice Exam Generator
 
 **Course:** Legacy of InFest

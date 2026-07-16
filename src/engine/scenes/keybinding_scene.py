@@ -70,10 +70,14 @@ class KeybindingScene(BaseScene):
         self._waiting_for_key: bool = False
         self._num_cols: int = 2
         self._dirty: bool = False
+        self._last_keys_state: tuple[bool, ...] = tuple()
+        self._font_title = pygame.font.Font(None, 24)
+        self._font_text = pygame.font.Font(None, 16)
+        self._font_hint = pygame.font.Font(None, 18)
 
     def _load_bindings(self) -> dict[str, list[int]]:
         try:
-            with open(CONFIG_PATH) as f:
+            with open(CONFIG_PATH, encoding="utf-8") as f:
                 raw = json.load(f)
                 return {str(k): v for k, v in raw.items()}
         except (FileNotFoundError, json.JSONDecodeError):
@@ -87,7 +91,7 @@ class KeybindingScene(BaseScene):
                 keys = im._bindings.get(action, DEFAULT_KEY_BINDINGS.get(action, []))
                 data[action.name] = list(keys)
         CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-        with open(CONFIG_PATH, "w") as f:
+        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
 
     def on_enter(self) -> None:
@@ -98,6 +102,7 @@ class KeybindingScene(BaseScene):
                 key = action.name
                 if key in saved:
                     im.rebind(action, saved[key])
+        self.context.scene_manager.transition.start_fade_in(0.5)
 
     def on_exit(self) -> None:
         if self._dirty:
@@ -109,16 +114,20 @@ class KeybindingScene(BaseScene):
             return
 
         if self._waiting_for_key:
-            for e in pygame.event.get():
-                if e.type == pygame.KEYDOWN:
-                    if e.key == pygame.K_ESCAPE:
+            keys = pygame.key.get_pressed()
+            for k, pressed in enumerate(keys):
+                if pressed and (k >= len(self._last_keys_state) or not self._last_keys_state[k]):
+                    if k == pygame.K_ESCAPE:
                         self._waiting_for_key = False
-                        break
+                        self._last_keys_state = tuple(keys)
+                        return
                     action = self._actions[self._selected]
-                    im.rebind(action, [e.key])
+                    im.rebind(action, [k])
                     self._dirty = True
                     self._waiting_for_key = False
-                    break
+                    self._last_keys_state = tuple(keys)
+                    return
+            self._last_keys_state = tuple(keys)
             return
 
         if im.is_action_just_pressed(Action.MOVE_DOWN):
@@ -144,17 +153,14 @@ class KeybindingScene(BaseScene):
                 self._selected -= 1
         if im.is_action_just_pressed(Action.CONFIRM):
             self._waiting_for_key = True
+            self._last_keys_state = tuple(pygame.key.get_pressed())
         if im.is_action_just_pressed(Action.CANCEL):
             from src.engine.scenes.title_scene import TitleScene
             self.context.scene_manager.replace(TitleScene(self.context))
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill((20, 20, 35))
-        font = pygame.font.Font(None, 24)
-        small = pygame.font.Font(None, 16)
-        mid = pygame.font.Font(None, 18)
-
-        title = font.render("KEY BINDINGS", True, (255, 255, 240))
+        title = self._font_title.render("KEY BINDINGS", True, (255, 255, 240))
         surface.blit(title, ((settings.INTERNAL_WIDTH - title.get_width()) // 2, 14))
 
         cols = self._num_cols
@@ -169,7 +175,7 @@ class KeybindingScene(BaseScene):
             y = start_y + row * row_h
             active = i == self._selected and not self._waiting_for_key
             label_color = (255, 255, 100) if active else (200, 200, 200)
-            label = mid.render(_ACTION_LABELS[action], True, label_color)
+            label = self._font_hint.render(_ACTION_LABELS[action], True, label_color)
             surface.blit(label, (x, y))
 
             im = self.input
@@ -181,13 +187,13 @@ class KeybindingScene(BaseScene):
             key_color = (180, 180, 220) if not active else (255, 200, 100)
             if self._waiting_for_key and i == self._selected:
                 key_str = "--- PRESS KEY ---" if int(pygame.time.get_ticks() / 500) % 2 == 0 else ""
-            key_display = small.render(key_str, True, key_color)
+            key_display = self._font_text.render(key_str, True, key_color)
             surface.blit(key_display, (x, y + 18))
 
         hint_y = BOTTOM_BAR_Y - 22
         if self._waiting_for_key:
-            hint = small.render("Press any key to bind | ESC to cancel", True, (255, 200, 100))
+            hint = self._font_text.render("Press any key to bind | ESC to cancel", True, (255, 200, 100))
         else:
-            hint = small.render("[ARROWS] Navigate  [ENTER] Rebind  [ESC] Back", True, (160, 160, 170))
+            hint = self._font_text.render("[ARROWS] Navigate  [ENTER] Rebind  [ESC] Back", True, (160, 160, 170))
         surface.blit(hint, ((settings.INTERNAL_WIDTH - hint.get_width()) // 2, hint_y))
 

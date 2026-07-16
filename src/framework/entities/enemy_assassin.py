@@ -3,7 +3,8 @@ from typing import TYPE_CHECKING
 
 import pygame
 
-from src.engine.core.event_bus import emit
+from src.engine.core.event_bus import _get_bus as _bus
+_emit = lambda *a, **kw: _bus().emit(*a, **kw)
 from src.engine.core.events import Events
 from src.framework.entities.enemy_base import EnemyBase
 
@@ -19,6 +20,7 @@ class EnemyAssassin(EnemyBase):
         max_health: float = 1.5,
         damage_on_contact: float = 0.25,
         zone: int = 0,
+        **kwargs,
     ) -> None:
         super().__init__(
             spawn_position=spawn_position,
@@ -49,6 +51,9 @@ class EnemyAssassin(EnemyBase):
         self._in_retreat: bool = False
         self._cloak_alpha: int = 80
         self._approach_range: float = 40.0
+
+        # Cached surfaces
+        self._cloak_fade_surf: pygame.Surface | None = None
 
         self._load_zone_sprites(zone, 12, 12)
 
@@ -94,7 +99,7 @@ class EnemyAssassin(EnemyBase):
             self._lunge_timer = self._lunge_duration
             self._lunge_dir = 1 if dx >= 0 else -1
             self._lunge_has_hit = False
-            emit(Events.BOSS_ATTACK, pattern="assassin_lunge", rect=self.rect)
+            _emit(Events.BOSS_ATTACK, pattern="assassin_lunge", rect=self.rect)
             return
 
         if not self._is_cloaked:
@@ -117,12 +122,12 @@ class EnemyAssassin(EnemyBase):
     def check_player_contact(self, player: Player) -> None:
         if self._is_cloaked and not self._is_lunging:
             return
-        super()._check_player_contact(player)
         if self._is_lunging and not self._lunge_has_hit:
             player_hurtbox = player.hurtbox if hasattr(player, "hurtbox") else player.rect
             if self.hurtbox.colliderect(player_hurtbox):
                 player.apply_damage(self._lunge_damage, (self.position.x, self.position.y))
                 self._lunge_has_hit = True
+        super()._check_player_contact(player)
 
     def draw(self, surface: pygame.Surface, camera_offset: pygame.Vector2) -> None:
         super().draw(surface, camera_offset)
@@ -131,7 +136,10 @@ class EnemyAssassin(EnemyBase):
         if self._is_cloaked:
             screen_x = int(self.position.x - camera_offset.x)
             screen_y = int(self.position.y - camera_offset.y)
-            fade = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
+            if self._cloak_fade_surf is None:
+                self._cloak_fade_surf = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
+            fade = self._cloak_fade_surf
+            fade.fill((0, 0, 0, 0))
             fade.set_alpha(255 - self._cloak_alpha)
             fade.fill((30, 40, 60))
             surface.blit(fade, (screen_x, screen_y))

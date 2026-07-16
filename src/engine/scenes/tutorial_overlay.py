@@ -54,6 +54,9 @@ class TutorialOverlay:
         self._steps: list[dict[str, str]] = TUTORIAL_CONTENT.get(lab_key, [
             {"title": "No Tutorial", "text": "No tutorial content available for this lab."},
         ])
+        self._font_step = pygame.font.Font(None, 11)
+        self._font_text = pygame.font.Font(None, 12)
+        self._font_hint = pygame.font.Font(None, 15)
 
     @property
     def active(self) -> bool:
@@ -101,11 +104,7 @@ class TutorialOverlay:
         pygame.draw.rect(overlay, (20, 20, 50), (bx, by, box_w, box_h))
         pygame.draw.rect(overlay, COLOR_HIGHLIGHT, (bx, by, box_w, box_h), 1)
 
-        font_small = pygame.font.Font(None, 12)
-        font_title = pygame.font.Font(None, 15)
-        font_step = pygame.font.Font(None, 11)
-
-        title = font_title.render(f"Tutorial: {step.get('title','')}", True, COLOR_HIGHLIGHT)
+        title = self._font_hint.render(f"Tutorial: {step.get('title','')}", True, COLOR_HIGHLIGHT)
         overlay.blit(title, (bx + 8, by + 6))
 
         text = step.get("text", "")
@@ -113,7 +112,7 @@ class TutorialOverlay:
         words = text.split(" ")
         line = ""
         for w in words:
-            if font_small.size(line + " " + w)[0] > box_w - 24:
+            if self._font_text.size(line + " " + w)[0] > box_w - 24:
                 wrapped.append(line)
                 line = w
             else:
@@ -122,10 +121,10 @@ class TutorialOverlay:
             wrapped.append(line)
 
         for i, line in enumerate(wrapped):
-            txt = font_small.render(line, True, COLOR_TEXT)
+            txt = self._font_text.render(line, True, COLOR_TEXT)
             overlay.blit(txt, (bx + 12, by + 28 + i * 14))
 
-        step_info = font_step.render(
+        step_info = self._font_step.render(
             f"  Step {self._step + 1}/{len(self._steps)}  |  LEFT/RIGHT to navigate  |  T to close",
             True, COLOR_ACCENT)
         overlay.blit(step_info, (bx + 8, by + box_h - 18))

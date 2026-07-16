@@ -14,13 +14,20 @@ from src.framework.entities.player_states import (
 
 
 class TestComboSystem:
+    def _reset_to_idle(self, player: Player) -> None:
+        """Force player back to IdleState so next _start_attack starts fresh."""
+        from src.framework.entities.player_states import IdleState
+        player._change_state_instance(IdleState(), force=True)
+
     def test_combo_count_increments(self) -> None:
         player = Player(pygame.Vector2(0, 0))
         assert player.combo_count == 0
         _start_attack(player, Player.SHORT_ATTACK)
         assert player.combo_count == 1
+        self._reset_to_idle(player)
         _start_attack(player, Player.SHORT_ATTACK)
         assert player.combo_count == 2
+        self._reset_to_idle(player)
         _start_attack(player, Player.SHORT_ATTACK)
         assert player.combo_count == 3
 
@@ -34,6 +41,7 @@ class TestComboSystem:
     def test_combo_capped_at_max(self) -> None:
         player = Player(pygame.Vector2(0, 0))
         for _ in range(5):
+            self._reset_to_idle(player)
             _start_attack(player, Player.SHORT_ATTACK)
         assert player.combo_count <= settings.COMBO_MAX
 
@@ -66,6 +74,7 @@ class TestComboSystem:
         player = Player(pygame.Vector2(0, 0))
         _start_attack(player, Player.SHORT_ATTACK)
         player.combo_timer = 0.1
+        self._reset_to_idle(player)
         _start_attack(player, Player.SHORT_ATTACK)
         assert player.combo_count == 2
 
@@ -75,6 +84,7 @@ class TestComboSystem:
         player.combo_timer = 0.0
         player.combo_active = False
         player.combo_count = 0
+        self._reset_to_idle(player)
         _start_attack(player, Player.SHORT_ATTACK)
         assert player.combo_count == 1
 

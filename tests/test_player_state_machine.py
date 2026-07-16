@@ -8,12 +8,14 @@ from src.framework.entities.player_states import (
     DashingState, ParryState, ChargingState, DashAttackState,
     WallSlideState, LedgeGrabState, GrabState, ThrowState,
     SlideState, SwimmingState, HurtState, DyingState,
+    UltimateState, ChargeReleaseState, AerialAttackState,
+    AerialSlamState, AirChaseState,
     PlayerStateBase,
 )
 
 
 def test_player_state_enum_has_19_values() -> None:
-    assert len(PlayerState) == 19
+    assert len(PlayerState) == 24
 
 
 def test_initial_state_is_idle() -> None:
@@ -38,10 +40,15 @@ _ENUM_MAP: list[tuple[type[PlayerStateBase], PlayerState]] = [
     (DashAttackState, PlayerState.DASH_ATTACK),
     (WallSlideState, PlayerState.WALL_SLIDE),
     (LedgeGrabState, PlayerState.LEDGE_GRAB),
-    (GrabState, PlayerState.SHORT_ATTACK),
-    (ThrowState, PlayerState.SHORT_ATTACK),
+    (GrabState, PlayerState.GRAB),
+    (ThrowState, PlayerState.THROW),
     (SlideState, PlayerState.SLIDE),
     (SwimmingState, PlayerState.SWIMMING),
+    (UltimateState, PlayerState.ULTIMATE),
+    (ChargeReleaseState, PlayerState.CHARGE_RELEASE),
+    (AerialAttackState, PlayerState.AERIAL_ATTACK),
+    (AerialSlamState, PlayerState.AERIAL_SLAM),
+    (AirChaseState, PlayerState.AIR_CHASE),
 ]
 
 

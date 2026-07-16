@@ -1,3 +1,13 @@
+---
+document_id: "LOI-README-DOCS"
+title: "Legacy of InFest — Realignment Package (v4)"
+aliases: ["Docs README", "Documentation README"]
+tags: ["readme", "intro", "documentation"]
+description: "Documentation package overview"
+source: "docs/README.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Realignment Package (v4)
 
 **Version:** 4.0.0  

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import numpy as np
 import pygame
 
 from src.engine.core import settings
@@ -25,6 +26,14 @@ class PostProcessing:
         self._motion_blur_strength: float = 0.0
         self._prev_frame: pygame.Surface | None = None
         self._color_grading: tuple[int, int, int, int, int, int, int, int, int] | None = None
+        self._last_vignette_strength: float = 0.0
+        self._flash_surf: pygame.Surface | None = None
+        self._tint_surf: pygame.Surface | None = None
+        self._blur_surf: pygame.Surface | None = None
+        self._bloom_down: pygame.Surface | None = None
+        self._bloom_up: pygame.Surface | None = None
+        self._highlight_surf: pygame.Surface | None = None
+        self._motion_up: pygame.Surface | None = None
 
     def set_motion_blur(self, strength: float = 0.3) -> None:
         self._motion_blur_strength = max(0.0, min(1.0, strength))
@@ -78,20 +87,25 @@ class PostProcessing:
         mode = settings.COLORBLIND_MODE
         if mode == "off":
             return
-        w, h = surface.get_size()
-        for x in range(0, w, 2):
-            for y in range(0, h, 2):
-                try:
-                    r, g, b, *a = surface.get_at((x, y))
-                    alpha_val = a[0] if a else 255
-                    if mode == "protanopia":
-                        surface.set_at((x, y), (int(r * 0.57 + g * 0.43), int(g * 0.86), int(b * 0.86), alpha_val))
-                    elif mode == "deuteranopia":
-                        surface.set_at((x, y), (int(r * 0.63), int(g * 0.78 + r * 0.22), int(b * 0.86), alpha_val))
-                    elif mode == "tritanopia":
-                        surface.set_at((x, y), (int(r * 0.95), int(g * 0.43 + b * 0.57), int(b * 0.43), alpha_val))
-                except Exception:
-                    pass
+        arr = pygame.surfarray.pixels3d(surface)
+        try:
+            r = arr[:,:,0].astype(np.float32)
+            g = arr[:,:,1].astype(np.float32)
+            b = arr[:,:,2].astype(np.float32)
+            if mode == "protanopia":
+                arr[:,:,0] = np.clip(r * 0.57 + g * 0.43, 0, 255).astype(np.uint8)
+                arr[:,:,1] = np.clip(g * 0.86, 0, 255).astype(np.uint8)
+                arr[:,:,2] = np.clip(b * 0.86, 0, 255).astype(np.uint8)
+            elif mode == "deuteranopia":
+                arr[:,:,0] = np.clip(r * 0.63, 0, 255).astype(np.uint8)
+                arr[:,:,1] = np.clip(g * 0.78 + r * 0.22, 0, 255).astype(np.uint8)
+                arr[:,:,2] = np.clip(b * 0.86, 0, 255).astype(np.uint8)
+            elif mode == "tritanopia":
+                arr[:,:,0] = np.clip(r * 0.95, 0, 255).astype(np.uint8)
+                arr[:,:,1] = np.clip(g * 0.43 + b * 0.57, 0, 255).astype(np.uint8)
+                arr[:,:,2] = np.clip(b * 0.43, 0, 255).astype(np.uint8)
+        finally:
+            del arr
 
     def apply(self, surface: pygame.Surface) -> None:
         w, h = settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT
@@ -99,79 +113,100 @@ class PostProcessing:
         # Flash overlay
         if self._flash_alpha > 0:
             alpha = int(self._flash_alpha * (self._flash_timer / max(self._flash_duration, 0.01)))
-            flash = pygame.Surface((w, h), pygame.SRCALPHA)
-            flash.fill((*self._flash_color, min(255, alpha)))
-            surface.blit(flash, (0, 0))
+            if self._flash_surf is None or self._flash_surf.get_size() != (w, h):
+                self._flash_surf = pygame.Surface((w, h), pygame.SRCALPHA)
+            self._flash_surf.fill((*self._flash_color, min(255, alpha)))
+            surface.blit(self._flash_surf, (0, 0))
 
         # Damage + base vignette
         if self._damage_vignette > 0 or self._vignette_strength > 0:
             total_v = min(0.6, self._vignette_strength + self._damage_vignette)
-            if self._vignette_surf is None or self._vignette_surf.get_size() != (w, h):
+            if (self._vignette_surf is None
+                or self._vignette_surf.get_size() != (w, h)
+                or abs(total_v - self._last_vignette_strength) > 0.01):
                 self._vignette_surf = self._build_vignette(w, h)
-            vig = self._vignette_surf.copy()
-            vig.set_alpha(int(total_v * 255))
-            surface.blit(vig, (0, 0))
+                self._last_vignette_strength = total_v
+            self._vignette_surf.set_alpha(int(total_v * 255))
+            surface.blit(self._vignette_surf, (0, 0))
 
         # Bloom — downsample bright areas for a glow
         if self._bloom_intensity > 0.01:
             small_w = max(1, w // 4)
             small_h = max(1, h // 4)
-            glow = pygame.transform.smoothscale(surface, (small_w, small_h))
-            for _ in range(2):
-                glow = pygame.transform.smoothscale(
-                    pygame.transform.smoothscale(glow, (max(1, small_w // 2), max(1, small_h // 2))),
-                    (small_w, small_h),
-                )
-            glow = pygame.transform.smoothscale(glow, (w, h))
-            # Add glow with intensity
-            glow.set_alpha(int(self._bloom_intensity * 128))
+            down_size = (small_w, small_h)
+            if self._bloom_down is None or self._bloom_down.get_size() != down_size:
+                self._bloom_down = pygame.Surface(down_size)
+            pygame.transform.smoothscale(surface, down_size, self._bloom_down)
+            up_size = (w, h)
+            if self._bloom_up is None or self._bloom_up.get_size() != up_size:
+                self._bloom_up = pygame.Surface(up_size, pygame.SRCALPHA)
+            self._bloom_up.fill((0, 0, 0, 0))
+            alpha = int(self._bloom_intensity * 128)
+            self._bloom_up.blit(self._bloom_down, (0, 0))
+            self._bloom_up.set_alpha(alpha)
+            glow = self._bloom_up
             surface.blit(glow, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
 
             # Add spectral highlight layer on top
-            highlight = pygame.Surface((w, h), pygame.SRCALPHA)
-            for x in range(0, w, 1):
-                for y in range(0, h, 1):
-                    try:
-                        r, g, b, *a = surface.get_at((x, y))
-                        lum = 0.299 * r + 0.587 * g + 0.114 * b
-                        if lum > self._bloom_threshold:
-                            extra = min(1.0, (lum - self._bloom_threshold) / 175.0)
-                            val = int(extra * self._bloom_intensity * 200)
-                            highlight.set_at((x, y), (255, 255, 255, val))
-                    except Exception:
-                        pass
+            if self._highlight_surf is None or self._highlight_surf.get_size() != (w, h):
+                self._highlight_surf = pygame.Surface((w, h))
+            highlight = self._highlight_surf
+            harr = pygame.surfarray.pixels3d(highlight)
+            try:
+                arr = pygame.surfarray.pixels3d(surface)
+                try:
+                    lum = 0.299 * arr[:,:,0].astype(np.float32) + 0.587 * arr[:,:,1].astype(np.float32) + 0.114 * arr[:,:,2].astype(np.float32)
+                finally:
+                    del arr
+                extra = np.clip((lum - self._bloom_threshold) / 175.0, 0, 1)
+                val = (extra * self._bloom_intensity * 200).astype(np.uint8)
+                harr[:,:,0] = val
+                harr[:,:,1] = val
+                harr[:,:,2] = val
+            finally:
+                del harr
             surface.blit(highlight, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
 
         # Tint overlay
         if self._tint_alpha > 0:
-            tint = pygame.Surface((w, h), pygame.SRCALPHA)
-            tint.fill((*self._tint_color, int(self._tint_alpha * 255)))
-            surface.blit(tint, (0, 0))
+            if self._tint_surf is None or self._tint_surf.get_size() != (w, h):
+                self._tint_surf = pygame.Surface((w, h), pygame.SRCALPHA)
+            self._tint_surf.fill((*self._tint_color, int(self._tint_alpha * 255)))
+            surface.blit(self._tint_surf, (0, 0))
 
-        # Motion blur — blend current frame with previous frame
+        # Motion blur — blend current frame with previous frame (1/4 res buffer)
         if self._motion_blur_strength > 0.01:
+            sw, sh = max(1, w // 4), max(1, h // 4)
+            down_size = (sw, sh)
+            up_size = (w, h)
             if self._prev_frame is None:
-                self._prev_frame = surface.copy()
+                self._prev_frame = pygame.Surface(down_size)
+                pygame.transform.smoothscale(surface, down_size, self._prev_frame)
             else:
-                blur = pygame.Surface((w, h), pygame.SRCALPHA)
-                blur.blit(self._prev_frame, (0, 0))
-                blur.set_alpha(int(self._motion_blur_strength * 128))
-                surface.blit(blur, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
-                self._prev_frame = surface.copy()
+                if self._blur_surf is None or self._blur_surf.get_size() != up_size:
+                    self._blur_surf = pygame.Surface(up_size, pygame.SRCALPHA)
+                if self._motion_up is None or self._motion_up.get_size() != up_size:
+                    self._motion_up = pygame.Surface(up_size)
+                prev_up = self._motion_up
+                pygame.transform.smoothscale(self._prev_frame, up_size, prev_up)
+                self._blur_surf.blit(prev_up, (0, 0))
+                self._blur_surf.set_alpha(int(self._motion_blur_strength * 128))
+                surface.blit(self._blur_surf, (0, 0), special_flags=pygame.BLEND_RGB_MULT)
+                pygame.transform.smoothscale(surface, down_size, self._prev_frame)
 
         # Color grading — 3x3 color matrix applied per pixel
         if self._color_grading is not None:
-            r, g, b, rr, gg, bb, rrr, ggg, bbb = self._color_grading
-            for x in range(0, w, 2):
-                for y in range(0, h, 2):
-                    try:
-                        pr, pg, pb, *pa = surface.get_at((x, y))
-                        nr = min(255, max(0, pr * r // 255 + pg * g // 255 + pb * b // 255))
-                        ng = min(255, max(0, pr * rr // 255 + pg * gg // 255 + pb * bb // 255))
-                        nb = min(255, max(0, pr * rrr // 255 + pg * ggg // 255 + pb * bbb // 255))
-                        surface.set_at((x, y), (nr, ng, nb, pa[0] if pa else 255))
-                    except Exception:
-                        pass
+            cr, cg, cb, crr, cgg, cbb, crrr, cggg, cbbb = self._color_grading
+            arr = pygame.surfarray.pixels3d(surface)
+            try:
+                pr = arr[:,:,0].astype(np.int32)
+                pg = arr[:,:,1].astype(np.int32)
+                pb = arr[:,:,2].astype(np.int32)
+                arr[:,:,0] = np.clip((pr * cr + pg * cg + pb * cb) // 255, 0, 255).astype(np.uint8)
+                arr[:,:,1] = np.clip((pr * crr + pg * cgg + pb * cbb) // 255, 0, 255).astype(np.uint8)
+                arr[:,:,2] = np.clip((pr * crrr + pg * cggg + pb * cbbb) // 255, 0, 255).astype(np.uint8)
+            finally:
+                del arr
 
         # Colorblind filter (last, on top of everything)
         self._apply_colorblind_filter(surface)
@@ -179,11 +214,14 @@ class PostProcessing:
     def _build_vignette(self, w: int, h: int) -> pygame.Surface:
         surf = pygame.Surface((w, h), pygame.SRCALPHA)
         cx, cy = w // 2, h // 2
-        max_dist = ((cx) ** 2 + (cy) ** 2) ** 0.5
-        for x in range(w):
-            for y in range(h):
-                dx, dy = x - cx, y - cy
-                dist = ((dx * dx + dy * dy) ** 0.5) / max_dist
-                alpha = int(max(0, dist - 0.3) / 0.7 * 200)
-                surf.set_at((x, y), (0, 0, 0, min(200, alpha)))
+        max_dist_sq = cx * cx + cy * cy
+        arr = pygame.surfarray.pixels_alpha(surf)
+        try:
+            xs, ys = np.ogrid[:w, :h]
+            dist_sq = (xs - cx) ** 2 + (ys - cy) ** 2
+            dist = np.sqrt(dist_sq / max_dist_sq)
+            alpha = np.clip((dist - 0.3) / 0.7 * 200, 0, 200).astype(np.uint8)
+            arr[:, :] = alpha
+        finally:
+            del arr
         return surf

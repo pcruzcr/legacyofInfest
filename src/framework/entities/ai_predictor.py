@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import math
 import random
 from typing import Any
@@ -77,7 +78,8 @@ class BehaviorPredictor:
             self._knn.fit(X_arr, y_arr)
             self._tree.fit(X_arr, y_arr)
             self._trained = True
-        except Exception:
+        except (ValueError, np.linalg.LinAlgError) as e:
+            logging.warning("ai_predictor: training failed: %s", e)
             self._trained = False
 
     def predict(
@@ -90,7 +92,8 @@ class BehaviorPredictor:
             knn_pred = int(self._knn.predict([features])[0])
             tree_pred = int(self._tree.predict([features])[0])
             return knn_pred if random.random() < 0.6 else tree_pred
-        except Exception:
+        except (ValueError, IndexError, np.linalg.LinAlgError) as e:
+            logging.warning("ai_predictor: prediction failed: %s", e)
             return random.randint(0, len(self._action_names) - 1)
 
     def predict_action_name(self, **kwargs: Any) -> str:

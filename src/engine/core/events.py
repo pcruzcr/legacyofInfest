@@ -75,9 +75,33 @@ class Events:
     SFX_STAGE_BANNER: str = "SFX_STAGE_BANNER"
     SFX_STAGE_COMPLETE: str = "SFX_STAGE_COMPLETE"
     SFX_HAZARD_ZONE: str = "SFX_HAZARD_ZONE"
+    SFX_PLAYER_PARRY: str = "SFX_PLAYER_PARRY"
+    SFX_PLAYER_CROUCH: str = "SFX_PLAYER_CROUCH"
+    SFX_PLAYER_HEAL: str = "SFX_PLAYER_HEAL"
+    SFX_BOSS_HIT: str = "SFX_BOSS_HIT"
+    SFX_UI_GAME_OVER: str = "SFX_UI_GAME_OVER"
+    SFX_ENVIRONMENT_SCREEN_SHAKE: str = "SFX_ENVIRONMENT_SCREEN_SHAKE"
+    SFX_ENVIRONMENT_ONE_WAY_PLATFORM: str = "SFX_ENVIRONMENT_ONE_WAY_PLATFORM"
+    SFX_BOSS_PHASE_CHANGE: str = "SFX_BOSS_PHASE_CHANGE"
+    SFX_ENEMIES_PROJECTILE_HIT_WALL: str = "SFX_ENEMIES_PROJECTILE_HIT_WALL"
+    SFX_BOSSES_GAVILAN_DIVE: str = "SFX_BOSSES_GAVILAN_DIVE"
+    SFX_BOSSES_GAVILAN_MASK_BEAM: str = "SFX_BOSSES_GAVILAN_MASK_BEAM"
+    SFX_BOSSES_PABURU_EYE_BEAM: str = "SFX_BOSSES_PABURU_EYE_BEAM"
+    SFX_BOSSES_PABURU_WAVE: str = "SFX_BOSSES_PABURU_WAVE"
+    SFX_BOSSES_RELIC_APPEAR: str = "SFX_BOSSES_RELIC_APPEAR"
+    SFX_BOSSES_REY_SPIT: str = "SFX_BOSSES_REY_SPIT"
+    SFX_BOSSES_REY_SPLIT: str = "SFX_BOSSES_REY_SPLIT"
+    SFX_BOSSES_VENADO_CHARGE: str = "SFX_BOSSES_VENADO_CHARGE"
+    SFX_BOSSES_VENADO_STOMP: str = "SFX_BOSSES_VENADO_STOMP"
+    SFX_BOSSES_VENADO_VINE: str = "SFX_BOSSES_VENADO_VINE"
 
     # ── Achievement events ─────────────────────────────────────────
     ACHIEVEMENT_UNLOCKED: str = "ACHIEVEMENT_UNLOCKED"
     """Emitted when an achievement is unlocked. Payload: achievement_id, name."""
     ACHIEVEMENT_PROGRESS: str = "ACHIEVEMENT_PROGRESS"
     """Emitted on progress toward achievement. Payload: achievement_id, progress, target."""
+
+    # ── Save / persist ──────────────────────────────────────────────
+    SAVE_REQUESTED: str = "SAVE_REQUESTED"
+    """Emitted when a save should be persisted. Payload: stage_id, stage_index,
+    checkpoint_x, checkpoint_y, health, max_health."""

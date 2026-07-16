@@ -1,3 +1,13 @@
+---
+document_id: "LOI-TMX-006"
+title: "Legacy of InFest — TMX Specification"
+aliases: ["TMX Specification", "Map Format"]
+tags: ["tmx", "tiled", "map", "format"]
+description: "Map file format, layers, object types"
+source: "docs/06_TMX_SPEC.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — TMX Specification
 
 **Document ID:** LOI-TMX-006  
@@ -517,3 +527,10 @@ Los mapas se diseñan en Tiled Map Editor y se exportan como archivos .tmx (form
 PlayerSpawn, Walker, Flying, Shooter, Checkpoint, NextTrigger, Message, Waypoint, HazardZone, OneWayPlatform, CameraLock, BossSpawn.
 
 Para la especificación completa de propiedades, reglas de spawn, checkpoints y formato XML, consultar el documento original en inglés.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[07_STAGE0_DESIGN.md|Stage 0 Design]]
+- [[STAGE_CREATION.md|Stage Creation Guide]]

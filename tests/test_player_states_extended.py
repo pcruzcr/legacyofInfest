@@ -14,7 +14,7 @@ class TestPlayerCreation:
         assert p.is_grounded is False
 
     def test_player_state_enum_count(self):
-        assert len(PlayerState) == 19
+        assert len(PlayerState) == 24
 
     def test_player_has_state_instance(self):
         p = Player(pygame.Vector2(50, 50))

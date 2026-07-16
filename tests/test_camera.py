@@ -100,9 +100,9 @@ class TestCameraLockZones:
         lock = _CameraLock(pygame.Rect(80, 40, 40, 40), lock_x=True, lock_y=False)
         cam.set_camera_locks([lock])
         cam.update(1.0 / 60.0)
-        assert cam._locked_x is True
+        assert cam._is_locked_x is True
 
     def test_no_locks_no_crash(self) -> None:
         cam = Camera()
         cam.set_camera_locks([])
-        assert cam._locked_x is False
+        assert cam._is_locked_x is False

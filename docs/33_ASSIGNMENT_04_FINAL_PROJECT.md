@@ -1,3 +1,13 @@
+---
+document_id: "LOI-ASGN04-033B"
+title: "Assignment 4: Final Project — Complete Zone"
+aliases: ["Assignment 4: Final Project"]
+tags: ["assignment", "final", "project", "academic"]
+description: "Final project assignment"
+source: "docs/33_ASSIGNMENT_04_FINAL_PROJECT.md"
+date_processed: "2026-07-14"
+---
+
 # Assignment 4: Final Project — Complete Zone
 
 **Due:** Week 16 | **Points:** 200 | **Units:** II-VIII (Comprehensive)
@@ -97,3 +107,10 @@ The CI pipeline will run auto-grading on all TMX and boss files.
 - Demostración funcional del proyecto
 
 Para la rúbrica completa y criterios de evaluación, consultar el documento original en inglés.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[16_WORLD_DESIGN.md|World Design]]
+- [[27_ACADEMIC_RUBRICS.md|Academic Rubrics]]

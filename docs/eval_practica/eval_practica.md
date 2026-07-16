@@ -1,3 +1,13 @@
+---
+document_id: "LOI-EVAL_PRACTICA-EVAL_PRACTICA"
+title: "Evaluación Práctica — Practical Evaluations"
+aliases: ["Eval Practica", "eval_practica"]
+tags: ["evaluation", "practical", "academic"]
+description: "Eval Practica document: eval_practica"
+source: "docs/docs\eval_practica/eval_practica.md"
+date_processed: "2026-07-14"
+---
+
 # Evaluación Práctica — Practical Evaluations
 
 **Course:** Legacy of InFest

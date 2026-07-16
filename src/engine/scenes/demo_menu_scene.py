@@ -6,11 +6,13 @@ select with ENTER, return to title with ESC.
 """
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 import pygame
 
 from src.engine.core import settings
+from src.engine.core.events import Events
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
@@ -79,6 +81,7 @@ class DemoMenuScene(BaseScene):
         self._scroll_offset = 0
         self._error_msg = ""
         self._error_timer = 0.0
+        self.context.scene_manager.transition.start_fade_in(0.5)
 
     def on_exit(self) -> None:
         pass
@@ -109,27 +112,26 @@ class DemoMenuScene(BaseScene):
                 if self._selected < self._scroll_offset:
                     self._scroll_offset = max(self._scroll_offset - 1, 0)
         if self._selected != prev_selected:
-            from src.engine.core.event_bus import emit
-            from src.engine.core.events import Events
-            emit(Events.SFX_MENU_HOVER)
+            self.context.event_bus.emit(Events.SFX_MENU_HOVER)
 
         if im.is_action_just_pressed(Action.CONFIRM):
-            from src.engine.core.event_bus import emit
-            from src.engine.core.events import Events
-            emit(Events.SFX_MENU_CONFIRM)
+            self.context.event_bus.emit(Events.SFX_MENU_CONFIRM)
             key = self._options[self._selected][2]
             registry = get_registry()
-            scene = registry.build(key, self.context)
-            if scene is not None:
-                self.context.scene_manager.push(scene)
-            else:
-                self._error_msg = "Failed to load demo scene — missing assets?"
+            try:
+                scene = registry.build(key, self.context)
+                if scene is not None:
+                    self.context.scene_manager.push(scene)
+                else:
+                    self._error_msg = f"Failed to load demo scene '{key}' — missing assets?"
+                    self._error_timer = 3.0
+            except (ImportError, RuntimeError, ValueError) as e:
+                logging.warning("demo_menu: failed to build scene '%s': %s", key, e)
+                self._error_msg = f"Failed to load demo scene '{key}': {e}"
                 self._error_timer = 3.0
 
         if im.is_action_just_pressed(Action.CANCEL):
-            from src.engine.core.event_bus import emit
-            from src.engine.core.events import Events
-            emit(Events.SFX_MENU_CANCEL)
+            self.context.event_bus.emit(Events.SFX_MENU_CANCEL)
             from src.engine.scenes.title_scene import TitleScene
             self.context.scene_manager.replace(TitleScene(self.context))
 

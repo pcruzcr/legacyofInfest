@@ -7,6 +7,9 @@ import pygame
 
 from src.framework.entities.enemy_base import EnemyBase, EnemyState
 from src.framework.entities.enemy_shooter import Projectile
+from src.engine.core.event_bus import _get_bus as _bus
+_emit = lambda *a, **kw: _bus().emit(*a, **kw)
+from src.engine.core.events import Events
 
 if TYPE_CHECKING:
     from src.framework.entities.player import Player
@@ -26,6 +29,7 @@ class EnemyArcher(EnemyBase):
         projectile_speed: float = 90.0,
         projectile_damage: float = 0.75,
         zone: int = 0,
+        **kwargs,
     ) -> None:
         super().__init__(
             spawn_position=spawn_position,
@@ -114,14 +118,13 @@ class EnemyArcher(EnemyBase):
             lifetime=3.0,
         )
         self._active_projectiles.append(projectile)
-        from src.engine.core.event_bus import emit
-        from src.engine.core.events import Events
-        emit(Events.SFX_PROJECTILE_FIRE)
+        _emit(Events.SFX_PROJECTILE_FIRE)
         return True
 
     def _post_update(self, dt: float) -> None:
         """Update active projectiles and apply gravity to them for arc effect."""
         for p in self._active_projectiles:
+            p.velocity.y += 400.0 * dt
             p.update(dt)
         self.clear_expired_projectiles()
 
@@ -138,14 +141,12 @@ class EnemyArcher(EnemyBase):
         for p in list(self._active_projectiles):
             if p.is_active and p.rect.colliderect(player_hurtbox):
                 if getattr(player, "_parry_active", False) and getattr(player, "_parry_window", 0) > 0:
-                    from src.engine.core.event_bus import emit
-                    from src.engine.core.events import Events
                     p._expired = True
                     p.is_active = False
                     player._parry_success = True
                     player._parry_active = False
                     player._parry_window = 0.0
-                    emit(Events.VFX_PARRY, pos=(p.position.x, p.position.y))
+                    _emit(Events.VFX_PARRY, pos=(p.position.x, p.position.y))
                 else:
                     player.apply_damage(p.damage, (self.position.x, self.position.y))
                     p.on_collision()

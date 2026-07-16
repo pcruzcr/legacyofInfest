@@ -1,3 +1,13 @@
+---
+document_id: "LOI-CODEX-002"
+title: "Legacy of InFest — Codex Context"
+aliases: ["Codex Context", "Coding Rules"]
+tags: ["codex", "rules", "architecture"]
+description: "Project philosophy, coding rules, architecture rules"
+source: "docs/02_CODEX_CONTEXT.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Codex Context
 
 **Document ID:** LOI-CODEX-002  

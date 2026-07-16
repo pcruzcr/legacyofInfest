@@ -1,3 +1,13 @@
+---
+document_id: "LOI-SYLLABUS-008"
+title: "Legacy of InFest — Syllabus Mapping"
+aliases: ["Syllabus Mapping"]
+tags: ["syllabus", "mapping", "academic"]
+description: "Framework component to syllabus unit mapping"
+source: "docs/08_SYLLABUS_MAPPING.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Syllabus Mapping
 
 **Document ID:** LOI-SYLLABUS-008  
@@ -521,3 +531,10 @@ VIII. Segmentación, Threshold, Morfología, Watershed
 IX. Reconocimiento de Patrones, Clasificación
 
 Para la tabla completa de mapeo con criterios de evaluación detallados, consultar el documento original en inglés.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[14_PROFESSOR_DELIVERABLE_MATRIX.md|Professor Deliverable Matrix]]
+- [[21_COURSE_SCHEDULE.md|Course Schedule]]

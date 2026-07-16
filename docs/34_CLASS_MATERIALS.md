@@ -1,3 +1,13 @@
+---
+document_id: "LOI-CLASS-034"
+title: "Class Materials — Lecture Slides & Live Coding Scripts"
+aliases: ["Class Materials"]
+tags: ["class", "materials", "academic"]
+description: "Class materials and resources"
+source: "docs/34_CLASS_MATERIALS.md"
+date_processed: "2026-07-14"
+---
+
 # Class Materials — Lecture Slides & Live Coding Scripts
 
 This document indexes all professor-facing presentation and live coding materials.
@@ -84,3 +94,10 @@ Este documento contiene referencias a los materiales didácticos utilizados en c
 - 6 instrumentos de evaluación oficiales
 
 Para el cronograma detallado clase por clase, consultar el documento original en inglés.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[34_EDUCATIONAL_ROADMAP.md|Educational Roadmap]]
+- [[21_COURSE_SCHEDULE.md|Course Schedule]]

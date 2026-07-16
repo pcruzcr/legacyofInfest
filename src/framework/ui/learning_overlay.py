@@ -3,9 +3,10 @@ from __future__ import annotations
 import pygame
 
 from src.engine.core import settings
+from src.engine.input.action_map import Action
 
-LEARNING_PANELS: dict[int, dict[str, object]] = {
-    pygame.K_F2: {
+LEARNING_PANELS: dict[Action, dict[str, object]] = {
+    Action.LEARN_MATH: {
         "title": "Math Concepts [F2]",
         "color": (100, 200, 255),
         "lines": [
@@ -20,7 +21,7 @@ LEARNING_PANELS: dict[int, dict[str, object]] = {
             "  - Cutscene camera moves lerp",
         ],
     },
-    pygame.K_F3: {
+    Action.LEARN_PHYSICS: {
         "title": "Physics [F3]",
         "color": (150, 255, 150),
         "lines": [
@@ -36,7 +37,7 @@ LEARNING_PANELS: dict[int, dict[str, object]] = {
             "Drag/Deceleration: ground vs air",
         ],
     },
-    pygame.K_F4: {
+    Action.LEARN_COLLISION: {
         "title": "Collision [F4]",
         "color": (255, 200, 100),
         "lines": [
@@ -51,7 +52,7 @@ LEARNING_PANELS: dict[int, dict[str, object]] = {
             "Contact damage: hurtbox overlap check",
         ],
     },
-    pygame.K_F5: {
+    Action.LEARN_FSM: {
         "title": "State Machines [F5]",
         "color": (255, 150, 200),
         "lines": [
@@ -66,7 +67,7 @@ LEARNING_PANELS: dict[int, dict[str, object]] = {
             "  - DYING > HURT > ALERT > PATROL",
         ],
     },
-    pygame.K_F6: {
+    Action.LEARN_RENDER: {
         "title": "Rendering [F6]",
         "color": (200, 180, 255),
         "lines": [
@@ -83,7 +84,7 @@ LEARNING_PANELS: dict[int, dict[str, object]] = {
             "  different speed relative to camera",
         ],
     },
-    pygame.K_F7: {
+    Action.LEARN_AUDIO: {
         "title": "Audio [F7]",
         "color": (255, 200, 200),
         "lines": [
@@ -98,7 +99,7 @@ LEARNING_PANELS: dict[int, dict[str, object]] = {
             "Spatial audio: stereo pan by world X",
         ],
     },
-    pygame.K_F8: {
+    Action.LEARN_PERF: {
         "title": "Performance [F8]",
         "color": (255, 255, 150),
         "lines": [
@@ -114,7 +115,7 @@ LEARNING_PANELS: dict[int, dict[str, object]] = {
             "Light sources: 2D with per-pixel alpha",
         ],
     },
-    pygame.K_F9: {
+    Action.LEARN_CONTROLS: {
         "title": "Controls [F9]",
         "color": (200, 200, 200),
         "lines": [
@@ -130,7 +131,7 @@ LEARNING_PANELS: dict[int, dict[str, object]] = {
             "Learning panels: F2-F10 toggle",
         ],
     },
-    pygame.K_F10: {
+    Action.LEARN_HELP: {
         "title": "Learning Mode Help [F10]",
         "color": (255, 220, 150),
         "lines": [
@@ -154,15 +155,16 @@ class LearningOverlay:
     """Educational overlay panels toggled with F2-F10 during gameplay."""
 
     def __init__(self) -> None:
-        self._active_key: int | None = None
+        self._active_key: Action | None = None
         self._font = pygame.font.Font(None, 14)
         self._title_font = pygame.font.Font(None, 18)
+        self._box_surf = None
 
-    def toggle(self, key: int) -> None:
-        if self._active_key == key:
+    def toggle(self, action: Action) -> None:
+        if self._active_key == action:
             self._active_key = None
-        elif key in LEARNING_PANELS:
-            self._active_key = key
+        elif action in LEARNING_PANELS:
+            self._active_key = action
 
     def hide(self) -> None:
         self._active_key = None
@@ -193,7 +195,9 @@ class LearningOverlay:
         total_h = title_h + len(lines) * line_h + pad * 2
         panel_w = min(panel_w, settings.INTERNAL_WIDTH - 40)
 
-        box = pygame.Surface((panel_w, total_h), pygame.SRCALPHA)
+        if self._box_surf is None or self._box_surf.get_size() != (panel_w, total_h):
+            self._box_surf = pygame.Surface((panel_w, total_h), pygame.SRCALPHA)
+        box = self._box_surf
         box.fill((0, 0, 0, 210))
         pygame.draw.rect(box, (*color, 200), (0, 0, panel_w, total_h), 2, border_radius=3)
 

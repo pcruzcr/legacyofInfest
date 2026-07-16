@@ -19,7 +19,7 @@ from src.framework.processing.vision_tools import VisionTools
 
 def _surface_fingerprint(surface: pygame.Surface) -> str:
     """Return SHA-256 of surface pixel data for change detection."""
-    raw = pygame.image.tostring(surface, "RGB")
+    raw = pygame.image.tobytes(surface, "RGB")
     return hashlib.sha256(raw).hexdigest()
 
 
