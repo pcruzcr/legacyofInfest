@@ -8,6 +8,7 @@ class BitmapFont:
 
     def __init__(self, path: Path | str, char_width: int = 0, char_height: int = 0,
                  chars: str = "", first_ascii: int = 0) -> None:
+        self._text_cache: dict[str, pygame.Surface] = {}
         try:
             sheet = pygame.image.load(str(path))
         except pygame.error:
@@ -56,6 +57,9 @@ class BitmapFont:
     def render(self, text: str) -> pygame.Surface:
         if not self._char_map:
             return pygame.Surface((0, 0))
+        cached = self._text_cache.get(text)
+        if cached is not None:
+            return cached.copy()
         total_w = 0
         h = 0
         for c in text:
@@ -78,6 +82,7 @@ class BitmapFont:
                 x += gw
             else:
                 x += gw or 4
+        self._text_cache[text] = surf.copy()
         return surf
 
     @property

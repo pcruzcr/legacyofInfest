@@ -58,6 +58,9 @@ class ComboDemoScene(BaseScene):
         self._last_type = ""
         self._hit_log = ["Press Z (light) or X (heavy)"]
 
+    def on_exit(self) -> None:
+        pass
+
     def update(self, dt: float) -> None:
         im = self.input
         if im is None:

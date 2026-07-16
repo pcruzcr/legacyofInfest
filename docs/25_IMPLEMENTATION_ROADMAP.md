@@ -1,3 +1,13 @@
+---
+document_id: "LOI-ROADMAP-025"
+title: "Legacy of InFest — Implementation Roadmap"
+aliases: ["Implementation Roadmap"]
+tags: ["implementation", "roadmap", "build"]
+description: "16-phase build order with Definition of Done"
+source: "docs/25_IMPLEMENTATION_ROADMAP.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Implementation Roadmap
 
 **Document ID:** LOI-ROADMAP-025  
@@ -637,3 +647,436 @@ Because this roadmap is designed to be executed across multiple AI coding sessio
 | 16 | `26_STUDENT_TEMPLATE_SPEC.md` | n/a |
 | 17 | All documents | n/a — regression phase |
 | 18 | `PHASE_FIX_REPORT.md`, `KNOWN_GAPS.md`, `REMEDIATION_PLAN.md` | n/a — audit with fixes against all prior phases |
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[30_TICKET_BACKLOG.md|Ticket Backlog]]
+- [[24_TEST_PLAN.md|Test Plan]]
+
+---
+--- Traducción al Español ---
+
+*This document is also available in English above.*
+
+# Legacy of InFest — Hoja de Ruta de Implementación
+
+**ID del Documento:** LOI-ROADMAP-025
+**Versión:** 1.1.0
+**Estado:** Oficial
+**Compatibilidad:** Requiere todos los documentos LOI anteriores (00 a 21)
+**Audiencia:** Profesor, asistentes de codificación IA (Claude Code, Cline, OpenCode, Codex)
+
+---
+
+## 1. Propósito
+
+Este documento le dice a un asistente de codificación IA **exactamente qué construir, en qué orden, y cómo saber cuándo cada pieza está terminada.** Los otros 24 documentos describen *cómo debería ser el sistema*. Este documento describe *la secuencia de trabajo que llega allí* sin romper dependencias, sin producir código muerto, y sin requerir retrabajo.
+
+**Regla para asistentes IA:** No comience ninguna fase antes de que la Definición de Terminado de la fase anterior esté completamente satisfecha. No implemente un módulo fuera de orden incluso si parece simple — los módulos posteriores asumen que los anteriores existen y se comportan exactamente como se especifica.
+
+---
+
+## 2. Resumen del Orden de Construcción
+
+FASE 0   Andamio del repositorio, configuración, instalación de dependencias
+FASE 1   Núcleo del Motor (app, clock, event_bus, settings)
+FASE 2   Entrada/Audio/Utilidades del Motor
+FASE 3   Sistema de Escenas del Motor + Pila de escenas
+FASE 4   UI del Motor (HUD, MessageBox, ScreenBanner)
+FASE 5   Entidades del Marco (BaseEntity, Player)
+FASE 6   Entidades del Marco (Plantillas de enemigos)
+FASE 7   Marco del Nivel (Camera, Checkpoint, StageLoader)
+FASE 8   Procesamiento del Marco — ColorTools, CurveTools
+FASE 9   Nivel 0 (implementación completa, las 7 zonas)
+FASE 10  Procesamiento del Marco — FilterTools (Unidad VII)
+FASE 11  Procesamiento del Marco — VisionTools (Unidad VIII)
+FASE 12  Procesamiento del Marco — PatternRecognitionTools (Unidad IX)
+FASE 13  Escenas de Demostración Académica (Filter/Vision/Pattern)
+FASE 14  Laboratorios Teóricos Interactivos (Vector/Collision/Color/Curve)
+FASE 15  Entidades del Marco — BossBase + un jefe de referencia (El Venado Sagrado)
+FASE 16  Andamio de student_templates/
+FASE 17  Pase de regresión completo + herramientas (validate_assets.py, build_dataset.py)
+
+Cada fase tiene una puerta: su Definición de Terminado (DoD) debe cumplirse antes de que comience la siguiente fase. Las Fases 10-12 pueden paralelizarse en sesiones IA separadas **solo si** la Fase 9 ya está completa, ya que las tres dependen de que el Nivel 0 exista como objetivo de prueba de humo de integración.
+
+---
+
+## 3. Fase 0 — Andamio del Repositorio
+
+**Objetivo:** Un repositorio que coincida exactamente con 00_SYLLABUS_ALIGNMENT_AUDIT.md sección 7, con todos los directorios presentes (incluso si están vacíos) y dependencias instalables.
+
+**Tareas:**
+1. Crear el árbol de directorios completo de 00_SYLLABUS_ALIGNMENT_AUDIT.md sección 7 (la estructura reubicada en src/).
+2. Crear requirements.txt según 10_LIBRARIES_AND_DEPENDENCIES.md sección 13, con pines de versión (ver 23_DATA_SCHEMAS.md sección 9 para la tabla de versiones fijadas).
+3. Crear src/engine/__init__.py, src/framework/__init__.py, y todos los archivos __init__.py de subpaquetes (vacíos, solo para hacer los paquetes importables).
+4. Crear main.py con un placeholder que no importa nada aún pero sale limpiamente (print("Legacy of InFest — scaffold only"); sys.exit(0)).
+5. Verificar que pip install -r requirements.txt tenga éxito en un entorno virtual limpio.
+
+**Definición de Terminado:**
+- [ ] El árbol de directorios coincide exactamente con la estructura corregida (diff contra 00_SYLLABUS_ALIGNMENT_AUDIT.md sección 7).
+- [ ] pip install -r requirements.txt sale con código 0.
+- [ ] python main.py sale con código 0 sin errores de importación.
+- [ ] Ningún módulo fuera de src/ contiene lógica de juego ejecutable.
+
+---
+
+## 4. Fase 1 — Núcleo del Motor
+
+**Construye:** src/engine/core/settings.py, clock.py, event_bus.py, app.py
+
+**Documentos de referencia:** 03_ARCHITECTURE.md secciones 2.1, 6; 22_API_CONTRACTS.md seccion 2
+
+**Orden dentro de la fase:**
+1. settings.py primero — cada otro módulo importa constantes de aquí. Sin lógica, solo declaraciones.
+2. event_bus.py segundo — cero dependencias de otros módulos del motor.
+3. clock.py tercero — depende solo de pygame.time.Clock.
+4. app.py último — depende de los tres anteriores más importaciones stub para SceneManager, InputManager, AudioManager (que aún no existen — use clases placeholder con cuerpos pass para que app.py esté sintácticamente completo pero aún no funcional).
+
+**Definición de Terminado:**
+- [ ] settings.py contiene cada constante listada en la tabla de 03_ARCHITECTURE.md seccion 2.1, sin constantes no documentadas adicionales.
+- [ ] EventBus.subscribe/unsubscribe/emit coinciden exactamente con 22_API_CONTRACTS.md seccion 2.3.
+- [ ] DeltaClock.tick() devuelve un float y nunca lanza en la primera llamada (sin división por cero en delta del primer fotograma).
+- [ ] App.__init__ crea la superficie interna de 320x224 y una superficie de ventana escalada según settings.DISPLAY_SCALE.
+- [ ] Pruebas unitarias: tests/test_event_bus.py, tests/test_clock.py — ambas pasando (ver 24_TEST_PLAN.md seccion 3).
+- [ ] python main.py todavía sale con código 0 (App se construye pero run() aún no se llama desde main.py).
+
+---
+
+## 5. Fase 2 — Entrada / Audio / Utilidades del Motor
+
+**Construye:** src/engine/input/, src/engine/audio/, src/engine/utils/
+
+**Documentos de referencia:** 03_ARCHITECTURE.md secciones 2.3, 2.4, 2.6; 22_API_CONTRACTS.md secciones 3, 4, 5
+
+**Orden dentro de la fase:**
+1. engine/utils/math_utils.py — cero dependencias, necesario para casi todo aguas abajo.
+2. engine/utils/asset_loader.py — depende solo de pygame y settings.ASSETS_DIR.
+3. engine/utils/spritesheet.py — depende de asset_loader.
+4. engine/input/action_map.py — declara la tabla de enlace predeterminada de 03_ARCHITECTURE.md seccion 2.3.
+5. engine/input/input_manager.py — depende de action_map.
+6. engine/audio/sound_bank.py — depende de asset_loader.
+7. engine/audio/audio_manager.py — depende de sound_bank.
+
+**Definición de Terminado:**
+- [ ] Todas las funciones de math_utils en 22_API_CONTRACTS.md seccion 5 implementadas con firmas coincidentes.
+- [ ] AssetLoader almacena en caché por ruta absoluta; cargar la misma ruta dos veces devuelve el mismo objeto.
+- [ ] InputManager.is_action_pressed/held/released todos implementados y distinguen presionado-este-fotograma de mantenido.
+- [ ] AudioManager.play_music/play_sfx no lanzan cuando los archivos referenciados de assets/music/ o assets/sfx/ aún no existen.
+- [ ] Pruebas unitarias: tests/test_math_utils.py, tests/test_asset_loader.py, tests/test_input_manager.py — todas pasando.
+
+---
+
+## 6. Fase 3 — Sistema de Escenas del Motor
+
+**Construye:** src/engine/scene/base_scene.py, scene_manager.py, transitions.py
+
+**Documentos de referencia:** 03_ARCHITECTURE.md secciones 2.2, 6, 7; 22_API_CONTRACTS.md seccion 6
+
+**Definición de Terminado:**
+- [ ] BaseScene es un abc.ABC con on_enter, on_exit, update, draw abstractos.
+- [ ] SceneManager.push/pop/replace llaman correctamente a on_pause/on_resume/on_enter/on_exit en el orden correcto.
+- [ ] App.run() ahora está conectado para llamar a SceneManager.current.update(dt) y .draw(surface) cada fotograma.
+- [ ] Un SplashScene stub mínimo se puede empujar y el bucle principal se ejecuta sin fallar por 5 segundos en una prueba de humo manual.
+- [ ] Pruebas unitarias: tests/test_scene_manager.py — pasando.
+
+---
+
+## 7. Fase 4 — UI del Motor
+
+**Construye:** src/engine/ui/hud.py, message_box.py, screen_banner.py
+
+**Documentos de referencia:** 09_HUD_SPEC.md (documento completo); 22_API_CONTRACTS.md seccion 7
+
+**Definición de Terminado:**
+- [ ] HUD se suscribe a PLAYER_DAMAGED, PLAYER_HEALED, PLAYER_DIED según 09_HUD_SPEC.md seccion 10 y actualiza el estado interno sin errores incluso sin una instancia de Player presente aún.
+- [ ] Algoritmo de renderizado de corazones en 09_HUD_SPEC.md seccion 4.3 implementado exactamente.
+- [ ] MessageBox tiene una tasa de revelación de máquina de escribir que coincide con 09_HUD_SPEC.md seccion 7.3 (30 caracteres/segundo).
+- [ ] El tiempo de deslizamiento-entrada/mantener/deslizamiento-salida de ScreenBanner coincide con 09_HUD_SPEC.md seccion 6.3.
+- [ ] Pruebas unitarias: tests/test_hud.py (lógica de fracción de corazón como mínimo).
+
+---
+
+## 8. Fase 5 — Entidades del Marco: BaseEntity y Player
+
+**Construye:** src/framework/entities/base_entity.py, player.py
+
+**Documentos de referencia:** 04_PLAYER_SPEC.md (documento completo); 22_API_CONTRACTS.md secciones 8, 9
+
+**Orden dentro de la fase:**
+1. base_entity.py primero — define el contrato de ciclo de vida que cada entidad hereda.
+2. player.py segundo — máquina de estados completa según 04_PLAYER_SPEC.md seccion 8.
+
+**Definición de Terminado:**
+- [ ] BaseEntity.update/draw son abstractos; llamarlos en BaseEntity directamente lanza NotImplementedError.
+- [ ] La máquina de estados del jugador implementa los 9 estados en 04_PLAYER_SPEC.md seccion 8.1 con reglas de transición exactas.
+- [ ] El movimiento coincide exactamente con 04_PLAYER_SPEC.md seccion 4: velocidad de caminar 90 px/s, gravedad 800 px/s², fuerza de salto -380 px/s, tiempo coyote 6 fotogramas, corte de salto en multiplicador 0.5x.
+- [ ] El sistema de daño coincide con la seccion 6: tres niveles de daño (0.25/0.50/1.00), invencibilidad de 1.5s, retroceso según seccion 6.3.
+- [ ] Las hitboxes de ataque coinciden con la seccion 10 exactamente.
+- [ ] La hurtbox coincide con la seccion 11.
+- [ ] Pruebas unitarias: tests/test_player_physics.py, tests/test_player_state_machine.py, tests/test_player_damage.py — todas pasando.
+- [ ] Prueba de humo manual: el jugador puede generarse en una escena en blanco con un suelo plano, caminar, saltar, agacharse y atacar sin excepciones.
+
+---
+
+## 9. Fase 6 — Entidades del Marco: Plantillas de Enemigos
+
+**Construye:** src/framework/entities/enemy_base.py, enemy_walker.py, enemy_flying.py, enemy_shooter.py
+
+**Documentos de referencia:** 05_ENEMY_SPEC.md (documento completo); 22_API_CONTRACTS.md seccion 10
+
+**Orden dentro de la fase:**
+1. enemy_base.py — esqueleto FSM (PATROL/ALERT/HURT/DYING), regla de detección, daño de contacto.
+2. enemy_walker.py — patrulla + detección de borde.
+3. enemy_flying.py — modos de vuelo senoidal/Bézier/patrulla.
+4. enemy_shooter.py — sistema de proyectiles, cálculo de ángulo atan2.
+
+**Definición de Terminado:**
+- [ ] EnemyBase.apply_hit, _die, _check_player_contact implementados exactamente según 05_ENEMY_SPEC.md seccion 2.3.
+- [ ] La zona de detección coincide exactamente con las secciones 2.5 y 10.1.
+- [ ] La sonda de detección de borde de EnemyWalker coincide con el pseudocódigo de la seccion 3.5.
+- [ ] El modo senoidal de EnemyFlying coincide con la fórmula de la seccion 4.3.
+- [ ] El ciclo de vida del proyectil de EnemyShooter coincide con la seccion 5.4 (generar a actualizar a expirar).
+- [ ] Pruebas unitarias: tests/test_enemy_walker.py, tests/test_enemy_flying.py, tests/test_enemy_shooter.py — pasando para todos los modos implementados.
+
+---
+
+## 10. Fase 7 — Sistema de Nivel del Marco
+
+**Construye:** src/framework/stage/camera.py, checkpoint.py, stage_loader.py
+
+**Documentos de referencia:** 03_ARCHITECTURE.md secciones 2.8, 8.3; 06_TMX_SPEC.md (documento completo); 22_API_CONTRACTS.md seccion 11
+
+**Orden dentro de la fase:**
+1. camera.py — sin dependencia de TMX; puede construirse y probarse con un objetivo codificado.
+2. checkpoint.py — pequeño, autocontenido, depende de EventBus.
+3. stage_loader.py — depende de pytmx, pyscroll, y el patrón de registro de fábrica de entidades.
+
+**Definición de Terminado:**
+- [ ] Camera.follow/update/world_to_screen/screen_to_world implementados; los factores de paralaje coinciden exactamente con 06_TMX_SPEC.md seccion 3.2.
+- [ ] Checkpoint se activa una vez, emite CHECKPOINT_REACHED con checkpoint_id correcto, nunca se vuelve a disparar.
+- [ ] StageLoader.load() analiza las 8 capas requeridas en 06_TMX_SPEC.md seccion 3.1, lanza FrameworkUsageError si falta alguna capa requerida o PlayerSpawn.
+- [ ] El registro de fábrica de entidades implementado y usado para generar Walker/Flying/Shooter/Checkpoint desde objetos TMX.
+- [ ] Pruebas unitarias: tests/test_stage_loader.py, tests/test_camera.py, tests/test_checkpoint.py — pasando.
+
+---
+
+## 11. Fase 8 — Procesamiento del Marco: ColorTools y CurveTools
+
+**Construye:** src/framework/processing/color_tools.py, curve_tools.py
+
+**Documentos de referencia:** 03_ARCHITECTURE.md seccion 2.9; 22_API_CONTRACTS.md seccion 12
+
+**Definición de Terminado:**
+- [ ] Todas las conversiones de ColorTools (RGB a HSV a HSL a CMYK) viajan de ida y vuelta dentro de +/-1 unidad de error para 1000 colores muestreados aleatoriamente.
+- [ ] ColorTools.alpha_blend coincide exactamente con la fórmula estándar out = src*a + dst*(1-a).
+- [ ] CurveTools.bezier produce salida correcta para casos conocidos de puntos de control.
+- [ ] CurveTools.b_spline, nurbs, catmull_rom implementados y pasan pruebas de humo.
+- [ ] CurveTools.sample_path interpola correctamente entre puntos pre-muestreados para cualquier t en [0,1].
+- [ ] Volver a la Fase 6: completar los modos Bézier y patrulla de EnemyFlying ahora que curve_tools.py existe.
+- [ ] Pruebas unitarias: tests/test_color_tools.py, tests/test_curve_tools.py — pasando.
+
+---
+
+## 12. Fase 9 — Nivel 0 (Implementación Completa)
+
+**Construye:** src/stages/stage0/stage0.py, stage0.tmx, todos los recursos del Nivel 0 según 20_ASSET_BIBLE.md
+
+**Documentos de referencia:** 07_STAGE0_DESIGN.md (documento completo); 20_ASSET_BIBLE.md (documento completo); 09_HUD_SPEC.md
+
+**Este es el primer hito de integración completo.** Cada módulo del motor y marco construido en las Fases 1-8 se ejercita aquí simultáneamente.
+
+**Definición de Terminado:**
+- [ ] Las 7 zonas (A a G) están presentes y transitables de principio a fin sin excepciones.
+- [ ] Los 27 mensajes de tutorial se disparan en las posiciones X correctas y se muestran correctamente.
+- [ ] Los 5 puntos de control funcionan (se activan una vez, restauran al morir).
+- [ ] NextTrigger dispara correctamente STAGE_COMPLETE.
+- [ ] Sin errores ni advertencias de consola durante un juego completo.
+- [ ] Esta fase es la **prueba de humo de referencia** para todo lo que sigue.
+
+---
+
+## 13. Fase 10 — FilterTools (Unidad VII)
+
+**Construye:** src/framework/processing/filter_tools.py
+
+**Documentos de referencia:** 11_FILTER_TOOLS_SPEC.md (documento completo); 22_API_CONTRACTS.md seccion 13
+
+**Definición de Terminado:**
+- [ ] Los 9 métodos públicos en 11_FILTER_TOOLS_SPEC.md seccion 8 implementados con firmas exactas.
+- [ ] Los 9 kernels estándar en la seccion 9.2 codificados exactamente como se especifica.
+- [ ] Validación de entrada según la seccion 11 lanza los tipos de excepción exactos.
+- [ ] Pruebas unitarias: tests/test_filter_tools.py con salida PNG guardada a tests/output/filter/.
+- [ ] Re-ejecutar prueba de humo del Nivel 0 — sin regresión.
+
+---
+
+## 14. Fase 11 — VisionTools (Unidad VIII)
+
+**Construye:** src/framework/processing/vision_tools.py
+
+**Documentos de referencia:** 12_VISION_TOOLS_SPEC.md (documento completo); 22_API_CONTRACTS.md seccion 14
+
+**Definición de Terminado:**
+- [ ] Todos los métodos públicos implementados con firmas exactas.
+- [ ] Pruebas unitarias: tests/test_vision_tools.py con salida PNG guardada a tests/output/vision/.
+- [ ] Re-ejecutar prueba de humo del Nivel 0 — sin regresión.
+
+---
+
+## 15. Fase 12 — PatternRecognitionTools (Unidad IX)
+
+**Construye:** src/framework/processing/pattern_recognition_tools.py, tools/build_dataset.py
+
+**Documentos de referencia:** 13_PATTERN_RECOGNITION_SPEC.md (documento completo); 22_API_CONTRACTS.md seccion 15; 23_DATA_SCHEMAS.md seccion 5
+
+**Definición de Terminado:**
+- [ ] train() implementado para los 4 tipos de clasificador (knn, tree, forest, svm).
+- [ ] evaluate() devuelve un EvaluationResult completo.
+- [ ] save_model()/load_model() viajan de ida y vuelta correctamente.
+- [ ] classify()/classify_proba()/predict() implementados.
+- [ ] Pruebas unitarias: tests/test_pattern_recognition_tools.py.
+- [ ] Re-ejecutar prueba de humo del Nivel 0 — sin regresión.
+
+---
+
+## 16. Fase 13 — Escenas de Demostración Académica
+
+**Construye:** src/engine/scenes/demo_menu_scene.py, filter_demo_scene.py, vision_demo_scene.py, pattern_demo_scene.py
+
+**Documentos de referencia:** 15_ACADEMIC_DEMO_SCENES.md (documento completo); 22_API_CONTRACTS.md seccion 16
+
+**Prerrequisito:** Las Fases 10, 11 y 12 deben estar completas.
+
+**Definición de Terminado:**
+- [x] DemoMenuScene navega a las tres demostraciones y de vuelta a TitleScene.
+- [x] FilterDemoScene: los 9 modos funcionales, incluyendo barras de histograma en vivo y visualización de matriz de kernel.
+- [x] VisionDemoScene: los 10 modos funcionales.
+- [x] PatternDemoScene: los 5 modos funcionales.
+- [x] Tecla S guarda a PNG en las tres escenas demo.
+- [x] Prueba de humo manual: cada escena demo ejecutada por 60 segundos con todos los modos — sin fallos.
+
+---
+
+## 17. Fase 14 — Escenas de Laboratorio Teórico Interactivo
+
+**Construye:** 7 escenas de laboratorio
+
+**Prerrequisito:** Fases 8 y 5.
+
+**Definición de Terminado general:**
+- [x] Las 7 escenas de laboratorio teórico implementan todos los modos documentados.
+- [x] Las 10 escenas pasan pruebas de importar/instanciar/dibujar en tests/test_demo_scenes.py.
+- [x] Las 364 pruebas existentes pasan todas.
+- [x] Prueba de humo manual: cada escena recorrida a través de todos los modos por 30 segundos — sin fallos.
+
+---
+
+## 18. Fase 15 — BossBase y Jefe de Referencia
+
+**Construye:** src/framework/entities/boss_base.py, src/stages/boss_venado/boss_venado.py (+ arena TMX)
+
+**Documentos de referencia:** 17_BOSS_SPEC.md secciones 2, 3; 22_API_CONTRACTS.md seccion 17
+
+**Definición de Terminado:**
+- [ ] El protocolo de transición de fase de BossBase coincide exactamente con 17_BOSS_SPEC.md seccion 2.3.
+- [ ] Los patrones de ataque de la Fase 1 y Fase 2 de El Venado Sagrado implementados exactamente según la seccion 3.3.
+- [ ] Pruebas unitarias: tests/test_boss_base.py.
+
+---
+
+## 19. Fase 16 — Andamio de student_templates/
+
+**Construye:** student_templates/stage_template/, student_templates/boss_template/
+
+**Documentos de referencia:** 26_STUDENT_TEMPLATE_SPEC.md (documento completo)
+
+---
+
+## 20. Fase 17 — Pase de Regresión y Herramientas
+
+**Construye:** scripts/validate_assets.py; limpieza final de todos los caminos de código de "respaldo de desarrollo temprano" marcados en fases anteriores.
+
+---
+
+## 21. Fase 18 — Sesión de Corrección de Errores y Remediación de Auditoría
+
+**Fecha:** Julio 2026
+**Alcance:** Auditoría sistemática y corrección de defectos encontrados durante pruebas, auditoría de código y juegos de estudiantes.
+
+### 21.1 fix_plataformas (Jugabilidad)
+
+| Archivo | Antes (regresión) | Después (corrección) |
+|---|---|---|
+| player.py (colisión unidireccional) | Detección basada en straddle | Comparación _prev_foot_y |
+| generate_stage0_tmx.py | Tile tipo 3 mapeado uniformemente a Platform | Correcciones específicas |
+| stage0.tmx | 4 plataformas unidireccionales en Zonas A/C | Todas Sólidas |
+| test_stage0_platform_solidity.py | No existía | 5 pruebas de regresión |
+
+### 21.2 Correcciones de Fallos (3 commits)
+
+- 14 fallos corregidos en núcleo del motor, marco de entidades y carga de niveles
+- Guardas de ZeroDivisionError
+- Guardas de tipo None en carga de sprites y detección de colisión
+
+### 21.3 Corrección de Texto Borroso
+
+| Recurso | Tamaño Anterior | Nuevo Tamaño |
+|---|---|---|
+| Fuente 5x7 (HUD/corazones) | 5x7 px | 5x7 px (sin cambios) |
+| Fuente 6x9 (banners) | 6x9 px | 6x15 px |
+| Fuente 7x11 (diálogos) | 7x11 px | 7x18 px |
+
+### 21.4 Remediación de Auditoría (8 problemas)
+
+Problemas 1-8 corregidos.
+
+### 21.5 Evolución del Conteo de Pruebas
+
+| Hito | Pruebas |
+|---|---|
+| Fin de Fase 17 | 364 |
+| Después de fix_plataformas | 369 |
+| Después de remediación de auditoría | 369 |
+
+---
+
+## 22. Resumen del Grafo de Dependencias
+
+Fase 0 (andamio) → Fase 1 (núcleo) → Fase 2 (entrada/audio/utils) → Fase 3 (sistema de escenas) → Fase 4 (UI) → Fase 5 (BaseEntity, Player) → Fase 6 (Enemigos) → Fase 7 (Sistema de nivel) → Fase 8 (ColorTools, CurveTools) → Fase 9 (NIVEL 0) → Fase 10 (FilterTools), Fase 11 (VisionTools), Fase 12 (PatternRecognitionTools) → Fase 13 (Escenas Demo) → Fase 14 (Laboratorios Teóricos) → Fase 15 (BossBase + El Venado Sagrado) → Fase 16 (student_templates/) → Fase 17 (Regresión) → Fase 18 (Corrección de errores)
+
+---
+
+## 21. Protocolo de Transferencia de Sesión
+
+Cada sesión debe:
+1. **Indicar qué fase está comenzando**, referenciando este documento por número de fase.
+2. **Confirmar que la lista de verificación DoD de la fase anterior** está satisfecha antes de escribir nuevo código.
+3. **No saltar adelante**.
+4. **Actualizar las casillas de verificación de este documento** para que la próxima sesión sepa exactamente dónde se dejó el trabajo.
+
+---
+
+## 22. Índice de Referencia Cruzada
+
+| Fase | Documento(s) de Especificación | Sección del Documento de Contrato |
+|---|---|---|
+| 1 | 03_ARCHITECTURE.md secciones 2.1, 6 | 22_API_CONTRACTS.md seccion 2 |
+| 2 | 03_ARCHITECTURE.md secciones 2.3-2.4, 2.6 | 22_API_CONTRACTS.md secciones 3-5 |
+| 3 | 03_ARCHITECTURE.md seccion 2.2 | 22_API_CONTRACTS.md seccion 6 |
+| 4 | 09_HUD_SPEC.md | 22_API_CONTRACTS.md seccion 7 |
+| 5 | 04_PLAYER_SPEC.md | 22_API_CONTRACTS.md secciones 8-9 |
+| 6 | 05_ENEMY_SPEC.md | 22_API_CONTRACTS.md seccion 10 |
+| 7 | 06_TMX_SPEC.md, 03_ARCHITECTURE.md seccion 2.8 | 22_API_CONTRACTS.md seccion 11 |
+| 8 | 03_ARCHITECTURE.md seccion 2.9 | 22_API_CONTRACTS.md seccion 12 |
+| 9 | 07_STAGE0_DESIGN.md, 20_ASSET_BIBLE.md | N/A — fase de integración |
+| 10 | 11_FILTER_TOOLS_SPEC.md | 22_API_CONTRACTS.md seccion 13 |
+| 11 | 12_VISION_TOOLS_SPEC.md | 22_API_CONTRACTS.md seccion 14 |
+| 12 | 13_PATTERN_RECOGNITION_SPEC.md | 22_API_CONTRACTS.md seccion 15 |
+| 13 | 15_ACADEMIC_DEMO_SCENES.md | 22_API_CONTRACTS.md seccion 16 |
+| 14 | 15_ACADEMIC_DEMO_SCENES.md v1.1 | N/A — extensión educativa |
+| 15 | 17_BOSS_SPEC.md secciones 2-3 | 22_API_CONTRACTS.md seccion 17 |
+| 16 | 26_STUDENT_TEMPLATE_SPEC.md | N/A |
+| 17 | Todos los documentos | N/A — fase de regresión |
+| 18 | PHASE_FIX_REPORT.md, KNOWN_GAPS.md, REMEDIATION_PLAN.md | N/A — auditoría con correcciones |

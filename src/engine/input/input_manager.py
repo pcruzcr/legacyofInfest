@@ -8,6 +8,8 @@ states for abstract Actions defined in action_map.py.
 from __future__ import annotations
 from typing import Any
 
+import logging
+
 import pygame
 
 from src.engine.input.action_map import (
@@ -50,7 +52,8 @@ class InputManager:
             if pygame.joystick.get_count() > 0:
                 self._joystick = pygame.joystick.Joystick(0)
                 self._joystick.init()
-        except Exception:
+        except pygame.error:
+            logging.warning("input_manager: failed to init joystick")
             self._joystick = None
 
     def pump(self, events: list[pygame.event.Event]) -> None:
@@ -130,8 +133,8 @@ class InputManager:
             self._controller_axis_right = 0.0
             self._controller_axis_up = y < -CONTROLLER_DEADZONE
             self._controller_axis_down = y > CONTROLLER_DEADZONE
-        except Exception:
-            pass
+        except pygame.error:
+            logging.warning("input_manager: failed to poll joystick axes")
 
     def _action_from_controller(self, action: Action) -> bool:
         """Check if any controller binding matches the action."""

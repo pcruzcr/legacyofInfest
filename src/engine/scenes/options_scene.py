@@ -9,9 +9,11 @@ import pygame
 
 from src.engine.core import settings
 from src.engine.core.difficulty import Difficulty, set_difficulty
+from src.engine.core.events import Events
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import BOTTOM_BAR_Y
+from src.engine.utils.asset_loader import AssetLoader
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -38,10 +40,11 @@ class OptionsScene(BaseScene):
         ]
         self._selected = 0
         self._dirty = False
+        self._display_dirty = False
 
     def _load_config(self) -> dict[str, Any]:
         try:
-            with open(CONFIG_PATH) as f:
+            with open(CONFIG_PATH, encoding="utf-8") as f:
                 return cast(dict[str, Any], json.load(f))
         except (FileNotFoundError, json.JSONDecodeError):
             return {}
@@ -59,7 +62,7 @@ class OptionsScene(BaseScene):
             "subtitles": self._options[9].get("value", "off"),
         }
         CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-        with open(CONFIG_PATH, "w") as f:
+        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
             json.dump(data, f)
 
     def on_enter(self) -> None:
@@ -74,22 +77,24 @@ class OptionsScene(BaseScene):
         self._options[6]["value"] = cfg.get("difficulty", "normal")
         self._options[8]["value"] = cfg.get("colorblind_mode", "off")
         self._options[9]["value"] = cfg.get("subtitles", "off")
+        self.context.scene_manager.transition.start_fade_in(0.5)
 
     def on_exit(self) -> None:
         if self._dirty:
             self._save_config()
-            scale = int(self._options[2]["value"])
-            if scale != settings.DISPLAY_SCALE:
-                settings.DISPLAY_SCALE = max(1, min(scale, 4))
-            fullscreen = self._options[3].get("value", "off") == "on"
-            vsync = self._options[4].get("value", "off") == "on"
-            res_str = self._options[5].get("value", "320x224")
-            res_parts = res_str.split("x")
-            res_w = int(res_parts[0]) if len(res_parts) == 2 else settings.INTERNAL_WIDTH * scale
-            res_h = int(res_parts[1]) if len(res_parts) == 2 else settings.INTERNAL_HEIGHT * scale
-            flags = pygame.FULLSCREEN if fullscreen else 0
-            flags |= pygame.SCALED
-            pygame.display.set_mode((res_w, res_h), flags, vsync=1 if vsync else 0)
+            if self._display_dirty:
+                scale = int(self._options[2]["value"])
+                if scale != settings.DISPLAY_SCALE:
+                    settings.DISPLAY_SCALE = max(1, min(scale, 4))
+                fullscreen = self._options[3].get("value", "off") == "on"
+                vsync = self._options[4].get("value", "off") == "on"
+                res_str = self._options[5].get("value", "320x224")
+                res_parts = res_str.split("x")
+                res_w = int(res_parts[0]) if len(res_parts) == 2 else settings.INTERNAL_WIDTH * scale
+                res_h = int(res_parts[1]) if len(res_parts) == 2 else settings.INTERNAL_HEIGHT * scale
+                flags = pygame.FULLSCREEN if fullscreen else 0
+                flags |= pygame.SCALED
+                pygame.display.set_mode((res_w, res_h), flags, vsync=1 if vsync else 0)
             diff_val = self._options[6].get("value", "normal")
             for d in Difficulty:
                 if d.value == diff_val:
@@ -104,17 +109,13 @@ class OptionsScene(BaseScene):
             return
         prev_selected = self._selected
         if im.is_action_just_pressed(Action.MOVE_DOWN):
-            self._selected = (self._selected + 1) % len(self._options)
+            self._selected = min(self._selected + 1, len(self._options) - 1)
         if im.is_action_just_pressed(Action.MOVE_UP):
-            self._selected = (self._selected - 1) % len(self._options)
+            self._selected = max(self._selected - 1, 0)
         if self._selected != prev_selected:
-            from src.engine.core.event_bus import emit
-            from src.engine.core.events import Events
-            emit(Events.SFX_MENU_HOVER)
+            self.context.event_bus.emit(Events.SFX_MENU_HOVER)
         if im.is_action_just_pressed(Action.CANCEL):
-            from src.engine.core.event_bus import emit
-            from src.engine.core.events import Events
-            emit(Events.SFX_MENU_CANCEL)
+            self.context.event_bus.emit(Events.SFX_MENU_CANCEL)
             from src.engine.scenes.title_scene import TitleScene
             self.context.scene_manager.replace(TitleScene(self.context))
             return
@@ -126,9 +127,7 @@ class OptionsScene(BaseScene):
             return
         if "options" in opt:
             if im.is_action_just_pressed(Action.MOVE_RIGHT) or im.is_action_just_pressed(Action.MOVE_LEFT):
-                from src.engine.core.event_bus import emit
-                from src.engine.core.events import Events
-                emit(Events.SFX_MENU_CONFIRM)
+                self.context.event_bus.emit(Events.SFX_MENU_CONFIRM)
                 idx = opt["options"].index(opt.get("value", opt["options"][0]))
                 direction = 1 if im.is_action_just_pressed(Action.MOVE_RIGHT) else -1
                 idx = (idx + direction) % len(opt["options"])
@@ -153,32 +152,32 @@ class OptionsScene(BaseScene):
             settings.COLORBLIND_MODE = opt.get("value", "off")
         if opt["name"] == "SUBTITLES":
             settings.SUBTITLES_ENABLED = opt.get("value", "off") == "on"
-        if opt["name"] in ("FULLSCREEN", "VSYNC", "RESOLUTION", "DIFFICULTY"):
-            self._dirty = True
+        if opt["name"] in ("DISPLAY SCALE", "FULLSCREEN", "VSYNC", "RESOLUTION"):
+            self._display_dirty = True
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill((20, 20, 30))
-        font = pygame.font.Font(None, 24)
+        font = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", 24)
         title = font.render("OPTIONS", True, (255, 255, 240))
         surface.blit(title, ((settings.INTERNAL_WIDTH - title.get_width()) // 2, 20))
-        hint = pygame.font.Font(None, 16).render("[ESC] Back  [LEFT/RIGHT] Change", True, (160, 160, 170))
+        hint = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", 16).render("[ESC] Back  [LEFT/RIGHT] Change", True, (160, 160, 170))
         surface.blit(hint, ((settings.INTERNAL_WIDTH - hint.get_width()) // 2, BOTTOM_BAR_Y - 22))
         y = 70
         for i, opt in enumerate(self._options):
             color = (255, 255, 100) if i == self._selected else (200, 200, 200)
-            label = pygame.font.Font(None, 18).render(opt["name"], True, color)
+            label = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", 18).render(opt["name"], True, color)
             surface.blit(label, (40, y))
             if opt.get("action"):
-                arrow = pygame.font.Font(None, 18).render(">", True, color)
+                arrow = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", 18).render(">", True, color)
                 surface.blit(arrow, (settings.INTERNAL_WIDTH - 30, y))
             elif "options" in opt:
                 val = opt.get("value", opt["options"][0])
-                val_surf = pygame.font.Font(None, 18).render(str(val).upper(), True, color)
+                val_surf = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", 18).render(str(val).upper(), True, color)
                 surface.blit(val_surf, (settings.INTERNAL_WIDTH - 90, y))
             else:
                 val = opt.get("value", (opt["min"] + opt["max"]) / 2)
                 val_s = f"{val:.2f}" if isinstance(val, float) else f"{int(val)}"
-                val_surf = pygame.font.Font(None, 18).render(val_s, True, color)
+                val_surf = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", 18).render(val_s, True, color)
                 surface.blit(val_surf, (settings.INTERNAL_WIDTH - 90, y))
             y += 28
 

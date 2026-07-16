@@ -5,7 +5,8 @@ from typing import TYPE_CHECKING, Any
 
 import pygame
 
-from src.engine.core.event_bus import emit
+from src.engine.core.event_bus import _get_bus as _bus
+_emit = lambda *a, **kw: _bus().emit(*a, **kw)
 from src.engine.core.events import Events
 from src.framework.entities.boss_base import BossBase, BossPhase
 from src.framework.entities.enemy_base import EnemyState
@@ -35,6 +36,8 @@ class BossVenado(BossBase):
         self.set_boss_name("VENADO SAGRADO")
         self.rect.width = 36
         self.rect.height = 44
+        self.position.y -= self.rect.height
+        self.rect.y = int(self.position.y)
         self._elapsed: float = 0.0
         self._base_y: float = spawn_position.y
 
@@ -221,19 +224,19 @@ class BossVenado(BossBase):
         if player_ref is None:
             return
         self._do_charge(player_ref)
-        emit(Events.BOSS_ATTACK, pattern="COMBO_STOMP_CHARGE", rect=self.rect)
+        _emit(Events.BOSS_ATTACK, pattern="COMBO_STOMP_CHARGE", rect=self.rect)
 
     def _do_combo_sweep_spore(self) -> None:
         self._attack_timers["MUSHROOM_SPORE"] = 0.0
         self._do_mushroom_spore()
-        emit(Events.BOSS_ATTACK, pattern="COMBO_SWEEP_SPORE", rect=self.rect)
+        _emit(Events.BOSS_ATTACK, pattern="COMBO_SWEEP_SPORE", rect=self.rect)
 
     def _do_stomp(self) -> None:
         self._attack_timers["STOMP"] = self._attack_cooldowns["STOMP"]
         self._stomp_rect = pygame.Rect(
             self.rect.centerx - 48, self.rect.bottom - 8, 96, 8,
         )
-        emit(Events.BOSS_ATTACK, pattern="STOMP", rect=self._stomp_rect)
+        _emit(Events.BOSS_ATTACK, pattern="STOMP", rect=self._stomp_rect)
 
     def _do_charge(self, player_ref: pygame.Rect) -> None:
         self._attack_timers["CHARGE"] = self._attack_cooldowns["CHARGE"]
@@ -290,7 +293,7 @@ class BossVenado(BossBase):
             self._charge_active = False
             if self.current_phase == 0:
                 self._do_stomp()
-                emit(Events.BOSS_ATTACK, pattern="CHARGE_STOMP", rect=self.rect)
+                _emit(Events.BOSS_ATTACK, pattern="CHARGE_STOMP", rect=self.rect)
 
     def _update_projectiles(self, dt: float) -> None:
         for proj in self._projectiles[:]:
@@ -300,7 +303,6 @@ class BossVenado(BossBase):
                 proj["t"] += proj["speed"] * dt
                 if proj["t"] >= 1.0:
                     proj["alive"] = False
-                    continue
                 sampled = CurveTools.sample_path(proj["control_points"], proj["t"])
                 if isinstance(sampled, (tuple, list)):
                     proj["pos"] = pygame.Vector2(sampled[0], sampled[1])
@@ -332,9 +334,6 @@ class BossVenado(BossBase):
                 elif self._defeat_stage == 1:
                     self._defeat_stage = 2
                     self._death_timer = 0
-                    emit(Events.ENEMY_DIED,
-                         entity_id=f"BossVenado_{id(self)}",
-                         position=(self.position.x, self.position.y))
                     # Stage scene handles STAGE_COMPLETE with 2s banner
                     self.is_alive = False
                     self.is_active = False
@@ -352,7 +351,6 @@ class BossVenado(BossBase):
             self._stomp_rect = None
 
     def _check_player_contact(self, player: Player) -> None:
-        super()._check_player_contact(player)
         player_hurtbox = player.hurtbox if hasattr(player, "hurtbox") else player.rect
         for proj in self._projectiles:
             if not proj.get("alive", False) or "pos" not in proj:
@@ -368,6 +366,7 @@ class BossVenado(BossBase):
             sweep_rect = pygame.Rect(0, self.rect.bottom - 12, self.ARENA_W, 24)
             if sweep_rect.colliderect(player_hurtbox):
                 player.apply_damage(0.5, self.rect.center)
+        super()._check_player_contact(player)
 
     def draw(self, surface: pygame.Surface, camera_offset: pygame.Vector2) -> None:
         super().draw(surface, camera_offset)

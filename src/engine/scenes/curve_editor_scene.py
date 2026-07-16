@@ -27,6 +27,7 @@ Controls:
 """
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 import pygame
@@ -314,7 +315,8 @@ class CurveEditorScene(BaseScene):
             elif mode == 4:
                 degree = min(3, len(pts) - 1)
                 return CurveTools.b_spline(pts, degree, self._n_samples)
-        except Exception:
+        except (ValueError, IndexError, ZeroDivisionError) as e:
+            logging.warning("curve_editor: curve evaluation failed: %s", e)
             return pts
         return pts
 

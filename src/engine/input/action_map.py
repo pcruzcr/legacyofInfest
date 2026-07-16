@@ -24,6 +24,17 @@ class Action(Enum):
     CONFIRM = auto()
     CANCEL = auto()
     PAUSE = auto()
+    # Learning overlay panels (ARC-034)
+    LEARN_MATH = auto()
+    LEARN_PHYSICS = auto()
+    LEARN_COLLISION = auto()
+    LEARN_FSM = auto()
+    LEARN_RENDER = auto()
+    LEARN_AUDIO = auto()
+    LEARN_PERF = auto()
+    LEARN_CONTROLS = auto()
+    LEARN_HELP = auto()
+    OPEN_BESTIARY = auto()
 
 
 # Default keyboard bindings: Action -> list of pygame key constants
@@ -41,6 +52,16 @@ DEFAULT_KEY_BINDINGS: dict[Action, list[int]] = {
     Action.CONFIRM: [pygame.K_RETURN, pygame.K_SPACE, pygame.K_z],
     Action.CANCEL: [pygame.K_ESCAPE, pygame.K_x],
     Action.PAUSE: [pygame.K_ESCAPE, pygame.K_p],
+    Action.LEARN_MATH: [pygame.K_F2],
+    Action.LEARN_PHYSICS: [pygame.K_F3],
+    Action.LEARN_COLLISION: [pygame.K_F4],
+    Action.LEARN_FSM: [pygame.K_F5],
+    Action.LEARN_RENDER: [pygame.K_F6],
+    Action.LEARN_AUDIO: [pygame.K_F7],
+    Action.LEARN_PERF: [pygame.K_F8],
+    Action.LEARN_CONTROLS: [pygame.K_F9],
+    Action.LEARN_HELP: [pygame.K_F10],
+    Action.OPEN_BESTIARY: [pygame.K_TAB],
 }
 
 # Controller axis/deadzone constants

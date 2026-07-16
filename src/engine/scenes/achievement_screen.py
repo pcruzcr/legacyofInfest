@@ -28,6 +28,7 @@ class AchievementScene(BaseScene):
         self._font_desc = pygame.font.Font(None, 12)
         self._scroll_y: int = 0
         self._max_scroll: int = 0
+        self._font_hint = pygame.font.Font(None, 14)
 
     def on_enter(self) -> None:
         self._scroll_y = 0
@@ -69,5 +70,5 @@ class AchievementScene(BaseScene):
                 target = self._font_desc.render(f"Progress: {prog.current}/{defn.target}", True, (130, 130, 140))
                 surface.blit(target, (46, y + 42))
             y += 56
-        hint = pygame.font.Font(None, 14).render("[ESC] Back  [UP/DOWN] Scroll", True, (120, 120, 130))
+        hint = self._font_hint.render("[ESC] Back  [UP/DOWN] Scroll", True, (120, 120, 130))
         surface.blit(hint, ((settings.INTERNAL_WIDTH - hint.get_width()) // 2, settings.INTERNAL_HEIGHT - 18))

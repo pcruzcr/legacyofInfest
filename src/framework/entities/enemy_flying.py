@@ -13,6 +13,7 @@ trivially extensible with new movement algorithms.
 """
 from __future__ import annotations
 
+import logging
 import math
 
 import pygame
@@ -40,6 +41,7 @@ class EnemyFlying(EnemyBase):
         max_health: float = 1.5,
         damage_on_contact: float = 0.5,
         zone: int = 0,
+        **kwargs,
     ) -> None:
         """Initialize the flying enemy."""
         super().__init__(
@@ -87,6 +89,10 @@ class EnemyFlying(EnemyBase):
         self.rect.width = 20
         self.rect.height = 14
 
+        # Cached surfaces
+        self._dive_warn_surf: pygame.Surface | None = None
+        self._dive_warn_size: tuple[int, int] = (0, 0)
+
         # Y-tracking offset for alert mode (persistent across strategy resets)
         self._y_track_offset: float = 0.0
 
@@ -112,8 +118,8 @@ class EnemyFlying(EnemyBase):
             try:
                 frames = AssetLoader.load_sprite_sheet(path, fw, fh)
                 self._sprite_frames[key] = frames
-            except Exception:
-                pass
+            except (pygame.error, FileNotFoundError, PermissionError):
+                logging.warning("enemy_flying: failed to load sprite %s", path)
 
     # ──────────────────────────────────────────────
     # Behavior implementations (Strategy delegation)
@@ -127,6 +133,7 @@ class EnemyFlying(EnemyBase):
     def _alert_behavior(self, dt: float) -> None:
         """Delegate alert movement, then track player Y axis.
         Uses dive bomb and spread attack patterns."""
+        self._y_track_offset = 0.0
         self._dive_cooldown = max(0.0, self._dive_cooldown - dt)
         self._spread_cooldown = max(0.0, self._spread_cooldown - dt)
 
@@ -159,10 +166,11 @@ class EnemyFlying(EnemyBase):
             track_dy = self._player_ref.centery - (self.position.y + self._y_track_offset + self.rect.height / 2)
             if abs(track_dy) > 4:
                 track_speed = self.flight_speed * 0.4
-                self._y_track_offset += math.copysign(track_speed * dt, track_dy)
-            self._y_track_offset *= 0.98
+                sign = 1.0 if track_dy >= 0 else -1.0
+                self._y_track_offset += sign * track_speed * dt
+            self._y_track_offset *= 0.98 ** (dt * 60.0)
         else:
-            self._y_track_offset *= 0.9
+            self._y_track_offset *= 0.9 ** (dt * 60.0)
         self.position.y += self._y_track_offset
 
     # ──────────────────────────────────────────────
@@ -186,7 +194,13 @@ class EnemyFlying(EnemyBase):
             sy = int(self.position.y - camera_offset.y + 20 + progress * 40)
             radius = 12 + int(progress * 8)
             alpha = int(200 - progress * 150)
-            warn = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+            size = (radius * 2, radius * 2)
+            if (self._dive_warn_surf is None
+                    or self._dive_warn_size != size):
+                self._dive_warn_surf = pygame.Surface(size, pygame.SRCALPHA)
+                self._dive_warn_size = size
+            warn = self._dive_warn_surf
+            warn.fill((0, 0, 0, 0))
             pygame.draw.circle(warn, (255, 255, 0, alpha), (radius, radius), radius, 2)
             if progress > 0.5:
                 pygame.draw.circle(warn, (255, 200, 0, alpha // 2), (radius, radius), radius - 2)

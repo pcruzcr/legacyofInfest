@@ -45,6 +45,7 @@ class LoadGameScene(BaseScene):
         self._refresh_slots()
         self._error_msg = ""
         self._error_timer = 0.0
+        self.context.scene_manager.transition.start_fade_in(0.5)
 
     def _refresh_slots(self) -> None:
         sm = self.context.save_manager

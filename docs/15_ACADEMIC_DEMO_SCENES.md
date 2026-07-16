@@ -1,3 +1,13 @@
+---
+document_id: "LOI-DEMO-015"
+title: "Legacy of InFest — Academic Demo Scenes"
+aliases: ["Academic Demo Scenes", "Demo Labs"]
+tags: ["demo", "lab", "academic", "interactive"]
+description: "10 interactive demo/lab scenes"
+source: "docs/15_ACADEMIC_DEMO_SCENES.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Academic Demo Scenes
 
 **Document ID:** LOI-DEMO-015  
@@ -1312,3 +1322,12 @@ On draw:
 | Side-by-side classifier comparison | Two models shown simultaneously | Unit IX advanced |
 | Batch inference mode | Classify all 5 source surfaces automatically | Unit IX exam |
 | Custom dataset builder | Draw labeled regions on source surface | Unit IX advanced |
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[11_FILTER_TOOLS_SPEC.md|Filter Tools Spec]]
+- [[12_VISION_TOOLS_SPEC.md|Vision Tools Spec]]
+- [[13_PATTERN_RECOGNITION_SPEC.md|Pattern Recognition Spec]]
+- [[37_DEMO_QUICK_GUIDE.md|Demo Quick Guide]]

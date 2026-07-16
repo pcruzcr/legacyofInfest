@@ -1,3 +1,13 @@
+---
+document_id: "LOI-ARCH-003"
+title: "Legacy of InFest — Architecture"
+aliases: ["Architecture", "Engine Architecture"]
+tags: ["architecture", "engine", "structure"]
+description: "Full folder structure, module responsibilities, data flow"
+source: "docs/03_ARCHITECTURE.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Architecture
 
 **Document ID:** LOI-ARCH-003  
@@ -874,3 +884,13 @@ Processing utilities in `framework/processing/` are used by entities and stages 
 --- Traducción al Español ---
 
 *Este documento está disponible en inglés. Para una traducción completa al español, contacte al profesor.*
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[04_PLAYER_SPEC.md|Player Specification]]
+- [[05_ENEMY_SPEC.md|Enemy Specification]]
+- [[06_TMX_SPEC.md|TMX Specification]]
+- [[10_LIBRARIES_AND_DEPENDENCIES.md|Libraries and Dependencies]]
+- [[22_API_CONTRACTS.md|API Contracts]]

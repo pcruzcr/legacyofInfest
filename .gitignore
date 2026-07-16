@@ -6,3 +6,9 @@ tests/output/
 !src/stages/**/models/*.pkl
 .pytest_cache/
 .vscode/settings.json
+
+
+
+
+# Ignore Smart Environment folder
+.smart-env

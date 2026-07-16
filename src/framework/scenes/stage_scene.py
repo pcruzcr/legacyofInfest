@@ -96,6 +96,8 @@ class StageScene(BaseScene):
         self._player_spawned: bool = False
         self._damage_taken_this_stage: float = 0.0
         self._stage_start_time: float = 0.0
+        self._sfx_handlers: dict[str, Callable[..., None]] = {}
+        self._vfx_handlers: dict[str, Callable[..., None]] = {}
 
     def on_stage_start(self) -> None:
         if "move" not in self._tutorial_shown:
@@ -124,7 +126,10 @@ class StageScene(BaseScene):
         ...
 
     def on_enter(self) -> None:
-        self._stage_data = StageLoader.load(self._tmx_path)
+        data = StageLoader.load(self._tmx_path)
+        if data is None:
+            raise RuntimeError(f"StageScene: failed to load stage from {self._tmx_path}")
+        self._stage_data = data
         spawn = self._stage_data.spawn_point
         self._player = Player(spawn)
         if hasattr(self._stage_data, "gravity_multiplier"):
@@ -156,12 +161,13 @@ class StageScene(BaseScene):
 
         self._checkpoints = list(self._stage_data.checkpoints)
         for cp in self._checkpoints:
-            cp._event_bus = self.context.event_bus
+            cp.set_event_bus(self.context.event_bus)
         self._checkpoint_position = None
         self._stage_complete = False
         self._game_over = False
         self._pending_game_over = False
         self._was_grounded = False
+        self.context.scene_manager.transition.start_fade_in(0.5)
         self._collision.reset()
         self._hazards.reset()
         self._progression.reset()
@@ -169,9 +175,9 @@ class StageScene(BaseScene):
         if self._stage_data.bgm_track:
             audio = self.audio
             if audio is not None:
-                bgm_path = Path("assets/music") / f"{self._stage_data.bgm_track}.wav"
+                bgm_path = settings.ASSETS_DIR / "music" / f"{self._stage_data.bgm_track}.wav"
                 if not bgm_path.exists():
-                    bgm_path = Path("assets/music") / f"{self._stage_data.bgm_track}.ogg"
+                    bgm_path = settings.ASSETS_DIR / "music" / f"{self._stage_data.bgm_track}.ogg"
                 audio.play_music(bgm_path)
             if self._dynamic_music is not None:
                 zone = getattr(self._stage_data, "zone", 0)
@@ -192,8 +198,7 @@ class StageScene(BaseScene):
         self.on_stage_start()
 
         # Init minimap with stage size
-        if self._stage_data is not None:
-            self._minimap.set_map_size(*self._stage_data.map_pixel_size)
+        self._minimap.set_map_size(*self._stage_data.map_pixel_size)
 
         # Speedrun timer
         self._speedrun.start()
@@ -202,6 +207,12 @@ class StageScene(BaseScene):
         # Track stage start for achievement timing
         self._player_spawned = True
         self._damage_taken_this_stage = 0.0
+        self._stage_data.map_layer._map_layer.view_rect = pygame.Rect(
+            self._camera.offset.x,
+            self._camera.offset.y,
+            settings.INTERNAL_WIDTH,
+            settings.INTERNAL_HEIGHT,
+        )
         self._stage_start_time = 0.0
 
         # Subscribe achievement system
@@ -227,7 +238,7 @@ class StageScene(BaseScene):
         self._player_light = None
         zone = int(getattr(self._stage_data, "zone", 0))
         if zone == 0:
-            self._lighting.ambient_brightness = 0.8
+            self._lighting.ambient_brightness = 1.0
             self._stage_lights = [
                 LightSource(pygame.Vector2(80, 80), radius=70, color=(255, 220, 180), intensity=0.7),
                 LightSource(pygame.Vector2(240, 80), radius=70, color=(255, 220, 180), intensity=0.7),
@@ -349,18 +360,23 @@ class StageScene(BaseScene):
         def _on_music_stinger(**data: Any) -> None:
             name = data.get("name", "stinger_boss_phase")
             vol = data.get("volume", 0.8)
-            self.context.audio.play_stinger(name, volume=vol)
+            # BUG-057: Null guard for audio
+            if self.audio is not None:
+                self.audio.play_stinger(name, volume=vol)
         self.context.event_bus.subscribe(Events.MUSIC_STINGER, _on_music_stinger)
-        self._vfx_handlers[Events.SFX_HIT_CONNECT] = _on_hit_connect
-        self._vfx_handlers[Events.SFX_ENEMY_HIT] = _on_enemy_hit
-        self._vfx_handlers[Events.ENEMY_DIED] = _on_enemy_died
-        self._vfx_handlers[Events.PLAYER_DAMAGED] = _on_player_damaged
-        self._vfx_handlers[Events.PLAYER_DIED] = _on_player_died
-        self._vfx_handlers[Events.MUSIC_STINGER] = _on_music_stinger
-        self._vfx_handlers[Events.VFX_PARRY] = _on_vfx_parry
-        self._vfx_handlers[Events.VFX_CHARGE] = _on_vfx_charge
-        self._vfx_handlers[Events.VFX_SLAM] = _on_vfx_slam
-        self._vfx_handlers[Events.VFX_ULTIMATE] = _on_vfx_ultimate
+        for _evt, _handler in (
+            (Events.SFX_HIT_CONNECT, _on_hit_connect),
+            (Events.SFX_ENEMY_HIT, _on_enemy_hit),
+            (Events.ENEMY_DIED, _on_enemy_died),
+            (Events.PLAYER_DAMAGED, _on_player_damaged),
+            (Events.PLAYER_DIED, _on_player_died),
+            (Events.VFX_PARRY, _on_vfx_parry),
+            (Events.VFX_CHARGE, _on_vfx_charge),
+            (Events.VFX_SLAM, _on_vfx_slam),
+            (Events.VFX_ULTIMATE, _on_vfx_ultimate),
+            (Events.MUSIC_STINGER, _on_music_stinger),
+        ):
+            self._vfx_handlers[_evt] = _handler
 
         self._sfx_handlers: dict[str, Callable[..., None]] = {}
         sfx_map = {
@@ -380,11 +396,29 @@ class StageScene(BaseScene):
             Events.SFX_STAGE_COMPLETE: "sfx_ui_stage_complete",
             Events.SFX_HAZARD_ZONE: "sfx_environment_hazard_zone",
             Events.SFX_PLAYER_FOOTSTEP: "sfx_step",
-            Events.SFX_MENU_HOVER: "sfx_ui_menu_move",
-            Events.SFX_MENU_CONFIRM: "sfx_ui_menu_confirm",
+            Events.SFX_MENU_HOVER: "sfx_select",
+            Events.SFX_MENU_CONFIRM: "sfx_select",
             Events.SFX_MENU_CANCEL: "sfx_ui_menu_cancel",
+            Events.SFX_PLAYER_PARRY: "sfx_parry",
+            Events.SFX_PLAYER_CROUCH: "sfx_player_crouch",
+            Events.SFX_PLAYER_HEAL: "sfx_ui_heart_restore",
+            Events.SFX_BOSS_HIT: "sfx_boss_hit",
+            Events.SFX_UI_GAME_OVER: "sfx_ui_game_over",
+            Events.SFX_ENVIRONMENT_SCREEN_SHAKE: "sfx_environment_screen_shake",
+            Events.SFX_ENVIRONMENT_ONE_WAY_PLATFORM: "sfx_environment_one_way_platform",
+            Events.SFX_BOSS_PHASE_CHANGE: "sfx_bosses_phase_change",
+            Events.SFX_ENEMIES_PROJECTILE_HIT_WALL: "sfx_enemies_projectile_hit_wall",
+            Events.SFX_BOSSES_GAVILAN_DIVE: "sfx_bosses_gavilan_dive",
+            Events.SFX_BOSSES_GAVILAN_MASK_BEAM: "sfx_bosses_gavilan_mask_beam",
+            Events.SFX_BOSSES_PABURU_EYE_BEAM: "sfx_bosses_paburu_eye_beam",
+            Events.SFX_BOSSES_PABURU_WAVE: "sfx_bosses_paburu_wave",
+            Events.SFX_BOSSES_RELIC_APPEAR: "sfx_bosses_relic_appear",
+            Events.SFX_BOSSES_REY_SPIT: "sfx_bosses_rey_spit",
+            Events.SFX_BOSSES_REY_SPLIT: "sfx_bosses_rey_split",
+            Events.SFX_BOSSES_VENADO_CHARGE: "sfx_bosses_venado_charge",
+            Events.SFX_BOSSES_VENADO_STOMP: "sfx_bosses_venado_stomp",
+            Events.SFX_BOSSES_VENADO_VINE: "sfx_bosses_venado_vine",
         }
-        self._sfx_names = sfx_map
         for evt, sname in sfx_map.items():
             def _make_handler(n: str) -> Any:
                 def handler(**d: Any) -> None:
@@ -401,6 +435,21 @@ class StageScene(BaseScene):
             self.context.event_bus.subscribe(evt, handler)
             self._sfx_handlers[evt] = handler
 
+        # SAVE_REQUESTED handler — persists game on checkpoint / save & quit
+        def _on_save_requested(**data: Any) -> None:
+            sm = self.context.save_manager
+            if sm is not None:
+                sm.auto_save(
+                    stage_id=data.get("stage_id", ""),
+                    stage_index=data.get("stage_index", 0),
+                    checkpoint_x=data.get("checkpoint_x", 0),
+                    checkpoint_y=data.get("checkpoint_y", 0),
+                    health=data.get("health", 100),
+                    max_health=data.get("max_health", 100),
+                )
+        self.context.event_bus.subscribe(Events.SAVE_REQUESTED, _on_save_requested)
+        self._vfx_handlers[Events.SAVE_REQUESTED] = _on_save_requested
+
     def _play_sfx_named(self, name: str, volume: float = 1.0) -> None:
         audio = self.audio
         if audio is not None:
@@ -411,10 +460,6 @@ class StageScene(BaseScene):
         if audio is not None:
             screen_center_x = self._camera.offset.x + settings.INTERNAL_WIDTH / 2
             audio.play_sfx_at(name, world_x, screen_center_x, volume=volume)
-
-    def _play_sfx_varied(self, names: list[str], volume: float = 1.0) -> None:
-        """Pick a random sound from a list for variation."""
-        self._play_sfx_named(random.choice(names), volume=volume)
 
     def on_exit(self) -> None:
         if self.context.clock is not None:
@@ -467,16 +512,13 @@ class StageScene(BaseScene):
         if cp is not None:
             self._player.position = pygame.Vector2(cp)
             self._player.rect.center = (int(cp.x), int(cp.y))
-        self._player._invincibility_timer = 2.0
+        setattr(self._player, "_invincibility_timer", 2.0)
         self._post_processing.flash((255, 255, 255), alpha=255, duration=0.3)
         self.context.scene_manager.transition.start_fade_in(0.5)
 
     def update(self, dt: float) -> None:
         if self._stage_data is None or self._player is None:
             return
-        if self._game_over:
-            return
-
         player = self._player
         stage = self._stage_data
         im = self.input
@@ -485,14 +527,19 @@ class StageScene(BaseScene):
             if im.is_action_just_pressed(Action.PAUSE):
                 self._paused = not self._paused
                 self._pause_selected = 0
-            if im and im.is_raw_key_pressed(pygame.K_F1):
+            if im.is_action_just_pressed(Action.OPEN_BESTIARY):
+                from src.engine.scenes.bestiary_scene import BestiaryScene
+                self.context.scene_manager.push(BestiaryScene(self.context))
+            if im.is_raw_key_pressed(pygame.K_F1):
                 self._debug = not self._debug
                 self.on_debug_toggle(self._debug)
-            for fkey in (pygame.K_F2, pygame.K_F3, pygame.K_F4, pygame.K_F5,
-                         pygame.K_F6, pygame.K_F7, pygame.K_F8, pygame.K_F9,
-                         pygame.K_F10):
-                if im and im.is_raw_key_pressed(fkey):
-                    self._learning.toggle(fkey)
+            for learn_action in (Action.LEARN_MATH, Action.LEARN_PHYSICS,
+                                 Action.LEARN_COLLISION, Action.LEARN_FSM,
+                                 Action.LEARN_RENDER, Action.LEARN_AUDIO,
+                                 Action.LEARN_PERF, Action.LEARN_CONTROLS,
+                                 Action.LEARN_HELP):
+                if im.is_action_just_pressed(learn_action):
+                    self._learning.toggle(learn_action)
                     break
 
         if self._paused:
@@ -513,199 +560,212 @@ class StageScene(BaseScene):
                         self._quit_to_title()
             return
 
-        original_time_scale = 1.0
-        if self.context.clock is not None:
-            original_time_scale = self.context.clock.time_scale
-        try:
-            player.update(dt, stage.collision_rects, im, one_way_rects=stage.one_way_rects)
+        # BUG-055: Check player death immediately after pause check
+        if player.current_health <= 0 and not self._game_over:
+            self._kill_player()
 
-            if player.combo_active and player.combo_count > 0:
-                self._achievements.mark_air_assault(player._combo_air_hits)
-                self._achievements.mark_combo_king(player.combo_count)
+        if not self._game_over:
+            original_time_scale = 1.0
+            if self.context.clock is not None:
+                original_time_scale = self.context.clock.time_scale
+            try:
+                player.update(dt, stage.collision_rects, im, one_way_rects=stage.one_way_rects)
 
-            if player.is_grounded and not self._was_grounded:
-                self.on_player_landed()
-            self._was_grounded = player.is_grounded
+                if player.combo_active and player.combo_count > 0:
+                    self._achievements.mark_air_assault(getattr(player, "_combo_air_hits", 0))
+                    self._achievements.mark_combo_king(player.combo_count)
 
-            for entity in stage.entity_list:
-                if isinstance(entity, EnemyBase) and not entity.is_alive:
-                    if getattr(entity, "_was_alive", True):
-                        entity._was_alive = False
-                        self.on_enemy_died(entity)
+                if player.is_grounded and not self._was_grounded:
+                    self.on_player_landed()
+                self._was_grounded = player.is_grounded
 
-            self._collision.update_enemies(dt, player, stage)
-            self._collision.process_attack(dt, player, stage, self._camera, self.context.clock)
+                for entity in stage.entity_list:
+                    if isinstance(entity, EnemyBase) and not entity.is_alive:
+                        if getattr(entity, "_was_alive", True):
+                            setattr(entity, "_was_alive", False)
+                            self.on_enemy_died(entity)
 
-            if player.current_health <= 0 and not self._game_over:
-                self._kill_player()
+                self._collision.update_enemies(dt, player, stage)
+                if player.active_hitbox is not None:
+                    self._collision.process_attack(dt, player, stage, self._camera,
+                                                   self.context.clock if self.context.clock is not None else None)
+            finally:
+                self._collision.update_hitstop(dt, self.context.clock if self.context.clock is not None else None)
+                hitstop = getattr(self._collision, "_hitstop_timer", 0.0)
+                if hitstop <= 0 and self.context.clock is not None:
+                    self.context.clock.time_scale = original_time_scale
+
+        if not self._game_over:
+            self._camera.update(dt)
+
+            stage.map_layer._map_layer.view_rect = pygame.Rect(
+                self._camera.offset.x,
+                self._camera.offset.y,
+                settings.INTERNAL_WIDTH,
+                settings.INTERNAL_HEIGHT,
+            )
+
+            self._camera.set_camera_locks(stage.camera_locks)
+
+            cp_pos = self._progression.process_checkpoints(player, stage, self._checkpoints, self._hud)
+            if cp_pos is not None:
+                self._checkpoint_position = cp_pos
+
+            # BUG-065: Use elif to prevent banner playing twice if both fire in same frame
+            if self._progression.check_next_trigger(player, stage):
+                self.on_next_trigger_entered()
+                self._banner.play("STAGE_COMPLETE", "STAGE COMPLETE")
+                self.context.event_bus.emit(Events.SFX_STAGE_COMPLETE)
+            elif self._progression.check_boss_defeat(stage):
+                self._banner.play("STAGE_COMPLETE", "STAGE COMPLETE")
+                self.context.event_bus.emit(Events.SFX_STAGE_COMPLETE)
+
+            if self._progression.update_complete_timer(dt):
+                # BUG-056: Use <= 0.001 instead of == 0 for float comparison
+                if self._damage_taken_this_stage <= 0.001:
+                    self._achievements.mark_untouchable()
+                if self._stage_start_time < 60.0:
+                    self._achievements.mark_speed_demon()
+                self._speedrun.split(self._stage_data.stage_id)
+                self._speedrun.stop()
+                self.context.event_bus.emit(Events.STAGE_COMPLETE, stage_id=stage.stage_id)
                 return
-        finally:
-            self._collision.update_hitstop(dt, self.context.clock)
-            if self._collision._hitstop_timer <= 0 and self.context.clock is not None:
-                self.context.clock.time_scale = original_time_scale
 
-        if self._game_over:
-            return
+            if self._progression.stage_complete:
+                if self._hud:
+                    self._hud.clear_boss_hud()
+                if self._msg_box:
+                    self._msg_box.update(dt)
+                if self._banner:
+                    self._banner.update(dt)
+                return
 
-        self._camera.update(dt)
+            # Dynamic music intensity — single pass
+            if self._dynamic_music is not None:
+                has_boss = False
+                has_enemies = False
+                for e in stage.entity_list:
+                    if isinstance(e, BossBase) and e.is_alive:
+                        has_boss = True
+                        has_enemies = True
+                        break
+                    if isinstance(e, EnemyBase) and e.is_alive:
+                        has_enemies = True
+                intensity = self._dynamic_music.detect_intensity_from_state(has_boss, has_enemies)
+                self._dynamic_music.set_intensity(intensity)
 
-        center_x = self._camera.offset.x + settings.INTERNAL_WIDTH / 2
-        center_y = self._camera.offset.y + settings.INTERNAL_HEIGHT / 2
-        stage.map_layer.center((center_x, center_y))
-
-        self._camera.set_camera_locks(stage.camera_locks)
-
-        cp_pos = self._progression.process_checkpoints(player, stage, self._checkpoints, self._hud)
-        if cp_pos is not None:
-            self._checkpoint_position = cp_pos
-
-        if self._progression.check_next_trigger(player, stage):
-            self.on_next_trigger_entered()
-            self._banner.play("STAGE_COMPLETE", "STAGE COMPLETE")
-            self.context.event_bus.emit(Events.SFX_STAGE_COMPLETE)
-
-        if self._progression.check_boss_defeat(stage):
-            self._banner.play("STAGE_COMPLETE", "STAGE COMPLETE")
-            self.context.event_bus.emit(Events.SFX_STAGE_COMPLETE)
-
-        if self._progression.update_complete_timer(dt):
-            if self._damage_taken_this_stage == 0:
-                self._achievements.mark_untouchable()
-            if self._stage_start_time < 60.0:
-                self._achievements.mark_speed_demon()
-            self._speedrun.split(self._stage_data.stage_id)
-            self._speedrun.stop()
-            self.context.event_bus.emit(Events.STAGE_COMPLETE, stage_id=stage.stage_id)
-            return
-
-        if self._progression.stage_complete:
             if self._hud:
-                self._hud.clear_boss_hud()
+                boss_found = False
+                for entity in stage.entity_list:
+                    if isinstance(entity, BossBase) and entity.is_alive:
+                        self._hud.set_boss_hud(
+                            entity.boss_name,
+                            entity.current_health,
+                            entity.phase_max_health,
+                            getattr(entity, "current_phase", 0) + 1,
+                            getattr(entity, "phase_count", 1),
+                        )
+                        boss_found = True
+                        break
+                if not boss_found:
+                    self._hud.clear_boss_hud()
+
             if self._msg_box:
                 self._msg_box.update(dt)
+                if self._msg_box.is_dismiss_on_confirm and im.is_action_just_pressed(Action.CONFIRM):
+                    self._msg_box.hide()
             if self._banner:
                 self._banner.update(dt)
-            return
+            if self._hud:
+                self._hud.set_combo_count(player.combo_count)
+                self._hud.set_special_meter(player.special_meter, player.special_meter_max)
+                self._hud.update(dt)
 
-        # Dynamic music intensity
-        if self._dynamic_music is not None:
-            has_boss = any(isinstance(e, BossBase) and e.is_alive for e in stage.entity_list)
-            has_enemies = any(isinstance(e, EnemyBase) and e.is_alive for e in stage.entity_list)
-            intensity = self._dynamic_music.detect_intensity_from_state(has_boss, has_enemies)
-            self._dynamic_music.set_intensity(intensity)
+            self._speedrun.update(dt)
+            self._hazards.update(dt, player, stage)
+            self._tutorial.update(dt, im)
+            self._particle_system.update(dt)
+            self._damage_numbers.update(dt)
+            self._post_processing.update(dt)
+            self._ambient_particles.update(dt, self._camera.offset)
+            self._weather.update(dt, self._camera.offset)
+            self._dialogue.update(dt)
 
-        if self._hud:
-            boss_found = False
-            for entity in stage.entity_list:
-                if isinstance(entity, BossBase) and entity.is_alive:
-                    self._hud.set_boss_hud(
-                        entity._boss_name,
-                        entity.current_health,
-                        entity._phase_max_health,
-                        getattr(entity, "current_phase", 0) + 1,
-                        getattr(entity, "phase_count", 1),
-                    )
-                    boss_found = True
-                    break
-            if not boss_found:
-                self._hud.clear_boss_hud()
-
-        if self._msg_box:
-            self._msg_box.update(dt)
-            if self._msg_box.is_dismiss_on_confirm and im.is_action_just_pressed(Action.CONFIRM):
-                self._msg_box.hide()
-        if self._banner:
-            self._banner.update(dt)
-        if self._hud:
-            self._hud.set_combo_count(player.combo_count)
-            self._hud.set_special_meter(player.special_meter, player.special_meter_max)
-            self._hud.update(dt)
-
-        self._speedrun.update(dt)
-        self._hazards.update(dt, player, stage)
-        self._tutorial.update(dt, im)
-        self._particle_system.update(dt)
-        self._damage_numbers.update(dt)
-        self._post_processing.update(dt)
-        self._ambient_particles.update(dt, self._camera.offset)
-        self._weather.update(dt, self._camera.offset)
-        self._dialogue.update(dt)
-
-        # Update lighting
-        if self._player is not None:
-            combat = len([e for e in stage.entity_list if isinstance(e, EnemyBase) and e.is_alive]) > 0
-            if self._player_light is None:
-                self._player_light = self._lighting.get_player_light(self._player.position, combat)
-                self._lighting.add_light(self._player_light)
-            else:
-                self._player_light.position = self._player.position
-                self._player_light.intensity = 0.9 if combat else 0.6
-                self._player_light.radius = 100 if combat else 60
-        self._lighting.update(dt, self._camera.offset)
-
-        # Update achievements & inventory notifications
-        self._achievements.update_notifications(dt)
-        get_inventory().update_notifications(dt)
-        if self._player_spawned:
-            self._stage_start_time += dt
-            # Track damage for untouchable achievement
+            # Update lighting
             if self._player is not None:
-                old_health = getattr(self, '_last_player_health', self._player.current_health)
-                if old_health > self._player.current_health:
-                    self._damage_taken_this_stage += old_health - self._player.current_health
-                self._last_player_health = self._player.current_health
-                # survivor: survive with 0.5 health or less
-                if self._player.current_health <= 0.5 and self._player.current_health > 0:
-                    self._achievements.mark_survived_low_health()
+                combat = any(isinstance(e, EnemyBase) and e.is_alive for e in stage.entity_list)
+                if self._player_light is None:
+                    self._player_light = self._lighting.get_player_light(self._player.position, combat)
+                    self._lighting.add_light(self._player_light)
+                else:
+                    self._player_light.position = self._player.position
+                    self._player_light.intensity = 0.9 if combat else 0.6
+                    self._player_light.radius = 100 if combat else 60
+            self._lighting.update(dt, self._camera.offset)
 
-        # Update minimap
-        if self._player is not None and self._stage_data is not None:
-            enemy_positions = [
-                (e.position.x, e.position.y)
-                for e in self._stage_data.entity_list
-                if isinstance(e, EnemyBase) and e.is_alive
-            ]
-            boss_positions = [
-                (e.position.x, e.position.y)
-                for e in self._stage_data.entity_list
-                if isinstance(e, BossBase) and e.is_alive
-            ]
-            cp_positions = [
-                (cp.rect.centerx, cp.rect.centery)
-                for cp in self._checkpoints
-            ]
-            activated = {i for i, cp in enumerate(self._checkpoints) if cp.is_activated}
-            self._minimap.update(
-                player_pos=(player.position.x, player.position.y),
-                player_dir=player.facing_direction,
-                enemy_positions=enemy_positions,
-                boss_positions=boss_positions,
-                checkpoint_positions=cp_positions,
-                activated_checkpoints=activated,
-            )
-            # Explore area around player
-            explore_rect = pygame.Rect(
-                player.rect.centerx - 80, player.rect.centery - 60,
-                160, 120,
-            )
-            self._minimap.explore_rect(explore_rect)
+            # Update achievements & inventory notifications
+            self._achievements.update_notifications(dt)
+            get_inventory().update_notifications(dt)
+            if self._player_spawned:
+                self._stage_start_time += dt
+                # Track damage for untouchable achievement
+                if self._player is not None:
+                    old_health = getattr(self, '_last_player_health', self._player.current_health)
+                    if old_health > self._player.current_health:
+                        self._damage_taken_this_stage += old_health - self._player.current_health
+                    self._last_player_health = self._player.current_health
+                    # survivor: survive with 0.5 health or less
+                    if self._player.current_health <= 0.5 and self._player.current_health > 0:
+                        self._achievements.mark_survived_low_health()
 
-        # Capture trail during dash
-        if self._player is not None:
-            is_dashing = getattr(self._player, "_dash_timer", 0) > 0
-            is_moving = abs(getattr(self._player, "velocity", pygame.Vector2()).x) > 50
-            if is_dashing or (is_moving and not self._player.is_grounded):
-                self._trail_system.capture(self._player)
-        self._trail_system.update(dt)
+            # Update minimap
+            if self._player is not None and self._stage_data is not None:
+                enemy_positions = [
+                    (e.position.x, e.position.y)
+                    for e in self._stage_data.entity_list
+                    if isinstance(e, EnemyBase) and e.is_alive
+                ]
+                boss_positions = [
+                    (e.position.x, e.position.y)
+                    for e in self._stage_data.entity_list
+                    if isinstance(e, BossBase) and e.is_alive
+                ]
+                cp_positions = [
+                    (cp.rect.centerx, cp.rect.centery)
+                    for cp in self._checkpoints
+                ]
+                activated = {i for i, cp in enumerate(self._checkpoints) if cp.is_activated}
+                self._minimap.update(
+                    player_pos=(player.position.x, player.position.y),
+                    player_dir=player.facing_direction,
+                    enemy_positions=enemy_positions,
+                    boss_positions=boss_positions,
+                    checkpoint_positions=cp_positions,
+                    activated_checkpoints=activated,
+                )
+                # Explore area around player
+                explore_rect = pygame.Rect(
+                    player.rect.centerx - 80, player.rect.centery - 60,
+                    160, 120,
+                )
+                self._minimap.explore_rect(explore_rect)
 
-        if self._hud and self._hud.current_time <= 0 and self._hud.is_countdown and not self._game_over:
-            self._kill_player()
-            return
+            # Capture trail during dash
+            if self._player is not None:
+                is_dashing = getattr(self._player, "_dash_timer", 0) > 0
+                is_moving = abs(getattr(self._player, "velocity", pygame.Vector2()).x) > 50
+                if is_dashing or (is_moving and not self._player.is_grounded):
+                    self._trail_system.capture(self._player)
+            self._trail_system.update(dt)
+
+            if self._hud and self._hud.current_time <= 0 and self._hud.is_countdown and not self._game_over:
+                self._kill_player()
+                return
 
     def _save_and_quit(self) -> None:
-        sm = self.context.save_manager
-        if sm is not None and self._stage_data is not None and self._player is not None:
-            sm.auto_save(
+        if self._stage_data is not None and self._player is not None:
+            self.context.event_bus.emit(
+                Events.SAVE_REQUESTED,
                 stage_id=self._stage_data.stage_id,
                 stage_index=self.context.scene_manager.stage_index,
                 checkpoint_x=self._player.rect.centerx,
@@ -726,6 +786,8 @@ class StageScene(BaseScene):
         self.context.scene_manager.push(GameOverScene(self.context, self))
 
     def draw(self, surface: pygame.Surface) -> None:
+        if self._stage_data is None or self._player is None:
+            return
         self._drawing.draw(
             surface, self._stage_data, self._player, self._checkpoints,
             self._camera, self._hud, self._msg_box, self._banner,

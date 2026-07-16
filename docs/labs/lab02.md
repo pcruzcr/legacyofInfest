@@ -1,3 +1,13 @@
+---
+document_id: "LOI-LABS-LAB02"
+title: "Lab 2: Interpolation & Animation (Unit V)"
+aliases: ["Lab02", "lab02"]
+tags: ["lab", "academic", "exercise"]
+description: "Labs document: lab02"
+source: "docs/docs\labs/lab02.md"
+date_processed: "2026-07-14"
+---
+
 # Lab 2: Interpolation & Animation (Unit V)
 
 **Objective:** Master easing functions and keyframe animation using the InterpolationLabScene.

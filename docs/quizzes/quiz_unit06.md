@@ -1,3 +1,13 @@
+---
+document_id: "LOI-QUIZZES-QUIZ_UNIT06"
+title: "Quiz — Unit VI: Collision Detection & Resolution"
+aliases: ["Quiz Unit06", "quiz_unit06"]
+tags: ["quiz", "academic", "evaluation"]
+description: "Quizzes document: quiz_unit06"
+source: "docs/docs\quizzes/quiz_unit06.md"
+date_processed: "2026-07-14"
+---
+
 # Quiz — Unit VI: Collision Detection & Resolution
 
 **Course:** Legacy of InFest  

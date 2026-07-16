@@ -34,6 +34,9 @@ class QuizManager:
         self._total_answered: int = 0
         self._results: list[bool] = []
         self._active: bool = False
+        self._overlay: pygame.Surface | None = None
+        self._font_question = pygame.font.Font(None, 13)
+        self._font_answer = pygame.font.Font(None, 15)
 
     def toggle(self) -> None:
         self._active = not self._active
@@ -87,7 +90,9 @@ class QuizManager:
             return
 
         q = self._current_question()
-        overlay = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT), pygame.SRCALPHA)
+        if self._overlay is None or self._overlay.get_size() != (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT):
+            self._overlay = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT), pygame.SRCALPHA)
+        overlay = self._overlay
         overlay.fill((0, 0, 0, 200))
 
         box_w = 320
@@ -98,10 +103,7 @@ class QuizManager:
         pygame.draw.rect(overlay, (20, 20, 40), (bx, by, box_w, box_h))
         pygame.draw.rect(overlay, COLOR_HIGHLIGHT, (bx, by, box_w, box_h), 1)
 
-        font_small = pygame.font.Font(None, 13)
-        font_med = pygame.font.Font(None, 15)
-
-        title = font_med.render("QUIZ", True, COLOR_HIGHLIGHT)
+        title = self._font_answer.render("QUIZ", True, COLOR_HIGHLIGHT)
         overlay.blit(title, (bx + 8, by + 6))
 
         qtext = q.get("question", "")
@@ -109,7 +111,7 @@ class QuizManager:
         words = qtext.split(" ")
         line = ""
         for w in words:
-            if font_small.size(line + " " + w)[0] > box_w - 24:
+            if self._font_question.size(line + " " + w)[0] > box_w - 24:
                 wrapped.append(line)
                 line = w
             else:
@@ -118,7 +120,7 @@ class QuizManager:
             wrapped.append(line)
 
         for i, line in enumerate(wrapped):
-            txt = font_small.render(line, True, COLOR_TEXT)
+            txt = self._font_question.render(line, True, COLOR_TEXT)
             overlay.blit(txt, (bx + 12, by + 24 + i * 12))
 
         options = q.get("options", [])
@@ -132,16 +134,16 @@ class QuizManager:
                 elif i == self._selected and not self._correct:
                     color = (200, 80, 80)
                     marker = "✗"
-            otxt = font_small.render(f"  {marker} {opt}", True, color)
+            otxt = self._font_question.render(f"  {marker} {opt}", True, color)
             overlay.blit(otxt, (bx + 12, by + 24 + len(wrapped) * 12 + 4 + i * 14))
 
         if self._answered:
             result_color = (80, 200, 80) if self._correct else (200, 80, 80)
             result_text = "✓ Correct!" if self._correct else "✗ Incorrect"
-            rt = font_med.render(result_text, True, result_color)
+            rt = self._font_answer.render(result_text, True, result_color)
             overlay.blit(rt, (bx + 12, by + box_h - 22))
 
-        progress = font_small.render(
+        progress = self._font_question.render(
             f"  {self._current + 1}/{len(self._questions)}  |  Score: {self._score}/{self._total_answered}",
             True, COLOR_ACCENT)
         overlay.blit(progress, (bx + 12, by + box_h - 14))

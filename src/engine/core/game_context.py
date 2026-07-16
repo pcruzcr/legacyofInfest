@@ -46,13 +46,14 @@ class GameContext:
         scene_manager: SceneManager,
         event_bus: EventBus,
         clock: DeltaClock | None = None,
+        save_manager: SaveManager | None = None,
     ) -> None:
         self.input_manager = input_manager
         self.audio_manager = audio_manager
         self.scene_manager = scene_manager
         self.event_bus = event_bus
         self.clock: DeltaClock | None = clock
-        self.save_manager: SaveManager = SaveManager()
+        self.save_manager: SaveManager = save_manager if save_manager is not None else SaveManager()
         self.pending_load: SaveData | None = None
         self.running: bool = True
 

@@ -25,6 +25,7 @@ STAGE_ORDER: list[str] = [
 
 # Custom module import paths for stages that don't follow the {id}.{id} convention.
 # Key: stage_id from STAGE_ORDER. Value: dotted module path.
+# TODO: Move this map into framework config (JSON / stage_config.py) for ARC-004.
 _STAGE_MODULE_MAP: dict[str, str] = {
     "stage1_4_boss_venado": "src.stages.boss_venado.boss_venado_scene",
 }
@@ -58,7 +59,7 @@ def discover_stages() -> list[type["BaseScene"]]:
                 )
         except ModuleNotFoundError:
             logging.info(f"StageRegistry: {stage_id} not found — skipping")
-        except Exception as e:
+        except (ImportError, AttributeError) as e:
             logging.error(f"StageRegistry: error loading {stage_id}: {e}")
 
     return stages

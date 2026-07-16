@@ -1,3 +1,13 @@
+---
+document_id: "LOI-LABS-LAB01"
+title: "Lab 1: Vectors & Curves (Unit II)"
+aliases: ["Lab01", "lab01"]
+tags: ["lab", "academic", "exercise"]
+description: "Labs document: lab01"
+source: "docs/docs\labs/lab01.md"
+date_processed: "2026-07-14"
+---
+
 # Lab 1: Vectors & Curves (Unit II)
 
 **Objective:** Implement vector operations and Bézier curves in the VectorLabScene and CurveEditorScene.

@@ -1,3 +1,13 @@
+---
+document_id: "LOI-WATER-047"
+title: "Legacy of InFest — Water Effect Specification"
+aliases: ["Water Effect"]
+tags: ["water", "effect", "vfx"]
+description: "Water VFX"
+source: "docs/47_WATER_EFFECT.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Water Effect Specification
 
 **Document ID:** LOI-WATER-047
@@ -58,3 +68,10 @@ Efecto visual de agua animada usando ondas sinusoidales.
 - Efecto de transparencia y reflejos
 
 Para la especificación completa, consultar el documento original en inglés.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[45_SWIMMING_SPEC.md|Swimming Spec]]
+- [[46_FOG_OF_WAR.md|Fog of War]]

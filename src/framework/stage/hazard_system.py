@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from src.engine.core.events import Events
+from src.engine.scenes.game_over_scene import GameOverScene
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -23,7 +24,6 @@ class HazardSystem:
             self._death_timer -= dt
             if self._death_timer <= 0:
                 self._context.event_bus.emit(Events.PLAYER_DIED)
-                from src.engine.scenes.game_over_scene import GameOverScene
                 self._context.scene_manager.push(
                     GameOverScene(self._context, self._context.scene_manager.current)
                 )
@@ -40,11 +40,12 @@ class HazardSystem:
                 )
 
         for hz in stage.hazard_zones:
-            hz.timer -= dt
-            if hz.timer <= 0 and trigger_rect.colliderect(hz.rect):
-                player.apply_damage(hz.damage, player.rect.center)
-                hz.timer = hz.cooldown
-                self._context.event_bus.emit(Events.SFX_HAZARD_ZONE)
+            if trigger_rect.colliderect(hz.rect):
+                hz.timer -= dt
+                if hz.timer <= 0 and player.rect is not None:
+                    player.apply_damage(hz.damage, player.rect.center)
+                    hz.timer = hz.cooldown
+                    self._context.event_bus.emit(Events.SFX_HAZARD_ZONE)
 
         for dp in stage.death_pits:
             if trigger_rect.colliderect(dp.rect):
@@ -52,7 +53,7 @@ class HazardSystem:
 
     def _kill_player(self) -> None:
         self._pending_death = True
-        self._death_timer = 0.0
+        self._death_timer = 0.3
 
     def reset(self) -> None:
         self._pending_death = False

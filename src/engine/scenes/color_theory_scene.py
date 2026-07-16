@@ -103,6 +103,9 @@ class ColorTheoryScene(BaseScene):
         self._y: float = 0.1
         self._k: float = 0.2
         self._alpha: float = 0.5
+        self._checker_surf: pygame.Surface | None = None
+        self._blended_surf: pygame.Surface | None = None
+        self._top_surf: pygame.Surface | None = None
         self._step_index: int = 0
         self._challenge_target: tuple[int, int, int] = (0, 0, 0)
         self._challenge_attempts: int = 0
@@ -459,21 +462,23 @@ class ColorTheoryScene(BaseScene):
         lr, lg, lb = self._r, self._g, self._b
         # Bottom layer: fixed checkerboard
         bw, bh = 16, 16
-        checker = pygame.Surface((160, 40))
-        for cx in range(0, 160, bw):
-            for cy in range(0, 40, bh):
-                c = (200, 200, 200) if ((cx // bw) + (cy // bh)) % 2 == 0 else (100, 100, 100)
-                pygame.draw.rect(checker, c, (cx, cy, bw, bh))
-        surface.blit(checker, (80, y))
+        if self._checker_surf is None or self._checker_surf.get_size() != (160, 40):
+            self._checker_surf = pygame.Surface((160, 40))
+            for cx in range(0, 160, bw):
+                for cy in range(0, 40, bh):
+                    c = (200, 200, 200) if ((cx // bw) + (cy // bh)) % 2 == 0 else (100, 100, 100)
+                    pygame.draw.rect(self._checker_surf, c, (cx, cy, bw, bh))
+        surface.blit(self._checker_surf, (80, y))
 
-        # Blend
-        blended = pygame.Surface((160, 40), pygame.SRCALPHA)
-        blended.blit(checker, (0, 0))
-        top = pygame.Surface((160, 40))
-        top.fill((lr, lg, lb))
-        top.set_alpha(int(self._alpha * 255))
-        blended.blit(top, (0, 0))
-        surface.blit(blended, (80, y + 45))
+        if self._blended_surf is None or self._blended_surf.get_size() != (160, 40):
+            self._blended_surf = pygame.Surface((160, 40), pygame.SRCALPHA)
+        if self._top_surf is None or self._top_surf.get_size() != (160, 40):
+            self._top_surf = pygame.Surface((160, 40))
+        self._blended_surf.blit(self._checker_surf, (0, 0))
+        self._top_surf.fill((lr, lg, lb))
+        self._top_surf.set_alpha(int(self._alpha * 255))
+        self._blended_surf.blit(self._top_surf, (0, 0))
+        surface.blit(self._blended_surf, (80, y + 45))
 
         # Labels
         labels = [

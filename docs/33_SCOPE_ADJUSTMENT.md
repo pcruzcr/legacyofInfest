@@ -1,3 +1,13 @@
+---
+document_id: "LOI-SCOPE-033"
+title: "Legacy of InFest - Scope Adjustment v2.0"
+aliases: ["Scope Adjustment"]
+tags: ["scope", "adjustment", "academic"]
+description: "Scope adjustment documentation"
+source: "docs/33_SCOPE_ADJUSTMENT.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest - Scope Adjustment v2.0
 
 **Document ID:** LOI-SCOPE-033

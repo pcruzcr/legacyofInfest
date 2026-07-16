@@ -9,7 +9,7 @@ Automatically cleans up EventBus subscriptions when scenes exit.
 """
 from __future__ import annotations
 import logging
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Callable, Protocol, runtime_checkable
 
 from src.engine.core.events import Events
 from src.engine.scenes.transition_manager import TransitionManager
@@ -30,8 +30,6 @@ if TYPE_CHECKING:
 class SceneManager:
     """Manages a stack of scenes with push/pop/replace semantics."""
 
-    _subscribed_events: list[str] = [Events.STAGE_COMPLETE, Events.PLAYER_DIED]
-
     def __init__(self, context: GameContext) -> None:
         self._context = context
         self._stack: list[BaseScene] = []
@@ -39,13 +37,23 @@ class SceneManager:
         self._stage_index: int = 0
         self._transition = TransitionManager()
         self._pending_replace_cb = None
-        self._context.event_bus.subscribe(Events.STAGE_COMPLETE, self._on_stage_complete)
-        self._context.event_bus.subscribe(Events.PLAYER_DIED, self._on_player_died)
+        # Store bound method refs so unsubscribe is never fragile (ARC-008)
+        self._event_refs: dict[str, Callable[..., None]] = {
+            Events.STAGE_COMPLETE: self._on_stage_complete,
+            Events.PLAYER_DIED: self._on_player_died,
+        }
+        for event, cb in self._event_refs.items():
+            self._context.event_bus.subscribe(event, cb)
+
+    def update(self, dt: float) -> None:
+        """Update the current active scene (top of stack)."""
+        if self._stack:
+            self._stack[-1].update(dt)
 
     def cleanup(self) -> None:
         """Unsubscribe all event listeners. Call when SceneManager is discarded."""
-        for event in self._subscribed_events:
-            self._context.event_bus.unsubscribe(event, getattr(self, f"_on_{event.lower()}"))
+        for event, cb in self._event_refs.items():
+            self._context.event_bus.unsubscribe(event, cb)
 
     @property
     def current(self) -> BaseScene:

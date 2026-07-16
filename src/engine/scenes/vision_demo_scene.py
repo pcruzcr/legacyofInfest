@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Literal
 
 import pygame
@@ -67,6 +68,12 @@ class VisionDemoScene(BaseScene):
 
         # Cached results
         self._cached_result: pygame.Surface | None = None
+        self._cached_left_scaled: pygame.Surface | None = None
+        self._cached_left_src: pygame.Surface | None = None
+        self._cached_right_scaled: pygame.Surface | None = None
+        self._cached_right_src: pygame.Surface | None = None
+        self._cached_thumb: pygame.Surface | None = None
+        self._cached_thumb_src: pygame.Surface | None = None
         self._cached_regions: list[RegionInfo] | None = None
         self._cached_comp_result: ComponentResult | None = None
         self._cached_watershed: pygame.Surface | None = None
@@ -90,10 +97,13 @@ class VisionDemoScene(BaseScene):
         self._inter_threshold: int = 128
         self._inter_pipeline_label: str = ""
         self._inter_pipeline_desc: str = ""
+        self._inter_overlay: pygame.Surface | None = None
 
         self._font_small = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_SMALL)
         self._font_medium = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_MEDIUM)
         self._font_large = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_LARGE)
+        self._font_overlay_small = pygame.font.Font(None, 11)
+        self._font_overlay_med = pygame.font.Font(None, 13)
 
     def on_enter(self) -> None:
         self._mode = 0
@@ -207,8 +217,10 @@ class VisionDemoScene(BaseScene):
 
     def _compute_otsu_curve(self, gray_surface: pygame.Surface) -> tuple[list[float], list[int]]:
         arr = pygame.surfarray.pixels3d(gray_surface)
-        gray = np.mean(arr, axis=2).astype(np.uint8).flatten()
-        del arr
+        try:
+            gray = np.mean(arr, axis=2).astype(np.uint8).flatten()
+        finally:
+            del arr
         total = len(gray)
         hist = np.bincount(gray, minlength=256).tolist()
         total_sum = sum(t * hist[t] for t in range(256))
@@ -248,7 +260,8 @@ class VisionDemoScene(BaseScene):
             self._inter_threshold = self._threshold
             self._update_intermediate_label()
             self._error_msg = ""
-        except Exception as e:
+        except (pygame.error, ValueError, ZeroDivisionError, np.linalg.LinAlgError) as e:
+            logging.warning("vision_demo: compute error: %s", e)
             self._error_msg = f"Error: {e}"[:60]
             self._error_timer = 2.0
 
@@ -270,11 +283,13 @@ class VisionDemoScene(BaseScene):
             self._inter_pipeline_label, self._inter_pipeline_desc = labels[mode]
 
     def _compute_histogram(self, src: pygame.Surface) -> list[int]:
-        """Compute luminance histogram (256 bins) for intermediate overlay."""
+        """Compute luminance histogram (256 bins) for intermediate self._inter_overlay."""
         gray = _to_grayscale(src)
         arr = pygame.surfarray.pixels3d(gray)
-        lum = np.mean(arr[:, :, 0], axis=1).astype(np.uint8)
-        del arr
+        try:
+            lum = np.mean(arr[:, :, 0], axis=1).astype(np.uint8)
+        finally:
+            del arr
         hist = np.bincount(lum, minlength=256).tolist()
         return hist
 
@@ -391,8 +406,10 @@ class VisionDemoScene(BaseScene):
     def _draw_left_panel(self, surface: pygame.Surface) -> None:
         src = self._sources.current_source
         if src is not None:
-            scaled = pygame.transform.scale(src, PANEL_SIZE)
-            surface.blit(scaled, (0, TOP_BAR_H))
+            if self._cached_left_src is not src:
+                self._cached_left_scaled = pygame.transform.scale(src, PANEL_SIZE)
+                self._cached_left_src = src
+            surface.blit(self._cached_left_scaled, (0, TOP_BAR_H))
         draw_panel_border(surface, pygame.Rect(0, TOP_BAR_H, PANEL_SIZE[0], PANEL_H))
 
         if self._sources.is_frozen:
@@ -402,8 +419,10 @@ class VisionDemoScene(BaseScene):
     def _draw_right_panel(self, surface: pygame.Surface) -> None:
         rect = pygame.Rect(RIGHT_PANEL_X, TOP_BAR_H, PANEL_SIZE[0], PANEL_H)
         if self._cached_result is not None:
-            scaled = pygame.transform.scale(self._cached_result, PANEL_SIZE)
-            surface.blit(scaled, (RIGHT_PANEL_X, TOP_BAR_H))
+            if self._cached_right_src is not self._cached_result:
+                self._cached_right_scaled = pygame.transform.scale(self._cached_result, PANEL_SIZE)
+                self._cached_right_src = self._cached_result
+            surface.blit(self._cached_right_scaled, (RIGHT_PANEL_X, TOP_BAR_H))
         draw_panel_border(surface, rect)
 
         # Region info text overlay (modes 7)
@@ -476,25 +495,24 @@ class VisionDemoScene(BaseScene):
 
     def _draw_intermediate_overlay(self, surface: pygame.Surface) -> None:
         """Draw a semi-transparent overlay showing intermediate steps (histogram, mask, pipeline)."""
-        overlay = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 190))
+        w, h = settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT
+        if self._inter_overlay is None or self._inter_overlay.get_size() != (w, h):
+            self._inter_overlay = pygame.Surface((w, h), pygame.SRCALPHA)
+        self._inter_overlay.fill((0, 0, 0, 190))
 
         box_w = 300
         box_h = 180
-        bx = (settings.INTERNAL_WIDTH - box_w) // 2
-        by = (settings.INTERNAL_HEIGHT - box_h) // 2 - 10
+        bx = (w - box_w) // 2
+        by = (h - box_h) // 2 - 10
 
-        pygame.draw.rect(overlay, (15, 15, 45), (bx, by, box_w, box_h))
-        pygame.draw.rect(overlay, COLOR_HIGHLIGHT, (bx, by, box_w, box_h), 1)
-
-        font = pygame.font.Font(None, 11)
-        font_title = pygame.font.Font(None, 13)
+        pygame.draw.rect(self._inter_overlay, (15, 15, 45), (bx, by, box_w, box_h))
+        pygame.draw.rect(self._inter_overlay, COLOR_HIGHLIGHT, (bx, by, box_w, box_h), 1)
 
         # Pipeline label
-        pipe_label = font_title.render(f"Pipeline: {self._inter_pipeline_label}", True, COLOR_HIGHLIGHT)
-        overlay.blit(pipe_label, (bx + 6, by + 4))
-        pipe_desc = font.render(self._inter_pipeline_desc, True, COLOR_ACCENT)
-        overlay.blit(pipe_desc, (bx + 6, by + 18))
+        pipe_label = self._font_overlay_med.render(f"Pipeline: {self._inter_pipeline_label}", True, COLOR_HIGHLIGHT)
+        self._inter_overlay.blit(pipe_label, (bx + 6, by + 4))
+        pipe_desc = self._font_overlay_small.render(self._inter_pipeline_desc, True, COLOR_ACCENT)
+        self._inter_overlay.blit(pipe_desc, (bx + 6, by + 18))
 
         # Histogram (if available)
         if self._inter_histogram:
@@ -504,55 +522,59 @@ class VisionDemoScene(BaseScene):
             hist_h = 50
             hx = bx + 50
             hy = by + 34
-            pygame.draw.rect(overlay, (10, 10, 30), (hx, hy, hist_w, hist_h))
+            pygame.draw.rect(self._inter_overlay, (10, 10, 30), (hx, hy, hist_w, hist_h))
             for t in range(256):
                 bar_h = int(hist[t] / max_hist * hist_h)
                 px = hx + int(t / 255 * hist_w)
-                pygame.draw.line(overlay, (80, 140, 200), (px, hy + hist_h), (px, hy + hist_h - bar_h), 1)
+                pygame.draw.line(self._inter_overlay, (80, 140, 200), (px, hy + hist_h), (px, hy + hist_h - bar_h), 1)
             # Threshold marker
             if self._mode in (0, 2, 3, 4, 5, 6, 7):
                 tx = hx + int(self._inter_threshold / 255 * hist_w)
-                pygame.draw.line(overlay, COLOR_GOLD, (tx, hy), (tx, hy + hist_h), 2)
-                tlabel = font.render(f"T={self._inter_threshold}", True, COLOR_GOLD)
-                overlay.blit(tlabel, (tx - 14, hy + hist_h + 2))
+                pygame.draw.line(self._inter_overlay, COLOR_GOLD, (tx, hy), (tx, hy + hist_h), 2)
+                tlabel = self._font_overlay_small.render(f"T={self._inter_threshold}", True, COLOR_GOLD)
+                self._inter_overlay.blit(tlabel, (tx - 14, hy + hist_h + 2))
             # Otsu marker
             if self._mode == 1:
                 tx = hx + int(self._otsu_value / 255 * hist_w)
-                pygame.draw.line(overlay, (80, 200, 80), (tx, hy), (tx, hy + hist_h), 2)
-                tlabel = font.render(f"Otsu T={self._otsu_value}", True, (80, 200, 80))
-                overlay.blit(tlabel, (tx - 18, hy + hist_h + 2))
-            h_label = font.render("Histogram", True, COLOR_TEXT)
-            overlay.blit(h_label, (bx + 6, hy + 2))
+                pygame.draw.line(self._inter_overlay, (80, 200, 80), (tx, hy), (tx, hy + hist_h), 2)
+                tlabel = self._font_overlay_small.render(f"Otsu T={self._otsu_value}", True, (80, 200, 80))
+                self._inter_overlay.blit(tlabel, (tx - 18, hy + hist_h + 2))
+            h_label = self._font_overlay_small.render("Histogram", True, COLOR_TEXT)
+            self._inter_overlay.blit(h_label, (bx + 6, hy + 2))
 
         # Binary mask thumbnail (if available)
         if self._inter_mask is not None and self._mode not in (8, 9):
             thumb_size = 60
             tx = bx + 6
             ty = by + box_h - thumb_size - 6
-            thumb = pygame.transform.scale(self._inter_mask, (thumb_size, thumb_size))
-            overlay.blit(thumb, (tx, ty))
-            pygame.draw.rect(overlay, COLOR_ACCENT, (tx, ty, thumb_size, thumb_size), 1)
-            ml = font.render("Mask", True, COLOR_TEXT)
-            overlay.blit(ml, (tx, ty - 10))
+            if self._cached_thumb_src is not self._inter_mask:
+                self._cached_thumb = pygame.transform.scale(self._inter_mask, (thumb_size, thumb_size))
+                self._cached_thumb_src = self._inter_mask
+            self._inter_overlay.blit(self._cached_thumb, (tx, ty))
+            pygame.draw.rect(self._inter_overlay, COLOR_ACCENT, (tx, ty, thumb_size, thumb_size), 1)
+            ml = self._font_overlay_small.render("Mask", True, COLOR_TEXT)
+            self._inter_overlay.blit(ml, (tx, ty - 10))
 
         # White/black pixel stats for threshold modes
         if self._inter_mask is not None and self._mode in (0, 1, 2, 3, 4, 5):
             try:
                 arr = pygame.surfarray.pixels3d(self._inter_mask)
-                total = arr.shape[0] * arr.shape[1]
-                white = int(np.sum(arr[:, :, 0] > 127))
-                black = total - white
-                del arr
+                try:
+                    total = arr.shape[0] * arr.shape[1]
+                    white = int(np.sum(arr[:, :, 0] > 127))
+                    black = total - white
+                finally:
+                    del arr
                 stats_y = by + box_h - 16
-                stats = font.render(f"White: {white}px ({white*100//total}%)  Black: {black}px ({black*100//total}%)", True, COLOR_TEXT)
-                overlay.blit(stats, (bx + 6, stats_y))
-            except Exception:
-                pass
+                stats = self._font_overlay_small.render(f"White: {white}px ({white*100//total}%)  Black: {black}px ({black*100//total}%)", True, COLOR_TEXT)
+                self._inter_overlay.blit(stats, (bx + 6, stats_y))
+            except (pygame.error, ValueError, RuntimeError) as e:
+                logging.warning("vision_demo: pixel stats failed: %s", e)
 
         # Kernel overlay for morph modes
         if self._mode in (2, 3, 4, 5):
-            k_label = font.render(f"Kernel: {self._kernel_size}x{self._kernel_size}", True, COLOR_HIGHLIGHT)
-            overlay.blit(k_label, (bx + box_w - 90, by + 4))
+            k_label = self._font_overlay_small.render(f"Kernel: {self._kernel_size}x{self._kernel_size}", True, COLOR_HIGHLIGHT)
+            self._inter_overlay.blit(k_label, (bx + box_w - 90, by + 4))
             # Draw kernel grid
             kx = bx + box_w - 80
             ky = by + 18
@@ -560,8 +582,8 @@ class VisionDemoScene(BaseScene):
             kernel_w = self._kernel_size * cell
             for row in range(self._kernel_size):
                 for col in range(self._kernel_size):
-                    pygame.draw.rect(overlay, (200, 200, 100), (kx + col * cell, ky + row * cell, cell, cell))
-            pygame.draw.rect(overlay, COLOR_ACCENT, (kx, ky, kernel_w, kernel_w), 1)
+                    pygame.draw.rect(self._inter_overlay, (200, 200, 100), (kx + col * cell, ky + row * cell, cell, cell))
+            pygame.draw.rect(self._inter_overlay, COLOR_ACCENT, (kx, ky, kernel_w, kernel_w), 1)
 
         # Component sizes for COMPONENTS mode
         if self._mode == 6 and self._cached_comp_result is not None:
@@ -572,20 +594,20 @@ class VisionDemoScene(BaseScene):
             bar_y = by + 80
             for i, sz in enumerate(sizes):
                 bw = int(sz / max_sz * 30)
-                pygame.draw.rect(overlay, (80 + i * 20, 160, 200 - i * 15), (bar_x, bar_y + i * 6, bw, 4))
-            sz_label = font.render(f"Top {len(sizes)} comps", True, COLOR_TEXT)
-            overlay.blit(sz_label, (bar_x, bar_y - 10))
+                pygame.draw.rect(self._inter_overlay, (80 + i * 20, 160, 200 - i * 15), (bar_x, bar_y + i * 6, bw, 4))
+            sz_label = self._font_overlay_small.render(f"Top {len(sizes)} comps", True, COLOR_TEXT)
+            self._inter_overlay.blit(sz_label, (bar_x, bar_y - 10))
 
         # Feature method info
         if self._mode == 9:
             method = FEATURE_METHODS[self._feat_method_idx]
-            feat_label = font.render(f"Descriptor: {method.upper()}", True, COLOR_HIGHLIGHT)
-            overlay.blit(feat_label, (bx + 6, by + box_h - 30))
+            feat_label = self._font_overlay_small.render(f"Descriptor: {method.upper()}", True, COLOR_HIGHLIGHT)
+            self._inter_overlay.blit(feat_label, (bx + 6, by + box_h - 30))
 
-        hint = font.render("Press I to close intermediate view", True, (100, 100, 140))
-        overlay.blit(hint, (bx + 6, by + box_h - 12))
+        hint = self._font_overlay_small.render("Press I to close intermediate view", True, (100, 100, 140))
+        self._inter_overlay.blit(hint, (bx + 6, by + box_h - 12))
 
-        surface.blit(overlay, (0, 0))
+        surface.blit(self._inter_overlay, (0, 0))
 
     def _draw_bottom_bar(self, surface: pygame.Surface) -> None:
         if self._error_msg:
@@ -624,8 +646,10 @@ class VisionDemoScene(BaseScene):
 
 def _to_grayscale(surface: pygame.Surface) -> pygame.Surface:
     arr = pygame.surfarray.pixels3d(surface)
-    gray = np.mean(arr, axis=2).astype(np.uint8)
-    del arr
+    try:
+        gray = np.mean(arr, axis=2).astype(np.uint8)
+    finally:
+        del arr
     gray3 = np.stack([gray, gray, gray], axis=-1)
     return pygame.surfarray.make_surface(gray3.transpose(1, 0, 2))
 

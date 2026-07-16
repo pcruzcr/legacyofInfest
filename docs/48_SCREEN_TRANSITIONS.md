@@ -1,3 +1,13 @@
+---
+document_id: "LOI-TRANSITION-048"
+title: "Legacy of InFest — Screen Transitions Specification"
+aliases: ["Screen Transitions"]
+tags: ["transition", "screen", "vfx"]
+description: "Fade/wipe/slide/circle transitions"
+source: "docs/48_SCREEN_TRANSITIONS.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Screen Transitions Specification
 
 **Document ID:** LOI-TRANSITIONS-048
@@ -80,3 +90,10 @@ Sistema de transiciones entre escenas: fundido, barrido, deslizamiento y círcul
 - Círculo (Circle) — revelado circular
 
 Para la especificación completa de duraciones y easing, consultar el documento original en inglés.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[42_CUTSCENE_SYSTEM.md|Cutscene System]]
+- [[46_FOG_OF_WAR.md|Fog of War]]

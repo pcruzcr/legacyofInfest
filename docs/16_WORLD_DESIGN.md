@@ -1,3 +1,13 @@
+---
+document_id: "LOI-WORLD-016"
+title: "Legacy of InFest — World Design Document"
+aliases: ["World Design"]
+tags: ["world", "design", "narrative"]
+description: "4 zones, 14 stages, narrative-to-gameplay mapping"
+source: "docs/16_WORLD_DESIGN.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — World Design Document
 
 **Document ID:** LOI-WORLD-016  
@@ -529,3 +539,11 @@ Boss stages (X-4) and the Final Zone are professor-owned. Students build the tra
 | Zone 2 | The heat of the datacenter draws them in. El Rey Terciopelo — thousands of serpents animating a decayed body — commands the space. Defeated, its venom-knowledge joins them. |
 | Zone 3 | A masked hawk hunts them through the university's Heredia campus. El Gavilán Camionero Mascarero — empowered by a Tilawa mask — guards the path to Paburu. Defeated, its aerial sight joins them. |
 | Zone Final | The cemetery. Paburu does not hide. He waits. Four phases. Four forms. The Gold Nugget and the Pearl are the key — and the danger. |
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[18_ENEMY_ROSTER.md|Enemy Roster]]
+- [[19_NARRATIVE_AND_LORE.md|Narrative and Lore]]
+- [[07_STAGE0_DESIGN.md|Stage 0 Design]]

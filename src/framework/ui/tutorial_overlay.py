@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from src.engine.input.input_manager import InputManager
 
 
+# Module-level hardcoded tips. Future: externalize to JSON / YAML (ARC-033).
 TUTORIAL_TIPS: dict[str, list[str]] = {
     "move": ["Move: LEFT/RIGHT or A/D", "Jump: SPACE or UP/W", "Crouch: DOWN/S"],
     "attack": ["Short attack: Z or J", "Long attack: X or K (hold to charge)", "Dash: SHIFT or ALT"],
@@ -39,6 +40,7 @@ class TutorialOverlay:
         self._duration: float = 5.0
         self._font = pygame.font.Font(None, 14)
         self._title_font = pygame.font.Font(None, 18)
+        self._box_surf = None
 
     def show(self, tip_key: str, duration: float = 5.0) -> None:
         lines = TUTORIAL_TIPS.get(tip_key)
@@ -66,7 +68,9 @@ class TutorialOverlay:
         title_h = 22
         pad = 8
         total_h = title_h + len(self._lines) * line_h + pad * 2
-        box_surf = pygame.Surface((box_w, total_h), pygame.SRCALPHA)
+        if self._box_surf is None or self._box_surf.get_size() != (box_w, total_h):
+            self._box_surf = pygame.Surface((box_w, total_h), pygame.SRCALPHA)
+        box_surf = self._box_surf
         box_surf.fill((0, 0, 0, 180))
         bx = (settings.INTERNAL_WIDTH - box_w) // 2
         by = settings.INTERNAL_HEIGHT // 2 - total_h // 2

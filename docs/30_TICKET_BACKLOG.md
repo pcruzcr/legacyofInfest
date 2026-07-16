@@ -1,3 +1,13 @@
+---
+document_id: "LOI-TICKET-030"
+title: "Legacy of InFest — Ticket Backlog"
+aliases: ["Ticket Backlog"]
+tags: ["ticket", "backlog", "tasks"]
+description: "Every roadmap phase decomposed into atomic tickets"
+source: "docs/30_TICKET_BACKLOG.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Ticket Backlog
 
 **Document ID:** LOI-BACKLOG-030  
@@ -286,3 +296,9 @@ If the professor wants to mirror this backlog into actual GitHub Issues for the 
 - **Issue milestone:** The roadmap phase number
 
 This is optional tooling — the backlog is fully usable as a plain Markdown checklist without GitHub Issues if preferred.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[25_IMPLEMENTATION_ROADMAP.md|Implementation Roadmap]]

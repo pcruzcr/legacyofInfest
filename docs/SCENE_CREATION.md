@@ -1,3 +1,13 @@
+---
+document_id: "LOI-GUIDE-SCENE"
+title: "Scene Creation Guide"
+aliases: ["Scene Creation Guide"]
+tags: ["scene", "creation", "guide", "tutorial"]
+description: "Scene creation tutorial"
+source: "docs/SCENE_CREATION.md"
+date_processed: "2026-07-14"
+---
+
 # Scene Creation Guide
 
 ## 1. Overview
@@ -207,3 +217,10 @@ Todas las escenas heredan de `BaseScene`. El ciclo de vida es gestionado por `Sc
 - `self.context.scene_manager` — SceneManager
 
 Para ejemplos completos de código, consultar el documento original en inglés.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[STAGE_CREATION.md|Stage Creation Guide]]
+- [[03_ARCHITECTURE.md|Architecture]]

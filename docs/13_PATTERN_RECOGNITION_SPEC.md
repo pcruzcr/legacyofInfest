@@ -1,3 +1,13 @@
+---
+document_id: "LOI-PATTERN-013"
+title: "Legacy of InFest — Pattern Recognition Specification"
+aliases: ["Pattern Recognition Spec"]
+tags: ["pattern", "recognition", "ml"]
+description: "Unit IX machine learning subsystem"
+source: "docs/13_PATTERN_RECOGNITION_SPEC.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Pattern Recognition Specification
 
 **Document ID:** LOI-PATTERN-013  
@@ -876,3 +886,10 @@ PatternRecognitionTools proporciona entrenamiento, evaluación e inferencia de m
 - Inferencia en tiempo de ejecución
 
 Para la especificación completa de la API con ejemplos de código, consultar el documento original en inglés.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[11_FILTER_TOOLS_SPEC.md|Filter Tools Spec]]
+- [[12_VISION_TOOLS_SPEC.md|Vision Tools Spec]]

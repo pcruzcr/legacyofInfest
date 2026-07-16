@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import math
+
 import pygame
 
 from src.engine.core import settings
-from src.engine.core.event_bus import emit
 from src.engine.core.events import Events
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
@@ -20,6 +21,8 @@ from src.framework.vfx.hit_effects import HitEffects
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
+
+_tutorial_seen_cache: bool | None = None
 
 
 class TitleScene(BaseScene):
@@ -61,6 +64,7 @@ class TitleScene(BaseScene):
         ]
         self._recalc_layout()
 
+        self._bar_surf: pygame.Surface | None = None
         self._particle_system = ParticleSystem()
         self._particle_timer: float = 0.0
 
@@ -70,7 +74,7 @@ class TitleScene(BaseScene):
         available = h - logo_bottom - 16
         n = len(self._options)
         line_h = max(11, min(18, available // max(n, 1)))
-        self._font_size = max(12, line_h - 2)
+        self._font_size = max(14, line_h - 2)
         self._font_game = AssetLoader.load_font(
             settings.ASSETS_DIR / "fonts" / "game.ttf",
             self._font_size,
@@ -94,7 +98,7 @@ class TitleScene(BaseScene):
             return
 
         self._logo_timer += dt
-        self._logo_y_offset = 2.0 * (1.0 + 0.5 * (1.0 + __import__('math').cos(self._logo_timer * 1.5)))
+        self._logo_y_offset = 2.0 * (1.0 + 0.5 * (1.0 + math.cos(self._logo_timer * 1.5)))
 
         self._particle_timer += dt
         if self._particle_timer >= 0.1:
@@ -110,22 +114,22 @@ class TitleScene(BaseScene):
         prev_selected = self._selected
         n = len(self._options)
         if im.is_action_just_pressed(Action.MOVE_DOWN):
-            self._selected = (self._selected + 1) % n
+            self._selected = min(self._selected + 1, n - 1)
         if im.is_action_just_pressed(Action.MOVE_UP):
-            self._selected = (self._selected - 1) % n
+            self._selected = max(self._selected - 1, 0)
         if self._selected != prev_selected:
-            emit(Events.SFX_MENU_HOVER)
+            self.context.event_bus.emit(Events.SFX_MENU_HOVER)
         if self._selected < self._scroll_offset:
             self._scroll_offset = self._selected
         elif self._selected >= self._scroll_offset + self._max_visible:
             self._scroll_offset = self._selected - self._max_visible + 1
 
         if im.is_action_just_pressed(Action.CONFIRM):
-            emit(Events.SFX_MENU_CONFIRM)
+            self.context.event_bus.emit(Events.SFX_MENU_CONFIRM)
             self._activate_option(self._options[self._selected])
 
         if im.is_action_just_pressed(Action.CANCEL):
-            emit(Events.SFX_MENU_CANCEL)
+            self.context.event_bus.emit(Events.SFX_MENU_CANCEL)
             self.context.quit()
 
     def _activate_option(self, opt: str) -> None:
@@ -178,24 +182,31 @@ class TitleScene(BaseScene):
                 self._options.remove("CONTINUE")
 
     def _has_seen_tutorial(self) -> bool:
+        global _tutorial_seen_cache
+        if _tutorial_seen_cache is not None:
+            return _tutorial_seen_cache
         from pathlib import Path
         import json
         import os
         flag_path = Path(os.environ.get("APPDATA", str(Path("~/.config").expanduser()))) / "legacyofinfest" / "tutorial_seen.json"
         try:
-            with open(flag_path) as f:
+            with open(flag_path, encoding="utf-8") as f:
                 data = json.load(f)
-                return bool(data.get("seen", False))
+                _tutorial_seen_cache = bool(data.get("seen", False))
+                return _tutorial_seen_cache
         except (FileNotFoundError, json.JSONDecodeError):
+            _tutorial_seen_cache = False
             return False
 
     def _mark_tutorial_seen(self) -> None:
+        global _tutorial_seen_cache
+        _tutorial_seen_cache = True
         from pathlib import Path
         import json
         import os
         flag_path = Path(os.environ.get("APPDATA", str(Path("~/.config").expanduser()))) / "legacyofinfest" / "tutorial_seen.json"
         flag_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(flag_path, "w") as f:
+        with open(flag_path, "w", encoding="utf-8") as f:
             json.dump({"seen": True}, f)
 
     def on_exit(self) -> None:
@@ -220,11 +231,18 @@ class TitleScene(BaseScene):
         for idx, opt in enumerate(visible):
             i = self._scroll_offset + idx
             color = (255, 255, 100) if i == self._selected else (150, 150, 150)
-            prefix = "> " if i == self._selected else "  "
-            text = self._font_game.render(f"{prefix}{opt}", True, color)
+            text = self._font_game.render(opt, True, color)
             ox = (settings.INTERNAL_WIDTH - text.get_width()) // 2
             oy = start_y + idx * self._option_spacing
             if oy + self._font_size <= settings.INTERNAL_HEIGHT:
+                if i == self._selected:
+                    pad = 4
+                    bw, bh = text.get_width() + pad * 2, text.get_height()
+                    if self._bar_surf is None or self._bar_surf.get_size() != (bw, bh):
+                        self._bar_surf = pygame.Surface((bw, bh), pygame.SRCALPHA)
+                    bar_surf = self._bar_surf
+                    bar_surf.fill((255, 255, 255, 60))
+                    surface.blit(bar_surf, (ox - pad, oy))
                 surface.blit(text, (ox, oy))
 
         if self._scroll_offset > 0:

@@ -104,6 +104,9 @@ class CodePanel:
         self._active: bool = False
         self._code_key: str = code_key
         self._custom_lines: list[str] | None = custom_lines
+        self._overlay: pygame.Surface | None = None
+        self._font_info = pygame.font.Font(None, 12)
+        self._font_label = pygame.font.Font(None, 14)
 
     @property
     def active(self) -> bool:
@@ -126,7 +129,9 @@ class CodePanel:
 
         lines = self._custom_lines if self._custom_lines is not None else _CODE_EXAMPLES.get(self._code_key, ["# no code available"])
 
-        overlay = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT), pygame.SRCALPHA)
+        if self._overlay is None or self._overlay.get_size() != (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT):
+            self._overlay = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT), pygame.SRCALPHA)
+        overlay = self._overlay
         overlay.fill((0, 0, 0, 180))
 
         box_w = 380
@@ -137,18 +142,15 @@ class CodePanel:
         pygame.draw.rect(overlay, (15, 15, 40), (bx, by, box_w, box_h))
         pygame.draw.rect(overlay, COLOR_HIGHLIGHT, (bx, by, box_w, box_h), 1)
 
-        font = pygame.font.Font(None, 12)
-        title_font = pygame.font.Font(None, 14)
-
-        title = title_font.render(f"Algorithm: {self._code_key.replace('_', ' ').title()}", True, COLOR_HIGHLIGHT)
+        title = self._font_label.render(f"Algorithm: {self._code_key.replace('_', ' ').title()}", True, COLOR_HIGHLIGHT)
         overlay.blit(title, (bx + 8, by + 6))
 
         for i, line in enumerate(lines):
             color = (120, 190, 120) if line.startswith("def ") or line.startswith("#") else (200, 200, 200)
-            txt = font.render(f"  {line}", True, color)
+            txt = self._font_info.render(f"  {line}", True, color)
             overlay.blit(txt, (bx + 8, by + 24 + i * 14))
 
-        hint = font.render("  Press C to close", True, (100, 100, 140))
+        hint = self._font_info.render("  Press C to close", True, (100, 100, 140))
         overlay.blit(hint, (bx + 8, by + box_h - 16))
 
         surface.blit(overlay, (0, 0))

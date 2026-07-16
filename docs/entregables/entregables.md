@@ -1,3 +1,13 @@
+---
+document_id: "LOI-ENTREGABLES-ENTREGABLES"
+title: "Entregables — Deliverables Guide"
+aliases: ["Entregables", "entregables"]
+tags: ["deliverable", "assignment"]
+description: "Entregables document: entregables"
+source: "docs/docs\entregables/entregables.md"
+date_processed: "2026-07-14"
+---
+
 # Entregables — Deliverables Guide
 
 **Course:** Legacy of InFest
@@ -68,3 +78,76 @@ evaluation_milestone: "Evaluación Práctica I" | "Evaluación Práctica II" | "
 - TMX files must be valid against `docs/06_TMX_SPEC.md`
 - Python files must not produce console errors on load
 - Screenshots referenced in README must exist in the same folder
+
+--- Traducción al Español ---
+
+# Entregables — Guía de Entregables
+
+**Curso:** Legacy of InFest
+**Referencia:** `docs/36_STUDENT_MANUAL.md`, `docs/26_STUDENT_TEMPLATE_SPEC.md`, `docs/14_PROFESSOR_DELIVERABLE_MATRIX.md`
+
+## Estructura General
+
+Cada entregable debe incluir un `README.md` colocado en `src/stages/<student_id>/` con:
+
+```yaml
+---
+assignment_type: stage | boss
+assignment_name: "Tu Título"
+assignment_id: "stage1_2_name"
+zone: 1 | 2 | 3 | final
+student_name: "Tu Nombre"
+units_demonstrated: [II, III, IV, V]
+evaluation_milestone: "Evaluación Práctica I" | "Evaluación Práctica II" | "Evaluación Práctica III"
+---
+```
+
+### Secciones Requeridas del README
+
+1. **Contexto narrativo** — Describe el escenario académico
+2. **Conceptos académicos demostrados** — Una subsección por unidad
+3. **Cómo ejecutar** — Instrucciones para lanzar el entregable
+4. **Capturas de pantalla** — Antes/después para operaciones de FilterTools/VisionTools
+
+## Entregables por Evaluación
+
+### Evaluación Práctica I (Clase 5)
+- [ ] `<assignment>.tmx` con las 8 capas requeridas
+- [ ] `<assignment>.py` — Subclase de `BaseScene` o `BossBase`
+- [ ] Entidad personalizada usando matemática vectorial
+- [ ] Entidad siguiendo una trayectoria curva
+- [ ] Operación de espacio de color sobre una superficie
+- [ ] `README.md` con conceptos académicos documentados
+
+### Evaluación Práctica II (Clase 8)
+- [ ] Todos los entregables de Eval I mantenidos
+- [ ] Función de easing usada en movimiento o animación
+- [ ] `FilterTools.compute_histogram()` impulsa la lógica del juego
+- [ ] `adjust_brightness()` o `adjust_contrast()` aplicado
+- [ ] `apply_kernel()` o `gaussian_blur()` aplicado
+- [ ] Resultado de detección de bordes (Sobel o Canny)
+- [ ] README: matriz de kernel, capturas antes/después
+
+### Evaluación Práctica III (Clase 11)
+- [ ] Todos los entregables de Eval I + II mantenidos
+- [ ] `threshold_binary()` o `threshold_otsu()` aplicado
+- [ ] Operación morfológica aplicada
+- [ ] `connected_components()` o `analyze_regions()` usado
+- [ ] `extract_features()` produce características de entrenamiento
+- [ ] Dataset etiquetado en `assets/datasets/`
+- [ ] Modelo entrenado (`.pkl`) en carpeta de asignación
+- [ ] `EvaluationResult` con precisión ≥70% en README
+- [ ] Clasificador se ejecuta en tiempo de ejecución; la salida cambia el comportamiento del juego en ≥2 formas
+- [ ] README: documentación completa del pipeline de entrenamiento
+
+## Plantillas
+
+- **Plantilla de Stage:** `student_templates/stage_template/stage_template.py` + `stage_template.tmx`
+- **Plantilla de Boss:** `student_templates/boss_template/boss_template.py` + plantilla README
+
+## Reglas de Entrega
+
+- Todos los archivos en una sola carpeta: `src/stages/<student_id>/`
+- Los archivos TMX deben ser válidos según `docs/06_TMX_SPEC.md`
+- Los archivos Python no deben producir errores en consola al cargarse
+- Las capturas de pantalla referenciadas en el README deben existir en la misma carpeta

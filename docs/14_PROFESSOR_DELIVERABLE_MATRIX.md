@@ -1,3 +1,13 @@
+---
+document_id: "LOI-DELIVERABLE-014"
+title: "Legacy of InFest — Professor Deliverable Matrix"
+aliases: ["Professor Deliverable Matrix"]
+tags: ["deliverable", "academic", "matrix"]
+description: "Full syllabus-to-framework-to-assessment traceability"
+source: "docs/14_PROFESSOR_DELIVERABLE_MATRIX.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Professor Deliverable Matrix
 
 **Document ID:** LOI-MATRIX-014  
@@ -336,3 +346,10 @@ The following items must be delivered before the course begins:
 | `EvaluationResult` with accuracy ≥ 70% in README | IX | Mandatory |
 | Classifier runs at runtime; result changes game behavior | IX | Mandatory |
 | README: full training pipeline documentation | IX | Mandatory |
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[08_SYLLABUS_MAPPING.md|Syllabus Mapping]]
+- [[27_ACADEMIC_RUBRICS.md|Academic Rubrics]]

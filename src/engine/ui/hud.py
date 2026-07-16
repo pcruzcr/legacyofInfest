@@ -5,6 +5,7 @@ Description: Heads-Up Display showing hearts (health), timer, and stage info.
 Uses sprite-based hearts from assets/ui/ with font fallback.
 """
 from __future__ import annotations
+import logging
 from typing import cast
 
 import pygame
@@ -49,7 +50,11 @@ class HUD:
         # Portrait frame (34x34 with 1px border, inner sprite at 3,3)
         self._portrait_frame_rect = pygame.Rect(2, 2, 34, 34)
         self._portrait_sprite_rect = pygame.Rect(3, 3, 32, 32)
-        # Load 9-slice frame from hud_frame.png
+        self._portrait_fill = None
+        self._portrait_edges: dict[str, pygame.Surface] = {}
+        self._timer_fill = None
+        self._timer_edges: dict[str, pygame.Surface] = {}
+        # Load 9-slice frame from hud_frame.png, pre-scale all variants once
         try:
             raw_frame = AssetLoader.load_image(settings.ASSETS_DIR / "ui" / "hud_frame.png")
             fw, fh = raw_frame.get_size()
@@ -61,18 +66,31 @@ class HUD:
                     "bl": raw_frame.subsurface((0, fh - c, c, c)),
                     "br": raw_frame.subsurface((fw - c, fh - c, c, c)),
                 }
-                self._frame_edges = {
+                src_edges = {
                     "top": raw_frame.subsurface((c, 0, fw - 2 * c, c)),
                     "bottom": raw_frame.subsurface((c, fh - c, fw - 2 * c, c)),
                     "left": raw_frame.subsurface((0, c, c, fh - 2 * c)),
                     "right": raw_frame.subsurface((fw - c, c, c, fh - 2 * c)),
                 }
-                self._frame_fill = raw_frame.subsurface((c, c, fw - 2 * c, fh - 2 * c))
+                self._frame_edges = src_edges
+                src_fill = raw_frame.subsurface((c, c, fw - 2 * c, fh - 2 * c))
+                self._frame_fill = src_fill
+                # Pre-scale for portrait frame (34x34)
+                pr = self._portrait_frame_rect
+                self._portrait_fill = pygame.transform.scale(src_fill, (pr.width, pr.height))
+                self._portrait_edges = {
+                    "top": pygame.transform.scale(src_edges["top"], (pr.width - 4, 2)),
+                    "bottom": pygame.transform.scale(src_edges["bottom"], (pr.width - 4, 2)),
+                    "left": pygame.transform.scale(src_edges["left"], (2, pr.height - 4)),
+                    "right": pygame.transform.scale(src_edges["right"], (2, pr.height - 4)),
+                }
+                # Timer background pre-scaling deferred until _timer_bg_rect is set
             else:
                 self._frame_corners = {}
                 self._frame_edges = {}
                 self._frame_fill = None
-        except Exception:
+        except (pygame.error, FileNotFoundError, PermissionError):
+            logging.warning("hud: failed to load hud_frame.png")
             self._frame_corners = {}
             self._frame_edges = {}
             self._frame_fill = None
@@ -82,6 +100,16 @@ class HUD:
         self._heart_spacing: int = 16
         # Timer frame (reuse hud_frame.png 9-slice at timer size 90x16)
         self._timer_bg_rect = pygame.Rect(258, 1, 62, 16)
+        # Pre-scale timer background once (deferred from frame load block)
+        self._timer_fill = pygame.transform.scale(self._frame_fill, (self._timer_bg_rect.width, self._timer_bg_rect.height)) if isinstance(self._frame_fill, pygame.Surface) else None
+        if self._frame_edges:
+            tr = self._timer_bg_rect
+            self._timer_edges = {
+                "top": pygame.transform.scale(self._frame_edges["top"], (tr.width - 4, 2)),
+                "bottom": pygame.transform.scale(self._frame_edges["bottom"], (tr.width - 4, 2)),
+                "left": pygame.transform.scale(self._frame_edges["left"], (2, tr.height - 4)),
+                "right": pygame.transform.scale(self._frame_edges["right"], (2, tr.height - 4)),
+            }
         self._timer_rect = pygame.Rect(288, 2, 32, 14)
         self._timer_label_rect = pygame.Rect(260, 2, 26, 12)
         self._timer_flash_timer: float = 0.0
@@ -92,7 +120,8 @@ class HUD:
             self._timer_digit_font = pygame.font.Font(
                 settings.ASSETS_DIR / "fonts" / "game.ttf", 12,
             )
-        except Exception:
+        except (pygame.error, FileNotFoundError, PermissionError):
+            logging.warning("hud: failed to load game.ttf for timer")
             self._timer_digit_font = None
 
         # Heart damage flash state
@@ -112,13 +141,18 @@ class HUD:
         self._heart_sprites: dict[str, pygame.Surface] = {}
         for state in ("full", "three_quarter", "half", "quarter", "empty"):
             path = settings.ASSETS_DIR / "ui" / f"heart_{state}.png"
-            surf = AssetLoader.load_image(path)
-            self._heart_sprites[state] = surf
+            try:
+                surf = AssetLoader.load_image(path)
+                self._heart_sprites[state] = surf
+            except (pygame.error, FileNotFoundError, PermissionError):
+                logging.warning("hud: failed to load heart sprite %s", path)
+                self._heart_sprites[state] = pygame.Surface((14, 8))
 
         try:
             sparkle_path = settings.ASSETS_DIR / "ui" / "heart_sparkle.png"
             self._sparkle_frames = AssetLoader.load_sprite_sheet(sparkle_path, 8, 8)
-        except Exception:
+        except (pygame.error, FileNotFoundError, PermissionError):
+            logging.warning("hud: failed to load heart_sparkle.png")
             self._sparkle_frames = []
 
         # Load portrait sprites
@@ -128,8 +162,8 @@ class HUD:
             try:
                 surf = AssetLoader.load_image(path, size=(32, 32))
                 self._portraits[state] = surf
-            except Exception:
-                pass
+            except (pygame.error, FileNotFoundError, PermissionError):
+                logging.warning("hud: failed to load portrait %s", state)
         self._current_portrait_state: str = "normal"
 
         # Boss HUD state
@@ -370,12 +404,9 @@ class HUD:
         state = self._get_portrait_state()
         portrait = self._portraits.get(state)
 
-        # Draw fill
-        if self._frame_fill:
-            self._frame_fill = pygame.transform.scale(
-                self._frame_fill, (self._portrait_frame_rect.width, self._portrait_frame_rect.height),
-            )
-            surface.blit(self._frame_fill, self._portrait_frame_rect)
+        # Draw fill (pre-scaled in __init__)
+        if self._portrait_fill:
+            surface.blit(self._portrait_fill, self._portrait_frame_rect)
 
         # Draw portrait sprite
         if portrait:
@@ -386,24 +417,18 @@ class HUD:
             color = color_map.get(state, (60, 60, 80))
             pygame.draw.rect(surface, color, self._portrait_sprite_rect)
 
-        # Draw 9-slice frame
+        # Draw 9-slice frame with pre-scaled edges
         if self._frame_corners:
             r = self._portrait_frame_rect
             c = 2
-            # Corners
             surface.blit(self._frame_corners["tl"], (r.x, r.y))
             surface.blit(self._frame_corners["tr"], (r.right - c, r.y))
             surface.blit(self._frame_corners["bl"], (r.x, r.bottom - c))
             surface.blit(self._frame_corners["br"], (r.right - c, r.bottom - c))
-            # Edges
-            top_edge = pygame.transform.scale(self._frame_edges["top"], (r.width - 2 * c, c))
-            surface.blit(top_edge, (r.x + c, r.y))
-            bottom_edge = pygame.transform.scale(self._frame_edges["bottom"], (r.width - 2 * c, c))
-            surface.blit(bottom_edge, (r.x + c, r.bottom - c))
-            left_edge = pygame.transform.scale(self._frame_edges["left"], (c, r.height - 2 * c))
-            surface.blit(left_edge, (r.x, r.y + c))
-            right_edge = pygame.transform.scale(self._frame_edges["right"], (c, r.height - 2 * c))
-            surface.blit(right_edge, (r.right - c, r.y + c))
+            surface.blit(self._portrait_edges["top"], (r.x + c, r.y))
+            surface.blit(self._portrait_edges["bottom"], (r.x + c, r.bottom - c))
+            surface.blit(self._portrait_edges["left"], (r.x, r.y + c))
+            surface.blit(self._portrait_edges["right"], (r.right - c, r.y + c))
         else:
             pygame.draw.rect(surface, (100, 100, 140), self._portrait_frame_rect, 1)
 
@@ -475,16 +500,12 @@ class HUD:
             surface.blit(self._frame_corners["tr"], (r.right - c, r.y))
             surface.blit(self._frame_corners["bl"], (r.x, r.bottom - c))
             surface.blit(self._frame_corners["br"], (r.right - c, r.bottom - c))
-            top_edge = pygame.transform.scale(self._frame_edges["top"], (r.width - 2 * c, c))
-            surface.blit(top_edge, (r.x + c, r.y))
-            bottom_edge = pygame.transform.scale(self._frame_edges["bottom"], (r.width - 2 * c, c))
-            surface.blit(bottom_edge, (r.x + c, r.bottom - c))
-            left_edge = pygame.transform.scale(self._frame_edges["left"], (c, r.height - 2 * c))
-            surface.blit(left_edge, (r.x, r.y + c))
-            right_edge = pygame.transform.scale(self._frame_edges["right"], (c, r.height - 2 * c))
-            surface.blit(right_edge, (r.right - c, r.y + c))
-            fill = pygame.transform.scale(self._frame_fill, (r.width, r.height))
-            surface.blit(fill, r, special_flags=pygame.BLEND_ALPHA_SDL2)
+            surface.blit(self._timer_edges["top"], (r.x + c, r.y))
+            surface.blit(self._timer_edges["bottom"], (r.x + c, r.bottom - c))
+            surface.blit(self._timer_edges["left"], (r.x, r.y + c))
+            surface.blit(self._timer_edges["right"], (r.right - c, r.y + c))
+            if self._timer_fill:
+                surface.blit(self._timer_fill, r, special_flags=pygame.BLEND_ALPHA_SDL2)
         else:
             pygame.draw.rect(surface, (10, 10, 30), r)
             pygame.draw.rect(surface, (100, 100, 140), r, 1)

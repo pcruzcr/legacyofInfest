@@ -1,3 +1,13 @@
+---
+document_id: "LOI-DEPS-010"
+title: "Legacy of InFest — Libraries and Dependencies"
+aliases: ["Libraries and Dependencies"]
+tags: ["dependencies", "libraries", "setup"]
+description: "Every third-party library, purpose, integration rules"
+source: "docs/10_LIBRARIES_AND_DEPENDENCIES.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Libraries and Dependencies
 
 **Document ID:** LOI-LIBS-010  
@@ -811,3 +821,9 @@ Este documento especifica cada librería utilizada en Legacy of InFest.
 | joblib | Serialización de modelos ML |
 
 Para reglas de uso, ejemplos de integración y configuración de entorno, consultar el documento original en inglés.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[32_ENVIRONMENT_SETUP_GUIDE.md|Environment Setup Guide]]

@@ -9,7 +9,7 @@ from src.engine.core import settings
 class Minimap:
     """Minimap overlay showing explored rooms, player position, and enemies."""
 
-    def __init__(self) -> None:
+    def __init__(self, x: int | None = None, y: int | None = None) -> None:
         self._map_size: tuple[int, int] = (0, 0)
         self._explored_rects: list[pygame.Rect] = []
         self._player_pos: tuple[float, float] = (0.0, 0.0)
@@ -23,8 +23,8 @@ class Minimap:
         # Minimap dimensions
         self._minimap_w: int = 80
         self._minimap_h: int = 56
-        self._minimap_x: int = settings.INTERNAL_WIDTH - self._minimap_w - 4
-        self._minimap_y: int = 4
+        self._minimap_x: int = x if x is not None else settings.INTERNAL_WIDTH - self._minimap_w - 4
+        self._minimap_y: int = y if y is not None else 4
 
         # Pixel per world unit scaling - auto-calculated
         self._scale: float = 1.0
@@ -78,7 +78,9 @@ class Minimap:
             return
 
         # Background
-        bg = pygame.Surface((self._minimap_w, self._minimap_h), pygame.SRCALPHA)
+        if not hasattr(self, '_bg_surf') or self._bg_surf is None:
+            self._bg_surf = pygame.Surface((self._minimap_w, self._minimap_h), pygame.SRCALPHA)
+        bg = self._bg_surf
         bg.fill((*self._bg_color, 200))
         surface.blit(bg, (self._minimap_x, self._minimap_y))
 

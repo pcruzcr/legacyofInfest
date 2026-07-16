@@ -1,3 +1,13 @@
+---
+document_id: "LOI-SETUP-032"
+title: "Legacy of InFest — Environment Setup Guide"
+aliases: ["Environment Setup Guide"]
+tags: ["setup", "environment", "guide"]
+description: "Step-by-step machine setup, troubleshooting"
+source: "docs/32_ENVIRONMENT_SETUP_GUIDE.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Environment Setup Guide
 
 **Document ID:** LOI-SETUP-032  
@@ -304,3 +314,9 @@ Once all boxes are checked, proceed to `26_STUDENT_TEMPLATE_SPEC.md` §8's 15-mi
 5. Verificar: `python main.py`
 
 Para solución de problemas y configuración adicional, consultar el documento original en inglés.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[10_LIBRARIES_AND_DEPENDENCIES.md|Libraries and Dependencies]]

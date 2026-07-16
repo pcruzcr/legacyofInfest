@@ -6,6 +6,8 @@ snapshot, and a tree-view of registered modules (F4/F5/F6).
 """
 from __future__ import annotations
 
+import logging
+
 import pygame
 
 from src.engine.core import settings
@@ -27,6 +29,9 @@ class DebugOverlay:
         self._tree_level: int = 0
         self._key_cooldown: dict[int, float] = {}
         self._font: pygame.font.Font | None = None
+        self._overlay: pygame.Surface | None = None
+        self._line_cache: dict[int, tuple[str, pygame.Surface]] = {}
+        self._hint_surf: pygame.Surface | None = None
 
     def _ensure_font(self) -> None:
         if self._font is not None:
@@ -69,8 +74,15 @@ class DebugOverlay:
             return
         self._ensure_font()
 
+        if self._hint_surf is None:
+            self._hint_surf = self._font.render(
+                "  Debug Console  |  [F3] toggle  |  [F4] engine  |"
+                "  [F5] framework  |  [F6] tests", True, (80, 200, 255))
+
         # Semi-transparent overlay
-        overlay = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
+        if self._overlay is None or self._overlay.get_size() != (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT):
+            self._overlay = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
+        overlay = self._overlay
         overlay.set_alpha(180)
         overlay.fill((5, 5, 15))
         surface.blit(overlay, (0, 0))
@@ -88,7 +100,8 @@ class DebugOverlay:
             lines.append(f"Event Queue: {len(snap)} pending")
             for evt_name, evt_data in snap[:5]:
                 lines.append(f"  {evt_name}: {evt_data}")
-        except Exception:
+        except (RuntimeError, AttributeError) as e:
+            logging.warning("debug_overlay: event bus snapshot failed: %s", e)
             lines.append("Event Bus: N/A")
 
         lines.append("")
@@ -149,13 +162,15 @@ class DebugOverlay:
 
         lines.extend(tree_items)
 
-        for line in lines:
-            txt = self._font.render(line, True, (80, 200, 255))
+        for idx, line in enumerate(lines):
+            cached = self._line_cache.get(idx)
+            if cached is None or cached[0] != line:
+                txt = self._font.render(line, True, (80, 200, 255))
+                self._line_cache[idx] = (line, txt)
+            else:
+                txt = cached[1]
             surface.blit(txt, (4, y))
             y += 10
 
         if y < settings.INTERNAL_HEIGHT - 20:
-            hint = self._font.render(
-                "  Debug Console  |  [F3] toggle  |  [F4] engine  |"
-                "  [F5] framework  |  [F6] tests", True, (80, 200, 255))
-            surface.blit(hint, (4, settings.INTERNAL_HEIGHT - 14))
+            surface.blit(self._hint_surf, (4, settings.INTERNAL_HEIGHT - 14))

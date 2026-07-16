@@ -5,31 +5,7 @@ import random
 import pygame
 
 from src.engine.core import settings
-
-
-class WeatherParticle:
-    __slots__ = ("x", "y", "vx", "vy", "life", "max_life", "size", "alpha")
-
-    def __init__(self, x: float, y: float, vx: float, vy: float,
-                 life: float, size: int) -> None:
-        self.x = x
-        self.y = y
-        self.vx = vx
-        self.vy = vy
-        self.life = life
-        self.max_life = life
-        self.size = size
-        self.alpha = 255
-
-    @property
-    def is_dead(self) -> bool:
-        return self.life <= 0
-
-    def update(self, dt: float) -> None:
-        self.life -= dt
-        self.alpha = max(0, int(255 * (self.life / self.max_life)))
-        self.x += self.vx * dt
-        self.y += self.vy * dt
+from src.framework.vfx.particle_system import Particle
 
 
 class WeatherSystem:
@@ -44,7 +20,7 @@ class WeatherSystem:
     }
 
     def __init__(self, climate: str = "clear") -> None:
-        self._particles: list[WeatherParticle] = []
+        self._particles: list[Particle] = []
         self._timer: float = 0.0
         self._climate: str = climate
         self._overlay = pygame.Surface(
@@ -75,27 +51,20 @@ class WeatherSystem:
         self._timer += dt
         if self._particle_rate > 0:
             spawn_interval = 1.0 / self._particle_rate
-            while self._timer >= spawn_interval:
+            max_spawn = max(1, int(self._particle_rate * dt))
+            spawned = 0
+            while self._timer >= spawn_interval and spawned < max_spawn:
                 self._timer -= spawn_interval
                 self._spawn_particle(camera_offset)
+                spawned += 1
 
-        for p in list(self._particles):
+        for p in self._particles:
             p.update(dt)
-            if p.is_dead:
-                self._particles.remove(p)
+        self._particles = [p for p in self._particles if not p.is_dead]
 
     def draw(self, surface: pygame.Surface, camera_offset: pygame.Vector2) -> None:
         for p in self._particles:
-            sx = int(p.x - camera_offset.x)
-            sy = int(p.y - camera_offset.y)
-            if sx < -10 or sx > settings.INTERNAL_WIDTH + 10:
-                continue
-            if sy < -10 or sy > settings.INTERNAL_HEIGHT + 10:
-                continue
-            color = self._get_particle_color()
-            ps = pygame.Surface((p.size, p.size), pygame.SRCALPHA)
-            ps.fill((*color, p.alpha))
-            surface.blit(ps, (sx, sy))
+            p.draw(surface, camera_offset)
 
         if self._overlay_alpha > 0:
             self._overlay.fill((*self._overlay_color, self._overlay_alpha))
@@ -107,30 +76,34 @@ class WeatherSystem:
     def _spawn_particle(self, camera_offset: pygame.Vector2) -> None:
         sx = camera_offset.x + random.uniform(-20, settings.INTERNAL_WIDTH + 20)
         sy = camera_offset.y - 10
+        color = self._get_particle_color()
 
         if self._climate == "rain":
-            self._particles.append(WeatherParticle(
+            self._particles.append(Particle(
                 sx, sy,
                 -20 + self._wind, 280 + random.uniform(-40, 40),
                 random.uniform(0.3, 0.6),
                 random.randint(1, 2),
+                color,
             ))
         elif self._climate == "snow":
-            self._particles.append(WeatherParticle(
+            self._particles.append(Particle(
                 sx, sy,
                 random.uniform(-10, 10) + self._wind * 0.3,
                 random.uniform(30, 60),
                 random.uniform(2.0, 4.0),
                 random.randint(2, 4),
+                color,
             ))
         elif self._climate == "storm":
             gust = random.choice([-1, 1]) * random.uniform(50, 100)
-            self._particles.append(WeatherParticle(
+            self._particles.append(Particle(
                 sx, sy,
                 gust,
                 280 + random.uniform(-60, 60),
                 random.uniform(0.2, 0.5),
                 random.randint(1, 3),
+                color,
             ))
 
     def _get_particle_color(self) -> tuple[int, int, int]:

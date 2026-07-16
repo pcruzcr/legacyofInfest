@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import threading
 from typing import TYPE_CHECKING, Callable
 
@@ -42,6 +43,9 @@ class LoadingScene(BaseScene):
         self._startup_done: bool = False
         self._fade_out: float = 0.0
         self._fading_out: bool = False
+        self._fade_surf: pygame.Surface | None = None
+        self._font_info = pygame.font.Font(None, 14)
+        self._font_title = pygame.font.Font(None, 20)
 
     def set_next_scene(self, scene: BaseScene) -> None:
         self._next_scene = scene
@@ -57,6 +61,7 @@ class LoadingScene(BaseScene):
             try:
                 task.fn()
             except Exception as e:
+                logging.warning("loading_scene: task '%s' failed: %s", task.name, e)
                 self._current_task_name = f"Error: {e}"
             task.done = True
             completed += task.weight
@@ -115,30 +120,28 @@ class LoadingScene(BaseScene):
                 b = int(200 + t * 55)
                 pygame.draw.line(surface, (r, g, b), (bx, by + i), (bx + fill_w, by + i))
 
-        font = pygame.font.Font(None, 14)
         if self._current_task_name:
-            label = font.render(f"Loading {self._current_task_name}...", True, (150, 150, 170))
+            label = self._font_info.render(f"Loading {self._current_task_name}...", True, (150, 150, 170))
         else:
-            label = font.render("Loading...", True, (150, 150, 170))
+            label = self._font_info.render("Loading...", True, (150, 150, 170))
         surface.blit(label, (bx, by - 18))
 
-        pct = font.render(f"{int(self._progress * 100)}%", True, (200, 200, 220))
+        pct = self._font_info.render(f"{int(self._progress * 100)}%", True, (200, 200, 220))
         px = bx + bar_w + 8
         surface.blit(pct, (px, by + 1))
 
         # Title
-        title_font = pygame.font.Font(None, 20)
-        title = title_font.render("LEGACY OF INFEST", True, (180, 180, 220))
+        title = self._font_title.render("LEGACY OF INFEST", True, (180, 180, 220))
         surface.blit(title, ((w - title.get_width()) // 2, by - 50))
 
         # Fade overlay
+        if self._fade_surf is None or self._fade_surf.get_size() != (w, h):
+            self._fade_surf = pygame.Surface((w, h))
         if not self._startup_done:
-            fade = pygame.Surface((w, h))
-            fade.set_alpha(int((1.0 - self._startup_alpha) * 255))
-            fade.fill((0, 0, 0))
-            surface.blit(fade, (0, 0))
+            self._fade_surf.set_alpha(int((1.0 - self._startup_alpha) * 255))
+            self._fade_surf.fill((0, 0, 0))
+            surface.blit(self._fade_surf, (0, 0))
         elif self._fading_out:
-            fade = pygame.Surface((w, h))
-            fade.set_alpha(int(self._fade_out * 255))
-            fade.fill((0, 0, 0))
-            surface.blit(fade, (0, 0))
+            self._fade_surf.set_alpha(int(self._fade_out * 255))
+            self._fade_surf.fill((0, 0, 0))
+            surface.blit(self._fade_surf, (0, 0))

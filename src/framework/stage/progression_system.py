@@ -26,6 +26,8 @@ class ProgressionSystem:
         self, player: Player, stage: StageData,
         checkpoints: list[Checkpoint], hud: HUD | None,
     ) -> pygame.Vector2 | None:
+        if stage is None or player is None:
+            return None
         checkpoint_position: pygame.Vector2 | None = None
         for cp in checkpoints:
             if not cp.is_activated and cp.check_collision(player.rect):
@@ -37,18 +39,17 @@ class ProgressionSystem:
                     self._context.event_bus.emit(
                         Events.PLAYER_HEALED, amount=heal_amount
                     )
-                sm = self._context.save_manager
-                if sm is not None and stage is not None and player is not None:
-                    sm.auto_save(
-                        stage_id=stage.stage_id,
-                        stage_index=self._context.scene_manager.stage_index,
-                        checkpoint_x=player.rect.centerx,
-                        checkpoint_y=player.rect.centery,
-                        health=player.current_health,
-                        max_health=settings.PLAYER_MAX_HEALTH,
-                    )
-                    if hud is not None:
-                        hud.trigger_save_notification()
+                self._context.event_bus.emit(
+                    Events.SAVE_REQUESTED,
+                    stage_id=stage.stage_id,
+                    stage_index=self._context.scene_manager.stage_index,
+                    checkpoint_x=player.rect.centerx,
+                    checkpoint_y=player.rect.centery,
+                    health=player.current_health,
+                    max_health=settings.PLAYER_MAX_HEALTH,
+                )
+                if hud is not None:
+                    hud.trigger_save_notification()
         return checkpoint_position
 
     def check_next_trigger(self, player: Player, stage: StageData) -> bool:
@@ -66,10 +67,10 @@ class ProgressionSystem:
             if (
                 isinstance(entity, BossBase)
                 and not entity.is_alive
-                and entity._death_timer <= 0
-                and not entity._completion_fired
+                and entity.death_timer <= 0
+                and not entity.completion_fired
             ):
-                entity._completion_fired = True
+                entity.completion_fired = True
                 self._stage_complete = True
                 self._complete_timer = 2.9
                 return True

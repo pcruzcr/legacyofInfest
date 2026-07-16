@@ -29,6 +29,7 @@ class EnemyWalker(EnemyBase):
         damage_on_contact: float = 0.5,
         max_health: float = 2.0,
         zone: int = 0,
+        **kwargs,
     ) -> None:
         """Initialize the walker enemy."""
         super().__init__(
@@ -52,6 +53,8 @@ class EnemyWalker(EnemyBase):
         # Set rect size
         self.rect.width = 24
         self.rect.height = 28
+        self.position.y -= self.rect.height
+        self.rect.y = int(self.position.y)
 
         # Load sprites
         self._load_zone_sprites(zone, 16, 12)
@@ -63,6 +66,10 @@ class EnemyWalker(EnemyBase):
         self._charge_speed: float = alert_speed * 3.0
         self._is_charging: bool = False
         self._charge_damage_mult: float = 1.5
+
+        # Cached surfaces
+        self._charge_warn_surf: pygame.Surface | None = None
+        self._charge_warn_size: tuple[int, int] = (0, 0)
 
     def set_collision_rects(self, rects: list[pygame.Rect], one_way: list[pygame.Rect] | None = None) -> None:
         """Provide collision rects for ledge detection and Y-snapping."""
@@ -111,7 +118,7 @@ class EnemyWalker(EnemyBase):
         if all_rects:
             feet_y = self.position.y + self.rect.height
             for rect in all_rects:
-                if (rect.top < feet_y < rect.bottom
+                if (rect.top <= feet_y < rect.bottom
                         and rect.left < self.rect.centerx < rect.right):
                     self.position.y = rect.top - self.rect.height
                     break
@@ -175,7 +182,12 @@ class EnemyWalker(EnemyBase):
             w = int(32 + progress * 16)
             h = 4
             alpha = int(180 + 75 * (1.0 - progress))
-            warn = pygame.Surface((w, h))
+            size = (w, h)
+            if (self._charge_warn_surf is None
+                    or self._charge_warn_size != size):
+                self._charge_warn_surf = pygame.Surface(size)
+                self._charge_warn_size = size
+            warn = self._charge_warn_surf
             warn.set_alpha(alpha)
             warn.fill((255, 50, 50))
             surface.blit(warn, (sx, sy))

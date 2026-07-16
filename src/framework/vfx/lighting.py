@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import math
 
+import numpy as np
 import pygame
 
 
 class LightSource:
     """A 2D point light with position, radius, color, and intensity."""
+
+    _gradient_cache: dict[tuple[int, int], pygame.Surface] = {}
 
     def __init__(
         self,
@@ -49,19 +52,25 @@ class LightSource:
         r = int(radius)
         if r <= 0:
             r = 1
+        key = (r, int(self.intensity * 100), color)
+        if key in self._gradient_cache:
+            return self._gradient_cache[key].copy()
         size = r * 2
-        surf = pygame.Surface((size, size))
-        cx, cy = r, r
-        for x in range(size):
-            for y in range(size):
-                dx, dy = x - cx, y - cy
-                dist = math.sqrt(dx * dx + dy * dy)
-                if dist > r:
-                    continue
-                falloff = max(0.0, 1.0 - dist / r)
-                brightness = int(self.intensity * falloff * 255)
-                val = min(255, max(0, brightness))
-                surf.set_at((x, y), (val, val, val, 255))
+        surf = pygame.Surface((size, size), pygame.SRCALPHA)
+        ys, xs = np.ogrid[:size, :size]
+        dist = np.sqrt((xs - r) ** 2 + (ys - r) ** 2)
+        falloff = np.clip(1.0 - dist / r, 0.0, 1.0)
+        mask = dist <= r
+        val = (self.intensity * falloff * 255).astype(np.uint8)
+        arr = pygame.surfarray.pixels3d(surf)
+        try:
+            arr[:, :, 0] = (val * color[0] / 255).astype(np.uint8)
+            arr[:, :, 1] = (val * color[1] / 255).astype(np.uint8)
+            arr[:, :, 2] = (val * color[2] / 255).astype(np.uint8)
+            arr[~mask] = 0
+        finally:
+            del arr
+        self._gradient_cache[key] = surf.copy()
         return surf
 
     def get_cached_gradient(self) -> pygame.Surface:
@@ -84,6 +93,7 @@ class LightSystem:
         self.lights: list[LightSource] = []
         self.ambient_brightness = ambient_brightness
         self._darkness_surf: pygame.Surface | None = None
+        self._multiplier: pygame.Surface | None = None
 
     def add_light(self, light: LightSource) -> None:
         self.lights.append(light)
@@ -103,8 +113,9 @@ class LightSystem:
         w, h = target.get_size()
 
         ambient_val = int(self.ambient_brightness * 255)
-        multiplier = pygame.Surface((w, h))
-        multiplier.fill((ambient_val, ambient_val, ambient_val))
+        if self._multiplier is None or self._multiplier.get_size() != (w, h):
+            self._multiplier = pygame.Surface((w, h), pygame.SRCALPHA)
+        self._multiplier.fill((ambient_val, ambient_val, ambient_val))
 
         for light in self.lights:
             screen_pos = (
@@ -115,9 +126,9 @@ class LightSystem:
             gw, gh = gradient.get_size()
             blit_x = screen_pos[0] - gw // 2
             blit_y = screen_pos[1] - gh // 2
-            multiplier.blit(gradient, (blit_x, blit_y), special_flags=pygame.BLEND_RGBA_MAX)
+            self._multiplier.blit(gradient, (blit_x, blit_y), special_flags=pygame.BLEND_RGBA_MAX)
 
-        target.blit(multiplier, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        target.blit(self._multiplier, (0, 0), special_flags=pygame.BLEND_RGB_MULT)
 
     def get_player_light(self, player_pos: pygame.Vector2, is_combat: bool) -> LightSource:
         """Create/return a dynamic light for the player."""

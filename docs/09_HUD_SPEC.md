@@ -1,3 +1,13 @@
+---
+document_id: "LOI-HUD-009"
+title: "Legacy of InFest — HUD Specification"
+aliases: ["HUD Specification", "HUD Spec"]
+tags: ["hud", "ui", "specification"]
+description: "HUD layout, hearts, timer, messages, Game Over"
+source: "docs/09_HUD_SPEC.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — HUD Specification
 
 **Document ID:** LOI-HUD-009  
@@ -400,3 +410,10 @@ El HUD ocupa regiones fijas de la pantalla interna de 320×224. Todos los elemen
 - **Pantalla de Game Over** — Opciones Continuar / Salir al Título
 
 Para la especificación completa de cada elemento con coordenadas, sprites y lógica de eventos, consultar el documento original en inglés.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[40_DIALOGUE_SYSTEM.md|Dialogue System]]
+- [[04_PLAYER_SPEC.md|Player Specification]]

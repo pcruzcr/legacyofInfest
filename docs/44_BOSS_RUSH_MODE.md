@@ -1,3 +1,13 @@
+---
+document_id: "LOI-BOSSRUSH-044"
+title: "Legacy of InFest — Boss Rush Mode Specification"
+aliases: ["Boss Rush Mode"]
+tags: ["boss", "rush", "mode", "gameplay"]
+description: "Boss gauntlet mode"
+source: "docs/44_BOSS_RUSH_MODE.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Boss Rush Mode Specification
 
 **Document ID:** LOI-BOSSRUSH-044
@@ -61,3 +71,10 @@ Modo de juego de jefes consecutivos donde el jugador enfrenta a todos los jefes 
 - Dificultad progresiva
 
 Para la especificación completa, consultar el documento original en inglés.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[43_SPEEDRUN_MODE.md|Speedrun Mode]]
+- [[17_BOSS_SPEC.md|Boss Specification]]

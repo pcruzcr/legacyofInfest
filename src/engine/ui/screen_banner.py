@@ -1,4 +1,6 @@
 from __future__ import annotations
+import logging
+
 import pygame
 from src.engine.core import settings
 from src.engine.utils.math_utils import ease_out_quad, ease_in_quad
@@ -30,25 +32,29 @@ class ScreenBanner:
                 settings.ASSETS_DIR / "ui" / "banner_bottom.png",
                 size=(settings.INTERNAL_WIDTH, self._banner_height // 2),
             )
-        except Exception:
-            pass
+        except (pygame.error, FileNotFoundError, PermissionError):
+            logging.warning("screen_banner: failed to load banner images")
 
         self._font_large: pygame.font.Font | None = None
         self._font_medium: pygame.font.Font | None = None
         try:
             self._font_large = pygame.font.Font(
-                settings.ASSETS_DIR / "fonts" / "game.ttf", 16,
+                settings.ASSETS_DIR / "fonts" / "game.ttf", 22,
             )
-        except Exception:
+        except (pygame.error, FileNotFoundError, PermissionError):
+            logging.warning("screen_banner: failed to load game.ttf (22)")
             self._font_large = None
         try:
             self._font_medium = pygame.font.Font(
-                settings.ASSETS_DIR / "fonts" / "game.ttf", 14,
+                settings.ASSETS_DIR / "fonts" / "game.ttf", 20,
             )
-        except Exception:
+        except (pygame.error, FileNotFoundError, PermissionError):
+            logging.warning("screen_banner: failed to load game.ttf (20)")
             self._font_medium = None
 
         self._fallback_font = pygame.font.Font(None, 18)
+        self._name_surf: pygame.Surface | None = None
+        self._name_fallback_surf: pygame.Surface | None = None
 
     def play(self, stage_id: str, stage_name: str) -> None:
         self._stage_id = stage_id
@@ -56,6 +62,8 @@ class ScreenBanner:
         self._state = "slide_in"
         self._timer = 0.0
         self._offset = float(settings.INTERNAL_WIDTH * 2)
+        self._name_surf = self._font_large.render(self._stage_name, True, (255, 255, 200)) if self._font_large else None
+        self._name_fallback_surf = self._fallback_font.render(self._stage_name, True, (255, 255, 200))
 
     def update(self, dt: float) -> None:
         if self._state == "idle":
@@ -104,11 +112,7 @@ class ScreenBanner:
             pygame.draw.rect(surface, (100, 80, 140), (bx, by, bw, self._banner_height), 1)
 
         # Draw stage name with banner fonts
-        name_surf: pygame.Surface | None = None
-        if self._font_large:
-            name_surf = self._font_large.render(self._stage_name, True, (255, 255, 200))
-        if name_surf is None or name_surf.get_width() == 0:
-            name_surf = self._fallback_font.render(self._stage_name, True, (255, 255, 200))
+        name_surf = self._name_surf or self._name_fallback_surf
 
         nx = bx + (bw - name_surf.get_width()) // 2
         ny = by + (self._banner_height - name_surf.get_height()) // 2

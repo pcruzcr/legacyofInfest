@@ -1,3 +1,13 @@
+---
+document_id: "LOI-SYLLABUS-000"
+title: "Legacy of InFest — Syllabus Alignment Audit"
+aliases: ["Syllabus Alignment Audit", "Syllabus Audit"]
+tags: ["syllabus", "audit", "academic"]
+description: "Audit reconciling documentation against official syllabus"
+source: "docs/00_SYLLABUS_ALIGNMENT_AUDIT.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Syllabus Alignment Audit
 
 **Document ID:** LOI-AUDIT-000  

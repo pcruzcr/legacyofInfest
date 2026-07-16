@@ -16,7 +16,8 @@ import pygame
 from typing import TYPE_CHECKING
 
 from src.engine.core import settings
-from src.engine.core.event_bus import emit
+from src.engine.core.event_bus import _get_bus as _bus
+_emit = lambda *a, **kw: _bus().emit(*a, **kw)
 from src.engine.core.events import Events
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.entities.base_entity import BaseEntity
@@ -54,6 +55,7 @@ class EnemyBase(BaseEntity):
         detection_range_y: float = 64.0,
         hurt_duration: float = 0.25,
         invincibility_duration: float = 0.5,
+        deaggro_margin: float = 32.0,
     ) -> None:
         """Initialize the enemy at the given spawn position."""
         super().__init__(spawn_position)
@@ -76,7 +78,8 @@ class EnemyBase(BaseEntity):
         self._invincibility_duration: float = invincibility_duration
         self._knockback_velocity: pygame.Vector2 = pygame.Vector2(0.0, 0.0)
         self._hitstun_type: str = "light"  # light, heavy, launch
-        self._telegraph_timer: float = 0.0
+        # BUG-030 FIX: Initialize telegraph timer to duration so it doesn't fire instantly
+        self._telegraph_timer: float = 0.4
         self._telegraph_duration: float = 0.4
         self._ground_y: float = spawn_position.y
         self._is_airborne: bool = False
@@ -84,7 +87,7 @@ class EnemyBase(BaseEntity):
         # --- Detection ---
         self.detection_range_x: float = detection_range_x
         self.detection_range_y: float = detection_range_y
-        self._deaggro_margin: float = 32.0
+        self._deaggro_margin: float = deaggro_margin
         self._player_ref: pygame.Rect | None = None
 
         # --- State ---
@@ -120,6 +123,12 @@ class EnemyBase(BaseEntity):
             28,
         )
 
+        # Cached surfaces (reused to avoid per-frame allocations)
+        self._telegraph_warning_surf: pygame.Surface | None = None
+        self._telegraph_warning_size: tuple[int, int] = (0, 0)
+        self._tint_surf: pygame.Surface | None = None
+        self._tint_surf_size: tuple[int, int] = (0, 0)
+
     # ──────────────────────────────────────────────
     # Master update (do NOT override in subclasses)
     # ──────────────────────────────────────────────
@@ -133,6 +142,12 @@ class EnemyBase(BaseEntity):
         TEMPLATE METHOD: algorithm skeleton fixed; hook methods supply
         per-subclass behavior without overriding the skeleton.
         """
+        if not self.is_alive:
+            if self.state == EnemyState.DYING:
+                self._tick_cooldowns(dt)
+                self._advance_animation(dt)
+                self._run_state_machine(dt)
+            return
         if self._pre_update(dt):
             return
         self._update_invincibility(dt)
@@ -148,8 +163,31 @@ class EnemyBase(BaseEntity):
         if self._knockback_velocity.length_squared() > 0:
             self.position.x += self._knockback_velocity.x * dt
             self.position.y += self._knockback_velocity.y * dt
-            self._knockback_velocity.x *= 0.85
-            self._knockback_velocity.y *= 0.85
+            # BUG-032 FIX: Collision resolution after knockback
+            if hasattr(self, "_collision_rects"):
+                entity_rect = pygame.Rect(
+                    int(self.position.x), int(self.position.y),
+                    self.rect.width, self.rect.height,
+                )
+                for tile in self._collision_rects:
+                    if entity_rect.colliderect(tile):
+                        overlap_x = min(entity_rect.right - tile.left, tile.right - entity_rect.left)
+                        overlap_y = min(entity_rect.bottom - tile.top, tile.bottom - entity_rect.top)
+                        if overlap_x < overlap_y:
+                            if entity_rect.centerx < tile.centerx:
+                                self.position.x = tile.left - entity_rect.width
+                            else:
+                                self.position.x = tile.right
+                            entity_rect.x = int(self.position.x)
+                        else:
+                            if entity_rect.centery < tile.centery:
+                                self.position.y = tile.top - entity_rect.height
+                            else:
+                                self.position.y = tile.bottom
+                            entity_rect.y = int(self.position.y)
+            # BUG-033 FIX: Frame-rate independent deceleration
+            self._knockback_velocity.x *= (0.85 ** (dt * 60.0))
+            self._knockback_velocity.y *= (0.85 ** (dt * 60.0))
             if abs(self._knockback_velocity.x) < 1.0 and abs(self._knockback_velocity.y) < 1.0:
                 self._knockback_velocity.x = 0.0
                 self._knockback_velocity.y = 0.0
@@ -166,6 +204,10 @@ class EnemyBase(BaseEntity):
         Optional post-update hook.
         Used by EnemyShooter to update projectiles.
         """
+
+    @property
+    def death_timer(self) -> float:
+        return self._death_timer
 
     def _load_zone_sprites(self, zone: int, fw: int, fh: int) -> None:
         """Load zone-specific enemy sprite sheets."""
@@ -220,7 +262,10 @@ class EnemyBase(BaseEntity):
         """
         if not self.is_visible:
             return
+        # BUG-031 FIX: Death animation visible until death timer expires
         if not self.is_alive and self.state != EnemyState.DYING:
+            return
+        if not self.is_alive and self.state == EnemyState.DYING and self._death_timer <= 0:
             return
 
         # Invincibility flash: skip draw when invisible
@@ -236,7 +281,13 @@ class EnemyBase(BaseEntity):
             radius = 4 + int(elapsed * 40)
             alpha = 128 + int(127 * (1.0 - self._telegraph_timer / self._telegraph_duration))
             if int(pygame.time.get_ticks() / 80) % 2 == 0:
-                warning_surf = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+                size = (radius * 2, radius * 2)
+                if (self._telegraph_warning_surf is None
+                        or self._telegraph_warning_size != size):
+                    self._telegraph_warning_surf = pygame.Surface(size, pygame.SRCALPHA)
+                    self._telegraph_warning_size = size
+                warning_surf = self._telegraph_warning_surf
+                warning_surf.fill((0, 0, 0, 0))
                 pygame.draw.circle(warning_surf, (255, 50, 50, alpha), (radius, radius), radius, 2)
                 surface.blit(
                     warning_surf,
@@ -258,7 +309,12 @@ class EnemyBase(BaseEntity):
 
         # Hit reaction tint overlay
         if self._hit_tint_timer > 0:
-            tint = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
+            size = (self.rect.width, self.rect.height)
+            if (self._tint_surf is None
+                    or self._tint_surf_size != size):
+                self._tint_surf = pygame.Surface(size, pygame.SRCALPHA)
+                self._tint_surf_size = size
+            tint = self._tint_surf
             tint_alpha = int(min(255, (self._hit_tint_timer / max(self._hurt_timer * 0.6, 0.01)) * 120))
             tint.fill((*self._hit_tint_color, tint_alpha))
             surface.blit(tint, (screen_x, screen_y))
@@ -299,7 +355,6 @@ class EnemyBase(BaseEntity):
             return
 
         self.current_health -= damage
-        self._invincibility_timer = self._invincibility_duration
 
         # Determine hitstun type
         if damage >= 1.5:
@@ -332,24 +387,33 @@ class EnemyBase(BaseEntity):
 
         if self.current_health <= 0:
             self._die()
-        elif self._hitstun_type == "launch":
-            self._ground_y = self.position.y
-            self._is_airborne = True
-            self.state = EnemyState.LAUNCHED
         else:
-            self.state = EnemyState.HURT
+            # BUG-034 FIX: Set invincibility only if not dead
+            self._invincibility_timer = self._invincibility_duration
+            if self._hitstun_type == "launch":
+                self._ground_y = self.position.y
+                self._is_airborne = True
+                self.state = EnemyState.LAUNCHED
+            else:
+                self.state = EnemyState.HURT
 
     def _die(self) -> None:
         """Handle death: set state, emit event, schedule removal."""
         self.state = EnemyState.DYING
         self._death_timer = 0.5
-        emit(
+        self._flash_counter = 0.0
+        self._flash_visible = True
+        # BUG-058 FIX: Reset _was_alive so revived enemies re-trigger on_enemy_died
+        self._was_alive = True
+        # BUG-031 FIX: Keep is_alive=True until death animation completes
+        # is_alive will be set to False in _tick_cooldowns when _death_timer <= 0
+        _emit(
             Events.ENEMY_DIED,
             entity_id=f"{type(self).__name__}_{id(self)}",
             position=(self.position.x, self.position.y),
         )
         is_large = self.rect.width > 24 or self.rect.height > 28
-        emit(Events.SFX_ENEMY_DIE_LARGE if is_large else Events.SFX_ENEMY_DIE_SMALL)
+        _emit(Events.SFX_ENEMY_DIE_LARGE if is_large else Events.SFX_ENEMY_DIE_SMALL)
 
     # ──────────────────────────────────────────────
     # Required overrides (abstract)
@@ -439,7 +503,7 @@ class EnemyBase(BaseEntity):
         Respects player parry — parried enemies get deflected.
         player: Player — imported locally to avoid circular imports.
         """
-        if not self.is_alive:
+        if not self.is_alive or self.state == EnemyState.DYING:
             return
         if self._contact_cooldown > 0:
             return
@@ -457,9 +521,7 @@ class EnemyBase(BaseEntity):
                 player._parry_success = True
                 player._parry_active = False
                 player._parry_window = 0.0
-                from src.engine.core.event_bus import emit
-                from src.engine.core.events import Events
-                emit(Events.VFX_PARRY, pos=(self.position.x, self.position.y))
+                _emit(Events.VFX_PARRY, pos=(self.position.x, self.position.y))
                 self._contact_cooldown = 0.3
                 return
             player.apply_damage(
@@ -471,6 +533,14 @@ class EnemyBase(BaseEntity):
 
     def check_player_contact(self, player: Player) -> None:
         """Deprecated alias for _check_player_contact."""
+        # BUG-036 FIX: Add deprecation warning for check_player_contact
+        import warnings
+
+        warnings.warn(
+            "check_player_contact is deprecated, use _check_player_contact instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self._check_player_contact(player)
 
     def _update_rects(self) -> None:
@@ -543,8 +613,6 @@ class EnemyBase(BaseEntity):
             return
 
         if self.state == EnemyState.TELEGRAPHING:
-            if self._telegraph_timer <= 0:
-                self._telegraph_timer = self._telegraph_duration
             self._telegraph_timer -= dt
             if self._telegraph_timer <= 0:
                 self.state = EnemyState.FIRING

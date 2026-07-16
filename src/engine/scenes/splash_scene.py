@@ -39,6 +39,8 @@ class SplashScene(BaseScene):
             assets / "logo.png",
             size=(int(lw * scale), int(lh * scale)),
         )
+        self._logo_shadow = self._logo.copy()
+        self._logo_shadow.fill((0, 0, 0, 150), special_flags=pygame.BLEND_RGBA_MULT)
 
         self._music = assets / "bck.wav"
 
@@ -77,9 +79,7 @@ class SplashScene(BaseScene):
             center=(settings.INTERNAL_WIDTH // 2, settings.INTERNAL_HEIGHT // 2 - 35),
         )
 
-        shadow = self._logo.copy()
-        shadow.fill((0, 0, 0, 150), special_flags=pygame.BLEND_RGBA_MULT)
-        surface.blit(shadow, (logo_rect.x + 3, logo_rect.y + 3))
+        surface.blit(self._logo_shadow, (logo_rect.x + 3, logo_rect.y + 3))
         surface.blit(self._logo, logo_rect)
 
         loading = self._font_game.render("Cargando...", True, (255, 255, 255))

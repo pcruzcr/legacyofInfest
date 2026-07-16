@@ -1,3 +1,13 @@
+---
+document_id: "LOI-BESTIARY-041"
+title: "Legacy of InFest — Bestiary / Codex Specification"
+aliases: ["Bestiary Codex"]
+tags: ["bestiary", "codex", "enemy"]
+description: "Enemy tracking system"
+source: "docs/41_BESTIARY_CODEX.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Bestiary / Codex Specification
 
 **Document ID:** LOI-BESTIARY-041

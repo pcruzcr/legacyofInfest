@@ -11,6 +11,7 @@ import math
 from pathlib import Path
 import pygame
 
+from src.engine.core import settings
 from src.engine.audio.sound_bank import SoundBank
 
 
@@ -18,6 +19,8 @@ class AudioManager:
     """Manages music and SFX playback. Graceful fallback on missing assets."""
 
     def __init__(self) -> None:
+        if pygame.mixer.get_init() is not None:
+            pygame.mixer.set_num_channels(16)
         self.sound_bank: SoundBank = SoundBank()
         self.sound_bank.load_all()
         self._current_music: str | None = None
@@ -42,6 +45,7 @@ class AudioManager:
         self._ambient_channel: pygame.mixer.Channel | None = None
         self._ambient_volume: float = 0.5
         self._ambient_active: bool = False
+        self._ambient_sounds: dict[str, pygame.mixer.Sound] = {}
 
     def play_music(self, path: str | Path, loops: int = -1) -> None:
         """Play background music. -1 loops = infinite. Falls back silently."""
@@ -59,20 +63,25 @@ class AudioManager:
         try:
             self._calm_sound = pygame.mixer.Sound(str(calm_path))
             self._combat_sound = pygame.mixer.Sound(str(combat_path))
-            self._calm_channel = pygame.mixer.find_channel()
-            self._combat_channel = pygame.mixer.find_channel()
-            if self._calm_channel and self._combat_channel:
-                self._calm_channel.play(self._calm_sound, loops=-1)
-                self._combat_channel.play(self._combat_sound, loops=-1)
-                self._calm_volume = 1.0
-                self._combat_volume = 0.0
-                self._intensity = 0.0
-                self._target_intensity = 0.0
-                self._dynamic_music_active = True
-                self._calm_channel.set_volume(self._calm_volume * self._music_volume)
-                self._combat_channel.set_volume(self._combat_volume * self._music_volume)
+            self._calm_channel = pygame.mixer.Channel(14)
+            self._combat_channel = pygame.mixer.Channel(15)
+            self._calm_channel.play(self._calm_sound, loops=-1)
+            self._combat_channel.play(self._combat_sound, loops=-1)
+            self._calm_volume = 1.0
+            self._combat_volume = 0.0
+            self._intensity = 0.0
+            self._target_intensity = 0.0
+            self._dynamic_music_active = True
+            self._calm_channel.set_volume(self._calm_volume * self._music_volume)
+            self._combat_channel.set_volume(self._combat_volume * self._music_volume)
         except pygame.error as e:
             logging.warning(f"AudioManager: no se pudo cargar música dinámica: {e}")
+            if self._calm_channel:
+                self._calm_channel.stop()
+            self._calm_channel = None
+            self._combat_channel = None
+            self._calm_sound = None
+            self._combat_sound = None
             self._dynamic_music_active = False
 
     def stop_dynamic_music(self) -> None:
@@ -131,14 +140,19 @@ class AudioManager:
         """Play a music stinger (short SFX overlay) without interrupting music."""
         if self._muted:
             return
-        self.sound_bank.play(name, volume=self._music_volume * volume)
+        self.sound_bank.play(name, volume=self._sfx_volume * volume)
 
     def play_ambient(self, path: str | Path, volume: float = 0.5, loops: int = -1) -> None:
         """Play ambient audio layer (wind, rain, machinery) with crossfade."""
         try:
             if self._ambient_active:
                 self.stop_ambient()
-            self._ambient_sound = pygame.mixer.Sound(str(path))
+            path_str = str(path)
+            if path_str in self._ambient_sounds:
+                self._ambient_sound = self._ambient_sounds[path_str]
+            else:
+                self._ambient_sound = pygame.mixer.Sound(path_str)
+                self._ambient_sounds[path_str] = self._ambient_sound
             self._ambient_channel = pygame.mixer.find_channel()
             if self._ambient_channel:
                 self._ambient_channel.play(self._ambient_sound, loops=loops)
@@ -166,9 +180,19 @@ class AudioManager:
 
     def crossfade_ambient(self, path: str | Path, duration: float = 2.0, volume: float = 0.5) -> None:
         """Crossfade from current ambient to new ambient sound."""
+        if self._muted:
+            return
         old_channel = self._ambient_channel
+        path_str = str(path)
         try:
-            new_sound = pygame.mixer.Sound(str(path))
+            if path_str in self._ambient_sounds:
+                new_sound = self._ambient_sounds[path_str]
+            else:
+                new_sound = pygame.mixer.Sound(path_str)
+                self._ambient_sounds[path_str] = new_sound
+            # Fade out old channel regardless of whether new channel is available
+            if old_channel is not None:
+                old_channel.fadeout(int(duration * 1000))
             new_channel = pygame.mixer.find_channel()
             if new_channel is not None:
                 new_channel.play(new_sound, loops=-1)
@@ -177,15 +201,16 @@ class AudioManager:
                 self._ambient_channel = new_channel
                 self._ambient_volume = volume
                 self._ambient_active = True
-                if old_channel is not None:
-                    old_channel.fadeout(int(duration * 1000))
         except pygame.error as e:
             logging.warning(f"AudioManager: no se pudo crossfade audio ambiental: {e}")
+            self._ambient_active = False
 
-    def play_sfx_at(self, name: str, world_x: float, screen_center_x: float = 160, volume: float = 1.0) -> None:
+    def play_sfx_at(self, name: str, world_x: float, screen_center_x: float | None = None, volume: float = 1.0) -> None:
         """Play SFX with stereo pan based on X position relative to screen center."""
         if self._muted:
             return
+        if screen_center_x is None or screen_center_x <= 0:
+            screen_center_x = settings.INTERNAL_WIDTH / 2.0
         pan = max(-1.0, min(1.0, (world_x - screen_center_x) / screen_center_x))
         left = 1.0 - max(0.0, pan)
         right = 1.0 + min(0.0, pan)
@@ -205,6 +230,8 @@ class AudioManager:
         """Toggle mute on/off."""
         self._muted = not self._muted
         pygame.mixer.music.set_volume(0.0 if self._muted else self._music_volume)
+        if self._ambient_channel:
+            self._ambient_channel.set_volume(0.0 if self._muted else self._ambient_volume * self._sfx_volume)
 
     @property
     def music_volume(self) -> float:

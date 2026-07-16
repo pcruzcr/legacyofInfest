@@ -8,11 +8,12 @@ state from inactive (grey) to active (gold).
 """
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import pygame
 
-from src.engine.core.event_bus import EventBus, emit
+from src.engine.core.event_bus import EventBus, _get_bus as _bus
 from src.engine.core.events import Events
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.entities.base_entity import BaseEntity
@@ -33,9 +34,17 @@ class Checkpoint(BaseEntity):
         self.layer = 3
         self._event_bus: EventBus | None = event_bus
         self._sprite: pygame.Surface | None = None
+        self._grey_sprite: pygame.Surface | None = None
         try:
-            self._sprite = AssetLoader.load_image(Path(CHECKPOINT_SPRITE_PATH))
-        except Exception:
+            sprite = AssetLoader.load_image(Path(CHECKPOINT_SPRITE_PATH))
+            self._sprite = sprite
+            grey = sprite.copy()
+            grey_overlay = pygame.Surface(grey.get_size(), pygame.SRCALPHA)
+            grey_overlay.fill((100, 100, 100, 180))
+            grey.blit(grey_overlay, (0, 0))
+            self._grey_sprite = grey
+        except (pygame.error, FileNotFoundError, PermissionError):
+            logging.warning("checkpoint: failed to load sprite %s", CHECKPOINT_SPRITE_PATH)
             self._sprite = None
 
     def update(self, dt: float) -> None:
@@ -58,7 +67,7 @@ class Checkpoint(BaseEntity):
         if self._event_bus is not None:
             self._event_bus.emit(Events.CHECKPOINT_REACHED, checkpoint_id=self._checkpoint_id)
         else:
-            emit(Events.CHECKPOINT_REACHED, checkpoint_id=self._checkpoint_id)
+            _bus().emit(Events.CHECKPOINT_REACHED, checkpoint_id=self._checkpoint_id)
 
     def draw(self, surface: pygame.Surface, camera_offset: pygame.Vector2) -> None:
         """Draw checkpoint: sprite when available, colored rect fallback."""
@@ -69,16 +78,16 @@ class Checkpoint(BaseEntity):
         screen_y = int(self.rect.y - camera_offset.y)
 
         if self._sprite is not None:
-            sprite = self._sprite.copy()
-            if not self._activated:
-                grey = pygame.Surface(sprite.get_size(), pygame.SRCALPHA)
-                grey.fill((100, 100, 100, 180))
-                sprite.blit(grey, (0, 0))
+            sprite = self._grey_sprite if not self._activated else self._sprite
             surface.blit(sprite, (screen_x, screen_y))
         else:
             color = (255, 215, 0) if self._activated else (100, 100, 100)
             pygame.draw.rect(surface, color, (screen_x, screen_y, self.rect.width, self.rect.height))
             pygame.draw.rect(surface, (255, 255, 255), (screen_x, screen_y, self.rect.width, self.rect.height), 1)
+
+    def set_event_bus(self, event_bus: EventBus) -> None:
+        """Set the event bus reference (needed when checkpoints are created before the bus is available)."""
+        self._event_bus = event_bus
 
     @property
     def is_activated(self) -> bool:

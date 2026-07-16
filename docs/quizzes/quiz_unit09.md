@@ -1,3 +1,13 @@
+---
+document_id: "LOI-QUIZZES-QUIZ_UNIT09"
+title: "Quiz — Unit IX: Pattern Recognition"
+aliases: ["Quiz Unit09", "quiz_unit09"]
+tags: ["quiz", "academic", "evaluation"]
+description: "Quizzes document: quiz_unit09"
+source: "docs/docs\quizzes/quiz_unit09.md"
+date_processed: "2026-07-14"
+---
+
 # Quiz — Unit IX: Pattern Recognition
 
 **Course:** Legacy of InFest  

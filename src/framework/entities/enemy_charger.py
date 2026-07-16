@@ -17,6 +17,7 @@ class EnemyCharger(EnemyBase):
         damage_on_contact: float = 1.5,
         charge_speed: float = 250.0,
         zone: int = 0,
+        **kwargs,
     ) -> None:
         super().__init__(
             spawn_position=spawn_position,
@@ -31,6 +32,8 @@ class EnemyCharger(EnemyBase):
         self._patrol_origin: pygame.Vector2 = pygame.Vector2(spawn_position)
         self.rect.width = 28
         self.rect.height = 24
+        self.position.y -= self.rect.height
+        self.rect.y = int(self.position.y)
 
         # Charge state
         self._charge_speed: float = charge_speed
@@ -76,7 +79,18 @@ class EnemyCharger(EnemyBase):
 
         if self._is_charging:
             self._charge_timer -= dt
-            self.position.x += self._charge_dir * self._charge_speed * dt
+            new_x = self.position.x + self._charge_dir * self._charge_speed * dt
+            entity_rect = pygame.Rect(int(new_x), int(self.position.y), self.rect.width, self.rect.height)
+            blocked = False
+            collision_rects = getattr(self, "_collision_rects", [])
+            for tile in collision_rects:
+                if entity_rect.colliderect(tile):
+                    blocked = True
+                    break
+            if not blocked:
+                self.position.x = new_x
+            elif self._charge_timer < self._charge_duration * 0.5:
+                self._charge_timer = 0.0
             if self._charge_timer <= 0:
                 self._is_charging = False
                 self._is_stunned = True

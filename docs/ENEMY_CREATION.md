@@ -1,3 +1,13 @@
+---
+document_id: "LOI-GUIDE-ENEMY"
+title: "Enemy Creation Guide"
+aliases: ["Enemy Creation Guide"]
+tags: ["enemy", "creation", "guide", "tutorial"]
+description: "Enemy creation tutorial"
+source: "docs/ENEMY_CREATION.md"
+date_processed: "2026-07-14"
+---
+
 # Enemy Creation Guide
 
 ## 1. Overview
@@ -223,3 +233,10 @@ Todos los enemigos heredan de `EnemyBase`, que a su vez hereda de `BaseEntity`.
 PATROL, ALERT, TELEGRAPHING, FIRING, HURT, LAUNCHED, DYING
 
 Para ejemplos completos de código y registro en EntityFactory, consultar el documento original en inglés.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[05_ENEMY_SPEC.md|Enemy Specification]]
+- [[BOSS_CREATION.md|Boss Creation Guide]]

@@ -1,3 +1,13 @@
+---
+document_id: "LOI-GIT-029"
+title: "Legacy of InFest — Git Workflow and Development Standards"
+aliases: ["Git Workflow", "Git Standards"]
+tags: ["git", "workflow", "standards"]
+description: "Branching, commits, PRs, code review"
+source: "docs/29_GIT_WORKFLOW_AND_STANDARDS.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Git Workflow and Development Standards
 
 **Document ID:** LOI-GITFLOW-029  
@@ -224,3 +234,9 @@ MERGE TO:  main (via PR review only, never direct push)
 REVIEW AT: Class 5, 8, 11 (Evaluación Práctica checkpoints) for student PRs
 NEVER:     bypass framework API · import banned libraries directly · touch files outside your scope · force-push shared branches
 ```
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[28_DECISION_LOG.md|Decision Log]]

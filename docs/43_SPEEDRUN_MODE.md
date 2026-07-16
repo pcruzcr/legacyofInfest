@@ -1,3 +1,13 @@
+---
+document_id: "LOI-SPEEDRUN-043"
+title: "Legacy of InFest — Speedrun Mode Specification"
+aliases: ["Speedrun Mode"]
+tags: ["speedrun", "mode", "gameplay"]
+description: "Speedrun timer + ghost data"
+source: "docs/43_SPEEDRUN_MODE.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Speedrun Mode Specification
 
 **Document ID:** LOI-SPEEDRUN-043
@@ -64,3 +74,10 @@ Modo de juego contrarreloj con seguimiento de mejores tiempos y datos fantasma.
 - División por zonas/checkpoints
 
 Para la especificación completa, consultar el documento original en inglés.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[44_BOSS_RUSH_MODE.md|Boss Rush Mode]]
+- [[09_HUD_SPEC.md|HUD Specification]]

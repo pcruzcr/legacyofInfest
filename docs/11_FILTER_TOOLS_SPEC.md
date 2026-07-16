@@ -1,3 +1,13 @@
+---
+document_id: "LOI-FILTER-011"
+title: "Legacy of InFest — Filter Tools Specification"
+aliases: ["Filter Tools Spec"]
+tags: ["filter", "processing", "image"]
+description: "Unit VII image processing subsystem"
+source: "docs/11_FILTER_TOOLS_SPEC.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Filter Tools Specification
 
 **Document ID:** LOI-FILTER-011  
@@ -874,3 +884,10 @@ FilterTools proporciona funciones de convolución y detección de bordes aplicad
 - `compute_histogram(surface)` — Histograma RGB
 
 Todas las funciones son de la Unidad VII del sílabo. Para ejemplos detallados de uso y kernels estándar, consultar el documento original en inglés.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[12_VISION_TOOLS_SPEC.md|Vision Tools Spec]]
+- [[13_PATTERN_RECOGNITION_SPEC.md|Pattern Recognition Spec]]

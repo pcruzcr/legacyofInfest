@@ -1,3 +1,13 @@
+---
+document_id: "LOI-SCHEMA-023"
+title: "Legacy of InFest — Data Schemas"
+aliases: ["Data Schemas"]
+tags: ["data", "schemas", "types"]
+description: "Exact data shapes crossing module boundaries"
+source: "docs/23_DATA_SCHEMAS.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Data Schemas
 
 **Document ID:** LOI-SCHEMA-023  
@@ -346,3 +356,9 @@ A recurring source of bugs in 2D game code is inconsistent coordinate space assu
 | **Surface-local array space** | Top-left of a `pygame.Surface`/`np.ndarray` being processed | All `FilterTools`/`VisionTools` inputs/outputs | Caller's responsibility to blit at the correct world/screen offset after processing |
 
 **Rule for `RegionInfo.centroid` and `.bounding_rect`:** These are always in the coordinate space of the surface that was passed into `VisionTools.analyze_regions()` — if the caller passed a `subsurface()` cropped from world space, the caller must add the subsurface's offset back before treating the result as a world-space position.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[22_API_CONTRACTS.md|API Contracts]]

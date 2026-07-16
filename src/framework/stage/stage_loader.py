@@ -115,10 +115,18 @@ class StageLoader:
 
         stage_id = tmx_data.properties.get("stage_id", "")
         stage_name = tmx_data.properties.get("stage_name", "")
-        time_limit = int(tmx_data.properties.get("time_limit", 0))
+        try:
+            time_limit = int(tmx_data.properties.get("time_limit", 0))
+        except ValueError:
+            logging.warning("StageLoader: invalid time_limit value, using 0")
+            time_limit = 0
         bgm_track = tmx_data.properties.get("bgm_track", "")
         background_zone = tmx_data.properties.get("background_zone", "")
-        gravity_multiplier = float(tmx_data.properties.get("gravity_multiplier", 1.0))
+        try:
+            gravity_multiplier = float(tmx_data.properties.get("gravity_multiplier", 1.0))
+        except ValueError:
+            logging.warning("StageLoader: invalid gravity_multiplier value, using 1.0")
+            gravity_multiplier = 1.0
         climate = tmx_data.properties.get("climate", "")
 
         map_data = pyscroll.data.TiledMapData(tmx_data)
@@ -154,8 +162,8 @@ class StageLoader:
                             bg_path, size=(settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
                         )
                         stage.background_layers.append(bg_surf)
-                    except Exception:
-                        pass
+                    except (pygame.error, FileNotFoundError, PermissionError):
+                        logging.warning("StageLoader: missing bg %s", bg_path)
                 # Also try direct zone name (non-nested)
             else:
                 for bg_name in ("far", "mid", "near"):
@@ -165,8 +173,8 @@ class StageLoader:
                             bg_path, size=(settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
                         )
                         stage.background_layers.append(bg_surf)
-                    except Exception:
-                        pass
+                    except (pygame.error, FileNotFoundError, PermissionError):
+                        logging.warning("StageLoader: missing bg %s", bg_path)
 
         # First pass: collect Waypoint objects grouped by owner name
         waypoints_by_owner: dict[str, list[tuple[float, float]]] = {}
@@ -207,14 +215,22 @@ class StageLoader:
                 cleaned: dict[str, Any] = {}
                 for k, v in props.items():
                     if k in ("zone",):
-                        cleaned[k] = int(v)
+                        try:
+                            cleaned[k] = int(v)
+                        except (ValueError, TypeError):
+                            logging.warning("StageLoader: invalid zone value '%s', using 0", v)
+                            cleaned[k] = 0
                     elif k in ("max_health", "damage_on_contact", "patrol_length",
                                "fire_rate", "projectile_speed", "projectile_damage",
                                "sine_amplitude", "sine_frequency", "flight_speed",
                                "patrol_speed", "alert_speed", "contact_knockback",
                                "detection_range_x", "detection_range_y",
                                "charge_speed"):
-                        cleaned[k] = float(v)
+                        try:
+                            cleaned[k] = float(v)
+                        except (ValueError, TypeError):
+                            logging.warning("StageLoader: invalid %s value '%s', using 0", k, v)
+                            cleaned[k] = 0.0
                     else:
                         cleaned[k] = v
                 # Inject waypoints if defined in the TMX
@@ -236,7 +252,11 @@ class StageLoader:
 
             elif obj_type == "HazardZone":
                 rect = pygame.Rect(obj.x, obj.y, obj.width, obj.height)
-                damage = float(props.get("damage", 0.25))
+                try:
+                    damage = float(props.get("damage", 0.25))
+                except (ValueError, TypeError):
+                    logging.warning("StageLoader: invalid HazardZone damage, using 0.25")
+                    damage = 0.25
                 stage.hazard_zones.append(HazardZone(rect=rect, damage=damage))
 
             elif obj_type == "DeathPit":

@@ -6,6 +6,7 @@ source manager, frame throttle, error display, save helpers.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import logging
 from pathlib import Path
 import datetime
 import pygame
@@ -74,8 +75,8 @@ def build_default_sources() -> SourceSurfaceManager:
                 sources.append(surf)
                 names.append(name)
                 return True
-        except Exception:
-            pass
+        except (pygame.error, FileNotFoundError, PermissionError):
+            logging.warning("demo_utils: failed to load %s", path)
         return False
 
     if not _try_load(Path("assets") / "sprites" / "player" / "player_idle.png",

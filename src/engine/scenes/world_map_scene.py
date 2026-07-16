@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 import pygame
 from src.engine.core import settings
+from src.engine.core.events import Events
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import BOTTOM_BAR_Y
@@ -21,7 +22,12 @@ STAGE_NODES: list[dict[str, Any]] = [
     {"id": "stage4", "name": "Boss Venado", "x": 80, "y": 160, "unlocks": []},
 ]
 
-CONNECTIONS: list[tuple[int, int]] = [(0, 1), (1, 2), (2, 3), (3, 4)]
+_node_index = {nd["id"]: i for i, nd in enumerate(STAGE_NODES)}
+CONNECTIONS: list[tuple[int, int]] = [
+    (i, _node_index[uid])
+    for i, nd in enumerate(STAGE_NODES)
+    for uid in nd.get("unlocks", [])
+]
 
 
 class WorldMapScene(BaseScene):
@@ -61,6 +67,7 @@ class WorldMapScene(BaseScene):
     def on_enter(self) -> None:
         self._load_save_data()
         self._build_nodes()
+        self.context.scene_manager.transition.start_fade_in(0.5)
 
     def on_exit(self) -> None:
         pass
@@ -79,15 +86,11 @@ class WorldMapScene(BaseScene):
         if im.is_action_just_pressed(Action.MOVE_UP):
             self._selected = (self._selected - 2) % len(self._nodes)
         if self._selected != prev:
-            from src.engine.core.event_bus import emit
-            from src.engine.core.events import Events
-            emit(Events.SFX_MENU_HOVER)
+            self.context.event_bus.emit(Events.SFX_MENU_HOVER)
         if im.is_action_just_pressed(Action.CONFIRM):
             node = self._nodes[self._selected]
             if node.get("unlocked"):
-                from src.engine.core.event_bus import emit
-                from src.engine.core.events import Events
-                emit(Events.SFX_MENU_CONFIRM)
+                self.context.event_bus.emit(Events.SFX_MENU_CONFIRM)
                 node_id = node["id"]
                 tmx_path = Path(settings.ASSETS_DIR / "maps" / node_id / f"{node_id}.tmx")
                 if tmx_path.exists():

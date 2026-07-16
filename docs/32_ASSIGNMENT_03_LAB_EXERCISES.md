@@ -1,3 +1,13 @@
+---
+document_id: "LOI-ASGN03-032B"
+title: "Assignment 3: Lab Exercise Completion"
+aliases: ["Assignment 3: Lab Exercises"]
+tags: ["assignment", "lab", "exercises", "academic"]
+description: "Lab exercises assignment"
+source: "docs/32_ASSIGNMENT_03_LAB_EXERCISES.md"
+date_processed: "2026-07-14"
+---
+
 # Assignment 3: Lab Exercise Completion
 
 **Due:** Ongoing (Week 2-15) | **Points:** 100 total | **Units:** II-VIII
@@ -94,3 +104,10 @@ python -c "from src.engine.scenes.progress_scene import ProgressScene; print('Pr
 - Clasificador se ejecuta en tiempo de ejecución
 
 Para la rúbrica detallada, consultar el documento original en inglés.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[15_ACADEMIC_DEMO_SCENES.md|Academic Demo Scenes]]
+- [[27_ACADEMIC_RUBRICS.md|Academic Rubrics]]

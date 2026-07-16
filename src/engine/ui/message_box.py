@@ -1,4 +1,6 @@
 from __future__ import annotations
+import logging
+
 import pygame
 from src.engine.core import settings
 from src.engine.core.event_bus import EventBus
@@ -29,7 +31,8 @@ class MessageBox:
                 self._font = pygame.font.Font(
                     settings.ASSETS_DIR / "fonts" / "game.ttf", 12,
                 )
-            except Exception:
+            except (pygame.error, FileNotFoundError, PermissionError):
+                logging.warning("message_box: failed to load game.ttf font")
                 self._font = pygame.font.Font(None, 12)
 
         if hasattr(settings, "ASSETS_DIR"):
@@ -38,11 +41,17 @@ class MessageBox:
                 self._arrow = AssetLoader.load_image(
                     settings.ASSETS_DIR / "ui" / "message_arrow.png", size=(5, 7),
                 )
-            except Exception:
+            except (pygame.error, FileNotFoundError, PermissionError):
+                logging.warning("message_box: failed to load message_arrow.png")
                 self._arrow = None
         else:
             self._arrow = None
         self._arrow_timer: float = 0.0
+
+        # Cached surfaces
+        self._overlay_surf: pygame.Surface | None = None
+        self._cached_text_surf: pygame.Surface | None = None
+        self._cached_text: str = ""
 
         self._event_bus.subscribe(Events.SHOW_MESSAGE, self._on_show_message)
         self._event_bus.subscribe(Events.HIDE_MESSAGE, self._on_hide_message)
@@ -129,34 +138,38 @@ class MessageBox:
             self._arrow_timer += dt
 
     def _render_text(self, text: str) -> pygame.Surface | None:
-        lines = self._wrap_text(text)
-        if not lines:
-            return None
-        chunks: list[pygame.Surface] = []
-        for line in lines:
-            chunks.append(self._font.render(line, True, (255, 255, 255)))
-        total_h = sum(s.get_height() for s in chunks) + 2 * (len(chunks) - 1)
-        w = max(s.get_width() for s in chunks) if chunks else 0
-        if w == 0 or total_h == 0:
-            return None
-        surf = pygame.Surface((w, total_h))
-        surf.set_colorkey((0, 0, 0))
-        y = 0
-        for s in chunks:
-            surf.blit(s, (0, y))
-            y += s.get_height() + 2
-        return surf
+        if self._cached_text != self._text:
+            self._cached_text = self._text
+            lines = self._wrap_text(text)
+            if not lines:
+                return None
+            chunks: list[pygame.Surface] = []
+            for line in lines:
+                chunks.append(self._font.render(line, True, (255, 255, 255)))
+            total_h = sum(s.get_height() for s in chunks) + 2 * (len(chunks) - 1)
+            w = max(s.get_width() for s in chunks) if chunks else 0
+            if w == 0 or total_h == 0:
+                return None
+            self._cached_text_surf = pygame.Surface((w, total_h))
+            self._cached_text_surf.set_colorkey((0, 0, 0))
+            y = 0
+            for s in chunks:
+                self._cached_text_surf.blit(s, (0, y))
+                y += s.get_height() + 2
+        return self._cached_text_surf
 
     def draw(self, surface: pygame.Surface) -> None:
         if not self._visible or not self._text:
             return
 
         box_height = 28
-        box_rect = pygame.Rect(0, 40,
+        box_rect = pygame.Rect(0, 64,
                                settings.INTERNAL_WIDTH, box_height)
-        overlay = pygame.Surface((box_rect.width, box_rect.height))
+        if self._overlay_surf is None:
+            self._overlay_surf = pygame.Surface((box_rect.width, box_rect.height))
+        overlay = self._overlay_surf
+        overlay.fill((0, 0, 0))
         overlay.set_alpha(180)
-        overlay.fill((10, 10, 30))
         surface.blit(overlay, box_rect)
         pygame.draw.rect(surface, (200, 180, 100), box_rect, 1)
 

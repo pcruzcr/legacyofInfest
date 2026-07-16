@@ -34,11 +34,11 @@ class DynamicMusicSystem:
         """Switch to a new intensity level with crossfade."""
         if level == self._current_intensity:
             return
-        self._current_intensity = level
         track = self._get_track_for_intensity(level)
-        if track is not None:
-            pygame.mixer.music.fadeout(int(self._fade_duration * 1000))
-            pygame.time.wait(int(self._fade_duration * 1000))
+        if track is None:
+            return
+        self._current_intensity = level
+        if self._audio is not None:
             self._audio.play_music(track)
 
     def detect_intensity_from_state(self, has_boss: bool, has_alive_enemies: bool) -> int:
@@ -54,13 +54,20 @@ class DynamicMusicSystem:
         bgm = self._bgm_base
         if not bgm:
             return None
+        base = settings.ASSETS_DIR / "music"
         if level == self.INTENSITY_BOSS:
-            suffix = "_boss"
+            for suffix in ("_boss", "_traverse", ""):
+                candidate = base / f"{bgm}{suffix}.wav"
+                if candidate.exists():
+                    return candidate
         elif level == self.INTENSITY_COMBAT:
-            suffix = "_traverse"
+            for suffix in ("_combat", "_traverse", ""):
+                candidate = base / f"{bgm}{suffix}.wav"
+                if candidate.exists():
+                    return candidate
         else:
-            suffix = "_traverse"
-        candidate = settings.ASSETS_DIR / "music" / f"{bgm}{suffix}.wav"
-        if candidate.exists():
-            return candidate
-        return settings.ASSETS_DIR / "music" / f"{bgm}.wav"
+            for suffix in ("_traverse", ""):
+                candidate = base / f"{bgm}{suffix}.wav"
+                if candidate.exists():
+                    return candidate
+        return None

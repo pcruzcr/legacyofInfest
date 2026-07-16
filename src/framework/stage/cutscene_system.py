@@ -106,6 +106,14 @@ class DialogueAction(CutsceneAction):
         self._speaker = speaker
         self._elapsed = 0.0
         self._completed = False
+        self._font = pygame.font.Font(None, 14)
+        self._box_surf = pygame.Surface((settings.INTERNAL_WIDTH - 40, 60), pygame.SRCALPHA)
+        self._box_surf.fill((0, 0, 0, 200))
+        self._hint_surf = self._font.render("[ENTER]", True, (140, 140, 150))
+        self._prev_speaker = None
+        self._prev_text = None
+        self._speaker_surf = None
+        self._text_surf = None
 
     def start(self) -> None:
         self._elapsed = 0.0
@@ -123,17 +131,20 @@ class DialogueAction(CutsceneAction):
         return False
 
     def draw(self, surface: pygame.Surface) -> None:
-        font = pygame.font.Font(None, 14)
-        box = pygame.Surface((settings.INTERNAL_WIDTH - 40, 60), pygame.SRCALPHA)
-        box.fill((0, 0, 0, 200))
-        surface.blit(box, (20, settings.INTERNAL_HEIGHT - 80))
-        if self._speaker:
-            name = font.render(self._speaker, True, (255, 220, 150))
-            surface.blit(name, (30, settings.INTERNAL_HEIGHT - 75))
-        text = font.render(self._text, True, (220, 220, 220))
-        surface.blit(text, (30, settings.INTERNAL_HEIGHT - 55))
-        hint = font.render("[ENTER]", True, (140, 140, 150))
-        surface.blit(hint, (settings.INTERNAL_WIDTH - 60, settings.INTERNAL_HEIGHT - 30))
+        if self._speaker != self._prev_speaker or self._text != self._prev_text:
+            self._prev_speaker = self._speaker
+            self._prev_text = self._text
+            if self._speaker:
+                self._speaker_surf = self._font.render(self._speaker, True, (255, 220, 150))
+            else:
+                self._speaker_surf = None
+            self._text_surf = self._font.render(self._text, True, (220, 220, 220))
+        surface.blit(self._box_surf, (20, settings.INTERNAL_HEIGHT - 80))
+        if self._speaker and self._speaker_surf:
+            surface.blit(self._speaker_surf, (30, settings.INTERNAL_HEIGHT - 75))
+        if self._text_surf:
+            surface.blit(self._text_surf, (30, settings.INTERNAL_HEIGHT - 55))
+        surface.blit(self._hint_surf, (settings.INTERNAL_WIDTH - 60, settings.INTERNAL_HEIGHT - 30))
 
 
 class CutsceneScript:

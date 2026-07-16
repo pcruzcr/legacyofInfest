@@ -16,15 +16,7 @@ import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
 
-import joblib
 import numpy as np
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report, confusion_matrix
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
-from sklearn.svm import SVC
-from sklearn.tree import DecisionTreeClassifier
 
 import pygame
 
@@ -82,6 +74,8 @@ class PatternRecognitionTools:
         feature_method: str = "hog",
         **kwargs: Any,
     ) -> TrainedModel:
+        from sklearn.preprocessing import StandardScaler
+        from sklearn.pipeline import Pipeline
         cls._validate_dataset(X, y)
         X = X.astype(np.float32)
         scaler = StandardScaler()
@@ -112,6 +106,7 @@ class PatternRecognitionTools:
         X_test: np.ndarray,
         y_test: np.ndarray,
     ) -> EvaluationResult:
+        from sklearn.metrics import classification_report, confusion_matrix
         cls._validate_model(model)
         X_test = X_test.astype(np.float32)
         if X_test.shape[1] != model.feature_length:
@@ -139,6 +134,7 @@ class PatternRecognitionTools:
 
     @classmethod
     def save_model(cls, model: TrainedModel, path: str | Path) -> None:
+        import joblib
         path = Path(path)
         if path.suffix != ".pkl":
             raise ValueError(
@@ -149,12 +145,16 @@ class PatternRecognitionTools:
 
     @classmethod
     def load_model(cls, path: str | Path) -> TrainedModel:
+        import joblib
         path = Path(path)
         if not path.exists():
             raise FileNotFoundError(
                 f"PatternRecognitionTools.load_model: file not found: {path}"
             )
-        model = joblib.load(str(path))
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            model = joblib.load(str(path))
         if not isinstance(model, TrainedModel):
             raise TypeError(
                 f"PatternRecognitionTools.load_model: loaded object is not a TrainedModel, "
@@ -225,14 +225,18 @@ class PatternRecognitionTools:
     @classmethod
     def _build_model(cls, model_type: str, **kwargs: Any) -> Any:
         if model_type == "knn":
+            from sklearn.neighbors import KNeighborsClassifier
             return KNeighborsClassifier(**kwargs)
         elif model_type == "tree":
+            from sklearn.tree import DecisionTreeClassifier
             kw = {"random_state": 42, **kwargs}
             return DecisionTreeClassifier(**kw)
         elif model_type == "forest":
+            from sklearn.ensemble import RandomForestClassifier
             kw = {"random_state": 42, **kwargs}
             return RandomForestClassifier(**kw)
         elif model_type == "svm":
+            from sklearn.svm import SVC
             kw = {"random_state": 42, "probability": True, **kwargs}
             return SVC(**kw)
         else:
@@ -295,8 +299,9 @@ class PatternRecognitionTools:
             import matplotlib
             matplotlib.use("Agg")
             import matplotlib.pyplot as plt
+            from sklearn.metrics import confusion_matrix
         except ImportError:
-            logger.warning("matplotlib not installed — training report unavailable")
+            logger.warning("matplotlib / sklearn not installed — training report unavailable")
             return None
 
         fig, axes = plt.subplots(1, 2 if X_test is not None else 1,

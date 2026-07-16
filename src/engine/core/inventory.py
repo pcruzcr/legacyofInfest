@@ -83,6 +83,7 @@ class Inventory:
         self._items: dict[str, int] = {}
         self._collect_notifications: list[_NotificationData] = []
         self._current_notify: _NotificationData | None = None
+        self._notif_bg: pygame.Surface | None = None
         self.load()
 
     def collect(self, item_id: str) -> bool:
@@ -145,12 +146,12 @@ class Inventory:
     def save(self) -> None:
         data = {"items": dict(self._items)}
         _INVENTORY_PATH.parent.mkdir(parents=True, exist_ok=True)
-        with open(_INVENTORY_PATH, "w") as f:
+        with open(_INVENTORY_PATH, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
 
     def load(self) -> None:
         try:
-            with open(_INVENTORY_PATH) as f:
+            with open(_INVENTORY_PATH, encoding="utf-8") as f:
                 data = json.load(f)
             self._items = {k: v for k, v in data.get("items", {}).items() if k in _ITEM_DEFS}
         except (FileNotFoundError, json.JSONDecodeError):
@@ -173,7 +174,9 @@ class Inventory:
         bar_h = 32
         bx = (w - bar_w) // 2
         by = 8
-        bg = pygame.Surface((bar_w, bar_h), pygame.SRCALPHA)
+        if self._notif_bg is None or self._notif_bg.get_size() != (bar_w, bar_h):
+            self._notif_bg = pygame.Surface((bar_w, bar_h), pygame.SRCALPHA)
+        bg = self._notif_bg
         bg.fill((10, 10, 10, 200))
         surface.blit(bg, (bx, by))
         pygame.draw.rect(surface, n["color"], (bx, by, bar_w, bar_h), 2)

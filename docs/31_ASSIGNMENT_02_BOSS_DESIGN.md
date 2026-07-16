@@ -1,3 +1,13 @@
+---
+document_id: "LOI-ASGN02-031B"
+title: "Assignment 2: Boss Design (Python)"
+aliases: ["Assignment 2: Boss Design"]
+tags: ["assignment", "boss", "design", "academic"]
+description: "Boss design assignment"
+source: "docs/31_ASSIGNMENT_02_BOSS_DESIGN.md"
+date_processed: "2026-07-14"
+---
+
 # Assignment 2: Boss Design (Python)
 
 **Due:** Week 8 | **Points:** 100 | **Unit:** IV (Polymorphism & State Machines)
@@ -117,3 +127,10 @@ git push
 - README con matriz de kernel y capturas de pantalla
 
 Para la rúbrica detallada, consultar el documento original en inglés.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[17_BOSS_SPEC.md|Boss Specification]]
+- [[27_ACADEMIC_RUBRICS.md|Academic Rubrics]]

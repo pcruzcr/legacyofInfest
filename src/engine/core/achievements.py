@@ -9,7 +9,7 @@ from typing import Any
 import pygame
 from src.engine.core import settings
 
-from src.engine.core.event_bus import emit, subscribe, unsubscribe
+from src.engine.core.event_bus import _get_bus as _bus
 from src.engine.core.events import Events
 
 ACHIEVEMENTS_PATH = Path(os.environ.get("APPDATA", str(Path("~/.config").expanduser()))) / "legacyofinfest" / "achievements.json"
@@ -33,7 +33,15 @@ class AchievementProgress:
 
 
 class AchievementSystem:
+    # Singleton for backward compatibility. Future: inject via GameContext / DI container.
+    # Tests should call _reset_instance() in setUp/teardown.
     _instance: AchievementSystem | None = None
+
+    @classmethod
+    def init_instance(cls) -> AchievementSystem:
+        """Create a fresh singleton instance (e.g. for testing or DI injection)."""
+        cls._instance = AchievementSystem()
+        return cls._instance
 
     @classmethod
     def get_instance(cls) -> AchievementSystem:
@@ -49,6 +57,8 @@ class AchievementSystem:
         self._current_notify: dict[str, Any] | None = None
         self._subscribed: bool = False
         self._stats: dict[str, int] = {}
+        self._notif_bg: pygame.Surface | None = None
+        self._notif_font = pygame.font.Font(None, 14)
         self._init_achievements()
 
     def _init_achievements(self) -> None:
@@ -74,8 +84,8 @@ class AchievementSystem:
         ))
         self.register(AchievementDef(
             id="air_assault", name="Air Assault",
-            description="Perform a 2-hit aerial combo",
-            target=2,
+            description="Perform a 3-hit aerial combo",
+            target=3,
         ))
         self.register(AchievementDef(
             id="speed_demon", name="Speed Demon",
@@ -112,15 +122,15 @@ class AchievementSystem:
         if self._subscribed:
             return
         self._subscribed = True
-        subscribe(Events.ENEMY_DIED, self._on_enemy_died)
-        subscribe(Events.VFX_PARRY, self._on_parry)
+        _bus().subscribe(Events.ENEMY_DIED, self._on_enemy_died)
+        _bus().subscribe(Events.VFX_PARRY, self._on_parry)
 
     def unsubscribe_events(self) -> None:
         if not self._subscribed:
             return
         self._subscribed = False
-        unsubscribe(Events.ENEMY_DIED, self._on_enemy_died)
-        unsubscribe(Events.VFX_PARRY, self._on_parry)
+        _bus().unsubscribe(Events.ENEMY_DIED, self._on_enemy_died)
+        _bus().unsubscribe(Events.VFX_PARRY, self._on_parry)
 
     def _on_enemy_died(self, **data: object) -> None:
         self._stats["enemies_killed"] = self._stats.get("enemies_killed", 0) + 1
@@ -137,7 +147,7 @@ class AchievementSystem:
         if ach is None or prog is None or prog.unlocked:
             return
         prog.current = min(prog.current + amount, ach.target)
-        emit(Events.ACHIEVEMENT_PROGRESS,
+        _bus().emit(Events.ACHIEVEMENT_PROGRESS,
              achievement_id=achievement_id,
              progress=prog.current,
              target=ach.target)
@@ -156,7 +166,7 @@ class AchievementSystem:
             "description": ach.description,
             "timer": 3.0,
         })
-        emit(Events.ACHIEVEMENT_UNLOCKED,
+        _bus().emit(Events.ACHIEVEMENT_UNLOCKED,
              achievement_id=ach.id,
              name=ach.name)
 
@@ -185,7 +195,7 @@ class AchievementSystem:
             self._unlock("speed_demon")
 
     def mark_air_assault(self, combo_count: int) -> None:
-        if not self.is_unlocked("air_assault") and combo_count >= 5:
+        if not self.is_unlocked("air_assault") and combo_count >= 3:
             self._set_progress("air_assault", 1)
             self._unlock("air_assault")
 
@@ -217,12 +227,12 @@ class AchievementSystem:
             "stats": self._stats,
         }
         ACHIEVEMENTS_PATH.parent.mkdir(parents=True, exist_ok=True)
-        with open(ACHIEVEMENTS_PATH, "w") as f:
+        with open(ACHIEVEMENTS_PATH, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
 
     def load(self) -> None:
         try:
-            with open(ACHIEVEMENTS_PATH) as f:
+            with open(ACHIEVEMENTS_PATH, encoding="utf-8") as f:
                 data = json.load(f)
             saved_progress = data.get("progress", {})
             for aid, pdata in saved_progress.items():
@@ -256,16 +266,17 @@ class AchievementSystem:
         bx = (w - bar_w) // 2
         by = 60
 
-        bg = pygame.Surface((bar_w, bar_h), pygame.SRCALPHA)
+        if self._notif_bg is None or self._notif_bg.get_size() != (bar_w, bar_h):
+            self._notif_bg = pygame.Surface((bar_w, bar_h), pygame.SRCALPHA)
+        bg = self._notif_bg
         bg.fill((0, 0, 0, 200))
         surface.blit(bg, (bx, by))
 
         pygame.draw.rect(surface, (255, 215, 0), (bx, by, bar_w, bar_h), 1)
 
-        font = pygame.font.Font(None, 14)
-        title = font.render(f"Achievement Unlocked: {n['name']}", True, (255, 215, 0))
+        title = self._notif_font.render(f"Achievement Unlocked: {n['name']}", True, (255, 215, 0))
         surface.blit(title, (bx + 8, by + 3))
-        desc = font.render(n['description'], True, (200, 200, 200))
+        desc = self._notif_font.render(n['description'], True, (200, 200, 200))
         surface.blit(desc, (bx + 8, by + 17))
 
     @classmethod

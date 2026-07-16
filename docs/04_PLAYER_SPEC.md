@@ -1,3 +1,13 @@
+---
+document_id: "LOI-PLAYER-004"
+title: "Legacy of InFest — Player Specification"
+aliases: ["Player Specification", "Player Spec"]
+tags: ["player", "specification", "entity"]
+description: "Player physics, states, combat — complete behavioral spec"
+source: "docs/04_PLAYER_SPEC.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Player Specification
 
 **Document ID:** LOI-PLAYER-004  
@@ -548,3 +558,11 @@ El personaje jugable es una figura encapuchada de identidad indeterminada. El di
 El jugador tiene 19 estados: IDLE, WALKING, JUMPING, FALLING, CROUCHING, SHORT_ATTACK, LONG_ATTACK, HURT, DYING, DASHING, PARRY, CHARGE_ATTACK, DASH_ATTACK, WALL_SLIDE, LEDGE_GRAB, GRAB, THROW, SLIDE, SWIMMING.
 
 Para la especificación completa con tablas de física, sistema de daño, hitboxes y ejemplos de código, consultar el documento original en inglés.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[45_SWIMMING_SPEC.md|Swimming Spec]]
+- [[09_HUD_SPEC.md|HUD Specification]]
+- [[03_ARCHITECTURE.md|Architecture]]

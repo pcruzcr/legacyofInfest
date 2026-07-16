@@ -1,3 +1,13 @@
+---
+document_id: "LOI-SWIMMING-045"
+title: "Legacy of InFest — Swimming Mechanics Specification"
+aliases: ["Swimming Spec"]
+tags: ["swimming", "mechanics", "player"]
+description: "Swimming mechanics"
+source: "docs/45_SWIMMING_SPEC.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Swimming Mechanics Specification
 
 **Document ID:** LOI-SWIMMING-045
@@ -63,3 +73,10 @@ Mecánica de natación para el jugador en zonas de agua.
 - Animaciones de natación
 
 Para la especificación completa con atributos físicos y estados, consultar el documento original en inglés.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[04_PLAYER_SPEC.md|Player Specification]]
+- [[47_WATER_EFFECT.md|Water Effect]]

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 import pygame
 
-from src.engine.core.event_bus import emit
+from src.engine.core.event_bus import _get_bus as _bus
+_emit = lambda *a, **kw: _bus().emit(*a, **kw)
 from src.engine.core.events import Events
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.entities.enemy_base import EnemyBase, EnemyState
@@ -58,6 +60,15 @@ class BossBase(EnemyBase):
         self._filter_frame: int = 0
         self._boss_sprite_prefix: str = ""
         self._completion_fired: bool = False
+        self._transition_overlay: pygame.Surface | None = None
+
+    @property
+    def completion_fired(self) -> bool:
+        return self._completion_fired
+
+    @completion_fired.setter
+    def completion_fired(self, value: bool) -> None:
+        self._completion_fired = value
 
     def _load_boss_sprites(
         self, prefix: str, fw: int = 48, fh: int = 48,
@@ -73,8 +84,8 @@ class BossBase(EnemyBase):
             try:
                 frames = AssetLoader.load_sprite_sheet(path, fw, fh)
                 self._sprite_frames[anim_key] = frames
-            except Exception:
-                pass
+            except (pygame.error, FileNotFoundError, PermissionError):
+                logging.warning("boss_base: failed to load sprite %s", path)
 
     def set_phases(self, phases: list[BossPhase]) -> None:
         """Set the phase list and extract health thresholds."""
@@ -91,6 +102,10 @@ class BossBase(EnemyBase):
     @property
     def phase_count(self) -> int:
         return len(self.phases) if self.phases else 1
+
+    @property
+    def phase_max_health(self) -> float:
+        return self._phase_max_health
 
     def _get_animation_state(self) -> str:
         """Boss-specific animation mapping: uses 'death' instead of 'die'."""
@@ -115,7 +130,7 @@ class BossBase(EnemyBase):
             return
         super().apply_hit(damage, source_position)
 
-        if self.is_alive:
+        if self.current_health > 0 and self.state != EnemyState.DYING:
             self._check_phase_transition()
 
     def _check_phase_transition(self) -> None:
@@ -148,26 +163,29 @@ class BossBase(EnemyBase):
             self._phase_max_health = self.phase_health_thresholds[self.current_phase]
         self.current_health = min(self.current_health, self._phase_max_health)
 
-        emit(
+        _emit(
             Events.BOSS_PHASE_CHANGED,
             boss_name=self._boss_name,
             phase=self.current_phase,
             phase_count=self.phase_count,
             new_max_health=self._phase_max_health,
         )
-        emit(
+        _emit(
             Events.VFX_ULTIMATE,
             pos=(self.position.x, self.position.y - 20),
         )
-        emit(
+        _emit(
             Events.VFX_PARRY,
             pos=(self.position.x, self.position.y - 20),
         )
-        emit(
+        _emit(
             Events.MUSIC_STINGER,
             name=f"stinger_boss_phase_{self.current_phase}",
             volume=0.8,
         )
+
+        # Check if another transition is needed (e.g. health dropped below multiple thresholds)
+        self._check_phase_transition()
 
     def _pre_update(self, dt: float) -> bool:
         """Handle phase transitions. Return True to skip normal update."""
@@ -176,10 +194,6 @@ class BossBase(EnemyBase):
             if self.transition_timer <= 0:
                 self._finish_phase_transition()
             return True
-
-        # Load phase-specific speed multiplier on phase properties
-        if self.phases and self.current_phase < len(self.phases):
-            self.phases[self.current_phase]
 
         return False
 
@@ -235,9 +249,10 @@ class BossBase(EnemyBase):
             if self.facing_direction < 0:
                 frame = pygame.transform.flip(frame, True, False)
             if self.is_transitioning:
-                overlay = pygame.Surface(frame.get_size(), pygame.SRCALPHA)
-                overlay.fill((200, 200, 0, 80))
-                frame.blit(overlay, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+                if self._transition_overlay is None or self._transition_overlay.get_size() != frame.get_size():
+                    self._transition_overlay = pygame.Surface(frame.get_size(), pygame.SRCALPHA)
+                self._transition_overlay.fill((200, 200, 0, 80))
+                frame.blit(self._transition_overlay, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
             else:
                 frame = self._apply_filter(frame)
             ox = (self.rect.width - self._sprite_fw) // 2

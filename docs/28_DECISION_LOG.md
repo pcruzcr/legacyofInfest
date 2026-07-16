@@ -1,3 +1,13 @@
+---
+document_id: "LOI-DECISION-028"
+title: "Legacy of InFest — Decision Log"
+aliases: ["Decision Log", "ADR Log"]
+tags: ["decision", "adr", "architecture"]
+description: "Architecture Decision Records"
+source: "docs/28_DECISION_LOG.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Decision Log
 
 **Document ID:** LOI-ADR-028  
@@ -287,3 +297,10 @@ These are flagged here rather than silently decided by whichever AI session enco
 ## 5. How to Add a New ADR
 
 When a new architectural or pedagogical decision is made during implementation (Phases 0–16 of `25_IMPLEMENTATION_ROADMAP.md`), append a new entry to this document using the format in §3, numbered sequentially (ADR-011, ADR-012, ...). Do not edit or delete prior ADRs — if a decision is reversed, add a new ADR with status **Accepted** and mark the old one **Superseded**, linking to the new one's number.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[29_GIT_WORKFLOW_AND_STANDARDS.md|Git Workflow]]
+- [[03_ARCHITECTURE.md|Architecture]]

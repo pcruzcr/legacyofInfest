@@ -150,7 +150,7 @@ Nunca borrar entradas - marcar como resueltas.
   mostrar: cola actual, suscriptores por evento, eventos despachados en el
   último frame.
 
-## [GAP-014] Faltan visualización de rects de colisión en runtime
+## ~~[GAP-014] Faltan visualización de rects de colisión en runtime~~ *(Resuelto - F1 debug overlay suficiente)*
 
 - **File:** `src/framework/stage/stage_loader.py`, `src/framework/scenes/stage_scene.py`
 - **Phase:** UX
@@ -160,6 +160,50 @@ Nunca borrar entradas - marcar como resueltas.
   entiende por qué el jugador atraviesa paredes o cae al vacío.
 - **Resolution:** El debug overlay existente (F1) es suficiente para ver rects.
   Pendiente: agregar tooltip en los rects que muestre `prev_bottom`, `tile.top`,
-  `velocity.y` al hacer hover o pausa.
+  `velocity.y` al hacer hover o pausa. (deferido por complejidad UI)
+
+## [GAP-015] StageScene sin descomposición — monolito de 1200+ líneas
+
+- **File:** `src/framework/scenes/stage_scene.py`
+- **Phase:** ARC-027 (deferred)
+- **Reason:** `StageScene` maneja update/draw de 11+ subsistemas (enemigos, HUD,
+  partículas, proyectiles, diálogo, etc.) en un solo archivo. Viola SRP y
+  dificulta testing y mantenimiento.
+- **Resolution:** Deferido por riesgo de regresión. Ideal: extraer subsistemas
+  en managers separados (combat_manager, vfx_manager, ui_manager, etc.) y que
+  StageScene los orqueste. ~50+ puntos de integración requieren planificación
+  dedicada.
+
+## [GAP-016] GameContext sin separación — 400+ líneas con UI y game state mezclados
+
+- **File:** `src/framework/core/game_context.py`
+- **Phase:** ARC-001 (deferred)
+- **Reason:** `GameContext` mezcla estado de UI (input mode, mensajes, overlay)
+  con estado de juego (salud, checkpoints, eventos). Además es singleton; la
+  inyección de dependencias es manual y frágil.
+- **Resolution:** Deferido. Ideal: dividir en `GameState` (salud, inventario,
+  progreso) y `UIContext` (modo input, mensajes, overlay). Misma razón de
+  riesgo que ARC-027.
+
+## [GAP-017] AssetLoader singleton — sin soporte para contextos de prueba
+
+- **File:** `src/engine/utils/asset_loader.py`
+- **Phase:** ARC-005 (deferred)
+- **Reason:** `AssetLoader` es un singleton global. Los tests no pueden aislar
+  assets porque comparten la misma instancia. No hay manera de inyectar un
+  loader mockeado.
+- **Resolution:** Deferido. Ideal: convertir a instancia manejada por
+  GameContext (o DI container). El cambio es superficial pero toca ~60 archivos
+  que importan `AssetLoader.get_instance()`.
+
+## ~~[GAP-018] Contenido de niveles: solo Stage 0 y boss_venado~~ *(Trabajo de estudiantes)*
+
+- **File:** `assets/stages/`, `src/framework/entities/boss_*.py`
+- **Phase:** Contenido
+- **Reason:** De 15 stages planeados + jefes por zona, solo existen
+  `stage0.tmx`, `boss_venado.py` y `boss_venado.png`. El resto son placeholders.
+- **Resolution:** Trabajo de estudiantes. Stage 0 jugable y funcional, con
+  Walker patrulla, Shooter dispara, boss Venado alcanzable. Los demás stages
+  deben ser creados por los estudiantes como parte del plan de estudios.
 
 

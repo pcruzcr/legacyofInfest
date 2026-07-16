@@ -1,3 +1,13 @@
+---
+document_id: "LOI-GUIDE-STAGE"
+title: "Stage Creation Guide"
+aliases: ["Stage Creation Guide"]
+tags: ["stage", "creation", "guide", "tutorial"]
+description: "Stage creation tutorial"
+source: "docs/STAGE_CREATION.md"
+date_processed: "2026-07-14"
+---
+
 # Stage Creation Guide
 
 ## 1. TMX Map Requirements
@@ -196,3 +206,11 @@ For reference, see `src/stages/stage0/stage0.py` and `assets/maps/stage0/`.
 - NextTrigger: Rectángulo para finalizar escenario
 
 Para instrucciones detalladas de registro y pruebas, consultar el documento original en inglés.
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[SCENE_CREATION.md|Scene Creation Guide]]
+- [[06_TMX_SPEC.md|TMX Specification]]
+- [[07_STAGE0_DESIGN.md|Stage 0 Design]]

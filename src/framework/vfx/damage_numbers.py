@@ -8,6 +8,10 @@ from src.engine.core import settings
 
 
 class DamageNumber:
+
+    _font_cache: dict[int, pygame.font.Font] = {}
+    _render_cache: dict[tuple[str, bool], pygame.Surface] = {}
+
     def __init__(self, x: float, y: float, amount_text: str, is_critical: bool = False) -> None:
         self.x = x
         self.y = y
@@ -17,6 +21,23 @@ class DamageNumber:
         self.max_life: float = 1.0
         self.vy: float = -60.0 - random.random() * 30.0
         self.vx: float = random.uniform(-20.0, 20.0)
+        size = 18 if is_critical else 14
+        font = self._font_cache.get(size)
+        if font is None:
+            font = pygame.font.Font(None, size)
+            self._font_cache[size] = font
+        color = (255, 220, 50) if is_critical else (255, 255, 200)
+        cache_key = (amount_text, is_critical)
+        surf = self._render_cache.get(cache_key)
+        if surf is None:
+            surf = font.render(amount_text, True, color)
+            self._render_cache[cache_key] = surf
+        if is_critical:
+            scale = 1.0 + 0.3 * (1.0 - self.life / self.max_life)
+            w, h = surf.get_size()
+            self._scaled_surf = pygame.transform.scale(surf, (int(w * scale), int(h * scale)))
+        else:
+            self._surf = surf
 
     @property
     def alive(self) -> bool:
@@ -36,16 +57,9 @@ class DamageNumber:
         sy = int(self.y - camera_offset.y)
         if sx < -50 or sx > settings.INTERNAL_WIDTH + 50 or sy < -50 or sy > settings.INTERNAL_HEIGHT + 50:
             return
-        font = pygame.font.Font(None, 18 if self.is_critical else 14)
-        color = (255, 220, 50) if self.is_critical else (255, 255, 200)
-        surf = font.render(self.amount_text, True, color)
+        surf = self._scaled_surf if self.is_critical else self._surf
         surf.set_alpha(alpha)
         rect = surf.get_rect(center=(sx, sy))
-        if self.is_critical:
-            scale = 1.0 + 0.3 * (1.0 - self.life / self.max_life)
-            w, h = surf.get_size()
-            surf = pygame.transform.scale(surf, (int(w * scale), int(h * scale)))
-            rect = surf.get_rect(center=(sx, sy))
         surface.blit(surf, rect)
 
 

@@ -1,3 +1,13 @@
+---
+document_id: "LOI-EDU-034B"
+title: "Legacy of InFest — Educational Roadmap"
+aliases: ["Educational Roadmap"]
+tags: ["educational", "roadmap", "pedagogy"]
+description: "Educational roadmap"
+source: "docs/34_EDUCATIONAL_ROADMAP.md"
+date_processed: "2026-07-14"
+---
+
 # Legacy of InFest — Educational Roadmap
 
 **Document ID:** LOI-EDUROADMAP-034  
@@ -187,3 +197,10 @@ The processing tools (`FilterTools`, `VisionTools`, `PatternRecognitionTools`) a
 8. FilterDemoScene — image processing for Stage 2
 9. VisionDemoScene — segmentation for Stage 2/3
 10. PatternDemoScene — pattern recognition for Stage 3
+
+
+---
+## 🔗 Documentos Relacionados
+
+- [[34_CLASS_MATERIALS.md|Class Materials]]
+- [[08_SYLLABUS_MAPPING.md|Syllabus Mapping]]
