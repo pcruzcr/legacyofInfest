@@ -288,3 +288,84 @@ def test_lab_palette_is_derived_from_the_theme() -> None:
     assert demo_layout.COLOR_BG == Theme.BG
     assert demo_layout.COLOR_TEXT == Theme.TEXT
     assert demo_layout.COLOR_HIGHLIGHT == Theme.ACCENT
+
+
+class TestLaCacheDeFuentesSobreviveAUnApagado:
+    """AUD-077 — la caché servía fuentes muertas y nadie lo notaba.
+
+    Un `pygame.font.Font` queda inservible en cuanto se apaga el módulo de
+    fuentes, y no revive al reinicializarlo. La caché del tema devolvía el
+    objeto viejo sin comprobarlo, así que cualquier pantalla que pasara por el
+    kit reventaba con `Invalid font` en la primera llamada a `render()`.
+
+    Estas pruebas ejecutan el ciclo completo —crear, apagar, reiniciar, volver
+    a pedir— porque el fallo sólo existe en la frontera entre esas cuatro
+    cosas. Una prueba que sólo pidiera la fuente dos veces seguidas pasaría con
+    el error dentro.
+    """
+
+    @staticmethod
+    def _ciclo_de_apagado() -> None:
+        import pygame
+        pygame.quit()
+        pygame.init()
+        pygame.display.set_mode((320, 180))
+
+    def test_una_fuente_pedida_tras_apagar_pygame_puede_dibujar(self) -> None:
+        import pygame
+
+        from src.engine.ui.theme import Theme, font
+
+        pygame.init()
+        pygame.display.set_mode((320, 180))
+        primera = font(Theme.FONT_SMALL)
+        primera.render("hola", True, Theme.TEXT)
+
+        self._ciclo_de_apagado()
+
+        segunda = font(Theme.FONT_SMALL)
+        # Si la caché devolviera la misma instancia, esto lanzaría
+        # `pygame.error: Invalid font (font module quit since font created)`.
+        superficie = segunda.render("hola", True, Theme.TEXT)
+        assert superficie.get_width() > 0
+
+    def test_el_apagado_invalida_toda_la_cache_no_solo_la_entrada_pedida(self) -> None:
+        """Pedir un tamaño debe sanear los demás, no dejarlos podridos."""
+        import pygame
+
+        from src.engine.ui.theme import Theme, font
+
+        pygame.init()
+        pygame.display.set_mode((320, 180))
+        font(Theme.FONT_SMALL)
+        font(Theme.FONT_TITLE)
+
+        self._ciclo_de_apagado()
+
+        font(Theme.FONT_SMALL)          # sólo se pide una de las dos
+        otra = font(Theme.FONT_TITLE)   # la otra también tiene que estar viva
+        assert otra.render("x", True, Theme.TEXT).get_width() > 0
+
+    def test_una_pantalla_completa_se_dibuja_tras_el_apagado(self) -> None:
+        """La prueba que de verdad importa: el kit entero, no una fuente suelta."""
+        import pygame
+
+        from src.engine.ui.widgets import draw_key_hints, draw_screen
+
+        pygame.init()
+        pygame.display.set_mode((320, 180))
+        self._ciclo_de_apagado()
+
+        superficie = pygame.Surface((320, 180))
+        draw_screen(superficie, "TÍTULO", "subtítulo")
+        draw_key_hints(superficie, [("Esc", "Volver")])
+
+    def test_sin_apagones_la_cache_sigue_reutilizando(self) -> None:
+        """La validación no debe convertir la caché en un no-op."""
+        import pygame
+
+        from src.engine.ui.theme import Theme, font
+
+        pygame.init()
+        pygame.display.set_mode((320, 180))
+        assert font(Theme.FONT_SMALL) is font(Theme.FONT_SMALL)
