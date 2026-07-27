@@ -762,6 +762,20 @@ class StageScene(BaseScene):
             # el sistema de colisiones debería tratar sólo de colisiones.
             for enemy in enemies:
                 enemy.set_player_ref(player.rect)
+                # El contacto se comprueba ANTES de actualizar, como hacía el
+                # bucle original. El orden importa: `_check_player_contact`
+                # resuelve el daño con las posiciones del fotograma que el
+                # jugador acaba de ver, no con las del siguiente.
+                #
+                # AUD-062: esta llamada también se perdió con `update_enemies`,
+                # y su ausencia era aún menos visible que la de `update`. No
+                # sólo se apagaba el daño por contacto: `_check_player_contact`
+                # es donde cada subclase resuelve **sus proyectiles** — las
+                # flechas del Archer, las bolas del Caster, las lianas y
+                # esporas del Venado, su pisotón y su barrido. El jefe entero
+                # era inofensivo: podías quedarte quieto delante de él
+                # indefinidamente.
+                enemy._check_player_contact(player)
                 enemy.update(dt)
             self._collision.process_attack(dt, player, stage, self._camera, clock)
         finally:
