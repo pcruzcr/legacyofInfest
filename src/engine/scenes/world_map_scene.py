@@ -9,7 +9,8 @@ from src.engine.core import settings
 from src.engine.core.events import Events
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
-from src.engine.scenes.demo_common import BOTTOM_BAR_Y
+from src.engine.ui.theme import Theme, font
+from src.engine.ui.widgets import draw_key_hints, draw_screen
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -36,9 +37,8 @@ class WorldMapScene(BaseScene):
     def __init__(self, context: GameContext) -> None:
         super().__init__(context)
         self._selected: int = 0
-        self._font_title = pygame.font.Font(None, 28)
-        self._font_name = pygame.font.Font(None, 18)
-        self._font_hint = pygame.font.Font(None, 14)
+        # AUD-069: fuentes de la escala del tema, a través de su caché.
+        self._font_name = font(Theme.FONT_SMALL)
         self._save_data: SaveData | None = None
         self._nodes: list[dict[str, Any]] = []
 
@@ -103,28 +103,46 @@ class WorldMapScene(BaseScene):
             self.context.scene_manager.replace(TitleScene(self.context))
 
     def draw(self, surface: pygame.Surface) -> None:
-        surface.fill((15, 15, 25))
-        title = self._font_title.render("WORLD MAP", True, (255, 255, 240))
-        surface.blit(title, ((settings.INTERNAL_WIDTH - title.get_width()) // 2, 16))
+        # AUD-069: la navegación sigue siendo por grafo —los nodos están
+        # colocados en un mapa, no en una lista— pero la paleta y los atajos
+        # ya son los del resto del juego. Antes esta pantalla tenía siete
+        # colores propios y un fondo distinto del de todas las demás.
+        draw_screen(surface, "MAPA DEL MUNDO", "Elige tu destino")
+
         for a, b in CONNECTIONS:
             na = self._nodes[a]
             nb = self._nodes[b]
-            color = (100, 160, 100) if na.get("completed") else (60, 60, 80)
-            pygame.draw.line(surface, color, (na["x"], na["y"]), (nb["x"], nb["y"]), 2)
+            colour = Theme.SUCCESS if na.get("completed") else Theme.BORDER
+            pygame.draw.line(
+                surface, colour, (na["x"], na["y"]), (nb["x"], nb["y"]), 2,
+            )
+
         for idx, node in enumerate(self._nodes):
-            if idx == self._selected:
-                color = (200, 200, 100)
+            focused = idx == self._selected
+            if focused:
+                colour = Theme.ACCENT
             elif node.get("completed"):
-                color = (100, 220, 100)
+                colour = Theme.SUCCESS
             elif node.get("unlocked"):
-                color = (80, 160, 80)
+                colour = Theme.TEXT_MUTED
             else:
-                color = (80, 80, 80)
-            pygame.draw.circle(surface, color, (node["x"], node["y"]), 10)
+                colour = Theme.TEXT_DIM
+            pygame.draw.circle(surface, colour, (node["x"], node["y"]), 10)
+            if focused:
+                # Anillo alrededor del nodo enfocado: en un mapa, el color solo
+                # no basta para distinguir «seleccionado» de «completado».
+                pygame.draw.circle(
+                    surface, Theme.TEXT, (node["x"], node["y"]), 13, 1,
+                )
             label = self._font_name.render(
                 node["name"], True,
-                (220, 220, 220) if node.get("unlocked") else (120, 120, 120))
+                Theme.TEXT if node.get("unlocked") else Theme.TEXT_DIM,
+            )
             surface.blit(label, (node["x"] + 16, node["y"] - 8))
-        hint = self._font_hint.render("[ESC] Back  [ARROWS] Navigate  [ENTER] Select", True, (120, 120, 130))
-        surface.blit(hint, ((settings.INTERNAL_WIDTH - hint.get_width()) // 2, BOTTOM_BAR_Y - 14))
+
+        draw_key_hints(surface, [
+            ("←→↑↓", "Navegar"),
+            ("Enter", "Entrar"),
+            ("Esc", "Volver"),
+        ])
 

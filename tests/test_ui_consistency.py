@@ -50,6 +50,15 @@ MIGRATED = {
     "noise_lab_scene.py", "pipeline_builder_scene.py", "progress_scene.py",
     "sandbox_scene.py", "stage_wizard_scene.py", "transform_lab_scene.py",
     "vector_lab_scene.py", "vision_demo_scene.py",
+    # Su fondo de pantalla ya es `COLOR_BG` (= Theme.BG). Los `(5,5,15)` que
+    # una versión anterior de este archivo marcaba como infracción se pintan
+    # sobre lienzos internos de visualización, no sobre la pantalla.
+    "pattern_demo_scene.py",
+    # ── Menús migrados en AUD-069 ──────────────────────────────────
+    "achievement_scene.py", "bestiary_scene.py", "inventory_scene.py",
+    "keybinding_scene.py", "tutorial_scene.py", "world_map_scene.py",
+    # ── Pantallas sin menú, migradas en AUD-069 ────────────────────
+    "end_credits_scene.py", "loading_scene.py", "story_scene.py",
 }
 
 # Not yet migrated. This list may only ever shrink — see
@@ -57,14 +66,11 @@ MIGRATED = {
 # now rather than waiting for all 34 scenes to be converted, which would have
 # meant shipping no guard at all.
 AWAITING_MIGRATION = {
-    # Menús propios que todavía llevan su navegación y su paleta a mano.
-    "achievement_scene.py", "bestiary_scene.py", "inventory_scene.py",
-    "keybinding_scene.py", "tutorial_scene.py", "world_map_scene.py",
-    # Pantallas sin menú: fondo y texto propios, sin atajos de teclado.
-    "end_credits_scene.py", "loading_scene.py", "splash_scene.py",
-    "story_scene.py",
-    # Pinta varios fondos a mano pese a ser un laboratorio.
-    "pattern_demo_scene.py",
+    # `splash_scene` es una imagen a pantalla completa durante dos segundos:
+    # no tiene fondo propio que unificar, ni menú, ni teclas que anunciar más
+    # allá de «pulsa para saltar». Migrarla sería añadirle una cabecera que
+    # taparía la ilustración.
+    "splash_scene.py",
     # Caso aparte: es la única escena construida con `pygame_gui`, una
     # segunda librería de UI. Migrarla no es reordenar dibujado, es decidir
     # si el proyecto mantiene dos sistemas de interfaz o uno. Esa decisión no

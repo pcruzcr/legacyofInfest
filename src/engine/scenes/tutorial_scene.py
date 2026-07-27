@@ -7,7 +7,8 @@ import pygame
 from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
-from src.engine.scenes.demo_common import BOTTOM_BAR_Y
+from src.engine.ui.theme import Theme, font
+from src.engine.ui.widgets import draw_key_hints, draw_screen
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -74,8 +75,8 @@ class TutorialScene(BaseScene):
         # it force-started the campaign.
         self._exit_target: str = "story"
         self._overlay: pygame.Surface | None = None
-        self._font_title = pygame.font.Font(None, 26)
-        self._font_text = pygame.font.Font(None, 18)
+        # AUD-069: escala tipográfica del tema y su caché de fuentes.
+        self._font_text = font(Theme.FONT_SMALL)
 
     def on_enter(self) -> None:
         self._fade_alpha = 255
@@ -123,24 +124,31 @@ class TutorialScene(BaseScene):
                 self._exit_target = "story"
 
     def draw(self, surface: pygame.Surface) -> None:
-        surface.fill((10, 10, 20))
         if not _TUTORIAL_STEPS:
+            draw_screen(surface, "TUTORIAL")
             return
+
         step = _TUTORIAL_STEPS[self._step_index]
-        title = self._font_title.render(step["title"], True, (255, 200, 80))
-        surface.blit(title, ((settings.INTERNAL_WIDTH - title.get_width()) // 2, 40))
-        y = 90
-        for line in step["lines"]:
-            text = self._font_text.render(line, True, (200, 200, 220))
-            surface.blit(text, ((settings.INTERNAL_WIDTH - text.get_width()) // 2, y))
-            y += 28
-        page_text = self._font_text.render(
-            f"{self._step_index + 1} / {len(_TUTORIAL_STEPS)}",
-            True, (120, 120, 140),
+        # AUD-069: el título del paso pasa a ser el título de la pantalla, con
+        # el contador de páginas como subtítulo. Antes esta pantalla tenía su
+        # propio fondo `(10,10,20)` y cuatro colores inventados.
+        y = draw_screen(
+            surface, step["title"],
+            f"{self._step_index + 1} de {len(_TUTORIAL_STEPS)}",
         )
-        surface.blit(page_text, ((settings.INTERNAL_WIDTH - page_text.get_width()) // 2, BOTTOM_BAR_Y - 56))
-        hint = self._font_text.render("[ENTER/Z/SPACE] Next  [ESC] Skip", True, (140, 140, 160))
-        surface.blit(hint, ((settings.INTERNAL_WIDTH - hint.get_width()) // 2, BOTTOM_BAR_Y - 26))
+
+        y += Theme.SPACE_L
+        for line in step["lines"]:
+            text = self._font_text.render(line, True, Theme.TEXT)
+            surface.blit(
+                text, ((settings.INTERNAL_WIDTH - text.get_width()) // 2, y),
+            )
+            y += 28
+
+        draw_key_hints(surface, [
+            ("Enter", "Siguiente"),
+            ("Esc", "Saltar"),
+        ])
         if self._fade_alpha > 0:
             if self._overlay is None or self._overlay.get_size() != (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT):
                 self._overlay = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
