@@ -7,10 +7,33 @@ from __future__ import annotations
 import time
 import tracemalloc
 
+import pygame
 import pytest
 
 from src.engine.scenes.demo_common import build_default_sources
 from src.framework.processing.filter_tools import FilterTools
+
+
+@pytest.fixture(autouse=True)
+def _fonts_ready():
+    """Inicializa el subsistema de fuentes antes de cada benchmark.
+
+    Estas pruebas construyen escenas reales, y una escena carga fuentes. Sin
+    esto pasaban **sólo si otro archivo de pruebas había inicializado pygame
+    antes**: ejecutadas solas fallaban dos de seis con «font not initialized»,
+    y en la suite completa pasaban por el orden alfabético de los archivos.
+
+    Es la misma clase de defecto que esta auditoría persigue en el código de
+    producción — algo que funciona por una dependencia invisible— sólo que
+    aquí la víctima es la propia red de seguridad: una prueba cuyo resultado
+    depende de con quién se ejecute no informa de nada (AUD-065).
+    """
+    if not pygame.get_init():
+        pygame.init()
+    if not pygame.font.get_init():
+        pygame.font.init()
+    if pygame.display.get_surface() is None:
+        pygame.display.set_mode((1, 1))
 
 # Thresholds
 MIN_FPS = 30

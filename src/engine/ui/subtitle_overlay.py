@@ -60,6 +60,12 @@ CAPTIONS: dict[str, str] = {
     Events.SFX_BOSSES_RELIC_APPEAR: "[A relic appears]",
     Events.MUSIC_STINGER: "[Music swells]",
     Events.CHECKPOINT_REACHED: "[Checkpoint reached]",
+    # AUD-064: el docstring de arriba prometía subtitular «a hazard
+    # triggering» y esta entrada no existía. Es de las que más falta hacen:
+    # una zona de daño puede no tener ninguna señal visual distinguible del
+    # decorado, así que sin sonido ni subtítulo el jugador pierde vida sin
+    # saber por qué.
+    Events.SFX_HAZARD_ZONE: "[Hazard!]",
 }
 
 

@@ -404,6 +404,16 @@ class EnemyBase(BaseEntity):
 
         self.current_health -= damage
 
+        # AUD-064: el sonido de impacto tenía archivo, handler y hasta subtítulo
+        # en `subtitle_overlay.py` — y nadie lo emitía. Golpear a un enemigo era
+        # completamente mudo, y quien juega con subtítulos tampoco recibía nada.
+        # Los jefes tienen su propio sonido, más grave.
+        from src.framework.entities.boss_base import BossBase
+        self._event_bus.emit(
+            Events.SFX_BOSS_HIT if isinstance(self, BossBase)
+            else Events.SFX_ENEMY_HIT,
+        )
+
         # Determine hitstun type
         if damage >= 1.5:
             self._hitstun_type = "launch"
@@ -570,6 +580,8 @@ class EnemyBase(BaseEntity):
                 player._parry_active = False
                 player._parry_window = 0.0
                 self._event_bus.emit(Events.VFX_PARRY, pos=(self.position.x, self.position.y))
+                # AUD-064: parar es la acción más difícil del juego y era muda.
+                self._event_bus.emit(Events.SFX_PLAYER_PARRY)
                 self._contact_cooldown = 0.3
                 return
             player.apply_damage(
