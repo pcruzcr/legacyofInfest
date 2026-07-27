@@ -42,6 +42,7 @@ class EnemyFlying(EnemyBase):
         max_health: float = 1.5,
         damage_on_contact: float = 0.5,
         zone: int = 0,
+        alert_flight_mode: str | None = None,
         **kwargs,
     ) -> None:
         """Initialize the flying enemy."""
@@ -63,6 +64,20 @@ class EnemyFlying(EnemyBase):
 
         # Strategy Pattern: delegate movement to the selected strategy
         self._strategy: IFlightStrategy = make_strategy(flight_mode)
+
+        # AUD-047: algunas especies cambian de estrategia al detectar al
+        # jugador — el roster describe al Halcón como "Sine + alert dive":
+        # patrulla en sinusoide y pica cuando entra en alerta. Sin esto, el
+        # comportamiento de alerta documentado no tenía forma de expresarse, y
+        # `make_strategy` cae en seno ante un modo desconocido *en silencio*,
+        # así que la ausencia no se habría notado.
+        self.alert_flight_mode: str = alert_flight_mode or flight_mode
+        self._alert_strategy: IFlightStrategy = (
+            make_strategy(self.alert_flight_mode)
+            if alert_flight_mode else self._strategy
+        )
+        # Fase del picado, leída por DiveFlight.
+        self._dive_phase: str = "align"
 
         # Sine mode state
         self._origin: pygame.Vector2 = pygame.Vector2(spawn_position)
@@ -132,8 +147,12 @@ class EnemyFlying(EnemyBase):
         self._strategy.execute(self, dt)
 
     def _alert_behavior(self, dt: float) -> None:
-        """Delegate alert movement, then track player Y axis.
-        Uses dive bomb and spread attack patterns."""
+        """Movimiento de alerta, delegado a la estrategia de alerta.
+
+        AUD-047: usa `_alert_strategy`, que por defecto es la misma que la de
+        patrulla salvo que la especie declare `alert_flight_mode` — así el
+        Halcón patrulla en sinusoide y pica al detectar, como pide el roster.
+        """
         self._y_track_offset = 0.0
         self._dive_cooldown = max(0.0, self._dive_cooldown - dt)
         self._spread_cooldown = max(0.0, self._spread_cooldown - dt)
@@ -161,7 +180,7 @@ class EnemyFlying(EnemyBase):
                 self._dive_angle = math.atan2(dy, dx)
                 return
 
-        self._strategy.execute(self, dt, speed_mult=1.5)
+        self._alert_strategy.execute(self, dt, speed_mult=1.5)
         self._face_player()
         if self._player_ref is not None:
             track_dy = self._player_ref.centery - (self.position.y + self._y_track_offset + self.rect.height / 2)

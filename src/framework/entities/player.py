@@ -128,6 +128,14 @@ class Player(BaseEntity):
     (physics, collision, animation frame advancement) remains in Player.
     """
 
+    # Pylint no puede seguir el proxy de `__getattr__`/`__setattr__` de abajo:
+    # ve `self._invincibility_timer` leído en la línea 362 y asignado en la 371
+    # y concluye que se usa antes de existir. En realidad todos esos atributos
+    # nacen con valor por defecto en `PlayerStateData`, y el proxy los enruta.
+    # Se desactiva aquí, en la clase que tiene el proxy, y no globalmente: en
+    # cualquier otra clase esa comprobación sí detecta errores reales.
+    # pylint: disable=access-member-before-definition
+
     SHORT_ATTACK = PlayerState.SHORT_ATTACK
     LONG_ATTACK = PlayerState.LONG_ATTACK
 

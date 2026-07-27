@@ -185,6 +185,63 @@ ignore = [
 "scripts/validate_assets.py" = ["E402"]
 "scripts/validate_tmx.py" = ["E402", "E501"]
 
+[tool.pylint]
+# Pylint no corre en CI —ahí manda ruff— pero sí corre en el editor de quien
+# tenga la extensión instalada, y sus valores por defecto contradicen los del
+# proyecto. El resultado eran avisos que CI nunca iba a pedir arreglar:
+#
+#     C0114 missing-module-docstring   en un archivo que sí tiene docstring
+#     C0116 missing-function-docstring en cada método público
+#     C0301 line-too-long              a 100 columnas, no a las 120 de aquí
+#
+# Esta sección lo alinea con ruff. No es "silenciar el linter": es que un
+# repositorio con dos linters que piden cosas distintas acaba enseñando a
+# ignorar los dos.
+
+[tool.pylint.main]
+# `.venv` y los directorios generados no son código del proyecto.
+ignore-paths = ["^\\.venv/.*", "^build/.*", "^dist/.*", "^colab/.*", "^web/.*"]
+# Extensiones compiladas: sin esto Pylint no puede inspeccionarlas y afirma
+# cosas falsas con severidad de error, como
+#     E1101: Module 'orjson' has no 'dumps' member
+# sobre una llamada que funciona. Pylint exige listarlas a mano porque para
+# inspeccionarlas tiene que importarlas —es decir, ejecutar código— y no lo
+# hace con cualquier paquete sin permiso explícito.
+extension-pkg-allow-list = ["orjson", "pygame", "pydantic_core", "numpy", "cv2"]
+# Sin esto Pylint no encuentra `src.` al analizar un archivo suelto.
+init-hook = "import sys; sys.path.insert(0, '.')"
+
+[tool.pylint.format]
+# La misma anchura que ruff (ver [tool.ruff] arriba) y que .editorconfig.
+max-line-length = 120
+
+[tool.pylint."messages control"]
+disable = [
+    # Convenciones de docstring: ruff no las exige y el proyecto documenta el
+    # *porqué* en los módulos y clases, no en cada getter de una línea.
+    "missing-module-docstring",
+    "missing-class-docstring",
+    "missing-function-docstring",
+    # Duplicadas con ruff, que ya las cubre y es la fuente de verdad en CI.
+    "line-too-long",           # ruff E501
+    "unused-import",           # ruff F401
+    "unused-variable",         # ruff F841
+    "wrong-import-order",      # ruff I001
+    "ungrouped-imports",       # ruff I001
+    # Métricas de tamaño: opiniones sin umbral acordado en este proyecto.
+    "too-many-arguments",
+    "too-many-instance-attributes",
+    "too-many-locals",
+    "too-many-branches",
+    "too-many-statements",
+    "too-few-public-methods",
+    # El código de juego usa nombres cortos deliberados (dt, dx, dy, fw, fh).
+    "invalid-name",
+    # Los accesos a privados en tests son intencionados y ya están exentos en
+    # la configuración de ruff por el mismo motivo.
+    "protected-access",
+]
+
 [tool.mypy]
 python_version = "3.12"
 ignore_missing_imports = true

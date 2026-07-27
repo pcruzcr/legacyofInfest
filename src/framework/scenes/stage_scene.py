@@ -24,6 +24,7 @@ from src.framework.entities.bestiary import Bestiary
 from src.framework.entities.boss_base import BossBase
 from src.framework.entities.enemy_base import EnemyBase
 from src.framework.entities.player import Player
+from src.framework.entities.squad_brain import SquadBrain
 from src.framework.stage.camera import Camera
 from src.framework.stage.collision_system import CollisionSystem
 from src.framework.stage.drawing_system import DrawingSystem
@@ -81,6 +82,10 @@ class StageScene(BaseScene):
         self._pending_game_over: bool = False
 
         self._collision = CollisionSystem(context)
+        # AUD-050: decisiones tácticas por lotes a 4 Hz. Consulta el predictor
+        # sklearn una sola vez por ciclo para todos los enemigos; llamarlo por
+        # enemigo y fotograma costaba 17 ms — el presupuesto completo.
+        self._squad = SquadBrain()
         self._hazards = HazardSystem(context)
         self._progression = ProgressionSystem(context)
         self._drawing = DrawingSystem()
@@ -196,6 +201,7 @@ class StageScene(BaseScene):
         self._was_grounded = False
         self.context.scene_manager.transition.start_fade_in(0.5)
         self._collision.reset()
+        self._squad.reset()
         self._hazards.reset()
         self._progression.reset()
 
@@ -694,11 +700,38 @@ class StageScene(BaseScene):
             if player.is_grounded and not self._was_grounded:
                 self.on_player_landed()
             self._was_grounded = player.is_grounded
+            enemies: list[EnemyBase] = []
             for entity in stage.entity_list:
-                if isinstance(entity, EnemyBase) and not entity.is_alive:
-                    if getattr(entity, "_was_alive", True):
-                        entity._was_alive = False
-                        self.on_enemy_died(entity)
+                if not isinstance(entity, EnemyBase):
+                    continue
+                if entity.is_alive:
+                    enemies.append(entity)
+                elif getattr(entity, "_was_alive", True):
+                    entity._was_alive = False
+                    self._squad.forget(entity)
+                    self.on_enemy_died(entity)
+
+            # AUD-053: los jefes crean esbirros pero no conocen la escena —
+            # que una entidad se inserte a sí misma en el mundo invierte la
+            # dirección de dependencia. La escena los recoge aquí.
+            for entity in enemies:
+                if isinstance(entity, BossBase):
+                    for minion in entity.take_summons():
+                        minion.set_event_bus(self.context.event_bus)
+                        if self._player is not None:
+                            minion.set_player_ref(self._player.rect)
+                        if hasattr(minion, "set_collision_rects"):
+                            minion.set_collision_rects(
+                                stage.collision_rects,
+                                one_way=stage.one_way_rects,
+                            )
+                        stage.entity_list.append(minion)
+
+            # Táctica de escuadra: barata de consultar, cara de recalcular, así
+            # que se recalcula a baja cadencia y los enemigos sólo leen.
+            self._squad.update(dt, player, enemies)
+            for enemy in enemies:
+                enemy.tactic = self._squad.decision_for(enemy).action
             self._collision.process_attack(dt, player, stage, self._camera, clock)
         finally:
             # update_hitstop owns time_scale entirely: it restores 1.0 as soon

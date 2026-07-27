@@ -1,0 +1,73 @@
+# Normalización de finales de línea (AUD-052)
+#
+# Sin este archivo, y sin `core.autocrlf` configurado, el repositorio quedó en
+# un estado en el que **cada archivo de texto aparecía reescrito por completo**:
+#
+#     334 files changed, 255596 insertions(+), 254956 deletions(-)
+#
+# El contenido era idéntico. Lo único que cambiaba era CRLF frente a LF, porque
+# los commits históricos guardaron LF y luego se editó el árbol desde Windows.
+#
+# Por qué importa más de lo que parece: con 255.000 líneas de ruido, `git diff`
+# deja de servir para revisar, `git blame` apunta al commit de conversión en
+# lugar de al autor real, cada merge produce conflictos en archivos que nadie
+# tocó, y un cambio de una línea es indistinguible de una reescritura. Es la
+# clase de problema que no rompe nada y a la vez impide trabajar.
+#
+# `text=auto eol=lf` guarda LF en el repositorio y deja que cada quien tenga en
+# su disco lo que su editor prefiera. Es la convención estándar y funciona igual
+# en Windows, macOS y Linux.
+#
+# Tras añadir este archivo hay que renormalizar el índice una vez:
+#
+#     git add --renormalize .
+#     git commit -m "chore: normalizar finales de línea a LF"
+#
+# Ese commit será enorme y es el último que lo será.
+
+* text=auto eol=lf
+
+# ── Archivos que NO son texto ─────────────────────────────────────
+# Marcarlos explícitamente evita que git intente convertirlos, lo que
+# corrompería sprites, fuentes y modelos serializados.
+
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.bmp   binary
+*.ico   binary
+*.ttf   binary
+*.otf   binary
+*.wav   binary
+*.ogg   binary
+*.mp3   binary
+*.pkl   binary
+*.npz   binary
+*.npy   binary
+*.joblib binary
+*.zip   binary
+*.pdf   binary
+*.exe   binary
+*.dll   binary
+*.so    binary
+*.pyd   binary
+
+# ── Scripts que exigen finales de línea concretos ─────────────────
+# Un .bat con LF puede fallar en cmd.exe; un .sh con CRLF falla en bash con
+# "bad interpreter". Estos se fijan a mano en lugar de dejarlos en auto.
+
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
+*.sh    text eol=lf
+
+# ── Diffs más legibles ────────────────────────────────────────────
+*.py    text diff=python
+*.md    text diff=markdown
+*.tmx   text
+*.tsx   text
+*.json  text
+*.toml  text
+*.yml   text
+*.yaml  text

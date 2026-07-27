@@ -13,6 +13,8 @@ Adding a new enemy type requires only importing it in the registry dict below.
 """
 from __future__ import annotations
 
+from typing import Any
+
 from src.framework.entities.enemy_archer import EnemyArcher
 from src.framework.entities.enemy_assassin import EnemyAssassin
 from src.framework.entities.enemy_base import EnemyBase
@@ -55,4 +57,35 @@ def ensure_registered() -> None:
 
     for type_name, entity_class in _ENTITY_REGISTRY.items():
         StageLoader.register_entity(type_name, entity_class)
+
+    _register_named_species()
     _registered = True
+
+
+def _register_named_species() -> None:
+    """Registra las 21 especies con nombre de `docs/18_ENEMY_ROSTER.md`.
+
+    AUD-046: el doc especifica 21 especies (`WalkerInsect`, `ShooterQuetzal`…)
+    con estadísticas concretas; el registro sólo conocía los 8 arquetipos
+    genéricos. Un TMX que colocaba `WalkerInsect` — exactamente lo que el doc
+    de diseño de niveles indica a los alumnos — no encontraba la clase y el
+    enemigo no aparecía.
+
+    Cada especie se registra como una factoría que aplica sus parámetros y deja
+    que las propiedades del TMX los sobreescriban, de modo que un alumno puede
+    partir de la especie documentada y ajustarla en Tiled sin tocar código.
+    """
+    from src.framework.entities import bestiary_registry
+
+    for species_id, spec in bestiary_registry.SPECIES.items():
+        StageLoader.register_entity(species_id, _species_factory(spec))
+
+
+def _species_factory(spec: Any) -> Any:
+    """Envuelve un SpeciesSpec en un invocable con la firma que espera el loader."""
+    def _build(spawn_position: Any, **kwargs: Any) -> EnemyBase:
+        return spec.build(spawn_position, **kwargs)
+
+    # El loader y el bestiario muestran este nombre; sin él saldría "_build".
+    _build.__name__ = spec.species_id
+    return _build

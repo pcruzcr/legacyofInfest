@@ -1,4 +1,18 @@
+# ⚠️ RETIRADO — este archivo ya no es la fuente de verdad.
+#
+# El linter del proyecto es **ruff**, configurado en `pyproject.toml`. Es el
+# que corre en CI (`.github/workflows/ci.yml`, paso "Lint with ruff") y el
+# único que bloquea un merge.
+#
+# Este `.flake8` se mantiene solo por compatibilidad con entornos que lo
+# invoquen por costumbre, y replica exactamente los valores de ruff para que
+# no puedan volver a discrepar. En su día declaraba 120 columnas mientras ruff
+# usaba su valor por defecto de 88: los dos linters no se ponían de acuerdo
+# sobre 882 líneas de código correcto (AUD-017).
+#
+# Si vas a añadir o quitar una regla, hazlo en `pyproject.toml`.
+
 [flake8]
 max-line-length = 120
-ignore = W503, E203
-exclude = .git,__pycache__,build,dist,.venv,venv,*.egg-info
+extend-ignore = E203, W503
+exclude = .git,__pycache__,build,dist,.venv,venv,colab,web,*.egg-info

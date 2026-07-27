@@ -22,13 +22,21 @@ tests/output/
 /tests/**/*.pkl
 !src/stages/**/models/*.pkl
 
-# ── Player state (AUD-035) ─────────────────────────────────────
+# ── Player state (AUD-035 / AUD-052) ──────────────────────────
+# `saves/slot_1.json` y `data/inventory.json` siguieron apareciendo en cada
+# diff después de ignorarlos, porque .gitignore no afecta a archivos que YA
+# están rastreados. Hay que sacarlos del índice una vez:
+#     git rm --cached saves/slot_1.json data/inventory.json
+# Mientras estén rastreados, cada partida jugada produce un diff espurio y el
+# repositorio viaja con el progreso de un desarrollador dentro.
 # Save files are per-player runtime state, not source. `saves/slot_1.json` was
 # committed, which meant every clone of the repository shipped with one
 # developer's half-finished playthrough — and every playtest session produced
 # a spurious diff.
 saves/
 *.sav
+data/inventory.json
+data/achievements.json
 
 # ── Editor / workspace cruft (AUD-035) ─────────────────────────
 .vscode/settings.json
