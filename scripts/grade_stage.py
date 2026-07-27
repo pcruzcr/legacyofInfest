@@ -30,6 +30,7 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
+from scripts._cli_paths import display_path  # noqa: E402  (tras ajustar sys.path)
 
 KNOWN_ENEMY_TYPES: set[str] = {
     "MushMom", "Bat", "Skitter", "Mantis", "Flying",
@@ -280,7 +281,7 @@ def main() -> int:
         r = grade_stage(tmx)
         all_results.append(r)
         if not args.json:
-            rel = tmx.relative_to(_PROJECT_ROOT)
+            rel = display_path(tmx, _PROJECT_ROOT)
             print(f"\n{'='*50}")
             print(f"  {rel}")
             print(f"{'='*50}")
