@@ -304,3 +304,59 @@ def test_stage_actually_renders_something(context, display) -> None:
         "the stage rendered nothing but background — DrawingSystem completed "
         "without painting the map, entities or HUD"
     )
+
+
+def test_the_tile_map_specifically_is_drawn(context, display) -> None:
+    """The tilemap must contribute pixels — not just the parallax backdrops.
+
+    Found by mutation testing (AUD-048). Replacing ``map_layer.draw(surface)``
+    with ``pass`` left ``test_stage_actually_renders_something`` green, because
+    the background layers alone already produce hundreds of colours. The suite
+    was asserting "something rendered", which is not the same claim as "the
+    world rendered" — and the world not rendering is precisely the bug that
+    shipped (AUD-039).
+
+    This compares a frame against one drawn with the map layer suppressed, so
+    it fails if the tilemap stops contributing regardless of what else paints.
+    """
+    from src.framework.stage.drawing_system import DrawContext
+    from src.stages.stage0.stage0 import Stage0
+
+    scene = Stage0(context)
+    scene.awake()
+    scene.start()
+    scene.on_enter()
+    try:
+        for _ in range(5):
+            scene.update(DT)
+
+        def frame(*, with_map: bool) -> set[tuple[int, int, int]]:
+            surface = pygame.Surface(INTERNAL_SIZE)
+            surface.fill((0, 0, 0))
+            stage = scene._stage_data
+            saved = stage.map_layer
+            if not with_map:
+                stage.map_layer = None
+            try:
+                scene._drawing.draw(DrawContext(
+                    surface=surface, stage=stage, player=scene._player,
+                    camera=scene._camera,
+                ))
+            finally:
+                stage.map_layer = saved
+            return {surface.get_at((x, y))[:3]
+                    for x in range(0, INTERNAL_SIZE[0], 7)
+                    for y in range(0, INTERNAL_SIZE[1], 5)}
+
+        with_map = frame(with_map=True)
+        without_map = frame(with_map=False)
+    finally:
+        scene.on_exit()
+        scene.destroy()
+
+    only_from_map = with_map - without_map
+    assert only_from_map, (
+        "suppressing stage.map_layer changed nothing on screen, so the tile "
+        "map is not being drawn — the world is rendering empty underneath the "
+        "parallax backdrops"
+    )

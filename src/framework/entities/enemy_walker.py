@@ -149,10 +149,31 @@ class EnemyWalker(EnemyBase):
                 self.damage_on_contact = 1.5
                 return
 
+        # AUD-050: la táctica que SquadBrain decidió para este enemigo modula la
+        # dirección y el ritmo. Antes el walker sólo sabía avanzar hacia el
+        # jugador, así que "retreat" y "evade" eran acciones que el predictor
+        # podía emitir y nadie obedecía — el modelo estaba conectado a la nada.
+        direction = self.facing_direction
+        speed = self.alert_speed
+
+        if self.tactic in ("retreat", "evade"):
+            # Retrocede manteniendo la cara hacia el jugador: leerlo como huida
+            # y no como despiste es lo que le permite al jugador presionar.
+            direction = -self.facing_direction
+            speed = self.alert_speed * (1.2 if self.tactic == "evade" else 0.9)
+        elif self.tactic == "wait":
+            speed = 0.0
+        elif self.tactic == "circle":
+            # Orbita: avanza a media velocidad, lo que abre hueco para que otro
+            # enemigo flanquee. Es lo que hace que un grupo se lea como grupo.
+            speed = self.alert_speed * 0.45
+        elif self.tactic == "charge":
+            speed = self.alert_speed * 1.35
+
         all_ground = self._all_ground_rects
-        if all_ground:
+        if all_ground and speed > 0.0:
             probe_x = self.position.x + (
-                self.facing_direction * (self.rect.width // 2 + 2)
+                direction * (self.rect.width // 2 + 2)
             )
             probe_y = self.position.y + self.rect.height + 2
             has_floor = any(
@@ -160,9 +181,16 @@ class EnemyWalker(EnemyBase):
                 for r in all_ground
             )
             if not has_floor:
-                self.facing_direction *= -1
+                # Un borde detiene la retirada en lugar de invertir el rumbo: un
+                # enemigo que retrocede hacia el jugador al llegar a un borde se
+                # lee como un bug, no como decisión.
+                if self.tactic in ("retreat", "evade"):
+                    speed = 0.0
+                else:
+                    self.facing_direction *= -1
+                    direction = self.facing_direction
 
-        self.position.x += self.facing_direction * self.alert_speed * dt
+        self.position.x += direction * speed * dt
 
     def _get_animation_key(self) -> str:
         return "walk"

@@ -26,11 +26,40 @@ if TYPE_CHECKING:
 
 
 class EnemyState(str, Enum):
-    """All possible enemy states as defined in 05_ENEMY_SPEC.md §12."""
+    """Estados de un enemigo.
+
+    AUD-051: la máquina tenía siete estados y le faltaban seis de los doce que
+    `docs/05_ENEMY_SPEC.md` §12 describe. Los que faltaban no eran adornos: son
+    justamente los que hacen legible un combate.
+
+    * ``IDLE`` — un enemigo estacionario (patrol_length = 0) estaba en PATROL
+      "patrullando" cero píxeles. Distinguirlos permite animarlos distinto y
+      deja de mentir sobre lo que el enemigo está haciendo.
+    * ``SEARCH`` — el jugador fue visto y se perdió. Sin este estado el enemigo
+      te olvida en el fotograma en que sales de rango, lo que hace inútil
+      romper la línea de visión. Con él, el enemigo tiene memoria corta y
+      esconderse significa algo.
+    * ``CHASE`` — persecución activa, distinta de ALERT (consciente). Permite
+      una velocidad y una animación propias.
+    * ``RETREAT`` — repliegue con poca vida. `SquadBrain` ya emitía la táctica
+      "retreat"; ahora hay un estado que la representa.
+    * ``RECOVER`` — ventana de vulnerabilidad tras atacar. Es *la* pieza que
+      vuelve justo el combate: sin recuperación, un enemigo que ataca sin pausa
+      no se puede castigar y la única respuesta posible es evitarlo.
+    * ``STUNNED`` — aturdido por una parada o un golpe pesado. Recompensa la
+      defensa activa en lugar de premiar sólo esquivar.
+    """
+
+    IDLE = "IDLE"
     PATROL = "PATROL"
+    SEARCH = "SEARCH"
     ALERT = "ALERT"
+    CHASE = "CHASE"
     TELEGRAPHING = "TELEGRAPHING"
     FIRING = "FIRING"
+    RECOVER = "RECOVER"
+    RETREAT = "RETREAT"
+    STUNNED = "STUNNED"
     HURT = "HURT"
     LAUNCHED = "LAUNCHED"
     DYING = "DYING"
@@ -71,6 +100,20 @@ class EnemyBase(BaseEntity):
         self.damage_on_contact: float = damage_on_contact
         self.contact_knockback: float = contact_knockback
         self._invincibility_timer: float = 0.0
+
+        # AUD-050: táctica decidida por SquadBrain. Es una lectura, no una
+        # inferencia: el cerebro de escuadra reevalúa a 4 Hz por lotes y escribe
+        # aquí, y el comportamiento de alerta la consulta cada fotograma sin
+        # coste. Por defecto "approach" para que un enemigo instanciado en un
+        # test o en un template de alumno se comporte igual que antes.
+        self.tactic: str = "approach"
+
+        # AUD-051: temporizadores de los estados nuevos.
+        self._search_timer: float = 0.0
+        self._recover_timer: float = 0.0
+        self._stun_timer: float = 0.0
+        #: Última posición conocida del jugador; alimenta el estado SEARCH.
+        self._last_seen: pygame.Vector2 | None = None
         self._contact_cooldown: float = 0.0
         self._hurt_timer: float = 0.0
         self._death_timer: float = 0.0
@@ -625,23 +668,165 @@ class EnemyBase(BaseEntity):
             self._firing_behavior(dt)
             return
 
-        # Check if player is in detection range
+        # STUNNED: indefenso. Prioridad alta a propósito — una parada acertada
+        # debe interrumpir cualquier plan del enemigo, o parar deja de valer.
+        if self.state == EnemyState.STUNNED:
+            self._stun_timer -= dt
+            if self._stun_timer <= 0:
+                self.state = EnemyState.RECOVER
+                self._recover_timer = self.RECOVER_DURATION
+            return
+
+        # RECOVER: ventana de castigo tras atacar. Sin esto el enemigo puede
+        # cadenar ataques sin pausa y no hay hueco para responder (AUD-051).
+        if self.state == EnemyState.RECOVER:
+            self._recover_timer -= dt
+            self._recover_behavior(dt)
+            if self._recover_timer <= 0:
+                self.state = (
+                    EnemyState.CHASE if self._check_detection_range()
+                    else EnemyState.SEARCH
+                )
+            return
+
+        # RETREAT: se repliega mientras siga con poca vida y el jugador cerca.
+        if self.state == EnemyState.RETREAT:
+            self._retreat_behavior(dt)
+            if not self._should_retreat():
+                self.state = (
+                    EnemyState.CHASE if self._check_detection_range()
+                    else EnemyState.PATROL
+                )
+            return
+
         player_in_range = self._check_detection_range()
 
         if player_in_range:
-            self.state = EnemyState.ALERT
-            self._alert_behavior(dt)
-        elif self.state == EnemyState.ALERT:
-            # Deaggro hysteresis: use extended range before leaving ALERT
-            still_in_range = self._player_in_range(
-                self._player_ref, margin=self._deaggro_margin
+            self._last_seen = pygame.Vector2(
+                self._player_ref.centerx, self._player_ref.centery,
             )
-            if not still_in_range:
-                self.state = EnemyState.PATROL
-                self._patrol_behavior(dt)
+            self._search_timer = self.SEARCH_DURATION
+            if self._should_retreat():
+                self.state = EnemyState.RETREAT
+                self._retreat_behavior(dt)
+            else:
+                # ALERT es el primer fotograma de detección; a partir de ahí es
+                # CHASE. Separarlos permite un sonido y una animación de "te vi"
+                # que telegrafían la agresión antes de que llegue.
+                self.state = (
+                    EnemyState.CHASE if self.state in (EnemyState.ALERT, EnemyState.CHASE)
+                    else EnemyState.ALERT
+                )
+                self._alert_behavior(dt)
+            return
+
+        if self.state in (EnemyState.ALERT, EnemyState.CHASE):
+            # Histéresis de desenganche: el jugador debe salir del rango
+            # ampliado antes de que el enemigo deje de perseguir.
+            if self._player_in_range(self._player_ref, margin=self._deaggro_margin):
+                self.state = EnemyState.CHASE
+                self._alert_behavior(dt)
+            else:
+                self.state = EnemyState.SEARCH
+                self._search_timer = self.SEARCH_DURATION
+                self._search_behavior(dt)
+            return
+
+        if self.state == EnemyState.SEARCH:
+            self._search_timer -= dt
+            self._search_behavior(dt)
+            if self._search_timer <= 0:
+                self.state = self._resting_state()
+            return
+
+        self.state = self._resting_state()
+        if self.state == EnemyState.IDLE:
+            self._idle_behavior(dt)
         else:
-            self.state = EnemyState.PATROL
             self._patrol_behavior(dt)
+
+    # ── nuevos estados: duraciones y comportamiento por defecto ──
+
+    #: Cuánto sigue buscando el enemigo tras perder de vista al jugador.
+    SEARCH_DURATION: float = 3.0
+    #: Ventana de vulnerabilidad tras un ataque.
+    RECOVER_DURATION: float = 0.45
+    #: Vida por debajo de la cual un enemigo se repliega, como fracción.
+    RETREAT_HEALTH_FRACTION: float = 0.25
+
+    def _resting_state(self) -> EnemyState:
+        """IDLE si el enemigo es estacionario, PATROL si tiene ruta.
+
+        Un enemigo con `patrol_length` 0 estaba antes en PATROL recorriendo cero
+        píxeles, lo que hacía imposible distinguir "quieto por diseño" de
+        "quieto porque algo falla".
+
+        El valor por defecto del `getattr` es **positivo** a propósito. Con 0.0
+        como reserva, cualquier enemigo que no use `patrol_length` —todos los
+        voladores, que se mueven por estrategia de vuelo— caía en IDLE y dejaba
+        de moverse por completo. Lo detectó
+        ``test_sine_reverses_at_boundary``: la ausencia del atributo significa
+        "esta clase no se rige por longitud de patrulla", no "está quieta".
+        """
+        if not hasattr(self, "patrol_length"):
+            return EnemyState.PATROL
+        # pylint: disable=no-member  # el hasattr de arriba es la comprobación
+        return (
+            EnemyState.IDLE
+            if float(self.patrol_length) <= 0.0
+            else EnemyState.PATROL
+        )
+
+    def _should_retreat(self) -> bool:
+        max_hp = float(self.max_health) or 1.0
+        return (self.current_health / max_hp) <= self.RETREAT_HEALTH_FRACTION
+
+    def stun(self, duration: float = 0.8) -> None:
+        """Aturde al enemigo. La llama una parada o un golpe pesado."""
+        if self.state == EnemyState.DYING:
+            return
+        self._stun_timer = max(self._stun_timer, duration)
+        self.state = EnemyState.STUNNED
+
+    def begin_recovery(self, duration: float | None = None) -> None:
+        """Entra en la ventana de castigo. La llaman los estados de ataque."""
+        if self.state == EnemyState.DYING:
+            return
+        self._recover_timer = duration if duration is not None else self.RECOVER_DURATION
+        self.state = EnemyState.RECOVER
+
+    def _idle_behavior(self, dt: float) -> None:
+        """Quieto. Las subclases pueden añadir un vaivén o mirar alrededor."""
+
+    def _search_behavior(self, dt: float) -> None:
+        """Avanza hacia el último punto donde se vio al jugador.
+
+        Deliberadamente simple: sin pathfinding. Un enemigo que camina hacia
+        donde te vio por última vez ya comunica "te está buscando", y eso es lo
+        que hace que romper la línea de visión sea una decisión táctica.
+        """
+        if self._last_seen is None:
+            return
+        dx = self._last_seen.x - self.position.x
+        if abs(dx) < 4.0:
+            return
+        self.facing_direction = 1 if dx > 0 else -1
+        speed = float(getattr(self, "patrol_speed", 40.0))
+        self.position.x += self.facing_direction * speed * dt
+        self.rect.x = int(self.position.x)
+
+    def _recover_behavior(self, dt: float) -> None:
+        """Sin movimiento durante la recuperación: es la ventana de castigo."""
+
+    def _retreat_behavior(self, dt: float) -> None:
+        """Se aleja del jugador sin darle la espalda."""
+        if self._player_ref is None:
+            return
+        dx = self._player_ref.centerx - self.rect.centerx
+        self.facing_direction = 1 if dx > 0 else -1
+        speed = float(getattr(self, "alert_speed", 60.0)) * 0.8
+        self.position.x -= self.facing_direction * speed * dt
+        self.rect.x = int(self.position.x)
 
     def set_player_ref(self, player_rect: pygame.Rect) -> None:
         """Set or update the reference to the player's rect for detection."""

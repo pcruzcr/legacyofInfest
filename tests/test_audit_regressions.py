@@ -150,6 +150,96 @@ class TestAttackDamageModel:
             ), f"{state_cls.__name__}: collision and player disagree on damage"
 
 
+class TestSwingDeduplicationIsLoadBearing:
+    """El conjunto por-golpe debe protegernos por sí solo.
+
+    Encontrado por mutation testing (AUD-048). Al eliminar
+    ``self._hit_this_swing.add(id(entity))`` la suite seguía en verde: el test
+    de AUD-003 dispara nueve fotogramas, pero ``process_attack`` llama a
+    ``consume_hitbox()`` en cuanto conecta, lo que vacía ``active_hitbox`` y hace
+    que el segundo fotograma salga por la rama temprana. El conjunto nunca
+    llegaba a consultarse.
+
+    Es decir: dos mecanismos solapados y sólo uno probado. El test no era falso,
+    era *insuficiente* — pasaba por la razón equivocada. Estos casos ejercitan
+    cada mecanismo por separado, de modo que romper cualquiera de los dos falla.
+    """
+
+    @staticmethod
+    def _scene(entities):
+        import types
+
+        return types.SimpleNamespace(entity_list=list(entities))
+
+    def _setup(self):
+        from src.engine.core.event_bus import EventBus
+        from src.framework.entities.enemy_walker import EnemyWalker
+        from src.framework.entities.player import Player
+        from src.framework.entities.states import ShortAttackState
+        from src.framework.stage.collision_system import CollisionSystem
+
+        pygame.display.set_mode((320, 240))
+        collision = CollisionSystem(None)
+        player = Player(pygame.Vector2(100, 100), event_bus=EventBus())
+        player._change_state_instance(ShortAttackState())
+
+        enemy = EnemyWalker(pygame.Vector2(100, 100))
+        enemy._invincibility_duration = 0.0
+        enemy.hurtbox = pygame.Rect(100, 100, 24, 28)
+        player._active_hitbox = pygame.Rect(100, 100, 24, 28)
+        return collision, player, enemy
+
+    def test_dedup_holds_even_if_the_hitbox_stays_active(self) -> None:
+        """Aísla el conjunto: se reactiva la hitbox en cada fotograma.
+
+        Simula que ``consume_hitbox`` no llegara a limpiar la hitbox —
+        exactamente la condición bajo la que el conjunto es el único guardián.
+        """
+        collision, player, enemy = self._setup()
+        stage = self._scene([enemy])
+        live_hitbox = pygame.Rect(100, 100, 24, 28)
+        start_hp = enemy.current_health
+        expected = player.current_attack_damage
+
+        for _ in range(9):
+            # Reponer la hitbox: neutraliza el efecto de consume_hitbox.
+            player._active_hitbox = pygame.Rect(live_hitbox)
+            player._hitbox_consumed = False
+            collision.process_attack(1 / 60, player, stage, None, None)
+
+        dealt = start_hp - enemy.current_health
+        assert dealt == pytest.approx(expected), (
+            f"con la hitbox permanentemente activa el golpe infligió {dealt} en "
+            f"lugar de {expected}: el conjunto _hit_this_swing no está "
+            f"deduplicando y sólo consume_hitbox nos protegía"
+        )
+
+    def test_one_swing_can_still_hit_several_enemies(self) -> None:
+        """La deduplicación es *por enemigo*, no por golpe.
+
+        Un barrido que alcanza a dos enemigos debe dañar a los dos. Si el
+        conjunto se aplicara al golpe entero, el arma dejaría de tener área y
+        nadie lo notaría salvo jugando.
+        """
+        from src.framework.entities.enemy_walker import EnemyWalker
+
+        collision, player, first = self._setup()
+        second = EnemyWalker(pygame.Vector2(110, 100))
+        second._invincibility_duration = 0.0
+        second.hurtbox = pygame.Rect(105, 100, 24, 28)
+
+        stage = self._scene([first, second])
+        hp1, hp2 = first.current_health, second.current_health
+
+        collision.process_attack(1 / 60, player, stage, None, None)
+
+        assert first.current_health < hp1, "el primer enemigo no recibió daño"
+        assert second.current_health < hp2, (
+            "el segundo enemigo dentro del área no recibió daño: la "
+            "deduplicación se está aplicando al golpe en vez de por enemigo"
+        )
+
+
 # ── AUD-005: autosave destroyed campaign progress ────────────────────────
 
 

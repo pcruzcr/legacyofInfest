@@ -152,14 +152,163 @@ class WaypointPatrol(IFlightStrategy):
         enemy.rect.y = int(enemy.position.y)
 
 
+class ChaseFlight(IFlightStrategy):
+    """Persecución directa con inercia — el enemigo *acelera* hacia el jugador.
+
+    AUD-046: las tres estrategias anteriores son todas trayectorias
+    predeterminadas: seno, spline y waypoints. Ninguna reacciona al jugador, así
+    que un enemigo volador nunca supone una amenaza distinta de un obstáculo
+    móvil. `docs/18_ENEMY_ROSTER.md` describe especies (Halcón, Terciovolador,
+    Cuaderno poseído) cuyo texto habla de perseguir, y no había forma de
+    expresarlo.
+
+    Detalle de diseño: acelera hacia el objetivo en lugar de fijar la velocidad
+    directamente. Un perseguidor de velocidad fija es trivial — basta con
+    correr. Uno con inercia sobrepasa al girar, lo que da al jugador una ventana
+    real para esquivar y convierte el enfrentamiento en una lectura de ritmo en
+    vez de una carrera.
+    """
+
+    # Cuánta velocidad puede ganar por segundo, como múltiplo de flight_speed.
+    ACCELERATION = 3.0
+    # Fracción de velocidad conservada por segundo; por debajo de 1 el
+    # perseguidor no orbita indefinidamente alrededor del jugador.
+    DRAG = 0.85
+
+    def execute(
+        self,
+        enemy: EnemyFlying,
+        dt: float,
+        speed_mult: float = 1.0,
+    ) -> None:
+        target = getattr(enemy, "_player_ref", None)
+        if target is None:
+            # Sin objetivo, mantiene la altura de origen y deriva: no se queda
+            # inmóvil, que se leería como un bug.
+            SineFlight().execute(enemy, dt, speed_mult * 0.4)
+            return
+
+        vel = getattr(enemy, "_chase_velocity", None)
+        if vel is None:
+            import pygame
+
+            vel = pygame.Vector2(0.0, 0.0)
+            enemy._chase_velocity = vel
+
+        dx = target.centerx - enemy.position.x
+        dy = target.centery - enemy.position.y
+        dist = math.hypot(dx, dy)
+        if dist > 1e-6:
+            accel = enemy.flight_speed * self.ACCELERATION * speed_mult * dt
+            vel.x += (dx / dist) * accel
+            vel.y += (dy / dist) * accel
+
+        # Amortiguación exponencial independiente del framerate.
+        damping = self.DRAG ** dt
+        vel.x *= damping
+        vel.y *= damping
+
+        # Techo de velocidad para que la aceleración no se dispare.
+        max_speed = enemy.flight_speed * speed_mult * 1.6
+        speed = math.hypot(vel.x, vel.y)
+        if speed > max_speed:
+            vel.x = vel.x / speed * max_speed
+            vel.y = vel.y / speed * max_speed
+
+        enemy.position.x += vel.x * dt
+        enemy.position.y += vel.y * dt
+        if abs(vel.x) > 1.0:
+            enemy.facing_direction = 1 if vel.x > 0 else -1
+
+        enemy.rect.x = int(enemy.position.x)
+        enemy.rect.y = int(enemy.position.y)
+
+
+class DiveFlight(IFlightStrategy):
+    """Picado en tres fases, tal y como lo especifica el roster.
+
+    AUD-047: `docs/18_ENEMY_ROSTER.md` §5.3 describe el comportamiento de alerta
+    del Halcón con precisión::
+
+        Al entrar el jugador en rango, el halcón pasa a picado: se desplaza
+        horizontalmente hasta la X del jugador (50 px/s), luego pica a 200 px/s.
+        Tras alcanzar Y=200 o golpear una plataforma, reasciende a la altitud
+        de patrulla. Esto sustituye el comportamiento de alerta estándar.
+
+    No existía nada que lo expresara: `make_strategy` sólo conocía seno, Bézier
+    y waypoints, y ante un modo desconocido **cae silenciosamente en SineFlight**
+    — así que el Halcón habría volado en sinusoide sin que nada avisara de que
+    su comportamiento documentado no estaba implementado.
+
+    Por qué el picado en fases funciona como diseño: telegrafía. La fase de
+    alineación es lenta y legible, y da al jugador ~1 s para leer la amenaza y
+    reposicionarse. La fase de picado es cuatro veces más rápida y ya no se
+    puede corregir. La amenaza es justa porque se anuncia.
+    """
+
+    ALIGN_SPEED = 50.0     # px/s, fase de alineación horizontal
+    DIVE_SPEED = 200.0     # px/s, fase de picado
+    ASCEND_SPEED = 90.0    # px/s, regreso a la altitud de patrulla
+    DIVE_FLOOR_Y = 200.0   # profundidad máxima antes de reascender
+    ALIGN_TOLERANCE = 6.0  # px; por debajo de esto se considera alineado
+
+    def execute(
+        self,
+        enemy: EnemyFlying,
+        dt: float,
+        speed_mult: float = 1.0,
+    ) -> None:
+        target = getattr(enemy, "_player_ref", None)
+        if target is None:
+            SineFlight().execute(enemy, dt, speed_mult)
+            return
+
+        phase = getattr(enemy, "_dive_phase", "align")
+
+        if phase == "align":
+            dx = target.centerx - enemy.position.x
+            if abs(dx) <= self.ALIGN_TOLERANCE:
+                enemy._dive_phase = "dive"
+            else:
+                step = self.ALIGN_SPEED * speed_mult * dt
+                enemy.position.x += math.copysign(min(step, abs(dx)), dx)
+                enemy.facing_direction = 1 if dx > 0 else -1
+
+        elif phase == "dive":
+            enemy.position.y += self.DIVE_SPEED * speed_mult * dt
+            if enemy.position.y >= self.DIVE_FLOOR_Y:
+                enemy._dive_phase = "ascend"
+
+        else:  # ascend
+            origin_y = getattr(enemy, "_origin", None)
+            ceiling = origin_y.y if origin_y is not None else 0.0
+            enemy.position.y -= self.ASCEND_SPEED * speed_mult * dt
+            if enemy.position.y <= ceiling:
+                enemy.position.y = ceiling
+                # Vuelve a alinear: el ciclo se repite mientras siga alerta.
+                enemy._dive_phase = "align"
+
+        enemy.rect.x = int(enemy.position.x)
+        enemy.rect.y = int(enemy.position.y)
+
+
 # ── Strategy factory ──────────────────────────────────────────────
 
 def make_strategy(flight_mode: str) -> IFlightStrategy:
-    """Create the appropriate flight strategy for the given mode name."""
+    """Devuelve la estrategia de vuelo para el modo indicado.
+
+    AUD-047: ante un modo desconocido esto cae en ``SineFlight``. Es una reserva
+    razonable — un modo mal escrito en un TMX de alumno no debe tumbar el nivel —
+    pero es *silenciosa*, y así fue como el picado documentado del Halcón pudo
+    no existir sin que nada lo señalara. ``tests/test_bestiary_roster.py``
+    comprueba ahora que cada modo que el roster nombra resuelve a su clase.
+    """
     strategy_map: dict[str, type[IFlightStrategy]] = {
         "sine": SineFlight,
         "bezier": BezierFlight,
         "patrol": WaypointPatrol,
+        "chase": ChaseFlight,
+        "dive": DiveFlight,
     }
     cls = strategy_map.get(flight_mode, SineFlight)
     return cls()

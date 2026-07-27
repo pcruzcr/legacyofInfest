@@ -125,6 +125,7 @@ class UserSettings:
             logger.warning("UserSettings: %s is not an object — using defaults", resolved)
             return cls(_path=resolved)
 
+        # pylint: disable=no-member  # `__dataclass_fields__` lo genera @dataclass
         known = {f for f in cls.__dataclass_fields__ if not f.startswith("_")}
         kwargs: dict[str, Any] = {k: v for k, v in raw.items() if k in known}
         try:

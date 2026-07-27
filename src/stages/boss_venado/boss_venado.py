@@ -7,6 +7,13 @@ import pygame
 
 from src.engine.core.events import Events
 from src.framework.entities.boss_base import BossBase, BossPhase
+from src.framework.entities.boss_kit import (
+    AttackScheduler,
+    BossAttack,
+    SummonTracker,
+    SummonWave,
+    WeakPoint,
+)
 from src.framework.entities.enemy_base import EnemyState
 from src.framework.processing.curve_tools import CurveTools
 
@@ -41,20 +48,12 @@ class BossVenado(BossBase):
 
         self._projectiles: list[dict[str, Any]] = []
 
-        self._attack_timers: dict[str, float] = {
-            "STOMP": 0.0,
-            "CHARGE": 0.0,
-            "VINE_TOSS": 0.0,
-            "VINE_SWEEP": 0.0,
-            "MUSHROOM_SPORE": 0.0,
-        }
-        self._attack_cooldowns: dict[str, float] = {
-            "STOMP": 3.0,
-            "CHARGE": 6.0,
-            "VINE_TOSS": 8.0,
-            "VINE_SWEEP": 5.0,
-            "MUSHROOM_SPORE": 10.0,
-        }
+        # Los tiempos de ataque los lleva `self.attacks` (AttackScheduler), no
+        # diccionarios paralelos aquí. Antes existían `_attack_timers` y
+        # `_attack_cooldowns` locales: al añadir el planificador habría habido
+        # dos sistemas de enfriamiento decidiendo lo mismo, y el que ganara
+        # dependería del orden de llamadas — el peor tipo de error, porque el
+        # jefe atacaría distinto según por dónde entrara la actualización.
 
         self._bezier_path: list[pygame.Vector2] = []
         self._bezier_t: float = 0.0
@@ -68,12 +67,24 @@ class BossVenado(BossBase):
         self._sweep_timer: float = 0.0
 
         self._stomp_rect: pygame.Rect | None = None
+        self._stomp_timer: float = 0.0
         self._defeat_stage: int = -1
 
         self._combo_queue: list[str] = []
         self._combo_timer: float = 0.0
 
-        self._load_boss_sprites("boss_venado", 48, 48)
+        # `frenzy_drift` no está en las claves por defecto de `_load_boss_sprites`,
+        # así que la hoja existía en disco sin cargarse nunca.
+        self._load_boss_sprites("boss_venado", 48, 48, sheets={
+            "drift": (48, 48),
+            "frenzy_drift": (48, 48),
+            "hurt": (48, 48),
+            "charge": (48, 48),
+            "stomp": (48, 48),
+            "vine": (48, 48),
+            "death": (48, 48),
+            "skull": (48, 48),
+        })
         self.set_phases()
         self.on_enter_stage()
 
@@ -92,16 +103,72 @@ class BossVenado(BossBase):
                           combos={"VINE_SWEEP": ["COMBO_SWEEP_SPORE"]}),
             ]
         super().set_phases(phases)
+        self._declare_encounter()
+
+    def _declare_encounter(self) -> None:
+        """Ataques telegrafiados, puntos débiles e invocaciones (AUD-053).
+
+        Antes, `attack_patterns` era una lista de cadenas que nada consumía: el
+        Venado declaraba cinco ataques y ejecutaba siempre el mismo. Aquí se
+        convierten en ataques reales con aviso, golpe y ventana de castigo.
+
+        Los tiempos son decisiones de diseño explícitas:
+
+        * ``STOMP`` es el ataque de base — aviso corto (0,5 s) porque es de
+          corto alcance y el jugador ya está cerca leyendo al jefe.
+        * ``CHARGE`` cruza la arena, así que avisa 0,9 s: hay que darle tiempo
+          a decidir si salta o se aparta, no sólo a reaccionar.
+        * ``VINE_TOSS`` es a distancia y castiga quedarse lejos, cerrando la
+          estrategia de esperar fuera de rango.
+        * ``MUSHROOM_SPORE`` sólo existe en la fase 2 y tiene la recuperación
+          más larga: es el momento de mayor castigo del encuentro.
+        """
+        self.attacks = AttackScheduler([
+            BossAttack("STOMP", windup=0.5, active=0.18, recover=0.7,
+                       damage=0.75, reach=56.0, max_range=90.0, cooldown=2.4),
+            BossAttack("CHARGE", windup=0.9, active=0.45, recover=1.1,
+                       damage=1.0, reach=40.0, min_range=60.0, max_range=320.0,
+                       cooldown=5.0),
+            BossAttack("VINE_TOSS", windup=0.7, active=0.2, recover=0.9,
+                       damage=0.5, reach=200.0, min_range=100.0, cooldown=4.0,
+                       phases=(0,)),
+            BossAttack("VINE_SWEEP", windup=0.75, active=0.3, recover=0.85,
+                       damage=0.75, reach=110.0, max_range=140.0, cooldown=3.5,
+                       phases=(1,)),
+            BossAttack("MUSHROOM_SPORE", windup=1.0, active=0.25, recover=1.4,
+                       damage=0.5, reach=160.0, cooldown=7.0, phases=(1,)),
+        ])
+
+        # Los cuernos son el punto débil: obligan a atacar por delante, que es
+        # justo donde el jefe embiste. Esa tensión — el sitio que más daño hace
+        # es el más peligroso — es lo que convierte el combate en una decisión.
+        self.weak_points = [
+            WeakPoint(offset=(6, 0), size=(24, 12), multiplier=2.5,
+                      label="cuernos"),
+            # Los flancos sólo quedan expuestos en la fase 2, cuando el jefe se
+            # mueve por trayectoria Bézier y se le puede rodear.
+            WeakPoint(offset=(-4, 20), size=(10, 18), multiplier=1.8,
+                      phases=(1,), label="flanco"),
+        ]
+
+        # Invoca esporas en la fase 2. El tope de 4 vivos evita que el
+        # encuentro deje de ser sobre el jefe y pase a ser sobre la multitud.
+        self.summons = SummonTracker(waves=[
+            SummonWave("FlyingCucaracha", count=2, max_alive=4,
+                       cooldown=9.0, phases=(1,)),
+        ])
 
     def on_enter_stage(self) -> None:
         self._elapsed = 0.0
         self._projectiles.clear()
-        self._attack_timers = {k: 0.0 for k in self._attack_timers}
+        self.attacks.reset()
+        self.summons.reset()
         self._bezier_path = self._build_figure8_path()
         self._bezier_t = 0.0
         self._charge_active = False
         self._sweep_active = False
         self._stomp_rect = None
+        self._stomp_timer = 0.0
         self._filter_frame = 0
         self._combo_queue.clear()
         self._combo_timer = 0.0
@@ -122,16 +189,36 @@ class BossVenado(BossBase):
         self._update_movement(dt)
 
     def _alert_behavior(self, dt: float) -> None:
+        """Movimiento y combos. Los ataques los lanza el planificador.
+
+        Ya no se recorre `phase.attack_patterns` disparando lo primero que
+        quede en rango: eso hacía que el Venado ejecutase siempre STOMP —
+        primero de la lista, rango más permisivo— y que los otros cuatro
+        patrones declarados no llegaran a verse. `BossBase._update_encounter`
+        elige el ataque y avisa aquí por `on_attack_fired`.
+        """
         self._update_movement(dt)
-        self._tick_attack_timers(dt)
-        phase = self.phases[self.current_phase] if self.phases else None
-        if phase is None:
-            return
-        for pattern in phase.attack_patterns:
-            self._try_attack(pattern, dt)
+        self._advance_combo(dt)
 
     def _get_animation_key(self) -> str:
-        """Drift animation for patrol; charge/stomp are attack-specific."""
+        """La animación sigue al ataque en curso, no al estado.
+
+        `boss_venado_charge.png` y `boss_venado_stomp.png` existen en disco
+        desde el principio y **nunca se mostraban**: este método devolvía
+        siempre `"drift"`. Un ataque telegrafiado que se ve igual que caminar
+        no está telegrafiado, así que aquí es donde el aviso se hace visible.
+        """
+        current = self.attacks.current
+        if current is not None:
+            if current.name == "CHARGE":
+                return "charge"
+            if current.name == "STOMP":
+                return "stomp"
+            if current.name in ("VINE_TOSS", "VINE_SWEEP"):
+                return "vine"
+        # La fase 2 tiene su propia hoja de deriva, más agitada.
+        if self.current_phase >= 1 and "frenzy_drift" in self._sprite_frames:
+            return "frenzy_drift"
         return "drift"
 
     def _build_hitbox(self) -> pygame.Rect:
@@ -173,51 +260,59 @@ class BossVenado(BossBase):
                 self.position.x = pos.x
                 self.position.y = pos.y
 
-    def _tick_attack_timers(self, dt: float) -> None:
-        for k in self._attack_timers:
-            self._attack_timers[k] = max(0.0, self._attack_timers[k] - dt)
+    def on_attack_fired(self, attack_name: str) -> None:
+        """El aviso terminó: ejecuta el golpe.
 
-    def _try_attack(self, pattern: str, dt: float) -> None:
-        # Process combo queue first
-        if self._combo_queue and self._combo_timer > 0:
-            self._combo_timer -= dt
-            if self._combo_timer <= 0:
-                next_combo = self._combo_queue.pop(0)
-                combo_method = getattr(self, f"_do_{next_combo.lower()}", None)
-                if combo_method:
-                    combo_method()
-                if not self._combo_queue:
-                    self._combo_timer = 0.0
-            return
-        if self._attack_timers.get(pattern, 0) > 0:
-            return
+        Gancho de `BossBase`. Se llama una sola vez, en el instante en que el
+        ataque pasa de WINDUP a ACTIVE, así que aquí no hay que comprobar
+        enfriamientos ni rangos: el planificador ya decidió que este ataque era
+        posible y el jugador ya vio el aviso.
+        """
         player_ref = self._player_ref
-        if player_ref is None:
-            return
-        dx = abs(player_ref.centerx - self.rect.centerx)
         phase = self.phases[self.current_phase] if self.phases else None
         phase_combos = phase.combos if phase else {}
-        if pattern == "STOMP" and dx <= 96:
+
+        if attack_name == "STOMP":
             self._do_stomp()
-            if "STOMP" in phase_combos:
-                self._queue_combo(phase_combos["STOMP"])
-        elif pattern == "CHARGE" and dx >= self.ARENA_W // 2:
+        elif attack_name == "CHARGE" and player_ref is not None:
             self._do_charge(player_ref)
-        elif pattern == "VINE_TOSS" and dx <= 200:
+        elif attack_name == "VINE_TOSS" and player_ref is not None:
             self._do_vine_toss(player_ref)
-        elif pattern == "VINE_SWEEP":
+        elif attack_name == "VINE_SWEEP":
             self._do_vine_sweep()
-            if "VINE_SWEEP" in phase_combos:
-                self._queue_combo(phase_combos["VINE_SWEEP"])
-        elif pattern == "MUSHROOM_SPORE" and dx <= 200:
+        elif attack_name == "MUSHROOM_SPORE":
             self._do_mushroom_spore()
+        else:
+            return
+
+        if attack_name in phase_combos:
+            self._queue_combo(phase_combos[attack_name])
+
+    def on_summon(self, species_id: str, count: int) -> None:
+        """Anuncia la invocación para que el HUD y el audio reaccionen."""
+        self._event_bus.emit(
+            Events.BOSS_ATTACK, pattern=f"SUMMON_{species_id}", rect=self.rect,
+        )
+
+    def _advance_combo(self, dt: float) -> None:
+        """Encadena el siguiente golpe del combo tras su pausa."""
+        if not self._combo_queue or self._combo_timer <= 0.0:
+            return
+        self._combo_timer -= dt
+        if self._combo_timer > 0.0:
+            return
+        next_combo = self._combo_queue.pop(0)
+        combo_method = getattr(self, f"_do_{next_combo.lower()}", None)
+        if combo_method:
+            combo_method()
+        # Sólo se reencola si queda combo; si no, el temporizador se apaga.
+        self._combo_timer = 0.5 if self._combo_queue else 0.0
 
     def _queue_combo(self, combo_names: list[str]) -> None:
         self._combo_queue = list(combo_names)
         self._combo_timer = 0.5
 
     def _do_combo_stomp_charge(self) -> None:
-        self._attack_timers["CHARGE"] = 0.0
         player_ref = self._player_ref
         if player_ref is None:
             return
@@ -225,25 +320,27 @@ class BossVenado(BossBase):
         self._event_bus.emit(Events.BOSS_ATTACK, pattern="COMBO_STOMP_CHARGE", rect=self.rect)
 
     def _do_combo_sweep_spore(self) -> None:
-        self._attack_timers["MUSHROOM_SPORE"] = 0.0
         self._do_mushroom_spore()
         self._event_bus.emit(Events.BOSS_ATTACK, pattern="COMBO_SWEEP_SPORE", rect=self.rect)
 
     def _do_stomp(self) -> None:
-        self._attack_timers["STOMP"] = self._attack_cooldowns["STOMP"]
+        # El rectángulo vive el tiempo activo del ataque, no un frame. Antes se
+        # borraba con `if self._stomp_rect.y < self.rect.bottom`, condición que
+        # es cierta en el mismo frame en que se crea (se coloca en
+        # `bottom - 8`), así que el pisotón se destruía antes de poder golpear:
+        # el ataque se veía y no hacía nada.
+        self._stomp_timer = 0.18
         self._stomp_rect = pygame.Rect(
             self.rect.centerx - 48, self.rect.bottom - 8, 96, 8,
         )
         self._event_bus.emit(Events.BOSS_ATTACK, pattern="STOMP", rect=self._stomp_rect)
 
     def _do_charge(self, player_ref: pygame.Rect) -> None:
-        self._attack_timers["CHARGE"] = self._attack_cooldowns["CHARGE"]
         self._charge_active = True
         self._charge_direction = 1 if player_ref.centerx > self.rect.centerx else -1
         self._charge_target_x = self.rect.centerx + self._charge_direction * 160
 
     def _do_vine_toss(self, player_ref: pygame.Rect) -> None:
-        self._attack_timers["VINE_TOSS"] = self._attack_cooldowns["VINE_TOSS"]
         muzzle = pygame.Vector2(self.rect.centerx, self.rect.top)
         predicted = pygame.Vector2(
             player_ref.centerx,
@@ -263,12 +360,10 @@ class BossVenado(BossBase):
         })
 
     def _do_vine_sweep(self) -> None:
-        self._attack_timers["VINE_SWEEP"] = self._attack_cooldowns["VINE_SWEEP"]
         self._sweep_active = True
         self._sweep_timer = 0.5
 
     def _do_mushroom_spore(self) -> None:
-        self._attack_timers["MUSHROOM_SPORE"] = self._attack_cooldowns["MUSHROOM_SPORE"]
         for angle_offset in [-15, 0, 15]:
             rad = math.radians(angle_offset)
             self._projectiles.append({
@@ -345,8 +440,10 @@ class BossVenado(BossBase):
             self._sweep_timer -= dt
             if self._sweep_timer <= 0:
                 self._sweep_active = False
-        if self._stomp_rect is not None and self._stomp_rect.y < self.rect.bottom:
-            self._stomp_rect = None
+        if self._stomp_rect is not None:
+            self._stomp_timer -= dt
+            if self._stomp_timer <= 0.0:
+                self._stomp_rect = None
 
     def _check_player_contact(self, player: Player) -> None:
         player_hurtbox = player.hurtbox if hasattr(player, "hurtbox") else player.rect

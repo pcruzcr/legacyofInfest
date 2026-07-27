@@ -40,6 +40,14 @@ class Minimap:
         self._fog_color: tuple[int, int, int] = (5, 5, 15)
 
         self._fow_surf: pygame.Surface | None = None
+        # Se declara aquí aunque se cree perezosamente en `draw`. Antes nacía
+        # dentro de `draw` tras un `hasattr(self, '_bg_surf')`, lo que significa
+        # que entre construir un Minimap y dibujarlo el objeto tenía un
+        # conjunto de atributos distinto: cualquier código que lo inspeccionara
+        # —una prueba, un panel de depuración, un serializador— veía una cosa
+        # u otra según el momento. Un atributo que a veces existe es más difícil
+        # de razonar que uno que a veces es None.
+        self._bg_surf: pygame.Surface | None = None
 
     def set_map_size(self, world_w: int, world_h: int) -> None:
         self._map_size = (world_w, world_h)
@@ -79,7 +87,7 @@ class Minimap:
             return
 
         # Background
-        if not hasattr(self, '_bg_surf') or self._bg_surf is None:
+        if self._bg_surf is None:
             self._bg_surf = pygame.Surface((self._minimap_w, self._minimap_h), pygame.SRCALPHA)
         bg = self._bg_surf
         bg.fill((*self._bg_color, 200))

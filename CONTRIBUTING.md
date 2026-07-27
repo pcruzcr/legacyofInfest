@@ -25,11 +25,24 @@ pytest tests/test_player_physics.py -k "test_specific"  # single test
 ## Linting & Type Checking
 
 ```powershell
-flake8 src/ tests/             # max-line-length=120, ignores W503,E203
-mypy src/                      # see pyproject.toml for config
+ruff check src/ tests/ scripts/ tools/   # config in pyproject.toml, 120 cols
+mypy src/                                # see pyproject.toml for config
 ```
 
 Code must pass both with zero warnings.
+
+**ruff is the only linter that gates a merge.** It is what CI runs
+(`.github/workflows/ci.yml`, step *Lint with ruff*), and its configuration in
+`pyproject.toml` records *why* each rule is on or off. The repository used to
+ship a `.flake8` that disagreed with it about 882 lines while nothing ever ran
+flake8. It now mirrors the ruff values exactly and says so at the top, so the
+two can no longer drift apart — but rules are added and removed in
+`pyproject.toml`, not there.
+
+If your editor runs Pylint, `pyproject.toml` has a `[tool.pylint]` section
+aligned with the ruff decisions. Without it, Pylint's defaults ask for a
+docstring on every public method and cap lines at 100 columns — findings CI
+will never ask you to fix.
 
 ## Code Style
 
@@ -43,7 +56,7 @@ Code must pass both with zero warnings.
 ## PR Process
 
 1. Branch from `main` — use `fix/`, `feat/`, `docs/` prefixes.
-2. Run `pytest` and `flake8` before committing.
+2. Run `pytest` and `ruff check` before committing.
 3. Keep commits small and atomic. Reference GAP tickets when applicable.
 4. PR description must summarise changes, motivation, and testing done.
 5. At least one review required before merge.
@@ -136,7 +149,8 @@ pytest tests/test_player_physics.py -k "test_specific"
 
 ### Proceso de PR
 1. Crear rama desde `main` con prefijo `fix/`, `feat/`, `docs/`
-2. Ejecutar `pytest` y `flake8` antes de consolidar
+2. Ejecutar `pytest` y `ruff check` antes de consolidar (ruff es el único
+   linter que bloquea un merge; es el que corre en CI)
 3. Mantener commits pequeños y atómicos
 
 Para más detalles, leer el archivo completo en su versión en inglés.

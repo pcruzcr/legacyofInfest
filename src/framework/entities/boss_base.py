@@ -8,6 +8,13 @@ import pygame
 from src.engine.core import settings
 from src.engine.core.events import Events
 from src.engine.utils.asset_loader import AssetLoader
+from src.framework.entities.boss_kit import (
+    AttackScheduler,
+    AttackTiming,
+    SummonTracker,
+    WeakPoint,
+    resolve_weak_point_damage,
+)
 from src.framework.entities.enemy_base import EnemyBase, EnemyState
 
 logger = logging.getLogger(__name__)
@@ -65,6 +72,26 @@ class BossBase(EnemyBase):
         self._completion_fired: bool = False
         self._transition_overlay: pygame.Surface | None = None
         self._flip_cache: dict[tuple[str, int], pygame.Surface] = {}
+
+        # ── Kit de encuentro (AUD-053) ─────────────────────────
+        # Antes de esto BossBase sólo sabía de fases. Telegrafiado, puntos
+        # débiles e invocaciones — todo lo que docs/17_BOSS_SPEC.md describe —
+        # no tenía representación en código. Se construye aquí para que
+        # cualquier jefe lo herede en lugar de reimplementarlo.
+        self.attacks: AttackScheduler = AttackScheduler()
+        self.weak_points: list[WeakPoint] = []
+        self.summons: SummonTracker = SummonTracker()
+        #: Esbirros creados este fotograma; StageScene los recoge y los añade
+        #: a la escena. El jefe no conoce la escena, así que no puede
+        #: insertarlos él mismo — eso mantendría una dependencia al revés.
+        self.pending_summons: list[EnemyBase] = []
+        #: Último punto débil acertado, para VFX y para el overlay de debug.
+        self.last_weak_point: WeakPoint | None = None
+        #: Multiplicador de velocidad de la fase activa. Existe porque
+        #: `_finish_phase_transition` leía `phase.speed_multiplier` y lo
+        #: descartaba con un `pass`: un jefe que declaraba acelerar en la
+        #: fase 2 no aceleraba.
+        self.speed_multiplier: float = 1.0
 
     @property
     def completion_fired(self) -> bool:
@@ -176,8 +203,13 @@ class BossBase(EnemyBase):
         self._filter_frame = 0
 
         phase = self.phases[self.current_phase]
-        if phase.speed_multiplier != 1.0:
-            pass
+        # AUD-053: esto era `if phase.speed_multiplier != 1.0: pass` — se leía
+        # el valor y se tiraba. Ahora se aplica, que es lo que hace que una
+        # fase 2 "más agresiva" se note.
+        self.speed_multiplier = float(phase.speed_multiplier)
+        # Un cambio de fase interrumpe el ataque en curso: seguir con el aviso
+        # de la fase anterior mientras el jefe cambia de forma es ilegible.
+        self.attacks.interrupt()
 
         if self.current_phase < len(self.phase_health_thresholds):
             self._phase_max_health = self.phase_health_thresholds[self.current_phase]
@@ -215,7 +247,132 @@ class BossBase(EnemyBase):
                 self._finish_phase_transition()
             return True
 
+        self._update_encounter(dt)
         return False
+
+    # ── Kit de encuentro (AUD-053) ─────────────────────────────
+
+    def _update_encounter(self, dt: float) -> None:
+        """Avanza ataques telegrafiados e invocaciones.
+
+        Deliberadamente **no** escribe en `self.state`. Es tentador hacerlo —
+        el tramo del ataque parece un estado— pero `EnemyBase._run_state_machine`
+        trata TELEGRAPHING, FIRING y RECOVER como estados con temporizador
+        propio y sale antes de ejecutar el comportamiento de la subclase. Si el
+        planificador pusiera esos estados, habría dos relojes gobernando el
+        mismo ataque y el jefe dejaría de moverse durante todo el ciclo: como
+        casi siempre hay un ataque en curso, el Venado se quedaría quieto la
+        práctica totalidad del combate.
+
+        El tramo se consulta por `attack_timing`, que es lectura pura. La
+        animación y el HUD leen de ahí; la máquina de estados sigue siendo la
+        dueña del estado.
+        """
+        self.summons.update(dt)
+
+        if self.state == EnemyState.DYING or not self.is_alive:
+            return
+
+        # Aturdido: se cancela el ataque. Una parada acertada tiene que
+        # interrumpir al jefe o parar no sirve para nada.
+        if self.state == EnemyState.STUNNED:
+            self.attacks.interrupt()
+            return
+
+        # Sin haber visto al jugador no se telegrafía nada: un jefe que ataca
+        # al aire antes de que entres en la arena gasta sus enfriamientos y
+        # llega al primer encuentro con todo en cooldown.
+        if self._player_ref is None or self.state in (
+            EnemyState.PATROL, EnemyState.IDLE,
+        ):
+            return
+
+        distance = abs(self._player_ref.centerx - self.rect.centerx)
+
+        fired = self.attacks.update(dt, distance, self.current_phase)
+        if fired is not None:
+            self.on_attack_fired(fired)
+
+        wave = self.summons.ready_wave(self.current_phase)
+        if wave is not None and self._player_ref is not None:
+            spawned = self.summons.spawn(wave, self.position)
+            if spawned:
+                self.pending_summons.extend(spawned)
+                self.on_summon(wave.species_id, len(spawned))
+
+    def on_attack_fired(self, attack_name: str) -> None:
+        """Gancho: el ataque acaba de pasar de aviso a golpe.
+
+        Las subclases lo sobreescriben para generar proyectiles, sacudir la
+        cámara o lanzar VFX. La base no asume nada sobre qué hace cada ataque.
+        """
+
+    def on_summon(self, species_id: str, count: int) -> None:
+        """Gancho: se acaba de invocar una oleada."""
+
+    def take_summons(self) -> list[EnemyBase]:
+        """Entrega los esbirros pendientes y vacía la cola.
+
+        `StageScene` los recoge y los añade a la escena. El jefe no conoce la
+        escena a propósito: que una entidad inserte cosas en el mundo invierte
+        la dirección de dependencia y hace imposible probarla aislada.
+        """
+        pending = self.pending_summons
+        self.pending_summons = []
+        return pending
+
+    @property
+    def attack_timing(self) -> AttackTiming:
+        """Tramo del ataque en curso. Lo leen la animación y el HUD."""
+        return self.attacks.timing
+
+    @property
+    def is_vulnerable(self) -> bool:
+        """¿Está el jefe en su ventana de castigo?"""
+        return self.attacks.is_vulnerable
+
+    @property
+    def telegraph_progress(self) -> float:
+        """0-1 durante el aviso; el HUD lo usa para el indicador."""
+        return self.attacks.telegraph_progress
+
+    def weak_point_at(self, hit_rect: pygame.Rect) -> WeakPoint | None:
+        """El punto débil expuesto que ese golpe alcanza, si alguno."""
+        for point in self.weak_points:
+            if point.exposed_in(self.current_phase) and hit_rect.colliderect(
+                point.rect_for(self.rect),
+            ):
+                return point
+        return None
+
+    def apply_hit_at(
+        self,
+        damage: float,
+        source_position: tuple[float, float],
+        hit_rect: pygame.Rect | None = None,
+    ) -> float:
+        """Aplica daño teniendo en cuenta puntos débiles. Devuelve el daño real.
+
+        Acertar un punto débil multiplica el daño y lo anuncia por el bus, para
+        que el VFX y el sonido confirmen al jugador que ha acertado *ahí*. Sin
+        esa confirmación, un punto débil es indistinguible de un golpe normal y
+        el jugador nunca aprende que existe.
+        """
+        final = damage
+        point = None
+        if hit_rect is not None and self.weak_points:
+            final, point = resolve_weak_point_damage(
+                self, hit_rect, damage, self.weak_points, self.current_phase,
+            )
+        self.last_weak_point = point
+
+        if point is not None:
+            self._event_bus.emit(
+                Events.VFX_PARRY,
+                pos=(self.position.x, self.position.y),
+            )
+        self.apply_hit(final, source_position)
+        return final
 
     _PHASE_COLORS = [
         (200, 100, 0),
