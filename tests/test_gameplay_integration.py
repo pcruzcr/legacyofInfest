@@ -310,11 +310,14 @@ class TestCombatHurtsBothWays:
         player = scene._player
 
         before = player.current_health
-        for _ in range(900):  # 15 s delante del jefe
-            boss.position.x = float(player.rect.centerx)
-            boss.position.y = float(player.rect.y)
-            boss.rect.x = int(boss.position.x)
-            boss.rect.y = int(boss.position.y)
+        for _ in range(900):  # 15 s debajo del jefe
+            # Se mueve al JUGADOR bajo el jefe, no al revés. Desde AUD-071 la
+            # altura del Venado se recalcula cada fotograma respecto al suelo,
+            # así que forzar su posición no sirve: el propio movimiento la
+            # deshace en el mismo frame. Una versión anterior de esta prueba lo
+            # hacía y medía dos cuerpos que nunca llegaban a tocarse.
+            player.position.x = float(boss.rect.centerx)
+            player.rect.x = int(player.position.x)
             app.scene_manager.update(DT)
             app.scene_manager.current.draw(surface)
             if player.current_health < before:
@@ -376,6 +379,35 @@ class TestTheBossFightIsPlayable:
             assert boss.rect.right <= width, (
                 f"el jefe salió por la derecha: right={boss.rect.right} > {width}"
             )
+
+    def test_the_boss_fights_within_reach_of_the_player(
+        self, app, surface, boss_scene,
+    ) -> None:
+        """El Venado peleaba pegado al techo (AUD-071).
+
+        Medido antes del arreglo: el suelo de la arena está en y=304 y el jefe
+        oscilaba entre y=52 y y=135 — el jugador no podía alcanzarlo saltando y
+        el combate era inganable, que es lo que se reportó jugando.
+
+        Su movimiento vertical se anclaba al punto de aparición del TMX y, en
+        fase 2, a la mitad de la altura del mapa. Ahora se mide desde el suelo,
+        así que funciona en cualquier arena que dibuje un estudiante.
+        """
+        scene, boss = boss_scene
+        floor = max(r.top for r in scene._stage_data.collision_rects)
+
+        heights = []
+        for _ in range(600):
+            app.scene_manager.update(DT)
+            app.scene_manager.current.draw(surface)
+            heights.append(floor - boss.rect.bottom)
+
+        highest = max(heights)
+        assert highest < 160, (
+            f"el jefe llegó a {highest} px sobre el suelo: fuera del alcance "
+            f"de un salto"
+        )
+        assert min(heights) > -20, "el jefe se hunde en el suelo"
 
     def test_the_boss_uses_the_whole_arena(self, app, surface, boss_scene) -> None:
         """Declaraba ARENA_W = 320 en un mapa de 640: peleaba en media arena.
@@ -694,3 +726,114 @@ class TestStage0SurvivesTheWholeMap:
 
         after = getattr(scene._weather, "_climate", None)
         assert after == "storm", f"el clima no cambió a tormenta: {before} -> {after}"
+
+
+class TestThePlayerMovesAtAHumanSpeed:
+    """La velocidad del jugador tiene que ser jugable (AUD-070).
+
+    Reportado jugando: «el player cuando avanzamos sale volando o sale rápido,
+    no hace lo que tiene que hacer».
+
+    Medido: `walk_speed` devolvía **1890 px/s** — 31 píxeles por fotograma a 60
+    fps, con lo que el personaje cruzaba un mapa de 1600 px en menos de un
+    segundo.
+
+    La causa es una unidad mal leída al conectar dos piezas. El inventario
+    guarda el bono de velocidad en **porcentaje** —`swift_feather` declara
+    `speed_bonus=10.0` y se describe a sí mismo como «Move 10% faster»— y el
+    jugador lo aplicaba como fracción: `90 * (1 + 10)`.
+
+    Es el defecto recurrente de esta auditoría visto desde el otro lado. Al
+    cablear `get_total_speed_bonus()`, que hasta entonces no tenía ningún
+    consumidor, nadie miró en qué unidad estaba lo que devolvía. Conectar dos
+    piezas obliga a mirar las dos.
+    """
+
+    def test_walk_speed_stays_within_a_playable_range(self, app, surface) -> None:
+        """Un límite superior generoso, pero que 1890 no cruza ni de lejos.
+
+        No se fija un valor exacto: la velocidad es una decisión de diseño y
+        puede ajustarse. Lo que no puede es salirse en un orden de magnitud.
+        """
+        from src.stages.stage0.stage0 import Stage0
+
+        scene = Stage0(app.context)
+        app.scene_manager.push(scene)
+        _skip_intro(app, scene, surface)
+
+        speed = scene._player.walk_speed
+        per_frame = speed / 60.0
+        assert 40.0 <= speed <= 400.0, (
+            f"walk_speed = {speed} px/s ({per_frame:.1f} px por fotograma). "
+            f"Fuera de ese rango el personaje es incontrolable o no avanza."
+        )
+        assert per_frame < 8.0, (
+            f"a {per_frame:.1f} px por fotograma el jugador atraviesa paredes "
+            f"de 16 px sin llegar a tocarlas"
+        )
+
+    def test_relic_speed_bonuses_are_percentages(self, _pygame_init) -> None:
+        """El bono declarado como «10% más rápido» debe dar un 10%.
+
+        Se comprueba la conversión directamente y no a través del juego: es una
+        cuestión de unidades, y una prueba de integración diría «va rápido» sin
+        distinguir un 10% de un 1000%.
+        """
+        import pygame
+
+        from src.framework.entities.player import Player
+
+        base = Player(pygame.Vector2(0, 0)).walk_speed
+
+        class _OneSwiftFeather:
+            def get_total_hp_bonus(self) -> float:
+                return 0.0
+
+            def get_total_speed_bonus(self) -> float:
+                return 10.0  # como lo declara `swift_feather`
+
+            def get_total_damage_bonus(self) -> float:
+                return 0.0
+
+        player = Player(pygame.Vector2(0, 0))
+        player.apply_relic_bonuses(_OneSwiftFeather())
+
+        assert player.walk_speed == pytest.approx(base * 1.10), (
+            f"una reliquia de «+10%» dejó la velocidad en {player.walk_speed} "
+            f"partiendo de {base}"
+        )
+
+    def test_the_player_can_traverse_the_opening_of_stage0(
+        self, app, surface,
+    ) -> None:
+        """Avanzar de verdad, saltando los escalones, como haría una persona.
+
+        El primer obstáculo de stage0 es un escalón de 16 px a los doce píxeles
+        de la salida: caminar sin saltar se detiene ahí, y eso es diseño de
+        nivel, no un fallo. Esta prueba salta, que es lo que el nivel pide.
+        """
+        from src.engine.input.action_map import Action
+        from src.stages.stage0.stage0 import Stage0
+        from tests.playtest.bot import _StubInput
+
+        scene = Stage0(app.context)
+        app.scene_manager.push(scene)
+        _skip_intro(app, scene, surface)
+
+        stub = _StubInput()
+        app.context.input_manager = stub
+        player = scene._player
+        start = player.position.x
+
+        for frame in range(300):
+            actions = {Action.MOVE_RIGHT}
+            if frame % 45 < 3:
+                actions.add(Action.JUMP)
+            stub.set_actions(actions)
+            app.scene_manager.update(DT)
+            app.scene_manager.current.draw(surface)
+
+        travelled = player.position.x - start
+        assert travelled > 150, (
+            f"en cinco segundos avanzando y saltando sólo recorrió {travelled:.0f} px"
+        )

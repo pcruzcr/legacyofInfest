@@ -48,6 +48,28 @@ class BossVenado(BossBase):
     def arena_height(self) -> int:
         return self.arena_bounds.height if self.arena_bounds else self.ARENA_H
 
+    #: A qué altura sobre el suelo flota el Venado. Es un ciervo espiritual, no
+    #: un ave: tiene que pelear al alcance del jugador.
+    HOVER_ABOVE_FLOOR = 70
+
+    @property
+    def hover_y(self) -> float:
+        """Altura de vuelo, medida **desde el suelo del arena** (AUD-071).
+
+        Antes el movimiento vertical se anclaba a `self._base_y`, el punto de
+        aparición del TMX, y la trayectoria Bézier a `arena_height // 2`.
+        Medido en la arena real: el suelo está en y=304 y el jefe oscilaba
+        entre y=52 y y=135 — peleaba pegado al techo, fuera del alcance del
+        jugador, que fue justo lo que se reportó jugando.
+
+        Anclarlo al suelo hace que el encuentro funcione en cualquier arena que
+        un estudiante dibuje, sin tener que acertar la Y del punto de aparición.
+        """
+        if self.arena_bounds is None:
+            return self._base_y
+        floor = self.arena_bounds.bottom
+        return float(floor - self.HOVER_ABOVE_FLOOR - self.rect.height)
+
     def __init__(self, spawn_position: pygame.Vector2) -> None:
         super().__init__(
             spawn_position=spawn_position,
@@ -191,7 +213,10 @@ class BossVenado(BossBase):
 
     def _build_figure8_path(self) -> list[pygame.Vector2]:
         cx = self.arena_center_x
-        cy = self.arena_height // 2 - 20
+        # AUD-071: centrado sobre el suelo, no sobre la mitad del mapa. Con
+        # `arena_height // 2` la fase 2 llevaba al jefe aún más arriba que la
+        # fase 1, así que el combate empeoraba justo cuando debía intensificarse.
+        cy = int(self.hover_y)
         # El radio se deriva del arena en vez de ser 80 fijo: en un mapa ancho
         # una trayectoria de 160 px de diámetro deja al jefe pegado al centro.
         r = max(48, min(120, self.arena_width // 4))
@@ -258,7 +283,9 @@ class BossVenado(BossBase):
             self.position.x += speed * dt * self.facing_direction
             amplitude = 40.0
             freq = 0.4
-            self.position.y = self._base_y + amplitude * math.sin(2 * math.pi * freq * self._elapsed)
+            self.position.y = (
+                self.hover_y + amplitude * math.sin(2 * math.pi * freq * self._elapsed)
+            )
             # Rebota en los bordes del arena real, no en un ancho fijo.
             left = 32 if self.arena_bounds is None else self.arena_bounds.left + 32
             right = (
