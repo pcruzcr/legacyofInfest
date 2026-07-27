@@ -159,7 +159,7 @@ Todo lo de esta sección se ejecutó hoy.
 |---|---|---|
 | Archivos fuente | 166 | `find src -name '*.py'` |
 | Líneas de código | 31.034 | `wc -l` |
-| Archivos de prueba | 65 | `ls tests/*.py` |
+| Archivos de prueba | 63 | `ls tests/*.py` |
 | Pruebas recolectadas | **1.228** | `pytest --collect-only` |
 | Pruebas en verde | 1.228 / 1.228 | por lotes (límite de 45 s) |
 | ruff | limpio | `ruff check src tests scripts tools main.py` |
