@@ -296,14 +296,21 @@ class BossVenado(BossBase):
         phase = self.phases[self.current_phase] if self.phases else None
         phase_combos = phase.combos if phase else {}
 
+        # AUD-064: los tres sonidos del Venado existen en disco, están
+        # cableados a un archivo y tienen subtítulo — y nadie los emitía. El
+        # jefe embestía, pisaba y lanzaba lianas en silencio absoluto.
         if attack_name == "STOMP":
             self._do_stomp()
+            self._event_bus.emit(Events.SFX_BOSSES_VENADO_STOMP)
         elif attack_name == "CHARGE" and player_ref is not None:
             self._do_charge(player_ref)
+            self._event_bus.emit(Events.SFX_BOSSES_VENADO_CHARGE)
         elif attack_name == "VINE_TOSS" and player_ref is not None:
             self._do_vine_toss(player_ref)
+            self._event_bus.emit(Events.SFX_BOSSES_VENADO_VINE)
         elif attack_name == "VINE_SWEEP":
             self._do_vine_sweep()
+            self._event_bus.emit(Events.SFX_BOSSES_VENADO_VINE)
         elif attack_name == "MUSHROOM_SPORE":
             self._do_mushroom_spore()
         else:

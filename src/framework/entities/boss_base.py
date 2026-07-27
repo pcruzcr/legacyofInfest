@@ -195,6 +195,8 @@ class BossBase(EnemyBase):
 
     def _start_phase_transition(self) -> None:
         """Begin phase transition: invincible, timer starts."""
+        # AUD-064: el momento más importante del combate no hacía ruido.
+        self._event_bus.emit(Events.SFX_BOSS_PHASE_CHANGE)
         self.is_transitioning = True
         self._invincibility_timer = float("inf")
         self.transition_timer = 2.5

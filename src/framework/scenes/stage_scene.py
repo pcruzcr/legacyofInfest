@@ -960,6 +960,8 @@ class StageScene(BaseScene):
     def _kill_player(self) -> None:
         self._game_over = True
         self.context.event_bus.emit(Events.PLAYER_DIED)
+        # AUD-064: la pantalla de game over aparecía en silencio.
+        self.context.event_bus.emit(Events.SFX_UI_GAME_OVER)
         from src.engine.scenes.game_over_scene import GameOverScene
         self.context.scene_manager.push(GameOverScene(self.context, self))
 
