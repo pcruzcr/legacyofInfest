@@ -12,6 +12,7 @@ rather than accessed through global state.
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
+
 from src.engine.core.clock import DeltaClock
 from src.engine.core.save_data import SaveData
 from src.engine.core.save_manager import SaveManager

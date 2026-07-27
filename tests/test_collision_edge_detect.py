@@ -5,7 +5,9 @@ Description: Regression — FIX-2: inflated rect catches edge-aligned
 overlaps (bottom == floor.top) that pygame.colliderect misses.
 """
 from __future__ import annotations
+
 import pygame
+
 from src.framework.entities.player import Player
 
 

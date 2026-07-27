@@ -5,6 +5,7 @@ Academic Unit: N/A
 Description: SpriteSheet utility for slicing frames from a sprite sheet image.
 """
 from __future__ import annotations
+
 import pygame
 
 

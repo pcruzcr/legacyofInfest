@@ -1,54 +1,111 @@
-"""
-Module: app
-System: engine.core
-Academic Unit: N/A
-Description: Main application entry point. Owns the game loop:
-process input -> dispatch events -> update -> draw -> present.
-Standard Pygame loop with EventBus integration.
-"""
 from __future__ import annotations
 
 import logging
 
 import pygame
 
-from src.engine.core import settings
-from src.engine.core.clock import DeltaClock
-from src.engine.core.event_bus import set_default_bus, EventBus
-from src.engine.core.game_context import GameContext
-from src.engine.scene.scene_manager import SceneManager
-from src.engine.input.input_manager import InputManager
 from src.engine.audio.audio_manager import AudioManager
+from src.engine.core import settings, user_settings
+from src.engine.core.clock import DeltaClock
+from src.engine.core.difficulty import Difficulty, set_difficulty
+from src.engine.core.event_bus import EventBus
+from src.engine.core.game_context import GameContext
 from src.engine.core.save_manager import SaveManager
+from src.engine.input.input_manager import InputManager
+from src.engine.scene.scene_manager import SceneManager
 
+logger = logging.getLogger(__name__)
 
 class App:
-    """
-    Top-level game application. Creates the window, initializes subsystems,
-    and runs the main loop.
-    """
+    def __init__(self, use_gl: bool = True) -> None:
+        self._use_gl = use_gl
+        self._gl_renderer = None
+        self._init_pygame()
+        self._init_subsystems()
 
-    def __init__(self) -> None:
+    def _init_pygame(self) -> None:
         pygame.init()
         pygame.display.set_caption("Legacy of InFest")
-        pygame.mixer.init(frequency=44100, size=-16, channels=8, buffer=512)
 
-        self.window_surface = pygame.display.set_mode(
-            (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
-            pygame.SCALED,
-        )
+        if self._use_gl:
+            try:
+                import moderngl  # noqa: F401
+                pygame.display.set_mode(
+                    (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
+                    pygame.OPENGL | pygame.DOUBLEBUF,
+                )
+                self._init_gl()
+            # `(ImportError, pygame.error, Exception)` was redundant — Exception
+            # subsumes both — and swallowed genuine GL bugs as "not available".
+            # We still fall back on any failure, but say what actually broke.
+            except ImportError:
+                logger.info("ModernGL not installed — using software rendering")
+                self._use_gl = False
+            except Exception:
+                logger.warning(
+                    "GL context creation failed — falling back to software rendering",
+                    exc_info=True,
+                )
+                self._use_gl = False
+
+        if not self._use_gl:
+            # SCALED lets SDL letterbox/upscale the window for us, so the
+            # display surface stays at the internal resolution and _draw() can
+            # blit 1:1. See _draw() for why DISPLAY_SCALE is not applied here.
+            pygame.display.set_mode(
+                (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
+                pygame.SCALED,
+            )
+
+        # AUD-012: an unguarded mixer.init() aborts startup on any machine with
+        # no audio device — headless CI, a locked ALSA device, a VM without a
+        # sound card, or a user who has muted output at the driver level. A
+        # game must not refuse to launch because it cannot make noise.
+        try:
+            pygame.mixer.init(frequency=44100, size=-16, channels=8, buffer=512)
+        except pygame.error:
+            logger.warning(
+                "No audio device available — continuing without sound", exc_info=True,
+            )
+
         self.internal_surface = pygame.Surface(
             (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
         )
+        self._scaled_surface: pygame.Surface | None = None
+        self._last_scale: int = 0
         self.clock = DeltaClock()
         self.running: bool = False
 
+    def _init_gl(self) -> None:
+        try:
+            from src.engine.render import GLRenderConfig, GLRenderer
+            cfg = GLRenderConfig()
+            self._gl_renderer = GLRenderer(cfg)
+            self._gl_renderer.init(pygame.display.get_surface())
+        except Exception as e:
+            logger.warning("GL initialization failed: %s", e)
+            self._use_gl = False
+
+    def _init_subsystems(self) -> None:
         self.event_bus = EventBus()
-        set_default_bus(self.event_bus)
+
+        # AUD-036: load persisted player preferences before anything reads them,
+        # and apply the ones other subsystems own (volumes, difficulty). The
+        # options screen previously wrote these to disk and nothing loaded them
+        # back, so accessibility settings could never take effect.
+        self.user_settings = user_settings.UserSettings.load()
+        user_settings.set_settings(self.user_settings)
 
         self.input_manager = InputManager()
         self.audio_manager = AudioManager()
         self.save_manager = SaveManager()
+
+        self.audio_manager.music_volume = self.user_settings.music_volume
+        self.audio_manager.sfx_volume = self.user_settings.sfx_volume
+        for difficulty in Difficulty:
+            if difficulty.value == self.user_settings.difficulty:
+                set_difficulty(difficulty)
+                break
 
         self.context = GameContext(
             input_manager=self.input_manager,
@@ -59,7 +116,17 @@ class App:
             save_manager=self.save_manager,
         )
 
-        self.scene_manager = SceneManager(self.context)
+        # AUD-018: App is the composition root, so it — not the scene manager —
+        # is where knowledge of concrete scene classes belongs. Injecting these
+        # keeps engine.scene free of any import into engine.scenes.
+        from src.engine.scenes.end_credits_scene import EndCreditsScene
+        from src.engine.scenes.title_scene import TitleScene
+
+        self.scene_manager = SceneManager(
+            self.context,
+            title_factory=TitleScene,
+            credits_factory=EndCreditsScene,
+        )
         self.context.scene_manager = self.scene_manager
 
         from src.framework.entities.entity_factory import ensure_registered
@@ -70,63 +137,115 @@ class App:
         from src.engine.scenes.splash_scene import SplashScene
         self.scene_manager.push(SplashScene(self.context))
 
+    # Consecutive frames that may fail before we stop trying to recover.
+    # Without a ceiling, a scene that raises on every update spins the loop at
+    # full speed forever, writing a stack trace per frame until the disk fills
+    # (AUD-015) — the player sees a frozen window and no way out.
+    MAX_CONSECUTIVE_FRAME_ERRORS = 10
+
     def run(self) -> None:
-        """Main game loop. Checks both App.running and GameContext.running
-        so that scenes can signal quit via context.quit()."""
         self.running = True
+        consecutive_errors = 0
         while self.running and self.context.running:
             dt = self.clock.tick()
             self._process_events()
             self.event_bus.dispatch()
+
+            frame_failed = False
             try:
                 self.scene_manager.update(dt)
                 self.scene_manager.transition.update(dt)
             except Exception:
-                logging.error("Unhandled exception in scene update", exc_info=True)
+                logger.exception("Unhandled exception in scene update")
+                frame_failed = True
                 self._fallback_to_title()
-            try:
-                self._draw()
-            except Exception:
-                logging.error("Unhandled exception in scene draw", exc_info=True)
-                self._fallback_to_title()
-            pygame.display.flip()
+            else:
+                try:
+                    self._draw()
+                except Exception:
+                    logger.exception("Unhandled exception in scene draw")
+                    frame_failed = True
+                    self._fallback_to_title()
+
+            if frame_failed:
+                consecutive_errors += 1
+                if consecutive_errors >= self.MAX_CONSECUTIVE_FRAME_ERRORS:
+                    logger.critical(
+                        "Aborting: %d consecutive frame failures — the fallback "
+                        "scene is failing too, so recovery is not possible.",
+                        consecutive_errors,
+                    )
+                    self.running = False
+            else:
+                consecutive_errors = 0
+
+            if not self._use_gl:
+                pygame.display.flip()
         self._shutdown()
 
     def _process_events(self) -> None:
-        """Collect pygame events, filter QUIT at app level, then
-        pump the remainder through InputManager so scenes can
-        handle CANCEL, CONFIRM, etc."""
         events = pygame.event.get()
+        has_quit = False
         for e in events:
             if e.type == pygame.QUIT:
-                self.running = False
-                return
+                has_quit = True
         self.input_manager.pump(events)
+        if has_quit:
+            self.running = False
+            return
+        if self.scene_manager.stack_size > 0:
+            self.scene_manager.current.process_events(events)
 
     def _draw(self) -> None:
-        """Render the current scene onto the internal surface, then scale
-        and present to the display.  The two-surface pipeline (internal →
-        display) avoids driver inconsistencies with pygame.SCALED."""
         self.internal_surface.fill(settings.BG_COLOR)
         if self.scene_manager.stack_size > 0:
             self.scene_manager.current.draw(self.internal_surface)
         self.scene_manager.transition.draw(self.internal_surface)
-        scaled = pygame.transform.scale_by(
-            self.internal_surface, settings.DISPLAY_SCALE,
-        )
-        pygame.display.get_surface().blit(scaled, (0, 0))
+
+        if self._use_gl and self._gl_renderer:
+            self._gl_renderer.render(self.internal_surface, self._current_light_surface())
+        else:
+            # AUD-013: this used to upscale internal_surface by
+            # settings.DISPLAY_SCALE and blit the result at (0, 0). The display
+            # surface, however, is created at the *internal* resolution, so with
+            # LOI_DISPLAY_SCALE=2 the game rendered an 1600x1200 image into an
+            # 800x600 window: everything but the top-left quadrant was clipped
+            # away, and two full-screen scale operations were paid every frame
+            # for the privilege. pygame.SCALED already asks SDL to upscale the
+            # window for us on the GPU, so the correct blit is 1:1.
+            pygame.display.get_surface().blit(self.internal_surface, (0, 0))
+
+    def _current_light_surface(self) -> pygame.Surface | None:
+        """The active scene's lighting buffer, if it exposes one.
+
+        Scenes opt in by implementing ``light_surface``; the previous code
+        reached through two layers of privates
+        (``scene._lighting._surface``), which coupled the application shell to
+        the internals of a specific VFX class.
+        """
+        if self.scene_manager.stack_size == 0:
+            return None
+        scene = self.scene_manager.current
+        surface = getattr(scene, "light_surface", None)
+        if isinstance(surface, pygame.Surface):
+            return surface
+        # Backward compatibility with scenes that have not adopted the
+        # property yet.
+        lighting = getattr(scene, "_lighting", None)
+        legacy = getattr(lighting, "_surface", None)
+        return legacy if isinstance(legacy, pygame.Surface) else None
 
     def _fallback_to_title(self) -> None:
-        """Fallback to title screen on unhandled exception."""
         from src.engine.scenes.title_scene import TitleScene
         try:
             self.context.scene_manager.replace(TitleScene(self.context))
         except Exception:
-            logging.error("Fallback to title also failed", exc_info=True)
+            logger.exception("Fallback to title also failed")
             self.running = False
 
     def _shutdown(self) -> None:
-        """Graceful shutdown."""
+        if self._gl_renderer:
+            self._gl_renderer.destroy()
         self.context.quit()
         self.scene_manager.cleanup()
         pygame.quit()

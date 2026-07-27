@@ -62,6 +62,8 @@ class Events:
     """Emitted on slam attack. Payload: pos."""
     VFX_ULTIMATE: str = "VFX_ULTIMATE"
     """Emitted on ultimate attack. Payload: pos."""
+    VFX_BUBBLE: str = "VFX_BUBBLE"
+    """Emitted by SwimmingState. Payload: pos."""
     SFX_PLAYER_SHORT_ATTACK: str = "SFX_PLAYER_SHORT_ATTACK"
     SFX_PLAYER_LONG_ATTACK: str = "SFX_PLAYER_LONG_ATTACK"
     SFX_PLAYER_HURT: str = "SFX_PLAYER_HURT"
@@ -100,6 +102,12 @@ class Events:
     """Emitted when an achievement is unlocked. Payload: achievement_id, name."""
     ACHIEVEMENT_PROGRESS: str = "ACHIEVEMENT_PROGRESS"
     """Emitted on progress toward achievement. Payload: achievement_id, progress, target."""
+
+    # ── Dialogue events ─────────────────────────────────────────
+    ITEM_COLLECTED: str = "ITEM_COLLECTED"
+    """Emitted by DialogueSystem on dialogue action. Payload: item_id."""
+    FLAG_SET: str = "FLAG_SET"
+    """Emitted by DialogueSystem on dialogue action. Payload: flag."""
 
     # ── Save / persist ──────────────────────────────────────────────
     SAVE_REQUESTED: str = "SAVE_REQUESTED"

@@ -13,11 +13,9 @@ Usage:
     python scripts/obsidianize.py --dry-run  # Preview changes without writing
 """
 
-import os
-import re
-import json
 import argparse
-from datetime import date
+import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 DOCS_DIR = Path("docs")
@@ -517,7 +515,7 @@ def build_frontmatter(meta: tuple, filename_stem: str, title: str, relative_path
     yaml_lines.append(f"tags: {json.dumps(tags)}")
     yaml_lines.append(f"description: \"{description}\"")
     yaml_lines.append(f"source: \"docs/{relative_path}{filename_stem}.md\"")
-    yaml_lines.append(f"date_processed: \"{date.today().isoformat()}\"")
+    yaml_lines.append(f"date_processed: \"{datetime.now(timezone.utc).date().isoformat()}\"")
     yaml_lines.append("---")
     return "\n".join(yaml_lines)
 
@@ -647,7 +645,7 @@ def create_obsidian_home(dry_run: bool = False):
         'tags: ["index", "home", "obsidian", "entry-point"]\n'
         'description: "Main entry point for the Legacy of InFest Obsidian knowledge base"\n'
         'source: "docs/Obsidian_Home.md"\n'
-        f'date_processed: "{date.today().isoformat()}"\n'
+        f'date_processed: "{datetime.now(timezone.utc).date().isoformat()}"\n'
         '---\n'
         '\n'
         '# 🧠 Legacy of InFest — Obsidian Knowledge Base\n'
@@ -760,7 +758,7 @@ def create_obsidian_home(dry_run: bool = False):
         '\n'
         '---\n'
         '\n'
-        f'*Este vault fue generado automáticamente el {date.today().isoformat()}. Para actualizar, ejecuta:*\n'
+        f'*Este vault fue generado automáticamente el {datetime.now(timezone.utc).date().isoformat()}. Para actualizar, ejecuta:*\n'
         '```bash\n'
         'python scripts/obsidianize.py\n'
         '```\n'
@@ -813,7 +811,7 @@ def main():
     print(f"  - Processed: {processed} files")
     print(f"  - Changed:   {changed} files")
     print(f"  - Skipped:   {skipped} files")
-    print(f"  - Created:   Obsidian_Home.md (landing page)")
+    print("  - Created:   Obsidian_Home.md (landing page)")
     print(f"{'='*60}\n")
 
     if dry_run:

@@ -6,9 +6,9 @@ import pygame
 
 from src.engine.core import settings
 from src.engine.scene.base_scene import BaseScene
+from src.engine.scenes.demo_common import BOTTOM_BAR_Y
 from src.engine.scenes.title_scene import TitleScene
 from src.engine.utils.asset_loader import AssetLoader
-from src.engine.scenes.demo_common import BOTTOM_BAR_Y
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext

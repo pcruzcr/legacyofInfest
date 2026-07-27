@@ -61,7 +61,7 @@ def _parse_tmx(path: Path) -> ET.Element | None:
     try:
         tree = ET.parse(path)
         return tree.getroot()
-    except ET.ParseError as e:
+    except ET.ParseError:
         return None
 
 
@@ -104,7 +104,7 @@ def grade_stage(path: Path) -> dict[str, Any]:
 
     # Layer checks
     layers = root.findall("layer")
-    layer_names = [l.get("name", "") for l in layers]
+    layer_names = [line.get("name", "") for line in layers]
     has_terrain = "Terrain" in layer_names
     has_collision = "Collision" in layer_names
     if has_terrain:
@@ -170,7 +170,7 @@ def grade_stage(path: Path) -> dict[str, Any]:
     for og in root.findall("objectgroup"):
         for obj in og.findall("object"):
             oname = obj.get("name", "")
-            otype = obj.get("type", "")
+            obj.get("type", "")
             if "collect" in oname.lower():
                 collectibles += 1
     for layer in root.findall("layer"):

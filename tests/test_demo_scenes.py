@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from unittest.mock import MagicMock
 
 import pygame
@@ -29,25 +30,25 @@ def context():
     return ctx
 
 
-from src.engine.scenes.demo_menu_scene import DemoMenuScene
-from src.engine.scenes.filter_demo_scene import FilterDemoScene
-from src.engine.scenes.vision_demo_scene import VisionDemoScene
-from src.engine.scenes.pattern_demo_scene import PatternDemoScene
 from src.engine.scenes.collision_lab_scene import CollisionLabScene
-from src.engine.scenes.vector_lab_scene import VectorLabScene
 from src.engine.scenes.color_theory_scene import ColorTheoryScene
 from src.engine.scenes.curve_editor_scene import CurveEditorScene
-from src.engine.scenes.transform_lab_scene import TransformLabScene
+from src.engine.scenes.demo_common import (
+    FrameThrottle,
+    SourceSurfaceManager,
+    build_default_sources,
+    draw_bottom_bar,
+    draw_top_bar,
+    save_png,
+)
+from src.engine.scenes.demo_menu_scene import DemoMenuScene
+from src.engine.scenes.filter_demo_scene import FilterDemoScene
 from src.engine.scenes.interpolation_lab_scene import InterpolationLabScene
 from src.engine.scenes.noise_lab_scene import NoiseLabScene
-from src.engine.scenes.demo_common import (
-    build_default_sources,
-    SourceSurfaceManager,
-    FrameThrottle,
-    save_png,
-    draw_top_bar,
-    draw_bottom_bar,
-)
+from src.engine.scenes.pattern_demo_scene import PatternDemoScene
+from src.engine.scenes.transform_lab_scene import TransformLabScene
+from src.engine.scenes.vector_lab_scene import VectorLabScene
+from src.engine.scenes.vision_demo_scene import VisionDemoScene
 
 
 class TestDemoMenuScene:
@@ -384,8 +385,8 @@ class TestTitleSceneIntegration:
         assert scene._options.index("ACADEMIC DEMOS") == 6
 
     def test_title_demo_select(self, context) -> None:
-        from src.engine.scenes.title_scene import TitleScene
         from src.engine.scenes.demo_menu_scene import DemoMenuScene
+        from src.engine.scenes.title_scene import TitleScene
 
         mock_replace_calls: list = []
         context.scene_manager.replace = lambda sc: mock_replace_calls.append(sc)

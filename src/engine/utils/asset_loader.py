@@ -22,6 +22,7 @@ from pathlib import Path
 
 import pygame
 
+logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
@@ -67,13 +68,39 @@ class AssetLoader:
 
     _default_instance: AssetLoader | None = None
 
+    # Images above this many cached entries trigger eviction of the
+    # least-recently-used ones. Sized generously: a stage plus its UI is well
+    # under this, so eviction only kicks in on pathological churn.
+    MAX_CACHED_IMAGES = 512
+
     def __init__(self) -> None:
         self._images: dict[str, pygame.Surface] = {}
         self._fonts: dict[str, pygame.font.Font] = {}
         self._sounds: dict[str, pygame.mixer.Sound] = {}
         self._missing: set[str] = set()
+        # Number of live scopes (scenes) currently using the cache. Only the
+        # last one to leave may clear it.
+        self._scopes: int = 0
 
     # ── Internal instance methods ──────────────────────────────
+
+    def _enter_scope(self) -> None:
+        """Register a consumer (typically a scene) as using the cache."""
+        self._scopes += 1
+
+    def _leave_scope(self) -> None:
+        """Release a consumer; clear the cache only when the last one leaves.
+
+        AUD-025: ``StageScene.on_exit()`` called the *global* ``clear_cache()``.
+        With a paused scene still on the stack below, that freed nothing — the
+        paused scene's surfaces kept the pixel data alive — while forcing every
+        subsequent lookup to re-decode from disk. The result was cache thrash
+        with none of the memory benefit. Reference counting means the cache is
+        only actually dropped when nothing is using it any more.
+        """
+        self._scopes = max(0, self._scopes - 1)
+        if self._scopes == 0:
+            self._clear_cache()
 
     def _clear_cache(self) -> None:
         """Release all cached images/fonts/sounds to free memory."""
@@ -82,14 +109,61 @@ class AssetLoader:
         self._sounds.clear()
         self._missing.clear()
 
+    def _evict_if_needed(self) -> None:
+        """Drop the oldest cached images once past ``MAX_CACHED_IMAGES``.
+
+        The cache was previously unbounded, and its keys include scale, size,
+        alpha and smoothing — so a single source file requested at several sizes
+        multiplied into several entries with nothing ever reclaiming them.
+        ``dict`` preserves insertion order, which gives us FIFO eviction for
+        free; that is a good enough approximation of LRU for asset loading,
+        where access is dominated by stage-scoped bursts.
+        """
+        overflow = len(self._images) - self.MAX_CACHED_IMAGES
+        if overflow <= 0:
+            return
+        for key in list(self._images)[:overflow]:
+            del self._images[key]
+        logger.debug("AssetLoader: evicted %d cached image(s)", overflow)
+
     def _resolve(self, path: str | Path) -> Path:
-        path = Path(path)
-        if path.is_absolute():
-            return path
-        custom = (PROJECT_ROOT / "custom_assets" / path).resolve()
-        if custom.exists():
-            return custom
-        return (PROJECT_ROOT / path).resolve()
+        """Resolve an asset path, refusing to escape the project directory.
+
+        AUD-026: this used to join any caller-supplied path onto
+        ``PROJECT_ROOT`` with no containment check. Stage geometry, sprite paths
+        and tileset references all come from student-authored TMX files, so a
+        path like ``../../../../etc/passwd`` — or, on Windows, one pointing at a
+        user's documents — was reachable from data the engine is designed to
+        load from untrusted authors. Absolute paths are still honoured, because
+        tooling legitimately passes them, but relative paths must stay inside
+        the project.
+        """
+        candidate = Path(path)
+        if candidate.is_absolute():
+            return candidate
+
+        for base in (PROJECT_ROOT / "custom_assets", PROJECT_ROOT):
+            resolved = (base / candidate).resolve()
+            try:
+                resolved.relative_to(PROJECT_ROOT.resolve())
+            except ValueError:
+                logger.error(
+                    "AssetLoader: refusing path %r — it resolves to %s, outside "
+                    "the project directory", str(path), resolved,
+                )
+                # Return a path that cannot exist rather than raising, so a
+                # malformed stage degrades to placeholder art instead of
+                # crashing the game.
+                return PROJECT_ROOT / "__rejected__" / candidate.name
+            if base.name == "custom_assets" and not resolved.exists():
+                continue
+            return resolved
+        return (PROJECT_ROOT / candidate).resolve()
+
+    @staticmethod
+    def _display_ready() -> bool:
+        """True when a display surface exists, so ``convert_alpha()`` can work."""
+        return pygame.display.get_init() and pygame.display.get_surface() is not None
 
     def _load_image(
         self,
@@ -104,19 +178,44 @@ class AssetLoader:
         key = f"{real_path}|{scale}|{size}|{alpha}|{smooth}"
         if key in self._images:
             return self._images[key]
+
+        image: pygame.Surface | None = None
         try:
             image = pygame.image.load(real_path)
-            image = image.convert_alpha() if alpha else image.convert()
         except (pygame.error, FileNotFoundError, PermissionError):
+            image = None
+            if str(real_path) not in self._missing:
+                logger.warning("Missing asset: %s", real_path)
+                self._missing.add(str(real_path))
+        else:
+            # AUD-024: convert()/convert_alpha() require a display surface. When
+            # called before pygame.display.set_mode(), pygame raises
+            # pygame.error — which the old code caught with the file-not-found
+            # handler, so the game silently served placeholder art for every
+            # asset and logged "Missing asset: <path>" for files that exist. The
+            # cause and the symptom were unrelated, which made it very hard to
+            # diagnose. Distinguish the two cases explicitly.
+            if self._display_ready():
+                image = image.convert_alpha() if alpha else image.convert()
+            else:
+                # Keep the unconverted surface: it renders correctly, just
+                # slower. Crucially it is the *real* artwork, not a placeholder,
+                # and it is not cached as if the file were missing.
+                logger.warning(
+                    "AssetLoader: no display surface yet — %s loaded unconverted. "
+                    "Blitting will be slower until a display mode is set; call "
+                    "pygame.display.set_mode() before loading assets.",
+                    real_path.name,
+                )
+
+        if image is None:
             category = real_path.parent.name
             placeholder_size = PLACEHOLDER_SIZES.get(category, (32, 32))
             color = PLACEHOLDER_COLORS.get(category, (120, 120, 120))
             image = pygame.Surface(placeholder_size, pygame.SRCALPHA)
             image.fill(color)
             pygame.draw.rect(image, (255, 255, 255), image.get_rect(), 1)
-            if str(real_path) not in self._missing:
-                logging.warning("Missing asset: %s", real_path)
-                self._missing.add(str(real_path))
+
         if size:
             transform_fn = pygame.transform.smoothscale if smooth else pygame.transform.scale
             image = transform_fn(image, size)
@@ -124,6 +223,7 @@ class AssetLoader:
             transform_fn = pygame.transform.smoothscale if smooth else pygame.transform.scale
             image = transform_fn(image, (int(image.get_width() * scale), int(image.get_height() * scale)))
         self._images[key] = image
+        self._evict_if_needed()
         return image
 
     def _load_font(self, path: str | Path | None, size: int) -> pygame.font.Font:
@@ -157,6 +257,11 @@ class AssetLoader:
         frame_width: int,
         frame_height: int,
     ) -> list[pygame.Surface]:
+        if frame_width <= 0 or frame_height <= 0:  # BUG-081 FIX: validar antes de dividir
+            raise ValueError(
+                f"AssetLoader: invalid frame size ({frame_width}x{frame_height}) "
+                f"for {path}"
+            )
         sheet = self._load_image(path)
         frames = []
         cols = sheet.get_width() // frame_width
@@ -177,7 +282,24 @@ class AssetLoader:
 
     @classmethod
     def clear_cache(cls) -> None:
+        """Unconditionally drop every cached asset.
+
+        Use this in test teardown and at shutdown. Scenes should call
+        :meth:`enter_scope` / :meth:`leave_scope` instead, so that a scene
+        exiting while another is still paused underneath does not throw away
+        assets the paused scene is still holding (AUD-025).
+        """
         cls._get_instance()._clear_cache()
+
+    @classmethod
+    def enter_scope(cls) -> None:
+        """Mark the start of a cache-using scope (called by scenes on enter)."""
+        cls._get_instance()._enter_scope()
+
+    @classmethod
+    def leave_scope(cls) -> None:
+        """End a cache-using scope; clears the cache when the last one leaves."""
+        cls._get_instance()._leave_scope()
 
     @classmethod
     def load_image(

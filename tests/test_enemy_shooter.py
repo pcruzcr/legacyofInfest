@@ -5,9 +5,11 @@ Description: Tests for EnemyShooter firing, projectile creation,
 aiming (atan2), and fire rate limiting.
 """
 from __future__ import annotations
+
 import pygame
-from src.framework.entities.enemy_shooter import EnemyShooter, Projectile
+
 from src.framework.entities.enemy_base import EnemyState
+from src.framework.entities.enemy_shooter import EnemyShooter, Projectile
 
 
 class TestShooterFiring:

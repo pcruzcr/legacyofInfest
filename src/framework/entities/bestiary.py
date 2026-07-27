@@ -5,9 +5,15 @@ Academic Unit: N/A
 Description: Bestiary/Codex system — tracks enemy encounters, kills, and lore.
 """
 from __future__ import annotations
-import json
+
 from pathlib import Path
 from typing import Any
+
+import orjson
+
+from src.engine.core import settings
+
+_DEFAULT_BESTIARY_PATH: Path = settings.PROJECT_ROOT / "saves/bestiary.json"
 
 
 class BestiaryEntry:
@@ -105,19 +111,18 @@ class Bestiary:
             entry.encountered = True
             entry.times_hit_by_player += 1
 
-    def save(self, path: str | Path = "saves/bestiary.json") -> None:
+    def save(self, path: str | Path | None = None) -> None:
         data = {eid: entry.to_dict() for eid, entry in self._entries.items()}
-        Path(path).parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
+        path = Path(path) if path is not None else _DEFAULT_BESTIARY_PATH
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(orjson.dumps(data, option=orjson.OPT_INDENT_2))
 
-    def load(self, path: str | Path = "saves/bestiary.json") -> None:
+    def load(self, path: str | Path | None = None) -> None:
         try:
-            with open(path, encoding="utf-8") as f:
-                data = json.load(f)
+            data = orjson.loads((Path(path) if path is not None else _DEFAULT_BESTIARY_PATH).read_bytes())
             for eid, entry_data in data.items():
                 base = self._entries.get(eid)
                 if base:
                     BestiaryEntry.from_dict(entry_data, base)
-        except (FileNotFoundError, json.JSONDecodeError):
+        except (FileNotFoundError, orjson.JSONEncodeError, ValueError):
             pass

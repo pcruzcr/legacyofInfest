@@ -104,13 +104,17 @@ def grade_boss(path: Path) -> dict[str, Any]:
         return result
     result["categories"]["inherits_bossbase"] = {"score": RUBRIC["inherits_bossbase"], "max": RUBRIC["inherits_bossbase"], "msg": f"Class '{boss_class.name}' inherits BossBase"}
 
-    # Boss name config
+    # Boss name config  # BUG-079 FIX: también acepta set_boss_name()
     has_boss_config = False
     for node in ast.walk(boss_class):
         if isinstance(node, ast.Assign):
             for target in node.targets:
                 if isinstance(target, ast.Attribute) and target.attr == "boss_name":
                     has_boss_config = True
+        if isinstance(node, ast.Call):
+            func = node.func
+            if isinstance(func, ast.Attribute) and func.attr == "set_boss_name":
+                has_boss_config = True
     if has_boss_config:
         result["categories"]["boss_name_config"] = {"score": RUBRIC["boss_name_config"], "max": RUBRIC["boss_name_config"], "msg": "Has boss_name config"}
     else:
@@ -125,7 +129,7 @@ def grade_boss(path: Path) -> dict[str, Any]:
     # Phase transitions (look for phase-related methods or state changes)
     phase_methods = [n for n in methods if "phase" in n.lower() or "phase" in n.lower()]
     state_transitions = 0
-    for name, func in methods.items():
+    for _name, func in methods.items():
         for node in ast.walk(func):
             if isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant):
                 doc = node.value.value
@@ -153,7 +157,7 @@ def grade_boss(path: Path) -> dict[str, Any]:
 
     # HP thresholds
     hp_thresholds = 0
-    for name, func in methods.items():
+    for _name, func in methods.items():
         for node in ast.walk(func):
             if isinstance(node, ast.Compare):
                 for c in [node.left, node.comparators]:
@@ -252,8 +256,11 @@ def main() -> int:
     for pyf in sorted(py_files):
         r = grade_boss(pyf)
         all_results.append(r)
-        if not args.json:
-            rel = pyf.relative_to(_PROJECT_ROOT)
+        if not args.json:  # BUG-080 FIX: rutas relativas
+            try:
+                rel = pyf.resolve().relative_to(_PROJECT_ROOT)
+            except ValueError:
+                rel = pyf
             print(f"\n{'='*50}")
             print(f"  {rel}")
             print(f"{'='*50}")

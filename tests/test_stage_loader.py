@@ -5,9 +5,11 @@ Description: Tests for StageLoader — TMX parsing, entity spawning,
 collision rects, missing layer/PlayerSpawn errors.
 """
 from __future__ import annotations
+
 from pathlib import Path
+
 from src.framework.entities.enemy_walker import EnemyWalker
-from src.framework.stage.stage_loader import StageLoader, StageData
+from src.framework.stage.stage_loader import StageData, StageLoader
 
 FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures"
 MINIMAL_TMX = FIXTURE_DIR / "minimal_stage.tmx"

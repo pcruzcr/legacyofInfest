@@ -2,15 +2,32 @@ import pygame
 import pytest
 
 from src.framework.entities.player import Player, PlayerState
-from src.framework.entities.player_states import (
-    IdleState, WalkingState, JumpingState, FallingState,
-    CrouchingState, ShortAttackState, LongAttackState,
-    DashingState, ParryState, ChargingState, DashAttackState,
-    WallSlideState, LedgeGrabState, GrabState, ThrowState,
-    SlideState, SwimmingState, HurtState, DyingState,
-    UltimateState, ChargeReleaseState, AerialAttackState,
-    AerialSlamState, AirChaseState,
+from src.framework.entities.states import (
+    AerialAttackState,
+    AerialSlamState,
+    AirChaseState,
+    ChargeReleaseState,
+    ChargingState,
+    CrouchingState,
+    DashAttackState,
+    DashingState,
+    DyingState,
+    FallingState,
+    GrabState,
+    HurtState,
+    IdleState,
+    JumpingState,
+    LedgeGrabState,
+    LongAttackState,
+    ParryState,
     PlayerStateBase,
+    ShortAttackState,
+    SlideState,
+    SwimmingState,
+    ThrowState,
+    UltimateState,
+    WalkingState,
+    WallSlideState,
 )
 
 

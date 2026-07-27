@@ -6,13 +6,16 @@ Description: Named sound registry. Maps logical sound names to loaded
 pygame.mixer.Sound objects with graceful missing-file handling.
 """
 from __future__ import annotations
+
 import logging
 from pathlib import Path
+
 import pygame
 
 from src.engine.core import settings
 from src.engine.utils.asset_loader import AssetLoader
 
+logger = logging.getLogger(__name__)
 
 class SoundBank:
     """Registry of named sounds with lazy loading."""
@@ -25,10 +28,10 @@ class SoundBank:
     def load_all(self) -> None:
         """Scan assets/sfx/ recursively and register every .wav file."""
         if not self.SFX_DIR.is_dir():
-            logging.warning(f"SoundBank: SFX dir not found: {self.SFX_DIR}")
+            logger.warning("SoundBank: SFX dir not found: %s", self.SFX_DIR)
             return
         if pygame.mixer.get_init() is None:
-            logging.warning("SoundBank: pygame.mixer not initialized, skipping load_all")
+            logger.warning("SoundBank: pygame.mixer not initialized, skipping load_all")
             return
         try:
             for wav_path in self.SFX_DIR.rglob("*.wav"):
@@ -36,18 +39,18 @@ class SoundBank:
                     name = wav_path.stem
                     self._sounds[name] = AssetLoader.load_sound(wav_path)
                 except (pygame.error, PermissionError, OSError) as e:
-                    logging.warning(f"SoundBank: failed to load {wav_path}: {e}")
+                    logger.warning("SoundBank: failed to load %s: %s", wav_path, e)
         except PermissionError as e:
-            logging.warning(f"SoundBank: cannot scan SFX dir: {e}")
+            logger.warning("SoundBank: cannot scan SFX dir: %s", e)
         try:
             for ogg_path in self.SFX_DIR.rglob("*.ogg"):
                 try:
                     name = ogg_path.stem
                     self._sounds[name] = AssetLoader.load_sound(ogg_path)
                 except (pygame.error, PermissionError, OSError) as e:
-                    logging.warning(f"SoundBank: failed to load {ogg_path}: {e}")
+                    logger.warning("SoundBank: failed to load %s: %s", ogg_path, e)
         except PermissionError as e:
-            logging.warning(f"SoundBank: cannot scan SFX dir: {e}")
+            logger.warning("SoundBank: cannot scan SFX dir: %s", e)
 
     def load(self, name: str, path: str | Path) -> None:
         """Register a sound by name, loading from the given path."""
@@ -55,7 +58,7 @@ class SoundBank:
             sound = AssetLoader.load_sound(path)
             self._sounds[name] = sound
         except (pygame.error, PermissionError, OSError) as e:
-            logging.warning(f"SoundBank: failed to load sound '{name}' from {path}: {e}")
+            logger.warning("SoundBank: failed to load sound '%s' from %s: %s", name, path, e)
             self._sounds[name] = None
 
     def get(self, name: str) -> pygame.mixer.Sound | None:
@@ -68,15 +71,15 @@ class SoundBank:
              pitch: float = 1.0, pan: tuple[float, float] | None = None) -> None:
         """Play a registered sound at the given volume and pitch. Silently skip if not found."""
         if pitch <= 0.0:
-            logging.warning("SoundBank: invalid pitch %f for '%s', using 1.0", pitch, name)
+            logger.warning("SoundBank: invalid pitch %f for '%s', using 1.0", pitch, name)
             pitch = 1.0
         sound = self._sounds.get(name)
         if sound is not None:
             try:
                 sound.set_volume(max(0.0, min(1.0, volume)))
                 if pitch != 1.0:
-                    import pygame.sndarray
                     import numpy as np
+                    import pygame.sndarray
                     pitch_key = f"{name}_p{round(pitch, 2) * 100:.0f}"
                     pitched = self._sounds.get(pitch_key)
                     if pitched is None:
@@ -102,7 +105,7 @@ class SoundBank:
                     if pan is not None:
                         channel.set_volume(max(0.0, pan[0]), max(0.0, pan[1]))
             except (ImportError, ValueError, IndexError, TypeError) as _exc:
-                logging.warning("SoundBank: pitch shift failed for '%s': %s", name, _exc)
+                logger.warning("SoundBank: pitch shift failed for '%s': %s", name, _exc)
                 channel = sound.play(loops=loops)
                 if channel is not None and pan is not None:
                     channel.set_volume(max(0.0, pan[0]), max(0.0, pan[1]))

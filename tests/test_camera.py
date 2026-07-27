@@ -5,8 +5,10 @@ Description: Tests for Camera follow, world-to-screen conversion,
 parallax, screen shake, map boundary clamping, and lock zones.
 """
 from __future__ import annotations
+
 import pygame
 import pytest
+
 from src.framework.stage.camera import Camera, _CameraLock
 
 

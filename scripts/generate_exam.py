@@ -16,7 +16,6 @@ import sys
 import time
 from pathlib import Path
 
-
 EXAM_DIR = Path(__file__).resolve().parent.parent / "exams"
 DEFAULT_BANK_PATH = Path(__file__).resolve().parent.parent / "docs" / "exam_questions.json"
 

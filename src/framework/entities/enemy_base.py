@@ -8,18 +8,17 @@ hitbox/hurtbox infrastructure, and death handling.
 """
 from __future__ import annotations
 
+import warnings
 from abc import abstractmethod
 from enum import Enum
+from typing import TYPE_CHECKING
 
 import pygame
 
-from typing import TYPE_CHECKING
-
 from src.engine.core import settings
-from src.engine.core.event_bus import _get_bus as _bus
-_emit = lambda *a, **kw: _bus().emit(*a, **kw)
 from src.engine.core.events import Events
 from src.engine.utils.asset_loader import AssetLoader
+from src.engine.utils.surface_pool import get_pool
 from src.framework.entities.base_entity import BaseEntity
 
 if TYPE_CHECKING:
@@ -56,9 +55,10 @@ class EnemyBase(BaseEntity):
         hurt_duration: float = 0.25,
         invincibility_duration: float = 0.5,
         deaggro_margin: float = 32.0,
+        event_bus=None,
     ) -> None:
         """Initialize the enemy at the given spawn position."""
-        super().__init__(spawn_position)
+        super().__init__(spawn_position, event_bus)
 
         # --- Health ---
         from src.engine.core.difficulty import get_config
@@ -83,6 +83,10 @@ class EnemyBase(BaseEntity):
         self._telegraph_duration: float = 0.4
         self._ground_y: float = spawn_position.y
         self._is_airborne: bool = False
+
+        # --- Collision ---
+        self._collision_rects: list[pygame.Rect] = []
+        self._one_way_rects: list[pygame.Rect] = []
 
         # --- Detection ---
         self.detection_range_x: float = detection_range_x
@@ -164,12 +168,11 @@ class EnemyBase(BaseEntity):
             self.position.x += self._knockback_velocity.x * dt
             self.position.y += self._knockback_velocity.y * dt
             # BUG-032 FIX: Collision resolution after knockback
-            if hasattr(self, "_collision_rects"):
-                entity_rect = pygame.Rect(
-                    int(self.position.x), int(self.position.y),
-                    self.rect.width, self.rect.height,
-                )
-                for tile in self._collision_rects:
+            entity_rect = pygame.Rect(
+                int(self.position.x), int(self.position.y),
+                self.rect.width, self.rect.height,
+            )
+            for tile in self._collision_rects:
                     if entity_rect.colliderect(tile):
                         overlap_x = min(entity_rect.right - tile.left, tile.right - entity_rect.left)
                         overlap_y = min(entity_rect.bottom - tile.top, tile.bottom - entity_rect.top)
@@ -299,9 +302,11 @@ class EnemyBase(BaseEntity):
         frames = self._sprite_frames.get(anim_key)
         if frames:
             frame_idx = min(self._animation_frame, len(frames) - 1)
-            frame = frames[frame_idx]
             if self.facing_direction < 0:
-                frame = pygame.transform.flip(frame, True, False)
+                flipped_frames = get_pool().get_flipped_frames(frames)
+                frame = flipped_frames[frame_idx]
+            else:
+                frame = frames[frame_idx]
             ox = (self.rect.width - self._sprite_fw) // 2
             oy = self.rect.height - self._sprite_fh
             surface.blit(frame, (screen_x + ox, screen_y + oy))
@@ -407,13 +412,13 @@ class EnemyBase(BaseEntity):
         self._was_alive = True
         # BUG-031 FIX: Keep is_alive=True until death animation completes
         # is_alive will be set to False in _tick_cooldowns when _death_timer <= 0
-        _emit(
+        self._event_bus.emit(
             Events.ENEMY_DIED,
             entity_id=f"{type(self).__name__}_{id(self)}",
             position=(self.position.x, self.position.y),
         )
         is_large = self.rect.width > 24 or self.rect.height > 28
-        _emit(Events.SFX_ENEMY_DIE_LARGE if is_large else Events.SFX_ENEMY_DIE_SMALL)
+        self._event_bus.emit(Events.SFX_ENEMY_DIE_LARGE if is_large else Events.SFX_ENEMY_DIE_SMALL)
 
     # ──────────────────────────────────────────────
     # Required overrides (abstract)
@@ -521,7 +526,7 @@ class EnemyBase(BaseEntity):
                 player._parry_success = True
                 player._parry_active = False
                 player._parry_window = 0.0
-                _emit(Events.VFX_PARRY, pos=(self.position.x, self.position.y))
+                self._event_bus.emit(Events.VFX_PARRY, pos=(self.position.x, self.position.y))
                 self._contact_cooldown = 0.3
                 return
             player.apply_damage(
@@ -533,9 +538,6 @@ class EnemyBase(BaseEntity):
 
     def check_player_contact(self, player: Player) -> None:
         """Deprecated alias for _check_player_contact."""
-        # BUG-036 FIX: Add deprecation warning for check_player_contact
-        import warnings
-
         warnings.warn(
             "check_player_contact is deprecated, use _check_player_contact instead",
             DeprecationWarning,

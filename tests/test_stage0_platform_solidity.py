@@ -6,9 +6,12 @@
 - Zone D High Platform (cols 58-62, row 27): reachable from floor.
 """
 from __future__ import annotations
+
 import os
+
 import pygame
 import pytest
+
 from src.engine.input.action_map import Action
 from src.engine.input.input_manager import InputManager
 from src.framework.entities.player import Player

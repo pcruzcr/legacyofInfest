@@ -1,10 +1,9 @@
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 import pygame
 
-from src.engine.core.event_bus import _get_bus as _bus
-_emit = lambda *a, **kw: _bus().emit(*a, **kw)
 from src.engine.core.events import Events
 from src.framework.entities.enemy_base import EnemyBase
 
@@ -99,7 +98,7 @@ class EnemyAssassin(EnemyBase):
             self._lunge_timer = self._lunge_duration
             self._lunge_dir = 1 if dx >= 0 else -1
             self._lunge_has_hit = False
-            _emit(Events.BOSS_ATTACK, pattern="assassin_lunge", rect=self.rect)
+            self._event_bus.emit(Events.BOSS_ATTACK, pattern="assassin_lunge", rect=self.rect)
             return
 
         if not self._is_cloaked:

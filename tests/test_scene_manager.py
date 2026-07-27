@@ -6,14 +6,16 @@ Description: Tests for SceneManager push/pop/replace lifecycle,
 current scene property, queue management, and cleanup.
 """
 from __future__ import annotations
-import pygame
-import pytest
+
 from unittest.mock import MagicMock
 
-from src.engine.core.game_context import GameContext
+import pygame
+import pytest
+
 from src.engine.core.event_bus import EventBus
-from src.engine.scene.scene_manager import SceneManager
+from src.engine.core.game_context import GameContext
 from src.engine.scene.base_scene import BaseScene
+from src.engine.scene.scene_manager import SceneManager
 
 
 class _TestSceneA(BaseScene):

@@ -6,13 +6,16 @@ and automatic rendering.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 import pygame
 
 from src.engine.scenes.demo_layout import (
-    COLOR_TEXT, COLOR_HIGHLIGHT,
-    FONT_SMALL, _get_demo_font,
+    COLOR_HIGHLIGHT,
+    COLOR_TEXT,
+    FONT_SMALL,
+    _get_demo_font,
 )
 
 if TYPE_CHECKING:

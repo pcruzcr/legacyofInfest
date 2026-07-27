@@ -1,60 +1,95 @@
 from __future__ import annotations
 
-import math
-import random
-
+import numpy as np
 import pygame
 
+# numba is an OPTIONAL accelerator here, not a hard requirement (AUD-006b).
+#
+# Unlike the scalar helpers in engine.utils.math_utils — where JIT compilation
+# measured *slower* than plain Python and was removed — this kernel is a tight
+# loop over N particle arrays, which is exactly the workload numba is good at.
+# So we keep it, but degrade gracefully: without numba installed the game runs
+# the vectorised NumPy path below instead of refusing to start.
+try:
+    import numba
 
-class Particle:
-    __slots__ = (
-        "x", "y", "vx", "vy", "life", "max_life", "size",
-        "color", "alpha", "decay", "gravity", "friction",
-    )
+    _HAS_NUMBA = True
+except ImportError:  # pragma: no cover - exercised only on installs without numba
+    numba = None  # type: ignore[assignment]
+    _HAS_NUMBA = False
 
-    def __init__(
-        self, x: float, y: float, vx: float, vy: float,
-        life: float, size: int, color: tuple[int, int, int],
-        gravity: float = 0.0, friction: float = 1.0,
+
+def _update_particles_py(
+    x: np.ndarray, y: np.ndarray, vx: np.ndarray, vy: np.ndarray,
+    life: np.ndarray, max_life: np.ndarray, alpha: np.ndarray,
+    size: np.ndarray, gravity: np.ndarray, friction: np.ndarray, dt: float,
+) -> None:
+    """Vectorised NumPy fallback. Same semantics as the JIT kernel."""
+    alive = life > 0
+    if not alive.any():
+        return
+    life[alive] -= dt
+
+    expired = alive & (life <= 0)
+    alpha[expired] = 0
+
+    live = alive & (life > 0)
+    if not live.any():
+        return
+    # max_life is guaranteed > 0 for live particles by the emitter, but guard
+    # anyway so a malformed config cannot produce a divide-by-zero warning.
+    safe_max = np.where(max_life[live] > 0, max_life[live], 1.0)
+    alpha[live] = np.clip((255.0 * life[live] / safe_max).astype(np.int32), 0, 255)
+    vy[live] += gravity[live] * dt
+    f = friction[live] ** dt
+    vx[live] *= f
+    vy[live] *= f
+    x[live] += vx[live] * dt
+    y[live] += vy[live] * dt
+
+
+if _HAS_NUMBA:
+
+    @numba.njit(cache=True, parallel=False)
+    def _update_particles_njit(
+        x: np.ndarray, y: np.ndarray, vx: np.ndarray, vy: np.ndarray,
+        life: np.ndarray, max_life: np.ndarray, alpha: np.ndarray,
+        size: np.ndarray, gravity: np.ndarray, friction: np.ndarray, dt: float,
     ) -> None:
-        self.x = x
-        self.y = y
-        self.vx = vx
-        self.vy = vy
-        self.life = life
-        self.max_life = life
-        self.size = size
-        self.color = color
-        self.alpha = 255
-        self.decay = 1.0
-        self.gravity = gravity
-        self.friction = friction
+        n = len(x)
+        for i in numba.prange(n):
+            if life[i] <= 0:
+                continue
+            life[i] -= dt
+            if life[i] <= 0:
+                alpha[i] = 0
+                continue
+            t = life[i] / max_life[i]
+            alpha[i] = max(0, min(255, int(255 * t)))
+            vy[i] += gravity[i] * dt
+            f = friction[i] ** dt
+            vx[i] *= f
+            vy[i] *= f
+            x[i] += vx[i] * dt
+            y[i] += vy[i] * dt
 
-    @property
-    def is_dead(self) -> bool:
-        return self.life <= 0
-
-    def update(self, dt: float) -> None:
-        self.life -= dt
-        t = max(0.0, self.life / self.max_life) if self.max_life > 0 else 0.0
-        self.alpha = int(255 * t)
-        self.vy += self.gravity * dt
-        self.vx *= self.friction ** dt
-        self.vy *= self.friction ** dt
-        self.x += self.vx * dt
-        self.y += self.vy * dt
-
-    def draw(self, surface: pygame.Surface, offset: pygame.Vector2) -> None:
-        sx = int(self.x - offset.x)
-        sy = int(self.y - offset.y)
-        if self.alpha <= 0 or self.size <= 0:
-            return
-        c = (*self.color, min(255, self.alpha))
-        sz = max(1, int(self.size * (0.5 + 0.5 * t))) if (t := self.life / max(self.max_life, 0.001)) > 0 else 1
-        pygame.draw.rect(surface, c, (sx - sz // 2, sy - sz // 2, sz, sz))
+else:
+    _update_particles_njit = _update_particles_py
 
 
 class BurstConfig:
+    __slots__ = (
+        "color",
+        "count",
+        "friction",
+        "gravity",
+        "lifetime",
+        "size_max",
+        "size_min",
+        "speed",
+        "spread",
+    )
+
     def __init__(
         self, count: int, speed: float, lifetime: float,
         size: tuple[int, int], color: tuple[int, int, int],
@@ -73,54 +108,127 @@ class BurstConfig:
 
 class ParticleEmitter:
     def __init__(self) -> None:
-        self._particles: list[Particle] = []
+        self.x: np.ndarray = np.empty(0, dtype=np.float32)
+        self.y: np.ndarray = np.empty(0, dtype=np.float32)
+        self.vx: np.ndarray = np.empty(0, dtype=np.float32)
+        self.vy: np.ndarray = np.empty(0, dtype=np.float32)
+        self.life: np.ndarray = np.empty(0, dtype=np.float32)
+        self.max_life: np.ndarray = np.empty(0, dtype=np.float32)
+        self.alpha: np.ndarray = np.empty(0, dtype=np.int32)
+        self.size: np.ndarray = np.empty(0, dtype=np.int32)
+        self.gravity: np.ndarray = np.empty(0, dtype=np.float32)
+        self.friction: np.ndarray = np.empty(0, dtype=np.float32)
+        self._colors: list[tuple[int, int, int]] = []
+
+    def _append_particles(
+        self, count: int,
+        x_val: float, y_val: float,
+        vx_arr: np.ndarray, vy_arr: np.ndarray,
+        sizes: np.ndarray, lives: np.ndarray,
+        alphas: np.ndarray, gravities: np.ndarray,
+        frictions: np.ndarray, color: tuple[int, int, int],
+    ) -> None:
+        self.x = np.concatenate([self.x, np.full(count, x_val, dtype=np.float32)])
+        self.y = np.concatenate([self.y, np.full(count, y_val, dtype=np.float32)])
+        self.vx = np.concatenate([self.vx, vx_arr])
+        self.vy = np.concatenate([self.vy, vy_arr])
+        self.life = np.concatenate([self.life, lives])
+        self.max_life = np.concatenate([self.max_life, lives])
+        self.alpha = np.concatenate([self.alpha, alphas])
+        self.size = np.concatenate([self.size, sizes])
+        self.gravity = np.concatenate([self.gravity, gravities])
+        self.friction = np.concatenate([self.friction, frictions])
+        self._colors.extend([color] * count)
 
     def emit(self, x: float, y: float, config: BurstConfig) -> None:
-        for _ in range(config.count):
-            angle = random.uniform(0, config.spread)
-            rad = math.radians(angle)
-            spd = random.uniform(config.speed * 0.5, config.speed)
-            vx = math.cos(rad) * spd
-            vy = math.sin(rad) * spd
-            size = random.randint(config.size_min, config.size_max)
-            p = Particle(
-                x, y, vx, vy, config.lifetime, size, config.color,
-                gravity=config.gravity, friction=config.friction,
-            )
-            self._particles.append(p)
+        n = config.count
+        if n <= 0:
+            return
+        angles = np.random.uniform(0, config.spread, n)
+        rad = np.radians(angles)
+        spd = np.random.uniform(config.speed * 0.5, config.speed, n)
+        vx_arr = np.cos(rad) * spd
+        vy_arr = np.sin(rad) * spd
+        sizes = np.random.randint(config.size_min, config.size_max + 1, n)
+        lives = np.full(n, config.lifetime, dtype=np.float32)
+        alphas = np.full(n, 255, dtype=np.int32)
+        gravities = np.full(n, config.gravity, dtype=np.float32)
+        frictions = np.full(n, config.friction, dtype=np.float32)
+        self._append_particles(n, x, y, vx_arr.astype(np.float32), vy_arr.astype(np.float32),
+                               sizes.astype(np.int32), lives, alphas, gravities, frictions, config.color)
 
     def emit_directed(
         self, x: float, y: float, angle: float, speed: float,
         count: int, lifetime: float, size: tuple[int, int],
         color: tuple[int, int, int], spread: float = 30.0,
-        gravity: float = 0.0,
+        gravity: float = 0.0, friction: float = 1.0,
     ) -> None:
-        for _ in range(count):
-            a = angle + random.uniform(-spread, spread)
-            rad = math.radians(a)
-            spd = random.uniform(speed * 0.7, speed)
-            sz = random.randint(size[0], size[1])
-            p = Particle(
-                x, y, math.cos(rad) * spd, math.sin(rad) * spd,
-                lifetime, sz, color, gravity=gravity,
-            )
-            self._particles.append(p)
+        if count <= 0:
+            return
+        angles = angle + np.random.uniform(-spread, spread, count)
+        rad = np.radians(angles)
+        spd = np.random.uniform(speed * 0.7, speed, count)
+        vx_arr = np.cos(rad) * spd
+        vy_arr = np.sin(rad) * spd
+        sz = np.random.randint(size[0], size[1] + 1, count)
+        lives = np.full(count, lifetime, dtype=np.float32)
+        alphas = np.full(count, 255, dtype=np.int32)
+        gravities = np.full(count, gravity, dtype=np.float32)
+        frictions = np.full(count, friction, dtype=np.float32)
+        self._append_particles(count, x, y, vx_arr.astype(np.float32), vy_arr.astype(np.float32),
+                               sz.astype(np.int32), lives, alphas, gravities, frictions, color)
 
     def update(self, dt: float) -> None:
-        for p in self._particles:
-            p.update(dt)
-        self._particles[:] = [p for p in self._particles if not p.is_dead]
+        if len(self.x) == 0:
+            return
+        _update_particles_njit(
+            self.x, self.y, self.vx, self.vy,
+            self.life, self.max_life, self.alpha,
+            self.size, self.gravity, self.friction, dt,
+        )
+        alive = self.life > 0
+        self.x = self.x[alive]
+        self.y = self.y[alive]
+        self.vx = self.vx[alive]
+        self.vy = self.vy[alive]
+        self.life = self.life[alive]
+        self.max_life = self.max_life[alive]
+        self.alpha = self.alpha[alive]
+        self.size = self.size[alive]
+        self.gravity = self.gravity[alive]
+        self.friction = self.friction[alive]
+        if len(self._colors) > 0:
+            idx = np.where(alive)[0]
+            self._colors = [self._colors[i] for i in idx]
 
     def draw(self, surface: pygame.Surface, offset: pygame.Vector2) -> None:
-        for p in self._particles:
-            p.draw(surface, offset)
+        ox = int(offset.x)
+        oy = int(offset.y)
+        for i in range(len(self.x)):
+            if self.life[i] <= 0 or self.alpha[i] <= 0:
+                continue
+            sx = int(self.x[i]) - ox
+            sy = int(self.y[i]) - oy
+            c = (*self._colors[i], min(255, self.alpha[i]))
+            sz = max(1, int(self.size[i]))
+            pygame.draw.rect(surface, c, (sx - sz // 2, sy - sz // 2, sz, sz))
 
     def clear(self) -> None:
-        self._particles.clear()
+        self.x = np.empty(0, dtype=np.float32)
+        self.y = np.empty(0, dtype=np.float32)
+        self.vx = np.empty(0, dtype=np.float32)
+        self.vy = np.empty(0, dtype=np.float32)
+        self.life = np.empty(0, dtype=np.float32)
+        self.max_life = np.empty(0, dtype=np.float32)
+        self.alpha = np.empty(0, dtype=np.int32)
+        self.size = np.empty(0, dtype=np.int32)
+        self.gravity = np.empty(0, dtype=np.float32)
+        self.friction = np.empty(0, dtype=np.float32)
+        self._colors.clear()
 
     @property
     def count(self) -> int:
-        return len(self._particles)
+        return len(self.x)
 
 
 class ParticleSystem:

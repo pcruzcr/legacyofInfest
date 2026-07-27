@@ -5,12 +5,15 @@ Academic Unit: N/A
 Description: Inventory screen showing collected items with grid layout.
 """
 from __future__ import annotations
-import pygame
+
 from typing import TYPE_CHECKING
+
+import pygame
+
 from src.engine.core import settings
+from src.engine.core.inventory import Inventory
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
-from src.engine.core.inventory import Inventory
 from src.engine.scenes.demo_common import BOTTOM_BAR_Y
 
 if TYPE_CHECKING:

@@ -13,11 +13,9 @@ import math
 import random
 import wave as wave_module
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 import numpy as np
 from PIL import Image, ImageDraw
-
 
 # ── CONSTANTS ─────────────────────────────────────────────────────
 W, H = 320, 224
@@ -282,7 +280,7 @@ PAL_UI = {
 
 # ── PIXEL ART HELPERS ─────────────────────────────────────────────
 
-def _to_palette_index(color: Tuple[int, int, int], palette: Dict) -> int:
+def _to_palette_index(color: tuple[int, int, int], palette: dict) -> int:
     """Find nearest color in palette using Manhattan distance."""
     best_idx = 0
     best_dist = float('inf')
@@ -296,7 +294,7 @@ def _to_palette_index(color: Tuple[int, int, int], palette: Dict) -> int:
     return best_idx
 
 
-def _render_pixel_art(width: int, height: int, palette: Dict, draw_func) -> Image.Image:
+def _render_pixel_art(width: int, height: int, palette: dict, draw_func) -> Image.Image:
     """Render pixel art using a draw function that returns list of (x, y, color_idx)."""
     img = Image.new('RGBA', (width, height), (0, 0, 0, 0))
     pixels = img.load()
@@ -310,7 +308,7 @@ def _render_pixel_art(width: int, height: int, palette: Dict, draw_func) -> Imag
     return img
 
 
-def _save_spritesheet(frames: List[Image.Image], path: Path) -> None:
+def _save_spritesheet(frames: list[Image.Image], path: Path) -> None:
     """Save frames as horizontal sprite sheet."""
     if not frames:
         return
@@ -328,10 +326,10 @@ def _save_spritesheet(frames: List[Image.Image], path: Path) -> None:
 
 # ── SPRITE GENERATORS ─────────────────────────────────────────────
 
-def _gen_player_idle(palette: Dict) -> List[Image.Image]:
+def _gen_player_idle(palette: dict) -> list[Image.Image]:
     """Generate 4 idle frames (32x32)"""
     frames = []
-    for f in range(4):
+    for _f in range(4):
         def draw():
             pts = []
             cx, cy = 16, 16
@@ -363,12 +361,15 @@ def _gen_player_idle(palette: Dict) -> List[Image.Image]:
     return frames
 
 
-def _gen_player_walk(palette: Dict) -> List[Image.Image]:
+def _gen_player_walk(palette: dict) -> list[Image.Image]:
     """Generate 8 walk frames (32x32)"""
     frames = []
     for f in range(8):
         phase = f * math.pi / 4
-        def draw():
+        # Bind the loop variable explicitly: a bare closure would
+        # capture the *variable*, not its value, so every frame would
+        # render with the final iteration's phase (AUD-032, B023).
+        def draw(phase=phase):
             pts = []
             cx, cy = 16, 16
             # Hood/head bob
@@ -399,13 +400,16 @@ def _gen_player_walk(palette: Dict) -> List[Image.Image]:
     return frames
 
 
-def _gen_player_attack(palette: Dict, is_long: bool = False) -> List[Image.Image]:
+def _gen_player_attack(palette: dict, is_long: bool = False) -> list[Image.Image]:
     """Generate attack frames"""
     frame_count = 10 if is_long else 6
     frames = []
     for f in range(frame_count):
         t = f / (frame_count - 1) if frame_count > 1 else 0
-        def draw():
+        # Bind the loop variable explicitly: a bare closure would
+        # capture the *variable*, not its value, so every frame would
+        # render with the final iteration's phase (AUD-032, B023).
+        def draw(t=t):
             pts = []
             cx, cy = 16, 16
             # Hood (static)
@@ -438,12 +442,15 @@ def _gen_player_attack(palette: Dict, is_long: bool = False) -> List[Image.Image
 
 # ── ENEMY GENERATORS ─────────────────────────────────────────────
 
-def _gen_walker(palette: Dict) -> List[Image.Image]:
+def _gen_walker(palette: dict) -> list[Image.Image]:
     """Generate 6 walk frames (20x16)"""
     frames = []
     for f in range(6):
         phase = f * math.pi / 3
-        def draw():
+        # Bind the loop variable explicitly: a bare closure would
+        # capture the *variable*, not its value, so every frame would
+        # render with the final iteration's phase (AUD-032, B023).
+        def draw(phase=phase):
             pts = []
             cx, cy = 10, 8
             # Body (20x12 approx)
@@ -462,10 +469,11 @@ def _gen_walker(palette: Dict) -> List[Image.Image]:
             return pts
         
         # Scale to 20x16 from internal coordinates
-        raw = _render_pixel_art(20, 16, palette, draw)
+        _render_pixel_art(20, 16, palette, draw)
         # We'll return as-is since our draw is already in 20x16
         # Adjust draw to match 20x16
-        def draw20():
+        # Bind the loop variable explicitly (AUD-032, B023).
+        def draw20(phase=phase):
             pts = []
             cx, cy = 10, 8
             for dy in range(-5, 7):
@@ -485,12 +493,15 @@ def _gen_walker(palette: Dict) -> List[Image.Image]:
     return frames
 
 
-def _gen_flying(palette: Dict) -> List[Image.Image]:
+def _gen_flying(palette: dict) -> list[Image.Image]:
     """Generate 4 flying frames"""
     frames = []
     for f in range(4):
         wing_phase = f * math.pi / 2
-        def draw():
+        # Bind the loop variable explicitly: a bare closure would
+        # capture the *variable*, not its value, so every frame would
+        # render with the final iteration's phase (AUD-032, B023).
+        def draw(wing_phase=wing_phase):
             pts = []
             cx, cy = 12, 12
             # Body
@@ -515,7 +526,7 @@ def _gen_flying(palette: Dict) -> List[Image.Image]:
 
 # ── TILESET GENERATOR ────────────────────────────────────────────
 
-def _gen_tileset_stage0(palette: Dict) -> Image.Image:
+def _gen_tileset_stage0(palette: dict) -> Image.Image:
     """Generate 128x128 tileset with floor, wall, platform, and deco tiles"""
     tileset = Image.new('RGBA', (128, 128), (0, 0, 0, 0))
     draw = ImageDraw.Draw(tileset)
@@ -797,6 +808,5 @@ class AssetGenerator:
 
 
 if __name__ == "__main__":
-    import sys
     gen = AssetGenerator()
     gen.generate_all()

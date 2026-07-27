@@ -6,10 +6,13 @@ components, region analysis, watershed, feature extraction, contours,
 bounding boxes.
 """
 from __future__ import annotations
+
 from pathlib import Path
+
 import numpy as np
 import pygame
-from src.framework.processing.vision_tools import VisionTools, ComponentResult, RegionInfo
+
+from src.framework.processing.vision_tools import ComponentResult, RegionInfo, VisionTools
 
 OUTPUT_DIR = Path("tests/output/vision")
 
@@ -74,7 +77,7 @@ class TestThresholdOtsu:
     def test_otsu_saves_png(self) -> None:
         _ensure_output_dir()
         surf = _mask_surface()
-        mask, t = VisionTools.threshold_otsu(surf)
+        mask, _t = VisionTools.threshold_otsu(surf)
         pygame.image.save(mask, str(OUTPUT_DIR / "threshold_otsu.png"))
 
 

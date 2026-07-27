@@ -17,7 +17,8 @@ Controls:
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import pygame
 
@@ -26,16 +27,29 @@ from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
     BOTTOM_BAR_Y,
-    COLOR_BG, COLOR_TEXT, COLOR_HIGHLIGHT, COLOR_ACCENT,
-    COLOR_DIVIDER, FONT_SMALL, FONT_MEDIUM,
-    draw_top_bar, draw_bottom_bar,
+    COLOR_ACCENT,
+    COLOR_BG,
+    COLOR_DIVIDER,
+    COLOR_HIGHLIGHT,
+    COLOR_TEXT,
+    FONT_MEDIUM,
+    FONT_SMALL,
+    draw_bottom_bar,
+    draw_top_bar,
     save_png,
 )
 from src.engine.utils.asset_loader import AssetLoader
 from src.engine.utils.math_utils import (
-    lerp, ease_in_quad, ease_out_quad, ease_in_out_quad,
-    ease_in_cubic, ease_out_cubic, ease_out_bounce,
-    ease_out_elastic, ease_in_sine, ease_out_sine,
+    ease_in_cubic,
+    ease_in_out_quad,
+    ease_in_quad,
+    ease_in_sine,
+    ease_out_bounce,
+    ease_out_cubic,
+    ease_out_elastic,
+    ease_out_quad,
+    ease_out_sine,
+    lerp,
 )
 
 if TYPE_CHECKING:

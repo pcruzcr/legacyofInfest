@@ -1,9 +1,10 @@
-import pygame
-import pytest
 from typing import Any
 
+import pygame
+import pytest
+
 from src.engine.core import settings
-from src.engine.core.event_bus import EventBus, set_default_bus
+from src.engine.core.event_bus import EventBus
 from src.engine.core.events import Events
 from src.framework.entities.player import Player, PlayerState
 
@@ -120,8 +121,8 @@ def test_set_health_normal_value() -> None:
 
 def test_player_damaged_event_emitted() -> None:
     bus = EventBus()
-    set_default_bus(bus)
-    player = Player(pygame.Vector2(50.0, 0.0))
+    # AUD-019: the bus is injected, not installed as a process-wide default.
+    player = Player(pygame.Vector2(50.0, 0.0), event_bus=bus)
     received: dict[str, Any] = {}
     def on_damaged(**data: Any) -> None:
         nonlocal received
@@ -135,8 +136,8 @@ def test_player_damaged_event_emitted() -> None:
 
 def test_player_died_event_on_zero_health() -> None:
     bus = EventBus()
-    set_default_bus(bus)
-    player = Player(pygame.Vector2(50.0, 0.0))
+    # AUD-019: the bus is injected, not installed as a process-wide default.
+    player = Player(pygame.Vector2(50.0, 0.0), event_bus=bus)
     died = False
     def on_died() -> None:
         nonlocal died
@@ -149,8 +150,8 @@ def test_player_died_event_on_zero_health() -> None:
 
 def test_sfx_player_hurt_emitted_on_damage() -> None:
     bus = EventBus()
-    set_default_bus(bus)
-    player = Player(pygame.Vector2(50.0, 0.0))
+    # AUD-019: the bus is injected, not installed as a process-wide default.
+    player = Player(pygame.Vector2(50.0, 0.0), event_bus=bus)
     hurt = False
     def on_hurt() -> None:
         nonlocal hurt
@@ -163,8 +164,8 @@ def test_sfx_player_hurt_emitted_on_damage() -> None:
 
 def test_sfx_player_die_emitted_on_death() -> None:
     bus = EventBus()
-    set_default_bus(bus)
-    player = Player(pygame.Vector2(50.0, 0.0))
+    # AUD-019: the bus is injected, not installed as a process-wide default.
+    player = Player(pygame.Vector2(50.0, 0.0), event_bus=bus)
     died = False
     def on_die() -> None:
         nonlocal died
@@ -177,8 +178,8 @@ def test_sfx_player_die_emitted_on_death() -> None:
 
 def test_invincibility_blocks_event_emission() -> None:
     bus = EventBus()
-    set_default_bus(bus)
-    player = Player(pygame.Vector2(50.0, 0.0))
+    # AUD-019: the bus is injected, not installed as a process-wide default.
+    player = Player(pygame.Vector2(50.0, 0.0), event_bus=bus)
     count = 0
     def on_damaged(**data: Any) -> None:
         nonlocal count

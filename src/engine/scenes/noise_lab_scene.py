@@ -17,21 +17,26 @@ Controls:
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import math
 import random
-import pygame
+from typing import TYPE_CHECKING
+
 import numpy as np
+import pygame
 
 from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
     BOTTOM_BAR_Y,
-    COLOR_BG, COLOR_TEXT, COLOR_HIGHLIGHT, COLOR_ACCENT,
-    FONT_SMALL, FONT_MEDIUM,
-    draw_top_bar, draw_bottom_bar,
+    COLOR_ACCENT,
+    COLOR_BG,
+    COLOR_HIGHLIGHT,
+    COLOR_TEXT,
+    FONT_MEDIUM,
+    FONT_SMALL,
+    draw_bottom_bar,
+    draw_top_bar,
     save_png,
 )
 from src.engine.utils.asset_loader import AssetLoader
@@ -244,7 +249,7 @@ class NoiseLabScene(BaseScene):
                 max_amp += amp
                 amp *= self._persistence
             amp = 1.0
-            for o in range(self._octaves):
+            for _o in range(self._octaves):
                 grid_w = max(2, int(1.0 / (freq * 2)))
                 grid_h = max(2, int(1.0 / (freq * 2)))
                 grid = rng.rand(grid_h + 1, grid_w + 1).astype(np.float32) * 2.0 - 1.0

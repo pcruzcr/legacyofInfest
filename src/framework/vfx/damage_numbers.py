@@ -32,12 +32,7 @@ class DamageNumber:
         if surf is None:
             surf = font.render(amount_text, True, color)
             self._render_cache[cache_key] = surf
-        if is_critical:
-            scale = 1.0 + 0.3 * (1.0 - self.life / self.max_life)
-            w, h = surf.get_size()
-            self._scaled_surf = pygame.transform.scale(surf, (int(w * scale), int(h * scale)))
-        else:
-            self._surf = surf
+        self._surf = surf
 
     @property
     def alive(self) -> bool:
@@ -57,7 +52,12 @@ class DamageNumber:
         sy = int(self.y - camera_offset.y)
         if sx < -50 or sx > settings.INTERNAL_WIDTH + 50 or sy < -50 or sy > settings.INTERNAL_HEIGHT + 50:
             return
-        surf = self._scaled_surf if self.is_critical else self._surf
+        if self.is_critical:
+            scale = 1.0 + 0.3 * (1.0 - self.life / self.max_life)
+            w, h = self._surf.get_size()
+            surf = pygame.transform.scale(self._surf, (int(w * scale), int(h * scale)))
+        else:
+            surf = self._surf
         surf.set_alpha(alpha)
         rect = surf.get_rect(center=(sx, sy))
         surface.blit(surf, rect)

@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import json
-from pathlib import Path
-from dataclasses import dataclass
 from typing import TypedDict
 
+import orjson
 import pygame
+from pydantic import BaseModel
 
 from src.engine.core import settings
 
@@ -18,11 +17,10 @@ class _NotificationData(TypedDict):
     timer: float
 
 
-_INVENTORY_PATH = Path("data/inventory.json")
+_INVENTORY_PATH = settings.PROJECT_ROOT / "data/inventory.json"
 
 
-@dataclass
-class ItemDef:
+class ItemDef(BaseModel):
     id: str
     name: str
     description: str
@@ -146,15 +144,14 @@ class Inventory:
     def save(self) -> None:
         data = {"items": dict(self._items)}
         _INVENTORY_PATH.parent.mkdir(parents=True, exist_ok=True)
-        with open(_INVENTORY_PATH, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
+        _INVENTORY_PATH.write_bytes(orjson.dumps(data, option=orjson.OPT_INDENT_2))
 
     def load(self) -> None:
         try:
-            with open(_INVENTORY_PATH, encoding="utf-8") as f:
-                data = json.load(f)
+            raw = _INVENTORY_PATH.read_bytes()
+            data = orjson.loads(raw)
             self._items = {k: v for k, v in data.get("items", {}).items() if k in _ITEM_DEFS}
-        except (FileNotFoundError, json.JSONDecodeError):
+        except (FileNotFoundError, orjson.JSONEncodeError, ValueError):
             self._items = {}
 
     def update_notifications(self, dt: float) -> None:

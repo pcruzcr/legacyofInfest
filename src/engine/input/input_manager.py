@@ -6,20 +6,22 @@ Description: Unified keyboard + controller input manager. Tracks pressed/held/re
 states for abstract Actions defined in action_map.py.
 """
 from __future__ import annotations
-from typing import Any
 
 import logging
+from typing import Any
 
 import pygame
 
 from src.engine.input.action_map import (
-    Action,
-    DEFAULT_KEY_BINDINGS,
-    CONTROLLER_DEADZONE,
+    _CONTROLLER_BUTTON_MAP,
     CONTROLLER_AXIS_LEFT_X,
     CONTROLLER_AXIS_LEFT_Y,
-    _CONTROLLER_BUTTON_MAP,
+    CONTROLLER_DEADZONE,
+    DEFAULT_KEY_BINDINGS,
+    Action,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class InputManager:
@@ -53,7 +55,7 @@ class InputManager:
                 self._joystick = pygame.joystick.Joystick(0)
                 self._joystick.init()
         except pygame.error:
-            logging.warning("input_manager: failed to init joystick")
+            logger.warning("input_manager: failed to init joystick")
             self._joystick = None
 
     def pump(self, events: list[pygame.event.Event]) -> None:
@@ -134,7 +136,7 @@ class InputManager:
             self._controller_axis_up = y < -CONTROLLER_DEADZONE
             self._controller_axis_down = y > CONTROLLER_DEADZONE
         except pygame.error:
-            logging.warning("input_manager: failed to poll joystick axes")
+            logger.warning("input_manager: failed to poll joystick axes")
 
     def _action_from_controller(self, action: Action) -> bool:
         """Check if any controller binding matches the action."""

@@ -1,26 +1,189 @@
 [build-system]
 requires = ["setuptools>=64"]
-build-backend = "setuptools.backends._legacy:_Backend"
+# AUD-007: was "setuptools.backends._legacy:_Backend", which is not a module
+# setuptools ships. Any `pip install .` / `python -m build` failed immediately
+# with ModuleNotFoundError. build_meta is the real PEP 517 backend.
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "legacyofinfest"
-version = "1.0.0"
-description = "Educational game engine for Computer Graphics, Image Processing, and Pattern Recognition"
+version = "2.0.0"
+description = "AAA+ 2D/2.5D/3D Metroidvania Engine — Educational Game Engine for Computer Graphics, Image Processing, and Pattern Recognition"
 requires-python = ">=3.11"
+# AUD-007: pyproject.toml is now the SINGLE source of truth for dependencies.
+# requirements.txt is generated from it (`pip-compile`) and previously listed a
+# completely different, much smaller set — following the README's documented
+# `pip install -r requirements.txt` produced an install that could not even
+# import the game, because numba, pymunk, pydantic, orjson and pygame-gui were
+# missing from it but imported unguarded by src/.
+#
+# Packages removed from this list because nothing in the repository imports
+# them: PyYAML, pytweening. Packages demoted to optional extras because the
+# code now degrades gracefully without them: numba, ModernGL, lupa, pydub.
 dependencies = [
+    # Core engine — required to launch
     "pygame-ce>=2.5",
-    "numpy>=1.26",
+    "numpy>=1.26,<2",
+    "pymunk>=6.6",
+
+    # Data & validation
+    "pydantic>=2.7",
+    "orjson>=3.10",
+
+    # UI
+    "pygame-gui>=0.6",
+
+    # Academic / processing
     "scipy>=1.13",
     "opencv-python>=4.10",
     "scikit-image>=0.24",
     "scikit-learn>=1.5",
-    "Pillow>=12.2",
+    "Pillow>=10.0",
+
+    # Map / level
     "pytmx>=3.32",
     "pyscroll>=2.31",
-    "pytweening>=1.2",
+
+    # ML / parallelism
     "joblib>=1.4",
-    "matplotlib>=3.9",
+    "matplotlib>=3.8",
 ]
+
+[project.optional-dependencies]
+# Optional accelerators / integrations. The game detects each at import time
+# and falls back to a pure-Python or software path when absent.
+accel = [
+    "numba>=0.60",   # JIT for the particle integrator only
+    "ModernGL>=5.10",  # GL post-processing; falls back to software blitting
+]
+scripting = ["lupa>=2.1"]   # Lua enemy behaviours
+audiotools = ["pydub>=0.25"]  # offline asset pipeline (tools/convert_audio.py)
+dev = [
+    "pytest>=8",
+    "pytest-benchmark>=5.2",
+    "pytest-cov>=5",
+    "pytest-mock>=3",
+    "hypothesis>=6",
+    "ruff>=0.6",
+]
+build = [
+    "pyinstaller>=6",
+    "nuitka>=2.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# AUD-016: the previous config contained `"ignore::Warning"`, which silences
+# EVERY warning the suite can raise — DeprecationWarning, RuntimeWarning,
+# numpy overflow warnings, pygame's own deprecations. That is a blindfold, not
+# a filter. Only the one genuinely noisy, genuinely harmless message from
+# running SDL under the dummy video driver is suppressed now.
+filterwarnings = [
+    "ignore:no fast renderer available",
+]
+
+[tool.ruff]
+# AUD-017: ruff had no configuration at all, so it used its 88-column default
+# while .flake8 declared max-line-length = 120. The two linters disagreed about
+# 882 lines of otherwise-fine code. CI ran ruff, so CI would have failed on
+# every push — had CI ever been triggered (see AUD-010). 120 is the width the
+# codebase is actually written to, so that is the width we enforce.
+line-length = 120
+target-version = "py311"
+extend-exclude = [".venv", "build", "dist", "colab", "web"]
+
+[tool.ruff.lint]
+# Start from the default correctness rules (pyflakes + pycodestyle errors) and
+# add the families that caught real defects during the audit. Deliberately
+# conservative: every rule enabled here is one the team should fix, not
+# suppress.
+select = [
+    "E", "F",      # pycodestyle errors, pyflakes
+    "B",           # flake8-bugbear — caught the loop-variable closures
+    "UP",          # pyupgrade
+    "I",           # import sorting
+    "RUF",         # ruff-specific
+    "LOG", "G",    # logging correctness
+    "DTZ",         # naive datetime — caught the save-timestamp ordering bug
+]
+ignore = [
+    "E203",   # whitespace before ':' — conflicts with common formatters
+    "RUF012", # ClassVar annotations on read-only lookup tables; noisy here
+    # UP017 rewrites `timezone.utc` to `datetime.UTC`, which only exists on
+    # Python 3.11+. The project targets 3.11+, but `timezone.utc` is correct on
+    # every version and costs nothing, so we keep the portable spelling rather
+    # than making the tree unimportable on 3.10 for a cosmetic gain.
+    "UP017",
+    # UP042 rewrites `class X(str, Enum)` to `class X(StrEnum)`. Same 3.11+
+    # availability problem as UP017, and it silently changes semantics: str(X.A)
+    # yields "A" under StrEnum but "X.A" under (str, Enum), which quietly breaks
+    # every f-string and log line that formats one of these enums.
+    "UP042",
+    # Unicode look-alikes: the project is Spanish-language and its docstrings,
+    # comments and UI strings legitimately contain accented characters, en
+    # dashes and box-drawing glyphs. Flagging those is noise, not signal.
+    "RUF001", "RUF002", "RUF003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# The exemptions below are deliberate engineering decisions, not unfixed
+# findings. Each states why the rule does not apply, so a future reader can
+# challenge the reasoning rather than guess at it.
+
+# Tests legitimately assert on private state and shadow fixtures.
+"tests/**" = ["B011"]
+
+# conftest and several test modules MUST set SDL_VIDEODRIVER=dummy *before*
+# pygame is imported, otherwise SDL tries to open a real window and the suite
+# cannot run headless. That inverts the usual imports-first rule by necessity.
+"tests/conftest.py" = ["E402"]
+"tests/test_demo_scenes.py" = ["E402"]
+"tests/test_new_pipeline_modules.py" = ["E402"]
+"tests/test_accessibility.py" = ["E402"]
+"tests/test_audit_regressions.py" = ["E402"]
+"tests/test_visual_regression.py" = ["E402"]
+"tests/benchmarks/**" = ["E402"]
+
+# Offline asset/level generators. These are dense coordinate tables and pixel
+# maps — `pts.append((x, y, c)); pts.append((x+1, y, c))` reads as one row of
+# artwork per line, and splitting or re-wrapping them makes the sprite data
+# harder to read, not easier. They are developer tooling, never imported by
+# the game, and are exercised by their own output being committed.
+"tools/generate_demo_stage0.py" = ["E501", "E702", "E701"]
+"tools/generate_stage0_tmx.py" = ["E501", "E702", "E701"]
+"tools/generate_all_assets.py" = ["E501", "E702", "E701"]
+"tools/pixel_asset_generator.py" = ["E501", "E702", "E701"]
+"tools/generate_assets.py" = ["E501", "E702"]
+
+# Grading and reporting scripts build long human-readable report strings and
+# rubric tables where the natural unit is one line per criterion.
+"scripts/grade_boss.py" = ["E501", "E702"]
+"scripts/grade_stage.py" = ["E501", "E702"]
+"scripts/project_stats.py" = ["E501", "E702", "E701", "E402"]
+"scripts/feedback_generator.py" = ["E501"]
+"scripts/obsidianize.py" = ["E501"]
+"scripts/generate_exam.py" = ["E501"]
+
+# Teaching scenes annotate formulas inline (matrix rows, kernel tables); the
+# lines are long because the maths is, and breaking them obscures the lesson.
+"src/engine/scenes/vector_lab_scene.py" = ["E501"]
+"src/engine/scenes/vision_demo_scene.py" = ["E501"]
+"src/engine/scenes/color_theory_scene.py" = ["E501"]
+"src/engine/scenes/pattern_demo_scene.py" = ["E501"]
+"src/engine/scenes/filter_demo_scene.py" = ["E501"]
+
+# BaseScene's empty lifecycle hooks are intentionally *optional* overrides, not
+# abstract methods: a scene that does not care about on_pause should not be
+# forced to implement it. Marking them @abstractmethod would break every
+# existing scene and every student template.
+"src/engine/scene/base_scene.py" = ["B027"]
+
+# Standalone entry-point scripts must prepend the project root to sys.path
+# before they can import from src/ — the import genuinely cannot come first.
+# This is the one case where E402 describes correct code.
+"tools/build_dataset.py" = ["E402", "E501", "E702"]
+"scripts/validate_assets.py" = ["E402"]
+"scripts/validate_tmx.py" = ["E402", "E501"]
 
 [tool.mypy]
 python_version = "3.12"

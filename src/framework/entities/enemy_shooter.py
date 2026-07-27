@@ -7,10 +7,10 @@ detected. Uses atan2 for angle calculation. Projectile is a lightweight
 sub-entity with velocity, lifetime, and collision.
 """
 from __future__ import annotations
-import logging
-from typing import TYPE_CHECKING
 
+import logging
 import math
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from src.framework.entities.player import Player
@@ -18,13 +18,13 @@ if TYPE_CHECKING:
 import pygame
 
 from src.engine.core import settings
-from src.engine.core.event_bus import _get_bus as _bus
-_emit = lambda *a, **kw: _bus().emit(*a, **kw)
 from src.engine.core.events import Events
 from src.engine.utils.asset_loader import AssetLoader
+from src.engine.utils.surface_pool import get_pool
 from src.framework.entities.base_entity import BaseEntity
 from src.framework.entities.enemy_base import EnemyBase, EnemyState
 
+logger = logging.getLogger(__name__)
 
 class Projectile(BaseEntity):
     """
@@ -185,7 +185,7 @@ class EnemyShooter(EnemyBase):
                 frames = AssetLoader.load_sprite_sheet(path, fw, fh)
                 self._sprite_frames[key] = frames
             except (pygame.error, FileNotFoundError, PermissionError):
-                logging.warning("enemy_shooter: failed to load sprite %s", path)
+                logger.warning("enemy_shooter: failed to load sprite %s", path)
                 placeholder = pygame.Surface((fw, fh), pygame.SRCALPHA)
                 placeholder.fill(colors.get(key, (200, 0, 200)))
                 self._sprite_frames[key] = [placeholder]
@@ -202,7 +202,7 @@ class EnemyShooter(EnemyBase):
                     player._parry_success = True
                     player._parry_active = False
                     player._parry_window = 0.0
-                    _emit(Events.VFX_PARRY, pos=(p.position.x, p.position.y))
+                    self._event_bus.emit(Events.VFX_PARRY, pos=(p.position.x, p.position.y))
                 else:
                     player.apply_damage(p.damage, (self.position.x, self.position.y))
                     p.on_collision()
@@ -313,7 +313,7 @@ class EnemyShooter(EnemyBase):
             lifetime=3.0,
         )
         self._active_projectiles.append(projectile)
-        _emit(Events.SFX_PROJECTILE_FIRE)
+        self._event_bus.emit(Events.SFX_PROJECTILE_FIRE)
         return True
 
     def _build_hitbox(self) -> pygame.Rect:
@@ -351,9 +351,11 @@ class EnemyShooter(EnemyBase):
         frames = self._sprite_frames.get(self._get_animation_state())
         if frames:
             frame_idx = min(self._animation_frame, len(frames) - 1)
-            frame = frames[frame_idx]
             if self.facing_direction < 0:
-                frame = pygame.transform.flip(frame, True, False)
+                flipped_frames = get_pool().get_flipped_frames(frames)
+                frame = flipped_frames[frame_idx]
+            else:
+                frame = frames[frame_idx]
             ox = (self.rect.width - self._sprite_fw) // 2
             oy = self.rect.height - self._sprite_fh
             surface.blit(frame, (screen_x + ox, screen_y + oy))

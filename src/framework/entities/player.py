@@ -14,21 +14,20 @@ while each state encapsulates its own update logic and transitions.
 from __future__ import annotations
 
 from enum import Enum
+from typing import TYPE_CHECKING, Any
 
 import pygame
 
-from typing import TYPE_CHECKING
 from src.engine.core import settings
-from src.engine.core.event_bus import _get_bus as _bus
-_emit = lambda *a, **kw: _bus().emit(*a, **kw)
 from src.engine.core.events import Events
 from src.engine.utils.asset_loader import AssetLoader
+from src.engine.utils.surface_pool import get_pool
 from src.framework.entities.base_entity import BaseEntity
+from src.framework.entities.player_state import PlayerStateData
 
 if TYPE_CHECKING:
     from src.engine.input.input_manager import InputManager
-    from src.framework.entities.enemy_base import EnemyBase
-    from src.framework.entities.player_states import PlayerStateBase
+    from src.framework.entities.states import PlayerStateBase
 
 
 SPRITE_W = 32
@@ -59,6 +58,7 @@ _PLAYER_SPRITE_MAP: dict[str, tuple[str, int]] = {
     "AERIAL_SLAM": ("player_short_attack.png", 6),
     "AIR_CHASE": ("player_jump.png", 3),
     "CHARGE_RELEASE": ("player_short_attack.png", 4),
+    "LEDGE_GRAB": ("player_jump.png", 2),
 }
 
 # Per-state animation playback rate (frames per second)
@@ -131,92 +131,66 @@ class Player(BaseEntity):
     SHORT_ATTACK = PlayerState.SHORT_ATTACK
     LONG_ATTACK = PlayerState.LONG_ATTACK
 
-    def __init__(self, spawn_position: pygame.Vector2) -> None:
+    # ── State delegation (routes _prefixed gameplay attrs to _state dataclass) ──
+
+    def __getattr__(self, name: str):
+        """Fallback: look up underscore-prefixed attrs in _state dataclass."""
+        if name.startswith("_") and "_state" in self.__dict__:
+            stripped = name[1:]
+            if hasattr(self._state, stripped):
+                return getattr(self._state, stripped)
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+    def __setattr__(self, name: str, value):
+        """Route underscore-prefixed gameplay attrs to _state dataclass."""
+        if name.startswith("_") and name != "_state" and "_state" in self.__dict__:
+            stripped = name[1:]
+            if hasattr(self._state, stripped):
+                setattr(self._state, stripped, value)
+                return
+        super().__setattr__(name, value)
+
+    def __init__(self, spawn_position: pygame.Vector2, event_bus=None) -> None:
         """Initialize the player at the given spawn position."""
-        super().__init__(spawn_position)
+        super().__init__(spawn_position, event_bus)
+
+        # ── Canonical state dataclass ──────────────────────────
+        self._state = PlayerStateData()
+        self._state.health = settings.PLAYER_MAX_HEALTH
+        self._state.coyote_counter = settings.PLAYER_COYOTE_FRAMES + 1
+        self._state.prev_foot_y = spawn_position.y + 32.0
 
         # --- Physics state ---
         self.velocity: pygame.Vector2 = pygame.Vector2(0.0, 0.0)
         self.is_grounded: bool = False
-        # BUG-012 FIX: Initialize coyote counter above threshold so fresh player is not in coyote time
-        self._coyote_counter: int = settings.PLAYER_COYOTE_FRAMES + 1
-        self._jump_cut_applied: bool = False
+
+        # --- Relic bonuses (AUD-022) ---
+        # Zero until apply_relic_bonuses() is called, so a player with no
+        # relics behaves exactly as before.
+        self._bonus_max_health: float = 0.0
+        self._bonus_speed: float = 0.0
+        self._bonus_damage: float = 0.0
 
         # --- State pattern ---
         self._state_instance: PlayerStateBase
         self._prev_state_instance: PlayerStateBase | None = None
         self._init_state()
 
-        # --- Attack state ---
-        self._attack_timer: float = 0.0
-        self._attack_active_frames: list[int] = []
-        self._attack_current_frame: int = 0
-        self._active_hitbox: pygame.Rect | None = None
-        self._hitbox_consumed: bool = False
-        self._cooldown_timer: float = 0.0
-
-        # --- Combo state ---
+        # --- Combo state (public) ---
         self.combo_count: int = 0
         self.combo_timer: float = 0.0
         self.last_attack_type: str = ""
         self.combo_active: bool = False
-        self._combo_air_hits: int = 0
-        self._crouching_at_attack_start: bool = False
 
         # --- Special meter ---
         self.special_meter: float = 0.0
         self.special_meter_max: float = 100.0
-        self._damage_mult: float = 1.0
 
-        # --- Slide state ---
-        self._slide_speed: float = 300.0
-        self._slide_duration: float = 0.4
-
-        # --- Dash state ---
-        self._air_dash_count: int = 0
-        self._dash_timer: float = 0.0
-        self._dash_cooldown: float = 0.0
-
-        # --- Air jump state ---
-        self._air_jumps_used: int = 0
-        self._swim_boosts: int = 0
+        # --- Air jump state (public) ---
         self.gravity_multiplier: float = 1.0
-
-        # --- Damage state ---
-        self._health: float = settings.PLAYER_MAX_HEALTH
-        self._invincibility_timer: float = 0.0
-        self._knockback_timer: float = 0.0
-        self._flash_timer: float = 0.0
-        self._flash_visible: bool = True
-
-        # --- Jump buffering ---
-        self._prev_foot_y: float = spawn_position.y + 32.0
-        self._pending_jump: bool = False
-        self._pending_jump_timer: float = 0.0
 
         # --- Direction ---
         self.facing_direction: int = 1  # -1 left, 1 right
-
-        # --- Parry ---
-        self._parry_window: float = 0.0
-        self._parry_active: bool = False
-        self._parry_success: bool = False
-
-        # --- Grab/Throw ---
-        self._grab_target: EnemyBase | None = None
-        self._grab_timer: float = 0.0
-
-        # --- Charge attack ---
-        self._charge_timer: float = 0.0
-        self._charge_level: int = 0
-        self._charging: bool = False
-
-        # --- Wall slide/jump ---
-        self._wall_side: int = 0
-        self._wall_slide_timer: float = 0.0
-        self._can_wall_jump: bool = False
-        self._can_ledge_grab: bool = False
-        self._ledge_grab_timer: float = 0.0
 
         # --- Rect setup ---
         self.rect = pygame.Rect(
@@ -236,7 +210,7 @@ class Player(BaseEntity):
 
     def _init_state(self) -> None:
         """Create the initial idle state instance."""
-        from src.framework.entities.player_states import IdleState
+        from src.framework.entities.states import IdleState
         self._state_instance = IdleState()
         self._state_instance.enter(self)
 
@@ -254,6 +228,46 @@ class Player(BaseEntity):
     def current_health(self) -> float:
         """Read-only health value."""
         return self._health
+
+    @property
+    def max_health(self) -> float:
+        """Maximum health, including bonuses granted by collected relics."""
+        return settings.PLAYER_MAX_HEALTH + self._bonus_max_health
+
+    @property
+    def walk_speed(self) -> float:
+        """Ground movement speed, including relic bonuses.
+
+        AUD-022: movement states used to read ``settings.PLAYER_WALK_SPEED``
+        directly, which is why ``Inventory.get_total_speed_bonus()`` had no
+        callers — there was nowhere for the bonus to be applied. Routing speed
+        through the player means every state picks up relic effects for free.
+        """
+        return settings.PLAYER_WALK_SPEED * (1.0 + self._bonus_speed)
+
+    @property
+    def damage_multiplier(self) -> float:
+        """Outgoing damage multiplier from relics (1.0 = no bonus)."""
+        return 1.0 + self._bonus_damage
+
+    def apply_relic_bonuses(self, inventory: Any) -> None:
+        """Recompute stat bonuses from the player's collected relics.
+
+        AUD-022: ``Inventory.get_total_hp_bonus`` / ``_speed_bonus`` /
+        ``_damage_bonus`` were fully implemented and had zero callers — relic
+        art shipped, the codex documented their effects, and picking one up did
+        nothing at all. This is the missing connection. Called by ``StageScene``
+        on stage entry and whenever an item is collected.
+        """
+        previous_max = self.max_health
+        self._bonus_max_health = float(inventory.get_total_hp_bonus())
+        self._bonus_speed = float(inventory.get_total_speed_bonus())
+        self._bonus_damage = float(inventory.get_total_damage_bonus())
+        # Grant newly added maximum health as actual health, so a relic that
+        # raises the cap is felt immediately rather than only after healing.
+        gained = self.max_health - previous_max
+        if gained > 0:
+            self._health = min(self.max_health, self._health + gained)
 
     @property
     def hurtbox(self) -> pygame.Rect:
@@ -296,7 +310,7 @@ class Player(BaseEntity):
         Combo multiplier from settings.COMBO_DAMAGE_MULT[combo_count - 1].
         """
         base = 0.0
-        dmg_mult = getattr(self, "_damage_mult", 1.0)
+        dmg_mult = getattr(self, "_damage_mult", 1.0) * self.damage_multiplier
         if (self._state_instance.state_enum == PlayerState.SHORT_ATTACK
                 and self._active_hitbox is not None):
             base = 0.5
@@ -322,10 +336,10 @@ class Player(BaseEntity):
 
     def heal(self, amount: float) -> None:
         from src.engine.core.difficulty import get_config
-        self._health = min(settings.PLAYER_MAX_HEALTH, self._health + amount * get_config().heal_mult)
+        self._health = min(self.max_health, self._health + amount * get_config().heal_mult)
 
     def set_health(self, amount: float) -> None:
-        self._health = max(0.0, min(settings.PLAYER_MAX_HEALTH, amount))
+        self._health = max(0.0, min(self.max_health, amount))
 
     def consume_hitbox(self) -> None:
         """
@@ -364,21 +378,21 @@ class Player(BaseEntity):
         self.velocity.y = -200.0 * cfg.knockback_mult
         self._knockback_timer = 0.3
 
-        _emit(
+        self._event_bus.emit(
             Events.PLAYER_DAMAGED,
             amount=amount,
             source=source_position,
         )
 
         if self._health <= 0.0:
-            from src.framework.entities.player_states import DyingState
+            from src.framework.entities.states import DyingState
             self._change_state_instance(DyingState(), force=True)
-            _emit(Events.PLAYER_DIED)
-            _emit(Events.SFX_PLAYER_DIE)
+            self._event_bus.emit(Events.PLAYER_DIED)
+            self._event_bus.emit(Events.SFX_PLAYER_DIE)
         else:
-            from src.framework.entities.player_states import HurtState
+            from src.framework.entities.states import HurtState
             self._change_state_instance(HurtState(), force=True)
-            _emit(Events.SFX_PLAYER_HURT)
+            self._event_bus.emit(Events.SFX_PLAYER_HURT)
 
     def _change_state_instance(self, new_state: PlayerStateBase, force: bool = False) -> bool:
         """
@@ -460,7 +474,7 @@ class Player(BaseEntity):
         if self._pending_jump and self.is_grounded:
             self._pending_jump = False
             self._pending_jump_timer = 0.0
-            from src.framework.entities.player_states import _do_jump
+            from src.framework.entities.states import _do_jump
             _do_jump(self)
 
         # Sync rect position to final resolved position
@@ -492,7 +506,8 @@ class Player(BaseEntity):
             frame = frames[frame_idx]
 
             if self.facing_direction < 0:
-                frame = pygame.transform.flip(frame, True, False)
+                flipped_frames = get_pool().get_flipped_frames(frames)
+                frame = flipped_frames[frame_idx]
 
             # Center the 32-wide sprite on the 20-wide collision rect
             offset_x = (self.rect.width - SPRITE_W) // 2
@@ -561,12 +576,12 @@ class Player(BaseEntity):
 
     def _do_jump(self) -> None:
         """Execute a jump (forwarder to module-level helper)."""
-        from src.framework.entities.player_states import _do_jump as _do_jump_fn
+        from src.framework.entities.states import _do_jump as _do_jump_fn
         _do_jump_fn(self)
 
     def _can_jump(self) -> bool:
         """Check if the player can jump (forwarder to module-level helper)."""
-        from src.framework.entities.player_states import _can_jump as _can_jump_fn
+        from src.framework.entities.states import _can_jump as _can_jump_fn
         return _can_jump_fn(self)
 
     # ──────────────────────────────────────────────
@@ -683,7 +698,7 @@ class Player(BaseEntity):
                     if self.velocity.y >= 0 and prev_bottom <= tile.top + 1:
                         # Came from above: land
                         if not was_grounded and self.velocity.y > 0:
-                            _emit(Events.SFX_PLAYER_LAND)
+                            self._event_bus.emit(Events.SFX_PLAYER_LAND)
                         py.bottom = tile.top
                         self.velocity.y = 0.0
                         self.is_grounded = True

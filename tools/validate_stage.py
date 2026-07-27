@@ -21,7 +21,6 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-
 try:
     import pytmx
 except ImportError:
@@ -119,7 +118,7 @@ def validate_tmx(tmx_path: Path) -> ValidationResult:
 
 
 def _validate_layers(tmx, result: ValidationResult) -> None:
-    layer_names = [l.name for l in tmx.layers]
+    layer_names = [line.name for line in tmx.layers]
     object_group_names = [g.name for g in getattr(tmx, 'objectgroups', [])]
 
     for req in REQUIRED_LAYERS:

@@ -1,21 +1,20 @@
 from __future__ import annotations
 
-import json
-import os
-from pathlib import Path
 from typing import TYPE_CHECKING
 
+import orjson
 import pygame
 
 from src.engine.core import settings
-from src.engine.input.action_map import Action, DEFAULT_KEY_BINDINGS
+from src.engine.core.user_settings import user_data_dir
+from src.engine.input.action_map import DEFAULT_KEY_BINDINGS, Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import BOTTOM_BAR_Y
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
 
-CONFIG_PATH = Path(os.environ.get("APPDATA", str(Path("~/.config").expanduser()))) / "legacyofinfest" / "keybindings.json"
+CONFIG_PATH = user_data_dir() / "keybindings.json"
 
 _KEY_NAMES: dict[int, str] = {
     pygame.K_a: "A", pygame.K_b: "B", pygame.K_c: "C", pygame.K_d: "D",
@@ -77,10 +76,9 @@ class KeybindingScene(BaseScene):
 
     def _load_bindings(self) -> dict[str, list[int]]:
         try:
-            with open(CONFIG_PATH, encoding="utf-8") as f:
-                raw = json.load(f)
-                return {str(k): v for k, v in raw.items()}
-        except (FileNotFoundError, json.JSONDecodeError):
+            raw = orjson.loads(CONFIG_PATH.read_bytes())
+            return {str(k): v for k, v in raw.items()}
+        except (FileNotFoundError, orjson.JSONDecodeError):
             return {}
 
     def _save_bindings(self) -> None:
@@ -91,8 +89,7 @@ class KeybindingScene(BaseScene):
                 keys = im._bindings.get(action, DEFAULT_KEY_BINDINGS.get(action, []))
                 data[action.name] = list(keys)
         CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
+        CONFIG_PATH.write_bytes(orjson.dumps(data, option=orjson.OPT_INDENT_2))
 
     def on_enter(self) -> None:
         saved = self._load_bindings()
@@ -108,26 +105,44 @@ class KeybindingScene(BaseScene):
         if self._dirty:
             self._save_bindings()
 
+    @staticmethod
+    def _snapshot_keys() -> tuple[bool, ...]:
+        """Copy the current keyboard state into a plain tuple.
+
+        AUD-041: the previous code called ``tuple(pygame.key.get_pressed())``
+        and ``enumerate(keys)``. In pygame-ce 2.5 ``get_pressed()`` returns a
+        ``ScancodeWrapper``, which supports ``len()`` and indexing but **not**
+        iteration, so both raised::
+
+            TypeError: Iterating over key states is not supported
+
+        That made the entire key-rebinding screen unreachable — pressing Enter
+        on any binding crashed the scene. Indexing explicitly works on every
+        pygame version.
+        """
+        keys = pygame.key.get_pressed()
+        return tuple(bool(keys[i]) for i in range(len(keys)))
+
     def update(self, dt: float) -> None:
         im = self.input
         if im is None:
             return
 
         if self._waiting_for_key:
-            keys = pygame.key.get_pressed()
+            keys = self._snapshot_keys()
             for k, pressed in enumerate(keys):
                 if pressed and (k >= len(self._last_keys_state) or not self._last_keys_state[k]):
                     if k == pygame.K_ESCAPE:
                         self._waiting_for_key = False
-                        self._last_keys_state = tuple(keys)
+                        self._last_keys_state = keys
                         return
                     action = self._actions[self._selected]
                     im.rebind(action, [k])
                     self._dirty = True
                     self._waiting_for_key = False
-                    self._last_keys_state = tuple(keys)
+                    self._last_keys_state = keys
                     return
-            self._last_keys_state = tuple(keys)
+            self._last_keys_state = keys
             return
 
         if im.is_action_just_pressed(Action.MOVE_DOWN):
@@ -153,7 +168,7 @@ class KeybindingScene(BaseScene):
                 self._selected -= 1
         if im.is_action_just_pressed(Action.CONFIRM):
             self._waiting_for_key = True
-            self._last_keys_state = tuple(pygame.key.get_pressed())
+            self._last_keys_state = self._snapshot_keys()
         if im.is_action_just_pressed(Action.CANCEL):
             from src.engine.scenes.title_scene import TitleScene
             self.context.scene_manager.replace(TitleScene(self.context))

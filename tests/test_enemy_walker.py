@@ -5,9 +5,11 @@ Description: Tests for EnemyWalker patrol reversal, ledge detection,
 and charge attack.
 """
 from __future__ import annotations
+
 import pygame
-from src.framework.entities.enemy_walker import EnemyWalker
+
 from src.framework.entities.enemy_base import EnemyState
+from src.framework.entities.enemy_walker import EnemyWalker
 
 
 class TestWalkerPatrolReversal:

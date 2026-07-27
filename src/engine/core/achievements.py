@@ -1,22 +1,20 @@
 from __future__ import annotations
 
-import json
-import os
-from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
+import orjson
 import pygame
+from pydantic import BaseModel
+
 from src.engine.core import settings
-
-from src.engine.core.event_bus import _get_bus as _bus
+from src.engine.core.event_bus import EventBus
 from src.engine.core.events import Events
+from src.engine.core.user_settings import user_data_dir
 
-ACHIEVEMENTS_PATH = Path(os.environ.get("APPDATA", str(Path("~/.config").expanduser()))) / "legacyofinfest" / "achievements.json"
+ACHIEVEMENTS_PATH = user_data_dir() / "achievements.json"
 
 
-@dataclass
-class AchievementDef:
+class AchievementDef(BaseModel):
     id: str
     name: str
     description: str
@@ -26,20 +24,32 @@ class AchievementDef:
     event: str = ""
 
 
-@dataclass
-class AchievementProgress:
+class AchievementProgress(BaseModel):
     current: int = 0
     unlocked: bool = False
 
 
 class AchievementSystem:
-    # Singleton for backward compatibility. Future: inject via GameContext / DI container.
-    # Tests should call _reset_instance() in setUp/teardown.
+    """Tracks achievement progress and surfaces unlock notifications.
+
+    Still a process-wide singleton (achievements are genuinely global player
+    state), but with two defects removed:
+
+    * **AUD-019** — it no longer reaches for a module-level default event bus.
+      The bus is injected via :meth:`bind_bus`, which ``StageScene`` calls with
+      the context bus. Without a bound bus the system tracks progress silently
+      rather than emitting into a bus nobody is listening to.
+    * **AUD-030** — the notification font is created lazily on first draw
+      instead of in ``__init__``. Constructing a ``pygame.font.Font`` in the
+      constructor meant ``get_instance()`` raised ``pygame.error: font not
+      initialized`` for any caller that ran before ``pygame.font.init()`` —
+      and, being a singleton, it then held that font for the process lifetime.
+    """
+
     _instance: AchievementSystem | None = None
 
     @classmethod
     def init_instance(cls) -> AchievementSystem:
-        """Create a fresh singleton instance (e.g. for testing or DI injection)."""
         cls._instance = AchievementSystem()
         return cls._instance
 
@@ -58,8 +68,35 @@ class AchievementSystem:
         self._subscribed: bool = False
         self._stats: dict[str, int] = {}
         self._notif_bg: pygame.Surface | None = None
-        self._notif_font = pygame.font.Font(None, 14)
+        self._notif_font: pygame.font.Font | None = None
+        self._bus: EventBus | None = None
         self._init_achievements()
+
+    # ── bus binding (AUD-019) ──────────────────────────────────
+
+    def bind_bus(self, bus: EventBus | None) -> None:
+        """Attach the event bus this system should publish and listen on.
+
+        Re-binding while subscribed moves the subscriptions across, so a scene
+        transition that swaps buses cannot leave handlers on the old one.
+        """
+        if bus is self._bus:
+            return
+        was_subscribed = self._subscribed
+        if was_subscribed:
+            self.unsubscribe_events()
+        self._bus = bus
+        if was_subscribed:
+            self.subscribe_events()
+
+    @property
+    def _font(self) -> pygame.font.Font:
+        """Notification font, created on first use (AUD-030)."""
+        if self._notif_font is None:
+            if not pygame.font.get_init():
+                pygame.font.init()
+            self._notif_font = pygame.font.Font(None, 14)
+        return self._notif_font
 
     def _init_achievements(self) -> None:
         self.register(AchievementDef(
@@ -119,18 +156,19 @@ class AchievementSystem:
             self._progress[ach.id] = AchievementProgress()
 
     def subscribe_events(self) -> None:
-        if self._subscribed:
+        if self._subscribed or self._bus is None:
             return
         self._subscribed = True
-        _bus().subscribe(Events.ENEMY_DIED, self._on_enemy_died)
-        _bus().subscribe(Events.VFX_PARRY, self._on_parry)
+        self._bus.subscribe(Events.ENEMY_DIED, self._on_enemy_died)
+        self._bus.subscribe(Events.VFX_PARRY, self._on_parry)
 
     def unsubscribe_events(self) -> None:
         if not self._subscribed:
             return
         self._subscribed = False
-        _bus().unsubscribe(Events.ENEMY_DIED, self._on_enemy_died)
-        _bus().unsubscribe(Events.VFX_PARRY, self._on_parry)
+        if self._bus is not None:
+            self._bus.unsubscribe(Events.ENEMY_DIED, self._on_enemy_died)
+            self._bus.unsubscribe(Events.VFX_PARRY, self._on_parry)
 
     def _on_enemy_died(self, **data: object) -> None:
         self._stats["enemies_killed"] = self._stats.get("enemies_killed", 0) + 1
@@ -147,10 +185,13 @@ class AchievementSystem:
         if ach is None or prog is None or prog.unlocked:
             return
         prog.current = min(prog.current + amount, ach.target)
-        _bus().emit(Events.ACHIEVEMENT_PROGRESS,
-             achievement_id=achievement_id,
-             progress=prog.current,
-             target=ach.target)
+        if self._bus is not None:
+            self._bus.emit(
+                Events.ACHIEVEMENT_PROGRESS,
+                achievement_id=achievement_id,
+                progress=prog.current,
+                target=ach.target,
+            )
         if prog.current >= ach.target:
             self._unlock(achievement_id)
 
@@ -166,9 +207,12 @@ class AchievementSystem:
             "description": ach.description,
             "timer": 3.0,
         })
-        _bus().emit(Events.ACHIEVEMENT_UNLOCKED,
-             achievement_id=ach.id,
-             name=ach.name)
+        if self._bus is not None:
+            self._bus.emit(
+                Events.ACHIEVEMENT_UNLOCKED,
+                achievement_id=ach.id,
+                name=ach.name,
+            )
 
     def _set_progress(self, achievement_id: str, value: int) -> None:
         prog = self._progress.get(achievement_id)
@@ -221,26 +265,24 @@ class AchievementSystem:
     def save(self) -> None:
         data = {
             "progress": {
-                aid: {"current": p.current, "unlocked": p.unlocked}
+                aid: p.model_dump()
                 for aid, p in self._progress.items()
             },
             "stats": self._stats,
         }
         ACHIEVEMENTS_PATH.parent.mkdir(parents=True, exist_ok=True)
-        with open(ACHIEVEMENTS_PATH, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
+        ACHIEVEMENTS_PATH.write_bytes(orjson.dumps(data, option=orjson.OPT_INDENT_2))
 
     def load(self) -> None:
         try:
-            with open(ACHIEVEMENTS_PATH, encoding="utf-8") as f:
-                data = json.load(f)
+            raw = ACHIEVEMENTS_PATH.read_bytes()
+            data = orjson.loads(raw)
             saved_progress = data.get("progress", {})
             for aid, pdata in saved_progress.items():
                 if aid in self._progress:
-                    self._progress[aid].current = pdata.get("current", 0)
-                    self._progress[aid].unlocked = pdata.get("unlocked", False)
+                    self._progress[aid] = AchievementProgress.model_validate(pdata)
             self._stats = data.get("stats", {})
-        except (FileNotFoundError, json.JSONDecodeError):
+        except (FileNotFoundError, orjson.JSONEncodeError, ValueError):
             pass
 
     def get_all_achievements(self) -> list[tuple[AchievementDef, AchievementProgress]]:
@@ -274,14 +316,13 @@ class AchievementSystem:
 
         pygame.draw.rect(surface, (255, 215, 0), (bx, by, bar_w, bar_h), 1)
 
-        title = self._notif_font.render(f"Achievement Unlocked: {n['name']}", True, (255, 215, 0))
+        title = self._font.render(f"Achievement Unlocked: {n['name']}", True, (255, 215, 0))
         surface.blit(title, (bx + 8, by + 3))
-        desc = self._notif_font.render(n['description'], True, (200, 200, 200))
+        desc = self._font.render(n['description'], True, (200, 200, 200))
         surface.blit(desc, (bx + 8, by + 17))
 
     @classmethod
     def _reset_instance(cls) -> None:
-        """Reset the singleton instance. Used by conftest.py to prevent cross-test contamination."""
         cls._instance = None
 
     def get_progress(self, achievement_id: str) -> int:

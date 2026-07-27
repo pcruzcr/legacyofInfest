@@ -3,44 +3,46 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-import pygame
 import numpy as np
+import pygame
 
 from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
-    COLOR_BG,
-    COLOR_TEXT,
-    COLOR_HIGHLIGHT,
+    BOTTOM_BAR_H,
+    BOTTOM_BAR_Y,
     COLOR_ACCENT,
-    COLOR_TOP_BAR_BG,
+    COLOR_BG,
     COLOR_ERROR,
-    FONT_SMALL,
-    FONT_MEDIUM,
+    COLOR_HIGHLIGHT,
+    COLOR_TEXT,
+    COLOR_TOP_BAR_BG,
     FONT_LARGE,
+    FONT_MEDIUM,
+    FONT_SMALL,
     LEFT_PANEL_W,
-    RIGHT_PANEL_X,
     PANEL_H,
     PANEL_SIZE,
-    TOP_BAR_Y,
+    RIGHT_PANEL_X,
     TOP_BAR_H,
-    BOTTOM_BAR_Y,
-    BOTTOM_BAR_H,
-    draw_top_bar,
+    TOP_BAR_Y,
+    FrameThrottle,
+    SourceSurfaceManager,
+    build_default_sources,
     draw_bottom_bar,
     draw_bottom_bar_error,
-    draw_panel_border,
     draw_divider,
     draw_histogram_bars,
+    draw_panel_border,
     draw_save_notification,
+    draw_top_bar,
     save_png,
-    build_default_sources,
-    SourceSurfaceManager,
-    FrameThrottle,
 )
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.processing.filter_tools import FilterTools
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -293,7 +295,7 @@ class FilterDemoScene(BaseScene):
             self._cached_result = result
             self._error_msg = ""
         except (pygame.error, ValueError, ZeroDivisionError) as e:
-            logging.warning("filter_demo: compute error: %s", e)
+            logger.warning("filter_demo: compute error: %s", e)
             self._error_msg = f"Error: {e}"[:60]
             self._error_timer = 2.0
 

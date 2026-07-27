@@ -5,14 +5,24 @@ from __future__ import annotations
 
 import os
 
-import pytest
+# Set dummy video driver BEFORE any pygame import so display.set_mode
+# never triggers the "no fast renderer available" warning.
+os.environ["SDL_VIDEODRIVER"] = "dummy"
+# Also hide pygame support prompt
+os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
+
+import warnings
+
 import pygame
+import pytest
+
+# Suppress harmless pygame-ce SCALED warning under dummy driver
+warnings.filterwarnings("ignore", message="no fast renderer available", category=Warning)
 
 
 @pytest.fixture(scope="session")
 def _pygame_init():
     """Initialize pygame once per test session for surface-dependent tests."""
-    os.environ["SDL_VIDEODRIVER"] = "dummy"
     pygame.init()
     yield
     pygame.quit()
@@ -27,13 +37,19 @@ def event_bus():
 
 @pytest.fixture(autouse=True)
 def _reset_global_state():
-    """Reset global singletons before each test to prevent cross-test contamination."""
-    from src.engine.core.event_bus import _get_bus as _test_bus
-    from src.engine.utils.asset_loader import AssetLoader
-    from src.engine.scenes.demo_layout import clear_demo_font_cache
+    """Reset global singletons before each test to prevent cross-test contamination.
+
+    AUD-019: there is no longer a module-level default EventBus to clear —
+    every consumer receives its bus by injection, so a test's bus cannot leak
+    into another test. Only genuinely process-wide caches are reset here.
+    """
     from src.engine.core.achievements import AchievementSystem
-    _test_bus().clear()
+    from src.engine.scenes.demo_layout import clear_demo_font_cache
+    from src.engine.utils.asset_loader import AssetLoader
+    from src.framework.stage.stage_loader import StageLoader
     AssetLoader.clear_cache()
+    AssetLoader._get_instance()._scopes = 0
+    StageLoader.clear_tmx_cache()
     clear_demo_font_cache()
     AchievementSystem._reset_instance()
 

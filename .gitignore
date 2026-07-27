@@ -1,14 +1,51 @@
+# ── Python ─────────────────────────────────────────────────────
 .venv/
+venv/
 __pycache__/
 *.pyc
+*.pyo
+*.egg-info/
+build/
+dist/
+
+# ── Tooling caches ─────────────────────────────────────────────
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.benchmarks/
+.coverage
+coverage.xml
+report.xml
+
+# ── Test artefacts ─────────────────────────────────────────────
 tests/output/
 /tests/**/*.pkl
 !src/stages/**/models/*.pkl
-.pytest_cache/
+
+# ── Player state (AUD-035) ─────────────────────────────────────
+# Save files are per-player runtime state, not source. `saves/slot_1.json` was
+# committed, which meant every clone of the repository shipped with one
+# developer's half-finished playthrough — and every playtest session produced
+# a spurious diff.
+saves/
+*.sav
+
+# ── Editor / workspace cruft (AUD-035) ─────────────────────────
 .vscode/settings.json
+.obsidian/
+.smart-env/
+.idea/
+*.swp
+.DS_Store
 
-
-
-
-# Ignore Smart Environment folder
-.smart-env
+# ── Working files that must never be committed (AUD-034) ───────
+# Ad-hoc debug scripts, patches and map backups belong in .archive/ (which is
+# also ignored) or in a branch — not in the repository root, where they were
+# indistinguishable from real tooling.
+.archive/
+*.backup
+*.backup[0-9]
+*.bak
+*.orig
+*.rej
+*_backup/

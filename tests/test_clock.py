@@ -6,8 +6,10 @@ Covers: tick returns float, tick returns scaled dt when time_scale changes,
 fps property returns float.
 """
 from __future__ import annotations
-import pytest
+
 import pygame
+import pytest
+
 from src.engine.core.clock import DeltaClock
 
 

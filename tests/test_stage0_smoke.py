@@ -6,12 +6,15 @@ These verify that Stage 0 loads without exceptions and matches the
 design document (07_STAGE0_DESIGN.md) in key structural properties.
 """
 from __future__ import annotations
+
 from pathlib import Path
+
 import pygame
-from src.framework.entities.enemy_walker import EnemyWalker
+
 from src.framework.entities.enemy_flying import EnemyFlying
 from src.framework.entities.enemy_shooter import EnemyShooter
-from src.framework.stage.stage_loader import StageLoader, StageData
+from src.framework.entities.enemy_walker import EnemyWalker
+from src.framework.stage.stage_loader import StageData, StageLoader
 
 STAGE0_TMX = Path("assets/maps/stage0/stage0.tmx")
 

@@ -6,9 +6,9 @@ Description: CurveTools class with Bézier, B-spline, NURBS, Catmull-Rom
 spline evaluation utilities.
 """
 from __future__ import annotations
-from typing import Sequence
 
 import math
+from collections.abc import Sequence
 
 import pygame
 

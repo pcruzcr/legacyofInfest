@@ -1,15 +1,13 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
 
 import math
+from typing import TYPE_CHECKING
 
 import pygame
 
+from src.engine.core.events import Events
 from src.framework.entities.enemy_base import EnemyBase, EnemyState
 from src.framework.entities.enemy_shooter import Projectile
-from src.engine.core.event_bus import _get_bus as _bus
-_emit = lambda *a, **kw: _bus().emit(*a, **kw)
-from src.engine.core.events import Events
 
 if TYPE_CHECKING:
     from src.framework.entities.player import Player
@@ -118,7 +116,7 @@ class EnemyArcher(EnemyBase):
             lifetime=3.0,
         )
         self._active_projectiles.append(projectile)
-        _emit(Events.SFX_PROJECTILE_FIRE)
+        self._event_bus.emit(Events.SFX_PROJECTILE_FIRE)
         return True
 
     def _post_update(self, dt: float) -> None:
@@ -146,7 +144,7 @@ class EnemyArcher(EnemyBase):
                     player._parry_success = True
                     player._parry_active = False
                     player._parry_window = 0.0
-                    _emit(Events.VFX_PARRY, pos=(p.position.x, p.position.y))
+                    self._event_bus.emit(Events.VFX_PARRY, pos=(p.position.x, p.position.y))
                 else:
                     player.apply_damage(p.damage, (self.position.x, self.position.y))
                     p.on_collision()

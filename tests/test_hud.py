@@ -5,11 +5,13 @@ Description: Tests for HUD: heart slot states, timer display,
 event-driven health updates.
 """
 from __future__ import annotations
+
 import pygame
 import pytest
-from src.engine.ui.hud import HUD, _heart_slot_state
+
 from src.engine.core import settings
 from src.engine.core.event_bus import EventBus
+from src.engine.ui.hud import HUD, _heart_slot_state
 
 
 @pytest.fixture(autouse=True)

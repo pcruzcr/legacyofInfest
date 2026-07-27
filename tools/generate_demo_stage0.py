@@ -9,9 +9,9 @@ Zone layout:
   E (cols 68-84): Hazards — death pit, hazard zone, Brute
   F (cols 85-98): Culmination — Caster, Assassin, storm, exit
 """
-import xml.etree.ElementTree as ET
 import os
 import shutil
+import xml.etree.ElementTree as ET
 
 OUT_DIR = "assets/maps/stage0"
 OUT_PATH = os.path.join(OUT_DIR, "stage0.tmx")
@@ -356,7 +356,7 @@ def make_tmx():
     ET.indent(tree, space="  ")
     tree.write(OUT_PATH, encoding="utf-8", xml_declaration=True)
     print(f"Generated {OUT_PATH} ({MAP_W}x{MAP_H} tiles, {MAP_W * TILE}x{MAP_H * TILE} px)")
-    print(f"Zones: A(cols 2-15) B(16-35) C(36-51) D(52-67) E(68-84) F(85-98)")
+    print("Zones: A(cols 2-15) B(16-35) C(36-51) D(52-67) E(68-84) F(85-98)")
     print("Enemies: 2 Walkers, 1 Flying, 1 Shooter, 1 Charger, 1 Archer, 1 Brute, 1 Caster, 1 Assassin")
     print("Checkpoints: 4 | Messages: 6 | Platforms: 8 (1 one-way)")
 

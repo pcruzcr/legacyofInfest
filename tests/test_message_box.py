@@ -5,10 +5,12 @@ Description: Tests for MessageBox: show/hide events, typewriter effect,
 and destroy cleanup.
 """
 from __future__ import annotations
+
 import pygame
 import pytest
-from src.engine.ui.message_box import MessageBox
+
 from src.engine.core.event_bus import EventBus
+from src.engine.ui.message_box import MessageBox
 
 
 @pytest.fixture(autouse=True)

@@ -10,7 +10,6 @@ import argparse
 import json
 from pathlib import Path
 
-
 FEEDBACK_RULES: dict[str, list[dict]] = {
     "tmx_missing_checkpoint": [
         {"pattern": "No checkpoint layer", "msg": "Add a tile layer named 'Checkpoint' (or object group with checkpoint objects)."},

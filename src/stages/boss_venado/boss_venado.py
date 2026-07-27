@@ -5,8 +5,6 @@ from typing import TYPE_CHECKING, Any
 
 import pygame
 
-from src.engine.core.event_bus import _get_bus as _bus
-_emit = lambda *a, **kw: _bus().emit(*a, **kw)
 from src.engine.core.events import Events
 from src.framework.entities.boss_base import BossBase, BossPhase
 from src.framework.entities.enemy_base import EnemyState
@@ -224,19 +222,19 @@ class BossVenado(BossBase):
         if player_ref is None:
             return
         self._do_charge(player_ref)
-        _emit(Events.BOSS_ATTACK, pattern="COMBO_STOMP_CHARGE", rect=self.rect)
+        self._event_bus.emit(Events.BOSS_ATTACK, pattern="COMBO_STOMP_CHARGE", rect=self.rect)
 
     def _do_combo_sweep_spore(self) -> None:
         self._attack_timers["MUSHROOM_SPORE"] = 0.0
         self._do_mushroom_spore()
-        _emit(Events.BOSS_ATTACK, pattern="COMBO_SWEEP_SPORE", rect=self.rect)
+        self._event_bus.emit(Events.BOSS_ATTACK, pattern="COMBO_SWEEP_SPORE", rect=self.rect)
 
     def _do_stomp(self) -> None:
         self._attack_timers["STOMP"] = self._attack_cooldowns["STOMP"]
         self._stomp_rect = pygame.Rect(
             self.rect.centerx - 48, self.rect.bottom - 8, 96, 8,
         )
-        _emit(Events.BOSS_ATTACK, pattern="STOMP", rect=self._stomp_rect)
+        self._event_bus.emit(Events.BOSS_ATTACK, pattern="STOMP", rect=self._stomp_rect)
 
     def _do_charge(self, player_ref: pygame.Rect) -> None:
         self._attack_timers["CHARGE"] = self._attack_cooldowns["CHARGE"]
@@ -293,7 +291,7 @@ class BossVenado(BossBase):
             self._charge_active = False
             if self.current_phase == 0:
                 self._do_stomp()
-                _emit(Events.BOSS_ATTACK, pattern="CHARGE_STOMP", rect=self.rect)
+                self._event_bus.emit(Events.BOSS_ATTACK, pattern="CHARGE_STOMP", rect=self.rect)
 
     def _update_projectiles(self, dt: float) -> None:
         for proj in self._projectiles[:]:

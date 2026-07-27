@@ -1,212 +1,274 @@
 from __future__ import annotations
 
+import logging
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 import pygame
 
 from src.engine.core import settings
-from src.framework.entities.base_entity import BaseEntity
-from src.framework.entities.enemy_base import EnemyBase
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from src.framework.entities.player import Player
-    from src.framework.stage.camera import Camera
-    from src.framework.stage.stage_loader import StageData
-    from src.framework.vfx.particle_system import ParticleSystem
-    from src.framework.vfx.damage_numbers import DamageNumberManager
-    from src.framework.vfx.ambient_particles import AmbientParticleSystem
-    from src.framework.vfx.weather_system import WeatherSystem
-    from src.framework.vfx.trail_system import TrailSystem
-    from src.framework.ui.tutorial_overlay import TutorialOverlay
-    from src.framework.ui.learning_overlay import LearningOverlay
-    from src.framework.ui.dialogue_system import DialogueSystem
     from src.engine.ui.hud import HUD
     from src.engine.ui.message_box import MessageBox
     from src.engine.ui.screen_banner import ScreenBanner
+    from src.framework.entities.player import Player
+    from src.framework.stage.camera import Camera
+    from src.framework.stage.stage_loader import StageData
+    from src.framework.ui.dialogue_system import DialogueSystem
+    from src.framework.ui.learning_overlay import LearningOverlay
+    from src.framework.ui.tutorial_overlay import TutorialOverlay
+    from src.framework.vfx.ambient_particles import AmbientParticleSystem
+    from src.framework.vfx.damage_numbers import DamageNumberManager
+    from src.framework.vfx.particle_system import ParticleSystem
+    from src.framework.vfx.trail_system import TrailSystem
+    from src.framework.vfx.weather_system import WeatherSystem
+
+
+@dataclass
+class DrawContext:
+    surface: pygame.Surface
+    stage: StageData | None = None
+    player: Player | None = None
+    checkpoints: list[Any] | None = None
+    camera: Camera | None = None
+    hud: HUD | None = None
+    msg_box: MessageBox | None = None
+    banner: ScreenBanner | None = None
+    paused: bool = False
+    pause_selected: int = 0
+    pause_options: list[str] | None = None
+    particle_system: ParticleSystem | None = None
+    damage_numbers: DamageNumberManager | None = None
+    ambient_particles: AmbientParticleSystem | None = None
+    weather_system: WeatherSystem | None = None
+    trail_system: TrailSystem | None = None
+    tutorial_overlay: TutorialOverlay | None = None
+    learning_overlay: LearningOverlay | None = None
+    dialogue_system: DialogueSystem | None = None
+    debug: bool = False
 
 
 class DrawingSystem:
     def __init__(self) -> None:
-        self._bg_tiles: dict[int, pygame.Surface] = {}
+        self._bg_tiles: dict[tuple[int, int, int], pygame.Surface] = {}
         self._pause_overlay: pygame.Surface | None = None
         self._pause_font = pygame.font.Font(None, 20)
         self._debug_font = pygame.font.Font(None, 14)
 
-    def draw(
-        self, surface: pygame.Surface,
-        stage: StageData | None,
-        player: Player | None,
-        checkpoints: list[Any],
-        camera: Camera,
-        hud: HUD | None,
-        msg_box: MessageBox | None,
-        banner: ScreenBanner | None,
-        paused: bool,
-        debug: bool,
-        pause_selected: int = 0,
-        pause_options: list[str] | None = None,
-        particle_system: ParticleSystem | None = None,
-        damage_numbers: DamageNumberManager | None = None,
-        ambient_particles: AmbientParticleSystem | None = None,
-        weather_system: WeatherSystem | None = None,
-        trail_system: TrailSystem | None = None,
-        tutorial_overlay: TutorialOverlay | None = None,
-        learning_overlay: LearningOverlay | None = None,
-        dialogue_system: DialogueSystem | None = None,
-    ) -> None:
-        if stage is None or player is None:
-            return
+    def draw(self, ctx: DrawContext) -> None:
+        surface = ctx.surface
+        stage = ctx.stage
+        player = ctx.player
+        checkpoints = ctx.checkpoints or []
+        camera = ctx.camera
+        hud = ctx.hud
+        msg_box = ctx.msg_box
+        banner = ctx.banner
 
         surface.fill(settings.BG_COLOR)
+
+        if stage is None:
+            return
+
+        if camera is None:
+            return
+
+        offset = camera.offset
+
+        # Draw order, back to front. Parallax backdrops first, then the tile
+        # map, then world-space effects, then entities, then screen-space UI.
         self._draw_background(surface, stage, camera)
-        if stage.map_layer is not None:
-            stage.map_layer.draw(surface)
-        cam_offset = camera.offset
+        self._draw_stage_layers(surface, stage, camera)
 
-        # Ambient particles behind entities
-        if ambient_particles is not None:
-            ambient_particles.draw(surface, cam_offset)
+        if ctx.particle_system:
+            ctx.particle_system.draw(surface, offset)
+        if ctx.weather_system:
+            ctx.weather_system.draw(surface, offset)
+        if ctx.ambient_particles:
+            ctx.ambient_particles.draw(surface, offset)
 
-        # Weather effects (rain, snow, fog, storm)
-        if weather_system is not None:
-            weather_system.draw(surface, cam_offset)
+        if ctx.learning_overlay:
+            ctx.learning_overlay.draw(surface)
+        if ctx.tutorial_overlay:
+            ctx.tutorial_overlay.draw(surface)
 
-        # Trails behind entities
-        if trail_system is not None:
-            trail_system.draw(surface, cam_offset)
+        self._draw_entities(surface, stage, offset)
 
-        drawables: list[tuple[BaseEntity, int]] = [(player, player.rect.centery)]
-        for entity in stage.entity_list:
-            if getattr(entity, "is_alive", True) or not isinstance(entity, EnemyBase):
-                if getattr(entity, "is_visible", True):
-                    drawables.append((entity, entity.rect.centery))
-        for cp in checkpoints:
-            drawables.append((cp, cp.rect.centery))
-        drawables.sort(key=lambda x: x[1])
-        for obj, _ in drawables:
-            obj.draw(surface, cam_offset)
+        if ctx.trail_system:
+            ctx.trail_system.draw(surface, offset)
+        if ctx.damage_numbers:
+            ctx.damage_numbers.draw(surface, offset)
+        if ctx.dialogue_system:
+            # Screen-space, not world-space: the dialogue box is anchored to the
+            # viewport, so it takes no camera offset (AUD-039).
+            ctx.dialogue_system.draw(surface)
 
-        # VFX layer
-        if particle_system is not None:
-            particle_system.draw(surface, cam_offset)
-        if damage_numbers is not None:
-            damage_numbers.draw(surface, cam_offset)
+        if checkpoints:
+            self._draw_checkpoints(surface, checkpoints, offset)
 
+        if hud:
+            hud.draw(surface)
         if msg_box:
             msg_box.draw(surface)
         if banner:
             banner.draw(surface)
-        if hud:
-            hud.draw(surface)
 
-        if tutorial_overlay:
-            tutorial_overlay.draw(surface)
+        if ctx.paused:
+            self._draw_pause_menu(surface, ctx.pause_selected, ctx.pause_options or [])
 
-        if learning_overlay:
-            learning_overlay.draw(surface)
+        if ctx.debug:
+            self._draw_debug(surface, stage, player, camera, offset)
 
-        if dialogue_system:
-            dialogue_system.draw(surface)
-
-        if paused:
-            self._draw_pause_menu(surface, pause_selected, pause_options or [])
-
-        if debug:
-            self._draw_debug(surface, stage, player, camera, paused)
-
-    def _draw_pause_menu(
-        self, surface: pygame.Surface,
-        selected: int, options: list[str],
-    ) -> None:
-        if self._pause_overlay is None:
-            self._pause_overlay = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
-            self._pause_overlay.set_alpha(160)
-            self._pause_overlay.fill((0, 0, 0))
-        surface.blit(self._pause_overlay, (0, 0))
-
-        title = self._pause_font.render("PAUSED", True, (255, 255, 255))
-        tx = (settings.INTERNAL_WIDTH - title.get_width()) // 2
-        surface.blit(title, (tx, 40))
-
-        for i, opt in enumerate(options):
-            color = (255, 255, 100) if i == selected else (180, 180, 180)
-            prefix = "> " if i == selected else "  "
-            text = self._pause_font.render(f"{prefix}{opt}", True, color)
-            ox = (settings.INTERNAL_WIDTH - text.get_width()) // 2
-            oy = 80 + i * 24
-            surface.blit(text, (ox, oy))
+    # Parallax speed per backdrop layer, far to near. Index 0 is the most
+    # distant layer and therefore moves least.
+    _PARALLAX_FACTORS: tuple[float, ...] = (0.15, 0.35, 0.6, 0.8)
 
     def _draw_background(
         self, surface: pygame.Surface, stage: StageData, camera: Camera,
     ) -> None:
-        bg_layers = stage.background_layers
-        bg_names = ("BG_Far", "BG_Mid", "BG_Near")
-        for i, bg_surf in enumerate(bg_layers):
-            layer_name = bg_names[i] if i < len(bg_names) else "BG_Far"
-            off = camera.layer_offset(layer_name)
-            bg_w = bg_surf.get_width()
-            bg_h = bg_surf.get_height()
-            if i not in self._bg_tiles:
-                tw = settings.INTERNAL_WIDTH + bg_w
-                th = settings.INTERNAL_HEIGHT + bg_h
-                tiled = pygame.Surface((tw, th))
-                for bx in range(0, tw, bg_w):
-                    for by in range(0, th, bg_h):
-                        tiled.blit(bg_surf, (bx, by))
-                self._bg_tiles[i] = tiled
-            ox = int(off.x) % bg_w
-            oy = int(off.y) % bg_h
-            surface.blit(self._bg_tiles[i], (-ox, -oy))
+        """Blit the parallax backdrop layers behind the tile map.
+
+        Rewritten (AUD-039). The previous implementation called
+        ``stage.draw_background(...)`` guarded by ``hasattr`` — and ``StageData``
+        has no such method, so the guard was permanently False and no backdrop
+        was ever drawn. A second helper iterated ``stage.background_objects``,
+        an attribute that does not exist either, which is what raised
+        ``AttributeError`` on the first gameplay frame.
+
+        What the loader actually produces is ``stage.background_layers``: a list
+        of ``pygame.Surface`` ordered far to near. That is what we draw.
+        """
+        layers = getattr(stage, "background_layers", None)
+        if not layers:
+            return
+
+        view_w = surface.get_width()
+        view_h = surface.get_height()
+        for index, layer in enumerate(layers):
+            if not isinstance(layer, pygame.Surface):
+                continue
+            factor = self._PARALLAX_FACTORS[min(index, len(self._PARALLAX_FACTORS) - 1)]
+            layer_w = layer.get_width()
+            if layer_w <= 0:
+                continue
+            # Wrap horizontally so a layer narrower than the map still tiles
+            # across the whole viewport instead of leaving a gap.
+            shift = int(camera.offset.x * factor) % layer_w
+            y = int(-camera.offset.y * factor * 0.5)
+            x = -shift
+            while x < view_w:
+                surface.blit(layer, (x, y))
+                x += layer_w
+            if layer.get_height() < view_h:
+                # Extend the last row of the layer down to the bottom edge so a
+                # short backdrop does not expose the clear colour.
+                surface.blit(layer, (x - layer_w, y + layer.get_height()))
+
+    def _draw_stage_layers(
+        self, surface: pygame.Surface, stage: StageData, camera: Camera,
+    ) -> None:
+        """Render the tile map.
+
+        AUD-039: this used to look for ``stage.tile_layer`` and
+        ``stage.top_layer``, neither of which exists. ``StageLoader`` builds a
+        ``pyscroll.PyscrollGroup`` and stores it as ``stage.map_layer``; nothing
+        in the codebase ever drew it, so **the tile map has never appeared on
+        screen**. Both lookups used ``getattr(..., None)`` and silently did
+        nothing, which is why this went unnoticed for so long — a missing
+        attribute raises, a defaulted one just quietly renders an empty world.
+        """
+        map_layer = getattr(stage, "map_layer", None)
+        if map_layer is None:
+            return
+
+        # pyscroll centres on a world point; the camera stores a top-left
+        # offset, so convert.
+        centre = (
+            int(camera.offset.x + surface.get_width() // 2),
+            int(camera.offset.y + surface.get_height() // 2),
+        )
+        try:
+            map_layer.center(centre)
+            # PyscrollGroup.draw takes only the target surface.
+            map_layer.draw(surface)
+        except (AttributeError, TypeError, pygame.error):
+            # A stage built without a real pyscroll group (tests, student
+            # templates in progress) must not take the whole frame down. Logged
+            # at warning, not debug: if the map stops rendering in a real build
+            # that is a headline failure, and burying it at debug is how the
+            # previous silent-getattr version hid the same problem (AUD-039).
+            logger.warning(
+                "DrawingSystem: tile map could not be drawn — the world will "
+                "render empty", exc_info=True,
+            )
+
+    def _draw_entities(
+        self, surface: pygame.Surface, stage: StageData, offset: pygame.Vector2,
+    ) -> None:
+        for entity in stage.entity_list:
+            if entity is None or not entity.is_visible or not entity.is_alive:
+                continue
+            entity.draw(surface, offset)
+
+    def _draw_checkpoints(
+        self, surface: pygame.Surface, checkpoints: list[Any], offset: pygame.Vector2,
+    ) -> None:
+        for cp in checkpoints:
+            if hasattr(cp, 'draw'):
+                cp.draw(surface, offset)
+
+    def _draw_pause_menu(
+        self, surface: pygame.Surface, selected: int, options: list[str],
+    ) -> None:
+        if self._pause_overlay is None:
+            self._pause_overlay = pygame.Surface(
+                (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
+            )
+        self._pause_overlay.set_alpha(160)
+        self._pause_overlay.fill((0, 0, 0))
+        surface.blit(self._pause_overlay, (0, 0))
+
+        cx = settings.INTERNAL_WIDTH // 2
+        cy = settings.INTERNAL_HEIGHT // 2 - (len(options) * 30) // 2
+        for i, opt in enumerate(options):
+            color = (255, 255, 100) if i == selected else (200, 200, 200)
+            label = f"> {opt}" if i == selected else f"  {opt}"
+            text = self._pause_font.render(label, True, color)
+            surface.blit(text, (cx - text.get_width() // 2, cy + i * 30))
 
     def _draw_debug(
-        self, surface: pygame.Surface,
-        stage: StageData, player: Player, camera: Camera,
-        paused: bool = False,
+        self, surface: pygame.Surface, stage: StageData | None,
+        player: Player | None, camera: Camera, offset: pygame.Vector2,
     ) -> None:
-        cam_offset = camera.offset
-        lx = -int(cam_offset.x)
-        ly = -int(cam_offset.y)
-        y = 4
-
-        for r in stage.collision_rects:
-            pygame.draw.rect(surface, (0, 255, 0), (r.x + lx, r.y + ly, r.w, r.h), 1)
-        for r in stage.one_way_rects:
-            pygame.draw.rect(surface, (0, 128, 255), (r.x + lx, r.y + ly, r.w, r.h), 1)
-        for mt in stage.message_triggers:
-            r = mt.rect
-            pygame.draw.rect(surface, (255, 255, 0), (r.x + lx, r.y + ly, r.w, r.h), 1)
-        for hz in stage.hazard_zones:
-            r = hz.rect
-            pygame.draw.rect(surface, (255, 0, 0), (r.x + lx, r.y + ly, r.w, r.h), 1)
-        for dp in stage.death_pits:
-            r = dp.rect
-            pygame.draw.rect(surface, (255, 0, 128), (r.x + lx, r.y + ly, r.w, r.h), 1)
-
-        for enemy in stage.entity_list:
-            if not isinstance(enemy, EnemyBase) or not enemy.is_alive:
+        if stage is None:
+            return
+        for entity in stage.entity_list:
+            if entity is None:
                 continue
-            hb = enemy.hurtbox
-            pygame.draw.rect(surface, (255, 128, 0), (hb.x + lx, hb.y + ly, hb.w, hb.h), 1)
-            hb2 = enemy.hitbox
-            pygame.draw.rect(surface, (255, 0, 0), (hb2.x + lx, hb2.y + ly, hb2.w, hb2.h), 1)
+            screen_x = int(entity.position.x - offset.x)
+            screen_y = int(entity.position.y - offset.y)
+            rect = getattr(entity, 'rect', None)
+            if rect is not None:
+                pygame.draw.rect(surface, (0, 255, 0), (screen_x, screen_y, rect.width, rect.height), 1)
+            hurtbox = getattr(entity, 'hurtbox', None)
+            if hurtbox is not None:
+                hx = int(hurtbox.x - offset.x)
+                hy = int(hurtbox.y - offset.y)
+                pygame.draw.rect(surface, (255, 0, 0), (hx, hy, hurtbox.width, hurtbox.height), 1)
+            hitbox = getattr(entity, 'hitbox', None)
+            if hitbox is not None:
+                hx2 = int(hitbox.x - offset.x)
+                hy2 = int(hitbox.y - offset.y)
+                pygame.draw.rect(surface, (0, 0, 255), (hx2, hy2, hitbox.width, hitbox.height), 1)
+        if player is not None and hasattr(player, 'rect') and player.rect is not None:
+            px = int(player.position.x - offset.x)
+            py = int(player.position.y - offset.y)
+            pygame.draw.rect(surface, (0, 255, 255), (px, py, player.rect.width, player.rect.height), 2)
 
-        if hasattr(player, "active_hitbox") and player.active_hitbox is not None:
-            hb3 = player.active_hitbox
-            pygame.draw.rect(surface, (0, 255, 255), (hb3.x + lx, hb3.y + ly, hb3.w, hb3.h), 1)
-        if hasattr(player, "hurtbox"):
-            hb4 = player.hurtbox
-            pygame.draw.rect(surface, (0, 200, 0), (hb4.x + lx, hb4.y + ly, hb4.w, hb4.h), 1)
-
-        max_hp = getattr(player, "max_health", player.current_health)
-        info = [
-            f"Pos: ({player.position.x:.0f}, {player.position.y:.0f})",
-            f"Vel: ({player.velocity.x:.1f}, {player.velocity.y:.1f})",
-            f"State: {player.state}",
-            f"HP: {player.current_health}/{max_hp}",
-            f"Grounded: {player.is_grounded}",
-            f"Paused: {paused}",
-        ]
-        for line in info:
-            txt = self._debug_font.render(line, True, (255, 255, 255))
-            surface.blit(txt, (4, y))
-            y += 16
+        fps = self._debug_font.render(f"Entities: {len(stage.entity_list)}", True, (255, 255, 255))
+        surface.blit(fps, (5, settings.INTERNAL_HEIGHT - 60))
+        cam_pos = self._debug_font.render(f"Cam: {int(offset.x)},{int(offset.y)}", True, (255, 255, 255))
+        surface.blit(cam_pos, (5, settings.INTERNAL_HEIGHT - 40))

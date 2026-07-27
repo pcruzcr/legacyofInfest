@@ -5,15 +5,18 @@ Description: Heads-Up Display showing hearts (health), timer, and stage info.
 Uses sprite-based hearts from assets/ui/ with font fallback.
 """
 from __future__ import annotations
+
 import logging
 from typing import cast
 
 import pygame
+
 from src.engine.core import settings
 from src.engine.core.event_bus import EventBus
 from src.engine.core.events import Events
 from src.engine.utils.asset_loader import AssetLoader
 
+logger = logging.getLogger(__name__)
 
 def _heart_slot_state(health: float, slot: int) -> str:
     v = max(0.0, min(1.0, health - slot))
@@ -90,7 +93,7 @@ class HUD:
                 self._frame_edges = {}
                 self._frame_fill = None
         except (pygame.error, FileNotFoundError, PermissionError):
-            logging.warning("hud: failed to load hud_frame.png")
+            logger.warning("hud: failed to load hud_frame.png")
             self._frame_corners = {}
             self._frame_edges = {}
             self._frame_fill = None
@@ -101,7 +104,14 @@ class HUD:
         # Timer frame (reuse hud_frame.png 9-slice at timer size 90x16)
         self._timer_bg_rect = pygame.Rect(258, 1, 62, 16)
         # Pre-scale timer background once (deferred from frame load block)
-        self._timer_fill = pygame.transform.scale(self._frame_fill, (self._timer_bg_rect.width, self._timer_bg_rect.height)) if isinstance(self._frame_fill, pygame.Surface) else None
+        self._timer_fill = (
+            pygame.transform.scale(
+                self._frame_fill,
+                (self._timer_bg_rect.width, self._timer_bg_rect.height),
+            )
+            if isinstance(self._frame_fill, pygame.Surface)
+            else None
+        )
         if self._frame_edges:
             tr = self._timer_bg_rect
             self._timer_edges = {
@@ -121,7 +131,7 @@ class HUD:
                 settings.ASSETS_DIR / "fonts" / "game.ttf", 12,
             )
         except (pygame.error, FileNotFoundError, PermissionError):
-            logging.warning("hud: failed to load game.ttf for timer")
+            logger.warning("hud: failed to load game.ttf for timer")
             self._timer_digit_font = None
 
         # Heart damage flash state
@@ -145,14 +155,14 @@ class HUD:
                 surf = AssetLoader.load_image(path)
                 self._heart_sprites[state] = surf
             except (pygame.error, FileNotFoundError, PermissionError):
-                logging.warning("hud: failed to load heart sprite %s", path)
+                logger.warning("hud: failed to load heart sprite %s", path)
                 self._heart_sprites[state] = pygame.Surface((14, 8))
 
         try:
             sparkle_path = settings.ASSETS_DIR / "ui" / "heart_sparkle.png"
             self._sparkle_frames = AssetLoader.load_sprite_sheet(sparkle_path, 8, 8)
         except (pygame.error, FileNotFoundError, PermissionError):
-            logging.warning("hud: failed to load heart_sparkle.png")
+            logger.warning("hud: failed to load heart_sparkle.png")
             self._sparkle_frames = []
 
         # Load portrait sprites
@@ -163,7 +173,7 @@ class HUD:
                 surf = AssetLoader.load_image(path, size=(32, 32))
                 self._portraits[state] = surf
             except (pygame.error, FileNotFoundError, PermissionError):
-                logging.warning("hud: failed to load portrait %s", state)
+                logger.warning("hud: failed to load portrait %s", state)
         self._current_portrait_state: str = "normal"
 
         # Boss HUD state

@@ -3,8 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import pygame
-
 from src.engine.core import settings
 
 if TYPE_CHECKING:

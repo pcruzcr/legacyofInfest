@@ -52,7 +52,7 @@ class ColorTools:
             rn, gn, bn = x, 0.0, c
         else:
             rn, gn, bn = c, 0.0, x
-        return (int(round((rn + m) * 255)), int(round((gn + m) * 255)), int(round((bn + m) * 255)))
+        return (round((rn + m) * 255), round((gn + m) * 255), round((bn + m) * 255))
 
     @classmethod
     def rgb_to_hsl(cls, r: int, g: int, b: int) -> tuple[float, float, float]:
@@ -92,7 +92,7 @@ class ColorTools:
             rn, gn, bn = x, 0.0, c
         else:
             rn, gn, bn = c, 0.0, x
-        return (int(round((rn + m) * 255)), int(round((gn + m) * 255)), int(round((bn + m) * 255)))
+        return (round((rn + m) * 255), round((gn + m) * 255), round((bn + m) * 255))
 
     @classmethod
     def rgb_to_cmyk(cls, r: int, g: int, b: int) -> tuple[float, float, float, float]:
@@ -110,9 +110,9 @@ class ColorTools:
         rn = (1.0 - c) * (1.0 - k)
         gn = (1.0 - m) * (1.0 - k)
         bn = (1.0 - y) * (1.0 - k)
-        r = int(round(max(0.0, min(1.0, rn)) * 255))
-        g = int(round(max(0.0, min(1.0, gn)) * 255))
-        b = int(round(max(0.0, min(1.0, bn)) * 255))
+        r = round(max(0.0, min(1.0, rn)) * 255)
+        g = round(max(0.0, min(1.0, gn)) * 255)
+        b = round(max(0.0, min(1.0, bn)) * 255)
         return (r, g, b)
 
     @classmethod

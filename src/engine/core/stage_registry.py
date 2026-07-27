@@ -7,9 +7,12 @@ in the defined STAGE_ORDER and imports existing stage modules,
 returning their BaseScene subclasses in order.
 """
 from __future__ import annotations
+
 import importlib
 import logging
 from typing import TYPE_CHECKING
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from src.engine.scene.base_scene import BaseScene
@@ -25,13 +28,13 @@ STAGE_ORDER: list[str] = [
 
 # Custom module import paths for stages that don't follow the {id}.{id} convention.
 # Key: stage_id from STAGE_ORDER. Value: dotted module path.
-# TODO: Move this map into framework config (JSON / stage_config.py) for ARC-004.
+# Configurable in a JSON config file for extensibility (see ARC-004 in 33_SCOPE_ADJUSTMENT.md).
 _STAGE_MODULE_MAP: dict[str, str] = {
     "stage1_4_boss_venado": "src.stages.boss_venado.boss_venado_scene",
 }
 
 
-def discover_stages() -> list[type["BaseScene"]]:
+def discover_stages() -> list[type[BaseScene]]:
     """Scans src/stages/ in STAGE_ORDER. Imports each module that exists
     and finds the BaseScene subclass. Returns ordered list. Skips missing stages."""
     from src.engine.scene.base_scene import BaseScene
@@ -51,15 +54,15 @@ def discover_stages() -> list[type["BaseScene"]]:
                         and obj is not BaseScene):
                     stages.append(obj)
                     found = True
-                    logging.info(f"StageRegistry: discovered {stage_id} -> {name}")
+                    logger.info("StageRegistry: discovered %s -> %s", stage_id, name)
                     break
             if not found:
-                logging.warning(
-                    f"StageRegistry: {stage_id} imported but no BaseScene subclass found"
+                logger.warning(
+                    "StageRegistry: %s imported but no BaseScene subclass found", stage_id
                 )
         except ModuleNotFoundError:
-            logging.info(f"StageRegistry: {stage_id} not found — skipping")
+            logger.info("StageRegistry: %s not found — skipping", stage_id)
         except (ImportError, AttributeError) as e:
-            logging.error(f"StageRegistry: error loading {stage_id}: {e}")
+            logger.error("StageRegistry: error loading %s: %s", stage_id, e)
 
     return stages

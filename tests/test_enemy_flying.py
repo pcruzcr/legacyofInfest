@@ -5,10 +5,13 @@ Description: Tests for EnemyFlying sine movement, alert acceleration,
 and path modes (Bézier / waypoint patrol).
 """
 from __future__ import annotations
+
 import math
+
 import pygame
-from src.framework.entities.enemy_flying import EnemyFlying
+
 from src.framework.entities.enemy_base import EnemyState
+from src.framework.entities.enemy_flying import EnemyFlying
 
 
 class TestFlyingSineMovement:

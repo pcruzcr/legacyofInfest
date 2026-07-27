@@ -10,6 +10,7 @@ import random
 import struct
 import wave
 from pathlib import Path
+
 from PIL import Image, ImageDraw
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -44,9 +45,14 @@ def _noise(w, h, scale=12):
             fx, fy = x / scale, y / scale
             ix, iy = int(fx), int(fy)
             dx, dy = fx - ix, fy - iy
-            dx = dx*dx*(3-2*dx); dy = dy*dy*(3-2*dy)
-            n00=g[iy][ix]; n10=g[iy][ix+1]; n01=g[iy+1][ix]; n11=g[iy+1][ix+1]
-            nx0 = n00 + (n10-n00)*dx; nx1 = n01 + (n11-n01)*dx
+            dx = dx*dx*(3-2*dx)
+            dy = dy*dy*(3-2*dy)
+            n00=g[iy][ix]
+            n10=g[iy][ix+1]
+            n01=g[iy+1][ix]
+            n11=g[iy+1][ix+1]
+            nx0 = n00 + (n10-n00)*dx
+            nx1 = n01 + (n11-n01)*dx
             n[y][x] = nx0 + (nx1-nx0)*dy
     return n
 
@@ -301,7 +307,7 @@ PLAYER_ATTACK = """
 def _gen_player_sprite(frames, base_data, fw=32, fh=32):
     """Generate multi-frame player sprite from base pixel data."""
     result = []
-    for fi in range(frames):
+    for _fi in range(frames):
         img = Image.new("RGBA", (fw, fh), (0,0,0,0))
         draw = ImageDraw.Draw(img)
         _pixel_art(draw, 0, 0, base_data, PLAYER_PAL)
@@ -349,7 +355,7 @@ def _gen_player_die(frames=8, fw=32, fh=32):
         img = Image.new("RGBA", (fw, fh), (0,0,0,0))
         draw = ImageDraw.Draw(img)
         # Gradually shrink and rotate by cropping
-        scale = 1.0 - (fi / frames) * 0.5
+        1.0 - (fi / frames) * 0.5
         _pixel_art(draw, 0, int(8 * fi / frames), PLAYER_IDLE, PLAYER_PAL)
         result.append(img)
     return result
@@ -390,7 +396,7 @@ def _gen_player_all():
 def _gen_enemy_sheet(path, w, h, frames, color, detail_color):
     """Generate simple enemy spritesheet."""
     imgs = []
-    for f in range(frames):
+    for _f in range(frames):
         img = Image.new("RGBA", (w, h), (0,0,0,0))
         draw = ImageDraw.Draw(img)
         # Body ellipse
@@ -438,7 +444,7 @@ def _gen_all_enemies():
 
 def _draw_venado_deer(draw, w, h, pal, sheet, frame, total):
     """Draw a 48x48 deer/venado facing right using PIL primitives."""
-    ivory, dk_green, md_green, brown, tan, black, red_brown = pal
+    ivory, dk_green, md_green, brown, tan, black, _red_brown = pal
 
     import math
     t = frame / max(total - 1, 1)
@@ -923,7 +929,7 @@ def _gen_bg_title(path, w=320, h=224):
         b = int(35 + t * 45)
         draw.line((0, y, w - 1, y), fill=(r, g, b))
     # Light rays from top center
-    for i in range(6):
+    for _i in range(6):
         angle = rng.uniform(-0.4, 0.4)
         x_off = int(math.tan(angle) * h * 0.6)
         cx = w // 2
@@ -956,7 +962,7 @@ def _gen_bg_story(path, w=320, h=224):
     rng = random.Random(13)
     for _ in range(4):
         fy = rng.randint(40, 180)
-        fw = rng.randint(60, 120)
+        rng.randint(60, 120)
         for y in range(fy, min(fy + 20, h)):
             t = (y - fy) / 20
             alpha = int(15 * (1 - abs(t - 0.5) * 2))
@@ -1298,14 +1304,14 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
             t = i / rate
             f = 400 + 800 * (t / dur)
             env = max(0, 1 - (t / dur))
-            samples.append((_tri(f, t) * env * 0.2 + _square(f * 0.5, t, 0.5) * env * 0.1))
+            samples.append(_tri(f, t) * env * 0.2 + _square(f * 0.5, t, 0.5) * env * 0.1)
     elif name in ("venado_stomp", "venado_charge", "rey_spit", "rey_split",
                   "gavilan_dive", "gavilan_mask_beam", "paburu_eye_beam", "paburu_wave"):
         samples = []
         for i in range(n):
             t = i / rate
             env = max(0, 1 - t / dur)
-            samples.append((_square(100, t, 0.3) * 0.2 + _square(150, t, 0.3) * 0.15 + random.uniform(-0.2, 0.2) * env))
+            samples.append(_square(100, t, 0.3) * 0.2 + _square(150, t, 0.3) * 0.15 + random.uniform(-0.2, 0.2) * env)
     else:
         samples = [0.0] * n
     

@@ -1,7 +1,7 @@
 """Legacy of InFest — Entry Point"""
-import sys
-import os
 import argparse
+import os
+import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -61,7 +61,10 @@ if __name__ == "__main__":
                 scene_cls = obj
                 break
         if scene_cls is None:
-            print(f"ERROR: No StageScene subclass found in src.stages.{args.boss}.{args.boss}_scene")
+            print(
+                f"ERROR: No StageScene subclass found in "
+                f"src.stages.{args.boss}.{args.boss}_scene"
+            )
             sys.exit(1)
         from src.engine.core.app import App
         app = App()

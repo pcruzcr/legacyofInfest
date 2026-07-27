@@ -5,7 +5,9 @@ Academic Unit: N/A
 Description: Action enum and keyboard bindings for abstract input actions.
 """
 from __future__ import annotations
+
 from enum import Enum, auto
+
 import pygame
 
 
@@ -35,6 +37,9 @@ class Action(Enum):
     LEARN_CONTROLS = auto()
     LEARN_HELP = auto()
     OPEN_BESTIARY = auto()
+    # AUD-022: AudioManager.toggle_mute()/is_muted existed with no callers, so
+    # the game had no working mute at all. M is the conventional binding.
+    TOGGLE_MUTE = auto()
 
 
 # Default keyboard bindings: Action -> list of pygame key constants
@@ -62,6 +67,7 @@ DEFAULT_KEY_BINDINGS: dict[Action, list[int]] = {
     Action.LEARN_CONTROLS: [pygame.K_F9],
     Action.LEARN_HELP: [pygame.K_F10],
     Action.OPEN_BESTIARY: [pygame.K_TAB],
+    Action.TOGGLE_MUTE: [pygame.K_m],
 }
 
 # Controller axis/deadzone constants

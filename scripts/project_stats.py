@@ -1,5 +1,8 @@
 """Quick project statistics for Legacy of InFest V1 assessment."""
-import os, sys, inspect, importlib
+import importlib
+import inspect
+import os
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -12,17 +15,19 @@ print(f'Test .py files: {len(tests)}')
 print(f'Total LOC: {sum(len(p.read_text().splitlines()) for p in src + tests + scripts)}')
 
 from src.engine.scene.base_scene import BaseScene
+
 scene_count = 0
 scene_dir = Path('src/engine/scenes')
 for f in sorted(scene_dir.glob('*.py')):
     if f.name.startswith('__'): continue
     mod = importlib.import_module('src.engine.scenes.' + f.stem)
-    for name, obj in inspect.getmembers(mod):
+    for _name, obj in inspect.getmembers(mod):
         if inspect.isclass(obj) and issubclass(obj, BaseScene) and obj is not BaseScene:
             scene_count += 1
 print(f'Scene classes: {scene_count}')
 
 from src.framework.entities.enemy_base import EnemyBase
+
 enemy_names = []
 entity_dir = Path('src/framework/entities')
 for f in sorted(entity_dir.glob('*.py')):
@@ -35,6 +40,7 @@ for f in sorted(entity_dir.glob('*.py')):
 print(f'Enemy types: {len(enemy_names)} - {enemy_names}')
 
 from src.framework.entities.boss_base import BossBase
+
 boss_names = []
 for f in sorted(Path('src/stages').rglob('**/*.py')):
     if f.name.startswith('__'): continue
@@ -46,8 +52,9 @@ for f in sorted(Path('src/stages').rglob('**/*.py')):
 print(f'Boss types: {len(boss_names)} - {boss_names}')
 
 from src.engine.core.achievements import AchievementSystem
+
 ach = AchievementSystem.get_instance()
-print(f'Achievements: TODO')
+print('Achievements: TODO')
 
 print()
 for label, d in [('Engine', 'src/engine'), ('Framework', 'src/framework'), ('Stages', 'src/stages')]:

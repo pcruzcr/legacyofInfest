@@ -12,7 +12,6 @@ import pytest
 from src.engine.scenes.demo_common import build_default_sources
 from src.framework.processing.filter_tools import FilterTools
 
-
 # Thresholds
 MIN_FPS = 30
 MAX_LOAD_TIME = 2.0  # seconds
@@ -21,11 +20,11 @@ MAX_MEMORY_MB = 200
 
 def test_load_time_vector_lab():
     """VectorLabScene should load within MAX_LOAD_TIME."""
-    from src.engine.scenes.vector_lab_scene import VectorLabScene
+    from src.engine.core.event_bus import EventBus
     from src.engine.core.game_context import GameContext
     from src.engine.input.input_manager import InputManager
     from src.engine.scene.scene_manager import SceneManager
-    from src.engine.core.event_bus import EventBus
+    from src.engine.scenes.vector_lab_scene import VectorLabScene
 
     bus = EventBus()
     sm = SceneManager.__new__(SceneManager)
@@ -48,11 +47,11 @@ def test_load_time_vector_lab():
 
 def test_load_time_filter_demo():
     """FilterDemoScene should load within MAX_LOAD_TIME."""
-    from src.engine.scenes.filter_demo_scene import FilterDemoScene
+    from src.engine.core.event_bus import EventBus
     from src.engine.core.game_context import GameContext
     from src.engine.input.input_manager import InputManager
     from src.engine.scene.scene_manager import SceneManager
-    from src.engine.core.event_bus import EventBus
+    from src.engine.scenes.filter_demo_scene import FilterDemoScene
 
     bus = EventBus()
     sm = SceneManager.__new__(SceneManager)

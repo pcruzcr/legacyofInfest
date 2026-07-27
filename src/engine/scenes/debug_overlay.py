@@ -11,8 +11,9 @@ import logging
 import pygame
 
 from src.engine.core import settings
-from src.engine.core.event_bus import _get_bus
+from src.engine.core.event_bus import EventBus
 
+logger = logging.getLogger(__name__)
 
 TREE_LEVELS = [
     "Engine / Core",
@@ -24,7 +25,9 @@ TREE_LEVELS = [
 
 
 class DebugOverlay:
-    def __init__(self) -> None:
+    def __init__(self, event_bus: EventBus | None = None) -> None:
+        """AUD-019: the bus is injected rather than pulled from a global."""
+        self._event_bus: EventBus | None = event_bus
         self._visible: bool = False
         self._tree_level: int = 0
         self._key_cooldown: dict[int, float] = {}
@@ -95,13 +98,13 @@ class DebugOverlay:
 
         # Event queue snapshot
         try:
-            bus = _get_bus()
-            snap = bus.queue_snapshot
+            bus = self._event_bus
+            snap = bus.queue_snapshot if bus is not None else []
             lines.append(f"Event Queue: {len(snap)} pending")
             for evt_name, evt_data in snap[:5]:
                 lines.append(f"  {evt_name}: {evt_data}")
         except (RuntimeError, AttributeError) as e:
-            logging.warning("debug_overlay: event bus snapshot failed: %s", e)
+            logger.warning("debug_overlay: event bus snapshot failed: %s", e)
             lines.append("Event Bus: N/A")
 
         lines.append("")

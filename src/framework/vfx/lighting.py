@@ -54,7 +54,7 @@ class LightSource:
             r = 1
         key = (r, int(self.intensity * 100), color)
         if key in self._gradient_cache:
-            return self._gradient_cache[key].copy()
+            return self._gradient_cache[key]
         size = r * 2
         surf = pygame.Surface((size, size), pygame.SRCALPHA)
         ys, xs = np.ogrid[:size, :size]
@@ -70,7 +70,7 @@ class LightSource:
             arr[~mask] = 0
         finally:
             del arr
-        self._gradient_cache[key] = surf.copy()
+        self._gradient_cache[key] = surf
         return surf
 
     def get_cached_gradient(self) -> pygame.Surface:
