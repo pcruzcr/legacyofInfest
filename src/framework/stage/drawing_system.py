@@ -95,7 +95,7 @@ class DrawingSystem:
         if ctx.tutorial_overlay:
             ctx.tutorial_overlay.draw(surface)
 
-        self._draw_entities(surface, stage, offset)
+        self._draw_entities(surface, stage, player, checkpoints, offset)
 
         if ctx.trail_system:
             ctx.trail_system.draw(surface, offset)
@@ -105,9 +105,6 @@ class DrawingSystem:
             # Screen-space, not world-space: the dialogue box is anchored to the
             # viewport, so it takes no camera offset (AUD-039).
             ctx.dialogue_system.draw(surface)
-
-        if checkpoints:
-            self._draw_checkpoints(surface, checkpoints, offset)
 
         if hud:
             hud.draw(surface)
@@ -206,19 +203,49 @@ class DrawingSystem:
             )
 
     def _draw_entities(
-        self, surface: pygame.Surface, stage: StageData, offset: pygame.Vector2,
+        self, surface: pygame.Surface, stage: StageData,
+        player: Player | None, checkpoints: list[Any],
+        offset: pygame.Vector2,
     ) -> None:
+        """Dibuja jugador, enemigos y checkpoints ordenados por profundidad.
+
+        AUD-067: al reescribir este módulo perdí dos cosas de golpe.
+
+        **El jugador.** Este bucle recorría `stage.entity_list`, que contiene
+        sólo enemigos. El personaje no se dibujaba en ninguna parte: se veía el
+        escenario moverse, el polvo del dash, la cámara siguiéndolo — todo
+        menos al protagonista. `ctx.player` quedó usándose únicamente en el
+        overlay de depuración, que pinta un rectángulo cian; por eso con F1 se
+        "veía" algo y sin F1 no.
+
+        **El orden por profundidad.** El original construía una lista de
+        dibujables y la ordenaba por `rect.centery`, de modo que lo que está
+        más abajo en pantalla —más cerca de la cámara— se pinta encima. Sin
+        eso, el orden lo decidía la lista de entidades del TMX: un enemigo del
+        fondo podía taparle la cara al jugador según en qué orden lo colocara
+        el mapa.
+
+        Los checkpoints entran en la misma ordenación, no después. Antes se
+        dibujaban al final, encima de todo, así que un checkpoint tapaba al
+        jugador que estaba delante de él.
+        """
+        drawables: list[tuple[Any, int]] = []
+
+        if player is not None:
+            drawables.append((player, player.rect.centery))
+
         for entity in stage.entity_list:
             if entity is None or not entity.is_visible or not entity.is_alive:
                 continue
-            entity.draw(surface, offset)
+            drawables.append((entity, entity.rect.centery))
 
-    def _draw_checkpoints(
-        self, surface: pygame.Surface, checkpoints: list[Any], offset: pygame.Vector2,
-    ) -> None:
-        for cp in checkpoints:
-            if hasattr(cp, 'draw'):
-                cp.draw(surface, offset)
+        for checkpoint in checkpoints:
+            if hasattr(checkpoint, "draw"):
+                drawables.append((checkpoint, checkpoint.rect.centery))
+
+        drawables.sort(key=lambda pair: pair[1])
+        for drawable, _depth in drawables:
+            drawable.draw(surface, offset)
 
     def _draw_pause_menu(
         self, surface: pygame.Surface, selected: int, options: list[str],

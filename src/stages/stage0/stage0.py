@@ -169,7 +169,11 @@ class Stage0(StageScene):
         if px > 85 * self.TILE and 3 not in self._zone_entered:
             self._zone_entered.add(3)
             self._weather.set_climate("storm")
-            self._context.event_bus.emit(
+            # AUD-066: era `self._context`, que no existe en `BaseScene` —el
+            # atributo es `self.context`—. Sólo se ejecuta al pasar del tile 85,
+            # así que el juego crasheaba a los tres cuartos del escenario y
+            # ninguna prueba llegaba tan lejos.
+            self.context.event_bus.emit(
                 Events.SHOW_MESSAGE,
                 text="¡Tormenta activada! Usa todo lo aprendido.",
                 duration=6.0,
