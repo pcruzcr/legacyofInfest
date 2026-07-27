@@ -20,9 +20,27 @@ def pygame_init():
 
 @pytest.fixture
 def context():
+    """Contexto con un gestor de entrada que **no pulsa nada por defecto**.
+
+    Un `MagicMock` devuelve un objeto truthy para cualquier método que no se
+    haya configurado, así que una escena que pregunte
+    `is_action_just_pressed(MOVE_DOWN)` recibe «sí» sin que nadie haya pulsado
+    nada. El resultado es una prueba que cree estar midiendo una pulsación
+    concreta mientras la escena reacciona a todas a la vez.
+
+    Es el mismo patrón que ya dio un diagnóstico equivocado en el bot de
+    playtest: un stub permisivo convierte un hueco en una respuesta falsa. Aquí
+    se fija el valor por defecto en False; quien quiera simular una tecla la
+    declara explícitamente.
+    """
     bus = EventBus()
+    input_manager = MagicMock()
+    input_manager.is_action_just_pressed.return_value = False
+    input_manager.is_action_pressed.return_value = False
+    input_manager.is_action_held.return_value = False
+    input_manager.is_raw_key_pressed.return_value = False
     ctx = GameContext(
-        input_manager=MagicMock(),
+        input_manager=input_manager,
         audio_manager=MagicMock(),
         scene_manager=MagicMock(),
         event_bus=bus,
@@ -380,9 +398,10 @@ class TestTitleSceneIntegration:
     def test_title_has_demo_option(self, context) -> None:
         from src.engine.scenes.title_scene import TitleScene
         scene = TitleScene(context)
-        assert "ACADEMIC DEMOS" in scene._options
-        assert "TUTORIAL" in scene._options
-        assert scene._options.index("ACADEMIC DEMOS") == 6
+        labels = [item.label for item in scene._menu.items]
+        assert "ACADEMIC DEMOS" in labels
+        assert "TUTORIAL" in labels
+        assert labels.index("ACADEMIC DEMOS") == 6
 
     def test_title_demo_select(self, context) -> None:
         from src.engine.scenes.demo_menu_scene import DemoMenuScene
@@ -392,8 +411,12 @@ class TestTitleSceneIntegration:
         context.scene_manager.replace = lambda sc: mock_replace_calls.append(sc)
 
         scene = TitleScene(context)
-        scene._selected = scene._options.index("ACADEMIC DEMOS")
-        context.input_manager.is_action_pressed.side_effect = lambda a: a == Action.CONFIRM
+        labels = [item.label for item in scene._menu.items]
+        scene._menu.index = labels.index("ACADEMIC DEMOS")
+        # El kit consulta `is_action_just_pressed`; ésta es la llamada real.
+        context.input_manager.is_action_just_pressed.side_effect = (
+            lambda a: a == Action.CONFIRM
+        )
 
         scene.update(1.0)
         assert len(mock_replace_calls) == 1

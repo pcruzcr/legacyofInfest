@@ -110,6 +110,20 @@ def test_splash_to_title(ctx: ContextManager) -> None:
     )
 
 
+def _title_option_index(title, label: str) -> int:
+    """Índice de una opción del título por su etiqueta.
+
+    AUD-068: la pantalla de título pasó de llevar `_options: list[str]` y un
+    `_selected` propio a usar el `MenuList` compartido, para que su navegación
+    dé la vuelta como la del resto del juego en vez de fijarse en los extremos.
+    Estas pruebas preguntaban por la estructura interna; ahora preguntan por lo
+    que se ve, que es lo que en realidad les importaba.
+    """
+    labels = [item.label for item in title._menu.items]
+    assert label in labels, f"la opción {label!r} ya no existe en el título: {labels}"
+    return labels.index(label)
+
+
 def test_title_menu_options(ctx: ContextManager) -> None:
     checks = [
         ("START", StoryScene),
@@ -126,7 +140,7 @@ def test_title_menu_options(ctx: ContextManager) -> None:
         ctx.step(10)
         assert isinstance(ctx.current, TitleScene), f"TitleScene replacement failed for '{label}'"
         title: TitleScene = ctx.current
-        idx = title._options.index(label)
+        idx = _title_option_index(title, label)
         _navigate_to(ctx, idx)
         ctx.press_key("CONFIRM")
         ctx.step(30)
@@ -143,7 +157,7 @@ def test_options_scene(ctx: ContextManager) -> None:
     ctx.replace_to_title()
     ctx.step(10)
     title: TitleScene = ctx.current
-    idx = title._options.index("OPTIONS")
+    idx = _title_option_index(title, "OPTIONS")
     _navigate_to(ctx, idx)
     ctx.press_key("CONFIRM")
     ctx.step(30)
@@ -156,7 +170,7 @@ def test_demo_menu(ctx: ContextManager) -> None:
     ctx.replace_to_title()
     ctx.step(10)
     title: TitleScene = ctx.current
-    idx = title._options.index("ACADEMIC DEMOS")
+    idx = _title_option_index(title, "ACADEMIC DEMOS")
     _navigate_to(ctx, idx)
     ctx.press_key("CONFIRM")
     ctx.step(30)
@@ -258,7 +272,7 @@ def test_all_menus_return(ctx: ContextManager) -> None:
 def _from_title_to(ctx: ContextManager, option_name: str) -> None:
     title: TitleScene = ctx.current
     try:
-        idx = title._options.index(option_name)
+        idx = _title_option_index(title, option_name)
     except ValueError:
         idx = 0
     _navigate_to(ctx, idx)

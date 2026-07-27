@@ -9,13 +9,19 @@ import pygame
 from src.engine.core import settings
 from src.engine.core.events import Events
 from src.engine.core.user_settings import user_data_dir
-from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import BOTTOM_BAR_Y
 from src.engine.scenes.demo_menu_scene import DemoMenuScene
 from src.engine.scenes.options_scene import OptionsScene
 from src.engine.scenes.story_scene import StoryScene
 from src.engine.scenes.tutorial_scene import TutorialScene
+from src.engine.ui.theme import Theme
+from src.engine.ui.widgets import (
+    MenuItem,
+    MenuList,
+    draw_key_hints,
+    handle_menu_navigation,
+)
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.vfx.hit_effects import HitEffects
 from src.framework.vfx.particle_system import ParticleSystem
@@ -57,12 +63,23 @@ class TitleScene(BaseScene):
         else:
             self._music = title_ogg
 
-        self._selected: int = 0
+        # AUD-068: navegación y foco vienen del kit compartido. Antes esta
+        # pantalla **fijaba** en los extremos (`min`/`max`) mientras el resto
+        # del juego da la vuelta: pulsar abajo en la última opción no hacía
+        # nada aquí y saltaba a la primera en cualquier otro menú. Es
+        # exactamente la incoherencia que el kit existe para eliminar.
+        self._menu = MenuList(items=[
+            MenuItem("START", value="START"),
+            MenuItem("TUTORIAL", value="TUTORIAL"),
+            MenuItem("WORLD MAP", value="WORLD MAP"),
+            MenuItem("INVENTORY", value="INVENTORY"),
+            MenuItem("BESTIARY", value="BESTIARY"),
+            MenuItem("ACHIEVEMENTS", value="ACHIEVEMENTS"),
+            MenuItem("ACADEMIC DEMOS", value="ACADEMIC DEMOS"),
+            MenuItem("OPTIONS", value="OPTIONS"),
+            MenuItem("QUIT", value="QUIT"),
+        ])
         self._scroll_offset: int = 0
-        self._options: list[str] = [
-            "START", "TUTORIAL", "WORLD MAP", "INVENTORY",
-            "BESTIARY", "ACHIEVEMENTS", "ACADEMIC DEMOS", "OPTIONS", "QUIT",
-        ]
         self._recalc_layout()
 
         self._bar_surf: pygame.Surface | None = None
@@ -73,7 +90,7 @@ class TitleScene(BaseScene):
         h = settings.INTERNAL_HEIGHT
         logo_bottom = h // 3 + 20
         available = h - logo_bottom - 16
-        n = len(self._options)
+        n = len(self._menu.items)
         line_h = max(11, min(18, available // max(n, 1)))
         self._font_size = max(14, line_h - 2)
         self._font_game = AssetLoader.load_font(
@@ -84,7 +101,7 @@ class TitleScene(BaseScene):
         self._max_visible = max(1, available // line_h)
 
     def on_enter(self) -> None:
-        self._selected = 0
+        self._menu.index = 0
         self._scroll_offset = 0
         self._recalc_layout()
         self._update_options()
@@ -112,26 +129,32 @@ class TitleScene(BaseScene):
             )
         self._particle_system.update(dt)
 
-        prev_selected = self._selected
-        n = len(self._options)
-        if im.is_action_just_pressed(Action.MOVE_DOWN):
-            self._selected = min(self._selected + 1, n - 1)
-        if im.is_action_just_pressed(Action.MOVE_UP):
-            self._selected = max(self._selected - 1, 0)
-        if self._selected != prev_selected:
+        self._menu.update(dt)
+        previous = self._menu.index
+        handle_menu_navigation(
+            self._menu, im,
+            on_confirm=self._on_confirm,
+            on_cancel=self._on_cancel,
+        )
+        if self._menu.index != previous:
             self.context.event_bus.emit(Events.SFX_MENU_HOVER)
-        if self._selected < self._scroll_offset:
-            self._scroll_offset = self._selected
-        elif self._selected >= self._scroll_offset + self._max_visible:
-            self._scroll_offset = self._selected - self._max_visible + 1
 
-        if im.is_action_just_pressed(Action.CONFIRM):
-            self.context.event_bus.emit(Events.SFX_MENU_CONFIRM)
-            self._activate_option(self._options[self._selected])
+        # La lista puede ser más larga que la pantalla, así que la ventana
+        # visible sigue al foco. Se recalcula tras navegar, no dentro de la
+        # navegación: el kit decide el índice y esta escena decide qué parte
+        # de la lista enseña.
+        if self._menu.index < self._scroll_offset:
+            self._scroll_offset = self._menu.index
+        elif self._menu.index >= self._scroll_offset + self._max_visible:
+            self._scroll_offset = self._menu.index - self._max_visible + 1
 
-        if im.is_action_just_pressed(Action.CANCEL):
-            self.context.event_bus.emit(Events.SFX_MENU_CANCEL)
-            self.context.quit()
+    def _on_confirm(self, item: MenuItem) -> None:
+        self.context.event_bus.emit(Events.SFX_MENU_CONFIRM)
+        self._activate_option(str(item.value))
+
+    def _on_cancel(self) -> None:
+        self.context.event_bus.emit(Events.SFX_MENU_CANCEL)
+        self.context.quit()
 
     def _activate_option(self, opt: str) -> None:
         if opt == "CONTINUE":
@@ -174,13 +197,22 @@ class TitleScene(BaseScene):
             self.context.quit()
 
     def _update_options(self) -> None:
+        """Añade o quita CONTINUE según haya partidas guardadas."""
         sm = self.context.save_manager
+        labels = [str(item.value) for item in self._menu.items]
+        has_continue = "CONTINUE" in labels
+
         if sm is not None and sm.has_saves():
-            if "CONTINUE" not in self._options:
-                self._options.insert(0, "CONTINUE")
-        else:
-            if "CONTINUE" in self._options:
-                self._options.remove("CONTINUE")
+            if not has_continue:
+                self._menu.items.insert(
+                    0, MenuItem("CONTINUE", value="CONTINUE",
+                                hint="Resume your most recent save"),
+                )
+        elif has_continue:
+            self._menu.items.pop(labels.index("CONTINUE"))
+
+        # Quitar una fila puede dejar el foco fuera de rango.
+        self._menu.ensure_valid()
 
     def _has_seen_tutorial(self) -> bool:
         global _tutorial_seen_cache
@@ -219,24 +251,39 @@ class TitleScene(BaseScene):
 
         self.context.scene_manager.transition.draw(surface)
 
+        # AUD-068: los colores salen del tema. Antes el foco era (255,255,100)
+        # y el resto (150,150,150), dos tonos que no aparecen en ninguna otra
+        # pantalla; ahora usa el mismo ámbar de acento y el mismo gris de texto
+        # que el resto del juego. El fondo NO se toca: esta pantalla tiene arte
+        # propio, y migrar no es sustituir el arte por una pantalla genérica.
         start_y = logo_rect.bottom + 8
-        visible = self._options[self._scroll_offset:self._scroll_offset + self._max_visible]
-        for idx, opt in enumerate(visible):
+        end = self._scroll_offset + self._max_visible
+        visible = self._menu.items[self._scroll_offset:end]
+        for idx, item in enumerate(visible):
             i = self._scroll_offset + idx
-            color = (255, 255, 100) if i == self._selected else (150, 150, 150)
-            text = self._font_game.render(opt, True, color)
+            focused = i == self._menu.index
+            color = Theme.ACCENT if focused else Theme.TEXT_MUTED
+            text = self._font_game.render(item.label, True, color)
             ox = (settings.INTERNAL_WIDTH - text.get_width()) // 2
             oy = start_y + idx * self._option_spacing
-            if oy + self._font_size <= settings.INTERNAL_HEIGHT:
-                if i == self._selected:
-                    pad = 4
-                    bw, bh = text.get_width() + pad * 2, text.get_height()
-                    if self._bar_surf is None or self._bar_surf.get_size() != (bw, bh):
-                        self._bar_surf = pygame.Surface((bw, bh), pygame.SRCALPHA)
-                    bar_surf = self._bar_surf
-                    bar_surf.fill((255, 255, 255, 60))
-                    surface.blit(bar_surf, (ox - pad, oy))
-                surface.blit(text, (ox, oy))
+            if oy + self._font_size > settings.INTERNAL_HEIGHT:
+                continue
+            if focused:
+                pad = 4
+                bw, bh = text.get_width() + pad * 2, text.get_height()
+                if self._bar_surf is None or self._bar_surf.get_size() != (bw, bh):
+                    self._bar_surf = pygame.Surface((bw, bh), pygame.SRCALPHA)
+                bar_surf = self._bar_surf
+                bar_surf.fill((*Theme.SURFACE_RAISED, 140))
+                surface.blit(bar_surf, (ox - pad, oy))
+            surface.blit(text, (ox, oy))
+
+        # AUD-068: la pantalla principal del juego no decía qué teclas usar.
+        draw_key_hints(surface, [
+            ("↑↓", "Mover"),
+            ("Enter", "Seleccionar"),
+            ("Esc", "Salir"),
+        ])
 
         if self._scroll_offset > 0:
             pygame.draw.polygon(surface, (200, 200, 200), [
@@ -244,7 +291,7 @@ class TitleScene(BaseScene):
                 (settings.INTERNAL_WIDTH // 2 - 6, start_y - 10),
                 (settings.INTERNAL_WIDTH // 2 + 6, start_y - 10),
             ])
-        if self._scroll_offset + self._max_visible < len(self._options):
+        if self._scroll_offset + self._max_visible < len(self._menu.items):
             bot = BOTTOM_BAR_Y - 2
             pygame.draw.polygon(surface, (200, 200, 200), [
                 (settings.INTERNAL_WIDTH // 2, bot),

@@ -33,6 +33,23 @@ SCENES_DIR = ROOT / "src" / "engine" / "scenes"
 MIGRATED = {
     "game_over_scene.py",
     "stage_error_scene.py",
+    "title_scene.py",
+    # ── Los 17 laboratorios ────────────────────────────────────────
+    # Estas escenas no importan `theme` ni `widgets` directamente: usan
+    # `demo_layout`, que **deriva toda su paleta del tema** (`COLOR_BG =
+    # Theme.BG`, `COLOR_HIGHLIGHT = Theme.ACCENT`…). Cambiar el tema las
+    # cambia a todas, que es exactamente lo que el kit persigue.
+    #
+    # Llevaban tiempo en la lista de espera por un error de contabilidad: se
+    # alinearon al reescribir `demo_layout` y nadie las sacó de ahí. Una lista
+    # de deuda que exagera la deuda es tan poco útil como una que la esconde —
+    # con 30 nombres pendientes nadie empieza; con 12, sí.
+    "collision_lab_scene.py", "color_theory_scene.py", "combo_demo_scene.py",
+    "curve_editor_scene.py", "demo_menu_scene.py", "filter_demo_scene.py",
+    "interpolation_lab_scene.py", "leaderboard_scene.py", "load_game_scene.py",
+    "noise_lab_scene.py", "pipeline_builder_scene.py", "progress_scene.py",
+    "sandbox_scene.py", "stage_wizard_scene.py", "transform_lab_scene.py",
+    "vector_lab_scene.py", "vision_demo_scene.py",
 }
 
 # Not yet migrated. This list may only ever shrink — see
@@ -40,16 +57,19 @@ MIGRATED = {
 # now rather than waiting for all 34 scenes to be converted, which would have
 # meant shipping no guard at all.
 AWAITING_MIGRATION = {
-    "achievement_scene.py", "bestiary_scene.py", "collision_lab_scene.py",
-    "color_theory_scene.py", "combo_demo_scene.py", "curve_editor_scene.py",
-    "demo_menu_scene.py", "end_credits_scene.py", "filter_demo_scene.py",
-    "interpolation_lab_scene.py", "inventory_scene.py", "keybinding_scene.py",
-    "leaderboard_scene.py", "load_game_scene.py", "loading_scene.py",
-    "noise_lab_scene.py", "options_scene.py", "pattern_demo_scene.py",
-    "pipeline_builder_scene.py", "progress_scene.py", "sandbox_scene.py",
-    "splash_scene.py", "stage_wizard_scene.py", "story_scene.py",
-    "title_scene.py", "transform_lab_scene.py", "tutorial_scene.py",
-    "vector_lab_scene.py", "vision_demo_scene.py", "world_map_scene.py",
+    # Menús propios que todavía llevan su navegación y su paleta a mano.
+    "achievement_scene.py", "bestiary_scene.py", "inventory_scene.py",
+    "keybinding_scene.py", "tutorial_scene.py", "world_map_scene.py",
+    # Pantallas sin menú: fondo y texto propios, sin atajos de teclado.
+    "end_credits_scene.py", "loading_scene.py", "splash_scene.py",
+    "story_scene.py",
+    # Pinta varios fondos a mano pese a ser un laboratorio.
+    "pattern_demo_scene.py",
+    # Caso aparte: es la única escena construida con `pygame_gui`, una
+    # segunda librería de UI. Migrarla no es reordenar dibujado, es decidir
+    # si el proyecto mantiene dos sistemas de interfaz o uno. Esa decisión no
+    # es mía y no se toma escondiéndola en una lista.
+    "options_scene.py",
 }
 
 
@@ -188,15 +208,34 @@ class TestMenuNavigationIsUniform:
 # ── palette discipline across scenes ─────────────────────────────
 
 
-_FILL_RE = re.compile(r"\.fill\(\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)")
+# Sólo interesa quien pinta **la pantalla**, no cualquier superficie.
+# `self._cached_result.fill((0, 0, 0))` limpia un búfer de trabajo interno y no
+# tiene nada que ver con la identidad visual del juego; la primera versión de
+# esta expresión no distinguía las dos cosas y marcaba tres laboratorios
+# correctos como infractores. Un guardián con falsos positivos acaba
+# desactivado, que es peor que no tenerlo.
+_FILL_RE = re.compile(r"\bsurface\.fill\(\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)")
 
 
 @pytest.mark.parametrize("path", [p for p in _scene_files() if p.name in MIGRATED],
                          ids=lambda p: p.name)
 def test_migrated_scenes_use_the_shared_kit(path: pathlib.Path) -> None:
+    """Directamente o a través de `demo_layout`, que deriva del tema.
+
+    Los laboratorios no importan `theme`: importan `demo_layout`, cuyas
+    constantes **son** las del tema. Exigir el import directo obligaría a
+    reescribir diecisiete archivos para no cambiar ni un píxel, que es
+    trabajo con la forma de progreso y sin el efecto.
+    """
     source = path.read_text(encoding="utf-8")
-    assert "src.engine.ui.widgets" in source or "src.engine.ui.theme" in source, (
-        f"{path.name} is listed as migrated but imports neither theme nor widgets"
+    uses_kit = (
+        "src.engine.ui.widgets" in source
+        or "src.engine.ui.theme" in source
+        or "demo_layout" in source
+        or "demo_common" in source
+    )
+    assert uses_kit, (
+        f"{path.name} está en MIGRATED pero no usa el tema ni por `demo_layout`"
     )
 
 
