@@ -21,7 +21,6 @@ from __future__ import annotations
 import pygame
 
 from src.framework.entities.boss_base import BossBase, BossPhase
-from src.framework.entities.enemy_base import EnemyState
 
 
 # TODO(student): Rename this class to match your assigned boss

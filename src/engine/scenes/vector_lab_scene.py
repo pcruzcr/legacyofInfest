@@ -18,19 +18,25 @@ Controls:
 """
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING
 
-import math
 import pygame
 
 from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
-    COLOR_BG, COLOR_TEXT, COLOR_HIGHLIGHT, COLOR_ACCENT,
-    FONT_SMALL, FONT_MEDIUM,
-    draw_top_bar, draw_bottom_bar,
-    TOP_BAR_H, BOTTOM_BAR_Y,
+    BOTTOM_BAR_Y,
+    COLOR_ACCENT,
+    COLOR_BG,
+    COLOR_HIGHLIGHT,
+    COLOR_TEXT,
+    FONT_MEDIUM,
+    FONT_SMALL,
+    TOP_BAR_H,
+    draw_bottom_bar,
+    draw_top_bar,
 )
 from src.engine.utils.asset_loader import AssetLoader
 from src.engine.utils.math_utils import vec2_dot
@@ -38,8 +44,8 @@ from src.engine.utils.math_utils import vec2_dot
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
 
-from src.engine.scenes.quiz_system import QuizManager
 from src.engine.scenes.code_panel import CodePanel
+from src.engine.scenes.quiz_system import QuizManager
 from src.engine.scenes.tutorial_overlay import TutorialOverlay
 
 # Responsive layout offsets (resolvable to demo_layout constants)
@@ -304,5 +310,5 @@ class VectorLabScene(BaseScene):
         self._tutorial.draw(surface)
 
         draw_bottom_bar(surface, (
-            "  MODE: {} | [Q] Quiz [C] Code [T] Tutorial".format(MODE_NAMES[self._mode])
+            f"  MODE: {MODE_NAMES[self._mode]} | [Q] Quiz [C] Code [T] Tutorial"
         ))

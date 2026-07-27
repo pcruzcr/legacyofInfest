@@ -1,45 +1,47 @@
 from __future__ import annotations
 
 import random
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import pygame
 
 from src.engine.core import settings
-from src.engine.input.action_map import Action
+from src.engine.core.achievements import AchievementSystem
 from src.engine.core.events import Events
+from src.engine.core.inventory import get_inventory
+from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.ui.hud import HUD
-from src.engine.utils.asset_loader import AssetLoader
 from src.engine.ui.message_box import MessageBox
+from src.engine.ui.minimap import Minimap
 from src.engine.ui.screen_banner import ScreenBanner
+from src.engine.ui.subtitle_overlay import SubtitleOverlay
+from src.engine.utils.asset_loader import AssetLoader
+from src.framework.audio.dynamic_music import DynamicMusicSystem
+from src.framework.entities.bestiary import Bestiary
 from src.framework.entities.boss_base import BossBase
 from src.framework.entities.enemy_base import EnemyBase
 from src.framework.entities.player import Player
 from src.framework.stage.camera import Camera
-from src.framework.stage.stage_loader import StageLoader
 from src.framework.stage.collision_system import CollisionSystem
+from src.framework.stage.drawing_system import DrawingSystem
 from src.framework.stage.hazard_system import HazardSystem
 from src.framework.stage.progression_system import ProgressionSystem
-from src.framework.stage.drawing_system import DrawingSystem
-from src.framework.vfx.particle_system import ParticleSystem
+from src.framework.stage.speedrun_mode import SpeedrunTimer
+from src.framework.stage.stage_loader import StageLoader
+from src.framework.ui.dialogue_system import DialogueSystem
+from src.framework.ui.learning_overlay import LearningOverlay
+from src.framework.ui.tutorial_overlay import TutorialOverlay
+from src.framework.vfx.ambient_particles import AmbientParticleSystem
 from src.framework.vfx.damage_numbers import DamageNumberManager
 from src.framework.vfx.hit_effects import HitEffects
+from src.framework.vfx.lighting import LightSource, LightSystem
+from src.framework.vfx.particle_system import ParticleSystem
 from src.framework.vfx.post_processing import PostProcessing
-from src.framework.vfx.lighting import LightSystem, LightSource
-from src.framework.vfx.ambient_particles import AmbientParticleSystem
-from src.framework.vfx.weather_system import WeatherSystem
 from src.framework.vfx.trail_system import TrailSystem
-from src.framework.audio.dynamic_music import DynamicMusicSystem
-from src.framework.ui.tutorial_overlay import TutorialOverlay
-from src.framework.ui.learning_overlay import LearningOverlay
-from src.framework.ui.dialogue_system import DialogueSystem
-from src.framework.entities.bestiary import Bestiary
-from src.framework.stage.speedrun_mode import SpeedrunTimer
-from src.engine.ui.minimap import Minimap
-from src.engine.core.achievements import AchievementSystem
-from src.engine.core.inventory import get_inventory
+from src.framework.vfx.weather_system import WeatherSystem
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -48,10 +50,18 @@ if TYPE_CHECKING:
 
 
 class StageScene(BaseScene):
-    def __init__(self, context: GameContext, tmx_path: Path) -> None:
+    TMX_PATH: Path | None = None
+
+    def __init__(self, context: GameContext, tmx_path: Path | None = None) -> None:
+        resolved = tmx_path if tmx_path is not None else self.TMX_PATH
+        if resolved is None:
+            raise TypeError(
+                f"{type(self).__name__}.__init__ missing required 'tmx_path'. "
+                f"Set TMX_PATH on the class or pass tmx_path=..."
+            )
         self._tutorial_shown: set[str] = set()
         super().__init__(context)
-        self._tmx_path = tmx_path
+        self._tmx_path = resolved
         self._stage_data: StageData | None = None
         self._player: Player | None = None
         self._camera: Camera = Camera()
@@ -88,7 +98,13 @@ class StageScene(BaseScene):
         self._tutorial = TutorialOverlay()
         self._learning = LearningOverlay()
         self._minimap = Minimap()
+        # AUD-036: captions for non-speech audio, active when the player has
+        # enabled subtitles. Retained here so the bus's weak refs stay alive.
+        self._subtitles = SubtitleOverlay(self.context.event_bus)
         self._achievements = AchievementSystem.get_instance()
+        # AUD-019: hand the achievement system the same bus this scene uses,
+        # instead of it reaching for a module-level default.
+        self._achievements.bind_bus(self.context.event_bus)
         self._achievements.load()
         self._bestiary = Bestiary.get_instance()
         self._speedrun = SpeedrunTimer()
@@ -126,12 +142,16 @@ class StageScene(BaseScene):
         ...
 
     def on_enter(self) -> None:
+        # AUD-025: claim a cache scope so that leaving this scene does not throw
+        # away assets a scene paused beneath us is still using.
+        AssetLoader.enter_scope()
+        self._subtitles.rearm()
         data = StageLoader.load(self._tmx_path)
         if data is None:
             raise RuntimeError(f"StageScene: failed to load stage from {self._tmx_path}")
         self._stage_data = data
         spawn = self._stage_data.spawn_point
-        self._player = Player(spawn)
+        self._player = Player(spawn, event_bus=self.context.event_bus)
         if hasattr(self._stage_data, "gravity_multiplier"):
             self._player.gravity_multiplier = self._stage_data.gravity_multiplier
 
@@ -142,6 +162,9 @@ class StageScene(BaseScene):
             self._checkpoint_position = pygame.Vector2(pending.checkpoint_x, pending.checkpoint_y)
             self.context.pending_load = None
 
+        # AUD-022: relic stat bonuses were fully implemented and never applied.
+        self._player.apply_relic_bonuses(get_inventory())
+
         self._achievements.mark_explorer(self._stage_data.stage_id)
 
         self._camera = Camera()
@@ -149,6 +172,10 @@ class StageScene(BaseScene):
         self._camera.set_map_size(*self._stage_data.map_pixel_size)
 
         for enemy in self._stage_data.entity_list:
+            if hasattr(enemy, "set_event_bus"):
+                enemy.set_event_bus(self.context.event_bus)
+            elif not getattr(enemy, "_event_bus", None):
+                enemy._event_bus = self.context.event_bus
             if hasattr(enemy, "set_player_ref"):
                 enemy.set_player_ref(self._player.rect)
             if hasattr(enemy, "set_collision_rects"):
@@ -180,7 +207,7 @@ class StageScene(BaseScene):
                     bgm_path = settings.ASSETS_DIR / "music" / f"{self._stage_data.bgm_track}.ogg"
                 audio.play_music(bgm_path)
             if self._dynamic_music is not None:
-                zone = getattr(self._stage_data, "zone", 0)
+                zone = self._stage_data.zone  # BUG-075 FIX: ya no usa getattr con default 0
                 self._dynamic_music.set_zone(zone, self._stage_data.bgm_track)
 
         self._msg_box = MessageBox(self.context.event_bus)
@@ -207,6 +234,7 @@ class StageScene(BaseScene):
         # Track stage start for achievement timing
         self._player_spawned = True
         self._damage_taken_this_stage = 0.0
+        self._last_player_health = self._player.current_health
         self._stage_data.map_layer._map_layer.view_rect = pygame.Rect(
             self._camera.offset.x,
             self._camera.offset.y,
@@ -236,39 +264,54 @@ class StageScene(BaseScene):
         # Set up stage lighting
         self._lighting.clear()
         self._player_light = None
-        zone = int(getattr(self._stage_data, "zone", 0))
+        # BUG-075: si el TMX no declara zona, cae al atributo ZONE de la escena.
+        zone = self._stage_data.zone
+        if zone is None:
+            zone = getattr(self, "ZONE", 0)
+        # BUG-076: escalar las luces a la resolución actual.
+        scale_x = settings.INTERNAL_WIDTH / settings.REFERENCE_WIDTH
+        scale_y = settings.INTERNAL_HEIGHT / settings.REFERENCE_HEIGHT
+        _ls = lambda x, y, r, **kw: LightSource(  # noqa: E731
+            pygame.Vector2(x * scale_x, y * scale_y), radius=int(r * min(scale_x, scale_y)), **kw,
+        )
         if zone == 0:
             self._lighting.ambient_brightness = 1.0
             self._stage_lights = [
-                LightSource(pygame.Vector2(80, 80), radius=70, color=(255, 220, 180), intensity=0.7),
-                LightSource(pygame.Vector2(240, 80), radius=70, color=(255, 220, 180), intensity=0.7),
+                _ls(80, 80, 70, color=(255, 220, 180), intensity=0.7),
+                _ls(240, 80, 70, color=(255, 220, 180), intensity=0.7),
             ]
         elif zone == 1:
             self._lighting.ambient_brightness = 0.6
             self._stage_lights = [
-                LightSource(pygame.Vector2(100, 60), radius=60, color=(200, 255, 180), intensity=0.6, flicker=True),
+                _ls(100, 60, 60, color=(200, 255, 180), intensity=0.6, flicker=True),
             ]
         elif zone == 2:
             self._lighting.ambient_brightness = 0.3
             self._stage_lights = [
-                LightSource(pygame.Vector2(100, 80), radius=80, color=(255, 100, 50), intensity=0.8, flicker=True),
-                LightSource(pygame.Vector2(200, 60), radius=50, color=(255, 150, 80), intensity=0.7, flicker=True),
+                _ls(100, 80, 80, color=(255, 100, 50), intensity=0.8, flicker=True),
+                _ls(200, 60, 50, color=(255, 150, 80), intensity=0.7, flicker=True),
             ]
         elif zone >= 3:
             self._lighting.ambient_brightness = 0.2
             self._stage_lights = [
-                LightSource(pygame.Vector2(80, 70), radius=90, color=(255, 80, 30), intensity=0.9, flicker=True),
-                LightSource(pygame.Vector2(180, 50), radius=70, color=(255, 120, 50), intensity=0.8, flicker=True),
-                LightSource(pygame.Vector2(280, 90), radius=60, color=(255, 60, 20), intensity=0.7, flicker=True),
+                _ls(80, 70, 90, color=(255, 80, 30), intensity=0.9, flicker=True),
+                _ls(180, 50, 70, color=(255, 120, 50), intensity=0.8, flicker=True),
+                _ls(280, 90, 60, color=(255, 60, 20), intensity=0.7, flicker=True),
             ]
         else:
             self._lighting.ambient_brightness = 0.7
             self._stage_lights = []
+        self._vfx_handlers.clear()
+        self._sfx_handlers.clear()
+        try:
+            self._subscribe_event_handlers()
+        except Exception:
+            self._unsubscribe_all_handlers()
+            raise
         for sl in self._stage_lights:
             self._lighting.add_light(sl)
 
-        self._vfx_handlers: dict[str, Callable[..., None]] = {}
-
+    def _subscribe_event_handlers(self) -> None:
         def _on_enemy_died(**data: Any) -> None:
             pos = data.get("position", (0, 0))
             self._particle_system.get_emitter("death").emit(
@@ -333,8 +376,11 @@ class StageScene(BaseScene):
             self._camera.apply_shake(amplitude=5.0, duration=0.4)
 
         self.context.event_bus.subscribe(Events.SFX_HIT_CONNECT, _on_hit_connect)
+        self._vfx_handlers[Events.SFX_HIT_CONNECT] = _on_hit_connect
         self.context.event_bus.subscribe(Events.SFX_ENEMY_HIT, _on_enemy_hit)
+        self._vfx_handlers[Events.SFX_ENEMY_HIT] = _on_enemy_hit
         self.context.event_bus.subscribe(Events.ENEMY_DIED, _on_enemy_died)
+        self._vfx_handlers[Events.ENEMY_DIED] = _on_enemy_died
 
         def _on_player_died(**data: Any) -> None:
             pos = data.get("pos", [0, 0])
@@ -351,11 +397,17 @@ class StageScene(BaseScene):
             self._post_processing.flash((255, 0, 0), alpha=180, duration=0.3)
 
         self.context.event_bus.subscribe(Events.PLAYER_DAMAGED, _on_player_damaged)
+        self._vfx_handlers[Events.PLAYER_DAMAGED] = _on_player_damaged
         self.context.event_bus.subscribe(Events.PLAYER_DIED, _on_player_died)
+        self._vfx_handlers[Events.PLAYER_DIED] = _on_player_died
         self.context.event_bus.subscribe(Events.VFX_PARRY, _on_vfx_parry)
+        self._vfx_handlers[Events.VFX_PARRY] = _on_vfx_parry
         self.context.event_bus.subscribe(Events.VFX_CHARGE, _on_vfx_charge)
+        self._vfx_handlers[Events.VFX_CHARGE] = _on_vfx_charge
         self.context.event_bus.subscribe(Events.VFX_SLAM, _on_vfx_slam)
+        self._vfx_handlers[Events.VFX_SLAM] = _on_vfx_slam
         self.context.event_bus.subscribe(Events.VFX_ULTIMATE, _on_vfx_ultimate)
+        self._vfx_handlers[Events.VFX_ULTIMATE] = _on_vfx_ultimate
 
         def _on_music_stinger(**data: Any) -> None:
             name = data.get("name", "stinger_boss_phase")
@@ -364,21 +416,8 @@ class StageScene(BaseScene):
             if self.audio is not None:
                 self.audio.play_stinger(name, volume=vol)
         self.context.event_bus.subscribe(Events.MUSIC_STINGER, _on_music_stinger)
-        for _evt, _handler in (
-            (Events.SFX_HIT_CONNECT, _on_hit_connect),
-            (Events.SFX_ENEMY_HIT, _on_enemy_hit),
-            (Events.ENEMY_DIED, _on_enemy_died),
-            (Events.PLAYER_DAMAGED, _on_player_damaged),
-            (Events.PLAYER_DIED, _on_player_died),
-            (Events.VFX_PARRY, _on_vfx_parry),
-            (Events.VFX_CHARGE, _on_vfx_charge),
-            (Events.VFX_SLAM, _on_vfx_slam),
-            (Events.VFX_ULTIMATE, _on_vfx_ultimate),
-            (Events.MUSIC_STINGER, _on_music_stinger),
-        ):
-            self._vfx_handlers[_evt] = _handler
+        self._vfx_handlers[Events.MUSIC_STINGER] = _on_music_stinger
 
-        self._sfx_handlers: dict[str, Callable[..., None]] = {}
         sfx_map = {
             Events.SFX_PLAYER_JUMP: "sfx_player_jump",
             Events.SFX_PLAYER_LAND: "sfx_player_land",
@@ -420,19 +459,9 @@ class StageScene(BaseScene):
             Events.SFX_BOSSES_VENADO_VINE: "sfx_bosses_venado_vine",
         }
         for evt, sname in sfx_map.items():
-            def _make_handler(n: str) -> Any:
-                def handler(**d: Any) -> None:
-                    vol = 1.0
-                    if "damage" in d:
-                        vol = 0.8 + random.random() * 0.4
-                    pos = d.get("pos")
-                    if pos is not None:
-                        self._play_sfx_spatial(n, pos[0], volume=vol)
-                    else:
-                        self._play_sfx_named(n, volume=vol)
-                return handler
-            handler = _make_handler(sname)
+            handler = self._make_sfx_handler(sname)
             self.context.event_bus.subscribe(evt, handler)
+            # Retained here so the bus's weak reference stays alive.
             self._sfx_handlers[evt] = handler
 
         # SAVE_REQUESTED handler — persists game on checkpoint / save & quit
@@ -450,6 +479,36 @@ class StageScene(BaseScene):
         self.context.event_bus.subscribe(Events.SAVE_REQUESTED, _on_save_requested)
         self._vfx_handlers[Events.SAVE_REQUESTED] = _on_save_requested
 
+    def _make_sfx_handler(self, sound_name: str) -> Callable[..., None]:
+        """Build an event handler that plays ``sound_name``.
+
+        AUD-032: this was previously a closure factory defined *inside* the loop
+        that used it, with the inner function and the loop variable sharing the
+        name ``handler``. It worked, but it tripped B023 and required a careful
+        read to see that it did — the exact shape that hides a real late-binding
+        bug the next time someone edits it. A named method takes the sound as a
+        parameter, so the binding is explicit and unmistakable.
+        """
+        def handler(**data: Any) -> None:
+            volume = 1.0
+            if "damage" in data:
+                # Slight random variation so repeated hits do not sound robotic.
+                volume = 0.8 + random.random() * 0.4
+            pos = data.get("pos")
+            if pos is not None:
+                self._play_sfx_spatial(sound_name, pos[0], volume=volume)
+            else:
+                self._play_sfx_named(sound_name, volume=volume)
+        return handler
+
+    def _unsubscribe_all_handlers(self) -> None:
+        for evt, handler in self._sfx_handlers.items():
+            self.context.event_bus.unsubscribe(evt, handler)
+        self._sfx_handlers.clear()
+        for evt, handler in self._vfx_handlers.items():
+            self.context.event_bus.unsubscribe(evt, handler)
+        self._vfx_handlers.clear()
+
     def _play_sfx_named(self, name: str, volume: float = 1.0) -> None:
         audio = self.audio
         if audio is not None:
@@ -464,12 +523,7 @@ class StageScene(BaseScene):
     def on_exit(self) -> None:
         if self.context.clock is not None:
             self.context.clock.time_scale = 1.0
-        for evt, handler in self._sfx_handlers.items():
-            self.context.event_bus.unsubscribe(evt, handler)
-        self._sfx_handlers.clear()
-        for evt, handler in self._vfx_handlers.items():
-            self.context.event_bus.unsubscribe(evt, handler)
-        self._vfx_handlers.clear()
+        self._unsubscribe_all_handlers()
         if self._hud is not None:
             self._hud.destroy()
             self._hud = None
@@ -480,9 +534,12 @@ class StageScene(BaseScene):
         audio = self.audio
         if audio is not None:
             audio.stop_music()
+        self._subtitles.destroy()
         self._achievements.save()
         self._achievements.unsubscribe_events()
-        AssetLoader.clear_cache()
+        # AUD-025: release our scope rather than wiping the shared cache. The
+        # cache is only actually dropped once no scene is using it.
+        AssetLoader.leave_scope()
         self._stage_data = None
         self._player = None
 
@@ -499,268 +556,311 @@ class StageScene(BaseScene):
         if self._msg_box is not None:
             self._msg_box.destroy()
             self._msg_box = None
-        for evt, handler in self._sfx_handlers.items():
-            self.context.event_bus.unsubscribe(evt, handler)
-        self._sfx_handlers.clear()
-        for evt, handler in self._vfx_handlers.items():
-            self.context.event_bus.unsubscribe(evt, handler)
-        self._vfx_handlers.clear()
+        self._unsubscribe_all_handlers()
+        # The achievement subscriptions are re-armed by on_enter(); drop them
+        # first so respawning does not accumulate duplicate registrations.
+        self._achievements.unsubscribe_events()
+        # respawn() re-runs on_enter(), which claims another cache scope. Release
+        # ours first so the reference count stays balanced across deaths
+        # (otherwise the count only ever grows and the cache is never freed).
+        AssetLoader.leave_scope()
         self.on_enter()
-        assert self._hud is not None
+        if self._hud is None:
+            raise RuntimeError("respawn: HUD not initialized by on_enter")
         self._hud.current_time = saved_time
         self._hud.is_countdown = saved_time_limit > 0
         if cp is not None:
             self._player.position = pygame.Vector2(cp)
             self._player.rect.center = (int(cp.x), int(cp.y))
-        setattr(self._player, "_invincibility_timer", 2.0)
+        self._player._invincibility_timer = 2.0
         self._post_processing.flash((255, 255, 255), alpha=255, duration=0.3)
         self.context.scene_manager.transition.start_fade_in(0.5)
+
+    # ── Subsystem update dispatch ──────────────────────────────────────
 
     def update(self, dt: float) -> None:
         if self._stage_data is None or self._player is None:
             return
+        self._dt = dt
+        self._handle_input()
+        if self._paused:
+            self._handle_pause_input()
+            return
+        self._check_player_death()
+        if not self._game_over:
+            self._update_gameplay(dt)
+        if not self._game_over:
+            self._update_camera_map(dt)
+        if not self._game_over and not self._progression.stage_complete:
+            self._update_audio(dt)
+            self._update_hud_ui(dt)
+            self._update_vfx(dt)
+            self._update_lighting(dt)
+            self._update_tracking(dt)
+            self._update_timers(dt)
+            self._update_minimap()
+            self._update_trail(dt)
+        if self._hud and self._hud.current_time <= 0 and self._hud.is_countdown and not self._game_over:
+            self._kill_player()
+
+    def _handle_input(self) -> None:
+        im = self.input
+        if im is None:
+            return
+        if im.is_action_just_pressed(Action.PAUSE):
+            self._paused = not self._paused
+            self._pause_selected = 0
+            # AUD-022: HUD.pause_timer / resume_timer existed and were never
+            # called, so on a timed stage the countdown kept draining while the
+            # player sat in the pause menu — pausing cost you the run. Music
+            # likewise kept playing over the pause screen.
+            self._set_paused_side_effects(self._paused)
+        if im.is_action_just_pressed(Action.TOGGLE_MUTE):
+            audio = self.audio
+            if audio is not None:
+                audio.toggle_mute()
+                self._subtitles.push(
+                    "[Audio muted]" if audio.is_muted else "[Audio unmuted]",
+                )
+        if im.is_action_just_pressed(Action.OPEN_BESTIARY):
+            from src.engine.scenes.bestiary_scene import BestiaryScene
+            self.context.scene_manager.push(BestiaryScene(self.context))
+        if im.is_raw_key_pressed(pygame.K_F1):
+            self._debug = not self._debug
+            self.on_debug_toggle(self._debug)
+        for learn_action in (Action.LEARN_MATH, Action.LEARN_PHYSICS,
+                             Action.LEARN_COLLISION, Action.LEARN_FSM,
+                             Action.LEARN_RENDER, Action.LEARN_AUDIO,
+                             Action.LEARN_PERF, Action.LEARN_CONTROLS,
+                             Action.LEARN_HELP):
+            if im.is_action_just_pressed(learn_action):
+                self._learning.toggle(learn_action)
+                break
+
+    def _set_paused_side_effects(self, paused: bool) -> None:
+        """Suspend or resume everything that must not advance during a pause."""
+        if self._hud is not None:
+            if paused:
+                self._hud.pause_timer()
+            else:
+                self._hud.resume_timer()
+        audio = self.audio
+        if audio is not None:
+            if paused:
+                audio.pause_music()
+            else:
+                audio.resume_music()
+
+    def _handle_pause_input(self) -> None:
+        im = self.input
+        if im is None:
+            return
+        if im.is_action_just_pressed(Action.MOVE_DOWN):
+            self._pause_selected = (self._pause_selected + 1) % len(self._pause_options)
+        if im.is_action_just_pressed(Action.MOVE_UP):
+            self._pause_selected = (self._pause_selected - 1) % len(self._pause_options)
+        if im.is_action_just_pressed(Action.CANCEL):
+            self._paused = False
+            self._set_paused_side_effects(False)
+        if im.is_action_just_pressed(Action.CONFIRM):
+            choice = self._pause_options[self._pause_selected]
+            if choice == "Resume":
+                self._paused = False
+            elif choice == "Save & Quit":
+                self._save_and_quit()
+            elif choice == "Quit to Title":
+                self._quit_to_title()
+
+    def _check_player_death(self) -> None:
+        if self._player.current_health <= 0 and not self._game_over:
+            self._kill_player()
+
+    def _update_gameplay(self, dt: float) -> None:
         player = self._player
         stage = self._stage_data
         im = self.input
+        clock = self.context.clock
+        # Hit-stop must be driven by REAL elapsed time. Driving it with the
+        # scaled `dt` is self-referential — time_scale goes to 0, dt goes to
+        # 0, and the countdown can never drain, freezing the game forever on
+        # the first landed hit (AUD-001). Fall back to dt only when the
+        # context has no clock (headless tests).
+        unscaled_dt = getattr(clock, "unscaled_dt", dt) if clock is not None else dt
+        try:
+            player.update(dt, stage.collision_rects, im, one_way_rects=stage.one_way_rects)
+            if player.combo_active and player.combo_count > 0:
+                self._achievements.mark_air_assault(getattr(player, "_combo_air_hits", 0))
+                self._achievements.mark_combo_king(player.combo_count)
+            if player.is_grounded and not self._was_grounded:
+                self.on_player_landed()
+            self._was_grounded = player.is_grounded
+            for entity in stage.entity_list:
+                if isinstance(entity, EnemyBase) and not entity.is_alive:
+                    if getattr(entity, "_was_alive", True):
+                        entity._was_alive = False
+                        self.on_enemy_died(entity)
+            self._collision.process_attack(dt, player, stage, self._camera, clock)
+        finally:
+            # update_hitstop owns time_scale entirely: it restores 1.0 as soon
+            # as the freeze expires, so no separate restore step is needed.
+            self._collision.update_hitstop(unscaled_dt, clock)
 
-        if im:
-            if im.is_action_just_pressed(Action.PAUSE):
-                self._paused = not self._paused
-                self._pause_selected = 0
-            if im.is_action_just_pressed(Action.OPEN_BESTIARY):
-                from src.engine.scenes.bestiary_scene import BestiaryScene
-                self.context.scene_manager.push(BestiaryScene(self.context))
-            if im.is_raw_key_pressed(pygame.K_F1):
-                self._debug = not self._debug
-                self.on_debug_toggle(self._debug)
-            for learn_action in (Action.LEARN_MATH, Action.LEARN_PHYSICS,
-                                 Action.LEARN_COLLISION, Action.LEARN_FSM,
-                                 Action.LEARN_RENDER, Action.LEARN_AUDIO,
-                                 Action.LEARN_PERF, Action.LEARN_CONTROLS,
-                                 Action.LEARN_HELP):
-                if im.is_action_just_pressed(learn_action):
-                    self._learning.toggle(learn_action)
-                    break
-
-        if self._paused:
-            if im:
-                if im.is_action_just_pressed(Action.MOVE_DOWN):
-                    self._pause_selected = (self._pause_selected + 1) % len(self._pause_options)
-                if im.is_action_just_pressed(Action.MOVE_UP):
-                    self._pause_selected = (self._pause_selected - 1) % len(self._pause_options)
-                if im.is_action_just_pressed(Action.CANCEL):
-                    self._paused = False
-                if im.is_action_just_pressed(Action.CONFIRM):
-                    choice = self._pause_options[self._pause_selected]
-                    if choice == "Resume":
-                        self._paused = False
-                    elif choice == "Save & Quit":
-                        self._save_and_quit()
-                    elif choice == "Quit to Title":
-                        self._quit_to_title()
-            return
-
-        # BUG-055: Check player death immediately after pause check
-        if player.current_health <= 0 and not self._game_over:
-            self._kill_player()
-
-        if not self._game_over:
-            original_time_scale = 1.0
-            if self.context.clock is not None:
-                original_time_scale = self.context.clock.time_scale
-            try:
-                player.update(dt, stage.collision_rects, im, one_way_rects=stage.one_way_rects)
-
-                if player.combo_active and player.combo_count > 0:
-                    self._achievements.mark_air_assault(getattr(player, "_combo_air_hits", 0))
-                    self._achievements.mark_combo_king(player.combo_count)
-
-                if player.is_grounded and not self._was_grounded:
-                    self.on_player_landed()
-                self._was_grounded = player.is_grounded
-
-                for entity in stage.entity_list:
-                    if isinstance(entity, EnemyBase) and not entity.is_alive:
-                        if getattr(entity, "_was_alive", True):
-                            setattr(entity, "_was_alive", False)
-                            self.on_enemy_died(entity)
-
-                self._collision.update_enemies(dt, player, stage)
-                if player.active_hitbox is not None:
-                    self._collision.process_attack(dt, player, stage, self._camera,
-                                                   self.context.clock if self.context.clock is not None else None)
-            finally:
-                self._collision.update_hitstop(dt, self.context.clock if self.context.clock is not None else None)
-                hitstop = getattr(self._collision, "_hitstop_timer", 0.0)
-                if hitstop <= 0 and self.context.clock is not None:
-                    self.context.clock.time_scale = original_time_scale
-
-        if not self._game_over:
-            self._camera.update(dt)
-
+    def _update_camera_map(self, dt: float) -> None:
+        stage = self._stage_data
+        self._camera.update(dt)
+        if stage.map_layer is not None and hasattr(stage.map_layer, '_map_layer'):
             stage.map_layer._map_layer.view_rect = pygame.Rect(
-                self._camera.offset.x,
-                self._camera.offset.y,
-                settings.INTERNAL_WIDTH,
-                settings.INTERNAL_HEIGHT,
+                self._camera.offset.x, self._camera.offset.y,
+                settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT,
             )
+        self._camera.set_camera_locks(stage.camera_locks)
+        cp_pos = self._progression.process_checkpoints(self._player, stage, self._checkpoints, self._hud)
+        if cp_pos is not None:
+            self._checkpoint_position = cp_pos
+        if self._progression.check_next_trigger(self._player, stage):
+            self.on_next_trigger_entered()
+            self._banner.play("STAGE_COMPLETE", "STAGE COMPLETE")
+            self.context.event_bus.emit(Events.SFX_STAGE_COMPLETE)
+        elif self._progression.check_boss_defeat(stage):
+            self._banner.play("STAGE_COMPLETE", "STAGE COMPLETE")
+            self.context.event_bus.emit(Events.SFX_STAGE_COMPLETE)
+        if self._progression.update_complete_timer(dt):
+            if self._damage_taken_this_stage <= 0.001:
+                self._achievements.mark_untouchable()
+            if self._stage_start_time < 60.0:
+                self._achievements.mark_speed_demon()
+            self._speedrun.split(stage.stage_id)
+            self._speedrun.stop()
+            # AUD-022: the speedrun timer ran the whole stage and then threw the
+            # result away — get_formatted_time() and get_splits() had no callers,
+            # so the player never saw their time. Surface it on completion.
+            if self._banner is not None:
+                self._banner.play(
+                    "STAGE_COMPLETE",
+                    f"CLEAR  {self._speedrun.get_formatted_time()}",
+                )
+            self.context.event_bus.emit(Events.STAGE_COMPLETE, stage_id=stage.stage_id)
 
-            self._camera.set_camera_locks(stage.camera_locks)
+    def _update_audio(self, dt: float) -> None:
+        if self._dynamic_music is None:
+            return
+        stage = self._stage_data
+        has_boss = any(isinstance(e, BossBase) and e.is_alive for e in stage.entity_list)
+        has_enemies = any(isinstance(e, EnemyBase) and e.is_alive for e in stage.entity_list)
+        intensity = self._dynamic_music.detect_intensity_from_state(has_boss, has_enemies)
+        self._dynamic_music.set_intensity(intensity)
 
-            cp_pos = self._progression.process_checkpoints(player, stage, self._checkpoints, self._hud)
-            if cp_pos is not None:
-                self._checkpoint_position = cp_pos
+    def _update_hud_ui(self, dt: float) -> None:
+        stage = self._stage_data
+        im = self.input
+        if self._hud:
+            boss_found = False
+            for entity in stage.entity_list:
+                if isinstance(entity, BossBase) and entity.is_alive:
+                    self._hud.set_boss_hud(
+                        entity.boss_name, entity.current_health,
+                        entity.phase_max_health,
+                        getattr(entity, "current_phase", 0) + 1,
+                        getattr(entity, "phase_count", 1),
+                    )
+                    boss_found = True
+                    break
+            if not boss_found:
+                self._hud.clear_boss_hud()
+            self._hud.set_combo_count(self._player.combo_count)
+            self._hud.set_special_meter(self._player.special_meter, self._player.special_meter_max)
+            self._hud.update(dt)
+        self._subtitles.update(dt)
+        if self._msg_box:
+            self._msg_box.update(dt)
+            if self._msg_box.is_dismiss_on_confirm and im.is_action_just_pressed(Action.CONFIRM):
+                self._msg_box.hide()
+        if self._banner:
+            self._banner.update(dt)
 
-            # BUG-065: Use elif to prevent banner playing twice if both fire in same frame
-            if self._progression.check_next_trigger(player, stage):
-                self.on_next_trigger_entered()
-                self._banner.play("STAGE_COMPLETE", "STAGE COMPLETE")
-                self.context.event_bus.emit(Events.SFX_STAGE_COMPLETE)
-            elif self._progression.check_boss_defeat(stage):
-                self._banner.play("STAGE_COMPLETE", "STAGE COMPLETE")
-                self.context.event_bus.emit(Events.SFX_STAGE_COMPLETE)
+    def _update_vfx(self, dt: float) -> None:
+        self._speedrun.update(dt)
+        self._hazards.update(dt, self._player, self._stage_data)
+        self._tutorial.update(dt, self.input)
+        self._particle_system.update(dt)
+        self._damage_numbers.update(dt)
+        self._post_processing.update(dt)
+        self._ambient_particles.update(dt, self._camera.offset)
+        self._weather.update(dt, self._camera.offset)
+        self._dialogue.update(dt)
 
-            if self._progression.update_complete_timer(dt):
-                # BUG-056: Use <= 0.001 instead of == 0 for float comparison
-                if self._damage_taken_this_stage <= 0.001:
-                    self._achievements.mark_untouchable()
-                if self._stage_start_time < 60.0:
-                    self._achievements.mark_speed_demon()
-                self._speedrun.split(self._stage_data.stage_id)
-                self._speedrun.stop()
-                self.context.event_bus.emit(Events.STAGE_COMPLETE, stage_id=stage.stage_id)
-                return
+    def _update_lighting(self, dt: float) -> None:
+        stage = self._stage_data
+        if self._player is None:
+            return
+        combat = any(isinstance(e, EnemyBase) and e.is_alive for e in stage.entity_list)
+        if self._player_light is None:
+            self._player_light = self._lighting.get_player_light(self._player.position, combat)
+            self._lighting.add_light(self._player_light)
+        else:
+            self._player_light.position = self._player.position
+            self._player_light.intensity = 0.9 if combat else 0.6
+            self._player_light.radius = 100 if combat else 60
+        self._lighting.update(dt, self._camera.offset)
 
-            if self._progression.stage_complete:
-                if self._hud:
-                    self._hud.clear_boss_hud()
-                if self._msg_box:
-                    self._msg_box.update(dt)
-                if self._banner:
-                    self._banner.update(dt)
-                return
+    def _update_tracking(self, dt: float) -> None:
+        self._achievements.update_notifications(dt)
+        get_inventory().update_notifications(dt)
+        if not self._player_spawned or self._player is None:
+            return
+        self._stage_start_time += dt
+        old_health = self._last_player_health
+        if old_health > self._player.current_health:
+            self._damage_taken_this_stage += old_health - self._player.current_health
+        self._last_player_health = self._player.current_health
+        if self._player.current_health <= 0.5 and self._player.current_health > 0:
+            self._achievements.mark_survived_low_health()
 
-            # Dynamic music intensity — single pass
-            if self._dynamic_music is not None:
-                has_boss = False
-                has_enemies = False
-                for e in stage.entity_list:
-                    if isinstance(e, BossBase) and e.is_alive:
-                        has_boss = True
-                        has_enemies = True
-                        break
-                    if isinstance(e, EnemyBase) and e.is_alive:
-                        has_enemies = True
-                intensity = self._dynamic_music.detect_intensity_from_state(has_boss, has_enemies)
-                self._dynamic_music.set_intensity(intensity)
-
+    def _update_timers(self, dt: float) -> None:
+        if self._progression.stage_complete:
             if self._hud:
-                boss_found = False
-                for entity in stage.entity_list:
-                    if isinstance(entity, BossBase) and entity.is_alive:
-                        self._hud.set_boss_hud(
-                            entity.boss_name,
-                            entity.current_health,
-                            entity.phase_max_health,
-                            getattr(entity, "current_phase", 0) + 1,
-                            getattr(entity, "phase_count", 1),
-                        )
-                        boss_found = True
-                        break
-                if not boss_found:
-                    self._hud.clear_boss_hud()
-
+                self._hud.clear_boss_hud()
             if self._msg_box:
                 self._msg_box.update(dt)
-                if self._msg_box.is_dismiss_on_confirm and im.is_action_just_pressed(Action.CONFIRM):
-                    self._msg_box.hide()
             if self._banner:
                 self._banner.update(dt)
-            if self._hud:
-                self._hud.set_combo_count(player.combo_count)
-                self._hud.set_special_meter(player.special_meter, player.special_meter_max)
-                self._hud.update(dt)
 
-            self._speedrun.update(dt)
-            self._hazards.update(dt, player, stage)
-            self._tutorial.update(dt, im)
-            self._particle_system.update(dt)
-            self._damage_numbers.update(dt)
-            self._post_processing.update(dt)
-            self._ambient_particles.update(dt, self._camera.offset)
-            self._weather.update(dt, self._camera.offset)
-            self._dialogue.update(dt)
+    def _update_minimap(self) -> None:
+        if self._player is None or self._stage_data is None:
+            return
+        stage = self._stage_data
+        enemy_positions = [
+            (e.position.x, e.position.y)
+            for e in stage.entity_list
+            if isinstance(e, EnemyBase) and e.is_alive
+        ]
+        boss_positions = [
+            (e.position.x, e.position.y)
+            for e in stage.entity_list
+            if isinstance(e, BossBase) and e.is_alive
+        ]
+        cp_positions = [(cp.rect.centerx, cp.rect.centery) for cp in self._checkpoints]
+        activated = {i for i, cp in enumerate(self._checkpoints) if cp.is_activated}
+        self._minimap.update(
+            player_pos=(self._player.position.x, self._player.position.y),
+            player_dir=self._player.facing_direction,
+            enemy_positions=enemy_positions,
+            boss_positions=boss_positions,
+            checkpoint_positions=cp_positions,
+            activated_checkpoints=activated,
+        )
+        explore_rect = pygame.Rect(
+            self._player.rect.centerx - 80, self._player.rect.centery - 60, 160, 120,
+        )
+        self._minimap.explore_rect(explore_rect)
 
-            # Update lighting
-            if self._player is not None:
-                combat = any(isinstance(e, EnemyBase) and e.is_alive for e in stage.entity_list)
-                if self._player_light is None:
-                    self._player_light = self._lighting.get_player_light(self._player.position, combat)
-                    self._lighting.add_light(self._player_light)
-                else:
-                    self._player_light.position = self._player.position
-                    self._player_light.intensity = 0.9 if combat else 0.6
-                    self._player_light.radius = 100 if combat else 60
-            self._lighting.update(dt, self._camera.offset)
-
-            # Update achievements & inventory notifications
-            self._achievements.update_notifications(dt)
-            get_inventory().update_notifications(dt)
-            if self._player_spawned:
-                self._stage_start_time += dt
-                # Track damage for untouchable achievement
-                if self._player is not None:
-                    old_health = getattr(self, '_last_player_health', self._player.current_health)
-                    if old_health > self._player.current_health:
-                        self._damage_taken_this_stage += old_health - self._player.current_health
-                    self._last_player_health = self._player.current_health
-                    # survivor: survive with 0.5 health or less
-                    if self._player.current_health <= 0.5 and self._player.current_health > 0:
-                        self._achievements.mark_survived_low_health()
-
-            # Update minimap
-            if self._player is not None and self._stage_data is not None:
-                enemy_positions = [
-                    (e.position.x, e.position.y)
-                    for e in self._stage_data.entity_list
-                    if isinstance(e, EnemyBase) and e.is_alive
-                ]
-                boss_positions = [
-                    (e.position.x, e.position.y)
-                    for e in self._stage_data.entity_list
-                    if isinstance(e, BossBase) and e.is_alive
-                ]
-                cp_positions = [
-                    (cp.rect.centerx, cp.rect.centery)
-                    for cp in self._checkpoints
-                ]
-                activated = {i for i, cp in enumerate(self._checkpoints) if cp.is_activated}
-                self._minimap.update(
-                    player_pos=(player.position.x, player.position.y),
-                    player_dir=player.facing_direction,
-                    enemy_positions=enemy_positions,
-                    boss_positions=boss_positions,
-                    checkpoint_positions=cp_positions,
-                    activated_checkpoints=activated,
-                )
-                # Explore area around player
-                explore_rect = pygame.Rect(
-                    player.rect.centerx - 80, player.rect.centery - 60,
-                    160, 120,
-                )
-                self._minimap.explore_rect(explore_rect)
-
-            # Capture trail during dash
-            if self._player is not None:
-                is_dashing = getattr(self._player, "_dash_timer", 0) > 0
-                is_moving = abs(getattr(self._player, "velocity", pygame.Vector2()).x) > 50
-                if is_dashing or (is_moving and not self._player.is_grounded):
-                    self._trail_system.capture(self._player)
-            self._trail_system.update(dt)
-
-            if self._hud and self._hud.current_time <= 0 and self._hud.is_countdown and not self._game_over:
-                self._kill_player()
-                return
+    def _update_trail(self, dt: float) -> None:
+        if self._player is not None:
+            is_dashing = getattr(self._player, "_dash_timer", 0) > 0
+            is_moving = abs(self._player.velocity.x) > 50
+            if is_dashing or (is_moving and not self._player.is_grounded):
+                self._trail_system.capture(self._player)
+        self._trail_system.update(dt)
 
     def _save_and_quit(self) -> None:
         if self._stage_data is not None and self._player is not None:
@@ -788,10 +888,20 @@ class StageScene(BaseScene):
     def draw(self, surface: pygame.Surface) -> None:
         if self._stage_data is None or self._player is None:
             return
-        self._drawing.draw(
-            surface, self._stage_data, self._player, self._checkpoints,
-            self._camera, self._hud, self._msg_box, self._banner,
-            self._paused, self._debug, self._pause_selected, self._pause_options,
+        from src.framework.stage.drawing_system import DrawContext
+        ctx = DrawContext(
+            surface=surface,
+            stage=self._stage_data,
+            player=self._player,
+            checkpoints=self._checkpoints,
+            camera=self._camera,
+            hud=self._hud,
+            msg_box=self._msg_box,
+            banner=self._banner,
+            paused=self._paused,
+            debug=self._debug,
+            pause_selected=self._pause_selected,
+            pause_options=self._pause_options,
             particle_system=self._particle_system,
             damage_numbers=self._damage_numbers,
             ambient_particles=self._ambient_particles,
@@ -801,8 +911,12 @@ class StageScene(BaseScene):
             learning_overlay=self._learning,
             dialogue_system=self._dialogue,
         )
+        self._drawing.draw(ctx)
         self._lighting.render(surface, self._camera.offset)
         self._post_processing.apply(surface)
         self._minimap.draw(surface)
+        # Captions render after post-processing so the colourblind filter does
+        # not wash out text that exists precisely for accessibility (AUD-036).
+        self._subtitles.draw(surface)
         self._achievements.draw_notifications(surface)
         get_inventory().draw_notifications(surface)

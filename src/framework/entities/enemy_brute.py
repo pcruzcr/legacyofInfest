@@ -1,10 +1,9 @@
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 import pygame
 
-from src.engine.core.event_bus import _get_bus as _bus
-_emit = lambda *a, **kw: _bus().emit(*a, **kw)
 from src.engine.core.events import Events
 from src.framework.entities.enemy_base import EnemyBase, EnemyState
 
@@ -65,14 +64,14 @@ class EnemyBrute(EnemyBase):
         if self._slam_cooldown <= 0:
             self._telegraph_timer = self._telegraph_duration
             self.state = EnemyState.TELEGRAPHING
-            _emit(Events.BOSS_ATTACK, pattern="ground_slam", rect=self.rect)
+            self._event_bus.emit(Events.BOSS_ATTACK, pattern="ground_slam", rect=self.rect)
 
     def _firing_behavior(self, dt: float) -> None:
         self._shockwave_active = True
         self._shockwave_timer = self._shockwave_duration
         self._shockwave_has_hit = False
         self._slam_cooldown = 3.0
-        _emit(Events.SFX_HIT_CONNECT)
+        self._event_bus.emit(Events.SFX_HIT_CONNECT)
         self.state = EnemyState.ALERT
 
     def _post_update(self, dt: float) -> None:

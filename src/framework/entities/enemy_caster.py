@@ -1,15 +1,13 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
 
 import math
+from typing import TYPE_CHECKING
 
 import pygame
 
 if TYPE_CHECKING:
     from src.framework.entities.player import Player
 
-from src.engine.core.event_bus import _get_bus as _bus
-_emit = lambda *a, **kw: _bus().emit(*a, **kw)
 from src.engine.core.events import Events
 from src.framework.entities.base_entity import BaseEntity
 from src.framework.entities.enemy_base import EnemyBase, EnemyState
@@ -146,7 +144,7 @@ class EnemyCaster(EnemyBase):
         if self._shoot_cooldown <= 0:
             self._telegraph_timer = self._telegraph_duration
             self.state = EnemyState.TELEGRAPHING
-            _emit(Events.BOSS_ATTACK, pattern="caster_charge", rect=self.rect)
+            self._event_bus.emit(Events.BOSS_ATTACK, pattern="caster_charge", rect=self.rect)
 
     def _firing_behavior(self, dt: float) -> None:
         self._face_player()
@@ -179,7 +177,7 @@ class EnemyCaster(EnemyBase):
         )
         orb.set_player_ref(self._player_ref)
         self._active_orbs.append(orb)
-        _emit(Events.SFX_PROJECTILE_FIRE)
+        self._event_bus.emit(Events.SFX_PROJECTILE_FIRE)
         return True
 
     def _post_update(self, dt: float) -> None:
@@ -207,7 +205,7 @@ class EnemyCaster(EnemyBase):
                     player._parry_success = True
                     player._parry_active = False
                     player._parry_window = 0.0
-                    _emit(Events.VFX_PARRY, pos=(o.position.x, o.position.y))
+                    self._event_bus.emit(Events.VFX_PARRY, pos=(o.position.x, o.position.y))
                 else:
                     player.apply_damage(o.damage, (self.position.x, self.position.y))
                     o.on_collision()

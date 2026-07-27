@@ -16,19 +16,22 @@ from src.engine.core.events import Events
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
+    BOTTOM_BAR_Y,
     COLOR_BG,
+    COLOR_ERROR,
     COLOR_HIGHLIGHT,
     COLOR_TEXT,
-    COLOR_ERROR,
     FONT_LARGE,
     FONT_MEDIUM,
     FONT_SMALL,
-    draw_top_bar,
+    TOP_BAR_H,
     draw_bottom_bar,
-    TOP_BAR_H, BOTTOM_BAR_Y,
+    draw_top_bar,
 )
 from src.engine.scenes.scene_registry import get_registry
 from src.engine.utils.asset_loader import AssetLoader
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -126,7 +129,7 @@ class DemoMenuScene(BaseScene):
                     self._error_msg = f"Failed to load demo scene '{key}' — missing assets?"
                     self._error_timer = 3.0
             except (ImportError, RuntimeError, ValueError) as e:
-                logging.warning("demo_menu: failed to build scene '%s': %s", key, e)
+                logger.warning("demo_menu: failed to build scene '%s': %s", key, e)
                 self._error_msg = f"Failed to load demo scene '{key}': {e}"
                 self._error_timer = 3.0
 

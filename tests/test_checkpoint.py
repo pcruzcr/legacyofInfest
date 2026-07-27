@@ -4,9 +4,11 @@ System: tests
 Description: Tests for Checkpoint single-activation and event emission.
 """
 from __future__ import annotations
+
 import pygame
-from src.framework.stage.checkpoint import Checkpoint
+
 from src.engine.core.event_bus import EventBus
+from src.framework.stage.checkpoint import Checkpoint
 
 
 class TestCheckpointActivation:

@@ -5,9 +5,11 @@ Description: Regression — FIX-5: input_manager is injected as 3rd arg
 to player.update() and state machine uses is_action_held/is_action_just_pressed.
 """
 from __future__ import annotations
+
 import pygame
-from src.engine.input.input_manager import InputManager
+
 from src.engine.input.action_map import Action
+from src.engine.input.input_manager import InputManager
 from src.framework.entities.player import Player
 
 

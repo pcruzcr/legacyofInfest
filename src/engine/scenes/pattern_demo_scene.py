@@ -4,49 +4,51 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
-import pygame
 import numpy as np
+import pygame
 
 from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
-    COLOR_BG,
-    COLOR_TEXT,
-    COLOR_HIGHLIGHT,
+    BOTTOM_BAR_H,
+    BOTTOM_BAR_Y,
     COLOR_ACCENT,
-    COLOR_DIVIDER,
-    COLOR_TOP_BAR_BG,
+    COLOR_BG,
     COLOR_BOTTOM_BAR_BG,
-    FONT_SMALL,
-    FONT_MEDIUM,
+    COLOR_DIVIDER,
+    COLOR_HIGHLIGHT,
+    COLOR_TEXT,
+    COLOR_TOP_BAR_BG,
     FONT_LARGE,
-    RIGHT_PANEL_W,
-    RIGHT_PANEL_X,
+    FONT_MEDIUM,
+    FONT_SMALL,
     PANEL_H,
     PANEL_SIZE,
-    TOP_BAR_Y,
+    RIGHT_PANEL_W,
+    RIGHT_PANEL_X,
     TOP_BAR_H,
-    BOTTOM_BAR_Y,
-    BOTTOM_BAR_H,
-    draw_top_bar,
+    TOP_BAR_Y,
+    FrameThrottle,
+    SourceSurfaceManager,
+    build_default_sources,
     draw_bottom_bar,
     draw_bottom_bar_error,
-    draw_panel_border,
     draw_divider,
+    draw_panel_border,
     draw_save_notification,
+    draw_top_bar,
     save_png,
-    build_default_sources,
-    SourceSurfaceManager,
-    FrameThrottle,
 )
 from src.engine.scenes.demo_layout import COLOR_ERROR
 from src.engine.utils.asset_loader import AssetLoader
-from src.framework.processing.vision_tools import VisionTools
 from src.framework.processing.pattern_recognition_tools import (
     PatternRecognitionTools,
     TrainedModel,
 )
+from src.framework.processing.vision_tools import VisionTools
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -134,7 +136,7 @@ class PatternDemoScene(BaseScene):
                 self._error_msg = "Default model not found"
                 self._error_timer = 2.0
         except (OSError, ValueError, ImportError) as e:
-            logging.warning("pattern_demo: model load error: %s", e)
+            logger.warning("pattern_demo: model load error: %s", e)
             self._error_msg = f"Model load error: {e}"[:60]
             self._error_timer = 2.0
 
@@ -281,7 +283,7 @@ class PatternDemoScene(BaseScene):
                 self._cached_result_surf = None
                 self._param_changed = True
             except (OSError, ValueError, ImportError) as e:
-                logging.warning("pattern_demo: text input model load failed: %s", e)
+                logger.warning("pattern_demo: text input model load failed: %s", e)
                 self._error_msg = f"Failed: {e}"[:60]
                 self._error_timer = 2.0
                 self._load_default_model()
@@ -299,7 +301,7 @@ class PatternDemoScene(BaseScene):
 
         # Check for printable characters via event unicode
         # (simplified: only alphanumeric, underscore, dot, dash)
-        for key, char in _get_printable_keys(im):
+        for _key, char in _get_printable_keys(im):
             self._text_buffer += char
 
     def _compute_result(self) -> None:
@@ -365,7 +367,7 @@ class PatternDemoScene(BaseScene):
 
             self._error_msg = ""
         except (ValueError, IndexError, ZeroDivisionError, pygame.error, np.linalg.LinAlgError) as e:
-            logging.warning("pattern_demo: compute error: %s", e)
+            logger.warning("pattern_demo: compute error: %s", e)
             self._error_msg = f"Error: {e}"[:60]
             self._error_timer = 2.0
 
@@ -402,7 +404,7 @@ class PatternDemoScene(BaseScene):
                 y = data["labels"]
                 self._dataset_samples = [(X[i], str(y[i])) for i in range(min(len(X), 16))]
             except (ValueError, OSError, KeyError) as e:
-                logging.warning("pattern_demo: dataset load failed: %s", e)
+                logger.warning("pattern_demo: dataset load failed: %s", e)
         # Generate random if empty
         if not self._dataset_samples:
             feat_dim = len(reference_features) if reference_features is not None else self._expected_feature_dim()
@@ -530,7 +532,7 @@ class PatternDemoScene(BaseScene):
                     scaled = pygame.transform.scale(report_surf, PANEL_SIZE)
                     return scaled
             except (ImportError, RuntimeError, ValueError) as e:
-                logging.warning("pattern_demo: confusion report failed: %s", e)
+                logger.warning("pattern_demo: confusion report failed: %s", e)
 
         # Fallback: manual grid rendering
         if not ev or "confusion_matrix" not in ev:
@@ -630,7 +632,7 @@ class PatternDemoScene(BaseScene):
             sub = src.subsurface(rect)
             return pygame.transform.scale(sub, size)
         except (pygame.error, ValueError, IndexError) as e:
-            logging.warning("pattern_demo: subsurface failed: %s", e)
+            logger.warning("pattern_demo: subsurface failed: %s", e)
             s = pygame.Surface(size)
             s.fill((40, 40, 60))
             return s
@@ -722,7 +724,7 @@ class PatternDemoScene(BaseScene):
             try:
                 self._tree_structure = self._extract_sklearn_tree(model.estimators_[0])
             except (AttributeError, IndexError, ValueError) as e:
-                logging.warning("pattern_demo: tree extraction failed: %s", e)
+                logger.warning("pattern_demo: tree extraction failed: %s", e)
                 self._tree_structure = None
         else:
             self._tree_structure = None
@@ -738,7 +740,7 @@ class PatternDemoScene(BaseScene):
         try:
             values = tree.value
         except (AttributeError, IndexError) as e:
-            logging.warning("pattern_demo: sklearn tree value access failed: %s", e)
+            logger.warning("pattern_demo: sklearn tree value access failed: %s", e)
             values = None
         _classes = getattr(tree_model, "classes_", None)
         if _classes is not None:
@@ -834,9 +836,9 @@ class PatternDemoScene(BaseScene):
 
         method = FEATURE_METHODS[self._method_idx]
         text = (
-            "  [L] Load model  |  [M] Cycle method ({method})  |  "
+            f"  [L] Load model  |  [M] Cycle method ({method})  |  "
             "[WASD] Move rect  |  [+/-] Resize  |  [TAB] Mode  |  [R] Reload default"
-        ).format(method=method)
+        )
         draw_bottom_bar(surface, text)
 
     def _draw_text_input(self, surface: pygame.Surface) -> None:

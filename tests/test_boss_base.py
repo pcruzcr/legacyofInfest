@@ -5,7 +5,9 @@ Description: Tests for BossBase phase management, phase transitions,
 and damage handling.
 """
 from __future__ import annotations
+
 import pygame
+
 from src.framework.entities.boss_base import BossBase, BossPhase
 from src.framework.entities.enemy_base import EnemyState
 

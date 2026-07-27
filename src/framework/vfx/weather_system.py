@@ -5,7 +5,7 @@ import random
 import pygame
 
 from src.engine.core import settings
-from src.framework.vfx.particle_system import Particle
+from src.framework.vfx.particle_system import ParticleEmitter
 
 
 class WeatherSystem:
@@ -20,7 +20,7 @@ class WeatherSystem:
     }
 
     def __init__(self, climate: str = "clear") -> None:
-        self._particles: list[Particle] = []
+        self._emitter = ParticleEmitter()
         self._timer: float = 0.0
         self._climate: str = climate
         self._overlay = pygame.Surface(
@@ -40,12 +40,16 @@ class WeatherSystem:
         if climate == self._climate:
             return
         self._climate = climate
-        self._particles.clear()
+        self._emitter.clear()
         self._set_climate_params()
 
     @property
     def climate(self) -> str:
         return self._climate
+
+    @property
+    def _particles(self) -> list:  # backward compat for tests
+        return []
 
     def update(self, dt: float, camera_offset: pygame.Vector2) -> None:
         self._timer += dt
@@ -58,20 +62,17 @@ class WeatherSystem:
                 self._spawn_particle(camera_offset)
                 spawned += 1
 
-        for p in self._particles:
-            p.update(dt)
-        self._particles = [p for p in self._particles if not p.is_dead]
+        self._emitter.update(dt)
 
     def draw(self, surface: pygame.Surface, camera_offset: pygame.Vector2) -> None:
-        for p in self._particles:
-            p.draw(surface, camera_offset)
+        self._emitter.draw(surface, camera_offset)
 
         if self._overlay_alpha > 0:
             self._overlay.fill((*self._overlay_color, self._overlay_alpha))
             surface.blit(self._overlay, (0, 0))
 
     def clear(self) -> None:
-        self._particles.clear()
+        self._emitter.clear()
 
     def _spawn_particle(self, camera_offset: pygame.Vector2) -> None:
         sx = camera_offset.x + random.uniform(-20, settings.INTERNAL_WIDTH + 20)
@@ -79,32 +80,27 @@ class WeatherSystem:
         color = self._get_particle_color()
 
         if self._climate == "rain":
-            self._particles.append(Particle(
-                sx, sy,
-                -20 + self._wind, 280 + random.uniform(-40, 40),
-                random.uniform(0.3, 0.6),
-                random.randint(1, 2),
-                color,
-            ))
+            self._emitter.emit_directed(
+                sx, sy, angle=90, speed=280,
+                count=1, lifetime=random.uniform(0.3, 0.6),
+                size=(1, 2), color=color, spread=5,
+                gravity=980, friction=0.99,
+            )
         elif self._climate == "snow":
-            self._particles.append(Particle(
-                sx, sy,
-                random.uniform(-10, 10) + self._wind * 0.3,
-                random.uniform(30, 60),
-                random.uniform(2.0, 4.0),
-                random.randint(2, 4),
-                color,
-            ))
+            self._emitter.emit_directed(
+                sx, sy, angle=90, speed=random.uniform(30, 60),
+                count=1, lifetime=random.uniform(2.0, 4.0),
+                size=(2, 4), color=color, spread=20,
+                gravity=50, friction=0.95,
+            )
         elif self._climate == "storm":
-            gust = random.choice([-1, 1]) * random.uniform(50, 100)
-            self._particles.append(Particle(
-                sx, sy,
-                gust,
-                280 + random.uniform(-60, 60),
-                random.uniform(0.2, 0.5),
-                random.randint(1, 3),
-                color,
-            ))
+            random.choice([-1, 1]) * random.uniform(50, 100)
+            self._emitter.emit_directed(
+                sx, sy, angle=90, speed=280,
+                count=1, lifetime=random.uniform(0.3, 0.5),
+                size=(1, 3), color=color, spread=10,
+                gravity=980, friction=0.99,
+            )
 
     def _get_particle_color(self) -> tuple[int, int, int]:
         if self._climate == "rain":
@@ -116,7 +112,6 @@ class WeatherSystem:
         return (200, 200, 200)
 
     def get_ambient_audio_key(self) -> str | None:
-        """Return the ambient audio filename (no extension) for this climate, or None."""
         audio_map: dict[str, str | None] = {
             "clear": None,
             "rain": "rain",

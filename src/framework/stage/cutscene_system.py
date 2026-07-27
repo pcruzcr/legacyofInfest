@@ -6,8 +6,12 @@ Description: Scripted cutscene system supporting camera moves, dialogue,
 animations, and scene transitions.
 """
 from __future__ import annotations
+
+from collections.abc import Callable
+from typing import Any
+
 import pygame
-from typing import Any, Callable
+
 from src.engine.core import settings
 
 
@@ -179,10 +183,29 @@ class CutsceneScript:
                     self._callback()
 
     def draw(self, surface: pygame.Surface) -> None:
-        if not self._active:
+        """Render only the action currently playing.
+
+        AUD-040: this used to loop over *every remaining* action::
+
+            for i in range(self._index, len(self._actions)):
+                self._actions[i].draw(surface)
+
+        A pending action has ``_elapsed == 0``, and ``FadeAction.draw`` maps
+        elapsed 0 on a fade-*in* to alpha 255 — fully opaque black. So any
+        script containing a later fade-in painted the screen solid black from
+        its very first frame, for the script's entire duration.
+
+        That is precisely the reported symptom: launching a stage showed a black
+        screen for ~2 s before the world appeared. The stage was rendering
+        correctly the whole time, underneath an opaque overlay belonging to a
+        step that had not started yet.
+
+        A cutscene is a sequence, not a stack: exactly one step is on screen at
+        a time.
+        """
+        if not self._active or not (0 <= self._index < len(self._actions)):
             return
-        for i in range(self._index, len(self._actions)):
-            self._actions[i].draw(surface)
+        self._actions[self._index].draw(surface)
 
     @property
     def active(self) -> bool:

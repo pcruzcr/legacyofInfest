@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import logging
 import threading
-from typing import TYPE_CHECKING, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import pygame
 
 from src.engine.core import settings
 from src.engine.scene.base_scene import BaseScene
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -33,6 +36,7 @@ class LoadingScene(BaseScene):
         super().__init__(context)
         self._next_scene = next_scene
         self._tasks = tasks or []
+        self._lock = threading.Lock()
         self._progress: float = 0.0
         self._total_weight: float = max(sum(t.weight for t in self._tasks), 0.01)
         self._current_task_name: str = ""
@@ -51,26 +55,35 @@ class LoadingScene(BaseScene):
         self._next_scene = scene
 
     def add_task(self, task: LoadTask) -> None:
-        self._tasks.append(task)
-        self._total_weight = max(sum(t.weight for t in self._tasks), 0.01)
+        with self._lock:
+            self._tasks.append(task)
+            self._total_weight = max(sum(t.weight for t in self._tasks), 0.01)
 
     def _load_worker(self) -> None:
         completed = 0.0
         for task in self._tasks:
-            self._current_task_name = task.name
+            with self._lock:
+                self._current_task_name = task.name
             try:
                 task.fn()
             except Exception as e:
-                logging.warning("loading_scene: task '%s' failed: %s", task.name, e)
-                self._current_task_name = f"Error: {e}"
+                logger.warning("loading_scene: task '%s' failed: %s", task.name, e)
+                with self._lock:
+                    self._current_task_name = f"Error: {e}"
             task.done = True
             completed += task.weight
-            self._progress = completed / self._total_weight
-        self._loading_done = True
+            with self._lock:
+                self._progress = completed / self._total_weight
+        with self._lock:
+            self._loading_done = True
 
     def on_enter(self) -> None:
-        self._progress = 0.0
-        self._loading_done = False
+        if self._thread is not None and self._thread.is_alive():
+            self._thread.join(timeout=5.0)
+        with self._lock:
+            self._progress = 0.0
+            self._loading_done = False
+            self._current_task_name = ""
         self._startup_alpha = 0.0
         self._startup_done = False
         self._fade_out = 1.0
@@ -80,7 +93,35 @@ class LoadingScene(BaseScene):
             self._thread = threading.Thread(target=self._load_worker, daemon=True)
             self._thread.start()
         else:
-            self._loading_done = True
+            with self._lock:
+                self._loading_done = True
+
+    def on_exit(self) -> None:
+        """Wait for the loader thread before the scene goes away.
+
+        AUD-042: ``BaseScene.on_exit`` is abstract and ``LoadingScene`` never
+        implemented it, which made the class **impossible to instantiate** —
+        ``TypeError: Can't instantiate abstract class LoadingScene``. The
+        loading screen has therefore never been usable, which is also why
+        ``set_next_scene`` and ``add_task`` showed up as unreferenced in the
+        dead-code scan (AUD-022).
+
+        Joining matters beyond satisfying the ABC: the worker is a daemon
+        thread that writes to ``self._progress`` and ``self._current_task_name``
+        under a lock. Letting the scene be collected while it still runs means
+        a background thread mutating a dead object, and asset loads continuing
+        to compete for I/O with whatever scene comes next.
+        """
+        thread = self._thread
+        if thread is not None and thread.is_alive():
+            thread.join(timeout=5.0)
+            if thread.is_alive():
+                logger.warning(
+                    "LoadingScene: loader thread did not finish within 5 s; "
+                    "continuing without it",
+                )
+        self._thread = None
+        self._is_loading = False
 
     def update(self, dt: float) -> None:
         if not self._startup_done:
@@ -89,7 +130,10 @@ class LoadingScene(BaseScene):
                 self._startup_done = True
             return
 
-        if self._loading_done and not self._fading_out:
+        with self._lock:
+            loading_done = self._loading_done
+
+        if loading_done and not self._fading_out:
             self._fading_out = True
 
         if self._fading_out:
@@ -100,6 +144,9 @@ class LoadingScene(BaseScene):
     def draw(self, surface: pygame.Surface) -> None:
         w, h = settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT
         surface.fill((10, 10, 20))
+        with self._lock:
+            progress = self._progress
+            task_name = self._current_task_name
 
         # Loading bar
         bar_w = 200
@@ -111,8 +158,8 @@ class LoadingScene(BaseScene):
         pygame.draw.rect(surface, (30, 30, 50), bg_rect)
         pygame.draw.rect(surface, (60, 60, 80), bg_rect, 1)
 
-        if self._progress > 0:
-            fill_w = int(bar_w * self._progress)
+        if progress > 0:
+            fill_w = int(bar_w * progress)
             for i in range(bar_h):
                 t = i / bar_h
                 r = int(80 + t * 60)
@@ -120,13 +167,13 @@ class LoadingScene(BaseScene):
                 b = int(200 + t * 55)
                 pygame.draw.line(surface, (r, g, b), (bx, by + i), (bx + fill_w, by + i))
 
-        if self._current_task_name:
-            label = self._font_info.render(f"Loading {self._current_task_name}...", True, (150, 150, 170))
+        if task_name:
+            label = self._font_info.render(f"Loading {task_name}...", True, (150, 150, 170))
         else:
             label = self._font_info.render("Loading...", True, (150, 150, 170))
         surface.blit(label, (bx, by - 18))
 
-        pct = self._font_info.render(f"{int(self._progress * 100)}%", True, (200, 200, 220))
+        pct = self._font_info.render(f"{int(progress * 100)}%", True, (200, 200, 220))
         px = bx + bar_w + 8
         surface.blit(pct, (px, by + 1))
 

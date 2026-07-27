@@ -8,7 +8,7 @@ position for standing and crouching states.
 import pygame
 
 from src.framework.entities.player import Player
-from src.framework.entities.player_states import CrouchingState
+from src.framework.entities.states import CrouchingState
 
 
 class TestPlayerHurtboxDimensions:

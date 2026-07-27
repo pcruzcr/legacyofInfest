@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from enum import Enum
+
+from pydantic import BaseModel, Field
 
 
 class Difficulty(Enum):
@@ -10,18 +11,16 @@ class Difficulty(Enum):
     HARD = "hard"
 
 
-@dataclass
-class DifficultyConfig:
+class DifficultyConfig(BaseModel):
     label: str
-    incoming_damage_mult: float = 1.0
-    outgoing_damage_mult: float = 1.0
-    enemy_health_mult: float = 1.0
-    heal_mult: float = 1.0
-    knockback_mult: float = 1.0
-    parry_window: float = 0.25
-    invincibility_duration: float = 1.5
-    combo_window: float = 0.5
-    damage_scaling: list[float] = field(default_factory=lambda: [1.0, 1.5, 2.0])
+    incoming_damage_mult: float = Field(default=1.0, ge=0.0, le=3.0)
+    outgoing_damage_mult: float = Field(default=1.0, ge=0.0, le=3.0)
+    enemy_health_mult: float = Field(default=1.0, ge=0.0, le=3.0)
+    heal_mult: float = Field(default=1.0, ge=0.0, le=3.0)
+    knockback_mult: float = Field(default=1.0, ge=0.0, le=3.0)
+    parry_window: float = Field(default=0.25, ge=0.0, le=1.0)
+    invincibility_duration: float = Field(default=1.5, ge=0.0, le=5.0)
+    combo_window: float = Field(default=0.5, ge=0.0, le=2.0)
 
 
 DIFFICULTY_PRESETS: dict[Difficulty, DifficultyConfig] = {
@@ -35,7 +34,6 @@ DIFFICULTY_PRESETS: dict[Difficulty, DifficultyConfig] = {
         parry_window=0.3,
         invincibility_duration=2.0,
         combo_window=0.6,
-        damage_scaling=[1.0, 1.8, 2.5],
     ),
     Difficulty.NORMAL: DifficultyConfig(
         label="Normal",
@@ -47,7 +45,6 @@ DIFFICULTY_PRESETS: dict[Difficulty, DifficultyConfig] = {
         parry_window=0.2,
         invincibility_duration=1.5,
         combo_window=0.5,
-        damage_scaling=[1.0, 1.5, 2.0],
     ),
     Difficulty.HARD: DifficultyConfig(
         label="Hard",
@@ -59,7 +56,6 @@ DIFFICULTY_PRESETS: dict[Difficulty, DifficultyConfig] = {
         parry_window=0.15,
         invincibility_duration=1.0,
         combo_window=0.35,
-        damage_scaling=[1.0, 1.2, 1.5],
     ),
 }
 

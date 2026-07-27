@@ -16,15 +16,26 @@ from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
     BOTTOM_BAR_Y,
-    COLOR_BG, COLOR_TEXT, COLOR_HIGHLIGHT, COLOR_ACCENT,
-    FONT_SMALL, FONT_MEDIUM,
-    draw_top_bar, draw_bottom_bar,
-    build_default_sources, SourceSurfaceManager,
-    PANEL_SIZE, PANEL_H, TOP_BAR_H,
-    draw_panel_border, RIGHT_PANEL_X,
+    COLOR_ACCENT,
+    COLOR_BG,
+    COLOR_HIGHLIGHT,
+    COLOR_TEXT,
+    FONT_MEDIUM,
+    FONT_SMALL,
+    PANEL_H,
+    PANEL_SIZE,
+    RIGHT_PANEL_X,
+    TOP_BAR_H,
+    SourceSurfaceManager,
+    build_default_sources,
+    draw_bottom_bar,
+    draw_panel_border,
+    draw_top_bar,
 )
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.processing.filter_tools import FilterTools
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -105,7 +116,7 @@ class PipelineBuilderScene(BaseScene):
             self._cached_result = result
             self._error_msg = ""
         except (pygame.error, ValueError, ZeroDivisionError) as e:
-            logging.warning("pipeline_builder: recompute error: %s", e)
+            logger.warning("pipeline_builder: recompute error: %s", e)
             self._error_msg = f"Pipeline error: {e}"[:60]
             self._error_timer = 2.0
 

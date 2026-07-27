@@ -5,8 +5,10 @@ Description: Tests for ColorTools: RGB↔HSV↔HSL↔CMYK round-trips,
 alpha_blend, apply_tint, surface_to_array.
 """
 from __future__ import annotations
+
 import numpy as np
 import pygame
+
 from src.framework.processing.color_tools import ColorTools
 
 
@@ -56,15 +58,15 @@ class TestColorConversions:
         assert c == 0.0 and m == 0.0 and y == 0.0
 
     def test_hsv_black_and_white(self) -> None:
-        h, s, v = ColorTools.rgb_to_hsv(0, 0, 0)
+        _h, s, v = ColorTools.rgb_to_hsv(0, 0, 0)
         assert v == 0.0
-        h, s, v = ColorTools.rgb_to_hsv(255, 255, 255)
+        _h, s, v = ColorTools.rgb_to_hsv(255, 255, 255)
         assert s == 0.0 and v == 1.0
 
     def test_hsl_black_and_white(self) -> None:
-        h, s, lightness = ColorTools.rgb_to_hsl(0, 0, 0)
+        _h, s, lightness = ColorTools.rgb_to_hsl(0, 0, 0)
         assert lightness == 0.0
-        h, s, lightness = ColorTools.rgb_to_hsl(255, 255, 255)
+        _h, s, lightness = ColorTools.rgb_to_hsl(255, 255, 255)
         assert lightness == 1.0 and s == 0.0
 
 

@@ -9,7 +9,7 @@ color histogram), contours, and bounding boxes.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal, cast
+from typing import cast
 
 import numpy as np
 import pygame
@@ -122,7 +122,7 @@ class VisionTools:
         from skimage.measure import regionprops
         cls._validate_surface(mask_surface)
         binary = cls._to_binary_array(mask_surface)
-        num_labels, label_array = cv2.connectedComponents(binary, connectivity=8)
+        _num_labels, label_array = cv2.connectedComponents(binary, connectivity=8)
         regions: list[RegionInfo] = []
         props = regionprops(label_array)
         for prop in props:
@@ -166,7 +166,7 @@ class VisionTools:
     @classmethod
     def extract_features(
         cls, surface: pygame.Surface,
-        method: Literal["hog", "lbp", "color_hist", "combined"] = "hog"
+        method: str = "hog"
     ) -> np.ndarray:
         cls._validate_surface(surface)
         if method == "hog":

@@ -9,9 +9,11 @@ DI NOTE (Fase 1): Every scene now receives a GameContext via __init__,
 eliminating global App._instance lookups. Subclasses must call super().__init__(context).
 """
 from __future__ import annotations
+
 import abc
-import pygame
 from typing import TYPE_CHECKING, Any
+
+import pygame
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -45,6 +47,9 @@ class BaseScene(abc.ABC):
 
     def start(self) -> None:
         """Called after awake, when the scene becomes active."""
+
+    def process_events(self, events: list[pygame.event.Event]) -> None:
+        """Called every frame with the raw pygame event list."""
 
     @abc.abstractmethod
     def on_enter(self) -> None:

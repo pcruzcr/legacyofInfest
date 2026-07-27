@@ -3,8 +3,17 @@ Module: boss_rush_mode
 System: framework.stage
 Academic Unit: N/A
 Description: Boss Rush mode — consecutive boss gauntlet with health carry-over and scoring.
+
+.. warning::
+   **NOT WIRED (AUD-022).** This module is complete and tested in isolation, but
+   nothing in the shipping game constructs or calls it — there is no menu entry,
+   scene or hook that reaches it. It is retained deliberately, as a foundation
+   for the feature and as teaching material, but the project documentation
+   should not describe the feature as delivered until an entry point exists.
+   Tracked as refactor item R-11.
 """
 from __future__ import annotations
+
 from typing import Any
 
 

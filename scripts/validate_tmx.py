@@ -73,7 +73,7 @@ def validate_tmx(path: Path) -> bool:
         error("No tilesets defined")
     for ts in tilesets:
         name = ts.get("name", "")
-        first_gid = int(ts.get("firstgid", 1))
+        int(ts.get("firstgid", 1))
         img = ts.find("image")
         if img is not None:
             src = img.get("source", "")
@@ -93,7 +93,7 @@ def validate_tmx(path: Path) -> bool:
         warn(f"Unknown climate '{prop_dict['climate']}', known: {sorted(KNOWN_CLIMATES)}")
 
     layers = root.findall("layer")
-    layer_names = [l.get("name", "") for l in layers]
+    layer_names = [line.get("name", "") for line in layers]
     for req_layer in REQUIRED_LAYERS:
         if req_layer not in layer_names:
             error(f"Missing required layer: '{req_layer}'")
@@ -119,7 +119,7 @@ def validate_tmx(path: Path) -> bool:
     object_groups = root.findall("objectgroup")
     has_player_spawn = False
     for og in object_groups:
-        og_name = og.get("name", "")
+        og.get("name", "")
         for obj in og.findall("object"):
             obj_type = obj.get("type", "")
             obj_name = obj.get("name", "")

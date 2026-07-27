@@ -5,8 +5,11 @@ Description: Tests for CurveTools: bezier, b_spline, nurbs, catmull_rom,
 sample_path, build_bezier_path.
 """
 from __future__ import annotations
+
 import math
+
 import pygame
+
 from src.framework.processing.curve_tools import CurveTools
 
 

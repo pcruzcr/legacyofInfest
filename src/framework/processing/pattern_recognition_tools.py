@@ -8,16 +8,15 @@ matplotlib-based training report generation (confusion matrix,
 per-class accuracy, feature importance).
 """
 from __future__ import annotations
-from typing import Any
 
 import io
 import logging
 import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
-
 import pygame
 
 from src.framework.processing.vision_tools import VisionTools
@@ -25,9 +24,19 @@ from src.framework.processing.vision_tools import VisionTools
 logger = logging.getLogger(__name__)
 
 
+if TYPE_CHECKING:
+    from sklearn.pipeline import Pipeline
+
+
 @dataclass
 class TrainedModel:
     model_type: str
+    # AUD-032: annotated as `Pipeline` with no import anywhere in the module.
+    # `from __future__ import annotations` made the annotation lazy, so this
+    # never raised at import time — but every tool that resolves annotations
+    # (typing.get_type_hints, pydantic, a dataclass with slots, IDE inspection)
+    # would fail on it, and readers had no way to find the type. Imported under
+    # TYPE_CHECKING so it costs nothing at runtime.
     estimator: Pipeline
     classes: list[str]
     feature_method: str
@@ -50,22 +59,6 @@ class PatternRecognitionTools:
     _model_registry: dict[str, TrainedModel] = {}
 
     @classmethod
-    def extract_hog(cls, surface: pygame.Surface) -> np.ndarray:
-        return VisionTools.extract_hog(surface)
-
-    @classmethod
-    def extract_lbp(cls, surface: pygame.Surface) -> np.ndarray:
-        return VisionTools.extract_lbp(surface)
-
-    @classmethod
-    def extract_color_histogram(cls, surface: pygame.Surface, bins: int = 256) -> np.ndarray:
-        return VisionTools.extract_color_histogram(surface, bins)
-
-    @classmethod
-    def extract_combined(cls, surface: pygame.Surface) -> np.ndarray:
-        return VisionTools.extract_features(surface, method="combined")
-
-    @classmethod
     def train(
         cls,
         X: np.ndarray,
@@ -74,8 +67,8 @@ class PatternRecognitionTools:
         feature_method: str = "hog",
         **kwargs: Any,
     ) -> TrainedModel:
-        from sklearn.preprocessing import StandardScaler
         from sklearn.pipeline import Pipeline
+        from sklearn.preprocessing import StandardScaler
         cls._validate_dataset(X, y)
         X = X.astype(np.float32)
         scaler = StandardScaler()
@@ -119,7 +112,7 @@ class PatternRecognitionTools:
         report = classification_report(y_test, y_pred, output_dict=False, zero_division=0)
         cm = confusion_matrix(y_test, y_pred)
         per_class: dict[str, float] = {}
-        for i, cls_name in enumerate(model.classes):
+        for _i, cls_name in enumerate(model.classes):
             mask = y_test == cls_name
             if mask.sum() > 0:
                 per_class[cls_name] = float(np.mean(y_pred[mask] == cls_name))
@@ -145,16 +138,39 @@ class PatternRecognitionTools:
 
     @classmethod
     def load_model(cls, path: str | Path) -> TrainedModel:
+        """Load a trained model from a joblib/pickle file.
+
+        .. danger::
+           **Only load model files you produced or trust (AUD-038).**
+           ``joblib.load`` is built on ``pickle``, and unpickling executes
+           arbitrary code contained in the file — a malicious ``.pkl`` runs
+           whatever it likes with this process's privileges. That matters here
+           because this engine is used in a classroom: a model file passed
+           between students, downloaded from a shared drive, or submitted as
+           coursework is untrusted input by definition.
+
+           There is no way to make ``pickle`` safe for untrusted data. To train
+           and distribute a model reproducibly, ship the training script and
+           the dataset rather than the serialised estimator — see
+           ``tools/build_dataset.py`` and ``scripts/train_reference_model.py``.
+        """
         import joblib
         path = Path(path)
         if not path.exists():
             raise FileNotFoundError(
                 f"PatternRecognitionTools.load_model: file not found: {path}"
             )
-        import warnings
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", DeprecationWarning)
-            model = joblib.load(str(path))
+
+        logger.warning(
+            "Loading pickled model from %s — unpickling executes arbitrary code. "
+            "Only do this for files you trust.", path,
+        )
+        # Do NOT suppress warnings here. sklearn's InconsistentVersionWarning is
+        # exactly what tells you a model was trained under a different library
+        # version and may now produce silently wrong predictions; the previous
+        # code hid it (AUD-016).
+        model = joblib.load(str(path))
+
         if not isinstance(model, TrainedModel):
             raise TypeError(
                 f"PatternRecognitionTools.load_model: loaded object is not a TrainedModel, "
@@ -166,7 +182,8 @@ class PatternRecognitionTools:
     def register_model(cls, name: str, model: TrainedModel) -> None:
         if name in cls._model_registry:
             logger.warning(
-                f"PatternRecognitionTools.register_model: overwriting existing model '{name}'"
+                "PatternRecognitionTools.register_model: overwriting existing model '%s'",
+                name,
             )
         cls._model_registry[name] = model
 
@@ -208,7 +225,7 @@ class PatternRecognitionTools:
         if features.ndim == 1:
             features = features.reshape(1, -1)
         proba = model.estimator.predict_proba(features)[0]
-        return {str(cls_name): float(p) for cls_name, p in zip(model.classes, proba)}
+        return {str(cls_name): float(p) for cls_name, p in zip(model.classes, proba, strict=False)}
 
     @classmethod
     def predict(
@@ -219,7 +236,7 @@ class PatternRecognitionTools:
     ) -> str:
         cls._validate_model(model)
         method = method or model.feature_method
-        features = VisionTools.extract_features(surface, method=method)  # type: ignore[arg-type]
+        features = VisionTools.extract_features(surface, method=method)
         return cls.classify(features, model)
 
     @classmethod
@@ -345,7 +362,7 @@ class PatternRecognitionTools:
             ax_acc.set_ylabel("Accuracy")
             ax_acc.set_title("Per-Class Accuracy")
             ax_acc.legend()
-            for bar, acc in zip(bars, accs):
+            for bar, acc in zip(bars, accs, strict=False):
                 ax_acc.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.02,
                             f"{acc:.2f}", ha="center", va="bottom", fontsize=8)
         else:

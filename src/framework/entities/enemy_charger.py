@@ -82,7 +82,7 @@ class EnemyCharger(EnemyBase):
             new_x = self.position.x + self._charge_dir * self._charge_speed * dt
             entity_rect = pygame.Rect(int(new_x), int(self.position.y), self.rect.width, self.rect.height)
             blocked = False
-            collision_rects = getattr(self, "_collision_rects", [])
+            collision_rects = self._collision_rects
             for tile in collision_rects:
                 if entity_rect.colliderect(tile):
                     blocked = True

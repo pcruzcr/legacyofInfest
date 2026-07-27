@@ -67,6 +67,12 @@ class TutorialScene(BaseScene):
         self._fade_dir: int = -1
         self._ready: bool = False
         self._exit_requested: bool = False
+        # Where the fade-out should land. "story" = the player read the
+        # tutorial through to the end and is starting the game; "title" = the
+        # player backed out with CANCEL and expects to be where they came
+        # from. Conflating the two (AUD-009) meant Escape did not cancel —
+        # it force-started the campaign.
+        self._exit_target: str = "story"
         self._overlay: pygame.Surface | None = None
         self._font_title = pygame.font.Font(None, 26)
         self._font_text = pygame.font.Font(None, 18)
@@ -76,6 +82,7 @@ class TutorialScene(BaseScene):
         self._fade_dir = -1
         self._ready = False
         self._exit_requested = False
+        self._exit_target = "story"
         self.context.scene_manager.transition.start_fade_in(0.5)
 
     def on_exit(self) -> None:
@@ -88,13 +95,23 @@ class TutorialScene(BaseScene):
         if self._exit_requested:
             self._fade_alpha = min(255, int(self._fade_alpha + 500 * dt))
             if self._fade_alpha >= 255:
-                from src.engine.scenes.title_scene import TitleScene
-                self.context.scene_manager.replace(TitleScene(self.context))
+                if self._exit_target == "title":
+                    from src.engine.scenes.title_scene import TitleScene
+                    self.context.scene_manager.replace(TitleScene(self.context))
+                else:
+                    from src.engine.scenes.story_scene import StoryScene
+                    self.context.scene_manager.replace(StoryScene(self.context, 1))
             return
         if not self._ready:
             self._fade_alpha = max(0, int(self._fade_alpha - 300 * dt))
             if self._fade_alpha <= 0:
                 self._ready = True
+            return
+        # CANCEL is checked first and returns: otherwise a frame carrying both
+        # CONFIRM and CANCEL would advance the step *and* exit.
+        if im.is_action_just_pressed(Action.CANCEL):
+            self._exit_requested = True
+            self._exit_target = "title"
             return
         if im.is_action_just_pressed(Action.CONFIRM) or \
                 im.is_action_just_pressed(Action.SHORT_ATTACK) or \
@@ -103,8 +120,7 @@ class TutorialScene(BaseScene):
                 self._step_index += 1
             else:
                 self._exit_requested = True
-        if im.is_action_just_pressed(Action.CANCEL):
-            self._exit_requested = True
+                self._exit_target = "story"
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill((10, 10, 20))

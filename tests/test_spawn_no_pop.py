@@ -5,7 +5,9 @@ Description: Regression — FIX-3: player spawns at correct y (160 for
 stage0) so feet align with floor at y=192, eliminating 32px pop-in.
 """
 from __future__ import annotations
+
 import pygame
+
 from src.framework.entities.player import Player
 
 

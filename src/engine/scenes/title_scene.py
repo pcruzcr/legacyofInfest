@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING
 
-import math
-
+import orjson
 import pygame
 
 from src.engine.core import settings
 from src.engine.core.events import Events
+from src.engine.core.user_settings import user_data_dir
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import BOTTOM_BAR_Y
@@ -16,8 +17,8 @@ from src.engine.scenes.options_scene import OptionsScene
 from src.engine.scenes.story_scene import StoryScene
 from src.engine.scenes.tutorial_scene import TutorialScene
 from src.engine.utils.asset_loader import AssetLoader
-from src.framework.vfx.particle_system import ParticleSystem
 from src.framework.vfx.hit_effects import HitEffects
+from src.framework.vfx.particle_system import ParticleSystem
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -185,29 +186,21 @@ class TitleScene(BaseScene):
         global _tutorial_seen_cache
         if _tutorial_seen_cache is not None:
             return _tutorial_seen_cache
-        from pathlib import Path
-        import json
-        import os
-        flag_path = Path(os.environ.get("APPDATA", str(Path("~/.config").expanduser()))) / "legacyofinfest" / "tutorial_seen.json"
+        flag_path = user_data_dir() / "tutorial_seen.json"
         try:
-            with open(flag_path, encoding="utf-8") as f:
-                data = json.load(f)
-                _tutorial_seen_cache = bool(data.get("seen", False))
-                return _tutorial_seen_cache
-        except (FileNotFoundError, json.JSONDecodeError):
+            data = orjson.loads(flag_path.read_bytes())
+            _tutorial_seen_cache = bool(data.get("seen", False))
+            return _tutorial_seen_cache
+        except (FileNotFoundError, orjson.JSONDecodeError):
             _tutorial_seen_cache = False
             return False
 
     def _mark_tutorial_seen(self) -> None:
         global _tutorial_seen_cache
         _tutorial_seen_cache = True
-        from pathlib import Path
-        import json
-        import os
-        flag_path = Path(os.environ.get("APPDATA", str(Path("~/.config").expanduser()))) / "legacyofinfest" / "tutorial_seen.json"
+        flag_path = user_data_dir() / "tutorial_seen.json"
         flag_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(flag_path, "w", encoding="utf-8") as f:
-            json.dump({"seen": True}, f)
+        flag_path.write_bytes(orjson.dumps({"seen": True}))
 
     def on_exit(self) -> None:
         audio = self.audio

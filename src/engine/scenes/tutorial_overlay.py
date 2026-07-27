@@ -9,8 +9,8 @@ from __future__ import annotations
 import pygame
 
 from src.engine.core import settings
-from src.engine.scenes.demo_common import COLOR_TEXT, COLOR_HIGHLIGHT, COLOR_ACCENT
-
+from src.engine.scenes.demo_common import COLOR_ACCENT, COLOR_HIGHLIGHT, COLOR_TEXT
+from src.engine.utils.surface_pool import get_pool
 
 TUTORIAL_CONTENT: dict[str, list[dict[str, str]]] = {
     "vector_lab": [
@@ -93,8 +93,11 @@ class TutorialOverlay:
             return
 
         step = self._steps[self._step]
-        overlay = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 200))
+        pool = get_pool()
+        overlay = pool.borrow(
+            settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT, pygame.SRCALPHA,
+            fill_color=(0, 0, 0, 200),
+        )
 
         box_w = 360
         box_h = 120
@@ -130,6 +133,7 @@ class TutorialOverlay:
         overlay.blit(step_info, (bx + 8, by + box_h - 18))
 
         surface.blit(overlay, (0, 0))
+        pool.return_surface(overlay)
 
 
 _TUTORIAL: TutorialOverlay | None = None

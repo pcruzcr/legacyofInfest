@@ -11,7 +11,6 @@ import pygame
 from src.engine.core import settings
 from src.engine.scenes.demo_common import COLOR_HIGHLIGHT
 
-
 _CODE_EXAMPLES: dict[str, list[str]] = {
     "normalize": [
         "def normalize(v: Vector2) -> Vector2:",
@@ -127,7 +126,9 @@ class CodePanel:
         if not self._active:
             return
 
-        lines = self._custom_lines if self._custom_lines is not None else _CODE_EXAMPLES.get(self._code_key, ["# no code available"])
+        lines = self._custom_lines
+        if lines is None:
+            lines = _CODE_EXAMPLES.get(self._code_key, ["# no code available"])
 
         if self._overlay is None or self._overlay.get_size() != (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT):
             self._overlay = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT), pygame.SRCALPHA)

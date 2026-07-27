@@ -1,10 +1,15 @@
 from __future__ import annotations
+
 import logging
 
 import pygame
+
 from src.engine.core import settings
 from src.engine.core.event_bus import EventBus
 from src.engine.core.events import Events
+
+logger = logging.getLogger(__name__)
+
 _MAX_LINES = 3
 _MAX_CHARS_PER_LINE = 58
 
@@ -32,7 +37,7 @@ class MessageBox:
                     settings.ASSETS_DIR / "fonts" / "game.ttf", 12,
                 )
             except (pygame.error, FileNotFoundError, PermissionError):
-                logging.warning("message_box: failed to load game.ttf font")
+                logger.warning("message_box: failed to load game.ttf font")
                 self._font = pygame.font.Font(None, 12)
 
         if hasattr(settings, "ASSETS_DIR"):
@@ -42,7 +47,7 @@ class MessageBox:
                     settings.ASSETS_DIR / "ui" / "message_arrow.png", size=(5, 7),
                 )
             except (pygame.error, FileNotFoundError, PermissionError):
-                logging.warning("message_box: failed to load message_arrow.png")
+                logger.warning("message_box: failed to load message_arrow.png")
                 self._arrow = None
         else:
             self._arrow = None

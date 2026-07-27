@@ -58,8 +58,8 @@ class TestStageTemplate:
             assert layer in content, f"Missing layer '{layer}' in stage_template.tmx"
 
     def test_inherits_from_stage_scene(self, context) -> None:
-        from student_templates.stage_template.stage_template import StageTemplate
         from src.framework.scenes.stage_scene import StageScene
+        from student_templates.stage_template.stage_template import StageTemplate
         assert issubclass(StageTemplate, StageScene)
 
     def test_has_stage_scene_attributes(self, context) -> None:
@@ -92,20 +92,23 @@ class TestBossTemplate:
 
     def test_constructs(self) -> None:
         import pygame
+
         from student_templates.boss_template.boss_template import BossTemplate
         boss = BossTemplate(pygame.Vector2(100, 100))
         assert boss is not None
 
     def test_inherits_from_boss_base(self) -> None:
         import pygame
-        from student_templates.boss_template.boss_template import BossTemplate
+
         from src.framework.entities.boss_base import BossBase
+        from student_templates.boss_template.boss_template import BossTemplate
         assert issubclass(BossTemplate, BossBase)
         boss = BossTemplate(pygame.Vector2(100, 100))
         assert boss is not None
 
     def test_has_required_methods(self) -> None:
         import pygame
+
         from student_templates.boss_template.boss_template import BossTemplate
         boss = BossTemplate(pygame.Vector2(100, 100))
         assert hasattr(boss, "_patrol_behavior")
@@ -116,12 +119,14 @@ class TestBossTemplate:
 
     def test_has_one_phase(self) -> None:
         import pygame
+
         from student_templates.boss_template.boss_template import BossTemplate
         boss = BossTemplate(pygame.Vector2(100, 100))
         assert len(boss.phases) == 1
 
     def test_has_boss_name(self) -> None:
         import pygame
+
         from student_templates.boss_template.boss_template import BossTemplate
         boss = BossTemplate(pygame.Vector2(100, 100))
         assert boss._boss_name == "Untitled Boss"

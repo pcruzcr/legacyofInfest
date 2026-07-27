@@ -12,8 +12,8 @@ if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
     from src.engine.ui.hud import HUD
     from src.framework.entities.player import Player
-    from src.framework.stage.stage_loader import StageData
     from src.framework.stage.checkpoint import Checkpoint
+    from src.framework.stage.stage_loader import StageData
 
 
 class ProgressionSystem:

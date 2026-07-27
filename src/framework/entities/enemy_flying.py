@@ -23,6 +23,7 @@ from src.engine.utils.asset_loader import AssetLoader
 from src.framework.entities.enemy_base import EnemyBase
 from src.framework.entities.flight_strategies import IFlightStrategy, make_strategy
 
+logger = logging.getLogger(__name__)
 
 class EnemyFlying(EnemyBase):
     """
@@ -119,7 +120,7 @@ class EnemyFlying(EnemyBase):
                 frames = AssetLoader.load_sprite_sheet(path, fw, fh)
                 self._sprite_frames[key] = frames
             except (pygame.error, FileNotFoundError, PermissionError):
-                logging.warning("enemy_flying: failed to load sprite %s", path)
+                logger.warning("enemy_flying: failed to load sprite %s", path)
 
     # ──────────────────────────────────────────────
     # Behavior implementations (Strategy delegation)

@@ -6,14 +6,16 @@ Description: High-level audio manager for music playback and sound effects.
 Never crashes on missing files — logs warning and continues silently.
 """
 from __future__ import annotations
+
 import logging
-import math
 from pathlib import Path
+
 import pygame
 
-from src.engine.core import settings
 from src.engine.audio.sound_bank import SoundBank
+from src.engine.core import settings
 
+logger = logging.getLogger(__name__)
 
 class AudioManager:
     """Manages music and SFX playback. Graceful fallback on missing assets."""
@@ -47,6 +49,14 @@ class AudioManager:
         self._ambient_active: bool = False
         self._ambient_sounds: dict[str, pygame.mixer.Sound] = {}
 
+    # NOTE (AUD-022): play_dynamic_music / stop_dynamic_music /
+    # set_music_intensity / update_dynamic_music used to live here. They were a
+    # second, complete implementation of layered dynamic music that nothing ever
+    # called — framework.audio.DynamicMusicSystem implements the same feature and
+    # *is* wired into StageScene. Two rival implementations of one feature, one
+    # of them dead, is worse than one: it doubles the surface that can rot and
+    # makes it unclear which is authoritative. The dead copy has been removed.
+
     def play_music(self, path: str | Path, loops: int = -1) -> None:
         """Play background music. -1 loops = infinite. Falls back silently."""
         path_str = str(path)
@@ -55,37 +65,22 @@ class AudioManager:
             pygame.mixer.music.set_volume(0.0 if self._muted else self._music_volume)
             pygame.mixer.music.play(loops=loops)
             self._current_music = path_str
-        except pygame.error as e:
-            logging.warning(f"AudioManager: no se pudo cargar música {path_str}: {e}")
+        except (pygame.error, FileNotFoundError, OSError) as e:  # BUG-074 FIX: pygame.error no atrapa FileNotFoundError
+            logger.warning("AudioManager: no se pudo cargar música %s: %s", path_str, e)
 
-    def play_dynamic_music(self, calm_path: str | Path, combat_path: str | Path) -> None:
-        """Start dynamic layered music with crossfade between calm and combat layers."""
-        try:
-            self._calm_sound = pygame.mixer.Sound(str(calm_path))
-            self._combat_sound = pygame.mixer.Sound(str(combat_path))
-            self._calm_channel = pygame.mixer.Channel(14)
-            self._combat_channel = pygame.mixer.Channel(15)
-            self._calm_channel.play(self._calm_sound, loops=-1)
-            self._combat_channel.play(self._combat_sound, loops=-1)
-            self._calm_volume = 1.0
-            self._combat_volume = 0.0
-            self._intensity = 0.0
-            self._target_intensity = 0.0
-            self._dynamic_music_active = True
-            self._calm_channel.set_volume(self._calm_volume * self._music_volume)
-            self._combat_channel.set_volume(self._combat_volume * self._music_volume)
-        except pygame.error as e:
-            logging.warning(f"AudioManager: no se pudo cargar música dinámica: {e}")
-            if self._calm_channel:
-                self._calm_channel.stop()
-            self._calm_channel = None
-            self._combat_channel = None
-            self._calm_sound = None
-            self._combat_sound = None
-            self._dynamic_music_active = False
+    def stop_music(self) -> None:
+        """Stop current music playback."""
+        pygame.mixer.music.stop()
+        self._current_music = None
+        self._stop_layered_channels()
 
-    def stop_dynamic_music(self) -> None:
-        """Stop dynamic music layers."""
+    def _stop_layered_channels(self) -> None:
+        """Silence the calm/combat crossfade channels if they are running.
+
+        Retained from the removed dynamic-music layer (see the note above
+        ``play_music``) because the channels are still allocated in ``__init__``
+        and must be stopped when music stops.
+        """
         self._dynamic_music_active = False
         if self._calm_channel:
             self._calm_channel.stop()
@@ -93,34 +88,6 @@ class AudioManager:
             self._combat_channel.stop()
         self._calm_sound = None
         self._combat_sound = None
-
-    def set_music_intensity(self, target: float, crossfade_speed: float = 1.0) -> None:
-        """Set target intensity (0.0=calm, 1.0=full combat) with crossfade speed."""
-        self._target_intensity = max(0.0, min(1.0, target))
-        self._crossfade_speed = crossfade_speed
-
-    def update_dynamic_music(self, dt: float) -> None:
-        """Update crossfade between music layers."""
-        if not self._dynamic_music_active:
-            return
-        diff = self._target_intensity - self._intensity
-        if abs(diff) > 0.01:
-            self._intensity += math.copysign(self._crossfade_speed * dt, diff)
-            self._intensity = max(0.0, min(1.0, self._intensity))
-        else:
-            self._intensity = self._target_intensity
-        self._calm_volume = 1.0 - self._intensity
-        self._combat_volume = self._intensity
-        if self._calm_channel:
-            self._calm_channel.set_volume(self._calm_volume * self._music_volume)
-        if self._combat_channel:
-            self._combat_channel.set_volume(self._combat_volume * self._music_volume)
-
-    def stop_music(self) -> None:
-        """Stop current music playback."""
-        pygame.mixer.music.stop()
-        self._current_music = None
-        self.stop_dynamic_music()
 
     def pause_music(self) -> None:
         """Pause current music."""
@@ -161,7 +128,7 @@ class AudioManager:
                 if not self._muted:
                     self._ambient_channel.set_volume(self._ambient_volume * self._sfx_volume)
         except (pygame.error, FileNotFoundError, OSError) as e:
-            logging.warning(f"AudioManager: no se pudo cargar audio ambiental: {e}")
+            logger.warning("AudioManager: no se pudo cargar audio ambiental: %s", e)
             self._ambient_active = False
 
     def stop_ambient(self) -> None:
@@ -202,7 +169,7 @@ class AudioManager:
                 self._ambient_volume = volume
                 self._ambient_active = True
         except pygame.error as e:
-            logging.warning(f"AudioManager: no se pudo crossfade audio ambiental: {e}")
+            logger.warning("AudioManager: no se pudo crossfade audio ambiental: %s", e)
             self._ambient_active = False
 
     def play_sfx_at(self, name: str, world_x: float, screen_center_x: float | None = None, volume: float = 1.0) -> None:

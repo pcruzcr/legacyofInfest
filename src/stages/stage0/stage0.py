@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pygame
 
+from src.engine.core import settings
 from src.engine.core.events import Events
 from src.engine.input.action_map import Action
 from src.framework.scenes.stage_scene import StageScene
@@ -26,9 +26,10 @@ class Stage0(StageScene):
     TIME_LIMIT: int = 0
     BGM_TRACK: str = "bgm_stage0"
     TILE: int = 16
+    TMX_PATH = settings.ASSETS_DIR / "maps/stage0/stage0.tmx"
 
     def __init__(self, context: GameContext) -> None:
-        super().__init__(context, Path("assets/maps/stage0/stage0.tmx"))
+        super().__init__(context)
         self._cutscene = None
         self._collectibles: list[dict] = []
         self._collected: set[int] = set()
@@ -42,13 +43,19 @@ class Stage0(StageScene):
 
     def _start_intro_cutscene(self) -> None:
         from src.framework.stage.cutscene_system import (
-            CutsceneScript, CameraMoveAction, WaitAction, FadeAction,
+            CameraMoveAction,
+            CutsceneScript,
+            WaitAction,
         )
+        # AUD-040: the original script opened with `FadeAction(fade_in=False)`
+        # — a fade *to* black — even though StageScene.on_enter has just asked
+        # the transition manager for a fade *in*. The player therefore watched
+        # the stage appear, immediately black out, wait, and fade in again,
+        # with gameplay frozen for the whole 2.3 s. Establish the shot first,
+        # then hand control over.
         script = CutsceneScript()
-        script.add_action(FadeAction(duration=0.5, fade_in=False))
-        script.add_action(WaitAction(0.3))
-        script.add_action(CameraMoveAction(0, 0, 1.0, self._camera))
-        script.add_action(FadeAction(duration=0.5, fade_in=True))
+        script.add_action(CameraMoveAction(0, 0, 0.8, self._camera))
+        script.add_action(WaitAction(0.2))
         script.start()
         self._cutscene = script
 
@@ -68,7 +75,7 @@ class Stage0(StageScene):
             })
 
     def _register_dialogue_trees(self) -> None:
-        from src.framework.ui.dialogue_system import DialogueTree, DialogueNode
+        from src.framework.ui.dialogue_system import DialogueNode, DialogueTree
 
         intro = DialogueTree(
             "intro_narrator", "start",
@@ -128,8 +135,12 @@ class Stage0(StageScene):
                 continue
             if self._player.rect.colliderect(entry["rect"]):
                 from src.engine.core.inventory import get_inventory
-                if get_inventory().collect(entry["item_id"]):
+                inventory = get_inventory()
+                if inventory.collect(entry["item_id"]):
                     self._collected.add(i)
+                    # AUD-022: recompute stat bonuses so a relic takes effect the
+                    # moment it is picked up, not on the next stage load.
+                    self._player.apply_relic_bonuses(inventory)
 
     def _check_dialogue_triggers(self) -> None:
         if self._player is None or self._stage_data is None:

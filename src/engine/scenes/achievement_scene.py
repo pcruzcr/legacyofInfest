@@ -11,6 +11,8 @@ from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.utils.asset_loader import AssetLoader
 
+logger = logging.getLogger(__name__)
+
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
 
@@ -29,7 +31,7 @@ class AchievementScene(BaseScene):
             bg_path = settings.ASSETS_DIR / "title" / "bck1.png"
             self._bg = AssetLoader.load_image(bg_path, size=(settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
         except (pygame.error, FileNotFoundError, PermissionError):
-            logging.warning("achievement_scene: failed to load background %s", bg_path)
+            logger.warning("achievement_scene: failed to load background %s", bg_path)
 
     def on_enter(self) -> None:
         self._selected = 0

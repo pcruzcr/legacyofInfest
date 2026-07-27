@@ -7,8 +7,8 @@ import pygame
 from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
-from src.engine.utils.asset_loader import AssetLoader
 from src.engine.scenes.demo_common import BOTTOM_BAR_Y
+from src.engine.utils.asset_loader import AssetLoader
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext

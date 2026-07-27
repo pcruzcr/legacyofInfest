@@ -1,18 +1,25 @@
 from __future__ import annotations
-import pygame
+
+from collections import OrderedDict
 from pathlib import Path
+
+import pygame
 
 
 class BitmapFont:
     """Bitmap font renderer for sprite-sheet based fonts."""
 
+    MAX_CACHE_SIZE = 128
+
     def __init__(self, path: Path | str, char_width: int = 0, char_height: int = 0,
                  chars: str = "", first_ascii: int = 0) -> None:
-        self._text_cache: dict[str, pygame.Surface] = {}
+        self._text_cache: OrderedDict[str, pygame.Surface] = OrderedDict()
         try:
             sheet = pygame.image.load(str(path))
-        except pygame.error:
-            raise FileNotFoundError(f"Bitmap font sheet not found or corrupt: {path}")
+        except pygame.error as exc:
+            raise FileNotFoundError(
+                f"Bitmap font sheet not found or corrupt: {path}"
+            ) from exc
         sheet_w, sheet_h = sheet.get_size()
         char_height = char_height or sheet_h
 
@@ -59,6 +66,7 @@ class BitmapFont:
             return pygame.Surface((0, 0))
         cached = self._text_cache.get(text)
         if cached is not None:
+            self._text_cache.move_to_end(text)
             return cached.copy()
         total_w = 0
         h = 0
@@ -83,6 +91,8 @@ class BitmapFont:
             else:
                 x += gw or 4
         self._text_cache[text] = surf.copy()
+        if len(self._text_cache) > self.MAX_CACHE_SIZE:
+            self._text_cache.popitem(last=False)
         return surf
 
     @property

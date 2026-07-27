@@ -6,8 +6,10 @@ Description: Tests for AssetLoader: caching, fallback placeholders,
 font loading, clear_cache, and missing asset handling.
 """
 from __future__ import annotations
+
 import pygame
 import pytest
+
 from src.engine.utils.asset_loader import AssetLoader
 
 
@@ -79,10 +81,9 @@ def test_load_missing_sound_returns_none() -> None:
 
 
 def test_clear_cache_empties_all_caches() -> None:
-    inst = AssetLoader.load_image  # access default instance via closure
     default = AssetLoader._get_instance()
     s1 = AssetLoader.load_image("img_a.png")
-    f1 = AssetLoader.load_font(None, 10)
+    AssetLoader.load_font(None, 10)
     assert default._images
     assert default._fonts
 

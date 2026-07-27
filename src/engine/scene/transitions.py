@@ -6,7 +6,9 @@ Description: Visual transitions between scenes: FadeTransition, WipeTransition,
 SlideTransition, and CircleTransition. All inherit from BaseTransition.
 """
 from __future__ import annotations
+
 import abc
+
 import pygame
 
 

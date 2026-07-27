@@ -5,9 +5,12 @@ Description: Tests for FilterTools: histogram, brightness, contrast,
 convolution, standard kernels, gaussian_blur, sobel_edge, canny_edge.
 """
 from __future__ import annotations
+
 from pathlib import Path
+
 import numpy as np
 import pygame
+
 from src.framework.processing.filter_tools import FilterTools
 
 OUTPUT_DIR = Path("tests/output/filter")

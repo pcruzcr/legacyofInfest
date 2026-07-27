@@ -5,9 +5,12 @@ Academic Unit: N/A
 Description: Water effect overlay with animated waves and distortion.
 """
 from __future__ import annotations
-import pygame
+
 import math
 from typing import TYPE_CHECKING
+
+import pygame
+
 from src.engine.core import settings
 
 if TYPE_CHECKING:

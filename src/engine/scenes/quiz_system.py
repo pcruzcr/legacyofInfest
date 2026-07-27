@@ -18,7 +18,9 @@ import pygame
 
 from src.engine.core import settings
 from src.engine.scenes.demo_common import (
-    COLOR_TEXT, COLOR_HIGHLIGHT, COLOR_ACCENT,
+    COLOR_ACCENT,
+    COLOR_HIGHLIGHT,
+    COLOR_TEXT,
 )
 
 

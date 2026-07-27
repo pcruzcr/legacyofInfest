@@ -63,8 +63,8 @@ class Camera:
     def set_camera_locks(self, locks: list[_CameraLock] | None) -> None:
         """Set camera lock zones (freeze X or Y axis in certain rooms)."""
         if locks is not None:
-            self._is_locked_x = any(l.lock_x for l in locks)
-            self._is_locked_y = any(l.lock_y for l in locks)
+            self._is_locked_x = any(line.lock_x for line in locks)
+            self._is_locked_y = any(line.lock_y for line in locks)
 
     def apply_shake(self, amplitude: float = 2.0, duration: float = 0.1) -> None:
         """Trigger a screen shake. Overwrites current shake if new amplitude is larger."""

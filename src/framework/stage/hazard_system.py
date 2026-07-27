@@ -40,12 +40,13 @@ class HazardSystem:
                 )
 
         for hz in stage.hazard_zones:
-            if trigger_rect.colliderect(hz.rect):
-                hz.timer -= dt
-                if hz.timer <= 0 and player.rect is not None:
-                    player.apply_damage(hz.damage, player.rect.center)
-                    hz.timer = hz.cooldown
-                    self._context.event_bus.emit(Events.SFX_HAZARD_ZONE)
+            hz.timer = max(0.0, hz.timer - dt)
+            if hz.timer > 0.0:
+                continue
+            if trigger_rect.colliderect(hz.rect) and player.rect is not None:
+                player.apply_damage(hz.damage, player.rect.center)
+                hz.timer = hz.cooldown
+                self._context.event_bus.emit(Events.SFX_HAZARD_ZONE)
 
         for dp in stage.death_pits:
             if trigger_rect.colliderect(dp.rect):

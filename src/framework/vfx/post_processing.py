@@ -84,7 +84,13 @@ class PostProcessing:
             self._bloom_intensity = 0.0
 
     def _apply_colorblind_filter(self, surface: pygame.Surface) -> None:
-        mode = settings.COLORBLIND_MODE
+        # AUD-036: this used to read settings.COLORBLIND_MODE, a module global
+        # that nothing ever assigned to. The options screen persisted the
+        # player's choice to config.json and this filter read a different,
+        # always-"off" variable, so selecting a colourblind mode had no effect
+        # on a single rendered frame. Both sides now use user_settings.
+        from src.engine.core import user_settings
+        mode = user_settings.get().colorblind_mode
         if mode == "off":
             return
         arr = pygame.surfarray.pixels3d(surface)
@@ -155,7 +161,12 @@ class PostProcessing:
             try:
                 arr = pygame.surfarray.pixels3d(surface)
                 try:
-                    lum = 0.299 * arr[:,:,0].astype(np.float32) + 0.587 * arr[:,:,1].astype(np.float32) + 0.114 * arr[:,:,2].astype(np.float32)
+                    # ITU-R BT.601 luma coefficients.
+                    lum = (
+                        0.299 * arr[:, :, 0].astype(np.float32)
+                        + 0.587 * arr[:, :, 1].astype(np.float32)
+                        + 0.114 * arr[:, :, 2].astype(np.float32)
+                    )
                 finally:
                     del arr
                 extra = np.clip((lum - self._bloom_threshold) / 175.0, 0, 1)

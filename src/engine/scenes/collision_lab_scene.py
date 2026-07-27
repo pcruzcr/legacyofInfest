@@ -29,9 +29,15 @@ from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
     BOTTOM_BAR_Y,
-    COLOR_BG, COLOR_TEXT, COLOR_HIGHLIGHT, COLOR_ACCENT, COLOR_ERROR,
-    FONT_SMALL, FONT_MEDIUM,
-    draw_top_bar, draw_bottom_bar,
+    COLOR_ACCENT,
+    COLOR_BG,
+    COLOR_ERROR,
+    COLOR_HIGHLIGHT,
+    COLOR_TEXT,
+    FONT_MEDIUM,
+    FONT_SMALL,
+    draw_bottom_bar,
+    draw_top_bar,
     save_png,
 )
 from src.engine.utils.asset_loader import AssetLoader

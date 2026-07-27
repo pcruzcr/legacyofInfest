@@ -10,12 +10,12 @@ from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
     COLOR_BG,
+    COLOR_ERROR,
     COLOR_HIGHLIGHT,
     COLOR_TEXT,
-    COLOR_ERROR,
     FONT_SMALL,
-    draw_top_bar,
     draw_bottom_bar,
+    draw_top_bar,
 )
 from src.engine.utils.asset_loader import AssetLoader
 

@@ -2,42 +2,98 @@
 Module: scene_manager
 System: engine.scene
 Academic Unit: N/A
-Description: Manages the scene stack with push/pop/replace semantics.
-Also listens for STAGE_COMPLETE and PLAYER_DIED events to advance
-or trigger game-over flow via StageRegistry.
-Automatically cleans up EventBus subscriptions when scenes exit.
+
+Owns the scene stack (push / pop / replace) and advances the stage queue in
+response to STAGE_COMPLETE and PLAYER_DIED.
+
+Dependency direction (AUD-018)
+------------------------------
+This module deliberately imports **no concrete scene**. It previously did::
+
+    scene_manager.py     ->  title_scene.py
+      title_scene.py     ->  options_scene.py
+        options_scene.py ->  pygame_gui
+
+…so importing the scene *manager* — a piece of infrastructure — dragged in the
+entire scene graph plus a third-party GUI toolkit. That is not a hypothetical
+cost: it is exactly why ``tests/test_scene_manager.py`` and
+``tests/test_menu_navigation.py`` both failed to even collect with
+``ModuleNotFoundError: pygame_gui`` on a clean install.
+
+The concrete scenes are now supplied as factories by whoever composes the
+application (``App``), so the dependency points inward: infrastructure depends
+on a ``Callable`` abstraction, and the composition root knows the concrete
+types. Defaults are resolved lazily on first use so existing callers that
+construct ``SceneManager(context)`` keep working.
+
+On EventBus cleanup: this class unsubscribes *its own* handlers in
+:meth:`cleanup`. It does **not** unsubscribe on behalf of scenes — an earlier
+docstring claimed it did, which was untrue and encouraged scenes to skip their
+own teardown. Scenes are responsible for their own subscriptions; the bus holds
+weak references so forgetting is no longer a leak.
 """
 from __future__ import annotations
+
 import logging
-from typing import TYPE_CHECKING, Callable, Protocol, runtime_checkable
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from src.engine.core.events import Events
 from src.engine.scenes.transition_manager import TransitionManager
-from src.engine.scenes.title_scene import TitleScene
 
+logger = logging.getLogger(__name__)
 
 @runtime_checkable
 class _SceneWithRespawn(Protocol):
+    """A scene that handles player death internally rather than via the manager.
+
+    Note the limits of ``runtime_checkable``: ``isinstance`` verifies only that
+    a ``respawn`` attribute exists, never its signature. A scene declaring
+    ``respawn(self, checkpoint)`` satisfies this check and then raises
+    ``TypeError`` when called. The manager therefore calls ``respawn()`` with no
+    arguments and treats that as the contract.
+    """
+
     def respawn(self) -> None:
         ...
 
 
 if TYPE_CHECKING:
-    from src.engine.scene.base_scene import BaseScene
     from src.engine.core.game_context import GameContext
+    from src.engine.scene.base_scene import BaseScene
+
+SceneFactory = Callable[["GameContext"], "BaseScene"]
+
+
+def _default_title_factory(context: GameContext) -> BaseScene:
+    from src.engine.scenes.title_scene import TitleScene
+    return TitleScene(context)
+
+
+def _default_credits_factory(context: GameContext) -> BaseScene:
+    from src.engine.scenes.end_credits_scene import EndCreditsScene
+    return EndCreditsScene(context)
 
 
 class SceneManager:
     """Manages a stack of scenes with push/pop/replace semantics."""
 
-    def __init__(self, context: GameContext) -> None:
+    def __init__(
+        self,
+        context: GameContext,
+        *,
+        title_factory: SceneFactory | None = None,
+        credits_factory: SceneFactory | None = None,
+    ) -> None:
         self._context = context
         self._stack: list[BaseScene] = []
         self._stage_queue: list[type[BaseScene]] = []
         self._stage_index: int = 0
         self._transition = TransitionManager()
-        self._pending_replace_cb = None
-        # Store bound method refs so unsubscribe is never fragile (ARC-008)
+        self._title_factory = title_factory or _default_title_factory
+        self._credits_factory = credits_factory or _default_credits_factory
+        # Bound method refs kept in one place so unsubscribe cannot drift out of
+        # sync with subscribe.
         self._event_refs: dict[str, Callable[..., None]] = {
             Events.STAGE_COMPLETE: self._on_stage_complete,
             Events.PLAYER_DIED: self._on_player_died,
@@ -97,46 +153,95 @@ class SceneManager:
         self._stage_queue = list(stages)
         self._stage_index = 0
 
+    # ── stage completion ───────────────────────────────────────
+    #
+    # AUD-020: this was one 22-line method doing five unrelated jobs — reading
+    # the player's health through a private attribute on the current scene,
+    # computing a next-stage index, loading a save, mutating it, saving it,
+    # autosaving again, mutating _stage_index, and swapping the scene. Split
+    # into named steps so each can be read, reasoned about and tested alone.
+
     def _on_stage_complete(self, **data: object) -> None:
-        """Advance to the next stage in the queue."""
+        """Record the completion, then advance to whatever comes next."""
         stage_id = str(data.get("stage_id", ""))
-        sm = self._context.save_manager
-        if sm is not None and stage_id:
-            current_scene = self._stack[-1] if self._stack else None
-            player_health = getattr(getattr(current_scene, '_player', None), 'current_health', 5.0)
-            player_max = getattr(getattr(current_scene, '_player', None), 'max_health', 5.0)
-            next_index = min(self._stage_index + 1, max(len(self._stage_queue) - 1, 0)) if self._stage_queue else 0
-            slot = sm.newest_slot()
-            if slot is not None:
-                save_data = sm.load(slot)
-                if save_data is not None and stage_id not in save_data.completed_stages:
-                    save_data.completed_stages.append(stage_id)
-                    sm.save(slot, save_data)
-            sm.auto_save(
-                stage_id=stage_id,
-                stage_index=next_index,
-                checkpoint_x=0.0, checkpoint_y=0.0,
-                health=player_health, max_health=player_max,
-            )
+        if stage_id:
+            self._record_stage_completion(stage_id)
         self._stage_index += 1
+        self._enter_next_stage()
+
+    def _player_vitals(self) -> tuple[float, float]:
+        """Current and maximum health of the active scene's player.
+
+        Returns ``(0.0, 0.0)`` when there is no player to read. Scenes expose
+        their player via a ``player`` property where available; the private
+        ``_player`` fallback remains for scenes that have not adopted it, but the
+        manager should not be reaching into scene internals at all — see R-04.
+        """
+        scene = self._stack[-1] if self._stack else None
+        player = getattr(scene, "player", None) or getattr(scene, "_player", None)
+        if player is None:
+            return 0.0, 0.0
+        return (
+            float(getattr(player, "current_health", 0.0)),
+            float(getattr(player, "max_health", 0.0)),
+        )
+
+    def _record_stage_completion(self, stage_id: str) -> None:
+        """Append ``stage_id`` to the save's history and refresh the autosave."""
+        save_manager = self._context.save_manager
+        if save_manager is None:
+            return
+
+        slot = save_manager.newest_slot()
+        if slot is not None:
+            save_data = save_manager.load(slot)
+            if save_data is not None and stage_id not in save_data.completed_stages:
+                save_data.completed_stages.append(stage_id)
+                save_manager.save(slot, save_data)
+
+        health, max_health = self._player_vitals()
+        save_manager.auto_save(
+            stage_id=stage_id,
+            stage_index=self._next_stage_index(),
+            checkpoint_x=0.0, checkpoint_y=0.0,
+            health=health, max_health=max_health,
+        )
+
+    def _next_stage_index(self) -> int:
+        """The index the player should resume at, clamped to the queue.
+
+        Kept separate from ``_stage_index`` because the two legitimately differ:
+        the in-memory index may run one past the end of the queue (that is how
+        ``_enter_next_stage`` detects "finished"), whereas the value written to
+        the save file must always address a real stage.
+        """
+        if not self._stage_queue:
+            return 0
+        return min(self._stage_index + 1, len(self._stage_queue) - 1)
+
+    def _enter_next_stage(self) -> None:
+        """Replace the current scene with the next stage, or the credits."""
         if self._stage_index < len(self._stage_queue):
             next_stage_class = self._stage_queue[self._stage_index]
-            logging.info(f"SceneManager: advancing to stage {next_stage_class.__name__}")
+            logger.info("SceneManager: advancing to stage %s", next_stage_class.__name__)
             self.replace(next_stage_class(self._context))
-        else:
-            from src.engine.scenes.end_credits_scene import EndCreditsScene
-            logging.info("SceneManager: no more stages — end credits")
-            self.replace(EndCreditsScene(self._context))
+            return
+        logger.info("SceneManager: no more stages — end credits")
+        self.replace(self._credits_factory(self._context))
 
     def _on_player_died(self, **data: object) -> None:
-        """Handle player death. If the current scene has a _respawn
-        method (e.g. StageScene), let it handle death internally."""
+        """Handle player death.
+
+        A scene that implements ``respawn()`` — every ``StageScene`` does —
+        owns its own death handling, including checkpoints and the death
+        animation. Anything else falls back to the title screen.
+        """
         current = self._stack[-1] if self._stack else None
         if current is not None and isinstance(current, _SceneWithRespawn):
-            logging.info("SceneManager: player died — scene handles respawn")
+            logger.info("SceneManager: player died — scene handles respawn")
             return
-        logging.info("SceneManager: player died — returning to title")
-        self.replace(TitleScene(self._context))
+        logger.info("SceneManager: player died — returning to title")
+        self.replace(self._title_factory(self._context))
 
     @property
     def stack_size(self) -> int:
@@ -152,6 +257,19 @@ class SceneManager:
         return self._transition
 
     def set_stage_index(self, index: int) -> None:
-        """Set the stage queue index (for load-game restore)."""
-        if 0 <= index < max(len(self._stage_queue), 1):
+        """Set the stage queue index, e.g. when restoring a save.
+
+        Out-of-range values are rejected with a warning rather than silently
+        ignored: a save pointing past the end of the queue means the save and
+        the build disagree about how many stages exist, which the player would
+        otherwise experience as being dropped back at stage one for no reason.
+        """
+        limit = max(len(self._stage_queue), 1)
+        if 0 <= index < limit:
             self._stage_index = index
+        else:
+            logger.warning(
+                "SceneManager: ignoring out-of-range stage index %d "
+                "(queue holds %d stage(s)); staying at %d",
+                index, len(self._stage_queue), self._stage_index,
+            )

@@ -17,9 +17,16 @@ from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
-    COLOR_BG, COLOR_TEXT, COLOR_HIGHLIGHT, COLOR_ACCENT,
-    FONT_SMALL, FONT_MEDIUM, TOP_BAR_H, BOTTOM_BAR_H,
-    draw_top_bar, draw_bottom_bar,
+    BOTTOM_BAR_H,
+    COLOR_ACCENT,
+    COLOR_BG,
+    COLOR_HIGHLIGHT,
+    COLOR_TEXT,
+    FONT_MEDIUM,
+    FONT_SMALL,
+    TOP_BAR_H,
+    draw_bottom_bar,
+    draw_top_bar,
 )
 from src.engine.utils.asset_loader import AssetLoader
 
@@ -173,7 +180,7 @@ class SandboxScene(BaseScene):
         pygame.draw.circle(surface, player_color, (int(self._player_pos.x), int(self._player_pos.y)), 8)
         pygame.draw.circle(surface, (255, 255, 255), (int(self._player_pos.x), int(self._player_pos.y)), 8, 1)
 
-        for pos, vel in self._projectiles:
+        for pos, _vel in self._projectiles:
             pygame.draw.circle(surface, (255, 200, 50), (int(pos.x), int(pos.y)), 3)
 
         info_y = TOP_BAR_H + 4
@@ -193,7 +200,9 @@ class SandboxScene(BaseScene):
             surface.blit(toggle_text, (4, info_y))
 
         count_text = self._font_small.render(
-            f"  Enemies: {len(self._enemies)}  |  Collectibles: {len(self._collectibles)}  |  Projectiles: {len(self._projectiles)}",
+            f"  Enemies: {len(self._enemies)}  |  "
+            f"Collectibles: {len(self._collectibles)}  |  "
+            f"Projectiles: {len(self._projectiles)}",
             True, COLOR_TEXT)
         surface.blit(count_text, (4, info_y + 16))
 

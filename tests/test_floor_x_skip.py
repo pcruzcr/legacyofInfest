@@ -5,9 +5,11 @@ Description: Regression — FIX-1/FIX-2: floor tiles (tile.top >=
 player_rect.centery) must NOT block X-axis movement.
 """
 from __future__ import annotations
+
 import pygame
-from src.engine.input.input_manager import InputManager
+
 from src.engine.input.action_map import Action
+from src.engine.input.input_manager import InputManager
 from src.framework.entities.player import Player
 
 

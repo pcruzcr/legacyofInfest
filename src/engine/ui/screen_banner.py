@@ -1,11 +1,14 @@
 from __future__ import annotations
+
 import logging
 
 import pygame
-from src.engine.core import settings
-from src.engine.utils.math_utils import ease_out_quad, ease_in_quad
-from src.engine.utils.asset_loader import AssetLoader
 
+from src.engine.core import settings
+from src.engine.utils.asset_loader import AssetLoader
+from src.engine.utils.math_utils import ease_in_quad, ease_out_quad
+
+logger = logging.getLogger(__name__)
 
 class ScreenBanner:
     """Animated stage title banner with two-tone background and bitmap fonts."""
@@ -33,7 +36,7 @@ class ScreenBanner:
                 size=(settings.INTERNAL_WIDTH, self._banner_height // 2),
             )
         except (pygame.error, FileNotFoundError, PermissionError):
-            logging.warning("screen_banner: failed to load banner images")
+            logger.warning("screen_banner: failed to load banner images")
 
         self._font_large: pygame.font.Font | None = None
         self._font_medium: pygame.font.Font | None = None
@@ -42,14 +45,14 @@ class ScreenBanner:
                 settings.ASSETS_DIR / "fonts" / "game.ttf", 22,
             )
         except (pygame.error, FileNotFoundError, PermissionError):
-            logging.warning("screen_banner: failed to load game.ttf (22)")
+            logger.warning("screen_banner: failed to load game.ttf (22)")
             self._font_large = None
         try:
             self._font_medium = pygame.font.Font(
                 settings.ASSETS_DIR / "fonts" / "game.ttf", 20,
             )
         except (pygame.error, FileNotFoundError, PermissionError):
-            logging.warning("screen_banner: failed to load game.ttf (20)")
+            logger.warning("screen_banner: failed to load game.ttf (20)")
             self._font_medium = None
 
         self._fallback_font = pygame.font.Font(None, 18)

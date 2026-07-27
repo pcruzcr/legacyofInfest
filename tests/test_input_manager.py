@@ -4,10 +4,12 @@ System: tests
 Description: Tests for InputManager: pressed/held/released semantics and action mapping.
 """
 from __future__ import annotations
+
 import pygame
 import pytest
-from src.engine.input.input_manager import InputManager
+
 from src.engine.input.action_map import Action
+from src.engine.input.input_manager import InputManager
 
 
 @pytest.fixture

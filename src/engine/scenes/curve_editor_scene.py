@@ -37,13 +37,20 @@ from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
     BOTTOM_BAR_Y,
-    COLOR_BG, COLOR_TEXT, COLOR_HIGHLIGHT, COLOR_ACCENT,
-    FONT_SMALL, FONT_MEDIUM,
-    draw_top_bar, draw_bottom_bar,
+    COLOR_ACCENT,
+    COLOR_BG,
+    COLOR_HIGHLIGHT,
+    COLOR_TEXT,
+    FONT_MEDIUM,
+    FONT_SMALL,
+    draw_bottom_bar,
+    draw_top_bar,
     save_png,
 )
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.processing.curve_tools import CurveTools
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -316,7 +323,7 @@ class CurveEditorScene(BaseScene):
                 degree = min(3, len(pts) - 1)
                 return CurveTools.b_spline(pts, degree, self._n_samples)
         except (ValueError, IndexError, ZeroDivisionError) as e:
-            logging.warning("curve_editor: curve evaluation failed: %s", e)
+            logger.warning("curve_editor: curve evaluation failed: %s", e)
             return pts
         return pts
 

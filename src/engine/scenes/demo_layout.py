@@ -12,8 +12,8 @@ from __future__ import annotations
 import pygame
 
 from src.engine.core import settings
+from src.engine.ui.theme import Theme
 from src.engine.utils.asset_loader import AssetLoader
-
 
 # ── Computed Layout Constants ──────────────────────────────────────
 # These scale with INTERNAL_WIDTH and INTERNAL_HEIGHT.
@@ -49,35 +49,71 @@ PANEL_SIZE: tuple[int, int] = (PANEL_W, PANEL_H)
 CENTER_X: int = LEFT_PANEL_W + 8
 CENTER_W: int = max(100, RIGHT_PANEL_X - LEFT_PANEL_W - 16)
 
-# Colors
-COLOR_BG = (10, 10, 30)
-COLOR_TOP_BAR_BG = (20, 20, 50)
-COLOR_BOTTOM_BAR_BG = (20, 20, 50)
-COLOR_DIVIDER = (60, 60, 100)
-COLOR_TEXT = (200, 200, 200)
-COLOR_HIGHLIGHT = (255, 220, 80)
-COLOR_ACCENT = (100, 180, 255)
-COLOR_ERROR = (255, 60, 60)
-COLOR_GOLD = (255, 200, 50)
+# ── Colours ────────────────────────────────────────────────────
+#
+# AUD-044: these were hand-picked literals that happened to be *close to* the
+# menu palette without matching it — the labs used (10, 10, 30) for their
+# background while menus used five other near-blacks, so moving from the title
+# screen into a lab produced a visible, unexplained shift in tone.
+#
+# The names are kept so the eighteen lab scenes need no edits; the values now
+# come from engine.ui.theme, which is the single source of truth. Change the
+# theme and every lab follows.
+COLOR_BG = Theme.BG
+COLOR_TOP_BAR_BG = Theme.SURFACE
+COLOR_BOTTOM_BAR_BG = Theme.SURFACE
+COLOR_DIVIDER = Theme.BORDER
+COLOR_TEXT = Theme.TEXT
+COLOR_HIGHLIGHT = Theme.ACCENT
+COLOR_ACCENT = (108, 172, 255)   # informational blue: labs only, never focus
+COLOR_ERROR = Theme.DANGER
+COLOR_GOLD = Theme.ACCENT
 
-# Font sizes — scale with resolution
-FONT_SMALL: int = max(12, settings.INTERNAL_WIDTH // 55)
-FONT_MEDIUM: int = max(15, settings.INTERNAL_WIDTH // 42)
-FONT_LARGE: int = max(18, settings.INTERNAL_WIDTH // 35)
+# Font sizes — scale with resolution, floored at the theme's type scale so a
+# small window never renders text below the legibility threshold.
+FONT_SMALL: int = max(Theme.FONT_TINY, settings.INTERNAL_WIDTH // 55)
+FONT_MEDIUM: int = max(Theme.FONT_SMALL, settings.INTERNAL_WIDTH // 42)
+FONT_LARGE: int = max(Theme.FONT_BODY, settings.INTERNAL_WIDTH // 35)
 
 # Shared font cache
 _FONT_CACHE: dict[int, pygame.font.Font] = {}
 
 # ── Public: re-export everything that demo_common exposes ──────────
 __all__ = [
-    "TOP_BAR_H", "LEFT_PANEL_W", "RIGHT_PANEL_W", "PANEL_H", "BOTTOM_BAR_H",
-    "TOP_BAR_Y", "LEFT_PANEL_X", "LEFT_PANEL_Y", "RIGHT_PANEL_X", "RIGHT_PANEL_Y",
-    "BOTTOM_BAR_Y", "PANEL_W", "PANEL_SIZE", "CENTER_X", "CENTER_W",
-    "COLOR_BG", "COLOR_TOP_BAR_BG", "COLOR_BOTTOM_BAR_BG", "COLOR_DIVIDER",
-    "COLOR_TEXT", "COLOR_HIGHLIGHT", "COLOR_ACCENT", "COLOR_ERROR", "COLOR_GOLD",
-    "FONT_SMALL", "FONT_MEDIUM", "FONT_LARGE",
-    "draw_top_bar", "draw_bottom_bar", "draw_bottom_bar_error",
-    "draw_panel_border", "draw_divider", "draw_save_notification", "draw_histogram_bars",
+    "BOTTOM_BAR_H",
+    "BOTTOM_BAR_Y",
+    "CENTER_W",
+    "CENTER_X",
+    "COLOR_ACCENT",
+    "COLOR_BG",
+    "COLOR_BOTTOM_BAR_BG",
+    "COLOR_DIVIDER",
+    "COLOR_ERROR",
+    "COLOR_GOLD",
+    "COLOR_HIGHLIGHT",
+    "COLOR_TEXT",
+    "COLOR_TOP_BAR_BG",
+    "FONT_LARGE",
+    "FONT_MEDIUM",
+    "FONT_SMALL",
+    "LEFT_PANEL_W",
+    "LEFT_PANEL_X",
+    "LEFT_PANEL_Y",
+    "PANEL_H",
+    "PANEL_SIZE",
+    "PANEL_W",
+    "RIGHT_PANEL_W",
+    "RIGHT_PANEL_X",
+    "RIGHT_PANEL_Y",
+    "TOP_BAR_H",
+    "TOP_BAR_Y",
+    "draw_bottom_bar",
+    "draw_bottom_bar_error",
+    "draw_divider",
+    "draw_histogram_bars",
+    "draw_panel_border",
+    "draw_save_notification",
+    "draw_top_bar",
 ]
 
 

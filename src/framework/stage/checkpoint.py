@@ -13,13 +13,15 @@ from pathlib import Path
 
 import pygame
 
-from src.engine.core.event_bus import EventBus, _get_bus as _bus
+from src.engine.core import settings
+from src.engine.core.event_bus import EventBus
 from src.engine.core.events import Events
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.entities.base_entity import BaseEntity
 
+logger = logging.getLogger(__name__)
 
-CHECKPOINT_SPRITE_PATH: str = "assets/sprites/shared/checkpoint.png"
+CHECKPOINT_SPRITE_PATH: Path = settings.ASSETS_DIR / "sprites/shared/checkpoint.png"
 
 
 class Checkpoint(BaseEntity):
@@ -44,7 +46,7 @@ class Checkpoint(BaseEntity):
             grey.blit(grey_overlay, (0, 0))
             self._grey_sprite = grey
         except (pygame.error, FileNotFoundError, PermissionError):
-            logging.warning("checkpoint: failed to load sprite %s", CHECKPOINT_SPRITE_PATH)
+            logger.warning("checkpoint: failed to load sprite %s", CHECKPOINT_SPRITE_PATH)
             self._sprite = None
 
     def update(self, dt: float) -> None:
@@ -64,10 +66,11 @@ class Checkpoint(BaseEntity):
         if self._activated:
             return
         self._activated = True
+        # AUD-019: no singleton fallback. A checkpoint without a bus simply
+        # does not announce itself, which is visible in tests rather than
+        # silently routed to a different bus than the listener uses.
         if self._event_bus is not None:
             self._event_bus.emit(Events.CHECKPOINT_REACHED, checkpoint_id=self._checkpoint_id)
-        else:
-            _bus().emit(Events.CHECKPOINT_REACHED, checkpoint_id=self._checkpoint_id)
 
     def draw(self, surface: pygame.Surface, camera_offset: pygame.Vector2) -> None:
         """Draw checkpoint: sprite when available, colored rect fallback."""

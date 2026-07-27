@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pygame
+
 from src.engine.core import settings
 from src.engine.core.events import Events
 from src.engine.input.action_map import Action

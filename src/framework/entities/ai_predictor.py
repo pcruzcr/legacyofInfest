@@ -1,3 +1,12 @@
+"""
+.. warning::
+   **NOT WIRED (AUD-022).** This module is complete and tested in isolation, but
+   nothing in the shipping game constructs or calls it — there is no menu entry,
+   scene or hook that reaches it. It is retained deliberately, as a foundation
+   for the feature and as teaching material, but the project documentation
+   should not describe the feature as delivered until an entry point exists.
+   Tracked as refactor item R-11.
+"""
 from __future__ import annotations
 
 import logging
@@ -9,6 +18,7 @@ import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
 
+logger = logging.getLogger(__name__)
 
 class BehaviorPredictor:
     """Lightweight AI behavior predictor using sklearn.
@@ -79,7 +89,7 @@ class BehaviorPredictor:
             self._tree.fit(X_arr, y_arr)
             self._trained = True
         except (ValueError, np.linalg.LinAlgError) as e:
-            logging.warning("ai_predictor: training failed: %s", e)
+            logger.warning("ai_predictor: training failed: %s", e)
             self._trained = False
 
     def predict(
@@ -93,7 +103,7 @@ class BehaviorPredictor:
             tree_pred = int(self._tree.predict([features])[0])
             return knn_pred if random.random() < 0.6 else tree_pred
         except (ValueError, IndexError, np.linalg.LinAlgError) as e:
-            logging.warning("ai_predictor: prediction failed: %s", e)
+            logger.warning("ai_predictor: prediction failed: %s", e)
             return random.randint(0, len(self._action_names) - 1)
 
     def predict_action_name(self, **kwargs: Any) -> str:

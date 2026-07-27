@@ -4,13 +4,26 @@ System: tests
 Description: Tests for math utility functions (lerp, clamp, ease, vector ops).
 """
 from __future__ import annotations
+
 import pygame
 import pytest
+
 from src.engine.utils.math_utils import (
-    lerp, clamp, ease_in_quad, ease_out_quad, ease_in_out_quad,
-    ease_in_cubic, ease_out_cubic, ease_out_bounce, ease_out_elastic,
-    ease_in_sine, ease_out_sine,
-    vec2_normalize, vec2_length, vec2_dot, vec2_distance,
+    clamp,
+    ease_in_cubic,
+    ease_in_out_quad,
+    ease_in_quad,
+    ease_in_sine,
+    ease_out_bounce,
+    ease_out_cubic,
+    ease_out_elastic,
+    ease_out_quad,
+    ease_out_sine,
+    lerp,
+    vec2_distance,
+    vec2_dot,
+    vec2_length,
+    vec2_normalize,
 )
 
 

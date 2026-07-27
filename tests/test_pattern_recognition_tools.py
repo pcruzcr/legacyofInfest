@@ -5,16 +5,20 @@ Description: Tests for PatternRecognitionTools: train, evaluate,
 save/load, registry, classify, classify_proba, predict.
 """
 from __future__ import annotations
+
 import os
 import tempfile
 from pathlib import Path
+
 import numpy as np
 import pygame
+
 from src.framework.processing.pattern_recognition_tools import (
+    EvaluationResult,
     PatternRecognitionTools,
     TrainedModel,
-    EvaluationResult,
 )
+from src.framework.processing.vision_tools import VisionTools
 
 SAMPLE_DATASET_PATH = Path("assets/datasets/sample_dataset.npz")
 SAMPLE_MODEL_PATH = Path("assets/models/professor_sample.pkl")
@@ -249,7 +253,7 @@ class TestPredict:
             s = pygame.Surface((32, 32))
             s.fill((rng.randint(0, 255), rng.randint(0, 255), rng.randint(0, 255)))
             surfs.append(s)
-        X = np.array([PatternRecognitionTools.extract_hog(s) for s in surfs], dtype=np.float32)
+        X = np.array([VisionTools.extract_hog(s) for s in surfs], dtype=np.float32)
         y = np.array(["a"] * 6 + ["b"] * 6, dtype=str)
         model = PatternRecognitionTools.train(X, y, model_type="knn", n_neighbors=3)
         label = PatternRecognitionTools.predict(model, surfs[0], method="hog")

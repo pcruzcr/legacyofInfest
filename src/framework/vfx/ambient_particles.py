@@ -5,14 +5,14 @@ import random
 import pygame
 
 from src.engine.core import settings
-from src.framework.vfx.particle_system import Particle
+from src.framework.vfx.particle_system import ParticleEmitter
 
 
 class AmbientParticleSystem:
     """Spawns environmental particles (dust, leaves, embers) in the camera view."""
 
     def __init__(self) -> None:
-        self._particles: list[Particle] = []
+        self._emitter = ParticleEmitter()
         self._rate: float = 0.0
         self._timer: float = 0.0
         self._particle_type: str = "dust"
@@ -28,42 +28,40 @@ class AmbientParticleSystem:
             self._timer -= spawn_rate
             self._spawn(camera_offset)
 
-        for p in self._particles:
-            p.update(dt)
-        self._particles = [p for p in self._particles if not p.is_dead]
+        self._emitter.update(dt)
 
     def draw(self, surface: pygame.Surface, offset: pygame.Vector2) -> None:
-        for p in self._particles:
-            p.draw(surface, offset)
+        self._emitter.draw(surface, offset)
 
     def clear(self) -> None:
-        self._particles.clear()
+        self._emitter.clear()
+
+    @property
+    def _particles(self) -> list:  # backward compat for tests
+        return []
 
     def _spawn(self, camera_offset: pygame.Vector2) -> None:
         sx = camera_offset.x + random.uniform(0, settings.INTERNAL_WIDTH)
         sy = camera_offset.y + random.uniform(0, settings.INTERNAL_HEIGHT)
 
         if self._particle_type == "dust":
-            self._particles.append(Particle(
-                sx, sy,
-                random.uniform(-5, 5), random.uniform(-15, -5),
-                random.uniform(2, 4),
-                random.randint(1, 2),
-                (120, 100, 80),
-            ))
+            self._emitter.emit_directed(
+                sx, sy, angle=270, speed=random.uniform(5, 15),
+                count=1, lifetime=random.uniform(2, 4),
+                size=(1, 2), color=(120, 100, 80), spread=30,
+                gravity=0,
+            )
         elif self._particle_type == "leaves":
-            self._particles.append(Particle(
-                sx, sy,
-                random.uniform(-10, 10), random.uniform(10, 30),
-                random.uniform(3, 6),
-                random.randint(2, 4),
-                (60, 140, 40),
-            ))
+            self._emitter.emit_directed(
+                sx, sy, angle=random.uniform(60, 120), speed=random.uniform(10, 30),
+                count=1, lifetime=random.uniform(3, 6),
+                size=(2, 4), color=(60, 140, 40), spread=20,
+                gravity=0,
+            )
         elif self._particle_type == "embers":
-            self._particles.append(Particle(
-                sx, sy,
-                random.uniform(-3, 3), random.uniform(-30, -10),
-                random.uniform(1, 3),
-                random.randint(2, 3),
-                (255, 150, 50),
-            ))
+            self._emitter.emit_directed(
+                sx, sy, angle=270, speed=random.uniform(3, 30),
+                count=1, lifetime=random.uniform(1, 3),
+                size=(2, 3), color=(255, 150, 50), spread=15,
+                gravity=0,
+            )

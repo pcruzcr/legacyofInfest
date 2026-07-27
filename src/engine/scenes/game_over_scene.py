@@ -6,10 +6,18 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.engine.core import settings
-from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.title_scene import TitleScene
-from src.engine.utils.asset_loader import AssetLoader
+from src.engine.ui.theme import Theme
+from src.engine.ui.widgets import (
+    MenuItem,
+    MenuList,
+    draw_key_hints,
+    draw_screen,
+    handle_menu_navigation,
+)
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -18,18 +26,26 @@ if TYPE_CHECKING:
 class GameOverScene(BaseScene):
     """Game Over screen shown on player death. Offers Continue and Quit."""
 
+    # Input is ignored for this long after death so a player mashing attack
+    # cannot dismiss the screen before they have read it.
+    INPUT_GRACE = 0.5
+
     def __init__(self, context: GameContext, stage_scene: BaseScene) -> None:
         super().__init__(context)
         self._stage_scene = stage_scene
         self._stage_scene_respawn = stage_scene.respawn if hasattr(stage_scene, "respawn") else None
-        self._selected: int = 0
-        self._options: list[str] = ["CONTINUE", "QUIT"]
-        self._title_font = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", 28)
-        self._option_font = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", 18)
+        # AUD-045: navigation and focus now come from the shared MenuList, so
+        # this screen behaves exactly like every other menu in the game.
+        self._menu = MenuList(items=[
+            MenuItem("CONTINUE", value="continue",
+                     hint="Respawn at your last checkpoint"),
+            MenuItem("QUIT", value="quit",
+                     hint="Abandon the run and return to the title screen"),
+        ])
         self._elapsed: float = 0.0
 
     def on_enter(self) -> None:
-        self._selected = 0
+        self._menu.index = 0
         self._elapsed = 0.0
 
     def on_exit(self) -> None:
@@ -37,43 +53,39 @@ class GameOverScene(BaseScene):
 
     def update(self, dt: float) -> None:
         self._elapsed += dt
-        im = self.input
-        if im is None:
+        self._menu.update(dt)
+        if self._elapsed <= self.INPUT_GRACE:
             return
 
-        if self._elapsed > 0.5:
-            if im.is_action_just_pressed(Action.MOVE_DOWN):
-                self._selected = min(self._selected + 1, len(self._options) - 1)
-            if im.is_action_just_pressed(Action.MOVE_UP):
-                self._selected = max(self._selected - 1, 0)
+        handle_menu_navigation(
+            self._menu, self.input,
+            on_confirm=self._activate,
+            # CANCEL is deliberately not wired to anything here. There is no
+            # "back" from death, and silently quitting on Escape would be a
+            # destructive action triggered by the universal cancel key.
+        )
 
-            if im.is_action_just_pressed(Action.CONFIRM):
-                if self._selected == 0:
-                    self.context.scene_manager.pop()
-                    try:
-                        if self._stage_scene_respawn:
-                            self._stage_scene_respawn()
-                    except (RuntimeError, AttributeError, TypeError) as e:
-                        logging.warning("game_over: respawn failed: %s", e)
-                        import traceback
-                        traceback.print_exc()
-                        self.context.scene_manager.replace(TitleScene(self.context))
-                elif self._selected == 1:
-                    self.context.scene_manager.replace(TitleScene(self.context))
+    def _activate(self, item: MenuItem) -> None:
+        if item.value == "continue":
+            self.context.scene_manager.pop()
+            try:
+                if self._stage_scene_respawn:
+                    self._stage_scene_respawn()
+            except (RuntimeError, AttributeError, TypeError):
+                logger.exception("game_over: respawn failed; returning to title")
+                self.context.scene_manager.replace(TitleScene(self.context))
+        else:
+            self.context.scene_manager.replace(TitleScene(self.context))
 
     def draw(self, surface: pygame.Surface) -> None:
-        surface.fill((10, 5, 20))
+        y = draw_screen(surface, "GAME OVER", "The infestation claims another")
 
-        # GAME OVER title
-        title = self._title_font.render("GAME OVER", True, (255, 80, 80))
-        tx = (settings.INTERNAL_WIDTH - title.get_width()) // 2
-        surface.blit(title, (tx, 60))
+        width = 280
+        x = (settings.INTERNAL_WIDTH - width) // 2
+        end_y = self._menu.draw(surface, x, y + Theme.SPACE_L, width)
+        self._menu.draw_hint(surface, end_y + Theme.SPACE_M)
 
-        # Options
-        for i, opt in enumerate(self._options):
-            color = (255, 215, 0) if i == self._selected else (150, 150, 150)
-            prefix = "> " if i == self._selected else "  "
-            text = self._option_font.render(f"{prefix}{opt}", True, color)
-            ox = (settings.INTERNAL_WIDTH - text.get_width()) // 2
-            oy = 100 + i * 22
-            surface.blit(text, (ox, oy))
+        draw_key_hints(surface, [
+            ("↑↓", "Move"),
+            ("Enter", "Select"),
+        ])

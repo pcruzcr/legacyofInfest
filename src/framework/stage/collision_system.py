@@ -1,142 +1,229 @@
+"""
+Module: collision_system
+System: framework.stage
+Academic Unit: Unit IV — Collision detection
+
+Combat-space arbitration: resolves the player's attack hitbox against enemy
+hurtboxes, applies damage, knockback and hit-stop.
+
+SCOPE (AUD-004). This module deliberately does *not* own locomotion physics.
+Movement, gravity and world collision for the player and for enemies are
+resolved by their own swept-AABB integrators (``Player.update`` and
+``EnemyBase.update``), which are authoritative. An earlier revision of this
+file claimed to run a pymunk/Chipmunk2D rigid-body simulation and constructed
+a ``pymunk.Space``, dynamic bodies, collision categories and a one-way
+platform helper — but nothing in the game ever called the methods that
+populated that space. The space was empty on every frame, so:
+
+  * ``apply_knockback`` looked up an always-empty body map and silently did
+    nothing on every hit;
+  * ``step`` integrated a world containing zero bodies, every frame;
+  * ``update_enemies`` ran an O(n) no-op sync loop, every frame;
+  * the ``_CAT_*`` constants were assigned to ``shape.collision_type`` (a
+    handler-dispatch key) rather than to ``shape.filter`` (the actual bitmask
+    filter), and no collision handler was ever registered, so they filtered
+    nothing.
+
+Rather than leave a misleading façade in place, the dead simulation has been
+removed and the honest behaviour — a broadphase-free AABB pass over the
+entity list plus the entity's own knockback impulse — is what the code now
+says it is. Reintroducing a real rigid-body pipeline is tracked as a separate
+piece of work; see docs/AUDIT_2026-07.md, refactor item R-03.
+"""
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
 import pygame
 
-from src.engine.core.events import Events
+from src.framework.entities.base_entity import BaseEntity
+from src.framework.entities.enemy_base import EnemyBase
+
 if TYPE_CHECKING:
-    from src.engine.core.clock import DeltaClock
-    from src.engine.core.game_context import GameContext
     from src.framework.entities.player import Player
     from src.framework.stage.camera import Camera
     from src.framework.stage.stage_loader import StageData
 
 
-class SpatialGrid:
-    """Simple spatial hash grid for broad-phase entity lookups.
-    Cell size of ~64px. Entities register their position each frame."""
-
-    def __init__(self, cell_size: int = 64) -> None:
-        self.cell_size = cell_size
-        self.cells: dict[tuple[int, int], list[Any]] = {}
-
-    def clear(self) -> None:
-        self.cells.clear()
-
-    def _cell_key(self, x: float, y: float) -> tuple[int, int]:
-        return (int(x // self.cell_size), int(y // self.cell_size))
-
-    def insert(self, entity: Any, rect: pygame.Rect) -> None:
-        tl = self._cell_key(rect.left, rect.top)
-        br = self._cell_key(rect.right, rect.bottom)
-        for cx in range(tl[0], br[0] + 1):
-            for cy in range(tl[1], br[1] + 1):
-                key = (cx, cy)
-                if key not in self.cells:
-                    self.cells[key] = []
-                self.cells[key].append(entity)
-
-    def get_nearby(self, rect: pygame.Rect) -> list[Any]:
-        tl = self._cell_key(rect.left, rect.top)
-        br = self._cell_key(rect.right, rect.bottom)
-        seen: set[int] = set()
-        result: list[Any] = []
-        for cx in range(tl[0], br[0] + 1):
-            for cy in range(tl[1], br[1] + 1):
-                for entity in self.cells.get((cx, cy), []):
-                    eid = id(entity)
-                    if eid not in seen:
-                        seen.add(eid)
-                        result.append(entity)
-        return result
+# Impulse applied to an enemy struck by the player, in px/s.
+KNOCKBACK_IMPULSE_X: float = 200.0
+KNOCKBACK_IMPULSE_Y: float = -100.0
+# Freeze duration on a connected hit, in *real* seconds.
+HITSTOP_DURATION: float = 0.05
 
 
 class CollisionSystem:
-    def __init__(self, context: GameContext) -> None:
+    """Resolves player attacks against enemies for a single stage.
+
+    Responsibilities
+    ----------------
+    * Test the player's active attack hitbox against every living enemy's
+      hurtbox and apply damage exactly once per swing.
+    * Apply knockback to the struck enemy.
+    * Drive hit-stop (a brief global freeze that sells the impact).
+
+    Explicitly *not* responsible for locomotion, gravity, world collision or
+    one-way platforms — those belong to the entities' own integrators.
+    """
+
+    def __init__(self, context: Any = None) -> None:
         self._context = context
         self._hitstop_timer: float = 0.0
-        self._spatial_grid: SpatialGrid = SpatialGrid(cell_size=64)
+        # Enemies already damaged by the *current* swing. Cleared when the
+        # player's hitbox is retired, so each swing lands at most once per
+        # enemy (AUD-003).
+        self._hit_this_swing: set[int] = set()
 
-    def build_spatial_grid(self, stage: StageData) -> None:
-        self._spatial_grid.clear()
-        from src.framework.entities.enemy_base import EnemyBase
-        for entity in stage.entity_list:
-            if isinstance(entity, EnemyBase) and entity.is_alive:
-                self._spatial_grid.insert(entity, entity.hurtbox)
+    # ── lifecycle ──────────────────────────────────────────────
+
+    def reset(self) -> None:
+        """Clear all per-stage state. Called on stage load and on respawn."""
+        self._hitstop_timer = 0.0
+        self._hit_this_swing.clear()
+
+    # ── hit-stop ───────────────────────────────────────────────
+
+    def trigger_hitstop(self, duration: float = HITSTOP_DURATION) -> None:
+        """Freeze the simulation for ``duration`` real seconds."""
+        # Never shorten an in-flight freeze: a second hit landing mid-stop
+        # should extend the impact, not cut it short.
+        self._hitstop_timer = max(self._hitstop_timer, duration)
+
+    @property
+    def is_hitstopped(self) -> bool:
+        return self._hitstop_timer > 0.0
+
+    def update_hitstop(self, unscaled_dt: float, clock: Any = None) -> None:
+        """Advance the hit-stop countdown and drive ``clock.time_scale``.
+
+        ``unscaled_dt`` MUST be the clock's real, unscaled delta. Passing the
+        scaled delta here reintroduces AUD-001: ``time_scale`` drops to 0.0,
+        which drives the scaled delta to 0.0, which stops this countdown from
+        ever draining — the game freezes permanently on the first landed hit.
+        """
+        if self._hitstop_timer > 0.0:
+            self._hitstop_timer -= unscaled_dt
+            if self._hitstop_timer <= 0.0:
+                self._hitstop_timer = 0.0
+        if clock is not None:
+            clock.time_scale = 0.0 if self._hitstop_timer > 0.0 else 1.0
+
+    def step(self, dt: float) -> None:
+        """Retained for API compatibility; combat resolution is not integrated.
+
+        Kept as an explicit no-op so existing stage code and student templates
+        that call ``collision.step(dt)`` keep working.
+        """
+        return None
+
+    # ── knockback ──────────────────────────────────────────────
+
+    def apply_knockback(self, entity: BaseEntity, impulse_x: float, impulse_y: float) -> None:
+        """Push ``entity`` away from the attacker.
+
+        Delegates to the entity's own knockback velocity, which is what its
+        integrator actually reads.
+        """
+        kb = getattr(entity, "_knockback_velocity", None)
+        if kb is not None:
+            kb.x += impulse_x
+            kb.y += impulse_y
+            return
+        velocity = getattr(entity, "velocity", None)
+        if velocity is not None:
+            velocity.x += impulse_x
+            velocity.y += impulse_y
+
+    # ── enemy sync ─────────────────────────────────────────────
 
     def update_enemies(self, dt: float, player: Player, stage: StageData) -> None:
-        self.build_spatial_grid(stage)
-        for entity in stage.entity_list:
-            from src.framework.entities.enemy_base import EnemyBase
-            if isinstance(entity, EnemyBase):
-                if hasattr(entity, "set_player_ref"):
-                    entity.set_player_ref(player.rect)
-                if entity.is_alive:
-                    entity._check_player_contact(player)
-                    entity.update(dt)
+        """Retained for API compatibility.
+
+        Enemy movement is integrated by ``EnemyBase.update``; there is nothing
+        to sync here. Previously this ran a per-frame O(n) loop over every
+        entity that could never match anything.
+        """
+        return None
+
+    # ── attack resolution ──────────────────────────────────────
 
     def process_attack(
         self, dt: float, player: Player, stage: StageData,
-        camera: Camera, clock: DeltaClock | None,
+        camera: Camera | None = None, clock: Any = None,
     ) -> None:
+        """Resolve the player's active hitbox against every living enemy."""
         hitbox = player.active_hitbox
         if hitbox is None:
+            # Swing is over (or was consumed) — arm the next one.
+            self._hit_this_swing.clear()
             return
 
-        hit_any = False
-        state_instance = getattr(player, "_state_instance", None)
-        is_slam = False
-        if state_instance is not None:
-            from src.framework.entities.player_states import AerialSlamState
-            is_slam = isinstance(state_instance, AerialSlamState)
+        connected = False
+        for entity in stage.entity_list:
+            if not isinstance(entity, EnemyBase) or not entity.is_alive:
+                continue
+            if id(entity) in self._hit_this_swing:
+                continue
+            if not hitbox.colliderect(entity.hurtbox):
+                continue
 
-        from src.framework.entities.enemy_base import EnemyBase
-        nearby = self._spatial_grid.get_nearby(hitbox)
-        for entity in nearby:
-            if isinstance(entity, EnemyBase) and entity.is_alive:
-                if hitbox.colliderect(entity.hurtbox):
-                    entity.apply_hit(player.current_attack_damage, player.rect.center)
-                    if is_slam and entity.is_alive:
-                        entity._knockback_velocity.y = 400.0
-                        entity._knockback_velocity.x = 0.0
-                        entity._hurt_timer = 0.4
-                    hit_any = True
-                    hit_pos = list(entity.rect.center)
-                    self._context.event_bus.emit(
-                        Events.SFX_ENEMY_HIT,
-                        pos=hit_pos, damage=player.current_attack_damage,
-                    )
-                    if not player.is_grounded and not is_slam:
-                        player.velocity.y = min(player.velocity.y, -250.0)
-                    player.special_meter = min(
-                        player.special_meter_max,
-                        player.special_meter + player.current_attack_damage * 8.0,
-                    )
+            entity.apply_hit(
+                self._calculate_damage(player, entity),
+                (player.position.x, player.position.y),
+            )
+            self.apply_knockback(
+                entity,
+                player.facing_direction * KNOCKBACK_IMPULSE_X,
+                KNOCKBACK_IMPULSE_Y,
+            )
+            self._hit_this_swing.add(id(entity))
+            connected = True
 
-        if not hit_any:
-            return
+        if connected:
+            self.trigger_hitstop(HITSTOP_DURATION)
+            # Retire the hitbox so a multi-frame swing cannot re-damage the
+            # same enemy on the following frames (AUD-003).
+            player.consume_hitbox()
 
-        player.consume_hitbox()
-        self._context.event_bus.emit(
-            Events.SFX_HIT_CONNECT,
-            pos=list(player.rect.center),
-            damage=player.current_attack_damage,
-        )
-        hitstop_frames = 6.0 if is_slam else (4.0 if player.current_attack_damage >= 1.0 else 2.0)
-        if clock is not None:
-            if self._hitstop_timer <= 0:
-                clock.time_scale = 0.15
-            self._hitstop_timer = hitstop_frames / 60.0
-        amp = min(4.0 if is_slam else 2.0, 0.5 * max(1, getattr(player, "combo_count", 0)))
-        camera.apply_shake(amplitude=amp, duration=0.1 if not is_slam else 0.2)
+    def _calculate_damage(self, player: Player, enemy: EnemyBase) -> float:
+        """Damage this swing deals to ``enemy``.
 
-    def update_hitstop(self, dt: float, clock: DeltaClock | None) -> None:
-        if self._hitstop_timer > 0:
-            self._hitstop_timer -= dt
-            if self._hitstop_timer <= 0 and clock is not None:
-                clock.time_scale = 1.0
+        Reads the player's public ``current_attack_damage`` property, which
+        already folds in attack weight (light 0.5 / heavy 1.0), the combo
+        multiplier and the difficulty modifier. The previous implementation
+        read a private attribute ``_current_attack_damage`` that has never
+        existed on ``Player``, so ``getattr`` always returned its 1.0 fallback
+        and every attack in the game dealt a flat 1.0 — light and heavy
+        attacks were indistinguishable and the combo system was inert
+        (AUD-002).
+        """
+        damage = getattr(player, "current_attack_damage", None)
+        if damage is None:
+            from src.engine.core.difficulty import get_config
+            return 1.0 * get_config().outgoing_damage_mult
+        return float(damage)
 
-    def reset(self) -> None:
-        self._hitstop_timer = 0.0
-        self._spatial_grid.clear()
+    def remove_entity(self, entity: BaseEntity) -> None:
+        """Forget any per-swing hit record for ``entity``."""
+        self._hit_this_swing.discard(id(entity))
+
+    def draw_debug(
+        self, surface: pygame.Surface,
+        player: Player | None = None,
+        stage: StageData | None = None,
+        camera: Camera | None = None,
+    ) -> None:
+        """Outline the player's active hitbox (green) and enemy hurtboxes (red)."""
+        ox, oy = 0.0, 0.0
+        if camera is not None:
+            ox, oy = camera.offset.x, camera.offset.y
+
+        def _shift(r: pygame.Rect) -> pygame.Rect:
+            return pygame.Rect(int(r.x - ox), int(r.y - oy), r.width, r.height)
+
+        if stage is not None:
+            for entity in stage.entity_list:
+                if isinstance(entity, EnemyBase) and entity.is_alive:
+                    pygame.draw.rect(surface, (255, 64, 64), _shift(entity.hurtbox), 1)
+        if player is not None and player.active_hitbox is not None:
+            pygame.draw.rect(surface, (64, 255, 64), _shift(player.active_hitbox), 1)

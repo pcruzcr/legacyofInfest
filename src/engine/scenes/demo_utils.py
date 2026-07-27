@@ -5,16 +5,18 @@ source manager, frame throttle, error display, save helpers.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-import logging
-from pathlib import Path
 import datetime
+import logging
+from dataclasses import dataclass, field
+from pathlib import Path
+
 import pygame
 
 from src.engine.core import settings
+from src.engine.scenes.demo_layout import FONT_LARGE, PANEL_SIZE
 from src.engine.utils.asset_loader import AssetLoader
-from src.engine.scenes.demo_layout import PANEL_SIZE, FONT_LARGE
 
+logger = logging.getLogger(__name__)
 
 # ── Source Surface Manager ────────────────────────────────────────
 @dataclass
@@ -76,7 +78,7 @@ def build_default_sources() -> SourceSurfaceManager:
                 names.append(name)
                 return True
         except (pygame.error, FileNotFoundError, PermissionError):
-            logging.warning("demo_utils: failed to load %s", path)
+            logger.warning("demo_utils: failed to load %s", path)
         return False
 
     if not _try_load(Path("assets") / "sprites" / "player" / "player_idle.png",
@@ -188,7 +190,7 @@ def save_png(scene_prefix: str, mode_name: str, surface: pygame.Surface | None) 
         return ""
     out_dir = Path("tests") / "output" / "demo"
     out_dir.mkdir(parents=True, exist_ok=True)
-    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    ts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
     fname = f"{scene_prefix}_{mode_name}_{ts}.png"
     path = out_dir / fname
     pygame.image.save(surface, str(path))

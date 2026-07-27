@@ -9,6 +9,7 @@ subscribers, wildcard literal, clear(), and recursion guard.
 from __future__ import annotations
 
 import pytest
+
 from src.engine.core.event_bus import EventBus
 
 
@@ -126,14 +127,81 @@ def test_unsubscribe_nonexistent_does_not_raise(bus: EventBus) -> None:
     bus.unsubscribe("NONEXISTENT", callback)
 
 
-def test_duplicate_subscribe_logs_warning(bus: EventBus, caplog: pytest.LogCaptureFixture) -> None:
+def test_duplicate_subscribe_is_idempotent(bus: EventBus) -> None:
+    """Subscribing the same callback twice must not double-deliver.
+
+    Rewritten (AUD-019): this test used to assert that a warning containing the
+    word "duplicate" reached the log. That pinned the logging implementation
+    rather than the contract, and the contract is what callers depend on —
+    scenes re-arm their handlers after a respawn and must not end up receiving
+    every event twice. Duplicate subscription is now a DEBUG-level detail, so
+    the behaviour is asserted directly instead.
+    """
+    calls: list[int] = []
+
     def callback(**data: object) -> None:
-        pass
+        calls.append(1)
 
     bus.subscribe("EVENT", callback)
     bus.subscribe("EVENT", callback)
+    assert bus.subscriber_count() == 1
 
-    assert "duplicate" in caplog.text.lower()
+    bus.emit("EVENT")
+    bus.dispatch()
+    assert calls == [1], f"handler fired {len(calls)} times for one event"
+
+
+def test_collected_subscriber_is_dropped(bus: EventBus) -> None:
+    """A subscriber whose owner is collected stops firing and is pruned.
+
+    AUD-028: the bus previously held strong references, so a popped scene was
+    kept alive forever and its handlers kept firing on a destroyed object.
+    """
+    import gc
+
+    class Listener:
+        def __init__(self) -> None:
+            self.hits = 0
+
+        def on_event(self, **data: object) -> None:
+            self.hits += 1
+
+    listener = Listener()
+    bus.subscribe("EVENT", listener.on_event)
+
+    bus.emit("EVENT")
+    bus.dispatch()
+    assert listener.hits == 1
+
+    del listener
+    gc.collect()
+
+    bus.emit("EVENT")
+    bus.dispatch()  # must not raise, and must prune the dead subscription
+    assert bus.subscriber_count() == 0
+
+
+def test_partial_callback_failure_does_not_mask_the_error(
+    bus: EventBus, caplog: pytest.LogCaptureFixture,
+) -> None:
+    """AUD-029: the error handler used to raise on callbacks without __name__.
+
+    ``functools.partial`` has no ``__name__``, so ``callback.__name__`` inside
+    the ``except`` block raised ``AttributeError``, discarding the real
+    exception and replacing a useful diagnostic with a misleading one.
+    """
+    import functools
+
+    def handler(flag: object, **data: object) -> None:
+        raise ValueError("boom")
+
+    bound = functools.partial(handler, flag=True)
+    bus.subscribe("EVENT", bound)
+    bus.emit("EVENT")
+
+    bus.dispatch()  # must not propagate AttributeError
+
+    assert "boom" in caplog.text or "ValueError" in caplog.text
 
 
 def test_subscribers_snapshot_returns_names(bus: EventBus) -> None:

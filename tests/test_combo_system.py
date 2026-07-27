@@ -4,10 +4,12 @@ System: tests
 Description: Tests for combo counting, combo timer, and multiplier calculation.
 """
 from __future__ import annotations
+
 import pygame
+
 from src.engine.core import settings
 from src.framework.entities.player import Player
-from src.framework.entities.player_states import (
+from src.framework.entities.states import (
     _reset_combo,
     _start_attack,
 )
@@ -16,7 +18,7 @@ from src.framework.entities.player_states import (
 class TestComboSystem:
     def _reset_to_idle(self, player: Player) -> None:
         """Force player back to IdleState so next _start_attack starts fresh."""
-        from src.framework.entities.player_states import IdleState
+        from src.framework.entities.states import IdleState
         player._change_state_instance(IdleState(), force=True)
 
     def test_combo_count_increments(self) -> None:
@@ -93,7 +95,7 @@ class TestComboSystem:
         _start_attack(player, Player.SHORT_ATTACK)
         player.combo_count = 2
         player.combo_active = True
-        from src.framework.entities.player_states import ShortAttackState
+        from src.framework.entities.states import ShortAttackState
         player._state_instance = ShortAttackState()
         player._active_hitbox = pygame.Rect(0, 0, 10, 10)
         dmg = player.current_attack_damage

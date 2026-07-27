@@ -7,7 +7,10 @@ Replaces the _try_scene() elif chain with a register → build pattern.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Callable, cast
+from collections.abc import Callable
+from typing import TYPE_CHECKING, cast
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -32,7 +35,7 @@ class SceneRegistry:
         try:
             return factory(ctx)
         except (ImportError, RuntimeError, TypeError) as e:
-            logging.warning("scene_registry: failed to build '%s': %s", key, e)
+            logger.warning("scene_registry: failed to build '%s': %s", key, e)
             return None
 
     @property
@@ -68,7 +71,7 @@ def register_demo_scenes() -> None:
     reg.register("pattern", lambda ctx: _build_scene(ctx, "pattern_demo_scene", "PatternDemoScene"))
     reg.register("combo", lambda ctx: _build_scene(ctx, "combo_demo_scene", "ComboDemoScene"))
     reg.register("inventory", lambda ctx: _build_scene(ctx, "inventory_scene", "InventoryScene"))
-    reg.register("achievement", lambda ctx: _build_scene(ctx, "achievement_screen", "AchievementScene"))
+    reg.register("achievement", lambda ctx: _build_scene(ctx, "achievement_scene", "AchievementScene"))
     reg.register("worldmap", lambda ctx: _build_scene(ctx, "world_map_scene", "WorldMapScene"))
     reg.register("bestiary", lambda ctx: _build_scene(ctx, "bestiary_scene", "BestiaryScene"))
     reg.register("progress", lambda ctx: _build_scene(ctx, "progress_scene", "ProgressScene"))

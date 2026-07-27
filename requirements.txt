@@ -1,12 +1,43 @@
-pygame-ce~=2.5 
-numpy~=1.26 
-scipy~=1.13 
-opencv-python~=4.10 
-scikit-image~=0.24 
-scikit-learn~=1.5 
-Pillow~=12.2 
-pytmx~=3.32 
-pyscroll~=2.31 
-pytweening~=1.2 
-joblib~=1.4 
-matplotlib~=3.9
+# Runtime dependencies for Legacy of InFest.
+#
+# AUD-007: this file is now kept in sync with the [project].dependencies table
+# in pyproject.toml, which is the single source of truth. It previously listed
+# a different, smaller set than pyproject.toml — following the README's
+# `pip install -r requirements.txt` produced an install that crashed on import
+# because numba, pymunk, pydantic, orjson and pygame-gui were all missing here
+# but imported unguarded by src/.
+#
+#   Full install (recommended):  pip install -e ".[dev]"
+#   Runtime only:                pip install -r requirements.txt
+#
+# Optional extras (the game runs without them, with a documented fallback):
+#   pip install -e ".[accel]"       numba JIT + ModernGL post-processing
+#   pip install -e ".[scripting]"   Lua enemy behaviours
+#   pip install -e ".[audiotools]"  offline audio conversion tooling
+
+# Core engine
+pygame-ce>=2.5
+numpy>=1.26,<2
+pymunk>=6.6
+
+# Data & validation
+pydantic>=2.7
+orjson>=3.10
+
+# UI
+pygame-gui>=0.6
+
+# Academic / processing
+scipy>=1.13
+opencv-python>=4.10
+scikit-image>=0.24
+scikit-learn>=1.5
+Pillow>=10.0
+
+# Map / level
+pytmx>=3.32
+pyscroll>=2.31
+
+# ML / parallelism
+joblib>=1.4
+matplotlib>=3.8

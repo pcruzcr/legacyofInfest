@@ -3,43 +3,45 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Literal
 
-import pygame
 import numpy as np
+import pygame
 
 from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
-    COLOR_BG,
-    COLOR_TEXT,
-    COLOR_HIGHLIGHT,
+    BOTTOM_BAR_H,
+    BOTTOM_BAR_Y,
     COLOR_ACCENT,
-    COLOR_TOP_BAR_BG,
+    COLOR_BG,
     COLOR_ERROR,
     COLOR_GOLD,
-    FONT_SMALL,
-    FONT_MEDIUM,
+    COLOR_HIGHLIGHT,
+    COLOR_TEXT,
+    COLOR_TOP_BAR_BG,
     FONT_LARGE,
-    RIGHT_PANEL_X,
+    FONT_MEDIUM,
+    FONT_SMALL,
     PANEL_H,
     PANEL_SIZE,
-    TOP_BAR_Y,
+    RIGHT_PANEL_X,
     TOP_BAR_H,
-    BOTTOM_BAR_Y,
-    BOTTOM_BAR_H,
-    draw_top_bar,
+    TOP_BAR_Y,
+    FrameThrottle,
+    SourceSurfaceManager,
+    build_default_sources,
     draw_bottom_bar,
     draw_bottom_bar_error,
-    draw_panel_border,
     draw_divider,
+    draw_panel_border,
     draw_save_notification,
+    draw_top_bar,
     save_png,
-    build_default_sources,
-    SourceSurfaceManager,
-    FrameThrottle,
 )
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.processing.vision_tools import ComponentResult, RegionInfo, VisionTools
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -261,7 +263,7 @@ class VisionDemoScene(BaseScene):
             self._update_intermediate_label()
             self._error_msg = ""
         except (pygame.error, ValueError, ZeroDivisionError, np.linalg.LinAlgError) as e:
-            logging.warning("vision_demo: compute error: %s", e)
+            logger.warning("vision_demo: compute error: %s", e)
             self._error_msg = f"Error: {e}"[:60]
             self._error_timer = 2.0
 
@@ -569,7 +571,7 @@ class VisionDemoScene(BaseScene):
                 stats = self._font_overlay_small.render(f"White: {white}px ({white*100//total}%)  Black: {black}px ({black*100//total}%)", True, COLOR_TEXT)
                 self._inter_overlay.blit(stats, (bx + 6, stats_y))
             except (pygame.error, ValueError, RuntimeError) as e:
-                logging.warning("vision_demo: pixel stats failed: %s", e)
+                logger.warning("vision_demo: pixel stats failed: %s", e)
 
         # Kernel overlay for morph modes
         if self._mode in (2, 3, 4, 5):

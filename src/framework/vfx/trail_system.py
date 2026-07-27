@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 
 class TrailPoint:
-    __slots__ = ("x", "y", "alpha", "surface")
+    __slots__ = ("alpha", "surface", "x", "y")
 
     def __init__(self, x: float, y: float, surface: pygame.Surface, alpha: int = 180) -> None:
         self.x = x
@@ -42,11 +42,7 @@ class TrailSystem:
         """Render the player silhouette for the trail."""
         w, h = player.rect.width, player.rect.height
         size = (w, h)
-        if self._capture_surf is None or self._capture_surf_size != size:
-            self._capture_surf = pygame.Surface(size, pygame.SRCALPHA)
-            self._capture_surf_size = size
-        surf = self._capture_surf
-        surf.fill((0, 0, 0, 0))
+        surf = pygame.Surface(size, pygame.SRCALPHA)
         color = (100, 150, 255, 120) if player._dash_timer > 0 else (200, 200, 255, 80)
         pygame.draw.rect(surf, color, (0, 0, w, h))
         return surf

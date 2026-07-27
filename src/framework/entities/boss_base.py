@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+
 import pygame
 
-from src.engine.core.event_bus import _get_bus as _bus
-_emit = lambda *a, **kw: _bus().emit(*a, **kw)
+from src.engine.core import settings
 from src.engine.core.events import Events
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.entities.enemy_base import EnemyBase, EnemyState
 
+logger = logging.getLogger(__name__)
 
 @dataclass
 class BossPhase:
@@ -43,11 +44,13 @@ class BossBase(EnemyBase):
         max_health: float = 20.0,
         damage_on_contact: float = 1.0,
     ) -> None:
-        super().__init__(
+        super().__init__(  # BUG-078 FIX: detection_range de arena, no de patrulla
             spawn_position=spawn_position,
             max_health=max_health,
             damage_on_contact=damage_on_contact,
             contact_knockback=0.0,
+            detection_range_x=640.0,
+            detection_range_y=480.0,
         )
 
         self.phases: list[BossPhase] = []
@@ -61,6 +64,7 @@ class BossBase(EnemyBase):
         self._boss_sprite_prefix: str = ""
         self._completion_fired: bool = False
         self._transition_overlay: pygame.Surface | None = None
+        self._flip_cache: dict[tuple[str, int], pygame.Surface] = {}
 
     @property
     def completion_fired(self) -> bool:
@@ -70,22 +74,39 @@ class BossBase(EnemyBase):
     def completion_fired(self, value: bool) -> None:
         self._completion_fired = value
 
-    def _load_boss_sprites(
+    def _load_boss_sprites(  # BUG-077 FIX: sheets y base_dir opcionales; logging en DEBUG
         self, prefix: str, fw: int = 48, fh: int = 48,
+        sheets: dict[str, tuple[int, int]] | None = None,
+        base_dir: str | None = None,
     ) -> None:
-        """Load boss sprites from assets/sprites/bosses/{prefix}_{name}.png."""
+        """Load boss sprites from assets/sprites/bosses/{prefix}_{name}.png.
+
+        Args:
+            prefix: File name prefix for sprite sheets.
+            fw: Default frame width.
+            fh: Default frame height.
+            sheets: Optional mapping of anim_key → (frame_width, frame_height)
+                    for bosses with varying frame sizes per animation.
+            base_dir: Optional subdirectory override.
+        """
         from pathlib import Path
-        base = Path("assets/sprites/bosses")
+        base = Path(base_dir) if base_dir else settings.ASSETS_DIR / "sprites/bosses"
         self._boss_sprite_prefix = prefix
         self._sprite_fw = fw
         self._sprite_fh = fh
-        for anim_key in ("drift", "hurt", "charge", "stomp", "vine", "death"):
+        default_keys = ("drift", "hurt", "charge", "stomp", "vine", "death")
+        anim_keys = list(sheets.keys()) if sheets else default_keys
+        for anim_key in anim_keys:
+            sw, sh = (sheets[anim_key] if sheets and anim_key in sheets else (fw, fh))
             path = base / f"{prefix}_{anim_key}.png"
+            if not path.exists():
+                logger.debug("boss_base: sprite not found (optional) %s", path)
+                continue
             try:
-                frames = AssetLoader.load_sprite_sheet(path, fw, fh)
+                frames = AssetLoader.load_sprite_sheet(path, sw, sh)
                 self._sprite_frames[anim_key] = frames
             except (pygame.error, FileNotFoundError, PermissionError):
-                logging.warning("boss_base: failed to load sprite %s", path)
+                logger.debug("boss_base: failed to load sprite %s", path)
 
     def set_phases(self, phases: list[BossPhase]) -> None:
         """Set the phase list and extract health thresholds."""
@@ -152,33 +173,32 @@ class BossBase(EnemyBase):
         self.current_phase += 1
         self.is_transitioning = False
         self._invincibility_timer = 0.0
+        self._filter_frame = 0
 
         phase = self.phases[self.current_phase]
         if phase.speed_multiplier != 1.0:
             pass
 
-        # Update phase max health to current threshold for HUD bar
-        # Do NOT reset health to max — the boss keeps its current health
         if self.current_phase < len(self.phase_health_thresholds):
             self._phase_max_health = self.phase_health_thresholds[self.current_phase]
         self.current_health = min(self.current_health, self._phase_max_health)
 
-        _emit(
+        self._event_bus.emit(
             Events.BOSS_PHASE_CHANGED,
             boss_name=self._boss_name,
             phase=self.current_phase,
             phase_count=self.phase_count,
             new_max_health=self._phase_max_health,
         )
-        _emit(
+        self._event_bus.emit(
             Events.VFX_ULTIMATE,
             pos=(self.position.x, self.position.y - 20),
         )
-        _emit(
+        self._event_bus.emit(
             Events.VFX_PARRY,
             pos=(self.position.x, self.position.y - 20),
         )
-        _emit(
+        self._event_bus.emit(
             Events.MUSIC_STINGER,
             name=f"stinger_boss_phase_{self.current_phase}",
             volume=0.8,
@@ -212,6 +232,7 @@ class BossBase(EnemyBase):
 
     def _apply_filter(self, frame: pygame.Surface) -> pygame.Surface:
         """Apply the current phase's filter effect to a sprite frame."""
+        self._filter_frame += 1
         if not self.phases or self.current_phase >= len(self.phases):
             return frame
         if self._filter_frame % _APPLY_FILTER_EVERY_N_FRAMES != 0:
@@ -247,7 +268,11 @@ class BossBase(EnemyBase):
             frame_idx = min(self._animation_frame, len(frames) - 1)
             frame = frames[frame_idx]
             if self.facing_direction < 0:
-                frame = pygame.transform.flip(frame, True, False)
+                cached = self._flip_cache.get((anim_key, frame_idx))
+                if cached is None:
+                    cached = pygame.transform.flip(frame, True, False)
+                    self._flip_cache[(anim_key, frame_idx)] = cached
+                frame = cached
             if self.is_transitioning:
                 if self._transition_overlay is None or self._transition_overlay.get_size() != frame.get_size():
                     self._transition_overlay = pygame.Surface(frame.get_size(), pygame.SRCALPHA)

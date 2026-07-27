@@ -6,6 +6,7 @@ Description: Fog of war overlay — hides unexplored areas with
 editable holes revealed by player/enemy positions.
 """
 from __future__ import annotations
+
 import pygame
 
 from src.engine.core import settings

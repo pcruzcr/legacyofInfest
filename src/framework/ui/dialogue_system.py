@@ -6,14 +6,18 @@ Description: Branching dialogue system with speaker portraits, name labels,
 and choice-based progression. Supports multiple NPCs and dialogue trees.
 """
 from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 import pygame
-from typing import TYPE_CHECKING
+
 from src.engine.core import settings
 from src.engine.core.events import Events
 from src.engine.input.action_map import Action
 from src.engine.utils.asset_loader import AssetLoader
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -149,7 +153,7 @@ class DialogueSystem:
                     )
                     self._portrait_cache[portrait] = img
                 except (pygame.error, FileNotFoundError, PermissionError):
-                    logging.warning("dialogue_system: failed to load portrait %s", portrait)
+                    logger.warning("dialogue_system: failed to load portrait %s", portrait)
                     self._portrait_cache[portrait] = pygame.Surface((48, 48))
                     self._portrait_cache[portrait].fill((80, 80, 100))
             surface.blit(self._portrait_cache[portrait], (px, py))

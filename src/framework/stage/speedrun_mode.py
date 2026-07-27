@@ -5,9 +5,15 @@ Academic Unit: N/A
 Description: Speedrun mode with global timer, splits per stage, and ghost data.
 """
 from __future__ import annotations
-import json
+
 from pathlib import Path
 from typing import Any
+
+import orjson
+
+from src.engine.core import settings
+
+_DEFAULT_SAVE_PATH: Path = settings.PROJECT_ROOT / "saves/speedrun.json"
 
 
 class SpeedrunTimer:
@@ -56,22 +62,21 @@ class SpeedrunTimer:
     def get_splits(self) -> list[dict[str, Any]]:
         return list(self._splits)
 
-    def save(self, path: str | Path = "saves/speedrun.json") -> None:
+    def save(self, path: str | Path | None = None) -> None:
         data = {
             "global_time": self._global_time,
             "splits": self._splits,
         }
-        Path(path).parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
+        path = Path(path) if path is not None else _DEFAULT_SAVE_PATH
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(orjson.dumps(data, option=orjson.OPT_INDENT_2))
 
-    def load(self, path: str | Path = "saves/speedrun.json") -> None:
+    def load(self, path: str | Path | None = None) -> None:
         try:
-            with open(path, encoding="utf-8") as f:
-                data = json.load(f)
+            data = orjson.loads(Path(path).read_bytes() if path is not None else _DEFAULT_SAVE_PATH.read_bytes())
             self._global_time = data.get("global_time", 0.0)
             self._splits = data.get("splits", [])
-        except (FileNotFoundError, json.JSONDecodeError):
+        except (FileNotFoundError, orjson.JSONDecodeError):
             pass
 
     @property
@@ -101,15 +106,14 @@ class GhostData:
         self._frames.clear()
 
     def save(self, path: str | Path) -> None:
-        Path(path).parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(self._frames, f, indent=2)
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(orjson.dumps(self._frames, option=orjson.OPT_INDENT_2))
 
     def load(self, path: str | Path) -> None:
         try:
-            with open(path, encoding="utf-8") as f:
-                self._frames = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
+            self._frames = orjson.loads(Path(path).read_bytes())
+        except (FileNotFoundError, orjson.JSONDecodeError):
             pass
 
     @property

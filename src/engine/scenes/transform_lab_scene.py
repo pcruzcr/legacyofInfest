@@ -16,9 +16,9 @@ Controls:
 """
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING
 
-import math
 import pygame
 
 from src.engine.core import settings
@@ -26,9 +26,14 @@ from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
     BOTTOM_BAR_Y,
-    COLOR_BG, COLOR_TEXT, COLOR_HIGHLIGHT, COLOR_ACCENT,
-    FONT_SMALL, FONT_MEDIUM,
-    draw_top_bar, draw_bottom_bar,
+    COLOR_ACCENT,
+    COLOR_BG,
+    COLOR_HIGHLIGHT,
+    COLOR_TEXT,
+    FONT_MEDIUM,
+    FONT_SMALL,
+    draw_bottom_bar,
+    draw_top_bar,
     save_png,
 )
 from src.engine.utils.asset_loader import AssetLoader
@@ -244,28 +249,28 @@ class TransformLabScene(BaseScene):
     def _build_matrix_lines(self) -> list[str]:
         if self._mode == 0:
             return [
-                "[1  0  tx]      [1  0  {:.0f}]".format(self._tx),
-                "[0  1  ty]  =   [0  1  {:.0f}]".format(self._ty),
+                f"[1  0  tx]      [1  0  {self._tx:.0f}]",
+                f"[0  1  ty]  =   [0  1  {self._ty:.0f}]",
                 "[0  0   1]      [0  0   1]",
             ]
         elif self._mode == 1:
             rad = math.radians(self._angle)
             c, s = math.cos(rad), math.sin(rad)
             return [
-                "[cos -sin  0]    [{:.2f}  {:.2f}  0]".format(c, -s),
-                "[sin  cos  0]  = [{:.2f}  {:.2f}  0]".format(s, c),
+                f"[cos -sin  0]    [{c:.2f}  {-s:.2f}  0]",
+                f"[sin  cos  0]  = [{s:.2f}  {c:.2f}  0]",
                 "[ 0    0   1]    [ 0     0    1]",
             ]
         elif self._mode == 2:
             return [
-                "[sx  0   0]     [{:.2f}  0    0]".format(self._sx),
-                "[ 0  sy  0]  =  [ 0   {:.2f}  0]".format(self._sy),
+                f"[sx  0   0]     [{self._sx:.2f}  0    0]",
+                f"[ 0  sy  0]  =  [ 0   {self._sy:.2f}  0]",
                 "[ 0   0   1]     [ 0    0    1]",
             ]
         elif self._mode == 3:
             return [
-                "[1  shx  0]     [1    {:.2f}  0]".format(self._shx),
-                "[shy 1   0]  =  [{:.2f}   1    0]".format(self._shy),
+                f"[1  shx  0]     [1    {self._shx:.2f}  0]",
+                f"[shy 1   0]  =  [{self._shy:.2f}   1    0]",
                 "[ 0   0   1]     [ 0     0    1]",
             ]
         elif self._mode == 4:

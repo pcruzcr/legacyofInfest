@@ -190,7 +190,7 @@ class LearningOverlay:
         line_h = 16
         title_h = 22
         pad = 10
-        max_line_w = max(self._font.size(l)[0] for l in lines) if lines else 200
+        max_line_w = max(self._font.size(line)[0] for line in lines) if lines else 200
         panel_w = max(max_line_w + pad * 2, self._title_font.size(title)[0] + pad * 2)
         total_h = title_h + len(lines) * line_h + pad * 2
         panel_w = min(panel_w, settings.INTERNAL_WIDTH - 40)

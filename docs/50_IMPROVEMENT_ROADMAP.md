@@ -1,25 +1,97 @@
 ---
 document_id: "LOI-ROADMAP-050"
-title: "Legacy of InFest — Improvement Roadmap"
-aliases: ["Improvement Roadmap", "50 Improvement Roadmap"]
-tags: ["improvement", "roadmap", "planning"]
-description: "Consolidated improvement opportunities from evaluations + V2 Architecture Plan"
+title: "Legacy of InFest — Improvement Roadmap & V2 Architecture"
+aliases: ["Improvement Roadmap", "50 Improvement Roadmap", "V2 Architecture"]
+tags: ["improvement", "roadmap", "architecture", "v2", "planning"]
+description: "Complete architecture transformation: from V1 monolithic prototype to V2 modular multi-engine platform"
 source: "docs/50_IMPROVEMENT_ROADMAP.md"
 date_processed: "2026-07-16"
 ---
 
-# Legacy of InFest — Improvement Roadmap
+# Legacy of InFest — Improvement Roadmap & V2 Architecture
 
 **Document ID:** LOI-ROADMAP-050  
-**Version:** 3.0.0  
-**Status:** Official — Current Implementation Baseline + V2 Architecture Plan  
-**Audience:** Professor, Teaching Assistants, AI coding assistants
+**Version:** 4.0.0  
+**Status:** Official — V1 Baseline + V2 Multi-Engine Architecture  
+**Audience:** Professor, Teaching Assistants, AI coding assistants, Architects
 
 ---
 
-## 0. Current Implementation Status
+## Table of Contents
 
-### 0.1 Fully Implemented Systems ✅
+1. [Executive Summary](#1-executive-summary)
+2. [V1 Current Implementation Status](#2-v1-current-implementation-status)
+3. [V1 Code Quality Assessment](#3-v1-code-quality-assessment)
+4. [V1 Architectural Problems Detected](#4-v1-architectural-problems-detected)
+5. [V2 Proposed Architecture: Multi-Engine Design](#5-v2-proposed-architecture-multi-engine-design)
+6. [Module Specifications](#6-module-specifications)
+7. [Design Patterns Applied](#7-design-patterns-applied)
+8. [Implementation Phases](#8-implementation-phases)
+9. [V1 vs V2 Comparison](#9-v1-vs-v2-comparison)
+10. [Game Types Possible After V2](#10-game-types-possible-after-v2)
+11. [V2 Verification Checklist](#11-v2-verification-checklist)
+12. [Complete Improvement Item List](#12-complete-improvement-item-list)
+13. [References](#13-references)
+
+---
+
+## 1. Executive Summary
+
+### 1.1 Current State (V1)
+
+**Legacy of InFest V1** es un prototipo funcional de ~29,000 LOC con 464+ tests, 32 escenas, 25 estados de jugador, 9 tipos de enemigos, sistema de partículas, iluminación, post-procesamiento, y más. **Funciona, pero NO escala.**
+
+| Métrica | Valor |
+|---------|-------|
+| Archivos Python | ~210 |
+| LOC | ~29,000 |
+| Tests | 464+ |
+| Player States | 25 |
+| Enemy Types | 9 |
+| Scenes | 32 |
+| Score General | **5.6/10** |
+
+### 1.2 Roadmap Summary
+
+| Category | Items | P0 | P1 | P2 | P3 | Effort |
+|----------|-------|----|----|----|----|--------|
+| **loi-core** | 12 | 4 | 4 | 3 | 1 | 12-20 weeks |
+| **loi-math** | 4 | 0 | 1 | 2 | 1 | 4-8 weeks |
+| **loi-physics** | 5 | 1 | 2 | 1 | 1 | 6-10 weeks |
+| **loi-render** | 10 | 3 | 3 | 2 | 2 | 14-22 weeks |
+| **loi-audio** | 4 | 0 | 2 | 1 | 1 | 4-8 weeks |
+| **loi-vfx** | 6 | 0 | 2 | 3 | 1 | 8-14 weeks |
+| **loi-framework** | 14 | 0 | 4 | 6 | 4 | 16-28 weeks |
+| **loi-tools** | 5 | 0 | 1 | 2 | 2 | 8-14 weeks |
+| **Code Quality** | 12 | 2 | 4 | 4 | 2 | 10-18 weeks |
+| **Content** | 3 | 0 | 1 | 1 | 1 | 2-4 weeks |
+| **Documentation** | 2 | 1 | 1 | 0 | 0 | 1 week |
+| **TOTAL** | **77** | **11** | **25** | **25** | **16** | **85-148 weeks** |
+
+**Note:** Items reducidos de 203 a 77 porque ahora están agrupados por módulo en lugar de prioridad. Cada módulo es un paquete pip-installable independiente.
+
+### 1.3 Key Architectural Decision
+
+**SÍ, es mejor tener motores independientes para cada área.**
+
+| Motor | Propósito | Dependencias | Tamaño estimado |
+|-------|-----------|--------------|-----------------|
+| `loi-math` | Matemáticas puras (vectores, matrices, curvas, ruido) | Ninguna | ~2,000 LOC |
+| `loi-physics` | Física (gravedad, colisiones AABB, spatial grid) | loi-math | ~3,000 LOC |
+| `loi-audio` | Audio (backends: pygame, null, sdl2) | Ninguna | ~1,500 LOC |
+| `loi-render` | Renderizado (SpriteBatch, SurfacePool, PostFX, Camera) | loi-math | ~5,000 LOC |
+| `loi-vfx` | Efectos visuales (partículas, luz, clima, fog) | loi-render | ~4,000 LOC |
+| `loi-core` | Core engine (EventBus, SceneManager, DI, Input, Plugin) | Ninguna | ~4,000 LOC |
+| `loi-framework` | Framework Metroidvania (Player, Enemies, Stage, HUD, ECS) | Todos los anteriores | ~8,000 LOC |
+| `loi-tools` | Herramientas (Editor, Benchmarks, WebExport) | loi-framework | ~3,000 LOC |
+| `legacy-game` | El juego (stages, contenido específico) | loi-framework | ~2,000 LOC |
+| **Total** | | | **~32,500 LOC** |
+
+---
+
+## 2. V1 Current Implementation Status
+
+### 2.1 Fully Implemented Systems ✅
 
 | System | Status | Evidence |
 |--------|--------|----------|
@@ -38,794 +110,987 @@ date_processed: "2026-07-16"
 | **Entity Factory** | ✅ Complete | Registry pattern in `entity_factory.py` |
 | **Stages** | ⚠️ Partial | 2 stages complete (Stage0, Boss Venado) |
 
-### 0.2 Project Metrics (Updated)
-
-| Metric | Value |
-|--------|-------|
-| **Total Files (.py)** | ~210 files |
-| **Lines of Code (Python)** | ~29,000 LOC |
-| **Tests** | 464+ tests |
-| **Test Files** | 40+ files |
-| **Scene Classes** | 32 scenes |
-| **Enemy Types** | 8 types + Boss |
-| **Player States** | 25 concrete states |
-| **Implemented Stages** | 2 (Stage0, Boss Venado) |
-| **Documentation** | 65+ .md documents |
-| **Demo Scenes** | 13 interactive labs |
-| **Architectural Patterns Used** | DI (GameContext), State, Factory, Observer (EventBus), Singleton (Inventory) |
-
-### 0.3 Code Quality Assessment (from 2026-07-16 Code Audit)
-
-| Aspect | Score | Notes |
-|--------|-------|-------|
-| **Architecture** | ⚠️ 6/10 | OOP jerárquico, sin ECS, sin plugin system |
-| **Rendering Performance** | ⚠️ 4/10 | CPU-bound blitting, sin GPU batch, ~800 sprite limit |
-| **Memory Efficiency** | ⚠️ 5/10 | Sin object pooling, GC pressure 15-30 MB/s |
-| **Startup Time** | ⚠️ 5/10 | ~3.4s por imports pesados (scipy, sklearn) |
-| **Modularity** | ✅ 7/10 | DI con GameContext, pero globales ocultos (_emit, _get_bus) |
-| **Type Safety** | ⚠️ 5/10 | Type hints parciales, no pasa mypy strict |
-| **Test Coverage** | ✅ 7/10 | 464+ tests, faltan benchmarks de rendimiento |
-| **Extensibility** | ❌ 3/10 | Sin plugin system, sin hooks API |
-| **Code Smells** | ⚠️ | Lambda global `_emit`, Singleton Inventory, imports laterales |
-| **Overall V1** | ⚠️ **5.6/10** | **Funcional pero necesita re-arquitectura para escalar** |
-
-### 0.4 Implementation Evidence by Category
-
-#### Engine Layer (`src/engine/` — 52 files)
-- `audio/audio_manager.py` — Audio playback with dynamic crossfade, stereo pan, ambient layers
-- `audio/sound_bank.py` — Named sound registry
-- `input/input_manager.py` — Keyboard + controller support
-- `scene/scene_manager.py` — Stack-based push/pop/replace + stage queue
-- `scene/base_scene.py` — Abstract lifecycle (awake, start, on_enter, on_exit, update, draw)
-- `core/achievements.py` — Achievement system
-- `core/inventory.py` — Item management (⚠️ Singleton anti-pattern)
-- `core/save_manager.py` — JSON-based atomic saves
-- `core/game_context.py` — DI container ✅
-- `core/event_bus.py` — Pub/sub event dispatch ✅
-- `core/settings.py` — Global constants
-- `core/events.py` — Event name constants
-- `core/stage_registry.py` — Stage registration
-- `scenes/*.py` — 32 scene implementations
-
-#### Framework Layer (`src/framework/` — 43 files)
-- `entities/player.py` — 25 states, State Pattern ✅ (750 LOC)
-- `entities/player_states.py` — State subclasses ✅
-- `entities/enemy_*.py` — 9 enemy types
-- `entities/entity_factory.py` — Registry pattern ✅
-- `vfx/particle_system.py` — Particle effects
-- `vfx/lighting.py` — 2D lights
-- `vfx/fog_of_war.py` — Fog of war
-- `vfx/weather_system.py` — Climate system (rain, snow, fog, dust, embers) ✅
-- `stage/camera.py` — Camera follow, shake, parallax
-- `stage/collision_system.py` — SpatialGrid broad-phase ✅
-- `stage/stage_loader.py` — TMX parser → StageData
-- `ui/dialogue_system.py` — Branching dialogue
-- `ui/learning_overlay.py` — F2-F10 learning toggles ✅
-
----
-
-## 1. Methodology
-
-This document consolidates improvement opportunities from evaluations + 2026-07-16 code audit:
-
-1. **External evaluation v1** (game dev professor) — architecture, pedagogy, completeness
-2. **External evaluation v2** (syllabus alignment) — shift from "game" to "academic platform"
-3. **External evaluation v3** (architecture review) — plugin system, ECS, observability
-4. **External evaluation v4** (engine review) — production engine architecture, tools
-5. **External evaluation v5** (pedagogy & math visualization) — teaching engineering thinking
-6. **External evaluation v6** (methodology & documentation) — learning methodologies, documentation strategy
-7. **External evaluation v7** (teacher & student support) — Teaching Operating System, student companion
-8. **External evaluation v8** (AI Lab & XAI) — Scikit-learn integration, explainable AI, ML applied to graphics
-9. **External evaluation v9** (game progression & gamification) — progression system, mastery levels, knowledge tree
-10. **Code audit** (build `b63ca53` + working tree) — 426 tests, 120+ modules, 19 player states, 9 enemy types
-11. **Gap analysis** against AAA+ 2D titles, academic platforms, commercial engines, pedagogical best practices, and accreditation standards
-12. **Engine architecture analysis** (v10) — rendering performance, dependency management, networking, distribution limits
-13. **2026-07-16 Deep Code Audit** (22 files analyzed) — identified architecture smells, performance bottlenecks, code quality issues, and V2 roadmap
-
----
-
-## 2. Executive Summary (Updated)
-
-| Category | Items | P0 | P1 | P2 | P3 | Effort |
-|----------|-------|----|----|----|----|--------|
-| Pedagogy & Math | 22 | 1 | 8 | 10 | 3 | 18-28 weeks |
-| Methodology | 12 | 0 | 1 | 8 | 3 | 12-18 weeks |
-| Teacher Support | 23 | 0 | 5 | 12 | 6 | 20-30 weeks |
-| Student Companion | 23 | 0 | 4 | 13 | 6 | 18-26 weeks |
-| AI Lab & XAI | 22 | 0 | 3 | 12 | 7 | 16-24 weeks |
-| Game Progression | 12 | 0 | 2 | 6 | 4 | 10-14 weeks |
-| Engine Architecture | 28 | 4 | 6 | 10 | 8 | 30-45 weeks |
-| Documentation Strategy | 10 | 0 | 0 | 5 | 5 | 8-12 weeks |
-| AI & Enemies | 4 | 0 | 2 | 1 | 1 | 3-4 weeks |
-| Tools & Editors | 8 | 0 | 2 | 4 | 2 | 10-18 weeks |
-| **Performance** | **9** | **3** | **1** | **4** | **1** | **12-18 weeks** |
-| Content | 3 | 0 | 1 | 1 | 1 | 2-4 weeks |
-| Documentation | 2 | 1 | 1 | 0 | 0 | 1 week |
-| **Code Quality** | **15** | **2** | **5** | **6** | **2** | **14-24 weeks** |
-| **TOTAL** | **193** | **11** | **41** | **92** | **49** | **185-268 weeks** |
-
-**Note:** This roadmap documents FUTURE improvements. See Section 0 for currently implemented systems. New items added in v3.0.0: Code Quality category, V2 Architecture Plan (Section 8), elevated P0 items from P2 based on criticality.
-
----
-
-## 3. Improvement Items
-
-### 3.1 P0 — Blockers (Must fix before V2 launch)
-
-#### P0-01: Documentación desactualizada (DOC) — ✅ RESOLVED
-
-| Field | Value |
-|-------|-------|
-| **Category** | Documentation |
-| **Status** | ✅ **RESOLVED** |
-| **Effort** | 1 week |
-| **Current State** | `05_ENEMY_SPEC.md` documenta los 8 tipos de enemigo (Walker, Flying, Shooter, Charger, Archer, Brute, Caster, Assassin) en secciones 3-10. BossBase tiene spec separado (`17_BOSS_SPEC.md`). Docs 03/22 actualizados con INTERNAL_WIDTH=800, INTERNAL_HEIGHT=600. BaseScene incluye `awake()`/`start()` y `context: GameContext`. |
-| **Implementation Evidence** | ✅ `src/framework/entities/enemy_walker.py`, `enemy_flying.py`, `enemy_shooter.py`, `enemy_charger.py`, `enemy_archer.py`, `enemy_brute.py`, `enemy_caster.py`, `enemy_assassin.py`, `boss_base.py` |
-| **Action** | Resuelto. Mantener sincronización en futuras actualizaciones. |
-| **Verification** | Cada spec documenta exactamente lo que el código implementa. |
-
-#### P0-02: Clima/partículas desde TMX (ARC) — ✅ IMPLEMENTED
-
-| Field | Value |
-|-------|-------|
-| **Category** | Architecture |
-| **Status** | ✅ **IMPLEMENTED** |
-| **Effort** | 2-3 days |
-| **Current State** | `WeatherSystem` existe en `src/framework/vfx/weather_system.py` (155 lines). Auto-wired en `StageScene` desde propiedad `climate` del TMX. Soporta rain, snow, fog, dust, embers. |
-| **Implementation Evidence** | ✅ `src/framework/vfx/weather_system.py` |
-| **Action** | Resuelto. Considerar mejoras: weather transitions, thunder/lightning, wind. |
-| **Verification** | TMX con `climate: rain` produce lluvia visible. |
-
-#### P0-03: Legacy Learning Mode (PED) — ✅ IMPLEMENTED
-
-| Field | Value |
-|-------|-------|
-| **Category** | Pedagogy & Visualization |
-| **Status** | ✅ **IMPLEMENTED** |
-| **Effort** | 2-3 weeks |
-| **Current State** | `LearningOverlay` existe en `src/framework/ui/learning_overlay.py` (209 lines). F2=FPS, F3=Grid, F4=Bounding Boxes, F5=Coords, F7=Pipeline, F8=Colisiones, F9=Histograma, F10=Segmentación. Wired en `StageScene.update()`. |
-| **Implementation Evidence** | ✅ `src/framework/ui/learning_overlay.py`, `src/engine/scenes/debug_overlay.py` |
-| **Action** | Resuelto. Considerar F6=Matriz 3x3 como mejora futura. |
-| **Verification** | F4 muestra ejes X/Y. F9 muestra histograma RGB. |
-
-#### P0-004: Sprite Batch System (PERF) — 🔺 NEW — ELEVATED to P0
-
-| Field | Value |
-|-------|-------|
-| **Category** | Performance |
-| **Priority** | **P0** (elevated from P2-116 after code audit) |
-| **Status** | ❌ **NOT IMPLEMENTED** |
-| **Effort** | 3-4 weeks |
-| **Current State** | El motor usa blitting CPU-bound (pygame-ce Surface.copy/blit). No hay agrupación de geometría en GPU. `app._draw()` hace un blit por sprite directamente a la surface interna. |
-| **Problem** | El renderizado 2D es puramente CPU-bound. Cada sprite se dibuja como una operación de copia de píxeles individual, sin batching. Esto limita la cantidad de sprites simultáneos (~500-800 antes de micro-stutters). Este es **el cuello de botella #1 del motor**. |
-| **Suggested Solution** | Implementar un `SpriteBatch` que agrupe sprites por textura atlas y los dibuje en una sola operación de GPU usando `pygame.sdl2.video.Texture`. Crear un `Renderer2D` con capas: Background (tilemap batch), Entities (atlas), Particles (point sprites), Foreground, HUD. |
-| **Acceptance Criteria** | Renderizar 2000+ sprites animados a 60 FPS estables sin micro-stutters. |
-| **Dependencies** | pygame-ce 2.5+ (SDL2_GPU features), `TextureAtlas` builder |
-| **Academic Value** | Concepto de **graphics pipeline**, **draw call optimization**, **GPU vs CPU rendering** — temas avanzados de CG. |
-| **Why P0** | Sin esto, el motor no puede escalar a juegos con muchos sprites. Es requisito base para V2. |
-
-#### P0-005: Surface Object Pool & GC Mitigation (PERF) — 🔺 NEW — ELEVATED to P0
-
-| Field | Value |
-|-------|-------|
-| **Category** | Performance |
-| **Priority** | **P0** (elevated from P2-117 after code audit) |
-| **Status** | ❌ **NOT IMPLEMENTED** |
-| **Effort** | 2-3 weeks |
-| **Current State** | Efectos como iluminación, partículas climáticas y post-processing crean superficies intermedias temporales frame a frame. La tasa de asignación alcanza 15-30 MB/s, provocando micro-stutters por GC. |
-| **Problem** | El recolector de basura de Python (GC) se activa frecuentemente al descartar objetos `Surface` temporales, causando caídas de frames imperceptibles pero acumulativas. Con efectos intensivos (lluvia + luces + partículas), el GC puede causar pausas de hasta 16ms (~1 frame perdido). |
-| **Suggested Solution** | Implementar un `SurfacePool` con reutilización de objetos: pre-asignar un pool de superficies de tamaños comunes (screen, quarter-screen, tile-sized) y reciclarlas en lugar de crear/destruir. Usar `__slots__` en clases de datos temporales. |
-| **Acceptance Criteria** | Reducción de asignación de memoria a <5 MB/s sostenido. Eliminación de micro-stutters por GC en escenas con efectos intensivos. |
-| **Dependencies** | `gc` module, profiling con `tracemalloc` |
-| **Academic Value** | Enseña **memory management**, **object pooling pattern**, **GC profiling** — conceptos clave en ingeniería de software de tiempo real. |
-| **Why P0** | El GC pressure afecta a TODAS las escenas con efectos. Es un problema sistémico. |
-
-#### P0-006: Post-Processing Pipeline with Selective Resolution (PERF) — 🔺 NEW — ELEVATED to P0
-
-| Field | Value |
-|-------|-------|
-| **Category** | Performance |
-| **Priority** | **P0** (elevated from P2-118 after code audit) |
-| **Status** | ❌ **NOT IMPLEMENTED** |
-| **Effort** | 2-3 weeks |
-| **Current State** | Los filtros de post-procesamiento (Bloom, Color Grading, Daltonismo) se aplican sobre la resolución completa (800×600), causando caídas de ~80 FPS a <35 FPS cuando se combinan múltiples efectos. |
-| **Problem** | Aplicar múltiples filtros de software sobre cada píxel de la pantalla es computacionalmente costoso. No hay un sistema de composición de efectos que permita priorizar o reducir resolución por efecto. |
-| **Suggested Solution** | Implementar un `PostProcessStack` con: (1) resolución variable por efecto (half-resolution para Bloom, full para Color Grading), (2) composición por capas con blending, (3) desactivación automática de efectos cuando FPS < umbral (adaptive performance). |
-| **Acceptance Criteria** | 3+ filtros simultáneos a ≥55 FPS sostenidos. Degradación graceful cuando el rendimiento cae. |
-| **Dependencies** | `PostProcessStack` class, `scipy.ndimage` para filtros downsampled |
-| **Academic Value** | **Signal processing**, **multi-resolution techniques**, **adaptive performance** — temas de CG avanzada. |
-| **Why P0** | El post-procesamiento es usado en demos académicas (filtros). Sin rendimiento aceptable, la experiencia de usuario se degrada severamente. |
-
-#### P0-007: State Container for Player Data (ARC) — 🔺 NEW
-
-| Field | Value |
-|-------|-------|
-| **Category** | Code Quality |
-| **Priority** | **P0** |
-| **Status** | ❌ **NOT IMPLEMENTED** |
-| **Effort** | 1-2 weeks |
-| **Current State** | `Player.__init__` en `player.py` tiene ~40 variables de estado dispersas entre líneas 138-220: `velocity`, `is_grounded`, `_coyote_counter`, `_attack_timer`, `combo_count`, `special_meter`, `_slide_speed`, `_air_dash_count`, etc. |
-| **Problem** | El estado del jugador está fragmentado en ~40 atributos sueltos. Esto hace difícil: (1) serializar el estado para save/load, (2) resetear el estado al morir, (3) testear la lógica de física, (4) entender el flujo de datos. |
-| **Suggested Solution** | Crear `PlayerState` dataclass que agrupe todo el estado puro del jugador (posición, velocidad, salud, combo, meter, etc.) y usar composición: `Player` tiene un `PlayerState` en lugar de 40 atributos. La lógica de negocio queda en `Player`, los datos en `PlayerState`. |
-| **Acceptance Criteria** | `PlayerState` dataclass con ~20 fields. `Player` init reducido de 80 líneas a 20. Serialización a JSON trivial. Tests de física pueden crear `PlayerState` directamente. |
-| **Dependencies** | `dataclasses` (ya importado) |
-| **Academic Value** | **Separation of concerns**, **Value Objects**, **data vs behavior** — principios SOLID. |
-
-#### P0-008: Eliminar Global EventBus Shortcuts (ARC) — 🔺 NEW
-
-| Field | Value |
-|-------|-------|
-| **Category** | Code Quality |
-| **Priority** | **P0** |
-| **Status** | ❌ **NOT IMPLEMENTED** |
-| **Effort** | 1 week |
-| **Current State** | En `player.py:23` y `enemy_base.py:20` existe: `_emit = lambda *a, **kw: _bus().emit(*a, **kw)`. Esto es una función lambda global que llama a `_get_bus()` cada vez, creando una dependencia oculta al EventBus global. |
-| **Problem** | (1) Dificulta el testing: no se puede mockear el EventBus fácilmente. (2) Dependencia oculta: el módulo falla si no hay un bus default. (3) Code smell: patrón Service Locator encubierto. (4) Imposible tener múltiples buses (ej: test isolation). |
-| **Suggested Solution** | Inyectar `EventBus` via parámetro en `__init__` de Player y EnemyBase. Mantener compatibilidad con código existente usando parámetro opcional `event_bus=None` que usa el bus default como fallback. Luego migrar progresivamente todas las instancias a usar inyección explícita. |
-| **Acceptance Criteria** | Player y EnemyBase aceptan `event_bus` en constructor. Cero lambdas globales `_emit`. Tests pueden inyectar un `EventBus` mock. |
-| **Dependencies** | `game_context.py` (ya tiene event_bus) |
-| **Academic Value** | **Dependency Injection**, **Service Locator anti-pattern**, **testability** — ingeniería de software. |
-
----
-
-### 3.2 P1 — High Priority
-
-#### P1-01: Benchmark Suite for Performance (PERF) — 🔺 NEW
-
-| Field | Value |
-|-------|-------|
-| **Category** | Performance / Code Quality |
-| **Priority** | **P1** |
-| **Status** | ❌ **NOT IMPLEMENTED** |
-| **Effort** | 2-3 weeks |
-| **Current State** | No existen benchmarks automáticos. El rendimiento solo se evalúa subjetivamente ("se siente lento"). |
-| **Problem** | Sin benchmarks, no podemos medir si las optimizaciones realmente funcionan. No hay línea base para comparar V1 vs V2. |
-| **Suggested Solution** | Crear `tests/benchmarks/` con: `test_render_benchmark.py` (500/1000/2000 sprites), `test_physics_benchmark.py` (100/500/1000 entities), `test_startup_time.py` (cold/warm), `test_memory_benchmark.py` (heap allocations). Usar `pytest-benchmark` para integración CI. |
-| **Acceptance Criteria** | 4+ benchmarks ejecutables con `pytest tests/benchmarks/`. Reporte de rendimiento en CI. Línea base documentada. |
-| **Dependencies** | `pytest-benchmark` |
-| **Academic Value** | **Performance engineering**, **benchmark-driven optimization**, **CI/CD pipelines**. |
-
-#### P1-02: ECS Prototype for Data-Oriented Design (ARC)
-
-| Field | Value |
-|-------|-------|
-| **Category** | Engine Architecture |
-| **Priority** | **P1** (elevated from P2-120 after code audit) |
-| **Status** | ❌ **NOT IMPLEMENTED** |
-| **Effort** | 4-6 weeks |
-| **Current State** | El motor usa jerarquía de clases OOP tradicional (Player, Enemy, etc.) con herencia profunda. No hay separación datos-comportamiento. Enemigos: `EnemyBase → EnemyWalker → ...` (herencia profunda de 3 niveles). |
-| **Problem** | (1) Agregar nuevo tipo de entidad requiere crear subclase y posiblemente modificar la jerarquía. (2) El rendimiento de caché de CPU es subóptimo al iterar componentes dispersos en memoria. (3) La serialización requiere lógica ad-hoc por cada clase. |
-| **Suggested Solution** | Implementar un mini-ECS (Entity Component System) como capa OPCIONAL sobre la arquitectura existente: `Entity` como ID (int), `Component` como datos planos (dataclass/numpy struct), `System` como lógica pura. Mantener compatibilidad con el sistema OOP actual mediante wrappers/adapter pattern. Componentes iniciales: Position, Velocity, Sprite, Health, AI, Collision. Sistemas: Movement, Render, AI, Collision. |
-| **Acceptance Criteria** | 5+ componentes funcionales (Position, Velocity, Sprite, Health, AI). 3+ sistemas (Movement, Render, AI). Rendimiento de iteración 2x vs OOP equivalente. Compatibilidad con entidades OOP existentes via adapter. |
-| **Dependencies** | `numpy` para almacenamiento contiguo de componentes |
-| **Academic Value** | **Data-Oriented Design (DOD)**, **CPU cache optimization**, **ECS pattern** — arquitectura de motores AAA. |
-| **Why P1** | Fundamental para escalar a +100 entidades simultáneas y para la extensibilidad del framework. |
-
-#### P1-03: Plugin System for Extensibility (ARC)
-
-| Field | Value |
-|-------|-------|
-| **Category** | Engine Architecture |
-| **Priority** | **P1** (elevated from P2-121) |
-| **Status** | ❌ **NOT IMPLEMENTED** |
-| **Effort** | 3-5 weeks |
-| **Current State** | No existe un sistema de plugins. Toda funcionalidad debe integrarse directamente en el código base del motor. |
-| **Problem** | Los estudiantes avanzados o contribuyentes externos no pueden extender el motor sin modificar el núcleo. No hay un mecanismo estándar para empaquetar y distribuir extensiones (nuevos filtros, tipos de enemigos, efectos). |
-| **Suggested Solution** | Diseñar un `PluginManager` que: (1) descubra plugins en directorios específicos (`plugins/`), (2) cargue dinámicamente módulos Python, (3) registre hooks en puntos de extensión definidos (render, update, input, tools), (4) valide versiones y dependencias. Hooks iniciales: `on_render`, `on_update`, `on_input`, `on_entity_spawn`, `on_stage_load`. |
-| **Acceptance Criteria** | Plugin funcional de ejemplo (nuevo filtro de imagen) cargado sin modificar el core. Sistema de hooks con 5+ puntos de extensión. |
-| **Dependencies** | `importlib.metadata`, `pluggy` (opcional) |
-| **Academic Value** | **Plugin architecture**, **dependency injection**, **hook systems** — patrones de diseño de software extensible. |
-| **Why P1** | Clave para el valor académico: estudiantes pueden extender sin tocar el core. |
-
-#### P1-04: Lazy Import System for Heavy Dependencies (ARC)
-
-| Field | Value |
-|-------|-------|
-| **Category** | Engine Architecture |
-| **Priority** | **P1** (elevated from P2-119) |
-| **Status** | ❌ **NOT IMPLEMENTED** |
-| **Effort** | 1-2 weeks |
-| **Current State** | `scikit-learn`, `scikit-image`, `scipy` se importan al inicio de la aplicación, añadiendo >300ms de latencia de arranque incluso si no se usan en la sesión actual. BossVenado importa numpy y sklearn en startup. |
-| **Problem** | Los tiempos de carga inicial son perceptibles para el usuario final (~3.4s). Las dependencias científicas pesadas se cargan aunque el estudiante solo esté explorando un nivel, no usando herramientas de ML/CV. |
-| **Suggested Solution** | Implementar un `LazyLoader` que envuelva los imports pesados usando `__getattr__` a nivel de módulo. Los módulos científicos solo se importan cuando se invoca su primera función. Adicionalmente, mostrar un splash screen con barra de progreso durante la carga inicial. |
-| **Acceptance Criteria** | Tiempo de arranque <1.5s en frío (vs ~3.4s actual). Los módulos científicos se cargan bajo demanda en <100ms. |
-| **Dependencies** | `importlib`, refactor de `entity_factory.py` (BossVenado lazy import) |
-| **Academic Value** | **Lazy loading pattern**, **module architecture**, **dependency management** — ingeniería de software. |
-
-#### P1-05: Input System with Priority Layers (ARC) — 🔺 NEW
-
-| Field | Value |
-|-------|-------|
-| **Category** | Engine Architecture |
-| **Priority** | **P1** |
-| **Status** | ❌ **NOT IMPLEMENTED** |
-| **Effort** | 1-2 weeks |
-| **Current State** | `InputManager` es plano: todas las acciones compiten por el mismo espacio de input. Cuando hay UI abierta (menú, diálogo, inventario), el input de gameplay también se procesa. |
-| **Problem** | No hay separación entre capas de input. Si el jugador presiona "A" mientras un mensaje de tutorial está abierto, puede activar tanto el gameplay como la UI. No hay un mecanismo de "input consume" o "priority stacking". |
-| **Suggested Solution** | Implementar `InputStack` con capas jerárquicas: (1) UI Layer (menús, diálogos, popups), (2) Gameplay Layer (movimiento, ataque), (3) Debug Layer (F-keys). Cada capa puede consumir input y evitar que capas inferiores lo procesen. |
-| **Acceptance Criteria** | UI abierta → gameplay inputs ignorados. Debug toggles siempre funcionan. Capas configurables por escena. |
-| **Dependencies** | `input_manager.py` |
-| **Academic Value** | **Input handling architecture**, **event propagation**, **layered systems** — UI/gameplay separation. |
-
-#### P1-06: Audio Pipeline with Backend Abstraction (ARC) — 🔺 NEW
-
-| Field | Value |
-|-------|-------|
-| **Category** | Engine Architecture |
-| **Priority** | **P1** |
-| **Status** | ❌ **NOT IMPLEMENTED** |
-| **Effort** | 2-3 weeks |
-| **Current State** | `AudioManager` está acoplado directamente a `pygame.mixer`. No hay capa de abstracción ni fallback para entornos sin audio (headless, CI, web). |
-| **Problem** | (1) No se puede ejecutar el juego en entornos sin pygame.mixer (CI, servidores). (2) Migrar a otro backend de audio (SDL2, OpenAL, WebAudio) requeriría reescribir AudioManager. (3) No hay soporte para audio 3D posicional. |
-| **Suggested Solution** | Crear `AudioBackend` clase abstracta con implementaciones: `PygameMixerBackend` (actual), `NullBackend` (silent, para CI/headless), `SDL2MixerBackend` (futuro). AudioManager usa composición con un backend inyectable. |
-| **Acceptance Criteria** | NullBackend funcional: cero dependencia de pygame.mixer. CI puede ejecutar tests de audio sin fallos. PygameMixerBackend mantiene 100% funcionalidad actual. |
-| **Dependencies** | `audio_manager.py`, `ABC` |
-| **Academic Value** | **Abstraction layer**, **Strategy pattern**, **backend isolation** — arquitectura de sistemas de audio. |
-
-#### P1-07: Scripting enemigos (AI) — ✅ IMPLEMENTED
-
-| Field | Value |
-|-------|-------|
-| **Category** | AI |
-| **Status** | ✅ **IMPLEMENTED** |
-| **Effort** | 1-2 weeks |
-| **Current State** | 9 tipos de enemigo implementados con comportamientos únicos via código. |
-| **Implementation Evidence** | ✅ `src/framework/entities/enemy_base.py` (base class), `enemy_walker.py`, `enemy_flying.py`, `enemy_shooter.py`, `enemy_charger.py`, `enemy_archer.py`, `enemy_brute.py`, `enemy_caster.py`, `enemy_assassin.py`, `boss_base.py` |
-| **Action** | Ya implementado via código. Considerar agregar soporte JSON/YAML para data-driven enemies. |
-| **Verification** | 9 tipos de enemigo funcionales con comportamientos únicos. |
-
----
-
-### 3.3 P1 — Code Quality (NEW Category)
-
-#### P1-08: Type Hints Completos + mypy strict (CQ) — 🔺 NEW
-
-| Field | Value |
-|-------|-------|
-| **Category** | Code Quality |
-| **Priority** | **P1** |
-| **Status** | ❌ **NOT IMPLEMENTED** |
-| **Effort** | 2-3 weeks |
-| **Current State** | Type hints parciales, `TYPE_CHECKING` en varios lados (`player.py:28-31`, `enemy_base.py:25-26`), `Any` usado como tipo en muchos lugares (`scene_manager.py:13`, `collision_system.py:3`). |
-| **Problem** | Sin tipos estrictos, el IDE no puede detectar errores en tiempo de escritura. `mypy --strict` no pasa. Bugs como pasar argumentos en orden incorrecto solo se detectan en runtime. |
-| **Suggested Solution** | Agregar type hints completos a todo el código. Configurar `mypy --strict` en `pyproject.toml`. Resolver gradualmente los errores. Priorizar: core (event_bus, app, scene_manager) → framework (player, enemy, stage) → scenes. |
-| **Acceptance Criteria** | `mypy --strict` pasa en todo el código. Cero `Any` innecesarios. `TYPE_CHECKING` solo para imports circulares inevitables. |
-| **Dependencies** | `mypy`, `pyproject.toml` |
-| **Academic Value** | **Type safety**, **static analysis**, **defensive programming** — calidad de software. |
-
-#### P1-09: Singleton Removal — Inventory (CQ) — 🔺 NEW
-
-| Field | Value |
-|-------|-------|
-| **Category** | Code Quality |
-| **Priority** | **P1** |
-| **Status** | ❌ **NOT IMPLEMENTED** |
-| **Effort** | 1 week |
-| **Current State** | `Inventory` en `inventory.py` usa patrón Singleton: `_instance: Inventory | None = None` con `__new__`. Se accede globalmente via `get_inventory()`. |
-| **Problem** | (1) Dificulta testing: el estado persiste entre tests. (2) Acoplamiento global: cualquier módulo puede llamar a `get_inventory()` sin inyección. (3) Imposible tener inventarios separados (multiplayer, test scenarios). |
-| **Suggested Solution** | Refactorizar Inventory a instancia normal inyectada via `GameContext`. Mantener `get_inventory()` como deprecated wrapper que emite warning. Migrar consumidores a usar `context.inventory`. |
-| **Acceptance Criteria** | `Inventory` sin singleton. `GameContext` tiene `inventory` field. Tests pueden crear inventarios independientes. |
-| **Dependencies** | `game_context.py`, `inventory.py` |
-| **Academic Value** | **Singleton anti-pattern**, **Dependency Injection**, **test isolation**. |
-
-#### P1-10: Asset Pipeline Moderno (ARC) — 🔺 NEW
-
-| Field | Value |
-|-------|-------|
-| **Category** | Engine Architecture |
-| **Priority** | **P1** |
-| **Status** | ❌ **NOT IMPLEMENTED** |
-| **Effort** | 3-4 weeks |
-| **Current State** | Assets en disco, sin compresión ni streaming. `AssetLoader` carga síncronamente con cache LRU simple. Sprites se cargan uno por uno. |
-| **Problem** | (1) Carga síncrona: la primera vez que se usa un asset, hay un micro-freeze. (2) Sin empaquetado: los assets son archivos sueltos, fácil de perder/dañar. (3) Sin compresión: texturas PNG sin optimizar. |
-| **Suggested Solution** | `AssetSystem V2`: (1) `AssetPack`: paquete binario comprimido (zip/7z) con índice. (2) `AsyncAssetLoader`: carga en background thread con callback. (3) `TextureAtlasBuilder`: empaqueta sprites en atlas. (4) LRU cache configurable con límite de memoria. |
-| **Acceptance Criteria** | Carga asíncrona sin micro-freezes. AssetPack reduce espacio en disco 40%+. TextureAtlas builder funcional. |
-| **Dependencies** | `asset_loader.py`, `threading` |
-| **Academic Value** | **Asset pipeline**, **async loading**, **resource management** — ingeniería de motores. |
-
----
-
-### 3.4 P2 — Medium Priority
-
-#### P2-04: Bestiario UI (CONTENT) — ✅ IMPLEMENTED
-
-| Field | Value |
-|-------|-------|
-| **Category** | Content |
-| **Status** | ✅ **IMPLEMENTED** |
-| **Effort** | 1 week |
-| **Current State** | Sistema completo de bestiario con UI. |
-| **Implementation Evidence** | ✅ `src/framework/entities/bestiary.py` (tracking system), `src/engine/scenes/bestiary_scene.py` (UI scene) |
-| **Action** | Ya implementado. Considerar mejoras: filtros, búsqueda, estadísticas avanzadas. |
-| **Verification** | Estudiante ve enemigos encontrados con stats y lore. |
-
-#### P2-05: Speedrun UI (CONTENT) — ✅ IMPLEMENTED
-
-| Field | Value |
-|-------|-------|
-| **Category** | Content |
-| **Status** | ✅ **IMPLEMENTED** |
-| **Effort** | 3-5 days |
-| **Current State** | Sistema completo de speedrun con timer, splits y ghost replay. |
-| **Implementation Evidence** | ✅ `src/framework/stage/speedrun_mode.py` (timer + splits + ghost data) |
-| **Action** | Ya implementado. Considerar mejoras: leaderboards, share replays. |
-| **Verification** | Jugador ve tiempo, splits, ghost replay. |
-
-#### P2-79: Achievement System (NEW) — ✅ IMPLEMENTED
-
-| Field | Value |
-|-------|-------|
-| **Category** | Student Support |
-| **Status** | ✅ **IMPLEMENTED** |
-| **Effort** | 1 week |
-| **Current State** | Sistema completo de logros con UI. |
-| **Implementation Evidence** | ✅ `src/engine/core/achievements.py` (system), `src/engine/scenes/achievement_scene.py` (UI) |
-| **Action** | Ya implementado. Considerar mejoras: más logros, progresión, rarity. |
-| **Verification** | Estudiante desbloquea logros académicos. |
-
-#### P2-115: No Monetization (CONSISTENCY) — ✅ FOLLOWED
-
-| Field | Value |
-|-------|-------|
-| **Category** | Game Progression |
-| **Status** | ✅ **FOLLOWED** |
-| **Effort** | — |
-| **Current State** | Decisión de diseño documentada y seguida. No hay features de monetización. |
-| **Implementation Evidence** | ✅ No existen sistemas de monedas, tienda, loot boxes, microtransacciones en el código |
-| **Action** | Mantener decisión. No implementar features de monetización. |
-| **Verification** | Documento oficial declara estas features como out-of-scope. |
-
-#### P2-116: Observer Pattern Audit (ARC) — 🔺 NEW
-
-| Field | Value |
-|-------|-------|
-| **Category** | Code Quality |
-| **Priority** | P2 |
-| **Status** | ❌ **NOT IMPLEMENTED** |
-| **Effort** | 1-2 weeks |
-| **Current State** | EventBus se usa extensivamente, pero no hay documentación de todos los eventos, suscriptores, y orden de dispatch. `events.py` tiene 107 líneas de constantes. |
-| **Problem** | Sin un mapa claro de eventos → suscriptores, es fácil introducir bugs por orden de dispatch incorrecto o eventos no esperados. |
-| **Suggested Solution** | Crear `EventMap.md` documentando: cada evento, suscriptores, payload, orden de dispatch. Agregar tests de integración que verifiquen que eventos producen los efectos esperados. |
-| **Acceptance Criteria** | `EventMap.md` documenta 30+ eventos. Tests de integración para eventos críticos (PLAYER_DAMAGED, STAGE_COMPLETE). |
-| **Dependencies** | `events.py`, `event_bus.py` |
-| **Academic Value** | **Observer pattern**, **event-driven architecture**, **integration testing**. |
-
----
-
-### 3.5 P2-P3 — Architectural & Performance Limits
-
-#### P2-117: Data-Driven Design for Enemies (ARC) — 🔺 NEW
-
-| Field | Value |
-|-------|-------|
-| **Category** | AI / Engine Architecture |
-| **Priority** | P2 |
-| **Status** | ❌ **NOT IMPLEMENTED** |
-| **Effort** | 2-3 weeks |
-| **Current State** | Enemigos definidos 100% en código Python. Cada nuevo tipo requiere crear una subclase de `EnemyBase` y registrarla en `entity_factory.py`. |
-| **Problem** | No es posible definir enemigos desde data (JSON/YAML). Los estudiantes deben escribir código Python para crear variantes de enemigos. |
-| **Suggested Solution** | Crear `EnemyBlueprint` sistema: (1) definición de enemigos en YAML (stats, comportamiento, sprite), (2) `DataDrivenEnemy` wrapper que interpreta blueprints, (3) editor visual básico. Mantener compatibilidad con enemigos code-based existentes. |
-| **Acceptance Criteria** | 3+ blueprints YAML funcionales. `DataDrivenEnemy` puede reemplazar `EnemyWalker` y `EnemyFlying` via data. |
-| **Dependencies** | `PyYAML`, `entity_factory.py` |
-| **Academic Value** | **Data-Driven Design**, **declarative configuration**, **content pipeline**. |
-
-#### P2-118: Couch Co-op Local Multiplayer (NET)
-
-| Field | Value |
-|-------|-------|
-| **Category** | Engine Architecture |
-| **Priority** | P2 |
-| **Status** | ❌ **NOT IMPLEMENTED** |
-| **Effort** | 4-6 weeks |
-| **Current State** | El motor es estrictamente single-player local. No hay soporte para múltiples jugadores locales. |
-| **Problem** | No es posible implementar modos cooperativos locales (2 jugadores en misma máquina). |
-| **Suggested Solution** | (1) Segundo jugador con joystick/gamepad. (2) Sistema de split-screen o shared-screen con cámara que abarca ambos jugadores. (3) Sistema de respawn cooperativo. (4) Segundo set de inputs en InputManager. |
-| **Acceptance Criteria** | 2 jugadores locales funcionales. Split-screen o shared-screen. Respawn cooperativo. |
-| **Dependencies** | `input_manager.py`, `camera.py`, `player.py` |
-| **Academic Value** | **Multiplayer architecture**, **split-screen rendering**, **local coop patterns**. |
-
-#### P2-119: Editor de Niveles Integrado (TOOLS)
-
-| Field | Value |
-|-------|-------|
-| **Category** | Tools & Editors |
-| **Priority** | P2 |
-| **Status** | ❌ **NOT IMPLEMENTED** (existe esqueleto en `stage_wizard_scene.py`) |
-| **Effort** | 4-6 weeks |
-| **Current State** | `StageWizardScene` existe como esqueleto pero no es funcional. Los niveles solo se pueden crear con Tiled externo. |
-| **Problem** | Los estudiantes deben aprender Tiled + formato TMX para crear niveles. No hay herramienta de edición in-game. |
-| **Suggested Solution** | Completar `StageWizardScene` con: (1) tilemap painter, (2) entity placer, (3) collision zone editor, (4) export a TMX. |
-| **Acceptance Criteria** | Estudiante puede crear un nivel funcional sin salir del juego. Exportar a TMX compatible con StageLoader. |
-| **Dependencies** | `stage_wizard_scene.py`, `stage_loader.py` |
-| **Academic Value** | **Tool development**, **level design workflows**, **editor architecture**. |
-
----
-
-### 3.6 P3 — Low Priority
-
-#### P3-122: Netcode Core — UDP Multiplayer Foundation (NET)
-
-| Field | Value |
-|-------|-------|
-| **Category** | Engine Architecture |
-| **Priority** | P3 |
-| **Status** | ❌ **NOT IMPLEMENTED** |
-| **Effort** | 6-10 weeks |
-
-(Content unchanged from previous version.)
-
-#### P3-123: Replay & Spectator System (NET)
-
-| Field | Value |
-|-------|-------|
-| **Category** | Engine Architecture |
-| **Priority** | P3 |
-| **Status** | ❌ **NOT IMPLEMENTED** |
-
-(Content unchanged from previous version.)
-
-#### P3-124: WebAssembly Export Target (DIST)
-
-| Field | Value |
-|-------|-------|
-| **Category** | Engine Architecture |
-| **Priority** | P3 |
-| **Status** | ❌ **NOT IMPLEMENTED** |
-
-(Content unchanged from previous version.)
-
-#### P3-125: Code Obfuscation & IP Protection (DIST)
-
-| Field | Value |
-|-------|-------|
-| **Category** | Engine Architecture |
-| **Priority** | P3 |
-| **Status** | ❌ **NOT IMPLEMENTED** |
-
-(Content unchanged from previous version.)
-
----
-
-## 4. Vision — Legacy Academic Framework V2
-
-### 4.1 V2 Purpose
-
-Transformar Legacy of InFest de un **prototipo funcional V1** a un **motor profesional para Metroidvania/scroll lateral 2D** con:
-
-- **Rendimiento GPU**: Sprite batching, post-processing multi-res, object pooling
-- **Arquitectura moderna**: ECS opcional, plugin system, lazy loading, DI completa
-- **Calidad de código**: Type hints estrictos, benchmarks, sin anti-patrones
-- **Extensibilidad**: Plugins, data-driven enemies, editor de niveles integrado
-- **Calidad académica**: Documentación viva, tests de integración, profiling integrado
-
-### 4.2 V2 Core Principles
-
-1. **GPU-first rendering** — Todo el renderizado debe ir a GPU cuando sea posible
-2. **Data-Oriented Design** — Los datos y la lógica deben estar separados
-3. **Zero global state** — No más singletons, no más lambdas globales
-4. **Plugin architecture** — El core debe ser extensible sin modificarlo
-5. **Measurable performance** — Benchmarks obligatorios para cada optimización
-6. **Backward compatibility** — Todo el código V1 debe seguir funcionando
-
-### 4.3 V2 Architecture Diagram (Propuesta)
+### 2.2 V1 Architecture (Current)
 
 ```
 src/
-├── engine/
-│   ├── core/           # (V1 + mejoras) GameContext, EventBus, Settings
-│   ├── render/         # 🔺 NUEVO: SpriteBatch, RenderLayer, PostProcessStack, SurfacePool
-│   ├── scene/          # (V1) SceneManager, BaseScene, Transitions
-│   ├── scenes/         # (V1) 32 scenes
-│   ├── input/          # (V1 + mejoras) InputStack con capas
-│   ├── audio/          # (V1 + mejoras) AudioBackend abstraction
-│   ├── ui/             # (V1) HUD, MessageBox, etc.
-│   └── utils/          # (V1) AssetLoader (V2 async), SpriteSheet, MathUtils
-│
-├── framework/
-│   ├── entities/       # (V1 + V2 ECS wrapper) Player, Enemy* + EntityECS
-│   ├── stage/          # (V1) StageLoader, Camera, Collision, etc.
-│   ├── vfx/            # (V1) Particles, Lighting, Fog, Weather
-│   ├── ui/             # (V1) Dialogue, Tutorial, LearningOverlay
-│   ├── processing/     # (V1) FilterTools, VisionTools, etc.
-│   └── ecs/            # 🔺 NUEVO: ECS core (Entity, Component, System)
-│
-├── plugins/            # 🔺 NUEVO: Plugin discovery directory
-│
-└── stages/             # (V1) Stage0, Boss Venado, student stages
+  engine/     (52 files)  ← Core + Scenes + Audio + Input + UI
+  framework/  (43 files)  ← Entities + Stage + VFX + UI + Processing
+  stages/     (2 stages)  ← Stage0, Boss Venado
+
+⚠️ ACoplamiento CRÍTICO:
+  engine/scenes/ ←importa→ framework/entities/
+  framework/entities/ ←importa→ engine/core/
+  → GRAFO CÍCLICO DE DEPENDENCIAS
 ```
 
 ---
 
-## 5. V2 Implementation Phases
+## 3. V1 Code Quality Assessment
 
-### Phase 1 (Foundation — 8-12 weeks)
-**Objetivo:** Resolver los cuellos de botella de rendimiento y arquitectura.
+Evaluación basada en auditoría de código de 22+ archivos clave (Julio 2026).
 
-| Item | Effort | Dependencies |
-|------|--------|-------------|
-| P0-004: Sprite Batch System + Render Pipeline | 3-4 weeks | pygame-ce 2.5+ |
-| P0-005: Surface Object Pool | 2-3 weeks | profiling tools |
-| P0-006: Post-Processing Pipeline (Multi-Res) | 2-3 weeks | SurfacePool |
-| P0-007: State Container (PlayerState) | 1-2 weeks | player.py |
-| P0-008: Eliminar globales (_emit, _get_bus) | 1 week | player.py, enemy_base.py |
-| P1-01: Benchmark Suite | 2-3 weeks | pytest-benchmark |
-| P1-04: Lazy Loading System | 1-2 weeks | entity_factory.py |
-| P1-08: Type Hints + mypy strict | 2-3 weeks | pyproject.toml |
-| **Total Phase 1** | **14-21 weeks** | |
+| Aspecto | Score | Evidencia | Problema |
+|---------|-------|-----------|----------|
+| **Architecture** | ⚠️ 6/10 | OOP jerárquico, sin ECS, sin plugin system, engine↔framework acoplados | 🔴 Acoplamiento cíclico |
+| **Rendering** | ⚠️ 4/10 | CPU-bound blitting, ~800 sprite limit, sin GPU batch | 🔴 Cuello de botella #1 |
+| **Memory** | ⚠️ 5/10 | Sin object pooling, GC pressure 15-30 MB/s, micro-stutters | 🔴 GC pauses |
+| **Startup** | ⚠️ 5/10 | ~3.4s por imports pesados (scipy, sklearn, numpy) | 🟡 Lento |
+| **Modularity** | ✅ 7/10 | DI con GameContext, pero globales ocultos (_emit, _get_bus) | 🔴 Service Locator anti-pattern |
+| **Type Safety** | ⚠️ 5/10 | Type hints parciales, `Any` en muchos lados, `TYPE_CHECKING` | 🟡 Bugs silenciosos |
+| **Test Coverage** | ✅ 7/10 | 464+ tests, pero faltan benchmarks de rendimiento | 🟡 Sin métricas |
+| **Extensibility** | ❌ 3/10 | Sin plugin system, sin hooks API, sin data-driven config | 🔴 No extensible |
+| **StageScene** | ❌ 2/10 | God Object de 812 líneas, 30+ subsistemas, 42 imports | 🔴 Mantenible |
+| **GameContext** | ⚠️ 5/10 | Crecimiento sin control, mezcla SceneContext con StageContext | 🟡 DI débil |
+| **Overall V1** | ⚠️ **5.6/10** | **Funcional pero necesita re-arquitectura total para escalar** | |
 
-### Phase 2 (Architecture — 10-14 weeks)
-**Objetivo:** ECS, Plugins, y mejoras arquitectónicas mayores.
+### 3.1 Code Smells Detectados
 
-| Item | Effort | Dependencies |
-|------|--------|-------------|
-| P1-02: ECS Prototype (Position, Velocity, Sprite, Health, AI) | 4-6 weeks | numpy |
-| P1-03: Plugin System (hooks + manager) | 3-5 weeks | importlib |
-| P1-05: Input Stack (UI vs Gameplay layers) | 1-2 weeks | input_manager.py |
-| P1-06: Audio Backend Abstraction | 2-3 weeks | audio_manager.py |
-| P1-09: Singleton Removal (Inventory) | 1 week | inventory.py |
-| P1-10: Asset Pipeline (async + atlas) | 3-4 weeks | asset_loader.py |
-| P2-116: EventBus Audit + EventMap | 1-2 weeks | events.py |
-| **Total Phase 2** | **16-25 weeks** | |
-
-### Phase 3 (Tools & Content — 6-10 weeks)
-**Objetivo:** Herramientas para estudiantes y creadores de contenido.
-
-| Item | Effort | Dependencies |
-|------|--------|-------------|
-| P2-117: Data-Driven Enemies (YAML blueprints) | 2-3 weeks | entity_factory.py |
-| P2-119: Editor de Niveles (Wizard) | 4-6 weeks | stage_loader.py |
-| P2-118: Couch Co-op (2P local) | 4-6 weeks | input, camera, player |
-| P2-04/05/79: Bestiario, Speedrun, Achievements | ✅ Done | — |
-| **Total Phase 3** | **10-15 weeks** | |
-
-### Phase 4 (Advanced Features — 12-20 weeks)
-**Objetivo:** Multiplayer, Replay, Web Export.
-
-| Item | Effort | Dependencies |
-|------|--------|-------------|
-| P3-122: Netcode UDP | 6-10 weeks | socket, msgpack |
-| P3-123: Replay System | 3-5 weeks | speedrun_mode.py |
-| P3-124: WebAssembly Export | 8-12 weeks | pyodide |
-| P3-125: Code Obfuscation | 2-3 weeks | Nuitka |
-| **Total Phase 4** | **19-30 weeks** | |
-
-### V2 Total Estimated Effort: **59-91 weeks** (1-2 years)
+| # | Code Smell | Archivo | Línea | Impacto |
+|---|------------|---------|-------|---------|
+| 1 | Lambda global `_emit` atada a `_get_bus()` | `player.py` | 23 | Dependencia oculta, no testeable |
+| 2 | Lambda global `_emit` atada a `_get_bus()` | `enemy_base.py` | 20 | Dependencia oculta, no testeable |
+| 3 | Singleton `Inventory` con `__new__` | `inventory.py` | 73-77 | Estado global, no testeable |
+| 4 | God Object `StageScene` (812 LOC) | `stage_scene.py` | 50-812 | Mantenibilidad, viola SRP |
+| 5 | Player con ~40 atributos sueltos | `player.py` | 138-220 | Sin cohesión, difícil de serializar |
+| 6 | `set_default_bus()` global | `event_bus.py` | 116-119 | Service Locator anti-pattern |
+| 7 | `_default_bus` module-level | `event_bus.py` | 113 | Estado global mutable |
+| 8 | Import de scipy/sklearn en startup | `entity_factory.py` | 42 | ~3.4s de arranque extra |
+| 9 | `app._draw()` hace blit directo | `app.py` | 107-118 | CPU-bound total, sin batching |
+| 10 | AudioManager acoplado a pygame.mixer | `audio_manager.py` | 21-28 | No portable, no testeable sin display |
 
 ---
 
-## 6. Verification Checklist (V2)
+## 4. V1 Architectural Problems Detected
 
-### 6.1 Performance Benchmarks
+### Problem #1: 🔴 Acoplamiento Cíclico Engine ↔ Framework
+
+```python
+# DIRECCIÓN ACTUAL (CÍCLICA):
+engine/scenes/  ──importa──→  framework/entities/  (stage_wizard_scene.py)
+framework/entities/  ──importa──→  engine/core/     (player.py: _get_bus)
+
+# DIRECCIÓN CORRECTA (ACÍCLICA):
+core  →  render + audio + input  →  framework  →  game
+```
+
+**Impacto:** No se puede usar `engine/` sin `framework/`. No se puede testear Player sin inicializar EventBus global.
+
+### Problem #2: 🔴 God Object StageScene (812 LOC)
+
+`StageScene` en `src/framework/scenes/stage_scene.py` sabe de TODO:
+
+```python
+class StageScene(BaseScene):
+    def __init__(self, ...):
+        self._collision = CollisionSystem()
+        self._hazards = HazardSystem()
+        self._progression = ProgressionSystem()
+        self._drawing = DrawingSystem()
+        self._particle_system = ParticleSystem()
+        self._damage_numbers = DamageNumberManager()
+        self._post_processing = PostProcessing()
+        self._ambient_particles = AmbientParticleSystem()
+        self._weather = WeatherSystem()
+        self._trail_system = TrailSystem()
+        self._lighting = LightSystem()
+        self._dynamic_music = DynamicMusicSystem()
+        self._tutorial = TutorialOverlay()
+        self._learning = LearningOverlay()
+        self._minimap = Minimap()
+        self._achievements = AchievementSystem.get_instance()
+        self._bestiary = Bestiary.get_instance()
+        self._speedrun = SpeedrunTimer()
+        self._dialogue = DialogueSystem()
+        self._sfx_handlers = {...}
+        self._vfx_handlers = {...}
+        # 30+ subsistemas en una sola clase
+```
+
+**Impacto:** Violación del **Single Responsibility Principle**. Cualquier cambio en cualquier subsistema requiere modificar StageScene.
+
+### Problem #3: 🟡 Player State Fragmentado (40 atributos sueltos)
+
+```python
+class Player:
+    def __init__(self, spawn_position):
+        self.velocity = Vector2(0, 0)
+        self.is_grounded = False
+        self._coyote_counter = 6
+        self._jump_cut_applied = False  
+        self._state_instance = IdleState()
+        self._attack_timer = 0.0
+        self._attack_active_frames = []
+        self._attack_current_frame = 0
+        self._active_hitbox = None
+        self._hitbox_consumed = False
+        self._cooldown_timer = 0.0
+        self.combo_count = 0
+        self.combo_timer = 0.0
+        self.last_attack_type = ""
+        self.special_meter = 0.0
+        self._slide_speed = 300.0
+        self._air_dash_count = 0
+        self._dash_timer = 0.0
+        self._invincibility_timer = 0.0
+        self._knockback_timer = 0.0
+        # ... ~40 atributos total
+```
+
+**Impacto:** No se puede serializar, no se puede resetear al morir sin recrear el objeto, difícil de testear.
+
+### Problem #4: 🔴 Service Locator Anti-Pattern
+
+```python
+# player.py
+from src.engine.core.event_bus import _get_bus as _bus
+_emit = lambda *a, **kw: _bus().emit(*a, **kw)
+```
+
+**Impacto:** Dependencia oculta, no testeable, no se puede tener múltiples instancias de EventBus.
+
+### Problem #5: 🟡 GameContext sin Control de Crecimiento
+
+```python
+class GameContext:
+    def __init__(self, input_manager, audio_manager, scene_manager, 
+                 event_bus, clock, save_manager):
+        # Cada nuevo feature agrega un parámetro aquí
+```
+
+**Solución:** Contextos especializados:
+- `SceneContext`: Solo input, audio, events (para menús, demos)
+- `StageContext`: SceneContext + physics, collision, stage_data (para gameplay)
+
+---
+
+## 5. V2 Proposed Architecture: Multi-Engine Design
+
+### 5.1 Philosophy: Unix Philosophy for Game Engines
+
+> **"Do one thing and do it well."**
+
+Cada motor es un paquete Python independiente con:
+- **API pública clara** (interfaces abstractas)
+- **Cero dependencias circulares**
+- **Versionado semántico** (semver)
+- **pip-installable** individualmente
+- **Testeable de forma aislada**
+
+### 5.2 Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          LEGACY OF INFEST V2                              │
+│                                                                           │
+│  DEPENDENCY DIRECTION:  →  (siempre hacia la derecha)                    │
+│                                                                           │
+│  ┌──────────┐  ┌───────────┐  ┌──────────┐  ┌──────────┐  ┌─────────┐  │
+│  │ loi-math │  │loi-physics│  │loi-render│  │ loi-vfx  │  │loi-fwk  │  │
+│  │          │  │           │  │          │  │          │  │         │  │
+│  │ Vector2  │→ │ Gravity   │  │ Sprite   │  │ Particle │  │ Player  │  │
+│  │ Matrix3  │  │ Collision │  │ Batch    │  │ Lighting │  │ Enemy   │  │
+│  │ Curve    │  │ Spatial   │  │SurfaceP  │  │ Weather  │  │ Stage   │  │
+│  │ Noise    │  │ Grid      │  │PostFX    │  │ FogOfWar │  │ HUD     │  │
+│  │ ColorSp  │  │ Raycast   │  │Camera2D  │  │ Trail    │  │ ECS     │  │
+│  └────┬─────┘  └─────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬────┘  │
+│       │              │             │             │             │        │
+│       └──────────────┴─────────────┴─────────────┴─────────────┘        │
+│                                  ▲                                      │
+│  ┌──────────┐  ┌──────────┐      │      ┌──────────┐  ┌───────────┐    │
+│  │ loi-core │  │loi-audio │      │      │loi-tools │  │legacy-game│    │
+│  │          │  │          │      │      │          │  │           │    │
+│  │EventBus  │  │ IAudio   │      │      │ Editor   │  │ Stage0    │    │
+│  │SceneMgr  │  │ Pygame   │──────┘      │ Bench    │  │ BossVenado│    │
+│  │DI Cont.  │  │ Null     │             │ WebExp   │  │ Students  │    │
+│  │ Input    │  │ SDL2     │             │ Profiler │  │           │    │
+│  │ Plugin   │  └──────────┘             └──────────┘  └───────────┘    │
+│  │ Clock    │                                                           │
+│  └──────────┘                                                           │
+│                                                                           │
+│  DEPENDENCIAS (siempre acíclicas):                                       │
+│    loi-math  → (ninguna)                                                  │
+│    loi-core  → (ninguna)                                                  │
+│    loi-audio → (ninguna)                                                  │
+│    loi-physics → loi-math                                                 │
+│    loi-render → loi-math                                                  │
+│    loi-vfx → loi-render, loi-math                                         │
+│    loi-framework → loi-core, loi-math, loi-physics, loi-render, loi-vfx  │
+│    loi-tools → loi-framework                                              │
+│    legacy-game → loi-framework                                            │
+│                                                                           │
+│  ✅ NO HAY DEPENDENCIAS CIRCULARES                                        │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### 5.3 Module Descriptions
+
+| # | Module | Name | Purpose | Dependencies | LOC Est. |
+|---|--------|------|---------|-------------|----------|
+| 1 | `loi-math` | Mathematics Engine | Vectores, matrices, curvas, ruido, colores, estadísticas | Ninguna | ~2,000 |
+| 2 | `loi-core` | Core Engine | EventBus, SceneManager, DI Container, Input, Clock, Plugin | Ninguna | ~4,000 |
+| 3 | `loi-audio` | Audio Engine | IAudio interface, backends (Pygame, Null, SDL2), SoundBank | Ninguna | ~1,500 |
+| 4 | `loi-physics` | Physics Engine | Gravedad, colisiones AABB, spatial grid, raycast, dinámica | loi-math | ~3,000 |
+| 5 | `loi-render` | Render Engine | SpriteBatch, SurfacePool, PostFX, Camera2D, TextureAtlas | loi-math | ~5,000 |
+| 6 | `loi-vfx` | Visual Effects Engine | Partículas, iluminación, clima, fog of war, trails, water | loi-render, loi-math | ~4,000 |
+| 7 | `loi-framework` | Metroidvania Framework | Player, Enemies, Stage, HUD, Dialogue, ECS, AI | Todos ↑ | ~8,000 |
+| 8 | `loi-tools` | Tools Suite | StageWizard editor, Benchmarks, WebExport, Profiler | loi-framework | ~3,000 |
+| 9 | `legacy-game` | The Game | Stage0, BossVenado, student stages | loi-framework | ~2,000 |
+| | **Total** | | | | **~32,500** |
+
+---
+
+## 6. Module Specifications
+
+### 6.1 `loi-math` — Mathematics Engine
+
+**Purpose:** Pure math operations. Zero dependencies. Reusable in ANY Python project.
+
+```
+loi-math/
+  ├── __init__.py
+  ├── vector2.py          # Vector2 class (x, y) with all operations
+  ├── matrix3.py          # 3x3 transformation matrix
+  ├── curves.py           # Bezier, B-Spline, Catmull-Rom, NURBS
+  ├── noise.py            # Perlin noise, simplex noise
+  ├── color_spaces.py     # RGB↔HSV↔HSL↔CMYK↔LAB conversions
+  ├── interpolation.py    # lerp, ease_in/out, smoothstep, cubic
+  ├── statistics.py       # mean, std, histogram, correlation
+  └── random.py           # Seeded RNG, distributions
+
+Key classes:
+  Vector2(x, y)            # .normalize(), .dot(), .cross(), .length()
+  Matrix3()                 # .rotate(), .scale(), .translate()
+  BezierCurve(points)       # .sample(t) → Vector2
+  PerlinNoise(seed)         # .noise2d(x, y) → float
+  ColorRGB(r, g, b)         # .to_hsv() → ColorHSV
+
+pip install loi-math
+```
+
+**Migration from V1:**
+- `src/engine/utils/math_utils.py` → `loi-math/vector2.py`
+- `src/framework/processing/curve_tools.py` → `loi-math/curves.py`
+- `src/framework/processing/color_tools.py` → `loi-math/color_spaces.py`
+
+### 6.2 `loi-core` — Core Engine
+
+**Purpose:** Framework-agnostic core. No game logic. Reusable in ANY game type.
+
+```
+loi-core/
+  ├── __init__.py
+  ├── api/                    # Abstract interfaces
+  │   ├── irenderer.py        # IRenderer (implementado por loi-render)
+  │   ├── iaudio.py           # IAudio (implementado por loi-audio)
+  │   ├── iinput.py           # IInput
+  │   ├── iscene.py           # IScene
+  │   ├── iscenemanager.py    # ISceneManager
+  │   └── ieventbus.py        # IEventBus
+  ├── event/
+  │   ├── event_bus.py        # EventBus con prioridades y tipado
+  │   └── events.py           # Event name constants
+  ├── scene/
+  │   ├── base_scene.py       # BaseScene (implementa IScene)
+  │   ├── scene_manager.py    # SceneManager (push/pop/replace)
+  │   └── transitions.py      # Fade, Wipe, Slide transitions
+  ├── di/
+  │   └── service_container.py # ServiceContainer (DI)
+  ├── input/
+  │   ├── input_manager.py    # InputManager
+  │   ├── action_map.py       # Action bindings
+  │   └── input_stack.py      # Layered input (UI > Gameplay > Debug)
+  ├── plugin/
+  │   ├── plugin_manager.py   # Discover, load, hook system
+  │   └── plugin_api.py       # Safe API exposed to plugins
+  ├── clock.py                # DeltaClock
+  └── settings.py             # Global constants
+
+Key classes:
+  EventBus                    # subscribe(priority), emit(Event), dispatch()
+  SceneManager                # push(), pop(), replace(), stage queue
+  ServiceContainer            # register_singleton(), resolve()
+  InputStack                  # push_layer(), pop_layer(), layers
+  PluginManager               # discover(), load(), trigger_hook()
+  DeltaClock                  # tick(), time_scale, fps
+  BaseScene(context)          # on_enter(), update(dt), draw(renderer)
+
+pip install loi-core
+```
+
+**Migration from V1:**
+- `src/engine/core/event_bus.py` → `loi-core/event/event_bus.py` (con tipado fuerte)
+- `src/engine/scene/scene_manager.py` → `loi-core/scene/scene_manager.py`
+- `src/engine/scene/base_scene.py` → `loi-core/scene/base_scene.py`
+- `src/engine/input/input_manager.py` → `loi-core/input/input_manager.py`
+- `src/engine/core/clock.py` → `loi-core/clock.py`
+- `src/engine/core/settings.py` → `loi-core/settings.py`
+
+### 6.3 `loi-audio` — Audio Engine
+
+**Purpose:** Audio abstraction with swappable backends.
+
+```
+loi-audio/
+  ├── __init__.py
+  ├── iaudio.py               # IAudio interface
+  ├── backends/
+  │   ├── pygame_backend.py   # Actual: pygame.mixer
+  │   ├── null_backend.py     # Silent, for CI/headless
+  │   └── sdl2_backend.py     # Future: SDL2_mixer
+  ├── sound_bank.py           # Named sound registry
+  └── audio_manager.py        # High-level: music, sfx, ambient, dynamic
+
+Key classes:
+  AudioManager(backend)        # play_music(), play_sfx(), set_volume()
+  PygameAudioBackend()         # Implementación con pygame.mixer
+  NullAudioBackend()           # Implementación silenciosa
+  SoundBank()                  # load_all(), play(name), cache
+
+pip install loi-audio
+```
+
+### 6.4 `loi-physics` — Physics Engine
+
+**Purpose:** 2D physics for platformers. Independent of rendering.
+
+```
+loi-physics/
+  ├── __init__.py
+  ├── vector2.py               # Re-export from loi-math (or standalone)
+  ├── gravity.py               # GravitySystem
+  ├── collision.py             # AABB collision detection + resolution
+  ├── spatial_grid.py          # Spatial hash grid for broad-phase
+  ├── raycast.py               # Raycasting
+  ├── dynamics.py              # Velocity, acceleration, friction
+  └── one_way_platform.py      # One-way platform collision
+
+Key classes:
+  GravitySystem(strength)      # apply(dt, velocity)
+  CollisionSystem()            # resolve_x(), resolve_y(), collide()
+  SpatialGrid(cell_size)       # insert(), get_nearby(), clear()
+  RaycastResult(hit, point, normal)  # cast(from, to, collision_rects)
+  OneWayPlatform(rect)         # pasable desde abajo
+
+pip install loi-physics
+```
+
+**Migration from V1:**
+- `src/framework/stage/collision_system.py` → `loi-physics/collision.py`
+- `src/framework/entities/player.py` (physics parts) → `loi-physics/gravity.py`
+
+### 6.5 `loi-render` — Render Engine
+
+**Purpose:** High-performance 2D rendering pipeline.
+
+```
+loi-render/
+  ├── __init__.py
+  ├── api/
+  │   └── irenderer.py         # IRenderer interface
+  ├── backends/
+  │   ├── pygame_renderer.py   # Actual: pygame-ce SDL2
+  │   ├── null_renderer.py     # Headless
+  │   └── opengl_renderer.py   # Future: ModernGL
+  ├── pipeline/
+  │   ├── render_pipeline.py   # Layers, ordering, composition
+  │   └── render_command.py    # RenderCommand dataclass
+  ├── batch/
+  │   └── sprite_batch.py      # SpriteBatch (group by texture)
+  ├── pool/
+  │   └── surface_pool.py      # SurfacePool (reuse surfaces)
+  ├── camera/
+  │   └── camera2d.py          # Camera2D (follow, parallax, shake)
+  ├── postfx/
+  │   ├── post_process_stack.py # Chain of effects
+  │   ├── bloom.py             # Bloom effect
+  │   ├── color_grading.py     # Color grading / colorblind
+  │   └── vignette.py          # Vignette effect
+  └── atlas/
+      └── texture_atlas.py     # TextureAtlas builder
+
+Key classes:
+  RenderPipeline(renderer)     # submit(cmd), render()
+  SpriteBatch()                # add(cmd), flush(renderer)
+  SurfacePool(max_size)        # acquire(w, h), release(surface)
+  Camera2D()                   # follow(target), apply(cmd), shake()
+  PostProcessStack()           # add_effect(), apply(layer)
+  TextureAtlas()               # pack(images), get(id)
+
+pip install loi-render
+```
+
+**Migration from V1:**
+- `src/engine/core/app.py` (draw parts) → `loi-render/pipeline/render_pipeline.py`
+- `src/framework/stage/camera.py` → `loi-render/camera/camera2d.py`
+- `src/framework/vfx/post_processing.py` → `loi-render/postfx/`
+
+### 6.6 `loi-vfx` — Visual Effects Engine
+
+**Purpose:** Reusable visual effects for 2D games.
+
+```
+loi-vfx/
+  ├── __init__.py
+  ├── particle/
+  │   ├── particle_system.py   # ParticleSystem (emitters, bursts)
+  │   ├── emitter.py           # Emitter (position, rate, lifetime)
+  │   └── particle.py          # Particle dataclass
+  ├── lighting/
+  │   ├── light_system.py      # LightSystem (ambient, lights)
+  │   └── light_source.py      # LightSource (position, radius, color)
+  ├── weather/
+  │   └── weather_system.py    # Rain, Snow, Fog, Dust, Embers
+  ├── fog_of_war.py            # FogOfWar (revealed areas)
+  ├── trail_system.py          # TrailSystem (motion trails)
+  ├── water_effect.py          # WaterEffect (sine wave overlay)
+  ├── hit_effects.py           # HitEffects (burst on hit)
+  └── damage_numbers.py        # DamageNumberManager
+
+Key classes:
+  ParticleSystem(pool)         # emit(), update(dt), draw(renderer)
+  LightSystem(ambient)         # add_light(), remove_light(), render()
+  WeatherSystem(climate)       # rain(), snow(), fog(), update(dt)
+  FogOfWar()                   # reveal(rect), is_visible(pos), draw()
+  TrailSystem(max_length)      # add_point(pos), draw()
+  DamageNumberManager()        # spawn(text, pos), update(dt), draw()
+
+pip install loi-vfx
+```
+
+### 6.7 `loi-framework` — Metroidvania Framework
+
+**Purpose:** Complete game framework for Metroidvania/2D platformers.
+
+```
+loi-framework/
+  ├── __init__.py
+  ├── ecs/                     # Entity Component System
+  │   ├── world.py             # World (entities, components, systems)
+  │   ├── entity.py            # Entity (ID)
+  │   ├── component.py         # Position, Velocity, Health, Sprite, AI, Collider
+  │   └── system.py            # System (abstract), MovementSystem, AISystem
+  ├── entities/
+  │   ├── player.py            # Player (wraps PlayerState + ECS)
+  │   ├── player_state.py      # PlayerState dataclass (datos puros)
+  │   ├── player_states.py     # State Machine (Idle, Walk, Jump, etc.)
+  │   ├── enemy_base.py        # EnemyBase + AI Strategy
+  │   ├── enemy_walker.py      # WalkerStrategy
+  │   ├── enemy_flying.py      # FlyingStrategy
+  │   ├── enemy_shooter.py     # ShooterStrategy
+  │   ├── boss_base.py         # BossBase (phase manager)
+  │   └── blueprint_loader.py  # EnemyBlueprint (YAML → Entity)
+  ├── stage/
+  │   ├── stage_controller.py  # StageController (orquesta subsistemas)
+  │   ├── stage_loader.py      # TMX → StageData
+  │   ├── stage_data.py        # StageData dataclass
+  │   ├── checkpoint.py        # Checkpoint system
+  │   ├── hazard_system.py     # Hazard zones
+  │   ├── progression.py       # Progression triggers
+  │   ├── drawing_system.py    # Layer-based drawing
+  │   └── cutscene_system.py   # Scripted cutscenes
+  ├── ui/
+  │   ├── hud.py               # HUD (hearts, timer, score)
+  │   ├── message_box.py       # Tutorial messages
+  │   ├── screen_banner.py     # Stage name intro
+  │   ├── minimap.py           # Exploration map
+  │   ├── dialogue_system.py   # Branching dialogue
+  │   ├── tutorial_overlay.py  # Contextual help
+  │   └── learning_overlay.py  # F2-F10 debug toggles
+  ├── audio/
+  │   └── dynamic_music.py     # DynamicMusicSystem (crossfade)
+  ├── ai/
+  │   ├── ai_strategy.py       # AIStrategy (abstract)
+  │   ├── patrol.py            # PatrolStrategy
+  │   ├── chase.py             # ChaseStrategy
+  │   ├── shooter.py           # ShooterStrategy
+  │   └── predictor.py         # AIPredictor (ML-based)
+  └── data/
+      ├── achievements.py      # Achievement system
+      ├── inventory.py         # Item management
+      ├── bestiary.py          # Enemy tracking
+      ├── save_manager.py      # Save/load
+      └── speedrun_mode.py     # Speedrun timer + ghost
+
+Key classes:
+  StageController(world, pipeline, bus)  # load_stage(), update(), draw()
+  Player(spawn, bus)                     # update(dt, input, physics)
+  PlayerState()                          # Datos puros del jugador
+  EnemyBlueprint(data)                   # Crea enemigos desde YAML
+  ECS World                              # create_entity(), add_component(), update()
+  AIStrategy                             # update(entity, world, dt)
+
+pip install loi-framework
+```
+
+### 6.8 `loi-tools` — Tools Suite
+
+**Purpose:** Development tools for the framework.
+
+```
+loi-tools/
+  ├── __init__.py
+  ├── editor/
+  │   ├── stage_wizard.py      # In-game level editor
+  │   ├── tile_palette.py      # Tile selection UI
+  │   └── entity_placer.py     # Entity placement tool
+  ├── benchmark/
+  │   ├── render_bench.py      # 500/1000/2000 sprites
+  │   ├── physics_bench.py     # 100/500/1000 entities
+  │   ├── startup_bench.py     # Cold/warm startup
+  │   └── memory_bench.py      # Heap allocations
+  ├── export/
+  │   └── web_exporter.py      # pyodide/pyscript export
+  └── profiler/
+      ├── frame_profiler.py    # Per-frame timing
+      └── memory_profiler.py   # Memory tracking
+
+pip install loi-tools
+```
+
+### 6.9 `legacy-game` — The Game
+
+```python
+# legacy-game/src/stages/stage0.py
+from loi_framework import StageController, StageLoader
+from loi_core import SceneContext
+
+class Stage0Scene(BaseScene):
+    def __init__(self, context: SceneContext):
+        self.controller = StageController(
+            world=context.resolve(World),
+            pipeline=context.resolve(RenderPipeline),
+            event_bus=context.resolve(EventBus),
+        )
+    
+    def on_enter(self):
+        self.controller.load_stage(Path("assets/maps/stage0.tmx"))
+    
+    def update(self, dt: float):
+        self.controller.update(dt)
+    
+    def draw(self, renderer: IRenderer):
+        self.controller.draw()
+```
+
+---
+
+## 7. Design Patterns Applied
+
+| Patrón | Dónde | Problema que Resuelve | Estado V1 | Estado V2 |
+|--------|-------|-----------------------|-----------|-----------|
+| **Strategy** | AI de enemigos | Cambiar comportamiento sin modificar clases | ❌ Hardcodeado | ✅ `AIStrategy` + Blueprints |
+| **State** | Player states | Máquina de estados | ✅ Ya existe | ✅ Mejorado con dataclass |
+| **Observer** | EventBus | Comunicación desacoplada | ✅ Ya existe | ✅ Tipado + Prioridades |
+| **Command** | Input + Replay | Grabar/Reproducir inputs | ❌ No existe | ✅ `InputCommand` |
+| **Composite** | Render layers | Jerarquía de render | ❌ app._draw() plano | ✅ `RenderPipeline` capas |
+| **Abstract Factory** | Entity creation | Crear sin acoplamiento | ✅ EntityFactory | ✅ + ServiceContainer |
+| **Service Locator → DI** | GameContext | Inyección de dependencias | ⚠️ Globales | ✅ `ServiceContainer` |
+| **Prototype** | Enemies | Clonar configs | ❌ No existe | ✅ `EnemyBlueprint.spawn()` |
+| **Adapter** | Audio backends | Soportar backends | ❌ Acoplado | ✅ `IAudio` + Adapters |
+| **Facade** | StageController | Simplificar interfaz compleja | ❌ God Object | ✅ Facade + ECS |
+| **Null Object** | Audio, Render | Evitar None checks | ❌ `if audio:` | ✅ `NullAudioBackend` |
+| **Pool** | Surfaces, Particles | Reducir allocaciones | ❌ 15-30 MB/s | ✅ `SurfacePool` |
+| **Plugin** | Extensions | Extender sin modificar core | ❌ No existe | ✅ `PluginManager` |
+| **ECS** | Entidades | Data-Oriented Design | ❌ OOP jerárquico | ✅ `World` + `System` |
+| **Value Object** | PlayerState | Datos inmutables | ❌ 40 atributos sueltos | ✅ `PlayerState` dataclass |
+| **Layered Architecture** | Toda la app | Separación de concerns | ❌ Acoplamiento cíclico | ✅ 9 módulos independientes |
+
+---
+
+## 8. Implementation Phases
+
+### Phase 1: Foundation (8-12 weeks)
+**Objective:** Establish base modules with zero external dependencies.
+
+| Item | Module | Effort | Description |
+|------|--------|--------|-------------|
+| P0-001 | `loi-math` | 2-3 weeks | Vector2, Matrix3, Curves, Noise, ColorSpaces |
+| P0-002 | `loi-core` | 4-6 weeks | EventBus tipado, ServiceContainer, BaseScene, SceneManager, InputStack, PluginManager |
+| P0-003 | `loi-audio` | 2-3 weeks | IAudio, PygameBackend, NullBackend, SoundBank |
+| P0-004 | Benchmarks | 1-2 weeks | Render, Physics, Startup, Memory benchmarks |
+| P0-005 | Type hints | 2-3 weeks | mypy strict en loi-math, loi-core, loi-audio |
+| **Total** | | **11-17 weeks** | |
+
+### Phase 2: Performance (6-10 weeks)
+**Objective:** GPU-accelerated rendering, memory optimization.
+
+| Item | Module | Effort | Description |
+|------|--------|--------|-------------|
+| P0-006 | `loi-render` | 3-4 weeks | SpriteBatch, RenderPipeline, Camera2D, SurfacePool |
+| P0-007 | `loi-render` | 2-3 weeks | PostProcessStack (Bloom, ColorGrading, Vignette, Multi-Res) |
+| P0-008 | `loi-physics` | 2-3 weeks | GravitySystem, CollisionSystem, SpatialGrid, Raycast |
+| P1-001 | `loi-core` | 1-2 weeks | Lazy imports (scipy, sklearn, numpy under demand) |
+| **Total** | | **8-12 weeks** | |
+
+### Phase 3: Visual Effects (4-6 weeks)
+**Objective:** Beautiful effects that don't kill performance.
+
+| Item | Module | Effort | Description |
+|------|--------|--------|-------------|
+| P1-002 | `loi-vfx` | 2-3 weeks | ParticleSystem, TrailSystem, DamageNumbers |
+| P1-003 | `loi-vfx` | 2-3 weeks | LightSystem, WeatherSystem, FogOfWar, WaterEffect |
+| P2-001 | `loi-vfx` | 1-2 weeks | HitEffects, AmbientParticles |
+| **Total** | | **5-8 weeks** | |
+
+### Phase 4: Framework (8-12 weeks)
+**Objective:** Complete Metroidvania framework.
+
+| Item | Module | Effort | Description |
+|------|--------|--------|-------------|
+| P1-004 | `loi-framework` | 3-4 weeks | PlayerState dataclass, Player refactor, State Machine |
+| P1-005 | `loi-framework` | 2-3 weeks | EnemyBase, AIStrategy, BlueprintLoader, 9 enemy types |
+| P1-006 | `loi-framework` | 3-4 weeks | ECS World, Component, System, MovementSystem, AISystem |
+| P2-002 | `loi-framework` | 2-3 weeks | StageController, StageLoader, Checkpoint, Hazards |
+| P2-003 | `loi-framework` | 2-3 weeks | HUD, Dialogue, Tutorial, Minimap, LearningOverlay |
+| P2-004 | `loi-framework` | 2-3 weeks | SaveManager, Achievements, Inventory, Bestiary, Speedrun |
+| **Total** | | **14-20 weeks** | |
+
+### Phase 5: Tools (4-6 weeks)
+**Objective:** Developer tools.
+
+| Item | Module | Effort | Description |
+|------|--------|--------|-------------|
+| P1-007 | `loi-tools` | 2-3 weeks | StageWizard editor (tile painter, entity placer) |
+| P2-005 | `loi-tools` | 2-3 weeks | Benchmark suite automation, CI integration |
+| P3-001 | `loi-tools` | 4-6 weeks | WebAssembly export (pyodide) |
+| **Total** | | **8-12 weeks** | |
+
+### Phase 6: Migration (4-6 weeks)
+**Objective:** Migrate existing V1 game to V2.
+
+| Item | Module | Effort | Description |
+|------|--------|--------|-------------|
+| P2-006 | `legacy-game` | 2-3 weeks | Stage0 migration (uses loi-framework StageController) |
+| P2-007 | `legacy-game` | 1-2 weeks | Boss Venado migration |
+| P2-008 | `legacy-game` | 1-2 weeks | Demo scenes migration (13 labs) |
+| **Total** | | **4-7 weeks** | |
+
+### Total V2 Effort: **50-75 weeks** (~1-1.5 years)
+
+---
+
+## 9. V1 vs V2 Comparison
+
+### 9.1 Architecture Comparison
+
+| Aspect | V1 (Monolith) | V2 (Multi-Engine) | Gap |
+|--------|---------------|-------------------|-----|
+| **Modules** | 3 (engine, framework, stages) | 9 (math, core, audio, physics, render, vfx, framework, tools, game) | 🔴 Grande |
+| **Dependencies** | Circular (engine↔framework) | Acíclica (siempre hacia la derecha) | 🔴 Crítico |
+| **Rendering** | CPU blit (~800 sprites) | GPU batch (2000+ sprites) | 🔴 Grande |
+| **Memory** | 15-30 MB/s alloc | <5 MB/s (SurfacePool) | 🔴 Grande |
+| **Post-Processing** | Full-res, <35 FPS | Multi-res, ≥55 FPS | 🔴 Grande |
+| **Architecture** | OOP jerárquico | ECS opcional + OOP wrappers | 🟡 Medio |
+| **StageScene** | God Object 812 LOC | StageController (facade) + ECS Systems | 🔴 Crítico |
+| **Player State** | 40 atributos sueltos | PlayerState dataclass (20 fields) | 🟡 Medio |
+| **Player Init** | 80 líneas | 20 líneas | 🟡 Medio |
+| **Input** | Plano, sin capas | InputStack con prioridades | 🟡 Medio |
+| **Audio** | Acoplado a pygame.mixer | IAudio + 3 backends | 🟡 Medio |
+| **Startup** | ~3.4s (imports pesados) | <1.5s (lazy loading) | 🟡 Medio |
+| **Type Safety** | Parcial, no pasa mypy | mypy strict en todos los módulos | 🟡 Medio |
+| **Global State** | Singleton Inventory, _emit lambda | DI completa (ServiceContainer) | 🟡 Medio |
+| **Plugins** | No existe | PluginManager + 5 hooks | 🔴 Grande |
+| **Data-Driven** | Solo código Python | YAML blueprints + editor visual | 🟡 Medio |
+| **Multiplayer** | Solo single-player | Couch co-op (P2) + Netcode (P3) | 🟢 Lejano |
+| **Tools** | Tiled externo obligatorio | StageWizard in-game | 🟡 Medio |
+| **Web Export** | No | pyodide (P3) | 🟢 Lejano |
+| **Reusabilidad** | Solo para este juego | Cualquier Metroidvania | 🔴 Grande |
+| **pip install** | No | Sí, cada módulo individualmente | 🔴 Grande |
+
+### 9.2 Compared to Commercial Engines
+
+| Aspect | Godot 4 | Unity 2D | Legacy V1 | Legacy V2 (Target) |
+|--------|---------|----------|-----------|-------------------|
+| **Render** | GPU (Vulkan/GL) | GPU (DX/GL) | CPU blit | **GPU batch** |
+| **ECS** | ✅ Built-in | ✅ DOTS | ❌ OOP | **✅ Optional** |
+| **Plugins** | ✅ GDScript/C# | ✅ C# | ❌ None | **✅ Hook system** |
+| **Pooling** | ✅ Built-in | ✅ Built-in | ❌ None | **✅ SurfacePool** |
+| **Profiling** | ✅ Built-in | ✅ Profiler | ❌ None | **✅ Benchmark suite** |
+| **Multiplayer** | ✅ Built-in | ✅ Mirror/Photon | ❌ None | **✅ Couch + UDP (P3)** |
+| **Startup** | <2s | <5s | ~3.4s | **<1.5s** |
+| **Sprites 60fps** | 5000+ | 10000+ | ~800 | **2000+** |
+| **LOC** | ~1.5M | ~3M | ~29K | **~32.5K** |
+| **Modular** | Monolítico | Monolítico | Monolítico | **9 módulos independientes** |
+| **pip install** | No | No | No | **✅ Sí** |
+| **Target** | General 2D/3D | General 2D/3D | Metroidvania | **🏆 Best Metroidvania Framework** |
+
+### 9.3 Key Improvements Summary
+
+| De (V1) | A (V2) | Beneficio |
+|---------|--------|-----------|
+| Monolito acoplado | 9 módulos independientes | Mantenibilidad, reuso, testing |
+| God Object StageScene (812 LOC) | StageController + ECS Systems | SRP, extensibilidad |
+| 40 atributos sueltos en Player | PlayerState dataclass | Serialización, testing |
+| Lambdas globales (_emit) | EventBus inyectado vía DI | Testeabilidad |
+| Singleton Inventory | ServiceContainer | Sin estado global |
+| CPU blit (800 sprites) | GPU batch (2000+ sprites) | Rendimiento 2.5x |
+| Sin plugins | PluginManager con hooks | Extensibilidad infinita |
+| Sin ECS | ECS opcional | Data-Oriented Design |
+| Acoplado a pygame.mixer | IAudio + 3 backends | Portabilidad |
+| Sin benchmarks | Benchmark suite | Medición objetiva |
+| Sin editor de niveles | StageWizard in-game | Productividad estudiantes |
+
+---
+
+## 10. Game Types Possible After V2
+
+### 🟢 DOMINADOS (Scroll Lateral 2D)
+
+| Game Type | Why V2 Excels | Examples |
+|-----------|---------------|----------|
+| **Metroidvania** 🏆 | ECS + StageController + AIStrategy + Data-Driven Enemies | Hollow Knight, Axiom Verge, Ori |
+| **Action Platformer** 🏆 | GPU batch (2000+ sprites), ParticleSystem, PostFX | Mega Man, Cuphead |
+| **Precision Platformer** 🏆 | Physics engine, benchmarks, DeltaClock preciso | Celeste, Super Meat Boy |
+| **Bullet Hell / Shmup** 🏆 | ECS para 500+ proyectiles, SpriteBatch | Touhou, Enter the Gungeon |
+| **Castlevania-like** 🏆 | Inventory + ECS + AIStrategy + Stage progression | Castlevania SOTN |
+| **Speedrun Platformer** 🏆 | SpeedrunSystem, ghost data, benchmarks integrados | Dustforce |
+
+### 🟡 POSIBLES con Adaptación (Top-Down)
+
+| Game Type | What's Needed | Effort | Examples |
+|-----------|---------------|--------|----------|
+| **Top-Down Adventure** | New MovementSystem (8-dir), Camera centrada, AI 360° | 4-6 weeks | Zelda: Link to the Past |
+| **Beat 'em Up** | Couch co-op P2, camera multijugador, combo system | 6-8 weeks | Streets of Rage |
+| **Dual-Stick Shooter** | ECS proyectiles, input analógico, right stick | 4-6 weeks | Hotline Miami |
+| **RPG de Acción (Diablo-like)** | Loot system, procedimental generation, ECS stats | 8-12 weeks | Diablo, Path of Exile |
+| **Party Game** | Couch co-op, minijuegos via Plugin system | 6-8 weeks | TowerFall, Duck Game |
+| **Souls-like 2D** | Stamina system, AI agresiva, animaciones largas | 4-6 weeks | Salt & Sanctuary |
+
+### 🔴 NO POSIBLES (Requieren reescritura)
+
+| Game Type | Limitation | Examples |
+|-----------|------------|----------|
+| **Pokémon (RPG por turnos)** ❌ | Sin sistema de batalla por turnos, captura, evolución, movimientos, party management, overworld grid | Pokémon, Persona |
+| **JRPG por turnos** ❌ | Sin sistema de turnos, ATB, menú de comandos | Final Fantasy |
+| **Estrategia por turnos** ❌ | Sin grid-based movement, pathfinding, sistema de unidades/turnos | Fire Emblem |
+| **Estrategia en tiempo real** ❌ | Sin selección de unidades, multi-agent pathfinding, recursos | StarCraft |
+| **Juego de Cartas** ❌ | Sin tablero, sistema de reglas, efectos encadenados | Slay the Spire |
+| **Novela Visual** ❌ | Sin branching narrativo complejo, galería CG, guardado por capítulos | Doki Doki |
+| **Racing** ❌ | Sin física vehicular, sistema de turbos, derrape | Mario Kart |
+| **Fighting Game** ❌ | Sin 1v1 mechanics, frame data, motion inputs | Street Fighter |
+
+---
+
+## 11. V2 Verification Checklist
+
+### 11.1 Architecture
+
+- [ ] 9 módulos independientes con dependencias acíclicas
+- [ ] `pip install loi-core` funciona sin pygame
+- [ ] `pip install loi-render` funciona con pygame
+- [ ] `pip install loi-framework` funciona con todas las dependencias
+- [ ] ServiceContainer registra todas las dependencias sin circularidad
+- [ ] Cero lambdas globales `_emit` en todo el código
+- [ ] Cero singletons en todo el código
+- [ ] Cero `_get_bus()` o `set_default_bus()` en loi-framework
+
+### 11.2 StageScene
+
+- [ ] StageScene < 200 líneas (delegado a StageController)
+- [ ] StageController no < 400 líneas (orquesta subsistemas)
+- [ ] Cada subsistema es testeable de forma aislada
+- [ ] ECS opcional funcional (World + Component + System)
+
+### 11.3 Performance Benchmarks
 
 - [ ] 2000+ sprites animados a 60 FPS estables (Sprite Batch)
 - [ ] <5 MB/s de alloc sostenido (Surface Pool)
 - [ ] 3+ filtros post-process simultáneos ≥55 FPS (Multi-Res)
 - [ ] Startup time <1.5s cold (Lazy Loading)
 - [ ] Zero micro-stutters por GC en gameplay normal
+- [ ] Benchmarks en CI con línea base documentada
 
-### 6.2 Architecture
+### 11.4 Player
 
-- [ ] ECS funcional: 5+ componentes, 3+ sistemas, 2x iteración vs OOP
-- [ ] Plugin cargado sin modificar core (ej: nuevo filtro)
-- [ ] InputStack con capas funcionales
-- [ ] AudioBackend con NullBackend para CI
-- [ ] Zero lambdas globales `_emit`
-- [ ] Inventory sin singleton
+- [ ] PlayerState dataclass con ~20 fields
+- [ ] Player.__init__ < 20 líneas
+- [ ] Serialización a JSON en < 10 líneas
+- [ ] Reset al checkpoint en < 5 líneas
 
-### 6.3 Code Quality
+### 11.5 Code Quality
 
-- [ ] `mypy --strict` pasa en todo src/
-- [ ] Cobertura de tests >70%
+- [ ] `mypy --strict` pasa en los 9 módulos
+- [ ] Cobertura de tests >80%
 - [ ] Benchmarks en CI
-- [ ] EventMap documentado
+- [ ] Docstrings en todas las clases públicas
 
-### 6.4 Features
+### 11.6 Features V2
 
+- [ ] Plugin funcional de ejemplo (nuevo filtro de imagen)
 - [ ] Data-driven enemy via YAML blueprint
-- [ ] Editor de niveles in-game funcional
-- [ ] Couch co-op 2 jugadores (opcional)
+- [ ] Editor de niveles in-game funcional (StageWizard)
+- [ ] Couch co-op 2 jugadores (opcional Phase 5)
+- [ ] Audio NullBackend para CI
 
 ---
 
-## 7. Current Status vs V2 Target
+## 12. Complete Improvement Item List
 
-| Aspect | V1 (Current) | V2 Target | Gap |
-|--------|-------------|-----------|-----|
-| **Rendering** | CPU blit (~800 sprites) | GPU batch (2000+ sprites) | 🔴 Grande |
-| **Memory** | 15-30 MB/s alloc, GC stutters | <5 MB/s, zero stutters | 🔴 Grande |
-| **Post-Processing** | Full-res, <35 FPS con 3 filtros | Multi-res, ≥55 FPS con 3 filtros | 🔴 Grande |
-| **Architecture** | OOP jerárquico | ECS opcional + OOP wrappers | 🟡 Medio |
-| **Extensibility** | Sin plugins | Plugin system con 5 hooks | 🔴 Grande |
-| **Input** | Plano, sin capas | InputStack con prioridades | 🟡 Medio |
-| **Audio** | Acoplado a pygame.mixer | Backend abstraction | 🟡 Medio |
-| **Startup** | ~3.4s | <1.5s | 🟡 Medio |
-| **Type Safety** | Parcial | mypy strict | 🟡 Medio |
-| **Global State** | Singleton Inventory, _emit lambda | DI completa | 🟡 Medio |
-| **Assets** | Síncrono, archivos sueltos | Async, empaquetado | 🟡 Medio |
-| **Data-Driven** | Solo código | YAML blueprints | 🟡 Medio |
-| **Multiplayer** | Solo single-player | Couch co-op (P2) + Netcode (P3) | 🟢 Lejano |
-| **Tools** | Tiled externo | Editor in-game | 🟡 Medio |
-| **Web Export** | No | pyodide (P3) | 🟢 Lejano |
+### 12.1 Items Already Implemented (8 items from V1)
 
----
+| ID | Name | Module | Evidence |
+|----|------|--------|----------|
+| ✅ | P0-01 | Documentation | Docs actualizados, 05_ENEMY_SPEC.md, 03_ARCHITECTURE.md |
+| ✅ | P0-02 | WeatherSystem | `loi-vfx/weather_system.py` (155 LOC) |
+| ✅ | P0-03 | LearningOverlay | `loi-framework/ui/learning_overlay.py` (209 LOC) |
+| ✅ | P1-07 | 9 Enemy Types | `loi-framework/entities/enemy_*.py` (8 + Boss) |
+| ✅ | P2-04 | Bestiary UI | `loi-framework/data/bestiary.py` + scene |
+| ✅ | P2-05 | Speedrun UI | `loi-framework/data/speedrun_mode.py` |
+| ✅ | P2-79 | Achievement System | `loi-framework/data/achievements.py` + scene |
+| ✅ | P2-115 | No Monetization | Design decision followed |
 
-## 8. V2 Architecture Comparison
+### 12.2 P0 — Critical (Must fix before V2 launch)
 
-| Aspect | Godot 4 | Unity 2D | Legacy V1 | Legacy V2 (Target) |
-|--------|---------|----------|-----------|-------------------|
-| **Render** | GPU (Vulkan/GL) | GPU (DX/GL) | CPU blit | GPU batch |
-| **ECS** | ✅ Built-in | ✅ DOTS | ❌ OOP | ✅ Optional |
-| **Plugins** | ✅ GDScript/C# | ✅ C# | ❌ None | ✅ Hook system |
-| **Pooling** | ✅ Built-in | ✅ Built-in | ❌ None | ✅ SurfacePool |
-| **Profiling** | ✅ Built-in | ✅ Profiler | ❌ None | ✅ Benchmark suite |
-| **Multiplayer** | ✅ Built-in | ✅ Mirror/Photon | ❌ None | ✅ Couch (P2) + UDP (P3) |
-| **Startup** | <2s | <5s | ~3.4s | <1.5s |
-| **Sprites 60fps** | 5000+ | 10000+ | ~800 | 2000+ |
-| **LOC** | ~1.5M | ~3M | ~29K | ~35K |
-| **Target** | General 2D/3D | General 2D/3D | Metroidvania/Scroll | **Best Metroidvania Framework** |
+| ID | Name | Module | Effort | Description |
+|----|------|--------|--------|-------------|
+| **P0-001** | **Vector2, Matrix3, Curves** | `loi-math` | 2-3 weeks | Extraer matemáticas puras a módulo independiente |
+| **P0-002** | **EventBus tipado + DI** | `loi-core` | 4-6 weeks | EventBus con prioridades, ServiceContainer, SceneManager, InputStack, PluginManager |
+| **P0-003** | **IAudio + NullBackend** | `loi-audio` | 2-3 weeks | Desacoplar audio de pygame.mixer, NullBackend para CI |
+| **P0-004** | **Benchmark Suite** | `loi-tools` | 1-2 weeks | Render, Physics, Startup, Memory benchmarks |
+| **P0-005** | **mypy strict** | All | 2-3 weeks | Type hints completos en todos los módulos |
+| **P0-006** | **SpriteBatch + RenderPipeline** | `loi-render` | 3-4 weeks | GPU batch rendering, capas, composición |
+| **P0-007** | **PostProcessStack (Multi-Res)** | `loi-render` | 2-3 weeks | Bloom, ColorGrading, Vignette, adaptive resolution |
+| **P0-008** | **SurfacePool** | `loi-render` | 2-3 weeks | Object pooling para superficies, eliminar GC pressure |
+| **P0-009** | **PlayerState dataclass** | `loi-framework` | 1-2 weeks | Datos puros del jugador, serializable |
+| **P0-010** | **Eliminar globales (_emit)** | `loi-framework` | 1-2 weeks | Inyectar EventBus via DI en Player, EnemyBase |
+| **P0-011** | **Refactor StageScene** | `loi-framework` | 3-4 weeks | Dividir God Object en StageController + ECS Systems |
 
----
+### 12.3 P1 — High Priority
 
-## Appendix A: Implementation Status Summary
+| ID | Name | Module | Effort | Description |
+|----|------|--------|--------|-------------|
+| P1-001 | Lazy Loading (scipy, sklearn) | `loi-core` | 1-2 weeks | Import bajo demanda de dependencias pesadas |
+| P1-002 | ParticleSystem V2 | `loi-vfx` | 2-3 weeks | Sistema de partículas con pool, GPU batch |
+| P1-003 | LightSystem V2 + Weather | `loi-vfx` | 2-3 weeks | Iluminación 2D con SurfacePool, clima multi-res |
+| P1-004 | AIStrategy + BlueprintLoader | `loi-framework` | 2-3 weeks | Strategy Pattern para AI, enemigos desde YAML |
+| P1-005 | ECS Core (World + Component + System) | `loi-framework` | 3-4 weeks | Entity Component System opcional |
+| P1-006 | StageWizard Editor | `loi-tools` | 2-3 weeks | Editor de niveles in-game (tile painter, entity placer) |
+| P1-007 | CollisionSystem + SpatialGrid | `loi-physics` | 2-3 weeks | Sistema de colisiones independiente del render |
+| P1-008 | GravitySystem + Physics | `loi-physics` | 2-3 weeks | Física de plataformas independiente del framework |
+| P1-009 | InputStack (capas) | `loi-core` | 2-3 weeks | Input con prioridades: UI > Gameplay > Debug |
+| P1-010 | SaveManager V2 | `loi-framework` | 1-2 weeks | Save/load con PlayerState serializable |
+| P1-011 | Singleton Removal (Inventory) | `loi-framework` | 1-2 weeks | Inventory via ServiceContainer, no singleton |
 
-### A.1 By Category (Updated)
+### 12.4 P2 — Medium Priority
 
-| Category | Total Items | Implemented | Not Implemented | % Done |
-|----------|-------------|-------------|-----------------|--------|
-| **Already Done** | 10 systems | 10 | 0 | 100% |
-| **P0 — Blockers** | 11 | 3 | 8 | 27% |
-| **P1 — High Priority** | 41 | 1 | 40 | 2% |
-| **P2 — Medium Priority** | 92 | 4 | 88 | 4% |
-| **P3 — Low Priority** | 49 | 0 | 49 | 0% |
-| **TOTAL** | **203** | **18** | **185** | **9%** |
+| ID | Name | Module | Effort | Description |
+|----|------|--------|--------|-------------|
+| P2-001 | HitEffects + DamageNumbers | `loi-vfx` | 1-2 weeks | Efectos de impacto y números de daño |
+| P2-002 | StageController + StageLoader | `loi-framework` | 2-3 weeks | Orquestador de stage, carga TMX |
+| P2-003 | HUD + Dialogue + Tutorial | `loi-framework` | 2-3 weeks | UI del framework Metroidvania |
+| P2-004 | Achievements + Inventory + Bestiary | `loi-framework` | 2-3 weeks | Sistemas de datos del framework |
+| P2-005 | Benchmark Automation | `loi-tools` | 2-3 weeks | Benchmarks en CI con reportes |
+| P2-006 | Stage0 Migration | `legacy-game` | 2-3 weeks | Migrar Stage0 a V2 |
+| P2-007 | Boss Venado Migration | `legacy-game` | 1-2 weeks | Migrar Boss Venado a V2 |
+| P2-008 | Demo Scenes Migration | `legacy-game` | 1-2 weeks | Migrar 13 labs académicos a V2 |
+| P2-009 | Couch Co-op (2P local) | `loi-framework` | 4-6 weeks | Segundo jugador local, split-screen |
+| P2-010 | Data-Driven Enemies (YAML) | `loi-framework` | 2-3 weeks | BlueprintLoader con ejemplos YAML |
+| P2-011 | DynamicMusicSystem V2 | `loi-framework` | 1-2 weeks | Música dinámica con crossfade y transiciones |
+| P2-012 | FogOfWar V2 | `loi-vfx` | 1-2 weeks | Fog of war con SurfacePool |
+| P2-013 | Minimap V2 | `loi-framework` | 1-2 weeks | Minimapa con exploración y markers |
+| P2-014 | Tutorial System V2 | `loi-framework` | 1-2 weeks | Tutoriales contextuales con triggers |
+| P2-015 | LearningOverlay V2 | `loi-framework` | 1-2 weeks | F2-F10 toggles con más modos |
+| P2-016 | EventBus EventMap | `loi-core` | 1-2 weeks | Documentación de eventos y suscriptores |
 
-### A.2 Items Already Implemented (8 items)
+### 12.5 P3 — Low Priority
 
-| Roadmap Item | System | Evidence |
-|--------------|--------|----------|
-| **P0-01** | Documentación actualizada | `05_ENEMY_SPEC.md` cubre 8 tipos + Boss; docs 03/22/04 corregidos |
-| **P0-02** | WeatherSystem desde TMX | `src/framework/vfx/weather_system.py` |
-| **P0-03** | LearningOverlay (F2-F10) | `src/framework/ui/learning_overlay.py` |
-| **P1-07** | Enemy scripting (9 types) | `src/framework/entities/enemy_*.py` |
-| **P2-04** | Bestiary UI | `src/framework/entities/bestiary.py`, `src/engine/scenes/bestiary_scene.py` |
-| **P2-05** | Speedrun UI | `src/framework/stage/speedrun_mode.py` |
-| **P2-79** | Achievement System | `src/engine/core/achievements.py`, `src/engine/scenes/achievement_scene.py` |
-| **P2-115** | No Monetization | Design decision followed |
-
-### A.3 New Items Added in v3.0.0 (from 2026-07-16 Code Audit)
-
-| Item | Priority | Category | Description |
-|------|----------|----------|-------------|
-| **P0-004** | P0 | Performance | Sprite Batch System (elevated from P2-116) |
-| **P0-005** | P0 | Performance | Surface Object Pool (elevated from P2-117) |
-| **P0-006** | P0 | Performance | Post-Processing Multi-Res (elevated from P2-118) |
-| **P0-007** | P0 | Code Quality | PlayerState dataclass |
-| **P0-008** | P0 | Code Quality | Eliminar lambdas globales _emit |
-| **P1-01** | P1 | Performance | Benchmark Suite |
-| **P1-02** | P1 | Architecture | ECS Prototype (elevated from P2-120) |
-| **P1-03** | P1 | Architecture | Plugin System (elevated from P2-121) |
-| **P1-04** | P1 | Architecture | Lazy Loading (elevated from P2-119) |
-| **P1-05** | P1 | Architecture | Input Stack con capas |
-| **P1-06** | P1 | Architecture | Audio Backend Abstraction |
-| **P1-08** | P1 | Code Quality | Type Hints + mypy strict |
-| **P1-09** | P1 | Code Quality | Singleton Removal (Inventory) |
-| **P1-10** | P1 | Architecture | Asset Pipeline (async + atlas) |
-| **P2-116** | P2 | Code Quality | EventBus Audit + EventMap |
-| **P2-117** | P2 | AI/ARC | Data-Driven Enemies (YAML blueprints) |
-| **P2-118** | P2 | NET | Couch Co-op Local Multiplayer |
+| ID | Name | Module | Effort | Description |
+|----|------|--------|--------|-------------|
+| P3-001 | WebAssembly Export | `loi-tools` | 4-6 weeks | pyodide/pyscript export |
+| P3-002 | Netcode UDP | `loi-core` | 6-10 weeks | Multiplayer online básico |
+| P3-003 | Replay System | `loi-framework` | 3-5 weeks | Input replay, ghost split comparación |
+| P3-004 | Code Obfuscation | `loi-tools` | 2-3 weeks | Nuitka/PyInstaller empaquetado |
+| P3-005 | 3D Audio (positional) | `loi-audio` | 2-3 weeks | Audio 3D posicional con HRTF |
+| P3-006 | OpenGL Renderer Backend | `loi-render` | 4-6 weeks | ModernGL backend para GPU nativa |
+| P3-007 | Visual Stage Scripting | `loi-tools` | 4-6 weeks | Editor visual de lógica de stage |
+| P3-008 | Mobile Export (Android) | `loi-tools` | 6-10 weeks | pyjnius/pygame-android export |
 
 ---
 
-**Document Version:** 3.0.0  
-**Last Updated:** 2026-07-16  
-**Next Review:** After Phase 1 V2 completion  
+## 13. References
 
----
-
-## 🔗 Documentos Relacionados
-
-- [[51_IMPLEMENTATION_AUDIT.md|Implementation Audit]]
-- [[03_ARCHITECTURE.md|Architecture]]
+- [[03_ARCHITECTURE.md|V1 Architecture]]
 - [[04_PLAYER_SPEC.md|Player Specification]]
 - [[05_ENEMY_SPEC.md|Enemy Specification]]
+- [[51_IMPLEMENTATION_AUDIT.md|Implementation Audit]]
 - [[52_MULTIDISCIPLINARY_AUDIT.md|Multidisciplinary Audit]]
+
+---
+
+**Document Version:** 4.0.0  
+**Last Updated:** 2026-07-16  
+**Next Review:** After Phase 1 V2 completion (loi-math + loi-core + loi-audio)
+
+---
+
+## Appendix: V1 → V2 Migration Mapping
+
+| V1 Path | V2 Module | Notes |
+|---------|-----------|-------|
+| `src/engine/utils/math_utils.py` | `loi-math/vector2.py` | Pure math, zero deps |
+| `src/framework/processing/curve_tools.py` | `loi-math/curves.py` | Bezier, B-Spline, NURBS |
+| `src/framework/processing/color_tools.py` | `loi-math/color_spaces.py` | RGB↔HSV↔HSL↔CMYK |
+| `src/engine/core/event_bus.py` | `loi-core/event/event_bus.py` | Tipado fuerte + prioridades |
+| `src/engine/core/events.py` | `loi-core/event/events.py` | Event constants |
+| `src/engine/core/clock.py` | `loi-core/clock.py` | DeltaClock |
+| `src/engine/core/settings.py` | `loi-core/settings.py` | Global constants |
+| `src/engine/scene/scene_manager.py` | `loi-core/scene/scene_manager.py` | SceneManager |
+| `src/engine/scene/base_scene.py` | `loi-core/scene/base_scene.py` | BaseScene |
+| `src/engine/scene/transitions.py` | `loi-core/scene/transitions.py` | Fade, Wipe, Slide |
+| `src/engine/input/input_manager.py` | `loi-core/input/input_manager.py` | + InputStack |
+| `src/engine/input/action_map.py` | `loi-core/input/action_map.py` | Action bindings |
+| `src/engine/core/game_context.py` | `loi-core/di/service_container.py` | ServiceContainer |
+| `NUEVO` | `loi-core/plugin/plugin_manager.py` | Plugin system |
+| `NUEVO` | `loi-core/plugin/plugin_api.py` | Plugin API |
+| `src/engine/audio/audio_manager.py` | `loi-audio/audio_manager.py` | IAudio interface |
+| `src/engine/audio/sound_bank.py` | `loi-audio/sound_bank.py` | SoundBank |
+| `NUEVO` | `loi-audio/backends/null_backend.py` | For CI |
+| `NUEVO` | `loi-audio/backends/sdl2_backend.py` | Future |
+| `src/framework/stage/collision_system.py` | `loi-physics/collision.py` | + SpatialGrid |
+| `src/framework/entities/player.py` (physics) | `loi-physics/gravity.py` | Gravity system |
+| `src/engine/core/app.py` (draw) | `loi-render/pipeline/render_pipeline.py` | RenderPipeline |
+| `NUEVO` | `loi-render/batch/sprite_batch.py` | GPU batch |
+| `NUEVO` | `loi-render/pool/surface_pool.py` | Object pool |
+| `src/framework/stage/camera.py` | `loi-render/camera/camera2d.py` | Camera2D |
+| `src/framework/vfx/post_processing.py` | `loi-render/postfx/post_process_stack.py` | Multi-res |
+| `NUEVO` | `loi-render/atlas/texture_atlas.py` | Atlas builder |
+| `src/framework/vfx/particle_system.py` | `loi-vfx/particle/particle_system.py` | + Pool |
+| `src/framework/vfx/lighting.py` | `loi-vfx/lighting/light_system.py` | LightSystem |
+| `src/framework/vfx/weather_system.py` | `loi-vfx/weather/weather_system.py` | Climate |
+| `src/framework/vfx/fog_of_war.py` | `loi-vfx/fog_of_war.py` | FogOfWar |
+| `src/framework/vfx/trail_system.py` | `loi-vfx/trail_system.py` | Trails |
+| `src/framework/vfx/water_effect.py` | `loi-vfx/water_effect.py` | Water |
+| `src/framework/vfx/hit_effects.py` | `loi-vfx/hit_effects.py` | Hit VFX |
+| `src/framework/vfx/damage_numbers.py` | `loi-vfx/damage_numbers.py` | Damage text |
+| `src/framework/entities/player.py` | `loi-framework/entities/player.py` | Use PlayerState |
+| `src/framework/entities/player_states.py` | `loi-framework/entities/player_states.py` | State Machine |
+| `NUEVO` | `loi-framework/entities/player_state.py` | Data class |
+| `src/framework/entities/enemy_*.py` | `loi-framework/entities/` | Use AIStrategy |
+| `NUEVO` | `loi-framework/entities/blueprint_loader.py` | YAML→Entity |
+| `NUEVO` | `loi-framework/ecs/world.py` | ECS |
+| `NUEVO` | `loi-framework/ecs/component.py` | Position, Velocity, etc |
+| `NUEVO` | `loi-framework/ecs/system.py` | Movement, Render, AI |
+| `src/framework/scenes/stage_scene.py` | `loi-framework/stage/stage_controller.py` | Facade |
+| `src/framework/stage/stage_loader.py` | `loi-framework/stage/stage_loader.py` | TMX→StageData |
+| `src/framework/stage/checkpoint.py` | `loi-framework/stage/checkpoint.py` | Checkpoint |
+| `src/framework/stage/hazard_system.py` | `loi-framework/stage/hazard_system.py` | Hazards |
+| `src/framework/stage/progression_system.py` | `loi-framework/stage/progression_system.py` | Progression |
+| `src/engine/ui/hud.py` | `loi-framework/ui/hud.py` | HUD |
+| `src/engine/ui/message_box.py` | `loi-framework/ui/message_box.py` | Messages |
+| `src/engine/ui/minimap.py` | `loi-framework/ui/minimap.py` | Minimap |
+| `src/engine/ui/screen_banner.py` | `loi-framework/ui/screen_banner.py` | Banner |
+| `src/framework/stage/speedrun_mode.py` | `loi-framework/data/speedrun_mode.py` | Speedrun |
+| `src/engine/core/inventory.py` | `loi-framework/data/inventory.py` | No singleton |
+| `src/engine/core/achievements.py` | `loi-framework/data/achievements.py` | Achievements |
+| `src/framework/entities/bestiary.py` | `loi-framework/data/bestiary.py` | Bestiary |
+| `src/engine/core/save_manager.py` | `loi-framework/data/save_manager.py` | Save |
+| `src/framework/ui/dialogue_system.py` | `loi-framework/ui/dialogue_system.py` | Dialogue |
+| `src/framework/ui/tutorial_overlay.py` | `loi-framework/ui/tutorial_overlay.py` | Tutorial |
+| `src/framework/ui/learning_overlay.py` | `loi-framework/ui/learning_overlay.py` | Learning |
+| `src/framework/audio/dynamic_music.py` | `loi-framework/audio/dynamic_music.py` | Dynamic music |
+| `NUEVO` | `loi-tools/editor/stage_wizard.py` | Level editor |
+| `NUEVO` | `loi-tools/benchmark/render_bench.py` | Benchmarks |
+| `NUEVO` | `loi-tools/export/web_exporter.py` | Web export |
+| `src/stages/stage0/` | `legacy-game/stages/stage0/` | Uses V2 API |
+| `src/stages/boss_venado/` | `legacy-game/stages/boss_venado/` | Uses V2 API |
