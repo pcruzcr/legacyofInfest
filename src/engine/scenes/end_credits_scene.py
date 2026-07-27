@@ -7,8 +7,9 @@ import pygame
 from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
-from src.engine.scenes.demo_common import BOTTOM_BAR_Y
 from src.engine.scenes.title_scene import TitleScene
+from src.engine.ui.theme import Theme, font
+from src.engine.ui.widgets import draw_key_hints
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -19,9 +20,9 @@ class EndCreditsScene(BaseScene):
 
     def __init__(self, context: GameContext) -> None:
         super().__init__(context)
-        self._font_title = pygame.font.Font(None, 18)
-        self._font_text = pygame.font.Font(None, 14)
-        self._font_hint = pygame.font.Font(None, 11)
+        # AUD-069: escala del tema y su caché.
+        self._font_title = font(Theme.FONT_SMALL)
+        self._font_text = font(Theme.FONT_TINY)
         self._elapsed: float = 0.0
         self._scroll_y: float = settings.INTERNAL_HEIGHT
         self._done: bool = False
@@ -83,27 +84,30 @@ class EndCreditsScene(BaseScene):
             self._done = True
 
     def draw(self, surface: pygame.Surface) -> None:
-        surface.fill(settings.BG_COLOR)
+        # Los créditos ruedan sobre el fondo del juego, sin cabecera: el título
+        # forma parte del propio texto que sube.
+        surface.fill(Theme.BG)
 
         y = int(self._scroll_y)
         for text, _ in self._lines:
             if y < -30 or y > settings.INTERNAL_HEIGHT + 10:
                 y += 22
                 continue
-            if text.startswith("---"):
-                surf = self._font_title.render(text, True, (200, 200, 100))
-            elif text.startswith("LEGACY"):
-                surf = self._font_title.render(text, True, (255, 215, 0))
+            # Cuatro niveles de jerarquía con los tres tonos de texto del tema
+            # más el acento para el título del juego. Antes eran cuatro colores
+            # inventados que no aparecían en ninguna otra pantalla.
+            if text.startswith("LEGACY"):
+                surf = self._font_title.render(text, True, Theme.ACCENT)
+            elif text.startswith("---"):
+                surf = self._font_title.render(text, True, Theme.TEXT)
             elif ":" in text:
-                surf = self._font_text.render(text, True, (220, 220, 220))
+                surf = self._font_text.render(text, True, Theme.TEXT)
             else:
-                surf = self._font_text.render(text, True, (180, 180, 180))
+                surf = self._font_text.render(text, True, Theme.TEXT_MUTED)
             sx = (settings.INTERNAL_WIDTH - surf.get_width()) // 2
             surface.blit(surf, (sx, y))
             y += 22
 
         if self._done:
-            hint = self._font_hint.render("Press CONFIRM to return to title", True, (150, 150, 150))
-            hx = (settings.INTERNAL_WIDTH - hint.get_width()) // 2
-            surface.blit(hint, (hx, BOTTOM_BAR_Y - 16))
+            draw_key_hints(surface, [("Enter", "Volver al título")])
 

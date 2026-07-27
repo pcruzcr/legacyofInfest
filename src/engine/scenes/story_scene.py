@@ -8,6 +8,8 @@ from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import BOTTOM_BAR_Y
+from src.engine.ui.theme import Theme, font
+from src.engine.ui.widgets import draw_screen
 from src.engine.utils.asset_loader import AssetLoader
 
 if TYPE_CHECKING:
@@ -43,7 +45,7 @@ class EmptyFallbackStage(BaseScene):
 
     def __init__(self, context: GameContext) -> None:
         super().__init__(context)
-        self._font = pygame.font.Font(None, 16)
+        self._font = font(Theme.FONT_SMALL)
 
     def on_enter(self) -> None:
         pass
@@ -55,9 +57,20 @@ class EmptyFallbackStage(BaseScene):
         pass
 
     def draw(self, surface: pygame.Surface) -> None:
-        surface.fill(settings.BG_COLOR)
-        t = self._font.render("No stages found. Add a stage in src/stages/", True, (255, 255, 200))
-        surface.blit(t, (10, 100))
+        # AUD-069: esto es un mensaje de error para quien monta el juego, así
+        # que usa la pantalla estándar y dice **qué hacer**, no sólo qué falta.
+        y = draw_screen(
+            surface, "NO HAY ESCENARIOS",
+            "El registro no encontró ninguno que cargar",
+        )
+        for line in (
+            "Añade tu escenario en src/stages/<tu_id>/<tu_id>.py",
+            "y regístralo en STAGE_ORDER (engine/core/stage_registry.py).",
+            "Puedes partir de student_templates/stage_template.",
+        ):
+            text = self._font.render(line, True, Theme.TEXT_MUTED)
+            surface.blit(text, (Theme.MARGIN, y + Theme.SPACE_L))
+            y += 20
 
 
 class StoryScene(BaseScene):

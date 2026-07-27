@@ -9,7 +9,8 @@ from src.engine.core import settings
 from src.engine.core.user_settings import user_data_dir
 from src.engine.input.action_map import DEFAULT_KEY_BINDINGS, Action
 from src.engine.scene.base_scene import BaseScene
-from src.engine.scenes.demo_common import BOTTOM_BAR_Y
+from src.engine.ui.theme import Theme, font
+from src.engine.ui.widgets import draw_key_hints, draw_screen
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -70,9 +71,9 @@ class KeybindingScene(BaseScene):
         self._num_cols: int = 2
         self._dirty: bool = False
         self._last_keys_state: tuple[bool, ...] = tuple()
-        self._font_title = pygame.font.Font(None, 24)
-        self._font_text = pygame.font.Font(None, 16)
-        self._font_hint = pygame.font.Font(None, 18)
+        # AUD-069: escala del tema y caché de fuentes compartida.
+        self._font_text = font(Theme.FONT_TINY)
+        self._font_label = font(Theme.FONT_SMALL)
 
     def _load_bindings(self) -> dict[str, list[int]]:
         try:
@@ -174,13 +175,14 @@ class KeybindingScene(BaseScene):
             self.context.scene_manager.replace(TitleScene(self.context))
 
     def draw(self, surface: pygame.Surface) -> None:
-        surface.fill((20, 20, 35))
-        title = self._font_title.render("KEY BINDINGS", True, (255, 255, 240))
-        surface.blit(title, ((settings.INTERNAL_WIDTH - title.get_width()) // 2, 14))
+        # AUD-069: rejilla de dos columnas, así que la navegación sigue siendo
+        # propia; lo que se unifica es la paleta, la tipografía y los atajos.
+        start_y = draw_screen(
+            surface, "CONTROLES", "Elige una acción y pulsa Enter para cambiarla",
+        ) + Theme.SPACE_S
 
         cols = self._num_cols
         col_w = settings.INTERNAL_WIDTH // cols
-        start_y = 50
         row_h = 40
 
         for i, action in enumerate(self._actions):
@@ -188,9 +190,22 @@ class KeybindingScene(BaseScene):
             row = i // cols
             x = col * col_w + 16
             y = start_y + row * row_h
-            active = i == self._selected and not self._waiting_for_key
-            label_color = (255, 255, 100) if active else (200, 200, 200)
-            label = self._font_hint.render(_ACTION_LABELS[action], True, label_color)
+            focused = i == self._selected
+            active = focused and not self._waiting_for_key
+            if focused:
+                # Fondo elevado bajo la fila enfocada: el color del texto por
+                # sí solo no marca el foco cuando hay ocho filas en dos
+                # columnas y la vista salta de una a otra.
+                pygame.draw.rect(
+                    surface, Theme.SURFACE_RAISED,
+                    pygame.Rect(x - Theme.SPACE_S, y - 2,
+                                col_w - Theme.SPACE_M, row_h - Theme.SPACE_XS),
+                    border_radius=Theme.RADIUS,
+                )
+            label = self._font_label.render(
+                _ACTION_LABELS[action], True,
+                Theme.ACCENT if active else Theme.TEXT,
+            )
             surface.blit(label, (x, y))
 
             im = self.input
@@ -199,16 +214,23 @@ class KeybindingScene(BaseScene):
                 key_str = " / ".join(_key_name(k) for k in keys)
             else:
                 key_str = "..."
-            key_color = (180, 180, 220) if not active else (255, 200, 100)
-            if self._waiting_for_key and i == self._selected:
-                key_str = "--- PRESS KEY ---" if int(pygame.time.get_ticks() / 500) % 2 == 0 else ""
-            key_display = self._font_text.render(key_str, True, key_color)
+            key_colour = Theme.ACCENT if active else Theme.TEXT_MUTED
+            if self._waiting_for_key and focused:
+                blinking = int(pygame.time.get_ticks() / 500) % 2 == 0
+                key_str = "— PULSA UNA TECLA —" if blinking else ""
+                key_colour = Theme.WARNING
+            key_display = self._font_text.render(key_str, True, key_colour)
             surface.blit(key_display, (x, y + 18))
 
-        hint_y = BOTTOM_BAR_Y - 22
         if self._waiting_for_key:
-            hint = self._font_text.render("Press any key to bind | ESC to cancel", True, (255, 200, 100))
+            draw_key_hints(surface, [
+                ("Cualquier tecla", "Asignar"),
+                ("Esc", "Cancelar"),
+            ])
         else:
-            hint = self._font_text.render("[ARROWS] Navigate  [ENTER] Rebind  [ESC] Back", True, (160, 160, 170))
-        surface.blit(hint, ((settings.INTERNAL_WIDTH - hint.get_width()) // 2, hint_y))
+            draw_key_hints(surface, [
+                ("←→↑↓", "Navegar"),
+                ("Enter", "Cambiar"),
+                ("Esc", "Volver"),
+            ])
 

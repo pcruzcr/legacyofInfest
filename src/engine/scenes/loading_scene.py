@@ -9,6 +9,8 @@ import pygame
 
 from src.engine.core import settings
 from src.engine.scene.base_scene import BaseScene
+from src.engine.ui.theme import Theme, font
+from src.engine.ui.widgets import draw_progress_bar
 
 logger = logging.getLogger(__name__)
 
@@ -48,8 +50,9 @@ class LoadingScene(BaseScene):
         self._fade_out: float = 0.0
         self._fading_out: bool = False
         self._fade_surf: pygame.Surface | None = None
-        self._font_info = pygame.font.Font(None, 14)
-        self._font_title = pygame.font.Font(None, 20)
+        # AUD-069: escala del tema y caché compartida.
+        self._font_info = font(Theme.FONT_TINY)
+        self._font_title = font(Theme.FONT_SMALL)
 
     def set_next_scene(self, scene: BaseScene) -> None:
         self._next_scene = scene
@@ -143,7 +146,9 @@ class LoadingScene(BaseScene):
 
     def draw(self, surface: pygame.Surface) -> None:
         w, h = settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT
-        surface.fill((10, 10, 20))
+        # Fondo del kit: antes `(10,10,20)`, uno de los seis grises oscuros
+        # distintos que el juego usaba para decir «pantalla».
+        surface.fill(Theme.BG)
         with self._lock:
             progress = self._progress
             task_name = self._current_task_name
@@ -154,31 +159,21 @@ class LoadingScene(BaseScene):
         bx = (w - bar_w) // 2
         by = h // 2
 
-        bg_rect = pygame.Rect(bx, by, bar_w, bar_h)
-        pygame.draw.rect(surface, (30, 30, 50), bg_rect)
-        pygame.draw.rect(surface, (60, 60, 80), bg_rect, 1)
+        # La barra la dibuja el kit: era un degradado hecho a mano línea por
+        # línea, dieciséis `draw.line` por fotograma para un efecto que ninguna
+        # otra pantalla comparte.
+        draw_progress_bar(surface, pygame.Rect(bx, by, bar_w, bar_h), progress)
 
-        if progress > 0:
-            fill_w = int(bar_w * progress)
-            for i in range(bar_h):
-                t = i / bar_h
-                r = int(80 + t * 60)
-                g = int(120 + t * 80)
-                b = int(200 + t * 55)
-                pygame.draw.line(surface, (r, g, b), (bx, by + i), (bx + fill_w, by + i))
-
-        if task_name:
-            label = self._font_info.render(f"Loading {task_name}...", True, (150, 150, 170))
-        else:
-            label = self._font_info.render("Loading...", True, (150, 150, 170))
+        text = f"Cargando {task_name}…" if task_name else "Cargando…"
+        label = self._font_info.render(text, True, Theme.TEXT_MUTED)
         surface.blit(label, (bx, by - 18))
 
-        pct = self._font_info.render(f"{int(progress * 100)}%", True, (200, 200, 220))
+        pct = self._font_info.render(f"{int(progress * 100)}%", True, Theme.TEXT)
         px = bx + bar_w + 8
         surface.blit(pct, (px, by + 1))
 
         # Title
-        title = self._font_title.render("LEGACY OF INFEST", True, (180, 180, 220))
+        title = self._font_title.render("LEGACY OF INFEST", True, Theme.ACCENT)
         surface.blit(title, ((w - title.get_width()) // 2, by - 50))
 
         # Fade overlay
