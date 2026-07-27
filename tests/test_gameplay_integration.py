@@ -1,0 +1,304 @@
+"""
+Module: test_gameplay_integration
+System: tests
+Academic Unit: N/A
+
+El juego jugándose: escena real, entidades reales, fotogramas reales.
+
+Por qué existe (AUD-060)
+------------------------
+Estas pruebas nacen de un fallo que ninguna de las 1060 anteriores detectó, y
+que yo mismo introduje: **ningún enemigo del juego se actualizaba**.
+
+Al reescribir `CollisionSystem` durante la auditoría convertí
+`update_enemies()` en un no-op, con un docstring que afirmaba «el movimiento lo
+integra `EnemyBase.update`, aquí no hay nada que sincronizar». La primera mitad
+era cierta. La segunda era falsa, porque **nadie más llamaba a
+`EnemyBase.update`**. Razoné sobre lo que el método debía hacer en lugar de
+comprobar quién dependía de él.
+
+El resultado: enemigos y jefe inmóviles e invulnerables —sus fotogramas de
+invencibilidad tampoco corrían, así que sólo aceptaban un golpe cada nunca—,
+mientras la máquina de 13 estados, la escuadra, el predictor de scikit-learn y
+el kit de encuentro de jefe se probaban todos aislados y pasaban.
+
+Ese es exactamente el hueco: cada pieza demostrada por separado y **nadie
+comprobando que estuvieran conectadas**. Las pruebas de humo de escena existían
+pero sólo exigían «no lanza excepciones», y una estatua tampoco lanza
+excepciones.
+
+Estas pruebas afirman lo contrario: que las cosas *se mueven*, *golpean* y
+*terminan*. Son lentas comparadas con una prueba unitaria y valen cada
+milisegundo, porque miden lo único que el jugador percibe.
+"""
+from __future__ import annotations
+
+import pygame
+import pytest
+
+from src.engine.core.events import Events
+from src.framework.entities.boss_base import BossBase
+from src.framework.entities.enemy_base import EnemyBase
+
+DT = 1.0 / 60.0
+
+
+@pytest.fixture
+def app(_pygame_init):
+    """Una App real: el mismo cableado que usa `main.py`."""
+    if pygame.display.get_surface() is None:
+        pygame.display.set_mode((800, 600))
+    from src.engine.core.app import App
+
+    return App()
+
+
+@pytest.fixture
+def surface():
+    return pygame.Surface((800, 600))
+
+
+def _run(app, scene, surface, frames: int) -> None:
+    for _ in range(frames):
+        app.scene_manager.update(DT)
+        app.scene_manager.current.draw(surface)
+        app.event_bus.dispatch()
+
+
+def _skip_intro(app, scene, surface, limit: int = 300) -> int:
+    """Avanza hasta que la cinemática de apertura devuelve el control.
+
+    `Stage0.update` actualiza la cinemática y **retorna**, saltándose el resto
+    del fotograma: es lo correcto —durante una cinemática el juego no debe
+    seguir jugándose— pero significa que medir el primer segundo de la escena
+    mide la cinemática, no el juego. Sin esto, una prueba de «los enemigos se
+    mueven» falla por una razón que no tiene nada que ver con los enemigos.
+    """
+    for frame in range(limit):
+        cutscene = getattr(scene, "_cutscene", None)
+        if cutscene is None or not cutscene.active:
+            return frame
+        app.scene_manager.update(DT)
+        app.scene_manager.current.draw(surface)
+    raise AssertionError(
+        f"la cinemática de apertura sigue activa tras {limit} fotogramas",
+    )
+
+
+class TestEnemiesActuallyLive:
+    """Lo mínimo que un enemigo tiene que hacer: existir en movimiento."""
+
+    def test_every_enemy_in_stage0_moves(self, app, surface) -> None:
+        """Los nueve enemigos de stage0 estuvieron inmóviles y nadie lo vio.
+
+        No se comprueba «alguno se mueve»: con uno bastaría para pasar mientras
+        ocho siguen siendo estatuas. Se exige que **todos** cambien de posición
+        en tres segundos, que es lo que hacen enemigos vivos.
+        """
+        from src.stages.stage0.stage0 import Stage0
+
+        scene = Stage0(app.context)
+        app.scene_manager.push(scene)
+        _skip_intro(app, scene, surface)
+        enemies = [e for e in scene._stage_data.entity_list
+                   if isinstance(e, EnemyBase)]
+        assert enemies, "stage0 debería tener enemigos"
+
+        before = [(e, e.rect.topleft) for e in enemies]
+        _run(app, scene, surface, 180)
+
+        still = [type(e).__name__ for e, was in before if e.rect.topleft == was]
+        assert not still, f"enemigos que no se movieron en 3 s: {still}"
+
+    def test_enemies_receive_the_player_reference_every_frame(
+        self, app, surface,
+    ) -> None:
+        """Sin referencia al jugador no hay detección, y sin detección no hay IA.
+
+        Se comprueba después de correr fotogramas, no en el arranque: la
+        referencia se fijaba una vez al cargar y bastaba con que la escena
+        respawneara al jugador para dejar a todos los enemigos apuntando a un
+        rect que ya no se actualiza.
+        """
+        from src.stages.stage0.stage0 import Stage0
+
+        scene = Stage0(app.context)
+        app.scene_manager.push(scene)
+        _skip_intro(app, scene, surface)
+        _run(app, scene, surface, 30)
+
+        for enemy in scene._stage_data.entity_list:
+            if isinstance(enemy, EnemyBase):
+                assert enemy._player_ref is scene._player.rect
+
+    def test_invincibility_frames_tick_down_inside_a_scene(
+        self, app, surface,
+    ) -> None:
+        """La consecuencia menos visible de no actualizar: un enemigo golpeado
+        una vez quedaba invulnerable para siempre, porque su contador de
+        invencibilidad sólo baja dentro de `update`."""
+        from src.stages.stage0.stage0 import Stage0
+
+        scene = Stage0(app.context)
+        app.scene_manager.push(scene)
+        _skip_intro(app, scene, surface)
+        enemy = next(e for e in scene._stage_data.entity_list
+                     if isinstance(e, EnemyBase))
+
+        enemy.apply_hit(0.5, (enemy.rect.centerx + 30, enemy.rect.centery))
+        assert enemy._invincibility_timer > 0
+        _run(app, scene, surface, 60)
+        assert enemy._invincibility_timer <= 0, (
+            "los fotogramas de invencibilidad no bajan: el enemigo aceptaría "
+            "un solo golpe en toda la partida"
+        )
+
+    def test_an_enemy_can_be_killed_over_several_hits(self, app, surface) -> None:
+        """El bucle completo: golpear, esperar las i-frames, volver a golpear."""
+        from src.stages.stage0.stage0 import Stage0
+
+        scene = Stage0(app.context)
+        app.scene_manager.push(scene)
+        _skip_intro(app, scene, surface)
+        enemy = next(e for e in scene._stage_data.entity_list
+                     if isinstance(e, EnemyBase))
+
+        for _ in range(60):
+            enemy.apply_hit(0.5, (enemy.rect.centerx + 30, enemy.rect.centery))
+            _run(app, scene, surface, 40)
+            if not enemy.is_alive:
+                break
+        assert not enemy.is_alive, (
+            f"el enemigo sobrevivió a 60 rondas de golpes; vida="
+            f"{enemy.current_health}"
+        )
+
+
+class TestTheBossFightIsPlayable:
+    """El único combate de jefe que existe hoy. Si no funciona, no hay juego."""
+
+    @pytest.fixture
+    def boss_scene(self, app):
+        from src.stages.boss_venado.boss_venado_scene import BossVenadoScene
+
+        scene = BossVenadoScene(app.context)
+        app.scene_manager.push(scene)
+        boss = next(e for e in scene._stage_data.entity_list
+                    if isinstance(e, BossBase))
+        return scene, boss
+
+    def test_the_boss_moves(self, app, surface, boss_scene) -> None:
+        scene, boss = boss_scene
+        start = boss.rect.topleft
+        _run(app, scene, surface, 180)
+        assert boss.rect.topleft != start, "el jefe es una estatua"
+
+    def test_the_boss_attacks(self, app, surface, boss_scene) -> None:
+        """Un jefe que no ataca no es un combate, es un saco de golpes."""
+        scene, boss = boss_scene
+        fired: list[str] = []
+        original = boss.on_attack_fired
+        boss.on_attack_fired = lambda name: (fired.append(name), original(name))[1]
+
+        _run(app, scene, surface, 900)  # 15 segundos
+        assert fired, "el jefe no lanzó ni un ataque en 15 s"
+        assert len(set(fired)) >= 2, f"sólo usó un ataque: {set(fired)}"
+
+    def test_the_boss_stays_inside_the_arena(self, app, surface, boss_scene) -> None:
+        """Una embestida sin límite lo sacaba del mapa (AUD-061).
+
+        Fuera del mapa el jugador no puede alcanzarlo, así que el combate deja
+        de poder ganarse sin que nada avise: el jugador da vueltas por una
+        arena vacía buscando a un jefe que está en x negativa.
+        """
+        scene, boss = boss_scene
+        width, _height = scene._stage_data.map_pixel_size
+
+        for i in range(1200):
+            if i % 50 == 0:
+                boss.apply_hit(0.25, (boss.rect.centerx + 40, boss.rect.centery))
+            app.scene_manager.update(DT)
+            app.scene_manager.current.draw(surface)
+            if not boss.is_alive:
+                break
+            assert 0 <= boss.rect.x, f"el jefe salió por la izquierda: x={boss.rect.x}"
+            assert boss.rect.right <= width, (
+                f"el jefe salió por la derecha: right={boss.rect.right} > {width}"
+            )
+
+    def test_the_boss_uses_the_whole_arena(self, app, surface, boss_scene) -> None:
+        """Declaraba ARENA_W = 320 en un mapa de 640: peleaba en media arena.
+
+        La mitad del escenario quedaba decorativa, y el jugador podía quedarse
+        en la otra mitad sin que nada le obligara a moverse.
+        """
+        scene, boss = boss_scene
+        width, _ = scene._stage_data.map_pixel_size
+        seen = []
+        for _ in range(1200):
+            app.scene_manager.update(DT)
+            app.scene_manager.current.draw(surface)
+            seen.append(boss.rect.centerx)
+        used = max(seen) - min(seen)
+        assert used > width * 0.4, (
+            f"el jefe sólo recorrió {used}px de un mapa de {width}px"
+        )
+
+    def test_defeating_the_boss_completes_the_stage(
+        self, app, surface, boss_scene,
+    ) -> None:
+        """El final del juego tal y como está hoy: matar al Venado y salir.
+
+        El manejador se guarda en una variable a propósito: el bus mantiene
+        referencias débiles, así que una lambda temporal se recolecta antes de
+        recibir nada. (El bus lo avisa por el log; conviene no ignorarlo.)
+        """
+        scene, boss = boss_scene
+        completed: list[dict] = []
+
+        def on_complete(**payload: object) -> None:
+            completed.append(dict(payload))
+
+        app.event_bus.subscribe(Events.STAGE_COMPLETE, on_complete)
+
+        boss.current_health = 0.5
+        boss._invincibility_timer = 0.0
+        boss.apply_hit(0.5, (boss.rect.centerx + 40, boss.rect.centery))
+
+        _run(app, scene, surface, 700)
+
+        assert completed, "derrotar al jefe no completó el escenario"
+        assert app.scene_manager.current is not scene, (
+            "el juego se quedó en la arena tras ganar"
+        )
+
+
+class TestTheStageChain:
+    """Que el juego se pueda terminar de principio a fin."""
+
+    def test_stage0_leads_to_the_boss_and_the_boss_to_the_credits(
+        self, app, surface,
+    ) -> None:
+        from src.engine.core.stage_registry import discover_stages
+
+        stages = discover_stages()
+        assert len(stages) >= 2, f"sólo se descubrieron {len(stages)} escenarios"
+
+        app.scene_manager.set_stage_queue(stages)
+        app.scene_manager.push(stages[0](app.context))
+        assert type(app.scene_manager.current) is stages[0]
+
+        app.event_bus.emit(Events.STAGE_COMPLETE, stage_id="stage0")
+        app.event_bus.dispatch()
+        assert type(app.scene_manager.current) is stages[1], (
+            "completar stage0 no lleva al jefe"
+        )
+
+        _run(app, app.scene_manager.current, surface, 60)
+
+        app.event_bus.emit(Events.STAGE_COMPLETE, stage_id="boss_venado")
+        app.event_bus.dispatch()
+        assert type(app.scene_manager.current) is not stages[1], (
+            "completar el jefe no lleva a ninguna parte"
+        )
+        _run(app, app.scene_manager.current, surface, 60)

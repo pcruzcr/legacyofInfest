@@ -686,3 +686,62 @@ class TestBossBaseIntegration:
 
         assert len(fired) >= 3, f"apenas atacó en 10 s: {fired}"
         assert len(set(fired)) >= 2, f"usó un solo ataque en 10 s: {set(fired)}"
+
+
+class TestArenaBounds:
+    """El jefe no puede salir de su arena (AUD-061).
+
+    Fuera del mapa el jugador no lo alcanza y el combate deja de poder
+    ganarse, sin que nada avise: el jugador da vueltas por una arena vacía
+    buscando a un jefe que está en coordenadas negativas.
+
+    Se prueba `clamp_to_arena` directamente y no a través del combate porque
+    en el juego hay dos mecanismos que contienen al jefe —el rebote del
+    movimiento sinusoidal y este límite— y una prueba de integración no
+    distingue cuál actuó. Una prueba que no puede fallar no prueba nada.
+    """
+
+    def _boss(self) -> _TestBoss:
+        boss = _TestBoss(pygame.Vector2(100, 100), max_health=20.0)
+        boss.set_arena_bounds(pygame.Rect(0, 0, 640, 320))
+        return boss
+
+    def test_without_bounds_nothing_is_clamped(self, _pygame_init) -> None:
+        """Un jefe recién construido no tiene arena y no debe inventarse una."""
+        boss = _TestBoss(pygame.Vector2(100, 100), max_health=20.0)
+        assert boss.arena_bounds is None
+        boss.position.x = -500.0
+        boss.clamp_to_arena()
+        assert boss.position.x == -500.0
+
+    def test_a_boss_pushed_left_comes_back(self, _pygame_init) -> None:
+        boss = self._boss()
+        boss.position.x = -200.0
+        boss.clamp_to_arena()
+        assert boss.position.x >= 0
+        assert boss.rect.x == int(boss.position.x), (
+            "el rect y la posición quedaron en desacuerdo: durante un fotograma "
+            "las colisiones usarían el valor viejo"
+        )
+
+    def test_a_boss_pushed_right_comes_back(self, _pygame_init) -> None:
+        boss = self._boss()
+        boss.position.x = 5000.0
+        boss.clamp_to_arena()
+        assert boss.rect.right <= 640
+
+    def test_a_boss_inside_the_arena_is_left_alone(self, _pygame_init) -> None:
+        """Recolocar a un jefe que está bien sería un tirón visible."""
+        boss = self._boss()
+        boss.position.x = 300.0
+        boss.clamp_to_arena()
+        assert boss.position.x == 300.0
+
+    def test_an_arena_narrower_than_the_boss_centres_it(self, _pygame_init) -> None:
+        """Caso degenerado: sin esto los límites se cruzan y `min`/`max` dan
+        un resultado arbitrario que depende del orden de las operaciones."""
+        boss = _TestBoss(pygame.Vector2(0, 0), max_health=20.0)
+        boss.set_arena_bounds(pygame.Rect(0, 0, 10, 10))
+        boss.position.x = 500.0
+        boss.clamp_to_arena()
+        assert -boss.rect.width <= boss.position.x <= 10

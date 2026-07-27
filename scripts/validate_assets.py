@@ -207,6 +207,15 @@ def check_model(path: Path) -> None:
 
 
 def check_sound(path: Path) -> None:
+    """Comprueba que el archivo se pueda decodificar, si hay mezclador.
+
+    Sin mezclador cada sonido produciría un aviso «mixer not initialized» —43
+    en este proyecto—, y un informe con 43 avisos que no son problemas de los
+    assets es un informe que se deja de leer. La ausencia de tarjeta de sonido
+    se anuncia una vez, en `main`.
+    """
+    if not pygame.mixer.get_init():
+        return
     try:
         pygame.mixer.Sound(str(path))
     except Exception as e:
@@ -316,7 +325,18 @@ def check_map(path: Path) -> None:
 
 def main() -> int:
     pygame.init()
-    pygame.mixer.init()
+    # El mezclador es opcional para validar: sólo hace falta si se van a
+    # *reproducir* sonidos, y aquí únicamente se comprueban archivos. Sin esta
+    # guarda, ejecutar el validador en una máquina sin tarjeta de sonido —una
+    # VM, WSL, un contenedor— moría con un traceback de ALSA que no tiene nada
+    # que ver con los assets. En CI funcionaba porque el workflow exporta
+    # SDL_AUDIODRIVER=dummy; quien lo ejecutara desde su portátil sin ese
+    # detalle recibía un error incomprensible sobre un script de validación de
+    # imágenes (AUD-059).
+    try:
+        pygame.mixer.init()
+    except pygame.error as exc:
+        print(f"  (audio no disponible: {exc} — se validan los archivos igual)")
     pygame.display.set_mode((1, 1))
 
     print(f"Validating assets in: {ASSETS_DIR}")
