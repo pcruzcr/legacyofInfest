@@ -19,6 +19,8 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
+from scripts._cli_paths import display_path
+
 MAPS_DIR = _PROJECT_ROOT / "assets" / "maps"
 KNOWN_TILESETS = ["tileset_stage0", "tileset_zone1", "tileset_zone2", "tileset_zone3"]
 KNOWN_TMX_PROPERTIES = {
@@ -238,6 +240,35 @@ def find_tmx_files(base: Path) -> list[Path]:
     return tmx_files
 
 
+def _comprobar_dependencias() -> str | None:
+    """Devuelve un mensaje si falta algo para validar, o None si todo está.
+
+    AUD-085 — el primer minuto del estudiante
+    -----------------------------------------
+    Este validador importa `StageLoader` para preguntarle qué capas exige, y
+    `StageLoader` importa pygame. Un estudiante que clona el repositorio y
+    ejecuta el validador **antes** de `pip install` recibía un traceback de
+    ocho líneas terminado en `ModuleNotFoundError: No module named 'pygame'`.
+
+    Es el peor momento posible para un traceback: la persona todavía no sabe
+    si el problema es suyo, del repositorio o de su Python. Un renglón que
+    diga qué ejecutar vale más que la pila de llamadas.
+    """
+    faltan = []
+    for modulo, paquete in (("pygame", "pygame-ce"), ("pytmx", "pytmx")):
+        try:
+            __import__(modulo)
+        except ImportError:
+            faltan.append(paquete)
+    if not faltan:
+        return None
+    return (
+        "Faltan dependencias para validar: " + ", ".join(faltan) + "\n"
+        "Instálalas con:\n"
+        "    pip install -r requirements.txt"
+    )
+
+
 def main() -> int:
     import argparse
     parser = argparse.ArgumentParser(description="Validate TMX map files")
@@ -245,6 +276,11 @@ def main() -> int:
     parser.add_argument("--fix", action="store_true", help="Suggest fixes for common issues")
     parser.add_argument("--ci", action="store_true", help="CI mode: only fail on errors (ignore warnings)")
     args = parser.parse_args()
+
+    problema = _comprobar_dependencias()
+    if problema is not None:
+        print(problema)
+        return 1
 
     if args.paths:
         tmx_files: list[Path] = []
@@ -269,7 +305,7 @@ def main() -> int:
     print(f"Validating {total} TMX file(s)...\n")
     for tmx in sorted(tmx_files):
         ok = validate_tmx(tmx)
-        rel = tmx.relative_to(_PROJECT_ROOT)
+        rel = display_path(tmx, _PROJECT_ROOT)
         # Use ASCII-safe markers
         if ok and not _errors and not _warnings:
             print(f"  [OK] {rel}")

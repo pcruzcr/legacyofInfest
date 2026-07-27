@@ -28,6 +28,7 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
+from scripts._cli_paths import display_path  # noqa: E402  (tras ajustar sys.path)
 
 RUBRIC: dict[str, int] = {
     "inherits_bossbase": 10,
@@ -256,11 +257,8 @@ def main() -> int:
     for pyf in sorted(py_files):
         r = grade_boss(pyf)
         all_results.append(r)
-        if not args.json:  # BUG-080 FIX: rutas relativas
-            try:
-                rel = pyf.resolve().relative_to(_PROJECT_ROOT)
-            except ValueError:
-                rel = pyf
+        if not args.json:
+            rel = display_path(pyf, _PROJECT_ROOT)
             print(f"\n{'='*50}")
             print(f"  {rel}")
             print(f"{'='*50}")
