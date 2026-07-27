@@ -174,6 +174,157 @@ class TestEnemiesActuallyLive:
         )
 
 
+class TestCombatHurtsBothWays:
+    """El combate tiene dos direcciones, y sólo se había verificado una.
+
+    AUD-062: al restaurar `enemy.update(dt)` recuperé el movimiento y volví a
+    dar por bueno el combate entero. Faltaba la otra llamada que se perdió con
+    `update_enemies`: `_check_player_contact`, que es donde cada enemigo
+    resuelve el daño por contacto **y sus proyectiles**. Sin ella, ningún
+    enemigo podía tocar al jugador: las flechas del Archer, las bolas del
+    Caster, las lianas y esporas del Venado, su pisotón y su barrido no
+    existían para el jugador.
+
+    Que una prueba de «los enemigos se mueven» pase no dice nada sobre si
+    pueden hacer daño. Son dos afirmaciones distintas y hacen falta las dos.
+    """
+
+    def _stage(self, app, surface):
+        from src.stages.stage0.stage0 import Stage0
+
+        scene = Stage0(app.context)
+        app.scene_manager.push(scene)
+        _skip_intro(app, scene, surface)
+        return scene
+
+    @staticmethod
+    def _place_beside_player(enemy, player) -> None:
+        """Coloca al enemigo encima del jugador, no al revés.
+
+        Mover al jugador no funciona: su física lo reposiciona en el mismo
+        fotograma —gravedad, resolución de colisiones— y la prueba acaba
+        midiendo dos cuerpos que nunca llegaron a tocarse. Es el error que me
+        hizo creer un rato que el contacto seguía roto después de arreglarlo.
+        """
+        enemy.position.x = float(player.rect.centerx)
+        enemy.position.y = float(player.rect.y)
+        enemy.rect.x = int(enemy.position.x)
+        enemy.rect.y = int(enemy.position.y)
+
+    def test_touching_an_enemy_hurts_the_player(self, app, surface) -> None:
+        scene = self._stage(app, surface)
+        player = scene._player
+        enemy = next(e for e in scene._stage_data.entity_list
+                     if isinstance(e, EnemyBase))
+
+        before = player.current_health
+        for _ in range(120):
+            self._place_beside_player(enemy, player)
+            app.scene_manager.update(DT)
+            app.scene_manager.current.draw(surface)
+            if player.current_health < before:
+                break
+
+        assert player.current_health < before, (
+            "el jugador puede quedarse dentro de un enemigo sin recibir daño"
+        )
+
+    def test_contact_damage_respects_its_cooldown(self, app, surface) -> None:
+        """Sin enfriamiento, tocar a un enemigo mataría en un puñado de frames.
+
+        Se comprueba que el daño exista **y** que esté limitado: las dos mitades
+        importan, y una prueba que sólo mire «recibió daño» aceptaría un
+        enemigo que drena la vida entera en medio segundo.
+        """
+        scene = self._stage(app, surface)
+        player = scene._player
+        enemy = next(e for e in scene._stage_data.entity_list
+                     if isinstance(e, EnemyBase))
+
+        before = player.current_health
+        for _ in range(120):  # 2 segundos pegados
+            self._place_beside_player(enemy, player)
+            app.scene_manager.update(DT)
+            app.scene_manager.current.draw(surface)
+
+        lost = before - player.current_health
+        assert lost > 0, "el contacto no hizo daño"
+        assert lost < before, (
+            f"2 s de contacto quitaron {lost} de {before} de vida: el "
+            f"enfriamiento de contacto no está limitando nada"
+        )
+
+    def test_the_player_attack_damages_an_enemy(self, app, surface) -> None:
+        """El ataque del jugador por el camino real: pulsar el botón.
+
+        No se llama a `enemy.apply_hit` a mano —eso probaría el método, no el
+        juego—: se pulsa la acción de ataque con el mismo stub de entrada que
+        usa el bot de playtest, el jugador entra en su estado de ataque, y
+        `CollisionSystem.process_attack` resuelve el impacto. Es la cadena
+        completa que ocurre cuando alguien juega.
+        """
+        from src.engine.input.action_map import Action
+        from tests.playtest.bot import _StubInput
+
+        scene = self._stage(app, surface)
+        player = scene._player
+        enemy = next(e for e in scene._stage_data.entity_list
+                     if isinstance(e, EnemyBase))
+
+        stub = _StubInput()
+        app.context.input_manager = stub
+
+        before = enemy.current_health
+        for frame in range(240):
+            # Se recoloca cada fotograma: el enemigo patrulla y se iría.
+            enemy.position.x = float(player.rect.centerx + 6)
+            enemy.position.y = float(player.rect.y)
+            enemy.rect.x = int(enemy.position.x)
+            enemy.rect.y = int(enemy.position.y)
+            # Pulsar y soltar: el ataque se dispara en el flanco, así que
+            # mantener el botón no encadena golpes.
+            stub.set_actions({Action.SHORT_ATTACK} if frame % 20 < 2 else set())
+            app.scene_manager.update(DT)
+            app.scene_manager.current.draw(surface)
+            if enemy.current_health < before:
+                break
+
+        assert enemy.current_health < before, (
+            "atacar a un enemigo pegado al jugador no le quita vida: el "
+            "ataque no llega por el camino real"
+        )
+
+    def test_the_boss_can_hurt_the_player(self, app, surface) -> None:
+        """El Venado era completamente inofensivo (AUD-062).
+
+        Sus proyectiles, su pisotón y su barrido se resuelven en
+        `_check_player_contact`. Sin esa llamada podías quedarte quieto delante
+        de él indefinidamente.
+        """
+        from src.stages.boss_venado.boss_venado_scene import BossVenadoScene
+
+        scene = BossVenadoScene(app.context)
+        app.scene_manager.push(scene)
+        boss = next(e for e in scene._stage_data.entity_list
+                    if isinstance(e, BossBase))
+        player = scene._player
+
+        before = player.current_health
+        for _ in range(900):  # 15 s delante del jefe
+            boss.position.x = float(player.rect.centerx)
+            boss.position.y = float(player.rect.y)
+            boss.rect.x = int(boss.position.x)
+            boss.rect.y = int(boss.position.y)
+            app.scene_manager.update(DT)
+            app.scene_manager.current.draw(surface)
+            if player.current_health < before:
+                break
+
+        assert player.current_health < before, (
+            "el jefe no puede hacer daño: el combate es un simulacro"
+        )
+
+
 class TestTheBossFightIsPlayable:
     """El único combate de jefe que existe hoy. Si no funciona, no hay juego."""
 
@@ -302,3 +453,49 @@ class TestTheStageChain:
             "completar el jefe no lleva a ninguna parte"
         )
         _run(app, app.scene_manager.current, surface, 60)
+
+
+class TestNoOpsAnnounceThemselves:
+    """Un método que no hace nada tiene que decirlo (AUD-063).
+
+    `CollisionSystem.update_enemies` fue durante toda la auditoría un no-op
+    silencioso con un docstring que afirmaba que no había nada que sincronizar.
+    Su nombre prometía trabajo, su cuerpo no hacía ninguno, y quien leyera la
+    llamada no tenía forma de notarlo. Costó dos bugs de gravedad máxima:
+    enemigos inmóviles (AUD-060) e incapaces de dañar (AUD-062).
+
+    Estas pruebas fijan la política: si se conserva por compatibilidad, avisa.
+    """
+
+    def _collision(self, _pygame_init):
+        import pygame
+        if pygame.display.get_surface() is None:
+            pygame.display.set_mode((800, 600))
+        from src.framework.stage.collision_system import CollisionSystem
+
+        return CollisionSystem()
+
+    def test_step_warns_instead_of_pretending(self, _pygame_init) -> None:
+        collision = self._collision(_pygame_init)
+        with pytest.warns(DeprecationWarning, match="no hace nada"):
+            collision.step(DT)
+
+    def test_update_enemies_warns_instead_of_pretending(self, _pygame_init) -> None:
+        """Éste es el que hizo daño real. Que nadie vuelva a creerle."""
+        collision = self._collision(_pygame_init)
+        with pytest.warns(DeprecationWarning, match="ya no actualiza"):
+            collision.update_enemies(DT, None, None)
+
+    def test_the_scene_does_not_call_the_deprecated_helpers(self) -> None:
+        """La escena tiene que hacer el trabajo, no delegarlo en un no-op."""
+        import pathlib
+
+        source = pathlib.Path("src/framework/scenes/stage_scene.py").read_text(
+            encoding="utf-8",
+        )
+        code = "\n".join(
+            line for line in source.splitlines()
+            if not line.strip().startswith("#")
+        )
+        assert "_collision.update_enemies(" not in code
+        assert "_collision.step(" not in code

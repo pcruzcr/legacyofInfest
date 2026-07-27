@@ -32,6 +32,7 @@ piece of work; see docs/AUDIT_2026-07.md, refactor item R-03.
 """
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING, Any
 
 import pygame
@@ -109,12 +110,24 @@ class CollisionSystem:
             clock.time_scale = 0.0 if self._hitstop_timer > 0.0 else 1.0
 
     def step(self, dt: float) -> None:
-        """Retained for API compatibility; combat resolution is not integrated.
+        """Obsoleto: no hace nada y lo dice en voz alta (AUD-063).
 
-        Kept as an explicit no-op so existing stage code and student templates
-        that call ``collision.step(dt)`` keep working.
+        Se conservaba como no-op silencioso «por compatibilidad». Su hermano
+        `update_enemies` hizo exactamente eso durante toda la auditoría y el
+        resultado fue que ningún enemigo del juego se movía ni podía dañar al
+        jugador: el nombre prometía trabajo, el cuerpo no hacía ninguno, y nadie
+        que leyera la llamada tenía forma de saberlo.
+
+        Un método que no hace nada debe **decirlo**, no fingir. Quien lo llame
+        recibe un aviso y puede borrar la línea; quien lea el código no puede
+        confundirlo con lógica viva.
         """
-        return None
+        warnings.warn(
+            "CollisionSystem.step() no hace nada: la resolución de combate "
+            "ocurre en process_attack(). Elimina la llamada.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
     # ── knockback ──────────────────────────────────────────────
 
@@ -137,13 +150,28 @@ class CollisionSystem:
     # ── enemy sync ─────────────────────────────────────────────
 
     def update_enemies(self, dt: float, player: Player, stage: StageData) -> None:
-        """Retained for API compatibility.
+        """Obsoleto y peligroso de creer. **Ya no actualiza nada** (AUD-063).
 
-        Enemy movement is integrated by ``EnemyBase.update``; there is nothing
-        to sync here. Previously this ran a per-frame O(n) loop over every
-        entity that could never match anything.
+        Historia, porque explica por qué este método grita en lugar de callar:
+        aquí vivía el bucle que llamaba a `_check_player_contact` y a
+        `update(dt)` de cada enemigo. Durante la auditoría lo convertí en un
+        no-op con un docstring que afirmaba que no había nada que sincronizar.
+        Era falso: **era el único sitio que actualizaba a los enemigos**.
+        Resultado, durante toda la remediación: enemigos y jefe inmóviles,
+        invulnerables e incapaces de hacer daño (AUD-060, AUD-062).
+
+        La responsabilidad vive ahora en `StageScene._update_gameplay`, que es
+        donde corresponde: decidir a quién se actualiza cada fotograma es de la
+        escena. Este método permanece sólo para que el código antiguo que lo
+        invoque reciba un aviso en lugar de un silencio tranquilizador.
         """
-        return None
+        warnings.warn(
+            "CollisionSystem.update_enemies() ya no actualiza a los enemigos; "
+            "de eso se encarga StageScene._update_gameplay. Elimina la llamada: "
+            "mantenerla sugiere que los enemigos se actualizan aquí y no es así.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
     # ── attack resolution ──────────────────────────────────────
 
