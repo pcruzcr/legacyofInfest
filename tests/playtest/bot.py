@@ -74,20 +74,32 @@ class ScriptedBot:
                 yield held
 
 
-def walk_right_bot(seconds: float = 30.0, jump_every: int = 45) -> ScriptedBot:
+def walk_right_bot(seconds: float = 30.0, jump_every: int = 24) -> ScriptedBot:
     """Camina a la derecha saltando periódicamente.
 
     Es el bot de referencia para "¿se puede avanzar por este nivel?". No resuelve
     puzzles, pero un nivel donde ni siquiera puede progresar horizontalmente
     tiene un problema de geometría, no de habilidad.
+
+    AUD-070: `jump_every` era 45 fotogramas —un salto cada 0,75 s— y bastaba
+    porque el jugador se movía a 1890 px/s por un error de unidades: a 31 px por
+    fotograma atravesaba los escalones sin necesidad de saltarlos. Con la
+    velocidad corregida a 108 px/s el bot llega al primer escalón de stage0, a
+    doce píxeles de la salida, y se queda ahí.
+    
+    Ese es el efecto secundario incómodo de arreglar un bug: una prueba que
+    pasaba **por la avería** deja de pasar. La respuesta correcta no es relajar
+    el umbral sino que el bot juegue como una persona, saltando a menudo.
     """
     total = int(seconds * 60)
     script: list[tuple[int, set[Action]]] = []
     frames_done = 0
     while frames_done < total:
         run = min(jump_every, total - frames_done)
-        script.append((run - 1, {Action.MOVE_RIGHT}))
-        script.append((1, {Action.MOVE_RIGHT, Action.JUMP}))
+        # Dos fotogramas de salto: uno solo puede caer entre lecturas de flanco
+        # y perderse, y un bot que "salta" sin saltar diagnostica el nivel mal.
+        script.append((max(1, run - 2), {Action.MOVE_RIGHT}))
+        script.append((2, {Action.MOVE_RIGHT, Action.JUMP}))
         frames_done += run
     return ScriptedBot(script)
 

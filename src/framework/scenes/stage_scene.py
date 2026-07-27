@@ -231,6 +231,18 @@ class StageScene(BaseScene):
             self._banner.play(self._stage_data.stage_id, self._stage_data.stage_name)
             self.context.event_bus.emit(Events.SFX_STAGE_BANNER)
 
+        # AUD-072: `on_enter` se vuelve a llamar en cada reaparición, y cada
+        # llamada creaba un HUD nuevo **sin destruir el anterior**. El viejo
+        # seguía suscrito al bus hasta que el recolector se lo llevaba, momento
+        # en el que el bus avisaba:
+        #
+        #   EventBus: dropping collected subscriber _on_stage_complete
+        #
+        # Es el aviso que aparecía en consola al jugar. No rompía nada —el bus
+        # poda las suscripciones muertas— pero cada muerte del jugador dejaba un
+        # HUD escuchando eventos y dibujando en ningún sitio.
+        if self._hud is not None:
+            self._hud.destroy()
         self._hud = HUD(self.context.event_bus)
         if self._stage_data.time_limit > 0:
             self._hud.start_timer(self._stage_data.time_limit)

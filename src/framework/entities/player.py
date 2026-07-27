@@ -269,7 +269,18 @@ class Player(BaseEntity):
         """
         previous_max = self.max_health
         self._bonus_max_health = float(inventory.get_total_hp_bonus())
-        self._bonus_speed = float(inventory.get_total_speed_bonus())
+        # AUD-070: el inventario guarda el bono de velocidad en **porcentaje**
+        # —`swift_feather` declara `speed_bonus=10.0` y se describe como «Move
+        # 10% faster»— y aquí se estaba usando como fracción: `90 * (1 + 10)`
+        # dejaba al jugador a 990 px/s, y con dos reliquias a 1890. A 60 fps
+        # son 31 px por fotograma: el personaje cruzaba el mapa en un segundo,
+        # atravesaba las paredes de un salto y era imposible de controlar.
+        #
+        # Es el mismo defecto de siempre visto desde el otro lado: al conectar
+        # `get_total_speed_bonus()` —que no tenía ningún consumidor— nadie
+        # comprobó en qué unidad estaba lo que devolvía. Conectar dos piezas
+        # exige mirar las dos.
+        self._bonus_speed = float(inventory.get_total_speed_bonus()) / 100.0
         self._bonus_damage = float(inventory.get_total_damage_bonus())
         # Grant newly added maximum health as actual health, so a relic that
         # raises the cap is felt immediately rather than only after healing.
