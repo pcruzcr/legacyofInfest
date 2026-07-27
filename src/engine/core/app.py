@@ -13,6 +13,7 @@ from src.engine.core.game_context import GameContext
 from src.engine.core.save_manager import SaveManager
 from src.engine.input.input_manager import InputManager
 from src.engine.scene.scene_manager import SceneManager
+from src.framework import FrameworkUsageError
 
 logger = logging.getLogger(__name__)
 
@@ -155,6 +156,14 @@ class App:
             try:
                 self.scene_manager.update(dt)
                 self.scene_manager.transition.update(dt)
+            except FrameworkUsageError as exc:
+                # AUD-055: un mapa mal formado no es un fallo del motor, es un
+                # dato que el estudiante necesita leer. Volver al título en
+                # silencio esconde precisamente el mensaje que explica qué
+                # arreglar.
+                logger.error("Stage load failed:\n%s", exc)
+                frame_failed = True
+                self._show_usage_error(exc)
             except Exception:
                 logger.exception("Unhandled exception in scene update")
                 frame_failed = True
@@ -234,6 +243,56 @@ class App:
         lighting = getattr(scene, "_lighting", None)
         legacy = getattr(lighting, "_surface", None)
         return legacy if isinstance(legacy, pygame.Surface) else None
+
+    def _show_usage_error(self, exc: Exception) -> None:
+        """Muestra en pantalla un error de uso del framework.
+
+        Se recurre al título sólo si la propia pantalla de error falla: dejar
+        al estudiante sin nada que leer es el estado que este método existe
+        para evitar, así que conviene degradar en un único paso y no en dos.
+        """
+        from src.engine.scenes.stage_error_scene import StageErrorScene
+
+        failed_scene = None
+        if self.scene_manager.stack_size > 0:
+            failed_scene = type(self.scene_manager.current)
+
+        try:
+            self.context.scene_manager.replace(
+                StageErrorScene(
+                    self.context, str(exc),
+                    retry=self._retry_factory(failed_scene),
+                ),
+            )
+        except Exception:
+            logger.exception("Error scene failed; falling back to title")
+            self._fallback_to_title()
+
+    def _retry_factory(self, scene_cls: type | None):
+        """Reintento que vuelve a construir la escena que falló, o `None`.
+
+        Devolver `None` cuando no se puede reconstruir es deliberado: la
+        pantalla de error oculta la tecla `R` si no hay reintento posible, y
+        una tecla anunciada que no hace nada es peor que una tecla ausente.
+        """
+        if scene_cls is None:
+            return None
+
+        def _retry() -> None:
+            try:
+                self.context.scene_manager.replace(scene_cls(self.context))
+            except FrameworkUsageError as exc:
+                # El mapa sigue mal, o está mal de otra forma. Se vuelve a
+                # mostrar el informe en lugar de dejar escapar la excepción:
+                # `process_events` corre fuera del try del bucle principal, así
+                # que sin esto el reintento cerraría el juego.
+                logger.error("Stage reload failed:\n%s", exc)
+                self._show_usage_error(exc)
+            except Exception:
+                logger.exception("Stage reload failed unexpectedly")
+                self._fallback_to_title()
+
+        return _retry
 
     def _fallback_to_title(self) -> None:
         from src.engine.scenes.title_scene import TitleScene

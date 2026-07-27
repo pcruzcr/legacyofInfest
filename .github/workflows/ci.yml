@@ -48,6 +48,13 @@ jobs:
       - name: Verify dependency manifests agree
         run: python scripts/check_dependency_sync.py
 
+      # La tabla de tipos de objeto de docs/STAGE_CREATION.md se genera desde
+      # el registro de entidades. Si alguien añade una especie y no regenera,
+      # la guía del estudiante deja de listar un tipo que sí existe — que es
+      # como las 21 especies con nombre acabaron siendo inalcanzables (AUD-057).
+      - name: Verify the student type reference is up to date
+        run: python scripts/generate_tmx_reference.py --check
+
       - name: Run tests
         run: |
           python -m pytest tests/ -v --tb=short \

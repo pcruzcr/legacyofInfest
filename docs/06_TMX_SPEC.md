@@ -126,12 +126,13 @@ All object positions in Tiled use pixel coordinates with the origin at the top-l
 | `Shooter` | Point | `fire_rate`, `projectile_speed` | Spawn a Shooter enemy |
 | `Checkpoint` | Rectangle | `checkpoint_id` | Checkpoint trigger zone |
 | `NextTrigger` | Rectangle | — | Stage completion trigger |
-| `Message` | Rectangle | `text`, `duration`, `trigger_once` | Show tutorial message |
+| `MessageTrigger` | Rectangle | `text`, `duration` | Show a tutorial message |
+| `MessageTrigger_Once` | Rectangle | `text`, `duration` | Same, but only the first time |
 | `Waypoint` | Point | `owner_id`, `waypoint_index` | Bézier/patrol waypoint for an entity |
 | `HazardZone` | Rectangle | `damage`, `damage_type` | Persistent damage zone |
-| `OneWayPlatform` | Rectangle | — | Passable from below |
+| `DeathPit` | Rectangle | — | Falling in kills the player |
 | `CameraLock` | Rectangle | `lock_x`, `lock_y` | Override camera scroll in zone |
-| `BossSpawn` | Point | `boss_id` | Spawn point for boss entity |
+| `BossVenado` | Point | — | Spawn the boss as a normal entity type |
 
 ---
 
@@ -359,7 +360,7 @@ This approach is permitted but not recommended for beginners, as it is harder to
 
 ### 10.1 Definition
 
-A `Message` object is a rectangle trigger in the `Objects` layer. When the player enters the rectangle, the HUD's `MessageBox` displays the configured text.
+A `MessageTrigger` object is a rectangle trigger in the `Objects` layer. When the player enters the rectangle, the HUD's `MessageBox` displays the configured text.
 
 ### 10.2 Required Properties
 
@@ -524,7 +525,17 @@ Los mapas se diseñan en Tiled Map Editor y se exportan como archivos .tmx (form
 8. FG_Overlay (Tile) — Primer plano (opcional)
 
 ### Registro de Tipos de Objeto
-PlayerSpawn, Walker, Flying, Shooter, Checkpoint, NextTrigger, Message, Waypoint, HazardZone, OneWayPlatform, CameraLock, BossSpawn.
+PlayerSpawn, Checkpoint, NextTrigger, MessageTrigger, MessageTrigger_Once,
+Waypoint, HazardZone, DeathPit, CameraLock — plus every registered entity type
+(Walker, Flying, Shooter, Charger, Archer, Brute, Caster, Assassin, the 21
+named species of `docs/18_ENEMY_ROSTER.md`, and BossVenado).
+
+`Platform` is **not** in this list: it belongs to the `Collision` layer, where a
+rectangle with that type becomes a one-way platform. In the `Objects` layer it
+is not a valid type and the loader will say so.
+
+Run `python scripts/validate_tmx.py <map>` for the authoritative list — it reads
+the registry rather than this document, so it cannot go out of date.
 
 Para la especificación completa de propiedades, reglas de spawn, checkpoints y formato XML, consultar el documento original en inglés.
 

@@ -31,112 +31,143 @@ if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
 
 
+def _tile_size() -> int:
+    """Tamaño de tile real del motor.
+
+    Se lee de `settings` en vez de escribirlo aquí. La versión anterior decía
+    «32x32 pixels» mientras `stage0.tmx`, la plantilla del estudiante y
+    `docs/06_TMX_SPEC.md` usaban 16: quien siguiera el asistente construía un
+    mapa al doble de escala y no había forma de que se enterara hasta verlo
+    mal en pantalla (AUD-057).
+    """
+    return settings.TILE_SIZE
+
+
+def _required_layers() -> str:
+    """Las capas que `StageLoader` exige, leídas del propio cargador.
+
+    El asistente pedía crear sólo `Terrain`. Cargar ese mapa fallaba con
+    `Missing required layer: BG_Far` — un error correcto sobre un paso que el
+    asistente nunca mandó dar.
+    """
+    from src.framework.stage.stage_loader import REQUIRED_LAYERS
+
+    return ", ".join(REQUIRED_LAYERS)
+
+
+def _enemy_examples(count: int = 6) -> str:
+    """Algunos tipos de enemigo válidos, tomados del registro real."""
+    from src.framework.entities import entity_factory
+    from src.framework.stage.stage_loader import StageLoader
+
+    entity_factory.ensure_registered()
+    names = sorted(StageLoader._entity_registry)
+    return ", ".join(names[:count]) + f" … ({len(names)} en total)"
+
+
 WIZARD_STEPS = [
     {
-        "title": "Step 1: Choose Tile Size",
-        "instruction": "Open Tiled and create a new map.",
+        "title": "Paso 1: Crear el mapa en Tiled",
+        "instruction": "Archivo > Nuevo > Nuevo mapa.",
         "details": [
-            "Map size: 40x23 tiles minimum, 80x60 max",
-            "Tile size: 32x32 pixels",
-            "Orientation: Orthogonal",
-            "Save in assets/maps/your_stage.tmx",
+            "Orientación: Ortogonal · Orden de dibujo: Right-down",
+            f"Tamaño de tile: {_tile_size()}x{_tile_size()} px (el del motor)",
+            "Tamaño del mapa: desde 40x23 tiles; «Infinito» desactivado",
+            "Guárdalo en assets/maps/<tu_id>/<tu_id>.tmx",
         ],
     },
     {
-        "title": "Step 2: Add Tileset",
-        "instruction": "Add the template tileset.",
+        "title": "Paso 2: Añadir el tileset",
+        "instruction": "Mapa > Añadir tileset externo.",
         "details": [
-            "Use File > New Tileset or drag tileset_stage_template.tsx",
-            "Set first GID to 1",
-            "Tile size must match map (32x32)",
-            "Check that tileset path is RELATIVE to the TMX",
+            "Usa un .tsx existente o crea uno desde tu PNG",
+            f"El tamaño de tile del tileset debe ser {_tile_size()}x{_tile_size()}",
+            "La ruta al tileset debe ser RELATIVA al .tmx",
+            "Si la ruta es absoluta, el mapa no abrirá en otro ordenador",
         ],
     },
     {
-        "title": "Step 3: Create Terrain Layer",
-        "instruction": "Create a tile layer named 'Terrain'.",
+        "title": "Paso 3: Crear las 8 capas obligatorias",
+        "instruction": "El cargador exige estas capas, en este orden.",
         "details": [
-            "Layer > Add Tile Layer, name it 'Terrain'",
-            "Paint ground tiles using the tileset",
-            "Ensure all tiles are connected (no gaps)",
-            "Add walls/boundaries so player can't leave",
+            "Capas de tiles: BG_Far, BG_Mid, BG_Near,",
+            "  Terrain, Terrain_Detail, FG_Overlay",
+            "Capas de objetos: Objects, Collision",
+            "Si falta una, el escenario no carga y te lo dirá por su nombre",
         ],
     },
     {
-        "title": "Step 4: Add Player Spawn",
-        "instruction": "Add an object group with PlayerSpawn.",
+        "title": "Paso 4: Pintar el terreno",
+        "instruction": "Dibuja el suelo en la capa 'Terrain'.",
         "details": [
-            "Layer > Add Object Group, name it 'Objects'",
-            "Add a Point object (right-click > Insert Point)",
-            "Set its Type property to 'PlayerSpawn'",
-            "The player will appear at this position",
+            "Terrain es lo que se ve; Collision es lo que frena al jugador",
+            "En 'Collision' dibuja rectángulos sobre el suelo sólido",
+            "Los rectángulos de Collision no necesitan type",
+            "Pon paredes en los bordes o el jugador se saldrá del mapa",
         ],
     },
     {
-        "title": "Step 5: Add Checkpoints",
-        "instruction": "Add checkpoint objects.",
+        "title": "Paso 5: Punto de aparición",
+        "instruction": "Un objeto punto con type=PlayerSpawn en 'Objects'.",
         "details": [
-            "In the 'Objects' layer, add more Point objects",
-            "Set Type to 'Checkpoint' for each",
-            "Place at strategic points in the stage",
-            "At least 1 checkpoint is required",
+            "Clic derecho > Insertar punto, en la capa Objects",
+            "En el panel de propiedades, campo Type (o Class): PlayerSpawn",
+            "La Y es la posición de los PIES del jugador",
+            "Exactamente uno: con dos, el escenario no carga",
         ],
     },
     {
-        "title": "Step 6: Add Enemies",
-        "instruction": "Create an 'Enemies' tile layer with enemy tiles.",
+        "title": "Paso 6: Puntos de control",
+        "instruction": "Objetos con type=Checkpoint y su checkpoint_id.",
         "details": [
-            "Create a new tile layer named 'Enemies'",
-            "Place enemy tiles from the tileset",
-            "Valid types: Walker, Shooter, Flying, Charger",
-            "2-5 enemies recommended for a good stage",
+            "Añade un objeto rectángulo en 'Objects'",
+            "Type: Checkpoint",
+            "Propiedad int OBLIGATORIA: checkpoint_id (0, 1, 2…)",
+            "Sin checkpoint_id el escenario no carga",
         ],
     },
     {
-        "title": "Step 7: Add Collectibles",
-        "instruction": "Create a 'Collectibles' tile layer.",
+        "title": "Paso 7: Enemigos",
+        "instruction": "Objetos punto en 'Objects', NO una capa de tiles.",
         "details": [
-            "Create a new tile layer named 'Collectibles'",
-            "Use coin tiles (GID 1) and gem tiles (GID 2)",
-            "Place 5+ collectibles throughout the stage",
-            "Reward exploration, not just the main path",
+            "Inserta un punto y ponle el Type del enemigo",
+            f"Tipos: {_enemy_examples()}",
+            "Distingue mayúsculas: «walker» no es «Walker»",
+            "Ajusta patrol_length, max_health… como propiedades del objeto",
         ],
     },
     {
-        "title": "Step 8: Set Map Properties",
-        "instruction": "Add custom properties to the map.",
+        "title": "Paso 8: Salida y peligros",
+        "instruction": "Rectángulos en 'Objects' con su type.",
         "details": [
-            "Map > Map Properties, click + to add",
-            "Add string property 'author' = your name",
-            "Add int property 'zone' = zone number (1-8)",
-            "Add string 'stage_id' = e.g. '1-1'",
-            "Add string 'stage_name' = your stage name",
-            "Add string 'climate' = desert/forest/cemetery/ice/lava/factory",
+            "NextTrigger: rectángulo que completa el escenario",
+            "DeathPit: caer aquí mata al jugador",
+            "HazardZone: daña al tocarla (propiedad float 'damage')",
+            "CameraLock: fija la cámara (lock_x / lock_y)",
         ],
     },
     {
-        "title": "Step 9: Save & Validate",
-        "instruction": "Save and validate your TMX file.",
+        "title": "Paso 9: Propiedades del mapa",
+        "instruction": "Mapa > Propiedades del mapa, botón +.",
         "details": [
-            "Save the TMX file to assets/maps/",
-            "Run: python scripts/validate_tmx.py assets/maps/your_stage.tmx",
-            "Fix any errors the validator reports",
-            "Run: python scripts/grade_stage.py assets/maps/your_stage.tmx --json",
-            "Aim for 90+ points",
+            "string stage_id — p. ej. 'stage1_2'",
+            "string stage_name — el nombre que verá el jugador",
+            "string bgm_track — música de fondo",
+            "int zone (1-8) · int time_limit (0 = sin límite)",
         ],
     },
     {
-        "title": "Step 10: Create Stage Scene",
-        "instruction": "Create a Python stage scene to load your TMX.",
+        "title": "Paso 10: Validar y jugar",
+        "instruction": "Comprueba el mapa antes de escribir código.",
         "details": [
-            "Look at src/stages/stage0/ for reference",
-            "Create src/stages/your_stage/ directory",
-            "Create __init__.py and stage_your_stage.py",
-            "Import and use load_stage(tmx_path)",
-            "Register in the stage registry",
+            "python scripts/validate_tmx.py assets/maps/<tu_id>/<tu_id>.tmx",
+            "Copia student_templates/stage_template a src/stages/<tu_id>/",
+            "Cambia STAGE_ID, STAGE_NAME, ZONE y TMX_PATH",
+            "python main.py --stage <tu_id>",
         ],
     },
 ]
+
 
 BACK_COLOR = (30, 30, 60)
 ACCENT_BRIGHT = (255, 200, 50)

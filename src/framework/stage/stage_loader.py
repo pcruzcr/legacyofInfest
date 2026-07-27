@@ -23,6 +23,12 @@ from src.engine.core import settings
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework import FrameworkUsageError
 from src.framework.entities.base_entity import BaseEntity
+from src.framework.stage.tmx_diagnostics import (
+    TmxObjectProblem,
+    TmxReport,
+    known_object_types,
+    suggest_types,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -144,10 +150,35 @@ class StageLoader:
         cls._tmx_cache.clear()
 
     @classmethod
+    def _ensure_entities_registered(cls) -> None:
+        """Registra el bestiario si nadie lo ha hecho todavía (AUD-056).
+
+        Hasta ahora el único sitio que llamaba a `ensure_registered()` era
+        `App.__init__`, así que `StageLoader.load()` sólo reconocía las
+        entidades si alguien había construido la aplicación antes. Cargar un
+        mapa desde un script, una prueba o una herramienta producía un escenario
+        al que **le faltaban enemigos, sin decirlo**: `tests/test_stage0_smoke.py`
+        cargaba stage0 con 5 de sus enemigos descartados en silencio
+        —Charger, Archer, Brute, Caster y Assassin— y a continuación afirmaba
+        que el escenario tenía enemigos. Pasaba, porque Walker y Flying sí
+        sobrevivían.
+
+        Una dependencia de orden que no se puede ver desde el sitio donde se
+        incumple es una trampa, y en un framework que usan estudiantes es una
+        trampa que van a pisar. La importación es local porque `entity_factory`
+        importa este módulo; la llamada es idempotente y cuesta un `if`.
+        """
+        from src.framework.entities.entity_factory import ensure_registered
+
+        ensure_registered()
+
+    @classmethod
     def load(cls, tmx_path: Path) -> StageData:
         tmx_path = Path(tmx_path)
         if not tmx_path.exists():
             raise FrameworkUsageError(f"TMX file not found: {tmx_path}")
+
+        cls._ensure_entities_registered()
 
         tmx_data = cls._parse_tmx(tmx_path)
         cls._validate_layers(tmx_data)
@@ -155,10 +186,26 @@ class StageLoader:
 
         cls._load_backgrounds(stage, tmx_data.properties.get("background_zone", ""))
         waypoints_by_owner = cls._build_waypoints(tmx_data)
-        spawn_found = cls._process_objects(tmx_data, stage, waypoints_by_owner)
+        report = TmxReport(tmx_path=str(tmx_path))
+        spawn_found = cls._process_objects(tmx_data, stage, waypoints_by_owner, report)
+
+        # AUD-055: los objetos no interpretables se informan **antes** que la
+        # falta de PlayerSpawn, porque lo más habitual es que sean la causa: un
+        # «PlayerSpwan» mal escrito produce las dos cosas a la vez, y decir
+        # «falta el PlayerSpawn» cuando está ahí, mal escrito, manda a buscar
+        # en la dirección contraria.
+        if not report.ok:
+            raise FrameworkUsageError(
+                report.format(known_object_types(list(cls._entity_registry))),
+            )
 
         if not spawn_found:
-            raise FrameworkUsageError("No PlayerSpawn found in TMX")
+            raise FrameworkUsageError(
+                f"No hay ningún objeto de tipo «PlayerSpawn» en {tmx_path}.\n"
+                f"Añade un objeto de tipo punto en la capa «Objects» con "
+                f"type=PlayerSpawn: es donde aparece el jugador al empezar y "
+                f"al reaparecer.",
+            )
 
         cls._load_collision(tmx_data, stage)
         return stage
@@ -252,6 +299,7 @@ class StageLoader:
         tmx_data: Any,
         stage: StageData,
         waypoints_by_owner: dict[str, list[tuple[float, float]]],
+        report: TmxReport,
     ) -> bool:
         player_spawn_found = False
         for obj in tmx_data.get_layer_by_name("Objects"):
@@ -290,7 +338,31 @@ class StageLoader:
 
             elif obj_type == "CameraLock":
                 cls._handle_camera_lock(stage, obj, props)
+
+            elif obj_type != "Waypoint":
+                # AUD-055. Esta rama no existía: cualquier `type` que no
+                # coincidiera se descartaba en silencio, así que una errata en
+                # Tiled producía un enemigo que simplemente no aparecía. Los
+                # problemas se acumulan en lugar de abortar en el primero,
+                # porque encontrar seis erratas de una vez es una corrección y
+                # encontrarlas de una en una son seis ejecuciones del juego.
+                report.add(cls._diagnose_object(obj, obj_type, obj_name))
+
         return player_spawn_found
+
+    @classmethod
+    def _diagnose_object(cls, obj: Any, obj_type: str, obj_name: str) -> TmxObjectProblem:
+        """Describe un objeto que el cargador no supo interpretar."""
+        known = known_object_types(list(cls._entity_registry))
+        return TmxObjectProblem(
+            object_id=int(getattr(obj, "id", 0) or 0),
+            object_name=obj_name,
+            object_type=obj_type,
+            x=float(getattr(obj, "x", 0.0) or 0.0),
+            y=float(getattr(obj, "y", 0.0) or 0.0),
+            suggestions=suggest_types(obj_type, known),
+            reason="objeto sin type" if not obj_type else "tipo desconocido",
+        )
 
     @classmethod
     def _handle_player_spawn(cls, stage: StageData, obj: Any) -> None:
