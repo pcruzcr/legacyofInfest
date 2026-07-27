@@ -28,6 +28,10 @@ from src.framework.stage.stage_loader import StageLoader
 
 _registered: bool = False
 
+#: Nombres que esta función dio de alta la última vez. Se usa para detectar que
+#: alguien vació o recortó el registro después, y volver a poblarlo.
+_REGISTERED_NAMES: set[str] = set()
+
 
 def ensure_registered() -> None:
     """
@@ -38,7 +42,18 @@ def ensure_registered() -> None:
     import cost at game startup (~3.4s).
     """
     global _registered
-    if _registered:
+    # AUD-056: la condición era sólo `if _registered: return`, así que el
+    # indicador podía afirmar que el registro estaba hecho cuando alguien lo
+    # había vaciado después —`StageLoader._entity_registry.clear()`, algo que
+    # varias pruebas hacen—. A partir de ahí toda carga de mapa perdía
+    # entidades en silencio mientras esta función aseguraba que todo estaba
+    # bien.
+    #
+    # Se comprueba que estén *todos* los tipos, no que el registro tenga algo:
+    # «no vacío» no es «completo», y una comprobación que se conforma con lo
+    # primero deja pasar exactamente el caso que se quería detectar — un
+    # registro parcial con tres tipos dados de alta a mano.
+    if _registered and _REGISTERED_NAMES <= StageLoader._entity_registry.keys():
         return
 
     from src.stages.boss_venado.boss_venado import BossVenado
@@ -58,11 +73,14 @@ def ensure_registered() -> None:
     for type_name, entity_class in _ENTITY_REGISTRY.items():
         StageLoader.register_entity(type_name, entity_class)
 
-    _register_named_species()
+    species_names = _register_named_species()
+    _REGISTERED_NAMES.clear()
+    _REGISTERED_NAMES.update(_ENTITY_REGISTRY)
+    _REGISTERED_NAMES.update(species_names)
     _registered = True
 
 
-def _register_named_species() -> None:
+def _register_named_species() -> set[str]:
     """Registra las 21 especies con nombre de `docs/18_ENEMY_ROSTER.md`.
 
     AUD-046: el doc especifica 21 especies (`WalkerInsect`, `ShooterQuetzal`…)
@@ -79,6 +97,7 @@ def _register_named_species() -> None:
 
     for species_id, spec in bestiary_registry.SPECIES.items():
         StageLoader.register_entity(species_id, _species_factory(spec))
+    return set(bestiary_registry.SPECIES)
 
 
 def _species_factory(spec: Any) -> Any:

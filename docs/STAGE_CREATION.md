@@ -214,3 +214,81 @@ Para instrucciones detalladas de registro y pruebas, consultar el documento orig
 - [[SCENE_CREATION.md|Scene Creation Guide]]
 - [[06_TMX_SPEC.md|TMX Specification]]
 - [[07_STAGE0_DESIGN.md|Stage 0 Design]]
+
+---
+
+## Referencia de tipos de objeto
+
+<!-- BEGIN GENERATED: tipos de objeto -->
+
+> Tabla generada por `scripts/generate_tmx_reference.py` desde el
+> registro real de entidades. No la edites a mano: añade la especie a
+> `bestiary_registry.SPECIES` y vuelve a ejecutar el script.
+
+### Tipos estructurales (capa `Objects`)
+
+| Type | Geometría | Propiedades |
+|---|---|---|
+| `PlayerSpawn` | Punto | — (la Y son los pies del jugador) |
+| `Checkpoint` | Rectángulo | `checkpoint_id` (int) **obligatoria** |
+| `NextTrigger` | Rectángulo | — (completa el escenario) |
+| `MessageTrigger` | Rectángulo | `text`, `duration` |
+| `MessageTrigger_Once` | Rectángulo | `text`, `duration` (una sola vez) |
+| `HazardZone` | Rectángulo | `damage` (float, 0.25 por defecto) |
+| `DeathPit` | Rectángulo | — (caer aquí mata) |
+| `CameraLock` | Rectángulo | `lock_x`, `lock_y` (bool) |
+| `Waypoint` | Punto | `owner_id` — ruta para la entidad con ese nombre |
+
+### Arquetipos de enemigo (capa `Objects`, objetos punto)
+
+| Type | Ajustable con propiedades |
+|---|---|
+| `Walker` | `patrol_length`, `facing`, `patrol_speed`, `alert_speed`, `damage_on_contact` |
+| `Flying` | `flight_mode`, `flight_speed`, `sine_amplitude`, `sine_frequency` |
+| `Shooter` | `fire_rate`, `projectile_speed`, `projectile_damage`, `patrol_length` |
+| `Charger` | `charge_speed`, `patrol_speed`, `alert_speed` |
+| `Archer` | `fire_rate`, `projectile_speed` |
+| `Brute` | `patrol_speed`, `alert_speed`, `max_health` |
+| `Caster` | `fire_rate`, `projectile_damage` |
+| `Assassin` | `patrol_speed`, `alert_speed` |
+
+### Especies con nombre (capa `Objects`, objetos punto)
+
+Cada una es un arquetipo con sus valores ya puestos, tomados de
+`docs/18_ENEMY_ROSTER.md`. Puedes sobreescribir cualquiera con una
+propiedad del objeto en Tiled.
+
+| Type | Nombre | Zona | Vida |
+|---|---|---|---|
+| `FlyingBird` | Ave de selva | 1 | 1.0 |
+| `FlyingBoa` | Boa arborícola | 2 | 2.0 |
+| `FlyingCucaracha` | Cucaracha voladora | 1 | 1.0 |
+| `FlyingHalcon` | Halcón | 3 | 2.0 |
+| `FlyingNotebook` | Cuaderno poseído | 1 | 0.5 |
+| `FlyingTerciovolador` | Terciovolador | 2 | 1.5 |
+| `ShooterBuitre` | Buitre | 3 | 3.5 |
+| `ShooterCocinero` | Cocinero de cafetería | 1 | 3.0 |
+| `ShooterFrog` | Rana dardo | 1 | 2.0 |
+| `ShooterQuetzal` | Quetzal | 3 | 2.5 |
+| `ShooterSerpienteArbol` | Serpiente de árbol | 2 | 2.0 |
+| `ShooterTiza` | Tiza voladora | 1 | 2.5 |
+| `ShooterVenomoLargo` | Venomo largo | 2 | 3.0 |
+| `WalkerEstudiante` | Estudiante infestado | 1 | 1.5 |
+| `WalkerGarza` | Garza | 3 | 2.0 |
+| `WalkerGuardia` | Guardia infestado | 2 | 3.0 |
+| `WalkerInsect` | Insecto de suelo | 1 | 1.0 |
+| `WalkerPalom` | Paloma infestada | 3 | 2.5 |
+| `WalkerRaton` | Rata de laboratorio | 1 | 1.0 |
+| `WalkerSerpientePequena` | Serpiente pequeña | 2 | 1.0 |
+| `WalkerTerciopelo` | Terciopelo | 2 | 2.5 |
+
+### Capa `Collision` (vocabulario distinto)
+
+| Type | Comportamiento |
+|---|---|
+| *(ninguno)* o `Solid` | Colisión AABB completa |
+| `Platform` | Plataforma atravesable desde abajo |
+
+Total aceptado en `Objects`: **39** tipos.
+
+<!-- END GENERATED: tipos de objeto -->

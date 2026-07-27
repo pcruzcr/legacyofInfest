@@ -107,8 +107,12 @@ class Camera:
         target_y = self._target.rect.centery
 
         # Look-ahead based on player velocity
-        _target_vel = self._target.velocity if hasattr(self._target, "velocity") else 0.0
-        look_ahead = _target_vel.x * 0.3 if isinstance(_target_vel, pygame.Vector2) else 0.0
+        # `getattr` con defecto `None` en vez de `hasattr` + acceso: la versión
+        # anterior usaba `0.0` como valor ausente y luego comprobaba el tipo,
+        # de modo que el mismo nombre era a veces un vector y a veces un
+        # número. El `isinstance` de abajo ya decide si hay velocidad usable.
+        velocity = getattr(self._target, "velocity", None)
+        look_ahead = velocity.x * 0.3 if isinstance(velocity, pygame.Vector2) else 0.0
         if not self._is_locked_x or not self._is_locked_y:
             # BUG-045 FIX: Clamp look_ahead to prevent pushing target past map boundaries
             if look_ahead > 0:

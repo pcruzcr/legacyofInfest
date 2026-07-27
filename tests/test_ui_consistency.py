@@ -32,6 +32,7 @@ SCENES_DIR = ROOT / "src" / "engine" / "scenes"
 # existing ones removed from the waiver list below as they are migrated.
 MIGRATED = {
     "game_over_scene.py",
+    "stage_error_scene.py",
 }
 
 # Not yet migrated. This list may only ever shrink — see
