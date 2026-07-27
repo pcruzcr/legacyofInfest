@@ -28,9 +28,25 @@ class BossVenado(BossBase):
     Uses FilterTools for edge-glow aura and CurveTools for Bézier projectiles.
     """
 
+    # Valores de reserva para cuando nadie ha fijado el arena todavía (una
+    # prueba que construye el jefe suelto). En el juego los sustituye
+    # `set_arena_bounds`, que recibe el tamaño real del mapa: estos decían 320
+    # para un mapa de 640, así que el Venado peleaba en la mitad izquierda.
     ARENA_W = 320
     ARENA_H = 224
     ARENA_CENTER_X = ARENA_W // 2
+
+    @property
+    def arena_width(self) -> int:
+        return self.arena_bounds.width if self.arena_bounds else self.ARENA_W
+
+    @property
+    def arena_center_x(self) -> int:
+        return self.arena_bounds.centerx if self.arena_bounds else self.ARENA_CENTER_X
+
+    @property
+    def arena_height(self) -> int:
+        return self.arena_bounds.height if self.arena_bounds else self.ARENA_H
 
     def __init__(self, spawn_position: pygame.Vector2) -> None:
         super().__init__(
@@ -174,9 +190,11 @@ class BossVenado(BossBase):
         self._combo_timer = 0.0
 
     def _build_figure8_path(self) -> list[pygame.Vector2]:
-        cx = self.ARENA_CENTER_X
-        cy = self.ARENA_H // 2 - 20
-        r = 80
+        cx = self.arena_center_x
+        cy = self.arena_height // 2 - 20
+        # El radio se deriva del arena en vez de ser 80 fijo: en un mapa ancho
+        # una trayectoria de 160 px de diámetro deja al jefe pegado al centro.
+        r = max(48, min(120, self.arena_width // 4))
         return [
             pygame.Vector2(cx - r, cy),
             pygame.Vector2(cx, cy - r // 2),
@@ -241,11 +259,17 @@ class BossVenado(BossBase):
             amplitude = 40.0
             freq = 0.4
             self.position.y = self._base_y + amplitude * math.sin(2 * math.pi * freq * self._elapsed)
-            if self.position.x < 32:
-                self.position.x = 32
+            # Rebota en los bordes del arena real, no en un ancho fijo.
+            left = 32 if self.arena_bounds is None else self.arena_bounds.left + 32
+            right = (
+                self.ARENA_W - 32 if self.arena_bounds is None
+                else self.arena_bounds.right - 32 - self.rect.width
+            )
+            if self.position.x < left:
+                self.position.x = left
                 self.facing_direction = 1
-            elif self.position.x > self.ARENA_W - 32:
-                self.position.x = self.ARENA_W - 32
+            elif self.position.x > right:
+                self.position.x = right
                 self.facing_direction = -1
 
         elif phase.movement_type == "bezier" and self._bezier_path:
@@ -381,6 +405,10 @@ class BossVenado(BossBase):
     def _update_charge(self, dt: float) -> None:
         charge_speed = 220.0 if self.current_phase == 0 else 280.0
         self.position.x += self._charge_direction * charge_speed * dt
+        # La embestida no llevaba ningún límite: bastaba una cerca del borde
+        # para dejar al jefe fuera del mapa, donde el jugador no lo alcanza y
+        # el combate deja de poder ganarse (AUD-061).
+        self.clamp_to_arena()
         if (self._charge_direction > 0 and self.position.x >= self._charge_target_x) or \
            (self._charge_direction < 0 and self.position.x <= self._charge_target_x):
             self._charge_active = False

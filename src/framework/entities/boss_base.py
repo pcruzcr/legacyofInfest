@@ -87,6 +87,10 @@ class BossBase(EnemyBase):
         self.pending_summons: list[EnemyBase] = []
         #: Último punto débil acertado, para VFX y para el overlay de debug.
         self.last_weak_point: WeakPoint | None = None
+        #: Límites del arena, que la escena fija con el tamaño del mapa. `None`
+        #: hasta entonces: un jefe construido en una prueba no tiene arena y no
+        #: debe fingir una.
+        self.arena_bounds: pygame.Rect | None = None
         #: Multiplicador de velocidad de la fase activa. Existe porque
         #: `_finish_phase_transition` leía `phase.speed_multiplier` y lo
         #: descartaba con un `pass`: un jefe que declaraba acelerar en la
@@ -320,6 +324,34 @@ class BossBase(EnemyBase):
         pending = self.pending_summons
         self.pending_summons = []
         return pending
+
+    def set_arena_bounds(self, bounds: pygame.Rect) -> None:
+        """Define los límites dentro de los que el jefe puede moverse (AUD-061).
+
+        La escena lo llama con el tamaño real del mapa. Antes cada jefe llevaba
+        sus propias constantes —`BossVenado` declaraba `ARENA_W = 320` para un
+        mapa de 640— y nadie las comparaba con nada: el jefe peleaba en la
+        mitad del escenario y una embestida podía sacarlo fuera del mapa, donde
+        el jugador no puede alcanzarlo y el combate deja de poder ganarse.
+        """
+        self.arena_bounds = pygame.Rect(bounds)
+
+    def clamp_to_arena(self, margin: int = 16) -> None:
+        """Devuelve al jefe dentro de su arena si se ha salido.
+
+        Se aplica a la posición y al rect a la vez porque el movimiento del
+        jefe escribe en `position` y el rect se deriva después; corregir sólo
+        uno deja los dos en desacuerdo durante un fotograma, que es tiempo
+        suficiente para que una comprobación de colisión use el valor viejo.
+        """
+        if self.arena_bounds is None:
+            return
+        left = self.arena_bounds.left + margin
+        right = self.arena_bounds.right - margin - self.rect.width
+        if right < left:  # arena más estrecha que el jefe: se centra
+            left = right = self.arena_bounds.centerx - self.rect.width // 2
+        self.position.x = max(left, min(right, self.position.x))
+        self.rect.x = int(self.position.x)
 
     @property
     def attack_timing(self) -> AttackTiming:

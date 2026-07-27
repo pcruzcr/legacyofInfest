@@ -188,6 +188,15 @@ class StageScene(BaseScene):
                     self._stage_data.collision_rects,
                     one_way=self._stage_data.one_way_rects,
                 )
+            if isinstance(enemy, BossBase):
+                # AUD-061: el jefe necesita saber dónde acaba su arena, y la
+                # escena es quien conoce el tamaño del mapa. `BossVenado` la
+                # tenía escrita a mano como ARENA_W = 320 mientras su mapa mide
+                # 640: peleaba en la mitad izquierda y una embestida podía
+                # sacarlo del escenario, dejando el combate sin poder ganarse.
+                enemy.set_arena_bounds(
+                    pygame.Rect(0, 0, *self._stage_data.map_pixel_size),
+                )
             if hasattr(enemy, "enemy_id"):
                 self._bestiary.record_encounter(enemy.enemy_id)
 
@@ -732,6 +741,28 @@ class StageScene(BaseScene):
             self._squad.update(dt, player, enemies)
             for enemy in enemies:
                 enemy.tactic = self._squad.decision_for(enemy).action
+
+            # AUD-060: **esto faltaba y ningún enemigo del juego se movía.**
+            #
+            # La llamada vivía en `CollisionSystem.update_enemies`. Al reescribir
+            # el sistema de colisiones durante la auditoría la convertí en un
+            # no-op, con un docstring que afirmaba «el movimiento lo integra
+            # EnemyBase.update, aquí no hay nada que sincronizar». La primera
+            # mitad era cierta; la segunda no, porque **nadie más llamaba a
+            # `EnemyBase.update`**. Razoné sobre lo que el método debía hacer en
+            # lugar de comprobar quién dependía de él.
+            #
+            # El efecto: todos los enemigos y el jefe quedaron inmóviles e
+            # invulnerables —sus fotogramas de invencibilidad tampoco corrían—,
+            # y nada lo detectó porque cada subsistema se probaba aislado y las
+            # pruebas de humo sólo exigían que la escena no lanzara excepciones.
+            #
+            # Vive aquí, y no en el sistema de colisiones, porque decidir a
+            # quién se actualiza cada fotograma es responsabilidad de la escena;
+            # el sistema de colisiones debería tratar sólo de colisiones.
+            for enemy in enemies:
+                enemy.set_player_ref(player.rect)
+                enemy.update(dt)
             self._collision.process_attack(dt, player, stage, self._camera, clock)
         finally:
             # update_hitstop owns time_scale entirely: it restores 1.0 as soon
