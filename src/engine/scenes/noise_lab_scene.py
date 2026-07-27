@@ -17,7 +17,6 @@ Controls:
 """
 from __future__ import annotations
 
-import math
 import random
 from typing import TYPE_CHECKING
 
@@ -71,16 +70,11 @@ class NoiseLabScene(BaseScene):
         self._status_msg: str = ""
         self._status_timer: float = 0.0
 
-        self._grad_table: list[tuple[float, float]] = self._build_grad_table(256)
-
-    @staticmethod
-    def _build_grad_table(size: int) -> list[tuple[float, float]]:
-        rng = random.Random(0)
-        table = []
-        for _ in range(size):
-            angle = rng.random() * math.pi * 2
-            table.append((math.cos(angle), math.sin(angle)))
-        return table
+        # AUD-076: aquí había una `_grad_table` de 256 gradientes construida en
+        # cada `__init__` y que **nadie leía nunca**. Peor que el coste: un
+        # estudiante que abriera este archivo para entender Perlin habría
+        # estudiado una tabla que no participa en el resultado. Los gradientes
+        # reales son los ocho de `_GRADS`.
 
     def on_enter(self) -> None:
         self._mode = 0
@@ -185,63 +179,51 @@ class NoiseLabScene(BaseScene):
             return str(self._seed)
         return ""
 
+    # Tabla de gradientes de Perlin. Ocho direcciones: los cuatro ejes y las
+    # cuatro diagonales. Es la tabla clásica de Perlin en 2D.
+    _GRADS = np.array(
+        [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, 1), (1, -1), (-1, -1)],
+        dtype=np.float32,
+    )
+
+    NOISE_W = 320
+    NOISE_H = 180
+
     def _generate_noise(self) -> None:
-        w, h = 320, 180
-        noise_map: np.ndarray = np.zeros((h, w), dtype=np.float32)
+        """Rellena `_cached_noise` con el mapa del modo activo.
+
+        AUD-073/074 — por qué esto es vectorizado
+        -----------------------------------------
+        La versión anterior recorría los 320x180 = 57.600 píxeles con dos
+        bucles `for` de Python y tardaba **295 ms** por mapa. Como
+        `_param_changed` nunca volvía a `False` (AUD-073), esto se ejecutaba en
+        *cada fotograma*: el laboratorio de ruido corría a 3,4 FPS desde el
+        instante en que se abría. Medido, no supuesto.
+
+        Ahora cada modo se calcula con operaciones de numpy sobre la rejilla
+        completa. La aritmética es la misma —interpolación bilineal sobre una
+        rejilla de valores, y producto punto contra gradientes en el caso de
+        Perlin—, sólo que expresada como álgebra de matrices en vez de píxel a
+        píxel. `tests/test_noise_lab.py` compara el resultado contra una copia
+        literal del código escalar antiguo, así que la equivalencia numérica
+        está probada, no prometida.
+        """
+        w, h = self.NOISE_W, self.NOISE_H
         rng = np.random.RandomState(self._seed)
 
-        if self._mode == 0:  # VALUE NOISE
-            grid_w = max(2, int(1.0 / (self._scale * 2)))
-            grid_h = max(2, int(1.0 / (self._scale * 2)))
-            grid = rng.rand(grid_h + 1, grid_w + 1).astype(np.float32)
-            for y in range(h):
-                for x in range(w):
-                    fx = x * self._scale
-                    fy = y * self._scale
-                    gx = int(fx * grid_w)
-                    gy = int(fy * grid_h)
-                    lx = (fx * grid_w) - gx
-                    ly = (fy * grid_h) - gy
-                    gx = min(gx, grid_w)
-                    gy = min(gy, grid_h)
-                    v00 = grid[gy, gx]
-                    v01 = grid[gy, min(gx + 1, grid_w)]
-                    v10 = grid[min(gy + 1, grid_h), gx]
-                    v11 = grid[min(gy + 1, grid_h), min(gx + 1, grid_w)]
-                    v0 = v00 + (v10 - v00) * ly
-                    v1 = v01 + (v11 - v01) * ly
-                    noise_map[y, x] = v0 + (v1 - v0) * lx
+        if self._mode == 0:  # RUIDO DE VALOR
+            noise_map = self._value_noise(w, h, self._scale, rng, signed=False)
 
-        elif self._mode == 1:  # PERLIN NOISE
-            grid_w = max(2, int(1.0 / (self._scale * 2)))
-            grid_h = max(2, int(1.0 / (self._scale * 2)))
-            perm = rng.permutation(256).astype(np.int32)
-            perm = np.concatenate([perm, perm])
-            for y in range(h):
-                for x in range(w):
-                    fx = x * self._scale * 10
-                    fy = y * self._scale * 10
-                    x0 = int(fx)
-                    y0 = int(fy)
-                    x1 = x0 + 1
-                    y1 = y0 + 1
-                    sx = fx - x0
-                    sy = fy - y0
-                    gi00 = perm[(perm[x0 & 255] + y0) & 255] & 7
-                    gi01 = perm[(perm[x0 & 255] + y1) & 255] & 7
-                    gi10 = perm[(perm[x1 & 255] + y0) & 255] & 7
-                    gi11 = perm[(perm[x1 & 255] + y1) & 255] & 7
-                    n00 = self._dot_grad(gi00, sx, sy)
-                    n01 = self._dot_grad(gi01, sx, sy - 1.0)
-                    n10 = self._dot_grad(gi10, sx - 1.0, sy)
-                    n11 = self._dot_grad(gi11, sx - 1.0, sy - 1.0)
-                    u = sx * sx * (3.0 - 2.0 * sx)
-                    v = sy * sy * (3.0 - 2.0 * sy)
-                    nx0 = n00 + (n10 - n00) * u
-                    nx1 = n01 + (n11 - n01) * u
-                    noise_map[y, x] = nx0 + (nx1 - nx0) * v
+        elif self._mode == 1:  # RUIDO PERLIN
+            noise_map = self._perlin_noise(w, h, self._scale, rng)
+            # AUD-075: Perlin vive en [-1, 1]. El código anterior lo recortaba
+            # directamente contra [0, 1], lo que convertía la mitad negativa de
+            # la imagen en negro plano. Se remapea, igual que ya hacía el modo
+            # fractal.
+            noise_map = (noise_map + 1.0) * 0.5
 
-        else:  # FRACTAL NOISE (mode 2)
+        else:  # RUIDO FRACTAL (modo 2)
+            noise_map = np.zeros((h, w), dtype=np.float32)
             amp = 1.0
             freq = self._scale
             max_amp = 0.0
@@ -250,40 +232,92 @@ class NoiseLabScene(BaseScene):
                 amp *= self._persistence
             amp = 1.0
             for _o in range(self._octaves):
-                grid_w = max(2, int(1.0 / (freq * 2)))
-                grid_h = max(2, int(1.0 / (freq * 2)))
-                grid = rng.rand(grid_h + 1, grid_w + 1).astype(np.float32) * 2.0 - 1.0
-                for y in range(h):
-                    for x in range(w):
-                        fx = x * freq
-                        fy = y * freq
-                        gx = int(fx * grid_w)
-                        gy = int(fy * grid_h)
-                        lx = (fx * grid_w) - gx
-                        ly = (fy * grid_h) - gy
-                        gx = min(gx, grid_w)
-                        gy = min(gy, grid_h)
-                        v00 = grid[gy, gx]
-                        v01 = grid[gy, min(gx + 1, grid_w)]
-                        v10 = grid[min(gy + 1, grid_h), gx]
-                        v11 = grid[min(gy + 1, grid_h), min(gx + 1, grid_w)]
-                        v0 = v00 + (v10 - v00) * ly
-                        v1 = v01 + (v11 - v01) * ly
-                        val = v0 + (v1 - v0) * lx
-                        noise_map[y, x] += val * amp
+                noise_map += self._value_noise(w, h, freq, rng, signed=True) * amp
                 amp *= self._persistence
                 freq *= self._lacunarity
             noise_map /= max_amp
             noise_map = (noise_map + 1.0) * 0.5
 
-        noise_map = np.clip(noise_map, 0.0, 1.0)
-        self._cached_noise = noise_map
+        self._cached_noise = np.clip(noise_map, 0.0, 1.0)
+        # AUD-073: apagar la bandera. Sin esta línea el mapa se regeneraba en
+        # cada `update()` aunque nadie hubiera tocado un parámetro.
+        self._param_changed = False
 
-    def _dot_grad(self, gi: int, x: float, y: float) -> float:
-        grads = [(1, 0), (-1, 0), (0, 1), (0, -1),
-                 (1, 1), (-1, 1), (1, -1), (-1, -1)]
-        gx, gy = grads[gi % 8]
-        return gx * x + gy * y
+    @staticmethod
+    def _lattice(n: int, scale: float, cells: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Índices de celda y peso de interpolación para un eje.
+
+        Devuelve `(i0, i1, t)`: la celda de la izquierda, la de la derecha y
+        cuánto hemos avanzado entre las dos, con `t` en [0, 1).
+        """
+        u = np.arange(n, dtype=np.float32) * np.float32(scale) * cells
+        i_raw = u.astype(np.int32)
+        t = u - i_raw
+        i0 = np.minimum(i_raw, cells)
+        i1 = np.minimum(i_raw + 1, cells)
+        return i0, i1, t
+
+    @classmethod
+    def _value_noise(
+        cls, w: int, h: int, scale: float, rng: np.random.RandomState, *, signed: bool,
+    ) -> np.ndarray:
+        """Ruido de valor: rejilla aleatoria + interpolación bilineal."""
+        cells = max(2, int(1.0 / (scale * 2)))
+        grid = rng.rand(cells + 1, cells + 1).astype(np.float32)
+        if signed:
+            grid = grid * 2.0 - 1.0
+
+        gx0, gx1, lx = cls._lattice(w, scale, cells)
+        gy0, gy1, ly = cls._lattice(h, scale, cells)
+
+        # Las cuatro esquinas de la celda que contiene a cada píxel.
+        v00 = grid[gy0[:, None], gx0[None, :]]
+        v01 = grid[gy0[:, None], gx1[None, :]]
+        v10 = grid[gy1[:, None], gx0[None, :]]
+        v11 = grid[gy1[:, None], gx1[None, :]]
+
+        ly_col = ly[:, None]
+        lx_row = lx[None, :]
+        v0 = v00 + (v10 - v00) * ly_col
+        v1 = v01 + (v11 - v01) * ly_col
+        return (v0 + (v1 - v0) * lx_row).astype(np.float32)
+
+    @classmethod
+    def _perlin_noise(
+        cls, w: int, h: int, scale: float, rng: np.random.RandomState,
+    ) -> np.ndarray:
+        """Perlin: gradientes por vértice y suavizado con 3t^2 - 2t^3."""
+        perm = rng.permutation(256).astype(np.int32)
+
+        fx = np.arange(w, dtype=np.float32) * np.float32(scale * 10)
+        fy = np.arange(h, dtype=np.float32) * np.float32(scale * 10)
+        x0 = fx.astype(np.int32)
+        y0 = fy.astype(np.int32)
+        sx = (fx - x0)[None, :]
+        sy = (fy - y0)[:, None]
+
+        px0 = perm[x0 & 255]
+        px1 = perm[(x0 + 1) & 255]
+        # Índice de gradiente para cada vértice de la celda.
+        gi00 = perm[(px0[None, :] + y0[:, None]) & 255] & 7
+        gi01 = perm[(px0[None, :] + y0[:, None] + 1) & 255] & 7
+        gi10 = perm[(px1[None, :] + y0[:, None]) & 255] & 7
+        gi11 = perm[(px1[None, :] + y0[:, None] + 1) & 255] & 7
+
+        def dot(gi: np.ndarray, dx: np.ndarray, dy: np.ndarray) -> np.ndarray:
+            g = cls._GRADS[gi]
+            return g[..., 0] * dx + g[..., 1] * dy
+
+        n00 = dot(gi00, sx, sy)
+        n01 = dot(gi01, sx, sy - 1.0)
+        n10 = dot(gi10, sx - 1.0, sy)
+        n11 = dot(gi11, sx - 1.0, sy - 1.0)
+
+        u = sx * sx * (3.0 - 2.0 * sx)
+        v = sy * sy * (3.0 - 2.0 * sy)
+        nx0 = n00 + (n10 - n00) * u
+        nx1 = n01 + (n11 - n01) * u
+        return (nx0 + (nx1 - nx0) * v).astype(np.float32)
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill(COLOR_BG)

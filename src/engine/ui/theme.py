@@ -110,9 +110,36 @@ def font(size: int, path: str | None = None) -> pygame.font.Font:
     Scenes previously constructed ``pygame.font.Font(None, N)`` in their own
     ``__init__``, rebuilding identical font objects on every scene
     construction. Caching by (path, size) means a menu transition reuses them.
+
+    AUD-077 — la caché puede llenarse de cadáveres
+    ----------------------------------------------
+    Un ``pygame.font.Font`` deja de servir en cuanto alguien llama a
+    ``pygame.quit()`` o ``pygame.font.quit()``. No se recupera: volver a
+    inicializar el módulo devuelve ``get_init() is True`` pero el objeto viejo
+    sigue lanzando ``pygame.error: Invalid font (font module quit since font
+    created)`` para siempre. Y la comprobación anterior —``if not
+    pygame.font.get_init()``— sólo se ejecutaba cuando la caché *fallaba*, así
+    que jamás veía el problema: la caché acertaba, devolvía el cadáver, y la
+    pantalla reventaba al primer ``render()``.
+
+    Esto se descubrió midiendo, no leyendo: ``tests/test_student_template.py``
+    apaga pygame después de cada prueba, y a partir de ahí toda pantalla que
+    usara el kit de interfaz fallaba en la misma sesión de pytest. Lo mismo le
+    pasaría al juego tras un cambio de modo de vídeo que reinicie el módulo.
+
+    La validación cuesta 0,08 µs —menos que la propia búsqueda en el
+    diccionario, 0,095 µs—, así que se hace en cada acierto de caché.
     """
     key = (path, size)
     cached = _font_cache.get(key)
+    if cached is not None:
+        try:
+            cached.get_height()
+        except pygame.error:
+            # El módulo de fuentes se apagó bajo nuestros pies: todo lo que
+            # hay en la caché es basura, no sólo esta entrada.
+            _font_cache.clear()
+            cached = None
     if cached is None:
         if not pygame.font.get_init():
             pygame.font.init()

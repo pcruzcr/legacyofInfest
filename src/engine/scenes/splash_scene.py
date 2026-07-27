@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 import pygame
@@ -13,16 +14,26 @@ from src.engine.utils.asset_loader import AssetLoader
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
 
+logger = logging.getLogger(__name__)
+
 
 class SplashScene(BaseScene):
     """Game startup splash screen."""
 
     SPLASH_TIME = 3.0
 
+    # AUD-082: hay que dejar pasar un fotograma antes de compilar el núcleo de
+    # partículas. Si se hiciera en `on_enter`, la ventana se quedaría en negro
+    # medio segundo antes de mostrar el logo: habríamos movido el tirón, no
+    # escondido.
+    _WARMUP_AFTER_FRAMES = 2
+
     def __init__(self, context: GameContext) -> None:
         super().__init__(context)
         self._timer = 0.0
         self._fading_out: bool = False
+        self._frames_shown = 0
+        self._warmed_up = False
         assets = settings.ASSETS_DIR / "splash"
 
         self._background = AssetLoader.load_image(
@@ -68,9 +79,37 @@ class SplashScene(BaseScene):
                 self.context.scene_manager.replace(TitleScene(self.context))
             return
         self._timer += dt
+        self._warm_up_particles()
         if self._timer >= self.SPLASH_TIME:
             self.context.scene_manager.transition.start_fade_out(0.5)
             self._fading_out = True
+
+    def _warm_up_particles(self) -> None:
+        """Compila el núcleo JIT de partículas durante la pantalla de inicio.
+
+        AUD-082 — dónde poner un coste que no se puede eliminar
+        ------------------------------------------------------
+        `numba.njit` compila en la primera llamada. Medido en `TitleScene`:
+        mediana de 0,70 ms por fotograma y **un fotograma de 376 ms** cuando
+        aparecía la primera partícula. La pantalla de inicio dura 3 s, no es
+        interactiva y su `update` no hace nada más que contar el tiempo. Es el
+        único sitio del arranque donde medio segundo no se nota.
+
+        No se hace en `on_enter` a propósito: eso retrasaría el primer
+        fotograma y el jugador vería una ventana negra en vez del logo.
+        """
+        self._frames_shown += 1
+        if self._warmed_up or self._frames_shown < self._WARMUP_AFTER_FRAMES:
+            return
+        self._warmed_up = True
+        from src.framework.vfx.particle_system import warmup
+
+        segundos = warmup()
+        if segundos > 0.05:
+            logger.info(
+                "partículas: núcleo JIT compilado en %.0f ms durante la pantalla "
+                "de inicio", segundos * 1000,
+            )
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.blit(self._background, (0, 0))

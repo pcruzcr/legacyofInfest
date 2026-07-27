@@ -25,7 +25,6 @@ from src.engine.scenes.demo_common import (
     FONT_SMALL,
     PANEL_H,
     PANEL_SIZE,
-    RIGHT_PANEL_W,
     RIGHT_PANEL_X,
     TOP_BAR_H,
     TOP_BAR_Y,
@@ -244,16 +243,16 @@ class PatternDemoScene(BaseScene):
         if self._mode in (0, 1):
             held = pygame.key.get_pressed()
             if held[pygame.K_w]:
-                self._rect_y = max(0, self._rect_y - 8)
+                self._rect_y -= 8
                 self._param_changed = True
             if held[pygame.K_s]:
-                self._rect_y = min(PANEL_H - self._rect_size, self._rect_y + 8)
+                self._rect_y += 8
                 self._param_changed = True
             if held[pygame.K_a]:
-                self._rect_x = max(0, self._rect_x - 8)
+                self._rect_x -= 8
                 self._param_changed = True
             if held[pygame.K_d]:
-                self._rect_x = min(RIGHT_PANEL_W - self._rect_size, self._rect_x + 8)
+                self._rect_x += 8
                 self._param_changed = True
             if im.is_raw_key_pressed(pygame.K_PLUS) or im.is_raw_key_pressed(pygame.K_EQUALS):
                 self._rect_size = min(80, self._rect_size + 8)
@@ -261,6 +260,7 @@ class PatternDemoScene(BaseScene):
             if im.is_raw_key_pressed(pygame.K_MINUS):
                 self._rect_size = max(16, self._rect_size - 8)
                 self._param_changed = True
+            self._clamp_analysis_rect()
 
         # Compute result every N frames (throttled)
         if self._param_changed or self._frame_count % 3 == 0:
@@ -304,7 +304,34 @@ class PatternDemoScene(BaseScene):
         for _key, char in _get_printable_keys(im):
             self._text_buffer += char
 
+    def _clamp_analysis_rect(self) -> None:
+        """Mantiene el recuadro de análisis dentro de la imagen de origen.
+
+        AUD-079 — por qué esta demo no mostraba nada
+        --------------------------------------------
+        El recuadro se recortaba contra ``RIGHT_PANEL_W`` (256) y ``PANEL_H``
+        (483), que son las medidas del **panel de dibujo**, no las de la
+        imagen. La fuente por defecto mide 32x32 y el recuadro arrancaba en
+        (64, 74) con lado 32: fuera de la imagen desde el primer fotograma.
+        ``subsurface`` lanzaba, el ``except`` lo convertía en un aviso, y la
+        demo de reconocimiento de patrones —Unidad VIII— mostraba
+        "Error: subsurface rectangle outside surface area" en bucle a quien la
+        abriera.
+
+        El recorte tiene que ser contra la imagen, y hay que rehacerlo también
+        al cambiar de fuente, porque las fuentes no miden todas lo mismo.
+        """
+        src = self._sources.current_source
+        if src is None:
+            return
+        ancho, alto = src.get_size()
+        # El lado nunca puede superar la dimensión menor de la imagen.
+        self._rect_size = max(1, min(self._rect_size, ancho, alto))
+        self._rect_x = max(0, min(self._rect_x, ancho - self._rect_size))
+        self._rect_y = max(0, min(self._rect_y, alto - self._rect_size))
+
     def _compute_result(self) -> None:
+        self._clamp_analysis_rect()
         src = self._sources.current_source
         if src is None:
             self._cached_result_surf = pygame.Surface(PANEL_SIZE)
@@ -682,8 +709,21 @@ class PatternDemoScene(BaseScene):
                 self._cached_left_scaled = pygame.transform.scale(src, PANEL_SIZE)
                 self._cached_left_src = src
             surface.blit(self._cached_left_scaled, (0, TOP_BAR_H))
-            # Draw analysis rect
-            rect = pygame.Rect(self._rect_x, self._rect_y, self._rect_size, self._rect_size)
+            # AUD-081: el recuadro se dibujaba en coordenadas de la imagen
+            # original sobre un panel que muestra esa imagen **escalada** a
+            # PANEL_SIZE, y sin sumar el desplazamiento vertical del blit. Con
+            # una fuente de 32x32 en un panel de 256x483, el recuadro amarillo
+            # aparecía diminuto y en la esquina equivocada: el estudiante no
+            # podía apuntar a lo que estaba analizando.
+            ancho_src, alto_src = src.get_size()
+            esc_x = PANEL_SIZE[0] / ancho_src
+            esc_y = PANEL_SIZE[1] / alto_src
+            rect = pygame.Rect(
+                round(self._rect_x * esc_x),
+                TOP_BAR_H + round(self._rect_y * esc_y),
+                max(1, round(self._rect_size * esc_x)),
+                max(1, round(self._rect_size * esc_y)),
+            )
             pygame.draw.rect(surface, (255, 220, 80), rect, 1)
         draw_panel_border(surface, pygame.Rect(0, TOP_BAR_H, PANEL_SIZE[0], PANEL_H))
 

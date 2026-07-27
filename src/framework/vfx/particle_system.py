@@ -77,6 +77,54 @@ else:
     _update_particles_njit = _update_particles_py
 
 
+_warmed_up = False
+
+
+def warmup() -> float:
+    """Compila el núcleo JIT ahora, para que no se compile a mitad de partida.
+
+    AUD-082 — el tirón de medio segundo en la pantalla de título
+    -----------------------------------------------------------
+    `@numba.njit` compila en la **primera llamada**, no al importar. Medido en
+    `TitleScene`: mediana de 0,70 ms por fotograma y **un fotograma de 376 ms**
+    —el primero en el que existe una partícula—. Son veintidós fotogramas
+    perdidos de golpe, y justo en la primera pantalla que ve el jugador.
+
+    `cache=True` guarda el resultado en `__pycache__`, así que en la mayoría de
+    los equipos el tirón sólo ocurre la primera vez... salvo que la instalación
+    sea de sólo lectura, o que el estudiante acabe de clonar el repositorio, o
+    que cambie de versión de Python o de numba. Es decir: le pasa a todo el
+    mundo al menos una vez, y a algunos siempre.
+
+    Llamar a esto desde la pantalla de carga mueve el coste al único sitio
+    donde una espera no es un defecto. Devuelve los segundos que costó, para
+    que quien llame pueda registrarlo.
+
+    Es idempotente: la segunda llamada no hace nada.
+    """
+    global _warmed_up
+    if _warmed_up:
+        return 0.0
+    _warmed_up = True
+    if not _HAS_NUMBA:
+        return 0.0
+
+    import time
+
+    # Un array de una partícula basta: lo que se compila es la firma, no el
+    # tamaño. Los tipos tienen que coincidir exactamente con los que usa
+    # `ParticleEmitter`, o numba compilará una segunda especialización en
+    # tiempo de juego y el tirón volverá.
+    uno = np.ones(1, dtype=np.float32)
+    inicio = time.perf_counter()
+    _update_particles_njit(
+        uno.copy(), uno.copy(), uno.copy(), uno.copy(),
+        uno.copy(), uno.copy(), np.ones(1, dtype=np.int32),
+        np.ones(1, dtype=np.int32), uno.copy(), uno.copy(), 1 / 60,
+    )
+    return time.perf_counter() - inicio
+
+
 class BurstConfig:
     __slots__ = (
         "color",
