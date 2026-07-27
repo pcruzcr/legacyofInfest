@@ -499,3 +499,198 @@ class TestNoOpsAnnounceThemselves:
         )
         assert "_collision.update_enemies(" not in code
         assert "_collision.step(" not in code
+
+
+class TestThePlayerIsVisible:
+    """El protagonista tiene que verse (AUD-067).
+
+    Lo reportó el usuario jugando: «el personaje no se ve, se ve el movimiento
+    y un dash pero no se ve más». Tenía razón — `Player.draw` no se llamaba
+    **nunca**.
+
+    Al reescribir `DrawingSystem` durante la auditoría, el bucle de dibujo pasó
+    a recorrer `stage.entity_list`, que contiene sólo enemigos. El jugador
+    quedó fuera. `ctx.player` siguió usándose únicamente en el overlay de
+    depuración, que pinta un rectángulo cian: por eso con F1 «se veía» algo y
+    sin F1 no había nadie.
+
+    Ninguna de las 1097 pruebas lo detectó. Las de humo comprobaban que la
+    escena dibujara «algo» distinto del fondo, y el escenario, los enemigos y
+    el HUD ya lo garantizaban. Un juego sin protagonista visible también pinta
+    píxeles.
+    """
+
+    def _stage(self, app, surface):
+        from src.stages.stage0.stage0 import Stage0
+
+        scene = Stage0(app.context)
+        app.scene_manager.push(scene)
+        _skip_intro(app, scene, surface)
+        return scene
+
+    def test_the_player_is_actually_drawn(self, app, surface) -> None:
+        """Se compara el fotograma con y sin el jugador.
+
+        Contar «píxeles distintos del fondo» no sirve: el escenario y el HUD ya
+        los ponen. Lo único que demuestra que el personaje está en pantalla es
+        que quitarlo cambie la imagen.
+        """
+        scene = self._stage(app, surface)
+        player = scene._player
+
+        with_player = pygame.Surface((800, 600))
+        scene.draw(with_player)
+
+        original_draw = type(player).draw
+        type(player).draw = lambda self, *a, **k: None
+        try:
+            without_player = pygame.Surface((800, 600))
+            scene.draw(without_player)
+        finally:
+            type(player).draw = original_draw
+
+        changed = sum(
+            1
+            for x in range(0, 800, 2)
+            for y in range(0, 600, 2)
+            if with_player.get_at((x, y)) != without_player.get_at((x, y))
+        )
+        assert changed > 20, (
+            f"quitar al jugador sólo cambia {changed} píxeles: el protagonista "
+            f"no se está dibujando"
+        )
+
+    def test_the_player_is_visible_without_the_debug_overlay(
+        self, app, surface,
+    ) -> None:
+        """El rectángulo cian de depuración no cuenta como ver al personaje.
+
+        Es lo que confundió el diagnóstico: con F1 aparecía una silueta y
+        parecía que el jugador estaba ahí.
+        """
+        scene = self._stage(app, surface)
+        assert not getattr(scene, "_debug", False), (
+            "la escena arranca con depuración activada; la prueba no mediría "
+            "el juego real"
+        )
+        calls: list[int] = []
+        original = type(scene._player).draw
+
+        def counting(self, *args, **kwargs):
+            calls.append(1)
+            return original(self, *args, **kwargs)
+
+        type(scene._player).draw = counting
+        try:
+            scene.draw(surface)
+        finally:
+            type(scene._player).draw = original
+
+        assert calls, "Player.draw no se llamó en un fotograma normal"
+
+    def test_entities_are_drawn_back_to_front(self, app, surface) -> None:
+        """El orden por profundidad también se perdió en aquella reescritura.
+
+        Sin él, quien se dibuja encima lo decide el orden en que el TMX listó
+        los objetos: un enemigo del fondo podía taparle la cara al jugador.
+        """
+        scene = self._stage(app, surface)
+        drawn: list[int] = []
+
+        from src.framework.entities.enemy_base import EnemyBase
+
+        targets = [scene._player] + [
+            e for e in scene._stage_data.entity_list if isinstance(e, EnemyBase)
+        ]
+        originals = {}
+        for entity in targets:
+            cls = type(entity)
+            if cls in originals:
+                continue
+            originals[cls] = cls.draw
+
+            def make(original):
+                def recording(self, *args, **kwargs):
+                    drawn.append(self.rect.centery)
+                    return original(self, *args, **kwargs)
+                return recording
+
+            cls.draw = make(originals[cls])
+        try:
+            scene.draw(surface)
+        finally:
+            for cls, original in originals.items():
+                cls.draw = original
+
+        assert drawn == sorted(drawn), (
+            f"las entidades no se dibujan de atrás hacia delante: {drawn}"
+        )
+
+
+class TestStage0SurvivesTheWholeMap:
+    """Recorrer el escenario entero, no sólo los primeros metros (AUD-066).
+
+    El usuario lo encontró jugando:
+
+        AttributeError: 'Stage0' object has no attribute '_context'
+        en _check_zone_progression, línea 172
+
+    `self._context` no existe —`BaseScene` expone `self.context`— y esa línea
+    sólo se ejecuta al pasar del tile 85 de 100. El juego crasheaba a tres
+    cuartos del escenario, y ninguna prueba llegaba tan lejos: todas medían el
+    arranque.
+
+    Un escenario se prueba de principio a fin o no se prueba.
+    """
+
+    def test_crossing_every_zone_trigger_does_not_crash(self, app, surface) -> None:
+        """Teletransporta al jugador por cada umbral de zona y sigue jugando.
+
+        Se mueve al jugador en vez de simular el recorrido completo: caminar
+        cien tiles tarda medio minuto de tiempo real y la prueba se saltaría en
+        cuanto molestara. Lo que importa es ejecutar el código de cada umbral.
+        """
+        from src.stages.stage0.stage0 import Stage0
+
+        scene = Stage0(app.context)
+        app.scene_manager.push(scene)
+        _skip_intro(app, scene, surface)
+        player = scene._player
+        tile = scene.TILE
+
+        # Los tres umbrales que `_check_zone_progression` comprueba, más allá
+        # del último para asegurar que no queda ninguno sin ejecutar.
+        for tile_x in (17, 53, 86, 95):
+            player.position.x = float(tile_x * tile)
+            player.rect.x = int(player.position.x)
+            for _ in range(30):
+                app.scene_manager.update(DT)
+                app.scene_manager.current.draw(surface)
+                app.event_bus.dispatch()
+
+        assert scene._zone_entered == {1, 2, 3}, (
+            f"no se activaron todas las zonas: {scene._zone_entered}"
+        )
+
+    def test_the_storm_zone_actually_changes_the_weather(
+        self, app, surface,
+    ) -> None:
+        """La línea que crasheaba era la que anuncia la tormenta.
+
+        Comprobar que no lanza no basta: si alguien «arregla» el crash
+        borrando la línea, la tormenta desaparece y la prueba seguiría en
+        verde.
+        """
+        from src.stages.stage0.stage0 import Stage0
+
+        scene = Stage0(app.context)
+        app.scene_manager.push(scene)
+        _skip_intro(app, scene, surface)
+
+        before = getattr(scene._weather, "_climate", None)
+        scene._player.position.x = float(86 * scene.TILE)
+        scene._player.rect.x = int(scene._player.position.x)
+        _run(app, scene, surface, 30)
+
+        after = getattr(scene._weather, "_climate", None)
+        assert after == "storm", f"el clima no cambió a tormenta: {before} -> {after}"
