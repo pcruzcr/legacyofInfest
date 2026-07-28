@@ -65,14 +65,41 @@ class BossRushMode:
         return None
 
     def advance_to_next(self) -> BossRushStage | None:
-        if self._current_index < len(self._stages) - 1:
-            current = self._stages[self._current_index]
+        """Da por derrotado al jefe actual y pasa al siguiente, si lo hay.
+
+        F2.5 — dos defectos que nadie había visto
+        -----------------------------------------
+        Este módulo no tenía una sola prueba. Al escribirle las primeras
+        aparecieron dos fallos que se anulaban entre sí lo justo para que nada
+        crujiera:
+
+        1. **El último jefe no contaba.** La versión anterior sólo marcaba
+           `defeated` y sumaba puntos dentro del `if` que comprueba que quede
+           otro jefe. Derrotar al jefe final no daba puntos y lo dejaba
+           marcado como vivo. Medido con dos jefes: `[True, False]`.
+
+        2. **El modo no se podía terminar.** `is_complete()` exige
+           ``self._active and self._current_index >= len(self._stages)``, y el
+           código anterior nunca incrementaba el índice más allá del último y
+           además apagaba `_active` al llegar al final. Las dos condiciones no
+           podían darse a la vez: `is_complete()` devolvía `False` para
+           siempre. Un modo de juego sin final.
+
+        Ahora se acredita al jefe actual **siempre**, y el índice avanza hasta
+        `len(self._stages)` para que el estado "terminado" sea representable.
+        """
+        current = self._stages[self._current_index] if self._stages else None
+        if current is not None:
             current.defeated = True
             self._score += max(0, 1000 - int(current.time * 10))
             self._score -= current.hits_taken * 50
-            self._current_index += 1
+
+        self._current_index += 1
+        if self._current_index < len(self._stages):
             return self._stages[self._current_index]
-        self._active = False
+        # Se ha superado el último. El índice queda fuera de rango a propósito:
+        # es lo que `is_complete()` mira para distinguir "terminado" de "en el
+        # último jefe".
         return None
 
     def record_hit(self) -> None:
@@ -81,7 +108,13 @@ class BossRushMode:
             current.hits_taken += 1
 
     def is_complete(self) -> bool:
-        return self._active and self._current_index >= len(self._stages)
+        """¿Se han superado todos los jefes?
+
+        Requiere que el modo se haya iniciado —`_stages` vacío con el modo
+        parado no es "completo", es "no empezado"— y que el índice haya
+        rebasado el último jefe.
+        """
+        return bool(self._stages) and self._current_index >= len(self._stages)
 
     @property
     def score(self) -> int:
