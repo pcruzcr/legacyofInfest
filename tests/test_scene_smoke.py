@@ -136,27 +136,55 @@ SCENE_PATHS: list[tuple[str, str]] = [
     ("src.engine.scenes.student_login_scene", "StudentLoginScene"),
 ]
 
+class _EscenarioDoble:
+    """Lo mínimo que `GameOverScene` espera de la escena de la que se muere.
+
+    Con un `respawn` de verdad. Ver `ARGUMENTO_EXTRA` para por qué importa.
+    """
+
+    def __init__(self) -> None:
+        self.respawns = 0
+
+    def respawn(self) -> None:
+        self.respawns += 1
+
+
 #: Escenas cuyo constructor pide algo más que el contexto.
 #:
-#: Antes esto era un `except TypeError: scene_cls(context, 1)` que servía
-#: para `StoryScene`, que toma un número de capítulo. Con `UnitTheoryScene`
-#: —que toma el identificador de una unidad— aquel `1` habría construido la
-#: escena de una unidad inexistente: no habría reventado, porque la escena lo
-#: contempla, pero la prueba habría ejercitado la rama de error en vez de la
-#: real. Una prueba que pasa recorriendo el camino equivocado es peor que una
-#: que falla (AUD-098).
+#: Antes esto era un `except TypeError: scene_cls(context, 1)`. Ese `1` valía
+#: para `StoryScene`, que toma un número de capítulo, y **falseaba las otras
+#: dos** (AUD-098, AUD-103):
+#:
+#: - `GameOverScene(context, stage_scene)` guarda
+#:   `stage_scene.respawn if hasattr(...) else None`. Con un `1`,
+#:   `hasattr(1, "respawn")` es falso, así que la prueba recorría siempre la
+#:   rama sin respawn: justo la que no le interesa a nadie. Ahora recibe un
+#:   doble con `respawn`.
+#: - `UnitTheoryScene(context, id_unidad)` con un `1` habría construido la
+#:   escena de una unidad inexistente y ejercitado su rama de error.
+#:
+#: Una prueba que pasa recorriendo el camino equivocado es peor que una que
+#: falla: la que falla se arregla, y ésta se cree.
 ARGUMENTO_EXTRA: dict[str, object] = {
     "StoryScene": 1,
     "UnitTheoryScene": "vectores",
+    "GameOverScene": _EscenarioDoble,
+    "StageErrorScene": "stage0.tmx: falta la capa Terrain",
 }
 
 
 def _construir(scene_cls: type, context: object) -> object:
-    """Instancia una escena, con su argumento extra si lo necesita."""
+    """Instancia una escena, con su argumento extra si lo necesita.
+
+    Un valor invocable en la tabla se llama para obtener el argumento; así
+    cada prueba recibe un doble limpio en vez de compartir uno.
+    """
     extra = ARGUMENTO_EXTRA.get(scene_cls.__name__)
-    if extra is not None:
-        return scene_cls(context, extra)
-    return scene_cls(context)
+    if extra is None:
+        return scene_cls(context)
+    if callable(extra) and not isinstance(extra, (str, int)):
+        extra = extra()
+    return scene_cls(context, extra)
 
 
 #: Ficheros de `engine/scenes/` que no son escenas y por eso no están arriba.
