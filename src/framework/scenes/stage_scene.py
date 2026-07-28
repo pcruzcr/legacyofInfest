@@ -1255,6 +1255,11 @@ class StageScene(BaseScene):
         self._drawing.draw(ctx)
         self._lighting.render(surface, self._camera.offset)
         self._post_processing.apply(surface)
+        # AUD-090: la interfaz va DESPUÉS de la luz y del post-procesado. Antes
+        # se pintaba dentro de `_drawing.draw` y el ambiente la multiplicaba:
+        # medido, el HUD perdía el 58 % de su brillo y el indicador de combo
+        # desaparecía por completo.
+        self._drawing.draw_ui(ctx)
         self._minimap.draw(surface)
         # Captions render after post-processing so the colourblind filter does
         # not wash out text that exists precisely for accessibility (AUD-036).

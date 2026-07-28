@@ -67,10 +67,6 @@ class DrawingSystem:
         player = ctx.player
         checkpoints = ctx.checkpoints or []
         camera = ctx.camera
-        hud = ctx.hud
-        msg_box = ctx.msg_box
-        banner = ctx.banner
-
         surface.fill(settings.BG_COLOR)
 
         if stage is None:
@@ -93,11 +89,6 @@ class DrawingSystem:
         if ctx.ambient_particles:
             ctx.ambient_particles.draw(surface, offset)
 
-        if ctx.learning_overlay:
-            ctx.learning_overlay.draw(surface)
-        if ctx.tutorial_overlay:
-            ctx.tutorial_overlay.draw(surface)
-
         self._draw_entities(surface, stage, player, checkpoints, offset)
 
         if ctx.enemy_trail_system:
@@ -106,23 +97,55 @@ class DrawingSystem:
             ctx.trail_system.draw(surface, offset)
         if ctx.damage_numbers:
             ctx.damage_numbers.draw(surface, offset)
+
+    def draw_ui(self, ctx: DrawContext) -> None:
+        """Interfaz en espacio de pantalla. Se dibuja DESPUÉS de la luz.
+
+        AUD-090 — la iluminación estaba oscureciendo la interfaz
+        --------------------------------------------------------
+        Hasta ahora todo esto se pintaba dentro de `draw`, es decir, **antes**
+        de `LightSystem.render` y `PostProcessing.apply`. Mientras el brillo
+        ambiente valía 1,0 daba igual: multiplicar por uno no hace nada. Al
+        encender la iluminación en la fase 1 y bajarlo a 0,59, la luz del mundo
+        empezó a multiplicar también el HUD.
+
+        Medido en Stage 0: el HUD perdía el **58 %** de su brillo, y el
+        indicador de combo pasaba de 406 píxeles amarillos a **cero**. El
+        jugador veía subir el daño y no veía el «COMBO x3».
+
+        Es un defecto que introduje yo al encender la luz, y su forma es la de
+        siempre en este proyecto: el código del combo era correcto, la llamada
+        estaba, el valor llegaba al HUD. Lo que fallaba era el orden.
+
+        Una interfaz es espacio de pantalla: la luz de una antorcha del nivel
+        no puede alcanzarla, igual que no la alcanza la niebla ni el clima.
+        """
+        surface = ctx.surface
+        if ctx.stage is None or ctx.camera is None:
+            return
+
+        if ctx.learning_overlay:
+            ctx.learning_overlay.draw(surface)
+        if ctx.tutorial_overlay:
+            ctx.tutorial_overlay.draw(surface)
         if ctx.dialogue_system:
-            # Screen-space, not world-space: the dialogue box is anchored to the
-            # viewport, so it takes no camera offset (AUD-039).
+            # Espacio de pantalla, no de mundo: el cuadro de diálogo se ancla
+            # al viewport y no toma desplazamiento de cámara (AUD-039).
             ctx.dialogue_system.draw(surface)
 
-        if hud:
-            hud.draw(surface)
-        if msg_box:
-            msg_box.draw(surface)
-        if banner:
-            banner.draw(surface)
+        if ctx.hud:
+            ctx.hud.draw(surface)
+        if ctx.msg_box:
+            ctx.msg_box.draw(surface)
+        if ctx.banner:
+            ctx.banner.draw(surface)
 
         if ctx.paused:
             self._draw_pause_menu(surface, ctx.pause_selected, ctx.pause_options or [])
 
         if ctx.debug:
-            self._draw_debug(surface, stage, player, camera, offset)
+            self._draw_debug(surface, ctx.stage, ctx.player, ctx.camera,
+                             ctx.camera.offset)
 
     # Parallax speed per backdrop layer, far to near. Index 0 is the most
     # distant layer and therefore moves least.

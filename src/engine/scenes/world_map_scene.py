@@ -18,11 +18,11 @@ if TYPE_CHECKING:
 
 
 STAGE_NODES: list[dict[str, Any]] = [
-    {"id": "stage0", "name": "Stage 0", "x": 80, "y": 60, "unlocks": ["stage1"]},
-    {"id": "stage1", "name": "Zone 1-1", "x": 200, "y": 50, "unlocks": ["stage2"]},
-    {"id": "stage2", "name": "Zone 1-2", "x": 280, "y": 80, "unlocks": ["stage3"]},
-    {"id": "stage3", "name": "Zone 1-3", "x": 200, "y": 130, "unlocks": ["stage4"]},
-    {"id": "stage4", "name": "Boss Venado", "x": 80, "y": 160, "unlocks": []},
+    {"id": "stage0", "name": "Stage 0", "nx": 0.00, "ny": 0.10, "unlocks": ["stage1"]},
+    {"id": "stage1", "name": "Zone 1-1", "nx": 0.42, "ny": 0.02, "unlocks": ["stage2"]},
+    {"id": "stage2", "name": "Zone 1-2", "nx": 0.78, "ny": 0.30, "unlocks": ["stage3"]},
+    {"id": "stage3", "name": "Zone 1-3", "nx": 0.42, "ny": 0.68, "unlocks": ["stage4"]},
+    {"id": "stage4", "name": "Boss Venado", "nx": 0.00, "ny": 0.92, "unlocks": []},
 ]
 
 _node_index = {nd["id"]: i for i, nd in enumerate(STAGE_NODES)}
@@ -102,20 +102,41 @@ class WorldMapScene(BaseScene):
             from src.engine.scenes.title_scene import TitleScene
             self.context.scene_manager.replace(TitleScene(self.context))
 
+    #: Posiciones de los nodos en coordenadas **normalizadas**, de 0 a 1
+    #: dentro del área de contenido.
+    #:
+    #: AUD-093 — antes eran píxeles absolutos: (80, 60), (200, 50), (280, 80)...
+    #: Se escribieron para la resolución de referencia de 320x224, y la interna
+    #: es 800x600. `draw_screen` devuelve y = 105 como inicio del contenido, así
+    #: que **tres de los cinco nodos se dibujaban encima del título** y el mapa
+    #: ocupaba el tercio superior izquierdo de la pantalla.
+    #:
+    #: Normalizadas, el mapa se reparte por el área disponible sea cual sea la
+    #: resolución, y nunca invade la cabecera ni la barra de atajos.
+    _MARGEN_X = 0.10
+    _MARGEN_INFERIOR = 46      # deja sitio a los atajos de teclado
+
+    def _posicion(self, nodo: dict, top: int) -> tuple[int, int]:
+        """Traduce la posición normalizada de un nodo a píxeles de pantalla."""
+        ancho = settings.INTERNAL_WIDTH
+        alto_util = settings.INTERNAL_HEIGHT - top - self._MARGEN_INFERIOR
+        x = ancho * (self._MARGEN_X + nodo["nx"] * (1.0 - 2 * self._MARGEN_X))
+        y = top + alto_util * nodo["ny"]
+        return int(x), int(y)
+
     def draw(self, surface: pygame.Surface) -> None:
         # AUD-069: la navegación sigue siendo por grafo —los nodos están
         # colocados en un mapa, no en una lista— pero la paleta y los atajos
         # ya son los del resto del juego. Antes esta pantalla tenía siete
         # colores propios y un fondo distinto del de todas las demás.
-        draw_screen(surface, "MAPA DEL MUNDO", "Elige tu destino")
+        top = draw_screen(surface, "MAPA DEL MUNDO", "Elige tu destino")
+
+        posiciones = [self._posicion(n, top) for n in self._nodes]
 
         for a, b in CONNECTIONS:
-            na = self._nodes[a]
-            nb = self._nodes[b]
-            colour = Theme.SUCCESS if na.get("completed") else Theme.BORDER
-            pygame.draw.line(
-                surface, colour, (na["x"], na["y"]), (nb["x"], nb["y"]), 2,
-            )
+            colour = (Theme.SUCCESS if self._nodes[a].get("completed")
+                      else Theme.BORDER)
+            pygame.draw.line(surface, colour, posiciones[a], posiciones[b], 2)
 
         for idx, node in enumerate(self._nodes):
             focused = idx == self._selected
@@ -127,18 +148,22 @@ class WorldMapScene(BaseScene):
                 colour = Theme.TEXT_MUTED
             else:
                 colour = Theme.TEXT_DIM
-            pygame.draw.circle(surface, colour, (node["x"], node["y"]), 10)
+            px, py = posiciones[idx]
+            pygame.draw.circle(surface, colour, (px, py), 10)
             if focused:
                 # Anillo alrededor del nodo enfocado: en un mapa, el color solo
                 # no basta para distinguir «seleccionado» de «completado».
-                pygame.draw.circle(
-                    surface, Theme.TEXT, (node["x"], node["y"]), 13, 1,
-                )
+                pygame.draw.circle(surface, Theme.TEXT, (px, py), 13, 1)
             label = self._font_name.render(
                 node["name"], True,
                 Theme.TEXT if node.get("unlocked") else Theme.TEXT_DIM,
             )
-            surface.blit(label, (node["x"] + 16, node["y"] - 8))
+            # La etiqueta se sitúa a la izquierda si el nodo está pegado al
+            # borde derecho, para que no se salga de la pantalla.
+            lx = px + 16
+            if lx + label.get_width() > settings.INTERNAL_WIDTH - 8:
+                lx = px - 16 - label.get_width()
+            surface.blit(label, (lx, py - 8))
 
         draw_key_hints(surface, [
             ("←→↑↓", "Navegar"),
