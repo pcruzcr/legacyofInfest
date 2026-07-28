@@ -44,12 +44,26 @@ BASURA = "{esto no es json, ni pretende serlo"
 
 @pytest.fixture(autouse=True)
 def _pygame():
+    """Inicializa pygame sin tocar la pantalla que otros módulos ya usen.
+
+    La primera versión de este fixture hacía `set_mode((64, 64))`. El modo de
+    display es **global al proceso**, así que si este fichero corría antes que
+    `test_demo_centering.py` —cuyo fixture de pantalla es de módulo y sólo crea
+    una si no hay ninguna—, las trece demos se medían sobre una superficie de
+    64x64 y nueve pruebas de centrado fallaban.
+
+    Pasaban en solitario y fallaban en compañía: la peor clase de fallo, y la
+    que más tiempo hace perder. Ahora se usa la resolución interna, que es la
+    que espera todo el proyecto.
+    """
     import pygame
+
+    from src.engine.core import settings
 
     pygame.init()
     pygame.font.init()
     if pygame.display.get_surface() is None:
-        pygame.display.set_mode((64, 64))
+        pygame.display.set_mode((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
 
 
 class TestElBestiario:
