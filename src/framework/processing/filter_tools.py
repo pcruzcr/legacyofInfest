@@ -178,6 +178,63 @@ class FilterTools:
         rgb = np.stack([edges, edges, edges], axis=-1)
         return pygame.surfarray.make_surface(rgb.transpose(1, 0, 2))
 
+    # ── Versiones propias, paso a paso (F2.3) ────────────────────────
+    #
+    # `sobel_edge` y `canny_edge`, arriba, llaman a OpenCV. Están bien: es lo
+    # que se usa en la industria y son entre 17 y 50 veces más rápidas. Pero en
+    # las Unidades VII y VIII **Sobel y Canny son el contenido**, y quien sólo
+    # ve `cv2.Canny(gray, 50, 150)` aprende una API, no un algoritmo.
+    #
+    # Las dos versiones conviven a propósito, y el laboratorio muestra ambas
+    # con sus tiempos: comparar tu implementación con la de referencia es parte
+    # de aprender, y descubrir que la tuya es cincuenta veces más lenta
+    # también. Ver `framework.processing.edge_detection`.
+
+    @classmethod
+    def sobel_edge_propio(cls, surface: pygame.Surface) -> pygame.Surface:
+        """Sobel implementado a mano. Ver `edge_detection.sobel`."""
+        from src.framework.processing import edge_detection
+
+        cls._validate_surface(surface)
+        rgb = pygame.surfarray.array3d(surface).transpose(1, 0, 2)
+        bordes = edge_detection.sobel(rgb)
+        return cls._gris_a_superficie(bordes)
+
+    @classmethod
+    def canny_edge_propio(
+        cls, surface: pygame.Surface, low_threshold: int, high_threshold: int,
+        sigma: float = 1.4,
+    ) -> pygame.Surface:
+        """Canny implementado a mano, en sus cinco pasos.
+
+        Ver `edge_detection.canny`. Los umbrales se validan igual que en la
+        versión de OpenCV para que las dos se puedan intercambiar sin sorpresas.
+        """
+        from src.framework.processing import edge_detection
+
+        cls._validate_surface(surface)
+        if low_threshold < 1 or high_threshold > 255 or low_threshold >= high_threshold:
+            raise ValueError(
+                f"FilterTools.canny_edge_propio: thresholds must satisfy "
+                f"1 <= low < high <= 255, got low={low_threshold}, "
+                f"high={high_threshold}"
+            )
+        rgb = pygame.surfarray.array3d(surface).transpose(1, 0, 2)
+        bordes = edge_detection.canny(
+            rgb, float(low_threshold), float(high_threshold), sigma)
+        return cls._gris_a_superficie(bordes)
+
+    @staticmethod
+    def _gris_a_superficie(gris: np.ndarray) -> pygame.Surface:
+        """Convierte una imagen de un canal (alto, ancho) en una superficie.
+
+        La transposición no es decorativa: numpy indexa (fila, columna) y
+        pygame.surfarray indexa (x, y). Confundirlas produce una imagen girada
+        90 grados, que es un fallo silencioso muy fácil de cometer.
+        """
+        rgb = np.stack([gris, gris, gris], axis=-1)
+        return pygame.surfarray.make_surface(rgb.transpose(1, 0, 2))
+
     @classmethod
     def _validate_surface(cls, surface: pygame.Surface) -> None:
         if surface is None:

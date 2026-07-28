@@ -891,3 +891,74 @@ Todas las funciones son de la Unidad VII del sílabo. Para ejemplos detallados d
 
 - [[12_VISION_TOOLS_SPEC.md|Vision Tools Spec]]
 - [[13_PATTERN_RECOGNITION_SPEC.md|Pattern Recognition Spec]]
+
+---
+
+## Apéndice A — Sobel y Canny escritos a mano (F2.3)
+
+### Por qué hay dos versiones de cada uno
+
+| Función | Implementación | Para qué sirve |
+|---|---|---|
+| `sobel_edge` | `cv2.Sobel` | Producción. Rápida. |
+| `sobel_edge_propio` | `framework.processing.edge_detection` | **Docencia.** Cada paso a la vista. |
+| `canny_edge` | `cv2.Canny` | Producción. Rápida. |
+| `canny_edge_propio` | `framework.processing.edge_detection` | **Docencia.** Los cinco pasos separados. |
+
+La auditoría de julio de 2026 señaló el problema: en las Unidades VII y VIII
+**Sobel y Canny son el contenido**, no una herramienta. Quien sólo ve
+`cv2.Canny(gray, 50, 150)` aprende una API. La distancia entre «sé que existe
+`cv2.Canny`» y «sé por qué la supresión no máxima adelgaza el borde» es la
+asignatura entera.
+
+Las dos versiones conviven a propósito. Comparar tu implementación con la de
+referencia es parte de aprender — y descubrir que la tuya es cincuenta veces
+más lenta también.
+
+### Los pasos, y qué hace cada uno
+
+**Sobel** (`edge_detection.sobel`)
+
+1. `a_gris` — luminancia con los coeficientes ITU-R BT.601. Devuelve
+   **float32**, no uint8: los pasos siguientes restan y dividen, y hacerlo en
+   enteros de 8 bits desborda en silencio.
+2. `convolucionar` con `KERNEL_X` y `KERNEL_Y` — la derivada en cada dirección.
+   El borde se **replica**; rellenar con ceros inventaría un contorno en el
+   marco de la imagen y Sobel detectaría el marco.
+3. Magnitud: `hypot(gx, gy)`.
+
+**Canny** (`edge_detection.canny`)
+
+1. `suavizar` — gaussiana separable. Se empieza suavizando porque el gradiente
+   amplifica el ruido: derivar una imagen ruidosa da bordes por todas partes.
+2. `gradiente` — magnitud y dirección.
+3. `supresion_no_maxima` — cada píxel se compara con sus dos vecinos **en la
+   dirección del gradiente** y sobrevive sólo si es el máximo local. Es el paso
+   que hace que Canny dé líneas y no manchas.
+4. Doble umbral — por encima del alto, borde seguro; entre los dos, candidato.
+5. `histeresis` — un candidato se acepta **sólo si toca a un borde seguro**.
+   Resuelve el dilema de un umbral único: perder bordes tenues o aceptar ruido.
+
+### Resultados medidos
+
+Sobre una imagen de 240×180 con formas geométricas:
+
+| | Coincidencia con OpenCV | Tiempo propio | Tiempo OpenCV | Factor |
+|---|---|---|---|---|
+| Sobel | 100 % | 1,72 ms | 0,10 ms | 17× |
+| Canny | 98,3 % | 3,73 ms | 0,074 ms | 50× |
+
+La coincidencia se comprueba en cada ejecución de la suite
+(`tests/test_edge_detection.py`): OpenCV es el oráculo. Y hay una prueba que
+verifica que la versión propia **sea más lenta** — si dejara de serlo, o está
+mal o alguien cambió la referencia, y en los dos casos conviene enterarse.
+
+### Ejercicios sugeridos
+
+1. Cambia `KERNEL_X` por el de Prewitt (`[[-1,0,1],[-1,0,1],[-1,0,1]]`) y
+   observa la diferencia en los bordes diagonales.
+2. Salta la supresión no máxima en `canny` y mira el grosor del resultado.
+3. Iguala `umbral_bajo` y `umbral_alto`: la histéresis deja de existir. ¿Qué
+   se pierde?
+4. Mide cuánto tarda `convolucionar` con un núcleo de 3×3, 5×5 y 9×9. ¿Crece
+   como esperabas?
