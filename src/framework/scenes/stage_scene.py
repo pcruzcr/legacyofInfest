@@ -290,6 +290,7 @@ class StageScene(BaseScene):
 
         self._setup_lighting()
         self._setup_post_processing()
+        self._setup_ambient_particles()
         self._vfx_handlers.clear()
         self._sfx_handlers.clear()
         try:
@@ -400,6 +401,44 @@ class StageScene(BaseScene):
         if vineta is None:
             vineta = self.VIGNETTE_BY_ZONE.get(zone, self.VIGNETTE_DEFAULT)
         self._post_processing.set_vignette(vineta)
+
+    #: Partículas de ambiente por zona: (tipo, partículas por segundo).
+    #:
+    #: F1.3 — `AmbientParticleSystem.set_effect` no la llamaba nadie, así que
+    #: el ritmo se quedaba en cero toda la partida. Medido en Stage 0 tras tres
+    #: segundos de juego: 0 partículas. El sistema existía, se actualizaba y se
+    #: dibujaba; no tenía nada que dibujar.
+    AMBIENT_FX_BY_ZONE: dict[int, tuple[str, float]] = {
+        0: ("spores", 14.0),   # prólogo: bosque infestado
+        1: ("leaves", 10.0),
+        2: ("embers", 18.0),
+        3: ("ash", 22.0),
+    }
+    AMBIENT_FX_DEFAULT: tuple[str, float] = ("dust", 8.0)
+
+    def _setup_ambient_particles(self) -> None:
+        """Enciende las partículas de ambiente del escenario.
+
+        Misma precedencia que la luz y el post-procesado: propiedad del mapa
+        (`ambient_fx`, `ambient_fx_rate`), luego tabla por zona, luego valor por
+        defecto. Un `ambient_fx` de `none` en el TMX apaga el efecto de forma
+        explícita, que es distinto de no declararlo.
+        """
+        zone = self._stage_data.zone
+        if zone is None:
+            zone = getattr(self, "ZONE", 0)
+
+        tipo = getattr(self._stage_data, "ambient_fx", "")
+        ritmo = getattr(self._stage_data, "ambient_fx_rate", None)
+        if not tipo:
+            tipo, ritmo_zona = self.AMBIENT_FX_BY_ZONE.get(
+                zone, self.AMBIENT_FX_DEFAULT)
+            if ritmo is None:
+                ritmo = ritmo_zona
+        elif ritmo is None:
+            ritmo = self.AMBIENT_FX_DEFAULT[1]
+
+        self._ambient_particles.set_effect(tipo, ritmo)
 
     def _subscribe_event_handlers(self) -> None:
         def _on_enemy_died(**data: Any) -> None:
