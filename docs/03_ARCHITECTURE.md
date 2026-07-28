@@ -795,7 +795,43 @@ Image segmentation and pattern recognition utilities.
 
 ### 3.1 Import Hierarchy
 
-The following imports are permitted. Cross-layer imports (going upward) are prohibited.
+Three rules, and only three. Están comprobadas en cada ejecución de la suite
+por `tests/test_layering.py`; si alguna deja de cumplirse, la suite se pone en
+rojo antes de que la infracción llegue a nadie.
+
+| # | Regla | Por qué |
+|---|---|---|
+| **L1** | El núcleo del motor —`engine/` **excepto** `engine/scenes/` y `engine/core/app.py`— no importa nada de `framework`. | Es lo que permite que el motor se pueda leer y reutilizar sin arrastrar el juego. Hoy se cumple con **cero** excepciones. |
+| **L2** | `framework/processing/` no importa nada de `engine`. | Son las funciones que se explican en clase: convolución, Sobel, Otsu, HOG. Tienen que poder ejecutarse desde un cuaderno sin arrancar pygame. Hoy se cumple con **cero** excepciones. |
+| **L3** | Un escenario no importa otro escenario. | Cada `stages/stageN` es entregable por separado. Hoy se cumple con **cero** excepciones. |
+
+**Las dos excepciones, nombradas y acotadas:**
+
+- `engine/core/app.py` es la **raíz de composición**: es el único sitio que
+  conoce todas las piezas a la vez, porque su trabajo es cablearlas. Que
+  importe `framework.entities.entity_factory` y `framework.academic.sesion`
+  no es una fuga de capas, es el patrón.
+- `engine/scenes/` es la **capa de aplicación**, no el núcleo. Los
+  laboratorios académicos viven ahí y enseñan algoritmos que viven en
+  `framework/processing/`; que el laboratorio de color importe
+  `color_tools` es exactamente lo que tiene que hacer. Son 27 imports y todos
+  son de esta forma.
+
+> **AUD-101 — qué decía esta sección antes.**
+> Decía: «*Cross-layer imports (going upward) are prohibited*», seguido de una
+> lista de importaciones permitidas por módulo. Medido contra el código, esa
+> regla estaba incumplida **27 veces** —todas legítimas— y a la vez pedía a
+> `framework/processing` que no importara «engine or framework», lo que
+> prohibía incluso que un módulo del paquete importara a su vecino, cosa que
+> hacen tres de ellos con toda la razón.
+>
+> Una regla que se incumple 27 veces sin consecuencias no es una regla: es
+> una frase. Lo que sí es cierto, y ahora está comprobado, es que el núcleo
+> del motor y las funciones de procesamiento están limpios. Eso es lo que
+> importa y es lo que se vigila.
+
+La lista de abajo se conserva como **mapa de dependencias típicas**, no como
+una prohibición: describe por dónde fluyen normalmente las importaciones.
 
 ```
 main.py
