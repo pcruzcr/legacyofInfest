@@ -89,6 +89,13 @@ class UserSettings:
     subtitles_enabled: bool = False
     #: Idioma de la interfaz. Español por defecto: es el idioma del curso.
     language: str = "es"
+    #: Correo del último estudiante que se identificó (AUD-098).
+    #:
+    #: Aquí sólo se guarda **quién** era, nunca sus notas: el progreso vive en
+    #: su propio fichero, en `saves/academico/`. Se recuerda para que en un
+    #: aula no haya que teclear el correo en cada arranque, que es la clase de
+    #: fricción por la que una función correcta acaba sin usarse.
+    student_email: str = ""
 
     # Not persisted: resolved at load time so callers need not handle None.
     _path: Path | None = field(default=None, repr=False, compare=False)

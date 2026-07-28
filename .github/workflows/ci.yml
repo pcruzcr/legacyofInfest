@@ -55,6 +55,16 @@ jobs:
       - name: Verify the student type reference is up to date
         run: python scripts/generate_tmx_reference.py --check
 
+      # AUD-098: estos dos validadores existían y nadie los ejecutaba salvo a
+      # mano. Un guardián que sólo corre cuando alguien se acuerda garantiza lo
+      # mismo que no tenerlo — es exactamente cómo AUD-010 acabó con un CI
+      # verde que nunca se había ejecutado.
+      - name: Verify translation catalogues
+        run: python scripts/check_translations.py --ci
+
+      - name: Verify the example map demonstrates every TMX property
+        run: python scripts/check_tmx_coverage.py --ci
+
       - name: Run tests
         run: |
           python -m pytest tests/ -v --tb=short \

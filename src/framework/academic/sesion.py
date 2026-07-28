@@ -75,21 +75,65 @@ class SesionAcademica:
         return self._directorio
 
     # -- operaciones -----------------------------------------------
-    def entrar(self, correo: str) -> bool:
+    def entrar(self, correo: str, *, recordar: bool = True) -> bool:
         """Identifica a un estudiante y carga lo que llevara hecho.
 
         Devuelve `False` si el correo no tiene forma de correo, y en ese caso
         no toca la sesión: es preferible seguir como anónimo a asociar las
         notas de alguien a una cadena escrita a medias.
+
+        Con `recordar`, deja el correo en los ajustes para que el siguiente
+        arranque lo reanude solo.
         """
         if not es_correo_valido(correo):
             return False
         self._progreso = ProgresoAcademico.cargar(self._directorio, correo)
+        if recordar:
+            self._recordar(self._progreso.correo)
         return True
 
+    def reanudar(self) -> bool:
+        """Vuelve a entrar con el último estudiante recordado, si lo hay.
+
+        AUD-098 — por qué esto faltaba y por qué importa
+        ------------------------------------------------
+        El progreso académico se guardaba correctamente y nada volvía a
+        leerlo nunca: `entrar()` sólo se llamaba desde las pruebas. Un
+        estudiante podía aprobar cinco unidades, cerrar el juego, y al abrirlo
+        encontrarse el temario entero bloqueado otra vez, con sus notas
+        intactas en el disco pero inalcanzables.
+
+        Es el mismo defecto que la iluminación que no iluminaba y que las
+        demos que dibujaban en una esquina: código correcto, probado en
+        aislamiento, que no llegaba a la pantalla.
+        """
+        from src.engine.core import user_settings
+
+        correo = (user_settings.get().student_email or "").strip()
+        if not correo:
+            return False
+        return self.entrar(correo, recordar=False)
+
     def salir(self) -> None:
-        """Vuelve a anónimo. No borra nada del disco."""
+        """Vuelve a anónimo y deja de recordar. No borra nada del disco."""
         self._progreso = ProgresoAcademico()
+        self._recordar("")
+
+    @staticmethod
+    def _recordar(correo: str) -> None:
+        """Anota en los ajustes quién es el estudiante activo.
+
+        Sólo el correo. Las notas viven en su propio fichero: mezclarlas con
+        los ajustes de volumen las haría viajar cada vez que alguien copia su
+        configuración a otra máquina.
+        """
+        from src.engine.core import user_settings
+
+        ajustes = user_settings.get()
+        if ajustes.student_email == correo:
+            return
+        ajustes.student_email = correo
+        ajustes.save()
 
     def guardar(self) -> Path | None:
         """Escribe el progreso. Devuelve `None` si nadie se ha identificado."""
