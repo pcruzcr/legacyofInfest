@@ -64,6 +64,33 @@ class CameraLock:
 
 
 @dataclass
+class LightSpec:
+    """Un foco declarado en el TMX, en coordenadas del mapa.
+
+    F1.1 — por qué esto es un dato y no un objeto de VFX
+    ----------------------------------------------------
+    El cargador no debe construir `LightSource`: eso ataría el módulo de
+    escenarios al de efectos y obligaría a importar pygame-surface machinery
+    para leer un mapa. Aquí sólo se describe *qué* pidió el diseñador; la
+    escena decide cómo materializarlo.
+
+    Antes de esto, las luces estaban **escritas a mano en el motor**, en una
+    cadena `if zone == 0: ... elif zone == 1: ...` con coordenadas fijas. Un
+    estudiante que construyera un escenario en Tiled no podía colocar ni una
+    sola luz: heredaba las dos del zone 0, en (80, 80) y (240, 80), estuviera
+    ahí su nivel o no.
+    """
+
+    position: tuple[float, float]
+    radius: float = 80.0
+    color: tuple[int, int, int] = (255, 220, 180)
+    intensity: float = 0.8
+    flicker: bool = False
+    flicker_speed: float = 4.0
+    flicker_amount: float = 0.15
+
+
+@dataclass
 class StageData:
     map_layer: pyscroll.PyscrollGroup
     map_pixel_size: tuple[int, int] = (0, 0)
@@ -78,6 +105,7 @@ class StageData:
     hazard_zones: list[HazardZone] = field(default_factory=list)
     death_pits: list[DeathPit] = field(default_factory=list)
     camera_locks: list[CameraLock] = field(default_factory=list)
+    lights: list[LightSpec] = field(default_factory=list)
     zone: int = 0
     stage_id: str = ""
     stage_name: str = ""
@@ -85,6 +113,12 @@ class StageData:
     bgm_track: str = ""
     gravity_multiplier: float = 1.0
     climate: str = ""
+    #: Brillo ambiente del escenario, de 0 (oscuridad total) a 1 (sin
+    #: oscurecer). `None` significa "no declarado": la escena caerá a su tabla
+    #: por zona. Se distingue de 1.0 a propósito, porque 1.0 es una decisión
+    #: explícita de diseño —"este nivel es a plena luz"— y `None` es la
+    #: ausencia de decisión.
+    ambient_light: float | None = None
 
 
 REQUIRED_LAYERS: tuple[str, ...] = (
@@ -230,6 +264,7 @@ class StageLoader:
         gravity_multiplier = cls._safe_float(props.get("gravity_multiplier", 1.0), "gravity_multiplier")
         climate = props.get("climate", "")
         zone = cls._safe_int(props.get("zone", 0), "zone")
+        ambient_light = cls._parse_ambient_light(props)
 
         map_data = pyscroll.data.TiledMapData(tmx_data)
         with warnings.catch_warnings():
@@ -255,7 +290,22 @@ class StageLoader:
             gravity_multiplier=gravity_multiplier,
             climate=climate,
             zone=zone,
+            ambient_light=ambient_light,
         )
+
+    @classmethod
+    def _parse_ambient_light(cls, props: dict[str, Any]) -> float | None:
+        """Lee `ambient_light` del mapa, o `None` si no está declarado.
+
+        Se recorta a [0, 1] en vez de rechazar los valores fuera de rango: un
+        estudiante que escriba `2` quiere "muy iluminado", y castigarle con un
+        error de carga por eso no le enseña nada. Un valor no numérico sí es
+        un error, porque ahí no hay intención que adivinar.
+        """
+        if "ambient_light" not in props:
+            return None
+        valor = cls._safe_float(props.get("ambient_light", 1.0), "ambient_light")
+        return max(0.0, min(1.0, valor))
 
     @classmethod
     def _load_backgrounds(cls, stage: StageData, background_zone: str) -> None:
@@ -339,6 +389,9 @@ class StageLoader:
             elif obj_type == "CameraLock":
                 cls._handle_camera_lock(stage, obj, props)
 
+            elif obj_type == "Light":
+                cls._handle_light(stage, obj, props)
+
             elif obj_type != "Waypoint":
                 # AUD-055. Esta rama no existía: cualquier `type` que no
                 # coincidiera se descartaba en silencio, así que una errata en
@@ -411,6 +464,96 @@ class StageLoader:
         from src.framework.stage.checkpoint import Checkpoint
         cp = Checkpoint(pygame.Vector2(obj.x, obj.y), rect, int(props["checkpoint_id"]))
         stage.checkpoints.append(cp)
+
+    #: Colores con nombre para la propiedad `color` de un objeto `Light`.
+    #: Existen porque escribir `#ffdcb4` en Tiled es un obstáculo real para
+    #: alguien que está aprendiendo, y porque una paleta corta produce
+    #: escenarios más coherentes que la libertad total.
+    LIGHT_COLORS: dict[str, tuple[int, int, int]] = {
+        "warm": (255, 220, 180),      # antorcha, lámpara
+        "cold": (180, 210, 255),      # luna, hielo
+        "fire": (255, 120, 50),       # fuego, lava
+        "toxic": (150, 255, 130),     # esporas, veneno
+        "blood": (255, 60, 60),       # alarma, sangre
+        "white": (255, 255, 255),
+    }
+
+    @classmethod
+    def _handle_light(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
+        """Convierte un objeto `Light` de Tiled en un `LightSpec`.
+
+        Propiedades reconocidas, todas opcionales:
+
+        ==============  ======  ===========================================
+        propiedad       tipo    significado
+        ==============  ======  ===========================================
+        `radius`        float   alcance en píxeles (por defecto 80)
+        `color`         string  nombre de `LIGHT_COLORS` o `#rrggbb`
+        `intensity`     float   0 a 1 (por defecto 0.8)
+        `flicker`       bool    parpadeo tipo antorcha
+        `flicker_speed` float   oscilaciones por segundo
+        `flicker_amount` float  amplitud del parpadeo, 0 a 1
+        ==============  ======  ===========================================
+
+        El punto de luz se toma del **centro** del rectángulo dibujado en
+        Tiled, no de su esquina. Es lo que espera cualquiera que dibuje un
+        recuadro alrededor de una antorcha; usar la esquina desplazaría la luz
+        y el estudiante no sabría por qué.
+        """
+        ancho = float(getattr(obj, "width", 0) or 0)
+        alto = float(getattr(obj, "height", 0) or 0)
+        centro = (float(obj.x) + ancho / 2.0, float(obj.y) + alto / 2.0)
+
+        radio = cls._safe_float(props.get("radius", 80.0), "light radius")
+        if radio <= 0:
+            radio = 80.0
+
+        stage.lights.append(LightSpec(
+            position=centro,
+            radius=radio,
+            color=cls._parse_light_color(props.get("color")),
+            intensity=max(0.0, min(1.0, cls._safe_float(
+                props.get("intensity", 0.8), "light intensity"))),
+            flicker=bool(props.get("flicker", False)),
+            flicker_speed=cls._safe_float(
+                props.get("flicker_speed", 4.0), "light flicker_speed"),
+            flicker_amount=max(0.0, min(1.0, cls._safe_float(
+                props.get("flicker_amount", 0.15), "light flicker_amount"))),
+        ))
+
+    @classmethod
+    def _parse_light_color(cls, valor: Any) -> tuple[int, int, int]:
+        """Acepta un nombre de la paleta, `#rrggbb`, o el formato de Tiled.
+
+        Tiled guarda los colores como `#aarrggbb` —con alfa delante—, que es
+        justo lo que nadie espera. Se aceptan las tres formas y se cae al
+        color cálido ante cualquier cosa ininteligible, porque una luz del
+        color equivocado se ve y se corrige, mientras que un error de carga
+        deja al estudiante sin nivel.
+        """
+        if valor is None:
+            return cls.LIGHT_COLORS["warm"]
+        texto = str(valor).strip().lower()
+        if texto in cls.LIGHT_COLORS:
+            return cls.LIGHT_COLORS[texto]
+        if texto.startswith("#"):
+            digitos = texto[1:]
+            if len(digitos) == 8:      # #aarrggbb de Tiled: se descarta el alfa
+                digitos = digitos[2:]
+            if len(digitos) == 6:
+                try:
+                    return (
+                        int(digitos[0:2], 16),
+                        int(digitos[2:4], 16),
+                        int(digitos[4:6], 16),
+                    )
+                except ValueError:
+                    pass
+        logger.warning(
+            "Light: color '%s' no reconocido; se usa 'warm'. Válidos: %s o #rrggbb",
+            valor, ", ".join(sorted(cls.LIGHT_COLORS)),
+        )
+        return cls.LIGHT_COLORS["warm"]
 
     @classmethod
     def _handle_hazard_zone(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:

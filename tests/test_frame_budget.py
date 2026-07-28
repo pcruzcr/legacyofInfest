@@ -24,6 +24,7 @@ magnitud, que son las que se ven jugando.
 """
 from __future__ import annotations
 
+import itertools
 import time
 
 import pygame
@@ -195,6 +196,53 @@ class TestElPrecalentamientoDeParticulasHaceLoQuePromete:
             escena.draw(superficie)
         assert escena._warmed_up is True, (
             "la escena de inicio nunca precalienta: el tirón vuelve al título"
+        )
+
+    def test_precalienta_un_paso_por_fotograma(self, hacer_contexto):
+        """AUD-088 — hacerlo todo de golpe congelaba el logo 3,4 s.
+
+        Ejecutar los dos precalentamientos en el mismo `update` sumaba más que
+        la propia pantalla de inicio. Repartidos, entre uno y otro se dibuja un
+        fotograma y el fundido sigue avanzando.
+        """
+        from src.engine.scenes.splash_scene import SplashScene
+
+        escena = SplashScene(hacer_contexto())
+        escena.on_enter()
+        superficie = pygame.Surface((800, 600))
+        indices = []
+        for _ in range(len(SplashScene._WARMUP_STEPS) + 3):
+            escena.update(1 / 60)
+            escena.draw(superficie)
+            indices.append(escena._warmup_index)
+        # El índice avanza de uno en uno, nunca de golpe.
+        saltos = [b - a for a, b in itertools.pairwise(indices)]
+        assert all(s <= 1 for s in saltos), f"avances por fotograma: {saltos}"
+        assert escena._warmed_up is True
+
+    def test_la_ia_queda_cargada_tras_la_pantalla_de_inicio(self, hacer_contexto):
+        """AUD-088 — sklearn se importaba en el fotograma 16 de la partida.
+
+        `squad_brain` importa `ai_predictor` la primera vez que un enemigo
+        consulta al predictor, y ese import arrastra scikit-learn entero:
+        2,3 s de congelación con el jugador ya moviéndose.
+        """
+        import sys
+
+        from src.engine.scenes.splash_scene import SplashScene
+
+        escena = SplashScene(hacer_contexto())
+        escena.on_enter()
+        superficie = pygame.Surface((800, 600))
+        for _ in range(len(SplashScene._WARMUP_STEPS) + 2):
+            escena.update(1 / 60)
+            escena.draw(superficie)
+
+        if "sklearn" not in sys.modules:
+            pytest.skip("scikit-learn no está instalado; la IA usa su heurística")
+        assert "src.framework.entities.ai_predictor" in sys.modules, (
+            "la pantalla de inicio no cargó el predictor: el tirón vuelve a "
+            "caer dentro de la partida"
         )
 
     def test_no_precalienta_en_el_primer_fotograma(self, hacer_contexto):

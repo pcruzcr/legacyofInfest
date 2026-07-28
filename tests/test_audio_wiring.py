@@ -295,3 +295,80 @@ def test_deferred_boss_sounds_have_their_asset_ready(sound: str) -> None:
     assert match.group(1) in available, (
         f"{sound} apunta a '{match.group(1)}', que no existe en assets/sfx"
     )
+
+
+class TestElJuegoSobreviveSinTarjetaDeSonido:
+    """AUD-089 — un aula sin dispositivo de audio tumbaba el juego.
+
+    `play_music` envolvía sus llamadas en `try/except pygame.error`, pero
+    `stop_music`, `pause_music`, `resume_music`, `set_music_volume` y
+    `toggle_mute` no. Si `pygame.mixer.init()` falla —máquina sin dispositivo,
+    sesión remota, contenedor, laboratorio con el sonido deshabilitado—
+    cualquier transición de escena que pare la música lanzaba
+    ``pygame.error: mixer not initialized`` y la partida se perdía.
+
+    No es un problema de sonido, es de disponibilidad: el jugador pierde el
+    juego entero por no tener altavoces.
+    """
+
+    @pytest.fixture
+    def sin_mezclador(self):
+        import pygame
+
+        estaba = pygame.mixer.get_init() is not None
+        if estaba:
+            pygame.mixer.quit()
+        yield
+        if estaba:
+            try:
+                pygame.mixer.init()
+            except pygame.error:
+                pass
+
+    def test_las_operaciones_de_musica_no_lanzan(self, sin_mezclador):
+        import pygame
+
+        from src.engine.audio.audio_manager import AudioManager
+
+        assert pygame.mixer.get_init() is None, "el escenario no se preparó"
+        audio = AudioManager()
+        # Ninguna de éstas puede lanzar: todas ocurren en transiciones normales.
+        audio.play_music("assets/music/bgm_title.ogg")
+        audio.stop_music()
+        audio.pause_music()
+        audio.resume_music()
+        audio.set_music_volume(0.5)
+        audio.set_sfx_volume(0.5)
+        audio.toggle_mute()
+        audio.toggle_mute()
+        audio.play_sfx("sfx_ui_confirm")
+        audio.stop_ambient()
+
+    def test_una_escena_completa_entra_y_sale_sin_mezclador(self, sin_mezclador):
+        """La prueba que importa: el ciclo real de una escena con música."""
+        import pygame
+
+        from src.engine.audio.audio_manager import AudioManager
+        from src.engine.core.event_bus import EventBus
+        from src.engine.core.game_context import GameContext
+        from src.engine.core.save_manager import SaveManager
+        from src.engine.input.input_manager import InputManager
+        from src.engine.scene.scene_manager import SceneManager
+        from src.engine.scenes.splash_scene import SplashScene
+
+        pygame.display.set_mode((800, 600))
+        ctx = GameContext(
+            input_manager=InputManager(), audio_manager=AudioManager(),
+            scene_manager=None, event_bus=EventBus(), clock=None,
+            save_manager=SaveManager(),
+        )
+        ctx.scene_manager = SceneManager(ctx)
+        escena = SplashScene(ctx)
+        superficie = pygame.Surface((800, 600))
+        escena.awake()
+        escena.start()
+        escena.on_enter()
+        for _ in range(5):
+            escena.update(1 / 60)
+            escena.draw(superficie)
+        escena.on_exit()          # aquí reventaba

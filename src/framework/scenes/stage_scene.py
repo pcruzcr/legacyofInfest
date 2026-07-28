@@ -288,46 +288,7 @@ class StageScene(BaseScene):
                 if ambient_path.exists():
                     self.context.audio.play_ambient(ambient_path, volume=0.3)
 
-        # Set up stage lighting
-        self._lighting.clear()
-        self._player_light = None
-        # BUG-075: si el TMX no declara zona, cae al atributo ZONE de la escena.
-        zone = self._stage_data.zone
-        if zone is None:
-            zone = getattr(self, "ZONE", 0)
-        # BUG-076: escalar las luces a la resolución actual.
-        scale_x = settings.INTERNAL_WIDTH / settings.REFERENCE_WIDTH
-        scale_y = settings.INTERNAL_HEIGHT / settings.REFERENCE_HEIGHT
-        _ls = lambda x, y, r, **kw: LightSource(  # noqa: E731
-            pygame.Vector2(x * scale_x, y * scale_y), radius=int(r * min(scale_x, scale_y)), **kw,
-        )
-        if zone == 0:
-            self._lighting.ambient_brightness = 1.0
-            self._stage_lights = [
-                _ls(80, 80, 70, color=(255, 220, 180), intensity=0.7),
-                _ls(240, 80, 70, color=(255, 220, 180), intensity=0.7),
-            ]
-        elif zone == 1:
-            self._lighting.ambient_brightness = 0.6
-            self._stage_lights = [
-                _ls(100, 60, 60, color=(200, 255, 180), intensity=0.6, flicker=True),
-            ]
-        elif zone == 2:
-            self._lighting.ambient_brightness = 0.3
-            self._stage_lights = [
-                _ls(100, 80, 80, color=(255, 100, 50), intensity=0.8, flicker=True),
-                _ls(200, 60, 50, color=(255, 150, 80), intensity=0.7, flicker=True),
-            ]
-        elif zone >= 3:
-            self._lighting.ambient_brightness = 0.2
-            self._stage_lights = [
-                _ls(80, 70, 90, color=(255, 80, 30), intensity=0.9, flicker=True),
-                _ls(180, 50, 70, color=(255, 120, 50), intensity=0.8, flicker=True),
-                _ls(280, 90, 60, color=(255, 60, 20), intensity=0.7, flicker=True),
-            ]
-        else:
-            self._lighting.ambient_brightness = 0.7
-            self._stage_lights = []
+        self._setup_lighting()
         self._vfx_handlers.clear()
         self._sfx_handlers.clear()
         try:
@@ -337,6 +298,67 @@ class StageScene(BaseScene):
             raise
         for sl in self._stage_lights:
             self._lighting.add_light(sl)
+
+    #: Brillo ambiente por zona cuando el TMX no declara `ambient_light`.
+    #:
+    #: F1.1 — antes esto era una cadena `if/elif` que además creaba las luces
+    #: con coordenadas fijas escritas en el motor. Un estudiante que
+    #: construyera su escenario en Tiled heredaba las dos luces del zone 0, en
+    #: (80, 80) y (240, 80), estuviera ahí su nivel o no. Ahora las luces se
+    #: colocan en el mapa y esta tabla sólo decide **cuánta oscuridad** hay si
+    #: nadie lo dijo.
+    #:
+    #: El zone 0 valía 1.0 —sin oscurecer—, así que todo el sistema de
+    #: iluminación era invisible en el único escenario terminado del juego.
+    AMBIENT_BY_ZONE: dict[int, float] = {
+        0: 0.62,   # prólogo: exterior nublado, se ve todo pero la luz se nota
+        1: 0.50,
+        2: 0.32,
+        3: 0.22,
+    }
+    AMBIENT_DEFAULT: float = 0.55
+
+    def _setup_lighting(self) -> None:
+        """Prepara la iluminación del escenario a partir del TMX.
+
+        Orden de precedencia, del más específico al más general:
+
+        1. `ambient_light` en las propiedades del mapa.
+        2. `AMBIENT_BY_ZONE[zone]`.
+        3. `AMBIENT_DEFAULT`.
+
+        Los focos vienen siempre del mapa (objetos de tipo `Light` en la capa
+        `Objects`). Si el mapa no declara ninguno, el escenario queda iluminado
+        sólo por la luz que acompaña al jugador, que es un resultado legítimo
+        y además una pista visual clara de que faltan focos.
+        """
+        self._lighting.clear()
+        self._player_light = None
+
+        # BUG-075: si el TMX no declara zona, cae al atributo ZONE de la escena.
+        zone = self._stage_data.zone
+        if zone is None:
+            zone = getattr(self, "ZONE", 0)
+
+        declarado = getattr(self._stage_data, "ambient_light", None)
+        if declarado is not None:
+            self._lighting.ambient_brightness = declarado
+        else:
+            self._lighting.ambient_brightness = self.AMBIENT_BY_ZONE.get(
+                zone, self.AMBIENT_DEFAULT)
+
+        self._stage_lights = [
+            LightSource(
+                position=pygame.Vector2(*spec.position),
+                radius=spec.radius,
+                color=spec.color,
+                intensity=spec.intensity,
+                flicker=spec.flicker,
+                flicker_speed=spec.flicker_speed,
+                flicker_amount=spec.flicker_amount,
+            )
+            for spec in getattr(self._stage_data, "lights", [])
+        ]
 
     def _subscribe_event_handlers(self) -> None:
         def _on_enemy_died(**data: Any) -> None:

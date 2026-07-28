@@ -238,6 +238,7 @@ Para instrucciones detalladas de registro y pruebas, consultar el documento orig
 | `DeathPit` | Rectángulo | — (caer aquí mata) |
 | `CameraLock` | Rectángulo | `lock_x`, `lock_y` (bool) |
 | `Waypoint` | Punto | `owner_id` — ruta para la entidad con ese nombre |
+| `Light` | — | — |
 
 ### Arquetipos de enemigo (capa `Objects`, objetos punto)
 
@@ -289,6 +290,6 @@ propiedad del objeto en Tiled.
 | *(ninguno)* o `Solid` | Colisión AABB completa |
 | `Platform` | Plataforma atravesable desde abajo |
 
-Total aceptado en `Objects`: **39** tipos.
+Total aceptado en `Objects`: **40** tipos.
 
 <!-- END GENERATED: tipos de objeto -->
