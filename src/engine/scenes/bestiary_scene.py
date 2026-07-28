@@ -78,11 +78,33 @@ class BestiaryScene(BaseScene):
         ]
         self._menu.ensure_valid()
 
+    def _volver(self) -> None:
+        """Vuelve al título, que es de donde se llega aquí.
+
+        AUD-092 — Esc dejaba al jugador en la pantalla equivocada
+        ---------------------------------------------------------
+        Esto llamaba a `scene_manager.pop`. Pero `TitleScene` abre el bestiario
+        con `replace`, que **sustituye** la cima de la pila en vez de apilar
+        encima, así que al hacer `pop` no aparecía el título: aparecía lo que
+        hubiera debajo, que según el camino recorrido era el menú de demos o
+        directamente la pantalla de inicio.
+
+        Medido: título -> demos -> Esc -> título -> bestiario -> Esc dejaba la
+        pila en `['SplashScene']`.
+
+        Sus dos hermanas —logros e inventario— ya usaban `replace(TitleScene)`,
+        que es el patrón correcto cuando se ha entrado con `replace`. Ésta se
+        quedó atrás.
+        """
+        from src.engine.scenes.title_scene import TitleScene
+
+        self.context.scene_manager.replace(TitleScene(self.context))
+
     def update(self, dt: float) -> None:
         self._menu.update(dt)
         handle_menu_navigation(
             self._menu, self.input,
-            on_cancel=self.context.scene_manager.pop,
+            on_cancel=self._volver,
         )
         # La ventana visible sigue al foco: la lista puede ser más larga que la
         # pantalla y el kit no sabe cuántas fichas caben aquí.

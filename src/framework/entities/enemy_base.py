@@ -321,6 +321,8 @@ class EnemyBase(BaseEntity):
         screen_x = int(self.position.x - camera_offset.x)
         screen_y = int(self.position.y - camera_offset.y)
 
+        self._draw_health_bar(surface, screen_x, screen_y)
+
         # Telegraph warning indicator
         if self.state == EnemyState.TELEGRAPHING:
             elapsed = self._telegraph_duration - self._telegraph_timer
@@ -379,6 +381,53 @@ class EnemyBase(BaseEntity):
             (screen_x, screen_y, self.rect.width, self.rect.height),
             1,
         )
+
+    #: Alto de la barra de vida, y a cuántos píxeles por encima del enemigo se
+    #: dibuja. Cuatro píxeles de alto es lo mínimo que se lee a esta escala.
+    _HEALTH_BAR_H = 3
+    _HEALTH_BAR_GAP = 6
+
+    def _draw_health_bar(
+        self, surface: pygame.Surface, screen_x: int, screen_y: int,
+    ) -> None:
+        """Barra de vida sobre el enemigo, sólo si ya ha recibido daño.
+
+        AUD-091 — los enemigos normales no tenían ninguna
+        --------------------------------------------------
+        `BossBase` sí dibuja la suya, y el jugador tiene sus corazones en el
+        HUD. Un enemigo corriente no tenía nada: la única señal de que un golpe
+        había entrado era un destello de 0,09 s. Con un Walker de 3 puntos de
+        vida y ataques de 0,5, hacen falta **seis impactos**, y durante los
+        cinco primeros el jugador no tiene forma de saber si está avanzando o
+        pegando al aire.
+
+        La barra aparece **sólo tras el primer golpe**. A plena vida no aporta
+        información y llenaría la pantalla de barras sobre enemigos intactos;
+        en cuanto falta un punto, es exactamente lo que hace falta ver.
+        """
+        if self.max_health <= 0 or self.current_health >= self.max_health:
+            return
+        if not self.is_alive:
+            return
+
+        ancho = self.rect.width
+        fraccion = max(0.0, min(1.0, self.current_health / self.max_health))
+        y = screen_y - self._HEALTH_BAR_GAP
+
+        # Fondo oscuro para que la barra se lea sobre cualquier terreno.
+        pygame.draw.rect(surface, (28, 20, 24),
+                         (screen_x - 1, y - 1, ancho + 2, self._HEALTH_BAR_H + 2))
+        # El color pasa de verde a rojo con la vida restante, para que la
+        # gravedad se lea sin contar píxeles.
+        relleno = int(ancho * fraccion)
+        color = (
+            int(220 - 40 * fraccion),
+            int(60 + 160 * fraccion),
+            60,
+        )
+        if relleno > 0:
+            pygame.draw.rect(surface, color,
+                             (screen_x, y, relleno, self._HEALTH_BAR_H))
 
     # ──────────────────────────────────────────────
     # Public methods (provided, do not override)
