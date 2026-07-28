@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import orjson
@@ -10,6 +11,8 @@ from src.engine.core import settings
 from src.engine.core.event_bus import EventBus
 from src.engine.core.events import Events
 from src.engine.core.user_settings import user_data_dir
+
+logger = logging.getLogger(__name__)
 
 ACHIEVEMENTS_PATH = user_data_dir() / "achievements.json"
 
@@ -282,8 +285,25 @@ class AchievementSystem:
                 if aid in self._progress:
                     self._progress[aid] = AchievementProgress.model_validate(pdata)
             self._stats = data.get("stats", {})
-        except (FileNotFoundError, orjson.JSONEncodeError, ValueError):
-            pass
+        # AUD-100 — la corrupción se tragaba en silencio.
+        #
+        # `orjson.JSONEncodeError` **es `TypeError`**, y codificar no puede
+        # fallar dentro de un `loads`: estaba de más. Lo que de verdad atrapa
+        # un fichero corrupto es `ValueError`, del que `orjson.JSONDecodeError`
+        # hereda. Así que el `except` funcionaba, pero por una razón distinta
+        # de la que aparentaba.
+        #
+        # El defecto real era el silencio. Los logros de un semestre se perdían sin una línea en
+        # el registro, y el estudiante veía todo bloqueado otra vez sin ninguna pista de por
+        # qué. `ProgresoAcademico.cargar` ya avisaba en el mismo caso; tres
+        # sitios del proyecto hacían lo contrario ante el mismo problema.
+        except FileNotFoundError:
+            logger.debug("achievements: sin fichero previo; se empieza de cero")
+        except (ValueError, TypeError):
+            logger.warning(
+                "achievements: %s ilegible; se empieza de cero",
+                ACHIEVEMENTS_PATH, exc_info=True,
+            )
 
     def get_all_achievements(self) -> list[tuple[AchievementDef, AchievementProgress]]:
         return [(self._defs[aid], self._progress[aid])
