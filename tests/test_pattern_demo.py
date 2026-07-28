@@ -235,3 +235,81 @@ class TestElRecuadroSeDibujaDondeApunta:
             if superficie.get_at((x, y))[:3] == amarillo
         ]
         assert not fuera, f"el recuadro invade la barra superior en {fuera[:3]}"
+
+
+class TestElModeloNoDependeDeLaVersionDeScikitLearn:
+    """F3.3 — dos estudiantes, dos versiones, dos resultados distintos.
+
+    `assets/models/professor_sample.pkl` se entrenó con scikit-learn 1.9.0. Al
+    cargarlo con otra versión la propia biblioteca avisa de «may lead to
+    breaking code or invalid results», y ese aviso sale por consola, donde
+    nadie lo lee. Un laboratorio que da resultados distintos según la máquina
+    no es un laboratorio.
+    """
+
+    def test_el_modelo_se_entrena_desde_el_dataset_del_repositorio(self):
+        from src.framework.processing import reference_model
+
+        assert reference_model.DATASET.exists(), (
+            "sin dataset no se puede reproducir el modelo, que era el problema"
+        )
+        modelo = reference_model.entrenar()
+        assert modelo is not None
+
+    def test_la_clave_de_cache_incluye_la_version_de_sklearn(self):
+        """Sin esto, actualizar sklearn devolvería el problema original."""
+        import sklearn
+
+        from src.framework.processing import reference_model
+
+        assert sklearn.__version__ in reference_model._clave_cache()
+
+    def test_la_clave_de_cache_incluye_el_dataset(self):
+        """Cambiar los datos tiene que invalidar el modelo cacheado."""
+        from src.framework.processing import reference_model
+
+        clave = reference_model._clave_cache()
+        assert "sin-datos" not in clave
+        assert len(clave.split("-")[-1]) == 16, (
+            "la clave no lleva huella del dataset"
+        )
+
+    def test_la_cache_se_guarda_fuera_del_repositorio(self):
+        """Un artefacto derivado y atado a una versión no debe versionarse.
+
+        Ése era justo el problema original: un binario en el repositorio que
+        nadie podía regenerar y que traía la versión de otra persona.
+        """
+        from pathlib import Path
+
+        from src.framework.processing import reference_model
+
+        raiz = Path(__file__).resolve().parent.parent
+        assert raiz not in reference_model.ruta_cacheada().parents
+
+    def test_la_escena_carga_el_modelo_sin_avisos_de_version(self, escena):
+        import warnings
+
+        with warnings.catch_warnings(record=True) as capturados:
+            warnings.simplefilter("always")
+            escena._load_default_model()
+        de_version = [
+            c for c in capturados
+            if "version" in str(c.message).lower()
+            or "Inconsistent" in type(c.message).__name__
+        ]
+        assert not de_version, (
+            f"la escena sigue avisando de versión: "
+            f"{[str(c.message)[:80] for c in de_version]}"
+        )
+        assert escena._model is not None, "la escena se quedó sin modelo"
+
+    def test_sin_dataset_el_laboratorio_se_abre_igual(self, monkeypatch):
+        """Quedarse sin modelo no puede impedir abrir la Unidad IX."""
+        from pathlib import Path
+
+        from src.framework.processing import reference_model
+
+        monkeypatch.setattr(
+            reference_model, "DATASET", Path("/no/existe/dataset.npz"))
+        assert reference_model.entrenar() is None
