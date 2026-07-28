@@ -278,3 +278,112 @@ class TestElCalificadorPuntuaDisenoYNoSoloEstructura:
         assert not desconocidos, (
             f"el calificador marca tipos válidos como desconocidos: {desconocidos}"
         )
+
+
+class TestElPrevisualizadorCierraElCicloDelEstudiante:
+    """F3.2 — hoy el estudiante coloca objetos en Tiled y no ve nada.
+
+    Los focos son el caso peor: en Tiled un `Light` es un rectángulo de 16x16
+    idéntico a cualquier otro objeto, así que ajustar `radius` o `intensity`
+    significaba lanzar el juego, cargar la partida y caminar hasta la zona.
+    Una partida entera por cada intento.
+    """
+
+    def test_dibuja_el_mapa_entero_y_no_una_ventana(self, tmp_path):
+        """El objetivo es ver la composición del nivel de un vistazo."""
+        import xml.etree.ElementTree as ET
+
+        r = _ejecutar("scripts/preview_tmx.py", TMX_STAGE0,
+                      "--salida", str(tmp_path / "vista.png"))
+        assert "Traceback" not in r.stderr, r.stderr[-600:]
+        salida = tmp_path / "vista.png"
+        assert salida.exists(), "no se generó la imagen"
+
+        raiz = ET.parse(RAIZ / TMX_STAGE0).getroot()
+        esperado = (int(raiz.get("width")) * int(raiz.get("tilewidth")),
+                    int(raiz.get("height")) * int(raiz.get("tileheight")))
+        import pygame
+        pygame.init()
+        if pygame.display.get_surface() is None:
+            pygame.display.set_mode((320, 180))
+        assert pygame.image.load(str(salida)).get_size() == esperado, (
+            "la vista no cubre el mapa completo"
+        )
+
+    def test_la_imagen_no_sale_en_blanco(self, tmp_path):
+        """Una vista previa vacía es peor que ninguna: engaña."""
+        import pygame
+
+        destino = tmp_path / "vista.png"
+        _ejecutar("scripts/preview_tmx.py", TMX_STAGE0, "--salida", str(destino))
+        pygame.init()
+        if pygame.display.get_surface() is None:
+            pygame.display.set_mode((320, 180))
+        pix = pygame.surfarray.array3d(
+            pygame.image.load(str(destino))).astype(float)
+        assert pix.std() > 10.0, (
+            f"la imagen es casi uniforme (desviación {pix.std():.1f}): no se "
+            "está dibujando el mapa"
+        )
+
+    def test_los_focos_se_dibujan_con_su_radio(self, tmp_path):
+        """La razón de ser de la herramienta.
+
+        Se compara la vista con y sin el calco de objetos: los círculos de
+        alcance tienen que aportar píxeles nuevos.
+        """
+        import numpy as np
+        import pygame
+
+        con = tmp_path / "con.png"
+        sin = tmp_path / "sin.png"
+        _ejecutar("scripts/preview_tmx.py", TMX_STAGE0, "--salida", str(con))
+        _ejecutar("scripts/preview_tmx.py", TMX_STAGE0, "--salida", str(sin),
+                  "--sin-luz")
+        pygame.init()
+        if pygame.display.get_surface() is None:
+            pygame.display.set_mode((320, 180))
+        a = pygame.surfarray.array3d(pygame.image.load(str(con))).astype(float)
+        b = pygame.surfarray.array3d(pygame.image.load(str(sin))).astype(float)
+        assert not np.array_equal(a, b), (
+            "--sin-luz da la misma imagen que con luz"
+        )
+
+    def test_la_hora_cambia_la_vista(self, tmp_path):
+        """Permite comprobar que un nivel se ve de noche antes de jugarlo."""
+        import pygame
+
+        dia, noche = tmp_path / "dia.png", tmp_path / "noche.png"
+        _ejecutar("scripts/preview_tmx.py", TMX_STAGE0, "--salida", str(dia),
+                  "--hora", "12")
+        _ejecutar("scripts/preview_tmx.py", TMX_STAGE0, "--salida", str(noche),
+                  "--hora", "23")
+        pygame.init()
+        if pygame.display.get_surface() is None:
+            pygame.display.set_mode((320, 180))
+        d = pygame.surfarray.array3d(pygame.image.load(str(dia))).astype(float)
+        n = pygame.surfarray.array3d(pygame.image.load(str(noche))).astype(float)
+        assert n.mean() < d.mean(), (
+            f"la noche ({n.mean():.1f}) no sale más oscura que el día "
+            f"({d.mean():.1f})"
+        )
+
+    def test_informa_de_lo_que_encontro(self, tmp_path):
+        """El resumen es la mitad del valor: dice si falta algo."""
+        r = _ejecutar("scripts/preview_tmx.py", TMX_STAGE0,
+                      "--salida", str(tmp_path / "v.png"))
+        for etiqueta in ("focos", "entidades", "puntos de control",
+                         "clima", "estación"):
+            assert etiqueta in r.stdout, f"el resumen no menciona '{etiqueta}'"
+
+    def test_un_mapa_roto_explica_qué_hacer_en_vez_de_reventar(self, tmp_path):
+        roto = tmp_path / "roto.tmx"
+        roto.write_text('<?xml version="1.0"?><map></map>', encoding="utf-8")
+        r = _ejecutar("scripts/preview_tmx.py", str(roto),
+                      "--salida", str(tmp_path / "v.png"))
+        assert "Traceback" not in r.stderr, (
+            f"vuelca la pila con un mapa roto:\n{r.stderr[-400:]}"
+        )
+        assert "validate_tmx" in r.stdout, (
+            "no remite al validador, que es la herramienta que diagnostica"
+        )
