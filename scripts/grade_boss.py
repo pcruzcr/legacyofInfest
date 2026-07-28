@@ -44,6 +44,49 @@ RUBRIC: dict[str, int] = {
 }
 
 
+def _llamadas_a(tree: ast.AST, nombre: str) -> list[ast.Call]:
+    """Todas las llamadas a una función o método con ese nombre."""
+    encontradas = []
+    for nodo in ast.walk(tree):
+        if not isinstance(nodo, ast.Call):
+            continue
+        f = nodo.func
+        if isinstance(f, ast.Name) and f.id == nombre:
+            encontradas.append(nodo)
+        elif isinstance(f, ast.Attribute) and f.attr == nombre:
+            encontradas.append(nodo)
+    return encontradas
+
+
+def _umbrales_en_fases(tree: ast.AST) -> int:
+    """Cuántos `BossPhase(health_threshold=...)` declara el jefe.
+
+    Es la forma que el framework espera, y la que usa el jefe de referencia
+    (AUD-104).
+    """
+    total = 0
+    for llamada in _llamadas_a(tree, "BossPhase"):
+        for kw in llamada.keywords:
+            if kw.arg == "health_threshold":
+                total += 1
+    return total
+
+
+def _ataques_declarados_en_fases(tree: ast.AST) -> list[str]:
+    """Nombres de ataque declarados dentro de `BossPhase(attacks=[...])`."""
+    nombres: list[str] = []
+    for llamada in _llamadas_a(tree, "BossPhase"):
+        for kw in llamada.keywords:
+            if kw.arg not in ("attacks", "attack_names", "ataques"):
+                continue
+            if isinstance(kw.value, (ast.List, ast.Tuple)):
+                nombres += [
+                    e.value for e in kw.value.elts
+                    if isinstance(e, ast.Constant) and isinstance(e.value, str)
+                ]
+    return nombres
+
+
 def grade_boss(path: Path) -> dict[str, Any]:
     result: dict[str, Any] = {
         "file": str(path),
@@ -148,7 +191,20 @@ def grade_boss(path: Path) -> dict[str, Any]:
         result["categories"]["phase_transitions"] = {"score": 0, "max": RUBRIC["phase_transitions"], "msg": "No phase transitions detected"}
 
     # Attack patterns
-    attack_methods = [n for n in methods if "attack" in n.lower() or "pattern" in n.lower()]
+    #
+    # AUD-104: antes esto buscaba métodos cuyo nombre contuviera "attack" o
+    # "pattern". El framework NO usa esa convención: el jefe de referencia
+    # llama a sus ataques `_do_stomp`, `_do_charge`, `_do_vine_toss`. El
+    # único método que casaba era `on_attack_fired`, así que un jefe con
+    # cuatro ataques se calificaba como si tuviera uno.
+    #
+    # Se cuenta ahora también el prefijo `_do_`, que es el que usa el
+    # framework, y los ataques declarados en `BossPhase(attacks=[...])`.
+    attack_methods = [
+        n for n in methods
+        if "attack" in n.lower() or "pattern" in n.lower() or n.startswith("_do_")
+    ]
+    attack_methods += _ataques_declarados_en_fases(tree)
     if len(attack_methods) >= 2:
         result["categories"]["attack_patterns"] = {"score": RUBRIC["attack_patterns"], "max": RUBRIC["attack_patterns"], "msg": f"{len(attack_methods)} attack method(s)"}
     elif len(attack_methods) == 1:
@@ -170,6 +226,12 @@ def grade_boss(path: Path) -> dict[str, Any]:
                 for child in ast.walk(node):
                     if isinstance(child, ast.Attribute) and "hp" in child.attr.lower():
                         hp_thresholds += 1
+    # AUD-104: la forma correcta de declarar umbrales en este framework es
+    # `BossPhase(health_threshold=...)` dentro de `set_phases`, no un `if`
+    # comparando contra `self.hp`. El jefe de referencia declara dos y
+    # sacaba 0/10 porque el calificador sólo miraba comparaciones sueltas.
+    hp_thresholds += _umbrales_en_fases(tree)
+
     if hp_thresholds >= 2:
         result["categories"]["hp_thresholds"] = {"score": RUBRIC["hp_thresholds"], "max": RUBRIC["hp_thresholds"], "msg": f"{hp_thresholds} HP threshold check(s)"}
     elif hp_thresholds == 1:
@@ -178,20 +240,57 @@ def grade_boss(path: Path) -> dict[str, Any]:
         result["categories"]["hp_thresholds"] = {"score": 0, "max": RUBRIC["hp_thresholds"], "msg": "No HP threshold checks"}
 
     # Telegraph state
-    has_telegraph = "telegraph" in methods or "telegraph" in str(source).lower()
+    # AUD-104: `telegraph_progress` y la duración del telegrafiado los
+    # aporta `BossBase`. Un jefe que lo usa —o que declara un tiempo de
+    # aviso en sus fases— está telegrafiando, aunque no escriba la palabra.
+    has_telegraph = (
+        "telegraph" in methods
+        or "telegraph" in source.lower()
+        or "windup" in source.lower()
+        or "wind_up" in source.lower()
+        or "aviso" in source.lower()
+    )
     if has_telegraph:
         result["categories"]["telegraph_state"] = {"score": RUBRIC["telegraph_state"], "max": RUBRIC["telegraph_state"], "msg": "telegraph state/method found"}
     else:
         result["categories"]["telegraph_state"] = {"score": 0, "max": RUBRIC["telegraph_state"], "msg": "No telegraph state"}
         result["warnings"].append("Add a telegraph/wind-up state before attacks")
 
-    # Hurt/damage states
-    has_hurt = "hurt" in methods or "damage" in methods or "take_damage" in methods
-    if has_hurt:
-        result["categories"]["hurt_damage_states"] = {"score": RUBRIC["hurt_damage_states"], "max": RUBRIC["hurt_damage_states"], "msg": "Has hurt/damage handler"}
+    # Respuesta al daño
+    #
+    # AUD-104: esto exigía un método llamado `take_damage` o `hurt`. **Esos
+    # nombres no existen en el framework**: la API real es `apply_hit` y
+    # `apply_hit_at`, las dos en `BossBase`. Ningún jefe correcto pasaba
+    # este criterio, y el que lo pasara sería porque se había escrito su
+    # propio sistema de daño en vez de usar el del motor — justo la lección
+    # contraria a la que enseña la asignatura.
+    #
+    # Lo que sí es una decisión de diseño del estudiante es **cómo responde**
+    # el jefe al daño: puntos débiles, hurtbox propia, animación de dolor, o
+    # una extensión de `apply_hit`.
+    respuestas = [
+        nombre for nombre in (
+            "apply_hit", "apply_hit_at", "take_damage", "hurt", "damage",
+            "on_hit", "_build_hurtbox",
+        ) if nombre in methods
+    ]
+    if "weak_points" in source or "add_weak_point" in source:
+        respuestas.append("weak_points")
+    if respuestas:
+        result["categories"]["hurt_damage_states"] = {
+            "score": RUBRIC["hurt_damage_states"], "max": RUBRIC["hurt_damage_states"],
+            "msg": f"responde al daño: {', '.join(sorted(set(respuestas)))}",
+        }
     else:
-        result["categories"]["hurt_damage_states"] = {"score": 0, "max": RUBRIC["hurt_damage_states"], "msg": "No hurt/damage handler"}
-        result["errors"].append("Add a take_damage or hurt method")
+        result["categories"]["hurt_damage_states"] = {
+            "score": 0, "max": RUBRIC["hurt_damage_states"],
+            "msg": "el jefe no define ninguna respuesta al daño",
+        }
+        result["errors"].append(
+            "Declara puntos débiles (`self.weak_points`), una hurtbox "
+            "(`_build_hurtbox`) o extiende `apply_hit`. La API de daño del "
+            "framework es `apply_hit` / `apply_hit_at`, no `take_damage`."
+        )
 
     # Event connections
     event_refs = 0
@@ -251,7 +350,27 @@ def main() -> int:
         print("No Python files found.")
         return 1
 
-    py_files = list(set(py_files))
+    # AUD-104: no se califican los ficheros que no son un jefe.
+    #
+    # `grade_boss.py student_templates/boss_template/*.py` calificaba también
+    # el `__init__.py` del paquete, le daba 0/100 y hundía la media a la
+    # mitad. Un profesor pasando el calificador sobre `submissions/*/` el día
+    # de la entrega habría visto una media falsa por cada paquete entregado.
+    #
+    # Se excluye también la clase base del framework: calificar `BossBase`
+    # —que no hereda de sí misma y no declara fases— da 0/100 y no significa
+    # nada. El CI lo hacía en cada ejecución.
+    py_files = [
+        f for f in set(py_files)
+        if f.name != "__init__.py"
+        and "__pycache__" not in f.parts
+        and f.name != "boss_base.py"
+    ]
+
+    if not py_files:
+        print("No hay ficheros de jefe que calificar "
+              "(se excluyen __init__.py y la clase base del framework).")
+        return 1
 
     all_results: list[dict[str, Any]] = []
     for pyf in sorted(py_files):

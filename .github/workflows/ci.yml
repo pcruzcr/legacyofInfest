@@ -113,5 +113,11 @@ jobs:
       - name: Grade reference stage
         run: python scripts/grade_stage.py assets/maps/ --json
 
+      # AUD-104: esto calificaba `boss_base.py`, la clase **base** del
+      # framework. No hereda de sí misma ni declara fases, así que sacaba
+      # 0/100 en cada ejecución y nadie lo miraba. Se califica el jefe de
+      # referencia, que es el que los estudiantes copian: si su nota baja, es
+      # que el calificador o el jefe han dejado de estar de acuerdo, y eso hay
+      # que verlo antes de un día de entrega.
       - name: Grade reference boss
-        run: python scripts/grade_boss.py src/framework/entities/boss_base.py --json
+        run: python scripts/grade_boss.py src/stages/boss_venado/boss_venado.py --json
