@@ -191,6 +191,11 @@ class LightSystem:
     def __init__(self, ambient_brightness: float = 0.3) -> None:
         self.lights: list[LightSource] = []
         self.ambient_brightness = ambient_brightness
+        #: Tinte de la luz ambiente. Blanco no tiñe. Lo usa el ciclo día/noche
+        #: (F2.1) para que el amanecer sea cálido y la madrugada azul: la hora
+        #: se comunica sobre todo por el color, no por la cantidad de luz, que
+        #: si baja demasiado deja el nivel injugable.
+        self.ambient_color: tuple[int, int, int] = (255, 255, 255)
         self._darkness_surf: pygame.Surface | None = None
         self._multiplier: pygame.Surface | None = None
 
@@ -211,10 +216,16 @@ class LightSystem:
     def render(self, target: pygame.Surface, camera_offset: pygame.Vector2) -> None:
         w, h = target.get_size()
 
-        ambient_val = int(self.ambient_brightness * 255)
         if self._multiplier is None or self._multiplier.get_size() != (w, h):
             self._multiplier = pygame.Surface((w, h), pygame.SRCALPHA)
-        self._multiplier.fill((ambient_val, ambient_val, ambient_val))
+        # El brillo modula cada canal del tinte, así que un tinte blanco da el
+        # gris neutro de siempre y uno cálido tiñe la sombra hacia el naranja.
+        b = self.ambient_brightness
+        self._multiplier.fill((
+            int(self.ambient_color[0] * b),
+            int(self.ambient_color[1] * b),
+            int(self.ambient_color[2] * b),
+        ))
 
         for light in self.lights:
             screen_pos = (

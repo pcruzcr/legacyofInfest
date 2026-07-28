@@ -127,6 +127,11 @@ class StageData:
     #: no declarado; la escena caerá a su tabla por zona.
     ambient_fx: str = ""
     ambient_fx_rate: float | None = None
+    #: Hora inicial del escenario, 0 a 24. `None` = no declarada (mediodía).
+    start_hour: float | None = None
+    #: Segundos reales que dura un ciclo completo. 0 congela el reloj, que es
+    #: el comportamiento de un escenario sin ciclo día/noche.
+    day_length: float = 0.0
 
 
 REQUIRED_LAYERS: tuple[str, ...] = (
@@ -277,6 +282,7 @@ class StageLoader:
         vignette = cls._parse_unit_prop(props, "vignette", 0.0, 0.6)
         ambient_fx = cls._parse_ambient_fx(props)
         ambient_fx_rate = cls._parse_unit_prop(props, "ambient_fx_rate", 0.0, 120.0)
+        start_hour, day_length = cls._parse_day_night(props)
 
         map_data = pyscroll.data.TiledMapData(tmx_data)
         with warnings.catch_warnings():
@@ -307,7 +313,29 @@ class StageLoader:
             vignette=vignette,
             ambient_fx=ambient_fx,
             ambient_fx_rate=ambient_fx_rate,
+            start_hour=start_hour,
+            day_length=day_length,
         )
+
+    @classmethod
+    def _parse_day_night(cls, props: dict[str, Any]) -> tuple[float | None, float]:
+        """Lee `start_hour` y `day_length` del mapa.
+
+        `start_hour` acepta un nombre (`dawn`, `dusk`, `night`...), un número
+        (`18.5`) o `HH:MM`. Los tres se admiten porque el nombre es lo que un
+        diseñador tiene en la cabeza, el número es lo que quiere quien está
+        ajustando, y `HH:MM` es lo que se escribe sin pensar.
+
+        `day_length` va en **segundos reales**: 300 significa que el ciclo
+        completo dura cinco minutos de partida. Cero congela el reloj.
+        """
+        from src.framework.stage.day_night import RelojDeMundo
+
+        hora = None
+        if "start_hour" in props:
+            hora = RelojDeMundo.hora_desde_texto(props.get("start_hour"))
+        duracion = cls._parse_unit_prop(props, "day_length", 0.0, 36000.0) or 0.0
+        return hora, duracion
 
     @classmethod
     def _parse_ambient_fx(cls, props: dict[str, Any]) -> str:
