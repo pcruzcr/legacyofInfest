@@ -33,6 +33,7 @@ from src.engine.scenes.demo_common import (
     draw_top_bar,
     save_png,
 )
+from src.engine.scenes.demo_layout import area_de_contenido
 from src.engine.utils.asset_loader import AssetLoader
 
 if TYPE_CHECKING:
@@ -42,8 +43,19 @@ if TYPE_CHECKING:
 class ComboDemoScene(BaseScene):
     PANEL_W = 260
     PANEL_H = 160
+    #: Radio y grosor heredados del diseño de 320x224. Se conservan como
+    #: valores públicos porque hay pruebas que los leen; el dibujado usa las
+    #: medidas derivadas del área útil que hay debajo.
     NODE_R = 14
     WINDOW_BAR_H = 8
+
+    # -- medidas derivadas del área útil (AUD-094) ------------------
+    _MARGEN_SUPERIOR = 24
+    _MARGEN_INFERIOR = 16
+    _SALTO = 26
+    _ANCHO_BARRA = 360
+    _RADIO_NODO = 34
+    _SEPARACION_NODOS = 200
 
     def __init__(self, context: GameContext) -> None:
         super().__init__(context)
@@ -118,69 +130,91 @@ class ComboDemoScene(BaseScene):
         if reason:
             self._hit_log.append(f"[{reason}] — reset")
 
+    def _centrado(self, surface: pygame.Surface, texto: pygame.Surface, y: int) -> None:
+        """Escribe centrado horizontalmente en el área útil."""
+        area = area_de_contenido()
+        surface.blit(texto, (area.centerx - texto.get_width() // 2, y))
+
     def draw(self, surface: pygame.Surface) -> None:
+        """Diagrama de la máquina de estados, centrado.
+
+        AUD-094 — la máquina de estados vivía en la esquina
+        ---------------------------------------------------
+        Esto empezaba en ``x = 20; y = 40`` y bajaba en saltos de 16 a 30 px:
+        una columna estrecha pegada al borde izquierdo, escrita para 320x224.
+        Medido sobre los 800x600 reales, el contenido ocupaba x[20,273]
+        y[43,238] —dos de las nueve celdas de una rejilla 3x3 sobre el área
+        útil— y el resto de la pantalla estaba en negro.
+
+        Ahora todo se mide desde el centro del área útil y los nodos se
+        dimensionan con ella, que es lo que hace legible el diagrama desde el
+        fondo de un aula.
+        """
         surface.fill(COLOR_BG)
         draw_top_bar(surface, "COMBO STATE MACHINE", "Demo")
 
-        x = 20
-        y = 40
-        # Title
-        title = self._font_medium.render("Chain: Z → Z → X", True, COLOR_HIGHLIGHT)
-        surface.blit(title, (x, y))
-        y += 30
+        area = area_de_contenido()
+        cx = area.centerx
+        y = area.y + self._MARGEN_SUPERIOR
 
-        # Window bar
+        title = self._font_medium.render("Chain: Z → Z → X", True, COLOR_HIGHLIGHT)
+        self._centrado(surface, title, y)
+        y += title.get_height() + self._SALTO
+
+        # Barra de la ventana de combo, centrada y del ancho del diagrama
+        ancho_barra = self._ANCHO_BARRA
+        bx = cx - ancho_barra // 2
+        alto_barra = self.WINDOW_BAR_H
+        pygame.draw.rect(surface, (60, 60, 80), (bx, y, ancho_barra, alto_barra))
         if self._combo_timer > 0:
             ratio = max(0.0, min(1.0, self._combo_timer / settings.COMBO_WINDOW))
-            bw = int(180 * ratio)
-            pygame.draw.rect(surface, (60, 60, 80), (x, y, 180, self.WINDOW_BAR_H))
-            pygame.draw.rect(surface, COLOR_ACCENT, (x, y, bw, self.WINDOW_BAR_H))
-        else:
-            pygame.draw.rect(surface, (60, 60, 80), (x, y, 180, self.WINDOW_BAR_H))
+            pygame.draw.rect(surface, COLOR_ACCENT,
+                             (bx, y, int(ancho_barra * ratio), alto_barra))
         label = self._font_small.render("Combo window", True, COLOR_TEXT)
-        surface.blit(label, (x + 190, y - 2))
-        y += 30
+        self._centrado(surface, label, y + alto_barra + 6)
+        y += alto_barra + label.get_height() + self._SALTO + 6
 
-        # Nodes
-        nodes = [
-            ("Z", self._last_type == "SHORT"),
-            ("X", self._last_type == "LONG"),
+        # Nodos del diagrama, repartidos alrededor del centro
+        radio = self._RADIO_NODO
+        separacion = self._SEPARACION_NODOS
+        nodes = [("Z", self._last_type == "SHORT"), ("X", self._last_type == "LONG")]
+        ny = y + radio
+        posiciones = [
+            cx - separacion // 2 + i * separacion for i in range(len(nodes))
         ]
-        for i, (sym, active) in enumerate(nodes):
-            nx = x + 40 + i * 60
-            ny = y + 20
-            color = COLOR_HIGHLIGHT if active else (80, 80, 100)
-            pygame.draw.circle(surface, color, (nx, ny), self.NODE_R)
-            txt = self._font_medium.render(sym, True, (20, 20, 20))
-            surface.blit(txt, (nx - txt.get_width() // 2, ny - txt.get_height() // 2))
 
-        # Arrow between nodes
         if self._last_type:
             pygame.draw.line(surface, COLOR_ACCENT,
-                             (x + 40 + 20, y + 20),
-                             (x + 40 + 100 - 20, y + 20), 3)
+                             (posiciones[0] + radio, ny),
+                             (posiciones[1] - radio, ny), 4)
 
-        y += 70
+        for (sym, active), nx in zip(nodes, posiciones, strict=True):
+            color = COLOR_HIGHLIGHT if active else (80, 80, 100)
+            pygame.draw.circle(surface, color, (nx, ny), radio)
+            txt = self._font_large.render(sym, True, (20, 20, 20))
+            surface.blit(txt, (nx - txt.get_width() // 2, ny - txt.get_height() // 2))
 
-        # Combo count and multiplier
+        y = ny + radio + self._SALTO
+
         count_txt = self._font_large.render(
             f"Combo: x{self._combo_count}" if self._combo_count > 0 else "Combo: —",
             True, COLOR_HIGHLIGHT if self._combo_count > 0 else COLOR_TEXT,
         )
-        surface.blit(count_txt, (x, y))
-        y += 28
+        self._centrado(surface, count_txt, y)
+        y += count_txt.get_height() + 6
+
         idx = min(max(0, self._combo_count - 1), len(settings.COMBO_DAMAGE_MULT) - 1)
         mult = settings.COMBO_DAMAGE_MULT[idx] if self._combo_count > 0 else 1.0
-        mult_txt = self._font_medium.render(
-            f"Multiplier: {mult}x", True, COLOR_ACCENT,
-        )
-        surface.blit(mult_txt, (x, y))
-        y += 30
+        mult_txt = self._font_medium.render(f"Multiplier: {mult}x", True, COLOR_ACCENT)
+        self._centrado(surface, mult_txt, y)
+        y += mult_txt.get_height() + self._SALTO
 
-        # Log
-        for line in self._hit_log[-4:]:
-            log_txt = self._font_small.render(line, True, COLOR_TEXT)
-            surface.blit(log_txt, (x, y))
-            y += 16
+        # El registro se ancla abajo: así no salta cada vez que crece.
+        salto_log = self._font_small.get_height() + 4
+        registro = self._hit_log[-4:]
+        y_log = max(y, area.bottom - self._MARGEN_INFERIOR - salto_log * len(registro))
+        for line in registro:
+            self._centrado(surface, self._font_small.render(line, True, COLOR_TEXT), y_log)
+            y_log += salto_log
 
         draw_bottom_bar(surface, "Z: Light | X: Heavy | ESC: Back")

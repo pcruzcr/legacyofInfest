@@ -36,6 +36,12 @@ from src.engine.scenes.demo_common import (
     draw_top_bar,
     save_png,
 )
+from src.engine.scenes.demo_layout import (
+    AUTHORED_H,
+    AUTHORED_W,
+    Lienzo,
+    area_con_columna,
+)
 from src.engine.utils.asset_loader import AssetLoader
 
 if TYPE_CHECKING:
@@ -47,11 +53,18 @@ SHAPE_PTS = [(0, -30), (20, 10), (0, 30), (-20, 10)]
 
 
 class TransformLabScene(BaseScene):
+    #: Origen del sistema de coordenadas, en unidades de autoría. El centro
+    #: del lienzo, para que la figura sin transformar aparezca centrada.
+    _ORIGEN_X: float = AUTHORED_W / 2.0
+    _ORIGEN_Y: float = AUTHORED_H / 2.0
+    #: Ancho de la columna donde van la matriz y las lecturas numéricas.
+    _ANCHO_COLUMNA: int = 260
+
     def __init__(self, context: GameContext) -> None:
         super().__init__(context)
         self._mode: int = 0
-        self._tx: float = 160.0
-        self._ty: float = 100.0
+        self._tx: float = self._ORIGEN_X
+        self._ty: float = self._ORIGEN_Y
         self._angle: float = 0.0
         self._sx: float = 1.0
         self._sy: float = 1.0
@@ -70,7 +83,7 @@ class TransformLabScene(BaseScene):
         self._status_timer: float = 0.0
 
     def _reset(self) -> None:
-        self._tx, self._ty = 160.0, 100.0
+        self._tx, self._ty = self._ORIGEN_X, self._ORIGEN_Y
         self._angle = 0.0
         self._sx, self._sy = 1.0, 1.0
         self._shx, self._shy = 0.0, 0.0
@@ -193,51 +206,69 @@ class TransformLabScene(BaseScene):
         return (x, y)
 
     def draw(self, surface: pygame.Surface) -> None:
+        """Dibuja la figura centrada y las lecturas en su propia columna.
+
+        AUD-094 — la figura vivía en la esquina
+        ---------------------------------------
+        Todo esto estaba escrito para una pantalla de 320x224: el origen en
+        `(160, 100)`, la rejilla cada 32 px, el texto en `x = 4`. Sobre los
+        800x600 reales el contenido medía x[4,247] y[33,199] —el cuadrante
+        superior izquierdo— y las tres cuartas partes de la pantalla estaban
+        vacías.
+
+        La aritmética de la transformación **no cambia**: sigue operando en
+        coordenadas de autoría, que son las que aparecen en la pizarra. Sólo
+        cambia el último paso, la traducción a píxeles, que ahora pasa por el
+        lienzo.
+        """
         surface.fill(COLOR_BG)
         draw_top_bar(surface, "TRANSFORM LAB", "UNIT II/III")
 
-        # Grid
-        for x in range(0, settings.INTERNAL_WIDTH, 32):
-            pygame.draw.line(surface, (20, 20, 40), (x, 0), (x, settings.INTERNAL_HEIGHT), 1)
-        for y in range(0, settings.INTERNAL_HEIGHT, 32):
-            pygame.draw.line(surface, (20, 20, 40), (0, y), (settings.INTERNAL_WIDTH, y), 1)
+        columna, escenario = area_con_columna(self._ANCHO_COLUMNA)
+        lienzo = Lienzo(AUTHORED_W, AUTHORED_H, area=escenario)
 
-        # Axis indicator
-        center = (160, 100)
-        pygame.draw.line(surface, (60, 60, 100), center, (center[0] + 40, center[1]), 1)
-        pygame.draw.line(surface, (60, 60, 100), center, (center[0], center[1] + 40), 1)
+        # Rejilla: se dibuja en el escenario, no sobre la columna de texto,
+        # con el paso de autoría (32 px) escalado.
+        paso = lienzo.l(32)
+        for x in range(escenario.left, escenario.right, paso):
+            pygame.draw.line(surface, (20, 20, 40), (x, escenario.top), (x, escenario.bottom), 1)
+        for y in range(escenario.top, escenario.bottom, paso):
+            pygame.draw.line(surface, (20, 20, 40), (escenario.left, y), (escenario.right, y), 1)
 
-        # Original shape (ghost)
-        orig_pts = [(160 + x, 100 + y) for x, y in SHAPE_PTS]
+        # Ejes en el origen de autoría
+        center = lienzo.p(self._ORIGEN_X, self._ORIGEN_Y)
+        pygame.draw.line(surface, (60, 60, 100), center, (center[0] + lienzo.l(40), center[1]), 1)
+        pygame.draw.line(surface, (60, 60, 100), center, (center[0], center[1] + lienzo.l(40)), 1)
+
+        # Figura original (fantasma)
+        orig_pts = [lienzo.p(self._ORIGEN_X + x, self._ORIGEN_Y + y) for x, y in SHAPE_PTS]
         pygame.draw.polygon(surface, (40, 40, 60), orig_pts, 1)
 
-        # Transformed shape
-        tpts = [self._transform_point(p) for p in SHAPE_PTS]
-        pygame.draw.polygon(surface, (80, 200, 255), tpts, 2)
-        # Fill with alpha-like effect
-        pygame.draw.polygon(surface, (80, 200, 255, 60), tpts, 1)
+        # Figura transformada
+        tpts = [lienzo.p(*self._transform_point(p)) for p in SHAPE_PTS]
+        pygame.draw.polygon(surface, (80, 200, 255), tpts, max(2, lienzo.l(1)))
 
-        # Label
-        label = self._font_medium.render(f"  Mode: {MODE_NAMES[self._mode]}  ", True, COLOR_HIGHLIGHT)
-        surface.blit(label, (4, 24))
+        # Columna de lecturas
+        x_txt = columna.x + 8
+        label = self._font_medium.render(f"Mode: {MODE_NAMES[self._mode]}", True, COLOR_HIGHLIGHT)
+        surface.blit(label, (x_txt, columna.y + 8))
 
-        # Matrix info
+        salto = self._font_small.get_height() + 2
+        y_txt = columna.y + 12 + label.get_height() + salto
+
         if self._show_matrix:
-            matrix_lines = self._build_matrix_lines()
-            for i, line in enumerate(matrix_lines):
-                txt = self._font_small.render(line, True, COLOR_ACCENT)
-                surface.blit(txt, (4, 44 + i * 14))
+            for line in self._build_matrix_lines():
+                surface.blit(self._font_small.render(line, True, COLOR_ACCENT), (x_txt, y_txt))
+                y_txt += salto
+            y_txt += salto
 
-        # Current values
-        val_lines = self._build_value_lines()
-        for i, line in enumerate(val_lines):
-            txt = self._font_small.render(line, True, COLOR_TEXT)
-            surface.blit(txt, (4, 110 + i * 14))
+        for line in self._build_value_lines():
+            surface.blit(self._font_small.render(line, True, COLOR_TEXT), (x_txt, y_txt))
+            y_txt += salto
 
-        # Controls
         controls = self._build_controls_text()
         ct = self._font_small.render(controls, True, COLOR_TEXT)
-        surface.blit(ct, (4, 190))
+        surface.blit(ct, (x_txt, min(y_txt + salto, BOTTOM_BAR_Y - ct.get_height() - 24)))
 
         # Status
         if self._status_msg:

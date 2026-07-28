@@ -40,6 +40,7 @@ from src.engine.scenes.demo_common import (
     draw_top_bar,
     save_png,
 )
+from src.engine.scenes.demo_layout import TOP_BAR_H, Lienzo, area_de_contenido
 from src.engine.utils.asset_loader import AssetLoader
 
 if TYPE_CHECKING:
@@ -54,8 +55,19 @@ TILE_SIZE = 32
 PLAYER_W = 20
 PLAYER_H = 32
 
+#: Tamaño del mundo del laboratorio, en unidades de autoría. Las plataformas
+#: de `_build_level` están escritas dentro de esta caja; el lienzo la lleva a
+#: la pantalla real (AUD-094).
+MUNDO_W = 400
+MUNDO_H = 224
+#: Espacio reservado bajo el escenario para la explicación del modo actual.
+ALTO_EXPLICACION = 150
+
 
 class CollisionLabScene(BaseScene):
+    #: Alto reservado arriba para la etiqueta de modo y la línea de controles.
+    _ALTO_CABECERA = 48
+
     def __init__(self, context: GameContext) -> None:
         super().__init__(context)
         self._mode: int = 2  # start with correct mode
@@ -197,9 +209,13 @@ class CollisionLabScene(BaseScene):
         else:
             self._resolve_x_first(dt)
 
-        # Keep in bounds
-        self._px = max(0.0, min(settings.INTERNAL_WIDTH - PLAYER_W, self._px))
-        if self._py > settings.INTERNAL_HEIGHT:
+        # AUD-094: los límites van en unidades del mundo, no de la pantalla.
+        # Antes se recortaba contra INTERNAL_WIDTH (800) sobre un mundo de 400
+        # de ancho: el jugador podía salirse del nivel por la derecha y quedar
+        # en el vacío, sin plataformas contra las que colisionar, que es
+        # justamente lo que la escena existe para enseñar.
+        self._px = max(0.0, min(MUNDO_W - PLAYER_W, self._px))
+        if self._py > MUNDO_H:
             self._py = self._spawn_y
             self._vy = 0.0
 
@@ -318,67 +334,81 @@ class CollisionLabScene(BaseScene):
             f"prev_bottom={prev_bottom:.0f}"
         )
 
+    def _escenario(self) -> pygame.Rect:
+        """La franja donde vive el nivel, dejando sitio a la explicación."""
+        area = area_de_contenido()
+        alto = max(120, area.h - ALTO_EXPLICACION - self._ALTO_CABECERA)
+        return pygame.Rect(area.x, area.y + self._ALTO_CABECERA, area.w, alto)
+
     def draw(self, surface: pygame.Surface) -> None:
+        """Nivel y jugador centrados; la explicación, debajo.
+
+        AUD-094 — el nivel se dibujaba a tamaño de miniatura
+        ----------------------------------------------------
+        Las plataformas se definen en un mundo de 400x224 —``Rect(0, 180,
+        160, 16)`` para el suelo, ``Rect(160, 140, 16, 56)`` para el muro que
+        provoca el fallo que la escena enseña— y se dibujaban como píxeles de
+        pantalla sobre 800x600. Medido, el nivel entero ocupaba x[0,399]
+        y[33,196]: el cuarto superior izquierdo, con el muro de 16 px de
+        ancho prácticamente invisible desde el fondo del aula.
+
+        **La física no se toca.** Sigue en unidades de autoría, que es donde
+        están escritas las tres resoluciones que se comparan (ninguna, con
+        fallo, correcta). Escalar el mundo cambiaría los números que se
+        comentan en clase. Sólo se escala el trazo.
+        """
         surface.fill(COLOR_BG)
         draw_top_bar(surface, "COLLISION LAB", "UNIT VI")
-        cam_x = 0
-        cam_y = 0
 
-        # Draw platforms
+        escenario = self._escenario()
+        lienzo = Lienzo(MUNDO_W, MUNDO_H, area=escenario)
+
+        # Plataformas sólidas
         for tile in self._platforms:
-            color = (80, 100, 80)  # solid green-gray
-            pygame.draw.rect(surface, color,
-                             (tile.x + cam_x, tile.y + cam_y, tile.w, tile.h))
-            pygame.draw.rect(surface, (60, 80, 60),
-                             (tile.x + cam_x, tile.y + cam_y, tile.w, tile.h), 1)
+            pygame.draw.rect(surface, (80, 100, 80), lienzo.r(tile.x, tile.y, tile.w, tile.h))
+            pygame.draw.rect(surface, (60, 80, 60), lienzo.r(tile.x, tile.y, tile.w, tile.h), 1)
 
+        # Plataformas de un solo sentido, con su flecha
         for plat in self._one_way_rects:
-            color = (60, 130, 200)  # blue for one-way
-            pygame.draw.rect(surface, color,
-                             (plat.x + cam_x, plat.y + cam_y, plat.w, plat.h))
-            # Arrow indicating one-way direction
-            mid_x = plat.x + plat.w // 2
+            pygame.draw.rect(surface, (60, 130, 200), lienzo.r(plat.x, plat.y, plat.w, plat.h))
+            mid_x = plat.x + plat.w / 2
             pygame.draw.polygon(surface, (100, 200, 255), [
-                (mid_x + cam_x, plat.y + cam_y),
-                (mid_x - 5 + cam_x, plat.y + 6 + cam_y),
-                (mid_x + 5 + cam_x, plat.y + 6 + cam_y),
+                lienzo.p(mid_x, plat.y),
+                lienzo.p(mid_x - 5, plat.y + 6),
+                lienzo.p(mid_x + 5, plat.y + 6),
             ])
 
-        # Draw player
-        px = int(self._px)
-        py = int(self._py)
+        # Jugador
         if self._mode == 1:
-            player_color = (255, 120, 80)  # orange-red for bug mode
+            player_color = (255, 120, 80)   # naranja: modo con el fallo
         elif self._mode == 0:
-            player_color = (120, 120, 200)  # purple for no collision
+            player_color = (120, 120, 200)  # morado: sin colisión
         else:
-            player_color = (80, 200, 120)  # green for correct
+            player_color = (80, 200, 120)   # verde: resolución correcta
 
-        pygame.draw.rect(surface, player_color,
-                         (px + cam_x, py + cam_y, PLAYER_W, PLAYER_H))
-        pygame.draw.rect(surface, (255, 255, 255),
-                         (px + cam_x, py + cam_y, PLAYER_W, PLAYER_H), 1)
+        cuerpo = lienzo.r(self._px, self._py, PLAYER_W, PLAYER_H)
+        pygame.draw.rect(surface, player_color, cuerpo)
+        pygame.draw.rect(surface, (255, 255, 255), cuerpo, 1)
 
-        # Grounded indicator
+        # Indicador de apoyo en el suelo
         if self._is_grounded:
             pygame.draw.line(surface, (255, 255, 100),
-                             (px, py + PLAYER_H),
-                             (px + PLAYER_W, py + PLAYER_H), 2)
+                             (cuerpo.left, cuerpo.bottom), (cuerpo.right, cuerpo.bottom), 3)
 
-        # Mode label
+        # Etiqueta de modo y controles, encima del escenario
         mode_color = COLOR_HIGHLIGHT if self._mode == 2 else (
             COLOR_ERROR if self._mode == 1 else COLOR_ACCENT)
         mode_label = self._font_medium.render(
-            f"  Mode: {MODE_NAMES[self._mode]}  ", True, mode_color)
-        surface.blit(mode_label, (4, 24))
+            f"Mode: {MODE_NAMES[self._mode]}", True, mode_color)
+        surface.blit(mode_label, (8, TOP_BAR_H + 6))
 
-        # Controls hint
         hint = self._font_small.render(
-            "  Arrows: move  |  SPACE: jump  |  TAB: mode  |  B: auto-bug  |  R: reset  |  ESC: exit", True, COLOR_TEXT)
-        surface.blit(hint, (4, 42))
+            "Arrows: move  |  SPACE: jump  |  TAB: mode  |  B: auto-bug  |  R: reset  |  ESC: exit",
+            True, COLOR_TEXT)
+        surface.blit(hint, (8, TOP_BAR_H + 8 + mode_label.get_height()))
 
-        # Collision info panel (bottom area)
-        info_y = 60
+        # La explicación va bajo el escenario, no encima de él
+        info_y = escenario.bottom + 4
         lines = [
             f"Player pos: ({self._px:.0f}, {self._py:.0f})",
             f"Velocity: ({self._vx:.1f}, {self._vy:.1f})",
@@ -412,9 +442,12 @@ class CollisionLabScene(BaseScene):
         if self._auto_bug:
             lines += ["", "[AUTO-BUG] Player walks right — watch the wall-climb!"]
 
+        salto = self._font_small.get_height() + 2
         for i, line in enumerate(lines):
-            txt = self._font_small.render(line, True, COLOR_TEXT)
-            surface.blit(txt, (4, info_y + i * 14))
+            y = info_y + i * salto
+            if y + salto > BOTTOM_BAR_Y - 4:
+                break
+            surface.blit(self._font_small.render(line, True, COLOR_TEXT), (8, y))
 
         # Status message
         if self._status_msg:

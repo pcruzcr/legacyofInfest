@@ -28,8 +28,23 @@ def _env_int(key: str, default: int) -> int:
 TOP_BAR_H: int = max(28, min(48, int(settings.INTERNAL_HEIGHT * 0.055)))
 # Bottom bar: 4% of height, min 20px, max 32px
 BOTTOM_BAR_H: int = max(20, min(32, int(settings.INTERNAL_HEIGHT * 0.04)))
-# Panel width: 32% of total width each, min 200px
-PANEL_W: int = max(200, int(settings.INTERNAL_WIDTH * 0.32))
+# Panel width (AUD-094): los dos paneles se reparten el ancho dejando una
+# canaleta entre ellos.
+#
+# Antes esto era `INTERNAL_WIDTH * 0.32`, un 32 % heredado de cuando había
+# tres columnas. Con dos paneles sobre 800 px daba 256 de panel y **288 de
+# hueco central**: el vacío era más ancho que cada panel. Medido con una
+# rejilla de 3x3 sobre el área útil, cuatro demos —filtros, visión, patrones
+# y el constructor de tuberías— daban el patrón `#.#/#.#/#.#`: contenido en
+# los bordes, columna central muerta. Es la mitad de la queja «la imagen no
+# está centrada»: no es que estuviera descentrada, es que estaban las dos
+# empujadas contra los bordes.
+#
+# La canaleta se fija en píxeles y no en porcentaje porque separa dos
+# imágenes que se comparan una junto a otra: lo que hace falta es un borde
+# visible, no una proporción.
+PANEL_GUTTER: int = 24
+PANEL_W: int = max(200, (settings.INTERNAL_WIDTH - PANEL_GUTTER) // 2)
 LEFT_PANEL_W: int = PANEL_W
 RIGHT_PANEL_W: int = PANEL_W
 # Panel height: fill space between top bar and bottom bar minus reserves
@@ -48,6 +63,143 @@ PANEL_SIZE: tuple[int, int] = (PANEL_W, PANEL_H)
 # Center area (between panels) for controls/info
 CENTER_X: int = LEFT_PANEL_W + 8
 CENTER_W: int = max(100, RIGHT_PANEL_X - LEFT_PANEL_W - 16)
+
+# ── Área útil y lienzo de autoría (AUD-094) ────────────────────────
+#
+# El problema medido
+# ------------------
+# Las demos académicas se escribieron cuando la resolución interna era
+# 320x224 y nunca se migraron a 800x600. Sus coordenadas están puestas a
+# mano: `center = (160, 100)` en el laboratorio de transformaciones,
+# `x = 20; y = 40` en el de combos, un tarjetón de color de 312 px de ancho
+# en el de teoría del color. Medido sobre la pantalla real:
+#
+#   TransformLabScene   contenido en x[4,247] y[33,199]   centroide desviado (-312,-196)
+#   ComboDemoScene      contenido en x[20,273] y[43,238]  centroide desviado (-308,-187)
+#   VectorLabScene      contenido en x[8,379] y[40,159]   centroide desviado (-286,-212)
+#
+# Es decir: el elemento que el estudiante manipula vive en el cuadrante
+# superior izquierdo y las tres cuartas partes de la pantalla están vacías.
+# Es el mismo defecto que AUD-093 en el mapa del mundo, en otras trece
+# pantallas.
+#
+# La solución
+# -----------
+# No reescribir a mano los cientos de números de las trece escenas: eso es
+# donde se introducen los errores. En su lugar, un lienzo que traduce las
+# coordenadas de autoría (320x224) al área útil real, escalando de forma
+# uniforme y centrando el sobrante. La escena sigue razonando en el sistema
+# en el que fue escrita —que además es el que aparece en la pizarra cuando
+# se explica una transformación afín— y el lienzo se ocupa del resto.
+#
+# El texto no se escala: las fuentes ya se calculan desde INTERNAL_WIDTH y
+# están a su tamaño correcto. Lo que se escala es la geometría, que es lo
+# que estaba encogido.
+
+#: Área entre la barra superior y la inferior. Todo lo que dibuja una demo
+#: cabe aquí; fuera queda tapado por las barras.
+CONTENT_X: int = 0
+CONTENT_Y: int = TOP_BAR_H
+CONTENT_W: int = settings.INTERNAL_WIDTH
+CONTENT_H: int = max(1, BOTTOM_BAR_Y - TOP_BAR_H)
+
+#: Tamaño para el que se escribieron las demos originalmente.
+AUTHORED_W: int = 320
+AUTHORED_H: int = 224
+
+
+def area_de_contenido() -> pygame.Rect:
+    """El rectángulo utilizable, sin las barras."""
+    return pygame.Rect(CONTENT_X, CONTENT_Y, CONTENT_W, CONTENT_H)
+
+
+def centrar_bloque(ancho: int, alto: int) -> tuple[int, int]:
+    """Esquina superior izquierda para que un bloque quede centrado."""
+    area = area_de_contenido()
+    return (area.x + (area.w - ancho) // 2, area.y + (area.h - alto) // 2)
+
+
+def area_con_columna(ancho_columna: int) -> tuple[pygame.Rect, pygame.Rect]:
+    """Parte el área útil en una columna de texto y un escenario.
+
+    Devuelve ``(columna, escenario)``. Varias demos escriben lecturas
+    numéricas —matrices, componentes de un vector, pasos de una conversión de
+    color— junto a la figura que el estudiante manipula. Antes se apilaban
+    ambas en la esquina; así el texto tiene su sitio y la figura el suyo.
+    """
+    area = area_de_contenido()
+    ancho_columna = max(0, min(ancho_columna, area.w - 120))
+    columna = pygame.Rect(area.x, area.y, ancho_columna, area.h)
+    escenario = pygame.Rect(
+        area.x + ancho_columna, area.y, area.w - ancho_columna, area.h,
+    )
+    return (columna, escenario)
+
+
+class Lienzo:
+    """Traduce coordenadas de autoría al área útil, escaladas y centradas.
+
+    ``Lienzo(320, 224)`` sobre una pantalla de 800x600 da escala 2.42 y
+    márgenes de 12 px a los lados: lo que antes ocupaba una esquina pasa a
+    llenar la pantalla.
+
+    Se escala de forma **uniforme** —el mismo factor en las dos dimensiones—
+    porque estas escenas enseñan geometría: un círculo tiene que seguir
+    siendo un círculo y una rotación tiene que conservar los ángulos. Un
+    escalado no uniforme convertiría la lección en una mentira.
+    """
+
+    __slots__ = ("alto", "ancho", "escala", "x0", "y0")
+
+    def __init__(
+        self, ancho: int = AUTHORED_W, alto: int = AUTHORED_H,
+        margen: int = 8, escala_maxima: float = 4.0,
+        area: pygame.Rect | None = None,
+    ) -> None:
+        self.ancho = max(1, ancho)
+        self.alto = max(1, alto)
+        area = area_de_contenido() if area is None else area
+        disponible_w = max(1, area.w - margen * 2)
+        disponible_h = max(1, area.h - margen * 2)
+        self.escala = min(
+            disponible_w / self.ancho, disponible_h / self.alto, escala_maxima,
+        )
+        usado_w = self.ancho * self.escala
+        usado_h = self.alto * self.escala
+        self.x0 = area.x + (area.w - usado_w) / 2.0
+        self.y0 = area.y + (area.h - usado_h) / 2.0
+
+    # -- traducción ------------------------------------------------
+    def x(self, valor: float) -> int:
+        return int(self.x0 + valor * self.escala)
+
+    def y(self, valor: float) -> int:
+        return int(self.y0 + valor * self.escala)
+
+    def p(self, x: float, y: float) -> tuple[int, int]:
+        """Un punto de autoría en coordenadas de pantalla."""
+        return (self.x(x), self.y(y))
+
+    def l(self, valor: float) -> int:  # noqa: E743 - 'l' de longitud, se usa mucho
+        """Una longitud (radio, grosor, ancho) escalada, mínimo 1."""
+        return max(1, round(valor * self.escala))
+
+    def r(self, x: float, y: float, w: float, h: float) -> pygame.Rect:
+        """Un rectángulo de autoría en coordenadas de pantalla."""
+        return pygame.Rect(self.x(x), self.y(y), self.l(w), self.l(h))
+
+    def rect(self) -> pygame.Rect:
+        """El lienzo entero, ya en pantalla."""
+        return pygame.Rect(
+            int(self.x0), int(self.y0),
+            int(self.ancho * self.escala), int(self.alto * self.escala),
+        )
+
+    def inverso(self, sx: float, sy: float) -> tuple[float, float]:
+        """De pantalla a autoría. Para el ratón."""
+        if self.escala <= 0:
+            return (sx, sy)
+        return ((sx - self.x0) / self.escala, (sy - self.y0) / self.escala)
 
 # ── Colours ────────────────────────────────────────────────────
 #
@@ -80,6 +232,8 @@ _FONT_CACHE: dict[int, pygame.font.Font] = {}
 
 # ── Public: re-export everything that demo_common exposes ──────────
 __all__ = [
+    "AUTHORED_H",
+    "AUTHORED_W",
     "BOTTOM_BAR_H",
     "BOTTOM_BAR_Y",
     "CENTER_W",
@@ -93,6 +247,10 @@ __all__ = [
     "COLOR_HIGHLIGHT",
     "COLOR_TEXT",
     "COLOR_TOP_BAR_BG",
+    "CONTENT_H",
+    "CONTENT_W",
+    "CONTENT_X",
+    "CONTENT_Y",
     "FONT_LARGE",
     "FONT_MEDIUM",
     "FONT_SMALL",
@@ -107,6 +265,7 @@ __all__ = [
     "RIGHT_PANEL_Y",
     "TOP_BAR_H",
     "TOP_BAR_Y",
+    "Lienzo",
     "draw_bottom_bar",
     "draw_bottom_bar_error",
     "draw_divider",
