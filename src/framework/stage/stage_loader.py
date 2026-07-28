@@ -119,6 +119,10 @@ class StageData:
     #: explícita de diseño —"este nivel es a plena luz"— y `None` es la
     #: ausencia de decisión.
     ambient_light: float | None = None
+    #: Bloom permanente del escenario, 0 a 1. `None` = no declarado.
+    bloom: float | None = None
+    #: Viñeta del escenario, 0 a 0,6. `None` = no declarado.
+    vignette: float | None = None
 
 
 REQUIRED_LAYERS: tuple[str, ...] = (
@@ -265,6 +269,8 @@ class StageLoader:
         climate = props.get("climate", "")
         zone = cls._safe_int(props.get("zone", 0), "zone")
         ambient_light = cls._parse_ambient_light(props)
+        bloom = cls._parse_unit_prop(props, "bloom", 0.0, 1.0)
+        vignette = cls._parse_unit_prop(props, "vignette", 0.0, 0.6)
 
         map_data = pyscroll.data.TiledMapData(tmx_data)
         with warnings.catch_warnings():
@@ -291,7 +297,25 @@ class StageLoader:
             climate=climate,
             zone=zone,
             ambient_light=ambient_light,
+            bloom=bloom,
+            vignette=vignette,
         )
+
+    @classmethod
+    def _parse_unit_prop(
+        cls, props: dict[str, Any], nombre: str, minimo: float, maximo: float,
+    ) -> float | None:
+        """Lee una propiedad numérica acotada del mapa, o `None` si no está.
+
+        Se recorta al rango en vez de rechazar: un estudiante que escriba
+        `bloom = 5` quiere "mucho brillo", y abortar la carga del nivel por eso
+        no le enseña nada. Un valor no numérico sí es un error, porque ahí no
+        hay intención que adivinar.
+        """
+        if nombre not in props:
+            return None
+        valor = cls._safe_float(props.get(nombre, minimo), nombre)
+        return max(minimo, min(maximo, valor))
 
     @classmethod
     def _parse_ambient_light(cls, props: dict[str, Any]) -> float | None:

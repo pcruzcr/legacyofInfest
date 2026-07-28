@@ -289,6 +289,7 @@ class StageScene(BaseScene):
                     self.context.audio.play_ambient(ambient_path, volume=0.3)
 
         self._setup_lighting()
+        self._setup_post_processing()
         self._vfx_handlers.clear()
         self._sfx_handlers.clear()
         try:
@@ -359,6 +360,46 @@ class StageScene(BaseScene):
             )
             for spec in getattr(self._stage_data, "lights", [])
         ]
+
+    #: Bloom permanente por zona cuando el TMX no declara `bloom`.
+    #:
+    #: F1.2 — el bloom existía y sólo se encendía en ráfagas de 0,15 a 0,6 s al
+    #: recoger un objeto o cambiar de fase el jefe. El resto del tiempo, cero.
+    #: Un halo permanente y suave es lo que hace que la iluminación de F1.1 se
+    #: lea como luz y no como manchas.
+    BLOOM_BY_ZONE: dict[int, float] = {
+        0: 0.18,   # prólogo: bruma tenue
+        1: 0.22,
+        2: 0.30,   # zonas de fuego: el halo hace el trabajo
+        3: 0.35,
+    }
+    BLOOM_DEFAULT: float = 0.20
+
+    #: Viñeta por zona. Sube al bajar la luz ambiente: cuanto más oscuro el
+    #: nivel, más cerrado el encuadre.
+    VIGNETTE_BY_ZONE: dict[int, float] = {0: 0.30, 1: 0.36, 2: 0.44, 3: 0.50}
+    VIGNETTE_DEFAULT: float = 0.35
+
+    def _setup_post_processing(self) -> None:
+        """Fija bloom y viñeta del escenario a partir del TMX.
+
+        Misma precedencia que la iluminación: propiedad del mapa, luego tabla
+        por zona, luego valor por defecto. Así un estudiante puede escribir
+        `bloom = 0.4` en Tiled y verlo, sin tocar una línea de Python.
+        """
+        zone = self._stage_data.zone
+        if zone is None:
+            zone = getattr(self, "ZONE", 0)
+
+        bloom = getattr(self._stage_data, "bloom", None)
+        if bloom is None:
+            bloom = self.BLOOM_BY_ZONE.get(zone, self.BLOOM_DEFAULT)
+        self._post_processing.set_base_bloom(bloom)
+
+        vineta = getattr(self._stage_data, "vignette", None)
+        if vineta is None:
+            vineta = self.VIGNETTE_BY_ZONE.get(zone, self.VIGNETTE_DEFAULT)
+        self._post_processing.set_vignette(vineta)
 
     def _subscribe_event_handlers(self) -> None:
         def _on_enemy_died(**data: Any) -> None:
