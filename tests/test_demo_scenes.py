@@ -74,10 +74,22 @@ class TestDemoMenuScene:
         assert DemoMenuScene is not None
 
     def test_instantiate(self, context) -> None:
+        """AUD-095 renombró `_options` a `_entradas` y cambió su contenido.
+
+        Ya no es una lista plana de tuplas: cada fila sabe a qué unidad del
+        temario pertenece, que es lo que permite bloquearla. La prueba lo
+        comprueba en vez de limitarse al nombre del atributo.
+        """
         scene = DemoMenuScene(context)
         assert scene is not None
-        assert hasattr(scene, "_options")
-        assert len(scene._options) >= 10
+        assert len(scene._entradas) >= 10
+        del_temario = [e for e in scene._entradas if e.unidad_id]
+        assert len(del_temario) >= 10, (
+            "el menú ya no deriva sus filas del temario"
+        )
+        assert all(e.clave for e in scene._entradas), (
+            "hay una fila sin clave de escena: no abriría nada"
+        )
 
     def test_on_enter_exit(self, context) -> None:
         scene = DemoMenuScene(context)
@@ -109,7 +121,7 @@ class TestDemoMenuScene:
     def test_navigation_clamps_at_bottom(self, context) -> None:
         scene = DemoMenuScene(context)
         scene.on_enter()
-        n = len(scene._options)
+        n = len(scene._entradas)
         scene._selected = n - 1
         context.input_manager.is_raw_key_pressed.side_effect = lambda k: k == pygame.K_DOWN
         scene.update(0.016)

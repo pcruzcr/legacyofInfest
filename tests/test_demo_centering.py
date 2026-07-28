@@ -65,11 +65,24 @@ _UMBRAL_CELDA = 0.002
 
 @pytest.fixture(scope="module")
 def pantalla():
+    """Una superficie propia del tamaño interno, no la pantalla del proceso.
+
+    Antes esto devolvía `pygame.display.get_surface()`, creándola sólo si no
+    existía. El modo de display es global al proceso: bastó con que otro
+    fichero de pruebas hiciera `set_mode((64, 64))` antes para que las trece
+    demos se midieran sobre 64x64 y nueve pruebas de centrado fallaran.
+
+    Una prueba que mide píxeles no puede depender de qué tamaño de ventana
+    dejó abierta la prueba anterior. Se dibuja sobre una superficie propia,
+    que es además lo que hace `App` con su lienzo interno.
+    """
     pygame.init()
     pygame.font.init()
     if pygame.display.get_surface() is None:
+        # Varias escenas convierten superficies al formato del display; sin
+        # modo de vídeo, `convert()` lanza.
         pygame.display.set_mode((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
-    return pygame.display.get_surface()
+    return pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
 
 
 @pytest.fixture
