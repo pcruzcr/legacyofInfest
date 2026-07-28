@@ -97,6 +97,25 @@ Mira `assets/maps/stage0/stage0.tmx` (9 focos a lo largo del recorrido) y
 `assets/maps/boss_venado/boss_venado.tmx` (cuatro braseros y un foco frío
 central) como referencia.
 
+### Ver tu escenario sin lanzar el juego
+
+Ajustar un foco a ciegas cuesta una partida entera por intento: en Tiled un
+`Light` es un cuadrado de 16 px y no hay forma de saber si su radio llega a
+donde quieres. Para eso está el previsualizador:
+
+```
+python scripts/preview_tmx.py assets/maps/stage0/stage0.tmx
+python scripts/preview_tmx.py mi_mapa.tmx --salida vista.png --con-etiquetas
+python scripts/preview_tmx.py mi_mapa.tmx --hora 23        # ¿se ve de noche?
+python scripts/preview_tmx.py mi_mapa.tmx --sin-luz        # sólo la geometría
+```
+
+Dibuja el mapa **entero** —no una ventana— con la iluminación aplicada, el
+radio real de cada foco y un calco de colores sobre los objetos. Y al final
+imprime un resumen: cuántos focos, cuántas entidades, cuántos puntos de
+control, qué clima y qué estación. Si algo sale en cero que no debería, ahí lo
+ves.
+
 ---
 
 ## 2. Object Layer Conventions
