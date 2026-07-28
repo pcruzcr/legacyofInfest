@@ -46,6 +46,48 @@ Create your map in **Tiled** with the following settings:
 | `background_zone` | string (optional) | `"cave"` — loads `assets/backgrounds/bg_cave_{far,mid,near}.png` |
 | `gravity_multiplier` | float (optional) | `1.0` |
 
+### Atmósfera (opcional) — propiedades de la Fase 1
+
+Todas son opcionales. Si no las declaras, el escenario usa el valor que
+corresponde a su `zone`, así que un mapa sin ninguna de estas propiedades
+sigue viéndose bien. Los valores fuera de rango se recortan en vez de
+rechazarse: escribir `bloom = 5` significa "mucho", no un error de carga.
+
+| Propiedad | Tipo | Rango | Qué hace |
+|---|---|---|---|
+| `ambient_light` | float | 0 – 1 | Luz de fondo. 1 = a plena luz, 0 = oscuridad total. Los focos que coloques se ven **por contraste** con este valor: con 1 no se nota ninguno. Stage 0 usa `0.70`; la arena del jefe, `0.42`. |
+| `bloom` | float | 0 – 1 | Halo alrededor de lo brillante. Sube el contraste percibido de los focos sin aclarar las sombras. |
+| `vignette` | float | 0 – 0.6 | Oscurece las esquinas. Conviene subirla al bajar `ambient_light`: un nivel oscuro con encuadre abierto se ve incoherente. |
+| `climate` | string | `clear` `rain` `snow` `fog` `storm` | Precipitación y tinte de color. `storm` añade viento lateral. |
+| `ambient_fx` | string | `dust` `leaves` `embers` `spores` `ash` `none` | Partículas flotantes constantes. `none` lo apaga de forma explícita. |
+| `ambient_fx_rate` | float | 0 – 120 | Partículas por segundo. Entre 10 y 20 es un ambiente perceptible sin saturar. |
+
+Un tipo mal escrito en `ambient_fx` —`leafs` en vez de `leaves`— **no falla en
+silencio**: se avisa por consola con la lista de valores válidos y el escenario
+cae a su valor por zona. Comprueba la consola si no ves las partículas.
+
+### El objeto `Light`
+
+Los focos se colocan en la capa `Objects` con `type = Light`. El punto de luz
+es el **centro** del rectángulo que dibujes, así que puedes encuadrar una
+antorcha y la luz saldrá de ella.
+
+| Propiedad | Tipo | Por defecto | Qué hace |
+|---|---|---|---|
+| `radius` | float | `80` | Alcance en píxeles. |
+| `color` | string | `warm` | `warm` `cold` `fire` `toxic` `blood` `white`, o `#rrggbb`. |
+| `intensity` | float | `0.8` | 0 a 1. |
+| `flicker` | bool | `false` | Parpadeo tipo antorcha o fuego. |
+| `flicker_speed` | float | `4.0` | Oscilaciones por segundo. |
+| `flicker_amount` | float | `0.15` | Amplitud, 0 a 1. |
+
+Ejemplo de una antorcha: rectángulo de 16×16 sobre el muro, `type = Light`,
+`radius = 110`, `color = warm`, `intensity = 0.85`, `flicker = true`.
+
+Mira `assets/maps/stage0/stage0.tmx` (9 focos a lo largo del recorrido) y
+`assets/maps/boss_venado/boss_venado.tmx` (cuatro braseros y un foco frío
+central) como referencia.
+
 ---
 
 ## 2. Object Layer Conventions
