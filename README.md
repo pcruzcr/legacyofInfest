@@ -9,10 +9,9 @@ Visión por Computadora y Reconocimiento de Patrones.
 - Sistema completo de stages 2D con físicas, colisiones, cámara, HUD y jefes
 - Framework de procesamiento: ColorTools, CurveTools, FilterTools, VisionTools, PatternRecognitionTools
 - Debug overlay (F3) con FPS, event queue snapshot y árbol de módulos
-- 369 pruebas automatizadas + scripts de validación de assets y generación de exámenes
-- Sistema de colisión one-way corregido (`_prev_foot_y` vs straddle) — Zonas A/C de Stage 0 ahora usan tiles Solid (no Platform)
-- 14 bugs de crash corregidos en 3 commits + 3 bugs de gameplay (plataformas one-way, piso/health/completion de Venado)
-- Texto nítido: tamaños de fuente 7→12, 9→15, 11→18, antialiasing activado, `SDL_HINT_RENDER_SCALE_QUALITY=0`
+- Atmósfera configurable desde Tiled: iluminación por focos, clima, partículas
+  de ambiente, bloom y viñeta — sin escribir una línea de Python
+- 1.333 pruebas automatizadas + validadores de TMX, assets y dependencias en CI
 
 ```
 pip install -r requirements.txt

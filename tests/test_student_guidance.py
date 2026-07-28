@@ -224,3 +224,87 @@ class TestTheGeneratedTypeTable:
         guide = (ROOT / "docs" / "STAGE_CREATION.md").read_text(encoding="utf-8")
         assert "BEGIN GENERATED" in guide
         assert "No la edites a mano" in guide
+
+
+class TestLaGuiaDocumentaLaAtmosferaDeLaFase1:
+    """Una propiedad que el motor lee y la guía no menciona no existe.
+
+    El estudiante no tiene forma de descubrir `ambient_light` leyendo el
+    código: está en `StageLoader`, a tres archivos de distancia de su
+    escenario. La guía es el único sitio donde puede encontrarla, así que
+    desincronizarla equivale a borrar la característica.
+
+    Esta prueba compara la guía con las listas reales del motor, no con una
+    copia escrita a mano.
+    """
+
+    GUIA = pathlib.Path(__file__).resolve().parent.parent / "docs" / "STAGE_CREATION.md"
+
+    def _filas_de_tabla(self) -> list[str]:
+        """Sólo las filas de tabla, no la prosa.
+
+        La primera versión de esta prueba buscaba el nombre en cualquier parte
+        del archivo. No detectó al mutante que borraba `ambient_light` de la
+        tabla, porque la propiedad seguía mencionada de pasada en la
+        descripción de la viñeta. Documentar de verdad una propiedad es darle
+        una fila con su tipo, su rango y lo que hace; una mención suelta no
+        sirve para configurar nada.
+        """
+        return [linea for linea in self.GUIA.read_text(encoding="utf-8").splitlines()
+                if linea.lstrip().startswith("|")]
+
+    @pytest.mark.parametrize(
+        "propiedad",
+        ["ambient_light", "bloom", "vignette", "climate",
+         "ambient_fx", "ambient_fx_rate"],
+    )
+    def test_cada_propiedad_de_atmosfera_tiene_su_fila(self, propiedad):
+        """La propiedad tiene que ser el **sujeto** de una fila, no una mención.
+
+        Segundo intento. El primero exigía que el nombre apareciera en alguna
+        fila de tabla, y tampoco detectó al mutante: `ambient_light` sale
+        también en la fila de `vignette` —"conviene subirla al bajar
+        `ambient_light`"—, así que la búsqueda acertaba con la fila equivocada.
+        Se comprueba la primera columna, que es donde vive el sujeto de la fila.
+        """
+        filas = [
+            f for f in self._filas_de_tabla()
+            if f.strip().strip("|").split("|")[0].strip() == f"`{propiedad}`"
+        ]
+        assert filas, (
+            f"el motor lee la propiedad de mapa '{propiedad}' y la guía no le "
+            "dedica una fila propia: el estudiante no puede descubrirla"
+        )
+        # La fila tiene que decir algo, no sólo nombrarla.
+        assert len(filas[0].strip().strip("|").split("|")) >= 3, (
+            f"la fila de '{propiedad}' no documenta tipo ni comportamiento: {filas[0]}"
+        )
+
+    def test_los_tipos_de_particula_coinciden_con_el_motor(self):
+        from src.framework.vfx.ambient_particles import AmbientParticleSystem
+
+        texto = self.GUIA.read_text(encoding="utf-8")
+        for tipo in AmbientParticleSystem.TIPOS:
+            assert tipo in texto, f"falta el tipo de partícula '{tipo}' en la guía"
+
+    def test_los_colores_de_foco_coinciden_con_el_motor(self):
+        from src.framework.stage.stage_loader import StageLoader
+
+        texto = self.GUIA.read_text(encoding="utf-8")
+        for nombre in StageLoader.LIGHT_COLORS:
+            assert nombre in texto, f"falta el color de foco '{nombre}' en la guía"
+
+    def test_los_climas_coinciden_con_el_motor(self):
+        from src.framework.vfx.weather_system import WeatherSystem
+
+        texto = self.GUIA.read_text(encoding="utf-8")
+        for clima in WeatherSystem.CLIMATE_PARAMS:
+            assert clima in texto, f"falta el clima '{clima}' en la guía"
+
+    def test_las_propiedades_del_objeto_light_estan_documentadas(self):
+        texto = self.GUIA.read_text(encoding="utf-8")
+        for prop in ("radius", "intensity", "flicker",
+                     "flicker_speed", "flicker_amount"):
+            assert f"`{prop}`" in texto, (
+                f"la propiedad '{prop}' del objeto Light no está en la guía"
+            )
