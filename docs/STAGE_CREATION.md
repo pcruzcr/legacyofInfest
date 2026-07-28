@@ -61,6 +61,14 @@ rechazarse: escribir `bloom = 5` significa "mucho", no un error de carga.
 | `climate` | string | `clear` `rain` `snow` `fog` `storm` | Precipitación y tinte de color. `storm` añade viento lateral. |
 | `ambient_fx` | string | `dust` `leaves` `embers` `spores` `ash` `none` | Partículas flotantes constantes. `none` lo apaga de forma explícita. |
 | `ambient_fx_rate` | float | 0 – 120 | Partículas por segundo. Entre 10 y 20 es un ambiente perceptible sin saturar. |
+| `start_hour` | string o float | 0 – 24 | Hora a la que empieza el escenario. Acepta un nombre (`dawn` `morning` `noon` `afternoon` `dusk` `night` `midnight`), un número (`18.5`) o `HH:MM`. |
+| `day_length` | float | 0 – 36000 | Segundos **reales** que dura un ciclo día/noche completo. `0` congela el reloj en `start_hour`, que es lo que quiere un combate: la luz no debe cambiar a mitad de una pelea. Stage 0 usa `420` (siete minutos); la arena del jefe lo deja congelado al atardecer. |
+
+El ciclo modula la luz que ya declaraste: `ambient_light` sigue mandando, y la
+hora lo multiplica y lo tiñe. Hay un suelo (`StageScene.MIN_AMBIENTE`) por
+debajo del cual la luz no baja, porque una noche en la que no se ven los
+enemigos es un defecto y no una decisión artística. La hora se comunica sobre
+todo por el **color**: azul frío de madrugada, dorado al atardecer.
 
 Un tipo mal escrito en `ambient_fx` —`leafs` en vez de `leaves`— **no falla en
 silencio**: se avisa por consola con la lista de valores válidos y el escenario

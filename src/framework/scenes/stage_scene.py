@@ -296,6 +296,7 @@ class StageScene(BaseScene):
         self._setup_lighting()
         self._setup_post_processing()
         self._setup_ambient_particles()
+        self._setup_day_night()
         self._vfx_handlers.clear()
         self._sfx_handlers.clear()
         try:
@@ -444,6 +445,58 @@ class StageScene(BaseScene):
             ritmo = self.AMBIENT_FX_DEFAULT[1]
 
         self._ambient_particles.set_effect(tipo, ritmo)
+
+    def _setup_day_night(self) -> None:
+        """Arranca el reloj del escenario a partir del TMX.
+
+        F2.1: sin `day_length` el reloj queda congelado en su hora inicial y el
+        escenario se comporta exactamente como antes de esta fase. Es
+        deliberado: un prólogo de tres minutos no gana nada con un ciclo, y
+        obligar a todos los mapas a tener uno sería imponer una decisión de
+        diseño desde el motor.
+        """
+        from src.framework.stage.day_night import RelojDeMundo
+
+        hora = getattr(self._stage_data, "start_hour", None)
+        if hora is None:
+            hora = self.HORA_POR_DEFECTO
+        self._reloj = RelojDeMundo(
+            hora_inicial=hora,
+            duracion_dia=getattr(self._stage_data, "day_length", 0.0) or 0.0,
+        )
+        # Se guardan los valores base del escenario porque el ciclo los
+        # **modula**: si se sobrescribieran, cada fotograma partiría del
+        # resultado del anterior y la luz se iría a cero en unos segundos.
+        self._ambiente_base = self._lighting.ambient_brightness
+        self._bloom_base_escenario = self._post_processing._bloom_base
+        self._aplicar_hora()
+
+    #: Hora que se usa cuando el mapa no declara `start_hour`. Mediodía, es
+    #: decir, el factor de ambiente 1.0: un escenario que no pide ciclo se ve
+    #: exactamente con el `ambient_light` que escribió su autor.
+    HORA_POR_DEFECTO = 12.0
+
+    #: Suelo de luz ambiente aplicada. Por debajo de esto el nivel deja de ser
+    #: jugable.
+    #:
+    #: F2.1: el ciclo **multiplica** el ambiente del escenario, así que los dos
+    #: factores se componen. Medido en Stage 0, que declara `ambient_light`
+    #: 0,70: a medianoche el factor 0,35 daba un ambiente aplicado de 0,245 y
+    #: un brillo de pantalla de 12,7 sobre 255. El jugador no ve los enemigos.
+    #: Una noche realista que impide jugar es un defecto, no una decisión
+    #: artística: la hora se comunica con el color, que sí cambia por completo.
+    MIN_AMBIENTE = 0.45
+
+    def _aplicar_hora(self) -> None:
+        """Traduce la hora actual a luz ambiente, tinte y bloom."""
+        luz = self._reloj.luz()
+        self._lighting.ambient_brightness = max(
+            self.MIN_AMBIENTE, self._ambiente_base * luz.factor_ambiente)
+        self._post_processing.set_base_bloom(
+            self._bloom_base_escenario + luz.bloom_extra)
+        # El tinte de la hora se aplica como color de la luz ambiente. A
+        # mediodía el color es prácticamente blanco, así que no tiñe nada.
+        self._lighting.ambient_color = luz.color
 
     def _subscribe_event_handlers(self) -> None:
         def _on_enemy_died(**data: Any) -> None:
@@ -983,6 +1036,9 @@ class StageScene(BaseScene):
         self._damage_numbers.update(dt)
         self._post_processing.update(dt)
         self._ambient_particles.update(dt, self._camera.offset)
+        if not self._reloj.congelado:
+            self._reloj.update(dt)
+            self._aplicar_hora()
         self._weather.update(dt, self._camera.offset)
         self._dialogue.update(dt)
 

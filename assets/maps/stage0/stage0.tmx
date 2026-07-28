@@ -9,6 +9,8 @@
   <property name="time_limit" value="0" />
   <property name="gravity_multiplier" value="1.0" />
   <property name="ambient_light" type="float" value="0.70" />
+  <property name="start_hour" type="string" value="afternoon" />
+  <property name="day_length" type="float" value="420" />
  </properties>
  <tileset firstgid="1" name="tileset_stage0" tilewidth="16" tileheight="16" tilecount="4096" columns="64">
   <image source="../../tilesets/tileset_stage0.png" width="1024" height="1024" />

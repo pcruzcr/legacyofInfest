@@ -256,7 +256,7 @@ class TestLaGuiaDocumentaLaAtmosferaDeLaFase1:
     @pytest.mark.parametrize(
         "propiedad",
         ["ambient_light", "bloom", "vignette", "climate",
-         "ambient_fx", "ambient_fx_rate"],
+         "ambient_fx", "ambient_fx_rate", "start_hour", "day_length"],
     )
     def test_cada_propiedad_de_atmosfera_tiene_su_fila(self, propiedad):
         """La propiedad tiene que ser el **sujeto** de una fila, no una mención.
