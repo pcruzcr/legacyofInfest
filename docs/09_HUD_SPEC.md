@@ -167,7 +167,7 @@ The timer is displayed in the top-right corner of the HUD. It shows elapsed time
 | Position | X=264, Y=24 (adjusted in v1.1.0 for message box at top) |
 | Width | 54 px |
 | Format | `M:SS` (e.g., `2:34`) |
-| Font | **TTF font** — `fonts/PixeloidSans.ttf` (size 12) renders via `pygame.font.Font` (in v1.1.0, replaced the pixel-font spritesheet) |
+| Font | **TTF** — `assets/fonts/game.ttf` at size 12, loaded through `AssetLoader.load_font` |
 | Color | White on dark background |
 | Background | Solid dark rectangle behind digits |
 
@@ -180,7 +180,19 @@ The timer is displayed in the top-right corner of the HUD. It shows elapsed time
 
 ### 5.4 Timer Font
 
-The timer renders via `pygame.font.Font` using the TTF font `fonts/PixeloidSans.ttf` at size 12 (changed in v1.1.0; previously used a pixel-font spritesheet `fonts/hud_digits.png`).
+The timer renders through `AssetLoader.load_font` using `assets/fonts/game.ttf` at size 12 (`engine/ui/hud.py`).
+
+> **AUD-098 — corregido contra el código.**
+> Esta sección nombraba fuentes que el motor no usa. El reloj decía cargar
+> `fonts/PixeloidSans.ttf`, **un fichero que no existe en el repositorio**;
+> el banner, la caja de mensajes y la pantalla de fin de partida decían
+> dibujarse con hojas de píxeles `.png`, que tampoco: la clase que sabía
+> leerlas (`engine/ui/bitmap_font.py`) estaba muerta y se ha retirado.
+>
+> Todo el texto del juego pasa por `AssetLoader.load_font` sobre
+> `assets/fonts/game.ttf`. Los `.png` de fuente siguen en `assets/fonts/`
+> como material de referencia, pero ningún código los carga.
+
 
 ---
 
@@ -217,8 +229,8 @@ During the banner animation, the game is still running (entities update, player 
 
 - Top strip: `ui/banner_top.png` — 320×24 px dark rectangle with gold border
 - Bottom strip: `ui/banner_bottom.png` — 320×24 px dark rectangle with gold border
-- Stage number font: `fonts/banner_large.png` — 10×14 pixel characters
-- Stage name font: `fonts/banner_medium.png` — 6×9 pixel characters
+- Stage number font: `assets/fonts/game.ttf` at size 22 (`engine/ui/screen_banner.py`)
+- Stage name font: `assets/fonts/game.ttf` at size 20 (same module)
 
 ### 6.5 Triggering the Banner
 
@@ -254,7 +266,7 @@ Tutorial messages are text boxes that appear at the bottom of the screen. They a
 | Background | Semi-transparent dark (alpha 180/255) |
 | Border | 1px solid gold |
 | Text color | White |
-| Font | `fonts/message_font.png` — 5×7 px per character |
+| Font | `assets/fonts/game.ttf` at size 12 (`engine/ui/message_box.py`) |
 | Max lines | 3 |
 | Max chars/line | 58 (with left/right padding of 6px) |
 | Indicator icon | `ui/message_arrow.png` — 5×7 arrow, animates when waiting for confirm |
@@ -333,8 +345,8 @@ When the player dies, the `GameOverScene` is pushed over the current stage. The 
 | Element | File |
 |---|---|
 | Background overlay | Filled `pygame.Surface` with `set_alpha()` |
-| `GAME OVER` text | `fonts/gameover_font.png` — 12×16 px per character |
-| Option text | `fonts/menu_font.png` — 6×9 px per character |
+| `GAME OVER` text | `assets/fonts/game.ttf`, via the shared UI kit |
+| Option text | `assets/fonts/game.ttf`, via the shared UI kit |
 | Selection arrow | `ui/menu_arrow.png` — 5×8 px |
 
 ---

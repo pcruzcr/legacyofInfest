@@ -137,7 +137,8 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── stage_error_scene.py       # Error screen for stage load failures
 │   │   │   ├── stage_wizard_scene.py      # Stage creation wizard
 │   │   │   ├── transition_manager.py      # Manages screen transitions (fade/wipe/slide/circle)
-│   │   │   └── unit_theory_scene.py       # Unit theory display scene
+│   │   │   ├── unit_theory_scene.py       # Teoria y examen de una unidad (AUD-095)
+│   │   │   └── student_login_scene.py     # Identificacion por correo (AUD-098)
 │   │   │
 │   │   ├── input/
 │   │   │   ├── __init__.py
@@ -161,7 +162,6 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── message_box.py             # MessageBox: scrolling text, tutorial messages
 │   │   │   ├── screen_banner.py           # ScreenBanner: stage title animation
 │   │   │   ├── minimap.py                 # Minimap: fog-of-war exploration map
-│   │   │   ├── bitmap_font.py             # BitmapFont: custom font rendering
 │   │   │   ├── subtitle_overlay.py        # SubtitleOverlay: dialogue subtitles
 │   │   │   ├── theme.py                   # Theme: UI color scheme and styling
 │   │   │   └── widgets.py                 # Reusable UI widgets
@@ -169,7 +169,6 @@ legacy-of-infest/                      # Actual repo root
 │   │   └── utils/
 │   │       ├── __init__.py
 │   │       ├── asset_loader.py            # AssetLoader: load+cache images, sounds, fonts
-│   │       ├── spritesheet.py             # SpriteSheet: slice frames from sheet
 │   │       ├── math_utils.py              # Vector2, lerp, clamp, ease functions
 │   │       └── surface_pool.py            # SurfacePool: reuse temporary surfaces
 │   │
@@ -222,6 +221,16 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── tutorial_overlay.py        # TutorialOverlay: contextual help popups
 │   │   │   ├── dialogue_system.py         # DialogueSystem: branching dialogue with portraits
 │   │   │   └── learning_overlay.py        # LearningOverlay: academic context overlay
+│   │   │
+│   │   ├── audio/
+│   │   │   ├── __init__.py
+│   │   │   └── dynamic_music.py           # DynamicMusic: cross-fade calm <-> combat
+│   │   │
+│   │   ├── academic/
+│   │   │   ├── __init__.py
+│   │   │   ├── curriculum.py              # PLAN: las unidades, su teoria y su examen
+│   │   │   ├── progress.py                # ProgresoAcademico: notas y desbloqueo encadenado
+│   │   │   └── sesion.py                  # SesionAcademica: estudiante activo
 │   │   │
 │   │   ├── scenes/
 │   │   │   ├── __init__.py
@@ -608,16 +617,29 @@ Centralizes asset loading. Maintains an in-memory cache keyed by path string. Su
 **Public Interface:**
 - `AssetLoader.load_image(path: str | Path) → pygame.Surface` — Load and cache a PNG image.
 - `AssetLoader.load_sound(path: str | Path) → pygame.mixer.Sound` — Load and cache audio.
-- `AssetLoader.load_spritesheet(path: str | Path, frame_w: int, frame_h: int) → SpriteSheet`
+- `AssetLoader.load_font(path: str | Path, size: int) → pygame.font.Font` — Load and cache a TTF font.
+- `AssetLoader.load_sprite_sheet(path: str | Path, frame_width: int, frame_height: int) → list[pygame.Surface]`
+  — Slice a horizontal sheet into frames. This is the **only** sprite-sheet
+  path in the engine: `enemy_base`, `boss_base` and `player` all go through it.
 
-#### `engine/utils/spritesheet.py` — `SpriteSheet`
-
-Slices a horizontal sprite sheet into individual frames.
-
-**Public Interface:**
-- `SpriteSheet.get_frame(index: int) → pygame.Surface` — Return the nth frame.
-- `SpriteSheet.get_frames(start: int, end: int) → list[pygame.Surface]` — Return a range of frames.
-- `SpriteSheet.frame_count → int` — Total number of frames in the sheet.
+> **AUD-098 — qué decía esta sección antes.**
+> Documentaba `AssetLoader.load_spritesheet` (sin guion bajo) devolviendo un
+> objeto `SpriteSheet`, y una clase `engine/utils/spritesheet.py` con
+> `get_frame(index)`, `get_frames(start, end)` y `frame_count`.
+>
+> Nada de eso existía. El método real se llama `load_sprite_sheet` y devuelve
+> una lista de superficies; la clase `SpriteSheet` sí estaba en el árbol, pero
+> **nadie la importaba** y su `get_frame` tomaba `(x, y, width, height)`, no un
+> índice. Era una segunda implementación del mismo concepto, muerta, con una
+> API distinta de la documentada y de la real a la vez.
+>
+> Lo mismo con `engine/ui/bitmap_font.py`: un renderizador de texto por mapa
+> de bits que nadie usaba, en un proyecto donde los 115 puntos de dibujado de
+> texto pasan por `AssetLoader.load_font`.
+>
+> Los dos módulos se han retirado. En un motor que existe para que alguien lo
+> lea, una implementación paralela sin usar no es código de reserva: es una
+> trampa para el estudiante que la encuentra primero.
 
 #### `engine/utils/math_utils.py` — Math Utilities
 
