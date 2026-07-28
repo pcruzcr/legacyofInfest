@@ -123,6 +123,10 @@ class StageData:
     bloom: float | None = None
     #: Viñeta del escenario, 0 a 0,6. `None` = no declarado.
     vignette: float | None = None
+    #: Partículas de ambiente: tipo y partículas por segundo. Cadena vacía =
+    #: no declarado; la escena caerá a su tabla por zona.
+    ambient_fx: str = ""
+    ambient_fx_rate: float | None = None
 
 
 REQUIRED_LAYERS: tuple[str, ...] = (
@@ -271,6 +275,8 @@ class StageLoader:
         ambient_light = cls._parse_ambient_light(props)
         bloom = cls._parse_unit_prop(props, "bloom", 0.0, 1.0)
         vignette = cls._parse_unit_prop(props, "vignette", 0.0, 0.6)
+        ambient_fx = cls._parse_ambient_fx(props)
+        ambient_fx_rate = cls._parse_unit_prop(props, "ambient_fx_rate", 0.0, 120.0)
 
         map_data = pyscroll.data.TiledMapData(tmx_data)
         with warnings.catch_warnings():
@@ -299,7 +305,31 @@ class StageLoader:
             ambient_light=ambient_light,
             bloom=bloom,
             vignette=vignette,
+            ambient_fx=ambient_fx,
+            ambient_fx_rate=ambient_fx_rate,
         )
+
+    @classmethod
+    def _parse_ambient_fx(cls, props: dict[str, Any]) -> str:
+        """Lee `ambient_fx` del mapa y avisa si el tipo no existe.
+
+        Una errata aquí no puede fallar en silencio: escribir `leafs` en vez de
+        `leaves` dejaría el nivel sin partículas y sin ninguna pista de por qué.
+        Se avisa por el registro y se devuelve cadena vacía, para que la escena
+        caiga a su valor por zona en vez de quedarse a medias.
+        """
+        from src.framework.vfx.ambient_particles import AmbientParticleSystem
+
+        valor = str(props.get("ambient_fx", "") or "").strip().lower()
+        if not valor or valor == "none":
+            return ""
+        if valor not in AmbientParticleSystem.TIPOS:
+            logger.warning(
+                "ambient_fx: '%s' no es un tipo conocido. Válidos: %s, none",
+                valor, ", ".join(AmbientParticleSystem.TIPOS),
+            )
+            return ""
+        return valor
 
     @classmethod
     def _parse_unit_prop(

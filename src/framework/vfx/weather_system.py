@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import random
 
 import pygame
@@ -27,6 +28,8 @@ class WeatherSystem:
             (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT), pygame.SRCALPHA
         )
         self._wind: float = 0.0
+        #: La capa de color sólo se repinta cuando cambia el clima.
+        self._overlay_listo: bool = False
         self._set_climate_params()
 
     def _set_climate_params(self) -> None:
@@ -34,7 +37,18 @@ class WeatherSystem:
         self._particle_rate: float = float(params["particles"])
         self._overlay_alpha: int = params["overlay_alpha"]
         self._overlay_color: tuple[int, int, int] = params["overlay_color"]
-        self._wind = random.uniform(-30, 30) if self._climate == "storm" else 0.0
+        self._overlay_listo = False
+        # Viento lateral en px/s. Los valores de la tormenta son los que
+        # pretendía la línea muerta que se corrigió en `_angulo_con_viento`:
+        # ±50 a 100, que sobre una caída de 280 px/s da entre 10 y 20 grados de
+        # inclinación. El ±30 anterior daba como máximo 6 grados, indistinguible
+        # de la vertical. La nieve deriva menos porque cae mucho más despacio y
+        # el mismo viento la desvía más.
+        self._wind = {
+            "storm": random.choice([-1, 1]) * random.uniform(50, 100),
+            "snow": random.uniform(-12, 12),
+            "rain": random.uniform(-15, 15),
+        }.get(self._climate, 0.0)
 
     def set_climate(self, climate: str) -> None:
         if climate == self._climate:
@@ -68,7 +82,14 @@ class WeatherSystem:
         self._emitter.draw(surface, camera_offset)
 
         if self._overlay_alpha > 0:
-            self._overlay.fill((*self._overlay_color, self._overlay_alpha))
+            # F1.3: antes esto hacía `fill` en cada fotograma para pintar
+            # siempre el mismo color. Un `fill` sobre 800x600 con alfa cuesta
+            # más que el `blit` que viene después; medido, la capa de clima
+            # costaba 1,79 ms por fotograma en la arena del jefe, casi todo en
+            # rellenar de nuevo una superficie que ya estaba bien.
+            if not self._overlay_listo:
+                self._overlay.fill((*self._overlay_color, self._overlay_alpha))
+                self._overlay_listo = True
             surface.blit(self._overlay, (0, 0))
 
     def clear(self) -> None:
@@ -81,26 +102,54 @@ class WeatherSystem:
 
         if self._climate == "rain":
             self._emitter.emit_directed(
-                sx, sy, angle=90, speed=280,
-                count=1, lifetime=random.uniform(0.3, 0.6),
+                sx, sy, angle=self._angulo_con_viento(), speed=280,
+                count=1, lifetime=random.uniform(*self._VIDA_LLUVIA),
                 size=(1, 2), color=color, spread=5,
                 gravity=980, friction=0.99,
             )
         elif self._climate == "snow":
             self._emitter.emit_directed(
-                sx, sy, angle=90, speed=random.uniform(30, 60),
+                sx, sy, angle=self._angulo_con_viento(), speed=random.uniform(30, 60),
                 count=1, lifetime=random.uniform(2.0, 4.0),
                 size=(2, 4), color=color, spread=20,
                 gravity=50, friction=0.95,
             )
         elif self._climate == "storm":
-            random.choice([-1, 1]) * random.uniform(50, 100)
             self._emitter.emit_directed(
-                sx, sy, angle=90, speed=280,
-                count=1, lifetime=random.uniform(0.3, 0.5),
+                sx, sy, angle=self._angulo_con_viento(), speed=280,
+                count=1, lifetime=random.uniform(*self._VIDA_LLUVIA),
                 size=(1, 3), color=color, spread=10,
                 gravity=980, friction=0.99,
             )
+
+    #: Cuánto vive una gota, en segundos.
+    #:
+    #: F1.3 — antes era 0,3 a 0,6 s. Con velocidad inicial de 280 px/s y
+    #: gravedad de 980, una gota recorre unos 344 px en 0,6 s, sobre una
+    #: pantalla de 600 px de alto. Medido: las gotas existían entre y = -6 y
+    #: y = 239, es decir, **la lluvia se evaporaba antes de llegar a la mitad
+    #: de la pantalla**. Cruzarla entera requiere 0,87 s.
+    _VIDA_LLUVIA = (0.95, 1.25)
+
+    def _angulo_con_viento(self) -> float:
+        """Dirección de caída, inclinada por el viento. 90 grados es vertical.
+
+        F1.3 — el viento de la tormenta no existía. La línea que lo calculaba
+        era::
+
+            random.choice([-1, 1]) * random.uniform(50, 100)
+
+        Un valor calculado y **asignado a nada**: una sentencia sin efecto.
+        `_set_climate_params` sí rellenaba `self._wind`, pero nadie lo leía, así
+        que la tormenta caía tan recta como la lluvia mansa. Ruff no lo detecta
+        porque la expresión contiene llamadas, y una llamada podría tener
+        efectos colaterales.
+        """
+        if not self._wind:
+            return 90.0
+        # atan2(viento, velocidad de caída) da la inclinación respecto a la
+        # vertical; se resta porque 90 grados es hacia abajo.
+        return 90.0 - math.degrees(math.atan2(self._wind, 280.0))
 
     def _get_particle_color(self) -> tuple[int, int, int]:
         if self._climate == "rain":

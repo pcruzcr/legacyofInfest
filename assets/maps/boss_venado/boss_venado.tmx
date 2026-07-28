@@ -1,14 +1,21 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <map version="1.10" tiledversion="1.11.0" orientation="orthogonal" renderorder="right-down" width="40" height="20" tilewidth="16" tileheight="16" infinite="0" nextlayerid="9" nextobjectid="20">
  <properties>
-  <property name="stage_id" value="boss_venado"/>
-  <property name="stage_name" value="VENADO"/>
-  <property name="time_limit" type="int" value="0"/>
-  <property name="bgm_track" value="bgm_zone1_boss"/>
-  <property name="background_zone" value="zone1"/>
+  <property name="stage_id" value="boss_venado" />
+  <property name="stage_name" value="VENADO" />
+  <property name="time_limit" type="int" value="0" />
+  <property name="bgm_track" value="bgm_zone1_boss" />
+  <property name="background_zone" value="zone1" />
+  <property name="zone" type="int" value="1" />
+  <property name="climate" type="string" value="storm" />
+  <property name="ambient_light" type="float" value="0.42" />
+  <property name="bloom" type="float" value="0.30" />
+  <property name="vignette" type="float" value="0.46" />
+  <property name="ambient_fx" type="string" value="embers" />
+  <property name="ambient_fx_rate" type="float" value="16" />
  </properties>
  <tileset firstgid="1" name="placeholder" tilewidth="16" tileheight="16" tilecount="1" columns="1">
-  <image source="../../tilesets/placeholder.png" width="16" height="16"/>
+  <image source="../../tilesets/placeholder.png" width="16" height="16" />
  </tileset>
  <layer id="1" name="BG_Far" width="40" height="20">
   <data encoding="csv">0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -102,19 +109,66 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0</data>
  </layer>
  <objectgroup id="6" name="Objects">
-  <object id="1" type="PlayerSpawn" name="PlayerSpawn_01" x="64" y="160"/>
-  <object id="2" type="BossVenado" name="BossVenado_01" x="320" y="96"/>
-   <object id="3" type="NextTrigger" name="NextTrigger_01" x="624" y="-32" width="16" height="16"/>
+  <object id="1" type="PlayerSpawn" name="PlayerSpawn_01" x="64" y="160" />
+  <object id="2" type="BossVenado" name="BossVenado_01" x="320" y="96" />
+  <object id="3" type="NextTrigger" name="NextTrigger_01" x="624" y="-32" width="16" height="16" />
+  <object id="17" name="luz_17" type="Light" x="62" y="242" width="16" height="16">
+   <properties>
+    <property name="radius" type="float" value="120" />
+    <property name="color" type="string" value="fire" />
+    <property name="intensity" type="float" value="0.9" />
+    <property name="flicker" type="bool" value="true" />
+    <property name="flicker_speed" type="float" value="4.5" />
+    <property name="flicker_amount" type="float" value="0.22" />
+   </properties>
+  </object>
+  <object id="18" name="luz_18" type="Light" x="562" y="242" width="16" height="16">
+   <properties>
+    <property name="radius" type="float" value="120" />
+    <property name="color" type="string" value="fire" />
+    <property name="intensity" type="float" value="0.9" />
+    <property name="flicker" type="bool" value="true" />
+    <property name="flicker_speed" type="float" value="4.5" />
+    <property name="flicker_amount" type="float" value="0.22" />
+   </properties>
+  </object>
+  <object id="19" name="luz_19" type="Light" x="142" y="102" width="16" height="16">
+   <properties>
+    <property name="radius" type="float" value="90" />
+    <property name="color" type="string" value="fire" />
+    <property name="intensity" type="float" value="0.7" />
+    <property name="flicker" type="bool" value="true" />
+    <property name="flicker_speed" type="float" value="4.5" />
+    <property name="flicker_amount" type="float" value="0.22" />
+   </properties>
+  </object>
+  <object id="20" name="luz_20" type="Light" x="482" y="102" width="16" height="16">
+   <properties>
+    <property name="radius" type="float" value="90" />
+    <property name="color" type="string" value="fire" />
+    <property name="intensity" type="float" value="0.7" />
+    <property name="flicker" type="bool" value="true" />
+    <property name="flicker_speed" type="float" value="4.5" />
+    <property name="flicker_amount" type="float" value="0.22" />
+   </properties>
+  </object>
+  <object id="21" name="luz_21" type="Light" x="312" y="142" width="16" height="16">
+   <properties>
+    <property name="radius" type="float" value="160" />
+    <property name="color" type="string" value="cold" />
+    <property name="intensity" type="float" value="0.55" />
+   </properties>
+  </object>
  </objectgroup>
-  <objectgroup id="7" name="Collision">
-   <object id="10" name="Floor" x="0" y="304" width="640" height="16"/>
-   <object id="11" name="LeftWall" x="0" y="0" width="16" height="320"/>
-   <object id="12" name="RightWall" x="624" y="0" width="16" height="320"/>
-   <object id="13" name="Ceiling" x="0" y="0" width="640" height="16"/>
-   <object id="14" name="Platform" type="Platform" x="80" y="224" width="160" height="16"/>
-   <object id="15" name="Platform" type="Platform" x="80" y="168" width="160" height="16"/>
-   <object id="16" name="Platform" type="Platform" x="80" y="112" width="160" height="16"/>
-  </objectgroup>
+ <objectgroup id="7" name="Collision">
+  <object id="10" name="Floor" x="0" y="304" width="640" height="16" />
+  <object id="11" name="LeftWall" x="0" y="0" width="16" height="320" />
+  <object id="12" name="RightWall" x="624" y="0" width="16" height="320" />
+  <object id="13" name="Ceiling" x="0" y="0" width="640" height="16" />
+  <object id="14" name="Platform" type="Platform" x="80" y="224" width="160" height="16" />
+  <object id="15" name="Platform" type="Platform" x="80" y="168" width="160" height="16" />
+  <object id="16" name="Platform" type="Platform" x="80" y="112" width="160" height="16" />
+ </objectgroup>
  <layer id="8" name="FG_Overlay" width="40" height="20">
   <data encoding="csv">0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
