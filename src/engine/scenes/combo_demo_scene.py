@@ -53,9 +53,9 @@ class ComboDemoScene(BaseScene):
     _MARGEN_SUPERIOR = 24
     _MARGEN_INFERIOR = 16
     _SALTO = 26
-    _ANCHO_BARRA = 360
+    _ANCHO_BARRA = 460
     _RADIO_NODO = 34
-    _SEPARACION_NODOS = 200
+    _SEPARACION_NODOS = 260
 
     def __init__(self, context: GameContext) -> None:
         super().__init__(context)

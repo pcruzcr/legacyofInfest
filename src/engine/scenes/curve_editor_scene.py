@@ -47,6 +47,7 @@ from src.engine.scenes.demo_common import (
     draw_top_bar,
     save_png,
 )
+from src.engine.scenes.demo_layout import area_de_contenido
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.processing.curve_tools import CurveTools
 
@@ -71,25 +72,55 @@ ANNOTATION_COLOR = (150, 200, 150)
 GRID_COLOR = (20, 20, 40)
 
 N_SAMPLES = 100
-CURVE_AREA = pygame.Rect(4, 48, 312, 160)
+
+# ── Área de la curva (AUD-094) ─────────────────────────────────────
+#
+# Esto era `pygame.Rect(4, 48, 312, 160)`: el ancho entero de una pantalla de
+# 320 px. Sobre los 800x600 reales el lienzo de la curva ocupaba el 39 % del
+# ancho y el 29 % del alto, arriba a la izquierda, y los puntos de control
+# —que se arrastran con el ratón— quedaban tan juntos que costaba agarrarlos.
+#
+# Ahora el área se calcula desde el área útil. Los puntos por defecto se
+# escalan con un factor **uniforme** para que la curva conserve su forma: una
+# Bézier estirada en un eje ya no es la Bézier que se explicó en clase.
+_MARGEN_CURVA = 20
+_ALTO_CABECERA_CURVA = 44
+_ALTO_INFO_CURVA = 150
+
+_area_util = area_de_contenido()
+CURVE_AREA = pygame.Rect(
+    _area_util.x + _MARGEN_CURVA,
+    _area_util.y + _ALTO_CABECERA_CURVA,
+    _area_util.w - _MARGEN_CURVA * 2,
+    max(120, _area_util.h - _ALTO_CABECERA_CURVA - _ALTO_INFO_CURVA),
+)
+#: Tamaño para el que se escribieron los puntos de control originales.
+_AREA_AUTORIA = (312, 160)
+#: Factor uniforme para llevar aquellos desplazamientos a este área.
+_ESCALA_PUNTOS = min(
+    CURVE_AREA.width / _AREA_AUTORIA[0], CURVE_AREA.height / _AREA_AUTORIA[1],
+)
 
 
 def _default_points(mode: int) -> list[tuple[float, float]]:
-    cx, cy = 160, 128
+    """Puntos de control por defecto, centrados en el área de la curva."""
+    cx, cy = CURVE_AREA.center
+    k = _ESCALA_PUNTOS
+
+    def p(dx: float, dy: float) -> tuple[float, float]:
+        return (cx + dx * k, cy + dy * k)
+
     if mode == 0:
-        return [(cx - 100, cy + 50), (cx, cy - 40), (cx + 100, cy + 50)]
+        return [p(-100, 50), p(0, -40), p(100, 50)]
     elif mode == 1:
-        return [(cx - 110, cy + 50), (cx - 50, cy - 50),
-                (cx + 50, cy + 40), (cx + 110, cy - 40)]
+        return [p(-110, 50), p(-50, -50), p(50, 40), p(110, -40)]
     elif mode in (2, 5):
-        return [(cx - 120, cy + 40), (cx - 80, cy - 50), (cx, cy + 20),
-                (cx + 60, cy - 40), (cx + 120, cy + 30)]
+        return [p(-120, 40), p(-80, -50), p(0, 20), p(60, -40), p(120, 30)]
     elif mode == 3:
-        return [(cx - 120, cy + 30), (cx - 80, cy - 40), (cx, cy + 10),
-                (cx + 80, cy - 30), (cx + 120, cy + 40)]
+        return [p(-120, 30), p(-80, -40), p(0, 10), p(80, -30), p(120, 40)]
     else:  # BSPLINE
-        return [(cx - 130, cy + 20), (cx - 80, cy - 50), (cx - 20, cy + 30),
-                (cx + 40, cy - 40), (cx + 100, cy + 20), (cx + 130, cy - 20)]
+        return [p(-130, 20), p(-80, -50), p(-20, 30),
+                p(40, -40), p(100, 20), p(130, -20)]
 
 
 def _lerp(a: tuple[float, float], b: tuple[float, float], t: float) -> tuple[float, float]:
@@ -188,7 +219,8 @@ class CurveEditorScene(BaseScene):
         if im.is_raw_key_pressed(pygame.K_EQUALS) or im.is_raw_key_pressed(pygame.K_PLUS):
             if self._mode in (2, 4, 5) and len(self._points) < 10:
                 last = self._points[-1]
-                self._points.append((last[0] + 30, last[1] - 20))
+                self._points.append((last[0] + 30 * _ESCALA_PUNTOS,
+                                     last[1] - 20 * _ESCALA_PUNTOS))
                 self._status_msg = f"Added point ({len(self._points)} total)"
                 self._status_timer = 1.0
         if im.is_raw_key_pressed(pygame.K_MINUS):
@@ -235,6 +267,17 @@ class CurveEditorScene(BaseScene):
             t = (mx - CURVE_AREA.left) / max(1, CURVE_AREA.width)
             self._casteljau_t = max(0.0, min(1.0, t))
 
+    def rect_principal(self) -> pygame.Rect:
+        """Dónde vive el elemento que el estudiante mira y manipula.
+
+        Lo consume `tests/test_demo_centering.py`, que exige que esté
+        centrado horizontalmente en el área útil. Es la forma de dejar
+        escrito, y comprobado en cada ejecución de la suite, el defecto
+        AUD-094: el elemento vivía en la esquina superior izquierda porque
+        estas escenas se escribieron para una pantalla de 320x224.
+        """
+        return CURVE_AREA
+
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill(COLOR_BG)
         draw_top_bar(surface, f"CURVE EDITOR — {MODE_NAMES[self._mode]}", "UNIT III")
@@ -244,10 +287,11 @@ class CurveEditorScene(BaseScene):
         pygame.draw.rect(surface, (40, 40, 60), CURVE_AREA, 1)
 
         # Draw grid
-        for gx in range(CURVE_AREA.left, CURVE_AREA.right, 20):
+        paso_rejilla = max(8, int(20 * _ESCALA_PUNTOS))
+        for gx in range(CURVE_AREA.left, CURVE_AREA.right, paso_rejilla):
             pygame.draw.line(surface, GRID_COLOR, (gx, CURVE_AREA.top),
                              (gx, CURVE_AREA.bottom), 1)
-        for gy in range(CURVE_AREA.top, CURVE_AREA.bottom, 20):
+        for gy in range(CURVE_AREA.top, CURVE_AREA.bottom, paso_rejilla):
             pygame.draw.line(surface, GRID_COLOR, (CURVE_AREA.left, gy),
                              (CURVE_AREA.right, gy), 1)
 
@@ -367,5 +411,6 @@ class CurveEditorScene(BaseScene):
         info_lines = [f"Level {i}: {len(lv)} pts" for i, lv in enumerate(levels)]
         for i, line in enumerate(info_lines):
             txt = self._font_small.render(line, True, colors[i % len(colors)])
-            surface.blit(txt, (CURVE_AREA.right - 70, CURVE_AREA.top + 4 + i * 12))
+            surface.blit(txt, (CURVE_AREA.right - txt.get_width() - 8,
+                               CURVE_AREA.top + 4 + i * (self._font_small.get_height() + 2)))
 

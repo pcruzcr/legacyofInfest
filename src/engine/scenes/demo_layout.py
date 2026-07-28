@@ -119,6 +119,28 @@ def centrar_bloque(ancho: int, alto: int) -> tuple[int, int]:
     return (area.x + (area.w - ancho) // 2, area.y + (area.h - alto) // 2)
 
 
+#: Cuánto puede desviarse del centro el elemento principal de una demo, en
+#: fracción del ancho útil. No es cero porque varias escenas ponen a un lado
+#: una columna de lecturas numéricas —la matriz, las componentes del
+#: vector— y el elemento se corre para dejarle sitio. Sí es lo bastante
+#: estrecho para que un elemento pegado a la esquina no pase: antes de
+#: AUD-094 las desviaciones iban del 22 % al 34 %.
+TOLERANCIA_CENTRADO: float = 0.20
+#: Fracción mínima del área útil que debe ocupar el elemento principal.
+OCUPACION_MINIMA: float = 0.30
+
+
+def esta_centrado(rect: pygame.Rect, tolerancia: float = TOLERANCIA_CENTRADO) -> bool:
+    """¿Está este rectángulo lo bastante centrado en el área útil?
+
+    Se comprueba sólo el eje horizontal a propósito: en vertical casi todas
+    las demos reservan una banda arriba para el rótulo y otra abajo para las
+    lecturas, y exigir simetría vertical obligaría a rellenar con vacío.
+    """
+    area = area_de_contenido()
+    return abs(rect.centerx - area.centerx) <= area.w * tolerancia
+
+
 def area_con_columna(ancho_columna: int) -> tuple[pygame.Rect, pygame.Rect]:
     """Parte el área útil en una columna de texto y un escenario.
 
