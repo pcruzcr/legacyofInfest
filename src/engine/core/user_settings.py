@@ -87,6 +87,8 @@ class UserSettings:
     difficulty: str = "normal"
     colorblind_mode: str = "off"
     subtitles_enabled: bool = False
+    #: Idioma de la interfaz. Español por defecto: es el idioma del curso.
+    language: str = "es"
 
     # Not persisted: resolved at load time so callers need not handle None.
     _path: Path | None = field(default=None, repr=False, compare=False)
@@ -103,6 +105,14 @@ class UserSettings:
             )
             self.colorblind_mode = "off"
         self.subtitles_enabled = bool(self.subtitles_enabled)
+
+        from src.engine.core.i18n import IDIOMA_POR_DEFECTO, IDIOMAS
+        if self.language not in IDIOMAS:
+            logger.warning(
+                "UserSettings: idioma %r desconocido — se usa %r",
+                self.language, IDIOMA_POR_DEFECTO,
+            )
+            self.language = IDIOMA_POR_DEFECTO
 
     # ── persistence ────────────────────────────────────────────
 
