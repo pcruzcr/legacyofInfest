@@ -45,6 +45,9 @@ class DrawContext:
     ambient_particles: AmbientParticleSystem | None = None
     weather_system: WeatherSystem | None = None
     trail_system: TrailSystem | None = None
+    #: Estela de enemigos, separada de la del jugador para que las dos
+    #: puedan ser continuas (comparten temporizador de intervalo).
+    enemy_trail_system: TrailSystem | None = None
     tutorial_overlay: TutorialOverlay | None = None
     learning_overlay: LearningOverlay | None = None
     dialogue_system: DialogueSystem | None = None
@@ -97,6 +100,8 @@ class DrawingSystem:
 
         self._draw_entities(surface, stage, player, checkpoints, offset)
 
+        if ctx.enemy_trail_system:
+            ctx.enemy_trail_system.draw(surface, offset)
         if ctx.trail_system:
             ctx.trail_system.draw(surface, offset)
         if ctx.damage_numbers:

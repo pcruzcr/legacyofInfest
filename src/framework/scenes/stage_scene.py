@@ -95,6 +95,9 @@ class StageScene(BaseScene):
         self._ambient_particles = AmbientParticleSystem()
         self._weather = WeatherSystem()
         self._trail_system = TrailSystem()
+        self._enemy_trail_system = TrailSystem()
+        #: Última x conocida de cada entidad, para deducir su velocidad.
+        self._enemy_prev_x: dict[int, float] = {}
         self._lighting = LightSystem(ambient_brightness=0.7)
         self._player_light: LightSource | None = None
         self._stage_lights: list[LightSource] = []
@@ -278,6 +281,8 @@ class StageScene(BaseScene):
         self._tutorial.show("move", duration=6.0)
         self._ambient_particles.clear()
         self._trail_system.clear()
+        self._enemy_trail_system.clear()
+        self._enemy_prev_x.clear()
         self._weather.clear()
         climate = getattr(self._stage_data, "climate", "")
         self._weather.set_climate(climate)
@@ -1046,6 +1051,14 @@ class StageScene(BaseScene):
         )
         self._minimap.explore_rect(explore_rect)
 
+    #: Velocidad, en px/s, a partir de la cual un enemigo deja estela.
+    #:
+    #: F1.4: el sistema de estelas sólo lo usaba el jugador, así que la
+    #: embestida de un jefe —el movimiento más rápido y más peligroso del
+    #: juego— no dejaba rastro. La estela no es decoración en ese caso: es la
+    #: información que permite leer de dónde viene el ataque.
+    ENEMY_TRAIL_SPEED = 180.0
+
     def _update_trail(self, dt: float) -> None:
         if self._player is not None:
             is_dashing = getattr(self._player, "_dash_timer", 0) > 0
@@ -1053,6 +1066,49 @@ class StageScene(BaseScene):
             if is_dashing or (is_moving and not self._player.is_grounded):
                 self._trail_system.capture(self._player)
         self._trail_system.update(dt)
+
+        self._capture_enemy_trails(dt)
+        self._enemy_trail_system.update(dt)
+
+    def _capture_enemy_trails(self, dt: float) -> None:
+        """Estela para los enemigos que se mueven rápido, jefes incluidos.
+
+        Se usa un `TrailSystem` aparte del jugador a propósito: los dos
+        comparten un único temporizador de intervalo, así que meterlos en el
+        mismo sistema haría que el jugador y el jefe se robaran capturas y
+        ninguno de los dos dejara una estela continua.
+
+        La velocidad se deduce del desplazamiento entre fotogramas porque los
+        enemigos **no tienen atributo `velocity`**: a diferencia del jugador,
+        mueven `position` directamente. El primer intento comprobaba
+        `entity.velocity` y por tanto nunca capturaba nada, lo que habría
+        pasado por una característica que "no se nota".
+        """
+        if self._stage_data is None or dt <= 0:
+            return
+        mas_rapido = None
+        mejor_velocidad = self.ENEMY_TRAIL_SPEED
+        for entity in self._stage_data.entity_list:
+            if entity.rect is None or not getattr(entity, "visible", True):
+                continue
+            anterior = self._enemy_prev_x.get(id(entity))
+            self._enemy_prev_x[id(entity)] = entity.position.x
+            if anterior is None:
+                continue
+            velocidad = abs(entity.position.x - anterior) / dt
+            if velocidad > mejor_velocidad:
+                mejor_velocidad = velocidad
+                mas_rapido = entity
+
+        if mas_rapido is None:
+            return
+        # Rojo tenue: se distingue del azul del jugador de un vistazo, que es
+        # lo que hace falta cuando las dos estelas se cruzan.
+        self._enemy_trail_system.capture_at(
+            mas_rapido.position.x, mas_rapido.position.y,
+            (mas_rapido.rect.width, mas_rapido.rect.height),
+            (255, 90, 70, 110),
+        )
 
     def _save_and_quit(self) -> None:
         if self._stage_data is not None and self._player is not None:
@@ -1101,6 +1157,7 @@ class StageScene(BaseScene):
             ambient_particles=self._ambient_particles,
             weather_system=self._weather,
             trail_system=self._trail_system,
+            enemy_trail_system=self._enemy_trail_system,
             tutorial_overlay=self._tutorial,
             learning_overlay=self._learning,
             dialogue_system=self._dialogue,
