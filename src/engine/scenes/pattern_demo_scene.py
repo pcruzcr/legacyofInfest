@@ -125,15 +125,36 @@ class PatternDemoScene(BaseScene):
         self._class_grid_generated: bool = False
 
     def _load_default_model(self) -> None:
+        """Obtiene el modelo de referencia, entrenándolo en esta máquina.
+
+        F3.3 — antes se cargaba `assets/models/professor_sample.pkl`, un
+        binario entrenado con scikit-learn 1.9.0. Con cualquier otra versión la
+        propia biblioteca avisa de «may lead to breaking code or invalid
+        results», así que dos estudiantes con versiones distintas obtenían de
+        este laboratorio predicciones distintas **sin ninguna señal en
+        pantalla**. Un laboratorio que da resultados distintos según la máquina
+        no es un laboratorio.
+
+        Ahora el modelo se entrena desde el dataset del repositorio y se cachea
+        localmente. Cuesta unos 190 ms la primera vez por máquina; después, 9.
+        Y de paso desaparece el segundo problema: nadie deserializa un binario
+        que no haya producido su propio equipo.
+        """
+        from src.framework.processing import reference_model
+
         try:
-            if _DEFAULT_MODEL.exists():
-                self._model = PatternRecognitionTools.load_model(str(_DEFAULT_MODEL))
-                self._model_name = "professor_sample"
-                self._status_msg = f"Loaded: {self._model_name}"
+            modelo = reference_model.obtener_modelo()
+            if modelo is not None:
+                self._model = modelo
+                self._model_name = "referencia (entrenado aquí)"
+                self._status_msg = f"Modelo: {self._model_name}"
                 self._status_timer = 2.0
-            else:
-                self._error_msg = "Default model not found"
-                self._error_timer = 2.0
+                return
+
+            # Sin dataset ni scikit-learn no hay modelo, pero el laboratorio
+            # tiene que abrirse igual: ya sabe decir que no hay ninguno.
+            self._error_msg = "No se pudo entrenar el modelo de referencia"
+            self._error_timer = 2.0
         except (OSError, ValueError, ImportError) as e:
             logger.warning("pattern_demo: model load error: %s", e)
             self._error_msg = f"Model load error: {e}"[:60]

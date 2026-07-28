@@ -387,3 +387,49 @@ class TestElPrevisualizadorCierraElCicloDelEstudiante:
         assert "validate_tmx" in r.stdout, (
             "no remite al validador, que es la herramienta que diagnostica"
         )
+
+
+class TestElEmpaquetadoEstaBienDeclarado:
+    """F3.3 — no se construye el .exe en la suite, pero sí se vigila la receta.
+
+    Compilar con PyInstaller tarda minutos y necesita la herramienta instalada,
+    así que no cabe en una suite que corre en cada cambio. Lo que sí cabe —y es
+    donde falla este tipo de guion— es comprobar que la lista de datos y de
+    importaciones ocultas siga coincidiendo con el proyecto real. Un ejecutable
+    al que le falta `locale/` arranca y muestra la interfaz sin traducir.
+    """
+
+    def test_empaqueta_todas_las_carpetas_de_datos_que_existen(self):
+        from scripts.build_executable import DATOS
+
+        for carpeta in DATOS:
+            assert (RAIZ / carpeta).is_dir(), (
+                f"el empaquetado declara '{carpeta}', que no existe"
+            )
+
+    def test_no_olvida_ninguna_carpeta_de_datos_necesaria(self):
+        """Las tres que el juego lee en tiempo de ejecución."""
+        from scripts.build_executable import DATOS
+
+        for imprescindible in ("assets", "locale"):
+            assert imprescindible in DATOS, (
+                f"sin '{imprescindible}' el ejecutable arranca roto"
+            )
+
+    def test_las_importaciones_ocultas_existen_de_verdad(self):
+        """Un nombre mal escrito aquí no falla al construir: falla al ejecutar."""
+        import importlib.util
+
+        from scripts.build_executable import OCULTOS
+
+        for modulo in OCULTOS:
+            raiz = modulo.split(".")[0]
+            if importlib.util.find_spec(raiz) is None:
+                continue          # dependencia opcional no instalada
+            assert importlib.util.find_spec(modulo) is not None, (
+                f"el empaquetado declara '{modulo}', que no se puede importar"
+            )
+
+    def test_avisa_si_falta_pyinstaller_en_vez_de_reventar(self):
+        r = _ejecutar("scripts/build_executable.py")
+        assert "Traceback" not in r.stderr, r.stderr[-400:]
