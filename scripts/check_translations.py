@@ -138,8 +138,16 @@ def main() -> int:
             if args.ci:
                 problemas += 1
         if sin_traducir:
-            print(f"    [nota ] {len(sin_traducir)} cadena(s) sin traducir "
-                  "(se mostrarán tal cual)")
+            # No todas las cadenas sin entrada son un hueco. El código fuente
+            # es bilingüe: un literal que ya está en castellano no necesita
+            # entrada en `es.json`, porque el respaldo lo muestra tal cual y
+            # eso es exactamente lo correcto. Añadirle una entrada identidad
+            # engordaría el catálogo y, peor, rompería la comprobación de ida
+            # y vuelta de `test_i18n`: afirmaría que el original está en
+            # castellano justo cuando `en.json` dice que está en inglés.
+            print(f"    [nota ] {len(sin_traducir)} cadena(s) sin entrada "
+                  "(se muestran tal cual; correcto si el original ya está "
+                  "en este idioma)")
 
     print()
     if problemas:

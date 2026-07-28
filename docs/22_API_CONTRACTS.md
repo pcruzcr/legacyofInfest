@@ -10,10 +10,10 @@ date_processed: "2026-07-14"
 
 # Legacy of InFest — API Contracts
 
-**Document ID:** LOI-API-022  
-**Version:** 1.1.0  
-**Status:** Official  
-**Compatibility:** Authoritative signature reference for all of `03_ARCHITECTURE.md` through `17_BOSS_SPEC.md`  
+**Document ID:** LOI-API-022
+**Version:** 1.1.0
+**Status:** Official
+**Compatibility:** Authoritative signature reference for all of `03_ARCHITECTURE.md` through `17_BOSS_SPEC.md`
 **Audience:** AI coding assistants (Claude Code, Cline, OpenCode, Codex)
 
 ---
@@ -53,7 +53,6 @@ PLAYER_WALK_SPEED: float = 90.0
 PLAYER_JUMP_FORCE: float = -380.0
 PLAYER_MAX_FALL_SPEED: float = 500.0
 PLAYER_COYOTE_FRAMES: int = 6
-PLAYER_INVINCIBILITY_DURATION: float = 1.5
 PLAYER_DASH_SPEED: float = 200.0
 PLAYER_AIR_DASH_LIMIT: int = 1
 PLAYER_SHORT_ATTACK_DURATION: float = 0.15
@@ -132,29 +131,74 @@ def clear() -> None: ...
 import pygame
 
 class App:
-    def __init__(self) -> None:
+    def __init__(self, use_gl: bool = True) -> None:
         """
         Initializes pygame, pygame.mixer, creates internal_surface (settings.INTERNAL_WIDTH x settings.INTERNAL_HEIGHT)
-        and window_surface (scaled by settings.DISPLAY_SCALE), constructs
-        DeltaClock, EventBus, AssetLoader, InputManager, AudioManager,
-        SceneManager. Pushes SplashScene onto the SceneManager.
+        and window_surface, constructs DeltaClock, EventBus, InputManager, AudioManager,
+        SceneManager, GameContext. Optionally initializes ModernGL renderer.
+        Loads UserSettings from disk and applies them. Pushes SplashScene onto the SceneManager.
         """
 
     def run(self) -> None:
         """Enters the main loop. Does not return until quit."""
 
-    def quit(self) -> None:
-        """Stops music, calls pygame.quit(), sys.exit(0)."""
+    def _shutdown(self) -> None:
+        """Stops music, calls pygame.quit()."""
+
+    def _init_pygame(self) -> None: ...
+    def _init_gl(self) -> None: ...
+    def _init_subsystems(self) -> None: ...
+    def _draw(self) -> None: ...
 
     internal_surface: pygame.Surface
-    window_surface: pygame.Surface
     clock: "DeltaClock"
     scene_manager: "SceneManager"
     input_manager: "InputManager"
     audio_manager: "AudioManager"
+    event_bus: "EventBus"
+    context: "GameContext"
+    user_settings: "UserSettings"
+    running: bool
 ```
 
-### 2.5 `src/engine/core/save_data.py`
+### 2.5 `src/engine/core/game_context.py`
+
+```python
+from __future__ import annotations
+from typing import TYPE_CHECKING, Any
+
+class GameContext:
+    """Dependency injection container. Holds all shared engine subsystems.
+    Passed to every scene via BaseScene.__init__(self, context)."""
+
+    def __init__(
+        self,
+        input_manager: InputManager,
+        audio_manager: AudioManager,
+        scene_manager: SceneManager,
+        event_bus: EventBus,
+        clock: DeltaClock | None = None,
+        save_manager: SaveManager | None = None,
+    ) -> None: ...
+
+    @property
+    def audio(self) -> Any:
+        """Shortcut to self.audio_manager."""
+
+    def quit(self) -> None:
+        """Signal the game loop to exit."""
+
+    input_manager: InputManager
+    audio_manager: AudioManager
+    scene_manager: SceneManager
+    event_bus: EventBus
+    clock: DeltaClock | None
+    save_manager: SaveManager
+    pending_load: SaveData | None
+    running: bool
+```
+
+### 2.6 `src/engine/core/save_data.py`
 
 ```python
 from dataclasses import dataclass, field

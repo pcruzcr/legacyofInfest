@@ -54,6 +54,12 @@ class HitEffects:
         friction=0.95,
     )
 
+    BUBBLE = BurstConfig(
+        count=3, speed=30.0, lifetime=0.6,
+        size=(2, 3), color=(180, 220, 255), spread=30.0,
+        friction=0.9, gravity=-30.0,
+    )
+
     CHARGE_GLOW = BurstConfig(
         count=3, speed=30.0, lifetime=0.2,
         size=(2, 4), color=(255, 200, 50), spread=360.0,

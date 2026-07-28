@@ -18,7 +18,6 @@ class SwimmingState(PlayerStateBase):
         self._swim_timer: float = 0.0
         self._bubble_timer: float = 0.0
         self._surface_y: float = 0.0
-        self._swim_boosts_used: int = 0
 
     def enter(self, player: Player) -> None:
         super().enter(player)
