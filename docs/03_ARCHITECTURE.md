@@ -10,9 +10,9 @@ date_processed: "2026-07-14"
 
 # Legacy of InFest — Architecture
 
-**Document ID:** LOI-ARCH-003  
-**Version:** 1.1.0  
-**Status:** Official  
+**Document ID:** LOI-ARCH-003
+**Version:** 1.1.0
+**Status:** Official
 **Audience:** Professor, Teaching Assistants, AI coding assistants
 
 ---
@@ -25,11 +25,25 @@ date_processed: "2026-07-14"
 legacy-of-infest/                      # Actual repo root
 │
 ├── main.py                            # Entry point. Instantiates App and calls run().
+│                                     # Supports --stage and --boss CLI args for direct launch.
 ├── requirements.txt
+├── requirements.lock
 ├── README.md
+├── README.en.md
 ├── LICENSE
+├── pyproject.toml                     # Build config, dependencies, ruff/pytest/mypy settings
+├── build.spec                         # PyInstaller build spec
+├── build_nuitka.bat                   # Nuitka build script (Windows)
+├── .flake8                            # Flake8 config (legacy, superseded by ruff)
+├── .gitignore
+├── .gitattributes
+├── CHANGELOG.md
+├── CONTRIBUTING.md
+├── KNOWN_GAPS.md                      # Known gaps and their resolutions
+├── PHASE_FIX_REPORT.md                # Stage 0 collision/spawn fixes
+├── REMEDIATION_PLAN.md                # 8-phase remediation plan
 │
-├── docs/                              # Official documentation package (00–21)
+├── docs/                              # Official documentation package (00–52+)
 │
 ├── assets/                            # PROFESSOR-OWNED. Read-only for students.
 │   ├── sprites/
@@ -42,7 +56,15 @@ legacy-of-infest/                      # Actual repo root
 │   ├── music/
 │   ├── sfx/
 │   ├── fonts/
-│   └── ui/
+│   ├── ui/
+│   ├── splash/
+│   ├── title/
+│   ├── story/
+│   ├── maps/
+│   ├── models/
+│   ├── datasets/
+│   ├── scripts/
+│   └── tileset_stage0.tsx
 │
 ├── src/                                # All Python source code
 │   │
@@ -54,21 +76,31 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── settings.py                # All global constants
 │   │   │   ├── clock.py                   # DeltaClock: delta time, FPS cap, time scale
 │   │   │   ├── event_bus.py               # EventBus: pub/sub event dispatch
-│   │   │   └── events.py                  # Event name constants
+│   │   │   ├── events.py                  # Event name constants (Events class)
+│   │   │   ├── game_context.py            # GameContext: DI container for all subsystems
+│   │   │   ├── achievements.py            # Achievement system
+│   │   │   ├── difficulty.py              # Difficulty scaling (Difficulty enum, set_difficulty)
+│   │   │   ├── i18n.py                    # Internationalization (gettext wrapper)
+│   │   │   ├── inventory.py               # Item/collectible management
+│   │   │   ├── save_data.py               # SaveData dataclass, SAVE_VERSION, MAX_SLOTS
+│   │   │   ├── save_manager.py            # SaveManager: JSON-based save/load/delete
+│   │   │   ├── stage_registry.py          # StageRegistry: auto-discover stages
+│   │   │   └── user_settings.py           # UserSettings: persisted player preferences
 │   │   │
 │   │   ├── scene/
 │   │   │   ├── __init__.py
 │   │   │   ├── scene_manager.py           # SceneManager: push/pop/replace scene stack
 │   │   │   ├── base_scene.py              # BaseScene: abstract interface all scenes implement
-│   │   │   └── transitions.py            # FadeTransition, WipeTransition, SlideTransition, CircleTransition
+│   │   │   └── transitions.py             # FadeTransition, WipeTransition, SlideTransition, CircleTransition
 │   │   │
-│   │   ├── scenes/                        # All scene implementations (34 files)
+│   │   ├── scenes/                        # All scene implementations (42+ files)
 │   │   │   ├── __init__.py
 │   │   │   ├── splash_scene.py            # Professor logo, auto-advance
 │   │   │   ├── title_scene.py             # Main menu: Start / Academic Demos / Quit
 │   │   │   ├── story_scene.py             # Story sequence (scenes 1–3)
 │   │   │   ├── loading_scene.py           # Loading screen with progress indicator
 │   │   │   ├── tutorial_scene.py          # Controls tutorial overlay
+│   │   │   ├── tutorial_overlay.py        # Contextual help popups (engine-level)
 │   │   │   ├── options_scene.py           # Options: volume, difficulty, colorblind mode
 │   │   │   ├── keybinding_scene.py        # Rebind controls
 │   │   │   ├── load_game_scene.py         # Save file selector
@@ -78,9 +110,9 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── scene_registry.py          # DI Container: register → build pattern
 │   │   │   ├── debug_overlay.py           # F3 debug console (FPS, events, modules)
 │   │   │   ├── param_panel.py             # Reusable ParamPanel widget
-│   │   │   ├── demo_layout.py            # Layout constants & draw helpers
-│   │   │   ├── demo_utils.py             # SourceSurfaceManager, FrameThrottle, etc.
-│   │   │   ├── demo_common.py            # Legacy re-exports from demo_layout + demo_utils
+│   │   │   ├── demo_layout.py             # Layout constants & draw helpers
+│   │   │   ├── demo_utils.py              # SourceSurfaceManager, FrameThrottle, etc.
+│   │   │   ├── demo_common.py             # Legacy re-exports from demo_layout + demo_utils
 │   │   │   ├── filter_demo_scene.py       # Unit VII — Filter demo (9 modes)
 │   │   │   ├── vision_demo_scene.py       # Unit VIII — Vision demo (10 modes)
 │   │   │   ├── pattern_demo_scene.py      # Unit IX — Pattern demo (5 modes)
@@ -94,13 +126,18 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── combo_demo_scene.py        # Combo system state machine demo
 │   │   │   ├── inventory_scene.py         # Inventory screen (grid of collected items)
 │   │   │   ├── achievement_scene.py       # Achievement screen (locked/unlocked)
-│   │   │   ├── achievement_screen.py      # Achievement unlock overlay
 │   │   │   ├── bestiary_scene.py          # Bestiary: enemy catalog
 │   │   │   ├── world_map_scene.py         # World map (connected nodes)
 │   │   │   ├── progress_scene.py          # Student progress dashboard (% per category)
 │   │   │   ├── leaderboard_scene.py       # Local speedrun / boss rush leaderboards
 │   │   │   ├── pipeline_builder_scene.py  # Visual filter chain builder (Unit VII/VIII)
-│   │   │   └── quiz_system.py             # Quiz overlay for academic labs
+│   │   │   ├── quiz_system.py             # Quiz overlay for academic labs
+│   │   │   ├── code_panel.py              # Code display panel for teaching
+│   │   │   ├── sandbox_scene.py           # Sandbox for testing mechanics
+│   │   │   ├── stage_error_scene.py       # Error screen for stage load failures
+│   │   │   ├── stage_wizard_scene.py      # Stage creation wizard
+│   │   │   ├── transition_manager.py      # Manages screen transitions (fade/wipe/slide/circle)
+│   │   │   └── unit_theory_scene.py       # Unit theory display scene
 │   │   │
 │   │   ├── input/
 │   │   │   ├── __init__.py
@@ -110,20 +147,31 @@ legacy-of-infest/                      # Actual repo root
 │   │   ├── audio/
 │   │   │   ├── __init__.py
 │   │   │   ├── sound_bank.py              # SoundBank: named sound registry
-│   │   │   └── audio_manager.py           # AudioManager: music + sfx + ambient + stingers
+│   │   │   ├── audio_manager.py           # AudioManager: music + sfx + ambient + stingers
+│   │   │   └── audio_pipeline.py          # Audio processing pipeline
+│   │   │
+│   │   ├── render/
+│   │   │   ├── __init__.py
+│   │   │   ├── gl_pipeline.py             # GLRenderer, GLRenderConfig: ModernGL pipeline
+│   │   │   └── shaders.py                 # GLSL shader sources
 │   │   │
 │   │   ├── ui/
 │   │   │   ├── __init__.py
 │   │   │   ├── hud.py                     # HUD: hearts, timer, portrait, score
 │   │   │   ├── message_box.py             # MessageBox: scrolling text, tutorial messages
 │   │   │   ├── screen_banner.py           # ScreenBanner: stage title animation
-│   │   │   └── minimap.py                 # Minimap: fog-of-war exploration map
+│   │   │   ├── minimap.py                 # Minimap: fog-of-war exploration map
+│   │   │   ├── bitmap_font.py             # BitmapFont: custom font rendering
+│   │   │   ├── subtitle_overlay.py        # SubtitleOverlay: dialogue subtitles
+│   │   │   ├── theme.py                   # Theme: UI color scheme and styling
+│   │   │   └── widgets.py                 # Reusable UI widgets
 │   │   │
 │   │   └── utils/
 │   │       ├── __init__.py
 │   │       ├── asset_loader.py            # AssetLoader: load+cache images, sounds, fonts
 │   │       ├── spritesheet.py             # SpriteSheet: slice frames from sheet
-│   │       └── math_utils.py             # Vector2, lerp, clamp, ease functions
+│   │       ├── math_utils.py              # Vector2, lerp, clamp, ease functions
+│   │       └── surface_pool.py            # SurfacePool: reuse temporary surfaces
 │   │
 │   ├── framework/                      # PROFESSOR-OWNED. Do not modify.
 │   │   │
@@ -131,11 +179,15 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── __init__.py
 │   │   │   ├── base_entity.py             # BaseEntity: position, rect, update, draw lifecycle
 │   │   │   ├── player.py                  # Player: state machine, input response, damage
+│   │   │   ├── player_state.py            # PlayerState enum (all player states)
+│   │   │   ├── player_states.py           # Player state machine implementation
+│   │   │   ├── states/                    # Individual state classes (subdirectory)
 │   │   │   ├── enemy_base.py              # EnemyBase: abstract enemy with health + state
 │   │   │   ├── enemy_walker.py            # EnemyWalker: horizontal patrol, player detection
 │   │   │   ├── enemy_flying.py            # EnemyFlying: sine-wave or waypoint flight
 │   │   │   ├── enemy_shooter.py           # EnemyShooter: projectile emission, range trigger
 │   │   │   ├── boss_base.py               # BossBase: phase manager, boss health bar event
+│   │   │   ├── boss_kit.py                # BossKit: reusable boss components
 │   │   │   ├── enemy_charger.py           # EnemyCharger: wind-up + charge attack
 │   │   │   ├── enemy_archer.py            # EnemyArcher: ranged with arc shot
 │   │   │   ├── enemy_brute.py             # EnemyBrute: heavy melee + ground slam
@@ -144,7 +196,9 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── entity_factory.py          # EntityFactory: registry-based enemy creation
 │   │   │   ├── flight_strategies.py       # FlightStrategy: sine/bezier/random flight patterns
 │   │   │   ├── ai_predictor.py            # AIPredictor: ML-based player action prediction
-│   │   │   └── bestiary.py                # Bestiary: enemy encounter/kill tracking
+│   │   │   ├── bestiary.py                # Bestiary: enemy encounter/kill tracking
+│   │   │   ├── bestiary_registry.py       # BestiaryRegistry: enemy data registry
+│   │   │   └── squad_brain.py             # SquadBrain: group enemy coordination AI
 │   │   │
 │   │   ├── stage/
 │   │   │   ├── __init__.py
@@ -157,12 +211,17 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── drawing_system.py          # DrawingSystem: layered rendering pipeline
 │   │   │   ├── cutscene_system.py         # CutsceneSystem: scripted cutscenes
 │   │   │   ├── speedrun_mode.py           # SpeedrunTimer: global timer + ghost data
-│   │   │   └── boss_rush_mode.py          # BossRushMode: consecutive boss gauntlet
+│   │   │   ├── boss_rush_mode.py          # BossRushMode: consecutive boss gauntlet
+│   │   │   ├── day_night.py               # DayNight: day/night cycle system
+│   │   │   ├── level_metrics.py           # LevelMetrics: stage analysis metrics
+│   │   │   ├── seasons.py                 # Seasons: seasonal visual effects
+│   │   │   └── tmx_diagnostics.py         # TmxDiagnostics: TMX validation utilities
 │   │   │
 │   │   ├── ui/
 │   │   │   ├── __init__.py
 │   │   │   ├── tutorial_overlay.py        # TutorialOverlay: contextual help popups
-│   │   │   └── dialogue_system.py         # DialogueSystem: branching dialogue with portraits
+│   │   │   ├── dialogue_system.py         # DialogueSystem: branching dialogue with portraits
+│   │   │   └── learning_overlay.py        # LearningOverlay: academic context overlay
 │   │   │
 │   │   ├── scenes/
 │   │   │   ├── __init__.py
@@ -178,15 +237,28 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── ambient_particles.py       # AmbientParticleSystem: dust, leaves, embers
 │   │   │   ├── trail_system.py            # TrailSystem: motion trails
 │   │   │   ├── fog_of_war.py              # FogOfWar: black overlay with revealed holes
-│   │   │   └── water_effect.py            # WaterEffect: animated sine wave overlay
+│   │   │   ├── water_effect.py            # WaterEffect: animated sine wave overlay
+│   │   │   └── weather_system.py          # WeatherSystem: rain, snow, fog effects
 │   │   │
-│   │   └── processing/
+│   │   ├── processing/
+│   │   │   ├── __init__.py
+│   │   │   ├── color_tools.py             # ColorTools: RGB↔HSV↔HSL↔CMYK, alpha blend
+│   │   │   ├── filter_tools.py            # FilterTools: convolution, blur, Sobel, Canny
+│   │   │   ├── curve_tools.py             # CurveTools: Bézier, B-Spline, NURBS, sample
+│   │   │   ├── vision_tools.py            # VisionTools: threshold, morphology, features
+│   │   │   ├── edge_detection.py          # EdgeDetection: additional edge detection methods
+│   │   │   ├── pattern_recognition_tools.py  # PatternRecognitionTools: training, inference
+│   │   │   └── reference_model.py         # ReferenceModel: reference ML model
+│   │   │
+│   │   ├── academic/
+│   │   │   ├── __init__.py
+│   │   │   ├── curriculum.py              # Curriculum: syllabus unit definitions
+│   │   │   ├── progress.py                # Progress: student progress tracking
+│   │   │   └── sesion.py                  # Sesion: class session management
+│   │   │
+│   │   └── ai/
 │   │       ├── __init__.py
-│   │       ├── color_tools.py             # ColorTools: RGB↔HSV↔HSL↔CMYK, alpha blend
-│   │       ├── filter_tools.py            # FilterTools: convolution, blur, Sobel, Canny
-│   │       ├── curve_tools.py             # CurveTools: Bézier, B-Spline, NURBS, sample
-│   │       ├── vision_tools.py            # VisionTools: threshold, morphology, features
-│   │       └── pattern_recognition_tools.py  # PatternRecognitionTools: training, inference
+│   │       └── lua_script.py              # LuaScript: Lua scripting for enemy AI
 │   │
 │   └── stages/
 │       ├── stage0/                        # PROFESSOR-OWNED. Executable documentation.
@@ -194,6 +266,10 @@ legacy-of-infest/                      # Actual repo root
 │       │   ├── stage0.py                  # Stage0Scene class
 │       │   ├── stage0.tmx                 # Tiled map
 │       │   └── README.md
+│       ├── boss_venado/                   # PROFESSOR-OWNED. Boss Venado implementation.
+│       │   ├── __init__.py
+│       │   ├── boss_venado.py
+│       │   └── boss_venado_scene.py
 │       └── <student_assignment>/          # ONE folder per individually-assigned Stage/Boss
 │           ├── __init__.py
 │           ├── <assignment>.py
@@ -201,11 +277,26 @@ legacy-of-infest/                      # Actual repo root
 │           └── README.md
 │
 ├── scripts/                            # Tooling scripts
-│   ├── validate_assets.py              # Validates fonts, models, maps
-│   ├── validate_tmx.py                 # Validates TMX map files for common errors
-│   ├── grade_stage.py                  # Auto-grades student stage TMX files
+│   ├── _cli_paths.py                   # Shared path utilities for CLI scripts
+│   ├── build_executable.py             # Build executable from source
+│   ├── check_dependency_sync.py        # Verify dependency consistency
+│   ├── check_tmx_coverage.py           # Check TMX map coverage
+│   ├── check_translations.py           # Verify translation completeness
+│   ├── collect_palettes.py             # Collect palette data from assets
+│   ├── downloader.py                   # Asset downloader utility
+│   ├── feedback_generator.py           # Generate student feedback reports
+│   ├── generate_exam.py                # Generates practice exams from question bank
+│   ├── generate_tmx_reference.py       # Generate TMX reference documentation
 │   ├── grade_boss.py                   # Auto-grades student boss Python files
-│   └── generate_exam.py                # Generates practice exams from question bank
+│   ├── grade_exporter.py               # Export grades to external format
+│   ├── grade_stage.py                  # Auto-grades student stage TMX files
+│   ├── obsidianize.py                  # Convert docs to Obsidian format
+│   ├── plagiarism_detector.py          # Plagiarism detection for student work
+│   ├── preview_tmx.py                  # Preview TMX maps in terminal
+│   ├── project_stats.py                # Generate project statistics
+│   ├── train_reference_model.py        # Train reference ML model
+│   ├── validate_assets.py              # Validates fonts, models, maps
+│   └── validate_tmx.py                 # Validates TMX map files for common errors
 │
 ├── colab/                              # Google Colab notebooks for interactive exercises
 │   ├── 01_vector_math_exercises.ipynb  # Unit II — Vector mathematics exercises
@@ -213,6 +304,7 @@ legacy-of-infest/                      # Actual repo root
 │   └── 03_filter_kernels_exercises.ipynb# Unit VII — Convolution kernel exercises
 │
 ├── student_templates/                  # Canonical starter scaffold (copied into src/stages/ by each student)
+│   ├── __init__.py
 │   ├── stage_template/
 │   │   ├── stage_template.py
 │   │   ├── stage_template.tmx
@@ -221,51 +313,118 @@ legacy-of-infest/                      # Actual repo root
 │       ├── boss_template.py
 │       └── README_template.md
 │
-├── student_assets/                      # Student-generated assets
-│   ├── datasets/
-│   │   └── sample_dataset.npz
-│   └── models/
-│       └── professor_sample.pkl
+├── locale/                             # Localization files
+│   ├── en.json                         # English translations
+│   └── es.json                         # Spanish translations
+│
+├── fonts/                              # Bundled font files
+│
+├── tools/                              # Developer tooling (not imported by game)
+│
+├── web/                                # Web dashboard (if applicable)
+│
+├── exams/                              # Generated exam files
 │
 ├── PHASE_FIX_REPORT.md                 # Stage 0 collision/spawn fixes
 ├── KNOWN_GAPS.md                       # Known gaps and their resolutions
 ├── REMEDIATION_PLAN.md                 # 8-phase remediation plan
 │
-└── tests/                              # Unit and integration tests (33 files, 364+ tests)
+└── tests/                              # Unit and integration tests (41+ files, 5,251+ LOC)
     ├── __init__.py
     ├── conftest.py
-    ├── test_event_bus.py
-    ├── test_clock.py
+    ├── strategies.py                   # Hypothesis strategies for property-based testing
+    ├── test_academic_units.py
+    ├── test_accessibility.py
+    ├── test_ambience.py
     ├── test_asset_loader.py
-    ├── test_input_manager.py
-    ├── test_input_injection.py
-    ├── test_scene_manager.py
-    ├── test_math_utils.py
-    ├── test_message_box.py
-    ├── test_hud.py
-    ├── test_player_physics.py
-    ├── test_player_state_machine.py
-    ├── test_player_damage.py
-    ├── test_player_hurtbox.py
-    ├── test_enemy_walker.py
+    ├── test_audio_wiring.py
+    ├── test_audit_regressions.py
+    ├── test_benchmarks.py
+    ├── test_bestiary_roster.py
+    ├── test_boss_base.py
+    ├── test_boss_encounter.py
+    ├── test_camera.py
+    ├── test_checkpoint.py
+    ├── test_clock.py
+    ├── test_collision_edge_detect.py
+    ├── test_color_tools.py
+    ├── test_combo_system.py
+    ├── test_curve_tools.py
+    ├── test_day_night.py
+    ├── test_demo_centering.py
+    ├── test_demo_scenes.py
+    ├── test_edge_detection.py
     ├── test_enemy_flying.py
     ├── test_enemy_shooter.py
-    ├── test_camera.py
-    ├── test_stage_loader.py
-    ├── test_checkpoint.py
-    ├── test_stage0_smoke.py
-    ├── test_color_tools.py
-    ├── test_curve_tools.py
+    ├── test_enemy_state_machine.py
+    ├── test_enemy_walker.py
+    ├── test_event_bus.py
+    ├── test_event_integration.py
+    ├── test_filter_demo_perf.py
     ├── test_filter_tools.py
-    ├── test_vision_tools.py
-    ├── test_pattern_recognition_tools.py
-    ├── test_demo_scenes.py
-    ├── test_boss_base.py
-    ├── test_student_template.py
-    ├── test_collision_edge_detect.py
     ├── test_floor_x_skip.py
+    ├── test_frame_budget.py
+    ├── test_gameplay_integration.py
+    ├── test_hud.py
+    ├── test_i18n.py
+    ├── test_input_injection.py
+    ├── test_input_manager.py
+    ├── test_level_design_qa.py
+    ├── test_lighting.py
+    ├── test_math_utils.py
+    ├── test_menu_navigation.py
+    ├── test_message_box.py
+    ├── test_new_pipeline_modules.py
+    ├── test_noise_lab.py
+    ├── test_orphan_systems.py
+    ├── test_particle_systems.py
+    ├── test_pattern_demo.py
+    ├── test_pattern_recognition_tools.py
+    ├── test_player_damage.py
+    ├── test_player_hurtbox.py
+    ├── test_player_physics.py
+    ├── test_player_state_machine.py
+    ├── test_player_states_extended.py
+    ├── test_post_processing.py
+    ├── test_reported_ui_bugs.py
+    ├── test_save_manager.py
+    ├── test_scene_manager.py
+    ├── test_scene_registry_integrity.py
+    ├── test_scene_smoke.py
+    ├── test_seasons.py
     ├── test_spawn_no_pop.py
-    └── fixtures/
+    ├── test_squad_brain.py
+    ├── test_stage_loader.py
+    ├── test_stage0_platform_solidity.py
+    ├── test_stage0_smoke.py
+    ├── test_student_guidance.py
+    ├── test_student_template.py
+    ├── test_teaching_tools.py
+    ├── test_tmx_diagnostics.py
+    ├── test_tmx_validator.py
+    ├── test_toolchain_consistency.py
+    ├── test_trails.py
+    ├── test_ui_consistency.py
+    ├── test_vision_tools.py
+    ├── test_visual_regression.py
+    ├── benchmarks/
+    │   ├── __init__.py
+    │   ├── baseline_v1.json
+    │   ├── test_memory_benchmark.py
+    │   ├── test_performance_budget.py
+    │   ├── test_physics_benchmark.py
+    │   ├── test_render_benchmark.py
+    │   └── test_startup_benchmark.py
+    ├── fixtures/
+    │   ├── __init__.py
+    │   └── minimal_stage.tmx
+    ├── output/
+    │   ├── demo/
+    │   ├── filter/
+    │   └── vision/
+    └── playtest/
+        ├── __init__.py
+        └── bot.py
 ```
 
 **Clarification on individual assignment (per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.1):** Each student is assigned exactly one Stage or Boss in Class 1 (see `21_COURSE_SCHEDULE.md`). They copy the appropriate template from `student_templates/` into a new folder under `src/stages/` named for their assignment (e.g., `src/stages/stage1_2_la_soda/` or `src/stages/boss_venado/`). They develop that single folder through all three Evaluación Práctica checkpoints. No student creates more than one assignment folder.

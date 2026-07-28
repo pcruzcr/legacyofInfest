@@ -50,6 +50,9 @@ MIGRATED = {
     "noise_lab_scene.py", "pipeline_builder_scene.py", "progress_scene.py",
     "sandbox_scene.py", "stage_wizard_scene.py", "transform_lab_scene.py",
     "vector_lab_scene.py", "vision_demo_scene.py",
+    # AUD-095. Usa `demo_layout` —barras, colores y `area_de_contenido`— igual
+    # que sus hermanas de esta lista, que es lo que aquí cuenta como migrada.
+    "unit_theory_scene.py",
     # Su fondo de pantalla ya es `COLOR_BG` (= Theme.BG). Los `(5,5,15)` que
     # una versión anterior de este archivo marcaba como infracción se pintan
     # sobre lienzos internos de visualización, no sobre la pantalla.

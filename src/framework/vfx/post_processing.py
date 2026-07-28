@@ -18,7 +18,10 @@ class PostProcessing:
         self._tint_color: tuple[int, int, int] = (0, 0, 0)
         self._tint_alpha: float = 0.0
         self._damage_vignette: float = 0.0
-        self._vignette_surf: pygame.Surface | None = None
+        # Pre-build vignette surface to avoid first-frame penalty (AUD-052).
+        w, h = settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT
+        self._vignette_surf: pygame.Surface | None = self._build_vignette(w, h)
+        self._last_vignette_strength: float = self._vignette_strength
         self._bloom_intensity: float = 0.0
         #: Bloom permanente del escenario, sin decaimiento. `_bloom_intensity`
         #: es la ráfaga con temporizador; en cada fotograma se usa el mayor.
@@ -33,7 +36,6 @@ class PostProcessing:
         self._motion_blur_strength: float = 0.0
         self._prev_frame: pygame.Surface | None = None
         self._color_grading: tuple[int, int, int, int, int, int, int, int, int] | None = None
-        self._last_vignette_strength: float = 0.0
         self._flash_surf: pygame.Surface | None = None
         self._tint_surf: pygame.Surface | None = None
         self._blur_surf: pygame.Surface | None = None

@@ -630,6 +630,14 @@ class StageScene(BaseScene):
         self.context.event_bus.subscribe(Events.VFX_ULTIMATE, _on_vfx_ultimate)
         self._vfx_handlers[Events.VFX_ULTIMATE] = _on_vfx_ultimate
 
+        def _on_vfx_bubble(**data: Any) -> None:
+            pos = data.get("pos", (0, 0))
+            self._particle_system.get_emitter("bubble").emit(
+                float(pos[0]), float(pos[1]), HitEffects.BUBBLE,
+            )
+        self.context.event_bus.subscribe(Events.VFX_BUBBLE, _on_vfx_bubble)
+        self._vfx_handlers[Events.VFX_BUBBLE] = _on_vfx_bubble
+
         def _on_music_stinger(**data: Any) -> None:
             name = data.get("name", "stinger_boss_phase")
             vol = data.get("volume", 0.8)
