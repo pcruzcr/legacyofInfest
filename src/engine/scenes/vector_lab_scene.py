@@ -38,6 +38,12 @@ from src.engine.scenes.demo_common import (
     draw_bottom_bar,
     draw_top_bar,
 )
+from src.engine.scenes.demo_layout import (
+    AUTHORED_H,
+    AUTHORED_W,
+    Lienzo,
+    area_con_columna,
+)
 from src.engine.utils.asset_loader import AssetLoader
 from src.engine.utils.math_utils import vec2_dot
 
@@ -50,6 +56,8 @@ from src.engine.scenes.tutorial_overlay import TutorialOverlay
 
 # Responsive layout offsets (resolvable to demo_layout constants)
 _MARGIN = 8
+#: Ancho de la columna de lecturas numéricas (AUD-094).
+_ANCHO_COLUMNA = 290
 _CONTENT_TOP = TOP_BAR_H + 4
 _PANEL_TOP = TOP_BAR_H
 
@@ -63,6 +71,20 @@ VECTOR_QUIZZES = [
     {"question": "What does a normalized vector represent?", "options": ["Magnitude only", "Direction only", "Position only", "Speed only"], "answer": 1},
     {"question": "What is cos(90 degrees)?", "options": ["0", "1", "-1", "0.5"], "answer": 0},
 ]
+
+#: Margen que se deja a los puntos para que su círculo y su etiqueta no
+#: queden cortados contra el borde del lienzo.
+_MARGEN_LIENZO = 10
+
+
+def _dentro_del_lienzo(v: pygame.Vector2) -> pygame.Vector2:
+    """Recorta un punto a las unidades de autoría del escenario."""
+    m = _MARGEN_LIENZO
+    return pygame.Vector2(
+        max(m, min(AUTHORED_W - m, v.x)),
+        max(m, min(AUTHORED_H - m, v.y)),
+    )
+
 
 DOT_COLORS = {
     "player": (80, 200, 120),
@@ -90,6 +112,7 @@ class VectorLabScene(BaseScene):
         self._status_msg: str = ""
         self._status_timer: float = 0.0
 
+        self._ANCHO_COLUMNA = _ANCHO_COLUMNA
         self._quiz = QuizManager(VECTOR_QUIZZES)
         self._code_panel = CodePanel("normalize")
         self._tutorial = TutorialOverlay("vector_lab")
@@ -175,8 +198,11 @@ class VectorLabScene(BaseScene):
             move_dir.y += 1.0
 
         self._player += move_dir * self._speed * dt
-        self._player.x = max(10, min(settings.INTERNAL_WIDTH - 10, self._player.x))
-        self._player.y = max(TOP_BAR_H + 10, min(BOTTOM_BAR_Y - 10, self._player.y))
+        # AUD-094: los límites van en unidades de autoría, que es donde viven
+        # las posiciones. Antes se recortaban contra la pantalla (800x600), así
+        # que el punto podía llegar a x=790 en un lienzo de 320 de ancho y
+        # dibujarse fuera del escenario.
+        self._player = _dentro_del_lienzo(self._player)
 
         # Enemy movement (WASD via raw keys)
         enemy_dir = pygame.Vector2(0.0, 0.0)
@@ -205,64 +231,81 @@ class VectorLabScene(BaseScene):
         else:
             self._enemy += enemy_dir * self._speed * dt
 
-        self._enemy.x = max(10, min(settings.INTERNAL_WIDTH - 10, self._enemy.x))
-        self._enemy.y = max(TOP_BAR_H + 10, min(BOTTOM_BAR_Y - 10, self._enemy.y))
+        self._enemy = _dentro_del_lienzo(self._enemy)
 
     def draw(self, surface: pygame.Surface) -> None:
+        """Vectores en el escenario centrado, lecturas en su columna.
+
+        AUD-094 — el vector cabía en un octavo de la pantalla
+        -----------------------------------------------------
+        El jugador arrancaba en (80, 120) y el enemigo en (220, 100): puntos
+        de un lienzo de 320x224 dibujados como píxeles de pantalla sobre
+        800x600. Medido, todo el contenido cabía en x[8,379] y[40,159] —dos
+        de nueve celdas— y el vector, que es lo que la escena enseña, medía
+        141 px sobre una pantalla de 800.
+
+        La aritmética vectorial —longitud, producto escalar, ángulo— **sigue
+        en unidades de autoría**. Escalarla cambiaría los números que el
+        estudiante compara con los que calcula a mano. Lo único que pasa por
+        el lienzo es el trazo.
+        """
         surface.fill(COLOR_BG)
         draw_top_bar(surface, "VECTOR LAB", "UNIT II")
 
-        # Draw grid (only in content area below top bar)
-        for x in range(0, settings.INTERNAL_WIDTH, 32):
-            pygame.draw.line(surface, (20, 20, 40), (x, TOP_BAR_H), (x, BOTTOM_BAR_Y), 1)
-        for y in range(TOP_BAR_H, BOTTOM_BAR_Y, 32):
-            pygame.draw.line(surface, (20, 20, 40), (0, y), (settings.INTERNAL_WIDTH, y), 1)
+        _, escenario = area_con_columna(self._ANCHO_COLUMNA)
+        lienzo = Lienzo(AUTHORED_W, AUTHORED_H, area=escenario)
 
-        # Draw vector from enemy to player
-        pi = (int(self._player.x), int(self._player.y))
-        ei = (int(self._enemy.x), int(self._enemy.y))
+        # Rejilla dentro del escenario, con el paso de autoría escalado
+        paso = lienzo.l(32)
+        for x in range(escenario.left, escenario.right, paso):
+            pygame.draw.line(surface, (20, 20, 40), (x, escenario.top), (x, escenario.bottom), 1)
+        for y in range(escenario.top, escenario.bottom, paso):
+            pygame.draw.line(surface, (20, 20, 40), (escenario.left, y), (escenario.right, y), 1)
 
-        # Vector AB (from enemy to player)
+        pi = lienzo.p(self._player.x, self._player.y)
+        ei = lienzo.p(self._enemy.x, self._enemy.y)
+
+        # Vector AB (del enemigo al jugador), en unidades de autoría
         vec_ab = self._player - self._enemy
         vec_len = vec_ab.length()
         vx, vy = vec_ab.x, vec_ab.y
 
-        # Draw vector arrow
+        radio = lienzo.l(8)
+        grosor = max(2, lienzo.l(1))
+
         if vec_len > 1.0:
-            # Main vector line
-            pygame.draw.line(surface, DOT_COLORS["vector"],
-                             ei, pi, 2)
-            # Arrow head
+            pygame.draw.line(surface, DOT_COLORS["vector"], ei, pi, grosor)
+            # Punta de la flecha
             if vec_len > 10.0:
+                punta = lienzo.l(8)
                 angle_rad = math.radians(-30)
                 cos_a, sin_a = math.cos(angle_rad), math.sin(angle_rad)
                 n = vec_ab.copy().normalize()
-                ax1 = pi[0] + int((-n.x * cos_a - n.y * sin_a) * 8)
-                ay1 = pi[1] + int((-n.y * cos_a + n.x * sin_a) * 8)
+                ax1 = pi[0] + int((-n.x * cos_a - n.y * sin_a) * punta)
+                ay1 = pi[1] + int((-n.y * cos_a + n.x * sin_a) * punta)
                 rad2 = math.radians(30)
                 cos_b, sin_b = math.cos(rad2), math.sin(rad2)
-                ax2 = pi[0] + int((-n.x * cos_b - n.y * sin_b) * 8)
-                ay2 = pi[1] + int((-n.y * cos_b + n.x * sin_b) * 8)
-                pygame.draw.line(surface, DOT_COLORS["vector"], pi, (ax1, ay1), 2)
-                pygame.draw.line(surface, DOT_COLORS["vector"], pi, (ax2, ay2), 2)
+                ax2 = pi[0] + int((-n.x * cos_b - n.y * sin_b) * punta)
+                ay2 = pi[1] + int((-n.y * cos_b + n.x * sin_b) * punta)
+                pygame.draw.line(surface, DOT_COLORS["vector"], pi, (ax1, ay1), grosor)
+                pygame.draw.line(surface, DOT_COLORS["vector"], pi, (ax2, ay2), grosor)
 
-            # Normalized vector (if toggled)
+            # Vector normalizado (si está activado)
             if self._show_normalized and vec_len > 5.0:
                 nn = vec_ab.copy().normalize()
-                n_end = (ei[0] + int(nn.x * 40), ei[1] + int(nn.y * 40))
-                pygame.draw.line(surface, DOT_COLORS["normalized"],
-                                 ei, n_end, 3)
+                n_end = lienzo.p(self._enemy.x + nn.x * 40, self._enemy.y + nn.y * 40)
+                pygame.draw.line(surface, DOT_COLORS["normalized"], ei, n_end, grosor + 1)
                 nlabel = self._font_small.render("normalized", True, DOT_COLORS["normalized"])
                 surface.blit(nlabel, (n_end[0] + 4, n_end[1] - 8))
 
-        # Draw Player and Enemy
-        pygame.draw.circle(surface, DOT_COLORS["player"], pi, 8)
-        pygame.draw.circle(surface, (255, 255, 255), pi, 8, 1)
+        # Jugador y enemigo
+        pygame.draw.circle(surface, DOT_COLORS["player"], pi, radio)
+        pygame.draw.circle(surface, (255, 255, 255), pi, radio, 1)
         label_p = self._font_small.render("Player", True, DOT_COLORS["player"])
-        surface.blit(label_p, (pi[0] + 12, pi[1] - 6))
+        surface.blit(label_p, (pi[0] + radio + 4, pi[1] - 6))
 
-        pygame.draw.circle(surface, DOT_COLORS["enemy"], ei, 8)
-        pygame.draw.circle(surface, (255, 255, 255), ei, 8, 1)
+        pygame.draw.circle(surface, DOT_COLORS["enemy"], ei, radio)
+        pygame.draw.circle(surface, (255, 255, 255), ei, radio, 1)
         label_e = self._font_small.render("Enemy", True, DOT_COLORS["enemy"])
         surface.blit(label_e, (ei[0] + 12, ei[1] - 6))
 
