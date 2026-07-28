@@ -68,9 +68,29 @@ class AudioManager:
         except (pygame.error, FileNotFoundError, OSError) as e:  # BUG-074 FIX: pygame.error no atrapa FileNotFoundError
             logger.warning("AudioManager: no se pudo cargar música %s: %s", path_str, e)
 
+    @staticmethod
+    def _mixer_listo() -> bool:
+        """¿Hay un mezclador con el que hablar?
+
+        AUD-089 — un aula sin tarjeta de sonido tumbaba el juego
+        --------------------------------------------------------
+        `play_music` ya envolvía sus llamadas en `try/except pygame.error`,
+        pero `stop_music`, `pause_music` y `resume_music` no. Si
+        `pygame.mixer.init()` falla —máquina sin dispositivo de audio, sesión
+        remota, contenedor, laboratorio con el sonido deshabilitado— cualquier
+        transición de escena que pare la música lanza
+        ``pygame.error: mixer not initialized`` y el juego se cae.
+
+        Es un fallo de disponibilidad, no de sonido: el jugador pierde la
+        partida entera por no tener altavoces. Salió al añadir `on_exit` a una
+        prueba de la pantalla de inicio.
+        """
+        return pygame.mixer.get_init() is not None
+
     def stop_music(self) -> None:
         """Stop current music playback."""
-        pygame.mixer.music.stop()
+        if self._mixer_listo():
+            pygame.mixer.music.stop()
         self._current_music = None
         self._stop_layered_channels()
 
@@ -91,11 +111,13 @@ class AudioManager:
 
     def pause_music(self) -> None:
         """Pause current music."""
-        pygame.mixer.music.pause()
+        if self._mixer_listo():
+            pygame.mixer.music.pause()
 
     def resume_music(self) -> None:
         """Resume paused music."""
-        pygame.mixer.music.unpause()
+        if self._mixer_listo():
+            pygame.mixer.music.unpause()
 
     def play_sfx(self, name: str, volume: float = 1.0) -> None:
         """Play a sound effect from the sound bank at the current SFX volume."""
@@ -186,7 +208,7 @@ class AudioManager:
     def set_music_volume(self, volume: float) -> None:
         """Set music volume (0.0 to 1.0)."""
         self._music_volume = max(0.0, min(1.0, volume))
-        if not self._muted:
+        if not self._muted and self._mixer_listo():
             pygame.mixer.music.set_volume(self._music_volume)
 
     def set_sfx_volume(self, volume: float) -> None:
@@ -196,7 +218,8 @@ class AudioManager:
     def toggle_mute(self) -> None:
         """Toggle mute on/off."""
         self._muted = not self._muted
-        pygame.mixer.music.set_volume(0.0 if self._muted else self._music_volume)
+        if self._mixer_listo():
+            pygame.mixer.music.set_volume(0.0 if self._muted else self._music_volume)
         if self._ambient_channel:
             self._ambient_channel.set_volume(0.0 if self._muted else self._ambient_volume * self._sfx_volume)
 

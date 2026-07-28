@@ -34,6 +34,7 @@ class SplashScene(BaseScene):
         self._fading_out: bool = False
         self._frames_shown = 0
         self._warmed_up = False
+        self._warmup_index = 0
         assets = settings.ASSETS_DIR / "splash"
 
         self._background = AssetLoader.load_image(
@@ -84,32 +85,72 @@ class SplashScene(BaseScene):
             self.context.scene_manager.transition.start_fade_out(0.5)
             self._fading_out = True
 
-    def _warm_up_particles(self) -> None:
-        """Compila el núcleo JIT de partículas durante la pantalla de inicio.
+    @staticmethod
+    def _precalentar_particulas() -> None:
+        """Compila el núcleo JIT que actualiza las partículas.
 
-        AUD-082 — dónde poner un coste que no se puede eliminar
-        ------------------------------------------------------
-        `numba.njit` compila en la primera llamada. Medido en `TitleScene`:
-        mediana de 0,70 ms por fotograma y **un fotograma de 376 ms** cuando
-        aparecía la primera partícula. La pantalla de inicio dura 3 s, no es
-        interactiva y su `update` no hace nada más que contar el tiempo. Es el
-        único sitio del arranque donde medio segundo no se nota.
+        AUD-082: `numba.njit` compila en la primera llamada, y esa llamada caía
+        en el primer fotograma con partículas — la pantalla de título. Medido
+        allí: mediana de 0,70 ms y **un fotograma de 376 ms**.
+        """
+        from src.framework.vfx.particle_system import warmup
+
+        warmup()
+
+    @staticmethod
+    def _precalentar_ia() -> None:
+        """Carga scikit-learn antes de que lo pida un enemigo.
+
+        AUD-088: `squad_brain` importa `ai_predictor` la primera vez que
+        consulta al predictor, y ese import arrastra scikit-learn entero.
+        Medido en Stage 0: un tirón de **2,3 s en el fotograma 16**, ya dentro
+        de la partida y con enemigos en pantalla. Peor que el de la pantalla de
+        título, porque aquí el jugador está intentando moverse.
+
+        scikit-learn es opcional: sin él la IA cae a su heurística, así que un
+        `ImportError` no es un fallo.
+        """
+        try:
+            from src.framework.entities import ai_predictor  # noqa: F401
+        except ImportError:
+            pass
+
+    #: Un paso por fotograma. Ejecutarlos todos de golpe sumaba 3,4 s de
+    #: congelación —más que la propia pantalla de inicio— y el logo se quedaba
+    #: quieto de una vez. Repartidos, entre uno y otro se dibuja un fotograma y
+    #: el fundido sigue avanzando.
+    _WARMUP_STEPS = ("_precalentar_particulas", "_precalentar_ia")
+
+    def _warm_up_particles(self) -> None:
+        """Ejecuta un paso de precalentamiento por fotograma.
+
+        La pantalla de inicio dura 3 s, no es interactiva y su `update` no hace
+        nada más que contar el tiempo. Es el único sitio del arranque donde
+        medio segundo no se nota, y por eso se paga aquí lo que de otro modo se
+        pagaría a mitad de partida.
 
         No se hace en `on_enter` a propósito: eso retrasaría el primer
         fotograma y el jugador vería una ventana negra en vez del logo.
         """
+        import time
+
         self._frames_shown += 1
         if self._warmed_up or self._frames_shown < self._WARMUP_AFTER_FRAMES:
             return
-        self._warmed_up = True
-        from src.framework.vfx.particle_system import warmup
 
-        segundos = warmup()
-        if segundos > 0.05:
+        paso = self._WARMUP_STEPS[self._warmup_index]
+        t0 = time.perf_counter()
+        getattr(self, paso)()
+        coste = time.perf_counter() - t0
+        if coste > 0.05:
             logger.info(
-                "partículas: núcleo JIT compilado en %.0f ms durante la pantalla "
-                "de inicio", segundos * 1000,
+                "arranque: %s tardó %.0f ms durante la pantalla de inicio",
+                paso.removeprefix("_precalentar_"), coste * 1000,
             )
+
+        self._warmup_index += 1
+        if self._warmup_index >= len(self._WARMUP_STEPS):
+            self._warmed_up = True
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.blit(self._background, (0, 0))

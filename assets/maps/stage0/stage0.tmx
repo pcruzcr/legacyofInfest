@@ -1,19 +1,20 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version='1.0' encoding='UTF-8'?>
 <map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="100" height="38" tilewidth="16" tileheight="16" infinite="0" nextlayerid="9" nextobjectid="200">
-  <properties>
-    <property name="stage_id" value="stage0" />
-    <property name="stage_name" value="STAGE 0 - PROLOGUE" />
-    <property name="bgm_track" value="bgm_stage0" />
-    <property name="background_zone" value="stage0" />
-    <property name="climate" value="clear" />
-    <property name="time_limit" value="0" />
-    <property name="gravity_multiplier" value="1.0" />
-  </properties>
-  <tileset firstgid="1" name="tileset_stage0" tilewidth="16" tileheight="16" tilecount="4096" columns="64">
-    <image source="../../tilesets/tileset_stage0.png" width="1024" height="1024" />
-  </tileset>
-  <layer id="1" name="BG_Far" width="100" height="38">
-    <data encoding="csv">
+ <properties>
+  <property name="stage_id" value="stage0" />
+  <property name="stage_name" value="STAGE 0 - PROLOGUE" />
+  <property name="bgm_track" value="bgm_stage0" />
+  <property name="background_zone" value="stage0" />
+  <property name="climate" value="clear" />
+  <property name="time_limit" value="0" />
+  <property name="gravity_multiplier" value="1.0" />
+  <property name="ambient_light" type="float" value="0.70" />
+ </properties>
+ <tileset firstgid="1" name="tileset_stage0" tilewidth="16" tileheight="16" tilecount="4096" columns="64">
+  <image source="../../tilesets/tileset_stage0.png" width="1024" height="1024" />
+ </tileset>
+ <layer id="1" name="BG_Far" width="100" height="38">
+  <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -53,9 +54,9 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
-  </layer>
-  <layer id="2" name="BG_Mid" width="100" height="38">
-    <data encoding="csv">
+ </layer>
+ <layer id="2" name="BG_Mid" width="100" height="38">
+  <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -95,9 +96,9 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
-  </layer>
-  <layer id="3" name="BG_Near" width="100" height="38">
-    <data encoding="csv">
+ </layer>
+ <layer id="3" name="BG_Near" width="100" height="38">
+  <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -137,9 +138,9 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
-  </layer>
-  <layer id="4" name="Terrain" width="100" height="38">
-    <data encoding="csv">
+ </layer>
+ <layer id="4" name="Terrain" width="100" height="38">
+  <data encoding="csv">
 153,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,160,
 153,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,160,
 153,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,160,
@@ -179,9 +180,9 @@
 153,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,0,0,0,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,665,160,
 153,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,0,0,0,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,668,160
 </data>
-  </layer>
-  <layer id="5" name="Terrain_Detail" width="100" height="38">
-    <data encoding="csv">
+ </layer>
+ <layer id="5" name="Terrain_Detail" width="100" height="38">
+  <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -221,9 +222,9 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
-  </layer>
-  <layer id="6" name="FG_Overlay" width="100" height="38">
-    <data encoding="csv">
+ </layer>
+ <layer id="6" name="FG_Overlay" width="100" height="38">
+  <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -263,166 +264,247 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
-  </layer>
-  <objectgroup id="7" name="Collision">
-    <object id="1" name="LeftWall" type="Solid" x="0" y="0" width="16" height="608" />
-    <object id="2" name="RightWall" type="Solid" x="1584" y="0" width="16" height="608" />
-    <object id="3" name="FloorLeft" type="Solid" x="16" y="512" width="848" height="96" />
-    <object id="4" name="FloorRight" type="Solid" x="912" y="512" width="672" height="96" />
-    <object id="5" name="Plat_A1" type="Solid" x="96" y="480" width="96" height="16" />
-    <object id="6" name="Plat_A2" type="Solid" x="176" y="448" width="48" height="16" />
-    <object id="7" name="Plat_C1" type="Solid" x="608" y="448" width="48" height="16" />
-    <object id="8" name="Plat_C2" type="Solid" x="720" y="464" width="48" height="16" />
-    <object id="9" name="Plat_D1" type="Platform" x="928" y="480" width="80" height="16" />
-    <object id="10" name="PitCover" type="Platform" x="864" y="512" width="48" height="16" />
-    <object id="11" name="Plat_E1" type="Solid" x="1184" y="464" width="80" height="16" />
-    <object id="12" name="Plat_F1" type="Solid" x="1408" y="432" width="80" height="16" />
-  </objectgroup>
-  <objectgroup id="8" name="Objects">
-    <object id="1" name="PlayerSpawn" type="PlayerSpawn" x="64" y="512" width="16" height="32" />
-    <object id="2" name="Walker_01" type="Walker" x="288" y="512" width="16" height="32">
-      <properties>
-        <property name="zone" value="0" />
-        <property name="max_health" value="3" />
-        <property name="damage_on_contact" value="1.0" />
-        <property name="patrol_length" value="64" />
-        <property name="patrol_speed" value="45" />
-        <property name="alert_speed" value="75" />
-      </properties>
-    </object>
-    <object id="3" name="Walker_02" type="Walker" x="448" y="512" width="16" height="32">
-      <properties>
-        <property name="zone" value="0" />
-        <property name="max_health" value="3" />
-        <property name="damage_on_contact" value="1.0" />
-        <property name="patrol_length" value="64" />
-        <property name="patrol_speed" value="45" />
-        <property name="alert_speed" value="75" />
-      </properties>
-    </object>
-    <object id="4" name="Flying_01" type="Flying" x="624" y="448" width="16" height="32">
-      <properties>
-        <property name="zone" value="0" />
-        <property name="max_health" value="2" />
-        <property name="damage_on_contact" value="0.75" />
-        <property name="flight_mode" value="sine" />
-        <property name="flight_speed" value="60" />
-        <property name="sine_amplitude" value="32" />
-        <property name="sine_frequency" value="2.0" />
-      </properties>
-    </object>
-    <object id="5" name="Shooter_01" type="Shooter" x="736" y="464" width="16" height="32">
-      <properties>
-        <property name="zone" value="0" />
-        <property name="max_health" value="3" />
-        <property name="damage_on_contact" value="0.75" />
-        <property name="fire_rate" value="1.5" />
-        <property name="projectile_speed" value="120" />
-        <property name="projectile_damage" value="2.0" />
-        <property name="patrol_length" value="32" />
-      </properties>
-    </object>
-    <object id="6" name="Charger_01" type="Charger" x="672" y="512" width="16" height="32">
-      <properties>
-        <property name="zone" value="0" />
-        <property name="max_health" value="4" />
-        <property name="damage_on_contact" value="1.0" />
-        <property name="charge_speed" value="250" />
-      </properties>
-    </object>
-    <object id="7" name="Archer_01" type="Archer" x="960" y="480" width="16" height="32">
-      <properties>
-        <property name="zone" value="0" />
-        <property name="max_health" value="3" />
-        <property name="damage_on_contact" value="0.75" />
-        <property name="fire_rate" value="2.0" />
-        <property name="projectile_speed" value="90" />
-        <property name="projectile_damage" value="2.0" />
-      </properties>
-    </object>
-    <object id="8" name="Brute_01" type="Brute" x="1216" y="512" width="16" height="32">
-      <properties>
-        <property name="zone" value="0" />
-        <property name="max_health" value="5" />
-        <property name="damage_on_contact" value="1.5" />
-      </properties>
-    </object>
-    <object id="9" name="Caster_01" type="Caster" x="1440" y="432" width="16" height="32">
-      <properties>
-        <property name="zone" value="0" />
-        <property name="max_health" value="3" />
-        <property name="damage_on_contact" value="0.75" />
-        <property name="fire_rate" value="2.0" />
-        <property name="projectile_speed" value="100" />
-        <property name="projectile_damage" value="2.0" />
-      </properties>
-    </object>
-    <object id="10" name="Assassin_01" type="Assassin" x="1376" y="512" width="16" height="32">
-      <properties>
-        <property name="zone" value="0" />
-        <property name="max_health" value="2" />
-        <property name="damage_on_contact" value="1.0" />
-        <property name="patrol_length" value="80" />
-        <property name="patrol_speed" value="60" />
-        <property name="alert_speed" value="90" />
-      </properties>
-    </object>
-    <object id="11" name="Checkpoint_0" type="Checkpoint" x="352" y="480" width="16" height="32">
-      <properties>
-        <property name="checkpoint_id" value="0" />
-      </properties>
-    </object>
-    <object id="12" name="Checkpoint_1" type="Checkpoint" x="704" y="480" width="16" height="32">
-      <properties>
-        <property name="checkpoint_id" value="1" />
-      </properties>
-    </object>
-    <object id="13" name="Checkpoint_2" type="Checkpoint" x="1184" y="480" width="16" height="32">
-      <properties>
-        <property name="checkpoint_id" value="2" />
-      </properties>
-    </object>
-    <object id="14" name="Checkpoint_3" type="Checkpoint" x="1504" y="480" width="16" height="32">
-      <properties>
-        <property name="checkpoint_id" value="3" />
-      </properties>
-    </object>
-    <object id="15" name="MsgTrigger_5" type="MessageTrigger_Once" x="80" y="508" width="64" height="16">
-      <properties>
-        <property name="text" value="Presiona A/D para moverte, W para saltar, S para agacharte" />
-      </properties>
-    </object>
-    <object id="16" name="MsgTrigger_17" type="MessageTrigger_Once" x="272" y="508" width="64" height="16">
-      <properties>
-        <property name="text" value="Presiona ESPACIO o J para atacar. SHIFT para dashear!" />
-      </properties>
-    </object>
-    <object id="17" name="MsgTrigger_37" type="MessageTrigger_Once" x="592" y="508" width="64" height="16">
-      <properties>
-        <property name="text" value="¡Enemigos voladores y a distancia! Usa P o K para parry." />
-      </properties>
-    </object>
-    <object id="18" name="MsgTrigger_52" type="MessageTrigger_Once" x="832" y="508" width="64" height="16">
-      <properties>
-        <property name="text" value="�Saltos verticales! Algunas plataformas estan muy altas. Agachate (S) para caer por plataformas de una via." />
-      </properties>
-    </object>
-    <object id="19" name="MsgTrigger_69" type="MessageTrigger_Once" x="1104" y="508" width="64" height="16">
-      <properties>
-        <property name="text" value="¡Zonas rojas son peligrosas! Evita las areas de daño." />
-      </properties>
-    </object>
-    <object id="20" name="MsgTrigger_85" type="MessageTrigger_Once" x="1360" y="508" width="64" height="16">
-      <properties>
-        <property name="text" value="¡Combina todas tus habilidades! Presiona U para ataque definitivo." />
-      </properties>
-    </object>
-    <object id="21" name="DeathPit" type="DeathPit" x="864" y="516" width="48" height="16" />
-    <object id="22" name="HazardZone" type="HazardZone" x="1120" y="508" width="48" height="16">
-      <properties>
-        <property name="damage" value="0.25" />
-      </properties>
-    </object>
-    <object id="23" name="NextTrigger" type="NextTrigger" x="1536" y="448" width="32" height="96" />
-  </objectgroup>
+ </layer>
+ <objectgroup id="7" name="Collision">
+  <object id="1" name="LeftWall" type="Solid" x="0" y="0" width="16" height="608" />
+  <object id="2" name="RightWall" type="Solid" x="1584" y="0" width="16" height="608" />
+  <object id="3" name="FloorLeft" type="Solid" x="16" y="512" width="848" height="96" />
+  <object id="4" name="FloorRight" type="Solid" x="912" y="512" width="672" height="96" />
+  <object id="5" name="Plat_A1" type="Solid" x="96" y="480" width="96" height="16" />
+  <object id="6" name="Plat_A2" type="Solid" x="176" y="448" width="48" height="16" />
+  <object id="7" name="Plat_C1" type="Solid" x="608" y="448" width="48" height="16" />
+  <object id="8" name="Plat_C2" type="Solid" x="720" y="464" width="48" height="16" />
+  <object id="9" name="Plat_D1" type="Platform" x="928" y="480" width="80" height="16" />
+  <object id="10" name="PitCover" type="Platform" x="864" y="512" width="48" height="16" />
+  <object id="11" name="Plat_E1" type="Solid" x="1184" y="464" width="80" height="16" />
+  <object id="12" name="Plat_F1" type="Solid" x="1408" y="432" width="80" height="16" />
+ </objectgroup>
+ <objectgroup id="8" name="Objects">
+  <object id="1" name="PlayerSpawn" type="PlayerSpawn" x="64" y="512" width="16" height="32" />
+  <object id="2" name="Walker_01" type="Walker" x="288" y="512" width="16" height="32">
+   <properties>
+    <property name="zone" value="0" />
+    <property name="max_health" value="3" />
+    <property name="damage_on_contact" value="1.0" />
+    <property name="patrol_length" value="64" />
+    <property name="patrol_speed" value="45" />
+    <property name="alert_speed" value="75" />
+   </properties>
+  </object>
+  <object id="3" name="Walker_02" type="Walker" x="448" y="512" width="16" height="32">
+   <properties>
+    <property name="zone" value="0" />
+    <property name="max_health" value="3" />
+    <property name="damage_on_contact" value="1.0" />
+    <property name="patrol_length" value="64" />
+    <property name="patrol_speed" value="45" />
+    <property name="alert_speed" value="75" />
+   </properties>
+  </object>
+  <object id="4" name="Flying_01" type="Flying" x="624" y="448" width="16" height="32">
+   <properties>
+    <property name="zone" value="0" />
+    <property name="max_health" value="2" />
+    <property name="damage_on_contact" value="0.75" />
+    <property name="flight_mode" value="sine" />
+    <property name="flight_speed" value="60" />
+    <property name="sine_amplitude" value="32" />
+    <property name="sine_frequency" value="2.0" />
+   </properties>
+  </object>
+  <object id="5" name="Shooter_01" type="Shooter" x="736" y="464" width="16" height="32">
+   <properties>
+    <property name="zone" value="0" />
+    <property name="max_health" value="3" />
+    <property name="damage_on_contact" value="0.75" />
+    <property name="fire_rate" value="1.5" />
+    <property name="projectile_speed" value="120" />
+    <property name="projectile_damage" value="2.0" />
+    <property name="patrol_length" value="32" />
+   </properties>
+  </object>
+  <object id="6" name="Charger_01" type="Charger" x="672" y="512" width="16" height="32">
+   <properties>
+    <property name="zone" value="0" />
+    <property name="max_health" value="4" />
+    <property name="damage_on_contact" value="1.0" />
+    <property name="charge_speed" value="250" />
+   </properties>
+  </object>
+  <object id="7" name="Archer_01" type="Archer" x="960" y="480" width="16" height="32">
+   <properties>
+    <property name="zone" value="0" />
+    <property name="max_health" value="3" />
+    <property name="damage_on_contact" value="0.75" />
+    <property name="fire_rate" value="2.0" />
+    <property name="projectile_speed" value="90" />
+    <property name="projectile_damage" value="2.0" />
+   </properties>
+  </object>
+  <object id="8" name="Brute_01" type="Brute" x="1216" y="512" width="16" height="32">
+   <properties>
+    <property name="zone" value="0" />
+    <property name="max_health" value="5" />
+    <property name="damage_on_contact" value="1.5" />
+   </properties>
+  </object>
+  <object id="9" name="Caster_01" type="Caster" x="1440" y="432" width="16" height="32">
+   <properties>
+    <property name="zone" value="0" />
+    <property name="max_health" value="3" />
+    <property name="damage_on_contact" value="0.75" />
+    <property name="fire_rate" value="2.0" />
+    <property name="projectile_speed" value="100" />
+    <property name="projectile_damage" value="2.0" />
+   </properties>
+  </object>
+  <object id="10" name="Assassin_01" type="Assassin" x="1376" y="512" width="16" height="32">
+   <properties>
+    <property name="zone" value="0" />
+    <property name="max_health" value="2" />
+    <property name="damage_on_contact" value="1.0" />
+    <property name="patrol_length" value="80" />
+    <property name="patrol_speed" value="60" />
+    <property name="alert_speed" value="90" />
+   </properties>
+  </object>
+  <object id="11" name="Checkpoint_0" type="Checkpoint" x="352" y="480" width="16" height="32">
+   <properties>
+    <property name="checkpoint_id" value="0" />
+   </properties>
+  </object>
+  <object id="12" name="Checkpoint_1" type="Checkpoint" x="704" y="480" width="16" height="32">
+   <properties>
+    <property name="checkpoint_id" value="1" />
+   </properties>
+  </object>
+  <object id="13" name="Checkpoint_2" type="Checkpoint" x="1184" y="480" width="16" height="32">
+   <properties>
+    <property name="checkpoint_id" value="2" />
+   </properties>
+  </object>
+  <object id="14" name="Checkpoint_3" type="Checkpoint" x="1504" y="480" width="16" height="32">
+   <properties>
+    <property name="checkpoint_id" value="3" />
+   </properties>
+  </object>
+  <object id="15" name="MsgTrigger_5" type="MessageTrigger_Once" x="80" y="508" width="64" height="16">
+   <properties>
+    <property name="text" value="Presiona A/D para moverte, W para saltar, S para agacharte" />
+   </properties>
+  </object>
+  <object id="16" name="MsgTrigger_17" type="MessageTrigger_Once" x="272" y="508" width="64" height="16">
+   <properties>
+    <property name="text" value="Presiona ESPACIO o J para atacar. SHIFT para dashear!" />
+   </properties>
+  </object>
+  <object id="17" name="MsgTrigger_37" type="MessageTrigger_Once" x="592" y="508" width="64" height="16">
+   <properties>
+    <property name="text" value="¡Enemigos voladores y a distancia! Usa P o K para parry." />
+   </properties>
+  </object>
+  <object id="18" name="MsgTrigger_52" type="MessageTrigger_Once" x="832" y="508" width="64" height="16">
+   <properties>
+    <property name="text" value="�Saltos verticales! Algunas plataformas estan muy altas. Agachate (S) para caer por plataformas de una via." />
+   </properties>
+  </object>
+  <object id="19" name="MsgTrigger_69" type="MessageTrigger_Once" x="1104" y="508" width="64" height="16">
+   <properties>
+    <property name="text" value="¡Zonas rojas son peligrosas! Evita las areas de daño." />
+   </properties>
+  </object>
+  <object id="20" name="MsgTrigger_85" type="MessageTrigger_Once" x="1360" y="508" width="64" height="16">
+   <properties>
+    <property name="text" value="¡Combina todas tus habilidades! Presiona U para ataque definitivo." />
+   </properties>
+  </object>
+  <object id="21" name="DeathPit" type="DeathPit" x="864" y="516" width="48" height="16" />
+  <object id="22" name="HazardZone" type="HazardZone" x="1120" y="508" width="48" height="16">
+   <properties>
+    <property name="damage" value="0.25" />
+   </properties>
+  </object>
+  <object id="23" name="NextTrigger" type="NextTrigger" x="1536" y="448" width="32" height="96" />
+  <object id="24" name="luz_24" type="Light" x="88" y="432" width="16" height="16">
+   <properties>
+    <property name="radius" type="float" value="110" />
+    <property name="color" type="string" value="warm" />
+    <property name="intensity" type="float" value="0.85" />
+    <property name="flicker" type="bool" value="true" />
+    <property name="flicker_speed" type="float" value="3.2" />
+    <property name="flicker_amount" type="float" value="0.18" />
+   </properties>
+  </object>
+  <object id="25" name="luz_25" type="Light" x="344" y="424" width="16" height="16">
+   <properties>
+    <property name="radius" type="float" value="130" />
+    <property name="color" type="string" value="warm" />
+    <property name="intensity" type="float" value="0.8" />
+    <property name="flicker" type="bool" value="true" />
+    <property name="flicker_speed" type="float" value="3.2" />
+    <property name="flicker_amount" type="float" value="0.18" />
+   </properties>
+  </object>
+  <object id="26" name="luz_26" type="Light" x="552" y="392" width="16" height="16">
+   <properties>
+    <property name="radius" type="float" value="100" />
+    <property name="color" type="string" value="toxic" />
+    <property name="intensity" type="float" value="0.55" />
+   </properties>
+  </object>
+  <object id="27" name="luz_27" type="Light" x="696" y="424" width="16" height="16">
+   <properties>
+    <property name="radius" type="float" value="130" />
+    <property name="color" type="string" value="warm" />
+    <property name="intensity" type="float" value="0.8" />
+    <property name="flicker" type="bool" value="true" />
+    <property name="flicker_speed" type="float" value="3.2" />
+    <property name="flicker_amount" type="float" value="0.18" />
+   </properties>
+  </object>
+  <object id="28" name="luz_28" type="Light" x="892" y="384" width="16" height="16">
+   <properties>
+    <property name="radius" type="float" value="95" />
+    <property name="color" type="string" value="toxic" />
+    <property name="intensity" type="float" value="0.55" />
+   </properties>
+  </object>
+  <object id="29" name="luz_29" type="Light" x="1176" y="424" width="16" height="16">
+   <properties>
+    <property name="radius" type="float" value="130" />
+    <property name="color" type="string" value="warm" />
+    <property name="intensity" type="float" value="0.8" />
+    <property name="flicker" type="bool" value="true" />
+    <property name="flicker_speed" type="float" value="3.2" />
+    <property name="flicker_amount" type="float" value="0.18" />
+   </properties>
+  </object>
+  <object id="30" name="luz_30" type="Light" x="1352" y="400" width="16" height="16">
+   <properties>
+    <property name="radius" type="float" value="105" />
+    <property name="color" type="string" value="toxic" />
+    <property name="intensity" type="float" value="0.6" />
+   </properties>
+  </object>
+  <object id="31" name="luz_31" type="Light" x="1496" y="424" width="16" height="16">
+   <properties>
+    <property name="radius" type="float" value="140" />
+    <property name="color" type="string" value="warm" />
+    <property name="intensity" type="float" value="0.9" />
+    <property name="flicker" type="bool" value="true" />
+    <property name="flicker_speed" type="float" value="3.2" />
+    <property name="flicker_amount" type="float" value="0.18" />
+   </properties>
+  </object>
+  <object id="32" name="luz_32" type="Light" x="1552" y="412" width="16" height="16">
+   <properties>
+    <property name="radius" type="float" value="120" />
+    <property name="color" type="string" value="fire" />
+    <property name="intensity" type="float" value="0.85" />
+    <property name="flicker" type="bool" value="true" />
+    <property name="flicker_speed" type="float" value="3.2" />
+    <property name="flicker_amount" type="float" value="0.18" />
+   </properties>
+  </object>
+ </objectgroup>
 </map>

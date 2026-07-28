@@ -9,7 +9,22 @@ import pygame
 class LightSource:
     """A 2D point light with position, radius, color, and intensity."""
 
-    _gradient_cache: dict[tuple[int, int], pygame.Surface] = {}
+    #: Discos de luz ya calculados, compartidos por todos los focos.
+    _gradient_cache: dict[tuple[int, int, tuple[int, int, int]], pygame.Surface] = {}
+
+    #: Cuantización del radio, en píxeles. Coincide con el umbral de
+    #: reconstrucción de `get_cached_gradient` (2 px): pedir menos grano del
+    #: que se puede distinguir sólo llena la caché.
+    _RADIUS_BUCKET = 4
+
+    #: Cuantización de la intensidad. 0,05 son 20 escalones entre apagado y
+    #: encendido — más de los que el ojo separa en un parpadeo.
+    _INTENSITY_BUCKET = 0.05
+
+    #: Tope de la caché. Con discos de hasta 280x280 px a 4 bytes por píxel,
+    #: 128 entradas son unos 40 MB en el peor caso. Sin tope, medido sobre
+    #: Stage 0: 182 MB en diez segundos y creciendo.
+    _MAX_CACHED_GRADIENTS = 128
 
     def __init__(
         self,
@@ -31,6 +46,7 @@ class LightSource:
         self._elapsed: float = 0.0
         self._gradient: pygame.Surface | None = None
         self._cached_radius: float = 0.0
+        self._cached_intensity: float = -1.0
         self._cached_color: tuple[int, int, int] = (0, 0, 0)
 
     def update(self, dt: float) -> None:
@@ -48,40 +64,123 @@ class LightSource:
         flicker = 1.0 + math.sin(self._elapsed * self.flicker_speed * 1.5 + 1.0) * self.flicker_amount
         return self.intensity * max(0.5, flicker)
 
-    def build_gradient(self, radius: float, color: tuple[int, int, int]) -> pygame.Surface:
-        r = int(radius)
-        if r <= 0:
-            r = 1
-        key = (r, int(self.intensity * 100), color)
-        if key in self._gradient_cache:
-            return self._gradient_cache[key]
+    def build_gradient(
+        self,
+        radius: float,
+        color: tuple[int, int, int],
+        intensity: float | None = None,
+    ) -> pygame.Surface:
+        """Construye el disco de luz: brillante en el centro, nulo en el borde.
+
+        AUD-086 — este método devolvía un disco completamente negro
+        ------------------------------------------------------------
+        La versión anterior calculaba el canal de color así::
+
+            val = (self.intensity * falloff * 255).astype(np.uint8)
+            arr[:, :, 0] = (val * color[0] / 255).astype(np.uint8)
+
+        `val` es `uint8` y `color[0]` vale hasta 255, que **también cabe en un
+        uint8**. NumPy conserva entonces el tipo pequeño y la multiplicación
+        desborda en silencio: para un píxel central con `val = 216` y
+        `color[0] = 255`, el producto no es 55.080 sino ``55.080 mod 256 =
+        40``; dividir entre 255 da 0,157; convertir a entero da **0**.
+
+        Es decir: todos los focos del juego eran discos negros y totalmente
+        transparentes. El sistema de iluminación estaba instanciado, cableado,
+        actualizándose cada fotograma y **no había iluminado jamás un píxel**.
+        Medido, no deducido: el centro de un foco daba exactamente el mismo
+        valor que la esquina de la pantalla.
+
+        Por eso nadie reparó en que el brillo ambiente del prólogo estaba en
+        1.0: aunque se hubiera bajado, el resultado habría sido oscuridad
+        uniforme, no charcos de luz.
+
+        La corrección es hacer la aritmética en coma flotante y convertir a
+        entero una sola vez, al final.
+        """
+        intensidad = self.intensity if intensity is None else intensity
+        # Cuantización de la clave. Sin esto la caché crece sin límite: medido
+        # sobre Stage 0 con seis focos parpadeantes, **182 MB en diez segundos**
+        # y subiendo de forma lineal, porque cada instante del parpadeo produce
+        # un radio y una intensidad ligeramente distintos y por tanto una
+        # entrada nueva. Redondear a cubos hace que el parpadeo recorra un
+        # puñado de discos en vez de inventar uno por fotograma.
+        r = max(1, round(radius / self._RADIUS_BUCKET) * self._RADIUS_BUCKET)
+        cubo_intensidad = round(intensidad / self._INTENSITY_BUCKET)
+        key = (r, cubo_intensidad, color)
+        cached = self._gradient_cache.get(key)
+        if cached is not None:
+            return cached
+        intensidad = cubo_intensidad * self._INTENSITY_BUCKET
+
         size = r * 2
         surf = pygame.Surface((size, size), pygame.SRCALPHA)
         ys, xs = np.ogrid[:size, :size]
         dist = np.sqrt((xs - r) ** 2 + (ys - r) ** 2)
-        falloff = np.clip(1.0 - dist / r, 0.0, 1.0)
-        mask = dist <= r
-        val = (self.intensity * falloff * 255).astype(np.uint8)
+        # Caída lineal recortada al círculo. Fuera del radio no hay luz.
+        falloff = np.clip(1.0 - dist / r, 0.0, 1.0).astype(np.float32)
+        falloff[dist > r] = 0.0
+        nivel = falloff * float(intensidad)          # float32 en [0, 1]
+
         arr = pygame.surfarray.pixels3d(surf)
+        alfa = pygame.surfarray.pixels_alpha(surf)
         try:
-            arr[:, :, 0] = (val * color[0] / 255).astype(np.uint8)
-            arr[:, :, 1] = (val * color[1] / 255).astype(np.uint8)
-            arr[:, :, 2] = (val * color[2] / 255).astype(np.uint8)
-            arr[~mask] = 0
+            for canal in range(3):
+                arr[:, :, canal] = (nivel * color[canal]).astype(np.uint8)
+            # El alfa no se usa en el mezclado actual (BLEND_RGBA_MAX opera
+            # canal a canal), pero dejarlo en cero convertía el gradiente en
+            # una superficie invisible para cualquier otro modo de mezcla, y
+            # eso es una trampa para quien lo reutilice.
+            alfa[:] = (nivel * 255.0).astype(np.uint8)
         finally:
             del arr
-        self._gradient_cache[key] = surf
+            del alfa
+
+        self._store_gradient(key, surf)
         return surf
 
+    @classmethod
+    def _store_gradient(cls, key: tuple, surf: pygame.Surface) -> None:
+        """Guarda el disco y expulsa el más antiguo si la caché se pasa.
+
+        La caché es de clase: la comparten todos los focos del juego, que es lo
+        que se quiere —dos antorchas iguales deben reutilizar el mismo disco—
+        pero también significa que nada la vacía nunca. Un tope explícito es la
+        diferencia entre una caché y una fuga de memoria.
+
+        Los diccionarios de Python conservan el orden de inserción, así que
+        `next(iter(...))` da la entrada más vieja sin estructuras adicionales.
+        """
+        cls._gradient_cache[key] = surf
+        while len(cls._gradient_cache) > cls._MAX_CACHED_GRADIENTS:
+            cls._gradient_cache.pop(next(iter(cls._gradient_cache)))
+
+    #: Cuánto tiene que cambiar la intensidad para justificar reconstruir el
+    #: disco. Un 2 % es menos de la mitad de un nivel de gris a intensidad
+    #: plena: por debajo de eso nadie ve la diferencia y sólo se paga el coste.
+    _INTENSITY_EPSILON = 0.02
+
     def get_cached_gradient(self) -> pygame.Surface:
+        """Disco de luz del instante actual, reconstruido sólo si hace falta.
+
+        AUD-087: la versión anterior sólo miraba el radio y el color. Un foco
+        con parpadeo cambia **radio e intensidad** —`get_current_intensity`
+        existe precisamente para eso— pero la intensidad no entraba ni en la
+        decisión de reconstruir ni en la construcción, que usaba `self.intensity`
+        fija. Resultado: la mitad del parpadeo no se veía.
+        """
         current_radius = self.get_current_radius()
+        current_intensity = self.get_current_intensity()
         if (
             self._gradient is None
             or abs(current_radius - self._cached_radius) > 2
+            or abs(current_intensity - self._cached_intensity) > self._INTENSITY_EPSILON
             or self._cached_color != self.color
         ):
-            self._gradient = self.build_gradient(current_radius, self.color)
+            self._gradient = self.build_gradient(
+                current_radius, self.color, current_intensity)
             self._cached_radius = current_radius
+            self._cached_intensity = current_intensity
             self._cached_color = self.color
         return self._gradient
 

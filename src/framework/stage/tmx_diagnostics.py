@@ -54,6 +54,7 @@ BUILTIN_OBJECT_TYPES: tuple[str, ...] = (
     "DeathPit",
     "CameraLock",
     "Waypoint",
+    "Light",
 )
 
 #: Tipos válidos en la capa `Collision`, que se procesa aparte. `Platform`
