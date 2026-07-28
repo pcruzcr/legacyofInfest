@@ -57,3 +57,4 @@ data/achievements.json
 *.orig
 *.rej
 *_backup/
+saves/academico/
