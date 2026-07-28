@@ -54,6 +54,19 @@ MODE_NAMES = [
     "GAUSSIAN", "SOBEL", "CANNY", "EQUALIZE", "CONV_STEP",
 ]
 
+#: Número de barras del histograma. El mismo de siempre.
+_BARRAS_HIST = 80
+#: Índices donde empieza cada barra, en niveles de 0 a 255.
+#:
+#: `np.histogram(..., bins=80, range=(0, 256))` reparte los 256 niveles en
+#: tramos de 3,2 y mete el nivel v en la barra ⌊v/3,2⌋; el primer nivel de la
+#: barra i es por tanto ⌈3,2·i⌉. Se calcula con división entera negada para
+#: no depender de la coma flotante, y así el resultado es **idéntico** al de
+#: `np.histogram`: se cambió el coste, no la lección (AUD-097).
+_CORTES_HIST = np.array(
+    [-((-256 * i) // _BARRAS_HIST) for i in range(_BARRAS_HIST)], dtype=np.intp,
+)
+
 STANDARD_KERNEL_NAMES = [
     "identity", "sharpen", "box_blur", "box_blur_5",
     "edge_laplacian", "emboss",
@@ -81,6 +94,11 @@ class FilterDemoScene(BaseScene):
         self._cached_left_scaled: pygame.Surface | None = None
         self._cached_left_src: pygame.Surface | None = None
         self._cached_right_scaled: pygame.Surface | None = None
+        # AUD-097: histogramas cacheados. `_hist_firma` identifica de qué
+        # imágenes son; mientras no cambie, no se recalculan.
+        self._hist_firma: tuple = ()
+        self._hist_src: list[list[int]] | None = None
+        self._hist_res: list[list[int]] | None = None
         self._cached_right_src: pygame.Surface | None = None
         self._param_changed: bool = True
 
@@ -434,37 +452,68 @@ class FilterDemoScene(BaseScene):
             err_text = self._font_small.render(self._error_msg, True, COLOR_ERROR)
             surface.blit(err_text, (RIGHT_PANEL_X + 4, TOP_BAR_H + 4))
 
-    def _draw_histogram(self, surface: pygame.Surface, panel_rect: pygame.Rect) -> None:
-        src = self._sources.current_source
-        if src is None:
-            return
-        # Compute histograms for source (left) and result (right)
+    @staticmethod
+    def _histograma(superficie: pygame.Surface) -> tuple[list[int], list[int], list[int]]:
+        """Los tres histogramas de canal de una superficie.
+
+        AUD-097 — por qué esto está en una función aparte y con caché
+        -------------------------------------------------------------
+        Esto se llamaba **seis veces por fotograma** —tres canales por dos
+        paneles— desde `draw`, recalculando el histograma de imágenes que no
+        habían cambiado. Medido con cProfile sobre 180 fotogramas:
+        `np.histogram` se llevaba 3,95 s de los 4,41 s que costaba dibujar la
+        escena entera, el 90 %.
+
+        Es el mismo defecto que AUD-073 en el laboratorio de ruido: trabajo
+        caro y determinista repetido en cada fotograma porque nadie se
+        preguntó cuándo cambia de verdad su entrada. La respuesta aquí es:
+        cuando el estudiante cambia de imagen o de filtro, no sesenta veces
+        por segundo.
+
+        Se usa `np.bincount` y no `np.histogram` porque los datos ya son
+        enteros de 0 a 255: no hace falta buscar el hueco de cada valor con
+        `searchsorted`, basta con contarlos. Sale unas cuatro veces más
+        barato aun sin la caché.
+        """
         try:
-            arr = pygame.surfarray.pixels3d(src)
-            h_r, _ = np.histogram(arr[:, :, 0], bins=80, range=(0, 256))
-            h_g, _ = np.histogram(arr[:, :, 1], bins=80, range=(0, 256))
-            h_b, _ = np.histogram(arr[:, :, 2], bins=80, range=(0, 256))
+            arr = pygame.surfarray.pixels3d(superficie)
+            canales = [
+                np.bincount(arr[:, :, c].ravel(), minlength=256)[:256]
+                for c in range(3)
+            ]
         finally:
             del arr
+        return [np.add.reduceat(c, _CORTES_HIST).tolist() for c in canales]
 
-        # Draw source histogram in left panel
-        left_rect = pygame.Rect(0, TOP_BAR_H, PANEL_SIZE[0], PANEL_H)
-        draw_histogram_bars(surface, left_rect,
-                            h_r.tolist(), h_g.tolist(), h_b.tolist(), bar_w=2, max_h=40)
+    def _histogramas_al_dia(self) -> None:
+        """Recalcula los histogramas sólo si cambió lo que representan."""
+        src = self._sources.current_source
+        firma = (
+            id(src),
+            id(self._cached_result),
+            self._sources.index if hasattr(self._sources, "index") else 0,
+        )
+        if firma == self._hist_firma:
+            return
+        self._hist_firma = firma
+        self._hist_src = self._histograma(src) if src is not None else None
+        self._hist_res = (
+            self._histograma(self._cached_result)
+            if self._cached_result is not None else None
+        )
 
-        # Draw result histogram in right panel
-        if self._cached_result is not None:
-            try:
-                arr2 = pygame.surfarray.pixels3d(self._cached_result)
-                h2_r, _ = np.histogram(arr2[:, :, 0], bins=80, range=(0, 256))
-                h2_g, _ = np.histogram(arr2[:, :, 1], bins=80, range=(0, 256))
-                h2_b, _ = np.histogram(arr2[:, :, 2], bins=80, range=(0, 256))
-            finally:
-                del arr2
+    def _draw_histogram(self, surface: pygame.Surface, panel_rect: pygame.Rect) -> None:
+        if self._sources.current_source is None:
+            return
+        self._histogramas_al_dia()
 
+        if self._hist_src is not None:
+            left_rect = pygame.Rect(0, TOP_BAR_H, PANEL_SIZE[0], PANEL_H)
+            draw_histogram_bars(surface, left_rect, *self._hist_src, bar_w=2, max_h=40)
+
+        if self._hist_res is not None:
             right_rect = pygame.Rect(RIGHT_PANEL_X, TOP_BAR_H, PANEL_SIZE[0], PANEL_H)
-            draw_histogram_bars(surface, right_rect,
-                                h2_r.tolist(), h2_g.tolist(), h2_b.tolist(), bar_w=2, max_h=40)
+            draw_histogram_bars(surface, right_rect, *self._hist_res, bar_w=2, max_h=40)
 
     def _draw_conv_step(self, surface: pygame.Surface, panel_rect: pygame.Rect) -> None:
         src = self._sources.current_source

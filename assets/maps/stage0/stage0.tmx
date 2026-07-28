@@ -3,6 +3,7 @@
  <properties>
   <property name="stage_id" value="stage0" />
   <property name="stage_name" value="STAGE 0 - PROLOGUE" />
+  <property name="author" value="Equipo docente — Legacy of Infest" />
   <property name="bgm_track" value="bgm_stage0" />
   <property name="background_zone" value="stage0" />
   <property name="climate" value="clear" />

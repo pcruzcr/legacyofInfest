@@ -346,6 +346,44 @@ def exit_is_reachable(
     return False
 
 
+#: Proporción del alto del mapa a partir de la cual una columna se considera
+#: un muro y no una plataforma. Dos tercios: una plataforma legítima puede ser
+#: alta, pero no llegar a serlo casi de arriba abajo.
+_PROPORCION_MURO = 0.66
+
+
+def _boundary_walls(
+    collision_rects: list[pygame.Rect], stage_data: object,
+) -> set[int]:
+    """Índices de las cajas que son muros de cierre y no plataformas.
+
+    Un muro es una columna alta —más de dos tercios del alto del mapa— y más
+    alta que ancha. Se exige lo segundo para no confundir un suelo largo con
+    un muro en mapas muy bajos.
+
+    No se exige que toque el borde: hay escenarios con muros interiores que
+    dividen zonas, y ésos tampoco son plataformas a las que llegar.
+    """
+    if not collision_rects:
+        return set()
+
+    alto_mapa = 0
+    for atributo in ("height_px", "pixel_height"):
+        alto_mapa = int(getattr(stage_data, atributo, 0) or 0)
+        if alto_mapa:
+            break
+    if not alto_mapa:
+        # Sin dato del mapa, se toma la caja más baja como referencia del
+        # alto: es lo que hay, y sigue distinguiendo una columna de un suelo.
+        alto_mapa = max(r.bottom for r in collision_rects)
+    umbral = alto_mapa * _PROPORCION_MURO
+
+    return {
+        i for i, r in enumerate(collision_rects)
+        if r.height >= umbral and r.height > r.width
+    }
+
+
 def analyse_stage(stage_data: object) -> LevelReport:
     """Análisis completo de un `StageData` ya cargado."""
     rects = list(getattr(stage_data, "collision_rects", []) or [])
@@ -354,10 +392,25 @@ def analyse_stage(stage_data: object) -> LevelReport:
 
     exit_rect = getattr(stage_data, "next_trigger", None)
     spawn = getattr(stage_data, "spawn_point", None)
-    report.total_platforms = len(rects)
 
-    if spawn is not None and rects:
-        report.reachable_platforms = len(reachable_platforms(rects, spawn))
+    # AUD-096 — los muros del borde no son plataformas huérfanas
+    # ----------------------------------------------------------
+    # El calificador avisaba de «2 plataforma(s) sin ruta desde el spawn» en
+    # Stage 0. Medido, esas dos eran `Rect(0, 0, 16, 608)` y
+    # `Rect(1584, 0, 16, 608)`: los muros laterales que cierran el mapa, de
+    # 608 px de alto y pegados a los bordes. Nadie va a saltar encima de
+    # ellos, y hacerlo sería un fallo, no un objetivo.
+    #
+    # El aviso era del calificador, no del escenario, y eso es peor que
+    # inofensivo: un estudiante que cierra bien su mapa recibe un aviso por
+    # haberlo hecho bien, aprende a no fiarse del calificador, y deja de leer
+    # también los avisos que sí importan.
+    muros = _boundary_walls(rects, stage_data)
+    plataformas = [r for i, r in enumerate(rects) if i not in muros]
+    report.total_platforms = len(plataformas)
+
+    if spawn is not None and plataformas:
+        report.reachable_platforms = len(reachable_platforms(plataformas, spawn))
         report.exit_reachable = exit_is_reachable(rects, spawn, exit_rect)
         report.checkpoint_gaps = analyse_checkpoints(
             list(getattr(stage_data, "checkpoints", []) or []),
