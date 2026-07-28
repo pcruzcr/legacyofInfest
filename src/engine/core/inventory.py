@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import TypedDict
 
 import orjson
@@ -7,6 +8,8 @@ import pygame
 from pydantic import BaseModel
 
 from src.engine.core import settings
+
+logger = logging.getLogger(__name__)
 
 
 class _NotificationData(TypedDict):
@@ -151,7 +154,26 @@ class Inventory:
             raw = _INVENTORY_PATH.read_bytes()
             data = orjson.loads(raw)
             self._items = {k: v for k, v in data.get("items", {}).items() if k in _ITEM_DEFS}
-        except (FileNotFoundError, orjson.JSONEncodeError, ValueError):
+        # AUD-100 — la corrupción se tragaba en silencio.
+        #
+        # `orjson.JSONEncodeError` **es `TypeError`**, y codificar no puede
+        # fallar dentro de un `loads`: estaba de más. Lo que de verdad atrapa
+        # un fichero corrupto es `ValueError`, del que `orjson.JSONDecodeError`
+        # hereda. Así que el `except` funcionaba, pero por una razón distinta
+        # de la que aparentaba.
+        #
+        # El defecto real era el silencio. Los objetos recogidos se perdían sin una línea en
+        # el registro, y el estudiante veía un inventario vacío sin ninguna pista de por
+        # qué. `ProgresoAcademico.cargar` ya avisaba en el mismo caso; tres
+        # sitios del proyecto hacían lo contrario ante el mismo problema.
+        except FileNotFoundError:
+            logger.debug("inventory: sin fichero previo; se empieza de cero")
+            self._items = {}
+        except (ValueError, TypeError):
+            logger.warning(
+                "inventory: %s ilegible; se empieza de cero",
+                _INVENTORY_PATH, exc_info=True,
+            )
             self._items = {}
 
     def update_notifications(self, dt: float) -> None:

@@ -6,12 +6,15 @@ Description: Bestiary/Codex system — tracks enemy encounters, kills, and lore.
 """
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any
 
 import orjson
 
 from src.engine.core import settings
+
+logger = logging.getLogger(__name__)
 
 _DEFAULT_BESTIARY_PATH: Path = settings.PROJECT_ROOT / "saves/bestiary.json"
 
@@ -118,11 +121,37 @@ class Bestiary:
         path.write_bytes(orjson.dumps(data, option=orjson.OPT_INDENT_2))
 
     def load(self, path: str | Path | None = None) -> None:
+        """Lee el bestiario del disco. Un fichero ilegible no tumba el juego.
+
+        AUD-100 — la corrupción se tragaba en silencio
+        ----------------------------------------------
+        El `except` era ``(FileNotFoundError, orjson.JSONEncodeError,
+        ValueError)`` seguido de un ``pass``. Dos cosas mal:
+
+        1. `orjson.JSONEncodeError` **es `TypeError`**, y codificar no puede
+           fallar dentro de un `loads`. Sobraba. Lo que de verdad atrapaba un
+           fichero corrupto era `ValueError`, del que `orjson.JSONDecodeError`
+           hereda: el bloque funcionaba, pero por una razón distinta de la que
+           aparentaba, y eso invita a «simplificarlo» quitando lo que hace
+           falta.
+        2. El `pass`. Las bajas acumuladas de un semestre desaparecían sin una
+           línea en el registro, y el estudiante veía un bestiario vacío sin
+           ninguna pista. `ProgresoAcademico.cargar` ya avisaba ante lo mismo;
+           tres sitios del proyecto hacían lo contrario.
+        """
+        destino = Path(path) if path is not None else _DEFAULT_BESTIARY_PATH
         try:
-            data = orjson.loads((Path(path) if path is not None else _DEFAULT_BESTIARY_PATH).read_bytes())
+            data = orjson.loads(destino.read_bytes())
             for eid, entry_data in data.items():
                 base = self._entries.get(eid)
                 if base:
                     BestiaryEntry.from_dict(entry_data, base)
-        except (FileNotFoundError, orjson.JSONEncodeError, ValueError):
-            pass
+        except FileNotFoundError:
+            logger.debug("bestiary: sin fichero previo en %s; se empieza de cero", destino)
+        except (ValueError, TypeError):
+            # Se nombra `destino` y no la ruta por defecto: quien pasa una
+            # ruta necesita saber cuál falló, no cuál se habría usado.
+            logger.warning(
+                "bestiary: %s ilegible; se empieza de cero y se sobrescribirá "
+                "al primer guardado", destino, exc_info=True,
+            )
