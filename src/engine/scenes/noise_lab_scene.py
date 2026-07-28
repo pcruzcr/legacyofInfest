@@ -38,6 +38,7 @@ from src.engine.scenes.demo_common import (
     draw_top_bar,
     save_png,
 )
+from src.engine.scenes.demo_layout import area_de_contenido
 from src.engine.utils.asset_loader import AssetLoader
 
 if TYPE_CHECKING:
@@ -189,6 +190,13 @@ class NoiseLabScene(BaseScene):
     NOISE_W = 320
     NOISE_H = 180
 
+    # -- reparto vertical del área útil (AUD-094) -------------------
+    #: Alto para la etiqueta del modo, encima del mapa.
+    _ALTO_CABECERA = 34
+    #: Alto reservado bajo el mapa para los parámetros y los controles.
+    _ALTO_PANEL = 150
+    _MARGEN = 16
+
     def _generate_noise(self) -> None:
         """Rellena `_cached_noise` con el mapa del modo activo.
 
@@ -319,37 +327,75 @@ class NoiseLabScene(BaseScene):
         nx1 = n01 + (n11 - n01) * u
         return (nx0 + (nx1 - nx0) * v).astype(np.float32)
 
+    def _rect_del_mapa(self) -> pygame.Rect:
+        """Dónde va el mapa de ruido: centrado y conservando su proporción.
+
+        AUD-094 — el mapa se dibujaba a tamaño original en la esquina
+        -------------------------------------------------------------
+        El mapa se generaba a 320x180 y se pegaba en `(0, 40)` **sin
+        escalar**: sobre 800x600 ocupaba el 16 % de la pantalla, arriba a la
+        izquierda, y el resto quedaba negro. Es el elemento que la escena
+        existe para mirar.
+
+        Se conserva la proporción 16:9 del mapa: estirarlo cambiaría la forma
+        de las celdas del ruido, que es precisamente lo que se está mirando
+        cuando se ajusta la escala.
+        """
+        area = area_de_contenido()
+        alto_disponible = area.h - self._ALTO_CABECERA - self._ALTO_PANEL
+        ancho_disponible = area.w - self._MARGEN * 2
+        escala = min(
+            ancho_disponible / self.NOISE_W, alto_disponible / self.NOISE_H,
+        )
+        ancho = max(1, int(self.NOISE_W * escala))
+        alto = max(1, int(self.NOISE_H * escala))
+        return pygame.Rect(
+            area.centerx - ancho // 2, area.y + self._ALTO_CABECERA, ancho, alto,
+        )
+
+    def rect_principal(self) -> pygame.Rect:
+        """Dónde vive el elemento que el estudiante mira y manipula.
+
+        Lo consume `tests/test_demo_centering.py`, que exige que esté
+        centrado horizontalmente en el área útil. Es la forma de dejar
+        escrito, y comprobado en cada ejecución de la suite, el defecto
+        AUD-094: el elemento vivía en la esquina superior izquierda porque
+        estas escenas se escribieron para una pantalla de 320x224.
+        """
+        return self._rect_del_mapa()
+
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill(COLOR_BG)
         draw_top_bar(surface, "NOISE LAB", "UNIT V/VIII")
 
-        label = self._font_medium.render(f"  {MODE_NAMES[self._mode]}  ", True, COLOR_HIGHLIGHT)
-        surface.blit(label, (4, 24))
+        area = area_de_contenido()
+        label = self._font_medium.render(MODE_NAMES[self._mode], True, COLOR_HIGHLIGHT)
+        surface.blit(label, (area.centerx - label.get_width() // 2, area.y + 6))
 
-        # Noise map
+        mapa = self._rect_del_mapa()
         if self._cached_noise is not None:
             noise_8: np.ndarray = (self._cached_noise * 255).astype(np.uint8)
             noise_rgb = np.stack([noise_8] * 3, axis=-1)
             noise_surf = pygame.surfarray.make_surface(noise_rgb.transpose(1, 0, 2))
-            noise_surf = pygame.transform.scale(noise_surf, (320, 180))
-            surface.blit(noise_surf, (0, 40))
-            pygame.draw.rect(surface, COLOR_ACCENT, (0, 40, 320, 180), 1)
+            noise_surf = pygame.transform.scale(noise_surf, (mapa.w, mapa.h))
+            surface.blit(noise_surf, mapa.topleft)
+        pygame.draw.rect(surface, COLOR_ACCENT, mapa, 1)
 
-        # Parameter panel
-        param_y = 228
+        # Panel de parámetros, bajo el mapa
+        salto = self._font_small.get_height() + 4
+        param_y = mapa.bottom + 10
         for i, pname in enumerate(PARAM_NAMES):
             selected = i == self._param_idx
             prefix = ">" if selected else " "
             val = self._get_param_value_for(i)
             color = COLOR_HIGHLIGHT if selected else COLOR_TEXT
-            txt = self._font_small.render(f"  {prefix} {pname}: {val}", True, color)
-            surface.blit(txt, (4, param_y + i * 14))
+            txt = self._font_small.render(f"{prefix} {pname}: {val}", True, color)
+            surface.blit(txt, (mapa.x, param_y + i * salto))
 
-        # Controls
-        controls = ("  [UP/DOWN] param  |  [LEFT/RIGHT] value  |  "
+        controls = ("[UP/DOWN] param  |  [LEFT/RIGHT] value  |  "
                     "[SPACE] random seed  |  [TAB] mode  |  [R] reset")
         ct = self._font_small.render(controls, True, COLOR_TEXT)
-        surface.blit(ct, (4, param_y + len(PARAM_NAMES) * 14 + 4))
+        surface.blit(ct, (mapa.x, param_y + len(PARAM_NAMES) * salto + 4))
 
         if self._status_msg:
             st = self._font_small.render(self._status_msg, True, COLOR_HIGHLIGHT)

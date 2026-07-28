@@ -57,7 +57,7 @@ from src.engine.scenes.tutorial_overlay import TutorialOverlay
 # Responsive layout offsets (resolvable to demo_layout constants)
 _MARGIN = 8
 #: Ancho de la columna de lecturas numéricas (AUD-094).
-_ANCHO_COLUMNA = 290
+_ANCHO_COLUMNA = 260
 _CONTENT_TOP = TOP_BAR_H + 4
 _PANEL_TOP = TOP_BAR_H
 
@@ -232,6 +232,18 @@ class VectorLabScene(BaseScene):
             self._enemy += enemy_dir * self._speed * dt
 
         self._enemy = _dentro_del_lienzo(self._enemy)
+
+    def rect_principal(self) -> pygame.Rect:
+        """Dónde vive el elemento que el estudiante mira y manipula.
+
+        Lo consume `tests/test_demo_centering.py`, que exige que esté
+        centrado horizontalmente en el área útil. Es la forma de dejar
+        escrito, y comprobado en cada ejecución de la suite, el defecto
+        AUD-094: el elemento vivía en la esquina superior izquierda porque
+        estas escenas se escribieron para una pantalla de 320x224.
+        """
+        _, escenario = area_con_columna(self._ANCHO_COLUMNA)
+        return Lienzo(AUTHORED_W, AUTHORED_H, area=escenario).rect()
 
     def draw(self, surface: pygame.Surface) -> None:
         """Vectores en el escenario centrado, lecturas en su columna.

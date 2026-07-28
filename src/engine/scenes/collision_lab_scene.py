@@ -340,6 +340,17 @@ class CollisionLabScene(BaseScene):
         alto = max(120, area.h - ALTO_EXPLICACION - self._ALTO_CABECERA)
         return pygame.Rect(area.x, area.y + self._ALTO_CABECERA, area.w, alto)
 
+    def rect_principal(self) -> pygame.Rect:
+        """Dónde vive el elemento que el estudiante mira y manipula.
+
+        Lo consume `tests/test_demo_centering.py`, que exige que esté
+        centrado horizontalmente en el área útil. Es la forma de dejar
+        escrito, y comprobado en cada ejecución de la suite, el defecto
+        AUD-094: el elemento vivía en la esquina superior izquierda porque
+        estas escenas se escribieron para una pantalla de 320x224.
+        """
+        return self._escenario()
+
     def draw(self, surface: pygame.Surface) -> None:
         """Nivel y jugador centrados; la explicación, debajo.
 

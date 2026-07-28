@@ -42,6 +42,7 @@ from src.engine.scenes.demo_common import (
     draw_bottom_bar,
     draw_top_bar,
 )
+from src.engine.scenes.demo_layout import TOP_BAR_H
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.processing.color_tools import ColorTools
 
@@ -56,6 +57,29 @@ CHANNEL_COLORS = [(255, 60, 60), (60, 200, 60), (60, 60, 255), (200, 200, 60)]
 SLIDER_H = 10
 SLIDER_GAP = 4
 
+# ── Escala de autoría → pantalla (AUD-094) ─────────────────────────
+#
+# Los catorce deslizadores de esta escena están escritos con `x = 10` y
+# `w = 300`: el ancho completo de una pantalla de 320 px. Sobre los 800x600
+# reales ocupaban el 38 % del ancho, pegados al borde izquierdo, y el
+# contenido entero cabía en x[4,315] y[33,163] —dos de nueve celdas—.
+#
+# En vez de tocar los catorce sitios se escala aquí, que es por donde pasan
+# todos. `_ESCALA_X` es la razón entre el ancho real y el de autoría.
+_ESCALA_X: float = settings.INTERNAL_WIDTH / 320.0
+#: Alto de un deslizador ya escalado, y separación entre filas.
+SLIDER_H_REAL: int = max(SLIDER_H, int(SLIDER_H * _ESCALA_X * 0.7))
+#: Salto vertical entre filas de deslizadores, en píxeles de pantalla.
+FILA: int = SLIDER_H_REAL + 16
+#: Alto del tarjetón de color. Es el «elemento» de esta escena: lo que el
+#: estudiante cambia y mira. Antes medía 44 px de alto sobre 600.
+_ALTO_TARJETON: int = 96
+
+
+def _ex(valor: float) -> int:
+    """Una coordenada o longitud horizontal de autoría, en pantalla."""
+    return int(valor * _ESCALA_X)
+
 
 def _rgb_to_hex(r: int, g: int, b: int) -> str:
     return f"#{r:02X}{g:02X}{b:02X}"
@@ -64,13 +88,17 @@ def _rgb_to_hex(r: int, g: int, b: int) -> str:
 def _draw_slider(surf: pygame.Surface, x: int, y: int, w: int,
                  val: float, color: tuple[int, int, int],
                  label: str, val_str: str) -> None:
-    pygame.draw.rect(surf, (40, 40, 60), (x, y, w, SLIDER_H))
+    """Dibuja un deslizador. `x` y `w` van en unidades de autoría (320)."""
+    x = _ex(x)
+    w = _ex(w)
+    alto = SLIDER_H_REAL
+    pygame.draw.rect(surf, (40, 40, 60), (x, y, w, alto))
     fill_w = int(w * val)
     if fill_w > 0:
-        pygame.draw.rect(surf, color, (x, y, fill_w, SLIDER_H))
-    pygame.draw.rect(surf, (100, 100, 140), (x, y, w, SLIDER_H), 1)
+        pygame.draw.rect(surf, color, (x, y, fill_w, alto))
+    pygame.draw.rect(surf, (100, 100, 140), (x, y, w, alto), 1)
     dot_x = x + fill_w
-    pygame.draw.circle(surf, (255, 255, 255), (dot_x, y + SLIDER_H // 2), 4)
+    pygame.draw.circle(surf, (255, 255, 255), (dot_x, y + alto // 2), max(4, alto // 2))
 
 
 def _draw_gradient_bar(surf: pygame.Surface, x: int, y: int, w: int, h: int,
@@ -318,40 +346,40 @@ class ColorTheoryScene(BaseScene):
         hex_str = _rgb_to_hex(cr, cg, cb)
 
         # Color swatch (compact)
-        swatch_rect = pygame.Rect(4, 28, 312, 44)
+        swatch_rect = pygame.Rect(_ex(4), TOP_BAR_H + 6, _ex(312), _ALTO_TARJETON)
         pygame.draw.rect(surface, (cr, cg, cb), swatch_rect)
         pygame.draw.rect(surface, (150, 150, 150), swatch_rect, 1)
 
         hex_label = self._font_medium.render(f"  RGB: ({cr:3d}, {cg:3d}, {cb:3d})  {hex_str}", True, COLOR_HIGHLIGHT)
-        surface.blit(hex_label, (8, 30))
+        surface.blit(hex_label, (_ex(8), swatch_rect.bottom + 6))
 
-        info_y = 78
+        info_y = swatch_rect.bottom + 12 + hex_label.get_height()
 
         if self._mode == 0:
             self._draw_rgb_ui(surface, info_y)
-            self._draw_all_space_readouts(surface, info_y + 54)
+            self._draw_all_space_readouts(surface, info_y + FILA * 3)
 
         elif self._mode == 1:
             self._draw_hsv_ui(surface, info_y)
             if self._show_steps:
-                self._draw_hsv_conversion_steps(surface, info_y + 56)
+                self._draw_hsv_conversion_steps(surface, info_y + FILA * 3)
             else:
-                self._draw_all_space_readouts(surface, info_y + 54)
+                self._draw_all_space_readouts(surface, info_y + FILA * 3)
 
         elif self._mode == 2:
             self._draw_hsl_ui(surface, info_y)
             if self._show_steps:
-                self._draw_hsl_conversion_steps(surface, info_y + 56)
+                self._draw_hsl_conversion_steps(surface, info_y + FILA * 3)
             else:
-                self._draw_all_space_readouts(surface, info_y + 54)
+                self._draw_all_space_readouts(surface, info_y + FILA * 3)
 
         elif self._mode == 3:
             self._draw_cmyk_ui(surface, info_y)
-            self._draw_all_space_readouts(surface, info_y + 66)
+            self._draw_all_space_readouts(surface, info_y + FILA * 4)
 
         elif self._mode == 4:
             self._draw_alpha_blend_ui(surface, info_y)
-            self._draw_alpha_formula(surface, info_y + 70)
+            self._draw_alpha_formula(surface, info_y + FILA * 4)
 
         elif self._mode == 5:
             self._draw_challenge_ui(surface, info_y)
@@ -369,17 +397,17 @@ class ColorTheoryScene(BaseScene):
     def _draw_rgb_ui(self, surface: pygame.Surface, y: int) -> None:
         _draw_slider(surface, 10, y, 300, self._r / 255, CHANNEL_COLORS[0],
                      "R", f"{self._r}")
-        _draw_slider(surface, 10, y + 12, 300, self._g / 255, CHANNEL_COLORS[1],
+        _draw_slider(surface, 10, y + FILA * 1, 300, self._g / 255, CHANNEL_COLORS[1],
                      "G", f"{self._g}")
-        _draw_slider(surface, 10, y + 24, 300, self._b / 255, CHANNEL_COLORS[2],
+        _draw_slider(surface, 10, y + FILA * 2, 300, self._b / 255, CHANNEL_COLORS[2],
                      "B", f"{self._b}")
 
     def _draw_hsv_ui(self, surface: pygame.Surface, y: int) -> None:
         _draw_slider(surface, 10, y, 300, self._h / 360, (255, 200, 100),
                      "H", f"{self._h:.0f}°")
-        _draw_slider(surface, 10, y + 12, 300, self._s, (200, 100, 200),
+        _draw_slider(surface, 10, y + FILA * 1, 300, self._s, (200, 100, 200),
                      "S", f"{self._s:.2f}")
-        _draw_slider(surface, 10, y + 24, 300, self._v, (100, 200, 255),
+        _draw_slider(surface, 10, y + FILA * 2, 300, self._v, (100, 200, 255),
                      "V", f"{self._v:.2f}")
         hint = self._font_small.render("SHIFT to toggle step-by-step algorithm", True, COLOR_ACCENT)
         surface.blit(hint, (10, y + 38))
@@ -387,9 +415,9 @@ class ColorTheoryScene(BaseScene):
     def _draw_hsl_ui(self, surface: pygame.Surface, y: int) -> None:
         _draw_slider(surface, 10, y, 300, self._h / 360, (255, 200, 100),
                      "H", f"{self._h:.0f}°")
-        _draw_slider(surface, 10, y + 12, 300, self._s, (200, 100, 200),
+        _draw_slider(surface, 10, y + FILA * 1, 300, self._s, (200, 100, 200),
                      "S", f"{self._s:.2f}")
-        _draw_slider(surface, 10, y + 24, 300, self._lightness, (100, 200, 200),
+        _draw_slider(surface, 10, y + FILA * 2, 300, self._lightness, (100, 200, 200),
                      "L", f"{self._lightness:.2f}")
         hint = self._font_small.render("SHIFT to toggle step-by-step algorithm", True, COLOR_ACCENT)
         surface.blit(hint, (10, y + 38))
@@ -397,11 +425,11 @@ class ColorTheoryScene(BaseScene):
     def _draw_cmyk_ui(self, surface: pygame.Surface, y: int) -> None:
         _draw_slider(surface, 10, y, 300, self._c, CHANNEL_COLORS[3],
                      "C", f"{self._c:.2f}")
-        _draw_slider(surface, 10, y + 12, 300, self._m, (200, 80, 200),
+        _draw_slider(surface, 10, y + FILA * 1, 300, self._m, (200, 80, 200),
                      "M", f"{self._m:.2f}")
-        _draw_slider(surface, 10, y + 24, 300, self._y, (200, 200, 80),
+        _draw_slider(surface, 10, y + FILA * 2, 300, self._y, (200, 200, 80),
                      "Y", f"{self._y:.2f}")
-        _draw_slider(surface, 10, y + 36, 300, self._k, (80, 80, 80),
+        _draw_slider(surface, 10, y + FILA * 3, 300, self._k, (80, 80, 80),
                      "K", f"{self._k:.2f}")
 
     def _draw_all_space_readouts(self, surface: pygame.Surface, y: int) -> None:
@@ -494,7 +522,7 @@ class ColorTheoryScene(BaseScene):
             txt = self._font_small.render(line, True, COLOR_TEXT)
             surface.blit(txt, (10, y + 90 + i * 14))
 
-        _draw_slider(surface, 80, y + 116, 160, self._alpha, (200, 200, 255),
+        _draw_slider(surface, 80, y + FILA * 6, 160, self._alpha, (200, 200, 255),
                      "Alpha", f"{self._alpha:.2f}")
 
     def _draw_alpha_formula(self, surface: pygame.Surface, y: int) -> None:

@@ -38,6 +38,12 @@ from src.engine.scenes.demo_common import (
     draw_top_bar,
     save_png,
 )
+from src.engine.scenes.demo_layout import (
+    AUTHORED_H,
+    AUTHORED_W,
+    Lienzo,
+    area_de_contenido,
+)
 from src.engine.utils.asset_loader import AssetLoader
 from src.engine.utils.math_utils import (
     ease_in_cubic,
@@ -73,6 +79,45 @@ EASING_FUNCS: list[tuple[str, Callable[[float], float]]] = [
 
 
 class InterpolationLabScene(BaseScene):
+    """Laboratorio de interpolación: lerp, curvas de suavizado y claves.
+
+    AUD-094 — los tres modos dibujaban en la esquina
+    ------------------------------------------------
+    Los extremos del lerp estaban en (40, 140) y (280, 140), la gráfica de
+    suavizado medía 260x120 en (40, 40) y los fotogramas clave iban de x=50 a
+    x=270: coordenadas de una pantalla de 320x224. Medido sobre 800x600, el
+    contenido cabía en x[8,322] —el 39 % del ancho— y tres de las nueve
+    celdas de la rejilla, ninguna de ellas la central.
+    """
+
+    # -- geometría de autoría (320x224) ----------------------------
+    #: Extremos del segmento del modo LERP.
+    _LERP_A = (40, 150)
+    _LERP_B = (280, 150)
+    #: Los tres fotogramas clave del tercer modo.
+    _KEYFRAMES = ((50, 170), (160, 60), (270, 170))
+    #: Alto reservado arriba para el rótulo y la fórmula.
+    _ALTO_CABECERA = 78
+    #: Alto reservado abajo para la línea de lectura y los controles.
+    _ALTO_PIE = 96
+
+    def _lienzo(self) -> Lienzo:
+        """El lienzo de autoría sobre la franja central del área útil."""
+        return Lienzo(AUTHORED_W, AUTHORED_H, area=self._franja())
+
+    def _franja(self) -> pygame.Rect:
+        area = area_de_contenido()
+        alto = max(120, area.h - self._ALTO_CABECERA - self._ALTO_PIE)
+        return pygame.Rect(area.x, area.y + self._ALTO_CABECERA, area.w, alto)
+
+    def _rect_grafica(self) -> pygame.Rect:
+        """Rectángulo de la gráfica f(t), centrado en la franja."""
+        franja = self._franja()
+        ancho = int(franja.w * 0.78)
+        return pygame.Rect(
+            franja.centerx - ancho // 2, franja.y, ancho, franja.h,
+        )
+
     def __init__(self, context: GameContext) -> None:
         super().__init__(context)
         self._mode: int = 0
@@ -170,6 +215,17 @@ class InterpolationLabScene(BaseScene):
                 self._status_msg = f"Easing: {EASING_FUNCS[self._easing_idx][0]}"
                 self._status_timer = 1.5
 
+    def rect_principal(self) -> pygame.Rect:
+        """Dónde vive el elemento que el estudiante mira y manipula.
+
+        Lo consume `tests/test_demo_centering.py`, que exige que esté
+        centrado horizontalmente en el área útil. Es la forma de dejar
+        escrito, y comprobado en cada ejecución de la suite, el defecto
+        AUD-094: el elemento vivía en la esquina superior izquierda porque
+        estas escenas se escribieron para una pantalla de 320x224.
+        """
+        return self._franja()
+
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill(COLOR_BG)
         draw_top_bar(surface, "INTERPOLATION LAB", "UNIT III/IV")
@@ -193,96 +249,104 @@ class InterpolationLabScene(BaseScene):
         draw_bottom_bar(surface, f"MODE: {MODE_NAMES[self._mode]}")
 
     def _draw_lerp(self, surface: pygame.Surface) -> None:
-        label = self._font_medium.render("  LERP: Linear Interpolation  ", True, COLOR_HIGHLIGHT)
-        surface.blit(label, (4, 24))
+        lienzo = self._lienzo()
+        area = area_de_contenido()
+        label = self._font_medium.render("LERP: Linear Interpolation", True, COLOR_HIGHLIGHT)
+        surface.blit(label, (area.x + 8, area.y + 6))
 
-        # Two points
-        start_a = (40, 140)
-        end_b = (280, 140)
-        pygame.draw.circle(surface, COLOR_TEXT, start_a, 6)
-        pygame.draw.circle(surface, COLOR_TEXT, end_b, 6)
+        # Los dos extremos, en unidades de autoría
+        ax, ay = self._LERP_A
+        bx, by = self._LERP_B
+        start_a = lienzo.p(ax, ay)
+        end_b = lienzo.p(bx, by)
+        radio = lienzo.l(6)
+        pygame.draw.circle(surface, COLOR_TEXT, start_a, radio)
+        pygame.draw.circle(surface, COLOR_TEXT, end_b, radio)
+        pygame.draw.line(surface, COLOR_DIVIDER, start_a, end_b, max(1, lienzo.l(1)))
 
-        # Line
-        pygame.draw.line(surface, COLOR_DIVIDER, start_a, end_b, 1)
-
-        # Lerped point
+        # El punto interpolado. La interpolación se hace en unidades de
+        # autoría —los mismos números que salen en la fórmula de abajo— y sólo
+        # después se lleva a pantalla.
         eased = self._t
-        lx = int(lerp(float(start_a[0]), float(end_b[0]), eased))
-        ly = int(lerp(float(start_a[1]), float(end_b[1]), eased))
+        px = lerp(float(ax), float(bx), eased)
+        py = lerp(float(ay), float(by), eased)
+        punto = lienzo.p(px, py)
         lerp_color = (255, 200, 80)
-        pygame.draw.circle(surface, lerp_color, (lx, ly), 8)
-        pygame.draw.circle(surface, (255, 255, 255), (lx, ly), 8, 1)
+        radio_punto = lienzo.l(8)
+        pygame.draw.circle(surface, lerp_color, punto, radio_punto)
+        pygame.draw.circle(surface, (255, 255, 255), punto, radio_punto, 1)
 
-        # Labels
         la = self._font_small.render("A (start)", True, COLOR_TEXT)
-        surface.blit(la, (start_a[0] + 10, start_a[1] - 6))
+        surface.blit(la, (start_a[0] - la.get_width() // 2, start_a[1] + radio + 6))
         lb = self._font_small.render("B (end)", True, COLOR_TEXT)
-        surface.blit(lb, (end_b[0] + 10, end_b[1] - 6))
+        surface.blit(lb, (end_b[0] - lb.get_width() // 2, end_b[1] + radio + 6))
         lt = self._font_small.render(f"t = {self._t:.3f}", True, lerp_color)
-        surface.blit(lt, (lx + 12, ly - 8))
+        surface.blit(lt, (punto[0] - lt.get_width() // 2, punto[1] - radio_punto - 20))
 
-        # Formula
         formula = self._font_small.render(
-            "  lerp(A, B, t) = A + (B - A) * t", True, COLOR_ACCENT)
-        surface.blit(formula, (4, 50))
+            "lerp(A, B, t) = A + (B - A) * t", True, COLOR_ACCENT)
+        surface.blit(formula, (area.x + 8, area.y + 12 + label.get_height()))
 
-        computed_x = 40.0 + (280.0 - 40.0) * self._t
+        computed_x = ax + (bx - ax) * self._t
         result = self._font_small.render(
-            f"  = ({start_a[0]} + ({end_b[0]} - {start_a[0]}) * {self._t:.3f})"
-            f"  =>  x = {computed_x:.1f}", True, COLOR_TEXT)
-        surface.blit(result, (4, 66))
+            f"= ({ax} + ({bx} - {ax}) * {self._t:.3f})  =>  x = {computed_x:.1f}",
+            True, COLOR_TEXT)
+        surface.blit(result, (area.x + 8,
+                              area.y + 16 + label.get_height() + formula.get_height()))
 
     def _draw_easing_curves(self, surface: pygame.Surface) -> None:
         name, func = EASING_FUNCS[self._easing_idx]
-        label = self._font_medium.render(f"  EASING: {name}  ", True, COLOR_HIGHLIGHT)
-        surface.blit(label, (4, 24))
+        label = self._font_medium.render(f"EASING: {name}", True, COLOR_HIGHLIGHT)
+        surface.blit(label, (area_de_contenido().x + 8, area_de_contenido().y + 6))
 
-        # Graph area
-        gx, gy = 40, 40
-        gw, gh = 260, 120
-        pygame.draw.rect(surface, (10, 10, 25), (gx, gy, gw, gh), 1)
+        # La gráfica ocupa el área útil menos la cabecera, no un rectángulo
+        # de 260x120 escrito para una pantalla de 320 (AUD-094).
+        area = area_de_contenido()
+        g = self._rect_grafica()
+        gx, gy, gw, gh = g.x, g.y, g.w, g.h
+        pygame.draw.rect(surface, (10, 10, 25), g, 1)
 
-        # Axis labels
         xl = self._font_small.render("t ->", True, COLOR_ACCENT)
-        surface.blit(xl, (gx + gw - 20, gy + gh - 2))
+        surface.blit(xl, (g.right - xl.get_width() - 4, g.bottom + 4))
         yl = self._font_small.render("f(t)", True, COLOR_ACCENT)
-        surface.blit(yl, (gx - 30, gy + 2))
+        surface.blit(yl, (g.left + 4, g.top + 4))
 
-        # Draw curve
-        pts = []
-        for i in range(gw + 1):
-            t = i / gw
-            v = func(t)
-            px = gx + i
-            py = gy + gh - int(v * gh)
-            pts.append((px, py))
-
+        # La curva se muestrea en t ∈ [0, 1] y se lleva a la gráfica. El paso
+        # es de un píxel de pantalla, así que la resolución del trazo crece
+        # con la gráfica en vez de quedarse en los 260 puntos de antes.
+        pts = [
+            (gx + i, gy + gh - int(func(i / gw) * gh))
+            for i in range(gw + 1)
+        ]
         if len(pts) > 1:
-            pygame.draw.lines(surface, (80, 200, 255), False, pts, 2)
+            pygame.draw.lines(surface, (80, 200, 255), False, pts, 3)
 
-        # Current t marker
+        # Marca de la t actual
         mx = gx + int(self._t * gw)
         mv = func(self._t)
         my = gy + gh - int(mv * gh)
         pygame.draw.line(surface, (255, 220, 80), (mx, gy), (mx, gy + gh), 1)
-        pygame.draw.circle(surface, (255, 220, 80), (mx, my), 5)
+        pygame.draw.circle(surface, (255, 220, 80), (mx, my), 7)
 
-        # Diagonal reference
-        pygame.draw.line(surface, (30, 30, 50), (gx, gy + gh), (gx + gw, gy), 1)
+        # Diagonal de referencia: f(t) = t
+        pygame.draw.line(surface, (60, 60, 90), (gx, gy + gh), (gx + gw, gy), 1)
 
         info = self._font_small.render(
-            f"  f({self._t:.2f}) = {mv:.3f}  |  "
+            f"f({self._t:.2f}) = {mv:.3f}  |  "
             f"[UP/DOWN: cycle easing]  |  [SPACE: animate]", True, COLOR_TEXT)
-        surface.blit(info, (4, gy + gh + 8))
+        surface.blit(info, (area.x + 8, g.bottom + 8 + xl.get_height()))
 
     def _draw_keyframe(self, surface: pygame.Surface) -> None:
-        label = self._font_medium.render("  KEYFRAME ANIMATION  ", True, COLOR_HIGHLIGHT)
-        surface.blit(label, (4, 24))
+        area = area_de_contenido()
+        label = self._font_medium.render("KEYFRAME ANIMATION", True, COLOR_HIGHLIGHT)
+        surface.blit(label, (area.x + 8, area.y + 6))
 
-        # Keyframes
-        kfs = [(50, 160), (160, 60), (270, 160)]
+        # Fotogramas clave, en unidades de autoría
+        lienzo = self._lienzo()
+        kfs = [lienzo.p(*k) for k in self._KEYFRAMES]
+        radio_kf = lienzo.l(5)
         for kf in kfs:
-            pygame.draw.circle(surface, (80, 200, 255), kf, 5)
+            pygame.draw.circle(surface, (80, 200, 255), kf, radio_kf)
 
         # Path
         if len(kfs) >= 2:
@@ -298,13 +362,14 @@ class InterpolationLabScene(BaseScene):
             # Animated point
             lx = int(lerp(float(start_pt[0]), float(end_pt[0]), eased_t))
             ly = int(lerp(float(start_pt[1]), float(end_pt[1]), eased_t))
-            pygame.draw.circle(surface, (255, 200, 80), (lx, ly), 8)
-            pygame.draw.circle(surface, (255, 255, 255), (lx, ly), 8, 1)
+            radio_animado = lienzo.l(8)
+            pygame.draw.circle(surface, (255, 200, 80), (lx, ly), radio_animado)
+            pygame.draw.circle(surface, (255, 255, 255), (lx, ly), radio_animado, 1)
 
             info = self._font_small.render(
                 f"  Segment {idx}: t={local_t:.2f} (eased={eased_t:.2f})  |  "
                 f"[LEFT/RIGHT: t]  |  [SPACE: animate]", True, COLOR_TEXT)
-            surface.blit(info, (4, 200))
+            surface.blit(info, (area_de_contenido().x + 8, self._rect_grafica().bottom + 8))
 
     def _get_keyframe_segment(self, n: int) -> tuple[int, float]:
         if n <= 1:
