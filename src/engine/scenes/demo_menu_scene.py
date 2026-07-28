@@ -202,6 +202,13 @@ class DemoMenuScene(BaseScene):
         if im.is_raw_key_pressed(pygame.K_t):
             self._abrir_teoria(self._entradas[self._selected])
 
+        # I — identificarse. AUD-098: sin esta puerta, el progreso académico
+        # se guardaba y nadie podía volver a él nunca.
+        if im.is_raw_key_pressed(pygame.K_i):
+            from src.engine.scenes.student_login_scene import StudentLoginScene
+            self.context.event_bus.emit(Events.SFX_MENU_CONFIRM)
+            self.context.scene_manager.replace(StudentLoginScene(self.context))
+
         if im.is_action_just_pressed(Action.CANCEL):
             self.context.event_bus.emit(Events.SFX_MENU_CANCEL)
             from src.engine.scenes.title_scene import TitleScene
@@ -267,14 +274,15 @@ class DemoMenuScene(BaseScene):
 
         draw_bottom_bar(
             surface,
-            "↑↓: Navegar  |  ENTER: Abrir demo  |  T: Teoría y examen  |  ESC: Título",
+            "↑↓: Navegar  |  ENTER: Demo  |  T: Teoría y examen  |  "
+            "I: Identificarse  |  ESC: Título",
         )
 
     def _dibujar_resumen(self, surface: pygame.Surface) -> None:
         """Una línea con quién eres y cuánto llevas."""
         progreso = self._sesion.progreso
         aprobadas = len(progreso.unidades_aprobadas())
-        quien = progreso.correo or "sin identificar — el progreso no se guarda"
+        quien = progreso.correo or "sin identificar — pulsa I para guardar tu progreso"
         texto = f"{quien}   ·   {aprobadas}/{len(PLAN)} unidades aprobadas"
         render = self._font_small.render(texto, True, COLOR_ACCENT)
         surface.blit(render, (16, TOP_BAR_H + 6))

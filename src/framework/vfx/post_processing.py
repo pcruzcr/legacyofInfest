@@ -43,6 +43,9 @@ class PostProcessing:
         self._bloom_up: pygame.Surface | None = None
         self._highlight_surf: pygame.Surface | None = None
         self._motion_up: pygame.Surface | None = None
+        #: Modo de daltonismo — se carga una vez (lazy) para no hacer I/O
+        #: (user_settings.get()) en cada fotograma (AUD-052).
+        self._cb_mode: str | None = None
 
     def set_motion_blur(self, strength: float = 0.3) -> None:
         self._motion_blur_strength = max(0.0, min(1.0, strength))
@@ -98,24 +101,27 @@ class PostProcessing:
         # player's choice to config.json and this filter read a different,
         # always-"off" variable, so selecting a colourblind mode had no effect
         # on a single rendered frame. Both sides now use user_settings.
-        from src.engine.core import user_settings
-        mode = user_settings.get().colorblind_mode
-        if mode == "off":
+        # AUD-052: Load mode once (lazy) and cache it to avoid hitting
+        # user_settings.get() (which may do I/O on first call) every frame.
+        if self._cb_mode is None:
+            from src.engine.core import user_settings
+            self._cb_mode = user_settings.get().colorblind_mode
+        if self._cb_mode == "off":
             return
         arr = pygame.surfarray.pixels3d(surface)
         try:
             r = arr[:,:,0].astype(np.float32)
             g = arr[:,:,1].astype(np.float32)
             b = arr[:,:,2].astype(np.float32)
-            if mode == "protanopia":
+            if self._cb_mode == "protanopia":
                 arr[:,:,0] = np.clip(r * 0.57 + g * 0.43, 0, 255).astype(np.uint8)
                 arr[:,:,1] = np.clip(g * 0.86, 0, 255).astype(np.uint8)
                 arr[:,:,2] = np.clip(b * 0.86, 0, 255).astype(np.uint8)
-            elif mode == "deuteranopia":
+            elif self._cb_mode == "deuteranopia":
                 arr[:,:,0] = np.clip(r * 0.63, 0, 255).astype(np.uint8)
                 arr[:,:,1] = np.clip(g * 0.78 + r * 0.22, 0, 255).astype(np.uint8)
                 arr[:,:,2] = np.clip(b * 0.86, 0, 255).astype(np.uint8)
-            elif mode == "tritanopia":
+            elif self._cb_mode == "tritanopia":
                 arr[:,:,0] = np.clip(r * 0.95, 0, 255).astype(np.uint8)
                 arr[:,:,1] = np.clip(g * 0.43 + b * 0.57, 0, 255).astype(np.uint8)
                 arr[:,:,2] = np.clip(b * 0.43, 0, 255).astype(np.uint8)

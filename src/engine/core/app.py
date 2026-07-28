@@ -140,6 +140,23 @@ class App:
         from src.engine.scenes.scene_registry import register_demo_scenes
         register_demo_scenes()
 
+        # AUD-098: reanudar al estudiante que se identificó la última vez.
+        #
+        # Sin esto, el progreso académico se guardaba y **nadie volvía a
+        # leerlo nunca**: se podían aprobar cinco unidades, cerrar el juego, y
+        # encontrarse el temario entero bloqueado otra vez con las notas
+        # intactas en el disco pero inalcanzables.
+        #
+        # Falla en silencio a propósito. Si el fichero de progreso está roto o
+        # el disco no deja leer, se sigue como anónimo: perder unas notas de
+        # prácticas es malo, que el juego no arranque el día de la entrega es
+        # peor.
+        from src.framework.academic.sesion import SesionAcademica
+        try:
+            SesionAcademica.instancia().reanudar()
+        except OSError:
+            logger.warning("no se pudo reanudar la sesión académica", exc_info=True)
+
         from src.engine.scenes.splash_scene import SplashScene
         self.scene_manager.push(SplashScene(self.context))
 

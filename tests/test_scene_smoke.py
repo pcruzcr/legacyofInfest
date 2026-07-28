@@ -132,7 +132,63 @@ SCENE_PATHS: list[tuple[str, str]] = [
     ("src.engine.scenes.sandbox_scene", "SandboxScene"),
     ("src.engine.scenes.stage_wizard_scene", "StageWizardScene"),
     ("src.engine.scenes.story_scene", "StoryScene"),
+    ("src.engine.scenes.unit_theory_scene", "UnitTheoryScene"),
+    ("src.engine.scenes.student_login_scene", "StudentLoginScene"),
 ]
+
+#: Escenas cuyo constructor pide algo más que el contexto.
+#:
+#: Antes esto era un `except TypeError: scene_cls(context, 1)` que servía
+#: para `StoryScene`, que toma un número de capítulo. Con `UnitTheoryScene`
+#: —que toma el identificador de una unidad— aquel `1` habría construido la
+#: escena de una unidad inexistente: no habría reventado, porque la escena lo
+#: contempla, pero la prueba habría ejercitado la rama de error en vez de la
+#: real. Una prueba que pasa recorriendo el camino equivocado es peor que una
+#: que falla (AUD-098).
+ARGUMENTO_EXTRA: dict[str, object] = {
+    "StoryScene": 1,
+    "UnitTheoryScene": "vectores",
+}
+
+
+def _construir(scene_cls: type, context: object) -> object:
+    """Instancia una escena, con su argumento extra si lo necesita."""
+    extra = ARGUMENTO_EXTRA.get(scene_cls.__name__)
+    if extra is not None:
+        return scene_cls(context, extra)
+    return scene_cls(context)
+
+
+#: Ficheros de `engine/scenes/` que no son escenas y por eso no están arriba.
+#: Se listan a mano para que añadir un fichero nuevo obligue a decidir.
+NO_SON_ESCENAS = {
+    "__init__.py", "code_panel.py", "debug_overlay.py", "demo_common.py",
+    "demo_layout.py", "demo_utils.py", "param_panel.py", "quiz_system.py",
+    "scene_registry.py", "transition_manager.py", "tutorial_overlay.py",
+}
+
+
+def test_toda_escena_nueva_entra_en_el_arnes() -> None:
+    """Ninguna escena puede quedarse fuera de este arnés en silencio.
+
+    AUD-098. `UnitTheoryScene` se añadió en AUD-095 y no llegó a esta lista.
+    No falló nada: simplemente dejó de comprobarse que arranca, dibuja y
+    aguanta la entrada, que es justo lo que este fichero existe para
+    garantizar. La lista explícita protege contra renombrados y borrados,
+    pero no contra olvidos; esto sí.
+    """
+    from pathlib import Path
+
+    directorio = Path(__file__).resolve().parent.parent / "src" / "engine" / "scenes"
+    ficheros = {p.name for p in directorio.glob("*.py")}
+    en_el_arnes = {
+        f"{modulo.rsplit('.', 1)[-1]}.py" for modulo, _ in SCENE_PATHS
+    }
+    sin_cubrir = ficheros - en_el_arnes - NO_SON_ESCENAS
+    assert not sin_cubrir, (
+        f"escena(s) {sorted(sin_cubrir)} no están en SCENE_PATHS ni declaradas "
+        f"como «no son escenas». Añádelas a una de las dos listas."
+    )
 
 
 def _load(module_path: str, class_name: str):
@@ -149,11 +205,7 @@ def test_scene_boots_updates_and_draws(module_path, class_name, context, display
     scene_cls = _load(module_path, class_name)
     surface = pygame.Surface(INTERNAL_SIZE)
 
-    try:
-        scene = scene_cls(context)
-    except TypeError:
-        # A few scenes take an extra argument (StoryScene takes a chapter).
-        scene = scene_cls(context, 1)
+    scene = _construir(scene_cls, context)
 
     _run_frames(scene, surface)
 
@@ -170,10 +222,7 @@ def test_scene_survives_input(module_path, class_name, context, display) -> None
 
     scene_cls = _load(module_path, class_name)
     surface = pygame.Surface(INTERNAL_SIZE)
-    try:
-        scene = scene_cls(context)
-    except TypeError:
-        scene = scene_cls(context, 1)
+    scene = _construir(scene_cls, context)
 
     scene.awake()
     scene.start()

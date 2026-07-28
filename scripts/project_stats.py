@@ -54,7 +54,14 @@ print(f'Boss types: {len(boss_names)} - {boss_names}')
 from src.engine.core.achievements import AchievementSystem
 
 ach = AchievementSystem.get_instance()
-print('Achievements: TODO')
+# Antes esto imprimía literalmente `Achievements: TODO`. Un contador de
+# estadísticas que confiesa no saber contar una de sus columnas no es una
+# nota pendiente: es una línea que nadie va a leer dos veces y que resta
+# credibilidad a las cifras que sí son ciertas. `get_all_achievements()`
+# existía desde el principio.
+_logros = ach.get_all_achievements()
+_desbloqueados = sum(1 for _, progreso in _logros if progreso.unlocked)
+print(f'Achievements: {len(_logros)} defined, {_desbloqueados} unlocked in this profile')
 
 print()
 for label, d in [('Engine', 'src/engine'), ('Framework', 'src/framework'), ('Stages', 'src/stages')]:

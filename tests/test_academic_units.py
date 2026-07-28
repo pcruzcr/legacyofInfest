@@ -455,3 +455,173 @@ class TestElPuenteEntreDemoYUnidad:
 
     def test_buscar_una_unidad_inexistente_devuelve_none(self):
         assert unidad("no_existe") is None
+
+
+class TestElProgresoSobreviveAlCierreDelJuego:
+    """AUD-098 — el eslabón que faltaba entre guardar y volver a usarlo.
+
+    AUD-095 dejó el progreso guardándose bien y **nadie volvía a leerlo
+    nunca**: `entrar()` sólo se llamaba desde las pruebas, no había pantalla
+    que pidiera el correo y `App` no reanudaba nada al arrancar. Un estudiante
+    podía aprobar cinco unidades, cerrar el juego, y encontrarse el temario
+    entero bloqueado otra vez con sus notas intactas en el disco.
+
+    Esta clase recorre el ciclo entero: identificarse, aprobar, «cerrar el
+    juego» —tirando la sesión— y reanudar.
+    """
+
+    @pytest.fixture
+    def ajustes_aislados(self, tmp_path, monkeypatch):
+        """Ajustes en un fichero temporal: no tocar los del desarrollador."""
+        from src.engine.core import user_settings
+
+        destino = tmp_path / "config.json"
+        monkeypatch.setattr(user_settings, "_default_config_path", lambda: destino)
+        user_settings.reset()
+        user_settings.set_settings(user_settings.UserSettings.load(destino))
+        yield destino
+        user_settings.reset()
+
+    def test_ciclo_completo_identificar_aprobar_cerrar_reanudar(
+        self, tmp_path, ajustes_aislados,
+    ):
+        ids = ids_de_unidades()
+
+        sesion = SesionAcademica.reiniciar(tmp_path)
+        assert sesion.entrar("alumno@uni.edu")
+        sesion.registrar_examen(ids[0], PREGUNTAS_POR_UNIDAD)
+        sesion.registrar_examen(ids[1], PREGUNTAS_POR_UNIDAD)
+        assert len(sesion.progreso.unidades_aprobadas()) == 2
+
+        # Se cierra el juego: sesión nueva, en blanco.
+        reabierta = SesionAcademica.reiniciar(tmp_path)
+        assert not reabierta.identificado
+        assert reabierta.progreso.unidades_aprobadas() == ()
+
+        # Al arrancar, App llama a esto.
+        assert reabierta.reanudar(), "no se reanudó al último estudiante"
+        assert reabierta.correo == "alumno@uni.edu"
+        assert len(reabierta.progreso.unidades_aprobadas()) == 2, (
+            "las notas estaban en el disco y no volvieron: es exactamente el "
+            "defecto que AUD-098 corrige"
+        )
+        assert reabierta.progreso.esta_desbloqueada(ids[2])
+
+    def test_sin_nadie_recordado_no_hay_nada_que_reanudar(self, tmp_path, ajustes_aislados):
+        sesion = SesionAcademica.reiniciar(tmp_path)
+        assert not sesion.reanudar()
+        assert not sesion.identificado
+
+    def test_cerrar_sesion_deja_de_recordar_pero_no_borra(self, tmp_path, ajustes_aislados):
+        ids = ids_de_unidades()
+        sesion = SesionAcademica.reiniciar(tmp_path)
+        sesion.entrar("alumno@uni.edu")
+        sesion.registrar_examen(ids[0], PREGUNTAS_POR_UNIDAD)
+        sesion.salir()
+
+        otra = SesionAcademica.reiniciar(tmp_path)
+        assert not otra.reanudar(), "seguía recordando a un estudiante que salió"
+        # Pero sus notas siguen ahí para cuando vuelva.
+        assert otra.entrar("alumno@uni.edu")
+        assert otra.progreso.esta_aprobada(ids[0])
+
+    def test_un_correo_invalido_no_se_recuerda(self, tmp_path, ajustes_aislados):
+        from src.engine.core import user_settings
+
+        sesion = SesionAcademica.reiniciar(tmp_path)
+        assert not sesion.entrar("no es un correo")
+        assert user_settings.get().student_email == ""
+
+
+class TestLaPantallaDeIdentificacion:
+    """Que exista la puerta, y que haga lo que dice."""
+
+    @pytest.fixture
+    def escena(self, tmp_path, monkeypatch):
+        import pygame
+
+        from src.engine.audio.audio_manager import AudioManager
+        from src.engine.core import settings, user_settings
+        from src.engine.core.event_bus import EventBus
+        from src.engine.core.game_context import GameContext
+        from src.engine.core.save_manager import SaveManager
+        from src.engine.input.input_manager import InputManager
+        from src.engine.scene.scene_manager import SceneManager
+        from src.engine.scenes.student_login_scene import StudentLoginScene
+
+        monkeypatch.setattr(
+            user_settings, "_default_config_path", lambda: tmp_path / "config.json",
+        )
+        user_settings.reset()
+        pygame.init()
+        pygame.font.init()
+        if pygame.display.get_surface() is None:
+            pygame.display.set_mode((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
+        SesionAcademica.reiniciar(tmp_path)
+        ctx = GameContext(
+            input_manager=InputManager(), audio_manager=AudioManager(),
+            scene_manager=None, event_bus=EventBus(), clock=None,
+            save_manager=SaveManager(),
+        )
+        ctx.scene_manager = SceneManager(ctx)
+        e = StudentLoginScene(ctx)
+        e.awake()
+        e.start()
+        e.on_enter()
+        yield e
+        user_settings.reset()
+
+    @staticmethod
+    def _teclear(escena, texto: str) -> None:
+        import pygame
+
+        escena.process_events([
+            pygame.event.Event(pygame.KEYDOWN, key=ord(c), mod=0, unicode=c)
+            for c in texto
+        ])
+
+    def test_teclear_llena_el_campo(self, escena):
+        self._teclear(escena, "ana@uni.edu")
+        assert escena._buffer == "ana@uni.edu"
+
+    def test_los_caracteres_raros_no_entran(self, escena):
+        """Un espacio o una comilla acabarían en un nombre de fichero."""
+        self._teclear(escena, "a n'a@uni.edu")
+        assert escena._buffer == "ana@uni.edu"
+
+    def test_el_borrado_funciona(self, escena):
+        import pygame
+
+        self._teclear(escena, "abc")
+        escena.process_events([
+            pygame.event.Event(pygame.KEYDOWN, key=pygame.K_BACKSPACE, mod=0, unicode=""),
+        ])
+        assert escena._buffer == "ab"
+
+    def test_confirmar_un_correo_valido_identifica(self, escena):
+        self._teclear(escena, "ana@uni.edu")
+        escena._confirmar()
+        assert SesionAcademica.instancia().correo == "ana@uni.edu"
+
+    def test_confirmar_uno_invalido_avisa_y_no_identifica(self, escena):
+        self._teclear(escena, "ana-arroba-uni")
+        escena._confirmar()
+        assert not SesionAcademica.instancia().identificado
+        assert escena._mensaje, "no se dijo al estudiante qué estaba mal"
+
+    def test_no_se_pasa_del_limite_de_longitud(self, escena):
+        from src.engine.scenes.student_login_scene import MAX_LONGITUD
+
+        self._teclear(escena, "a" * (MAX_LONGITUD + 40))
+        assert len(escena._buffer) == MAX_LONGITUD
+
+    def test_dibuja_sin_caerse(self, escena):
+        import pygame
+
+        from src.engine.core import settings
+
+        superficie = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
+        self._teclear(escena, "ana@uni.edu")
+        for _ in range(4):
+            escena.update(1.0 / 60.0)
+            escena.draw(superficie)

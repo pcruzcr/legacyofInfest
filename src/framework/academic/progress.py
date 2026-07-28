@@ -26,10 +26,16 @@ Decisiones
   tabla de equivalencias. El correo se normaliza —minúsculas, sin espacios—
   para que `Juan.Perez@UNI.EDU` y `juan.perez@uni.edu` sean el mismo
   estudiante.
-- *Un fichero JSON por estudiante.* Legible, revisable y fácil de recoger. No
-  se usa pickle: AUD-035 lo sacó del proyecto entero porque abrir un `.pkl`
-  ajeno ejecuta código arbitrario, y estos ficheros los van a intercambiar
-  treinta personas.
+- *Un fichero JSON por estudiante.* Legible, revisable y fácil de recoger.
+  Aquí no se usa pickle porque estos ficheros los van a intercambiar treinta
+  personas y abrir un `.pkl` ajeno ejecuta código arbitrario.
+
+  Para ser exacto: pickle **no** está retirado del proyecto entero. Sigue
+  vivo, vía `joblib`, en el modelo de referencia de la Unidad IX
+  (`framework/processing/reference_model.py`), donde carga un `.pkl` que
+  genera la propia máquina y que avisa por registro al deserializar. Esa
+  excepción está acotada y documentada; lo que AUD-035 retiró fue el pickle
+  de las partidas guardadas, que sí viajan entre alumnos.
 """
 from __future__ import annotations
 
