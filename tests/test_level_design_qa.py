@@ -415,3 +415,90 @@ def test_reachability_accepts_a_stepped_route() -> None:
     assert len(reachable) == 3, (
         f"la ruta escalonada no se reconoció: sólo {len(reachable)}/3 alcanzables"
     )
+
+
+# ── AUD-096: los muros de cierre no son plataformas huérfanas ──────
+
+
+class _EscenarioFalso:
+    """Lo mínimo que `analyse_stage` lee de un `StageData`."""
+
+    def __init__(self, rects, spawn, alto=608, next_trigger=None):
+        self.collision_rects = rects
+        self.spawn_point = spawn
+        self.height_px = alto
+        self.next_trigger = next_trigger
+        self.checkpoints = []
+        self.stage_id = "prueba"
+
+
+def test_los_muros_laterales_no_cuentan_como_plataformas_huerfanas() -> None:
+    """El aviso era del calificador, no del escenario.
+
+    Stage 0 recibía «2 plataforma(s) sin ruta desde el spawn». Medido, las
+    dos eran `Rect(0, 0, 16, 608)` y `Rect(1584, 0, 16, 608)`: los muros que
+    cierran el mapa por los lados. Nadie salta encima de ellos.
+
+    Que el calificador castigue a quien cierra bien su mapa es peor que
+    inofensivo: enseña al estudiante a no fiarse de los avisos, y entonces
+    tampoco lee los que sí importan.
+    """
+    from src.framework.stage.level_metrics import analyse_stage
+
+    suelo = pygame.Rect(16, 560, 800, 48)
+    muro_izq = pygame.Rect(0, 0, 16, 608)
+    muro_der = pygame.Rect(1584, 0, 16, 608)
+    escenario = _EscenarioFalso(
+        [muro_izq, suelo, muro_der], pygame.Vector2(64, 540),
+    )
+    informe = analyse_stage(escenario)
+    assert informe.orphan_platforms == 0, (
+        f"{informe.orphan_platforms} muro(s) contados como plataforma huérfana"
+    )
+    assert informe.total_platforms == 1, (
+        f"se contaron {informe.total_platforms} plataformas; sólo hay una"
+    )
+
+
+def test_una_isla_de_verdad_inalcanzable_si_se_sigue_detectando() -> None:
+    """La excepción de los muros no puede tapar el fallo que sí importa."""
+    from src.framework.stage.level_metrics import JumpEnvelope, analyse_stage
+
+    env = JumpEnvelope.from_settings()
+    lejos = int(env.max_gap_with_air_jump * 4)
+    escenario = _EscenarioFalso(
+        [
+            pygame.Rect(0, 0, 16, 608),            # muro: no cuenta
+            pygame.Rect(16, 560, 200, 48),         # suelo del spawn
+            pygame.Rect(lejos, 200, 64, 16),       # isla inalcanzable
+        ],
+        pygame.Vector2(64, 540),
+    )
+    informe = analyse_stage(escenario)
+    assert informe.orphan_platforms == 1, (
+        f"la isla inalcanzable no se detectó (huérfanas: {informe.orphan_platforms})"
+    )
+
+
+def test_un_suelo_muy_largo_no_se_confunde_con_un_muro() -> None:
+    """Se exige alto > ancho para no descartar suelos en mapas bajos."""
+    from src.framework.stage.level_metrics import _boundary_walls
+
+    suelo = pygame.Rect(0, 100, 1600, 96)
+    escenario = _EscenarioFalso([suelo], pygame.Vector2(32, 90), alto=128)
+    assert _boundary_walls([suelo], escenario) == set()
+
+
+def test_stage0_no_tiene_plataformas_huerfanas() -> None:
+    """El caso real que motivó el cambio."""
+    import pygame as pg
+
+    from src.framework.stage.level_metrics import analyse_stage
+    from src.framework.stage.stage_loader import StageLoader
+
+    if pg.display.get_surface() is None:
+        pg.display.set_mode((8, 8))
+    datos = StageLoader().load("assets/maps/stage0/stage0.tmx")
+    informe = analyse_stage(datos)
+    assert informe.orphan_platforms == 0
+    assert informe.exit_reachable
