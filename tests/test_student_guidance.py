@@ -323,3 +323,106 @@ class TestLaGuiaDocumentaLaAtmosferaDeLaFase1:
             assert f"`{prop}`" in texto, (
                 f"la propiedad '{prop}' del objeto Light no está en la guía"
             )
+
+
+class TestElMapaDeReferenciaDemuestraTodoLoQueElMotorOfrece:
+    """Una característica que ningún mapa usa es una que nadie descubre.
+
+    El estudiante aprende abriendo `stage0.tmx` en Tiled y copiando lo que ve.
+    Si el motor lee `bloom` pero el mapa de ejemplo no lo declara, esa
+    característica existe sólo en la documentación —que es justo lo que no se
+    lee—.
+
+    Medido antes de cerrar este hueco: stage0 declaraba 11 de las 16
+    propiedades. Las cinco que faltaban funcionaban por la tabla de respaldo
+    por zona, así que el juego se veía bien y nadie notaba nada.
+    """
+
+    @pytest.fixture(scope="class")
+    def cobertura(self):
+        from scripts.check_tmx_coverage import MAPA_REFERENCIA, analizar
+
+        return analizar(ROOT / MAPA_REFERENCIA)
+
+    def test_declara_todas_las_propiedades_de_mapa(self, cobertura):
+        from scripts.check_tmx_coverage import PROPIEDADES_MAPA
+
+        faltan = sorted(cobertura["props_sin_usar"])
+        assert not faltan, (
+            f"stage0 no declara {len(faltan)} de {len(PROPIEDADES_MAPA)} "
+            f"propiedades: {faltan}. Un estudiante que copie el mapa de "
+            "ejemplo no se enterará de que existen."
+        )
+
+    def test_sus_focos_usan_todas_las_propiedades_de_light(self, cobertura):
+        from scripts.check_tmx_coverage import PROPIEDADES_LUZ
+
+        faltan = sorted(set(PROPIEDADES_LUZ) - cobertura["props_luz_usadas"])
+        assert not faltan, f"ningún foco de stage0 usa: {faltan}"
+
+    def test_la_lista_del_guion_coincide_con_lo_que_lee_el_cargador(self):
+        """La lista está escrita a mano; esto impide que se desfase.
+
+        Extraerla con expresiones regulares mezclaba las propiedades de mapa
+        con las de objeto —`radius`, `color`, `damage`— y daba un recuento sin
+        sentido, así que se declara explícitamente. El precio de esa decisión
+        es esta prueba.
+        """
+        from scripts.check_tmx_coverage import PROPIEDADES_MAPA
+        from src.framework.stage.stage_loader import StageData
+
+        campos = {f.name for f in StageData.__dataclass_fields__.values()}
+        no_reconocidas = [p for p in PROPIEDADES_MAPA
+                          if p not in campos and p != "background_zone"]
+        assert not no_reconocidas, (
+            f"el guion declara propiedades que StageData no tiene: "
+            f"{no_reconocidas}"
+        )
+
+    def test_cada_propiedad_declarada_llega_al_juego(self):
+        """La prueba de cableado: declararlas no basta, tienen que aplicarse."""
+        import pygame
+
+        from src.engine.audio.audio_manager import AudioManager
+        from src.engine.core.event_bus import EventBus
+        from src.engine.core.game_context import GameContext
+        from src.engine.core.save_manager import SaveManager
+        from src.engine.input.input_manager import InputManager
+        from src.engine.scene.scene_manager import SceneManager
+        from src.framework.entities import entity_factory
+        from src.stages.stage0.stage0 import Stage0
+
+        pygame.init()
+        if pygame.display.get_surface() is None:
+            pygame.display.set_mode((800, 600))
+        entity_factory.ensure_registered()
+        ctx = GameContext(
+            input_manager=InputManager(), audio_manager=AudioManager(),
+            scene_manager=None, event_bus=EventBus(), clock=None,
+            save_manager=SaveManager(),
+        )
+        ctx.scene_manager = SceneManager(ctx)
+        escena = Stage0(ctx)
+        escena.awake()
+        escena.start()
+        escena.on_enter()
+        lienzo = pygame.Surface((800, 600))
+        for _ in range(120):
+            escena.update(1 / 60)
+            escena.draw(lienzo)
+
+        datos = escena._stage_data
+        # Cada par es (lo que dice el TMX, lo que hace el juego).
+        assert datos.ambient_light is not None
+        assert escena._lighting.ambient_brightness > 0
+        assert escena._post_processing._bloom_base > 0, "bloom declarado y sin aplicar"
+        assert escena._post_processing._vignette_strength > 0
+        assert escena._ambient_particles.count > 0, "ambient_fx declarado y sin partículas"
+        assert escena._lighting.ambient_color != (255, 255, 255), (
+            "season declarada y sin teñir nada"
+        )
+        assert not escena._reloj.congelado, "day_length declarado y el reloj parado"
+        assert len(escena._lighting.lights) >= len(datos.lights), (
+            "hay focos en el TMX que no llegaron al sistema de luz"
+        )
+        assert datos.camera_locks, "CameraLock declarado y sin cargar"

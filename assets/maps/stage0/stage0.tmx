@@ -12,6 +12,11 @@
   <property name="start_hour" type="string" value="afternoon" />
   <property name="day_length" type="float" value="420" />
   <property name="season" type="string" value="autumn" />
+  <property name="zone" type="int" value="0" />
+  <property name="bloom" type="float" value="0.18" />
+  <property name="vignette" type="float" value="0.30" />
+  <property name="ambient_fx" type="string" value="spores" />
+  <property name="ambient_fx_rate" type="float" value="14" />
  </properties>
  <tileset firstgid="1" name="tileset_stage0" tilewidth="16" tileheight="16" tilecount="4096" columns="64">
   <image source="../../tilesets/tileset_stage0.png" width="1024" height="1024" />
@@ -507,6 +512,11 @@
     <property name="flicker" type="bool" value="true" />
     <property name="flicker_speed" type="float" value="3.2" />
     <property name="flicker_amount" type="float" value="0.18" />
+   </properties>
+  </object>
+  <object id="33" name="camara_arena" type="CameraLock" x="620" y="380" width="240" height="180">
+   <properties>
+    <property name="lock_y" type="bool" value="true" />
    </properties>
   </object>
  </objectgroup>
