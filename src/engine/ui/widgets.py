@@ -41,6 +41,7 @@ from dataclasses import dataclass, field
 import pygame
 
 from src.engine.core import settings
+from src.engine.core.i18n import _
 from src.engine.ui.theme import Theme, font, pulse, with_alpha
 
 
@@ -194,6 +195,14 @@ def draw_screen(surface: pygame.Surface, title: str, subtitle: str = "") -> int:
     """
     surface.fill(Theme.BG)
 
+    # F3.1: la traducción se hace **aquí**, en el kit, y no en cada escena.
+    # Las treinta pantallas del juego pasan por `draw_screen`, así que
+    # traducir en este punto las cubre todas sin tocar treinta archivos —y sin
+    # que un estudiante que escriba una escena nueva tenga que acordarse de
+    # envolver sus cadenas.
+    title = _(title)
+    subtitle = _(subtitle) if subtitle else subtitle
+
     y = Theme.MARGIN
     if title:
         label = font(Theme.FONT_TITLE).render(title, True, Theme.TEXT)
@@ -249,6 +258,9 @@ def draw_key_hints(surface: pygame.Surface, hints: Sequence[tuple[str, str]]) ->
     parts: list[tuple[pygame.Surface, pygame.Surface]] = []
     total = 0
     for key, action in hints:
+        # La tecla no se traduce —«Esc» es «Esc» en los dos idiomas—; la
+        # acción sí.
+        action = _(action)
         k = key_font.render(f" {key} ", True, Theme.BG)
         a = key_font.render(action, True, Theme.TEXT_MUTED)
         parts.append((k, a))

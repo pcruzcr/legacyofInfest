@@ -23,6 +23,8 @@ class OptionsScene(BaseScene):
         self._ui_elements: list[pygame_gui.core.UIElement] = []
         self._dirty = False
         self._btn_subtitles: Any = None
+        self._btn_language: Any = None
+        self._idioma_actual: str = "es"
         self._subtitles_on: bool = False
 
     def on_enter(self) -> None:
@@ -104,6 +106,20 @@ class OptionsScene(BaseScene):
         )
         y += 36
 
+        # F3.1: selector de idioma. Sin esto la traducción existiría y nadie
+        # podría cambiarla sin editar config.json a mano.
+        self._idioma_actual = cfg.get("language", "es")
+        self._btn_language = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect((40, y), (150, 28)),
+            text=self._language_label(),
+            manager=self._gui_manager,
+        )
+        pygame_gui.elements.UILabel(
+            pygame.Rect((200, y), (240, 28)),
+            "IDIOMA / LANGUAGE", self._gui_manager,
+        )
+        y += 36
+
         self._btn_keybindings = pygame_gui.elements.UIButton(
             relative_rect=pygame.Rect((40, y), (200, 32)),
             text="KEY BINDINGS",
@@ -122,6 +138,25 @@ class OptionsScene(BaseScene):
     def _subtitles_label(self) -> str:
         return f"SUBTITLES: {'ON' if self._subtitles_on else 'OFF'}"
 
+    #: Nombres que se muestran, en su propio idioma. Un desplegable que dijera
+    #: «Español / Inglés» en inglés es exactamente lo que no ayuda a quien no
+    #: sabe inglés.
+    _NOMBRES_IDIOMA = {"es": "ESPAÑOL", "en": "ENGLISH"}
+
+    def _language_label(self) -> str:
+        return self._NOMBRES_IDIOMA.get(self._idioma_actual, self._idioma_actual)
+
+    def _toggle_language(self) -> None:
+        """Alterna entre los idiomas disponibles y lo aplica al momento."""
+        from src.engine.core.i18n import IDIOMAS, set_idioma
+
+        indice = IDIOMAS.index(self._idioma_actual) if \
+            self._idioma_actual in IDIOMAS else 0
+        self._idioma_actual = IDIOMAS[(indice + 1) % len(IDIOMAS)]
+        set_idioma(self._idioma_actual)
+        if self._btn_language is not None:
+            self._btn_language.set_text(self._language_label())
+
     def _load_config(self) -> dict[str, Any]:
         """Current preference values, for populating the widgets."""
         prefs = user_settings.get()
@@ -131,6 +166,7 @@ class OptionsScene(BaseScene):
             "difficulty": prefs.difficulty,
             "colorblind_mode": prefs.colorblind_mode,
             "subtitles_enabled": prefs.subtitles_enabled,
+            "language": prefs.language,
         }
 
     def _save_config(self) -> None:
@@ -148,6 +184,8 @@ class OptionsScene(BaseScene):
         prefs.colorblind_mode = self._dropdown_cb.selected_option[0]
         if self._btn_subtitles is not None:
             prefs.subtitles_enabled = self._subtitles_on
+        if self._btn_language is not None:
+            prefs.language = self._idioma_actual
         prefs.save()
 
     def on_exit(self) -> None:
@@ -177,6 +215,12 @@ class OptionsScene(BaseScene):
                         # change without leaving the menu.
                         prefs = user_settings.get()
                         prefs.subtitles_enabled = self._subtitles_on
+                        return
+                    if (self._btn_language is not None
+                            and event.ui_element == self._btn_language):
+                        self._toggle_language()
+                        prefs = user_settings.get()
+                        prefs.language = self._idioma_actual
                         return
                     if event.ui_element == self._btn_keybindings:
                         from src.engine.scenes.keybinding_scene import KeybindingScene

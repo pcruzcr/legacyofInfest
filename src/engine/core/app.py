@@ -96,6 +96,11 @@ class App:
         # back, so accessibility settings could never take effect.
         self.user_settings = user_settings.UserSettings.load()
         user_settings.set_settings(self.user_settings)
+        # F3.1: el idioma se aplica aquí, antes de construir ninguna escena.
+        # Si se hiciera más tarde, las pantallas ya creadas se quedarían con
+        # el texto del idioma anterior hasta recrearse.
+        from src.engine.core.i18n import set_idioma
+        set_idioma(self.user_settings.language)
 
         self.input_manager = InputManager()
         self.audio_manager = AudioManager()
