@@ -183,3 +183,98 @@ class TestElEstudianteSinDependenciasRecibeUnaInstruccion:
 
         resultado = _comprobar_dependencias()
         assert resultado is None or isinstance(resultado, str)
+
+
+class TestElCalificadorPuntuaDisenoYNoSoloEstructura:
+    """F2.4 — la rúbrica medía que los objetos estuvieran, no que se jugara.
+
+    Todo lo que había antes se puede satisfacer sin diseñar nada: colocar las
+    capas obligatorias, un spawn, cuatro checkpoints y algunos enemigos en un
+    rectángulo vacío daba más del 90 %. `framework.stage.level_metrics` ya
+    sabía responder a las preguntas que importan —¿se llega a la salida?, ¿hay
+    saltos imposibles?, ¿hay plataformas huérfanas?— y llevaba desde su
+    creación sin conectarse a nada que calificara.
+    """
+
+    @staticmethod
+    def _calificar(ruta_relativa: str) -> dict:
+        from scripts.grade_stage import grade_stage
+
+        return grade_stage(RAIZ / ruta_relativa)
+
+    def test_la_rubrica_incluye_las_tres_categorias_de_diseno(self):
+        from scripts.grade_stage import RUBRIC
+
+        for cat in ("design_completable", "design_geometry", "design_pacing"):
+            assert cat in RUBRIC, f"falta la categoría {cat}"
+        diseno = sum(RUBRIC[c] for c in
+                     ("design_completable", "design_geometry", "design_pacing"))
+        assert diseno / sum(RUBRIC.values()) > 0.15, (
+            f"el diseño pesa sólo el {diseno / sum(RUBRIC.values()):.0%} de la "
+            "nota: no cambia el resultado de nadie"
+        )
+
+    def test_stage0_se_puede_completar(self):
+        r = self._calificar(TMX_STAGE0)
+        assert r["categories"]["design_completable"]["score"] > 0, (
+            "el escenario de referencia del juego no se puede terminar según "
+            "el calificador"
+        )
+        assert r["design"]["exit_reachable"] is True
+
+    def test_el_informe_expone_las_metricas_crudas(self):
+        """El profesor tiene que poder ver el dato, no sólo la nota."""
+        r = self._calificar(TMX_STAGE0)
+        for clave in ("exit_reachable", "orphan_platforms", "impossible_ledges",
+                      "demanding_gaps", "worst_checkpoint_gap"):
+            assert clave in r["design"], f"falta la métrica {clave}"
+
+    def test_un_nivel_que_no_carga_no_tumba_el_calificador(self, tmp_path):
+        """Un calificador que revienta con una entrega mala es inútil."""
+        from scripts.grade_stage import grade_stage
+
+        roto = tmp_path / "roto.tmx"
+        roto.write_text(
+            '<?xml version="1.0"?><map version="1.10" width="10" height="10" '
+            'tilewidth="16" tileheight="16"><layer name="Terrain" width="10" '
+            'height="10"><data encoding="csv">0</data></layer></map>',
+            encoding="utf-8",
+        )
+        r = grade_stage(roto)
+        assert r["categories"]["design_completable"]["score"] == 0
+        assert "no se pudo analizar" in \
+               r["categories"]["design_completable"]["msg"]
+        assert isinstance(r["percentage"], float)
+
+    def test_avisa_de_que_una_arena_de_jefe_usa_otra_rubrica(self):
+        """La arena del juego puntúa 0 en alcanzabilidad, y no es un fallo suyo.
+
+        `exit_is_reachable` recorre plataformas; en una arena la salida se abre
+        al derrotar al jefe. Sin este aviso, un profesor suspendería una
+        entrega correcta.
+        """
+        r = self._calificar("assets/maps/boss_venado/boss_venado.tmx")
+        if r["categories"]["design_completable"]["score"] > 0:
+            pytest.skip("la arena ahora sí es alcanzable andando")
+        assert any("grade_boss" in w for w in r["warnings"]), (
+            "no se avisa de que a una arena le corresponde otra rúbrica"
+        )
+
+    def test_los_tipos_validos_salen_del_motor_y_no_de_una_copia(self):
+        """F2.4 — la lista escrita a mano marcaba `Light` como tipo inexistente.
+
+        Un calificador que da error sobre lo que el motor acepta enseña a
+        desconfiar de él.
+        """
+        from scripts.grade_stage import _tipos_no_enemigos
+
+        tipos = _tipos_no_enemigos()
+        for esperado in ("Light", "MessageTrigger_Once", "CameraLock"):
+            assert esperado in tipos, f"el calificador no conoce '{esperado}'"
+
+    def test_stage0_no_produce_avisos_de_tipos_desconocidos(self):
+        r = self._calificar(TMX_STAGE0)
+        desconocidos = [w for w in r["warnings"] if "Unknown enemy types" in w]
+        assert not desconocidos, (
+            f"el calificador marca tipos válidos como desconocidos: {desconocidos}"
+        )

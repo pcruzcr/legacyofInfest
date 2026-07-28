@@ -191,3 +191,53 @@ If a Teaching Assistant grades any portion of these rubrics:
 - [[31_ASSIGNMENT_02_BOSS_DESIGN.md|Assignment 2: Boss Design]]
 - [[32_ASSIGNMENT_03_LAB_EXERCISES.md|Assignment 3: Lab Exercises]]
 - [[33_ASSIGNMENT_04_FINAL_PROJECT.md|Assignment 4: Final Project]]
+
+---
+
+## Apéndice — Diseño de nivel en `grade_stage.py` (F2.4)
+
+### El hueco que cierra
+
+Hasta ahora la rúbrica automática medía que los objetos **estuvieran**, no que
+el nivel se pudiera jugar. Un estudiante que colocara las ocho capas
+obligatorias, un spawn, cuatro checkpoints y algunos enemigos en un rectángulo
+vacío sacaba más del 90 %.
+
+`framework/stage/level_metrics.py` ya sabía responder a las preguntas que
+importan, y llevaba desde su creación sin conectarse a nada que calificara.
+
+### Las tres categorías nuevas — 30 de 130 puntos
+
+| Categoría | Puntos | Qué mide | Cómo se pierde |
+|---|---|---|---|
+| `design_completable` | 12 | ¿Hay ruta de plataformas del spawn a la salida? | Todo o nada. |
+| `design_geometry` | 10 | Repechos imposibles y plataformas aisladas | −3 por cada uno. |
+| `design_pacing` | 8 | Distancia entre checkpoints, y si hay algún salto exigente | −6 si hay más de 500 px sin checkpoint; −3 si no hay ningún salto que ponga a prueba. |
+
+El informe incluye además las métricas crudas bajo la clave `design` de la
+salida `--json`, para que puedas ver el dato y no sólo la nota.
+
+### Referencias medidas
+
+| Mapa | Nota | Qué le pasa |
+|---|---|---|
+| `stage0` | 86,2 % | 2 plataformas sin ruta desde el spawn; ningún salto exigente. |
+| `stage_template` | 63,8 % | Estructuralmente pobre, pero geométricamente trivial: un rectángulo plano no tiene saltos imposibles. |
+| `boss_venado` | 44,6 % | **Aquí la rúbrica no aplica.** |
+
+### Aviso importante sobre las arenas
+
+`design_completable` recorre plataformas. En una arena de jefe la salida se
+abre al derrotarlo, no al llegar andando, así que la arena de referencia del
+propio juego puntúa 0 en esa categoría. **No es un fallo de la arena: es que se
+le está aplicando la rúbrica equivocada.** El calificador lo avisa en el
+informe; usa `scripts/grade_boss.py` para esas entregas.
+
+### Qué decirle a un estudiante
+
+- «2 plataformas sin ruta desde el spawn» → o sobran, o falta un camino. Las
+  dos cosas son información: una plataforma decorativa está bien si es
+  deliberada.
+- «ningún salto pone a prueba al jugador» → el nivel se recorre solo. No es un
+  error, es un nivel sin tensión.
+- «588 px sin checkpoint» → morir ahí cuesta demasiado camino rehecho.

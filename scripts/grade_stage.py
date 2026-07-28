@@ -55,7 +55,44 @@ RUBRIC = {
     "climate_valid": 5,
     "map_bounds_reasonable": 5,
     "time_limit_reasonable": 5,
+    # F2.4 — diseño, no estructura. Todo lo de arriba se puede satisfacer
+    # colocando objetos en un rectángulo vacío; esto pregunta si el nivel se
+    # puede jugar. Pesa 30 de 130, un 23 % de la nota.
+    "design_completable": 12,
+    "design_geometry": 10,
+    "design_pacing": 8,
 }
+
+
+def _tipos_no_enemigos() -> set[str]:
+    """Tipos de objeto que existen y no son enemigos.
+
+    F2.4 — antes esto era una lista escrita a mano en este archivo, y llevaba
+    desfasada desde que se añadieron tipos nuevos: calificar stage0 avisaba de
+    "Unknown enemy types: {MessageTrigger_Once, Light}" sobre objetos
+    perfectamente válidos. Un calificador que marca como error lo que el motor
+    acepta enseña a desconfiar de él.
+
+    Ahora la lista sale del registro real. Si falla la importación —porque
+    falten dependencias— se cae a la copia antigua en vez de reventar: la
+    parte estructural de la rúbrica no necesita el motor.
+    """
+    try:
+        from src.framework.entities import entity_factory
+        from src.framework.stage.stage_loader import StageLoader
+        from src.framework.stage.tmx_diagnostics import (
+            COLLISION_OBJECT_TYPES,
+            known_object_types,
+        )
+        entity_factory.ensure_registered()
+        todos = set(known_object_types(list(StageLoader._entity_registry)))
+        return (todos | set(COLLISION_OBJECT_TYPES)) - KNOWN_ENEMY_TYPES
+    except Exception:
+        return {
+            "PlayerSpawn", "Checkpoint", "MessageTrigger", "MessageTrigger_Once",
+            "Waypoint", "Solid", "Platform", "HazardZone", "DeathPit",
+            "NextTrigger", "ZoneTrigger", "CameraLock", "Light",
+        }
 
 
 def _parse_tmx(path: Path) -> ET.Element | None:
@@ -153,7 +190,7 @@ def grade_stage(path: Path) -> dict[str, Any]:
                 valid_types += 1
                 enemies.append(obj_name or obj_type)
                 enemy_positions.append((float(obj.get("x", 0)), float(obj.get("y", 0))))
-            elif obj_type and obj_type not in {"PlayerSpawn", "Checkpoint", "MessageTrigger", "Waypoint", "Solid", "Platform", "HazardZone", "DeathPit", "NextTrigger", "ZoneTrigger"}:
+            elif obj_type and obj_type not in _tipos_no_enemigos():
                 invalid_enemy_types.append(obj_type)
     if valid_types > 0:
         result["categories"]["enemies_valid_types"] = {"score": RUBRIC["enemies_valid_types"], "max": RUBRIC["enemies_valid_types"], "msg": f"{valid_types} valid enemy type(s)"}
@@ -242,12 +279,154 @@ def grade_stage(path: Path) -> dict[str, Any]:
     else:
         result["categories"]["time_limit_reasonable"] = {"score": 2, "max": RUBRIC["time_limit_reasonable"], "msg": f"Time {time_limit}s seems unreasonable"}
 
+    _grade_design(path, result)
+
     total = sum(c["score"] for c in result["categories"].values())
     result["score"] = total
     result["max_score"] = sum(RUBRIC.values())
     result["percentage"] = round(total / result["max_score"] * 100, 1)
 
     return result
+
+
+def _grade_design(path: Path, result: dict[str, Any]) -> None:
+    """Puntúa el **diseño** del nivel, no sólo su estructura.
+
+    F2.4 — el hueco que esto cierra
+    -------------------------------
+    Todo lo anterior de esta rúbrica se puede satisfacer sin diseñar nada: un
+    estudiante que coloque las capas obligatorias, un spawn, cuatro checkpoints
+    y algunos enemigos en un rectángulo vacío saca más del 90 %. La rúbrica
+    medía que los objetos **estuvieran**, no que el nivel se pudiera jugar.
+
+    `framework.stage.level_metrics` ya sabía responder a las preguntas que
+    importan —¿se llega a la salida?, ¿hay saltos imposibles?, ¿hay plataformas
+    huérfanas?, ¿está el recorrido cubierto por checkpoints?— y llevaba desde
+    su creación sin conectarse a nada que calificara.
+
+    Se puntúa aparte y de forma tolerante a fallos: si el nivel no se puede
+    cargar —falta una capa, un tileset roto— el resto de la nota sigue siendo
+    válida y aquí se explica por qué no se pudo analizar. Un calificador que se
+    cae con una entrega mala es un calificador inútil justo cuando más falta
+    hace.
+    """
+    from src.framework.stage.level_metrics import analyse_stage
+
+    def poner(cat: str, score: int, msg: str) -> None:
+        result["categories"][cat] = {"score": score, "max": RUBRIC[cat], "msg": msg}
+
+    try:
+        # `StageLoader` construye un renderizador de pyscroll, que necesita un
+        # modo de vídeo activo. Se pide el controlador ficticio para poder
+        # calificar sin pantalla —en un servidor de integración continua o por
+        # SSH— y se hace aquí y no al importar para no exigirlo a quien sólo
+        # quiere la parte estructural de la rúbrica.
+        import os
+        os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
+        os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
+        import pygame
+        if not pygame.display.get_init():
+            pygame.display.init()
+        if pygame.display.get_surface() is None:
+            pygame.display.set_mode((800, 600))
+
+        from src.framework.stage.stage_loader import StageLoader
+        stage_data = StageLoader.load(path)
+        informe = analyse_stage(stage_data)
+    except Exception as e:
+        for cat in ("design_completable", "design_geometry", "design_pacing"):
+            poner(cat, 0, f"no se pudo analizar el diseño: {type(e).__name__}")
+        result["warnings"].append(
+            "el nivel no se pudo cargar para analizar su diseño; corrige "
+            "primero los errores de estructura"
+        )
+        return
+
+    result["design"] = {
+        "exit_reachable": informe.exit_reachable,
+        "orphan_platforms": informe.orphan_platforms,
+        "impossible_ledges": len(informe.impossible_ledges),
+        "impossible_gaps": len(informe.impossible_gaps),
+        "demanding_gaps": len(informe.demanding_gaps),
+        "worst_checkpoint_gap": max(informe.checkpoint_gaps, default=0.0),
+    }
+
+    # 1. ¿Se puede terminar? Es binario y es lo único de la rúbrica que puede
+    #    hacer que un nivel valga cero por diseño.
+    if informe.exit_reachable:
+        poner("design_completable", RUBRIC["design_completable"],
+              "la salida es alcanzable andando desde el spawn")
+    else:
+        poner("design_completable", 0, "NO se llega a la salida andando")
+        result["errors"].append(
+            "no hay ruta de plataformas desde el spawn hasta el NextTrigger: "
+            "el nivel no se puede completar saltando"
+        )
+        # Aviso honesto sobre lo que esta métrica NO sabe.
+        #
+        # `exit_is_reachable` recorre plataformas. En una arena de jefe la
+        # salida se abre al derrotarlo, no al llegar andando, así que la arena
+        # de referencia del propio juego puntúa 0 aquí. No es un fallo de la
+        # arena: es que se le está aplicando la rúbrica equivocada. Decirlo en
+        # el informe evita que un profesor suspenda una entrega correcta.
+        result["warnings"].append(
+            "si el escenario es una arena donde la salida se abre al derrotar "
+            "a un jefe, esta métrica no aplica: califícalo con "
+            "scripts/grade_boss.py"
+        )
+
+    # 2. Geometría: saltos imposibles y plataformas a las que no se llega.
+    #    Se descuenta por cada uno en vez de suspender de golpe, porque un
+    #    repecho imposible en un nivel de treinta plataformas es un error
+    #    puntual y no un diseño equivocado.
+    fallos = len(informe.impossible_ledges) + informe.orphan_platforms
+    puntos = max(0, RUBRIC["design_geometry"] - fallos * 3)
+    if fallos == 0:
+        poner("design_geometry", puntos, "sin saltos imposibles ni zonas aisladas")
+    else:
+        poner("design_geometry", puntos,
+              f"{len(informe.impossible_ledges)} repecho(s) imposible(s), "
+              f"{informe.orphan_platforms} plataforma(s) aislada(s)")
+        for y, x, alto in informe.impossible_ledges[:3]:
+            result["warnings"].append(
+                f"repecho de {alto:.0f} px en ({x:.0f}, {y:.0f}): el jugador no "
+                "salta tan alto"
+            )
+        if informe.orphan_platforms:
+            result["warnings"].append(
+                f"{informe.orphan_platforms} plataforma(s) sin ruta desde el "
+                "spawn: o sobran, o falta un camino"
+            )
+
+    # 3. Ritmo: cuánto se anda entre puntos de control, y si hay saltos
+    #    exigentes que den variedad. Un nivel sin ningún salto difícil es
+    #    correcto y aburrido; uno con un tramo larguísimo sin checkpoint
+    #    castiga al jugador por un error.
+    peor = max(informe.checkpoint_gaps, default=0.0)
+    exigentes = len(informe.demanding_gaps)
+    if peor > MAX_CHECKPOINT_GAP:
+        poner("design_pacing", 2,
+              f"{peor:.0f} px sin checkpoint (máximo recomendado "
+              f"{MAX_CHECKPOINT_GAP})")
+        result["warnings"].append(
+            f"hay {peor:.0f} px entre checkpoints: morir ahí cuesta demasiado "
+            "camino rehecho"
+        )
+    elif exigentes == 0:
+        poner("design_pacing", RUBRIC["design_pacing"] - 3,
+              "el recorrido no tiene ningún salto exigente")
+        result["warnings"].append(
+            "ningún salto pone a prueba al jugador: el nivel se recorre solo"
+        )
+    else:
+        poner("design_pacing", RUBRIC["design_pacing"],
+              f"checkpoints bien repartidos, {exigentes} salto(s) exigente(s)")
+
+
+#: Distancia máxima recomendada entre puntos de control, en píxeles.
+#: Stage 0 mide 1600 px y coloca cuatro, así que ~350 px es lo que el
+#: escenario de referencia considera aceptable.
+MAX_CHECKPOINT_GAP = 500.0
 
 
 def main() -> int:
