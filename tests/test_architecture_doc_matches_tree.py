@@ -101,9 +101,19 @@ def test_todo_fichero_del_arbol_existe_de_verdad() -> None:
     módulo que promete resolver su problema, y no está. `spritesheet.py` y
     `bitmap_font.py` estuvieron peor todavía —existían, pero muertos—.
     """
-    existentes = {
-        p.name for p in RAIZ.rglob("*.py") if "__pycache__" not in str(p)
-    }
+    # Se recorren sólo los directorios que el árbol documenta. Un `rglob`
+    # sobre la raíz entera tardaba 33 s porque entraba en `.git`, en los
+    # entornos virtuales y en los `__pycache__` de todo el repositorio; una
+    # prueba lenta es una prueba que alguien acaba desactivando.
+    existentes: set[str] = {"main.py"}
+    for carpeta in ("src", "tests", "scripts", "tools", "student_templates"):
+        raiz_carpeta = RAIZ / carpeta
+        if not raiz_carpeta.is_dir():
+            continue
+        existentes.update(
+            p.name for p in raiz_carpeta.rglob("*.py")
+            if "__pycache__" not in str(p)
+        )
     # Ficheros que el árbol cita y que no son Python del repositorio: el
     # árbol también documenta scripts de arranque del estudiante.
     fantasmas = sorted(_citados() - existentes)
@@ -192,6 +202,19 @@ def _recursos_citados(nombre_doc: str) -> set[str]:
     }
 
 
+_INDICE_RECURSOS: list[str] | None = None
+
+
+def _indice_de_recursos() -> list[str]:
+    """Todas las rutas de `assets/`, en POSIX, calculadas una sola vez."""
+    global _INDICE_RECURSOS
+    if _INDICE_RECURSOS is None:
+        _INDICE_RECURSOS = [
+            p.as_posix() for p in (RAIZ / "assets").rglob("*") if p.is_file()
+        ]
+    return _INDICE_RECURSOS
+
+
 @pytest.mark.parametrize("nombre_doc", DOCS_DE_ESPECIFICACION)
 def test_los_recursos_que_promete_la_especificacion_existen(nombre_doc: str) -> None:
     """AUD-098 — la especificación del HUD nombraba una fuente inexistente.
@@ -205,14 +228,16 @@ def test_los_recursos_que_promete_la_especificacion_existen(nombre_doc: str) -> 
     Una especificación que nombra recursos que no existen no es documentación
     desfasada: es una instrucción falsa para quien intente reproducir el HUD.
     """
+    # El índice se construye **una vez**. La primera versión hacía un `rglob`
+    # sobre `assets/` por cada recurso citado, y con veintitantos recursos la
+    # prueba tardaba más de treinta segundos. Una prueba lenta es una prueba
+    # que alguien acaba desactivando, y entonces deja de proteger nada.
+    indice = _indice_de_recursos()
+
     faltan = []
     for recurso in sorted(_recursos_citados(nombre_doc)):
         candidato = recurso.split("/", 1)[-1] if recurso.startswith("assets/") else recurso
-        encontrado = any(
-            p.as_posix().endswith(candidato)
-            for p in (RAIZ / "assets").rglob("*" + pathlib.Path(candidato).suffix)
-        )
-        if not encontrado:
+        if not any(ruta.endswith(candidato) for ruta in indice):
             faltan.append(recurso)
     assert not faltan, (
         f"{nombre_doc} nombra recurso(s) que no existen en assets/: {faltan}"

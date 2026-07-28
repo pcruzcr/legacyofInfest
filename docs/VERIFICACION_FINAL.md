@@ -1,6 +1,6 @@
 # Verificación final: qué está, qué falta, y qué nota
 
-**Fecha:** 28 de julio de 2026 · **Método:** medición, no lectura
+**Fecha:** 28 de julio de 2026 (segunda pasada) · **Método:** medición, no lectura
 Cada número sale de un comando ejecutado hoy.
 
 ---
@@ -153,12 +153,93 @@ Stage 0 en el calificador: **86,2 % → 93,1 %**.
 
 ---
 
+## 4 bis. Auditoría transversal: seis hallazgos más
+
+Tras cerrar lo anterior se hizo una pasada distinta: en vez de buscar lo que
+falla, comprobar **una por una las afirmaciones** que el proyecto hace sobre
+sí mismo. Seis hallazgos, los seis corregidos y vigilados por pruebas.
+
+### AUD-098 — el progreso académico era inalcanzable
+
+El sistema que acababa de entregar guardaba las notas correctamente y **nada
+volvía a leerlas nunca**. `SesionAcademica.entrar()` sólo se llamaba desde las
+pruebas; no había pantalla que pidiera el correo, y `App` no reanudaba nada al
+arrancar.
+
+Para un estudiante: aprobar cinco unidades, cerrar el juego, y encontrarse el
+temario entero bloqueado otra vez, con las notas intactas en el disco pero sin
+forma de llegar a ellas.
+
+Es la **tercera vez esta sesión** con la misma forma —la iluminación que no
+iluminaba, las demos que dibujaban en una esquina, y esto—: código correcto,
+probado en aislamiento, que no llega a la pantalla. Se añadió
+`student_login_scene.py`, `SesionAcademica.reanudar()` y la llamada en el
+arranque; se entra con **I** desde el menú del temario.
+
+### AUD-099 — dos módulos duplicados y muertos
+
+Un barrido de referencias sobre los 153 módulos de `src/` encontró dos que
+nadie importaba, y los dos eran **segundas implementaciones** de algo que el
+motor ya hacía por otro camino: `engine/utils/spritesheet.py` duplicaba
+`AssetLoader.load_sprite_sheet`, y `engine/ui/bitmap_font.py` duplicaba la
+carga de fuentes TTF, en un proyecto con 115 puntos de dibujado de texto que
+van todos por `AssetLoader.load_font`.
+
+Con ellos caían tres afirmaciones falsas de la documentación, incluida una
+especificación del HUD que nombraba `fonts/PixeloidSans.ttf`, **un fichero que
+no existe en el repositorio**.
+
+En un motor que existe para ser leído, una implementación paralela sin usar no
+es código de reserva: es una trampa para el estudiante que la encuentra
+primero.
+
+### AUD-100 — tres cargas se comían un fichero corrupto en silencio
+
+Bestiario, logros e inventario tenían la misma línea: `except (…​,
+orjson.JSONEncodeError, ValueError): pass`. Dos problemas. `JSONEncodeError`
+**es `TypeError`** y no puede saltar en un `loads`: el bloque funcionaba, pero
+por una razón distinta de la que aparentaba. Y el `pass` hacía desaparecer las
+bajas de un semestre sin una línea en el registro.
+
+Lo que lo convierte en defecto y no en preferencia: `ProgresoAcademico.cargar`
+ya avisaba ante exactamente lo mismo.
+
+### AUD-101 — una regla de arquitectura que se incumplía 27 veces
+
+`03_ARCHITECTURE.md` §3.1 decía «*cross-layer imports are prohibited*». Medido
+con análisis AST, incumplida **27 veces**, todas legítimas: `engine/scenes/`
+es la capa de aplicación y `app.py` la raíz de composición.
+
+Una regla que se incumple veintisiete veces sin consecuencias no es una regla:
+es una frase. Y lo peor no es que se incumpla, sino que nadie distingue ya una
+infracción real de las toleradas. Se reescribió a las tres reglas que **sí**
+son ciertas —el núcleo del motor no toca el framework, `processing` no toca el
+motor, los escenarios no se tocan entre sí; cero excepciones en las tres— y se
+convirtieron en `tests/test_layering.py`.
+
+### AUD-102 y AUD-103 — pruebas que se creían a sí mismas
+
+Dos defectos que sólo aparecen ejecutando la suite entera, que es como se
+ejecuta de verdad:
+
+- Un fixture mío hacía `set_mode((64, 64))`. El modo de vídeo es **global al
+  proceso**, así que las trece demos se medían sobre 64×64 y nueve pruebas de
+  centrado fallaban. Pasaban en solitario y fallaban en compañía.
+- El arnés de humo construía `GameOverScene` con un `1` como escena de origen.
+  Como `hasattr(1, "respawn")` es falso, llevaba desde siempre recorriendo la
+  rama **sin respawn**: pasaba sin comprobar lo que decía comprobar.
+
+Una prueba que pasa recorriendo el camino equivocado es peor que una que
+falla: la que falla se arregla, y ésta se cree.
+
+---
+
 ## 5. Estado medido hoy
 
 | Medida | Valor |
 |---|---|
-| Pruebas | **1.657**, todas en verde |
-| Archivos de prueba | 77 |
+| Pruebas | **1.696**, todas en verde |
+| Archivos de prueba | 80 |
 | ruff sobre `src/`, `tests/`, `scripts/` | limpio |
 | Validador TMX | 2/2 |
 | Validador de recursos | 0 errores, 0 avisos |
@@ -191,10 +272,10 @@ elegir el número más favorable.
 
 | Qué | Medido | Coste |
 |---|---|---|
+| Los seis `.png` de fuente de mapa de bits siguen en `assets/fonts/` | Ningún código los carga desde que se retiró `BitmapFont`. Se conservan como material de referencia y así está anotado en `09_HUD_SPEC.md` | 10 min si se decide retirarlos |
 | Traducción de los 12 documentos del estudiante | La maquinaria está; faltan las horas | 1–2 semanas |
 | `test_gameplay_integration` tarda ~50 s | 26 pruebas que construyen escenas completas | factura que crecerá |
 | Rúbrica propia para arenas de jefe | El calificador de escenarios les aplica criterios de nivel | 1 día |
-| Identificación del estudiante sin pantalla propia | `SesionAcademica.entrar()` funciona y está probada, pero todavía no hay escena que pida el correo | 1 día |
 
 ### Lo que decidí no hacer, y por qué
 
@@ -219,7 +300,7 @@ incendios**— y no contra un producto comercial.
 
 | Área | Nota | Por qué |
 |---|---|---|
-| **Motor y framework** | 9,5 / 10 | 1.657 pruebas, ruff limpio, arquitectura legible. `FilterDemoScene` ya no es la excepción que bajaba la nota |
+| **Motor y framework** | 9,5 / 10 | 1.696 pruebas, ruff limpio, arquitectura legible. `FilterDemoScene` ya no es la excepción que bajaba la nota |
 | **Herramientas del profesor** | 9 / 10 | Calificar, exportar notas, detectar plagio, generar exámenes y realimentación. Falta rúbrica propia para arenas |
 | **Herramientas del estudiante** | 8,5 / 10 | Validador, previsualizador y plantilla honesta. El ciclo está cerrado |
 | **Configurable desde TMX** | 10 / 10 | 16 de 16 propiedades demostradas en el mapa de ejemplo, con prueba que lo vigila |
@@ -251,11 +332,17 @@ ahora además el temario tiene un orden que se respeta solo.
 —documentación en inglés—. Las dos cosas son horas de trabajo, no problemas
 que resolver.
 
-**Y una advertencia que me aplico.** Esta sesión encontró **ocho defectos más**
+**Y una advertencia que me aplico.** Esta sesión encontró **catorce defectos**
 en sistemas que llevaban meses «terminados», todos con la misma forma: código
 correcto, probado en aislamiento, que no llegaba a la pantalla o que llegaba
 al sitio equivocado. Trece demos llevaban desde siempre dibujando en un cuarto
-de la pantalla y nadie lo había escrito nunca en un informe.
+de la pantalla y nadie lo había escrito nunca en un informe. El progreso
+académico se guardaba y nadie podía volver a él. Dos módulos duplicados
+llevaban meses muertos en el árbol, documentados como si funcionaran.
+
+Tres de los catorce los introduje yo en esta misma sesión. Los tres eran de la
+misma familia que llevo toda la sesión persiguiendo, lo que dice algo sobre
+cuán fácil es cometerlos aunque uno esté buscándolos.
 
 Ninguno se veía leyendo el código. Se vieron **midiendo píxeles y
 cronometrando fotogramas**.
