@@ -14,6 +14,7 @@
   <property name="ambient_fx" type="string" value="embers" />
   <property name="ambient_fx_rate" type="float" value="16" />
   <property name="start_hour" type="string" value="dusk" />
+  <property name="season" type="string" value="autumn" />
  </properties>
  <tileset firstgid="1" name="placeholder" tilewidth="16" tileheight="16" tilecount="1" columns="1">
   <image source="../../tilesets/placeholder.png" width="16" height="16" />

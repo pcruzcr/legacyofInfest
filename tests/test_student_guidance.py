@@ -256,7 +256,8 @@ class TestLaGuiaDocumentaLaAtmosferaDeLaFase1:
     @pytest.mark.parametrize(
         "propiedad",
         ["ambient_light", "bloom", "vignette", "climate",
-         "ambient_fx", "ambient_fx_rate", "start_hour", "day_length"],
+         "ambient_fx", "ambient_fx_rate", "start_hour", "day_length",
+         "season"],
     )
     def test_cada_propiedad_de_atmosfera_tiene_su_fila(self, propiedad):
         """La propiedad tiene que ser el **sujeto** de una fila, no una mención.
@@ -293,6 +294,20 @@ class TestLaGuiaDocumentaLaAtmosferaDeLaFase1:
         texto = self.GUIA.read_text(encoding="utf-8")
         for nombre in StageLoader.LIGHT_COLORS:
             assert nombre in texto, f"falta el color de foco '{nombre}' en la guía"
+
+    def test_las_estaciones_coinciden_con_el_motor(self):
+        from src.framework.stage.seasons import ESTACIONES
+
+        texto = self.GUIA.read_text(encoding="utf-8")
+        for nombre in ESTACIONES:
+            assert nombre in texto, f"falta la estación '{nombre}' en la guía"
+
+    def test_los_momentos_del_dia_coinciden_con_el_motor(self):
+        from src.framework.stage.day_night import RelojDeMundo
+
+        texto = self.GUIA.read_text(encoding="utf-8")
+        for momento in RelojDeMundo.MOMENTOS:
+            assert momento in texto, f"falta el momento '{momento}' en la guía"
 
     def test_los_climas_coinciden_con_el_motor(self):
         from src.framework.vfx.weather_system import WeatherSystem

@@ -132,6 +132,10 @@ class StageData:
     #: Segundos reales que dura un ciclo completo. 0 congela el reloj, que es
     #: el comportamiento de un escenario sin ciclo día/noche.
     day_length: float = 0.0
+    #: Estación del escenario. Cadena vacía = no declarada; la escena usará la
+    #: de por defecto. Las estaciones no avanzan solas: un escenario dura
+    #: minutos y cambiar de invierno a primavera a mitad sería ruido.
+    season: str = ""
 
 
 REQUIRED_LAYERS: tuple[str, ...] = (
@@ -283,6 +287,7 @@ class StageLoader:
         ambient_fx = cls._parse_ambient_fx(props)
         ambient_fx_rate = cls._parse_unit_prop(props, "ambient_fx_rate", 0.0, 120.0)
         start_hour, day_length = cls._parse_day_night(props)
+        season = cls._parse_season(props)
 
         map_data = pyscroll.data.TiledMapData(tmx_data)
         with warnings.catch_warnings():
@@ -315,7 +320,29 @@ class StageLoader:
             ambient_fx_rate=ambient_fx_rate,
             start_hour=start_hour,
             day_length=day_length,
+            season=season,
         )
+
+    @classmethod
+    def _parse_season(cls, props: dict[str, Any]) -> str:
+        """Lee `season` del mapa y avisa si el nombre no existe.
+
+        Igual que con `ambient_fx`: una errata no puede dejar el escenario a
+        medias en silencio. Se avisa con la lista de nombres válidos y se
+        devuelve cadena vacía para que la escena use su valor por defecto.
+        """
+        from src.framework.stage.seasons import ESTACIONES, es_valida
+
+        valor = str(props.get("season", "") or "").strip().lower()
+        if not valor:
+            return ""
+        if not es_valida(valor):
+            logger.warning(
+                "season: '%s' no es una estación conocida. Válidas: %s",
+                valor, ", ".join(sorted(ESTACIONES)),
+            )
+            return ""
+        return valor
 
     @classmethod
     def _parse_day_night(cls, props: dict[str, Any]) -> tuple[float | None, float]:

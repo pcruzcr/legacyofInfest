@@ -62,6 +62,7 @@ rechazarse: escribir `bloom = 5` significa "mucho", no un error de carga.
 | `ambient_fx` | string | `dust` `leaves` `embers` `spores` `ash` `none` | Partículas flotantes constantes. `none` lo apaga de forma explícita. |
 | `ambient_fx_rate` | float | 0 – 120 | Partículas por segundo. Entre 10 y 20 es un ambiente perceptible sin saturar. |
 | `start_hour` | string o float | 0 – 24 | Hora a la que empieza el escenario. Acepta un nombre (`dawn` `morning` `noon` `afternoon` `dusk` `night` `midnight`), un número (`18.5`) o `HH:MM`. |
+| `season` | string | `spring` `summer` `autumn` `winter` | Estación. Tiñe la paleta, y **sugiere** un clima y unas partículas de aire si no los declaraste. Nunca sobrescribe lo que escribas: `climate = fog` en un mapa de otoño sigue siendo niebla. |
 | `day_length` | float | 0 – 36000 | Segundos **reales** que dura un ciclo día/noche completo. `0` congela el reloj en `start_hour`, que es lo que quiere un combate: la luz no debe cambiar a mitad de una pelea. Stage 0 usa `420` (siete minutos); la arena del jefe lo deja congelado al atardecer. |
 
 El ciclo modula la luz que ya declaraste: `ambient_light` sigue mandando, y la

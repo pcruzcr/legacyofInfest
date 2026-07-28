@@ -284,7 +284,8 @@ class StageScene(BaseScene):
         self._enemy_trail_system.clear()
         self._enemy_prev_x.clear()
         self._weather.clear()
-        climate = getattr(self._stage_data, "climate", "")
+        self._setup_season()
+        climate = self._clima_efectivo()
         self._weather.set_climate(climate)
         if climate:
             audio_key = self._weather.get_ambient_audio_key()
@@ -437,14 +438,41 @@ class StageScene(BaseScene):
         tipo = getattr(self._stage_data, "ambient_fx", "")
         ritmo = getattr(self._stage_data, "ambient_fx_rate", None)
         if not tipo:
-            tipo, ritmo_zona = self.AMBIENT_FX_BY_ZONE.get(
-                zone, self.AMBIENT_FX_DEFAULT)
+            # Precedencia: mapa > estación > zona. La estación va antes que la
+            # zona porque es una decisión explícita del autor del mapa y la
+            # tabla por zona es sólo un respaldo del motor.
+            if getattr(self._stage_data, "season", ""):
+                tipo, ritmo_estacion = self._estacion.particulas
+            else:
+                tipo, ritmo_estacion = self.AMBIENT_FX_BY_ZONE.get(
+                    zone, self.AMBIENT_FX_DEFAULT)
             if ritmo is None:
-                ritmo = ritmo_zona
+                ritmo = ritmo_estacion
         elif ritmo is None:
             ritmo = self.AMBIENT_FX_DEFAULT[1]
 
         self._ambient_particles.set_effect(tipo, ritmo)
+
+    def _clima_efectivo(self) -> str:
+        """Qué clima usa el escenario: el del mapa, o el que sugiere la estación.
+
+        F2.2 — el orden importa y por eso vive en un método propio. Un autor
+        que escribe `climate = fog` en un mapa de otoño quiere niebla, no la
+        lluvia que trae la estación. La estación **sugiere**; no manda.
+
+        Está extraído en vez de en línea dentro de `on_enter` porque una regla
+        de precedencia que sólo se puede probar recargando un TMX entero se
+        acaba probando de mentira: la primera versión de su prueba
+        reimplementaba la regla en el propio test y por tanto no podía fallar.
+        """
+        declarado = getattr(self._stage_data, "climate", "")
+        return declarado or self._estacion.clima
+
+    def _setup_season(self) -> None:
+        """Resuelve la estación del escenario. Ver `framework.stage.seasons`."""
+        from src.framework.stage.seasons import estacion
+
+        self._estacion = estacion(getattr(self._stage_data, "season", ""))
 
     def _setup_day_night(self) -> None:
         """Arranca el reloj del escenario a partir del TMX.
@@ -488,15 +516,21 @@ class StageScene(BaseScene):
     MIN_AMBIENTE = 0.45
 
     def _aplicar_hora(self) -> None:
-        """Traduce la hora actual a luz ambiente, tinte y bloom."""
+        """Traduce la hora actual, y la estación, a luz ambiente y bloom."""
+        from src.framework.stage.seasons import aplicar_tinte
+
         luz = self._reloj.luz()
         self._lighting.ambient_brightness = max(
-            self.MIN_AMBIENTE, self._ambiente_base * luz.factor_ambiente)
+            self.MIN_AMBIENTE,
+            self._ambiente_base * luz.factor_ambiente * self._estacion.factor_luz,
+        )
         self._post_processing.set_base_bloom(
             self._bloom_base_escenario + luz.bloom_extra)
-        # El tinte de la hora se aplica como color de la luz ambiente. A
-        # mediodía el color es prácticamente blanco, así que no tiñe nada.
-        self._lighting.ambient_color = luz.color
+        # El tinte de la hora se aplica como color de la luz ambiente, y la
+        # estación lo modula. Los dos son multiplicadores, así que se componen
+        # sin que ninguno tenga que conocer al otro: a mediodía en verano el
+        # resultado es casi blanco, y de madrugada en invierno, azul doble.
+        self._lighting.ambient_color = aplicar_tinte(luz.color, self._estacion)
 
     def _subscribe_event_handlers(self) -> None:
         def _on_enemy_died(**data: Any) -> None:
