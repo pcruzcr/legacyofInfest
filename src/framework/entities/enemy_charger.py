@@ -117,7 +117,8 @@ class EnemyCharger(EnemyBase):
         return "walk"
 
     def _build_hurtbox(self) -> pygame.Rect:
-        return pygame.Rect(4, 2, 28, 24)
+        # AUD-108: era el cuerpo desplazado 4 px, no una caja ajustada.
+        return self.caja_ajustada(margen_x=2, margen_y=1)
 
     def _build_hitbox(self) -> pygame.Rect:
         return self._build_hurtbox()

@@ -547,6 +547,48 @@ class EnemyBase(BaseEntity):
         """Returns LOCAL-space rect (offset from entity position)."""
 
     # ──────────────────────────────────────────────
+    # AUD-108 — cajas que no se salen del cuerpo
+    # ──────────────────────────────────────────────
+
+    def caja_ajustada(self, margen_x: int = 0, margen_y: int = 0) -> pygame.Rect:
+        """Caja local recortada hacia dentro del cuerpo, y centrada.
+
+        **Por qué existe.** `_build_hurtbox` devuelve coordenadas locales que
+        `_update_rects` suma a la posición. Diez de los doce cuerpos del
+        bestiario declaraban un desplazamiento **sin encoger el tamaño**::
+
+            EnemyWalker:  cuerpo 24 × 28   →   Rect(4, 2, 24, 28)
+
+        Eso no es una caja ajustada: es el cuerpo entero movido 4 px a la
+        derecha y 2 hacia abajo. En un `Flying` de 20 px de ancho el
+        desplazamiento era de 6, así que **el 30 % de su cuerpo visible no se
+        podía golpear** por la izquierda, y había 6 px de aire a su derecha que
+        sí golpeaban. En un `Shooter` la caja sobresalía 12 px: daño de un
+        enemigo que no está ahí.
+
+        Y como todos los desplazamientos iban hacia la derecha, atacar por la
+        izquierda era sistemáticamente más difícil en los catorce escenarios.
+
+        **Cómo se evita que vuelva.** Aquí se calcula el rectángulo a partir
+        del cuerpo en vez de escribirlo a mano, así que el margen es un margen
+        de verdad y no puede convertirse en un desplazamiento por descuido. Los
+        márgenes se recortan si son mayores que el cuerpo: una caja de área
+        cero es un enemigo invulnerable, y prefiero uno estrecho a uno
+        intocable.
+
+        El jugador ya lo hacía bien —misma anchura, sólo recorte vertical— y de
+        ahí se dedujo cuál era la intención de todos estos.
+        """
+        ancho = max(2, self.rect.width - margen_x * 2)
+        alto = max(2, self.rect.height - margen_y * 2)
+        return pygame.Rect(
+            (self.rect.width - ancho) // 2,
+            (self.rect.height - alto) // 2,
+            ancho,
+            alto,
+        )
+
+    # ──────────────────────────────────────────────
     # Concrete hooks with sensible defaults
     # ──────────────────────────────────────────────
 

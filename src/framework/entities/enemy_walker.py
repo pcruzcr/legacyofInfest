@@ -196,7 +196,11 @@ class EnemyWalker(EnemyBase):
         return "walk"
 
     def _build_hurtbox(self) -> pygame.Rect:
-        return pygame.Rect(4, 2, 24, 28)
+        # Margen de 2 px: la caja cubre casi todo el cuerpo del caminante,
+        # que es un bloque sin apéndices. Antes decía `Rect(4, 2, 24, 28)`
+        # —el cuerpo entero desplazado 4 px a la derecha— y golpearle por
+        # la izquierda fallaba en sus primeros 4 px de sprite (AUD-108).
+        return self.caja_ajustada(margen_x=2, margen_y=1)
 
     def _build_hitbox(self) -> pygame.Rect:
         return self._build_hurtbox()

@@ -214,7 +214,8 @@ class EnemyCaster(EnemyBase):
         return "walk"
 
     def _build_hurtbox(self) -> pygame.Rect:
-        return pygame.Rect(2, 4, 20, 28)
+        # AUD-108: mismo defecto que el resto del bestiario.
+        return self.caja_ajustada(margen_x=1, margen_y=2)
 
     def _build_hitbox(self) -> pygame.Rect:
         return self._build_hurtbox()
