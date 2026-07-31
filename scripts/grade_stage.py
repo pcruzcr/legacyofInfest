@@ -32,11 +32,14 @@ if str(_PROJECT_ROOT) not in sys.path:
 
 from scripts._cli_paths import display_path  # noqa: E402  (tras ajustar sys.path)
 
-KNOWN_ENEMY_TYPES: set[str] = {
-    "MushMom", "Bat", "Skitter", "Mantis", "Flying",
-    "Shooter", "Charger", "Archer", "Brute", "Caster",
-    "Assassin", "Walker",
-}
+#: Copia de emergencia de los tipos de enemigo. **No es la fuente de verdad**:
+#: sólo se usa si no se puede importar el motor (faltan dependencias, se
+#: califica desde una máquina sin instalar). La lista real la da
+#: `_tipos_de_enemigo()`, que lee el registro de entidades.
+_ENEMIGOS_DE_RESPALDO: frozenset[str] = frozenset({
+    "Walker", "Flying", "Shooter", "Charger", "Archer",
+    "Brute", "Caster", "Assassin",
+})
 MAX_TMX_WIDTH = 400
 MAX_TMX_HEIGHT = 50
 MAX_TIME_LIMIT = 999
@@ -64,6 +67,101 @@ RUBRIC = {
 }
 
 
+def _tipos_de_enemigo(escenario: Path | None = None) -> set[str]:
+    """Los tipos que el motor sabe convertir en enemigo.
+
+    AUD-107 — por qué dejó de ser una lista escrita a mano
+    ------------------------------------------------------
+    Lo era, y decía esto::
+
+        {"MushMom", "Bat", "Skitter", "Mantis", "Flying", "Shooter",
+         "Charger", "Archer", "Brute", "Caster", "Assassin", "Walker"}
+
+    De esos doce nombres, **cuatro no existen** en el motor —`MushMom`, `Bat`,
+    `Skitter` y `Mantis` son de un bestiario anterior— y **faltaban veintidós**
+    de los treinta que el registro tiene hoy. El efecto se vio calificando la
+    entrega de stage2_2: el mapa coloca siete enemigos y el informe decía
+    «2 enemy(ies) placed», porque `WalkerGuardia`, `FlyingBoa`,
+    `ShooterSerpienteArbol` y `WalkerSerpientePequena` —las cuatro del
+    bestiario oficial de la Zona 2— no estaban en la lista.
+
+    No le costó puntos a nadie, porque las dos categorías puntúan por
+    presencia y no por cantidad. Costó algo peor: el informe que el estudiante
+    lee le decía que cinco de sus enemigos no contaban.
+
+    Es el tercer caso esta semana de una herramienta del profesor con su propia
+    copia desfasada de lo que el motor sabe (AUD-104 en el calificador de
+    jefes, AUD-106 en el validador de TMX). La cura es la misma: preguntarle al
+    registro en vez de recordar.
+
+    `escenario` permite además contar los enemigos que el propio estudiante
+    registró con `register_entity`, igual que hace el validador.
+    """
+    try:
+        from src.framework.entities import entity_factory
+        from src.framework.stage.stage_loader import StageLoader
+        entity_factory.ensure_registered()
+        tipos = set(StageLoader._entity_registry)
+    except Exception:
+        return set(_ENEMIGOS_DE_RESPALDO)
+
+    if escenario is not None:
+        tipos |= _tipos_registrados_por_el_estudiante(escenario)
+    return tipos
+
+
+def _tipos_registrados_por_el_estudiante(escenario: Path) -> set[str]:
+    """Nombres pasados a `register_entity(...)` dentro del paquete del escenario.
+
+    Se lee por AST y no importando: calificar el trabajo de otro no debería
+    ejecutar su código. Misma técnica que `validate_tmx.py` (AUD-106).
+    """
+    import ast
+
+    encontrados: set[str] = set()
+    if not escenario.is_dir():
+        return encontrados
+    for fichero in escenario.rglob("*.py"):
+        try:
+            arbol = ast.parse(fichero.read_text(encoding="utf-8-sig", errors="replace"))
+        except (OSError, SyntaxError):
+            continue
+        for nodo in ast.walk(arbol):
+            if not isinstance(nodo, ast.Call) or not nodo.args:
+                continue
+            nombre = nodo.func.attr if isinstance(nodo.func, ast.Attribute) else (
+                nodo.func.id if isinstance(nodo.func, ast.Name) else ""
+            )
+            if nombre == "register_entity" and isinstance(nodo.args[0], ast.Constant):
+                valor = nodo.args[0].value
+                if isinstance(valor, str):
+                    encontrados.add(valor)
+    return encontrados
+
+
+def _paquete_del_escenario(tmx: Path) -> Path | None:
+    """El directorio `src/stages/<x>/` que corresponde a este mapa.
+
+    No se puede deducir del nombre: los estudiantes bautizan la carpeta por el
+    sitio —`la_soda`, `las_aulas`, `oficinas`— y el mapa por la ranura. Se
+    busca el paquete que nombre el fichero, que es la única relación real.
+    """
+    stages = _PROJECT_ROOT / "src" / "stages"
+    if not stages.is_dir():
+        return None
+    directo = stages / tmx.parent.name
+    if directo.is_dir():
+        return directo
+    for paquete in sorted(p for p in stages.iterdir() if p.is_dir()):
+        for fichero in paquete.rglob("*.py"):
+            try:
+                if tmx.name in fichero.read_text(encoding="utf-8-sig", errors="replace"):
+                    return paquete
+            except OSError:
+                continue
+    return None
+
+
 def _tipos_no_enemigos() -> set[str]:
     """Tipos de objeto que existen y no son enemigos.
 
@@ -86,7 +184,7 @@ def _tipos_no_enemigos() -> set[str]:
         )
         entity_factory.ensure_registered()
         todos = set(known_object_types(list(StageLoader._entity_registry)))
-        return (todos | set(COLLISION_OBJECT_TYPES)) - KNOWN_ENEMY_TYPES
+        return (todos | set(COLLISION_OBJECT_TYPES)) - _tipos_de_enemigo()
     except Exception:
         return {
             "PlayerSpawn", "Checkpoint", "MessageTrigger", "MessageTrigger_Once",
@@ -177,19 +275,19 @@ def grade_stage(path: Path) -> dict[str, Any]:
         result["categories"]["checkpoints"] = {"score": 0, "max": RUBRIC["checkpoints"], "msg": "No checkpoints"}
         result["warnings"].append("Add at least 1 checkpoint")
 
-    # Enemies (check object types against KNOWN_ENEMY_TYPES)
+    # Enemigos. Los tipos válidos salen del registro del motor más los que el
+    # estudiante haya registrado en su propio paquete (AUD-107).
+    tipos_enemigo = _tipos_de_enemigo(_paquete_del_escenario(path))
     enemies: list[str] = []
-    enemy_positions: list[tuple[float, float]] = []
     valid_types = 0
     invalid_enemy_types = []
     for og in root.findall("objectgroup"):
         for obj in og.findall("object"):
             obj_type = obj.get("type", "")
             obj_name = obj.get("name", "")
-            if obj_type in KNOWN_ENEMY_TYPES:
+            if obj_type in tipos_enemigo:
                 valid_types += 1
                 enemies.append(obj_name or obj_type)
-                enemy_positions.append((float(obj.get("x", 0)), float(obj.get("y", 0))))
             elif obj_type and obj_type not in _tipos_no_enemigos():
                 invalid_enemy_types.append(obj_type)
     if valid_types > 0:
@@ -238,15 +336,40 @@ def grade_stage(path: Path) -> dict[str, Any]:
         result["warnings"].append(f"Missing metadata: {missing}")
 
     # Tileset
+    #
+    # AUD-107 — Tiled ofrece dos formas de declarar un tileset: incrustado en
+    # el propio `.tmx` (`<tileset><image .../></tileset>`) o en un fichero
+    # `.tsx` aparte al que el mapa apunta con `source=`. La segunda es la que
+    # recomienda Tiled y la que permite compartir un tileset entre mapas, y es
+    # la que usó la entrega del Lobby.
+    #
+    # Este bloque sólo miraba la primera: buscaba `<image>` como hijo directo
+    # y, al no encontrarlo, daba «No valid tileset images» y restaba 5 puntos a
+    # un mapa cuyo tileset estaba perfectamente en su sitio. Ahora se sigue el
+    # `.tsx`, que es donde vive la imagen en ese caso.
     tilesets = root.findall("tileset")
     ts_valid = 0
     for ts in tilesets:
         img = ts.find("image")
         if img is not None:
-            src = img.get("source", "")
-            img_path = (path.parent / src).resolve()
-            if img_path.exists():
+            if (path.parent / img.get("source", "")).resolve().exists():
                 ts_valid += 1
+            continue
+        externo = ts.get("source", "")
+        if not externo:
+            continue
+        tsx = (path.parent / externo).resolve()
+        if not tsx.exists():
+            continue
+        try:
+            img_ext = ET.parse(tsx).getroot().find("image")
+        except ET.ParseError:
+            result["warnings"].append(f"El tileset externo {externo} no se puede leer")
+            continue
+        if img_ext is not None and (
+            tsx.parent / img_ext.get("source", "")
+        ).resolve().exists():
+            ts_valid += 1
     if ts_valid > 0:
         result["categories"]["tileset_valid"] = {"score": RUBRIC["tileset_valid"], "max": RUBRIC["tileset_valid"], "msg": f"{ts_valid} tileset(s) valid"}
     else:

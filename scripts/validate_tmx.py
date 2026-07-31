@@ -95,7 +95,7 @@ def _tipos_registrados_por_el_estudiante(tmx: Path) -> set[str]:
         if "__pycache__" in fichero.parts:
             continue
         try:
-            arbol = ast.parse(fichero.read_text(encoding="utf-8"))
+            arbol = ast.parse(fichero.read_text(encoding="utf-8-sig"))
         except (OSError, SyntaxError) as e:
             warn(f"no se pudo leer {display_path(fichero, _PROJECT_ROOT)} ({e})")
             continue

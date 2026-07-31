@@ -197,11 +197,14 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── ai_predictor.py            # AIPredictor: ML-based player action prediction
 │   │   │   ├── bestiary.py                # Bestiary: enemy encounter/kill tracking
 │   │   │   ├── bestiary_registry.py       # BestiaryRegistry: enemy data registry
+│   │   │   ├── ranged_weapon.py           # ArcoDelJugador: arco del jugador, munición y flechas (F4.2)
 │   │   │   └── squad_brain.py             # SquadBrain: group enemy coordination AI
 │   │   │
 │   │   ├── stage/
 │   │   │   ├── __init__.py
 │   │   │   ├── stage_loader.py            # StageLoader: parse TMX, build layer stack, spawn
+│   │   │   ├── interactables.py           # Recogible/Cerradura/Cofre/Disparador/Llavero (F4.1)
+│   │   │   ├── interactable_system.py     # InteractableSystem: llaves, puertas, cofres y eventos (F4.1)
 │   │   │   ├── camera.py                  # Camera: viewport, parallax, follow target
 │   │   │   ├── checkpoint.py              # Checkpoint: trigger zone, respawn anchor
 │   │   │   ├── collision_system.py        # CollisionSystem: hitstop, attack processing

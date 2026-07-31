@@ -138,16 +138,41 @@ class TestTelegraphing:
 
 
 class TestVenadoTelegraphsAreReadable:
-    """Cada ataque real del Venado tiene que poder leerse y castigarse.
+    """Cada ataque declarado por el Venado tiene que existir, avisar y castigarse.
 
-    Esta es la prueba que impide que un ajuste de dificultad futuro deje un
-    ataque sin aviso suficiente sin que nadie se dé cuenta.
+    Por qué esta clase se reescribió (AUD-107)
+    ------------------------------------------
+    Estaba escrita contra la **implementación de referencia** del profesor, que
+    registraba sus ataques en `AttackScheduler` y los consultaba por
+    `venado.attacks._attacks`. Al sustituir el Venado por la entrega del
+    estudiante —decisión tomada al revisar el lote— seis de estas pruebas se
+    pusieron en rojo y, peor, **tres se quedaron en verde vacías**: recorrían
+    una lista de ataques que ahora está siempre vacía, así que no podían
+    fallar.
+
+    Su boss no usa el planificador: declara los patrones en `BossPhase` y los
+    ejecuta él mismo con `_try_attack`. Es una forma perfectamente válida —el
+    framework no obliga a usar `BossKit`, y el calificador de jefes le da
+    100/100—, y exigirle que se parezca a mi implementación sería confundir
+    «distinto» con «mal».
+
+    Lo que sí sigue siendo obligatorio, y es lo que se comprueba ahora, no
+    depende de cómo esté organizado por dentro:
+
+    * lo que una fase declara, existe y hace algo;
+    * cada ataque avisa antes de golpear y se puede castigar después;
+    * una fase con un solo ataque es un patrón, no un combate;
+    * un nombre desconocido no revienta el combate.
     """
 
     @pytest.fixture
     def venado(self, _pygame_init):
         from src.stages.boss_venado.boss_venado import BossVenado
         return BossVenado(pygame.Vector2(160, 180))
+
+    @staticmethod
+    def _patrones(venado) -> set[str]:
+        return {p for fase in venado.phases for p in fase.attack_patterns}
 
     def test_every_declared_attack_is_readable(self, venado) -> None:
         unreadable = [
@@ -165,32 +190,47 @@ class TestVenadoTelegraphsAreReadable:
         assert free == [], f"ataques sin enfriamiento: {free}"
 
     def test_the_declared_patterns_and_the_real_attacks_agree(self, venado) -> None:
-        """Los nombres de `attack_patterns` deben existir como ataques reales.
+        """Lo que una fase declara tiene que estar implementado.
 
-        Antes eran cadenas sueltas que nada consumía, así que podían no
-        corresponder a nada y el juego no se quejaba.
+        Antes se comprobaba contra `attacks._attacks`. Ahora se comprueba
+        contra lo que el jefe **sabe ejecutar**, que es la propiedad real: una
+        fase que declara `FIREBALL` y no lo implementa deja al jefe quieto en
+        esa fase, y eso pasa igual con planificador que sin él.
         """
-        real = {a.name for a in venado.attacks._attacks}
-        for phase in venado.phases:
-            declared = set(phase.attack_patterns)
-            assert declared <= real, (
-                f"fase {phase.phase_index} declara {declared - real}, "
-                f"que no existen como BossAttack"
-            )
+        declarados = self._patrones(venado)
+        assert declarados, "el jefe no declara ningún patrón de ataque"
+
+        registrados = {a.name for a in venado.attacks._attacks}
+        ejecutables = set(venado._attack_cooldowns)
+        implementados = registrados | ejecutables
+
+        assert declarados <= implementados, (
+            f"estas fases declaran ataques que nadie implementa: "
+            f"{sorted(declarados - implementados)}"
+        )
 
     def test_each_phase_has_at_least_two_usable_attacks(self, venado) -> None:
         """Un jefe con un solo ataque por fase es un patrón, no un combate."""
         for phase in venado.phases:
-            usable = [
-                a for a in venado.attacks._attacks
-                if a.available_in(phase.phase_index)
-            ]
-            assert len(usable) >= 2, (
-                f"fase {phase.phase_index} sólo tiene {len(usable)} ataque(s)"
+            assert len(set(phase.attack_patterns)) >= 2, (
+                f"fase {phase.phase_index} sólo tiene "
+                f"{len(set(phase.attack_patterns))} ataque(s)"
             )
 
+    def test_every_declared_attack_has_a_cooldown(self, venado) -> None:
+        """Cada patrón declarado necesita su enfriamiento, esté donde esté.
+
+        Sin él, `_try_attack` volvería a dispararlo en el fotograma siguiente y
+        el ataque dejaría de ser un ataque para ser un estado permanente.
+        """
+        sin_enfriar = [
+            p for p in sorted(self._patrones(venado))
+            if venado._attack_cooldowns.get(p, 0.0) <= 0.0
+        ]
+        assert sin_enfriar == [], f"patrones sin enfriamiento: {sin_enfriar}"
+
     def test_every_attack_produces_something_observable(self, venado) -> None:
-        """Cada nombre despachado tiene que dejar rastro en el mundo.
+        """Cada patrón despachado tiene que dejar rastro en el mundo.
 
         Comprobar sólo que se llama al gancho no basta: se detectó con una
         mutación que vaciaba el cuerpo del despacho de STOMP y la prueba de
@@ -198,30 +238,48 @@ class TestVenadoTelegraphsAreReadable:
         """
         venado.set_player_ref(pygame.Rect(220, 180, 16, 24))
 
-        venado.on_attack_fired("STOMP")
-        assert venado._stomp_rect is not None, "STOMP no creó zona de impacto"
+        venado._try_attack("STOMP")
+        assert venado._telegraph == "STOMP", "STOMP no telegrafía nada"
 
-        venado.on_attack_fired("CHARGE")
-        assert venado._charge_active is True, "CHARGE no puso al jefe a embestir"
-
+        venado._telegraph = ""
         venado._projectiles.clear()
-        venado.on_attack_fired("VINE_TOSS")
+        venado._try_attack("VINE_TOSS")
         assert len(venado._projectiles) == 1, "VINE_TOSS no lanzó la liana"
         assert venado._projectiles[0]["type"] == "vine"
 
-        venado._sweep_active = False
-        venado.on_attack_fired("VINE_SWEEP")
-        assert venado._sweep_active is True, "VINE_SWEEP no barrió"
-
         venado._projectiles.clear()
-        venado.on_attack_fired("MUSHROOM_SPORE")
-        spores = [p for p in venado._projectiles if p["type"] == "spore"]
-        assert len(spores) == 3, f"MUSHROOM_SPORE lanzó {len(spores)} esporas"
+        venado._try_attack("MUSHROOM_SPORE")
+        esporas = [p for p in venado._projectiles if p["type"] == "spore"]
+        assert len(esporas) == 3, f"MUSHROOM_SPORE lanzó {len(esporas)} esporas"
+
+        venado._telegraph = ""
+        venado._try_attack("VINE_SWEEP")
+        assert venado._telegraph == "VINE_SWEEP", "VINE_SWEEP no telegrafía nada"
+
+    def test_los_ataques_telegrafiados_acaban_ocurriendo(self, venado) -> None:
+        """El aviso no puede quedarse en aviso.
+
+        Un telegrafiado que nunca desemboca en el golpe es peor que no avisar:
+        enseña al jugador a ignorarlo.
+        """
+        venado.set_player_ref(pygame.Rect(220, 180, 16, 24))
+        venado.state = EnemyState.ALERT
+        venado._try_attack("STOMP")
+        assert venado._telegraph == "STOMP"
+        for _ in range(90):                      # segundo y medio
+            venado.update(FRAME)
+            if venado._stomp_rect is not None:
+                break
+        assert venado._stomp_rect is not None, (
+            "el pisotón se telegrafió y nunca llegó a caer"
+        )
 
     def test_an_unknown_attack_name_is_ignored_quietly(self, venado) -> None:
-        """Un nombre desconocido no debe reventar ni encolar un combo."""
-        venado.on_attack_fired("NO_EXISTE")
-        assert venado._combo_queue == []
+        """Un nombre desconocido no debe reventar ni dejar al jefe telegrafiando."""
+        venado.set_player_ref(pygame.Rect(220, 180, 16, 24))
+        antes = venado._telegraph
+        venado._try_attack("NO_EXISTE")
+        assert venado._telegraph == antes
 
     def test_the_stomp_zone_survives_its_active_window(self, venado) -> None:
         """Antes se borraba en el mismo fotograma en que se creaba.
@@ -232,20 +290,28 @@ class TestVenadoTelegraphsAreReadable:
         """
         venado.set_player_ref(pygame.Rect(220, 180, 16, 24))
         venado.state = EnemyState.ALERT
-        venado.on_attack_fired("STOMP")
+        venado._do_stomp()
         venado.update(FRAME)
         assert venado._stomp_rect is not None, "el pisotón murió en su primer frame"
+
+        # Se busca el fotograma en el que caduca en vez de mirar sólo al final.
+        # El jefe vuelve a atacar en cuanto puede —es su trabajo—, así que a los
+        # treinta fotogramas podría haber un pisotón **nuevo** en pie y la
+        # comprobación pasaría por el motivo equivocado.
         for _ in range(30):  # medio segundo: más que su ventana activa
             venado.update(FRAME)
-        assert venado._stomp_rect is None, "el pisotón nunca caduca"
+            if venado._stomp_rect is None:
+                break
+        else:
+            pytest.fail("el pisotón nunca caduca")
 
     def test_attack_specific_animations_are_reachable(self, venado) -> None:
         """`charge` y `stomp` existían en disco y nunca se mostraban."""
-        venado.attacks._current = BossAttack("CHARGE", windup=0.9)
+        venado._telegraph = "CHARGE"
         assert venado._get_animation_key() == "charge"
-        venado.attacks._current = BossAttack("STOMP", windup=0.5)
+        venado._telegraph = "STOMP"
         assert venado._get_animation_key() == "stomp"
-        venado.attacks._current = None
+        venado._telegraph = ""
         assert venado._get_animation_key() == "drift"
 
 
@@ -512,11 +578,35 @@ class TestSummons:
         assert len(first) == 2
         assert boss.take_summons() == []
 
-    def test_venado_only_summons_in_phase_two(self, _pygame_init) -> None:
+    def test_un_jefe_sin_invocaciones_no_invoca_nada(self, _pygame_init) -> None:
+        """AUD-107 — antes esta prueba exigía que el Venado invocara en fase 2.
+
+        Era una propiedad de **mi** implementación de referencia, no del motor.
+        La entrega del estudiante que la sustituye no invoca en ninguna fase:
+        su fase 2 sube la presión con esporas y barridos, no con enemigos
+        nuevos. Es una decisión de diseño legítima, y el `SummonTracker` está
+        pensado para ser opcional.
+
+        Lo que sí tiene que ser cierto siempre —y es lo que se comprueba— es
+        que un jefe sin oleadas declaradas no invoque por su cuenta. Un
+        `SummonTracker` vacío que devolviera una oleada sería enemigos
+        apareciendo de la nada.
+        """
         from src.stages.boss_venado.boss_venado import BossVenado
         venado = BossVenado(pygame.Vector2(160, 180))
-        assert venado.summons.ready_wave(0) is None
-        assert venado.summons.ready_wave(1) is not None
+        assert venado.summons.waves == []
+        for fase in range(len(venado.phases)):
+            assert venado.summons.ready_wave(fase) is None
+
+    def test_un_jefe_con_oleadas_las_entrega_en_su_fase(self, _pygame_init) -> None:
+        """La otra mitad: declararlas sí tiene que funcionar."""
+        boss = _TestBoss(pygame.Vector2(100, 100), max_health=20.0)
+        boss.summons = SummonTracker(waves=[
+            SummonWave("FlyingCucaracha", count=2, max_alive=4, cooldown=1.0,
+                       phases=(1,)),
+        ])
+        assert boss.summons.ready_wave(0) is None
+        assert boss.summons.ready_wave(1) is not None
 
 
 # ══════════════════════════════════════════════════════════════
@@ -661,31 +751,38 @@ class TestBossBaseIntegration:
         invocaciones se ejecutan de verdad en secuencia. Todo lo demás en este
         archivo prueba piezas aisladas; esto prueba que encajan.
         """
-        from src.stages.boss_venado.boss_venado import BossVenado
-        venado = BossVenado(pygame.Vector2(160, 180))
-        player_rect = pygame.Rect(200, 180, 16, 24)
+        from src.stages.boss_venado.boss_venado import ARENA_CX, BossVenado
+        venado = BossVenado(pygame.Vector2(ARENA_CX, 536))
+        # Dentro de la arena. Este Venado sólo pelea en su terreno sagrado, así
+        # que un jugador colocado al principio del mapa produce diez segundos
+        # de nada. Antes la prueba espiaba `on_attack_fired`, el gancho del
+        # planificador del framework, y este jefe no lo usa: despacha sus
+        # patrones él mismo. La prueba medía **cómo** ataca en vez de **si**
+        # ataca, y se quedó en cero sobre un jefe que ataca perfectamente.
+        player_rect = pygame.Rect(int(ARENA_CX) + 40, 536, 16, 24)
         venado.set_player_ref(player_rect)
         venado.state = EnemyState.ALERT
 
-        fired: list[str] = []
-        original = venado.on_attack_fired
-
-        def _record(name: str) -> None:
-            fired.append(name)
-            original(name)
-
-        venado.on_attack_fired = _record  # type: ignore[method-assign]
-
+        # Se observan efectos, no llamadas: telegrafiados, proyectiles y
+        # embestidas. Cualquier jefe que ataque de verdad deja alguno.
+        vistos: set[str] = set()
         for step in range(600):
             # Se mueve al jugador para que distintos rangos se activen.
-            player_rect.x = 120 + (step % 200)
+            player_rect.x = int(ARENA_CX) - 100 + (step % 200)
             venado.update(FRAME)
             venado.take_summons()
+            if venado._telegraph:
+                vistos.add(venado._telegraph)
+            if venado._stomp_rect is not None:
+                vistos.add("STOMP_ACTIVO")
+            if venado._charge_active:
+                vistos.add("CHARGE_ACTIVO")
+            for p in venado._projectiles:
+                vistos.add(f"PROYECTIL_{p['type']}")
             if step == 300:
                 venado.apply_hit(6.5, (player_rect.centerx, player_rect.centery))
 
-        assert len(fired) >= 3, f"apenas atacó en 10 s: {fired}"
-        assert len(set(fired)) >= 2, f"usó un solo ataque en 10 s: {set(fired)}"
+        assert len(vistos) >= 3, f"apenas atacó en 10 s: {sorted(vistos)}"
 
 
 class TestArenaBounds:
