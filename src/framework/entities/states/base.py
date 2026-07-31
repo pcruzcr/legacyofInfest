@@ -40,6 +40,7 @@ class _InputSnapshot:
         "jump_pressed",
         "long_attack",
         "move_x",
+        "move_y_up",
         "short_attack",
     )
 
@@ -52,6 +53,9 @@ class _InputSnapshot:
         long_attack = False
         dash_pressed = False
         grab_pressed = False
+        # F5.14 — subir. Hasta las lianas no hacía falta: MOVE_UP existía en
+        # `Action` y no lo leía nadie, así que pulsar arriba no hacía nada.
+        move_y_up = False
 
         if im is not None:
             if im.is_action_held(Action.MOVE_LEFT):
@@ -65,8 +69,10 @@ class _InputSnapshot:
             long_attack = im.is_action_pressed(Action.LONG_ATTACK)
             dash_pressed = im.is_action_pressed(Action.DASH)
             grab_pressed = im.is_action_pressed(Action.GRAB)
+            move_y_up = im.is_action_held(Action.MOVE_UP)
 
         self.move_x = move_x
+        self.move_y_up = move_y_up
         self.jump_pressed = jump_pressed
         self.jump_held = jump_held
         self.crouch_held = crouch_held

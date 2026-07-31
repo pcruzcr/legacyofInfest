@@ -54,7 +54,7 @@ logger = logging.getLogger(__name__)
 _TIPOS_DE_COMPONENTE: frozenset[str] = frozenset({
     "WindZone", "FrictionZone", "Conveyor", "LaserZone", "ShockwaveZone",
     "WaterZone", "MovingPlatform", "RhythmBlock", "SinkingPlatform",
-    "Guard", "Stalker",
+    "Guard", "Stalker", "Vine", "Zipline",
 })
 
 if TYPE_CHECKING:
@@ -914,9 +914,11 @@ class StageLoader:
             Alerta,
             BloqueRitmico,
             ConoDeVision,
+            Liana,
             PlataformaHundible,
             PlataformaMovil,
             Solido,
+            Tirolesa,
             Transform,
             ZonaDeAgua,
             ZonaDeFriccion,
@@ -1046,6 +1048,29 @@ class StageLoader:
                     reaparicion=f("reaparicion", 6.0),
                 ),
             ]
+
+        elif obj_type == "Vine":
+            grupo = [Liana(
+                rect=rect,
+                ancho_de_agarre=int(f("ancho_de_agarre", 10.0)),
+                velocidad=f("velocidad", 70.0),
+            )]
+
+        elif obj_type == "Zipline":
+            # El destino va en desplazamiento, igual que en `MovingPlatform`:
+            # mover el cable en Tiled no debería obligar a recalcular su
+            # extremo a mano.
+            grupo = [Tirolesa(
+                origen=pygame.Vector2(rect.topleft),
+                destino=pygame.Vector2(
+                    rect.x + f("destino_dx", 96.0),
+                    rect.y + f("destino_dy", 64.0),
+                ),
+                velocidad=f("velocidad", 190.0),
+                radio_de_enganche=f("radio_de_enganche", 14.0),
+                solo_de_bajada=cls._bool_de(
+                    props.get("solo_de_bajada"), por_defecto=True),
+            )]
 
         else:  # pragma: no cover - `_TIPOS_DE_COMPONENTE` y esto van juntos
             return

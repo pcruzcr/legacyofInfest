@@ -54,6 +54,11 @@ _PLAYER_SPRITE_MAP: dict[str, tuple[str, int]] = {
     "THROW": ("player_short_attack.png", 4),
     "SLIDE": ("player_crouch.png", 4),
     "SWIMMING": ("player_jump.png", 4),
+    # F5.14 — lianas y tirolesas. Reutilizan la hoja de salto: el jugador va
+    # colgado, y hasta que haya arte propio es mejor un sprite coherente que
+    # uno inventado.
+    "CLIMBING": ("player_jump.png", 2),
+    "ZIPLINE": ("player_jump.png", 2),
     "ULTIMATE": ("player_long_attack.png", 10),
     "AERIAL_ATTACK": ("player_short_attack.png", 6),
     "AERIAL_SLAM": ("player_short_attack.png", 6),
@@ -82,6 +87,17 @@ _PLAYER_ANIM_FPS: dict[str, float] = {
     "THROW": 16.0,
     "SLIDE": 14.0,
     "SWIMMING": 10.0,
+    "CLIMBING": 6.0,
+    "ZIPLINE": 8.0,
+    # AUD-109 — `LEDGE_GRAB` tenía hoja de sprites y **no** tenía velocidad, así
+    # que caía al valor por defecto de 10 fps. No rompía nada, y por eso llevaba
+    # ahí desde siempre: agarrarse a un borde con la misma cadencia que correr
+    # se ve nervioso, y nadie lo relaciona con una tabla incompleta.
+    #
+    # Lo encontró la prueba que sustituyó a `assert len(PlayerState) == 24`.
+    # Aquélla contaba estados; ésta comprueba que todos se puedan dibujar, y
+    # encontró el hueco en la primera ejecución.
+    "LEDGE_GRAB": 4.0,
     "ULTIMATE": 16.0,
     "AERIAL_ATTACK": 18.0,
     "AERIAL_SLAM": 16.0,
@@ -111,6 +127,8 @@ class PlayerState(str, Enum):
     THROW = "THROW"
     SLIDE = "SLIDE"
     SWIMMING = "SWIMMING"
+    CLIMBING = "CLIMBING"
+    ZIPLINE = "ZIPLINE"
     ULTIMATE = "ULTIMATE"
     AERIAL_ATTACK = "AERIAL_ATTACK"
     AERIAL_SLAM = "AERIAL_SLAM"

@@ -964,6 +964,37 @@ class StageScene(BaseScene):
         if self._player.current_health <= 0 and not self._game_over:
             self._kill_player()
 
+    # ── F5.14 — lianas y tirolesas ─────────────────────────────
+    def _actualizar_agarres(self, player, im) -> None:
+        """Agarrarse a una liana o engancharse a una tirolesa.
+
+        Se hace aquí y no en un sistema ECS por la misma razón que el nado:
+        quien decide en qué estado está el jugador es su máquina de estados, y
+        empujarle un cambio desde un sistema sería el desorden que la fase 5
+        quiso evitar. El sistema **informa**; la escena **pregunta**.
+
+        Con el botón de agarrar y no automáticamente: una liana que te atrapa
+        al pasar corriendo por delante convierte un adorno en una trampa, y es
+        el fallo que más se repite en los juegos que las tienen.
+        """
+        from src.framework.entities.states import TirolesaState, TrepandoState
+
+        if player is None or im is None:
+            return
+        actual = getattr(player, "_state_instance", None)
+        if isinstance(actual, (TrepandoState, TirolesaState)):
+            return
+        if not im.is_action_just_pressed(Action.GRAB):
+            return
+
+        cable = ecs_systems.tirolesa_alcanzable(self._mundo, player.rect)
+        if cable is not None:
+            player._change_state_instance(TirolesaState(cable))
+            return
+        liana = ecs_systems.liana_alcanzable(self._mundo, player.rect)
+        if liana is not None:
+            player._change_state_instance(TrepandoState(liana))
+
     # ── F5 — el mundo ECS del escenario ────────────────────────
     def _poblar_mundo_ecs(self) -> None:
         """Vuelca al mundo los componentes del TMX, el jugador y los enemigos.
@@ -1092,6 +1123,7 @@ class StageScene(BaseScene):
 
             player.update(dt, solidos, im, one_way_rects=stage.one_way_rects)
             self._nado.update(dt, player, self._mundo, self.context.event_bus)
+            self._actualizar_agarres(player, im)
             self._interactables.update(
                 dt, player.rect,
                 usar=bool(im and im.is_action_just_pressed(Action.GRAB)),
