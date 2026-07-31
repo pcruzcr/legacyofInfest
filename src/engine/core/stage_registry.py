@@ -46,10 +46,14 @@ _STAGE_MODULE_MAP: dict[str, str] = {
     "stage1_2": "src.stages.stage1_2_la_soda.stage1_2_la_soda",
     "stage1_3": "src.stages.stage1_3_las_aulas.stage1_3_las_aulas",
     "stage2_1": "src.stages.stage2_1_oficinas.stage2_1_oficinas",
-    "stage2_2": "src.stages.hall.hall",
     "stage2_3": "src.stages.lobby_datacenter.lobby_datacenter",
     "stage2_4_boss_rey": "src.stages.boss_rey.boss_rey_scene",
     "stage3_1": "src.stages.stage3_1_la_entrada_de_piedra.stage3_1_la_entrada_de_piedra",
+    # `hall` estuvo mapeado a `stage2_2` por error mío al integrar. Su propio
+    # código lo desmentía desde el principio: `ZONE = 3` y
+    # `STAGE_NAME = "3-2  EL HALL"`. Ocupaba la ranura de otro compañero y se
+    # jugaba en la zona equivocada. Va donde él dijo que iba.
+    "stage3_2": "src.stages.hall.hall",
     "stage3_3": "src.stages.stage3_3_el_patio.stage3_3_el_patio",
     "stage4_2_boss_paburu": "src.stages.boss_paburu.boss_paburu_scene",
 }

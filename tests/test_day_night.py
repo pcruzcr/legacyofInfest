@@ -233,12 +233,19 @@ class TestElCicloLlegaALaPantalla:
 
         assert arena._reloj.congelado, "el mapa no pidió ciclo y el reloj corre"
         antes = arena._lighting.ambient_brightness
+        # La hora de partida es del autor del mapa, no de esta prueba. Antes se
+        # exigía «19:00», que era la que había escrito yo en la arena de
+        # referencia; al sustituirla por la entrega del estudiante —que no
+        # declara `start_hour` y se queda en el mediodía por defecto— la prueba
+        # se puso roja sin que el reloj hubiera cambiado de conducta. Lo que
+        # hay que preservar es que **no se mueva**, no cuál sea.
+        hora_inicial = arena._reloj.etiqueta()
         lienzo = pygame.Surface((800, 600))
         for _ in range(300):
             arena.update(1 / 60)
             arena.draw(lienzo)
         assert arena._lighting.ambient_brightness == pytest.approx(antes)
-        assert arena._reloj.etiqueta() == "19:00", (
+        assert arena._reloj.etiqueta() == hora_inicial, (
             "la hora fija de la arena se movió"
         )
 

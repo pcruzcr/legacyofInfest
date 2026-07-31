@@ -50,7 +50,9 @@ SUBTITLE_FILE = ROOT / "src" / "engine" / "ui" / "subtitle_overlay.py"
 AWAITING_THEIR_BOSS = {
     "SFX_BOSSES_GAVILAN_DIVE",
     "SFX_BOSSES_GAVILAN_MASK_BEAM",
-    "SFX_BOSSES_PABURU_EYE_BEAM",
+    # `SFX_BOSSES_PABURU_EYE_BEAM` estaba aquí y ya no: la entrega de Paburu lo
+    # emite (`boss_paburu.py`). La lista encogió, que es lo que se dijo que
+    # pasaría. `SFX_BOSSES_PABURU_WAVE` sigue esperando a su fase.
     "SFX_BOSSES_PABURU_WAVE",
     "SFX_BOSSES_REY_SPIT",
     "SFX_BOSSES_REY_SPLIT",
@@ -66,7 +68,8 @@ AWAITING_THEIR_FEATURE = {
     "SFX_PLAYER_CROUCH",       # agacharse no emite nada todavía
     "SFX_PLAYER_HEAL",         # no hay curación en el juego actual
     "SFX_ENVIRONMENT_ONE_WAY_PLATFORM",  # atravesar plataforma no avisa
-    "SFX_ENVIRONMENT_SCREEN_SHAKE",      # la sacudida es visual, sin sonido
+    # `SFX_ENVIRONMENT_SCREEN_SHAKE` decía «la sacudida es visual, sin sonido».
+    # Dejó de ser cierto: el pisotón de Paburu lo emite. Fuera de la lista.
     "SFX_ENEMIES_PROJECTILE_HIT_WALL",   # los proyectiles no colisionan con muros
 }
 
@@ -268,6 +271,23 @@ class TestTheFightMakesNoise:
 
         boss = next(e for e in scene._stage_data.entity_list
                     if isinstance(e, BossBase))
+
+        # Hay que **entrar en la arena**, no mirarla desde fuera.
+        #
+        # Esta prueba se quedó en dos sonidos al sustituir el jefe de
+        # referencia por la entrega del estudiante, y no era un fallo suyo: su
+        # Venado sólo pelea en su terreno sagrado —se activa cuando el jugador
+        # cruza la boca de la arena— y está escrito así a propósito en su
+        # código. El jugador aparecía al principio del mapa y no se movía, así
+        # que el jefe recibía golpes de lejos y no contestaba nunca.
+        #
+        # Un combate en el que el jugador no se acerca no es un combate. La
+        # prueba decía «quince segundos de combate real» y estaba midiendo
+        # quince segundos de acoso a distancia.
+        if getattr(scene, "_player", None) is not None:
+            scene._player.rect.centerx = boss.rect.centerx + 60
+            scene._player.position.x = float(scene._player.rect.x)
+
         for frame in range(900):
             if frame % 60 == 0:
                 boss.apply_hit(0.5, (boss.rect.centerx + 40, boss.rect.centery))

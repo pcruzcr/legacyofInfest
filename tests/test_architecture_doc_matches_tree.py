@@ -45,6 +45,20 @@ DOC = RAIZ / "docs" / "03_ARCHITECTURE.md"
 #: se entienden mejor como «el paquete de estados» que como doce renglones.
 RESUMIDOS_EN_EL_ARBOL = {
     "src/framework/entities/states",
+    # `src/stages/` es de los estudiantes, no del motor.
+    #
+    # El árbol de 03_ARCHITECTURE.md describe la arquitectura del **motor**:
+    # qué capa vive dónde y quién puede importar a quién. Cada entrega trae su
+    # propio README con su estructura, y son catorce paquetes que cambian cada
+    # semestre. Enumerarlos aquí obligaría a editar el documento de
+    # arquitectura cada vez que un alumno añade un módulo, y a la tercera vez
+    # nadie lo haría: el documento diría una cosa y el árbol otra, que es
+    # exactamente lo que esta prueba existe para impedir.
+    #
+    # Lo que sí sigue vigilado para ellos es la regla de capas
+    # (`test_layering.py::test_L3_los_escenarios_estan_aislados`), que es la
+    # que de verdad protege la arquitectura.
+    "src/stages",
 }
 
 

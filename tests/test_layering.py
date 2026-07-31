@@ -54,8 +54,13 @@ def _modulos_importados(fichero: pathlib.Path) -> set[str]:
     dentro de funciones para romper ciclos, y un `grep` de líneas que empiezan
     por `import` se los saltaría precisamente donde más interesan.
     """
+    # `utf-8-sig` y no `utf-8`: los editores de Windows escriben una marca BOM
+    # al principio del fichero, y `ast.parse` la rechaza con «invalid
+    # non-printable character U+FEFF». Una entrega del curso llegó así y tumbó
+    # esta prueba, el validador de TMX y el calificador de jefes a la vez. El
+    # fichero era correcto; lo que no toleraba la marca eran las herramientas.
     try:
-        arbol = ast.parse(fichero.read_text(encoding="utf-8"))
+        arbol = ast.parse(fichero.read_text(encoding="utf-8-sig"))
     except SyntaxError as e:  # pragma: no cover - sería un fallo de sintaxis real
         pytest.fail(f"{fichero} no se puede analizar: {e}")
 

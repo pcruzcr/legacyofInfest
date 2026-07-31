@@ -348,15 +348,43 @@ class TestTheBossFightIsPlayable:
         assert boss.rect.topleft != start, "el jefe es una estatua"
 
     def test_the_boss_attacks(self, app, surface, boss_scene) -> None:
-        """Un jefe que no ataca no es un combate, es un saco de golpes."""
-        scene, boss = boss_scene
-        fired: list[str] = []
-        original = boss.on_attack_fired
-        boss.on_attack_fired = lambda name: (fired.append(name), original(name))[1]
+        """Un jefe que no ataca no es un combate, es un saco de golpes.
 
-        _run(app, scene, surface, 900)  # 15 segundos
-        assert fired, "el jefe no lanzó ni un ataque en 15 s"
-        assert len(set(fired)) >= 2, f"sólo usó un ataque: {set(fired)}"
+        AUD-107 — dos cosas cambiaron al sustituir el jefe de referencia por la
+        entrega del estudiante, y ninguna era un fallo suyo:
+
+        1. Esta prueba espiaba `on_attack_fired`, el gancho del planificador
+           del framework. Su Venado no lo usa: declara los patrones en
+           `BossPhase` y los despacha él. La prueba medía **cómo** ataca en vez
+           de **si** ataca, y daba cero sobre un jefe que ataca de sobra.
+        2. Su Venado sólo pelea en su terreno sagrado. El jugador aparece al
+           principio del mapa y aquí nadie lo movía, así que el jefe esperaba
+           quince segundos, correctamente.
+
+        Ahora se entra en la arena y se observan efectos.
+        """
+        from src.stages.boss_venado.boss_venado import ARENA_CX
+
+        scene, boss = boss_scene
+        if getattr(scene, "_player", None) is not None:
+            scene._player.rect.centerx = int(ARENA_CX)
+            scene._player.position.x = float(scene._player.rect.x)
+
+        vistos: set[str] = set()
+        for _ in range(900):  # 15 segundos
+            app.scene_manager.update(DT)
+            app.scene_manager.current.draw(surface)
+            if boss._telegraph:
+                vistos.add(boss._telegraph)
+            if boss._stomp_rect is not None:
+                vistos.add("STOMP_ACTIVO")
+            if boss._charge_active:
+                vistos.add("CHARGE_ACTIVO")
+            for p in boss._projectiles:
+                vistos.add(f"PROYECTIL_{p['type']}")
+
+        assert vistos, "el jefe no lanzó ni un ataque en 15 s"
+        assert len(vistos) >= 2, f"sólo usó un ataque: {sorted(vistos)}"
 
     def test_the_boss_stays_inside_the_arena(self, app, surface, boss_scene) -> None:
         """Una embestida sin límite lo sacaba del mapa (AUD-061).
@@ -414,17 +442,32 @@ class TestTheBossFightIsPlayable:
 
         La mitad del escenario quedaba decorativa, y el jugador podía quedarse
         en la otra mitad sin que nada le obligara a moverse.
+
+        AUD-107 — se medía contra el **mapa entero**, y eso dejó de tener
+        sentido. La arena de referencia era un rectángulo de 640 px y el mapa
+        no era otra cosa. La entrega que la sustituye es un nivel largo con un
+        corredor de aproximación y la arena al final (2480 → 3264): pedirle al
+        jefe que recorra el 40 % del mapa sería pedirle que salga de su arena.
+
+        Lo que hay que comprobar es que no se quede en una esquina de **su
+        arena**, que es lo que la prueba quería decir desde el principio.
         """
+        from src.stages.boss_venado.boss_venado import ARENA_X0, ARENA_X1
+
         scene, boss = boss_scene
-        width, _ = scene._stage_data.map_pixel_size
+        ancho_arena = ARENA_X1 - ARENA_X0
+        if getattr(scene, "_player", None) is not None:
+            scene._player.rect.centerx = int((ARENA_X0 + ARENA_X1) / 2)
+            scene._player.position.x = float(scene._player.rect.x)
+
         seen = []
         for _ in range(1200):
             app.scene_manager.update(DT)
             app.scene_manager.current.draw(surface)
             seen.append(boss.rect.centerx)
         used = max(seen) - min(seen)
-        assert used > width * 0.4, (
-            f"el jefe sólo recorrió {used}px de un mapa de {width}px"
+        assert used > ancho_arena * 0.25, (
+            f"el jefe sólo recorrió {used}px de una arena de {ancho_arena:.0f}px"
         )
 
     def test_defeating_the_boss_completes_the_stage(

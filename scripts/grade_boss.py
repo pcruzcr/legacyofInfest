@@ -44,6 +44,28 @@ RUBRIC: dict[str, int] = {
 }
 
 
+def _define_un_jefe(fichero: Path) -> bool:
+    """¿Este `.py` declara una subclase de `BossBase`?
+
+    Usa **la misma regla** que la categoría `inherits_bossbase` de la rúbrica:
+    una clase de primer nivel con `BossBase` entre sus bases. Si divergieran,
+    el filtro dejaría pasar ficheros que después sacan 0, o descartaría jefes
+    que la rúbrica sí reconoce, y ninguna de las dos cosas se notaría hasta que
+    a alguien le saliera una nota rara.
+    """
+    try:
+        arbol = ast.parse(fichero.read_text(encoding="utf-8-sig", errors="replace"))
+    except (OSError, SyntaxError):
+        # Un fichero que ni siquiera compila sí interesa calificarlo: el
+        # informe dirá que no se pudo leer, que es información útil.
+        return True
+    return any(
+        isinstance(n, ast.ClassDef)
+        and any(isinstance(b, ast.Name) and b.id == "BossBase" for b in n.bases)
+        for n in ast.iter_child_nodes(arbol)
+    )
+
+
 def _llamadas_a(tree: ast.AST, nombre: str) -> list[ast.Call]:
     """Todas las llamadas a una función o método con ese nombre."""
     encontradas = []
@@ -105,7 +127,7 @@ def grade_boss(path: Path) -> dict[str, Any]:
         result["errors"].append(f"Not a .py file (got {path.suffix})")
 
     try:
-        with open(path, encoding="utf-8") as f:
+        with open(path, encoding="utf-8-sig") as f:
             source = f.read()
     except Exception as e:
         result["errors"].append(f"Cannot read file: {e}")
@@ -366,6 +388,34 @@ def main() -> int:
         and "__pycache__" not in f.parts
         and f.name != "boss_base.py"
     ]
+
+    # AUD-107 — al recorrer un directorio, sólo son candidatos los ficheros que
+    # **definen un jefe**.
+    #
+    # AUD-104 quitó `__init__.py` y `boss_base.py`, y con eso bastaba mientras
+    # se calificaban plantillas. Sobre las entregas reales no basta ni de lejos:
+    # `grade_boss.py src/stages/boss_paburu` calificaba los siete módulos del
+    # paquete —la escena, la arena, los sprites, la introducción, los
+    # guardianes— y le ponía 0/100 a cada uno por «no hereda de BossBase».
+    # El jefe sacaba buena nota y la media impresa era **14,3 %**.
+    #
+    # Peor aún con boss_venado, que trae utilidades y pruebas: catorce ficheros
+    # calificados, media 7,1 %, cuando su jefe saca 100. Un profesor que mire
+    # la última línea suspende a quien organizó bien su código, que es
+    # justamente lo que el curso pide.
+    #
+    # Un fichero sin subclase de `BossBase` no es un jefe mal hecho: no es un
+    # jefe. Se excluye en vez de puntuarlo. Nombrar un fichero suelto sigue
+    # calificándolo tal cual, para poder diagnosticar «¿por qué no lo detecta?».
+    if any(Path(p).is_dir() for p in args.paths) or args.dir:
+        candidatos = [f for f in py_files if _define_un_jefe(f)]
+        if not candidatos:
+            print("No se encontró ninguna clase que herede de BossBase en las "
+                  "rutas indicadas.")
+            print("Si esperabas que la hubiera, revisa que la clase declare "
+                  "`class MiJefe(BossBase)`.")
+            return 1
+        py_files = candidatos
 
     if not py_files:
         print("No hay ficheros de jefe que calificar "

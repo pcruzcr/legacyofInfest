@@ -207,17 +207,42 @@ class TestElEscenarioConfiguraLaAtmosferaDesdeElTmx:
                      if (o.get("type") or o.get("class")) == "Light"]
             assert luces, f"{mapa} no coloca ningún foco"
 
-    def test_la_arena_del_jefe_tiene_tormenta(self):
-        import xml.etree.ElementTree as ET
-        from pathlib import Path
+    def test_el_clima_declarado_en_el_tmx_llega_al_sistema_de_clima(self):
+        """La propiedad `climate` del mapa manda sobre la estación.
 
-        raiz = ET.parse(
-            Path(__file__).resolve().parent.parent
-            / "assets" / "maps" / "boss_venado" / "boss_venado.tmx").getroot()
-        props = {p.get("name"): p.get("value")
-                 for p in raiz.findall("./properties/property")}
-        assert props.get("climate") == "storm", (
-            "la escena más dramática del juego no usa el sistema de clima"
+        Esta prueba **exigía antes que `boss_venado.tmx` declarase
+        `climate = storm`**, porque ese mapa era del profesor y su tormenta era
+        la única prueba de que la propiedad se leía. Al sustituir la arena por
+        la entrega de un estudiante —que no declara clima— la prueba se puso en
+        rojo sin que nada del motor hubiera cambiado.
+
+        Era una prueba mal apuntada: medía el **contenido** de un mapa
+        concreto para demostrar algo del **motor**. Cualquier profesor que
+        cambie el contenido del curso la rompe, y la única salida sería editarle
+        el mapa a un alumno para que una prueba pase, que es exactamente al
+        revés.
+
+        Ahora se comprueba la regla directamente, sin depender del mapa de
+        nadie: si el TMX declara un clima, ése es el que se usa.
+        """
+        from src.framework.scenes.stage_scene import StageScene
+        from src.framework.stage.seasons import estacion
+
+        class DatosFalsos:
+            climate = "storm"
+            season = "autumn"
+
+        escena = StageScene.__new__(StageScene)
+        escena._stage_data = DatosFalsos()
+        escena._estacion = estacion("autumn")
+        assert escena._clima_efectivo() == "storm", (
+            "el clima escrito en el mapa no llega al sistema de clima"
+        )
+
+        DatosFalsos.climate = ""
+        assert escena._clima_efectivo() == escena._estacion.clima, (
+            "sin `climate` en el mapa manda la estación, no una tormenta "
+            "aparecida de la nada"
         )
 
 
@@ -276,14 +301,35 @@ class TestLaAtmosferaLlegaAlJuego:
             "de ambiente en pantalla"
         )
 
-    def test_la_arena_del_jefe_tiene_ambiente_y_tormenta_vivos(self, contexto):
-        from src.stages.boss_venado.boss_venado_scene import BossVenadoScene
+    def test_un_escenario_con_tormenta_acaba_con_gotas_en_pantalla(self, contexto):
+        """El camino completo: clima del escenario → `WeatherSystem` → gotas.
 
-        escena = BossVenadoScene(contexto)
+        Antes esta prueba se apoyaba en que `boss_venado.tmx` declarase
+        `climate = storm`. Ese mapa pasó a ser la entrega de un estudiante, que
+        no declara clima, y la prueba se cayó sin que el motor hubiera
+        cambiado: medía contenido para demostrar comportamiento.
+
+        Ahora el clima se fuerza sobre un escenario real —el prólogo, que es
+        del curso— sobreescribiendo el único punto donde se decide. Se sigue
+        recorriendo `on_enter`, `update` y `draw` de verdad, que es lo que
+        detectaba el defecto original —`set_climate` existía y nadie la
+        llamaba—, pero ya no depende del mapa de nadie.
+        """
+        from src.stages.stage0.stage0 import Stage0
+
+        class PrologoConTormenta(Stage0):
+            def _clima_efectivo(self) -> str:
+                return "storm"
+
+        escena = PrologoConTormenta(contexto)
         self._jugar(escena)
-        assert escena._weather.climate == "storm"
+        assert escena._weather.climate == "storm", (
+            "la escena no le pasó su clima al sistema: `set_climate` no se llama"
+        )
         assert escena._weather._emitter.count > 5, "la tormenta no tiene gotas"
-        assert escena._ambient_particles.count > 3, "la arena no tiene ascuas"
+        assert escena._ambient_particles.count > 3, (
+            "el escenario no tiene partículas de ambiente"
+        )
 
     def test_stage0_queda_iluminado_con_los_focos_del_mapa(self, contexto):
         from src.stages.stage0.stage0 import Stage0

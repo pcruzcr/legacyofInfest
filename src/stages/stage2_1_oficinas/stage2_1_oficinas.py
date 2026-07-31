@@ -1,4 +1,4 @@
-﻿"""
+"""
 Module: stage2_1_oficinas
 System: src.stages.stage2_1_oficinas
 Description: Zona 2 (Distrito Central) - Oficinas.
