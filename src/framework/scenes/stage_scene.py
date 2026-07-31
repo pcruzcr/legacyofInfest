@@ -29,6 +29,7 @@ from src.framework.stage.camera import Camera
 from src.framework.stage.collision_system import CollisionSystem
 from src.framework.stage.drawing_system import DrawingSystem
 from src.framework.stage.hazard_system import HazardSystem
+from src.framework.stage.interactable_system import InteractableSystem
 from src.framework.stage.progression_system import ProgressionSystem
 from src.framework.stage.speedrun_mode import SpeedrunTimer
 from src.framework.stage.stage_loader import StageLoader
@@ -87,6 +88,8 @@ class StageScene(BaseScene):
         # enemigo y fotograma costaba 17 ms — el presupuesto completo.
         self._squad = SquadBrain()
         self._hazards = HazardSystem(context)
+        # F4.1 — recogibles, cerraduras, cofres y disparadores.
+        self._interactables = InteractableSystem(bus=context.event_bus)
         self._progression = ProgressionSystem(context)
         self._drawing = DrawingSystem()
         self._particle_system = ParticleSystem()
@@ -215,6 +218,15 @@ class StageScene(BaseScene):
         self._collision.reset()
         self._squad.reset()
         self._hazards.reset()
+        # F4.1: el sistema se reconstruye por escenario. Reutilizar el anterior
+        # arrastraría el llavero y las puertas ya abiertas al siguiente nivel.
+        self._interactables = InteractableSystem(
+            recogibles=self._stage_data.recogibles,
+            cerraduras=self._stage_data.cerraduras,
+            cofres=self._stage_data.cofres,
+            disparadores=self._stage_data.disparadores,
+            bus=self.context.event_bus,
+        )
         self._progression.reset()
 
         if self._stage_data.bgm_track:
@@ -916,7 +928,18 @@ class StageScene(BaseScene):
         # context has no clock (headless tests).
         unscaled_dt = getattr(clock, "unscaled_dt", dt) if clock is not None else dt
         try:
-            player.update(dt, stage.collision_rects, im, one_way_rects=stage.one_way_rects)
+            # F4.1 — una puerta cerrada bloquea el paso; al abrirse deja de
+            # hacerlo. Se suma aquí en vez de mutar `stage.collision_rects`,
+            # que es la lista que construye el cargador y leen varios sistemas:
+            # cambiarla para simular un estado es el atajo que después nadie
+            # sabe deshacer.
+            cerradas = self._interactables.rects_solidos()
+            solidos = stage.collision_rects + cerradas if cerradas else stage.collision_rects
+            player.update(dt, solidos, im, one_way_rects=stage.one_way_rects)
+            self._interactables.update(
+                dt, player.rect,
+                usar=bool(im and im.is_action_just_pressed(Action.GRAB)),
+            )
             if player.combo_active and player.combo_count > 0:
                 self._achievements.mark_air_assault(getattr(player, "_combo_air_hits", 0))
                 self._achievements.mark_combo_king(player.combo_count)
@@ -1256,6 +1279,7 @@ class StageScene(BaseScene):
             weather_system=self._weather,
             trail_system=self._trail_system,
             enemy_trail_system=self._enemy_trail_system,
+            interactables=self._interactables,
             tutorial_overlay=self._tutorial,
             learning_overlay=self._learning,
             dialogue_system=self._dialogue,
