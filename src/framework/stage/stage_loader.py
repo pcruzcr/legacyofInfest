@@ -155,8 +155,52 @@ _NUMERIC_PROPS: tuple[str, ...] = (
 
 class StageLoader:
     _entity_registry: dict[str, type[BaseEntity]] = {}
+    #: Escenarios cuyo paquete ya se intentó importar (AUD-106).
+    _escenarios_ya_importados: set[str] = set()
     # (resolved path, mtime_ns, size) -> parsed pytmx map. See _parse_tmx.
     _tmx_cache: dict[tuple[str, int, int], Any] = {}
+
+    @classmethod
+    def _registrar_tipos_del_escenario(cls, tmx_path: Path) -> bool:
+        """Importa el paquete del escenario para que registre sus entidades.
+
+        Devuelve `True` si importó algo nuevo. Convención:
+        ``assets/maps/<nombre>/<nombre>.tmx`` ↔ ``src/stages/<nombre>/``.
+
+        Se importa el paquete entero porque el framework no dice desde qué
+        fichero hay que registrar: sobre las entregas reales, unos lo hacen en
+        el módulo principal, otros en un módulo de entidades aparte, y otros
+        dentro de la escena. Sólo se hace **una vez por escenario** y sólo
+        cuando ya ha habido un tipo desconocido, así que no cuesta nada en el
+        camino normal.
+        """
+        import importlib
+        import pkgutil
+
+        nombre = tmx_path.parent.name
+        if nombre in cls._escenarios_ya_importados:
+            return False
+        cls._escenarios_ya_importados.add(nombre)
+
+        antes = len(cls._entity_registry)
+        raiz = f"src.stages.{nombre}"
+        try:
+            paquete = importlib.import_module(raiz)
+        except ImportError:
+            return False
+        except Exception:
+            logger.warning("stage_loader: '%s' no se pudo importar", raiz, exc_info=True)
+            return False
+
+        for info in pkgutil.walk_packages(getattr(paquete, "__path__", []), f"{raiz}."):
+            if any(p in info.name for p in (".tools", ".tests", ".herramientas")):
+                continue
+            try:
+                importlib.import_module(info.name)
+            except Exception:
+                logger.debug("stage_loader: '%s' no se pudo importar", info.name, exc_info=True)
+
+        return len(cls._entity_registry) > antes
 
     @classmethod
     def register_entity(cls, type_name: str, entity_class: type[BaseEntity]) -> None:
@@ -245,6 +289,37 @@ class StageLoader:
         # «PlayerSpwan» mal escrito produce las dos cosas a la vez, y decir
         # «falta el PlayerSpawn» cuando está ahí, mal escrito, manda a buscar
         # en la dirección contraria.
+        if not report.ok:
+            # AUD-106: antes de rendirse, dar al escenario la oportunidad de
+            # registrar sus propios tipos.
+            #
+            # El curso pide que quien inventa un enemigo o un jefe lo registre
+            # desde su paquete. Al jugar funciona, porque la escena importa su
+            # módulo antes de cargar el mapa. Pero cargar el TMX **suelto** —el
+            # validador, el previsualizador, el calificador, esta suite— fallaba
+            # con «type='BossPaburu' no existe», y entonces la herramienta del
+            # profesor contradecía al juego.
+            #
+            # Importar el paquete aquí hace que las cuatro rutas coincidan, que
+            # es lo único que hace fiable a un validador.
+            if cls._registrar_tipos_del_escenario(tmx_path):
+                # Se rehace la pasada desde cero: la primera dejó a medias las
+                # listas del escenario, y duplicar entidades sería peor que el
+                # fallo que se está intentando arreglar.
+                report = TmxReport(tmx_path=str(tmx_path))
+                stage.entity_list.clear()
+                stage.checkpoints.clear()
+                stage.message_triggers.clear()
+                stage.hazard_zones.clear()
+                stage.death_pits.clear()
+                stage.camera_locks.clear()
+                stage.lights.clear()
+                stage.next_trigger = None
+                waypoints_by_owner.clear()
+                spawn_found = cls._process_objects(
+                    tmx_data, stage, waypoints_by_owner, report,
+                )
+
         if not report.ok:
             raise FrameworkUsageError(
                 report.format(known_object_types(list(cls._entity_registry))),

@@ -31,6 +31,27 @@ STAGE_ORDER: list[str] = [
 # Configurable in a JSON config file for extensibility (see ARC-004 in 33_SCOPE_ADJUSTMENT.md).
 _STAGE_MODULE_MAP: dict[str, str] = {
     "stage1_4_boss_venado": "src.stages.boss_venado.boss_venado_scene",
+    # AUD-106 — las entregas de la Evaluación Práctica I.
+    #
+    # `STAGE_ORDER` usa los identificadores canónicos del documento de alcance
+    # (`stage1_2`, `stage2_1`…). Los estudiantes nombraron sus carpetas con el
+    # nombre del sitio —«la soda», «las aulas», «oficinas»—, que es más legible
+    # y es lo que la guía les invita a hacer. Sin este mapa, `discover_stages`
+    # encontraba **4 de 13** y los otros nueve no aparecían en el juego pese a
+    # estar instalados y validados.
+    #
+    # Los nombres se dejan como los entregó cada estudiante: renombrarles la
+    # carpeta para que encaje en una convención interna es trabajo del motor,
+    # no suyo.
+    "stage1_2": "src.stages.stage1_2_la_soda.stage1_2_la_soda",
+    "stage1_3": "src.stages.stage1_3_las_aulas.stage1_3_las_aulas",
+    "stage2_1": "src.stages.stage2_1_oficinas.stage2_1_oficinas",
+    "stage2_2": "src.stages.hall.hall",
+    "stage2_3": "src.stages.lobby_datacenter.lobby_datacenter",
+    "stage2_4_boss_rey": "src.stages.boss_rey.boss_rey_scene",
+    "stage3_1": "src.stages.stage3_1_la_entrada_de_piedra.stage3_1_la_entrada_de_piedra",
+    "stage3_3": "src.stages.stage3_3_el_patio.stage3_3_el_patio",
+    "stage4_2_boss_paburu": "src.stages.boss_paburu.boss_paburu_scene",
 }
 
 

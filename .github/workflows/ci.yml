@@ -42,8 +42,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
+      # AUD-106: se lintea lo que mantiene el equipo docente. Las entregas de
+      # los estudiantes viven en src/stages/ y traen 162 avisos de estilo; no
+      # se corrigen, porque son su codigo y su nota, pero tampoco pueden
+      # tumbar el CI del motor: un equipo que se acostumbra a un CI en rojo
+      # deja de mirarlo, y entonces no protege nada.
+      #
+      # Para revisarlos al calificar:  ruff check src/stages/
       - name: Lint with ruff
-        run: ruff check src/ tests/ scripts/ tools/ --output-format=github
+        run: |
+          ruff check src/engine src/framework src/stages/stage0 \
+            tests/ scripts/ tools/ --output-format=github
 
       - name: Verify dependency manifests agree
         run: python scripts/check_dependency_sync.py
