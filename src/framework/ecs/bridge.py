@@ -40,7 +40,7 @@ from __future__ import annotations
 
 import pygame
 
-from src.framework.ecs.components import Salud, Transform, Velocidad
+from src.framework.ecs.components import Transform, Velocidad
 from src.framework.ecs.world import EntityId, World
 
 
@@ -122,8 +122,7 @@ class ComponentesDeEntidad:
     def poner_componente(self, componente: object) -> None:
         self._mundo.poner(self._entidad, componente)  # type: ignore[attr-defined]
 
-    # -- las propiedades que sostienen el código existente ----------
-    # -- lecturas rápidas, escrituras vigiladas -------------------
+    # -- lecturas rápidas: los atributos son del dueño ------------
     #
     # `rect` y `position` son **atributos normales**, no propiedades, y apuntan
     # a los mismos objetos que guarda el `Transform`. Mutarlos en el sitio
@@ -137,9 +136,8 @@ class ComponentesDeEntidad:
     #
     # Lo único que las propiedades protegían era la **reasignación**
     # —`self.rect = otro`—, que en las 26 clases entregadas ocurre 14 veces
-    # frente a cientos de lecturas. Así que se paga donde es barato: las
-    # lecturas van directas y `__setattr__` vigila las dos escrituras que
-    # importan.
+    # frente a cientos de lecturas. Y eso lo resuelve la vista sin coste: el
+    # componente no guarda copia, así que no hay nada que pueda quedarse viejo.
 
     @property
     def _transform(self) -> Transform:
@@ -176,23 +174,13 @@ class ComponentesDeEntidad:
         self.velocity.update(valor)
 
 
-def sincronizar_salud(
-    entidad_ecs: EntityId, mundo: World, actual: float, maxima: float,
-) -> None:
-    """Refleja la vida de un `EnemyBase` en un componente `Salud`.
+def sincronizar_salud(*_args: object, **_kwargs: object) -> None:
+    """**Retirada en F5.12.** Ya no hace falta sincronizar nada.
 
-    Los enemigos llevan su vida en atributos propios desde antes del ECS, y
-    varias entregas la leen y la escriben directamente. En vez de moverla —lo
-    que rompería su código— se refleja aquí, para que los sistemas puedan
-    consultarla sin conocer la jerarquía.
+    Existía para copiar `current_health` al componente `Salud` en cada golpe.
+    Ahora `Salud` es una *vista* sobre el dueño —igual que `Transform`—, así que
+    no hay dos copias que mantener a la par.
 
-    Duplicar un dato es una deuda declarada, no un descuido: el día que ninguna
-    entrega dependa de `current_health` esta función desaparece y `Salud` pasa a
-    ser la única verdad.
+    Se deja como función vacía y no se borra porque alguna entrega podría
+    llamarla; borrarla les rompería el código por una mejora interna nuestra.
     """
-    s = mundo.obtener(entidad_ecs, Salud)
-    if s is None:
-        mundo.poner(entidad_ecs, Salud(actual=actual, maxima=maxima))
-    else:
-        s.actual = actual
-        s.maxima = maxima

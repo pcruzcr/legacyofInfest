@@ -40,6 +40,7 @@ from src.framework.ecs.components import (
     Alerta,
     BloqueRitmico,
     ConoDeVision,
+    EsJugador,
     PlataformaHundible,
     PlataformaMovil,
     Salud,
@@ -306,7 +307,23 @@ def en_agua(mundo: World, rect: pygame.Rect) -> ZonaDeAgua | None:
 # ══════════════════════════════════════════════════════════════
 
 
-def sistema_conos_de_vision(mundo: World, dt: float, jugador: pygame.Rect | None) -> None:
+def rect_del_jugador(mundo: World) -> pygame.Rect | None:
+    """Dónde está el jugador, preguntándoselo al mundo.
+
+    F5.11 — antes esto era un parámetro. Pasarlo obligaba a que los sistemas de
+    sigilo tuvieran una firma distinta al resto, y con firma distinta no caben
+    en el `Planificador`: la escena tenía que llamar a los once sistemas a mano
+    y en el orden correcto. Buscarlo por su marca devuelve la uniformidad, y con
+    ella el orden vuelve a estar declarado en un solo sitio.
+    """
+    for entidad in mundo.con(EsJugador, Transform):
+        t = mundo.obtener(entidad, Transform)
+        if t is not None:
+            return t.rect
+    return None
+
+
+def sistema_conos_de_vision(mundo: World, dt: float) -> None:
     """¿Ve alguien al jugador?
 
     La detección es la misma álgebra que César Ubáu escribió para su cámara de
@@ -322,6 +339,7 @@ def sistema_conos_de_vision(mundo: World, dt: float, jugador: pygame.Rect | None
     ordena igual que comparar ángulos. Es la optimización clásica del cono de
     visión y merece explicarse en clase porque el atajo no es evidente.
     """
+    jugador = rect_del_jugador(mundo)
     if jugador is None:
         return
     import math
@@ -369,7 +387,7 @@ def sistema_alerta(mundo: World, dt: float) -> None:
         alerta.nivel = max(0.0, min(alerta.umbral_alerta * 1.5, alerta.nivel))
 
 
-def sistema_acosador(mundo: World, dt: float, jugador: pygame.Rect | None) -> None:
+def sistema_acosador(mundo: World, dt: float) -> None:
     """Persigue sin descanso, no se puede matar, y desaparece si lo pierdes.
 
     Lo tercero es lo que lo hace soportable. Un perseguidor que nunca se va
@@ -377,6 +395,7 @@ def sistema_acosador(mundo: World, dt: float, jugador: pygame.Rect | None) -> No
     produce la tensión de Nemesis, que es la de no saber cuándo. Y es más barato
     que simularlo fuera de pantalla.
     """
+    jugador = rect_del_jugador(mundo)
     if jugador is None:
         return
     objetivo = pygame.Vector2(jugador.center)

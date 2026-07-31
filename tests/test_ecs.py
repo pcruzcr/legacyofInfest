@@ -36,6 +36,7 @@ from src.framework.ecs import (
     ZonaLetalTemporizada,
 )
 from src.framework.ecs import systems as S
+from src.framework.ecs.components import EsJugador
 
 FRAME = 1.0 / 60.0
 
@@ -461,6 +462,17 @@ class TestAgua:
 # ══════════════════════════════════════════════════════════════
 
 
+def _poner_jugador(mundo: World, rect: pygame.Rect) -> int:
+    """El jugador es una entidad más del mundo, con su marca.
+
+    F5.11 — antes se pasaba por parámetro a los dos sistemas de sigilo, y esa
+    firma distinta impedía meterlos en el `Planificador`. Ahora lo buscan ellos.
+    """
+    return mundo.crear(
+        Transform(pygame.Vector2(rect.topleft), rect), EsJugador(),
+    )
+
+
 class TestSigilo:
     def _guardia(self, mundo: World, **kw) -> int:
         return mundo.crear(
@@ -472,41 +484,48 @@ class TestSigilo:
     def test_ve_al_jugador_delante_y_cerca(self):
         m = World()
         g = self._guardia(m)
-        S.sistema_conos_de_vision(m, FRAME, pygame.Rect(200, 100, 16, 16))
+        _poner_jugador(m, pygame.Rect(200, 100, 16, 16))
+        S.sistema_conos_de_vision(m, FRAME)
         assert m.obtener(g, ConoDeVision).ve_al_jugador
 
     def test_no_ve_al_que_tiene_detras(self):
         m = World()
         g = self._guardia(m)
-        S.sistema_conos_de_vision(m, FRAME, pygame.Rect(0, 100, 16, 16))
+        _poner_jugador(m, pygame.Rect(0, 100, 16, 16))
+        S.sistema_conos_de_vision(m, FRAME)
         assert not m.obtener(g, ConoDeVision).ve_al_jugador
 
     def test_no_ve_al_que_esta_lejos(self):
         m = World()
         g = self._guardia(m)
-        S.sistema_conos_de_vision(m, FRAME, pygame.Rect(9000, 100, 16, 16))
+        _poner_jugador(m, pygame.Rect(9000, 100, 16, 16))
+        S.sistema_conos_de_vision(m, FRAME)
         assert not m.obtener(g, ConoDeVision).ve_al_jugador
 
     def test_no_ve_al_que_esta_fuera_del_cono(self):
         """A 45° con un semiángulo de 30 no debería verlo."""
         m = World()
         g = self._guardia(m)
-        S.sistema_conos_de_vision(m, FRAME, pygame.Rect(180, 20, 16, 16))
+        _poner_jugador(m, pygame.Rect(180, 20, 16, 16))
+        S.sistema_conos_de_vision(m, FRAME)
         assert not m.obtener(g, ConoDeVision).ve_al_jugador
 
     def test_la_alerta_sube_viendo_y_baja_al_perderlo(self):
         m = World()
         g = self._guardia(m)
-        visto = pygame.Rect(200, 100, 16, 16)
+        jugador = _poner_jugador(m, pygame.Rect(200, 100, 16, 16))
         for _ in range(60):
-            S.sistema_conos_de_vision(m, FRAME, visto)
+            S.sistema_conos_de_vision(m, FRAME)
             S.sistema_alerta(m, FRAME)
         alta = m.obtener(g, Alerta).nivel
         assert m.obtener(g, Alerta).estado == "alerta"
 
-        escondido = pygame.Rect(0, 100, 16, 16)
+        # Se esconde: se mueve **la misma entidad**, no se crea otra. Dos
+        # jugadores en el mundo serían un estado imposible, y el sistema
+        # devolvería el primero que encontrara.
+        m.obtener(jugador, Transform).rect.topleft = (0, 100)
         for _ in range(30):
-            S.sistema_conos_de_vision(m, FRAME, escondido)
+            S.sistema_conos_de_vision(m, FRAME)
             S.sistema_alerta(m, FRAME)
         assert m.obtener(g, Alerta).nivel < alta
 
@@ -519,9 +538,9 @@ class TestSigilo:
         m = World()
         e = m.crear(Transform(pygame.Vector2(0, 100), pygame.Rect(0, 100, 16, 16)),
                     Acosador(velocidad=100.0), Salud(1.0, 1.0))
-        objetivo = pygame.Rect(300, 100, 16, 16)
+        _poner_jugador(m, pygame.Rect(300, 100, 16, 16))
         for _ in range(60):
-            S.sistema_acosador(m, FRAME, objetivo)
+            S.sistema_acosador(m, FRAME)
         assert m.obtener(e, Transform).posicion.x > 50.0
         assert m.obtener(e, Salud).invulnerable
 
@@ -530,8 +549,8 @@ class TestSigilo:
         e = m.crear(Transform(pygame.Vector2(0, 100), pygame.Rect(0, 100, 16, 16)),
                     Acosador(velocidad=100.0, distancia_retirada=100.0,
                              reaparicion=0.5))
-        lejos = pygame.Rect(5000, 100, 16, 16)
-        S.sistema_acosador(m, FRAME, lejos)
+        _poner_jugador(m, pygame.Rect(5000, 100, 16, 16))
+        S.sistema_acosador(m, FRAME)
         assert m.obtener(e, Acosador)._fuera > 0.0
 
 
@@ -616,6 +635,300 @@ class TestElCosteDelPuente:
             sistemas.rects_solidos(m)
         ms = (time.perf_counter() - t0) / 1000 * 1000
         assert ms < 0.05, f"un mundo vacío cuesta {ms:.4f} ms por fotograma"
+
+
+class TestElJugadorEsUnaEntidadDelMundo:
+    """F5.11 — la deuda que `_mundo_ecs_paso` dejaba declarada, saldada.
+
+    Aquella función llamaba a los once sistemas a mano porque los dos de sigilo
+    recibían el rectángulo del jugador por parámetro, y con una firma distinta
+    a `Sistema` no cabían en el `Planificador`.
+
+    Ahora el jugador entra al mundo con su marca `EsJugador`, los sistemas lo
+    buscan, y el orden vive en un solo sitio.
+    """
+
+    @pytest.fixture
+    def escena(self):
+        from src.engine.audio.audio_manager import AudioManager
+        from src.engine.core.event_bus import EventBus
+        from src.engine.core.game_context import GameContext
+        from src.engine.core.save_manager import SaveManager
+        from src.engine.input.input_manager import InputManager
+        from src.engine.scene.scene_manager import SceneManager
+        from src.framework.entities import entity_factory
+        from src.stages.stage0.stage0 import Stage0
+
+        entity_factory.ensure_registered()
+        ctx = GameContext(
+            input_manager=InputManager(), audio_manager=AudioManager(),
+            scene_manager=None, event_bus=EventBus(), clock=None,
+            save_manager=SaveManager(),
+        )
+        ctx.scene_manager = SceneManager(ctx)
+        sc = Stage0(ctx)
+        sc.awake()
+        sc.start()
+        sc.on_enter()
+        return sc
+
+    def test_el_jugador_esta_en_el_mundo_con_su_marca(self, escena):
+        assert escena._mundo.tiene(escena._player.entidad, EsJugador)
+        assert S.rect_del_jugador(escena._mundo) is escena._player.rect, (
+            "el mundo devuelve un rect que no es el del jugador: los sistemas "
+            "de sigilo estarían mirando a otro sitio"
+        )
+
+    def test_los_enemigos_tambien_entran_al_mundo(self, escena):
+        """Si no entran, el viento sopla para el jugador y no para ellos.
+
+        Era una rareza real de la primera versión: un nivel con viento tenía
+        viento para uno y calma para todos los demás.
+        """
+        from src.framework.entities.enemy_base import EnemyBase
+
+        enemigos = [
+            e for e in escena._stage_data.entity_list if isinstance(e, EnemyBase)
+        ]
+        assert enemigos, "el prólogo debería tener enemigos"
+        for e in enemigos:
+            assert escena._mundo.tiene(e.entidad, Transform), (
+                f"{type(e).__name__} no está en el mundo: las zonas de efecto "
+                f"lo ignorarían"
+            )
+            assert escena._mundo.tiene(e.entidad, Velocidad), (
+                f"{type(e).__name__} no tiene Velocidad: el viento no podría "
+                f"empujarlo"
+            )
+
+    def test_la_escena_usa_el_planificador_y_no_una_lista_a_mano(self, escena):
+        """La deuda decía: «esta función se sustituye por `ejecutar` y desaparece»."""
+        assert not hasattr(escena, "_mundo_ecs_paso"), (
+            "`_mundo_ecs_paso` sigue existiendo: la deuda no está saldada"
+        )
+        assert escena._planificador.nombres, "el planificador está vacío"
+
+    def test_todos_los_sistemas_estan_registrados(self, escena):
+        """Registrar el planificador y olvidar un sistema lo apagaría en silencio."""
+        esperados = {
+            "conos_de_vision", "alerta", "acosador", "viento", "corriente",
+            "plataformas_moviles", "bloques_ritmicos", "plataformas_hundibles",
+            "arrastre", "friccion", "zonas_letales",
+        }
+        faltan = esperados - set(escena._planificador.nombres)
+        assert not faltan, f"sistemas sin registrar: {sorted(faltan)}"
+
+    def test_el_arrastre_corre_despues_de_mover_las_plataformas(self, escena):
+        """Al revés, el pasajero queda hundido un fotograma y sale expulsado."""
+        orden = escena._planificador.nombres
+        # `nombres` respeta el orden de registro, no el de ejecución; se
+        # comprueba el de ejecución forzando la ordenación con una pasada.
+        escena._planificador.ejecutar(escena._mundo, 1.0 / 60.0)
+        orden = escena._planificador.nombres
+        assert orden.index("plataformas_moviles") < orden.index("arrastre")
+        assert orden.index("arrastre") < orden.index("friccion")
+
+    def test_el_planificador_mide_cada_sistema(self, escena):
+        """Cuando el fotograma se pase, hay que saber cuál fue sin adivinar."""
+        escena._planificador.ejecutar(escena._mundo, 1.0 / 60.0)
+        tiempos = dict(escena._planificador.tiempos())
+        assert len(tiempos) >= 11
+        assert all(v >= 0.0 for v in tiempos.values())
+
+
+class TestSaludEsUnaSolaVerdad:
+    """F5.12 — la segunda deuda de la fase 5, saldada al revés de lo previsto.
+
+    La deuda decía: *«el día que ninguna entrega dependa de `current_health`, el
+    componente pasa a ser la única verdad»*. Ese día no iba a llegar: hay **48
+    referencias** a `current_health` y `max_health` en el código de los
+    estudiantes, con escrituras incluidas.
+
+    Así que se resolvió al contrario: el componente es una **vista** sobre el
+    dueño. No hay dos copias porque no hay copia.
+    """
+
+    @pytest.fixture
+    def enemigo(self):
+        from src.framework.entities.enemy_walker import EnemyWalker
+        e = EnemyWalker(pygame.Vector2(0, 0))
+        m = World()
+        e.adoptar_en(m)
+        from src.framework.ecs.components import Salud as S_
+        m.poner(e.entidad, S_(duenio=e))
+        return e, m
+
+    def test_el_componente_ve_la_vida_del_enemigo(self, enemigo):
+        e, m = enemigo
+        assert m.obtener(e.entidad, Salud).actual == pytest.approx(e.current_health)
+
+    def test_bajar_la_vida_del_enemigo_se_ve_en_el_componente(self, enemigo):
+        """Sin paso de sincronización que alguien pueda olvidar."""
+        e, m = enemigo
+        e.current_health -= 3.0
+        assert m.obtener(e.entidad, Salud).actual == pytest.approx(e.current_health)
+
+    def test_escribir_en_el_componente_baja_la_vida_del_enemigo(self, enemigo):
+        """Es lo que hacen las zonas letales: escriben en `Salud`."""
+        e, m = enemigo
+        antes = e.current_health
+        m.obtener(e.entidad, Salud).actual = antes - 2.0
+        assert e.current_health == pytest.approx(antes - 2.0), (
+            "la zona letal escribió en el componente y la vida del enemigo no "
+            "bajó: vuelve a haber dos copias"
+        )
+
+    def test_una_zona_letal_mata_a_un_enemigo_de_verdad(self, enemigo):
+        """El camino completo, que es el que este proyecto falla siempre."""
+        e, m = enemigo
+        m.crear(ZonaLetalTemporizada(
+            pygame.Rect(e.rect.x - 50, e.rect.y - 50, 200, 200), dano=999.0,
+        ))
+        S.sistema_zonas_letales(m, FRAME)
+        assert e.current_health <= 0.0, (
+            "el enemigo estaba dentro de una zona letal y sigue con vida"
+        )
+
+    def test_los_fotogramas_de_invencibilidad_protegen_del_componente(self, enemigo):
+        """Un enemigo recién golpeado no debe morir por una zona en el mismo instante."""
+        e, m = enemigo
+        e._invincibility_timer = 1.0
+        assert m.obtener(e.entidad, Salud).invulnerable
+
+    def test_una_salud_sin_dueno_guarda_sus_propios_valores(self):
+        """Las entidades puramente ECS no tienen dueño y siguen funcionando."""
+        s = Salud(actual=5.0, maxima=10.0)
+        assert s.fraccion == pytest.approx(0.5)
+        s.actual = 2.5
+        assert s.actual == pytest.approx(2.5)
+
+
+class TestElEscenarioDeReferencia:
+    """F5.13 — la tercera deuda: las mecánicas no las usaba nadie.
+
+    Estaban en el motor, probadas, documentadas y en la guía del estudiante, y
+    **ninguna de las catorce entregas usaba una sola**. Es la misma forma que la
+    iluminación que no iluminaba y el nado inalcanzable, un paso más allá: el
+    camino existe, está abierto, y no hay nadie andándolo.
+
+    Estas pruebas vigilan que el escenario de referencia siga enseñando las
+    once, porque un mapa de ejemplo que pierde la mitad de sus ejemplos es peor
+    que no tenerlo: da la impresión de que el resto no existe.
+    """
+
+    @pytest.fixture(scope="class")
+    def escena(self):
+        from src.engine.audio.audio_manager import AudioManager
+        from src.engine.core.event_bus import EventBus
+        from src.engine.core.game_context import GameContext
+        from src.engine.core.save_manager import SaveManager
+        from src.engine.input.input_manager import InputManager
+        from src.engine.scene.scene_manager import SceneManager
+        from src.framework.entities import entity_factory
+        from src.stages.stage_mecanicas.stage_mecanicas import StageMecanicas
+
+        entity_factory.ensure_registered()
+        ctx = GameContext(
+            input_manager=InputManager(), audio_manager=AudioManager(),
+            scene_manager=None, event_bus=EventBus(), clock=None,
+            save_manager=SaveManager(),
+        )
+        ctx.scene_manager = SceneManager(ctx)
+        sc = StageMecanicas(ctx)
+        sc.awake()
+        sc.start()
+        sc.on_enter()
+        return sc
+
+    def test_las_once_mecanicas_llegan_al_mundo(self, escena):
+        """Que el TMX las declare no basta: tienen que existir como componentes."""
+        from src.framework.ecs.components import (
+            Acosador,
+            Alerta,
+            BloqueRitmico,
+            ConoDeVision,
+            PlataformaHundible,
+            PlataformaMovil,
+            ZonaDeAgua,
+            ZonaDeFriccion,
+            ZonaDeViento,
+            ZonaLetalTemporizada,
+        )
+
+        censo = escena._mundo.censo()
+        for componente in (
+            ZonaDeViento, ZonaDeFriccion, ZonaLetalTemporizada, ZonaDeAgua,
+            PlataformaMovil, BloqueRitmico, PlataformaHundible,
+            ConoDeVision, Alerta, Acosador,
+        ):
+            assert censo.get(componente.__name__, 0) > 0, (
+                f"el escenario de referencia ya no enseña {componente.__name__}: "
+                f"censo actual {censo}"
+            )
+
+    def test_el_escenario_no_necesita_codigo_propio(self, escena):
+        """Todo tiene que estar en el TMX, o el ejemplo no sirve de ejemplo.
+
+        Si hiciera falta código para que las mecánicas funcionen, no serían
+        usables desde Tiled y el escenario no demostraría lo que pretende.
+        """
+        from src.framework.scenes.stage_scene import StageScene
+        from src.stages.stage_mecanicas.stage_mecanicas import StageMecanicas
+
+        for metodo in ("update", "draw", "_update_gameplay"):
+            assert getattr(StageMecanicas, metodo, None) is getattr(
+                StageScene, metodo, None,
+            ), (
+                f"el escenario de referencia sobreescribe `{metodo}`: entonces "
+                f"sus mecánicas no se pueden reproducir sólo desde Tiled"
+            )
+
+    def test_las_mecanicas_hacen_algo_en_diez_segundos(self, escena):
+        """Diez segundos de simulación: los ciclos tienen que haber girado."""
+        from src.framework.ecs.components import BloqueRitmico, PlataformaMovil
+
+        posiciones = {
+            e: pygame.Vector2(escena._mundo.obtener(e, Transform).posicion)
+            for e, _ in escena._mundo.cada(PlataformaMovil)
+        }
+        estados_bloque = set()
+        for _ in range(600):
+            escena.update(1.0 / 60.0)
+            for e, b in escena._mundo.cada(BloqueRitmico):
+                estados_bloque.add((e, b.presente))
+
+        movidas = [
+            e for e, p0 in posiciones.items()
+            if (escena._mundo.obtener(e, Transform).posicion - p0).length() > 4.0
+        ]
+        assert movidas, "ninguna plataforma móvil se movió en diez segundos"
+        assert len({v for _, v in estados_bloque}) == 2, (
+            "los bloques rítmicos no llegaron a aparecer y desaparecer"
+        )
+
+    def test_el_mapa_se_puede_regenerar_igual(self):
+        """El TMX está generado: el fichero del repositorio y el generador van juntos.
+
+        Sin esto, alguien edita el `.tmx` a mano, el generador se queda viejo, y
+        la siguiente ejecución le borra los cambios sin avisar.
+        """
+        import importlib.util
+        import pathlib
+
+        raiz = pathlib.Path(__file__).resolve().parent.parent
+        ruta = raiz / "tools" / "generate_stage_mecanicas.py"
+        spec = importlib.util.spec_from_file_location("gen_mec", ruta)
+        assert spec and spec.loader
+        modulo = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(modulo)
+
+        en_disco = (
+            raiz / "assets" / "maps" / "stage_mecanicas" / "stage_mecanicas.tmx"
+        ).read_text(encoding="utf-8")
+        assert modulo.generar() == en_disco, (
+            "el TMX del repositorio no coincide con lo que produce su generador; "
+            "ejecuta `python tools/generate_stage_mecanicas.py`"
+        )
 
 
 def test_los_tipos_de_componente_estan_declarados():
