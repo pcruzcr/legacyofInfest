@@ -88,6 +88,21 @@ class BossAttack:
     cooldown: float = 1.5
     #: Fases en las que está disponible. Vacío = todas.
     phases: tuple[int, ...] = ()
+    #: F5.7 — ¿se puede desviar con el parry del jugador?
+    #:
+    #: `ParryState` existía desde hace meses y **no tenía con qué practicar**:
+    #: desviar no cambiaba nada en ningún jefe, así que la mecánica estaba en el
+    #: juego y no estaba en el juego. Doce análisis del dossier de jefes giran
+    #: sobre esto —Sekiro, Katana ZERO, Metal Gear Rising, Cuphead— y es lo que
+    #: convierte un saco de golpes en un duelo.
+    #:
+    #: No todos los ataques deben serlo. Un ataque imparable obliga a moverse en
+    #: vez de a esperar el desvío, y sin al menos uno el combate se resuelve
+    #: quieto en el sitio pulsando un botón.
+    parriable: bool = False
+    #: Segundos de aturdimiento del jefe al ser desviado. Es la recompensa: sin
+    #: ella el parry sólo evita daño y no invita a arriesgarse.
+    aturde_al_parry: float = 1.2
 
     def available_in(self, phase: int) -> bool:
         return not self.phases or phase in self.phases
@@ -261,6 +276,39 @@ class AttackScheduler:
         self._current = None
         self._timing = AttackTiming.IDLE
         self._timer = 0.0
+
+    # ── F5.7 — desvío ──────────────────────────────────────────
+    @property
+    def se_puede_desviar(self) -> bool:
+        """¿El ataque en curso admite parry, y estamos a tiempo?
+
+        Sólo durante `WINDUP` y `ACTIVE`. Permitirlo en `RECOVER` haría que el
+        desvío funcionara **después** del golpe, y con eso el jugador aprendería
+        a pulsar tarde, que es justo el hábito contrario al que la mecánica
+        quiere enseñar.
+        """
+        return (
+            self._current is not None
+            and self._current.parriable
+            and self._timing in (AttackTiming.WINDUP, AttackTiming.ACTIVE)
+        )
+
+    def desviar(self) -> float:
+        """El jugador desvía. Devuelve los segundos de aturdimiento (0 si no cuela).
+
+        Al desviar, el ataque entra en **enfriamiento completo** y no a la mitad
+        como en una interrupción normal. Un jefe al que desvías y que repite el
+        mismo ataque al instante convierte el acierto en castigo.
+        """
+        if not self.se_puede_desviar or self._current is None:
+            return 0.0
+        aturde = self._current.aturde_al_parry
+        self._cooldowns[self._current.name] = self._current.cooldown
+        self._last_name = self._current.name
+        self._current = None
+        self._timing = AttackTiming.IDLE
+        self._timer = 0.0
+        return aturde
 
     def reset(self) -> None:
         self._cooldowns.clear()

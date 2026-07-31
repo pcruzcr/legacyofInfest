@@ -316,6 +316,17 @@ Para instrucciones detalladas de registro y pruebas, consultar el documento orig
 | `Cage` | — | — |
 | `Chest` | — | — |
 | `EventTrigger` | — | — |
+| `WindZone` | — | — |
+| `FrictionZone` | — | — |
+| `Conveyor` | — | — |
+| `LaserZone` | — | — |
+| `ShockwaveZone` | — | — |
+| `WaterZone` | — | — |
+| `MovingPlatform` | — | — |
+| `RhythmBlock` | — | — |
+| `SinkingPlatform` | — | — |
+| `Guard` | — | — |
+| `Stalker` | — | — |
 
 ### Arquetipos de enemigo (capa `Objects`, objetos punto)
 
@@ -367,6 +378,6 @@ propiedad del objeto en Tiled.
 | *(ninguno)* o `Solid` | Colisión AABB completa |
 | `Platform` | Plataforma atravesable desde abajo |
 
-Total aceptado en `Objects`: **47** tipos.
+Total aceptado en `Objects`: **58** tipos.
 
 <!-- END GENERATED: tipos de objeto -->

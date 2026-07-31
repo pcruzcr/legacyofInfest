@@ -4,13 +4,35 @@ System: framework.entities
 Academic Unit: N/A
 Description: Abstract base class for all game entities. Defines the lifecycle
 contract (update/draw) that every entity in the framework must implement.
+
+F5.2 — qué cambió por dentro y qué no cambió por fuera
+=======================================================
+Desde la fase 5, `position`, `rect`, `facing` y `velocity` **ya no son
+atributos**: son propiedades que leen y escriben componentes ECS
+(`framework.ecs`). Por fuera no se nota nada, y ése es todo el objetivo::
+
+    self.rect.centerx = 40         # sigue funcionando
+    self.position.x += v * dt      # sigue funcionando
+    self.rect = pygame.Rect(...)   # sigue funcionando
+
+Funciona porque las propiedades devuelven **el objeto de verdad** que vive
+dentro del componente `Transform`, no una copia. El razonamiento largo está en
+`framework/ecs/bridge.py`; es el que sostiene las 18.054 líneas de código de
+estudiantes que hay hoy en `src/stages/`.
+
+Lo que se gana: un sistema puede empujar con viento, arrastrar sobre una
+plataforma móvil o meter bajo el agua a **cualquier** entidad que tenga
+`Transform` y `Velocidad`, sin preguntar de qué clase es y sin obligar a nadie a
+heredar de nada nuevo.
 """
 from abc import ABC, abstractmethod
 
 import pygame
 
+from src.framework.ecs.bridge import ComponentesDeEntidad
 
-class BaseEntity(ABC):
+
+class BaseEntity(ComponentesDeEntidad, ABC):
     """
     Root class for all game objects in the Legacy of InFest framework.
     Manages world position, a Pygame Rect for collision, visibility,
@@ -19,8 +41,10 @@ class BaseEntity(ABC):
 
     def __init__(self, position: pygame.Vector2, event_bus=None) -> None:
         """Initialize the entity at the given world-space position."""
-        self.position = pygame.Vector2(position)
-        self.rect = pygame.Rect(0, 0, 0, 0)
+        # El cuerpo ECS va primero: `position` y `rect` son propiedades que
+        # leen el componente `Transform`, así que tiene que existir antes de
+        # que nadie las toque.
+        self._iniciar_componentes(position, pygame.Rect(0, 0, 0, 0))
         self.is_active: bool = True
         self.is_visible: bool = True
         self.layer: int = 4

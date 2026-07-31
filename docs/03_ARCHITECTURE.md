@@ -200,11 +200,21 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── ranged_weapon.py           # ArcoDelJugador: arco del jugador, munición y flechas (F4.2)
 │   │   │   └── squad_brain.py             # SquadBrain: group enemy coordination AI
 │   │   │
+│   │   ├── ecs/                            # F5 — entidades, componentes y sistemas
+│   │   │   ├── __init__.py                 #   Va DEBAJO de la jerarquía, no en su lugar:
+│   │   │   ├── world.py                    #   World: almacén de componentes y entidades
+│   │   │   ├── components.py               #   Los datos, sin comportamiento
+│   │   │   ├── systems.py                  #   Viento, plataformas, láseres, sigilo
+│   │   │   ├── scheduler.py                #   Planificador: el orden de un fotograma
+│   │   │   ├── bridge.py                   #   ComponentesDeEntidad: BaseEntity sobre componentes
+│   │   │   └── bullet_swarm.py             #   EnjambreDeBalas: bullet hell con NumPy (F5.8)
+│   │   │
 │   │   ├── stage/
 │   │   │   ├── __init__.py
 │   │   │   ├── stage_loader.py            # StageLoader: parse TMX, build layer stack, spawn
 │   │   │   ├── interactables.py           # Recogible/Cerradura/Cofre/Disparador/Llavero (F4.1)
 │   │   │   ├── interactable_system.py     # InteractableSystem: llaves, puertas, cofres y eventos (F4.1)
+│   │   │   ├── level_mechanics.py         # ControlDeNado, TiempoBala, ScrollForzado (F5.5/F5.6)
 │   │   │   ├── camera.py                  # Camera: viewport, parallax, follow target
 │   │   │   ├── checkpoint.py              # Checkpoint: trigger zone, respawn anchor
 │   │   │   ├── collision_system.py        # CollisionSystem: hitstop, attack processing

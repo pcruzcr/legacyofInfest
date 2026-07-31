@@ -1,0 +1,390 @@
+"""
+Los componentes: datos, sin comportamiento.
+
+F5.1 — la regla que hay que respetar
+====================================
+Un componente **no tiene métodos que cambien el juego**. Puede tener una
+propiedad calculada o un `rect_actual()` que derive datos de los suyos, pero en
+cuanto uno empieza a llamar al bus de eventos o a mover a otra entidad, deja de
+ser un dato y vuelve a ser un objeto con comportamiento, que es justo lo que se
+estaba intentando dejar atrás.
+
+Todo componente es un `@dataclass` con `slots=True`. Los slots no son
+microoptimización: impiden crear atributos por error. Sin ellos, un
+`viento.fuerza = 100` con la propiedad mal escrita —`furza`— crea el atributo,
+no falla, y el viento deja de soplar sin que nada avise. Es exactamente el tipo
+de fallo silencioso que este proyecto lleva un mes cazando.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+import pygame
+
+# ══════════════════════════════════════════════════════════════
+# Núcleo: lo que casi todo tiene
+# ══════════════════════════════════════════════════════════════
+
+
+class Transform:
+    """Dónde está y hacia dónde mira.
+
+    Es el único componente que **no** es un `dataclass`, y la razón es de
+    rendimiento medida, no de estilo.
+
+    Las dos formas de un Transform
+    -------------------------------
+    * **Propio** — lo usan las entidades que sólo existen en el ECS: plataformas
+      móviles, bloques rítmicos, guardias. Guarda su posición y su rect.
+    * **Vista** — lo usan las entidades de la jerarquía (`BaseEntity` y sus 26
+      subclases de estudiantes). No guarda nada: **lee del dueño**.
+
+    Por qué la vista, con los números
+    ----------------------------------
+    Se intentaron las dos alternativas obvias y las dos costaron caro:
+
+    1. `rect` como **propiedad** en `BaseEntity`: el motor lee `rect` y
+       `position` 255 veces por fotograma, y a 404 ns contra 66 el prólogo pasó
+       de 18,36 ms a 21,36 ms por fotograma. Un 16 % del presupuesto en
+       indirección.
+    2. `rect` como atributo normal más `__setattr__` para vigilar las
+       reasignaciones: **34,58 ms**, casi el doble. `__setattr__` se dispara en
+       *cada* escritura de atributo de la entidad —temporizadores, banderas,
+       velocidades— y el motor escribe muchísimos por fotograma.
+
+    La vista invierte la dirección: el dueño tiene `rect` y `position` como
+    atributos normales —lectura a 66 ns, exactamente como antes de la fase 5— y
+    es el **componente** el que hace la indirección. Se paga donde es barato:
+    los sistemas recorren decenas de entidades, no miles de veces por fotograma.
+
+    Y resuelve gratis el problema que motivó todo esto: si un estudiante
+    reasigna `self.rect = otro_rect` —ocurre 14 veces en las entregas—, la vista
+    lo ve al instante, porque no guardaba una copia que pudiera quedarse vieja.
+    """
+
+    __slots__ = ("_duenio", "_facing", "_posicion", "_rect")
+
+    def __init__(
+        self,
+        posicion: pygame.Vector2 | None = None,
+        rect: pygame.Rect | None = None,
+        facing: int = 1,
+        duenio: object | None = None,
+    ) -> None:
+        self._posicion = posicion if posicion is not None else pygame.Vector2(0, 0)
+        self._rect = rect if rect is not None else pygame.Rect(0, 0, 0, 0)
+        self._facing = facing
+        #: Si no es `None`, este Transform es una vista sobre esa entidad.
+        self._duenio = duenio
+
+    @property
+    def posicion(self) -> pygame.Vector2:
+        d = self._duenio
+        return d.position if d is not None else self._posicion  # type: ignore[union-attr]
+
+    @posicion.setter
+    def posicion(self, valor: pygame.Vector2) -> None:
+        self.posicion.update(valor)
+
+    @property
+    def rect(self) -> pygame.Rect:
+        d = self._duenio
+        return d.rect if d is not None else self._rect  # type: ignore[union-attr]
+
+    @rect.setter
+    def rect(self, valor: pygame.Rect) -> None:
+        if self._duenio is not None:
+            self._duenio.rect = valor  # type: ignore[union-attr]
+        else:
+            self._rect = valor
+
+    @property
+    def facing(self) -> int:
+        d = self._duenio
+        return getattr(d, "facing_direction", self._facing) if d is not None else self._facing
+
+    @facing.setter
+    def facing(self, valor: int) -> None:
+        valor = -1 if valor < 0 else 1
+        self._facing = valor
+        if self._duenio is not None and hasattr(self._duenio, "facing_direction"):
+            self._duenio.facing_direction = valor  # type: ignore[union-attr]
+
+    def __repr__(self) -> str:
+        clase = "vista" if self._duenio is not None else "propio"
+        return f"Transform({clase}, pos={tuple(self.posicion)}, rect={tuple(self.rect)})"
+
+
+@dataclass(slots=True)
+class Velocidad:
+    v: pygame.Vector2
+
+
+@dataclass(slots=True)
+class Gravedad:
+    """Sin este componente una entidad no cae. Flotar es no tenerlo."""
+
+    multiplicador: float = 1.0
+
+
+@dataclass(slots=True)
+class Solido:
+    """Bloquea el paso. La geometría del escenario y las puertas cerradas."""
+
+    atravesable_desde_abajo: bool = False
+
+
+@dataclass(slots=True)
+class Salud:
+    actual: float
+    maxima: float
+    invulnerable: bool = False
+
+
+@dataclass(slots=True)
+class Renderizable:
+    """Qué dibujar y en qué capa. El dibujado lo hace un sistema, no la entidad."""
+
+    surface: pygame.Surface | None = None
+    capa: int = 4
+    visible: bool = True
+
+
+@dataclass(slots=True)
+class Etiqueta:
+    """Marca legible. Para depurar y para que los sistemas filtren por rol."""
+
+    nombre: str
+
+
+# ══════════════════════════════════════════════════════════════
+# F5.3 — zonas con efecto físico
+# ══════════════════════════════════════════════════════════════
+
+
+@dataclass(slots=True)
+class ZonaDeViento:
+    """Empuja a quien esté dentro. Mega Man 2 (Air Man), Celeste (Golden Ridge).
+
+    Es el mismo rectángulo que una `HazardZone`, con una diferencia de fondo:
+    la zona de daño **quita algo**, y ésta **cambia cómo te mueves**. Diseñar
+    con la segunda es más interesante porque el jugador puede aprovecharla —un
+    viento a favor alarga el salto— y por eso se separan.
+    """
+
+    rect: pygame.Rect
+    #: Aceleración en px/s². Positiva empuja a la derecha o hacia abajo.
+    fuerza: pygame.Vector2
+    #: Segundos de ciclo. 0 = constante. Con ciclo, sopla la mitad del tiempo.
+    periodo: float = 0.0
+    _t: float = 0.0
+
+    @property
+    def soplando(self) -> bool:
+        return self.periodo <= 0.0 or (self._t % self.periodo) < (self.periodo / 2.0)
+
+
+@dataclass(slots=True)
+class ZonaDeFriccion:
+    """Cambia el agarre del suelo. La miel de The Hive, el hielo, las cintas.
+
+    `multiplicador` < 1 resbala, > 1 frena antes. `arrastre` mueve solo, que es
+    lo que convierte esto en una cinta transportadora.
+    """
+
+    rect: pygame.Rect
+    multiplicador: float = 1.0
+    arrastre: float = 0.0
+
+
+@dataclass(slots=True)
+class ZonaLetalTemporizada:
+    """Mata, pero sólo mientras está encendida.
+
+    MGS (los láseres del almacén), Mega Man 2 (Quick Man), Celeste (los
+    buscadores del Templo de los Espejos), Inside (las ondas de choque).
+
+    `desfase` existe para poder colocar cinco láseres que se encienden en
+    cascada en vez de todos a la vez, que es la diferencia entre un obstáculo y
+    un patrón.
+    """
+
+    rect: pygame.Rect
+    dano: float = 99.0
+    encendido: float = 1.0
+    apagado: float = 1.0
+    desfase: float = 0.0
+    _t: float = 0.0
+
+    @property
+    def activa(self) -> bool:
+        ciclo = self.encendido + self.apagado
+        if ciclo <= 0.0:
+            return True
+        return ((self._t + self.desfase) % ciclo) < self.encendido
+
+    @property
+    def aviso(self) -> float:
+        """0→1 en el medio segundo previo a encenderse. Para el parpadeo.
+
+        Sin aviso, una zona letal que aparece de golpe no es un obstáculo: es
+        una emboscada. Media clase de diseño cabe en esta propiedad.
+        """
+        ciclo = self.encendido + self.apagado
+        if ciclo <= 0.0 or self.activa:
+            return 0.0
+        restante = self.encendido + self.apagado - ((self._t + self.desfase) % ciclo)
+        return max(0.0, 1.0 - restante / 0.5) if restante < 0.5 else 0.0
+
+
+@dataclass(slots=True)
+class ZonaDeAgua:
+    """F5.6 — el disparador que le faltaba a `SwimmingState`.
+
+    El estado de nado estaba escrito, completo y era **inalcanzable**: cero
+    transiciones en todo `src/`. Y `docs/45_SWIMMING_SPEC.md` lo decía desde el
+    14 de julio: «No dedicated water zone detection».
+
+    Esto es esa detección.
+    """
+
+    rect: pygame.Rect
+    #: Con corriente el agua además arrastra. SMB3 (Water Land).
+    corriente: pygame.Vector2 = field(default_factory=lambda: pygame.Vector2(0, 0))
+
+
+# ══════════════════════════════════════════════════════════════
+# F5.4 — superficies que se mueven
+# ══════════════════════════════════════════════════════════════
+
+
+@dataclass(slots=True)
+class PlataformaMovil:
+    """Va y viene entre dos puntos, y **arrastra a quien lleva encima**.
+
+    Lo segundo es la parte que se olvida siempre, y por eso está escrito aquí
+    arriba: sin arrastre el jugador se queda flotando en el aire mientras la
+    plataforma se va, y parece un fallo de colisión cuando es un fallo de
+    diseño del sistema.
+    """
+
+    origen: pygame.Vector2
+    destino: pygame.Vector2
+    velocidad: float = 40.0
+    #: Segundos de pausa en cada extremo. Un ir y venir sin pausa no se puede
+    #: leer: el jugador no sabe cuándo saltar.
+    espera: float = 0.5
+    _hacia_destino: bool = True
+    _espera_restante: float = 0.0
+    #: Cuánto se movió en el último fotograma. Lo lee el sistema de arrastre.
+    delta: pygame.Vector2 = field(default_factory=lambda: pygame.Vector2(0, 0))
+
+
+@dataclass(slots=True)
+class BloqueRitmico:
+    """Aparece y desaparece a compás. Mega Man 2 (Wily 1), Celeste (cassette).
+
+    Un bloque que desaparece **con el jugador encima** tiene que dejarlo caer,
+    no atraparlo. El sistema de colisión lo consigue solo, porque el bloque
+    deja de estar en la lista de sólidos.
+    """
+
+    visible_seg: float = 1.0
+    oculto_seg: float = 1.0
+    desfase: float = 0.0
+    _t: float = 0.0
+
+    @property
+    def presente(self) -> bool:
+        ciclo = self.visible_seg + self.oculto_seg
+        if ciclo <= 0.0:
+            return True
+        return ((self._t + self.desfase) % ciclo) < self.visible_seg
+
+
+@dataclass(slots=True)
+class PlataformaHundible:
+    """Se hunde al pisarla y vuelve sola. Cuphead (Perilous Piers).
+
+    `retraso` es la ventana de decisión: si fuera cero, pisar sería morir y no
+    habría nada que jugar.
+    """
+
+    retraso: float = 0.4
+    velocidad_caida: float = 90.0
+    reaparece_en: float = 3.0
+    y_original: float = 0.0
+    _pisada: float = 0.0
+    _cayendo: bool = False
+    _ausente: float = 0.0
+
+
+# ══════════════════════════════════════════════════════════════
+# F5.9 — sigilo
+# ══════════════════════════════════════════════════════════════
+
+
+@dataclass(slots=True)
+class ConoDeVision:
+    """Detección por ángulo y distancia. MGS, Inside, Metroid Dread.
+
+    Generaliza lo que César Ubáu escribió en `stage2_2/camara_seguridad.py`
+    para su cámara de seguridad. Se sube al framework para que no tenga que
+    reescribirlo cada estudiante que quiera un guardia, y se cita en el
+    material de clase como Unidad II: es álgebra vectorial de las que se ven.
+    """
+
+    #: Vector unitario de mira.
+    mira: pygame.Vector2
+    alcance: float = 160.0
+    #: Semiángulo del cono en grados. 30 da un cono de 60.
+    semiangulo: float = 30.0
+    #: Barrido: grados a cada lado y velocidad. 0 = fijo.
+    barrido: float = 0.0
+    velocidad_barrido: float = 45.0
+    _fase: float = 0.0
+    #: Lo escribe el sistema; lo leen la IA y el dibujado.
+    ve_al_jugador: bool = False
+
+
+@dataclass(slots=True)
+class Alerta:
+    """Normal → sospecha → alerta, y la vuelta lenta.
+
+    La vuelta es lenta a propósito. Un guardia que olvida al instante convierte
+    el sigilo en prueba y error sin coste; uno que no olvida nunca lo convierte
+    en una partida perdida. Los segundos de memoria son la palanca de
+    dificultad de todo el sistema.
+    """
+
+    nivel: float = 0.0
+    subida_por_segundo: float = 2.0
+    bajada_por_segundo: float = 0.35
+    umbral_sospecha: float = 0.4
+    umbral_alerta: float = 1.0
+
+    @property
+    def estado(self) -> str:
+        if self.nivel >= self.umbral_alerta:
+            return "alerta"
+        if self.nivel >= self.umbral_sospecha:
+            return "sospecha"
+        return "tranquilo"
+
+
+@dataclass(slots=True)
+class Acosador:
+    """Persigue y **no se puede matar**. Nemesis, SA-X, E.M.M.I., el conserje.
+
+    `Salud.invulnerable` ya existiría para esto, pero un acosador necesita algo
+    más: reaparecer. Retirarlo cuando el jugador lo pierde y devolverlo después
+    es lo que produce la sensación de que sigue ahí fuera, y es más barato que
+    simularlo fuera de pantalla.
+    """
+
+    velocidad: float = 55.0
+    #: Distancia a la que se retira si lo pierde de vista.
+    distancia_retirada: float = 480.0
+    #: Segundos hasta volver a aparecer.
+    reaparicion: float = 6.0
+    _fuera: float = 0.0

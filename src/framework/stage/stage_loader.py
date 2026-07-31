@@ -38,6 +38,25 @@ from src.framework.stage.tmx_diagnostics import (
 
 logger = logging.getLogger(__name__)
 
+#: F5.3–F5.6 — tipos de Tiled que se convierten en componentes ECS.
+#:
+#: Es un **subconjunto** de `BUILTIN_OBJECT_TYPES`, no una copia: aquélla dice
+#: qué tipos existen y ésta cuáles de ellos son componentes. No se puede
+#: derivar, porque `PlayerSpawn` o `Checkpoint` también existen y no lo son.
+#:
+#: Pero sí puede quedarse desfasada, que es exactamente el defecto que este mes
+#: castigó a estudiantes tres veces (AUD-104 en los ataques del jefe, AUD-106 en
+#: los tipos del validador, AUD-107 en la lista de enemigos). Para que no haya
+#: una cuarta, `tests/test_ecs.py::test_los_tipos_de_componente_estan_declarados`
+#: comprueba que todo lo de aquí está en `BUILTIN_OBJECT_TYPES` **y** que el
+#: cargador sabe construirlo. Si alguien añade un tipo y se olvida de la otra
+#: mitad, la prueba se pone roja el mismo día.
+_TIPOS_DE_COMPONENTE: frozenset[str] = frozenset({
+    "WindZone", "FrictionZone", "Conveyor", "LaserZone", "ShockwaveZone",
+    "WaterZone", "MovingPlatform", "RhythmBlock", "SinkingPlatform",
+    "Guard", "Stalker",
+})
+
 if TYPE_CHECKING:
     from src.framework.stage.checkpoint import Checkpoint
 
@@ -117,6 +136,15 @@ class StageData:
     cerraduras: list[Cerradura] = field(default_factory=list)
     cofres: list[Cofre] = field(default_factory=list)
     disparadores: list[Disparador] = field(default_factory=list)
+    #: F5.3–F5.6 — componentes ECS declarados desde el TMX.
+    #:
+    #: Se guardan como una lista de componentes sueltos y no como una lista por
+    #: tipo. Con doce mecánicas nuevas, doce campos más aquí harían de
+    #: `StageData` un catálogo que hay que ampliar cada vez, y la escena tendría
+    #: que enterarse de cada uno. Así, la escena los vuelca al mundo ECS de una
+    #: pasada y los sistemas encuentran lo suyo por el tipo del componente, que
+    #: es justo lo que ECS resuelve bien.
+    componentes: list[list[object]] = field(default_factory=list)
     zone: int = 0
     stage_id: str = ""
     stage_name: str = ""
@@ -329,6 +357,7 @@ class StageLoader:
                 stage.cerraduras.clear()
                 stage.cofres.clear()
                 stage.disparadores.clear()
+                stage.componentes.clear()
                 stage.next_trigger = None
                 waypoints_by_owner.clear()
                 spawn_found = cls._process_objects(
@@ -606,6 +635,10 @@ class StageLoader:
             elif obj_type == "EventTrigger":
                 cls._handle_disparador(stage, obj, props)
 
+            # F5.3–F5.6 — mecánicas del Top 200 declaradas desde Tiled.
+            elif obj_type in _TIPOS_DE_COMPONENTE:
+                cls._handle_componente(stage, obj, props, obj_type)
+
             elif obj_type != "Waypoint":
                 # AUD-055. Esta rama no existía: cualquier `type` que no
                 # coincidiera se descartaba en silencio, así que una errata en
@@ -859,6 +892,160 @@ class StageLoader:
         if isinstance(valor, bool):
             return valor
         return str(valor).strip().lower() in ("true", "1", "si", "sí", "yes")
+
+    # ── F5.3–F5.6: componentes ECS desde el TMX ────────────────
+    @classmethod
+    def _handle_componente(
+        cls, stage: StageData, obj: Any, props: dict[str, Any], obj_type: str,
+    ) -> None:
+        """Convierte un objeto de Tiled en un componente ECS.
+
+        Una sola función para las once mecánicas nuevas, y no once métodos:
+        todas hacen lo mismo —leer un rectángulo, leer unas propiedades,
+        construir un `dataclass`— y once copias de eso serían once sitios donde
+        olvidar el mismo `_safe_float`.
+
+        Los nombres de las propiedades son los que un estudiante escribiría en
+        Tiled sin consultar nada: `fuerza_x`, `velocidad`, `alcance`. Se
+        eligieron antes que los del código.
+        """
+        from src.framework.ecs.components import (
+            Acosador,
+            Alerta,
+            BloqueRitmico,
+            ConoDeVision,
+            PlataformaHundible,
+            PlataformaMovil,
+            Solido,
+            Transform,
+            ZonaDeAgua,
+            ZonaDeFriccion,
+            ZonaDeViento,
+            ZonaLetalTemporizada,
+        )
+
+        rect = cls._rect_de(obj)
+
+        def f(clave: str, defecto: float) -> float:
+            return cls._safe_float(props.get(clave, defecto), f"{obj_type}.{clave}")
+
+        def transform() -> Transform:
+            """Las mecánicas que se mueven necesitan `Transform`; las zonas no.
+
+            Una zona es un rectángulo quieto y le basta con llevarlo dentro. Una
+            plataforma se mueve, así que su posición tiene que estar donde los
+            sistemas de movimiento y arrastre saben buscarla.
+            """
+            return Transform(
+                posicion=pygame.Vector2(rect.topleft), rect=rect.copy(),
+            )
+
+        # Cada entrada es **la lista de componentes de UNA entidad**. Uniforme
+        # para las once mecánicas: la escena hace `mundo.crear(*grupo)` y no
+        # tiene que saber cuál es cuál.
+        grupo: list[object]
+
+        if obj_type == "WindZone":
+            grupo = [ZonaDeViento(
+                rect=rect,
+                fuerza=pygame.Vector2(f("fuerza_x", 0.0), f("fuerza_y", 0.0)),
+                periodo=f("periodo", 0.0),
+            )]
+
+        elif obj_type in ("FrictionZone", "Conveyor"):
+            # `Conveyor` es un alias con otro valor por defecto: una cinta sin
+            # arrastre no es una cinta, y obligar al estudiante a recordarlo
+            # sería una errata esperando a ocurrir.
+            arrastre_defecto = 60.0 if obj_type == "Conveyor" else 0.0
+            grupo = [ZonaDeFriccion(
+                rect=rect,
+                multiplicador=f("multiplicador", 1.0),
+                arrastre=f("arrastre", arrastre_defecto),
+            )]
+
+        elif obj_type in ("LaserZone", "ShockwaveZone"):
+            grupo = [ZonaLetalTemporizada(
+                rect=rect,
+                dano=f("dano", 99.0),
+                encendido=f("encendido", 1.0),
+                apagado=f("apagado", 1.0),
+                desfase=f("desfase", 0.0),
+            )]
+
+        elif obj_type == "WaterZone":
+            grupo = [ZonaDeAgua(
+                rect=rect,
+                corriente=pygame.Vector2(f("corriente_x", 0.0), f("corriente_y", 0.0)),
+            )]
+
+        elif obj_type == "MovingPlatform":
+            # El destino se declara como desplazamiento y no en coordenadas
+            # absolutas: mover la plataforma en Tiled no debería obligar a
+            # recalcular su destino a mano, y con absolutas hay que hacerlo
+            # siempre.
+            grupo = [
+                transform(),
+                PlataformaMovil(
+                    origen=pygame.Vector2(rect.topleft),
+                    destino=pygame.Vector2(
+                        rect.x + f("destino_dx", 0.0), rect.y + f("destino_dy", 0.0),
+                    ),
+                    velocidad=f("velocidad", 40.0),
+                    espera=f("espera", 0.5),
+                ),
+                Solido(atravesable_desde_abajo=cls._bool_de(
+                    props.get("atravesable"), por_defecto=False)),
+            ]
+
+        elif obj_type == "RhythmBlock":
+            grupo = [
+                transform(),
+                BloqueRitmico(
+                    visible_seg=f("visible", 1.0),
+                    oculto_seg=f("oculto", 1.0),
+                    desfase=f("desfase", 0.0),
+                ),
+            ]
+
+        elif obj_type == "SinkingPlatform":
+            grupo = [
+                transform(),
+                PlataformaHundible(
+                    retraso=f("retraso", 0.4),
+                    velocidad_caida=f("velocidad_caida", 90.0),
+                    reaparece_en=f("reaparece_en", 3.0),
+                    y_original=float(rect.y),
+                ),
+                Solido(atravesable_desde_abajo=True),
+            ]
+
+        elif obj_type == "Guard":
+            grupo = [
+                transform(),
+                ConoDeVision(
+                    mira=pygame.Vector2(f("mira_x", 1.0), f("mira_y", 0.0)),
+                    alcance=f("alcance", 160.0),
+                    semiangulo=f("semiangulo", 30.0),
+                    barrido=f("barrido", 0.0),
+                    velocidad_barrido=f("velocidad_barrido", 45.0),
+                ),
+                Alerta(),
+            ]
+
+        elif obj_type == "Stalker":
+            grupo = [
+                transform(),
+                Acosador(
+                    velocidad=f("velocidad", 55.0),
+                    distancia_retirada=f("distancia_retirada", 480.0),
+                    reaparicion=f("reaparicion", 6.0),
+                ),
+            ]
+
+        else:  # pragma: no cover - `_TIPOS_DE_COMPONENTE` y esto van juntos
+            return
+
+        stage.componentes.append(grupo)
 
     @classmethod
     def _handle_hazard_zone(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
