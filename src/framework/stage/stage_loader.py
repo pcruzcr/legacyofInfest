@@ -1001,8 +1001,13 @@ class StageLoader:
             grupo = [
                 transform(),
                 BloqueRitmico(
-                    visible_seg=f("visible", 1.0),
-                    oculto_seg=f("oculto", 1.0),
+                    # `visible` y `oculto` a secas serían tentadores, pero
+                    # **`visible` es un nombre reservado en Tiled**: pytmx
+                    # rechaza el mapa entero con «Reserved names and duplicate
+                    # names are not allowed». Lo descubrió el escenario de
+                    # referencia al cargarlo por primera vez.
+                    visible_seg=f("visible_seg", 1.0),
+                    oculto_seg=f("oculto_seg", 1.0),
                     desfase=f("desfase", 0.0),
                 ),
             ]

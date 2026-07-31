@@ -134,11 +134,88 @@ class Solido:
     atravesable_desde_abajo: bool = False
 
 
-@dataclass(slots=True)
 class Salud:
-    actual: float
-    maxima: float
-    invulnerable: bool = False
+    """Vida, y quién es su dueño.
+
+    F5.12 — la segunda deuda declarada de la fase 5, saldada
+    --------------------------------------------------------
+    Nació como un `dataclass` con sus propios `actual` y `maxima`, y la escena
+    los **sincronizaba** con `current_health` de `EnemyBase` en cada golpe. Dos
+    copias del mismo dato, y quedó escrito como deuda: *«el día que ninguna
+    entrega dependa de `current_health`, el componente pasa a ser la única
+    verdad»*.
+
+    Ese día no va a llegar: hay **48 referencias** a `current_health` y
+    `max_health` en el código de los estudiantes, incluyendo escrituras
+    (`boss.current_health = boss.phase_max_health` en Paburu). Esperar a que
+    desaparezcan es esperar a reescribir su trabajo.
+
+    Así que se resuelve al revés, con la misma solución que `Transform`: el
+    componente es una **vista** sobre el dueño. `current_health` sigue siendo el
+    atributo normal de siempre —su código no cambia y no paga indirección— y el
+    componente lee de ahí. No hay dos copias porque no hay copia: hay un dato y
+    una ventana a él.
+
+    Sincronizar dos copias siempre acaba mal. La pregunta correcta no era
+    «¿cuándo puedo borrar la otra?» sino «¿por qué hay dos?».
+    """
+
+    __slots__ = ("_actual", "_duenio", "_invulnerable", "_maxima")
+
+    def __init__(
+        self,
+        actual: float = 0.0,
+        maxima: float = 0.0,
+        invulnerable: bool = False,
+        duenio: object | None = None,
+    ) -> None:
+        self._actual = actual
+        self._maxima = maxima
+        self._invulnerable = invulnerable
+        self._duenio = duenio
+
+    @property
+    def actual(self) -> float:
+        d = self._duenio
+        return float(d.current_health) if d is not None else self._actual  # type: ignore[union-attr]
+
+    @actual.setter
+    def actual(self, valor: float) -> None:
+        if self._duenio is not None:
+            self._duenio.current_health = valor  # type: ignore[union-attr]
+        else:
+            self._actual = valor
+
+    @property
+    def maxima(self) -> float:
+        d = self._duenio
+        return float(d.max_health) if d is not None else self._maxima  # type: ignore[union-attr]
+
+    @maxima.setter
+    def maxima(self, valor: float) -> None:
+        if self._duenio is not None:
+            self._duenio.max_health = valor  # type: ignore[union-attr]
+        else:
+            self._maxima = valor
+
+    @property
+    def invulnerable(self) -> bool:
+        d = self._duenio
+        if d is not None and hasattr(d, "_invincibility_timer"):
+            return self._invulnerable or d._invincibility_timer > 0  # type: ignore[union-attr]
+        return self._invulnerable
+
+    @invulnerable.setter
+    def invulnerable(self, valor: bool) -> None:
+        self._invulnerable = valor
+
+    @property
+    def fraccion(self) -> float:
+        return self.actual / self.maxima if self.maxima > 0 else 0.0
+
+    def __repr__(self) -> str:
+        clase = "vista" if self._duenio is not None else "propia"
+        return f"Salud({clase}, {self.actual}/{self.maxima})"
 
 
 @dataclass(slots=True)
@@ -155,6 +232,31 @@ class Etiqueta:
     """Marca legible. Para depurar y para que los sistemas filtren por rol."""
 
     nombre: str
+
+
+@dataclass(slots=True)
+class EsJugador:
+    """Marca sin datos: esta entidad es **el** jugador.
+
+    F5.11 — la pieza que permitió jubilar `_mundo_ecs_paso`
+    -------------------------------------------------------
+    Los sistemas de sigilo necesitan saber dónde está el jugador. La primera
+    versión se lo pasaba por parámetro::
+
+        sistema_conos_de_vision(mundo, dt, rect_del_jugador)
+
+    Y eso rompía la firma `Sistema = Callable[[World, float], None]`, así que
+    esos dos sistemas no cabían en el `Planificador` y la escena tenía que
+    llamar a los once a mano, en orden, sin equivocarse.
+
+    Con una marca, el sistema lo busca él: `mundo.con(EsJugador, Transform)`.
+    La firma vuelve a ser uniforme, los once entran en el planificador y el
+    orden deja de estar escrito a mano en la escena para estar declarado en un
+    solo sitio con su motivo.
+
+    Es un componente vacío a propósito. En ECS, «qué eres» se dice teniendo o
+    no teniendo un componente, no con un campo `tipo` que haya que comparar.
+    """
 
 
 # ══════════════════════════════════════════════════════════════
