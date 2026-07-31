@@ -131,6 +131,33 @@ class StageScene(BaseScene):
             self._tutorial.show("move", duration=6.0)
             self._tutorial_shown.add("move")
 
+    def _actualizar_arco(self, dt: float, player: object, im: object, stage: object) -> None:
+        """F4.2 — disparo a distancia.
+
+        El arma no conoce la escena ni la escena decide su munición: el arco
+        informa de qué flecha tocó a quién y aquí se aplica el daño, porque
+        quién puede dañar a quién es una regla del escenario y no del arma.
+        """
+        arco = getattr(player, "arco", None)
+        if arco is None:
+            return
+
+        arco.update(dt)
+        if im is not None and im.is_action_just_pressed(Action.RANGED_ATTACK):
+            origen = pygame.Vector2(player.rect.centerx, player.rect.centery)
+            if arco.disparar(origen, player.facing) is not None:
+                self.context.event_bus.emit(Events.SFX_PLAYER_SHORT_ATTACK)
+
+        # Una flecha que da en la pared se para; si no, atraviesa el nivel.
+        arco.choca_con_muros(stage.collision_rects)
+
+        enemigos = [e for e in stage.entity_list if hasattr(e, "apply_hit")]
+        for flecha, objetivo in arco.impactos_contra(enemigos):
+            objetivo.apply_hit(flecha.damage, (flecha.rect.centerx, flecha.rect.centery))
+            self._damage_numbers.add(
+                flecha.rect.centerx, flecha.rect.top, str(round(flecha.damage, 1)),
+            )
+
     def on_player_landed(self) -> None:
         if "landed" not in self._tutorial_shown and hasattr(self, '_player') and self._player is not None:
             if abs(self._player.velocity.x) > 0:
@@ -940,6 +967,7 @@ class StageScene(BaseScene):
                 dt, player.rect,
                 usar=bool(im and im.is_action_just_pressed(Action.GRAB)),
             )
+            self._actualizar_arco(dt, player, im, stage)
             if player.combo_active and player.combo_count > 0:
                 self._achievements.mark_air_assault(getattr(player, "_combo_air_hits", 0))
                 self._achievements.mark_combo_king(player.combo_count)
