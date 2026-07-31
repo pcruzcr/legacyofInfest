@@ -329,7 +329,10 @@ class EnemyShooter(EnemyBase):
 
     def _build_hurtbox(self) -> pygame.Rect:
         """Return local-space hurtbox rect."""
-        return pygame.Rect(4, 2, 24, 30)
+        # Era `Rect(4, 2, 24, 30)` sobre un cuerpo de 16 × 24: la caja
+        # sobresalía **12 px** por la derecha y 8 por abajo, así que el
+        # jugador recibía daño de un enemigo que no estaba ahí (AUD-108).
+        return self.caja_ajustada(margen_x=1, margen_y=1)
 
     # ──────────────────────────────────────────────
     # Sprite rendering

@@ -153,7 +153,8 @@ class EnemyArcher(EnemyBase):
         return "walk"
 
     def _build_hurtbox(self) -> pygame.Rect:
-        return pygame.Rect(2, 4, 16, 28)
+        # AUD-108: el desplazamiento vertical de 4 px dejaba los pies fuera.
+        return self.caja_ajustada(margen_x=1, margen_y=2)
 
     def _build_hitbox(self) -> pygame.Rect:
         return self._build_hurtbox()

@@ -201,7 +201,9 @@ class EnemyFlying(EnemyBase):
         return "fly"
 
     def _build_hurtbox(self) -> pygame.Rect:
-        return pygame.Rect(6, 4, 20, 14)
+        # El volador mide 20 × 14 y su caja estaba desplazada 6 px: el 30 %
+        # de su cuerpo no se podía golpear por la izquierda (AUD-108).
+        return self.caja_ajustada(margen_x=2, margen_y=1)
 
     def _build_hitbox(self) -> pygame.Rect:
         return self._build_hurtbox()

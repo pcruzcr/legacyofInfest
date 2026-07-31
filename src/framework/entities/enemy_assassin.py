@@ -113,7 +113,8 @@ class EnemyAssassin(EnemyBase):
         return "walk"
 
     def _build_hurtbox(self) -> pygame.Rect:
-        return pygame.Rect(2, 2, 16, 24)
+        # AUD-108: era el cuerpo (16 × 24) desplazado 2 px en ambos ejes.
+        return self.caja_ajustada(margen_x=1, margen_y=1)
 
     def _build_hitbox(self) -> pygame.Rect:
         return self._build_hurtbox()
