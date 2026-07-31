@@ -4,6 +4,11 @@
 **Motor:** Legacy of InFest v1.x — pygame-ce 2.5.7, plataformas 2D de ejes.
 **Fecha:** 31 de julio de 2026.
 
+> **Continuado en `54_MECANICAS_TOP200_VIABILIDAD.md`.** Este documento analizó
+> los primeros 49 niveles; después llegó el Top 200 completo (193 niveles
+> únicos). Ninguna conclusión de aquí cambió, pero aparecieron 17 mecánicas más
+> —once de ellas de dos días o menos—. Para el análisis vigente, ir al 54.
+
 Este documento no opina sobre si las mecánicas son buenas. Están todas
 probadas por la historia. Responde a otra cosa: **cuáles se pueden usar hoy en
 nuestro motor, cuáles cuestan una tarde, cuáles son un proyecto de curso, y
