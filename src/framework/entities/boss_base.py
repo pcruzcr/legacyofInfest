@@ -31,6 +31,21 @@ class BossPhase:
     sprite_override: str | None = None
     filter_effect: str | None = None
     combos: dict[str, list[str]] = field(default_factory=dict)
+    # ── F5.7 — mecánicas de fase del dossier de jefes ──────────
+    #: Inmune al daño durante toda la fase. Nosk, Metal Sonic, Mother Brain.
+    #:
+    #: Sirve para una fase de puesta en escena o para una en la que hay que
+    #: hacer otra cosa —romper los frascos de The Collector, esquivar la
+    #: cascada de Mega Satan— antes de poder volver a golpear. Una fase
+    #: invulnerable **sin nada que hacer** es una pausa forzada y se nota; el
+    #: calificador de jefes no puede distinguirlo, pero un jugador sí.
+    invulnerable: bool = False
+    #: Multiplicador de tamaño. Baby Bowser, Grim Matchstick, Mega Satan: 11 de
+    #: los 185 análisis del dossier usan el crecimiento como señal de fase.
+    #:
+    #: Los `WeakPoint` se recalculan solos porque `rect_for()` deriva del rect
+    #: del jefe; no hay que tocarlos al escalar.
+    escala: float = 1.0
 
 
 _APPLY_FILTER_EVERY_N_FRAMES = 5
@@ -180,10 +195,64 @@ class BossBase(EnemyBase):
             return
         if self._invincibility_timer > 0:
             return
+        if self.fase_invulnerable:
+            # F5.7 — una fase declarada invulnerable no recibe daño, y no es lo
+            # mismo que estar en transición: aquí el jefe sigue atacando, sólo
+            # que golpearlo no sirve hasta que se cumpla lo que la fase pida.
+            return
         super().apply_hit(damage, source_position)
 
         if self.current_health > 0 and self.state != EnemyState.DYING:
             self._check_phase_transition()
+
+    # ── F5.7 — estado de fase y desvío ─────────────────────────
+    @property
+    def fase_invulnerable(self) -> bool:
+        """¿La fase actual declara inmunidad al daño?"""
+        if not self.phases or self.current_phase >= len(self.phases):
+            return False
+        return bool(getattr(self.phases[self.current_phase], "invulnerable", False))
+
+    @property
+    def escala_de_fase(self) -> float:
+        """Multiplicador de tamaño de la fase actual."""
+        if not self.phases or self.current_phase >= len(self.phases):
+            return 1.0
+        return float(getattr(self.phases[self.current_phase], "escala", 1.0))
+
+    @property
+    def aturdido(self) -> bool:
+        return getattr(self, "_aturdimiento", 0.0) > 0.0
+
+    def recibir_parry(self) -> float:
+        """El jugador desvió el ataque en curso. Devuelve el aturdimiento.
+
+        Es el punto de entrada de la mecánica y vive en `BossBase` a propósito,
+        para que **cualquier** jefe de un estudiante la tenga sin escribir nada:
+        basta con marcar un `BossAttack(parriable=True)`. La alternativa —que
+        cada uno se lo implemente— garantizaba que casi nadie lo hiciera.
+        """
+        aturde = self.attacks.desviar()
+        if aturde > 0.0:
+            self._aturdimiento = aturde
+            self._event_bus.emit(Events.BOSS_ATTACK, pattern="PARRIED", rect=self.rect)
+        return aturde
+
+    def teletransportar(self, x: float, y: float) -> None:
+        """Reaparece en otro punto de la arena. Death, Agahnim, The Time Keeper.
+
+        `(x, y)` es la **esquina superior izquierda**, igual que `position` en
+        todo el motor. La primera versión trataba el argumento como centro para
+        el rect y como esquina para la posición, y `clamp_to_arena` —que hace
+        `rect.x = int(position.x)`— deshacía la mitad: el jefe acababa doce
+        píxeles a la derecha de donde se le había mandado.
+
+        Es exactamente el error que este método existe para evitar, cometido al
+        escribirlo. Lo cazó la primera prueba, que es para lo que están.
+        """
+        self.position.update(x, y)
+        self.rect.topleft = (int(x), int(y))
+        self.clamp_to_arena()
 
     def _check_phase_transition(self) -> None:
         """Check if health dropped below the next phase threshold."""
@@ -277,6 +346,15 @@ class BossBase(EnemyBase):
         self.summons.update(dt)
 
         if self.state == EnemyState.DYING or not self.is_alive:
+            return
+
+        # F5.7 — aturdido por un desvío. Se descuenta aquí y no en `update` para
+        # que un jefe que sobreescriba `update()` —lo hacen tres de las cuatro
+        # entregas— siga descontándolo sin tener que acordarse.
+        aturdimiento = getattr(self, "_aturdimiento", 0.0)
+        if aturdimiento > 0.0:
+            self._aturdimiento = max(0.0, aturdimiento - dt)
+            self.attacks.interrupt()
             return
 
         # Aturdido: se cancela el ataque. Una parada acertada tiene que

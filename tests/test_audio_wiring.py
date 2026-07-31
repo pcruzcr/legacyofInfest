@@ -272,6 +272,20 @@ class TestTheFightMakesNoise:
         boss = next(e for e in scene._stage_data.entity_list
                     if isinstance(e, BossBase))
 
+        # Se corta en cuanto hay variedad suficiente, en vez de simular los
+        # quince segundos enteros.
+        #
+        # Al arreglar esta prueba (AUD-107) el combate empezó a ocurrir de
+        # verdad —antes el jugador no entraba en la arena y el jefe no atacaba—
+        # y con ello el coste pasó de un segundo a **23**, con proyectiles,
+        # partículas y colisiones reales en cada fotograma. Una prueba correcta
+        # que tarda 23 s en un CI que se ejecuta por tandas es una prueba que
+        # alguien acaba desactivando.
+        #
+        # La condición ya se conoce a mitad de camino, así que se sale al
+        # cumplirla. Si nunca se cumple, se agotan los 900 fotogramas y la
+        # prueba falla como debe.
+
         # Hay que **entrar en la arena**, no mirarla desde fuera.
         #
         # Esta prueba se quedó en dos sonidos al sustituir el jefe de
@@ -294,6 +308,8 @@ class TestTheFightMakesNoise:
             app.scene_manager.update(1 / 60)
             app.scene_manager.current.draw(surface)
             app.event_bus.dispatch()
+            if len(heard) >= 3:
+                break
 
         assert len(heard) >= 3, (
             f"el combate de jefe sólo produjo {sorted(heard)}; debería sonar "

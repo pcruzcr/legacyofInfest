@@ -68,6 +68,22 @@ BUILTIN_OBJECT_TYPES: tuple[str, ...] = (
     "Cage",
     "Chest",
     "EventTrigger",
+    # F5.3/F5.4/F5.6 — las mecánicas de los dossiers del Top 200, puestas al
+    # alcance de Tiled. Cada una nace de niveles concretos, y el nombre se
+    # eligió por lo que la cosa **es** y no por cómo está implementada: un
+    # estudiante que quiere una cinta transportadora busca «Conveyor», no
+    # «ZonaDeFriccionConArrastre».
+    "WindZone",        # Mega Man 2 (Air Man), Celeste (Golden Ridge)
+    "FrictionZone",    # Hollow Knight (la miel de The Hive), hielo
+    "Conveyor",        # Mega Man 2 (Metal Man)
+    "LaserZone",       # MGS, Mega Man 2 (Quick Man), Celeste (Mirror Temple)
+    "ShockwaveZone",   # Inside (las ondas de choque de la mina)
+    "WaterZone",       # Sonic (Labyrinth), SMB3 (Water Land), Inside
+    "MovingPlatform",  # Mega Man 2, Sonic, Donkey Kong Country
+    "RhythmBlock",     # Mega Man 2 (Wily 1), Celeste (bloques de cassette)
+    "SinkingPlatform",  # Cuphead (Perilous Piers)
+    "Guard",           # MGS (Tank Hangar): cono de visión y alerta
+    "Stalker",         # RE3 (Nemesis), Celeste (el conserje), Metroid Dread
 )
 
 #: Tipos válidos en la capa `Collision`, que se procesa aparte. `Platform`

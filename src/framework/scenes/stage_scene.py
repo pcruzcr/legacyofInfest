@@ -20,6 +20,8 @@ from src.engine.ui.screen_banner import ScreenBanner
 from src.engine.ui.subtitle_overlay import SubtitleOverlay
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.audio.dynamic_music import DynamicMusicSystem
+from src.framework.ecs import systems as ecs_systems
+from src.framework.ecs.world import World
 from src.framework.entities.bestiary import Bestiary
 from src.framework.entities.boss_base import BossBase
 from src.framework.entities.enemy_base import EnemyBase
@@ -30,6 +32,11 @@ from src.framework.stage.collision_system import CollisionSystem
 from src.framework.stage.drawing_system import DrawingSystem
 from src.framework.stage.hazard_system import HazardSystem
 from src.framework.stage.interactable_system import InteractableSystem
+from src.framework.stage.level_mechanics import (
+    ControlDeNado,
+    ScrollForzado,
+    TiempoBala,
+)
 from src.framework.stage.progression_system import ProgressionSystem
 from src.framework.stage.speedrun_mode import SpeedrunTimer
 from src.framework.stage.stage_loader import StageLoader
@@ -90,6 +97,15 @@ class StageScene(BaseScene):
         self._hazards = HazardSystem(context)
         # F4.1 — recogibles, cerraduras, cofres y disparadores.
         self._interactables = InteractableSystem(bus=context.event_bus)
+        # F5 — el mundo ECS del escenario: viento, plataformas móviles, láseres,
+        # agua, guardias y acosadores. Uno por escena y no global, para que dos
+        # escenarios cargados a la vez —el juego y una previsualización— no se
+        # mezclen. La lección del modo de vídeo global de pygame salió cara una
+        # vez y no se repite.
+        self._mundo: World = World()
+        self._nado = ControlDeNado()
+        self._tiempo_bala = TiempoBala()
+        self._scroll_forzado = ScrollForzado()
         self._progression = ProgressionSystem(context)
         self._drawing = DrawingSystem()
         self._particle_system = ParticleSystem()
@@ -254,6 +270,7 @@ class StageScene(BaseScene):
             disparadores=self._stage_data.disparadores,
             bus=self.context.event_bus,
         )
+        self._poblar_mundo_ecs()
         self._progression.reset()
 
         if self._stage_data.bgm_track:
@@ -943,6 +960,54 @@ class StageScene(BaseScene):
         if self._player.current_health <= 0 and not self._game_over:
             self._kill_player()
 
+    # ── F5 — el mundo ECS del escenario ────────────────────────
+    def _poblar_mundo_ecs(self) -> None:
+        """Vuelca al mundo los componentes que declaró el TMX.
+
+        Mundo nuevo por escenario y no reutilizado: arrastrar el anterior
+        llevaría al nivel siguiente las plataformas del anterior y su estado a
+        medio ciclo. Es el mismo motivo por el que `InteractableSystem` se
+        reconstruye justo arriba.
+        """
+        self._mundo = World()
+        for grupo in self._stage_data.componentes:
+            self._mundo.crear(*grupo)
+
+    def _mundo_ecs_paso(self, dt: float, player) -> None:
+        """Un fotograma de las mecánicas nuevas, en el orden que importa.
+
+        Se llaman a mano y en orden explícito en vez de por el `Planificador`.
+        El planificador existe y está probado, pero meterlo aquí obligaría a que
+        el jugador —que **no** es una entidad ECS, sino la fachada de
+        `BaseEntity`— entrara y saliera del mundo cada fotograma. Cuando el
+        jugador sea un componente más, esta función se sustituye por
+        `planificador.ejecutar(mundo, dt)` y desaparece.
+
+        Se deja escrito porque es deuda declarada, no un descuido: cualquiera
+        que lea esto sabe cuál es el siguiente paso y por qué no se dio hoy.
+        """
+        if self._mundo.total_entidades == 0:
+            return
+        rect_jugador = player.rect if player is not None else None
+
+        # FUERZAS: modifican velocidad antes de integrarla.
+        ecs_systems.sistema_viento(self._mundo, dt)
+        ecs_systems.sistema_corriente_de_agua(self._mundo, dt)
+        # ESCENARIO: las superficies se mueven...
+        ecs_systems.sistema_plataformas_moviles(self._mundo, dt)
+        ecs_systems.sistema_bloques_ritmicos(self._mundo, dt)
+        ecs_systems.sistema_plataformas_hundibles(self._mundo, dt)
+        # ARRASTRE: ...y llevan a su pasajero, antes de colisionar.
+        ecs_systems.sistema_arrastre_de_plataformas(self._mundo, dt)
+        # IA de sigilo.
+        ecs_systems.sistema_conos_de_vision(self._mundo, dt, rect_jugador)
+        ecs_systems.sistema_alerta(self._mundo, dt)
+        ecs_systems.sistema_acosador(self._mundo, dt, rect_jugador)
+        # ZONAS: reaccionan a la posición final. La fricción va aquí y no en
+        # FUERZAS porque arrastra posición, no velocidad.
+        ecs_systems.sistema_friccion(self._mundo, dt)
+        self._mundo.aplicar_bajas()
+
     def _update_gameplay(self, dt: float) -> None:
         player = self._player
         stage = self._stage_data
@@ -962,7 +1027,22 @@ class StageScene(BaseScene):
             # sabe deshacer.
             cerradas = self._interactables.rects_solidos()
             solidos = stage.collision_rects + cerradas if cerradas else stage.collision_rects
+
+            # F5.3–F5.6 — las mecánicas nuevas corren ANTES que el jugador.
+            #
+            # El orden importa y es el motivo de que esto esté aquí y no en
+            # `_update_vfx`: las plataformas tienen que haberse movido y haber
+            # arrastrado a su pasajero antes de que el jugador resuelva sus
+            # colisiones. Al revés, el pasajero pasaría un fotograma hundido en
+            # la plataforma y saldría expulsado al siguiente. El orden completo,
+            # con su porqué, está en `framework/ecs/scheduler.py`.
+            self._mundo_ecs_paso(dt, player)
+            moviles = ecs_systems.rects_solidos(self._mundo)
+            if moviles:
+                solidos = solidos + moviles
+
             player.update(dt, solidos, im, one_way_rects=stage.one_way_rects)
+            self._nado.update(dt, player, self._mundo, self.context.event_bus)
             self._interactables.update(
                 dt, player.rect,
                 usar=bool(im and im.is_action_just_pressed(Action.GRAB)),
