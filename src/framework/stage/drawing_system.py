@@ -51,6 +51,8 @@ class DrawContext:
     tutorial_overlay: TutorialOverlay | None = None
     learning_overlay: LearningOverlay | None = None
     dialogue_system: DialogueSystem | None = None
+    #: F4.1 — recogibles, cerraduras, cofres y disparadores.
+    interactables: Any | None = None
     debug: bool = False
 
 
@@ -89,6 +91,11 @@ class DrawingSystem:
         if ctx.ambient_particles:
             ctx.ambient_particles.draw(surface, offset)
 
+        # F4.1: los objetos se dibujan ANTES que las entidades, para que el
+        # jugador pase por delante de una llave del suelo y no al revés.
+        if ctx.interactables is not None:
+            self._draw_interactables(surface, ctx.interactables, offset)
+
         self._draw_entities(surface, stage, player, checkpoints, offset)
 
         if ctx.enemy_trail_system:
@@ -97,6 +104,61 @@ class DrawingSystem:
             ctx.trail_system.draw(surface, offset)
         if ctx.damage_numbers:
             ctx.damage_numbers.draw(surface, offset)
+
+    #: Colores de los objetos interactivos. Se dibujan con formas planas y no
+    #: con sprites porque el motor no puede suponer qué arte tiene cada
+    #: escenario: un rectángulo del color correcto siempre se ve, y el
+    #: estudiante puede sustituirlo por su propio sprite cuando lo tenga.
+    _COLOR_RECOGIBLE = (240, 210, 90)
+    _COLOR_CERRADA = (150, 110, 70)
+    _COLOR_JAULA = (120, 120, 135)
+    _COLOR_COFRE = (185, 140, 70)
+    _COLOR_ABIERTO = (90, 90, 100)
+
+    def _draw_interactables(
+        self, surface: pygame.Surface, sistema: Any, offset: pygame.Vector2,
+    ) -> None:
+        """Llaves, puertas, jaulas y cofres.
+
+        Los disparadores **no se dibujan**: son zonas invisibles a propósito,
+        igual que `MessageTrigger`. Verlos rompería la sorpresa que el
+        diseñador buscaba al ponerlos.
+        """
+        for objeto in getattr(sistema, "recogibles", ()):
+            if objeto.recogido:
+                continue
+            r = objeto.rect.move(-offset.x, -offset.y)
+            pygame.draw.rect(surface, self._COLOR_RECOGIBLE, r, border_radius=3)
+            pygame.draw.rect(surface, (60, 50, 20), r, 1, border_radius=3)
+
+        for cerradura in getattr(sistema, "cerraduras", ()):
+            r = cerradura.rect.move(-offset.x, -offset.y)
+            if cerradura.abierta:
+                # Abierta se dibuja como marco: el hueco se ve atravesable, que
+                # es la información que el jugador necesita.
+                pygame.draw.rect(surface, self._COLOR_ABIERTO, r, 2)
+                continue
+            color = self._COLOR_JAULA if cerradura.clase == "jaula" else self._COLOR_CERRADA
+            pygame.draw.rect(surface, color, r)
+            pygame.draw.rect(surface, (40, 30, 20), r, 2)
+            if cerradura.clase == "jaula":
+                # Barrotes: hacen la jaula distinguible de una puerta de un
+                # vistazo, sin depender del color.
+                for x in range(r.left + 6, r.right - 2, 8):
+                    pygame.draw.line(surface, (40, 40, 50), (x, r.top + 2), (x, r.bottom - 2), 2)
+
+        for cofre in getattr(sistema, "cofres", ()):
+            r = cofre.rect.move(-offset.x, -offset.y)
+            pygame.draw.rect(
+                surface, self._COLOR_ABIERTO if cofre.abierto else self._COLOR_COFRE, r,
+                border_radius=2,
+            )
+            pygame.draw.rect(surface, (60, 40, 20), r, 2, border_radius=2)
+            if not cofre.abierto:
+                pygame.draw.line(
+                    surface, (60, 40, 20),
+                    (r.left + 2, r.centery), (r.right - 2, r.centery), 2,
+                )
 
     def draw_ui(self, ctx: DrawContext) -> None:
         """Interfaz en espacio de pantalla. Se dibuja DESPUÉS de la luz.

@@ -55,6 +55,19 @@ BUILTIN_OBJECT_TYPES: tuple[str, ...] = (
     "CameraLock",
     "Waypoint",
     "Light",
+    # F4.1 — objetos con los que el jugador interactúa.
+    #
+    # `Key` es un alias de `Pickup` y `LockedDoor` de `Door`: el motor los
+    # trata igual, pero poder escribir en Tiled lo que la cosa *es* hace el
+    # mapa legible sin abrir el código. Los alias cuestan una línea aquí y
+    # ahorran una explicación en clase.
+    "Pickup",
+    "Key",
+    "Door",
+    "LockedDoor",
+    "Cage",
+    "Chest",
+    "EventTrigger",
 )
 
 #: Tipos válidos en la capa `Collision`, que se procesa aparte. `Platform`

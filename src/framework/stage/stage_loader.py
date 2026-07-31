@@ -23,6 +23,12 @@ from src.engine.core import settings
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework import FrameworkUsageError
 from src.framework.entities.base_entity import BaseEntity
+from src.framework.stage.interactables import (
+    Cerradura,
+    Cofre,
+    Disparador,
+    Recogible,
+)
 from src.framework.stage.tmx_diagnostics import (
     TmxObjectProblem,
     TmxReport,
@@ -106,6 +112,11 @@ class StageData:
     death_pits: list[DeathPit] = field(default_factory=list)
     camera_locks: list[CameraLock] = field(default_factory=list)
     lights: list[LightSpec] = field(default_factory=list)
+    #: F4.1 — objetos con los que el jugador interactúa.
+    recogibles: list[Recogible] = field(default_factory=list)
+    cerraduras: list[Cerradura] = field(default_factory=list)
+    cofres: list[Cofre] = field(default_factory=list)
+    disparadores: list[Disparador] = field(default_factory=list)
     zone: int = 0
     stage_id: str = ""
     stage_name: str = ""
@@ -314,6 +325,10 @@ class StageLoader:
                 stage.death_pits.clear()
                 stage.camera_locks.clear()
                 stage.lights.clear()
+                stage.recogibles.clear()
+                stage.cerraduras.clear()
+                stage.cofres.clear()
+                stage.disparadores.clear()
                 stage.next_trigger = None
                 waypoints_by_owner.clear()
                 spawn_found = cls._process_objects(
@@ -576,6 +591,21 @@ class StageLoader:
             elif obj_type == "Light":
                 cls._handle_light(stage, obj, props)
 
+            # F4.1 — objetos con los que el jugador interactúa. Pedidos por los
+            # estudiantes tras jugar la fase 1: llaves, puertas, jaulas, cofres
+            # y disparadores de evento.
+            elif obj_type in ("Pickup", "Key"):
+                cls._handle_recogible(stage, obj, props)
+
+            elif obj_type in ("Door", "Cage", "LockedDoor"):
+                cls._handle_cerradura(stage, obj, props, obj_type)
+
+            elif obj_type == "Chest":
+                cls._handle_cofre(stage, obj, props)
+
+            elif obj_type == "EventTrigger":
+                cls._handle_disparador(stage, obj, props)
+
             elif obj_type != "Waypoint":
                 # AUD-055. Esta rama no existía: cualquier `type` que no
                 # coincidiera se descartaba en silencio, así que una errata en
@@ -738,6 +768,97 @@ class StageLoader:
             valor, ", ".join(sorted(cls.LIGHT_COLORS)),
         )
         return cls.LIGHT_COLORS["warm"]
+
+    @classmethod
+    def _handle_recogible(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
+        """`Pickup` / `Key` — algo que el jugador coge del suelo.
+
+        `Key` es un alias de `Pickup`: nombrar el tipo por lo que es hace el
+        mapa legible en Tiled, y a efectos del motor son lo mismo.
+        """
+        item_id = str(props.get("item_id") or props.get("key_id") or obj.name or "")
+        if not item_id:
+            logger.warning(
+                "Pickup en (%s, %s) sin 'item_id': se ignora. Ponle un item_id "
+                "o dale nombre al objeto en Tiled.", obj.x, obj.y,
+            )
+            return
+        stage.recogibles.append(Recogible(
+            rect=cls._rect_de(obj),
+            item_id=item_id,
+            automatico=cls._bool_de(props.get("automatico"), por_defecto=True),
+            mensaje=str(props.get("mensaje", "")),
+        ))
+
+    @classmethod
+    def _handle_cerradura(
+        cls, stage: StageData, obj: Any, props: dict[str, Any], obj_type: str,
+    ) -> None:
+        """`Door` / `Cage` / `LockedDoor` — bloquea el paso hasta tener la llave."""
+        if obj.width == 0 or obj.height == 0:
+            logger.warning(
+                "%s en (%s, %s) no tiene tamaño: una puerta sin área no bloquea "
+                "nada. Dibújala como rectángulo en Tiled.", obj_type, obj.x, obj.y,
+            )
+            return
+        stage.cerraduras.append(Cerradura(
+            rect=cls._rect_de(obj),
+            key_id=str(props.get("key_id", "")),
+            clase="jaula" if obj_type == "Cage" else "puerta",
+            consume_llave=cls._bool_de(props.get("consume_llave"), por_defecto=False),
+            mensaje_bloqueado=str(props.get("mensaje", "")),
+            evento_al_abrir=str(props.get("evento", "")),
+        ))
+
+    @classmethod
+    def _handle_cofre(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
+        """`Chest` — se abre con el botón y entrega su contenido una vez."""
+        stage.cofres.append(Cofre(
+            rect=cls._rect_de(obj),
+            contenido=str(props.get("contenido") or props.get("item_id") or ""),
+            key_id=str(props.get("key_id", "")),
+            mensaje=str(props.get("mensaje", "")),
+            evento_al_abrir=str(props.get("evento", "")),
+        ))
+
+    @classmethod
+    def _handle_disparador(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
+        """`EventTrigger` — emite un evento del bus; el escenario decide qué hace."""
+        evento = str(props.get("evento") or obj.name or "")
+        if not evento:
+            logger.warning(
+                "EventTrigger en (%s, %s) sin 'evento': no emitiría nada, así "
+                "que se ignora.", obj.x, obj.y,
+            )
+            return
+        stage.disparadores.append(Disparador(
+            rect=cls._rect_de(obj),
+            evento=evento,
+            automatico=cls._bool_de(props.get("automatico"), por_defecto=True),
+            una_vez=cls._bool_de(props.get("una_vez"), por_defecto=True),
+            key_id=str(props.get("key_id", "")),
+        ))
+
+    @staticmethod
+    def _rect_de(obj: Any) -> pygame.Rect:
+        """El rectángulo de un objeto de Tiled, con un mínimo utilizable.
+
+        Un objeto de tipo punto tiene ancho y alto 0 y sería imposible de
+        tocar. Se le da el tamaño de una baldosa, que es lo que el diseñador
+        ve en Tiled cuando coloca el punto.
+        """
+        ancho = int(obj.width) or settings.TILE_SIZE
+        alto = int(obj.height) or settings.TILE_SIZE
+        return pygame.Rect(int(obj.x), int(obj.y), ancho, alto)
+
+    @staticmethod
+    def _bool_de(valor: Any, *, por_defecto: bool) -> bool:
+        """Tiled entrega los booleanos como bool, como 'true' o como '1'."""
+        if valor is None or valor == "":
+            return por_defecto
+        if isinstance(valor, bool):
+            return valor
+        return str(valor).strip().lower() in ("true", "1", "si", "sí", "yes")
 
     @classmethod
     def _handle_hazard_zone(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
