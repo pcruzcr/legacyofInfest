@@ -7,7 +7,19 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "legacyofinfest"
-version = "2.0.0"
+# AUD-105: esto decía 2.0.0. El producto está en la línea 1.x — la 2.0.0 es la
+# versión *futura*, la del `50_IMPROVEMENT_ROADMAP.md`. Lo más probable es que
+# alguien copiara aquí la versión de un documento: ese fichero lleva su propia
+# cabecera `Version: 4.0.0`, y `51_IMPLEMENTATION_AUDIT.md` la suya `2.0.0`.
+#
+# Decir 2.0.0 cuando se entrega la 1.x no es un detalle cosmético: un
+# estudiante que abre una incidencia diciendo «me pasa en la 2.0.0» está
+# describiendo una versión que no existe, y nadie puede reproducirla.
+#
+# La versión vive **sólo aquí**. `src/__init__.py` la lee del paquete
+# instalado y `tests/test_version_coherence.py` comprueba que coincide con la
+# última entrada del CHANGELOG.
+version = "1.1.0"
 description = "AAA+ 2D/2.5D/3D Metroidvania Engine — Educational Game Engine for Computer Graphics, Image Processing, and Pattern Recognition"
 requires-python = ">=3.11"
 # AUD-007: pyproject.toml is now the SINGLE source of truth for dependencies.
