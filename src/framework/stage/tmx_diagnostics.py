@@ -84,6 +84,13 @@ BUILTIN_OBJECT_TYPES: tuple[str, ...] = (
     "SinkingPlatform",  # Cuphead (Perilous Piers)
     "Guard",           # MGS (Tank Hangar): cono de visión y alerta
     "Stalker",         # RE3 (Nemesis), Celeste (el conserje), Metroid Dread
+    # F5.14 — de escalada no había **nada**: ni `Ladder`, ni `Rope`, ni `Climb`,
+    # ni un estado que suspendiera la gravedad. Y no se podía improvisar:
+    # apilar `Solid` estrechos para simular una cuerda deja al jugador al lado
+    # de la columna, no dentro, y para subir tiene que saltar — que es justo lo
+    # que una liana existe para evitar.
+    "Vine",            # DKC (Ropey Rampage), Zelda, Spelunky, Castlevania
+    "Zipline",         # DKC, Rayman, Ori
 )
 
 #: Tipos válidos en la capa `Collision`, que se procesa aparte. `Platform`

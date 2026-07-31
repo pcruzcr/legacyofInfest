@@ -426,6 +426,84 @@ class PlataformaHundible:
 # ══════════════════════════════════════════════════════════════
 
 
+# ══════════════════════════════════════════════════════════════
+# F5.14 — lianas y tirolesas
+# ══════════════════════════════════════════════════════════════
+
+
+@dataclass(slots=True)
+class Liana:
+    """Cuerda o enredadera por la que se sube y se baja.
+
+    Donkey Kong Country (Ropey Rampage), Zelda, Spelunky, Castlevania.
+
+    Por qué no es una plataforma vertical
+    --------------------------------------
+    Se podría simular con `Solido` estrechos apilados y dejar que el jugador
+    salte entre ellos, y es lo que un estudiante intentaría primero. No
+    funciona: sobre una columna de sólidos el jugador queda *al lado*, no
+    *dentro*, y no puede subir sin saltar.
+
+    Una liana necesita suspender la gravedad y dar movimiento vertical libre
+    mientras se está agarrado, y eso es un **estado del jugador**, no geometría.
+    De ahí `TrepandoState`.
+
+    `ancho_de_agarre` es generoso a propósito. Con la anchura exacta de la
+    cuerda —dos o tres píxeles— agarrarse sería un acto de puntería, y saltar
+    hacia una liana y fallar por un píxel se lee como que el juego no responde.
+    """
+
+    rect: pygame.Rect
+    #: Píxeles de margen a cada lado para poder agarrarse.
+    ancho_de_agarre: int = 10
+    #: Velocidad de subida y bajada, px/s.
+    velocidad: float = 70.0
+
+
+@dataclass(slots=True)
+class Tirolesa:
+    """Cable en diagonal por el que se desliza. DKC, Rayman, Ori.
+
+    Se declara con dos puntos y no con un rectángulo porque **la pendiente es
+    la mecánica**: una tirolesa horizontal es un pasillo, y una casi vertical es
+    una caída. El ángulo decide si el tramo es un descanso o una carrera.
+
+    `solo_de_bajada` está por defecto porque una tirolesa que sube gratis
+    rompe cualquier nivel construido alrededor de saltos: el jugador la usa para
+    llegar donde el diseñador no quería. Quien la quiera bidireccional puede
+    pedirla, pero que no sea el descuido por omisión.
+    """
+
+    origen: pygame.Vector2
+    destino: pygame.Vector2
+    velocidad: float = 190.0
+    #: Radio de enganche alrededor del cable, en píxeles.
+    radio_de_enganche: float = 14.0
+    solo_de_bajada: bool = True
+
+    def punto_mas_cercano(self, p: pygame.Vector2) -> pygame.Vector2:
+        """Proyección de `p` sobre el segmento, recortada a sus extremos.
+
+        Recortada y no sobre la recta infinita: sin el recorte, un jugador que
+        pasa por debajo del extremo se engancharía a un cable que no está ahí,
+        y es de los fallos que más desconciertan porque el cable *se ve* lejos.
+        """
+        d = self.destino - self.origen
+        largo2 = d.length_squared()
+        if largo2 == 0.0:
+            return pygame.Vector2(self.origen)
+        t = max(0.0, min(1.0, (p - self.origen).dot(d) / largo2))
+        return self.origen + d * t
+
+    def progreso(self, p: pygame.Vector2) -> float:
+        """0 en el origen, 1 en el destino."""
+        d = self.destino - self.origen
+        largo2 = d.length_squared()
+        if largo2 == 0.0:
+            return 1.0
+        return max(0.0, min(1.0, (p - self.origen).dot(d) / largo2))
+
+
 @dataclass(slots=True)
 class ConoDeVision:
     """Detección por ángulo y distancia. MGS, Inside, Metroid Dread.

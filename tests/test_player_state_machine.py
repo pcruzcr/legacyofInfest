@@ -31,8 +31,25 @@ from src.framework.entities.states import (
 )
 
 
-def test_player_state_enum_has_19_values() -> None:
-    assert len(PlayerState) == 24
+def test_cada_valor_del_enum_tiene_sprite_y_velocidad_de_animacion() -> None:
+    """Se cuenta lo que importa, no cuántos hay.
+
+    Esta prueba decía `assert len(PlayerState) == 24` y se llamaba
+    `test_player_state_enum_has_19_values`: el nombre y el número ya no
+    coincidían, señal de que a alguien le tocó editarla y sólo cambió el
+    número. Una prueba que hay que actualizar cada vez que se añade un estado
+    no protege nada; enseña a editar pruebas.
+
+    Lo que sí es un contrato: **todo estado declarado tiene que poder
+    dibujarse**. Un valor del enum sin entrada en la tabla de sprites es un
+    jugador que desaparece al entrar en él, y eso sí es un fallo.
+    """
+    from src.framework.entities.player import _PLAYER_ANIM_FPS, _PLAYER_SPRITE_MAP
+
+    sin_sprite = [e.value for e in PlayerState if e.value not in _PLAYER_SPRITE_MAP]
+    sin_velocidad = [e.value for e in PlayerState if e.value not in _PLAYER_ANIM_FPS]
+    assert not sin_sprite, f"estados sin hoja de sprites: {sin_sprite}"
+    assert not sin_velocidad, f"estados sin velocidad de animación: {sin_velocidad}"
 
 
 def test_initial_state_is_idle() -> None:

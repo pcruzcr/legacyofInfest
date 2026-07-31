@@ -41,10 +41,12 @@ from src.framework.ecs.components import (
     BloqueRitmico,
     ConoDeVision,
     EsJugador,
+    Liana,
     PlataformaHundible,
     PlataformaMovil,
     Salud,
     Solido,
+    Tirolesa,
     Transform,
     Velocidad,
     ZonaDeAgua,
@@ -284,6 +286,41 @@ def sistema_zonas_letales(mundo: World, dt: float) -> None:
             s = mundo.obtener(entidad, Salud)
             if s is not None and not s.invulnerable:
                 s.actual = max(0.0, s.actual - zona.dano)
+
+
+def liana_alcanzable(mundo: World, rect: pygame.Rect) -> Liana | None:
+    """La liana que el jugador puede agarrar ahora mismo, si hay alguna.
+
+    F5.14 — el margen de agarre es generoso a propósito. Con la anchura exacta
+    de la cuerda —dos o tres píxeles— agarrarse sería un acto de puntería, y
+    saltar hacia una liana y fallar por un píxel se lee como que el juego no
+    responde, no como que el jugador falló.
+    """
+    for _, liana in mundo.cada(Liana):
+        zona = liana.rect.inflate(liana.ancho_de_agarre * 2, 0)
+        if zona.colliderect(rect):
+            return liana
+    return None
+
+
+def tirolesa_alcanzable(mundo: World, rect: pygame.Rect) -> Tirolesa | None:
+    """El cable al que el jugador puede engancharse, si hay alguno.
+
+    Se mide contra el **punto más cercano del segmento**, no contra su caja
+    envolvente: una tirolesa muy diagonal tiene una caja enorme y engancharía
+    desde metros por debajo, donde el cable no está.
+    """
+    centro = pygame.Vector2(rect.center)
+    for _, cable in mundo.cada(Tirolesa):
+        cerca = cable.punto_mas_cercano(centro)
+        if (cerca - centro).length() > cable.radio_de_enganche:
+            continue
+        if cable.solo_de_bajada and cable.destino.y < cable.origen.y:
+            # Declarada de bajada pero dibujada hacia arriba: se engancha por
+            # el extremo alto, no por donde caiga el jugador.
+            continue
+        return cable
+    return None
 
 
 def en_agua(mundo: World, rect: pygame.Rect) -> ZonaDeAgua | None:

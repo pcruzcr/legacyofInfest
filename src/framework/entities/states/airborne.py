@@ -185,6 +185,27 @@ class AerialAttackState(PlayerStateBase):
         if player._hitbox_consumed and not self._has_hit:
             self._has_hit = True
             if not player.is_grounded:
+                # AUD-109 — el primer golpe aéreo **lanza**; el segundo remata.
+                #
+                # `AirChaseState` estaba escrito entero —sprite propio
+                # (`player_jump.png`), velocidad de animación propia (12.0),
+                # valor en el enum `PlayerState.AIR_CHASE`, y una lógica que
+                # impulsa al jugador hacia arriba y adelante para seguir al
+                # enemigo levantado— y **no había una sola transición que
+                # entrara en él**. Comprobado por análisis del árbol de
+                # sintaxis sobre todo `src/`: cero.
+                #
+                # Es el quinto sistema de esta forma en un mes: la iluminación
+                # que no iluminaba, las trece demos en una esquina, el ultimate
+                # cuyo medidor nadie subía, el nado inalcanzable, y esto.
+                #
+                # La forma del código decía para qué era: `enter()` pone
+                # `velocity.y = -200` y suma un golpe al combo, y este bloque ya
+                # mandaba al remate a partir del segundo. Faltaba el primero.
+                if player._combo_air_hits == 0:
+                    from src.framework.entities.states import AirChaseState
+                    player._change_state_instance(AirChaseState())
+                    return
                 player._combo_air_hits += 1
                 if player._combo_air_hits >= 2:
                     from src.framework.entities.states import AerialSlamState

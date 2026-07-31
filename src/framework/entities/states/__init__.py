@@ -55,6 +55,10 @@ from src.framework.entities.states.helpers import (
     _reset_combo,
     _start_attack,
 )
+from src.framework.entities.states.rope import (
+    TirolesaState,
+    TrepandoState,
+)
 from src.framework.entities.states.swim import (
     SwimmingState,
 )
@@ -87,6 +91,8 @@ __all__ = (
     "SlideState",
     "SwimmingState",
     "ThrowState",
+    "TirolesaState",
+    "TrepandoState",
     "UltimateState",
     "WalkingState",
     "WallSlideState",
