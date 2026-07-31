@@ -23,6 +23,10 @@ class Action(Enum):
     LONG_ATTACK = auto()
     DASH = auto()
     GRAB = auto()
+    #: F4.2 — disparo con el arco. Los estudiantes pidieron un ataque a
+    #: distancia; sin acción propia habría que reutilizar una existente y
+    #: perder el ataque que ya tenía.
+    RANGED_ATTACK = auto()
     CONFIRM = auto()
     CANCEL = auto()
     PAUSE = auto()
@@ -52,6 +56,8 @@ DEFAULT_KEY_BINDINGS: dict[Action, list[int]] = {
     Action.CROUCH: [pygame.K_DOWN, pygame.K_s],
     Action.DASH: [pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_LALT],
     Action.GRAB: [pygame.K_g, pygame.K_c],
+    # F: cerca de las teclas de movimiento con la mano izquierda, y libre.
+    Action.RANGED_ATTACK: [pygame.K_f, pygame.K_v],
     Action.SHORT_ATTACK: [pygame.K_z, pygame.K_j],
     Action.LONG_ATTACK: [pygame.K_x, pygame.K_k],
     Action.CONFIRM: [pygame.K_RETURN, pygame.K_SPACE, pygame.K_z],
@@ -80,6 +86,7 @@ _CONTROLLER_BUTTON_MAP: dict[int, Action] = {
     2: Action.LONG_ATTACK,    # X
     3: Action.CROUCH,         # Y
     4: Action.GRAB,           # LB
+    5: Action.RANGED_ATTACK,  # RB
     7: Action.PAUSE,          # START
     6: Action.CANCEL,         # SELECT/BACK
 }

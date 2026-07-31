@@ -161,7 +161,10 @@ def _handle_grab_input(player: Player, inp: _InputSnapshot) -> bool:
 
 
 def _handle_ultimate_input(player: Player, inp: _InputSnapshot) -> bool:
-    if inp.short_attack and inp.long_attack and player.special_meter >= player.special_meter_max:
+    # F4.2: se consulta `ultimate_listo` y no el medidor a pelo, para que
+    # la comparación con margen viva en un solo sitio. Antes había un
+    # `>=` literal aquí y el redondeo lo dejaba en falso con la barra llena.
+    if inp.short_attack and inp.long_attack and player.ultimate_listo:
         from src.framework.entities.states import UltimateState
         player._change_state_instance(UltimateState())
         return True

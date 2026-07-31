@@ -54,6 +54,7 @@ _ACTION_LABELS: dict[Action, str] = {
     Action.LONG_ATTACK: "Attack (Long)",
     Action.DASH: "Dash",
     Action.GRAB: "Grab",
+    Action.RANGED_ATTACK: "Disparar",
     Action.CONFIRM: "Confirm",
     Action.CANCEL: "Cancel",
     Action.PAUSE: "Pause",

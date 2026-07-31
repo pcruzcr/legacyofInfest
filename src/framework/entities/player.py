@@ -24,6 +24,7 @@ from src.engine.utils.asset_loader import AssetLoader
 from src.engine.utils.surface_pool import get_pool
 from src.framework.entities.base_entity import BaseEntity
 from src.framework.entities.player_state import PlayerStateData
+from src.framework.entities.ranged_weapon import ArcoDelJugador
 
 if TYPE_CHECKING:
     from src.engine.input.input_manager import InputManager
@@ -191,8 +192,29 @@ class Player(BaseEntity):
         self.combo_active: bool = False
 
         # --- Special meter ---
+        #
+        # F4.2 — el ultimate era INALCANZABLE.
+        #
+        # `UltimateState` estaba escrito, tenía su animación, su hitbox de
+        # 96x64 y su multiplicador de daño x3. `helpers.py` exigía
+        # `special_meter >= special_meter_max` para entrar. Y **nada en todo el
+        # proyecto subía el medidor**: se inicializaba a 0, se ponía a 0 al
+        # gastarlo, y no había un solo `+=` en ninguna parte. Comprobado con
+        # 300 golpes simulados: seguía en 0,0.
+        #
+        # El HUD lo dibujaba, así que el jugador veía una barra que nunca se
+        # llenaba. Es la misma forma que la iluminación que no iluminaba y las
+        # demos que dibujaban en una esquina: sistema completo y correcto que
+        # no llegaba al jugador.
         self.special_meter: float = 0.0
         self.special_meter_max: float = 100.0
+        #: Cuánto sube el medidor por golpe conectado. 100/12 ≈ 8,34: doce
+        #: golpes por ultimate. Con menos se vuelve el ataque por defecto; con
+        #: muchos más, un adorno que nadie llega a ver.
+        self.special_gain_per_hit: float = 100.0 / 12.0
+        #: F4.2 — arco. Se crea aquí y no en la escena para que el jugador lo
+        #: lleve encima al cambiar de escenario, como la vida.
+        self.arco = ArcoDelJugador()
 
         # --- Air jump state (public) ---
         self.gravity_multiplier: float = 1.0
@@ -361,12 +383,39 @@ class Player(BaseEntity):
         self._health = max(0.0, min(self.max_health, amount))
 
     def consume_hitbox(self) -> None:
-        """
-        Called by the stage collision system after an attack hitbox connects,
-        to prevent multi-hit on the same frame.
+        """El sistema de colisión avisa de que un golpe ha conectado.
+
+        Evita el golpe múltiple en el mismo fotograma y, desde F4.2, es
+        también el **único** sitio donde sube el medidor de especial y se
+        recupera munición.
+
+        Aquí y no en el estado de ataque porque aquí es donde se sabe que el
+        golpe *acertó*: llenar el medidor al lanzarlo premiaría dar palos al
+        aire, que es exactamente el hábito que no interesa recompensar.
         """
         self._hitbox_consumed = True
         self._active_hitbox = None
+        self.gain_special(self.special_gain_per_hit)
+        self.arco.recargar()
+
+    def gain_special(self, amount: float) -> None:
+        """Sube el medidor de especial, con tope."""
+        self.special_meter = min(
+            self.special_meter_max, self.special_meter + max(0.0, amount),
+        )
+
+    #: Margen para comparar el medidor con su tope.
+    #:
+    #: Doce sumas de 100/12 dan **99,99999999999999**, no 100. Sin este margen
+    #: el jugador llenaba la barra en pantalla y el ultimate seguía sin
+    #: activarse: exactamente el defecto que F4.2 arregla, reintroducido por
+    #: una comparación de flotantes. Lo cazó la primera ejecución.
+    _EPSILON_MEDIDOR = 1e-6
+
+    @property
+    def ultimate_listo(self) -> bool:
+        """¿Está el medidor lleno? Lo consultan el HUD y las pruebas."""
+        return self.special_meter >= self.special_meter_max - self._EPSILON_MEDIDOR
 
     def apply_damage(
         self,
