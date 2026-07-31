@@ -1,0 +1,105 @@
+"""
+Module: entities
+System: stages.stage1_2_la_soda
+Academic Unit: Unit II (Vectors) / Unit III (Curves)
+Description: Custom enemy subclasses for La Soda. Both extend framework
+enemy base classes (EnemyWalker, EnemyFlying) per CLAUDE.md's "call the
+framework, never edit it" rule. Registered with StageLoader.register_entity()
+from stage1_2_la_soda.py so the .tmx can reference them by type name.
+See README.md for the academic concepts each one demonstrates.
+"""
+from __future__ import annotations
+
+import pygame
+
+from src.framework.entities.enemy_flying import EnemyFlying
+from src.framework.entities.enemy_walker import EnemyWalker
+from src.framework.processing.curve_tools import CurveTools
+
+
+class WalkerRaton(EnemyWalker):
+    """Cafeteria rat (docs/18_ENEMY_ROSTER.md #2.4).
+
+    Stats match the roster spec. Adds a "scent lock" speed burst on top of
+    the inherited chase AI: when the normalized direction to the player is
+    nearly head-on with the rat's current facing (dot product > 0.8), it
+    gets a small burst toward the player. This is explicit vector math
+    (normalize, dot product, length) living in student-owned code, not
+    just inherited framework behavior.
+    """
+
+    SCENT_LOCK_DOT: float = 0.8
+    SCENT_LOCK_BURST: float = 14.0
+
+    def __init__(self, spawn_position: pygame.Vector2, **kwargs) -> None:
+        kwargs.setdefault("patrol_length", 48.0)
+        kwargs.setdefault("patrol_speed", 55.0)
+        kwargs.setdefault("alert_speed", 90.0)
+        kwargs.setdefault("damage_on_contact", 0.25)
+        kwargs.setdefault("max_health", 1.0)
+        # EnemyWalker.__init__ (framework) hardcodes detection_range_x/y when
+        # calling EnemyBase.__init__ instead of forwarding them, so passing
+        # them as kwargs here would silently be swallowed and ignored — set
+        # them directly as instance attributes after construction instead.
+        kwargs.pop("detection_range_x", None)
+        super().__init__(spawn_position, **kwargs)
+        self.detection_range_x = 96.0
+
+    def _alert_behavior(self, dt: float) -> None:
+        super()._alert_behavior(dt)
+        if self._player_ref is None:
+            return
+        to_player = pygame.Vector2(self._player_ref.center) - pygame.Vector2(self.rect.center)
+        distance = to_player.length()
+        if distance <= 0:
+            return
+        direction = to_player.normalize()
+        facing = pygame.Vector2(self.facing_direction, 0.0)
+        if direction.dot(facing) > self.SCENT_LOCK_DOT:
+            self.position.x += direction.x * self.SCENT_LOCK_BURST * dt
+
+
+class FlyingCucaracha(EnemyFlying):
+    """Flying cockroach (docs/18_ENEMY_ROSTER.md #2.5).
+
+    Patrol path is an explicit CurveTools Catmull-Rom spline through 4
+    documented control points (a shallow arc above the counter), sampled
+    back-and-forth with a triangle wave so the roach glides smoothly
+    instead of snapping at the ends. Chosen over the framework's built-in
+    "sine" patrol strategy so the curve math (CurveTools.build_bezier_path)
+    is explicit and inspectable in student-owned code. Alert-mode chase
+    still uses the inherited sine/dive-bomb strategy for combat feel.
+    """
+
+    # Control points relative to spawn position (px). Forms a shallow
+    # dip-glide-dip arc: down, up, up, down — a lazy patrol above the
+    # kitchen counter.
+    CONTROL_POINTS: list[tuple[float, float]] = [
+        (-40.0, 10.0),
+        (-14.0, -18.0),
+        (14.0, -18.0),
+        (40.0, 10.0),
+    ]
+    CURVE_PERIOD: float = 3.2  # seconds for one full back-and-forth pass
+
+    def __init__(self, spawn_position: pygame.Vector2, **kwargs) -> None:
+        kwargs.setdefault("flight_speed", 45.0)
+        kwargs.setdefault("sine_amplitude", 16.0)
+        kwargs.setdefault("sine_frequency", 2.0)
+        kwargs.setdefault("damage_on_contact", 0.25)
+        kwargs.setdefault("max_health", 1.0)
+        super().__init__(spawn_position, **kwargs)
+        self._curve_points: list[pygame.Vector2] = [
+            pygame.Vector2(spawn_position.x + dx, spawn_position.y + dy)
+            for dx, dy in self.CONTROL_POINTS
+        ]
+        self._curve_t: float = 0.0
+
+    def _patrol_behavior(self, dt: float) -> None:
+        self._curve_t = (self._curve_t + dt / self.CURVE_PERIOD) % 2.0
+        t = self._curve_t if self._curve_t <= 1.0 else 2.0 - self._curve_t
+        target = CurveTools.build_bezier_path(self._curve_points, t)
+        prev_x = self.position.x
+        self.position.x, self.position.y = target.x, target.y
+        if abs(self.position.x - prev_x) > 0.01:
+            self.facing_direction = 1 if self.position.x >= prev_x else -1

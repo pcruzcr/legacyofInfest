@@ -45,14 +45,119 @@ def _loader_required_layers() -> list[str]:
     return list(LOADER_LAYERS)
 
 
-def _valid_object_types() -> list[str]:
-    """Tipos aceptados en la capa `Objects`, tomados del registro real."""
+def _tipos_registrados_por_el_estudiante(tmx: Path) -> set[str]:
+    """Tipos que el paquete de este escenario registra, leídos sin ejecutarlo.
+
+    AUD-106 — el validador suspendía a quien usaba bien el framework
+    ----------------------------------------------------------------
+    El diseño del curso es explícito: quien inventa un enemigo o un jefe lo
+    registra desde su propio paquete con
+    ``StageLoader.register_entity("MiJefe", MiJefe)``. Es exactamente lo que
+    hacen. Pero el validador leía el registro **del motor**, que en un proceso
+    recién arrancado no contiene nada del estudiante. Sobre las entregas
+    reales de la Evaluación Práctica I:
+
+        [ERROR] type='BossPaburu' no existe.
+        [ERROR] type='BossRey' no existe.
+        [ERROR] type='BossGavilan' no existe.
+        [ERROR] type='EstudianteInfectado' no existe.
+        [ERROR] type='LaSodaWalkerRaton' no existe. ¿Quisiste decir WalkerRaton?
+
+    Cinco de trece entregas suspendidas por hacerlo como se les pidió. Es el
+    mismo defecto que AUD-104 en el calificador de jefes, y la misma lección:
+    una herramienta del profesor que castiga usar el framework enseña a no
+    usarlo.
+
+    Por qué se lee el código en vez de importarlo
+    ---------------------------------------------
+    La primera versión importaba el paquete. No basta: `boss_paburu` registra
+    **dentro de un método** de su escena, así que importar el módulo no
+    ejecuta esa línea. Habría que instanciar la escena, y para eso hace falta
+    un contexto de juego entero.
+
+    Leyendo el árbol sintáctico se encuentra el registro esté donde esté —a
+    nivel de módulo, dentro de un método o de un `if`— y, de paso, **no se
+    ejecuta código ajeno** para validar un fichero de mapa.
+
+    Convención: ``assets/maps/<nombre>/<nombre>.tmx`` ↔ ``src/stages/<nombre>/``.
+    """
+    import ast
+
+    paquete = _PROJECT_ROOT / "src" / "stages" / tmx.parent.name
+    if not paquete.is_dir():
+        return set()
+
+    tipos: set[str] = set()
+    dinamicos = 0
+    diferidos: list[str] = []
+
+    for fichero in paquete.rglob("*.py"):
+        if "__pycache__" in fichero.parts:
+            continue
+        try:
+            arbol = ast.parse(fichero.read_text(encoding="utf-8"))
+        except (OSError, SyntaxError) as e:
+            warn(f"no se pudo leer {display_path(fichero, _PROJECT_ROOT)} ({e})")
+            continue
+
+        # Un registro escrito dentro de una función sólo existe cuando esa
+        # función se ejecuta. Se anota aparte para poder avisar.
+        dentro_de_funcion: set[int] = set()
+        for nodo in ast.walk(arbol):
+            if isinstance(nodo, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                for hijo in ast.walk(nodo):
+                    dentro_de_funcion.add(id(hijo))
+
+        for nodo in ast.walk(arbol):
+            if not isinstance(nodo, ast.Call):
+                continue
+            f = nodo.func
+            nombre_llamada = f.attr if isinstance(f, ast.Attribute) else getattr(f, "id", "")
+            if nombre_llamada != "register_entity" or not nodo.args:
+                continue
+            primero = nodo.args[0]
+            if not (isinstance(primero, ast.Constant) and isinstance(primero.value, str)):
+                dinamicos += 1
+                continue
+            tipos.add(primero.value)
+            if id(nodo) in dentro_de_funcion:
+                diferidos.append(f"{primero.value} ({display_path(fichero, _PROJECT_ROOT)})")
+
+    if dinamicos:
+        warn(
+            f"{dinamicos} llamada(s) a register_entity con un nombre que no es "
+            f"literal; esos tipos no se pueden comprobar desde aquí"
+        )
+    if diferidos:
+        # AUD-106: aviso, no error. El juego funciona —la escena registra en su
+        # constructor, antes de cargar el mapa—, pero cargar el TMX suelto no:
+        # ni el previsualizador ni el calificador construyen la escena. Decirlo
+        # es más útil que aprobarlo en silencio o suspenderlo sin explicar.
+        warn(
+            "registro dentro de una función: "
+            + ", ".join(sorted(diferidos))
+            + ". Al jugar funciona, pero el previsualizador y las herramientas "
+              "que abren el mapa suelto no podrán construir esos objetos. "
+              "Registra a nivel de módulo, como en stage1_3_las_aulas."
+        )
+    return tipos
+
+
+def _valid_object_types(tmx: Path | None = None) -> list[str]:
+    """Tipos aceptados en la capa `Objects`, tomados del registro real.
+
+    Incluye los que registre el paquete del escenario, si se le pasa la ruta
+    del mapa y ese paquete existe (AUD-106).
+    """
     from src.framework.entities import entity_factory
     from src.framework.stage.stage_loader import StageLoader
     from src.framework.stage.tmx_diagnostics import known_object_types
 
     entity_factory.ensure_registered()
-    return known_object_types(list(StageLoader._entity_registry))
+    tipos = list(StageLoader._entity_registry)
+    if tmx is not None:
+        tipos += sorted(_tipos_registrados_por_el_estudiante(tmx))
+    return known_object_types(tipos)
 
 
 _errors: list[str] = []
@@ -175,7 +280,7 @@ def _validate_objects(root: ET.Element, path: Path) -> None:
         suggest_types,
     )
 
-    valid_types = _valid_object_types()
+    valid_types = _valid_object_types(path)
     spawns = 0
 
     for og in root.findall("objectgroup"):

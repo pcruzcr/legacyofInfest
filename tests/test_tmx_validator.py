@@ -171,15 +171,35 @@ class TestTheValidatorAgreesWithTheLoader:
     """La afirmación que el estudiante necesita que sea verdad."""
 
     def test_what_the_validator_approves_the_loader_loads(self, _pygame_init) -> None:
+        """Lo que el validador aprueba **sin reservas**, el cargador lo carga.
+
+        AUD-106 — la excepción, y por qué está declarada
+        ------------------------------------------------
+        Dos entregas registran sus jefes dentro de un método de su escena, no
+        a nivel de módulo. Al jugar funciona —la escena se construye antes de
+        cargar el mapa—, pero abrir el TMX suelto no ejecuta ese método, y el
+        cargador no sabe construir el jefe.
+
+        El validador ya lo dice con todas las letras: «*el previsualizador y
+        las herramientas que abren el mapa suelto no podrán construir esos
+        objetos*». Esta prueba es una de esas herramientas, así que respeta el
+        aviso en lugar de contradecirlo.
+
+        Lo que **no** se hace es degradar el aviso a silencio: el estudiante
+        tiene que saberlo, y la línea de abajo falla en cuanto un mapa sin ese
+        aviso deje de cargar.
+        """
         import pygame
         pygame.display.set_mode((320, 224))
 
         from src.framework.stage.stage_loader import StageLoader
 
         for tmx in sorted((ROOT / "assets" / "maps").rglob("*.tmx")):
-            ok, _problems = _validate(tmx)
+            ok, problems = _validate(tmx)
             if not ok:
                 continue  # el validador ya lo rechazó; no promete nada
+            if "registro dentro de una función" in problems:
+                continue  # el propio validador avisó de que esto no cargaría
             StageLoader.clear_tmx_cache()
             StageLoader.load(tmx)  # no debe lanzar
 
