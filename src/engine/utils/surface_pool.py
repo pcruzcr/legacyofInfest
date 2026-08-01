@@ -60,7 +60,13 @@ class SurfacePool:
         self._hits: int = 0
         self._misses: int = 0
         self._active_count: int = 0
-        self._flip_cache: dict[int, list[pygame.Surface]] = {}
+        # AUD-124 — la clave es una tupla de tres enteros, no un entero.
+        # La anotación decía `dict[int, ...]` y el código guardaba
+        # `(id(frames), len(frames), id(frames[0]))`, que es lo correcto: con
+        # sólo `id()` una lista liberada y otra creada en la misma dirección
+        # compartirían caché y el sprite saldría espejado. La anotación
+        # describía una versión anterior y más frágil de este caché.
+        self._flip_cache: dict[tuple[int, int, int], list[pygame.Surface]] = {}
         self._leak_warning: bool = False
 
         buckets = buckets or _DEFAULT_BUCKETS

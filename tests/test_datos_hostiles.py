@@ -152,3 +152,76 @@ class TestNoHayTravesiaDeRutas:
             "revisa que un `stage_id` manipulado no pueda importar un módulo "
             "arbitrario"
         )
+
+
+class TestLosLogrosSobrevivenAlCambioDeFormato:
+    """AUD-124 — `_stats` estaba declarado `dict[str, int]` y guardaba una lista.
+
+    La anotación mentía. Funcionaba, porque Python no comprueba anotaciones en
+    tiempo de ejecución, pero quien leyera `dict[str, int]` podía escribir
+    `_stats["explored_stages"] + 1` y romperle la partida a alguien.
+
+    Los escenarios visitados son un **conjunto**, no un contador, y ahora
+    viven en su propio atributo. Lo que estas pruebas protegen es que el
+    fichero en disco no cambiara de forma: un profesor con logros de medio
+    semestre no debe perderlos porque yo haya arreglado una anotación.
+    """
+
+    @pytest.fixture
+    def sistema(self, tmp_path, monkeypatch):
+        import src.engine.core.achievements as modulo
+
+        monkeypatch.setattr(modulo, "ACHIEVEMENTS_PATH", tmp_path / "logros.json")
+        return modulo.AchievementSystem()
+
+    def test_los_escenarios_visitados_se_guardan_y_se_recuperan(self, sistema) -> None:
+        for stage in ("stage0", "stage1_1", "stage1_2"):
+            sistema.mark_explorer(stage)
+        sistema.save()
+
+        import src.engine.core.achievements as modulo
+        otro = modulo.AchievementSystem()
+        otro.load()
+        assert otro._explored_stages == ["stage0", "stage1_1", "stage1_2"]
+
+    def test_un_fichero_del_formato_viejo_se_lee_igual(self, sistema, tmp_path) -> None:
+        """El caso que de verdad importa: la partida que ya existe en disco."""
+        import orjson
+
+        (tmp_path / "logros.json").write_bytes(orjson.dumps({
+            "progress": {},
+            "stats": {"enemies_killed": 7,
+                      "explored_stages": ["stage0", "stage2_2"]},
+        }))
+        sistema.load()
+        assert sistema._explored_stages == ["stage0", "stage2_2"]
+        assert sistema._stats["enemies_killed"] == 7
+        assert "explored_stages" not in sistema._stats, (
+            "la lista volvió a colarse en el diccionario de contadores"
+        )
+
+    def test_no_se_cuenta_dos_veces_el_mismo_escenario(self, sistema) -> None:
+        for _ in range(5):
+            sistema.mark_explorer("stage0")
+        assert sistema._explored_stages == ["stage0"]
+
+    def test_un_stage_id_vacio_no_entra(self, sistema) -> None:
+        """Un mapa sin `stage_id` no debe contar como escenario explorado."""
+        sistema.mark_explorer("")
+        assert sistema._explored_stages == []
+
+    def test_los_contadores_no_admiten_basura_del_fichero(self, sistema, tmp_path) -> None:
+        """Si el fichero trae texto donde va un contador, se descarta.
+
+        Antes cualquier valor entraba en `_stats` tal cual, y la primera suma
+        reventaba en la partida del jugador en vez de al cargar.
+        """
+        import orjson
+
+        (tmp_path / "logros.json").write_bytes(orjson.dumps({
+            "progress": {},
+            "stats": {"enemies_killed": "muchisimos", "parries": 3},
+        }))
+        sistema.load()
+        assert "enemies_killed" not in sistema._stats
+        assert sistema._stats["parries"] == 3

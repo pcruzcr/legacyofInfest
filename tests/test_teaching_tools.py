@@ -335,8 +335,11 @@ class TestElPrevisualizadorCierraElCicloDelEstudiante:
         import numpy as np
         import pygame
 
-        con = tmp_path / "con.png"
-        sin = tmp_path / "sin.png"
+        # "con.png" no: en Windows "con" es el nombre reservado de la consola,
+        # pygame.image.save escribía al dispositivo y image.load se quedaba
+        # leyendo del teclado para siempre (el cuelgue del CI de Windows).
+        con = tmp_path / "con_luz.png"
+        sin = tmp_path / "sin_luz.png"
         _ejecutar("scripts/preview_tmx.py", TMX_STAGE0, "--salida", str(con))
         _ejecutar("scripts/preview_tmx.py", TMX_STAGE0, "--salida", str(sin),
                   "--sin-luz")

@@ -207,7 +207,7 @@ def grade_boss(path: Path) -> dict[str, Any]:
     if total_phase_indicators >= 2:
         result["categories"]["phase_transitions"] = {"score": RUBRIC["phase_transitions"], "max": RUBRIC["phase_transitions"], "msg": f"{total_phase_indicators} phase indicator(s)"}
     elif total_phase_indicators == 1:
-        result["categories"]["phase_transitions"] = {"score": 8, "max": RUBRIC["phase_transitions"], "msg": "Only 1 phase indicator (need ≥2)"}
+        result["categories"]["phase_transitions"] = {"score": 8, "max": RUBRIC["phase_transitions"], "msg": "Only 1 phase indicator (need >=2)"}
         result["warnings"].append("Add a second phase (e.g. phase2 method or change_state call)")
     else:
         result["categories"]["phase_transitions"] = {"score": 0, "max": RUBRIC["phase_transitions"], "msg": "No phase transitions detected"}
@@ -230,7 +230,7 @@ def grade_boss(path: Path) -> dict[str, Any]:
     if len(attack_methods) >= 2:
         result["categories"]["attack_patterns"] = {"score": RUBRIC["attack_patterns"], "max": RUBRIC["attack_patterns"], "msg": f"{len(attack_methods)} attack method(s)"}
     elif len(attack_methods) == 1:
-        result["categories"]["attack_patterns"] = {"score": 8, "max": RUBRIC["attack_patterns"], "msg": "Only 1 attack pattern (need ≥2)"}
+        result["categories"]["attack_patterns"] = {"score": 8, "max": RUBRIC["attack_patterns"], "msg": "Only 1 attack pattern (need >=2)"}
     else:
         result["categories"]["attack_patterns"] = {"score": 0, "max": RUBRIC["attack_patterns"], "msg": "No attack patterns found"}
 
@@ -257,7 +257,7 @@ def grade_boss(path: Path) -> dict[str, Any]:
     if hp_thresholds >= 2:
         result["categories"]["hp_thresholds"] = {"score": RUBRIC["hp_thresholds"], "max": RUBRIC["hp_thresholds"], "msg": f"{hp_thresholds} HP threshold check(s)"}
     elif hp_thresholds == 1:
-        result["categories"]["hp_thresholds"] = {"score": 5, "max": RUBRIC["hp_thresholds"], "msg": "Only 1 HP threshold (need ≥2 for 2 phases)"}
+        result["categories"]["hp_thresholds"] = {"score": 5, "max": RUBRIC["hp_thresholds"], "msg": "Only 1 HP threshold (need >=2 for 2 phases)"}
     else:
         result["categories"]["hp_thresholds"] = {"score": 0, "max": RUBRIC["hp_thresholds"], "msg": "No HP threshold checks"}
 
@@ -339,7 +339,7 @@ def grade_boss(path: Path) -> dict[str, Any]:
     elif method_count >= 3:
         result["categories"]["class_structure"] = {"score": 3, "max": RUBRIC["class_structure"], "msg": f"Only {method_count} methods"}
     else:
-        result["categories"]["class_structure"] = {"score": 0, "max": RUBRIC["class_structure"], "msg": f"Only {method_count} methods (need ≥5)"}
+        result["categories"]["class_structure"] = {"score": 0, "max": RUBRIC["class_structure"], "msg": f"Only {method_count} methods (need >=5)"}
 
     total = sum(c["score"] for c in result["categories"].values())
     result["score"] = total
@@ -432,12 +432,12 @@ def main() -> int:
             print(f"  {rel}")
             print(f"{'='*50}")
             for cat, data in sorted(r["categories"].items()):
-                status = "[PASS]" if data["score"] >= data["max"] else "[WARN]️ " if data["score"] > 0 else "[FAIL]"
+                status = "[PASS]" if data["score"] >= data["max"] else "[WARN] " if data["score"] > 0 else "[FAIL]"
                 print(f"  {status} {cat}: {data['score']}/{data['max']} — {data['msg']}")
             for err in r["errors"]:
                 print(f"  [FAIL] ERROR: {err}")
             for w in r["warnings"]:
-                print(f"  [WARN]️  WARN: {w}")
+                print(f"  [WARN]  WARN: {w}")
             print(f"\n  GRADE: {r['score']}/{r['max_score']} ({r['percentage']}%)")
 
     if args.json:

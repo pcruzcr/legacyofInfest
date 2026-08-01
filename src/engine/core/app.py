@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
 import pygame
 
@@ -15,12 +16,21 @@ from src.engine.input.input_manager import InputManager
 from src.engine.scene.scene_manager import SceneManager
 from src.framework import FrameworkUsageError
 
+if TYPE_CHECKING:
+    from src.engine.render import GLRenderer
+
 logger = logging.getLogger(__name__)
 
 class App:
     def __init__(self, use_gl: bool = True) -> None:
         self._use_gl = use_gl
-        self._gl_renderer = None
+        # AUD-124 — sin anotación, mypy infiere el tipo `None` y toda
+        # llamada posterior a `self._gl_renderer.init(...)` es un error.
+        # `GLRenderer` sólo se importa para comprobar tipos: importarlo
+        # en tiempo de ejecución arrastraría moderngl aunque el juego
+        # arranque sin GL, que es el caso que este atributo existe para
+        # soportar.
+        self._gl_renderer: GLRenderer | None = None
         self._init_pygame()
         self._init_subsystems()
 
