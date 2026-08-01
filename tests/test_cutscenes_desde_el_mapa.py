@@ -519,10 +519,9 @@ class TestStage0YaNoLoHaceAMano:
     def _fuente(self) -> str:
         import inspect
 
-        from src.stages.stage0.stage0 import Stage0
-
         import src.stages.stage0.stage0 as modulo
-        return inspect.getsource(modulo) + inspect.getsource(Stage0)
+
+        return inspect.getsource(modulo)
 
     def test_no_toca_el_atributo_privado_del_guion(self) -> None:
         assert "_cutscene._active" not in self._fuente(), (
