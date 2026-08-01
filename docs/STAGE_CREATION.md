@@ -10,6 +10,17 @@ date_processed: "2026-07-14"
 
 # Stage Creation Guide
 
+> **Esta guía es el resumen. El manual completo es
+> [`60_GUIA_COMPLETA_DEL_MOTOR.md`](60_GUIA_COMPLETA_DEL_MOTOR.md).**
+>
+> Lo que hay aquí abajo sigue siendo cierto, pero es **parcial**: la tabla de
+> enemigos lista 8 de los 30 tipos registrados, y no aparecen ninguno de los
+> objetos de las fases 4 y 5 —`Pickup`, `Key`, `LockedDoor`, `Chest`, `Vine`,
+> `Zipline`, `RhythmBlock`, `MovingPlatform`, `SinkingPlatform`, `WindZone`,
+> `WaterZone`, `FrictionZone`, `Conveyor`, `LaserZone`, `Guard`, `Stalker`,
+> `EventTrigger`—. Si buscas algo y no está aquí, está en la guía completa
+> antes que en ningún sitio.
+
 ## 1. TMX Map Requirements
 
 Create your map in **Tiled** with the following settings:
