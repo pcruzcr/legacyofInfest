@@ -68,6 +68,28 @@ class AudioManager:
         except (pygame.error, FileNotFoundError, OSError) as e:  # BUG-074 FIX: pygame.error no atrapa FileNotFoundError
             logger.warning("AudioManager: no se pudo cargar música %s: %s", path_str, e)
 
+    def posicion_musica(self) -> float | None:
+        """Segundos reproducidos de la pista actual, o `None` si no se sabe.
+
+        AUD-137 (F6) — la fuente de verdad del reloj musical.
+
+        `pygame.mixer.music.get_pos()` cuenta desde el último `play()` en
+        milisegundos y devuelve -1 cuando no hay nada sonando. Devolver `None`
+        en ese caso y no 0.0 es la diferencia entre «la música va por el
+        principio» y «no hay música», y quien pregunta necesita distinguirlas:
+        con `None` el reloj sigue con su propio tiempo en vez de quedarse
+        clavado en el pulso cero para siempre.
+        """
+        if not self._mixer_listo() or self._current_music is None:
+            return None
+        try:
+            ms = pygame.mixer.music.get_pos()
+        except pygame.error:  # pragma: no cover - mezclador caído a mitad
+            return None
+        if ms is None or ms < 0:
+            return None
+        return ms / 1000.0
+
     @staticmethod
     def _mixer_listo() -> bool:
         """¿Hay un mezclador con el que hablar?

@@ -430,6 +430,22 @@ class BloqueRitmico:
     desfase: float = 0.0
     _t: float = 0.0
 
+    #: AUD-137 (F6) — patrón de compás: `"x.x."` es sí, no, sí, no.
+    #:
+    #: Con patrón, el bloque deja de contar segundos y **pregunta al reloj
+    #: musical** en qué pulso va. Es la diferencia entre un bloque que aparece
+    #: cada segundo y uno que aparece con la música: contando segundos, el
+    #: bloque y la canción llevan relojes distintos y a los cinco minutos van
+    #: medio compás desfasados.
+    #:
+    #: Y además se lee de un vistazo, que es más de lo que puede decirse de
+    #: dos números en segundos.
+    patron: str = ""
+
+    @property
+    def sigue_la_musica(self) -> bool:
+        return bool(self.patron.strip())
+
     @property
     def presente(self) -> bool:
         ciclo = self.visible_seg + self.oculto_seg

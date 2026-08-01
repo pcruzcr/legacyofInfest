@@ -160,9 +160,15 @@ def _objetos() -> list[str]:
     # ── Sala 4: bloques rítmicos sobre el hueco ───────────────
     obj("MessageTrigger_Once", (3 * SALA + 2) * TS, suelo_px - 64, 48, 48,
         text="Aparecen a compas. Cuenta antes de saltar.")
+    # AUD-137: los dos primeros siguen contando segundos —para que el mapa
+    # siga sirviendo de ejemplo del modo de siempre— y los dos ultimos van
+    # con la musica. Los patrones estan desplazados entre si: «x.x.» y
+    # «.x.x» se turnan, que es lo que obliga a saltar a tiempo.
+    patrones = ["", "", "x.x.", ".x.x"]
     for i in range(4):
         obj("RhythmBlock", (3 * SALA + 9 + i * 3) * TS, suelo_px - 2 * TS,
-            2 * TS, TS, visible_seg=1.6, oculto_seg=1.2, desfase=i * 0.7)
+            2 * TS, TS, visible_seg=1.6, oculto_seg=1.2, desfase=i * 0.7,
+            patron=patrones[i])
     obj("DeathPit", (3 * SALA + 8) * TS, (MH - 1) * TS, 14 * TS, TS)
     obj("Checkpoint", (4 * SALA - 4) * TS, suelo_px - 32, 16, 32, checkpoint_id=4)
 
@@ -249,6 +255,10 @@ tileheight="{TS}" infinite="0" nextlayerid="20" nextobjectid="900">
   <property name="stage_name" value="LABORATORIO DE MECANICAS"/>
   <property name="author" value="Equipo docente — Legacy of Infest"/>
   <property name="bgm_track" value="bgm_stage0"/>
+  <!-- AUD-137 (F6): el compas del escenario. Con `bpm`, los bloques que
+       declaran `patron` dejan de contar segundos y siguen a la musica. -->
+  <property name="bpm" type="float" value="120"/>
+  <property name="compas" type="int" value="4"/>
   <property name="background_zone" value="stage0"/>
   <property name="climate" value="clear"/>
   <property name="time_limit" value="0"/>

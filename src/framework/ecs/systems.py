@@ -194,9 +194,18 @@ def sistema_bloques_ritmicos(mundo: World, dt: float) -> None:
     fotograma**, y el jugador cae. Con herencia habría que avisar a alguien; con
     componentes, la ausencia del dato es el aviso.
     """
+    reloj = mundo.recurso("reloj_musical")
     for entidad, bloque in mundo.cada(BloqueRitmico):
         bloque._t += dt
-        presente = bloque.presente
+        # AUD-137 (F6): con patrón, el bloque **pregunta a la música** en qué
+        # pulso va en vez de contar sus propios segundos. Contando segundos,
+        # el bloque y la canción llevan relojes distintos y a los cinco
+        # minutos van medio compás desfasados: es la razón por la que hasta
+        # ahora no se podía hacer un nivel rítmico de verdad.
+        if bloque.sigue_la_musica and reloj is not None:
+            presente = reloj.presente_en_patron(bloque.patron)
+        else:
+            presente = bloque.presente
         tiene = mundo.tiene(entidad, Solido)
         if presente and not tiene:
             mundo.poner(entidad, Solido())

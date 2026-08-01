@@ -77,7 +77,8 @@ class World:
       sistemas y no dentro de uno.
     """
 
-    __slots__ = ("_almacen", "_pendientes_de_baja", "_siguiente", "_vivas")
+    __slots__ = ("_almacen", "_pendientes_de_baja", "_recursos", "_siguiente",
+                 "_vivas")
 
     def __init__(self) -> None:
         #: tipo de componente -> {entidad: componente}
@@ -85,6 +86,21 @@ class World:
         self._siguiente: EntityId = 1
         self._vivas: set[EntityId] = set()
         self._pendientes_de_baja: set[EntityId] = set()
+        #: AUD-137 — cosas que son del mundo entero y no de una entidad: el
+        #: reloj musical, por ejemplo.
+        #:
+        #: Un sistema recibe `(mundo, dt)` y nada más, a propósito: es lo que
+        #: hace que se puedan probar sueltos. Pero hay datos que no son de
+        #: ninguna entidad en particular y que un sistema necesita, y sin un
+        #: sitio para ellos aparecen como variables globales — que es peor.
+        self._recursos: dict[str, object] = {}
+
+    # -- recursos del mundo ----------------------------------------
+    def poner_recurso(self, clave: str, valor: object) -> None:
+        self._recursos[clave] = valor
+
+    def recurso(self, clave: str, por_defecto: object = None) -> object:
+        return self._recursos.get(clave, por_defecto)
 
     # -- ciclo de vida ---------------------------------------------
     def crear(self, *componentes: object) -> EntityId:
