@@ -38,6 +38,15 @@ from src.framework.stage.tmx_diagnostics import (
 
 logger = logging.getLogger(__name__)
 
+#: Puntos de vista que el motor sabe jugar (AUD-129).
+#:
+#: `lateral` es el plataformas de siempre. `cenital` es la vista desde arriba
+#: —Zelda, Hotline Miami, la sala de cámaras de César Ubáu—: sin gravedad,
+#: movimiento libre en los dos ejes, y **sin plataformas de un solo sentido**,
+#: porque desde arriba una repisa atravesable no es una repisa: es un muro
+#: invisible que el jugador no puede ver ni entender.
+VISTAS_VALIDAS: frozenset[str] = frozenset({"lateral", "cenital"})
+
 #: F5.3–F5.6 — tipos de Tiled que se convierten en componentes ECS.
 #:
 #: Es un **subconjunto** de `BUILTIN_OBJECT_TYPES`, no una copia: aquélla dice
@@ -164,6 +173,17 @@ class StageData:
     time_limit: int = 0
     bgm_track: str = ""
     gravity_multiplier: float = 1.0
+    #: Punto de vista del escenario: `"lateral"` o `"cenital"` (AUD-129).
+    #:
+    #: Cenital es la vista desde arriba de Zelda, Hotline Miami o la sala de
+    #: cámaras de César Ubáu: sin gravedad, movimiento libre en dos ejes y sin
+    #: plataformas de un solo sentido —desde arriba, una repisa atravesable es
+    #: un muro invisible—.
+    #:
+    #: Se declara por escenario y no por zona: el mismo mundo puede tener un
+    #: sótano cenital y un exterior lateral, que es justo lo que hace que
+    #: valga la pena tener las dos vistas.
+    vista: str = "lateral"
     climate: str = ""
     #: Brillo ambiente del escenario, de 0 (oscuridad total) a 1 (sin
     #: oscurecer). `None` significa "no declarado": la escena caerá a su tabla
@@ -416,6 +436,17 @@ class StageLoader:
         bgm_track = props.get("bgm_track", "")
         gravity_multiplier = cls._safe_float(props.get("gravity_multiplier", 1.0), "gravity_multiplier")
         climate = props.get("climate", "")
+        # AUD-129 — una vista desconocida cae a lateral con aviso, no rompe.
+        # `view` en inglés se acepta igual: el proyecto es bilingüe en las
+        # propiedades desde F3.1 y obligar a recordar cuál lleva cada una es
+        # la clase de fricción que produce mapas que no cargan.
+        vista = str(props.get("vista") or props.get("view") or "lateral").strip().lower()
+        if vista not in VISTAS_VALIDAS:
+            logger.warning(
+                "StageLoader: vista %r desconocida — se usa 'lateral'. "
+                "Valores válidos: %s", vista, ", ".join(sorted(VISTAS_VALIDAS)),
+            )
+            vista = "lateral"
         zone = cls._safe_int(props.get("zone", 0), "zone")
         ambient_light = cls._parse_ambient_light(props)
         bloom = cls._parse_unit_prop(props, "bloom", 0.0, 1.0)
@@ -450,6 +481,7 @@ class StageLoader:
             time_limit=time_limit,
             bgm_track=bgm_track,
             gravity_multiplier=gravity_multiplier,
+            vista=vista,
             climate=climate,
             zone=zone,
             ambient_light=ambient_light,

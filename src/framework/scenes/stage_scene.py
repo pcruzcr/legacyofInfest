@@ -218,6 +218,15 @@ class StageScene(BaseScene):
         self._player = Player(spawn, event_bus=self.context.event_bus)
         if hasattr(self._stage_data, "gravity_multiplier"):
             self._player.gravity_multiplier = self._stage_data.gravity_multiplier
+        # AUD-129 — la vista del escenario llega al jugador.
+        #
+        # Se escribe directamente y no con `hasattr` a propósito: `vista` tiene
+        # valor por defecto en `StageData`, así que siempre existe. Un
+        # `getattr(..., "lateral")` aquí sería justo el patrón que dejó el
+        # sistema de diálogo sin abrirse durante meses (AUD-127) — si algún día
+        # alguien renombra el campo, quiero un `AttributeError` ruidoso, no un
+        # escenario que calla y se juega en la vista equivocada.
+        self._player.vista_cenital = self._stage_data.vista == "cenital"
 
         pending = self.context.pending_load
         if pending is not None and pending.stage_id == self._stage_data.stage_id:

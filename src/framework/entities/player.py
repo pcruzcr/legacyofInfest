@@ -236,6 +236,14 @@ class Player(BaseEntity):
 
         # --- Air jump state (public) ---
         self.gravity_multiplier: float = 1.0
+        #: AUD-129 — vista cenital: sin gravedad y con movimiento en dos ejes.
+        #:
+        #: Es una bandera del jugador y no un estado nuevo a propósito. Los 26
+        #: estados que ya existen —atacar, recibir daño, morir, parry— siguen
+        #: valiendo tal cual desde arriba; lo único que cambia es **cómo se
+        #: integra el movimiento**. Un `PlayerState.CENITAL` habría obligado a
+        #: duplicar la mitad de la máquina de estados para no ganar nada.
+        self.vista_cenital: bool = False
 
         # --- Direction ---
         self.facing_direction: int = 1  # -1 left, 1 right
@@ -542,13 +550,38 @@ class Player(BaseEntity):
             self._advance_animation(dt)
 
         # Physics (gravity + movement)
-        self._apply_physics(dt)
+        if self.vista_cenital:
+            self._aplicar_fisica_cenital(dt, input_manager)
+        else:
+            self._apply_physics(dt)
 
         # Collision resolution (axis-separated) — X then Y
         self._resolve_collision(dt, collision_rects)
 
         # One-way platforms (only resolve Y when falling)
-        self._resolve_one_way_collision(dt, one_way_rects)
+        #
+        # AUD-129 — desde arriba **no** se resuelven. Una repisa atravesable
+        # vista en planta no es una repisa: es un rectángulo que frena al
+        # jugador por un lado y no por el otro, sin nada en pantalla que lo
+        # explique. El jugador concluye que el juego está roto, y tiene razón.
+        if not self.vista_cenital:
+            self._resolve_one_way_collision(dt, one_way_rects)
+        else:
+            # AUD-129 — el suelo se restituye **después** de la colisión.
+            #
+            # `_resolve_collision` pone `is_grounded = False` al integrar Y y
+            # sólo lo devuelve a True si encuentra algo debajo. Desde arriba no
+            # hay «debajo», así que sin esto el jugador quedaría en el aire
+            # permanentemente: animación de caída, sonido de aterrizaje en
+            # bucle y saltos recargándose sin parar.
+            #
+            # Como efecto lateral deseable, esto **desactiva el salto**: la
+            # tecla arriba y la de saltar comparten enlace (`W` y `↑`), así que
+            # en cenital el jugador va a pulsar saltar sin querer todo el rato.
+            # Con el suelo siempre presente, el estado aéreo se abandona al
+            # fotograma siguiente y la velocidad vertical la fija el
+            # movimiento, no el impulso.
+            self.is_grounded = True
 
         # Decay pending jump timer so the buffer only lasts ~5 frames
         if self._pending_jump:
@@ -674,6 +707,52 @@ class Player(BaseEntity):
     # Physics
     # ──────────────────────────────────────────────
 
+    def _aplicar_fisica_cenital(
+        self, dt: float, input_manager: InputManager | None,
+    ) -> None:
+        """Física de la vista desde arriba: sin gravedad, dos ejes libres.
+
+        AUD-129 — qué cambia y qué no
+        ------------------------------
+        Cambia **sólo la integración del movimiento**. El estado que gobierna
+        al jugador sigue decidiendo la velocidad horizontal —así los ataques,
+        el daño y el parry se comportan igual—, y aquí se añade la vertical,
+        que en lateral la pone la gravedad.
+
+        Tres decisiones que se notan al jugar:
+
+        * **`is_grounded` siempre verdadero.** Desde arriba no hay «en el
+          aire»: sin esto el jugador entraría en `FALLING` en el primer
+          fotograma, sonaría el aterrizaje en bucle y el salto se recargaría
+          sin parar. El suelo es el plano de juego.
+        * **La diagonal se normaliza.** Sin normalizar, moverse en diagonal
+          da 1,41 veces la velocidad, y todo jugador acaba andando en zigzag
+          porque es objetivamente más rápido. Es el defecto clásico de la
+          vista cenital y sale gratis evitarlo.
+        * **La velocidad vertical no acumula.** Se fija desde la entrada, no
+          se integra: en cenital no hay inercia de caída que respetar, y
+          acumular haría que soltar la tecla dejara al jugador derrapando.
+        """
+        self.is_grounded = True
+        self._wall_side = 0
+        self._wall_slide_timer = 0.0
+
+        vy = 0.0
+        if input_manager is not None:
+            from src.engine.input.action_map import Action
+            if input_manager.is_action_held(Action.MOVE_UP):
+                vy -= 1.0
+            if input_manager.is_action_held(Action.MOVE_DOWN):
+                vy += 1.0
+
+        velocidad = self.walk_speed
+        if vy != 0.0 and self.velocity.x != 0.0:
+            # Diagonal: se reparte para que el módulo siga siendo `walk_speed`.
+            factor = 0.70710678                      # 1 / raíz de 2
+            self.velocity.x *= factor
+            vy *= factor
+        self.velocity.y = vy * velocidad
+
     def _apply_physics(self, dt: float) -> None:
         """Apply gravity. Movement integration happens per-axis in _resolve_collision."""
         wall_side = self._wall_side
@@ -715,9 +794,31 @@ class Player(BaseEntity):
            direction of motion (came-from-above lands, came-from-below bonks).
         No heuristics needed: each axis only sees penetration caused by
         its own movement.
+
+        AUD-130 — este método también **integra**, y ahí estaba el defecto
+        ---------------------------------------------------------------------
+        La primera línea era::
+
+            if not collision_rects:
+                return
+
+        …y como la integración de la posición vive dentro de este método, un
+        escenario **sin ninguna caja de colisión dejaba al jugador congelado**:
+        la velocidad crecía fotograma a fotograma y la posición no se movía
+        nunca. Salir por «no hay nada contra lo que chocar» también saltaba el
+        «avanzar».
+
+        En los quince mapas del curso no se notaba porque todos tienen suelo.
+        Se notaría en el primer mapa de un estudiante con la capa `Collision`
+        vacía —que es un error frecuentísimo, y ya avisado por el validador—:
+        el síntoma sería «no me muevo», que no apunta ni de lejos a la causa.
+        Lo encontró la vista cenital, donde probar sin geometría es lo natural.
+
+        El nombre del método miente un poco y eso es lo que lo hizo posible:
+        se llama «resolver colisión» y hace dos cosas. Se deja el nombre —lo
+        llaman el jugador y las pruebas de los estudiantes— y se arregla el
+        contrato: **integrar siempre, resolver sólo si hay contra qué**.
         """
-        if not collision_rects:
-            return
         w, h = self.rect.width, self.rect.height
 
         # --- X axis ---
