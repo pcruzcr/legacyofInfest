@@ -66,6 +66,19 @@ class MessageTrigger:
     rect: pygame.Rect
     text: str
     triggered: bool = False
+    #: Árbol de diálogo que abre este disparador, si abre alguno (AUD-127).
+    #:
+    #: `Stage0._check_dialogue_triggers` leía este dato con
+    #: `getattr(mt, "dialogue_tree_id", "")` **y el atributo no existía**, así
+    #: que el `getattr` devolvía la cadena vacía en todas las iteraciones y
+    #: ningún diálogo se abría jamás. Los dos árboles que stage 0 construye
+    #: —la introducción y el bestiario— llevaban meses escritos y sin llegar
+    #: nunca a la pantalla.
+    #:
+    #: Es el mismo patrón de AUD-039: `getattr(objeto, "campo", defecto)`
+    #: contra un campo que no existe no falla, calla. Ahora el campo existe y
+    #: sale del TMX.
+    dialogue_tree_id: str = ""
 
 
 @dataclass
@@ -681,7 +694,17 @@ class StageLoader:
     def _handle_message_trigger(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
         rect = pygame.Rect(obj.x, obj.y, obj.width or 32, obj.height or 32)
         text = props.get("text", "")
-        stage.message_triggers.append(MessageTrigger(rect=rect, text=text))
+        # AUD-127 — `dialogue` abre un árbol de diálogo en vez de un mensaje.
+        #
+        # Un `MessageTrigger` con `dialogue` y sin `text` es una conversación;
+        # con `text` y sin `dialogue`, un aviso de una línea. Con los dos, el
+        # aviso se muestra y la conversación se abre después: no se pierde
+        # ninguno de los dos, que es lo que ocurriría si uno tuviera prioridad
+        # sobre el otro en silencio.
+        arbol = str(props.get("dialogue", "") or props.get("dialogue_tree", ""))
+        stage.message_triggers.append(
+            MessageTrigger(rect=rect, text=text, dialogue_tree_id=arbol),
+        )
 
     @classmethod
     def _handle_entity_spawn(

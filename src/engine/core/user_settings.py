@@ -73,6 +73,16 @@ ESCALAS_DE_TEXTO: Final[tuple[float, ...]] = (1.0, 1.25, 1.5, 2.0)
 #: ser información perdida.
 MOVIMIENTO_REDUCIDO_FACTOR: Final[float] = 0.25
 
+#: Velocidades de la máquina de escribir de los diálogos (AUD-128).
+#:
+#: La velocidad de lectura es una necesidad de accesibilidad, no una
+#: preferencia estética: 30 caracteres por segundo fijos dejan fuera a quien
+#: lee despacio y aburren a quien lee rápido, y las dos cosas terminan igual —
+#: el jugador aprende a saltarse los diálogos.
+VELOCIDADES_DE_TEXTO_VALIDAS: Final[tuple[str, ...]] = (
+    "slow", "normal", "fast", "instant",
+)
+
 
 def user_data_dir() -> Path:
     """The per-user directory this game stores its state in.
@@ -135,6 +145,8 @@ class UserSettings:
     reduced_motion: bool = False
     #: Convierte las acciones de mantener —correr, cargar— en pulsar/soltar.
     hold_to_press: bool = False
+    #: Velocidad de la máquina de escribir. `instant` muestra el texto entero.
+    text_speed: str = "normal"
 
     # Not persisted: resolved at load time so callers need not handle None.
     _path: Path | None = field(default=None, repr=False, compare=False)
@@ -165,6 +177,12 @@ class UserSettings:
         self.text_scale = min(max(escala, ESCALAS_DE_TEXTO[0]), ESCALAS_DE_TEXTO[-1])
         self.reduced_motion = bool(self.reduced_motion)
         self.hold_to_press = bool(self.hold_to_press)
+        if self.text_speed not in VELOCIDADES_DE_TEXTO_VALIDAS:
+            logger.warning(
+                "UserSettings: velocidad de texto %r desconocida — se usa "
+                "'normal'", self.text_speed,
+            )
+            self.text_speed = "normal"
 
         from src.engine.core.i18n import IDIOMA_POR_DEFECTO, IDIOMAS
         if self.language not in IDIOMAS:
