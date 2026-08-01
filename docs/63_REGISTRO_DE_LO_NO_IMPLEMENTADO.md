@@ -163,7 +163,7 @@ De la tabla de viabilidad, lo que sigue sin hacer:
 | ~~Puertas cronometradas~~ | **HECHO** (AUD-132). `cierra_en`, y nunca sobre el jugador | — |
 | ~~Interruptores que cambian el mundo~~ | **HECHO** (AUD-132). `abre_con` en la puerta cierra el circuito | — |
 | ~~Pogo (ataque abajo que rebota)~~ | **HECHO** (AUD-134). Acertar devuelve impulso y recupera el dash aéreo | — |
-| Inundación que sube | Falta una `HazardZone` con `rect` móvil | 3 h |
+| ~~Inundación que sube~~ | **HECHO** (AUD-135). `sube`, `sube_hasta` y `arranca_con` en la `HazardZone`, y el motor la dibuja | — |
 | Medidor de estamina | Falta; el patrón está resuelto en `special_meter` | 4 h |
 | Empujar bloques | No existe | 1 día |
 | ~~Vista cenital~~ | **HECHO** (AUD-129). `vista = cenital` en el TMX | — |

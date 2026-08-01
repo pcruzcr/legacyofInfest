@@ -279,7 +279,10 @@ class StageScene(BaseScene):
         self.context.scene_manager.transition.start_fade_in(0.5)
         self._collision.reset()
         self._squad.reset()
-        self._hazards.reset()
+        # AUD-135: con el escenario, para que la inundación vuelva a su altura.
+        # Sin esto, morir ahogado dejaría el agua arriba y el reintento sería
+        # imposible: el fallo clásico de las mecánicas con estado.
+        self._hazards.reset(self._stage_data)
         # F4.1: el sistema se reconstruye por escenario. Reutilizar el anterior
         # arrastraría el llavero y las puertas ya abiertas al siguiente nivel.
         self._interactables = InteractableSystem(

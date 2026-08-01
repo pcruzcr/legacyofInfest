@@ -248,6 +248,9 @@ serviría de nada.
 | Tipo | Propiedad | Por defecto | Qué hace |
 |---|---|---|---|
 | `HazardZone` | `damage` | `0.25` | daño por tic mientras estés dentro |
+| | `sube` | `0` | px/s que sube el borde superior. **`0` = zona fija**; con `>0` es una inundación |
+| | `sube_hasta` | — | la `y` del mapa donde el agua se para. Vacío = sin tope |
+| | `arranca_con` | — | nombre del `evento` de un `EventTrigger`. Vacío = sube desde el principio |
 | `DeathPit` | — | — | muerte instantánea, sin pasar por niveles de daño ni invulnerabilidad |
 | `LaserZone` | `dano` | `99` | letal, intermitente |
 | | `encendido` | `1.0` | segundos activo |
@@ -257,6 +260,41 @@ serviría de nada.
 
 Un `DeathPit` mata del todo **a propósito**. Un foso que quita media vida
 enseña a caerse dentro.
+
+#### La inundación
+
+Una `HazardZone` con `sube` es agua que crece. Es la mecánica más barata que
+cambia el ritmo de una sala entera: sin añadir un enemigo, un tramo de
+plataformas se convierte en una persecución.
+
+```xml
+<object type="HazardZone" x="0" y="900" width="1600" height="120">
+  <properties>
+    <property name="damage" type="float" value="0.5"/>
+    <property name="sube" type="float" value="18"/>
+    <property name="sube_hasta" type="float" value="240"/>
+    <property name="arranca_con" value="ROMPER_LA_PRESA"/>
+  </properties>
+</object>
+```
+
+Con `arranca_con`, el agua espera a que un `EventTrigger` con ese mismo
+`evento` se dispare. Es la combinación que hace el nivel: se recorre tranquilo
+hacia dentro, se rompe la presa, y la vuelta es otra cosa.
+
+Tres cosas que conviene saber al colocarla:
+
+* **Crece hacia arriba; el fondo no se mueve.** Si se desplazara dejaría el
+  suelo limpio detrás y se podría volver a bajar.
+* **El motor la dibuja.** Las zonas fijas se pintan con tiles —pinchos, lava—,
+  pero los tiles no suben. El agua es translúcida a propósito: hay que ver las
+  plataformas sumergidas para decidir la ruta.
+* **Al morir vuelve a su altura.** El reintento empieza igual que el primer
+  intento.
+
+Elegir `sube`: a 18 px/s el agua tarda unos 37 segundos en subir un mapa de
+altura 672. Como referencia, con menos de 10 px/s la persecución no se siente
+y por encima de 40 px/s casi ninguna ruta da tiempo.
 
 ### 4.4 Zonas con efecto físico
 

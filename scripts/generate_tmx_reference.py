@@ -70,7 +70,10 @@ def build_table() -> str:
         "NextTrigger": ("Rectángulo", "— (completa el escenario)"),
         "MessageTrigger": ("Rectángulo", "`text`, `duration`"),
         "MessageTrigger_Once": ("Rectángulo", "`text`, `duration` (una sola vez)"),
-        "HazardZone": ("Rectángulo", "`damage` (float, 0.25 por defecto)"),
+        "HazardZone": ("Rectángulo",
+                       "`damage` (float, 0.25) · `sube` (px/s: la inundación) · "
+                       "`sube_hasta` (y del mapa donde para) · "
+                       "`arranca_con` (evento de un `EventTrigger`)"),
         "DeathPit": ("Rectángulo", "— (caer aquí mata)"),
         "CameraLock": ("Rectángulo", "`lock_x`, `lock_y` (bool)"),
         "Waypoint": ("Punto", "`owner_id` — ruta para la entidad con ese nombre"),

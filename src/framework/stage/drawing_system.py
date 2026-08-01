@@ -62,6 +62,8 @@ class DrawingSystem:
         self._pause_overlay: pygame.Surface | None = None
         self._pause_font = pygame.font.Font(None, 20)
         self._debug_font = pygame.font.Font(None, 14)
+        #: AUD-135 — lienzo del agua, cacheado al tamaño de la pantalla.
+        self._agua_cache: pygame.Surface | None = None
 
     def draw(self, ctx: DrawContext) -> None:
         surface = ctx.surface
@@ -98,12 +100,69 @@ class DrawingSystem:
 
         self._draw_entities(surface, stage, player, checkpoints, offset)
 
+        # AUD-135 — la inundación, DESPUÉS de las entidades y por delante de
+        # ellas: el jugador tiene que verse sumergido, no flotando encima de un
+        # rectángulo azul. Una zona de daño que no se ve es una trampa; una que
+        # sube y no se ve es peor, porque cambia sin avisar.
+        self._draw_inundaciones(surface, stage, offset)
+
         if ctx.enemy_trail_system:
             ctx.enemy_trail_system.draw(surface, offset)
         if ctx.trail_system:
             ctx.trail_system.draw(surface, offset)
         if ctx.damage_numbers:
             ctx.damage_numbers.draw(surface, offset)
+
+    #: Agua de la inundación: turquesa oscuro y translúcido. El alfa es lo que
+    #: hace que se siga viendo el nivel debajo, que es lo que el jugador
+    #: necesita para planear la subida.
+    _COLOR_INUNDACION = (40, 120, 170, 110)
+    _COLOR_SUPERFICIE = (150, 220, 240)
+
+    def _draw_inundaciones(
+        self, surface: pygame.Surface, stage: Any, offset: pygame.Vector2,
+    ) -> None:
+        """Dibuja las `HazardZone` que suben. Las fijas siguen invisibles.
+
+        Una zona de daño fija se dibuja con tiles: el diseñador pinta pinchos o
+        lava y el rectángulo sólo marca dónde duele. Una que sube no puede
+        hacer eso —los tiles no se mueven—, así que el motor tiene que
+        dibujarla o el jugador recibe daño de la nada.
+
+        La superficie se cachea una vez al tamaño de la pantalla y luego se
+        recorta con `area=`. Repintar un rectángulo con alfa cada fotograma
+        costaría una asignación por fotograma, que es justo lo que AUD-023
+        vino a quitar.
+        """
+        zonas = [
+            hz for hz in getattr(stage, "hazard_zones", ())
+            if getattr(hz, "sube_de_verdad", False)
+        ]
+        if not zonas:
+            return
+
+        ancho, alto = surface.get_size()
+        agua = self._agua_cache
+        if agua is None or agua.get_size() != (ancho, alto):
+            agua = pygame.Surface((ancho, alto), pygame.SRCALPHA)
+            agua.fill(self._COLOR_INUNDACION)
+            self._agua_cache = agua
+
+        pantalla = surface.get_rect()
+        for hz in zonas:
+            r = hz.rect.move(-int(offset.x), -int(offset.y))
+            visible = r.clip(pantalla)
+            if visible.width <= 0 or visible.height <= 0:
+                continue
+            surface.blit(agua, visible.topleft, pygame.Rect(0, 0, visible.width, visible.height))
+            # La línea de superficie: sin ella el borde del agua se pierde
+            # contra el fondo y no se puede juzgar si una plataforma ya está
+            # cubierta, que es la única decisión que el jugador toma aquí.
+            if pantalla.top <= r.top <= pantalla.bottom:
+                pygame.draw.line(
+                    surface, self._COLOR_SUPERFICIE,
+                    (visible.left, r.top), (visible.right, r.top), 2,
+                )
 
     #: Colores de los objetos interactivos. Se dibujan con formas planas y no
     #: con sprites porque el motor no puede suponer qué arte tiene cada
