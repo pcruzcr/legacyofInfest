@@ -92,10 +92,84 @@ class MessageTrigger:
 
 @dataclass
 class HazardZone:
+    """Una zona que hace daño. Con `sube`, además, **crece hacia arriba**.
+
+    AUD-135 — la inundación que sube.
+
+    Es la mecánica más barata del catálogo pendiente y la que más cambia el
+    ritmo de un escenario: convierte una sala de plataformas en una
+    persecución sin añadir un solo enemigo. El agua no persigue al jugador
+    —sube a velocidad constante—, y por eso es justa: la amenaza es
+    predecible y el error es del jugador, no del azar.
+
+    Tres decisiones que se notan al jugar:
+
+    * **El borde inferior no se mueve.** Sube el techo del rectángulo, así
+      que la zona crece en vez de desplazarse. Un rectángulo que se desplaza
+      dejaría el suelo limpio detrás, y el jugador podría volver a bajar.
+    * **Se puede arrancar con un evento.** Con `arranca_con` la inundación
+      espera a que el jugador cruce un `Disparador` o abra una puerta, que es
+      donde tiene gracia: el nivel se recorre tranquilo y a la vuelta ya no.
+    * **`reiniciar()` la devuelve a su sitio.** Sin esto, morir dejaría el
+      agua arriba y el reintento sería imposible — el fallo clásico de las
+      mecánicas con estado que nadie prueba en la segunda vida.
+    """
+
     rect: pygame.Rect
     damage: float = 0.25
     cooldown: float = 0.5
     timer: float = 0.5
+
+    #: Píxeles por segundo que sube el borde superior. 0 = zona fija.
+    sube: float = 0.0
+    #: Coordenada `y` del mapa donde el agua se detiene. `None` = sin tope.
+    sube_hasta: float | None = None
+    #: Nombre del evento que la pone en marcha. Vacío = arranca ya.
+    arranca_con: str = ""
+
+    #: Estado interno. `_alto_inicial` guarda la altura original porque el
+    #: `rect` es mutable y lo vamos a modificar en sitio.
+    activa: bool = True
+    _alto_inicial: int = 0
+    _borde: float = 0.0
+
+    def __post_init__(self) -> None:
+        self._alto_inicial = self.rect.height
+        self._borde = float(self.rect.top)
+        if self.arranca_con:
+            self.activa = False
+
+    @property
+    def sube_de_verdad(self) -> bool:
+        return self.sube > 0.0
+
+    def arrancar(self) -> None:
+        self.activa = True
+
+    def avanzar(self, dt: float) -> None:
+        """Sube el borde superior. No hace nada si la zona es fija."""
+        if not self.activa or self.sube <= 0.0 or dt <= 0.0:
+            return
+        tope = self.sube_hasta
+        nuevo = self._borde - self.sube * dt
+        if tope is not None and nuevo < tope:
+            nuevo = float(tope)
+        if nuevo == self._borde:
+            return
+        # El borde se lleva en float y el rect en int: acumular el redondeo
+        # frame a frame haría que a 30 px/s y 60 fps el agua no subiera nunca.
+        self._borde = nuevo
+        fondo = self.rect.bottom
+        self.rect.top = round(nuevo)
+        self.rect.height = fondo - self.rect.top
+
+    def reiniciar(self) -> None:
+        """Devuelve el agua a su altura inicial. Se llama al reaparecer."""
+        fondo = self.rect.bottom
+        self.rect.height = self._alto_inicial
+        self.rect.bottom = fondo
+        self._borde = float(self.rect.top)
+        self.activa = not self.arranca_con
 
 
 @dataclass
@@ -1161,7 +1235,22 @@ class StageLoader:
             return
         rect = pygame.Rect(obj.x, obj.y, obj.width, obj.height)
         damage = cls._safe_float(props.get("damage", 0.25), "hazard damage")
-        stage.hazard_zones.append(HazardZone(rect=rect, damage=damage))
+        # AUD-135 — la inundación. `sube` en píxeles por segundo; `sube_hasta`
+        # es una `y` del mapa, así que el diseñador pone el tope donde ve el
+        # techo en Tiled y no tiene que calcular alturas.
+        sube = cls._safe_float(props.get("sube", 0.0), "hazard sube")
+        tope_bruto = props.get("sube_hasta")
+        sube_hasta = (
+            cls._safe_float(tope_bruto, "hazard sube_hasta")
+            if tope_bruto not in (None, "") else None
+        )
+        stage.hazard_zones.append(HazardZone(
+            rect=rect,
+            damage=damage,
+            sube=max(0.0, sube),
+            sube_hasta=sube_hasta,
+            arranca_con=str(props.get("arranca_con", "") or ""),
+        ))
 
     @classmethod
     def _handle_camera_lock(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
