@@ -22,6 +22,9 @@ import pygame
 from src.framework.ecs.components import ZonaDeAgua
 from src.framework.ecs.systems import en_agua
 
+#: Nombre con el que la cámara lenta registra su factor en el reloj (AUD-118).
+FUENTE_TIEMPO_BALA: str = "tiempo_bala"
+
 if TYPE_CHECKING:
     from src.engine.core.clock import Clock
     from src.framework.ecs.world import World
@@ -212,20 +215,31 @@ class TiempoBala:
         if reloj is None:
             return
 
-        # Sólo se devuelve a 1.0 lo que **esta** clase ralentizó.
+        # AUD-118 — el reloj compone; esta clase sólo declara su factor.
         #
-        # `trigger_hitstop` también escribe en `time_scale`. La primera versión
-        # ponía la condición «si el reloj está a 1.0 o estoy activo», y con eso
-        # la cámara lenta no se apagaba nunca: al soltar el botón el reloj
-        # estaba a 0,35 —no a 1.0— y `_activo` ya era False, así que ninguna
-        # rama restauraba. Recordar quién bajó el reloj lo resuelve sin que las
-        # dos mecánicas se pisen.
+        # Antes esto recordaba «yo bajé el reloj» para no pisar al hit-stop.
+        # Funcionaba a medias: el hit-stop, al expirar, escribía 1.0 sin
+        # preguntar, y la cámara lenta se recuperaba un fotograma tarde. El
+        # parche del recuerdo tapaba la mitad del problema que el parche del
+        # hit-stop dejaba abierta, que es la señal de que el problema estaba en
+        # que un solo número tuviera dos dueños.
+        #
+        # `getattr` conserva los dobles de reloj de las entregas de
+        # estudiantes, que sólo tienen el atributo `time_scale`.
+        registrar = getattr(reloj, "escalar", None)
+        retirar = getattr(reloj, "restaurar", None)
+        if registrar is None or retirar is None:
+            if self._activo:
+                reloj.time_scale = self.escala
+                self._yo_lo_baje = True
+            elif getattr(self, "_yo_lo_baje", False):
+                reloj.time_scale = 1.0
+                self._yo_lo_baje = False
+            return
         if self._activo:
-            reloj.time_scale = self.escala
-            self._yo_lo_baje = True
-        elif getattr(self, "_yo_lo_baje", False):
-            reloj.time_scale = 1.0
-            self._yo_lo_baje = False
+            registrar(FUENTE_TIEMPO_BALA, self.escala)
+        else:
+            retirar(FUENTE_TIEMPO_BALA)
 
 
 # ══════════════════════════════════════════════════════════════

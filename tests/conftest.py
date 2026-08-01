@@ -52,6 +52,23 @@ def _reset_global_state():
     StageLoader.clear_tmx_cache()
     clear_demo_font_cache()
     AchievementSystem._reset_instance()
+    # Drain the pygame event queue so key presses posted by a previous test
+    # (e.g. menu-navigation tests that post synthetic KEYDOWN events) cannot
+    # leak into the next test's fresh App and be misinterpreted as input.
+    #
+    # AUD-120 — la guarda no es decorativa. `pygame.event.clear()` lanza
+    # «video system not initialized» si nadie ha llamado a `pygame.init()`
+    # todavía, y esta función corre **antes de cada prueba**, incluidas las
+    # que no necesitan vídeo. El síntoma era que `pytest tests/test_clock.py`
+    # a secas daba cuatro errores y la misma orden con cualquier otro fichero
+    # delante pasaba: el otro fichero inicializaba pygame de camino.
+    #
+    # Una suite en la que el resultado depende de qué otro fichero corrió
+    # antes no es una suite, es una lotería. Y el que la sufre es quien
+    # ejecuta una sola prueba para depurar, que es justo cuando menos falta
+    # hace un misterio.
+    if pygame.display.get_init():
+        pygame.event.clear()
 
 
 @pytest.fixture

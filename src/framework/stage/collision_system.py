@@ -37,6 +37,7 @@ from typing import TYPE_CHECKING, Any
 
 import pygame
 
+from src.engine.core.clock import FUENTE_HITSTOP
 from src.framework.entities.base_entity import BaseEntity
 from src.framework.entities.enemy_base import EnemyBase
 
@@ -95,19 +96,46 @@ class CollisionSystem:
         return self._hitstop_timer > 0.0
 
     def update_hitstop(self, unscaled_dt: float, clock: Any = None) -> None:
-        """Advance the hit-stop countdown and drive ``clock.time_scale``.
+        """Advance the hit-stop countdown and register its time factor.
 
         ``unscaled_dt`` MUST be the clock's real, unscaled delta. Passing the
         scaled delta here reintroduces AUD-001: ``time_scale`` drops to 0.0,
         which drives the scaled delta to 0.0, which stops this countdown from
         ever draining — the game freezes permanently on the first landed hit.
+
+        AUD-118 — por qué ya no se escribe ``clock.time_scale = 1.0``
+        ------------------------------------------------------------
+        La línea anterior era::
+
+            clock.time_scale = 0.0 if self._hitstop_timer > 0.0 else 1.0
+
+        Ese ``else 1.0`` afirma que **nadie más** ha tocado el reloj, y era
+        falso: `TiempoBala` lo pone a 0,35 mientras el jugador mantiene la
+        cámara lenta. Golpear a un enemigo durante la cámara lenta daba
+        ``0.35 → 0.0 → 1.0`` y al fotograma siguiente ``0.35`` otra vez: un
+        fotograma a velocidad completa en mitad de la cámara lenta, justo en
+        el impacto.
+
+        Ahora el hit-stop registra su factor con su nombre y lo retira al
+        acabar; el reloj compone lo que quede. El ``getattr`` conserva los
+        dobles de reloj de las entregas de estudiantes, que sólo tienen el
+        atributo ``time_scale`` y ninguno de los dos métodos.
         """
         if self._hitstop_timer > 0.0:
             self._hitstop_timer -= unscaled_dt
             if self._hitstop_timer <= 0.0:
                 self._hitstop_timer = 0.0
-        if clock is not None:
+        if clock is None:
+            return
+        registrar = getattr(clock, "escalar", None)
+        retirar = getattr(clock, "restaurar", None)
+        if registrar is None or retirar is None:
             clock.time_scale = 0.0 if self._hitstop_timer > 0.0 else 1.0
+            return
+        if self._hitstop_timer > 0.0:
+            registrar(FUENTE_HITSTOP, 0.0)
+        else:
+            retirar(FUENTE_HITSTOP)
 
     def step(self, dt: float) -> None:
         """Obsoleto: no hace nada y lo dice en voz alta (AUD-063).

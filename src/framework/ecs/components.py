@@ -120,11 +120,26 @@ class Velocidad:
     v: pygame.Vector2
 
 
-@dataclass(slots=True)
-class Gravedad:
-    """Sin este componente una entidad no cae. Flotar es no tenerlo."""
-
-    multiplicador: float = 1.0
+# ══════════════════════════════════════════════════════════════
+# AUD-123 — tres componentes retirados por no usarse jamás
+# ══════════════════════════════════════════════════════════════
+#
+# `Gravedad`, `Renderizable` y `Etiqueta` se escribieron en la fase 5 «porque
+# un ECS los tiene». Un análisis de alcanzabilidad sobre todo el árbol —el
+# mismo que este mes encontró seis sistemas huérfanos en código ajeno— les dio
+# **cero usos**: ni un sistema, ni una escena, ni una prueba. Sólo estaban
+# exportados en `__init__.py`, que es la forma más fácil de que algo parezca
+# vivo.
+#
+# La gravedad la aplica el jugador en su propia física y los enemigos moviendo
+# `position`; el dibujado lo hace `DrawingSystem` desde `entity_list`; y para
+# filtrar por rol el motor usa `isinstance`, que además da tipado.
+#
+# Se retiran en vez de conectarse porque conectarlos exigiría reescribir la
+# física y el dibujado para resolver un problema que nadie tiene. Es el mismo
+# criterio que se aplicó a `transitions.py` (AUD-111) y que se le ha aplicado
+# al código de los estudiantes: si nadie lo alcanza, o se enchufa o se va.
+# Aplicarlo sólo al código ajeno sería una vara de medir doble.
 
 
 @dataclass(slots=True)
@@ -216,22 +231,6 @@ class Salud:
     def __repr__(self) -> str:
         clase = "vista" if self._duenio is not None else "propia"
         return f"Salud({clase}, {self.actual}/{self.maxima})"
-
-
-@dataclass(slots=True)
-class Renderizable:
-    """Qué dibujar y en qué capa. El dibujado lo hace un sistema, no la entidad."""
-
-    surface: pygame.Surface | None = None
-    capa: int = 4
-    visible: bool = True
-
-
-@dataclass(slots=True)
-class Etiqueta:
-    """Marca legible. Para depurar y para que los sistemas filtren por rol."""
-
-    nombre: str
 
 
 @dataclass(slots=True)

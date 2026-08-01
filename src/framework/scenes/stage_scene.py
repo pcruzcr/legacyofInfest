@@ -1150,7 +1150,19 @@ class StageScene(BaseScene):
             # colisiones. Al revés, el pasajero pasaría un fotograma hundido en
             # la plataforma y saldría expulsado al siguiente. El orden completo,
             # con su porqué, está en `framework/ecs/scheduler.py`.
-            self._planificador.ejecutar(self._mundo, dt)
+            # AUD-119 — la maquinaria del nivel usa `dt_mundo`, no `dt`.
+            #
+            # `dt` incluye el hit-stop, así que los 50 ms de congelación de
+            # cada golpe también paraban los bloques rítmicos, los láseres y
+            # las plataformas móviles. Eso es un exploit —golpear a un enemigo
+            # junto a un láser lo detenía— y, en un nivel a compás, una
+            # desincronización que se acumula y que nada corrige.
+            #
+            # `dt_mundo` sí respeta la cámara lenta: ralentizar el mundo es lo
+            # que la cámara lenta *es*. Lo que no debe mover el reloj del
+            # escenario es un efecto de presentación de 50 ms.
+            dt_mundo = getattr(clock, "dt_mundo", dt) if clock is not None else dt
+            self._planificador.ejecutar(self._mundo, dt_mundo)
             moviles = ecs_systems.rects_solidos(self._mundo)
             if moviles:
                 solidos = solidos + moviles

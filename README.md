@@ -11,11 +11,14 @@ Visión por Computadora y Reconocimiento de Patrones.
 - Debug overlay (F3) con FPS, event queue snapshot y árbol de módulos
 - Atmósfera configurable desde Tiled: iluminación por focos, clima, partículas
   de ambiente, bloom y viñeta — sin escribir una línea de Python
-- 1.333 pruebas automatizadas + validadores de TMX, assets y dependencias en CI
+- 2.020 pruebas automatizadas + validadores de TMX, assets y dependencias en CI
 
 ```
 pip install -r requirements.txt
 python main.py
 ```
 
-Documentación completa en `docs/00_MASTER_INDEX.md`.
+Documentación completa en `docs/00_MASTER_INDEX.md`. El manual del
+diseñador es `docs/60_GUIA_COMPLETA_DEL_MOTOR.md`.
+
+*English version: [`README.en.md`](README.en.md).*

@@ -65,7 +65,7 @@ class TestLintersAgree:
         pylint = pyproject["tool"]["pylint"]["format"]["max-line-length"]
 
         parser = configparser.ConfigParser()
-        parser.read(ROOT / ".flake8")
+        parser.read(ROOT / ".flake8", encoding="utf-8")
         flake8 = int(parser["flake8"]["max-line-length"])
 
         assert ruff == pylint == flake8, (
