@@ -103,6 +103,36 @@ class Theme:
 
 _font_cache: dict[tuple[str | None, int], pygame.font.Font] = {}
 
+#: Tamaño mínimo en píxeles. Por debajo de esto la fuente por defecto de
+#: pygame deja de tener trazos distinguibles y el texto es una mancha.
+_TAMANO_MINIMO: int = 8
+
+
+def escalar_texto(size: int) -> int:
+    """El tamaño pedido, multiplicado por la preferencia de accesibilidad.
+
+    AUD-126 — por qué aquí y no en cada escena
+    -------------------------------------------
+    `font()` es el **único** sitio del proyecto por el que pasan todas las
+    fuentes de la interfaz. Aplicar la escala aquí la aplica a las 34 escenas
+    sin tocar ninguna, que es exactamente lo que consiguió alinear las 18
+    demos cuando `demo_layout` pasó a derivar su paleta del tema.
+
+    La alternativa —un parámetro `escala` en cada llamada— habría dependido de
+    que 34 escenas se acordaran de pasarlo, y bastaría que una se olvidara para
+    que el jugador que necesita el texto grande se encontrara una pantalla
+    ilegible sin saber por qué.
+
+    Si la preferencia no se puede leer se devuelve el tamaño original: el juego
+    tiene que dibujar texto aunque la configuración esté rota.
+    """
+    try:
+        from src.engine.core import user_settings
+        escala = user_settings.get().text_scale
+    except Exception:            # el juego sigue: dibujar es más importante
+        return size
+    return max(_TAMANO_MINIMO, round(size * escala))
+
 
 def font(size: int, path: str | None = None) -> pygame.font.Font:
     """Cached font lookup.
@@ -130,6 +160,7 @@ def font(size: int, path: str | None = None) -> pygame.font.Font:
     La validación cuesta 0,08 µs —menos que la propia búsqueda en el
     diccionario, 0,095 µs—, así que se hace en cada acierto de caché.
     """
+    size = escalar_texto(size)
     key = (path, size)
     cached = _font_cache.get(key)
     if cached is not None:

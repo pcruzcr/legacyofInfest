@@ -42,6 +42,37 @@ COLORBLIND_MODES: Final[tuple[str, ...]] = (
     "off", "protanopia", "deuteranopia", "tritanopia",
 )
 
+# ── Accesibilidad (AUD-126) ───────────────────────────────────────────────
+#
+# El proyecto ya tenía `colorblind_mode` conectado de punta a punta —opciones,
+# preferencias, post-procesado— y ahí se quedó. Faltaban las tres barreras que
+# más gente encuentran en un plataformas:
+#
+# * **Texto pequeño.** La resolución interna es de 800 × 600 y la tipografía
+#   base mide 14 px. En una pantalla grande a dos metros, eso no se lee. Es la
+#   petición número uno en cualquier estudio de accesibilidad de videojuegos,
+#   por delante del daltonismo.
+# * **Movimiento.** Sacudida de pantalla, estelas, partículas y destellos
+#   provocan náusea a quien tiene sensibilidad vestibular, y hacen ilegible el
+#   juego a quien tiene déficit de atención.
+# * **Mantener pulsado.** Correr y cargar el ataque exigen mantener una tecla.
+#   Para quien tiene temblor, artritis o usa un conmutador, mantener es la
+#   diferencia entre jugar y no jugar.
+#
+# Los tres se guardan aquí porque son preferencias del jugador, no del
+# escenario: viajan con la persona entre partidas y entre niveles.
+
+#: Multiplicadores de tamaño de texto ofrecidos en la pantalla de opciones.
+#: 1,0 es el diseño original; 2,0 duplica y sigue cabiendo en 800 × 600 sin
+#: recortar los diálogos, que es el límite que se comprobó.
+ESCALAS_DE_TEXTO: Final[tuple[float, ...]] = (1.0, 1.25, 1.5, 2.0)
+
+#: Cuánto se atenúa cada efecto con «movimiento reducido» activado. No es cero
+#: para todos a propósito: quitar del todo la estela del dash borra la única
+#: señal de que el dash ocurrió, y eso deja de ser accesibilidad para pasar a
+#: ser información perdida.
+MOVIMIENTO_REDUCIDO_FACTOR: Final[float] = 0.25
+
 
 def user_data_dir() -> Path:
     """The per-user directory this game stores its state in.
@@ -97,6 +128,14 @@ class UserSettings:
     #: fricción por la que una función correcta acaba sin usarse.
     student_email: str = ""
 
+    # ── Accesibilidad (AUD-126) ────────────────────────────────
+    #: Multiplicador del tamaño de todo el texto. Ver `ESCALAS_DE_TEXTO`.
+    text_scale: float = 1.0
+    #: Atenúa sacudida de pantalla, estelas, partículas y destellos.
+    reduced_motion: bool = False
+    #: Convierte las acciones de mantener —correr, cargar— en pulsar/soltar.
+    hold_to_press: bool = False
+
     # Not persisted: resolved at load time so callers need not handle None.
     _path: Path | None = field(default=None, repr=False, compare=False)
 
@@ -112,6 +151,20 @@ class UserSettings:
             )
             self.colorblind_mode = "off"
         self.subtitles_enabled = bool(self.subtitles_enabled)
+
+        # AUD-126 — la escala se **recorta**, no se rechaza.
+        #
+        # Un `config.json` con `text_scale: 40` viene de una edición a mano o
+        # de un fichero corrupto, y negarse a arrancar por eso deja al jugador
+        # sin juego. Recortar a 2,0 le deja el texto grande, que es lo que
+        # pedía. El mismo criterio que las propiedades de mapa.
+        try:
+            escala = float(self.text_scale)
+        except (TypeError, ValueError):
+            escala = 1.0
+        self.text_scale = min(max(escala, ESCALAS_DE_TEXTO[0]), ESCALAS_DE_TEXTO[-1])
+        self.reduced_motion = bool(self.reduced_motion)
+        self.hold_to_press = bool(self.hold_to_press)
 
         from src.engine.core.i18n import IDIOMA_POR_DEFECTO, IDIOMAS
         if self.language not in IDIOMAS:

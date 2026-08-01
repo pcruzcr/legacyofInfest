@@ -7,8 +7,10 @@ import pygame_gui
 
 from src.engine.core import settings, user_settings
 from src.engine.core.difficulty import Difficulty, set_difficulty
+from src.engine.core.user_settings import ESCALAS_DE_TEXTO
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
+from src.engine.ui.theme import clear_font_cache
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -26,6 +28,11 @@ class OptionsScene(BaseScene):
         self._btn_language: Any = None
         self._idioma_actual: str = "es"
         self._subtitles_on: bool = False
+        self._dropdown_texto: Any = None
+        self._btn_movimiento: Any = None
+        self._btn_mantener: Any = None
+        self._movimiento_reducido: bool = False
+        self._mantener_pulsado: bool = False
 
     def on_enter(self) -> None:
         audio = self.audio
@@ -120,6 +127,53 @@ class OptionsScene(BaseScene):
         )
         y += 36
 
+        # ── Accesibilidad (AUD-126) ────────────────────────────
+        # El modo daltonismo ya estaba; faltaban las tres barreras que más
+        # gente encuentran en un plataformas. Van juntas y con etiqueta propia
+        # para que se encuentren: una opción de accesibilidad escondida entre
+        # los ajustes de volumen no la usa quien la necesita.
+        pygame_gui.elements.UILabel(
+            pygame.Rect((40, y), (400, 24)),
+            "ACCESIBILIDAD / ACCESSIBILITY", self._gui_manager,
+        )
+        y += 28
+
+        self._dropdown_texto = pygame_gui.elements.UIDropDownMenu(
+            options_list=[f"{e:g}x" for e in ESCALAS_DE_TEXTO],
+            starting_option=f"{cfg.get('text_scale', 1.0):g}x",
+            relative_rect=pygame.Rect((40, y), (150, 28)),
+            manager=self._gui_manager,
+        )
+        pygame_gui.elements.UILabel(
+            pygame.Rect((200, y), (280, 28)),
+            "TAMANO DEL TEXTO", self._gui_manager,
+        )
+        y += 36
+
+        self._movimiento_reducido = bool(cfg.get("reduced_motion", False))
+        self._btn_movimiento = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect((40, y), (150, 28)),
+            text=self._movimiento_label(),
+            manager=self._gui_manager,
+        )
+        pygame_gui.elements.UILabel(
+            pygame.Rect((200, y), (320, 28)),
+            "MOVIMIENTO REDUCIDO (sacudida, estelas)", self._gui_manager,
+        )
+        y += 36
+
+        self._mantener_pulsado = bool(cfg.get("hold_to_press", False))
+        self._btn_mantener = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect((40, y), (150, 28)),
+            text=self._mantener_label(),
+            manager=self._gui_manager,
+        )
+        pygame_gui.elements.UILabel(
+            pygame.Rect((200, y), (320, 28)),
+            "PULSAR EN VEZ DE MANTENER", self._gui_manager,
+        )
+        y += 40
+
         self._btn_keybindings = pygame_gui.elements.UIButton(
             relative_rect=pygame.Rect((40, y), (200, 32)),
             text="KEY BINDINGS",
@@ -137,6 +191,12 @@ class OptionsScene(BaseScene):
 
     def _subtitles_label(self) -> str:
         return f"SUBTITLES: {'ON' if self._subtitles_on else 'OFF'}"
+
+    def _movimiento_label(self) -> str:
+        return f"MOVIMIENTO: {'REDUCIDO' if self._movimiento_reducido else 'NORMAL'}"
+
+    def _mantener_label(self) -> str:
+        return f"ENTRADA: {'PULSAR' if self._mantener_pulsado else 'MANTENER'}"
 
     #: Nombres que se muestran, en su propio idioma. Un desplegable que dijera
     #: «Español / Inglés» en inglés es exactamente lo que no ayuda a quien no
@@ -167,6 +227,9 @@ class OptionsScene(BaseScene):
             "colorblind_mode": prefs.colorblind_mode,
             "subtitles_enabled": prefs.subtitles_enabled,
             "language": prefs.language,
+            "text_scale": prefs.text_scale,
+            "reduced_motion": prefs.reduced_motion,
+            "hold_to_press": prefs.hold_to_press,
         }
 
     def _save_config(self) -> None:
@@ -186,6 +249,19 @@ class OptionsScene(BaseScene):
             prefs.subtitles_enabled = self._subtitles_on
         if self._btn_language is not None:
             prefs.language = self._idioma_actual
+        if self._dropdown_texto is not None:
+            # El desplegable muestra «1.5x»; se guarda el número.
+            prefs.text_scale = float(
+                self._dropdown_texto.selected_option[0].rstrip("x"))
+        if self._btn_movimiento is not None:
+            prefs.reduced_motion = self._movimiento_reducido
+        if self._btn_mantener is not None:
+            prefs.hold_to_press = self._mantener_pulsado
+        # Cambiar la escala invalida toda la caché de fuentes: las que hay
+        # dentro se crearon con el tamaño anterior y seguirían saliendo
+        # pequeñas hasta reiniciar, que es cuando el jugador concluye que la
+        # opción no hace nada.
+        clear_font_cache()
         prefs.save()
 
     def on_exit(self) -> None:
