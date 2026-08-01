@@ -81,7 +81,7 @@ BUILTIN_OBJECT_TYPES: tuple[str, ...] = (
     "WaterZone",       # Sonic (Labyrinth), SMB3 (Water Land), Inside
     "MovingPlatform",  # Mega Man 2, Sonic, Donkey Kong Country
     "RhythmBlock",     # Mega Man 2 (Wily 1), Celeste (bloques de cassette)
-    "SinkingPlatform",  # Cuphead (Perilous Piers)
+    "SinkingPlatform", "Spring",  # Cuphead (Perilous Piers)
     "Guard",           # MGS (Tank Hangar): cono de visión y alerta
     "Stalker",         # RE3 (Nemesis), Celeste (el conserje), Metroid Dread
     # F5.14 — de escalada no había **nada**: ni `Ladder`, ni `Rope`, ni `Climb`,

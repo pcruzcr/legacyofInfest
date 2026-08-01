@@ -264,6 +264,41 @@ class EsJugador:
 
 
 @dataclass(slots=True)
+class Resorte:
+    """Devuelve al jugador hacia arriba al pisarlo. Sonic, Hollow Knight, Ori.
+
+    AUD-131 — por qué es un componente y no una propiedad del suelo
+    ---------------------------------------------------------------
+    Un resorte no es «terreno con una propiedad»: tiene estado propio —el
+    rebote se dispara, se anima y se rearma— y no debe activarse dos veces por
+    el mismo contacto. Meterlo en la colisión del terreno habría obligado a
+    guardar ese estado en la lista de rectángulos, que se reconstruye al cargar
+    y no es de nadie.
+
+    Dos decisiones que se notan al jugar:
+
+    * **Sólo rebota quien viene cayendo.** Si no, tocarlo de lado desde una
+      cornisa te lanza sin haberlo pisado, y el jugador no entiende por qué.
+    * **`impulso` se aplica como velocidad, no se suma.** Sumar haría que
+      caer desde más alto rebotara más alto, y con eso la altura del rebote
+      deja de ser una constante del nivel: el diseñador ya no puede colocar
+      una plataforma sabiendo si se alcanza.
+    """
+
+    rect: pygame.Rect
+    #: Velocidad vertical que se impone al rebotar, en px/s. Negativa = arriba.
+    impulso: float = -520.0
+    #: Segundos que tarda en poder volver a dispararse. Evita el doble rebote
+    #: cuando el jugador sigue solapando el rectángulo un fotograma después.
+    rearme: float = 0.15
+    _espera: float = 0.0
+
+    @property
+    def listo(self) -> bool:
+        return self._espera <= 0.0
+
+
+@dataclass(slots=True)
 class ZonaDeViento:
     """Empuja a quien esté dentro. Mega Man 2 (Air Man), Celeste (Golden Ridge).
 

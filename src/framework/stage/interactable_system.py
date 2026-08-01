@@ -95,6 +95,7 @@ class InteractableSystem:
 
         self._recoger(jugador, usar)
         self._disparar(jugador, usar)
+        self._cerrar_las_cronometradas(dt, jugador)
         if usar:
             self._abrir_cerraduras(jugador)
             self._abrir_cofres(jugador)
@@ -117,6 +118,52 @@ class InteractableSystem:
             self._avisar(objeto.mensaje or f"Has cogido: {objeto.item_id}")
             self._emitir(EVENTO_RECOGIDO, item_id=objeto.item_id)
 
+    def abrir_por_evento(self, evento: str) -> int:
+        """Abre las cerraduras que declaran `abre_con_evento == evento`.
+
+        AUD-132 — el receptor que faltaba.
+
+        `Disparador` emitía su evento al bus y **nadie escuchaba**. Un
+        estudiante podía poner un interruptor en Tiled, verlo aparecer en el
+        registro y no conseguir que abriera nada sin escribir Python. El
+        circuito se cierra aquí: interruptor → bus → puerta, con dos
+        propiedades en Tiled y ninguna línea de código.
+
+        Devuelve cuántas se abrieron, para que el llamante pueda avisar o no.
+        """
+        if not evento:
+            return 0
+        abiertas = 0
+        for cerradura in self.cerraduras:
+            if cerradura.abierta or cerradura.abre_con_evento != evento:
+                continue
+            cerradura.abrir()
+            abiertas += 1
+            self._emitir(EVENTO_ABIERTA, key_id=cerradura.key_id,
+                         clase=cerradura.clase)
+            if cerradura.evento_al_abrir:
+                self._emitir(cerradura.evento_al_abrir)
+        if abiertas:
+            self._avisar(f"Se ha abierto algo. ({abiertas})")
+        return abiertas
+
+    def _cerrar_las_cronometradas(self, dt: float, jugador: pygame.Rect) -> None:
+        """Cierra las puertas cuyo temporizador se agota.
+
+        **Nunca sobre el jugador.** Cerrar una puerta con el jugador dentro lo
+        aplastaría contra la geometría o lo dejaría atrapado dentro del
+        rectángulo sólido, y las dos cosas se leen como un fallo del juego.
+        Si está encima, el temporizador se prorroga hasta que salga: es lo que
+        el jugador espera y no requiere que él lo entienda.
+        """
+        for cerradura in self.cerraduras:
+            if not cerradura.abierta or cerradura._cierre <= 0.0:
+                continue
+            if cerradura.rect.colliderect(jugador):
+                continue
+            if cerradura.avanzar(dt):
+                self._avisar(f"La {cerradura.clase} se ha cerrado.")
+
     def _abrir_cerraduras(self, jugador: pygame.Rect) -> None:
         for cerradura in self.cerraduras:
             if cerradura.abierta or not alcanza(jugador, cerradura.rect):
@@ -129,7 +176,7 @@ class InteractableSystem:
                 self._emitir(EVENTO_BLOQUEADA, key_id=cerradura.key_id)
                 continue
 
-            cerradura.abierta = True
+            cerradura.abrir(temporal=False)
             if cerradura.consume_llave:
                 self.llavero.gastar(cerradura.key_id)
             self._avisar(f"{cerradura.clase.capitalize()} abierta.")
@@ -176,6 +223,10 @@ class InteractableSystem:
             # que sirve tener una.
             self._emitir(EVENTO_DISPARADOR, nombre=disparador.evento)
             self._emitir(disparador.evento)
+            # AUD-132 — y además abre lo que escuche ese nombre. El bus sigue
+            # emitiendo para quien quiera enterarse desde su escena; esto es
+            # el camino que no exige escribir Python.
+            self.abrir_por_evento(disparador.evento)
 
     # -- salida ----------------------------------------------------
     def _avisar(self, texto: str, duracion: float = 2.0) -> None:

@@ -89,6 +89,45 @@ class Cerradura:
     #: Evento del bus que se emite al abrirla, si el escenario quiere reaccionar.
     evento_al_abrir: str = ""
 
+    # ── AUD-132 — interruptores y puertas que se cierran solas ──
+    #
+    # `Disparador` emitía su evento al bus y **nadie escuchaba**. Un estudiante
+    # podía poner un interruptor en Tiled, verlo funcionar en el registro, y no
+    # conseguir que abriera nada sin escribir Python. La pieza que faltaba era
+    # el receptor, y el receptor natural es la propia cerradura.
+    #
+    #: Nombre de evento que abre esta cerradura sin llave. El mismo que se
+    #: escribe en el `EventTrigger`, y con eso queda el circuito completo:
+    #: interruptor -> bus -> puerta, sin una línea de código.
+    abre_con_evento: str = ""
+    #: Segundos que permanece abierta antes de cerrarse sola. `0` = para
+    #: siempre. Es lo que convierte un interruptor en una carrera contra el
+    #: tiempo, que es el 90 % de lo que se hace con un interruptor.
+    cierra_en: float = 0.0
+    _cierre: float = 0.0
+
+    def abrir(self, temporal: bool = True) -> None:
+        """Abre la cerradura y arranca el temporizador si lo tiene."""
+        self.abierta = True
+        self._cierre = self.cierra_en if (temporal and self.cierra_en > 0.0) else 0.0
+
+    def avanzar(self, dt: float) -> bool:
+        """Un fotograma del temporizador. Devuelve `True` si se acaba de cerrar.
+
+        Cerrar con el jugador dentro sería aplastarlo contra la geometría, así
+        que el llamante comprueba el solapamiento antes de hacer caso. Aquí
+        sólo se cuenta el tiempo: la decisión es del sistema, que es quien
+        sabe dónde está el jugador.
+        """
+        if not self.abierta or self._cierre <= 0.0:
+            return False
+        self._cierre -= dt
+        if self._cierre > 0.0:
+            return False
+        self._cierre = 0.0
+        self.abierta = False
+        return True
+
 
 @dataclass
 class Cofre:

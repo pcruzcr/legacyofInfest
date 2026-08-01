@@ -28,7 +28,7 @@ date_processed: "2026-07-31"
 1. [El bucle: qué pasa en un fotograma](#1)
 2. [Anatomía de un escenario TMX](#2)
 3. [Propiedades del mapa — las 17](#3)
-4. [Los 62 tipos de objeto, uno por uno](#4)
+4. [Los 63 tipos de objeto, uno por uno](#4)
 5. [El jugador: 26 estados y qué los provoca](#5)
 6. [Enemigos: 30 tipos y 13 estados](#6)
 7. [Jefes](#7)
@@ -147,6 +147,7 @@ sin ellas el nivel no valida y pierde 10 puntos de rúbrica.
 | `time_limit` | int | `0` | segundos; `0` = sin límite |
 | `gravity_multiplier` | float | `1.0` | `0.5` = lunar, `1.5` = pesado |
 | `zone` | int | `0` | zona del mundo; decide paleta y bestiario por defecto |
+| `vista` | string | `lateral` | `lateral` o `cenital`. Cenital apaga la gravedad, da movimiento en dos ejes y **ignora las plataformas de un solo sentido** — desde arriba son muros invisibles |
 | `background_zone` | string | — | carga `assets/backgrounds/bg_<zona>_{far,mid,near}.png` |
 
 ### De atmósfera
@@ -178,9 +179,9 @@ efecto, mira la consola antes que el código.
 ---
 
 <a id="4"></a>
-## 4. Los 62 tipos de objeto, uno por uno
+## 4. Los 63 tipos de objeto, uno por uno
 
-El motor acepta **62 tipos** en la capa `Objects`: 30 integrados del framework
+El motor acepta **63 tipos** en la capa `Objects`: 31 integrados del framework
 y 30 enemigos del registro, más `Solid` y `Platform` en `Collision`. Todos los
 números se convierten a `float` automáticamente.
 
@@ -298,6 +299,33 @@ te obligue a recalcular su destino a mano.
 > nombre reservado en Tiled** y pytmx rechaza el mapa entero con «Reserved
 > names and duplicate names are not allowed». Lo descubrimos cargando el
 > escenario de mecánicas por primera vez.
+
+### 4.5 bis  Resortes e interruptores (AUD-131 / AUD-132)
+
+| Tipo | Propiedad | Por defecto | Qué hace |
+|---|---|---|---|
+| `Spring` | `impulso` | `-520` | velocidad vertical impuesta al rebotar. **Se impone, no se suma**: la altura del rebote es una constante del nivel, no depende de desde dónde caigas |
+| | `rearme` | `0.15` | segundos hasta poder volver a dispararse; evita el doble rebote |
+
+Sólo rebota quien **viene cayendo**. Tocarlo de lado o desde abajo no hace nada,
+que es lo que el jugador espera al verlo.
+
+**El interruptor que abre una puerta** ya no necesita Python. En la puerta:
+
+| Propiedad | Qué hace |
+|---|---|
+| `abre_con` | nombre del evento que la abre, sin llave |
+| `cierra_en` | segundos hasta cerrarse sola. `0` = para siempre |
+
+Y en el `EventTrigger`, `evento` con ese mismo nombre. Con eso queda el circuito
+completo: interruptor → bus → puerta.
+
+`Disparador` llevaba desde F4.1 emitiendo su evento **sin que nadie
+escuchara**: se podía poner un interruptor en Tiled, verlo funcionar en el
+registro, y no conseguir que abriera nada. Faltaba el receptor.
+
+Una puerta cronometrada **nunca se cierra sobre el jugador**: si está dentro,
+el temporizador se prorroga hasta que salga.
 
 ### 4.6 Agarres: liana y tirolesa
 
