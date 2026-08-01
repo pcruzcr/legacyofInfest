@@ -206,4 +206,20 @@ Nunca borrar entradas - marcar como resueltas.
   Walker patrulla, Shooter dispara, boss Venado alcanzable. Los demás stages
   deben ser creados por los estudiantes como parte del plan de estudios.
 
+## ~~[GAP-019] Benchmark post-processing no determinista con colorblind_mode persistido~~ *(Resuelto)*
+
+- **File:** `src/framework/vfx/post_processing.py`, `tests/benchmarks/test_performance_budget.py`
+- **Phase:** AUD-052
+- **Reason:** El benchmark `test_post_processing_pass` medía el pipeline de
+  post-procesamiento sin restablecer `user_settings`. Si el jugador tenía
+  `colorblind_mode` persistido (ej. `"protanopia"`) en `config.json`, el filtro
+  de daltonismo per-pixel se activaba y costaba ~15 ms/frame en 800×600 — el
+  costo *intencional* de un filtro de accesibilidad, no una regresión del
+  pipeline. El benchmark fallaba de forma no determinista según la máquina.
+- **Resolution:** El benchmark ahora fuerza `colorblind_mode="off"` antes de
+  medir. Además, `PostProcessing` cachea el modo de daltonismo (lazy) para no
+  llamar a `user_settings.get()` (que puede hacer I/O) en cada fotograma, y
+  precarga la viñeta en el constructor para evitar el costo de numpy en el
+  primer frame.
+
 

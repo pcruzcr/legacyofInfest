@@ -101,6 +101,15 @@ class TestFrameBudget:
         _assert_within_budget("Particles (2k)", _measure_ms(frame, 200), 0.25)
 
     def test_post_processing_pass(self, display) -> None:
+        # AUD-052: reset user_settings to a clean default before measuring.
+        # A persisted colorblind_mode (e.g. "protanopia") activates the
+        # per-pixel colourblind filter, which costs ~15 ms/frame on 800×600 —
+        # that is the *intended* cost of an accessibility filter, not a
+        # regression in the post-processing pipeline. The benchmark must
+        # measure the default pipeline, so we force colorblind_mode="off".
+        from src.engine.core import user_settings
+        user_settings.set_settings(user_settings.UserSettings(colorblind_mode="off"))
+
         from src.framework.vfx.post_processing import PostProcessing
 
         post = PostProcessing()
