@@ -154,7 +154,8 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── __init__.py
 │   │   │   ├── sound_bank.py              # SoundBank: named sound registry
 │   │   │   ├── audio_manager.py           # AudioManager: music + sfx + ambient + stingers
-│   │   │   └── audio_pipeline.py          # Audio processing pipeline
+│   │   │   ├── audio_pipeline.py          # Audio processing pipeline
+│   │   │   └── music_clock.py            # RelojMusical: pulsos, compases y latencia (F6)
 │   │   │
 │   │   ├── render/
 │   │   │   ├── __init__.py
@@ -175,7 +176,8 @@ legacy-of-infest/                      # Actual repo root
 │   │       ├── __init__.py
 │   │       ├── asset_loader.py            # AssetLoader: load+cache images, sounds, fonts
 │   │       ├── math_utils.py              # Vector2, lerp, clamp, ease functions
-│   │       └── surface_pool.py            # SurfacePool: reuse temporary surfaces
+│   │       ├── surface_pool.py            # SurfacePool: reuse temporary surfaces
+│   │       └── sprite_atlas.py            # SpriteAtlas: muchos recortes en una hoja (G1)
 │   │
 │   ├── framework/                      # PROFESSOR-OWNED. Do not modify.
 │   │   │
@@ -307,6 +309,7 @@ legacy-of-infest/                      # Actual repo root
 │
 ├── scripts/                            # Tooling scripts
 │   ├── _cli_paths.py                   # Shared path utilities for CLI scripts
+│   ├── audit_docs_vs_code.py           # Audits doc identifiers vs actual code (regenerates docs/63)
 │   ├── build_executable.py             # Build executable from source
 │   ├── check_dependency_sync.py        # Verify dependency consistency
 │   ├── check_tmx_coverage.py           # Check TMX map coverage

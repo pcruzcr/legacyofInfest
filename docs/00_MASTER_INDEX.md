@@ -95,6 +95,17 @@ Documents marked **[SUPERSEDED]** below exist in their originating package (v1, 
 | —   | `BOSS_CREATION.md`                   | v10 (in-repo)                           | Current — boss creation guide                                        |
 | —   | `ENEMY_CREATION.md`                  | v10 (in-repo)                           | Current — enemy creation guide                                       |
 | —   | `SCENE_CREATION.md`                  | v10 (in-repo)                           | Current — scene creation guide                                       |
+| 53  | `53_MECANICAS_DEL_DOSSIER_VIABILIDAD.md` | v13 (in-repo)                      | Current — mechanic feasibility dossier analysis |
+| 54  | `54_MECANICAS_TOP200_VIABILIDAD.md`  | v13 (in-repo)                           | Current — top-200 mechanics viability |
+| 55  | `55_MECANICAS_JEFES_TOP200_VIABILIDAD.md` | v13 (in-repo)                     | Current — boss mechanics top-200 viability |
+| 56  | `56_FASE_5_ECS_Y_MECANICAS.md`       | v13 (in-repo)                           | Current — phase 5 ECS and mechanics |
+| 57  | `57_COLISIONES_Y_DEUDAS_SALDADAS.md` | v13 (in-repo)                           | Current — collisions and settled debts |
+| 58  | `58_VALIDACION_DE_SISTEMAS.md`       | v13 (in-repo)                           | Current — systems validation |
+| 59  | `59_STAGE_0_REGENERADO.md`           | v13 (in-repo)                           | Current — stage 0 regeneration |
+| 60  | `60_GUIA_COMPLETA_DEL_MOTOR.md`      | v13 (in-repo)                           | Current — complete engine guide (Spanish) |
+| 61  | `61_AUDITORIA_AAA_2026-08.md`        | v13 (in-repo)                           | Current — AAA audit 2026-08 |
+| 62  | `62_ESTADO_DEL_PROYECTO.md`          | v13 (in-repo)                           | Current — project state |
+| 63  | `63_REGISTRO_DE_LO_NO_IMPLEMENTADO.md` | v13 (in-repo)                        | Current — registry of what is not implemented |
 | —   | `STAGE_CREATION.md`                  | v10 (in-repo)                           | Current — stage creation guide                                       |
 
 **Recommended action before implementation begins:** Consolidate all current-status documents into a single flat `docs/` folder in the actual repository (per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §7's structure), discarding the superseded v1/v2/v3 originals of the six documents listed as "supersedes" above. This index becomes redundant once that consolidation happens — at that point, a simple numbered `docs/` folder listing is self-explanatory.
