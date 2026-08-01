@@ -239,10 +239,25 @@ def grade_stage(path: Path) -> dict[str, Any]:
     props = _get_props(root)
 
     # Layer checks
+    #
+    # AUD-110 — la colisión de este motor es un `<objectgroup>`, no un `<layer>`.
+    #
+    # Esto miraba sólo `root.findall("layer")`, que en Tiled son las capas de
+    # baldosas. La capa `Collision` del motor es un grupo de objetos —así la
+    # produce `generate_stage0_tmx.py`, así la documenta `06_TMX_SPEC.md` y así
+    # la leen `StageLoader` y el validador—. Resultado: **los quince mapas del
+    # proyecto recibían el aviso «No 'Collision' layer found (add one for solid
+    # walls/floors)», y los quince la tienen.**
+    #
+    # Es el cuarto caso este mes de una herramienta del profesor que corrige lo
+    # que está bien (AUD-104, AUD-106, AUD-107). Un aviso que sale siempre deja
+    # de leerse, y con él dejan de leerse los que sí importan.
     layers = root.findall("layer")
+    grupos = root.findall("objectgroup")
     layer_names = [line.get("name", "") for line in layers]
+    nombres_de_grupo = [g.get("name", "") for g in grupos]
     has_terrain = "Terrain" in layer_names
-    has_collision = "Collision" in layer_names
+    has_collision = "Collision" in layer_names or "Collision" in nombres_de_grupo
     if has_terrain:
         result["categories"]["required_layers"] = {"score": RUBRIC["required_layers"], "max": RUBRIC["required_layers"], "msg": "Has Terrain layer"}
     else:
@@ -302,12 +317,28 @@ def grade_stage(path: Path) -> dict[str, Any]:
         result["categories"]["enemies_placed"] = {"score": 0, "max": RUBRIC["enemies_placed"], "msg": "No enemies placed"}
 
     # Collectibles (check objects AND Collectibles tile layer)
+    #
+    # AUD-112 — esto no contaba los coleccionables del motor.
+    #
+    # Buscaba la cadena «collect» en el **nombre** del objeto, y dejaba
+    # `obj.get("type", "")` en una línea suelta sin asignar a nada: la huella de
+    # una edición a medias, alguien empezó a mirar el tipo y no terminó.
+    #
+    # El resultado es que `Pickup`, `Key` y `Chest` —los tipos que el motor
+    # tiene para esto desde F4.1, los que están en la guía del estudiante y los
+    # que el validador acepta— **no contaban como coleccionables**. Sólo contaba
+    # quien bautizara su objeto «collectible_1» por casualidad.
+    #
+    # Sexta vez este mes que una herramienta del profesor ignora lo que el motor
+    # sabe hacer. Se cuenta por tipo, y se deja la heurística del nombre para no
+    # invalidar a quien ya la estuviera usando.
+    TIPOS_COLECCIONABLES = {"Pickup", "Key", "Chest"}
     collectibles = 0
     for og in root.findall("objectgroup"):
         for obj in og.findall("object"):
             oname = obj.get("name", "")
-            obj.get("type", "")
-            if "collect" in oname.lower():
+            otype = obj.get("type", "")
+            if otype in TIPOS_COLECCIONABLES or "collect" in oname.lower():
                 collectibles += 1
     for layer in root.findall("layer"):
         lname = layer.get("name", "")
@@ -330,7 +361,13 @@ def grade_stage(path: Path) -> dict[str, Any]:
     for req_prop in REQUIRED_GRADE_PROPS:
         if req_prop in props:
             meta_score += 1
-    result["categories"]["metadata"] = {"score": meta_score * 3, "max": RUBRIC["metadata"], "msg": f"{meta_score}/{len(REQUIRED_GRADE_PROPS)} props found"}
+    # AUD-113 — `meta_score * 3` con tres propiedades daba 9 sobre 10: el 10/10
+    # era **inalcanzable**, y la casilla salía en amarillo aunque el estudiante
+    # hubiera puesto todo lo que se le pedía. Se reparte el peso completo entre
+    # las propiedades que de verdad se exigen, sea cual sea su número.
+    total_props = len(REQUIRED_GRADE_PROPS)
+    puntos = round(RUBRIC["metadata"] * meta_score / total_props) if total_props else RUBRIC["metadata"]
+    result["categories"]["metadata"] = {"score": puntos, "max": RUBRIC["metadata"], "msg": f"{meta_score}/{total_props} props found"}
     if meta_score < len(REQUIRED_GRADE_PROPS):
         missing = [p for p in REQUIRED_GRADE_PROPS if p not in props]
         result["warnings"].append(f"Missing metadata: {missing}")

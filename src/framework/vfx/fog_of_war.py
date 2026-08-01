@@ -4,6 +4,19 @@ System: framework.vfx
 Academic Unit: N/A
 Description: Fog of war overlay — hides unexplored areas with
 editable holes revealed by player/enemy positions.
+
+AUD-111 — enchufado
+===================
+Este módulo estuvo escrito, documentado (`docs/46_FOG_OF_WAR.md`) y probado en
+aislamiento durante meses, y **ninguna escena lo instanciaba**: un jugador no
+podía llegar a él por ningún camino. Las pruebas lo mantenían verde y eso
+escondía que nadie lo usaba — confirmaban que la pieza funciona, no que
+estuviera enchufada.
+
+Ahora lo enciende `StageScene` cuando el TMX declara la propiedad de mapa
+`fog_of_war` con un radio en píxeles. Se dibuja **entre el mundo y la
+iluminación**: después de la luz taparía los focos que definen lo que se ve, y
+antes del mundo no taparía nada.
 """
 from __future__ import annotations
 

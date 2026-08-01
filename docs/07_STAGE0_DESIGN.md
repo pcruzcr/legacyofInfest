@@ -1,428 +1,399 @@
 ---
 document_id: "LOI-STAGE0-007"
-title: "Legacy of InFest — Stage 0 Design Document"
-aliases: ["Stage 0 Design", "Reference Stage"]
+title: "Legacy of InFest — Diseño del Escenario 0"
+aliases: ["Stage 0 Design", "Reference Stage", "Escenario de referencia"]
 tags: ["stage0", "reference", "design"]
-description: "Professor's reference-implementation stage"
+description: "Escenario de referencia del equipo docente"
 source: "docs/07_STAGE0_DESIGN.md"
-date_processed: "2026-07-14"
+date_processed: "2026-07-31"
 ---
 
-# Legacy of InFest — Stage 0 Design Document
+# Legacy of InFest — Diseño del Escenario 0
 
-**Document ID:** LOI-STAGE0-007  
-**Version:** 1.0.0  
-**Status:** Official  
-**Audience:** Professor, Teaching Assistants, AI coding assistants
+**ID del documento:** LOI-STAGE0-007
+**Versión:** 2.0.0
+**Estado:** Oficial
+**Público:** profesorado, asistentes, estudiantes, asistentes de código
 
----
-
-## 1. Educational Purpose
-
-Stage 0 is not a tutorial in the entertainment sense. It is the **executable documentation** of the Legacy of InFest framework. Every system that a student will use to build their stages is demonstrated in Stage 0 — correctly, completely, and with inline tutorial messages that explain what is happening and why.
-
-A student who has played through Stage 0 and studied its source code should be able to:
-
-1. Understand the complete framework API without reading the engine source.
-2. Know exactly how each system behaves in a running stage.
-3. Use Stage 0 as a reference implementation when building their own stage.
-
-Stage 0 also serves as the grader's calibration baseline. All three student stages are evaluated against the behavior demonstrated in Stage 0.
-
-### 1.1 Design Philosophy
-
-- **No hidden systems.** Every system activated in Stage 0 announces itself via a tutorial message.
-- **Progressive complexity.** Systems are introduced from simplest to most complex, following the same order as the course syllabus.
-- **Restartable zones.** Stage 0 has checkpoints before each demonstration zone. A student can die and retry any zone independently.
-- **Debug mode.** Pressing `F1` enables the debug overlay, which renders hitboxes, hurtboxes, detection zones, collision rects, and camera bounds. This is educational, not a cheat.
+> **AUD-114 — este documento describía un escenario que no existe.**
+> La versión 1.0.0 especificaba un mapa de **240 × 14 baldosas (3840 × 224 px)**
+> con 27 mensajes, 12 enemigos y 5 checkpoints, todos en coordenadas concretas.
+> El mapa que el juego carga mide **100 × 38 (1600 × 608 px)** y no coincidía en
+> una sola cifra. De aquí salió el 240 × 14 de `tools/generate_stage0_tmx.py`,
+> que llevaba meses listo para borrar el escenario bueno si alguien lo ejecutaba.
+>
+> Un documento de diseño que nadie comprueba se convierte en ficción, y esta era
+> la ficción más cara del repositorio: es lo primero que lee un estudiante que
+> quiere entender el motor. Todas las cifras de aquí abajo se **derivan del
+> `.tmx`** y `tests/test_stage0_platform_solidity.py` las vuelve a comprobar en
+> cada ejecución de la suite.
 
 ---
 
-## 2. Stage Layout
+## 1. Para qué existe el Escenario 0
 
-Stage 0 is a single-screen-wide horizontal stage divided into seven demonstration zones. The stage scrolls from left to right. Total map width: **3840 pixels (240 tiles)**. Map height: **224 pixels (14 tiles)**.
+El Escenario 0 no es un tutorial en el sentido comercial. Es la **documentación
+ejecutable** del framework: cada sistema que un estudiante va a usar para
+construir su escenario aparece aquí, funcionando, con un mensaje que explica qué
+está pasando.
+
+Quien lo haya jugado y leído su fuente debería poder:
+
+1. Entender la API del framework sin leer el motor.
+2. Saber cómo se comporta cada sistema dentro de un escenario en marcha.
+3. Usarlo como implementación de referencia para su propia entrega.
+
+También es la **calibración del calificador**: `scripts/grade_stage.py` le pone
+130/130, que es la nota que un estudiante puede aspirar a igualar.
+
+### 1.1 Principios
+
+- **Ningún sistema oculto.** Todo lo que se activa se anuncia con un mensaje.
+- **Complejidad creciente.** El orden de las zonas es el orden del temario.
+- **Zonas reintentables.** Hay un checkpoint antes de cada bloque difícil.
+- **Dos soluciones donde se pueda.** El foso se salta *o* se cruza por arriba.
+  Un obstáculo con una sola solución es un pasillo con un examen en medio.
+- **Modo depuración.** `F1` dibuja cajas de golpe, de daño, conos de visión y
+  rectángulos de colisión. Es material didáctico, no un truco.
+
+---
+
+## 2. Trazado
+
+Mapa horizontal de **100 × 38 baldosas** de 16 px = **1600 × 608 px**. El suelo
+está en la fila 30 (**y = 480 px**) y el avance es de izquierda a derecha.
 
 ```
-[SPAWN]──[Zone A]──[Zone B]──[Zone C]──[Zone D]──[Zone E]──[Zone F]──[Zone G]──[EXIT]
-  0px     160px     640px    1120px    1600px    2080px    2560px    3200px    3760px
+  x=48      160      288       528      736      992      1184     1472  1552
+   │         │        │         │        │        │         │        │     │
+ SPAWN ──A──[▮]──B──[walker]──C──[liana]──D──[▮]──E──[foso]──F──[viento]──G──[tirolesa]──SALIDA
+                                             llave/puerta   bloques         cofre
 ```
 
-### 2.1 Visual Theme
-
-Stage 0 takes place in a neutral, stone-corridor environment. The visual style is clean and readable — no atmospheric clutter that would obscure the demonstration systems. The tileset is `tileset_stage0.png`, a desaturated stone set with clear tile boundaries visible in debug mode.
-
-### 2.2 Vertical Layout
-
-The stage is a flat, single-elevation corridor with the following vertical elements:
-
-- Floor: tiles at Y=192–224 (rows 12–14)
-- Ceiling: open sky (no ceiling tiles)
-- Platforms: elevated platforms appear in Zone C, Zone D, and Zone E
-- Pits: one death pit in Zone E
-- Vertical clearance for flight: 96 pixels of open air above the floor
-
----
-
-## 3. Zone Breakdown
-
-### Zone A — Movement and Jump (X: 160–640)
-
-**Systems Demonstrated:** Walk, Jump, Crouch, Coyote Time, Jump Cut
-
-**Layout:**
-- Flat floor, no enemies
-- Two elevated platforms at Y=160 (32 px above floor)
-- Platform 1: X=272–368 (96 px wide)
-- Platform 2: X=416–512 (96 px wide)
-- Gap between platforms: 48 px (jumpable with normal jump)
-
-**Messages:**
-
-| Trigger Position | Message |
-|---|---|
-| X=160 (zone entry) | `"Use arrow keys or left stick to walk.\nPress Space or A to jump."` |
-| X=260 (before platform 1) | `"Jump to reach elevated platforms.\nYou have 6 frames of coyote time at ledge edges."` |
-| X=400 (between platforms) | `"Hold jump longer for a higher jump.\nRelease early for a short hop."` |
-| X=520 (after platform 2) | `"Press Down to crouch.\nCrouching reduces your hurtbox size."` |
-
-**Entities:** None  
-**Checkpoints:** None (Zone A is before the first checkpoint)
-
----
-
-### Zone B — Short Attack and Long Attack (X: 640–1120)
-
-**Systems Demonstrated:** Short Attack, Long Attack, Hitstop, Attack hitbox, Enemy death
-
-**Layout:**
-- Flat floor
-- Three Walker enemies spaced 80 px apart
-- Walker A: X=760, patrol_length=0 (stationary, facing right)
-- Walker B: X=900, patrol_length=0 (stationary, facing right)
-- Walker C: X=1040, patrol_length=0 (stationary, facing right)
-
-**Messages:**
-
-| Trigger Position | Message |
-|---|---|
-| X=640 (zone entry) | `"Press Z to perform a Short Attack (fists).\nPress X for a Long Attack (stick)."` |
-| X=700 (before Walker A) | `"Short Attack: 0.5 heart damage, fast recovery.\nLong Attack: 1.0 heart damage, wider reach."` |
-| X=840 (after Walker A dies) | `"Notice the hitstop effect on hit.\nTime briefly slows to emphasize impact."` |
-| X=1000 (before Walker C) | `"Try crouching (Down) then attacking.\nThe hitbox shifts to hit low targets."` |
-
-**Checkpoint:** `Checkpoint_01` at X=1080, `checkpoint_id=0`
-
----
-
-### Zone C — Walker Enemy and Contact Damage (X: 1120–1600)
-
-**Systems Demonstrated:** Walker patrol, ledge detection, alert state, contact damage, invincibility frames
-
-**Layout:**
-- Flat floor
-- Two elevated platforms creating an elevated walkway section
-  - Platform 1: X=1200–1376 (176 px wide, Y=160)
-  - Gap: X=1376–1440 (64 px — Walker will turn here due to ledge detection)
-  - Platform 2: X=1440–1616 (176 px wide, Y=160)
-- Walker A: on Platform 1, patrol_length=160, facing=right
-- Walker B: at floor level, patrol_length=128, facing=left
-
-**Messages:**
-
-| Trigger Position | Message |
-|---|---|
-| X=1120 | `"Walker enemies patrol back and forth.\nThey detect ledge edges automatically."` |
-| X=1200 | `"When you enter their detection range,\nWalkers accelerate toward you."` |
-| X=1360 | `"If a Walker touches you, you lose 0.5 hearts.\nYou briefly become invincible after taking damage."` |
-| X=1520 | `"Watch the sprite flash during invincibility.\nThis is feedback for the damage-received state."` |
-
-**Checkpoint:** `Checkpoint_02` at X=1560, `checkpoint_id=1`
-
----
-
-### Zone D — Flying Enemy and Curve Paths (X: 1600–2080)
-
-**Systems Demonstrated:** Flying enemy, sine-wave flight, Bézier path flight, parametric sampling
-
-**Layout:**
-- Flat floor
-- Wide open vertical space (no ceiling obstacles)
-- Flying_A: sine mode, amplitude=28, frequency=1.2, X=1700, patrol horizontal range 200 px
-- Flying_B: bezier mode, control points forming an S-curve across the zone
-  - Waypoint 0: X=1900, Y=80
-  - Waypoint 1: X=1800, Y=40
-  - Waypoint 2: X=1700, Y=80
-  - Waypoint 3: X=1800, Y=120
-
-**Messages:**
-
-| Trigger Position | Message |
-|---|---|
-| X=1600 | `"Flying enemies move along computed paths.\nThe first uses a sine wave trajectory."` |
-| X=1780 | `"Sine wave: position.y = origin + A * sin(2πft)\nAmplitude (A) and frequency (f) are TMX properties."` |
-| X=1880 | `"The second Flying enemy uses a Bézier curve path.\nFour control points define the S-shaped trajectory."` |
-| X=2000 | `"Press F1 to toggle debug view.\nYou can see the Bézier control points and sampled path."` |
-
-**Checkpoint:** `Checkpoint_03` at X=2040, `checkpoint_id=2`
-
----
-
-### Zone E — Shooter Enemy and Projectiles (X: 2080–2560)
-
-**Systems Demonstrated:** Shooter, projectile velocity, angle calculation, range detection, death pit
-
-**Layout:**
-- Floor with a death pit at X=2240–2304 (64 px wide)
-- One-way platform spanning the pit: X=2240–2320, Y=176
-- Shooter_A: stationary, X=2400, facing=left, fire_rate=0.6
-- Shooter_B: slow patrol, spawn at X=2500, fire_rate=0.4
-
-**Messages:**
-
-| Trigger Position | Message |
-|---|---|
-| X=2080 | `"Shooter enemies fire projectiles when you enter range.\nProjectile angle is computed with atan2."` |
-| X=2160 | `"angle = atan2(dy, dx) from shooter to player.\nThis is Unit II vector mathematics."` |
-| X=2240 | `"The gap ahead has a one-way platform.\nJump up through it; fall back down through it."` |
-| X=2360 | `"Crouch to avoid projectiles that fly high.\nTime your movement between shots."` |
-
-**Checkpoint:** `Checkpoint_04` at X=2520, `checkpoint_id=3`
-
----
-
-### Zone F — HUD and Timer Demonstration (X: 2560–3200)
-
-**Systems Demonstrated:** HUD hearts, timer countdown, checkpoint restore with full health, Game Over flow
-
-**Layout:**
-- Flat floor, slightly more complex enemy arrangement
-- Walker_A: X=2680, patrol_length=128, damage_on_contact=1.0 (heavy damage enemy — marked with a visual indicator)
-- Walker_B: X=2820, patrol_length=96
-- Walker_C: X=2960, patrol_length=64
-- HazardZone_A: X=3040–3088 (48 px wide), damage=0.25, damage_type=floor_spikes (visible spike tiles in Terrain_Detail)
-
-**Messages:**
-
-| Trigger Position | Message |
-|---|---|
-| X=2560 | `"The HUD shows your health (hearts) and the stage timer.\nThe portrait in the corner is the player avatar."` |
-| X=2640 | `"The red Walker deals 1.0 heart of damage.\nHeavy damage enemies are marked differently."` |
-| X=2760 | `"If you run out of health, Game Over appears.\nYou can continue from the last checkpoint."` |
-| X=3040 | `"The spike floor deals 0.25 heart damage per tick.\nThis is the Light damage tier."` |
-
-**Checkpoint:** `Checkpoint_05` at X=3160, `checkpoint_id=4`
-
----
-
-### Zone G — Stage Banner, Next Trigger, and Completion (X: 3200–3760)
-
-**Systems Demonstrated:** Stage completion trigger, next stage transition, screen banner
-
-**Layout:**
-- Flat corridor, no enemies
-- Decorative arch tilework in `FG_Overlay` at X=3600
-- `NextTrigger` rect: X=3720–3760 (40 px wide), Y=160–224 (64 px tall)
-- A torch animation plays at X=3640 (sprite: `shared/torch_anim.png`, 4 frames, 8 fps)
-
-**Messages:**
-
-| Trigger Position | Message |
-|---|---|
-| X=3200 | `"You have demonstrated all framework systems.\nWalk right to complete Stage 0."` |
-| X=3500 | `"Your stages (Stage 1, 2, 3) will build on everything shown here.\nStudy the source code for each zone."` |
-| X=3680 | `"Step through the arch to proceed.\nGood luck."` |
-
----
-
-## 4. Messages — Complete List
-
-All tutorial messages in Stage 0 are `trigger_once=true`. They appear once and do not reappear on replay unless the stage is fully restarted.
-
-| ID | Zone | Trigger X | Text Summary |
-|---|---|---|---|
-| MSG_01 | A | 160 | Walk and jump controls |
-| MSG_02 | A | 260 | Platforms and coyote time |
-| MSG_03 | A | 400 | Jump cut (variable height) |
-| MSG_04 | A | 520 | Crouch mechanics |
-| MSG_05 | B | 640 | Short and long attack buttons |
-| MSG_06 | B | 700 | Damage tiers |
-| MSG_07 | B | 840 | Hitstop explanation |
-| MSG_08 | B | 1000 | Crouch-attack lowered hitbox |
-| MSG_09 | C | 1120 | Walker patrol and ledge detection |
-| MSG_10 | C | 1200 | Walker alert state |
-| MSG_11 | C | 1360 | Contact damage and invincibility |
-| MSG_12 | C | 1520 | Invincibility flash feedback |
-| MSG_13 | D | 1600 | Flying enemy introduction |
-| MSG_14 | D | 1780 | Sine wave math explanation |
-| MSG_15 | D | 1880 | Bézier curve path introduction |
-| MSG_16 | D | 2000 | Debug mode F1 hint |
-| MSG_17 | E | 2080 | Shooter introduction and atan2 |
-| MSG_18 | E | 2160 | Vector mathematics reference |
-| MSG_19 | E | 2240 | One-way platform explanation |
-| MSG_20 | E | 2360 | Crouch to dodge projectiles |
-| MSG_21 | F | 2560 | HUD overview |
-| MSG_22 | F | 2640 | Heavy damage enemy indicator |
-| MSG_23 | F | 2760 | Game Over flow |
-| MSG_24 | F | 3040 | Light damage spike floor |
-| MSG_25 | G | 3200 | Stage completion introduction |
-| MSG_26 | G | 3500 | Study the source code |
-| MSG_27 | G | 3680 | Proceed instruction |
-
----
-
-## 5. Triggers — Complete List
-
-| Name | Type | X | Y | Width | Height | Properties |
-|---|---|---|---|---|---|---|
-| `PlayerSpawn_01` | PlayerSpawn | 48 | 160 | — | — | — |
-| `Checkpoint_01` | Checkpoint | 1080 | 160 | 24 | 32 | `checkpoint_id=0` |
-| `Checkpoint_02` | Checkpoint | 1560 | 160 | 24 | 32 | `checkpoint_id=1` |
-| `Checkpoint_03` | Checkpoint | 2040 | 160 | 24 | 32 | `checkpoint_id=2` |
-| `Checkpoint_04` | Checkpoint | 2520 | 160 | 24 | 32 | `checkpoint_id=3` |
-| `Checkpoint_05` | Checkpoint | 3160 | 160 | 24 | 32 | `checkpoint_id=4` |
-| `NextTrigger_01` | NextTrigger | 3720 | 160 | 40 | 64 | — |
-| `HazardZone_A` | HazardZone | 3040 | 176 | 48 | 16 | `damage=0.25, damage_type=floor_spikes` |
-| `CameraLock_BossArena` | CameraLock | — | — | — | — | (reserved, not active in Stage 0) |
-
----
-
-## 6. Enemy Placement — Complete List
-
-| Name | Type | X | Y | Key Properties |
-|---|---|---|---|---|
-| `Walker_01` | Walker | 760 | 192 | patrol_length=0, stationary |
-| `Walker_02` | Walker | 900 | 192 | patrol_length=0, stationary |
-| `Walker_03` | Walker | 1040 | 192 | patrol_length=0, stationary |
-| `Walker_04` | Walker | 1260 | 160 | patrol_length=160, facing=right, on Platform 1 |
-| `Walker_05` | Walker | 1480 | 192 | patrol_length=128, facing=left, floor level |
-| `Flying_01` | Flying | 1700 | 112 | flight_mode=sine, amplitude=28, frequency=1.2 |
-| `Flying_02` | Flying | 1900 | 80 | flight_mode=bezier, linked waypoints Waypoint_01–04 |
-| `Shooter_01` | Shooter | 2400 | 192 | stationary, fire_rate=0.6, facing=left |
-| `Shooter_02` | Shooter | 2500 | 192 | patrol_length=40, fire_rate=0.4 |
-| `Walker_06` | Walker | 2680 | 192 | patrol_length=128, damage_on_contact=1.0 |
-| `Walker_07` | Walker | 2820 | 192 | patrol_length=96 |
-| `Walker_08` | Walker | 2960 | 192 | patrol_length=64 |
-
----
-
-## 7. Checkpoint Placement
-
-| ID | X | Trigger Context |
+| Zona | Rango x (px) | Qué enseña |
 |---|---|---|
-| 0 | 1080 | After completing Zone B (attack demonstration) |
-| 1 | 1560 | After Zone C (Walker enemy section) |
-| 2 | 2040 | After Zone D (Flying enemy section) |
-| 3 | 2520 | After Zone E (Shooter section) |
-| 4 | 3160 | After Zone F (HUD and damage demonstration) |
+| A | 48 – 220 | moverse, saltar, y el primer obstáculo sólido |
+| B | 224 – 390 | el primer enemigo, inevitable |
+| C | 400 – 700 | plataformas de un sentido, liana, primer salto exigente |
+| D | 720 – 975 | combate variado, llave y puerta cerrada |
+| E | 976 – 1150 | foso con dos rutas, bloques rítmicos, zona de daño |
+| F | 1152 – 1350 | enemigos a distancia y zona de viento |
+| G | 1360 – 1552 | todo junto, tirolesa y cofre |
+
+### 2.1 Tema visual
+
+Corredor de piedra neutro, legible, sin ruido atmosférico que tape lo que se
+está demostrando. Tileset `tileset_stage0.png`.
+
+### 2.2 Geometría vertical
+
+- **Suelo:** filas 30–37 (y 480–608), sólido.
+- **Muros de cierre:** x = −16 y x = 1600, de 608 px de alto. Quedan fuera del
+  área jugable y `level_metrics` los descarta antes de medir repisas (AUD-112).
+- **Obstáculos sólidos interiores:** dos, y son lo único contra lo que se choca
+  de lado en todo el escenario.
+
+  | x | Alto | Dónde | Para qué |
+  |---|---|---|---|
+  | 160 | 2 baldosas (32 px) | zona A | se salta desde parado |
+  | 736 | 3 baldosas (48 px) | zona D | obliga a aprovechar el impulso; guarda la llave |
+
+  El salto del jugador alcanza **72 px** medidos. Una prueba parametrizada
+  conduce al jugador por encima de cada uno: poner cajas sólidas en el camino
+  sin comprobar que se superan es como se deja un callejón sin salida en el
+  escenario que sirve de ejemplo.
+
+- **Plataformas atravesables** (`Platform`, un solo sentido):
+
+  | x | y | Ancho | Zona |
+  |---|---|---|---|
+  | 416 | 416 | 96 px | C |
+  | 576 | 368 | 96 px | C |
+  | 976 | 352 | 144 px | E — la pasarela sobre el foso |
+  | 1376 | 336 | 128 px | G |
+
+- **Foso:** x 992 – 1088 (96 px), con `DeathPit` al fondo.
 
 ---
 
-## 8. Completion Conditions
+## 3. Zona por zona
 
-### 8.1 Normal Completion
+### Zona A — moverse, saltar y chocar (x 48 – 220)
 
-The player reaches and overlaps the `NextTrigger_01` rect at X=3720 while grounded.
+**Sistemas:** andar, saltar, tiempo del coyote, corte de salto, colisión
+horizontal contra un sólido.
 
-**On completion:**
-1. `STAGE_COMPLETE` event emitted.
-2. Audio fades out (500ms).
-3. Screen fades to black (800ms).
-4. `SceneManager.replace(Stage1Scene())` called.
+- Aparición del jugador en x = 48.
+- `MessageTrigger_Once` en x = 80: *«Flechas para moverte. Espacio para
+  saltar.»*
+- Obstáculo sólido de 2 baldosas en x = 160. Sin enemigos: el primer choque del
+  jugador es contra geometría, no contra algo que le quite vida.
 
-### 8.2 Timer Expiration
-
-Stage 0 does not have a time limit. The timer is displayed as a demonstration of the HUD timer system but it counts up (not down) and does not trigger a game over. This is noted in the HUD tutorial message.
-
----
-
-## 9. Failure Conditions
-
-### 9.1 Player Death
-
-When `current_health <= 0`:
-
-1. `PLAYER_DIED` emitted.
-2. Player death animation plays.
-3. `GameOverScene` pushed.
-4. Player selects **Continue** → `GameOverScene` popped, player respawns at last active checkpoint with full health.
-5. Player selects **Quit** → return to `TitleScene`.
-
-### 9.2 Death Pit
-
-The death pit in Zone E (X=2240–2304, Y=224) has a `Death_` collision rect immediately below. If the player falls into it, `current_health` is set to 0 directly (bypasses damage tiers) and `PLAYER_DIED` is emitted immediately. The effect is instant — no damage animation, no invincibility frames.
+**Checkpoints:** ninguno todavía.
 
 ---
 
-## 10. Systems Demonstrated — Master Checklist
+### Zona B — el primer enemigo (x 224 – 390)
 
-The following table confirms that every framework system documented in this specification package is demonstrated somewhere in Stage 0.
+**Sistemas:** `Walker`, patrulla, detección de borde, estado de alerta, daño por
+contacto, fotogramas de invulnerabilidad.
 
-| System | Zone | Reference Document |
+- `MessageTrigger_Once` en x = 224: *«Z ataca. También puedes saltar por
+  encima.»* Va **después** del mensaje de salto, para que el jugador ya sepa
+  saltar cuando se le ofrece esa salida.
+- `Walker` en x = 288, `patrol_length=80`, `patrol_speed=60`, `alert_speed=90`,
+  2 de vida.
+
+Está **en el camino**, no a un lado. Es la lección de Mario 1-1 del dossier del
+Top 200: el castigo por contacto se enseña sin una línea de texto, y las dos
+soluciones —pelear o saltar— se ofrecen a la vez.
+
+**Checkpoint 0:** x = 352.
+
+---
+
+### Zona C — plataformas, liana y el primer salto exigente (x 400 – 700)
+
+**Sistemas:** plataformas de un solo sentido, `Vine` con `TrepandoState`,
+`Pickup`, enemigo volador con trayectoria senoidal.
+
+- `MessageTrigger_Once` en x = 400: *«Sube. Con X te agarras a la liana.»*
+- Plataformas atravesables en (416, 416) y (576, 368).
+- `Flying` en x = 480: `flight_mode=sine`, amplitud 32, frecuencia 2,0
+  (Unidad III).
+- `Vine` en x = 528, 176 px de largo, `ancho_de_agarre=12`.
+- `Pickup` «fragmento_1» en (608, 336), sobre la segunda plataforma.
+
+Aquí está el **salto exigente** que el calificador exigía y que el escenario del
+profesor no tenía: el desnivel entre las dos plataformas no se supera andando.
+
+**Checkpoint 1:** x = 688.
+
+---
+
+### Zona D — combate variado, llave y puerta (x 720 – 975)
+
+**Sistemas:** cuatro arquetipos de enemigo distintos, `Key`, `LockedDoor`,
+obstáculo alto.
+
+- `MessageTrigger_Once` en x = 720: *«La llave abre la puerta del fondo.»*
+- Obstáculo sólido de 3 baldosas en x = 736.
+- `Key` «llave_prologo» en x = 752, detrás del obstáculo.
+- `Charger` en x = 800 (`charge_speed=250`).
+- `Archer` en x = 864 (`fire_rate=2`, proyectil a 100 px/s, 2 de daño).
+- `Brute` en x = 912, 6 de vida, caja de 100 × 60.
+- `LockedDoor` en x = 960, `key_id=llave_prologo`, con mensaje de bloqueo.
+
+La llave está **antes** de la puerta pero detrás del muro: el estudiante ve que
+un objeto de inventario y un obstáculo de geometría resuelven cosas distintas.
+
+**Checkpoint 2:** x = 976.
+
+---
+
+### Zona E — el foso, con dos rutas (x 976 – 1150)
+
+**Sistemas:** `DeathPit`, `RhythmBlock`, plataforma de un sentido como pasarela,
+`HazardZone`.
+
+- `MessageTrigger_Once` en x = 944: *«Salta el foso, o cruza por encima.»*
+- Foso en x 992 – 1088 con `DeathPit` al fondo (y = 576).
+- Tres `RhythmBlock` en x 1008, 1040 y 1072, a y = 400:
+  `visible_seg=1.8`, `oculto_seg=1.0`, `desfase` 0, 0,6 y 1,2. Aparecen en
+  cascada, así que la ruta de arriba **existe pero hay que cronometrarla**.
+- Pasarela `Platform` en (976, 352), atravesable desde abajo.
+- `HazardZone` en x = 1120, daño 0,25 por tic — el nivel de daño «leve».
+
+Tres formas de pasar: saltar el foso, cronometrar los bloques, o cruzar por la
+pasarela. Es el sitio del escenario donde más se nota la diferencia entre
+diseñar y poner obstáculos.
+
+---
+
+### Zona F — a distancia, y viento (x 1152 – 1350)
+
+**Sistemas:** `Shooter`, `Caster`, `WindZone` (fase 5), `Pickup`.
+
+- `MessageTrigger_Once` en x = 1152: *«El viento empuja. Espera a que amaine.»*
+- `WindZone` en x 1184 – 1344, 160 × 160 px: `fuerza_x=210`, `periodo=3.4`. La
+  fuerza es periódica, así que la solución es **esperar**, no insistir.
+- `Pickup` «fragmento_2» en x = 1216.
+- `Shooter` en x = 1248 y `Caster` en x = 1296, ambos a distancia: el viento
+  cambia el problema de puntería.
+
+**Checkpoint 3:** x = 1344.
+
+---
+
+### Zona G — todo junto, tirolesa y cofre (x 1360 – 1552)
+
+**Sistemas:** `Assassin`, `Zipline` con `TirolesaState`, `Chest`, `CameraLock`,
+`NextTrigger`, ataque definitivo.
+
+- `MessageTrigger_Once` en x = 1360: *«Combina todo. U es el ataque
+  definitivo.»*
+- `CameraLock` en x = 1376, 224 px de ancho, `lock_y=true`.
+- `Assassin` en x = 1408 y `Walker` en x = 1456.
+- Plataforma alta en (1376, 336).
+- `Pickup` «fragmento_3» en (1440, 320).
+- `Zipline` en (1472, 320): `destino_dx=80`, `destino_dy=128`, 200 px/s.
+- `Chest` «reliquia_prologo» en (1488, 320) — la recompensa por subir.
+- `NextTrigger` en x = 1552.
+
+---
+
+## 4. Inventario del mapa
+
+Cifras derivadas del `.tmx`; si dejan de cuadrar, la suite avisa.
+
+| | |
+|---|---|
+| Tamaño | 100 × 38 baldosas (1600 × 608 px) |
+| Capas | 8 |
+| Objetos en `Objects` | 44 |
+| Objetos en `Collision` | 10 |
+| Propiedades de mapa | 17 |
+| Enemigos | 9, de 8 tipos |
+| Mensajes de tutorial | 7 |
+| Checkpoints | 4 (ids 0–3) |
+| Coleccionables | 5 (3 `Pickup`, 1 `Key`, 1 `Chest`) |
+| Focos `Light` | 7 |
+| Obstáculos sólidos interiores | 2 |
+| Plataformas de un sentido | 4 |
+
+### 4.1 Enemigos
+
+| Tipo | x | Nota |
 |---|---|---|
-| Walk | A | `04_PLAYER_SPEC.md` §4.1 |
-| Jump | A | `04_PLAYER_SPEC.md` §4.2 |
-| Coyote Time | A | `04_PLAYER_SPEC.md` §4.2 |
-| Jump Cut | A | `04_PLAYER_SPEC.md` §4.2 |
-| Crouch | A | `04_PLAYER_SPEC.md` §4.1 |
-| Short Attack | B | `04_PLAYER_SPEC.md` §7.1 |
-| Long Attack | B | `04_PLAYER_SPEC.md` §7.2 |
-| Hitstop | B | `04_PLAYER_SPEC.md` §7.3 |
-| Attack hitbox | B | `04_PLAYER_SPEC.md` §10 |
-| Hurtbox | C | `04_PLAYER_SPEC.md` §11 |
-| Walker enemy | B, C | `05_ENEMY_SPEC.md` §3 |
-| Ledge detection | C | `05_ENEMY_SPEC.md` §3.5 |
-| Alert state | C | `05_ENEMY_SPEC.md` §3.3 |
-| Contact damage | C | `05_ENEMY_SPEC.md` §9.2 |
-| Invincibility frames | C | `04_PLAYER_SPEC.md` §5.3 |
-| Flying enemy (sine) | D | `05_ENEMY_SPEC.md` §4 |
-| Flying enemy (Bézier) | D | `05_ENEMY_SPEC.md` §4.3 |
-| Shooter enemy | E | `05_ENEMY_SPEC.md` §5 |
-| Projectile system | E | `05_ENEMY_SPEC.md` §5.4 |
-| atan2 angle calculation | E | `05_ENEMY_SPEC.md` §5.4 |
-| One-way platform | E | `06_TMX_SPEC.md` §9.2 |
-| Death pit | E | `06_TMX_SPEC.md` §9.3 |
-| Checkpoint | B, C, D, E, F | `06_TMX_SPEC.md` §7 |
-| HUD hearts | F | `09_HUD_SPEC.md` §3 |
-| HUD timer | F | `09_HUD_SPEC.md` §4 |
-| Light damage (0.25) | F | `04_PLAYER_SPEC.md` §6.1 |
-| Heavy damage (1.0) | F | `04_PLAYER_SPEC.md` §6.1 |
-| HazardZone | F | `06_TMX_SPEC.md` §9.2 |
-| Game Over flow | F | `03_ARCHITECTURE.md` §7 |
-| Stage Banner | G (entry) | `09_HUD_SPEC.md` §6 |
-| NextTrigger / Completion | G | `06_TMX_SPEC.md` §8 |
-| Tutorial Messages | A–G | `09_HUD_SPEC.md` §5 |
-| Debug overlay (F1) | D | `03_ARCHITECTURE.md` §2 |
-| Camera scrolling | All | `03_ARCHITECTURE.md` §2.8 |
-| Parallax backgrounds | All | `06_TMX_SPEC.md` §3.2 |
-| TMX layer system | All | `06_TMX_SPEC.md` §3 |
-| Entity spawn from TMX | All | `06_TMX_SPEC.md` §6 |
-| EventBus communication | All | `03_ARCHITECTURE.md` §8.5 |
-| Audio (BGM + SFX) | All | `03_ARCHITECTURE.md` §2.4 |
+| `Walker` | 288 | 2 de vida, patrulla 80 px |
+| `Flying` | 480 | senoidal, amplitud 32, frecuencia 2,0 |
+| `Charger` | 800 | embestida a 250 px/s |
+| `Archer` | 864 | proyectil a 100 px/s |
+| `Brute` | 912 | 6 de vida |
+| `Shooter` | 1248 | disparo cada 2 s |
+| `Caster` | 1296 | ataque a distancia |
+| `Assassin` | 1408 | acercamiento rápido |
+| `Walker` | 1456 | 2 de vida |
 
+### 4.2 Checkpoints
 
---- Traducción al Español ---
+| id | x | Contexto |
+|---|---|---|
+| 0 | 352 | tras el primer enemigo |
+| 1 | 688 | tras las plataformas y la liana |
+| 2 | 976 | tras el combate y la puerta |
+| 3 | 1344 | tras el viento, antes del tramo final |
 
-## Diseño del Escenario 0
+### 4.3 Propiedades de mapa
 
-El Escenario 0 es la documentación ejecutable del framework. Cada sistema que un estudiante usará está demostrado en el Escenario 0.
+`stage_id`, `stage_name`, `author`, `bgm_track`, `background_zone`, `climate`,
+`time_limit`, `gravity_multiplier`, `ambient_light`, `start_hour`, `day_length`,
+`season`, `zone`, `bloom`, `vignette`, `ambient_fx`, `ambient_fx_rate`.
 
-### Diseño del Escenario
-Escenario horizontal de una sola pantalla dividido en 7 zonas de demostración. Ancho total: 3840 píxeles (240 tiles). Alto: 224 píxeles (14 tiles).
-
-### Zonas
-- **Zona A** — Movimiento y Salto (X: 160–640)
-- **Zona B** — Ataque Corto y Largo (X: 640–1120)
-- **Zona C** — Enemigo Walker y Daño por Contacto (X: 1120–1600)
-- **Zona D** — Enemigo Volador y Curvas (X: 1600–2080)
-- **Zona E** — Enemigo Shooter y Proyectiles (X: 2080–2560)
-- **Zona F** — HUD y Demostración del Temporizador (X: 2560–3200)
-- **Zona G** — Banner de Escenario y Finalización (X: 3200–3760)
-
-Para la lista completa de mensajes, disparadores, colocación de enemigos y condiciones de finalización, consultar el documento original en inglés.
-
+Las tres primeras son las que exige el calificador. Las demás encienden clima,
+ciclo día/noche, estaciones, iluminación y post-procesado: si un estudiante
+quiere saber qué se puede pedir desde Tiled, esta lista es la respuesta.
 
 ---
-## 🔗 Documentos Relacionados
 
-- [[06_TMX_SPEC.md|TMX Specification]]
-- [[30_ASSIGNMENT_01_STAGE_DESIGN.md|Assignment 1: Stage Design]]
+## 5. Fin del escenario
+
+### 5.1 Final normal
+
+El jugador entra en el rectángulo `NextTrigger` de x = 1552 estando en el suelo.
+
+1. Se emite `STAGE_COMPLETE`.
+2. El audio se atenúa.
+3. La pantalla funde a negro y **se queda en negro** hasta el corte (AUD-109:
+   `FadeAction` retornaba antes de dibujar el velo al completarse, y el fundido
+   terminaba con un fotograma de destello justo antes del cambio de escena).
+4. `SceneManager` reemplaza la escena por la siguiente.
+
+### 5.2 Temporizador
+
+`time_limit = 0`: el Escenario 0 no tiene límite. El reloj del HUD se muestra
+como demostración y cuenta hacia arriba.
+
+---
+
+## 6. Fallos
+
+### 6.1 Muerte del jugador
+
+Con `Salud` a cero: se emite `PLAYER_DIED`, se reproduce la animación, se apila
+`GameOverScene`. **Continuar** reaparece en el último checkpoint con la vida
+llena; **Salir** vuelve al título.
+
+### 6.2 Foso
+
+El `DeathPit` de la zona E pone la vida a cero directamente, sin pasar por los
+niveles de daño ni por la invulnerabilidad. Es instantáneo a propósito: un foso
+que quita media vida enseña a caerse dentro.
+
+---
+
+## 7. Lista de sistemas demostrados
+
+| Sistema | Zona | Documento |
+|---|---|---|
+| Andar, saltar, tiempo del coyote, corte de salto | A | `04_PLAYER_SPEC.md` §4 |
+| Colisión horizontal contra sólido | A, D | `06_TMX_SPEC.md` §9 |
+| Ataque corto y largo, hitstop | B | `04_PLAYER_SPEC.md` §7 |
+| Caja de daño y de golpe | B, C | `04_PLAYER_SPEC.md` §10–11 |
+| `Walker`: patrulla, borde, alerta, contacto | B, G | `05_ENEMY_SPEC.md` §3 |
+| Invulnerabilidad tras recibir daño | B | `04_PLAYER_SPEC.md` §5.3 |
+| Plataforma de un solo sentido | C, E, G | `06_TMX_SPEC.md` §9.2 |
+| Vuelo senoidal (Unidad III) | C | `05_ENEMY_SPEC.md` §4 |
+| Liana / `TrepandoState` | C | `56_FASE_5_ECS_Y_MECANICAS.md` |
+| `Pickup` e inventario | C, F, G | `06_TMX_SPEC.md` §6 |
+| `Charger`, `Archer`, `Brute` | D | `05_ENEMY_SPEC.md` §5–7 |
+| `Key` y `LockedDoor` | D | `06_TMX_SPEC.md` §6 |
+| `DeathPit` | E | `06_TMX_SPEC.md` §9.3 |
+| `RhythmBlock` | E | `56_FASE_5_ECS_Y_MECANICAS.md` |
+| `HazardZone` y daño leve | E | `04_PLAYER_SPEC.md` §6.1 |
+| `Shooter`, `Caster`, proyectiles, `atan2` | F | `05_ENEMY_SPEC.md` §5 |
+| `WindZone` | F | `56_FASE_5_ECS_Y_MECANICAS.md` |
+| `Assassin` | G | `05_ENEMY_SPEC.md` §8 |
+| Tirolesa / `TirolesaState` | G | `56_FASE_5_ECS_Y_MECANICAS.md` |
+| `Chest` | G | `06_TMX_SPEC.md` §6 |
+| `CameraLock` | G | `06_TMX_SPEC.md` §8 |
+| `NextTrigger` y fin de escenario | G | `06_TMX_SPEC.md` §8 |
+| Checkpoints | B–G | `06_TMX_SPEC.md` §7 |
+| Mensajes de tutorial | A–G | `09_HUD_SPEC.md` §5 |
+| HUD: corazones y reloj | todas | `09_HUD_SPEC.md` §3–4 |
+| Iluminación por focos | todas | `06_TMX_SPEC.md` §5 |
+| Clima, ciclo día/noche, estaciones | todas | `06_TMX_SPEC.md` §4 |
+| Bloom y viñeta | todas | `03_ARCHITECTURE.md` §2.6 |
+| Cámara, parallax, capas TMX | todas | `06_TMX_SPEC.md` §3 |
+| `EventBus`, audio | todas | `03_ARCHITECTURE.md` §8.5 |
+| Superposición de depuración (`F1`) | todas | `03_ARCHITECTURE.md` §2 |
+
+### 7.1 Lo que el Escenario 0 **no** demuestra
+
+Honestidad por delante: de las once mecánicas de la fase 5, el prólogo usa
+cuatro (liana, tirolesa, bloques rítmicos, zona de viento). Las otras siete
+—agua y nado, plataformas móviles, plataformas hundibles, zonas de fricción,
+tiempo bala, scroll forzado, sigilo con cono de visión— viven en
+`assets/maps/stage_mecanicas/`, que es su escenario de referencia. Meterlas
+todas aquí convertiría el prólogo en un catálogo y dejaría de ser jugable.
+
+---
+
+## 8. Cómo se regenera
+
+```bash
+python tools/generate_stage0_tmx.py
+```
+
+El `.tmx` del repositorio **es** la salida de ese script, y una prueba lo
+comprueba. Si hay que cambiar el trazado, se cambia el generador; editar el
+`.tmx` a mano funciona hasta que alguien ejecute el script.
+
+---
+
+## 🔗 Documentos relacionados
+
+- [[06_TMX_SPEC.md|Especificación TMX]]
+- [[30_ASSIGNMENT_01_STAGE_DESIGN.md|Práctica 1: diseño de escenario]]
+- [[56_FASE_5_ECS_Y_MECANICAS.md|Fase 5: ECS y mecánicas nuevas]]
+- [[59_STAGE_0_REGENERADO.md|Informe de la regeneración]]

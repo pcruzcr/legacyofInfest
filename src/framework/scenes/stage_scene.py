@@ -107,6 +107,12 @@ class StageScene(BaseScene):
         # vez y no se repite.
         self._mundo: World = World()
         self._planificador: Planificador = self._construir_planificador()
+        # AUD-111 — niebla de guerra y efecto de agua. `None` mientras el
+        # escenario no los pida: los dos pintan una capa del tamaño de la
+        # pantalla cada fotograma, y cobrárselo a los catorce escenarios que no
+        # los usan sería pagar por nada.
+        self._niebla = None
+        self._agua_vfx = None
         self._nado = ControlDeNado()
         self._tiempo_bala = TiempoBala()
         self._scroll_forzado = ScrollForzado()
@@ -274,6 +280,7 @@ class StageScene(BaseScene):
             disparadores=self._stage_data.disparadores,
             bus=self.context.event_bus,
         )
+        self._configurar_vfx_opcionales()
         self._poblar_mundo_ecs()
         self._progression.reset()
 
@@ -964,6 +971,33 @@ class StageScene(BaseScene):
         if self._player.current_health <= 0 and not self._game_over:
             self._kill_player()
 
+    # ── AUD-111 — VFX opcionales declarados en el TMX ──────────
+    def _configurar_vfx_opcionales(self) -> None:
+        """Enciende la niebla de guerra y el efecto de agua si el mapa los pide.
+
+        Los dos estaban escritos, documentados (`docs/46_`, `docs/47_`) y con
+        pruebas que los ejercitaban en aislamiento, y **ninguna escena los
+        instanciaba**: un jugador no podía llegar a ellos por ningún camino. Es
+        el mismo patrón que el nado y que el ultimate.
+
+        Se activan por propiedad de mapa y no por defecto porque los dos pintan
+        una superficie del tamaño de la pantalla en cada fotograma. Encenderlos
+        siempre le cobraría ese coste a los catorce escenarios que no los
+        quieren.
+        """
+        from src.framework.vfx.fog_of_war import FogOfWar
+        from src.framework.vfx.water_effect import WaterEffect
+
+        datos = self._stage_data
+        self._niebla = None
+        self._agua_vfx = None
+
+        radio = getattr(datos, "fog_of_war", 0.0)
+        if radio and radio > 0:
+            self._niebla = FogOfWar(radius=int(radio))
+        if getattr(datos, "water_effect", False):
+            self._agua_vfx = WaterEffect()
+
     # ── F5.14 — lianas y tirolesas ─────────────────────────────
     def _actualizar_agarres(self, player, im) -> None:
         """Agarrarse a una liana o engancharse a una tirolesa.
@@ -1474,6 +1508,20 @@ class StageScene(BaseScene):
             dialogue_system=self._dialogue,
         )
         self._drawing.draw(ctx)
+        # AUD-111 — la niebla y el agua, que llevaban meses escritas sin que
+        # nadie las dibujara.
+        #
+        # Van **entre** el mundo y la iluminación, y ése es el único sitio
+        # correcto: después de la luz, la niebla taparía los focos que definen
+        # lo que se ve; antes del mundo, no taparía nada. Las dos se activan
+        # desde el TMX (`fog_of_war`, `water_effect`), así que un escenario que
+        # no las pide no paga nada por ellas.
+        if self._niebla is not None:
+            self._niebla.reveal(self._player.rect.centerx, self._player.rect.centery) \
+                if self._player is not None else None
+            self._niebla.draw(surface, self._camera.offset)
+        if self._agua_vfx is not None:
+            self._agua_vfx.draw(surface, self._camera.offset)
         self._lighting.render(surface, self._camera.offset)
         self._post_processing.apply(surface)
         # AUD-090: la interfaz va DESPUÉS de la luz y del post-procesado. Antes

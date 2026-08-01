@@ -387,7 +387,22 @@ def _boundary_walls(
 def analyse_stage(stage_data: object) -> LevelReport:
     """Análisis completo de un `StageData` ya cargado."""
     rects = list(getattr(stage_data, "collision_rects", []) or [])
-    report = analyse_geometry(rects)
+
+    # AUD-112 — los muros de cierre tampoco son plataformas para la geometría.
+    #
+    # AUD-096 los excluyó del recuento de plataformas huérfanas y **no** del
+    # análisis de repechos, que corre justo aquí arriba. Con eso, un muro
+    # lateral de altura completa —`Rect(-16, 0, 16, 608)`— entraba en el
+    # análisis como una plataforma de la fila 0, y el **suelo** aparecía como
+    # «repecho de 480 px» medido desde ella.
+    #
+    # Lo destapó regenerar Stage 0: el escenario de referencia del profesor
+    # perdía 6 de 10 en geometría por cerrar bien su mapa. Es la quinta vez
+    # este mes que una herramienta castiga trabajo correcto, y la segunda con
+    # la misma causa: una exclusión aplicada en un sitio y olvidada en el otro.
+    muros_idx = _boundary_walls(rects, stage_data)
+    geometria = [r for i, r in enumerate(rects) if i not in muros_idx]
+    report = analyse_geometry(geometria)
     report.stage_id = str(getattr(stage_data, "stage_id", "") or "")
 
     exit_rect = getattr(stage_data, "next_trigger", None)
@@ -405,8 +420,7 @@ def analyse_stage(stage_data: object) -> LevelReport:
     # inofensivo: un estudiante que cierra bien su mapa recibe un aviso por
     # haberlo hecho bien, aprende a no fiarse del calificador, y deja de leer
     # también los avisos que sí importan.
-    muros = _boundary_walls(rects, stage_data)
-    plataformas = [r for i, r in enumerate(rects) if i not in muros]
+    plataformas = geometria
     report.total_platforms = len(plataformas)
 
     if spawn is not None and plataformas:

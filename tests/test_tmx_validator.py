@@ -130,7 +130,14 @@ class TestItRejectsWhatTheLoaderRejects:
     def test_two_player_spawns_are_an_error(self, map_factory) -> None:
         """El cargador lanza «More than one PlayerSpawn»."""
         def _duplicate(text: str) -> str:
-            match = re.search(r'<object[^>]*type="PlayerSpawn"[^>]*/>', text)
+            # Tiled escribe la etiqueta auto-cerrada cuando el objeto no
+            # tiene propiedades y con cuerpo cuando las tiene. Buscar sólo la
+            # primera forma hacía que esta prueba se rompiera al regenerar el
+            # mapa, sin que el validador hubiera cambiado nada.
+            match = re.search(
+                r'<object[^>]*type="PlayerSpawn"[^>]*(?:/>|>.*?</object>)',
+                text, re.S,
+            )
             assert match, "stage0 ya no declara el PlayerSpawn como se esperaba"
             return text.replace(match.group(0), match.group(0) * 2, 1)
 
@@ -248,3 +255,68 @@ class TestItReadsBothTiledDialects:
         converted = map_factory(lambda t: t.replace('type="Walker"', 'class="Walker"'))
         ok, problems = _validate(converted)
         assert ok, f"un TMX con `class=` debería validar igual:\n{problems}"
+
+
+class TestElTilesetDeclaradoEsElTilesetReal:
+    """AUD-115 — un mapa puede dibujar las baldosas equivocadas y validar.
+
+    `generate_stage0_tmx.py` y `generate_stage_mecanicas.py` declaraban el
+    tileset como `tilecount="64" columns="8"` con una imagen de 128 × 128 px.
+    `tileset_stage0.png` mide **1024 × 1024** y tiene 4096 baldosas en 64
+    columnas. Con la cabecera equivocada, el índice de baldosa que el mapa
+    guarda apunta a otra casilla de la hoja: los dos escenarios pintaban las
+    tres primeras baldosas —casi negras— en vez del corredor de piedra.
+
+    Ni `grade_stage.py` ni `validate_tmx.py` lo vieron. Los dos comprueban que
+    el fichero del tileset **exista**; ninguno comprueba que la hoja declarada
+    tenga el tamaño de la hoja real. Un mapa ilegible sacaba 130/130.
+
+    Lo cazó, de rebote, una prueba de legibilidad nocturna que mide píxeles en
+    pantalla. Ésta lo comprueba de frente, y para todos los mapas del curso:
+    también para los de los estudiantes, donde el mismo error saldría como
+    «mi nivel se ve negro» sin más pista.
+    """
+
+    @staticmethod
+    def _mapas():
+        import pathlib
+        raiz = pathlib.Path(__file__).resolve().parent.parent
+        return sorted((raiz / "assets" / "maps").glob("*/*.tmx"))
+
+    def test_hay_mapas_que_revisar(self) -> None:
+        """Sin esto, la prueba de abajo pasaría con una carpeta vacía."""
+        assert len(self._mapas()) >= 10
+
+    def test_cada_hoja_incrustada_declara_su_tamano_real(self) -> None:
+        import xml.etree.ElementTree as ET
+
+        from PIL import Image
+
+        desajustes: list[str] = []
+        for tmx in self._mapas():
+            raiz = ET.parse(tmx).getroot()
+            for tileset in raiz.findall("tileset"):
+                imagen = tileset.find("image")
+                if imagen is None:      # tileset externo `.tsx`: es válido
+                    continue
+                ruta = (tmx.parent / imagen.get("source", "")).resolve()
+                if not ruta.exists():   # lo cubre el validador de recursos
+                    continue
+                real = Image.open(ruta).size
+                declarado = (int(imagen.get("width", 0)), int(imagen.get("height", 0)))
+                if declarado != real:
+                    desajustes.append(
+                        f"{tmx.name}: declara {declarado[0]}×{declarado[1]}, "
+                        f"la imagen mide {real[0]}×{real[1]}"
+                    )
+                columnas = int(tileset.get("columns", 0))
+                esperadas = real[0] // int(tileset.get("tilewidth", 16))
+                if columnas != esperadas:
+                    desajustes.append(
+                        f"{tmx.name}: declara {columnas} columnas, la hoja tiene "
+                        f"{esperadas}"
+                    )
+        assert not desajustes, (
+            "estos mapas dibujarían baldosas distintas de las que guardaron:\n  "
+            + "\n  ".join(desajustes)
+        )

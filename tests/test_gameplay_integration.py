@@ -104,10 +104,24 @@ class TestEnemiesActuallyLive:
                    if isinstance(e, EnemyBase)]
         assert enemies, "stage0 debería tener enemigos"
 
-        before = [(e, e.rect.topleft) for e in enemies]
-        _run(app, scene, surface, 180)
+        # AUD-116: antes se comparaba la posición final con la inicial. Un
+        # enemigo que patrulla 80 px a 60 px/s tarda 2,67 s en el viaje de ida
+        # y vuelta, así que a los 3 s puede estar **exactamente** donde
+        # empezó. La prueba fallaba o pasaba según el período de la patrulla,
+        # no según si el enemigo estaba vivo, y al regenerar stage 0 acusó de
+        # estatuas a dos Walkers que se movían perfectamente.
+        #
+        # Ahora se muestrea durante toda la ventana: se mueve quien ocupó
+        # alguna posición distinta en algún momento.
+        inicial = {id(e): e.rect.topleft for e in enemies}
+        visto_moverse: set[int] = set()
+        for _ in range(180):
+            _run(app, scene, surface, 1)
+            for e in enemies:
+                if e.rect.topleft != inicial[id(e)]:
+                    visto_moverse.add(id(e))
 
-        still = [type(e).__name__ for e, was in before if e.rect.topleft == was]
+        still = [type(e).__name__ for e in enemies if id(e) not in visto_moverse]
         assert not still, f"enemigos que no se movieron en 3 s: {still}"
 
     def test_enemies_receive_the_player_reference_every_frame(

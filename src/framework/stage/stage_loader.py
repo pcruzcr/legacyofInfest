@@ -175,6 +175,10 @@ class StageData:
     #: de por defecto. Las estaciones no avanzan solas: un escenario dura
     #: minutos y cambiar de invierno a primavera a mitad sería ruido.
     season: str = ""
+    #: AUD-111 — radio en píxeles de la niebla de guerra. 0 = apagada.
+    fog_of_war: float = 0.0
+    #: AUD-111 — capa de ondas de agua sobre la escena.
+    water_effect: bool = False
 
 
 REQUIRED_LAYERS: tuple[str, ...] = (
@@ -407,6 +411,9 @@ class StageLoader:
         ambient_fx_rate = cls._parse_unit_prop(props, "ambient_fx_rate", 0.0, 120.0)
         start_hour, day_length = cls._parse_day_night(props)
         season = cls._parse_season(props)
+        # AUD-111 — VFX opcionales. Apagados salvo que el mapa los pida.
+        fog_of_war = cls._safe_float(props.get("fog_of_war", 0.0), "fog_of_war")
+        water_effect = cls._bool_de(props.get("water_effect"), por_defecto=False)
 
         map_data = pyscroll.data.TiledMapData(tmx_data)
         with warnings.catch_warnings():
@@ -440,6 +447,8 @@ class StageLoader:
             start_hour=start_hour,
             day_length=day_length,
             season=season,
+            fog_of_war=fog_of_war,
+            water_effect=water_effect,
         )
 
     @classmethod

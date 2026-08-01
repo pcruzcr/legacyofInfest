@@ -47,8 +47,23 @@ MW, MH = 220, 24          # 3520 × 384 px
 SUELO_Y = 20              # fila del suelo
 SALA = 30                 # ancho de cada sala en baldosas
 
-#: Índices del tileset. 0 vacío, 1 suelo, 2 muro, 3 plataforma.
-VACIO, SUELO, MURO, PLATAFORMA = 0, 1, 2, 3
+# ── Baldosas ────────────────────────────────────────────────────────────────
+# AUD-115: aquí también se declaraba el tileset como `tilecount="64"
+# columns="8"` con una imagen de 128 × 128 px. `tileset_stage0.png` mide
+# **1024 × 1024** y tiene 4096 baldosas en 64 columnas, así que este mapa
+# pintaba las tres primeras baldosas de la hoja —casi negras— en vez del
+# corredor de piedra. El mismo error que en `generate_stage0_tmx.py`, cometido
+# el mismo día y por la misma razón: inventé la cabecera del tileset en vez de
+# copiar la del mapa que ya funcionaba.
+TS_COLUMNAS = 64
+TS_TOTAL = 4096
+TS_IMAGEN_PX = 1024
+
+VACIO = 0
+SUELO = 409               # la fila que se pisa
+MURO = 153                # columna de cierre
+PLATAFORMA = 666          # repisa atravesable
+RELLENO = 665             # relleno bajo la superficie
 
 
 def _terreno() -> list[list[int]]:
@@ -245,8 +260,8 @@ tileheight="{TS}" infinite="0" nextlayerid="20" nextobjectid="900">
   <property name="ambient_fx_rate" type="float" value="8"/>
  </properties>
  <tileset firstgid="1" name="tileset_stage0" tilewidth="{TS}" tileheight="{TS}" \
-tilecount="64" columns="8">
-  <image source="{TILESET}" width="128" height="128"/>
+tilecount="{TS_TOTAL}" columns="{TS_COLUMNAS}">
+  <image source="{TILESET}" width="{TS_IMAGEN_PX}" height="{TS_IMAGEN_PX}"/>
  </tileset>
 {capa(1, "BG_Far", ceros)}
 {capa(2, "BG_Mid", ceros)}

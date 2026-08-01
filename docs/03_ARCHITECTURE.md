@@ -90,8 +90,13 @@ legacy-of-infest/                      # Actual repo root
 │   │   ├── scene/
 │   │   │   ├── __init__.py
 │   │   │   ├── scene_manager.py           # SceneManager: push/pop/replace scene stack
-│   │   │   ├── base_scene.py              # BaseScene: abstract interface all scenes implement
-│   │   │   └── transitions.py             # FadeTransition, WipeTransition, SlideTransition, CircleTransition
+│   │   │   └── base_scene.py              # BaseScene: abstract interface all scenes implement
+│   │   │       # AUD-111: aquí vivía un módulo de transiciones con cinco
+│   │   │       # clases y CERO usos en todo el repositorio, ni siquiera en
+│   │   │       # pruebas. Competía con el gestor de transiciones de `scenes/`,
+│   │   │       # que es el que SceneManager instancia de verdad, así que quien
+│   │   │       # buscaba «cómo hago una transición» encontraba el muerto la
+│   │   │       # mitad de las veces. Retirado.
 │   │   │
 │   │   ├── scenes/                        # All scene implementations (42+ files)
 │   │   │   ├── __init__.py

@@ -246,7 +246,7 @@ falla: la que falla se arregla, y ésta se cree.
 | Catálogos de idioma | en orden, sin huecos reales |
 | Sincronía de dependencias | 15/15 |
 | Cobertura de propiedades TMX en el mapa de ejemplo | **100 %** |
-| Stage 0 en el calificador | **121/130 (93,1 %)** |
+| Stage 0 en el calificador | **130/130 (100 %)** (regenerado; era 121/130) |
 | Stage 0, mediana por fotograma | **7,20–9,00 ms** (presupuesto 16,67) |
 | `FilterDemoScene`, mediana | **0,73 ms** |
 

@@ -3,6 +3,16 @@ Module: water_effect
 System: framework.vfx
 Academic Unit: N/A
 Description: Water effect overlay with animated waves and distortion.
+
+AUD-111 — enchufado
+===================
+Mismo caso que `fog_of_war`: escrito, documentado (`docs/47_WATER_EFFECT.md`),
+probado en aislamiento, y sin una sola instanciación en el motor. Lo enciende
+`StageScene` cuando el TMX declara `water_effect`.
+
+Es el compañero visual de `ZonaDeAgua`: aquélla es la física —nado, oxígeno,
+corriente— y esto es lo que se ve. Van por separado a propósito, porque un
+escenario puede querer el aspecto de agua sin el ahogamiento, o al revés.
 """
 from __future__ import annotations
 
