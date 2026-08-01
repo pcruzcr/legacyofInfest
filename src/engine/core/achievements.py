@@ -16,6 +16,10 @@ logger = logging.getLogger(__name__)
 
 ACHIEVEMENTS_PATH = user_data_dir() / "achievements.json"
 
+#: Escenarios que hay que completar para el logro «explorer».
+#: Estaba escrito a mano en dos sitios con el mismo 15; ahora en uno.
+EXPLORER_TARGET: int = 15
+
 
 class AchievementDef(BaseModel):
     id: str
@@ -70,6 +74,9 @@ class AchievementSystem:
         self._current_notify: dict[str, Any] | None = None
         self._subscribed: bool = False
         self._stats: dict[str, int] = {}
+        #: Escenarios distintos ya visitados. Es un conjunto, no un
+        #: contador, y por eso no cabe en `_stats` (AUD-124).
+        self._explored_stages: list[str] = []
         self._notif_bg: pygame.Surface | None = None
         self._notif_font: pygame.font.Font | None = None
         self._bus: EventBus | None = None
@@ -150,7 +157,7 @@ class AchievementSystem:
         self.register(AchievementDef(
             id="explorer", name="Explorer",
             description="Complete every stage",
-            target=15,
+            target=EXPLORER_TARGET,
         ))
 
     def register(self, ach: AchievementDef) -> None:
@@ -252,14 +259,30 @@ class AchievementSystem:
             self._unlock("combo_king")
 
     def mark_explorer(self, stage_id: str) -> None:
-        if not self.is_unlocked("explorer"):
-            seen: list[str] = self._stats.get("explored_stages", [])
-            if stage_id not in seen:
-                seen.append(stage_id)
-                self._stats["explored_stages"] = seen
-            self._set_progress("explorer", len(seen))
-            if len(seen) >= 15:
-                self._unlock("explorer")
+        """AUD-124 — `_stats` está declarado `dict[str, int]` y guardaba una lista.
+
+        La línea era::
+
+            self._stats["explored_stages"] = seen   # seen: list[str]
+
+        Funcionaba, porque Python no comprueba anotaciones en tiempo de
+        ejecución. Pero la anotación mentía, y una anotación que miente es
+        peor que no tenerla: quien lee `dict[str, int]` asume que puede sumar
+        cualquier valor del diccionario, y `_stats["explored_stages"] + 1`
+        revienta en la partida de alguien.
+
+        Los escenarios visitados no son un contador: son un **conjunto**. Ahora
+        viven en su propio atributo, con el tipo que les corresponde. El
+        formato en disco no cambia —se siguen serializando dentro de `stats`—
+        para no invalidar los logros de quien ya tenga partida.
+        """
+        if self.is_unlocked("explorer"):
+            return
+        if stage_id and stage_id not in self._explored_stages:
+            self._explored_stages.append(stage_id)
+        self._set_progress("explorer", len(self._explored_stages))
+        if len(self._explored_stages) >= EXPLORER_TARGET:
+            self._unlock("explorer")
 
     @property
     def achievements(self) -> list[tuple[AchievementDef, AchievementProgress]]:
@@ -271,7 +294,10 @@ class AchievementSystem:
                 aid: p.model_dump()
                 for aid, p in self._progress.items()
             },
-            "stats": self._stats,
+            # El formato en disco no cambia: los escenarios visitados
+            # siguen viajando dentro de `stats` para no invalidar los
+            # logros de quien ya tenga partida (AUD-124).
+            "stats": {**self._stats, "explored_stages": self._explored_stages},
         }
         ACHIEVEMENTS_PATH.parent.mkdir(parents=True, exist_ok=True)
         ACHIEVEMENTS_PATH.write_bytes(orjson.dumps(data, option=orjson.OPT_INDENT_2))
@@ -284,7 +310,14 @@ class AchievementSystem:
             for aid, pdata in saved_progress.items():
                 if aid in self._progress:
                     self._progress[aid] = AchievementProgress.model_validate(pdata)
-            self._stats = data.get("stats", {})
+            guardado = data.get("stats", {}) or {}
+            visitados = guardado.pop("explored_stages", [])
+            self._explored_stages = [
+                s for s in visitados if isinstance(s, str)
+            ] if isinstance(visitados, list) else []
+            self._stats = {
+                k: v for k, v in guardado.items() if isinstance(v, int)
+            }
         # AUD-100 — la corrupción se tragaba en silencio.
         #
         # `orjson.JSONEncodeError` **es `TypeError`**, y codificar no puede

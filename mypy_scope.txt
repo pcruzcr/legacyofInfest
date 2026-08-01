@@ -1,0 +1,39 @@
+# Alcance del comprobador de tipos — el trinquete
+# ================================================
+#
+# AUD-124. `mypy` llevaba meses **configurado en `pyproject.toml` y sin
+# ejecutarse en ninguna parte**. Un tipado declarado que nadie comprueba no es
+# verificación: es documentación con sintaxis de código, y envejece igual de
+# mal que la documentación. Las tres primeras cosas que encontró al ejecutarlo
+# por fin fueron anotaciones que mentían:
+#
+#   * `AchievementSystem._stats: dict[str, int]` guardaba una `list[str]`.
+#   * `App._gl_renderer` sin anotar: mypy lo infería como `None`, así que toda
+#     llamada posterior era un error.
+#   * `SurfacePool._flip_cache: dict[int, ...]` con claves de tres enteros.
+#
+# Por qué una lista y no `src/` entero
+# -------------------------------------
+# Poner el árbol completo bajo mypy hoy daría cientos de errores, y un
+# comprobador que sale en rojo desde el primer día se desactiva en una semana.
+# Es exactamente lo que pasó con ruff antes de AUD-017.
+#
+# Así que esto es un **trinquete**: cada línea es un paquete que ya está
+# limpio. CI comprueba justo esta lista y falla si deja de estarlo.
+# `tests/test_alcance_de_tipos.py` impide que la lista encoja.
+#
+# Cómo añadir un paquete
+# ----------------------
+#   python -m mypy src/lo/que/sea --no-incremental
+#   # cuando salga «Success», añádelo aquí abajo
+#
+# No se añade nada con errores «temporalmente». La lista dice la verdad o no
+# sirve de nada.
+#
+# Fuera del trinquete, y a propósito
+# -----------------------------------
+# `src/stages/` no entra nunca: es el código de los estudiantes. Se califica
+# con la rúbrica, no con el comprobador de tipos del motor.
+
+src/engine/core
+src/engine/input

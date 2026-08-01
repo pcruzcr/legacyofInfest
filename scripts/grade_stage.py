@@ -352,7 +352,7 @@ def grade_stage(path: Path) -> dict[str, Any]:
     if collectibles >= 3:
         result["categories"]["collectibles"] = {"score": RUBRIC["collectibles"], "max": RUBRIC["collectibles"], "msg": f"{collectibles} collectibles"}
     elif collectibles >= 1:
-        result["categories"]["collectibles"] = {"score": 5, "max": RUBRIC["collectibles"], "msg": f"Only {collectibles} collectible(s) (need ≥3 for full score)"}
+        result["categories"]["collectibles"] = {"score": 5, "max": RUBRIC["collectibles"], "msg": f"Only {collectibles} collectible(s) (need >=3 for full score)"}
     else:
         result["categories"]["collectibles"] = {"score": 5, "max": RUBRIC["collectibles"], "msg": "No collectibles found (OK for tutorial stages)"}
 
@@ -630,7 +630,7 @@ def main() -> int:
             for err in r["errors"]:
                 print(f"  [FAIL] ERROR: {err}")
             for w in r["warnings"]:
-                print(f"  [WARN]️  WARN: {w}")
+                print(f"  [WARN]  WARN: {w}")
             print(f"\n  GRADE: {r['score']}/{r['max_score']} ({r['percentage']}%)")
 
     if args.json:

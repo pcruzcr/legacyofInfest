@@ -54,6 +54,35 @@ jobs:
           ruff check src/engine src/framework src/stages/stage0 \
             tests/ scripts/ tools/ --output-format=github
 
+      # AUD-124: mypy llevaba meses configurado en pyproject.toml y sin
+      # ejecutarse en ningun sitio. Un tipado que nadie comprueba es
+      # documentacion, no verificacion, y envejece igual de mal. Las tres
+      # primeras cosas que encontro al ejecutarlo eran anotaciones que mentian.
+      #
+      # Se comprueba solo lo que ya esta limpio (mypy_scope.txt) y la lista no
+      # puede encoger. Poner el arbol entero hoy daria cientos de errores, y un
+      # comprobador rojo desde el primer dia se desactiva en una semana.
+      - name: Type-check the ratcheted scope
+        run: |
+          PAQUETES=$(grep -v '^\s*#' mypy_scope.txt | grep -v '^\s*$' | tr '\n' ' ')
+          echo "Comprobando: $PAQUETES"
+          mypy $PAQUETES
+
+      # AUD-125: no habia ningun escaneo de vulnerabilidades. Ni pip-audit, ni
+      # Dependabot, ni CodeQL. El proyecto declara 15 dependencias y arrastra
+      # numpy, scipy, scikit-learn, opencv y pygame: si manana sale un CVE en
+      # cualquiera de ellas, nadie se entera.
+      #
+      # `continue-on-error` a proposito. Un CVE en una transitiva no es motivo
+      # para bloquear la entrega de un estudiante a las once de la noche, pero
+      # si para que aparezca en el resumen del CI. Cuando el equipo tenga
+      # costumbre de mirarlo, se sube a bloqueante.
+      - name: Audit dependencies for known vulnerabilities
+        continue-on-error: true
+        run: |
+          pip install pip-audit
+          pip-audit --desc --strict || true
+
       - name: Verify dependency manifests agree
         run: python scripts/check_dependency_sync.py
 
