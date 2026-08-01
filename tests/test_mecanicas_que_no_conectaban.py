@@ -277,3 +277,75 @@ class TestElTipoNuevoEstaDeclarado:
 
         fuente = inspect.getsource(StageScene._construir_planificador)
         assert "sistema_resortes" in fuente
+
+
+class TestElPogo:
+    """AUD-134 — `AERIAL_SLAM` existía y acertar no significaba nada.
+
+    El estado ya tenía caja de golpe y ya empujaba al jugador hacia abajo. Lo
+    que faltaba era el rebote al conectar, y sin él el ataque aéreo hacia abajo
+    es un ataque normal con otra animación: se cae igual tanto si acierta como
+    si no.
+
+    Con el rebote, encadenar golpes sobre enemigos mantiene al jugador en el
+    aire y una fila de enemigos se convierte en un camino. Es la mecánica
+    entera de Ducktales, Shovel Knight y Hollow Knight.
+    """
+
+    @staticmethod
+    def _en_slam():
+        import pygame as _pg
+
+        from src.framework.entities.player import Player
+        from src.framework.entities.states import AerialSlamState
+
+        _pg.init()
+        if _pg.display.get_surface() is None:
+            _pg.display.set_mode((320, 240))
+        p = Player(_pg.Vector2(100.0, 100.0))
+        p.is_grounded = False
+        estado = AerialSlamState()
+        p._change_state_instance(estado)
+        return p, estado
+
+    def test_sin_acertar_se_sigue_cayendo(self) -> None:
+        """La prueba de control: el pogo no debe activarse solo."""
+        p, estado = self._en_slam()
+        estado.update(p, DT, None)
+        assert p.velocity.y > 0.0
+
+    def test_acertar_devuelve_impulso_hacia_arriba(self) -> None:
+        from src.framework.entities.states.airborne import POGO_IMPULSO
+
+        p, estado = self._en_slam()
+        p._hitbox_consumed = True                    # el golpe conectó
+        estado.update(p, DT, None)
+        assert p.velocity.y == pytest.approx(POGO_IMPULSO)
+        assert p.velocity.y < 0.0
+
+    def test_el_rebote_es_menor_que_el_salto(self) -> None:
+        """El pogo no debe ser mejor que saltar, o nadie salta.
+
+        Basta con que dé tiempo a alinearse con el siguiente enemigo.
+        """
+        from src.engine.core import settings
+        from src.framework.entities.states.airborne import POGO_IMPULSO
+
+        assert abs(POGO_IMPULSO) < abs(settings.PLAYER_JUMP_FORCE)
+
+    def test_rebotar_recupera_el_dash_aereo(self) -> None:
+        """Sin esto, el segundo enemigo de la fila queda fuera de alcance."""
+        p, estado = self._en_slam()
+        p._air_dash_count = 1
+        p._hitbox_consumed = True
+        estado.update(p, DT, None)
+        assert p._air_dash_count == 0
+
+    def test_solo_rebota_una_vez_por_golpe(self) -> None:
+        """`_has_hit` evita que el mismo impacto rebote en cada fotograma."""
+        p, estado = self._en_slam()
+        p._hitbox_consumed = True
+        estado.update(p, DT, None)
+        p.velocity.y = 300.0
+        estado.update(p, DT, None)
+        assert p.velocity.y == pytest.approx(300.0)
