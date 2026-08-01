@@ -216,10 +216,26 @@ class TestLaEstelaLlegaAlJuego:
 
         jefe = next(e for e in escena._stage_data.entity_list
                     if type(e).__name__.startswith("Boss"))
-        assert not hasattr(jefe, "velocity"), (
-            "el jefe ya tiene `velocity`; esta prueba deja de comprobar lo que "
-            "pretendía y hay que revisar `_capture_enemy_trails`"
+        # AUD-117 — la guarda original decía `not hasattr(jefe, "velocity")`.
+        # Desde la fase 5 **todas** las entidades tienen `velocity`: se la da
+        # el puente ECS. Pero los enemigos siguen moviendo `position` a mano,
+        # así que su `velocity` se queda en (0, 0) para siempre.
+        #
+        # Eso es peor que antes. Antes, escribir `enemigo.velocity` lanzaba
+        # `AttributeError` y te enterabas en el acto; ahora devuelve un cero
+        # silencioso y la característica que dependa de ello simplemente no se
+        # nota. Por eso `_capture_enemy_trails` deriva la velocidad del
+        # desplazamiento entre fotogramas, y por eso esta prueba fija el hecho
+        # incómodo en vez de esconderlo.
+        antes_x = jefe.position.x
+        jefe.position.x += 8
+        assert jefe.position.x != antes_x
+        assert jefe.velocity.length_squared() == 0.0, (
+            "el jefe ya mantiene `velocity` de verdad: `_capture_enemy_trails` "
+            "puede dejar de deducirla del desplazamiento, y esta prueba con "
+            "ella"
         )
+        jefe.position.x = antes_x
         # Se mide el máximo **durante** la embestida, no al final.
         #
         # La primera versión de esta prueba movía al jefe 45 fotogramas y

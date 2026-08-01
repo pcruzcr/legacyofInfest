@@ -65,21 +65,42 @@ registro en vez de recordar.
 
 Rúbrica `scripts/grade_stage.py`, sobre 130 puntos.
 
-| # | Estudiante | Ranura | Carpeta | Nota | % |
-|---|---|---|---|---|---|
-| 1 | César Ubáu Calvo | 2-2 | `stage2_2` | 129/130 | **99,2 %** |
-| 2 | Fabrizio E | 1-1 | `stage1_1` | 126/130 | **96,9 %** |
-| 3 | Yariel Andrey Elizondo Jiménez | 1-3 | `stage1_3_las_aulas` | 106/130 | **81,5 %** |
-| 4 | Rebeca | 3-3 | `stage3_3_el_patio` | 105/130 | **80,8 %** |
-| 5 | Guillermo Morice Díaz | 1-2 | `stage1_2_la_soda` | 103/130 | **79,2 %** |
-| 6 | Alejandro Luna | 2-3 | `lobby_datacenter` | 103/130 | **79,2 %** |
-| 7 | Isaac Felipe Morún Moreira | 3-4 (arena) | `stage3_4_boss_gavilan` | 101/130 | **77,7 %** |
-| 8 | Avril | 3-1 | `stage3_1_la_entrada_de_piedra` | 100/130 | **76,9 %** |
-| 9 | José Pablo Monestel Cruz | 3-2 | `hall` | 90/130 | **69,2 %** |
-| 10 | Saúl | 2-1 | `stage2_1_oficinas` | 83/130 | **63,8 %** |
+> **Notas revisadas al alza el 31/07.** Tres defectos del calificador quitaban
+> puntos por trabajo correcto; están corregidos y estas son las notas buenas.
+> Ninguna bajó. El detalle, más abajo en «Correcciones al calificador».
 
-*Referencia del profesor:* `stage0` saca 121/130 (93,1 %) con la misma rúbrica.
-Dos entregas están por encima de ella.
+| # | Estudiante | Ranura | Carpeta | Nota | % | Antes |
+|---|---|---|---|---|---|---|
+| 1 | César Ubáu Calvo | 2-2 | `stage2_2` | 130/130 | **100 %** | 129 |
+| 2 | Fabrizio E | 1-1 | `stage1_1` | 127/130 | **97,7 %** | 126 |
+| 3 | Yariel Andrey Elizondo Jiménez | 1-3 | `stage1_3_las_aulas` | 110/130 | **84,6 %** | 106 |
+| 4 | Rebeca | 3-3 | `stage3_3_el_patio` | 106/130 | **81,5 %** | 105 |
+| 5 | Guillermo Morice Díaz | 1-2 | `stage1_2_la_soda` | 104/130 | **80,0 %** | 103 |
+| 6 | Alejandro Luna | 2-3 | `lobby_datacenter` | 104/130 | **80,0 %** | 103 |
+| 7 | Isaac Felipe Morún Moreira | 3-4 (arena) | `stage3_4_boss_gavilan` | 102/130 | **78,5 %** | 101 |
+| 8 | Avril | 3-1 | `stage3_1_la_entrada_de_piedra` | 101/130 | **77,7 %** | 100 |
+| 9 | José Pablo Monestel Cruz | 3-2 | `hall` | 91/130 | **70,0 %** | 90 |
+| 10 | Saúl | 2-1 | `stage2_1_oficinas` | 89/130 | **68,5 %** | 83 |
+
+*Referencia del profesor:* `stage0` sacaba **121/130 (93,1 %)** con la misma
+rúbrica —por debajo de dos entregas— y se regeneró hasta **130/130**. El
+detalle de qué le faltaba está en `docs/59_STAGE_0_REGENERADO.md`; lo resumido
+es que el escenario que enseña el motor no usaba ni un coleccionable, ni un
+obstáculo sólido, ni una sola de las once mecánicas de la fase 5.
+
+### Correcciones al calificador
+
+Tres defectos, todos en la misma dirección: castigar trabajo correcto.
+
+| Ref | Qué hacía mal | A quién afectaba |
+|---|---|---|
+| AUD-110 | Avisaba de que faltaba la capa `Collision` aunque estuviera, si venía como grupo de objetos —que es como la hace Tiled | los 15 mapas |
+| AUD-112 | Contaba los muros de cierre del mapa como repisas, y no reconocía `Pickup`, `Key` ni `Chest` como coleccionables | Yariel +4, Saúl +6 |
+| AUD-113 | `meta_score * 3` sobre 10 puntos: con las tres propiedades exigidas daba **9/10**, así que el 10/10 era inalcanzable | todos +1 |
+
+AUD-113 es el más incómodo de los tres. Nadie podía sacar la casilla completa
+de metadatos, y la rúbrica llevaba todo el curso diciéndole a cada estudiante
+que le faltaba algo cuando no le faltaba nada.
 
 ## Notas — jefes
 
@@ -102,7 +123,7 @@ define la subclase de `BossBase`, no al paquete entero.
 
 ## Qué le falta a cada uno
 
-### César Ubáu Calvo — stage2_2 «Entrada y Antenas» — 99,2 %
+### César Ubáu Calvo — stage2_2 «Entrada y Antenas» — 100 %
 
 La entrega más completa del lote. Mapa de 120 × 50 en tres secciones (parqueo,
 escalada, azotea), 8 capas, 50 objetos, 5 checkpoints, 7 enemigos, tileset
@@ -111,13 +132,15 @@ cada uno: cono de visión por álgebra vectorial (Unidad II), patrulla sobre
 B-Spline (Unidad III) y atmósfera por espacios de color (Unidad V). Usa
 `CameraLock` con `lock_x`/`lock_y` separados, que casi nadie usó.
 
-Único punto perdido: la casilla `metadata` da 9/10. Nada más que corregir.
+Nota perfecta. El punto que le faltaba era **AUD-113**, un defecto del
+calificador y no suyo: la casilla `metadata` no podía dar más de 9/10.
+Nada que corregir en la entrega.
 
 **Una nota menor:** el docstring de `stage2_2.py` dice «64 × 50 tiles» y el mapa
 mide 120 × 50; el README y `CONTENIDO.md` sí dicen 120. Es una línea desfasada
 en un comentario, no afecta a nada.
 
-### Fabrizio E — stage1_1 — 96,9 %
+### Fabrizio E — stage1_1 — 97,7 %
 
 11 enemigos, geometría sólida. Dos cosas:
 
@@ -129,7 +152,7 @@ en un comentario, no afecta a nada.
 - `stage1_1.RESPALDO.tmx` apunta a un `tileset_manual.png` que no está. Si es un
   respaldo, sácalo de la entrega.
 
-### Yariel Andrey Elizondo Jiménez — stage1_3 «Las Aulas» — 81,5 %
+### Yariel Andrey Elizondo Jiménez — stage1_3 «Las Aulas» — 84,6 %
 
 12 enemigos, buen tamaño de mapa. Pierde por diseño:
 
@@ -139,7 +162,7 @@ en un comentario, no afecta a nada.
   rehecho.
 - Falta la propiedad de mapa `author`.
 
-### Rebeca — stage3_3 «El Patio» — 80,8 %
+### Rebeca — stage3_3 «El Patio» — 81,5 %
 
 11 enemigos bien repartidos. Tres cosas:
 
@@ -149,7 +172,7 @@ en un comentario, no afecta a nada.
   la capa `Objects`.
 - Falta `author`.
 
-### Guillermo Morice Díaz — stage1_2 «La Soda» — 79,2 %
+### Guillermo Morice Díaz — stage1_2 «La Soda» — 80,0 %
 
 Registra dos enemigos propios (`LaSodaWalkerRaton`, `LaSodaFlyingCucaracha`) a
 nivel de módulo, que es la forma correcta. Pierde por:
@@ -161,7 +184,7 @@ nivel de módulo, que es la forma correcta. Pierde por:
   aviso de ritmo, y es el que más pesa aquí.
 - Sólo 1 checkpoint y 2 enemigos en todo el mapa.
 
-### Alejandro Luna — stage2_3 «El Lobby» — 79,2 %
+### Alejandro Luna — stage2_3 «El Lobby» — 80,0 %
 
 Sube 5 puntos respecto a la primera pasada: su tileset externo `.tsx` era
 correcto y el calificador no lo entendía. Queda:
@@ -170,7 +193,7 @@ correcto y el calificador no lo entendía. Queda:
 - Ningún salto exigente: el recorrido no plantea ningún problema.
 - 3 enemigos es poco para el tamaño del mapa.
 
-### Isaac Felipe Morún Moreira — arena 3-4 y jefe Gavilán — 77,7 % / 45 %
+### Isaac Felipe Morún Moreira — arena 3-4 y jefe Gavilán — 78,5 % / 45 %
 
 **Corrección aplicada al integrar:** su TMX colocaba un `BossGavilan` y el
 código definía la clase, pero **nadie la registraba**. El jefe no habría
@@ -189,7 +212,7 @@ En el jefe (45/100) faltan cuatro cosas de la rúbrica:
 En la arena: un repecho de 144 px que no se puede saltar, dos plataformas
 huérfanas y 600 px entre checkpoints.
 
-### Avril — stage3_1 «La Entrada de Piedra» — 76,9 %
+### Avril — stage3_1 «La Entrada de Piedra» — 77,7 %
 
 10 enemigos, geometría correcta. Pierde por `climate` (−5), falta `author`, y
 785 px entre checkpoints.
@@ -198,7 +221,7 @@ huérfanas y 600 px entre checkpoints.
 código; se reapuntó a `assets/maps/`, que es donde miran el validador, el
 calificador y el previsualizador.
 
-### José Pablo Monestel Cruz — stage3_2 «El Hall» — 69,2 %
+### José Pablo Monestel Cruz — stage3_2 «El Hall» — 70,0 %
 
 **Corrección aplicada hoy, y es culpa mía:** al integrar el lote lo puse en la
 ranura `stage2_2`. Su propio código lo desmentía desde el principio —`ZONE = 3`
@@ -219,7 +242,7 @@ tiles generado por código, y una nota sobre la envolvente de salto real frente
 a la estimada que es correcta y que ningún otro detectó—. El problema es de
 geometría, no de comprensión.
 
-### Saúl — stage2_1 «Oficinas» — 63,8 %
+### Saúl — stage2_1 «Oficinas» — 68,5 %
 
 Es la única entrega que **no pasa la validación**. Cuatro cosas, todas rápidas:
 

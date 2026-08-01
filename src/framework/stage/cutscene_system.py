@@ -64,7 +64,25 @@ class FadeAction(CutsceneAction):
         return self._elapsed >= self._duration
 
     def draw(self, surface: pygame.Surface) -> None:
+        # AUD-111 — un fundido a negro tiene que **acabar** en negro.
+        #
+        # Esto era `if self._elapsed >= self._duration: return`, y con eso el
+        # fotograma siguiente al final de un fundido a negro se dibujaba con
+        # alfa cero: la pantalla, que llevaba medio segundo oscureciéndose,
+        # volvía de golpe a plena luz durante un fotograma antes del corte.
+        #
+        # Es un destello de 16 ms. No rompe nada, no lo detecta ninguna prueba
+        # de construcción, y es exactamente lo que un fundido existe para
+        # evitar. Lo encontró la primera prueba que se escribió contra esta
+        # clase.
+        #
+        # Al terminar, un fundido de entrada desaparece —la escena ya está
+        # visible— y uno de salida se queda opaco hasta que alguien lo retire.
         if self._elapsed >= self._duration:
+            if self._fade_in:
+                return
+            self._surface.set_alpha(255)
+            surface.blit(self._surface, (0, 0))
             return
         progress = self._elapsed / self._duration
         alpha = int((1.0 - progress) * 255) if self._fade_in else int(progress * 255)

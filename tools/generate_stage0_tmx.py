@@ -1,277 +1,371 @@
 #!/usr/bin/env python3
-"""Generate the full Stage 0 TMX map with all 7 zones (A-G), 240 tiles wide."""
+"""
+Genera `assets/maps/stage0/stage0.tmx`: el prólogo y escenario de referencia.
+
+AUD-112 — por qué se reescribió este generador
+===============================================
+El generador anterior declaraba un mapa de **240 × 14** baldosas. El fichero del
+repositorio mide **100 × 38**. Llevaban desincronizados el tiempo suficiente
+para que nadie recuerde cuál era el bueno: ejecutar el generador habría borrado
+el escenario que el juego usa de verdad.
+
+Es el mismo defecto que `stage_mecanicas` previno con una prueba que compara el
+fichero con lo que produce su generador. Aquí ya había ocurrido, así que este
+generador se reescribe **desde el TMX que hay en producción** —sus ocho capas,
+sus dieciocho tipos de objeto, sus diecisiete propiedades de mapa— y se le añade
+la misma prueba.
+
+Qué cambia respecto al stage 0 anterior
+----------------------------------------
+El calificador daba **121/130 (93,1 %)** y señalaba dos cosas reales:
+
+* `design_pacing: 5/8` — «el recorrido no tiene ningún salto exigente». El
+  escenario de referencia del profesor **se recorría solo**, y es la misma
+  métrica con la que se califica a los estudiantes. Predicar con el ejemplo
+  contrario cuesta autoridad.
+* `collectibles: 5/10` — sin coleccionables. Tolerable en un tutorial, pero
+  `Pickup` existe desde F4.1 y stage 0 es donde un estudiante va a mirar cómo
+  se usa.
+
+Y una carencia que el calificador no mide: de las **once mecánicas** de la fase
+5 y de los **cuatro objetos interactivos** de F4.1, el prólogo no usaba
+ninguno. El escenario que enseña el motor no enseñaba la mitad del motor.
+
+Estructura: siete zonas, las del documento de diseño
+------------------------------------------------------
+    A  movimiento y salto        (sin peligro)
+    B  primer enemigo            (Walker, inevitable — lección de Mario 1-1)
+    C  plataformas               + una liana, y el primer salto exigente
+    D  combate variado           + llave y puerta
+    E  foso                      + bloques rítmicos y pasarela
+    F  enemigos a distancia      + viento
+    G  todas las habilidades     + tirolesa y cofre
+"""
+from __future__ import annotations
+
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-TMX_PATH = PROJECT_ROOT / "assets" / "maps" / "stage0" / "stage0.tmx"
-TILESET_PATH = "../../tilesets/tileset_stage0.png"
+DESTINO = PROJECT_ROOT / "assets" / "maps" / "stage0" / "stage0.tmx"
+TILESET = "../../tilesets/tileset_stage0.png"
 
-MW, MH = 240, 14  # map dimensions in tiles
-TS = 16  # tile size
+TS = 16
+MW, MH = 100, 38          # 1600 × 608 px — el tamaño que el juego usa de verdad
+SUELO_Y = 30              # fila del suelo
 
-# ── Tile indices (0=empty, 1=floor, 2=wall, 3=platform) ──
-# Generate terrain grid
-terrain = [[0] * MW for _ in range(MH)]
+# ── Baldosas ────────────────────────────────────────────────────────────────
+# AUD-115: la primera versión de este generador declaraba el tileset como
+# `tilecount="64" columns="8"` con la imagen de 128 × 128 px, y pintaba todo el
+# terreno con las baldosas 1, 2 y 3. `tileset_stage0.png` mide **1024 × 1024**
+# y tiene **4096** baldosas de 64 columnas: el mapa regenerado dibujaba las
+# baldosas equivocadas —las tres primeras de la hoja, casi negras— en vez del
+# corredor de piedra.
+#
+# Ni el calificador ni el validador de TMX lo vieron: los dos comprueban que el
+# tileset **exista**, no que la hoja declarada tenga el tamaño de la hoja real.
+# Lo delató `test_de_noche_el_nivel_sigue_siendo_jugable`, que mide píxeles en
+# pantalla, con un 24 % de legibilidad a medianoche frente al 38 % de antes.
+#
+# Los identificadores de abajo son los que usaba el mapa en producción.
+TS_COLUMNAS = 64
+TS_TOTAL = 4096
+TS_IMAGEN_PX = 1024
 
-# Floor (rows 12-13)
-for y in range(12, 14):
+VACIO = 0
+SUELO_SUPERFICIE = 409        # la fila que se pisa
+SUELO_RELLENO_A = 665         # relleno, filas pares
+SUELO_RELLENO_B = 668         # relleno, filas impares
+MURO_IZQUIERDO = 153          # columna de cierre de la izquierda
+MURO_DERECHO = 160            # columna de cierre de la derecha
+PLATAFORMA = 666              # repisa atravesable
+BORDE = 161                   # remate bajo las repisas
+
+#: El foso de la zona E, en baldosas. Se cruza saltando o por la pasarela de
+#: encima: dos soluciones para el mismo obstáculo es lo que separa un nivel de
+#: un pasillo.
+FOSO_X0, FOSO_X1 = 62, 68
+
+#: Obstáculos sólidos interiores `(columna, alto en baldosas)`.
+#:
+#: El prólogo no tenía ninguno: sus únicas cajas sólidas eran el suelo y los dos
+#: muros de cierre del mapa. Un escenario sin nada contra lo que chocar no
+#: enseña la mitad más básica de la colisión —el eje horizontal— y la prueba
+#: `test_andar_contra_un_solido_detiene_al_jugador` se saltaba en silencio por
+#: no encontrar contra qué chocar. Una prueba que se salta es una prueba que no
+#: existe.
+#:
+#: Dos alturas a propósito: 2 baldosas se salta desde parado, 3 obliga a
+#: aprovechar el impulso. La segunda guarda la llave de la zona D.
+OBSTACULOS: tuple[tuple[int, int], ...] = ((10, 2), (46, 3))
+
+
+def _relleno(y: int) -> int:
+    """Alterna las dos baldosas de relleno para que el suelo no se vea liso."""
+    return SUELO_RELLENO_A if (y - SUELO_Y) % 2 else SUELO_RELLENO_B
+
+
+def _terreno() -> list[list[int]]:
+    g = [[VACIO] * MW for _ in range(MH)]
     for x in range(MW):
-        terrain[y][x] = 1
-
-# Zone A platforms (X=280-360, 420-500, Y=160 -> tile row 10)
-for x in range(17, 23):
-    terrain[10][x] = 3  # platform 1
-for x in range(26, 32):
-    terrain[10][x] = 3  # platform 2
-
-# Zone C platforms (X=1200-1360, 1440-1600, Y=160 -> tile row 10)
-for x in range(75, 86):
-    terrain[10][x] = 3  # platform 1
-for x in range(90, 101):
-    terrain[10][x] = 3  # platform 2
-
-# Zone E death pit (X=2240-2304 -> tile col 140-144)
-for y in range(12, 14):
-    for x in range(140, 145):
-        terrain[y][x] = 0
-
-# Zone E one-way platform over pit (tile row 11, Y=176)
-for x in range(140, 145):
-    terrain[11][x] = 3
-
-# Walls at stage edges
-# Left wall (tile col 0)
-for y in range(12):
-    terrain[y][0] = 2
-# Right wall
-for y in range(12):
-    terrain[y][MW-1] = 2
-
-
-def _gen_collision_rects():
-    """Generate TMX rect objects from the terrain grid, merging contiguous solid tiles.
-    Tile 1=floor, 2=wall → type Solid.
-    Tile 3=platform → type Solid by default; ONLY the Zone E pit cover is
-    one-way (type Platform), per 07_STAGE0_DESIGN §Zone E ("one-way platform
-    spanning the pit"). Zone A/C elevated platforms are solid ground the
-    player jumps ONTO and cannot walk through (§Zone A/C)."""
-    ONE_WAY_RECTS = {(2240, 176, 80, 16)}
-    solid_rects = []
-    platform_rects = []
-    oid = 100
-    for y in range(MH):
-        start_x = None
-        tile_type = None
+        g[SUELO_Y][x] = SUELO_SUPERFICIE
+    for y in range(SUELO_Y + 1, MH):
         for x in range(MW):
-            t = terrain[y][x]
-            if t in (1, 2, 3):
-                if start_x is None:
-                    start_x = x
-                    tile_type = t
-            else:
-                if start_x is not None:
-                    rx = start_x * TS
-                    rw = (x - start_x) * TS
-                    entry = (oid, rx, y * TS, rw, TS)
-                    if tile_type == 3 and entry[1:] in ONE_WAY_RECTS:
-                        platform_rects.append(entry)
-                    else:
-                        solid_rects.append(entry)
-                    oid += 1
-                    start_x = None
-                    tile_type = None
-        if start_x is not None:
-            rx = start_x * TS
-            rw = (MW - start_x) * TS
-            entry = (oid, rx, y * TS, rw, TS)
-            if tile_type == 3 and entry[1:] in ONE_WAY_RECTS:
-                platform_rects.append(entry)
-            else:
-                solid_rects.append(entry)
-            oid += 1
-    for oid, rx, ry, rw, rh in solid_rects:
-        yield f'  <object id="{oid}" name="Solid" type="Solid" x="{rx}" y="{ry}" width="{rw}" height="{rh}"/>'
-    for oid, rx, ry, rw, rh in platform_rects:
-        yield f'  <object id="{oid}" name="Platform" type="Platform" x="{rx}" y="{ry}" width="{rw}" height="{rh}"/>'
+            g[y][x] = _relleno(y)
+
+    for y in range(SUELO_Y, MH):
+        for x in range(FOSO_X0, FOSO_X1):
+            g[y][x] = VACIO
+
+    for x in range(26, 32):
+        g[SUELO_Y - 4][x] = PLATAFORMA
+    for x in range(36, 42):
+        g[SUELO_Y - 7][x] = PLATAFORMA
+    for x in range(86, 94):
+        g[SUELO_Y - 9][x] = PLATAFORMA
+
+    for y in range(MH):
+        g[y][0] = MURO_IZQUIERDO
+        g[y][MW - 1] = MURO_DERECHO
+
+    # Los obstáculos se rematan con la baldosa de superficie arriba y relleno
+    # debajo: se leen como un bloque de terreno, no como una pared flotante.
+    for x, alto in OBSTACULOS:
+        g[SUELO_Y - alto][x] = SUELO_SUPERFICIE
+        for y in range(SUELO_Y - alto + 1, SUELO_Y):
+            g[y][x] = BORDE
+    return g
 
 
-def _iter_objects():
-    """Yield TMX object entries for all entities, triggers, and zones."""
-    # PlayerSpawn (y = floor surface = terrain row 12 * TS = 192)
-    yield """  <object id="1" name="PlayerSpawn" type="PlayerSpawn" x="48" y="192" width="16" height="16"/>"""
+def _objetos() -> list[str]:
+    o: list[str] = []
+    ident = [200]
 
-    # ── Zone A: Messages ──
-    objs = [
-        (2, "MSG_01", "MessageTrigger", 160, 192, 32, 32, {"text": "Use arrow keys or left stick to walk. Press Space or A to jump."}),
-        (3, "MSG_02", "MessageTrigger", 260, 192, 32, 32, {"text": "Jump to reach elevated platforms. You have 6 frames of coyote time at ledge edges."}),
-        (4, "MSG_03", "MessageTrigger", 400, 192, 32, 32, {"text": "Hold jump longer for a higher jump. Release early for a short hop."}),
-        (5, "MSG_04", "MessageTrigger", 520, 192, 32, 32, {"text": "Press Down to crouch. Crouching reduces your hurtbox size."}),
-    ]
-
-    # ── Zone B: Messages + Walkers ──
-    objs += [
-        (6, "MSG_05", "MessageTrigger", 640, 192, 32, 32, {"text": "Press Z for Short Attack (fists). Press X for Long Attack (stick)."}),
-        (7, "MSG_06", "MessageTrigger", 700, 192, 32, 32, {"text": "Short Attack: 0.5 heart damage, fast recovery. Long Attack: 1.0 heart damage, wider reach."}),
-        (8, "MSG_07", "MessageTrigger", 840, 192, 32, 32, {"text": "Notice the hitstop effect on hit. Time briefly slows."}),
-        (9, "MSG_08", "MessageTrigger", 1000, 192, 32, 32, {"text": "Try crouching then attacking. The hitbox shifts to hit low targets."}),
-        # Walkers in Zone B
-        (10, "Walker_01", "Walker", 760, 164, 16, 16, {}),
-        (11, "Walker_02", "Walker", 900, 164, 16, 16, {}),
-        (12, "Walker_03", "Walker", 1040, 164, 16, 16, {}),
-        # Checkpoint 1
-        (13, "Checkpoint_01", "Checkpoint", 1080, 160, 24, 32, {"checkpoint_id": "0"}),
-    ]
-
-    # ── Zone C: Messages + Walkers + Platform ──
-    objs += [
-        (14, "MSG_09", "MessageTrigger", 1120, 192, 32, 32, {"text": "Walker enemies patrol back and forth. They detect ledge edges automatically."}),
-        (15, "MSG_10", "MessageTrigger", 1200, 192, 32, 32, {"text": "When you enter their detection range, Walkers accelerate toward you."}),
-        (16, "MSG_11", "MessageTrigger", 1360, 192, 32, 32, {"text": "If a Walker touches you, you lose 0.5 hearts. You become invincible briefly."}),
-        (17, "MSG_12", "MessageTrigger", 1520, 192, 32, 32, {"text": "Watch the sprite flash during invincibility. This is damage feedback."}),
-        # Walkers in Zone C
-        (18, "Walker_04", "Walker", 1260, 132, 16, 16, {}),
-        (19, "Walker_05", "Walker", 1480, 164, 16, 16, {}),
-        # Checkpoint 2
-        (20, "Checkpoint_02", "Checkpoint", 1560, 160, 24, 32, {"checkpoint_id": "1"}),
-    ]
-
-    # ── Zone D: Messages + Flying enemies ──
-    objs += [
-        (21, "MSG_13", "MessageTrigger", 1600, 192, 32, 32, {"text": "Flying enemies move along computed paths. The first uses a sine wave trajectory."}),
-        (22, "MSG_14", "MessageTrigger", 1780, 192, 32, 32, {"text": "Sine wave: pos.y = origin + A * sin(2*pi*f*t). Amplitude and frequency are TMX properties."}),
-        (23, "MSG_15", "MessageTrigger", 1880, 192, 32, 32, {"text": "The second Flying enemy uses a Bezier curve path. Four control points define the trajectory."}),
-        (24, "MSG_16", "MessageTrigger", 2000, 192, 32, 32, {"text": "Press F1 to toggle debug view. You can see Bezier control points and sampled path."}),
-        # Flying enemies
-        (25, "Flying_01", "Flying", 1700, 112, 16, 12, {"flight_mode": "sine"}),
-        (26, "Flying_02", "Flying", 1900, 80, 16, 12, {"flight_mode": "bezier"}),
-        # Waypoints for Flying_02 (S-curve)
-        (49, "Waypoint_01", "Waypoint", 1900, 80, 8, 8, {"owner_id": "Flying_02"}),
-        (50, "Waypoint_02", "Waypoint", 1800, 40, 8, 8, {"owner_id": "Flying_02"}),
-        (51, "Waypoint_03", "Waypoint", 1700, 80, 8, 8, {"owner_id": "Flying_02"}),
-        (52, "Waypoint_04", "Waypoint", 1800, 120, 8, 8, {"owner_id": "Flying_02"}),
-        # Checkpoint 3
-        (27, "Checkpoint_03", "Checkpoint", 2040, 160, 24, 32, {"checkpoint_id": "2"}),
-    ]
-
-    # ── Zone E: Messages + Shooter + DeathPit ──
-    objs += [
-        (28, "MSG_17", "MessageTrigger", 2080, 192, 32, 32, {"text": "Shooter enemies fire projectiles when you enter range. Angle computed with atan2."}),
-        (29, "MSG_18", "MessageTrigger", 2160, 192, 32, 32, {"text": "angle = atan2(dy, dx) from shooter to player. This is Unit II vector math."}),
-        (30, "MSG_19", "MessageTrigger", 2240, 192, 32, 32, {"text": "The gap ahead has a one-way platform. Jump up through it; fall back down."}),
-        (31, "MSG_20", "MessageTrigger", 2360, 192, 32, 32, {"text": "Crouch to avoid projectiles that fly high. Time movement between shots."}),
-        # Shooter enemies
-        (32, "Shooter_01", "Shooter", 2400, 192, 16, 16, {}),
-        (33, "Shooter_02", "Shooter", 2500, 192, 16, 16, {}),
-        # Death pit
-        (34, "DeathPit_01", "DeathPit", 2240, 208, 64, 16, {}),
-        # Checkpoint 4
-        (35, "Checkpoint_04", "Checkpoint", 2520, 160, 24, 32, {"checkpoint_id": "3"}),
-    ]
-
-    # ── Zone F: Messages + Walkers + Hazard ──
-    objs += [
-        (36, "MSG_21", "MessageTrigger", 2560, 192, 32, 32, {"text": "The HUD shows health (hearts) and the stage timer. Portrait is the player avatar."}),
-        (37, "MSG_22", "MessageTrigger", 2640, 192, 32, 32, {"text": "The red Walker deals 1.0 heart damage. Heavy damage enemies are marked differently."}),
-        (38, "MSG_23", "MessageTrigger", 2760, 192, 32, 32, {"text": "If health reaches 0, Game Over appears. You can continue from the last checkpoint."}),
-        (39, "MSG_24", "MessageTrigger", 3040, 192, 32, 32, {"text": "The spike floor deals 0.25 heart damage per tick. This is the Light damage tier."}),
-        # Walkers in Zone F
-        (40, "Walker_06", "Walker", 2680, 164, 16, 16, {"damage_on_contact": "1.0"}),
-        (41, "Walker_07", "Walker", 2820, 164, 16, 16, {}),
-        (42, "Walker_08", "Walker", 2960, 164, 16, 16, {}),
-        # Hazard zone
-        (43, "HazardZone_A", "HazardZone", 3040, 176, 48, 16, {"damage": "0.25"}),
-        # Checkpoint 5
-        (44, "Checkpoint_05", "Checkpoint", 3160, 160, 24, 32, {"checkpoint_id": "4"}),
-    ]
-
-    # ── Zone G: Messages + NextTrigger ──
-    objs += [
-        (45, "MSG_25", "MessageTrigger", 3200, 192, 32, 32, {"text": "You have demonstrated all framework systems. Walk right to complete Stage 0."}),
-        (46, "MSG_26", "MessageTrigger", 3500, 192, 32, 32, {"text": "Your stages (1, 2, 3) build on everything shown here. Study the source code."}),
-        (47, "MSG_27", "MessageTrigger", 3680, 192, 32, 32, {"text": "Step through the arch to proceed. Good luck."}),
-        # Exit
-        (48, "NextTrigger_01", "NextTrigger", 3720, 160, 40, 64, {}),
-    ]
-
-    for oid, name, otype, x, y, w, h, props in objs:
-        prop_str = ""
+    def obj(tipo: str, x: int, y: int, w: int, h: int, **props: object) -> None:
+        ident[0] += 1
+        cabecera = (
+            f'  <object id="{ident[0]}" name="{tipo}_{ident[0]}" type="{tipo}"'
+            f' x="{x}" y="{y}" width="{w}" height="{h}"'
+        )
+        # Sin propiedades, Tiled cierra la etiqueta en la misma línea. Emitir
+        # `<object ...></object>` es XML válido pero no es lo que un estudiante
+        # ve al abrir su mapa, y una prueba del validador buscaba precisamente
+        # la forma auto-cerrada.
+        if not props:
+            o.append(cabecera + "/>")
+            return
+        cuerpo = cabecera + ">"
         if props:
-            pxml = "".join(f'<property name="{k}" value="{v}"/>' for k, v in props.items())
-            prop_str = f" <properties>{pxml}</properties>"
-        yield f'  <object id="{oid}" name="{name}" type="{otype}" x="{x}" y="{y}" width="{w}" height="{h}">{prop_str}</object>'
+            cuerpo += "\n   <properties>"
+            for k, v in props.items():
+                if isinstance(v, bool):
+                    tipo_p, valor = "bool", str(v).lower()
+                elif isinstance(v, int):
+                    tipo_p, valor = "int", str(v)
+                elif isinstance(v, float):
+                    tipo_p, valor = "float", str(v)
+                else:
+                    tipo_p, valor = "", str(v)
+                attr = f' type="{tipo_p}"' if tipo_p else ""
+                cuerpo += f'\n    <property name="{k}"{attr} value="{valor}"/>'
+            cuerpo += "\n   </properties>"
+        cuerpo += "\n  </object>"
+        o.append(cuerpo)
+
+    suelo = SUELO_Y * TS
+
+    obj("PlayerSpawn", 3 * TS, suelo - 48, 16, 32)
+
+    # ── Zona A — moverse y saltar, sin nada que pueda matarte ──
+    obj("MessageTrigger_Once", 5 * TS, suelo - 64, 48, 48,
+        text="Flechas para moverte. Espacio para saltar.")
+
+    # ── Zona B — el primer enemigo, inevitable ─────────────────
+    # En el camino y no a un lado: es la lección de Mario 1-1 del dossier del
+    # Top 200, enseñar el castigo por contacto sin una línea de texto. Va
+    # después del mensaje de salto para que el jugador ya sepa saltar.
+    obj("MessageTrigger_Once", 14 * TS, suelo - 64, 48, 48,
+        text="Z ataca. Tambien puedes saltar por encima.")
+    obj("Walker", 18 * TS, suelo - 28, 24, 28,
+        max_health=2.0, patrol_length=80.0, patrol_speed=60.0, alert_speed=90.0)
+    obj("Checkpoint", 22 * TS, suelo - 32, 16, 32, checkpoint_id=0)
+
+    # ── Zona C — plataformas, liana y el primer salto exigente ─
+    obj("MessageTrigger_Once", 25 * TS, suelo - 64, 48, 48,
+        text="Sube. Con X te agarras a la liana.")
+    obj("Vine", 33 * TS, (SUELO_Y - 11) * TS, 8, 11 * TS,
+        velocidad=75.0, ancho_de_agarre=12.0)
+    obj("Pickup", 38 * TS, (SUELO_Y - 9) * TS, 16, 16,
+        item_id="fragmento_1", automatico=True, mensaje="Fragmento 1 de 3.")
+    obj("Flying", 30 * TS, suelo - 7 * TS, 20, 14,
+        flight_mode="sine", flight_speed=60.0,
+        sine_amplitude=32.0, sine_frequency=2.0)
+    obj("Checkpoint", 43 * TS, suelo - 32, 16, 32, checkpoint_id=1)
+
+    # ── Zona D — combate variado, llave y puerta ───────────────
+    obj("MessageTrigger_Once", 45 * TS, suelo - 64, 48, 48,
+        text="La llave abre la puerta del fondo.")
+    obj("Key", 47 * TS, suelo - 20, 16, 16,
+        item_id="llave_prologo", automatico=True, mensaje="Has cogido la llave.")
+    obj("Charger", 50 * TS, suelo - 24, 28, 24, charge_speed=250.0)
+    obj("Archer", 54 * TS, suelo - 28, 16, 28, fire_rate=2.0,
+        projectile_speed=100.0, projectile_damage=2.0)
+    obj("Brute", 57 * TS, suelo - 60, 100, 60, max_health=6.0)
+    obj("LockedDoor", 60 * TS, suelo - 3 * TS, TS, 3 * TS,
+        key_id="llave_prologo", clase="puerta",
+        mensaje_bloqueado="Cerrada. Busca la llave.")
+    obj("Checkpoint", 61 * TS, suelo - 32, 16, 32, checkpoint_id=2)
+
+    # ── Zona E — el foso, con dos formas de cruzarlo ───────────
+    obj("MessageTrigger_Once", 59 * TS, suelo - 64, 48, 48,
+        text="Salta el foso, o cruza por encima.")
+    obj("DeathPit", FOSO_X0 * TS, (MH - 2) * TS, (FOSO_X1 - FOSO_X0) * TS, 2 * TS)
+    for i in range(3):
+        obj("RhythmBlock", (FOSO_X0 + 1 + i * 2) * TS, suelo - 5 * TS, 2 * TS, TS,
+            visible_seg=1.8, oculto_seg=1.0, desfase=i * 0.6)
+    obj("HazardZone", 70 * TS, suelo - TS, 3 * TS, TS, damage=0.25)
+
+    # ── Zona F — enemigos a distancia y viento ─────────────────
+    obj("MessageTrigger_Once", 72 * TS, suelo - 64, 48, 48,
+        text="El viento empuja. Espera a que amaine.")
+    obj("WindZone", 74 * TS, (SUELO_Y - 10) * TS, 10 * TS, 10 * TS,
+        fuerza_x=210.0, fuerza_y=0.0, periodo=3.4)
+    # `patrol_length` explícito: sin él el Shooter se queda clavado, y un
+    # enemigo a distancia inmóvil se resuelve andando dos pasos a un lado.
+    obj("Shooter", 78 * TS, suelo - 24, 16, 24, fire_rate=2.0,
+        projectile_speed=100.0, projectile_damage=2.0,
+        patrol_length=48.0, patrol_speed=30.0)
+    obj("Caster", 81 * TS, suelo - 28, 20, 28)
+    obj("Pickup", 76 * TS, suelo - 20, 16, 16,
+        item_id="fragmento_2", automatico=True, mensaje="Fragmento 2 de 3.")
+    obj("Checkpoint", 84 * TS, suelo - 32, 16, 32, checkpoint_id=3)
+
+    # ── Zona G — todo junto, tirolesa y cofre ──────────────────
+    obj("MessageTrigger_Once", 85 * TS, suelo - 64, 48, 48,
+        text="Combina todo. U es el ataque definitivo.")
+    obj("Assassin", 88 * TS, suelo - 24, 16, 24)
+    obj("Walker", 91 * TS, suelo - 28, 24, 28, max_health=2.0)
+    obj("Pickup", 90 * TS, (SUELO_Y - 10) * TS, 16, 16,
+        item_id="fragmento_3", automatico=True, mensaje="Fragmento 3 de 3.")
+    obj("Chest", 93 * TS, (SUELO_Y - 10) * TS, TS, TS,
+        contenido="reliquia_prologo", mensaje="Una reliquia del prologo.")
+    obj("Zipline", 92 * TS, (SUELO_Y - 10) * TS, 8, 8,
+        destino_dx=5 * TS, destino_dy=8 * TS, velocidad=200.0)
+    obj("CameraLock", 86 * TS, 0, 14 * TS, MH * TS, lock_y=True)
+    obj("NextTrigger", 97 * TS, suelo - 3 * TS, 2 * TS, 3 * TS)
+
+    # ── Focos ──────────────────────────────────────────────────────────
+    # La iluminación es material de la Unidad V y el prólogo es donde se
+    # enseña, pero el número y la potencia de los focos **no son decoración**:
+    # stage 0 declara `day_length=420`, así que a mitad de partida se hace de
+    # noche y el ambiente cae al suelo de 0,45.
+    #
+    # La primera versión de este generador puso 7 focos de intensidad 0,7 en
+    # lugar de los 9 de hasta 0,9 que tenía el mapa anterior, y a medianoche
+    # sólo el **24 %** de la pantalla quedaba por encima del umbral de
+    # legibilidad; a las 20:00, el 17 %. El nivel se volvía injugable a oscuras
+    # y nadie lo habría notado hasta jugarlo siete minutos seguidos.
+    #
+    # Lo cazó `test_de_noche_el_nivel_sigue_siendo_jugable`, que mide píxeles
+    # en pantalla y no propiedades del TMX. Los números de abajo están ajustados
+    # contra esa medición, no a ojo.
+    obj("Light", 6 * TS, suelo - 5 * TS, 16, 16,
+        radius=150.0, color="fire", intensity=0.95, flicker=True,
+        flicker_speed=3.2, flicker_amount=0.18)
+    for i, x in enumerate((14, 22, 30, 38, 46, 54, 60, 70, 78, 86, 94)):
+        obj("Light", x * TS, suelo - 6 * TS, 16, 16,
+            radius=140.0 + (i % 3) * 10, color="warm",
+            intensity=0.85 + (i % 2) * 0.05)
+    return o
 
 
-def generate_tmx():
-    # CSV terrain data (single-line to avoid pytmx newline issues)
-    csv_data = ",".join(str(terrain[y][x]) for y in range(MH) for x in range(MW))
-    zeros_csv = ",".join(["0"] * (MW * MH))
+def _colisiones() -> list[str]:
+    r: list[str] = []
+    ident = [1]
 
-    object_entries = "\n".join(_iter_objects())
-    collision_entries = "\n".join(_gen_collision_rects())
+    def solido(x: int, y: int, w: int, h: int, tipo: str = "Solid") -> None:
+        ident[0] += 1
+        r.append(
+            f'  <object id="{ident[0]}" name="{tipo}_{ident[0]}" type="{tipo}"'
+            f' x="{x}" y="{y}" width="{w}" height="{h}"/>',
+        )
 
-    tmx = f"""<?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.0" orientation="orthogonal"
-     renderorder="right-down" width="{MW}" height="{MH}"
-     tilewidth="{TS}" tileheight="{TS}" infinite="0"
-     nextlayerid="9" nextobjectid="150">
+    suelo = SUELO_Y * TS
+    solido(0, suelo, FOSO_X0 * TS, (MH - SUELO_Y) * TS)
+    solido(FOSO_X1 * TS, suelo, (MW - FOSO_X1) * TS, (MH - SUELO_Y) * TS)
+    solido(-TS, 0, TS, MH * TS)
+    solido(MW * TS, 0, TS, MH * TS)
+    # Obstáculos interiores: lo único del prólogo contra lo que se choca de lado.
+    for x, alto in OBSTACULOS:
+        solido(x * TS, (SUELO_Y - alto) * TS, TS, alto * TS)
+    # Repisas atravesables desde abajo, que es lo que las hace útiles.
+    solido(26 * TS, (SUELO_Y - 4) * TS, 6 * TS, 8, "Platform")
+    solido(36 * TS, (SUELO_Y - 7) * TS, 6 * TS, 8, "Platform")
+    solido(86 * TS, (SUELO_Y - 9) * TS, 8 * TS, 8, "Platform")
+    # La pasarela sobre el foso: la segunda forma de cruzarlo.
+    solido((FOSO_X0 - 1) * TS, (SUELO_Y - 8) * TS,
+           (FOSO_X1 - FOSO_X0 + 2) * TS, 8, "Platform")
+    return r
+
+
+def generar() -> str:
+    g = _terreno()
+    csv_terreno = ",".join(str(g[y][x]) for y in range(MH) for x in range(MW))
+    ceros = ",".join(["0"] * (MW * MH))
+
+    def capa(i: int, nombre: str, datos: str) -> str:
+        return (
+            f' <layer id="{i}" name="{nombre}" width="{MW}" height="{MH}">\n'
+            f'  <data encoding="csv">\n{datos}\n</data>\n </layer>'
+        )
+
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.10.2" orientation="orthogonal" \
+renderorder="right-down" width="{MW}" height="{MH}" tilewidth="{TS}" \
+tileheight="{TS}" infinite="0" nextlayerid="20" nextobjectid="900">
  <properties>
   <property name="stage_id" value="stage0"/>
-  <property name="stage_name" value="STAGE 0  PROLOGUE"/>
-  <property name="time_limit" value="0"/>
+  <property name="stage_name" value="STAGE 0 - PROLOGUE"/>
+  <property name="author" value="Equipo docente — Legacy of Infest"/>
   <property name="bgm_track" value="bgm_stage0"/>
+  <property name="background_zone" value="stage0"/>
+  <property name="climate" value="clear"/>
+  <property name="time_limit" type="int" value="0"/>
+  <property name="gravity_multiplier" type="float" value="1.0"/>
+  <property name="ambient_light" type="float" value="0.70"/>
+  <property name="start_hour" value="afternoon"/>
+  <property name="day_length" type="float" value="420"/>
+  <property name="season" value="autumn"/>
+  <property name="zone" type="int" value="0"/>
+  <property name="bloom" type="float" value="0.18"/>
+  <property name="vignette" type="float" value="0.30"/>
+  <property name="ambient_fx" value="spores"/>
+  <property name="ambient_fx_rate" type="float" value="14"/>
  </properties>
- <tileset firstgid="1" name="tileset_stage0" tilewidth="{TS}"
-          tileheight="{TS}" tilecount="64" columns="8">
-  <image source="{TILESET_PATH}"
-         width="{TS * 8}" height="{TS * 8}"/>
+ <tileset firstgid="1" name="tileset_stage0" tilewidth="{TS}" tileheight="{TS}" \
+tilecount="{TS_TOTAL}" columns="{TS_COLUMNAS}">
+  <image source="{TILESET}" width="{TS_IMAGEN_PX}" height="{TS_IMAGEN_PX}"/>
  </tileset>
- <layer id="1" name="BG_Far" width="{MW}" height="{MH}">
-  <data encoding="csv">
-{zeros_csv}
-  </data>
- </layer>
- <layer id="2" name="BG_Mid" width="{MW}" height="{MH}">
-  <data encoding="csv">
-{zeros_csv}
-  </data>
- </layer>
- <layer id="3" name="BG_Near" width="{MW}" height="{MH}">
-  <data encoding="csv">
-{zeros_csv}
-  </data>
- </layer>
- <layer id="4" name="Terrain" width="{MW}" height="{MH}">
-  <data encoding="csv">
-{csv_data}
-  </data>
- </layer>
- <layer id="5" name="Terrain_Detail" width="{MW}" height="{MH}">
-  <data encoding="csv">
-{zeros_csv}
-  </data>
- </layer>
- <layer id="6" name="FG_Overlay" width="{MW}" height="{MH}">
-  <data encoding="csv">
-{zeros_csv}
-  </data>
- </layer>
+{capa(1, "BG_Far", ceros)}
+{capa(2, "BG_Mid", ceros)}
+{capa(3, "BG_Near", ceros)}
+{capa(4, "Terrain", csv_terreno)}
+{capa(5, "Terrain_Detail", ceros)}
+{capa(6, "FG_Overlay", ceros)}
  <objectgroup id="7" name="Collision">
-{collision_entries}
+{chr(10).join(_colisiones())}
  </objectgroup>
  <objectgroup id="8" name="Objects">
-{object_entries}
+{chr(10).join(_objetos())}
  </objectgroup>
-</map>"""
+</map>
+"""
 
-    TMX_PATH.parent.mkdir(parents=True, exist_ok=True)
-    TMX_PATH.write_text(tmx, encoding="utf-8")
-    n_collision = sum(1 for _ in _gen_collision_rects())
-    print(f"Created Stage 0 TMX: {TMX_PATH}")
-    print(f"  Map: {MW}x{MH} tiles ({MW*TS}x{MH*TS} px)")
-    print("  Zones: A-G with 27 message triggers, 8 walkers, 2 flying, 2 shooters")
-    print("  Checkpoints: 5, Death pits: 1, Hazard zones: 1")
-    print(f"  Collision rects: {n_collision} (merged from terrain grid)")
+
+def main() -> None:
+    DESTINO.parent.mkdir(parents=True, exist_ok=True)
+    DESTINO.write_text(generar(), encoding="utf-8")
+    print(f"escrito {DESTINO.relative_to(PROJECT_ROOT)} ({MW}×{MH} baldosas)")
 
 
 if __name__ == "__main__":
-    generate_tmx()
+    main()
