@@ -142,7 +142,7 @@ Esto no sale del barrido automático: sale de la auditoría de agosto
 
 | Falta | Bloquea | Esfuerzo |
 |---|---|---|
-| **Reloj musical** (BPM, compás, posición de pista, latencia) | los niveles rítmicos y la nota de audio | 2–3 semanas |
+| ~~Reloj musical~~ | **HECHO** (AUD-137). `bpm`/`compas`/`desfase_audio` en el mapa, `patron` en los bloques, posición tomada del mezclador | — |
 | **Buses de mezcla, ducking, reverberación por zona** | audio | 1 semana |
 | **Atlas de sprites y batching** | gráficos y rendimiento | 1 semana |
 | **Post-procesado en GPU** (la tubería existe y no se usa para esto) | gráficos y rendimiento | 1 semana |

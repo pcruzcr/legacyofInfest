@@ -107,6 +107,9 @@ class StageScene(BaseScene):
         # intento.
         self._cutscenes: Any | None = None
         self._escenas_vistas: set[str] = set()
+        # AUD-137 (F6) — el reloj musical. `None` salvo que el mapa declare
+        # `bpm`: un escenario que no es rítmico no paga nada por esto.
+        self._reloj_musical: Any | None = None
         # F5 — el mundo ECS del escenario: viento, plataformas móviles, láseres,
         # agua, guardias y acosadores. Uno por escena y no global, para que dos
         # escenarios cargados a la vez —el juego y una previsualización— no se
@@ -301,6 +304,7 @@ class StageScene(BaseScene):
             disparadores=self._stage_data.disparadores,
             bus=self.context.event_bus,
         )
+        self._montar_reloj_musical()
         self._montar_director_de_escenas()
         self._configurar_vfx_opcionales()
         self._poblar_mundo_ecs()
@@ -1324,6 +1328,30 @@ class StageScene(BaseScene):
                 )
             self.context.event_bus.emit(Events.STAGE_COMPLETE, stage_id=stage.stage_id)
 
+    def _montar_reloj_musical(self) -> None:
+        """AUD-137 — el compás del escenario, si lo tiene.
+
+        Se le da el gestor de audio como fuente: la posición sale del
+        mezclador y no de sumar fotogramas. Sumando fotogramas, el nivel y la
+        canción llevan relojes distintos y a los cinco minutos van medio
+        compás desfasados — la razón por la que hasta ahora no se podía hacer
+        un nivel rítmico de verdad.
+        """
+        from src.engine.audio.music_clock import RelojMusical
+
+        stage = self._stage_data
+        if stage is None or getattr(stage, "bpm", 0.0) <= 0.0:
+            self._reloj_musical = None
+            self._mundo.poner_recurso("reloj_musical", None)
+            return
+        self._reloj_musical = RelojMusical(
+            bpm=stage.bpm,
+            compas=getattr(stage, "compas", 4),
+            desfase=getattr(stage, "desfase_audio", 0.0),
+            fuente=self.audio,
+        )
+        self._mundo.poner_recurso("reloj_musical", self._reloj_musical)
+
     def _actualizar_escenas(self, dt: float) -> bool:
         """Corre el director. Devuelve `True` si el juego debe quedarse quieto.
 
@@ -1419,6 +1447,15 @@ class StageScene(BaseScene):
             self._banner.update(dt)
 
     def _update_vfx(self, dt: float) -> None:
+        # AUD-137: el reloj musical va con tiempo REAL. El tiempo bala
+        # ralentiza el mundo y la música sigue sonando igual; alimentarlo con
+        # el `dt` escalado desincronizaría el nivel entero cada vez que algo
+        # se ralentiza. Es el mismo error que AUD-118/119 quitó del reloj.
+        if self._reloj_musical is not None:
+            clock = self.context.clock
+            self._reloj_musical.update(
+                getattr(clock, "unscaled_dt", dt) if clock is not None else dt,
+            )
         self._speedrun.update(dt)
         self._hazards.update(dt, self._player, self._stage_data)
         self._tutorial.update(dt, self.input)

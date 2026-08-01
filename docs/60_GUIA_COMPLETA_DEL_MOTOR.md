@@ -342,6 +342,7 @@ además se vea.
 | `RhythmBlock` | `visible_seg` | `1.0` | segundos presente |
 | | `oculto_seg` | `1.0` | segundos ausente |
 | | `desfase` | `0.0` | desplaza el ciclo |
+| | `patron` | — | patrón de compás, p. ej. `x.x.`. **Manda sobre los segundos** y exige que el mapa declare `bpm` |
 
 El destino va en **desplazamiento** para que mover la plataforma en Tiled no
 te obligue a recalcular su destino a mano.
@@ -704,6 +705,37 @@ falta que ilumines. Compruébalo con `preview_tmx.py --hora 23`.
 Volúmenes de música y efectos separados, silencio con `M`. **Si falta un
 fichero de audio, el juego sigue**: se registra el aviso y se calla ese sonido.
 Un nivel no se cae por un `.ogg` que no subiste, pero mira la consola.
+
+### 10.1 Niveles rítmicos: el reloj musical
+
+Declara el compás en el mapa y el escenario pasa a tener pulso:
+
+| Propiedad del mapa | Por defecto | Qué hace |
+|---|---|---|
+| `bpm` | `0` | pulsos por minuto. **`0` = el escenario no es rítmico** y el reloj ni se construye |
+| `compas` | `4` | pulsos por compás. `3` da un vals |
+| `desfase_audio` | `0` | segundos de latencia que compensar en esta máquina |
+
+Con `bpm` puesto, un `RhythmBlock` con `patron` deja de contar segundos y sigue
+a la música: `"x.x."` es sí, no, sí, no, un carácter por pulso. Dos bloques con
+`"x.x."` y `".x.x"` se turnan, y eso ya es un tramo rítmico.
+
+Por qué no basta con `visible_seg`: un bloque que suma su propio tiempo y una
+canción que suena llevan **relojes distintos**. Al minuto van cien milisegundos
+desfasados —más de lo que el oído tolera— y a los cinco minutos, medio compás.
+El reloj musical no cuenta: le pregunta al mezclador por dónde va la pista.
+
+Y va con tiempo **real**: el tiempo bala ralentiza el mundo y la música sigue
+sonando igual, así que una ralentización no desincroniza el nivel.
+
+Desde código hay más de lo que cabe en una propiedad: `reloj.en_ventana()` dice
+si ahora mismo se está a compás —para premiar un salto a tiempo—,
+`reloj.cuantizar(t)` redondea un instante al pulso más cercano y
+`reloj.pulsos_cruzados` cuenta cuántos pulsos empezaron en este fotograma (es un
+contador y no un sí/no: un fotograma largo puede cruzar dos).
+
+El laboratorio de mecánicas (`stage_mecanicas`) tiene los cuatro bloques de la
+sala 4 puestos así: dos a la manera de siempre y dos siguiendo la música.
 
 ---
 

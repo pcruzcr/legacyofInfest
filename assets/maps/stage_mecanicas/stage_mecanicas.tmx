@@ -5,6 +5,10 @@
   <property name="stage_name" value="LABORATORIO DE MECANICAS"/>
   <property name="author" value="Equipo docente — Legacy of Infest"/>
   <property name="bgm_track" value="bgm_stage0"/>
+  <!-- AUD-137 (F6): el compas del escenario. Con `bpm`, los bloques que
+       declaran `patron` dejan de contar segundos y siguen a la musica. -->
+  <property name="bpm" type="float" value="120"/>
+  <property name="compas" type="int" value="4"/>
   <property name="background_zone" value="stage0"/>
   <property name="climate" value="clear"/>
   <property name="time_limit" value="0"/>
@@ -128,6 +132,7 @@
     <property name="visible_seg" type="float" value="1.6"/>
     <property name="oculto_seg" type="float" value="1.2"/>
     <property name="desfase" type="float" value="0.0"/>
+    <property name="patron" value=""/>
    </properties>
   </object>
   <object id="114" name="RhythmBlock_114" type="RhythmBlock" x="1632" y="288" width="32" height="16">
@@ -135,6 +140,7 @@
     <property name="visible_seg" type="float" value="1.6"/>
     <property name="oculto_seg" type="float" value="1.2"/>
     <property name="desfase" type="float" value="0.7"/>
+    <property name="patron" value=""/>
    </properties>
   </object>
   <object id="115" name="RhythmBlock_115" type="RhythmBlock" x="1680" y="288" width="32" height="16">
@@ -142,6 +148,7 @@
     <property name="visible_seg" type="float" value="1.6"/>
     <property name="oculto_seg" type="float" value="1.2"/>
     <property name="desfase" type="float" value="1.4"/>
+    <property name="patron" value="x.x."/>
    </properties>
   </object>
   <object id="116" name="RhythmBlock_116" type="RhythmBlock" x="1728" y="288" width="32" height="16">
@@ -149,6 +156,7 @@
     <property name="visible_seg" type="float" value="1.6"/>
     <property name="oculto_seg" type="float" value="1.2"/>
     <property name="desfase" type="float" value="2.0999999999999996"/>
+    <property name="patron" value=".x.x"/>
    </properties>
   </object>
   <object id="117" name="DeathPit_117" type="DeathPit" x="1568" y="368" width="224" height="16">

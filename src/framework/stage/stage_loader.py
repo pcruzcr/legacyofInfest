@@ -286,6 +286,17 @@ class StageData:
     #: sótano cenital y un exterior lateral, que es justo lo que hace que
     #: valga la pena tener las dos vistas.
     vista: str = "lateral"
+    #: AUD-137 (F6) — el compás del escenario.
+    #:
+    #: `bpm = 0` significa «este escenario no es rítmico», que es el caso de
+    #: casi todos, y entonces el reloj musical ni se construye. Un motor que
+    #: obligara a declarar un tempo para hacer un nivel normal estaría
+    #: cobrando a todo el mundo el precio de una función que usan pocos.
+    bpm: float = 0.0
+    #: Pulsos por compás. 4 es lo normal; 3 da un vals, 7 da un compás raro.
+    compas: int = 4
+    #: Segundos de latencia que compensar. Se calibra por máquina.
+    desfase_audio: float = 0.0
     climate: str = ""
     #: Brillo ambiente del escenario, de 0 (oscuridad total) a 1 (sin
     #: oscurecer). `None` significa "no declarado": la escena caerá a su tabla
@@ -560,6 +571,12 @@ class StageLoader:
         time_limit = cls._safe_int(props.get("time_limit", 0), "time_limit")
         bgm_track = props.get("bgm_track", "")
         gravity_multiplier = cls._safe_float(props.get("gravity_multiplier", 1.0), "gravity_multiplier")
+        # AUD-137 — el compás. Sin `bpm` no hay reloj musical y el escenario se
+        # comporta como siempre.
+        bpm = max(0.0, cls._safe_float(props.get("bpm", 0.0), "bpm"))
+        compas = max(1, cls._safe_int(props.get("compas", 4), "compas"))
+        desfase_audio = cls._safe_float(
+            props.get("desfase_audio", 0.0), "desfase_audio")
         climate = props.get("climate", "")
         # AUD-129 — una vista desconocida cae a lateral con aviso, no rompe.
         # `view` en inglés se acepta igual: el proyecto es bilingüe en las
@@ -607,6 +624,9 @@ class StageLoader:
             bgm_track=bgm_track,
             gravity_multiplier=gravity_multiplier,
             vista=vista,
+            bpm=bpm,
+            compas=compas,
+            desfase_audio=desfase_audio,
             climate=climate,
             zone=zone,
             ambient_light=ambient_light,
@@ -1217,6 +1237,9 @@ class StageLoader:
                     visible_seg=f("visible_seg", 1.0),
                     oculto_seg=f("oculto_seg", 1.0),
                     desfase=f("desfase", 0.0),
+                    # AUD-137: con patrón manda la música y los segundos
+                    # dejan de contar. `"x.x."` = sí, no, sí, no.
+                    patron=str(props.get("patron", "") or ""),
                 ),
             ]
 
