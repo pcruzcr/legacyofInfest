@@ -6,7 +6,6 @@ import pygame
 
 from src.engine.core import settings
 from src.engine.core.events import Events
-from src.engine.input.action_map import Action
 from src.framework.scenes.stage_scene import StageScene
 
 if TYPE_CHECKING:
@@ -41,23 +40,32 @@ class Stage0(StageScene):
         self._place_collectibles()
         self._register_dialogue_trees()
 
+    #: El guion de la introducción, en el mismo lenguaje que usan los mapas.
+    #:
+    #: AUD-040: la versión original empezaba con un fundido **a** negro,
+    #: aunque `StageScene.on_enter` acababa de pedir un fundido de entrada. El
+    #: jugador veía aparecer el escenario, apagarse de golpe, esperar y volver
+    #: a encenderse, con el juego congelado 2,3 s. Primero se establece el
+    #: plano y luego se entrega el mando.
+    GUION_DE_INTRO = """
+    camara 0 0 0.8
+    esperar 0.2
+    """
+
     def _start_intro_cutscene(self) -> None:
-        from src.framework.stage.cutscene_system import (
-            CameraMoveAction,
-            CutsceneScript,
-            WaitAction,
-        )
-        # AUD-040: the original script opened with `FadeAction(fade_in=False)`
-        # — a fade *to* black — even though StageScene.on_enter has just asked
-        # the transition manager for a fade *in*. The player therefore watched
-        # the stage appear, immediately black out, wait, and fade in again,
-        # with gameplay frozen for the whole 2.3 s. Establish the shot first,
-        # then hand control over.
-        script = CutsceneScript()
-        script.add_action(CameraMoveAction(0, 0, 0.8, self._camera))
-        script.add_action(WaitAction(0.2))
-        script.start()
-        self._cutscene = script
+        """AUD-136 — ahora por el director, no a mano.
+
+        Esto era un `CutsceneScript` propio que este escenario guardaba,
+        actualizaba, dibujaba y apagaba tocando `_active` desde fuera. Cada
+        escenario que quisiera una escena tenía que repetir esas cuatro cosas,
+        y las repetiría igual de mal: apagar el guion a medias no es saltarlo.
+
+        Ahora es un guion de dos líneas que corre por el mismo camino que las
+        escenas del mapa.
+        """
+        if self._cutscenes is None:
+            return
+        self._cutscene = self._cutscenes.reproducir_texto(self.GUION_DE_INTRO)
 
     def _place_collectibles(self) -> None:
         items = [
@@ -111,18 +119,12 @@ class Stage0(StageScene):
         self._dialogue_trees = {"intro": intro, "bestiary": bestiary}
 
     def update(self, dt: float) -> None:
-        if self._cutscene and self._cutscene.active:
-            self._cutscene.update(dt)
-            im = self.input
-            if im and im.is_action_just_pressed(Action.CANCEL):
-                self._cutscene._active = False
-                self._cutscene = None
-            if im and im.is_action_just_pressed(Action.PAUSE):
-                self._cutscene._active = False
-                self._cutscene = None
-                self._paused = True
-            return
+        # AUD-136: el director corre dentro de `StageScene.update` y ya congela
+        # el juego mientras la escena bloquea. Lo que este escenario añade
+        # encima sólo tiene sentido cuando se está jugando de verdad.
         super().update(dt)
+        if self._cutscenes is not None and self._cutscenes.bloquea:
+            return
         self._check_collectibles()
         self._check_dialogue_triggers()
         self._check_zone_progression()
@@ -180,9 +182,10 @@ class Stage0(StageScene):
             )
 
     def draw(self, surface: pygame.Surface) -> None:
+        # El director dibuja sus escenas dentro de `StageScene.draw`, entre el
+        # mundo y la interfaz. Dibujarlas otra vez aquí las pondría por encima
+        # del HUD.
         super().draw(surface)
-        if self._cutscene:
-            self._cutscene.draw(surface)
 
     def on_debug_toggle(self, enabled: bool) -> None:
         if enabled and self._collectibles:

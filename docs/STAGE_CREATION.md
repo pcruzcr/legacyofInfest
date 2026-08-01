@@ -315,11 +315,12 @@ Para instrucciones detalladas de registro y pruebas, consultar el documento orig
 | `NextTrigger` | Rectángulo | — (completa el escenario) |
 | `MessageTrigger` | Rectángulo | `text`, `duration` |
 | `MessageTrigger_Once` | Rectángulo | `text`, `duration` (una sola vez) |
-| `HazardZone` | Rectángulo | `damage` (float, 0.25 por defecto) |
+| `HazardZone` | Rectángulo | `damage` (float, 0.25) · `sube` (px/s: la inundación) · `sube_hasta` (y del mapa donde para) · `arranca_con` (evento de un `EventTrigger`) |
 | `DeathPit` | Rectángulo | — (caer aquí mata) |
 | `CameraLock` | Rectángulo | `lock_x`, `lock_y` (bool) |
 | `Waypoint` | Punto | `owner_id` — ruta para la entidad con ese nombre |
 | `Light` | — | — |
+| `Cutscene` | Rectángulo o punto | `guion` **obligatoria** · `bloquea` · `saltable` · `una_vez` · `arranca_con`. Punto = al empezar; rectángulo = al entrar |
 | `Pickup` | — | — |
 | `Key` | — | — |
 | `Door` | — | — |
@@ -336,6 +337,7 @@ Para instrucciones detalladas de registro y pruebas, consultar el documento orig
 | `MovingPlatform` | — | — |
 | `RhythmBlock` | — | — |
 | `SinkingPlatform` | — | — |
+| `Spring` | — | — |
 | `Guard` | — | — |
 | `Stalker` | — | — |
 | `Vine` | — | — |
@@ -391,6 +393,6 @@ propiedad del objeto en Tiled.
 | *(ninguno)* o `Solid` | Colisión AABB completa |
 | `Platform` | Plataforma atravesable desde abajo |
 
-Total aceptado en `Objects`: **60** tipos.
+Total aceptado en `Objects`: **62** tipos.
 
 <!-- END GENERATED: tipos de objeto -->

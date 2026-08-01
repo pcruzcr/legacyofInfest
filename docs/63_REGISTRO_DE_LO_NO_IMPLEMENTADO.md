@@ -53,6 +53,7 @@ Comprobado con análisis de alcanzabilidad sobre todo el árbol.
 | `sincronizar_salud` | ECS | Quedó sin usar al pasar `Salud` a componente-vista (F5) |
 | `build_gradient` | VFX | Sin usos |
 | `crossfade_ambient`, `set_ambient_volume` | `audio_manager.py` | API de audio escrita y nunca llamada |
+| Audio ambiental por clima | `stage_scene.py` + `weather_system.py` | El código busca `assets/sfx/ambient/{rain,wind,storm}.wav` y esa carpeta **no existe** (los 7 SFX reales viven en `assets/sfx/environment/` con otros nombres). El `.exists()` lo silencia, así que el clima no suena y nadie se entera. Falta o bien renombrar los assets a `ambient/{rain,wind,storm}.wav` o mapear clima → archivo real |
 | `check_player_contact` | `enemy_archer.py` | El resto de enemigos usa `_check_player_contact`; éste quedó público y suelto |
 | `on_stage_start`, `on_player_landed`, `on_enemy_died`, `on_next_trigger_entered` | plantilla de estudiante | **Correcto que estén sin usar.** Son los ganchos que el estudiante rellena |
 | `ComboDemoScene`, `LeaderboardScene`, `LoadingScene`, `PipelineBuilderScene`, `ProgressScene`, `SandboxScene`, `StageWizardScene` | escenas | Falso positivo: el registro las construye por cadena |
@@ -145,7 +146,7 @@ Esto no sale del barrido automático: sale de la auditoría de agosto
 | **Buses de mezcla, ducking, reverberación por zona** | audio | 1 semana |
 | **Atlas de sprites y batching** | gráficos y rendimiento | 1 semana |
 | **Post-procesado en GPU** (la tubería existe y no se usa para esto) | gráficos y rendimiento | 1 semana |
-| **Cutscenes: acciones nuevas, guiones desde TMX, no bloquear** | narrativa | 3–4 días |
+| ~~Cutscenes: acciones nuevas, guiones desde TMX, no bloquear~~ | **HECHO** (AUD-136). Tipo `Cutscene`, guion en texto, escenas que no bloquean y salto que ejecuta el final | — |
 | **Curva de dificultad medida** de los 15 escenarios | diseño | 3 días |
 | **Partir `stage_scene.py`** (1.549 líneas) | mantenibilidad | 1 semana |
 | **Mutación y resistencia en CI** | QA | 3 días |

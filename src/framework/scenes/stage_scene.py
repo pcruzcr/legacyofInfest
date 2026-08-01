@@ -100,6 +100,13 @@ class StageScene(BaseScene):
         self._hazards = HazardSystem(context)
         # F4.1 — recogibles, cerraduras, cofres y disparadores.
         self._interactables = InteractableSystem(bus=context.event_bus)
+        # AUD-136 (D3) — el director de escenas. Se construye al cargar el
+        # escenario; `_escenas_vistas` vive en la ESCENA y no en el director
+        # para que sobreviva a las muertes: recargar el mapa crea objetos
+        # nuevos, y sin esta memoria la introducción se repetiría en cada
+        # intento.
+        self._cutscenes: Any | None = None
+        self._escenas_vistas: set[str] = set()
         # F5 — el mundo ECS del escenario: viento, plataformas móviles, láseres,
         # agua, guardias y acosadores. Uno por escena y no global, para que dos
         # escenarios cargados a la vez —el juego y una previsualización— no se
@@ -283,6 +290,8 @@ class StageScene(BaseScene):
         # Sin esto, morir ahogado dejaría el agua arriba y el reintento sería
         # imposible: el fallo clásico de las mecánicas con estado.
         self._hazards.reset(self._stage_data)
+        if self._cutscenes is not None:
+            self._cutscenes.reset()
         # F4.1: el sistema se reconstruye por escenario. Reutilizar el anterior
         # arrastraría el llavero y las puertas ya abiertas al siguiente nivel.
         self._interactables = InteractableSystem(
@@ -292,6 +301,7 @@ class StageScene(BaseScene):
             disparadores=self._stage_data.disparadores,
             bus=self.context.event_bus,
         )
+        self._montar_director_de_escenas()
         self._configurar_vfx_opcionales()
         self._poblar_mundo_ecs()
         self._progression.reset()
@@ -895,9 +905,16 @@ class StageScene(BaseScene):
             self._handle_pause_input()
             return
         self._check_player_death()
-        if not self._game_over:
+        # AUD-136 (D3) — las escenas van ANTES del juego y pueden pararlo.
+        #
+        # Una escena que bloquea congela al jugador y a los enemigos, pero no
+        # el resto: la cámara del guion tiene que poder moverse, el clima
+        # sigue, el diálogo se actualiza. Por eso esto no es una vuelta
+        # temprana sino una condición sobre las dos llamadas de juego.
+        en_escena = self._actualizar_escenas(dt)
+        if not self._game_over and not en_escena:
             self._update_gameplay(dt)
-        if not self._game_over:
+        if not self._game_over and not en_escena:
             self._update_camera_map(dt)
         if not self._game_over and not self._progression.stage_complete:
             self._update_audio(dt)
@@ -1307,6 +1324,63 @@ class StageScene(BaseScene):
                 )
             self.context.event_bus.emit(Events.STAGE_COMPLETE, stage_id=stage.stage_id)
 
+    def _actualizar_escenas(self, dt: float) -> bool:
+        """Corre el director. Devuelve `True` si el juego debe quedarse quieto.
+
+        El salto se lee con CANCEL, la misma tecla con la que stage 0 lo hacía
+        a mano, pero ahora saltar **ejecuta el final** del guion en vez de
+        tirarlo a medias (`CutsceneScript.saltar`).
+        """
+        director = self._cutscenes
+        if director is None or self._player is None:
+            return False
+        im = self.input
+        saltar = bool(im is not None and im.is_action_just_pressed(Action.CANCEL))
+        director.update(dt, self._player.rect, saltar=saltar)
+        return bool(director.bloquea)
+
+    def _montar_director_de_escenas(self) -> None:
+        """AUD-136 (D3) — conecta las escenas del TMX con el motor.
+
+        Antes de esto, el único escenario del proyecto que reproducía una
+        cutscene era stage 0, a mano, apagando el guion desde fuera tocando un
+        atributo privado. El sistema de escenas estaba escrito, probado y sin
+        nadie que lo ejecutara: la novena vez este mes que aparece el mismo
+        patrón —código correcto que no llega al jugador—.
+        """
+        from src.framework.stage.cutscene_director import CutsceneDirector
+        from src.framework.stage.cutscene_guion import ContextoDeGuion
+
+        stage = self._stage_data
+        if stage is None:
+            self._cutscenes = None
+            return
+        entidades = {
+            nombre: e for e in stage.entity_list
+            if (nombre := getattr(e, "name", "") or getattr(e, "entity_id", ""))
+        }
+        contexto = ContextoDeGuion(
+            camara=self._camera,
+            jugador=self._player,
+            bus=self.context.event_bus,
+            dialogo=self._dialogue,
+            entidades=entidades,
+        )
+        self._cutscenes = CutsceneDirector(
+            contexto,
+            getattr(stage, "escenas", []),
+            bus=self.context.event_bus,
+            vistas=self._escenas_vistas,
+        )
+        if self._cutscenes.errores:
+            # Los errores de guion no cancelan la escena —se ignora la línea y
+            # se sigue—, pero tienen que verse: un guion que calla es un guion
+            # que el estudiante da por bueno.
+            import logging
+            registro = logging.getLogger(__name__)
+            for error in self._cutscenes.errores:
+                registro.warning("guion de escena en %s: %s", stage.stage_id, error)
+
     def _update_audio(self, dt: float) -> None:
         if self._dynamic_music is None:
             return
@@ -1556,6 +1630,10 @@ class StageScene(BaseScene):
         # se pintaba dentro de `_drawing.draw` y el ambiente la multiplicaba:
         # medido, el HUD perdía el 58 % de su brillo y el indicador de combo
         # desaparecía por completo.
+        # AUD-136 — las escenas se dibujan sobre el mundo y bajo la interfaz:
+        # las bandas cinematográficas tienen que tapar el juego, no el HUD.
+        if self._cutscenes is not None:
+            self._cutscenes.draw(surface)
         self._drawing.draw_ui(ctx)
         self._minimap.draw(surface)
         # Captions render after post-processing so the colourblind filter does

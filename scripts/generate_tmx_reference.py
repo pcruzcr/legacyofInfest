@@ -77,6 +77,10 @@ def build_table() -> str:
         "DeathPit": ("Rectángulo", "— (caer aquí mata)"),
         "CameraLock": ("Rectángulo", "`lock_x`, `lock_y` (bool)"),
         "Waypoint": ("Punto", "`owner_id` — ruta para la entidad con ese nombre"),
+        "Cutscene": ("Rectángulo o punto",
+                     "`guion` **obligatoria** · `bloquea` · `saltable` · "
+                     "`una_vez` · `arranca_con`. Punto = al empezar; "
+                     "rectángulo = al entrar"),
     }
     for name in BUILTIN_OBJECT_TYPES:
         geometry, props = structural.get(name, ("—", "—"))

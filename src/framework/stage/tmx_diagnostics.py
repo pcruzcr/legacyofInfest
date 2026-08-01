@@ -55,6 +55,8 @@ BUILTIN_OBJECT_TYPES: tuple[str, ...] = (
     "CameraLock",
     "Waypoint",
     "Light",
+    #: AUD-136 (D3) — una escena narrativa con su guion en una propiedad.
+    "Cutscene",
     # F4.1 — objetos con los que el jugador interactúa.
     #
     # `Key` es un alias de `Pickup` y `LockedDoor` de `Door`: el motor los
