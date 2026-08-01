@@ -108,7 +108,7 @@ Unifica teclado + joystick. Métodos: `is_action_just_pressed` (alias `is_action
 
 ### 4.1 `audio_manager.py` — `AudioManager`
 La doc describe `play_music(name, loop, fade_ms)`, `stop_music`, `play_sfx(name, volume)`, `set_music/sfx_volume`. El código **cambia la firma**: `play_music(path, loops=-1)` (sin `fade_ms`), y añade un conjunto enorme:
-- Música dinámica por capas: `play_dynamic_music(calm, combat)`, `set_music_intensity`, `update_dynamic_music` (crossfade calm↔combat según intensidad 0..1).
+- Música dinámica por capas: vive en `src/framework/audio/dynamic_music.py` (`DynamicMusicSystem`), no en `AudioManager`. Su API es `set_zone(zone, bgm_track)`, `set_intensity(level)` y `detect_intensity_from_state(has_boss, has_alive_enemies)`, con intensidades `INTENSITY_CALM/COMBAT/BOSS`; `StageScene` la maneja.
 - Música ambiental: `play_ambient`, `stop_ambient`, `set_ambient_volume`, `crossfade_ambient`.
 - `play_stinger` (SFX corto sobre la música), `play_sfx_at(name, world_x, screen_center_x, volume)` (**pan estéreo posicional** — no documentado), `pause_music/resume_music`, `toggle_mute`, propiedades `music_volume/sfx_volume/is_muted/current_music`.
 - **Tolerancia a fallos:** nunca crashea ante archivos faltantes (loguea warning).

@@ -227,6 +227,8 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── progression_system.py      # ProgressionSystem: stage completion, triggers
 │   │   │   ├── drawing_system.py          # DrawingSystem: layered rendering pipeline
 │   │   │   ├── cutscene_system.py         # CutsceneSystem: scripted cutscenes
+│   │   │   ├── cutscene_director.py       # CutsceneDirector: escenas declaradas en TMX (AUD-136)
+│   │   │   ├── cutscene_guion.py          # analizar_guion: texto de guion a acciones (AUD-136)
 │   │   │   ├── speedrun_mode.py           # SpeedrunTimer: global timer + ghost data
 │   │   │   ├── boss_rush_mode.py          # BossRushMode: consecutive boss gauntlet
 │   │   │   ├── day_night.py               # DayNight: day/night cycle system

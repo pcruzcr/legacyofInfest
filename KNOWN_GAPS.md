@@ -137,7 +137,7 @@ Nunca borrar entradas - marcar como resueltas.
   parámetros `scale`, `size`, `alpha` que la implementación soporta.
 - **Resolution:** Se actualizó `22_API_CONTRACTS.md` §5.2 con la firma completa.
 
-## [GAP-013] Sin acceso programático al estado del EventBus para debugging
+## ~~[GAP-013] Sin acceso programático al estado del EventBus para debugging~~ *(Resuelto - 1.0.0)*
 
 - **File:** `src/engine/core/event_bus.py`
 - **Phase:** UX
@@ -149,6 +149,9 @@ Nunca borrar entradas - marcar como resueltas.
   `subscribers_snapshot` a `EventBus`. El overlay F3 en StageScene puede entonces
   mostrar: cola actual, suscriptores por evento, eventos despachados en el
   último frame.
+- **Status:** Implementado — `EventBus.queue_snapshot` y
+  `EventBus.subscribers_snapshot` existen (`src/engine/core/event_bus.py:236,241`)
+  y `debug_overlay.py` ya los consume.
 
 ## ~~[GAP-014] Faltan visualización de rects de colisión en runtime~~ *(Resuelto - F1 debug overlay suficiente)*
 
