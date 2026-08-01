@@ -63,7 +63,7 @@ VISTAS_VALIDAS: frozenset[str] = frozenset({"lateral", "cenital"})
 _TIPOS_DE_COMPONENTE: frozenset[str] = frozenset({
     "WindZone", "FrictionZone", "Conveyor", "LaserZone", "ShockwaveZone",
     "WaterZone", "MovingPlatform", "RhythmBlock", "SinkingPlatform",
-    "Guard", "Stalker", "Vine", "Zipline",
+    "Guard", "Stalker", "Vine", "Zipline", "Spring",
 })
 
 if TYPE_CHECKING:
@@ -905,6 +905,9 @@ class StageLoader:
             consume_llave=cls._bool_de(props.get("consume_llave"), por_defecto=False),
             mensaje_bloqueado=str(props.get("mensaje", "")),
             evento_al_abrir=str(props.get("evento", "")),
+            # AUD-132 — interruptor y puerta cronometrada, desde Tiled.
+            abre_con_evento=str(props.get("abre_con", "")),
+            cierra_en=cls._safe_float(props.get("cierra_en", 0.0), "cierra_en"),
         ))
 
     @classmethod
@@ -981,6 +984,7 @@ class StageLoader:
             Liana,
             PlataformaHundible,
             PlataformaMovil,
+            Resorte,
             Solido,
             Tirolesa,
             Transform,
@@ -1011,7 +1015,17 @@ class StageLoader:
         # tiene que saber cuál es cuál.
         grupo: list[object]
 
-        if obj_type == "WindZone":
+        if obj_type == "Spring":
+            # AUD-131 — resorte. El rectángulo es la zona de contacto, así que
+            # un resorte dibujado ancho rebota en todo su ancho: es lo que el
+            # diseñador ve en Tiled y por tanto lo que espera.
+            grupo = [Resorte(
+                rect=rect,
+                impulso=f("impulso", -520.0),
+                rearme=f("rearme", 0.15),
+            )]
+
+        elif obj_type == "WindZone":
             grupo = [ZonaDeViento(
                 rect=rect,
                 fuerza=pygame.Vector2(f("fuerza_x", 0.0), f("fuerza_y", 0.0)),

@@ -1106,6 +1106,10 @@ class StageScene(BaseScene):
         p.registrar(Fase.IA, "conos_de_vision", ecs_systems.sistema_conos_de_vision)
         p.registrar(Fase.IA + 1, "alerta", ecs_systems.sistema_alerta)
         p.registrar(Fase.IA + 2, "acosador", ecs_systems.sistema_acosador)
+        # AUD-131 — el resorte va **antes** del viento y de la integración:
+        # impone la velocidad de rebote y deja que el resto del fotograma la
+        # use. Después, la colisión del suelo la habría puesto a cero.
+        p.registrar(Fase.FUERZAS, "resortes", ecs_systems.sistema_resortes)
         p.registrar(Fase.FUERZAS, "viento", ecs_systems.sistema_viento)
         p.registrar(
             Fase.FUERZAS + 1, "corriente", ecs_systems.sistema_corriente_de_agua,

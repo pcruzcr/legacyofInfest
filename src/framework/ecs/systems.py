@@ -44,6 +44,7 @@ from src.framework.ecs.components import (
     Liana,
     PlataformaHundible,
     PlataformaMovil,
+    Resorte,
     Salud,
     Solido,
     Tirolesa,
@@ -59,6 +60,32 @@ from src.framework.ecs.world import EntityId, World
 # ══════════════════════════════════════════════════════════════
 # Fase FUERZAS — modifican la velocidad antes de integrarla
 # ══════════════════════════════════════════════════════════════
+
+
+def sistema_resortes(mundo: World, dt: float) -> None:
+    """Rebota a quien cae sobre un resorte.
+
+    AUD-131 — corre en la fase de FUERZAS, **antes** de que el jugador
+    resuelva su colisión, para que el impulso ya esté puesto cuando se
+    integra. Si corriera después, el jugador aterrizaría sobre el resorte, la
+    colisión le pondría la velocidad vertical a cero, y el rebote se perdería
+    en el mismo fotograma en que se disparó.
+
+    Sólo rebota quien **baja**: `v.v.y > 0`. Tocar el resorte de lado o desde
+    abajo no hace nada, que es lo que el jugador espera al verlo.
+    """
+    for _, muelle in mundo.cada(Resorte):
+        if muelle._espera > 0.0:
+            muelle._espera = max(0.0, muelle._espera - dt)
+        for entidad in mundo.con(Transform, Velocidad):
+            t = mundo.obtener(entidad, Transform)
+            if t is None or not muelle.rect.colliderect(t.rect):
+                continue
+            v = mundo.obtener(entidad, Velocidad)
+            if v is None or v.v.y <= 0.0 or not muelle.listo:
+                continue
+            v.v.y = muelle.impulso
+            muelle._espera = muelle.rearme
 
 
 def sistema_viento(mundo: World, dt: float) -> None:
