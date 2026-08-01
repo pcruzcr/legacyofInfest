@@ -173,6 +173,32 @@ class HazardZone:
 
 
 @dataclass
+class EscenaGuionizada:
+    """Una cutscene declarada en el TMX. AUD-136 (D3).
+
+    Hasta ahora una escena narrativa sólo se podía montar desde Python:
+    importar tres clases, construir acciones y arrancarlas a mano. En un curso
+    donde el estudiante trabaja en Tiled, eso significa que las escenas son
+    cosa del profesor. Con esto son cosa de quien diseña el nivel.
+    """
+
+    #: Zona que la dispara al entrar el jugador. Vacía (un punto en Tiled) =
+    #: se dispara al empezar el escenario.
+    rect: pygame.Rect
+    guion: str = ""
+    bloquea: bool = True
+    saltable: bool = True
+    una_vez: bool = True
+    #: Nombre de un evento del bus que la arranca, en vez de la posición.
+    arranca_con: str = ""
+    disparada: bool = False
+
+    @property
+    def al_empezar(self) -> bool:
+        return self.rect.width <= 0 or self.rect.height <= 0
+
+
+@dataclass
 class DeathPit:
     rect: pygame.Rect
 
@@ -225,6 +251,8 @@ class StageData:
     message_triggers: list[MessageTrigger] = field(default_factory=list)
     hazard_zones: list[HazardZone] = field(default_factory=list)
     death_pits: list[DeathPit] = field(default_factory=list)
+    #: AUD-136 — escenas narrativas declaradas en el TMX.
+    escenas: list[EscenaGuionizada] = field(default_factory=list)
     camera_locks: list[CameraLock] = field(default_factory=list)
     lights: list[LightSpec] = field(default_factory=list)
     #: F4.1 — objetos con los que el jugador interactúa.
@@ -305,6 +333,15 @@ _NUMERIC_PROPS: tuple[str, ...] = (
 
 class StageLoader:
     _entity_registry: dict[str, type[BaseEntity]] = {}
+    #: Todo lo que se registró alguna vez (AUD-144).
+    #:
+    #: Varias pruebas hacen `StageLoader._entity_registry.clear()` para
+    #: empezar de cero. Eso vacía también los tipos que registran los
+    #: escenarios a nivel de módulo —`LaSodaWalkerRaton`, `BossGavilan`…— y,
+    #: como el módulo ya está importado, sus efectos de importación no se
+    #: repiten. Este registro histórico no se vacía nunca: el cargador lo
+    #: usa para devolver al registro lo que falte antes de procesar el mapa.
+    _registro_historico: dict[str, type[BaseEntity]] = {}
     #: Escenarios cuyo paquete ya se intentó importar (AUD-106).
     _escenarios_ya_importados: set[str] = set()
     # (resolved path, mtime_ns, size) -> parsed pytmx map. See _parse_tmx.
@@ -323,9 +360,21 @@ class StageLoader:
         dentro de la escena. Sólo se hace **una vez por escenario** y sólo
         cuando ya ha habido un tipo desconocido, así que no cuesta nada en el
         camino normal.
+
+        AUD-144: antes de importar se restauran del registro histórico los
+        tipos que alguien vació. Un módulo re-importado no repetiría sus
+        efectos, así que esta copia es lo único que puede devolverlos.
         """
         import importlib
         import pkgutil
+
+        faltan = {
+            k: v for k, v in cls._registro_historico.items()
+            if k not in cls._entity_registry
+        }
+        if faltan:
+            cls._entity_registry.update(faltan)
+            return True
 
         nombre = tmx_path.parent.name
         if nombre in cls._escenarios_ya_importados:
@@ -355,6 +404,7 @@ class StageLoader:
     @classmethod
     def register_entity(cls, type_name: str, entity_class: type[BaseEntity]) -> None:
         cls._entity_registry[type_name] = entity_class
+        cls._registro_historico[type_name] = entity_class
 
     @classmethod
     def _parse_tmx(cls, tmx_path: Path) -> Any:
@@ -462,6 +512,7 @@ class StageLoader:
                 stage.message_triggers.clear()
                 stage.hazard_zones.clear()
                 stage.death_pits.clear()
+                stage.escenas.clear()
                 stage.camera_locks.clear()
                 stage.lights.clear()
                 stage.recogibles.clear()
@@ -737,6 +788,9 @@ class StageLoader:
 
             elif obj_type == "HazardZone":
                 cls._handle_hazard_zone(stage, obj, props)
+
+            elif obj_type == "Cutscene":
+                cls._handle_cutscene(stage, obj, props)
 
             elif obj_type == "DeathPit":
                 if obj.width > 0 and obj.height > 0:
@@ -1249,6 +1303,31 @@ class StageLoader:
             damage=damage,
             sube=max(0.0, sube),
             sube_hasta=sube_hasta,
+            arranca_con=str(props.get("arranca_con", "") or ""),
+        ))
+
+    @classmethod
+    def _handle_cutscene(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
+        """AUD-136 — `Cutscene` en Tiled.
+
+        Con rectángulo, se dispara al entrar el jugador; como punto, al empezar
+        el escenario. Sin `guion` se ignora con un aviso: una escena vacía no
+        haría nada y quitaría el mando durante un instante, que es peor que no
+        estar.
+        """
+        guion = str(props.get("guion", "") or props.get("script", "") or "")
+        if not guion.strip():
+            logger.warning(
+                "Cutscene sin propiedad 'guion' en (%s, %s): se ignora",
+                getattr(obj, "x", "?"), getattr(obj, "y", "?"),
+            )
+            return
+        stage.escenas.append(EscenaGuionizada(
+            rect=pygame.Rect(obj.x, obj.y, obj.width, obj.height),
+            guion=guion,
+            bloquea=cls._bool_de(props.get("bloquea"), por_defecto=True),
+            saltable=cls._bool_de(props.get("saltable"), por_defecto=True),
+            una_vez=cls._bool_de(props.get("una_vez"), por_defecto=True),
             arranca_con=str(props.get("arranca_con", "") or ""),
         ))
 

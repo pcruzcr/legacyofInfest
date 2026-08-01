@@ -39,7 +39,7 @@ Every asset listed here has a defined path, format, dimensions, palette constrai
 | Pixel size | 1:1 — no sub-pixel rendering |
 | Anti-aliasing | Never |
 | Transparency | Binary (fully transparent or opaque) OR smooth alpha (for effects only) |
-| Internal resolution | All assets designed for 320×224 display |
+| Internal resolution | All assets designed for the 800×600 internal render |
 
 ### 2.2 Sprite Sheet Format
 
@@ -161,9 +161,9 @@ Frame size: **32×32 pixels** for all animations.
 |---|---|---|---|---|
 | `player_idle.png` | 4 | 8 | Yes | IDLE |
 | `player_walk.png` | 8 | 12 | Yes | WALKING |
-| `player_jump.png` | 3 | 12 | No (hold last) | JUMPING |
-| `player_fall.png` | 2 | 8 | Yes | FALLING |
-| `player_crouch.png` | 2 | 8 | No (hold last) | CROUCHING |
+| `player_jump.png` | 4 | 12 | No (hold last) | JUMPING |
+| `player_fall.png` | 3 | 8 | Yes | FALLING |
+| `player_crouch.png` | 3 | 8 | No (hold last) | CROUCHING |
 | `player_short_attack.png` | 6 | 18 | No | SHORT_ATTACK |
 | `player_long_attack.png` | 10 | 16 | No | LONG_ATTACK |
 | `player_hurt.png` | 4 | 12 | No | HURT |
@@ -203,7 +203,7 @@ Location: `assets/sprites/enemies/zoneN/`
 |---|---|---|---|
 | `enemy_zoneN_walk.png` | Zone walker | 6 | 10 |
 | `enemy_zoneN_hurt.png` | Any (damage) | 3 | 12 |
-| `enemy_zoneN_die.png` | Any (death) | 6 | 8 |
+| `enemy_zoneN_die.png` | Any (death) | 5 | 8 |
 | `enemy_fly_zoneN.png` | Zone flyer | 4 | 12 |
 | `enemy_shoot_zoneN.png` | Zone shooter | 4 | 6 |
 
@@ -287,7 +287,7 @@ Multiple frame sizes per form.
 | `boss_paburu_spirit.png` | 4 | 64×80 | 8 | 10 | Yes | ✅ |
 | `boss_paburu_spirit_surge.png` | 4 | 64×80 | 12 | 14 | No | ⚠️ Placeholder |
 | `boss_paburu_hurt.png` | All | 64×64 | 4 | 12 | No | ✅ |
-| `boss_paburu_transcend.png` | Death | 64×80 | 20 | 8 | No | ✅ |
+| `boss_paburu_transcend.png` | Death | 64×64 | 20 | 8 | No | ⚠️ Placeholder |
 | `boss_paburu_stone_proyectil.png` | Form 1 | 8×8 | 3 | 8 | Yes | ⚠️ Placeholder |
 | `boss_paburu_gold_orb.png` | Form 3A | 6×6 | 3 | 12 | Yes | ⚠️ Placeholder |
 | `boss_paburu_black_orb.png` | Form 3B | 6×6 | 3 | 12 | Yes | ⚠️ Placeholder |
@@ -308,7 +308,7 @@ Location: `assets/tilesets/`
 
 | File | Used In | Theme | Size |
 |---|---|---|---|
-| `tileset_stage0.png` | Stage 0 | Neutral stone corridor | 128×128 |
+| `tileset_stage0.png` | Stage 0 | Neutral stone corridor | 1024×1024 |
 | `tileset_jungle_stone.png` | Zone 1 Stage 1-1, 1-4 | Mountain jungle with stone | 128×128 |
 | `tileset_cafeteria.png` | Zone 1 Stage 1-2 | Interior cafeteria, checkered floor | 128×128 |
 | `tileset_aulas.png` | Zone 1 Stage 1-3 | Classroom interior, wood and plaster | 128×128 |
@@ -340,15 +340,15 @@ Each tileset must contain tiles organized in the following categories (columns):
 
 Location: `assets/backgrounds/`
 
-Each stage requires three background layers: `_far`, `_mid`, `_near`. Dimensions must match or exceed the stage map width × 224px.
+Each stage requires three background layers: `_far`, `_mid`, `_near`. Dimensions must match or exceed the stage map width × 224px. Stage 0's set is the exception at 800×600 (the game's internal resolution).
 
 ### 8.1 Stage 0
 
 | File | Layer | Size | Parallax |
 |---|---|---|---|
-| `stage0/bg_stage0_far.png` | BG_Far | 320×224 | 0.15× |
-| `stage0/bg_stage0_mid.png` | BG_Mid | 640×224 | 0.40× |
-| `stage0/bg_stage0_near.png` | BG_Near | 960×224 | 0.70× |
+| `stage0/bg_stage0_far.png` | BG_Far | 800×600 | 0.15× |
+| `stage0/bg_stage0_mid.png` | BG_Mid | 800×600 | 0.40× |
+| `stage0/bg_stage0_near.png` | BG_Near | 800×600 | 0.70× |
 
 Each zone uses a single generic background set loaded by `StageLoader` using
 the pattern `bg_{zone}_{layer}.png` (e.g. `bg_zone1_far.png`). Thematic
