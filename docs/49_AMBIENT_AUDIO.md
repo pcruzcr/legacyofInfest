@@ -31,9 +31,12 @@ Ambient Audio is managed by `AudioManager` in `src/engine/audio/audio_manager.py
 - Volume: `set_music_volume(0.0–1.0)`
 
 ### 2.2 Dynamic Music (Crossfade)
-- `play_dynamic_music(calm_path, combat_path)` — loads two layers
-- `set_music_intensity(target, speed)` — crossfade between calm (0.0) and combat (1.0)
-- `update_dynamic_music(dt)` — drives interpolation per frame
+
+Dynamic music is a framework system (`src/framework/audio/dynamic_music.py`), not an `AudioManager` method:
+- `DynamicMusicSystem(audio_manager)` — built by `StageScene`
+- `set_zone(zone, bgm_track)` — names the base track for the current zone
+- `set_intensity(level)` — switch to `INTENSITY_CALM` (0), `INTENSITY_COMBAT` (1) or `INTENSITY_BOSS` (2), crossfading between `{bgm}_traverse.wav` / `{bgm}_combat.wav` / `{bgm}_boss.wav` when present
+- `detect_intensity_from_state(has_boss, has_alive_enemies)` — auto-detection used per frame by `StageScene`
 
 ### 2.3 Sound Effects (SFX)
 - `play_sfx(name, volume)` — one-shot from SoundBank

@@ -28,9 +28,9 @@ date_processed: "2026-07-31"
 1. [El bucle: qué pasa en un fotograma](#1)
 2. [Anatomía de un escenario TMX](#2)
 3. [Propiedades del mapa — las 17](#3)
-4. [Los 63 tipos de objeto, uno por uno](#4)
+4. [Los 69 tipos de objeto, uno por uno](#4)
 5. [El jugador: 26 estados y qué los provoca](#5)
-6. [Enemigos: 30 tipos y 13 estados](#6)
+6. [Enemigos: 35 tipos y 13 estados](#6)
 7. [Jefes](#7)
 8. [Iluminación, post-procesado y VFX](#8)
 9. [Clima, ciclo día/noche y estaciones](#9)
@@ -179,10 +179,10 @@ efecto, mira la consola antes que el código.
 ---
 
 <a id="4"></a>
-## 4. Los 63 tipos de objeto, uno por uno
+## 4. Los 69 tipos de objeto, uno por uno
 
-El motor acepta **63 tipos** en la capa `Objects`: 31 integrados del framework
-y 30 enemigos del registro, más `Solid` y `Platform` en `Collision`. Todos los
+El motor acepta **69 tipos** en la capa `Objects`: 32 integrados del framework
+y 35 enemigos del registro, más `Solid` y `Platform` en `Collision`. Todos los
 números se convierten a `float` automáticamente.
 
 > Un objeto **punto** (ancho y alto 0) recibe el tamaño de una baldosa, porque
@@ -242,6 +242,20 @@ avisos que conviene repetir.
 
 Sin `evento` ni nombre, se ignora con un aviso: emitir la cadena vacía no
 serviría de nada.
+
+#### `Cutscene`
+
+| Propiedad | Tipo | Por defecto | Qué hace |
+|---|---|---|---|
+| `guion` | string | - | guion de la escena: acciones en orden (mover cámara, esperar, fundir, texto, evento) |
+| `bloquea` | bool | `true` | `false` = el jugador puede moverse mientras suena |
+| `saltable` | bool | `true` | `false` = no se puede saltar la escena |
+| `una_vez` | bool | `true` | se repite en cada visita si es `false` |
+| `arranca_con` | string | - | nombre del `evento` que la dispara; vacío = al entrar en el rectángulo |
+
+Con rectángulo se dispara al entrar el jugador; como punto, al empezar el
+escenario. Sin `guion` se ignora con un aviso. Mientras dura, el escenario no
+se sigue jugando por debajo; el sistema completo está en el §13.
 
 ### 4.3 Peligros
 
@@ -519,11 +533,11 @@ enemigos suficientes antes del tramo final, el jugador nunca lo verá.
 ---
 
 <a id="6"></a>
-## 6. Enemigos: 30 tipos y 13 estados
+## 6. Enemigos: 35 tipos y 13 estados
 
 ### Los ocho arquetipos
 
-Son la base; los 22 restantes son variantes temáticas con otro aspecto y otros
+Son la base; los 27 restantes son variantes temáticas con otro aspecto y otros
 números.
 
 | Tipo | Cómo se comporta | Propiedades |
@@ -552,6 +566,25 @@ Jefe:     BossVenado
 
 **Quince de estos tipos no aparecen en ningún mapa del curso.** Si buscas
 enemigos con personalidad para tu zona, empieza por ahí.
+
+### Los enemigos de las entregas
+
+Cinco tipos más viven en los escenarios de las entregas, no en el bestiario:
+los registra el propio paquete del escenario al importarse, y por eso sólo
+existen en los mapas de su zona.
+
+| Tipo | De dónde viene | Cómo se comporta |
+|---|---|---|
+| `LaSodaWalkerRaton` | `stage1_2_la_soda` | una rata que patrulla, como `WalkerRaton` |
+| `LaSodaFlyingCucaracha` | `stage1_2_la_soda` | una cucaracha que vuela, como `FlyingCucaracha` |
+| `EstudianteInfectado` | `stage1_3_las_aulas` | un estudiante que ataca de cerca |
+| `CuadernoVolador` | `stage1_3_las_aulas` | un cuaderno que vuela por una curva |
+| `BossGavilan` | `stage3_4_boss_gavilan` | el jefe del gavilán, con fases |
+
+El cargador importa el paquete del escenario al abrir su mapa y así encuentra
+estos tipos. Si registras los tuyos **al nivel del módulo** (fuera de funciones
+y de métodos de clase), pasan a existir para todo el que abra tu mapa, incluido
+el validador.
 
 ### Los 13 estados de enemigo
 
@@ -735,14 +768,64 @@ El **sistema de diálogo** dibuja un cuadro con retrato, nombre y texto por
 letras, y encadena intervenciones. Se lanza desde un `EventTrigger` o desde el
 código del escenario.
 
-El **sistema de cutscenes** encadena acciones: mover la cámara, esperar,
-fundir, mostrar texto, emitir un evento. Mientras hay una cutscene,
-`StageScene.update` **retorna**: el juego no se sigue jugando por debajo.
+El **sistema de cutscenes** encadena acciones: mover la cámara, mover un
+personaje, esperar, fundir, temblar, sonar, mostrar texto, abrir un árbol de
+diálogo o emitir un evento. Y se escribe desde Tiled.
 
 > Un fundido a negro termina **opaco**. Hasta esta semana `FadeAction`
 > retornaba antes de dibujar el velo al completarse, y el fundido acababa
 > desfundido: un fotograma de destello justo antes del corte, exactamente
 > donde no se quiere.
+
+### 13.1 Una escena desde el mapa
+
+Se pone un objeto `Cutscene` en la capa `Objects`. Como **rectángulo**, se
+dispara cuando el jugador entra; como **punto**, al empezar el escenario.
+
+| Propiedad | Por defecto | Qué hace |
+|---|---|---|
+| `guion` | — | el guion, una orden por línea. **Obligatoria** |
+| `bloquea` | `true` | `false` = el juego sigue corriendo por debajo |
+| `saltable` | `true` | `false` = CANCEL no la salta |
+| `una_vez` | `true` | `false` = se repite cada vez que se entra |
+| `arranca_con` | — | evento de un `EventTrigger` que la lanza, en vez de la posición |
+
+El guion:
+
+```text
+# la llegada al puente
+camara 640 200 1.2
++ mover jugador 610 . 1.2      # «+» = a la vez que la línea anterior
+temblor 0.5 8
+texto Eco: El puente no aguanta.
+dialogo aviso_del_puente
+evento ROMPER_EL_PUENTE
+esperar 0.4
+```
+
+| Orden | Forma | Qué hace |
+|---|---|---|
+| `esperar` | `esperar 0.5` | pausa |
+| `camara` | `camara <x> <y> <dur>` | lleva la cámara |
+| `mover` | `mover <quién> <x> <y> <dur>` | lleva a alguien. `jugador` o el nombre del objeto en Tiled. Un `.` en una coordenada = no la toques |
+| `texto` | `texto Eco: Hola` | un cuadro; avanza con ENTER |
+| `dialogo` | `dialogo <árbol>` | abre el sistema de diálogo bueno y espera a que se cierre |
+| `evento` | `evento ABRIR` | emite al bus: abre puertas, arranca inundaciones |
+| `sonido` | `sonido SFX_X` | pide un sonido y sigue |
+| `temblor` | `temblor <dur> <fuerza>` | sacude la cámara |
+| `fundido` | `fundido entra\|sale <dur>` | funde |
+| `esperar_evento` | `esperar_evento X [tope]` | espera a que alguien emita `X`, con tope de segundos |
+
+Tres cosas que conviene saber:
+
+* **Saltar ejecuta el final, no lo cancela.** Si el guion llevaba al jugador
+  hasta la puerta y abría la puerta, saltarlo lo deja en la puerta y la puerta
+  abierta. Un botón de saltar que rompe la partida es peor que no tenerlo.
+* **`bloquea = false` es la opción interesante.** Un compañero que grita desde
+  una cornisa mientras se sigue corriendo cuenta lo mismo sin interrumpir. A la
+  tercera interrupción el jugador se las salta todas sin leerlas.
+* **Una línea que no se entiende no rompe la escena.** Se ignora, se avisa en
+  el registro y el resto del guion sigue. Un guion es contenido, no código.
 
 ---
 

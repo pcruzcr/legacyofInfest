@@ -62,6 +62,15 @@ def _motor():
     )
 
     entity_factory.ensure_registered()
+    # AUD-144: el catálogo completo incluye los tipos que registran a nivel
+    # de módulo los escenarios de las entregas (LaSoda*, BossGavilan,
+    # EstudianteInfectado, CuadernoVolador). Sin importarlos aquí, el número
+    # de enemigos depende de qué otras pruebas corrieron antes —la guía tiene
+    # que hablar del catálogo entero, no del trozo que vio la suite hasta
+    # entonces. `discover_stages()` es el mismo camino que usa el juego.
+    from src.engine.core.stage_registry import discover_stages
+
+    discover_stages()
     logros = AchievementSystem.init_instance()
 
     return {

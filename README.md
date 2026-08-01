@@ -11,7 +11,7 @@ Visión por Computadora y Reconocimiento de Patrones.
 - Debug overlay (F3) con FPS, event queue snapshot y árbol de módulos
 - Atmósfera configurable desde Tiled: iluminación por focos, clima, partículas
   de ambiente, bloom y viñeta — sin escribir una línea de Python
-- 2.177 pruebas automatizadas + validadores de TMX, assets y dependencias en CI
+- 2.210 pruebas automatizadas + validadores de TMX, assets y dependencias en CI
 
 ```
 pip install -r requirements.txt

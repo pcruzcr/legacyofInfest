@@ -104,7 +104,7 @@ Zone 1 enemies reflect the jungle campus: insects, small animals, and creatures 
 | Detection Range X | 96 px |
 | Patrol Length | 48 px |
 
-**Visual:** A large rat — gray, red eyes. Running animation. Sprite: `enemy_raton_walk.png` (6 frames, 14 FPS). Size: 14×10 px.
+**Visual:** A large rat — gray, red eyes. Running animation. Sprite: `sprite_walker_raton_walk.png` (in `assets/maps/stage1_2_la_soda/`). Size: 14×10 px.
 
 **Behavior Note:** Faster than WalkerInsect. Alert state is notably quick — players who are not attentive get caught off guard. Teaches the importance of attention to detection ranges.
 
@@ -123,7 +123,7 @@ Zone 1 enemies reflect the jungle campus: insects, small animals, and creatures 
 | Sine Frequency | 2.0 Hz |
 | Flight Speed | 45 px/s |
 
-**Visual:** A cockroach with wings spread — brown, glossy carapace. Sprite: `enemy_cucaracha_fly.png` (4 frames, 16 FPS). Size: 12×8 px. High-frequency wing beat animation.
+**Visual:** A cockroach with wings spread — brown, glossy carapace. Sprite: `sprite_flying_cucaracha_fly.png` (in `assets/maps/stage1_2_la_soda/`). Size: 12×8 px. High-frequency wing beat animation.
 
 **Behavior Note:** High sine frequency makes movement erratic at close range. Fills the vertical mid-space of the cafeteria.
 

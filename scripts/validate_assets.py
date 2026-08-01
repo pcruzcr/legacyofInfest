@@ -116,10 +116,6 @@ REQUIRED_SOUNDS = [
     "sfx/bosses/sfx_bosses_rey_spit.wav",
     "sfx/bosses/sfx_bosses_rey_split.wav",
 ]
-REQUIRED_MAPS = [
-    "maps/stage0/stage0.tmx",
-    "maps/boss_venado/boss_venado.tmx",
-]
 
 # Palette definitions: (glob_pattern, set_of_allowed_RGB_tuples)
 #
@@ -224,14 +220,22 @@ def check_sound(path: Path) -> None:
 
 # Colour budgets for painted/rendered art, which a fixed palette cannot describe.
 # These are ceilings against uncontrolled growth (a photo pasted in, a PNG saved
-# from a lossy source), not style rules. Current worst cases: bg_stage0_near.png
-# at 195 and story/h02.png at 486, so the limits below leave real headroom.
+# from a lossy source), not style rules. Worst cases at the time of writing:
+#   - story/h03.png at 196,988 and title/logo.png at 266,590: the splash/story/
+#     title screens are painted 1448x1086 plates (AUD-105) — photo-range colour
+#     counts are their nature, so the ceilings just document them.
+#   - bg_aulas_near.png at 15,785: painted zone background from a student
+#     delivery (AUD-106), the same class.
+#   - bg_stage0_near.png at 195: the original indexed art the 512 budgets were
+#     set for; those lower limits stay.
+# The old 512/1024 budgets predate both replacements and flagged the delivered
+# art as broken — a tooling-drift failure, not an art failure (AUD-011).
 COLOR_BUDGETS: list[tuple[str, int]] = [
-    ("backgrounds/**/*.png", 512),
+    ("backgrounds/**/*.png", 20000),
     ("backgrounds/*.png", 512),
-    ("story/*.png", 1024),
-    ("splash/*.png", 512),
-    ("title/*.png", 512),
+    ("story/*.png", 300000),
+    ("splash/*.png", 400000),
+    ("title/*.png", 400000),
     # AUD-011: tileset_stage0.png currently holds 108,187 colours. That is far
     # outside anything a 16x16 tile atlas should need and strongly suggests it
     # was exported from a rescaled or lossily-compressed source rather than
