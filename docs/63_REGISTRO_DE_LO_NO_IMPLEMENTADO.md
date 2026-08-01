@@ -90,18 +90,31 @@ que lo escriba en Tiled recibe un aviso de tipo desconocido.
 
 ---
 
-## 3. `05_ENEMY_SPEC.md` — un estado y cuatro sonidos
+## 3. `05_ENEMY_SPEC.md` — nombres viejos, no funciones ausentes
 
-| Prometido | Estado |
+> **Corrección (AUD-133).** La primera versión de esta sección decía que los
+> enemigos «mueren en silencio» y lo llamaba «el hallazgo jugable». **Era
+> falso, y el error fue mío.** El barrido encontró que los nombres
+> `sfx_walker_die`, `sfx_flying_die` y `sfx_shooter_die` no existen, que es
+> cierto; yo salté de ahí a «la función no existe», que no lo es.
+>
+> Comprobado después, eslabón por eslabón: `EnemyBase._die` **sí** emite
+> sonido, `StageScene` lo traduce, y los dos ficheros están en el disco.
+> `tests/test_sonido_de_muerte_llega.py` recorre la cadena entera.
+>
+> Es el falso positivo contra el que escribí el aviso en el propio script
+> —«no entiende contexto»— y que luego no me apliqué al leer su salida. Una
+> lista de hallazgos automáticos no es una lista de defectos hasta que alguien
+> comprueba cada uno contra el código.
+
+| Prometido | Estado real |
 |---|---|
-| `WIND_UP` | **No existe.** Los 13 estados de enemigo no lo incluyen. Su función la cumple `TELEGRAPHING` |
-| `detection_rect`, `patrol_origin` | No existen con ese nombre |
-| `sfx_walker_die`, `sfx_flying_die`, `sfx_shooter_die`, `death_sfx`, `hit_sfx` | **No existen.** Los enemigos mueren en silencio |
+| `WIND_UP` | **No existe**, y es correcto: `TELEGRAPHING` cumple su función. Lo que hay que corregir es el documento |
+| `detection_rect`, `patrol_origin` | Nombres viejos. Existen como `detection_range_x` y `detection_range_y` |
+| `sfx_walker_die`, `sfx_flying_die`, `sfx_shooter_die` | Nombres viejos. El motor usa **dos** sonidos por tamaño —`SFX_ENEMY_DIE_SMALL` y `_LARGE`— en vez de uno por especie, que con treinta especies es mejor diseño: dos ficheros que mantener en vez de treinta |
 
-**Los sonidos de muerte son el hallazgo jugable.** Un enemigo que muere sin
-sonido se lee como que el golpe no conectó, y es la queja número uno en
-cualquier prueba de juego con gente nueva. Está en la especificación desde el
-principio y nunca se implementó.
+**Acción:** reescribir la especificación contra el código. No hay nada que
+implementar aquí.
 
 ---
 
@@ -134,7 +147,6 @@ Esto no sale del barrido automático: sale de la auditoría de agosto
 | **Post-procesado en GPU** (la tubería existe y no se usa para esto) | gráficos y rendimiento | 1 semana |
 | **Cutscenes: acciones nuevas, guiones desde TMX, no bloquear** | narrativa | 3–4 días |
 | **Curva de dificultad medida** de los 15 escenarios | diseño | 3 días |
-| **Sonidos de muerte de enemigo** (§3) | sensación de juego | 1 día |
 | **Partir `stage_scene.py`** (1.549 líneas) | mantenibilidad | 1 semana |
 | **Mutación y resistencia en CI** | QA | 3 días |
 | **15 tipos de objeto sin usar en ningún mapa**, 10 de ellos enemigos | contenido | 2 días |
@@ -150,7 +162,7 @@ De la tabla de viabilidad, lo que sigue sin hacer:
 | ~~Resortes y rebotes~~ | **HECHO** (AUD-131). Tipo `Spring`, componente y sistema | — |
 | ~~Puertas cronometradas~~ | **HECHO** (AUD-132). `cierra_en`, y nunca sobre el jugador | — |
 | ~~Interruptores que cambian el mundo~~ | **HECHO** (AUD-132). `abre_con` en la puerta cierra el circuito | — |
-| Pogo (ataque abajo que rebota) | `AERIAL_SLAM` existe; falta el impulso al impactar | 2 h |
+| ~~Pogo (ataque abajo que rebota)~~ | **HECHO** (AUD-134). Acertar devuelve impulso y recupera el dash aéreo | — |
 | Inundación que sube | Falta una `HazardZone` con `rect` móvil | 3 h |
 | Medidor de estamina | Falta; el patrón está resuelto en `special_meter` | 4 h |
 | Empujar bloques | No existe | 1 día |

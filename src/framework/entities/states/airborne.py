@@ -228,6 +228,14 @@ class AerialAttackState(PlayerStateBase):
         player._active_hitbox = None
 
 
+#: Velocidad vertical que devuelve el pogo al acertar (AUD-134).
+#:
+#: Menor que el salto (-380) a propósito: el pogo **no** debe ser una forma
+#: mejor de ganar altura que saltar, o el jugador deja de saltar. Basta con que
+#: dé tiempo a alinearse con el siguiente enemigo.
+POGO_IMPULSO: float = -300.0
+
+
 class AerialSlamState(PlayerStateBase):
     def __init__(self) -> None:
         from src.framework.entities.player import PlayerState
@@ -260,6 +268,35 @@ class AerialSlamState(PlayerStateBase):
             player._active_hitbox = pygame.Rect(hx, hy, w, h)
         else:
             player._active_hitbox = None
+
+        # AUD-134 — el pogo: acertar en el aire devuelve impulso.
+        #
+        # El estado ya existía y ya tenía caja de golpe; lo que faltaba era
+        # que **acertar significara algo**. Sin esto, el ataque aéreo hacia
+        # abajo es un ataque normal con animación distinta: se cae igual
+        # tanto si conecta como si no.
+        #
+        # Con el rebote, el jugador que encadena golpes sobre enemigos se
+        # mantiene en el aire, y eso convierte una fila de enemigos en un
+        # camino. Es la mecánica entera de Ducktales, Shovel Knight y Hollow
+        # Knight, y sale de una condición.
+        #
+        # `_hitbox_consumed` es la señal correcta porque lo pone
+        # `Player._on_hit_landed`, que es donde se sabe que el golpe
+        # **acertó** — no donde se lanzó. Premiar el lanzamiento enseñaría a
+        # dar palos al aire.
+        if player._hitbox_consumed and not self._has_hit:
+            self._has_hit = True
+            player.velocity.y = POGO_IMPULSO
+            player._combo_air_hits += 1
+            # Recuperar el dash al rebotar es lo que hace la cadena posible:
+            # sin ello, el segundo enemigo de la fila queda fuera de alcance.
+            player._air_dash_count = 0
+            player._event_bus.emit(
+                Events.VFX_SLAM, pos=(player.position.x, player.position.y))
+            from src.framework.entities.states import FallingState
+            player._change_state_instance(FallingState())
+            return
 
         player.velocity.y = 300.0
 
