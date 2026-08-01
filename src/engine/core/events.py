@@ -108,6 +108,14 @@ class Events:
     """Emitted by DialogueSystem on dialogue action. Payload: item_id."""
     FLAG_SET: str = "FLAG_SET"
     """Emitted by DialogueSystem on dialogue action. Payload: flag."""
+    DIALOGUE_FINISHED: str = "DIALOGUE_FINISHED"
+    """Emitido al cerrarse un árbol de diálogo. Carga: tree_id.
+
+    AUD-127 — antes el diálogo terminaba en silencio, así que nada podía
+    reaccionar a una conversación acabada: ni abrir una puerta, ni encadenar
+    una cutscene, ni marcar un objetivo. Una conversación que no deja rastro
+    en el juego es una pantalla de texto, no una mecánica.
+    """
 
     # ── Save / persist ──────────────────────────────────────────────
     SAVE_REQUESTED: str = "SAVE_REQUESTED"
