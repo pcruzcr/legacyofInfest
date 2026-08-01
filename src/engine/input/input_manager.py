@@ -23,6 +23,32 @@ from src.engine.input.action_map import (
 
 logger = logging.getLogger(__name__)
 
+#: Acciones que `hold_to_press` convierte en conmutador (AUD-126).
+#:
+#: Las direcciones quedan fuera a propósito: un jugador que pulsa «derecha» y
+#: se queda andando para siempre está peor que antes de la ayuda. Sólo se
+#: conmuta lo que el diseño pide sostener.
+_ACCIONES_CONMUTABLES: frozenset[Action] = frozenset({
+    Action.DASH,
+    Action.GRAB,
+    Action.CROUCH,
+    Action.LONG_ATTACK,
+})
+
+
+def _conmutar_mantener() -> bool:
+    """¿Está activada la ayuda de «mantener pulsado»?
+
+    Se consulta en cada fotograma en lugar de guardarse: el jugador puede
+    cambiarla desde el menú de pausa y esperar que surta efecto al volver, no
+    al reiniciar.
+    """
+    try:
+        from src.engine.core import user_settings
+        return bool(user_settings.get().hold_to_press)
+    except Exception:            # el juego sigue: el juego se sigue jugando
+        return False
+
 
 class InputManager:
     """Tracks keyboard + controller input with pressed/held/released semantics."""
@@ -36,6 +62,8 @@ class InputManager:
         self._released_this_frame: set[int] = set()
         self._consumed_actions: set[Action] = set()
         self._raw_keys_pressed: set[int] = set()
+        #: Acciones que el jugador dejó conmutadas a «activa» (AUD-126).
+        self._conmutadas: set[Action] = set()
 
         # Controller state
         self._joystick: Any | None = None
@@ -86,6 +114,10 @@ class InputManager:
             elif e.type == pygame.JOYAXISMOTION:
                 self._poll_axes()
 
+        # AUD-126 — una vez por fotograma, y aquí: `is_action_held` es una
+        # pregunta y una pregunta no debe tener efectos.
+        self._actualizar_conmutadas()
+
     def is_action_just_pressed(self, action: Action) -> bool:
         """True only on the frame the action's key was first pressed."""
         if action in self._consumed_actions:
@@ -99,11 +131,62 @@ class InputManager:
         return self.is_action_just_pressed(action)
 
     def is_action_held(self, action: Action) -> bool:
-        """True every frame while the action's key is held down."""
+        """True every frame while the action's key is held down.
+
+        AUD-126 — «mantener pulsado» convertido en conmutador
+        -----------------------------------------------------
+        Con `hold_to_press` activado, una pulsación **activa** la acción y la
+        siguiente la **desactiva**, en vez de exigir el dedo puesto. Para quien
+        tiene temblor, artritis o usa un conmutador adaptado, mantener una
+        tecla durante un tramo de plataformas es la diferencia entre jugar y no
+        jugar.
+
+        Se implementa aquí porque `is_action_held` es el único sitio por el que
+        pasan las 42 consultas de acción mantenida del proyecto. Hacerlo en
+        cada estado del jugador habría dependido de que 42 sitios se acordaran,
+        y basta que uno se olvide para que el ajuste parezca roto.
+
+        Las direcciones **no** se conmutan: un jugador que pulsa «derecha» y
+        se queda andando para siempre está peor que antes. Sólo se conmutan las
+        acciones que el diseño pide sostener.
+        """
+        if _conmutar_mantener() and action in _ACCIONES_CONMUTABLES:
+            return action in self._conmutadas
         keys = self._bindings.get(action, [])
         if any(k in self._held for k in keys):
             return True
         return self._action_held_from_controller(action)
+
+    def _actualizar_conmutadas(self) -> None:
+        """Aplica los flancos de subida del fotograma a las acciones conmutadas.
+
+        AUD-126 — por qué esto vive en `pump` y no en `is_action_held`
+        --------------------------------------------------------------
+        La primera versión conmutaba dentro de `is_action_held`. Parecía
+        natural y estaba mal: **esa función se consulta varias veces por
+        fotograma** —la máquina de estados del jugador, el HUD y el sistema de
+        combate preguntan cada uno por su cuenta— así que una sola pulsación
+        conmutaba dos o tres veces y la acción quedaba como estuviera, al azar
+        según cuántos sistemas hubieran preguntado ese fotograma.
+
+        Lo cazó `test_la_segunda_pulsacion_la_apaga` a la primera ejecución. Es
+        la regla general: **una consulta no debe tener efectos**. Aquí se
+        aplica una vez por fotograma, en el sitio donde ya se procesan los
+        eventos, y `is_action_held` vuelve a ser una pregunta.
+
+        Si la ayuda está apagada se limpia el conjunto: quien la prueba y la
+        quita no debe quedarse corriendo sin tocar nada y sin forma de parar.
+        """
+        if not _conmutar_mantener():
+            self._conmutadas.clear()
+            return
+        for action in _ACCIONES_CONMUTABLES:
+            keys = self._bindings.get(action, [])
+            if any(k in self._pressed_this_frame for k in keys):
+                if action in self._conmutadas:
+                    self._conmutadas.discard(action)
+                else:
+                    self._conmutadas.add(action)
 
     def is_action_released(self, action: Action) -> bool:
         """True only on the frame the action's key was released."""

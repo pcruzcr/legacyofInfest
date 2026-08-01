@@ -13,6 +13,25 @@ import pygame
 
 from src.engine.core import settings
 
+
+def _factor_de_movimiento() -> float:
+    """1,0 normalmente; `MOVIMIENTO_REDUCIDO_FACTOR` con la opción activada.
+
+    Se lee en cada disparo en vez de guardarse: el jugador puede cambiar el
+    ajuste desde el menú de pausa, y una copia en caché le obligaría a
+    reiniciar el nivel para notarlo — que es cuando la gente concluye que la
+    opción no funciona.
+    """
+    try:
+        from src.engine.core import user_settings
+        from src.engine.core.user_settings import MOVIMIENTO_REDUCIDO_FACTOR
+        if user_settings.get().reduced_motion:
+            return MOVIMIENTO_REDUCIDO_FACTOR
+    except Exception:            # el juego se dibuja igual
+        pass
+    return 1.0
+
+
 if TYPE_CHECKING:
     from src.framework.entities.base_entity import BaseEntity
 
@@ -67,7 +86,20 @@ class Camera:
             self._is_locked_y = any(line.lock_y for line in locks)
 
     def apply_shake(self, amplitude: float = 2.0, duration: float = 0.1) -> None:
-        """Trigger a screen shake. Overwrites current shake if new amplitude is larger."""
+        """Trigger a screen shake. Overwrites current shake if new amplitude is larger.
+
+        AUD-126 — «movimiento reducido» atenúa, no elimina.
+        --------------------------------------------------
+        La sacudida es la respuesta táctil de un impacto: quitarla del todo
+        borra la única señal de que algo golpeó. Se atenúa al 25 %, que basta
+        para que no provoque náusea vestibular y sigue leyéndose como golpe.
+
+        Se filtra en el disparador y no en el dibujado a propósito: así ningún
+        sistema puede saltarse el ajuste escribiendo `_shake_amplitude`
+        directamente y dejar al jugador con la pantalla temblando pese a
+        haberlo desactivado.
+        """
+        amplitude *= _factor_de_movimiento()
         if amplitude > self._shake_amplitude:
             self._shake_amplitude = amplitude
         self._shake_timer = max(self._shake_timer, duration)
