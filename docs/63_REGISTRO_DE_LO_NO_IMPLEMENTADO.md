@@ -147,13 +147,14 @@ De la tabla de viabilidad, lo que sigue sin hacer:
 
 | Mecánica | Estado real | Esfuerzo |
 |---|---|---|
-| Resortes y rebotes | **No existe.** Falta un tipo TMX que invierta `velocity.y` | 1 h |
+| ~~Resortes y rebotes~~ | **HECHO** (AUD-131). Tipo `Spring`, componente y sistema | — |
+| ~~Puertas cronometradas~~ | **HECHO** (AUD-132). `cierra_en`, y nunca sobre el jugador | — |
+| ~~Interruptores que cambian el mundo~~ | **HECHO** (AUD-132). `abre_con` en la puerta cierra el circuito | — |
 | Pogo (ataque abajo que rebota) | `AERIAL_SLAM` existe; falta el impulso al impactar | 2 h |
-| Puertas cronometradas | `Cerradura` existe sin temporizador | 3 h |
-| Interruptores que cambian el mundo | `EventTrigger` emite al bus y **nadie escucha**. Falta el receptor | 3 h |
 | Inundación que sube | Falta una `HazardZone` con `rect` móvil | 3 h |
 | Medidor de estamina | Falta; el patrón está resuelto en `special_meter` | 4 h |
 | Empujar bloques | No existe | 1 día |
+| ~~Vista cenital~~ | **HECHO** (AUD-129). `vista = cenital` en el TMX | — |
 | Bloques destructibles | Requiere `collision_rects` mutable en caliente | 1 día |
 
 **Ya implementadas** de esa misma tabla, y conviene no volver a estimarlas:
