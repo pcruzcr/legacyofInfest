@@ -419,11 +419,28 @@ class StageScene(BaseScene):
         climate = self._clima_efectivo()
         self._weather.set_climate(climate)
         if climate:
-            audio_key = self._weather.get_ambient_audio_key()
-            if audio_key and self.context.audio is not None:
-                ambient_path = settings.ASSETS_DIR / "sfx" / "ambient" / f"{audio_key}.wav"
+            # AUD-145 — el ambiente del clima ya suena.
+            #
+            # Esto construía `assets/sfx/ambient/<clave>.wav`, y esa carpeta no
+            # existe: el `.exists()` daba falso siempre y el clima era mudo en
+            # silencio. Ahora el sistema de clima devuelve la ruta del fichero
+            # real, y cuando un clima no tiene sonido se dice en el registro
+            # en vez de callarse.
+            ruta_relativa = self._weather.get_ambient_audio_key()
+            if ruta_relativa and self.context.audio is not None:
+                ambient_path = settings.ASSETS_DIR / ruta_relativa
                 if ambient_path.exists():
                     self.context.audio.play_ambient(ambient_path, volume=0.3)
+                else:
+                    logging.getLogger(__name__).warning(
+                        "el clima %r pide %s y no está en el disco",
+                        climate, ambient_path,
+                    )
+            elif self._weather.falta_su_ambiente():
+                logging.getLogger(__name__).warning(
+                    "el clima %r no tiene sonido ambiente todavía: falta el "
+                    "fichero en assets/sfx/environment/", climate,
+                )
 
         self._setup_lighting()
         self._setup_post_processing()
