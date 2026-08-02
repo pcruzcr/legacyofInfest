@@ -13,6 +13,18 @@ from src.framework.scenes.stage_scene import StageScene
 
 
 class Stage21Oficinas(StageScene):
+    # AUD-156 — la clase no declaraba `STAGE_ID` ni `STAGE_NAME`.
+    #
+    # Era el único escenario de los quince sin ellos, así que el mapa del mundo
+    # lo nombraba `Stage21Oficinas` —el nombre de la clase— mientras el resto
+    # del juego usaba `stage2_1`, el del TMX. Con la progresión en cadena eso
+    # significaba que terminarlo no marcaba su nodo, y el nodo sin marcar
+    # bloqueaba los seis escenarios siguientes.
+    #
+    # Se toma el valor de su propio mapa para no cambiar lo que ya haya
+    # guardado ningún jugador.
+    STAGE_ID: str = "stage2_1"
+    STAGE_NAME: str = "2-1  OFICINAS"
     # AUD-106 — ruta corregida al integrar la entrega.
     #
     # El mapa estaba junto al código. La convención del proyecto es
