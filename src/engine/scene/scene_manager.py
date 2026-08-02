@@ -235,9 +235,26 @@ class SceneManager:
         A scene that implements ``respawn()`` — every ``StageScene`` does —
         owns its own death handling, including checkpoints and the death
         animation. Anything else falls back to the title screen.
+
+        AUD-186: esto miraba **sólo la cima** de la pila, y caer en un foso
+        mandaba al título en vez de a la pantalla de game over.
+
+        La secuencia que lo rompía está en `HazardSystem` y en
+        `StageScene._kill_player`, y las dos hacen lo mismo::
+
+            event_bus.emit(Events.PLAYER_DIED)      # ENCOLA
+            scene_manager.push(GameOverScene(...))  # inmediato
+
+        `emit` no invoca a nadie: encola para el `dispatch()` siguiente. Para
+        cuando este manejador corría, el game over ya estaba encima, y
+        `GameOverScene` no tiene `respawn()`. De ahí que diera por hecho que
+        nadie sabía gestionar la muerte y se llevara por delante el game over
+        que acababan de empujar.
+
+        Se busca en toda la pila: que alguien haya empujado algo encima no
+        cambia que el escenario siga vivo debajo y sepa reaparecer.
         """
-        current = self._stack[-1] if self._stack else None
-        if current is not None and isinstance(current, _SceneWithRespawn):
+        if any(isinstance(scene, _SceneWithRespawn) for scene in self._stack):
             logger.info("SceneManager: player died — scene handles respawn")
             return
         logger.info("SceneManager: player died — returning to title")
