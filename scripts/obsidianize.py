@@ -15,8 +15,14 @@ Usage:
 
 import argparse
 import json
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
+# AUD-177: imprime emoji y flechas, y la consola de Windows usa cp1252, que no
+# los tiene.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 DOCS_DIR = Path("docs")
 PY_FILES = {"34_LIVE_CODE_u02_vector_class.py", "34_LIVE_CODE_u07_convolution.py"}

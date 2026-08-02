@@ -166,3 +166,38 @@ class TestLosObjetivosSonReales:
         herramienta en un adorno que siempre pasa."""
         assert (RAIZ / modulo).exists(), modulo
         assert (RAIZ / pruebas).exists(), pruebas
+
+
+class TestLaHerramientaNoDejaResiduo:
+    """AUD-180: mutar un módulo le cambiaba los finales de línea.
+
+    Tras una pasada, `git status` marcaba `mixer_buses.py`, `music_clock.py` y
+    `bloques.py` como modificados, y `git diff` salía **vacío**: el contenido
+    era idéntico y sólo habían cambiado los LF por CRLF. Es el diff fantasma
+    que `test_toolchain_consistency.py` ya documenta —«guardar CRLF fue lo que
+    produjo un diff de 334 archivos sin un solo cambio real»—, y aquí lo
+    producía la propia herramienta de calidad sobre los tres módulos que más
+    se miran.
+
+    Nota honesta: esta prueba sólo puede ponerse roja en Windows, que es donde
+    `os.linesep` es CRLF y donde ocurre el defecto. En Linux pasa con y sin la
+    corrección.
+    """
+
+    def test_escribir_fuente_conserva_los_finales_de_linea(self, tmp_path) -> None:
+        objetivo = tmp_path / "modulo.py"
+        objetivo.write_bytes(b"a = 1\nb = 2\n")
+
+        mut.escribir_fuente(objetivo, objetivo.read_text(encoding="utf-8"))
+
+        assert objetivo.read_bytes() == b"a = 1\nb = 2\n", (
+            "restaurar el módulo le cambió los finales de línea: el fichero "
+            "queda marcado como modificado en git sin un solo cambio real"
+        )
+
+    def test_los_modulos_del_repositorio_estan_en_lf(self) -> None:
+        """Si alguno llega ya en CRLF, la prueba de arriba mide lo que no es."""
+        for modulo, _ in mut.OBJETIVOS:
+            assert b"\r\n" not in (RAIZ / modulo).read_bytes(), (
+                f"{modulo} está guardado con CRLF; el repositorio usa LF"
+            )

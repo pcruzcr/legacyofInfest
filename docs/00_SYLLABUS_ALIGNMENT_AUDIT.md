@@ -202,7 +202,7 @@ LICENSE
 | **Matplotlib** | Syllabus-mandated | Explicitly named | ⚠ Integration point not yet defined — see B.3 |
 | **Scikit-Image** | Syllabus-mandated | Explicitly named | VisionTools, PatternRecognitionTools (internal) |
 | **Scikit-Learn** | Syllabus-mandated | Explicitly named | PatternRecognitionTools (internal) |
-| **Pillow** | Syllabus-mandated | Explicitly named | Asset validation tooling (`tools/validate_assets.py`), not runtime |
+| **Pillow** | Syllabus-mandated | Explicitly named | Asset validation tooling (`scripts/validate_assets.py`), not runtime |
 | Pygame CE | Framework implementation | Permitted under "bibliotecas complementarias" | Engine core (rendering, input, audio, scenes) |
 | SciPy (`scipy.ndimage`) | Framework implementation | Permitted under "bibliotecas complementarias" | FilterTools (internal — convolution, Gaussian blur) |
 | PyTMX | Framework implementation | Permitted under "bibliotecas complementarias" | StageLoader (internal — TMX parsing) |

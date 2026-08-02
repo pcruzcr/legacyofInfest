@@ -817,7 +817,8 @@ class TestElEscenarioDeReferencia:
     """
 
     @pytest.fixture(scope="class")
-    def escena(self):
+    @classmethod
+    def escena(cls):
         from src.engine.audio.audio_manager import AudioManager
         from src.engine.core.event_bus import EventBus
         from src.engine.core.game_context import GameContext

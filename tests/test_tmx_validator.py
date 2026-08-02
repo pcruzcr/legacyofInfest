@@ -302,7 +302,8 @@ class TestElTilesetDeclaradoEsElTilesetReal:
                 ruta = (tmx.parent / imagen.get("source", "")).resolve()
                 if not ruta.exists():   # lo cubre el validador de recursos
                     continue
-                real = Image.open(ruta).size
+                with Image.open(ruta) as _imagen:
+                    real = _imagen.size
                 declarado = (int(imagen.get("width", 0)), int(imagen.get("height", 0)))
                 if declarado != real:
                     desajustes.append(

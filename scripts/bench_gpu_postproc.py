@@ -42,6 +42,10 @@ os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 import numpy as np  # noqa: E402
 import pygame  # noqa: E402
 
+# AUD-177: imprime `→` y la consola de Windows usa cp1252, que no lo tiene.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 ANCHO, ALTO = 800, 600
 REPETICIONES = 12
 

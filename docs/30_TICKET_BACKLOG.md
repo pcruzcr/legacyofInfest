@@ -66,7 +66,7 @@ Each ticket includes a title, the files it touches, its acceptance criteria, and
 |---|---|---|---|
 | **T2.1** Implement `math_utils.py` | `src/engine/utils/math_utils.py` | All functions from `22_API_CONTRACTS.md` §5.1 implemented | S |
 | **T2.2** Implement `AssetLoader` | `src/engine/utils/asset_loader.py` | Matches `22_API_CONTRACTS.md` §5.2; caching verified | S |
-| **T2.3** Implement `SpriteSheet` | `src/engine/utils/spritesheet.py` | Matches `22_API_CONTRACTS.md` §5.3 | XS |
+| **T2.3** ~~Implement `SpriteSheet`~~ — anulado (AUD-098) | el recorte lo hace `AssetLoader.load_sprite_sheet`; el módulo aparte se retiró por ser código muerto | — | XS |
 | **T2.4** Implement `action_map.py` | `src/engine/input/action_map.py` | `Action` enum and default binding tables match `22_API_CONTRACTS.md` §3.1 and `03_ARCHITECTURE.md` §2.3 table | XS |
 | **T2.5** Implement `InputManager` | `src/engine/input/input_manager.py` | Matches `22_API_CONTRACTS.md` §3.2; pressed/held/released distinction correct | S |
 | **T2.6** Implement `SoundBank` | `src/engine/audio/sound_bank.py` | Matches `22_API_CONTRACTS.md` §4.1 | XS |
@@ -81,7 +81,7 @@ Each ticket includes a title, the files it touches, its acceptance criteria, and
 |---|---|---|---|
 | **T3.1** Implement `BaseScene` | `src/engine/scene/base_scene.py` | Abstract class matches `22_API_CONTRACTS.md` §6.1 | XS |
 | **T3.2** Implement `SceneManager` | `src/engine/scene/scene_manager.py` | Push/pop/replace call-order matches `22_API_CONTRACTS.md` §6.2 sequence diagram | S |
-| **T3.3** Implement `transitions.py` | `src/engine/scene/transitions.py` | `FadeTransition`/`WipeTransition` match `22_API_CONTRACTS.md` §6.3 | S |
+| **T3.3** ~~Implement `transitions.py`~~ — anulado (AUD-111) | las cuatro transiciones son modos de `src/engine/scenes/transition_manager.py` | — | S |
 | **T3.4** Wire `App.run()` to `SceneManager` | `src/engine/core/app.py` | Main loop calls `scene_manager.current.update/draw` every frame | S |
 | **T3.5** Build minimal `SplashScene` stub | `src/engine/scenes/splash_scene.py` (temporary, replaced in later phases) | Solid color fill, runs for 5s without crash in manual smoke test | XS |
 | **T3.6** Write Phase 3 tests | `tests/test_scene_manager.py` | All assertions from `24_TEST_PLAN.md` §5 present and passing | S |
@@ -162,10 +162,10 @@ This phase is large enough that tickets are grouped by Stage 0 zone (per `07_STA
 
 | Ticket | Files | Acceptance Criteria | Size |
 |---|---|---|---|
-| **T9.1** Author `stage0.tmx` — all zones, layers, layout | `src/stages/stage0/stage0.tmx` | All 7 zones (A–G) present per `07_STAGE0_DESIGN.md` §3; opens cleanly in Tiled | L |
+| **T9.1** Author `stage0.tmx` — all zones, layers, layout | `assets/maps/stage0/stage0.tmx` | All 7 zones (A–G) present per `07_STAGE0_DESIGN.md` §3; opens cleanly in Tiled | L |
 | **T9.2** Source/placeholder Stage 0 assets | `assets/sprites/`, `assets/tilesets/`, `assets/backgrounds/` (Stage 0 subset) | All files listed for Stage 0 in `20_ASSET_BIBLE.md` §4–12 present (placeholders acceptable) | L |
 | **T9.3** Implement `Stage0Scene` class | `src/stages/stage0/stage0.py` | Wires `StageLoader`, `Camera`, `HUD`, `MessageBox`, `ScreenBanner` | M |
-| **T9.4** Wire all 27 tutorial messages | `src/stages/stage0/stage0.tmx` (Message objects), `stage0.py` | All messages from `07_STAGE0_DESIGN.md` §4 trigger at correct X positions | M |
+| **T9.4** Wire all 27 tutorial messages | `assets/maps/stage0/stage0.tmx` (Message objects), `stage0.py` | All messages from `07_STAGE0_DESIGN.md` §4 trigger at correct X positions | M |
 | **T9.5** Wire all 5 checkpoints | `stage0.tmx`, `stage0.py` | Checkpoints activate once, restore correctly on death | S |
 | **T9.6** Implement minimal `TitleScene`/`StoryScene1-3` placeholders | `src/engine/scenes/title_scene.py`, `story_scene.py` | Scene flow Splash→Title→Story1-3→Stage0 navigable end to end | M |
 | **T9.7** Implement debug overlay (F1) | `src/engine/core/app.py` or a dedicated debug module | Renders hitboxes/hurtboxes/detection zones without crashing | S |

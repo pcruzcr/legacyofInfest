@@ -11,7 +11,13 @@ Zone layout:
 """
 import os
 import shutil
+import sys
 import xml.etree.ElementTree as ET
+
+# AUD-177: la consola de Windows usa cp1252 y aquí se imprimen los carteles del
+# nivel, que llevan acentos y signos de apertura.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 OUT_DIR = "assets/maps/stage0"
 OUT_PATH = os.path.join(OUT_DIR, "stage0.tmx")
@@ -324,7 +330,11 @@ def make_tmx():
         (5,  "Presiona A/D para moverte, W para saltar, S para agacharte"),
         (17, "Presiona ESPACIO o J para atacar. SHIFT para dashear!"),
         (37, "¡Enemigos voladores y a distancia! Usa P o K para parry."),
-        (52, "�Saltos verticales! Algunas plataformas estan muy altas. Agachate (S) para caer por plataformas de una via."),
+        # AUD-178: el `¡` de apertura se había perdido al guardar el fichero
+        # con otra codificación, y en su lugar quedó el carácter de reemplazo:
+        # el cartel mostraba un rombo con interrogante a todo el que jugara el
+        # nivel de demostración.
+        (52, "¡Saltos verticales! Algunas plataformas estan muy altas. Agachate (S) para caer por plataformas de una via."),
         (69, "¡Zonas rojas son peligrosas! Evita las areas de daño."),
         (85, "¡Combina todas tus habilidades! Presiona U para ataque definitivo."),
     ]

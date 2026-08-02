@@ -664,7 +664,7 @@ class Stage0Scene(BaseScene):
         )
     
     def on_enter(self):
-        self.controller.load_stage(Path("assets/maps/stage0.tmx"))
+        self.controller.load_stage(Path("assets/maps/stage0/stage0.tmx"))
     
     def update(self, dt: float):
         self.controller.update(dt)
@@ -1037,7 +1037,7 @@ class Stage0Scene(BaseScene):
 | `src/engine/core/settings.py` | `loi-core/settings.py` | Global constants |
 | `src/engine/scene/scene_manager.py` | `loi-core/scene/scene_manager.py` | SceneManager |
 | `src/engine/scene/base_scene.py` | `loi-core/scene/base_scene.py` | BaseScene |
-| `src/engine/scene/transitions.py` | `loi-core/scene/transitions.py` | Fade, Wipe, Slide |
+| `src/engine/scenes/transition_manager.py` | `loi-core/scene/transitions.py` | Fade, Wipe, Slide, Circle (AUD-168: el origen no era `scene/transitions.py`, retirado en AUD-111) |
 | `src/engine/input/input_manager.py` | `loi-core/input/input_manager.py` | + InputStack |
 | `src/engine/input/action_map.py` | `loi-core/input/action_map.py` | Action bindings |
 | `src/engine/core/game_context.py` | `loi-core/di/service_container.py` | ServiceContainer |

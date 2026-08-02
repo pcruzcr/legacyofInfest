@@ -60,6 +60,13 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+# AUD-177: esta herramienta imprime `→` y la consola de Windows usa cp1252, que
+# no lo tiene. Sin esto el proceso muere con UnicodeEncodeError en mitad del
+# primer módulo —no al final—, así que la comprobación de mutación no llegaba a
+# dar ningún veredicto en la máquina para la que está escrita.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 RAIZ = Path(__file__).resolve().parent.parent
 
 #: Módulos que se mutan por defecto, con las pruebas que deberían defenderlos.
@@ -174,22 +181,31 @@ class Resultado:
         return 100.0 * self.muertos / self.total if self.total else 100.0
 
 
-def _pruebas_pasan(pruebas: str, segundos: int, raiz: Path) -> bool:
-    """Corre las pruebas contra `raiz`, que es la COPIA, no el repositorio."""
-    try:
-        proceso = subprocess.run(
-            [sys.executable, "-m", "pytest", pruebas, "-x", "-q",
-             "-p", "no:cacheprovider", "--no-header", "--tb=no"],
-            check=False, capture_output=True, cwd=raiz, timeout=segundos,
-            env={"SDL_VIDEODRIVER": "dummy", "SDL_AUDIODRIVER": "dummy",
-                 "PATH": "/usr/bin:/bin:/usr/local/bin", "HOME": str(Path.home()),
-                 "PYTHONPATH": str(raiz)},
-        )
-    except subprocess.TimeoutExpired:
-        # Un mutante que cuelga la suite cuenta como muerto: el cambio tuvo
-        # consecuencias, que es justo lo que se estaba midiendo.
-        return False
-    return proceso.returncode == 0
+# AUD-170 — aquí vivía una segunda definición de `_pruebas_pasan`.
+#
+# Este módulo declaraba la función **dos veces**: ésta, de tres parámetros
+# (`pruebas, segundos, raiz`), que corría la suite contra una copia con un
+# entorno construido desde cero; y la de más abajo, de dos parámetros, que
+# corre contra `RAIZ` heredando `os.environ`. En Python la segunda gana, así
+# que ésta llevaba tiempo siendo código inalcanzable — y el único sitio que
+# llama a la función lo hace con dos argumentos.
+#
+# Se retiró la de tres. No es una elección estética:
+#
+# * la versión viva explica en su propio comentario por qué el entorno tiene
+#   que heredarse (sin la ruta de paquetes del usuario, pytest no encuentra
+#   pygame y **todos** los mutantes mueren por la razón equivocada, que en una
+#   herramienta de mutación significa dar por buena una suite que no lo es);
+# * su `PATH` fijo a `/usr/bin:/bin:/usr/local/bin` no existe en Windows, que
+#   es donde se desarrolla este repositorio;
+# * mientras estaban las dos, `ruff` fallaba con F811 sobre `scripts/`, que
+#   está dentro del alcance que el CI lintea.
+#
+# Lo que la muerta hacía mejor —trabajar sobre una copia en vez de sobre el
+# árbol real— no se pierde por descuido: aquí se muta el repositorio a
+# propósito, y por eso existen el respaldo en disco y los manejadores de
+# señal de `medir`. Si algún día se quiere mutar sobre copia, se cambia esa
+# decisión entera, no se deja media implementación muerta esperando.
 
 
 #: Sufijo del respaldo que se deja en disco mientras se muta.
@@ -239,6 +255,19 @@ def restaurar_pendientes(verboso: bool = True) -> list[str]:
     return reparados
 
 
+def escribir_fuente(destino: Path, fuente: str) -> None:
+    """Escribe un módulo sin traducir los finales de línea.
+
+    AUD-180: `Path.write_text` sin `newline` traduce cada `\\n` al separador del
+    sistema, así que en Windows escribía CRLF. Restaurar el original dejaba los
+    tres módulos críticos marcados como modificados en git **sin un solo cambio
+    real** — el mismo diff fantasma que ya documenta
+    `tests/test_toolchain_consistency.py`, sólo que aquí lo producía la propia
+    herramienta de calidad, y justo sobre los ficheros que más se miran.
+    """
+    destino.write_text(fuente, encoding="utf-8", newline="")
+
+
 def _pruebas_pasan(pruebas: str, segundos: int) -> bool:
     try:
         proceso = subprocess.run(
@@ -278,7 +307,7 @@ def medir(ruta_modulo: str, ruta_pruebas: str, *, maximo: int = 25,
     indices = list(range(0, total_posibles, paso))[:maximo]
 
     def _deshacer(*_a: object) -> None:
-        modulo.write_text(original, encoding="utf-8")
+        escribir_fuente(modulo, original)
         respaldo.unlink(missing_ok=True)
 
     shutil.copy2(modulo, respaldo)
@@ -290,7 +319,7 @@ def medir(ruta_modulo: str, ruta_pruebas: str, *, maximo: int = 25,
     try:
         for indice in indices:
             mutado, descripcion = aplicar(original, indice)
-            modulo.write_text(mutado, encoding="utf-8")
+            escribir_fuente(modulo, mutado)
             if _pruebas_pasan(ruta_pruebas, segundos):
                 vivos.append(descripcion)
                 if verboso:

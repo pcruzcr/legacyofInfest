@@ -494,18 +494,49 @@ class TestDependencyManifests:
         )
         assert result.returncode == 0, result.stdout + result.stderr
 
-    def test_build_backend_is_importable(self) -> None:
+    def test_build_backend_is_one_setuptools_actually_publishes(self) -> None:
         """`setuptools.backends._legacy:_Backend` is not a real module — any
-        `pip install .` failed with ModuleNotFoundError before the fix."""
+        `pip install .` failed with ModuleNotFoundError before the fix.
+
+        AUD-175: this used to `importlib.import_module` the backend, which
+        conflated two different claims — "the name is spelled right" and
+        "setuptools happens to be installed in whatever interpreter runs the
+        tests". Only the first is the project's business: PEP 517 builds the
+        wheel in an isolated environment created from `build-system.requires`,
+        and since Python 3.12 `ensurepip` no longer ships setuptools, so a
+        fresh venv does not have it. The test failed on a correct tree.
+
+        Checking the name against the backends setuptools documents still
+        fails on the AUD-007 string, and no longer depends on the environment.
+        """
         import importlib
+        import importlib.util
         import re
+
+        valid = {
+            "setuptools.build_meta",
+            "setuptools.build_meta:__legacy__",
+        }
 
         text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
         match = re.search(r'^build-backend\s*=\s*"([^"]+)"', text, re.MULTILINE)
         assert match, "pyproject.toml declares no build-backend"
+        backend = match.group(1)
 
-        module = match.group(1).split(":")[0]
-        importlib.import_module(module)
+        requires = re.search(r"^requires\s*=\s*\[(.*?)\]", text, re.MULTILINE | re.DOTALL)
+        assert requires and "setuptools" in requires.group(1), (
+            f"build-backend is {backend!r} but build-system.requires does not "
+            f"ask for setuptools, so the backend would never be installed"
+        )
+        assert backend in valid, (
+            f"{backend!r} is not a backend setuptools publishes; expected one "
+            f"of {sorted(valid)}. `pip install .` would fail with "
+            f"ModuleNotFoundError before building anything"
+        )
+
+        # Where setuptools *is* present, hold it to the stronger claim too.
+        if importlib.util.find_spec("setuptools") is not None:
+            importlib.import_module(backend.split(":")[0])
 
     def test_no_unused_heavy_dependencies_declared(self) -> None:
         """PyYAML and pytweening were required but imported nowhere."""

@@ -425,23 +425,27 @@ class AssetLoader:
     ) -> pygame.Surface: ...
 
     @classmethod
-    def load_sound(cls, path: str | Path) -> pygame.mixer.Sound: ...
+    def load_sound(cls, path: str | Path) -> pygame.mixer.Sound | None: ...
 
     @classmethod
-    def load_spritesheet(cls, path: str | Path, frame_w: int, frame_h: int) -> "SpriteSheet": ...
+    def load_sprite_sheet(
+        cls, path: str | Path, frame_width: int, frame_height: int,
+    ) -> list[pygame.Surface]: ...
 ```
 
-### 5.3 `src/engine/utils/spritesheet.py`
+### 5.3 `src/engine/utils/sprite_atlas.py`
+
+> **AUD-168.** Esta sección documentaba `src/engine/utils/spritesheet.py` y una
+> clase `SpriteSheet` con `get_frame`/`get_frames`/`frame_count`. AUD-098 ya
+> había retirado ese módulo por ser una segunda implementación muerta que nadie
+> importaba, y corrigió `03_ARCHITECTURE.md` — pero este documento se quedó
+> atrás. El recorte de hojas de sprites lo hace `AssetLoader.load_sprite_sheet`,
+> que devuelve una lista de superficies; el empaquetado en atlas lo hace
+> `SpriteAtlas`.
 
 ```python
-class SpriteSheet:
-    def __init__(self, surface: pygame.Surface, frame_w: int, frame_h: int) -> None: ...
-
-    def get_frame(self, index: int) -> pygame.Surface: ...
-    def get_frames(self, start: int, end: int) -> list[pygame.Surface]: ...
-
-    @property
-    def frame_count(self) -> int: ...
+class SpriteAtlas:
+    """Empaqueta superficies sueltas en una textura única para reducir blits."""
 ```
 
 ---
@@ -549,44 +553,20 @@ on_exit()   → called when the scene is removed from the stack
 destroy()   → called once after on_exit() for final cleanup
 ```
 
-### 6.3 `src/engine/scene/transitions.py`
+### 6.3 Transiciones — dónde están de verdad
 
-```python
-class FadeTransition:
-    def __init__(self, duration: float = 0.5, fade_in: bool = True,
-                 color: tuple[int, int, int] = (0, 0, 0)) -> None: ...
-    def start(self) -> None: ...
-    def update(self, dt: float) -> None: ...
-    def draw(self, surface: pygame.Surface) -> None: ...
-    @property
-    def is_complete(self) -> bool: ...
-    @property
-    def is_done(self) -> bool: ...
-
-class WipeTransition:
-    def __init__(self, duration: float = 0.5, direction: str = "left_to_right") -> None: ...
-    def start(self) -> None: ...
-    def update(self, dt: float) -> None: ...
-    def draw(self, surface: pygame.Surface) -> None: ...
-    @property
-    def is_complete(self) -> bool: ...
-
-class SlideTransition:
-    def __init__(self, duration: float = 0.5, direction: str = "left") -> None: ...
-    def start(self) -> None: ...
-    def update(self, dt: float) -> None: ...
-    def draw(self, surface: pygame.Surface) -> None: ...
-    @property
-    def is_complete(self) -> bool: ...
-
-class CircleTransition:
-    def __init__(self, duration: float = 0.5, expand: bool = True) -> None: ...
-    def start(self) -> None: ...
-    def update(self, dt: float) -> None: ...
-    def draw(self, surface: pygame.Surface) -> None: ...
-    @property
-    def is_complete(self) -> bool: ...
-```
+> **AUD-168.** Aquí había una sección que documentaba
+> `src/engine/scene/transitions.py` con cuatro clases —`FadeTransition`,
+> `WipeTransition`, `SlideTransition`, `CircleTransition`—, y otros cuatro
+> documentos la citaban, uno de ellos con recuento de líneas incluido
+> («199 lines»). **Ese módulo no existe y esas clases no existen en ninguna
+> parte del árbol.** Las cuatro transiciones son cuatro *modos* de un único
+> objeto, `TransitionManager` (§6.4), seleccionados por el método que se llama:
+> `start_fade_in`, `start_wipe`, `start_slide`, `start_circle`.
+>
+> Un contrato de API que describe clases inexistentes es peor que no tener
+> contrato: quien lo lee escribe `from src.engine.scene.transitions import
+> FadeTransition` y descubre el error en tiempo de importación.
 
 ### 6.4 `src/engine/scenes/transition_manager.py`
 
@@ -603,9 +583,12 @@ class TransitionManager:
     def __init__(self) -> None: ...
     def start_fade_out(self, duration: float = FADE_DURATION) -> None: ...
     def start_fade_in(self, duration: float = FADE_DURATION) -> None: ...
-    def start_wipe(self, direction: str = "left_to_right", duration: float = 0.5) -> None: ...
-    def start_slide(self, direction: str = "left", duration: float = 0.5) -> None: ...
-    def start_circle(self, expand: bool = True, duration: float = 0.5) -> None: ...
+    def start_wipe(self, direction: str = "left", duration: float = 0.4,
+                   old_surface: pygame.Surface | None = None) -> None: ...
+    def start_slide(self, direction: str = "left", duration: float = 0.4,
+                    old_surface: pygame.Surface | None = None) -> None: ...
+    def start_circle(self, expanding: bool = True, duration: float = 0.4,
+                     old_surface: pygame.Surface | None = None) -> None: ...
     def update(self, dt: float) -> None: ...
     def draw(self, surface: pygame.Surface) -> None: ...
 
@@ -1901,9 +1884,9 @@ Este documento es la única fuente de verdad para firmas exactas de funciones y 
 
 ### 5.1 math_utils.py — Funciones: lerp, clamp, ease_in_quad, ease_out_quad, ease_in_out_quad, ease_in_cubic, ease_out_cubic, ease_out_bounce, ease_out_elastic, ease_in_sine, ease_out_sine, vec2_normalize, vec2_length, vec2_dot, vec2_distance.
 
-### 5.2 asset_loader.py — Clase AssetLoader con load_image, load_sound, load_spritesheet (todos classmethods con caché).
+### 5.2 asset_loader.py — Clase AssetLoader con load_image, load_sound, load_sprite_sheet (todos classmethods con caché). `load_sprite_sheet` devuelve `list[pygame.Surface]`; `load_sound` puede devolver `None`.
 
-### 5.3 spritesheet.py — Clase SpriteSheet con get_frame, get_frames, frame_count.
+### 5.3 sprite_atlas.py — Clase SpriteAtlas: empaqueta superficies sueltas en una textura única. (AUD-168: aquí se documentaba `spritesheet.py`, retirado en AUD-098.)
 
 ---
 
@@ -1913,9 +1896,9 @@ Este documento es la única fuente de verdad para firmas exactas de funciones y 
 
 ### 6.2 scene_manager.py — Clase SceneManager con push, pop, replace, set_stage_queue. Orden de llamada garantizado: push llama on_pause + on_enter, pop llama on_exit + on_resume, replace llama on_exit + on_enter.
 
-### 6.3 transitions.py — Clases FadeTransition, WipeTransition, SlideTransition, CircleTransition con start, update, draw, is_complete.
+### 6.3 Transiciones — no hay `transitions.py`. (AUD-168: las cuatro «clases de transición» que aquí se documentaban no existen; son cuatro modos de `TransitionManager`.)
 
-### 6.4 transition_manager.py — Clase TransitionManager con start_fade_out, start_fade_in, start_wipe, start_slide, start_circle.
+### 6.4 transition_manager.py — Clase TransitionManager con start_fade_out, start_fade_in, start_wipe, start_slide, start_circle. Los tres últimos aceptan `old_surface` y usan `duration=0.4`; el parámetro de `start_circle` se llama `expanding`.
 
 ---
 

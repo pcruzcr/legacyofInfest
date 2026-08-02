@@ -508,7 +508,7 @@ def classify_region(features: np.ndarray, model) -> str:
 
 Pillow handles image loading and format conversion for the asset pipeline. While Pygame CE can load PNG and JPEG files natively, Pillow provides more robust support for edge cases: palette-mode PNGs, indexed color images, and images that require pre-processing before being loaded as Pygame surfaces.
 
-Pillow is also used by the asset validation script (`tools/validate_assets.py`) to check that student assets conform to palette and dimension constraints.
+Pillow is also used by the asset validation script (`scripts/validate_assets.py`) to check that student assets conform to palette and dimension constraints.
 
 ### 8.3 Why It Exists
 
@@ -519,7 +519,7 @@ Some SNES-era sprite assets are created as indexed-color PNGs (palette mode `P`)
 | Rule | Description |
 |---|---|
 | Not used at runtime | Pillow is a development and validation tool; it is not imported in any engine or framework module |
-| Asset validation only | `tools/validate_assets.py` uses Pillow to check palette compliance |
+| Asset validation only | `scripts/validate_assets.py` uses Pillow to check palette compliance |
 | Not in student stage code | Students do not import Pillow |
 
 ### 8.5 Integration Rules

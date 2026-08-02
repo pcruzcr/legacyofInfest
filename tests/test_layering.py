@@ -46,6 +46,19 @@ RAIZ_DE_COMPOSICION = "src/engine/core/app.py"
 #: laboratorios académicos que enseñan lo que vive en `framework/processing`.
 CAPA_DE_APLICACION = "src/engine/scenes/"
 
+#: La única dependencia tolerada de `framework` hacia `stages` (regla L4).
+#:
+#: `entity_factory.ensure_registered()` da de alta al Venado en el registro de
+#: entidades, y para eso lo importa. Se tolera porque el Venado es el **jefe de
+#: referencia** que mantiene el equipo docente y del que copian los alumnos, no
+#: una entrega.
+#:
+#: Añadir algo aquí es afirmar «esto es material del curso, no contenido de un
+#: estudiante», y hay que justificarlo también en `03_ARCHITECTURE.md` §3.1.
+EXCEPCION_L4: frozenset[str] = frozenset({
+    "src.stages.boss_venado.boss_venado",
+})
+
 
 def _modulos_importados(fichero: pathlib.Path) -> set[str]:
     """Todos los módulos que un fichero importa, incluidos los diferidos.
@@ -163,10 +176,56 @@ def test_L3_los_escenarios_estan_aislados() -> None:
     )
 
 
+def test_L4_el_motor_no_depende_del_contenido() -> None:
+    """AUD-172 — `engine/` y `framework/` no importan de `stages/`.
+
+    `stages/` es contenido, y en su mayor parte entregas de estudiantes. Una
+    dependencia en este sentido invierte la relación: un paquete que falta o
+    que no importa deja de romper *un nivel* y pasa a romper el juego entero,
+    porque `ensure_registered()` corre antes de cargar cualquier mapa.
+
+    La comprobación no existía. La única infracción del árbol —el jefe de
+    referencia— llevaba ahí sin declararse, indistinguible de un descuido.
+    """
+    infracciones = [
+        f"{_relativo(f)} -> {m}"
+        for carpeta in ("engine", "framework")
+        for f in _ficheros(carpeta)
+        for m in _modulos_importados(f)
+        if m.startswith("src.stages") and m not in EXCEPCION_L4
+    ]
+    assert not infracciones, (
+        "el motor ha empezado a depender de un escenario concreto:\n  "
+        + "\n  ".join(sorted(infracciones))
+        + "\n\nSi es contenido de referencia del curso, decláralo en "
+          "EXCEPCION_L4 y en 03_ARCHITECTURE.md §3.1, con el porqué. Si no, "
+          "la pieza pertenece a framework/ y no a stages/."
+    )
+
+
 def test_las_excepciones_nombradas_siguen_existiendo() -> None:
     """Si desaparecen, la exclusión de L1 se vuelve una puerta abierta sin dueño."""
     assert (RAIZ / RAIZ_DE_COMPOSICION).is_file()
     assert (RAIZ / CAPA_DE_APLICACION).is_dir()
+
+    for modulo in EXCEPCION_L4:
+        ruta = SRC.parent / (modulo.replace(".", "/") + ".py")
+        assert ruta.is_file(), (
+            f"EXCEPCION_L4 nombra `{modulo}` y no existe. Una excepción a una "
+            f"regla de capas que apunta a la nada es una puerta abierta sin "
+            f"dueño: retírala de la lista"
+        )
+
+    infractores = [
+        _relativo(f)
+        for carpeta in ("engine", "framework")
+        for f in _ficheros(carpeta)
+        if _modulos_importados(f) & EXCEPCION_L4
+    ]
+    assert infractores, (
+        "ya nadie usa la excepción de L4; retírala de EXCEPCION_L4 y de "
+        "03_ARCHITECTURE.md §3.1 en vez de dejar la puerta abierta"
+    )
 
 
 def test_la_documentacion_describe_estas_mismas_reglas() -> None:
@@ -179,5 +238,5 @@ def test_la_documentacion_describe_estas_mismas_reglas() -> None:
     assert "tests/test_layering.py" in texto, (
         "§3.1 ya no dice quién comprueba sus reglas"
     )
-    for etiqueta in ("**L1**", "**L2**", "**L3**"):
+    for etiqueta in ("**L1**", "**L2**", "**L3**", "**L4**"):
         assert etiqueta in texto, f"§3.1 ya no enuncia la regla {etiqueta}"

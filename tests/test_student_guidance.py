@@ -149,7 +149,8 @@ class TestTheWrittenGuideMatchesTheEngine:
     """`docs/STAGE_CREATION.md` es la versión larga de lo mismo."""
 
     @pytest.fixture(scope="class")
-    def guide(self) -> str:
+    @classmethod
+    def guide(cls) -> str:
         return (ROOT / "docs" / "STAGE_CREATION.md").read_text(encoding="utf-8")
 
     def test_the_guide_lists_every_required_layer(self, guide: str) -> None:
@@ -339,7 +340,8 @@ class TestElMapaDeReferenciaDemuestraTodoLoQueElMotorOfrece:
     """
 
     @pytest.fixture(scope="class")
-    def cobertura(self):
+    @classmethod
+    def cobertura(cls):
         from scripts.check_tmx_coverage import MAPA_REFERENCIA, analizar
 
         return analizar(ROOT / MAPA_REFERENCIA)

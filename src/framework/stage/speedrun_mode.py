@@ -6,6 +6,7 @@ Description: Speedrun mode with global timer, splits per stage, and ghost data.
 """
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +20,49 @@ import orjson
 # sin aplicar.
 from src.engine.core.user_settings import user_data_dir
 
+logger = logging.getLogger(__name__)
+
 _DEFAULT_SAVE_PATH: Path = user_data_dir() / "saves" / "speedrun.json"
+
+
+#: Marca de «aquí no hay nada que cargar». No se usa `None` porque `null` es
+#: un contenido JSON válido: un fichero con `null` dentro devolvería `None` y
+#: se confundiría con «el fichero no existe», que es el único caso que no
+#: merece aviso.
+_AUSENTE = object()
+
+
+def _leer_json(ruta: Path) -> Any:
+    """Lee un fichero de datos del jugador. `_AUSENTE` si no se puede usar.
+
+    AUD-171. Distingue tres situaciones que antes eran una sola:
+
+    * **no existe** — normal la primera vez que se juega; ni aviso ni ruido;
+    * **existe y no es JSON** — se avisa nombrando la ruta y se sigue con los
+      valores por defecto;
+    * **existe, es JSON válido y tiene otra forma** — igual que el anterior.
+      Éste es el caso que el `except (FileNotFoundError, JSONDecodeError)`
+      anterior *no* cubría, y el que de verdad rompía: un fichero con `[]`
+      dentro hacía saltar un `AttributeError` sin capturar desde `.get()`.
+
+    La forma concreta la comprueba cada `load`; aquí sólo se garantiza que lo
+    devuelto viene de un JSON que se pudo parsear.
+    """
+    try:
+        crudo = ruta.read_bytes()
+    except FileNotFoundError:
+        return _AUSENTE
+    except OSError as e:
+        # Permisos, disco desconectado, ruta que es un directorio. No es
+        # motivo para tumbar la partida, sí para dejar rastro.
+        logger.warning("speedrun: %s es ilegible (%s); se empieza de cero", ruta, e)
+        return _AUSENTE
+
+    try:
+        return orjson.loads(crudo)
+    except orjson.JSONDecodeError:
+        logger.warning("speedrun: %s es ilegible (JSON corrupto); se empieza de cero", ruta)
+        return _AUSENTE
 
 
 class SpeedrunTimer:
@@ -78,12 +121,31 @@ class SpeedrunTimer:
         path.write_bytes(orjson.dumps(data, option=orjson.OPT_INDENT_2))
 
     def load(self, path: str | Path | None = None) -> None:
-        try:
-            data = orjson.loads(Path(path).read_bytes() if path is not None else _DEFAULT_SAVE_PATH.read_bytes())
-            self._global_time = data.get("global_time", 0.0)
-            self._splits = data.get("splits", [])
-        except (FileNotFoundError, orjson.JSONDecodeError):
-            pass
+        ruta = Path(path) if path is not None else _DEFAULT_SAVE_PATH
+        datos = _leer_json(ruta)
+        if datos is _AUSENTE:
+            return
+
+        # AUD-171: un fichero con `[]`, `42` o `null` es JSON perfectamente
+        # válido, y el `.get()` de abajo sólo existe en un diccionario.
+        if not isinstance(datos, dict):
+            logger.warning(
+                "speedrun: %s es ilegible (se esperaba un objeto y hay %s); "
+                "se empieza de cero", ruta, type(datos).__name__,
+            )
+            return
+
+        tiempo = datos.get("global_time", 0.0)
+        parciales = datos.get("splits", [])
+        if not isinstance(tiempo, (int, float)) or isinstance(tiempo, bool) or not isinstance(parciales, list):
+            logger.warning(
+                "speedrun: %s es ilegible (campos con el tipo equivocado); "
+                "se empieza de cero", ruta,
+            )
+            return
+
+        self._global_time = float(tiempo)
+        self._splits = parciales
 
     @property
     def global_time(self) -> float:
@@ -173,10 +235,22 @@ class GhostData:
         path.write_bytes(orjson.dumps(self._frames, option=orjson.OPT_INDENT_2))
 
     def load(self, path: str | Path) -> None:
-        try:
-            self._frames = orjson.loads(Path(path).read_bytes())
-        except (FileNotFoundError, orjson.JSONDecodeError):
-            pass
+        ruta = Path(path)
+        datos = _leer_json(ruta)
+        if datos is _AUSENTE:
+            return
+
+        # AUD-171: esto se asignaba a `self._frames` sin mirarlo. Con una
+        # cadena dentro del fichero, `frame_count` devolvía su longitud y
+        # `get_frame(0)` devolvía una letra: el fantasma no fallaba, mentía.
+        if not isinstance(datos, list) or not all(isinstance(f, dict) for f in datos):
+            logger.warning(
+                "speedrun: %s es ilegible (se esperaba una lista de fotogramas); "
+                "no se carga el fantasma", ruta,
+            )
+            return
+
+        self._frames = datos
 
     @property
     def frame_count(self) -> int:

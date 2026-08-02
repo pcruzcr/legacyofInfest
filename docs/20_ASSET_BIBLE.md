@@ -565,7 +565,7 @@ Students adding assets to `student_assets/` must comply with all standards in Se
 
 | Rule | Requirement |
 |---|---|
-| Palette validation | Run `tools/validate_assets.py` on all new sprites before committing |
+| Palette validation | Run `scripts/validate_assets.py` on all new sprites before committing |
 | Naming convention | Follow the same naming pattern as the asset type (see Section 2.5 of Codex) |
 | No modification of `assets/` | Students only add to `student_assets/` |
 | File format | PNG only for visuals; WAV or OGG for audio |

@@ -60,7 +60,12 @@ del juego; eso está medido aparte en `docs/67_CURVA_DE_DIFICULTAD.md`.
 """
 from __future__ import annotations
 
+import sys
 from pathlib import Path
+
+# AUD-177: imprime `←` y la consola de Windows usa cp1252, que no lo tiene.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DESTINO = PROJECT_ROOT / "assets" / "maps" / "stage_mecanicas" / "stage_mecanicas.tmx"
