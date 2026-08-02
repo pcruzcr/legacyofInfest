@@ -77,6 +77,7 @@ class TitleScene(BaseScene):
             MenuItem("INVENTORY", value="INVENTORY"),
             MenuItem("BESTIARY", value="BESTIARY"),
             MenuItem("ACHIEVEMENTS", value="ACHIEVEMENTS"),
+            MenuItem("BOSS RUSH", value="BOSS RUSH"),
             MenuItem("ACADEMIC DEMOS", value="ACADEMIC DEMOS"),
             MenuItem("OPTIONS", value="OPTIONS"),
             MenuItem("QUIT", value="QUIT"),
@@ -210,6 +211,13 @@ class TitleScene(BaseScene):
             from src.engine.scenes.achievement_scene import AchievementScene
             self.context.scene_manager.transition.start_fade_out(0.4)
             self.context.scene_manager.replace(AchievementScene(self.context))
+        elif opt == "BOSS RUSH":
+            # AUD-191: `boss_rush_mode` estaba completo y probado desde
+            # AUD-022, y su cabecera avisaba de que nada del juego lo
+            # construía. Esta rama es la puerta que faltaba.
+            from src.engine.scenes.boss_rush_entry import empezar_boss_rush
+            if empezar_boss_rush(self.context) is not None:
+                self.context.scene_manager.transition.start_fade_out(0.4)
         elif opt == "ACADEMIC DEMOS":
             from src.engine.scenes.demo_menu_scene import DemoMenuScene
             self.context.scene_manager.transition.start_fade_out(0.4)
