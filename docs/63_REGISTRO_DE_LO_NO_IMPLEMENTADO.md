@@ -45,21 +45,37 @@ Comprobado con análisis de alcanzabilidad sobre todo el árbol.
 
 | Identificador | Dónde vive | Veredicto |
 |---|---|---|
-| `GhostData` | `speedrun_mode.py` | **Decidir.** Graba la posición del jugador para el fantasma del modo speedrun. Ni se graba ni se reproduce: falta el consumidor |
+| ~~`GhostData`~~ | `speedrun_mode.py` | **HECHO** (AUD-142). Enchufado: la escena graba, guarda la mejor carrera y dibuja el fantasma anterior |
 | `ParamPanel` | `engine/scenes/param_panel.py` | **Decidir.** Widget de parámetros para las demos; ninguna demo lo instancia |
 | `SceneRegistry` | citado en 25 y 28 | Falso positivo del barrido: se usa por nombre, no por símbolo |
 | `CameraLock` | `stage_loader.py` | Se usa **sólo dentro del fichero que lo define**. Funciona; conviene mirar si la escena debería leerlo |
-| `SineFlight` | vuelo senoidal | El comportamiento existe en `EnemyFlying`; la clase suelta no la usa nadie |
-| `sincronizar_salud` | ECS | Quedó sin usar al pasar `Salud` a componente-vista (F5) |
-| `build_gradient` | VFX | Sin usos |
+| `SineFlight` | vuelo senoidal | **Falso positivo, comprobado.** La usan `make_strategy` y otras dos estrategias del mismo módulo |
+| `sincronizar_salud` | ECS | **Correcto que siga.** Es un hueco vacío a propósito desde F5.12: alguna entrega puede llamarlo y borrarlo les rompería el código |
+| `build_gradient` | VFX | **Falso positivo, comprobado.** La llama `lighting.py` para construir el degradado de cada foco |
 | `crossfade_ambient`, `set_ambient_volume` | `audio_manager.py` | API de audio escrita y nunca llamada |
 | Audio ambiental por clima | `stage_scene.py` + `weather_system.py` | El código busca `assets/sfx/ambient/{rain,wind,storm}.wav` y esa carpeta **no existe** (los 7 SFX reales viven en `assets/sfx/environment/` con otros nombres). El `.exists()` lo silencia, así que el clima no suena y nadie se entera. Falta o bien renombrar los assets a `ambient/{rain,wind,storm}.wav` o mapear clima → archivo real |
 | `check_player_contact` | `enemy_archer.py` | El resto de enemigos usa `_check_player_contact`; éste quedó público y suelto |
 | `on_stage_start`, `on_player_landed`, `on_enemy_died`, `on_next_trigger_entered` | plantilla de estudiante | **Correcto que estén sin usar.** Son los ganchos que el estudiante rellena |
 | `ComboDemoScene`, `LeaderboardScene`, `LoadingScene`, `PipelineBuilderScene`, `ProgressScene`, `SandboxScene`, `StageWizardScene` | escenas | Falso positivo: el registro las construye por cadena |
 
-**Acción recomendada:** decidir sobre `GhostData` y `ParamPanel` —o se enchufan
-o se van—, y retirar `SineFlight`, `sincronizar_salud` y `build_gradient`.
+> **Corrección (AUD-142). Tres de estas recomendaciones eran falsas, y el
+> error fue mío.** La versión anterior de esta sección decía «retirar
+> `SineFlight`, `sincronizar_salud` y `build_gradient`». Comprobado contra el
+> código, una por una:
+>
+> * `SineFlight` la usan `make_strategy` y otras dos estrategias del mismo
+>   fichero. Borrarla habría roto el vuelo de la mitad del bestiario.
+> * `build_gradient` la llama `lighting.py`. Borrarla habría apagado los focos.
+> * `sincronizar_salud` es un hueco vacío **a propósito**, documentado como
+>   tal: se dejó para que las entregas que lo llamen no se rompan.
+>
+> El barrido marca como huérfano lo que sólo se usa dentro de su propio
+> fichero, y eso no es código muerto. Es la segunda vez este mes que publico
+> una recomendación sacada de su salida sin comprobarla —la primera fue
+> AUD-133, los sonidos de muerte— y el aviso lleva escrito en el propio script
+> desde que lo escribí.
+
+**Acción pendiente:** sólo `ParamPanel`. `GhostData` ya está enchufado.
 
 ---
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import random
 from collections.abc import Callable
 from pathlib import Path
@@ -157,6 +158,11 @@ class StageScene(BaseScene):
         self._achievements.load()
         self._bestiary = Bestiary.get_instance()
         self._speedrun = SpeedrunTimer()
+        # AUD-142 — el fantasma. `GhostData` estaba escrita entera y no la
+        # usaba nadie: ni se grababa ni se reproducía. `_fantasma` es la
+        # carrera de ahora; `_fantasma_previo`, la mejor guardada.
+        self._fantasma: Any | None = None
+        self._fantasma_previo: Any | None = None
         self._dialogue = DialogueSystem(self.context)
         self._player_spawned: bool = False
         self._damage_taken_this_stage: float = 0.0
@@ -382,6 +388,7 @@ class StageScene(BaseScene):
         # Speedrun timer
         self._speedrun.start()
         self._speedrun.start_stage(self._stage_data.stage_id)
+        self._preparar_fantasma()
 
         # Track stage start for achievement timing
         self._player_spawned = True
@@ -1377,6 +1384,7 @@ class StageScene(BaseScene):
                 self._achievements.mark_speed_demon()
             self._speedrun.split(stage.stage_id)
             self._speedrun.stop()
+            self._guardar_fantasma_si_es_mejor()
             # AUD-022: the speedrun timer ran the whole stage and then threw the
             # result away — get_formatted_time() and get_splits() had no callers,
             # so the player never saw their time. Surface it on completion.
@@ -1386,6 +1394,72 @@ class StageScene(BaseScene):
                     f"CLEAR  {self._speedrun.get_formatted_time()}",
                 )
             self.context.event_bus.emit(Events.STAGE_COMPLETE, stage_id=stage.stage_id)
+
+    # ── AUD-142: el fantasma de tu mejor carrera ──────────────────
+    def _ruta_del_fantasma(self):
+        from pathlib import Path
+
+        from src.engine.core import settings
+
+        stage_id = getattr(self._stage_data, "stage_id", "") or "sin_id"
+        return Path(settings.PROJECT_ROOT) / "saves" / "fantasmas" / f"{stage_id}.json"
+
+    def _preparar_fantasma(self) -> None:
+        """Empieza a grabar esta carrera y carga la anterior, si la hay."""
+        from src.framework.stage.speedrun_mode import GhostData
+
+        self._fantasma = GhostData()
+        previo = GhostData()
+        ruta = self._ruta_del_fantasma()
+        if ruta.exists():
+            previo.load(ruta)
+        # Sin fotogramas no hay fantasma que dibujar, y `None` lo dice mejor
+        # que un objeto vacío al que hay que preguntarle siempre.
+        self._fantasma_previo = previo if previo.frame_count else None
+
+    def _guardar_fantasma_si_es_mejor(self) -> None:
+        """Sólo se guarda si esta carrera fue más corta.
+
+        Guardar siempre convertiría el fantasma en «tu última partida», que es
+        una compañía peor: el jugador quiere perseguir su mejor marca, no la
+        de hace un rato.
+        """
+        actual = self._fantasma
+        if actual is None or not actual.frame_count:
+            return
+        anterior = self._fantasma_previo
+        if anterior is not None and anterior.frame_count <= actual.frame_count:
+            return
+        try:
+            actual.save(self._ruta_del_fantasma())
+        except OSError:
+            # Un disco lleno o un directorio sin permisos no puede costar la
+            # partida a nadie: el fantasma es un adorno, no el guardado.
+            logging.getLogger(__name__).warning(
+                "no se pudo guardar el fantasma", exc_info=True)
+
+    _COLOR_FANTASMA = (140, 210, 255)
+
+    def _dibujar_fantasma(self, surface: pygame.Surface) -> None:
+        """Una silueta translúcida donde estabas en tu mejor carrera.
+
+        Translúcida y sin sprite a propósito: un fantasma opaco con la
+        animación del jugador se confunde con el jugador, y en un salto
+        difícil eso es peor que no tenerlo.
+        """
+        previo = self._fantasma_previo
+        if previo is None or self._player is None:
+            return
+        punto = previo.posicion_en(self._speedrun.global_time)
+        if punto is None:
+            return
+        x, y = punto
+        offset = self._camera.offset
+        alto = self._player.rect.height
+        ancho = self._player.rect.width
+        silueta = pygame.Surface((ancho, alto), pygame.SRCALPHA)
+        silueta.fill((*self._COLOR_FANTASMA, 90))
+        surface.blit(silueta, (int(x - offset.x), int(y - offset.y)))
 
     def _montar_reloj_musical(self) -> None:
         """AUD-137 — el compás del escenario, si lo tiene.
@@ -1497,7 +1571,6 @@ class StageScene(BaseScene):
             # Los errores de guion no cancelan la escena —se ignora la línea y
             # se sigue—, pero tienen que verse: un guion que calla es un guion
             # que el estudiante da por bueno.
-            import logging
             registro = logging.getLogger(__name__)
             for error in self._cutscenes.errores:
                 registro.warning("guion de escena en %s: %s", stage.stage_id, error)
@@ -1551,6 +1624,9 @@ class StageScene(BaseScene):
                 getattr(clock, "unscaled_dt", dt) if clock is not None else dt,
             )
         self._speedrun.update(dt)
+        if self._fantasma is not None and self._player is not None:
+            self._fantasma.grabar_si_toca(
+                dt, self._player.position.x, self._player.position.y)
         self._hazards.update(dt, self._player, self._stage_data)
         self._tutorial.update(dt, self.input)
         self._particle_system.update(dt)
@@ -1765,6 +1841,7 @@ class StageScene(BaseScene):
         # las bandas cinematográficas tienen que tapar el juego, no el HUD.
         if self._bloques is not None:
             self._dibujar_bloques(surface)
+        self._dibujar_fantasma(surface)
         if self._cutscenes is not None:
             self._cutscenes.draw(surface)
         self._drawing.draw_ui(ctx)
