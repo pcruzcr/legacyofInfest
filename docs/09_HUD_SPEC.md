@@ -17,6 +17,16 @@ date_processed: "2026-07-14"
 
 ---
 
+<!-- cita-historica -->
+> **Corrección AUD-150 — nombres que este documento daba por existentes.**
+> Comprobados uno por uno contra el código. Ninguno rompe nada al jugar; todos
+> engañan a quien lea el documento para programar.
+>
+> * `hurt_display_timer` y `reveal_count` **no existen.** Son nombres de un pseudocódigo que nunca se escribió así: el HUD no lleva esos contadores.
+> * `Message` **no es un tipo de objeto de Tiled.** El tipo se llama `MessageTrigger` (y `MessageTrigger_Once`). Un estudiante que escriba «Message» recibe un aviso de tipo desconocido.
+<!-- /cita-historica -->
+
+
 ## 1. Overview
 
 The HUD (Heads-Up Display) is the persistent on-screen layer that communicates player state, stage information, and game events to the player. All HUD elements are drawn in screen space — they do not move with the camera. They are rendered on top of all stage content on every frame.
@@ -86,14 +96,14 @@ if current_health == 0:
     portrait_state = "DEAD"
 elif current_health <= 1.0:
     portrait_state = "CRITICAL"
-elif hurt_display_timer > 0:
+elif temporizador_de_dolor > 0:
     portrait_state = "HURT"
-    hurt_display_timer -= dt
+    temporizador_de_dolor -= dt
 else:
     portrait_state = "NORMAL"
 ```
 
-The `hurt_display_timer` is set to 0.8 seconds each time `PLAYER_DAMAGED` is received.
+Ese temporizador dura 0,8 s desde cada `PLAYER_DAMAGED`. **Es pseudocódigo**: el HUD real no lleva un campo con ese nombre (AUD-150).
 
 ---
 
@@ -247,7 +257,7 @@ self.screen_banner.play(stage_id="stage0", stage_name="The Corridor of Truths")
 
 ### 7.1 Description
 
-Tutorial messages are text boxes that appear at the bottom of the screen. They are triggered by `Message` trigger zones in the TMX map (see `06_TMX_SPEC.md` §10). They communicate framework system explanations, hints, and narrative flavor to the player.
+Tutorial messages are text boxes that appear at the bottom of the screen. They are triggered by `MessageTrigger` zones in the TMX map (see `06_TMX_SPEC.md` §10). They communicate framework system explanations, hints, and narrative flavor to the player.
 
 ### 7.2 Message Box Layout
 
@@ -273,7 +283,7 @@ Tutorial messages are text boxes that appear at the bottom of the screen. They a
 
 ### 7.3 Message Reveal Animation
 
-Text reveals character by character at a rate of 30 characters per second (typewriter effect). This is implemented by tracking a `reveal_count` float that increases by `30 * dt` per frame, and rendering only the first `int(reveal_count)` characters of the current text.
+Text reveals character by character at a rate of 30 characters per second (typewriter effect). Se implementa con un contador en coma flotante que sube `30 * dt` cada fotograma y del que se dibujan sólo los primeros `int(...)` caracteres. **El nombre del campo real está en `MessageBox`**; aquí se describe el algoritmo, no la variable (AUD-150).
 
 ### 7.4 Message Dismiss
 

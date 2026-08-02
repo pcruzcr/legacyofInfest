@@ -149,6 +149,23 @@ def _inventario() -> tuple[dict[str, set[str]], dict[str, set[str]],
     return definidos, usados, cadenas, declarados
 
 
+#: AUD-150 — marcas para citar un nombre **para decir que no existe**.
+#:
+#: Al corregir `05_ENEMY_SPEC.md` apareció una paradoja incómoda: la tabla que
+#: dice «`detection_rect` no existe, es `detection_range_x`» hacía que el
+#: barrido volviera a acusar al documento de citar `detection_rect`. El
+#: documento quedaba peor **por haberse corregido**, y la única forma de
+#: bajar el contador era dejar de explicar el error.
+#:
+#: Se resuelve con una marca explícita en vez de adivinando por el texto: un
+#: `<!-- cita-historica -->` … `<!-- /cita-historica -->` alrededor de la
+#: tabla de correcciones. Explícito y aburrido, que para esto es lo que hay
+#: que ser: una heurística sobre las palabras «no existe» habría dejado fuera
+#: las tablas escritas en inglés y las que no usan esa frase.
+_ABRE_HISTORICA = "<!-- cita-historica -->"
+_CIERRA_HISTORICA = "<!-- /cita-historica -->"
+
+
 def auditar() -> list[dict]:
     definidos, usados, cadenas, declarados = _inventario()
     conocidos = set(definidos) | cadenas | _BUILTINS | _CONVENCIONES
@@ -156,8 +173,30 @@ def auditar() -> list[dict]:
     informe: list[dict] = []
     for doc in sorted((RAIZ / "docs").rglob("*.md")):
         texto = doc.read_text(encoding="utf-8", errors="replace")
+        # AUD-150 — las líneas que DESMIENTEN un nombre no cuentan como cita.
+        #
+        # Al corregir `05_ENEMY_SPEC.md` apareció una paradoja incómoda: la
+        # tabla que dice «`detection_rect` no existe, es `detection_range_x`»
+        # hacía que el barrido volviera a acusar al documento de citar
+        # `detection_rect`. El documento quedaba peor por haberse corregido.
+        #
+        # Una línea que contiene «no existe», «no exist» o un tachado de
+        # markdown está haciendo exactamente lo que este registro pide: poner
+        # la etiqueta. Se salta.
+        lineas_utiles = []
+        dentro = False
+        for linea in texto.splitlines():
+            if _ABRE_HISTORICA in linea:
+                dentro = True
+                continue
+            if _CIERRA_HISTORICA in linea:
+                dentro = False
+                continue
+            if dentro or "~~" in linea:
+                continue
+            lineas_utiles.append(linea)
         citados = {
-            m for m in _CITA.findall(texto)
+            m for m in _CITA.findall("\n".join(lineas_utiles))
             # Sólo lo que parece un identificador del proyecto.
             if (m[0].isupper() and any(c.islower() for c in m)) or "_" in m
         }
