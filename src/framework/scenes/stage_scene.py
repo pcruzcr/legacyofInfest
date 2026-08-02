@@ -77,6 +77,15 @@ MEMORIA_DEL_RATON: float = 1.5
 TINTA_DE_LA_TRAYECTORIA: tuple[int, int, int] = (236, 232, 220)
 
 
+#: Congelación al clavar una flecha, en segundos de tiempo real.
+#:
+#: AUD-196. Menos que los 0,05 s del cuerpo a cuerpo
+#: (`collision_system.HITSTOP_DURATION`): el impacto ocurre lejos del
+#: jugador y darle el mismo peso que a un golpe en la cara miente sobre
+#: lo que acaba de pasar. Con cero no se notaría que la flecha acertó.
+HITSTOP_DEL_FLECHAZO: float = 0.035
+
+
 class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
                  BaseScene):
     """El escenario jugable: carga un TMX y lo hace jugar.
@@ -358,9 +367,13 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
         # mantener signifique algo. Un toque rápido sigue disparando —la
         # potencia mínima es utilizable— así que quien no quiera cargar no
         # tiene que aprender nada nuevo.
-        if im is None:
-            return
-        if im.is_action_pressed(Action.RANGED_ATTACK):
+        # AUD-196: sólo se salta el **disparo**, no el resto del método. Mi
+        # primera versión de esto retornaba aquí, y sin gestor de entrada las
+        # flechas ya lanzadas dejaban de volar, de chocar con las paredes y de
+        # impactar en los enemigos. Una escena sin entrada —un guion, una
+        # demostración automática— se quedaba con las flechas colgadas en el
+        # aire.
+        if im is not None and im.is_action_pressed(Action.RANGED_ATTACK):
             arco.tensar(dt)
         elif arco.tensando:
             origen = pygame.Vector2(player.rect.centerx, player.rect.centery)
@@ -379,6 +392,18 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
         enemigos = [e for e in stage.entity_list if hasattr(e, "apply_hit")]
         for flecha, objetivo in arco.impactos_contra(enemigos):
             objetivo.apply_hit(flecha.damage, (flecha.rect.centerx, flecha.rect.centery))
+            # AUD-196 — un flechazo tiene que pesar igual que un espadazo.
+            #
+            # El cuerpo a cuerpo ya congelaba el mundo al conectar (AUD-001) y
+            # la cámara ya se sacude en seis eventos del juego, pero el arco
+            # —añadido en AUD-193— entró sin nada de eso: acertar a veinte
+            # baldosas bajaba un número y no se notaba. La congelación es más
+            # corta que la del cuerpo a cuerpo y la sacudida menor: el impacto
+            # ocurre lejos del jugador, y darle el mismo peso que a un golpe
+            # en la cara miente sobre lo que acaba de pasar.
+            self._collision.trigger_hitstop(HITSTOP_DEL_FLECHAZO)
+            if self._camera is not None:
+                self._camera.apply_shake(amplitude=1.5, duration=0.08)
             self._damage_numbers.add(
                 flecha.rect.centerx, flecha.rect.top, str(round(flecha.damage, 1)),
             )
@@ -1245,6 +1270,16 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
                 self._achievements.mark_speed_demon()
             self._speedrun.split(stage.stage_id)
             self._speedrun.stop()
+            # AUD-197 — el tiempo se persiste, no sólo se enseña un segundo.
+            # `save()` existía desde el primer día sin que nadie lo llamara, así
+            # que la pantalla de récords no tenía qué leer y enseñaba tiempos
+            # escritos a mano. Un fallo de disco no corta la partida: perder una
+            # marca es molesto, quedarse sin terminar el nivel es peor.
+            try:
+                self._speedrun.save()
+            except OSError:
+                logging.getLogger(__name__).warning(
+                    "no se pudo guardar el tiempo de speedrun", exc_info=True)
             self._guardar_fantasma_si_es_mejor()
             # AUD-022: the speedrun timer ran the whole stage and then threw the
             # result away — get_formatted_time() and get_splits() had no callers,
