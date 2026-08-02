@@ -31,13 +31,32 @@ de datos y las tablas estaban perfectas.
 """
 from __future__ import annotations
 
+import inspect
 import pathlib
 import re
 
 import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-SFX_MAP_FILE = ROOT / "src" / "framework" / "scenes" / "stage_scene.py"
+
+
+def _fichero_del_mapa_de_sonidos() -> pathlib.Path:
+    """Dónde vive la tabla `Events.SFX_… → nombre de muestra`.
+
+    Se pregunta al módulo en vez de escribir la ruta a mano. AUD-152 movió la
+    tabla de `stage_scene.py` a `stage_parts/senales.py` y una constante fija
+    habría hecho que estas pruebas fallaran con «ya no está cableado», que es
+    una acusación falsa: el cableado estaba intacto y lo que se movió fue el
+    archivo. Un `getsourcefile` sigue al módulo se mueva donde se mueva.
+    """
+    from src.framework.scenes.stage_parts import senales
+
+    ruta = inspect.getsourcefile(senales)
+    assert ruta is not None
+    return pathlib.Path(ruta)
+
+
+SFX_MAP_FILE = _fichero_del_mapa_de_sonidos()
 SUBTITLE_FILE = ROOT / "src" / "engine" / "ui" / "subtitle_overlay.py"
 
 #: Sonidos que todavía no puede disparar nadie porque su jefe **no existe**.
