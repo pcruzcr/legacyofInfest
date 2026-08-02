@@ -239,6 +239,16 @@ class DialogueSystem:
         self._active = True
         self._current_tree = tree
         self._selected_choice = 0
+        # AUD-144 — mientras se habla, la música se aparta.
+        #
+        # Es el truco más viejo de la radio y el que más se nota: sin él, el
+        # jugador sube el volumen para leer el diálogo con la voz de fondo y
+        # se lleva un susto con el siguiente golpe. Se pide aquí y no en cada
+        # línea porque una conversación es una unidad: agacharse y levantarse
+        # entre frase y frase suena a fallo.
+        audio = getattr(self._context, "audio", None)
+        if audio is not None and hasattr(audio, "agachar_musica"):
+            audio.agachar_musica()
         self._go_to_node(tree.start_node)
 
     def _go_to_node(self, node_id: str) -> None:
@@ -289,6 +299,9 @@ class DialogueSystem:
         self._active = False
         self._current_tree = None
         self._current_node = None
+        audio = getattr(self._context, "audio", None)
+        if audio is not None and hasattr(audio, "soltar_musica"):
+            audio.soltar_musica()
         if arbol:
             self._context.event_bus.emit(Events.DIALOGUE_FINISHED, tree_id=arbol)
 

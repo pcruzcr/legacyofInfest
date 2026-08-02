@@ -183,6 +183,11 @@ class App:
             dt = self.clock.tick()
             self._process_events()
             self.event_bus.dispatch()
+            # AUD-144 — la mezcla avanza con tiempo REAL, aquí y no dentro de
+            # una escena: el *ducking* tiene que seguir moviéndose en el menú
+            # de pausa y durante una ralentización, o la música se quedaría
+            # agachada esperando a que el mundo vuelva a correr.
+            self.audio_manager.update(getattr(self.clock, "unscaled_dt", dt))
 
             frame_failed = False
             try:

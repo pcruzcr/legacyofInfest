@@ -741,10 +741,26 @@ falta que ilumines. Compruébalo con `preview_tmx.py --hora 23`.
 | Ambiente en bucle | `play_ambient(ruta)` |
 | Cambio de ambiente | `crossfade_ambient(ruta, duracion)` |
 | Golpe musical | `play_stinger(nombre)` |
+| Voz, con la música apartada | `play_voz(nombre)` — agacha la música al 35 % mientras suena |
 
 Volúmenes de música y efectos separados, silencio con `M`. **Si falta un
 fichero de audio, el juego sigue**: se registra el aviso y se calla ese sonido.
 Un nivel no se cae por un `.ogg` que no subiste, pero mira la consola.
+
+### 10.0 Los cuatro buses
+
+`musica`, `efectos`, `voz` y `ambiente`. El volumen de un sonido es
+**maestro × bus × el que pida quien lo reproduce**, y se calcula en un solo
+sitio para que el silencio y el *ducking* no se olviden en ninguna llamada.
+
+Abrir un diálogo **aparta la música** al 35 %: baja en 0,15 s —si tardara, se
+comería la primera palabra— y vuelve en 0,5 s —subir de golpe suena a fallo—.
+No hay que pedirlo: lo hace el sistema de diálogo.
+
+**Reverberación por zona no hay, y no la va a haber sobre este mezclador.** El
+de SDL no tiene efectos: reproduce muestras y las suma. Haría falta
+convolucionar cada sonido con la respuesta de la sala al cargarlo, o una
+biblioteca de DSP externa.
 
 ### 10.1 Niveles rítmicos: el reloj musical
 
