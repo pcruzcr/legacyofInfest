@@ -76,3 +76,14 @@ Ninguno. El único "contenido" son:
 - [ ] Cuencos con luz por proximidad; grietas pulsantes legibles
 - [ ] `start_hour = "dusk"` y `day_length = 900` (sugerido)
 - [ ] `validate_tmx.py --ci` en verde
+
+## Diseño propuesto
+
+Una propuesta completa de cómo llenar este nivel — progresión ambiental estilo
+Magus (Chrono Trigger), luna descendente, 12 braseros en secuencia, tormenta
+con relámpagos que revelan peligros, La Cegua como presencia (nunca enemigo),
+lápidas con los nombres de los estudiantes y tramos de salto — está en:
+
+- [[15_DISENO_4_1_EL_CEMENTERIO.md|Diseño 4-1 — El Cementerio y La Cegua]]
+
+*(Cumple todas las reglas obligatorias de esta ficha; no modifica ninguna.)*
