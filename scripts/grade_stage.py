@@ -516,6 +516,31 @@ def _grade_design(path: Path, result: dict[str, Any]) -> None:
     if informe.exit_reachable:
         poner("design_completable", RUBRIC["design_completable"],
               "la salida es alcanzable andando desde el spawn")
+    elif _tiene_movilidad(stage_data):
+        # AUD-192 — no penalizar a quien use las mecánicas del motor.
+        #
+        # `exit_is_reachable` construye un grafo de saltos, y su propio
+        # docstring reconoce el límite: «no modela dash, salto de pared ni
+        # plataformas móviles». Tampoco resortes, lianas ni tirolesas. Un nivel
+        # cuyo camino pasa por un `Spring` sale marcado como incompletable.
+        #
+        # Medido: `stage_mecanicas.tmx` —el escenario que el propio motor usa
+        # para enseñar las once mecánicas, con 11 objetos de movilidad— perdía
+        # 12 de 130 puntos por usarlas. Con él, cualquier alumno que resolviera
+        # un tramo con un resorte en vez de con un salto.
+        #
+        # No se afirma que el nivel sea completable: se dice que esta métrica
+        # no puede juzgarlo y no se cobra por ello. Es la misma decisión que ya
+        # se tomó con las arenas de jefe, y por la misma razón: aplicar la
+        # rúbrica equivocada y suspender por ella es peor que no medir.
+        poner("design_completable", RUBRIC["design_completable"],
+              "hay mecánicas de movilidad: la ruta no se juzga sólo por saltos")
+        result["warnings"].append(
+            "el nivel usa resortes, tirolesas, lianas o plataformas móviles, "
+            "que el analizador de rutas no modela. No se penaliza la ruta, "
+            "pero **compruébala jugando**: aquí ninguna herramienta puede "
+            "garantizar que se llegue a la salida"
+        )
     else:
         poner("design_completable", 0, "NO se llega a la salida andando")
         result["errors"].append(
@@ -587,6 +612,39 @@ def _grade_design(path: Path, result: dict[str, Any]) -> None:
 #: Stage 0 mide 1600 px y coloca cuatro, así que ~350 px es lo que el
 #: escenario de referencia considera aceptable.
 MAX_CHECKPOINT_GAP = 500.0
+
+#: Componentes que mueven al jugador por sitios a los que no llegaría saltando.
+#:
+#: AUD-192. Se nombran por su clase de componente y no por el tipo del TMX
+#: porque es lo que sobrevive a la carga: `Conveyor` y `FrictionZone` son el
+#: mismo `ZonaDeFriccion`, y `LaserZone` y `ShockwaveZone` la misma zona letal.
+#: `ZonaDeAgua` entra porque nadar es otra forma de recorrer el mapa que el
+#: grafo de saltos tampoco modela.
+COMPONENTES_DE_MOVILIDAD: frozenset[str] = frozenset({
+    "Resorte",            # Spring
+    "Tirolesa",           # Zipline
+    "Liana",              # Vine
+    "PlataformaMovil",    # MovingPlatform
+    "PlataformaHundible", # SinkingPlatform
+    "BloqueRitmico",      # RhythmBlock
+    "ZonaDeViento",       # WindZone
+    "ZonaDeFriccion",     # Conveyor / FrictionZone
+    "ZonaDeAgua",         # WaterZone
+})
+
+
+def _tiene_movilidad(stage_data: object) -> bool:
+    """¿El nivel se recorre con algo más que saltos?
+
+    Se mira el resultado de la carga y no el XML: así vale igual para un mapa
+    escrito a mano en Tiled que para uno generado, y no hay que mantener una
+    lista de nombres de tipo en dos sitios.
+    """
+    for grupo in getattr(stage_data, "componentes", []) or []:
+        for componente in grupo:
+            if type(componente).__name__ in COMPONENTES_DE_MOVILIDAD:
+                return True
+    return False
 
 
 def main() -> int:
