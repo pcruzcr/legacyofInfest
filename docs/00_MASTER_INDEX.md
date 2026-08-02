@@ -107,6 +107,7 @@ Documents marked **[SUPERSEDED]** below exist in their originating package (v1, 
 | 62  | `62_ESTADO_DEL_PROYECTO.md`          | v13 (in-repo)                           | Current — project state |
 | 63  | `63_REGISTRO_DE_LO_NO_IMPLEMENTADO.md` | v13 (in-repo)                        | Current — registry of what is not implemented |
 | 64  | `64_GAME_DESIGN_DOCUMENT.md`         | v13 (in-repo)                           | Current — complete game design reference (GDD) |
+| 65  | `65_EL_LORE_EXTENSO.md`              | v1 (in-repo)                            | Current — extensive canon lore expansion (Spanish) |
 | —   | `STAGE_CREATION.md`                  | v10 (in-repo)                           | Current — stage creation guide                                       |
 
 **Recommended action before implementation begins:** Consolidate all current-status documents into a single flat `docs/` folder in the actual repository (per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §7's structure), discarding the superseded v1/v2/v3 originals of the six documents listed as "supersedes" above. This index becomes redundant once that consolidation happens — at that point, a simple numbered `docs/` folder listing is self-explanatory.
