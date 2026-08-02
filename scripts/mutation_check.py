@@ -231,7 +231,9 @@ def restaurar_pendientes(verboso: bool = True) -> list[str]:
             objetivo = Path(str(respaldo)[: -len(SUFIJO_RESPALDO)])
         shutil.copy2(respaldo, objetivo)
         respaldo.unlink()
-        reparados.append(str(objetivo.relative_to(RAIZ)))
+        # Ruta relativa con `/` en cualquier SO: `tests/test_mutacion.py` la
+        # compara con `src/cosa.py` y un `os.sep` distinto la rompe en Windows.
+        reparados.append(objetivo.relative_to(RAIZ).as_posix())
         if verboso:
             print(f"  restaurado tras una ejecución interrumpida: {reparados[-1]}")
     return reparados
