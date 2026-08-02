@@ -57,6 +57,9 @@ BUILTIN_OBJECT_TYPES: tuple[str, ...] = (
     "Light",
     #: AUD-136 (D3) — una escena narrativa con su guion en una propiedad.
     "Cutscene",
+    #: AUD-140 — bloques que el jugador mueve o rompe.
+    "PushBlock",
+    "BreakableBlock",
     # F4.1 — objetos con los que el jugador interactúa.
     #
     # `Key` es un alias de `Pickup` y `LockedDoor` de `Door`: el motor los

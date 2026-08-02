@@ -107,6 +107,8 @@ class StageScene(BaseScene):
         # intento.
         self._cutscenes: Any | None = None
         self._escenas_vistas: set[str] = set()
+        #: AUD-140 — se reconstruye por escenario, como los interactuables.
+        self._bloques: Any | None = None
         # AUD-137 (F6) — el reloj musical. `None` salvo que el mapa declare
         # `bpm`: un escenario que no es rítmico no paga nada por esto.
         self._reloj_musical: Any | None = None
@@ -293,6 +295,10 @@ class StageScene(BaseScene):
         # Sin esto, morir ahogado dejaría el agua arriba y el reintento sería
         # imposible: el fallo clásico de las mecánicas con estado.
         self._hazards.reset(self._stage_data)
+        if self._bloques is not None:
+            # AUD-140: un bloque empujado a un foso deja el nivel sin solución,
+            # y el jugador no tiene forma de saber que ya no se puede pasar.
+            self._bloques.reiniciar()
         if self._cutscenes is not None:
             self._cutscenes.reset()
         # F4.1: el sistema se reconstruye por escenario. Reutilizar el anterior
@@ -305,6 +311,13 @@ class StageScene(BaseScene):
             bus=self.context.event_bus,
         )
         self._montar_director_de_escenas()
+        # AUD-140 — bloques empujables y destructibles del mapa.
+        from src.framework.stage.bloques import SistemaDeBloques
+        self._bloques = SistemaDeBloques(
+            empujables=self._stage_data.empujables,
+            destructibles=self._stage_data.destructibles,
+            bus=self.context.event_bus,
+        )
         self._configurar_vfx_opcionales()
         self._poblar_mundo_ecs()
         # AUD-139 — el reloj musical va DESPUÉS de poblar el mundo.
@@ -1189,7 +1202,26 @@ class StageScene(BaseScene):
             # cambiarla para simular un estado es el atajo que después nadie
             # sabe deshacer.
             cerradas = self._interactables.rects_solidos()
-            solidos = stage.collision_rects + cerradas if cerradas else stage.collision_rects
+            # AUD-140: los bloques entran en la lista de sólidos por el mismo
+            # camino que las puertas cerradas, sumando y sin mutar la lista
+            # del cargador.
+            extra = cerradas + (self._bloques.rects_solidos()
+                                if self._bloques is not None else [])
+            solidos = stage.collision_rects + extra if extra else stage.collision_rects
+            if self._bloques is not None:
+                # Empujar va ANTES de que el jugador resuelva su colisión: si
+                # fuera después, el jugador ya estaría metido en el bloque y
+                # el motor lo expulsaría antes de que el bloque se apartase.
+                direccion = 0
+                if im is not None:
+                    if im.is_action_held(Action.MOVE_RIGHT):
+                        direccion = 1
+                    elif im.is_action_held(Action.MOVE_LEFT):
+                        direccion = -1
+                if player is not None and player.is_grounded:
+                    self._bloques.empujar(player.rect, direccion, dt,
+                                          stage.collision_rects + cerradas)
+                self._bloques.caer(dt, stage.collision_rects + cerradas)
 
             # F5.3–F5.6 — las mecánicas nuevas corren ANTES que el jugador.
             #
@@ -1298,6 +1330,17 @@ class StageScene(BaseScene):
                 # indefinidamente.
                 enemy._check_player_contact(player)
                 enemy.update(dt)
+            # AUD-140 — el golpe rompe bloques ANTES de resolverse contra los
+            # enemigos, porque `process_attack` consume la caja al conectar:
+            # después, un ataque que hubiera tocado enemigo y bloque a la vez
+            # dejaría el bloque intacto sin que nadie entendiera por qué.
+            #
+            # Suena `SFX_HIT_CONNECT`, que es el sonido de que un golpe
+            # acertó. No hay un sonido de «bloque roto» y no voy a inventar
+            # un nombre para un fichero que no existe: eso es exactamente lo
+            # que llevaba `05_ENEMY_SPEC.md` prometiendo (AUD-133).
+            if self._bloques is not None and self._bloques.golpear(player.active_hitbox):
+                self.context.event_bus.emit(Events.SFX_HIT_CONNECT)
             self._collision.process_attack(dt, player, stage, self._camera, clock)
         finally:
             # update_hitstop owns time_scale entirely: it restores 1.0 as soon
@@ -1363,6 +1406,40 @@ class StageScene(BaseScene):
             fuente=self.audio,
         )
         self._mundo.poner_recurso("reloj_musical", self._reloj_musical)
+
+    #: Colores de los bloques. Planos y no sprites por lo mismo que los
+    #: interactuables: el motor no puede suponer qué arte tiene cada
+    #: escenario, y un rectángulo del color correcto siempre se ve.
+    _COLOR_EMPUJABLE = (150, 120, 85)
+    _COLOR_DESTRUCTIBLE = (120, 115, 110)
+
+    def _dibujar_bloques(self, surface: pygame.Surface) -> None:
+        """Los bloques se dibujan, y no es opcional.
+
+        Un empujable se mueve, así que las baldosas no pueden representarlo; un
+        destructible desaparece. Si el motor no los pinta, el jugador ve un
+        muro invisible que a veces cede — que es como se lee un fallo.
+        """
+        offset = self._camera.offset
+        bloques = self._bloques
+        if bloques is None:
+            return
+        for bloque in bloques.empujables:
+            r = bloque.rect.move(-int(offset.x), -int(offset.y))
+            pygame.draw.rect(surface, self._COLOR_EMPUJABLE, r)
+            pygame.draw.rect(surface, (95, 75, 50), r, 2)
+        for roto in bloques.destructibles:
+            if roto.roto:
+                continue
+            r = roto.rect.move(-int(offset.x), -int(offset.y))
+            pygame.draw.rect(surface, self._COLOR_DESTRUCTIBLE, r)
+            # Las grietas cuentan cuánto le queda. Sin ellas, golpear un
+            # bloque de tres golpes no da ninguna señal de estar avanzando y
+            # el jugador se va antes del tercero.
+            for i in range(roto._recibidos):
+                y = r.top + (i + 1) * r.height // (max(1, roto.golpes) + 1)
+                pygame.draw.line(surface, (60, 55, 50), (r.left + 2, y),
+                                 (r.right - 2, y), 1)
 
     def _actualizar_escenas(self, dt: float) -> bool:
         """Corre el director. Devuelve `True` si el juego debe quedarse quieto.
@@ -1681,6 +1758,8 @@ class StageScene(BaseScene):
         # desaparecía por completo.
         # AUD-136 — las escenas se dibujan sobre el mundo y bajo la interfaz:
         # las bandas cinematográficas tienen que tapar el juego, no el HUD.
+        if self._bloques is not None:
+            self._dibujar_bloques(surface)
         if self._cutscenes is not None:
             self._cutscenes.draw(surface)
         self._drawing.draw_ui(ctx)

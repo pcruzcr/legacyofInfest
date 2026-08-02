@@ -77,6 +77,9 @@ def build_table() -> str:
         "DeathPit": ("Rectángulo", "— (caer aquí mata)"),
         "CameraLock": ("Rectángulo", "`lock_x`, `lock_y` (bool)"),
         "Waypoint": ("Punto", "`owner_id` — ruta para la entidad con ese nombre"),
+        "PushBlock": ("Rectángulo", "`velocidad` (px/s, 45) · `con_gravedad`"),
+        "BreakableBlock": ("Rectángulo",
+                           "`golpes` (int, 1) · `evento_al_romper`"),
         "Cutscene": ("Rectángulo o punto",
                      "`guion` **obligatoria** · `bloquea` · `saltable` · "
                      "`una_vez` · `arranca_con`. Punto = al empezar; "

@@ -200,6 +200,20 @@ def _objetos() -> list[str]:
     obj("Stalker", (6 * SALA + 4) * TS, suelo_px - 2 * TS, TS, 2 * TS,
         velocidad=42.0, distancia_retirada=420.0, reaparicion=7.0)
 
+    # ── Sala 7 bis: bloques que se empujan y que se rompen ────
+    #
+    # AUD-140. Van juntos a proposito: el empujable sirve de escalon y el
+    # destructible tapa lo que hay detras, asi que la sala se lee sola —hay
+    # que colocar uno para llegar a golpear el otro—.
+    obj("MessageTrigger_Once", (6 * SALA + 25) * TS, suelo_px - 64, 48, 48,
+        text="Uno se empuja. El otro se rompe a golpes.")
+    obj("PushBlock", (6 * SALA + 27) * TS, suelo_px - 2 * TS, 2 * TS, 2 * TS,
+        velocidad=45.0)
+    obj("BreakableBlock", (6 * SALA + 33) * TS, suelo_px - 4 * TS, TS, 2 * TS,
+        golpes=3)
+    obj("BreakableBlock", (6 * SALA + 33) * TS, suelo_px - 2 * TS, TS, 2 * TS,
+        golpes=1)
+
     # Salida
     obj("NextTrigger", (MW - 4) * TS, suelo_px - 3 * TS, 2 * TS, 3 * TS)
 

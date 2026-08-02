@@ -268,11 +268,31 @@
     <property name="reaparicion" type="float" value="7.0"/>
    </properties>
   </object>
-  <object id="134" name="NextTrigger_134" type="NextTrigger" x="3456" y="272" width="32" height="48">
+  <object id="134" name="MessageTrigger_Once_134" type="MessageTrigger_Once" x="3280" y="256" width="48" height="48">
+   <properties>
+    <property name="text" value="Uno se empuja. El otro se rompe a golpes."/>
+   </properties>
   </object>
-  <object id="135" name="Walker_135" type="Walker" x="800" y="292" width="24" height="28">
+  <object id="135" name="PushBlock_135" type="PushBlock" x="3312" y="288" width="32" height="32">
+   <properties>
+    <property name="velocidad" type="float" value="45.0"/>
+   </properties>
   </object>
-  <object id="136" name="FlyingBoa_136" type="FlyingBoa" x="1152" y="224" width="20" height="14">
+  <object id="136" name="BreakableBlock_136" type="BreakableBlock" x="3408" y="256" width="16" height="32">
+   <properties>
+    <property name="golpes" type="int" value="3"/>
+   </properties>
+  </object>
+  <object id="137" name="BreakableBlock_137" type="BreakableBlock" x="3408" y="288" width="16" height="32">
+   <properties>
+    <property name="golpes" type="int" value="1"/>
+   </properties>
+  </object>
+  <object id="138" name="NextTrigger_138" type="NextTrigger" x="3456" y="272" width="32" height="48">
+  </object>
+  <object id="139" name="Walker_139" type="Walker" x="800" y="292" width="24" height="28">
+  </object>
+  <object id="140" name="FlyingBoa_140" type="FlyingBoa" x="1152" y="224" width="20" height="14">
   </object>
  </objectgroup>
  <layer id="9" name="FG_Overlay" width="220" height="24">
