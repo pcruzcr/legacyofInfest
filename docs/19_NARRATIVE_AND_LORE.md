@@ -253,3 +253,4 @@ Students building traversal stages must maintain the following narrative consist
 
 - [[16_WORLD_DESIGN.md|World Design]]
 - [[17_BOSS_SPEC.md|Boss Specification]]
+- [[65_EL_LORE_EXTENSO.md|El Lore Extenso]] — expansión creativa canónica del mundo
