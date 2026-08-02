@@ -11,10 +11,14 @@ from src.engine.core.events import Events
 from src.engine.core.user_settings import user_data_dir
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import BOTTOM_BAR_Y
-from src.engine.scenes.demo_menu_scene import DemoMenuScene
-from src.engine.scenes.options_scene import OptionsScene
-from src.engine.scenes.story_scene import StoryScene
-from src.engine.scenes.tutorial_scene import TutorialScene
+
+# AUD-188: las cuatro escenas a las que lleva este menu se importan en el
+# punto de uso, no aqui. `options_scene` y `demo_menu_scene` arrastran
+# numpy, scipy y pygame_gui, y `App()` importa esta pantalla al arrancar:
+# eran 1,1 s de importaciones con la ventana ya abierta y en negro, antes
+# de que el splash pudiera dibujar su primer fotograma. Las otras seis
+# opciones de este mismo menu ya se importaban asi; estas cuatro se
+# quedaron arriba.
 from src.engine.ui.theme import Theme
 from src.engine.ui.widgets import (
     MenuItem,
@@ -23,8 +27,6 @@ from src.engine.ui.widgets import (
     handle_menu_navigation,
 )
 from src.engine.utils.asset_loader import AssetLoader
-from src.framework.vfx.hit_effects import HitEffects
-from src.framework.vfx.particle_system import ParticleSystem
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -83,7 +85,12 @@ class TitleScene(BaseScene):
         self._recalc_layout()
 
         self._bar_surf: pygame.Surface | None = None
-        self._particle_system = ParticleSystem()
+        # AUD-188: el sistema de partículas se crea al primer uso. Importarlo
+        # aquí arrastraba numpy y scipy —`particle_system` los pide a nivel de
+        # módulo— y `App()` construye esta pantalla al arrancar, así que era
+        # ~1 s de importaciones con la ventana ya abierta y en negro. Las
+        # chispas del título son adorno: pueden esperar al primer fotograma.
+        self._particle_system: object | None = None
         self._particle_timer: float = 0.0
 
     def _recalc_layout(self) -> None:
@@ -129,12 +136,18 @@ class TitleScene(BaseScene):
         if self._particle_timer >= 0.1:
             self._particle_timer = 0.0
             import random
+
+            from src.framework.vfx.hit_effects import HitEffects
+            from src.framework.vfx.particle_system import ParticleSystem
+            if self._particle_system is None:
+                self._particle_system = ParticleSystem()
             self._particle_system.get_emitter("title_spark").emit(
                 random.uniform(0, settings.INTERNAL_WIDTH),
                 random.uniform(60, settings.INTERNAL_HEIGHT),
                 HitEffects.SPARK,
             )
-        self._particle_system.update(dt)
+        if self._particle_system is not None:
+            self._particle_system.update(dt)
 
         self._menu.update(dt)
         previous = self._menu.index
@@ -169,6 +182,8 @@ class TitleScene(BaseScene):
             self.context.scene_manager.transition.start_fade_out(0.4)
             self.context.scene_manager.replace(LoadGameScene(self.context))
         elif opt == "START":
+            from src.engine.scenes.story_scene import StoryScene
+            from src.engine.scenes.tutorial_scene import TutorialScene
             self.context.scene_manager.transition.start_fade_out(0.4)
             if not self._has_seen_tutorial():
                 self._mark_tutorial_seen()
@@ -176,6 +191,7 @@ class TitleScene(BaseScene):
             else:
                 self.context.scene_manager.replace(StoryScene(self.context, 1))
         elif opt == "TUTORIAL":
+            from src.engine.scenes.tutorial_scene import TutorialScene
             self.context.scene_manager.transition.start_fade_out(0.4)
             self.context.scene_manager.replace(TutorialScene(self.context))
         elif opt == "WORLD MAP":
@@ -195,9 +211,11 @@ class TitleScene(BaseScene):
             self.context.scene_manager.transition.start_fade_out(0.4)
             self.context.scene_manager.replace(AchievementScene(self.context))
         elif opt == "ACADEMIC DEMOS":
+            from src.engine.scenes.demo_menu_scene import DemoMenuScene
             self.context.scene_manager.transition.start_fade_out(0.4)
             self.context.scene_manager.replace(DemoMenuScene(self.context))
         elif opt == "OPTIONS":
+            from src.engine.scenes.options_scene import OptionsScene
             self.context.scene_manager.transition.start_fade_out(0.4)
             self.context.scene_manager.replace(OptionsScene(self.context))
         elif opt == "QUIT":
@@ -254,7 +272,8 @@ class TitleScene(BaseScene):
         )
         surface.blit(self._logo, logo_rect)
 
-        self._particle_system.draw(surface, pygame.Vector2(0, 0))
+        if self._particle_system is not None:
+            self._particle_system.draw(surface, pygame.Vector2(0, 0))
 
         self.context.scene_manager.transition.draw(surface)
 
