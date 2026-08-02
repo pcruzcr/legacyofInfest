@@ -43,9 +43,27 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
 
-#: Alto de fila. El logro enfocado añade su descripción debajo, así que la
-#: separación tiene que dar cabida a dos líneas sin solaparse.
-ROW_HEIGHT = 22
+def y_de_la_descripcion() -> int:
+    """Dónde va la descripción del logro enfocado: bajo su nombre."""
+    return font(Theme.FONT_SMALL).get_linesize()
+
+
+def alto_de_fila() -> int:
+    """AUD-187 — el alto sale de la fuente, no de un número escrito a mano.
+
+    Antes era `ROW_HEIGHT = 22`, y la fuente de la fila mide exactamente 22 px
+    de interlineado: las filas se tocaban, sin un píxel de aire, y con el texto
+    ampliado por accesibilidad (AUD-126) pasaban a pisarse. Una lista sin aire
+    entre filas se lee como un bloque y el ojo no encuentra dónde empieza cada
+    una.
+
+    Reserva **dos** líneas porque el logro enfocado despliega su descripción
+    debajo, que es lo que el comentario original ya pedía —«la separación tiene
+    que dar cabida a dos líneas sin solaparse»— y los 22 px no daban.
+    """
+    return (y_de_la_descripcion()
+            + font(Theme.FONT_TINY).get_linesize()
+            + Theme.SPACE_S)
 
 
 class AchievementScene(BaseScene):
@@ -85,7 +103,7 @@ class AchievementScene(BaseScene):
             self._menu, self.input, on_cancel=self._back_to_title,
         )
 
-        visible = max(1, (settings.INTERNAL_HEIGHT - 100) // ROW_HEIGHT)
+        visible = max(1, (settings.INTERNAL_HEIGHT - 100) // alto_de_fila())
         if self._menu.index < self._scroll_offset:
             self._scroll_offset = self._menu.index
         elif self._menu.index >= self._scroll_offset + visible:
@@ -110,7 +128,7 @@ class AchievementScene(BaseScene):
         for i, item in enumerate(self._menu.items):
             if i < self._scroll_offset:
                 continue
-            y = top + (i - self._scroll_offset) * ROW_HEIGHT
+            y = top + (i - self._scroll_offset) * alto_de_fila()
             if y > settings.INTERNAL_HEIGHT - 60:
                 break
             self._draw_row(surface, row_font, item, i, y)
@@ -155,4 +173,6 @@ class AchievementScene(BaseScene):
             description = font(Theme.FONT_TINY).render(
                 definition.description, True, Theme.TEXT_MUTED,
             )
-            surface.blit(description, (Theme.MARGIN + Theme.SPACE_M, y + 11))
+            surface.blit(description,
+                         (Theme.MARGIN + Theme.SPACE_M,
+                          y + y_de_la_descripcion()))

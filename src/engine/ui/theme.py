@@ -83,11 +83,16 @@ class Theme:
     MARGIN: Final[int] = 32
 
     # ── Type scale ──────────────────────────────────────────────
-    FONT_TITLE: Final[int] = 34
-    FONT_HEADING: Final[int] = 24
-    FONT_BODY: Final[int] = 18
-    FONT_SMALL: Final[int] = 15
-    FONT_TINY: Final[int] = 13
+    # AUD-187: subida un escalón. La escala anterior —34/24/18/15/13— venía de
+    # cuando la superficie interna era de 320x240; a los 800x600 actuales el
+    # cuerpo de texto se quedaba pequeño y jugando cuesta leer los menús. Los
+    # altos de fila del bestiario y de los logros salen ahora de la métrica de
+    # la fuente, así que la escala puede moverse sin que nada se solape.
+    FONT_TITLE: Final[int] = 38
+    FONT_HEADING: Final[int] = 27
+    FONT_BODY: Final[int] = 20
+    FONT_SMALL: Final[int] = 17
+    FONT_TINY: Final[int] = 15
 
     # ── Motion ──────────────────────────────────────────────────
     # Short enough to feel instant, long enough to be legible. Anything above
