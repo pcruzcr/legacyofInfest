@@ -69,6 +69,14 @@ if TYPE_CHECKING:
 MEMORIA_DEL_RATON: float = 1.5
 
 
+#: Color de los puntos que previsualizan el tiro del arco.
+#:
+#: AUD-194. Un blanco roto, el mismo tono del contorno del jugador
+#: (AUD-190): los fondos de este juego son oscuros y saturados, y
+#: cualquier color con tinte se confunde con el decorado de alguna zona.
+TINTA_DE_LA_TRAYECTORIA: tuple[int, int, int] = (236, 232, 220)
+
+
 class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
                  BaseScene):
     """El escenario jugable: carga un TMX y lo hace jugar.
@@ -197,6 +205,63 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
         if "move" not in self._tutorial_shown:
             self._tutorial.show("move", duration=6.0)
             self._tutorial_shown.add("move")
+
+    def _dibujar_trayectoria_del_arco(self, surface: pygame.Surface) -> None:
+        """La parábola punteada, mientras se apunta.
+
+        AUD-194. Sólo aparece cuando el jugador está apuntando de verdad —stick
+        o ratón— y le quedan flechas. Con el disparo horizontal de teclado no
+        se dibuja nada: ahí la curva no aporta información y sería ruido
+        permanente en pantalla.
+
+        Se dibuja **después** del mundo y antes de la niebla y el HUD: tiene
+        que verse sobre el decorado, pero no sobre el marcador ni tapar un
+        diálogo.
+        """
+        jugador, arco = self._player, getattr(self._player, "arco", None)
+        if jugador is None or arco is None or arco.vacio:
+            return
+        entrada = self.input
+        if entrada is None:
+            return
+
+        direccion = self._direccion_de_tiro(jugador, entrada)
+        if not isinstance(direccion, pygame.Vector2):
+            return
+
+        from src.framework.entities.ranged_weapon import trayectoria
+
+        desplazamiento = (self._camera.offset if self._camera is not None
+                          else pygame.Vector2(0, 0))
+        origen = pygame.Vector2(jugador.rect.centerx, jugador.rect.centery)
+        puntos = trayectoria(origen, direccion)
+
+        # Punteada y desvaneciéndose: una línea continua se lee como una
+        # cuerda tendida y sugiere que la flecha llega hasta el final, cuando
+        # en realidad choca con lo primero que encuentre. El punteado dice
+        # «por aquí pasará», no «aquí terminará».
+        total = len(puntos)
+        marco = surface.get_rect()
+        for indice, punto in enumerate(puntos):
+            # Uno de cada dos: el muestreo del cálculo es más fino que lo que
+            # hace falta ver, y dibujarlos todos da una línea continua.
+            if indice % 2:
+                continue
+            # La cola se corta en vez de desvanecerse a nada: el final de la
+            # curva es el menos fiable —cualquier pared la interrumpe antes— y
+            # dibujarlo entero prometería un alcance que no existe.
+            if indice / max(total - 1, 1) > 0.75:
+                break
+            pantalla = punto - desplazamiento
+            if not marco.collidepoint(pantalla.x, pantalla.y):
+                continue
+            radio = 2 if indice < total // 3 else 1
+            pygame.draw.circle(
+                surface,
+                TINTA_DE_LA_TRAYECTORIA,
+                (int(pantalla.x), int(pantalla.y)),
+                radio,
+            )
 
     def _raton_esta_apuntando(self) -> bool:
         """¿El jugador está usando el ratón, o sólo está ahí quieto?
@@ -1548,6 +1613,12 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
             self._agua_vfx.draw(surface, self._camera.offset)
         self._lighting.render(surface, self._camera.offset)
         self._post_processing.apply(surface)
+        # AUD-194 — la previsualización del tiro va DESPUÉS de la
+        # iluminación y el post-procesado. Puesta antes, la luz la
+        # apagaba: medido, cero píxeles dibujados en stage0, que tiene
+        # doce focos. Es una ayuda de interfaz, no un objeto del mundo,
+        # así que no debe recibir la luz del escenario.
+        self._dibujar_trayectoria_del_arco(surface)
         # AUD-090: la interfaz va DESPUÉS de la luz y del post-procesado. Antes
         # se pintaba dentro de `_drawing.draw` y el ambiente la multiplicaba:
         # medido, el HUD perdía el 58 % de su brillo y el indicador de combo

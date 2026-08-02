@@ -241,6 +241,84 @@ class TestElRatonNoSecuestraElApuntado:
         escena._direccion_de_tiro(escena._player, Raro())
 
 
+class TestLaPrevisualizacionEnPantalla:
+    """AUD-194 — la parábola punteada mientras se apunta.
+
+    Se cuenta la tinta del color de la trayectoria sobre la superficie
+    dibujada. Comprobar «no lanza excepción» no serviría: el defecto real que
+    apareció fue que **se dibujaba y la iluminación la apagaba**, con la escena
+    funcionando perfectamente y cero píxeles en pantalla.
+    """
+
+    @pytest.fixture
+    def escena(self):
+        pygame.init()
+        if pygame.display.get_surface() is None:
+            pygame.display.set_mode((800, 600))
+        from src.engine.core.app import App
+        from src.stages.stage0.stage0 import Stage0
+
+        app = App()
+        escena = Stage0(app.context)
+        app.context.scene_manager.push(escena)
+        escena.on_enter()
+        for _ in range(30):
+            escena.update(1 / 60)
+            app.context.event_bus.dispatch()
+        return escena
+
+    @staticmethod
+    def _tinta(superficie: pygame.Surface) -> int:
+        from src.framework.scenes.stage_scene import TINTA_DE_LA_TRAYECTORIA
+
+        r, g, b = TINTA_DE_LA_TRAYECTORIA
+        pixeles = pygame.surfarray.array3d(superficie)
+        return int((
+            (pixeles[..., 0] >= r - 6)
+            & (pixeles[..., 1] >= g - 6)
+            & (pixeles[..., 2] >= b - 6)
+        ).sum())
+
+    def _dibujar(self, escena) -> int:
+        superficie = pygame.Surface((800, 600))
+        escena.draw(superficie)
+        return self._tinta(superficie)
+
+    def test_apuntando_se_dibuja_la_parabola(self, escena) -> None:
+        base = self._dibujar(escena)
+        escena._direccion_de_tiro = lambda p, im: pygame.Vector2(0.85, -0.5)
+
+        assert self._dibujar(escena) > base, (
+            "apuntando no aparece ningún punto de trayectoria en pantalla"
+        )
+
+    def test_la_ilumincaion_no_se_la_come(self, escena) -> None:
+        """El defecto que costó encontrar: dibujada antes de la iluminación,
+        stage0 —doce focos— la apagaba entera. Es una ayuda de interfaz, no un
+        objeto del mundo, así que va después del post-procesado."""
+        escena._direccion_de_tiro = lambda p, im: pygame.Vector2(0.85, -0.5)
+
+        assert self._dibujar(escena) > 0
+
+    def test_sin_apuntar_no_se_dibuja_nada(self, escena) -> None:
+        """Con el disparo horizontal de teclado la curva no aporta nada y
+        sería ruido permanente en pantalla."""
+        base = self._dibujar(escena)
+        escena._direccion_de_tiro = lambda p, im: 1
+
+        assert self._dibujar(escena) == base
+
+    def test_sin_flechas_no_se_dibuja_nada(self, escena) -> None:
+        """Prometer un tiro que no se puede hacer es peor que no dibujar."""
+        escena._direccion_de_tiro = lambda p, im: pygame.Vector2(0.85, -0.5)
+        con_flechas = self._dibujar(escena)
+
+        escena._player.arco.municion = 0
+        sin_flechas = self._dibujar(escena)
+
+        assert sin_flechas < con_flechas
+
+
 class TestLaCalibracionDeLaCaida:
     """Los números del comentario de `GRAVEDAD_FLECHA`, comprobados.
 
