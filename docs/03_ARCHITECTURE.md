@@ -259,7 +259,12 @@ legacy-of-infest/                      # Actual repo root
 │   │   │
 │   │   ├── scenes/
 │   │   │   ├── __init__.py
-│   │   │   └── stage_scene.py             # StageScene: main gameplay scene
+│   │   │   ├── stage_scene.py             # StageScene: main gameplay scene
+│   │   │   └── stage_parts/               # AUD-152: mixins de lectura de StageScene
+│   │   │       ├── __init__.py            #   por qué son mixins y no colaboradores
+│   │   │       ├── ambiente.py            #   luz, bloom, viñeta, estación, hora
+│   │   │       ├── senales.py             #   suscripciones al bus: VFX y 38 sonidos
+│   │   │       └── fantasma.py            #   silueta de la mejor carrera
 │   │   │
 │   │   ├── vfx/
 │   │   │   ├── __init__.py
@@ -840,8 +845,15 @@ rojo antes de que la infracción llegue a nadie.
 - `engine/scenes/` es la **capa de aplicación**, no el núcleo. Los
   laboratorios académicos viven ahí y enseñan algoritmos que viven en
   `framework/processing/`; que el laboratorio de color importe
-  `color_tools` es exactamente lo que tiene que hacer. Son 27 imports y todos
-  son de esta forma.
+  `color_tools` es exactamente lo que tiene que hacer. Todos los imports de
+  esta carpeta hacia `framework` son de esa forma.
+>
+> **AUD-161 — aquí decía «son 27 imports».** Eran 26 al medirlo. Un número
+> contado a mano en prosa envejece a la primera escena que se añade o se
+> quita, y entonces el documento miente sobre algo que nadie va a volver a
+> contar. Lo que sí se comprueba en cada ejecución es la **regla**, en
+> `tests/test_layering.py`; la cifra no aportaba nada que la regla no diga
+> mejor.
 
 > **AUD-101 — qué decía esta sección antes.**
 > Decía: «*Cross-layer imports (going upward) are prohibited*», seguido de una
