@@ -16,7 +16,7 @@ Vision and Pattern Recognition.
 - Debug overlay (F3) with FPS, event-queue snapshot and module tree
 - Atmosphere configured from Tiled: point lighting, weather, ambient particles,
   bloom and vignette — without writing a line of Python
-- 2,299 automated tests plus TMX, asset and dependency validators in CI
+- 2,455 automated tests plus TMX, asset and dependency validators in CI
 
 ```
 pip install -r requirements.txt
@@ -60,7 +60,7 @@ src/
   framework/           game framework (entities, stage, ecs, ai, vfx, ui,
                        processing, academic)
   stages/              stage 0 and the student deliveries
-tests/                 2,299 tests across every module
+tests/                 2,455 tests across every module
 tools/                 map generators
 scripts/               validators, graders and the TMX previewer
 docs/                  full documentation
