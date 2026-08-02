@@ -25,9 +25,20 @@ class ProgressionSystem:
     def process_checkpoints(
         self, player: Player, stage: StageData,
         checkpoints: list[Checkpoint], hud: HUD | None,
+        stage_key: str = "",
     ) -> pygame.Vector2 | None:
+        """AUD-156 — `stage_key` es la identidad única del escenario.
+
+        Se pasa desde la escena porque aquí sólo hay `StageData`, y el
+        `stage_id` del TMX no siempre coincide con el que el resto del juego
+        usa: `lobby_datacenter` guarda `stage_template` en su mapa. Guardar con
+        un identificador y buscarlo con otro es lo que dejaba al jugador al
+        principio del nivel al cargar. Por defecto cae al del mapa para no
+        romper a quien llame a este método con la firma vieja.
+        """
         if stage is None or player is None:
             return None
+        clave = stage_key or stage.stage_id
         checkpoint_position: pygame.Vector2 | None = None
         for cp in checkpoints:
             if not cp.is_activated and cp.check_collision(player.rect):
@@ -41,7 +52,7 @@ class ProgressionSystem:
                     )
                 self._context.event_bus.emit(
                     Events.SAVE_REQUESTED,
-                    stage_id=stage.stage_id,
+                    stage_id=clave,
                     stage_index=self._context.scene_manager.stage_index,
                     checkpoint_x=player.rect.centerx,
                     checkpoint_y=player.rect.centery,

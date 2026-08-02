@@ -243,6 +243,57 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
     def on_debug_toggle(self, enabled: bool) -> None:
         ...
 
+    @property
+    def stage_key(self) -> str:
+        """La identidad de este escenario, una sola para todo el juego.
+
+        AUD-156 — había dos y no coincidían. La clase declara `STAGE_ID` y el
+        TMX declara `stage_id`, y el motor usaba **el del mapa** para el evento
+        de escenario completado y para el logro de explorador, mientras el mapa
+        del mundo usaba **el de la clase**. Dos escenarios divergían:
+
+        * `lobby_datacenter` — su TMX se quedó con el `stage_id` de la
+          plantilla, `stage_template`. El alumno lo declaró bien en su clase;
+        * `stage2_1_oficinas` — su clase no declara `STAGE_ID`, así que ese
+          lado quedaba vacío.
+
+        En los dos, terminar el nivel apuntaba un identificador que el mapa del
+        mundo no reconocía, de modo que el nodo **no se marcaba nunca como
+        completado** y, con la progresión en cadena, bloqueaba todo lo que
+        viniera detrás.
+
+        Gana la clase porque es la que el estudiante controla desde Python y la
+        que ya usan el registro de escenarios y el mapa del mundo; el TMX queda
+        de respaldo para un mapa suelto sin escena propia.
+        """
+        de_la_clase = getattr(type(self), "STAGE_ID", "")
+        if de_la_clase:
+            return str(de_la_clase)
+        data = getattr(self, "_stage_data", None)
+        return str(getattr(data, "stage_id", "") or "")
+
+    def _aplicar_partida_pendiente(self) -> None:
+        """Coloca al jugador donde lo dejó la partida guardada, si es aquí.
+
+        Se acepta el identificador de la clase **y** el del TMX porque hay
+        partidas grabadas con el segundo: rechazarlas dejaría al jugador al
+        principio del nivel sin decirle por qué.
+        """
+        pending = self.context.pending_load
+        if pending is None:
+            return
+        identidades = {self.stage_key,
+                       str(getattr(self._stage_data, "stage_id", "") or "")}
+        identidades.discard("")
+        if pending.stage_id not in identidades:
+            return
+
+        destino = pygame.Vector2(pending.checkpoint_x, pending.checkpoint_y)
+        self._player.set_spawn(destino)
+        self._player.set_health(pending.health)
+        self._checkpoint_position = destino
+        self.context.pending_load = None
+
     def on_enter(self) -> None:
         # AUD-025: claim a cache scope so that leaving this scene does not throw
         # away assets a scene paused beneath us is still using.
@@ -272,17 +323,10 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
         # AUD-143 — modo de cámara del escenario.
         self._camera.modo = getattr(self._stage_data, "camara", "seguir")
 
-        pending = self.context.pending_load
-        if pending is not None and pending.stage_id == self._stage_data.stage_id:
-            self._player.set_spawn(pygame.Vector2(pending.checkpoint_x, pending.checkpoint_y))
-            self._player.set_health(pending.health)
-            self._checkpoint_position = pygame.Vector2(pending.checkpoint_x, pending.checkpoint_y)
-            self.context.pending_load = None
-
         # AUD-022: relic stat bonuses were fully implemented and never applied.
         self._player.apply_relic_bonuses(get_inventory())
 
-        self._achievements.mark_explorer(self._stage_data.stage_id)
+        self._achievements.mark_explorer(self.stage_key)
 
         self._camera = Camera()
         self._camera.follow(self._player)
@@ -315,6 +359,21 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
         for cp in self._checkpoints:
             cp.set_event_bus(self.context.event_bus)
         self._checkpoint_position = None
+        # AUD-156 — la partida guardada se aplica AQUÍ, después del reinicio.
+        #
+        # Estaba treinta y ocho líneas más arriba, y la línea de encima
+        # —`self._checkpoint_position = None`— borraba justo lo que acababa de
+        # poner. Efecto, medido en los quince escenarios: cargar una partida
+        # devolvía al jugador al principio del nivel, y morir después lo
+        # devolvía otra vez al principio en vez de a su checkpoint.
+        #
+        # Que ahora vaya después de `apply_relic_bonuses()` también importa:
+        # esa llamada sube el máximo de vida y **regala la diferencia** como
+        # vida actual, así que fijar la salud guardada antes la dejaría
+        # inflada. No conseguí reproducirlo con las reliquias que existen hoy
+        # —ninguna de las que probé sube el máximo—, pero el orden correcto es
+        # éste y no depende de qué reliquias haya mañana.
+        self._aplicar_partida_pendiente()
         self._stage_complete = False
         self._game_over = False
         self._pending_game_over = False
@@ -989,7 +1048,10 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
                 settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT,
             )
         self._camera.set_camera_locks(stage.camera_locks)
-        cp_pos = self._progression.process_checkpoints(self._player, stage, self._checkpoints, self._hud)
+        cp_pos = self._progression.process_checkpoints(
+            self._player, stage, self._checkpoints, self._hud,
+            stage_key=self.stage_key,
+        )
         if cp_pos is not None:
             self._checkpoint_position = cp_pos
         if self._progression.check_next_trigger(self._player, stage):
@@ -1015,7 +1077,8 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
                     "STAGE_COMPLETE",
                     f"CLEAR  {self._speedrun.get_formatted_time()}",
                 )
-            self.context.event_bus.emit(Events.STAGE_COMPLETE, stage_id=stage.stage_id)
+            self.context.event_bus.emit(Events.STAGE_COMPLETE,
+                                        stage_id=self.stage_key)
 
     # ── El fantasma vive en `stage_parts/fantasma.py` ─────────────
     #
@@ -1327,7 +1390,7 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
         if self._stage_data is not None and self._player is not None:
             self.context.event_bus.emit(
                 Events.SAVE_REQUESTED,
-                stage_id=self._stage_data.stage_id,
+                stage_id=self.stage_key,
                 stage_index=self.context.scene_manager.stage_index,
                 checkpoint_x=self._player.rect.centerx,
                 checkpoint_y=self._player.rect.centery,
