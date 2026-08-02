@@ -46,14 +46,14 @@ Comprobado con análisis de alcanzabilidad sobre todo el árbol.
 | Identificador | Dónde vive | Veredicto |
 |---|---|---|
 | ~~`GhostData`~~ | `speedrun_mode.py` | **HECHO** (AUD-142). Enchufado: la escena graba, guarda la mejor carrera y dibuja el fantasma anterior |
-| `ParamPanel` | `engine/scenes/param_panel.py` | **Decidir.** Widget de parámetros para las demos; ninguna demo lo instancia |
+| ~~`ParamPanel`~~ | `engine/scenes/param_panel.py` | **HECHO** (AUD-146). Lo usa la vista de árbol de la demo de patrones, con su rango y su aviso de cambio |
 | `SceneRegistry` | citado en 25 y 28 | Falso positivo del barrido: se usa por nombre, no por símbolo |
 | `CameraLock` | `stage_loader.py` | Se usa **sólo dentro del fichero que lo define**. Funciona; conviene mirar si la escena debería leerlo |
 | `SineFlight` | vuelo senoidal | **Falso positivo, comprobado.** La usan `make_strategy` y otras dos estrategias del mismo módulo |
 | `sincronizar_salud` | ECS | **Correcto que siga.** Es un hueco vacío a propósito desde F5.12: alguna entrega puede llamarlo y borrarlo les rompería el código |
 | `build_gradient` | VFX | **Falso positivo, comprobado.** La llama `lighting.py` para construir el degradado de cada foco |
 | `crossfade_ambient`, `set_ambient_volume` | `audio_manager.py` | API de audio escrita y nunca llamada |
-| Audio ambiental por clima | `stage_scene.py` + `weather_system.py` | El código busca `assets/sfx/ambient/{rain,wind,storm}.wav` y esa carpeta **no existe** (los 7 SFX reales viven en `assets/sfx/environment/` con otros nombres). El `.exists()` lo silencia, así que el clima no suena y nadie se entera. Falta o bien renombrar los assets a `ambient/{rain,wind,storm}.wav` o mapear clima → archivo real |
+| ~~Audio ambiental por clima~~ | `weather_system.py` | **HECHO** (AUD-145). El mapa devuelve la ruta del fichero real; `snow` y `fog` suenan con el viento que sí existe, y `rain` y `storm` **declaran que les falta el asset** en vez de callarse |
 | `check_player_contact` | `enemy_archer.py` | El resto de enemigos usa `_check_player_contact`; éste quedó público y suelto |
 | `on_stage_start`, `on_player_landed`, `on_enemy_died`, `on_next_trigger_entered` | plantilla de estudiante | **Correcto que estén sin usar.** Son los ganchos que el estudiante rellena |
 | `ComboDemoScene`, `LeaderboardScene`, `LoadingScene`, `PipelineBuilderScene`, `ProgressScene`, `SandboxScene`, `StageWizardScene` | escenas | Falso positivo: el registro las construye por cadena |
@@ -75,7 +75,7 @@ Comprobado con análisis de alcanzabilidad sobre todo el árbol.
 > AUD-133, los sonidos de muerte— y el aviso lleva escrito en el propio script
 > desde que lo escribí.
 
-**Acción pendiente:** sólo `ParamPanel`. `GhostData` ya está enchufado.
+**Acción pendiente:** ninguna. `GhostData` (AUD-142) y `ParamPanel` (AUD-146) están enchufados; los tres «retirar» eran falsos positivos.
 
 ---
 
@@ -162,11 +162,11 @@ Esto no sale del barrido automático: sale de la auditoría de agosto
 | ~~Buses de mezcla y ducking~~ | **HECHO** (AUD-144). Cuatro buses y la música se aparta cuando alguien habla | — |
 | **Reverberación por zona** | audio | **No se puede sobre SDL.** Su mezclador no tiene efectos: haría falta convolucionar cada sonido al cargarlo o una biblioteca de DSP. Documentado en `mixer_buses.py` |
 | ~~Atlas de sprites y batching~~ | **HECHO** (AUD-138), con una salvedad medida: el atlas **no** acelera el dibujado en la ruta software (2,06 → 2,35 ms). Lo que gana es carga (3×) y `blits()` (16 %) |
-| **Post-procesado en GPU** | gráficos | pendiente: exige pasar el motor a `pygame._sdl2`. Mientras tanto, AUD-138 bajó el filtro de daltonismo de 17,4 ms a 3,1 ms sacándolo de numpy |
+| **Post-procesado en GPU** | gráficos | **MEDIDO** (AUD-148), y la respuesta no era la esperada: en la máquina de medida el bloom en GPU sale **5× más lento** (8,3 ms contra 1,7 ms) porque SDL cae a software sin tarjeta. Presentar sí es barato (0,18–0,36 ms). Queda `scripts/bench_gpu_postproc.py` para medirlo donde toque y `PresentadorGPU` apagado por defecto |
 | ~~Cutscenes: acciones nuevas, guiones desde TMX, no bloquear~~ | **HECHO** (AUD-136). Tipo `Cutscene`, guion en texto, escenas que no bloquean y salto que ejecuta el final | — |
 | **Curva de dificultad medida** de los 15 escenarios | diseño | 3 días |
 | **Partir `stage_scene.py`** (1.549 líneas) | mantenibilidad | 1 semana |
-| **Mutación y resistencia en CI** | QA | 3 días |
+| ~~Mutación en CI~~ | **HECHO** (AUD-147). `scripts/mutation_check.py`, semanal y a mano; acotado a tres módulos para que el informe se lea | — |
 | **15 tipos de objeto sin usar en ningún mapa**, 10 de ellos enemigos | contenido | 2 días |
 
 ---

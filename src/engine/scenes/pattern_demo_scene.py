@@ -40,6 +40,7 @@ from src.engine.scenes.demo_common import (
     save_png,
 )
 from src.engine.scenes.demo_layout import COLOR_ERROR
+from src.engine.scenes.param_panel import ParamPanel
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.processing.pattern_recognition_tools import (
     PatternRecognitionTools,
@@ -106,6 +107,22 @@ class PatternDemoScene(BaseScene):
 
         # TREE_VIEW state
         self._tree_depth: int = 2
+        # AUD-146 — el panel de parámetros, que llevaba escrito sin que
+        # ninguna demo lo instanciara.
+        #
+        # `ParamPanel` existe desde hace meses con su rango, su paso, su
+        # dibujado y su recorte a los límites, y cada demo se hacía a mano un
+        # `if K_LEFT: valor = max(min_, valor - 1)`. Eso son cuatro copias de
+        # la misma lógica, cada una con sus propios límites escritos otra vez
+        # —y una de ellas terminará por no recortarlos—.
+        #
+        # La profundidad del árbol es el parámetro más limpio que hay en las
+        # demos: un entero, un rango, un paso. Es por donde se empieza.
+        self._panel = ParamPanel()
+        self._panel.add_int(
+            "Max Depth", self._tree_depth, 0, 6,
+            on_change=self._al_cambiar_profundidad,
+        )
         self._tree_structure: list[dict[str, object]] | None = None
 
         # Save / error / notifications
@@ -251,14 +268,10 @@ class PatternDemoScene(BaseScene):
             self.context.scene_manager.replace(DemoMenuScene(self.context))
             return
 
-        # TREE_VIEW depth control
+        # TREE_VIEW depth control — AUD-146: lo lleva `ParamPanel`, que ya
+        # sabe recortar al rango y avisar del cambio.
         if self._mode == 5 and self._tree_structure:
-            if im.is_raw_key_pressed(pygame.K_LEFT):
-                self._tree_depth = max(0, self._tree_depth - 1)
-                self._param_changed = True
-            if im.is_raw_key_pressed(pygame.K_RIGHT):
-                self._tree_depth = min(6, self._tree_depth + 1)
-                self._param_changed = True
+            self._panel.handle_input(im, 0.0)
 
         # Analysis rect movement (modes 0, 1)
         if self._mode in (0, 1):
@@ -827,6 +840,16 @@ class PatternDemoScene(BaseScene):
             })
         return nodes
 
+    def _al_cambiar_profundidad(self, valor: int) -> None:
+        """Lo llama el panel cuando el valor se mueve.
+
+        `_tree_depth` sigue siendo el dato que lee el dibujado: el panel es
+        quien lo edita, no quien lo guarda. Así ningún otro sitio de esta
+        escena tiene que enterarse de que ahora hay un panel.
+        """
+        self._tree_depth = int(valor)
+        self._param_changed = True
+
     def _render_tree(self) -> pygame.Surface:
         surf = pygame.Surface(PANEL_SIZE)
         surf.fill((5, 5, 15))
@@ -835,10 +858,12 @@ class PatternDemoScene(BaseScene):
             surf.blit(msg, (10, 30))
             return surf
         self._draw_tree_nodes(surf, self._tree_structure, 0, 0, PANEL_SIZE[0] - 10, 0)
-        depth_label = self._font_small.render(
-            f"  Max Depth: {self._tree_depth}  |  [LEFT/RIGHT] adjust  |  Pruning depth shown", True, COLOR_ACCENT,
+        # AUD-146: el panel se dibuja solo, con su marca de selección.
+        self._panel.draw(surf, 0, PANEL_H - 12)
+        pista = self._font_small.render(
+            "  [LEFT/RIGHT] ajustar  |  profundidad de poda", True, COLOR_ACCENT,
         )
-        surf.blit(depth_label, (4, PANEL_H - 12))
+        surf.blit(pista, (110, PANEL_H - 12))
         return surf
 
     def _draw_tree_nodes(self, surf: pygame.Surface, nodes: list[dict[str, Any]],

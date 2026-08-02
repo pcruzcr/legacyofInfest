@@ -160,12 +160,40 @@ class WeatherSystem:
             return (120, 130, 150)
         return (200, 200, 200)
 
+    #: AUD-145 — clima → fichero REAL, con su ruta completa desde `assets/`.
+    #:
+    #: Antes esto devolvía «rain», «wind» o «storm» y la escena buscaba
+    #: `assets/sfx/ambient/<clave>.wav`. **Esa carpeta no existe.** Los siete
+    #: ambientes del proyecto viven en `assets/sfx/environment/` con otros
+    #: nombres, así que el `.exists()` de la escena daba falso siempre y el
+    #: clima sonaba en silencio sin que nadie se enterara.
+    #:
+    #: Es el mismo patrón que AUD-127 y AUD-136: una comprobación defensiva
+    #: —`if ruta.exists()`— convirtiendo un fallo de integración en silencio.
+    #:
+    #: `None` significa dos cosas distintas y las dos importan:
+    #: en `clear`, que no debe sonar nada; en `rain` y `storm`, que **no hay
+    #: fichero todavía**. Lo segundo se avisa; lo primero no.
+    AMBIENTES: dict[str, str | None] = {
+        "clear": None,
+        "rain": None,      # falta el asset
+        "snow": "sfx/environment/sfx_environment_wind_indoor.wav",
+        "fog": "sfx/environment/sfx_environment_wind_indoor.wav",
+        "storm": None,     # falta el asset
+    }
+
+    #: Climas que deberían sonar y no tienen fichero. Se distinguen de `clear`
+    #: para poder avisar de la carencia sin avisar del silencio buscado.
+    SIN_ASSET: frozenset[str] = frozenset({"rain", "storm"})
+
     def get_ambient_audio_key(self) -> str | None:
-        audio_map: dict[str, str | None] = {
-            "clear": None,
-            "rain": "rain",
-            "snow": "wind",
-            "fog": "wind",
-            "storm": "storm",
-        }
-        return audio_map.get(self._climate)
+        """Ruta relativa a `assets/` del ambiente de este clima, o `None`.
+
+        Se mantiene el nombre por compatibilidad con las entregas que ya lo
+        llaman; lo que cambia es que ahora devuelve algo que existe.
+        """
+        return self.AMBIENTES.get(self._climate)
+
+    def falta_su_ambiente(self) -> bool:
+        """`True` si este clima debería sonar y no hay fichero para él."""
+        return self._climate in self.SIN_ASSET

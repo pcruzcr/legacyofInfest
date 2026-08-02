@@ -11,6 +11,10 @@ on:
   pull_request:
     branches: [prod, pprod, dev]
   workflow_dispatch:
+  # AUD-147 — la comprobación de mutación corre una vez por semana. El
+  # porqué de no correrla en cada empujón está en el trabajo `mutation`.
+  schedule:
+    - cron: "0 4 * * 1"
 
 env:
   # SDL needs headless drivers on CI runners or every pygame call aborts.
@@ -121,6 +125,35 @@ jobs:
         with:
           name: coverage-${{ matrix.python-version }}
           path: coverage.xml
+
+  # AUD-147 — mutación: ¿se enterarían las pruebas si el código cambiara?
+  #
+  # Va en su propio trabajo y **no en cada empujón** a propósito. Cada mutante
+  # arranca pytest, así que una pasada cuesta minutos; metida en el camino de
+  # todos los días, la gente empieza a ignorar CI, que es exactamente lo que
+  # pasó con las seis herramientas de calificación que hubo que arreglar este
+  # mes. Una vez por semana y a mano cuando se quiera: se lee y se actúa.
+  mutation:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Mutation check on the critical modules
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: python scripts/mutation_check.py --ci
 
   validate:
     runs-on: ubuntu-latest
