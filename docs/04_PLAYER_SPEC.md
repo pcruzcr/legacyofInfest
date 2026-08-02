@@ -17,6 +17,15 @@ date_processed: "2026-07-14"
 
 ---
 
+<!-- cita-historica -->
+> **Corrección AUD-150 — nombres que este documento daba por existentes.**
+> Comprobados uno por uno contra el código. Ninguno rompe nada al jugar; todos
+> engañan a quien lea el documento para programar.
+>
+> * `damage_amount` **no existe.** El daño se pasa como argumento a `apply_damage(cantidad, origen)`; el jugador no guarda un campo con la cantidad del último golpe.
+<!-- /cita-historica -->
+
+
 ## 1. Concept
 
 The player character is a hooded figure of indeterminate identity. The hood is not a costume choice — it is a narrative device. The character intentionally does not reveal whether it is John or Jin, the two protagonists of the Legacy of InFest universe. This ambiguity serves the tutorial context of Stage 0: the character is an avatar of the player and of the student, not a story character in the full sense.
@@ -186,7 +195,7 @@ Damage is applied when the player's **hurtbox** (see Section 8.2) overlaps with 
 
 **Damage Application Sequence:**
 1. Check: Is `invincibility_timer > 0`? If yes, skip.
-2. Subtract `damage_amount` from `current_health`.
+2. Resta del `current_health` la cantidad **que llega como argumento** a `apply_damage(cantidad, origen)`. El jugador no guarda un campo con el daño del último golpe (AUD-150).
 3. Clamp `current_health` to `[0.0, MAX_HEALTH]`.
 4. Set `invincibility_timer = INVINCIBILITY_DURATION`.
 5. Emit `PLAYER_DAMAGED` event with `amount` and `source`.

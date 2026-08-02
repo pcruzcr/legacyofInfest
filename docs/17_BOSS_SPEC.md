@@ -3,7 +3,7 @@ document_id: "LOI-BOSS-017"
 title: "Legacy of InFest — Boss Specification"
 aliases: ["Boss Specification", "Boss Spec"]
 tags: ["boss", "specification", "entity"]
-description: "All 4 boss designs, phase-by-phase"
+description: "Los 4 jefes de diseño; 3 implementados. Ver §0 para el estado real"
 source: "docs/17_BOSS_SPEC.md"
 date_processed: "2026-07-14"
 ---
@@ -15,6 +15,41 @@ date_processed: "2026-07-14"
 **Status:** Official  
 **Compatibility:** Requires LOI-ENEMY-005, LOI-WORLD-016, LOI-ARCH-003, LOI-FILTER-011, LOI-VISION-012, LOI-PATTERN-013  
 **Audience:** Professor, Teaching Assistants, AI coding assistants
+
+---
+
+## 0. Qué de esto existe hoy (AUD-150)
+
+> **Leer esto antes que nada.** Este documento describe **cuatro jefes** y
+> unos cuarenta patrones de ataque. En el código hay **tres clases de jefe** y
+> **nueve patrones**. Lo demás es diseño: legítimo, útil y **no implementado**.
+>
+> El registro de pendientes (`63`) lo llamaba «22 patrones que ningún jefe
+> implementa» y sugería reescribir la especificación contra los jefes reales.
+> No se reescribe: se **etiqueta**. Un diseño de jefe que aún no existe es lo
+> que una especificación debe contener; lo que no puede es que nadie sepa cuál
+> de las dos cosas está leyendo.
+
+<!-- cita-historica -->
+
+| Jefe | Clase en el código | Fases reales | Patrones que EXISTEN | Patrones sólo diseñados |
+|---|---|---|---|---|
+| El Venado Sagrado (§3) | `BossVenado` | 2 | `STOMP`, `CHARGE`, `VINE_TOSS`, `VINE_SWEEP`, `MUSHROOM_SPORE` | — |
+| El Rey Terciopelo (§4) | `BossRey` | **1** | `VENOM_SPIT` | `SERPENT_CARPET`, `VENOM_BURST`, `SERPENT_WAVE`, y las formas `ReyMetad` de las fases 2-3 |
+| El Gavilán Mascarero (§5) | **ninguna** | — | **ninguno** | todo §5 |
+| El Gran Shaman Paburu (§6) | `BossPaburu` | 1 de 4 formas | `STONE_SPIT`, `EYE_BEAM`, `EL_SELLO` | las formas 2, 3 y 4 (marcadas como EP3 en el propio código) |
+
+<!-- /cita-historica -->
+
+**Cómo se comprobó.** Leyendo `attack_patterns` de cada `BossPhase` en las tres
+clases y los métodos `_attack_*` / `_do_*` que las ejecutan. La lista de
+patrones inventados del registro salía de citar nombres en este documento que
+no aparecen en ningún fichero `.py`.
+
+**`BossSpawn`** —el tipo de objeto de Tiled que §8 describe— **el motor no lo
+acepta**. Hoy un estudiante que lo escriba en su mapa recibe un aviso de tipo
+desconocido. Los tres jefes se colocan con su tipo propio (`BossVenado`, y los
+otros dos registrados por su paquete al cargar el escenario).
 
 ---
 
@@ -217,6 +252,10 @@ Phase 2: `FilterTools.apply_kernel(sobel_x_kernel)` applied every 3 frames creat
 
 ## 4. Boss 2 — El Rey Terciopelo
 
+> **Estado (AUD-150): fase 1 implementada, fases 2 y 3 no.** `BossRey` existe
+> con una sola `BossPhase` y un único patrón, `VENOM_SPIT`. Todo lo que este
+> apartado dice de serpientes, ráfagas y mitades `ReyMetad` es diseño.
+
 ### 4.1 Concept
 
 **Name:** El Rey Terciopelo (The Fer-de-Lance King)  
@@ -313,6 +352,12 @@ The professor's implementation includes inline comments documenting that a stude
 ---
 
 ## 5. Boss 3 — El Gavilán Camionero Mascarero
+
+> **Estado (AUD-150): NO EXISTE.** No hay clase, ni sprites, ni escena. El
+> registro de escenarios reserva el hueco `stage3_4_boss_gavilan` y los
+> créditos ya lo citan, pero el jefe está entero por hacer. Todo este apartado
+> es diseño; ninguno de sus patrones —`DIVE_BOMB`, `FEATHER_STORM`,
+> `MASK_BEAM` y los demás— aparece en el código.
 
 ### 5.1 Concept
 
@@ -423,6 +468,11 @@ Phase 3's movement pattern — a combination of diving and erratic hovering — 
 ---
 
 ## 6. Final Boss — El Gran Shaman Paburu
+
+> **Estado (AUD-150): Forma 1 implementada.** `BossPaburu` tiene sus tres
+> patrones —`STONE_SPIT`, `EYE_BEAM`, `EL_SELLO`— y su arena. Las formas 2, 3
+> y 4 están por hacer, y el propio código lo dice en un comentario que remite
+> a EP3.
 
 ### 6.1 Concept
 

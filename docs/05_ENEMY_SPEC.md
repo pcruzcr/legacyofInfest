@@ -17,6 +17,38 @@ date_processed: "2026-07-14"
 
 ---
 
+---
+
+## 0. Los cinco nombres que este documento tenía mal (AUD-150)
+
+> Comprobado contra el código, uno por uno. Ninguno rompía nada al jugar;
+> todos engañaban a quien leyera el documento para programar.
+
+<!-- cita-historica -->
+
+| El documento decía | En el código es | Qué pasó |
+|---|---|---|
+| `detection_rect` | `detection_range_x` y `detection_range_y` | La detección nunca fue un rectángulo guardado: son dos distancias que se comparan. §2 lo describe ahora así |
+| `patrol_origin` | `_patrol_origin` | Existe, es privado. `patrol_length` sí es público y sí se lee del TMX |
+| `WIND_UP` | `TELEGRAPHING` | El estado de aviso previo al ataque **sí existe**, con otro nombre y en el enum base. El Charger no añade estados propios: usa `TELEGRAPHING` y un temporizador de aturdimiento |
+| `sfx_walker_die`, `sfx_flying_die`, `sfx_shooter_die` | `SFX_ENEMY_DIE_SMALL` y `SFX_ENEMY_DIE_LARGE` | **Corregido en AUD-133, y es mejor diseño que el documentado**: dos sonidos por tamaño en vez de uno por especie. Con treinta especies, treinta ficheros que mantener y treinta oportunidades de que falte uno |
+
+<!-- /cita-historica -->
+
+**Los trece estados reales**, leídos del enum `EnemyState`:
+
+`IDLE`, `PATROL`, `SEARCH`, `ALERT`, `CHASE`, `TELEGRAPHING`, `FIRING`,
+`RECOVER`, `RETREAT`, `STUNNED`, `HURT`, `LAUNCHED`, `DYING`.
+
+<!-- cita-historica -->
+**Ninguna subclase añade estados.** §12 dice que el Charger añade
+`WIND_UP`/`CHARGE`/`STUN`; no los añade: usa `TELEGRAPHING` para el aviso,
+`CHASE` para la embestida y `STUNNED` para la recuperación, que es justo lo
+que esos tres nombres describían.
+<!-- /cita-historica -->
+
+---
+
 ## 1. Enemy Philosophy
 
 ### 1.1 Enemies as Academic Vehicles
@@ -64,8 +96,15 @@ The framework provides three enemy archetypes (plus five advanced specialist typ
 | `hurtbox` | pygame.Rect | Defined per subclass | Damage-receiving zone |
 | `damage_on_contact` | float | 0.50 | Hearts of damage dealt on hurtbox collision |
 | `contact_knockback` | float | 120.0 | Horizontal knockback speed applied to player |
-| `death_sfx` | str | `"sfx_enemy_die"` | Sound played on death |
-| `hit_sfx` | str | `"sfx_enemy_hit"` | Sound played on receiving a hit |
+
+<!-- cita-historica -->
+> **AUD-150: `death_sfx` y `hit_sfx` no son atributos y nunca lo fueron.**
+> Un enemigo no guarda el nombre de su sonido: **emite un evento** y la escena
+> decide qué suena. `EnemyBase._die` emite `SFX_ENEMY_DIE_SMALL` o `_LARGE`
+> según el tamaño, y el golpe emite `SFX_ENEMY_HIT`. Es mejor así: cambiar el
+> sonido de la muerte de todo el bestiario es una línea en `StageScene`, no
+> treinta atributos.
+<!-- /cita-historica -->
 
 ### 2.2 Required Overrides
 
@@ -120,7 +159,9 @@ Death animation completes
 
 ### 2.5 Detection System
 
-All enemies share a detection range check. The player's position is compared against the enemy's `detection_rect`, a wider invisible rectangle centered on the enemy.
+<!-- cita-historica -->
+All enemies share a detection range check. The player's position is compared against `detection_range_x` and `detection_range_y` — **two distances, not a stored rectangle** (AUD-150: this paragraph used to name a `detection_rect` that never existed).
+<!-- /cita-historica -->
 
 | Property | Default | Description |
 |---|---|---|
@@ -166,10 +207,10 @@ The Walker is the simplest enemy and the primary demonstration vehicle for:
 
 ### 3.4 Patrol Limit Detection
 
-The Walker tracks a `patrol_origin` (spawn position) and a `patrol_length` property. It reverses when:
+The Walker tracks `_patrol_origin` (spawn position, private) and a public `patrol_length` read from the TMX. It reverses when:
 
 ```
-abs(position.x - patrol_origin.x) >= patrol_length / 2
+abs(position.x - _patrol_origin.x) >= patrol_length / 2
 ```
 
 ### 3.5 Ledge Detection
@@ -384,7 +425,7 @@ Expiration:
 
 ### 6.1 Description
 
-The Charger rushes the player at high speed with a wind-up telegraph. Its attack cycle has three phases: WIND_UP (red bar telegraph) → CHARGE (fast) → STUN (recovery). This enemy demonstrates:
+The Charger rushes the player at high speed with a wind-up telegraph. Its attack cycle has three phases, and **los tres son estados del enum base**: `TELEGRAPHING` (barra roja) → `CHASE` (embestida) → `STUNNED` (recuperación). This enemy demonstrates:
 
 - Multi-phase attack state machine with timing
 - Telegraph indicators for player readability
@@ -412,8 +453,8 @@ The Charger rushes the player at high speed with a wind-up telegraph. Its attack
 | State | Behavior |
 |---|---|
 | `PATROL` | Slow back-and-forth movement, turns at ±48px from origin |
-| `ALERT` | Faces player; if 40-180px away, begins WIND_UP → CHARGE → STUN cycle |
-| `WIND_UP` | 0.4s telegraph period (red bar indicator), then enters CHARGE |
+| `ALERT` | Faces player; if 40-180px away, begins `TELEGRAPHING` → `CHASE` → `STUNNED` |
+| `TELEGRAPHING` | 0.4 s de aviso (barra roja) antes de embestir |
 | `CHARGE` | Dashes at 250.0 px/s for 0.7s, damage 1.5, then enters STUN |
 | `STUN` | Recovers for 1.0s, damage reduced to 0.5, returns to ALERT |
 | `HURT` | Halt for 0.3s |
@@ -613,7 +654,7 @@ When flanking or retreating, the Assassin renders with semi-transparent alpha (8
 | Max health | 2.0 | 1.5 | 3.0 | 4.0 | 2.5 | 5.0 | 2.0 | 1.5 |
 | Contact damage | 0.50 | 0.50 | 0.25 | 1.50 (charge) | 0.25 | 0.50 | 0.25 | 0.25 |
 | Invincibility after hit | 0.5 s | 0.3 s | 0.4 s | 0.4 s | 0.35 s | 0.5 s | 0.35 s | 0.35 s |
-| Death SFX | `sfx_walker_die` | `sfx_flying_die` | `sfx_shooter_die` | `sfx_enemies_die_large` | `sfx_enemies_die_small` | `sfx_enemies_die_large` | `sfx_enemies_die_small` | `sfx_enemies_die_small` |
+| Death SFX (AUD-133: por TAMAÑO, no por especie) | `sfx_enemies_die_small` | `sfx_enemies_die_small` | `sfx_enemies_die_small` | `sfx_enemies_die_large` | `sfx_enemies_die_small` | `sfx_enemies_die_large` | `sfx_enemies_die_small` | `sfx_enemies_die_small` |
 | Has projectiles | No | No | Yes | No | Yes (arc) | No | Yes (homing) | No |
 | Gravity affected | Yes | No | Yes (if mobile) | Yes | Yes | Yes | Yes | Yes |
 | Patrol limit (default) | 96 px | Path-based | 48 px | 96 px | 96 px | 128 px | 96 px | 128 px |
@@ -622,7 +663,13 @@ When flanking or retreating, the Assassin renders with semi-transparent alpha (8
 
 ## 12. States Reference
 
-All enemies share the base state names listed below. `EnemyState` enum (`enemy_base.py:28-36`) defines the base set: `PATROL`, `ALERT`, `TELEGRAPHING`, `FIRING`, `HURT`, `LAUNCHED`, `DYING`. Subclasses may add additional states (Charger adds `WIND_UP`/`CHARGE`/`STUN` which are not in the base enum).
+All enemies share the base state names listed below. `EnemyState` define **trece** estados: `IDLE`, `PATROL`, `SEARCH`, `ALERT`,
+`CHASE`, `TELEGRAPHING`, `FIRING`, `RECOVER`, `RETREAT`, `STUNNED`, `HURT`,
+<!-- cita-historica -->
+`LAUNCHED`, `DYING`. **Ninguna subclase añade estados** (AUD-150: aquí se decía
+que el Charger añadía `WIND_UP`/`CHARGE`/`STUN`; usa `TELEGRAPHING`, `CHASE` y
+`STUNNED`, que son esos mismos tres con los nombres del enum).
+<!-- /cita-historica -->
 
 | State Name | Base Enum | Applicable To | Description |
 |---|---|---|---|
@@ -633,7 +680,7 @@ All enemies share the base state names listed below. `EnemyState` enum (`enemy_b
 | `LAUNCHED` | ✅ Yes | Pushed/knocked back | Enemy is airborne from knockback (undocumented in earlier docs) |
 | `HURT` | ✅ Yes | All | Damage received, brief stun |
 | `DYING` | ✅ Yes | All | Death animation playing |
-| `WIND_UP` | ❌ Subclass only | Charger only | Charge telegraph phase |
+| ~~`WIND_UP`~~ | **No existe.** Es `TELEGRAPHING`, y está en el enum base | — | AUD-150 |
 | `CHARGE` | ❌ Subclass only | Charger only | High-speed rush |
 | `STUN` | ❌ Subclass only | Charger only | Post-charge recovery |
 

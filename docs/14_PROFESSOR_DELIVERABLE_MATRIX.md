@@ -18,6 +18,16 @@ date_processed: "2026-07-14"
 
 ---
 
+<!-- cita-historica -->
+> **Corrección AUD-150 — nombres que este documento daba por existentes.**
+> Comprobados uno por uno contra el código. Ninguno rompe nada al jugar; todos
+> engañan a quien lea el documento para programar.
+>
+> * `SpriteSheet` y `AnimationController` **no existen como clases.** La carga de hojas la hace `AssetLoader`, y la animación vive dentro de cada entidad (`_advance_animation`, `_sprite_frames`). La rúbrica sigue siendo válida —lo que se evalúa es que el estudiante anime su entidad—; lo que hay que leer distinto es dónde mirar el código.
+> * `OneWay_` no es un prefijo de nada. Las plataformas atravesables se declaran con el tipo «Platform» en la capa `Collision`.
+<!-- /cita-historica -->
+
+
 ## 1. Overview
 
 This document provides complete traceability between the course syllabus and the Legacy of InFest framework. For every topic in every course unit, it defines what the professor delivers, what the student produces, which framework component is used, which libraries participate, where the concept appears in Stage 0, what a student stage must demonstrate, and how it is assessed.
@@ -123,8 +133,8 @@ A student demonstrates Unit III mastery when they can:
 |---|---|---|---|---|---|---|---|---|
 | Scene graph concepts | `SceneManager` with push/pop/replace | Student stage implements `BaseScene` correctly with `on_enter`, `update`, `draw` | `engine/scene/scene_manager.py`, `engine/scene/base_scene.py` | `pygame-ce` | All scenes in the game flow | All stages | Code review | LOI-ARCH-003 §2.2 |
 | Layered rendering | TMX layer system (BG_Far through FG_Overlay) | TMX map has all required layers; parallax visually observable | `framework/stage/stage_loader.py`, `pyscroll` | `pygame-ce`, `pyscroll`, `pytmx` | All zones: parallax scrolling | All stages | TMX review + demo | LOI-TMX-006 §3 |
-| Sprite as textured quad | `SpriteSheet` and `AssetLoader` | At least one custom animated sprite created by student | `engine/utils/spritesheet.py`, `engine/utils/asset_loader.py` | `pygame-ce` | Player and enemy sprites | All stages | Code review | LOI-ARCH-003 §2.6 |
-| Sprite animation | `AnimationController` in player/enemies | Custom entity has multi-frame animation with correct FPS | `framework/entities/base_entity.py` + player/enemy | `pygame-ce` | All animated entities in Stage 0 | All stages | Code review | LOI-PLAYER-004 §9 |
+| Sprite as textured quad | `AssetLoader` (AUD-150: no hay ninguna clase de hoja de sprites) | At least one custom animated sprite created by student | `engine/utils/asset_loader.py` | `pygame-ce` | Player and enemy sprites | All stages | Code review | LOI-ARCH-003 §2.6 |
+| Sprite animation | la animación vive en cada entidad, no en un controlador aparte | Custom entity has multi-frame animation with correct FPS | `framework/entities/base_entity.py` + player/enemy | `pygame-ce` | All animated entities in Stage 0 | All stages | Code review | LOI-PLAYER-004 §9 |
 | Double buffering | `App.internal_surface` (320×224) blitted to window | README explains double buffering (internal → window) | `engine/core/app.py` | `pygame-ce` | Entire Stage 0 | All stages (README) | README | LOI-ARCH-003 §4.1 |
 | Z-ordering / draw calls | `BaseEntity.layer` property; pyscroll group | Entity layer values produce correct visual depth order | `framework/entities/base_entity.py`, `pyscroll` | `pygame-ce` | Stage 0 entities at correct depths | All stages | Visual review | LOI-ARCH-003 §2.7 |
 | Object lifecycle | `BaseEntity.is_active`, `is_visible` | Custom entities correctly set `is_active = False` on death | `framework/entities/base_entity.py` | `pygame-ce` | Enemy death in Stage 0 | All stages | Code review | LOI-ARCH-003 §2.7 |
@@ -167,13 +177,13 @@ A student demonstrates Unit V mastery when they can:
 
 | Topic | Professor Delivers | Student Delivers | Framework Component | Libraries | Stage 0 Example | Student Stage | Assessment | Doc Reference |
 |---|---|---|---|---|---|---|---|---|
-| Texture mapping | `SpriteSheet`, `AssetLoader.load_image()` | Student's entities use correctly sized textures (16-color constraint) | `engine/utils/spritesheet.py`, `engine/utils/asset_loader.py` | `pygame-ce` | All sprite entities | All stages | Asset review | LOI-ARCH-003 §2.6 |
-| Frame-based animation | `AnimationController` (inside player/enemy) | Custom entity animation with documented frame count, FPS, loop mode | `framework/entities/base_entity.py` | `pygame-ce` | Player and enemy animations | All stages | Code review | LOI-PLAYER-004 §9 |
+| Texture mapping | `AssetLoader.load_image()` | Student's entities use correctly sized textures (16-color constraint) | `engine/utils/asset_loader.py` | `pygame-ce` | All sprite entities | All stages | Asset review | LOI-ARCH-003 §2.6 |
+| Frame-based animation | `_advance_animation` y `_sprite_frames` en cada entidad | Custom entity animation with documented frame count, FPS, loop mode | `framework/entities/base_entity.py` | `pygame-ce` | Player and enemy animations | All stages | Code review | LOI-PLAYER-004 §9 |
 | Linear interpolation | `math_utils.lerp()` | At least one lerp-driven value (camera follow, platform movement, fade) | `engine/utils/math_utils.py` | — | Camera follow uses lerp | Stage 1 or 2 | Code review | LOI-ARCH-003 §2.6 |
 | Easing functions | `math_utils.ease_*` functions + `pytweening` | At least one entity or UI uses an ease function (not plain lerp) | `engine/utils/math_utils.py` | `pytweening` | Screen banner slide (ease_out_quad) | Stage 1 or 2 | Practical I | LOI-ARCH-003 §2.6 |
 | AABB collision detection | Player and enemy collision resolution in engine | Student's custom entity resolves AABB collision correctly | `framework/entities/player.py`, `framework/entities/enemy_base.py` | `pygame-ce` | All Zone A–F interactions | All stages | Code review | LOI-PLAYER-004 §4.3 |
 | Interaction events | `EventBus` pub/sub system | Custom trigger zone emits an event; another entity subscribes | `engine/core/event_bus.py` | — | Checkpoint → HUD; Shooter → projectile | Stage 1 or 2 | Code review | LOI-ARCH-003 §2.1 |
-| One-way platforms | `Collision` layer `OneWay_` prefix objects | Student designs a stage zone with one-way platforms | TMX `Collision` layer, `framework/stage/stage_loader.py` | `pygame-ce`, `pytmx` | Zone E one-way platform | Stage 1 or 2 | TMX review | LOI-TMX-006 §9.2 |
+| One-way platforms | objetos de tipo «Platform» en la capa `Collision` (AUD-150: no hay ningún prefijo especial en los nombres) | Student designs a stage zone with one-way platforms | TMX `Collision` layer, `framework/stage/stage_loader.py` | `pygame-ce`, `pytmx` | Zone E one-way platform | Stage 1 or 2 | TMX review | LOI-TMX-006 §9.2 |
 
 ### 8.2 Learning Evidence — Unit VI
 

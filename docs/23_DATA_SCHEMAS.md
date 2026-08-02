@@ -18,6 +18,17 @@ date_processed: "2026-07-14"
 
 ---
 
+<!-- cita-historica -->
+> **Corrección AUD-150 — nombres que este documento daba por existentes.**
+> Comprobados uno por uno contra el código. Ninguno rompe nada al jugar; todos
+> engañan a quien lea el documento para programar.
+>
+> * `Message` **no es un tipo de objeto**: es `MessageTrigger`.
+> * `BossSpawn` **no lo acepta el motor.** Los tres jefes se colocan con su tipo propio.
+> * `n_features` es una variable de ejemplo del pseudocódigo de scikit-learn, no un identificador del proyecto. Se deja porque el ejemplo se entiende mejor así.
+<!-- /cita-historica -->
+
+
 ## 1. Purpose
 
 `22_API_CONTRACTS.md` defines function and class **signatures**. This document defines the exact **shape of the data** that flows through those signatures and across files on disk — TMX object properties, event payloads, dataset files, serialized models, and configuration files. Where `22_API_CONTRACTS.md` says `dict[str, Any]` or `**kwargs`, this document says exactly which keys are valid and what they mean.
@@ -99,7 +110,7 @@ This expands `06_TMX_SPEC.md` §6 into exact property dictionaries as `StageLoad
 }
 ```
 
-### 3.6 `Message`
+### 3.6 `MessageTrigger`
 
 ```python
 {
@@ -136,7 +147,9 @@ This expands `06_TMX_SPEC.md` §6 into exact property dictionaries as `StageLoad
 }
 ```
 
-### 3.10 `BossSpawn`
+### 3.10 BossSpawn — **no implementado** (AUD-150)
+
+> El motor no acepta este tipo. Se conserva el esquema porque describe lo que haría falta si algún día se implementa; hoy, escribirlo en Tiled produce un aviso de tipo desconocido.
 
 ```python
 {
@@ -225,7 +238,7 @@ Per `13_PATTERN_RECOGNITION_SPEC.md` §8.3, all datasets are NumPy compressed ar
 ```python
 np.savez(path, X=X, y=y)
 
-# X.shape == (n_samples, n_features), dtype == np.float32
+# X.shape == (n_samples, n_caracteristicas), dtype == np.float32
 # y.shape == (n_samples,), dtype == '<U...' (numpy unicode string) or object
 ```
 
@@ -244,7 +257,7 @@ y: np.ndarray = data["y"]
 | Property | Value |
 |---|---|
 | `n_samples` | 90 |
-| `n_features` | 512 (HOG on 32×32 canonical resize) |
+| n_features (variable del ejemplo, no del proyecto) | 512 (HOG on 32×32 canonical resize) |
 | Classes | `"dark_zone"`, `"neutral"`, `"light_zone"` — exactly 30 samples each |
 | Source | Synthetically generated or screenshot-derived 32×32 surface crops, brightness-stratified into the three classes by mean luminance threshold |
 

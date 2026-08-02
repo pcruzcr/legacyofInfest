@@ -110,10 +110,26 @@ tienen sus propios ataques, con otros nombres. La especificación describe un
 diseño anterior que nadie siguió. No es que los jefes estén incompletos: es que
 el documento describe otros jefes.
 
-**Acción recomendada:** reescribir §5 de `17_BOSS_SPEC.md` contra los cuatro
-jefes que existen, como se hizo con `07_STAGE0_DESIGN.md`. Y decidir si
-`BossSpawn` se implementa o se retira de la especificación: hoy un estudiante
-que lo escriba en Tiled recibe un aviso de tipo desconocido.
+**HECHO (AUD-150), y con una corrección de partida: los jefes que existen son
+TRES, no cuatro.** `BossVenado`, `BossRey` y `BossPaburu`. El cuarto —el
+Gavilán de §5— no tiene clase, ni sprites, ni escena: sólo un hueco reservado
+en el registro de escenarios y una línea en los créditos.
+
+No se reescribió la especificación: se **etiquetó**, que es lo que este
+registro pide. `17_BOSS_SPEC.md` abre ahora con una §0 que dice, jefe por
+jefe, qué clase lo implementa, cuántas fases tiene de verdad y cuáles de sus
+patrones existen; y cada apartado lleva su propio aviso. Borrar el diseño
+habría sido peor: un diseño de jefe sin implementar es lo que una
+especificación **debe** contener; lo que no puede es que nadie sepa cuál de
+las dos cosas está leyendo.
+
+Los 22 patrones siguen apareciendo en el barrido, y **está bien que
+aparezcan**: no existen. La diferencia es que ahora el documento lo dice
+primero.
+
+`BossSpawn` sigue sin implementarse y §0 lo advierte: un estudiante que lo
+escriba en Tiled recibe un aviso de tipo desconocido. Los tres jefes reales se
+colocan con su tipo propio.
 
 ---
 
@@ -140,8 +156,18 @@ que lo escriba en Tiled recibe un aviso de tipo desconocido.
 | `detection_rect`, `patrol_origin` | Nombres viejos. Existen como `detection_range_x` y `detection_range_y` |
 | `sfx_walker_die`, `sfx_flying_die`, `sfx_shooter_die` | Nombres viejos. El motor usa **dos** sonidos por tamaño —`SFX_ENEMY_DIE_SMALL` y `_LARGE`— en vez de uno por especie, que con treinta especies es mejor diseño: dos ficheros que mantener en vez de treinta |
 
-**Acción:** reescribir la especificación contra el código. No hay nada que
-implementar aquí.
+**HECHO (AUD-150).** `05_ENEMY_SPEC.md` abre con una §0 que corrige los cinco
+nombres, y los sitios donde el documento los usaba están arreglados: la
+detección son dos distancias y no un rectángulo, `_patrol_origin` es privado,
+y el ciclo del Charger se describe con los estados que de verdad tiene
+—`TELEGRAPHING` → `CHASE` → `STUNNED`—.
+
+Aparecieron dos más al comprobar: **`death_sfx` y `hit_sfx` tampoco son
+atributos**, y nunca lo fueron. Un enemigo no guarda el nombre de su sonido:
+emite un evento y la escena decide. Es mejor así — cambiar el sonido de muerte
+de todo el bestiario es una línea, no treinta atributos.
+
+El documento ya no aparece en el barrido.
 
 ---
 
