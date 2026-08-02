@@ -84,9 +84,106 @@ def build_table() -> str:
                      "`guion` **obligatoria** · `bloquea` · `saltable` · "
                      "`una_vez` · `arranca_con`. Punto = al empezar; "
                      "rectángulo = al entrar"),
+        "Light": ("Punto o rectángulo (se usa el **centro**)",
+                  "`radius` (px, 80) · `color` (nombre de la paleta o "
+                  "`#rrggbb`) · `intensity` (0-1, 0.8) · `flicker` (bool) · "
+                  "`flicker_speed` (Hz, 4.0) · `flicker_amount` (0-1, 0.15)"),
+        # ── F4.1 — objetos con los que el jugador interactúa ──────
+        "Pickup": ("Rectángulo o punto",
+                   "`item_id` **obligatoria** (vale el nombre del objeto en "
+                   "Tiled, o `key_id`) · `automatico` (bool, sí: se coge al "
+                   "tocarlo) · `mensaje`"),
+        "Key": ("Rectángulo o punto",
+                "Alias de `Pickup`, mismas propiedades. Nombrarlo `Key` sólo "
+                "hace el mapa legible en Tiled"),
+        "Door": ("Rectángulo **obligatorio**",
+                 "`key_id` (llave que la abre) · `consume_llave` (bool, no) · "
+                 "`mensaje` (al intentar pasar sin llave) · `evento` (se emite "
+                 "al abrir) · `abre_con` (evento que la abre sola) · "
+                 "`cierra_en` (segundos: puerta cronometrada)"),
+        "LockedDoor": ("Rectángulo **obligatorio**",
+                       "Alias de `Door`, mismas propiedades"),
+        "Cage": ("Rectángulo **obligatorio**",
+                 "Igual que `Door` pero se dibuja como jaula"),
+        "Chest": ("Rectángulo",
+                  "`contenido` (o `item_id`: lo que entrega) · `key_id` (llave "
+                  "que hace falta) · `mensaje` · `evento` (al abrir). Se abre "
+                  "con el botón de interactuar y entrega una sola vez"),
+        "EventTrigger": ("Rectángulo",
+                         "`evento` **obligatoria** (vale el nombre del objeto) "
+                         "· `automatico` (bool, sí: al entrar; no: hay que "
+                         "pulsar) · `una_vez` (bool, sí) · `key_id`"),
+        # ── F5.3-F5.6 — las once mecánicas de componente ECS ──────
+        "WindZone": ("Rectángulo",
+                     "`fuerza_x`, `fuerza_y` (px/s², 0) · `periodo` (s: con "
+                     "valor, el viento sopla a rachas)"),
+        "FrictionZone": ("Rectángulo",
+                         "`multiplicador` (1.0; por debajo de 1 resbala) · "
+                         "`arrastre` (px/s, 0)"),
+        "Conveyor": ("Rectángulo",
+                     "Igual que `FrictionZone`, pero `arrastre` vale 60 px/s "
+                     "por defecto: una cinta sin arrastre no es una cinta"),
+        "LaserZone": ("Rectángulo",
+                      "`dano` (99: mata) · `encendido` (s, 1.0) · `apagado` "
+                      "(s, 1.0) · `desfase` (s, 0: desincroniza dos láseres)"),
+        "ShockwaveZone": ("Rectángulo",
+                          "Alias de `LaserZone`, mismas propiedades"),
+        "WaterZone": ("Rectángulo",
+                      "`corriente_x`, `corriente_y` (px/s, 0). Dentro del agua "
+                      "el jugador pasa al estado de nado"),
+        "MovingPlatform": ("Rectángulo",
+                           "`destino_dx`, `destino_dy` (px **relativos** a "
+                           "donde la dibujaste) · `velocidad` (px/s, 40) · "
+                           "`espera` (s en cada extremo, 0.5) · `atravesable` "
+                           "(bool, no)"),
+        "RhythmBlock": ("Rectángulo",
+                        "`visible_seg` (1.0) · `oculto_seg` (1.0) · `desfase` "
+                        "(s, 0) · `patron` (p. ej. `\"x.x.\"`: con patrón manda "
+                        "la música y los segundos dejan de contar)"),
+        "SinkingPlatform": ("Rectángulo",
+                            "`retraso` (s antes de ceder, 0.4) · "
+                            "`velocidad_caida` (px/s, 90) · `reaparece_en` "
+                            "(s, 3.0)"),
+        "Spring": ("Rectángulo (rebota en todo su ancho)",
+                   "`impulso` (px/s, -520; negativo es hacia arriba) · "
+                   "`rearme` (s, 0.15)"),
+        "Guard": ("Punto",
+                  "`mira_x`, `mira_y` (dirección, 1/0) · `alcance` (px, 160) · "
+                  "`semiangulo` (grados, 30) · `barrido` (grados, 0: el cono "
+                  "oscila) · `velocidad_barrido` (grados/s, 45)"),
+        "Stalker": ("Punto",
+                    "`velocidad` (px/s, 55) · `distancia_retirada` (px, 480) · "
+                    "`reaparicion` (s, 6.0)"),
+        "Vine": ("Rectángulo (alto = lo que se trepa)",
+                 "`ancho_de_agarre` (px, 10) · `velocidad` (px/s de trepada, "
+                 "70)"),
+        "Zipline": ("Rectángulo (la esquina es el enganche)",
+                    "`destino_dx` (px, 96), `destino_dy` (px, 64) "
+                    "**relativos** · `velocidad` (px/s, 190) · "
+                    "`radio_de_enganche` (px, 14) · `solo_de_bajada` "
+                    "(bool, sí)"),
     }
+    # AUD-182: antes esto era `structural.get(name, ("—", "—"))`, así que todo
+    # tipo sin fila escrita a mano salía publicado como «— | —»: 22 de los 35.
+    # El estudiante leía que `Conveyor` existe y no tenía forma de saber qué
+    # propiedades acepta, ni de sospechar que las tenía. Y el `--check` del CI
+    # no lo veía, porque compara el documento contra esta misma tabla: un gate
+    # que verifica que el doc coincida con una tabla incompleta.
+    #
+    # Ahora falta un tipo es un error duro. `tests/test_referencia_tmx.py`
+    # comprueba lo mismo antes de llegar aquí, para que el fallo salga como
+    # prueba y no como excepción de un script.
+    sin_documentar = [n for n in BUILTIN_OBJECT_TYPES if n not in structural]
+    if sin_documentar:
+        raise SystemExit(
+            "Estos tipos de objeto los acepta el cargador pero nadie los ha "
+            "documentado, así que saldrían en la guía como «—»:\n  "
+            + "\n  ".join(sin_documentar)
+            + "\n\nAñádelos a `structural` en scripts/generate_tmx_reference.py "
+            "con su geometría y sus propiedades reales.",
+        )
     for name in BUILTIN_OBJECT_TYPES:
-        geometry, props = structural.get(name, ("—", "—"))
+        geometry, props = structural[name]
         lines.append(f"| `{name}` | {geometry} | {props} |")
 
     lines += [
