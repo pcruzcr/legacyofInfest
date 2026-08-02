@@ -34,6 +34,44 @@ if TYPE_CHECKING:
 SPRITE_W = 32
 SPRITE_H = 32
 
+#: AUD-190 — contorno de silueta del jugador.
+#:
+#: Medido sobre los 16 escenarios: el jugador tenía un contraste de **1,01 a
+#: 1,18** contra el fondo que lo rodea en 15 de ellos (1,0 es indistinguible).
+#: Sólo `boss_venado` llegaba a 1,98. En la práctica el personaje desaparecía
+#: contra el decorado, que es el defecto de legibilidad más caro que puede
+#: tener un plataformas: si no ves dónde estás, no puedes calcular un salto.
+#:
+#: La solución es la de cualquier juego 2D con fondos oscuros —Celeste, Dead
+#: Cells, Hollow Knight—: un contorno de un píxel que separa la figura del
+#: fondo. No se toca ni un sprite; se dibuja la misma imagen teñida en cuatro
+#: desplazamientos, detrás. Las siluetas se cachean, así que cuesta cuatro
+#: blits por fotograma de una superficie ya calculada.
+_CONTORNO: tuple[tuple[int, int], ...] = ((-1, 0), (1, 0), (0, -1), (0, 1))
+
+#: Un blanco roto, no blanco puro: el blanco puro sobre pixel art oscuro se lee
+#: como un brillo y no como un borde.
+_COLOR_CONTORNO: tuple[int, int, int] = (236, 232, 220)
+
+_siluetas: dict[int, pygame.Surface] = {}
+
+
+def _silueta_de(frame: pygame.Surface) -> pygame.Surface:
+    """El mismo fotograma, teñido de un color plano, conservando su alfa."""
+    cacheada = _siluetas.get(id(frame))
+    if cacheada is not None:
+        return cacheada
+    silueta = frame.copy()
+    # BLEND_RGB_MAX y no MIN: el sprite del jugador es oscuro, y `min(oscuro,
+    # claro)` devuelve el oscuro — la primera versión de esto dibujaba cuatro
+    # copias de la misma sombra y el contraste medido no se movía ni una
+    # centésima. `max` lleva cada canal al color del borde allí donde el sprite
+    # es más oscuro, y las variantes RGB no tocan el alfa, así que la forma
+    # recortada se conserva.
+    silueta.fill(_COLOR_CONTORNO, special_flags=pygame.BLEND_RGB_MAX)
+    _siluetas[id(frame)] = silueta
+    return silueta
+
 # State -> (filename, frame_count)
 _PLAYER_SPRITE_MAP: dict[str, tuple[str, int]] = {
     "IDLE": ("player_idle.png", 4),
@@ -699,7 +737,11 @@ class Player(BaseEntity):
             offset_x = (self.rect.width - SPRITE_W) // 2
             offset_y = 0 if self._state_instance.state_enum == PlayerState.CROUCHING else self.rect.height - SPRITE_H
 
-            surface.blit(frame, (screen_x + offset_x, screen_y + offset_y))
+            destino = (screen_x + offset_x, screen_y + offset_y)
+            silueta = _silueta_de(frame)
+            for dx, dy in _CONTORNO:
+                surface.blit(silueta, (destino[0] + dx, destino[1] + dy))
+            surface.blit(frame, destino)
             return
 
         # Fallback: colored rectangle when sprites are unavailable
