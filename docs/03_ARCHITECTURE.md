@@ -220,6 +220,7 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── __init__.py
 │   │   │   ├── stage_loader.py            # StageLoader: parse TMX, build layer stack, spawn
 │   │   │   ├── interactables.py           # Recogible/Cerradura/Cofre/Disparador/Llavero (F4.1)
+│   │   │   ├── bloques.py                 # PushBlock y BreakableBlock: empujar y romper (AUD-140)
 │   │   │   ├── interactable_system.py     # InteractableSystem: llaves, puertas, cofres y eventos (F4.1)
 │   │   │   ├── level_mechanics.py         # ControlDeNado, TiempoBala, ScrollForzado (F5.5/F5.6)
 │   │   │   ├── camera.py                  # Camera: viewport, parallax, follow target
