@@ -14,9 +14,8 @@ from typing import TYPE_CHECKING, Any
 
 import pygame
 
-from src.engine.input.action_map import Action
-
 from src.engine.core.events import Events
+from src.engine.input.action_map import Action
 from src.framework.scenes.stage_scene import StageScene
 from src.framework.stage.stage_loader import StageLoader
 from src.framework.vfx.lighting import LightSource
@@ -48,13 +47,26 @@ AMBIENT_BY_PHASE = (0.80, 0.87, 0.94, 1.00)
 
 
 
+# AUD-151 — el tipo se registra al IMPORTAR el módulo, no dentro de un método.
+#
+# Estaba dentro de `__init__`, así que sólo existía cuando alguien construía la
+# escena. Cualquier herramienta que abra el mapa sin ella —el validador, el
+# calificador, el previsualizador, la curva de dificultad— se encontraba con
+# «tipo desconocido: BossRey» y no podía medir el nivel.
+#
+# Es la misma familia que AUD-106: el motor y las herramientas del profesor
+# tienen que ver el mismo mundo, o las herramientas castigan trabajo correcto.
+# Registrar al importar cuesta una línea y hace que las cuatro rutas
+# coincidan.
+StageLoader.register_entity("BossPaburu", BossPaburu)
+
+
 class BossPaburuScene(StageScene):
     STAGE_ID: str = "boss_paburu"
     STAGE_NAME: str = "4-2  EL GRAN SHAMAN PABURU"
     ZONE: int = 4
 
     def __init__(self, context: GameContext) -> None:
-        StageLoader.register_entity("BossPaburu", BossPaburu)
         self._braziers: list[LightSource] = []
         self._teclas_previas: dict[int, bool] = {}
         self._intro: Any | None = None
