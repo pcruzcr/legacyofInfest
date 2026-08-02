@@ -29,6 +29,11 @@ class DashingState(PlayerStateBase):
 
     def enter(self, player: Player) -> None:
         super().enter(player)
+        # AUD-141: se cobra al ENTRAR, no al pulsar. `_can_dash` ya ha
+        # comprobado que hay bastante; cobrar en el sitio donde el dash
+        # empieza de verdad evita el caso de gastar por un dash que después
+        # otra condición cancela.
+        player.gastar_estamina()
         player._dash_timer = _DASH_DURATION
         if not player.is_grounded:
             player._air_dash_count += 1

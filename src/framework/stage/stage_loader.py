@@ -301,6 +301,10 @@ class StageData:
     compas: int = 4
     #: Segundos de latencia que compensar. Se calibra por máquina.
     desfase_audio: float = 0.0
+    #: AUD-141 — máximo del medidor de estamina. **`0` = apagado**, que es el
+    #: caso de los quince escenarios entregados: encenderla para todos
+    #: cambiaría cómo se juegan sin que sus autores lo pidan.
+    estamina: float = 0.0
     climate: str = ""
     #: Brillo ambiente del escenario, de 0 (oscuridad total) a 1 (sin
     #: oscurecer). `None` significa "no declarado": la escena caerá a su tabla
@@ -583,6 +587,7 @@ class StageLoader:
         compas = max(1, cls._safe_int(props.get("compas", 4), "compas"))
         desfase_audio = cls._safe_float(
             props.get("desfase_audio", 0.0), "desfase_audio")
+        estamina = max(0.0, cls._safe_float(props.get("estamina", 0.0), "estamina"))
         climate = props.get("climate", "")
         # AUD-129 — una vista desconocida cae a lateral con aviso, no rompe.
         # `view` en inglés se acepta igual: el proyecto es bilingüe en las
@@ -633,6 +638,7 @@ class StageLoader:
             bpm=bpm,
             compas=compas,
             desfase_audio=desfase_audio,
+            estamina=estamina,
             climate=climate,
             zone=zone,
             ambient_light=ambient_light,

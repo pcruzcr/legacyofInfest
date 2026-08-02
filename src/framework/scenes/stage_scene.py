@@ -239,6 +239,10 @@ class StageScene(BaseScene):
         # alguien renombra el campo, quiero un `AttributeError` ruidoso, no un
         # escenario que calla y se juega en la vista equivocada.
         self._player.vista_cenital = self._stage_data.vista == "cenital"
+        # AUD-141 — la estamina, si este escenario la pide. Por el mismo
+        # camino que la vista: una propiedad del mapa que la escena traslada
+        # al jugador al cargar.
+        self._player.activar_estamina(getattr(self._stage_data, "estamina", 0.0))
 
         pending = self.context.pending_load
         if pending is not None and pending.stage_id == self._stage_data.stage_id:
@@ -1526,6 +1530,7 @@ class StageScene(BaseScene):
                 self._hud.clear_boss_hud()
             self._hud.set_combo_count(self._player.combo_count)
             self._hud.set_special_meter(self._player.special_meter, self._player.special_meter_max)
+            self._hud.set_estamina(self._player.estamina, self._player.estamina_max)
             self._hud.update(dt)
         self._subtitles.update(dt)
         if self._msg_box:

@@ -186,6 +186,9 @@ class HUD:
         # Combo state
         self._combo_count: int = 0
         self._special_current: float = 0.0
+        #: AUD-141 — estamina. En 0 la barra no se dibuja.
+        self._estamina_actual: float = 0.0
+        self._estamina_max: float = 0.0
         self._special_max: float = 100.0
 
         self._font = pygame.font.Font(None, 12)
@@ -362,6 +365,7 @@ class HUD:
         self._draw_portrait(surface)
         self._draw_hearts(surface)
         self._draw_special_meter(surface)
+        self._draw_estamina(surface)
         self._draw_timer(surface)
         if self._boss_active:
             self._draw_boss_hud(surface)
@@ -372,6 +376,29 @@ class HUD:
     def set_special_meter(self, current: float, max_val: float) -> None:
         self._special_current = current
         self._special_max = max_val
+
+    def set_estamina(self, current: float, max_val: float) -> None:
+        """AUD-141. Con `max_val = 0` la barra no se dibuja.
+
+        Un medidor vacío en pantalla en los quince escenarios que no usan
+        estamina sería una promesa falsa: el jugador buscaría qué lo llena.
+        """
+        self._estamina_actual = current
+        self._estamina_max = max_val
+
+    def _draw_estamina(self, surface: pygame.Surface) -> None:
+        if self._estamina_max <= 0.0:
+            return
+        bar_w, bar_h, bar_x, bar_y = 60, 4, 84, 40
+        pct = max(0.0, min(1.0, self._estamina_actual / self._estamina_max))
+        pygame.draw.rect(surface, (25, 45, 30), (bar_x, bar_y, bar_w, bar_h))
+        if pct > 0:
+            # Ámbar cuando queda poco: el jugador tiene que poder decidir
+            # **antes** de intentar el dash que no va a salir.
+            color = (120, 220, 130) if pct > 0.34 else (230, 180, 70)
+            pygame.draw.rect(surface, color,
+                             (bar_x, bar_y, int(bar_w * pct), bar_h))
+        pygame.draw.rect(surface, (150, 210, 160), (bar_x, bar_y, bar_w, bar_h), 1)
 
     def _draw_special_meter(self, surface: pygame.Surface) -> None:
         bar_w = 60

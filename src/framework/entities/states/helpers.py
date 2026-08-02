@@ -147,6 +147,11 @@ def _start_attack(player: Player, attack_type: object) -> None:
 def _can_dash(player: Player, inp: _InputSnapshot) -> bool:
     if player._dash_cooldown > 0:
         return False
+    # AUD-141 — la estamina se consulta AQUÍ, que es el único sitio del motor
+    # donde se decide si un dash empieza. Ponerla en cada estado que lo
+    # permite —hay seis— habría garantizado que alguno se quedara sin ella.
+    if not player.hay_estamina_para_correr:
+        return False
     if player.is_grounded:
         return True
     return player._air_dash_count < settings.PLAYER_AIR_DASH_LIMIT
