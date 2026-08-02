@@ -243,6 +243,19 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
     def on_debug_toggle(self, enabled: bool) -> None:
         ...
 
+    def dibujar_fondo(self, surface: pygame.Surface,
+                      offset: pygame.Vector2) -> None:
+        """Pintura propia del escenario, **detrás** del mapa de baldosas.
+
+        AUD-162 — el gancho que faltaba. Sobreescribiendo `draw()` un escenario
+        podía pintar encima de todo, pero no detrás: lo primero que hace
+        `DrawingSystem.draw` es `surface.fill(BG_COLOR)`, así que todo lo
+        pintado antes de llamar a `super()` se borraba.
+
+        Se llama después de las capas de parallax y antes del mapa, con el
+        desplazamiento de la cámara ya calculado. No hace nada por defecto.
+        """
+
     @property
     def stage_key(self) -> str:
         """La identidad de este escenario, una sola para todo el juego.
@@ -1438,6 +1451,7 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
             tutorial_overlay=self._tutorial,
             learning_overlay=self._learning,
             dialogue_system=self._dialogue,
+            fondo_del_escenario=self.dibujar_fondo,
         )
         self._drawing.draw(ctx)
         # AUD-111 — la niebla y el agua, que llevaban meses escritas sin que
