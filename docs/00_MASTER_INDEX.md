@@ -110,6 +110,7 @@ Documents marked **[SUPERSEDED]** below exist in their originating package (v1, 
 | 65  | `65_EL_LORE_EXTENSO.md`              | v1 (in-repo)                            | Current — extensive canon lore expansion (Spanish) |
 | 66  | `66_GUIA_DE_LEVEL_DESIGN.md`         | v1 (in-repo)                            | Current — level design guide: difficulty, dimensions, enemy composition (Spanish) |
 | 67  | `67_ESPECIFICACION_DE_NIVELES_Y_JEFES.md` | v1 (in-repo)                     | Current — mandatory level/boss rules per deliverable 1-2-3 + day/night arcs; per-level sheets in `docs/niveles/` (Spanish) |
+| 68  | `niveles/15_DISENO_4_1_EL_CEMENTERIO.md` | v1 (in-repo)                        | Current — proposed design for level 4-1: Magus-style progression, La Cegua, advancing flames, storm, student tombstones (Spanish) |
 | —   | `STAGE_CREATION.md`                  | v10 (in-repo)                           | Current — stage creation guide                                       |
 
 **Recommended action before implementation begins:** Consolidate all current-status documents into a single flat `docs/` folder in the actual repository (per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §7's structure), discarding the superseded v1/v2/v3 originals of the six documents listed as "supersedes" above. This index becomes redundant once that consolidation happens — at that point, a simple numbered `docs/` folder listing is self-explanatory.
