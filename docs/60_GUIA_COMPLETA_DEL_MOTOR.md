@@ -28,7 +28,7 @@ date_processed: "2026-07-31"
 1. [El bucle: qué pasa en un fotograma](#1)
 2. [Anatomía de un escenario TMX](#2)
 3. [Propiedades del mapa — las 17](#3)
-4. [Los 69 tipos de objeto, uno por uno](#4)
+4. [Los 71 tipos de objeto, uno por uno](#4)
 5. [El jugador: 26 estados y qué los provoca](#5)
 6. [Enemigos: 35 tipos y 13 estados](#6)
 7. [Jefes](#7)
@@ -149,6 +149,8 @@ sin ellas el nivel no valida y pierde 10 puntos de rúbrica.
 | `zone` | int | `0` | zona del mundo; decide paleta y bestiario por defecto |
 | `vista` | string | `lateral` | `lateral` o `cenital`. Cenital apaga la gravedad, da movimiento en dos ejes y **ignora las plataformas de un solo sentido** — desde arriba son muros invisibles |
 | `background_zone` | string | — | carga `assets/backgrounds/bg_<zona>_{far,mid,near}.png` |
+| `estamina` | float | `0` | máximo del medidor. **`0` = apagado.** Con `100`, cuatro dashes seguidos y una pausa de 0,6 s antes de recuperar |
+| `bpm` | float | `0` | pulsos por minuto; enciende el reloj musical (§10.1) |
 
 ### De atmósfera
 
@@ -179,9 +181,9 @@ efecto, mira la consola antes que el código.
 ---
 
 <a id="4"></a>
-## 4. Los 69 tipos de objeto, uno por uno
+## 4. Los 71 tipos de objeto, uno por uno
 
-El motor acepta **69 tipos** en la capa `Objects`: 32 integrados del framework
+El motor acepta **71 tipos** en la capa `Objects`: 34 integrados del framework
 y 35 enemigos del registro, más `Solid` y `Platform` en `Collision`. Todos los
 números se convierten a `float` automáticamente.
 

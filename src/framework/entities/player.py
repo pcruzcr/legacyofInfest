@@ -234,6 +234,27 @@ class Player(BaseEntity):
         #: lleve encima al cambiar de escenario, como la vida.
         self.arco = ArcoDelJugador()
 
+        # AUD-141 — la estamina, y por qué viene APAGADA de fábrica.
+        #
+        # Un medidor de estamina cambia cómo se juega: convierte el dash de
+        # recurso libre en recurso administrado. Encenderlo para todos
+        # cambiaría los quince escenarios ya entregados sin que sus autores lo
+        # pidan, y algunos están medidos al dash. Se enciende por escenario,
+        # con la propiedad `estamina` del mapa.
+        self.estamina_max: float = 0.0
+        self.estamina: float = 0.0
+        #: Lo que cuesta un dash. Con 100 de máximo, cuatro dashes seguidos.
+        self.coste_dash: float = 25.0
+        #: Puntos por segundo que se recuperan.
+        self.recuperacion_estamina: float = 35.0
+        #: Segundos de espera antes de empezar a recuperar.
+        #:
+        #: Sin esta pausa la estamina se rellena mientras se encadenan dashes
+        #: y el medidor no limita nada; con ella hay un ritmo que aprender,
+        #: que es justo lo que la mecánica aporta.
+        self.espera_estamina: float = 0.6
+        self._espera_estamina_restante: float = 0.0
+
         # --- Air jump state (public) ---
         self.gravity_multiplier: float = 1.0
         #: AUD-129 — vista cenital: sin gravedad y con movimiento en dos ejes.
@@ -408,6 +429,49 @@ class Player(BaseEntity):
     def set_health(self, amount: float) -> None:
         self._health = max(0.0, min(self.max_health, amount))
 
+    # ── AUD-141: estamina ─────────────────────────────────────────
+    @property
+    def estamina_activa(self) -> bool:
+        """`False` mientras el escenario no la pida. Es el caso por defecto."""
+        return self.estamina_max > 0.0
+
+    @property
+    def hay_estamina_para_correr(self) -> bool:
+        """Lo consulta `_can_dash`, el único sitio que decide si hay dash."""
+        if not self.estamina_activa:
+            return True
+        return self.estamina >= self.coste_dash
+
+    def gastar_estamina(self, cantidad: float | None = None) -> bool:
+        """Cobra el gasto. Devuelve `False` si no había bastante.
+
+        Con la estamina apagada devuelve `True` sin tocar nada: el escenario
+        que no la pide no puede notar que existe.
+        """
+        if not self.estamina_activa:
+            return True
+        coste = self.coste_dash if cantidad is None else max(0.0, cantidad)
+        if self.estamina < coste:
+            return False
+        self.estamina -= coste
+        self._espera_estamina_restante = self.espera_estamina
+        return True
+
+    def recuperar_estamina(self, dt: float) -> None:
+        if not self.estamina_activa or dt <= 0.0:
+            return
+        if self._espera_estamina_restante > 0.0:
+            self._espera_estamina_restante -= dt
+            return
+        self.estamina = min(
+            self.estamina_max, self.estamina + self.recuperacion_estamina * dt)
+
+    def activar_estamina(self, maximo: float) -> None:
+        """La enciende el escenario al cargar. `0` la deja apagada."""
+        self.estamina_max = max(0.0, float(maximo))
+        self.estamina = self.estamina_max
+        self._espera_estamina_restante = 0.0
+
     def consume_hitbox(self) -> None:
         """El sistema de colisión avisa de que un golpe ha conectado.
 
@@ -528,6 +592,9 @@ class Player(BaseEntity):
 
         # Tick timers (includes animation_timer)
         self._tick_timers(dt)
+        # AUD-141 — la estamina se recupera aquí y no dentro de un estado:
+        # se recupera en TODOS, incluso quieto, agachado o en el aire.
+        self.recuperar_estamina(dt)
 
         # State machine — delegate to current state
         self._state_instance.update(self, dt, input_manager)

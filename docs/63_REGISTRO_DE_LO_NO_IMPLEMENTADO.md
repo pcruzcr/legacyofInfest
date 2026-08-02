@@ -165,7 +165,7 @@ De la tabla de viabilidad, lo que sigue sin hacer:
 | ~~Interruptores que cambian el mundo~~ | **HECHO** (AUD-132). `abre_con` en la puerta cierra el circuito | — |
 | ~~Pogo (ataque abajo que rebota)~~ | **HECHO** (AUD-134). Acertar devuelve impulso y recupera el dash aéreo | — |
 | ~~Inundación que sube~~ | **HECHO** (AUD-135). `sube`, `sube_hasta` y `arranca_con` en la `HazardZone`, y el motor la dibuja | — |
-| Medidor de estamina | Falta; el patrón está resuelto en `special_meter` | 4 h |
+| ~~Medidor de estamina~~ | **HECHO** (AUD-141). Propiedad `estamina` del mapa; **apagada por defecto** para no cambiar los quince escenarios entregados | — |
 | ~~Empujar bloques~~ | **HECHO** (AUD-140). Tipo `PushBlock`, con gravedad y vuelta a su sitio al morir | — |
 | ~~Vista cenital~~ | **HECHO** (AUD-129). `vista = cenital` en el TMX | — |
 | ~~Bloques destructibles~~ | **HECHO** (AUD-140). Tipo `BreakableBlock`. No hizo falta mutar `collision_rects`: se suman, como las puertas cerradas | — |
