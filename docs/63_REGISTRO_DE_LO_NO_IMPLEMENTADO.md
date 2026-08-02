@@ -166,9 +166,9 @@ De la tabla de viabilidad, lo que sigue sin hacer:
 | ~~Pogo (ataque abajo que rebota)~~ | **HECHO** (AUD-134). Acertar devuelve impulso y recupera el dash aéreo | — |
 | ~~Inundación que sube~~ | **HECHO** (AUD-135). `sube`, `sube_hasta` y `arranca_con` en la `HazardZone`, y el motor la dibuja | — |
 | Medidor de estamina | Falta; el patrón está resuelto en `special_meter` | 4 h |
-| Empujar bloques | No existe | 1 día |
+| ~~Empujar bloques~~ | **HECHO** (AUD-140). Tipo `PushBlock`, con gravedad y vuelta a su sitio al morir | — |
 | ~~Vista cenital~~ | **HECHO** (AUD-129). `vista = cenital` en el TMX | — |
-| Bloques destructibles | Requiere `collision_rects` mutable en caliente | 1 día |
+| ~~Bloques destructibles~~ | **HECHO** (AUD-140). Tipo `BreakableBlock`. No hizo falta mutar `collision_rects`: se suman, como las puertas cerradas | — |
 
 **Ya implementadas** de esa misma tabla, y conviene no volver a estimarlas:
 escaleras y lianas (`Vine`, `CLIMBING`), tirolesas (`Zipline`, `ZIPLINE`),

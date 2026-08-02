@@ -46,6 +46,8 @@ COLORES = {
     "DeathPit": (255, 60, 60),
     "HazardZone": (255, 140, 60),
     "Cutscene": (200, 120, 230),
+    "PushBlock": (150, 120, 85),
+    "BreakableBlock": (120, 115, 110),
     "MessageTrigger": (140, 140, 255),
     "MessageTrigger_Once": (140, 140, 255),
     "CameraLock": (180, 180, 180),

@@ -316,7 +316,7 @@ y por encima de 40 px/s casi ninguna ruta da tiempo.
 |---|---|---|---|
 | `WindZone` | `fuerza_x` | `0` | empuje horizontal en px/s² |
 | | `fuerza_y` | `0` | empuje vertical |
-| | `periodo` | `0` | segundos de ciclo. **`0` = constante**; con `3.4` amaina y vuelve, y la solución pasa a ser esperar |
+| |fx `periodo` | `0` | segundos de ciclo. **`0` = constante**; con `3.4` amaina y vuelve, y la solución pasa a ser esperar |
 | `FrictionZone` | `multiplicador` | `1.0` | `0.2` = hielo, `2.0` = barro |
 | | `arrastre` | `0` | px/s que te lleva |
 | `Conveyor` | igual que `FrictionZone` | `arrastre = 60` | alias con arrastre por defecto: una cinta sin arrastre no es una cinta |
@@ -339,6 +339,10 @@ además se vea.
 | `SinkingPlatform` | `retraso` | `0.4` | segundos antes de ceder |
 | | `velocidad_caida` | `90` | px/s |
 | | `reaparece_en` | `3.0` | segundos hasta volver |
+| `PushBlock` | `velocidad` | `45` | px/s mientras se empuja. Lento a propósito: empujar tiene que costar |
+| | `con_gravedad` | `true` | `false` = se queda flotando (para vista cenital) |
+| `BreakableBlock` | `golpes` | `1` | golpes que aguanta. Uno es un secreto; tres, un obstáculo |
+| | `evento_al_romper` | — | evento del bus al ceder: abre puertas, arranca inundaciones, lanza escenas |
 | `RhythmBlock` | `visible_seg` | `1.0` | segundos presente |
 | | `oculto_seg` | `1.0` | segundos ausente |
 | | `desfase` | `0.0` | desplaza el ciclo |

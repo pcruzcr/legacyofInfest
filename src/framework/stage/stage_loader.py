@@ -23,6 +23,7 @@ from src.engine.core import settings
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework import FrameworkUsageError
 from src.framework.entities.base_entity import BaseEntity
+from src.framework.stage.bloques import BloqueDestructible, BloqueEmpujable
 from src.framework.stage.interactables import (
     Cerradura,
     Cofre,
@@ -253,6 +254,9 @@ class StageData:
     death_pits: list[DeathPit] = field(default_factory=list)
     #: AUD-136 — escenas narrativas declaradas en el TMX.
     escenas: list[EscenaGuionizada] = field(default_factory=list)
+    #: AUD-140 — bloques que se empujan y bloques que se rompen.
+    empujables: list[BloqueEmpujable] = field(default_factory=list)
+    destructibles: list[BloqueDestructible] = field(default_factory=list)
     camera_locks: list[CameraLock] = field(default_factory=list)
     lights: list[LightSpec] = field(default_factory=list)
     #: F4.1 — objetos con los que el jugador interactúa.
@@ -524,6 +528,8 @@ class StageLoader:
                 stage.hazard_zones.clear()
                 stage.death_pits.clear()
                 stage.escenas.clear()
+                stage.empujables.clear()
+                stage.destructibles.clear()
                 stage.camera_locks.clear()
                 stage.lights.clear()
                 stage.recogibles.clear()
@@ -808,6 +814,12 @@ class StageLoader:
 
             elif obj_type == "HazardZone":
                 cls._handle_hazard_zone(stage, obj, props)
+
+            elif obj_type == "PushBlock":
+                cls._handle_bloque(stage, obj, props, empujable=True)
+
+            elif obj_type == "BreakableBlock":
+                cls._handle_bloque(stage, obj, props, empujable=False)
 
             elif obj_type == "Cutscene":
                 cls._handle_cutscene(stage, obj, props)
@@ -1328,6 +1340,35 @@ class StageLoader:
             sube_hasta=sube_hasta,
             arranca_con=str(props.get("arranca_con", "") or ""),
         ))
+
+    @classmethod
+    def _handle_bloque(cls, stage: StageData, obj: Any, props: dict[str, Any],
+                       *, empujable: bool) -> None:
+        """AUD-140 — `PushBlock` y `BreakableBlock`.
+
+        Sin tamaño se ignora con aviso: un bloque de 0×0 sería un sólido
+        invisible de área nula, que no estorba a nadie y no se ve. El
+        estudiante creería haberlo puesto.
+        """
+        if obj.width <= 0 or obj.height <= 0:
+            logger.warning(
+                "bloque sin tamaño en (%s, %s): se ignora", obj.x, obj.y)
+            return
+        rect = pygame.Rect(int(obj.x), int(obj.y), int(obj.width), int(obj.height))
+        if empujable:
+            stage.empujables.append(BloqueEmpujable(
+                rect=rect,
+                velocidad=max(1.0, cls._safe_float(
+                    props.get("velocidad", 45.0), "velocidad del bloque")),
+                con_gravedad=cls._bool_de(props.get("con_gravedad"),
+                                          por_defecto=True),
+            ))
+        else:
+            stage.destructibles.append(BloqueDestructible(
+                rect=rect,
+                golpes=max(1, cls._safe_int(props.get("golpes", 1), "golpes")),
+                evento_al_romper=str(props.get("evento_al_romper", "") or ""),
+            ))
 
     @classmethod
     def _handle_cutscene(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
