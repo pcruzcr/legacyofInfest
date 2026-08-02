@@ -11,6 +11,56 @@ source: "docs/niveles/13_STAGE_4_1.md"
 
 **Entregable:** profesorado (no se asigna a estudiantes) · **Zona:** Final — El Cementerio Sagrado · **Tipo:** Travesía atmosférica (sin enemigos)
 
+## 0. Estado real — construido (AUD-163)
+
+El nivel **existe y se juega**. Esta sección dice qué se construyó de verdad,
+qué se cambió respecto a la ficha y por qué, para que nadie tenga que
+adivinarlo leyendo el código.
+
+| Pieza | Dónde vive |
+|---|---|
+| Mapa (100 × 38, generado) | `tools/generate_stage4_1.py` → `assets/maps/stage4_1/stage4_1.tmx` |
+| Escena, actos, luna, rayos | `src/stages/stage4_1/stage4_1.py` |
+| Tabla de los cinco actos | `src/stages/stage4_1/actos.py` |
+| Contornos de venado, serpiente, gavilán y la Cegua | `src/stages/stage4_1/siluetas.py` |
+| Pruebas (36) | `tests/test_stage4_1.py` |
+
+**Lo que se cambió respecto a esta ficha, y por qué:**
+
+1. **`Portal` no existe en el motor.** La ficha lo pide en «Objetos mínimos».
+   La salida de un escenario es `NextTrigger`, que es lo que hay en el mapa.
+   Es la misma cosa con otro nombre; lo que no se puede es escribir un tipo
+   que el cargador rechaza. (La auditoría de documentación ya lo tenía
+   señalado como inexistente.)
+2. **`start_hour` va como número (19), no como la cadena `dusk`.** El motor
+   lee la hora como `float`; `dusk` no es un valor que entienda.
+3. **Las siluetas no están en la capa `BG_Mid` del TMX** sino dibujadas por el
+   escenario, detrás del mapa, con el gancho `dibujar_fondo` que AUD-162 tuvo
+   que añadir a `StageScene`. La capa `BG_Mid` de un TMX es de baldosas, y no
+   hay arte de venado ni de gavilán en vista de fondo: un contorno dibujado es
+   honesto —se lee como «una forma en la niebla», que es lo que el diseño
+   pide— y no finge ser una ilustración terminada.
+4. **Partículas verdes: `spores`.** Es el único efecto del motor que sale en
+   verde —(150, 255, 130)— y es exactamente la «luz espectral verde» que el
+   lore le pone al cementerio (§3.4). El ritmo sube con los actos.
+5. **El acto V no tiene «silencio súbito» de audio**, sólo `climate = clear` y
+   menos partículas. Silenciar la música por acto exigiría tocar el gestor de
+   audio y no se hizo.
+6. **Los nombres de las lápidas son `[NOMBRE]`.** El diseño (§7) exige que los
+   cargue el profesor, que estén todos sin distinción de nota y que ninguna
+   inscripción se burle de nadie. Inventar una lista sería lo contrario.
+
+**Medido, no supuesto:**
+
+- Dibujar el nivel cuesta **4,6 ms** por fotograma; con la visión espectral
+  puesta, **6,6 ms** de los 16,6 que hay a 60 fps. El umbral se aplica a 1/4 de
+  resolución justamente por esto: a 1/2 costaba 4,6 ms de más y se salía del
+  presupuesto.
+- En la curva de dificultad sale con **36,8**, entre `stage3_3_el_patio` (36,4)
+  y `boss_paburu` (13,4). No introduce ningún escalón brusco. Todo su índice
+  viene de peligros —6 por pantalla— y **cero** de combate, que es exactamente
+  lo que un nivel sin enemigos debe puntuar.
+
 ## Ficha rápida
 
 | Campo | Valor |
@@ -71,11 +121,11 @@ Ninguno. El único "contenido" son:
 
 ## Checklist de cierre
 
-- [ ] Sin enemigos (regla de oro)
-- [ ] Visión espectral funcionando con marcas ocultas
-- [ ] Cuencos con luz por proximidad; grietas pulsantes legibles
-- [ ] `start_hour = "dusk"` y `day_length = 900` (sugerido)
-- [ ] `validate_tmx.py --ci` en verde
+- [x] Sin enemigos (regla de oro) — comprobado contando `entity_list`, no el XML
+- [x] Visión espectral funcionando con marcas ocultas — comprobada píxel a píxel
+- [x] Cuencos con luz por proximidad; grietas pulsantes legibles
+- [x] `start_hour = 19` y `day_length = 900` — como número, ver §0
+- [x] `validate_tmx.py --ci` en verde (17/17)
 
 ## Diseño propuesto
 

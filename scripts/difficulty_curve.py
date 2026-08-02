@@ -61,6 +61,7 @@ ORDEN: tuple[str, ...] = (
     "stage2_1_oficinas", "stage2_2",
     "boss_rey",
     "stage3_1_la_entrada_de_piedra", "stage3_3_el_patio",
+    "stage4_1",
     "boss_paburu",
 )
 

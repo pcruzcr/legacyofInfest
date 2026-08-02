@@ -54,6 +54,23 @@ class DrawContext:
     #: F4.1 — recogibles, cerraduras, cofres y disparadores.
     interactables: Any | None = None
     debug: bool = False
+    #: AUD-162 — pintura propia del escenario, DETRÁS del mapa de baldosas.
+    #:
+    #: Un escenario podía dibujar encima de todo —sobreescribiendo `draw()` y
+    #: llamando a `super()` primero— y no podía dibujar **detrás**: lo primero
+    #: que hace este método es `surface.fill(BG_COLOR)`, así que cualquier cosa
+    #: pintada antes se borraba.
+    #:
+    #: El 4-1 necesita justo eso: una luna que baja y las siluetas de los
+    #: espíritus vencidos, que por canon están «en el fondo» y «no atacan,
+    #: testifican». Sin este gancho habría que meterlas en el motor —una luna
+    #: en `DrawingSystem` sería una mecánica de un solo nivel viviendo en el
+    #: sitio de todos— o dibujarlas encima del jugador, que las convertiría en
+    #: primer plano y contradiría el canon.
+    #:
+    #: Recibe `(surface, offset)` y se llama después del parallax y antes del
+    #: mapa. Un escenario que no lo use no paga nada.
+    fondo_del_escenario: Any | None = None
 
 
 class DrawingSystem:
@@ -84,6 +101,17 @@ class DrawingSystem:
         # Draw order, back to front. Parallax backdrops first, then the tile
         # map, then world-space effects, then entities, then screen-space UI.
         self._draw_background(surface, stage, camera)
+        if ctx.fondo_del_escenario is not None:
+            # AUD-162 — el escenario pinta su propio fondo aquí, entre el
+            # parallax y el mapa. Un fallo suyo no puede tumbar el fotograma:
+            # es decoración, y el nivel tiene que seguir jugándose.
+            try:
+                ctx.fondo_del_escenario(surface, offset)
+            except Exception:
+                logger.warning(
+                    "el fondo propio del escenario falló; se sigue dibujando",
+                    exc_info=True,
+                )
         self._draw_stage_layers(surface, stage, camera)
 
         if ctx.particle_system:
