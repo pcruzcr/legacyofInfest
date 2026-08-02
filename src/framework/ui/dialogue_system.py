@@ -227,10 +227,7 @@ class DialogueSystem:
     @property
     def _velocidad(self) -> float:
         """Caracteres por segundo, según la preferencia del jugador."""
-        try:
-            nombre = user_settings.get().text_speed
-        except Exception:            # el diálogo se muestra igual
-            nombre = "normal"
+        nombre = user_settings.preferencia("text_speed", "normal")
         return VELOCIDADES_DE_TEXTO.get(nombre, 30.0)
 
     # ── ciclo de vida ──────────────────────────────────────────
@@ -414,10 +411,7 @@ class DialogueSystem:
 
     @staticmethod
     def _escala_actual() -> float:
-        try:
-            return float(user_settings.get().text_scale)
-        except Exception:            # el diálogo se dibuja igual
-            return 1.0
+        return float(user_settings.preferencia("text_scale", 1.0))
 
     def _retrato(self, nombre: str | None, lado: int) -> pygame.Surface | None:
         """El retrato pedido, o un marcador si no se puede cargar.

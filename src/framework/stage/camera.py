@@ -22,13 +22,11 @@ def _factor_de_movimiento() -> float:
     reiniciar el nivel para notarlo — que es cuando la gente concluye que la
     opción no funciona.
     """
-    try:
-        from src.engine.core import user_settings
-        from src.engine.core.user_settings import MOVIMIENTO_REDUCIDO_FACTOR
-        if user_settings.get().reduced_motion:
-            return MOVIMIENTO_REDUCIDO_FACTOR
-    except Exception:            # el juego se dibuja igual
-        pass
+    from src.engine.core import user_settings
+    from src.engine.core.user_settings import MOVIMIENTO_REDUCIDO_FACTOR
+
+    if user_settings.preferencia("reduced_motion", False):
+        return MOVIMIENTO_REDUCIDO_FACTOR
     return 1.0
 
 

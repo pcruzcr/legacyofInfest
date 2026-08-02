@@ -11,14 +11,61 @@ import orjson
 
 from src.engine.core import settings
 from src.engine.core.save_data import MAX_SLOTS, SaveData
+from src.engine.core.user_settings import user_data_dir
 
 logger = logging.getLogger(__name__)
 
+#: Dónde vivían las partidas antes de AUD-157: dentro del proyecto.
+_SAVES_HEREDADO = settings.PROJECT_ROOT / "saves"
+
+
 class SaveManager:
-    SAVES_DIR = settings.PROJECT_ROOT / "saves"
+    """Las partidas guardadas, en el directorio del usuario.
+
+    AUD-157 — la contradicción que quedó a medias
+    ==============================================
+    `user_data_dir()` existe desde AUD-032 y su docstring explica por qué:
+    *«una versión empaquetada puede estar instalada en un sitio de sólo
+    lectura (Program Files, /Applications), y escribir el estado del jugador
+    dentro del árbol de instalación es lo que metió `saves/slot_1.json` en el
+    control de versiones»*.
+
+    Ese arreglo se aplicó a las preferencias y a los logros, y **no a las
+    partidas**, que son el estado más importante de todos: `SAVES_DIR` seguía
+    siendo `PROJECT_ROOT / "saves"`. En el ejecutable de PyInstaller (F3.3)
+    instalado en Program Files, guardar la partida falla. El proyecto ya había
+    escrito por qué eso está mal y siguió haciéndolo.
+
+    Las partidas que estén en el sitio viejo se copian una vez al nuevo. No se
+    borran: si alguien vuelve a una versión anterior, siguen ahí.
+    """
+
+    #: Se mantiene como atributo de clase porque hay pruebas y herramientas que
+    #: lo redirigen a un directorio temporal. Cambiarlo a propiedad rompería
+    #: `SaveManager.SAVES_DIR = tmp` sin avisar.
+    SAVES_DIR = user_data_dir() / "saves"
 
     def __init__(self) -> None:
         self.SAVES_DIR.mkdir(parents=True, exist_ok=True)
+        self._migrar_partidas_antiguas()
+
+    def _migrar_partidas_antiguas(self) -> None:
+        """Copia las partidas del sitio viejo si el nuevo no las tiene."""
+        if self.SAVES_DIR == _SAVES_HEREDADO or not _SAVES_HEREDADO.is_dir():
+            return
+        for origen in _SAVES_HEREDADO.glob("slot_*.json"):
+            destino = self.SAVES_DIR / origen.name
+            if destino.exists():
+                continue
+            try:
+                destino.write_bytes(origen.read_bytes())
+                logger.info(
+                    "SaveManager: partida migrada %s -> %s", origen, destino)
+            except OSError as exc:
+                # Que no se pueda migrar no puede impedir jugar: se arranca
+                # con una partida nueva y queda dicho por qué.
+                logger.warning(
+                    "SaveManager: no se pudo migrar %s (%s)", origen, exc)
 
     def _slot_path(self, slot: int) -> Path:
         return self.SAVES_DIR / f"slot_{slot}.json"

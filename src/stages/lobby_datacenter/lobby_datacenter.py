@@ -38,8 +38,11 @@ class LobbyDatacenter(StageScene):
     ZONE: int = 2
 
     TMX_PATH = "assets/maps/lobby_datacenter/lobby_datacenter.tmx"
-    def __init__(self, context: GameContext) -> None:
-        super().__init__(context, Path(self.TMX_PATH))
+
+    # AUD-157 — había dos `__init__` idénticos seguidos. El primero no corría
+    # nunca: Python se queda con el último de la clase. No cambiaba nada
+    # —eran iguales— pero es la clase de descuido que el día que se editen por
+    # separado produce un fallo imposible de leer.
     def __init__(self, context: GameContext) -> None:
         super().__init__(context, Path(self.TMX_PATH))
 
