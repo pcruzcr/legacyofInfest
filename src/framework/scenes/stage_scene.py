@@ -304,10 +304,22 @@ class StageScene(BaseScene):
             disparadores=self._stage_data.disparadores,
             bus=self.context.event_bus,
         )
-        self._montar_reloj_musical()
         self._montar_director_de_escenas()
         self._configurar_vfx_opcionales()
         self._poblar_mundo_ecs()
+        # AUD-139 — el reloj musical va DESPUÉS de poblar el mundo.
+        #
+        # Estaba antes, y `_poblar_mundo_ecs` construye un `World` nuevo: el
+        # recurso «reloj_musical» se ponía en un mundo que se tiraba a la
+        # basura tres líneas después. Los bloques con `patron` habrían buscado
+        # el reloj, no lo habrían encontrado y habrían seguido contando
+        # segundos, en silencio y sin fallar.
+        #
+        # Es el mismo defecto que llevo todo el mes corrigiendo en código
+        # ajeno —una pieza correcta que no llega a quien la necesita— y esta
+        # vez era mío. No lo cazó ninguna prueba: las mías montaban el mundo a
+        # mano. Lo cazó leer el orden de arranque.
+        self._montar_reloj_musical()
         self._progression.reset()
 
         if self._stage_data.bgm_track:

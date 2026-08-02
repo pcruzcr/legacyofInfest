@@ -390,3 +390,72 @@ class TestElBloqueSigueALaMusica:
             "todos siguen la música: el mapa dejó de enseñar el modo de "
             "siempre, que es el que usan los 15 escenarios entregados"
         )
+
+
+class TestElRelojLlegaAlMundoDeVerdad:
+    """AUD-139 — la prueba que faltaba, y el fallo que encontró.
+
+    Todas las de arriba montan el mundo a mano, así que ninguna se enteró de
+    que en el juego real el reloj **no llegaba**: `StageScene.on_enter`
+    construía el reloj, lo metía como recurso del mundo, y tres líneas después
+    `_poblar_mundo_ecs` creaba un `World` nuevo y tiraba el anterior.
+
+    Los bloques con `patron` habrían buscado el reloj, no lo habrían
+    encontrado y habrían seguido contando segundos: en silencio, sin fallar y
+    sin que ninguna prueba se quejara. Es exactamente el defecto que llevo
+    todo el mes corrigiendo en código ajeno, esta vez mío.
+
+    Por eso esta prueba arranca la escena entera en vez de mirar la clase.
+    """
+
+    def _escena_del_laboratorio(self):
+        import pygame
+
+        from src.engine.audio.audio_manager import AudioManager
+        from src.engine.core.event_bus import EventBus
+        from src.engine.core.game_context import GameContext
+        from src.engine.core.save_manager import SaveManager
+        from src.engine.input.input_manager import InputManager
+        from src.engine.scene.scene_manager import SceneManager
+        from src.framework.entities import entity_factory
+        from src.stages.stage_mecanicas.stage_mecanicas import StageMecanicas
+
+        pygame.init()
+        pygame.font.init()
+        if pygame.display.get_surface() is None:
+            pygame.display.set_mode((800, 600))
+        entity_factory.ensure_registered()
+        ctx = GameContext(
+            input_manager=InputManager(),
+            audio_manager=AudioManager(),
+            scene_manager=None,
+            event_bus=EventBus(),
+            clock=None,
+            save_manager=SaveManager(),
+        )
+        ctx.scene_manager = SceneManager(ctx)
+        escena = StageMecanicas(ctx)
+        escena.awake()
+        escena.start()
+        escena.on_enter()
+        return escena
+
+    def test_el_mundo_del_escenario_tiene_su_reloj(self) -> None:
+        escena = self._escena_del_laboratorio()
+        try:
+            assert escena._reloj_musical is not None, (
+                "el escenario declara bpm y no construyó reloj"
+            )
+            assert escena._mundo.recurso("reloj_musical") is not None, (
+                "el reloj existe pero no está en el mundo que corren los "
+                "sistemas: los bloques con patrón seguirán contando segundos"
+            )
+        finally:
+            escena.on_exit()
+
+    def test_y_es_el_mismo_reloj(self) -> None:
+        escena = self._escena_del_laboratorio()
+        try:
+            assert escena._mundo.recurso("reloj_musical") is escena._reloj_musical
+        finally:
+            escena.on_exit()
