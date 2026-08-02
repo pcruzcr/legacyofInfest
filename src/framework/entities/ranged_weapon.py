@@ -83,7 +83,35 @@ PASOS_TRAYECTORIA: int = 28
 PASO_TRAYECTORIA: float = 1.0 / 30.0
 
 
-def velocidad_inicial(direccion: int | pygame.Vector2) -> pygame.Vector2:
+#: Segundos de tensado para llegar a la potencia máxima.
+#:
+#: AUD-195. 0,6 s es lo que tarda un gesto deliberado sin volverse una espera:
+#: por debajo, cargar del todo pasa a ser accidental y el tiro corto deja de
+#: existir; por encima, el arco se siente pegajoso en combate cercano.
+TIEMPO_DE_TENSADO: float = 0.6
+
+#: Potencia de un toque rápido, sin tensar. **Uno exacto, no menos.**
+#:
+#: La primera versión la puso en 0,6 y el tiro sin cargar salía a 252 px/s en
+#: vez de a 420: quien no tensara disparaba peor que antes de existir el
+#: tensado, y los enemigos colocados en los 17 mapas ya calibrados pasaban a
+#: quedar fuera de alcance. Añadir una mecánica no puede empeorar lo que ya
+#: funcionaba (invariante 2).
+#:
+#: Así que el suelo es el disparo de siempre y tensar **premia** en vez de que
+#: no tensar castigue.
+POTENCIA_MINIMA: float = 1.0
+
+#: Potencia con el arco tensado del todo. Un 45 % más de velocidad, que en
+#: alcance se nota mucho más porque la flecha pasa más tiempo antes de que la
+#: gravedad la venza.
+POTENCIA_MAXIMA: float = 1.45
+
+
+def velocidad_inicial(
+    direccion: int | pygame.Vector2,
+    potencia: float = 1.0,
+) -> pygame.Vector2:
     """El vector de salida de la flecha, venga de una tecla o de un apuntado.
 
     Un `int` (-1 o +1) es el disparo horizontal de siempre. Un `Vector2` es la
@@ -93,19 +121,20 @@ def velocidad_inicial(direccion: int | pygame.Vector2) -> pygame.Vector2:
     """
     if isinstance(direccion, pygame.Vector2):
         if direccion.length_squared() > 0.0:
-            return direccion.normalize() * VELOCIDAD
+            return direccion.normalize() * (VELOCIDAD * potencia)
         # Un stick en reposo o el cursor justo encima del jugador: se dispara
         # a la derecha en vez de no disparar, porque gastar la flecha sin que
         # salga nada es peor que gastarla en una dirección discutible.
-        return pygame.Vector2(VELOCIDAD, 0.0)
+        return pygame.Vector2(VELOCIDAD * potencia, 0.0)
     signo = -1 if direccion < 0 else 1
-    return pygame.Vector2(VELOCIDAD * signo, 0.0)
+    return pygame.Vector2(VELOCIDAD * signo * potencia, 0.0)
 
 
 def trayectoria(
     origen: pygame.Vector2,
     direccion: int | pygame.Vector2,
     pasos: int = PASOS_TRAYECTORIA,
+    potencia: float = 1.0,
 ) -> list[pygame.Vector2]:
     """Los puntos por los que pasará la flecha, para dibujarlos antes de tirar.
 
@@ -115,7 +144,7 @@ def trayectoria(
     línea dibujada y la flecha que vuela se separarían, y el jugador nota
     enseguida que la previsualización le miente.
     """
-    velocidad = velocidad_inicial(direccion)
+    velocidad = velocidad_inicial(direccion, potencia)
     posicion = pygame.Vector2(origen)
     puntos = [pygame.Vector2(posicion)]
     for _ in range(pasos):
@@ -146,12 +175,42 @@ class ArcoDelJugador:
         self.dano = dano
         self._espera = 0.0
         self.flechas: list[Projectile] = []
+        #: Segundos que se lleva tensando. 0 = el arco está en reposo.
+        self._tensado: float = 0.0
 
     # -- estado ----------------------------------------------------
     @property
     def listo(self) -> bool:
         """¿Se puede disparar ahora mismo?"""
         return self.municion > 0 and self._espera <= 0.0
+
+    @property
+    def tensando(self) -> bool:
+        return self._tensado > 0.0
+
+    @property
+    def potencia(self) -> float:
+        """Cuánto se ha tensado, de `POTENCIA_MINIMA` a `POTENCIA_MAXIMA`.
+
+        AUD-195. Un toque rápido dispara igual que antes de existir el tensado
+        —de ahí que el suelo no sea cero—, y mantener hasta el final da el tiro
+        largo. Que el mínimo sea utilizable importa: si soltar pronto fuera un
+        disparo inútil, el arco pasaría a exigir una espera en cada tiro y
+        dejaría de servir para responder de cerca.
+        """
+        if self._tensado <= 0.0:
+            return POTENCIA_MINIMA
+        avance = min(1.0, self._tensado / TIEMPO_DE_TENSADO)
+        return POTENCIA_MINIMA + (POTENCIA_MAXIMA - POTENCIA_MINIMA) * avance
+
+    def tensar(self, dt: float) -> None:
+        """Mantener pulsado. Acumula tensión mientras haya flechas."""
+        if self.vacio:
+            return
+        self._tensado += dt
+
+    def soltar_tension(self) -> None:
+        self._tensado = 0.0
 
     @property
     def vacio(self) -> bool:
@@ -194,11 +253,13 @@ class ArcoDelJugador:
         if not self.listo:
             return None
 
+        potencia = self.potencia
         self.municion -= 1
         self._espera = self.cadencia
+        self._tensado = 0.0
         flecha = Projectile(
             spawn_position=pygame.Vector2(origen),
-            velocity=velocidad_inicial(direccion),
+            velocity=velocidad_inicial(direccion, potencia),
             damage=self.dano,
             lifetime=VIDA,
             gravity=GRAVEDAD_FLECHA,

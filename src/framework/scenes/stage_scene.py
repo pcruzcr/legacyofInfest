@@ -234,7 +234,11 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
         desplazamiento = (self._camera.offset if self._camera is not None
                           else pygame.Vector2(0, 0))
         origen = pygame.Vector2(jugador.rect.centerx, jugador.rect.centery)
-        puntos = trayectoria(origen, direccion)
+        # AUD-195: la curva se dibuja con la potencia acumulada, así que
+        # tensar se **ve**: la parábola se estira mientras se mantiene pulsado.
+        # Esa es la mitad del valor del tensado — sin previsualización, cargar
+        # sería una espera a ciegas.
+        puntos = trayectoria(origen, direccion, potencia=arco.potencia)
 
         # Punteada y desvaneciéndose: una línea continua se lee como una
         # cuerda tendida y sugiere que la flecha llega hasta el final, cuando
@@ -347,10 +351,27 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
         arco.update(dt)
         self._raton_ultimo_movimiento = max(
             0.0, getattr(self, "_raton_ultimo_movimiento", 0.0) - dt)
-        if im is not None and im.is_action_just_pressed(Action.RANGED_ATTACK):
+
+        # AUD-195 — tensar y soltar.
+        #
+        # Se dispara al **soltar**, no al pulsar: es lo que permite que
+        # mantener signifique algo. Un toque rápido sigue disparando —la
+        # potencia mínima es utilizable— así que quien no quiera cargar no
+        # tiene que aprender nada nuevo.
+        if im is None:
+            return
+        if im.is_action_pressed(Action.RANGED_ATTACK):
+            arco.tensar(dt)
+        elif arco.tensando:
             origen = pygame.Vector2(player.rect.centerx, player.rect.centery)
-            if arco.disparar(origen, self._direccion_de_tiro(player, im)) is not None:
+            direccion = self._direccion_de_tiro(player, im)
+            if arco.disparar(origen, direccion) is not None:
                 self.context.event_bus.emit(Events.SFX_PLAYER_SHORT_ATTACK)
+            else:
+                # Sin munición o en enfriamiento: se suelta la tensión igual,
+                # o el arco se quedaría cargado para siempre y el siguiente
+                # disparo saldría con una potencia que nadie pidió.
+                arco.soltar_tension()
 
         # Una flecha que da en la pared se para; si no, atraviesa el nivel.
         arco.choca_con_muros(stage.collision_rects)

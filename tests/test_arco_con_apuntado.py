@@ -39,6 +39,9 @@ import pytest
 from src.framework.entities.enemy_shooter import Projectile
 from src.framework.entities.ranged_weapon import (
     GRAVEDAD_FLECHA,
+    POTENCIA_MAXIMA,
+    POTENCIA_MINIMA,
+    TIEMPO_DE_TENSADO,
     VELOCIDAD,
     ArcoDelJugador,
     trayectoria,
@@ -317,6 +320,71 @@ class TestLaPrevisualizacionEnPantalla:
         sin_flechas = self._dibujar(escena)
 
         assert sin_flechas < con_flechas
+
+
+class TestElTensado:
+    """AUD-195 — mantener pulsado carga el tiro.
+
+    La regla que ordena todo lo demás: **añadir el tensado no puede empeorar
+    el disparo de quien no tense**. Un toque rápido tiene que salir exactamente
+    igual que antes de que esta mecánica existiera, o los enemigos colocados en
+    los 17 mapas ya calibrados se quedan fuera de alcance (invariante 2).
+    """
+
+    def test_un_toque_rapido_dispara_como_siempre(self) -> None:
+        """La primera versión puso el suelo en 0,6 y el tiro sin cargar salía a
+        252 px/s en vez de a 420: quien no tensara disparaba peor que antes."""
+        flecha = ArcoDelJugador().disparar(ORIGEN, 1)
+
+        assert flecha is not None
+        assert flecha.velocity.length() == pytest.approx(VELOCIDAD)
+
+    def test_tensar_premia(self) -> None:
+        arco = ArcoDelJugador()
+        arco.tensar(TIEMPO_DE_TENSADO)
+        flecha = arco.disparar(ORIGEN, 1)
+
+        assert flecha is not None
+        assert flecha.velocity.length() > VELOCIDAD
+
+    def test_la_potencia_crece_con_el_tiempo_y_topa(self) -> None:
+        arco = ArcoDelJugador()
+        assert arco.potencia == pytest.approx(POTENCIA_MINIMA)
+
+        arco.tensar(TIEMPO_DE_TENSADO / 2)
+        media = arco.potencia
+        assert POTENCIA_MINIMA < media < POTENCIA_MAXIMA
+
+        arco.tensar(TIEMPO_DE_TENSADO * 3)
+        assert arco.potencia == pytest.approx(POTENCIA_MAXIMA), "la carga no topa"
+
+    def test_disparar_suelta_la_tension(self) -> None:
+        """Si no, el siguiente tiro saldría cargado sin que nadie lo pidiera."""
+        arco = ArcoDelJugador()
+        arco.tensar(TIEMPO_DE_TENSADO)
+        arco.disparar(ORIGEN, 1)
+
+        assert not arco.tensando
+        assert arco.potencia == pytest.approx(POTENCIA_MINIMA)
+
+    def test_un_arco_vacio_no_acumula_tension(self) -> None:
+        """Tensar sin flechas dejaría el arco cargado esperando a la recarga, y
+        el primer tiro tras recuperar munición saldría con una potencia que el
+        jugador no eligió."""
+        arco = ArcoDelJugador()
+        arco.municion = 0
+        arco.tensar(TIEMPO_DE_TENSADO)
+
+        assert not arco.tensando
+
+    def test_la_trayectoria_se_estira_al_tensar(self) -> None:
+        """Es la mitad del valor del tensado: sin verlo, cargar sería una
+        espera a ciegas."""
+        direccion = pygame.Vector2(1, -0.4)
+        floja = trayectoria(ORIGEN, direccion, potencia=POTENCIA_MINIMA)
+        cargada = trayectoria(ORIGEN, direccion, potencia=POTENCIA_MAXIMA)
+
+        assert cargada[-1].x - ORIGEN.x > (floja[-1].x - ORIGEN.x) * 1.3
 
 
 class TestLaCalibracionDeLaCaida:
