@@ -132,8 +132,20 @@ class EnemyArcher(EnemyBase):
     def get_projectiles(self) -> list[Projectile]:
         return self._active_projectiles
 
-    def check_player_contact(self, player: Player) -> None:
-        """Check contact + projectile collision."""
+    def _check_player_contact(self, player: Player) -> None:
+        """AUD-149 — este método se llamaba `check_player_contact`, sin guion.
+
+        El motor llama al PRIVADO —`StageScene` hace
+        `enemy._check_player_contact(player)`—, y el público es sólo un alias
+        obsoleto que `EnemyBase` conserva para las entregas de estudiantes.
+        Al sobreescribir el público, esta lógica **nunca se ejecutaba en el
+        juego**: la clase estaba completa, probada por su nombre, y el camino
+        real pasaba de largo por la implementación de la base.
+
+        Es el mismo patrón que el sistema de diálogo (AUD-127) y el reloj
+        musical (AUD-139), con un agravante: aquí no faltaba un dato, sino que
+        sobraba un guion bajo.
+        """
         super()._check_player_contact(player)
         player_hurtbox = player.hurtbox if hasattr(player, "hurtbox") else player.rect
         for p in list(self._active_projectiles):

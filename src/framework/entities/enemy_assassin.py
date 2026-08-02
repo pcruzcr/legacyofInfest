@@ -119,7 +119,20 @@ class EnemyAssassin(EnemyBase):
     def _build_hitbox(self) -> pygame.Rect:
         return self._build_hurtbox()
 
-    def check_player_contact(self, player: Player) -> None:
+    def _check_player_contact(self, player: Player) -> None:
+        """AUD-149 — este método se llamaba `check_player_contact`, sin guion.
+
+        El motor llama al PRIVADO —`StageScene` hace
+        `enemy._check_player_contact(player)`—, y el público es sólo un alias
+        obsoleto que `EnemyBase` conserva para las entregas de estudiantes.
+        Al sobreescribir el público, esta lógica **nunca se ejecutaba en el
+        juego**: la clase estaba completa, probada por su nombre, y el camino
+        real pasaba de largo por la implementación de la base.
+
+        Es el mismo patrón que el sistema de diálogo (AUD-127) y el reloj
+        musical (AUD-139), con un agravante: aquí no faltaba un dato, sino que
+        sobraba un guion bajo.
+        """
         if self._is_cloaked and not self._is_lunging:
             return
         if self._is_lunging and not self._lunge_has_hit:

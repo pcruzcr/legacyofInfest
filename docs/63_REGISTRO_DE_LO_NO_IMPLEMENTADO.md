@@ -48,13 +48,13 @@ Comprobado con análisis de alcanzabilidad sobre todo el árbol.
 | ~~`GhostData`~~ | `speedrun_mode.py` | **HECHO** (AUD-142). Enchufado: la escena graba, guarda la mejor carrera y dibuja el fantasma anterior |
 | ~~`ParamPanel`~~ | `engine/scenes/param_panel.py` | **HECHO** (AUD-146). Lo usa la vista de árbol de la demo de patrones, con su rango y su aviso de cambio |
 | `SceneRegistry` | citado en 25 y 28 | Falso positivo del barrido: se usa por nombre, no por símbolo |
-| `CameraLock` | `stage_loader.py` | Se usa **sólo dentro del fichero que lo define**. Funciona; conviene mirar si la escena debería leerlo |
+| ~~`CameraLock`~~ | `stage_loader.py` | **HECHO** (AUD-143). Y la sospecha era buena: su `rect` se guardaba y no se leía nunca, así que **una sola zona congelaba la cámara en todo el nivel**. `boss_rey` tenía un parche escrito para rodearlo |
 | `SineFlight` | vuelo senoidal | **Falso positivo, comprobado.** La usan `make_strategy` y otras dos estrategias del mismo módulo |
 | `sincronizar_salud` | ECS | **Correcto que siga.** Es un hueco vacío a propósito desde F5.12: alguna entrega puede llamarlo y borrarlo les rompería el código |
 | `build_gradient` | VFX | **Falso positivo, comprobado.** La llama `lighting.py` para construir el degradado de cada foco |
-| `crossfade_ambient`, `set_ambient_volume` | `audio_manager.py` | API de audio escrita y nunca llamada |
+| ~~`crossfade_ambient`, `set_ambient_volume`~~ | `audio_manager.py` | **HECHO** (AUD-149). El bus de ambiente pasa por `set_ambient_volume`, y la escena **funde** entre ambientes al volver de una sala de jefe en vez de cortar en seco |
 | ~~Audio ambiental por clima~~ | `weather_system.py` | **HECHO** (AUD-145). El mapa devuelve la ruta del fichero real; `snow` y `fog` suenan con el viento que sí existe, y `rain` y `storm` **declaran que les falta el asset** en vez de callarse |
-| `check_player_contact` | `enemy_archer.py` | El resto de enemigos usa `_check_player_contact`; éste quedó público y suelto |
+| ~~`check_player_contact`~~ | 4 enemigos | **HECHO, y era un fallo jugable** (AUD-149). No estaba «suelto»: arquero, asesino, bruto y hechicero sobreescribían el alias **público**, y el motor llama al privado. Las flechas y los orbes no hacían daño ni se podían parar, la onda del bruto no golpeaba, el asesino dañaba estando invisible y su puñalada no hacía nada |
 | `on_stage_start`, `on_player_landed`, `on_enemy_died`, `on_next_trigger_entered` | plantilla de estudiante | **Correcto que estén sin usar.** Son los ganchos que el estudiante rellena |
 | `ComboDemoScene`, `LeaderboardScene`, `LoadingScene`, `PipelineBuilderScene`, `ProgressScene`, `SandboxScene`, `StageWizardScene` | escenas | Falso positivo: el registro las construye por cadena |
 
@@ -74,6 +74,16 @@ Comprobado con análisis de alcanzabilidad sobre todo el árbol.
 > una recomendación sacada de su salida sin comprobarla —la primera fue
 > AUD-133, los sonidos de muerte— y el aviso lleva escrito en el propio script
 > desde que lo escribí.
+
+> **Lo que enseñó la sección 1 al terminarla (AUD-149).** De sus doce filas,
+> **tres eran falsos positivos**, **dos eran correctas tal cual están** —los
+> ganchos del estudiante y el hueco de compatibilidad—, y **una escondía el
+> fallo más jugable del mes**: cuatro enemigos con su lógica de daño en un
+> método que el motor no llama.
+>
+> La lección no es que el barrido falle. Es que su salida son **preguntas**, y
+> la respuesta a cada una hay que ir a buscarla al código. Nueve de las doce
+> filas necesitaron abrir el fichero para saber de cuál de los tres tipos era.
 
 **Acción pendiente:** ninguna. `GhostData` (AUD-142) y `ParamPanel` (AUD-146) están enchufados; los tres «retirar» eran falsos positivos.
 

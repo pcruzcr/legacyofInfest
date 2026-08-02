@@ -196,7 +196,11 @@ class AudioManager:
         self._ambient_channel = None
 
     def set_ambient_volume(self, volume: float) -> None:
-        """Set ambient volume (0.0 to 1.0)."""
+        """Volumen del ambiente, de 0 a 1.
+
+        AUD-149: lo llama `ajustar_bus(BUS_AMBIENTE)`. Llevaba meses escrito y
+        sin usar, con el ambiente colgando del volumen de efectos.
+        """
         self._ambient_volume = max(0.0, min(1.0, volume))
         if self._ambient_channel and self._ambient_active and not self._muted:
             self._ambient_channel.set_volume(self._ambient_volume * self._sfx_volume)
@@ -272,8 +276,12 @@ class AudioManager:
             self._aplicar_volumen_de_musica()
         elif bus == BUS_EFECTOS:
             self._sfx_volume = self.mezcla.volumen_de(BUS_EFECTOS)
-        elif bus == BUS_AMBIENTE and self._ambient_channel is not None:
-            self._ambient_channel.set_volume(self.mezcla.ganancia(BUS_AMBIENTE))
+        elif bus == BUS_AMBIENTE:
+            # AUD-149: por `set_ambient_volume` y no tocando el canal a mano.
+            # Ese método existía desde hacía meses sin que nadie lo llamara, y
+            # además sabe cosas que aquí habría que repetir: si hay ambiente
+            # sonando y si el juego está silenciado.
+            self.set_ambient_volume(self.mezcla.volumen_de(BUS_AMBIENTE))
 
     def _aplicar_volumen_de_musica(self) -> None:
         """Lleva el volumen calculado al mezclador de SDL."""

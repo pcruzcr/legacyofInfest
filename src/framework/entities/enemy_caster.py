@@ -194,7 +194,13 @@ class EnemyCaster(EnemyBase):
     def set_collision_rects(self, rects: list[pygame.Rect], one_way: list[pygame.Rect] | None = None) -> None:
         self._collision_rects = rects
 
-    def check_player_contact(self, player: Player) -> None:
+    def _check_player_contact(self, player: Player) -> None:
+        """AUD-149 — se llamaba `check_player_contact`, sin guion bajo.
+
+        El motor llama al privado; el público es un alias obsoleto que
+        `EnemyBase` conserva para las entregas. Al sobreescribir el público,
+        esta lógica no se ejecutaba nunca en el juego.
+        """
         super()._check_player_contact(player)
         player_hurtbox = player.hurtbox if hasattr(player, "hurtbox") else player.rect
         for o in list(self._active_orbs):

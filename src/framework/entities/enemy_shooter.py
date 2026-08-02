@@ -207,8 +207,11 @@ class EnemyShooter(EnemyBase):
                     player.apply_damage(p.damage, (self.position.x, self.position.y))
                     p.on_collision()
 
-    def check_player_contact(self, player: Player) -> None:
-        self._check_player_contact(player)
+    # AUD-149: aquí había un alias público que repetía el de `EnemyBase`.
+    # Se retira para que la regla quede sin excepciones: **ninguna subclase
+    # define `check_player_contact`**. Este enemigo era el único que lo hacía
+    # bien —sobreescribe el privado—, y su alias de más era justo lo que
+    # despistó a los otros cuatro.
 
     def get_projectiles(self) -> list[Projectile]:
         """Return the list of active projectiles."""

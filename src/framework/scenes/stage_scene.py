@@ -430,7 +430,19 @@ class StageScene(BaseScene):
             if ruta_relativa and self.context.audio is not None:
                 ambient_path = settings.ASSETS_DIR / ruta_relativa
                 if ambient_path.exists():
-                    self.context.audio.play_ambient(ambient_path, volume=0.3)
+                    # AUD-149 — se FUNDE si ya había ambiente sonando.
+                    #
+                    # `crossfade_ambient` llevaba meses escrita sin que nadie
+                    # la llamara. Su sitio es justo éste: al volver de una
+                    # sala de jefe o al reaparecer, cortar el ambiente en seco
+                    # y arrancar otro se oye como un fallo. La primera vez no
+                    # hay nada que fundir, así que se arranca normal.
+                    audio = self.context.audio
+                    if getattr(audio, "_ambient_active", False):
+                        audio.crossfade_ambient(ambient_path, duration=1.5,
+                                                volume=0.3)
+                    else:
+                        audio.play_ambient(ambient_path, volume=0.3)
                 else:
                     logging.getLogger(__name__).warning(
                         "el clima %r pide %s y no está en el disco",

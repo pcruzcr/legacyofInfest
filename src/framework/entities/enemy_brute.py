@@ -91,7 +91,13 @@ class EnemyBrute(EnemyBase):
     def _build_hitbox(self) -> pygame.Rect:
         return self._build_hurtbox()
 
-    def check_player_contact(self, player: Player) -> None:
+    def _check_player_contact(self, player: Player) -> None:
+        """AUD-149 — se llamaba `check_player_contact`, sin guion bajo.
+
+        El motor llama al privado; el público es un alias obsoleto que
+        `EnemyBase` conserva para las entregas. Al sobreescribir el público,
+        esta lógica no se ejecutaba nunca en el juego.
+        """
         if self._shockwave_active and not self._shockwave_has_hit:
             shockwave_rect = pygame.Rect(
                 self.position.x + (self.rect.width - 60) // 2,

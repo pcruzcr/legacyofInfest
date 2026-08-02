@@ -241,3 +241,53 @@ class TestLoQueNoSePuedeHacer:
         from src.engine.audio.mixer_buses import Mezclador
 
         assert not hasattr(Mezclador, "reverberacion")
+
+
+class TestLasDosApisDeAmbienteQueNadieLlamaba:
+    """AUD-149 — `set_ambient_volume` y `crossfade_ambient`.
+
+    Las dos llevaban meses escritas, completas y sin una sola llamada. El
+    registro las tenía en la fila «API de audio escrita y nunca llamada».
+    """
+
+    def _audio(self):
+        from src.engine.audio.audio_manager import AudioManager
+
+        return AudioManager()
+
+    def test_el_bus_de_ambiente_pasa_por_set_ambient_volume(self) -> None:
+        import inspect
+
+        from src.engine.audio.audio_manager import AudioManager
+
+        fuente = inspect.getsource(AudioManager.ajustar_bus)
+        assert "set_ambient_volume" in fuente, (
+            "el bus toca el canal a mano y `set_ambient_volume` vuelve a ser "
+            "un huérfano"
+        )
+
+    def test_ajustar_el_bus_mueve_el_volumen_del_ambiente(self) -> None:
+        audio = self._audio()
+        audio.ajustar_bus(BUS_AMBIENTE, 0.2)
+        assert audio._ambient_volume == pytest.approx(0.2)
+
+    def test_la_escena_funde_entre_ambientes(self) -> None:
+        import inspect
+
+        from src.framework.scenes import stage_scene
+
+        fuente = inspect.getsource(stage_scene)
+        assert "crossfade_ambient" in fuente, (
+            "al volver de una sala de jefe el ambiente cortaría en seco, que "
+            "se oye como un fallo"
+        )
+
+    def test_la_primera_vez_no_funde_nada(self) -> None:
+        """No hay ambiente anterior con el que fundir: arrancar normal."""
+        import inspect
+
+        from src.framework.scenes import stage_scene
+
+        fuente = inspect.getsource(stage_scene)
+        assert "_ambient_active" in fuente
+        assert "play_ambient(ambient_path, volume=0.3)" in fuente
