@@ -28,9 +28,9 @@ date_processed: "2026-07-31"
 1. [El bucle: qué pasa en un fotograma](#1)
 2. [Anatomía de un escenario TMX](#2)
 3. [Propiedades del mapa — las 17](#3)
-4. [Los 71 tipos de objeto, uno por uno](#4)
+4. [Los 73 tipos de objeto, uno por uno](#4)
 5. [El jugador: 26 estados y qué los provoca](#5)
-6. [Enemigos: 35 tipos y 13 estados](#6)
+6. [Enemigos: 37 tipos y 13 estados](#6)
 7. [Jefes](#7)
 8. [Iluminación, post-procesado y VFX](#8)
 9. [Clima, ciclo día/noche y estaciones](#9)
@@ -215,10 +215,10 @@ efecto, mira la consola antes que el código.
 ---
 
 <a id="4"></a>
-## 4. Los 71 tipos de objeto, uno por uno
+## 4. Los 73 tipos de objeto, uno por uno
 
-El motor acepta **71 tipos** en la capa `Objects`: 34 integrados del framework
-y 35 enemigos del registro, más `Solid` y `Platform` en `Collision`. Todos los
+El motor acepta **73 tipos** en la capa `Objects`: 34 integrados del framework
+y 37 enemigos del registro, más `Solid` y `Platform` en `Collision`. Todos los
 números se convierten a `float` automáticamente.
 
 > Un objeto **punto** (ancho y alto 0) recibe el tamaño de una baldosa, porque
@@ -574,11 +574,11 @@ enemigos suficientes antes del tramo final, el jugador nunca lo verá.
 ---
 
 <a id="6"></a>
-## 6. Enemigos: 35 tipos y 13 estados
+## 6. Enemigos: 37 tipos y 13 estados
 
 ### Los ocho arquetipos
 
-Son la base; los 27 restantes son variantes temáticas con otro aspecto y otros
+Son la base; los 29 restantes son variantes temáticas con otro aspecto y otros
 números.
 
 | Tipo | Cómo se comporta | Propiedades |
@@ -610,7 +610,7 @@ enemigos con personalidad para tu zona, empieza por ahí.
 
 ### Los enemigos de las entregas
 
-Cinco tipos más viven en los escenarios de las entregas, no en el bestiario:
+Siete tipos más viven en los escenarios de las entregas, no en el bestiario:
 los registra el propio paquete del escenario al importarse, y por eso sólo
 existen en los mapas de su zona.
 
@@ -621,6 +621,8 @@ existen en los mapas de su zona.
 | `EstudianteInfectado` | `stage1_3_las_aulas` | un estudiante que ataca de cerca |
 | `CuadernoVolador` | `stage1_3_las_aulas` | un cuaderno que vuela por una curva |
 | `BossGavilan` | `stage3_4_boss_gavilan` | el jefe del gavilán, con fases |
+| `BossRey` | `boss_rey` | el Rey Terciopelo, jefe de la Práctica I, con fases |
+| `BossPaburu` | `boss_paburu` | el Gran Chamán Paburu, jefe de la Zona 4, con fases |
 
 El cargador importa el paquete del escenario al abrir su mapa y así encuentra
 estos tipos. Si registras los tuyos **al nivel del módulo** (fuera de funciones
