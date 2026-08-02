@@ -159,7 +159,8 @@ Esto no sale del barrido automático: sale de la auditoría de agosto
 | Falta | Bloquea | Esfuerzo |
 |---|---|---|
 | ~~Reloj musical~~ | **HECHO** (AUD-137). `bpm`/`compas`/`desfase_audio` en el mapa, `patron` en los bloques, posición tomada del mezclador | — |
-| **Buses de mezcla, ducking, reverberación por zona** | audio | 1 semana |
+| ~~Buses de mezcla y ducking~~ | **HECHO** (AUD-144). Cuatro buses y la música se aparta cuando alguien habla | — |
+| **Reverberación por zona** | audio | **No se puede sobre SDL.** Su mezclador no tiene efectos: haría falta convolucionar cada sonido al cargarlo o una biblioteca de DSP. Documentado en `mixer_buses.py` |
 | ~~Atlas de sprites y batching~~ | **HECHO** (AUD-138), con una salvedad medida: el atlas **no** acelera el dibujado en la ruta software (2,06 → 2,35 ms). Lo que gana es carga (3×) y `blits()` (16 %) |
 | **Post-procesado en GPU** | gráficos | pendiente: exige pasar el motor a `pygame._sdl2`. Mientras tanto, AUD-138 bajó el filtro de daltonismo de 17,4 ms a 3,1 ms sacándolo de numpy |
 | ~~Cutscenes: acciones nuevas, guiones desde TMX, no bloquear~~ | **HECHO** (AUD-136). Tipo `Cutscene`, guion en texto, escenas que no bloquean y salto que ejecuta el final | — |

@@ -155,7 +155,8 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── sound_bank.py              # SoundBank: named sound registry
 │   │   │   ├── audio_manager.py           # AudioManager: music + sfx + ambient + stingers
 │   │   │   ├── audio_pipeline.py          # Audio processing pipeline
-│   │   │   └── music_clock.py            # RelojMusical: pulsos, compases y latencia (F6)
+│   │   │   ├── music_clock.py            # RelojMusical: pulsos, compases y latencia (F6)
+│   │   │   └── mixer_buses.py           # Mezclador: buses y ducking (AUD-144)
 │   │   │
 │   │   ├── render/
 │   │   │   ├── __init__.py

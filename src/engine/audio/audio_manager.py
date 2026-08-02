@@ -12,6 +12,13 @@ from pathlib import Path
 
 import pygame
 
+from src.engine.audio.mixer_buses import (
+    BUS_AMBIENTE,
+    BUS_EFECTOS,
+    BUS_MUSICA,
+    BUS_VOZ,
+    Mezclador,
+)
 from src.engine.audio.sound_bank import SoundBank
 from src.engine.core import settings
 
@@ -29,6 +36,11 @@ class AudioManager:
         self._music_volume: float = 0.7
         self._sfx_volume: float = 1.0
         self._muted: bool = False
+        # AUD-144 — buses de mezcla. `_music_volume` y `_sfx_volume` siguen
+        # existiendo porque los leen las opciones y varias entregas; lo que
+        # cambia es que ahora son la cara visible de dos buses, y que hay dos
+        # buses más —voz y ambiente— que antes colgaban de «efectos».
+        self.mezcla: Mezclador = Mezclador()
 
         # Dynamic music layers
         self._calm_channel: pygame.mixer.Channel | None = None
@@ -145,7 +157,7 @@ class AudioManager:
         """Play a sound effect from the sound bank at the current SFX volume."""
         if self._muted:
             return
-        self.sound_bank.play(name, volume=self._sfx_volume * volume)
+        self.sound_bank.play(name, volume=self.mezcla.ganancia(BUS_EFECTOS, volume))
 
     def play_stinger(self, name: str, volume: float = 0.8) -> None:
         """Play a music stinger (short SFX overlay) without interrupting music."""
@@ -225,21 +237,86 @@ class AudioManager:
         pan = max(-1.0, min(1.0, (world_x - screen_center_x) / screen_center_x))
         left = 1.0 - max(0.0, pan)
         right = 1.0 + min(0.0, pan)
-        self.sound_bank.play(name, volume=self._sfx_volume * volume, pan=(left, right))
+        self.sound_bank.play(
+            name, volume=self.mezcla.ganancia(BUS_EFECTOS, volume),
+            pan=(left, right))
+
+    # ── AUD-144: buses y ducking ──────────────────────────────────
+    def play_voz(self, name: str, volume: float = 1.0,
+                 duracion_duck: float = 0.0) -> None:
+        """Reproduce una línea de voz y **aparta la música**.
+
+        Es el único método que agacha la música por su cuenta, y por eso
+        existe: si el ducking hubiera que pedirlo aparte, alguien se olvidaría
+        en la mitad de las líneas y la mezcla sería distinta según la escena.
+        """
+        self.mezcla.agachar_musica(duracion_duck)
+        self._aplicar_volumen_de_musica()
+        if self.sound_bank is not None:
+            self.sound_bank.play(name, volume=self.mezcla.ganancia(BUS_VOZ, volume))
+
+    def agachar_musica(self, segundos: float = 0.0) -> None:
+        self.mezcla.agachar_musica(segundos)
+        self._aplicar_volumen_de_musica()
+
+    def soltar_musica(self) -> None:
+        self.mezcla.soltar_musica()
+
+    def volumen_de_bus(self, bus: str) -> float:
+        return self.mezcla.volumen_de(bus)
+
+    def ajustar_bus(self, bus: str, volumen: float) -> None:
+        self.mezcla.ajustar(bus, volumen)
+        if bus == BUS_MUSICA:
+            self._music_volume = self.mezcla.volumen_de(BUS_MUSICA)
+            self._aplicar_volumen_de_musica()
+        elif bus == BUS_EFECTOS:
+            self._sfx_volume = self.mezcla.volumen_de(BUS_EFECTOS)
+        elif bus == BUS_AMBIENTE and self._ambient_channel is not None:
+            self._ambient_channel.set_volume(self.mezcla.ganancia(BUS_AMBIENTE))
+
+    def _aplicar_volumen_de_musica(self) -> None:
+        """Lleva el volumen calculado al mezclador de SDL."""
+        if not self._mixer_listo():
+            return
+        try:
+            pygame.mixer.music.set_volume(self.mezcla.ganancia(BUS_MUSICA))
+        except pygame.error:  # pragma: no cover - mezclador caído a mitad
+            pass
+
+    def update(self, dt: float) -> None:
+        """Mueve el *ducking*. **Con `dt` real**, nunca escalado.
+
+        El tiempo bala ralentiza el mundo; la mezcla no. Si esto se alimentara
+        con el `dt` del juego, una ralentización dejaría la música agachada el
+        triple de tiempo.
+        """
+        antes = self.mezcla.factor_de_duck
+        self.mezcla.update(dt)
+        if self.mezcla.factor_de_duck != antes:
+            self._aplicar_volumen_de_musica()
 
     def set_music_volume(self, volume: float) -> None:
-        """Set music volume (0.0 to 1.0)."""
+        """Set music volume (0.0 to 1.0).
+
+        AUD-144: escribe en el bus, no en un campo suelto. Si los dos vivieran
+        por separado, mover el deslizador de opciones dejaría el bus a lo suyo
+        y el *ducking* calcularía sobre el volumen equivocado.
+        """
         self._music_volume = max(0.0, min(1.0, volume))
-        if not self._muted and self._mixer_listo():
-            pygame.mixer.music.set_volume(self._music_volume)
+        self.mezcla.ajustar(BUS_MUSICA, self._music_volume)
+        if not self._muted:
+            self._aplicar_volumen_de_musica()
 
     def set_sfx_volume(self, volume: float) -> None:
         """Set SFX volume (0.0 to 1.0)."""
         self._sfx_volume = max(0.0, min(1.0, volume))
+        self.mezcla.ajustar(BUS_EFECTOS, self._sfx_volume)
 
     def toggle_mute(self) -> None:
         """Toggle mute on/off."""
         self._muted = not self._muted
+        self.mezcla.silencio = self._muted
         if self._mixer_listo():
             pygame.mixer.music.set_volume(0.0 if self._muted else self._music_volume)
         if self._ambient_channel:
