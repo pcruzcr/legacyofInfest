@@ -249,6 +249,8 @@ class StageScene(BaseScene):
         # camino que la vista: una propiedad del mapa que la escena traslada
         # al jugador al cargar.
         self._player.activar_estamina(getattr(self._stage_data, "estamina", 0.0))
+        # AUD-143 — modo de cámara del escenario.
+        self._camera.modo = getattr(self._stage_data, "camara", "seguir")
 
         pending = self.context.pending_load
         if pending is not None and pending.stage_id == self._stage_data.stage_id:

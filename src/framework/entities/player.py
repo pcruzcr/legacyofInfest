@@ -847,7 +847,19 @@ class Player(BaseEntity):
             self._coyote_counter = 0
             self._wall_side = 0
         else:
-            self._coyote_counter += 1
+            # AUD-143 — el contador avanza con el TIEMPO, no con los
+            # fotogramas.
+            #
+            # Era `+= 1` por fotograma, así que la ventana de coyote duraba
+            # seis fotogramas: 100 ms a 60 fps, 200 ms a 30 y 42 ms a 144. El
+            # margen de perdón para saltar tarde —que es exactamente lo que
+            # esta mecánica es— cambiaba con la máquina, y en un portátil que
+            # baja a 30 fps el juego se volvía notablemente más blando.
+            #
+            # Se sigue contando en «fotogramas a 60 fps» para no tocar la
+            # constante pública ni las comparaciones, pero la unidad ya es
+            # real: `PLAYER_COYOTE_FRAMES = 6` son 100 ms en cualquier equipo.
+            self._coyote_counter += dt * 60.0
 
     # ──────────────────────────────────────────────
     # Collision resolution (AABB, axis-separated)
