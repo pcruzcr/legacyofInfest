@@ -63,6 +63,12 @@ if TYPE_CHECKING:
     from src.framework.stage.stage_loader import StageData
 
 
+#: Segundos que el apuntado sigue siendo del ratón tras el último
+#: movimiento. Corto, pero no tanto como para que soltar el ratón un
+#: instante devuelva el tiro al frente en mitad de una pelea.
+MEMORIA_DEL_RATON: float = 1.5
+
+
 class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
                  BaseScene):
     """El escenario jugable: carga un TMX y lo hace jugar.
@@ -192,6 +198,76 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
             self._tutorial.show("move", duration=6.0)
             self._tutorial_shown.add("move")
 
+    def _raton_esta_apuntando(self) -> bool:
+        """¿El jugador está usando el ratón, o sólo está ahí quieto?
+
+        AUD-193 — sin esto, el ratón secuestra el apuntado. La primera versión
+        preguntaba únicamente por `mouse.get_focused()`, y entonces un jugador
+        de teclado disparaba hacia donde el cursor se hubiera quedado olvidado:
+        medido en stage0, hacia arriba y a la izquierda, en diagonal, sin haber
+        tocado el ratón.
+
+        Se considera que apunta con el ratón si lo ha movido hace poco. Es lo
+        que hacen los juegos que admiten los dos controles a la vez, y evita
+        tener que elegir uno en un menú.
+        """
+        if not pygame.mouse.get_focused():
+            self._raton_ultimo_movimiento = 0.0
+            return False
+
+        posicion = pygame.mouse.get_pos()
+        if not hasattr(self, "_raton_posicion_previa"):
+            # Primera lectura: se toma como referencia, no como movimiento. Sin
+            # esto, comparar contra `None` cuenta siempre como que el ratón se
+            # ha movido y el apuntado arranca secuestrado antes de que el
+            # jugador toque nada.
+            self._raton_posicion_previa = posicion
+            return False
+        if posicion != self._raton_posicion_previa:
+            self._raton_posicion_previa = posicion
+            self._raton_ultimo_movimiento = MEMORIA_DEL_RATON
+        return getattr(self, "_raton_ultimo_movimiento", 0.0) > 0.0
+
+    def _direccion_de_tiro(self, player: object, im: object) -> object:
+        """Hacia dónde sale la flecha: apuntado libre si lo hay, si no de frente.
+
+        AUD-193. Devuelve un `Vector2` cuando el jugador está apuntando de
+        verdad —stick derecho fuera de su zona muerta, o ratón— y el entero de
+        siempre cuando no. Esa caída al comportamiento anterior no es pereza:
+        es lo que permite que los 17 mapas calibrados y las entregas de
+        estudiantes se sigan jugando igual con sólo el teclado.
+
+        El ratón se lee en coordenadas de pantalla y hay que restarle el
+        desplazamiento de la cámara, porque el jugador vive en coordenadas de
+        mundo. Sin eso, apuntar funcionaría sólo con la cámara en el origen —el
+        defecto clásico de mezclar los dos espacios.
+        """
+        eje = getattr(im, "aim_axis", None)
+        if callable(eje):
+            # Se comprueba el tipo y no sólo que exista: `getattr` sobre un
+            # doble de prueba con `__getattr__` genérico devuelve un invocable
+            # para cualquier nombre, y llamar a `length_squared()` sobre lo que
+            # sea que conteste revienta la escena entera en mitad del combate.
+            vector = eje()
+            if isinstance(vector, pygame.Vector2) and vector.length_squared() > 0.0:
+                return vector
+
+        if self._raton_esta_apuntando():
+            raton = pygame.Vector2(pygame.mouse.get_pos())
+            camara = getattr(self, "_camera", None)
+            desplazamiento = (camara.offset if camara is not None
+                              else pygame.Vector2(0, 0))
+            objetivo = raton + desplazamiento
+            apuntado = objetivo - pygame.Vector2(
+                player.rect.centerx, player.rect.centery,
+            )
+            # Un cursor pegado al jugador da una dirección sin sentido: por
+            # debajo de media baldosa se dispara de frente.
+            if apuntado.length_squared() > 64.0:
+                return apuntado
+
+        return player.facing
+
     def _actualizar_arco(self, dt: float, player: object, im: object, stage: object) -> None:
         """F4.2 — disparo a distancia.
 
@@ -204,9 +280,11 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
             return
 
         arco.update(dt)
+        self._raton_ultimo_movimiento = max(
+            0.0, getattr(self, "_raton_ultimo_movimiento", 0.0) - dt)
         if im is not None and im.is_action_just_pressed(Action.RANGED_ATTACK):
             origen = pygame.Vector2(player.rect.centerx, player.rect.centery)
-            if arco.disparar(origen, player.facing) is not None:
+            if arco.disparar(origen, self._direccion_de_tiro(player, im)) is not None:
                 self.context.event_bus.emit(Events.SFX_PLAYER_SHORT_ATTACK)
 
         # Una flecha que da en la pared se para; si no, atraviesa el nivel.
