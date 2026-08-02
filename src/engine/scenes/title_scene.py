@@ -91,8 +91,15 @@ class TitleScene(BaseScene):
         logo_bottom = h // 3 + 20
         available = h - logo_bottom - 16
         n = len(self._menu.items)
-        line_h = max(11, min(18, available // max(n, 1)))
-        self._font_size = max(14, line_h - 2)
+        # AUD-187: el techo era `min(18, …)`, un número heredado de cuando la
+        # superficie interna medía 320x240. A los 800x600 actuales sobraba
+        # sitio —con diez opciones caben 36 px por fila— y el menú principal se
+        # dibujaba a 16 px igualmente, más pequeño que el cuerpo de texto del
+        # resto del juego. Ahora el techo es la escala del tema y el reparto
+        # sólo encoge cuando de verdad no caben.
+        deseado = Theme.FONT_BODY + Theme.SPACE_S
+        line_h = max(11, min(deseado, available // max(n, 1)))
+        self._font_size = max(14, line_h - Theme.SPACE_XS)
         self._font_game = AssetLoader.load_font(
             settings.ASSETS_DIR / "fonts" / "game.ttf",
             self._font_size,

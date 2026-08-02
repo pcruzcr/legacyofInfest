@@ -38,9 +38,27 @@ if TYPE_CHECKING:
 
 from src.engine.scene.base_scene import BaseScene
 
-#: Alto de cada ficha. Más que una fila de menú normal porque cada entrada
-#: lleva nombre, descripción y dos estadísticas.
-ENTRY_HEIGHT = 48
+#: AUD-187 — el alto de la ficha sale de la fuente, no de un número escrito a
+#: mano.
+#:
+#: Antes esto era `ENTRY_HEIGHT = 48` y la descripción se dibujaba en `y + 22`.
+#: Ese 22 daba por hecho el alto del nombre; medido, el nombre ocupa 22 px
+#: desde `y + 4`, así que terminaba en 26 y la descripción arrancaba en 22:
+#: cuatro píxeles de solape de partida. Con el texto ampliado por accesibilidad
+#: (AUD-126) el solape crece y la ficha se vuelve ilegible, que es lo contrario
+#: de lo que esa opción busca.
+
+
+def y_de_la_descripcion() -> int:
+    """Dónde empieza la descripción, justo debajo del nombre."""
+    return Theme.SPACE_XS + font(Theme.FONT_SMALL).get_linesize()
+
+
+def alto_de_ficha() -> int:
+    """Nombre + descripción + el aire de abajo, con la fuente de ahora."""
+    return (y_de_la_descripcion()
+            + font(Theme.FONT_TINY).get_linesize()
+            + Theme.SPACE_S)
 
 
 class BestiaryScene(BaseScene):
@@ -108,7 +126,7 @@ class BestiaryScene(BaseScene):
         )
         # La ventana visible sigue al foco: la lista puede ser más larga que la
         # pantalla y el kit no sabe cuántas fichas caben aquí.
-        visible = max(1, (settings.INTERNAL_HEIGHT - 60) // ENTRY_HEIGHT)
+        visible = max(1, (settings.INTERNAL_HEIGHT - 60) // alto_de_ficha())
         if self._menu.index < self._scroll_offset:
             self._scroll_offset = self._menu.index
         elif self._menu.index >= self._scroll_offset + visible:
@@ -144,7 +162,7 @@ class BestiaryScene(BaseScene):
         for idx, item in enumerate(self._menu.items):
             if idx < self._scroll_offset:
                 continue
-            y = top + (idx - self._scroll_offset) * ENTRY_HEIGHT
+            y = top + (idx - self._scroll_offset) * alto_de_ficha()
             if y > settings.INTERNAL_HEIGHT - 40:
                 break
 
@@ -153,7 +171,7 @@ class BestiaryScene(BaseScene):
             row = pygame.Rect(
                 Theme.MARGIN, y,
                 settings.INTERNAL_WIDTH - Theme.MARGIN * 2,
-                ENTRY_HEIGHT - Theme.SPACE_XS,
+                alto_de_ficha() - Theme.SPACE_XS,
             )
             pygame.draw.rect(
                 surface,
@@ -175,7 +193,7 @@ class BestiaryScene(BaseScene):
             surface.blit(name, (row.x + Theme.SPACE_M, row.y + Theme.SPACE_XS))
 
             desc = stat_font.render(entry.description, True, Theme.TEXT_MUTED)
-            surface.blit(desc, (row.x + Theme.SPACE_M, row.y + 22))
+            surface.blit(desc, (row.x + Theme.SPACE_M, row.y + y_de_la_descripcion()))
 
             kills = stat_font.render(f"Bajas: {entry.kills}", True, Theme.ACCENT_DIM)
             surface.blit(
@@ -187,5 +205,6 @@ class BestiaryScene(BaseScene):
             health = stat_font.render(f"Vida: {entry.hp}", True, Theme.DANGER)
             surface.blit(
                 health,
-                (row.right - health.get_width() - Theme.SPACE_M, row.y + 22),
+                (row.right - health.get_width() - Theme.SPACE_M,
+                 row.y + y_de_la_descripcion()),
             )
