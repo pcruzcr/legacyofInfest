@@ -206,6 +206,212 @@ class TestRomper:
         assert bus.emitidos == []
 
 
+class TestLoQueLaMutacionDestapo:
+    """AUD-181 / GAP-023 — once cambios que la suite no detectaba.
+
+    `scripts/mutation_check.py` puntuó este módulo con un 56 %: se le podían
+    cambiar once cosas y ninguna prueba se enteraba. Lo interesante no es el
+    número, sino **por qué** sobrevivían tres de ellos.
+
+    `test_no_se_empuja_a_traves_de_una_pared` y
+    `test_un_bloque_no_empuja_a_otro_a_traves` pasaban por la razón
+    equivocada. En las dos, el jugador se queda quieto en su sitio mientras el
+    bloque avanza; en cuanto el bloque se aleja lo suficiente, `_toca_de_lado`
+    deja de dar contacto y el bloque **se para solo**, mucho antes de llegar a
+    la pared. La rama que comprueba la colisión no llegaba a ejecutarse nunca,
+    así que se podía invertir entera y las dos pruebas seguían en verde.
+
+    Aquí el jugador sigue al bloque —`jugador.right = bloque.rect.left`, que es
+    lo que hace la resolución de colisión de verdad cuando se camina contra un
+    sólido—, y entonces sí se llega a empujar contra algo.
+
+    El que sigue vivo, y por qué no se persigue
+    -------------------------------------------
+    Queda 1 de 25 (96 %): la línea 204, `if dt <= 0.0` → `if dt < 0.0` en
+    `caer`. Es **equivalente**. Con `dt == 0.0` el cuerpo se ejecuta pero no
+    hace nada: la velocidad crece `GRAVEDAD_BLOQUE * 0`, y los píxeles a
+    recorrer son `int(_vy * 0)` = 0, que sale por el `continue`. Comprobado
+    sobre 5.000 secuencias aleatorias de `dt` —sembradas de ceros a
+    propósito— comparando posición, velocidad y posición en coma flotante de
+    los tres bloques: **0 diferencias**. Una prueba que lo matara tendría que
+    afirmar que un fotograma de duración cero cambia algo.
+    """
+
+    def _empujar_siguiendo(self, sistema, bloque, jugador, solidos,
+                           fotogramas: int = 600) -> None:
+        """Empuja hacia la derecha manteniendo el contacto, como en el juego."""
+        for _ in range(fotogramas):
+            sistema.empujar(jugador, 1, 1 / 60, solidos)
+            jugador.right = bloque.rect.left
+
+    def test_empujando_sin_soltar_el_bloque_no_entra_en_la_pared(self) -> None:
+        bloque = BloqueEmpujable(rect=pygame.Rect(100, 168, 32, 32))
+        sistema = SistemaDeBloques(empujables=[bloque])
+        jugador = pygame.Rect(80, 170, 20, 30)
+        pared = pygame.Rect(140, 100, 16, 120)
+
+        self._empujar_siguiendo(sistema, bloque, jugador,
+                                [*_suelo(), pared])
+
+        assert bloque.rect.right <= pared.left, (
+            f"el bloque acabó en x={bloque.rect.right} y la pared empieza en "
+            f"{pared.left}: lo ha atravesado"
+        )
+
+    def test_empujando_sin_soltar_el_bloque_no_atraviesa_a_otro(self) -> None:
+        uno = BloqueEmpujable(rect=pygame.Rect(100, 168, 32, 32))
+        dos = BloqueEmpujable(rect=pygame.Rect(140, 168, 32, 32))
+        sistema = SistemaDeBloques(empujables=[uno, dos])
+        jugador = pygame.Rect(80, 170, 20, 30)
+
+        self._empujar_siguiendo(sistema, uno, jugador, _suelo())
+
+        assert not uno.rect.colliderect(dos.rect), (
+            "un bloque empujado se ha metido dentro de otro"
+        )
+        assert uno.rect.right <= dos.rect.left
+
+    def test_empujando_sin_soltar_el_bloque_no_atraviesa_un_destructible(
+        self,
+    ) -> None:
+        """Un destructible entero es una pared: se rompe, no se aparta."""
+        bloque = BloqueEmpujable(rect=pygame.Rect(100, 168, 32, 32))
+        muro = BloqueDestructible(rect=pygame.Rect(140, 168, 32, 32), golpes=3)
+        sistema = SistemaDeBloques(empujables=[bloque], destructibles=[muro])
+        jugador = pygame.Rect(80, 170, 20, 30)
+
+        self._empujar_siguiendo(sistema, bloque, jugador, _suelo())
+
+        assert bloque.rect.right <= muro.rect.left
+
+    def test_un_destructible_roto_deja_pasar_al_bloque(self) -> None:
+        """La contraparte: si sólo se comprobara «hay un destructible», un
+        bloque roto seguiría estorbando y el paso quedaría cerrado para
+        siempre."""
+        bloque = BloqueEmpujable(rect=pygame.Rect(100, 168, 32, 32))
+        muro = BloqueDestructible(rect=pygame.Rect(140, 168, 32, 32))
+        muro.golpear()
+        sistema = SistemaDeBloques(empujables=[bloque], destructibles=[muro])
+        jugador = pygame.Rect(80, 170, 20, 30)
+
+        self._empujar_siguiendo(sistema, bloque, jugador, _suelo(ancho=600))
+
+        assert bloque.rect.left > muro.rect.left, (
+            "el bloque se paró ante un destructible ya roto"
+        )
+
+    # ── el reloj no va hacia atrás ────────────────────────────────
+    def test_un_dt_negativo_no_arrastra_el_bloque_hacia_atras(self) -> None:
+        """La guarda es `direccion == 0 or dt <= 0`. Con un `and` en vez del
+        `or`, un `dt` negativo —un reloj que retrocede tras una pausa— empuja
+        el bloque en sentido contrario al que camina el jugador."""
+        sistema, bloque, jugador = TestEmpujar()._montaje()
+        antes = bloque.rect.x
+
+        movidos = sistema.empujar(jugador, 1, -0.1, _suelo())
+
+        assert movidos == 0
+        assert bloque.rect.x == antes
+
+    # ── las fronteras del solape vertical ─────────────────────────
+    def test_rozar_el_canto_de_arriba_no_empuja(self) -> None:
+        """Se exigen más de 2 px de solape. Con 1 px, el jugador está de hecho
+        de pie sobre el canto, y ver el suelo deslizarse bajo los pies es
+        justo lo que la condición existe para evitar."""
+        bloque = BloqueEmpujable(rect=pygame.Rect(100, 168, 32, 32))
+        sistema = SistemaDeBloques(empujables=[bloque])
+        # bottom = top + 1: un píxel de solape, un roce.
+        jugador = pygame.Rect(80, 168 + 1 - 30, 20, 30)
+        antes = bloque.rect.x
+
+        for _ in range(60):
+            sistema.empujar(jugador, 1, 1 / 60, _suelo())
+
+        assert bloque.rect.x == antes
+
+    def test_rozar_el_canto_de_abajo_no_empuja(self) -> None:
+        bloque = BloqueEmpujable(rect=pygame.Rect(100, 168, 32, 32))
+        sistema = SistemaDeBloques(empujables=[bloque])
+        # top exactamente en bottom - 2: la frontera, que no cuenta.
+        jugador = pygame.Rect(80, bloque.rect.bottom - 2, 20, 30)
+        antes = bloque.rect.x
+
+        for _ in range(60):
+            sistema.empujar(jugador, 1, 1 / 60, _suelo(y=260))
+
+        assert bloque.rect.x == antes
+
+    def test_con_solape_de_sobra_si_empuja(self) -> None:
+        """La contraparte de las dos de arriba: si la tolerancia se fuera al
+        otro extremo, no se podría empujar nada."""
+        sistema, bloque, jugador = TestEmpujar()._montaje()
+        antes = bloque.rect.x
+
+        for _ in range(60):
+            sistema.empujar(jugador, 1, 1 / 60, _suelo())
+
+        assert bloque.rect.x > antes
+
+    # ── la caída se integra, no se teletransporta ─────────────────
+    def test_un_fotograma_de_caida_son_pocos_pixeles(self) -> None:
+        """`int(_vy * dt)` frente a `int(_vy / dt)`.
+
+        A 60 fps, dividir en vez de multiplicar convierte 11 px/s en 700
+        píxeles de caída **en un solo fotograma**: el bloque desaparece de la
+        pantalla entre dos dibujados. Como `caer` avanza de píxel en píxel
+        hasta chocar, el desplome no atraviesa el suelo y ninguna de las
+        pruebas de «no atraviesa» se enteraba.
+        """
+        bloque = BloqueEmpujable(rect=pygame.Rect(50, 50, 32, 32))
+        sistema = SistemaDeBloques(empujables=[bloque])
+        antes = bloque.rect.y
+
+        sistema.caer(1 / 60, [])
+
+        caido = bloque.rect.y - antes
+        assert caido <= 2, (
+            f"cayó {caido} px en un fotograma; a 700 px/s² el primer "
+            f"fotograma no llega ni a un píxel"
+        )
+
+    def test_la_caida_acelera_en_vez_de_ir_a_velocidad_fija(self) -> None:
+        """Si `_vy` no creciera, el bloque caería como una piedra de papel."""
+        bloque = BloqueEmpujable(rect=pygame.Rect(50, 0, 32, 32))
+        sistema = SistemaDeBloques(empujables=[bloque])
+
+        for _ in range(10):
+            sistema.caer(1 / 60, [])
+        primer_tramo = bloque.rect.y
+        for _ in range(10):
+            sistema.caer(1 / 60, [])
+        segundo_tramo = bloque.rect.y - primer_tramo
+
+        assert segundo_tramo > primer_tramo, (
+            f"cayó {primer_tramo} px en los primeros 10 fotogramas y "
+            f"{segundo_tramo} en los siguientes: no está acelerando"
+        )
+
+    # ── el estado de un destructible ya roto ──────────────────────
+    def test_golpear_un_bloque_ya_roto_devuelve_false(self) -> None:
+        """`sistema.golpear` cuenta roturas y devuelve 0 en los dos casos, así
+        que la prueba que ya existía no distinguía `return False` de
+        `return True` aquí dentro. El método sí lo distingue, y de él depende
+        que el evento de rotura no se emita dos veces."""
+        bloque = BloqueDestructible(rect=pygame.Rect(0, 0, 16, 16), golpes=1)
+
+        assert bloque.golpear() is True
+        assert bloque.golpear() is False
+        assert bloque.golpear() is False
+
+    def test_el_repr_de_un_empujable_no_arrastra_su_copia_inicial(self) -> None:
+        """`repr=False` en el campo `inicial`. Un dataclass que vuelca dos
+        rects en cada repr duplica el ruido de todo mensaje de fallo de pytest
+        que lo mencione, y `inicial` no aporta nada para identificarlo."""
+        bloque = BloqueEmpujable(rect=pygame.Rect(10, 20, 32, 32))
+
+        assert "inicial" not in repr(bloque)
+
+
 class TestLosSolidos:
     def test_los_dos_tipos_estorban_el_paso(self) -> None:
         sistema = SistemaDeBloques(

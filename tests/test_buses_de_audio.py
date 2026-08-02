@@ -25,12 +25,15 @@ from __future__ import annotations
 
 import pytest
 
+from src.engine.audio import mixer_buses
 from src.engine.audio.mixer_buses import (
     BUS_AMBIENTE,
     BUS_EFECTOS,
     BUS_MUSICA,
     BUS_VOZ,
+    DUCK_ATAQUE,
     DUCK_NIVEL,
+    DUCK_RECUPERACION,
     Mezclador,
 )
 
@@ -149,6 +152,186 @@ class TestElDucking:
         m.agachar_musica()
         m.update(0.0)
         assert m.factor_de_duck == 1.0
+
+
+class TestLoQueLaMutacionDestapo:
+    """AUD-181 / GAP-023 — ocho cambios que la suite no detectaba.
+
+    `scripts/mutation_check.py` puntuó este módulo con un 56 %. El agujero más
+    llamativo: se podía poner a **cero** el volumen de partida del bus de
+    ambiente y el nivel del *duck*, y ninguna prueba fallaba. Las que había
+    comprobaban que los volúmenes estuvieran *entre* 0 y 1, que es cierto
+    también cuando valen 0 — es decir, cuando no se oye nada.
+
+    La lección es la de siempre en este repositorio: un rango no comprueba un
+    valor. `0.0 <= x <= 1.0` pasa con el altavoz apagado.
+
+    Los tres que siguen vivos, y por qué no se persiguen
+    -----------------------------------------------------
+    Quedan 3 de 25 (88 %). Los tres son **equivalentes**: cambian el código
+    sin cambiar lo que hace. Escribirles una prueba exigiría afirmar algo
+    falso, así que se dejan documentados en vez de tapados.
+
+    * **línea 144, `segundos > 0.0` → `>= 0.0`.** La rama sólo se ejecuta de
+      más cuando `segundos` vale 0, y entonces hace
+      `max(_duck_restante, 0.0)`. Eso sólo cambia algo si el contador es
+      negativo, y un contador negativo ya está inerte: el descuento del
+      `update` corre bajo `if _duck_restante > 0.0`, que es falso tanto para
+      -0,4 como para 0,0. Comprobado sobre 20.000 secuencias aleatorias de
+      llamadas: **0 diferencias** en la interfaz pública.
+    * **línea 164, `dt <= 0.0` → `dt < 0.0`.** Con `dt == 0.0` el cuerpo se
+      ejecuta pero cada paso es una operación nula: no se descuenta nada y el
+      paso del *duck* vale `(1 - DUCK_NIVEL) * 0 / duracion` = 0. Comprobado
+      sobre 4.000 secuencias comparando incluso el estado interno:
+      **0 diferencias**.
+    * **línea 177, `objetivo < self._duck` → `<=`.** Las dos formas sólo
+      difieren cuando son iguales, y tres líneas antes hay un
+      `if self._duck == objetivo: return` que ya se llevó ese caso. La rama
+      se instrumentó: la igualdad se da **0 veces**.
+    """
+
+    def _avanzar(self, m: Mezclador, segundos: float) -> None:
+        for _ in range(int(segundos * 60)):
+            m.update(1 / 60)
+
+    # ── constantes que nadie miraba ───────────────────────────────
+    @pytest.mark.parametrize(
+        "bus", [BUS_MUSICA, BUS_EFECTOS, BUS_VOZ, BUS_AMBIENTE],
+    )
+    def test_ningun_bus_arranca_mudo(self, bus: str) -> None:
+        """Un bus que arranca en 0 no se distingue de uno roto: el jugador
+        oye silencio y no tiene forma de saber que hay un deslizador que
+        subir."""
+        assert Mezclador().ganancia(bus) > 0.0
+
+    def test_la_musica_agachada_baja_pero_no_se_calla(self) -> None:
+        """Con `DUCK_NIVEL` en 0 la música desaparece mientras alguien habla.
+        Eso no es *ducking*: es un corte, y se nota tanto como el problema que
+        el *ducking* venía a resolver."""
+        m = Mezclador()
+        entera = m.ganancia(BUS_MUSICA)
+
+        m.agachar_musica()
+        self._avanzar(m, 1.0)
+        agachada = m.ganancia(BUS_MUSICA)
+
+        assert 0.0 < agachada < entera, (
+            f"la música pasó de {entera:.3f} a {agachada:.3f}: por debajo de "
+            f"cero no hay duck que valga, hay un corte"
+        )
+
+    def test_bajar_tarda_lo_que_dice_el_ataque(self) -> None:
+        """No basta con «baja más rápido de lo que sube»: eso lo cumple
+        cualquier par de números. El ataque son 0,15 s porque menos se oye
+        como un corte y más se come la primera palabra."""
+        m = Mezclador()
+        m.agachar_musica()
+
+        transcurrido = 0.0
+        while m.factor_de_duck > DUCK_NIVEL + 0.001 and transcurrido < 2.0:
+            m.update(1 / 240)
+            transcurrido += 1 / 240
+
+        # Los límites son absolutos y no `approx(DUCK_ATAQUE)` a propósito: si
+        # la referencia se lee de la propia constante, cambiarla mueve también
+        # la prueba y el mutante sobrevive. Por debajo de 0,05 s el corte se
+        # oye; por encima de 0,3 s la música se come la primera palabra.
+        assert 0.05 <= transcurrido <= 0.30, (
+            f"tardó {transcurrido:.3f} s en agacharse: fuera de la ventana en "
+            f"la que el duck no se nota"
+        )
+        assert transcurrido == pytest.approx(DUCK_ATAQUE, abs=0.02), (
+            f"tardó {transcurrido:.3f} s y la constante declara {DUCK_ATAQUE} s"
+        )
+
+    def test_volver_tarda_lo_que_dice_la_recuperacion(self) -> None:
+        m = Mezclador()
+        m.agachar_musica()
+        self._avanzar(m, 1.0)
+        m.soltar_musica()
+
+        transcurrido = 0.0
+        while m.factor_de_duck < 0.999 and transcurrido < 3.0:
+            m.update(1 / 240)
+            transcurrido += 1 / 240
+
+        assert 0.25 <= transcurrido <= 1.50, (
+            f"tardó {transcurrido:.3f} s en volver: subir de golpe suena a "
+            f"fallo técnico y tardar demasiado deja la música apagada"
+        )
+        assert transcurrido == pytest.approx(DUCK_RECUPERACION, abs=0.05), (
+            f"tardó {transcurrido:.3f} s y la constante declara "
+            f"{DUCK_RECUPERACION} s"
+        )
+
+    # ── el estado de partida ──────────────────────────────────────
+    def test_un_mezclador_recien_creado_no_agacha_la_musica_solo(self) -> None:
+        """Con `_duck_pedido` arrancando en `True`, la música empieza
+        agachándose sin que nadie hable — y como nadie llamó a
+        `agachar_musica`, tampoco hay quien la suelte."""
+        m = Mezclador()
+        entera = m.ganancia(BUS_MUSICA)
+
+        self._avanzar(m, 1.0)
+
+        assert not m.musica_agachada
+        assert m.factor_de_duck == 1.0
+        assert m.ganancia(BUS_MUSICA) == entera
+
+    # ── las fronteras ─────────────────────────────────────────────
+    def test_una_milesima_por_debajo_de_uno_no_cuenta_como_agachada(
+        self,
+    ) -> None:
+        """`musica_agachada` usa un umbral de 0,999 porque el *duck* se mueve
+        en coma flotante y nunca vuelve a valer 1.0 exacto. La frontera se
+        toca aquí a mano: no hay forma de aterrizar en 0,999 justo desde la
+        integración, y sin fijarla el umbral se puede invertir sin que nada
+        falle.
+        """
+        m = Mezclador()
+        m._duck = 0.999
+
+        assert not m.musica_agachada, (
+            "0,999 es indistinguible de 1,0 para el oído; contarlo como "
+            "agachada dejaría el indicador encendido para siempre"
+        )
+
+        m._duck = 0.998
+        assert m.musica_agachada
+
+    def test_al_agotarse_el_tiempo_justo_la_musica_se_suelta(self) -> None:
+        """El caso de borde exacto: se pide 0,5 s y pasan 0,5 s clavados. Si
+        la comprobación fuera `< 0` en vez de `<= 0`, el contador se quedaría
+        en cero sin llegar a soltar nunca, y la música no volvería jamás."""
+        m = Mezclador()
+        m.agachar_musica(0.5)
+
+        # De una sola vez, no en 50 pasos de 0,01: sumar 0,01 cincuenta veces
+        # en coma flotante no aterriza en el cero exacto —cae un pelo por
+        # encima o por debajo— y es justo el cero exacto lo que distingue
+        # `<= 0` de `< 0`. Con `< 0`, el contador se queda clavado en 0.0 y,
+        # como el descuento sólo corre mientras es `> 0`, no vuelve a moverse:
+        # la música se queda agachada para el resto de la partida.
+        m.update(0.5)
+
+        self._avanzar(m, 2.0)
+        assert m.factor_de_duck == pytest.approx(1.0, abs=0.01), (
+            "la música se quedó agachada tras agotarse su tiempo"
+        )
+
+    def test_un_ataque_de_cero_no_divide_por_cero(self, monkeypatch) -> None:
+        """El `max(0.01, duracion)` del paso es una guarda, no un adorno: sin
+        ella, poner cualquiera de las dos constantes a 0 —algo que un
+        estudiante ajustando la mezcla hará— revienta con ZeroDivisionError en
+        mitad del bucle de juego."""
+        monkeypatch.setattr(mixer_buses, "DUCK_ATAQUE", 0.0)
+        monkeypatch.setattr(mixer_buses, "DUCK_RECUPERACION", 0.0)
+
+        m = Mezclador()
+        m.agachar_musica()
+        m.update(1 / 60)            # no debe lanzar
+
+        assert m.factor_de_duck == pytest.approx(DUCK_NIVEL, abs=0.001)
 
 
 class TestElGestorDeAudioLosUsa:
