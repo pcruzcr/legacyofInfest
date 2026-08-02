@@ -115,6 +115,7 @@ Documents marked **[SUPERSEDED]** below exist in their originating package (v1, 
 | 69  | `69_PROMPT_AUDITORIA_MAESTRO.md`     | v1 (in-repo)                            | Current — master audit prompt + critique of the previous one |
 | 70  | `70_INFORME_DE_AUDITORIA_VIVO.md`    | v1 (in-repo)                            | Current — living audit report, updated per iteration |
 | 71  | `71_REVISION_DE_JUEGO.md`            | v1 (in-repo)                            | Current — measured review of mechanics, gameplay, funfactor and level design (D5-D9) |
+| 72  | `72_VIABILIDAD_PROPUESTA_V2.md`      | v1 (in-repo)                            | Current — V2 proposal checked against the code: what already exists, what is viable, what breaks invariants |
 | —   | `niveles/15_DISENO_4_1_EL_CEMENTERIO.md` | v1 (in-repo)                        | Current — proposed design for level 4-1: Magus-style progression, La Cegua, advancing flames, storm, student tombstones (Spanish) |
 | —   | `52_EVENT_MAP.md`                    | v1 (in-repo)                            | Current — event bus map |
 | —   | `AUDIT_2026-07.es.md`                | v1 (in-repo)                            | Current — July 2026 audit (Spanish side of the enforced bilingual pair) |
