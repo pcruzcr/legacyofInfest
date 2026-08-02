@@ -73,6 +73,39 @@ Dos detalles que se notan al diseñar:
 * **`Clock.time_scale`.** Un solo número escala el tiempo de todo el juego. De
   ahí salen el *hit-stop* al golpear y el tiempo bala.
 
+### 1.1 La cámara y la sensación de control
+
+Tres modos, con la propiedad `camara` del mapa:
+
+| Modo | Qué hace | De dónde viene |
+|---|---|---|
+| `seguir` | persigue al jugador con suavizado | el de siempre; sirve para casi todo |
+| `zona_muerta` | **no se mueve** mientras el jugador esté en el centro | Celeste, Hollow Knight. Saltar en el sitio deja de mover el mundo entero, y eso cansa mucho menos la vista |
+| `sala` | salta de pantalla en pantalla, sin suavizar | Zelda, Metroid, Castlevania. Cada sala se compone entera y se lee de un vistazo |
+
+El corte de `sala` es instantáneo **a propósito**: suavizarlo lo convierte en
+un barrido y se pierde justo lo que aporta.
+
+La cámara además **se adelanta** en la dirección en la que corres
+(`anticipacion`, 0,3 s por defecto) y **mira hacia abajo al caer**
+(`anticipacion_caida`), que es lo que evita el salto de fe. Hacia arriba no
+mira: ya sabes de dónde vienes, y mirar arriba al saltar marea.
+
+Un `CameraLock` congela el eje que declare **sólo mientras estés dentro de su
+rectángulo**. Hasta AUD-143 congelaba el nivel entero desde el primer
+fotograma, y `boss_rey` llevaba un parche escrito para rodearlo.
+
+Del lado del jugador hay dos perdones que no se ven y se notan:
+
+* **Coyote time** (`PLAYER_COYOTE_FRAMES`, 100 ms): saltar justo después de
+  dejar la plataforma sigue valiendo. Se cuenta en tiempo real, así que dura
+  lo mismo a 30 que a 144 fps.
+* **Buffer de salto** (130 ms): pulsar saltar un poco antes de aterrizar
+  también vale, y el salto sale al tocar el suelo.
+
+Los dos existen para lo mismo: el jugador cree que pulsó a tiempo, y casi
+siempre tiene razón.
+
 ---
 
 <a id="2"></a>
@@ -149,6 +182,7 @@ sin ellas el nivel no valida y pierde 10 puntos de rúbrica.
 | `zone` | int | `0` | zona del mundo; decide paleta y bestiario por defecto |
 | `vista` | string | `lateral` | `lateral` o `cenital`. Cenital apaga la gravedad, da movimiento en dos ejes y **ignora las plataformas de un solo sentido** — desde arriba son muros invisibles |
 | `background_zone` | string | — | carga `assets/backgrounds/bg_<zona>_{far,mid,near}.png` |
+| `camara` | string | `seguir` | `seguir`, `zona_muerta` o `sala` (§1.1) |
 | `estamina` | float | `0` | máximo del medidor. **`0` = apagado.** Con `100`, cuatro dashes seguidos y una pausa de 0,6 s antes de recuperar |
 | `bpm` | float | `0` | pulsos por minuto; enciende el reloj musical (§10.1) |
 

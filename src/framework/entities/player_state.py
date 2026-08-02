@@ -20,7 +20,9 @@ if TYPE_CHECKING:
 @dataclass
 class PlayerStateData:
     # Physics
-    coyote_counter: int = 0
+    #: AUD-143: en «fotogramas a 60 fps», pero acumulado con `dt`. Es
+    #: float porque el tiempo real no cae en números enteros.
+    coyote_counter: float = 0.0
     jump_cut_applied: bool = False
 
     # Attack state

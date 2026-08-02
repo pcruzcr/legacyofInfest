@@ -7,12 +7,15 @@ animations, and scene transitions.
 """
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from typing import Any
 
 import pygame
 
 from src.engine.core import settings
+
+logger = logging.getLogger(__name__)
 
 
 class CutsceneAction:
@@ -318,9 +321,26 @@ class TemblorAction(CutsceneAction):
     def start(self) -> None:
         if self._camara is None:
             return
-        sacudir = getattr(self._camara, "shake", None)
-        if callable(sacudir):
-            sacudir(self._duracion, self._intensidad)
+        # AUD-143 — el método se llama `apply_shake`, no `shake`.
+        #
+        # Esta acción llamaba a `shake()`, que **no existe en `Camera`**, así
+        # que la orden `temblor` de los guiones no sacudía nada: el `getattr`
+        # devolvía `None` y se salía en silencio. La prueba pasaba porque usé
+        # una cámara de mentira con un método `shake` que me inventé — un
+        # doble que no se parecía al objeto real, exactamente el fallo que
+        # este proyecto ya había cometido con `InputManager`.
+        #
+        # Se prueban los dos nombres porque un escenario puede traer su propia
+        # cámara; y si no hay ninguno, ahora se registra un aviso en vez de
+        # callar.
+        for nombre in ("apply_shake", "shake"):
+            sacudir = getattr(self._camara, nombre, None)
+            if callable(sacudir):
+                sacudir(self._intensidad, self._duracion) if nombre == "apply_shake" \
+                    else sacudir(self._duracion, self._intensidad)
+                return
+        logger.warning(
+            "la cámara de este escenario no sabe sacudirse: «temblor» no hará nada")
 
     def update(self, dt: float) -> bool:
         return True

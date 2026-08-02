@@ -83,18 +83,16 @@ class BossReyScene(StageScene):
 
     def update(self, dt: float) -> None:
         super().update(dt)
-        # stage_scene.py llama a camera.set_camera_locks(stage.camera_locks)
-        # cada frame sin condición de posición: en Camera.set_camera_locks
-        # (src/framework/stage/camera.py) el campo `rect` de cada CameraLock
-        # se guarda pero nunca se lee -- solo hace
-        # `any(line.lock_x for line in locks)`, así que un solo CameraLock en
-        # el mapa congela la cámara en TODO el nivel desde el frame 1, no
-        # solo dentro de su rect. Con el corredor nuevo eso bloquearía la
-        # cámara también ahí. Lo corrijo aquí, después de que el framework
-        # ya aplicó su lock global, activándolo solo cuando el jugador está
-        # dentro del rect real de la sala del jefe.
-        if self._stage_data is not None and self._stage_data.camera_locks and self._player is not None:
-            room_rect = self._stage_data.camera_locks[0].rect
-            in_room = room_rect.collidepoint(self._player.rect.center)
-            self._camera._is_locked_x = in_room
-            self._camera._is_locked_y = in_room
+        # AUD-143 — aquí había un parche, y ya no hace falta.
+        #
+        # Este escenario corregía a mano un defecto del motor: `Camera`
+        # guardaba el `rect` de cada `CameraLock` y no lo leía nunca, así que
+        # una sola zona congelaba la cámara en TODO el nivel desde el primer
+        # fotograma. Este `update` volvía a calcular los bloqueos tocando
+        # `_camera._is_locked_x` desde fuera.
+        #
+        # El defecto está arreglado en `Camera.set_camera_locks`, que ahora
+        # aplica cada zona sólo cuando el jugador está dentro de su
+        # rectángulo. Cuando un escenario tiene que parchear el motor, el
+        # defecto es del motor: el parche se va y la corrección se queda
+        # donde tenía que estar desde el principio.

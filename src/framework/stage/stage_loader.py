@@ -48,6 +48,14 @@ logger = logging.getLogger(__name__)
 #: invisible que el jugador no puede ver ni entender.
 VISTAS_VALIDAS: frozenset[str] = frozenset({"lateral", "cenital"})
 
+#: AUD-143 — modos de cámara que el motor sabe encuadrar.
+#:
+#: `seguir` persigue con suavizado; `zona_muerta` no se mueve mientras el
+#: jugador esté en el centro de la pantalla —lo que impide que saltar en el
+#: sitio mueva el mundo entero—; `sala` salta de pantalla en pantalla, que es
+#: el encuadre de Zelda, Metroid y los Castlevania clásicos.
+MODOS_DE_CAMARA: frozenset[str] = frozenset({"seguir", "zona_muerta", "sala"})
+
 #: F5.3–F5.6 — tipos de Tiled que se convierten en componentes ECS.
 #:
 #: Es un **subconjunto** de `BUILTIN_OBJECT_TYPES`, no una copia: aquélla dice
@@ -301,6 +309,8 @@ class StageData:
     compas: int = 4
     #: Segundos de latencia que compensar. Se calibra por máquina.
     desfase_audio: float = 0.0
+    #: AUD-143 — modo de cámara: `seguir`, `zona_muerta` o `sala`.
+    camara: str = "seguir"
     #: AUD-141 — máximo del medidor de estamina. **`0` = apagado**, que es el
     #: caso de los quince escenarios entregados: encenderla para todos
     #: cambiaría cómo se juegan sin que sus autores lo pidan.
@@ -588,6 +598,13 @@ class StageLoader:
         desfase_audio = cls._safe_float(
             props.get("desfase_audio", 0.0), "desfase_audio")
         estamina = max(0.0, cls._safe_float(props.get("estamina", 0.0), "estamina"))
+        camara = str(props.get("camara") or props.get("camera") or "seguir").strip().lower()
+        if camara not in MODOS_DE_CAMARA:
+            logger.warning(
+                "StageLoader: camara %r desconocida — se usa 'seguir'. "
+                "Valores válidos: %s", camara, ", ".join(sorted(MODOS_DE_CAMARA)),
+            )
+            camara = "seguir"
         climate = props.get("climate", "")
         # AUD-129 — una vista desconocida cae a lateral con aviso, no rompe.
         # `view` en inglés se acepta igual: el proyecto es bilingüe en las
@@ -639,6 +656,7 @@ class StageLoader:
             compas=compas,
             desfase_audio=desfase_audio,
             estamina=estamina,
+            camara=camara,
             climate=climate,
             zone=zone,
             ambient_light=ambient_light,
