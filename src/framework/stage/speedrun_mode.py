@@ -89,10 +89,64 @@ class SpeedrunTimer:
 
 
 class GhostData:
-    """Records player position over time for ghost replay."""
+    """La grabación de una carrera: dónde estaba el jugador en cada fotograma.
+
+    AUD-142 — estaba escrita entera y **no la usaba nadie**.
+
+    Tenía `record`, `get_frame`, `save`, `load`, `clear` y `frame_count`, todo
+    correcto, y cero llamadas en el proyecto: ni se grababa ni se reproducía.
+    Es el mismo patrón que el sistema de diálogo (AUD-127) y el de escenas
+    (AUD-136): la pieza estaba, faltaba quien la usara.
+
+    Ahora `StageScene` graba mientras se juega y dibuja la carrera anterior.
+    El fantasma es la forma más barata que existe de hacer que repetir un
+    nivel tenga sentido: no hace falta un adversario, basta con quien fuiste.
+
+    Grabación a intervalo fijo
+    --------------------------
+    Se graba cada `INTERVALO` segundos y no cada fotograma. A 60 fps, un nivel
+    de tres minutos serían 10.800 puntos —un fichero de medio mega para dibujar
+    un muñeco— y la diferencia no se ve: a 30 muestras por segundo el fantasma
+    se mueve igual de fluido para el ojo, y el fichero baja a la mitad.
+    """
+
+    #: Segundos entre muestras. 1/30 basta: el ojo no distingue más.
+    INTERVALO: float = 1.0 / 30.0
 
     def __init__(self) -> None:
         self._frames: list[dict[str, float]] = []
+        self._t: float = 0.0
+        self._desde_ultima: float = 0.0
+
+    def grabar_si_toca(self, dt: float, x: float, y: float,
+                       state: str = "") -> bool:
+        """Graba una muestra si ha pasado el intervalo. Devuelve si grabó."""
+        self._t += dt
+        self._desde_ultima += dt
+        if self._desde_ultima < self.INTERVALO:
+            return False
+        self._desde_ultima = 0.0
+        self.record(x, y, state)
+        return True
+
+    def posicion_en(self, segundos: float) -> tuple[float, float] | None:
+        """Dónde estaba el fantasma en ese instante de SU carrera.
+
+        Devuelve `None` cuando la carrera grabada ya terminó, que es la señal
+        de que el jugador va por detrás de su propio récord — y es justo la
+        información que hace útil a un fantasma.
+        """
+        if not self._frames:
+            return None
+        indice = int(segundos / self.INTERVALO)
+        if indice >= len(self._frames):
+            return None
+        marco = self._frames[max(0, indice)]
+        return float(marco.get("x", 0.0)), float(marco.get("y", 0.0))
+
+    @property
+    def duracion(self) -> float:
+        return len(self._frames) * self.INTERVALO
 
     def record(self, x: float, y: float, state: str) -> None:
         self._frames.append({"x": x, "y": y, "state": state})
@@ -104,6 +158,8 @@ class GhostData:
 
     def clear(self) -> None:
         self._frames.clear()
+        self._t = 0.0
+        self._desde_ultima = 0.0
 
     def save(self, path: str | Path) -> None:
         path = Path(path)
