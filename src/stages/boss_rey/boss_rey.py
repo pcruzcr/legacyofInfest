@@ -125,7 +125,10 @@ class BossRey(BossBase):
         return "walk"
 
     def _build_hitbox(self) -> pygame.Rect:
-        return pygame.Rect(5, 3, 30, 50)
+        # La caja de golpe no puede salirse del cuerpo (30x50): antes era
+        # `Rect(5, 3, 30, 50)` — el cuerpo entero desplazado, que golpea desde
+        # fuera del sprite. Ahora se encoge y centra como la hurtbox (28x48).
+        return pygame.Rect(2, 2, 26, 46)
 
     def _build_hurtbox(self) -> pygame.Rect:
         ox = (self.rect.width - 28) // 2
