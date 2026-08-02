@@ -36,17 +36,35 @@ from src.engine.core.stage_registry import STAGE_ORDER, discover_stages
 
 @pytest.fixture
 def app_context():
-    """Un `App` real: es quien cablea contexto, bus y gestor de escenas."""
+    """Un `App` real: es quien cablea contexto, bus y gestor de escenas.
+
+    El desmontaje limpia las cachés globales, y no por pulcritud: construir los
+    16 escenarios llena la caché de `AssetLoader` con las hojas de sprites que
+    cada uno escala a su medida. `tests/test_cajas_de_colision.py` construye
+    después sus enemigos, se encuentra esos sprites ya escalados y mide
+    `FlyingBird` y `ShooterFrog` con la caja de daño 2 px fuera del cuerpo por
+    cada lado. La prueba de las cajas es correcta; quien mentía era el residuo
+    que dejaba ésta.
+    """
     pygame.init()
     if pygame.display.get_surface() is None:
         pygame.display.set_mode((320, 240))
     from src.engine.core.app import App
+    from src.engine.utils.asset_loader import AssetLoader
+    from src.framework.stage.stage_loader import StageLoader
 
+    registro_previo = dict(StageLoader._entity_registry)
     app = App()
-    yield app.context
-    manager = app.context.scene_manager
-    if hasattr(manager, "cleanup"):
-        manager.cleanup()
+    try:
+        yield app.context
+    finally:
+        manager = app.context.scene_manager
+        if hasattr(manager, "cleanup"):
+            manager.cleanup()
+        AssetLoader.clear_cache()
+        StageLoader.clear_tmx_cache()
+        StageLoader._entity_registry.clear()
+        StageLoader._entity_registry.update(registro_previo)
 
 
 class TestLaCadenaDeNiveles:
