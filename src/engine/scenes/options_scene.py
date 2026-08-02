@@ -277,40 +277,88 @@ class OptionsScene(BaseScene):
                 set_difficulty(d)
                 break
 
+    #: Los eventos de pygame_gui que significan «el jugador tocó algo».
+    #:
+    #: AUD-154 — esta pantalla comprobaba `event.type == pygame.USEREVENT` y
+    #: luego `event.user_type`. Ésa es la API de pygame_gui **0.5**. Desde 0.6
+    #: cada evento tiene su propio tipo (`UI_BUTTON_PRESSED` es 32866, y
+    #: `USEREVENT` es 32865), así que la condición era falsa para todos ellos y
+    #: el cuerpo entero de este método no se ejecutaba nunca.
+    #:
+    #: Lo que eso significaba, comprobado antes de tocar nada:
+    #:
+    #: * los botones VOLVER y ATAJOS DE TECLADO no hacían nada —sólo la tecla
+    #:   Escape salía de la pantalla, y la de atajos era **inalcanzable**—;
+    #:   subtítulos, idioma, movimiento reducido y pulsar/mantener tampoco;
+    #: * `_dirty` no se ponía nunca, así que `_save_config()` no corría y
+    #:   **nada de lo que el jugador elegía se guardaba**: volumen, dificultad,
+    #:   daltonismo, tamaño de texto. Al reiniciar volvía todo al principio.
+    #:
+    #: La dificultad y los volúmenes se aplicaban igualmente porque `on_exit`
+    #: los lee del widget sin mirar `_dirty`, así que duraban la sesión y se
+    #: perdían al cerrar. Es la peor forma de fallar: parece que funciona.
+    _EVENTOS_DE_CAMBIO = (
+        pygame_gui.UI_HORIZONTAL_SLIDER_MOVED,
+        pygame_gui.UI_DROP_DOWN_MENU_CHANGED,
+    )
+
     def process_events(self, events: list[pygame.event.Event]) -> None:
         for event in events:
             self._gui_manager.process_events(event)
-            if event.type == pygame.USEREVENT:
-                if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
-                    self._dirty = True
-                    if (self._btn_subtitles is not None
-                            and event.ui_element == self._btn_subtitles):
-                        self._subtitles_on = not self._subtitles_on
-                        self._btn_subtitles.set_text(self._subtitles_label())
-                        # Apply immediately so the player can hear-test the
-                        # change without leaving the menu.
-                        prefs = user_settings.get()
-                        prefs.subtitles_enabled = self._subtitles_on
-                        return
-                    if (self._btn_language is not None
-                            and event.ui_element == self._btn_language):
-                        self._toggle_language()
-                        prefs = user_settings.get()
-                        prefs.language = self._idioma_actual
-                        return
-                    if event.ui_element == self._btn_keybindings:
-                        from src.engine.scenes.keybinding_scene import KeybindingScene
-                        self.context.scene_manager.replace(KeybindingScene(self.context))
-                        return
-                    if event.ui_element == self._btn_back:
-                        from src.engine.scenes.title_scene import TitleScene
-                        self.context.scene_manager.replace(TitleScene(self.context))
-                        return
-                elif event.user_type in (
-                    pygame_gui.UI_HORIZONTAL_SLIDER_MOVED,
-                    pygame_gui.UI_DROP_DOWN_MENU_CHANGED,
-                ):
-                    self._dirty = True
+            if event.type == pygame_gui.UI_BUTTON_PRESSED:
+                self._dirty = True
+                if self._pulsar_boton(event.ui_element):
+                    return
+            elif event.type in self._EVENTOS_DE_CAMBIO:
+                self._dirty = True
+
+    def _pulsar_boton(self, elemento: object) -> bool:
+        """Atiende un botón. Devuelve `True` si hay que dejar de procesar.
+
+        Está extraído porque la lista creció a seis botones y dos de ellos
+        —movimiento reducido y pulsar/mantener— se quedaron sin rama cuando se
+        añadieron en AUD-126: aunque el evento hubiera llegado, esos dos
+        seguirían sin hacer nada. En una cadena de `if` dentro de un bucle
+        dentro de un `if` eso no se ve; en un método corto, sí.
+        """
+        prefs = user_settings.get()
+
+        if self._btn_subtitles is not None and elemento == self._btn_subtitles:
+            self._subtitles_on = not self._subtitles_on
+            self._btn_subtitles.set_text(self._subtitles_label())
+            # Se aplica al momento para que el jugador pueda comprobarlo sin
+            # salir del menú.
+            prefs.subtitles_enabled = self._subtitles_on
+            return True
+
+        if self._btn_language is not None and elemento == self._btn_language:
+            self._toggle_language()
+            prefs.language = self._idioma_actual
+            return True
+
+        if self._btn_movimiento is not None and elemento == self._btn_movimiento:
+            self._movimiento_reducido = not self._movimiento_reducido
+            self._btn_movimiento.set_text(self._movimiento_label())
+            prefs.reduced_motion = self._movimiento_reducido
+            return True
+
+        if self._btn_mantener is not None and elemento == self._btn_mantener:
+            self._mantener_pulsado = not self._mantener_pulsado
+            self._btn_mantener.set_text(self._mantener_label())
+            prefs.hold_to_press = self._mantener_pulsado
+            return True
+
+        if elemento == self._btn_keybindings:
+            from src.engine.scenes.keybinding_scene import KeybindingScene
+            self.context.scene_manager.replace(KeybindingScene(self.context))
+            return True
+
+        if elemento == self._btn_back:
+            from src.engine.scenes.title_scene import TitleScene
+            self.context.scene_manager.replace(TitleScene(self.context))
+            return True
+
+        return False
 
     def update(self, dt: float) -> None:
         im = self.input

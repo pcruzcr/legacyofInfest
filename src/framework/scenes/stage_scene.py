@@ -169,6 +169,11 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
         self._achievements.bind_bus(self.context.event_bus)
         self._achievements.load()
         self._bestiary = Bestiary.get_instance()
+        # AUD-154 — el bestiario tenía `save()` y `load()` escritos y nadie los
+        # llamaba, así que ni siquiera lo poco que hubiera registrado habría
+        # sobrevivido a cerrar el juego. Va junto a los logros porque es la
+        # misma clase de dato: progreso del jugador, no de la partida.
+        self._bestiary.load()
         self._speedrun = SpeedrunTimer()
         # AUD-142 — el fantasma. `GhostData` estaba escrita entera y no la
         # usaba nadie: ni se grababa ni se reproducía. `_fantasma` es la
@@ -221,8 +226,11 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
                 self._tutorial_shown.add("landed")
 
     def on_enemy_died(self, enemy: EnemyBase) -> None:
-        if hasattr(enemy, "enemy_id"):
-            self._bestiary.record_kill(enemy.enemy_id)
+        # AUD-154 — era `if hasattr(enemy, "enemy_id")`, y ninguna clase de
+        # enemigo define ese atributo, así que el bestiario no se llenaba
+        # nunca. `Bestiary.id_de` lo deduce del tipo cuando la entidad no lo
+        # declara, que es el caso de los ocho arquetipos del motor.
+        self._bestiary.record_kill(Bestiary.id_de(enemy))
         if "enemy_kill" not in self._tutorial_shown:
             self._tutorial.show("advanced", duration=5.0)
             self._tutorial_shown.add("enemy_kill")
@@ -301,8 +309,7 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
                 enemy.set_arena_bounds(
                     pygame.Rect(0, 0, *self._stage_data.map_pixel_size),
                 )
-            if hasattr(enemy, "enemy_id"):
-                self._bestiary.record_encounter(enemy.enemy_id)
+            self._bestiary.record_encounter(Bestiary.id_de(enemy))
 
         self._checkpoints = list(self._stage_data.checkpoints)
         for cp in self._checkpoints:
@@ -508,6 +515,7 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
             audio.stop_music()
         self._subtitles.destroy()
         self._achievements.save()
+        self._bestiary.save()
         self._achievements.unsubscribe_events()
         # AUD-025: release our scope rather than wiping the shared cache. The
         # cache is only actually dropped once no scene is using it.

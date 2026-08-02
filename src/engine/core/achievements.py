@@ -139,9 +139,17 @@ class AchievementSystem:
             description="Complete a stage in under 60 seconds",
             target=1,
         ))
+        # AUD-154 — la descripción decía «Reach 5 checkpoints in a single run»
+        # y lo único que hace avanzar este logro es `Inventory.collect()`, es
+        # decir, **recoger objetos**. Ningún checkpoint lo toca, y «in a single
+        # run» tampoco era cierto: el progreso es acumulado y persistente.
+        #
+        # Se corrige el texto y no el disparador porque el nombre del logro es
+        # «Collector» y recoger cinco objetos es lo que ya hacía: cambiar el
+        # disparador reiniciaría el progreso de quien lo tenga a medias.
         self.register(AchievementDef(
             id="collector", name="Collector",
-            description="Reach 5 checkpoints in a single run",
+            description="Recoge 5 objetos",
             target=5,
         ))
         self.register(AchievementDef(
