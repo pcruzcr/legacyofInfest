@@ -49,6 +49,83 @@ VIDA: float = 1.6
 RECARGA_POR_GOLPE: int = 1
 
 
+#: Caída de la flecha, px/s².
+#:
+#: AUD-193. Calibrado midiendo la caída de un tiro horizontal a las distancias
+#: a las que de verdad se combate, no elegido a ojo:
+#:
+#: caída de un tiro horizontal, integrada con el mismo paso que usa el juego:
+#:
+#:     gravedad   a 10 baldosas   a 20 baldosas
+#:          110          10 px           34 px
+#:     ->   180          16 px           55 px
+#:          340          29 px          104 px
+#:
+#: Se toma 180. A diez baldosas la flecha cae 16 px —la mitad de la altura del
+#: jugador—, así que el combate cercano se sigue resolviendo apuntando de
+#: frente y nadie tiene que reaprender a disparar. A veinte cae 55 px y ahí
+#: acertar pasa a ser una habilidad. Esa progresión es justamente lo que hace
+#: que valga la pena dibujar la trayectoria.
+#:
+#: Con 340 —el primer valor que puse, y a ojo— la flecha caía 104 px en veinte
+#: baldosas, más que la altura del salto del jugador: el arco quedaba
+#: inservible a media distancia y los enemigos ya colocados en los mapas
+#: calibrados pasaban a ser inalcanzables.
+GRAVEDAD_FLECHA: float = 180.0
+
+#: Cuántos puntos se calculan al dibujar la trayectoria y cada cuánto.
+#:
+#: 28 pasos de 1/30 s son casi un segundo de vuelo, más que suficiente para
+#: cualquier tiro útil. El paso es más grueso que el del juego a propósito: la
+#: línea se dibuja punteada y muestrear más sólo gasta CPU en puntos que caen
+#: uno encima de otro.
+PASOS_TRAYECTORIA: int = 28
+PASO_TRAYECTORIA: float = 1.0 / 30.0
+
+
+def velocidad_inicial(direccion: int | pygame.Vector2) -> pygame.Vector2:
+    """El vector de salida de la flecha, venga de una tecla o de un apuntado.
+
+    Un `int` (-1 o +1) es el disparo horizontal de siempre. Un `Vector2` es la
+    dirección apuntada, que se normaliza aquí: quien apunta entrega hacia
+    dónde, no a qué velocidad, y dejar que el módulo del vector llegue hasta la
+    flecha haría que apuntar lejos con el ratón disparara más fuerte.
+    """
+    if isinstance(direccion, pygame.Vector2):
+        if direccion.length_squared() > 0.0:
+            return direccion.normalize() * VELOCIDAD
+        # Un stick en reposo o el cursor justo encima del jugador: se dispara
+        # a la derecha en vez de no disparar, porque gastar la flecha sin que
+        # salga nada es peor que gastarla en una dirección discutible.
+        return pygame.Vector2(VELOCIDAD, 0.0)
+    signo = -1 if direccion < 0 else 1
+    return pygame.Vector2(VELOCIDAD * signo, 0.0)
+
+
+def trayectoria(
+    origen: pygame.Vector2,
+    direccion: int | pygame.Vector2,
+    pasos: int = PASOS_TRAYECTORIA,
+) -> list[pygame.Vector2]:
+    """Los puntos por los que pasará la flecha, para dibujarlos antes de tirar.
+
+    Integra **el mismo paso que usa `Projectile.update`**, y en el mismo orden
+    —primero la gravedad sobre la velocidad, luego la posición—. Calcular la
+    curva con una fórmula cerrada distinta sería más elegante y estaría mal: la
+    línea dibujada y la flecha que vuela se separarían, y el jugador nota
+    enseguida que la previsualización le miente.
+    """
+    velocidad = velocidad_inicial(direccion)
+    posicion = pygame.Vector2(origen)
+    puntos = [pygame.Vector2(posicion)]
+    for _ in range(pasos):
+        velocidad.y += GRAVEDAD_FLECHA * PASO_TRAYECTORIA
+        posicion.x += velocidad.x * PASO_TRAYECTORIA
+        posicion.y += velocidad.y * PASO_TRAYECTORIA
+        puntos.append(pygame.Vector2(posicion))
+    return puntos
+
+
 class ArcoDelJugador:
     """Munición, cadencia y creación de flechas.
 
@@ -90,24 +167,41 @@ class ArcoDelJugador:
         # retiran, la lista crece durante toda la partida.
         self.flechas = [f for f in self.flechas if f.is_active]
 
-    def disparar(self, origen: pygame.Vector2, direccion: int) -> Projectile | None:
+    def disparar(
+        self,
+        origen: pygame.Vector2,
+        direccion: int | pygame.Vector2,
+    ) -> Projectile | None:
         """Lanza una flecha. Devuelve `None` si no se puede.
 
-        `direccion` es -1 o +1. No se admite disparar en diagonal: el juego es
-        de plataformas con movimiento horizontal, y apuntar en ocho
-        direcciones exigiría un control que no existe.
+        AUD-193 — por qué ahora sí se apunta en diagonal
+        ------------------------------------------------
+        Esto admitía sólo -1 o +1, y el motivo escrito era:
+
+            «No se admite disparar en diagonal: el juego es de plataformas con
+            movimiento horizontal, y apuntar en ocho direcciones exigiría un
+            control que no existe.»
+
+        El argumento no era que apuntar libre estuviera mal: era que **no
+        había con qué**. Con el ratón o el stick derecho ese control existe, así
+        que la razón deja de sostenerse — y sólo por eso se cambia.
+
+        Se admiten las dos formas a propósito. Un `int` dispara horizontal
+        exactamente como antes, que es lo que hacen los 17 mapas ya calibrados
+        y las entregas de estudiantes; un `Vector2` apunta libre. Nadie tiene
+        que migrar nada.
         """
         if not self.listo:
             return None
 
         self.municion -= 1
         self._espera = self.cadencia
-        signo = -1 if direccion < 0 else 1
         flecha = Projectile(
             spawn_position=pygame.Vector2(origen),
-            velocity=pygame.Vector2(VELOCIDAD * signo, 0.0),
+            velocity=velocidad_inicial(direccion),
             damage=self.dano,
             lifetime=VIDA,
+            gravity=GRAVEDAD_FLECHA,
         )
         self.flechas.append(flecha)
         return flecha

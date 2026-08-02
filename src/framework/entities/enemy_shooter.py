@@ -39,10 +39,25 @@ class Projectile(BaseEntity):
         velocity: pygame.Vector2,
         damage: float,
         lifetime: float = 3.0,
+        gravity: float = 0.0,
     ) -> None:
-        """Initialize the projectile."""
+        """Initialize the projectile.
+
+        AUD-193 — `gravity` en px/s², **cero por defecto**.
+
+        Los proyectiles de los enemigos vuelan rectos y así deben seguir: son
+        telegrafiados que el jugador aprende a leer, y una parábola los haría
+        impredecibles. El valor por defecto conserva ese comportamiento exacto
+        para las 21 especies sin tocar ninguna.
+
+        La flecha del jugador sí cae, y no por realismo: es lo que convierte
+        apuntar en una habilidad. Con trayectoria recta, dibujar la
+        previsualización sobra —sería una línea— y el tiro no tiene lectura de
+        terreno.
+        """
         super().__init__(spawn_position)
         self.velocity: pygame.Vector2 = velocity
+        self.gravity: float = gravity
         self.damage: float = damage
         self._lifetime: float = lifetime
         self._elapsed: float = 0.0
@@ -70,6 +85,11 @@ class Projectile(BaseEntity):
             self.is_active = False
             return
 
+        # La gravedad se integra antes de mover, no después: con el orden
+        # inverso el primer fotograma viaja recto y la parábola dibujada por la
+        # previsualización deja de coincidir con la que vuela.
+        if self.gravity:
+            self.velocity.y += self.gravity * dt
         self.position.x += self.velocity.x * dt
         self.position.y += self.velocity.y * dt
         self.rect.center = (int(self.position.x), int(self.position.y))

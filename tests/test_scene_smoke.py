@@ -193,6 +193,9 @@ NO_SON_ESCENAS = {
     "__init__.py", "code_panel.py", "debug_overlay.py", "demo_common.py",
     "demo_layout.py", "demo_utils.py", "param_panel.py", "quiz_system.py",
     "scene_registry.py", "transition_manager.py", "tutorial_overlay.py",
+    # AUD-191: compone el modo Boss Rush y llena la cola de escenarios; no
+    # dibuja nada. Sus pruebas están en `test_boss_rush.py`.
+    "boss_rush_entry.py",
 }
 
 
