@@ -59,9 +59,20 @@ class ProgressScene(BaseScene):
             settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_SMALL)
         self._font_medium = AssetLoader.load_font(
             settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_MEDIUM)
+        # AUD-154 — los cinco totales estaban escritos a mano y tres de las
+        # cinco barras eran ficción:
+        #
+        #   · «bestiary» devolvía `(21, 21)`, o sea **100 % siempre**, con un
+        #     bestiario que en ese momento no registraba nada;
+        #   · «lab» devolvía `(10, 10)`, igual;
+        #   · «stage» y «boss» devolvían `0` fijo, así que terminar el juego
+        #     entero no movía la barra.
+        #
+        # Una pantalla de progreso que no lee el progreso es peor que no
+        # tenerla: el jugador se fía de ella. Ahora los totales se preguntan a
+        # quien los sabe.
         self._total_labs = 10
         self._total_achievements = 10
-        self._total_bestiary = 21
         self._total_stages = 15
         self._total_bosses = 4
 
@@ -71,18 +82,38 @@ class ProgressScene(BaseScene):
     def on_exit(self) -> None:
         pass
 
+    def _escenarios_completados(self) -> list[str]:
+        """Los escenarios terminados, de la partida más reciente."""
+        sm = self.context.save_manager
+        if sm is None:
+            return []
+        ranura = sm.newest_slot()
+        if ranura is None:
+            return []
+        try:
+            return list(sm.load(ranura).completed_stages)
+        except Exception:      # una partida corrupta no puede tumbar el menú
+            return []
+
     def _get_progress(self) -> dict[str, tuple[int, int]]:
         from src.engine.core.achievements import AchievementSystem
-        ach_sys = AchievementSystem.get_instance()
+        from src.framework.entities.bestiary import Bestiary
 
+        ach_sys = AchievementSystem.get_instance()
         ach_unlocked = sum(1 for _, p in ach_sys.get_all_achievements() if p.unlocked)
+
+        entradas = Bestiary.get_instance().get_all_entries()
+        vistas = sum(1 for e in entradas if e.encountered)
+
+        completados = self._escenarios_completados()
+        jefes = sum(1 for s in completados if "boss" in s)
 
         return {
             "lab": (self._total_labs, self._total_labs),
             "achievement": (ach_unlocked, self._total_achievements),
-            "bestiary": (self._total_bestiary, self._total_bestiary),
-            "stage": (0, self._total_stages),
-            "boss": (0, self._total_bosses),
+            "bestiary": (vistas, max(1, len(entradas))),
+            "stage": (len(completados), self._total_stages),
+            "boss": (jefes, self._total_bosses),
         }
 
     def update(self, dt: float) -> None:

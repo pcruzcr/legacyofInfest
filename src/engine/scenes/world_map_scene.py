@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+from itertools import pairwise
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -12,24 +14,86 @@ from src.engine.scene.base_scene import BaseScene
 from src.engine.ui.theme import Theme, font
 from src.engine.ui.widgets import draw_key_hints, draw_screen
 
+logger = logging.getLogger(__name__)
+
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
     from src.engine.core.save_data import SaveData
 
 
-STAGE_NODES: list[dict[str, Any]] = [
-    {"id": "stage0", "name": "Stage 0", "nx": 0.00, "ny": 0.10, "unlocks": ["stage1"]},
-    {"id": "stage1", "name": "Zone 1-1", "nx": 0.42, "ny": 0.02, "unlocks": ["stage2"]},
-    {"id": "stage2", "name": "Zone 1-2", "nx": 0.78, "ny": 0.30, "unlocks": ["stage3"]},
-    {"id": "stage3", "name": "Zone 1-3", "nx": 0.42, "ny": 0.68, "unlocks": ["stage4"]},
-    {"id": "stage4", "name": "Boss Venado", "nx": 0.00, "ny": 0.92, "unlocks": []},
-]
+# ── Los nodos, sacados del registro de escenarios ────────────────────
+#
+# AUD-155. Esta lista estaba escrita a mano con cinco entradas —`stage0`,
+# `stage1`, `stage2`, `stage3`, `stage4`— y **cuatro de las cinco apuntaban a
+# mapas que no existen**: las carpetas reales son `stage1_1`,
+# `stage1_2_la_soda`, `boss_venado`… Entrar en cualquier nodo que no fuera
+# Stage 0 hacía esto:
+#
+#     if tmx_path.exists():        ← falso
+#         ...replace(StageScene)   ← no se ejecutaba
+#
+# Es decir: pulsar Enter no hacía nada y no decía nada. Y los once escenarios
+# que entregaron los estudiantes no aparecían en el mapa del mundo en absoluto,
+# aunque estaban instalados, validados y en el registro de escenarios.
+#
+# Ahora los nodos salen de `stage_registry.discover_stages()`, que es la misma
+# fuente que usa el juego para encadenar niveles. Si un estudiante entrega un
+# escenario y se añade al registro, aparece aquí solo.
+
+
+def _serpiente(indice: int, total: int) -> tuple[float, float]:
+    """Coloca el nodo `indice` en zigzag dentro del área normalizada.
+
+    En zigzag y no en rejilla porque un mapa del mundo tiene que leerse como
+    un **recorrido**: la línea que une dos nodos es la que dice en qué orden se
+    juegan. Con quince escenarios, tres por fila caben sin que las etiquetas se
+    pisen a 800 px de ancho.
+    """
+    por_fila = 3
+    fila, columna = divmod(indice, por_fila)
+    if fila % 2:                      # las filas impares van al revés
+        columna = por_fila - 1 - columna
+    filas = max(1, (total + por_fila - 1) // por_fila)
+    nx = columna / (por_fila - 1) if por_fila > 1 else 0.5
+    ny = fila / (filas - 1) if filas > 1 else 0.5
+    return round(nx, 3), round(ny, 3)
+
+
+def construir_nodos() -> list[dict[str, Any]]:
+    """Un nodo por escenario descubierto, en el orden en que se juegan."""
+    from src.engine.core.stage_registry import discover_stages
+
+    nodos: list[dict[str, Any]] = []
+    escenarios = discover_stages()
+    for i, cls in enumerate(escenarios):
+        stage_id = getattr(cls, "STAGE_ID", "") or cls.__name__
+        nombre = getattr(cls, "STAGE_NAME", "") or stage_id
+        nx, ny = _serpiente(i, len(escenarios))
+        nodos.append({
+            "id": stage_id,
+            "name": nombre,
+            "nx": nx,
+            "ny": ny,
+            # El escenario se abre por su clase, no por su ruta TMX: la clase
+            # es la que registra los tipos de entidad propios del estudiante
+            # (`CuadernoVolador`, `BossRey`…). Construir un `StageScene`
+            # genérico con su TMX cargaría el mapa sin sus enemigos.
+            "scene": cls,
+            "unlocks": [],
+        })
+    for anterior, siguiente in pairwise(nodos):
+        anterior["unlocks"] = [siguiente["id"]]
+    return nodos
+
+
+STAGE_NODES: list[dict[str, Any]] = construir_nodos()
 
 _node_index = {nd["id"]: i for i, nd in enumerate(STAGE_NODES)}
 CONNECTIONS: list[tuple[int, int]] = [
     (i, _node_index[uid])
     for i, nd in enumerate(STAGE_NODES)
     for uid in nd.get("unlocks", [])
+    if uid in _node_index
 ]
 
 
@@ -54,16 +118,28 @@ class WorldMapScene(BaseScene):
         if self._save_data is not None:
             completed = list(self._save_data.completed_stages)
 
+        # AUD-155 — la regla de desbloqueo tampoco funcionaba. Era:
+        #
+        #     any(prev_id in completed for prev_id in STAGE_NODES
+        #         if node["id"] in nd.get("unlocks", []))
+        #
+        # `prev_id` iteraba sobre `STAGE_NODES`, que son **diccionarios**, así
+        # que `prev_id in completed` comparaba un dict contra una lista de
+        # cadenas: siempre falso. Y el `if` miraba `nd`, que es el nodo actual,
+        # no el anterior. Lo que quedaba en pie era «desbloqueado si eres
+        # stage0 o si ya lo completaste», de modo que **terminar un nivel no
+        # abría el siguiente**: el mapa no progresaba.
+        #
+        # La regla escrita para que se lea: el primero siempre está abierto, y
+        # cada uno abre al siguiente.
         self._nodes = []
+        anterior_completado = True      # el primero no depende de nadie
         for nd in STAGE_NODES:
             node = dict(nd)
-            node["unlocked"] = (
-                node["id"] == "stage0"
-                or any(prev_id in completed for prev_id in STAGE_NODES
-                       if node["id"] in nd.get("unlocks", []))
-                or node["id"] in completed
-            )
-            node["completed"] = node["id"] in completed
+            hecho = node["id"] in completed
+            node["completed"] = hecho
+            node["unlocked"] = anterior_completado or hecho
+            anterior_completado = hecho
             self._nodes.append(node)
 
     def on_enter(self) -> None:
@@ -90,17 +166,44 @@ class WorldMapScene(BaseScene):
         if self._selected != prev:
             self.context.event_bus.emit(Events.SFX_MENU_HOVER)
         if im.is_action_just_pressed(Action.CONFIRM):
-            node = self._nodes[self._selected]
-            if node.get("unlocked"):
-                self.context.event_bus.emit(Events.SFX_MENU_CONFIRM)
-                node_id = node["id"]
-                tmx_path = Path(settings.ASSETS_DIR / "maps" / node_id / f"{node_id}.tmx")
-                if tmx_path.exists():
-                    from src.framework.scenes.stage_scene import StageScene
-                    self.context.scene_manager.replace(StageScene(self.context, tmx_path))
+            self._entrar(self._nodes[self._selected])
         if im.is_action_just_pressed(Action.CANCEL):
             from src.engine.scenes.title_scene import TitleScene
             self.context.scene_manager.replace(TitleScene(self.context))
+
+    def _entrar(self, node: dict[str, Any]) -> bool:
+        """Abre el escenario del nodo. Devuelve si se pudo.
+
+        Se construye **la clase del escenario**, no un `StageScene` genérico
+        con su TMX: es la clase la que registra los tipos de entidad propios de
+        cada entrega (`CuadernoVolador`, `BossRey`, `LaSodaWalkerRaton`…). Con
+        el genérico el mapa cargaría y sus enemigos no.
+        """
+        if not node.get("unlocked"):
+            return False
+        self.context.event_bus.emit(Events.SFX_MENU_CONFIRM)
+
+        cls = node.get("scene")
+        if cls is not None:
+            self.context.scene_manager.replace(cls(self.context))
+            return True
+
+        # Sin clase, el TMX por convención. Es el camino de respaldo para un
+        # mapa suelto que aún no tiene escena propia.
+        node_id = node["id"]
+        tmx_path = Path(settings.ASSETS_DIR / "maps" / node_id / f"{node_id}.tmx")
+        if not tmx_path.exists():
+            # Antes esto era un `if` sin `else` y el jugador pulsaba Enter
+            # contra un nodo muerto sin ninguna señal. Un aviso en el registro
+            # es lo mínimo para que se pueda diagnosticar.
+            logger.warning(
+                "mapa del mundo: «%s» no tiene ni escena ni mapa en %s",
+                node_id, tmx_path,
+            )
+            return False
+        from src.framework.scenes.stage_scene import StageScene
+        self.context.scene_manager.replace(StageScene(self.context, tmx_path))
+        return True
 
     #: Posiciones de los nodos en coordenadas **normalizadas**, de 0 a 1
     #: dentro del área de contenido.

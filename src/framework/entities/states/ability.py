@@ -69,7 +69,25 @@ class DashingState(PlayerStateBase):
 
 # ── Parry ─────────────────────────────────────────────────────────
 
+#: Ventana de parry cuando no hay configuración de dificultad que consultar.
+#:
+#: AUD-154 — esto era una constante y punto, así que los tres presets de
+#: dificultad declaraban `parry_window` (0,30 en fácil; 0,15 en difícil) y
+#: **nadie los leía**: todo el mundo jugaba con 0,20. Uno de los ocho mandos de
+#: la dificultad no estaba conectado a nada.
 _PARRY_DURATION = 0.2
+
+
+def _ventana_de_parry() -> float:
+    """La ventana que toca según la dificultad elegida.
+
+    Se consulta al entrar en el estado y no se guarda en el jugador: cambiar la
+    dificultad a mitad de partida tiene que notarse en el siguiente parry, no
+    en la siguiente partida.
+    """
+    from src.engine.core.difficulty import get_config
+
+    return float(getattr(get_config(), "parry_window", _PARRY_DURATION))
 
 
 class ParryState(PlayerStateBase):
@@ -79,7 +97,7 @@ class ParryState(PlayerStateBase):
 
     def enter(self, player: Player) -> None:
         super().enter(player)
-        player._parry_window = _PARRY_DURATION
+        player._parry_window = _ventana_de_parry()
         player._parry_active = True
         player._parry_success = False
         player.velocity.x = 0.0

@@ -61,6 +61,63 @@ class Bestiary:
         self._entries: dict[str, BestiaryEntry] = {}
         self._init_defaults()
 
+    #: Cómo se convierte el nombre de una clase en un identificador de
+    #: bestiario. Es la regla que ya seguían las nueve entradas escritas a
+    #: mano: `EnemyWalker` → `walker`, `BossVenado` → `boss_venado`.
+    @staticmethod
+    def id_de(enemigo: object) -> str:
+        """El identificador de bestiario de un enemigo.
+
+        AUD-154 — antes esto no existía y `StageScene` hacía::
+
+            if hasattr(enemy, "enemy_id"):
+                self._bestiary.record_kill(enemy.enemy_id)
+
+        Ninguna clase de enemigo definía `enemy_id`, así que la condición era
+        **siempre falsa** y el bestiario no registró nunca nada. La pantalla del
+        bestiario filtra por `encountered`, de modo que salía vacía siempre y
+        parecía que faltaba contenido en vez de que faltaba el cableado.
+        """
+        declarado = getattr(enemigo, "enemy_id", "")
+        if declarado:
+            return str(declarado)
+        nombre = type(enemigo).__name__
+        if nombre.startswith("Enemy"):
+            return nombre[len("Enemy"):].lower()
+        # `BossVenado` → `boss_venado`; cualquier otra cosa, tal cual en
+        # minúsculas con guiones bajos.
+        salida = []
+        for i, ch in enumerate(nombre):
+            if ch.isupper() and i:
+                salida.append("_")
+            salida.append(ch.lower())
+        return "".join(salida)
+
+    def _asegurar(self, enemy_id: str) -> BestiaryEntry:
+        """La entrada de ese id, creándola si es la primera vez que se ve.
+
+        Antes los tres `record_*` hacían `if entry:` y salían callados cuando el
+        id no estaba en la tabla. Como la tabla tenía nueve entradas fijas y el
+        registro de especies tiene veintiuna, matar un `WalkerInsect` no se
+        anotaba en ninguna parte y no había forma de enterarse. Un bestiario
+        que descarta lo que no conoce es un bestiario que nunca crece.
+        """
+        entrada = self._entries.get(enemy_id)
+        if entrada is None:
+            from src.framework.entities import bestiary_registry
+
+            spec = bestiary_registry.get(enemy_id)
+            entrada = BestiaryEntry(
+                enemy_id,
+                spec.display_name if spec is not None else enemy_id,
+                spec.display_name if spec is not None else "Sin descripción.",
+                hp=int(float((spec.params if spec else {}).get("max_health", 1))),
+                damage=float((spec.params if spec else {}).get(
+                    "damage_on_contact", 1.0)),
+            )
+            self._entries[enemy_id] = entrada
+        return entrada
+
     def _init_defaults(self) -> None:
         defaults = [
             BestiaryEntry("walker", "Walker", "A slow patrolling enemy.",
@@ -85,6 +142,22 @@ class Bestiary:
         for entry in defaults:
             self._entries[entry.enemy_id] = entry
 
+        # Y las especies con nombre del registro (`WalkerInsect`,
+        # `ShooterQuetzal`…). Estaban en el motor, se podían colocar en Tiled y
+        # el bestiario no las conocía: matar una no se anotaba en ningún sitio.
+        from src.framework.entities import bestiary_registry
+
+        for spec in bestiary_registry.SPECIES.values():
+            if spec.species_id in self._entries:
+                continue
+            self._entries[spec.species_id] = BestiaryEntry(
+                spec.species_id,
+                spec.display_name,
+                f"Especie de zona {spec.zone}.",
+                hp=int(float(spec.params.get("max_health", 1))),
+                damage=float(spec.params.get("damage_on_contact", 1.0)),
+            )
+
     @classmethod
     def get_instance(cls) -> Bestiary:
         if cls._instance is None:
@@ -98,21 +171,22 @@ class Bestiary:
         return list(self._entries.values())
 
     def record_encounter(self, enemy_id: str) -> None:
-        entry = self._entries.get(enemy_id)
-        if entry:
-            entry.encountered = True
+        if enemy_id:
+            self._asegurar(enemy_id).encountered = True
 
     def record_kill(self, enemy_id: str) -> None:
-        entry = self._entries.get(enemy_id)
-        if entry:
-            entry.encountered = True
-            entry.kills += 1
+        if not enemy_id:
+            return
+        entry = self._asegurar(enemy_id)
+        entry.encountered = True
+        entry.kills += 1
 
     def record_hit(self, enemy_id: str) -> None:
-        entry = self._entries.get(enemy_id)
-        if entry:
-            entry.encountered = True
-            entry.times_hit_by_player += 1
+        if not enemy_id:
+            return
+        entry = self._asegurar(enemy_id)
+        entry.encountered = True
+        entry.times_hit_by_player += 1
 
     def save(self, path: str | Path | None = None) -> None:
         data = {eid: entry.to_dict() for eid, entry in self._entries.items()}

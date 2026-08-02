@@ -103,7 +103,15 @@ def _register_named_species() -> set[str]:
 def _species_factory(spec: Any) -> Any:
     """Envuelve un SpeciesSpec en un invocable con la firma que espera el loader."""
     def _build(spawn_position: Any, **kwargs: Any) -> EnemyBase:
-        return spec.build(spawn_position, **kwargs)
+        enemigo = spec.build(spawn_position, **kwargs)
+        # AUD-154 — la especie se queda pegada a la entidad.
+        #
+        # Las veintiuna especies comparten tres clases base, así que sin esto
+        # un `WalkerInsect` y un `WalkerRaton` son los dos `EnemyWalker` y el
+        # bestiario los contaría como el mismo bicho. El sitio correcto es
+        # aquí: es lo único que sabe con qué especie se construyó.
+        enemigo.enemy_id = spec.species_id
+        return enemigo
 
     # El loader y el bestiario muestran este nombre; sin él saldría "_build".
     _build.__name__ = spec.species_id
