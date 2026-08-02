@@ -19,9 +19,20 @@ date_processed: "2026-07-14"
 
 ## 1. Overview
 
-The Screen Transitions system provides visual effects between scene changes. It has two layers:
-1. **Low-level:** `src/engine/scene/transitions.py` — individual transition effect classes
-2. **High-level:** `src/engine/scenes/transition_manager.py` — orchestration controller
+The Screen Transitions system provides visual effects between scene changes.
+
+> **AUD-168.** Este documento describía dos capas, y la de abajo —un módulo
+> `src/engine/scene/transitions.py` con cuatro clases de efecto— **fue retirada
+> en AUD-111** por ser código muerto: cinco clases, cero usos en todo el
+> repositorio, ni siquiera en pruebas, compitiendo por el nombre con el
+> controlador que `SceneManager` sí instancia. El documento se quedó
+> describiendo la arquitectura anterior, con recuento de líneas incluido.
+
+Hoy hay **una sola capa**: `src/engine/scenes/transition_manager.py`, un
+controlador con cuatro modos (fade, wipe, slide, circle) que se eligen por el
+método que se llama — `start_fade_in`, `start_wipe`, `start_slide`,
+`start_circle`. Las secciones 2.x de abajo describen esos modos, no clases
+separadas.
 
 ---
 
@@ -71,9 +82,14 @@ tm.start_fade_in()
 ## 5. Implementation Status
 
 **Files:**
-- `src/engine/scene/transitions.py` (199 lines) — 4 transition effect classes
-- `src/engine/scenes/transition_manager.py` (164 lines) — orchestration controller
+- `src/engine/scenes/transition_manager.py` (164 lines) — el controlador, con
+  los cuatro modos dentro
+
 **Status:** ✅ Complete — fade, wipe, slide, circle transitions
+
+> **AUD-168.** Esta lista incluía un segundo fichero «(199 lines) — 4
+> transition effect classes» que llevaba retirado desde AUD-111. Un recuento de
+> líneas es exactamente la clase de dato que hace creer que alguien lo miró.
 
 
 --- Traducción al Español ---

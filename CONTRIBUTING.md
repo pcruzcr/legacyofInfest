@@ -20,16 +20,31 @@ pytest tests/ -v              # verbose
 pytest tests/test_player_physics.py -k "test_specific"  # single test
 ```
 
-369 tests across physics, collision, entities, scenes, input, HUD, stage loading, processing tools, and more.
+La suite cubre físicas, colisión, entidades, escenas, entrada, HUD, carga de
+niveles y herramientas de procesamiento. **El recuento vive en `README.md`**, no
+aquí: es un número que cambia cada semana y `tests/test_documentacion_bilingue.py`
+lo comprueba contra `pytest --collect-only` con un 5 % de margen.
+
+> **AUD-168.** Aquí decía «369 tests». En el árbol hay 2.142 funciones `test_*`
+> definidas, y con parametrización se recolectan más de dos mil. Una cifra
+> escrita a mano en un documento que nada comprueba envejece en semanas; ésta
+> llevaba desviada casi un orden de magnitud.
 
 ## Linting & Type Checking
 
+Estos son los comandos que **de verdad** ejecuta CI. No son
+`ruff check src/` ni `mypy src/`:
+
 ```powershell
-ruff check src/ tests/ scripts/ tools/   # config in pyproject.toml, 120 cols
-mypy src/                                # see pyproject.toml for config
+# ruff: src/stages/ queda fuera a propósito — es código de estudiantes.
+ruff check src/engine src/framework src/stages/stage0 tests/ scripts/ tools/
+
+# mypy: sólo el alcance del trinquete. `mypy src/` da cientos de errores
+# por diseño; la lista está en mypy_scope.txt y sólo puede crecer.
+mypy (Get-Content mypy_scope.txt | Where-Object { $_ -notmatch '^\s*(#|$)' })
 ```
 
-Code must pass both with zero warnings.
+Ambos deben salir sin avisos sobre ese alcance.
 
 **ruff is the only linter that gates a merge.** It is what CI runs
 (`.github/workflows/ci.yml`, step *Lint with ruff*), and its configuration in
@@ -55,11 +70,17 @@ will never ask you to fix.
 
 ## PR Process
 
-1. Branch from `main` — use `fix/`, `feat/`, `docs/` prefixes.
-2. Run `pytest` and `ruff check` before committing.
-3. Keep commits small and atomic. Reference GAP tickets when applicable.
-4. PR description must summarise changes, motivation, and testing done.
-5. At least one review required before merge.
+1. Parte de `dev` — usa prefijos `fix/`, `feat/`, `docs/`. Las ramas del
+   repositorio son `prod`, `pprod` y `dev`; **no existe `main`**.
+2. Ejecuta `pytest` y el `ruff check` de arriba antes de hacer commit.
+3. Commits pequeños y atómicos. Un `AUD-NNN` por corrección; cita el ticket
+   `GAP-NNN` de `KNOWN_GAPS.md` cuando aplique.
+4. La descripción del PR resume cambios, motivación y qué se probó.
+5. Al menos una revisión antes de fusionar.
+
+> **AUD-168.** El punto 1 decía «Branch from `main`». Esa rama no existe, y no
+> es un detalle menor: es la misma confusión que dejó el CI de AUD-010
+> disparándose sobre `main`/`develop` y sin ejecutarse ni una sola vez.
 
 ## Architecture Overview
 
@@ -100,10 +121,30 @@ Key patterns:
 4. Add smoke test in `tests/test_stageN_smoke.py`.
 
 ### New Enemy
-1. Subclass `EnemyBase` in `src/framework/entities/`.
-2. Implement `update(dt)`, state machine, attack pattern.
-3. Register in `EntityFactory.ENEMY_TYPES`.
-4. Add test class in `tests/` (physics, state transitions).
+
+**Primero pregúntate si necesitas una clase.** Casi nunca. Las 21 especies del
+bestiario se diferencian sólo en parámetros —vida, velocidad de patrulla,
+cadencia de disparo, amplitud de la onda— que las ocho clases base ya aceptan
+por constructor (AUD-046).
+
+*Especie nueva sobre un arquetipo existente* — el caso normal:
+
+1. Añade su `SpeciesSpec` a `SPECIES` en
+   `src/framework/entities/bestiary_registry.py`.
+2. Añade su fila a `docs/18_ENEMY_ROSTER.md`.
+3. `tests/test_bestiary_roster.py` parsea el markdown y compara: si falta una
+   de las dos cosas, o los valores no coinciden, la prueba nombra el campo.
+
+*Arquetipo nuevo de verdad* — sólo si el comportamiento no existe:
+
+1. Subclase de `EnemyBase` en `src/framework/entities/`.
+2. Implementa `update(dt)`, máquina de estados y patrón de ataque.
+3. Regístrala en `EntityFactory`.
+4. Añade pruebas de físicas y de transiciones de estado.
+
+> **AUD-168.** Esta sección sólo describía el segundo camino. Escrita así,
+> invita a crear veintiuna subclases de tres líneas — herencia usada como base
+> de datos, que es exactamente lo que AUD-046 deshizo.
 
 ### New Boss
 1. Subclass `BossBase` in `src/framework/entities/`.
@@ -140,7 +181,7 @@ pytest tests/ -v
 pytest tests/test_player_physics.py -k "test_specific"
 ```
 
-369 pruebas distribuidas en física, colisiones, entidades, escenas, entrada, HUD, carga de escenarios, herramientas de procesamiento y más.
+La suite cubre física, colisiones, entidades, escenas, entrada, HUD, carga de escenarios, herramientas de procesamiento y más. El recuento vive en `README.md` y lo comprueba `tests/test_documentacion_bilingue.py` (AUD-168: aquí decía «369 pruebas»).
 
 ### Estilo de Código
 - PEP 8 con líneas de 120 caracteres

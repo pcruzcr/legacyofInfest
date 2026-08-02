@@ -17,7 +17,7 @@
 
 # Core engine
 pygame-ce>=2.5
-numpy>=1.26,<2
+numpy>=1.26  # AUD-173: sin tope; numpy<2 no tiene ruedas para Python 3.13
 pymunk>=6.6
 
 # Data & validation
@@ -32,7 +32,9 @@ scipy>=1.13
 opencv-python>=4.10
 scikit-image>=0.24
 scikit-learn>=1.5
-Pillow>=10.0
+# AUD-176: suelo de seguridad, ver SUELOS_POR_SEGURIDAD en
+# tests/test_dependencias_coherentes.py
+Pillow>=12.3.0
 
 # Map / level
 pytmx>=3.32
@@ -40,4 +42,4 @@ pyscroll>=2.31
 
 # ML / parallelism
 joblib>=1.4
-matplotlib>=3.8
+matplotlib>=3.10

@@ -101,6 +101,106 @@ class TestLintersAgree:
         assert "ruff check" in joined
 
 
+class TestCIToolsAreInstallable:
+    """Toda herramienta que CI invoca tiene que venir de algún sitio.
+
+    AUD-174. El paso «Type-check the ratcheted scope» ejecutaba `mypy`, pero
+    `mypy` no estaba en ningún extra de `pyproject.toml` y el workflow instala
+    exactamente `pip install -e ".[dev]"`. El paso terminaba en
+    `mypy: command not found` — código 127 — así que el trinquete de tipos que
+    AUD-124 puso en marcha llevaba desde entonces sin comprobar una sola línea.
+
+    El modo de fallo es peor que un gate en rojo: el paso *parece* existir en
+    el fichero del workflow y en CLAUDE.md, así que nadie vuelve a mirarlo.
+    """
+
+    #: Comandos del propio shell o del intérprete. No se instalan con pip, así
+    #: que no exigen declaración. Todo lo que NO esté aquí se considera una
+    #: herramienta de Python y tiene que estar declarada: así una herramienta
+    #: nueva se detecta sola, en vez de depender de que alguien la añada a una
+    #: lista blanca.
+    _SHELL = frozenset({
+        "python", "python3", "pip", "pip3", "echo", "cd", "export", "grep",
+        "tr", "sed", "cat", "cp", "mv", "mkdir", "rm", "ls", "set", "source",
+        "if", "then", "else", "fi", "for", "do", "done", "while", "true",
+        "false", "exit", "sudo", "apt-get", "git", "chmod", "test",
+    })
+
+    @classmethod
+    def _tools_invoked_by_ci(cls) -> dict[str, set[str]]:
+        """Primer token de cada línea de un bloque `run:`, por workflow."""
+        invoked: dict[str, set[str]] = {}
+        for workflow in sorted((ROOT / ".github" / "workflows").glob("*.yml")):
+            found: set[str] = set()
+            in_run = False
+            run_indent = 0
+            continued = False
+            for raw in workflow.read_text(encoding="utf-8").splitlines():
+                stripped = raw.strip()
+                indent = len(raw) - len(raw.lstrip())
+
+                if not stripped:
+                    continue
+                if in_run and indent <= run_indent and not raw.startswith(" " * (run_indent + 1)):
+                    in_run = False
+                if re.match(r"^run:\s*\|?\s*$", stripped):
+                    in_run, run_indent, continued = True, indent, False
+                    continue
+                if stripped.startswith("run:"):
+                    stripped, in_run = stripped[4:].strip(), False
+                elif not in_run:
+                    continue
+
+                was_continued, continued = continued, stripped.endswith("\\")
+                if was_continued or stripped.startswith("#"):
+                    continue
+
+                token = stripped.split()[0]
+                # `PAQUETES=$(...)` es una asignación, no una invocación.
+                if "=" in token.split("(")[0] and not token.startswith("-"):
+                    continue
+                found.add(token)
+            invoked[workflow.name] = found
+        return invoked
+
+    @staticmethod
+    def _declared_anywhere(pyproject: dict) -> set[str]:
+        specs = list(pyproject["project"]["dependencies"])
+        for extra in pyproject["project"].get("optional-dependencies", {}).values():
+            specs.extend(extra)
+        return {re.split(r"[<>=!~\[]", spec)[0].strip().lower() for spec in specs}
+
+    def test_every_tool_ci_runs_is_declared_or_installed_in_place(
+        self, pyproject,
+    ) -> None:
+        declared = self._declared_anywhere(pyproject)
+
+        for name, tools in self._tools_invoked_by_ci().items():
+            text = (ROOT / ".github" / "workflows" / name).read_text(encoding="utf-8")
+            for tool in sorted(tools - self._SHELL):
+                installed_in_place = re.search(
+                    rf"pip install .*\b{re.escape(tool)}\b", text,
+                )
+                assert tool in declared or installed_in_place, (
+                    f"{name} ejecuta '{tool}', pero no está declarado en "
+                    f"pyproject.toml ni se instala en el propio workflow. El "
+                    f"paso terminará en 'command not found' en un runner limpio"
+                )
+
+    def test_the_type_checker_is_a_dev_dependency(self, pyproject) -> None:
+        """El caso concreto de AUD-174, fijado aparte para que no se pierda.
+
+        La prueba de arriba es la regla general; ésta nombra la herramienta,
+        porque el trinquete de tipos de `mypy_scope.txt` no significa nada si
+        el comprobador no llega a ejecutarse.
+        """
+        dev = pyproject["project"]["optional-dependencies"]["dev"]
+        names = {re.split(r"[<>=!~\[]", spec)[0].strip().lower() for spec in dev}
+        assert "mypy" in names, (
+            "el extra 'dev' no declara mypy, y es lo único que CI instala"
+        )
+
+
 class TestEditorConfiguration:
     """El editor tiene que apuntar al intérprete del proyecto."""
 

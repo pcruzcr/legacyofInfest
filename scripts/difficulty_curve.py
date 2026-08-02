@@ -44,6 +44,10 @@ from dataclasses import dataclass
 from itertools import pairwise
 from pathlib import Path
 
+# AUD-177: imprime `→` y la consola de Windows usa cp1252, que no lo tiene.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ))
 

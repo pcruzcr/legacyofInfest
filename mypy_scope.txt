@@ -20,7 +20,10 @@
 #
 # Así que esto es un **trinquete**: cada línea es un paquete que ya está
 # limpio. CI comprueba justo esta lista y falla si deja de estarlo.
-# `tests/test_alcance_de_tipos.py` impide que la lista encoja.
+# `tests/test_puertas_de_calidad.py` impide que la lista encoja.
+# (AUD-179: esta línea nombraba un fichero de prueba que no existe, así que
+# quien buscara la red de seguridad del trinquete no la encontraba. La prueba
+# sí existía, con otro nombre.)
 #
 # Cómo añadir un paquete
 # ----------------------

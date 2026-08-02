@@ -11,11 +11,16 @@ from __future__ import annotations
 
 import math
 import random
+import sys
 import wave as wave_module
 from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageDraw
+
+# AUD-177: imprime emoji y la consola de Windows usa cp1252, que no los tiene.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 # ── CONSTANTS ─────────────────────────────────────────────────────
 W, H = 320, 224

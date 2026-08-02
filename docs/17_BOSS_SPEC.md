@@ -680,7 +680,7 @@ The PULL attack directly implements a simplified gravitational attraction: `attr
 | `src/framework/entities/boss_base.py` | `BossBase` class — phase manager, health bar event | Professor (always) |
 | `src/stages/boss_venado/boss_venado.py` | El Venado Sagrado implementation | Assigned student, or professor if unclaimed |
 | `src/stages/boss_rey/boss_rey.py` | El Rey Terciopelo implementation | Assigned student, or professor if unclaimed |
-| `src/stages/boss_gavilan/boss_gavilan.py` | El Gavilán Camionero Mascarero | Assigned student, or professor if unclaimed |
+| `src/stages/stage3_4_boss_gavilan/boss_gavilan.py` | El Gavilán Camionero Mascarero | Assigned student, or professor if unclaimed |
 | `src/stages/boss_paburu/boss_paburu.py` | El Gran Shaman Paburu (4 forms) | Professor (Final Boss is not assigned to a single student) |
 
 ### 8.2 Required TMX Objects

@@ -72,9 +72,7 @@ tests/
 ├── test_boss_base.py
 ├── test_demo_scenes.py     # All 10 demo/lab scenes: import, instantiate, draw
 ├── fixtures/
-│   ├── minimal_stage.tmx
-│   ├── reference_sprite_32x32.png
-│   └── sample_dataset_tiny.npz
+│   └── minimal_stage.tmx
 └── output/
     ├── filter/
     ├── vision/
@@ -333,7 +331,13 @@ No new isolated unit test file — Stage 0's Definition of Done in `25_IMPLEMENT
 
 ### 12.1 `tests/test_filter_tools.py`
 
-Uses `tests/fixtures/reference_sprite_32x32.png` as a known input. Saves visual output to `tests/output/filter/` for each test (filename pattern: `{test_name}.png`) for human spot-check, in addition to the programmatic assertion.
+Uses the `sample_surface_32x32` / `sample_surface_64x64` / `sample_surface_bw_32x32` fixtures from `tests/conftest.py` as known inputs. Saves visual output to `tests/output/filter/` for each test (filename pattern: `{test_name}.png`) for human spot-check, in addition to the programmatic assertion.
+
+> **AUD-168.** Aquí ponía un `reference_sprite_32x32.png` en `fixtures/`, junto
+> con un `sample_dataset_tiny.npz`, y ninguno de los dos existe. Las entradas canónicas
+> se generan en memoria en `conftest.py` — un PNG de referencia en disco se
+> corrompe, se regenera con otra paleta y nadie se entera hasta que un test
+> falla por una razón que no tiene nada que ver con el filtro que prueba.
 
 | Test | Assertion |
 |---|---|
@@ -542,8 +546,6 @@ tests/
   test_demo_scenes.py     # Las 10 escenas demo/lab: importar, instanciar, dibujar
   fixtures/
     minimal_stage.tmx
-    reference_sprite_32x32.png
-    sample_dataset_tiny.npz
   output/
     filter/
     vision/
@@ -801,7 +803,7 @@ Ningún archivo de prueba unitaria aislada nuevo — la Definición de Terminado
 
 ### 12.1 tests/test_filter_tools.py
 
-Usa tests/fixtures/reference_sprite_32x32.png como entrada conocida. Guarda la salida visual en tests/output/filter/ para cada prueba (patrón de nombre de archivo: {test_name}.png) para verificación humana, además de la afirmación programática.
+Usa los fixtures `sample_surface_32x32`, `sample_surface_64x64` y `sample_surface_bw_32x32` de tests/conftest.py como entradas conocidas. Guarda la salida visual en tests/output/filter/ para cada prueba (patrón de nombre de archivo: {test_name}.png) para verificación humana, además de la afirmación programática. (AUD-168: aquí se declaraba un PNG de referencia en disco que no existe.)
 
 | Prueba | Afirmación |
 |---|---|

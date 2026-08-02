@@ -826,7 +826,7 @@ Image segmentation and pattern recognition utilities.
 
 ### 3.1 Import Hierarchy
 
-Three rules, and only three. Están comprobadas en cada ejecución de la suite
+Cuatro reglas, y sólo cuatro. Están comprobadas en cada ejecución de la suite
 por `tests/test_layering.py`; si alguna deja de cumplirse, la suite se pone en
 rojo antes de que la infracción llegue a nadie.
 
@@ -835,6 +835,17 @@ rojo antes de que la infracción llegue a nadie.
 | **L1** | El núcleo del motor —`engine/` **excepto** `engine/scenes/` y `engine/core/app.py`— no importa nada de `framework`. | Es lo que permite que el motor se pueda leer y reutilizar sin arrastrar el juego. Hoy se cumple con **cero** excepciones. |
 | **L2** | `framework/processing/` no importa nada de `engine`. | Son las funciones que se explican en clase: convolución, Sobel, Otsu, HOG. Tienen que poder ejecutarse desde un cuaderno sin arrancar pygame. Hoy se cumple con **cero** excepciones. |
 | **L3** | Un escenario no importa otro escenario. | Cada `stages/stageN` es entregable por separado. Hoy se cumple con **cero** excepciones. |
+| **L4** | Ni `engine/` ni `framework/` importan de `stages/`, salvo el jefe de referencia. | `stages/` es contenido —y en su mayor parte, entregas de estudiantes—. Si el motor depende de una entrega, un paquete que falta o que no importa deja de romper un nivel y pasa a romper el juego entero. Hoy se cumple con **una** excepción nombrada. |
+
+**La excepción de L4, nombrada y acotada:**
+
+`framework/entities/entity_factory.py` importa `stages.boss_venado.boss_venado`
+dentro de `ensure_registered()` para darlo de alta en el registro de entidades.
+Se tolera porque el Venado es el **jefe de referencia** que mantiene el equipo
+docente y del que copian los estudiantes, no una entrega. Se declara aquí y en
+`tests/test_layering.py::EXCEPCION_L4` para que sea una decisión y no un
+descuido: cualquier *otra* dependencia de `framework` hacia `stages` pone la
+suite en rojo (AUD-172).
 
 **Las dos excepciones, nombradas y acotadas:**
 

@@ -35,7 +35,24 @@ requires-python = ">=3.11"
 dependencies = [
     # Core engine — required to launch
     "pygame-ce>=2.5",
-    "numpy>=1.26,<2",
+    # AUD-173: aquí ponía `numpy>=1.26,<2`, y ese tope hacía **imposible**
+    # instalar el proyecto en Python 3.13.
+    #
+    # La última 1.x es numpy 1.26.4 y sus ruedas llegan hasta Python 3.12; en
+    # 3.13 no hay ninguna, así que `pip install -e ".[dev]"` intenta compilar
+    # numpy desde el código fuente y falla. El CI declara la matriz
+    # 3.11 / 3.12 / 3.13 (`ci.yml`), o sea que **un tercio de la matriz no
+    # podía ni instalar el proyecto**. Es el mismo modo de fallo de AUD-010:
+    # una promesa de compatibilidad que nadie había ejecutado.
+    #
+    # El tope venía de numba, que es un extra opcional: numba 0.60 exigía
+    # numpy<2.1. Un acelerador opcional no puede dictar el suelo de todo el
+    # proyecto — el extra `accel` sube a numba>=0.62, que soporta numpy 2.3.
+    #
+    # Antes de quitarlo se comprobó que el árbol no usa ninguna de las APIs
+    # que numpy 2.0 retiró (`np.float_`, `np.NaN`, `np.in1d`, `np.trapz`,
+    # `np.product`, `np.row_stack`…): cero apariciones en los 446 ficheros.
+    "numpy>=1.26",
     "pymunk>=6.6",
 
     # Data & validation
@@ -50,7 +67,12 @@ dependencies = [
     "opencv-python>=4.10",
     "scikit-image>=0.24",
     "scikit-learn>=1.5",
-    "Pillow>=10.0",
+    # AUD-176: era `>=10.0`. Pillow 12.2.0 y anteriores acumulan diez
+    # vulnerabilidades publicadas, todas corregidas en 12.3.0, y aquí se usa
+    # para decodificar imágenes que llegan de fuera en el pipeline de assets.
+    # El registro y el porqué están en `tests/test_dependencias_coherentes.py`
+    # (`SUELOS_POR_SEGURIDAD`), que es lo que impide que el suelo vuelva a bajar.
+    "Pillow>=12.3.0",
 
     # Map / level
     "pytmx>=3.32",
@@ -58,14 +80,22 @@ dependencies = [
 
     # ML / parallelism
     "joblib>=1.4",
-    "matplotlib>=3.8",
+    # AUD-173: subido de 3.8 a 3.10. matplotlib 3.8 es anterior a numpy 2 y no
+    # resuelve con él; 3.9 tuvo problemas conocidos con numpy 2.1. 3.10 es la
+    # primera línea que convive con numpy 2.x sin sobresaltos, y es además la
+    # que `requirements.lock` ya fijaba (3.10.9).
+    "matplotlib>=3.10",
 ]
 
 [project.optional-dependencies]
 # Optional accelerators / integrations. The game detects each at import time
 # and falls back to a pure-Python or software path when absent.
 accel = [
-    "numba>=0.60",   # JIT for the particle integrator only
+    # AUD-173: subido de 0.60 a 0.62. numba 0.60 exige `numpy<2.1`, y ese
+    # requisito —de un extra que el juego no necesita— era el que mantenía el
+    # tope `numpy<2` en las dependencias base y dejaba a Python 3.13 sin poder
+    # instalar nada. numba 0.62 soporta numpy 2.3.
+    "numba>=0.62",   # JIT for the particle integrator only
     "ModernGL>=5.10",  # GL post-processing; falls back to software blitting
 ]
 scripting = ["lupa>=2.1"]   # Lua enemy behaviours
@@ -77,6 +107,12 @@ dev = [
     "pytest-mock>=3",
     "hypothesis>=6",
     "ruff>=0.6",
+    # AUD-174: faltaba. CI ejecuta `mypy` sobre `mypy_scope.txt` y sólo instala
+    # este extra, así que el paso terminaba en `command not found` y el
+    # trinquete de tipos que AUD-124 puso en marcha no comprobaba nada desde
+    # entonces. Un gate que no se ejecuta es peor que no tenerlo: aparece en el
+    # workflow y en CLAUDE.md, así que nadie vuelve a mirarlo.
+    "mypy>=1.11",
 ]
 build = [
     "pyinstaller>=6",
@@ -92,6 +128,11 @@ testpaths = ["tests"]
 # running SDL under the dummy video driver is suppressed now.
 filterwarnings = [
     "ignore:no fast renderer available",
+    # pyscroll <2.5 emite un DeprecationWarning interno (`depth argument
+    # deprecated`) al convertir cada baldosa de los mapas TMX. Es ajena al
+    # código del proyecto: el arreglo llega con la próxima versión de la
+    # librería, no desde este repo.
+    "ignore:depth argument deprecated since version 2.4.0",
 ]
 
 [tool.ruff]

@@ -110,8 +110,29 @@ Documents marked **[SUPERSEDED]** below exist in their originating package (v1, 
 | 65  | `65_EL_LORE_EXTENSO.md`              | v1 (in-repo)                            | Current — extensive canon lore expansion (Spanish) |
 | 66  | `66_GUIA_DE_LEVEL_DESIGN.md`         | v1 (in-repo)                            | Current — level design guide: difficulty, dimensions, enemy composition (Spanish) |
 | 67  | `67_ESPECIFICACION_DE_NIVELES_Y_JEFES.md` | v1 (in-repo)                     | Current — mandatory level/boss rules per deliverable 1-2-3 + day/night arcs; per-level sheets in `docs/niveles/` (Spanish) |
-| 68  | `niveles/15_DISENO_4_1_EL_CEMENTERIO.md` | v1 (in-repo)                        | Current — proposed design for level 4-1: Magus-style progression, La Cegua, advancing flames, storm, student tombstones (Spanish) |
+| 67b | `67_CURVA_DE_DIFICULTAD.md`          | v1 (in-repo)                            | Current — measured difficulty curve (AUD-151) |
+| 68  | `68_AUDITORIA_DE_INGENIERIA.md`      | v1 (in-repo)                            | Current — engineering audit AUD-157/160 |
+| 69  | `69_PROMPT_AUDITORIA_MAESTRO.md`     | v1 (in-repo)                            | Current — master audit prompt + critique of the previous one |
+| 70  | `70_INFORME_DE_AUDITORIA_VIVO.md`    | v1 (in-repo)                            | Current — living audit report, updated per iteration |
+| 71  | `71_REVISION_DE_JUEGO.md`            | v1 (in-repo)                            | Current — measured review of mechanics, gameplay, funfactor and level design (D5-D9) |
+| —   | `niveles/15_DISENO_4_1_EL_CEMENTERIO.md` | v1 (in-repo)                        | Current — proposed design for level 4-1: Magus-style progression, La Cegua, advancing flames, storm, student tombstones (Spanish) |
+| —   | `52_EVENT_MAP.md`                    | v1 (in-repo)                            | Current — event bus map |
+| —   | `AUDIT_2026-07.es.md`                | v1 (in-repo)                            | Current — July 2026 audit (Spanish side of the enforced bilingual pair) |
+| —   | `AUDIT_2026-07.en.md`                | v1 (in-repo)                            | Current — July 2026 audit (English side; `test_documentacion_bilingue.py` keeps both in sync) |
+| —   | `AUDITORIA_2026-07-27_MEDICION.md`   | v1 (in-repo)                            | Historical — measurement record |
+| —   | `AUDIT_VERIFICATION_2026-07-27.md`   | v1 (in-repo)                            | Historical — verification record |
+| —   | `ESTRATEGIA_2026-07-27.md`           | v1 (in-repo)                            | Historical — strategy note |
+| —   | `FASES_1_2_3_COMPLETADAS.md`         | v1 (in-repo)                            | Historical — phases 1-3 completion record |
+| —   | `VERIFICACION_FINAL.md`              | v1 (in-repo)                            | Historical — final verification record |
 | —   | `STAGE_CREATION.md`                  | v10 (in-repo)                           | Current — stage creation guide                                       |
+
+> **AUD-169.** Esta tabla se declara «la lista autoritativa» y no mencionaba
+> trece documentos, entre ellos `52_EVENT_MAP.md`, `67_CURVA_DE_DIFICULTAD.md` y
+> `68_AUDITORIA_DE_INGENIERIA.md`. La fila 68 apuntaba además a
+> `niveles/15_DISENO_4_1_EL_CEMENTERIO.md`, que no es el documento 68. Una lista
+> autoritativa incompleta es peor que ninguna: quien la consulta concluye que lo
+> que falta no existe. `tests/test_rutas_de_los_documentos.py` lo comprueba
+> ahora en cada ejecución.
 
 **Recommended action before implementation begins:** Consolidate all current-status documents into a single flat `docs/` folder in the actual repository (per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §7's structure), discarding the superseded v1/v2/v3 originals of the six documents listed as "supersedes" above. This index becomes redundant once that consolidation happens — at that point, a simple numbered `docs/` folder listing is self-explanatory.
 

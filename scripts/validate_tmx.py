@@ -21,6 +21,10 @@ if str(_PROJECT_ROOT) not in sys.path:
 
 from scripts._cli_paths import display_path
 
+# AUD-177: imprime `↔` y la consola de Windows usa cp1252, que no lo tiene.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 MAPS_DIR = _PROJECT_ROOT / "assets" / "maps"
 KNOWN_TILESETS = ["tileset_stage0", "tileset_zone1", "tileset_zone2", "tileset_zone3"]
 KNOWN_TMX_PROPERTIES = {

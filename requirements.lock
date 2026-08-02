@@ -14,8 +14,24 @@
 #     pip-compile --output-file=requirements.lock pyproject.toml
 #
 # Until that is run in the target environment, install from requirements.txt or
-# `pip install -e ".[dev]"` instead. The pins below are the versions the audit
-# of 2026-07-26 verified as mutually resolvable on Python 3.10-3.13.
+# `pip install -e ".[dev]"` instead.
+#
+# AUD-173 — esta cabecera decía que los pines de abajo se habían verificado
+# «mutually resolvable on Python 3.10-3.13». No es cierto: `numpy==1.26.4` es
+# la última 1.x y sus ruedas llegan hasta Python 3.12. En 3.13 no existe
+# ninguna, así que este fichero **no se puede instalar** en el intérprete más
+# nuevo de la matriz del CI.
+#
+# No se han retocado los pines a mano: este fichero ya lleva escrito arriba que
+# se regenera con `pip-compile`, y hand-editarlo es exactamente lo que produjo
+# el lock imposible de AUD-008. Lo que hay que hacer, en la máquina destino y
+# con el `pyproject.toml` ya corregido:
+#
+#     pip install pip-tools
+#     pip-compile --output-file=requirements.lock pyproject.toml
+#
+# Hasta entonces, los pines de abajo valen para 3.11 y 3.12 y no para 3.13.
+# Queda registrado como GAP-022.
 
 # Core engine
 pygame-ce==2.5.7
