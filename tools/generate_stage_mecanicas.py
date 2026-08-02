@@ -33,6 +33,30 @@ enseñar por colocación, sin texto.
     Sala 5   láseres con desfase        ← patrón, no muro
     Sala 6   agua y oxígeno             ← el reloj bajo el agua
     Sala 7   guardia y acosador         ← sigilo
+    Sala 8   llave, puerta, resorte,
+             interruptor y jaula        ← abrir cosas (AUD-153)
+    Sala 9   hielo, onda de choque
+             y una escena               ← el suelo también es mecánica
+
+AUD-153 — las salas 8 y 9, y la fauna
+======================================
+Diecisiete tipos de objeto que el cargador reconoce no aparecían en **ningún**
+mapa del juego: siete de escenario —`Key`, `Door`, `Cage`, `EventTrigger`,
+`Spring`, `FrictionZone`, `ShockwaveZone`, `Cutscene`— y diez especies del
+bestiario.
+
+Es la versión más barata del fallo que este proyecto lleva un mes cazando. No
+es código roto: es código que nadie recorre. Una regresión en `_handle_cerradura`
+no la habría visto nadie hasta que un estudiante pusiera su primera puerta en
+Tiled y no funcionara, que es el peor momento posible para descubrirlo.
+
+Van al laboratorio y no repartidos por los escenarios de zona 1 a 3 porque
+esos mapas los escribieron catorce estudiantes, y cambiar la población de un
+nivel ajeno es una decisión de diseño de su autor. El laboratorio es el mapa
+del profesor y su trabajo es justo éste.
+
+Esto los hace **alcanzables y ejercitados**. No arregla la curva de dificultad
+del juego; eso está medido aparte en `docs/67_CURVA_DE_DIFICULTAD.md`.
 """
 from __future__ import annotations
 
@@ -43,7 +67,7 @@ DESTINO = PROJECT_ROOT / "assets" / "maps" / "stage_mecanicas" / "stage_mecanica
 TILESET = "../../tilesets/tileset_stage0.png"
 
 TS = 16
-MW, MH = 220, 24          # 3520 × 384 px
+MW, MH = 280, 24          # 4480 × 384 px
 SUELO_Y = 20              # fila del suelo
 SALA = 30                 # ancho de cada sala en baldosas
 
@@ -97,9 +121,15 @@ def _terreno() -> list[list[int]]:
     # Repisas para descansar entre salas: son las «válvulas de escape» del
     # dossier, y sin ellas siete mecánicas seguidas se leen como una sola
     # cuesta arriba.
-    for sala in range(1, 7):
+    for sala in range(1, 9):
         for x in range(sala * SALA - 4, sala * SALA + 4):
             g[SUELO_Y - 5][x] = PLATAFORMA
+
+    # Sala 8 — repisa alta a la que sólo se llega con el resorte. Es lo que
+    # convierte el resorte en algo que hay que usar y no en un adorno que se
+    # pisa de paso.
+    for x in range(7 * SALA + 17, 7 * SALA + 23):
+        g[SUELO_Y - 7][x] = PLATAFORMA
     return g
 
 
@@ -124,7 +154,19 @@ def _objetos() -> list[str]:
                 elif isinstance(v, float):
                     cuerpo += f'\n    <property name="{k}" type="float" value="{v}"/>'
                 else:
-                    cuerpo += f'\n    <property name="{k}" value="{v}"/>'
+                    # Los saltos de línea van como `&#10;` y no como carácter.
+                    #
+                    # AUD-153: un XML normaliza los espacios en blanco dentro
+                    # de un valor de atributo, así que un `\n` literal se
+                    # convierte en un espacio al leerlo. El guion de la
+                    # `Cutscene` llegaba al motor como **una sola línea** —
+                    # «camara 4400 200 0.8 temblor 0.3 5 …»— y ninguna de sus
+                    # órdenes se entendía. Lo escribí, lo cargué y lo vi; sin
+                    # imprimir el guion cargado habría dado la escena por buena.
+                    # La referencia de carácter sobrevive a la normalización.
+                    texto = (str(v).replace("&", "&amp;").replace("<", "&lt;")
+                             .replace('"', "&quot;").replace("\n", "&#10;"))
+                    cuerpo += f'\n    <property name="{k}" value="{texto}"/>'
             cuerpo += "\n   </properties>"
         cuerpo += "\n  </object>"
         o.append(cuerpo)
@@ -214,10 +256,90 @@ def _objetos() -> list[str]:
     obj("BreakableBlock", (6 * SALA + 33) * TS, suelo_px - 2 * TS, TS, 2 * TS,
         golpes=1)
 
+    # ── Sala 8: llave, puerta, resorte, interruptor y jaula ───
+    #
+    # AUD-153. Los cinco tipos de esta sala estaban escritos en el cargador,
+    # con pruebas unitarias, y **ningún mapa del juego los colocaba**. Es la
+    # forma más barata del fallo que este proyecto lleva un mes cazando: no
+    # código roto, sino código que nadie recorre, de modo que una regresión en
+    # `_handle_cerradura` no la habría visto nadie hasta que un estudiante
+    # pusiera su primera puerta y no funcionara.
+    #
+    # La sala se lee sola y en un orden: la llave está antes que la puerta, el
+    # resorte es la única forma de llegar al interruptor, y el interruptor es
+    # la única forma de abrir la jaula.
+    s8 = 7 * SALA
+    obj("MessageTrigger_Once", (s8 + 2) * TS, suelo_px - 64, 48, 48,
+        text="Coge la llave. La puerta la pide.")
+    obj("Key", (s8 + 5) * TS, suelo_px - 2 * TS, TS, TS,
+        key_id="llave_lab", nombre="Llave del laboratorio")
+    obj("Door", (s8 + 11) * TS, suelo_px - 3 * TS, TS, 3 * TS,
+        key_id="llave_lab", consume_llave=True,
+        mensaje="Cerrada. Falta la llave.")
+    # El resorte sube a la repisa alta; sin él no se alcanza el interruptor.
+    obj("Spring", (s8 + 14) * TS, suelo_px - TS, 2 * TS, TS,
+        impulso=-560.0, rearme=0.2)
+    obj("EventTrigger", (s8 + 19) * TS, (SUELO_Y - 8) * TS, 2 * TS, TS,
+        evento="ABRIR_JAULA", automatico=True, una_vez=True)
+    obj("Cage", (s8 + 25) * TS, suelo_px - 3 * TS, 2 * TS, 3 * TS,
+        abre_con="ABRIR_JAULA", mensaje="La jaula no cede a golpes.")
+    obj("Checkpoint", (8 * SALA - 4) * TS, suelo_px - 32, 16, 32, checkpoint_id=7)
+
+    # ── Sala 9: hielo, onda de choque y una escena ────────────
+    #
+    # La `FrictionZone` con multiplicador bajo es hielo: el jugador conserva la
+    # velocidad y frena tarde, así que la onda de choque que viene después
+    # castiga entrar corriendo. Las dos juntas enseñan lo mismo que por
+    # separado no se ve — que el suelo también es una mecánica.
+    s9 = 8 * SALA
+    obj("MessageTrigger_Once", (s9 + 2) * TS, suelo_px - 64, 48, 48,
+        text="Aqui no se frena. Y algo golpea el suelo.")
+    obj("FrictionZone", (s9 + 5) * TS, suelo_px - 2 * TS, 12 * TS, 2 * TS,
+        multiplicador=0.25, arrastre=0.0)
+    obj("ShockwaveZone", (s9 + 18) * TS, suelo_px - TS, 6 * TS, TS,
+        dano=99.0, encendido=0.7, apagado=2.6, desfase=0.0)
+    obj("ShockwaveZone", (s9 + 24) * TS, suelo_px - TS, 6 * TS, TS,
+        dano=99.0, encendido=0.7, apagado=2.6, desfase=1.65)
+    # `Cutscene` como rectángulo: se dispara al entrar. Es corta y saltable a
+    # propósito — una escena que quita el mando en un mapa de laboratorio sería
+    # justo el ejemplo que no hay que copiar.
+    obj("Cutscene", (s9 + 28) * TS, suelo_px - 4 * TS, 2 * TS, 4 * TS,
+        guion="camara 4400 200 0.8\ntemblor 0.3 5\n+ evento LAB_COMPLETADO",
+        bloquea=False, saltable=True, una_vez=True)
+
     # Salida
     obj("NextTrigger", (MW - 4) * TS, suelo_px - 3 * TS, 2 * TS, 3 * TS)
 
-    # Un par de enemigos normales, para que el escenario no sea sólo un museo.
+    # ── La fauna que nadie había visto ────────────────────────
+    #
+    # AUD-153. Diez especies del bestiario estaban registradas, con sus
+    # parámetros y sus pruebas, y no aparecían en un solo TMX del juego: el
+    # jugador no las ha visto nunca y el cargador no las había construido
+    # nunca desde un mapa real.
+    #
+    # Van aquí y no repartidas por los escenarios de zona 1 a 3 porque esos
+    # mapas los escribieron catorce estudiantes: cambiar la población de un
+    # nivel ajeno es una decisión de diseño de su autor, no mía. El
+    # laboratorio es el mapa del profesor y su trabajo es exactamente éste,
+    # ser el sitio donde todo lo que el motor sabe hacer se puede ver.
+    #
+    # Esto las hace **alcanzables y ejercitadas**; no arregla la curva de
+    # dificultad del juego (ver `docs/67_CURVA_DE_DIFICULTAD.md`).
+    fauna = [
+        ("WalkerInsect", 1, 20), ("WalkerRaton", 2, 20),
+        ("FlyingCucaracha", 2, 12), ("WalkerEstudiante", 3, 24),
+        ("FlyingNotebook", 3, 6), ("ShooterTiza", 4, 26),
+        ("ShooterCocinero", 5, 26), ("WalkerTerciopelo", 6, 27),
+        ("FlyingTerciovolador", 7, 8), ("ShooterVenomoLargo", 8, 10),
+    ]
+    for especie, sala, dx in fauna:
+        x = (sala * SALA + dx) * TS
+        if especie.startswith("Flying"):
+            obj(especie, x, suelo_px - 6 * TS, 20, 14)
+        else:
+            obj(especie, x, suelo_px - 28, 24, 28)
+
+    # Los dos de siempre, para que el escenario no sea sólo un museo.
     obj("Walker", (SALA + 20) * TS, suelo_px - 28, 24, 28)
     obj("FlyingBoa", (2 * SALA + 12) * TS, suelo_px - 6 * TS, 20, 14)
     return o
@@ -247,8 +369,10 @@ def _colisiones() -> list[str]:
     solido(-TS, 0, TS, MH * TS)
     solido(MW * TS, 0, TS, MH * TS)
     # Repisas de descanso, atravesables desde abajo.
-    for sala in range(1, 7):
+    for sala in range(1, 9):
         solido((sala * SALA - 4) * TS, (SUELO_Y - 5) * TS, 8 * TS, 8, "Platform")
+    # Sala 8 — la repisa del resorte, con el interruptor encima.
+    solido((7 * SALA + 17) * TS, (SUELO_Y - 7) * TS, 6 * TS, 8, "Platform")
     return r
 
 

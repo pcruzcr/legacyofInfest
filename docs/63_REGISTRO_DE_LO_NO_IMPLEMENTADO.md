@@ -200,10 +200,10 @@ Esto no sale del barrido automático: sale de la auditoría de agosto
 | ~~Atlas de sprites y batching~~ | **HECHO** (AUD-138), con una salvedad medida: el atlas **no** acelera el dibujado en la ruta software (2,06 → 2,35 ms). Lo que gana es carga (3×) y `blits()` (16 %) |
 | **Post-procesado en GPU** | gráficos | **MEDIDO** (AUD-148), y la respuesta no era la esperada: en la máquina de medida el bloom en GPU sale **5× más lento** (8,3 ms contra 1,7 ms) porque SDL cae a software sin tarjeta. Presentar sí es barato (0,18–0,36 ms). Queda `scripts/bench_gpu_postproc.py` para medirlo donde toque y `PresentadorGPU` apagado por defecto |
 | ~~Cutscenes: acciones nuevas, guiones desde TMX, no bloquear~~ | **HECHO** (AUD-136). Tipo `Cutscene`, guion en texto, escenas que no bloquean y salto que ejecuta el final | — |
-| **Curva de dificultad medida** de los 15 escenarios | diseño | 3 días |
-| **Partir `stage_scene.py`** (1.549 líneas) | mantenibilidad | 1 semana |
+| ~~Curva de dificultad medida~~ | **HECHO** (AUD-151). `scripts/difficulty_curve.py` mide once escenarios y `docs/67_CURVA_DE_DIFICULTAD.md` recoge lo que salió: el tutorial `stage0` es el nivel normal más exigente (48,8) y hay dos escalones de más del doble. Los jefes quedan exentos: un jefe *debe* ser un pico | — |
+| ~~Partir `stage_scene.py`~~ | **HECHO** (AUD-152). De 1.884 a 1.405 líneas, con tres mixins de lectura en `scenes/stage_parts/`: ambiente, señales y fantasma. Separación por legibilidad, no por dependencia — las subclases de los estudiantes siguen sobreescribiendo lo mismo | — |
 | ~~Mutación en CI~~ | **HECHO** (AUD-147). `scripts/mutation_check.py`, semanal y a mano; acotado a tres módulos para que el informe se lea | — |
-| **15 tipos de objeto sin usar en ningún mapa**, 10 de ellos enemigos | contenido | 2 días |
+| ~~Tipos de objeto sin usar en ningún mapa~~ | **HECHO** (AUD-153). Eran **17**, no 15: siete de escenario y diez especies del bestiario. Colocados en las salas 8 y 9 del laboratorio, con una prueba que vuelve a rojo si alguien añade un tipo y no lo coloca. Los hace alcanzables y ejercitados; **no** arregla la curva de dificultad del juego | — |
 
 ---
 
