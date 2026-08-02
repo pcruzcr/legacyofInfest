@@ -17,6 +17,20 @@ if TYPE_CHECKING:
 _ARENA_BG: tuple[int, int, int] = (180, 180, 190)
 
 
+# AUD-151 — el tipo se registra al IMPORTAR el módulo, no dentro de un método.
+#
+# Estaba dentro de `on_enter`, así que sólo existía cuando alguien construía la
+# escena. Cualquier herramienta que abra el mapa sin ella —el validador, el
+# calificador, el previsualizador, la curva de dificultad— se encontraba con
+# «tipo desconocido: BossRey» y no podía medir el nivel.
+#
+# Es la misma familia que AUD-106: el motor y las herramientas del profesor
+# tienen que ver el mismo mundo, o las herramientas castigan trabajo correcto.
+# Registrar al importar cuesta una línea y hace que las cuatro rutas
+# coincidan.
+StageLoader.register_entity("BossRey", BossRey)
+
+
 class BossReyScene(StageScene):
     STAGE_ID: str = "boss_rey"
     STAGE_NAME: str = "REY TERCIOPELO"
@@ -28,15 +42,6 @@ class BossReyScene(StageScene):
         self._original_bg: tuple[int, int, int] = settings.BG_COLOR
 
     def on_enter(self) -> None:
-        # El objeto "BossRey" del TMX necesita una clase Python registrada
-        # para poder aparecer. Esa tabla vive en
-        # src/framework/entities/entity_factory.py, fuera de mi carpeta, así
-        # que en vez de tocarla registro mi propio tipo aquí, antes de que
-        # StageScene.on_enter() cargue el TMX. StageLoader.load() llama
-        # internamente a ensure_registered(), que solo completa lo que falte
-        # y no borra lo ya registrado, así que esta línea persiste sin tocar
-        # nada del profesor.
-        StageLoader.register_entity("BossRey", BossRey)
         settings.BG_COLOR = _ARENA_BG
         super().on_enter()
         # Iluminación al máximo para que el jugador y el boss sean visibles

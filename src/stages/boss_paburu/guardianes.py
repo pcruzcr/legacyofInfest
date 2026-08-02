@@ -49,8 +49,21 @@ class Guardian:
     que la composición de la arena no se desarme.
     """
 
-    __slots__ = ("frame", "bx", "by", "ax", "ay", "wx", "wy", "px", "py",
-                 "alpha_base", "alpha_amp", "w_alpha", "t")
+    __slots__ = (
+        "alpha_amp",
+        "alpha_base",
+        "ax",
+        "ay",
+        "bx",
+        "by",
+        "frame",
+        "px",
+        "py",
+        "t",
+        "w_alpha",
+        "wx",
+        "wy",
+    )
 
     def __init__(self, frame: pygame.Surface, base: tuple[int, int],
                  amp: tuple[float, float], omega: tuple[float, float],
