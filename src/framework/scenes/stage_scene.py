@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import random
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -31,6 +30,9 @@ from src.framework.entities.boss_base import BossBase
 from src.framework.entities.enemy_base import EnemyBase
 from src.framework.entities.player import Player
 from src.framework.entities.squad_brain import SquadBrain
+from src.framework.scenes.stage_parts.ambiente import MezclaDeAmbiente
+from src.framework.scenes.stage_parts.fantasma import FantasmaDeCarrera
+from src.framework.scenes.stage_parts.senales import SenalesDeEscenario
 from src.framework.stage.camera import Camera
 from src.framework.stage.collision_system import CollisionSystem
 from src.framework.stage.drawing_system import DrawingSystem
@@ -49,7 +51,6 @@ from src.framework.ui.learning_overlay import LearningOverlay
 from src.framework.ui.tutorial_overlay import TutorialOverlay
 from src.framework.vfx.ambient_particles import AmbientParticleSystem
 from src.framework.vfx.damage_numbers import DamageNumberManager
-from src.framework.vfx.hit_effects import HitEffects
 from src.framework.vfx.lighting import LightSource, LightSystem
 from src.framework.vfx.particle_system import ParticleSystem
 from src.framework.vfx.post_processing import PostProcessing
@@ -62,7 +63,18 @@ if TYPE_CHECKING:
     from src.framework.stage.stage_loader import StageData
 
 
-class StageScene(BaseScene):
+class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
+                 BaseScene):
+    """El escenario jugable: carga un TMX y lo hace jugar.
+
+    AUD-152 — los tres primeros padres son **mixins de lectura**, no capas de
+    arquitectura: sólo mueven texto que antes vivía aquí. Ver
+    `stage_parts/__init__.py` para el razonamiento completo. El orden importa
+    para el MRO en un solo sentido: `BaseScene` va al final, así que cualquier
+    método que un mixin y la base compartan lo gana el mixin, que es lo que
+    ocurría cuando el método estaba escrito en esta clase.
+    """
+
     TMX_PATH: Path | None = None
 
     def __init__(self, context: GameContext, tmx_path: Path | None = None) -> None:
@@ -468,446 +480,17 @@ class StageScene(BaseScene):
         for sl in self._stage_lights:
             self._lighting.add_light(sl)
 
-    #: Brillo ambiente por zona cuando el TMX no declara `ambient_light`.
-    #:
-    #: F1.1 — antes esto era una cadena `if/elif` que además creaba las luces
-    #: con coordenadas fijas escritas en el motor. Un estudiante que
-    #: construyera su escenario en Tiled heredaba las dos luces del zone 0, en
-    #: (80, 80) y (240, 80), estuviera ahí su nivel o no. Ahora las luces se
-    #: colocan en el mapa y esta tabla sólo decide **cuánta oscuridad** hay si
-    #: nadie lo dijo.
-    #:
-    #: El zone 0 valía 1.0 —sin oscurecer—, así que todo el sistema de
-    #: iluminación era invisible en el único escenario terminado del juego.
-    AMBIENT_BY_ZONE: dict[int, float] = {
-        0: 0.62,   # prólogo: exterior nublado, se ve todo pero la luz se nota
-        1: 0.50,
-        2: 0.32,
-        3: 0.22,
-    }
-    AMBIENT_DEFAULT: float = 0.55
+    # ── El ambiente vive en `stage_parts/ambiente.py` ─────────────
+    #
+    # AUD-152: luz, bloom, viñeta, partículas, estación y hora, con su regla
+    # de precedencia común (TMX > zona > motor). Se movió el texto tal cual:
+    # los nombres y el comportamiento son los mismos, y una subclase que
+    # sobreescriba `_setup_lighting` sigue funcionando.
 
-    def _setup_lighting(self) -> None:
-        """Prepara la iluminación del escenario a partir del TMX.
-
-        Orden de precedencia, del más específico al más general:
-
-        1. `ambient_light` en las propiedades del mapa.
-        2. `AMBIENT_BY_ZONE[zone]`.
-        3. `AMBIENT_DEFAULT`.
-
-        Los focos vienen siempre del mapa (objetos de tipo `Light` en la capa
-        `Objects`). Si el mapa no declara ninguno, el escenario queda iluminado
-        sólo por la luz que acompaña al jugador, que es un resultado legítimo
-        y además una pista visual clara de que faltan focos.
-        """
-        self._lighting.clear()
-        self._player_light = None
-
-        # BUG-075: si el TMX no declara zona, cae al atributo ZONE de la escena.
-        zone = self._stage_data.zone
-        if zone is None:
-            zone = getattr(self, "ZONE", 0)
-
-        declarado = getattr(self._stage_data, "ambient_light", None)
-        if declarado is not None:
-            self._lighting.ambient_brightness = declarado
-        else:
-            self._lighting.ambient_brightness = self.AMBIENT_BY_ZONE.get(
-                zone, self.AMBIENT_DEFAULT)
-
-        self._stage_lights = [
-            LightSource(
-                position=pygame.Vector2(*spec.position),
-                radius=spec.radius,
-                color=spec.color,
-                intensity=spec.intensity,
-                flicker=spec.flicker,
-                flicker_speed=spec.flicker_speed,
-                flicker_amount=spec.flicker_amount,
-            )
-            for spec in getattr(self._stage_data, "lights", [])
-        ]
-
-    #: Bloom permanente por zona cuando el TMX no declara `bloom`.
-    #:
-    #: F1.2 — el bloom existía y sólo se encendía en ráfagas de 0,15 a 0,6 s al
-    #: recoger un objeto o cambiar de fase el jefe. El resto del tiempo, cero.
-    #: Un halo permanente y suave es lo que hace que la iluminación de F1.1 se
-    #: lea como luz y no como manchas.
-    BLOOM_BY_ZONE: dict[int, float] = {
-        0: 0.18,   # prólogo: bruma tenue
-        1: 0.22,
-        2: 0.30,   # zonas de fuego: el halo hace el trabajo
-        3: 0.35,
-    }
-    BLOOM_DEFAULT: float = 0.20
-
-    #: Viñeta por zona. Sube al bajar la luz ambiente: cuanto más oscuro el
-    #: nivel, más cerrado el encuadre.
-    VIGNETTE_BY_ZONE: dict[int, float] = {0: 0.30, 1: 0.36, 2: 0.44, 3: 0.50}
-    VIGNETTE_DEFAULT: float = 0.35
-
-    def _setup_post_processing(self) -> None:
-        """Fija bloom y viñeta del escenario a partir del TMX.
-
-        Misma precedencia que la iluminación: propiedad del mapa, luego tabla
-        por zona, luego valor por defecto. Así un estudiante puede escribir
-        `bloom = 0.4` en Tiled y verlo, sin tocar una línea de Python.
-        """
-        zone = self._stage_data.zone
-        if zone is None:
-            zone = getattr(self, "ZONE", 0)
-
-        bloom = getattr(self._stage_data, "bloom", None)
-        if bloom is None:
-            bloom = self.BLOOM_BY_ZONE.get(zone, self.BLOOM_DEFAULT)
-        self._post_processing.set_base_bloom(bloom)
-
-        vineta = getattr(self._stage_data, "vignette", None)
-        if vineta is None:
-            vineta = self.VIGNETTE_BY_ZONE.get(zone, self.VIGNETTE_DEFAULT)
-        self._post_processing.set_vignette(vineta)
-
-    #: Partículas de ambiente por zona: (tipo, partículas por segundo).
-    #:
-    #: F1.3 — `AmbientParticleSystem.set_effect` no la llamaba nadie, así que
-    #: el ritmo se quedaba en cero toda la partida. Medido en Stage 0 tras tres
-    #: segundos de juego: 0 partículas. El sistema existía, se actualizaba y se
-    #: dibujaba; no tenía nada que dibujar.
-    AMBIENT_FX_BY_ZONE: dict[int, tuple[str, float]] = {
-        0: ("spores", 14.0),   # prólogo: bosque infestado
-        1: ("leaves", 10.0),
-        2: ("embers", 18.0),
-        3: ("ash", 22.0),
-    }
-    AMBIENT_FX_DEFAULT: tuple[str, float] = ("dust", 8.0)
-
-    def _setup_ambient_particles(self) -> None:
-        """Enciende las partículas de ambiente del escenario.
-
-        Misma precedencia que la luz y el post-procesado: propiedad del mapa
-        (`ambient_fx`, `ambient_fx_rate`), luego tabla por zona, luego valor por
-        defecto. Un `ambient_fx` de `none` en el TMX apaga el efecto de forma
-        explícita, que es distinto de no declararlo.
-        """
-        zone = self._stage_data.zone
-        if zone is None:
-            zone = getattr(self, "ZONE", 0)
-
-        tipo = getattr(self._stage_data, "ambient_fx", "")
-        ritmo = getattr(self._stage_data, "ambient_fx_rate", None)
-        if not tipo:
-            # Precedencia: mapa > estación > zona. La estación va antes que la
-            # zona porque es una decisión explícita del autor del mapa y la
-            # tabla por zona es sólo un respaldo del motor.
-            if getattr(self._stage_data, "season", ""):
-                tipo, ritmo_estacion = self._estacion.particulas
-            else:
-                tipo, ritmo_estacion = self.AMBIENT_FX_BY_ZONE.get(
-                    zone, self.AMBIENT_FX_DEFAULT)
-            if ritmo is None:
-                ritmo = ritmo_estacion
-        elif ritmo is None:
-            ritmo = self.AMBIENT_FX_DEFAULT[1]
-
-        self._ambient_particles.set_effect(tipo, ritmo)
-
-    def _clima_efectivo(self) -> str:
-        """Qué clima usa el escenario: el del mapa, o el que sugiere la estación.
-
-        F2.2 — el orden importa y por eso vive en un método propio. Un autor
-        que escribe `climate = fog` en un mapa de otoño quiere niebla, no la
-        lluvia que trae la estación. La estación **sugiere**; no manda.
-
-        Está extraído en vez de en línea dentro de `on_enter` porque una regla
-        de precedencia que sólo se puede probar recargando un TMX entero se
-        acaba probando de mentira: la primera versión de su prueba
-        reimplementaba la regla en el propio test y por tanto no podía fallar.
-        """
-        declarado = getattr(self._stage_data, "climate", "")
-        return declarado or self._estacion.clima
-
-    def _setup_season(self) -> None:
-        """Resuelve la estación del escenario. Ver `framework.stage.seasons`."""
-        from src.framework.stage.seasons import estacion
-
-        self._estacion = estacion(getattr(self._stage_data, "season", ""))
-
-    def _setup_day_night(self) -> None:
-        """Arranca el reloj del escenario a partir del TMX.
-
-        F2.1: sin `day_length` el reloj queda congelado en su hora inicial y el
-        escenario se comporta exactamente como antes de esta fase. Es
-        deliberado: un prólogo de tres minutos no gana nada con un ciclo, y
-        obligar a todos los mapas a tener uno sería imponer una decisión de
-        diseño desde el motor.
-        """
-        from src.framework.stage.day_night import RelojDeMundo
-
-        hora = getattr(self._stage_data, "start_hour", None)
-        if hora is None:
-            hora = self.HORA_POR_DEFECTO
-        self._reloj = RelojDeMundo(
-            hora_inicial=hora,
-            duracion_dia=getattr(self._stage_data, "day_length", 0.0) or 0.0,
-        )
-        # Se guardan los valores base del escenario porque el ciclo los
-        # **modula**: si se sobrescribieran, cada fotograma partiría del
-        # resultado del anterior y la luz se iría a cero en unos segundos.
-        self._ambiente_base = self._lighting.ambient_brightness
-        self._bloom_base_escenario = self._post_processing._bloom_base
-        self._aplicar_hora()
-
-    #: Hora que se usa cuando el mapa no declara `start_hour`. Mediodía, es
-    #: decir, el factor de ambiente 1.0: un escenario que no pide ciclo se ve
-    #: exactamente con el `ambient_light` que escribió su autor.
-    HORA_POR_DEFECTO = 12.0
-
-    #: Suelo de luz ambiente aplicada. Por debajo de esto el nivel deja de ser
-    #: jugable.
-    #:
-    #: F2.1: el ciclo **multiplica** el ambiente del escenario, así que los dos
-    #: factores se componen. Medido en Stage 0, que declara `ambient_light`
-    #: 0,70: a medianoche el factor 0,35 daba un ambiente aplicado de 0,245 y
-    #: un brillo de pantalla de 12,7 sobre 255. El jugador no ve los enemigos.
-    #: Una noche realista que impide jugar es un defecto, no una decisión
-    #: artística: la hora se comunica con el color, que sí cambia por completo.
-    MIN_AMBIENTE = 0.45
-
-    def _aplicar_hora(self) -> None:
-        """Traduce la hora actual, y la estación, a luz ambiente y bloom."""
-        from src.framework.stage.seasons import aplicar_tinte
-
-        luz = self._reloj.luz()
-        self._lighting.ambient_brightness = max(
-            self.MIN_AMBIENTE,
-            self._ambiente_base * luz.factor_ambiente * self._estacion.factor_luz,
-        )
-        self._post_processing.set_base_bloom(
-            self._bloom_base_escenario + luz.bloom_extra)
-        # El tinte de la hora se aplica como color de la luz ambiente, y la
-        # estación lo modula. Los dos son multiplicadores, así que se componen
-        # sin que ninguno tenga que conocer al otro: a mediodía en verano el
-        # resultado es casi blanco, y de madrugada en invierno, azul doble.
-        self._lighting.ambient_color = aplicar_tinte(luz.color, self._estacion)
-
-    def _subscribe_event_handlers(self) -> None:
-        def _on_enemy_died(**data: Any) -> None:
-            pos = data.get("position", (0, 0))
-            self._particle_system.get_emitter("death").emit(
-                float(pos[0]), float(pos[1]), HitEffects.DEATH,
-            )
-
-        def _on_hit_connect(**data: Any) -> None:
-            pos = data.get("pos", [0, 0])
-            dmg = data.get("damage", 1.0)
-            self._particle_system.get_emitter("hits").emit(
-                pos[0], pos[1], HitEffects.get_for_damage(dmg),
-            )
-            self._damage_numbers.add(pos[0], pos[1], str(int(dmg)))
-
-        def _on_enemy_hit(**data: Any) -> None:
-            pos = data.get("pos", [0, 0])
-            dmg = data.get("damage", 1.0)
-            self._particle_system.get_emitter("blood").emit(
-                pos[0], pos[1], HitEffects.get_blood_for_damage(dmg),
-            )
-            self._camera.apply_shake(amplitude=1.5, duration=0.06)
-
-        def _on_player_damaged(**data: Any) -> None:
-            src = data.get("source", (0, 0))
-            self._particle_system.get_emitter("blood").emit(
-                float(src[0]), float(src[1]), HitEffects.BLOOD_BIG,
-            )
-            self._camera.apply_shake(amplitude=2.0, duration=0.1)
-            self._post_processing.flash((255, 50, 50), alpha=180, duration=0.15)
-            health_pct = self._player.current_health / max(settings.PLAYER_MAX_HEALTH, 1)
-            self._post_processing.set_damage_vignette(max(0, 0.5 - health_pct * 0.5))
-
-        def _on_vfx_parry(**data: Any) -> None:
-            pos = data.get("pos", (0, 0))
-            self._particle_system.get_emitter("parry").emit(
-                float(pos[0]), float(pos[1]), HitEffects.PARRY,
-            )
-            self._camera.apply_shake(amplitude=3.0, duration=0.15)
-            self._post_processing.flash((100, 200, 255), alpha=120, duration=0.1)
-            self._post_processing.set_bloom(0.3, duration=0.15)
-
-        def _on_vfx_charge(**data: Any) -> None:
-            pos = data.get("pos", (0, 0))
-            self._particle_system.get_emitter("charge").emit(
-                float(pos[0]), float(pos[1]), HitEffects.CHARGE_GLOW,
-            )
-
-        def _on_vfx_slam(**data: Any) -> None:
-            pos = data.get("pos", (0, 0))
-            self._particle_system.get_emitter("slam").emit(
-                float(pos[0]), float(pos[1]), HitEffects.SPARK_BIG,
-            )
-            self._camera.apply_shake(amplitude=4.0, duration=0.2)
-
-        def _on_vfx_ultimate(**data: Any) -> None:
-            pos = data.get("pos", (0, 0))
-            self._particle_system.get_emitter("parry").emit(
-                float(pos[0]), float(pos[1]), HitEffects.SPARK_BIG,
-            )
-            self._post_processing.set_bloom(0.8, duration=0.6)
-            self._post_processing.flash((255, 255, 255), alpha=255, duration=0.15)
-            self._camera.apply_shake(amplitude=5.0, duration=0.4)
-
-        self.context.event_bus.subscribe(Events.SFX_HIT_CONNECT, _on_hit_connect)
-        self._vfx_handlers[Events.SFX_HIT_CONNECT] = _on_hit_connect
-        self.context.event_bus.subscribe(Events.SFX_ENEMY_HIT, _on_enemy_hit)
-        self._vfx_handlers[Events.SFX_ENEMY_HIT] = _on_enemy_hit
-        self.context.event_bus.subscribe(Events.ENEMY_DIED, _on_enemy_died)
-        self._vfx_handlers[Events.ENEMY_DIED] = _on_enemy_died
-
-        def _on_player_died(**data: Any) -> None:
-            pos = data.get("pos", [0, 0])
-            self._particle_system.get_emitter("death").emit(
-                float(pos[0]), float(pos[1]), HitEffects.get_blood_for_damage(10),
-            )
-            for _ in range(3):
-                self._particle_system.get_emitter("death").emit(
-                    float(pos[0]) + random.uniform(-8, 8),
-                    float(pos[1]) + random.uniform(-8, 8),
-                    HitEffects.get_blood_for_damage(5),
-                )
-            self._camera.apply_shake(amplitude=8.0, duration=0.5)
-            self._post_processing.flash((255, 0, 0), alpha=180, duration=0.3)
-
-        self.context.event_bus.subscribe(Events.PLAYER_DAMAGED, _on_player_damaged)
-        self._vfx_handlers[Events.PLAYER_DAMAGED] = _on_player_damaged
-        self.context.event_bus.subscribe(Events.PLAYER_DIED, _on_player_died)
-        self._vfx_handlers[Events.PLAYER_DIED] = _on_player_died
-        self.context.event_bus.subscribe(Events.VFX_PARRY, _on_vfx_parry)
-        self._vfx_handlers[Events.VFX_PARRY] = _on_vfx_parry
-        self.context.event_bus.subscribe(Events.VFX_CHARGE, _on_vfx_charge)
-        self._vfx_handlers[Events.VFX_CHARGE] = _on_vfx_charge
-        self.context.event_bus.subscribe(Events.VFX_SLAM, _on_vfx_slam)
-        self._vfx_handlers[Events.VFX_SLAM] = _on_vfx_slam
-        self.context.event_bus.subscribe(Events.VFX_ULTIMATE, _on_vfx_ultimate)
-        self._vfx_handlers[Events.VFX_ULTIMATE] = _on_vfx_ultimate
-
-        def _on_vfx_bubble(**data: Any) -> None:
-            pos = data.get("pos", (0, 0))
-            self._particle_system.get_emitter("bubble").emit(
-                float(pos[0]), float(pos[1]), HitEffects.BUBBLE,
-            )
-        self.context.event_bus.subscribe(Events.VFX_BUBBLE, _on_vfx_bubble)
-        self._vfx_handlers[Events.VFX_BUBBLE] = _on_vfx_bubble
-
-        def _on_music_stinger(**data: Any) -> None:
-            name = data.get("name", "stinger_boss_phase")
-            vol = data.get("volume", 0.8)
-            # BUG-057: Null guard for audio
-            if self.audio is not None:
-                self.audio.play_stinger(name, volume=vol)
-        self.context.event_bus.subscribe(Events.MUSIC_STINGER, _on_music_stinger)
-        self._vfx_handlers[Events.MUSIC_STINGER] = _on_music_stinger
-
-        sfx_map = {
-            Events.SFX_PLAYER_JUMP: "sfx_player_jump",
-            Events.SFX_PLAYER_LAND: "sfx_player_land",
-            Events.SFX_PLAYER_SHORT_ATTACK: "sfx_player_short_attack",
-            Events.SFX_PLAYER_LONG_ATTACK: "sfx_player_long_attack",
-            Events.SFX_PLAYER_HURT: "sfx_player_hurt",
-            Events.SFX_PLAYER_DIE: "sfx_player_die",
-            Events.SFX_HIT_CONNECT: "sfx_player_hit_connect",
-            Events.SFX_ENEMY_HIT: "sfx_enemies_hit",
-            Events.SFX_ENEMY_DIE_SMALL: "sfx_enemies_die_small",
-            Events.SFX_ENEMY_DIE_LARGE: "sfx_enemies_die_large",
-            Events.SFX_PROJECTILE_FIRE: "sfx_enemies_projectile_fire",
-            Events.SFX_CHECKPOINT: "sfx_ui_checkpoint",
-            Events.SFX_STAGE_BANNER: "sfx_ui_stage_banner",
-            Events.SFX_STAGE_COMPLETE: "sfx_ui_stage_complete",
-            Events.SFX_HAZARD_ZONE: "sfx_environment_hazard_zone",
-            Events.SFX_PLAYER_FOOTSTEP: "sfx_step",
-            Events.SFX_MENU_HOVER: "sfx_select",
-            Events.SFX_MENU_CONFIRM: "sfx_select",
-            Events.SFX_MENU_CANCEL: "sfx_ui_menu_cancel",
-            Events.SFX_PLAYER_PARRY: "sfx_parry",
-            Events.SFX_PLAYER_CROUCH: "sfx_player_crouch",
-            Events.SFX_PLAYER_HEAL: "sfx_ui_heart_restore",
-            Events.SFX_BOSS_HIT: "sfx_boss_hit",
-            Events.SFX_UI_GAME_OVER: "sfx_ui_game_over",
-            Events.SFX_ENVIRONMENT_SCREEN_SHAKE: "sfx_environment_screen_shake",
-            Events.SFX_ENVIRONMENT_ONE_WAY_PLATFORM: "sfx_environment_one_way_platform",
-            Events.SFX_BOSS_PHASE_CHANGE: "sfx_bosses_phase_change",
-            Events.SFX_ENEMIES_PROJECTILE_HIT_WALL: "sfx_enemies_projectile_hit_wall",
-            Events.SFX_BOSSES_GAVILAN_DIVE: "sfx_bosses_gavilan_dive",
-            Events.SFX_BOSSES_GAVILAN_MASK_BEAM: "sfx_bosses_gavilan_mask_beam",
-            Events.SFX_BOSSES_PABURU_EYE_BEAM: "sfx_bosses_paburu_eye_beam",
-            Events.SFX_BOSSES_PABURU_WAVE: "sfx_bosses_paburu_wave",
-            Events.SFX_BOSSES_RELIC_APPEAR: "sfx_bosses_relic_appear",
-            Events.SFX_BOSSES_REY_SPIT: "sfx_bosses_rey_spit",
-            Events.SFX_BOSSES_REY_SPLIT: "sfx_bosses_rey_split",
-            Events.SFX_BOSSES_VENADO_CHARGE: "sfx_bosses_venado_charge",
-            Events.SFX_BOSSES_VENADO_STOMP: "sfx_bosses_venado_stomp",
-            Events.SFX_BOSSES_VENADO_VINE: "sfx_bosses_venado_vine",
-        }
-        for evt, sname in sfx_map.items():
-            handler = self._make_sfx_handler(sname)
-            self.context.event_bus.subscribe(evt, handler)
-            # Retained here so the bus's weak reference stays alive.
-            self._sfx_handlers[evt] = handler
-
-        # SAVE_REQUESTED handler — persists game on checkpoint / save & quit
-        def _on_save_requested(**data: Any) -> None:
-            sm = self.context.save_manager
-            if sm is not None:
-                sm.auto_save(
-                    stage_id=data.get("stage_id", ""),
-                    stage_index=data.get("stage_index", 0),
-                    checkpoint_x=data.get("checkpoint_x", 0),
-                    checkpoint_y=data.get("checkpoint_y", 0),
-                    health=data.get("health", 100),
-                    max_health=data.get("max_health", 100),
-                )
-        self.context.event_bus.subscribe(Events.SAVE_REQUESTED, _on_save_requested)
-        self._vfx_handlers[Events.SAVE_REQUESTED] = _on_save_requested
-
-    def _make_sfx_handler(self, sound_name: str) -> Callable[..., None]:
-        """Build an event handler that plays ``sound_name``.
-
-        AUD-032: this was previously a closure factory defined *inside* the loop
-        that used it, with the inner function and the loop variable sharing the
-        name ``handler``. It worked, but it tripped B023 and required a careful
-        read to see that it did — the exact shape that hides a real late-binding
-        bug the next time someone edits it. A named method takes the sound as a
-        parameter, so the binding is explicit and unmistakable.
-        """
-        def handler(**data: Any) -> None:
-            volume = 1.0
-            if "damage" in data:
-                # Slight random variation so repeated hits do not sound robotic.
-                volume = 0.8 + random.random() * 0.4
-            pos = data.get("pos")
-            if pos is not None:
-                self._play_sfx_spatial(sound_name, pos[0], volume=volume)
-            else:
-                self._play_sfx_named(sound_name, volume=volume)
-        return handler
-
-    def _unsubscribe_all_handlers(self) -> None:
-        for evt, handler in self._sfx_handlers.items():
-            self.context.event_bus.unsubscribe(evt, handler)
-        self._sfx_handlers.clear()
-        for evt, handler in self._vfx_handlers.items():
-            self.context.event_bus.unsubscribe(evt, handler)
-        self._vfx_handlers.clear()
-
-    def _play_sfx_named(self, name: str, volume: float = 1.0) -> None:
-        audio = self.audio
-        if audio is not None:
-            audio.play_sfx(name, volume=volume)
-
-    def _play_sfx_spatial(self, name: str, world_x: float, volume: float = 1.0) -> None:
-        audio = self.audio
-        if audio is not None:
-            screen_center_x = self._camera.offset.x + settings.INTERNAL_WIDTH / 2
-            audio.play_sfx_at(name, world_x, screen_center_x, volume=volume)
+    # ── Las señales viven en `stage_parts/senales.py` ─────────────
+    #
+    # AUD-152: `_subscribe_event_handlers`, `_unsubscribe_all_handlers`,
+    # `_make_sfx_handler` y los dos reproductores de sonido.
 
     def on_exit(self) -> None:
         if self.context.clock is not None:
@@ -1426,71 +1009,9 @@ class StageScene(BaseScene):
                 )
             self.context.event_bus.emit(Events.STAGE_COMPLETE, stage_id=stage.stage_id)
 
-    # ── AUD-142: el fantasma de tu mejor carrera ──────────────────
-    def _ruta_del_fantasma(self):
-        from pathlib import Path
-
-        from src.engine.core import settings
-
-        stage_id = getattr(self._stage_data, "stage_id", "") or "sin_id"
-        return Path(settings.PROJECT_ROOT) / "saves" / "fantasmas" / f"{stage_id}.json"
-
-    def _preparar_fantasma(self) -> None:
-        """Empieza a grabar esta carrera y carga la anterior, si la hay."""
-        from src.framework.stage.speedrun_mode import GhostData
-
-        self._fantasma = GhostData()
-        previo = GhostData()
-        ruta = self._ruta_del_fantasma()
-        if ruta.exists():
-            previo.load(ruta)
-        # Sin fotogramas no hay fantasma que dibujar, y `None` lo dice mejor
-        # que un objeto vacío al que hay que preguntarle siempre.
-        self._fantasma_previo = previo if previo.frame_count else None
-
-    def _guardar_fantasma_si_es_mejor(self) -> None:
-        """Sólo se guarda si esta carrera fue más corta.
-
-        Guardar siempre convertiría el fantasma en «tu última partida», que es
-        una compañía peor: el jugador quiere perseguir su mejor marca, no la
-        de hace un rato.
-        """
-        actual = self._fantasma
-        if actual is None or not actual.frame_count:
-            return
-        anterior = self._fantasma_previo
-        if anterior is not None and anterior.frame_count <= actual.frame_count:
-            return
-        try:
-            actual.save(self._ruta_del_fantasma())
-        except OSError:
-            # Un disco lleno o un directorio sin permisos no puede costar la
-            # partida a nadie: el fantasma es un adorno, no el guardado.
-            logging.getLogger(__name__).warning(
-                "no se pudo guardar el fantasma", exc_info=True)
-
-    _COLOR_FANTASMA = (140, 210, 255)
-
-    def _dibujar_fantasma(self, surface: pygame.Surface) -> None:
-        """Una silueta translúcida donde estabas en tu mejor carrera.
-
-        Translúcida y sin sprite a propósito: un fantasma opaco con la
-        animación del jugador se confunde con el jugador, y en un salto
-        difícil eso es peor que no tenerlo.
-        """
-        previo = self._fantasma_previo
-        if previo is None or self._player is None:
-            return
-        punto = previo.posicion_en(self._speedrun.global_time)
-        if punto is None:
-            return
-        x, y = punto
-        offset = self._camera.offset
-        alto = self._player.rect.height
-        ancho = self._player.rect.width
-        silueta = pygame.Surface((ancho, alto), pygame.SRCALPHA)
-        silueta.fill((*self._COLOR_FANTASMA, 90))
-        surface.blit(silueta, (int(x - offset.x), int(y - offset.y)))
+    # ── El fantasma vive en `stage_parts/fantasma.py` ─────────────
+    #
+    # AUD-152: grabar, cargar, guardar y dibujar la mejor carrera.
 
     def _montar_reloj_musical(self) -> None:
         """AUD-137 — el compás del escenario, si lo tiene.

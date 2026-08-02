@@ -119,7 +119,14 @@ class TestLaCadenaLlegaHastaElFichero:
 
         from src.framework.scenes.stage_scene import StageScene
 
-        fuente = inspect.getsource(StageScene)
+        # Se lee la clase **y sus padres**: AUD-152 movió la tabla de sonidos
+        # a un mixin, y mirar sólo `StageScene` habría dado un fallo que dice
+        # «el enemigo muere en silencio» cuando lo único que pasó es que el
+        # texto está una clase más arriba.
+        fuente = "\n".join(
+            inspect.getsource(c) for c in StageScene.__mro__
+            if c.__module__.startswith("src.")
+        )
         assert "sfx_enemies_die_small" in fuente
         assert "sfx_enemies_die_large" in fuente
 
