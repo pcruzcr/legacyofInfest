@@ -202,6 +202,45 @@ def check_model(path: Path) -> None:
         ERRORS.append(f"[MODEL LOAD FAILED] {path}: {e}")
 
 
+#: Cabecera mágica esperada por extensión de audio.
+#:
+#: AUD-159 — siete ficheros `.ogg` de `assets/music/` eran **WAV** (empiezan
+#: por `RIFF`). SDL se fía de la extensión, así que `pygame.mixer.music.load`
+#: los rechazaba con «Not an Ogg Vorbis audio stream» y el escenario se jugaba
+#: **en silencio**: `StageScene` sólo registra un aviso y sigue.
+#:
+#: Costó verlo porque el juego prefiere `.wav` y cae al `.ogg` sólo si no hay
+#: `.wav`. De los siete, cuatro no tenían gemelo —`bgm_boss`, `bgm_zone1`,
+#: `bgm_zone2`, `bgm_zone3`— y ésos eran los que sonaban a nada. Los otros
+#: tres tienen al lado un `.wav` de 8 a 12 segundos que el generador de
+#: assets produce como marcador de posición, así que el juego lleva meses
+#: reproduciendo el marcador en vez de la pista de 60 s que hay en el `.ogg`.
+CABECERAS_DE_AUDIO: dict[str, bytes] = {
+    ".ogg": b"OggS",
+    ".wav": b"RIFF",
+}
+
+
+def check_audio_format(path: Path) -> None:
+    """Que la extensión diga la verdad sobre el contenido."""
+    esperada = CABECERAS_DE_AUDIO.get(path.suffix.lower())
+    if esperada is None:
+        return
+    try:
+        cabecera = path.read_bytes()[:4]
+    except OSError as exc:
+        WARNINGS.append(f"[AUDIO UNREADABLE] {path}: {exc}")
+        return
+    if cabecera != esperada:
+        real = next((ext for ext, magia in CABECERAS_DE_AUDIO.items()
+                     if magia == cabecera), f"desconocido ({cabecera!r})")
+        WARNINGS.append(
+            f"[AUDIO EXTENSION LIES] {path}: la extensión dice "
+            f"«{path.suffix}» y el contenido es {real}. SDL se fía de la "
+            f"extensión, así que este fichero NO se puede reproducir."
+        )
+
+
 def check_sound(path: Path) -> None:
     """Comprueba que el archivo se pueda decodificar, si hay mezclador.
 
@@ -391,6 +430,14 @@ def main() -> int:
         check_file(p, "Sound")
         if p.exists():
             check_sound(p)
+
+    # AUD-159 — la extensión de TODO el audio, no sólo el de la lista de
+    # requeridos: los cuatro ficheros que dejaban escenarios mudos no estaban
+    # en `REQUIRED_SOUNDS`, y por eso el validador pasaba en verde mientras el
+    # juego se jugaba en silencio.
+    for p in sorted(ASSETS_DIR.rglob("*")):
+        if p.is_file() and p.suffix.lower() in CABECERAS_DE_AUDIO:
+            check_audio_format(p)
 
     # Report
     if WARNINGS:

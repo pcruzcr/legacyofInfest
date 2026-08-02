@@ -43,11 +43,9 @@ def _conmutar_mantener() -> bool:
     cambiarla desde el menú de pausa y esperar que surta efecto al volver, no
     al reiniciar.
     """
-    try:
-        from src.engine.core import user_settings
-        return bool(user_settings.get().hold_to_press)
-    except Exception:            # el juego sigue: el juego se sigue jugando
-        return False
+    from src.engine.core import user_settings
+
+    return bool(user_settings.preferencia("hold_to_press", False))
 
 
 class InputManager:

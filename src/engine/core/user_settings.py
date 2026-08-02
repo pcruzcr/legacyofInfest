@@ -278,3 +278,46 @@ def reset() -> None:
     """Forget the loaded preferences so the next get() re-reads them."""
     global _current
     _current = None
+    _AVISADAS.clear()
+
+
+#: Preferencias por las que ya se avisó. Un aviso por nombre y no uno por
+#: fotograma: estas lecturas ocurren dentro del bucle de juego y un registro
+#: que escupe sesenta líneas por segundo no lo lee nadie.
+_AVISADAS: set[str] = set()
+
+
+def preferencia(nombre: str, por_defecto: Any) -> Any:
+    """Lee una preferencia sin que un fallo tumbe el fotograma — pero avisando.
+
+    AUD-157 — por qué existe
+    =========================
+    Cinco sitios del motor —entrada, tema, cámara y dos del diálogo— leían una
+    preferencia envuelta en ``try: ... except Exception: return <defecto>``. La
+    intención era buena: dibujar y jugar importan más que una opción.
+
+    El problema es qué puede fallar ahí de verdad. ``get()`` **no lanza**:
+    ``UserSettings.load()`` atrapa el fichero que falta, el JSON roto y los
+    valores inválidos, y devuelve los valores por defecto. Lo único que puede
+    saltar es un ``AttributeError`` por un campo renombrado — es decir, un
+    error del programador. Y esos cinco bloques lo convertían en «la opción
+    deja de funcionar, en silencio, para todo el mundo».
+
+    Es exactamente la forma de fallo que este proyecto lleva un mes cazando, y
+    la que dejó el sistema de diálogo inalcanzable durante meses (AUD-127).
+
+    Así que se conserva la red —el juego sigue— y se le pone una alarma: la
+    primera vez que una preferencia no se puede leer, queda escrita en el
+    registro con su nombre.
+    """
+    try:
+        return getattr(get(), nombre)
+    except Exception as exc:      # se registra y se sigue: el juego no para
+        if nombre not in _AVISADAS:
+            _AVISADAS.add(nombre)
+            logger.warning(
+                "preferencia «%s» ilegible (%s): se usa %r. Si el campo se "
+                "renombró, esta opción está apagada para todo el mundo.",
+                nombre, exc, por_defecto,
+            )
+        return por_defecto

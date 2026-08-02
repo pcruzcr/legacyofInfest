@@ -126,11 +126,9 @@ def escalar_texto(size: int) -> int:
     Si la preferencia no se puede leer se devuelve el tamaño original: el juego
     tiene que dibujar texto aunque la configuración esté rota.
     """
-    try:
-        from src.engine.core import user_settings
-        escala = user_settings.get().text_scale
-    except Exception:            # el juego sigue: dibujar es más importante
-        return size
+    from src.engine.core import user_settings
+
+    escala = user_settings.preferencia("text_scale", 1.0)
     return max(_TAMANO_MINIMO, round(size * escala))
 
 

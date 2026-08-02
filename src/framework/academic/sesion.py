@@ -24,15 +24,21 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from src.engine.core import settings
+#: Dónde se guardan los ficheros de progreso, uno por estudiante.
+# AUD-157 — el estado del jugador va al directorio del usuario.
+#
+# `PROJECT_ROOT` es el árbol de instalación, y una versión empaquetada
+# puede estar en un sitio de sólo lectura. Es la misma corrección que
+# AUD-032 aplicó a las preferencias y a los logros y que aquí se quedó
+# sin aplicar.
+from src.engine.core.user_settings import user_data_dir
 from src.framework.academic.progress import (
     ProgresoAcademico,
     ResultadoIntento,
     es_correo_valido,
 )
 
-#: Dónde se guardan los ficheros de progreso, uno por estudiante.
-DIRECTORIO_PROGRESO: Path = settings.PROJECT_ROOT / "saves" / "academico"
+DIRECTORIO_PROGRESO: Path = user_data_dir() / "saves" / "academico"
 
 
 class SesionAcademica:

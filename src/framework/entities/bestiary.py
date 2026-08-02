@@ -12,11 +12,16 @@ from typing import Any
 
 import orjson
 
-from src.engine.core import settings
+from src.engine.core.user_settings import user_data_dir
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_BESTIARY_PATH: Path = settings.PROJECT_ROOT / "saves/bestiary.json"
+# AUD-157 — el estado del jugador va al directorio del usuario.
+#
+# `PROJECT_ROOT` es el árbol de instalación, y una versión empaquetada puede
+# estar en un sitio de sólo lectura. Es la misma corrección que AUD-032 aplicó
+# a las preferencias y a los logros y que aquí se quedó sin aplicar.
+_DEFAULT_BESTIARY_PATH: Path = user_data_dir() / "saves" / "bestiary.json"
 
 
 class BestiaryEntry:
