@@ -1,0 +1,234 @@
+"""AUD-201/197 — los dos modos que el jugador no podía ver.
+
+Boss Rush entraba y se quedaba en negro
+========================================
+`TitleScene._activate_option` hace lo mismo en las once opciones: arrancar el
+fundido y **luego** cambiar de pantalla. La rama de Boss Rush lo hacía al revés
+—entraba al jefe y después pedía el fundido de salida— y ese orden importa,
+porque `replace()` arranca el fundido de **entrada**. Invertido, el de salida
+llegaba el último y ganaba.
+
+`TransitionManager.update` deja `_fade_alpha = 255` al terminar un fundido de
+salida, y `draw` pinta el velo negro siempre que el alfa sea mayor que cero, sin
+mirar si la transición sigue activa. Así que no era un parpadeo: el jefe se
+cargaba, se ejecutaba y sonaba debajo de una pantalla negra permanente.
+
+El speedrun no existía para el jugador
+=======================================
+El cronómetro corría en todos los escenarios y nadie llegaba a ver un solo
+número:
+
+* `SpeedrunTimer.save()` no lo llamaba nadie, así que los tiempos vivían en
+  memoria y morían con la escena;
+* `LeaderboardScene` no leía la partida —pese a que su docstring lo prometía—
+  sino que mostraba **tiempos escritos a mano**: «Stage 0: 1:23.45», «Boss
+  Venado: 0:45.12». Números inventados presentados como récords del jugador;
+* ninguna opción de menú llevaba a esa pantalla.
+
+Un marcador que enseña cifras falsas es peor que no tener marcador: el jugador
+que ve «1:23.45» sin haber jugado nunca aprende que el juego miente.
+"""
+from __future__ import annotations
+
+import json
+
+import pytest
+
+from src.engine.core import settings
+
+
+@pytest.fixture
+def contexto(_pygame_init):
+    """Un `GameContext` cableado como en producción."""
+    import pygame
+
+    from src.engine.audio.audio_manager import AudioManager
+    from src.engine.core.event_bus import EventBus
+    from src.engine.core.game_context import GameContext
+    from src.engine.core.save_manager import SaveManager
+    from src.engine.input.input_manager import InputManager
+    from src.engine.scene.scene_manager import SceneManager
+    from src.framework.entities import entity_factory
+
+    pygame.display.set_mode((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
+    entity_factory.ensure_registered()
+
+    ctx = GameContext(
+        input_manager=InputManager(),
+        audio_manager=AudioManager(),
+        scene_manager=None,
+        event_bus=EventBus(),
+        clock=None,
+        save_manager=SaveManager(),
+    )
+    ctx.scene_manager = SceneManager(ctx)
+    return ctx
+
+
+def _titulo(contexto):
+    from src.engine.scenes.title_scene import TitleScene
+
+    escena = TitleScene(contexto)
+    # Por la pila real: `SceneManager.current` lee `_stack[-1]`, y colocar la
+    # escena en un atributo inventado deja a `replace()` operando en el vacío.
+    contexto.scene_manager.replace(escena)
+    return escena
+
+
+def _alfa_tras_la_transicion(contexto, opcion: str) -> int:
+    """El alfa del velo negro cuando la transición ya ha terminado."""
+    escena = _titulo(contexto)
+    transicion = contexto.scene_manager.transition
+    escena._activate_option(opcion)
+    for _ in range(120):  # 2 s a 60 fps; el fundido dura 0,4 s
+        transicion.update(1.0 / 60.0)
+    return int(transicion._fade_alpha)
+
+
+# ── Boss Rush ──────────────────────────────────────────────────
+
+
+def test_boss_rush_no_deja_la_pantalla_en_negro(contexto) -> None:
+    """Entrar al modo tiene que dejar el jefe **visible**.
+
+    255 es negro opaco. Antes de AUD-201 ése era exactamente el valor final:
+    el modo arrancaba bien y no se veía nada.
+    """
+    assert _alfa_tras_la_transicion(contexto, "BOSS RUSH") == 0
+
+
+def test_boss_rush_termina_como_cualquier_otra_opcion(contexto) -> None:
+    """La prueba de fondo: ninguna opción del título se comporta distinto.
+
+    Se compara contra una pantalla que siempre funcionó en vez de fijar el
+    número a mano, para que el día que cambie el sistema de transiciones esto
+    siga midiendo «igual que las demás» y no «igual que en agosto de 2026».
+    """
+    referencia = _alfa_tras_la_transicion(contexto, "BESTIARY")
+    assert _alfa_tras_la_transicion(contexto, "BOSS RUSH") == referencia
+
+
+def test_boss_rush_encuentra_los_cuatro_jefes() -> None:
+    """Si el pareo de escenarios se rompe, el modo se queda sin combates."""
+    from src.engine.scenes.boss_rush_entry import escenarios_de_jefe
+
+    jefes = escenarios_de_jefe()
+    assert [stage_id for stage_id, _ in jefes] == [
+        "stage1_4_boss_venado",
+        "stage2_4_boss_rey",
+        "stage3_4_boss_gavilan",
+        "stage4_2_boss_paburu",
+    ]
+
+
+# ── Speedrun ───────────────────────────────────────────────────
+
+
+def test_el_titulo_lleva_a_los_records(contexto) -> None:
+    """Sin entrada de menú, la pantalla de récords no existe para el jugador."""
+    escena = _titulo(contexto)
+    etiquetas = [str(item.value) for item in escena._menu.items]
+    assert "RECORDS" in etiquetas
+
+
+def test_elegir_records_abre_la_pantalla_de_records(contexto) -> None:
+    from src.engine.scenes.leaderboard_scene import LeaderboardScene
+
+    escena = _titulo(contexto)
+    escena._activate_option("RECORDS")
+    assert isinstance(contexto.scene_manager.current, LeaderboardScene)
+
+
+def test_alguien_guarda_los_tiempos_al_terminar_un_escenario() -> None:
+    """El defecto no era que `save()` funcionara mal: era que nadie lo llamaba.
+
+    Se comprueba el **cableado**, por AST, porque es la forma del fallo: un
+    subsistema entero, terminado y probado, que ninguna parte del juego invoca.
+    Ejercitar `SpeedrunTimer.save()` a mano habría pasado desde el primer día
+    sin que el jugador viera jamás un tiempo.
+    """
+    import ast
+    import pathlib
+
+    ruta = (pathlib.Path(__file__).resolve().parent.parent
+            / "src" / "framework" / "scenes" / "stage_scene.py")
+    arbol = ast.parse(ruta.read_text(encoding="utf-8"))
+
+    llamadas = {
+        nodo.func.attr
+        for nodo in ast.walk(arbol)
+        if isinstance(nodo, ast.Call)
+        and isinstance(nodo.func, ast.Attribute)
+        and isinstance(nodo.func.value, ast.Attribute)
+        and nodo.func.value.attr == "_speedrun"
+    }
+    assert "save" in llamadas, (
+        "stage_scene.py cronometra la partida y nunca la guarda: llama a "
+        f"{sorted(llamadas)} sobre `_speedrun` pero no a `save`. Los tiempos "
+        f"mueren con la escena y la tabla de récords no tiene qué leer"
+    )
+
+
+def test_lo_que_escribe_el_cronometro_es_lo_que_lee_la_tabla(tmp_path) -> None:
+    """Contrato entre quien escribe el fichero y quien lo muestra.
+
+    Los dos lados se escribieron por separado y con años de diferencia; si el
+    formato se mueve, esto lo dice antes que el jugador.
+    """
+    from src.engine.scenes import leaderboard_scene
+    from src.framework.stage.speedrun_mode import SpeedrunTimer
+
+    ruta = tmp_path / "speedrun.json"
+    reloj = SpeedrunTimer()
+    reloj.start()
+    reloj.update(12.5)
+    reloj.split("stage0")
+    reloj.save(ruta)
+
+    assert ruta.exists(), "el cronómetro no escribió nada"
+    datos = json.loads(ruta.read_text(encoding="utf-8"))
+    assert datos["splits"][0]["stage_id"] == "stage0"
+    assert datos["splits"][0]["time"] == pytest.approx(12.5)
+
+    # Y el lector lo entiende sin traducción por medio.
+    marcas = leaderboard_scene.mejores_tiempos(ruta)
+    assert marcas["stage0"] == pytest.approx(12.5)
+
+
+def test_la_tabla_de_records_no_inventa_tiempos(contexto, monkeypatch, tmp_path) -> None:
+    """Sin partidas jugadas, la tabla no puede enseñar marcas.
+
+    Antes mostraba «Stage 0: 1:23.45» y «Boss Venado: 0:45.12» escritos en el
+    código. Un jugador recién instalado veía récords que nunca hizo.
+    """
+    from src.engine.scenes import leaderboard_scene
+
+    monkeypatch.setattr(
+        leaderboard_scene, "_RUTA_SPEEDRUN", tmp_path / "no_existe.json",
+    )
+    escena = leaderboard_scene.LeaderboardScene(contexto)
+    escena.on_enter()
+
+    lineas = " ".join(escena._lineas_de_tiempos())
+    assert "1:23.45" not in lineas
+    assert "0:45.12" not in lineas
+    assert "--:--" in lineas, "sin datos, los huecos se marcan como vacíos"
+
+
+def test_la_tabla_de_records_lee_los_tiempos_reales(
+    contexto, monkeypatch, tmp_path,
+) -> None:
+    """Y cuando sí hay partida, enseña la de verdad."""
+    from src.engine.scenes import leaderboard_scene
+
+    ruta = tmp_path / "speedrun.json"
+    ruta.write_text(json.dumps({
+        "global_time": 65.0,
+        "splits": [{"stage_id": "stage0", "time": 65.0}],
+    }), encoding="utf-8")
+    monkeypatch.setattr(leaderboard_scene, "_RUTA_SPEEDRUN", ruta)
+
+    escena = leaderboard_scene.LeaderboardScene(contexto)
+    escena.on_enter()
+    lineas = " ".join(escena._lineas_de_tiempos())
+    assert "1:05.00" in lineas, f"no aparece el tiempo guardado: {lineas}"
