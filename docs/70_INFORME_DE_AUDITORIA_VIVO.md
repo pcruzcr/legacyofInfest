@@ -858,3 +858,182 @@ src/stages/stage1_2_la_soda/entities.py.bak2        (rastreado)
 
 Con el `RESPALDO.tmx` fuera, `grade_stage.py` deja de calificar un respaldo
 como si fuera un nivel del juego.
+
+---
+
+## Iteración 8 — 2026-08-02 — Calibración del salto y duplicación de documentos
+
+**Hallazgos:** AUD-204 (el calificador mide el salto con una fórmula que el
+motor no cumple → GAP-024), AUD-205 (cinco documentos contenían su propio
+cuerpo dos veces).
+
+### AUD-204 — 3 baldosas, no 5,34
+
+`JumpEnvelope.from_settings()` calcula el alcance del salto con el tiro
+parabólico y `grade_stage.py` califica con ese número. Nadie había comprobado
+que coincidiera con el motor. Se construyó un banco que **ejecuta** al `Player`
+real sobre huecos sintéticos (`tests/playtest/jump_bench.py`, reproducible con
+`python -m tests.playtest.jump_bench`):
+
+| Hueco | Manteniendo la dirección | Soltando la dirección |
+|---|---|---|
+| 2 baldosas (32 px) | sí, 39 % de los despegues | sí, holgado |
+| 3 baldosas (48 px) | sí, **8 %** | sí, 94 % |
+| 4 baldosas (64 px) | **no** | sí, 61 % |
+| 5 baldosas (80 px) | **no** | sí, 27 % |
+| 6 baldosas (96 px) | no | no |
+
+Dos supuestos de la fórmula son falsos. `AirborneState` fija
+`velocity.x = walk_speed * 0.5` mientras haya dirección pulsada, así que la
+envolvente analítica (5,34 baldosas) describe una técnica experta —soltar la
+dirección en el aire conserva los 90 px/s del suelo— y no la natural, que llega
+a 3. Y `max_gap_with_air_jump` duplica el alcance a 10,69 baldosas apoyándose en
+un salto aéreo que **no está conectado**: en el aire la pulsación sólo se guarda
+en `_pending_jump` para gastarla al aterrizar.
+
+El daño cae del lado que no avisa: `classify_gap` etiqueta «cómodo» un hueco de
+4 baldosas que es imposible con entrada natural. El alcance vertical sí
+concuerda (5,64 teóricas / 5 medidas): el error es sólo horizontal.
+
+**No se cambió la física ni el calificador.** Apretar la envolvente rebajaría la
+nota de geometría de entregas ya calificadas, así que la decisión quedó
+registrada como GAP-024 y se tomó la salida acordada: documentar la técnica en
+`66_GUIA_DE_LEVEL_DESIGN.md` §1.3 y `04_PLAYER_SPEC.md` §4.1–4.2.
+`tests/test_calibracion_del_salto.py` fija los tres techos y falla si alguien
+toca `GRAVITY` o `PLAYER_JUMP_FORCE` — comprobado por mutación: 800→700 y
+800→900, y −380→−420, los tres hacen fallar la suite.
+
+### AUD-205 — cinco documentos duplicados, y ya estaban divergiendo
+
+La pasada que añade el cuerpo traducido tras `--- Traducción al Español ---`
+corrió sobre documentos **ya escritos en español**. Sin nada que traducir, emitió
+una copia casi idéntica.
+
+Medido sobre los 54 documentos con separador, los dos grupos no se solapan:
+
+| Grupo | Similitud entre mitades | Cuántos |
+|---|---|---|
+| Duplicados accidentales (español arriba y abajo) | 88,6 % – 96,2 % | 5 |
+| Bilingües legítimos (inglés arriba, español abajo) | 0 % – 24,8 % | 49 |
+
+Los cinco: `35_USER_MANUAL`, `36_STUDENT_MANUAL`, `37_DEMO_QUICK_GUIDE`,
+`38_STAGE_BOSS_GUIDE` y `Obsidian_Home`.
+
+Lo que confirma que el riesgo era real y no teórico: **las dos copias ya habían
+empezado a separarse**. La mitad de abajo de `36` decía «Tus assignments» y la
+de arriba «Tus assignment»; y la de arriba de `37` tenía dos ideogramas chinos
+—`método de` seguido de U+7279 y U+5F81, «características» en chino— donde la de
+abajo decía «características». Por eso no se
+truncó por el separador sin más: se portaron las correcciones de la mitad que se
+borraba, y se adoptaron sus etiquetas de metadatos en español.
+
+`tests/test_documentos_sin_duplicar.py` lo vigila con tres reglas. Hacen falta
+las tres: la del H1 repetido no ve `Obsidian_Home`, porque ahí la pasada **sí**
+tradujo el titular y sólo duplicó el cuerpo. Sin el arreglo fallan 10 casos; con
+él, en verde.
+
+---
+
+## Iteración 9 — 2026-08-02 — Lo que se veía al jugar
+
+Origen: informe de quien jugó la compilación —«no vemos el boss rush ni el
+speedrun, y el texto dentro del juego está muy pequeño». Los tres son ciertos y
+ninguno era el que parecía.
+
+**Hallazgos:** AUD-201 (Boss Rush entraba y dejaba la pantalla en negro),
+AUD-202 (el speedrun no existía para el jugador), AUD-203 (el kit de interfaz
+usaba la tipografía más pequeña disponible).
+
+### AUD-201 — el modo arrancaba bien y no se veía nada
+
+`BOSS RUSH` **sí** estaba en el menú desde AUD-191, en la posición 7 de 11, y
+las once opciones caben en pantalla (`_max_visible = 13`). El pareo de
+escenarios también funciona: los cuatro jefes se encuentran en orden.
+
+Lo que fallaba era el orden de dos líneas. Las otras diez opciones arrancan el
+fundido y **luego** cambian de pantalla; ésta entraba al jefe primero y pedía el
+fundido de salida después, así que el fundido de entrada que dispara `replace()`
+llegaba antes y lo pisaba el de salida.
+
+No es un parpadeo. `TransitionManager.update` deja el velo en alfa **255** al
+terminar un fundido de salida, y `draw` lo pinta siempre que el alfa sea mayor
+que cero, mire o no si la transición sigue activa. Medido, dos segundos después
+de elegir la opción:
+
+| Opción | Alfa final del velo |
+|---|---|
+| BESTIARY (referencia) | 0 — se ve |
+| BOSS RUSH (antes) | **255 — negro opaco** |
+| BOSS RUSH (después) | 0 |
+
+El jefe se cargaba, corría y sonaba debajo de una pantalla negra permanente.
+
+### AUD-202 — el cronómetro llevaba años midiendo para nadie
+
+Aquí no había una puerta que abrir: faltaba la cadena entera.
+
+| Eslabón | Estado medido |
+|---|---|
+| `SpeedrunTimer` corre en cada escenario | ✅ ya funcionaba |
+| Alguien llama a `SpeedrunTimer.save()` | ❌ **nadie**, en todo `src/` |
+| `LeaderboardScene` lee la partida | ❌ tiempos escritos a mano en el código |
+| Alguna opción de menú lleva a esa pantalla | ❌ ninguna |
+
+El segundo es el grave. La pantalla mostraba «Stage 0: 1:23.45» y «Boss Venado:
+0:45.12» como literales, mientras su propia cabecera prometía *«Reads from save
+data»*. Un jugador recién instalado veía récords que nunca hizo. Un marcador que
+enseña cifras falsas es peor que no tener marcador: enseña a no fiarse del resto
+de lo que el juego afirma.
+
+Los cuatro eslabones quedan cerrados: se guarda al terminar el escenario (sin
+cortar la partida si el disco falla), la tabla lee `saves/speedrun.json` y enseña
+`--:--.--` donde no hay marca, hay opción `RECORDS` en el título, y salir de ahí
+vuelve al título en vez de al menú de demos académicas.
+
+### AUD-203 — `FONT_BODY = 20` no eran 20 px
+
+La queja era comparativa —el texto del juego «ni se nota» al lado del de
+Opciones— y esa comparación era la pista. Opciones es la única pantalla dibujada
+con `pygame_gui`; el resto usa `theme.font()`, que construía
+`pygame.font.Font(None, size)`: la tipografía por defecto de pygame, que entrega
+mucha menos tinta por punto pedido que cualquier TTF.
+
+Alto de tinta real de «Salud», a escala 1.0x:
+
+| Constante | Por defecto (antes) | `game.ttf` (ahora) |
+|---|---|---|
+| `FONT_TINY` (15) | 7 px | 9 px |
+| `FONT_BODY` (20) | **9 px** | **12 px** |
+| `FONT_TITLE` (38) | 19 px | 21 px |
+
+Los 9 px del cuerpo competían con los **12 px** que `pygame_gui` dibuja pidiendo
+14. La pantalla de Opciones tenía la letra un tercio más alta que el resto del
+juego pidiendo un tamaño casi la mitad.
+
+La solución no fue subir las constantes —eso descuadra maquetas— sino usar
+`game.ttf`, la tipografía propia que la pantalla de título ya usaba por su
+cuenta: el kit era el que iba por libre. Cierra el hueco y además **ocupa menos
+ancho** (−16 % en «CONTINUAR PARTIDA»), así que no desborda nada.
+
+Ganancia medida, a las dos escalas que importan:
+
+| Escala | `FONT_BODY` antes | después |
+|---|---|---|
+| 1.0x | 9 px | 12 px (+33 %) |
+| 2.0x | 20 px | 23 px (+15 %) |
+
+### Dos cosas que aparecieron por el camino
+
+**La máquina de quien jugó tiene `text_scale = 2.0`**, el máximo de
+accesibilidad. Importa para leer los números de arriba —lo que se ve ahí es la
+columna de 2.0x— y destapó algo peor: `escalar_texto()` lee la configuración del
+jugador y `conftest.py` **no la aísla**, así que la suite mide distinto según el
+`config.json` de quien la ejecuta. La primera versión de estas pruebas pasó sin
+comprobar nada por eso; ahora fijan la escala a mano.
+
+**Dos pruebas fijaban lo que no importaba.**
+`test_demo_scenes` exigía `labels.index("ACADEMIC DEMOS") == 6`, una posición
+absoluta que se rompía con cada opción nueva del menú: con BOSS RUSH pasó a 7 y
+con RECORDS a 8. Ahora comprueba el orden relativo, que es lo que se quería
+decir. Y `test_ui_consistency` reclamaba `boss_rush_entry.py` como escena sin
+migrar: vive en `scenes/` pero son dos funciones que no dibujan un píxel.
