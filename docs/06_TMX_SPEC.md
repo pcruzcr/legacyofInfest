@@ -129,7 +129,7 @@ All object positions in Tiled use pixel coordinates with the origin at the top-l
 | `MessageTrigger` | Rectangle | `text`, `duration` | Show a tutorial message |
 | `MessageTrigger_Once` | Rectangle | `text`, `duration` | Same, but only the first time |
 | `Waypoint` | Point | `owner_id`, `waypoint_index` | Bézier/patrol waypoint for an entity |
-| `HazardZone` | Rectangle | `damage`, `damage_type` | Persistent damage zone |
+| `HazardZone` | Rectangle | `damage`, `damage_type`, `sube`, `sube_hasta`, `arranca_con`, `visible` | Persistent damage zone. El motor la dibuja con un aviso rojo que late; ponle `visible=false` si tu mapa ya pinta sus propios pinchos (AUD-228) |
 | `DeathPit` | Rectangle | — | Falling in kills the player |
 | `CameraLock` | Rectangle | `lock_x`, `lock_y` | Override camera scroll in zone |
 | `BossVenado` | Point | — | Spawn the boss as a normal entity type |

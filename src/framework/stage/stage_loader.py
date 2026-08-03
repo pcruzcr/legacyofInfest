@@ -136,6 +136,17 @@ class HazardZone:
     #: Nombre del evento que la pone en marcha. Vacío = arranca ya.
     arranca_con: str = ""
 
+    #: Si el motor la pinta. AUD-228 — antes **no se pintaba ninguna zona fija**,
+    #: sólo las que suben, y el contrato implícito era que el diseñador dibujara
+    #: pinchos en las baldosas. Ese contrato no estaba escrito y no se cumplía:
+    #: los dos únicos mapas del proyecto con `HazardZone` fija —`stage0`, que es
+    #: el que copian los estudiantes, y `stage3_3_el_patio`— hacían daño desde un
+    #: rectángulo invisible.
+    #:
+    #: Se pone a `false` en el TMX cuando el mapa **sí** trae su propio arte de
+    #: peligro y el aviso del motor sobraría encima.
+    visible: bool = True
+
     #: Estado interno. `_alto_inicial` guarda la altura original porque el
     #: `rect` es mutable y lo vamos a modificar en sitio.
     activa: bool = True
@@ -343,6 +354,12 @@ class StageData:
     fog_of_war: float = 0.0
     #: AUD-111 — capa de ondas de agua sobre la escena.
     water_effect: bool = False
+    #: AUD-226 — fuerza de los rayos de luz volumétricos. 0 = apagados.
+    #: Sólo hacen algo con el camino GL: son una pasada de sombreador y no
+    #: tienen equivalente por CPU, así que un escenario que los pida se ve
+    #: igual que siempre en una máquina sin ModernGL. El foco no se declara
+    #: aquí —lo elige la escena, que es quien sabe qué luz hay en pantalla.
+    god_rays: float = 0.0
 
 
 REQUIRED_LAYERS: tuple[str, ...] = (
@@ -628,6 +645,7 @@ class StageLoader:
         # AUD-111 — VFX opcionales. Apagados salvo que el mapa los pida.
         fog_of_war = cls._safe_float(props.get("fog_of_war", 0.0), "fog_of_war")
         water_effect = cls._bool_de(props.get("water_effect"), por_defecto=False)
+        god_rays = cls._safe_float(props.get("god_rays", 0.0), "god_rays")
 
         map_data = pyscroll.data.TiledMapData(tmx_data)
         with warnings.catch_warnings():
@@ -669,6 +687,7 @@ class StageLoader:
             season=season,
             fog_of_war=fog_of_war,
             water_effect=water_effect,
+            god_rays=god_rays,
         )
 
     @classmethod
@@ -1363,6 +1382,10 @@ class StageLoader:
             sube=max(0.0, sube),
             sube_hasta=sube_hasta,
             arranca_con=str(props.get("arranca_con", "") or ""),
+            # Tiled escribe los booleanos como `"true"`/`"false"`, y la cadena
+            # `"false"` es verdadera en Python: leerla sin convertir haría que
+            # `visible=false` no apagara nada.
+            visible=str(props.get("visible", "true")).lower() != "false",
         ))
 
     @classmethod
