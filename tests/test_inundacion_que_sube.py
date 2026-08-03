@@ -377,9 +377,17 @@ class TestElAguaSeVe:
             "invisible que además se mueve"
         )
 
-    def test_una_zona_fija_no_se_dibuja(self, sistema) -> None:
-        """Los 15 escenarios entregados tienen zonas fijas pintadas con tiles.
-        Dibujarlas encima las taparía."""
+    def test_una_zona_fija_no_la_dibuja_este_metodo(self, sistema) -> None:
+        """`_draw_inundaciones` es sólo del agua: las fijas las pinta
+        `_draw_zonas_de_dano`, con otro color y otro pulso.
+
+        AUD-228: aquí ponía que «los 15 escenarios entregados tienen zonas fijas
+        pintadas con tiles, dibujarlas encima las taparía». Se comprobó y era
+        falso: en todo el proyecto hay **dos** `HazardZone` fijas —`stage0` y
+        `stage3_3_el_patio`— y ninguna de las dos tiene arte de peligro debajo.
+        La suposición nunca se midió, y mientras tanto el nivel que copian los
+        estudiantes hacía daño desde un rectángulo invisible.
+        """
         lienzo = pygame.Surface((200, 200))
         lienzo.fill((0, 0, 0))
         escenario = self._escenario(HazardZone(rect=pygame.Rect(0, 100, 200, 100)))
@@ -418,3 +426,90 @@ class TestElAguaSeVe:
         primero = sistema._agua_cache
         sistema._draw_inundaciones(lienzo, escenario, pygame.Vector2(0, 0))
         assert sistema._agua_cache is primero
+
+
+class TestLasZonasFijasTambienSeVen:
+    """AUD-228 — «una zona de daño que no se ve es una trampa», y esa regla el
+    motor sólo se la aplicaba al agua.
+
+    Las fijas no se pintaban nunca. El contrato implícito era que el diseñador
+    dibujara pinchos en las baldosas, pero no estaba escrito en ningún sitio y
+    no se cumplía: los dos únicos mapas del proyecto con una `HazardZone` fija
+    son `stage0` —el que los estudiantes copian— y `stage3_3_el_patio`, y
+    ninguno tenía arte debajo.
+    """
+
+    @pytest.fixture
+    def sistema(self):
+        from src.framework.stage.drawing_system import DrawingSystem
+
+        return DrawingSystem()
+
+    def _escenario(self, *zonas):
+        return type("E", (), {"hazard_zones": list(zonas)})()
+
+    def test_una_zona_fija_se_ve(self, sistema) -> None:
+        lienzo = pygame.Surface((200, 200))
+        lienzo.fill((0, 0, 0))
+        escenario = self._escenario(HazardZone(rect=pygame.Rect(0, 100, 200, 100)))
+        sistema._draw_zonas_de_dano(lienzo, escenario, pygame.Vector2(0, 0))
+        assert lienzo.get_at((100, 150))[:3] != (0, 0, 0), (
+            "la zona de daño sigue siendo invisible: el jugador pierde salud "
+            "sin nada en pantalla que lo explique"
+        )
+
+    def test_avisa_en_rojo_y_no_en_el_azul_del_agua(self, sistema) -> None:
+        """Son dos mecánicas distintas y tienen que separarse de un vistazo."""
+        lienzo = pygame.Surface((200, 200))
+        lienzo.fill((0, 0, 0))
+        escenario = self._escenario(HazardZone(rect=pygame.Rect(0, 100, 200, 100)))
+        sistema._draw_zonas_de_dano(lienzo, escenario, pygame.Vector2(0, 0))
+        r, g, b = lienzo.get_at((100, 150))[:3]
+        assert r > b, f"el aviso de daño sale azulado ({r},{g},{b})"
+
+    def test_se_sigue_viendo_el_nivel_debajo(self, sistema) -> None:
+        """Es un aviso, no una capa de pintura: el suelo tiene que leerse."""
+        lienzo = pygame.Surface((200, 200))
+        lienzo.fill((30, 200, 40))          # una plataforma verde bien visible
+        escenario = self._escenario(HazardZone(rect=pygame.Rect(0, 100, 200, 100)))
+        sistema._draw_zonas_de_dano(lienzo, escenario, pygame.Vector2(0, 0))
+        _r, g, _b = lienzo.get_at((100, 150))[:3]
+        assert g > 90, "el aviso es opaco y tapa el nivel"
+
+    def test_el_agua_no_la_pinta_este_metodo(self, sistema) -> None:
+        """La que sube ya la dibuja `_draw_inundaciones`. Pintarla dos veces la
+        dejaría del color equivocado."""
+        lienzo = pygame.Surface((200, 200))
+        lienzo.fill((0, 0, 0))
+        escenario = self._escenario(
+            HazardZone(rect=pygame.Rect(0, 100, 200, 100), sube=30.0),
+        )
+        sistema._draw_zonas_de_dano(lienzo, escenario, pygame.Vector2(0, 0))
+        assert lienzo.get_at((100, 150))[:3] == (0, 0, 0)
+
+    def test_un_mapa_con_su_propio_arte_puede_apagarlo(self, sistema) -> None:
+        """`visible=false` en el TMX, para el que sí pintó sus pinchos."""
+        lienzo = pygame.Surface((200, 200))
+        lienzo.fill((0, 0, 0))
+        escenario = self._escenario(
+            HazardZone(rect=pygame.Rect(0, 100, 200, 100), visible=False),
+        )
+        sistema._draw_zonas_de_dano(lienzo, escenario, pygame.Vector2(0, 0))
+        assert lienzo.get_at((100, 150))[:3] == (0, 0, 0)
+
+    def test_tiled_escribe_los_booleanos_como_texto(self) -> None:
+        """`"false"` es una cadena, y una cadena no vacía es verdadera en
+        Python: leerla sin convertir dejaría `visible=false` sin efecto."""
+        from src.framework.stage.stage_loader import StageData, StageLoader
+
+        stage = StageData(map_layer=None)  # type: ignore[arg-type]
+        obj = type("O", (), {"x": 0, "y": 0, "width": 32, "height": 16})()
+        StageLoader._handle_hazard_zone(stage, obj, {"visible": "false"})
+        assert stage.hazard_zones[0].visible is False
+
+        stage2 = StageData(map_layer=None)  # type: ignore[arg-type]
+        StageLoader._handle_hazard_zone(stage2, obj, {})
+        assert stage2.hazard_zones[0].visible is True, (
+            "sin la propiedad, una zona de daño se ve: es el valor por defecto "
+            "que evita el daño invisible"
+        )

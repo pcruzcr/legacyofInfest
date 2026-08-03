@@ -81,6 +81,7 @@ class DrawingSystem:
         self._debug_font = pygame.font.Font(None, 14)
         #: AUD-135 — lienzo del agua, cacheado al tamaño de la pantalla.
         self._agua_cache: pygame.Surface | None = None
+        self._peligro_cache: pygame.Surface | None = None
 
     def draw(self, ctx: DrawContext) -> None:
         surface = ctx.surface
@@ -133,6 +134,7 @@ class DrawingSystem:
         # rectángulo azul. Una zona de daño que no se ve es una trampa; una que
         # sube y no se ve es peor, porque cambia sin avisar.
         self._draw_inundaciones(surface, stage, offset)
+        self._draw_zonas_de_dano(surface, stage, offset)
 
         if ctx.enemy_trail_system:
             ctx.enemy_trail_system.draw(surface, offset)
@@ -150,12 +152,14 @@ class DrawingSystem:
     def _draw_inundaciones(
         self, surface: pygame.Surface, stage: Any, offset: pygame.Vector2,
     ) -> None:
-        """Dibuja las `HazardZone` que suben. Las fijas siguen invisibles.
+        """Dibuja las `HazardZone` que suben. De las fijas se ocupa
+        `_draw_zonas_de_dano`.
 
-        Una zona de daño fija se dibuja con tiles: el diseñador pinta pinchos o
-        lava y el rectángulo sólo marca dónde duele. Una que sube no puede
-        hacer eso —los tiles no se mueven—, así que el motor tiene que
-        dibujarla o el jugador recibe daño de la nada.
+        Aquí ponía que una zona fija «se dibuja con tiles: el diseñador pinta
+        pinchos o lava y el rectángulo sólo marca dónde duele». Ese contrato no
+        estaba escrito en ninguna parte y no se cumplía — ver AUD-228 —, así que
+        las fijas se pintan también, con otro color y otro pulso. Una que sube
+        no puede apoyarse en tiles en ningún caso, porque los tiles no se mueven.
 
         La superficie se cachea una vez al tamaño de la pantalla y luego se
         recorta con `area=`. Repintar un rectángulo con alfa cada fotograma
@@ -190,6 +194,76 @@ class DrawingSystem:
                 pygame.draw.line(
                     surface, self._COLOR_SUPERFICIE,
                     (visible.left, r.top), (visible.right, r.top), 2,
+                )
+
+    #: Rojo de aviso para las zonas de daño fijas. Deliberadamente distinto del
+    #: turquesa de la inundación: son dos cosas distintas y el jugador tiene que
+    #: poder separarlas de un vistazo.
+    _COLOR_PELIGRO = (215, 70, 55, 255)
+    _COLOR_BORDE_PELIGRO = (255, 160, 120)
+
+    def _draw_zonas_de_dano(
+        self, surface: pygame.Surface, stage: StageData,
+        offset: pygame.Vector2,
+    ) -> None:
+        """Pinta las zonas de daño **fijas** (AUD-228).
+
+        Hasta ahora el motor sólo dibujaba las que suben. El contrato implícito
+        para las fijas era que el diseñador pintara pinchos o lava en las
+        baldosas y que el rectángulo sólo marcara dónde duele — pero ese
+        contrato no estaba escrito en ninguna parte y no se cumplía. Los dos
+        únicos mapas del proyecto con una `HazardZone` fija son `stage0`, que es
+        el que los estudiantes copian, y `stage3_3_el_patio`, y **ninguno de los
+        dos** tenía arte debajo: se perdía salud desde un rectángulo invisible.
+
+        El comentario de `_draw_inundaciones` ya decía la regla —«una zona de
+        daño que no se ve es una trampa»— y sólo se la aplicaba al agua.
+
+        Late en vez de estar fija porque un tinte quieto se lee como parte del
+        decorado, y lo que hay que comunicar es que eso está **activo**. Un mapa
+        que sí trae su propio arte apaga esto con `visible=false` en el TMX.
+        """
+        zonas = [
+            hz for hz in getattr(stage, "hazard_zones", ())
+            if not getattr(hz, "sube_de_verdad", False)
+            and getattr(hz, "visible", True)
+            and getattr(hz, "activa", True)
+        ]
+        if not zonas:
+            return
+
+        ancho, alto = surface.get_size()
+        tinte = self._peligro_cache
+        if tinte is None or tinte.get_size() != (ancho, alto):
+            # Una sola superficie, cacheada al tamaño de la pantalla y recortada
+            # con `area=`. Repintar un rectángulo con alfa cada fotograma es la
+            # asignación por fotograma que AUD-023 vino a quitar.
+            tinte = pygame.Surface((ancho, alto), pygame.SRCALPHA)
+            tinte.fill(self._COLOR_PELIGRO)
+            self._peligro_cache = tinte
+
+        # El pulso viene del reloj de SDL y no de un `dt` acumulado: este método
+        # no recibe delta, y pedirlo obligaría a tocar la firma de `draw` y las
+        # 26 escenas que la usan.
+        fase = (pygame.time.get_ticks() % 1400) / 1400.0
+        tinte.set_alpha(int(48 + 42 * (1.0 - abs(fase * 2.0 - 1.0))))
+
+        pantalla = surface.get_rect()
+        for hz in zonas:
+            r = hz.rect.move(-int(offset.x), -int(offset.y))
+            visible = r.clip(pantalla)
+            if visible.width <= 0 or visible.height <= 0:
+                continue
+            surface.blit(
+                tinte, visible.topleft,
+                pygame.Rect(0, 0, visible.width, visible.height),
+            )
+            # El borde superior, opaco: es el que dice exactamente dónde empieza
+            # a doler, y es la única decisión que el jugador toma aquí.
+            if pantalla.top <= r.top <= pantalla.bottom:
+                pygame.draw.line(
+                    surface, self._COLOR_BORDE_PELIGRO,
+                    (visible.left, r.top), (visible.right, r.top), 1,
                 )
 
     #: Colores de los objetos interactivos. Se dibujan con formas planas y no
