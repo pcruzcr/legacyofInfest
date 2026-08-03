@@ -891,6 +891,172 @@ def _gen_bg_stage0_near(path, w=960, h=224):
     img.save(path)
 
 
+# ── Zona Final: el cementerio (bg_final_*) ──
+#
+# AUD-209: estas tres capas las hacía `_gen_procedural_bg`, o sea un degradado
+# con ruido y nada más — sin lápidas, sin árboles, sin horizonte. El 4-1, que es
+# el único nivel de la zona, acabó por eso apuntando al fondo del prólogo
+# (`background_zone = "stage0"`) y se jugaba dentro del castillo gótico del
+# principio: el documento de diseño prometía un cementerio y en pantalla había
+# otra cosa.
+#
+# La paleta no me la invento: es la que fija el Asset Bible
+# (`docs/20_ASSET_BIBLE.md`, «Cemetery background palette»).
+CEM_CIELO_ALTO = (10, 0, 20)      # morado casi negro
+CEM_CIELO_BAJO = (34, 22, 50)
+CEM_PIEDRA = (74, 74, 90)
+CEM_VERDE = (40, 200, 80)         # el verde espectral del canon
+CEM_LUNA = (200, 212, 200)
+CEM_TIERRA = (30, 20, 16)
+
+#: Dónde va la línea del suelo dentro de la imagen, en tanto por uno de su alto.
+#:
+#: No es una decisión estética, es aritmética. `StageLoader._try_append_bg`
+#: **estira** cada capa a los 800×600 de la resolución interna, sea cual sea su
+#: tamaño original, y el suelo del 4-1 está en la fila 30 de 38 — o sea a y=480
+#: de los 608 px del mapa, que en pantalla cae sobre y≈476 de 600. Todo lo que
+#: se dibuje por debajo de esa proporción queda **detrás de las baldosas del
+#: terreno** y no lo ve nadie.
+#:
+#: Se deja un margen: 0,72 pone el horizonte del cementerio un poco por encima
+#: del suelo que se pisa, que además es lo que hace que se lea como «el
+#: cementerio sigue hacia el fondo» y no como una calcomanía a la misma altura.
+CEM_HORIZONTE = 0.72
+
+
+def _lapida(draw, x, base, ancho, alto, color):
+    """Una lápida: el cuerpo y la cabeza redondeada."""
+    draw.rectangle((x, base - alto, x + ancho, base), fill=color)
+    draw.ellipse((x, base - alto - ancho // 2, x + ancho,
+                  base - alto + ancho // 2), fill=color)
+
+
+def _cruz(draw, x, base, alto, color):
+    """Una cruz de las que se ven desde lejos: dos trazos y ya."""
+    grosor = max(2, alto // 10)
+    draw.rectangle((x, base - alto, x + grosor, base), fill=color)
+    draw.rectangle((x - alto // 4, base - alto + grosor,
+                    x + grosor + alto // 4, base - alto + grosor * 2),
+                   fill=color)
+
+
+def _gen_bg_final_far(path, w=320, h=224):
+    """Capa lejana: cielo, estrellas, colinas y el círculo de piedra.
+
+    No lleva luna. La dibuja la escena (`stage4_1.py::_dibujar_luna`), porque
+    en este nivel la luna **baja acto a acto**: pintarla aquí la dejaría clavada
+    en el sitio y el reloj del nivel dejaría de moverse.
+    """
+    _ensure(path)
+    img = _gradient(w, h, CEM_CIELO_ALTO, CEM_CIELO_BAJO)
+    draw = ImageDraw.Draw(img)
+    rng = random.Random(410)
+    horizonte = int(h * CEM_HORIZONTE)
+    for _ in range(70):
+        sx, sy = rng.randint(0, w - 1), rng.randint(0, int(horizonte * 0.8))
+        br = rng.randint(90, 200)
+        draw.point((sx, sy), fill=(br, br, int(br * 0.95)))
+
+    # Colinas: dos crestas bajas, la de atrás más clara, para que el horizonte
+    # tenga profundidad sin necesitar más capas.
+    for cresta, tinte in ((horizonte - 16, (26, 20, 40)),
+                          (horizonte, (18, 14, 30))):
+        pts = [(0, h)]
+        for i in range(13):
+            pts.append((i * w // 12, cresta + rng.randint(-7, 7)))
+        pts.append((w, h))
+        draw.polygon(pts, fill=tinte)
+
+    # El círculo de piedra del acto V (§1 del diseño): siete monolitos en la
+    # línea del horizonte. Se ve desde el primer acto — es el sitio al que se
+    # camina durante todo el nivel, así que tiene que asomar **por encima** del
+    # campo de lápidas de la capa media, no perderse entre ellas.
+    base = horizonte - 10
+    for i, alto in enumerate((26, 36, 44, 50, 44, 36, 26)):
+        mx = int(w * 0.56) + i * 11
+        draw.rectangle((mx, base - alto, mx + 7, base), fill=(40, 36, 54))
+        # El dintel: dos piedras de pie y una encima es lo que hace que se lea
+        # como un círculo ceremonial y no como una valla.
+        if i in (1, 4):
+            draw.rectangle((mx - 2, base - alto - 5, mx + 20, base - alto),
+                           fill=(46, 42, 60))
+    img.save(path)
+
+
+def _gen_bg_final_mid(path, w=640, h=224):
+    """Capa media: el campo de lápidas, en silueta contra el cielo."""
+    _ensure(path)
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    rng = random.Random(411)
+    horizonte = int(h * CEM_HORIZONTE)
+
+    # Dos hileras. La de atrás es más pequeña y más clara: la misma piedra a más
+    # distancia, que es lo que convierte una fila de rectángulos en un campo.
+    for fila, (base, escala, color) in enumerate((
+        (horizonte - 14, 0.7, (44, 42, 56)),
+        (horizonte + 2, 1.0, CEM_PIEDRA),
+    )):
+        x = rng.randint(0, 20)
+        while x < w:
+            alto = int(rng.randint(14, 26) * escala)
+            ancho = int(rng.randint(7, 11) * escala)
+            if rng.random() < 0.25:
+                _cruz(draw, x, base, alto, color)
+            else:
+                _lapida(draw, x, base, ancho, alto, color)
+            # Un resplandor verde muy tenue al pie de algunas: son las que
+            # tienen nombre. El lore le pone al cementerio «luz espectral
+            # verde», y esto es lo que la pone en el fondo y no sólo en las
+            # partículas.
+            if fila == 1 and rng.random() < 0.3:
+                halo = Image.new("RGBA", (24, 12), (0, 0, 0, 0))
+                ImageDraw.Draw(halo).ellipse((0, 0, 23, 11),
+                                             fill=(*CEM_VERDE, 26))
+                img.paste(halo, (x - 6, base - 5), halo)
+            x += int(rng.randint(22, 40) * escala)
+
+    # El suelo del fondo, para que las lápidas se apoyen en algo.
+    draw.rectangle((0, horizonte + 2, w, h), fill=CEM_TIERRA)
+    img.save(path)
+
+
+def _gen_bg_final_near(path, w=960, h=224):
+    """Capa cercana: árboles secos y la verja."""
+    _ensure(path)
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    rng = random.Random(412)
+    horizonte = int(h * CEM_HORIZONTE)
+    tronco = (20, 16, 24)
+
+    def _rama(x, y, angulo, largo, nivel):
+        """Una rama que se parte en dos hasta agotarse. Tres niveles bastan
+        para que el árbol se lea como seco y no como un poste."""
+        if nivel == 0 or largo < 4:
+            return
+        x2 = x + math.cos(angulo) * largo
+        y2 = y - math.sin(angulo) * largo
+        draw.line((x, y, x2, y2), fill=tronco, width=max(1, nivel))
+        _rama(x2, y2, angulo + rng.uniform(0.3, 0.7), largo * 0.62, nivel - 1)
+        _rama(x2, y2, angulo - rng.uniform(0.3, 0.7), largo * 0.62, nivel - 1)
+
+    for tx in range(30, w, 150):
+        suelo = horizonte + 6
+        alto = rng.randint(60, 90)
+        draw.line((tx, suelo, tx, suelo - alto), fill=tronco, width=4)
+        for _ in range(3):
+            _rama(tx, suelo - alto + rng.randint(0, 12),
+                  rng.uniform(0.6, 2.5), alto * 0.45, 3)
+
+    # La verja: barrotes y pasamanos. Cierra el cementerio por delante.
+    draw.rectangle((0, horizonte - 2, w, horizonte), fill=(26, 24, 32))
+    for bx in range(0, w, 12):
+        draw.rectangle((bx, horizonte - 10, bx + 1, horizonte), fill=(26, 24, 32))
+    draw.rectangle((0, horizonte + 6, w, h), fill=CEM_TIERRA)
+    img.save(path)
+
+
 # ── Splash/title/story backgrounds ──
 
 def _gen_bg_splash(path, w=320, h=224):
@@ -1013,8 +1179,21 @@ def _gen_all_backgrounds():
         else:
             _gen_bg_stage0_near(p / "bg_stage0_near.png", bw, bh)
 
+    # Zona Final: el cementerio, a mano como el stage0 (ver AUD-209).
+    for layer, (bw, bh) in BG_SIZES.items():
+        p = A / "backgrounds" / "final"
+        _ensure(p)
+        if layer == "far":
+            _gen_bg_final_far(p / "bg_final_far.png", bw, bh)
+        elif layer == "mid":
+            _gen_bg_final_mid(p / "bg_final_mid.png", bw, bh)
+        else:
+            _gen_bg_final_near(p / "bg_final_near.png", bw, bh)
+
     # Other zones (procedural)
     for zone, (top, bot) in BG_ZONES.items():
+        if zone == "final":
+            continue
         for layer, (bw, bh) in BG_SIZES.items():
             p = A / "backgrounds" / zone
             _ensure(p)
