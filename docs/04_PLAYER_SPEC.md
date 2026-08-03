@@ -81,18 +81,34 @@ All player controls are routed through the `InputManager`. The player entity nev
 
 ### 4.1 Horizontal Movement
 
-The player moves horizontally at a constant walk speed. There is no acceleration or deceleration ramp. This keeps the movement model simple and SNES-authentic (Super Castlevania IV reference).
+The player moves horizontally at a constant speed. There is no acceleration or deceleration ramp. This keeps the movement model simple and SNES-authentic (Super Castlevania IV reference).
+
+That speed is **not** the same on the ground and in the air.
 
 | Property | Value | Unit |
 |---|---|---|
-| Walk speed | 90.0 | pixels/second |
+| Walk speed (grounded) | 90.0 | pixels/second |
+| Air control speed | 45.0 (`walk_speed * 0.5`) | pixels/second |
 | Direction | -1 (left) or +1 (right) | — |
 | Facing | Stored as `facing_direction: int` | — |
 
-**Velocity Calculation (per frame):**
+**Velocity Calculation (per frame):** velocity is set, not accumulated; `dt` is
+applied later, when `_resolve_collision` integrates position.
 ```
-velocity.x = direction * PLAYER_WALK_SPEED * dt
+grounded:  velocity.x = direction * PLAYER_WALK_SPEED          # 90 px/s
+airborne:  velocity.x = direction * PLAYER_WALK_SPEED * 0.5    # 45 px/s
 ```
+
+**Momentum carry (AUD-204).** Both assignments only happen when a direction key
+is held. `AirborneState` leaves `velocity.x` untouched when `move_x == 0`
+(`src/framework/entities/states/airborne.py`), so **releasing the direction key
+after take-off preserves the 90 px/s of the ground run** instead of dropping to
+the 45 px/s of air control. Holding the key forward is the slower option.
+
+This is not a quirk of the spec — it is measured. `tests/playtest/jump_bench.py`
+runs the real `Player` over synthetic gaps: holding the direction clears **3
+tiles**, releasing it clears **5**. Level designers need the first number, not
+the second; see `66_GUIA_DE_LEVEL_DESIGN.md` §1.3.
 
 **Crouch Lock:** When `CROUCHING`, horizontal velocity is forced to 0. The player cannot walk while crouched.
 
@@ -117,6 +133,15 @@ position.y += velocity.y * dt
 **Coyote Time:** The player may jump up to 6 frames after walking off a platform edge. This is a standard SNES-era movement quality-of-life feature.
 
 **Jump Cut:** If the player releases the jump button while ascending (velocity.y < 0), the vertical velocity is multiplied by 0.5 on that frame, producing a shorter hop. This allows variable jump height.
+
+**Air jump: constant present, mechanic absent (GAP-024).** `PLAYER_AIR_JUMPS = 1`
+exists in `settings.py` and `_can_jump()` has a branch for it, but no mid-air
+jump can ever fire: `AirborneState` stores a jump press in `_pending_jump` to
+spend it on landing, and the `_can_jump()` air branch is only ever reached from
+the grounded states, where the player is already standing on something. Measured
+reach is unchanged by pressing jump in mid-air. Do not design levels around a
+double jump, and do not treat `max_gap_with_air_jump` in `level_metrics.py` as a
+reachable distance.
 
 ### 4.3 Collision Resolution
 

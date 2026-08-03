@@ -336,4 +336,56 @@ Nunca borrar entradas - marcar como resueltas.
   precarga la viñeta en el constructor para evitar el costo de numpy en el
   primer frame.
 
+## [GAP-024] El calificador mide el salto con una fórmula que el motor no cumple
 
+- **File:** `src/framework/stage/level_metrics.py`, `scripts/grade_stage.py`
+- **Phase:** auditoría 2026-08-02, AUD-204
+- **Reason:** `JumpEnvelope.from_settings()` deriva el alcance del salto del tiro
+  parabólico —`velocidad × tiempo_de_vuelo`— usando `PLAYER_WALK_SPEED = 90`.
+  Medido sobre el `Player` real con `tests/playtest/jump_bench.py`, el motor no
+  se comporta así, y falla por dos sitios distintos:
+
+  - **Velocidad aérea.** `AirborneState` fija `velocity.x = walk_speed * 0.5`
+    (`src/framework/entities/states/airborne.py:52`) mientras haya dirección
+    pulsada. Manteniendo la dirección —lo que hace cualquiera— el jugador cruza
+    **3 baldosas**, no las 5,34 que promete la fórmula. Sólo se llega a 5 si se
+    **suelta** la dirección en el aire, porque entonces `velocity.x` no se
+    reescribe y conserva los 90 px/s del suelo. La fórmula describe esa técnica
+    experta, no la natural.
+  - **Salto aéreo inexistente.** `max_gap_with_air_jump` duplica el alcance a
+    171 px (10,69 baldosas) porque `PLAYER_AIR_JUMPS = 1`. Esa mecánica no está
+    conectada: en el aire, `AirborneState` sólo guarda la pulsación en
+    `_pending_jump` para gastarla al aterrizar, y la rama de `_can_jump` que
+    autorizaría el salto aéreo se consulta únicamente desde los estados de
+    suelo. Ninguna técnica medida cruza 6 baldosas.
+
+  El daño cae del lado peor —el calificador es **más permisivo** que el motor, así
+  que no avisa—. `classify_gap` etiqueta «cómodo» un hueco de 4 baldosas que es
+  imposible con entrada natural: un estudiante lo coloca, `grade_stage` se lo
+  aprueba como holgado y entrega un nivel que no se puede pasar. Y como
+  `reachable_platforms` y `exit_is_reachable` usan `max_gap_with_air_jump` como
+  alcance de conexión, el grafo de transitabilidad de los 17 mapas está
+  construido con el doble del salto real.
+
+  El alcance **vertical** sí concuerda: 90,25 px teóricos son 5,64 baldosas y se
+  suben 5. El error es sólo horizontal, que es donde entra la velocidad.
+
+  **Relación con AUD-192.** Aquella corrección exime de `design_completable` a
+  los mapas que traen objetos de movilidad, porque el grafo de saltos no los
+  modela. Reduce el radio de este defecto pero no lo toca: un mapa **sin**
+  resortes ni lianas —el caso normal de una primera entrega— se sigue juzgando
+  con el grafo, y el grafo se sigue construyendo con 171 px. Y `classify_gap`,
+  que es lo que etiqueta los huecos uno a uno, queda fuera de aquella exención
+  por completo.
+
+  No se corrige en esta iteración porque la corrección no es técnica sino
+  académica, y hay tres salidas incompatibles: (a) apretar la envolvente al
+  comportamiento natural, lo que **rebaja la nota de geometría de entregas ya
+  calificadas**; (b) conectar el salto aéreo, que cambia la física de los 17
+  mapas de golpe; (c) dejar el calificador como está y documentar la técnica
+  experta en el material del curso. Elegir es del profesor, no del linter.
+- **Medición:** `python -m tests.playtest.jump_bench` imprime la tabla completa.
+  `tests/test_calibracion_del_salto.py` fija los tres techos (natural 3, experta
+  5, repecho 5) y falla si alguien toca `GRAVITY` o `PLAYER_JUMP_FORCE`.
+
+---

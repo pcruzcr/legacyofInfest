@@ -95,6 +95,52 @@ Reglas de la curva:
 - **Los jefes no tienen límite de tiempo.** El reloj se oculta al entrar en la
   arena (protocolo de `17_BOSS_SPEC.md` §8.3).
 
+#### Cuánto salta el jugador de verdad
+
+Estas cifras están **medidas** ejecutando al jugador real sobre huecos
+sintéticos, no calculadas con la fórmula del tiro parabólico. Reprodúcelas con:
+
+```
+python -m tests.playtest.jump_bench
+```
+
+| Hueco | Manteniendo la dirección | Soltando la dirección |
+|---|---|---|
+| 1 baldosa (16 px) | sí, holgado | sí, holgado |
+| 2 baldosas (32 px) | sí, 39 % de los despegues | sí, holgado |
+| 3 baldosas (48 px) | **sí, sólo 8 %** | sí, 94 % |
+| 4 baldosas (64 px) | **no** | sí, 61 % |
+| 5 baldosas (80 px) | **no** | sí, 27 % |
+| 6 baldosas (96 px) o más | no | no |
+
+Repechos (escalones que hay que subir de un salto): hasta **5 baldosas**
+(80 px). La sexta no se sube.
+
+Tres reglas salen de esa tabla:
+
+1. **Diseña con 2 baldosas.** Es el hueco que cualquiera cruza sin pensar.
+2. **3 baldosas es un obstáculo, no un tránsito.** Sale de menos de uno de cada
+   diez despegues manteniendo la dirección. Úsalo cuando quieras que cueste, con
+   checkpoint cerca, y nunca como único camino a la salida.
+3. **4 baldosas o más exige una técnica que el jugador no tiene por qué
+   conocer** (la de abajo). Si pones una, pon también otra ruta.
+
+**La técnica: soltar la dirección en el aire.** El motor sólo reescribe la
+velocidad horizontal mientras haya una dirección pulsada. En el aire esa
+reescritura vale la mitad (45 px/s en lugar de 90). Por tanto, **soltar** la
+tecla de dirección justo después de despegar conserva los 90 px/s de la carrera
+y llega casi el doble de lejos. Manteniéndola pulsada se avanza más despacio.
+
+Es contraintuitivo y no está señalizado en ninguna parte del juego. Cuenta con
+que un alumno que juegue tu nivel por primera vez **no** la conoce.
+
+> **Aviso sobre `grade_stage.py`.** El calificador usa la fórmula analítica, que
+> describe la técnica de soltar la dirección, no la natural. Etiqueta «cómodo»
+> un hueco de 4 baldosas que con entrada natural es imposible, y su grafo de
+> transitabilidad supone además un salto aéreo que el motor no tiene. Aprobar
+> geometría no garantiza que el nivel se pueda pasar: **hay que jugarlo**.
+> Detalle y medición en `KNOWN_GAPS.md`, GAP-024.
+
 ### 1.4 Reglas de colocación de enemigos
 
 1. **Presentar antes de exigir.** El primer encuentro con un tipo de enemigo
@@ -559,6 +605,9 @@ del datacenter).
 - [ ] Dimensiones del TMX escritas en el README (y verificadas con `validate_tmx.py --ci`)
 - [ ] Máximo 3 tipos de enemigo; primer encuentro presentado sin otras amenazas
 - [ ] Checkpoint cada 700–1200 px; nunca bloqueado por enemigos
+- [ ] Ningún hueco obligatorio de más de 3 baldosas (§1.3); los de 3, con ruta alternativa o checkpoint pegado
+- [ ] Ningún repecho obligatorio de más de 5 baldosas (§1.3)
+- [ ] El nivel se ha **jugado** de principio a fin, no sólo calificado
 - [ ] Dos soluciones en al menos un tramo
 - [ ] Límite de tiempo ≈ 2× limpieza estimada
 - [ ] Conteo de enemigos en pantalla ≤ 8 simultáneos
