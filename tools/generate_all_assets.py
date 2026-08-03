@@ -1384,7 +1384,12 @@ MUSIC_DEFS = {
     "bgm_zone2_boss": {"bpm": 90, "dur": 12, "notes": [110, 146.83, 185, 220], "desc": "ominous"},
     "bgm_zone3_traverse": {"bpm": 140, "dur": 12, "notes": [349.23, 440, 523.25, 659.25], "desc": "aerial"},
     "bgm_zone3_boss": {"bpm": 110, "dur": 12, "notes": [293.66, 369.99, 440, 554.37], "desc": "ceremonial"},
-    "bgm_final_approach": {"bpm": 60, "dur": 10, "notes": [65.41, 82.41, 98, 130.81], "desc": "ritual"},
+    # AUD-227: esta fila ya no se usa para generar el audio — `_gen_all_music`
+    # desvía `bgm_final_approach` a `_gen_bgm_organo`, porque la ficha del 4-1 y
+    # el Asset Bible piden un órgano y el generador genérico hace chiptune. Se
+    # deja para que la tabla siga listando los doce temas y para no perder los
+    # valores originales si alguien quiere comparar.
+    "bgm_final_approach": {"bpm": 60, "dur": 10, "notes": [65.41, 82.41, 98, 130.81], "desc": "ritual (generado por _gen_bgm_organo)"},
     "bgm_paburu": {"bpm": 140, "dur": 16, "notes": [110, 146.83, 185, 220, 293.66, 369.99], "desc": "epic"},
 }
 
@@ -1425,12 +1430,117 @@ def _gen_music_track(name, defn):
         result[n - 1 - i] *= f
     return result
 
+# ── El órgano del cementerio (AUD-227) ──
+#
+# `_gen_music_track` es un chiptune: onda cuadrada, saw, triangular y ruido
+# blanco de percusión. Sirve para los diez temas que lo usan y no sirve para
+# éste. La ficha del 4-1 y el Asset Bible piden un órgano —el nivel es una
+# procesión por un cementerio— y lo que sonaba eran tambores de onda cuadrada.
+#
+# Un órgano de tubos no se imita con una envolvente: **es** síntesis aditiva. Un
+# registro es un tubo que suena a un múltiplo entero de la fundamental, y tirar
+# de varios a la vez es sumar senos. Por eso esto no es un truco para que «suene
+# parecido»: es como funciona el instrumento.
+#
+# Los seis registros son los clásicos de un principal:
+#   1×  Principal 8'      la nota
+#   2×  Octava 4'         una octava arriba
+#   3×  Quinta 2 2/3'     la duodécima — lo que da el color «de iglesia»
+#   4×  Superoctava 2'
+#   6×  Larigot 1 1/3'
+#   8×  Flautín 1'
+ORGANO_REGISTROS: tuple[tuple[int, float], ...] = (
+    (1, 1.00), (2, 0.50), (3, 0.30), (4, 0.25), (6, 0.12), (8, 0.10),
+)
+
+#: La progresión, en re menor: i – VI – III – v. Es la cadencia de procesión de
+#: toda la música fúnebre occidental, y re menor es la tonalidad del órgano por
+#: antonomasia. Cada acorde son sus tres notas en hercios; el pedal va aparte.
+ORGANO_ACORDES: tuple[tuple[float, ...], ...] = (
+    (73.42, 87.31, 110.00),    # Dm  — D2  F2  A2
+    (58.27, 73.42, 87.31),     # Bb  — Bb1 D2  F2
+    (87.31, 110.00, 130.81),   # F   — F2  A2  C3
+    (55.00, 65.41, 82.41),     # Am  — A1  C2  E2
+)
+
+#: El pedal: la fundamental una octava por debajo. Es el registro de 16' y es lo
+#: que hace que un órgano se sienta en el pecho en vez de oírse en la oreja.
+ORGANO_PEDAL: tuple[float, ...] = (36.71, 29.14, 43.65, 27.50)
+
+#: Segundos por acorde. Cuatro, y no menos: un órgano no se apresura, y el
+#: silencio entre cambios es la mitad del efecto.
+ORGANO_COMPAS = 4.0
+
+
+def _gen_bgm_organo(dur=16.0, rate=SAMPLE_RATE):
+    """El tema del 4-1: órgano de tubos, sin percusión y sin prisa.
+
+    Sin percusión a propósito. La ficha dice que en este nivel *«el silencio es
+    el jefe»*, y una caja de ritmos debajo convierte una procesión en un nivel
+    de acción. Lo único que se mueve es el trémolo, que en un órgano real es un
+    registro más.
+    """
+    import numpy as np
+
+    n = int(rate * dur)
+    t = np.arange(n, dtype=np.float64) / rate
+    salida = np.zeros(n, dtype=np.float64)
+
+    # El trémolo: un 6 % de variación a 4,8 Hz. Más y suena a sirena; menos y no
+    # se nota que el aire está vivo.
+    tremulo = 1.0 + 0.06 * np.sin(2.0 * np.pi * 4.8 * t)
+
+    for compas in range(int(dur / ORGANO_COMPAS)):
+        acorde = ORGANO_ACORDES[compas % len(ORGANO_ACORDES)]
+        pedal = ORGANO_PEDAL[compas % len(ORGANO_PEDAL)]
+        i0 = int(compas * ORGANO_COMPAS * rate)
+        i1 = min(n, int((compas + 1) * ORGANO_COMPAS * rate))
+        if i1 <= i0:
+            continue
+        tramo = t[i0:i1]
+        voz = np.zeros(i1 - i0, dtype=np.float64)
+        for freq in (*acorde, pedal):
+            peso = 0.9 if freq == pedal else 0.55
+            for armonico, amplitud in ORGANO_REGISTROS:
+                # El pedal sólo lleva los registros graves: con los agudos se
+                # embarra la mezcla y deja de leerse como un bajo.
+                if freq == pedal and armonico > 3:
+                    continue
+                voz += np.sin(2.0 * np.pi * freq * armonico * tramo) * amplitud * peso
+
+        # El «habla» del tubo: 60 ms para llenarse de aire y 200 para vaciarse.
+        # Sin esto el acorde entra con un chasquido, que es el ruido que delata
+        # a un órgano sintetizado.
+        ataque = min(len(voz), int(rate * 0.06))
+        caida = min(len(voz) - ataque, int(rate * 0.20))
+        if ataque > 0:
+            voz[:ataque] *= np.linspace(0.0, 1.0, ataque)
+        if caida > 0:
+            voz[-caida:] *= np.linspace(1.0, 0.0, caida)
+        salida[i0:i1] += voz * tremulo[i0:i1]
+
+    # El soplo del fuelle, muy por debajo: un órgano nunca está en silencio del
+    # todo mientras el motor está encendido.
+    aire = np.random.default_rng(4127).normal(0.0, 1.0, n)
+    for _ in range(6):          # suavizado: ruido blanco filtrado a marrón
+        aire = np.convolve(aire, np.ones(64) / 64.0, mode="same")
+    salida += aire / (np.max(np.abs(aire)) or 1.0) * 0.05
+
+    fundido = int(rate * 0.4)
+    salida[:fundido] *= np.linspace(0.0, 1.0, fundido)
+    salida[-fundido:] *= np.linspace(1.0, 0.0, fundido)
+    return salida.tolist()
+
+
 def _gen_all_music():
     print("  Music...")
     mdir = A / "music"
     _ensure(mdir)
     for name, defn in MUSIC_DEFS.items():
-        samples = _gen_music_track(name, defn)
+        if name == "bgm_final_approach":
+            samples = _gen_bgm_organo()
+        else:
+            samples = _gen_music_track(name, defn)
         _write_wav(mdir / f"{name}.wav", samples)
 
 # ════════════════════════════════════════
