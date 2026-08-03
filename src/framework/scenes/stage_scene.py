@@ -1270,7 +1270,7 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
                 self._achievements.mark_speed_demon()
             self._speedrun.split(stage.stage_id)
             self._speedrun.stop()
-            # AUD-197 — el tiempo se persiste, no sólo se enseña un segundo.
+            # AUD-202 — el tiempo se persiste, no sólo se enseña un segundo.
             # `save()` existía desde el primer día sin que nadie lo llamara, así
             # que la pantalla de récords no tenía qué leer y enseñaba tiempos
             # escritos a mano. Un fallo de disco no corta la partida: perder una
