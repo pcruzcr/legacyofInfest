@@ -5,12 +5,30 @@ Academic Unit: N/A
 Description: Boss Rush mode — consecutive boss gauntlet with health carry-over and scoring.
 
 .. warning::
-   **NOT WIRED (AUD-022).** This module is complete and tested in isolation, but
-   nothing in the shipping game constructs or calls it — there is no menu entry,
-   scene or hook that reaches it. It is retained deliberately, as a foundation
-   for the feature and as teaching material, but the project documentation
-   should not describe the feature as delivered until an entry point exists.
-   Tracked as refactor item R-11.
+   **PARCIALMENTE CONECTADO (AUD-232).** El aviso anterior decía «NOT WIRED …
+   there is no menu entry, scene or hook that reaches it», y desde AUD-191 eso
+   ya no es cierto: el título tiene su opción y AUD-201 arregló que entrar
+   dejara la pantalla en negro. Pero sustituirlo por «conectado» sería pasarse
+   al otro extremo. Medido:
+
+   * **Sí funciona:** el jugador elige BOSS RUSH y pelea seguido contra los
+     cuatro jefes. El encadenado lo hace la cola de escenarios del
+     `SceneManager`, no este módulo.
+   * **No funciona:** nadie *conduce* el modo. `boss_rush_entry` lo construye,
+     llama a `start()` y lo deja en `context.boss_rush`, donde **no lo lee
+     nadie**. `advance_to_next()` y `record_hit()` no se invocan desde fuera de
+     este fichero, así que la puntuación nunca se calcula y `hits_taken` se
+     queda en cero.
+   * **Ni siquiera está aquí:** `_carry_over_health` y `_carry_over_meter` se
+     ponen a 0.0 en el constructor, se reponen a 0.0 en `start()` y no tienen
+     getter ni setter. El arrastre de vida que anuncia la cabecera de este
+     módulo no está implementado tampoco dentro de él.
+
+   Se conserva a propósito, como base de la funcionalidad y como material
+   docente. Lo que no se puede es describirla como entregada: `docs/44` decía
+   «✅ Complete — gauntlet logic, scoring, health carry-over» y las tres cosas
+   son falsas. Queda como GAP-030, y `tests/test_modos_que_no_se_veian.py` fija
+   el estado real para que la especificación y el juego no se separen otra vez.
 """
 from __future__ import annotations
 

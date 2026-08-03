@@ -579,3 +579,43 @@ Nunca borrar entradas - marcar como resueltas.
   (`v.v.x *= zona.multiplicador ** dt`, como ya hace `particle_system.py` con su
   `friction`) y corregir el docstring. Cambia el valor efectivo de cualquier zona
   ya colocada, así que hay que revisar `stage_mecanicas` y las entregas antes.
+
+## [GAP-030] El Boss Rush se juega, pero no es el modo que la spec describe
+
+- **File:** `src/framework/stage/boss_rush_mode.py`, `src/engine/scenes/boss_rush_entry.py`
+- **Phase:** auditoría 2026-08-03, AUD-232
+- **Reason:** AUD-191 le puso entrada de menú y AUD-201 arregló que entrar
+  dejara la pantalla en negro, así que el modo ya se juega: cuatro jefes
+  seguidos. Comprobar qué pasa **una vez dentro** destapa que ahí se acaba.
+
+  `boss_rush_entry` construye el `BossRushMode`, lo arranca con `start()` y lo
+  deja en `context.boss_rush`, donde **no lo lee ningún sitio del juego**. El
+  encadenado real lo hace la cola de escenarios del `SceneManager`; el modo es
+  un objeto que se crea y se abandona. Medido:
+
+  - `advance_to_next()` y `record_hit()` no se invocan desde fuera del propio
+    módulo, así que la **puntuación nunca se calcula** y `hits_taken` se queda
+    en 0 para siempre;
+  - `_carry_over_health` y `_carry_over_meter` se ponen a 0.0 en el constructor,
+    se reponen a 0.0 en `start()` y no tienen getter ni setter. El **arrastre de
+    vida no está implementado ni dentro del módulo**: no es que falte
+    conectarlo, es que no existe.
+
+  Lo grave no es el hueco sino lo que se afirmaba sobre él. `docs/44` §4 decía
+  «✅ Complete — gauntlet logic, scoring, health carry-over» y daba como única
+  carencia la interfaz; las tres cosas que declaraba completas son justo las que
+  faltan. Y la cabecera del módulo seguía avisando «NOT WIRED … there is no menu
+  entry», falso desde AUD-191. Los dos documentos estaban equivocados, cada uno
+  en una dirección distinta.
+
+  Lo que el jugador tiene hoy —cuatro jefes seguidos a vida llena, sin
+  marcador— es jugable y no está roto. Simplemente no es lo especificado.
+
+  No se implementa aquí porque el arrastre de vida es una **decisión de diseño
+  con efecto en la dificultad**, no una conexión pendiente: hay que decidir
+  cuánta vida pasa, si hay curación entre combates y qué ocurre al morir. Eso
+  es del profesor. Lo que sí se hace es dejar de afirmar que está hecho.
+- **Verificado:** `tests/test_modos_que_no_se_veian.py`,
+  `TestLoQueElBossRushHaceDeVerdad` fija el estado real y falla si alguien
+  conecta el arrastre o la puntuación, para que la spec se actualice en el mismo
+  cambio.

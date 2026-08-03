@@ -19,7 +19,9 @@ date_processed: "2026-07-14"
 
 ## 1. Overview
 
-Boss Rush Mode (`src/framework/stage/boss_rush_mode.py`) is a consecutive boss gauntlet with health carry-over and scoring. Players fight a sequence of bosses; health and special meter persist between encounters. Score is calculated from clear time and hits taken.
+Boss Rush Mode (`src/framework/stage/boss_rush_mode.py`) is the design for a consecutive boss gauntlet with health carry-over and scoring.
+
+**What ships today (AUD-232), measured:** choosing BOSS RUSH from the title screen chains the four bosses back to back. That is the whole of it. Health does *not* persist between encounters, no score is computed, and hits are not counted — see §4. This section used to state the carry-over as fact; it was describing the intent.
 
 ---
 
@@ -52,9 +54,27 @@ Per boss: `max(0, 1000 − int(time * 10)) − hits_taken * 50`
 
 ## 4. Implementation Status
 
-**File:** `src/framework/stage/boss_rush_mode.py` (92 lines)
-**Status:** ✅ Complete — gauntlet logic, scoring, health carry-over
-**Missing:** No UI overlay (boss name cards, score display, intermission screens)
+**File:** `src/framework/stage/boss_rush_mode.py`
+
+**Status (AUD-232, medido):** ⚠️ **Parcial.** La lógica del módulo está escrita y
+probada en aislamiento, pero el juego no la conduce.
+
+| Pieza | Estado real | Por qué |
+|---|---|---|
+| Entrada desde el menú | ✅ | AUD-191 la añadió; AUD-201 arregló que dejara la pantalla en negro |
+| Los cuatro jefes seguidos | ✅ | lo encadena la cola de escenarios del `SceneManager` |
+| Arrastre de vida y de medidor | ❌ | `_carry_over_health` y `_carry_over_meter` se ponen a 0.0 y no tienen getter ni setter: **no está implementado dentro del módulo** |
+| Puntuación | ❌ | la aplica `advance_to_next()`, a la que no llama nadie fuera del módulo |
+| Recuento de golpes | ❌ | lo incrementa `record_hit()`, ídem |
+| Superposición de interfaz | ❌ | rótulos de jefe, marcador, pantallas intermedias |
+
+`context.boss_rush` se escribe en `boss_rush_entry` y **no lo lee ningún sitio**.
+
+La versión anterior de esta sección decía «✅ Complete — gauntlet logic, scoring,
+health carry-over» y daba como única carencia la interfaz. Las tres cosas que
+declaraba completas son las que faltan. Registrado como **GAP-030**; el estado
+real lo fija `tests/test_modos_que_no_se_veian.py`, que falla si alguien conecta
+el arrastre o la puntuación sin actualizar esta tabla.
 
 
 --- Traducción al Español ---
