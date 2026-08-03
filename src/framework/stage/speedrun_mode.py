@@ -255,3 +255,66 @@ class GhostData:
     @property
     def frame_count(self) -> int:
         return len(self._frames)
+
+def registrar_marca(
+    stage_id: str, tiempo: float, path: str | Path | None = None,
+) -> None:
+    """Anota el tiempo de un escenario en el libro de récords.
+
+    AUD-231 — por qué no vale `SpeedrunTimer.save()` para esto
+    ==========================================================
+    AUD-202 conectó `save()` al final de cada escenario, y con eso la pantalla
+    de récords dejó de inventarse los tiempos. Pero seguía sin servir de nada.
+
+    `StageScene.on_enter` llama a `SpeedrunTimer.start()`, y `start()` hace
+    ``_splits = []``: entrar a un nivel vacía los parciales. Así que el `save()`
+    del final escribía un fichero con **una sola marca**, encima del anterior.
+    Medido: terminar `stage0` en 30 s y luego `stage1_1` en 45 dejaba en disco
+    sólo la de `stage1_1`. La tabla podía enseñar el último nivel jugado y
+    ``--:--.--`` en los otros diez.
+
+    La distinción que faltaba es de qué es cada cosa. `save()` vuelca el estado
+    de **una carrera** —lo que el cronómetro lleva medido ahora mismo— y es lo
+    correcto para retomar una partida. El fichero que lee la pantalla de récords
+    no es eso: es un **libro de marcas**, acumulativo, donde una entrada sólo se
+    pisa a sí misma y sólo cuando mejora.
+
+    Se conserva una entrada por escenario en lugar de añadir una por partida:
+    con la lista completa el fichero crecería sin límite a cambio de nada, ya
+    que la pantalla sólo muestra la mejor.
+
+    No lanza nunca. Esto corre al terminar un nivel, y perder una marca es
+    molesto mientras que quedarse sin terminar el nivel es peor. Un fichero
+    ilegible se sustituye por uno nuevo con esta marca: es lo único recuperable
+    y deja al jugador en mejor sitio que borrarlo del todo.
+    """
+    ruta = Path(path) if path is not None else _DEFAULT_SAVE_PATH
+
+    datos = _leer_json(ruta)
+    marcas: dict[str, float] = {}
+    if isinstance(datos, dict):
+        for parcial in datos.get("splits", []) or []:
+            if not isinstance(parcial, dict):
+                continue
+            sid = parcial.get("stage_id")
+            t = parcial.get("time")
+            if isinstance(sid, str) and isinstance(t, (int, float)) and not isinstance(t, bool):
+                marcas[sid] = float(t)
+
+    previa = marcas.get(stage_id)
+    if previa is None or tiempo < previa:
+        marcas[stage_id] = float(tiempo)
+
+    contenido = {
+        # La suma de las mejores marcas, no el tiempo de una partida seguida.
+        # Se escribe para que `SpeedrunTimer.load()` siga encontrando el campo
+        # que espera; quien lea récords usa `splits`.
+        "global_time": sum(marcas.values()),
+        "splits": [{"stage_id": sid, "time": t} for sid, t in sorted(marcas.items())],
+    }
+    try:
+        ruta.parent.mkdir(parents=True, exist_ok=True)
+        ruta.write_bytes(orjson.dumps(contenido, option=orjson.OPT_INDENT_2))
+    except OSError:
+        logger.warning("speedrun: no se pudo anotar la marca en %s", ruta,
+                       exc_info=True)

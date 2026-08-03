@@ -1,4 +1,4 @@
-"""AUD-201/197 — los dos modos que el jugador no podía ver.
+"""AUD-201/202 — los dos modos que el jugador no podía ver.
 
 Boss Rush entraba y se quedaba en negro
 ========================================
@@ -139,13 +139,17 @@ def test_elegir_records_abre_la_pantalla_de_records(contexto) -> None:
     assert isinstance(contexto.scene_manager.current, LeaderboardScene)
 
 
-def test_alguien_guarda_los_tiempos_al_terminar_un_escenario() -> None:
-    """El defecto no era que `save()` funcionara mal: era que nadie lo llamaba.
+def test_alguien_anota_la_marca_al_terminar_un_escenario() -> None:
+    """El defecto no era que la persistencia fallara: era que nadie la llamaba.
 
     Se comprueba el **cableado**, por AST, porque es la forma del fallo: un
     subsistema entero, terminado y probado, que ninguna parte del juego invoca.
-    Ejercitar `SpeedrunTimer.save()` a mano habría pasado desde el primer día
-    sin que el jugador viera jamás un tiempo.
+    Ejercitar la persistencia a mano habria pasado desde el primer dia sin que
+    el jugador viera jamas un tiempo.
+
+    Mira `registrar_marca` y no `save`: AUD-231 cambio cual de las dos es la
+    correcta aqui, y esta prueba tiene que seguir a la que de verdad alimenta la
+    pantalla de records.
     """
     import ast
     import pathlib
@@ -154,18 +158,15 @@ def test_alguien_guarda_los_tiempos_al_terminar_un_escenario() -> None:
             / "src" / "framework" / "scenes" / "stage_scene.py")
     arbol = ast.parse(ruta.read_text(encoding="utf-8"))
 
-    llamadas = {
-        nodo.func.attr
+    nombres = {
+        nodo.func.id
         for nodo in ast.walk(arbol)
-        if isinstance(nodo, ast.Call)
-        and isinstance(nodo.func, ast.Attribute)
-        and isinstance(nodo.func.value, ast.Attribute)
-        and nodo.func.value.attr == "_speedrun"
+        if isinstance(nodo, ast.Call) and isinstance(nodo.func, ast.Name)
     }
-    assert "save" in llamadas, (
-        "stage_scene.py cronometra la partida y nunca la guarda: llama a "
-        f"{sorted(llamadas)} sobre `_speedrun` pero no a `save`. Los tiempos "
-        f"mueren con la escena y la tabla de récords no tiene qué leer"
+    assert "registrar_marca" in nombres, (
+        "stage_scene.py cronometra la partida y no anota la marca en ningun "
+        "sitio. Los tiempos mueren con la escena y la tabla de records no "
+        "tiene que leer"
     )
 
 
@@ -232,3 +233,70 @@ def test_la_tabla_de_records_lee_los_tiempos_reales(
     escena.on_enter()
     lineas = " ".join(escena._lineas_de_tiempos())
     assert "1:05.00" in lineas, f"no aparece el tiempo guardado: {lineas}"
+
+
+# ── El libro de récords tiene que acumular (AUD-231) ───────────
+
+
+class TestLasMarcasSobrevivenAlNivelSiguiente:
+    """AUD-231 — guardar el tiempo no basta si guardar borra el anterior.
+
+    AUD-202 conecto `save()` al final de cada escenario y con eso la tabla dejo
+    de inventarse los tiempos. Pero `StageScene.on_enter` llama a
+    `SpeedrunTimer.start()`, y `start()` hace `_splits = []`. Es decir: entrar a
+    un nivel vacia los parciales, y el `save()` del final escribe un fichero con
+    **una sola marca** encima del anterior.
+
+    Resultado medido: terminar `stage0` en 30 s y luego `stage1_1` en 45 dejaba
+    en disco `{"splits": [{"stage_id": "stage1_1", "time": 45.0}]}`. La marca de
+    `stage0` se perdia. La tabla de records solo podia ensenar el ultimo nivel
+    jugado y `--:--.--` en los otros diez, que es casi tan inutil como los
+    tiempos inventados que sustituyo.
+
+    El fichero es un libro de records, no el diario de una partida: acumula, y
+    una marca solo se pisa a si misma cuando mejora.
+    """
+
+    def test_terminar_un_nivel_no_borra_la_marca_del_anterior(self, tmp_path):
+        from src.engine.scenes.leaderboard_scene import mejores_tiempos
+        from src.framework.stage.speedrun_mode import registrar_marca
+
+        ruta = tmp_path / "speedrun.json"
+        registrar_marca("stage0", 30.0, ruta)
+        registrar_marca("stage1_1", 45.0, ruta)
+
+        marcas = mejores_tiempos(ruta)
+        assert marcas == pytest.approx({"stage0": 30.0, "stage1_1": 45.0})
+
+    def test_una_marca_solo_se_pisa_cuando_mejora(self, tmp_path):
+        """Repetir un nivel y hacerlo peor no debe borrar el record."""
+        from src.engine.scenes.leaderboard_scene import mejores_tiempos
+        from src.framework.stage.speedrun_mode import registrar_marca
+
+        ruta = tmp_path / "speedrun.json"
+        registrar_marca("stage0", 30.0, ruta)
+        registrar_marca("stage0", 41.0, ruta)
+        assert mejores_tiempos(ruta)["stage0"] == pytest.approx(30.0)
+
+        registrar_marca("stage0", 22.5, ruta)
+        assert mejores_tiempos(ruta)["stage0"] == pytest.approx(22.5)
+
+    def test_el_fichero_no_crece_sin_limite(self, tmp_path):
+        """Una entrada por escenario, no una por partida jugada."""
+        from src.framework.stage.speedrun_mode import registrar_marca
+
+        ruta = tmp_path / "speedrun.json"
+        for i in range(20):
+            registrar_marca("stage0", 60.0 - i, ruta)
+        datos = json.loads(ruta.read_text(encoding="utf-8"))
+        assert len(datos["splits"]) == 1
+
+    def test_un_fichero_ilegible_no_tumba_la_partida(self, tmp_path):
+        """Anotar una marca ocurre al terminar un nivel: no puede lanzar."""
+        from src.engine.scenes.leaderboard_scene import mejores_tiempos
+        from src.framework.stage.speedrun_mode import registrar_marca
+
+        ruta = tmp_path / "speedrun.json"
+        ruta.write_text("{esto no es JSON", encoding="utf-8")
+        registrar_marca("stage0", 30.0, ruta)
+        assert mejores_tiempos(ruta)["stage0"] == pytest.approx(30.0)
