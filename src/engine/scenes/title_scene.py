@@ -78,6 +78,11 @@ class TitleScene(BaseScene):
             MenuItem("BESTIARY", value="BESTIARY"),
             MenuItem("ACHIEVEMENTS", value="ACHIEVEMENTS"),
             MenuItem("BOSS RUSH", value="BOSS RUSH"),
+            # AUD-202: `LeaderboardScene` existía, estaba registrada y no la
+            # abría nadie. Los tiempos de speedrun se cronometraban partida
+            # tras partida sin que hubiera una sola pantalla desde la que
+            # verlos.
+            MenuItem("RECORDS", value="RECORDS"),
             MenuItem("ACADEMIC DEMOS", value="ACADEMIC DEMOS"),
             MenuItem("OPTIONS", value="OPTIONS"),
             MenuItem("QUIT", value="QUIT"),
@@ -215,9 +220,30 @@ class TitleScene(BaseScene):
             # AUD-191: `boss_rush_mode` estaba completo y probado desde
             # AUD-022, y su cabecera avisaba de que nada del juego lo
             # construía. Esta rama es la puerta que faltaba.
+            #
+            # AUD-201 — el orden de estas dos líneas era el revés y dejaba la
+            # pantalla en negro.
+            #
+            # Las otras diez opciones arrancan el fundido y **luego** cambian
+            # de pantalla. Ésta entraba al jefe primero y pedía el fundido de
+            # salida después, así que el fundido de **entrada** que dispara
+            # `replace()` llegaba antes y lo pisaba el de salida.
+            #
+            # No era un parpadeo: `TransitionManager.update` deja el velo en
+            # alfa 255 al terminar un fundido de salida, y `draw` lo pinta
+            # siempre que el alfa sea mayor que cero, mire o no si la
+            # transición sigue activa. El jefe se cargaba, corría y sonaba
+            # debajo de una pantalla negra permanente.
             from src.engine.scenes.boss_rush_entry import empezar_boss_rush
-            if empezar_boss_rush(self.context) is not None:
-                self.context.scene_manager.transition.start_fade_out(0.4)
+            self.context.scene_manager.transition.start_fade_out(0.4)
+            if empezar_boss_rush(self.context) is None:
+                # Sin jefes que encadenar no se cambia de pantalla, así que
+                # hay que deshacer el fundido o el menú se queda a oscuras.
+                self.context.scene_manager.transition.start_fade_in(0.4)
+        elif opt == "RECORDS":
+            from src.engine.scenes.leaderboard_scene import LeaderboardScene
+            self.context.scene_manager.transition.start_fade_out(0.4)
+            self.context.scene_manager.replace(LeaderboardScene(self.context))
         elif opt == "ACADEMIC DEMOS":
             from src.engine.scenes.demo_menu_scene import DemoMenuScene
             self.context.scene_manager.transition.start_fade_out(0.4)
