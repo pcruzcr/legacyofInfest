@@ -413,7 +413,14 @@ class TestTitleSceneIntegration:
         labels = [item.label for item in scene._menu.items]
         assert "ACADEMIC DEMOS" in labels
         assert "TUTORIAL" in labels
-        assert labels.index("ACADEMIC DEMOS") == 6
+        # AUD-203: era `labels.index("ACADEMIC DEMOS") == 6`, una posición
+        # absoluta. Fijaba lo que a nadie le importa —el índice— y se rompía
+        # cada vez que el menú ganaba una opción: con BOSS RUSH pasó a 7 y con
+        # RECORDS a 8, dos fallos por dos cambios legítimos. Lo que sí importa
+        # es que las demos queden antes de OPTIONS y QUIT, es decir, que el
+        # cierre del menú siga siendo el cierre.
+        assert labels.index("ACADEMIC DEMOS") < labels.index("OPTIONS")
+        assert labels.index("OPTIONS") < labels.index("QUIT")
 
     def test_title_demo_select(self, context) -> None:
         from src.engine.scenes.demo_menu_scene import DemoMenuScene

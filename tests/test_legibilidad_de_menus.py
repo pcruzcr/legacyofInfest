@@ -116,3 +116,119 @@ class TestLaEscalaTipografica:
         assert Theme.FONT_BODY >= 16, (
             f"el cuerpo de texto mide {Theme.FONT_BODY} px sobre 600 de alto"
         )
+
+
+
+class TestElTamanoQueDeVerdadSeVe:
+    """AUD-203 — `FONT_BODY = 20` no significaba 20 px en pantalla.
+
+    La queja al jugar fue que el texto del juego «ni se nota» al lado del de la
+    pantalla de Opciones. No era una impresión: `theme.font()` construía
+    `pygame.font.Font(None, size)`, la tipografía por defecto de pygame, que
+    entrega mucha menos tinta por punto pedido que cualquier TTF normal.
+
+    Medido a escala 1.0x, alto de tinta real de «Salud»:
+
+    ===============  ==============  ==========
+    constante        por defecto     game.ttf
+    ===============  ==============  ==========
+    FONT_TITLE (38)  19 px           21 px
+    FONT_BODY  (20)   9 px           12 px
+    FONT_TINY  (15)   7 px            9 px
+    ===============  ==============  ==========
+
+    Los 9 px del cuerpo competían contra los **12 px** que pygame_gui dibuja en
+    Opciones pidiendo 14. La pantalla de Opciones tenía la letra un 33 % más
+    alta que el resto del juego pidiendo un tamaño casi la mitad.
+
+    `game.ttf` —la tipografía propia, que la pantalla de título ya usaba— cierra
+    el hueco y además ocupa menos ancho (−16 % en «CONTINUAR PARTIDA»), así que
+    no descuadra ninguna maqueta.
+
+    Por qué estas pruebas fijan la escala a mano
+    --------------------------------------------
+    `theme.font()` llama a `escalar_texto()`, que **lee la configuración del
+    jugador**. En una máquina con la ayuda de accesibilidad al máximo, `font(20)`
+    devuelve una fuente de 40 px. Sin fijar la escala, comparar `font(N)` contra
+    `Font(None, N)` compara 40 contra 20 y pasa sin comprobar nada — pasó, y por
+    eso está escrito aquí.
+    """
+
+    #: Lo que pygame_gui entrega en Opciones a su tamaño base de 14 px, a escala
+    #: 1.0x. El resto del juego no puede quedar por debajo.
+    TINTA_DE_PYGAME_GUI = 12
+
+    @pytest.fixture(autouse=True)
+    def _escala_fija(self, monkeypatch):
+        """Escala 1.0x pase lo que pase en el `config.json` de quien ejecute."""
+        from src.engine.core import user_settings
+        from src.engine.ui.theme import clear_font_cache
+
+        monkeypatch.setattr(
+            user_settings, "preferencia",
+            lambda nombre, defecto=None: 1.0 if nombre == "text_scale" else defecto,
+        )
+        clear_font_cache()
+        yield
+        clear_font_cache()
+
+    @staticmethod
+    def _tinta(fuente: pygame.font.Font) -> int:
+        return fuente.render("Salud", True, (255, 255, 255)).get_bounding_rect().height
+
+    def test_la_escala_de_prueba_es_la_normal(self) -> None:
+        """Guarda de la guarda: si el ajuste no llega, lo demás no mide nada."""
+        from src.engine.ui.theme import escalar_texto
+
+        assert escalar_texto(Theme.FONT_BODY) == Theme.FONT_BODY
+
+    def test_el_kit_no_usa_la_tipografia_por_defecto_de_pygame(self) -> None:
+        """La más pequeña de las disponibles era justo la que se usaba."""
+        from src.engine.ui.theme import font as fuente_del_kit
+
+        del_kit = self._tinta(fuente_del_kit(Theme.FONT_BODY))
+        por_defecto = self._tinta(pygame.font.Font(None, Theme.FONT_BODY))
+        assert del_kit > por_defecto, (
+            f"el cuerpo de texto mide {del_kit} px de tinta, lo mismo que la "
+            f"tipografía por defecto de pygame ({por_defecto} px): el kit "
+            f"sigue sin usar game.ttf"
+        )
+
+    def test_el_cuerpo_no_es_mas_pequeno_que_el_de_la_pantalla_de_opciones(
+        self,
+    ) -> None:
+        """Que no vuelva a haber dos escalas de letra en el mismo juego."""
+        from src.engine.ui.theme import font as fuente_del_kit
+
+        alto = self._tinta(fuente_del_kit(Theme.FONT_BODY))
+        assert alto >= self.TINTA_DE_PYGAME_GUI, (
+            f"el cuerpo del juego mide {alto} px y el de pygame_gui "
+            f"{self.TINTA_DE_PYGAME_GUI} px: el jugador ve dos escalas y la "
+            f"del juego es la pequeña"
+        )
+
+    def test_el_arreglo_alcanza_a_toda_la_escala(self) -> None:
+        """Los cinco escalones, no sólo el cuerpo."""
+        from src.engine.ui.theme import font as fuente_del_kit
+
+        for tamano in (Theme.FONT_TINY, Theme.FONT_SMALL, Theme.FONT_BODY,
+                       Theme.FONT_HEADING, Theme.FONT_TITLE):
+            assert self._tinta(fuente_del_kit(tamano)) > self._tinta(
+                pygame.font.Font(None, tamano)
+            ), f"el escalón de {tamano} px sigue en la tipografía por defecto"
+
+    def test_la_tipografia_del_juego_no_desborda_las_maquetas(self) -> None:
+        """Más alta pero no más ancha: por eso el cambio es seguro.
+
+        Si algún día se cambia por una fuente ancha, esto avisa antes de que
+        once etiquetas de Opciones se salgan de su rectángulo (AUD-160).
+        """
+        from src.engine.ui.theme import font as fuente_del_kit
+
+        for texto in ("CONTINUAR PARTIDA", "MOVIMIENTO REDUCIDO (sacudida)",
+                      "Pulsa Z para hablar"):
+            ancho_kit = fuente_del_kit(Theme.FONT_BODY).size(texto)[0]
+            ancho_viejo = pygame.font.Font(None, Theme.FONT_BODY).size(texto)[0]
+            assert ancho_kit <= ancho_viejo * 1.05, (
+                f"«{texto}» pasa de {ancho_viejo} a {ancho_kit} px de ancho"
+            )

@@ -145,10 +145,18 @@ class TestElTextoCabeEnLaPantalla:
     def test_una_linea_larga_se_parte(self, sistema) -> None:
         fuente = font(Theme.FONT_SMALL)
         # El texto real de la introducción de stage 0, palabra por palabra.
+        #
+        # AUD-203: la guarda de abajo saltó al cambiar el kit a `game.ttf`. Esa
+        # tipografía es más alta pero más estrecha, y las tres frases pasaron a
+        # medir 637 px en un cuadro de 672: seguían cabiendo, así que la prueba
+        # habría comprobado el ajuste de línea sin nada que ajustar. Se añade la
+        # cuarta frase del mismo texto de stage 0 en vez de bajar el ancho, para
+        # que el caso siga siendo el real y no uno fabricado.
         texto = (
             "The world lies in ruin. You are the last Legacy. "
             "Each zone teaches you the skills you need. "
-            "Press F2-F10 anytime for educational panels."
+            "Press F2-F10 anytime for educational panels. "
+            "Reach the exit before the timer runs out."
         )
         # Ancho útil con retrato, que es el caso peor y el que usa stage 0.
         ancho = 672

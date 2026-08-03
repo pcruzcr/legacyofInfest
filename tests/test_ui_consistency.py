@@ -90,7 +90,14 @@ def _scene_files() -> list[pathlib.Path]:
         and p.name not in {"demo_common.py", "demo_layout.py", "demo_utils.py",
                            "scene_registry.py", "code_panel.py", "param_panel.py",
                            "quiz_system.py", "debug_overlay.py", "transition_manager.py",
-                           "tutorial_overlay.py"}
+                           "tutorial_overlay.py",
+                           # AUD-203: vive en `scenes/` pero no es una escena —
+                           # son dos funciones que arman el modo Boss Rush y no
+                           # dibujan un solo píxel. Va aquí y no en
+                           # AWAITING_MIGRATION porque no hay nada que migrar:
+                           # esa lista es para interfaz pendiente, no para
+                           # ficheros que nunca tendrán interfaz.
+                           "boss_rush_entry.py"}
     )
 
 

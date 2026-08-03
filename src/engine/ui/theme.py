@@ -108,6 +108,12 @@ class Theme:
 
 _font_cache: dict[tuple[str | None, int], pygame.font.Font] = {}
 
+#: Centinela: `None` es una respuesta válida de `_tipografia_del_juego()` —
+#: significa «no está el fichero, usa la de pygame»— así que no sirve para
+#: marcar «aún no lo he mirado».
+_SIN_RESOLVER: object = object()
+_RUTA_JUEGO_CACHE: object | str | None = _SIN_RESOLVER
+
 #: Tamaño mínimo en píxeles. Por debajo de esto la fuente por defecto de
 #: pygame deja de tener trazos distinguibles y el texto es una mancha.
 _TAMANO_MINIMO: int = 8
@@ -137,6 +143,41 @@ def escalar_texto(size: int) -> int:
     return max(_TAMANO_MINIMO, round(size * escala))
 
 
+def _tipografia_del_juego() -> str | None:
+    """La ruta de `game.ttf`, o `None` si no está y hay que caer a la de pygame.
+
+    AUD-203 — por qué el kit no puede seguir con la tipografía por defecto
+    ---------------------------------------------------------------------
+    `pygame.font.Font(None, N)` no dibuja N píxeles de letra: entrega bastante
+    menos tinta por punto pedido que un TTF normal. Medido a escala 1.0x con la
+    palabra «Salud», alto real de la tinta:
+
+    * `FONT_BODY` = 20 px  ->   9 px por defecto,  12 px con `game.ttf`
+    * `FONT_TITLE` = 38 px ->  19 px por defecto,  21 px con `game.ttf`
+
+    Esos 9 px del cuerpo convivían en el mismo juego con los **12 px** que
+    `pygame_gui` dibuja en la pantalla de Opciones pidiendo 14 px. Un jugador
+    que pasaba de Opciones a cualquier otra pantalla veía la letra encogerse un
+    tercio sin haber tocado nada, y la queja fue literalmente que el texto del
+    juego «ni se nota» al lado del de Opciones.
+
+    `game.ttf` es la tipografía propia del proyecto y la pantalla de título ya
+    la usaba directamente por su cuenta: el kit era el que iba por libre. Cierra
+    el hueco con Opciones y **ocupa menos ancho** —un 16 % menos en «CONTINUAR
+    PARTIDA»—, así que ninguna maqueta se desborda por el cambio.
+
+    Si el fichero no está se devuelve `None` y se cae a la de pygame: el juego
+    tiene que poder dibujar texto aunque falte un asset.
+    """
+    global _RUTA_JUEGO_CACHE
+    if _RUTA_JUEGO_CACHE is _SIN_RESOLVER:
+        from src.engine.core import settings
+
+        ruta = settings.ASSETS_DIR / "fonts" / "game.ttf"
+        _RUTA_JUEGO_CACHE = str(ruta) if ruta.is_file() else None
+    return _RUTA_JUEGO_CACHE
+
+
 def font(size: int, path: str | None = None) -> pygame.font.Font:
     """Cached font lookup.
 
@@ -164,6 +205,8 @@ def font(size: int, path: str | None = None) -> pygame.font.Font:
     diccionario, 0,095 µs—, así que se hace en cada acierto de caché.
     """
     size = escalar_texto(size)
+    if path is None:
+        path = _tipografia_del_juego()
     key = (path, size)
     cached = _font_cache.get(key)
     if cached is not None:
