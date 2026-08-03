@@ -41,7 +41,22 @@ _ENEMIGOS_DE_RESPALDO: frozenset[str] = frozenset({
     "Brute", "Caster", "Assassin",
 })
 MAX_TMX_WIDTH = 400
-MAX_TMX_HEIGHT = 50
+# AUD-226: esto valía 50, y ese número no sale de ninguna parte. El contrato
+# (`docs/06_TMX_SPEC.md` §Dimensiones) fija un **mínimo** de 14 filas —«debe
+# llenar al menos una pantalla»— y no fija ningún máximo. El 50 se escribió
+# cuando los diecisiete mapas eran corredores horizontales, y describía la
+# costumbre, no una regla.
+#
+# El coste era real y silencioso: un estudiante que entregue un nivel vertical
+# —una torre, un pozo, un descenso— pierde los cinco puntos de
+# `map_bounds_reasonable` por una forma que la especificación permite, y el
+# mensaje que recibe es «Size 60x240 seems unreasonable», que no le dice ni
+# cuál es el tope ni por qué. Lo destapó el 4-1 al pasar a ser un descenso.
+#
+# Se iguala al tope de ancho: sigue habiendo un límite que atrapa el error de
+# verdad —un mapa de 100.000 baldosas por un cero de más— y deja de castigar
+# una decisión de diseño legítima.
+MAX_TMX_HEIGHT = 400
 MAX_TIME_LIMIT = 999
 REQUIRED_GRADE_PROPS = ["author", "stage_id", "stage_name"]
 
