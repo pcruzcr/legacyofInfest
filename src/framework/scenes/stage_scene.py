@@ -11,6 +11,7 @@ from src.engine.core import settings
 from src.engine.core.achievements import AchievementSystem
 from src.engine.core.events import Events
 from src.engine.core.inventory import get_inventory
+from src.engine.core.score_system import ScoreSystem
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.ui.hud import HUD
@@ -44,7 +45,7 @@ from src.framework.stage.level_mechanics import (
     TiempoBala,
 )
 from src.framework.stage.progression_system import ProgressionSystem
-from src.framework.stage.speedrun_mode import SpeedrunTimer
+from src.framework.stage.speedrun_mode import SpeedrunTimer, registrar_marca
 from src.framework.stage.stage_loader import StageLoader
 from src.framework.ui.dialogue_system import DialogueSystem
 from src.framework.ui.learning_overlay import LearningOverlay
@@ -191,6 +192,13 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
         # instead of it reaching for a module-level default.
         self._achievements.bind_bus(self.context.event_bus)
         self._achievements.load()
+        # AUD-219 — GAP-029, conexión 2 de 4. `ScoreSystem` estaba escrito
+        # entero y nadie lo construía: sin instancia no hay suscripción a
+        # `ENEMY_DIED`, y matar enemigos no sumaba un punto. Va junto a los
+        # logros y el bestiario porque es el mismo tipo de dato —progreso del
+        # jugador— y necesita lo mismo: el bus de *esta* escena.
+        self._score = ScoreSystem.get_instance()
+        self._score.bind_bus(self.context.event_bus)
         self._bestiary = Bestiary.get_instance()
         # AUD-154 — el bestiario tenía `save()` y `load()` escritos y nadie los
         # llamaba, así que ni siquiera lo poco que hubiera registrado habría
@@ -950,6 +958,77 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
         if getattr(datos, "water_effect", False):
             self._agua_vfx = WaterEffect()
 
+    def _publicar_o_dibujar_el_agua(self, surface) -> None:
+        """El agua la pinta el sombreador si hay GL, y `WaterEffect` si no.
+
+        AUD-216 — no son el mismo efecto y por eso se elige uno: `WaterEffect`
+        superpone líneas senoidales *encima* de la escena, y el sombreador
+        deforma lo que se ve *a través* del agua, que es lo que el primero
+        imitaba. Dibujar los dos sumaría una superposición sobre una
+        refracción, que es el defecto que AUD-222 acaba de quitar del bloom.
+
+        La región es la pantalla entera porque eso es exactamente lo que
+        cubre hoy `WaterEffect`: la propiedad `water_effect` del TMX es un
+        booleano de escenario, no un rectángulo. Cuando las zonas de agua del
+        ECS expongan su rect en pantalla, es aquí donde hay que estrecharla —
+        la tubería ya acepta cualquier rectángulo.
+        """
+        from src.engine.core import gpu_effects
+
+        if gpu_effects.WATER in gpu_effects.effects_on_gpu():
+            gpu_effects.publish_water_region(
+                (0, 0, settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
+            )
+        else:
+            self._agua_vfx.draw(surface, self._camera.offset)
+
+    def _publicar_los_rayos_de_luz(self) -> None:
+        """Enciende los rayos volumétricos y decide de qué luz salen.
+
+        AUD-226 — el sombreador necesita un foco, y la tubería no tiene forma
+        de saber cuál: sólo ve una textura de luz ya compuesta, sin separar
+        los focos que la formaron. Quien sí lo sabe es la escena.
+
+        Se elige la luz **más fuerte que esté en pantalla**, ponderando
+        intensidad y radio: es la que domina la iluminación del fotograma y,
+        por tanto, la que el ojo lee como fuente. Elegir la más cercana al
+        jugador daría rayos que saltan de una farola a otra al caminar.
+
+        Si el escenario pide rayos y no hay ninguna luz visible, se apagan en
+        vez de dejarlos en el centro de la pantalla: un abanico saliendo de la
+        nada es peor que ninguno.
+        """
+        fuerza = getattr(self._stage_data, "god_rays", 0.0)
+        if not fuerza or fuerza <= 0:
+            return
+
+        from src.engine.core import gpu_effects
+
+        w, h = settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT
+        off = self._camera.offset
+        mejor = None
+        mejor_peso = 0.0
+        for luz in self._lighting.lights:
+            sx = luz.position.x - off.x
+            sy = luz.position.y - off.y
+            radio = luz.get_current_radius()
+            # Fuera de pantalla con todo su radio: no aporta nada al fotograma.
+            if sx + radio < 0 or sx - radio > w or sy + radio < 0 or sy - radio > h:
+                continue
+            peso = luz.get_current_intensity() * radio
+            if peso > mejor_peso:
+                mejor_peso = peso
+                mejor = (sx, sy)
+
+        if mejor is None:
+            return
+        # A UV, y con la Y volteada: la tubería sube la escena invertida
+        # (`pygame.image.tostring(..., True)`) y el sombreador muestrea en ese
+        # sistema. Es el mismo desfase que documenta `region_to_gl_uv`.
+        gpu_effects.publish_god_rays(
+            (mejor[0] / w, 1.0 - mejor[1] / h), float(fuerza),
+        )
+
     # ── F5.14 — lianas y tirolesas ─────────────────────────────
     def _actualizar_agarres(self, player, im) -> None:
         """Agarrarse a una liana o engancharse a una tirolesa.
@@ -1273,13 +1352,14 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
             # AUD-202 — el tiempo se persiste, no sólo se enseña un segundo.
             # `save()` existía desde el primer día sin que nadie lo llamara, así
             # que la pantalla de récords no tenía qué leer y enseñaba tiempos
-            # escritos a mano. Un fallo de disco no corta la partida: perder una
-            # marca es molesto, quedarse sin terminar el nivel es peor.
-            try:
-                self._speedrun.save()
-            except OSError:
-                logging.getLogger(__name__).warning(
-                    "no se pudo guardar el tiempo de speedrun", exc_info=True)
+            # escritos a mano.
+            #
+            # AUD-231 — pero `save()` era la llamada equivocada. Vuelca la
+            # carrera actual, y `on_enter` acaba de vaciar los parciales con
+            # `start()`, así que escribía una sola marca encima de todas las
+            # anteriores: la tabla sólo podía enseñar el último nivel jugado.
+            # `registrar_marca` acumula, y sólo pisa una marca cuando mejora.
+            registrar_marca(stage.stage_id, self._speedrun.global_time)
             self._guardar_fantasma_si_es_mejor()
             # AUD-022: the speedrun timer ran the whole stage and then threw the
             # result away — get_formatted_time() and get_splits() had no callers,
@@ -1439,6 +1519,10 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
             self._hud.set_combo_count(self._player.combo_count)
             self._hud.set_special_meter(self._player.special_meter, self._player.special_meter_max)
             self._hud.set_estamina(self._player.estamina, self._player.estamina_max)
+            # AUD-219: el saldo se lee del inventario, no se guarda aparte —
+            # las monedas *son* el objeto `coin`, y duplicar el número acabaría
+            # con los dos desincronizados en cuanto la tienda cobre algo.
+            self._hud.set_score(self._score.score, get_inventory().coins)
             self._hud.update(dt)
         self._subtitles.update(dt)
         if self._msg_box:
@@ -1666,7 +1750,8 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
                 if self._player is not None else None
             self._niebla.draw(surface, self._camera.offset)
         if self._agua_vfx is not None:
-            self._agua_vfx.draw(surface, self._camera.offset)
+            self._publicar_o_dibujar_el_agua(surface)
+        self._publicar_los_rayos_de_luz()
         self._lighting.render(surface, self._camera.offset)
         self._post_processing.apply(surface)
         # AUD-194 — la previsualización del tiro va DESPUÉS de la
