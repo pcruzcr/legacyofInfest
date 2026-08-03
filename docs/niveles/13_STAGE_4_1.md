@@ -19,11 +19,13 @@ adivinarlo leyendo el código.
 
 | Pieza | Dónde vive |
 |---|---|
-| Mapa (100 × 38, generado) | `tools/generate_stage4_1.py` → `assets/maps/stage4_1/stage4_1.tmx` |
-| Escena, actos, luna, rayos | `src/stages/stage4_1/stage4_1.py` |
+| Mapa (60 × 240 — **un descenso**, generado) | `tools/generate_stage4_1.py` → `assets/maps/stage4_1/stage4_1.tmx` |
+| Trazado: dónde está cada repisa, brasero y lápida | `src/stages/stage4_1/trazado.py` |
+| Escena, actos, luna, rayos, brujas, oscuridad | `src/stages/stage4_1/stage4_1.py` |
 | Tabla de los cinco actos | `src/stages/stage4_1/actos.py` |
-| Contornos de venado, serpiente, gavilán y la Cegua | `src/stages/stage4_1/siluetas.py` |
-| Pruebas (36) | `tests/test_stage4_1.py` |
+| Contornos de venado, serpiente, gavilán, la Cegua y las brujas | `src/stages/stage4_1/siluetas.py` |
+| Fondo del cementerio (3 capas) | `tools/generate_all_assets.py` → `assets/backgrounds/final/` |
+| Pruebas (50) | `tests/test_stage4_1.py` |
 
 **Lo que se cambió respecto a esta ficha, y por qué:**
 
@@ -50,23 +52,109 @@ adivinarlo leyendo el código.
    cargue el profesor, que estén todos sin distinción de nota y que ninguna
    inscripción se burle de nadie. Inventar una lista sería lo contrario.
 
+**Lo que se corrigió después (AUD-208 … AUD-211):**
+
+7. **El nivel medía media pantalla por acto.** Los tramos eran de 20 baldosas
+   sobre un mapa de 100, y la pantalla mide 50: en una sola vista cabían dos
+   actos y medio, la luna «bajaba un tramo» dos veces sin que el jugador se
+   moviera de sitio y los cinco actos se recorrían en unos diez segundos. Ahora
+   son **60 baldosas por acto** (300 × 38, 4800 × 608 px) — pantalla y media
+   cada uno. Las columnas de todo viven en `trazado.py`, que leen el generador
+   **y** la escena: antes eran dos listas a mano y la huella de la visión
+   espectral podía acabar flotando sobre una grieta sin que nada fallara.
+8. **Doce puntos de reaparición, uno por brasero.** El §10 del diseño dice que
+   «los braseros ya cumplen de marcadores»; ahora es literal, se vuelve al
+   último fuego encendido. Con dos checkpoints sobre 300 baldosas el calificador
+   avisaba de 688 px sin reaparecer (recomienda 500); ahora el tramo más largo
+   es de 480 px.
+9. **La música y el fondo eran de otro nivel.** El mapa pedía `bgm_zone3` y
+   `background_zone = stage0`, o sea la música de la zona 3 y el castillo del
+   prólogo. El Asset Bible (`docs/20_ASSET_BIBLE.md`) ya tenía asignadas las dos
+   cosas a este nivel —`bgm_final_approach.wav` y `final/bg_final_*.png`— y
+   estaban en el repositorio sin usar. Las tres capas del fondo, además, las
+   dibujaba el generador genérico (un degradado con ruido): ahora son un
+   cementerio de verdad —lápidas, cruces, verja, árboles secos y el círculo de
+   piedra del acto V— con la paleta que fija el propio Asset Bible.
+10. **Faltaban dos cosas de la checklist del diseño.** Las **brujas** que cruzan
+    el fondo con el relámpago (§4) y el **susurro de la oscuridad**: quedarse
+    quieto más de 4 s sin ningún brasero cerca enciende los ojos de la Cegua en
+    el fondo y suena `sfx_environment_cemetery_silence`. Como manda el §4, no
+    hay daño ni castigo — hay una prueba que lo comprueba.
+
+**El rediseño: de pasillo a pozo (AUD-225).**
+
+Jugado, el nivel horizontal no funcionaba. Tres defectos, y los tres se
+arreglaron cambiando la forma del nivel:
+
+11. **Tenía trampas, y la ficha las prohíbe.** Siete `DeathPit` y cinco
+    `HazardZone` en un nivel que esta misma ficha llama «travesía atmosférica» y
+    donde se prohíben los enemigos *«porque la tensión ya está»*. Memorizar
+    caídas no es atmósfera. **No queda ni un foso ni una zona de daño**, y hay
+    tres pruebas que lo comprueban —una de ellas leyendo el XML, por si el
+    cargador algún día ignora un tipo por otro motivo—.
+12. **El daño era invisible.** El motor sólo dibujaba las zonas de daño que
+    **suben**; una fija esperaba a que el diseñador pintara pinchos en las
+    baldosas y aquí no había ninguno. Este nivel ya no usa ninguna, pero el
+    defecto era del motor y afectaba a cualquier entrega: se arregló aparte en
+    **AUD-228**, y de paso apareció que la única `HazardZone` fija que quedaba
+    en el proyecto estaba en `stage0`, el nivel que copian los estudiantes,
+    haciendo daño invisible desde el primer día.
+13. **Un cementerio se baja.** Ahora es un pozo de 60 × 240 (960 × 3840 px) y los
+    cinco actos son cinco tramos de profundidad. Se desciende por 44 repisas que
+    alternan lado —un zigzag— hasta el suelo del umbral. Como el motor **no tiene
+    daño por caída**, caer es el movimiento y no el castigo: es lo que permite
+    quitar los fosos sin poner nada en su lugar.
+
+Lo que sustituye al peligro son **superficies que se ven** — la regla es que nada
+cambie el movimiento del jugador sin que se vea por qué:
+
+| Superficie | Qué hace | Cómo se ve |
+|---|---|---|
+| Musgo | Arrastra hacia el hueco de su repisa (`arrastre` 62 px/s) | Verde con matas (baldosa 146) |
+| Lodo | Frena: se camina despacio (`multiplicador` 0,88) | Tierra con raíces (baldosa 212) |
+| Viento | Empuja en el acto IV, con ciclo de 3,2 s | La tormenta, los rayos y la lluvia |
+
+Las grietas siguen ahí y **ya no hacen daño**: son luz verde en el canto de cada
+repisa, dibujada por la escena con el fondo, que marca el borde del que hay que
+dejarse caer.
+
+**El órgano (AUD-227).** `bgm_final_approach.wav` lo generaba
+`_gen_music_track`, el sintetizador genérico de los otros diez temas: onda
+cuadrada, saw y un golpe de ruido blanco en cada pulso. La ficha pide órgano y
+sonaba una caja de ritmos en un nivel donde «el silencio es el jefe».
+
+Ahora lo genera `_gen_bgm_organo`, y no es una imitación: un registro de órgano
+**es** un armónico —un tubo que suena a un múltiplo entero de la fundamental—,
+así que la pista es síntesis aditiva con los seis registros del principal
+(8', 4', 2⅔', 2', 1⅓', 1'), pedal de 16', trémolo al 6 % y **sin percusión**.
+Cuatro acordes de re menor (i – VI – III – v), cuatro segundos cada uno.
+
+Dos pruebas lo defienden, y ninguna comprueba «que el fichero exista» —eso ya
+pasaba antes—: una exige que los picos del espectro caigan en múltiplos enteros
+de las notas del acorde, y la otra cuenta ataques bruscos por segundo. Medido:
+el órgano da 0,63/s y el chiptune que había daba 4,3/s.
+
 **Medido, no supuesto:**
 
 - Dibujar el nivel cuesta **4,6 ms** por fotograma; con la visión espectral
   puesta, **6,6 ms** de los 16,6 que hay a 60 fps. El umbral se aplica a 1/4 de
   resolución justamente por esto: a 1/2 costaba 4,6 ms de más y se salía del
   presupuesto.
-- En la curva de dificultad sale con **36,8**, entre `stage3_3_el_patio` (36,4)
-  y `boss_paburu` (13,4). No introduce ningún escalón brusco. Todo su índice
-  viene de peligros —6 por pantalla— y **cero** de combate, que es exactamente
-  lo que un nivel sin enemigos debe puntuar.
+- En la curva de dificultad sale con **25,5** (antes 36,8). Los peligros por
+  pantalla bajaron de 6,0 a 2,0 no quitando peligros sino repartiéndolos por un
+  nivel tres veces más largo, que es lo que un ★★☆☆☆ atmosférico debe puntuar.
+  Sigue sin introducir ningún escalón brusco.
+- `grade_stage.py` lo puntúa **102/130 (78,5 %)**, antes 94/130. Los 20 puntos
+  que faltan son los dos criterios de enemigos: el calificador espera que un
+  nivel tenga enemigos y éste tiene prohibido tenerlos. Es la única nota del
+  proyecto donde bajar es lo correcto.
 
 ## Ficha rápida
 
 | Campo | Valor |
 |---|---|
 | Dificultad | ★★☆☆☆ (2/5) — **atmosférica**: el miedo es el desafío |
-| Tamaño mínimo | **1600 × 608 px** (100 × 38 tiles) |
+| Tamaño mínimo | **1600 × 608 px** (100 × 38 tiles) — el construido son 4800 × 608 |
 | Tamaño de referencia | ~400 px de recorrido en el diseño canónico |
 | Tipos de enemigo | **0 — regla de oro: prohibido añadir** |
 | Enemigos mínimos | 0 |
@@ -126,6 +214,10 @@ Ninguno. El único "contenido" son:
 - [x] Cuencos con luz por proximidad; grietas pulsantes legibles
 - [x] `start_hour = 19` y `day_length = 900` — como número, ver §0
 - [x] `validate_tmx.py --ci` en verde (17/17)
+- [x] Cinco actos de una pantalla y media cada uno (AUD-208)
+- [x] Música y fondo de la zona final, no de la zona 3 ni del prólogo (AUD-209)
+- [x] Brujas cruzando con el relámpago (AUD-210)
+- [x] El susurro de la oscuridad, sin daño (AUD-211)
 
 ## Diseño propuesto
 

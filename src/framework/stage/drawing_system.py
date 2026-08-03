@@ -400,20 +400,34 @@ class DrawingSystem:
                 continue
             factor = self._PARALLAX_FACTORS[min(index, len(self._PARALLAX_FACTORS) - 1)]
             layer_w = layer.get_width()
-            if layer_w <= 0:
+            layer_h = layer.get_height()
+            if layer_w <= 0 or layer_h <= 0:
                 continue
-            # Wrap horizontally so a layer narrower than the map still tiles
-            # across the whole viewport instead of leaving a gap.
-            shift = int(camera.offset.x * factor) % layer_w
-            y = int(-camera.offset.y * factor * 0.5)
-            x = -shift
+            # AUD-225: el desplazamiento vertical no estaba acotado. Se
+            # calculaba `-offset.y * factor * 0.5` y luego se pegaba **una**
+            # copia extra debajo, lo que bastaba para los mapas de 38 filas
+            # —donde la cámara apenas se mueve en vertical— y para ninguno más.
+            #
+            # El 4-1 pasó a ser un pozo de 240 filas: con la cámara a 3.000 px
+            # de profundidad el fondo subía 900 px y por debajo no quedaba
+            # cielo, sólo el color de borrado.
+            #
+            # Se acota en vez de repetir, y no es lo mismo. `_try_append_bg`
+            # escala **todas** las capas al tamaño de la pantalla, así que
+            # repetir en vertical significa ver el mismo horizonte una vez por
+            # pantalla de profundidad —una costura cada 600 px— y además cuesta
+            # cuatro pegados por capa en lugar de dos. Acotado, el cielo se
+            # queda donde está mientras se baja, que es lo que hace un cielo.
+            #
+            # El eje horizontal sí se envuelve: ahí la repetición es la que
+            # permite que una capa más estrecha que el mapa cubra el recorrido.
+            shift_x = int(camera.offset.x * factor) % layer_w
+            margen = max(0, layer_h - view_h)
+            y = -min(margen, max(0, int(camera.offset.y * factor * 0.5)))
+            x = -shift_x
             while x < view_w:
                 surface.blit(layer, (x, y))
                 x += layer_w
-            if layer.get_height() < view_h:
-                # Extend the last row of the layer down to the bottom edge so a
-                # short backdrop does not expose the clear colour.
-                surface.blit(layer, (x - layer_w, y + layer.get_height()))
 
     def _draw_stage_layers(
         self, surface: pygame.Surface, stage: StageData, camera: Camera,

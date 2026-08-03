@@ -105,6 +105,29 @@ def _cegua(ancho: int, alto: int) -> list[tuple[float, float]]:
     ]
 
 
+def _bruja(ancho: int, alto: int) -> list[tuple[float, float]]:
+    """Una figura encorvada cruzando el cielo (AUD-210).
+
+    El diseño (§4) las pone en el acto IV: *«2–3 cruzan con el relámpago; se
+    quedan un segundo en la rama de un árbol»*. Como la Cegua, no son enemigos
+    y no se caricaturizan: es una silueta con capa, alargada por el viaje, y la
+    escoba se lee por la línea horizontal de abajo — no hace falta dibujar más
+    para que se entienda qué es.
+    """
+    w, h = ancho, alto
+    return [
+        # la escoba, de punta a punta
+        (0.00 * w, 0.86 * h), (0.30 * w, 0.78 * h), (1.00 * w, 0.72 * h),
+        (0.94 * w, 0.80 * h), (0.34 * w, 0.86 * h),
+        # la figura encorvada encima
+        (0.30 * w, 0.78 * h), (0.26 * w, 0.46 * h), (0.34 * w, 0.20 * h),
+        (0.46 * w, 0.06 * h), (0.62 * w, 0.00 * h), (0.54 * w, 0.16 * h),
+        (0.58 * w, 0.34 * h), (0.52 * w, 0.58 * h), (0.46 * w, 0.76 * h),
+        # la capa, que es lo que la hace leerse en movimiento
+        (0.20 * w, 0.62 * h), (0.06 * w, 0.70 * h), (0.18 * w, 0.74 * h),
+    ]
+
+
 #: Las tres formas de los vencidos, en el orden en que se derrotan.
 ESPIRITUS: tuple[tuple[str, object], ...] = (
     ("venado", _venado),

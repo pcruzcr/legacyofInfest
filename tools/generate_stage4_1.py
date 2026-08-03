@@ -4,11 +4,29 @@ Genera `assets/maps/stage4_1/stage4_1.tmx` — La Entrada al Cementerio.
 
 El nivel, en una frase
 =======================
-Un sendero de 100 baldosas sin un solo enemigo, donde **el fondo avanza con el
-jugador**: cada tramo enciende braseros, baja la luna, sube la tormenta y
-acerca las siluetas. La ficha (`docs/niveles/13_STAGE_4_1.md`) lo llama
-«travesía atmosférica»; el diseño (`15_DISENO_4_1_EL_CEMENTERIO.md`) lo
+Un **descenso** de 240 filas sin un solo enemigo y sin una sola trampa mortal,
+donde el fondo avanza con el jugador: cada tramo enciende braseros, sube la
+tormenta y acerca las siluetas. La ficha (`docs/niveles/13_STAGE_4_1.md`) lo
+llama «travesía atmosférica»; el diseño (`15_DISENO_4_1_EL_CEMENTERIO.md`) lo
 estructura en cinco actos con la pelea de Magus como referencia.
+
+Qué cambió, y por qué (AUD-225)
+--------------------------------
+El nivel era horizontal y tenía siete `DeathPit`. Jugado no funcionaba:
+
+* **Los fosos contradecían la ficha.** «Travesía atmosférica», sin enemigos,
+  porque *«la tensión ya está»*. Siete agujeros mortales lo convertían en un
+  nivel de memorizar caídas. **Ya no hay ninguno.**
+* **Las `HazardZone` no se veían.** El motor sólo pinta las que suben (la
+  inundación de AUD-135); una fija espera a que el diseñador dibuje pinchos en
+  las baldosas, y aquí no había ninguno. Se recibía daño de la nada.
+  **Ya no hay ninguna.** Las grietas siguen ahí, pero como luz verde que dibuja
+  la escena y que no hace daño.
+* **Un cementerio se baja, no se cruza.** Ahora es un pozo de 60 × 240.
+
+Lo que sustituye al peligro son **superficies que se ven**: musgo que arrastra
+hacia el hueco y lodo que frena, cada una con su baldosa. La regla es que nada
+cambie el movimiento del jugador sin que se vea por qué.
 
 Por qué se genera con código
 -----------------------------
@@ -16,18 +34,17 @@ Igual que `generate_stage0_tmx.py` y `generate_stage_mecanicas.py`: un TMX a
 mano son miles de números en CSV que nadie puede revisar en un *pull request*.
 Generado, el diff es de diez líneas de Python y se lee lo que cambió.
 
-Los cinco actos, y dónde empieza cada uno
-------------------------------------------
-El mapa mide 100 baldosas. Los actos se reparten en tramos de 20, y la escena
-(`src/stages/stage4_1/stage4_1.py`) lee la `x` del jugador para saber en cuál
-está. Aquí sólo se coloca **lo que es geometría**; el clima, la luna y las
-siluetas los mueve la escena.
+Los cinco actos, y en qué fila empieza cada uno
+-----------------------------------------------
+    0-47     I   La Entrada                el brocal, suelo firme, primer salto
+    48-95    II  El Sendero de los Nombres las lápidas con los nombres
+    96-143   III La Niebla que Respira     aparece el musgo: arrastra
+    144-191  IV  La Tormenta               lluvia, rayos, viento y lodo
+    192-239  V   El Umbral                 el fondo del pozo y «LA PRUEBA»
 
-    0-19    I   La Entrada              suelo continuo, sin peligros
-    20-39   II  El Sendero de los Nombres   lápidas con nombres, grietas visibles
-    40-59   III La Niebla que Respira   primer tramo de saltos (grietas)
-    60-79   IV  La Tormenta             losas que ceden + grietas
-    80-99   V   El Umbral               suelo firme, la lápida «LA PRUEBA»
+Aquí sólo se coloca **lo que es geometría**; el clima, la luna, los rayos y las
+siluetas los mueve la escena. Las columnas y filas de cada cosa viven en
+`src/stages/stage4_1/trazado.py`, que es también de donde las lee la escena.
 
 La regla de oro: **cero enemigos**
 -----------------------------------
@@ -39,8 +56,7 @@ Sobre el «Portal» de la ficha
 ------------------------------
 La ficha pide «1 `Portal`». Ese tipo **no existe en el motor** — la auditoría
 de documentación ya lo tenía señalado. La salida de un escenario es
-`NextTrigger`, que es lo que se coloca aquí. Es la misma cosa con otro nombre;
-lo que no se puede es escribir en el mapa un tipo que el cargador rechaza.
+`NextTrigger`, que es lo que se coloca aquí.
 """
 from __future__ import annotations
 
@@ -52,13 +68,31 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+# El trazado —dónde está cada repisa, cada brasero y cada lápida— es el mismo
+# objeto que lee la escena. Ver la cabecera de `trazado.py`: cuando eran dos
+# listas, la huella de la visión espectral acabó flotando sobre el vacío.
+from src.stages.stage4_1.trazado import (  # noqa: E402
+    ALTO_ACTO,
+    ARRASTRE_DEL_MUSGO,
+    EPITAFIOS,
+    FRENO_DEL_LODO,
+    GROSOR_REPISA,
+    MH,
+    MURO_ANCHO,
+    MW,
+    SUELO_FINAL,
+    TS,
+    braseros,
+    checkpoints,
+    repisas,
+    superficies,
+)
+
 DESTINO = PROJECT_ROOT / "assets" / "maps" / "stage4_1" / "stage4_1.tmx"
 TILESET = "../../tilesets/tileset_stage0.png"
-
-TS = 16
-MW, MH = 100, 38          # 1600 × 608 px — el mínimo que pide la ficha
-SUELO_Y = 30              # fila del suelo; deja 30 filas de cielo para la luna
-ACTO = 20                 # ancho de cada acto, en baldosas
 
 # ── Baldosas ────────────────────────────────────────────────────────────────
 # La cabecera del tileset se copia del mapa que ya funciona. Inventarla es lo
@@ -69,64 +103,70 @@ TS_TOTAL = 4096
 TS_IMAGEN_PX = 1024
 
 VACIO = 0
-SUELO = 409               # la losa que se pisa
+PIEDRA = 409              # la losa que se pisa
 MURO = 153                # piedra de cierre
 LOSA = 666                # lápida caída / repisa
 RELLENO = 665             # tierra bajo la superficie
 
+# Las dos superficies que cambian el movimiento. Se eligieron **mirando la
+# hoja**, no adivinando el índice: 146 es verde con matas encima y 212 es tierra
+# con raíces. Que se distingan de un vistazo del 409 gris es el requisito, no un
+# detalle: una superficie que resbala y se ve igual que el suelo normal es una
+# trampa, y este nivel no tiene trampas.
+MUSGO = 146               # verde con matas — arrastra
+MUSGO_RELLENO = 141
+LODO = 212                # tierra con raíces — frena
+LODO_RELLENO = 213
 
-#: Los doce braseros, en `x` de baldosa. El último es el del umbral: grande y
-#: central, en el acto V. La escena los enciende por proximidad y **no los
-#: apaga**, así que el sendero queda marcado de luz por detrás del jugador.
-BRASEROS: tuple[int, ...] = (
-    6, 13,                    # I  — dos, fríos, para que se vea qué es un brasero
-    22, 30, 37,               # II — el sendero de los nombres
-    42, 48, 54,               # III— acompañan el primer tramo de saltos
-    62, 71,                   # IV — la tormenta
-    84, 94,                   # V  — el umbral; el último es el grande
-)
+#: Qué baldosa pinta cada material, en `(superficie, relleno)`.
+BALDOSAS = {
+    "piedra": (PIEDRA, RELLENO),
+    "musgo": (MUSGO, MUSGO_RELLENO),
+    "lodo": (LODO, LODO_RELLENO),
+}
+
 
 def _terreno() -> list[list[int]]:
-    """La geometría del cementerio, acto por acto."""
+    """La geometría del pozo, repisa a repisa."""
     g = [[VACIO] * MW for _ in range(MH)]
 
-    # Suelo continuo. Los huecos se abren después, donde toca.
-    for y in range(SUELO_Y, MH):
-        for x in range(MW):
-            g[y][x] = SUELO if y == SUELO_Y else RELLENO
-
-    # Acto III — el primer tramo de saltos. Tres grietas anchas que se cruzan
-    # de una en una: es la presentación de la mecánica, no el examen.
-    for x0 in (44, 50, 56):
-        for y in range(SUELO_Y, MH):
-            for x in range(x0, x0 + 3):
-                g[y][x] = VACIO
-
-    # Acto IV — la tormenta. Cuatro huecos más juntos; entre ellos van las
-    # losas que ceden, así que el suelo no puede estar.
-    for x0 in (63, 68, 73, 78):
-        for y in range(SUELO_Y, MH):
-            for x in range(x0, x0 + 4):
-                g[y][x] = VACIO
-
-    # Lápidas caídas: peldaños de piedra sobre el sendero. Están en los actos
-    # II y V, donde no hay huecos, para que se lean como decoración jugable y
-    # no como parte del tramo de saltos.
-    for x in (24, 25, 33, 34, 86, 87):
-        g[SUELO_Y - 2][x] = LOSA
-    for x in (28, 29, 90, 91):
-        g[SUELO_Y - 4][x] = LOSA
-
-    # Muros laterales: el cementerio está cerrado. El de la derecha deja pasar
-    # al 4-2 por el disparador, no por el borde.
+    # Los dos muros del pozo, de arriba abajo. El cementerio está cerrado: no
+    # se sale por los lados, se baja.
     for y in range(MH):
-        g[y][0] = MURO
+        for x in range(MURO_ANCHO):
+            g[y][x] = MURO
+            g[y][MW - 1 - x] = MURO
+
+    # El techo: el brocal por el que se entra.
+    for x in range(MURO_ANCHO, MW - MURO_ANCHO):
+        g[0][x] = MURO
+
+    # Las repisas, cada una con su material a la vista.
+    for x0, ancho, fila, material in superficies():
+        arriba, abajo = BALDOSAS[material]
+        for x in range(x0, x0 + ancho):
+            g[fila][x] = arriba
+            for d in range(1, GROSOR_REPISA):
+                g[fila + d][x] = abajo
+
+    # El suelo del umbral: firme, de pared a pared.
+    for y in range(SUELO_FINAL, MH):
+        for x in range(MURO_ANCHO, MW - MURO_ANCHO):
+            g[y][x] = PIEDRA if y == SUELO_FINAL else RELLENO
+
+    # Las lápidas de los nombres, apoyadas en su repisa.
+    lista = repisas()
+    for indice, _texto in EPITAFIOS:
+        x0, ancho, fila = lista[indice]
+        cx = x0 + ancho // 3
+        g[fila - 1][cx] = LOSA
+        g[fila - 2][cx] = LOSA
 
     return g
 
 
 def _colisiones() -> list[str]:
-    """La capa `Collision`: suelo por tramos y las repisas de lápida."""
+    """La capa `Collision`: los muros, las repisas y el suelo del umbral."""
     r: list[str] = []
     ident = [1]
 
@@ -137,52 +177,30 @@ def _colisiones() -> list[str]:
             f' width="{w}" height="{h}"/>',
         )
 
-    suelo_px = SUELO_Y * TS
-    alto = (MH - SUELO_Y) * TS
+    # Muros laterales. No hay techo de colisión: un rectángulo por encima de la
+    # fila 0 lo cuenta el calificador como una plataforma a la que no llega
+    # nadie, y no hace falta — arriba del brocal no hay nada a donde ir.
+    solido(0, 0, MURO_ANCHO * TS, MH * TS)
+    solido((MW - MURO_ANCHO) * TS, 0, MURO_ANCHO * TS, MH * TS)
 
-    # Tramos de suelo, saltando los siete huecos. Se calculan a partir de la
-    # misma lista que los abre para que no puedan divergir.
-    huecos = [(44, 3), (50, 3), (56, 3), (63, 4), (68, 4), (73, 4), (78, 4)]
-    x = 0
-    for inicio, ancho in huecos:
-        if inicio > x:
-            solido(x * TS, suelo_px, (inicio - x) * TS, alto)
-        x = inicio + ancho
-    solido(x * TS, suelo_px, (MW - x) * TS, alto)
+    # Las repisas. Son `Solid` y no `Platform` a propósito. Una `Platform` se
+    # atraviesa desde abajo, y aquí se cae desde arriba a 400 px/s sobre una
+    # repisa de 16 px de grosor: es justo la situación en la que un colisionador
+    # de un solo sentido se atraviesa por velocidad. `Solid` para en los dos
+    # sentidos y el precio —darse en la cabeza al saltar debajo de una— se paga
+    # una vez y se entiende.
+    for x0, ancho, fila in repisas():
+        solido(x0 * TS, fila * TS, ancho * TS, GROSOR_REPISA * TS)
 
-    # Muros laterales.
-    solido(-TS, 0, TS, MH * TS)
-    solido(MW * TS, 0, TS, MH * TS)
-
-    # Lápidas caídas, atravesables desde abajo: son peldaños, no techo.
-    for x0 in (24, 33, 86):
-        solido(x0 * TS, (SUELO_Y - 2) * TS, 2 * TS, 8, "Platform")
-    for x0 in (28, 90):
-        solido(x0 * TS, (SUELO_Y - 4) * TS, 2 * TS, 8, "Platform")
-
-    # El borde de cada cuenco de fuego, también atravesable desde abajo: se
-    # puede subir encima de un brasero. El último no lleva —es el del umbral,
-    # y subirse a él rompería la imagen del final.
-    for bx in BRASEROS[:-1]:
-        solido(bx * TS, (SUELO_Y - 1) * TS, 2 * TS, 8, "Platform")
+    # El suelo del umbral.
+    solido(MURO_ANCHO * TS, SUELO_FINAL * TS,
+           (MW - 2 * MURO_ANCHO) * TS, (MH - SUELO_FINAL) * TS)
 
     return r
 
 
-#: Los nombres de los estudiantes van aquí. Se dejan como marcador de posición
-#: a propósito: el diseño (§7) exige que los cargue el profesor, que todos
-#: estén sin distinción de nota, y que ninguna inscripción se burle de nadie.
-#: Escribir yo una lista inventada sería justo lo contrario.
-EPITAFIOS: tuple[tuple[int, str], ...] = (
-    (23, "[NOMBRE] — Computo Grafico, 2026"),
-    (31, "[NOMBRE] — Procesamiento de Imagenes, 2026"),
-    (38, "[NOMBRE] — Vision por Computadora, 2026"),
-    (88, "[NOMBRE] — Reconocimiento de Patrones, 2026"),
-)
-
-
 def _objetos() -> list[str]:
-    """Los objetos del TMX. Ni un solo enemigo: es la regla de oro."""
+    """Los objetos del TMX. Ni un enemigo, ni un `DeathPit`, ni una `HazardZone`."""
     o: list[str] = []
     ident = [100]
 
@@ -209,83 +227,90 @@ def _objetos() -> list[str]:
         cuerpo += "\n  </object>"
         o.append(cuerpo)
 
-    suelo_px = SUELO_Y * TS
+    lista = repisas()
+    primera = lista[0]
 
-    obj("PlayerSpawn", 3 * TS, suelo_px - 48, 16, 32)
+    obj("PlayerSpawn", (primera[0] + 3) * TS, (primera[2] - 3) * TS, 16, 32)
 
-    # ── Acto I — La Entrada ───────────────────────────────────
-    obj("MessageTrigger_Once", 5 * TS, suelo_px - 64, 48, 48,
-        text="El cementerio no ataca. Testifica.")
+    # ── Los mensajes: uno al entrar en cada acto ──────────────
+    #
+    # Van a la altura de la primera repisa de su acto, no en la fila del
+    # umbral: un disparador colocado en el aire no lo cruza nadie.
+    textos = {
+        1: "El cementerio no ataca. Testifica.",
+        2: "Los nombres de los que bajaron antes.",
+        3: "El musgo tira hacia el hueco. Dejate llevar.",
+        4: "No te pares. El lodo frena y el viento empuja.",
+        5: "Silencio. Los doce arden.",
+    }
+    vistos: set[int] = set()
+    for x0, ancho, fila in lista:
+        acto = min(5, fila // ALTO_ACTO + 1)
+        if acto in vistos:
+            continue
+        vistos.add(acto)
+        obj("MessageTrigger_Once", (x0 + ancho // 2) * TS, (fila - 3) * TS,
+            48, 48, text=textos[acto])
 
     # ── Los doce braseros ─────────────────────────────────────
     #
     # Cada uno es una luz de Tiled. El motor las coloca desde el centro del
-    # rectángulo, así que se dibujan como un cuadro alrededor del cuenco.
-    # `flicker` las hace respirar: un fuego que no parpadea se lee como una
-    # bombilla.
-    for i, bx in enumerate(BRASEROS):
-        ultimo = i == len(BRASEROS) - 1
-        obj("Light", bx * TS, suelo_px - 3 * TS, 2 * TS, 2 * TS,
-            radius=140.0 if ultimo else 90.0,
+    # rectángulo. `flicker` las hace respirar: un fuego que no parpadea se lee
+    # como una bombilla.
+    fuegos = braseros()
+    for i, (bx, fila) in enumerate(fuegos):
+        ultimo = i == len(fuegos) - 1
+        obj("Light", bx * TS, (fila - 3) * TS, 2 * TS, 2 * TS,
+            radius=160.0 if ultimo else 100.0,
             color="#7CFFA0",          # verde espectral: el color del canon
             intensity=0.95 if ultimo else 0.75,
             flicker=True, flicker_speed=2.2, flicker_amount=0.28)
-        # El cuenco en sí es una repisa. Va en la capa `Collision`, no aquí:
-        # `Platform` es un tipo de colisión y el validador lo rechaza en
-        # `Objects`. Ver `_colisiones()`.
 
-    # ── Acto II — El Sendero de los Nombres ───────────────────
-    obj("MessageTrigger_Once", 21 * TS, suelo_px - 64, 48, 48,
-        text="Los nombres de los que pasaron por aqui.")
-    for bx, texto in EPITAFIOS[:3]:
-        obj("MessageTrigger_Once", bx * TS, suelo_px - 3 * TS, 2 * TS, 3 * TS,
-            text=texto)
+    # ── Los puntos de reaparición ─────────────────────────────
+    #
+    # Uno por brasero. El descenso es de un solo sentido —96 px entre repisas
+    # contra 90 de salto—, así que sin ellos un error costaría el pozo entero.
+    for i, (cx, fila) in enumerate(checkpoints(), start=1):
+        obj("Checkpoint", cx * TS, (fila - 2) * TS, 16, 32, checkpoint_id=i)
 
-    # Grietas del acto II: **visibles y sin daño mortal**, para que el jugador
-    # aprenda a leerlas antes de que importen. Es la regla del §5 del diseño:
-    # ningún peligro aparece sin haberse mostrado antes.
-    obj("HazardZone", 27 * TS, suelo_px - 4, 3 * TS, 4, damage=0.0)
-    obj("HazardZone", 35 * TS, suelo_px - 4, 3 * TS, 4, damage=0.0)
+    # ── Las superficies que mueven al jugador ─────────────────
+    #
+    # Ni una hace daño. El musgo arrastra hacia el hueco de su repisa y el lodo
+    # frena; las dos están pintadas con su baldosa, así que se ve por qué.
+    for x0, ancho, fila, material in superficies():
+        if material == "musgo":
+            # Hacia el hueco: si la repisa empieza en el muro, el hueco está a
+            # la derecha, y al revés.
+            sentido = 1.0 if x0 == MURO_ANCHO else -1.0
+            obj("FrictionZone", x0 * TS, (fila - 2) * TS, ancho * TS, 2 * TS,
+                arrastre=ARRASTRE_DEL_MUSGO * sentido)
+        elif material == "lodo":
+            obj("FrictionZone", x0 * TS, (fila - 2) * TS, ancho * TS, 2 * TS,
+                multiplicador=FRENO_DEL_LODO)
 
-    obj("Checkpoint", 39 * TS, suelo_px - 32, 16, 32, checkpoint_id=1)
+    # ── Acto IV — el viento de la tormenta ────────────────────
+    #
+    # Empuja hacia el centro del pozo, nunca contra una pared: el viento tiene
+    # que hacer que la tormenta se note, no que el descenso se pierda.
+    obj("WindZone", MURO_ANCHO * TS, 3 * ALTO_ACTO * TS,
+        (MW - 2 * MURO_ANCHO) * TS, ALTO_ACTO * TS,
+        fuerza_x=-70.0, fuerza_y=0.0, periodo=3.2)
 
-    # ── Acto III — La Niebla que Respira ──────────────────────
-    obj("MessageTrigger_Once", 41 * TS, suelo_px - 64, 48, 48,
-        text="Las grietas respiran. Salta cuando exhalen.")
-    for x0 in (44, 50, 56):
-        obj("DeathPit", x0 * TS, (MH - 1) * TS, 3 * TS, TS)
-        # La grieta pulsa en el borde: se ve el peligro antes de caer en él.
-        obj("HazardZone", x0 * TS, suelo_px - 6, 3 * TS, 6, damage=0.25)
-
-    # ── Acto IV — La Tormenta ─────────────────────────────────
-    obj("MessageTrigger_Once", 61 * TS, suelo_px - 64, 48, 48,
-        text="No te pares. La piedra cede.")
-    for x0 in (63, 68, 73, 78):
-        obj("DeathPit", x0 * TS, (MH - 1) * TS, 4 * TS, TS)
-    # Las losas que ceden: aguantan medio segundo y se hunden. Reaparecen a los
-    # 3 s para que morir no cierre el camino.
-    for x0 in (64, 69, 74, 79):
-        obj("SinkingPlatform", x0 * TS, suelo_px - 2 * TS, 3 * TS, 8,
-            retraso=0.55, velocidad_caida=110.0, reaparece_en=3.0)
-    # El viento de la tormenta empuja hacia adelante, nunca contra el salto:
-    # ayuda a leer que hay tormenta sin castigar por ella.
-    obj("WindZone", 62 * TS, (SUELO_Y - 8) * TS, 20 * TS, 8 * TS,
-        fuerza_x=90.0, fuerza_y=0.0, periodo=2.6)
-
-    obj("Checkpoint", 82 * TS, suelo_px - 32, 16, 32, checkpoint_id=2)
+    # ── Las lápidas con los nombres ───────────────────────────
+    for indice, texto in EPITAFIOS:
+        x0, ancho, fila = lista[indice]
+        obj("MessageTrigger_Once", (x0 + ancho // 3) * TS, (fila - 3) * TS,
+            2 * TS, 3 * TS, text=texto)
 
     # ── Acto V — El Umbral ────────────────────────────────────
-    obj("MessageTrigger_Once", 85 * TS, suelo_px - 64, 48, 48,
-        text="Silencio. Los doce arden.")
-    obj("MessageTrigger_Once", EPITAFIOS[3][0] * TS, suelo_px - 3 * TS,
-        2 * TS, 3 * TS, text=EPITAFIOS[3][1])
+    #
     # La lápida central. No lleva nombre: lleva la inscripción del diseño (§7).
-    obj("MessageTrigger_Once", 95 * TS, suelo_px - 5 * TS, 2 * TS, 5 * TS,
-        text="LA PRUEBA")
+    obj("MessageTrigger_Once", (MW // 2 - 6) * TS, (SUELO_FINAL - 5) * TS,
+        2 * TS, 5 * TS, text="LA PRUEBA")
 
-    # La salida al 4-2. La ficha la llama «Portal»; el motor la llama
-    # `NextTrigger` y es el único tipo que el cargador acepta para salir.
-    obj("NextTrigger", (MW - 3) * TS, suelo_px - 3 * TS, 2 * TS, 3 * TS)
+    # La salida al 4-2, al fondo del pozo.
+    obj("NextTrigger", (MW - MURO_ANCHO - 4) * TS, (SUELO_FINAL - 3) * TS,
+        2 * TS, 3 * TS)
 
     return [x for x in o if x]
 
@@ -306,8 +331,12 @@ tileheight="{TS}" infinite="0" nextlayerid="20" nextobjectid="900">
   <property name="stage_id" value="stage4_1"/>
   <property name="stage_name" value="4-1  LA ENTRADA AL CEMENTERIO"/>
   <property name="author" value="Equipo docente — Legacy of Infest"/>
-  <property name="bgm_track" value="bgm_zone3"/>
-  <property name="background_zone" value="stage0"/>
+  <!-- AUD-209: aquí ponía `bgm_zone3` y `stage0`, o sea la música de la zona 3
+       y el fondo del prólogo. Las dos cosas ya tenían dueño en el Asset Bible
+       (`docs/20_ASSET_BIBLE.md`): `bgm_final_approach.wav` está listado como
+       «Stage 4-1» y las capas del cementerio son `final/bg_final_*.png`. -->
+  <property name="bgm_track" value="bgm_final_approach"/>
+  <property name="background_zone" value="final"/>
   <!-- El clima ARRANCA en niebla y lo cambia la escena por acto: fog al
        principio, storm en el acto IV, clear en el umbral. -->
   <property name="climate" value="fog"/>
@@ -322,7 +351,7 @@ tileheight="{TS}" infinite="0" nextlayerid="20" nextobjectid="900">
   <property name="time_limit" type="int" value="0"/>
   <property name="zone" type="int" value="4"/>
   <!-- Oscuro, pero no injugable: el suelo de MIN_AMBIENTE del motor (0,45)
-       protege de que la noche haga imposible ver las grietas. -->
+       protege de que la noche haga imposible ver los cantos. -->
   <property name="ambient_light" type="float" value="0.42"/>
   <property name="bloom" type="float" value="0.34"/>
   <property name="vignette" type="float" value="0.52"/>
@@ -350,8 +379,12 @@ tilecount="{TS_TOTAL}" columns="{TS_COLUMNAS}">
 def main() -> None:
     DESTINO.parent.mkdir(parents=True, exist_ok=True)
     DESTINO.write_text(generar(), encoding="utf-8")
+    musgo = sum(1 for *_, m in superficies() if m == "musgo")
+    lodo = sum(1 for *_, m in superficies() if m == "lodo")
     print(f"escrito {DESTINO.relative_to(PROJECT_ROOT)} "
-          f"({MW}×{MH} baldosas, {len(BRASEROS)} braseros, 0 enemigos)")
+          f"({MW}×{MH} baldosas, {len(repisas())} repisas, "
+          f"{len(braseros())} braseros, {musgo} de musgo, {lodo} de lodo, "
+          f"0 enemigos, 0 fosos, 0 zonas de daño)")
 
 
 if __name__ == "__main__":

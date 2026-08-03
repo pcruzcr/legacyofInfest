@@ -63,13 +63,41 @@ def escena(_video):
     sc.on_exit()
 
 
-def _llevar_a(escena, baldosa: int) -> None:
-    """Coloca al jugador en esa columna y deja correr unos fotogramas."""
-    x = baldosa * settings.TILE_SIZE
-    escena._player.rect.x = x
-    escena._player.position.x = float(x)
-    for _ in range(4):
+def _llevar_a(escena, fila: int, columna: int = 30) -> None:
+    """Coloca al jugador en esa **fila** del pozo y espera a la cámara.
+
+    Desde AUD-225 el nivel se baja, así que lo que sitúa al jugador en un acto
+    es la fila y no la columna.
+
+    La espera no es un número fijo de fotogramas: la cámara persigue con
+    interpolación y aquí tiene 3.800 px de recorrido vertical. Con los cuatro
+    fotogramas que bastaban en el mapa horizontal, la prueba de la visión
+    espectral pedía un píxel que estaba fuera de la pantalla.
+    """
+    x = columna * settings.TILE_SIZE
+    y = fila * settings.TILE_SIZE
+    escena._player.rect.topleft = (x, y)
+    escena._player.position.update(float(x), float(y))
+    for _ in range(400):
         escena.update(1 / 60)
+        objetivo = escena._player.rect.centery - settings.INTERNAL_HEIGHT / 2
+        if abs(escena._camera.offset.y - objetivo) < 2.0:
+            break
+
+
+def _dentro_del_acto(numero: int) -> int:
+    """Una fila que cae dentro del acto pedido, 1 a 5.
+
+    Se calcula de la tabla y no se escribe a mano. Cuando el mapa cambió de
+    forma (AUD-208 y AUD-225), las pruebas que apuntaban a coordenadas escritas
+    a mano no fallaron: la del clima comprobaba el acto IV sobre una posición
+    que ya era del acto II y **pasaba igual**, porque ahí también hay niebla.
+    Una prueba que sigue en verde midiendo el sitio equivocado es peor que una
+    que falla.
+    """
+    from src.stages.stage4_1.actos import ACTOS
+
+    return ACTOS[numero - 1].desde_fila + 6
 
 
 class TestLaReglaDeOro:
@@ -103,6 +131,238 @@ class TestLaReglaDeOro:
         assert not hasattr(siluetas, "Cegua")
 
 
+class TestNoHayTrampas:
+    """AUD-225. La ficha llama a esto «travesía atmosférica» y prohíbe enemigos
+    *«porque la tensión ya está»*. Tenía siete `DeathPit` y cinco `HazardZone`,
+    y las zonas de daño **no se dibujan**: el motor sólo pinta las que suben, así
+    que el jugador recibía daño desde un rectángulo invisible."""
+
+    def test_no_queda_ni_un_foso(self, escena) -> None:
+        assert escena._stage_data.death_pits == [], (
+            f"quedan {len(escena._stage_data.death_pits)} fosos: el nivel es "
+            f"un descenso, caer es el movimiento y no el castigo"
+        )
+
+    def test_no_queda_ni_una_zona_de_dano(self, escena) -> None:
+        assert list(escena._stage_data.hazard_zones) == [], (
+            "una zona de daño fija no la dibuja el motor: es daño invisible"
+        )
+
+    def test_el_mapa_no_declara_esos_tipos(self) -> None:
+        """Se lee el XML además del mapa cargado. Si alguien vuelve a poner un
+        `DeathPit` y el cargador lo ignora por otro motivo, esto lo ve."""
+        from pathlib import Path
+
+        xml = Path("assets/maps/stage4_1/stage4_1.tmx").read_text(encoding="utf-8")
+        for tipo in ('type="DeathPit"', 'type="HazardZone"'):
+            assert tipo not in xml, f"el TMX sigue declarando {tipo}"
+
+
+class TestLasSuperficiesSeVen:
+    """La regla del rediseño: **nada cambia el movimiento del jugador sin que se
+    vea por qué**. Musgo verde que arrastra, lodo marrón que frena."""
+
+    def _zonas(self, escena):
+        from src.framework.ecs import ZonaDeFriccion
+
+        return [z for _, z in escena._mundo.cada(ZonaDeFriccion)]
+
+    def test_cada_repisa_de_musgo_arrastra(self, escena) -> None:
+        from src.stages.stage4_1 import trazado
+
+        arrastres = [z for z in self._zonas(escena) if z.arrastre]
+        esperadas = len(trazado.INDICES_MUSGO)
+        assert len(arrastres) == esperadas, (
+            f"hay {esperadas} repisas de musgo y {len(arrastres)} zonas que "
+            f"arrastran"
+        )
+
+    def test_cada_repisa_de_lodo_frena(self, escena) -> None:
+        from src.stages.stage4_1 import trazado
+
+        frenos = [z for z in self._zonas(escena) if z.multiplicador != 1.0]
+        assert len(frenos) == len(trazado.INDICES_LODO)
+        assert all(0.0 < z.multiplicador < 1.0 for z in frenos), (
+            "un multiplicador >= 1 no frena: acelera o no hace nada"
+        )
+
+    def test_el_musgo_arrastra_hacia_el_hueco_y_no_contra_el(self) -> None:
+        """Arrastrar hacia la pared sería empujar al jugador contra el sitio del
+        que tiene que salir. Es la diferencia entre una ayuda y un castigo."""
+        from src.stages.stage4_1 import trazado
+
+        lista = trazado.repisas()
+        for i in trazado.INDICES_MUSGO:
+            x0, ancho, _fila = lista[i]
+            hacia_la_derecha = x0 == trazado.MURO_ANCHO
+            hueco_a_la_derecha = x0 + ancho < trazado.MW - trazado.MURO_ANCHO
+            assert hacia_la_derecha == hueco_a_la_derecha, (
+                f"la repisa de musgo {i} arrastra hacia el lado equivocado"
+            )
+
+    def test_musgo_y_lodo_se_pintan_distintos_del_suelo(self) -> None:
+        """Si la baldosa fuera la misma, la superficie sería una trampa."""
+        import sys
+        from pathlib import Path
+
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
+        from generate_stage4_1 import LODO, MUSGO, PIEDRA
+
+        assert len({PIEDRA, MUSGO, LODO}) == 3
+
+    def test_la_baldosa_pintada_coincide_con_la_zona(self) -> None:
+        """La comprobación que de verdad importa: que la repisa que arrastra sea
+        **la misma** que se pinta de verde. Una zona de fricción sobre una
+        baldosa de piedra es exactamente el defecto que este nivel tenía."""
+        import sys
+        from pathlib import Path
+
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
+        from generate_stage4_1 import BALDOSAS, _terreno
+
+        from src.stages.stage4_1 import trazado
+
+        g = _terreno()
+        for x0, ancho, fila, material in trazado.superficies():
+            esperada = BALDOSAS[material][0]
+            fila_pintada = {g[fila][x] for x in range(x0, x0 + ancho)}
+            assert fila_pintada == {esperada}, (
+                f"la repisa de la fila {fila} es «{material}» y está pintada "
+                f"con {fila_pintada}, no con {esperada}"
+            )
+
+
+class TestSuenaAOrgano:
+    """AUD-227. La ficha pide órgano y sonaba un chiptune de onda cuadrada con
+    caja de ritmos: `_gen_music_track` es el generador genérico de los otros
+    diez temas. Esto no comprueba «que exista un fichero» —eso ya pasaba— sino
+    las dos propiedades que distinguen un órgano de lo que había."""
+
+    @staticmethod
+    def _muestras():
+        import struct
+        import wave
+
+        import numpy as np
+
+        with wave.open("assets/music/bgm_final_approach.wav") as w:
+            n, rate = w.getnframes(), w.getframerate()
+            crudo = struct.unpack(f"<{n}h", w.readframes(n))
+        return np.array(crudo, dtype=float) / 32768.0, rate
+
+    def test_los_parciales_son_multiplos_enteros_de_la_nota(self) -> None:
+        """Un registro de órgano **es** un armónico: un tubo que suena a un
+        múltiplo entero de la fundamental. Si los picos no caen en múltiplos,
+        no es un órgano, sea lo que sea."""
+        import numpy as np
+
+        x, rate = self._muestras()
+        # El primer acorde, evitando el ataque y el fundido.
+        tramo = x[int(1.0 * rate):int(3.0 * rate)]
+        esp = np.abs(np.fft.rfft(tramo * np.hanning(len(tramo))))
+        frec = np.fft.rfftfreq(len(tramo), 1.0 / rate)
+        # Los diez picos más fuertes por encima de 30 Hz, separados entre sí.
+        orden = np.argsort(esp)[::-1]
+        picos: list[float] = []
+        for i in orden:
+            f = float(frec[i])
+            if f < 30.0 or any(abs(f - p) < 4.0 for p in picos):
+                continue
+            picos.append(f)
+            if len(picos) == 10:
+                break
+
+        import sys
+        from pathlib import Path
+
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
+        from generate_all_assets import ORGANO_ACORDES, ORGANO_PEDAL
+
+        fundamentales = (*ORGANO_ACORDES[0], ORGANO_PEDAL[0])
+        for pico in picos:
+            assert any(
+                abs(pico / f - round(pico / f)) < 0.04 and round(pico / f) >= 1
+                for f in fundamentales
+            ), (
+                f"el pico de {pico:.1f} Hz no es múltiplo entero de ninguna nota "
+                f"del acorde {fundamentales}: eso no es un registro de órgano"
+            )
+
+    #: Ataques bruscos por segundo que se toleran.
+    #:
+    #: No es un número inventado: está medido sobre los dos generadores. El
+    #: órgano da 10 ataques en 16 s (0,63/s) —el ataque y la caída de cada uno de
+    #: los cuatro acordes, más los dos fundidos— y el chiptune que sonaba antes
+    #: da 43 en 10 s (4,3/s), porque mete un golpe de ruido blanco en cada
+    #: pulso. Entre 0,63 y 4,3 hay sitio de sobra; 1,5 deja margen a los dos
+    #: lados sin dejar pasar una caja de ritmos.
+    ATAQUES_POR_SEGUNDO = 1.5
+
+    def test_no_lleva_percusion(self) -> None:
+        """Un órgano sostiene; el generador genérico golpea en cada pulso, y eso
+        es lo que sonaba en un nivel donde «el silencio es el jefe»."""
+        import numpy as np
+
+        x, rate = self._muestras()
+        ventana = int(rate * 0.02)
+        energia = np.array([
+            float(np.sqrt((x[i:i + ventana] ** 2).mean()))
+            for i in range(0, len(x) - ventana, ventana)
+        ])
+        # Un golpe es un salto brusco de energía. Se cuentan los que superan
+        # cuatro veces la mediana de los saltos.
+        saltos = np.abs(np.diff(energia))
+        golpes = int((saltos > 4.0 * np.median(saltos)).sum())
+        por_segundo = golpes / (len(x) / rate)
+        assert por_segundo <= self.ATAQUES_POR_SEGUNDO, (
+            f"{golpes} ataques bruscos en {len(x) / rate:.0f} s "
+            f"({por_segundo:.2f}/s): un órgano tiene uno por cambio de acorde, "
+            f"no uno por pulso"
+        )
+
+    def test_el_nivel_apunta_a_esa_pista(self, escena) -> None:
+        from src.stages.stage4_1.stage4_1 import Stage4_1
+
+        assert Stage4_1.BGM_TRACK == "bgm_final_approach"
+        assert escena._stage_data.bgm_track == Stage4_1.BGM_TRACK
+
+
+class TestElPozoNoEncierraANadie:
+    """Un descenso con un sitio del que no se sale es peor que un foso: el foso
+    al menos mata y devuelve al checkpoint."""
+
+    def test_repisas_consecutivas_se_solapan(self) -> None:
+        from itertools import pairwise
+
+        from src.stages.stage4_1 import trazado
+
+        for (x0, an, fila), (sx, san, sfila) in pairwise(trazado.repisas()):
+            solape = min(x0 + an, sx + san) - max(x0, sx)
+            assert solape > 0, (
+                f"las repisas de las filas {fila} y {sfila} no se solapan: "
+                f"desde la de arriba no se llega andando al hueco de la de abajo"
+            )
+
+    def test_se_puede_volver_a_subir(self) -> None:
+        """80 px de desnivel contra 90,25 de salto. Con 96 —la primera versión—
+        el calificador contaba 37 repechos imposibles."""
+        from src.framework.stage.level_metrics import JumpEnvelope
+        from src.stages.stage4_1 import trazado
+
+        envolvente = JumpEnvelope.from_settings()
+        desnivel = trazado.FILAS_POR_REPISA * trazado.TS
+        assert desnivel < envolvente.max_height, (
+            f"hay {desnivel} px entre repisas y el jugador sube "
+            f"{envolvente.max_height}: el pozo no deja volver atrás"
+        )
+
+    def test_el_jugador_cabe_entre_dos_repisas(self) -> None:
+        from src.stages.stage4_1 import trazado
+
+        libre = (trazado.FILAS_POR_REPISA - trazado.GROSOR_REPISA) * trazado.TS
+        assert libre >= 48, f"quedan {libre} px de hueco y el jugador mide 32"
+
+
 class TestElNivelSePuedeJugar:
     def test_tiene_salida(self, escena) -> None:
         """La ficha la llama «Portal»; el motor sólo acepta `NextTrigger`."""
@@ -113,10 +373,28 @@ class TestElNivelSePuedeJugar:
         assert len(escena._stage_data.checkpoints) >= 1
 
     def test_el_mapa_tiene_el_tamano_minimo(self, escena) -> None:
+        """La ficha pide 1600×608 px. Es un **mínimo de superficie**, no de
+        forma: desde AUD-225 el nivel es un pozo, así que se cumple a lo alto."""
         ancho, alto = escena._stage_data.map_pixel_size
-        assert ancho >= 1600 and alto >= 608, (
-            f"la ficha pide 1600x608 y el mapa mide {ancho}x{alto}"
+        assert ancho * alto >= 1600 * 608, (
+            f"la ficha pide al menos 1600x608 px de nivel y mide {ancho}x{alto}"
         )
+        assert alto > ancho, (
+            f"el 4-1 es un descenso: debería ser más alto que ancho, y mide "
+            f"{ancho}x{alto}"
+        )
+
+    def test_la_escena_y_el_mapa_dicen_la_misma_zona(self, escena) -> None:
+        """El 4-1 es de la zona 4 en el mapa y en la clase.
+
+        Lo pilló la comprobación de mutación: poner `ZONE = 0` no rompía nada,
+        y la zona es lo que decide la música, la progresión y en qué tramo del
+        mundo cuenta este nivel.
+        """
+        from src.stages.stage4_1.stage4_1 import Stage4_1
+
+        assert Stage4_1.ZONE == 4
+        assert escena._stage_data.zone == Stage4_1.ZONE
 
     def test_el_reloj_va_de_las_19_a_las_23(self, escena) -> None:
         datos = escena._stage_data
@@ -129,31 +407,66 @@ class TestElFondoAvanzaConElJugador:
 
     def test_los_cinco_actos_se_alcanzan_en_orden(self, escena) -> None:
         vistos = []
-        for baldosa in (5, 25, 45, 65, 90):
-            _llevar_a(escena, baldosa)
+        for numero in (1, 2, 3, 4, 5):
+            _llevar_a(escena, _dentro_del_acto(numero))
             vistos.append(escena.acto.numero)
         assert vistos == [1, 2, 3, 4, 5], f"la progresión salió {vistos}"
 
+    def test_cada_acto_ocupa_al_menos_una_pantalla(self) -> None:
+        """AUD-208: con 20 baldosas por acto y 50 de pantalla, se veían dos
+        actos y medio a la vez y la luna «bajaba un tramo» sin que el jugador
+        se moviera de sitio. Un acto que no llena la pantalla no se lee como un
+        acto."""
+        from src.stages.stage4_1.trazado import ALTO_ACTO
+
+        pantalla = settings.INTERNAL_HEIGHT // settings.TILE_SIZE
+        assert ALTO_ACTO >= pantalla, (
+            f"un acto mide {ALTO_ACTO} filas y la pantalla {pantalla}"
+        )
+
     def test_el_clima_cambia_con_el_acto(self, escena) -> None:
         climas = {}
-        for baldosa in (5, 45, 65, 90):
-            _llevar_a(escena, baldosa)
+        for numero in (1, 3, 4, 5):
+            _llevar_a(escena, _dentro_del_acto(numero))
             climas[escena.acto.numero] = escena._weather._climate
         assert climas[1] == "fog"
         assert climas[4] == "storm", "el acto de la tormenta no llueve"
         assert climas[5] == "clear", "el umbral no se queda en silencio"
 
+    def test_el_acto_se_aplica_una_vez_y_no_en_cada_fotograma(
+        self, escena,
+    ) -> None:
+        """El comentario del código lo dice: llamar a `set_climate` sesenta
+        veces por segundo vacía el emisor de la tormenta y no se ve llover.
+
+        Otro hallazgo de la comprobación de mutación: cambiar el `- 1` por un
+        `+ 1` en la detección de cambio de acto dejaba todas las pruebas en
+        verde y el clima reaplicándose sin parar.
+        """
+        _llevar_a(escena, _dentro_del_acto(4))
+        veces = []
+        original = escena._weather.set_climate
+        escena._weather.set_climate = lambda c: (veces.append(c), original(c))[1]
+        try:
+            for _ in range(60):
+                escena.update(1 / 60)
+        finally:
+            escena._weather.set_climate = original
+        assert veces == [], (
+            f"quieto dentro del acto IV, el clima se aplicó {len(veces)} veces"
+        )
+
     def test_las_particulas_verdes_estan_encendidas(self, escena) -> None:
         """`spores` es el único efecto verde del motor, y el lore le pone al
         cementerio «luz espectral verde»."""
-        _llevar_a(escena, 25)
+        _llevar_a(escena, _dentro_del_acto(2))
         assert escena._ambient_particles._particle_type == "spores"
         assert escena._ambient_particles.rate > 0.0
 
     def test_las_particulas_suben_hacia_la_tormenta(self, escena) -> None:
-        _llevar_a(escena, 25)
+        _llevar_a(escena, _dentro_del_acto(2))
         pocas = escena._ambient_particles.rate
-        _llevar_a(escena, 65)
+        _llevar_a(escena, _dentro_del_acto(4))
         muchas = escena._ambient_particles.rate
         assert muchas > pocas
 
@@ -256,7 +569,11 @@ class TestLaVisionEspectral:
         """El corazón de la mecánica, comprobado píxel a píxel."""
         from src.stages.stage4_1.siluetas import VERDE_ESPECTRAL
 
-        _llevar_a(escena, 43)
+        # Junto a la primera huella: tiene que estar en pantalla para poder
+        # mirarle el color.
+        marca = escena._marcas[0]
+        _llevar_a(escena, marca.y // settings.TILE_SIZE - 2,
+                  marca.x // settings.TILE_SIZE)
         marca = escena._marcas[0]
 
         def color_en_la_huella() -> tuple[int, int, int]:
@@ -273,11 +590,40 @@ class TestLaVisionEspectral:
             "mecánica del nivel"
         )
 
-    def test_hay_huellas_en_los_dos_tramos_de_saltos(self, escena) -> None:
+    def test_hay_huellas_en_los_actos_del_musgo_y_del_lodo(self, escena) -> None:
+        from src.stages.stage4_1.actos import ACTOS
+        from src.stages.stage4_1.trazado import ALTO_ACTO
+
         ts = settings.TILE_SIZE
-        columnas = [m.x // ts for m in escena._marcas]
-        assert any(40 <= c < 60 for c in columnas), "faltan huellas en el acto III"
-        assert any(60 <= c < 80 for c in columnas), "faltan huellas en el acto IV"
+        filas = [m.y // ts for m in escena._marcas]
+        for numero in (3, 4):
+            desde = ACTOS[numero - 1].desde_fila
+            assert any(desde <= f <= desde + ALTO_ACTO for f in filas), (
+                f"faltan huellas en el acto {numero}"
+            )
+
+    def test_cada_huella_marca_un_hueco_y_no_una_repisa(self, escena) -> None:
+        """La huella dice «cae por aquí». Si cae sobre la repisa, miente.
+
+        Es el fallo que AUD-208 quitó de raíz: las coordenadas de las huellas se
+        escribían a mano en la escena y las del terreno en el generador, así que
+        mover una desplazaba la otra y dejaba la marca donde no servía. Ahora
+        las dos salen de `trazado.py` y esto lo comprueba.
+        """
+        from src.stages.stage4_1 import trazado
+
+        ts = settings.TILE_SIZE
+        por_fila = {fila: (x0, ancho) for x0, ancho, fila in trazado.repisas()}
+        for marca in escena._marcas:
+            fila = marca.y // ts + 1          # la repisa de la que se cae
+            assert fila in por_fila, f"la huella de la fila {fila} no tiene repisa"
+            x0, ancho = por_fila[fila]
+            columnas = range(marca.x // ts, (marca.right - 1) // ts + 1)
+            solapa = [c for c in columnas if x0 <= c < x0 + ancho]
+            assert not solapa, (
+                f"la huella de la fila {fila} cae sobre la repisa, en {solapa}: "
+                f"debería marcar el hueco"
+            )
 
     def test_la_vision_ilumina_y_no_oscurece(self, escena) -> None:
         """Lo primero que probé multiplicaba sobre la pantalla y el verde medio
@@ -292,6 +638,102 @@ class TestLaVisionEspectral:
         escena.draw(lienzo)
         con = np.asarray(pygame.surfarray.array3d(lienzo), dtype=int)[:, :, 1].mean()
         assert con >= sin
+
+
+class TestLasBrujasCruzanYNoSonEnemigos:
+    """§4 del diseño: «2–3 cruzan con el relámpago». Estaban en el documento y
+    en la checklist, y no en el juego (AUD-210)."""
+
+    def test_no_hay_brujas_antes_de_la_niebla(self) -> None:
+        from src.stages.stage4_1.actos import ACTOS
+
+        assert [a.brujas for a in ACTOS[:2]] == [0, 0], (
+            "las brujas aparecen en el III como anuncio del IV, no antes"
+        )
+
+    def test_la_tormenta_es_donde_mas_hay(self) -> None:
+        from src.stages.stage4_1.actos import ACTOS
+
+        assert ACTOS[3].brujas == max(a.brujas for a in ACTOS)
+
+    def test_en_el_umbral_estan_quietas(self) -> None:
+        """«Siluetas posadas en los árboles, quietas.»"""
+        from src.stages.stage4_1.actos import ACTOS
+
+        assert ACTOS[4].brujas_quietas is True
+        assert [a.brujas_quietas for a in ACTOS[:4]] == [False] * 4
+
+    def test_se_mueven_de_verdad(self, escena) -> None:
+        """Una bruja que no cruza es una mancha en el fondo."""
+        _llevar_a(escena, _dentro_del_acto(4))
+        escena._rayo = escena.DURACION_DEL_RAYO
+
+        def _pinta() -> pygame.Surface:
+            lienzo = pygame.Surface((800, 600), pygame.SRCALPHA)
+            escena._dibujar_brujas(lienzo, escena.acto, escena._camera.offset)
+            return lienzo
+
+        antes = pygame.surfarray.array3d(_pinta()).copy()
+        escena._tiempo += 1.5
+        assert not (pygame.surfarray.array3d(_pinta()) == antes).all()
+
+    def test_no_son_entidades(self, escena) -> None:
+        """La regla de oro no se negocia ni por el fondo."""
+        assert list(escena._stage_data.entity_list) == []
+        assert not hasattr(escena, "_brujas_entidades")
+
+
+class TestLaOscuridadSusurraYNoCastiga:
+    """§4: quedarse quieto a oscuras despierta al cementerio — y *«no hay daño
+    ni castigo»* (AUD-211)."""
+
+    def _a_oscuras_y_quieto(self, escena) -> None:
+        escena._encendidos.clear()
+        escena._quieto = 0.0
+        escena._donde_estaba = float(escena._player.rect.centerx)
+        for _ in range(int(escena.ESPERA_DEL_SUSURRO * 60) + 2):
+            escena._actualizar_oscuridad(1 / 60)
+
+    def test_a_oscuras_es_no_tener_braseros_cerca(self, escena) -> None:
+        escena._encendidos.clear()
+        assert escena.a_oscuras is True
+        # Enciende el que tiene encima y deja de estarlo.
+        escena._player.rect.center = (int(escena._luces[0].position.x),
+                                      int(escena._luces[0].position.y))
+        escena._encendidos.add(0)
+        assert escena.a_oscuras is False
+
+    def test_los_ojos_se_encienden_al_cabo_de_los_cuatro_segundos(
+        self, escena,
+    ) -> None:
+        self._a_oscuras_y_quieto(escena)
+        assert escena._ojos > 0.0
+
+    def test_moverse_reinicia_la_cuenta(self, escena) -> None:
+        escena._encendidos.clear()
+        escena._donde_estaba = float(escena._player.rect.centerx)
+        for _ in range(120):
+            escena._player.rect.x += 3      # andando
+            escena._actualizar_oscuridad(1 / 60)
+        assert escena._ojos == 0.0, "el susurro llegó mientras el jugador andaba"
+
+    def test_con_un_brasero_encendido_no_pasa_nada(self, escena) -> None:
+        escena._player.rect.center = (int(escena._luces[0].position.x),
+                                      int(escena._luces[0].position.y))
+        escena._encendidos.add(0)
+        escena._donde_estaba = float(escena._player.rect.centerx)
+        for _ in range(400):
+            escena._actualizar_oscuridad(1 / 60)
+        assert escena._ojos == 0.0
+
+    def test_no_quita_vida(self, escena) -> None:
+        """La regla explícita del diseño. Es lo único que esta mecánica podría
+        romper, y es lo que la haría estar mal."""
+        antes = escena._player.current_health
+        self._a_oscuras_y_quieto(escena)
+        for _ in range(300):
+            escena._actualizar_oscuridad(1 / 60)
+        assert escena._player.current_health == antes
 
 
 class TestElRelampagoEnsenaAntesDeCastigar:

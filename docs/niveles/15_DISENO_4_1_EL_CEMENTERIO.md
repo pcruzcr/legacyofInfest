@@ -276,17 +276,42 @@ ACTO V — EL UMBRAL                La tormenta cesa. Silencio. La luna toca
 
 ## 11. Checklist de la propuesta
 
-- [ ] 5 actos con sus cinco parámetros (braseros / luna / clima / fondo / peligros)
-- [ ] La luna en las 5 posiciones del §2 (lerp entre actos)
-- [ ] 12 braseros en secuencia; luz + ascuas; el último grande y central
-- [ ] La Cegua en siluetas BG_Mid, nunca en combate; visibilidad con relámpagos
-- [ ] Brujas cruzando el fondo en el Acto IV
-- [ ] Tramo de saltos III (grietas) y IV (losas que ceden + viento) — sin peligro no revelado
-- [ ] Lápidas con nombres (placeholder `[NOMBRE]`) + lápida central «LA PRUEBA»
-- [ ] Clima por acto (`fog` → `storm` → silencio)
-- [ ] Visión espectral revelando huellas de pezuña y ruta segura
-- [ ] Sin enemigos (regla de oro), 1 checkpoint, portal al 4-2
-- [ ] `start_hour = "dusk"` y `day_length = 900`
+Construida entera. Cada casilla la defiende una prueba de `tests/test_stage4_1.py`
+(61 en total); lo que se cambió respecto a esta propuesta está en el §0 de la
+ficha, `13_STAGE_4_1.md`.
+
+> **El nivel es vertical (AUD-225).** Esta propuesta lo describe como un corredor
+> horizontal de cinco actos. Jugado no funcionaba —siete fosos mortales y cinco
+> zonas de daño invisibles en una «travesía atmosférica»— y se rehízo como un
+> **descenso**: un pozo de 60 × 240 con 44 repisas que alternan lado. Todo lo
+> demás de este documento se mantiene y sólo cambia de eje: los cinco actos son
+> cinco tramos de profundidad, la luna se queda arriba en el brocal en vez de
+> bajar al horizonte, y los tramos de salto son tramos de caída. Lo que
+> sustituye al peligro son superficies que se ven —musgo que arrastra, lodo que
+> frena—, con la regla de que nada cambia el movimiento del jugador sin que se
+> vea por qué.
+
+- [x] 5 actos con sus cinco parámetros (braseros / luna / clima / fondo / peligros)
+- [x] La luna en las 5 posiciones del §2 (lerp entre actos)
+- [x] 12 braseros en secuencia; luz + ascuas; el último grande y central
+- [x] La Cegua en siluetas de fondo, nunca en combate; visibilidad con relámpagos
+- [x] Brujas cruzando el fondo en el Acto IV *(AUD-210; quietas en el V)*
+- [x] Tramo exigente III (musgo que arrastra) y IV (lodo que frena + viento) —
+      **sin peligro no revelado, y sin peligro mortal**: ninguno hace daño
+- [x] Lápidas con nombres (placeholder `[NOMBRE]`) + lápida central «LA PRUEBA»
+- [x] Clima por acto (`fog` → `storm` → silencio)
+- [x] Visión espectral revelando huellas de pezuña y ruta segura
+- [x] Sin enemigos (regla de oro), portal al 4-2 *(y 12 checkpoints, uno por
+      brasero: el §10 dice que los braseros son los marcadores — AUD-208)*
+- [x] `start_hour` = 19 y `day_length = 900` *(como número: el motor no entiende
+      la cadena `dusk`)*
+- [x] La opción de tensión del §4: quieto y a oscuras, susurro y ojos — **sin
+      daño** *(AUD-211)*
+
+Lo único de esta propuesta que **no** está construido con arte propio es el
+tileset del suelo: `assets/tilesets/tileset_cemetery.png` existe pero son ocho
+baldosas de relleno genéricas, así que el terreno sigue usando el del prólogo.
+Queda anotado en `KNOWN_GAPS.md`.
 
 ---
 

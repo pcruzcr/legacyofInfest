@@ -57,7 +57,7 @@ from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.framework.scenes.stage_scene import StageScene
 from src.framework.vfx.lighting import LightSource
-from src.stages.stage4_1 import siluetas
+from src.stages.stage4_1 import siluetas, trazado
 from src.stages.stage4_1.actos import ACTOS, Acto, acto_en
 
 if TYPE_CHECKING:
@@ -70,7 +70,11 @@ class Stage4_1(StageScene):
     STAGE_ID: str = "stage4_1"
     STAGE_NAME: str = "4-1  LA ENTRADA AL CEMENTERIO"
     ZONE: int = 4
-    BGM_TRACK: str = "bgm_zone3"
+    # AUD-209: era `bgm_zone3`, la música del nivel anterior. El Asset Bible
+    # (`docs/20_ASSET_BIBLE.md`) tiene una pista asignada a este nivel desde el
+    # principio —«bgm_final_approach.wav | Stage 4-1 | Silence punctuated by
+    # ritual drums»— y estaba en `assets/music/` sin que nada la reprodujera.
+    BGM_TRACK: str = "bgm_final_approach"
     TMX_PATH = "assets/maps/stage4_1/stage4_1.tmx"
 
     # ── Braseros ──────────────────────────────────────────────
@@ -87,6 +91,16 @@ class Stage4_1(StageScene):
     DURACION_DEL_RAYO = 0.4
     #: Cuánto sube la luz ambiente en el pico del destello.
     FUERZA_DEL_RAYO = 0.55
+
+    # ── La oscuridad que susurra (AUD-211) ────────────────────
+    #: Segundos quieto y a oscuras antes de que el cementerio conteste. Los ~4 s
+    #: del §4 del diseño.
+    ESPERA_DEL_SUSURRO = 4.0
+    #: Cuánto brillan los ojos después. Lo justo para verlos si estás mirando.
+    DURACION_DE_LOS_OJOS = 2.5
+    #: A qué distancia deja de contar como oscuridad tener un brasero cerca.
+    #: Es el radio grande de las luces del mapa: dentro de él, el sendero se ve.
+    RADIO_DE_LA_LUZ = 150.0
 
     # ── Visión espectral ──────────────────────────────────────
     #: Segundos que dura la visión tras activarla. Los 3 s de la ficha.
@@ -119,6 +133,17 @@ class Stage4_1(StageScene):
         self._vision: float = 0.0
         self._recarga: float = 0.0
         self._tiempo: float = 0.0
+        #: Segundos que el jugador lleva quieto y a oscuras, y lo que queda de
+        #: brillo en los ojos de la Cegua cuando el cementerio ya ha contestado.
+        self._quieto: float = 0.0
+        self._ojos: float = 0.0
+        #: Las ocho superficies del degradado de las grietas. Se construyen la
+        #: primera vez que se dibuja y no se vuelven a tocar.
+        self._brillos: list[pygame.Surface] | None = None
+        #: Dónde estaba el jugador en el fotograma anterior. Es lo que decide si
+        #: está quieto: preguntarle a la velocidad no vale, porque un jugador
+        #: apoyado contra un muro tiene velocidad y no se mueve.
+        self._donde_estaba: float = 0.0
         #: Marcas ocultas: las huellas de pezuña que deja la Cegua. Se colocan
         #: aquí y no en el TMX porque no son objetos del mundo —no colisionan,
         #: no se recogen— y meterlas en el mapa las convertiría en algo que el
@@ -159,19 +184,20 @@ class Stage4_1(StageScene):
         Van donde el diseño (§8) dice que sirven: marcando **dónde pisar** en
         los dos tramos de saltos. Con la visión espectral el tramo del acto IV
         se vuelve trivial, que es la recompensa de mirar.
+
+        Las columnas salen de `trazado.py`, que es el mismo sitio del que las
+        lee el generador del mapa. Escritas a mano aquí —como estaban— una
+        grieta movida en el TMX dejaba la huella flotando sobre el vacío, y eso
+        no rompe ninguna prueba: sólo miente al jugador (AUD-208).
         """
         self._marcas.clear()
         if self._stage_data is None:
             return
         ts = settings.TILE_SIZE
-        suelo = 30 * ts
-        # Acto III: el borde seguro antes de cada grieta.
-        for bx in (43, 49, 55):
-            self._marcas.append(pygame.Rect(bx * ts, suelo - 6, ts, 4))
-        # Acto IV: encima de cada losa que cede.
-        for bx in (64, 69, 74, 79):
-            self._marcas.append(pygame.Rect(bx * ts + 8, suelo - 2 * ts - 8,
-                                            2 * ts, 4))
+        for bx, by, ancho in trazado.marcas_de_pezuna():
+            self._marcas.append(
+                pygame.Rect(bx * ts, by * ts - 6, ancho * ts, 4),
+            )
 
     # ── Actualización ─────────────────────────────────────────
 
@@ -184,13 +210,18 @@ class Stage4_1(StageScene):
         self._actualizar_braseros(dt)
         self._actualizar_rayos(dt)
         self._actualizar_vision(dt)
+        self._actualizar_oscuridad(dt)
 
     @property
     def acto(self) -> Acto:
-        """El acto en el que está el jugador ahora mismo."""
+        """El acto en el que está el jugador ahora mismo.
+
+        Se mira la **fila**, no la columna: desde AUD-225 el nivel es un pozo y
+        el avance es hacia abajo (ver `trazado.py`).
+        """
         if self._player is None:
             return ACTOS[0]
-        return acto_en(self._player.rect.centerx / settings.TILE_SIZE)
+        return acto_en(self._player.rect.centery / settings.TILE_SIZE)
 
     def _actualizar_acto(self) -> None:
         """Aplica el acto nuevo, si el jugador cambió de tramo.
@@ -271,6 +302,58 @@ class Stage4_1(StageScene):
             # retardo es el metrónomo de la tensión (§5 del diseño).
             self._play_sfx_named("sfx_environment_screen_shake", volume=0.5)
 
+    # ── La oscuridad que susurra (Unidad V, y §4 del diseño) ──
+
+    @property
+    def a_oscuras(self) -> bool:
+        """Si no hay ningún brasero encendido cerca del jugador.
+
+        Se mide contra los braseros **encendidos**, no contra todos: el nivel
+        entero está lleno de luces apagadas, y contarlas diría que hay luz donde
+        no la hay.
+        """
+        if self._player is None:
+            return False
+        centro = pygame.Vector2(self._player.rect.center)
+        return all(
+            centro.distance_to(self._luces[i].position) > self.RADIO_DE_LA_LUZ
+            for i in self._encendidos
+        )
+
+    def _actualizar_oscuridad(self, dt: float) -> None:
+        """Quedarse quieto a oscuras: el cementerio contesta, y no hace daño.
+
+        Es la «opción de tensión» del §4 del diseño, y su regla es explícita:
+        *«No hay daño ni castigo: es recordatorio de seguir»*. Así que aquí no
+        se toca la salud, ni la velocidad, ni los controles — sólo suena un
+        susurro y brillan unos ojos en el fondo.
+
+        El sonido es `sfx_environment_cemetery_silence`, que el Asset Bible ya
+        tenía asignado a esta zona («Zone Final ambient») y que hasta ahora no
+        reproducía nadie.
+        """
+        if self._player is None:
+            return
+        if self._ojos > 0.0:
+            self._ojos = max(0.0, self._ojos - dt)
+
+        ahora = float(self._player.rect.centerx)
+        se_movio = abs(ahora - self._donde_estaba) > 1.0
+        self._donde_estaba = ahora
+
+        if se_movio or not self.a_oscuras:
+            self._quieto = 0.0
+            return
+
+        self._quieto += dt
+        if self._quieto < self.ESPERA_DEL_SUSURRO:
+            return
+        # Y se reinicia la cuenta: si se sigue quieto, el susurro vuelve, pero
+        # espaciado. Sin esto sonaría sesenta veces por segundo.
+        self._quieto = 0.0
+        self._ojos = self.DURACION_DE_LOS_OJOS
+        self._play_sfx_named("sfx_environment_cemetery_silence", volume=0.35)
+
     # ── Visión espectral (Unidad VIII) ────────────────────────
 
     def _actualizar_vision(self, dt: float) -> None:
@@ -302,7 +385,22 @@ class Stage4_1(StageScene):
         acto = self.acto
         self._dibujar_luna(surface, acto)
         self._dibujar_espiritus(surface, acto, offset)
+        self._dibujar_brujas(surface, acto, offset)
         self._dibujar_cegua(surface, acto, offset)
+        self._dibujar_ojos(surface)
+        # Las grietas van aquí, con el fondo, y no en `draw()` — que es donde
+        # las puse primero. Dos motivos, los dos vistos en una captura:
+        #
+        # * `draw()` corre **después** de la interfaz, así que el brillo se
+        #   pintaba encima del marcador y del minimapa.
+        # * Aquí las apaga el sistema de luz igual que a todo lo demás. Sueltas
+        #   por encima quedaban de neón: eran lo más brillante de la pantalla,
+        #   por delante de los braseros, que son los que deben mandar.
+        #
+        # No se pierde nada por quedar detrás del mapa: la grieta ocupa la fila
+        # de la repisa y las dos de aire que hay debajo, así que lo que se ve es
+        # el resplandor saliendo por debajo del labio, que es lo que se buscaba.
+        self._dibujar_grietas(surface)
 
     def _dibujar_luna(self, surface: pygame.Surface, acto: Acto) -> None:
         """El reloj del nivel: baja y crece con el avance.
@@ -328,10 +426,10 @@ class Stage4_1(StageScene):
         """0 al entrar en el acto, 1 al salir. Para interpolar la luna."""
         if self._player is None or siguiente is acto:
             return 0.0
-        ancho = max(1, siguiente.desde_baldosa - acto.desde_baldosa)
-        recorrido = (self._player.rect.centerx / settings.TILE_SIZE
-                     - acto.desde_baldosa)
-        return max(0.0, min(1.0, recorrido / ancho))
+        alto = max(1, siguiente.desde_fila - acto.desde_fila)
+        recorrido = (self._player.rect.centery / settings.TILE_SIZE
+                     - acto.desde_fila)
+        return max(0.0, min(1.0, recorrido / alto))
 
     #: Dónde se planta cada espíritu, en fracción del ancho de pantalla. Están
     #: repartidos para que no se pisen y no se lean como una fila.
@@ -353,6 +451,50 @@ class Stage4_1(StageScene):
             siluetas.dibujar_contorno(
                 surface, forma, x, int(210 + vaiven), int(alto * 0.9), alto,
                 siluetas.VERDE_ESPECTRAL, alfa,
+            )
+
+    # ── Las brujas (AUD-210) ──────────────────────────────────
+    #
+    #: A qué altura de la pantalla vuela cada una. Están a alturas distintas a
+    #: propósito: en fila se leerían como una bandada de pájaros.
+    _ALTURAS_BRUJA: tuple[int, ...] = (96, 148, 62)
+    #: Píxeles por segundo de cada una. Distintas también, y ninguna redonda:
+    #: con la misma velocidad cruzan en formación y parecen un solo objeto.
+    _VELOCIDADES_BRUJA: tuple[float, ...] = (54.0, 37.0, 71.0)
+
+    def _dibujar_brujas(self, surface: pygame.Surface, acto: Acto,
+                        offset: pygame.Vector2) -> None:
+        """Las brujas cruzando el fondo del acto IV (§4 del diseño).
+
+        Se ven, como la Cegua, sobre todo con el relámpago. La diferencia es que
+        éstas **se mueven**: cruzan de un lado a otro y vuelven a entrar por el
+        otro extremo. En el umbral se quedan posadas y quietas, que es lo que el
+        diseño pide para el acto V.
+
+        Igual que las siluetas, no son entidades: ni colisión, ni IA, ni salud.
+        La regla de oro del nivel sigue siendo cero enemigos.
+        """
+        cuantas = min(acto.brujas, len(self._ALTURAS_BRUJA))
+        if cuantas <= 0:
+            return
+        margen = 140
+        recorrido = settings.INTERNAL_WIDTH + margen * 2
+        for i in range(cuantas):
+            if acto.brujas_quietas:
+                # Posadas: repartidas por el ancho y sin avanzar. El parallax
+                # sigue actuando —están en el mundo, no pegadas a la cámara—.
+                x = int(settings.INTERNAL_WIDTH * (0.22 + 0.26 * i)
+                        - offset.x * 0.1)
+            else:
+                avance = self._tiempo * self._VELOCIDADES_BRUJA[i]
+                x = int((avance + i * 260 - offset.x * 0.1) % recorrido) - margen
+            alto = 34 + i * 5
+            # Sin relámpago son casi invisibles: el destello es lo que las
+            # revela, igual que a la Cegua.
+            alfa = 18 + int(120 * self._visibilidad_de_fondo())
+            siluetas.dibujar_contorno(
+                surface, siluetas._bruja, x, self._ALTURAS_BRUJA[i],
+                int(alto * 1.9), alto, siluetas.BLANCO_CEGUA, alfa,
             )
 
     def _dibujar_cegua(self, surface: pygame.Surface, acto: Acto,
@@ -377,11 +519,102 @@ class Stage4_1(StageScene):
             siluetas.BLANCO_CEGUA, min(255, alfa), grosor=2,
         )
 
+    def _dibujar_ojos(self, surface: pygame.Surface) -> None:
+        """Los ojos de la Cegua, cuando el cementerio contesta (AUD-211).
+
+        Dos puntos verdes en el fondo, y nada más. La regla del §4 es que *«el
+        miedo nunca cobra vida»*: no se acercan, no persiguen y no hacen daño —
+        se encienden, se apagan, y el jugador decide si eso le da motivos para
+        seguir andando.
+        """
+        if self._ojos <= 0.0:
+            return
+        # Se desvanecen por los dos extremos: aparecer y desaparecer de golpe
+        # se lee como un fallo de dibujo, no como una presencia.
+        t = self._ojos / self.DURACION_DE_LOS_OJOS
+        alfa = int(210 * math.sin(t * math.pi) ** 0.6)
+        if alfa <= 0:
+            return
+        x = int(settings.INTERNAL_WIDTH * 0.5)
+        y = int(settings.INTERNAL_HEIGHT * 0.42)
+        lienzo = pygame.Surface((40, 12), pygame.SRCALPHA)
+        for dx in (7, 29):
+            pygame.draw.circle(lienzo, (*siluetas.VERDE_ESPECTRAL, alfa),
+                               (dx, 6), 3)
+            pygame.draw.circle(lienzo, (*siluetas.VERDE_ESPECTRAL, alfa // 4),
+                               (dx, 6), 7)
+        surface.blit(lienzo, (x - 20, y - 6))
+
     def _visibilidad_de_fondo(self) -> float:
         """0 sin relámpago, 1 en el pico del destello."""
         if self._rayo <= 0.0:
             return 0.0
         return (self._rayo / self.DURACION_DEL_RAYO) ** 0.5
+
+    # ── Las grietas verdes (AUD-225) ──────────────────────────
+
+    def _dibujar_grietas(self, surface: pygame.Surface) -> None:
+        """Luz verde en el canto de cada repisa. **No hacen daño.**
+
+        Esto es lo que sustituyó a las `HazardZone` del nivel viejo, y el porqué
+        importa: el motor sólo pinta las zonas de daño que **suben** —la
+        inundación de AUD-135—. Una zona fija espera a que el diseñador dibuje
+        pinchos en las baldosas, y aquí no había ninguno pintado: el jugador
+        recibía daño desde un rectángulo invisible. Se quitaron todas.
+
+        Lo que queda es información, no amenaza: el borde por el que hay que
+        dejarse caer, marcado con la luz del cementerio. Respira despacio para
+        que se lea como algo vivo y no como una línea de la interfaz.
+        """
+        if self._stage_data is None:
+            return
+        ts = settings.TILE_SIZE
+        offset = self._camera.offset
+        pantalla = surface.get_rect()
+        # El pulso es común a todas: si cada una llevara su fase, el pozo
+        # parpadearía como un árbol de navidad en vez de respirar.
+        pulso = 0.5 + 0.5 * math.sin(self._tiempo * 1.6)
+        paso = self._brillos_de_grieta()[
+            min(len(self._PASOS_DEL_PULSO) - 1, int(pulso * len(self._PASOS_DEL_PULSO)))
+        ]
+        for bx, fila, alto in trazado.grietas():
+            r = pygame.Rect(bx * ts - int(offset.x), fila * ts - int(offset.y),
+                            ts, alto * ts)
+            if not pantalla.colliderect(r):
+                continue
+            surface.blit(paso, r.topleft, special_flags=pygame.BLEND_RGBA_ADD)
+
+    #: Los escalones del pulso. Ocho bastan para que respire: el ojo no
+    #: distingue más, y cada uno es una superficie que se construye una vez.
+    _PASOS_DEL_PULSO: tuple[float, ...] = tuple(i / 7.0 for i in range(8))
+
+    def _brillos_de_grieta(self) -> list[pygame.Surface]:
+        """Las ocho superficies del degradado, construidas una sola vez.
+
+        Medido antes de cachear: 0,56 ms por fotograma de los 5,9 que cuesta
+        dibujar el nivel, sólo por rehacer 44 degradados que siempre son
+        iguales. Es el mismo derroche que AUD-023 quitó del resto del motor —
+        una asignación por fotograma para pintar un rectángulo con alfa— y aquí
+        además compite con la visión espectral, que es la mecánica del nivel.
+        """
+        if self._brillos is not None:
+            return self._brillos
+        ts = settings.TILE_SIZE
+        ancho, alto = ts, 3 * ts
+        self._brillos = []
+        for t in self._PASOS_DEL_PULSO:
+            alfa = 70 + 90 * t
+            brillo = pygame.Surface((ancho, alto), pygame.SRCALPHA)
+            # Un degradado hacia abajo: la grieta nace en el canto y se apaga
+            # con la profundidad, que es como se lee una fisura y no una barra.
+            for i in range(alto):
+                caida = 1.0 - i / max(1, alto - 1)
+                pygame.draw.line(
+                    brillo, (*siluetas.VERDE_ESPECTRAL, int(alfa * caida)),
+                    (0, i), (ancho - 1, i),
+                )
+            self._brillos.append(brillo)
+        return self._brillos
 
     def draw(self, surface: pygame.Surface) -> None:
         super().draw(surface)
