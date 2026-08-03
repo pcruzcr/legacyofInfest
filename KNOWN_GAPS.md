@@ -336,6 +336,29 @@ Nunca borrar entradas - marcar como resueltas.
   precarga la viñeta en el constructor para evitar el costo de numpy en el
   primer frame.
 
+## ~~[GAP-025] Recogibles del mundo nunca llegaban al Inventory~~ *(Resuelto)*
+
+- **File:** `src/framework/stage/interactable_system.py`, `src/framework/scenes/stage_parts/senales.py`
+- **Phase:** F4.1
+- **Reason:** `InteractableSystem._recoger()` guardaba el objeto en el llavero
+  y emitía `EVENTO_RECOGIDO = "INTERACT_ITEM_PICKED"`, pero **nadie escuchaba
+  ese evento**. Un `Recogible` con `item_id="heart_vessel"` o
+  `"swift_feather"` —objetos que la clase `Recogible` documenta como «si
+  coincide con un objeto de `engine.core.inventory` se aplica su efecto»— se
+  recogía, mostraba el aviso "Has cogido: X", y la mejora permanente se perdía
+  en silencio: el `Inventory` (que persiste a JSON en `data/inventory.json`)
+  nunca recibía la llamada a `collect()`, así que `apply_relic_bonuses()` no
+  tenía nada que aplicar.
+- **Resolution:** Se añadió el suscriptor `_on_item_picked` en
+  `SenalesDeEscenario._subscribe_event_handlers()` que escucha
+  `EVENTO_RECOGIDO` y llama `Inventory.collect(item_id)` si el id coincide con
+  una mejora permanente, quitando la llave del llavero en ese caso. Los
+  objetos que no son mejoras (llaves, monedas) siguen siendo solo llaves del
+  escenario, como documenta la clase. Verificado con `test_interactables.py`
+  y `test_guardado_y_cadena.py` (136 passed).
+
+
+
 ## [GAP-024] El calificador mide el salto con una fórmula que el motor no cumple
 
 - **File:** `src/framework/stage/level_metrics.py`, `scripts/grade_stage.py`
@@ -389,3 +412,170 @@ Nunca borrar entradas - marcar como resueltas.
   5, repecho 5) y falla si alguien toca `GRAVITY` o `PLAYER_JUMP_FORCE`.
 
 ---
+
+## [GAP-026] El cementerio no tiene tileset de cementerio
+
+- **File:** `assets/tilesets/tileset_cemetery.png`, `tools/generate_stage4_1.py`
+- **Phase:** auditoría 2026-08-03, AUD-209
+- **Reason:** El Asset Bible (`docs/20_ASSET_BIBLE.md`) asigna a la zona final un
+  `tileset_cemetery.png` con «stone markers, ceremonial carvings». El fichero
+  existe, pero mide 128×128 y son **ocho baldosas de relleno genéricas** —piedra
+  lisa, azul oscuro, tablones, ladrillo rojo— repetidas ocho veces hacia abajo.
+  Ninguna es una marca de piedra ni un grabado.
+
+  Por eso el 4-1 sigue pintando el suelo con `tileset_stage0.png`, que tiene 4096
+  baldosas y una piedra que al menos se lee como cripta en la oscuridad del
+  nivel. AUD-209 arregló el **fondo** del cementerio (las tres capas de
+  `assets/backgrounds/final/`, generadas ya con lápidas, cruces, verja y el
+  círculo de piedra) y dejó el **terreno** como estaba: cambiarlo por el tileset
+  actual haría que el nivel se viera peor, no más a cementerio.
+
+- **Impact:** Cosmético. El nivel se juega y se lee; el suelo es el del prólogo.
+- **Resolution path:** Dibujar el tileset de verdad —o generarlo en
+  `tools/generate_all_assets.py` como se hizo con el fondo— y cambiar la
+  constante `TILESET` de `tools/generate_stage4_1.py` junto con los cuatro GID
+  (`SUELO`, `MURO`, `LOSA`, `RELLENO`). Regenerar y mirar una captura: los GID
+  inventados son lo que dejó `stage_mecanicas` pintando las tres primeras
+  baldosas de la hoja durante semanas (AUD-115).
+
+---
+
+## [GAP-029] La economía tiene catálogo y API, y ningún sitio que la use *(3 de 4 resueltas)*
+
+> Esta entrada nació como `GAP-027` y se renumeró: el trabajo de stage4_1
+> (AUD-225) había tomado ese mismo número en paralelo, y renumerar aquí toca
+> siete ficheros propios en vez de los ajenos en vuelo.
+
+- **File:** `src/engine/core/inventory.py`, `src/engine/core/score_system.py`
+- **Phase:** auditoría 2026-08-03, AUD-207
+- **Reason:** El modelo de datos de la economía está completo y probado:
+  monedas (`coin`, `add_coins`, `spend_coins`), tienda (`buy`, `sell` a mitad
+  de precio), ropa por huecos (`equip` / `unequip`, y desde AUD-207 la
+  bonificación **sólo cuenta puesta**) y habilidades de jefe (`has_skill`).
+  `ScoreSystem` también está escrito, con puntos por tipo de enemigo y
+  persistencia.
+
+  Lo que no existe es ningún llamante. Medido sobre `src/`, fuera del propio
+  `inventory.py`: cero llamadas a `buy`, `sell`, `equip`, `add_coins` o
+  `has_skill`; `ScoreSystem` no se instancia en ninguna parte. En concreto
+  faltan cuatro conexiones:
+
+  1. **Nadie suelta monedas.** `EnemyBase._die()` emite `ENEMY_DIED` y ahí
+     acaba; no hay `Recogible` de `coin` que aparezca al morir un enemigo.
+  2. **No hay tienda.** No existe escena donde gastar el saldo. Decidido que
+     vaya como entrada de menú propia, al estilo del bestiario y los logros.
+  3. **`ScoreSystem` no está enchufado** ni al `EventBus` real ni al HUD.
+     (La versión original de esta entrada decía «pese a que `09_HUD_SPEC.md`
+     documenta el hueco de puntuación». **Era falso**: la especificación no
+     tenía ninguna región de score. Repetía una afirmación de la docstring de
+     `score_system.py`, que se corrigió en AUD-219.)
+  4. **Los jefes no sueltan habilidades.** `skill_double_jump`, `skill_dash` y
+     `skill_parry` están en el catálogo y nadie los concede — y nadie consulta
+     `has_skill`: el doble salto lo gobierna `settings.PLAYER_AIR_JUMPS` y el
+     dash `_can_dash`, ambos siempre disponibles.
+
+- **Impact:** Un estudiante que lea `60_GUIA_COMPLETA_DEL_MOTOR.md` §11 ve un
+  sistema de tienda y equipamiento completo y puede diseñar un nivel contando
+  con él. La guía avisa explícitamente de este hueco por eso.
+- **Resolution:** Tres de las cuatro conexiones, cerradas:
+
+  1. ~~Nadie suelta monedas~~ — **AUD-218**. `SenalesDeEscenario._on_enemy_died`
+     deja un `Recogible` de `coin` donde murió el enemigo, con la cantidad
+     dentro (`Recogible.cantidad`, nueva y por defecto 1, así que ninguna
+     entrega cambia). `score_system.coins_for()` decide cuánto, compartiendo
+     con los puntos la lectura del `entity_id`.
+     `InteractableSystem.soltar_botin()` descarta el cadáver que ya pagó.
+  2. ~~No hay tienda~~ — **AUD-221**. `src/engine/scenes/shop_scene.py`, entrada
+     `SHOP` del menú del título, registrada en `scene_registry`. Izquierda y
+     derecha alternan comprar/vender; la lista sale de `_ITEM_DEFS`, no de una
+     copia a mano.
+  3. ~~`ScoreSystem` sin enchufar~~ — **AUD-219**. `StageScene` lo construye y
+     le da su bus (`bind_bus()`, que **muda** la suscripción al cambiar de
+     escena en vez de duplicarla), y alimenta `HUD.set_score()` cada
+     fotograma. La región `Score` se añadió a `09_HUD_SPEC.md` §2.1 y una
+     prueba comprueba que lo dibujado cabe en lo que el doc declara.
+
+  Y **AUD-220** cerró el hueco que abrió AUD-207: `InventoryScene` deja poner y
+  quitar la ropa con `CONFIRM`. Sin eso, comprar ropa dejaba al jugador peor
+  que antes —pagaba y la bonificación no contaba por no estar equipada—.
+
+- **Resolution path (lo que queda):** la conexión 4. Que el jefe conceda
+  `skill_double_jump` / `skill_dash` / `skill_parry` al morir, y que el doble
+  salto y el dash consulten `Inventory.has_skill()` en vez de estar siempre
+  disponibles. Es la que toca la progresión del jugador y puede romper el
+  equilibrio de las 26 entregas, así que va aparte y con decisión explícita:
+  hoy `settings.PLAYER_AIR_JUMPS` y `_can_dash` los dan desde el primer nivel,
+  y condicionarlos cambia cómo se juegan los mapas existentes.
+
+---
+
+## ~~[GAP-027] Una `HazardZone` fija no se dibuja: es daño invisible~~ *(Resuelto)*
+
+- **File:** `src/framework/stage/drawing_system.py`, `src/framework/stage/stage_loader.py`
+- **Phase:** auditoría 2026-08-03, AUD-225
+- **Reason:** `DrawingSystem._draw_inundaciones` filtra por `sube_de_verdad`, así
+  que el motor **sólo pinta las zonas de daño que suben** —la inundación de
+  AUD-135—. Una `HazardZone` fija no se dibuja nunca: el contrato implícito es
+  que el diseñador pinte pinchos o lava en las baldosas y que el rectángulo sólo
+  marque dónde duele.
+
+  Ese contrato no está escrito en ningún sitio, y el 4-1 es la prueba de que no
+  se cumple solo: tenía cinco `HazardZone` sin una baldosa de peligro debajo, así
+  que el jugador perdía salud desde un rectángulo invisible y no había forma de
+  saber por qué. Lo mismo le puede pasar a cualquiera de las 26 entregas.
+
+  El propio comentario de `_draw_inundaciones` ya lo dice —*«Una zona de daño que
+  no se ve es una trampa»*— y luego sólo aplica esa regla al agua.
+
+- **Impact:** Cualquier nivel con `HazardZone` fija y sin arte propio hace daño
+  invisible. Un estudiante lo lee como «el motor está roto».
+- **Resolution:** AUD-228. `DrawingSystem._draw_zonas_de_dano` pinta las zonas
+  fijas con un rojo que late —distinto del turquesa de la inundación, porque son
+  dos mecánicas distintas— y con el borde superior marcado, que es donde empieza
+  a doler. La superficie se cachea al tamaño de pantalla y se recorta con
+  `area=`, como ya hacía el agua (AUD-023).
+
+  El riesgo de tocar el aspecto por defecto resultó ser mucho menor de lo que
+  parecía, y sólo porque se midió: en **todo el proyecto hay dos** `HazardZone`
+  fijas —`stage0` y `stage3_3_el_patio`— y ninguna tenía arte de peligro debajo.
+  La prueba que decía «los 15 escenarios entregados tienen zonas fijas pintadas
+  con tiles» afirmaba algo que nadie había comprobado y que era falso.
+
+  Un mapa que sí traiga su propio arte lo apaga con `visible=false` en el TMX.
+  El valor por defecto es visible a propósito: el defecto que esto arregla es
+  que un estudiante pierda salud sin nada en pantalla que lo explique, y ése no
+  se arregla con una propiedad que haya que acordarse de poner.
+
+  Pruebas: `tests/test_inundacion_que_sube.py::TestLasZonasFijasTambienSeVen`
+  (seis, incluida la de que `"false"` desde Tiled llega como cadena y hay que
+  convertirla).
+
+---
+
+## [GAP-028] `ZonaDeFriccion` no escala por `dt` y su documentación dice lo contrario
+
+- **File:** `src/framework/ecs/systems.py`, `src/framework/ecs/components.py`
+- **Phase:** auditoría 2026-08-03, AUD-225
+- **Reason:** `sistema_friccion` hace `v.v.x *= zona.multiplicador` **una vez por
+  fotograma y sin `dt`**. Dos consecuencias:
+
+  1. **Depende de los fotogramas por segundo.** A 60 fps, un multiplicador de
+     0,88 deja la velocidad en 0,88^60 ≈ 0,0005 por segundo; a 30 fps, en 0,0004
+     por segundo distinto. La misma zona frena distinto en dos máquinas, que es
+     el mismo modo de fallo que AUD-220 corrigió en la suite.
+  2. **La documentación está al revés.** El docstring dice «`multiplicador` < 1
+     resbala, > 1 frena antes», y el código hace justo lo contrario: multiplicar
+     por menos de 1 **amortigua** la velocidad —frena— y multiplicar por más de 1
+     la dispara sin tope.
+
+  El 4-1 lo usa con los dos ojos abiertos: el lodo frena con `multiplicador`
+  0,88 (calibrado a 60 fps, y así está anotado en `trazado.py`) y el musgo
+  resbala con `arrastre`, que sí se aplica por `dt` y sí hace lo que dice.
+
+- **Impact:** Cualquier zona de fricción se comporta distinto según la máquina.
+  Y un estudiante que siga el docstring pone `multiplicador = 1.5` esperando
+  frenar y sale disparado.
+- **Resolution path:** Convertir el multiplicador en un coeficiente por segundo
+  (`v.v.x *= zona.multiplicador ** dt`, como ya hace `particle_system.py` con su
+  `friction`) y corregir el docstring. Cambia el valor efectivo de cualquier zona
+  ya colocada, así que hay que revisar `stage_mecanicas` y las entregas antes.
