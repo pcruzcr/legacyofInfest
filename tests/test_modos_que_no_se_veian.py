@@ -300,3 +300,75 @@ class TestLasMarcasSobrevivenAlNivelSiguiente:
         ruta.write_text("{esto no es JSON", encoding="utf-8")
         registrar_marca("stage0", 30.0, ruta)
         assert mejores_tiempos(ruta)["stage0"] == pytest.approx(30.0)
+
+
+# ── Qué es hoy el Boss Rush, y qué no (AUD-232 / GAP-030) ──────
+
+
+class TestLoQueElBossRushHaceDeVerdad:
+    """El modo se juega, pero no es el que la documentación describe.
+
+    AUD-201 lo hizo visible. Al comprobar qué hace una vez dentro, aparece que
+    `BossRushMode` se construye, se arranca con `start()` y **nadie vuelve a
+    hablarle**: `context.boss_rush` se escribe y no lo lee ningún sitio, y
+    `advance_to_next()` y `record_hit()` no se llaman desde fuera del módulo.
+    El encadenado real lo hace la cola de escenarios normal del `SceneManager`.
+
+    Consecuencias medidas, todas contra lo que promete `docs/44`:
+
+    * la salud **no** se arrastra entre combates —`_carry_over_health` y
+      `_carry_over_meter` se inicializan a 0.0, se reponen a 0.0 en `start()` y
+      no tienen ni getter ni setter: la función no existe tampoco dentro del
+      módulo—;
+    * la puntuación nunca se calcula, porque la aplica `advance_to_next()`;
+    * `hits_taken` se queda en 0, porque lo incrementa `record_hit()`.
+
+    Lo que sí hay es un combate seguido contra los cuatro jefes, a vida llena
+    cada vez. Es jugable y no está roto; simplemente no es lo especificado.
+
+    Estas pruebas fijan **eso**, no lo deseable. El día que alguien conecte el
+    arrastre de vida o la puntuación, fallan — y eso es lo que se busca: obliga
+    a actualizar `docs/44` y GAP-030 en el mismo cambio, en vez de dejar que la
+    especificación y el juego vuelvan a separarse en silencio.
+    """
+
+    def test_el_modo_encadena_los_cuatro_jefes(self, contexto) -> None:
+        from src.engine.scenes.boss_rush_entry import empezar_boss_rush
+
+        modo = empezar_boss_rush(contexto)
+        assert modo is not None
+        assert len(contexto.scene_manager._stage_queue) == 4
+
+    def test_la_salud_no_se_arrastra_todavia(self) -> None:
+        """GAP-030. Si esto falla, el arrastre se conectó: actualiza la spec."""
+        from src.framework.stage.boss_rush_mode import BossRushMode
+
+        modo = BossRushMode()
+        publicos = [n for n in dir(modo)
+                    if "carry" in n.lower() and not n.startswith("_")]
+        assert publicos == [], (
+            f"`BossRushMode` ya expone {publicos}: el arrastre de vida dejó de "
+            f"ser un campo muerto. Actualiza docs/44 §4 y cierra GAP-030"
+        )
+
+    def test_nadie_conduce_el_modo_desde_el_juego(self) -> None:
+        """GAP-030. El modo se arranca y se abandona; lo demás lo hace la cola."""
+        import ast
+        import pathlib
+
+        raiz = pathlib.Path(__file__).resolve().parent.parent / "src"
+        conducen = []
+        for fichero in raiz.rglob("*.py"):
+            if fichero.name == "boss_rush_mode.py":
+                continue
+            arbol = ast.parse(fichero.read_text(encoding="utf-8"))
+            for nodo in ast.walk(arbol):
+                if (isinstance(nodo, ast.Call)
+                        and isinstance(nodo.func, ast.Attribute)
+                        and nodo.func.attr in {"advance_to_next", "record_hit"}):
+                    conducen.append(fichero.name)
+        assert conducen == [], (
+            f"{sorted(set(conducen))} ya conduce el modo: la puntuación y el "
+            f"recuento de golpes han dejado de estar muertos. Actualiza "
+            f"docs/44 §4 y cierra GAP-030"
+        )
