@@ -42,9 +42,26 @@ def _reset_global_state():
     AUD-019: there is no longer a module-level default EventBus to clear —
     every consumer receives its bus by injection, so a test's bus cannot leak
     into another test. Only genuinely process-wide caches are reset here.
+
+    AUD-220 — las preferencias del jugador también son estado global
+    ----------------------------------------------------------------
+    `user_settings.get()` **carga del disco** en la primera lectura, así que sin
+    esto la suite corría con el `config.json` de quien la ejecutara. En la
+    máquina donde se detectó, `text_scale` estaba en 2.0 —la ayuda de
+    accesibilidad al máximo—, de modo que `theme.font(20)` devolvía 40 px
+    durante toda la suite y en CI devolvía 20. Dos máquinas, dos resultados, el
+    mismo commit.
+
+    Lo destapó una prueba de tipografía que pasaba sin comprobar nada: comparaba
+    `font(N)` contra `Font(None, N)` sin saber que la primera venía multiplicada.
+
+    Se instalan las preferencias **de fábrica**, no las del disco. Una prueba
+    que necesite otra cosa lo declara con `set_settings()`, que para eso está.
     """
+    from src.engine.core import user_settings
     from src.engine.core.achievements import AchievementSystem
     from src.engine.scenes.demo_layout import clear_demo_font_cache
+    from src.engine.ui.theme import clear_font_cache
     from src.engine.utils.asset_loader import AssetLoader
     from src.framework.stage.stage_loader import StageLoader
     AssetLoader.clear_cache()
@@ -52,6 +69,10 @@ def _reset_global_state():
     StageLoader.clear_tmx_cache()
     clear_demo_font_cache()
     AchievementSystem._reset_instance()
+    user_settings.set_settings(user_settings.UserSettings())
+    # La caché de fuentes indexa por (ruta, tamaño ya escalado): si sobrevive a
+    # un cambio de escala, la prueba siguiente recibe la fuente de la anterior.
+    clear_font_cache()
     # Drain the pygame event queue so key presses posted by a previous test
     # (e.g. menu-navigation tests that post synthetic KEYDOWN events) cannot
     # leak into the next test's fresh App and be misinterpreted as input.

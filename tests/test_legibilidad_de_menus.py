@@ -47,6 +47,36 @@ def _video():
 AIRE_MINIMO = 4
 
 
+def _texto_ampliado(escala: float) -> None:
+    """Sube la escala de texto de verdad, para el resto de la prueba.
+
+    AUD-220 — antes esto era `monkeypatch.setattr(tema, "_escala_texto", 1.5,
+    raising=False)`, y `theme` no tiene ni ha tenido nunca un `_escala_texto`.
+    Con `raising=False` la línea no fallaba: creaba un atributo nuevo que no
+    lee nadie. Las dos pruebas que dicen comprobar la accesibilidad la
+    comprobaban al tamaño normal, que es el caso que ya cubren sus gemelas.
+
+    La escala sale de `user_settings`, así que se cambia ahí. Y hay que vaciar
+    la caché de fuentes: indexa por tamaño **ya escalado**, de modo que las
+    fuentes pedidas antes del cambio siguen siendo las pequeñas.
+    """
+    from src.engine.core import user_settings
+    from src.engine.ui.theme import clear_font_cache, escalar_texto
+
+    user_settings.set_settings(user_settings.UserSettings(text_scale=escala))
+    clear_font_cache()
+
+    # La guarda que faltaba. El defecto original no fue equivocarse de atributo
+    # sino que equivocarse no costara nada: la prueba seguía en verde midiendo
+    # el caso que no era. Si el mecanismo de escala vuelve a moverse, aquí se
+    # entera quien lo mueva.
+    assert escalar_texto(100) == round(100 * escala), (
+        f"pedir escala {escala}x no ha cambiado nada: escalar_texto(100) sigue "
+        f"devolviendo {escalar_texto(100)}. La prueba de accesibilidad estaría "
+        f"midiendo el tamaño normal"
+    )
+
+
 class TestElMenuDeLogros:
     def test_la_fila_deja_aire_para_su_texto(self) -> None:
         from src.engine.scenes.achievement_scene import alto_de_fila
@@ -57,12 +87,11 @@ class TestElMenuDeLogros:
             f"{f.get_linesize()}: las filas se tocan"
         )
 
-    def test_sigue_dejando_aire_con_el_texto_ampliado(self, monkeypatch) -> None:
+    def test_sigue_dejando_aire_con_el_texto_ampliado(self) -> None:
         """Con la ayuda de accesibilidad activada, que es cuando más importa."""
-        import src.engine.ui.theme as tema
         from src.engine.scenes.achievement_scene import alto_de_fila
 
-        monkeypatch.setattr(tema, "_escala_texto", 1.5, raising=False)
+        _texto_ampliado(1.5)
         f = font(Theme.FONT_SMALL)
         assert alto_de_fila() >= f.get_linesize() + AIRE_MINIMO
 
@@ -85,13 +114,10 @@ class TestElBestiario:
             f"{necesario}: la última línea se sale a la ficha siguiente"
         )
 
-    def test_la_ficha_sigue_cabiendo_con_el_texto_ampliado(
-        self, monkeypatch,
-    ) -> None:
-        import src.engine.ui.theme as tema
+    def test_la_ficha_sigue_cabiendo_con_el_texto_ampliado(self) -> None:
         from src.engine.scenes.bestiary_scene import alto_de_ficha, y_de_la_descripcion
 
-        monkeypatch.setattr(tema, "_escala_texto", 1.5, raising=False)
+        _texto_ampliado(1.5)
         nombre = font(Theme.FONT_SMALL)
         stats = font(Theme.FONT_TINY)
 
@@ -232,3 +258,50 @@ class TestElTamanoQueDeVerdadSeVe:
             assert ancho_kit <= ancho_viejo * 1.05, (
                 f"«{texto}» pasa de {ancho_viejo} a {ancho_kit} px de ancho"
             )
+
+
+class TestLaSuiteNoLeeLaConfiguracionDeQuienLaEjecuta:
+    """AUD-220 — la suite medía distinto en cada máquina.
+
+    `theme.escalar_texto()` multiplica todos los tamaños por `text_scale`, y esa
+    preferencia sale de `user_settings.get()`, que la **carga del disco** la
+    primera vez: `%APPDATA%/legacyofinfest/config.json` en Windows. `conftest.py`
+    reiniciaba el `AssetLoader`, el `StageLoader`, los logros y la cola de
+    eventos, pero no las preferencias.
+
+    Consecuencia: en la máquina donde se detectó esto la ayuda de accesibilidad
+    estaba al máximo (`text_scale = 2.0`), así que `font(20)` devolvía una fuente
+    de 40 px durante toda la suite, mientras que en CI devolvía una de 20. Dos
+    máquinas, dos resultados, el mismo commit.
+
+    No es teórico: la primera versión de `TestElTamanoQueDeVerdadSeVe` comparaba
+    `font(N)` contra `Font(None, N)` —es decir, 40 contra 20— y pasaba en verde
+    sin comprobar absolutamente nada. Una prueba de tamaño de letra que aprobaba
+    porque el ajuste del desarrollador la desnivelaba.
+
+    `user_settings` ya traía la costura para arreglarlo: `set_settings()` está
+    documentada como «replaceable in tests». Sólo faltaba usarla.
+    """
+
+    def test_las_preferencias_son_las_de_fabrica(self) -> None:
+        from src.engine.core import user_settings
+
+        assert user_settings.get().text_scale == 1.0, (
+            "la suite está leyendo el config.json de quien la ejecuta; con la "
+            "ayuda de accesibilidad activada todos los tamaños de letra salen "
+            "multiplicados y las pruebas de tipografía dejan de medir"
+        )
+
+    def test_la_escala_de_texto_no_multiplica_nada(self) -> None:
+        from src.engine.ui.theme import escalar_texto
+
+        assert escalar_texto(Theme.FONT_BODY) == Theme.FONT_BODY
+
+    def test_una_prueba_puede_seguir_pidiendo_la_escala_que_quiera(self) -> None:
+        """Aislar no es prohibir: quien necesite 2.0x lo declara y lo obtiene."""
+        from src.engine.core import user_settings
+        from src.engine.ui.theme import clear_font_cache, escalar_texto
+
+        user_settings.set_settings(user_settings.UserSettings(text_scale=2.0))
+        clear_font_cache()
+        assert escalar_texto(Theme.FONT_BODY) == Theme.FONT_BODY * 2
