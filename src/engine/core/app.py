@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.engine.audio.audio_manager import AudioManager
-from src.engine.core import settings, user_settings
+from src.engine.core import gpu_effects, settings, user_settings
 from src.engine.core.clock import DeltaClock
 from src.engine.core.difficulty import Difficulty, set_difficulty
 from src.engine.core.event_bus import EventBus
@@ -96,6 +96,15 @@ class App:
         except Exception as e:
             logger.warning("GL initialization failed: %s", e)
             self._use_gl = False
+            return
+        # AUD-222 — el reparto se declara aquí y en ningún otro sitio: ésta es
+        # la única función del árbol que sabe a la vez que el contexto GL se
+        # creó **de verdad** y qué pasadas trae encendidas la configuración.
+        # Va después del `init`, no antes, porque hasta que éste no vuelve sin
+        # excepción no hay tarjeta que se haga cargo de nada; declararlo antes
+        # dejaría a la CPU sin dibujar el bloom en una máquina que acaba de
+        # caerse al camino software.
+        gpu_effects.set_effects_on_gpu(cfg.cpu_effects_taken_over())
 
     def _init_subsystems(self) -> None:
         self.event_bus = EventBus()
@@ -207,7 +216,7 @@ class App:
                 self._fallback_to_title()
             else:
                 try:
-                    self._draw()
+                    self._draw(dt)
                 except Exception:
                     logger.exception("Unhandled exception in scene draw")
                     frame_failed = True
@@ -242,13 +251,43 @@ class App:
         if self.scene_manager.stack_size > 0:
             self.scene_manager.current.process_events(events)
 
-    def _draw(self) -> None:
+    def _draw(self, dt: float = 0.0) -> None:
+        # AUD-222 — se olvida lo publicado en el fotograma anterior *antes* de
+        # que dibuje nadie. Los menús no ejecutan post-procesado, así que sin
+        # este borrón la pantalla de título heredaría el bloom del nivel del
+        # que se acaba de salir y seguiría brillando hasta entrar en otro.
+        gpu_effects.begin_frame()
         self.internal_surface.fill(settings.BG_COLOR)
         if self.scene_manager.stack_size > 0:
             self.scene_manager.current.draw(self.internal_surface)
         self.scene_manager.transition.draw(self.internal_surface)
 
         if self._use_gl and self._gl_renderer:
+            # La escena acaba de decir cuánto bloom quiere mientras dibujaba;
+            # se recoge aquí, ya con todas las capas dentro, y antes de que la
+            # pasada lo lea.
+            self._gl_renderer.config.bloom_intensity = gpu_effects.published_bloom()
+            # AUD-215 — el golpe que pidió la escena al recibir daño, y el
+            # decaimiento. El impulso se recoge (y se borra) aquí; mantenerlo
+            # vivo mientras se apaga es cosa del renderizador, que es quien
+            # sabe cuánto tiempo ha pasado.
+            impulso = gpu_effects.consume_chromatic_aberration()
+            if impulso > 0.0:
+                self._gl_renderer.trigger_chromatic_aberration(impulso)
+            self._gl_renderer.update_chromatic_aberration(dt)
+            # AUD-216 — la región de agua que la escena acaba de publicar.
+            # `None` apaga la pasada, que es lo que pasa en los menús y en los
+            # catorce escenarios sin agua.
+            self._gl_renderer.set_refraction_region(
+                gpu_effects.published_water_region(), dt,
+            )
+            # AUD-226 — los rayos: foco y fuerza, o apagados. El foco lo
+            # decide la escena porque es la única que sabe qué luz manda.
+            rayos = gpu_effects.published_god_rays()
+            cfg = self._gl_renderer.config
+            cfg.godray_enabled = rayos is not None
+            if rayos is not None:
+                cfg.godray_origin, cfg.godray_exposure = rayos
             self._gl_renderer.render(self.internal_surface, self._current_light_surface())
         else:
             # AUD-013: this used to upscale internal_surface by
