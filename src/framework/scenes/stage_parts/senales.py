@@ -17,6 +17,7 @@ queda mudo sin un solo error en consola.
 """
 from __future__ import annotations
 
+import logging
 import random
 from collections.abc import Callable
 from typing import Any
@@ -106,6 +107,36 @@ class SenalesDeEscenario:
 
         self.context.event_bus.subscribe(EVENTO_RECOGIDO, _on_item_picked)
         self._vfx_handlers[EVENTO_RECOGIDO] = _on_item_picked
+
+        # AUD-244 — abrir la conversación que pide un disparador del mapa.
+        #
+        # `StageLoader` lee `dialogue_tree_id` de los `MessageTrigger` desde
+        # AUD-127 y hasta ahora sólo `stage0` hacía algo con él, con árboles
+        # escritos a mano en Python. Los otros dieciséis mapas podían declarar
+        # una conversación y no ocurría nada, sin aviso.
+        #
+        # Los árboles se cargan de `data/dialogues/<stage_id>.json` con
+        # `DialogueTree.desde_datos`, que existe desde AUD-127 para que un
+        # diseñador que no programa pueda escribir un diálogo. Hasta hoy no
+        # tenía quien la llamara.
+        def _on_show_dialogue(**data: Any) -> None:
+            tree_id = str(data.get("tree_id", ""))
+            arbol = self._arboles_de_dialogo.get(tree_id)
+            if arbol is None:
+                # Un identificador que no existe es una errata del mapa, y
+                # callarse es justamente lo que hizo que esto tardara meses
+                # en verse.
+                if tree_id:
+                    logging.getLogger(__name__).warning(
+                        "diálogo: el mapa pide el árbol '%s' y no está en "
+                        "data/dialogues/%s.json", tree_id,
+                        getattr(self._stage_data, "stage_id", "?"),
+                    )
+                return
+            if not self._dialogue.active:
+                self._dialogue.start_dialogue(arbol)
+
+        self._vfx_handlers[Events.SHOW_DIALOGUE] = _on_show_dialogue
 
         def _on_enemy_died(**data: Any) -> None:
             pos = data.get("position", (0, 0))

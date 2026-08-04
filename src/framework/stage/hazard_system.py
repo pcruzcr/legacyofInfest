@@ -69,9 +69,19 @@ class HazardSystem:
         for mt in stage.message_triggers:
             if not mt.triggered and trigger_rect.colliderect(mt.rect):
                 mt.triggered = True
-                self._context.event_bus.emit(
-                    Events.SHOW_MESSAGE, text=mt.text, duration=8.0
-                )
+                # AUD-244 — un disparador puede pedir una conversación, no sólo
+                # un cartel. `StageLoader` lee `dialogue_tree_id` desde AUD-127
+                # y aquí se ignoraba, así que declararlo en un mapa no hacía
+                # nada y no avisaba de nada.
+                arbol = getattr(mt, "dialogue_tree_id", "")
+                if arbol:
+                    self._context.event_bus.emit(
+                        Events.SHOW_DIALOGUE, tree_id=arbol,
+                    )
+                else:
+                    self._context.event_bus.emit(
+                        Events.SHOW_MESSAGE, text=mt.text, duration=8.0
+                    )
 
         for hz in stage.hazard_zones:
             hz.timer = max(0.0, hz.timer - dt)

@@ -104,6 +104,19 @@ class Events:
     """Emitted on progress toward achievement. Payload: achievement_id, progress, target."""
 
     # ── Dialogue events ─────────────────────────────────────────
+    SHOW_DIALOGUE: str = "SHOW_DIALOGUE"
+    """Pide abrir un árbol de diálogo. Carga: tree_id.
+
+    AUD-244 — el eslabón que faltaba entre el mapa y el sistema de diálogo.
+    `StageLoader` lee `dialogue_tree_id` de los `MessageTrigger` de **los
+    diecisiete mapas**, pero el único sitio que consumía esos disparadores
+    —`HazardSystem`— sólo emitía `SHOW_MESSAGE` con el texto plano. Un mapa que
+    declarara una conversación no obtenía nada, sin aviso: la misma forma de
+    fallo que AUD-127, un nivel más arriba.
+
+    Va por evento y no por llamada directa porque `HazardSystem` sólo tiene el
+    bus: quien sabe de árboles es la escena, que es la que los carga.
+    """
     ITEM_COLLECTED: str = "ITEM_COLLECTED"
     """Emitted by DialogueSystem on dialogue action. Payload: item_id."""
     FLAG_SET: str = "FLAG_SET"

@@ -131,7 +131,6 @@ VERIFICADOS: dict[str, str] = {
 #: lleva el GAP que lo sigue. La diferencia con `VERIFICADOS` importa —aquéllos
 #: no son defectos; éstos sí, y esperan una decisión de diseño.
 PENDIENTES: dict[str, str] = {
-    "desde_datos": "GAP-031: constructor de árbol de diálogo desde JSON, sin cargador ni contenido",
     "get_frame": "GAP-031: accesor de fotograma del fantasma; lo sustituyó `posicion_en`",
     "get_splits": "GAP-031: nadie consulta los parciales; la tabla lee el fichero",
     "reveal_all": "GAP-031: alta por lotes de la niebla; ningún escenario la usa",
