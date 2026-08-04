@@ -85,7 +85,27 @@ Comprobado con análisis de alcanzabilidad sobre todo el árbol.
 > la respuesta a cada una hay que ir a buscarla al código. Nueve de las doce
 > filas necesitaron abrir el fichero para saber de cuál de los tres tipos era.
 
-**Acción pendiente:** ninguna. `GhostData` (AUD-142) y `ParamPanel` (AUD-146) están enchufados; los tres «retirar» eran falsos positivos.
+**Acción pendiente (actualizado 2026-08-03, AUD-233).** La frase anterior decía
+«ninguna», y envejeció: el barrido no se había repetido desde entonces y en esa
+ventana aparecieron **tres huérfanos nuevos**, los tres encontrados a mano y no
+por herramienta:
+
+| Huérfano | Cómo se manifestaba | Resuelto en |
+|---|---|---|
+| `SpeedrunTimer.save()` | Nadie lo llamaba; la pantalla de récords rellenaba el hueco con **tiempos escritos a mano** | AUD-202 |
+| `LeaderboardScene` | Registrada y sin ninguna entrada de menú que la abriera | AUD-202 |
+| `BossRushMode` | Construido, arrancado y abandonado, con `docs/44` declarándolo «✅ Complete — scoring, health carry-over» | AUD-232 / GAP-030 |
+
+La lección de la sección anterior —que la salida del barrido son preguntas— se
+mantiene entera. Lo que faltaba era **repetir el barrido**, y que repetirlo no
+dependiera de que alguien se acordara.
+
+Desde AUD-233 lo hace `scripts/check_orphan_systems.py`, con
+`tests/test_sistemas_huerfanos.py` ejecutándolo en la suite. Su puerta es
+estrecha a propósito: sólo falla cuando un módulo **que un documento declara
+terminado** tiene un símbolo que las pruebas ejercitan, el juego no invoca y
+nadie ha clasificado todavía. Medida actual: 181 candidatos, 16 verificados como
+no-defectos, 8 huérfanos reales anotados en **GAP-031**.
 
 ---
 
