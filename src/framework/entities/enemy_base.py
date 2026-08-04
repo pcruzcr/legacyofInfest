@@ -678,7 +678,7 @@ class EnemyBase(BaseEntity):
                 # llevaban desde AUD-051 escritas y sin un solo llamante en
                 # producción; esta línea es la que las conecta. STUNNED sale a
                 # RECOVER, así que un parry acertado abre ventana de castigo.
-                self.stun(self.PARRY_STUN_DURATION)
+                self.stun(self._aturdimiento_por_parry())
                 player._parry_success = True
                 player._parry_active = False
                 player._parry_window = 0.0
@@ -915,6 +915,18 @@ class EnemyBase(BaseEntity):
         self._cancelar_ataque_en_curso()
         self._stun_timer = max(self._stun_timer, duration)
         self.state = EnemyState.STUNNED
+
+    def _aturdimiento_por_parry(self) -> float:
+        """Cuánto dura el aturdimiento de un parry acertado (AUD-243).
+
+        Por defecto, la constante de la clase. Existe como gancho porque los
+        jefes tienen su propia mecánica de desvío —`BossAttack.parriable`, con
+        un `aturde_al_parry` por ataque— y su punto de entrada,
+        `BossBase.recibir_parry()`, **no tenía un solo llamante**. Toda la
+        cadena estaba escrita y desconectada justo por arriba, que es el modo
+        de fallo de este repositorio.
+        """
+        return self.PARRY_STUN_DURATION
 
     def _cancelar_ataque_en_curso(self) -> None:
         """Gancho: abandonar el ataque a medias al ser aturdido (AUD-239).
