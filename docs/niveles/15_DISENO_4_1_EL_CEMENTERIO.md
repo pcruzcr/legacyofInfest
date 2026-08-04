@@ -277,7 +277,7 @@ ACTO V — EL UMBRAL                La tormenta cesa. Silencio. La luna toca
 ## 11. Checklist de la propuesta
 
 Construida entera. Cada casilla la defiende una prueba de `tests/test_stage4_1.py`
-(61 en total); lo que se cambió respecto a esta propuesta está en el §0 de la
+(69 en total); lo que se cambió respecto a esta propuesta está en el §0 de la
 ficha, `13_STAGE_4_1.md`.
 
 > **El nivel es vertical (AUD-225).** Esta propuesta lo describe como un corredor
@@ -308,10 +308,12 @@ ficha, `13_STAGE_4_1.md`.
 - [x] La opción de tensión del §4: quieto y a oscuras, susurro y ojos — **sin
       daño** *(AUD-211)*
 
-Lo único de esta propuesta que **no** está construido con arte propio es el
-tileset del suelo: `assets/tilesets/tileset_cemetery.png` existe pero son ocho
-baldosas de relleno genéricas, así que el terreno sigue usando el del prólogo.
-Queda anotado en `KNOWN_GAPS.md`.
+El suelo también es del cementerio desde AUD-237. `tileset_cemetery.png` existía
+y eran ocho baldosas de relleno genéricas —piedra lisa, tablones, ladrillo
+rojo—, así que el nivel pintaba con el tileset del prólogo porque el suyo era
+peor. Ahora la hoja se dibuja de verdad: losa de cripta, muro del pozo, lápida
+en dos mitades, cruz, y el musgo y el lodo como **la misma losa con otra
+superficie encima**, que es lo que hace que el jugador entienda por qué resbala.
 
 ---
 
