@@ -136,16 +136,23 @@ class HazardZone:
     #: Nombre del evento que la pone en marcha. Vacío = arranca ya.
     arranca_con: str = ""
 
-    #: Si el motor la pinta. AUD-228 — antes **no se pintaba ninguna zona fija**,
-    #: sólo las que suben, y el contrato implícito era que el diseñador dibujara
-    #: pinchos en las baldosas. Ese contrato no estaba escrito y no se cumplía:
-    #: los dos únicos mapas del proyecto con `HazardZone` fija —`stage0`, que es
-    #: el que copian los estudiantes, y `stage3_3_el_patio`— hacían daño desde un
-    #: rectángulo invisible.
+    #: Si el motor pinta el aviso. AUD-228 — antes **no se pintaba ninguna zona
+    #: fija**, sólo las que suben, y el contrato implícito era que el diseñador
+    #: dibujara pinchos en las baldosas. Ese contrato no estaba escrito y no se
+    #: cumplía: los dos únicos mapas del proyecto con `HazardZone` fija
+    #: —`stage0`, que es el que copian los estudiantes, y `stage3_3_el_patio`—
+    #: hacían daño desde un rectángulo invisible.
     #:
     #: Se pone a `false` en el TMX cuando el mapa **sí** trae su propio arte de
     #: peligro y el aviso del motor sobraría encima.
-    visible: bool = True
+    #:
+    #: AUD-241 — se llama `avisar` y no `visible` porque **`visible` es un nombre
+    #: reservado en Tiled**: pytmx rechaza el mapa entero con «Reserved names and
+    #: duplicate names are not allowed», así que la propiedad que AUD-228
+    #: documentó no apagaba el aviso — impedía cargar el nivel. Es la misma
+    #: piedra con la que ya tropezó `BloqueRitmico`, que por eso usa
+    #: `visible_seg` en vez de `visible`.
+    avisar: bool = True
 
     #: Estado interno. `_alto_inicial` guarda la altura original porque el
     #: `rect` es mutable y lo vamos a modificar en sitio.
@@ -1417,8 +1424,8 @@ class StageLoader:
             arranca_con=str(props.get("arranca_con", "") or ""),
             # Tiled escribe los booleanos como `"true"`/`"false"`, y la cadena
             # `"false"` es verdadera en Python: leerla sin convertir haría que
-            # `visible=false` no apagara nada.
-            visible=str(props.get("visible", "true")).lower() != "false",
+            # `avisar=false` no apagara nada.
+            avisar=str(props.get("avisar", "true")).lower() != "false",
         ))
 
     @classmethod
