@@ -248,6 +248,23 @@ class BossBase(EnemyBase):
             self._event_bus.emit(Events.BOSS_ATTACK, pattern="PARRIED", rect=self.rect)
         return aturde
 
+    def _aturdimiento_por_parry(self) -> float:
+        """Conecta el parry genérico con la mecánica de desvío del jefe.
+
+        AUD-243 — el eslabón que faltaba. `recibir_parry()` se describe a sí
+        misma como «el punto de entrada de la mecánica» y no tenía **ningún**
+        llamante: ni en producción ni en pruebas. `BossAttack.parriable` y
+        `aturde_al_parry` existían, se probaban por unidad, y no cambiaban
+        nada en ningún jefe — el campo era decorativo.
+
+        Si hay un ataque parable en curso manda su aturdimiento, que es mayor
+        que el genérico porque acertar la ventana de un jefe es más difícil.
+        Si no lo hay, se cae al de `EnemyBase`: parar a un jefe fuera de su
+        ataque sigue valiendo, sólo que lo de siempre.
+        """
+        aturde = self.recibir_parry()
+        return aturde if aturde > 0.0 else super()._aturdimiento_por_parry()
+
     def teletransportar(self, x: float, y: float) -> None:
         """Reaparece en otro punto de la arena. Death, Agahnim, The Time Keeper.
 
