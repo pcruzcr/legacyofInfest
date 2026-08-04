@@ -114,7 +114,11 @@ class SpeedrunTimer:
     def save(self, path: str | Path | None = None) -> None:
         data = {
             "global_time": self._global_time,
-            "splits": self._splits,
+            # AUD-245: por el accesor público, que devuelve una copia. Volcar
+            # `self._splits` metía la lista viva en el diccionario que se
+            # serializa, así que quien tocara los parciales después del `save`
+            # estaría editando lo que se acababa de escribir.
+            "splits": self.get_splits(),
         }
         path = Path(path) if path is not None else _DEFAULT_SAVE_PATH
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -206,10 +210,12 @@ class GhostData:
         """
         if not self._frames:
             return None
-        indice = int(segundos / self.INTERVALO)
-        if indice >= len(self._frames):
+        # AUD-245: por `get_frame` y no indexando la lista a mano. Era la
+        # misma comprobación de rango escrita dos veces, y la versión pública
+        # -la que documenta `22_API_CONTRACTS`- no la llamaba nadie.
+        marco = self.get_frame(max(0, int(segundos / self.INTERVALO)))
+        if marco is None:
             return None
-        marco = self._frames[max(0, indice)]
         return float(marco.get("x", 0.0)), float(marco.get("y", 0.0))
 
     @property

@@ -310,16 +310,19 @@ class AudioManager:
         AUD-144: escribe en el bus, no en un campo suelto. Si los dos vivieran
         por separado, mover el deslizador de opciones dejaría el bus a lo suyo
         y el *ducking* calcularía sobre el volumen equivocado.
+
+        AUD-245: delega en `ajustar_bus` en vez de repetir sus tres pasos. Eran
+        el mismo procedimiento escrito dos veces —ajustar la mezcla, releer el
+        bus, aplicar— y `ajustar_bus` no lo llamaba nadie: la mitad genérica del
+        sistema de buses estaba muerta mientras dos casos particulares la
+        reimplementaban al lado. Dos copias de una regla es una que se queda
+        atrás.
         """
-        self._music_volume = max(0.0, min(1.0, volume))
-        self.mezcla.ajustar(BUS_MUSICA, self._music_volume)
-        if not self._muted:
-            self._aplicar_volumen_de_musica()
+        self.ajustar_bus(BUS_MUSICA, max(0.0, min(1.0, volume)))
 
     def set_sfx_volume(self, volume: float) -> None:
-        """Set SFX volume (0.0 to 1.0)."""
-        self._sfx_volume = max(0.0, min(1.0, volume))
-        self.mezcla.ajustar(BUS_EFECTOS, self._sfx_volume)
+        """Set SFX volume (0.0 to 1.0). AUD-245: ídem, por `ajustar_bus`."""
+        self.ajustar_bus(BUS_EFECTOS, max(0.0, min(1.0, volume)))
 
     def toggle_mute(self) -> None:
         """Toggle mute on/off."""
