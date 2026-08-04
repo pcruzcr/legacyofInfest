@@ -423,3 +423,97 @@ class TestEnjambreDeBalas:
             e.impactos_contra(objetivo)
         ms = (time.perf_counter() - t0) / 30 * 1000
         assert ms < 2.0, f"3000 balas cuestan {ms:.2f} ms de un presupuesto de 16,67"
+
+
+class TestLasMecanicasDelEcsSeVen:
+    """AUD-242 — `_dibujar_bloques` dice la regla: «los bloques se dibujan, y no
+    es opcional». Se aplicaba a la familia de `bloques.py` y no a la del ECS.
+
+    Medido antes de arreglarlo: `BloqueRitmico`, `ZonaLetalTemporizada`,
+    `Resorte` y `PlataformaMovil` no se dibujaban en **ningún** sitio del árbol,
+    y están puestos en los mapas — 7 bloques rítmicos (tres en `stage0`, el que
+    copian los estudiantes) y 7 zonas letales que matan de un golpe.
+    """
+
+    def _escena_con(self, *componentes):
+        import pygame as pg
+
+        from src.framework.ecs import Transform, World
+        from src.framework.scenes.stage_scene import StageScene
+
+        class Falsa:
+            _COLOR_RITMICO = StageScene._COLOR_RITMICO
+            _COLOR_RITMICO_AUSENTE = StageScene._COLOR_RITMICO_AUSENTE
+            _COLOR_LASER = StageScene._COLOR_LASER
+            _COLOR_LASER_APAGADO = StageScene._COLOR_LASER_APAGADO
+            _COLOR_RESORTE = StageScene._COLOR_RESORTE
+            _COLOR_MOVIL = StageScene._COLOR_MOVIL
+            _dibujar_mecanicas_ecs = StageScene._dibujar_mecanicas_ecs
+
+        falsa = Falsa()
+        falsa._mundo = World()
+        falsa._camera = type("C", (), {"offset": pg.Vector2(0, 0)})()
+        for comp in componentes:
+            if hasattr(comp, "rect"):
+                falsa._mundo.crear(comp)
+            else:
+                falsa._mundo.crear(
+                    Transform(posicion=pg.Vector2(20, 20),
+                              rect=pg.Rect(20, 20, 40, 16)),
+                    comp,
+                )
+        return falsa
+
+    def _pintado(self, falsa) -> bool:
+        import pygame as pg
+
+        lienzo = pg.Surface((200, 200))
+        lienzo.fill((0, 0, 0))
+        falsa._dibujar_mecanicas_ecs(lienzo)
+        return any(
+            lienzo.get_at((x, y))[:3] != (0, 0, 0)
+            for x in range(0, 120) for y in range(0, 120)
+        )
+
+    def test_un_bloque_ritmico_presente_se_ve(self) -> None:
+        from src.framework.ecs import BloqueRitmico
+
+        falsa = self._escena_con(BloqueRitmico(visible_seg=10.0, oculto_seg=0.0))
+        assert self._pintado(falsa), (
+            "un bloque rítmico invisible es un muro que aparece sin avisar"
+        )
+
+    def test_un_bloque_ritmico_ausente_deja_su_contorno(self) -> None:
+        """Sin contorno, «desapareció el suelo» no se distingue de «nunca hubo
+        suelo». El contorno es lo que dice «vuelve dentro de un momento»."""
+        from src.framework.ecs import BloqueRitmico
+
+        falsa = self._escena_con(BloqueRitmico(visible_seg=0.0, oculto_seg=10.0))
+        assert self._pintado(falsa)
+
+    def test_un_laser_encendido_se_ve(self) -> None:
+        import pygame as pg
+
+        from src.framework.ecs import ZonaLetalTemporizada
+
+        falsa = self._escena_con(ZonaLetalTemporizada(
+            rect=pg.Rect(20, 20, 40, 16), encendido=10.0, apagado=0.0))
+        assert self._pintado(falsa), "mata de un golpe y no se veía"
+
+    def test_un_resorte_se_ve(self) -> None:
+        import pygame as pg
+
+        from src.framework.ecs import Resorte
+
+        assert self._pintado(self._escena_con(Resorte(rect=pg.Rect(20, 20, 16, 16))))
+
+    def test_una_plataforma_movil_se_ve(self) -> None:
+        """Las baldosas no se mueven, así que una plataforma móvil **no puede**
+        representarse pintando el mapa. O la dibuja el motor, o no se ve."""
+        import pygame as pg
+
+        from src.framework.ecs import PlataformaMovil
+
+        falsa = self._escena_con(PlataformaMovil(
+            origen=pg.Vector2(20, 20), destino=pg.Vector2(80, 20)))
+        assert self._pintado(falsa)
