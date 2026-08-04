@@ -324,8 +324,30 @@ class ZonaDeViento:
 class ZonaDeFriccion:
     """Cambia el agarre del suelo. La miel de The Hive, el hielo, las cintas.
 
-    `multiplicador` < 1 resbala, > 1 frena antes. `arrastre` mueve solo, que es
-    lo que convierte esto en una cinta transportadora.
+    AUD-236 — aquí ponía «`multiplicador` < 1 resbala, > 1 frena antes», y es
+    **al revés de lo que hace el código**. `sistema_friccion` multiplica la
+    velocidad horizontal, así que por debajo de 1 la recorta —frena— y por
+    encima de 1 la dispara sin tope. Un estudiante que siguiera esta frase
+    ponía 1,5 esperando barro y salía despedido.
+
+    Lo que es de verdad
+    -------------------
+    `multiplicador` es una **escala de velocidad**, no un coeficiente de
+    rozamiento, porque el jugador reescribe `velocity.x` desde la entrada en
+    cada fotograma y esto se aplica encima. Medido sobre el sistema real
+    (`tests/test_stage4_1.py::TestElLodoFrenaIgualEnCualquierMaquina`):
+
+        andando con 0,88   →  79,20 px/s a 30, a 60 y a 120 fps
+
+    O sea que para el caso que importa **no depende de los fotogramas**. Sí
+    depende cuando el cuerpo va sin empuje —deslizándose— porque entonces cada
+    fotograma vuelve a recortar lo que quedaba: 21,5 px/s a 30 fps contra 5,5 a
+    120. Ese camino no lo recorre el jugador, que fija su velocidad cada
+    fotograma, y por eso se deja como está en vez de meter un `** dt` que
+    arreglaría el caso muerto y estropearía el vivo.
+
+    `arrastre` mueve solo, que es lo que convierte esto en una cinta
+    transportadora, y ése sí va escalado por `dt`.
     """
 
     rect: pygame.Rect

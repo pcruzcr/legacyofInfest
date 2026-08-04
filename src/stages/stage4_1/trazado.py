@@ -174,10 +174,13 @@ INDICES_LODO: tuple[int, ...] = (28, 31, 34)
 #: al saltar se suelta — es la cinta de Mega Man 2, no un empujón que se acumula.
 ARRASTRE_DEL_MUSGO = 62.0
 
-#: Cuánto frena el lodo. `multiplicador` multiplica la velocidad horizontal cada
-#: fotograma, así que 0,88 deja andar pero cuesta. Ver GAP-027: el sistema no
-#: escala por `dt`, y por eso este número está calibrado a 60 fps y no es un
-#: coeficiente físico.
+#: Cuánto frena el lodo: se anda al 88 % de la velocidad normal.
+#:
+#: `multiplicador` es una escala de velocidad y no un coeficiente de rozamiento
+#: —el jugador reescribe `velocity.x` desde la entrada cada fotograma y esto se
+#: aplica encima—, así que el número **no depende de los fotogramas por
+#: segundo**: medidos 79,20 px/s a 30, a 60 y a 120 (AUD-236). Lo comprueba
+#: `tests/test_stage4_1.py::TestElLodoFrenaIgualEnCualquierMaquina`.
 FRENO_DEL_LODO = 0.88
 
 
