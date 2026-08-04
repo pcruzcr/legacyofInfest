@@ -799,10 +799,154 @@ def _gen_procedural_tileset(path, theme, ts=16, cols=8, rows=8):
             draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), outline=outline_color, width=1)
     img.save(path)
 
+# ── El tileset del cementerio (AUD-237) ──
+#
+# `tileset_cemetery.png` existía y no lo usaba **nadie**. Lo hacía
+# `_gen_procedural_tileset`, que produce ocho baldosas genéricas —piedra lisa,
+# azul oscuro, tablones, ladrillo rojo— repetidas ocho veces hacia abajo; el
+# Asset Bible le pide «stone markers, ceremonial carvings». Por eso el 4-1
+# pintaba su suelo con el tileset del prólogo: el del cementerio era peor.
+#
+# Aquí se dibujan las ocho baldosas que el nivel usa de verdad, y con una regla
+# encima: **el musgo y el lodo son la misma losa con otra superficie**. Si fueran
+# tres materiales que no se parecen, el jugador leería «tres suelos distintos»;
+# siendo la misma piedra con algo encima, lee «esta losa está cubierta», que es
+# lo que explica por qué resbala.
+CEM_LOSA = (96, 96, 110)          # la piedra que se pisa
+CEM_LOSA_LUZ = (128, 128, 144)
+CEM_LOSA_SOMBRA = (62, 62, 74)
+CEM_TIERRA_T = (46, 34, 28)       # bajo la losa
+CEM_MURO = (58, 56, 70)
+CEM_MUSGO_T = (58, 128, 62)
+CEM_MUSGO_OSC = (36, 84, 44)
+CEM_LODO_T = (104, 74, 44)
+CEM_LODO_OSC = (68, 48, 28)
+
+#: Qué hay en cada casilla de la hoja, por índice. El GID del TMX es índice + 1,
+#: así que esta lista **es** el contrato con `generate_stage4_1.py`: cambiar el
+#: orden aquí sin cambiarlo allí repinta el nivel entero con las baldosas
+#: equivocadas, que es como `stage_mecanicas` acabó pintando basura (AUD-115).
+CEM_ORDEN = (
+    "vacio", "losa", "relleno", "muro",
+    "musgo", "musgo_relleno", "lodo", "lodo_relleno",
+    "lapida_alta", "lapida_baja", "cruz", "grieta",
+)
+
+
+def _cem_losa(draw, ox, oy, ts, base=CEM_LOSA, luz=CEM_LOSA_LUZ):
+    """La piedra de siempre: canto iluminado arriba y junta de mortero."""
+    draw.rectangle((ox, oy, ox + ts - 1, oy + ts - 1), fill=base)
+    draw.line((ox, oy, ox + ts - 1, oy), fill=luz)
+    draw.line((ox, oy + 1, ox + ts - 1, oy + 1),
+              fill=tuple((oscuro + claro) // 2
+                         for oscuro, claro in zip(base, luz, strict=True)))
+    draw.line((ox, oy + ts - 1, ox + ts - 1, oy + ts - 1), fill=CEM_LOSA_SOMBRA)
+    # La junta vertical, desplazada, para que dos losas seguidas no se lean como
+    # una sola plancha.
+    draw.line((ox + ts // 3, oy + 3, ox + ts // 3, oy + ts - 2),
+              fill=CEM_LOSA_SOMBRA)
+
+
+def _gen_tileset_cementerio(path, ts=16, cols=8, rows=8):
+    _ensure(path)
+    img = Image.new("RGBA", (ts * cols, ts * rows), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    rng = random.Random(4341)
+
+    for indice, clase in enumerate(CEM_ORDEN):
+        ox, oy = (indice % cols) * ts, (indice // cols) * ts
+
+        if clase == "vacio":
+            continue
+
+        if clase == "losa":
+            _cem_losa(draw, ox, oy, ts)
+
+        elif clase == "relleno":
+            draw.rectangle((ox, oy, ox + ts - 1, oy + ts - 1), fill=CEM_TIERRA_T)
+            for _ in range(14):     # guijarros, para que no sea un plano liso
+                px, py = rng.randint(ox + 1, ox + ts - 2), rng.randint(oy + 1, oy + ts - 2)
+                draw.point((px, py), fill=(62, 48, 40))
+
+        elif clase == "muro":
+            draw.rectangle((ox, oy, ox + ts - 1, oy + ts - 1), fill=CEM_MURO)
+            for fy in (0, 8):       # sillares alternados
+                dx = 0 if fy == 0 else ts // 2
+                draw.line((ox + dx, oy + fy, ox + dx, oy + fy + 7),
+                          fill=(44, 42, 54))
+                draw.line((ox, oy + fy + 7, ox + ts - 1, oy + fy + 7),
+                          fill=(44, 42, 54))
+
+        elif clase in ("musgo", "lodo"):
+            # La misma losa debajo: es lo que hace que se lea como suelo cubierto
+            # y no como otro material.
+            _cem_losa(draw, ox, oy, ts)
+            claro, oscuro = ((CEM_MUSGO_T, CEM_MUSGO_OSC) if clase == "musgo"
+                             else (CEM_LODO_T, CEM_LODO_OSC))
+            draw.rectangle((ox, oy, ox + ts - 1, oy + 5), fill=claro)
+            draw.line((ox, oy + 5, ox + ts - 1, oy + 5), fill=oscuro)
+            if clase == "musgo":
+                # Matas que asoman: la señal de lejos de que ahí se resbala.
+                for mx in range(ox + 1, ox + ts - 1, 3):
+                    alto = rng.randint(2, 4)
+                    draw.line((mx, oy - alto + 6, mx, oy + 6), fill=claro)
+                    draw.point((mx, oy - alto + 6), fill=(120, 200, 110))
+            else:
+                # Raíces: dos hilos que cruzan el barro.
+                for _ in range(3):
+                    ry = rng.randint(oy + 1, oy + 4)
+                    draw.line((ox, ry, ox + ts - 1, ry + rng.randint(-1, 1)),
+                              fill=oscuro)
+
+        elif clase in ("musgo_relleno", "lodo_relleno"):
+            fondo = CEM_MUSGO_OSC if clase == "musgo_relleno" else CEM_LODO_OSC
+            draw.rectangle((ox, oy, ox + ts - 1, oy + ts - 1), fill=fondo)
+            for _ in range(10):
+                px, py = rng.randint(ox + 1, ox + ts - 2), rng.randint(oy + 1, oy + ts - 2)
+                draw.point((px, py), fill=tuple(max(0, c - 14) for c in fondo))
+
+        elif clase in ("lapida_alta", "lapida_baja"):
+            # Dos mitades de una lápida de dos baldosas de alto: la de arriba
+            # lleva la cabeza redondeada y la inscripción.
+            draw.rectangle((ox + 3, oy, ox + ts - 4, oy + ts - 1), fill=CEM_LOSA)
+            if clase == "lapida_alta":
+                # La cúpula, **dentro** de su baldosa. Con un `oy - 4` se salía
+                # por arriba y manchaba la casilla de al lado en la hoja: una
+                # baldosa vacía que no está vacía es basura que aparece en el
+                # mapa donde nadie la puso.
+                draw.ellipse((ox + 3, oy, ox + ts - 4, oy + 9), fill=CEM_LOSA)
+                draw.line((ox + 5, oy + 9, ox + ts - 6, oy + 9), fill=CEM_LOSA_SOMBRA)
+                draw.line((ox + 5, oy + 12, ox + ts - 6, oy + 12), fill=CEM_LOSA_SOMBRA)
+            else:
+                draw.rectangle((ox + 1, oy + ts - 3, ox + ts - 2, oy + ts - 1),
+                               fill=CEM_LOSA_SOMBRA)
+            draw.line((ox + 3, oy, ox + 3, oy + ts - 1), fill=CEM_LOSA_LUZ)
+
+        elif clase == "cruz":
+            draw.rectangle((ox + 7, oy + 2, ox + 9, oy + ts - 1), fill=CEM_LOSA)
+            draw.rectangle((ox + 3, oy + 5, ox + ts - 4, oy + 7), fill=CEM_LOSA)
+            draw.line((ox + 7, oy + 2, ox + 7, oy + ts - 1), fill=CEM_LOSA_LUZ)
+
+        elif clase == "grieta":
+            # Una fisura verde para quien quiera pintarla en el mapa en vez de
+            # dejársela a la escena.
+            draw.rectangle((ox, oy, ox + ts - 1, oy + ts - 1), fill=CEM_TIERRA_T)
+            x = ox + ts // 2
+            for y in range(oy, oy + ts):
+                x += rng.randint(-1, 1)
+                x = max(ox + 1, min(ox + ts - 2, x))
+                draw.point((x, y), fill=(90, 220, 120))
+                draw.point((x + 1, y), fill=(40, 120, 60))
+
+    img.save(path)
+
+
 def _gen_all_tilesets():
     print("  Tilesets...")
     for name, theme in TILESET_THEMES.items():
-        if theme == "gothic":
+        if name == "tileset_cemetery":
+            _gen_tileset_cementerio(A / "tilesets" / f"{name}.png")
+        elif theme == "gothic":
             _gen_gothic_tileset(A / "tilesets" / f"{name}.png")
         else:
             _gen_procedural_tileset(A / "tilesets" / f"{name}.png", theme)

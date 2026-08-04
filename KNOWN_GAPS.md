@@ -413,34 +413,36 @@ Nunca borrar entradas - marcar como resueltas.
 
 ---
 
-## [GAP-026] El cementerio no tiene tileset de cementerio
+## ~~[GAP-026] El cementerio no tiene tileset de cementerio~~ *(Resuelto)*
 
-- **File:** `assets/tilesets/tileset_cemetery.png`, `tools/generate_stage4_1.py`
-- **Phase:** auditoría 2026-08-03, AUD-209
-- **Reason:** El Asset Bible (`docs/20_ASSET_BIBLE.md`) asigna a la zona final un
-  `tileset_cemetery.png` con «stone markers, ceremonial carvings». El fichero
-  existe, pero mide 128×128 y son **ocho baldosas de relleno genéricas** —piedra
-  lisa, azul oscuro, tablones, ladrillo rojo— repetidas ocho veces hacia abajo.
-  Ninguna es una marca de piedra ni un grabado.
+- **File:** `assets/tilesets/tileset_cemetery.png`, `tools/generate_all_assets.py`
+- **Phase:** auditoría 2026-08-03, AUD-225 → resuelto en AUD-237
+- **Reason:** El Asset Bible asigna a la zona final un `tileset_cemetery.png` con
+  «stone markers, ceremonial carvings». El fichero existía, medía 128×128 y eran
+  **ocho baldosas de relleno genéricas** —piedra lisa, azul oscuro, tablones,
+  ladrillo rojo— repetidas ocho veces hacia abajo, porque lo generaba
+  `_gen_procedural_tileset` como cualquier otra zona. Ninguna era una marca de
+  piedra ni un grabado, y **no lo usaba ningún mapa**.
 
-  Por eso el 4-1 sigue pintando el suelo con `tileset_stage0.png`, que tiene 4096
-  baldosas y una piedra que al menos se lee como cripta en la oscuridad del
-  nivel. AUD-209 arregló el **fondo** del cementerio (las tres capas de
-  `assets/backgrounds/final/`, generadas ya con lápidas, cruces, verja y el
-  círculo de piedra) y dejó el **terreno** como estaba: cambiarlo por el tileset
-  actual haría que el nivel se viera peor, no más a cementerio.
+  Por eso el 4-1 pintaba su suelo con `tileset_stage0.png`, la piedra del
+  castillo del prólogo: el tileset del cementerio era peor que el del prólogo.
 
-- **Impact:** Cosmético. El nivel se juega y se lee; el suelo es el del prólogo.
-- **Resolution path:** Dibujar el tileset de verdad —o generarlo en
-  `tools/generate_all_assets.py` como se hizo con el fondo— y cambiar la
-  constante `TILESET` de `tools/generate_stage4_1.py` junto con los cuatro GID
-  (`SUELO`, `MURO`, `LOSA`, `RELLENO`). Regenerar y mirar una captura: los GID
-  inventados son lo que dejó `stage_mecanicas` pintando las tres primeras
-  baldosas de la hoja durante semanas (AUD-115).
+- **Resolution:** AUD-237. `_gen_tileset_cementerio` dibuja las baldosas que el
+  nivel usa de verdad —losa de cripta, relleno, muro del pozo, musgo, lodo,
+  lápida en dos mitades, cruz y grieta— con una regla encima: **el musgo y el
+  lodo son la misma losa con otra superficie**. Si fueran tres materiales que no
+  se parecen, el jugador leería «tres suelos distintos»; siendo la misma piedra
+  cubierta, lee «esta losa está tomada», que es lo que explica por qué resbala.
+
+  Los GID son un contrato entre `CEM_ORDEN` y las constantes de
+  `tools/generate_stage4_1.py`, y hay una prueba que compara las dos listas:
+  reordenar la hoja sin tocar el mapa lo repintaría entero con las baldosas
+  equivocadas sin que fallara nada, que es exactamente cómo `stage_mecanicas`
+  estuvo semanas pintando las tres primeras casillas de su hoja (AUD-115).
 
 ---
 
-## [GAP-029] La economía tiene catálogo y API, y ningún sitio que la use *(3 de 4 resueltas)*
+## ~~[GAP-029] La economía tiene catálogo y API, y ningún sitio que la use~~ *(Resuelto)*
 
 > Esta entrada nació como `GAP-027` y se renumeró: el trabajo de stage4_1
 > (AUD-225) había tomado ese mismo número en paralelo, y renumerar aquí toca
@@ -499,13 +501,33 @@ Nunca borrar entradas - marcar como resueltas.
   quitar la ropa con `CONFIRM`. Sin eso, comprar ropa dejaba al jugador peor
   que antes —pagaba y la bonificación no contaba por no estar equipada—.
 
-- **Resolution path (lo que queda):** la conexión 4. Que el jefe conceda
-  `skill_double_jump` / `skill_dash` / `skill_parry` al morir, y que el doble
-  salto y el dash consulten `Inventory.has_skill()` en vez de estar siempre
-  disponibles. Es la que toca la progresión del jugador y puede romper el
-  equilibrio de las 26 entregas, así que va aparte y con decisión explícita:
-  hoy `settings.PLAYER_AIR_JUMPS` y `_can_dash` los dan desde el primer nivel,
-  y condicionarlos cambia cómo se juegan los mapas existentes.
+  4. ~~Los jefes no sueltan habilidades~~ — **AUD-238**, y es la que exigía una
+     decisión de diseño, no sólo cablear. La invariante 2 dice que las 26
+     entregas siguen funcionando sin tocar una línea; condicionar el doble
+     salto sin más habría dejado sin completar cualquier nivel que lo diera
+     por hecho. Se parte en dos mitades con riesgos distintos:
+
+     * **Soltar es aditivo.** `BossBase.skill_drop` (vacía por defecto) viaja
+       en `ENEMY_DIED` y la escena deja la reliquia junto a las monedas. Un
+       recogible más en el suelo; ningún nivel existente cambia. Se descarta
+       lo que no está en el catálogo, para que un jefe de una entrega con
+       `skill_drop = "skill_volar"` no deje algo que al cogerlo no hace nada.
+     * **Exigir nace apagado.** `settings.PLAYER_SKILLS_REQUIRE_UNLOCK = False`
+       por defecto: `_can_jump` y `_can_dash` **no consultan** el inventario y
+       se comportan exactamente como antes. Con `True`, la progresión existe.
+       El salto desde el suelo y los fotogramas de coyote nunca se
+       condicionan: eso no es progresión, es un juego roto.
+
+     `BossVenado` concede `skill_dash` y `BossRey` `skill_double_jump` — una
+     línea cada uno, y son el ejemplo que los estudiantes copian. No es
+     adorno: una prueba exige que **cada habilidad condicionable la suelte
+     algún jefe**, porque encender el candado sin eso volvería la mecánica
+     inalcanzable para siempre en vez de ganable.
+
+- **Nota de alcance:** `discover_stages()` no llega a todos los jefes —
+  registra escenarios, y `BossVenado` vive en un módulo que sólo se importa al
+  cargar su escena. La prueba recorre el árbol de ficheros para ver el
+  catálogo entero; es el mismo problema que AUD-144 arregló en la guía.
 
 ---
 
@@ -552,33 +574,42 @@ Nunca borrar entradas - marcar como resueltas.
 
 ---
 
-## [GAP-028] `ZonaDeFriccion` no escala por `dt` y su documentación dice lo contrario
+## ~~[GAP-028] `ZonaDeFriccion` no escala por `dt` y su documentación dice lo contrario~~ *(Resuelto — y la mitad no era lo que parecía)*
 
 - **File:** `src/framework/ecs/systems.py`, `src/framework/ecs/components.py`
-- **Phase:** auditoría 2026-08-03, AUD-225
-- **Reason:** `sistema_friccion` hace `v.v.x *= zona.multiplicador` **una vez por
-  fotograma y sin `dt`**. Dos consecuencias:
+- **Phase:** auditoría 2026-08-03, AUD-225 → medido y cerrado en AUD-236
+- **Reason:** Esta entrada afirmaba dos cosas.
 
-  1. **Depende de los fotogramas por segundo.** A 60 fps, un multiplicador de
-     0,88 deja la velocidad en 0,88^60 ≈ 0,0005 por segundo; a 30 fps, en 0,0004
-     por segundo distinto. La misma zona frena distinto en dos máquinas, que es
-     el mismo modo de fallo que AUD-220 corrigió en la suite.
-  2. **La documentación está al revés.** El docstring dice «`multiplicador` < 1
-     resbala, > 1 frena antes», y el código hace justo lo contrario: multiplicar
-     por menos de 1 **amortigua** la velocidad —frena— y multiplicar por más de 1
-     la dispara sin tope.
+  **La documentación estaba al revés.** Cierto. El docstring decía
+  «`multiplicador` < 1 resbala, > 1 frena antes» y el código hace lo contrario:
+  por debajo de 1 recorta la velocidad —frena— y por encima de 1 la dispara sin
+  tope. Un estudiante que siguiera esa frase ponía 1,5 esperando barro y salía
+  despedido.
 
-  El 4-1 lo usa con los dos ojos abiertos: el lodo frena con `multiplicador`
-  0,88 (calibrado a 60 fps, y así está anotado en `trazado.py`) y el musgo
-  resbala con `arrastre`, que sí se aplica por `dt` y sí hace lo que dice.
+  **«Frena distinto en cada máquina».** Esto se midió antes de arreglarlo, y no
+  era así para el uso que existe. El jugador reescribe `velocity.x` desde la
+  entrada en cada fotograma y el multiplicador se aplica encima, así que se
+  comporta como una **escala de velocidad** y no como un coeficiente de
+  rozamiento. Con 0,88:
 
-- **Impact:** Cualquier zona de fricción se comporta distinto según la máquina.
-  Y un estudiante que siga el docstring pone `multiplicador = 1.5` esperando
-  frenar y sale disparado.
-- **Resolution path:** Convertir el multiplicador en un coeficiente por segundo
-  (`v.v.x *= zona.multiplicador ** dt`, como ya hace `particle_system.py` con su
-  `friction`) y corregir el docstring. Cambia el valor efectivo de cualquier zona
-  ya colocada, así que hay que revisar `stage_mecanicas` y las entregas antes.
+  | | 30 fps | 60 fps | 120 fps |
+  |---|---|---|---|
+  | Andando (el caso real) | 79,20 px/s | 79,20 px/s | 79,20 px/s |
+  | Deslizándose sin empuje | 21,5 px/s | 11,0 px/s | 5,5 px/s |
+
+  Depende de los fotogramas sólo cuando el cuerpo va sin empuje, y ese camino no
+  lo recorre nadie: el jugador y los enemigos fijan su velocidad cada fotograma.
+
+- **Resolution:** AUD-236. Docstring reescrito con lo que el código hace de
+  verdad y con los números de arriba, y la medición convertida en prueba
+  (`tests/test_stage4_1.py::TestElLodoFrenaIgualEnCualquierMaquina`) — incluida
+  una que fija **a propósito** la dependencia del caso sin empuje, para que
+  quien algún día conecte esto a un cuerpo que se desliza se entere leyéndola.
+
+  El `** dt` que esta entrada proponía **habría empeorado las cosas**: arregla el
+  camino muerto y estropea el vivo, porque haría que andar sobre lodo fuera más
+  lento a 30 fps que a 60. Queda escrito para que nadie lo intente otra vez sin
+  medir.
 
 ## [GAP-030] El Boss Rush se juega, pero no es el modo que la spec describe
 
