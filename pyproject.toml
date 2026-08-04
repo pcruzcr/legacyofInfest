@@ -53,7 +53,17 @@ dependencies = [
     # que numpy 2.0 retiró (`np.float_`, `np.NaN`, `np.in1d`, `np.trapz`,
     # `np.product`, `np.row_stack`…): cero apariciones en los 446 ficheros.
     "numpy>=1.26",
-    "pymunk>=6.6",
+    # AUD-235: aquí estaba `pymunk>=6.6`, y **ningún fichero del árbol lo
+    # importa**. Lo pedía `collision_system.py`, que construía un
+    # `pymunk.Space` con cero cuerpos y llamaba a `step()` en cada fotograma
+    # para integrar un mundo vacío; esa simulación se retiró y la dependencia
+    # se quedó. Su propio módulo lo cuenta en la cabecera.
+    #
+    # No es gratis tenerla de más: pymunk es una extensión en C, y este
+    # proyecto ya se quedó sin poder instalarse en Python 3.13 por una rueda
+    # que no existía (AUD-173). Cada dependencia obligatoria que nadie usa es
+    # una forma más de que `pip install -e .` falle el día de la entrega, a
+    # cambio de nada. Lo vigila `tests/test_dependencias_que_se_usan.py`.
 
     # Data & validation
     "pydantic>=2.7",

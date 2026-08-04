@@ -18,7 +18,7 @@
 # Core engine
 pygame-ce>=2.5
 numpy>=1.26  # AUD-173: sin tope; numpy<2 no tiene ruedas para Python 3.13
-pymunk>=6.6
+# AUD-235: `pymunk>=6.6` retirado — nadie lo importa. El porqué, en pyproject.
 
 # Data & validation
 pydantic>=2.7
