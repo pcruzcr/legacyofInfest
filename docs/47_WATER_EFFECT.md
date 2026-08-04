@@ -43,7 +43,24 @@ The Water Effect (`src/framework/vfx/water_effect.py`) is an animated visual ove
 | `alpha` | 100 | Overlay transparency (0–255) |
 | `tint` | (40, 80, 160) | RGB color of water overlay |
 
-All adjustable via `set_params()`.
+All adjustable via `set_params()` — **y desde el mapa** (AUD-240).
+
+Hasta AUD-240 esta frase describía sólo la API: `StageScene` construía un
+`WaterEffect()` con los valores por defecto y nunca llamaba a `set_params`, así
+que los cinco mandos eran inalcanzables desde el contenido y toda el agua del
+juego ondulaba igual. Ahora el escenario los declara como propiedades del mapa:
+
+| Propiedad del mapa | Rango | Por defecto |
+|---|---|---|
+| `water_speed` | 0 – 8 | 1.5 |
+| `water_amplitude` | 0 – 16 px | 4 |
+| `water_frequency` | 0 – 1 | 0.04 |
+| `water_alpha` | 0 – 255 | 100 |
+| `water_tint` | nombre de la paleta de luces o `#rrggbb` | (40, 80, 160) |
+
+Los valores fuera de rango se recortan en vez de abortar la carga, como el resto
+del cargador: un mapa mal escrito se ve raro, no deja al estudiante sin nivel.
+Un mapa que no declare nada se ve exactamente igual que antes.
 
 ---
 

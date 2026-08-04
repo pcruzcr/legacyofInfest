@@ -957,6 +957,21 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
             self._niebla = FogOfWar(radius=int(radio))
         if getattr(datos, "water_effect", False):
             self._agua_vfx = WaterEffect()
+            # AUD-240 — el agua se configura desde el mapa.
+            #
+            # `docs/47` documenta cinco mandos y decía «all adjustable via
+            # `set_params()`». Nadie la llamaba: aquí se construía un
+            # `WaterEffect()` a secas, así que el charco de una cueva y el mar
+            # de un acantilado ondulaban exactamente igual. Los `getattr` con
+            # defecto son por las entregas de estudiante que traen su propio
+            # `StageData` sin estos campos.
+            self._agua_vfx.set_params(
+                speed=float(getattr(datos, "water_speed", 1.5)),
+                amplitude=int(getattr(datos, "water_amplitude", 4)),
+                frequency=float(getattr(datos, "water_frequency", 0.04)),
+                alpha=int(getattr(datos, "water_alpha", 100)),
+                tint=tuple(getattr(datos, "water_tint", (40, 80, 160))),
+            )
 
     def _publicar_o_dibujar_el_agua(self, surface) -> None:
         """El agua la pinta el sombreador si hay GL, y `WaterEffect` si no.
