@@ -31,6 +31,7 @@ from src.framework.entities.boss_base import BossBase
 from src.framework.entities.enemy_base import EnemyBase
 from src.framework.entities.player import Player
 from src.framework.entities.squad_brain import SquadBrain
+from src.framework.scenes.stage_parts import dibujo_mecanicas
 from src.framework.scenes.stage_parts.ambiente import MezclaDeAmbiente
 from src.framework.scenes.stage_parts.fantasma import FantasmaDeCarrera
 from src.framework.scenes.stage_parts.senales import SenalesDeEscenario
@@ -1492,90 +1493,6 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
                 pygame.draw.line(surface, (60, 55, 50), (r.left + 2, y),
                                  (r.right - 2, y), 1)
 
-    #: Colores de las mecánicas del ECS. Formas planas, como el resto de lo que
-    #: el motor dibuja por su cuenta: un rectángulo del color correcto siempre se
-    #: ve, y el estudiante lo sustituye por su sprite cuando lo tenga.
-    _COLOR_RITMICO = (150, 140, 190)
-    _COLOR_RITMICO_AUSENTE = (110, 100, 150)
-    _COLOR_LASER = (255, 90, 70)
-    _COLOR_LASER_APAGADO = (120, 60, 55)
-    _COLOR_RESORTE = (230, 190, 70)
-    _COLOR_MOVIL = (140, 130, 120)
-
-    def _dibujar_mecanicas_ecs(self, surface: pygame.Surface) -> None:
-        """Las mecánicas del ECS también se dibujan (AUD-242).
-
-        `_dibujar_bloques` dice la regla dos métodos más arriba —«los bloques se
-        dibujan, y no es opcional: si el motor no los pinta, el jugador ve un
-        muro invisible que a veces cede, que es como se lee un fallo»— y se
-        aplicó a la familia de `bloques.py` y **no a la del ECS**.
-
-        Medido antes de escribir esto: de `BloqueRitmico`, `ZonaLetalTemporizada`,
-        `Resorte` y `PlataformaMovil` no había **ni un solo sitio** en todo el
-        árbol que los dibujara. Y están puestos en los mapas: 7 bloques rítmicos
-        —tres de ellos en `stage0`, que es el que copian los estudiantes— y 7
-        zonas letales, que matan de un golpe con `dano=99`.
-
-        Un bloque rítmico invisible es un muro que aparece y desaparece sin
-        avisar; un láser invisible mata sin que haya nada en pantalla. Las dos
-        cosas se leen como que el motor está roto, y las dos llevaban meses así.
-
-        El bloque ausente se dibuja **en contorno** en vez de no dibujarse: es lo
-        que convierte «desapareció el suelo» en «vuelve dentro de un momento»,
-        que es la diferencia entre un obstáculo y una trampa.
-        """
-        from src.framework.ecs import (
-            BloqueRitmico,
-            PlataformaMovil,
-            Resorte,
-            Transform,
-            ZonaLetalTemporizada,
-        )
-
-        mundo = getattr(self, "_mundo", None)
-        if mundo is None:
-            return
-        offset = self._camera.offset
-        dx, dy = -int(offset.x), -int(offset.y)
-
-        def _rect_de(entidad):
-            t = mundo.obtener(entidad, Transform)
-            return None if t is None else t.rect.move(dx, dy)
-
-        for entidad, bloque in mundo.cada(BloqueRitmico):
-            r = _rect_de(entidad)
-            if r is None:
-                continue
-            if bloque.presente:
-                pygame.draw.rect(surface, self._COLOR_RITMICO, r)
-                pygame.draw.rect(surface, (90, 84, 120), r, 1)
-            else:
-                pygame.draw.rect(surface, self._COLOR_RITMICO_AUSENTE, r, 1)
-
-        for _entidad, zona in mundo.cada(ZonaLetalTemporizada):
-            r = zona.rect.move(dx, dy)
-            if zona.activa:
-                pygame.draw.rect(surface, self._COLOR_LASER, r)
-            else:
-                # Apagada se marca el carril, no el rayo: hay que poder ver por
-                # dónde va a pasar antes de que pase.
-                pygame.draw.rect(surface, self._COLOR_LASER_APAGADO, r, 1)
-
-        for _entidad, resorte in mundo.cada(Resorte):
-            r = resorte.rect.move(dx, dy)
-            pygame.draw.rect(surface, self._COLOR_RESORTE, r)
-            for i in range(1, 4):       # las espiras, para que se lea muelle
-                y = r.top + i * r.height // 4
-                pygame.draw.line(surface, (150, 120, 40),
-                                 (r.left + 1, y), (r.right - 2, y), 1)
-
-        for entidad, _movil in mundo.cada(PlataformaMovil):
-            r = _rect_de(entidad)
-            if r is None:
-                continue
-            pygame.draw.rect(surface, self._COLOR_MOVIL, r)
-            pygame.draw.line(surface, (190, 180, 170), r.topleft, r.topright)
-
     def _actualizar_escenas(self, dt: float) -> bool:
         """Corre el director. Devuelve `True` si el juego debe quedarse quieto.
 
@@ -1910,7 +1827,9 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
         # las bandas cinematográficas tienen que tapar el juego, no el HUD.
         if self._bloques is not None:
             self._dibujar_bloques(surface)
-            self._dibujar_mecanicas_ecs(surface)
+            # AUD-242 — lo del ECS tampoco lo pintaba nadie. Ver `stage_parts/`.
+            dibujo_mecanicas.dibujar_mecanicas_ecs(
+                surface, getattr(self, "_mundo", None), self._camera.offset)
         self._dibujar_fantasma(surface)
         if self._cutscenes is not None:
             self._cutscenes.draw(surface)

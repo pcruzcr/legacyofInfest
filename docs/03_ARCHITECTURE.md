@@ -268,7 +268,9 @@ legacy-of-infest/                      # Actual repo root
 │   │   │       ├── __init__.py            #   por qué son mixins y no colaboradores
 │   │   │       ├── ambiente.py            #   luz, bloom, viñeta, estación, hora
 │   │   │       ├── senales.py             #   suscripciones al bus: VFX y 38 sonidos
-│   │   │       └── fantasma.py            #   silueta de la mejor carrera
+│   │   │       ├── fantasma.py            #   silueta de la mejor carrera
+│   │   │       └── dibujo_mecanicas.py    #   pinta lo del ECS: bloques rítmicos,
+│   │   │                                  #   láseres, resortes, plataformas móviles
 │   │   │
 │   │   ├── vfx/
 │   │   │   ├── __init__.py
