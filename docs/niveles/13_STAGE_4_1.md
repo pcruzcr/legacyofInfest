@@ -25,7 +25,7 @@ adivinarlo leyendo el código.
 | Tabla de los cinco actos | `src/stages/stage4_1/actos.py` |
 | Contornos de venado, serpiente, gavilán, la Cegua y las brujas | `src/stages/stage4_1/siluetas.py` |
 | Fondo del cementerio (3 capas) | `tools/generate_all_assets.py` → `assets/backgrounds/final/` |
-| Pruebas (50) | `tests/test_stage4_1.py` |
+| Pruebas (69) | `tests/test_stage4_1.py` |
 
 **Lo que se cambió respecto a esta ficha, y por qué:**
 
@@ -53,6 +53,12 @@ adivinarlo leyendo el código.
    inscripción se burle de nadie. Inventar una lista sería lo contrario.
 
 **Lo que se corrigió después (AUD-208 … AUD-211):**
+
+> El punto 7 quedó **superado** por el rediseño de AUD-225, que aparece más
+> abajo: el corredor horizontal de 300 baldosas que describe no llegó a
+> entregarse, porque jugarlo destapó que el problema no era el largo sino la
+> forma. Se deja escrito porque de ahí salió `trazado.py`, que sí sigue vivo, y
+> porque el camino que lleva a una decisión explica la decisión.
 
 7. **El nivel medía media pantalla por acto.** Los tramos eran de 20 baldosas
    sobre un mapa de 100, y la pantalla mide 50: en una sola vista cabían dos
@@ -110,9 +116,23 @@ cambie el movimiento del jugador sin que se vea por qué:
 
 | Superficie | Qué hace | Cómo se ve |
 |---|---|---|
-| Musgo | Arrastra hacia el hueco de su repisa (`arrastre` 62 px/s) | Verde con matas (baldosa 146) |
-| Lodo | Frena: se camina despacio (`multiplicador` 0,88) | Tierra con raíces (baldosa 212) |
+| Musgo | Arrastra hacia el hueco de su repisa (`arrastre` 62 px/s) | La losa cubierta de musgo, con matas (GID 5) |
+| Lodo | Frena: se camina despacio (`multiplicador` 0,88) | La losa cubierta de barro, con raíces (GID 7) |
 | Viento | Empuja en el acto IV, con ciclo de 3,2 s | La tormenta, los rayos y la lluvia |
+
+Las dos son **la misma losa con otra superficie encima**, y eso es la mitad del
+diseño: tres materiales que no se parecen se leerían como «tres suelos
+distintos», y piedra cubierta se lee como «esta losa está tomada», que es lo que
+explica por qué resbala. El `multiplicador` del lodo **no depende de los
+fotogramas por segundo** — medidos 79,20 px/s a 30, a 60 y a 120 (AUD-236).
+
+**El tileset (AUD-237).** El suelo lo pintaba `tileset_stage0.png`, la piedra
+del castillo del prólogo, mientras `tileset_cemetery.png` existía sin que lo
+usara ningún mapa: eran ocho baldosas de relleno genéricas, así que usarlo
+habría empeorado el nivel. Ahora la hoja se dibuja de verdad —losa de cripta,
+muro del pozo, lápida en dos mitades, cruz, musgo y lodo— y el cementerio pisa
+su propia piedra. Los GID son un contrato con `CEM_ORDEN` y hay una prueba que
+compara las dos listas.
 
 Las grietas siguen ahí y **ya no hacen daño**: son luz verde en el canto de cada
 repisa, dibujada por la escena con el fondo, que marca el borde del que hay que
