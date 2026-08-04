@@ -3,11 +3,21 @@ from __future__ import annotations
 import numpy as np
 import pygame
 
-from src.engine.core import settings
+from src.engine.core import gpu_effects, settings
 
 
 class PostProcessing:
-    """Screen-space post-processing effects: vignette, flash, tint, bloom, motion blur, color grading."""
+    """Screen-space post-processing effects: vignette, flash, tint, bloom, motion blur, color grading.
+
+    AUD-222 — algunos de estos efectos los hace también `gl_pipeline.py` con
+    sombreadores, y en una máquina con ModernGL se aplicaban **los dos**. Lo
+    que la GPU esté haciendo se consulta en `engine.core.gpu_effects`, que es
+    un dato de proceso que fija la raíz de composición: esta clase no puede
+    preguntar por `App` ni importar `moderngl` sin acoplar `framework/` a la
+    existencia de un contexto GL (`tests/test_layering.py`). Con el camino
+    software —CI, cualquier instalación sin el extra `accel`, las 26 entregas—
+    el reparto está vacío y aquí no cambia absolutamente nada.
+    """
 
     def __init__(self) -> None:
         self._vignette_strength: float = 0.4
@@ -316,8 +326,10 @@ class PostProcessing:
 
     def apply(self, surface: pygame.Surface) -> None:
         w, h = settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT
+        # AUD-222 — se lee una vez por fotograma, no una por efecto.
+        en_la_gpu = gpu_effects.effects_on_gpu()
 
-        # Flash overlay
+        # Flash overlay — se queda en la CPU: no hay sombreador equivalente.
         if self._flash_alpha > 0:
             alpha = int(self._flash_alpha * (self._flash_timer / max(self._flash_duration, 0.01)))
             if self._flash_surf is None or self._flash_surf.get_size() != (w, h):
@@ -326,7 +338,8 @@ class PostProcessing:
             surface.blit(self._flash_surf, (0, 0))
 
         # Damage + base vignette
-        if self._damage_vignette > 0 or self._vignette_strength > 0:
+        if (gpu_effects.VIGNETTE not in en_la_gpu
+                and (self._damage_vignette > 0 or self._vignette_strength > 0)):
             total_v = min(0.6, self._vignette_strength + self._damage_vignette)
             if (self._vignette_surf is None
                 or self._vignette_surf.get_size() != (w, h)
@@ -338,7 +351,15 @@ class PostProcessing:
 
         # Bloom — downsample bright areas for a glow
         intensidad = max(self._bloom_intensity, self._bloom_base)
-        if intensidad > 0.01:
+        if gpu_effects.BLOOM in en_la_gpu:
+            # AUD-222 — delegar el bloom no es apagarlo. El de aquí es
+            # dinámico (la ráfaga de `set_bloom` al cambiar de fase un jefe,
+            # el `_bloom_base` que cada escenario lee de su TMX) y el del
+            # sombreador venía fijo en la configuración. Publicar la
+            # intensidad es lo que impide que delegar convierta un efecto que
+            # responde al juego en un brillo constante.
+            gpu_effects.publish_bloom(intensidad)
+        elif intensidad > 0.01:
             self._apply_bloom(surface, w, h, intensidad)
 
         # Tint overlay
