@@ -651,55 +651,6 @@ Nunca borrar entradas - marcar como resueltas.
   conecta el arrastre o la puntuación, para que la spec se actualice en el mismo
   cambio.
 
-## [GAP-032] Cinco mecánicas de F5 están escritas, documentadas «en código» y nadie las invoca
-
-- **File:** `src/framework/stage/level_mechanics.py`, `src/framework/ecs/bullet_swarm.py`, `src/framework/entities/boss_base.py`
-- **Phase:** auditoría 2026-08-03, AUD-243
-- **Reason:** `docs/56_FASE_5_ECS_Y_MECANICAS.md` lista siete mecánicas bajo el
-  epígrafe **«Y en código:»**. Medido una por una con `grep -rn` sobre `src/`,
-  excluyendo el módulo propio de cada una:
-
-  | Mecánica | Estado medido |
-  |---|---|
-  | Parry del jefe (`BossAttack.parriable`) | ~~0 llamantes~~ → **resuelto en AUD-243** |
-  | Fase invulnerable (`BossPhase.invulnerable`) | OK: `boss_base.py:208` la consulta |
-  | **Tiempo bala** (`TiempoBala`) | **se construye y no se vuelve a tocar** |
-  | **Scroll forzado** (`ScrollForzado`) | **se construye y no se vuelve a tocar** |
-  | **Bullet hell** (`EnjambreDeBalas`) | **0 usos fuera de su módulo** |
-  | **Escalado de fase** (`BossPhase.escala`) | **0 usos**; `escala_de_fase` sólo se define |
-  | **Teletransporte** (`BossBase.teletransportar`) | **0 usos** |
-
-  El caso más claro es `ScrollForzado`. `StageScene.__init__` hace
-  `self._scroll_forzado = ScrollForzado()` en la línea 167 y **ese es su único
-  uso en todo el repositorio**: no se llama a `arrancar()`, ni a `update()`, ni
-  a `se_quedo_atras()`. El docstring de la clase explica con detalle por qué el
-  borde mata en vez de empujar —«el nivel dijo *sígueme* y no lo seguiste»— y
-  ese borde no mata a nadie porque la cámara nunca se mueve sola.
-
-  `TiempoBala` es idéntico: construido en la línea 166, nunca actualizado.
-
-- **Impact:** Un estudiante que lea `56_FASE_5_ECS_Y_MECANICAS.md` ve siete
-  mecánicas entregadas y puede diseñar un nivel de persecución con scroll
-  forzado, o un jefe que se teletransporta. Ninguna de las cinco hará nada, y
-  no habrá ningún error que se lo diga.
-
-- **Resolution path:** Cada una necesita una decisión de diseño distinta, no
-  sólo cableado, y por eso no se corrigieron aquí:
-
-  1. **`ScrollForzado` y `TiempoBala`** necesitan **quién los enciende**. Lo
-     natural es una propiedad TMX o un `Disparador` —el circuito de AUD-132 ya
-     existe—, pero eso toca `StageLoader` y `06_TMX_SPEC.md`, que son contrato
-     para las 26 entregas.
-  2. **`EnjambreDeBalas`** necesita un jefe que lo use; hoy ninguno de los
-     cuatro dispara patrones.
-  3. **`teletransportar` y `escala_de_fase`** necesitan un jefe que los declare
-     en su transición de fase. Es el mismo patrón que AUD-238 resolvió con
-     `skill_drop`: una línea en la clase del jefe y un ejemplo en el material
-     que los estudiantes copian.
-
-  Mientras tanto, **`56_FASE_5_ECS_Y_MECANICAS.md` miente** y esa es la parte
-  que sí es urgente: o se cablean, o el documento deja de decir «y en código».
-
 ## [GAP-031] El motor sabe reproducir voz y no hay un solo fichero de voz
 
 - **File:** `src/engine/audio/audio_manager.py`
@@ -738,3 +689,66 @@ Nunca borrar entradas - marcar como resueltas.
   ninguna entrada en la puerta. `tests/test_apis_que_nadie_llamaba.py` fija las
   cuatro delegaciones —cinco de sus nueve pruebas fallan sin ellas— y
   `tests/test_sistemas_huerfanos.py` vigila que no aparezcan nuevos.
+
+## [GAP-032] Cinco mecánicas de F5 están escritas, documentadas «en código» y nadie las invoca
+
+- **File:** `src/framework/stage/level_mechanics.py`, `src/framework/ecs/bullet_swarm.py`, `src/framework/entities/boss_base.py`
+- **Phase:** auditoría 2026-08-03, AUD-243
+- **Reason:** `docs/56_FASE_5_ECS_Y_MECANICAS.md` lista siete mecánicas bajo el
+  epígrafe **«Y en código:»**. Medido una por una con `grep -rn` sobre `src/`,
+  excluyendo el módulo propio de cada una:
+
+  | Mecánica | Estado medido |
+  |---|---|
+  | Parry del jefe (`BossAttack.parriable`) | ~~0 llamantes~~ → **resuelto en AUD-243** |
+  | Fase invulnerable (`BossPhase.invulnerable`) | OK: `boss_base.py:208` la consulta |
+  | **Tiempo bala** (`TiempoBala`) | **se construye y no se vuelve a tocar** |
+  | ~~Scroll forzado (`ScrollForzado`)~~ | **resuelto en AUD-249**: tipo TMX `ScrollZone` |
+  | **Bullet hell** (`EnjambreDeBalas`) | **0 usos fuera de su módulo** |
+  | **Escalado de fase** (`BossPhase.escala`) | **0 usos**; `escala_de_fase` sólo se define |
+  | **Teletransporte** (`BossBase.teletransportar`) | **0 usos** |
+
+  El caso más claro es `ScrollForzado`. `StageScene.__init__` hace
+  `self._scroll_forzado = ScrollForzado()` en la línea 167 y **ese es su único
+  uso en todo el repositorio**: no se llama a `arrancar()`, ni a `update()`, ni
+  a `se_quedo_atras()`. El docstring de la clase explica con detalle por qué el
+  borde mata en vez de empujar —«el nivel dijo *sígueme* y no lo seguiste»— y
+  ese borde no mata a nadie porque la cámara nunca se mueve sola.
+
+  `TiempoBala` es idéntico: construido en la línea 166, nunca actualizado.
+
+- **Impact:** Un estudiante que lea `56_FASE_5_ECS_Y_MECANICAS.md` ve siete
+  mecánicas entregadas y puede diseñar un nivel de persecución con scroll
+  forzado, o un jefe que se teletransporta. Ninguna de las cinco hará nada, y
+  no habrá ningún error que se lo diga.
+
+- **Resolution path:** Cada una necesita una decisión de diseño distinta, no
+  sólo cableado, y por eso no se corrigieron aquí:
+
+  ~~1. `ScrollForzado`~~ — **AUD-249**. Tipo TMX `ScrollZone`: el rectángulo es
+     el disparador, la cámara arranca al pisarlo y el borde izquierdo mata.
+     Vive en `HazardSystem`, que ya es quien mata por zona; lo único que le
+     faltaba era la cámara. **Aditivo**: ningún TMX existente lo declara, y hay
+     una prueba que lo comprueba sobre `assets/maps/`.
+
+     Ese es el patrón para las que quedan: **tipo TMX nuevo → cargador →
+     el sistema que ya hace ese trabajo**. Un tipo que nadie declara no puede
+     romper ningún mapa entregado, así que la invariante 2 no lo bloquea.
+
+  2. **`TiempoBala` no encaja en ese patrón, y conviene saberlo antes de
+     empezar.** Su firma es `update(dt_real, quiere, reloj)`: ese `quiere` es
+     entrada del jugador, así que **es una habilidad, no una zona**. Necesita
+     cuatro cosas y no una: una `Action` nueva en `action_map`, su tecla en el
+     mapa de teclado y en la pantalla de rebindeo, un interruptor por nivel
+     —lo natural es una propiedad del mapa, no un objeto, porque la mecánica es
+     de nivel entero y no posicional— y una barra en el HUD, que para eso
+     `TiempoBala.fraccion` devuelve 0→1 y hoy no la lee nadie. Encenderla
+     siempre sería un cambio de comportamiento en las 26 entregas; por nivel,
+     es aditiva.
+  3. **`EnjambreDeBalas`** necesita un jefe que lo use; hoy ninguno de los
+     cuatro dispara patrones.
+  4. **`teletransportar` y `escala_de_fase`** necesitan un jefe que los declare
+     en su transición de fase. Es el mismo patrón que AUD-238 resolvió con
+     `skill_drop`: una línea en la clase del jefe y un ejemplo en el material
+     que los estudiantes copian. `escala_de_fase` además **no la aplica nadie**:
+     devuelve el multiplicador y ningún sitio escala el sprite con él.
