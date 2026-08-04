@@ -25,7 +25,7 @@ adivinarlo leyendo el código.
 | Tabla de los cinco actos | `src/stages/stage4_1/actos.py` |
 | Contornos de venado, serpiente, gavilán, la Cegua y las brujas | `src/stages/stage4_1/siluetas.py` |
 | Fondo del cementerio (3 capas) | `tools/generate_all_assets.py` → `assets/backgrounds/final/` |
-| Pruebas (69) | `tests/test_stage4_1.py` |
+| Pruebas (84) | `tests/test_stage4_1.py` |
 
 **Lo que se cambió respecto a esta ficha, y por qué:**
 
@@ -138,6 +138,28 @@ Las grietas siguen ahí y **ya no hacen daño**: son luz verde en el canto de ca
 repisa, dibujada por la escena con el fondo, que marca el borde del que hay que
 dejarse caer.
 
+**Lo que da miedo, y no hace daño (AUD-246 y AUD-247).**
+
+Cuatro cosas más, y ninguna quita salud. El terror aquí no puede ser perder vida
+—la ficha prohíbe enemigos y el rediseño quitó las trampas—, así que es otra
+cosa: **no poder fiarte de lo que ves**.
+
+| Dónde | Qué | Por qué no castiga |
+|---|---|---|
+| Los doce braseros | Se **ven** arder: cuenco de piedra siempre, llama que crece al encenderse | Un brasero apagado se ve apagado: es la barra de progreso del §3 |
+| Acto II | Losas de tumba que se rompen a golpes (`BreakableBlock`, 2 golpes) | Son atajos; el motor pinta grietas que cuentan lo que queda |
+| Acto III | Cinco losas que aparecen y desaparecen **con el órgano** (`RhythmBlock`, `patron="x..."`, `bpm=60`) | Un pulso por segundo, cuatro por compás, y cuatro segundos es lo que dura cada acorde |
+| Acto IV | Losas fantasma: sólidas siempre, visibles sólo con el relámpago o la visión espectral | Un pincho invisible es una trampa; un **suelo** invisible es una pregunta |
+
+Las tres losas van en el hueco de su repisa y ninguna lo tapa: el hueco mide 17
+o 18 columnas y la losa cuatro, así que siempre se baja por al lado. En un
+descenso, una mecánica que pueda encerrarte es peor que un foso — el foso al
+menos te devuelve al checkpoint. Hay una prueba que mide el margen libre.
+
+Efecto medido: `design_pacing` pasó de 5/8 a **8/8**. El aviso era «ningún salto
+pone a prueba al jugador» y ahora hay cuatro exigentes **sin un solo peligro
+nuevo**.
+
 **El órgano (AUD-227).** `bgm_final_approach.wav` lo generaba
 `_gen_music_track`, el sintetizador genérico de los otros diez temas: onda
 cuadrada, saw y un golpe de ruido blanco en cada pulso. La ficha pide órgano y
@@ -164,7 +186,7 @@ el órgano da 0,63/s y el chiptune que había daba 4,3/s.
   pantalla bajaron de 6,0 a 2,0 no quitando peligros sino repartiéndolos por un
   nivel tres veces más largo, que es lo que un ★★☆☆☆ atmosférico debe puntuar.
   Sigue sin introducir ningún escalón brusco.
-- `grade_stage.py` lo puntúa **102/130 (78,5 %)**, antes 94/130. Los 20 puntos
+- `grade_stage.py` lo puntúa **105/130 (80,8 %)**, antes 94/130. Los 20 puntos
   que faltan son los dos criterios de enemigos: el calificador espera que un
   nivel tenga enemigos y éste tiene prohibido tenerlos. Es la única nota del
   proyecto donde bajar es lo correcto.

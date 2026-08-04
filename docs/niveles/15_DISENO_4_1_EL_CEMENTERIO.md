@@ -277,7 +277,7 @@ ACTO V — EL UMBRAL                La tormenta cesa. Silencio. La luna toca
 ## 11. Checklist de la propuesta
 
 Construida entera. Cada casilla la defiende una prueba de `tests/test_stage4_1.py`
-(69 en total); lo que se cambió respecto a esta propuesta está en el §0 de la
+(84 en total); lo que se cambió respecto a esta propuesta está en el §0 de la
 ficha, `13_STAGE_4_1.md`.
 
 > **El nivel es vertical (AUD-225).** Esta propuesta lo describe como un corredor
