@@ -354,6 +354,19 @@ class StageData:
     fog_of_war: float = 0.0
     #: AUD-111 — capa de ondas de agua sobre la escena.
     water_effect: bool = False
+    #: AUD-240 — los cinco mandos del agua, desde el mapa.
+    #:
+    #: `docs/47` los documenta desde el principio y decía «all adjustable via
+    #: `set_params()`». Nadie llamaba a `set_params`: `StageScene` construía un
+    #: `WaterEffect()` con los valores por defecto, así que **toda el agua del
+    #: juego era idéntica** y los cinco mandos eran inalcanzables desde el
+    #: contenido. Los valores de aquí son exactamente los que `WaterEffect` usa
+    #: por defecto, para que un mapa que no diga nada se vea igual que antes.
+    water_speed: float = 1.5
+    water_amplitude: int = 4
+    water_frequency: float = 0.04
+    water_alpha: int = 100
+    water_tint: tuple[int, int, int] = (40, 80, 160)
     #: AUD-226 — fuerza de los rayos de luz volumétricos. 0 = apagados.
     #: Sólo hacen algo con el camino GL: son una pasada de sombreador y no
     #: tienen equivalente por CPU, así que un escenario que los pida se ve
@@ -645,6 +658,21 @@ class StageLoader:
         # AUD-111 — VFX opcionales. Apagados salvo que el mapa los pida.
         fog_of_war = cls._safe_float(props.get("fog_of_war", 0.0), "fog_of_war")
         water_effect = cls._bool_de(props.get("water_effect"), por_defecto=False)
+        # AUD-240 — los mandos del agua. Los rangos no son decorativos: una
+        # amplitud de 40 px convierte la lámina en ruido y un alfa de 255 tapa
+        # el escenario. Se acotan aquí y no en el efecto para que un mapa mal
+        # escrito se vea raro pero jugable, que es la regla del resto del
+        # cargador.
+        # `_parse_unit_prop` devuelve `None` cuando el mapa no dice nada, y su
+        # tercer argumento es el MÍNIMO del rango, no el valor por defecto: los
+        # defectos se aplican aquí, y son los de `WaterEffect`, para que un mapa
+        # que no declare nada se vea exactamente igual que antes de AUD-240.
+        water_speed = cls._parse_unit_prop(props, "water_speed", 0.0, 8.0)
+        water_amplitude = cls._parse_unit_prop(props, "water_amplitude", 0.0, 16.0)
+        water_frequency = cls._parse_unit_prop(props, "water_frequency", 0.0, 1.0)
+        water_alpha = cls._parse_unit_prop(props, "water_alpha", 0.0, 255.0)
+        water_tint = (cls._parse_light_color(props["water_tint"])
+                      if props.get("water_tint") is not None else (40, 80, 160))
         god_rays = cls._safe_float(props.get("god_rays", 0.0), "god_rays")
 
         map_data = pyscroll.data.TiledMapData(tmx_data)
@@ -687,6 +715,11 @@ class StageLoader:
             season=season,
             fog_of_war=fog_of_war,
             water_effect=water_effect,
+            water_speed=1.5 if water_speed is None else water_speed,
+            water_amplitude=4 if water_amplitude is None else int(water_amplitude),
+            water_frequency=0.04 if water_frequency is None else water_frequency,
+            water_alpha=100 if water_alpha is None else int(water_alpha),
+            water_tint=water_tint,
             god_rays=god_rays,
         )
 

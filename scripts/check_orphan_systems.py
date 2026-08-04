@@ -135,7 +135,6 @@ PENDIENTES: dict[str, str] = {
     "get_frame": "GAP-031: accesor de fotograma del fantasma; lo sustituyó `posicion_en`",
     "get_splits": "GAP-031: nadie consulta los parciales; la tabla lee el fichero",
     "reveal_all": "GAP-031: alta por lotes de la niebla; ningún escenario la usa",
-    "set_params": "GAP-031: los cinco parámetros del agua no se pueden fijar desde el mapa",
     "get_entry": "GAP-031: accesor del bestiario; la pantalla itera el catálogo",
     "ajustar_bus": "GAP-031: el bus de ambiente no tiene control en Opciones",
     "play_voz": "GAP-031: bus de voz sin contenido de voz",
