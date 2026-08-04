@@ -686,3 +686,54 @@ Nunca borrar entradas - marcar como resueltas.
   `tests/test_sistemas_huerfanos.py`. Los ocho están en `PENDIENTES` con su
   motivo, así que la puerta pasa; lo que no esté en ninguna de las dos listas la
   hace fallar.
+
+---
+
+## [GAP-032] Cinco mecánicas de F5 están escritas, documentadas «en código» y nadie las invoca
+
+- **File:** `src/framework/stage/level_mechanics.py`, `src/framework/ecs/bullet_swarm.py`, `src/framework/entities/boss_base.py`
+- **Phase:** auditoría 2026-08-03, AUD-243
+- **Reason:** `docs/56_FASE_5_ECS_Y_MECANICAS.md` lista siete mecánicas bajo el
+  epígrafe **«Y en código:»**. Medido una por una con `grep -rn` sobre `src/`,
+  excluyendo el módulo propio de cada una:
+
+  | Mecánica | Estado medido |
+  |---|---|
+  | Parry del jefe (`BossAttack.parriable`) | ~~0 llamantes~~ → **resuelto en AUD-243** |
+  | Fase invulnerable (`BossPhase.invulnerable`) | OK: `boss_base.py:208` la consulta |
+  | **Tiempo bala** (`TiempoBala`) | **se construye y no se vuelve a tocar** |
+  | **Scroll forzado** (`ScrollForzado`) | **se construye y no se vuelve a tocar** |
+  | **Bullet hell** (`EnjambreDeBalas`) | **0 usos fuera de su módulo** |
+  | **Escalado de fase** (`BossPhase.escala`) | **0 usos**; `escala_de_fase` sólo se define |
+  | **Teletransporte** (`BossBase.teletransportar`) | **0 usos** |
+
+  El caso más claro es `ScrollForzado`. `StageScene.__init__` hace
+  `self._scroll_forzado = ScrollForzado()` en la línea 167 y **ese es su único
+  uso en todo el repositorio**: no se llama a `arrancar()`, ni a `update()`, ni
+  a `se_quedo_atras()`. El docstring de la clase explica con detalle por qué el
+  borde mata en vez de empujar —«el nivel dijo *sígueme* y no lo seguiste»— y
+  ese borde no mata a nadie porque la cámara nunca se mueve sola.
+
+  `TiempoBala` es idéntico: construido en la línea 166, nunca actualizado.
+
+- **Impact:** Un estudiante que lea `56_FASE_5_ECS_Y_MECANICAS.md` ve siete
+  mecánicas entregadas y puede diseñar un nivel de persecución con scroll
+  forzado, o un jefe que se teletransporta. Ninguna de las cinco hará nada, y
+  no habrá ningún error que se lo diga.
+
+- **Resolution path:** Cada una necesita una decisión de diseño distinta, no
+  sólo cableado, y por eso no se corrigieron aquí:
+
+  1. **`ScrollForzado` y `TiempoBala`** necesitan **quién los enciende**. Lo
+     natural es una propiedad TMX o un `Disparador` —el circuito de AUD-132 ya
+     existe—, pero eso toca `StageLoader` y `06_TMX_SPEC.md`, que son contrato
+     para las 26 entregas.
+  2. **`EnjambreDeBalas`** necesita un jefe que lo use; hoy ninguno de los
+     cuatro dispara patrones.
+  3. **`teletransportar` y `escala_de_fase`** necesitan un jefe que los declare
+     en su transición de fase. Es el mismo patrón que AUD-238 resolvió con
+     `skill_drop`: una línea en la clase del jefe y un ejemplo en el material
+     que los estudiantes copian.
+
+  Mientras tanto, **`56_FASE_5_ECS_Y_MECANICAS.md` miente** y esa es la parte
+  que sí es urgente: o se cablean, o el documento deja de decir «y en código».

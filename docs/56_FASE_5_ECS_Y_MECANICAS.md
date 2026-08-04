@@ -117,6 +117,25 @@ Y en código:
   Baby Bowser, Mega Satan.
 * **Teletransporte** (`BossBase.teletransportar`) — Death, Agahnim.
 
+> ⚠️ **«En código» no quería decir «en el juego» (AUD-243, `GAP-032`).**
+>
+> Medidas una por una con `grep` sobre `src/`, cinco de las siete **no las
+> invoca nadie**. No fallan: simplemente no ocurren, y no hay ningún error que
+> lo diga.
+>
+> | Mecánica | ¿La usa el juego? |
+> |---|---|
+> | Parry del jefe | **Sí**, desde AUD-243 |
+> | Fase invulnerable | **Sí** (`boss_base.py:208`) |
+> | Tiempo bala | No — se construye y no se vuelve a tocar |
+> | Scroll forzado | No — ni `arrancar()`, ni `update()`, ni `se_quedo_atras()` |
+> | Bullet hell | No — 0 usos fuera de su módulo |
+> | Escalado de fase | No — `escala_de_fase` sólo se define |
+> | Teletransporte | No — 0 usos |
+>
+> **No diseñes un nivel que dependa de las cinco que faltan.** El detalle y el
+> camino de resolución de cada una están en `GAP-032` de `KNOWN_GAPS.md`.
+
 ### Dos detalles que casi siempre se olvidan, y aquí no
 
 **El arrastre de plataformas.** Sin él, el jugador se queda clavado en el aire
