@@ -30,12 +30,9 @@ def _has_lupa() -> bool:
         return False
 
 
-def _has_pymunk() -> bool:
-    try:
-        import pymunk  # noqa: F401
-        return True
-    except ImportError:
-        return False
+# AUD-235: aquí vivía `_has_pymunk()`, que nadie llamaba. Era el último rastro
+# de la simulación de cuerpos rígidos que `collision_system.py` retiró, y la
+# dependencia se ha ido con él.
 
 
 def _make_test_wav(tmp_path: Path) -> Path:
@@ -387,7 +384,14 @@ class TestGLRendererFallback:
         cfg = GLRenderConfig()
         assert cfg.bloom_enabled
         assert cfg.bloom_threshold == 0.8
-        assert cfg.vignette_enabled
+        # AUD-222 — aquí ponía `assert cfg.vignette_enabled`, y venir en `True`
+        # era justamente el defecto: la viñeta se dibujaba dos veces, la de CPU
+        # sobre la superficie y ésta sobre la textura. De las dos, la que se
+        # apaga es la del sombreador, porque la de CPU crece cuando al jugador
+        # le queda poca vida (`set_damage_vignette`) y esta configuración es
+        # estática. El razonamiento completo está en `GLRenderConfig` y las
+        # pruebas del reparto en `tests/test_postprocesado_no_se_duplica.py`.
+        assert not cfg.vignette_enabled
         assert cfg.lighting_enabled
         assert cfg.colorblind_mode == 0
 
