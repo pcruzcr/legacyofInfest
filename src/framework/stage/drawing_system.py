@@ -226,7 +226,7 @@ class DrawingSystem:
         zonas = [
             hz for hz in getattr(stage, "hazard_zones", ())
             if not getattr(hz, "sube_de_verdad", False)
-            and getattr(hz, "visible", True)
+            and getattr(hz, "avisar", True)
             and getattr(hz, "activa", True)
         ]
         if not zonas:

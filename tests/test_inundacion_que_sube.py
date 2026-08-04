@@ -488,28 +488,76 @@ class TestLasZonasFijasTambienSeVen:
         assert lienzo.get_at((100, 150))[:3] == (0, 0, 0)
 
     def test_un_mapa_con_su_propio_arte_puede_apagarlo(self, sistema) -> None:
-        """`visible=false` en el TMX, para el que sí pintó sus pinchos."""
+        """`avisar=false` en el TMX, para el que sí pintó sus pinchos."""
         lienzo = pygame.Surface((200, 200))
         lienzo.fill((0, 0, 0))
         escenario = self._escenario(
-            HazardZone(rect=pygame.Rect(0, 100, 200, 100), visible=False),
+            HazardZone(rect=pygame.Rect(0, 100, 200, 100), avisar=False),
         )
         sistema._draw_zonas_de_dano(lienzo, escenario, pygame.Vector2(0, 0))
         assert lienzo.get_at((100, 150))[:3] == (0, 0, 0)
 
     def test_tiled_escribe_los_booleanos_como_texto(self) -> None:
         """`"false"` es una cadena, y una cadena no vacía es verdadera en
-        Python: leerla sin convertir dejaría `visible=false` sin efecto."""
+        Python: leerla sin convertir dejaría `avisar=false` sin efecto."""
         from src.framework.stage.stage_loader import StageData, StageLoader
 
         stage = StageData(map_layer=None)  # type: ignore[arg-type]
         obj = type("O", (), {"x": 0, "y": 0, "width": 32, "height": 16})()
-        StageLoader._handle_hazard_zone(stage, obj, {"visible": "false"})
-        assert stage.hazard_zones[0].visible is False
+        StageLoader._handle_hazard_zone(stage, obj, {"avisar": "false"})
+        assert stage.hazard_zones[0].avisar is False
 
         stage2 = StageData(map_layer=None)  # type: ignore[arg-type]
         StageLoader._handle_hazard_zone(stage2, obj, {})
-        assert stage2.hazard_zones[0].visible is True, (
+        assert stage2.hazard_zones[0].avisar is True, (
             "sin la propiedad, una zona de daño se ve: es el valor por defecto "
             "que evita el daño invisible"
         )
+
+
+class TestElNombreDeLaPropiedadCargaDeVerdad:
+    """AUD-241 — la prueba que faltaba, y que habría evitado el defecto.
+
+    AUD-228 documentó `visible=false` para apagar el aviso. Las pruebas llamaban
+    a `_handle_hazard_zone` con un diccionario, así que pasaban — y **`visible`
+    es un nombre reservado en Tiled**: pytmx rechaza el mapa entero con
+    «Reserved names and duplicate names are not allowed». O sea que la propiedad
+    documentada no apagaba el aviso: impedía cargar el nivel.
+
+    Es la misma piedra con la que ya tropezó `BloqueRitmico`, que por eso usa
+    `visible_seg`. Probar el handler no basta: hay que meter la propiedad en un
+    TMX y cargarlo.
+    """
+
+    def _cargar_con(self, propiedad: str, valor: str = "false"):
+        import shutil
+        import tempfile
+        from pathlib import Path
+
+        from src.framework.stage.stage_loader import StageLoader
+
+        origen = Path("assets/maps/stage0/stage0.tmx")
+        xml = origen.read_text(encoding="utf-8").replace(
+            '<property name="damage" type="float" value="0.25"/>',
+            f'<property name="damage" type="float" value="0.25"/>\n'
+            f'    <property name="{propiedad}" value="{valor}"/>',
+            1,
+        )
+        raiz = Path(tempfile.mkdtemp())
+        destino = raiz / "assets" / "maps" / "stage0"
+        destino.mkdir(parents=True)
+        shutil.copytree("assets/tilesets", raiz / "assets" / "tilesets")
+        (destino / "stage0.tmx").write_text(xml, encoding="utf-8")
+        return StageLoader.load(destino / "stage0.tmx")
+
+    def test_avisar_carga_y_apaga_el_aviso(self) -> None:
+        datos = self._cargar_con("avisar")
+        fijas = [h for h in datos.hazard_zones if not h.sube_de_verdad]
+        assert fijas, "stage0 dejó de tener su zona de daño fija"
+        assert fijas[0].avisar is False
+
+    def test_visible_seguiria_rompiendo_el_mapa(self) -> None:
+        """Se deja escrito lo que pasa si alguien vuelve a llamarla `visible`:
+        no es que no funcione, es que el nivel no carga."""
+        with pytest.raises(ValueError, match="Reserved names"):
+            self._cargar_con("visible")
