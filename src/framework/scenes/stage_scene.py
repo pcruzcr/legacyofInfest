@@ -212,6 +212,7 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
         self._fantasma: Any | None = None
         self._fantasma_previo: Any | None = None
         self._dialogue = DialogueSystem(self.context)
+        self._arboles_de_dialogo: dict[str, Any] = {}
         self._player_spawned: bool = False
         self._damage_taken_this_stage: float = 0.0
         self._stage_start_time: float = 0.0
@@ -676,6 +677,7 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
         self._minimap.set_map_size(*self._stage_data.map_pixel_size)
 
         # Speedrun timer
+        self._cargar_los_arboles_de_dialogo()
         self._speedrun.start()
         self._speedrun.start_stage(self._stage_data.stage_id)
         self._preparar_fantasma()
@@ -972,6 +974,47 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
                 alpha=int(getattr(datos, "water_alpha", 100)),
                 tint=tuple(getattr(datos, "water_tint", (40, 80, 160))),
             )
+
+    def _cargar_los_arboles_de_dialogo(self) -> None:
+        """Lee las conversaciones del escenario de `data/dialogues/<id>.json`.
+
+        AUD-244 — `DialogueTree.desde_datos` existe desde AUD-127, escrita para
+        que un diseñador que no programa pueda escribir un diálogo en un fichero
+        de datos en vez de instanciar `DialogueNode` en Python. No la llamaba
+        nadie: la única forma de tener conversación seguía siendo escribirla en
+        el código del escenario, que es exactamente lo que aquello quería
+        evitar. `stage0` lo hace así y por eso era el único que las tenía.
+
+        Un escenario sin fichero no es un error: la inmensa mayoría no habla.
+        Un fichero ilegible **sí** se avisa, porque el diseñador lo escribió
+        esperando que se leyera.
+        """
+        import json
+
+        from src.framework.ui.dialogue_system import DialogueTree
+
+        self._arboles_de_dialogo = {}
+        stage_id = str(getattr(self._stage_data, "stage_id", "") or "")
+        if not stage_id:
+            return
+        ruta = settings.PROJECT_ROOT / "data" / "dialogues" / f"{stage_id}.json"
+        if not ruta.is_file():
+            return
+        try:
+            crudo = json.loads(ruta.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            logging.getLogger(__name__).warning(
+                "diálogo: %s no se puede leer; el escenario se juega sin "
+                "conversaciones", ruta, exc_info=True)
+            return
+
+        arboles = crudo if isinstance(crudo, list) else [crudo]
+        for datos in arboles:
+            if not isinstance(datos, dict):
+                continue
+            arbol = DialogueTree.desde_datos(datos)
+            if arbol.tree_id:
+                self._arboles_de_dialogo[arbol.tree_id] = arbol
 
     def _publicar_o_dibujar_el_agua(self, surface) -> None:
         """El agua la pinta el sombreador si hay GL, y `WaterEffect` si no.
