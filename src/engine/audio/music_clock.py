@@ -78,6 +78,25 @@ class RelojMusical:
         self._pulso_anterior = -1
         self._pulsos_cruzados = 0
         self._corriendo = True
+        #: Lo último que contestó la fuente, y cuánto tiempo lleva contestando
+        #: lo mismo. Ver `_preguntar_al_audio` y `SEGUNDOS_DE_ATASCO`.
+        self._ultima_cruda: float | None = None
+        self._atascado: float = 0.0
+
+    #: Cuánto puede repetir la fuente la misma posición antes de dejar de
+    #: creerla (AUD-250).
+    #:
+    #: `posicion_musica()` devuelve `None` cuando no hay música, y de ese caso
+    #: el reloj ya se defendía. Lo que no estaba previsto es que **conteste y no
+    #: avance**: `pygame.mixer.music.get_pos()` devuelve 0 para siempre con el
+    #: controlador `dummy`, y también cuando el mezclador se queda colgado. El
+    #: reloj se creía ese 0, se quedaba clavado en el pulso 0 y **todos los
+    #: bloques rítmicos del juego se quedaban sólidos para siempre** — los tres
+    #: de `stage0` incluidos.
+    #:
+    #: Un cuarto de segundo es más de lo que tarda cualquier pista real en mover
+    #: su posición, y lo bastante corto para que el nivel arranque a tiempo.
+    SEGUNDOS_DE_ATASCO = 0.25
 
     # ── configuración ────────────────────────────────────────────
     @property
@@ -108,8 +127,22 @@ class RelojMusical:
         Si se le pasa el `dt` del juego, una ralentización desincroniza el
         nivel entero: los bloques van al ralentí y la música no.
         """
-        self._acumulado += max(0.0, float(unscaled_dt))
+        paso = max(0.0, float(unscaled_dt))
+        self._acumulado += paso
         cruda = self._preguntar_al_audio()
+
+        # AUD-250 — una fuente que contesta siempre lo mismo no está diciendo
+        # por dónde va la música: está atascada. Con `SDL_AUDIODRIVER=dummy`
+        # `get_pos()` devuelve 0 para siempre, y el reloj se lo creía.
+        if cruda is not None and cruda == self._ultima_cruda:
+            self._atascado += paso
+            if self._atascado >= self.SEGUNDOS_DE_ATASCO:
+                cruda = None
+        else:
+            self._atascado = 0.0
+        if cruda is not None:
+            self._ultima_cruda = cruda
+
         if cruda is None:
             cruda = self._acumulado
         else:
@@ -226,15 +259,22 @@ class RelojMusical:
         pulsos = round(segundos / self.segundos_por_pulso)
         return pulsos * self.segundos_por_pulso
 
-    def presente_en_patron(self, patron: str) -> bool:
+    def presente_en_patron(self, patron: str, desfase_pulsos: float = 0.0) -> bool:
         """Lee un patrón de compás: `"x.x."` es sí, no, sí, no.
 
         Es la forma más corta que hay de escribir un ritmo en una propiedad de
         Tiled, y se lee de un vistazo — que es más de lo que puede decirse de
         dos números en segundos.
+
+        `desfase_pulsos` corre el patrón para esta pieza en concreto (AUD-250).
+        Sin él, **todos los bloques que comparten patrón aparecen y desaparecen
+        a la vez**, que es un semáforo y no un ritmo: el `desfase` que el TMX ya
+        aceptaba sólo se usaba en el modo por segundos y se perdía en cuanto se
+        escribía un `patron`. Cinco losas escalonadas para que bajando persigas
+        la que acaba de aparecer debajo salían las cinco en el mismo pulso.
         """
         limpio = [c for c in str(patron) if c in "x.Xo0-"]
         if not limpio:
             return True
-        indice = self.pulso_actual % len(limpio)
+        indice = int(self.pulso_actual + desfase_pulsos) % len(limpio)
         return limpio[indice] in "xXo"

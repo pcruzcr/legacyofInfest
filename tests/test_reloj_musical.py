@@ -459,3 +459,91 @@ class TestElRelojLlegaAlMundoDeVerdad:
             assert escena._mundo.recurso("reloj_musical") is escena._reloj_musical
         finally:
             escena.on_exit()
+
+
+class TestUnaFuenteAtascadaNoParaElNivel:
+    """AUD-250 — el reloj se defendía de «no hay música» (`None`) y no de
+    «contesta y no avanza».
+
+    `pygame.mixer.music.get_pos()` devuelve 0 para siempre con el controlador
+    `dummy`, y también cuando el mezclador se cuelga. El reloj se creía ese 0,
+    se quedaba clavado en el pulso 0 y **todos los bloques rítmicos del juego se
+    quedaban sólidos para siempre** — los tres de `stage0` incluidos, que es el
+    nivel que copian los estudiantes.
+    """
+
+    class _Atascada:
+        """Contesta siempre lo mismo, como el mezclador `dummy`."""
+
+        def __init__(self, valor: float = 0.0) -> None:
+            self.valor = valor
+
+        def posicion_musica(self) -> float:
+            return self.valor
+
+    def test_el_reloj_avanza_aunque_la_fuente_no(self) -> None:
+        from src.engine.audio.music_clock import RelojMusical
+
+        reloj = RelojMusical(bpm=60, fuente=self._Atascada())
+        for _ in range(300):          # cinco segundos
+            reloj.update(1 / 60)
+        assert reloj.pulso_actual >= 4, (
+            f"el reloj se quedó en el pulso {reloj.pulso_actual} tras cinco "
+            f"segundos: con la fuente atascada, un nivel rítmico no arranca"
+        )
+
+    def test_una_fuente_que_sí_avanza_sigue_mandando(self) -> None:
+        """El arreglo no puede quitarle la voz al mezclador cuando funciona:
+        sumar fotogramas es justo lo que AUD-137 vino a evitar."""
+        from src.engine.audio.music_clock import RelojMusical
+
+        fuente = self._Atascada()
+        reloj = RelojMusical(bpm=60, fuente=fuente)
+        for i in range(300):
+            fuente.valor = i * (1 / 60) * 4.0      # la pista va a 4x
+            reloj.update(1 / 60)
+        assert reloj.posicion == pytest.approx(fuente.valor, abs=0.1), (
+            "el reloj dejó de seguir a una fuente que sí avanzaba"
+        )
+
+    def test_tarda_un_poco_en_desconfiar(self) -> None:
+        """Desconfiar al primer fotograma repetido tiraría la sincronía cada
+        vez que dos fotogramas caen dentro del mismo milisegundo de la pista."""
+        from src.engine.audio.music_clock import RelojMusical
+
+        reloj = RelojMusical(bpm=60, fuente=self._Atascada())
+        for _ in range(6):            # 0,1 s, por debajo del umbral
+            reloj.update(1 / 60)
+        assert reloj.posicion == pytest.approx(0.0, abs=0.02)
+
+
+class TestElDesfaseTambienValeConPatron:
+    """AUD-250 — el `desfase` del TMX sólo contaba en el modo por segundos. Al
+    escribir un `patron` se perdía, así que todos los bloques con el mismo ritmo
+    aparecían y desaparecían **a la vez**: un semáforo, no un ritmo."""
+
+    def test_dos_desfases_distintos_dan_pulsos_distintos(self) -> None:
+        from src.engine.audio.music_clock import RelojMusical
+
+        reloj = RelojMusical(bpm=60)
+        for _ in range(60):           # un pulso
+            reloj.update(1 / 60)
+        assert reloj.presente_en_patron("x...", 0.0) != \
+               reloj.presente_en_patron("x...", 3.0), (
+            "el desfase no mueve el patrón: cinco losas escalonadas saldrían "
+            "todas en el mismo pulso"
+        )
+
+    def test_sin_desfase_se_comporta_como_antes(self) -> None:
+        from src.engine.audio.music_clock import RelojMusical
+
+        reloj = RelojMusical(bpm=60)
+        assert reloj.presente_en_patron("x...") is True
+        assert reloj.presente_en_patron("x...", 0.0) is True
+
+    def test_el_desfase_da_la_vuelta_al_patron(self) -> None:
+        """Un desfase mayor que el patrón no debe salirse del índice."""
+        from src.engine.audio.music_clock import RelojMusical
+
+        reloj = RelojMusical(bpm=60)
+        assert reloj.presente_en_patron("x...", 8.0) is True
