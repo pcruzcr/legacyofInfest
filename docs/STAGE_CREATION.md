@@ -342,6 +342,7 @@ Para instrucciones detalladas de registro y pruebas, consultar el documento orig
 | `Spring` | Rectángulo (rebota en todo su ancho) | `impulso` (px/s, -520; negativo es hacia arriba) · `rearme` (s, 0.15) |
 | `Guard` | Punto | `mira_x`, `mira_y` (dirección, 1/0) · `alcance` (px, 160) · `semiangulo` (grados, 30) · `barrido` (grados, 0: el cono oscila) · `velocidad_barrido` (grados/s, 45) |
 | `Stalker` | Punto | `velocidad` (px/s, 55) · `distancia_retirada` (px, 480) · `reaparicion` (s, 6.0) |
+| `ScrollZone` | Rectángulo (el **disparador**, no la zona de muerte) | `velocidad_x` (px/s, 40) · `velocidad_y` (px/s, 0) · `margen_de_gracia` (px que se puede rebasar el borde antes de morir, 24) · `parar_en_x` (la cámara se detiene ahí; sin ella, hasta el final del mapa). Al pisarlo la cámara arranca sola y **el borde izquierdo mata**: SMB3 Airship, Cuphead, Ori |
 | `Vine` | Rectángulo (alto = lo que se trepa) | `ancho_de_agarre` (px, 10) · `velocidad` (px/s de trepada, 70) |
 | `Zipline` | Rectángulo (la esquina es el enganche) | `destino_dx` (px, 96), `destino_dy` (px, 64) **relativos** · `velocidad` (px/s, 190) · `radio_de_enganche` (px, 14) · `solo_de_bajada` (bool, sí) |
 
@@ -395,6 +396,6 @@ propiedad del objeto en Tiled.
 | *(ninguno)* o `Solid` | Colisión AABB completa |
 | `Platform` | Plataforma atravesable desde abajo |
 
-Total aceptado en `Objects`: **64** tipos.
+Total aceptado en `Objects`: **65** tipos.
 
 <!-- END GENERATED: tipos de objeto -->

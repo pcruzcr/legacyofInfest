@@ -272,6 +272,14 @@ class ScrollForzado:
     margen_de_gracia: float = 24.0
     #: Se detiene al llegar aquí. `None` = hasta el final del mapa.
     parar_en_x: float | None = None
+    #: Rectángulo que lo enciende al pisarlo (AUD-249). `None` = lo arranca
+    #: alguien por código.
+    #:
+    #: Sin esto la mecánica **no se podía usar desde Tiled**: estaba escrita,
+    #: probada y sin ninguna forma de encenderla que no fuera escribir Python,
+    #: así que ningún alumno podía hacer un nivel de persecución. `StageScene`
+    #: la construía y no la tocaba nunca (`GAP-032`).
+    disparador: pygame.Rect | None = None
     _origen: pygame.Vector2 | None = None
 
     def arrancar(self, camara: Camera) -> None:

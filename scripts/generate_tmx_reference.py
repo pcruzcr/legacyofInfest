@@ -144,6 +144,13 @@ def build_table() -> str:
                             "`retraso` (s antes de ceder, 0.4) · "
                             "`velocidad_caida` (px/s, 90) · `reaparece_en` "
                             "(s, 3.0)"),
+        "ScrollZone": ("Rectángulo (el **disparador**, no la zona de muerte)",
+                       "`velocidad_x` (px/s, 40) · `velocidad_y` (px/s, 0) · "
+                       "`margen_de_gracia` (px que se puede rebasar el borde "
+                       "antes de morir, 24) · `parar_en_x` (la cámara se "
+                       "detiene ahí; sin ella, hasta el final del mapa). "
+                       "Al pisarlo la cámara arranca sola y **el borde "
+                       "izquierdo mata**: SMB3 Airship, Cuphead, Ori"),
         "Spring": ("Rectángulo (rebota en todo su ancho)",
                    "`impulso` (px/s, -520; negativo es hacia arriba) · "
                    "`rearme` (s, 0.15)"),

@@ -89,6 +89,13 @@ BUILTIN_OBJECT_TYPES: tuple[str, ...] = (
     "SinkingPlatform", "Spring",  # Cuphead (Perilous Piers)
     "Guard",           # MGS (Tank Hangar): cono de visión y alerta
     "Stalker",         # RE3 (Nemesis), Celeste (el conserje), Metroid Dread
+    # AUD-249 — SMB3 (Airship), Cuphead, Ori, Terraria (Wall of Flesh).
+    #
+    # `ScrollForzado` existía entera, probada, y **sin forma de encenderla
+    # desde Tiled**: `StageScene` la construía y no la tocaba nunca. Un
+    # arquetipo de nivel completo —la persecución— estaba fuera del alcance de
+    # cualquier alumno que no escribiera Python (`GAP-032`).
+    "ScrollZone",
     # F5.14 — de escalada no había **nada**: ni `Ladder`, ni `Rope`, ni `Climb`,
     # ni un estado que suspendiera la gravedad. Y no se podía improvisar:
     # apilar `Solid` estrechos para simular una cuerda deja al jugador al lado
