@@ -104,6 +104,15 @@ jobs:
       - name: Verify translation catalogues
         run: python scripts/check_translations.py --ci
 
+      # AUD-197 / AUD-199: logros y bestiario ya no guardan texto en el
+      # código, sino en data/*.json. Un json que no se valida es un json que
+      # se pudre en silencio: una clave excluida por tipeño hace que la
+      # pantalla de logros del estudiante salga vacía sin que nadie se entere.
+      - name: Verify achievement and bestiary text data
+        run: |
+          python scripts/check_achievements.py
+          python scripts/check_bestiary.py
+
       - name: Verify the example map demonstrates every TMX property
         run: python scripts/check_tmx_coverage.py --ci
 

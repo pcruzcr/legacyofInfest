@@ -12,6 +12,7 @@ from typing import Any
 
 import orjson
 
+from src.engine.core import settings
 from src.engine.core.user_settings import user_data_dir
 
 logger = logging.getLogger(__name__)
@@ -22,6 +23,11 @@ logger = logging.getLogger(__name__)
 # estar en un sitio de sólo lectura. Es la misma corrección que AUD-032 aplicó
 # a las preferencias y a los logros y que aquí se quedó sin aplicar.
 _DEFAULT_BESTIARY_PATH: Path = user_data_dir() / "saves" / "bestiary.json"
+
+#: Los textos de las fichas clásicas viven en `data/bestiary.json` (AUD-199):
+#: editar un nombre o un lore ya no exige tocar el motor, y
+#: `scripts/check_bestiary.py` valida el fichero.
+_DATOS_BESTIARIO: Path = settings.PROJECT_ROOT / "data" / "bestiary.json"
 
 
 class BestiaryEntry:
@@ -124,28 +130,50 @@ class Bestiary:
         return entrada
 
     def _init_defaults(self) -> None:
-        defaults = [
-            BestiaryEntry("walker", "Walker", "A slow patrolling enemy.",
-                          lore="Once a guardian of these halls.", hp=2, damage=0.5),
-            BestiaryEntry("flying", "Flying Eye", "A floating watcher.",
-                          lore="An ancient surveillance construct.", hp=1, damage=0.5),
-            BestiaryEntry("shooter", "Shooter", "Fires projectiles from range.",
-                          lore="Armed sentry of the old empire.", hp=2, damage=1.0),
-            BestiaryEntry("charger", "Charger", "Rushes at high speed.",
-                          lore="Berserker unit, no self-preservation.", hp=3, damage=1.5),
-            BestiaryEntry("archer", "Archer", "Precise ranged attacker.",
-                          lore="Elite marksman of the fallen kingdom.", hp=2, damage=1.0),
-            BestiaryEntry("brute", "Brute", "Heavy melee with ground slam.",
-                          lore="Siege breaker, unstoppable.", hp=5, damage=2.0),
-            BestiaryEntry("caster", "Caster", "Magic user with homing orbs.",
-                          lore="Court mage, now corrupted.", hp=3, damage=1.5),
-            BestiaryEntry("assassin", "Assassin", "Invisible until it strikes.",
-                          lore="Shadow of the old regime.", hp=2, damage=2.0),
-            BestiaryEntry("boss_venado", "Venado", "The Forest Guardian.",
-                          lore="Ancient spirit of the woods.", hp=12, damage=2.0),
-        ]
-        for entry in defaults:
-            self._entries[entry.enemy_id] = entry
+        """Las fichas clásicas se leen de `data/bestiary.json`.
+
+        AUD-199 — los textos (nombre, descripción, lore) estaban escritos a
+        mano en el código y mezclados con la lógica. Un nombre mal escrito se
+        arreglaba tocando el motor; ahora se arregla en el fichero de datos, y
+        el validador lo vacuna antes de que llegue a la pantalla.
+        """
+        try:
+            datos: Any = orjson.loads(_DATOS_BESTIARIO.read_bytes())
+        except FileNotFoundError:
+            logger.warning(
+                "bestiary: no existe %s; sólo quedan las especies del registro",
+                _DATOS_BESTIARIO,
+            )
+            datos = None
+        except (ValueError, TypeError):
+            logger.warning(
+                "bestiary: %s ilegible; sólo quedan las especies del registro",
+                _DATOS_BESTIARIO, exc_info=True,
+            )
+            datos = None
+
+        if isinstance(datos, dict):
+            for e in datos.get("species", []):
+                if not isinstance(e, dict):
+                    continue
+                eid = e.get("id")
+                if not eid or eid in self._entries:
+                    continue
+                try:
+                    self._entries[eid] = BestiaryEntry(
+                        eid,
+                        e.get("name", eid),
+                        e.get("description", ""),
+                        lore=e.get("lore", ""),
+                        drops=e.get("drops"),
+                        hp=int(e.get("hp", 1)),
+                        damage=float(e.get("damage", 1.0)),
+                    )
+                except (TypeError, ValueError):
+                    logger.warning(
+                        "bestiary: entrada «%s» de %s con estadísticas raras; "
+                        "se omite", eid, _DATOS_BESTIARIO,
+                    )
 
         # Y las especies con nombre del registro (`WalkerInsect`,
         # `ShooterQuetzal`…). Estaban en el motor, se podían colocar en Tiled y

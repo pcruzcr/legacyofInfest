@@ -27,7 +27,7 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.engine.core import settings
-from src.engine.core.achievements import AchievementSystem
+from src.engine.core.achievements import AchievementSystem, esta_oculta
 from src.engine.scene.base_scene import BaseScene
 from src.engine.ui.theme import Theme, font
 from src.engine.ui.widgets import (
@@ -90,10 +90,14 @@ class AchievementScene(BaseScene):
         desbloquea uno, así que basta con leerlos al entrar.
         """
         achievements = AchievementSystem.get_instance().get_all_achievements()
+        # AUD-198 — las medallas secretas se quedan fuera de la lista mientras
+        # estén bloqueadas: un logro oculto no debe delatar su existencia
+        # (ni su descripción) antes de desbloquearse.
         self._menu.items = [
             MenuItem(definition.name, value=(definition, progress),
                      hint=definition.description)
             for definition, progress in achievements
+            if not esta_oculta(definition, progress)
         ]
         self._menu.ensure_valid()
 

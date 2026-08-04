@@ -171,6 +171,16 @@ class TestLosLogrosSobrevivenAlCambioDeFormato:
     def sistema(self, tmp_path, monkeypatch):
         import src.engine.core.achievements as modulo
 
+        # AUD-200 — la ruta de los logros depende de la sesión activa; sin
+        # fijarla anónima, un identificado que dejara un test anterior leería
+        # su propio fichero en vez del `logros.json` de aquí, y estas pruebas
+        # de formato fallarían según el orden de la suite.
+        from src.framework.academic import sesion
+
+        class _Anonima:
+            correo = ""
+
+        monkeypatch.setattr(sesion.SesionAcademica, "instancia", lambda: _Anonima())
         monkeypatch.setattr(modulo, "ACHIEVEMENTS_PATH", tmp_path / "logros.json")
         return modulo.AchievementSystem()
 
