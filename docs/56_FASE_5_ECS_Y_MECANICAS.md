@@ -127,14 +127,30 @@ Y en código:
 > |---|---|
 > | Parry del jefe | **Sí**, desde AUD-243 |
 > | Fase invulnerable | **Sí** (`boss_base.py:208`) |
+> | **Scroll forzado** | **Sí**, desde AUD-249 — objeto `ScrollZone` en Tiled |
 > | Tiempo bala | No — se construye y no se vuelve a tocar |
-> | Scroll forzado | No — ni `arrancar()`, ni `update()`, ni `se_quedo_atras()` |
 > | Bullet hell | No — 0 usos fuera de su módulo |
 > | Escalado de fase | No — `escala_de_fase` sólo se define |
 > | Teletransporte | No — 0 usos |
 >
-> **No diseñes un nivel que dependa de las cinco que faltan.** El detalle y el
+> **No diseñes un nivel que dependa de las cuatro que faltan.** El detalle y el
 > camino de resolución de cada una están en `GAP-032` de `KNOWN_GAPS.md`.
+
+### Scroll forzado: cómo se pone (AUD-249)
+
+Un objeto de tipo `ScrollZone` en la capa de objetos. **Su rectángulo es el
+disparador, no la zona de muerte**: el jugador lo pisa una vez y a partir de
+ahí manda la cámara. Quien mata es el borde izquierdo de la pantalla.
+
+| Propiedad | Por defecto | Qué hace |
+|---|---|---|
+| `velocidad_x` | 40 | px/s de la cámara. Negativo = hacia la izquierda |
+| `velocidad_y` | 0 | px/s vertical, para una subida tipo Ori |
+| `margen_de_gracia` | 24 | px que se puede rebasar el borde antes de morir |
+| `parar_en_x` | — | la cámara se detiene ahí; sin ella, hasta el final |
+
+El margen de gracia existe porque sin él la muerte ocurre cuando el sprite aún
+se ve, y eso se lee como injusticia aunque sea correcto.
 
 ### Dos detalles que casi siempre se olvidan, y aquí no
 

@@ -308,6 +308,16 @@ ficha, `13_STAGE_4_1.md`.
 - [x] La opción de tensión del §4: quieto y a oscuras, susurro y ojos — **sin
       daño** *(AUD-211)*
 
+Y lo que se añadió después, todo sin quitar salud a nadie:
+
+- [x] Las antorchas **se ven arder**: cuenco siempre, llama que crece *(AUD-246)*
+- [x] Losas de tumba que se rompen a golpes, en el acto II *(AUD-247)*
+- [x] Un tramo que aparece y desaparece **con el órgano**, en el acto III
+      *(AUD-247, y el reloj musical arreglado en AUD-250)*
+- [x] Losas fantasma que sólo enseña el relámpago o la visión espectral, en el
+      acto IV *(AUD-247)*
+- [x] Suelo de cementerio de verdad: la hoja de baldosas dibujada *(AUD-237)*
+
 El suelo también es del cementerio desde AUD-237. `tileset_cemetery.png` existía
 y eran ocho baldosas de relleno genéricas —piedra lisa, tablones, ladrillo
 rojo—, así que el nivel pintaba con el tileset del prólogo porque el suyo era

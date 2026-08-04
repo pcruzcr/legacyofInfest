@@ -176,6 +176,18 @@ pasaba antes—: una exige que los picos del espectro caigan en múltiplos enter
 de las notas del acorde, y la otra cuenta ataques bruscos por segundo. Medido:
 el órgano da 0,63/s y el chiptune que había daba 4,3/s.
 
+**El inventario del nivel terminado**, leído del mapa cargado y no de la memoria:
+
+| | |
+|---|---|
+| Mapa | 960 × 3840 px, zona 4 |
+| Música / fondo | `bgm_final_approach` (órgano) / `final`, `bpm = 60` |
+| Enemigos · fosos · zonas de daño | **0 · 0 · 0** |
+| Braseros = checkpoints | 12 |
+| Losas rompibles · rítmicas · fantasma | 3 · 5 · 4 |
+| Zonas de fricción (musgo + lodo) · viento | 10 · 1 |
+| Reloj | 19:00 → 23:00 (`day_length` 900) |
+
 **Medido, no supuesto:**
 
 - Dibujar el nivel cuesta **4,6 ms** por fotograma; con la visión espectral
