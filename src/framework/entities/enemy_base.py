@@ -514,10 +514,15 @@ class EnemyBase(BaseEntity):
         self._was_alive = True
         # BUG-031 FIX: Keep is_alive=True until death animation completes
         # is_alive will be set to False in _tick_cooldowns when _death_timer <= 0
+        # AUD-238: la habilidad viaja en el evento. `BossBase.skill_drop` la
+        # declara y `getattr` con reserva vacía la hace opcional — un enemigo
+        # normal, o el de una entrega que no sepa de esto, no la lleva y la
+        # escena no concede nada.
         self._event_bus.emit(
             Events.ENEMY_DIED,
             entity_id=f"{type(self).__name__}_{id(self)}",
             position=(self.position.x, self.position.y),
+            skill_drop=str(getattr(self, "skill_drop", "")),
         )
         is_large = self.rect.width > 24 or self.rect.height > 28
         self._event_bus.emit(Events.SFX_ENEMY_DIE_LARGE if is_large else Events.SFX_ENEMY_DIE_SMALL)
@@ -664,9 +669,16 @@ class EnemyBase(BaseEntity):
                 dir_x = 1 if dx >= 0 else -1
                 self._knockback_velocity.x = dir_x * 200.0
                 self._knockback_velocity.y = -150.0
-                self._hurt_timer = 0.3
-                if self.state not in (EnemyState.DYING, EnemyState.LAUNCHED):
-                    self.state = EnemyState.HURT
+                self._hurt_timer = 0.3  # sólo el tinte del golpe, no el estado
+                # AUD-206: aquí ponía `state = HURT`, y HURT es el estado en el
+                # que cae el enemigo con un golpe normal — sale de él directo a
+                # ALERT. Es decir: parar, la acción más difícil del juego,
+                # devolvía exactamente lo mismo que esquivar y costaba una
+                # ventana de 0,2 s de precisión. `stun()` y la rama STUNNED
+                # llevaban desde AUD-051 escritas y sin un solo llamante en
+                # producción; esta línea es la que las conecta. STUNNED sale a
+                # RECOVER, así que un parry acertado abre ventana de castigo.
+                self.stun(self.PARRY_STUN_DURATION)
                 player._parry_success = True
                 player._parry_active = False
                 player._parry_window = 0.0
@@ -856,6 +868,11 @@ class EnemyBase(BaseEntity):
     RECOVER_DURATION: float = 0.45
     #: Vida por debajo de la cual un enemigo se repliega, como fracción.
     RETREAT_HEALTH_FRACTION: float = 0.25
+    #: Cuánto queda aturdido un enemigo al que le paran un ataque (AUD-206).
+    #: Tiene que ser holgadamente mayor que los 0,3 s de HURT que había antes,
+    #: o parar sigue costando más precisión de la que devuelve. Las subclases
+    #: la suben para los enemigos pesados y la bajan para los ágiles.
+    PARRY_STUN_DURATION: float = 0.9
 
     def _resting_state(self) -> EnemyState:
         """IDLE si el enemigo es estacionario, PATROL si tiene ruta.
@@ -885,11 +902,33 @@ class EnemyBase(BaseEntity):
         return (self.current_health / max_hp) <= self.RETREAT_HEALTH_FRACTION
 
     def stun(self, duration: float = 0.8) -> None:
-        """Aturde al enemigo. La llama una parada o un golpe pesado."""
-        if self.state == EnemyState.DYING:
+        """Aturde al enemigo. La llama una parada o un golpe pesado.
+
+        AUD-206: LAUNCHED se suma a la guarda. Un enemigo por los aires tiene
+        su propia rama con gravedad y aterrizaje; meterlo en STUNNED lo dejaba
+        congelado a media altura. La guarda vivía duplicada en el bloque de
+        parry de `_check_player_contact`; está mejor aquí, donde alcanza
+        también a quien llame a `stun()` desde una entrega.
+        """
+        if self.state in (EnemyState.DYING, EnemyState.LAUNCHED):
             return
+        self._cancelar_ataque_en_curso()
         self._stun_timer = max(self._stun_timer, duration)
         self.state = EnemyState.STUNNED
+
+    def _cancelar_ataque_en_curso(self) -> None:
+        """Gancho: abandonar el ataque a medias al ser aturdido (AUD-239).
+
+        No hace nada por defecto. Lo sobreescriben los enemigos que llevan su
+        propia máquina de ataque en banderas —`EnemyCharger`, `EnemyWalker`—
+        porque `stun()` sólo cambia el estado de la base y esas banderas
+        sobreviven al aturdimiento: al volver a ALERT, el enemigo **reanudaba
+        la misma embestida** contra el jugador que se había acercado a
+        castigarle. Parar salía peor que no parar.
+
+        Si tu enemigo guarda «estoy atacando» fuera de `EnemyState`, límpialo
+        aquí. Se llama después de la guarda, así que un cadáver no lo recibe.
+        """
 
     def begin_recovery(self, duration: float | None = None) -> None:
         """Entra en la ventana de castigo. La llaman los estados de ataque."""

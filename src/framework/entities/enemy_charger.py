@@ -41,8 +41,14 @@ class EnemyCharger(EnemyBase):
         self._charge_duration: float = 0.7
         self._wind_up_timer: float = 0.0
         self._wind_up_duration: float = 0.4
-        self._stun_timer: float = 0.0
-        self._stun_duration: float = 1.0
+        # AUD-239 — antes esto se llamaba `_stun_timer` / `_stun_duration`, el
+        # **mismo nombre** que usa `EnemyBase` para la rama `STUNNED`. Dos
+        # dueños para una variable: la base la descuenta en su rama y el
+        # charger en `_alert_behavior`. No chocaban porque hasta AUD-206 nadie
+        # llamaba a `stun()` en producción. Esto es su recuperación tras
+        # embestir, que es otra cosa.
+        self._recuperacion_timer: float = 0.0
+        self._recuperacion_duracion: float = 1.0
         self._is_charging: bool = False
         self._is_winding_up: bool = False
         self._is_stunned: bool = False
@@ -58,13 +64,28 @@ class EnemyCharger(EnemyBase):
         if distance >= 48:
             self.facing_direction *= -1
 
+    def _cancelar_ataque_en_curso(self) -> None:
+        """Un parry acertado cancela la embestida, no la aplaza (AUD-239).
+
+        Sin esto, `stun()` cambiaba el estado de la base y dejaba
+        `_is_charging = True`. Al volver a ALERT, `_alert_behavior` se
+        encontraba la embestida a medias y la reanudaba — contra el jugador
+        que se había acercado a castigar durante el aturdimiento. Con los
+        0,3 s de HURT de antes de AUD-206 se confundía con un empujón; con
+        0,9 s de aturdimiento es una trampa que enseña a no parar.
+        """
+        self._is_charging = False
+        self._is_winding_up = False
+        self._charge_timer = 0.0
+        self._wind_up_timer = 0.0
+
     def _alert_behavior(self, dt: float) -> None:
         """Wind up telegraph, then charge at player."""
         self._face_player()
 
         if self._is_stunned:
-            self._stun_timer -= dt
-            if self._stun_timer <= 0:
+            self._recuperacion_timer -= dt
+            if self._recuperacion_timer <= 0:
                 self._is_stunned = False
             return
 
@@ -94,7 +115,7 @@ class EnemyCharger(EnemyBase):
             if self._charge_timer <= 0:
                 self._is_charging = False
                 self._is_stunned = True
-                self._stun_timer = self._stun_duration
+                self._recuperacion_timer = self._recuperacion_duracion
                 self.damage_on_contact = 0.5
             return
 
