@@ -22,6 +22,8 @@ cobertura de líneas; buscan la promesa de cada módulo.
 """
 from __future__ import annotations
 
+import itertools
+
 import numpy as np
 import pygame
 import pytest
@@ -83,6 +85,53 @@ class TestLaNieblaDeGuerraOcultaYRevela:
         niebla.draw(b, pygame.Vector2(100, 0))
         assert _pixeles(b)[100, 90].mean() > _pixeles(b)[200, 90].mean(), (
             "el hueco no se desplaza con el desplazamiento de cámara"
+        )
+
+    def test_el_borde_del_hueco_se_desvanece(self, display):
+        """AUD-213: el hueco tenía borde de sierra, no transición.
+
+        La máscara era un círculo sólido a alfa 255, así que el velo pasaba de
+        opaco a transparente en un píxel: un punto al 70 % del radio y otro al
+        98 % daban **exactamente** el mismo brillo. Esta prueba mira el brillo
+        a lo largo de un radio y exige que baje de veras.
+        """
+        from src.framework.vfx.fog_of_war import FogOfWar
+
+        radio = 40
+        niebla = FogOfWar(320, 180, radius=radio)
+        niebla.reveal(160, 90)
+        lienzo = _lienzo()
+        niebla.draw(lienzo, pygame.Vector2(0, 0))
+        pix = _pixeles(lienzo)
+        muestras = [
+            float(pix[160 + int(radio * f), 90].mean())
+            for f in (0.70, 0.80, 0.90, 0.98)
+        ]
+        assert all(a > b + 1.0 for a, b in itertools.pairwise(muestras)), (
+            f"el brillo no cae hacia el borde del hueco: {muestras}"
+        )
+
+    def test_hardness_decide_donde_empieza_la_caida(self, display):
+        """AUD-213: `hardness` se guardaba en el constructor y nadie lo leía.
+
+        El módulo anunciaba un control de dureza del borde y no lo cumplía. A
+        media distancia del centro, un hueco duro debe seguir completamente
+        revelado y uno blando debe llevar ya desvanecido un buen trecho.
+        """
+        from src.framework.vfx.fog_of_war import FogOfWar
+
+        def brillo_a_media_distancia(hardness: float) -> float:
+            niebla = FogOfWar(320, 180, radius=40, hardness=hardness)
+            niebla.reveal(160, 90)
+            lienzo = _lienzo()
+            niebla.draw(lienzo, pygame.Vector2(0, 0))
+            return float(_pixeles(lienzo)[180, 90].mean())
+
+        duro = brillo_a_media_distancia(0.95)
+        blando = brillo_a_media_distancia(0.05)
+        assert duro > blando + 10.0, (
+            f"hardness no cambia el perfil del hueco: "
+            f"duro={duro:.0f} blando={blando:.0f}"
         )
 
     def test_clear_vuelve_a_taparlo_todo(self, display):
