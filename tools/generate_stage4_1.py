@@ -92,31 +92,44 @@ from src.stages.stage4_1.trazado import (  # noqa: E402
 )
 
 DESTINO = PROJECT_ROOT / "assets" / "maps" / "stage4_1" / "stage4_1.tmx"
-TILESET = "../../tilesets/tileset_stage0.png"
+
+# AUD-237: el nivel pintaba su suelo con `tileset_stage0.png`, la piedra del
+# castillo del prólogo, mientras `tileset_cemetery.png` existía sin que lo usara
+# nadie. No era un descuido: la hoja del cementerio eran ocho baldosas genéricas
+# —piedra lisa, tablones, ladrillo rojo— repetidas, y cambiar a ella habría hecho
+# que el nivel se viera **peor**. Ahora la hoja se dibuja de verdad
+# (`_gen_tileset_cementerio`) y el cementerio pisa su propia piedra.
+TILESET = "../../tilesets/tileset_cemetery.png"
 
 # ── Baldosas ────────────────────────────────────────────────────────────────
-# La cabecera del tileset se copia del mapa que ya funciona. Inventarla es lo
-# que dejó `stage_mecanicas` pintando las tres primeras baldosas de la hoja
-# durante semanas (AUD-115).
-TS_COLUMNAS = 64
-TS_TOTAL = 4096
-TS_IMAGEN_PX = 1024
+# La cabecera describe la hoja real: 128x128 px, 8 columnas, 64 baldosas.
+# Inventarla es lo que dejó `stage_mecanicas` pintando las tres primeras
+# baldosas de la hoja durante semanas (AUD-115).
+TS_COLUMNAS = 8
+TS_TOTAL = 64
+TS_IMAGEN_PX = 128
 
+# Los GID son `índice + 1` sobre `CEM_ORDEN` de `tools/generate_all_assets.py`.
+# Esa lista y estos números son un contrato: cambiar el orden allí sin cambiarlo
+# aquí repinta el nivel entero con las baldosas equivocadas, y hay una prueba
+# que compara las dos listas para que no pase.
 VACIO = 0
-PIEDRA = 409              # la losa que se pisa
-MURO = 153                # piedra de cierre
-LOSA = 666                # lápida caída / repisa
-RELLENO = 665             # tierra bajo la superficie
+PIEDRA = 2                # la losa que se pisa
+RELLENO = 3               # tierra bajo la superficie
+MURO = 4                  # piedra de cierre del pozo
+LOSA = 10                 # lápida — el cuerpo
 
-# Las dos superficies que cambian el movimiento. Se eligieron **mirando la
-# hoja**, no adivinando el índice: 146 es verde con matas encima y 212 es tierra
-# con raíces. Que se distingan de un vistazo del 409 gris es el requisito, no un
-# detalle: una superficie que resbala y se ve igual que el suelo normal es una
-# trampa, y este nivel no tiene trampas.
-MUSGO = 146               # verde con matas — arrastra
-MUSGO_RELLENO = 141
-LODO = 212                # tierra con raíces — frena
-LODO_RELLENO = 213
+# Las dos superficies que cambian el movimiento. Son **la misma losa con otra
+# cosa encima**, a propósito: si fueran tres materiales distintos el jugador
+# leería «tres suelos», y siendo piedra cubierta lee «esta losa está tomada»,
+# que es lo que explica por qué resbala. Una superficie que cambia el
+# movimiento y se ve igual que el suelo normal es una trampa, y este nivel no
+# tiene trampas.
+MUSGO = 5                 # losa con musgo y matas — arrastra
+MUSGO_RELLENO = 6
+LODO = 7                  # losa con barro y raíces — frena
+LODO_RELLENO = 8
+LAPIDA_ALTA = 9           # la cabeza redondeada, con inscripción
 
 #: Qué baldosa pinta cada material, en `(superficie, relleno)`.
 BALDOSAS = {
@@ -159,8 +172,8 @@ def _terreno() -> list[list[int]]:
     for indice, _texto in EPITAFIOS:
         x0, ancho, fila = lista[indice]
         cx = x0 + ancho // 3
-        g[fila - 1][cx] = LOSA
-        g[fila - 2][cx] = LOSA
+        g[fila - 1][cx] = LOSA          # el cuerpo, apoyado en la repisa
+        g[fila - 2][cx] = LAPIDA_ALTA   # la cabeza con la inscripción
 
     return g
 

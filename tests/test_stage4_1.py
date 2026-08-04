@@ -210,6 +210,67 @@ class TestLasSuperficiesSeVen:
 
         assert len({PIEDRA, MUSGO, LODO}) == 3
 
+    def test_los_gid_apuntan_a_la_baldosa_que_dicen(self) -> None:
+        """El contrato entre el mapa y la hoja de baldosas (AUD-237).
+
+        Un GID es una posición en la hoja. Si alguien reordena `CEM_ORDEN` en el
+        generador de assets y no toca las constantes del generador del mapa, el
+        nivel se repinta entero con las baldosas equivocadas **sin que falle
+        nada** — es exactamente cómo `stage_mecanicas` estuvo semanas pintando
+        las tres primeras casillas de su hoja (AUD-115).
+        """
+        import sys
+        from pathlib import Path
+
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
+        from generate_all_assets import CEM_ORDEN
+        from generate_stage4_1 import (
+            LAPIDA_ALTA,
+            LODO,
+            LODO_RELLENO,
+            LOSA,
+            MURO,
+            MUSGO,
+            MUSGO_RELLENO,
+            PIEDRA,
+            RELLENO,
+        )
+
+        esperado = {
+            "losa": PIEDRA, "relleno": RELLENO, "muro": MURO,
+            "musgo": MUSGO, "musgo_relleno": MUSGO_RELLENO,
+            "lodo": LODO, "lodo_relleno": LODO_RELLENO,
+            "lapida_alta": LAPIDA_ALTA, "lapida_baja": LOSA,
+        }
+        for nombre, gid in esperado.items():
+            assert CEM_ORDEN[gid - 1] == nombre, (
+                f"el GID {gid} debería ser «{nombre}» y en la hoja es "
+                f"«{CEM_ORDEN[gid - 1]}»: el nivel se pintaría con la baldosa "
+                f"equivocada"
+            )
+
+    def test_la_hoja_del_cementerio_es_la_que_declara_el_mapa(self) -> None:
+        """Y con el tamaño que declara: 128x128, 8 columnas, 64 baldosas."""
+        import sys
+        from pathlib import Path
+
+        from PIL import Image
+
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
+        from generate_stage4_1 import (
+            TILESET,
+            TS_COLUMNAS,
+            TS_IMAGEN_PX,
+            TS_TOTAL,
+        )
+
+        assert TILESET.endswith("tileset_cemetery.png"), (
+            "el cementerio volvió a pintarse con la piedra del prólogo"
+        )
+        hoja = Image.open("assets/tilesets/tileset_cemetery.png")
+        assert hoja.size == (TS_IMAGEN_PX, TS_IMAGEN_PX)
+        assert TS_COLUMNAS * TS_COLUMNAS == TS_TOTAL
+
     def test_la_baldosa_pintada_coincide_con_la_zona(self) -> None:
         """La comprobación que de verdad importa: que la repisa que arrastra sea
         **la misma** que se pinta de verde. Una zona de fricción sobre una
@@ -325,6 +386,78 @@ class TestSuenaAOrgano:
 
         assert Stage4_1.BGM_TRACK == "bgm_final_approach"
         assert escena._stage_data.bgm_track == Stage4_1.BGM_TRACK
+
+
+class TestElLodoFrenaIgualEnCualquierMaquina:
+    """AUD-236. `ZonaDeFriccion` multiplica la velocidad **sin escalar por
+    `dt`**, y de ahí salió la sospecha de que el lodo del 4-1 frenara distinto
+    según los fotogramas por segundo.
+
+    Medido, es al revés de lo que parecía: el jugador reescribe `velocity.x`
+    desde la entrada en cada fotograma y el multiplicador se aplica encima, así
+    que se comporta como una **escala de velocidad** y sale igual a 30, 60 y
+    120 fps. Esta prueba fija esa medición para que deje de ser una suposición.
+    """
+
+    def _recorrido(self, fps: int, con_entrada: bool) -> float:
+        import pygame as pg
+
+        from src.framework.ecs import (
+            Transform,
+            Velocidad,
+            World,
+            ZonaDeFriccion,
+            systems,
+        )
+        from src.stages.stage4_1.trazado import FRENO_DEL_LODO
+
+        dt = 1.0 / fps
+        mundo = World()
+        entidad = mundo.crear(
+            Transform(posicion=pg.Vector2(0, 0), rect=pg.Rect(0, 0, 16, 32)),
+            Velocidad(pg.Vector2(90, 0)),
+        )
+        mundo.crear(ZonaDeFriccion(
+            rect=pg.Rect(-500, -500, 4000, 4000), multiplicador=FRENO_DEL_LODO,
+        ))
+        v = mundo.obtener(entidad, Velocidad)
+        recorrido = 0.0
+        for _ in range(fps):                 # un segundo
+            if con_entrada:
+                v.v.x = 90.0                 # andar es fijar la velocidad
+            systems.sistema_friccion(mundo, dt)
+            recorrido += v.v.x * dt
+        return recorrido
+
+    def test_andando_recorre_lo_mismo_a_cualquier_tasa(self) -> None:
+        medidas = [self._recorrido(fps, True) for fps in (30, 60, 120)]
+        assert max(medidas) - min(medidas) < 0.5, (
+            f"el lodo frena distinto según los fps: {medidas}. Un nivel que se "
+            f"juega distinto en dos máquinas no se puede calificar"
+        )
+
+    def test_frena_pero_deja_andar(self) -> None:
+        """Un lodo que para al jugador no es lodo, es una pared."""
+        andado = self._recorrido(60, True)
+        assert 60.0 < andado < 88.0, (
+            f"con el lodo se recorren {andado:.1f} px/s de los 90 normales"
+        )
+
+    def test_deslizarse_sin_empuje_si_depende_de_la_tasa(self) -> None:
+        """La otra cara, documentada a propósito: sin entrada, cada fotograma
+        vuelve a recortar lo que quedaba. Ese camino no lo recorre el jugador
+        —fija su velocidad cada fotograma—, y por eso se deja como está en vez
+        de meter un `** dt` que arreglaría el caso muerto y estropearía el vivo.
+
+        Si algún día alguien conecta esto a un cuerpo que va sin empuje, esta
+        prueba es la que le dice lo que va a encontrarse.
+        """
+        lento = self._recorrido(30, False)
+        rapido = self._recorrido(120, False)
+        assert lento > rapido * 2, (
+            "si esto deja de cumplirse es que alguien tocó el sistema: "
+            "reléase el docstring de ZonaDeFriccion antes de seguir"
+        )
 
 
 class TestElPozoNoEncierraANadie:
