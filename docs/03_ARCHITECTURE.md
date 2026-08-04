@@ -78,11 +78,13 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── event_bus.py               # EventBus: pub/sub event dispatch
 │   │   │   ├── events.py                  # Event name constants (Events class)
 │   │   │   ├── game_context.py            # GameContext: DI container for all subsystems
+│   │   │   ├── gpu_effects.py             # Reparto CPU/GPU del post-procesado (AUD-222)
 │   │   │   ├── achievements.py            # Achievement system
 │   │   │   ├── difficulty.py              # Difficulty scaling (Difficulty enum, set_difficulty)
 │   │   │   ├── i18n.py                    # Internationalization (gettext wrapper)
 │   │   │   ├── inventory.py               # Item/collectible management
 │   │   │   ├── save_data.py               # SaveData dataclass, SAVE_VERSION, MAX_SLOTS
+│   │   │   ├── score_system.py            # Points and coin drops per enemy type
 │   │   │   ├── save_manager.py            # SaveManager: JSON-based save/load/delete
 │   │   │   ├── stage_registry.py          # StageRegistry: auto-discover stages
 │   │   │   └── user_settings.py           # UserSettings: persisted player preferences
@@ -129,7 +131,9 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── noise_lab_scene.py         # Unit V/VIII — Noise lab
 │   │   │   ├── collision_lab_scene.py     # Unit VI — Collision lab
 │   │   │   ├── combo_demo_scene.py        # Combo system state machine demo
-│   │   │   ├── inventory_scene.py         # Inventory screen (grid of collected items)
+│   │   │   ├── inventory_scene.py         # Inventory screen (grid; equip/unequip)
+│   │   │   ├── shop_scene.py              # Shop: buy/sell clothing with coins
+│   │   │   ├── boss_rush_entry.py         # Boss rush entry point (two helper functions)
 │   │   │   ├── achievement_scene.py       # Achievement screen (locked/unlocked)
 │   │   │   ├── bestiary_scene.py          # Bestiary: enemy catalog
 │   │   │   ├── world_map_scene.py         # World map (connected nodes)
