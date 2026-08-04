@@ -285,11 +285,27 @@ class DrawingSystem:
         igual que `MessageTrigger`. Verlos rompería la sorpresa que el
         diseñador buscaba al ponerlos.
         """
+        # AUD-234 — cada objeto del catálogo se pinta de su color.
+        #
+        # Todos salían del mismo amarillo, así que una moneda de oro, una
+        # llave roja y una vasija de corazón eran tres rectángulos idénticos.
+        # Desde AUD-218 los enemigos sueltan monedas y el suelo se llena de
+        # recogibles: sin distinguirlos, el jugador no sabe si eso de ahí es la
+        # llave que le falta o el cambio de matar a un esbirro.
+        #
+        # `ItemDef.icon_color` llevaba desde el principio en el catálogo y sólo
+        # lo leía el aviso de recogida. Un `item_id` libre —el que invente un
+        # estudiante— no está en el catálogo y conserva el color de siempre,
+        # así que ninguno de los niveles entregados cambia de aspecto.
+        from src.engine.core.inventory import get_inventory
+        inventario = get_inventory()
         for objeto in getattr(sistema, "recogibles", ()):
             if objeto.recogido:
                 continue
             r = objeto.rect.move(-offset.x, -offset.y)
-            pygame.draw.rect(surface, self._COLOR_RECOGIBLE, r, border_radius=3)
+            defn = inventario.get_def(objeto.item_id)
+            color = defn.icon_color if defn is not None else self._COLOR_RECOGIBLE
+            pygame.draw.rect(surface, color, r, border_radius=3)
             pygame.draw.rect(surface, (60, 50, 20), r, 1, border_radius=3)
 
         for cerradura in getattr(sistema, "cerraduras", ()):

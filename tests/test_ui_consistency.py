@@ -61,6 +61,9 @@ MIGRATED = {
     # ── Menús migrados en AUD-069 ──────────────────────────────────
     "achievement_scene.py", "bestiary_scene.py", "inventory_scene.py",
     "keybinding_scene.py", "tutorial_scene.py", "world_map_scene.py",
+    # AUD-221: la tienda nace ya en el kit — `draw_screen`, `MenuList`,
+    # `handle_menu_navigation`, `draw_key_hints` y los colores del `Theme`.
+    "shop_scene.py",
     # ── Pantallas sin menú, migradas en AUD-069 ────────────────────
     "end_credits_scene.py", "loading_scene.py", "story_scene.py",
 }
