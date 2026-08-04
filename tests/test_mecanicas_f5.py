@@ -435,41 +435,31 @@ class TestLasMecanicasDelEcsSeVen:
     copian los estudiantes) y 7 zonas letales que matan de un golpe.
     """
 
-    def _escena_con(self, *componentes):
+    def _mundo_con(self, *componentes):
         import pygame as pg
 
         from src.framework.ecs import Transform, World
-        from src.framework.scenes.stage_scene import StageScene
 
-        class Falsa:
-            _COLOR_RITMICO = StageScene._COLOR_RITMICO
-            _COLOR_RITMICO_AUSENTE = StageScene._COLOR_RITMICO_AUSENTE
-            _COLOR_LASER = StageScene._COLOR_LASER
-            _COLOR_LASER_APAGADO = StageScene._COLOR_LASER_APAGADO
-            _COLOR_RESORTE = StageScene._COLOR_RESORTE
-            _COLOR_MOVIL = StageScene._COLOR_MOVIL
-            _dibujar_mecanicas_ecs = StageScene._dibujar_mecanicas_ecs
-
-        falsa = Falsa()
-        falsa._mundo = World()
-        falsa._camera = type("C", (), {"offset": pg.Vector2(0, 0)})()
+        mundo = World()
         for comp in componentes:
             if hasattr(comp, "rect"):
-                falsa._mundo.crear(comp)
+                mundo.crear(comp)
             else:
-                falsa._mundo.crear(
+                mundo.crear(
                     Transform(posicion=pg.Vector2(20, 20),
                               rect=pg.Rect(20, 20, 40, 16)),
                     comp,
                 )
-        return falsa
+        return mundo
 
-    def _pintado(self, falsa) -> bool:
+    def _pintado(self, mundo) -> bool:
         import pygame as pg
+
+        from src.framework.scenes.stage_parts import dibujo_mecanicas
 
         lienzo = pg.Surface((200, 200))
         lienzo.fill((0, 0, 0))
-        falsa._dibujar_mecanicas_ecs(lienzo)
+        dibujo_mecanicas.dibujar_mecanicas_ecs(lienzo, mundo, pg.Vector2(0, 0))
         return any(
             lienzo.get_at((x, y))[:3] != (0, 0, 0)
             for x in range(0, 120) for y in range(0, 120)
@@ -478,8 +468,8 @@ class TestLasMecanicasDelEcsSeVen:
     def test_un_bloque_ritmico_presente_se_ve(self) -> None:
         from src.framework.ecs import BloqueRitmico
 
-        falsa = self._escena_con(BloqueRitmico(visible_seg=10.0, oculto_seg=0.0))
-        assert self._pintado(falsa), (
+        mundo = self._mundo_con(BloqueRitmico(visible_seg=10.0, oculto_seg=0.0))
+        assert self._pintado(mundo), (
             "un bloque rítmico invisible es un muro que aparece sin avisar"
         )
 
@@ -488,24 +478,24 @@ class TestLasMecanicasDelEcsSeVen:
         suelo». El contorno es lo que dice «vuelve dentro de un momento»."""
         from src.framework.ecs import BloqueRitmico
 
-        falsa = self._escena_con(BloqueRitmico(visible_seg=0.0, oculto_seg=10.0))
-        assert self._pintado(falsa)
+        mundo = self._mundo_con(BloqueRitmico(visible_seg=0.0, oculto_seg=10.0))
+        assert self._pintado(mundo)
 
     def test_un_laser_encendido_se_ve(self) -> None:
         import pygame as pg
 
         from src.framework.ecs import ZonaLetalTemporizada
 
-        falsa = self._escena_con(ZonaLetalTemporizada(
+        mundo = self._mundo_con(ZonaLetalTemporizada(
             rect=pg.Rect(20, 20, 40, 16), encendido=10.0, apagado=0.0))
-        assert self._pintado(falsa), "mata de un golpe y no se veía"
+        assert self._pintado(mundo), "mata de un golpe y no se veía"
 
     def test_un_resorte_se_ve(self) -> None:
         import pygame as pg
 
         from src.framework.ecs import Resorte
 
-        assert self._pintado(self._escena_con(Resorte(rect=pg.Rect(20, 20, 16, 16))))
+        assert self._pintado(self._mundo_con(Resorte(rect=pg.Rect(20, 20, 16, 16))))
 
     def test_una_plataforma_movil_se_ve(self) -> None:
         """Las baldosas no se mueven, así que una plataforma móvil **no puede**
@@ -514,6 +504,6 @@ class TestLasMecanicasDelEcsSeVen:
 
         from src.framework.ecs import PlataformaMovil
 
-        falsa = self._escena_con(PlataformaMovil(
+        mundo = self._mundo_con(PlataformaMovil(
             origen=pg.Vector2(20, 20), destino=pg.Vector2(80, 20)))
-        assert self._pintado(falsa)
+        assert self._pintado(mundo)
