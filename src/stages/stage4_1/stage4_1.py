@@ -140,6 +140,9 @@ class Stage4_1(StageScene):
         #: Las ocho superficies del degradado de las grietas. Se construyen la
         #: primera vez que se dibuja y no se vuelven a tocar.
         self._brillos: list[pygame.Surface] | None = None
+        #: Lienzo de trabajo para componer una llama. Se reutiliza para las
+        #: doce, así que no hay asignaciones por fotograma.
+        self._lienzo_llama = pygame.Surface(self._LIENZO_LLAMA, pygame.SRCALPHA)
         #: Dónde estaba el jugador en el fotograma anterior. Es lo que decide si
         #: está quieto: preguntarle a la velocidad no vale, porque un jugador
         #: apoyado contra un muro tiene velocidad y no se mueve.
@@ -401,6 +404,13 @@ class Stage4_1(StageScene):
         # de la repisa y las dos de aire que hay debajo, así que lo que se ve es
         # el resplandor saliendo por debajo del labio, que es lo que se buscaba.
         self._dibujar_grietas(surface)
+        # Las antorchas, lo último del fondo. Siguen estando **detrás** del mapa
+        # de baldosas —todo esto lo está—, y no importa: el cuenco y la llama
+        # caen en el aire abierto que hay sobre cada repisa, así que no hay nada
+        # que las tape. Ponerlas en `draw()` para tenerlas delante las pintaría
+        # también encima del HUD, que es el error que ya costó una captura con
+        # las grietas.
+        self._dibujar_antorchas(surface, offset)
 
     def _dibujar_luna(self, surface: pygame.Surface, acto: Acto) -> None:
         """El reloj del nivel: baja y crece con el avance.
@@ -550,6 +560,92 @@ class Stage4_1(StageScene):
         if self._rayo <= 0.0:
             return 0.0
         return (self._rayo / self.DURACION_DEL_RAYO) ** 0.5
+
+    # ── Las antorchas, que ahora se ven (AUD-246) ─────────────
+    #
+    #: Los doce braseros eran **sólo focos de luz**: `Light` en el TMX y nada
+    #: dibujado. Se veía el charco de luz aparecer sobre la repisa sin nada que
+    #: lo produjera, y el §3 del diseño se apoya entero en ellos —«si un jugador
+    #: pregunta cuánto falta, la respuesta es cuenta los apagados»—. Un contador
+    #: que no se ve no cuenta nada.
+    #:
+    #: Se dibujan aquí y no como sprite del TMX porque la llama tiene que
+    #: **crecer** con `self._llama[i]`, que es el mismo número que sube la
+    #: intensidad de la luz: así el fuego y su resplandor son la misma cosa y no
+    #: pueden desincronizarse.
+    _COLOR_CUENCO = (74, 70, 82)
+    _COLOR_CUENCO_LUZ = (104, 100, 114)
+    #: Tamaño del lienzo donde se compone cada llama. Da de sobra para la más
+    #: alta (15 px) con su holgura.
+    _LIENZO_LLAMA = (28, 34)
+    #: De fuera hacia dentro. El verde espectral del canon, no naranja: en este
+    #: cementerio arde otra cosa.
+    _CAPAS_DE_LLAMA: tuple[tuple[tuple[int, int, int], float, float], ...] = (
+        ((40, 130, 70), 1.00, 0.55),      # el halo exterior
+        ((90, 210, 120), 0.66, 0.80),     # el cuerpo
+        ((190, 255, 205), 0.30, 1.00),    # el corazón
+    )
+
+    def _dibujar_antorchas(self, surface: pygame.Surface,
+                           offset: pygame.Vector2) -> None:
+        """El cuenco siempre; la llama sólo si está encendida, y creciendo.
+
+        Un brasero apagado se dibuja igual —piedra fría y vacía— porque ésa es
+        la mitad del mensaje: el jugador tiene que **ver cuántos le faltan**.
+        """
+        ts = settings.TILE_SIZE
+        pantalla = surface.get_rect()
+        # Se dibuja sobre las coordenadas del **trazado**, no sobre las del foco.
+        # El `Light` del TMX se centra en su rectángulo, así que su posición cae
+        # dos filas por encima de la repisa: dibujar ahí dejaba la antorcha
+        # flotando en el aire, y una llama sin nada debajo no se lee como una
+        # antorcha. La correspondencia entre las dos listas la fija una prueba.
+        for i, (bx, fila) in enumerate(trazado.braseros()):
+            px = int(bx * ts + ts // 2 - offset.x)
+            suelo = int(fila * ts - offset.y)          # el canto de la repisa
+            if not pantalla.collidepoint(px, suelo):
+                continue
+
+            # El cuenco: piedra apoyada en la repisa, con el borde iluminado.
+            cuenco = pygame.Rect(px - 8, suelo - 7, 16, 7)
+            pygame.draw.rect(surface, self._COLOR_CUENCO, cuenco)
+            pygame.draw.line(surface, self._COLOR_CUENCO_LUZ,
+                             cuenco.topleft, cuenco.topright)
+            pygame.draw.rect(surface, self._COLOR_CUENCO,
+                             (px - 3, suelo - 10, 6, 3))   # el pie
+            py = suelo - 9                                  # boca del cuenco
+
+            avance = self._llama.get(i, 0.0)
+            if avance <= 0.0:
+                continue
+
+            # El parpadeo: cada antorcha con su fase, o las doce respirarían a
+            # la vez y se leerían como una sola luz encendida por un interruptor.
+            latido = 0.86 + 0.14 * math.sin(self._tiempo * 7.3 + i * 1.9)
+            alto = 22.0 * avance * latido
+            ancho = 8.0 * avance
+
+            # Las tres capas van a un lienzo pequeño y **reutilizado**, y de ahí
+            # a la pantalla de un solo pegado. La primera versión creaba una
+            # superficie del tamaño de la pantalla por capa y por antorcha: 24
+            # asignaciones de 800×600 por fotograma, que es exactamente el
+            # derroche que AUD-023 vino a quitar del motor.
+            lienzo = self._lienzo_llama
+            lienzo.fill((0, 0, 0, 0))
+            cx, base = self._LIENZO_LLAMA[0] // 2, self._LIENZO_LLAMA[1] - 4
+            for color, escala, opacidad in self._CAPAS_DE_LLAMA:
+                a, h = ancho * escala, alto * escala
+                if h < 1.0:
+                    continue
+                # Una gota: ancha abajo, en punta arriba.
+                pygame.draw.polygon(lienzo, (*color, int(255 * opacidad)), [
+                    (cx, base - h),
+                    (cx + a, base - h * 0.42),
+                    (cx + a * 0.72, base + 1),
+                    (cx - a * 0.72, base + 1),
+                    (cx - a, base - h * 0.42),
+                ])
+            surface.blit(lienzo, (px - cx, py + 2 - base))
 
     # ── Las grietas verdes (AUD-225) ──────────────────────────
 

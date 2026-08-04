@@ -680,6 +680,89 @@ class TestLosBraserosSonLaBarraDeProgreso:
         assert escena._luces[-1].radius > escena._luces[0].radius
 
 
+class TestLasAntorchasSeVen:
+    """AUD-246 — los doce braseros eran **sólo focos de luz**: un `Light` en el
+    TMX y nada dibujado. Se veía aparecer el charco de luz sobre la repisa sin
+    nada que lo produjera.
+
+    Importa más de lo que parece: el §3 del diseño se apoya entero en ellos
+    —«si un jugador pregunta cuánto falta, la respuesta es cuenta los
+    apagados»— y un contador que no se ve no cuenta nada.
+    """
+
+    def _pintar_fondo(self, escena) -> pygame.Surface:
+        """Sólo las antorchas, no el fondo entero.
+
+        `dibujar_fondo` pinta también las grietas, que son verdes: midiendo
+        sobre él, «hay verde» estaría respondiendo por las grietas y la prueba
+        pasaría con las doce antorchas rotas.
+        """
+        lienzo = pygame.Surface((800, 600))
+        lienzo.fill((0, 0, 0))
+        escena._dibujar_antorchas(lienzo, escena._camera.offset)
+        return lienzo
+
+    def _hay_verde(self, lienzo: pygame.Surface) -> bool:
+        import numpy as np
+
+        px = pygame.surfarray.array3d(lienzo).astype(int)
+        return bool(((px[:, :, 1] > px[:, :, 0] + 30)
+                     & (px[:, :, 1] > px[:, :, 2] + 30)
+                     & (px[:, :, 1] > 90)).any())
+
+    def _junto_a_un_brasero(self, escena) -> None:
+        from src.stages.stage4_1 import trazado
+
+        bx, fila = trazado.braseros()[2]
+        _llevar_a(escena, fila - 3, bx)
+
+    def test_apagada_no_hay_llama(self, escena) -> None:
+        self._junto_a_un_brasero(escena)
+        escena._encendidos.clear()
+        escena._llama.clear()
+        assert not self._hay_verde(self._pintar_fondo(escena)), (
+            "hay llama en un brasero apagado: la barra de progreso mentiría"
+        )
+
+    def test_encendida_se_ve_la_llama(self, escena) -> None:
+        self._junto_a_un_brasero(escena)
+        for i in range(len(escena._luces)):
+            escena._encendidos.add(i)
+            escena._llama[i] = 1.0
+        assert self._hay_verde(self._pintar_fondo(escena)), (
+            "el brasero está encendido y no se dibuja nada"
+        )
+
+    def test_la_llama_crece_con_el_encendido(self, escena) -> None:
+        """Sube en medio segundo en vez de aparecer, y tiene que verse subir."""
+        import numpy as np
+
+        self._junto_a_un_brasero(escena)
+        for i in range(len(escena._luces)):
+            escena._encendidos.add(i)
+
+        def verdes(avance: float) -> int:
+            for i in range(len(escena._luces)):
+                escena._llama[i] = avance
+            px = pygame.surfarray.array3d(self._pintar_fondo(escena)).astype(int)
+            return int(((px[:, :, 1] > px[:, :, 0] + 30) & (px[:, :, 1] > 90)).sum())
+
+        assert verdes(1.0) > verdes(0.35) > 0
+
+    def test_la_llama_se_dibuja_donde_esta_la_repisa(self, escena) -> None:
+        """El `Light` del TMX se centra en su rectángulo, así que su posición
+        cae dos filas por encima de la repisa. Dibujar ahí dejaba la antorcha
+        flotando en el aire, y una llama sin nada debajo no es una antorcha."""
+        from src.stages.stage4_1 import trazado
+
+        ts = settings.TILE_SIZE
+        for (bx, fila), luz in zip(trazado.braseros(), escena._luces, strict=True):
+            assert abs(luz.position.x - (bx * ts + ts // 2)) <= ts, (
+                f"el foco de la fila {fila} no está sobre su brasero: la llama "
+                f"y su resplandor saldrían en sitios distintos"
+            )
+
+
 class TestLaVisionEspectral:
     """La mecánica protagonista (Unidad VIII)."""
 
