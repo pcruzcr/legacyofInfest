@@ -1,0 +1,77 @@
+{
+  "comment": "Entradas clásicas del bestiario. Fuente de verdad de los textos que antes vivían en src/framework/entities/bestiary.py; la valida scripts/check_bestiary.py. Las especies del registro (bestiary_registry.py) siguen llegando del código.",
+  "species": [
+    {
+      "id": "walker",
+      "name": "Walker",
+      "description": "A slow patrolling enemy.",
+      "lore": "Once a guardian of these halls.",
+      "hp": 2,
+      "damage": 0.5
+    },
+    {
+      "id": "flying",
+      "name": "Flying Eye",
+      "description": "A floating watcher.",
+      "lore": "An ancient surveillance construct.",
+      "hp": 1,
+      "damage": 0.5
+    },
+    {
+      "id": "shooter",
+      "name": "Shooter",
+      "description": "Fires projectiles from range.",
+      "lore": "Armed sentry of the old empire.",
+      "hp": 2,
+      "damage": 1.0
+    },
+    {
+      "id": "charger",
+      "name": "Charger",
+      "description": "Rushes at high speed.",
+      "lore": "Berserker unit, no self-preservation.",
+      "hp": 3,
+      "damage": 1.5
+    },
+    {
+      "id": "archer",
+      "name": "Archer",
+      "description": "Precise ranged attacker.",
+      "lore": "Elite marksman of the fallen kingdom.",
+      "hp": 2,
+      "damage": 1.0
+    },
+    {
+      "id": "brute",
+      "name": "Brute",
+      "description": "Heavy melee with ground slam.",
+      "lore": "Siege breaker, unstoppable.",
+      "hp": 5,
+      "damage": 2.0
+    },
+    {
+      "id": "caster",
+      "name": "Caster",
+      "description": "Magic user with homing orbs.",
+      "lore": "Court mage, now corrupted.",
+      "hp": 3,
+      "damage": 1.5
+    },
+    {
+      "id": "assassin",
+      "name": "Assassin",
+      "description": "Invisible until it strikes.",
+      "lore": "Shadow of the old regime.",
+      "hp": 2,
+      "damage": 2.0
+    },
+    {
+      "id": "boss_venado",
+      "name": "Venado",
+      "description": "The Forest Guardian.",
+      "lore": "Ancient spirit of the woods.",
+      "hp": 12,
+      "damage": 2.0
+    }
+  ]
+}

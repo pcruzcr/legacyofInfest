@@ -156,3 +156,28 @@ class SesionAcademica:
         resultado = self._progreso.registrar_intento(id_unidad, aciertos)
         self.guardar()
         return resultado
+
+
+# AUD-200 — los logros siguen a la sesión académica, no al proceso.
+#
+# El núcleo del motor no puede saber que `framework` existe (regla L1), así
+# que `achievements.py` expone un punto de inyección, `bind_ruta_resolver`,
+# y la sesión se lo presta aquí: identificado escribe en
+# `achievements_<correo>.json`, anónimo conserva la ruta histórica. Sin esta
+# pieza, dos estudiantes en la misma máquina compartirían medallas.
+def _ruta_de_logros_de_la_sesion() -> Path:
+    from src.engine.core.achievements import ACHIEVEMENTS_PATH, _slug_estudiante
+
+    correo = SesionAcademica.instancia().correo
+    if not correo:
+        return ACHIEVEMENTS_PATH
+    return ACHIEVEMENTS_PATH.with_name(f"achievements_{_slug_estudiante(correo)}.json")
+
+
+def _vincular_logros_a_la_sesion() -> None:
+    from src.engine.core.achievements import bind_ruta_resolver
+
+    bind_ruta_resolver(_ruta_de_logros_de_la_sesion)
+
+
+_vincular_logros_a_la_sesion()

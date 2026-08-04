@@ -31,8 +31,10 @@ from pathlib import Path
 _RAIZ = Path(__file__).resolve().parent.parent
 
 #: Carpetas que tienen que viajar con el ejecutable. Sin ellas el juego
-#: arranca y no encuentra ni un mapa.
-DATOS = ("assets", "locale", "student_templates")
+#: arranca y no encuentra ni un mapa. `data/` entró con los catálogos de
+#: texto (inventario, logros y bestiario): sin ellos la interfaz pierde los
+#: nombres y el progreso de los jugadores.
+DATOS = ("assets", "locale", "data", "student_templates")
 
 #: Módulos que PyInstaller no detecta solo.
 #:

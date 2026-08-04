@@ -33,10 +33,13 @@ tests/output/
 # committed, which meant every clone of the repository shipped with one
 # developer's half-finished playthrough — and every playtest session produced
 # a spurious diff.
+#
+# AUD-197 — `data/achievements.json` ya no es estado de partida: es el
+# catálogo de definiciones (el progreso vive en `user_data_dir()`), así que
+# dejó de estar ignorado y viaja con el repositorio.
 saves/
 *.sav
 data/inventory.json
-data/achievements.json
 
 # ── Editor / workspace cruft (AUD-035) ─────────────────────────
 .vscode/settings.json

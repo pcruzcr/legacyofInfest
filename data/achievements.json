@@ -1,0 +1,78 @@
+{
+  "comment": "Definiciones de logros. Fuente de verdad de src/engine/core/achievements.py; la valida scripts/check_achievements.py. Un logro con hidden=true es una medalla secreta: no aparece en la pantalla de logros hasta desbloquearse.",
+  "achievements": [
+    {
+      "id": "first_blood",
+      "name": "First Blood",
+      "description": "Defeat your first enemy",
+      "hidden": false,
+      "target": 1,
+      "event": "ENEMY_DIED"
+    },
+    {
+      "id": "exterminator",
+      "name": "Exterminator",
+      "description": "Defeat 50 enemies",
+      "hidden": false,
+      "target": 50,
+      "event": "ENEMY_DIED"
+    },
+    {
+      "id": "untouchable",
+      "name": "Untouchable",
+      "description": "Complete a stage without taking damage",
+      "hidden": true,
+      "target": 1
+    },
+    {
+      "id": "parry_master",
+      "name": "Parry Master",
+      "description": "Successfully parry 10 attacks",
+      "hidden": false,
+      "target": 10,
+      "event": "VFX_PARRY"
+    },
+    {
+      "id": "air_assault",
+      "name": "Air Assault",
+      "description": "Perform a 3-hit aerial combo",
+      "hidden": true,
+      "target": 3
+    },
+    {
+      "id": "speed_demon",
+      "name": "Speed Demon",
+      "description": "Complete a stage in under 60 seconds",
+      "hidden": true,
+      "target": 1
+    },
+    {
+      "id": "collector",
+      "name": "Collector",
+      "description": "Recoge 5 objetos",
+      "hidden": false,
+      "target": 5
+    },
+    {
+      "id": "survivor",
+      "name": "Survivor",
+      "description": "Survive with 0.5 health or less",
+      "hidden": true,
+      "target": 1
+    },
+    {
+      "id": "combo_king",
+      "name": "Combo King",
+      "description": "Reach a 10-hit combo",
+      "hidden": true,
+      "target": 10
+    },
+    {
+      "id": "explorer",
+      "name": "Explorer",
+      "description": "Complete every stage",
+      "hidden": true,
+      "target": 15
+    }
+  ]
+}

@@ -111,6 +111,16 @@ class TestLosLogros:
     def test_un_fichero_corrupto_avisa_y_no_lanza(self, tmp_path, caplog, monkeypatch):
         from src.engine.core import achievements
 
+        # AUD-200: la ruta de los logros la decide la sesión activa. Se fija
+        # una sesión anónima para que el fichero corrupto del test sea el que
+        # de verdad se lee, da igual el orden en que corra la suite.
+        from src.framework.academic import sesion
+
+        class _Anonima:
+            correo = ""
+
+        monkeypatch.setattr(sesion.SesionAcademica, "instancia", lambda: _Anonima())
+
         roto = tmp_path / "achievements.json"
         roto.write_text(BASURA, encoding="utf-8")
         monkeypatch.setattr(achievements, "ACHIEVEMENTS_PATH", roto)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any
 
 import orjson
@@ -14,11 +15,14 @@ from src.engine.core.user_settings import user_data_dir
 
 logger = logging.getLogger(__name__)
 
+#: Dónde se guarda el progreso por defecto de los logros. Un estudiante
+#: identificado tiene su propio fichero junto a éste (AUD-200).
 ACHIEVEMENTS_PATH = user_data_dir() / "achievements.json"
 
-#: Escenarios que hay que completar para el logro «explorer».
-#: Estaba escrito a mano en dos sitios con el mismo 15; ahora en uno.
-EXPLORER_TARGET: int = 15
+#: Las definiciones de logros viven en un fichero de datos (AUD-197): se
+#: validan en CI y se editan sin tocar el motor. El campo `hidden` es la
+#: medalla secreta (AUD-198): no se muestra hasta desbloquearse.
+DEFINICIONES_PATH = settings.PROJECT_ROOT / "data" / "achievements.json"
 
 
 class AchievementDef(BaseModel):
@@ -34,6 +38,94 @@ class AchievementDef(BaseModel):
 class AchievementProgress(BaseModel):
     current: int = 0
     unlocked: bool = False
+
+
+def esta_oculta(definicion: AchievementDef, progreso: AchievementProgress) -> bool:
+    """Una medalla secreta no se muestra mientras esté bloqueada.
+
+    AUD-198 — el campo `hidden` existía en `AchievementDef` y nadie lo leía:
+    un logro marcado oculto aparecía en la pantalla con su nombre y su
+    descripción, que es el único lugar donde el jugador podía descubrir qué
+    le faltaba. Esta es la regla única de lo oculto: secreto = marcado así Y
+    todavía sin desbloquear. Desbloqueado, se muestra con orgullo.
+    """
+    return definicion.hidden and not progreso.unlocked
+
+
+def _slug_estudiante(correo: str) -> str:
+    """Un correo como nombre de fichero: legible y seguro en cualquier sistema."""
+    return "".join(c if c.isalnum() else "_" for c in correo.lower())
+
+
+#: Quién decide dónde vive el fichero de logros (AUD-200). El núcleo del motor
+#: no puede conocer a `src.framework`, así que la resolución por estudiante la
+#: **inyecta** la sesión académica (`sesion.py`) a través de
+#: `bind_ruta_resolver`; sin resolver, es el fichero histórico del proceso.
+_ruta_resolver = None
+
+
+def bind_ruta_resolver(implementacion) -> None:
+    """Declara quién traduce «estudiante activo» a ruta de logros.
+
+    Esto separa lo que L1 exige separar: `engine/core` define el mecanismo de
+    persistencia y `framework` aporta la política (un fichero por correo).
+    """
+    global _ruta_resolver
+    _ruta_resolver = implementacion
+
+
+def _ruta_de_logros() -> Path:
+    """El fichero donde viven los logros del estudiante activo.
+
+    AUD-200 — los logros eran del proceso entero: dos estudiantes en la misma
+    máquina compartían el mismo `achievements.json` y el segundo veía los
+    logros del primero. Si la sesión académica registró un resolver, éste
+    decide el fichero (uno por correo); si no, se conserva la ruta histórica,
+    de modo que una partida anterior no se pierde al actualizar el motor.
+    """
+    if _ruta_resolver is not None:
+        ruta = _ruta_resolver()
+        if ruta is not None:
+            return ruta
+    return ACHIEVEMENTS_PATH
+
+
+def _cargar_definiciones() -> list[AchievementDef]:
+    """Las definiciones del catálogo `data/achievements.json`.
+
+    AUD-197 — antes estaban escritas a mano en `_init_achievements`: diez
+    `AchievementDef(...)` que sólo podía tocar quien tocara el motor. Un JSON
+    se edita sin miedo, y `scripts/check_achievements.py` lo valida antes de
+    que un texto roto o un objetivo en cero llegue a la pantalla.
+    """
+    try:
+        raw: Any = orjson.loads(DEFINICIONES_PATH.read_bytes())
+    except FileNotFoundError:
+        logger.warning(
+            "achievements: no existe %s; el juego arranca sin logros",
+            DEFINICIONES_PATH,
+        )
+        return []
+    except (ValueError, TypeError):
+        logger.warning(
+            "achievements: %s ilegible; el juego arranca sin logros",
+            DEFINICIONES_PATH, exc_info=True,
+        )
+        return []
+
+    definiciones: list[AchievementDef] = []
+    entradas = raw.get("achievements", []) if isinstance(raw, dict) else []
+    for entrada in entradas:
+        if not isinstance(entrada, dict):
+            continue
+        try:
+            definiciones.append(AchievementDef.model_validate(entrada))
+        except ValueError as e:
+            logger.warning(
+                "achievements: entrada inválida en %s (%s); se omite",
+                DEFINICIONES_PATH, e,
+            )
+    return definiciones
 
 
 class AchievementSystem:
@@ -109,64 +201,14 @@ class AchievementSystem:
         return self._notif_font
 
     def _init_achievements(self) -> None:
-        self.register(AchievementDef(
-            id="first_blood", name="First Blood",
-            description="Defeat your first enemy",
-            target=1, event=Events.ENEMY_DIED,
-        ))
-        self.register(AchievementDef(
-            id="exterminator", name="Exterminator",
-            description="Defeat 50 enemies",
-            target=50, event=Events.ENEMY_DIED,
-        ))
-        self.register(AchievementDef(
-            id="untouchable", name="Untouchable",
-            description="Complete a stage without taking damage",
-            target=1,
-        ))
-        self.register(AchievementDef(
-            id="parry_master", name="Parry Master",
-            description="Successfully parry 10 attacks",
-            target=10, event=Events.VFX_PARRY,
-        ))
-        self.register(AchievementDef(
-            id="air_assault", name="Air Assault",
-            description="Perform a 3-hit aerial combo",
-            target=3,
-        ))
-        self.register(AchievementDef(
-            id="speed_demon", name="Speed Demon",
-            description="Complete a stage in under 60 seconds",
-            target=1,
-        ))
-        # AUD-154 — la descripción decía «Reach 5 checkpoints in a single run»
-        # y lo único que hace avanzar este logro es `Inventory.collect()`, es
-        # decir, **recoger objetos**. Ningún checkpoint lo toca, y «in a single
-        # run» tampoco era cierto: el progreso es acumulado y persistente.
-        #
-        # Se corrige el texto y no el disparador porque el nombre del logro es
-        # «Collector» y recoger cinco objetos es lo que ya hacía: cambiar el
-        # disparador reiniciaría el progreso de quien lo tenga a medias.
-        self.register(AchievementDef(
-            id="collector", name="Collector",
-            description="Recoge 5 objetos",
-            target=5,
-        ))
-        self.register(AchievementDef(
-            id="survivor", name="Survivor",
-            description="Survive with 0.5 health or less",
-            target=1,
-        ))
-        self.register(AchievementDef(
-            id="combo_king", name="Combo King",
-            description="Reach a 10-hit combo",
-            target=10,
-        ))
-        self.register(AchievementDef(
-            id="explorer", name="Explorer",
-            description="Complete every stage",
-            target=EXPLORER_TARGET,
-        ))
+        """Registra las definiciones que llegan de `data/achievements.json`.
+
+        AUD-197 — este método escribía las diez definiciones a mano, en inglés
+        mezclado con español, en medio del código del motor. Ahora se leen del
+        catálogo; la lógica no cambia.
+        """
+        for definicion in _cargar_definiciones():
+            self.register(definicion)
 
     def register(self, ach: AchievementDef) -> None:
         self._defs[ach.id] = ach
@@ -289,7 +331,10 @@ class AchievementSystem:
         if stage_id and stage_id not in self._explored_stages:
             self._explored_stages.append(stage_id)
         self._set_progress("explorer", len(self._explored_stages))
-        if len(self._explored_stages) >= EXPLORER_TARGET:
+        # AUD-197 — el objetivo ya no es una constante del código: se lee del
+        # catálogo, la misma fuente de la cifra que ve el jugador.
+        objetivo = self._defs.get("explorer")
+        if objetivo is not None and len(self._explored_stages) >= objetivo.target:
             self._unlock("explorer")
 
     @property
@@ -297,6 +342,7 @@ class AchievementSystem:
         return [(self._defs[aid], self._progress[aid]) for aid in self._defs]
 
     def save(self) -> None:
+        destino = _ruta_de_logros()
         data = {
             "progress": {
                 aid: p.model_dump()
@@ -307,25 +353,33 @@ class AchievementSystem:
             # logros de quien ya tenga partida (AUD-124).
             "stats": {**self._stats, "explored_stages": self._explored_stages},
         }
-        ACHIEVEMENTS_PATH.parent.mkdir(parents=True, exist_ok=True)
-        ACHIEVEMENTS_PATH.write_bytes(orjson.dumps(data, option=orjson.OPT_INDENT_2))
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        destino.write_bytes(orjson.dumps(data, option=orjson.OPT_INDENT_2))
 
     def load(self) -> None:
+        # AUD-200 — antes de leer, se vuelve a cero: este sistema es un
+        # singleton de proceso, y cambiar de estudiante sin limpiar dejaría
+        # los logros del anterior mezclados con los del nuevo.
+        self._progress = {aid: AchievementProgress() for aid in self._defs}
+        self._explored_stages = []
+        self._stats = {}
+        destino = _ruta_de_logros()
         try:
-            raw = ACHIEVEMENTS_PATH.read_bytes()
+            raw = destino.read_bytes()
             data = orjson.loads(raw)
-            saved_progress = data.get("progress", {})
+            saved_progress = data.get("progress", {}) if isinstance(data, dict) else {}
             for aid, pdata in saved_progress.items():
                 if aid in self._progress:
                     self._progress[aid] = AchievementProgress.model_validate(pdata)
-            guardado = data.get("stats", {}) or {}
-            visitados = guardado.pop("explored_stages", [])
-            self._explored_stages = [
-                s for s in visitados if isinstance(s, str)
-            ] if isinstance(visitados, list) else []
-            self._stats = {
-                k: v for k, v in guardado.items() if isinstance(v, int)
-            }
+            guardado = data.get("stats", {}) if isinstance(data, dict) else {}
+            if isinstance(guardado, dict):
+                visitados = guardado.pop("explored_stages", [])
+                self._explored_stages = [
+                    s for s in visitados if isinstance(s, str)
+                ] if isinstance(visitados, list) else []
+                self._stats = {
+                    k: v for k, v in guardado.items() if isinstance(v, int)
+                }
         # AUD-100 — la corrupción se tragaba en silencio.
         #
         # `orjson.JSONEncodeError` **es `TypeError`**, y codificar no puede
@@ -339,11 +393,14 @@ class AchievementSystem:
         # qué. `ProgresoAcademico.cargar` ya avisaba en el mismo caso; tres
         # sitios del proyecto hacían lo contrario ante el mismo problema.
         except FileNotFoundError:
-            logger.debug("achievements: sin fichero previo; se empieza de cero")
+            logger.debug(
+                "achievements: sin fichero previo en %s; se empieza de cero",
+                destino,
+            )
         except (ValueError, TypeError):
             logger.warning(
                 "achievements: %s ilegible; se empieza de cero",
-                ACHIEVEMENTS_PATH, exc_info=True,
+                destino, exc_info=True,
             )
 
     def get_all_achievements(self) -> list[tuple[AchievementDef, AchievementProgress]]:

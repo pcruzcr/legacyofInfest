@@ -129,6 +129,7 @@ class StudentLoginScene(BaseScene):
 
     def _confirmar(self) -> None:
         if SesionAcademica.instancia().entrar(self._buffer):
+            self._recargar_logros()
             self.context.event_bus.emit(Events.SFX_MENU_CONFIRM)
             self._volver()
             return
@@ -141,9 +142,22 @@ class StudentLoginScene(BaseScene):
     def _salir_de_la_sesion(self) -> None:
         """Deja de recordar a este estudiante. No borra sus notas."""
         SesionAcademica.instancia().salir()
+        self._recargar_logros()
         self._buffer = ""
         self._mensaje = "Sesión cerrada. El progreso guardado sigue en el disco."
         self.context.event_bus.emit(Events.SFX_MENU_CANCEL)
+
+    def _recargar_logros(self) -> None:
+        """Vuelve a leer los logros del perfil recién activado.
+
+        AUD-200 — los logros viven en un fichero por estudiante. Al cambiar de
+        perfil hay que pedirle al sistema que recargue desde el fichero del
+        nuevo dueño; si no, la pantalla de logros mostraría los del anterior,
+        que siguen en la memoria del singleton.
+        """
+        from src.engine.core.achievements import AchievementSystem
+
+        AchievementSystem.get_instance().load()
 
     def _volver(self) -> None:
         from src.engine.scenes.demo_menu_scene import DemoMenuScene
