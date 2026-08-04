@@ -88,6 +88,15 @@ WEAK_POINT_FLASH_DURATION = 0.12  # brief crit confirmation, not a lingering VFX
 class BossVenado(BossBase):
     """Two official phases: El Bosque Duerme (sine) / El Bosque Despierta (bezier)."""
 
+    # AUD-238 — el primer jefe concede el dash.
+    #
+    # Una línea, y es el ejemplo que los estudiantes copian para su propio
+    # jefe. Sin al menos un jefe que suelte cada habilidad condicionable,
+    # encender `PLAYER_SKILLS_REQUIRE_UNLOCK` dejaría el dash inalcanzable
+    # para siempre — mecánica borrada, no progresión. Lo exige
+    # `test_habilidades_que_sueltan_los_jefes.py`.
+    skill_drop = "skill_dash"
+
     _TELEGRAPH_WARN_COLOR = (230, 90, 60)   # STOMP/CHARGE/VINE_SWEEP warning tint
     _WEAK_POINT_FLASH_HUE = 48.0            # amber/gold crit confirmation, distinct
                                              # from the warning color above and the

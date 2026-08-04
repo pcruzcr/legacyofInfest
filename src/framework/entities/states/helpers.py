@@ -85,11 +85,29 @@ def _handle_grounded_jump_input(
     return False
 
 
+def _tiene_habilidad(skill_id: str) -> bool:
+    """¿Está desbloqueada esta habilidad? (AUD-238)
+
+    Con `PLAYER_SKILLS_REQUIRE_UNLOCK` apagado —el valor por defecto— devuelve
+    `True` sin tocar el inventario. Eso es lo que mantiene intactas las 26
+    entregas: no es que se consulte y salga que sí, es que **no se consulta**.
+    """
+    if not settings.PLAYER_SKILLS_REQUIRE_UNLOCK:
+        return True
+    from src.engine.core.inventory import get_inventory
+    return get_inventory().has_skill(skill_id)
+
+
 def _can_jump(player: Player) -> bool:
+    # El salto desde el suelo y el coyote **nunca** se condicionan: el coyote
+    # son fotogramas de gracia del salto normal llegando tarde, no un salto
+    # aéreo. Bloquearlos dejaría al jugador sin poder subir un escalón, que no
+    # es progresión sino un juego roto.
+    if player.is_grounded or player._coyote_counter < settings.PLAYER_COYOTE_FRAMES:
+        return True
     return (
-        player.is_grounded
-        or player._coyote_counter < settings.PLAYER_COYOTE_FRAMES
-        or player._air_jumps_used < settings.PLAYER_AIR_JUMPS
+        player._air_jumps_used < settings.PLAYER_AIR_JUMPS
+        and _tiene_habilidad("skill_double_jump")
     )
 
 
@@ -160,6 +178,11 @@ def _can_dash(player: Player, inp: _InputSnapshot) -> bool:
     # donde se decide si un dash empieza. Ponerla en cada estado que lo
     # permite —hay seis— habría garantizado que alguno se quedara sin ella.
     if not player.hay_estamina_para_correr:
+        return False
+    # AUD-238: la habilidad se comprueba aquí por el mismo motivo que la
+    # estamina — es el único sitio del motor donde se decide si un dash
+    # empieza. Con el candado apagado no se consulta nada.
+    if not _tiene_habilidad("skill_dash"):
         return False
     if player.is_grounded:
         return True

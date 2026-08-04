@@ -60,6 +60,16 @@ class BossBase(EnemyBase):
     transition animation, and BOSS_PHASE_CHANGED event emission.
     """
 
+    #: Habilidad que este jefe deja al morir (AUD-238). Uno de los `skill_*`
+    #: de `engine.core.inventory`; cadena vacía = no suelta ninguna.
+    #:
+    #: **Vacía por defecto a propósito.** Los cuatro jefes del repositorio y
+    #: los que escriban los estudiantes se comportan igual que antes mientras
+    #: nadie la rellene, que es lo que exige la invariante 2. Un jefe que
+    #: quiera conceder algo declara, por ejemplo,
+    #: `skill_drop = "skill_dash"` en su clase — una línea, sin tocar nada más.
+    skill_drop: str = ""
+
     def __init__(
         self,
         spawn_position: pygame.Vector2,
