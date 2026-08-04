@@ -198,6 +198,73 @@ def superficies() -> tuple[tuple[int, int, int, str], ...]:
     return tuple(salida)
 
 
+# ── Lo que hace que el pozo dé miedo (AUD-247) ──────────────────────────────
+#
+# Tres ideas, una por acto, y ninguna hace daño. El terror de este nivel no es
+# perder salud —no hay enemigos y no hay trampas— sino **no poder fiarte de lo
+# que ves**: una losa que se rompe, otra que no está hasta que un rayo la
+# enseña, y un tramo entero que aparece y desaparece al compás del órgano.
+#
+# Las tres van en el **hueco** de su repisa, o sea en la ruta de bajada, y
+# ninguna es obligatoria: el hueco mide 17 o 18 columnas y el bloque cuatro, así
+# que siempre se puede caer por al lado. Un descenso donde una mecánica pueda
+# encerrarte es peor que un foso, porque el foso al menos te devuelve al
+# checkpoint.
+
+#: Acto II — losas de tumba que se rompen a golpes. Son atajos: caes antes si
+#: las rompes, y si no, rodeas. El motor las pinta con grietas que cuentan los
+#: golpes que quedan, así que el jugador ve que está avanzando.
+INDICES_ROMPIBLES: tuple[int, ...] = (10, 13, 16)
+#: Golpes que aguantan. Dos: uno sería un secreto y tres, una tarea.
+GOLPES_DE_LA_LOSA = 2
+
+#: Acto III — «La Niebla que Respira». El tramo musical: losas que aparecen y
+#: desaparecen a compás. El acto se llama así desde el primer borrador del
+#: diseño y hasta ahora no respiraba nada.
+INDICES_RITMICAS: tuple[int, ...] = (18, 20, 22, 24, 26)
+#: El patrón, en pulsos. `"x..."` = suena, calla, calla, calla — una losa
+#: presente un pulso de cada cuatro. Con `bpm = 60` un pulso es un segundo y los
+#: cuatro son un acorde entero del órgano, así que la losa entra y sale **con la
+#: música que suena**, no con un temporizador que da la casualidad de coincidir.
+PATRON_RITMICO = "x..."
+#: Cada losa entra un pulso después que la anterior: bajando, se persigue la
+#: que acaba de aparecer debajo. Todas a la vez sería un semáforo.
+DESFASE_RITMICO = 1.0
+
+#: Acto IV — losas fantasma. Están, son sólidas, y **no se ven** hasta que un
+#: relámpago las enseña o la visión espectral las revela. Es el §5 del diseño
+#: llevado a su conclusión: «el relámpago revela los peligros del tramo
+#: siguiente… el jugador memoriza el tramo con cada rayo».
+#:
+#: Que sean plataformas y no peligros es deliberado. Un pincho invisible es una
+#: trampa; un suelo invisible es una pregunta —¿me fío de lo que vi hace tres
+#: segundos?— y esa pregunta es la que da miedo sin castigar a nadie.
+INDICES_FANTASMA: tuple[int, ...] = (29, 31, 33, 35)
+
+#: Ancho de los tres tipos de losa, en baldosas.
+ANCHO_LOSA_EXTRA = 4
+
+
+def hueco_de(indice: int) -> tuple[int, int]:
+    """Dónde empieza y cuánto mide el hueco de esa repisa, en baldosas."""
+    x0, ancho, _fila = repisas()[indice]
+    if x0 == MURO_ANCHO:                      # la repisa pega al muro izquierdo
+        return x0 + ancho, MW - MURO_ANCHO - (x0 + ancho)
+    return MURO_ANCHO, x0 - MURO_ANCHO
+
+
+def losa_extra(indice: int) -> tuple[int, int]:
+    """La losa que va en el hueco de esa repisa: `(columna, fila)`.
+
+    Centrada en el hueco, así que quedan libres seis o siete columnas a cada
+    lado: se puede bajar sin tocarla, que es lo que impide que una mecánica
+    encierre a nadie.
+    """
+    inicio, ancho = hueco_de(indice)
+    fila = repisas()[indice][2]
+    return inicio + (ancho - ANCHO_LOSA_EXTRA) // 2, fila
+
+
 def grietas() -> tuple[tuple[int, int, int], ...]:
     """Las grietas verdes de la pared, en `(columna, fila, alto_en_filas)`.
 

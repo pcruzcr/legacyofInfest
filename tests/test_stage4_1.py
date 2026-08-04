@@ -460,6 +460,159 @@ class TestElLodoFrenaIgualEnCualquierMaquina:
         )
 
 
+class TestLoQueDaMiedoSinHacerDano:
+    """AUD-247 — tres ideas, una por acto, y ninguna quita salud.
+
+    El terror de este nivel no es perder vida —no hay enemigos ni trampas— sino
+    **no poder fiarte de lo que ves**: una losa que se rompe, otra que no está
+    hasta que un rayo la enseña, y un tramo que respira con el órgano.
+    """
+
+    def test_ninguna_encierra_al_jugador(self) -> None:
+        """La condición que las hace aceptables en un descenso: el hueco mide
+        17 o 18 columnas y la losa cuatro, así que siempre se baja por al lado.
+        Una mecánica que pueda encerrarte es peor que un foso — el foso al menos
+        te devuelve al checkpoint."""
+        from src.stages.stage4_1 import trazado
+
+        todas = (trazado.INDICES_ROMPIBLES + trazado.INDICES_RITMICAS
+                 + trazado.INDICES_FANTASMA)
+        for indice in todas:
+            inicio, ancho = trazado.hueco_de(indice)
+            cx, _fila = trazado.losa_extra(indice)
+            libre_izq = cx - inicio
+            libre_der = (inicio + ancho) - (cx + trazado.ANCHO_LOSA_EXTRA)
+            assert libre_izq >= 4 and libre_der >= 4, (
+                f"la losa de la repisa {indice} deja {libre_izq} y {libre_der} "
+                f"columnas libres: se puede tapar el paso"
+            )
+
+    def test_cada_idea_esta_en_su_acto(self) -> None:
+        """Rompibles en el II, musicales en el III —que se llama «La Niebla que
+        Respira»— y fantasmas en el IV, que es donde caen los rayos."""
+        from src.stages.stage4_1 import trazado
+
+        def acto(indice: int) -> int:
+            return trazado.acto_de_la_fila(trazado.repisas()[indice][2])
+
+        assert {acto(i) for i in trazado.INDICES_ROMPIBLES} == {2}
+        assert {acto(i) for i in trazado.INDICES_RITMICAS} == {3}
+        assert {acto(i) for i in trazado.INDICES_FANTASMA} == {4}
+
+    def test_las_losas_rompibles_llegan_al_mapa(self, escena) -> None:
+        from src.stages.stage4_1 import trazado
+
+        assert len(escena._stage_data.destructibles) == len(
+            trazado.INDICES_ROMPIBLES)
+        assert all(b.golpes == trazado.GOLPES_DE_LA_LOSA
+                   for b in escena._stage_data.destructibles)
+
+    def test_ninguna_losa_rompible_hace_dano(self, escena) -> None:
+        """Es una tumba que se abre, no una trampa."""
+        assert list(escena._stage_data.hazard_zones) == []
+        assert escena._stage_data.death_pits == []
+
+    def test_el_tramo_musical_sigue_a_la_musica_y_no_a_un_reloj(
+        self, escena,
+    ) -> None:
+        """Con `patron` manda el compás y los segundos dejan de contar
+        (AUD-137). Sin `bpm` en el mapa no hay reloj musical, y el patrón sería
+        un temporizador que coincide por casualidad."""
+        from src.framework.ecs import BloqueRitmico
+        from src.stages.stage4_1 import trazado
+
+        bloques = [b for _, b in escena._mundo.cada(BloqueRitmico)]
+        assert len(bloques) == len(trazado.INDICES_RITMICAS)
+        assert all(b.sigue_la_musica for b in bloques), (
+            "los bloques no tienen patrón: irían por segundos, no por música"
+        )
+        assert escena._stage_data.bpm == 60.0, (
+            "sin bpm el reloj musical no se construye y el patrón no suena"
+        )
+
+    def test_las_losas_musicales_entran_escalonadas(self, escena) -> None:
+        """Todas a la vez sería un semáforo. Bajando, se persigue la que acaba
+        de aparecer debajo."""
+        from src.framework.ecs import BloqueRitmico
+
+        desfases = sorted(b.desfase for _, b in escena._mundo.cada(BloqueRitmico))
+        assert len(set(desfases)) == len(desfases), "hay dos con el mismo desfase"
+
+    def test_las_losas_fantasma_son_solidas_aunque_no_se_vean(
+        self, escena,
+    ) -> None:
+        """Si no fueran sólidas, revelarlas no serviría de nada."""
+        import pygame as pg
+
+        from src.stages.stage4_1 import trazado
+
+        ts = settings.TILE_SIZE
+        solidos = escena._stage_data.collision_rects
+        for indice in trazado.INDICES_FANTASMA:
+            cx, fila = trazado.losa_extra(indice)
+            esperado = pg.Rect(cx * ts, fila * ts,
+                               trazado.ANCHO_LOSA_EXTRA * ts, ts)
+            assert any(r.colliderect(esperado) for r in solidos), (
+                f"la losa fantasma de la repisa {indice} no tiene colisión"
+            )
+
+    def test_las_losas_fantasma_no_tienen_baldosa(self) -> None:
+        """El punto entero: si el generador las pintara, se verían siempre."""
+        import sys
+        from pathlib import Path
+
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
+        from generate_stage4_1 import VACIO, _terreno
+
+        from src.stages.stage4_1 import trazado
+
+        g = _terreno()
+        for indice in trazado.INDICES_FANTASMA:
+            cx, fila = trazado.losa_extra(indice)
+            fila_pintada = {g[fila][x]
+                            for x in range(cx, cx + trazado.ANCHO_LOSA_EXTRA)}
+            assert fila_pintada == {VACIO}, (
+                f"la losa fantasma de la fila {fila} está pintada: se vería "
+                f"siempre y dejaría de ser fantasma"
+            )
+
+    def test_sin_rayo_ni_vision_no_se_dibujan(self, escena) -> None:
+        from src.stages.stage4_1 import trazado
+
+        cx, fila = trazado.losa_extra(trazado.INDICES_FANTASMA[0])
+        _llevar_a(escena, fila - 3, cx)
+        escena._rayo = 0.0
+        escena._vision = 0.0
+        antes = self._pintar(escena)
+        assert antes == 0, "la losa fantasma se ve sin que nada la revele"
+
+    def test_el_relampago_las_revela(self, escena) -> None:
+        from src.stages.stage4_1 import trazado
+
+        cx, fila = trazado.losa_extra(trazado.INDICES_FANTASMA[0])
+        _llevar_a(escena, fila - 3, cx)
+        escena._rayo = escena.DURACION_DEL_RAYO
+        assert self._pintar(escena) > 0
+
+    def test_la_vision_espectral_tambien(self, escena) -> None:
+        """Las dos linternas del nivel sirven para lo mismo."""
+        from src.stages.stage4_1 import trazado
+
+        cx, fila = trazado.losa_extra(trazado.INDICES_FANTASMA[0])
+        _llevar_a(escena, fila - 3, cx)
+        escena._rayo = 0.0
+        escena._vision = escena.DURACION_DE_LA_VISION
+        assert self._pintar(escena) > 0
+
+    @staticmethod
+    def _pintar(escena) -> int:
+        lienzo = pygame.Surface((800, 600))
+        lienzo.fill((0, 0, 0))
+        escena._dibujar_fantasmas(lienzo, escena._camera.offset)
+
+        return int((pygame.surfarray.array3d(lienzo).sum(axis=2) > 0).sum())
+
+
 class TestElPozoNoEncierraANadie:
     """Un descenso con un sitio del que no se sale es peor que un foso: el foso
     al menos mata y devuelve al checkpoint."""
@@ -703,7 +856,6 @@ class TestLasAntorchasSeVen:
         return lienzo
 
     def _hay_verde(self, lienzo: pygame.Surface) -> bool:
-        import numpy as np
 
         px = pygame.surfarray.array3d(lienzo).astype(int)
         return bool(((px[:, :, 1] > px[:, :, 0] + 30)
@@ -735,7 +887,6 @@ class TestLasAntorchasSeVen:
 
     def test_la_llama_crece_con_el_encendido(self, escena) -> None:
         """Sube en medio segundo en vez de aparecer, y tiene que verse subir."""
-        import numpy as np
 
         self._junto_a_un_brasero(escena)
         for i in range(len(escena._luces)):

@@ -411,6 +411,7 @@ class Stage4_1(StageScene):
         # también encima del HUD, que es el error que ya costó una captura con
         # las grietas.
         self._dibujar_antorchas(surface, offset)
+        self._dibujar_fantasmas(surface, offset)
 
     def _dibujar_luna(self, surface: pygame.Surface, acto: Acto) -> None:
         """El reloj del nivel: baja y crece con el avance.
@@ -560,6 +561,48 @@ class Stage4_1(StageScene):
         if self._rayo <= 0.0:
             return 0.0
         return (self._rayo / self.DURACION_DEL_RAYO) ** 0.5
+
+    # ── Las losas fantasma (AUD-247) ──────────────────────────
+    #: Color de la losa cuando algo la revela. El mismo gris de la piedra, con
+    #: el canto en verde espectral: se lee «esto es suelo» y «esto no es
+    #: normal» a la vez.
+    _COLOR_FANTASMA = (96, 96, 110)
+
+    def _dibujar_fantasmas(self, surface: pygame.Surface,
+                           offset: pygame.Vector2) -> None:
+        """Las losas del acto IV: sólidas siempre, visibles casi nunca.
+
+        Es el §5 del diseño llevado a su conclusión — *«el relámpago revela los
+        peligros del tramo siguiente; el jugador memoriza el tramo con cada
+        rayo»*—. Aquí lo que revela no es un peligro sino **el suelo**, y por eso
+        funciona sin castigar a nadie: un pincho invisible es una trampa, un
+        suelo invisible es una pregunta. ¿Te fías de lo que viste hace tres
+        segundos?
+
+        Se revelan con el rayo y con la visión espectral, las dos linternas que
+        el nivel ya tenía. La visión las deja más nítidas que el rayo porque es
+        la que cuesta usar: mirar tiene premio.
+        """
+        revelado = max(
+            self._rayo / self.DURACION_DEL_RAYO if self._rayo > 0.0 else 0.0,
+            1.0 if self.vision_activa else 0.0,
+        )
+        if revelado <= 0.0:
+            return
+        ts = settings.TILE_SIZE
+        pantalla = surface.get_rect()
+        alfa = int(230 * revelado)
+        for indice in trazado.INDICES_FANTASMA:
+            cx, fila = trazado.losa_extra(indice)
+            r = pygame.Rect(cx * ts - int(offset.x), fila * ts - int(offset.y),
+                            trazado.ANCHO_LOSA_EXTRA * ts, ts)
+            if not pantalla.colliderect(r):
+                continue
+            losa = pygame.Surface(r.size, pygame.SRCALPHA)
+            losa.fill((*self._COLOR_FANTASMA, alfa))
+            pygame.draw.line(losa, (*siluetas.VERDE_ESPECTRAL, alfa),
+                             (0, 0), (r.width - 1, 0))
+            surface.blit(losa, r.topleft)
 
     # ── Las antorchas, que ahora se ven (AUD-246) ─────────────
     #

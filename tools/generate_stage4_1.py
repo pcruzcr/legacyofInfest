@@ -76,17 +76,25 @@ if str(PROJECT_ROOT) not in sys.path:
 # listas, la huella de la visión espectral acabó flotando sobre el vacío.
 from src.stages.stage4_1.trazado import (  # noqa: E402
     ALTO_ACTO,
+    ANCHO_LOSA_EXTRA,
     ARRASTRE_DEL_MUSGO,
+    DESFASE_RITMICO,
     EPITAFIOS,
     FRENO_DEL_LODO,
+    GOLPES_DE_LA_LOSA,
     GROSOR_REPISA,
+    INDICES_FANTASMA,
+    INDICES_RITMICAS,
+    INDICES_ROMPIBLES,
     MH,
     MURO_ANCHO,
     MW,
+    PATRON_RITMICO,
     SUELO_FINAL,
     TS,
     braseros,
     checkpoints,
+    losa_extra,
     repisas,
     superficies,
 )
@@ -205,6 +213,12 @@ def _colisiones() -> list[str]:
     for x0, ancho, fila in repisas():
         solido(x0 * TS, fila * TS, ancho * TS, GROSOR_REPISA * TS)
 
+    # Las losas fantasma del acto IV: sólidas y sin baldosa que las pinte. Se
+    # ven sólo con el relámpago o con la visión espectral (AUD-247).
+    for indice in INDICES_FANTASMA:
+        cx, fila = losa_extra(indice)
+        solido(cx * TS, fila * TS, ANCHO_LOSA_EXTRA * TS, TS)
+
     # El suelo del umbral.
     solido(MURO_ANCHO * TS, SUELO_FINAL * TS,
            (MW - 2 * MURO_ANCHO) * TS, (MH - SUELO_FINAL) * TS)
@@ -315,6 +329,31 @@ def _objetos() -> list[str]:
         obj("MessageTrigger_Once", (x0 + ancho // 3) * TS, (fila - 3) * TS,
             2 * TS, 3 * TS, text=texto)
 
+    # ── Lo que hace que el pozo dé miedo (AUD-247) ────────────
+    #
+    # Tres ideas, una por acto, y ninguna hace daño. Todas van en el hueco de su
+    # repisa y ninguna lo tapa entero: siempre se puede bajar por al lado.
+
+    # Acto II — losas de tumba que se rompen a golpes. El motor las pinta con
+    # grietas que cuentan lo que queda, así que golpear da señal de avance.
+    for indice in INDICES_ROMPIBLES:
+        cx, fila = losa_extra(indice)
+        obj("BreakableBlock", cx * TS, fila * TS, ANCHO_LOSA_EXTRA * TS, TS,
+            golpes=GOLPES_DE_LA_LOSA)
+
+    # Acto III — el tramo musical. `patron` manda sobre los segundos, y con
+    # `bpm = 60` un pulso es un segundo: los cuatro del patrón son un acorde
+    # entero del órgano, así que la losa entra y sale **con la música**.
+    for orden, indice in enumerate(INDICES_RITMICAS):
+        cx, fila = losa_extra(indice)
+        obj("RhythmBlock", cx * TS, fila * TS, ANCHO_LOSA_EXTRA * TS, TS,
+            patron=PATRON_RITMICO,
+            desfase=orden * DESFASE_RITMICO)
+
+    # Acto IV — las losas fantasma. Sólidas y **sin baldosa**: no se ven hasta
+    # que un relámpago las enseña o la visión espectral las revela. La colisión
+    # va en `_colisiones()`; aquí no hay nada que poner, y ése es el punto.
+
     # ── Acto V — El Umbral ────────────────────────────────────
     #
     # La lápida central. No lleva nombre: lleva la inscripción del diseño (§7).
@@ -352,6 +391,12 @@ tileheight="{TS}" infinite="0" nextlayerid="20" nextobjectid="900">
   <property name="background_zone" value="final"/>
   <!-- El clima ARRANCA en niebla y lo cambia la escena por acto: fog al
        principio, storm en el acto IV, clear en el umbral. -->
+  <!-- AUD-247: el compás del nivel. Sin `bpm` no hay reloj musical y el
+       `patron` de los bloques rítmicos no se puede seguir (AUD-137). 60 pulsos
+       por minuto es un pulso por segundo, y cuatro pulsos son los cuatro
+       segundos que dura cada acorde del órgano: las losas del acto III entran y
+       salen con la música que suena, no con un temporizador que coincide. -->
+  <property name="bpm" type="float" value="60"/>
   <property name="climate" value="fog"/>
   <!-- Partículas verdes: `spores` es el único efecto del motor que sale en
        verde (150,255,130), y es exactamente la «luz espectral verde» que el

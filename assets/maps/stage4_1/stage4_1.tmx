@@ -12,6 +12,12 @@
   <property name="background_zone" value="final"/>
   <!-- El clima ARRANCA en niebla y lo cambia la escena por acto: fog al
        principio, storm en el acto IV, clear en el umbral. -->
+  <!-- AUD-247: el compás del nivel. Sin `bpm` no hay reloj musical y el
+       `patron` de los bloques rítmicos no se puede seguir (AUD-137). 60 pulsos
+       por minuto es un pulso por segundo, y cuatro pulsos son los cuatro
+       segundos que dura cada acorde del órgano: las losas del acto III entran y
+       salen con la música que suena, no con un temporizador que coincide. -->
+  <property name="bpm" type="float" value="60"/>
   <property name="climate" value="fog"/>
   <!-- Partículas verdes: `spores` es el único efecto del motor que sale en
        verde (150,255,130), y es exactamente la «luz espectral verde» que el
@@ -104,7 +110,11 @@
   <object id="45" type="Solid" x="320" y="3440" width="608" height="16"/>
   <object id="46" type="Solid" x="32" y="3520" width="624" height="16"/>
   <object id="47" type="Solid" x="320" y="3600" width="608" height="16"/>
-  <object id="48" type="Solid" x="32" y="3680" width="896" height="160"/>
+  <object id="48" type="Solid" x="144" y="2480" width="64" height="16"/>
+  <object id="49" type="Solid" x="144" y="2640" width="64" height="16"/>
+  <object id="50" type="Solid" x="144" y="2800" width="64" height="16"/>
+  <object id="51" type="Solid" x="144" y="2960" width="64" height="16"/>
+  <object id="52" type="Solid" x="32" y="3680" width="896" height="160"/>
  </objectgroup>
  <objectgroup id="8" name="Objects">
   <object id="101" name="PlayerSpawn_101" type="PlayerSpawn" x="80" y="112" width="16" height="32">
@@ -391,12 +401,57 @@
     <property name="text" value="[NOMBRE] — Reconocimiento de Patrones, 2026"/>
    </properties>
   </object>
-  <object id="146" name="MessageTrigger_Once_146" type="MessageTrigger_Once" x="384" y="3600" width="32" height="80">
+  <object id="146" name="BreakableBlock_146" type="BreakableBlock" x="752" y="960" width="64" height="16">
+   <properties>
+    <property name="golpes" type="int" value="2"/>
+   </properties>
+  </object>
+  <object id="147" name="BreakableBlock_147" type="BreakableBlock" x="144" y="1200" width="64" height="16">
+   <properties>
+    <property name="golpes" type="int" value="2"/>
+   </properties>
+  </object>
+  <object id="148" name="BreakableBlock_148" type="BreakableBlock" x="752" y="1440" width="64" height="16">
+   <properties>
+    <property name="golpes" type="int" value="2"/>
+   </properties>
+  </object>
+  <object id="149" name="RhythmBlock_149" type="RhythmBlock" x="752" y="1600" width="64" height="16">
+   <properties>
+    <property name="patron" value="x..."/>
+    <property name="desfase" type="float" value="0.0"/>
+   </properties>
+  </object>
+  <object id="150" name="RhythmBlock_150" type="RhythmBlock" x="752" y="1760" width="64" height="16">
+   <properties>
+    <property name="patron" value="x..."/>
+    <property name="desfase" type="float" value="1.0"/>
+   </properties>
+  </object>
+  <object id="151" name="RhythmBlock_151" type="RhythmBlock" x="752" y="1920" width="64" height="16">
+   <properties>
+    <property name="patron" value="x..."/>
+    <property name="desfase" type="float" value="2.0"/>
+   </properties>
+  </object>
+  <object id="152" name="RhythmBlock_152" type="RhythmBlock" x="752" y="2080" width="64" height="16">
+   <properties>
+    <property name="patron" value="x..."/>
+    <property name="desfase" type="float" value="3.0"/>
+   </properties>
+  </object>
+  <object id="153" name="RhythmBlock_153" type="RhythmBlock" x="752" y="2240" width="64" height="16">
+   <properties>
+    <property name="patron" value="x..."/>
+    <property name="desfase" type="float" value="4.0"/>
+   </properties>
+  </object>
+  <object id="154" name="MessageTrigger_Once_154" type="MessageTrigger_Once" x="384" y="3600" width="32" height="80">
    <properties>
     <property name="text" value="LA PRUEBA"/>
    </properties>
   </object>
-  <object id="147" name="NextTrigger_147" type="NextTrigger" x="864" y="3632" width="32" height="48">
+  <object id="155" name="NextTrigger_155" type="NextTrigger" x="864" y="3632" width="32" height="48">
   </object>
  </objectgroup>
  <layer id="9" name="FG_Overlay" width="60" height="240">
