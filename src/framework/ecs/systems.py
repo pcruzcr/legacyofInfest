@@ -203,7 +203,11 @@ def sistema_bloques_ritmicos(mundo: World, dt: float) -> None:
         # minutos van medio compás desfasados: es la razón por la que hasta
         # ahora no se podía hacer un nivel rítmico de verdad.
         if bloque.sigue_la_musica and reloj is not None:
-            presente = reloj.presente_en_patron(bloque.patron)
+            # AUD-250: el `desfase` se pasa también aquí. Antes sólo contaba en
+            # el modo por segundos, así que escribir un `patron` hacía que todos
+            # los bloques con el mismo ritmo entraran y salieran a la vez — un
+            # semáforo en lugar de un ritmo.
+            presente = reloj.presente_en_patron(bloque.patron, bloque.desfase)
         else:
             presente = bloque.presente
         tiene = mundo.tiene(entidad, Solido)
