@@ -28,7 +28,7 @@ date_processed: "2026-07-31"
 1. [El bucle: qué pasa en un fotograma](#1)
 2. [Anatomía de un escenario TMX](#2)
 3. [Propiedades del mapa — las 17](#3)
-4. [Los 73 tipos de objeto, uno por uno](#4)
+4. [Los 74 tipos de objeto, uno por uno](#4)
 5. [El jugador: 26 estados y qué los provoca](#5)
 6. [Enemigos: 37 tipos y 13 estados](#6)
 7. [Jefes](#7)
@@ -215,9 +215,9 @@ efecto, mira la consola antes que el código.
 ---
 
 <a id="4"></a>
-## 4. Los 73 tipos de objeto, uno por uno
+## 4. Los 74 tipos de objeto, uno por uno
 
-El motor acepta **73 tipos** en la capa `Objects`: 34 integrados del framework
+El motor acepta **74 tipos** en la capa `Objects`: 35 integrados del framework
 y 37 enemigos del registro, más `Solid` y `Platform` en `Collision`. Todos los
 números se convierten a `float` automáticamente.
 
@@ -474,6 +474,26 @@ dibujada como punto también: una puerta sin área no bloquea nada.
 El `Stalker` es **invulnerable a propósito**: no se resuelve peleando. Si tu
 nivel no ofrece una salida —un escondite, una puerta, un tramo de carrera—, no
 es tensión, es un callejón.
+
+**`ScrollZone` — la persecución (AUD-249).** SMB3 Airship, Cuphead, Ori, la
+Wall of Flesh. Su rectángulo es el **disparador, no la zona de muerte**: el
+jugador lo pisa una vez y a partir de ahí manda la cámara. Quien mata es el
+borde izquierdo de la pantalla.
+
+| Type | Propiedad | Por defecto | Qué hace |
+|---|---|---|---|
+| `ScrollZone` | `velocidad_x` | `40` | px/s. Negativo = hacia la izquierda |
+| | `velocidad_y` | `0` | px/s vertical, para una subida tipo Ori |
+| | `margen_de_gracia` | `24` | px que se puede rebasar el borde antes de morir |
+| | `parar_en_x` | — | la cámara se detiene ahí; sin ella, hasta el final |
+
+El borde **mata** en vez de empujar, y es deliberado: empujar deja al jugador
+aplastado contra la geometría o atascado en un saliente mientras la cámara
+sigue. Matar es honesto —el nivel dijo «sígueme» y no lo seguiste— y el
+reintento es inmediato si has puesto checkpoints. Ponlos.
+
+El `margen_de_gracia` existe porque sin él la muerte ocurre cuando el sprite
+aún se ve, y eso se lee como injusticia aunque sea correcto.
 
 ### 4.9 Auxiliares
 
