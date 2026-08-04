@@ -113,7 +113,10 @@ class Bestiary:
         anotaba en ninguna parte y no había forma de enterarse. Un bestiario
         que descarta lo que no conoce es un bestiario que nunca crece.
         """
-        entrada = self._entries.get(enemy_id)
+        # AUD-245: por el accesor público, que hace exactamente esto. Eran dos
+        # formas de la misma consulta conviviendo en la misma clase, y la
+        # pública no la llamaba nadie.
+        entrada = self.get_entry(enemy_id)
         if entrada is None:
             from src.framework.entities import bestiary_registry
 

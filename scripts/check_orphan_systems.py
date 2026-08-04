@@ -124,6 +124,25 @@ VERIFICADOS: dict[str, str] = {
     "record": "lo llama `GhostData.grabar` en speedrun_mode.py:197",
     "escenarios_de_jefe": "lo llama `empezar_boss_rush` en el mismo fichero",
     "mejores_tiempos": "lo llama `LeaderboardScene.on_enter` en el mismo fichero",
+    # Éstos cuatro no lo estaban: los llamaba nadie y al lado había una copia
+    # de su lógica. AUD-245 los conectó haciendo que el duplicado delegue.
+    "ajustar_bus": "lo llaman `set_music_volume` y `set_sfx_volume`, que antes lo reimplementaban",
+    "get_entry": "lo llama `_asegurar`, que hacía la misma consulta a mano",
+    "get_frame": "lo llama `posicion_en`, que indexaba la lista de fotogramas a mano",
+    "get_splits": "lo llama `save`, que volcaba la lista viva en vez de una copia",
+
+    # ── API publicada a los autores de escenarios (AUD-245) ──
+    #
+    # Punto ciego estructural del barrido, no de estos símbolos: `src/stages/`
+    # queda fuera de ORIGENES y de CONSUMIDORES por la invariante 1 de
+    # CLAUDE.md, así que **toda API que el motor publica para que la use un
+    # escenario aparecerá siempre como huérfana**. El motor no la llama porque
+    # no le toca llamarla.
+    #
+    # El criterio para entrar aquí es verificable y estrecho: que un documento
+    # de la especificación la publique en su tabla de API. No vale «alguien
+    # podría usarla».
+    "reveal_all": "docs/46 §API la publica para que un escenario revele zonas en lote",
 }
 
 #: Huérfanos **reales**, verificados y ya anotados donde toca. Están aquí para
@@ -131,12 +150,7 @@ VERIFICADOS: dict[str, str] = {
 #: lleva el GAP que lo sigue. La diferencia con `VERIFICADOS` importa —aquéllos
 #: no son defectos; éstos sí, y esperan una decisión de diseño.
 PENDIENTES: dict[str, str] = {
-    "get_frame": "GAP-031: accesor de fotograma del fantasma; lo sustituyó `posicion_en`",
-    "get_splits": "GAP-031: nadie consulta los parciales; la tabla lee el fichero",
-    "reveal_all": "GAP-031: alta por lotes de la niebla; ningún escenario la usa",
-    "get_entry": "GAP-031: accesor del bestiario; la pantalla itera el catálogo",
-    "ajustar_bus": "GAP-031: el bus de ambiente no tiene control en Opciones",
-    "play_voz": "GAP-031: bus de voz sin contenido de voz",
+    "play_voz": "GAP-031: el motor sabe reproducir voz y no hay un solo fichero de voz",
     # `achievements.py` lo está reescribiendo otra sesión (logros por
     # estudiante). No se juzga aquí: se mirará cuando aquello asiente.
     "AchievementDef": "en obras: logros por estudiante, sesión paralela",

@@ -651,44 +651,6 @@ Nunca borrar entradas - marcar como resueltas.
   conecta el arrastre o la puntuación, para que la spec se actualice en el mismo
   cambio.
 
-## [GAP-031] Ocho símbolos sueltos en módulos que la documentación da por entregados
-
-- **File:** `src/framework/ui/dialogue_system.py`, `src/framework/vfx/water_effect.py`,
-  `src/framework/vfx/fog_of_war.py`, `src/framework/stage/speedrun_mode.py`,
-  `src/framework/entities/bestiary.py`, `src/engine/audio/audio_manager.py`
-- **Phase:** auditoría 2026-08-03, AUD-233
-- **Reason:** Barrido de alcanzabilidad (`scripts/check_orphan_systems.py`)
-  sobre los símbolos que **las pruebas ejercitan y el juego no invoca**, cruzado
-  con los documentos que declaran su módulo terminado. De 181 candidatos, 16
-  resultaron no ser defectos y éstos ocho sí lo son:
-
-  | Símbolo | Qué falta | Coste |
-  |---|---|---|
-  | `dialogue_system.desde_datos` | Escribe árboles de diálogo en JSON (AUD-127 la creó para que un diseñador no programador pudiera). No hay cargador ni un solo fichero de datos, y **ningún TMX declara `dialogue_tree`** | Cargador + convención de ruta |
-  | `water_effect.set_params` | `docs/47` dice «all adjustable via `set_params()`». `StageScene` crea `WaterEffect()` con los valores por defecto y nunca la llama: **toda el agua del juego es idéntica** | 5 campos en `StageData` + parseo TMX + `06_TMX_SPEC` + regenerar la referencia |
-  | `fog_of_war.reveal_all` | Alta por lotes de zonas reveladas. Ningún escenario la usa | Decidir qué la dispararía |
-  | `speedrun_mode.get_frame` | Accesor de fotograma del fantasma, sustituido por `posicion_en` | Retirarlo o documentarlo como API pública |
-  | `speedrun_mode.get_splits` | Nadie consulta los parciales; la tabla lee el fichero | Ídem |
-  | `bestiary.get_entry` | La pantalla itera el catálogo entero en vez de pedir una ficha | Conveniencia; bajo impacto |
-  | `audio_manager.ajustar_bus` | El bus de ambiente no tiene control en Opciones: música y efectos sí, ambiente no | Un deslizador más |
-  | `audio_manager.play_voz` | Bus de voz sin contenido de voz | Requiere assets |
-
-  De los ocho, **el único con efecto visible hoy es el agua**: `docs/47`
-  documenta cinco parámetros —velocidad, amplitud, frecuencia, alfa y tinte— que
-  ningún mapa puede fijar. No se corrigió aquí porque la cadena toca el esquema
-  TMX, su documento y el generador de la referencia, y dos de esos ficheros los
-  está editando otra sesión.
-
-  `achievements.py` salió también en el barrido (`AchievementDef`,
-  `AchievementProgress`, `init_instance`) y **no se juzga**: otra sesión lo está
-  reescribiendo para los logros por estudiante. Se mirará cuando asiente.
-- **Verificado:** `scripts/check_orphan_systems.py --ci` y
-  `tests/test_sistemas_huerfanos.py`. Los ocho están en `PENDIENTES` con su
-  motivo, así que la puerta pasa; lo que no esté en ninguna de las dos listas la
-  hace fallar.
-
----
-
 ## [GAP-032] Cinco mecánicas de F5 están escritas, documentadas «en código» y nadie las invoca
 
 - **File:** `src/framework/stage/level_mechanics.py`, `src/framework/ecs/bullet_swarm.py`, `src/framework/entities/boss_base.py`
@@ -737,3 +699,42 @@ Nunca borrar entradas - marcar como resueltas.
 
   Mientras tanto, **`56_FASE_5_ECS_Y_MECANICAS.md` miente** y esa es la parte
   que sí es urgente: o se cablean, o el documento deja de decir «y en código».
+
+## [GAP-031] El motor sabe reproducir voz y no hay un solo fichero de voz
+
+- **File:** `src/engine/audio/audio_manager.py`
+- **Phase:** auditoría 2026-08-03, AUD-233 → AUD-245
+- **Reason:** De los ocho huérfanos que este GAP abrió, **siete están cerrados**.
+  Queda `play_voz`, y queda por un motivo distinto a los demás: no le falta un
+  llamador, le falta contenido. Reproduce una línea de voz y aparta la música
+  por su cuenta —para eso existe, para que nadie olvide el *ducking*—, y no hay
+  un solo fichero de voz en `assets/`.
+
+  Se deja sin conectar a propósito. Inventarle un llamador sería cableado
+  falso, que es exactamente el defecto que esta tanda vino a corregir: el
+  problema nunca fue que faltaran llamadas, sino que la documentación afirmara
+  cosas que el juego no hacía.
+
+  | Huérfano | Cómo se cerró |
+  |---|---|
+  | `water_effect.set_params` | AUD-240: los cinco mandos se declaran en el mapa |
+  | `dialogue_system.desde_datos` | AUD-244: los árboles salen de `data/dialogues/<stage_id>.json` |
+  | `audio_manager.ajustar_bus` | AUD-245: `set_music_volume` y `set_sfx_volume` delegan en él |
+  | `bestiary.get_entry` | AUD-245: `_asegurar` consulta por el accesor |
+  | `speedrun_mode.get_frame` | AUD-245: `posicion_en` lee por él |
+  | `speedrun_mode.get_splits` | AUD-245: `save` guarda por él — y guardaba la lista **viva** |
+  | `fog_of_war.reveal_all` | AUD-245: no era un defecto. `docs/46` la publica como API para autores de escenarios, y `src/stages/` está fuera del barrido por la invariante 1 |
+
+  Los tres símbolos de `achievements.py` que este GAP listaba salen de aquí sin
+  veredicto: otra sesión estaba reescribiendo el módulo para los logros por
+  estudiante y juzgarlo a mitad no habría medido nada.
+
+  Lo que enseñó cerrarlos: **cuatro de los siete no necesitaban integración
+  sino deduplicación**. La lógica ya se ejecutaba; lo que pasaba es que estaba
+  escrita dos veces, y la copia pública era la que no llamaba nadie. En
+  `get_splits` esa segunda copia además era peor que la buena: `save` volcaba la
+  lista viva de parciales en el diccionario que se serializa.
+- **Verificado:** `scripts/check_orphan_systems.py --ci` sale en verde sin
+  ninguna entrada en la puerta. `tests/test_apis_que_nadie_llamaba.py` fija las
+  cuatro delegaciones —cinco de sus nueve pruebas fallan sin ellas— y
+  `tests/test_sistemas_huerfanos.py` vigila que no aparezcan nuevos.
