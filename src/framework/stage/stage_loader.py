@@ -77,6 +77,7 @@ _TIPOS_DE_COMPONENTE: frozenset[str] = frozenset({
 
 if TYPE_CHECKING:
     from src.framework.stage.checkpoint import Checkpoint
+    from src.framework.stage.level_mechanics import ScrollForzado
 
 
 @dataclass
@@ -290,6 +291,12 @@ class StageData:
     cerraduras: list[Cerradura] = field(default_factory=list)
     cofres: list[Cofre] = field(default_factory=list)
     disparadores: list[Disparador] = field(default_factory=list)
+    #: AUD-249 — scroll forzado declarado desde Tiled con `ScrollZone`.
+    #:
+    #: No es un componente ECS: `ScrollForzado` mueve la **cámara**, no una
+    #: entidad, y los sistemas del ECS trabajan sobre entidades. Va aquí, junto
+    #: al resto de lo que el mapa declara y la escena consume.
+    scroll_forzados: list[ScrollForzado] = field(default_factory=list)
     #: F5.3–F5.6 — componentes ECS declarados desde el TMX.
     #:
     #: Se guardan como una lista de componentes sueltos y no como una lista por
@@ -578,6 +585,7 @@ class StageLoader:
                 stage.message_triggers.clear()
                 stage.hazard_zones.clear()
                 stage.death_pits.clear()
+                stage.scroll_forzados.clear()
                 stage.escenas.clear()
                 stage.empujables.clear()
                 stage.destructibles.clear()
@@ -932,6 +940,9 @@ class StageLoader:
             elif obj_type == "EventTrigger":
                 cls._handle_disparador(stage, obj, props)
 
+            elif obj_type == "ScrollZone":
+                cls._handle_scroll_forzado(stage, obj, props)
+
             # F5.3–F5.6 — mecánicas del Top 200 declaradas desde Tiled.
             elif obj_type in _TIPOS_DE_COMPONENTE:
                 cls._handle_componente(stage, obj, props, obj_type)
@@ -1180,6 +1191,39 @@ class StageLoader:
             automatico=cls._bool_de(props.get("automatico"), por_defecto=True),
             una_vez=cls._bool_de(props.get("una_vez"), por_defecto=True),
             key_id=str(props.get("key_id", "")),
+        ))
+
+    @classmethod
+    def _handle_scroll_forzado(
+        cls, stage: StageData, obj: Any, props: dict[str, Any],
+    ) -> None:
+        """`ScrollZone` — la cámara arranca sola al pisar el rectángulo (AUD-249).
+
+        El rectángulo del objeto es el **disparador**, no la zona de muerte: se
+        pisa una vez y a partir de ahí manda la cámara. Quien mata es el borde
+        izquierdo de la pantalla, con `margen_de_gracia` píxeles de cortesía
+        para que la muerte no ocurra mientras el sprite aún se ve.
+
+        Propiedades, todas opcionales:
+
+        * `velocidad_x` / `velocidad_y` — px/s. Por defecto 40 hacia la derecha.
+        * `margen_de_gracia` — px que se puede rebasar el borde. Por defecto 24.
+        * `parar_en_x` — la cámara se detiene ahí. Sin ella, hasta el final.
+        """
+        from src.framework.stage.level_mechanics import ScrollForzado
+
+        def f(clave: str, defecto: float) -> float:
+            return cls._safe_float(props.get(clave, defecto), f"ScrollZone.{clave}")
+
+        parar = props.get("parar_en_x")
+        stage.scroll_forzados.append(ScrollForzado(
+            velocidad=pygame.Vector2(f("velocidad_x", 40.0), f("velocidad_y", 0.0)),
+            margen_de_gracia=f("margen_de_gracia", 24.0),
+            parar_en_x=(
+                cls._safe_float(parar, "ScrollZone.parar_en_x")
+                if parar is not None else None
+            ),
+            disparador=cls._rect_de(obj),
         ))
 
     @staticmethod

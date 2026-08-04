@@ -1605,7 +1605,9 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
         if self._fantasma is not None and self._player is not None:
             self._fantasma.grabar_si_toca(
                 dt, self._player.position.x, self._player.position.y)
-        self._hazards.update(dt, self._player, self._stage_data)
+        # AUD-249: la cámara viaja al sistema de peligros porque el borde que
+        # mata en un `ScrollZone` se mueve con ella.
+        self._hazards.update(dt, self._player, self._stage_data, self._camera)
         self._tutorial.update(dt, self.input)
         self._particle_system.update(dt)
         self._damage_numbers.update(dt)

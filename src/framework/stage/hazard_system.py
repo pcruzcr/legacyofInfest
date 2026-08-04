@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+import pygame
 
 from src.engine.core.events import Events
 from src.engine.scenes.game_over_scene import GameOverScene
@@ -46,8 +48,34 @@ class HazardSystem:
                 arrancadas += 1
         return arrancadas
 
+    def _mover_el_scroll_forzado(
+        self, dt: float, trigger_rect: pygame.Rect, stage: StageData, camara: Any,
+    ) -> None:
+        """El scroll forzado de `ScrollZone`: arranca, empuja y mata (AUD-249).
+
+        Vive aquí porque es una zona que mata, como `DeathPit`, y este sistema
+        ya tiene el jugador, el escenario y `_kill_player()`. La diferencia es
+        que el borde que mata **se mueve**, así que hace falta la cámara.
+
+        Sin cámara no se hace nada en vez de fallar: un escenario de estudiante
+        que llame a este `update()` con la firma antigua sigue funcionando y
+        sólo se queda sin la mecánica que no estaba usando.
+        """
+        if camara is None:
+            return
+        for scroll in stage.scroll_forzados:
+            if not scroll.activo:
+                if scroll.disparador is not None and trigger_rect.colliderect(
+                    scroll.disparador,
+                ):
+                    scroll.arrancar(camara)
+                continue
+            scroll.update(dt, camara)
+            if scroll.se_quedo_atras(trigger_rect, camara):
+                self._kill_player()
+
     def update(
-        self, dt: float, player: Player, stage: StageData,
+        self, dt: float, player: Player, stage: StageData, camara: Any = None,
     ) -> None:
         # El agua sube aunque el jugador esté muriendo: si se congelara durante
         # los 0,3 s de la muerte, la altura dependería de cuántas veces se ha
@@ -95,6 +123,8 @@ class HazardSystem:
         for dp in stage.death_pits:
             if trigger_rect.colliderect(dp.rect):
                 self._kill_player()
+
+        self._mover_el_scroll_forzado(dt, trigger_rect, stage, camara)
 
     def _subir_las_inundaciones(self, dt: float, stage: StageData) -> None:
         for hz in stage.hazard_zones:
