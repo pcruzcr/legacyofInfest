@@ -75,6 +75,9 @@ class TitleScene(BaseScene):
             MenuItem("TUTORIAL", value="TUTORIAL"),
             MenuItem("WORLD MAP", value="WORLD MAP"),
             MenuItem("INVENTORY", value="INVENTORY"),
+            # AUD-221: la tienda va pegada al inventario porque son las dos
+            # mitades de lo mismo — aquí se compra la ropa y allí se pone.
+            MenuItem("SHOP", value="SHOP"),
             MenuItem("BESTIARY", value="BESTIARY"),
             MenuItem("ACHIEVEMENTS", value="ACHIEVEMENTS"),
             MenuItem("BOSS RUSH", value="BOSS RUSH"),
@@ -208,6 +211,10 @@ class TitleScene(BaseScene):
             from src.engine.scenes.inventory_scene import InventoryScene
             self.context.scene_manager.transition.start_fade_out(0.4)
             self.context.scene_manager.replace(InventoryScene(self.context))
+        elif opt == "SHOP":
+            from src.engine.scenes.shop_scene import ShopScene
+            self.context.scene_manager.transition.start_fade_out(0.4)
+            self.context.scene_manager.replace(ShopScene(self.context))
         elif opt == "BESTIARY":
             from src.engine.scenes.bestiary_scene import BestiaryScene
             self.context.scene_manager.transition.start_fade_out(0.4)

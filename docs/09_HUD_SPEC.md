@@ -64,6 +64,7 @@ The HUD occupies fixed regions of the 320×224 internal screen. All coordinates 
 | Portrait frame | 2 | 16 | 34 | 34 | Shifted down to accommodate message box |
 | Portrait sprite | 3 | 17 | 32 | 32 | Inner sprite |
 | Heart row | 38 | 20 | 76 | 8 | Five hearts at 14px each + 2px gap |
+| Score | 124 | 2 | 128 | 14 | Points and coin balance, right-aligned (AUD-219) |
 | Timer box | 262 | 16 | 56 | 12 | Right-aligned |
 | Timer digits | 264 | 24 | — | — | Format: `M:SS` |
 | Stage banner | 0 | 88 | 320 | 48 | Center screen, slide-in |

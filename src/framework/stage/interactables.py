@@ -62,6 +62,11 @@ class Recogible:
     automatico: bool = True
     #: Texto que se muestra al recogerlo. Vacío = el motor compone uno.
     mensaje: str = ""
+    #: Cuántas unidades entrega (AUD-218). Con `1` —lo de siempre— nada cambia
+    #: para las entregas existentes. Sirve para una bolsa de monedas sin tener
+    #: que poner veinte objetos en el suelo, que es como suelta el botín un
+    #: enemigo al morir.
+    cantidad: int = 1
     recogido: bool = False
 
 

@@ -21,8 +21,11 @@ import random
 from collections.abc import Callable
 from typing import Any
 
+import pygame
+
 from src.engine.core import settings
 from src.engine.core.events import Events
+from src.framework.stage.interactable_system import EVENTO_RECOGIDO
 from src.framework.vfx.hit_effects import HitEffects
 
 
@@ -30,15 +33,98 @@ class SenalesDeEscenario:
     """Suscripción, baja y reproducción de sonido de la escena.
 
     Espera de la escena: `context.event_bus`, `_particle_system`,
-    `_damage_numbers`, `_camera`, `_post_processing`, `_player`, `audio`,
-    `_vfx_handlers` y `_sfx_handlers`.
+    `_damage_numbers`, `_camera`, `_post_processing`, `_player`, audio,
+    `_interactables`, `_vfx_handlers` y `_sfx_handlers`.
     """
 
+    #: Lado del recogible de monedas, en píxeles. Del tamaño de una baldosa
+    #: para que se vea y se coja al pasar sin tener que buscarlo.
+    _BOTIN_TAM: int = 16
+
+    def _soltar_botin(self, entity_id: str, pos: Any, skill: str = "") -> None:
+        """Deja el botín donde murió el enemigo: monedas y, si lo declara, su
+        habilidad (AUD-218, AUD-238).
+
+        La cantidad de monedas la decide `score_system.coins_for()`, que es
+        donde vive la tabla por tipo — la misma lectura de `entity_id` que usa
+        la puntuación, para no tener dos formas de decir «esto es un jefe».
+        """
+        interactables = getattr(self, "_interactables", None)
+        if interactables is None:
+            return
+        from src.engine.core.score_system import coins_for
+        from src.framework.stage.interactables import Recogible
+
+        lado = self._BOTIN_TAM
+        cx = int(float(pos[0]))
+        cy = int(float(pos[1]))
+        interactables.soltar_botin(entity_id, Recogible(
+            rect=pygame.Rect(cx - lado // 2, cy - lado // 2, lado, lado),
+            item_id="coin",
+            automatico=True,
+            cantidad=coins_for(entity_id),
+        ))
+        if skill:
+            # AUD-238: la reliquia del jefe, **además** de las monedas y no en
+            # su lugar. Se deja un poco a la derecha para que no quede
+            # exactamente debajo de ellas y se vean las dos.
+            #
+            # Se descarta lo que no está en el catálogo: un jefe de una entrega
+            # con `skill_drop = "skill_volar"` dejaría en el suelo algo que
+            # `collect()` rechaza, y el jugador lo cogería sin que pasara nada.
+            from src.engine.core.inventory import get_inventory
+            if get_inventory().get_def(skill) is not None:
+                interactables.recogibles.append(Recogible(
+                    rect=pygame.Rect(cx + lado, cy - lado // 2, lado, lado),
+                    item_id=skill,
+                    automatico=True,
+                ))
+
     def _subscribe_event_handlers(self) -> None:
+        # GAP-020 — recogibles que nunca llegaban al inventario.
+        #
+        # `InteractableSystem._recoger()` guardaba el objeto en el llavero y
+        # emitía `EVENTO_RECOGIDO`, pero nadie escuchaba ese evento. Un
+        # `Recogible` con `item_id="heart_vessel"` o `"swift_feather"` —objetos
+        # que `Recogible` documenta como «si coincide con un objeto de
+        # `engine.core.inventory` se aplica su efecto»— se recogía, mostraba el
+        # aviso, y la mejora permanente se perdía en silencio: el inventario
+        # (que persiste a JSON) nunca recibía la llamada a `collect()`.
+        #
+        # Aquí se cierra el circuito: quien escuche la recolección decide si el
+        # objeto es una mejora permanente o una llave del escenario.
+        def _on_item_picked(**data: Any) -> None:
+            item_id = str(data.get("item_id", ""))
+            if not item_id:
+                return
+            cantidad = int(data.get("cantidad", 1))
+            from src.engine.core.inventory import get_inventory
+            if get_inventory().collect(item_id, cantidad):
+                # El recogible era una mejora permanente del inventario; el
+                # llavero no la necesita como llave.
+                self._interactables.llavero.gastar(item_id)
+
+        self.context.event_bus.subscribe(EVENTO_RECOGIDO, _on_item_picked)
+        self._vfx_handlers[EVENTO_RECOGIDO] = _on_item_picked
+
         def _on_enemy_died(**data: Any) -> None:
             pos = data.get("position", (0, 0))
             self._particle_system.get_emitter("death").emit(
                 float(pos[0]), float(pos[1]), HitEffects.DEATH,
+            )
+            # GAP-029 / AUD-218 — el botín que faltaba.
+            #
+            # La economía tenía catálogo y API (`coin`, `buy`, `sell`) y ningún
+            # sitio donde ganar una moneda: este manejador sólo lanzaba
+            # partículas. Sin esto, el saldo del jugador no puede subir jugando
+            # y la única forma de comprar era editar `data/inventory.json`.
+            #
+            # Se suelta **un** recogible con la cantidad dentro, no N monedas:
+            # veinte objetos en el suelo por un jefe cuestan colisiones cada
+            # fotograma y tapan el sitio donde murió.
+            self._soltar_botin(
+                str(data.get("entity_id", "")), pos,
+                str(data.get("skill_drop", "")),
             )
 
         def _on_hit_connect(**data: Any) -> None:
@@ -66,6 +152,16 @@ class SenalesDeEscenario:
             self._post_processing.flash((255, 50, 50), alpha=180, duration=0.15)
             health_pct = self._player.current_health / max(settings.PLAYER_MAX_HEALTH, 1)
             self._post_processing.set_damage_vignette(max(0, 0.5 - health_pct * 0.5))
+            # AUD-215 — aberración cromática en el impacto. El golpe es más
+            # fuerte cuanta menos vida queda: al 100 % apenas se insinúa y con
+            # la barra en rojo la lente se descompone. Es la misma señal que ya
+            # dan la viñeta de daño y la sacudida, en un canal que el jugador
+            # lee sin mirar la barra.
+            #
+            # Si no hay GL esto no hace nada: `App` es la única que lo recoge,
+            # y sin tarjeta nadie consume el impulso.
+            from src.engine.core import gpu_effects
+            gpu_effects.request_chromatic_aberration(0.35 + 0.45 * (1.0 - health_pct))
 
         def _on_vfx_parry(**data: Any) -> None:
             pos = data.get("pos", (0, 0))

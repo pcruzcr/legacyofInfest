@@ -66,6 +66,9 @@ class InteractableSystem:
         self.disparadores = list(disparadores or [])
         self.llavero = Llavero()
         self._bus = bus
+        #: De qué cadáveres ya salió el botín (AUD-218). Vive aquí y no en el
+        #: mixin de señales porque es estado del mundo: se va con el escenario.
+        self._botin_soltado: set[str] = set()
         #: Último mensaje para la interfaz. La escena lo lee y lo muestra.
         self.mensaje: str = ""
         self.mensaje_timer: float = 0.0
@@ -116,7 +119,24 @@ class InteractableSystem:
             objeto.recogido = True
             self.llavero.coger(objeto.item_id)
             self._avisar(objeto.mensaje or f"Has cogido: {objeto.item_id}")
-            self._emitir(EVENTO_RECOGIDO, item_id=objeto.item_id)
+            self._emitir(
+                EVENTO_RECOGIDO,
+                item_id=objeto.item_id,
+                cantidad=objeto.cantidad,
+            )
+
+    def soltar_botin(self, entity_id: str, recogible: Recogible) -> bool:
+        """Deja el botín de `entity_id` en el suelo. `False` si ya pagó.
+
+        AUD-218. El descarte por `entity_id` evita que un evento repetido
+        —o un enemigo que revive y vuelve a morir, que `EnemyBase` permite a
+        propósito desde BUG-058— pague dos veces por el mismo cadáver.
+        """
+        if not entity_id or entity_id in self._botin_soltado:
+            return False
+        self._botin_soltado.add(entity_id)
+        self.recogibles.append(recogible)
+        return True
 
     def abrir_por_evento(self, evento: str) -> int:
         """Abre las cerraduras que declaran `abre_con_evento == evento`.

@@ -800,7 +800,12 @@ sala 4 puestos así: dos a la manera de siempre y dos siguiendo la música.
 <a id="11"></a>
 ## 11. Inventario, coleccionables y llaves
 
-Seis objetos definidos, con efecto real sobre el jugador:
+Dieciséis objetos definidos, en tres familias que **cuentan distinto**.
+
+### Mejoras permanentes — se recogen en el mapa y apilan
+
+No tienen hueco (`slot = None`): basta con tenerlas, y dos copias valen el
+doble. Son las que colocas en el nivel con un `Pickup`.
 
 | `item_id` | Nombre | Efecto |
 |---|---|---|
@@ -810,6 +815,82 @@ Seis objetos definidos, con efecto real sobre el jugador:
 | `swift_feather` | Swift Feather | +10 % de velocidad |
 | `thorn_ring` | Thorn Ring | +0,5 de daño |
 | `sunken_crown` | Sunken Crown | +3 vida máxima, +0,8 de daño |
+
+### Ropa — se compra, se pone y sólo cuenta puesta
+
+Cada prenda ocupa un `slot` (`head`, `body`, `feet`) y **su bonificación sólo
+se aplica si está equipada** (AUD-207). Llevar dos capuchas en la mochila no
+suma las dos: sólo cuenta la que esté en el hueco `head`, y una copia de más
+tampoco duplica nada. Ese límite es lo que convierte el equipo en una
+decisión. `price` es lo que cuesta en monedas; se vende por la mitad.
+
+| `item_id` | Nombre | Hueco | Efecto | Precio |
+|---|---|---|---|---|
+| `hood_leaf` | Leaf Hood | `head` | +0,2 de daño | 30 |
+| `hood_ember` | Ember Hood | `head` | +0,5 vida máxima | 40 |
+| `cloak_reed` | Reed Cloak | `body` | +5 % de velocidad | 35 |
+| `cloak_serpent` | Serpent Cloak | `body` | +0,4 de daño | 50 |
+| `boots_swift` | Swift Boots | `feet` | +8 % de velocidad | 45 |
+| `boots_stone` | Stone Boots | `feet` | +1 vida máxima | 40 |
+
+La moneda del juego es un objeto más: `coin`. El saldo se consulta con
+`Inventory.coins` y se mueve con `add_coins()` / `spend_coins()`.
+
+| `item_id` | Nombre | Efecto |
+|---|---|---|
+| `coin` | Coin | moneda de la tienda; sin bonificación |
+
+### Habilidades — sueltas de jefe
+
+Ocupan `slot = "skill"`, no dan estadísticas y no se equipan: se tienen o no,
+y se consultan con `Inventory.has_skill()`.
+
+| `item_id` | Nombre | Concede | La suelta |
+|---|---|---|---|
+| `skill_double_jump` | Double Jump | saltar otra vez en el aire | `BossRey` |
+| `skill_dash` | Dash | impulso rápido hacia delante | `BossVenado` |
+| `skill_parry` | Parry | desviar ataques | — (nadie todavía) |
+
+**Tu jefe puede conceder una con una línea.** En su clase:
+
+```python
+class MiJefe(BossBase):
+    skill_drop = "skill_dash"
+```
+
+Al morir deja la reliquia en el suelo junto a las monedas. Si el `item_id` no
+está en el catálogo no se deja nada, para no poner un objeto que al cogerlo no
+haría nada.
+
+### El candado: `PLAYER_SKILLS_REQUIRE_UNLOCK`
+
+Por defecto está en **`False`**, y eso importa: el doble salto y el dash están
+disponibles desde el primer fotograma del primer nivel, igual que siempre. Los
+niveles que ya existen se juegan exactamente igual.
+
+Ponlo en `True` si quieres que **derrotar al jefe signifique algo**: entonces
+`_can_jump` y `_can_dash` preguntan al inventario y sin la habilidad no hay
+doble salto ni dash. Dos cosas que no cambian ni con el candado puesto:
+
+* el **salto desde el suelo** y los fotogramas de coyote nunca se bloquean —
+  sin ellos no se sube un escalón;
+* la habilidad tiene que soltarla algún jefe **antes** del punto donde el nivel
+  la exija, o el nivel no se puede terminar. Si diseñas con el candado puesto,
+  comprueba ese orden.
+
+> **Estado real:** el ciclo entero funciona.
+>
+> * **Monedas:** los enemigos las sueltan al morir (`Recogible` de `coin`, con
+>   la cantidad según el tipo). Se recogen al pasar por encima.
+> * **Tienda:** entrada `SHOP` del menú del título. Izquierda y derecha
+>   alternan comprar y vender; se vende por la mitad del precio.
+> * **Equipar:** entrada `INVENTORY`, con Enter sobre la prenda.
+> * **Puntos y saldo:** se ven en el HUD durante la partida.
+> * **Habilidades:** los jefes las sueltan; ver el candado más abajo.
+>
+> La única pieza sin dueño es `skill_parry`: está en el catálogo y ningún jefe
+> la suelta todavía, porque parar **no** está condicionado —lo aprende el
+> jugador, no se compra—. Si quieres usarla, dásela a tu jefe con `skill_drop`.
 
 Puedes inventar tus propios `item_id` para llaves y coleccionables narrativos:
 si no está en la tabla, entra al inventario sin bonificación, que es

@@ -71,6 +71,7 @@ def register_demo_scenes() -> None:
     reg.register("pattern", lambda ctx: _build_scene(ctx, "pattern_demo_scene", "PatternDemoScene"))
     reg.register("combo", lambda ctx: _build_scene(ctx, "combo_demo_scene", "ComboDemoScene"))
     reg.register("inventory", lambda ctx: _build_scene(ctx, "inventory_scene", "InventoryScene"))
+    reg.register("shop", lambda ctx: _build_scene(ctx, "shop_scene", "ShopScene"))
     reg.register("achievement", lambda ctx: _build_scene(ctx, "achievement_scene", "AchievementScene"))
     reg.register("worldmap", lambda ctx: _build_scene(ctx, "world_map_scene", "WorldMapScene"))
     reg.register("bestiary", lambda ctx: _build_scene(ctx, "bestiary_scene", "BestiaryScene"))

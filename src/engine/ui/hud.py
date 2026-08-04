@@ -101,6 +101,15 @@ class HUD:
         self._hearts_x: int = 38
         self._hearts_y: int = 6
         self._heart_spacing: int = 16
+        # AUD-219 — marcador de puntos y monedas.
+        #
+        # Va entre los corazones (38..118) y el marco del cronómetro (258..320)
+        # porque es el único hueco libre de la franja superior. Se declara como
+        # región en `09_HUD_SPEC.md` §2.1: el doc es contrato, y una prueba
+        # comprueba que lo que se dibuja cabe en lo que el doc promete.
+        self._score_region = pygame.Rect(124, 2, 128, 14)
+        self._score: int = 0
+        self._coins: int = 0
         # Timer frame (reuse hud_frame.png 9-slice at timer size 90x16)
         self._timer_bg_rect = pygame.Rect(258, 1, 62, 16)
         # Pre-scale timer background once (deferred from frame load block)
@@ -366,12 +375,49 @@ class HUD:
         self._draw_hearts(surface)
         self._draw_special_meter(surface)
         self._draw_estamina(surface)
+        self._draw_score(surface)
         self._draw_timer(surface)
         if self._boss_active:
             self._draw_boss_hud(surface)
         if self._combo_count > 1:
             self._draw_combo_indicator(surface)
         self._draw_save_notification(surface)
+
+    def set_score(self, puntos: int, monedas: int = 0) -> None:
+        """Puntos de la partida y saldo de monedas (AUD-219).
+
+        Van juntos porque se leen juntos: los puntos dicen cómo va la partida y
+        las monedas, si ya alcanza para comprar algo. Enseñar sólo lo primero
+        deja al jugador yendo a la tienda a ver si le llega.
+        """
+        self._score = max(0, int(puntos))
+        self._coins = max(0, int(monedas))
+
+    def _score_text(self) -> str:
+        return f"{self._score}  ¤{self._coins}"
+
+    def score_rect(self) -> pygame.Rect:
+        """Lo que ocupa de verdad el marcador dibujado, no la región reservada.
+
+        La usa la prueba que comprueba que cabe donde `09_HUD_SPEC.md` dice, y
+        que no pisa ni los corazones ni el cronómetro.
+        """
+        w, h = self._font.size(self._score_text())
+        r = self._score_region
+        return pygame.Rect(r.right - w, r.y, w, min(h, r.height))
+
+    def _draw_score(self, surface: pygame.Surface) -> None:
+        """Alineado a la derecha, pegado al cronómetro.
+
+        Alineado a la derecha y no a la izquierda porque el número crece: con
+        el origen fijo a la izquierda, pasar de 9999 a 10000 lo empujaría
+        contra el marco del cronómetro a mitad de partida.
+        """
+        r = self.score_rect()
+        puntos = self._font.render(str(self._score), True, (235, 235, 210))
+        monedas = self._font.render(f"¤{self._coins}", True, (255, 215, 0))
+        surface.blit(puntos, (r.x, r.y))
+        surface.blit(monedas, (r.right - monedas.get_width(), r.y))
 
     def set_special_meter(self, current: float, max_val: float) -> None:
         self._special_current = current

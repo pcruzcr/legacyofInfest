@@ -110,6 +110,7 @@ SCENE_PATHS: list[tuple[str, str]] = [
     ("src.engine.scenes.end_credits_scene", "EndCreditsScene"),
     ("src.engine.scenes.world_map_scene", "WorldMapScene"),
     ("src.engine.scenes.inventory_scene", "InventoryScene"),
+    ("src.engine.scenes.shop_scene", "ShopScene"),
     ("src.engine.scenes.bestiary_scene", "BestiaryScene"),
     ("src.engine.scenes.achievement_scene", "AchievementScene"),
     ("src.engine.scenes.leaderboard_scene", "LeaderboardScene"),
