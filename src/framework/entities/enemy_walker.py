@@ -123,6 +123,19 @@ class EnemyWalker(EnemyBase):
                     self.position.y = rect.top - self.rect.height
                     break
 
+    def _cancelar_ataque_en_curso(self) -> None:
+        """AUD-239 — parar la carga la cancela. El porqué, en `enemy_charger`.
+
+        Se devuelve el daño de contacto a su valor de carga cancelada, igual
+        que hace el final normal de la embestida: si no, el enemigo se queda
+        aturdido conservando el daño elevado del impacto.
+        """
+        if self._is_charging:
+            self._is_charging = False
+            self._charge_timer = 0.0
+            self._charge_cooldown = 2.0
+            self.damage_on_contact = 0.5
+
     def _alert_behavior(self, dt: float) -> None:
         """Move toward player at alert speed. Use charge attack at range."""
         self._face_player()

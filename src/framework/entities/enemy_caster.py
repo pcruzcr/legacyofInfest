@@ -212,6 +212,9 @@ class EnemyCaster(EnemyBase):
                     player._parry_active = False
                     player._parry_window = 0.0
                     self._event_bus.emit(Events.VFX_PARRY, pos=(o.position.x, o.position.y))
+                    # AUD-206: parar el orbe también interrumpe al lanzador.
+                    # El porqué, en `enemy_archer._check_player_contact`.
+                    self.stun(self.PARRY_STUN_DURATION)
                 else:
                     player.apply_damage(o.damage, (self.position.x, self.position.y))
                     o.on_collision()

@@ -157,6 +157,13 @@ class EnemyArcher(EnemyBase):
                     player._parry_active = False
                     player._parry_window = 0.0
                     self._event_bus.emit(Events.VFX_PARRY, pos=(p.position.x, p.position.y))
+                    # AUD-206: desviar la flecha la borraba y nada más. El
+                    # arquero seguía su rutina y volvía a tensar el arco, así
+                    # que parar a distancia no compraba nada: salía más barato
+                    # apartarse. Aturdirlo es lo que da el hueco para acercarse
+                    # — que es la única recompensa que tiene sentido contra un
+                    # enemigo al que no alcanzas.
+                    self.stun(self.PARRY_STUN_DURATION)
                 else:
                     player.apply_damage(p.damage, (self.position.x, self.position.y))
                     p.on_collision()

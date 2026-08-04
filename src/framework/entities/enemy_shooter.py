@@ -223,6 +223,9 @@ class EnemyShooter(EnemyBase):
                     player._parry_active = False
                     player._parry_window = 0.0
                     self._event_bus.emit(Events.VFX_PARRY, pos=(p.position.x, p.position.y))
+                    # AUD-206: parar el disparo también interrumpe al tirador.
+                    # El porqué, en `enemy_archer._check_player_contact`.
+                    self.stun(self.PARRY_STUN_DURATION)
                 else:
                     player.apply_damage(p.damage, (self.position.x, self.position.y))
                     p.on_collision()
