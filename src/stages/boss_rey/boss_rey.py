@@ -27,6 +27,11 @@ class BossRey(BossBase):
     implementan aquí (docs/17_BOSS_SPEC.md §4, CLAUDE.md).
     """
 
+    # AUD-238 — el Rey concede el doble salto. Ver `boss_venado.py`, que hace
+    # lo mismo con el dash: cada habilidad condicionable necesita al menos un
+    # jefe que la suelte o encender el candado la vuelve inalcanzable.
+    skill_drop = "skill_double_jump"
+
     #: Cuántos puntos de control aleatorios se suman a la posición actual
     #: para trazar la curva (spec: "4 random arena positions").
     RANDOM_POINTS = 3

@@ -41,6 +41,20 @@ PLAYER_COYOTE_FRAMES: int = 6
 PLAYER_DASH_SPEED: float = 200.0
 PLAYER_AIR_DASH_LIMIT: int = 1
 PLAYER_AIR_JUMPS: int = 1
+#: ¿Hay que ganarse el doble salto y el dash? (AUD-238)
+#:
+#: **Apagado por defecto, y esa es la decisión importante.** El catálogo tiene
+#: `skill_double_jump` y `skill_dash` desde el principio y nadie los consultaba;
+#: consultarlos siempre habría roto la invariante 2 de `CLAUDE.md`: las 26
+#: entregas existentes diseñaron sus saltos contando con el doble salto
+#: disponible desde el primer fotograma, y condicionarlo dejaría niveles ya
+#: corregidos sin poder completarse.
+#:
+#: Con `True`, `_can_jump` y `_can_dash` preguntan a `Inventory.has_skill()` y
+#: la progresión existe. Es lo que enciende un escenario nuevo que quiera que
+#: derrotar al jefe signifique algo. Nunca bloquea el salto desde el suelo ni
+#: el coyote: eso no es progresión, es un juego roto.
+PLAYER_SKILLS_REQUIRE_UNLOCK: bool = False
 PLAYER_SHORT_ATTACK_DURATION: float = 0.15
 PLAYER_LONG_ATTACK_DURATION: float = 0.4
 PLAYER_COOLDOWN_SHORT: float = 0.0
