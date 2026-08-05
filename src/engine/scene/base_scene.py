@@ -74,6 +74,18 @@ class BaseScene(abc.ABC):
         """Render the scene onto the given surface."""
         ...
 
+    def medidas_de_depuracion(self) -> dict[str, object]:
+        """Cuentas que esta escena quiere ver en la consola (F11) — AUD-283.
+
+        Vacío por defecto: un menú no tiene nada que contar y obligarle a
+        devolver ceros sólo llenaría la consola de ruido. Un escenario devuelve
+        sus entidades, sus partículas y lo que esté midiendo esa semana.
+
+        Se pregunta **sólo cuando la consola está abierta**, así que puede
+        permitirse recorrer listas: no cuesta nada en una partida normal.
+        """
+        return {}
+
     def on_pause(self) -> None:
         """Called when another scene is pushed on top of this one."""
         pass

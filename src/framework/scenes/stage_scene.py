@@ -1861,6 +1861,42 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
         from src.engine.scenes.game_over_scene import GameOverScene
         self.context.scene_manager.push(GameOverScene(self.context, self))
 
+    def medidas_de_depuracion(self) -> dict[str, object]:
+        """Lo que este escenario publica en la consola (F11) — AUD-283.
+
+        Las cuatro cuentas que hacen falta para decidir sobre rendimiento en
+        este motor: cuántas entidades se están simulando de verdad —no cuántas
+        hay, que con el culling de AUD-279 ya no es lo mismo—, cuántas
+        partículas vivas, y qué está decidiendo la IA.
+
+        Lo del escuadrón es lo que cierra un cabo suelto de su propio módulo:
+        `SquadBrain.stats()` llevaba desde AUD-050 comentado como «introspección
+        para el overlay de debug» **sin un solo llamante**. El dato se calculaba
+        cada fotograma y no se enseñaba en ninguna parte.
+        """
+        from src.framework.entities.enemy_base import EnemyBase
+
+        stage = self._stage_data
+        entidades = list(stage.entity_list) if stage is not None else []
+        vivos = [e for e in entidades if isinstance(e, EnemyBase) and e.is_alive]
+        zona = culling.zona_activa(self._camera.offset)
+        simulados = sum(1 for e in vivos if culling.se_simula(e, zona))
+
+        particulas = 0
+        sistema = getattr(self, "_particle_system", None)
+        if sistema is not None:
+            particulas = sum(em.count for em in sistema._emitters.values())
+
+        stats = self._squad.stats
+        return {
+            "Enemigos": f"{simulados} simulados de {len(vivos)} vivos",
+            "Partículas": particulas,
+            "Escuadrón": (
+                f"{stats['fraccion_modelo'] * 100:.0f}% por modelo, "
+                f"{int(stats['por_reglas'])} por reglas"
+            ),
+        }
+
     def draw(self, surface: pygame.Surface) -> None:
         if self._stage_data is None or self._player is None:
             return

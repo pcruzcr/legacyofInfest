@@ -1,12 +1,44 @@
 """
 Module: debug_overlay
 System: engine.scenes
-Description: Debug overlay toggled with F3. Shows FPS, event queue
-snapshot, and a tree-view of registered modules (F4/F5/F6).
+Description: Consola de depuración (F11). FPS, coste del fotograma, cuentas de
+la escena, cola de eventos y árbol de módulos.
+
+Dos cosas que arregla AUD-283
+=============================
+**Esto no lo abría nadie.** El módulo estaba entero —consola, cola de eventos,
+árbol de módulos— y no tenía **un solo llamante en `src/engine`**. Ni una
+prueba. `docs/87` §15.7 llegó a describirlo como si funcionara («F3 abre la
+consola…»), que es el error de leer el código y no ejecutarlo: la décima vez
+este mes que aparece código correcto que no llega al jugador.
+
+Tampoco lo detectaba `check_orphan_systems.py`, y por una razón interesante:
+ese barrido busca símbolos que **las pruebas ejercitan y el juego no invoca**.
+Lo que no prueba nadie **y** no usa nadie le resulta invisible. Queda anotado
+por si vuelve a hacer falta buscar en ese hueco.
+
+**Y la tecla estaba ocupada.** Se abría con F3, que desde el mapa de acciones
+es `LEARN_PHYSICS`. Aunque alguien lo hubiera conectado, pulsarla habría abierto
+la lección de física. Ahora es **F11**, que estaba libre, y el nivel del árbol
+se cambia con F12.
+
+Qué mide, y qué no
+==================
+Lo que se puede medir barato y en cualquier equipo: FPS, milisegundos de
+fotograma, y las cuentas que la escena quiera publicar —entidades, partículas,
+decisiones del escuadrón—.
+
+**La RAM del proceso no está**, y no por olvido: medirla en Windows y en Linux
+sin dependencias nuevas obliga a `ctypes` por plataforma, y `psutil` no está
+instalado. Lo que sí se enseña es el número de objetos vivos que Python conoce,
+que es gratis y responde a la pregunta que de verdad se hace uno mirando esto:
+«¿esto está creciendo?».
 """
 from __future__ import annotations
 
+import gc
 import logging
+from typing import Any
 
 import pygame
 
@@ -14,6 +46,13 @@ from src.engine.core import settings
 from src.engine.core.event_bus import EventBus
 
 logger = logging.getLogger(__name__)
+
+#: Tecla que abre y cierra la consola. F11 porque F1 son los gizmos del
+#: escenario y F2–F10 son las lecciones del curso (`action_map`).
+TECLA_CONSOLA = pygame.K_F11
+
+#: Tecla que rota el nivel del árbol de módulos.
+TECLA_ARBOL = pygame.K_F12
 
 TREE_LEVELS = [
     "Engine / Core",
@@ -30,7 +69,6 @@ class DebugOverlay:
         self._event_bus: EventBus | None = event_bus
         self._visible: bool = False
         self._tree_level: int = 0
-        self._key_cooldown: dict[int, float] = {}
         self._font: pygame.font.Font | None = None
         self._overlay: pygame.Surface | None = None
         self._line_cache: dict[int, tuple[str, pygame.Surface]] = {}
@@ -47,40 +85,43 @@ class DebugOverlay:
     def visible(self) -> bool:
         return self._visible
 
-    def handle_input(self, held: tuple[bool, ...], dt: float) -> None:
-        # Cool-downs to avoid repeat fire
-        for k in list(self._key_cooldown.keys()):
-            self._key_cooldown[k] -= dt
-            if self._key_cooldown[k] <= 0:
-                del self._key_cooldown[k]
+    def handle_input(self, input_manager: Any) -> None:
+        """Lee las dos teclas de la consola. Lo llama `App`, cada fotograma.
 
-        def consume(key: int) -> bool:
-            if not held[key]:
-                return False
-            if key in self._key_cooldown:
-                return False
-            self._key_cooldown[key] = 0.3
-            return True
-
-        if consume(pygame.K_F3):
+        AUD-283 — antes recibía la tupla de `pygame.key.get_pressed()` y llevaba
+        su propio sistema de enfriamientos de 0,3 s para no dispararse en cada
+        fotograma con la tecla pulsada. Sobra: `is_raw_key_pressed` ya es por
+        flanco. Un temporizador que replica algo que el gestor de entrada hace
+        mejor es una segunda verdad sobre cuándo se pulsó una tecla, y las dos
+        acaban discrepando.
+        """
+        if input_manager is None:
+            return
+        if input_manager.is_raw_key_pressed(TECLA_CONSOLA):
             self._visible = not self._visible
-        if self._visible:
-            if consume(pygame.K_F4):
-                self._tree_level = 0
-            if consume(pygame.K_F5):
-                self._tree_level = 1
-            if consume(pygame.K_F6):
-                self._tree_level = 2
+        if self._visible and input_manager.is_raw_key_pressed(TECLA_ARBOL):
+            # Una tecla que rota, en vez de tres que eligen. F4, F5 y F6 son
+            # `LEARN_COLLISION`, `LEARN_FSM` y `LEARN_RENDER`: elegir el nivel
+            # del árbol abría además tres lecciones del curso.
+            self._tree_level = (self._tree_level + 1) % len(TREE_LEVELS)
 
-    def draw(self, surface: pygame.Surface, fps: float) -> None:
+    def draw(self, surface: pygame.Surface, fps: float,
+             medidas: dict[str, Any] | None = None) -> None:
+        """Pinta la consola. `medidas` es lo que la escena quiera publicar.
+
+        Un diccionario y no una estructura fija a propósito: cada escena mide
+        cosas distintas —un escenario tiene enemigos y partículas, un menú no—
+        y una estructura con campos obligatorios obligaría a los menús a
+        rellenar ceros que no significan nada.
+        """
         if not self._visible:
             return
         self._ensure_font()
 
         if self._hint_surf is None:
             self._hint_surf = self._font.render(
-                "  Debug Console  |  [F3] toggle  |  [F4] engine  |"
-                "  [F5] framework  |  [F6] tests", True, (80, 200, 255))
+                "  Consola de depuración  |  [F11] cerrar  |  [F12] árbol",
+                True, (80, 200, 255))
 
         # Semi-transparent overlay
         if self._overlay is None or self._overlay.get_size() != (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT):
@@ -92,8 +133,16 @@ class DebugOverlay:
 
         y = 4
         lines: list[str] = []
-        lines.append(f"FPS: {fps:.0f}")
-        lines.append(f"Tree: {TREE_LEVELS[self._tree_level]}  |  [F3] hide  [F4/F5/F6] tree level")
+        # AUD-283 — los milisegundos, no sólo los FPS. Un contador de FPS
+        # redondeado a entero no distingue 16,6 ms de 12,0: los dos dicen «60».
+        # El presupuesto de este motor está escrito en milisegundos y es en
+        # milisegundos como hay que poder leerlo.
+        ms = 1000.0 / fps if fps > 0 else 0.0
+        lines.append(f"FPS: {fps:.0f}   ({ms:.2f} ms de 16,67)")
+        lines.append(f"Objetos vivos: {len(gc.get_objects())}")
+        for etiqueta, valor in (medidas or {}).items():
+            lines.append(f"{etiqueta}: {valor}")
+        lines.append(f"Árbol: {TREE_LEVELS[self._tree_level]}  |  [F11] cerrar  [F12] rotar")
         lines.append("")
 
         # Event queue snapshot

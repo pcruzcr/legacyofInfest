@@ -139,6 +139,13 @@ class App:
         configurar_registro(depurar=self.depurar)
         self.event_bus = EventBus()
 
+        # AUD-283 — la consola de depuración, que existía sin que nadie la
+        # abriera. Vive en `App` y no en `StageScene` porque sirve igual en un
+        # menú, en un laboratorio y en un nivel: lo que mide —FPS, coste del
+        # fotograma, cola de eventos— es del motor, no del escenario.
+        from src.engine.scenes.debug_overlay import DebugOverlay
+        self.debug_overlay = DebugOverlay(self.event_bus)
+
         # AUD-036: load persisted player preferences before anything reads them,
         # and apply the ones other subsystems own (volumes, difficulty). The
         # options screen previously wrote these to disk and nothing loaded them
@@ -275,6 +282,10 @@ class App:
             if e.type == pygame.QUIT:
                 has_quit = True
         self.input_manager.pump(events)
+        # AUD-283 — la consola se lee aquí, antes que la escena, y a propósito:
+        # una escena modal —el menú de pausa, un diálogo— consume sus teclas y
+        # dejaría la consola sin poder abrirse justo cuando hace falta mirarla.
+        self.debug_overlay.handle_input(self.input_manager)
         if has_quit:
             self.running = False
             return
@@ -291,6 +302,27 @@ class App:
         if self.scene_manager.stack_size > 0:
             self.scene_manager.current.draw(self.internal_surface)
         self.scene_manager.transition.draw(self.internal_surface)
+
+        # AUD-283 — la consola, encima de la escena y debajo del post-procesado.
+        #
+        # Debajo a propósito: si se pintara después del camino GL, el bloom y la
+        # aberración cromática no la tocarían y se leería como una capa ajena al
+        # juego. Pasando por las mismas pasadas se ve lo que el jugador ve, que
+        # es justamente lo que hay que depurar.
+        if self.debug_overlay.visible:
+            medidas: dict = {}
+            if self.scene_manager.stack_size > 0:
+                try:
+                    medidas = dict(
+                        self.scene_manager.current.medidas_de_depuracion())
+                except Exception:
+                    # Una escena de estudiante que falle al contarse no puede
+                    # tumbar el fotograma: la consola es una herramienta, no
+                    # parte del juego.
+                    logger.exception("medidas_de_depuracion falló")
+                    medidas = {"medidas": "error (ver el registro)"}
+            self.debug_overlay.draw(
+                self.internal_surface, self.clock.fps, medidas)
 
         if self._use_gl and self._gl_renderer:
             # La escena acaba de decir cuánto bloom quiere mientras dibujaba;
