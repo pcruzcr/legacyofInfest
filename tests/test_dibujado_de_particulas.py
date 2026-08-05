@@ -51,15 +51,21 @@ def _dibujo_ingenuo(
 
     Es el patrón oro de este módulo. No la toques para «modernizarla»: si deja
     de ser la de antes, deja de demostrar nada.
+
+    AUD-275 cambió **dos** cosas que este oráculo tenía que seguir, y sólo dos:
+    el color pasó de `_colors[i]` —lista de tuplas— a la fila `i` del arreglo
+    `colores`, y las partículas vivas están empaquetadas en `[:count]` en vez
+    de ocupar todo el arreglo. Son la misma información leída de otro sitio;
+    la aritmética de píxeles de abajo no se ha tocado una coma.
     """
     ox = int(offset.x)
     oy = int(offset.y)
-    for i in range(len(em.x)):
+    for i in range(em.count):
         if em.life[i] <= 0 or em.alpha[i] <= 0:
             continue
         sx = int(em.x[i]) - ox
         sy = int(em.y[i]) - oy
-        c = (*em._colors[i], min(255, em.alpha[i]))
+        c = (*em.colores[i], min(255, em.alpha[i]))
         sz = max(1, int(em.size[i]))
         pygame.draw.rect(surface, c, (sx - sz // 2, sy - sz // 2, sz, sz))
 
