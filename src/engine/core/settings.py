@@ -79,6 +79,18 @@ BG_COLOR: tuple[int, int, int] = (15, 15, 40)
 #: enemigo que no se mueve. El porqué completo, en `framework/stage/culling.py`.
 CULLING_MARGEN: int = 800
 
+#: ¿Una entidad que lanza en `update()` se lleva por delante el fotograma? (AUD-289)
+#:
+#: **No, por defecto.** Este motor ejecuta código de veintiséis estudiantes: un
+#: `IndexError` en el `update` de un enemigo de una entrega tumbaba el fotograma
+#: entero y `App` devolvía al menú de título, que desde el asiento del estudiante
+#: se ve como «el juego se cierra». La entidad se retira, el nivel sigue, y el
+#: fallo se registra con su traza.
+#:
+#: `False` vuelve a propagar la excepción. Es lo que quiere quien está depurando
+#: **el motor** y necesita la traza donde ocurre, no un resumen en el registro.
+AISLAR_FALLOS_DE_ENTIDAD: bool = True
+
 COMBO_WINDOW: float = 0.5
 # AUD-021: a tuple, not a list. As a mutable list this balance table could be
 # reordered or appended to from anywhere in the process — including by a test

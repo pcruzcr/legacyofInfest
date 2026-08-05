@@ -586,10 +586,25 @@ class DrawingSystem:
 
         escala = self._escala_de_profundidad(stage)
         for drawable, _depth in drawables:
-            if escala.activa:
-                self._dibujar_con_profundidad(surface, drawable, offset, escala)
-            else:
-                drawable.draw(surface, offset)
+            # AUD-289 — el `draw` de una entidad de estudiante también puede
+            # lanzar, y aquí el daño sería peor que en el `update`: media escena
+            # ya está pintada, así que el fotograma se quedaría a medias sobre
+            # el anterior y el resultado no se parece a un error, se parece a un
+            # fallo de vídeo. Se salta esa entidad y se sigue pintando.
+            #
+            # No se retira aquí: quien decide qué entidades hay en el nivel es la
+            # escena, y un sistema de dibujado que borra entidades es la clase de
+            # atajo que después nadie sabe de dónde salió.
+            try:
+                if escala.activa:
+                    self._dibujar_con_profundidad(surface, drawable, offset, escala)
+                else:
+                    drawable.draw(surface, offset)
+            except Exception:
+                if not getattr(settings, "AISLAR_FALLOS_DE_ENTIDAD", True):
+                    raise
+                logger.exception("%s falló al dibujarse; se salta este fotograma",
+                                 type(drawable).__name__)
 
     def _escala_de_profundidad(self, stage: Any) -> EscalaPorProfundidad:
         """La escala 2.5D de este escenario, cacheada por escenario (AUD-277).
