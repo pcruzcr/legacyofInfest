@@ -253,3 +253,226 @@ Por orden de lo que más se nota jugando:
 - [[17_BOSS_SPEC.md|Especificación de jefes — §0, el aviso del Gavilán]]
 - [[44_BOSS_RUSH_MODE.md|Boss Rush]]
 - `KNOWN_GAPS.md` — los huecos abiertos
+
+---
+
+## 9. Auditoría de sistemas base (2026-08-04, segunda pasada)
+
+Medido ejecutando el motor, no leyendo documentación.
+
+### 9.1 Jugador — completo
+
+**26 estados en el enum, 26 con clase instanciable.** Ninguno huérfano.
+
+> **Corrección de método.** La primera pasada de esta auditoría dio tres
+> estados «sin clase» —`CHARGE_ATTACK`, `CLIMBING`, `ZIPLINE`— y era **falso**:
+> los implementan `ChargingState`, `TrepandoState` y `TirolesaState`. El script
+> casaba por nombre de clase en vez de por `state_enum`. Queda escrito porque
+> es el mismo error que este repositorio lleva un mes corrigiendo: una lista de
+> hallazgos automáticos no es una lista de defectos hasta que alguien la
+> comprueba contra el código.
+
+### 9.2 Enemigos — completo
+
+13 estados de IA, 8 arquetipos, 21 especies con nombre. Sprites por **zona**
+—`enemy_zone{N}_walk/hurt/die/fly/shoot/aim/fire`, 7 ficheros por zona × 3
+zonas— que es como los carga `_load_zone_sprites`. IA de pelotón con
+scikit-learn y predictor de trayectoria, los dos presentes.
+
+> Segunda corrección del mismo tipo: buscar sprites por nombre de arquetipo
+> (`*walker*`, `*flying*`…) daba ocho falsos negativos. El motor no los nombra
+> así.
+
+### 9.3 VFX y entorno
+
+Los diez módulos de `vfx/` existen y se usan. Lo que se midió del entorno:
+
+| Qué | Medido |
+|---|---|
+| Día contra noche | Factor de luz **1,00 al mediodía y 0,52 a medianoche**, con color propio: `(255, 252, 245)` contra `(165, 180, 235)`. El amanecer queda en 0,65 |
+| Estaciones | Las cuatro, cada una con **tinte propio** y clima por defecto: primavera `clear`, verano `clear`, otoño `rain`, invierno `snow` |
+| Lluvia, nieve, niebla | Partículas, velo de color y viento lateral |
+| **Rayos y relámpagos** | **Faltaban por completo** → **HECHO (AUD-270)** |
+| **Ambiente de lluvia y tormenta** | **Sin fichero de audio** → **HECHO (AUD-271)** |
+| Niebla de guerra | Se nota: el centro revelado queda a alfa 0 y la esquina a 220. `update()` **es un hueco vacío a propósito** — el sistema es de revelado, no animado |
+
+**AUD-270 — la tormenta no relampagueaba.** `storm` era lluvia con viento: cien
+partículas inclinadas y un velo gris, sin una sola referencia a un rayo en todo
+el módulo. Una tormenta que no relampaguea se lee como lluvia fuerte, y `storm`
+es justamente el clima del clímax de `stage0`. Ahora hay fogonazo a pantalla
+completa con espera aleatoria entre 4 y 11 segundos —un rayo cada N exactos
+deja de dar miedo a la tercera vez, porque el jugador lo empieza a contar—,
+decaimiento de 0,35 s y alfa máximo 110 sobre 255: aclara la escena sin cegar.
+
+**AUD-271 — `rain` y `storm` sonaban en silencio.** Eran los dos climas que
+`SIN_ASSET` declaraba sin fichero desde AUD-145. Declararlo en voz alta era lo
+correcto mientras no existieran; ahora se generan por el mismo camino que todo
+el audio del proyecto, más un trueno. `SIN_ASSET` queda vacío y **no se
+retira**: el mecanismo hará falta el día que alguien añada un clima nuevo.
+
+### 9.4 Cámara — completo
+
+Tres modos (`seguir`, `zona_muerta`, `sala`), anticipación de mirada
+(*look-ahead*), sacudida, y `CameraLock` por zona con el arreglo de AUD-143 —el
+`rect` se guardaba y no se leía nunca, así que una sola zona congelaba la
+cámara en todo el nivel.
+
+### 9.5 Narrativa e interfaz
+
+| Requisito | Estado |
+|---|---|
+| Cinemáticas sin errores | ✅ `CutsceneSystem` + `CutsceneDirector`, guion en texto, no bloquean |
+| Caja de diálogo abajo | ✅ `h - alto - 10` |
+| Imagen del personaje | ✅ `_retrato()`, con rectángulo de reserva si falta el retrato |
+| Texto progresivo | ✅ máquina de escribir, con adelanto al pulsar (AUD-128) |
+| **Texto largo dividido** | **Se recortaba en silencio** → **HECHO (AUD-269)** |
+| **Ocultar mensajes de depuración** | **134 avisos salían por consola** → **HECHO (AUD-268)** |
+
+**AUD-269 — un diálogo largo se recortaba.** `draw` dibujaba líneas hasta
+llenar el cuadro y hacía `break`: **lo que no cabía no se mostraba nunca**. Sin
+aviso ni flecha; el jugador leía media frase, pulsaba ENTER y el resto se
+perdía, y un guionista que escribiera un párrafo en
+`data/dialogues/<stage>.json` no tenía forma de enterarse. Ahora se **pagina**:
+el texto se parte en páginas del alto del cuadro —calculado, no fijo, para que
+la escala de accesibilidad al 2,0× no vuelva a recortar—, ENTER avanza de
+página antes que de nodo, la máquina de escribir se reinicia en cada una, y el
+indicador dice `[ENTER] 1/3`.
+
+**AUD-268 — la consola escupía avisos mientras se jugaba.** El proyecto **no
+configuraba el logging en ninguna parte**: sin `basicConfig`, Python instala su
+manejador de último recurso y escribe todo lo de `WARNING` arriba en la
+consola. Este árbol tiene **134 `logger.warning`**, muchos en rutas normales de
+juego.
+
+Los avisos **no se borran**: son correctos, y este repositorio lleva un mes
+cazando defectos que fallaban en silencio —AUD-055, AUD-127, AUD-149—. Lo que
+cambia es el destino: el registro completo va a
+`user_data_dir()/legacy_of_infest.log` y la consola queda limpia.
+`python main.py --debug` los devuelve a la pantalla para quien esté
+diagnosticando, que es la única persona que quiere verlos.
+
+---
+
+## 10. Viabilidad de las mejoras de arquitectura
+
+Cada una medida contra el árbol de hoy, no contra la intención.
+
+### 10.1 Partir `stage_scene.py` — **viable, y ya empezado**
+
+**Medido: 1.906 líneas** contra un presupuesto de 1.500. La partición en mixins
+existe desde AUD-152 (`stage_parts/`: ambiente, señales, fantasma, dibujo de
+mecánicas, y `rush` desde AUD-261) y el fichero volvió a crecer.
+
+**Viable, y el patrón está probado.** Lo que hay que saber antes de seguir:
+
+* los mixins mueven texto y **no cambian nada más** — `self` sigue siendo la
+  misma escena y las subclases de los estudiantes siguen sobreescribiendo los
+  mismos métodos. Convertirlos en colaboradores exigiría pasarles media docena
+  de referencias y **rompería las 26 entregas**;
+* los candidatos naturales que quedan: la carga del TMX con el montaje de
+  sistemas, y el dibujado;
+* **está aplazado por acuerdo** mientras otra sesión edite el mismo fichero.
+
+### 10.2 Arquitectura multi-motor (`loi-math`, `loi-physics`, `loi-render`) — **inviable hoy**
+
+**Medido: 147 aristas de importación entre paquetes y 24 pares con ciclo.**
+Entre ellos:
+
+```
+src.engine.core        <-> src.framework.entities
+src.engine.core        <-> src.engine.audio / render / input / scene / scenes
+src.framework.entities <-> src.framework.stage
+src.framework.entities <-> src.stages.boss_venado   <- el motor importa una entrega
+```
+
+Ese último es el que decide: para publicar paquetes independientes habría que
+cortar **veinticuatro acoplamientos bidireccionales**, uno de ellos entre el
+motor y código de estudiante. Y `docs/72` ya lo evaluó por el otro lado:
+partirlo en paquetes pip **rompería las 26 entregas**, que importan
+`src.framework...` por ruta absoluta.
+
+**Recomendación: no ahora.** Lo que sí es viable y barato es lo que ese número
+mide de verdad — **reducir los ciclos uno a uno**, empezando por
+`engine.core -> framework.entities`, que no debería existir en ningún caso.
+
+### 10.3 GPU batching de más de 2.000 sprites — **viable, y medido en contra**
+
+La tubería GL existe entera (doc 74) y el atlas también (AUD-138). Lo que hay
+que pesar antes de migrar el dibujado:
+
+* **AUD-148, medido:** en una máquina sin tarjeta real el bloom en GPU sale
+  **5× más lento** que en CPU (8,3 ms contra 1,7), porque SDL cae a software.
+  Por eso `PresentadorGPU` está apagado por defecto;
+* **AUD-138, medido:** el atlas **no** acelera el dibujado en la ruta software
+  (2,06 -> 2,35 ms). Lo que gana es carga (3×) y `blits()` (16 %);
+* `SpriteBatch` **no existe**. Es la pieza que falta.
+
+**Recomendación: viable con una condición** — medir primero en la máquina
+destino con `python scripts/bench_gpu_postproc.py`. Migrar el dibujado a GPU en
+las máquinas del laboratorio, si son como la de medida, **empeoraría** el
+fotograma. El 63 % de CPU en dibujado es real; que la GPU lo arregle *aquí* no
+está demostrado.
+
+### 10.4 Pooling de memoria — **la mitad ya está**
+
+`SurfacePool` existe (`engine/utils/surface_pool.py`) y **lo usan**
+`player.py`, `enemy_base.py`, `enemy_shooter.py` y `tutorial_overlay.py`. Hay
+benchmarks dedicados: `test_surface_allocation_vs_pool`,
+`test_gc_collections_per_frame`, `test_tracemalloc_peak_on_burst`.
+
+**Lo que falta es el pooling de entidades.** Viable y de bajo riesgo: los
+proyectiles y las partículas ya se dan de baja por índice —`EnjambreDeBalas`
+mantiene una pila de ranuras libres— así que el patrón está en la casa.
+
+---
+
+## 11. Hoja de ruta V2 — viabilidad
+
+| Propuesta | Veredicto | Por qué |
+|---|---|---|
+| Módulo `loi-physics` aparte | **No ahora** | Mismo problema que §10.2. La física **sí** se puede aislar *dentro* de `src/framework/`, sin publicarla como paquete |
+| Rejilla espacial y *raycast* | **Viable** | Aditivo; no toca el contrato de colisión actual |
+| Pymunk (cuerpos rígidos) | **No recomendado** | `pymunk` se **retiró** de las dependencias. Volver a meterlo cambia la física de los 16 mapas entregados y calificados — invariante 2 |
+| Pendientes (*slopes*) | **Viable, con coste** | Necesita normales de superficie y proyección de velocidad, y **cambia la resolución de colisión**, que es el sistema del que dependen las 26 entregas. Hay que hacerlo aditivo (un tipo TMX nuevo) o no hacerlo |
+| Capas de profundidad y escala Z (2.5D) | **Viable** | Es dibujado, no física. `docs/62` C2 ya lo evaluó: 2.5D es factible, 3D no |
+| Más de 3 niveles de parallax | **Viable y barato** | El cargador ya lee `BG_Far/Mid/Near`; añadir capas es aditivo |
+| *Normal mapping* en GPU | **Viable, sin datos** | Requiere un mapa normal por sprite: es trabajo de arte, no de motor |
+| Bajar `ambient_light` a 0,35 | **Cuidado** | `docs/60` §17 lo midió: con 12 luces en 100 baldosas la noche es legible al 45 %; con 7, **24 % e injugable**. `MIN_AMBIENTE = 0.45` existe por eso. Bajarlo sin añadir focos deja niveles a oscuras |
+| God rays y bloom encendidos | **Ya existen** | AUD-226 y AUD-224, activables desde el TMX |
+| Sombra elíptica bajo los pies | **Viable y barata** | Puramente de dibujado, aditiva |
+| Sombras 2D proyectadas | **Viable, con coste** | Una proyección por foco y por *collider*: hay que medirla antes de encenderla por defecto |
+
+---
+
+## 12. Documentación, estudiantes y huérfanos — estado
+
+| Punto de la lista | Estado real |
+|---|---|
+| Deriva documental | **Corregida en esta ronda**: `63` §2 y §4, `52`, `17`, `44`, `60`, `75` y el índice, todos medidos contra el código |
+| Ampliar pruebas doc↔código | **Parcial.** Hay guardianes para rutas (111 pruebas), índice, árbol de arquitectura, tipos TMX, recuento de pruebas y cifras de la guía. Sigue siendo **1 documento de 95** con pruebas de contenido (`docs/60`) |
+| Traducción de 66 documentos | **Pendiente.** La política vigente es «bilingüe donde hay lector» (invariante 5): traducir los 95 duplicaría la superficie de desincronización. **Traducir los 12 manuales del estudiante es compatible con esa política** y sigue sin hacerse |
+| ~~Boss Rush sin acceso desde el menú~~ | **Ya no es cierto.** Entra por menú desde AUD-191 y el modo se conduce entero desde AUD-261 |
+| ~~Tiempo bala sin acceso~~ | **Ya no es cierto.** AUD-260: `Action.BULLET_TIME` y propiedad de mapa `tiempo_bala` |
+| ~~Reloj musical (F6) pendiente~~ | **Ya no es cierto.** AUD-137: `bpm`/`compas`/`desfase_audio` en el mapa y `patron` en los bloques, con la posición tomada del mezclador |
+| Rúbrica que castiga la movilidad | **Parcial.** AUD-192 exime de `design_completable` a los mapas con objetos de movilidad; `classify_gap` sigue fuera de esa exención. Relacionado con GAP-024, decidido en AUD-264 |
+
+---
+
+## 13. Mejoras ya implementadas — registro
+
+Las tres que la lista da por hechas, confirmadas contra el código:
+
+* **Tres relojes independientes.** `DeltaClock` separa `dt` (escalado),
+  `dt_mundo` (sin hit-stop) y `unscaled_dt` (tiempo real). Es lo que impide que
+  el hit-stop de un golpe congele los láseres y los bloques rítmicos, y lo que
+  permite el tiempo bala sin desincronizar la música (AUD-118/119).
+* **Heurística `prev_bottom`.** Las plataformas de un solo sentido sólo atrapan
+  si los pies estaban al nivel o por encima el fotograma anterior. Y con el
+  trabajo del frente paralelo, la resolución en X usa **solape vertical con la
+  posición previa** en vez de comparar `tile.top` con el centro del jugador,
+  que era justo lo que GAP-002 temía.
+* **Independencia de FPS.** Gravedad, fricción y amortiguación multiplicadas
+  por `dt`. Con una salvedad medida en AUD-236: `ZonaDeFriccion` actúa como
+  escala de velocidad y no como coeficiente, así que andar sobre barro da
+  79,20 px/s a 30, 60 y 120 fps por igual — sólo el deslizamiento sin impulso
+  difiere.

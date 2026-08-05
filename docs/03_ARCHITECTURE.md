@@ -84,6 +84,7 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── experience.py              # XP por enemigo, curva de nivel y puntos de habilidad (AUD-249)
 │   │   │   ├── i18n.py                    # Internationalization (gettext wrapper)
 │   │   │   ├── inventory.py               # Item/collectible management
+│   │   │   ├── registro.py                # AUD-268: los avisos van al fichero, no a la consola
 │   │   │   ├── save_data.py               # SaveData dataclass, SAVE_VERSION, MAX_SLOTS
 │   │   │   ├── score_system.py            # Points and coin drops per enemy type
 │   │   │   ├── save_manager.py            # SaveManager: JSON-based save/load/delete
