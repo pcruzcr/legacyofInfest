@@ -226,6 +226,8 @@ legacy-of-infest/                      # Actual repo root
 │   │   │
 │   │   ├── stage/
 │   │   │   ├── __init__.py
+│   │   │   ├── profundidad.py             # AUD-277: escala 2.5D por altura (apagada por defecto)
+│   │   │   ├── rejilla.py                 # AUD-276: rejilla espacial + raycast (línea de visión)
 │   │   │   ├── stage_loader.py            # StageLoader: parse TMX, build layer stack, spawn
 │   │   │   ├── interactables.py           # Recogible/Cerradura/Cofre/Disparador/Llavero (F4.1)
 │   │   │   ├── bloques.py                 # PushBlock y BreakableBlock: empujar y romper (AUD-140)

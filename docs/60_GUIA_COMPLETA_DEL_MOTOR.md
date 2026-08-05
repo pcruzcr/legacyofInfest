@@ -185,6 +185,8 @@ sin ellas el nivel no valida y pierde 10 puntos de rúbrica.
 | `camara` | string | `seguir` | `seguir`, `zona_muerta` o `sala` (§1.1) |
 | `estamina` | float | `0` | máximo del medidor. **`0` = apagado.** Con `100`, cuatro dashes seguidos y una pausa de 0,6 s antes de recuperar |
 | `tiempo_bala` | float | `0` | segundos de reserva de cámara lenta. **`0` = apagado.** Se mantiene pulsada `Q`/`R`: gasta reserva mientras dura y se recarga despacio al soltar (AUD-260) |
+| `profundidad_min` | float | `1` | **2.5D (AUD-277).** Escala de las entidades arriba del todo del mapa —lo más lejano—. Igual a `profundidad_max` = apagado |
+| `profundidad_max` | float | `1` | Escala abajo del todo —lo más cercano—. Un `0.75`/`1.0` da profundidad clara sin deformar. **No toca la física**: sólo el dibujado |
 | `bpm` | float | `0` | pulsos por minuto; enciende el reloj musical (§10.1) |
 
 ### De atmósfera

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 import pygame
 
 from src.engine.core import settings
+from src.framework.stage.profundidad import EscalaPorProfundidad
 from src.framework.vfx.sombras import Sombra
 
 logger = logging.getLogger(__name__)
@@ -551,8 +552,65 @@ class DrawingSystem:
                 if rect is not None and getattr(drawable, "proyecta_sombra", True):
                     self._sombra.dibujar(surface, rect, solidos, offset)
 
+        escala = self._escala_de_profundidad(stage)
         for drawable, _depth in drawables:
+            if escala.activa:
+                self._dibujar_con_profundidad(surface, drawable, offset, escala)
+            else:
+                drawable.draw(surface, offset)
+
+    def _escala_de_profundidad(self, stage: Any) -> EscalaPorProfundidad:
+        """La escala 2.5D de este escenario, cacheada por escenario (AUD-277).
+
+        Se cachea porque `activa` se consulta una vez por entidad y por
+        fotograma, y construir el objeto cada vez sería pagar por una
+        funcionalidad que casi ningún mapa enciende.
+        """
+        if getattr(self, "_prof_stage", None) is not stage:
+            alto = getattr(stage, "map_pixel_size", (0, 0))[1]
+            self._prof_stage = stage
+            self._prof = EscalaPorProfundidad(
+                mapa_alto=alto,
+                minimo=float(getattr(stage, "profundidad_min", 1.0)),
+                maximo=float(getattr(stage, "profundidad_max", 1.0)),
+            )
+        return self._prof
+
+    def _dibujar_con_profundidad(
+        self, surface: pygame.Surface, drawable: Any,
+        offset: pygame.Vector2, escala: EscalaPorProfundidad,
+    ) -> None:
+        """Dibuja la entidad a su escala, en una superficie aparte.
+
+        Se pinta a un lienzo del tamaño de la entidad y se escala eso, en vez
+        de pedirle a la entidad que se dibuje pequeña: las entidades de las
+        veintiséis entregas no saben de escala y no van a aprender — su
+        `draw(surface, offset)` es el contrato, y esto lo respeta.
+
+        Se ancla por los **pies**: una entidad que encoge desde su esquina
+        superior flotaría sobre el suelo, y el suelo es lo único que el jugador
+        usa para juzgar dónde está algo.
+        """
+        rect = getattr(drawable, "rect", None)
+        if rect is None or rect.width <= 0 or rect.height <= 0:
             drawable.draw(surface, offset)
+            return
+        factor = escala.escala_en(rect.bottom)
+        if abs(factor - 1.0) < 0.01:
+            drawable.draw(surface, offset)      # no merece la pena el rodeo
+            return
+
+        lienzo = pygame.Surface(rect.size, pygame.SRCALPHA)
+        # Se le pasa un desplazamiento que sitúa a la entidad en el origen del
+        # lienzo: así `draw` no tiene que saber que está dibujando aparte.
+        drawable.draw(lienzo, pygame.Vector2(rect.x, rect.y))
+        ancho = max(1, int(rect.width * factor))
+        alto = max(1, int(rect.height * factor))
+        escalado = pygame.transform.scale(lienzo, (ancho, alto))
+        surface.blit(escalado, (
+            int(rect.centerx - ancho / 2 - offset.x),
+            int(rect.bottom - alto - offset.y),
+        ))
 
     def _draw_pause_menu(
         self, surface: pygame.Surface, selected: int, options: list[str],
