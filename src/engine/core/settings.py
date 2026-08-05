@@ -61,6 +61,24 @@ PLAYER_COOLDOWN_SHORT: float = 0.0
 PLAYER_COOLDOWN_LONG: float = 0.067
 BG_COLOR: tuple[int, int, int] = (15, 15, 40)
 
+#: Píxeles más allá del encuadre que se siguen simulando y dibujando (AUD-279).
+#:
+#: Una pantalla entera por lado. El primer valor que probé fue 400 —el doble de
+#: los 360 px que recorre como mucho un `Projectile`, 120 px/s durante 3 s— y
+#: **rompió stage 0**: el mapa mide 1.600 px y cuatro de sus nueve enemigos
+#: quedaban fuera de la zona con la cámara en el arranque, así que
+#: `test_every_enemy_in_stage0_moves` los encontró convertidos en estatuas.
+#:
+#: 800 mantiene el mapa de referencia —el que copian los estudiantes— con el
+#: comportamiento exacto que tenía antes de AUD-279, y sigue sobrando sobre el
+#: alcance de cualquier proyectil. Bajarlo hace visible el congelado; subirlo lo
+#: vuelve inútil.
+#:
+#: **Cero lo apaga entero.** Está para cuando alguien sospeche que el culling le
+#: está escondiendo un fallo, que es la primera pregunta razonable ante un
+#: enemigo que no se mueve. El porqué completo, en `framework/stage/culling.py`.
+CULLING_MARGEN: int = 800
+
 COMBO_WINDOW: float = 0.5
 # AUD-021: a tuple, not a list. As a mutable list this balance table could be
 # reordered or appended to from anywhere in the process — including by a test

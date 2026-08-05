@@ -73,6 +73,15 @@ class EnemyBase(BaseEntity):
     Do NOT override update() — use the master update pattern.
     """
 
+    #: AUD-279 — exención del culling: se sigue simulando lejos de la cámara.
+    #:
+    #: `False` para un enemigo normal, que fuera del encuadre no le importa a
+    #: nadie. Ponlo a `True` en una subclase cuyo comportamiento sólo tenga
+    #: sentido simulado de continuo —un perseguidor que se acerca desde el otro
+    #: extremo del mapa, un enemigo con un temporizador largo—. Los proyectiles
+    #: en vuelo **no** hacen falta declararlos: `culling.se_simula` los detecta.
+    siempre_activo: bool = False
+
     def __init__(
         self,
         spawn_position: pygame.Vector2,

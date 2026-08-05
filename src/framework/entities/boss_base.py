@@ -89,6 +89,14 @@ class BossBase(EnemyBase):
     #: `skill_drop = "skill_dash"` en su clase — una línea, sin tocar nada más.
     skill_drop: str = ""
 
+    #: AUD-279 — un jefe nunca se congela por estar fuera del encuadre.
+    #:
+    #: Sus fases, sus temporizadores y sus invocaciones corren aunque la cámara
+    #: mire a otro lado, y su arena no cabe en pantalla: la de `boss_venado`
+    #: mide 3.280 px. Congelar a un jefe porque el jugador se alejó es la clase
+    #: de optimización que produce un combate que se para solo.
+    siempre_activo: bool = True
+
     def habilidades_que_suelta(self) -> list[str]:
         """Las habilidades que este jefe deja al morir (AUD-263).
 

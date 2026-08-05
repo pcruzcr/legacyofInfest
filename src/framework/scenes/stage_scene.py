@@ -37,6 +37,7 @@ from src.framework.scenes.stage_parts.ambiente import MezclaDeAmbiente
 from src.framework.scenes.stage_parts.fantasma import FantasmaDeCarrera
 from src.framework.scenes.stage_parts.rush import ConduccionDelBossRush
 from src.framework.scenes.stage_parts.senales import SenalesDeEscenario
+from src.framework.stage import culling
 from src.framework.stage.camera import Camera
 from src.framework.stage.collision_system import CollisionSystem
 from src.framework.stage.drawing_system import DrawingSystem
@@ -1401,8 +1402,21 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
             # Vive aquí, y no en el sistema de colisiones, porque decidir a
             # quién se actualiza cada fotograma es responsabilidad de la escena;
             # el sistema de colisiones debería tratar sólo de colisiones.
+            # AUD-279 — la zona activa: el encuadre más 400 px por lado.
+            #
+            # Se calcula una vez por fotograma y no una vez por enemigo, que es
+            # el error obvio en un bucle como este: `zona_activa` construye un
+            # `Rect` y leer `settings` no es gratis multiplicado por doscientos.
+            zona = culling.zona_activa(self._camera.offset)
             for enemy in enemies:
+                # Lejos de la cámara no se simula (jefes y quien tenga algo
+                # volando quedan exentos; ver `framework/stage/culling.py`).
+                # `set_player_ref` sí se hace siempre: es una asignación, y
+                # dejarla fuera haría que un enemigo que vuelve a entrar en la
+                # zona apuntase durante un fotograma a la posición vieja.
                 enemy.set_player_ref(player.rect)
+                if not culling.se_simula(enemy, zona):
+                    continue
                 # El contacto se comprueba ANTES de actualizar, como hacía el
                 # bucle original. El orden importa: `_check_player_contact`
                 # resuelve el daño con las posiciones del fotograma que el
