@@ -254,7 +254,52 @@ class DemoMenuScene(BaseScene):
             self._error_msg = f"No se pudo abrir '{entrada.clave}' — ¿faltan recursos?"
             self._error_timer = 3.0
             return
-        self.context.scene_manager.push(escena)
+        self.context.scene_manager.push(self._con_precarga(entrada.clave, escena))
+
+    #: AUD-288 — demos cuya apertura hay que precargar, y con qué.
+    #:
+    #: Sólo una, y medida: abrir `pattern` **congelaba el juego 2,8 s** —3,5 la
+    #: primera vez de la sesión— porque `obtener_modelo()` importa scikit-learn
+    #: y carga o entrena el modelo en el hilo del dibujado. Tres segundos de
+    #: pantalla negra en la demo que el profesor abre delante de la clase.
+    #:
+    #: La segunda llamada tarda 2 ms: lo caro es el import, y basta con hacerlo
+    #: una vez fuera del hilo principal. El resto de las demos abren en menos de
+    #: 10 ms y no entran aquí — con el umbral de `LoadingScene` tampoco pasaría
+    #: nada si entraran, pero un diccionario que enumera lo que de verdad cuesta
+    #: dice más que uno que las lista todas.
+    _PRECARGAS: dict[str, tuple[str, str]] = {
+        "pattern": ("el modelo de la Unidad IX",
+                    "src.framework.processing.reference_model"),
+    }
+
+    def _con_precarga(self, clave: str, escena):
+        """Envuelve la escena en una pantalla de carga si su apertura es lenta.
+
+        Devuelve la escena tal cual cuando no hay nada que precargar, así que el
+        camino normal no cambia en absoluto.
+        """
+        precarga = self._PRECARGAS.get(clave)
+        if precarga is None:
+            return escena
+
+        etiqueta, modulo = precarga
+
+        def _calentar() -> None:
+            # Se hace en el hilo trabajador y **no toca pygame**: importar
+            # scikit-learn y cargar un modelo es CPU pura. Tocar superficies
+            # desde aquí sería la forma de convertir una mejora en un fallo
+            # intermitente imposible de reproducir.
+            import importlib
+
+            importlib.import_module(modulo).obtener_modelo()
+
+        from src.engine.scenes.loading_scene import LoadingScene, LoadTask
+
+        return LoadingScene(
+            self.context, next_scene=escena,
+            tasks=[LoadTask(etiqueta, _calentar)],
+        )
 
     # -- dibujado --------------------------------------------------
     def draw(self, surface: pygame.Surface) -> None:
