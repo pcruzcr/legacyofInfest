@@ -83,14 +83,13 @@ AWAITING_THEIR_BOSS = {
 #: Sonidos cuya acción todavía no está implementada en el jugador o el entorno.
 #: Distinto motivo que el anterior, así que lista distinta: aquí el que falta
 #: es el *hecho*, no el jefe.
-AWAITING_THEIR_FEATURE = {
-    "SFX_PLAYER_CROUCH",       # agacharse no emite nada todavía
-    "SFX_PLAYER_HEAL",         # no hay curación en el juego actual
-    "SFX_ENVIRONMENT_ONE_WAY_PLATFORM",  # atravesar plataforma no avisa
-    # `SFX_ENVIRONMENT_SCREEN_SHAKE` decía «la sacudida es visual, sin sonido».
-    # Dejó de ser cierto: el pisotón de Paburu lo emite. Fuera de la lista.
-    "SFX_ENEMIES_PROJECTILE_HIT_WALL",   # los proyectiles no colisionan con muros
-}
+#
+# AUD-255 la vació: los cuatro que quedaban —agacharse, curarse, posarse en una
+# repisa atravesable y el proyectil contra la pared— tenían fichero, tabla y
+# subtítulo, y les faltaba **sólo el `emit`**. Ninguno esperaba una
+# funcionalidad: esperaban una línea. La lista se deja declarada porque el
+# hueco que vigila es real y volverá a haber sonidos por delante de su acción.
+AWAITING_THEIR_FEATURE: set[str] = set()
 
 
 def _wired_sounds() -> set[str]:

@@ -462,7 +462,14 @@ class Player(BaseEntity):
 
     def heal(self, amount: float) -> None:
         from src.engine.core.difficulty import get_config
+        antes = self._health
         self._health = min(self.max_health, self._health + amount * get_config().heal_mult)
+        # AUD-255 — `SFX_PLAYER_HEAL` tenía fichero, tabla de sonidos y
+        # subtítulo, y ni un solo emisor. Se emite sólo si la salud **subió**:
+        # curarse a salud llena sonaría igual que curarse de verdad, y el
+        # sonido dejaría de significar nada.
+        if self._health > antes and self._event_bus is not None:
+            self._event_bus.emit(Events.SFX_PLAYER_HEAL)
 
     def set_health(self, amount: float) -> None:
         self._health = max(0.0, min(self.max_health, amount))
@@ -1040,9 +1047,18 @@ class Player(BaseEntity):
         # Inflate by 2px so edge-aligned platforms (player bottom == plat top)
         # are detected via colliderect's strict comparison.
         collision_check_rect = player_rect.inflate(0, 2)
+        estaba_en_el_aire = not self.is_grounded
         for plat in one_way_rects:
             if (collision_check_rect.colliderect(plat)
                     and self._prev_foot_y <= plat.top + 1):
+                # AUD-255 — posarse en una repisa atravesable era **mudo**:
+                # `SFX_PLAYER_LAND` lo emite `_resolve_collision`, que es la
+                # ruta del suelo sólido, y ésta es la otra. El evento
+                # `SFX_ENVIRONMENT_ONE_WAY_PLATFORM` existía con fichero y
+                # tabla desde el principio, sin emisor. Sólo al llegar desde
+                # el aire: si no, sonaría cada fotograma de pie encima.
+                if estaba_en_el_aire and self._event_bus is not None:
+                    self._event_bus.emit(Events.SFX_ENVIRONMENT_ONE_WAY_PLATFORM)
                 player_rect.bottom = plat.top
                 self.velocity.y = 0.0
                 self.is_grounded = True

@@ -159,6 +159,11 @@ class CrouchingState(PlayerStateBase):
     def enter(self, player: Player) -> None:
         super().enter(player)
         player._update_rect_size()
+        # AUD-255 — `SFX_PLAYER_CROUCH` existía con fichero y sin emisor. Va en
+        # `enter` y no en `update` porque agacharse es un gesto, no un estado
+        # que suene: emitirlo por fotograma sería un zumbido.
+        if player._event_bus is not None:
+            player._event_bus.emit(Events.SFX_PLAYER_CROUCH)
 
     def update(
         self,
