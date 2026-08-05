@@ -305,6 +305,15 @@ class TestCollisionSystem:
 
 
 class TestParticleEmitterExtended:
+    """AUD-275 — estas pruebas leen ahora `[:em.count]`, no el arreglo entero.
+
+    Los arreglos tienen capacidad reservada desde AUD-275: las partículas vivas
+    van empaquetadas al principio y el resto son ranuras a cero. Recorrer el
+    arreglo completo comprueba el relleno, no las partículas — que es lo que
+    hacía fallar a las tres de aquí abajo aunque el comportamiento fuera
+    correcto.
+    """
+
     def test_emit_respects_gravity(self) -> None:
         from src.framework.vfx.particle_system import BurstConfig, ParticleEmitter
         em = ParticleEmitter()
@@ -312,8 +321,8 @@ class TestParticleEmitterExtended:
                              color=(255, 255, 255), spread=0, gravity=200, friction=1.0)
         em.emit(0, 0, config)
         assert em.count == 10
-        assert all(g == 200.0 for g in em.gravity)
-        assert all(f == 1.0 for f in em.friction)
+        assert all(g == 200.0 for g in em.gravity[:em.count])
+        assert all(f == 1.0 for f in em.friction[:em.count])
 
     def test_emit_directed_stores_gravity_friction(self) -> None:
         from src.framework.vfx.particle_system import ParticleEmitter
@@ -321,8 +330,8 @@ class TestParticleEmitterExtended:
         em.emit_directed(100, 100, 90, 50, 5, 2.0, (3, 5),
                          (255, 0, 0), gravity=500, friction=0.5)
         assert em.count == 5
-        assert all(g == 500.0 for g in em.gravity)
-        assert all(f == 0.5 for f in em.friction)
+        assert all(g == 500.0 for g in em.gravity[:em.count])
+        assert all(f == 0.5 for f in em.friction[:em.count])
 
     def test_update_applies_gravity(self) -> None:
         from src.framework.vfx.particle_system import BurstConfig, ParticleEmitter
@@ -330,11 +339,23 @@ class TestParticleEmitterExtended:
         config = BurstConfig(count=5, speed=0, lifetime=5.0, size=(2, 2),
                              color=(255, 255, 255), spread=0, gravity=100, friction=1.0)
         em.emit(0, 0, config)
-        initial_y = em.y.copy()
+        vivas = em.count
+        initial_y = em.y[:vivas].copy()
         em.update(0.1)
-        assert all(em.y > initial_y), "Particles should fall with gravity"
+        assert all(em.y[:vivas] > initial_y), "Particles should fall with gravity"
 
     def test_clear_resets_all_arrays(self) -> None:
+        """AUD-275 — `clear()` vacía el emisor **sin soltar los arreglos**.
+
+        Esta prueba miraba `len(em.gravity) == 0`, que era cierto cuando los
+        arreglos crecían y encogían con las partículas. Ahora tienen capacidad
+        reservada: `len()` da la capacidad y las vivas las da `count`.
+
+        Y no soltar la memoria es deliberado — el sistema llama a `clear()` al
+        cambiar de escena, y volver a la capacidad inicial obligaría a crecer
+        otra vez desde cero en el primer combate, que es justo el trabajo que
+        AUD-275 quitó.
+        """
         from src.framework.vfx.particle_system import BurstConfig, ParticleEmitter
         em = ParticleEmitter()
         config = BurstConfig(count=5, speed=0, lifetime=1.0, size=(2, 2),
@@ -342,9 +363,7 @@ class TestParticleEmitterExtended:
         em.emit(0, 0, config)
         em.clear()
         assert em.count == 0
-        assert len(em.gravity) == 0
-        assert len(em.friction) == 0
-        assert len(em._colors) == 0
+        assert em.capacidad > 0, "clear() no puede soltar los arreglos"
 
     def test_burst_config_init(self) -> None:
         from src.framework.vfx.particle_system import BurstConfig

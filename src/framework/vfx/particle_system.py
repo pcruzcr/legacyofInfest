@@ -155,18 +155,80 @@ class BurstConfig:
 
 
 class ParticleEmitter:
-    def __init__(self) -> None:
-        self.x: np.ndarray = np.empty(0, dtype=np.float32)
-        self.y: np.ndarray = np.empty(0, dtype=np.float32)
-        self.vx: np.ndarray = np.empty(0, dtype=np.float32)
-        self.vy: np.ndarray = np.empty(0, dtype=np.float32)
-        self.life: np.ndarray = np.empty(0, dtype=np.float32)
-        self.max_life: np.ndarray = np.empty(0, dtype=np.float32)
-        self.alpha: np.ndarray = np.empty(0, dtype=np.int32)
-        self.size: np.ndarray = np.empty(0, dtype=np.int32)
-        self.gravity: np.ndarray = np.empty(0, dtype=np.float32)
-        self.friction: np.ndarray = np.empty(0, dtype=np.float32)
-        self._colors: list[tuple[int, int, int]] = []
+    """Partículas en arreglos paralelos, con capacidad reservada.
+
+    AUD-275 — por qué ya no se reasigna cada fotograma
+    ---------------------------------------------------
+    La versión anterior compactaba con máscara booleana::
+
+        alive = self.life > 0
+        self.x = self.x[alive]      # arreglo nuevo... diez veces
+        self._colors = [self._colors[i] for i in idx]
+
+    Diez asignaciones de arreglo **por emisor y por fotograma**, más una lista
+    de Python reconstruida elemento a elemento —3.840 en regimen— y otras diez
+    asignaciones por rafaga via `np.concatenate`. AUD-214 ya lo habia rozado
+    («el color vive en una lista de tuplas, no en un array») y lo dejo porque
+    entonces tocaba el dibujado.
+
+    Ahora: capacidad reservada y un contador de vivas, que es exactamente el
+    patron que `EnjambreDeBalas` usa en este mismo repositorio. Las ranuras
+    vivas van **empaquetadas al principio**, asi que todo el trabajo se hace
+    sobre `[:n]`.
+
+    Lo que **no** cambia: `BurstConfig.color` sigue siendo una tupla, que es lo
+    que ven los escenarios. Lo que se reordena es la representacion interna.
+    """
+
+    #: Capacidad inicial. 256 cubre las rafagas normales de impacto y muerte
+    #: sin reservar de mas en los quince emisores que puede tener una escena.
+    CAPACIDAD_INICIAL: int = 256
+
+    #: Nombres de los diez arreglos escalares, en un solo sitio: tenerlos
+    #: repetidos en reservar/crecer/compactar es como se acaba con uno que se
+    #: olvida y una particula que conserva la velocidad de otra.
+    _CAMPOS: tuple[tuple[str, object], ...] = (
+        ("x", np.float32), ("y", np.float32),
+        ("vx", np.float32), ("vy", np.float32),
+        ("life", np.float32), ("max_life", np.float32),
+        ("alpha", np.int32), ("size", np.int32),
+        ("gravity", np.float32), ("friction", np.float32),
+    )
+
+    def __init__(self, capacidad: int = CAPACIDAD_INICIAL) -> None:
+        self._n: int = 0
+        self._capacidad: int = 0
+        self._reservar(max(1, capacidad))
+
+    def _reservar(self, capacidad: int) -> None:
+        """Crea los arreglos con la capacidad pedida, conservando lo vivo."""
+        n = self._n
+        for nombre, tipo in self._CAMPOS:
+            nuevo = np.zeros(capacidad, dtype=tipo)
+            if n:
+                nuevo[:n] = getattr(self, nombre)[:n]
+            setattr(self, nombre, nuevo)
+        #: Color por particula. Arreglo y no lista de tuplas: la lista era lo
+        #: que obligaba a un bucle de Python por fotograma al compactar.
+        nuevas = np.zeros((capacidad, 3), dtype=np.uint8)
+        if n:
+            nuevas[:n] = self.colores[:n]
+        self.colores = nuevas
+        self._capacidad = capacidad
+
+    def _crecer_para(self, extra: int) -> None:
+        """Dobla la capacidad hasta que quepan `extra` particulas mas.
+
+        Doblar y no crecer lo justo: con incrementos ajustados, una lluvia de
+        rafagas pequenas reservaria memoria en casi todas. Doblando, el coste
+        queda amortizado y en regimen no se reserva nunca.
+        """
+        if self._n + extra <= self._capacidad:
+            return
+        nueva = max(self._capacidad, 1)
+        while self._n + extra > nueva:
+            nueva *= 2
+        self._reservar(nueva)
 
     def _append_particles(
         self, count: int,
@@ -176,17 +238,20 @@ class ParticleEmitter:
         alphas: np.ndarray, gravities: np.ndarray,
         frictions: np.ndarray, color: tuple[int, int, int],
     ) -> None:
-        self.x = np.concatenate([self.x, np.full(count, x_val, dtype=np.float32)])
-        self.y = np.concatenate([self.y, np.full(count, y_val, dtype=np.float32)])
-        self.vx = np.concatenate([self.vx, vx_arr])
-        self.vy = np.concatenate([self.vy, vy_arr])
-        self.life = np.concatenate([self.life, lives])
-        self.max_life = np.concatenate([self.max_life, lives])
-        self.alpha = np.concatenate([self.alpha, alphas])
-        self.size = np.concatenate([self.size, sizes])
-        self.gravity = np.concatenate([self.gravity, gravities])
-        self.friction = np.concatenate([self.friction, frictions])
-        self._colors.extend([color] * count)
+        self._crecer_para(count)
+        a, b = self._n, self._n + count
+        self.x[a:b] = x_val
+        self.y[a:b] = y_val
+        self.vx[a:b] = vx_arr
+        self.vy[a:b] = vy_arr
+        self.life[a:b] = lives
+        self.max_life[a:b] = lives
+        self.alpha[a:b] = alphas
+        self.size[a:b] = sizes
+        self.gravity[a:b] = gravities
+        self.friction[a:b] = frictions
+        self.colores[a:b] = color
+        self._n = b
 
     def emit(self, x: float, y: float, config: BurstConfig) -> None:
         n = config.count
@@ -227,27 +292,33 @@ class ParticleEmitter:
                                sz.astype(np.int32), lives, alphas, gravities, frictions, color)
 
     def update(self, dt: float) -> None:
-        if len(self.x) == 0:
+        """Avanza la fisica y compacta **en su sitio** (AUD-275).
+
+        La compactacion usa un unico arreglo de indices y `np.take(..., out=)`,
+        que escribe sobre el mismo buffer. Antes eran diez arreglos nuevos por
+        fotograma mas una lista de Python de miles de elementos.
+
+        Si no ha muerto ninguna, no se mueve nada: es el caso comun mientras
+        una rafaga esta viva, y detectarlo cuesta una comparacion.
+        """
+        n = self._n
+        if n == 0:
             return
         _update_particles_njit(
-            self.x, self.y, self.vx, self.vy,
-            self.life, self.max_life, self.alpha,
-            self.size, self.gravity, self.friction, dt,
+            self.x[:n], self.y[:n], self.vx[:n], self.vy[:n],
+            self.life[:n], self.max_life[:n], self.alpha[:n],
+            self.size[:n], self.gravity[:n], self.friction[:n], dt,
         )
-        alive = self.life > 0
-        self.x = self.x[alive]
-        self.y = self.y[alive]
-        self.vx = self.vx[alive]
-        self.vy = self.vy[alive]
-        self.life = self.life[alive]
-        self.max_life = self.max_life[alive]
-        self.alpha = self.alpha[alive]
-        self.size = self.size[alive]
-        self.gravity = self.gravity[alive]
-        self.friction = self.friction[alive]
-        if len(self._colors) > 0:
-            idx = np.where(alive)[0]
-            self._colors = [self._colors[i] for i in idx]
+        idx = np.flatnonzero(self.life[:n] > 0)
+        k = int(idx.size)
+        if k == n:
+            return
+        if k:
+            for nombre, _tipo in self._CAMPOS:
+                arr = getattr(self, nombre)
+                np.take(arr[:n], idx, out=arr[:k])
+            np.take(self.colores[:n], idx, axis=0, out=self.colores[:k])
+        self._n = k
 
     def draw(self, surface: pygame.Surface, offset: pygame.Vector2) -> None:
         """Dibuja cada partícula viva como un cuadrado opaco.
@@ -284,13 +355,14 @@ class ParticleEmitter:
           `SRCALPHA` el alfa de la partícula se pierde. Más rápido de mentira
           y distinto de verdad.
 
-        El bucle sigue existiendo porque el color vive en una lista de tuplas
-        de Python, no en un array; vectorizarlo del todo exigiría cambiar la
-        representación del color, que es API que ven los escenarios.
+        AUD-275 cerró el cabo que este comentario dejaba abierto: el color ya
+        **no** vive en una lista de tuplas de Python sino en un arreglo
+        `(capacidad, 3)`, así que el bucle sólo toca enteros nativos.
         """
-        if len(self.x) == 0:
+        n = self._n
+        if n == 0:
             return
-        idx = np.flatnonzero((self.life > 0) & (self.alpha > 0))
+        idx = np.flatnonzero((self.life[:n] > 0) & (self.alpha[:n] > 0))
         if idx.size == 0:
             return
 
@@ -303,29 +375,32 @@ class ParticleEmitter:
         alphas = np.minimum(255, self.alpha[idx]).tolist()
         sizes = sz.tolist()
 
-        colors = self._colors
+        # AUD-275: el color sale del arreglo, no de una lista de tuplas. Un
+        # `tolist()` de una sola pasada deja el bucle tocando solo enteros
+        # nativos, que es lo que AUD-214 buscaba y no pudo terminar.
+        colores = self.colores[idx].tolist()
         fill = surface.fill
-        for k, i in enumerate(idx.tolist()):
-            r, g, b = colors[i]
+        for k in range(int(idx.size)):
+            r, g, b = colores[k]
             s = sizes[k]
             fill((r, g, b, alphas[k]), (xs[k], ys[k], s, s))
 
     def clear(self) -> None:
-        self.x = np.empty(0, dtype=np.float32)
-        self.y = np.empty(0, dtype=np.float32)
-        self.vx = np.empty(0, dtype=np.float32)
-        self.vy = np.empty(0, dtype=np.float32)
-        self.life = np.empty(0, dtype=np.float32)
-        self.max_life = np.empty(0, dtype=np.float32)
-        self.alpha = np.empty(0, dtype=np.int32)
-        self.size = np.empty(0, dtype=np.int32)
-        self.gravity = np.empty(0, dtype=np.float32)
-        self.friction = np.empty(0, dtype=np.float32)
-        self._colors.clear()
+        """Deja el emisor vacio **sin soltar los arreglos**.
+
+        Reservar de nuevo en cada `clear()` desharia el trabajo de AUD-275: el
+        sistema llama a `clear()` al cambiar de escena, y volver a la capacidad
+        inicial obligaria a crecer otra vez desde cero en el primer combate.
+        """
+        self._n = 0
 
     @property
     def count(self) -> int:
-        return len(self.x)
+        return self._n
+
+    @property
+    def capacidad(self) -> int:
+        return self._capacidad
 
 
 class ParticleSystem:
