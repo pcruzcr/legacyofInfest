@@ -1925,6 +1925,10 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
             learning_overlay=self._learning,
             dialogue_system=self._dialogue,
             fondo_del_escenario=self.dibujar_fondo,
+            # AUD-285 — para los conos de visión de F1. Los conos son
+            # componentes del ECS, no entidades, y sin el mundo no hay de dónde
+            # sacarlos.
+            mundo=self._mundo,
         )
         self._drawing.draw(ctx)
         # AUD-111 — la niebla y el agua, que llevaban meses escritas sin que
