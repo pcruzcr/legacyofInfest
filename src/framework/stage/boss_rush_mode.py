@@ -170,6 +170,17 @@ class BossRushMode:
     def medidor_arrastrado(self) -> float:
         return self._carry_over_meter
 
+    @property
+    def golpes_totales(self) -> int:
+        """Golpes recibidos en toda la tanda (AUD-274).
+
+        Lo pide el HUD. Es una propiedad y no un `sum(...)` en la escena porque
+        `_stages` es privado: que la interfaz tuviera que abrirlo para contar
+        es la clase de acoplamiento que acaba con dos sitios calculando lo
+        mismo de forma distinta.
+        """
+        return sum(e.hits_taken for e in self._stages)
+
     def is_complete(self) -> bool:
         """¿Se han superado todos los jefes?
 

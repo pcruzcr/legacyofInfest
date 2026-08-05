@@ -201,6 +201,12 @@ class HUD:
         #: AUD-260 — tiempo bala. Negativo = el escenario no lo pide.
         self._bala_fraccion: float = -1.0
         self._bala_activo: bool = False
+        #: AUD-274 — franja del Boss Rush. Progreso vacío = modo apagado, que
+        #: es el caso de la partida normal.
+        self._rush_progreso: str = ""
+        self._rush_jefe: str = ""
+        self._rush_puntos: int = 0
+        self._rush_golpes: int = 0
         self._special_max: float = 100.0
 
         self._font = pygame.font.Font(None, 12)
@@ -379,6 +385,7 @@ class HUD:
         self._draw_special_meter(surface)
         self._draw_estamina(surface)
         self._draw_tiempo_bala(surface)
+        self._draw_boss_rush(surface)
         self._draw_score(surface)
         self._draw_timer(surface)
         if self._boss_active:
@@ -409,6 +416,39 @@ class HUD:
         w, h = self._font.size(self._score_text())
         r = self._score_region
         return pygame.Rect(r.right - w, r.y, w, min(h, r.height))
+
+    def set_boss_rush(self, progreso: str, jefe: str,
+                      puntos: int, golpes: int) -> None:
+        """Los datos del Boss Rush. Con `progreso` vacío la franja no se dibuja.
+
+        AUD-274 — AUD-261 conectó el modo entero y el jugador no veía nada: la
+        puntuación se calculaba, los golpes se contaban, la vida se arrastraba,
+        y todo ello era invisible. Un marcador que no se ve es, para quien
+        juega, un marcador que no existe.
+        """
+        self._rush_progreso = progreso
+        self._rush_jefe = jefe
+        self._rush_puntos = puntos
+        self._rush_golpes = golpes
+
+    def _draw_boss_rush(self, surface: pygame.Surface) -> None:
+        """Una línea arriba: en qué combate va, contra quién y cuántos golpes.
+
+        Una línea y no un panel: el Boss Rush es un modo de concentración, y
+        una interfaz que tape la arena trabaja en contra del propio modo.
+        """
+        if not self._rush_progreso:
+            return
+        izquierda = self._font.render(
+            f"RUSH {self._rush_progreso}  {self._rush_jefe}", True, (255, 210, 120))
+        derecha = self._font.render(
+            f"{self._rush_puntos} pts   {self._rush_golpes} golpes",
+            True, (235, 235, 210))
+        y = 20
+        surface.blit(izquierda, (settings.INTERNAL_WIDTH // 2
+                                 - izquierda.get_width() // 2, y))
+        surface.blit(derecha, (settings.INTERNAL_WIDTH
+                               - derecha.get_width() - 8, y))
 
     def _draw_score(self, surface: pygame.Surface) -> None:
         """Alineado a la derecha, pegado al cronómetro.

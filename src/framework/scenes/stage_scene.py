@@ -1635,6 +1635,16 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
             self._hud.set_estamina(self._player.estamina, self._player.estamina_max)
             # AUD-260: `-1` significa «este escenario no lo pide» y la barra
             # no se dibuja, igual que la estamina con máximo 0.
+            # AUD-274 — la franja del Boss Rush. Con el modo apagado se manda
+            # progreso vacío y el HUD no dibuja nada, así que la partida normal
+            # no puede notarlo.
+            modo_rush = self._boss_rush_activo()
+            self._hud.set_boss_rush(
+                modo_rush.progress if modo_rush else "",
+                modo_rush.current_name if modo_rush else "",
+                modo_rush.score if modo_rush else 0,
+                modo_rush.golpes_totales if modo_rush else 0,
+            )
             self._hud.set_tiempo_bala(
                 self._tiempo_bala.fraccion
                 if self._tiempo_bala.reserva_maxima > 0.0 else -1.0,
