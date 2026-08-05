@@ -151,6 +151,12 @@ def build_table() -> str:
                        "detiene ahí; sin ella, hasta el final del mapa). "
                        "Al pisarlo la cámara arranca sola y **el borde "
                        "izquierdo mata**: SMB3 Airship, Cuphead, Ori"),
+        "BossSpawn": ("Punto (dónde entra el jefe)",
+                      "`boss` (**obligatoria**: el nombre registrado del jefe, "
+                      "p. ej. `BossVenado`). Produce la misma entidad que "
+                      "escribir ese nombre como `type`; sin `boss`, o con uno "
+                      "que no esté registrado, el cargador avisa. Lo pide "
+                      "`17_BOSS_SPEC.md` §8.2 en todo mapa de jefe"),
         "Spring": ("Rectángulo (rebota en todo su ancho)",
                    "`impulso` (px/s, -520; negativo es hacia arriba) · "
                    "`rearme` (s, 0.15)"),

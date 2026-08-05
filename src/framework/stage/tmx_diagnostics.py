@@ -103,6 +103,12 @@ BUILTIN_OBJECT_TYPES: tuple[str, ...] = (
     # que una liana existe para evitar.
     "Vine",            # DKC (Ropey Rampage), Zelda, Spelunky, Castlevania
     "Zipline",         # DKC, Rayman, Ori
+    # AUD-259 — `17_BOSS_SPEC.md` §8.2 exige un `BossSpawn` en todo mapa de
+    # jefe desde que se escribió, y el cargador no lo conocía: quien siguiera
+    # su propia especificación recibía «tipo desconocido». Declara **dónde
+    # entra** el jefe que nombra su propiedad `boss`, resuelto por el registro
+    # de entidades.
+    "BossSpawn",
 )
 
 #: Tipos válidos en la capa `Collision`, que se procesa aparte. `Platform`
