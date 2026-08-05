@@ -17,6 +17,12 @@ sistema, con lo que se ejecutó para comprobarlo. Complementa a
 ejecutando el código o midiendo el árbol el 4 de agosto de 2026. Donde el
 documento y el código no coincidían, se corrigió el documento.
 
+**§15 (5 de agosto de 2026)** responde al backlog de diseño completo —las nueve
+categorías, cuarenta y seis propuestas— con el mismo método. Si vienes de esa
+lista, empieza por [§15.0](#150-seis-cifras-de-la-lista-que-la-medición-no-confirma):
+seis de sus cifras no coinciden con lo medido, y tres de ellas cambian la
+conclusión de su propia propuesta.
+
 ---
 
 ## 0. Resumen para quien tiene prisa
@@ -230,6 +236,10 @@ estudiantes (invariante 1 de `CLAUDE.md`).
 ---
 
 ## 8. Lo que sigue abierto, en una lista
+
+> Esta lista es la de los sistemas base. La lista **completa y ordenada por
+> coste**, que incluye lo de aquí más todo el backlog de diseño, está en
+> [§15.10](#1510-lo-que-queda-ordenado-por-lo-que-cuesta).
 
 Por orden de lo que más se nota jugando:
 
@@ -520,3 +530,184 @@ relleno de polígonos. La rejilla se queda porque es la estructura correcta,
 pero lo que acota el coste es un tope explícito por foco. Escribir la
 justificación antes de medirla es la forma más fácil de que un documento
 vuelva a mentir.
+
+---
+
+## 15. El backlog de diseño, medido (2026-08-05)
+
+Esta sección responde a la lista de mejoras en formato GDD —nueve categorías,
+cuarenta y seis propuestas— comprobando **una por una contra el código que hay
+hoy**. Ninguna fila sale de leer documentación: cada veredicto trae el fichero,
+la constante o el número que lo sostiene.
+
+El resultado corto: **veinticuatro de las cuarenta y seis ya están hechas**,
+casi siempre con su `AUD-NNN`. Lo que la lista propone como novedad es, en más
+de la mitad de los casos, algo que el motor lleva meses haciendo. Eso no es un
+defecto de la lista: es la consecuencia de que nadie tenía un sitio donde mirar
+el estado real, que es justamente lo que este documento intenta ser.
+
+### 15.0 Seis cifras de la lista que la medición no confirma
+
+Se comprueban primero porque tres de ellas cambian la conclusión de su propia
+propuesta.
+
+| La lista dice | Medido hoy | Cómo se midió |
+|---|---|---|
+| El salto es «muy vertical, 1,05:1» | **0,95:1** el salto sencillo; **1,90:1** usando el salto aéreo, que ya está dentro del 1,5–2 que la lista recomienda | `JumpEnvelope.from_settings()`: altura 90,25 px, alcance 85,50 px, alcance con salto aéreo 171,00 px |
+| El post-procesado «consume el 63 % del fotograma» en CPU | El 63 % es de **otra tabla**: el coste de **8.100 partículas** (`docs/74` §12). El post-procesado **ya está en GPU** desde AUD-229/230 | `docs/74_TUBERIA_DE_GPU.md`: camino GL completo 7,96 → 3,76 ms; todas las pasadas 25,80 → 15,32 ms |
+| «24 pares» de ciclos de importación | **17 pares**, y **11 son `title_scene ↔ pantalla que vuelve al título`** — el patrón del menú, no una maraña | Barrido AST de los 202 módulos de `src/`, aristas mutuas |
+| «15 especies inalcanzables para el jugador» | **Cero.** Las **21** especies del roster están colocadas en algún `.tmx`, y el bestiario tiene **30 fichas** (21 especies + 9 arquetipos) | `bestiary_registry.SPECIES` cruzado con los `type=` de `assets/maps/**/*.tmx`; `Bestiary.get_all_entries()` |
+| Arranque de «3,4 s», a bajar con importación perezosa | Import en frío: **mediana 1,61 s** (mín 1,52, máx 3,22). Y al arrancar **no entra ninguna librería pesada**: `sklearn`, `scipy`, `cv2`, `skimage`, `matplotlib`, `joblib` y `pandas` están todas fuera de `sys.modules` | `pytest tests/benchmarks/test_startup_benchmark.py`; `python -X importtime` sobre `scene_registry` |
+| `StageScene` «con más de 1.800 líneas» | **1.923**, y ya hay cinco módulos extraídos en `stage_parts/` | `wc -l src/framework/scenes/stage_scene.py` |
+
+La de la importación perezosa merece una frase más, porque la propuesta se cae
+sola: el registro de escenas **ya** construye por cadena y no importa nada
+hasta que alguien entra en la pantalla, y `filter_tools` y
+`pattern_recognition_tools` importan `scipy` y `sklearn` **dentro de la
+función**. El trabajo está hecho; lo que quedaba —medirlo— es esta fila.
+
+### 15.1 Gameplay y *game feel*
+
+| Propuesta | Veredicto | Evidencia |
+|---|---|---|
+| *Coyote time* | **HECHO** | `PLAYER_COYOTE_FRAMES = 6`, y el contador avanza con `dt * 60.0` para que la ventana dure 100 ms en cualquier equipo y no seis fotogramas de duración variable (`player.py:894-911`) |
+| *Jump buffering* | **HECHO** | `player_state.py:63` y `player.py:698-704`: la pulsación se guarda ~5 fotogramas y se dispara al aterrizar |
+| Ajustar el arco de salto | **No tocar sin decidirlo antes** | `GRAVITY` y `PLAYER_JUMP_FORCE` recalibran **los 16 mapas ya calificados**. `tests/test_calibracion_del_salto.py` existe como trinquete precisamente para que nadie los cambie sin enterarse. Y con el salto aéreo el arco ya es 1,90:1 |
+| *Hit-stop* | **HECHO** | `FUENTE_HITSTOP` en `clock.py`, con los tres relojes de AUD-118/119 para que congelar el golpe no congele la música ni los bloques rítmicos |
+| *Knockback* | **HECHO** | `states/damage.py`, `player.py` |
+| *Screen shake* **direccional** | **PENDIENTE (pequeño)** | `Camera.apply_shake(amplitude, duration)` sacude en aleatorio; no recibe dirección del golpe. Respeta «movimiento reducido», así que la variante direccional tendría que hacerlo también |
+| Telegrafiar el ataque enemigo | **HECHO en jefes, parcial en enemigos** | `BossBase` tiene fase de aviso con `0-1` publicado para el HUD (`boss_base.py:429-546`). Los enemigos comunes no tienen ventana de aviso declarada |
+| *Spacing* y cajas de ataque | **La maquinaria está; el ajuste es diseño** | Hay `hitbox`/`hurtbox` separadas por entidad y `_attack_timer` por estado. Cambiar los alcances es una decisión de diseño que afecta a las entregas |
+| *Pogo* | **HECHO (AUD-134)** | `POGO_IMPULSO = -300.0`, menor que el salto a propósito: no debe ser una forma más rápida de subir |
+| *Bash* sobre proyectiles | **NO EXISTE** | Sin coincidencias en `src/`. Es aditivo y de riesgo bajo, pero necesita decidir qué proyectiles admiten impulso |
+| Habilidades atadas a jefes | **HECHO (AUD-238)** | El jefe suelta el recogible (aditivo) y `PLAYER_SKILLS_REQUIRE_UNLOCK = False` deja el candado apagado, porque exigir el doble salto rompería niveles ya entregados (invariante 2) |
+| Micro-recompensas al recoger | **PARCIAL** | `INTERACT_ITEM_PICKED` llega a `senales.py` y **sólo actualiza el inventario**: ni partículas, ni rebote de la interfaz. Hay `damage_numbers.py` para el daño, así que el patrón existe y falta aplicarlo a la recogida |
+
+### 15.2 Diseño de niveles
+
+| Propuesta | Veredicto | Evidencia |
+|---|---|---|
+| Iluminación como guía | **Motor listo, mapas no** | El tipo `Light` está en el TMX con sus seis propiedades y `stage0` lo cubre al 100 %. Usarla para marcar la ruta crítica es trabajo de diseño de mapas |
+| Métricas de salto estandarizadas | **HECHO como herramienta, incumplido en los mapas** | `JumpEnvelope` + `grade_stage.py` califican los 16 mapas. Hoy hay **13 huecos imposibles en `stage1_2_la_soda`**, 5 en `stage3_4_boss_gavilan`, 3 en `stage3_3_el_patio` y 2 en `hall` y `stage_mecanicas` |
+| Válvulas de seguridad (*pacing*) | **NO MEDIDO** | El calificador no tiene métrica de tensión. Añadirla es viable: ya cuenta enemigos, huecos y checkpoints por mapa |
+| Densidad y checkpoints | **Confirmado, y es el peor dato de la tanda** | `worst_checkpoint_gap` de `stage2_1_oficinas.tmx` = **3.048,17 px**. El segundo peor es 944,0. No es una tendencia: es un mapa |
+| Zonas de *warp* | **NO EXISTE** | De los 68 tipos de objeto TMX no hay ninguno de teletransporte. `NextTrigger` cambia de nivel; dentro del mapa no hay nada |
+| Sigilo de tres estados | **HECHO, con un estado menos del que pide la lista** | `Alerta.estado` da `tranquilo → sospecha → alerta`, con subida 2,0/s y bajada 0,35/s; `sistema_conos_de_vision` compara cosenos en vez de llamar a `acos`. Falta el estado de **evasión** (ir al último punto donde se vio al jugador) |
+| Fricción variable | **HECHO** | Tipo TMX `FrictionZone` (hielo, miel), con la salvedad medida en AUD-236: actúa como escala de velocidad, no como coeficiente |
+
+### 15.3 Interfaz y dirección de arte
+
+| Propuesta | Veredicto | Evidencia |
+|---|---|---|
+| HUD minimalista | **Decisión de arte, no de motor** | El HUD dibuja trece elementos (corazones, retrato, estamina, especial, combo, puntuación, tiempo bala, temporizador, jefe, Boss Rush…). Hay pruebas de legibilidad (`test_legibilidad_de_menus`, `test_ui_consistency`) pero ninguna de densidad |
+| *Feedback* diegético | **PARCIAL** | Está el parpadeo de invencibilidad. No hay daño visible en el sprite del jugador ni color de arma al cargar |
+
+### 15.4 VFX, partículas y GPU
+
+| Propuesta | Veredicto | Evidencia |
+|---|---|---|
+| `SpriteBatch` | **PENDIENTE (medir primero)** | AUD-148. Ver la fila siguiente antes de escribirlo |
+| Atlas de texturas | **EXISTE Y NO LO USA NADIE — a propósito** | `sprite_atlas.py` está medido: **2.000 blits sueltos 2,06 ms; desde el atlas 2,35 ms**. En el camino de CPU de pygame el atlas sale *peor*. Lo que sí gana es la carga: 200 PNG 12,9 ms → atlas 4,3 ms, y `blits()` 2,06 → 1,74 ms. El atlas es el cimiento de la ruta de GPU, no una optimización de hoy |
+| *Culling* agresivo | **NO EXISTE, y es lo más rentable que queda aquí** | `stage_scene.py:1405-1420` actualiza **todos** los enemigos cada fotograma, y `drawing_system.py:533` los encola todos para dibujar. Nada consulta el rectángulo de la cámara |
+| *GPU instancing* | **NO APLICABLE HOY** | La tubería GL (`gl_pipeline.py`) es post-proceso a pantalla completa: los sprites siguen yendo por CPU. Sin ruta de sprites en GPU no hay nada que instanciar — es la misma decisión que `SpriteBatch`, no una aparte |
+| *Object pooling* de VFX | **HECHO (AUD-275)** | 0,658 → 0,453 ms/fotograma, 1,45×. Más `SurfacePool`, usado por jugador, enemigos y tutorial. Queda el pooling de **proyectiles**, que es pequeño |
+| Post-procesado nativo | **HECHO (AUD-229/230)** | Subir el fotograma 10,98 → 0,20 ms; bloom 3,39 → 1,70 ms; todas las pasadas 25,80 → 15,32 ms |
+| Sombra elíptica bajo los pies | **HECHO (AUD-273)** | |
+| Sombras proyectadas | **HECHO (AUD-278)**, apagadas por defecto | Medido: hasta 4-5 focos cabe (+6,8 ms con 3.000 obstáculos); con 8 no |
+
+### 15.5 Audio
+
+| Propuesta | Veredicto | Evidencia |
+|---|---|---|
+| *Ducking* | **HECHO a medias (AUD-144)** | `mixer_buses.py` agacha la música **bajo la voz**, y `play_voz(..., duracion_duck=)` es quien lo dispara. Lo que la lista pide —que un SFX crítico agache la música— **no tiene disparador**: el mecanismo está, falta la llamada |
+| Panoramización 2D | **HECHO** | `AudioManager.play_sfx_at()` calcula el *pan* por la posición en X respecto al centro de la pantalla |
+| Gestión de voces (polifonía) | **NO EXISTE** | `SoundBank.play()` llama a `sound.play()` sin contar instancias. Cinco enemigos muriendo a la vez reproducen el sonido cinco veces |
+| Reloj musical (F6) | **HECHO (AUD-137)** | `music_clock.py` lee la posición del mezclador; `bpm`/`compas`/`desfase_audio` se declaran en el mapa |
+
+### 15.6 Arquitectura y seguridad
+
+| Propuesta | Veredicto | Evidencia |
+|---|---|---|
+| Patrón Observer (*event bus*) | **HECHO, y está en todas partes** | `EventBus` con **referencias débiles** (AUD-028) y sin *singleton* de módulo (AUD-019), usado por **38 módulos**. `PLAYER_DIED` ya funciona exactamente como describe la lista |
+| Partir `StageScene` | **Empezado y aplazado por acuerdo** | 1.923 líneas, con `ambiente.py`, `dibujo_mecanicas.py`, `fantasma.py`, `rush.py` y `senales.py` ya fuera |
+| Contenedor de servicios (DI) | **HECHO en su forma útil** | `GameContext` **es** el contenedor de inyección: entra por el constructor de toda escena. Y **no hay Service Locator que eliminar** — cero coincidencias en `src/`. Un `ServiceContainer` con registro dinámico sería cambiar una inyección explícita por una implícita, que es peor para leer |
+| Sistema de plugins | **NO EXISTE** | `lua_script.py` se conserva como cimiento y lo dice en su cabecera. Ojo: un gestor de plugins que deje a los estudiantes extender el motor **es** una decisión de curso, no de ingeniería |
+| Hash de integridad en los JSON | **NO EXISTE, y conviene pensarlo antes** | `save_manager.py` escribe con `orjson`, sin firma. Pero el *salt* viviría en el código, y el código lo leen las 26 personas de las que se querría defender: sería ofuscación, no integridad. Sirve para detectar corrupción accidental; no para un tiempo de *speedrun* alterado a conciencia |
+| Eliminar `pickle` | **HECHO donde importaba (AUD-035)** | La persistencia usa `orjson`, y `tests/test_seguridad_del_motor.py` lo fija para que nadie lo deshaga. Queda **acotado y documentado** en el modelo de referencia de la Unidad IX (`joblib`), con aviso explícito de que deserializar ejecuta código |
+| Carga perezosa | **HECHO** | Ver §15.0 |
+| Carga asíncrona en hilo | **EXISTE Y NADIE LA USA** | `LoadingScene` tiene su hilo trabajador y su barra de progreso, y la única referencia en todo el repositorio es `tests/test_scene_smoke.py`. **No está en el registro de escenas**, así que no se puede alcanzar jugando |
+
+### 15.7 Herramientas internas
+
+| Propuesta | Veredicto | Evidencia |
+|---|---|---|
+| Gizmos de depuración | **PARCIAL** | **F1** dentro de un escenario dibuja `rect` (verde), `hurtbox` (rojo), `hitbox` (azul) y el jugador (cian), más el recuento de entidades y la posición de la cámara. Faltan los **vectores de velocidad** y los **conos de visión**, que es lo único que hoy no se puede ver aunque el dato exista |
+| Monitor de rendimiento | **PARCIAL** | **F3** abre la consola: FPS, cola de eventos con los cinco primeros y árbol de módulos (F4/F5/F6). Faltan RAM, el reparto GPU/CPU en ms y el número de sprites activos — justo lo que haría falta para decidir sobre `SpriteBatch` |
+
+### 15.8 Arquitectura para enseñar
+
+| Propuesta | Veredicto | Evidencia |
+|---|---|---|
+| Aislamiento de errores | **HECHO al cargar (AUD-055), NO al ejecutar** | Si el `.tmx` no carga, `StageErrorScene` pone el diagnóstico en pantalla y `R` recarga. Pero en el bucle de juego **no hay red**: el único `except Exception` de `stage_scene.py` está en la suscripción de manejadores. Una entidad de estudiante que lance en `update()` tumba el fotograma |
+| API estricta para entidades | **HECHO** | `EnemyBase` es plantilla con cinco `@abstractmethod` y ganchos opcionales antes y después del update; `BossBase` hereda de ella. Un estudiante no puede olvidarse de implementar lo obligatorio: falla al instanciar |
+| Rúbrica que modele la movilidad | **PARCIAL** | AUD-192 exime de `design_completable` a los mapas con objetos de movilidad; `classify_gap` sigue fuera de la exención (GAP-024) |
+| Filtros «hechos a mano» | **HECHO** | `sobel_edge_propio` y `canny_edge_propio` en `filter_tools.py`, con los cinco pasos de Canny escritos, y `cv2` conservado al lado como referencia de rendimiento — que es exactamente lo que la lista pide |
+| Visualización de la IA | **NO EXISTE, y hay un documento que dice lo contrario** | `SquadBrain.stats()` está comentado como «introspección para el overlay de debug» y **no tiene un solo llamante**. El dato está calculado (fracción de decisiones por modelo frente a por reglas) y no se muestra en ningún sitio |
+| Traducir los 12 manuales | **PENDIENTE** | Compatible con la invariante 5 y sin hacer. Ver §12 |
+
+### 15.9 Accesibilidad y contenido
+
+| Propuesta | Veredicto | Evidencia |
+|---|---|---|
+| Reasignación de controles | **HECHO** | `KeybindingScene` sobre las 14 acciones de `Action`, con persistencia en el `config.json` del usuario |
+| *Hold* en vez de *mash* | **HECHO (AUD-126)** | `hold_to_press` convierte las acciones sostenidas en conmutador, y se activa desde la pantalla de opciones |
+| Alto contraste | **PARCIAL** | Modos daltónicos completos, y también en la ruta de GPU (AUD-252, 0,07 ms). Contorno de silueta **sólo para el jugador** (AUD-190). Faltan el contorno de enemigos y los iconos que no dependan del color |
+| Interfaz escalable | **HECHO** | `ESCALAS_DE_TEXTO` hasta 2,0, comprobado a 800 × 600 sin recortar diálogos. Más «movimiento reducido» (factor 0,25, no cero, para no borrar la única señal de que el dash ocurrió) y cuatro velocidades de texto (AUD-128) |
+| Completar el bestiario | **HECHO** | 21/21 especies colocadas, 30 fichas. Ver §15.0 |
+
+### 15.10 Lo que queda, ordenado por lo que cuesta
+
+**Barato y con efecto medible** (un `AUD-NNN` cada uno, sin tocar contratos):
+
+1. ***Culling* de actualización y dibujado.** Hoy no existe ninguno. Es la
+   optimización con mejor relación coste/beneficio que queda, y es aditiva.
+2. **Polifonía en `SoundBank`.** Un contador por sonido y un tope.
+3. **Micro-recompensas al recoger.** El evento ya llega; falta emitir
+   partículas y sonido.
+4. **Sacudida direccional.** `apply_shake` recibiendo un vector.
+5. **`stats()` del escuadrón en el overlay de F3**, junto a RAM y número de
+   sprites. Cierra a la vez la fila de «visualización de IA» y media de
+   «monitor de rendimiento».
+6. ***Ducking* disparado por SFX crítico.** El bus ya existe.
+
+**Medio, y decidible sin romper nada:**
+
+7. **Vectores de velocidad y conos de visión en F1.** El dato ya está.
+8. **Estado de evasión en el sigilo.** Cuarto estado de `Alerta`.
+9. **Zonas de *warp*.** Tipo TMX nuevo; aditivo por construcción.
+10. **Enganchar `LoadingScene`.** Está escrita y probada; falta registrarla y
+    usarla en la transición de escenario.
+11. **Aislar el fallo de una entidad de estudiante.** `try/except` alrededor de
+    `enemy.update(dt)` que retire la entidad y registre el error. Es la mejora
+    con más valor **docente** de toda la lista: hoy un bucle mal escrito en una
+    entrega tumba la demo de clase.
+
+**Grande, o pendiente de una decisión que no es técnica:**
+
+12. **Pendientes (*slopes*)** — cambia la resolución de colisión (§11).
+13. **`SpriteBatch` y la ruta de sprites en GPU** — con ella entran el atlas y
+    el *instancing*; sin ella, ninguno de los tres tiene sentido. Medir antes
+    (AUD-148), y el monitor del punto 5 es lo que permitiría medirlo.
+14. **Reducir los 17 pares de importación mutua** — once son el patrón del
+    menú y se resuelven con una importación diferida en `title_scene`.
+15. **Partir `stage_scene.py`** — aplazado por acuerdo.
+16. **Árbol de habilidades** — sigue siendo lo único que no existe en absoluto
+    (§0), y necesita decisión de diseño antes que código.
+17. **Traducir los 12 manuales del estudiante.**
+18. **Sistema de plugins y hash de integridad** — los dos son decisiones de
+    curso, y el segundo, tal como se propone, no daría la garantía que promete.
+
+**Y lo que este documento recomienda no hacer:** cambiar `GRAVITY` o
+`PLAYER_JUMP_FORCE` para «arreglar» el arco del salto, y sustituir `GameContext`
+por un `ServiceContainer`. El primero recalibra dieciséis mapas ya calificados;
+el segundo cambia una dependencia visible por una escondida.
