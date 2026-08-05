@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 import pygame
 
 from src.engine.core import settings
+from src.framework.vfx.sombras import Sombra
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +83,10 @@ class DrawingSystem:
         #: AUD-135 — lienzo del agua, cacheado al tamaño de la pantalla.
         self._agua_cache: pygame.Surface | None = None
         self._peligro_cache: pygame.Surface | None = None
+        #: AUD-273 — la sombra bajo los pies. Sin ella, un salto largo sobre un
+        #: hueco es una apuesta: la cámara sigue al personaje y en el pico del
+        #: salto el suelo queda fuera de la vista útil.
+        self._sombra = Sombra()
 
     def draw(self, ctx: DrawContext) -> None:
         surface = ctx.surface
@@ -414,7 +419,16 @@ class DrawingSystem:
         for index, layer in enumerate(layers):
             if not isinstance(layer, pygame.Surface):
                 continue
-            factor = self._PARALLAX_FACTORS[min(index, len(self._PARALLAX_FACTORS) - 1)]
+            # AUD-272 — la velocidad la publica el cargador, atada al **nombre**
+            # de la capa. La tabla por índice se queda como respaldo para un
+            # `StageData` construido a mano, que es lo que hacen varias
+            # entregas y varias pruebas.
+            factores = getattr(stage, "background_factors", None) or ()
+            if index < len(factores):
+                factor = float(factores[index])
+            else:
+                factor = self._PARALLAX_FACTORS[
+                    min(index, len(self._PARALLAX_FACTORS) - 1)]
             layer_w = layer.get_width()
             layer_h = layer.get_height()
             if layer_w <= 0 or layer_h <= 0:
@@ -525,6 +539,18 @@ class DrawingSystem:
                 drawables.append((checkpoint, checkpoint.rect.centery))
 
         drawables.sort(key=lambda pair: pair[1])
+
+        # AUD-273 — las sombras van **todas antes** que las entidades, no cada
+        # una justo antes de la suya. Intercaladas, la sombra de un enemigo
+        # cercano se pintaría encima de otro que está detrás y más abajo, y se
+        # leería como una mancha flotando sobre su cabeza.
+        solidos = getattr(stage, "collision_rects", None) or []
+        if solidos:
+            for drawable, _depth in drawables:
+                rect = getattr(drawable, "rect", None)
+                if rect is not None and getattr(drawable, "proyecta_sombra", True):
+                    self._sombra.dibujar(surface, rect, solidos, offset)
+
         for drawable, _depth in drawables:
             drawable.draw(surface, offset)
 

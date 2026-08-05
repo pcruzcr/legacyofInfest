@@ -276,6 +276,13 @@ class StageData:
     spawn_point: pygame.Vector2 = field(default_factory=lambda: pygame.Vector2(0, 0))
     next_trigger: pygame.Rect | None = None
     background_layers: list[pygame.Surface] = field(default_factory=list)
+    #: AUD-272 — velocidad de parallax de cada capa de `background_layers`, en
+    #: el mismo orden. Se publica aparte en vez de cambiar el tipo de la lista
+    #: porque `background_layers` lo leen las entregas.
+    #:
+    #: Vacía significa «usa la tabla por índice de siempre», que es lo que hace
+    #: un `StageData` construido a mano.
+    background_factors: list[float] = field(default_factory=list)
     message_triggers: list[MessageTrigger] = field(default_factory=list)
     hazard_zones: list[HazardZone] = field(default_factory=list)
     death_pits: list[DeathPit] = field(default_factory=list)
@@ -839,29 +846,64 @@ class StageLoader:
         valor = cls._safe_float(props.get("ambient_light", 1.0), "ambient_light")
         return max(0.0, min(1.0, valor))
 
+    #: AUD-272 — las capas de fondo, de lo más lejano a lo más cercano.
+    #:
+    #: Eran tres y el dibujado ya admitía cuatro velocidades: la profundidad
+    #: estaba limitada por el lado que menos costaba cambiar. `sky` y `deep`
+    #: son nuevas.
+    CAPAS_DE_FONDO: tuple[str, ...] = ("sky", "deep", "far", "mid", "near")
+
+    #: Las que un mapa puede no tener sin que eso sea una errata. Las tres de
+    #: siempre siguen avisando si faltan, porque ahí sí lo es.
+    CAPAS_OPCIONALES: frozenset[str] = frozenset({"sky", "deep"})
+
+    #: Cuánto se mueve cada capa respecto a la cámara, **por nombre**.
+    #:
+    #: Por nombre y no por posición: antes el factor salía del índice de carga,
+    #: así que un mapa que añadiera una capa delante hacía que `far` pasara de
+    #: 0,15 a 0,35 y el mismo fondo se moviera distinto en dos escenarios sin
+    #: que nadie lo pidiera.
+    #:
+    #: Ninguna llega a 1,0: un fondo a la velocidad de la cámara se pega al
+    #: terreno y deja de leerse como fondo.
+    VELOCIDAD_DE_FONDO: dict[str, float] = {
+        "sky": 0.06,     # casi quieto; un cielo que sigue a la cámara no es cielo
+        "deep": 0.10,
+        "far": 0.15,     # los tres de siempre conservan su velocidad exacta
+        "mid": 0.35,
+        "near": 0.60,
+    }
+
     @classmethod
     def _load_backgrounds(cls, stage: StageData, background_zone: str) -> None:
         if not background_zone:
             return
         bg_dir = settings.ASSETS_DIR / "backgrounds" / background_zone
-        if bg_dir.is_dir():
-            for bg_name in ("far", "mid", "near"):
-                bg_path = bg_dir / f"bg_{background_zone}_{bg_name}.png"
-                cls._try_append_bg(stage, bg_path)
-        else:
-            for bg_name in ("far", "mid", "near"):
-                bg_path = settings.ASSETS_DIR / "backgrounds" / f"bg_{background_zone}_{bg_name}.png"
-                cls._try_append_bg(stage, bg_path)
+        base = bg_dir if bg_dir.is_dir() else settings.ASSETS_DIR / "backgrounds"
+        for bg_name in cls.CAPAS_DE_FONDO:
+            bg_path = base / f"bg_{background_zone}_{bg_name}.png"
+            if bg_name in cls.CAPAS_OPCIONALES and not bg_path.is_file():
+                continue
+            if cls._try_append_bg(stage, bg_path):
+                stage.background_factors.append(cls.VELOCIDAD_DE_FONDO[bg_name])
 
     @classmethod
-    def _try_append_bg(cls, stage: StageData, bg_path: Path) -> None:
+    def _try_append_bg(cls, stage: StageData, bg_path: Path) -> bool:
+        """Carga una capa de fondo. Devuelve si se pudo (AUD-272).
+
+        Devuelve algo, y no nada, porque quien llama necesita saberlo para
+        apuntar la velocidad de la capa **sólo si la capa existe**: si no, los
+        dos listados se desincronizarían en cuanto faltara un fichero.
+        """
         try:
             bg_surf = AssetLoader.load_image(
                 bg_path, size=(settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
             )
             stage.background_layers.append(bg_surf)
+            return True
         except (pygame.error, FileNotFoundError, PermissionError):
             logger.warning("StageLoader: missing bg %s", bg_path)
+            return False
 
     @classmethod
     def _build_waypoints(cls, tmx_data: Any) -> dict[str, list[tuple[float, float]]]:
