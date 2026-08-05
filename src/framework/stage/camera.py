@@ -6,12 +6,30 @@ screen shake, map clamping, and camera lock zones.
 """
 from __future__ import annotations
 
+import math
 import random
 from typing import TYPE_CHECKING, Any
 
 import pygame
 
 from src.engine.core import settings
+
+#: AUD-282 — ciclos completos que da la sacudida direccional en toda su duración.
+#:
+#: **Uno.** El primer intento puso 24 Hz y salió mal por una razón que merece
+#: quedar escrita: a 60 fps eso son 2,5 radianes por fotograma, casi π. La onda
+#: cambiaba de signo en diecinueve de veinticuatro fotogramas, o sea que el
+#: muestreo la convertía en ruido —submuestreo puro, Nyquist manda— y el
+#: resultado se veía exactamente igual que la sacudida isótropa que esto viene
+#: a sustituir.
+#:
+#: Con un ciclo, un golpe de 0,1 s empuja hacia fuera y vuelve en seis
+#: fotogramas: se lee como empujón porque **se puede ver**.
+_SACUDIDA_CICLOS: float = 1.0
+
+#: Cuánto tiembla en perpendicular, en fracción de la amplitud. Sin nada de
+#: cruzado la oscilación se ve mecánica; con demasiado vuelve a ser ruido.
+_SACUDIDA_CRUZADA: float = 0.25
 
 
 def _factor_de_movimiento() -> float:
@@ -58,6 +76,11 @@ class Camera:
         self._is_locked_y: bool = False
         self._shake_timer: float = 0.0
         self._shake_amplitude: float = 0.0
+        #: AUD-282 — eje del golpe, o `None` para la sacudida isótropa de antes.
+        self._shake_dir: pygame.Vector2 | None = None
+        #: Cuánto duraba el golpe que fijó el eje: la onda se calcula sobre
+        #: esto para acabar en cero y no cortarse a media altura.
+        self._shake_duracion: float = 0.0
         self._shake_offset: pygame.Vector2 = pygame.Vector2(0.0, 0.0)
 
         # Parallax factors (multiplied against camera offset per layer name)
@@ -144,7 +167,8 @@ class Camera:
                 self._is_locked_x = self._is_locked_x or bool(zona.lock_x)
                 self._is_locked_y = self._is_locked_y or bool(zona.lock_y)
 
-    def apply_shake(self, amplitude: float = 2.0, duration: float = 0.1) -> None:
+    def apply_shake(self, amplitude: float = 2.0, duration: float = 0.1,
+                    direccion: Any = None) -> None:
         """Trigger a screen shake. Overwrites current shake if new amplitude is larger.
 
         AUD-126 — «movimiento reducido» atenúa, no elimina.
@@ -157,11 +181,57 @@ class Camera:
         sistema puede saltarse el ajuste escribiendo `_shake_amplitude`
         directamente y dejar al jugador con la pantalla temblando pese a
         haberlo desactivado.
+
+        AUD-282 — `direccion`, y por qué no basta con ruido en un eje
+        ------------------------------------------------------------
+        Sin dirección esto sacude en aleatorio isótropo, y el ruido isótropo
+        dice «ha pasado algo» pero no **de dónde**. Un golpe que llega por la
+        izquierda y otro por la derecha se sentían idénticos, así que la
+        sacudida no aportaba información: sólo intensidad.
+
+        Con dirección, la pantalla oscila **a lo largo de ese eje** con una
+        onda que decae, y no con ruido proyectado. La diferencia importa: ruido
+        limitado a un eje se percibe igual que ruido en dos: como vibración. Lo
+        que se lee como empujón es un movimiento coherente de ida y vuelta, que
+        es lo que hace un cuerpo al recibir un impacto.
+
+        Queda un 25 % de componente perpendicular. Una oscilación puramente
+        rectilínea se ve mecánica, como un motor; el temblor cruzado es lo que
+        la devuelve a parecer un golpe.
+
+        Sin `direccion` el comportamiento es **exactamente** el de antes: los
+        dieciséis mapas entregados y las veintiséis clases de escenario llaman
+        sin ella.
         """
         amplitude *= _factor_de_movimiento()
         if amplitude > self._shake_amplitude:
             self._shake_amplitude = amplitude
+            # La dirección viaja con la amplitud: si este golpe no gana, su
+            # dirección tampoco debe pisar la del golpe más fuerte que sigue
+            # sonando. Dos sistemas discutiendo el eje en el mismo fotograma es
+            # cómo la sacudida acaba pareciendo un fallo de vídeo.
+            self._shake_dir = self._normalizar(direccion)
+            self._shake_duracion = duration
         self._shake_timer = max(self._shake_timer, duration)
+
+    @staticmethod
+    def _normalizar(direccion: Any) -> pygame.Vector2 | None:
+        """Vector unitario, o `None` si no hay dirección utilizable.
+
+        Un vector de longitud cero —dos entidades exactamente superpuestas, que
+        pasa más de lo que parece— no define ninguna dirección: se trata como
+        ausencia y la sacudida vuelve a ser la de siempre. Normalizarlo sería
+        una división por cero.
+        """
+        if direccion is None:
+            return None
+        try:
+            v = pygame.Vector2(direccion)
+        except (TypeError, ValueError):
+            return None
+        if v.length_squared() <= 1e-9:
+            return None
+        return v.normalize()
 
     def parallax_factor(self, layer_name: str) -> float:
         """Return the parallax multiplier for the given layer name."""
@@ -297,11 +367,34 @@ class Camera:
 
         if self._shake_timer > 0:
             self._shake_timer -= dt
-            sx = random.uniform(-1.0, 1.0) * self._shake_amplitude
-            sy = random.uniform(-1.0, 1.0) * self._shake_amplitude
+            if self._shake_dir is None:
+                sx = random.uniform(-1.0, 1.0) * self._shake_amplitude
+                sy = random.uniform(-1.0, 1.0) * self._shake_amplitude
+            else:
+                # AUD-282 — oscilación coherente a lo largo del eje del golpe:
+                # sale entera en el primer fotograma y vuelve amortiguándose.
+                # La fase se saca del tiempo que queda y no de un acumulador,
+                # para que la onda termine en cero justo cuando acaba el
+                # temporizador en vez de cortarse a media altura.
+                if self._shake_duracion > 0.0:
+                    avance = 1.0 - max(0.0, min(1.0,
+                                                self._shake_timer / self._shake_duracion))
+                else:
+                    avance = 1.0
+                onda = math.cos(avance * math.tau * _SACUDIDA_CICLOS) * (1.0 - avance)
+                eje = self._shake_dir * (self._shake_amplitude * onda)
+                # El cruzado se saca del propio eje girado 90°, no de otro
+                # `random` por componente: así el temblor acompaña al empujón
+                # en vez de competir con él.
+                cruz = pygame.Vector2(-self._shake_dir.y, self._shake_dir.x)
+                cruz *= (self._shake_amplitude * _SACUDIDA_CRUZADA
+                         * random.uniform(-1.0, 1.0))
+                sx, sy = eje.x + cruz.x, eje.y + cruz.y
             self._shake_offset.update(sx, sy)
         else:
             self._shake_amplitude = 0.0
+            self._shake_dir = None
+            self._shake_duracion = 0.0
 
         # Clamp to map boundaries
         screen_w = settings.INTERNAL_WIDTH
