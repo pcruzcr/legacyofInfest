@@ -123,6 +123,10 @@ class InteractableSystem:
                 EVENTO_RECOGIDO,
                 item_id=objeto.item_id,
                 cantidad=objeto.cantidad,
+                # AUD-281 — dónde ocurrió. Sin esto no hay ni partículas ni
+                # sonido panoramizado: el evento llegaba sin lugar y quien lo
+                # escuchaba sólo podía sumar al inventario.
+                pos=objeto.rect.center,
             )
 
     def soltar_botin(self, entity_id: str, recogible: Recogible) -> bool:

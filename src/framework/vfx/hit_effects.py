@@ -66,6 +66,21 @@ class HitEffects:
         friction=0.9,
     )
 
+    #: AUD-281 — recoger algo. Chispas doradas que **suben**.
+    #:
+    #: `gravity` negativa, como `HEAL` y al contrario que `SPARK`: una moneda
+    #: recogida no cae al suelo, se va con el jugador. Es la diferencia entre
+    #: leerlo como «algo se rompió aquí» y como «te has llevado algo».
+    #:
+    #: Ocho partículas y 0,4 s, no veinte y un segundo: esto ocurre cada vez
+    #: que se toca una moneda, y en un pasillo con quince monedas una fiesta
+    #: por cada una tapa el escenario.
+    PICKUP = BurstConfig(
+        count=8, speed=45.0, lifetime=0.4,
+        size=(2, 4), color=(255, 215, 0), spread=360.0,
+        friction=0.88, gravity=-120.0,
+    )
+
     @staticmethod
     def get_for_damage(damage: float) -> BurstConfig:
         if damage >= 1.0:
