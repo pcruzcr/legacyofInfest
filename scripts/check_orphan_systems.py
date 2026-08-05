@@ -113,6 +113,18 @@ VERIFICADOS: dict[str, str] = {
     "on_next_trigger_entered": "ídem",
     "sincronizar_salud": "hueco de compatibilidad desde F5.12: alguna entrega lo llama",
 
+    # ── Paginación del diálogo (AUD-269) ──
+    #
+    # `confirmar()` la llama el propio `update()` cuando el jugador pulsa, y es
+    # pública porque la escena y las pruebas necesitan **el mismo camino** que
+    # la tecla: tener dos formas de avanzar un diálogo es cómo se acaba con una
+    # que pagina y otra que no. `paginas` y `pagina_actual` las lee el dibujado
+    # para el indicador `[ENTER] 1/3`, y son propiedades para que un guionista
+    # pueda comprobar desde una prueba que su texto cabe donde cree.
+    "confirmar": "la llama update() al pulsar; pública para que escena y pruebas usen el mismo camino",
+    "paginas": "la lee el indicador del propio cuadro; pública para poder medir un guion desde una prueba",
+    "pagina_actual": "ídem",
+
     # ── Ayudantes extraídos para poder medirlos (AUD-187) ──
     "alto_de_fila": "extraído para que la prueba de legibilidad mida la métrica real",
     "alto_de_ficha": "ídem",
