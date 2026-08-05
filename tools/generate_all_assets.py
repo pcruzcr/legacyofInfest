@@ -1701,6 +1701,16 @@ SFX_CATEGORIES = {
            "game_over", "heart_restore", "stage_complete"],
     "environment": ["jungle_ambient", "datacenter_hum", "wind_indoor", "cemetery_silence",
                     "screen_shake", "hazard_zone", "one_way_platform"],
+    # AUD-263 — las voces. GAP-031 decía «el motor sabe reproducir voz y no hay
+    # ni un solo fichero», y se dejó así a propósito para no cablear mentiras.
+    # Pero **todo** el audio de este juego está sintetizado aquí: los pasos, los
+    # jefes, el menú. Una voz de marcador de posición generada por el mismo
+    # camino no es una mentira, es la misma clase de recurso que el resto.
+    #
+    # Son las líneas del venado, el jefe de referencia, en sus dos cambios de
+    # fase y en su muerte: lo justo para que `play_voz` tenga un demo real que
+    # un estudiante pueda copiar para su propio jefe.
+    "voz": ["venado_fase1", "venado_fase2", "venado_muerte"],
 }
 
 def _gen_sfx(name, rate=SAMPLE_RATE):
@@ -1714,7 +1724,8 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
              "venado_stomp": 0.4, "venado_charge": 0.5, "venado_vine": 0.3,
              "rey_spit": 0.3, "rey_split": 0.6, "gavilan_dive": 0.4, "gavilan_mask_beam": 0.5,
              "paburu_eye_beam": 0.5, "paburu_wave": 0.6,
-             "jungle_ambient": 2.0, "datacenter_hum": 2.0, "wind_indoor": 2.0, "cemetery_silence": 2.0}
+             "jungle_ambient": 2.0, "datacenter_hum": 2.0, "wind_indoor": 2.0, "cemetery_silence": 2.0,
+             "venado_fase1": 0.9, "venado_fase2": 1.1, "venado_muerte": 1.4}
     
     dur = t_dur.get(name, 0.3)
     n = int(rate * dur)
@@ -1745,6 +1756,25 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
             t = i / rate
             env = max(0, 1 - t / dur)
             samples.append(_square(100, t, 0.3) * 0.2 + _square(150, t, 0.3) * 0.15 + random.uniform(-0.2, 0.2) * env)
+    elif name.startswith("venado_"):
+        # AUD-263 — voz de marcador de posición: una vocalización grave con
+        # formantes, no una palabra. Un gruñido con inflexión se lee como «una
+        # criatura ha dicho algo» sin fingir un idioma, que es lo que hace falta
+        # para probar la mezcla —el ducking de la música al 35 %— y para que el
+        # estudiante oiga dónde encaja su propia grabación.
+        base = {"venado_fase1": 110.0, "venado_fase2": 95.0, "venado_muerte": 80.0}[name]
+        samples = []
+        for i in range(n):
+            t = i / rate
+            avance = t / dur
+            # La inflexión sube y vuelve a bajar: una frase, no un pitido.
+            f = base * (1.0 + 0.25 * math.sin(math.pi * avance))
+            # Envolvente con ataque corto y cola larga, como una exhalación.
+            env = min(1.0, avance * 12.0) * max(0.0, 1.0 - avance) ** 0.7
+            voz = (_tri(f, t) * 0.45 + _square(f * 2.0, t, 0.35) * 0.18
+                   + _tri(f * 3.0, t) * 0.10)
+            # Un poco de aire: sin él suena a sintetizador y no a garganta.
+            samples.append((voz + random.uniform(-0.06, 0.06)) * env * 0.35)
     else:
         samples = [0.0] * n
     

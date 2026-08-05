@@ -19,6 +19,25 @@ from src.framework.entities.enemy_base import EnemyBase, EnemyState
 
 logger = logging.getLogger(__name__)
 
+
+def normalizar_skill_drop(declarado: object) -> list[str]:
+    """Las habilidades de un jefe, venga como venga declarado (AUD-263).
+
+    `skill_drop` era un solo `str`, y eso dejaba a `skill_parry` sin dueño
+    posible: el venado ya suelta el dash y quitárselo habría borrado una
+    mecánica. Ahora acepta también una lista.
+
+    Es función de módulo y no sólo método porque los guardianes de la suite
+    comprueban las **clases** de jefe sin instanciarlas —construir un jefe
+    carga sprites— y necesitan la misma lectura, no una copia que se
+    desincronice.
+    """
+    if isinstance(declarado, str):
+        return [declarado] if declarado else []
+    if isinstance(declarado, (list, tuple, set)):
+        return [str(s) for s in declarado if s]
+    return []
+
 @dataclass
 class BossPhase:
     """Definition of a single boss phase."""
@@ -69,6 +88,21 @@ class BossBase(EnemyBase):
     #: quiera conceder algo declara, por ejemplo,
     #: `skill_drop = "skill_dash"` en su clase — una línea, sin tocar nada más.
     skill_drop: str = ""
+
+    def habilidades_que_suelta(self) -> list[str]:
+        """Las habilidades que este jefe deja al morir (AUD-263).
+
+        `skill_drop` era un solo `str`, y eso dejaba a `skill_parry` sin dueño
+        posible: el venado ya suelta el dash y no se le puede quitar sin cambiar
+        la progresión. Darle una lista al motor es lo que permite que un jefe
+        enseñe más de una cosa.
+
+        Acepta las dos formas **a propósito**. Una entrega que escriba
+        `skill_drop = "skill_dash"` sigue funcionando exactamente igual: son 26
+        escenarios ya calificados y la invariante 2 no admite «actualiza tu
+        código». Quien quiera varias, escribe una lista.
+        """
+        return normalizar_skill_drop(getattr(self, "skill_drop", ""))
 
     def __init__(
         self,
@@ -121,6 +155,11 @@ class BossBase(EnemyBase):
         #: descartaba con un `pass`: un jefe que declaraba acelerar en la
         #: fase 2 no aceleraba.
         self.speed_multiplier: float = 1.0
+        #: Tamaño de la caja antes de cualquier escalado de fase (AUD-257). Se
+        #: fija en el primer cambio de fase: los jefes de los estudiantes
+        #: ajustan su rect en `__init__` después de llamar a `super()`, así que
+        #: leerlo aquí guardaría el tamaño equivocado.
+        self._tam_base: tuple[int, int] | None = None
 
     @property
     def completion_fired(self) -> bool:
@@ -230,6 +269,34 @@ class BossBase(EnemyBase):
             return 1.0
         return float(getattr(self.phases[self.current_phase], "escala", 1.0))
 
+    def _aplicar_escala_de_fase(self) -> None:
+        """Redimensiona la caja del jefe según `escala` de la fase (AUD-257).
+
+        Hasta aquí `escala_de_fase` era una propiedad que devolvía un número
+        que **nadie leía**: declararla en una fase no cambiaba nada, igual que
+        pasaba con `speed_multiplier` antes de AUD-053.
+
+        Se ancla por los pies y por el centro. Crecer desde la esquina
+        superior izquierda —lo que sale gratis si sólo se toca `width`—
+        hundiría medio jefe en el suelo y lo desplazaría a la derecha; anclar
+        abajo es lo que hace cualquier transformación de personaje.
+
+        `position` se actualiza junto al rect porque es la fuente de verdad
+        del motor: `clamp_to_arena` hace `rect.x = int(position.x)` y desharía
+        el cambio al fotograma siguiente.
+        """
+        if self._tam_base is None:
+            self._tam_base = (self.rect.width, self.rect.height)
+        escala = self.escala_de_fase
+        ancho = max(1, int(self._tam_base[0] * escala))
+        alto = max(1, int(self._tam_base[1] * escala))
+        if (ancho, alto) == (self.rect.width, self.rect.height):
+            return
+        pies, centro = self.rect.bottom, self.rect.centerx
+        self.rect.size = (ancho, alto)
+        self.rect.bottom, self.rect.centerx = pies, centro
+        self.position.update(float(self.rect.x), float(self.rect.y))
+
     @property
     def aturdido(self) -> bool:
         return getattr(self, "_aturdimiento", 0.0) > 0.0
@@ -309,6 +376,10 @@ class BossBase(EnemyBase):
         # el valor y se tiraba. Ahora se aplica, que es lo que hace que una
         # fase 2 "más agresiva" se note.
         self.speed_multiplier = float(phase.speed_multiplier)
+        # AUD-257 — y lo mismo que le pasaba a `speed_multiplier` le pasaba a
+        # `escala`: se leía en una propiedad que nadie consultaba. Aquí se
+        # aplica de verdad.
+        self._aplicar_escala_de_fase()
         # Un cambio de fase interrumpe el ataque en curso: seguir con el aviso
         # de la fase anterior mientras el jefe cambia de forma es ilegible.
         self.attacks.interrupt()
@@ -576,8 +647,18 @@ class BossBase(EnemyBase):
                 frame.blit(self._transition_overlay, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
             else:
                 frame = self._apply_filter(frame)
-            ox = (self.rect.width - self._sprite_fw) // 2
-            oy = self.rect.height - self._sprite_fh
+            # AUD-257 — el sprite sigue a la caja. Sin esto, una fase con
+            # `escala` daba un jefe cuya silueta y cuyo alcance no coinciden:
+            # el jugador golpea aire o recibe daño de la nada.
+            escala = self.escala_de_fase
+            if escala != 1.0:
+                frame = pygame.transform.scale(
+                    frame,
+                    (max(1, int(frame.get_width() * escala)),
+                     max(1, int(frame.get_height() * escala))),
+                )
+            ox = (self.rect.width - frame.get_width()) // 2
+            oy = self.rect.height - frame.get_height()
             surface.blit(frame, (screen_x + ox, screen_y + oy))
             return
 

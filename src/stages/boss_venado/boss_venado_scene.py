@@ -144,6 +144,13 @@ class BossVenadoScene(StageScene):
         self._in_arena_prev = False
         self._arena_ease_elapsed = ARENA_SETTLE_DURATION
         self._arena_ease_start.update(0.0, 0.0)
+        # AUD-263 — quien reproduce las líneas del venado. Se inyecta desde
+        # aquí porque el jefe no debe conocer el `GameContext`: es la misma
+        # razón por la que el `InputManager` llega al jugador por parámetro y
+        # no por un singleton de `App`.
+        jefe = self._get_boss()
+        if jefe is not None:
+            jefe.audio_de_voz = getattr(self.context, "audio_manager", None)
 
     @staticmethod
     def _locks_for_player_x(player_x: float, original_locks: list) -> list:

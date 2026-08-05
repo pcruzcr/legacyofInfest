@@ -518,11 +518,18 @@ class EnemyBase(BaseEntity):
         # declara y `getattr` con reserva vacía la hace opcional — un enemigo
         # normal, o el de una entrega que no sepa de esto, no la lleva y la
         # escena no concede nada.
+        #
+        # AUD-263: pueden ser varias. `habilidades_que_suelta()` normaliza las
+        # dos formas —`str` de siempre y lista nueva—; los enemigos normales no
+        # tienen el método y caen a la lectura antigua, que es la que el
+        # `getattr` de abajo ya hacía.
+        sueltas = self.habilidades_que_suelta() if hasattr(
+            self, "habilidades_que_suelta") else [str(getattr(self, "skill_drop", ""))]
         self._event_bus.emit(
             Events.ENEMY_DIED,
             entity_id=f"{type(self).__name__}_{id(self)}",
             position=(self.position.x, self.position.y),
-            skill_drop=str(getattr(self, "skill_drop", "")),
+            skill_drop=",".join(s for s in sueltas if s),
         )
         is_large = self.rect.width > 24 or self.rect.height > 28
         self._event_bus.emit(Events.SFX_ENEMY_DIE_LARGE if is_large else Events.SFX_ENEMY_DIE_SMALL)

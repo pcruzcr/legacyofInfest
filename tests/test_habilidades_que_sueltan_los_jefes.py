@@ -255,7 +255,15 @@ class TestElCandadoNoDejaElJuegoSinSalida:
         return list(_descendientes(BossBase))
 
     def test_hay_un_jefe_para_cada_habilidad_condicionada(self) -> None:
-        sueltan = {getattr(j, "skill_drop", "") for j in self._jefes()}
+        # AUD-263: `skill_drop` puede ser un `str` —la forma de las 26
+        # entregas— o una lista. `normalizar_skill_drop` es la lectura única;
+        # duplicarla aquí sería garantizar que las dos se separen.
+        from src.framework.entities.boss_base import normalizar_skill_drop
+
+        sueltan = {
+            s for j in self._jefes()
+            for s in normalizar_skill_drop(getattr(j, "skill_drop", ""))
+        }
         faltan = [s for s in self.CONDICIONADAS if s not in sueltan]
 
         assert not faltan, (
@@ -265,10 +273,12 @@ class TestElCandadoNoDejaElJuegoSinSalida:
 
     def test_lo_que_sueltan_los_jefes_existe_en_el_catalogo(self) -> None:
         from src.engine.core.inventory import _ITEM_DEFS
+        from src.framework.entities.boss_base import normalizar_skill_drop
 
         inventados = sorted({
             s for j in self._jefes()
-            if (s := getattr(j, "skill_drop", "")) and s not in _ITEM_DEFS
+            for s in normalizar_skill_drop(getattr(j, "skill_drop", ""))
+            if s not in _ITEM_DEFS
         })
         assert not inventados, (
             f"jefes que sueltan objetos que no existen: {inventados}"

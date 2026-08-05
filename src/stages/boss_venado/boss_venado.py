@@ -95,7 +95,11 @@ class BossVenado(BossBase):
     # encender `PLAYER_SKILLS_REQUIRE_UNLOCK` dejaría el dash inalcanzable
     # para siempre — mecánica borrada, no progresión. Lo exige
     # `test_habilidades_que_sueltan_los_jefes.py`.
-    skill_drop = "skill_dash"
+    # AUD-263: dos, no una. `skill_parry` llevaba meses en el catálogo sin que
+    # ningún jefe lo soltara —contenido inalcanzable— porque `skill_drop` era un
+    # solo `str` y quitarle el dash al venado habría borrado una mecánica. Ahora
+    # el motor acepta las dos formas y aquí se declaran las dos habilidades.
+    skill_drop = ["skill_dash", "skill_parry"]
 
     _TELEGRAPH_WARN_COLOR = (230, 90, 60)   # STOMP/CHARGE/VINE_SWEEP warning tint
     _WEAK_POINT_FLASH_HUE = 48.0            # amber/gold crit confirmation, distinct
@@ -109,6 +113,15 @@ class BossVenado(BossBase):
             damage_on_contact=0.75,
         )
         self.set_boss_name("VENADO SAGRADO")
+        # AUD-263 — `EnjambreDeBalas` tenía 0 usos fuera de su módulo (GAP-032).
+        # Aquí es la nube de esporas de la fase 2: el patrón dense-bullet que el
+        # bestiario no tenía y que un estudiante puede copiar tal cual. Medido
+        # en su día: 2.000 balas de 12,94 ms a 0,072 ms.
+        from src.framework.ecs.bullet_swarm import EnjambreDeBalas
+        self.esporas = EnjambreDeBalas(capacidad=256)
+        #: Quien reproduce las líneas de voz. Lo inyecta la escena; sin él, el
+        #: jefe calla y no revienta — una entrega puede construirlo sin audio.
+        self.audio_de_voz: object | None = None
         self._load_boss_sprites("boss_venado", 48, 48)
         self._load_extra_sprites()
 
@@ -181,9 +194,19 @@ class BossVenado(BossBase):
             BossPhase(phase_index=0, health_threshold=12.0,
                       attack_patterns=["STOMP", "CHARGE", "VINE_TOSS"],
                       movement_type="sine", speed_multiplier=1.0),
+            # AUD-257 — la segunda fase declara `escala`. El campo existía en
+            # `BossPhase` desde F5.7 y **ningún jefe lo usaba**, así que el
+            # motor lo leía y lo tiraba (GAP-032). Éste es el jefe de
+            # referencia: si el patrón no está aquí, no está en el material
+            # que los estudiantes copian.
+            #
+            # 1,25 y no 2: el venado enloquecido tiene que caber en su cenador
+            # y seguir siendo esquivable. La escala se nota en la silueta y en
+            # el alcance, no en volver el combate imposible.
             BossPhase(phase_index=1, health_threshold=6.0,
                       attack_patterns=["VINE_SWEEP", "MUSHROOM_SPORE", "CHARGE"],
-                      movement_type="bezier", speed_multiplier=1.5),
+                      movement_type="bezier", speed_multiplier=1.5,
+                      escala=1.25),
         ])
 
     def _load_extra_sprites(self) -> None:
@@ -622,9 +645,31 @@ class BossVenado(BossBase):
         """Engine hook: on top of the base's phase advance + event/VFX/stinger,
         (re)build the figure-8 flight path when entering a bezier-movement phase."""
         super()._finish_phase_transition()
+        # AUD-263 — el venado habla. `play_voz` existía desde los buses de
+        # AUD-144 y **no la llamaba nadie**: el motor sabía reproducir voz y no
+        # había un solo fichero (GAP-031). Las líneas se sintetizan con el mismo
+        # generador que produce todos los demás sonidos del proyecto.
+        self._decir(f"sfx_voz_venado_fase{self.current_phase + 1}")
+        # Y la fase 2 abre su nube de esporas nada más entrar, para que el
+        # cambio se vea además de oírse.
+        if self.current_phase >= 1:
+            self._soltar_abanico_de_esporas()
         if self.phases[self.current_phase].movement_type == "bezier":
             self._bezier_path = self._build_figure8_path()
             self._bezier_t, self._bezier_dir = 0.0, 1
+        # AUD-257 — `teletransportar` no tenía **ni un solo llamante** en todo
+        # el repositorio (GAP-032). Su sitio natural es éste: el jefe
+        # desaparece del punto donde el jugador lo tenía acorralado y reaparece
+        # en el centro de la arena, que es lo que hace legible un cambio de
+        # fase —y lo que impide encerrar al venado contra una pared durante
+        # toda la pelea—. Sin arena declarada no se mueve: teletransportar a
+        # ciegas podría dejarlo fuera del mapa.
+        if self.arena_bounds is not None:
+            self.teletransportar(
+                float(self.arena_bounds.centerx - self.rect.width // 2),
+                float(self.position.y),
+            )
+            self.clamp_to_arena()
 
     def apply_hit(self, damage: float, source_position: tuple[float, float]) -> None:
         """EnemyBase.apply_hit (enemy_base.py:390-391) calls _die() synchronously
@@ -674,6 +719,37 @@ class BossVenado(BossBase):
         if self.current_health <= 0 and self.is_alive and not self._defeated:
             self.on_defeated()
 
+    def _decir(self, linea: str) -> None:
+        """Una línea de voz, si hay quien la reproduzca (AUD-263).
+
+        `play_voz` aparta la música al 35 % por su cuenta —es el único método
+        del mezclador que lo hace solo— así que aquí no hay que pedir el
+        ducking: pedirlo aparte es lo que garantiza olvidarlo en la mitad de
+        las líneas.
+        """
+        audio = self.audio_de_voz
+        if audio is not None and hasattr(audio, "play_voz"):
+            audio.play_voz(linea)
+
+    #: Esporas por abanico y su alcance. Doce y no cien: la nube tiene que
+    #: leerse como un patrón que se esquiva, no como una pared.
+    _ESPORAS_POR_ABANICO = 12
+    _VELOCIDAD_ESPORA = 70.0
+
+    def _soltar_abanico_de_esporas(self) -> None:
+        """La nube de la fase 2 (AUD-263).
+
+        Un abanico completo desde el centro del jefe: `EnjambreDeBalas.abanico`
+        calcula los ángulos con NumPy de una vez, que es la razón por la que
+        este patrón cabe en el fotograma.
+        """
+        self.esporas.abanico(
+            float(self.rect.centerx), float(self.rect.centery),
+            cuantas=self._ESPORAS_POR_ABANICO,
+            velocidad=self._VELOCIDAD_ESPORA,
+            vida=3.0, dano=0.5, radio=3.0,
+        )
+
     def update(self, dt: float) -> None:
         """DYING short-circuits before touching any engine machinery: the death
         sequence (Task 9's _update_defeat) is scripted by hand, same as the
@@ -695,6 +771,7 @@ class BossVenado(BossBase):
             self._update_charge(dt)
         self._update_attack_state(dt)
         self._update_projectiles(dt)
+        self.esporas.update(dt)
         if self._weak_point_flash_timer > 0:
             self._weak_point_flash_timer = max(0.0, self._weak_point_flash_timer - dt)
         # ENGINE V2: BossBase._apply_filter now increments self._filter_frame
@@ -704,6 +781,7 @@ class BossVenado(BossBase):
 
     # ── Defeat sequence ──
     def on_defeated(self) -> None:
+        self._decir("sfx_voz_venado_muerte")          # AUD-263
         self._defeated = True
         # state is already DYING here — _die() (enemy_base.py) set it before apply_hit() returned.
         self._death_timer = 1.5                       # death anim (12f @ 8fps)
@@ -748,6 +826,7 @@ class BossVenado(BossBase):
         super().draw(surface, camera_offset)          # 1) body (BossBase sprite)
         self._draw_telegraphs(surface, camera_offset) # 2) warnings
         self._draw_projectiles(surface, camera_offset)# 3) projectiles
+        self.esporas.draw(surface, camera_offset)     # 3b) esporas (AUD-263)
         self._draw_transition_pulse(surface, camera_offset)  # 4) color VFX
         self._draw_weak_point_flash(surface, camera_offset)  # 5) crit confirmation
         if self._defeat_stage == 1:
