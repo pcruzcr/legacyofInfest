@@ -119,9 +119,18 @@ class Projectile(BaseEntity):
         )
 
     def on_collision(self) -> None:
-        """Handle collision with a solid tile or player."""
+        """Handle collision with a solid tile or player.
+
+        AUD-255 — el impacto es la única señal de que un disparo se ha
+        perdido: sin ella, un proyectil que falla desaparece en silencio y el
+        jugador no aprende dónde estaba la cobertura. `SFX_ENEMIES_PROJECTILE_
+        HIT_WALL` tenía fichero y tabla desde el principio, y ningún emisor.
+        """
         self._expired = True
         self.is_active = False
+        if self._event_bus is not None:
+            pos = (self.position.x, self.position.y)
+            self._event_bus.emit(Events.SFX_ENEMIES_PROJECTILE_HIT_WALL, pos=pos)
 
 
 class EnemyShooter(EnemyBase):
