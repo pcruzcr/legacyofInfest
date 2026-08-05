@@ -330,6 +330,14 @@ class TestLoQueElBossRushHaceDeVerdad:
     arrastre de vida o la puntuación, fallan — y eso es lo que se busca: obliga
     a actualizar `docs/44` y GAP-030 en el mismo cambio, en vez de dejar que la
     especificación y el juego vuelvan a separarse en silencio.
+
+    **Ese día llegó: AUD-261, el 4 de agosto de 2026.** Las dos pruebas que
+    describían el hueco fallaron en cuanto `StageScene` empezó a conducir el
+    modo, y con ellas en rojo no había forma de dar el cambio por terminado sin
+    tocar `docs/44` §4 y `KNOWN_GAPS.md`. Se dan la vuelta y pasan a fijar lo
+    contrario. La lección se queda escrita aquí: **una prueba que describe un
+    hueco vale tanto como una que describe una función**, siempre que falle
+    cuando el hueco se cierre.
     """
 
     def test_el_modo_encadena_los_cuatro_jefes(self, contexto) -> None:
@@ -339,25 +347,31 @@ class TestLoQueElBossRushHaceDeVerdad:
         assert modo is not None
         assert len(contexto.scene_manager._stage_queue) == 4
 
-    def test_la_salud_no_se_arrastra_todavia(self) -> None:
-        """GAP-030. Si esto falla, el arrastre se conectó: actualiza la spec."""
+    def test_la_salud_ya_se_arrastra(self) -> None:
+        """AUD-261 — esta prueba estaba escrita al revés, y a propósito.
+
+        Decía «si esto falla, el arrastre se conectó: actualiza la spec». Falló
+        el 4 de agosto de 2026, que es exactamente para lo que se escribió: la
+        obligación de tocar `docs/44` y `KNOWN_GAPS.md` en el mismo cambio se
+        cumplió porque una prueba la hizo imposible de olvidar.
+
+        Lo que fija ahora es lo contrario: que el arrastre siga siendo API
+        pública y no vuelva a ser un campo muerto.
+        """
         from src.framework.stage.boss_rush_mode import BossRushMode
 
         modo = BossRushMode()
-        publicos = [n for n in dir(modo)
-                    if "carry" in n.lower() and not n.startswith("_")]
-        assert publicos == [], (
-            f"`BossRushMode` ya expone {publicos}: el arrastre de vida dejó de "
-            f"ser un campo muerto. Actualiza docs/44 §4 y cierra GAP-030"
-        )
 
-    def test_nadie_conduce_el_modo_desde_el_juego(self) -> None:
-        """GAP-030. El modo se arranca y se abandona; lo demás lo hace la cola."""
+        assert hasattr(modo, "salud_arrastrada")
+        assert hasattr(modo, "medidor_arrastrado")
+
+    def test_el_juego_conduce_el_modo(self) -> None:
+        """AUD-261, GAP-030 cerrado. Antes exigía que **nadie** lo condujera."""
         import ast
         import pathlib
 
         raiz = pathlib.Path(__file__).resolve().parent.parent / "src"
-        conducen = []
+        conducen = set()
         for fichero in raiz.rglob("*.py"):
             if fichero.name == "boss_rush_mode.py":
                 continue
@@ -365,10 +379,10 @@ class TestLoQueElBossRushHaceDeVerdad:
             for nodo in ast.walk(arbol):
                 if (isinstance(nodo, ast.Call)
                         and isinstance(nodo.func, ast.Attribute)
-                        and nodo.func.attr in {"advance_to_next", "record_hit"}):
-                    conducen.append(fichero.name)
-        assert conducen == [], (
-            f"{sorted(set(conducen))} ya conduce el modo: la puntuación y el "
-            f"recuento de golpes han dejado de estar muertos. Actualiza "
-            f"docs/44 §4 y cierra GAP-030"
+                        and nodo.func.attr in {"acreditar_combate", "record_hit",
+                                               "registrar_tiempo"}):
+                    conducen.add(fichero.name)
+        assert conducen, (
+            "nadie conduce el modo: la puntuación y el recuento de golpes han "
+            "vuelto a estar muertos, que es GAP-030 otra vez"
         )
