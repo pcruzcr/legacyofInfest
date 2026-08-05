@@ -36,7 +36,7 @@ class SenalesDeEscenario:
 
     Espera de la escena: `context.event_bus`, `_particle_system`,
     `_damage_numbers`, `_camera`, `_post_processing`, `_player`, audio,
-    `_interactables`, `_vfx_handlers` y `_sfx_handlers`.
+    `_interactables`, `_hud`, `_vfx_handlers` y `_sfx_handlers`.
     """
 
     #: Lado del recogible de monedas, en píxeles. Del tamaño de una baldosa
@@ -105,6 +105,29 @@ class SenalesDeEscenario:
                 self._interactables.llavero.gastar(item_id)
             else:
                 self._interactables.llavero.coger(item_id)
+
+            # AUD-281 — la recompensa, que hasta hoy era sólo un número que
+            # subía en una esquina.
+            #
+            # Recoger algo era el único acto del juego sin respuesta: el golpe
+            # tiene chispas, sacudida y hit-stop; la moneda no tenía nada. Y es
+            # la acción que más veces se repite en una partida.
+            #
+            # Va aquí y no en `InteractableSystem` porque el sistema no conoce
+            # ni las partículas ni la cámara, y dárselos para esto invertiría la
+            # dirección de dependencia por un efecto visual.
+            pos = data.get("pos")
+            if pos is not None:
+                self._particle_system.get_emitter("pickup").emit(
+                    float(pos[0]), float(pos[1]), HitEffects.PICKUP,
+                )
+                # `sfx_select` y no un nombre inventado: no hay fichero de
+                # recogida en `assets/sfx/` y bautizar uno que no existe es lo
+                # que AUD-133 tuvo que deshacer. Cuando el sonido exista, se
+                # cambia esta línea y ya está.
+                self._play_sfx_spatial("sfx_select", float(pos[0]), volume=0.5)
+            if self._hud is not None:
+                self._hud.pulso_de_recogida()
 
         for evento in (EVENTO_RECOGIDO, Events.ITEM_COLLECTED):
             self.context.event_bus.subscribe(evento, _on_item_picked)

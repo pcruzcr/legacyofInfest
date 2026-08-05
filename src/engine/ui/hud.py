@@ -7,6 +7,7 @@ Uses sprite-based hearts from assets/ui/ with font fallback.
 from __future__ import annotations
 
 import logging
+import math
 from typing import cast
 
 import pygame
@@ -49,6 +50,8 @@ class HUD:
         self._hurt_portrait_timer: float = 0.0
         self._destroyed: bool = False
         self._save_notify_timer: float = 0.0
+        #: AUD-281 — lo que queda del rebote del contador de monedas.
+        self._pulso_timer: float = 0.0
 
         # Portrait frame (34x34 with 1px border, inner sprite at 3,3)
         self._portrait_frame_rect = pygame.Rect(2, 2, 34, 34)
@@ -346,6 +349,7 @@ class HUD:
                 self._timer += dt
         self._hurt_portrait_timer = max(0.0, self._hurt_portrait_timer - dt)
         self._save_notify_timer = max(0.0, self._save_notify_timer - dt)
+        self._pulso_timer = max(0.0, self._pulso_timer - dt)
         self._heart_flash_timer = max(0.0, self._heart_flash_timer - dt)
         if self._heart_flash_timer <= 0:
             self._heart_flash_slot = -1
@@ -450,6 +454,31 @@ class HUD:
         surface.blit(derecha, (settings.INTERNAL_WIDTH
                                - derecha.get_width() - 8, y))
 
+    #: AUD-281 — cuánto dura el rebote del contador al recoger algo.
+    #:
+    #: 0,18 s. Más corto no se ve; más largo y dos monedas seguidas dejan el
+    #: número temblando, que es lo que hace que un jugador acabe mirando la
+    #: esquina en vez del escenario.
+    _PULSO_DE_RECOGIDA: float = 0.18
+
+    #: Cuánto crece en el pico, en veces. 1,25 se nota de reojo sin empujar el
+    #: número contra el marco del cronómetro.
+    _PULSO_ESCALA: float = 1.25
+
+    def pulso_de_recogida(self) -> None:
+        """Rebota el contador de monedas. Lo llama la escena al recoger algo.
+
+        Respeta «movimiento reducido» dejándolo en nada: es adorno, y la opción
+        existe justamente para quitar el adorno que se mueve. Aquí sí se puede
+        anular del todo —al contrario que la estela del dash, que era la única
+        señal de que el dash ocurrió—, porque el número ya dice lo que pasó.
+        """
+        from src.engine.core import user_settings
+
+        if user_settings.preferencia("reduced_motion", False):
+            return
+        self._pulso_timer = self._PULSO_DE_RECOGIDA
+
     def _draw_score(self, surface: pygame.Surface) -> None:
         """Alineado a la derecha, pegado al cronómetro.
 
@@ -461,6 +490,18 @@ class HUD:
         puntos = self._font.render(str(self._score), True, (235, 235, 210))
         monedas = self._font.render(f"¤{self._coins}", True, (255, 215, 0))
         surface.blit(puntos, (r.x, r.y))
+
+        # AUD-281 — el rebote. Crece y vuelve, anclado a su borde derecho para
+        # que el número no se desplace mientras late: escalar desde la esquina
+        # superior izquierda lo empujaría contra el cronómetro en cada moneda.
+        if self._pulso_timer > 0.0:
+            fase = self._pulso_timer / self._PULSO_DE_RECOGIDA
+            # Media onda de seno: sube y baja una vez, sin tirón al terminar.
+            escala = 1.0 + (self._PULSO_ESCALA - 1.0) * math.sin(fase * math.pi)
+            ancho = max(1, int(monedas.get_width() * escala))
+            alto = max(1, int(monedas.get_height() * escala))
+            monedas = pygame.transform.smoothscale(monedas, (ancho, alto))
+
         surface.blit(monedas, (r.right - monedas.get_width(), r.y))
 
     def set_special_meter(self, current: float, max_val: float) -> None:
