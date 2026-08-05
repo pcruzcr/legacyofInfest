@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from src.engine.scene.base_scene import BaseScene
 
-# The canonical stage order matching the sequence defined in 33_SCOPE_ADJUSTMENT.md §2.1
+# The canonical stage order matching the sequence defined in 83_SCOPE_ADJUSTMENT.md §2.1
 STAGE_ORDER: list[str] = [
     "stage0",
     # F5.13 — el laboratorio de mecánicas va justo después del prólogo.
@@ -35,7 +35,7 @@ STAGE_ORDER: list[str] = [
 
 # Custom module import paths for stages that don't follow the {id}.{id} convention.
 # Key: stage_id from STAGE_ORDER. Value: dotted module path.
-# Configurable in a JSON config file for extensibility (see ARC-004 in 33_SCOPE_ADJUSTMENT.md).
+# Configurable in a JSON config file for extensibility (see ARC-004 in 83_SCOPE_ADJUSTMENT.md).
 _STAGE_MODULE_MAP: dict[str, str] = {
     "stage1_4_boss_venado": "src.stages.boss_venado.boss_venado_scene",
     # AUD-106 — las entregas de la Evaluación Práctica I.

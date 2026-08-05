@@ -36,7 +36,7 @@ DOC_REGISTRY = {
         ["Master Index", "Documentation Index"],
         "Single authoritative entry point for all documentation"
     ),
-    "00_SYLLABUS_ALIGNMENT_AUDIT": (
+    "77_SYLLABUS_ALIGNMENT_AUDIT": (
         "LOI-SYLLABUS-000", ["syllabus", "audit", "academic"],
         ["Syllabus Alignment Audit", "Syllabus Audit"],
         "Audit reconciling documentation against official syllabus"
@@ -195,7 +195,7 @@ DOC_REGISTRY = {
         ["Decision Log", "ADR Log"],
         "Architecture Decision Records"
     ),
-    "28_SAMPLE_SYLLABUS": (
+    "78_SAMPLE_SYLLABUS": (
         "LOI-SYLLABUS-028B", ["syllabus", "sample", "academic"],
         ["Sample Syllabus"],
         "Sample course syllabus"
@@ -207,14 +207,14 @@ DOC_REGISTRY = {
         ["Git Workflow", "Git Standards"],
         "Branching, commits, PRs, code review"
     ),
-    "29_TA_GUIDE": (
+    "79_TA_GUIDE": (
         "LOI-TA-029B", ["ta", "teaching", "assistant", "guide"],
         ["TA Guide"],
         "Teaching assistant guide"
     ),
 
     # ── Assignments ──
-    "30_TICKET_BACKLOG": (
+    "80_TICKET_BACKLOG": (
         "LOI-TICKET-030", ["ticket", "backlog", "tasks"],
         ["Ticket Backlog"],
         "Every roadmap phase decomposed into atomic tickets"
@@ -224,7 +224,7 @@ DOC_REGISTRY = {
         ["Assignment 1: Stage Design"],
         "Stage design assignment"
     ),
-    "31_RISK_REGISTER": (
+    "81_RISK_REGISTER": (
         "LOI-RISK-031", ["risk", "register", "management"],
         ["Risk Register"],
         "Academic/pedagogical risks and mitigation"
@@ -234,7 +234,7 @@ DOC_REGISTRY = {
         ["Assignment 2: Boss Design"],
         "Boss design assignment"
     ),
-    "32_ENVIRONMENT_SETUP_GUIDE": (
+    "82_ENVIRONMENT_SETUP_GUIDE": (
         "LOI-SETUP-032", ["setup", "environment", "guide"],
         ["Environment Setup Guide"],
         "Step-by-step machine setup, troubleshooting"
@@ -244,7 +244,7 @@ DOC_REGISTRY = {
         ["Assignment 3: Lab Exercises"],
         "Lab exercises assignment"
     ),
-    "33_SCOPE_ADJUSTMENT": (
+    "83_SCOPE_ADJUSTMENT": (
         "LOI-SCOPE-033", ["scope", "adjustment", "academic"],
         ["Scope Adjustment"],
         "Scope adjustment documentation"
@@ -261,7 +261,7 @@ DOC_REGISTRY = {
         ["Class Materials"],
         "Class materials and resources"
     ),
-    "34_EDUCATIONAL_ROADMAP": (
+    "84_EDUCATIONAL_ROADMAP": (
         "LOI-EDU-034B", ["educational", "roadmap", "pedagogy"],
         ["Educational Roadmap"],
         "Educational roadmap"
@@ -391,7 +391,7 @@ DOC_REGISTRY = {
 # ── Cross-reference mapping: source -> list of target filenames (without .md) ──
 CROSS_REFS = {
     "00_MASTER_INDEX": [
-        "00_SYLLABUS_ALIGNMENT_AUDIT", "01_PROJECT_CHARTER", "02_CODEX_CONTEXT",
+        "77_SYLLABUS_ALIGNMENT_AUDIT", "01_PROJECT_CHARTER", "02_CODEX_CONTEXT",
         "03_ARCHITECTURE", "04_PLAYER_SPEC", "05_ENEMY_SPEC", "06_TMX_SPEC",
         "07_STAGE0_DESIGN", "08_SYLLABUS_MAPPING", "09_HUD_SPEC",
         "10_LIBRARIES_AND_DEPENDENCIES", "11_FILTER_TOOLS_SPEC", "12_VISION_TOOLS_SPEC",
@@ -400,13 +400,13 @@ CROSS_REFS = {
         "18_ENEMY_ROSTER", "19_NARRATIVE_AND_LORE", "20_ASSET_BIBLE",
         "21_COURSE_SCHEDULE", "22_API_CONTRACTS", "23_DATA_SCHEMAS",
         "24_TEST_PLAN", "25_IMPLEMENTATION_ROADMAP", "26_STUDENT_TEMPLATE_SPEC",
-        "27_ACADEMIC_RUBRICS", "28_DECISION_LOG", "28_SAMPLE_SYLLABUS",
-        "29_GIT_WORKFLOW_AND_STANDARDS", "29_TA_GUIDE",
-        "30_TICKET_BACKLOG", "30_ASSIGNMENT_01_STAGE_DESIGN",
-        "31_RISK_REGISTER", "31_ASSIGNMENT_02_BOSS_DESIGN",
-        "32_ENVIRONMENT_SETUP_GUIDE", "32_ASSIGNMENT_03_LAB_EXERCISES",
-        "33_SCOPE_ADJUSTMENT", "33_ASSIGNMENT_04_FINAL_PROJECT",
-        "34_CLASS_MATERIALS", "34_EDUCATIONAL_ROADMAP",
+        "27_ACADEMIC_RUBRICS", "28_DECISION_LOG", "78_SAMPLE_SYLLABUS",
+        "29_GIT_WORKFLOW_AND_STANDARDS", "79_TA_GUIDE",
+        "80_TICKET_BACKLOG", "30_ASSIGNMENT_01_STAGE_DESIGN",
+        "81_RISK_REGISTER", "31_ASSIGNMENT_02_BOSS_DESIGN",
+        "82_ENVIRONMENT_SETUP_GUIDE", "32_ASSIGNMENT_03_LAB_EXERCISES",
+        "83_SCOPE_ADJUSTMENT", "33_ASSIGNMENT_04_FINAL_PROJECT",
+        "34_CLASS_MATERIALS", "84_EDUCATIONAL_ROADMAP",
         "35_USER_MANUAL", "36_STUDENT_MANUAL", "37_DEMO_QUICK_GUIDE",
         "38_STAGE_BOSS_GUIDE", "39_REPORTE_ANALISIS_CODIGO",
         "40_DIALOGUE_SYSTEM", "41_BESTIARY_CODEX", "42_CUTSCENE_SYSTEM",
@@ -416,14 +416,14 @@ CROSS_REFS = {
         "BOSS_CREATION", "ENEMY_CREATION", "SCENE_CREATION", "STAGE_CREATION",
     ],
     "36_STUDENT_MANUAL": [
-        "32_ENVIRONMENT_SETUP_GUIDE", "26_STUDENT_TEMPLATE_SPEC",
+        "82_ENVIRONMENT_SETUP_GUIDE", "26_STUDENT_TEMPLATE_SPEC",
         "16_WORLD_DESIGN", "17_BOSS_SPEC", "18_ENEMY_ROSTER",
         "08_SYLLABUS_MAPPING", "15_ACADEMIC_DEMO_SCENES",
         "37_DEMO_QUICK_GUIDE", "38_STAGE_BOSS_GUIDE",
         "27_ACADEMIC_RUBRICS", "29_GIT_WORKFLOW_AND_STANDARDS",
     ],
     "35_USER_MANUAL": [
-        "32_ENVIRONMENT_SETUP_GUIDE", "03_ARCHITECTURE",
+        "82_ENVIRONMENT_SETUP_GUIDE", "03_ARCHITECTURE",
         "04_PLAYER_SPEC", "09_HUD_SPEC", "40_DIALOGUE_SYSTEM",
     ],
     "50_IMPROVEMENT_ROADMAP": [
@@ -470,21 +470,21 @@ CROSS_REFS = {
         "30_ASSIGNMENT_01_STAGE_DESIGN", "31_ASSIGNMENT_02_BOSS_DESIGN",
         "32_ASSIGNMENT_03_LAB_EXERCISES", "33_ASSIGNMENT_04_FINAL_PROJECT",
     ],
-    "25_IMPLEMENTATION_ROADMAP": ["30_TICKET_BACKLOG", "24_TEST_PLAN"],
-    "30_TICKET_BACKLOG": ["25_IMPLEMENTATION_ROADMAP"],
+    "25_IMPLEMENTATION_ROADMAP": ["80_TICKET_BACKLOG", "24_TEST_PLAN"],
+    "80_TICKET_BACKLOG": ["25_IMPLEMENTATION_ROADMAP"],
     "24_TEST_PLAN": ["22_API_CONTRACTS", "23_DATA_SCHEMAS"],
     "22_API_CONTRACTS": ["23_DATA_SCHEMAS", "03_ARCHITECTURE"],
     "23_DATA_SCHEMAS": ["22_API_CONTRACTS"],
     "29_GIT_WORKFLOW_AND_STANDARDS": ["28_DECISION_LOG"],
     "28_DECISION_LOG": ["29_GIT_WORKFLOW_AND_STANDARDS", "03_ARCHITECTURE"],
-    "32_ENVIRONMENT_SETUP_GUIDE": ["10_LIBRARIES_AND_DEPENDENCIES"],
+    "82_ENVIRONMENT_SETUP_GUIDE": ["10_LIBRARIES_AND_DEPENDENCIES"],
     "08_SYLLABUS_MAPPING": ["14_PROFESSOR_DELIVERABLE_MATRIX", "21_COURSE_SCHEDULE"],
     "14_PROFESSOR_DELIVERABLE_MATRIX": ["08_SYLLABUS_MAPPING", "27_ACADEMIC_RUBRICS"],
     "37_DEMO_QUICK_GUIDE": ["15_ACADEMIC_DEMO_SCENES"],
     "38_STAGE_BOSS_GUIDE": ["STAGE_CREATION", "BOSS_CREATION"],
     "39_REPORTE_ANALISIS_CODIGO": ["51_IMPLEMENTATION_AUDIT", "50_IMPROVEMENT_ROADMAP"],
-    "34_CLASS_MATERIALS": ["34_EDUCATIONAL_ROADMAP", "21_COURSE_SCHEDULE"],
-    "34_EDUCATIONAL_ROADMAP": ["34_CLASS_MATERIALS", "08_SYLLABUS_MAPPING"],
+    "34_CLASS_MATERIALS": ["84_EDUCATIONAL_ROADMAP", "21_COURSE_SCHEDULE"],
+    "84_EDUCATIONAL_ROADMAP": ["34_CLASS_MATERIALS", "08_SYLLABUS_MAPPING"],
     "20_ASSET_BIBLE": ["06_TMX_SPEC", "07_STAGE0_DESIGN", "16_WORLD_DESIGN"],
     "15_ACADEMIC_DEMO_SCENES": [
         "11_FILTER_TOOLS_SPEC", "12_VISION_TOOLS_SPEC", "13_PATTERN_RECOGNITION_SPEC",
@@ -493,7 +493,7 @@ CROSS_REFS = {
     "09_HUD_SPEC": ["40_DIALOGUE_SYSTEM", "04_PLAYER_SPEC"],
     "06_TMX_SPEC": ["07_STAGE0_DESIGN", "STAGE_CREATION"],
     "07_STAGE0_DESIGN": ["06_TMX_SPEC", "30_ASSIGNMENT_01_STAGE_DESIGN"],
-    "10_LIBRARIES_AND_DEPENDENCIES": ["32_ENVIRONMENT_SETUP_GUIDE"],
+    "10_LIBRARIES_AND_DEPENDENCIES": ["82_ENVIRONMENT_SETUP_GUIDE"],
 }
 
 
@@ -671,7 +671,7 @@ def create_obsidian_home(dry_run: bool = False):
         '\n'
         '| Documento | Descripción |\n'
         '|-----------|-------------|\n'
-        '| [[00_SYLLABUS_ALIGNMENT_AUDIT.md|Syllabus Alignment Audit]] | Auditoría de alineación con el sílabo oficial |\n'
+        '| [[77_SYLLABUS_ALIGNMENT_AUDIT.md|Syllabus Alignment Audit]] | Auditoría de alineación con el sílabo oficial |\n'
         '| [[08_SYLLABUS_MAPPING.md|Syllabus Mapping]] | Mapeo de componentes del framework a unidades del sílabo |\n'
         '| [[14_PROFESSOR_DELIVERABLE_MATRIX.md|Deliverable Matrix]] | Trazabilidad sílabo-framework-evaluación |\n'
         '| [[21_COURSE_SCHEDULE.md|Course Schedule]] | Calendario de 11 clases + Invenio Fest |\n'
@@ -716,7 +716,7 @@ def create_obsidian_home(dry_run: bool = False):
         '| [[25_IMPLEMENTATION_ROADMAP.md|Implementation Roadmap]] | 16 fases de construcción con DoD |\n'
         '| [[26_STUDENT_TEMPLATE_SPEC.md|Student Templates]] | Archivos iniciales que cada estudiante copia |\n'
         '| [[29_GIT_WORKFLOW_AND_STANDARDS.md|Git Workflow]] | Ramas, commits, PRs, code review |\n'
-        '| [[30_TICKET_BACKLOG.md|Ticket Backlog]] | Tickets atómicos por fase del roadmap |\n'
+        '| [[80_TICKET_BACKLOG.md|Ticket Backlog]] | Tickets atómicos por fase del roadmap |\n'
         '\n'
         '---\n'
         '\n'
@@ -734,14 +734,14 @@ def create_obsidian_home(dry_run: bool = False):
         '    G --> H[Rubrics]\n'
         '```\n'
         '\n'
-        '- Comienza en: [[32_ENVIRONMENT_SETUP_GUIDE.md|Environment Setup Guide]]\n'
+        '- Comienza en: [[82_ENVIRONMENT_SETUP_GUIDE.md|Environment Setup Guide]]\n'
         '- Sigue con: [[36_STUDENT_MANUAL.md|Student Manual]]\n'
         '- Revisa: [[27_ACADEMIC_RUBRICS.md|Academic Rubrics]]\n'
         '\n'
         '### 👨‍🏫 Profesor\n'
         '- [[21_COURSE_SCHEDULE.md|Course Schedule]]\n'
         '- [[27_ACADEMIC_RUBRICS.md|Academic Rubrics]]\n'
-        '- [[31_RISK_REGISTER.md|Risk Register]]\n'
+        '- [[81_RISK_REGISTER.md|Risk Register]]\n'
         '\n'
         '### 🤖 AI Coding Assistant\n'
         '- [[00_MASTER_INDEX.md|Master Index]]\n'
