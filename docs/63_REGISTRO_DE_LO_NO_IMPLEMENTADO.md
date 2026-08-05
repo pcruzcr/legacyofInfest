@@ -56,7 +56,8 @@ Comprobado con análisis de alcanzabilidad sobre todo el árbol.
 | ~~Audio ambiental por clima~~ | `weather_system.py` | **HECHO** (AUD-145). El mapa devuelve la ruta del fichero real; `snow` y `fog` suenan con el viento que sí existe, y `rain` y `storm` **declaran que les falta el asset** en vez de callarse |
 | ~~`check_player_contact`~~ | 4 enemigos | **HECHO, y era un fallo jugable** (AUD-149). No estaba «suelto»: arquero, asesino, bruto y hechicero sobreescribían el alias **público**, y el motor llama al privado. Las flechas y los orbes no hacían daño ni se podían parar, la onda del bruto no golpeaba, el asesino dañaba estando invisible y su puñalada no hacía nada |
 | `on_stage_start`, `on_player_landed`, `on_enemy_died`, `on_next_trigger_entered` | plantilla de estudiante | **Correcto que estén sin usar.** Son los ganchos que el estudiante rellena |
-| `ComboDemoScene`, `LeaderboardScene`, `LoadingScene`, `PipelineBuilderScene`, `ProgressScene`, `SandboxScene`, `StageWizardScene` | escenas | Falso positivo: el registro las construye por cadena |
+| `ComboDemoScene`, `LeaderboardScene`, `PipelineBuilderScene`, `ProgressScene`, `SandboxScene`, `StageWizardScene` | escenas | Falso positivo: el registro las construye por cadena (`scene_registry.py:72-82`) |
+| `LoadingScene` | escenas | **Huérfana de verdad** (medido el 2026-08-05). Esta fila la daba por falso positivo junto a las seis de arriba, y no lo es: **no está en `scene_registry`**, y su única referencia en todo el repositorio es `tests/test_scene_smoke.py`. El hilo de carga y la barra de progreso están escritos y probados, y no hay forma de llegar a ellos jugando. Ver `docs/87` §15.6 |
 
 > **Corrección (AUD-142). Tres de estas recomendaciones eran falsas, y el
 > error fue mío.** La versión anterior de esta sección decía «retirar
