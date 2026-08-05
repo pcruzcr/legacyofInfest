@@ -40,6 +40,10 @@ tests/output/
 saves/
 *.sav
 data/inventory.json
+# AUD-253 — `data/score.json` lo escribe `ScoreSystem` al jugar, igual que el
+# inventario. Sin esta línea, arrancar el juego una vez ensuciaba el árbol de
+# trabajo con la puntuación de esa partida.
+data/score.json
 
 # ── Editor / workspace cruft (AUD-035) ─────────────────────────
 .vscode/settings.json
