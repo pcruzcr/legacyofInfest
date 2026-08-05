@@ -10,6 +10,7 @@ import pygame
 from src.engine.core import settings
 from src.engine.core.achievements import AchievementSystem
 from src.engine.core.events import Events
+from src.engine.core.experience import ExperienceSystem
 from src.engine.core.inventory import get_inventory
 from src.engine.core.score_system import ScoreSystem
 from src.engine.input.action_map import Action
@@ -34,6 +35,7 @@ from src.framework.entities.squad_brain import SquadBrain
 from src.framework.scenes.stage_parts import dibujo_mecanicas
 from src.framework.scenes.stage_parts.ambiente import MezclaDeAmbiente
 from src.framework.scenes.stage_parts.fantasma import FantasmaDeCarrera
+from src.framework.scenes.stage_parts.rush import ConduccionDelBossRush
 from src.framework.scenes.stage_parts.senales import SenalesDeEscenario
 from src.framework.stage.camera import Camera
 from src.framework.stage.collision_system import CollisionSystem
@@ -89,7 +91,7 @@ HITSTOP_DEL_FLECHAZO: float = 0.035
 
 
 class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
-                 BaseScene):
+                 ConduccionDelBossRush, BaseScene):
     """El escenario jugable: carga un TMX y lo hace jugar.
 
     AUD-152 — los tres primeros padres son **mixins de lectura**, no capas de
@@ -200,6 +202,17 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
         # jugador— y necesita lo mismo: el bus de *esta* escena.
         self._score = ScoreSystem.get_instance()
         self._score.bind_bus(self.context.event_bus)
+        # AUD-267 — y exactamente lo mismo le pasaba a la experiencia.
+        #
+        # AUD-249 construyó `ExperienceSystem` entero —tabla por tipo, curva de
+        # nivel, puntos de habilidad— y **nadie lo construía**: medido con
+        # `grep -rn "ExperienceSystem" src/` fuera de su módulo, cero. Sin
+        # instancia no hay suscripción a `ENEMY_DIED`, así que matar enemigos
+        # no daba un solo punto de experiencia. Es la tercera vez que este
+        # mismo patrón aparece en la misma línea de código: logros, puntuación
+        # y ahora experiencia.
+        self._experiencia = ExperienceSystem.get_instance()
+        self._experiencia.bind_bus(self.context.event_bus)
         self._bestiary = Bestiary.get_instance()
         # AUD-154 — el bestiario tenía `save()` y `load()` escritos y nadie los
         # llamaba, así que ni siquiera lo poco que hubiera registrado habría
@@ -504,7 +517,20 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
         self._player.set_spawn(destino)
         self._player.set_health(pending.health)
         self._checkpoint_position = destino
+        self._restaurar_banderas(self.context, pending)
         self.context.pending_load = None
+
+    @staticmethod
+    def _restaurar_banderas(context: Any, pending: Any) -> None:
+        """Devuelve al contexto las banderas de mundo de la partida (AUD-251).
+
+        Estático y con el contexto por parámetro para que se pueda comprobar
+        sin levantar un escenario entero: el defecto que cierra es de
+        cableado, y una prueba que necesita un TMX para verlo no se escribe.
+        """
+        banderas = getattr(pending, "zone_flags", None)
+        if banderas:
+            context.banderas.update(banderas)
 
     def on_enter(self) -> None:
         # AUD-025: claim a cache scope so that leaving this scene does not throw
@@ -532,6 +558,12 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
         # camino que la vista: una propiedad del mapa que la escena traslada
         # al jugador al cargar.
         self._player.activar_estamina(getattr(self._stage_data, "estamina", 0.0))
+        # AUD-260 — y el tiempo bala por el mismo camino. `0` lo deja apagado,
+        # que es lo que declaran los dieciséis mapas entregados.
+        self._tiempo_bala = TiempoBala(
+            reserva_maxima=float(getattr(self._stage_data, "tiempo_bala", 0.0)))
+        # AUD-261 — la vida con la que se llega, si esto es un Boss Rush.
+        self._aplicar_salud_arrastrada()
         # AUD-143 — modo de cámara del escenario.
         self._camera.modo = getattr(self._stage_data, "camara", "seguir")
 
@@ -753,6 +785,7 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
         self._sfx_handlers.clear()
         try:
             self._subscribe_event_handlers()
+            self._suscribir_boss_rush()
         except Exception:
             self._unsubscribe_all_handlers()
             raise
@@ -1227,6 +1260,22 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
         # the first landed hit (AUD-001). Fall back to dt only when the
         # context has no clock (headless tests).
         unscaled_dt = getattr(clock, "unscaled_dt", dt) if clock is not None else dt
+        # AUD-260 — el tiempo bala, si este escenario lo pide. Va con el `dt`
+        # **sin escalar** por la misma razón que el hit-stop de arriba: con el
+        # escalado, la reserva duraría más cuanto más lenta fuera la cámara
+        # lenta, que es un bucle de realimentación absurdo.
+        if self._tiempo_bala.reserva_maxima > 0.0:
+            self._tiempo_bala.update(
+                unscaled_dt,
+                im.is_action_held(Action.BULLET_TIME),
+                clock,
+            )
+        # AUD-261 — el cronómetro del combate de Boss Rush. Con el `dt` sin
+        # escalar por la misma razón: el tiempo bala no puede regalar
+        # puntuación por ralentizar el mundo.
+        modo_rush = self._boss_rush_activo()
+        if modo_rush is not None:
+            modo_rush.registrar_tiempo(unscaled_dt)
         try:
             # F4.1 — una puerta cerrada bloquea el paso; al abrirse deja de
             # hacerlo. Se suma aquí en vez de mutar `stage.collision_rects`,
@@ -1428,6 +1477,12 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
                     "STAGE_COMPLETE",
                     f"CLEAR  {self._speedrun.get_formatted_time()}",
                 )
+            # AUD-261 — si esto es un combate del Boss Rush, se acredita antes
+            # de anunciar el escenario completado: `STAGE_COMPLETE` hace
+            # avanzar la cola del `SceneManager`, y acreditar después dejaría
+            # el arrastre de vida escrito cuando el combate siguiente ya ha
+            # empezado. Es GAP-030, cerrado.
+            self._acreditar_boss_rush()
             self.context.event_bus.emit(Events.STAGE_COMPLETE,
                                         stage_id=self.stage_key)
 
@@ -1578,6 +1633,13 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
             self._hud.set_combo_count(self._player.combo_count)
             self._hud.set_special_meter(self._player.special_meter, self._player.special_meter_max)
             self._hud.set_estamina(self._player.estamina, self._player.estamina_max)
+            # AUD-260: `-1` significa «este escenario no lo pide» y la barra
+            # no se dibuja, igual que la estamina con máximo 0.
+            self._hud.set_tiempo_bala(
+                self._tiempo_bala.fraccion
+                if self._tiempo_bala.reserva_maxima > 0.0 else -1.0,
+                self._tiempo_bala.activo,
+            )
             # AUD-219: el saldo se lee del inventario, no se guarda aparte —
             # las monedas *son* el objeto `coin`, y duplicar el número acabaría
             # con los dos desincronizados en cuanto la tienda cobre algo.

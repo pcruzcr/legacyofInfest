@@ -26,6 +26,7 @@ import pygame
 
 from src.engine.core import settings
 from src.engine.core.events import Events
+from src.engine.core.experience import ExperienceSystem
 from src.framework.stage.interactable_system import EVENTO_RECOGIDO
 from src.framework.vfx.hit_effects import HitEffects
 
@@ -65,19 +66,19 @@ class SenalesDeEscenario:
             automatico=True,
             cantidad=coins_for(entity_id),
         ))
-        if skill:
-            # AUD-238: la reliquia del jefe, **además** de las monedas y no en
-            # su lugar. Se deja un poco a la derecha para que no quede
-            # exactamente debajo de ellas y se vean las dos.
-            #
-            # Se descarta lo que no está en el catálogo: un jefe de una entrega
-            # con `skill_drop = "skill_volar"` dejaría en el suelo algo que
-            # `collect()` rechaza, y el jugador lo cogería sin que pasara nada.
-            from src.engine.core.inventory import get_inventory
-            if get_inventory().get_def(skill) is not None:
+        # AUD-238: la reliquia del jefe, **además** de las monedas y no en su
+        # lugar. AUD-263: pueden ser varias, separadas por coma, y se colocan en
+        # fila para que no queden una encima de otra.
+        #
+        # Se descarta lo que no está en el catálogo: un jefe de una entrega con
+        # `skill_drop = "skill_volar"` dejaría en el suelo algo que `collect()`
+        # rechaza, y el jugador lo cogería sin que pasara nada.
+        from src.engine.core.inventory import get_inventory
+        for n, nombre in enumerate(s for s in skill.split(",") if s):
+            if get_inventory().get_def(nombre) is not None:
                 interactables.recogibles.append(Recogible(
-                    rect=pygame.Rect(cx + lado, cy - lado // 2, lado, lado),
-                    item_id=skill,
+                    rect=pygame.Rect(cx + lado * (n + 1), cy - lado // 2, lado, lado),
+                    item_id=nombre,
                     automatico=True,
                 ))
 
@@ -86,14 +87,14 @@ class SenalesDeEscenario:
         #
         # `InteractableSystem._recoger()` guardaba el objeto en el llavero y
         # emitía `EVENTO_RECOGIDO`, pero nadie escuchaba ese evento. Un
-        # `Recogible` con `item_id="heart_vessel"` o `"swift_feather"` —objetos
-        # que `Recogible` documenta como «si coincide con un objeto de
-        # `engine.core.inventory` se aplica su efecto»— se recogía, mostraba el
+        # `Recogible` con `item_id="heart_vessel"` se recogía, mostraba el
         # aviso, y la mejora permanente se perdía en silencio: el inventario
         # (que persiste a JSON) nunca recibía la llamada a `collect()`.
         #
-        # Aquí se cierra el circuito: quien escuche la recolección decide si el
-        # objeto es una mejora permanente o una llave del escenario.
+        # AUD-251 — y el mismo hueco tenía la otra puerta: `give_item:` en un
+        # diálogo emitía `ITEM_COLLECTED` y **nadie escuchaba**. Un manejador
+        # atiende a las dos formas de recibir algo —catálogo al inventario, el
+        # resto al llavero— para que no puedan desincronizarse.
         def _on_item_picked(**data: Any) -> None:
             item_id = str(data.get("item_id", ""))
             if not item_id:
@@ -101,12 +102,21 @@ class SenalesDeEscenario:
             cantidad = int(data.get("cantidad", 1))
             from src.engine.core.inventory import get_inventory
             if get_inventory().collect(item_id, cantidad):
-                # El recogible era una mejora permanente del inventario; el
-                # llavero no la necesita como llave.
                 self._interactables.llavero.gastar(item_id)
+            else:
+                self._interactables.llavero.coger(item_id)
 
-        self.context.event_bus.subscribe(EVENTO_RECOGIDO, _on_item_picked)
-        self._vfx_handlers[EVENTO_RECOGIDO] = _on_item_picked
+        for evento in (EVENTO_RECOGIDO, Events.ITEM_COLLECTED):
+            self.context.event_bus.subscribe(evento, _on_item_picked)
+            self._vfx_handlers[evento] = _on_item_picked
+
+        def _on_flag_set(**data: Any) -> None:
+            flag = str(data.get("flag", ""))
+            if flag:
+                self.context.banderas[flag] = True
+
+        self.context.event_bus.subscribe(Events.FLAG_SET, _on_flag_set)
+        self._vfx_handlers[Events.FLAG_SET] = _on_flag_set
 
         # AUD-244 — abrir la conversación que pide un disparador del mapa.
         #
@@ -248,6 +258,7 @@ class SenalesDeEscenario:
 
         self.context.event_bus.subscribe(Events.PLAYER_DAMAGED, _on_player_damaged)
         self._vfx_handlers[Events.PLAYER_DAMAGED] = _on_player_damaged
+
         self.context.event_bus.subscribe(Events.PLAYER_DIED, _on_player_died)
         self._vfx_handlers[Events.PLAYER_DIED] = _on_player_died
         self.context.event_bus.subscribe(Events.VFX_PARRY, _on_vfx_parry)
@@ -301,6 +312,10 @@ class SenalesDeEscenario:
             Events.SFX_PLAYER_HEAL: "sfx_ui_heart_restore",
             Events.SFX_BOSS_HIT: "sfx_boss_hit",
             Events.SFX_UI_GAME_OVER: "sfx_ui_game_over",
+            # AUD-256 — el logro se veía y no se oía: `ACHIEVEMENT_UNLOCKED`
+            # se emitía sin un solo suscriptor y el aviso se perdía en mitad
+            # del combate que lo provocaba.
+            Events.ACHIEVEMENT_UNLOCKED: "sfx_ui_stage_complete",
             Events.SFX_ENVIRONMENT_SCREEN_SHAKE: "sfx_environment_screen_shake",
             Events.SFX_ENVIRONMENT_ONE_WAY_PLATFORM: "sfx_environment_one_way_platform",
             Events.SFX_BOSS_PHASE_CHANGE: "sfx_bosses_phase_change",
@@ -333,6 +348,11 @@ class SenalesDeEscenario:
                     checkpoint_y=data.get("checkpoint_y", 0),
                     health=data.get("health", 100),
                     max_health=data.get("max_health", 100),
+                    # AUD-251: el checkpoint se lleva las banderas de mundo.
+                    zone_flags=dict(getattr(self.context, "banderas", {})),
+                    # AUD-267: y la experiencia, que sin esto se perdía al
+                    # cerrar el juego aunque hubiera subido jugando.
+                    exp_total=ExperienceSystem.get_instance().exp,
                 )
         self.context.event_bus.subscribe(Events.SAVE_REQUESTED, _on_save_requested)
         self._vfx_handlers[Events.SAVE_REQUESTED] = _on_save_requested
