@@ -52,9 +52,16 @@ def _ejecutar(*argumentos: str, entorno: dict[str, str] | None = None) -> subpro
     env["SDL_AUDIODRIVER"] = "dummy"
     if entorno:
         env.update(entorno)
+    # AUD-254: la descodificación se fija a UTF-8 en vez de heredar la del
+    # sistema. Las herramientas del repositorio reconfiguran su salida a UTF-8
+    # —es la regla que comprueba `test_salida_de_consola.py`—, así que leerlas
+    # con la codificación local dejaba esta prueba en rojo en cualquier consola
+    # cp1252: el resumen sí decía «estación» y llegaba aquí como `estaciÃ³n`.
+    # En Linux no se notaba porque allí las dos codificaciones coinciden.
     return subprocess.run(
         [sys.executable, *argumentos],
-        cwd=RAIZ, capture_output=True, text=True, timeout=120, env=env,
+        cwd=RAIZ, capture_output=True, text=True, encoding="utf-8",
+        errors="replace", timeout=120, env=env,
     )
 
 

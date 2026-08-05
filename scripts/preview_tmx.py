@@ -35,6 +35,14 @@ if str(_RAIZ) not in sys.path:
 
 from scripts._cli_paths import display_path  # noqa: E402  (tras ajustar sys.path)
 
+# AUD-254: el resumen dice «estación» y la consola de Windows escribía la «ó»
+# en cp1252. La herramienta no moría —la «ó» sí existe en cp1252, así que el
+# guardián de AUD-177 no la señalaba—, pero quien leyera la salida esperando
+# UTF-8 recibía `estaciM-sn`: el alumno veía basura y la prueba que comprueba
+# que el previsualizador informa de la estación estaba en rojo por eso.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 #: Colores del calco de diagnóstico. Coinciden con los que usa el modo de
 #: depuración del juego (F1) para que lo aprendido aquí sirva allí.
 COLORES = {

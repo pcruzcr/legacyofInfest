@@ -54,6 +54,13 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+# AUD-254: imprime `✅`, que no existe en cp1252 —la codificación por defecto
+# de la consola de Windows—. Sin esto el guardián de huérfanos muere con
+# `UnicodeEncodeError` **a mitad del trabajo**, que es el modo de fallo exacto
+# que AUD-177 documentó para `mutation_check.py`.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 RAIZ = Path(__file__).resolve().parent.parent
 
 #: Dónde se definen los símbolos que nos interesan. `src/stages/stage0` entra
