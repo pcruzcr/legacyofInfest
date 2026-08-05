@@ -130,6 +130,12 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
         self._pause_selected: int = 0
         self._pause_options: list[str] = ["Resume", "Save & Quit", "Quit to Title"]
         self._debug: bool = False
+        #: AUD-289 — entidades que se retiraron por lanzar en `update()`.
+        #:
+        #: Pública porque es un dato del nivel que el estudiante tiene que poder
+        #: ver: la consola de F11 la enseña. Se acumula por nombre de clase y no
+        #: por instancia, que es como se lee («el WalkerX vuelve a fallar»).
+        self.entidades_retiradas: list[str] = []
         self._was_grounded: bool = False
         self._pending_game_over: bool = False
 
@@ -1431,8 +1437,12 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
                 # esporas del Venado, su pisotón y su barrido. El jefe entero
                 # era inofensivo: podías quedarte quieto delante de él
                 # indefinidamente.
-                enemy._check_player_contact(player)
-                enemy.update(dt)
+                # AUD-289 — y si la entidad revienta, revienta ella sola.
+                try:
+                    enemy._check_player_contact(player)
+                    enemy.update(dt)
+                except Exception:
+                    self._retirar_entidad_rota(enemy)
             # AUD-140 — el golpe rompe bloques ANTES de resolverse contra los
             # enemigos, porque `process_attack` consume la caja al conectar:
             # después, un ataque que hubiera tocado enemigo y bloque a la vez
@@ -1862,6 +1872,55 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
         from src.engine.scenes.game_over_scene import GameOverScene
         self.context.scene_manager.push(GameOverScene(self.context, self))
 
+    def _retirar_entidad_rota(self, entidad: Any) -> None:
+        """Una entidad que lanza se va del nivel; el nivel sigue — AUD-289.
+
+        Por qué esto existe
+        -------------------
+        Este motor **ejecuta código de veintiséis estudiantes**. Hasta AUD-289 no
+        había red ninguna en el bucle de juego: un `IndexError` en el `update` de
+        un enemigo de una entrega tumbaba el fotograma entero, `App` lo cazaba
+        arriba del todo y devolvía al menú de título. Desde el asiento del
+        estudiante eso se ve como «el juego se cierra», y el mensaje que explica
+        qué pasó queda en un fichero de registro que nadie mira mientras juega.
+
+        Al cargar sí había red desde AUD-055 (`StageErrorScene`): un `.tmx` mal
+        formado enseña su diagnóstico en pantalla y `R` recarga. Faltaba la otra
+        mitad, la de ejecución.
+
+        Lo importante: **esto no silencia nada.** Registra con traza completa
+        —`logger.exception`, al fichero de registro que AUD-268 dejó junto a las
+        partidas—, lo apunta en `entidades_retiradas` para que la consola de F11
+        lo enseñe mientras se juega, y retira a la entidad para que el fallo no
+        se repita sesenta veces por segundo. Un `except` que se calla
+        convertiría un fallo ruidoso en uno invisible, que es peor que el
+        problema original.
+
+        Y se puede apagar. `settings.AISLAR_FALLOS_DE_ENTIDAD = False` vuelve a
+        propagar la excepción, que es lo que quiere quien está depurando el
+        motor y necesita la traza donde ocurre.
+        """
+        if not getattr(settings, "AISLAR_FALLOS_DE_ENTIDAD", True):
+            raise
+
+        nombre = type(entidad).__name__
+        logging.getLogger(__name__).exception(
+            "la entidad %r falló en update() y se retira del nivel", nombre)
+        # Se marca muerta **y** se saca de la lista: sólo lo primero la dejaría
+        # sin dibujar pero seguiría recibiendo `set_player_ref` cada fotograma,
+        # y `on_enemy_died` la contaría como una baja del jugador — puntuación y
+        # monedas por un fallo de programación.
+        entidad.is_alive = False
+        entidad._was_alive = False
+        if self._stage_data is not None:
+            try:
+                self._stage_data.entity_list.remove(entidad)
+            except ValueError:
+                pass
+        self._squad.forget(entidad)
+        self.entidades_retiradas.append(nombre)
+        self._subtitles.push(f"[{nombre} falló y se retiró: mira el registro]")
+
     def medidas_de_depuracion(self) -> dict[str, object]:
         """Lo que este escenario publica en la consola (F11) — AUD-283.
 
@@ -1889,7 +1948,7 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
             particulas = sum(em.count for em in sistema._emitters.values())
 
         stats = self._squad.stats
-        return {
+        medidas: dict[str, object] = {
             "Enemigos": f"{simulados} simulados de {len(vivos)} vivos",
             "Partículas": particulas,
             "Escuadrón": (
@@ -1897,6 +1956,13 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
                 f"{int(stats['por_reglas'])} por reglas"
             ),
         }
+        # AUD-289 — arriba del todo si ha pasado, y ausente si no. Una fila
+        # «Entidades retiradas: 0» permanente enseña a ignorarla, y el día que
+        # ponga 1 nadie lo va a mirar.
+        if self.entidades_retiradas:
+            medidas["!! Entidades retiradas"] = ", ".join(
+                sorted(set(self.entidades_retiradas)))
+        return medidas
 
     def draw(self, surface: pygame.Surface) -> None:
         if self._stage_data is None or self._player is None:
