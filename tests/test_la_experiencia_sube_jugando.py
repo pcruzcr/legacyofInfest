@@ -23,7 +23,6 @@ se decida, la moneda existe, sube sola jugando y sobrevive a cerrar el juego.
 """
 from __future__ import annotations
 
-import pygame
 import pytest
 
 from src.engine.core.events import Events

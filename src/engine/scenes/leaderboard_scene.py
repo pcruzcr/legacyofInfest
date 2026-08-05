@@ -29,6 +29,7 @@ from typing import TYPE_CHECKING, Any
 import pygame
 
 from src.engine.core import settings
+from src.engine.core.user_settings import user_data_dir
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
@@ -53,9 +54,14 @@ logger = logging.getLogger(__name__)
 
 #: De dónde salen las marcas. Módulo y no constante de clase para que una
 #: prueba pueda apuntarlo a un directorio temporal sin tocar la partida real.
-_RUTA_SPEEDRUN: Path = (
-    settings.PROJECT_ROOT / "saves" / "speedrun.json"
-)
+#:
+#: AUD-157 — el speedrun escribe en el directorio del usuario
+#: (`user_data_dir()/saves/speedrun.json`), igual que las preferencias, los
+#: logros y el bestiario. Esta pantalla leía de `PROJECT_ROOT/saves/`, así que
+#: nunca veía las marcas que `registrar_marca()` acababa de escribir: la tabla
+#: enseñaba `--:--.--` aunque hubiera récords. La ruta de lectura tiene que ser
+#: la misma que la de escritura.
+_RUTA_SPEEDRUN: Path = user_data_dir() / "saves" / "speedrun.json"
 
 #: Lo que se enseña cuando de un escenario no hay marca. Se repite tal cual en
 #: las tres columnas: un hueco vacío es un dato, y fingir un tiempo no lo es.
