@@ -358,6 +358,10 @@ class StageData:
     #: dieciséis mapas entregados.
     profundidad_min: float = 1.0
     profundidad_max: float = 1.0
+    #: AUD-278 — sombras proyectadas desde los focos. **Apagadas por defecto**:
+    #: cuestan una proyección por foco y por obstáculo, y el reporte 87 §11 las
+    #: dejó anotadas como «viable, con coste».
+    sombras_proyectadas: bool = False
     climate: str = ""
     #: Brillo ambiente del escenario, de 0 (oscuridad total) a 1 (sin
     #: oscurecer). `None` significa "no declarado": la escena caerá a su tabla
@@ -667,6 +671,8 @@ class StageLoader:
             props.get("profundidad_min", 1.0), "profundidad_min"))
         profundidad_max = max(0.05, cls._safe_float(
             props.get("profundidad_max", 1.0), "profundidad_max"))
+        sombras_proyectadas = cls._bool_de(
+            props.get("sombras_proyectadas"), por_defecto=False)
         camara = str(props.get("camara") or props.get("camera") or "seguir").strip().lower()
         if camara not in MODOS_DE_CAMARA:
             logger.warning(
@@ -744,6 +750,7 @@ class StageLoader:
             tiempo_bala=tiempo_bala,
             profundidad_min=profundidad_min,
             profundidad_max=profundidad_max,
+            sombras_proyectadas=sombras_proyectadas,
             camara=camara,
             climate=climate,
             zone=zone,

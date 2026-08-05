@@ -187,6 +187,7 @@ sin ellas el nivel no valida y pierde 10 puntos de rúbrica.
 | `tiempo_bala` | float | `0` | segundos de reserva de cámara lenta. **`0` = apagado.** Se mantiene pulsada `Q`/`R`: gasta reserva mientras dura y se recarga despacio al soltar (AUD-260) |
 | `profundidad_min` | float | `1` | **2.5D (AUD-277).** Escala de las entidades arriba del todo del mapa —lo más lejano—. Igual a `profundidad_max` = apagado |
 | `profundidad_max` | float | `1` | Escala abajo del todo —lo más cercano—. Un `0.75`/`1.0` da profundidad clara sin deformar. **No toca la física**: sólo el dibujado |
+| `sombras_proyectadas` | bool | `false` | **AUD-278.** Los focos dejan de atravesar las paredes: cada obstáculo proyecta su cuña de sombra. Cuesta una proyección por foco y por obstáculo — enciéndelo en escenarios de noche, donde se nota |
 | `bpm` | float | `0` | pulsos por minuto; enciende el reloj musical (§10.1) |
 
 ### De atmósfera

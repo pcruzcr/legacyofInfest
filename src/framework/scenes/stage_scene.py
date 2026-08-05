@@ -791,6 +791,13 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
             raise
         for sl in self._stage_lights:
             self._lighting.add_light(sl)
+        # AUD-278 — la geometría que tapa la luz, si el mapa lo pide. Sin la
+        # propiedad, la lista va vacía y el sistema de luz se comporta
+        # exactamente como antes: una antorcha detrás de un muro sigue
+        # iluminando a través, que es lo que hacen los dieciséis mapas
+        # entregados y lo que sus autores calificaron.
+        if getattr(self._stage_data, "sombras_proyectadas", False):
+            self._lighting.set_obstaculos(self._stage_data.collision_rects)
 
     # ── El ambiente vive en `stage_parts/ambiente.py` ─────────────
     #

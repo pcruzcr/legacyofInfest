@@ -5,6 +5,8 @@ import math
 import numpy as np
 import pygame
 
+from src.framework.vfx.sombras_proyectadas import ProyectorDeSombras
+
 
 class LightSource:
     """A 2D point light with position, radius, color, and intensity."""
@@ -189,6 +191,9 @@ class LightSystem:
     """Manages all 2D light sources and renders a light overlay."""
 
     def __init__(self, ambient_brightness: float = 0.3) -> None:
+        #: AUD-278 — geometría que proyecta sombra. Vacía = apagado.
+        self._obstaculos: list[pygame.Rect] = []
+        self._proyector = ProyectorDeSombras()
         self.lights: list[LightSource] = []
         self.ambient_brightness = ambient_brightness
         #: Tinte de la luz ambiente. Blanco no tiñe. Lo usa el ciclo día/noche
@@ -198,6 +203,19 @@ class LightSystem:
         self.ambient_color: tuple[int, int, int] = (255, 255, 255)
         self._darkness_surf: pygame.Surface | None = None
         self._multiplier: pygame.Surface | None = None
+
+    def set_obstaculos(self, rects: list[pygame.Rect] | None) -> None:
+        """La geometría que tapa la luz (AUD-278).
+
+        `None` o lista vacía la apaga, que es el caso por defecto: hasta aquí
+        una antorcha al otro lado de un muro iluminaba igual que si el muro no
+        existiera.
+
+        Se recibe la lista ya hecha en vez de buscarla: este sistema no sabe
+        de escenarios, y la escena ya tiene los sólidos que le pasa al jugador
+        cada fotograma.
+        """
+        self._obstaculos = list(rects) if rects else []
 
     def add_light(self, light: LightSource) -> None:
         self.lights.append(light)
@@ -237,6 +255,14 @@ class LightSystem:
             blit_x = screen_pos[0] - gw // 2
             blit_y = screen_pos[1] - gh // 2
             self._multiplier.blit(gradient, (blit_x, blit_y), special_flags=pygame.BLEND_RGBA_MAX)
+            # AUD-278 — la sombra se resta **de esta luz**, justo después de
+            # sumarla y antes de la siguiente. Hacerlo al final, sobre la
+            # máscara ya compuesta, borraría también la luz de los focos que no
+            # están tapados por ese muro.
+            if self._obstaculos:
+                self._proyector.proyectar(
+                    self._multiplier, light.position,
+                    light.get_current_radius(), self._obstaculos, camera_offset)
 
         target.blit(self._multiplier, (0, 0), special_flags=pygame.BLEND_RGB_MULT)
 
