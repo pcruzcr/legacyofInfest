@@ -72,7 +72,13 @@ DESTINO = PROJECT_ROOT / "assets" / "maps" / "stage_mecanicas" / "stage_mecanica
 TILESET = "../../tilesets/tileset_stage0.png"
 
 TS = 16
-MW, MH = 280, 24          # 4480 × 384 px
+# AUD-258: 280 → 310 para meter la sala 10, la del scroll forzado. `ScrollZone`
+# se declaró en AUD-249 y **ningún mapa lo colocaba**, así que la mecánica era
+# inalcanzable jugando y `test_todos_los_tipos_se_usan` estaba en rojo. Es el
+# mismo remedio que AUD-153 aplicó a los diecisiete tipos huérfanos: el
+# laboratorio es el mapa del profesor y su trabajo es ser donde todo lo que el
+# motor sabe hacer se puede ver.
+MW, MH = 310, 24          # 4960 × 384 px
 SUELO_Y = 20              # fila del suelo
 SALA = 30                 # ancho de cada sala en baldosas
 
@@ -126,7 +132,7 @@ def _terreno() -> list[list[int]]:
     # Repisas para descansar entre salas: son las «válvulas de escape» del
     # dossier, y sin ellas siete mecánicas seguidas se leen como una sola
     # cuesta arriba.
-    for sala in range(1, 9):
+    for sala in range(1, 10):
         for x in range(sala * SALA - 4, sala * SALA + 4):
             g[SUELO_Y - 5][x] = PLATAFORMA
 
@@ -311,6 +317,33 @@ def _objetos() -> list[str]:
     obj("Cutscene", (s9 + 28) * TS, suelo_px - 4 * TS, 2 * TS, 4 * TS,
         guion="camara 4400 200 0.8\ntemblor 0.3 5\n+ evento LAB_COMPLETADO",
         bloquea=False, saltable=True, una_vez=True)
+
+    # ── Sala 10: el nivel dice «sígueme» ──────────────────────
+    #
+    # AUD-258. `ScrollZone` (AUD-249) es la única mecánica del motor que le
+    # quita al jugador el control del ritmo: se pisa el rectángulo y a partir
+    # de ahí manda la cámara; quien se queda atrás muere contra el borde
+    # izquierdo. Estaba escrita, probada y **en ningún mapa**.
+    #
+    # La sala está acotada a propósito, y ésa es la decisión de diseño:
+    # `parar_en_x` detiene la cámara antes de la salida, así que el tramo con
+    # presión dura lo que dura la sala y el laboratorio no se vuelve hostil
+    # para quien viene a leer un cartel. El checkpoint va **antes** del
+    # disparador: morir aquí tiene que costar el tramo, no la sala anterior.
+    s10 = 9 * SALA
+    obj("Checkpoint", (s10 + 1) * TS, suelo_px - 32, 16, 32, checkpoint_id=8)
+    obj("MessageTrigger_Once", (s10 + 3) * TS, suelo_px - 64, 48, 48,
+        text="La camara arranca sola. No te quedes atras.")
+    obj("ScrollZone", (s10 + 6) * TS, suelo_px - 4 * TS, 2 * TS, 4 * TS,
+        velocidad_x=38.0, margen_de_gracia=28.0,
+        parar_en_x=float((s10 + 26) * TS))
+    # Dos repisas dentro del tramo: sin nada que hacer, el scroll forzado es
+    # sólo una caminata con prisa. Con ellas hay que decidir si se sube o se
+    # rodea, que es lo que la mecánica enseña.
+    obj("MovingPlatform", (s10 + 12) * TS, suelo_px - 3 * TS, 3 * TS, 8,
+        dx=0.0, dy=-48.0, velocidad=34.0, espera=0.4)
+    obj("Spring", (s10 + 19) * TS, suelo_px - TS, 2 * TS, TS,
+        impulso=-520.0, rearme=0.2)
 
     # Salida
     obj("NextTrigger", (MW - 4) * TS, suelo_px - 3 * TS, 2 * TS, 3 * TS)
