@@ -491,25 +491,32 @@ tenga que cruzar dos secciones:
 | Más de 3 capas de parallax | **HECHO (AUD-272)** |
 | Sombra elíptica bajo los pies | **HECHO (AUD-273)** |
 | Interfaz del Boss Rush | **HECHO (AUD-274)** |
-| Pooling de entidades | Pendiente — ver abajo |
-| Rejilla espacial y *raycast* | Pendiente |
-| Capas de profundidad / escala Z (2.5D) | Pendiente |
-| Sombras 2D proyectadas desde los focos | Pendiente (*viable con coste*: hay que medirla antes de encenderla por defecto) |
+| ~~Pooling de partículas~~ | **HECHO (AUD-275)** — 0,658 → 0,453 ms/fotograma, 1,45× |
+| ~~Rejilla espacial y *raycast*~~ | **HECHO (AUD-276)** — aditiva; el raycast es lo que faltaba para línea de visión y sombras proyectadas |
+| ~~Capas de profundidad / escala Z (2.5D)~~ | **HECHO (AUD-277)** — propiedades `profundidad_min`/`max`, apagadas por defecto; no toca la física |
+| ~~Sombras 2D proyectadas desde los focos~~ | **HECHO (AUD-278)** — medida: hasta 4-5 focos cabe (+6,8 ms con 3.000 obstáculos); con 8 no. Apagada por defecto |
 | Pendientes (*slopes*) | Pendiente (*viable con coste*: cambia la resolución de colisión, hay que hacerlo aditivo) |
 | `SpriteBatch` | Pendiente (*medir primero* en la máquina destino: AUD-148) |
 | Reducir ciclos de importación | Pendiente |
 | Partir `stage_scene.py` | Aplazado por acuerdo |
 
-**Una medición nueva, para el pooling.** El sistema de partículas ya usa NumPy
-en *structure of arrays*, pero `_append_particles` hace `np.concatenate` sobre
-**diez arreglos en cada emisión**: cada partícula que sale asigna memoria nueva
-en lugar de reutilizar. Es el punto de presión de GC más gordo que se ve, por
-encima de los proyectiles —que como mucho son tres por tirador—. Cambiarlo a
-capacidad reservada con pila de ranuras libres es el patrón que
-`EnjambreDeBalas` ya usa en este mismo repositorio.
+**El pooling, resuelto y medido (AUD-275).** La sospecha era `np.concatenate`
+en `emit`, y el perfil dijo otra cosa: **`update` se llevaba el 74 %**. Lo que
+hacía era compactar con máscara booleana —diez arreglos nuevos por emisor y por
+fotograma— más reconstruir una lista de Python de 3.840 tuplas de color
+elemento a elemento. AUD-214 lo había rozado años atrás y lo dejó escrito.
 
-**No se tocó aquí a propósito:** es una reescritura del núcleo de un sistema
-con varios dependientes y pruebas propias, y el repositorio exige medir antes
-de declarar una mejora. La medida que hay que tomar primero es
-`test_gc_collections_per_frame` y `test_tracemalloc_peak_on_burst` con una
-ráfaga sostenida, no con una sola.
+Capacidad reservada, compactación en su sitio con `np.take(..., out=)` y el
+color en un arreglo `(capacidad, 3)`. **0,658 → 0,453 ms/fotograma, 1,45×**, con
+los píxeles idénticos comprobados contra el oráculo de AUD-214.
+
+Queda pendiente el pooling de **proyectiles**, que es mucho menor: tres por
+tirador como mucho.
+
+**Y una corrección de método, para la próxima.** La primera versión de
+`sombras_proyectadas.py` afirmaba que la rejilla de AUD-276 «es lo que lo
+vuelve asumible». Al medirlo, **no era cierto**: el cuello de botella es el
+relleno de polígonos. La rejilla se queda porque es la estructura correcta,
+pero lo que acota el coste es un tope explícito por foco. Escribir la
+justificación antes de medirla es la forma más fácil de que un documento
+vuelva a mentir.
