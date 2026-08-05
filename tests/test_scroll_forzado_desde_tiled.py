@@ -236,13 +236,25 @@ class TestLoQueNoCambia:
 
         assert scroll.activo is False
 
+    #: El laboratorio del profesor no es una entrega: es el mapa donde se
+    #: coloca a propósito todo lo que el motor sabe hacer (AUD-153). Que
+    #: `ScrollZone` esté ahí es lo contrario de un problema — mientras no
+    #: estuvo, la mecánica era inalcanzable jugando y AUD-258 lo cerró.
+    _DEL_PROFESOR = {"stage_mecanicas.tmx"}
+
     def test_ningun_mapa_entregado_lo_declara(self) -> None:
-        """Si algún TMX ya usara el nombre, esto no sería aditivo."""
+        """Si algún TMX de estudiante usara el nombre, esto no sería aditivo.
+
+        La garantía que importa es sobre las **entregas**: un tipo que ninguna
+        de ellas declara no puede cambiar ningún nivel ya calificado, que es
+        lo que exige la invariante 2 de `CLAUDE.md`.
+        """
         import pathlib
 
         raiz = pathlib.Path(__file__).resolve().parent.parent
         con_scroll = [
             p.name for p in (raiz / "assets" / "maps").rglob("*.tmx")
-            if "ScrollZone" in p.read_text(encoding="utf-8", errors="replace")
+            if p.name not in self._DEL_PROFESOR
+            and "ScrollZone" in p.read_text(encoding="utf-8", errors="replace")
         ]
         assert not con_scroll, f"ya lo usaban: {con_scroll}"

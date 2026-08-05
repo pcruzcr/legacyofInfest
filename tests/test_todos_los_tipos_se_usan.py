@@ -39,7 +39,16 @@ LAB = RAIZ / "assets" / "maps" / "stage_mecanicas" / "stage_mecanicas.tmx"
 #: Tipos que el motor reconoce a propósito y que **no** se espera ver en un
 #: mapa del juego. Cada uno con su motivo escrito: una excepción con nombre se
 #: puede revisar, un silencio no.
-SIN_MAPA_A_PROPOSITO: dict[str, str] = {}
+SIN_MAPA_A_PROPOSITO: dict[str, str] = {
+    "BossSpawn": (
+        "AUD-259. Sólo tiene sentido en un mapa de jefe, y los tres que hay "
+        "son entregas de estudiantes que ya colocan el suyo con su tipo "
+        "propio: añadirlo duplicaría el jefe. Y el laboratorio —el mapa donde "
+        "se coloca todo lo demás— no tiene jefe, así que meter uno sería "
+        "enseñar la mecánica equivocada. Lo ejercita "
+        "tests/test_boss_spawn_desde_tiled.py de punta a punta."
+    ),
+}
 
 
 def _tipos_usados_en_los_mapas() -> set[str]:
