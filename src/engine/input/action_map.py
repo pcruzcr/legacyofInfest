@@ -44,6 +44,11 @@ class Action(Enum):
     # AUD-022: AudioManager.toggle_mute()/is_muted existed with no callers, so
     # the game had no working mute at all. M is the conventional binding.
     TOGGLE_MUTE = auto()
+    #: AUD-260 — el tiempo bala. `TiempoBala` estaba entera desde F5 y **no
+    #: tenía forma de encenderse**: sin acción propia habría que reutilizar
+    #: una existente, y entonces se activaría al saltar o al correr sin
+    #: querer. Sólo hace algo en los escenarios que declaran `tiempo_bala`.
+    BULLET_TIME = auto()
 
 
 # Default keyboard bindings: Action -> list of pygame key constants
@@ -74,6 +79,11 @@ DEFAULT_KEY_BINDINGS: dict[Action, list[int]] = {
     Action.LEARN_HELP: [pygame.K_F10],
     Action.OPEN_BESTIARY: [pygame.K_TAB],
     Action.TOGGLE_MUTE: [pygame.K_m],
+    # AUD-260 — `Q` y `R`: las dos libres, las dos alcanzables con la mano
+    # izquierda sin soltar el movimiento, y ninguna ligada a saltar, correr o
+    # atacar. Se **mantiene pulsada**, no se conmuta: la reserva se gasta
+    # mientras dura, así que soltar tiene que devolver el tiempo al momento.
+    Action.BULLET_TIME: [pygame.K_q, pygame.K_r],
 }
 
 # Controller axis/deadzone constants

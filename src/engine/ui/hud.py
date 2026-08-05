@@ -198,6 +198,9 @@ class HUD:
         #: AUD-141 — estamina. En 0 la barra no se dibuja.
         self._estamina_actual: float = 0.0
         self._estamina_max: float = 0.0
+        #: AUD-260 — tiempo bala. Negativo = el escenario no lo pide.
+        self._bala_fraccion: float = -1.0
+        self._bala_activo: bool = False
         self._special_max: float = 100.0
 
         self._font = pygame.font.Font(None, 12)
@@ -375,6 +378,7 @@ class HUD:
         self._draw_hearts(surface)
         self._draw_special_meter(surface)
         self._draw_estamina(surface)
+        self._draw_tiempo_bala(surface)
         self._draw_score(surface)
         self._draw_timer(surface)
         if self._boss_active:
@@ -431,6 +435,31 @@ class HUD:
         """
         self._estamina_actual = current
         self._estamina_max = max_val
+
+    def set_tiempo_bala(self, fraccion: float, activo: bool) -> None:
+        """AUD-260. Con `fraccion` negativa la barra no se dibuja.
+
+        Mismo trato que la estamina (AUD-141): un medidor en pantalla en los
+        dieciséis escenarios que no declaran `tiempo_bala` sería una promesa
+        falsa. La escena manda `-1.0` cuando la mecánica está apagada.
+        """
+        self._bala_fraccion = fraccion
+        self._bala_activo = activo
+
+    def _draw_tiempo_bala(self, surface: pygame.Surface) -> None:
+        if self._bala_fraccion < 0.0:
+            return
+        bar_w, bar_h, bar_x, bar_y = 60, 4, 84, 46
+        pct = max(0.0, min(1.0, self._bala_fraccion))
+        pygame.draw.rect(surface, (30, 30, 50), (bar_x, bar_y, bar_w, bar_h))
+        if pct > 0:
+            # Azul mientras está guardada, blanco mientras se gasta: el
+            # jugador tiene que ver **que la está usando** sin apartar la
+            # vista del combate, que es cuando la usa.
+            color = (255, 255, 255) if self._bala_activo else (110, 160, 255)
+            pygame.draw.rect(surface, color,
+                             (bar_x, bar_y, int(bar_w * pct), bar_h))
+        pygame.draw.rect(surface, (160, 180, 230), (bar_x, bar_y, bar_w, bar_h), 1)
 
     def _draw_estamina(self, surface: pygame.Surface) -> None:
         if self._estamina_max <= 0.0:

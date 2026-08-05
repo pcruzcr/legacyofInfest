@@ -340,6 +340,11 @@ class StageData:
     #: caso de los quince escenarios entregados: encenderla para todos
     #: cambiaría cómo se juegan sin que sus autores lo pidan.
     estamina: float = 0.0
+    #: AUD-260 — segundos de reserva de tiempo bala. **`0` = apagado**, por la
+    #: misma razón que la estamina: los dieciséis escenarios entregados están
+    #: calificados y encenderles una mecánica nueva cambiaría el juego que sus
+    #: autores diseñaron.
+    tiempo_bala: float = 0.0
     climate: str = ""
     #: Brillo ambiente del escenario, de 0 (oscuridad total) a 1 (sin
     #: oscurecer). `None` significa "no declarado": la escena caerá a su tabla
@@ -643,6 +648,8 @@ class StageLoader:
         desfase_audio = cls._safe_float(
             props.get("desfase_audio", 0.0), "desfase_audio")
         estamina = max(0.0, cls._safe_float(props.get("estamina", 0.0), "estamina"))
+        tiempo_bala = max(
+            0.0, cls._safe_float(props.get("tiempo_bala", 0.0), "tiempo_bala"))
         camara = str(props.get("camara") or props.get("camera") or "seguir").strip().lower()
         if camara not in MODOS_DE_CAMARA:
             logger.warning(
@@ -717,6 +724,7 @@ class StageLoader:
             compas=compas,
             desfase_audio=desfase_audio,
             estamina=estamina,
+            tiempo_bala=tiempo_bala,
             camara=camara,
             climate=climate,
             zone=zone,
@@ -940,6 +948,11 @@ class StageLoader:
             elif obj_type == "EventTrigger":
                 cls._handle_disparador(stage, obj, props)
 
+            elif obj_type == "BossSpawn":
+                problema = cls._handle_boss_spawn(stage, obj)
+                if problema is not None:
+                    report.add(problema)
+
             elif obj_type == "ScrollZone":
                 cls._handle_scroll_forzado(stage, obj, props)
 
@@ -1008,6 +1021,56 @@ class StageLoader:
             cleaned["waypoints"] = waypoints_by_owner[obj_name]
         entity = entity_class(pygame.Vector2(obj.x, obj.y), **cleaned)
         stage.entity_list.append(entity)
+
+    @classmethod
+    def _handle_boss_spawn(cls, stage: StageData, obj: Any) -> TmxObjectProblem | None:
+        """`BossSpawn` — dónde entra el jefe que el mapa nombra (AUD-259).
+
+        `17_BOSS_SPEC.md` §8.2 lo exige en todo mapa de jefe desde que se
+        escribió, y el cargador **no lo conocía**: un estudiante que siguiera
+        su propia especificación recibía un aviso de tipo desconocido y su
+        jefe no aparecía.
+
+        No construye «un jefe» —el motor no sabe cuál— sino el que declara la
+        propiedad `boss`, resuelto por el mismo registro de entidades que usan
+        `BossVenado` y compañía. Escribir `BossSpawn` con `boss="BossVenado"`
+        produce exactamente la misma entidad que escribir `BossVenado`.
+
+        Sin `boss`, o con un nombre no registrado, **avisa** por el camino de
+        diagnóstico de AUD-055. Callarse sería repetir el defecto que esto
+        arregla: el estudiante escribe algo razonable y no ocurre nada.
+        """
+        props = dict(obj.properties) if obj.properties else {}
+        nombre = str(props.pop("boss", "") or "")
+        if not nombre or nombre not in cls._entity_registry:
+            problema = cls._diagnose_object(
+                obj, "BossSpawn", getattr(obj, "name", "") or "")
+            problema.reason = (
+                "BossSpawn sin propiedad `boss`" if not nombre
+                else f"BossSpawn declara boss='{nombre}', que no está registrado"
+            )
+            return problema
+
+        entity_class = cls._entity_registry[nombre]
+        entity = entity_class(
+            pygame.Vector2(obj.x, obj.y), **cls._parse_entity_props(props))
+        stage.entity_list.append(entity)
+        return None
+
+    @classmethod
+    def _handle_boss_spawn_para_pruebas(
+        cls, obj: Any, destino: list[Any],
+    ) -> TmxObjectProblem | None:
+        """Adaptador para probar `_handle_boss_spawn` sin un `StageData`.
+
+        Existe porque el defecto que cierra AUD-259 vive en la resolución del
+        tipo, no en el escenario: montar un TMX entero para comprobarlo haría
+        la prueba lenta y menos clara sobre qué falló.
+        """
+        class _Destino:
+            entity_list = destino
+
+        return cls._handle_boss_spawn(_Destino(), obj)  # type: ignore[arg-type]
 
     @classmethod
     def _parse_entity_props(cls, props: dict[str, Any]) -> dict[str, Any]:
