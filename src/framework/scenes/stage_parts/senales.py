@@ -212,7 +212,17 @@ class SenalesDeEscenario:
             self._particle_system.get_emitter("blood").emit(
                 float(src[0]), float(src[1]), HitEffects.BLOOD_BIG,
             )
-            self._camera.apply_shake(amplitude=2.0, duration=0.1)
+            # AUD-282 — la pantalla se va **en el sentido del empujón**: del
+            # origen del daño hacia el jugador. Con la sacudida isótropa, un
+            # golpe por la izquierda y otro por la derecha se sentían iguales, y
+            # saber de qué lado viene es la mitad de la información que un
+            # jugador necesita para reaccionar.
+            direccion = None
+            if self._player is not None:
+                direccion = (self._player.rect.centerx - float(src[0]),
+                             self._player.rect.centery - float(src[1]))
+            self._camera.apply_shake(amplitude=2.0, duration=0.1,
+                                     direccion=direccion)
             self._post_processing.flash((255, 50, 50), alpha=180, duration=0.15)
             health_pct = self._player.current_health / max(settings.PLAYER_MAX_HEALTH, 1)
             self._post_processing.set_damage_vignette(max(0, 0.5 - health_pct * 0.5))
@@ -247,7 +257,10 @@ class SenalesDeEscenario:
             self._particle_system.get_emitter("slam").emit(
                 float(pos[0]), float(pos[1]), HitEffects.SPARK_BIG,
             )
-            self._camera.apply_shake(amplitude=4.0, duration=0.2)
+            # AUD-282 — un pisotón va hacia abajo y no hay ambigüedad posible:
+            # es el caso donde la sacudida direccional se nota más.
+            self._camera.apply_shake(amplitude=4.0, duration=0.2,
+                                     direccion=(0.0, 1.0))
 
         def _on_vfx_ultimate(**data: Any) -> None:
             pos = data.get("pos", (0, 0))
