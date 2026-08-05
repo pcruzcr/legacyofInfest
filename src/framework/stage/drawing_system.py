@@ -7,10 +7,19 @@ from typing import TYPE_CHECKING, Any
 import pygame
 
 from src.engine.core import settings
+from src.framework.stage import culling
 from src.framework.stage.profundidad import EscalaPorProfundidad
 from src.framework.vfx.sombras import Sombra
 
 logger = logging.getLogger(__name__)
+
+#: AUD-279 — margen de dibujado, en píxeles alrededor del encuadre.
+#:
+#: Más pequeño que el de simulación (400) porque responde a otra pregunta: no
+#: «¿puede esto afectar a lo que veo dentro de tres segundos?», sino «¿asoma
+#: ahora mismo por el borde?». 64 px es cuatro veces el lado de una baldosa y
+#: cubre de sobra al sprite más grande del bestiario.
+_MARGEN_DIBUJADO: int = 64
 
 if TYPE_CHECKING:
     from src.engine.ui.hud import HUD
@@ -530,8 +539,23 @@ class DrawingSystem:
         if player is not None:
             drawables.append((player, player.rect.centery))
 
+        # AUD-279 — lo que no toca la pantalla no entra en la lista.
+        #
+        # `blit` ya recorta solo, así que saltarse el dibujado de un enemigo
+        # lejano ahorra poco. Lo que ahorra de verdad es todo lo que este método
+        # hace **por dibujable** antes de dibujarlo: una sombra proyectada
+        # contra todos los sólidos del mapa (AUD-273) y, con 2.5D activo, un
+        # `transform.scale` del sprite (AUD-277). Eso sí se paga entero aunque
+        # el resultado caiga fuera del encuadre.
+        #
+        # El margen aquí es de un cuarto del que usa la simulación: dibujar es
+        # una decisión de este fotograma, y basta con cubrir el sprite más
+        # grande que pueda asomar por el borde.
+        zona = culling.zona_de_dibujado(offset, _MARGEN_DIBUJADO)
         for entity in stage.entity_list:
             if entity is None or not entity.is_visible or not entity.is_alive:
+                continue
+            if not culling.dentro(entity.rect, zona):
                 continue
             drawables.append((entity, entity.rect.centery))
 
