@@ -29,6 +29,7 @@ from src.framework.stage.interactables import (
     Cofre,
     Disparador,
     Recogible,
+    ZonaDeWarp,
 )
 from src.framework.stage.tmx_diagnostics import (
     TmxObjectProblem,
@@ -298,6 +299,12 @@ class StageData:
     cerraduras: list[Cerradura] = field(default_factory=list)
     cofres: list[Cofre] = field(default_factory=list)
     disparadores: list[Disparador] = field(default_factory=list)
+    #: AUD-287 — zonas de warp declaradas con `WarpZone`.
+    #:
+    #: Lista aparte y no un componente ECS por lo mismo que `scroll_forzados`:
+    #: lo que mueven no es una entidad del mundo, es **el jugador**, y quien lo
+    #: posee es la escena.
+    warps: list[ZonaDeWarp] = field(default_factory=list)
     #: AUD-249 — scroll forzado declarado desde Tiled con `ScrollZone`.
     #:
     #: No es un componente ECS: `ScrollForzado` mueve la **cámara**, no una
@@ -1017,6 +1024,9 @@ class StageLoader:
             elif obj_type == "ScrollZone":
                 cls._handle_scroll_forzado(stage, obj, props)
 
+            elif obj_type == "WarpZone":
+                cls._handle_warp(stage, obj, props)
+
             # F5.3–F5.6 — mecánicas del Top 200 declaradas desde Tiled.
             elif obj_type in _TIPOS_DE_COMPONENTE:
                 cls._handle_componente(stage, obj, props, obj_type)
@@ -1315,6 +1325,41 @@ class StageLoader:
             automatico=cls._bool_de(props.get("automatico"), por_defecto=True),
             una_vez=cls._bool_de(props.get("una_vez"), por_defecto=True),
             key_id=str(props.get("key_id", "")),
+        ))
+
+    @classmethod
+    def _handle_warp(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
+        """`WarpZone` — teletransporta dentro del mismo mapa (AUD-287).
+
+        Propiedades:
+
+        * `destino_x`, `destino_y` — **obligatorias**, en píxeles de mundo. Es
+          adonde va el centro inferior del jugador, o sea sus pies: dar el punto
+          en el suelo es lo natural mirando el mapa en Tiled, y evita el error de
+          dejarlo medio hundido.
+        * `automatico` — al tocar (por defecto) o pulsando usar.
+        * `una_vez`, `key_id`, `enfriamiento`, `mensaje`.
+
+        Sin destino no se carga y se avisa. Un warp sin destino no es un warp a
+        medio configurar: es un rectángulo que teletransporta al origen del
+        mapa, que es peor que no existir porque parece un fallo del motor.
+        """
+        if "destino_x" not in props or "destino_y" not in props:
+            logger.warning(
+                "WarpZone en (%s, %s) sin 'destino_x'/'destino_y': se ignora. "
+                "Con destino implícito mandaría al jugador a la esquina del "
+                "mapa y parecería un fallo del motor.", obj.x, obj.y,
+            )
+            return
+        stage.warps.append(ZonaDeWarp(
+            rect=cls._rect_de(obj),
+            destino=pygame.Vector2(float(props["destino_x"]),
+                                   float(props["destino_y"])),
+            automatico=cls._bool_de(props.get("automatico"), por_defecto=True),
+            una_vez=cls._bool_de(props.get("una_vez"), por_defecto=False),
+            key_id=str(props.get("key_id", "")),
+            enfriamiento=float(props.get("enfriamiento", 0.5)),
+            mensaje=str(props.get("mensaje", "")),
         ))
 
     @classmethod

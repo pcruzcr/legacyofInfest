@@ -27,7 +27,7 @@ import pygame
 from src.engine.core import settings
 from src.engine.core.events import Events
 from src.engine.core.experience import ExperienceSystem
-from src.framework.stage.interactable_system import EVENTO_RECOGIDO
+from src.framework.stage.interactable_system import EVENTO_RECOGIDO, EVENTO_WARP
 from src.framework.vfx.hit_effects import HitEffects
 
 #: AUD-284 — los efectos que apartan la música al sonar.
@@ -153,6 +153,40 @@ class SenalesDeEscenario:
         for evento in (EVENTO_RECOGIDO, Events.ITEM_COLLECTED):
             self.context.event_bus.subscribe(evento, _on_item_picked)
             self._vfx_handlers[evento] = _on_item_picked
+
+        def _on_warp(**data: Any) -> None:
+            """AUD-287 — el salto de una punta del mapa a la otra.
+
+            Lo aplica la escena y no `InteractableSystem` porque el jugador y la
+            cámara son suyos. Y hay que hacer **tres** cosas, no una:
+
+            1. mover al jugador —a sus pies, que es lo que declara el mapa—;
+            2. **cortarle la velocidad**: llegar al destino cayendo a 500 px/s
+               lo atraviesa el suelo antes de que la colisión pueda resolverlo;
+            3. **saltar la cámara** en vez de dejar que interpole. Con el LERP
+               normal, un warp de 3.000 px produce medio segundo de barrido a
+               toda velocidad por el nivel, que marea y además enseña partes del
+               mapa que el diseño no quería enseñar todavía.
+            """
+            destino = data.get("destino")
+            if destino is None or self._player is None:
+                return
+            self._player.rect.midbottom = (int(destino[0]), int(destino[1]))
+            self._player.position.update(float(self._player.rect.x),
+                                         float(self._player.rect.y))
+            self._player.velocity.update(0.0, 0.0)
+            self._camera.snap_to_target()
+            origen = data.get("origen")
+            if origen is not None:
+                self._particle_system.get_emitter("warp").emit(
+                    float(origen[0]), float(origen[1]), HitEffects.PARRY,
+                )
+            self._particle_system.get_emitter("warp").emit(
+                float(destino[0]), float(destino[1]) - 8.0, HitEffects.PARRY,
+            )
+
+        self.context.event_bus.subscribe(EVENTO_WARP, _on_warp)
+        self._vfx_handlers[EVENTO_WARP] = _on_warp
 
         def _on_flag_set(**data: Any) -> None:
             flag = str(data.get("flag", ""))

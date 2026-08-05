@@ -96,6 +96,11 @@ BUILTIN_OBJECT_TYPES: tuple[str, ...] = (
     # arquetipo de nivel completo —la persecución— estaba fuera del alcance de
     # cualquier alumno que no escribiera Python (`GAP-032`).
     "ScrollZone",
+    # AUD-287 — teletransporte **dentro** del mismo mapa. `NextTrigger` cambia
+    # de escenario y `Door` abre un paso; mover al jugador de una punta del mapa
+    # a la otra no se podía declarar de ninguna forma, así que un mapa grande no
+    # tenía manera de conectar sus extremos.
+    "WarpZone",        # Zelda (cuevas), Metroid (ascensores), Hollow Knight
     # F5.14 — de escalada no había **nada**: ni `Ladder`, ni `Rope`, ni `Climb`,
     # ni un estado que suspendiera la gravedad. Y no se podía improvisar:
     # apilar `Solid` estrechos para simular una cuerda deja al jugador al lado

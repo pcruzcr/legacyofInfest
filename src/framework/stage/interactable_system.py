@@ -31,6 +31,7 @@ from src.framework.stage.interactables import (
     Disparador,
     Llavero,
     Recogible,
+    ZonaDeWarp,
     alcanza,
 )
 
@@ -47,6 +48,8 @@ EVENTO_ABIERTA = "INTERACT_LOCK_OPENED"
 EVENTO_BLOQUEADA = "INTERACT_LOCK_BLOCKED"
 EVENTO_COFRE = "INTERACT_CHEST_OPENED"
 EVENTO_DISPARADOR = "INTERACT_TRIGGER_FIRED"
+#: AUD-287 — el jugador ha pisado una zona de warp. Lleva `destino` y `origen`.
+EVENTO_WARP = "INTERACT_WARP"
 
 
 class InteractableSystem:
@@ -59,11 +62,15 @@ class InteractableSystem:
         cofres: list[Cofre] | None = None,
         disparadores: list[Disparador] | None = None,
         bus: EventBus | None = None,
+        warps: list[ZonaDeWarp] | None = None,
     ) -> None:
         self.recogibles = list(recogibles or [])
         self.cerraduras = list(cerraduras or [])
         self.cofres = list(cofres or [])
         self.disparadores = list(disparadores or [])
+        #: AUD-287 — zonas de warp. Al final de la firma y con valor por
+        #: defecto: las 26 clases de escenario construyen esto por posición.
+        self.warps = list(warps or [])
         self.llavero = Llavero()
         self._bus = bus
         #: De qué cadáveres ya salió el botín (AUD-218). Vive aquí y no en el
@@ -98,6 +105,7 @@ class InteractableSystem:
 
         self._recoger(jugador, usar)
         self._disparar(jugador, usar)
+        self._warpear(dt, jugador, usar)
         self._cerrar_las_cronometradas(dt, jugador)
         if usar:
             self._abrir_cerraduras(jugador)
@@ -251,6 +259,39 @@ class InteractableSystem:
             # emitiendo para quien quiera enterarse desde su escena; esto es
             # el camino que no exige escribir Python.
             self.abrir_por_evento(disparador.evento)
+
+    def _warpear(self, dt: float, jugador: pygame.Rect, usar: bool) -> None:
+        """AUD-287 — cruzar de un punto del mapa a otro.
+
+        El sistema **no mueve al jugador**: emite dónde debería aparecer. Mover
+        un rectángulo que este módulo no posee es la clase de atajo que después
+        deja al jugador dentro de una pared sin que nadie sepa quién lo puso
+        ahí. La escena, que sí es dueña del jugador y de la cámara, es quien
+        aplica el salto.
+        """
+        for warp in self.warps:
+            if warp._espera > 0.0:
+                warp._espera = max(0.0, warp._espera - dt)
+                continue
+            if warp.una_vez and warp.usado:
+                continue
+            if warp.automatico:
+                if not warp.rect.colliderect(jugador):
+                    continue
+            elif not (usar and alcanza(jugador, warp.rect)):
+                continue
+            if not self.llavero.tiene(warp.key_id):
+                continue
+
+            warp.usado = True
+            warp._espera = warp.enfriamiento
+            if warp.mensaje:
+                self._avisar(warp.mensaje)
+            self._emitir(
+                EVENTO_WARP,
+                destino=(float(warp.destino.x), float(warp.destino.y)),
+                origen=warp.rect.center,
+            )
 
     # -- salida ----------------------------------------------------
     def _avisar(self, texto: str, duracion: float = 2.0) -> None:

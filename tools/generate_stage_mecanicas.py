@@ -345,6 +345,28 @@ def _objetos() -> list[str]:
     obj("Spring", (s10 + 19) * TS, suelo_px - TS, 2 * TS, TS,
         impulso=-520.0, rearme=0.2)
 
+    # ── El atajo de vuelta ────────────────────────────────────
+    #
+    # AUD-287. `WarpZone` teletransporta **dentro del mismo mapa**, que es lo
+    # único que faltaba para conectar los extremos de un nivel grande: hasta
+    # ahora `NextTrigger` cambiaba de escenario y `Door` abría un paso, y no
+    # había nada entre medias.
+    #
+    # Aquí se coloca donde el laboratorio lo pide de verdad: el mapa mide 4.960
+    # px y quien llega al final y quiere volver a leer un cartel de la sala 2
+    # tiene que caminar los diez tramos otra vez. El warp del final devuelve a
+    # la entrada; el de la entrada lleva a la sala 5, que es la mitad.
+    #
+    # Los dos son manuales (`automatico=false`). Un warp automático en un
+    # corredor por el que se pasa andando se dispara sin querer, y en un mapa
+    # que además tiene scroll forzado eso sería una trampa.
+    obj("WarpZone", (MW - 8) * TS, suelo_px - 3 * TS, 2 * TS, 3 * TS,
+        automatico=False, destino_x=float(3 * TS), destino_y=float(suelo_px),
+        mensaje="De vuelta a la entrada.")
+    obj("WarpZone", 5 * TS, suelo_px - 3 * TS, 2 * TS, 3 * TS,
+        automatico=False, destino_x=float((5 * SALA - 4) * TS),
+        destino_y=float(suelo_px), mensaje="Atajo a la mitad del laboratorio.")
+
     # Salida
     obj("NextTrigger", (MW - 4) * TS, suelo_px - 3 * TS, 2 * TS, 3 * TS)
 

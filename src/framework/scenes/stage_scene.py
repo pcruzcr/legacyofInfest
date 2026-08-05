@@ -644,6 +644,7 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
             cofres=self._stage_data.cofres,
             disparadores=self._stage_data.disparadores,
             bus=self.context.event_bus,
+            warps=self._stage_data.warps,
         )
         self._montar_director_de_escenas()
         # AUD-140 — bloques empujables y destructibles del mapa.

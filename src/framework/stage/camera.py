@@ -254,6 +254,34 @@ class Camera:
         """Convert a screen position to world position."""
         return screen_pos + self.offset
 
+    def snap_to_target(self) -> None:
+        """Planta la cámara sobre su objetivo, sin interpolar — AUD-287.
+
+        Para cuando el objetivo **salta** en vez de moverse: un warp, un
+        respawn, un cambio de sala. Con el LERP normal, teletransportar al
+        jugador 3.000 px produce medio segundo de barrido a toda velocidad por
+        el nivel; marea, y de paso enseña partes del mapa que el diseño no
+        quería enseñar todavía.
+
+        No toca la sacudida en curso: un golpe recibido justo antes de cruzar
+        sigue siendo un golpe recibido.
+        """
+        if self._target is None:
+            return
+        self.offset.update(
+            self._target.rect.centerx - settings.INTERNAL_WIDTH / 2,
+            self._target.rect.centery - settings.INTERNAL_HEIGHT / 2,
+        )
+        self._adelanto.update(0.0, 0.0)
+        self._clamp_a_los_bordes()
+
+    def _clamp_a_los_bordes(self) -> None:
+        """Encierra el encuadre dentro del mapa."""
+        self.offset.x = max(0.0, min(self.offset.x,
+                                     max(0, self._map_w - settings.INTERNAL_WIDTH)))
+        self.offset.y = max(0.0, min(self.offset.y,
+                                     max(0, self._map_h - settings.INTERNAL_HEIGHT)))
+
     def update(self, dt: float) -> None:
         """
         Smoothly follow the target using LERP, apply screen shake,
