@@ -110,12 +110,33 @@ class TestElClimaYaNoSuenaEnSilencio:
     def test_la_niebla_suena(self) -> None:
         assert self._clima("fog").get_ambient_audio_key() is not None
 
-    def test_la_lluvia_declara_que_le_falta_el_fichero(self) -> None:
-        """`None` significa dos cosas y hay que poder distinguirlas: «no debe
-        sonar» y «debería sonar y falta el asset». Lo segundo se avisa."""
+    def test_la_lluvia_ya_tiene_su_fichero(self) -> None:
+        """AUD-271 — esta prueba estaba escrita al revés, y a propósito.
+
+        Fijaba que la lluvia **declaraba su carencia**: `None` significa dos
+        cosas —«no debe sonar» y «debería sonar y falta el asset»— y AUD-145
+        las separó para poder avisar de la segunda sin avisar del silencio
+        buscado. Eso era lo correcto mientras el fichero no existiera.
+
+        Ya existe: se genera con el mismo camino que el resto del audio del
+        proyecto. Lo que se fija ahora es que suene, y que la distinción siga
+        estando para el día que alguien añada un clima nuevo.
+        """
         lluvia = self._clima("rain")
-        assert lluvia.get_ambient_audio_key() is None
-        assert lluvia.falta_su_ambiente() is True
+        assert lluvia.get_ambient_audio_key() is not None
+        assert lluvia.falta_su_ambiente() is False
+
+    def test_la_tormenta_tambien(self) -> None:
+        tormenta = self._clima("storm")
+        assert tormenta.get_ambient_audio_key() is not None
+        assert tormenta.falta_su_ambiente() is False
+
+    def test_la_distincion_sigue_existiendo(self) -> None:
+        """El mecanismo de AUD-145 no se retira: sólo se queda sin clientes."""
+        from src.framework.vfx.weather_system import WeatherSystem
+
+        assert hasattr(WeatherSystem, "SIN_ASSET")
+        assert hasattr(WeatherSystem, "falta_su_ambiente")
 
     def test_la_escena_avisa_en_vez_de_callarse(self) -> None:
         import inspect

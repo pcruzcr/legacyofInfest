@@ -1700,7 +1700,12 @@ SFX_CATEGORIES = {
     "ui": ["menu_move", "menu_confirm", "menu_cancel", "checkpoint", "stage_banner",
            "game_over", "heart_restore", "stage_complete"],
     "environment": ["jungle_ambient", "datacenter_hum", "wind_indoor", "cemetery_silence",
-                    "screen_shake", "hazard_zone", "one_way_platform"],
+                    "screen_shake", "hazard_zone", "one_way_platform",
+                    # AUD-271 — `rain` y `storm` eran los dos climas que
+                    # `WeatherSystem.SIN_ASSET` declaraba sin fichero desde
+                    # AUD-145. Declararlo en voz alta estuvo bien; generarlos
+                    # por el mismo camino que los demás lo cierra.
+                    "rain_ambient", "storm_ambient", "thunder"],
     # AUD-263 — las voces. GAP-031 decía «el motor sabe reproducir voz y no hay
     # ni un solo fichero», y se dejó así a propósito para no cablear mentiras.
     # Pero **todo** el audio de este juego está sintetizado aquí: los pasos, los
@@ -1725,12 +1730,46 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
              "rey_spit": 0.3, "rey_split": 0.6, "gavilan_dive": 0.4, "gavilan_mask_beam": 0.5,
              "paburu_eye_beam": 0.5, "paburu_wave": 0.6,
              "jungle_ambient": 2.0, "datacenter_hum": 2.0, "wind_indoor": 2.0, "cemetery_silence": 2.0,
-             "venado_fase1": 0.9, "venado_fase2": 1.1, "venado_muerte": 1.4}
+             "venado_fase1": 0.9, "venado_fase2": 1.1, "venado_muerte": 1.4,
+             "rain_ambient": 2.0, "storm_ambient": 2.0, "thunder": 1.6}
     
     dur = t_dur.get(name, 0.3)
     n = int(rate * dur)
     
-    if name in ("jungle_ambient", "datacenter_hum", "wind_indoor", "cemetery_silence"):
+    if name == "rain_ambient":
+        # AUD-271 — lluvia: ruido blanco filtrado, sin envolvente. Es un bucle
+        # de ambiente, así que **no** puede decaer: un ambiente que se apaga
+        # delata el bucle en cuanto da la vuelta.
+        anterior = 0.0
+        samples = []
+        for _ in range(n):
+            crudo = random.uniform(-1.0, 1.0)
+            anterior = anterior * 0.6 + crudo * 0.4     # paso bajo sencillo
+            samples.append(anterior * 0.11)
+    elif name == "storm_ambient":
+        # Lo mismo, más grave y más fuerte: la tormenta es lluvia con cuerpo.
+        anterior = 0.0
+        samples = []
+        for i in range(n):
+            crudo = random.uniform(-1.0, 1.0)
+            anterior = anterior * 0.82 + crudo * 0.18   # más filtrado = más grave
+            # Un vaivén lento de intensidad, como ráfagas.
+            rafaga = 0.75 + 0.25 * math.sin(2.0 * math.pi * (i / rate) / 3.0)
+            samples.append(anterior * 0.17 * rafaga)
+    elif name == "thunder":
+        # El retumbar: ruido grave con ataque lento y cola larga. Lo que
+        # distingue un trueno de un golpe es que **tarda** en llegar a su
+        # máximo, y que se va apagando mucho después.
+        anterior = 0.0
+        samples = []
+        for i in range(n):
+            t_seg = i / rate
+            avance = t_seg / dur
+            crudo = random.uniform(-1.0, 1.0)
+            anterior = anterior * 0.93 + crudo * 0.07
+            env = min(1.0, avance * 6.0) * max(0.0, 1.0 - avance) ** 1.8
+            samples.append((anterior + _tri(45.0, t_seg) * 0.25) * env * 0.5)
+    elif name in ("jungle_ambient", "datacenter_hum", "wind_indoor", "cemetery_silence"):
         samples = [random.uniform(-0.05, 0.05) * max(0, 1 - i/n) for i in range(n)]
     elif name == "jump":
         samples = [_square(200 + 1200 * (i/(n-1)) if n > 1 else 200, i/rate, 0.5) * (1 - i/n) * 0.3 for i in range(n)]
