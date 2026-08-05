@@ -16,6 +16,14 @@ def _parse_args() -> argparse.Namespace:
         "--boss", type=str, default=None,
         help="Launch a specific boss by ID (e.g., --boss boss_rey)",
     )
+    # AUD-268: los avisos van a un fichero junto a las partidas. Esta bandera
+    # los devuelve a la consola, que es lo que quiere quien está diagnosticando
+    # y nadie más.
+    parser.add_argument(
+        "--debug", action="store_true",
+        help="Muestra los avisos del motor en la consola (por defecto van al "
+             "registro, junto a las partidas)",
+    )
     return parser.parse_args()
 
 
@@ -110,7 +118,7 @@ if __name__ == "__main__":
             print(f"ERROR: No StageScene subclass found in src.stages.{args.stage}")
             sys.exit(1)
         from src.engine.core.app import App
-        app = App()
+        app = App(depurar=args.debug)
         app.scene_manager.push(scene_cls(app.context))
         app.run()
 
@@ -139,10 +147,10 @@ if __name__ == "__main__":
             )
             sys.exit(1)
         from src.engine.core.app import App
-        app = App()
+        app = App(depurar=args.debug)
         app.scene_manager.push(scene_cls(app.context))
         app.run()
 
     else:
         from src.engine.core.app import App
-        App().run()
+        App(depurar=args.debug).run()

@@ -11,6 +11,7 @@ from src.engine.core.clock import DeltaClock
 from src.engine.core.difficulty import Difficulty, set_difficulty
 from src.engine.core.event_bus import EventBus
 from src.engine.core.game_context import GameContext
+from src.engine.core.registro import configurar_registro
 from src.engine.core.save_manager import SaveManager
 from src.engine.input.input_manager import InputManager
 from src.engine.scene.scene_manager import SceneManager
@@ -45,7 +46,8 @@ def modo_daltonico_gl(ajustes: object | None) -> int:
 
 
 class App:
-    def __init__(self, use_gl: bool = True) -> None:
+    def __init__(self, use_gl: bool = True, depurar: bool = False) -> None:
+        self.depurar = depurar
         self._use_gl = use_gl
         # AUD-124 — sin anotación, mypy infiere el tipo `None` y toda
         # llamada posterior a `self._gl_renderer.init(...)` es un error.
@@ -130,6 +132,11 @@ class App:
         gpu_effects.set_effects_on_gpu(cfg.cpu_effects_taken_over())
 
     def _init_subsystems(self) -> None:
+        # AUD-268 — lo primero de todo: sin esto, Python usa su manejador de
+        # último recurso y los 134 `logger.warning` del árbol salen por la
+        # consola mientras el jugador juega. Van a un fichero junto a las
+        # partidas; `--debug` los devuelve a la pantalla.
+        configurar_registro(depurar=self.depurar)
         self.event_bus = EventBus()
 
         # AUD-036: load persisted player preferences before anything reads them,
