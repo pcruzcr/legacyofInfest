@@ -17,6 +17,8 @@ from src.engine.audio.mixer_buses import (
     BUS_EFECTOS,
     BUS_MUSICA,
     BUS_VOZ,
+    DUCK_EFECTO_SEGUNDOS,
+    DUCK_NIVEL_EFECTO,
     Mezclador,
 )
 from src.engine.audio.sound_bank import SoundBank
@@ -258,6 +260,27 @@ class AudioManager:
         self._aplicar_volumen_de_musica()
         if self.sound_bank is not None:
             self.sound_bank.play(name, volume=self.mezcla.ganancia(BUS_VOZ, volume))
+
+    def play_sfx_critico(self, name: str, volume: float = 1.0,
+                         world_x: float | None = None,
+                         screen_center_x: float | None = None) -> None:
+        """Un efecto que **se lleva por delante a la música** — AUD-284.
+
+        La muerte de un jefe, un logro, el final de un escenario. Hasta ahora el
+        ducking sólo lo disparaba `play_voz`: el mecanismo estaba entero y
+        ningún efecto lo usaba, así que el momento más ruidoso de la partida era
+        justo donde peor se oía lo importante.
+
+        Baja la música un 30 % durante un segundo —no al 35 % como una voz—
+        porque bajo un jefe que cae la música es parte del momento: se le hace
+        hueco, no se la apaga.
+        """
+        self.mezcla.agachar_musica(DUCK_EFECTO_SEGUNDOS, nivel=DUCK_NIVEL_EFECTO)
+        self._aplicar_volumen_de_musica()
+        if world_x is not None:
+            self.play_sfx_at(name, world_x, screen_center_x, volume=volume)
+        else:
+            self.play_sfx(name, volume=volume)
 
     def agachar_musica(self, segundos: float = 0.0) -> None:
         self.mezcla.agachar_musica(segundos)

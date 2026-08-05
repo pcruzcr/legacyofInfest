@@ -73,6 +73,20 @@ POR_DEFECTO: dict[str, float] = {
 
 #: Cuánto baja la música mientras alguien habla.
 DUCK_NIVEL: float = 0.35
+
+#: Cuánto baja la música bajo un efecto **crítico** (AUD-284): un 30 %.
+#:
+#: Mucho más suave que el de la voz, y por una razón: bajo una línea de diálogo
+#: la música estorba y hay que apartarla; bajo la muerte de un jefe la música
+#: **es parte del momento** y apagarla lo desinfla. Lo que se busca aquí es
+#: espacio para que el golpe se oiga entero, no silencio.
+DUCK_NIVEL_EFECTO: float = 0.70
+
+#: Cuánto dura el hueco que abre un efecto crítico.
+#:
+#: Un segundo: lo que tarda en apagarse la cola de un sonido grande. Con menos,
+#: la música vuelve encima del propio efecto que motivó apartarla.
+DUCK_EFECTO_SEGUNDOS: float = 1.0
 #: Segundos en bajar. Corto: si tarda, se come la primera palabra.
 DUCK_ATAQUE: float = 0.15
 #: Segundos en volver. Largo: subir de golpe suena a fallo técnico.
@@ -90,6 +104,8 @@ class Mezclador:
         self._duck: float = 1.0
         self._duck_pedido: bool = False
         self._duck_restante: float = 0.0
+        #: AUD-284 — hasta dónde baja el duck vivo. Voz 0,35; efecto 0,70.
+        self._duck_nivel: float = DUCK_NIVEL
 
     # ── volúmenes ─────────────────────────────────────────────────
     def volumen_de(self, bus: str) -> float:
@@ -132,14 +148,24 @@ class Mezclador:
         return max(0.0, min(1.0, ganancia))
 
     # ── ducking ───────────────────────────────────────────────────
-    def agachar_musica(self, segundos: float = 0.0) -> None:
-        """Pide que la música se aparte.
+    def agachar_musica(self, segundos: float = 0.0,
+                       nivel: float = DUCK_NIVEL) -> None:
+        """Pide que la música se aparte, y cuánto.
 
         Con `segundos` se mantiene ese tiempo y se suelta sola: es lo que usa
         una línea de diálogo, que sabe lo que dura. Sin argumento se queda
         agachada hasta que alguien llame a `soltar_musica`, para lo que no
         tiene duración conocida.
+
+        AUD-284 — `nivel` existe porque no todo lo que aparta la música la
+        aparta igual. Una voz necesita silencio (0,35); un efecto crítico sólo
+        necesita hueco (0,70). **Gana siempre el más profundo** mientras los dos
+        estén vivos: si la muerte de un jefe subiera la música por encima de la
+        línea de diálogo que está sonando, el diálogo se perdería, y quien pide
+        silencio tiene más que perder que quien pide sitio.
         """
+        nivel = max(0.0, min(1.0, float(nivel)))
+        self._duck_nivel = min(self._duck_nivel, nivel) if self._duck_pedido else nivel
         self._duck_pedido = True
         if segundos > 0.0:
             self._duck_restante = max(self._duck_restante, float(segundos))
@@ -147,6 +173,7 @@ class Mezclador:
     def soltar_musica(self) -> None:
         self._duck_pedido = False
         self._duck_restante = 0.0
+        self._duck_nivel = DUCK_NIVEL
 
     @property
     def musica_agachada(self) -> bool:
@@ -167,13 +194,20 @@ class Mezclador:
             self._duck_restante -= dt
             if self._duck_restante <= 0.0:
                 self._duck_pedido = False
+                self._duck_nivel = DUCK_NIVEL
 
-        objetivo = DUCK_NIVEL if self._duck_pedido else 1.0
+        objetivo = self._duck_nivel if self._duck_pedido else 1.0
         if self._duck == objetivo:
             return
         # Bajar y subir a velocidades distintas: es lo que hace que el duck
         # no se note. Con la misma velocidad en ambos sentidos se oye el
         # bombeo, que es el defecto clásico de un compresor mal ajustado.
+        #
+        # AUD-284 — el paso se calcula sobre el recorrido **más profundo** y no
+        # sobre el de este duck en concreto. Si se normalizara por su propio
+        # recorrido, un duck superficial tardaría lo mismo que uno profundo en
+        # llegar, o sea que iría mucho más lento: dos efectos idénticos sonarían
+        # distinto según lo hondo que bajen.
         duracion = DUCK_ATAQUE if objetivo < self._duck else DUCK_RECUPERACION
         paso = (1.0 - DUCK_NIVEL) * dt / max(0.01, duracion)
         if objetivo < self._duck:

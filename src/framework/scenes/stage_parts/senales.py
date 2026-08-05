@@ -30,6 +30,27 @@ from src.engine.core.experience import ExperienceSystem
 from src.framework.stage.interactable_system import EVENTO_RECOGIDO
 from src.framework.vfx.hit_effects import HitEffects
 
+#: AUD-284 — los efectos que apartan la música al sonar.
+#:
+#: Cuatro, y la lista es corta a propósito. El *ducking* funciona porque es raro:
+#: si lo disparase cada golpe, la música pasaría la partida entera subiendo y
+#: bajando y el bombeo se oiría más que los propios efectos. Entra aquí lo que
+#: ocurre **una vez** y cierra algo:
+#:
+#: * el logro desbloqueado, que además trae un aviso en pantalla que hay que leer;
+#: * el escenario completado;
+#: * el Game Over;
+#: * el cambio de fase de un jefe, que es el momento en que el combate cambia de
+#:   reglas y el jugador necesita enterarse.
+#:
+#: La muerte de un enemigo **no** entra: mueren a docenas.
+EVENTOS_CRITICOS: frozenset[str] = frozenset({
+    Events.ACHIEVEMENT_UNLOCKED,
+    Events.SFX_STAGE_COMPLETE,
+    Events.SFX_UI_GAME_OVER,
+    Events.SFX_BOSS_PHASE_CHANGE,
+})
+
 
 class SenalesDeEscenario:
     """Suscripción, baja y reproducción de sonido de la escena.
@@ -368,7 +389,7 @@ class SenalesDeEscenario:
             Events.SFX_BOSSES_VENADO_VINE: "sfx_bosses_venado_vine",
         }
         for evt, sname in sfx_map.items():
-            handler = self._make_sfx_handler(sname)
+            handler = self._make_sfx_handler(sname, critico=evt in EVENTOS_CRITICOS)
             self.context.event_bus.subscribe(evt, handler)
             # Retained here so the bus's weak reference stays alive.
             self._sfx_handlers[evt] = handler
@@ -393,7 +414,8 @@ class SenalesDeEscenario:
         self.context.event_bus.subscribe(Events.SAVE_REQUESTED, _on_save_requested)
         self._vfx_handlers[Events.SAVE_REQUESTED] = _on_save_requested
 
-    def _make_sfx_handler(self, sound_name: str) -> Callable[..., None]:
+    def _make_sfx_handler(self, sound_name: str,
+                          critico: bool = False) -> Callable[..., None]:
         """Build an event handler that plays ``sound_name``.
 
         AUD-032: this was previously a closure factory defined *inside* the loop
@@ -409,6 +431,17 @@ class SenalesDeEscenario:
                 # Slight random variation so repeated hits do not sound robotic.
                 volume = 0.8 + random.random() * 0.4
             pos = data.get("pos")
+            if critico:
+                # AUD-284 — este efecto se lleva por delante a la música.
+                audio = self.audio
+                if audio is not None:
+                    centro = self._camera.offset.x + settings.INTERNAL_WIDTH / 2
+                    audio.play_sfx_critico(
+                        sound_name, volume=volume,
+                        world_x=pos[0] if pos is not None else None,
+                        screen_center_x=centro,
+                    )
+                return
             if pos is not None:
                 self._play_sfx_spatial(sound_name, pos[0], volume=volume)
             else:
