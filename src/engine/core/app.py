@@ -21,6 +21,29 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
+def modo_daltonico_gl(ajustes: object | None) -> int:
+    """Traduce la preferencia del jugador al entero que espera el sombreador.
+
+    AUD-252 — el eslabón que faltaba. `colorblind_frag` estaba escrito,
+    compilado y enchufado a su pasada, y esa pasada sólo corre si
+    `config.colorblind_mode > 0`. Nadie escribía nunca ese campo: se quedaba en
+    0 y el sombreador no se ejecutaba jamás, así que elegir `deuteranopia` en
+    Opciones no hacía nada en cuanto la máquina tenía tarjeta.
+
+    El contrato es el orden de `COLORBLIND_MODES`, que es el mismo que declara
+    `shaders.py` (`0=off, 1=protanopia, 2=deuteranopia, 3=tritanopia`).
+
+    Un valor que no esté en la tupla devuelve 0 en vez de reventar: quedarse
+    sin corrección de color es malo, quedarse sin fotograma es peor.
+    """
+    modo = getattr(ajustes, "colorblind_mode", "off")
+    try:
+        return user_settings.COLORBLIND_MODES.index(str(modo))
+    except ValueError:
+        return 0
+
+
 class App:
     def __init__(self, use_gl: bool = True) -> None:
         self._use_gl = use_gl
@@ -285,6 +308,12 @@ class App:
             # decide la escena porque es la única que sabe qué luz manda.
             rayos = gpu_effects.published_god_rays()
             cfg = self._gl_renderer.config
+            # AUD-252 — la accesibilidad se sincroniza aquí, cada fotograma,
+            # porque Opciones la cambia en caliente: leerla sólo al crear el
+            # contexto habría dejado un modo daltónico que exige reiniciar.
+            # Es una comparación de enteros; la pasada sólo se monta si > 0.
+            cfg.colorblind_mode = modo_daltonico_gl(
+                getattr(self, "user_settings", None))
             cfg.godray_enabled = rayos is not None
             if rayos is not None:
                 cfg.godray_origin, cfg.godray_exposure = rayos
