@@ -153,7 +153,9 @@ class SaveManager:
 
     def auto_save(self, stage_id: str, stage_index: int,
                   checkpoint_x: float, checkpoint_y: float,
-                  health: float, max_health: float) -> str | None:
+                  health: float, max_health: float,
+                  zone_flags: dict[str, bool] | None = None,
+                  exp_total: int | None = None) -> str | None:
         """Update the progress fields of the newest save, preserving the rest.
 
         AUD-005: this used to construct a brand-new ``SaveData`` from only the
@@ -186,4 +188,15 @@ class SaveManager:
         data.checkpoint_y = checkpoint_y
         data.health = health
         data.max_health = max_health
+        # AUD-251: las banderas se **funden**, no se sustituyen. El autoguardado
+        # sólo sabe de las de la partida en curso; borrar las que trae el hueco
+        # sería repetir el defecto que documenta el párrafo de arriba, esta vez
+        # con lo que abrió el jugador hace tres salas.
+        if zone_flags:
+            data.zone_flags.update(zone_flags)
+        # AUD-267: la experiencia sólo sube, así que se queda la mayor. Un
+        # autoguardado disparado por una escena que aún no leyó el sistema no
+        # puede hacer retroceder el nivel del jugador.
+        if exp_total is not None:
+            data.exp_total = max(data.exp_total, int(exp_total))
         return self.save(slot, data)

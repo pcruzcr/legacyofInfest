@@ -57,6 +57,12 @@ class GameContext:
         self.save_manager: SaveManager = save_manager if save_manager is not None else SaveManager()
         self.pending_load: SaveData | None = None
         self.running: bool = True
+        # AUD-251 — las banderas de mundo que pone `set_flag:` en un guion de
+        # diálogo. Viven aquí y no en la escena porque una bandera es lo que
+        # queda **después** de hablar: sobrevive al cambio de sala y baja a
+        # `SaveData.zone_flags` en el siguiente checkpoint. Ese campo existía
+        # desde el principio y sólo lo escribían las pruebas.
+        self.banderas: dict[str, bool] = {}
 
     @property
     def audio(self) -> Any:

@@ -36,6 +36,12 @@ class SaveData(BaseModel):
 
     zone_flags: dict[str, bool] = Field(default_factory=dict)
     completed_stages: list[str] = Field(default_factory=list)
+    #: AUD-267 — experiencia acumulada. `ExperienceSystem` la calculaba desde
+    #: AUD-249 y no había dónde guardarla: cerrar el juego la borraba, así que
+    #: la moneda con la que se paga el árbol de habilidades no llegaba viva a
+    #: la sesión siguiente. Con reserva 0, las partidas anteriores se cargan
+    #: sin tocar nada.
+    exp_total: int = 0
 
     @field_validator("health", "max_health")
     @classmethod
@@ -97,6 +103,7 @@ class SaveData(BaseModel):
         ver = data.get("version", 0)
         if ver < 1:
             data.setdefault("zone_flags", {})
+            data.setdefault("exp_total", 0)
             data["version"] = 1
         if ver < 2:
             data.setdefault("completed_stages", [])
