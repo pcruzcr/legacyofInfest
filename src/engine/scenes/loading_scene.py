@@ -1,3 +1,39 @@
+"""
+Module: loading_scene
+System: engine.scenes
+Academic Unit: N/A
+Description: Pantalla de carga con barra de progreso y trabajo en un hilo.
+
+Dónde estaba esto (AUD-288)
+===========================
+Escrita, probada y **sin un solo llamante**. No estaba ni en el registro de
+escenas: la única referencia en todo el repositorio era `test_scene_smoke.py`.
+`docs/63` la daba por «falso positivo del barrido: el registro las construye por
+cadena», y era mentira — se corrigió al medirlo.
+
+Y el sitio obvio para engancharla —la transición entre escenarios— resultó ser
+**el equivocado**, cosa que sólo se supo midiendo. Entrar en un escenario cuesta
+entre 41 ms (`lobby_datacenter`) y 134 ms (`stage1_3_las_aulas`); el peor caso en
+frío ronda los 163 ms. Una pantalla de carga que aparece y desaparece en una
+décima de segundo no informa: parpadea, y un parpadeo se lee como un fallo de
+vídeo. Ahí no hace falta.
+
+Donde sí hacía falta era en el laboratorio de la Unidad IX: abrir
+`PatternDemoScene` **congelaba el juego 2,8 s** —3,5 s la primera vez— porque
+`reference_model.obtener_modelo()` importa scikit-learn y carga o entrena el
+modelo, todo en el hilo del dibujado. Tres segundos de pantalla negra sin nada
+que mirar, en la demo que el profesor abre delante de la clase.
+
+Ese trabajo además es el ideal para un hilo: CPU pura, sin una sola llamada a
+SDL. Las superficies de pygame no se tocan desde el trabajador.
+
+El umbral, y por qué existe
+===========================
+`umbral_para_mostrarse` es lo que hace que esta pantalla sirva para las dos
+cosas: si la carga termina antes, la escena **no se dibuja nunca** y se pasa de
+largo. Así se puede enchufar sin medir antes cada caso, sin miedo a meter un
+parpadeo donde no hacía falta.
+"""
 from __future__ import annotations
 
 import logging
@@ -26,6 +62,15 @@ class LoadTask:
         self.done = False
 
 
+#: Segundos que tiene que durar una carga para que la pantalla llegue a verse.
+#:
+#: Un cuarto de segundo. Por debajo, una pantalla de carga aparece y se va antes
+#: de que el ojo la resuelva, y eso no se lee como «estaba cargando»: se lee
+#: como un parpadeo, o sea como un fallo. Por encima, el jugador ya está
+#: preguntándose si el juego se ha colgado y agradece la barra.
+UMBRAL_PARA_MOSTRARSE: float = 0.25
+
+
 class LoadingScene(BaseScene):
     """Loading screen with progress bar for async asset loading."""
 
@@ -34,8 +79,11 @@ class LoadingScene(BaseScene):
         context: GameContext,
         next_scene: BaseScene | None = None,
         tasks: list[LoadTask] | None = None,
+        umbral_para_mostrarse: float = UMBRAL_PARA_MOSTRARSE,
     ) -> None:
         super().__init__(context)
+        self._umbral = max(0.0, float(umbral_para_mostrarse))
+        self._esperado: float = 0.0
         self._next_scene = next_scene
         self._tasks = tasks or []
         self._lock = threading.Lock()
@@ -91,6 +139,7 @@ class LoadingScene(BaseScene):
         self._startup_done = False
         self._fade_out = 1.0
         self._fading_out = False
+        self._esperado = 0.0
         if self._tasks:
             self._is_loading = True
             self._thread = threading.Thread(target=self._load_worker, daemon=True)
@@ -126,7 +175,31 @@ class LoadingScene(BaseScene):
         self._thread = None
         self._is_loading = False
 
+    @property
+    def visible_todavia(self) -> bool:
+        """¿Ha pasado ya el umbral, o seguimos esperando en silencio?
+
+        Lo consulta `draw`. Público porque es lo que una prueba tiene que poder
+        preguntar sin hurgar en atributos privados.
+        """
+        return self._esperado >= self._umbral
+
     def update(self, dt: float) -> None:
+        # AUD-288 — el silencio de los primeros milisegundos.
+        #
+        # Mientras no se cumpla el umbral no se dibuja nada y no se cuenta el
+        # fundido de entrada: si la carga acaba dentro de esa ventana, la
+        # escena se sustituye sin haber pintado un solo fotograma y el jugador
+        # no ve un parpadeo.
+        self._esperado += dt
+        if not self.visible_todavia:
+            with self._lock:
+                if self._loading_done:
+                    if self._next_scene is not None:
+                        self.context.scene_manager.replace(self._next_scene)
+                    return
+            return
+
         if not self._startup_done:
             self._startup_alpha = min(1.0, self._startup_alpha + dt * 2.0)
             if self._startup_alpha >= 1.0:
@@ -145,6 +218,8 @@ class LoadingScene(BaseScene):
                 self.context.scene_manager.replace(self._next_scene)
 
     def draw(self, surface: pygame.Surface) -> None:
+        if not self.visible_todavia:
+            return
         w, h = settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT
         # Fondo del kit: antes `(10,10,20)`, uno de los seis grises oscuros
         # distintos que el juego usaba para decir «pantalla».
