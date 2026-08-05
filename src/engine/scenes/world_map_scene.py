@@ -41,6 +41,13 @@ if TYPE_CHECKING:
 # escenario y se añade al registro, aparece aquí solo.
 
 
+#: Nodos por fila del zigzag. Lo leen `_serpiente` —que coloca— y
+#: `WorldMapScene._SALTO_VERTICAL` —que navega—: si cada uno tuviera el suyo,
+#: bajar una fila dejaría al cursor en un sitio que no está debajo de nada, que
+#: es exactamente lo que pasaba (AUD-266).
+NODOS_POR_FILA = 3
+
+
 def _serpiente(indice: int, total: int) -> tuple[float, float]:
     """Coloca el nodo `indice` en zigzag dentro del área normalizada.
 
@@ -49,7 +56,7 @@ def _serpiente(indice: int, total: int) -> tuple[float, float]:
     juegan. Con quince escenarios, tres por fila caben sin que las etiquetas se
     pisen a 800 px de ancho.
     """
-    por_fila = 3
+    por_fila = NODOS_POR_FILA
     fila, columna = divmod(indice, por_fila)
     if fila % 2:                      # las filas impares van al revés
         columna = por_fila - 1 - columna
@@ -98,6 +105,12 @@ CONNECTIONS: list[tuple[int, int]] = [
 
 
 class WorldMapScene(BaseScene):
+    #: Cuántos nodos salta el cursor con arriba/abajo. Es el ancho de la fila
+    #: del zigzag: cualquier otro número mueve el cursor a un nodo que no está
+    #: encima ni debajo del actual. Era **2** con una rejilla de **3**, resto
+    #: de cuando la lista tenía cinco nodos escritos a mano (AUD-266).
+    _SALTO_VERTICAL = NODOS_POR_FILA
+
     def __init__(self, context: GameContext) -> None:
         super().__init__(context)
         self._selected: int = 0
@@ -160,9 +173,9 @@ class WorldMapScene(BaseScene):
         if im.is_action_just_pressed(Action.MOVE_LEFT):
             self._selected = (self._selected - 1) % len(self._nodes)
         if im.is_action_just_pressed(Action.MOVE_DOWN):
-            self._selected = (self._selected + 2) % len(self._nodes)
+            self._selected = (self._selected + self._SALTO_VERTICAL) % len(self._nodes)
         if im.is_action_just_pressed(Action.MOVE_UP):
-            self._selected = (self._selected - 2) % len(self._nodes)
+            self._selected = (self._selected - self._SALTO_VERTICAL) % len(self._nodes)
         if self._selected != prev:
             self.context.event_bus.emit(Events.SFX_MENU_HOVER)
         if im.is_action_just_pressed(Action.CONFIRM):
@@ -185,6 +198,20 @@ class WorldMapScene(BaseScene):
 
         cls = node.get("scene")
         if cls is not None:
+            # AUD-266 — **declarar la cola antes de entrar**, o el nivel no
+            # tiene continuación.
+            #
+            # Esto faltaba, y era el defecto que hacía que el mapa del mundo
+            # «no funcionara»: `SceneManager._on_stage_complete` incrementa el
+            # índice y llama a `_enter_next_stage()`, que compara contra la
+            # cola. El mapa entraba con `replace()` y sin tocarla, así que al
+            # terminar el nivel la cola estaba vacía —o traía la de una partida
+            # cargada— y el jugador se encontraba **los créditos finales** en
+            # mitad del juego.
+            #
+            # La cola es la misma lista que el mapa dibuja, y la misma que
+            # `story_scene` pone al empezar la campaña: un solo orden de juego.
+            self._declarar_cola(node)
             self.context.scene_manager.replace(cls(self.context))
             return True
 
@@ -204,6 +231,18 @@ class WorldMapScene(BaseScene):
         from src.framework.scenes.stage_scene import StageScene
         self.context.scene_manager.replace(StageScene(self.context, tmx_path))
         return True
+
+    def _declarar_cola(self, node: dict[str, Any]) -> None:
+        """Deja la cola de escenarios en el nodo elegido (AUD-266)."""
+        gestor = self.context.scene_manager
+        clases = [nd["scene"] for nd in self._nodes if nd.get("scene") is not None]
+        if not clases:
+            return
+        gestor.set_stage_queue(clases)
+        try:
+            gestor.set_stage_index(self._nodes.index(node))
+        except ValueError:          # un nodo que no salió de esta lista
+            pass
 
     #: Posiciones de los nodos en coordenadas **normalizadas**, de 0 a 1
     #: dentro del área de contenido.
