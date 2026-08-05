@@ -352,6 +352,12 @@ class StageData:
     #: calificados y encenderles una mecánica nueva cambiaría el juego que sus
     #: autores diseñaron.
     tiempo_bala: float = 0.0
+    #: AUD-277 — 2.5D: escala de las entidades según su altura en el mapa.
+    #: `min` es la de lo más lejano (arriba) y `max` la de lo más cercano
+    #: (abajo). **Iguales = apagado**, que es el valor por defecto y el de los
+    #: dieciséis mapas entregados.
+    profundidad_min: float = 1.0
+    profundidad_max: float = 1.0
     climate: str = ""
     #: Brillo ambiente del escenario, de 0 (oscuridad total) a 1 (sin
     #: oscurecer). `None` significa "no declarado": la escena caerá a su tabla
@@ -657,6 +663,10 @@ class StageLoader:
         estamina = max(0.0, cls._safe_float(props.get("estamina", 0.0), "estamina"))
         tiempo_bala = max(
             0.0, cls._safe_float(props.get("tiempo_bala", 0.0), "tiempo_bala"))
+        profundidad_min = max(0.05, cls._safe_float(
+            props.get("profundidad_min", 1.0), "profundidad_min"))
+        profundidad_max = max(0.05, cls._safe_float(
+            props.get("profundidad_max", 1.0), "profundidad_max"))
         camara = str(props.get("camara") or props.get("camera") or "seguir").strip().lower()
         if camara not in MODOS_DE_CAMARA:
             logger.warning(
@@ -732,6 +742,8 @@ class StageLoader:
             desfase_audio=desfase_audio,
             estamina=estamina,
             tiempo_bala=tiempo_bala,
+            profundidad_min=profundidad_min,
+            profundidad_max=profundidad_max,
             camara=camara,
             climate=climate,
             zone=zone,
