@@ -21,7 +21,9 @@ date_processed: "2026-07-14"
 
 Boss Rush Mode (`src/framework/stage/boss_rush_mode.py`) is the design for a consecutive boss gauntlet with health carry-over and scoring.
 
-**What ships today (AUD-232), measured:** choosing BOSS RUSH from the title screen chains the four bosses back to back. That is the whole of it. Health does *not* persist between encounters, no score is computed, and hits are not counted — see §4. This section used to state the carry-over as fact; it was describing the intent.
+**What ships today (AUD-261), measured:** choosing BOSS RUSH from the title screen chains the four bosses back to back, health carries over between encounters with a declared partial heal (`CURACION_ENTRE_COMBATES`), hits are counted, and the score is computed per fight from time and damage taken — see §4.
+
+**History, kept on purpose.** Between AUD-232 and AUD-261 this paragraph read: «That is the whole of it. Health does *not* persist between encounters, no score is computed, and hits are not counted.» Before AUD-232 it read «✅ Complete — gauntlet logic, scoring, health carry-over», and all three were false. The middle version was the honest one, and it is what made the fix possible: it named what was missing instead of claiming it was there.
 
 ---
 
@@ -63,18 +65,20 @@ probada en aislamiento, pero el juego no la conduce.
 |---|---|---|
 | Entrada desde el menú | ✅ | AUD-191 la añadió; AUD-201 arregló que dejara la pantalla en negro |
 | Los cuatro jefes seguidos | ✅ | lo encadena la cola de escenarios del `SceneManager` |
-| Arrastre de vida y de medidor | ❌ | `_carry_over_health` y `_carry_over_meter` se ponen a 0.0 y no tienen getter ni setter: **no está implementado dentro del módulo** |
-| Puntuación | ❌ | la aplica `advance_to_next()`, a la que no llama nadie fuera del módulo |
-| Recuento de golpes | ❌ | lo incrementa `record_hit()`, ídem |
-| Superposición de interfaz | ❌ | rótulos de jefe, marcador, pantallas intermedias |
+| Arrastre de vida y de medidor | ✅ | AUD-261. `salud_arrastrada` y `medidor_arrastrado` son API pública; `StageScene` los escribe al caer el jefe y los aplica al entrar en el siguiente |
+| Curación entre combates | ✅ | `CURACION_ENTRE_COMBATES`, una constante con nombre. El arrastre puro deja al jugador sin vida en el tercer jefe, y nadie ha jugado esto lo bastante para calibrar otra cosa |
+| Puntuación | ✅ | AUD-261. `acreditar_combate()` la aplica: premia ir rápido y castiga cada golpe recibido |
+| Recuento de golpes | ✅ | AUD-261. `record_hit()` la llama el manejador de `PLAYER_DAMAGED`, sólo con el modo activo |
+| Superposición de interfaz | ❌ | rótulos de jefe, marcador en pantalla, pantallas intermedias. Es lo único que queda |
 
-`context.boss_rush` se escribe en `boss_rush_entry` y **no lo lee ningún sitio**.
+`context.boss_rush` lo **lee** `StageScene`, que es la única que sabe cuándo
+empieza un combate, cuándo el jugador recibe un golpe y cuándo cae el jefe.
 
-La versión anterior de esta sección decía «✅ Complete — gauntlet logic, scoring,
-health carry-over» y daba como única carencia la interfaz. Las tres cosas que
-declaraba completas son las que faltan. Registrado como **GAP-030**; el estado
-real lo fija `tests/test_modos_que_no_se_veian.py`, que falla si alguien conecta
-el arrastre o la puntuación sin actualizar esta tabla.
+**GAP-030 queda cerrado.** La tabla anterior marcaba en ❌ las tres filas que la
+versión de antes daba por «✅ Complete», y `tests/test_modos_que_no_se_veian.py`
+estaba escrito para **fallar el día que alguien las conectara**. Falló, y por
+eso esta tabla está actualizada: la prueba hizo imposible cerrar el hueco sin
+tocar el documento.
 
 
 --- Traducción al Español ---

@@ -46,7 +46,7 @@ Each entry follows this structure: Title · Status · Context · Decision · Con
 
 **Status:** Accepted
 
-**Context:** The syllabus mandates NumPy, OpenCV, Matplotlib, Scikit-Image, Scikit-Learn, and Pillow, and permits the professor to add complementary libraries (`00_SYLLABUS_ALIGNMENT_AUDIT.md` §3 B.2). It does not specify a rendering technology. The course requires "aplicaciones visuales interactivas" (Unit IX) and a real-time environment in which Units I–IX can all be demonstrated cohesively.
+**Context:** The syllabus mandates NumPy, OpenCV, Matplotlib, Scikit-Image, Scikit-Learn, and Pillow, and permits the professor to add complementary libraries (`77_SYLLABUS_ALIGNMENT_AUDIT.md` §3 B.2). It does not specify a rendering technology. The course requires "aplicaciones visuales interactivas" (Unit IX) and a real-time environment in which Units I–IX can all be demonstrated cohesively.
 
 **Decision:** Use Pygame CE (Community Edition) as the engine's rendering, input, audio, and game-loop layer.
 
@@ -83,7 +83,7 @@ Each entry follows this structure: Title · Status · Context · Decision · Con
 
 **Decision:** Include SciPy as a framework-implementation-layer dependency, used only internally inside `filter_tools.py`. Students never import it directly.
 
-**Consequences:** `requirements.txt` includes `scipy~=1.13` per `23_DATA_SCHEMAS.md` §9. This is explicitly classified as Classification B (Valid Design Decision) in `00_SYLLABUS_ALIGNMENT_AUDIT.md` §3 B.1, under the syllabus's "bibliotecas complementarias" discretion clause.
+**Consequences:** `requirements.txt` includes `scipy~=1.13` per `23_DATA_SCHEMAS.md` §9. This is explicitly classified as Classification B (Valid Design Decision) in `77_SYLLABUS_ALIGNMENT_AUDIT.md` §3 B.1, under the syllabus's "bibliotecas complementarias" discretion clause.
 
 **Alternatives Considered:**
 - **Implement convolution/Gaussian blur from scratch with pure NumPy** — rejected: reinvents well-tested, academically-standard numerical code with no pedagogical benefit (students never see this code anyway — it's hidden behind `FilterTools`), and risks subtle correctness bugs in a tool the entire course depends on.
@@ -99,7 +99,7 @@ Each entry follows this structure: Title · Status · Context · Decision · Con
 
 **Decision:** Relocate `engine/`, `framework/`, and `stages/` under `src/`. Add `student_templates/` as a new top-level directory.
 
-**Consequences:** All import paths use the `src.engine.*` / `src.framework.*` / `src.stages.*` prefix. No class, responsibility, or dependency rule changed — only the path prefix. Documented exhaustively in `00_SYLLABUS_ALIGNMENT_AUDIT.md` §2 A.6 and §7.
+**Consequences:** All import paths use the `src.engine.*` / `src.framework.*` / `src.stages.*` prefix. No class, responsibility, or dependency rule changed — only the path prefix. Documented exhaustively in `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2 A.6 and §7.
 
 **Alternatives Considered:**
 - **Restructure the actual GitHub repo to match the original `engine/`-at-root design instead** — rejected: the repo already existed with real commit history ("Initial Legacy of InFest repository structure," 3 days prior per the professor's account) at the time of discovery; changing the actual repository's structure is more disruptive than updating documentation to match reality.
@@ -161,7 +161,7 @@ Each entry follows this structure: Title · Status · Context · Decision · Con
 
 **Decision:** El Gavilán Camionero Mascarero **is** the Zone 3 boss. This is no longer a placeholder pending sign-off — it is the confirmed, permanent design. `17_BOSS_SPEC.md` §1's prior "project-defined, pending sign-off" classification is updated accordingly (see `17_BOSS_SPEC.md` for the corrected boss origin table).
 
-**Consequences:** All downstream documentation referencing El Gavilán — `17_BOSS_SPEC.md` §3, `18_ENEMY_ROSTER.md` Zone 3 enemies, `16_WORLD_DESIGN.md` Stage 3-4, `19_NARRATIVE_AND_LORE.md` §5.3, `20_ASSET_BIBLE.md` §6.3 — is now treated as stable, confirmed content, not subject to reassignment risk. A student may be safely assigned this boss starting any future Class 1 with no risk of mid-trimester invalidation. The corresponding risk entry (`31_RISK_REGISTER.md` RISK-A04) is closed.
+**Consequences:** All downstream documentation referencing El Gavilán — `17_BOSS_SPEC.md` §3, `18_ENEMY_ROSTER.md` Zone 3 enemies, `16_WORLD_DESIGN.md` Stage 3-4, `19_NARRATIVE_AND_LORE.md` §5.3, `20_ASSET_BIBLE.md` §6.3 — is now treated as stable, confirmed content, not subject to reassignment risk. A student may be safely assigned this boss starting any future Class 1 with no risk of mid-trimester invalidation. The corresponding risk entry (`81_RISK_REGISTER.md` RISK-A04) is closed.
 
 **Alternatives Considered:**
 - **Leave Zone 3 boss undefined until the professor decides** — moot: the professor has now decided.
@@ -177,7 +177,7 @@ Each entry follows this structure: Title · Status · Context · Decision · Con
 
 **Decision:** Use "Tilawa" as the official in-universe culture throughout all game text, while retaining the same standard of respectful, non-caricatured design that would be required if the source were a living real-world culture.
 
-**Consequences:** All boss, narrative, and asset documentation referencing cultural elements use "Tilawa" terminology exclusively (`00_SYLLABUS_ALIGNMENT_AUDIT.md` §2 A.5, `19_NARRATIVE_AND_LORE.md` v2). No real-world tribal names, sacred object names, or ceremonial terminology belonging to actual living indigenous peoples appear in official game text.
+**Consequences:** All boss, narrative, and asset documentation referencing cultural elements use "Tilawa" terminology exclusively (`77_SYLLABUS_ALIGNMENT_AUDIT.md` §2 A.5, `19_NARRATIVE_AND_LORE.md` v2). No real-world tribal names, sacred object names, or ceremonial terminology belonging to actual living indigenous peoples appear in official game text.
 
 **Alternatives Considered:**
 - **Keep Maleku references since they're "more authentic"** — rejected: contradicts the syllabus's explicit naming choice, and using a real living culture's actual sacred terminology in a game context (even respectfully) carries representational risk that a fictional-but-inspired culture avoids while preserving the same real-world grounding and care in design.
@@ -192,7 +192,7 @@ Each entry follows this structure: Title · Status · Context · Decision · Con
 
 **Decision:** Replace all invented instruments with the syllabus's exact six: Quices (15%), Prácticas de laboratorio (20%), Evaluación Práctica I/II/III (15% each), Proyecto Integrador Invenio Fest (20%).
 
-**Consequences:** `01_PROJECT_CHARTER.md`, `14_PROFESSOR_DELIVERABLE_MATRIX.md`, `21_COURSE_SCHEDULE.md`, and `27_ACADEMIC_RUBRICS.md` all reference this exact six-instrument structure consistently. This is the highest-impact correction from `00_SYLLABUS_ALIGNMENT_AUDIT.md` (§2 A.2).
+**Consequences:** `01_PROJECT_CHARTER.md`, `14_PROFESSOR_DELIVERABLE_MATRIX.md`, `21_COURSE_SCHEDULE.md`, and `27_ACADEMIC_RUBRICS.md` all reference this exact six-instrument structure consistently. This is the highest-impact correction from `77_SYLLABUS_ALIGNMENT_AUDIT.md` (§2 A.2).
 
 **Alternatives Considered:** None — this was a factual correction against an authoritative source document, not a design tradeoff.
 
@@ -290,7 +290,7 @@ These are flagged here rather than silently decided by whichever AI session enco
 | Whether `apply_kernel()`'s SciPy dependency should be replaced with a pure-OpenCV implementation | ADR-003 above | Open, low priority |
 | Exact quiz/lab count distribution within the 15%/20% pools (syllabus permits professor discretion) | `21_COURSE_SCHEDULE.md` §4 note | Open, professor discretion |
 
-**Resolved since last revision:** Matplotlib's role (confirmed classroom/lab-instructional use only, not a framework integration point — see `31_RISK_REGISTER.md` RISK-A03) and El Gavilán Camionero Mascarero's status as the confirmed, permanent Zone 3 boss (see ADR-008 above) have both been resolved by professor confirmation and removed from this open-items list.
+**Resolved since last revision:** Matplotlib's role (confirmed classroom/lab-instructional use only, not a framework integration point — see `81_RISK_REGISTER.md` RISK-A03) and El Gavilán Camionero Mascarero's status as the confirmed, permanent Zone 3 boss (see ADR-008 above) have both been resolved by professor confirmation and removed from this open-items list.
 
 ---
 

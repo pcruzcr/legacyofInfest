@@ -27,12 +27,30 @@ The Fog of War (`src/framework/vfx/fog_of_war.py`) is a full-screen black overla
 
 ### 2.1 FogOfWar
 - **Overlay:** Full-screen `Surface` at (0, 0, 0, 220) alpha
-- **Mask:** A transparent `Surface` with circles drawn at revealed positions (full alpha)
-- **Composite:** `mask` is subtracted from `overlay` via `BLEND_RGBA_SUB`, creating transparent holes
+- **Mask:** A radial-gradient disc built **once** in the constructor (`_construir_mascara`), blitted at every revealed position
+- **Composite:** `mask` is subtracted from `overlay` via `BLEND_RGBA_SUB`, creating soft-edged transparent holes
+
+The mask peaks at alpha **220**, not 255, on purpose: `BLEND_RGBA_SUB`
+saturates at zero, so any alpha above the veil's own 220 would reveal exactly
+like 220 and the first stretch of the gradient would be lost to the clamp.
+Matching them puts the whole falloff inside the visible range.
 
 ### 2.2 Parameters
 - `radius` — default 80px reveal radius
-- `hardness` — edge softness factor (reserved for future Gaussian falloff)
+- `hardness` — default 0.6. Fraction of the radius that stays **fully**
+  revealed; the remaining `1 - hardness` is the band where the veil returns,
+  following a smoothstep (`3t² - 2t³`) that reaches zero with zero slope at
+  both seams. `hardness = 1.0` reproduces the old hard-edged disc;
+  `hardness = 0.0` fades from the very centre. Values are clamped to [0, 1].
+
+Measured mask alpha along a radius (`radius = 80`), sampled at fractions of
+the radius — reproducible with `_hole_mask` and `pygame.surfarray.pixels_alpha`:
+
+| hardness | 0.0 | 0.25 | 0.50 | 0.60 | 0.75 | 0.90 | 0.99 |
+|---|---|---|---|---|---|---|---|
+| 0.0 | 220 | 185 | 110 | 77 | 34 | 6 | 0 |
+| 0.6 (default) | 220 | 220 | 220 | 220 | 150 | 34 | 0 |
+| 1.0 | 220 | 220 | 220 | 220 | 220 | 220 | 220 |
 
 ---
 
@@ -50,9 +68,16 @@ The Fog of War (`src/framework/vfx/fog_of_war.py`) is a full-screen black overla
 
 ## 4. Implementation Status
 
-**File:** `src/framework/vfx/fog_of_war.py` (49 lines)
-**Status:** ✅ Complete — screen-space overlay with alpha holes
-**Missing:** No perma-reveal (explored areas stay black when off-screen); no smooth edge falloff
+**File:** `src/framework/vfx/fog_of_war.py` (133 lines)
+**Status:** ✅ Complete — screen-space overlay with soft-edged alpha holes (AUD-198)
+**Missing:** No perma-reveal (explored areas stay black when off-screen). `draw()`
+iterates over every revealed point and that set is unbounded: measured at
+320x180 with `radius = 80`, the cost is linear at roughly 2.7 µs per point —
+0.55 ms at 100 points, 6.65 ms at 2000, 10.73 ms at 4000. A moving player adds
+about one point per frame, so the overlay eats a third of a 60 fps budget after
+half a minute of walking. Tracked separately; not addressed by AUD-198.
+**Note:** no TMX declares the `fog_of_war` map property yet, so no shipped
+stage currently turns the overlay on.
 
 
 --- Traducción al Español ---
@@ -63,7 +88,9 @@ The Fog of War (`src/framework/vfx/fog_of_war.py`) is a full-screen black overla
 Superposición de niebla que oculta áreas no exploradas del mapa.
 
 ### Características
-- Niebla negra con agujeros revelados
+- Niebla negra con agujeros revelados de borde suave
+- El agujero cae en degradado radial; `hardness` (0,6 por omisión) marca qué
+  fracción del radio queda revelada del todo antes de que empiece la caída
 - Revelado progresivo por movimiento del jugador
 - Persistencia entre visitas
 - Efecto visual de descubrimiento

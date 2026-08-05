@@ -4,7 +4,7 @@ title: "Sample Syllabus — Legacy of InFest: Game Development Practicum"
 aliases: ["Sample Syllabus"]
 tags: ["syllabus", "sample", "academic"]
 description: "Sample course syllabus"
-source: "docs/28_SAMPLE_SYLLABUS.md"
+source: "docs/78_SAMPLE_SYLLABUS.md"
 date_processed: "2026-07-14"
 ---
 

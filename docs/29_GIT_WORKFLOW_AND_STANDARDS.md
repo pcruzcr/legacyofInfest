@@ -13,14 +13,14 @@ date_processed: "2026-07-14"
 **Document ID:** LOI-GITFLOW-029  
 **Version:** 1.0.0  
 **Status:** Official  
-**Compatibility:** Requires `02_CODEX_CONTEXT.md`, `00_SYLLABUS_ALIGNMENT_AUDIT.md`, `25_IMPLEMENTATION_ROADMAP.md`  
+**Compatibility:** Requires `02_CODEX_CONTEXT.md`, `77_SYLLABUS_ALIGNMENT_AUDIT.md`, `25_IMPLEMENTATION_ROADMAP.md`  
 **Audience:** Professor, Students, AI coding assistants
 
 ---
 
 ## 1. Scope and Relationship to Other Documents
 
-`02_CODEX_CONTEXT.md` §5–6 already defines **code-level** standards: naming conventions, type hints, docstrings, error handling. This document does not repeat those — it covers everything `02_CODEX_CONTEXT.md` does not: **Git branching strategy, commit message format, pull request process, and code review checklist** for the private GitHub repository described in `00_SYLLABUS_ALIGNMENT_AUDIT.md` §7.
+`02_CODEX_CONTEXT.md` §5–6 already defines **code-level** standards: naming conventions, type hints, docstrings, error handling. This document does not repeat those — it covers everything `02_CODEX_CONTEXT.md` does not: **Git branching strategy, commit message format, pull request process, and code review checklist** for the private GitHub repository described in `77_SYLLABUS_ALIGNMENT_AUDIT.md` §7.
 
 **Precedence:** For code style, `02_CODEX_CONTEXT.md` governs. For repository workflow (branches, commits, PRs, reviews), this document governs.
 
@@ -154,7 +154,7 @@ This expands `01_PROJECT_CHARTER.md` §8.5 into the full checklist a reviewer (p
 
 - [ ] Student PR touches **only** their assignment folder (`src/stages/<assignment_id>/` and, if applicable, their `models/`/`datasets/` subfolder)
 - [ ] No modifications to `src/engine/`, `src/framework/`, `assets/`, or another student's folder
-- [ ] No direct imports of `scipy`, `cv2`, `skimage`, `sklearn`, `joblib`, or `numpy` in student-authored files (per `02_CODEX_CONTEXT.md` §11.1 and `00_SYLLABUS_ALIGNMENT_AUDIT.md` §4 library table) — only via `FilterTools`/`VisionTools`/`PatternRecognitionTools`
+- [ ] No direct imports of `scipy`, `cv2`, `skimage`, `sklearn`, `joblib`, or `numpy` in student-authored files (per `02_CODEX_CONTEXT.md` §11.1 and `77_SYLLABUS_ALIGNMENT_AUDIT.md` §4 library table) — only via `FilterTools`/`VisionTools`/`PatternRecognitionTools`
 
 ### 5.2 Functional Correctness
 

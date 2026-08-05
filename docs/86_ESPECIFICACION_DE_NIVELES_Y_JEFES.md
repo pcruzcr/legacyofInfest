@@ -4,7 +4,7 @@ title: "Legacy of InFest — Especificación de Niveles y Jefes"
 aliases: ["Especificación de Niveles", "Reglas de Niveles", "Level Rules"]
 tags: ["rules", "level-design", "deliverables", "evaluation", "day-night"]
 description: "Reglas obligatorias de tamaño, enemigos, objetos, día/noche y dificultad para cada nivel y jefe, por entregable"
-source: "docs/67_ESPECIFICACION_DE_NIVELES_Y_JEFES.md"
+source: "docs/86_ESPECIFICACION_DE_NIVELES_Y_JEFES.md"
 date_processed: "2026-08-01"
 ---
 

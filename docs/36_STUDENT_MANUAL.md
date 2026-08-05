@@ -67,7 +67,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Sigue `docs/32_ENVIRONMENT_SETUP_GUIDE.md` paso a paso.
+Sigue `docs/82_ENVIRONMENT_SETUP_GUIDE.md` paso a paso.
 
 ### 3.2 Elegir Asignación
 
@@ -178,7 +178,7 @@ python -m pytest tests/ -v -k <tu_id>
 
 | Para... | Abre... |
 |---|---|
-| Setup del entorno | `docs/32_ENVIRONMENT_SETUP_GUIDE.md` |
+| Setup del entorno | `docs/82_ENVIRONMENT_SETUP_GUIDE.md` |
 | Plantilla de stage/boss | `docs/26_STUDENT_TEMPLATE_SPEC.md` |
 | Mapa del mundo y zonas | `docs/16_WORLD_DESIGN.md` |
 | Especificación de jefes | `docs/17_BOSS_SPEC.md` |
@@ -193,7 +193,7 @@ python -m pytest tests/ -v -k <tu_id>
 ---
 ## 🔗 Documentos Relacionados
 
-- [[32_ENVIRONMENT_SETUP_GUIDE.md|Environment Setup Guide]]
+- [[82_ENVIRONMENT_SETUP_GUIDE.md|Environment Setup Guide]]
 - [[26_STUDENT_TEMPLATE_SPEC.md|Student Template Spec]]
 - [[16_WORLD_DESIGN.md|World Design]]
 - [[17_BOSS_SPEC.md|Boss Specification]]

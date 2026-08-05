@@ -46,18 +46,67 @@ clases y los métodos `_attack_*` / `_do_*` que las ejecutan. La lista de
 patrones inventados del registro salía de citar nombres en este documento que
 no aparecen en ningún fichero `.py`.
 
-**`BossSpawn`** —el tipo de objeto de Tiled que §8 describe— **el motor no lo
-acepta**. Hoy un estudiante que lo escriba en su mapa recibe un aviso de tipo
-desconocido. Los tres jefes se colocan con su tipo propio (`BossVenado`, y los
-otros dos registrados por su paquete al cargar el escenario).
+> **Actualización (AUD-265, 2026-08-04): el Gavilán ya tiene clase.** La fila
+> de arriba dice «ninguna» y era cierta el día que se escribió; la entrega
+> llegó después. Hoy existe `class BossGavilan(BossBase)` en
+> `src/stages/stage3_4_boss_gavilan/boss_gavilan.py`, con su escena y su mapa.
+>
+> **Es parcial y lo dice ella misma**: implementa sólo la fase 1, «El Vuelo
+> Circular» de §5.3, sin ataques y sin las fases 2 y 3. Los jefes son **cuatro**,
+> uno de ellos a medias.
+>
+> Y no se completa desde aquí: `src/stages/` es **código de estudiantes**
+> (invariante 1 de `CLAUDE.md`). Terminar el Gavilán es trabajo de quien lo
+> tiene asignado, con esta especificación como contrato; lo que sí es trabajo
+> del motor es que el documento diga la verdad sobre lo que hay.
+
+### Aviso de asignación — el Gavilán está SIN ASIGNAR
+
+**Estado a 4 de agosto de 2026.** Las etapas tempranas del Gavilán —lo que hay
+en `boss_gavilan.py`— están **sin asignar**: nadie las mantiene hoy.
+
+**El desarrollo completo del jefe Gavilán queda a cargo de los estudiantes.**
+Es una asignación abierta, no deuda del motor. Quien la tome recibe:
+
+| Lo que ya está hecho | Lo que falta por hacer |
+|---|---|
+| La clase `BossGavilan(BossBase)` con la fase 1, «El Vuelo Circular» (§5.3): órbita paramétrica con vectores explícitos (Unidad II) | Las **fases 2 y 3** completas |
+| Su escena `Stage3_4BossGavilanScene` y su mapa (58,7 KB), ya en el registro y jugables | Los **patrones de ataque** de §5: `DIVE_BOMB`, `FEATHER_STORM`, `MASK_BEAM`, `ORBIT_SHRINK`, `RAPID_DIVE`, `FULL_FEATHER_STORM`, `MASK_FRAGMENT_STORM`, `FEATHER_TOSS` — hoy `attack_patterns=[]` |
+| Nueve sprites en `assets/sprites/bosses/` (`dive`, `feather`, `glide`, `hover`, `masked`, `mask_frag`, `storm`, `hurt`, `death`) | Los **puntos débiles** (`WeakPoint`) y la **telegrafía** de cada ataque |
+| Todo `BossBase` heredado gratis: fases, parry (AUD-243), escala de fase y teletransporte (AUD-257), arena, invocaciones | Los sonidos `SFX_BOSSES_GAVILAN_DIVE` y `_MASK_BEAM`, que **existen con fichero** y esperan su emisor |
+
+**Por dónde empezar, medido:** `src/stages/boss_venado/boss_venado.py` es el
+jefe de referencia y hace las mismas cosas que §5 pide — telegrafía, puntos
+débiles, proyectiles con curva, dos fases con escala y teletransporte, voz—.
+Copiar de ahí es lo esperado, no hacer trampa.
+
+**Cómo se califica:** `python scripts/grade_boss.py src/stages/stage3_4_boss_gavilan/boss_gavilan.py --json`
+(100 puntos). Medido el 2026-08-04: el venado saca **100 %**, el Gavilán **45 %**. Esos 55 puntos son, literalmente, la tarea.
+
+**`BossSpawn`** —el tipo de objeto de Tiled que §8 describe— **ya funciona
+(AUD-259)**. Hasta entonces el motor no lo conocía y un estudiante que siguiera
+esta especificación al pie de la letra recibía un aviso de tipo desconocido.
+
+Declara **dónde entra** el jefe que nombra su propiedad `boss`:
+
+```
+type = "BossSpawn"      boss = "BossVenado"
+```
+
+y produce exactamente la misma entidad que escribir `BossVenado` como tipo,
+porque se resuelve por el mismo registro. Sin `boss`, o con un nombre no
+registrado, el cargador **avisa** en vez de callarse.
+
+Los jefes existentes siguen colocándose con su tipo propio y no se tocó
+ninguno: `BossSpawn` es aditivo y ningún mapa entregado lo declara.
 
 ---
 
 ## 1. Overview
 
-Legacy of InFest features four boss encounters — one per zone. **Corrected per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.1 and §5:** the course syllabus explicitly allows a student to individually select a **Boss** (not only a Stage) as their trimester assignment — *"Cada estudiante selecciona un Stage o Boss durante la primera clase."* This document's boss designs therefore serve two purposes: (1) Stage 0 and any boss **not** claimed by a student remain professor-owned, implemented as reference/executable documentation; (2) any boss **claimed by a student** is built by that student, using this specification as the required design contract, in the same way `07_STAGE0_DESIGN.md` and `16_WORLD_DESIGN.md` define the contract for Stage assignments. `BossBase` and the academic pipeline integration points described below apply identically regardless of who implements a given boss.
+Legacy of InFest features four boss encounters — one per zone. **Corrected per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.1 and §5:** the course syllabus explicitly allows a student to individually select a **Boss** (not only a Stage) as their trimester assignment — *"Cada estudiante selecciona un Stage o Boss durante la primera clase."* This document's boss designs therefore serve two purposes: (1) Stage 0 and any boss **not** claimed by a student remain professor-owned, implemented as reference/executable documentation; (2) any boss **claimed by a student** is built by that student, using this specification as the required design contract, in the same way `07_STAGE0_DESIGN.md` and `16_WORLD_DESIGN.md` define the contract for Stage assignments. `BossBase` and the academic pipeline integration points described below apply identically regardless of who implements a given boss.
 
-**Boss origin classification and implementation status (required by `00_SYLLABUS_ALIGNMENT_AUDIT.md` §5):**
+**Boss origin classification and implementation status (required by `77_SYLLABUS_ALIGNMENT_AUDIT.md` §5):**
 
 | Boss | Origin | Implementation Status |
 |---|---|---|
@@ -673,7 +722,7 @@ The PULL attack directly implements a simplified gravitational attraction: `attr
 
 ### 8.1 Required Files
 
-**Corrected per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.6.** Paths use the `src/` prefix; boss implementation files live in the individually-assigned student folder under `src/stages/`, or under `src/stages/stage0/` siblings if professor-owned (unclaimed).
+**Corrected per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.6.** Paths use the `src/` prefix; boss implementation files live in the individually-assigned student folder under `src/stages/`, or under `src/stages/stage0/` siblings if professor-owned (unclaimed).
 
 | File | Description | Typical Owner |
 |---|---|---|

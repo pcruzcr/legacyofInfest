@@ -331,5 +331,5 @@ superficie encima**, que es lo que hace que el jugador entienda por qué resbala
 
 - [[13_STAGE_4_1.md|Ficha 4-1]] — las reglas obligatorias que esta propuesta cumple
 - [[14_BOSS_4_2.md|Jefe final 4-2]] — la puerta al otro lado del umbral
-- [[67_ESPECIFICACION_DE_NIVELES_Y_JEFES.md|Especificación de Niveles]] — reglas globales
+- [[86_ESPECIFICACION_DE_NIVELES_Y_JEFES.md|Especificación de Niveles]] — reglas globales
 - [[65_EL_LORE_EXTENSO.md|El Lore Extenso]] — el cementerio en el canon

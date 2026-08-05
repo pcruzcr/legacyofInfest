@@ -32,7 +32,7 @@ Nunca borrar entradas - marcar como resueltas.
   análisis estático podía ver —AUD-174, AUD-175 y AUD-176—, corregidos en esa
   misma iteración. Detalle en `docs/70_INFORME_DE_AUDITORIA_VIVO.md`.
 
-## [GAP-022] `requirements.lock` no se puede instalar en Python 3.13
+## ~~[GAP-022] `requirements.lock` no se puede instalar en Python 3.13~~ *(Resuelto)*
 
 - **File:** `requirements.lock`
 - **Phase:** auditoría 2026-08-02, iteración 3
@@ -53,6 +53,29 @@ Nunca borrar entradas - marcar como resueltas.
   matriz declarada (3.11/3.12/3.13), y `pip-compile` produce un lock atado al
   intérprete que lo genera. Regenerarlo desde 3.14 cambiaría un lock imposible
   en 3.13 por otro imposible en 3.11. Hay que hacerlo desde 3.11.
+
+- **Resolution (AUD-262, 2026-08-04):** no hacía falta el intérprete 3.11.
+  `uv pip compile --python-version 3.11 --universal` resuelve **para** una
+  versión objetivo sin ejecutarla, y emite marcadores de entorno en vez de un
+  pin único, así que un solo fichero sirve para las tres de la matriz. El
+  bloqueo de la ampliación de arriba era real —`pip-compile` sí ata el lock al
+  intérprete que lo corre— pero era una limitación de la herramienta, no del
+  problema.
+
+  Los dos pines caducos desaparecen: `numpy==1.26.4` pasa a 2.4.6 en `<3.12` y
+  2.5.1 en `>=3.12`, y `Pillow==12.2.0` a 12.3.0, el mínimo que fijó AUD-176.
+
+  Comprobado ejecutando la resolución del propio lock contra las tres versiones
+  del CI:
+
+  ```
+  uv pip compile requirements.lock --python-version 3.11  → exit 0
+  uv pip compile requirements.lock --python-version 3.12  → exit 0
+  uv pip compile requirements.lock --python-version 3.13  → exit 0
+  ```
+
+  Sigue sin editarse a mano, que es la regla que AUD-008 dejó escrita con
+  sangre: la cabecera del fichero lleva la orden exacta que lo regenera.
 
 ## ~~[GAP-023] 22 mutantes vivos en `mixer_buses.py` y `bloques.py`~~ *(Resuelto)*
 
@@ -89,19 +112,50 @@ Nunca borrar entradas - marcar como resueltas.
   paraba solo antes de tocar nada. La rama de colisión que decían cubrir no
   se ejecutaba nunca y se podía invertir entera sin que fallaran.
 
-## [GAP-021] Números de documento duplicados en `docs/`
+## ~~[GAP-021] Números de documento duplicados en `docs/`~~ *(Resuelto)*
 
 - **File:** `docs/00_MASTER_INDEX.md`
 - **Phase:** auditoría 2026-08-02, iteración 1
 - **Reason:** Los prefijos 28, 29, 30, 31, 32, 33, 34, 52 y 67 los usan dos
-  ficheros distintos cada uno (`28_DECISION_LOG.md` y `28_SAMPLE_SYLLABUS.md`,
-  `67_CURVA_DE_DIFICULTAD.md` y `67_ESPECIFICACION_DE_NIVELES_Y_JEFES.md`…).
+  ficheros distintos cada uno (`28_DECISION_LOG.md` y `78_SAMPLE_SYLLABUS.md`,
+  `67_CURVA_DE_DIFICULTAD.md` y `86_ESPECIFICACION_DE_NIVELES_Y_JEFES.md`…).
   El índice se refiere a los documentos por número, así que «el 67» es
   ambiguo.
-- **Resolution:** No se renumeró a propósito: las referencias cruzadas del
-  material del curso citan los números, y renumerar rompe todas a la vez. La
-  decisión —renumerar de golpe o pasar a citar por nombre de fichero— es de
-  quien mantiene el temario.
+- **Resolution (AUD-265, 2026-08-04):** decisión tomada —renumerar— y hecha de
+  golpe, que es la única forma en que no rompe nada: renombrar y arreglar las
+  referencias en el mismo cambio.
+
+  **Qué se movió y qué no.** De cada par se queda el que pertenece a una serie
+  coherente y se mueve el otro, a números libres a partir del 77:
+
+  | Antes | Ahora | Se queda con el número |
+  |---|---|---|
+  | `00_SYLLABUS_ALIGNMENT_AUDIT` | `77_…` | `00_MASTER_INDEX` |
+  | `28_SAMPLE_SYLLABUS` | `78_…` | `28_DECISION_LOG` |
+  | `29_TA_GUIDE` | `79_…` | `29_GIT_WORKFLOW_AND_STANDARDS` |
+  | `30_TICKET_BACKLOG` | `80_…` | `30_ASSIGNMENT_01_STAGE_DESIGN` |
+  | `31_RISK_REGISTER` | `81_…` | `31_ASSIGNMENT_02_BOSS_DESIGN` |
+  | `32_ENVIRONMENT_SETUP_GUIDE` | `82_…` | `32_ASSIGNMENT_03_LAB_EXERCISES` |
+  | `33_SCOPE_ADJUSTMENT` | `83_…` | `33_ASSIGNMENT_04_FINAL_PROJECT` |
+  | `34_EDUCATIONAL_ROADMAP` | `84_…` | `34_CLASS_MATERIALS` |
+  | `52_MULTIDISCIPLINARY_AUDIT` | `85_…` | `52_EVENT_MAP` |
+  | `67_ESPECIFICACION_DE_NIVELES_Y_JEFES` | `86_…` | `67_CURVA_DE_DIFICULTAD` |
+
+  El criterio: `30`–`33` son la serie `ASSIGNMENT_01`…`04` y partirla dejaría
+  cuatro entregas con numeración salteada, que es peor que el problema. `00` es
+  el índice por definición. En los demás pares se movió el documento con menos
+  referencias cruzadas, para minimizar el texto tocado.
+
+  Se renombró con `git mv` —el historial de cada fichero sigue completo— y se
+  reescribieron **todas** las referencias del repositorio en la misma pasada.
+  Verificado con `tests/test_rutas_de_los_documentos.py`, que exige que cada
+  ruta citada en un documento exista y que cada `docs/*.md` esté en el índice:
+  110 pasan.
+
+  **Lo que este cambio no arregla:** material impreso o enlaces externos que
+  citen «el 30» seguirán apuntando al documento equivocado. No hay forma de
+  evitarlo renumerando; es el coste que la entrada anterior describía y que la
+  decisión acepta.
 
 ## [GAP-002] Collision rect depth usada para X-skip heurística
 
@@ -359,7 +413,7 @@ Nunca borrar entradas - marcar como resueltas.
 
 
 
-## [GAP-024] El calificador mide el salto con una fórmula que el motor no cumple
+## ~~[GAP-024] El calificador mide el salto con una fórmula que el motor no cumple~~ *(Resuelto por decisión)*
 
 - **File:** `src/framework/stage/level_metrics.py`, `scripts/grade_stage.py`
 - **Phase:** auditoría 2026-08-02, AUD-204
@@ -410,6 +464,29 @@ Nunca borrar entradas - marcar como resueltas.
 - **Medición:** `python -m tests.playtest.jump_bench` imprime la tabla completa.
   `tests/test_calibracion_del_salto.py` fija los tres techos (natural 3, experta
   5, repecho 5) y falla si alguien toca `GRAVITY` o `PLAYER_JUMP_FORCE`.
+
+- **Decisión del profesor (AUD-264, 2026-08-04): la salida (c).** El calificador
+  se queda como está y la técnica se documenta.
+
+  Las otras dos se descartan por lo que cuestan, no por lo que valen. (a)
+  apretar la envolvente **rebaja la nota de geometría de trabajo ya
+  calificado**: un estudiante recibiría una nota peor por un mapa que no ha
+  tocado, y eso no es una corrección técnica sino un cambio retroactivo de
+  criterio. (b) conectar el salto aéreo cambia la física de los diecisiete
+  mapas a la vez, que es exactamente lo que la invariante 2 de `CLAUDE.md`
+  prohíbe.
+
+  Lo que queda dicho, y donde se dice: `docs/60_GUIA_COMPLETA_DEL_MOTOR.md` §5
+  lleva ahora el aviso de que la envolvente del calificador **asume salto aéreo
+  encadenado** —una técnica que el motor permite en el aire y que no sale con
+  entrada natural— y que por eso un hueco de 4 baldosas etiquetado «cómodo»
+  puede exigir práctica. El número honesto está al lado: 3 baldosas con entrada
+  natural, 5 con técnica experta.
+
+  Que esto se llame «resuelto» y no «cerrado sin arreglar» es deliberado: el
+  hueco pedía **una decisión**, y la decisión está tomada y escrita. Lo que no
+  se puede es dejar que alguien lea el calificador creyendo que mide lo que el
+  jugador puede hacer.
 
 ---
 
@@ -611,7 +688,7 @@ Nunca borrar entradas - marcar como resueltas.
   lento a 30 fps que a 60. Queda escrito para que nadie lo intente otra vez sin
   medir.
 
-## [GAP-030] El Boss Rush se juega, pero no es el modo que la spec describe
+## ~~[GAP-030] El Boss Rush se juega, pero no es el modo que la spec describe~~ *(Resuelto)*
 
 - **File:** `src/framework/stage/boss_rush_mode.py`, `src/engine/scenes/boss_rush_entry.py`
 - **Phase:** auditoría 2026-08-03, AUD-232
@@ -650,6 +727,34 @@ Nunca borrar entradas - marcar como resueltas.
   `TestLoQueElBossRushHaceDeVerdad` fija el estado real y falla si alguien
   conecta el arrastre o la puntuación, para que la spec se actualice en el mismo
   cambio.
+
+- **Resolution (AUD-261, 2026-08-04):** tomada la decisión de diseño que este
+  hueco esperaba —**marcador y arrastre real de salud, con curación parcial
+  entre combates**— el modo se conduce desde `StageScene`, que es la única que
+  sabe cuándo empieza un combate, cuándo el jugador recibe un golpe y cuándo cae
+  el jefe:
+
+  * `acreditar_combate(salud_restante, medidor, salud_maxima)` guarda con qué se
+    sigue y avanza; `salud_arrastrada` y `medidor_arrastrado` son API pública, y
+    `0` significa «a vida llena», que es lo que devuelve el modo recién
+    arrancado — el primer jefe no se ve afectado;
+  * la curación es `CURACION_ENTRE_COMBATES`, **una constante con nombre**. El
+    arrastre puro deja al jugador sin vida en el tercer jefe y nadie ha jugado
+    esto lo bastante para calibrar otra cosa; esconder el número dentro de una
+    fórmula habría repetido el pecado de `docs/44`;
+  * `record_hit()` la llama el manejador de `PLAYER_DAMAGED`, sólo con el modo
+    activo, y `registrar_tiempo()` acumula con el `dt` **sin escalar** para que
+    el tiempo bala no regale puntuación.
+
+  Lo que **no** se hizo: la superposición de interfaz —rótulos, marcador en
+  pantalla, pantallas intermedias—. Sigue anotado en `docs/44` §4 como lo único
+  que queda.
+
+  La prueba que fijaba el hueco hizo su trabajo: falló en cuanto la escena
+  empezó a conducir el modo, y con ella en rojo no había forma de dar el cambio
+  por bueno sin actualizar `docs/44` y esta entrada. Una prueba que describe un
+  hueco vale tanto como una que describe una función, siempre que falle cuando
+  el hueco se cierra.
 
 ## [GAP-031] El motor sabe reproducir voz y no hay un solo fichero de voz
 
@@ -690,7 +795,7 @@ Nunca borrar entradas - marcar como resueltas.
   cuatro delegaciones —cinco de sus nueve pruebas fallan sin ellas— y
   `tests/test_sistemas_huerfanos.py` vigila que no aparezcan nuevos.
 
-## [GAP-032] Cinco mecánicas de F5 están escritas, documentadas «en código» y nadie las invoca
+## [GAP-032] Dos mecánicas de F5 siguen escritas, documentadas «en código» y sin que nadie las invoque
 
 - **File:** `src/framework/stage/level_mechanics.py`, `src/framework/ecs/bullet_swarm.py`, `src/framework/entities/boss_base.py`
 - **Phase:** auditoría 2026-08-03, AUD-243
@@ -705,8 +810,18 @@ Nunca borrar entradas - marcar como resueltas.
   | **Tiempo bala** (`TiempoBala`) | **se construye y no se vuelve a tocar** |
   | ~~Scroll forzado (`ScrollForzado`)~~ | **resuelto en AUD-249**: tipo TMX `ScrollZone` |
   | **Bullet hell** (`EnjambreDeBalas`) | **0 usos fuera de su módulo** |
-  | **Escalado de fase** (`BossPhase.escala`) | **0 usos**; `escala_de_fase` sólo se define |
-  | **Teletransporte** (`BossBase.teletransportar`) | **0 usos** |
+  | ~~Escalado de fase (`BossPhase.escala`)~~ | **resuelto en AUD-257** |
+  | ~~Teletransporte (`BossBase.teletransportar`)~~ | **resuelto en AUD-257** |
+
+  **Actualización (2026-08-04, AUD-257/AUD-258).** De las cinco quedan **dos**:
+  `TiempoBala` y `EnjambreDeBalas`. El escalado de fase se aplica de verdad
+  —`_aplicar_escala_de_fase()` redimensiona la caja anclada por los pies y el
+  sprite la sigue— y el teletransporte tiene llamante: los dos los declara
+  `boss_venado`, que es el jefe de referencia, para que el patrón esté en el
+  material que los estudiantes copian y no sólo en la clase base. `ScrollZone`,
+  además, ya está **colocado**: sala 10 del laboratorio, acotada con
+  `parar_en_x` (AUD-258); hasta entonces la mecánica existía y era inalcanzable
+  jugando.
 
   El caso más claro es `ScrollForzado`. `StageScene.__init__` hace
   `self._scroll_forzado = ScrollForzado()` en la línea 167 y **ese es su único

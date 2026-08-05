@@ -55,17 +55,17 @@ Each phase is gated: its Definition of Done (DoD) must be met before the next ph
 
 ## 3. Phase 0 — Repository Scaffold
 
-**Goal:** A repository that matches `00_SYLLABUS_ALIGNMENT_AUDIT.md` §7 exactly, with all directories present (even if empty) and dependencies installable.
+**Goal:** A repository that matches `77_SYLLABUS_ALIGNMENT_AUDIT.md` §7 exactly, with all directories present (even if empty) and dependencies installable.
 
 **Tasks:**
-1. Create the full directory tree from `00_SYLLABUS_ALIGNMENT_AUDIT.md` §7 (the `src/`-relocated structure).
+1. Create the full directory tree from `77_SYLLABUS_ALIGNMENT_AUDIT.md` §7 (the `src/`-relocated structure).
 2. Create `requirements.txt` per `10_LIBRARIES_AND_DEPENDENCIES.md` §13, with version pins (see `23_DATA_SCHEMAS.md` §9 for the pinned version table).
 3. Create `src/engine/__init__.py`, `src/framework/__init__.py`, and all subpackage `__init__.py` files (empty, just to make packages importable).
 4. Create `main.py` with a placeholder that imports nothing yet but exits cleanly (`print("Legacy of InFest — scaffold only"); sys.exit(0)`).
 5. Verify `pip install -r requirements.txt` succeeds in a clean virtual environment.
 
 **Definition of Done:**
-- [ ] Directory tree matches the corrected structure exactly (diff against `00_SYLLABUS_ALIGNMENT_AUDIT.md` §7).
+- [ ] Directory tree matches the corrected structure exactly (diff against `77_SYLLABUS_ALIGNMENT_AUDIT.md` §7).
 - [ ] `pip install -r requirements.txt` exits 0.
 - [ ] `python main.py` exits 0 with no import errors.
 - [ ] No module outside `src/` contains executable game logic.
@@ -652,7 +652,7 @@ Because this roadmap is designed to be executed across multiple AI coding sessio
 ---
 ## 🔗 Documentos Relacionados
 
-- [[30_TICKET_BACKLOG.md|Ticket Backlog]]
+- [[80_TICKET_BACKLOG.md|Ticket Backlog]]
 - [[24_TEST_PLAN.md|Test Plan]]
 
 ---
@@ -705,17 +705,17 @@ Cada fase tiene una puerta: su Definición de Terminado (DoD) debe cumplirse ant
 
 ## 3. Fase 0 — Andamio del Repositorio
 
-**Objetivo:** Un repositorio que coincida exactamente con 00_SYLLABUS_ALIGNMENT_AUDIT.md sección 7, con todos los directorios presentes (incluso si están vacíos) y dependencias instalables.
+**Objetivo:** Un repositorio que coincida exactamente con 77_SYLLABUS_ALIGNMENT_AUDIT.md sección 7, con todos los directorios presentes (incluso si están vacíos) y dependencias instalables.
 
 **Tareas:**
-1. Crear el árbol de directorios completo de 00_SYLLABUS_ALIGNMENT_AUDIT.md sección 7 (la estructura reubicada en src/).
+1. Crear el árbol de directorios completo de 77_SYLLABUS_ALIGNMENT_AUDIT.md sección 7 (la estructura reubicada en src/).
 2. Crear requirements.txt según 10_LIBRARIES_AND_DEPENDENCIES.md sección 13, con pines de versión (ver 23_DATA_SCHEMAS.md sección 9 para la tabla de versiones fijadas).
 3. Crear src/engine/__init__.py, src/framework/__init__.py, y todos los archivos __init__.py de subpaquetes (vacíos, solo para hacer los paquetes importables).
 4. Crear main.py con un placeholder que no importa nada aún pero sale limpiamente (print("Legacy of InFest — scaffold only"); sys.exit(0)).
 5. Verificar que pip install -r requirements.txt tenga éxito en un entorno virtual limpio.
 
 **Definición de Terminado:**
-- [ ] El árbol de directorios coincide exactamente con la estructura corregida (diff contra 00_SYLLABUS_ALIGNMENT_AUDIT.md sección 7).
+- [ ] El árbol de directorios coincide exactamente con la estructura corregida (diff contra 77_SYLLABUS_ALIGNMENT_AUDIT.md sección 7).
 - [ ] pip install -r requirements.txt sale con código 0.
 - [ ] python main.py sale con código 0 sin errores de importación.
 - [ ] Ningún módulo fuera de src/ contiene lógica de juego ejecutable.

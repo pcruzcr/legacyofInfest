@@ -19,7 +19,7 @@ date_processed: "2026-07-14"
 
 ## 1. Complete Folder Structure
 
-**Corrected per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.6 and §7.** All paths below are relative to the actual private GitHub repository root. `engine/`, `framework/`, and `stages/` are relocated under `src/`; `student_templates/` is added. Every module, responsibility, and dependency rule documented elsewhere in this file is otherwise unchanged from the original design — only the path prefix changes.
+**Corrected per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.6 and §7.** All paths below are relative to the actual private GitHub repository root. `engine/`, `framework/`, and `stages/` are relocated under `src/`; `student_templates/` is added. Every module, responsibility, and dependency rule documented elsewhere in this file is otherwise unchanged from the original design — only the path prefix changes.
 
 ```
 legacy-of-infest/                      # Actual repo root
@@ -81,6 +81,7 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── gpu_effects.py             # Reparto CPU/GPU del post-procesado (AUD-222)
 │   │   │   ├── achievements.py            # Achievement system
 │   │   │   ├── difficulty.py              # Difficulty scaling (Difficulty enum, set_difficulty)
+│   │   │   ├── experience.py              # XP por enemigo, curva de nivel y puntos de habilidad (AUD-249)
 │   │   │   ├── i18n.py                    # Internationalization (gettext wrapper)
 │   │   │   ├── inventory.py               # Item/collectible management
 │   │   │   ├── save_data.py               # SaveData dataclass, SAVE_VERSION, MAX_SLOTS
@@ -269,6 +270,8 @@ legacy-of-infest/                      # Actual repo root
 │   │   │       ├── ambiente.py            #   luz, bloom, viñeta, estación, hora
 │   │   │       ├── senales.py             #   suscripciones al bus: VFX y 38 sonidos
 │   │   │       ├── fantasma.py            #   silueta de la mejor carrera
+│   │   │       ├── rush.py                #   AUD-261: conduce el Boss Rush —
+│   │   │       │                          #   golpes, tiempo y arrastre de vida
 │   │   │       └── dibujo_mecanicas.py    #   pinta lo del ECS: bloques rítmicos,
 │   │   │                                  #   láseres, resortes, plataformas móviles
 │   │   │
@@ -473,7 +476,7 @@ legacy-of-infest/                      # Actual repo root
         └── bot.py
 ```
 
-**Clarification on individual assignment (per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.1):** Each student is assigned exactly one Stage or Boss in Class 1 (see `21_COURSE_SCHEDULE.md`). They copy the appropriate template from `student_templates/` into a new folder under `src/stages/` named for their assignment (e.g., `src/stages/stage1_2_la_soda/` or `src/stages/boss_venado/`). They develop that single folder through all three Evaluación Práctica checkpoints. No student creates more than one assignment folder.
+**Clarification on individual assignment (per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.1):** Each student is assigned exactly one Stage or Boss in Class 1 (see `21_COURSE_SCHEDULE.md`). They copy the appropriate template from `student_templates/` into a new folder under `src/stages/` named for their assignment (e.g., `src/stages/stage1_2_la_soda/` or `src/stages/boss_venado/`). They develop that single folder through all three Evaluación Práctica checkpoints. No student creates more than one assignment folder.
 
 ## 2. Module Responsibilities
 

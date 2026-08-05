@@ -4,7 +4,7 @@ title: "Legacy of InFest — Ticket Backlog"
 aliases: ["Ticket Backlog"]
 tags: ["ticket", "backlog", "tasks"]
 description: "Every roadmap phase decomposed into atomic tickets"
-source: "docs/30_TICKET_BACKLOG.md"
+source: "docs/80_TICKET_BACKLOG.md"
 date_processed: "2026-07-14"
 ---
 
@@ -39,7 +39,7 @@ Each ticket includes a title, the files it touches, its acceptance criteria, and
 
 | Ticket | Files | Acceptance Criteria | Size |
 |---|---|---|---|
-| **T0.1** Create directory tree | All directories per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §7 | `find . -type d` output matches the documented tree | XS |
+| **T0.1** Create directory tree | All directories per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §7 | `find . -type d` output matches the documented tree | XS |
 | **T0.2** Write `requirements.txt` | `requirements.txt` | Matches `23_DATA_SCHEMAS.md` §9 pin table; `pip install -r requirements.txt` exits 0 | XS |
 | **T0.3** Create `__init__.py` stubs | `src/engine/__init__.py` + all subpackages, `src/framework/__init__.py` + all subpackages | All packages importable (`python -c "import src.engine"` succeeds) | XS |
 | **T0.4** Write placeholder `main.py` | `main.py` | Exits 0, prints scaffold message | XS |

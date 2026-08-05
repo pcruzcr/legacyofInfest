@@ -276,7 +276,7 @@ A student demonstrates Unit IX mastery when they can:
 
 ## 12. Assessment Instrument Summary
 
-**Corrected per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.2.** The table below replaces the prior invented instrument set with the six **official** instruments and their **official weighting**, as defined by the course syllabus. Full class-by-class scheduling is in `21_COURSE_SCHEDULE.md`.
+**Corrected per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.2.** The table below replaces the prior invented instrument set with the six **official** instruments and their **official weighting**, as defined by the course syllabus. Full class-by-class scheduling is in `21_COURSE_SCHEDULE.md`.
 
 | Instrumento | Porcentaje | Units Covered | Class | Format |
 |---|---|---|---|---|
@@ -296,7 +296,7 @@ Each Evaluación Práctica is a submission of the **same single Stage or Boss** 
 
 The following items must be delivered before the course begins:
 
-**Corrected per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.3 and §2.A.6** — timeline uses Class numbers (11-class trimester, see `21_COURSE_SCHEDULE.md`) instead of Week numbers, and paths reflect the `src/` relocation.
+**Corrected per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.3 and §2.A.6** — timeline uses Class numbers (11-class trimester, see `21_COURSE_SCHEDULE.md`) instead of Week numbers, and paths reflect the `src/` relocation.
 
 | Deliverable | Status Target | Document |
 |---|---|---|
@@ -317,7 +317,7 @@ The following items must be delivered before the course begins:
 
 ## 14. Student Deliverable Checklist (Per Evaluación Práctica)
 
-**Corrected per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.1 and §9.** The checklists below apply to the **single Stage or Boss individually assigned** to each student in Class 1 — they are **not** three different stages. "14.1 / 14.2 / 14.3" are the three cumulative completeness checkpoints of that one assignment, renamed to match the official Evaluación Práctica I/II/III instruments.
+**Corrected per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.1 and §9.** The checklists below apply to the **single Stage or Boss individually assigned** to each student in Class 1 — they are **not** three different stages. "14.1 / 14.2 / 14.3" are the three cumulative completeness checkpoints of that one assignment, renamed to match the official Evaluación Práctica I/II/III instruments.
 
 ### 14.1 Evaluación Práctica I — Prototipo Funcional Checklist (Class 5)
 

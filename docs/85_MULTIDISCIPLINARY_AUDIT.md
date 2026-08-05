@@ -4,7 +4,7 @@ title: "Legacy of InFest — Multidisciplinary Audit Report"
 aliases: ["Multidisciplinary Audit", "52 Multidisciplinary Audit"]
 tags: ["audit", "multidisciplinary", "quality", "assessment"]
 description: "Comprehensive multi-disciplinary quality audit with category scores"
-source: "docs/52_MULTIDISCIPLINARY_AUDIT.md"
+source: "docs/85_MULTIDISCIPLINARY_AUDIT.md"
 date_processed: "2026-07-14"
 ---
 

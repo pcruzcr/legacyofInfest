@@ -294,7 +294,7 @@ The entire `TrainedModel` dataclass instance is serialized — not just the skle
 | Professor sample model | `assets/models/professor_sample.pkl` |
 | Student assignment model | `src/stages/<student_assignment>/models/<name>.pkl` |
 
-**Note:** This corrects the path convention from earlier drafts of `13_PATTERN_RECOGNITION_SPEC.md` (which referenced `student_assets/models/`) to match the `src/`-relocated repository structure defined in `00_SYLLABUS_ALIGNMENT_AUDIT.md` §7. A student's model lives inside their own assignment folder, not a separate top-level directory.
+**Note:** This corrects the path convention from earlier drafts of `13_PATTERN_RECOGNITION_SPEC.md` (which referenced `student_assets/models/`) to match the `src/`-relocated repository structure defined in `77_SYLLABUS_ALIGNMENT_AUDIT.md` §7. A student's model lives inside their own assignment folder, not a separate top-level directory.
 
 ---
 
@@ -352,7 +352,7 @@ joblib~=1.4
 matplotlib~=3.9
 ```
 
-**Note on Matplotlib:** Flagged in `00_SYLLABUS_ALIGNMENT_AUDIT.md` §3 B.3 as a syllabus-mandated library with no defined integration point at the time of that audit. It is pinned here for installation completeness. Its concrete usage (training-report plots, confusion-matrix visualization in `tools/build_dataset.py` output, etc.) remains an open item — log it in `KNOWN_GAPS.md` if Phase 12 of the roadmap is completed without a Matplotlib call site being implemented.
+**Note on Matplotlib:** Flagged in `77_SYLLABUS_ALIGNMENT_AUDIT.md` §3 B.3 as a syllabus-mandated library with no defined integration point at the time of that audit. It is pinned here for installation completeness. Its concrete usage (training-report plots, confusion-matrix visualization in `tools/build_dataset.py` output, etc.) remains an open item — log it in `KNOWN_GAPS.md` if Phase 12 of the roadmap is completed without a Matplotlib call site being implemented.
 
 ---
 

@@ -28,7 +28,7 @@ date_processed: "2026-07-31"
 1. [El bucle: qué pasa en un fotograma](#1)
 2. [Anatomía de un escenario TMX](#2)
 3. [Propiedades del mapa — las 17](#3)
-4. [Los 74 tipos de objeto, uno por uno](#4)
+4. [Los 75 tipos de objeto, uno por uno](#4)
 5. [El jugador: 26 estados y qué los provoca](#5)
 6. [Enemigos: 37 tipos y 13 estados](#6)
 7. [Jefes](#7)
@@ -184,6 +184,7 @@ sin ellas el nivel no valida y pierde 10 puntos de rúbrica.
 | `background_zone` | string | — | carga `assets/backgrounds/bg_<zona>_{far,mid,near}.png` |
 | `camara` | string | `seguir` | `seguir`, `zona_muerta` o `sala` (§1.1) |
 | `estamina` | float | `0` | máximo del medidor. **`0` = apagado.** Con `100`, cuatro dashes seguidos y una pausa de 0,6 s antes de recuperar |
+| `tiempo_bala` | float | `0` | segundos de reserva de cámara lenta. **`0` = apagado.** Se mantiene pulsada `Q`/`R`: gasta reserva mientras dura y se recarga despacio al soltar (AUD-260) |
 | `bpm` | float | `0` | pulsos por minuto; enciende el reloj musical (§10.1) |
 
 ### De atmósfera
@@ -215,9 +216,9 @@ efecto, mira la consola antes que el código.
 ---
 
 <a id="4"></a>
-## 4. Los 74 tipos de objeto, uno por uno
+## 4. Los 75 tipos de objeto, uno por uno
 
-El motor acepta **74 tipos** en la capa `Objects`: 35 integrados del framework
+El motor acepta **75 tipos** en la capa `Objects`: 36 integrados del framework
 y 37 enemigos del registro, más `Solid` y `Platform` en `Collision`. Todos los
 números se convierten a `float` automáticamente.
 
@@ -492,6 +493,20 @@ aplastado contra la geometría o atascado en un saliente mientras la cámara
 sigue. Matar es honesto —el nivel dijo «sígueme» y no lo seguiste— y el
 reintento es inmediato si has puesto checkpoints. Ponlos.
 
+**`BossSpawn` — dónde entra el jefe (AUD-259).** `17_BOSS_SPEC.md` §8.2 lo
+pide en todo mapa de jefe desde que se escribió, y hasta AUD-259 **el motor no
+lo aceptaba**: quien seguía la especificación al pie de la letra recibía un
+aviso de tipo desconocido y su jefe no aparecía.
+
+| Type | Propiedad | Por defecto | Qué hace |
+|---|---|---|---|
+| `BossSpawn` | `boss` | — | **Obligatoria.** El nombre registrado del jefe, p. ej. `BossVenado` |
+
+Produce exactamente la misma entidad que escribir ese nombre como `type`,
+porque se resuelve por el mismo registro. Sin `boss`, o con un nombre que no
+esté registrado, el cargador **avisa** en vez de callarse: quedarse mudo es lo
+que hizo que este hueco durara meses.
+
 El `margen_de_gracia` existe porque sin él la muerte ocurre cuando el sprite
 aún se ve, y eso se lee como injusticia aunque sea correcto.
 
@@ -571,6 +586,29 @@ corto, X ataque largo, Y agacharse, LB agarrar.
 Ese último número es el que necesitas al diseñar: **un obstáculo de más de 4
 baldosas no se supera saltando**. La rúbrica marca los repechos imposibles, y
 es la penalización más frecuente en las entregas.
+
+#### El hueco horizontal, y por qué el calificador es más generoso (GAP-024)
+
+Con el alcance **horizontal** hay que saber una cosa antes de diseñar un salto
+largo, y está medida:
+
+| Cómo se salta | Baldosas que se cruzan |
+|---|---|
+| Entrada natural — mantener la dirección y saltar | **3** |
+| Técnica experta — encadenar el salto aéreo en el punto justo | **5** |
+| Repecho vertical | 5 |
+
+`grade_stage` mide con una envolvente que **asume la técnica experta**, así que
+puede etiquetar «cómodo» un hueco de 4 baldosas que con entrada natural no se
+cruza. Es una decisión tomada y no un descuido (AUD-264): apretar la envolvente
+habría rebajado la nota de geometría de entregas ya calificadas, y conectar el
+salto aéreo a los estados de suelo habría cambiado la física de los diecisiete
+mapas a la vez.
+
+**Lo que significa para ti:** si tu nivel es para alguien que juega por primera
+vez, diseña con **3 baldosas**. Los huecos de 4 y 5 son contenido para quien ya
+domina el salto aéreo — colócalos donde fallar cueste poco, no en el camino
+principal. `python -m tests.playtest.jump_bench` imprime la tabla completa.
 
 ### Los 26 estados
 

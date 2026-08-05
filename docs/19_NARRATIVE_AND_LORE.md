@@ -20,7 +20,7 @@ date_processed: "2026-07-14"
 
 ## 1. Overview
 
-**Corrected per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.5.** This document defines the complete narrative framework of Legacy of InFest: the story of John and Jin, the nature and origin of the four spirits, the cultural grounding of the **Tilawa** mythology — the official fictional culture named in the course syllabus — and the meaning of the relics.
+**Corrected per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.5.** This document defines the complete narrative framework of Legacy of InFest: the story of John and Jin, the nature and origin of the four spirits, the cultural grounding of the **Tilawa** mythology — the official fictional culture named in the course syllabus — and the meaning of the relics.
 
 The narrative is intentionally understated during gameplay — it is told through environment, sprite design, the identity of the bosses, and the three story screens that precede Stage 0. Students and players are not expected to engage with deep lore during a stage. The story enriches the experience for those who seek it.
 
@@ -30,7 +30,7 @@ The narrative is intentionally understated during gameplay — it is told throug
 
 ### 2.1 The Tilawa Culture (Official, Fictional)
 
-**Corrected per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.5.** The course syllabus names the in-universe ancestral culture as **Tilawa**, verbatim: *"Paburu, un antiguo chamán de la cultura ancestral de Tilawa, juró proteger a su pueblo y a la naturaleza que habitaba la región."* Tilawa is a **fictional culture** invented for Legacy of InFest — it is not a literal stand-in for any single real-world indigenous nation, though it is clearly inspired by the broader heritage of Costa Rican and Central American indigenous peoples, consistent with the game's grounding in real Costa Rican geography, ecology, and university settings.
+**Corrected per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.5.** The course syllabus names the in-universe ancestral culture as **Tilawa**, verbatim: *"Paburu, un antiguo chamán de la cultura ancestral de Tilawa, juró proteger a su pueblo y a la naturaleza que habitaba la región."* Tilawa is a **fictional culture** invented for Legacy of InFest — it is not a literal stand-in for any single real-world indigenous nation, though it is clearly inspired by the broader heritage of Costa Rican and Central American indigenous peoples, consistent with the game's grounding in real Costa Rican geography, ecology, and university settings.
 
 **Production guideline (preserved from prior design work):** Even though Tilawa is fictional, all design work involving it must maintain the same standard of respect, dignity, and avoidance of caricature that would be required for a real culture. Real-world tribal names, sacred object names, and ceremonial terminology belonging to actual living indigenous peoples of Costa Rica must **not** be used in official game text — only the fictional Tilawa equivalents defined by this document and the syllabus.
 
@@ -65,7 +65,7 @@ This ecological grounding is intentional: the game's world is recognizably Costa
 
 ## 3. The Protagonists
 
-**Corrected per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.4.** The official syllabus defines John and Jin as exchange students arriving in Costa Rica to study at Universidad Invenio, each carrying a relic tied to their family's industry. The text below replaces the prior, non-official origin (hiking discovery / beach discovery) with the syllabus-accurate backstory.
+**Corrected per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.4.** The official syllabus defines John and Jin as exchange students arriving in Costa Rica to study at Universidad Invenio, each carrying a relic tied to their family's industry. The text below replaces the prior, non-official origin (hiking discovery / beach discovery) with the syllabus-accurate backstory.
 
 ### 3.1 John
 
@@ -93,7 +93,7 @@ They travel together from Zone 1 onward. The game does not explicitly define the
 
 ## 4. The Relics
 
-**Corrected per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.4.** The official syllabus names the precise origin of each relic verbatim: *"Una pepita de oro proveniente de Crucitas. Una extraña perla nacida en un raro coral marino."* Both relics are connected to the protagonists' family industries (mining for John, fishing for Jin), reinforcing the human/nature tension that triggers the story.
+**Corrected per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.4.** The official syllabus names the precise origin of each relic verbatim: *"Una pepita de oro proveniente de Crucitas. Una extraña perla nacida en un raro coral marino."* Both relics are connected to the protagonists' family industries (mining for John, fishing for Jin), reinforcing the human/nature tension that triggers the story.
 
 ### 4.1 La Pepita (The Gold Nugget)
 
@@ -231,7 +231,7 @@ Students building traversal stages must maintain the following narrative consist
 
 ## 8. Lore Glossary
 
-**Corrected per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.4, §2.A.5, §5.**
+**Corrected per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.4, §2.A.5, §5.**
 
 | Term | Meaning |
 |---|---|

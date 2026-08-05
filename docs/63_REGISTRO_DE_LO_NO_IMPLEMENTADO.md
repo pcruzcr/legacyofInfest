@@ -135,6 +135,20 @@ TRES, no cuatro.** `BossVenado`, `BossRey` y `BossPaburu`. El cuarto —el
 Gavilán de §5— no tiene clase, ni sprites, ni escena: sólo un hueco reservado
 en el registro de escenarios y una línea en los créditos.
 
+> **Corrección (AUD-254). El párrafo de arriba envejeció y hay que leerlo con
+> fecha.** Hoy `BossGavilan` **sí existe**: `class BossGavilan(BossBase)` en
+> `src/stages/stage3_4_boss_gavilan/boss_gavilan.py`, con su escena
+> `Stage3_4BossGavilanScene` y su mapa de 58,7 KB. La entrega llegó después de
+> escribirse esta sección.
+>
+> Lo que sigue siendo cierto es que **es parcial** —tiene la fase orbital y no
+> los patrones que §2 lista—, que es lo que `75_BIBLIA_TECNICA.md` §21.3 dice.
+> Los jefes son **cuatro**, uno de ellos a medias.
+>
+> Es la misma lección de AUD-142 por tercera vez: un veredicto medido caduca, y
+> un documento que no se vuelve a medir pasa de ser un inventario a ser una
+> creencia.
+
 No se reescribió la especificación: se **etiquetó**, que es lo que este
 registro pide. `17_BOSS_SPEC.md` abre ahora con una §0 que dice, jefe por
 jefe, qué clase lo implementa, cuántas fases tiene de verdad y cuáles de sus
@@ -193,17 +207,42 @@ El documento ya no aparece en el barrido.
 
 ## 4. Especificaciones que describen una API distinta de la real
 
-| Documento | Qué cita y no existe |
-|---|---|
-| `09_HUD_SPEC.md` | `hurt_display_timer`, `reveal_count`, `Message` |
-| `04_PLAYER_SPEC.md` | `_health`, `facing_direction`, `damage_amount` (nombres viejos) |
-| `11_FILTER_TOOLS_SPEC.md` | `KERNEL_X`, `KERNEL_Y`, `umbral_alto`, `umbral_bajo` |
-| `12_VISION_TOOLS_SPEC.md` | `label_array`, `component_sizes`, `bounding_rect`, `local_binary_pattern` |
-| `14_PROFESSOR_DELIVERABLE_MATRIX.md` | `AnimationController`, `SpriteSheet`, `OneWay_` |
-| `23_DATA_SCHEMAS.md` | esquemas de guardado con campos que ya no están |
+> **Corrección (AUD-254). Más de la mitad de esta tabla eran falsos positivos,
+> y el error fue mío otra vez.** Comprobado nombre por nombre contra el árbol
+> el 4 de agosto de 2026, con `grep -rl` sobre `src/`. La versión anterior de
+> esta sección decía que doce identificadores «no existen». Ocho **sí existen**:
+>
+> * `KERNEL_X`, `KERNEL_Y`, `umbral_alto` y `umbral_bajo` viven en
+>   `src/framework/processing/edge_detection.py`. El barrido los buscó en
+>   `filter_tools.py` —el módulo que da nombre al documento— y no los encontró
+>   porque el pipeline de Canny se escribió aparte.
+> * `label_array`, `component_sizes` y `bounding_rect` son campos de las
+>   dataclases de resultado de `vision_tools.py`; `local_binary_pattern` es un
+>   método del mismo módulo.
+> * `_health` y `facing_direction` son atributos de `Player`
+>   (`player.py:345` y `player.py:308`). Llamarlos «nombres viejos» era
+>   exactamente lo contrario de la verdad.
+>
+> Es la tercera vez que este registro publica una recomendación sacada de la
+> salida del barrido sin abrirla contra el código —AUD-133 los sonidos de
+> muerte, AUD-142 `SineFlight`— y el aviso lleva escrito en el propio script
+> desde el primer día: **su salida son preguntas**. Una tabla de «esto no
+> existe» que se equivoca en ocho de doce no informa: manda a alguien a
+> reescribir documentación correcta.
 
-Son documentos escritos antes del código y nunca revisados contra él. Ninguno
-rompe nada hoy; todos engañan a quien los lea para programar.
+| Documento | Qué cita | Comprobado el 2026-08-04 |
+|---|---|---|
+| `09_HUD_SPEC.md` | `hurt_display_timer`, `reveal_count`, `Message` | **No existen.** La clase real es `MessageBox` (`ui/message_box.py:17`) |
+| `04_PLAYER_SPEC.md` | `_health`, `facing_direction`, `damage_amount` | `_health` y `facing_direction` **sí existen**; sólo `damage_amount` es un nombre muerto |
+| `11_FILTER_TOOLS_SPEC.md` | `KERNEL_X`, `KERNEL_Y`, `umbral_alto`, `umbral_bajo` | **Los cuatro existen**, en `edge_detection.py`. Falso positivo |
+| `12_VISION_TOOLS_SPEC.md` | `label_array`, `component_sizes`, `bounding_rect`, `local_binary_pattern` | **Los cuatro existen**, en `vision_tools.py`. Falso positivo |
+| `14_PROFESSOR_DELIVERABLE_MATRIX.md` | `AnimationController`, `SpriteSheet`, `OneWay_` | **No existen.** Fila correcta |
+| `23_DATA_SCHEMAS.md` | esquemas de guardado con campos que ya no están | Sin volver a medir |
+
+Lo que queda en pie: `09_HUD_SPEC.md` y `14_PROFESSOR_DELIVERABLE_MATRIX.md`
+citan API que no existe, y una línea de `04_PLAYER_SPEC.md`. Son documentos
+escritos antes del código y nunca revisados contra él. Ninguno rompe nada hoy;
+esos tres engañan a quien los lea para programar.
 
 ---
 
