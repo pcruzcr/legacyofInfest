@@ -189,7 +189,7 @@ La suite cubre física, colisiones, entidades, escenas, entrada, HUD, carga de e
 - Sin `except:` sin especificar excepción
 
 ### Proceso de PR
-1. Crear rama desde `main` con prefijo `fix/`, `feat/`, `docs/`
+1. Crear rama desde `dev` con prefijo `fix/`, `feat/`, `docs/`
 2. Ejecutar `pytest` y `ruff check` antes de consolidar (ruff es el único
    linter que bloquea un merge; es el que corre en CI)
 3. Mantener commits pequeños y atómicos
