@@ -282,6 +282,7 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── __init__.py
 │   │   │   ├── particle_system.py         # ParticleSystem: emitters, bursts
 │   │   │   ├── sombras.py                 # AUD-273: la elipse bajo los pies (dónde vas a caer)
+│   │   │   ├── sombras_proyectadas.py     # AUD-278: la luz ya no atraviesa las paredes
 │   │   │   ├── hit_effects.py             # HitEffects: burst configs per hit type
 │   │   │   ├── damage_numbers.py          # DamageNumberManager: floating damage text
 │   │   │   ├── post_processing.py         # PostProcessing: bloom, vignette, motion blur
