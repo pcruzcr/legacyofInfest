@@ -8,10 +8,12 @@ pygame.mixer.Sound objects with graceful missing-file handling.
 from __future__ import annotations
 
 import logging
+import time
 from pathlib import Path
 
 import pygame
 
+from src.engine.audio.polifonia import ControlDeVoces
 from src.engine.core import settings
 from src.engine.utils.asset_loader import AssetLoader
 
@@ -24,6 +26,10 @@ class SoundBank:
 
     def __init__(self) -> None:
         self._sounds: dict[str, pygame.mixer.Sound | None] = {}
+        # AUD-280 — polifonía: quién puede sonar y cuántas veces a la vez.
+        self._voces = ControlDeVoces()
+        #: Último canal por nombre, para poder reforzarlo sin abrir otra voz.
+        self._canales: dict[str, pygame.mixer.Channel] = {}
 
     def load_all(self) -> None:
         """Scan assets/sfx/ recursively and register every .wav file."""
@@ -75,6 +81,21 @@ class SoundBank:
             pitch = 1.0
         sound = self._sounds.get(name)
         if sound is not None:
+            # AUD-280 — polifonía. Cinco muertes en el mismo fotograma eran
+            # cinco copias en fase del mismo fichero: saturación, y cinco de los
+            # ocho canales gastados. El porqué, en `engine/audio/polifonia.py`.
+            #
+            # Los bucles quedan fuera: un `loops=-1` es música ambiente o un
+            # zumbido sostenido, no un evento, y contarlo como voz dejaría el
+            # tope ocupado para siempre.
+            if loops == 0:
+                decision = self._voces.pedir(name, time.perf_counter(),
+                                             self._duracion(sound))
+                if decision.accion == "refuerza":
+                    self._reforzar(name, volume, decision.ganancia, pan)
+                    return
+                if decision.accion == "calla":
+                    return
             try:
                 sound.set_volume(max(0.0, min(1.0, volume)))
                 if pitch != 1.0:
@@ -104,11 +125,50 @@ class SoundBank:
                 if channel is not None:
                     if pan is not None:
                         channel.set_volume(max(0.0, pan[0]), max(0.0, pan[1]))
+                    self._canales[name] = channel
             except (ImportError, ValueError, IndexError, TypeError) as _exc:
                 logger.warning("SoundBank: pitch shift failed for '%s': %s", name, _exc)
                 channel = sound.play(loops=loops)
-                if channel is not None and pan is not None:
-                    channel.set_volume(max(0.0, pan[0]), max(0.0, pan[1]))
+                if channel is not None:
+                    if pan is not None:
+                        channel.set_volume(max(0.0, pan[0]), max(0.0, pan[1]))
+                    self._canales[name] = channel
+
+    @staticmethod
+    def _duracion(sound: pygame.mixer.Sound) -> float:
+        """Cuánto dura el fichero, o 0 si el mezclador no sabe decirlo.
+
+        Sin mezclador —CI, y cualquier equipo del aula sin tarjeta— los `Sound`
+        son de mentira y `get_length` puede no existir. Devolver 0 hace que
+        `ControlDeVoces` trate la voz como si durase una ventana, que es lo
+        conservador: la polifonía sigue contando, sólo que sin saber el final.
+        """
+        try:
+            return float(sound.get_length())
+        except (AttributeError, pygame.error):
+            return 0.0
+
+    def _reforzar(self, name: str, volume: float, ganancia: float,
+                  pan: tuple[float, float] | None) -> None:
+        """Sube la voz que ya suena en vez de abrir una segunda igual.
+
+        Se re-aplica el `pan` en la misma llamada. `Channel.set_volume` con un
+        solo argumento **iguala los dos altavoces**, así que reforzar sin
+        acordarse del `pan` centraría un sonido que estaba a la izquierda —un
+        fallo silencioso que sólo se nota con auriculares.
+        """
+        canal = self._canales.get(name)
+        if canal is None:
+            return
+        base = max(0.0, min(1.0, volume)) * ganancia
+        try:
+            if pan is not None:
+                canal.set_volume(min(1.0, max(0.0, pan[0]) * ganancia),
+                                 min(1.0, max(0.0, pan[1]) * ganancia))
+            else:
+                canal.set_volume(min(1.0, base))
+        except (AttributeError, pygame.error):
+            self._canales.pop(name, None)
 
     def contains(self, name: str) -> bool:
         """Check if a sound name is registered."""
@@ -117,3 +177,7 @@ class SoundBank:
     def clear(self) -> None:
         """Clear all loaded sounds."""
         self._sounds.clear()
+        # Y las voces con ellos: un contador que sobrevive al banco silenciaría
+        # los tres primeros disparos del sonido recién cargado.
+        self._voces.limpiar()
+        self._canales.clear()
