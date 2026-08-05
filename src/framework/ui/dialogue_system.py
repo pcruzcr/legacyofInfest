@@ -204,6 +204,10 @@ class DialogueSystem:
         self._selected_choice: int = 0
         self._text_progress: float = 0.0
         self._full_text_visible: bool = False
+        #: AUD-269 — página que se está leyendo. Un texto que no cabe en el
+        #: cuadro se recortaba en silencio: el jugador veía media frase, pulsaba
+        #: ENTER y el resto no se mostraba nunca.
+        self._pagina: int = 0
         self._portrait_cache: dict[str, pygame.Surface] = {}
         # AUD-128: las fuentes ya no se construyen aquí ni con
         # `pygame.font.Font` directo. `theme.font()` aplica la escala de
@@ -267,6 +271,7 @@ class DialogueSystem:
             return
         self._current_node = node
         self._text_progress = 0.0
+        self._pagina = 0
         self._full_text_visible = self._velocidad <= 0.0
         self._selected_choice = 0
         if node.on_enter:
@@ -314,8 +319,8 @@ class DialogueSystem:
                 self._full_text_visible = True
             else:
                 self._text_progress += velocidad * dt
-                if self._text_progress >= len(self._current_node.text):
-                    self._text_progress = float(len(self._current_node.text))
+                if self._text_progress >= len(self._texto_de_la_pagina()):
+                    self._text_progress = float(len(self._texto_de_la_pagina()))
                     self._full_text_visible = True
 
         im = self._context.input_manager
@@ -331,7 +336,7 @@ class DialogueSystem:
         # diálogos en cuanto puede.
         if not self._full_text_visible:
             if confirmar or im.is_action_just_pressed(Action.CANCEL):
-                self._text_progress = float(len(self._current_node.text))
+                self._text_progress = float(len(self._texto_de_la_pagina()))
                 self._full_text_visible = True
             return
 
@@ -345,7 +350,7 @@ class DialogueSystem:
                 _, next_id = self._current_node.choices[self._selected_choice]
                 self._go_to_node(next_id)
         elif confirmar or im.is_action_just_pressed(Action.CANCEL):
-            self.end_dialogue()
+            self.confirmar()
 
     # ── dibujado ───────────────────────────────────────────────
 
@@ -379,11 +384,10 @@ class DialogueSystem:
         surface.blit(nombre, (px, py))
         y = py + nombre.get_height() + Theme.SPACE_XS
 
-        ancho_texto = box.right - px - Theme.SPACE_M
-        visible = self._current_node.text[:int(self._text_progress)]
-        for linea in dividir_en_lineas(visible, self._font_text, ancho_texto):
-            if y + self._font_text.get_height() > box.bottom - Theme.SPACE_S:
-                break
+        # AUD-269: se dibuja la página, no el nodo entero. El `break` que había
+        # aquí recortaba lo que no cabía **y no lo enseñaba nunca**.
+        visible = self._texto_de_la_pagina()[:int(self._text_progress)]
+        for linea in visible.splitlines():
             surface.blit(self._font_text.render(linea, True, Theme.TEXT), (px, y))
             y += self._font_text.get_height() + 2
 
@@ -403,9 +407,68 @@ class DialogueSystem:
                 )
                 y += self._font_choice.get_height() + 2
         else:
-            pista = self._font_text.render("[ENTER]", True, Theme.TEXT_DIM)
+            texto_pista = ("[ENTER]" if self.paginas <= 1
+                           else f"[ENTER] {self._pagina + 1}/{self.paginas}")
+            pista = self._font_text.render(texto_pista, True, Theme.TEXT_DIM)
             surface.blit(pista, (box.right - pista.get_width() - Theme.SPACE_M,
                                  box.bottom - pista.get_height() - Theme.SPACE_XS))
+
+    # ── paginación (AUD-269) ───────────────────────────────────
+
+    def _lineas_por_pagina(self) -> int:
+        """Cuántas líneas caben en el cuadro, con la escala de texto actual.
+
+        Se calcula, no se fija: la escala de accesibilidad llega a 2,0×, y un
+        número escrito a mano volvería a recortar texto en cuanto alguien la
+        subiera — que es el defecto que esto arregla.
+        """
+        alto = int(ALTO_CUADRO * self._escala_actual())
+        util = alto - Theme.SPACE_S * 2 - self._font_name.get_height()
+        paso = self._font_text.get_height() + 2
+        return max(1, util // paso)
+
+    def _paginas_de_texto(self) -> list[list[str]]:
+        """El texto del nodo, repartido en páginas de líneas."""
+        if self._current_node is None:
+            return [[]]
+        ancho = (settings.INTERNAL_WIDTH - MARGEN * 2
+                 - int(48 * self._escala_actual()) - Theme.SPACE_M * 3)
+        lineas = dividir_en_lineas(self._current_node.text, self._font_text, ancho)
+        if not lineas:
+            return [[]]
+        por_pagina = self._lineas_por_pagina()
+        return [lineas[i:i + por_pagina] for i in range(0, len(lineas), por_pagina)]
+
+    def _texto_de_la_pagina(self) -> str:
+        """Las líneas de la página actual, ya partidas, unidas por salto."""
+        paginas = self._paginas_de_texto()
+        indice = min(self._pagina, len(paginas) - 1)
+        return "\n".join(paginas[indice])
+
+    @property
+    def paginas(self) -> int:
+        return len(self._paginas_de_texto())
+
+    @property
+    def pagina_actual(self) -> int:
+        return self._pagina
+
+    def confirmar(self) -> None:
+        """ENTER con el texto ya visible: pasa de página, o cierra.
+
+        Es un método público porque la escena y las pruebas necesitan el mismo
+        camino que la tecla: tener dos formas de avanzar un diálogo es cómo se
+        acaba con una que pagina y otra que no.
+        """
+        if self._pagina + 1 < self.paginas:
+            self._pagina += 1
+            # La máquina de escribir se reinicia: si no, la página siguiente
+            # aparecería entera de golpe y el ritmo de lectura cambiaría a
+            # mitad de la frase.
+            self._text_progress = 0.0
+            self._full_text_visible = self._velocidad <= 0.0
+            return
+        self.end_dialogue()
 
     # ── auxiliares ─────────────────────────────────────────────
 
