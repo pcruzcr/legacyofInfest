@@ -23,7 +23,7 @@ documento y el código no coincidían, se corrigió el documento.
 
 | Sistema | Estado | Lo que falta |
 |---|---|---|
-| Boss Rush | ✅ **Completo** | Superposición de interfaz (rótulos, marcador en pantalla) |
+| Boss Rush | ✅ **Completo** | Pantallas intermedias entre combates (decoración) |
 | Speedrun | ✅ **Completo** | — |
 | Rendimiento / GPU | ✅ **Completo salvo una pieza** | `SpriteBatch` (no existe) |
 | Monedas al matar | ✅ **Completo** | — |
@@ -60,8 +60,10 @@ combate, cuándo el jugador recibe un golpe y cuándo cae el jefe:
 * `registrar_tiempo()` acumula con el `dt` **sin escalar**, para que el tiempo
   bala no regale puntuación.
 
-**Falta:** la superposición de interfaz — rótulos de jefe, marcador en pantalla
-y pantallas intermedias. Es lo único que `docs/44` §4 sigue marcando en ❌.
+~~**Falta:** la superposición de interfaz.~~ **HECHO (AUD-274)**: franja de una
+línea arriba con el combate, el jefe, los puntos y los golpes, visible **sólo**
+con el modo activo. Quedan las pantallas intermedias entre combates, que son
+decoración y no información.
 
 ### Speedrun — completo
 
@@ -232,7 +234,7 @@ estudiantes (invariante 1 de `CLAUDE.md`).
 Por orden de lo que más se nota jugando:
 
 1. **Árbol de habilidades** — no existe. Necesita decisión de diseño primero.
-2. **Interfaz del Boss Rush** — rótulos y marcador en pantalla.
+2. ~~Interfaz del Boss Rush~~ — **HECHO (AUD-274)**.
 3. **Unificar el guardado** — inventario y puntuación dentro del slot.
 4. **`stage_scene.py`** — 1.900 líneas contra un presupuesto de 1.500
    (GAP-015). Aplazado mientras otra sesión edite el mismo fichero.
@@ -435,11 +437,11 @@ mantiene una pila de ranuras libres— así que el patrón está en la casa.
 | Pymunk (cuerpos rígidos) | **No recomendado** | `pymunk` se **retiró** de las dependencias. Volver a meterlo cambia la física de los 16 mapas entregados y calificados — invariante 2 |
 | Pendientes (*slopes*) | **Viable, con coste** | Necesita normales de superficie y proyección de velocidad, y **cambia la resolución de colisión**, que es el sistema del que dependen las 26 entregas. Hay que hacerlo aditivo (un tipo TMX nuevo) o no hacerlo |
 | Capas de profundidad y escala Z (2.5D) | **Viable** | Es dibujado, no física. `docs/62` C2 ya lo evaluó: 2.5D es factible, 3D no |
-| Más de 3 niveles de parallax | **Viable y barato** | El cargador ya lee `BG_Far/Mid/Near`; añadir capas es aditivo |
+| ~~Más de 3 niveles de parallax~~ | **HECHO (AUD-272)** | Cinco capas (`sky`, `deep`, `far`, `mid`, `near`), con la velocidad atada al **nombre** y no al índice de carga. `sky` y `deep` opcionales y silenciosas |
 | *Normal mapping* en GPU | **Viable, sin datos** | Requiere un mapa normal por sprite: es trabajo de arte, no de motor |
 | Bajar `ambient_light` a 0,35 | **Cuidado** | `docs/60` §17 lo midió: con 12 luces en 100 baldosas la noche es legible al 45 %; con 7, **24 % e injugable**. `MIN_AMBIENTE = 0.45` existe por eso. Bajarlo sin añadir focos deja niveles a oscuras |
 | God rays y bloom encendidos | **Ya existen** | AUD-226 y AUD-224, activables desde el TMX |
-| Sombra elíptica bajo los pies | **Viable y barata** | Puramente de dibujado, aditiva |
+| ~~Sombra elíptica bajo los pies~~ | **HECHO (AUD-273)** | Elipse que se encoge y aclara con la altura; el suelo llega por parámetro para no acoplar dibujado y física |
 | Sombras 2D proyectadas | **Viable, con coste** | Una proyección por foco y por *collider*: hay que medirla antes de encenderla por defecto |
 
 ---
@@ -476,3 +478,38 @@ Las tres que la lista da por hechas, confirmadas contra el código:
   escala de velocidad y no como coeficiente, así que andar sobre barro da
   79,20 px/s a 30, 60 y 120 fps por igual — sólo el deslizamiento sin impulso
   difiere.
+
+---
+
+## 14. Lo viable, implementado (2026-08-04, tercera pasada)
+
+De la lista de §10 y §11, lo que se ha hecho y lo que queda, para que nadie
+tenga que cruzar dos secciones:
+
+| Ítem | Estado |
+|---|---|
+| Más de 3 capas de parallax | **HECHO (AUD-272)** |
+| Sombra elíptica bajo los pies | **HECHO (AUD-273)** |
+| Interfaz del Boss Rush | **HECHO (AUD-274)** |
+| Pooling de entidades | Pendiente — ver abajo |
+| Rejilla espacial y *raycast* | Pendiente |
+| Capas de profundidad / escala Z (2.5D) | Pendiente |
+| Sombras 2D proyectadas desde los focos | Pendiente (*viable con coste*: hay que medirla antes de encenderla por defecto) |
+| Pendientes (*slopes*) | Pendiente (*viable con coste*: cambia la resolución de colisión, hay que hacerlo aditivo) |
+| `SpriteBatch` | Pendiente (*medir primero* en la máquina destino: AUD-148) |
+| Reducir ciclos de importación | Pendiente |
+| Partir `stage_scene.py` | Aplazado por acuerdo |
+
+**Una medición nueva, para el pooling.** El sistema de partículas ya usa NumPy
+en *structure of arrays*, pero `_append_particles` hace `np.concatenate` sobre
+**diez arreglos en cada emisión**: cada partícula que sale asigna memoria nueva
+en lugar de reutilizar. Es el punto de presión de GC más gordo que se ve, por
+encima de los proyectiles —que como mucho son tres por tirador—. Cambiarlo a
+capacidad reservada con pila de ranuras libres es el patrón que
+`EnjambreDeBalas` ya usa en este mismo repositorio.
+
+**No se tocó aquí a propósito:** es una reescritura del núcleo de un sistema
+con varios dependientes y pruebas propias, y el repositorio exige medir antes
+de declarar una mejora. La medida que hay que tomar primero es
+`test_gc_collections_per_frame` y `test_tracemalloc_peak_on_burst` con una
+ráfaga sostenida, no con una sola.
