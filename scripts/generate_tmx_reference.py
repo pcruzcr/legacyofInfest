@@ -151,6 +151,15 @@ def build_table() -> str:
                        "detiene ahí; sin ella, hasta el final del mapa). "
                        "Al pisarlo la cámara arranca sola y **el borde "
                        "izquierdo mata**: SMB3 Airship, Cuphead, Ori"),
+        "WarpZone": ("Rectángulo (el disparador)",
+                     "`destino_x` / `destino_y` (**obligatorias**: adónde van "
+                     "los **pies** del jugador, en píxeles de mundo) · "
+                     "`automatico` (al tocar, true) · `una_vez` (false) · "
+                     "`key_id` · `enfriamiento` (s antes de poder repetirlo, "
+                     "0.5) · `mensaje`. Teletransporta **dentro del mismo "
+                     "mapa**, que es lo que `NextTrigger` no hace: Zelda, "
+                     "Metroid, Hollow Knight. Sin destino no se carga y el "
+                     "cargador avisa"),
         "BossSpawn": ("Punto (dónde entra el jefe)",
                       "`boss` (**obligatoria**: el nombre registrado del jefe, "
                       "p. ej. `BossVenado`). Produce la misma entidad que "

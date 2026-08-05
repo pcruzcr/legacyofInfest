@@ -399,31 +399,47 @@
     <property name="rearme" type="float" value="0.2"/>
    </properties>
   </object>
-  <object id="155" name="NextTrigger_155" type="NextTrigger" x="4896" y="272" width="32" height="48">
+  <object id="155" name="WarpZone_155" type="WarpZone" x="4832" y="272" width="32" height="48">
+   <properties>
+    <property name="automatico" type="bool" value="false"/>
+    <property name="destino_x" type="float" value="48.0"/>
+    <property name="destino_y" type="float" value="320.0"/>
+    <property name="mensaje" value="De vuelta a la entrada."/>
+   </properties>
   </object>
-  <object id="156" name="WalkerInsect_156" type="WalkerInsect" x="800" y="292" width="24" height="28">
+  <object id="156" name="WarpZone_156" type="WarpZone" x="80" y="272" width="32" height="48">
+   <properties>
+    <property name="automatico" type="bool" value="false"/>
+    <property name="destino_x" type="float" value="2336.0"/>
+    <property name="destino_y" type="float" value="320.0"/>
+    <property name="mensaje" value="Atajo a la mitad del laboratorio."/>
+   </properties>
   </object>
-  <object id="157" name="WalkerRaton_157" type="WalkerRaton" x="1280" y="292" width="24" height="28">
+  <object id="157" name="NextTrigger_157" type="NextTrigger" x="4896" y="272" width="32" height="48">
   </object>
-  <object id="158" name="FlyingCucaracha_158" type="FlyingCucaracha" x="1152" y="224" width="20" height="14">
+  <object id="158" name="WalkerInsect_158" type="WalkerInsect" x="800" y="292" width="24" height="28">
   </object>
-  <object id="159" name="WalkerEstudiante_159" type="WalkerEstudiante" x="1824" y="292" width="24" height="28">
+  <object id="159" name="WalkerRaton_159" type="WalkerRaton" x="1280" y="292" width="24" height="28">
   </object>
-  <object id="160" name="FlyingNotebook_160" type="FlyingNotebook" x="1536" y="224" width="20" height="14">
+  <object id="160" name="FlyingCucaracha_160" type="FlyingCucaracha" x="1152" y="224" width="20" height="14">
   </object>
-  <object id="161" name="ShooterTiza_161" type="ShooterTiza" x="2336" y="292" width="24" height="28">
+  <object id="161" name="WalkerEstudiante_161" type="WalkerEstudiante" x="1824" y="292" width="24" height="28">
   </object>
-  <object id="162" name="ShooterCocinero_162" type="ShooterCocinero" x="2816" y="292" width="24" height="28">
+  <object id="162" name="FlyingNotebook_162" type="FlyingNotebook" x="1536" y="224" width="20" height="14">
   </object>
-  <object id="163" name="WalkerTerciopelo_163" type="WalkerTerciopelo" x="3312" y="292" width="24" height="28">
+  <object id="163" name="ShooterTiza_163" type="ShooterTiza" x="2336" y="292" width="24" height="28">
   </object>
-  <object id="164" name="FlyingTerciovolador_164" type="FlyingTerciovolador" x="3488" y="224" width="20" height="14">
+  <object id="164" name="ShooterCocinero_164" type="ShooterCocinero" x="2816" y="292" width="24" height="28">
   </object>
-  <object id="165" name="ShooterVenomoLargo_165" type="ShooterVenomoLargo" x="4000" y="292" width="24" height="28">
+  <object id="165" name="WalkerTerciopelo_165" type="WalkerTerciopelo" x="3312" y="292" width="24" height="28">
   </object>
-  <object id="166" name="Walker_166" type="Walker" x="800" y="292" width="24" height="28">
+  <object id="166" name="FlyingTerciovolador_166" type="FlyingTerciovolador" x="3488" y="224" width="20" height="14">
   </object>
-  <object id="167" name="FlyingBoa_167" type="FlyingBoa" x="1152" y="224" width="20" height="14">
+  <object id="167" name="ShooterVenomoLargo_167" type="ShooterVenomoLargo" x="4000" y="292" width="24" height="28">
+  </object>
+  <object id="168" name="Walker_168" type="Walker" x="800" y="292" width="24" height="28">
+  </object>
+  <object id="169" name="FlyingBoa_169" type="FlyingBoa" x="1152" y="224" width="20" height="14">
   </object>
  </objectgroup>
  <layer id="9" name="FG_Overlay" width="310" height="24">

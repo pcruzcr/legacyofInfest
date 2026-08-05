@@ -167,6 +167,46 @@ class Disparador:
 
 
 @dataclass
+class ZonaDeWarp:
+    """Teletransporta al jugador a otro punto **del mismo mapa** — AUD-287.
+
+    Zelda (las cuevas), Metroid (los ascensores), Hollow Knight (los bancos de
+    los Stagways), Super Metroid (los tubos). Lo que hasta ahora no se podía
+    declarar desde Tiled: `NextTrigger` cambia de escenario y `Door` abre un
+    paso, pero mover al jugador de una punta del mapa a otra **no existía**, ni
+    con propiedad ni con tipo de objeto. Un mapa grande no tenía forma de
+    conectar sus extremos sin obligar a recorrerlo entero.
+
+    Por qué el enfriamiento
+    -----------------------
+    Sin él, un warp cuyo destino cae dentro de otra zona de warp —o dentro de sí
+    mismo, que es el error de colocación más fácil de cometer en Tiled— entra en
+    un bucle: el jugador aparece dentro del disparador, salta, aparece otra vez.
+    A 60 fps eso no es un fallo visible, es una pantalla epiléptica. Medio
+    segundo basta para salir andando de cualquier rectángulo razonable.
+
+    `una_vez` está para los pasadizos de ida sin vuelta, y `key_id` para los que
+    hay que ganarse: los dos siguen el mismo contrato que `Disparador`, para que
+    quien ya sepa poner un disparador sepa poner un warp.
+    """
+
+    rect: pygame.Rect
+    #: Adónde va el **centro inferior** del jugador, en píxeles de mundo.
+    destino: pygame.Vector2
+    #: Con `True` se cruza al tocarlo; con `False`, pulsando el botón de usar.
+    automatico: bool = True
+    una_vez: bool = False
+    #: Si no está vacío, hace falta esta llave.
+    key_id: str = ""
+    #: Segundos que tarda en poder volver a usarse.
+    enfriamiento: float = 0.5
+    #: Texto que se enseña al cruzar. Vacío = ninguno.
+    mensaje: str = ""
+    usado: bool = False
+    _espera: float = 0.0
+
+
+@dataclass
 class Llavero:
     """Lo que el jugador lleva encima durante el escenario.
 
