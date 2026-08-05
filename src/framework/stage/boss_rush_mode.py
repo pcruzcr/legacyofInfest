@@ -4,35 +4,35 @@ System: framework.stage
 Academic Unit: N/A
 Description: Boss Rush mode — consecutive boss gauntlet with health carry-over and scoring.
 
-.. warning::
-   **PARCIALMENTE CONECTADO (AUD-232).** El aviso anterior decía «NOT WIRED …
-   there is no menu entry, scene or hook that reaches it», y desde AUD-191 eso
-   ya no es cierto: el título tiene su opción y AUD-201 arregló que entrar
-   dejara la pantalla en negro. Pero sustituirlo por «conectado» sería pasarse
-   al otro extremo. Medido:
+.. note::
+   **CONECTADO (AUD-261), y con su historia.** El aviso que había aquí decía
+   «PARCIALMENTE CONECTADO» y era exacto: desde AUD-191 el jugador podía entrar
+   por el menú y pelear seguido contra los cuatro jefes, pero **nadie conducía
+   el modo**. `boss_rush_entry` lo construía, llamaba a `start()` y lo dejaba
+   en `context.boss_rush`, donde no lo leía nadie: `advance_to_next()` y
+   `record_hit()` no tenían llamante fuera de este fichero, la puntuación nunca
+   se calculaba, `hits_taken` se quedaba en cero, y `_carry_over_health` no
+   tenía ni getter ni setter — el arrastre de vida no existía tampoco **dentro**
+   del módulo.
 
-   * **Sí funciona:** el jugador elige BOSS RUSH y pelea seguido contra los
-     cuatro jefes. El encadenado lo hace la cola de escenarios del
-     `SceneManager`, no este módulo.
-   * **No funciona:** nadie *conduce* el modo. `boss_rush_entry` lo construye,
-     llama a `start()` y lo deja en `context.boss_rush`, donde **no lo lee
-     nadie**. `advance_to_next()` y `record_hit()` no se invocan desde fuera de
-     este fichero, así que la puntuación nunca se calcula y `hits_taken` se
-     queda en cero.
-   * **Ni siquiera está aquí:** `_carry_over_health` y `_carry_over_meter` se
-     ponen a 0.0 en el constructor, se reponen a 0.0 en `start()` y no tienen
-     getter ni setter. El arrastre de vida que anuncia la cabecera de este
-     módulo no está implementado tampoco dentro de él.
-
-   Se conserva a propósito, como base de la funcionalidad y como material
-   docente. Lo que no se puede es describirla como entregada: `docs/44` decía
-   «✅ Complete — gauntlet logic, scoring, health carry-over» y las tres cosas
-   son falsas. Queda como GAP-030, y `tests/test_modos_que_no_se_veian.py` fija
-   el estado real para que la especificación y el juego no se separen otra vez.
+   Lo conduce ahora `StageScene`, que es la única que sabe cuándo empieza un
+   combate, cuándo el jugador recibe un golpe y cuándo cae el jefe. Las tres
+   cosas que `docs/44` §4 daba por hechas —gauntlet, marcador y arrastre de
+   vida— lo están, y GAP-030 se cierra con ellas.
 """
 from __future__ import annotations
 
 from typing import Any
+
+#: Salud que se devuelve entre combates del Boss Rush (AUD-261).
+#:
+#: El arrastre puro —terminas con lo que te queda y empiezas igual— convierte
+#: el gauntlet en una carrera imposible: se llega al tercer jefe con media vida
+#: y al cuarto sin nada. Nadie ha jugado esto lo bastante para calibrar otra
+#: cosa, así que la curación es **una fracción fija con nombre**: se ve, se
+#: discute y se cambia en un sitio. Esconderla dentro de una fórmula sería
+#: repetir el pecado de `docs/44`, que declaraba terminado lo que no existía.
+CURACION_ENTRE_COMBATES: float = 1.0
 
 
 class BossRushStage:
@@ -124,6 +124,51 @@ class BossRushMode:
         current = self.get_current_stage()
         if current:
             current.hits_taken += 1
+
+    # ── AUD-261: lo que el juego llama para conducir el modo ──────
+
+    def registrar_tiempo(self, dt: float) -> None:
+        """Acumula el tiempo del combate en curso.
+
+        Lo llama la escena por fotograma. Sin esto, `current.time` se quedaba
+        en 0 y la parte de la puntuación que premia ir rápido no premiaba
+        nada — el marcador existía y medía una constante.
+        """
+        current = self.get_current_stage()
+        if current is not None:
+            current.time += dt
+
+    def acreditar_combate(self, salud_restante: float, medidor: float,
+                          salud_maxima: float | None = None) -> BossRushStage | None:
+        """El jefe ha caído: se guarda con qué se sigue y se pasa al siguiente.
+
+        Es el punto de entrada que le faltaba al modo. Une las dos mitades que
+        estaban escritas y sueltas: `advance_to_next()` —que ya sabía puntuar—
+        y el arrastre de vida, que no tenía forma de escribirse desde fuera.
+
+        La curación de `CURACION_ENTRE_COMBATES` se aplica **aquí** y no al
+        entrar en el combate siguiente porque así el número que se guarda es el
+        que se va a usar: si se aplicara al entrar, `salud_arrastrada` diría
+        una cosa y el jugador vería otra, y ésa es la clase de desajuste que
+        deja una barra de vida mintiendo.
+        """
+        tope = salud_maxima if salud_maxima is not None else float("inf")
+        self._carry_over_health = min(salud_restante + CURACION_ENTRE_COMBATES, tope)
+        self._carry_over_meter = medidor
+        return self.advance_to_next()
+
+    @property
+    def salud_arrastrada(self) -> float:
+        """Con cuánta vida empieza el siguiente combate. `0` = a vida llena."""
+        return self._carry_over_health
+
+    @salud_arrastrada.setter
+    def salud_arrastrada(self, valor: float) -> None:
+        self._carry_over_health = max(0.0, float(valor))
+
+    @property
+    def medidor_arrastrado(self) -> float:
+        return self._carry_over_meter
 
     def is_complete(self) -> bool:
         """¿Se han superado todos los jefes?
