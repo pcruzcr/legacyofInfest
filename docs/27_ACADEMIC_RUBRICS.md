@@ -13,7 +13,7 @@ date_processed: "2026-07-14"
 **Document ID:** LOI-RUBRIC-027  
 **Version:** 1.0.0  
 **Status:** Official  
-**Compatibility:** Requires `00_SYLLABUS_ALIGNMENT_AUDIT.md`, `08_SYLLABUS_MAPPING.md`, `14_PROFESSOR_DELIVERABLE_MATRIX.md`, `21_COURSE_SCHEDULE.md`  
+**Compatibility:** Requires `77_SYLLABUS_ALIGNMENT_AUDIT.md`, `08_SYLLABUS_MAPPING.md`, `14_PROFESSOR_DELIVERABLE_MATRIX.md`, `21_COURSE_SCHEDULE.md`  
 **Audience:** Professor, Teaching Assistants
 
 ---

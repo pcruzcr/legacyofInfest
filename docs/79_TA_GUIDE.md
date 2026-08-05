@@ -4,7 +4,7 @@ title: "TA Guide — Legacy of InFest"
 aliases: ["TA Guide"]
 tags: ["ta", "teaching", "assistant", "guide"]
 description: "Teaching assistant guide"
-source: "docs/29_TA_GUIDE.md"
+source: "docs/79_TA_GUIDE.md"
 date_processed: "2026-07-14"
 ---
 

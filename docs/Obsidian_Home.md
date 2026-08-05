@@ -22,7 +22,7 @@ El conocimiento está organizado en **4 capas**. Explora según tu rol:
 
 | Documento | Descripción |
 |-----------|-------------|
-| [[00_SYLLABUS_ALIGNMENT_AUDIT.md|Syllabus Alignment Audit]] | Auditoría de alineación con el sílabo oficial |
+| [[77_SYLLABUS_ALIGNMENT_AUDIT.md|Syllabus Alignment Audit]] | Auditoría de alineación con el sílabo oficial |
 | [[08_SYLLABUS_MAPPING.md|Syllabus Mapping]] | Mapeo de componentes del framework a unidades del sílabo |
 | [[14_PROFESSOR_DELIVERABLE_MATRIX.md|Deliverable Matrix]] | Trazabilidad sílabo-framework-evaluación |
 | [[21_COURSE_SCHEDULE.md|Course Schedule]] | Calendario de 11 clases + Invenio Fest |
@@ -67,7 +67,7 @@ El conocimiento está organizado en **4 capas**. Explora según tu rol:
 | [[25_IMPLEMENTATION_ROADMAP.md|Implementation Roadmap]] | 16 fases de construcción con DoD |
 | [[26_STUDENT_TEMPLATE_SPEC.md|Student Templates]] | Archivos iniciales que cada estudiante copia |
 | [[29_GIT_WORKFLOW_AND_STANDARDS.md|Git Workflow]] | Ramas, commits, PRs, code review |
-| [[30_TICKET_BACKLOG.md|Ticket Backlog]] | Tickets atómicos por fase del roadmap |
+| [[80_TICKET_BACKLOG.md|Ticket Backlog]] | Tickets atómicos por fase del roadmap |
 
 ---
 
@@ -85,14 +85,14 @@ flowchart LR
     G --> H[Rubrics]
 ```
 
-- Comienza en: [[32_ENVIRONMENT_SETUP_GUIDE.md|Environment Setup Guide]]
+- Comienza en: [[82_ENVIRONMENT_SETUP_GUIDE.md|Environment Setup Guide]]
 - Sigue con: [[36_STUDENT_MANUAL.md|Student Manual]]
 - Revisa: [[27_ACADEMIC_RUBRICS.md|Academic Rubrics]]
 
 ### 👨‍🏫 Profesor
 - [[21_COURSE_SCHEDULE.md|Course Schedule]]
 - [[27_ACADEMIC_RUBRICS.md|Academic Rubrics]]
-- [[31_RISK_REGISTER.md|Risk Register]]
+- [[81_RISK_REGISTER.md|Risk Register]]
 
 ### 🤖 AI Coding Assistant
 - [[00_MASTER_INDEX.md|Master Index]]

@@ -345,6 +345,7 @@ Para instrucciones detalladas de registro y pruebas, consultar el documento orig
 | `ScrollZone` | Rectángulo (el **disparador**, no la zona de muerte) | `velocidad_x` (px/s, 40) · `velocidad_y` (px/s, 0) · `margen_de_gracia` (px que se puede rebasar el borde antes de morir, 24) · `parar_en_x` (la cámara se detiene ahí; sin ella, hasta el final del mapa). Al pisarlo la cámara arranca sola y **el borde izquierdo mata**: SMB3 Airship, Cuphead, Ori |
 | `Vine` | Rectángulo (alto = lo que se trepa) | `ancho_de_agarre` (px, 10) · `velocidad` (px/s de trepada, 70) |
 | `Zipline` | Rectángulo (la esquina es el enganche) | `destino_dx` (px, 96), `destino_dy` (px, 64) **relativos** · `velocidad` (px/s, 190) · `radio_de_enganche` (px, 14) · `solo_de_bajada` (bool, sí) |
+| `BossSpawn` | Punto (dónde entra el jefe) | `boss` (**obligatoria**: el nombre registrado del jefe, p. ej. `BossVenado`). Produce la misma entidad que escribir ese nombre como `type`; sin `boss`, o con uno que no esté registrado, el cargador avisa. Lo pide `17_BOSS_SPEC.md` §8.2 en todo mapa de jefe |
 
 ### Arquetipos de enemigo (capa `Objects`, objetos punto)
 
@@ -396,6 +397,6 @@ propiedad del objeto en Tiled.
 | *(ninguno)* o `Solid` | Colisión AABB completa |
 | `Platform` | Plataforma atravesable desde abajo |
 
-Total aceptado en `Objects`: **65** tipos.
+Total aceptado en `Objects`: **66** tipos.
 
 <!-- END GENERATED: tipos de objeto -->

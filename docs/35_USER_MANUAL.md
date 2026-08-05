@@ -47,7 +47,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Ver `docs/32_ENVIRONMENT_SETUP_GUIDE.md` para instalación detallada y solución de problemas.
+Ver `docs/82_ENVIRONMENT_SETUP_GUIDE.md` para instalación detallada y solución de problemas.
 
 ## 4. Controles Generales
 
@@ -170,7 +170,7 @@ Desde el menú principal, selecciona **Academic Demos** para acceder a 10 labora
 ---
 ## 🔗 Documentos Relacionados
 
-- [[32_ENVIRONMENT_SETUP_GUIDE.md|Environment Setup Guide]]
+- [[82_ENVIRONMENT_SETUP_GUIDE.md|Environment Setup Guide]]
 - [[03_ARCHITECTURE.md|Architecture]]
 - [[04_PLAYER_SPEC.md|Player Specification]]
 - [[09_HUD_SPEC.md|HUD Specification]]

@@ -20,7 +20,7 @@ date_processed: "2026-07-14"
 
 This package contains the **audit** and **corrected documents** produced by realigning the full Legacy of InFest documentation (Documents 01–20, packages v1/v2/v3) against the official course syllabus. It does **not** replace v1/v2/v3 in full — it supplements them with two new documents and replaces **only the eight files listed below** that contained real contradictions with the syllabus.
 
-**Read `00_SYLLABUS_ALIGNMENT_AUDIT.md` first.** It classifies every difference found between the prior documentation and the syllabus into Real Contradiction / Valid Design Decision / Legitimate Framework Extension, and is the authoritative record of what changed and why.
+**Read `77_SYLLABUS_ALIGNMENT_AUDIT.md` first.** It classifies every difference found between the prior documentation and the syllabus into Real Contradiction / Valid Design Decision / Legitimate Framework Extension, and is the authoritative record of what changed and why.
 
 ---
 
@@ -28,7 +28,7 @@ This package contains the **audit** and **corrected documents** produced by real
 
 | File | Type | Replaces |
 |---|---|---|
-| `00_SYLLABUS_ALIGNMENT_AUDIT.md` | **New** | — |
+| `77_SYLLABUS_ALIGNMENT_AUDIT.md` | **New** | — |
 | `21_COURSE_SCHEDULE.md` | **New** | — |
 | `01_PROJECT_CHARTER.md` | **Corrected** | v1 `01_PROJECT_CHARTER.md` |
 | `03_ARCHITECTURE.md` | **Corrected** | v1 `03_ARCHITECTURE.md` |

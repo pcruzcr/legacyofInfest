@@ -4,7 +4,7 @@ title: "Legacy of InFest — Educational Roadmap"
 aliases: ["Educational Roadmap"]
 tags: ["educational", "roadmap", "pedagogy"]
 description: "Educational roadmap"
-source: "docs/34_EDUCATIONAL_ROADMAP.md"
+source: "docs/84_EDUCATIONAL_ROADMAP.md"
 date_processed: "2026-07-14"
 ---
 

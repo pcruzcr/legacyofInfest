@@ -1014,7 +1014,7 @@ class Stage0Scene(BaseScene):
 - [[04_PLAYER_SPEC.md|Player Specification]]
 - [[05_ENEMY_SPEC.md|Enemy Specification]]
 - [[51_IMPLEMENTATION_AUDIT.md|Implementation Audit]]
-- [[52_MULTIDISCIPLINARY_AUDIT.md|Multidisciplinary Audit]]
+- [[85_MULTIDISCIPLINARY_AUDIT.md|Multidisciplinary Audit]]
 
 ---
 

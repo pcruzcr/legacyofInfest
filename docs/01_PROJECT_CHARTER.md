@@ -143,13 +143,13 @@ By the end of the course, a student should be able to:
 
 ## 7. Repository Structure
 
-**Corrected per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.6 and §7.** This tree reflects the actual private GitHub repository structure. The `engine/`, `framework/`, and `stages/` subtrees from the original design are preserved entirely as documented below — they are relocated under `src/` rather than at repo root, and `student_templates/` is added as the canonical starter scaffold location.
+**Corrected per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.6 and §7.** This tree reflects the actual private GitHub repository structure. The `engine/`, `framework/`, and `stages/` subtrees from the original design are preserved entirely as documented below — they are relocated under `src/` rather than at repo root, and `student_templates/` is added as the canonical starter scaffold location.
 
 ```
 legacy-of-infest/                      # Actual GitHub private repo root
 │
 ├── docs/                              # All official documentation (this package)
-│   ├── 00_SYLLABUS_ALIGNMENT_AUDIT.md
+│   ├── 77_SYLLABUS_ALIGNMENT_AUDIT.md
 │   ├── 01_PROJECT_CHARTER.md
 │   ├── 02_CODEX_CONTEXT.md
 │   ├── 03_ARCHITECTURE.md
@@ -257,7 +257,7 @@ All commits must follow the format:
 
 ### 8.4 Assessment Cadence
 
-**Corrected per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.3.** The course runs as **11 effective classes of 4 hours** (2h theory + 2h practice) within a trimestral period, plus a 12th session reserved for Invenio Fest. There is no 16-week schedule. The complete class-by-class calendar, including which class each evaluation instrument falls in, is defined in `21_COURSE_SCHEDULE.md`. Summary:
+**Corrected per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.3.** The course runs as **11 effective classes of 4 hours** (2h theory + 2h practice) within a trimestral period, plus a 12th session reserved for Invenio Fest. There is no 16-week schedule. The complete class-by-class calendar, including which class each evaluation instrument falls in, is defined in `21_COURSE_SCHEDULE.md`. Summary:
 
 | Class | Milestone |
 |---|---|

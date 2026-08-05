@@ -12,7 +12,39 @@ date_processed: "2026-07-16"
 
 **Document ID:** LOI-EVENTMAP-052  
 **Version:** 1.0.0  
-**Status:** ✅ Complete (tracked to 2026-07-16 codebase)
+**Status:** ⚠️ Medido contra el árbol del **2026-07-16**. Ver §0.
+
+---
+
+## 0. Qué de este documento ha caducado (AUD-254, medido 2026-08-04)
+
+Este mapa se levantó el 16 de julio y no se ha vuelto a medir. Su §3 —«18
+eventos huérfanos, ni emitidos ni suscritos»— **ya no es cierta**, y una lista
+de huérfanos equivocada es peor que ninguna: manda a alguien a borrar cableado
+que sí existe. Recuento de hoy, `grep` sobre `src/`:
+
+**Dejaron de ser huérfanos** (tienen emisor desde que se escribió §3):
+`MUSIC_STINGER` (`boss_base.py:336`), `SFX_PLAYER_PARRY` (`enemy_base.py`),
+`SFX_UI_GAME_OVER` (`stage_scene.py`), `SFX_ENVIRONMENT_SCREEN_SHAKE` y
+`SFX_BOSSES_PABURU_EYE_BEAM` (`boss_paburu.py`), `SFX_BOSS_HIT`
+(`enemy_base.py`), `SFX_BOSS_PHASE_CHANGE` (`boss_base.py`).
+
+**Se conectaron en AUD-255:** `SFX_PLAYER_HEAL`, `SFX_PLAYER_CROUCH`,
+`SFX_ENVIRONMENT_ONE_WAY_PLATFORM`, `SFX_ENEMIES_PROJECTILE_HIT_WALL`. Los
+cuatro tenían fichero, tabla y subtítulo, y les faltaba sólo el `emit`.
+
+**Se conectaron en AUD-251 y AUD-256:** `ITEM_COLLECTED` y `FLAG_SET` (un
+diálogo que regalaba un objeto no se lo daba a nadie) y `ACHIEVEMENT_UNLOCKED`
+(el logro se veía y no se oía).
+
+**Siguen sin emisor, y es una decisión, no un defecto (5):**
+`SFX_BOSSES_GAVILAN_DIVE`, `SFX_BOSSES_GAVILAN_MASK_BEAM`,
+`SFX_BOSSES_PABURU_WAVE`, `SFX_BOSSES_RELIC_APPEAR`, `SFX_BOSSES_REY_SPIT`,
+`SFX_BOSSES_REY_SPLIT` — pertenecen a ataques de jefes de estudiantes.
+`ACHIEVEMENT_PROGRESS` sigue reservado, como dice el propio código.
+
+La recomendación de §6 que **sí sigue viva**: los SFX se suscriben sólo dentro
+de `StageScene`, así que un sonido emitido desde un menú no suena.
 
 ---
 

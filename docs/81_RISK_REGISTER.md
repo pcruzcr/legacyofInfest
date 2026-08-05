@@ -4,7 +4,7 @@ title: "Legacy of InFest — Risk Register"
 aliases: ["Risk Register"]
 tags: ["risk", "register", "management"]
 description: "Academic/pedagogical risks and mitigation"
-source: "docs/31_RISK_REGISTER.md"
+source: "docs/81_RISK_REGISTER.md"
 date_processed: "2026-07-14"
 ---
 
@@ -62,7 +62,7 @@ Each risk below follows: ID · Category · Description · Likelihood · Impact �
 ### RISK-A02: Student Misunderstands "Individual" Scope and Collaborates Inappropriately
 
 **Category:** Academic / Integrity  
-**Description:** Given the framework's shared codebase and the natural instinct to help classmates debug, a student's submission may contain code substantially written by another student, contradicting the syllabus's individual-project requirement (`00_SYLLABUS_ALIGNMENT_AUDIT.md` §2 A.1).  
+**Description:** Given the framework's shared codebase and the natural instinct to help classmates debug, a student's submission may contain code substantially written by another student, contradicting the syllabus's individual-project requirement (`77_SYLLABUS_ALIGNMENT_AUDIT.md` §2 A.1).  
 **Likelihood:** Medium  
 **Impact:** Medium (academic integrity concern, requires case-by-case adjudication outside this framework's scope)  
 **Mitigation:**
@@ -77,7 +77,7 @@ Each risk below follows: ID · Category · Description · Likelihood · Impact �
 ### RISK-A03: ~~Matplotlib (Syllabus-Mandated) Has No Defined Integration Point~~ — RESOLVED
 
 **Category:** Academic / Compliance  
-**Description:** Per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §3 B.3 and `23_DATA_SCHEMAS.md` §9, Matplotlib is one of six syllabus-mandated libraries. This was flagged as having no concrete call site anywhere in the Legacy of InFest framework/codebase.  
+**Description:** Per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §3 B.3 and `23_DATA_SCHEMAS.md` §9, Matplotlib is one of six syllabus-mandated libraries. This was flagged as having no concrete call site anywhere in the Legacy of InFest framework/codebase.  
 **Resolution (Professor-confirmed):** Matplotlib's syllabus role is **classroom/lab instructional use only** — used in lecture demonstrations, lab exercises (e.g., Lab 1–3 per `21_COURSE_SCHEDULE.md` §4), and ad-hoc student exploration (e.g., plotting a histogram while learning Unit VII concepts before translating that understanding into `FilterTools` usage). It is **not** intended to be integrated into the Legacy of InFest framework, engine, or any student Stage/Boss deliverable. No call site needs to exist in `src/`.  
 **Likelihood:** N/A — closed  
 **Impact:** N/A — closed  
@@ -122,7 +122,7 @@ Each risk below follows: ID · Category · Description · Likelihood · Impact �
 **Impact:** High (blocks `FilterTools`/`VisionTools`, which are required from Class 8 onward)  
 **Mitigation:**
 - Test the full `requirements.txt` install on Windows, macOS (Intel and Apple Silicon), and at least one Linux distribution **before** Class 1.
-- Document common failure modes and fixes in a dedicated environment setup guide (`32_ENVIRONMENT_SETUP_GUIDE.md`).
+- Document common failure modes and fixes in a dedicated environment setup guide (`82_ENVIRONMENT_SETUP_GUIDE.md`).
 - Recommend `opencv-python-headless` as a fallback if the standard package conflicts with Pygame CE's own SDL-based windowing on a specific platform (verify this is not actually needed before recommending it — flag as an open verification item).  
 **Owner:** Professor / TA  
 **Status:** Open — requires pre-Class-1 verification pass each trimester
@@ -163,7 +163,7 @@ Each risk below follows: ID · Category · Description · Likelihood · Impact �
 **Impact:** Medium (a saved `.pkl` from a prior trimester's `assets/models/professor_sample.pkl` could break if dependencies are later upgraded)  
 **Mitigation:**
 - Never change the pinned scikit-learn version (`23_DATA_SCHEMAS.md` §9) mid-trimester.
-- Regenerate `assets/models/professor_sample.pkl` (Phase 12, ticket T12.9 in `30_TICKET_BACKLOG.md`) at the start of any trimester where the pin is updated.  
+- Regenerate `assets/models/professor_sample.pkl` (Phase 12, ticket T12.9 in `80_TICKET_BACKLOG.md`) at the start of any trimester where the pin is updated.  
 **Owner:** Professor  
 **Status:** Mitigated by version pinning discipline
 

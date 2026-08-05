@@ -826,4 +826,4 @@ Para reglas de uso, ejemplos de integración y configuración de entorno, consul
 ---
 ## 🔗 Documentos Relacionados
 
-- [[32_ENVIRONMENT_SETUP_GUIDE.md|Environment Setup Guide]]
+- [[82_ENVIRONMENT_SETUP_GUIDE.md|Environment Setup Guide]]

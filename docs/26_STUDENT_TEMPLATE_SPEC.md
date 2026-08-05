@@ -13,14 +13,14 @@ date_processed: "2026-07-14"
 **Document ID:** LOI-TEMPLATE-026  
 **Version:** 1.0.0  
 **Status:** Official  
-**Compatibility:** Requires `00_SYLLABUS_ALIGNMENT_AUDIT.md`, `22_API_CONTRACTS.md`, `23_DATA_SCHEMAS.md`, `21_COURSE_SCHEDULE.md`  
+**Compatibility:** Requires `77_SYLLABUS_ALIGNMENT_AUDIT.md`, `22_API_CONTRACTS.md`, `23_DATA_SCHEMAS.md`, `21_COURSE_SCHEDULE.md`  
 **Audience:** Professor, AI coding assistants (Claude Code, Cline, OpenCode, Codex)
 
 ---
 
 ## 1. Purpose
 
-`00_SYLLABUS_ALIGNMENT_AUDIT.md` §7 and `03_ARCHITECTURE.md` §1 both reference `student_templates/stage_template/` and `student_templates/boss_template/` as the canonical starting point every student copies in Class 1 (per `21_COURSE_SCHEDULE.md`). No prior document defines what those template files actually contain. This document is that definition — exact file contents, placeholders, and the README a student fills in.
+`77_SYLLABUS_ALIGNMENT_AUDIT.md` §7 and `03_ARCHITECTURE.md` §1 both reference `student_templates/stage_template/` and `student_templates/boss_template/` as the canonical starting point every student copies in Class 1 (per `21_COURSE_SCHEDULE.md`). No prior document defines what those template files actually contain. This document is that definition — exact file contents, placeholders, and the README a student fills in.
 
 **Onboarding target (per `25_IMPLEMENTATION_ROADMAP.md` §18):** A student must be able to copy a template, rename it to their assignment, and have a *running* (if empty) Stage or Boss within 15 minutes of starting Class 1.
 
@@ -364,7 +364,7 @@ ___________________________
 
 ## 9. Relationship to Student Assignment Folders
 
-Once a student completes the 15-minute onboarding copy-and-rename, their working folder lives at `src/stages/<assignment_id>/` (per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §7 and `03_ARCHITECTURE.md` §1) and is **no longer** part of `student_templates/`. The template directory itself is never modified after initial professor setup — it is read-only scaffolding that every student copies from independently, so one student's in-progress work never collides with another's, consistent with the individual-assignment model confirmed in `00_SYLLABUS_ALIGNMENT_AUDIT.md` §2 A.1.
+Once a student completes the 15-minute onboarding copy-and-rename, their working folder lives at `src/stages/<assignment_id>/` (per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §7 and `03_ARCHITECTURE.md` §1) and is **no longer** part of `student_templates/`. The template directory itself is never modified after initial professor setup — it is read-only scaffolding that every student copies from independently, so one student's in-progress work never collides with another's, consistent with the individual-assignment model confirmed in `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2 A.1.
 
 
 --- Traducción al Español ---

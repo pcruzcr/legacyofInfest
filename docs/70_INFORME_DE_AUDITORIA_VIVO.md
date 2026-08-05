@@ -53,12 +53,12 @@ que la suite pase. La suite hay que correrla en la máquina con el `.venv`.
 | AUD-168 | ALTA | `docs/22_API_CONTRACTS.md` §5.2, §5.3, §6.3 | contrato de API que documenta `AssetLoader.load_spritesheet → SpriteSheet`, un módulo `utils/spritesheet.py` y cuatro clases `*Transition` en `scene/transitions.py`. Los dos módulos se retiraron en AUD-098 y AUD-111; el método real es `load_sprite_sheet → list[pygame.Surface]` | **Corregido** |
 | AUD-168 | ALTA | `docs/48_SCREEN_TRANSITIONS.md` §1, §5 | describe una arquitectura de dos capas y da `199 lines` para un fichero que no existe | **Corregido** |
 | AUD-168 | MEDIA | `docs/22_API_CONTRACTS.md` §6.4 | firmas divergentes: doc `start_wipe(direction="left_to_right", duration=0.5)`, real `start_wipe(direction="left", duration=0.4, old_surface=None)`; doc `start_circle(expand=…)`, real `expanding=…` | **Corregido** |
-| AUD-168 | MEDIA | `docs/00_SYLLABUS_ALIGNMENT_AUDIT.md`, `10_LIBRARIES_AND_DEPENDENCIES.md`, `20_ASSET_BIBLE.md` | los tres mandan ejecutar `validate_assets.py` desde `tools/`; el script vive en `scripts/` | **Corregido** |
+| AUD-168 | MEDIA | `docs/77_SYLLABUS_ALIGNMENT_AUDIT.md`, `10_LIBRARIES_AND_DEPENDENCIES.md`, `20_ASSET_BIBLE.md` | los tres mandan ejecutar `validate_assets.py` desde `tools/`; el script vive en `scripts/` | **Corregido** |
 | AUD-168 | MEDIA | `CONTRIBUTING.md` | «369 tests» (hay 2.142 funciones definidas); «Branch from `main`» (las ramas son `prod`/`pprod`/`dev`); `ruff check src/` y `mypy src/` en vez de los alcances reales del CI; sección *New Enemy* que ignora la decisión AUD-046 | **Corregido** |
 | AUD-168 | MEDIA | `docs/24_TEST_PLAN.md` §12.1 y árboles | declara fixtures `reference_sprite_32x32.png` y `sample_dataset_tiny.npz` que no existen; las entradas se generan en `conftest.py` | **Corregido** |
 | AUD-168 | BAJA | `docs/17_BOSS_SPEC.md` | ruta `src/stages/boss_gavilan/` → real `src/stages/stage3_4_boss_gavilan/` | **Corregido** |
 | AUD-168 | BAJA | `KNOWN_GAPS.md` GAP | `game_context.py` situado en `framework/core/` → vive en `src/engine/core/game_context.py` | **Corregido** |
-| AUD-168 | BAJA | `docs/30_TICKET_BACKLOG.md`, `50_IMPROVEMENT_ROADMAP.md` | tickets y tabla de migración apuntando a los dos módulos retirados, y un ejemplo que carga `stage0.tmx` desde `assets/maps/` sin su directorio | **Corregido** |
+| AUD-168 | BAJA | `docs/80_TICKET_BACKLOG.md`, `50_IMPROVEMENT_ROADMAP.md` | tickets y tabla de migración apuntando a los dos módulos retirados, y un ejemplo que carga `stage0.tmx` desde `assets/maps/` sin su directorio | **Corregido** |
 | AUD-169 | MEDIA | `docs/00_MASTER_INDEX.md` §2 | la «lista autoritativa» no mencionaba 13 documentos; la fila 68 apuntaba a un documento de `niveles/` | **Corregido** |
 
 ### Corrección estructural
@@ -80,13 +80,13 @@ porque `pytest` no era instalable en el entorno de auditoría):
 
 ```text
 ANTES
-FAIL  00_SYLLABUS_ALIGNMENT_AUDIT.md: ['tools/validate_assets.py']
+FAIL  77_SYLLABUS_ALIGNMENT_AUDIT.md: ['tools/validate_assets.py']
 FAIL  10_LIBRARIES_AND_DEPENDENCIES.md: ['tools/validate_assets.py']
 FAIL  17_BOSS_SPEC.md: ['src/stages/boss_gavilan/boss_gavilan.py']
 FAIL  20_ASSET_BIBLE.md: ['tools/validate_assets.py']
 FAIL  22_API_CONTRACTS.md: ['src/engine/scene/transitions.py', 'src/engine/utils/spritesheet.py']
 FAIL  24_TEST_PLAN.md: ['tests/fixtures/reference_sprite_32x32.png']
-FAIL  30_TICKET_BACKLOG.md: ['src/engine/scene/transitions.py', 'src/engine/utils/spritesheet.py', 'src/stages/stage0/stage0.tmx']
+FAIL  80_TICKET_BACKLOG.md: ['src/engine/scene/transitions.py', 'src/engine/utils/spritesheet.py', 'src/stages/stage0/stage0.tmx']
 FAIL  48_SCREEN_TRANSITIONS.md: ['src/engine/scene/transitions.py']
 FAIL  50_IMPROVEMENT_ROADMAP.md: ['assets/maps/stage0.tmx', 'src/engine/scene/transitions.py']
 FAIL  59_STAGE_0_REGENERADO.md: ['src/engine/scene/transitions.py']
@@ -1037,3 +1037,818 @@ absoluta que se rompía con cada opción nueva del menú: con BOSS RUSH pasó a 
 con RECORDS a 8. Ahora comprueba el orden relativo, que es lo que se quería
 decir. Y `test_ui_consistency` reclamaba `boss_rush_entry.py` como escena sin
 migrar: vive en `scenes/` pero son dos funciones que no dibujan un píxel.
+
+---
+
+## Iteración 10 — 2026-08-02 — El parry conectado al aturdimiento
+
+### AUD-206 — dos mitades escritas que no se hablaban
+
+`EnemyState.STUNNED` entró en AUD-051 con todo lo necesario: la rama de la
+máquina de estados, el temporizador, la salida a `RECOVER` y cinco pruebas en
+`test_enemy_state_machine.py`. `EnemyBase.stun()` estaba igual de completo.
+
+Lo que se midió antes de tocar nada:
+
+| Pieza | Estado real |
+|---|---|
+| `EnemyBase.stun()` | 0 llamantes en producción — sólo lo invocaban las pruebas |
+| `STUNNED` leído por el motor | 1 sitio (`boss_base.py:362`), y sólo para consultarlo |
+| Parry del jugador | ponía al enemigo en `HURT` 0,3 s |
+
+`HURT` es el estado en el que cae un enemigo con un golpe normal, y sale de él
+directo a `ALERT`. Es decir: parar —la acción que exige acertar una ventana de
+0,2 s— devolvía exactamente lo mismo que apartarse, y encima más caro. El
+combate premiaba esquivar y nunca leer, que es justo lo contrario de lo que el
+docstring del propio enum promete: «`STUNNED` — aturdido por una parada o un
+golpe pesado. Recompensa la defensa activa en lugar de premiar sólo esquivar».
+
+Es el mismo patrón que AUD-149 y AUD-127: dos piezas correctas, probadas por
+separado, y ningún camino que vaya de una a la otra. **Una prueba que llama a
+`stun()` a mano no descubre que nadie la llama.** Por eso las pruebas nuevas
+entran por `_check_player_contact`, que es lo que ejecuta `StageScene`.
+
+**El cambio.** El bloque de parry llama a `self.stun(self.PARRY_STUN_DURATION)`
+en vez de asignar `HURT`. Se añade la constante de clase
+`PARRY_STUN_DURATION = 0.9` —holgadamente por encima de los 0,3 s de antes, o
+no cambiaría nada para quien juega— que cada subclase puede subir para los
+pesados y bajar para los ágiles. El empuje y el tinte del golpe se conservan.
+
+Se extiende a los tres enemigos a distancia (`archer`, `caster`, `shooter`):
+desviar el proyectil lo borraba y nada más, y el que disparaba volvía a
+disparar. Aturdirlo es la única recompensa con sentido contra un enemigo al que
+no alcanzas — da el hueco para acercarse.
+
+De paso, `LAUNCHED` se suma a la guarda de `stun()`. Estaba duplicada en el
+bloque de parry y ahí no alcanzaba a quien llamase a `stun()` desde una entrega;
+un enemigo por los aires tiene su propia rama con gravedad y meterlo en
+`STUNNED` lo dejaba congelado a media altura.
+
+**Fuera de alcance a propósito:** `stage1_1/entities/jungle_frog.py` y
+`stage1_2_la_soda/entities.py` tienen su propio bloque de parry y siguen sin
+aturdir. Son entregas de estudiantes (invariante 1) y no se tocan.
+
+### Gates tras los cambios
+
+```
+pytest tests/test_parada_que_aturde.py -q         → 7 passed
+pytest tests/test_enemy_state_machine.py
+       tests/test_flechas_y_punalada.py
+       tests/test_boss_encounter.py -q            → 110 passed
+ruff check <los 5 ficheros tocados>               → All checks passed
+mypy <los 4 módulos de src tocados>               → no issues found
+```
+
+Las 4 pruebas que fijan el comportamiento nuevo fallaban antes del cambio; las
+3 de control (contacto sin parry, cadáver, `LAUNCHED`) pasaban ya y siguen
+pasando.
+
+### AUD-207 — la ropa daba su bonificación guardada en la mochila
+
+`engine.core.inventory` ya distinguía dos familias de objetos por el campo
+`slot`, y `equip()` / `unequip()` / `get_equipped()` estaban escritos. Pero
+`get_total_hp_bonus()` y sus dos hermanas recorrían `_items` entero
+multiplicando por la cantidad, **sin leer `_equipped` ni una vez**. Cuatro
+consecuencias, medidas antes de tocar nada:
+
+| Lo que hacías | Lo que pasaba |
+|---|---|
+| Comprar una prenda | Ya dabas su bonificación sin ponértela |
+| Comprar las dos capuchas | Sumaban las dos, pese a compartir `slot="head"` |
+| Comprar la misma prenda dos veces | Valía el doble |
+| Vender una prenda equipada | Te quedabas la bonificación: `sell()` borraba de `_items` y no tocaba `_equipped` |
+
+`equip()` era decorativo: escribía en un diccionario que nadie leía. Y sin
+hueco que obligue a elegir, la tienda vende números en vez de ropa — la única
+estrategia posible es comprarlo todo.
+
+**El cambio.** Las tres funciones pasan por un `_sumar_bonus()` común que trata
+las familias como el catálogo ya decía que eran:
+
+* **mejoras permanentes** (`slot is None`): apilan por cantidad, igual que
+  antes. Los niveles están diseñados contando con que dos vasijas son +2.
+* **ropa**: cuenta una vez y sólo si está en `_equipped`.
+* **habilidades** (`slot="skill"`): no dan estadísticas; `equip()` ya las
+  rechazaba.
+
+Y se cierran los tres caminos por los que se conservaba una bonificación sin la
+prenda, todos del mismo tipo —`_equipped` sobreviviendo a la desaparición del
+objeto— y todos inofensivos mientras nadie leyera ese diccionario:
+
+1. `sell()` desequipa al irse la última copia (con dos, te queda una).
+2. `load()` sólo restaura prendas que de verdad están en `items`; un
+   `inventory.json` editado a mano no regala nada.
+3. Las dos ramas `except` de `load()` vacían también `_equipped`: «empezar de
+   cero» incluye lo que se lleva puesto.
+
+**De paso, un gate en rojo.** `test_guia_del_motor::test_menciona_cada_objeto_del_inventario`
+llevaba fallando desde que el catálogo creció de 6 a 16 objetos:
+`60_GUIA_COMPLETA_DEL_MOTOR.md` §11 seguía publicando «Seis objetos definidos»
+y la tabla vieja. Ahora documenta las tres familias, la regla de equipamiento y
+—explícitamente— qué parte **no** está cableada todavía, para que nadie diseñe
+un nivel contando con una tienda que aún no existe.
+
+### Gates tras los cambios
+
+```
+pytest tests/test_ropa_que_hay_que_ponerse.py -q     → 14 passed
+pytest tests/test_inventario_recoleccion.py
+       tests/test_gameplay_integration.py -q         → 44 passed (con el anterior)
+pytest tests/test_guia_del_motor.py -q               → 22 passed (estaba en rojo)
+ruff check inventory.py + la prueba nueva            → All checks passed
+mypy src/engine/core/inventory.py                    → no issues found
+```
+
+6 de las 14 pruebas fallaban antes del cambio. Las de la clase
+`TestLasMejorasDelMapaSiguenIgual` son el control: fijan que las mejoras
+recogidas en el nivel siguen apilando sin equiparse, que es lo que no podía
+romperse.
+
+---
+
+## Iteración 11 — 2026-08-03 — La economía, enchufada (GAP-029, resuelto)
+
+El patrón de esta iteración es el de siempre en este proyecto, y ya van diez:
+**piezas correctas, probadas por separado, sin ningún camino que vaya de una a
+la otra.** El modelo de datos de la economía estaba entero —`coin`,
+`add_coins`, `buy`, `sell`, `equip`, `has_skill`, `ScoreSystem`— y medido sobre
+`src/`, fuera de `inventory.py`, tenía **cero llamantes**.
+
+Cinco lotes cierran las cuatro conexiones que faltaban.
+
+### AUD-218 — nadie soltaba una sola moneda
+
+`EnemyBase._die()` emitía `ENEMY_DIED`; la escena lo escuchaba **sólo para
+lanzar partículas**. El saldo del jugador no podía subir jugando: la única
+forma de tener monedas era editar `data/inventory.json` a mano.
+
+El circuito completo, que es como se prueba y no pieza a pieza:
+
+```
+_die() → ENEMY_DIED → SenalesDeEscenario._on_enemy_died
+→ Recogible("coin") en el suelo → InteractableSystem._recoger()
+→ EVENTO_RECOGIDO → _on_item_picked → Inventory.collect("coin", n)
+```
+
+Tres piezas nuevas, todas pequeñas:
+
+* `Recogible.cantidad` (por defecto **1**, así que ninguna de las 26 entregas
+  cambia). Permite una bolsa de monedas sin poner veinte objetos en el suelo:
+  veinte recogibles por jefe cuestan colisiones cada fotograma y tapan el sitio
+  donde murió.
+* `score_system.coins_for()`, que comparte con los puntos la lectura del
+  `entity_id` (`_tipo_de()`) para que no haya **dos maneras distintas de decir
+  «esto es un jefe»**. Un peón da 2 y un jefe 25: con la ropa entre 30 y 50, la
+  primera prenda sale a una docena de enemigos.
+* `InteractableSystem.soltar_botin()`, que descarta el cadáver que ya pagó. El
+  estado vive con el mundo, no en el mixin de señales, porque se va con el
+  escenario.
+
+`Inventory.collect()` avisa **una vez** por recogida y no una por unidad: una
+bolsa de diez encolaba diez notificaciones de tres segundos y tapaba la
+pantalla medio minuto.
+
+### AUD-219 — el marcador que el documento no declaraba
+
+`ScoreSystem` estaba escrito entero y nadie lo instanciaba. Sin instancia no
+hay suscripción, así que matar enemigos no sumaba un punto.
+
+**Y la docstring del módulo mentía.** Decía que «el HUD documentaba un slot de
+score en `09_HUD_SPEC.md`». Comprobado con `grep`: **cero apariciones**. La
+especificación no tenía ninguna región de puntuación, así que el módulo no
+cerraba un hueco documentado sino uno real y sin declarar. La afirmación se
+había propagado a `KNOWN_GAPS.md`; las dos están corregidas.
+
+El orden importa y por eso se hizo así: primero la región en el contrato
+(`09_HUD_SPEC.md` §2.1, `| Score | 124 | 2 | 128 | 14 |`), después el dibujo, y
+una prueba que comprueba que **lo que se pinta cabe en lo que el doc promete**.
+El doc es lo que los estudiantes leen para colocar su propia interfaz.
+
+`bind_bus()` sigue el patrón de `AchievementSystem`: rebindear **muda** la
+suscripción en vez de añadirla. Sin eso, cada muerte sumaría el doble en cuanto
+el jugador pasara de un nivel al siguiente.
+
+El HUD enseña puntos **y** monedas juntos: los puntos dicen cómo va la partida,
+las monedas si ya alcanza para comprar. El saldo se lee del inventario y no se
+guarda aparte — las monedas *son* el objeto `coin`, y duplicar el número
+acabaría con los dos desincronizados en cuanto la tienda cobre algo.
+
+> **Divergencia anotada, no arreglada:** `09_HUD_SPEC.md` §2.1 y `hud.py` ya no
+> coincidían antes de esto —el doc pone los corazones en Y=20 y el código los
+> dibuja en Y=6—. Es anterior a AUD-219 y queda fuera de este lote; la prueba
+> de solape se escribió contra la geometría **real** del HUD justamente porque
+> comprobarlo contra la tabla del doc no diría nada sobre lo que se ve.
+
+### AUD-220 — comprar ropa dejaba al jugador peor que antes
+
+AUD-207 convirtió una bonificación automática en una que exige una acción —
+equiparse. **Esa acción no existía en ninguna pantalla.** `Inventory.equip()`
+seguía sin un solo llamante en la interfaz, así que la única forma de ponerse
+algo era una consola de Python, y comprar una prenda era pagar por nada.
+
+`InventoryScene` ahora equipa y desequipa con `CONFIRM`. Antes `CONFIRM`
+**salía de la pantalla**, además de `CANCEL`: un atajo redundante que ocupaba
+la única tecla natural para «ponerse esto». Lo puesto se marca con borde y
+etiqueta, porque un hueco invisible no deja saber si ya llevas la capucha o si
+pulsaste y no pasó nada. Las monedas dejan de ocupar casilla —son el saldo, no
+un objeto que mirar— y pasan a la cabecera.
+
+Un detalle que costó dos intentos: el saldo **no** se puede meter en el
+subtítulo. `draw_screen` traduce la cadena entera, así que un f-string con el
+número dentro no coincide con ninguna entrada del catálogo y dejaría la
+pantalla sin traducir. Lo destapó `test_i18n`, que detectó la entrada huérfana
+`Objetos recogidos` en `en.json`. Y el literal de `_()` tiene que ir suelto, no
+anidado en un f-string: `check_translations` no lo ve ahí dentro.
+
+### AUD-221 — la tienda
+
+`buy()` y `sell()` estaban probados por unidad desde AUD-207 y sin llamante.
+`src/engine/scenes/shop_scene.py`, entrada `SHOP` en el menú del título, junto
+a `INVENTORY` porque son las dos mitades de lo mismo: aquí se compra y allí se
+pone.
+
+Decisiones:
+
+* **Entrada de menú, no mercader en el mapa.** Un interactuable nuevo obligaría
+  a tocar el cargador de TMX, la rúbrica del calificador y las 26 entregas. La
+  pantalla no cambia nada de lo que ya funciona.
+* **Izquierda y derecha alternan comprar/vender.** Arriba y abajo ya recorren
+  la lista y `CONFIRM` actúa en el modo activo: no hace falta una tecla nueva
+  que rebindear en las opciones y documentar.
+* **La lista sale de `_ITEM_DEFS`**, no de una copia a mano. Una prueba
+  compara el conjunto contra el catálogo. Escribirla a mano es exactamente
+  como la guía del motor acabó publicando seis objetos cuando ya había
+  dieciséis.
+* **Quien mueve el saldo sigue siendo el inventario.** La tienda no resta
+  monedas: llama a `buy()`, que comprueba y devuelve `False` si no alcanza. Esa
+  es la comprobación que evita el saldo negativo, y se prueba con las veinte
+  pulsaciones seguidas del caso del aula.
+
+### Un número que se corrigió al escribir esto
+
+La primera versión de esta iteración decía «18 passed» de
+`test_ropa_que_hay_que_ponerse.py`. Son **14**. Invariante 6: se ejecutó y se
+corrigió antes de dejarlo escrito.
+
+### Gates tras los cambios
+
+```
+pytest (14 ficheros: los 6 nuevos + vecinos + gates)  → 247 passed (×2 pasadas)
+ruff check <alcance de CI>                            → All checks passed
+mypy <mypy_scope.txt>                                 → no issues found in 20 source files
+python scripts/check_translations.py --ci             → Catálogos en orden
+```
+
+**Por qué no hay aquí un número de la suite completa.** Se ejecutó tres veces y
+dio tres conjuntos de fallos distintos con el mismo código. La causa se midió,
+no se supuso: `find -newermt '-20 minutes'` mostró `app.py`, `gl_pipeline.py`,
+`shaders.py`, `drawing_system.py` y `stage_loader.py` modificados durante la
+propia ejecución, **ninguno tocado por esta iteración**. Otra sesión estaba
+escribiendo en el repositorio en paralelo. La prueba que lo delata es
+`test_la_interfaz_se_dibuja_despues_del_post_procesado`: es una comprobación de
+`inspect.getsource` que no depende de píxeles ni de orden, y falló en una
+pasada y pasó en la siguiente.
+
+Lo que sí se puede afirmar: las 247 pruebas de la superficie tocada pasan de
+forma determinista en dos pasadas seguidas, y los tres gates de CI están en
+verde. Un número honesto de la suite completa exige un árbol quieto.
+
+Se cerraron por el camino tres gates que sí estaban rojos:
+`test_architecture_doc_matches_tree` (faltaban `score_system.py`,
+`shop_scene.py` y `boss_rush_entry.py` en el árbol de `03_ARCHITECTURE.md`),
+`test_guia_del_motor` y el único error de `ruff` del repositorio.
+
+`test_particion_de_stage_scene` sigue rojo y merece una nota: `stage_scene.py`
+estaba en 1.695 líneas en el último commit, ya 195 por encima del presupuesto
+de 1.500. Esta iteración le añade 12 (medido con `git diff --numstat`).
+**No se subió el presupuesto** —el propio mensaje del test lo prohíbe—;
+extraer otro grupo cohesivo a `stage_parts/` es un lote aparte, y ese fichero
+tiene trabajo en paralelo encima.
+
+Los otros fallos observados y no atribuibles a esta iteración:
+`test_logros_por_estudiante` ×3 y `test_teaching_tools`, que ya estaban rojos
+al empezar (comprobado con `git stash` en la iteración 10).
+
+### Numeración: dos colisiones reales
+
+`CLAUDE.md` §4 dice que el último `AUD-NNN` se comprueba con
+`git log --oneline -1`. **Da un número ya ocupado**: el último commit era
+AUD-196 y el árbol de trabajo llegaba a AUD-205, y horas después a AUD-217 por
+trabajo en paralelo de stage4_1. Lo mismo pasó con `GAP-027`, que esta
+iteración y AUD-225 tomaron a la vez; se renumeró **el de aquí** a `GAP-029`
+—siete ficheros propios— para no tocar los ajenos en vuelo.
+
+### AUD-238 — las habilidades de jefe, y la invariante que decidió el diseño
+
+`skill_double_jump`, `skill_dash` y `skill_parry` llevaban en el catálogo desde
+el principio, con `slot="skill"` y `has_skill()` para consultarlas. **Nadie las
+concedía y nadie las consultaba**: el doble salto lo gobierna
+`settings.PLAYER_AIR_JUMPS` y el dash `_can_dash`, disponibles desde el primer
+fotograma del primer nivel. Tres entradas de catálogo que no significaban nada.
+
+Este lote es el único de la iteración donde cablear las dos mitades **habría
+sido un error**. La invariante 2 de `CLAUDE.md` dice que las 26 entregas siguen
+funcionando sin tocar una línea; condicionar el doble salto sin más convierte
+en imposible cualquier salto que un estudiante diseñara contando con él. Un
+nivel entregado, corregido y aprobado dejaría de poder completarse. Eso no es
+cerrar un hueco: es romper veintiséis entregas.
+
+Así que se parte en dos mitades con riesgos distintos:
+
+| | Riesgo | Decisión |
+|---|---|---|
+| **Soltar** la habilidad | Ninguno: un recogible más en el suelo | Activo ya |
+| **Exigirla** | Rompe niveles existentes | `PLAYER_SKILLS_REQUIRE_UNLOCK = False` por defecto |
+
+Con el candado apagado, `_tiene_habilidad()` devuelve `True` **sin tocar el
+inventario**. No es que se consulte y salga que sí: es que no se consulta. Esa
+distinción es la prueba `TestConElCandadoApagadoNadaCambia`, que es la que no
+puede ponerse en rojo nunca.
+
+Con el candado encendido nunca se bloquean el salto desde el suelo ni los
+fotogramas de coyote — el coyote es el salto normal llegando tarde, no un salto
+aéreo, y bloquearlo dejaría al jugador sin poder subir un escalón.
+
+**La trampa que la prueba destapó.** La primera versión dejaba
+`skill_drop = ""` en los cuatro jefes. Con eso, encender el candado volvía el
+dash **inalcanzable para siempre**: mecánica borrada, no progresión. Lo pilló
+`test_hay_un_jefe_para_cada_habilidad_condicionada`, escrita justo para eso.
+`BossVenado` concede `skill_dash` y `BossRey` `skill_double_jump`, una línea
+cada uno — y son el material que los estudiantes copian, así que el ejemplo
+está donde lo van a leer.
+
+De paso, un hallazgo de alcance: **`discover_stages()` no llega a todos los
+jefes.** Registra escenarios, y `BossVenado` vive en un módulo que sólo se
+importa al cargar su escena, así que un recorrido por `__subclasses__()` tras
+`discover_stages()` ve tres de cuatro. La prueba recorre el árbol de ficheros;
+es el mismo problema que AUD-144 arregló en la guía del motor.
+
+### Dos cosas del entorno, no del código
+
+**`mypy` reventó con un `INTERNAL ERROR`** —`AssertionError: Cannot find
+component '_ufunc_config' for 'numpy.core._ufunc_config._ErrFunc'`—. Es la
+caché incremental de `.mypy_cache` guardada contra una numpy 1.x; `numpy.core`
+pasó a `numpy._core` en 2.x. Se borra la caché y vuelve a pasar. No es un
+defecto del proyecto, pero conviene saberlo antes de perder media hora.
+
+**Los dos únicos errores de `ruff` que quedan** en el alcance de CI están en
+`src/engine/render/gl_pipeline.py` (`w` y `h` asignadas y sin usar), fichero de
+la sesión en paralelo y no tocado aquí.
+
+### Siguiente iteración
+
+`GAP-029` queda cerrado. Lo que sigue abierto y anotado:
+
+* `test_particion_de_stage_scene` — `stage_scene.py` a 1.707 líneas contra un
+  presupuesto de 1.500. Extraer un grupo cohesivo a `stage_parts/`.
+* `skill_parry` no la suelta nadie, y es deliberado: parar no está
+  condicionado, lo aprende el jugador. Queda en el catálogo para quien quiera
+  usarla en su jefe.
+* Los recogibles se dibujan todos del mismo color: una moneda de oro y una
+  llave son idénticas en pantalla. `DrawingSystem._draw_interactables` podría
+  usar el `icon_color` que el catálogo ya define para cada objeto.
+* `EnemyCharger` lleva su propio aturdimiento con un booleano `_is_stunned` y
+  reutiliza `self._stun_timer`, el mismo atributo que usa la rama `STUNNED` de
+  la base (AUD-206). Parar a un charger a media embestida la reanuda al salir;
+  es anterior a esta auditoría, pero con 0,9 s de aturdimiento se nota más.
+
+---
+
+## Iteración 12 — 2026-08-03 — La tubería de GPU no hacía nada
+
+Ocho hallazgos alrededor del renderizado. El orden en que se cuentan no es el
+orden en que aparecieron: **AUD-223 se encontró el último y explica a los
+demás**, así que va primero.
+
+La lección de la iteración cabe en una frase: *todo el post-procesado en GPU
+estaba probado y ninguna prueba lo ejecutaba*. Las pruebas usan
+`SDL_VIDEODRIVER=dummy`, que no da contexto OpenGL, así que verificaban el
+cableado en Python y jamás un píxel. Nada de esto se vio hasta ejecutar la
+tubería contra una tarjeta de verdad.
+
+### AUD-223 — todas las pasadas ejecutaban el sombreador de copia
+
+`_create_quad` construía **un** `VertexArray` atado a `_passthrough_prog`:
+
+```python
+self._quad_vao = ctx.vertex_array(self._passthrough_prog, ...)
+```
+
+y `_run_shader_pass(program, ...)` fijaba los uniformes de `program` —el del
+bloom, el de la viñeta, el de la iluminación— para después dibujar
+`self._quad_vao`. En moderngl **el programa vive dentro del VertexArray**: es
+el que se ejecuta al llamar a `render()`, y el argumento `program` no influía
+en nada.
+
+Medido en la máquina de auditoría (Intel HD Graphics 530, OpenGL 4.6, contexto
+real): encendiendo bloom, iluminación, viñeta, aberración cromática, refracción
+o rayos, la imagen final salía **byte a byte idéntica** a no encender ninguno.
+Diferencia media 0,000, pico 0. El coste sí se pagaba —una pasada de pantalla
+completa por efecto—; el efecto no llegaba nunca.
+
+No se notó porque los mismos efectos existen por CPU en
+`framework/vfx/post_processing.py` y ésos sí se dibujaban: la pantalla se veía
+correcta y lo que la tarjeta aportaba era exactamente nada.
+
+Arreglo: un VAO por programa, cacheado, compartiendo los mismos búferes.
+`destroy()` los libera todos, no sólo uno.
+
+La prueba (`test_cada_pasada_ejecuta_su_shader.py`) no mide píxeles —en CI no
+hay GPU— sino la causa: **cada pasada dibuja con el VAO de su propio
+programa**. Comprobación de mutación: devolviendo la línea a
+`self._quad_vao.render(...)`, 2 de 5 pruebas caen.
+
+### AUD-224 — el bloom de la GPU era invisible
+
+Con las pasadas ya ejecutándose, el bloom del sombreador resultó ser 30 veces
+más débil que el de CPU y **no responder a la intensidad**. Dos causas: el
+kernel difuminaba a ±4 píxeles (el de CPU esparce el halo reduciendo y
+ampliando la imagen), y el umbral se aplicaba *después* de difuminar, que es el
+orden que destruye el halo — la media de un vecindario que mezcla una lámpara
+con el fondo cae por debajo del umbral justo donde el halo tiene que estar.
+
+Diferencia media contra la escena sin bloom, a intensidad 0,25 / 0,50 / 0,80:
+
+| | 0,25 | 0,50 | 0,80 |
+|---|---|---|---|
+| CPU | 5,44 | 7,01 | 8,81 |
+| GPU antes | 0,21 | 0,23 | 0,25 |
+| GPU después | 1,79 | 3,38 | 5,28 |
+
+Esto importaba más de lo que parece: **AUD-222 apaga el bloom de CPU porque «lo
+hace la GPU»**. Sin AUD-223 y AUD-224, ese cambio le habría quitado el bloom al
+juego en toda máquina con tarjeta, en silencio.
+
+### AUD-222 — el post-procesado se aplicaba dos veces
+
+`App` arranca con `use_gl=True` y `StageScene.draw` llamaba a
+`PostProcessing.apply(surface)` **sin mirar si había GL**, para después subir
+esa misma superficie al `GLRenderer`. La viñeta se dibujaba dos veces y el
+bloom se calculaba por CPU para que el sombreador lo repitiera.
+
+El reparto vive en `engine/core/gpu_effects.py` y lo fija la raíz de
+composición, que es la única que sabe si el contexto GL se creó de verdad.
+`PostProcessing` está en `framework/` y no puede preguntar por `App` ni
+importar `moderngl` sin romper las reglas de capas que vigila
+`test_layering.py`.
+
+Sólo se delega lo que las dos tuberías hacen igual. Se comprobó pasada por
+pasada: **destello y tinte** no tienen sombreador; **corrección de color** y
+**desenfoque de movimiento** existen en los dos lados pero no son el mismo
+efecto; **daltonismo** tiene `colorblind_frag` escrito y nadie le pasa nunca el
+modo del jugador —`GLRenderConfig.colorblind_mode` vale 0 y `App` no lo toca—,
+así que el sombreador está escrito y jamás se ejecuta. Queda anotado.
+
+La viñeta se apaga en la GPU y no al revés: la de CPU **crece cuando al jugador
+le queda poca vida**, y la configuración de GL es estática.
+
+Medido tras AUD-224, con la configuración real del juego:
+
+```
+bloom en GPU                     0,19 ms
+bloom en CPU                     2,71 ms
+ahorro al delegar               +2,6 ms/fotograma  (15 % del presupuesto)
+camino GL completo               7,96 ms  -> cabe en 16,67
+```
+
+Ese 15 % es la cifra que la propuesta V2 afirmaba sin medir. Ahora está medida.
+
+### AUD-213 — la niebla de guerra recortaba agujeros de borde duro
+
+La máscara era un círculo sólido a alfa 255 restado del velo: el agujero
+pasaba de revelado a opaco en un píxel. Y el constructor aceptaba `hardness`,
+lo guardaba, y **ningún sitio del repositorio lo leía**: un contrato anunciado
+en la firma y en `docs/46_FOG_OF_WAR.md` que el módulo no cumplía.
+
+Ahora la máscara es un disco degradado con caída *smoothstep* y `hardness`
+decide dónde empieza la caída. La técnica se copió de
+`LightSource.build_gradient`, que ya construía exactamente ese disco.
+
+### AUD-214 — el dibujado de partículas leía numpy partícula a partícula
+
+`update` llevaba desde AUD-006b siendo SoA con numpy, pero `draw` hacía lo
+contrario: cinco accesos escalares, tres conversiones y dos comparaciones por
+partícula. Con 2.008 partículas vivas: **8,02 ms**, la mitad del fotograma.
+Filtrando y convirtiendo los arrays de una pasada y bajándolos a listas de
+Python: **3,11 ms** (2,6x). Con 508 partículas, 1,97 -> 0,56 ms (3,5x).
+
+La prueba compara contra la implementación anterior copiada literalmente, y
+exige **los mismos bytes**, no un parecido. `Surface.blits()` —la vía obvia— se
+descartó midiendo: sólo 4 % mejor con 508 partículas, peor con 2.008, y además
+mezcla en vez de escribir, así que pierde el alfa sobre destinos `SRCALPHA`.
+
+### AUD-215 — aberración cromática en los impactos
+
+Pasada nueva: desplaza R y B en direcciones opuestas, radialmente desde el
+centro. Va después del bloom y la iluminación y antes de la viñeta, el
+daltonismo y el desenfoque; cada una de esas cinco posiciones está razonada en
+el propio `render()`.
+
+Cableada de punta a punta: al recibir daño, `stage_parts/senales.py` pide el
+golpe por `gpu_effects`, `App` lo recoge y lo deja decaer exponencialmente.
+La fuerza sube cuanta menos vida queda — la misma señal que ya dan la viñeta
+de daño y la sacudida, en un canal que el jugador lee sin mirar la barra.
+
+### AUD-216 — refracción real bajo el agua
+
+`WaterEffect` no refractaba nada: dibujaba líneas horizontales teñidas cuya X
+oscila con un seno, encima de la escena. El fondo que se ve a través del agua
+no se distorsionaba, porque nada leía los píxeles de debajo.
+
+La pasada nueva desplaza la coordenada de muestreo dentro de una región, con
+desvanecido en los bordes. El riesgo real estaba en las coordenadas: la escena
+se sube con `pygame.image.tostring(..., True)`, o sea volteada, así que el
+borde superior del rectángulo de pygame es el valor **mayor** de v. Esa
+conversión (`region_to_gl_uv`) es lógica pura y tiene nueve pruebas propias.
+
+Con GL, el sombreador **sustituye** a `WaterEffect` en vez de sumarse: dibujar
+los dos sería la duplicación que AUD-222 acaba de quitar del bloom.
+
+### AUD-226 — rayos de luz volumétricos
+
+Dispersión radial sobre el mapa de luz que la tubería ya recibía. Van después
+de la iluminación a propósito: `lighting_frag` es multiplicativo, así que todo
+lo que se sume antes queda aniquilado justo donde un rayo tiene que verse, que
+es la sombra.
+
+De paso se sacó la subida del mapa de luz fuera del `if` de la iluminación:
+los rayos leen el mismo mapa, y dejarla dentro obligaba a subirlo dos veces por
+fotograma (1,9 MB extra por el bus, ~115 MB/s a 60 fps) o a que los rayos sólo
+funcionaran con la iluminación encendida.
+
+El foco lo elige la escena, no la tubería: ésta sólo ve una textura de luz ya
+compuesta, con los focos mezclados. `StageScene` publica la luz **más fuerte
+que esté en pantalla**, ponderando intensidad y radio. Se activa con la
+propiedad de mapa `god_rays`.
+
+### Gates tras los cambios
+
+```
+pytest (suite completa)                   -> 3324 passed, 6 failed, 4 skipped
+pytest (los ficheros de esta iteración)   -> 124 passed
+ruff check <alcance de CI>                -> All checks passed
+mypy <mypy_scope.txt>                     -> no issues found in 20 source files
+scripts/check_tmx_coverage.py --ci        -> Cobertura correcta
+scripts/generate_tmx_reference.py --check -> al día
+```
+
+Verificación en GPU real, que es la que faltaba y la que encontró todo:
+
+```
+GL_RENDERER   Intel(R) HD Graphics 530      GL_VERSION  4.6.0
+diez programas compilan
+las seis pasadas modifican la imagen (antes: ninguna)
+```
+
+**Los 6 fallos restantes son ajenos a esta iteración**:
+`test_logros_por_estudiante` x3, `test_particion_de_stage_scene`
+(`stage_scene.py` sigue por encima del presupuesto) y `test_vista_cenital` x2,
+que pasan en aislado y no los provocan los ficheros de aquí — se comprobó
+ejecutándolos delante.
+
+### AUD-229 — subir el fotograma costaba más que dibujarlo
+
+Con la tubería ya funcionando de verdad se pudo medir el reparto real del
+tiempo, y el mayor consumidor no era ningún efecto: era **entregarle la imagen
+a la tarjeta**. Cada fotograma se hacía
+`pygame.image.tostring(superficie, "RGBA", True)` —una pasada por los 480.000
+píxeles en Python para reordenar canales y voltear— y el `bytes` resultante
+obligaba a moderngl a copiarlo otra vez:
+
+```
+pygame.image.tostring(RGBA, flip=True)    3,458 ms
+texture.write(bytes)                      7,517 ms
+texture.write(memoryview de la surface)   0,200 ms
+```
+
+Escribir el búfer de la superficie no convierte ni copia. A cambio los píxeles
+llegan como los guarda pygame, y las tres diferencias las arregla `upload_frag`
+en la pasada de copia que ya existía: el volteo, el orden de canales y el alfa.
+
+El alfa fue lo que costó encontrar. Una `Surface` sin `SRCALPHA` —la superficie
+interna del juego lo es— tiene la máscara de alfa a cero, así que su cuarto
+byte vale 0. `tostring` lo reponía a 255 al convertir; el búfer crudo no. Con
+`GL_BLEND` activo y `SRC_ALPHA, ONE_MINUS_SRC_ALPHA`, un fragmento con alfa 0
+**no escribe nada**: la pantalla salía entera del color de limpieza, sin un
+solo error en consola. Lo destapó una prueba de identidad —subir y bajar sin
+efectos tiene que devolver la misma imagen—, que ahora vive en el guion de
+verificación en GPU.
+
+El orden de canales se **detecta** de las máscaras de la superficie; si el
+formato no es uno de los dos conocidos se vuelve a `tostring`. Equivocarse aquí
+no da un error, da los colores cambiados.
+
+De paso, la textura del mapa de luz dejó de crearse y soltarse en cada
+fotograma (0,46 ms, 27 ms por segundo a 60 fps en reservar memoria que ya se
+tenía), y se recuperó `_light_fbo`, que se ataba y se limpiaba para nada: la
+pasada siguiente escribía en otro FBO y deshacía el `use()` una línea después.
+
+### AUD-230 — el bloom se difuminaba a resolución completa
+
+AUD-224 ensanchó el kernel del bloom para que se viera, y eso lo hizo caro:
+**3,39 ms**, más que los 2,26 ms del bloom por CPU al que sustituye. O sea que
+delegarlo pasó a salir perdiendo.
+
+Se hace ahora en el FBO de media resolución que la tubería **ya reservaba y no
+usaba nunca** (`_bloom_fbo`, creado desde el primer día). A un cuarto de
+píxeles el mismo kernel cuesta un cuarto, y el halo sale más suave gratis: al
+recomponer, el filtrado bilineal lo interpola de vuelta a tamaño completo, que
+es justamente lo que hace la tubería de CPU con `smoothscale`.
+
+Medido: **3,39 → 1,70 ms**, con el mismo aspecto (1,72 / 3,24 / 5,10 de
+diferencia media frente a 1,79 / 3,38 / 5,28 antes, a intensidad
+0,25 / 0,50 / 0,80). Delegar el bloom vuelve a ser ganancia.
+
+### Rendimiento, de punta a punta
+
+| | antes | después | |
+|---|---|---|---|
+| Subir el fotograma | 10,98 ms | **0,20 ms** | AUD-229 |
+| Bloom en GPU | 3,39 ms | **1,70 ms** | AUD-230 |
+| **Camino GL con la configuración real** | 7,96 ms | **3,76 ms** | 2,1× |
+| Todas las pasadas encendidas | 25,80 ms | **15,32 ms** | 1,7× |
+
+### Gates finales de la iteración
+
+```
+pytest (suite completa)                   -> 3368 passed, 4 failed, 4 skipped
+ruff check <alcance de CI>                -> All checks passed
+mypy <mypy_scope.txt>                     -> no issues found in 20 source files
+scripts/check_tmx_coverage.py --ci        -> Cobertura correcta
+scripts/generate_tmx_reference.py --check -> al día
+scripts/check_translations.py --ci        -> Catálogos en orden
+```
+
+En GPU real (Intel HD 530, OpenGL 4.6): identidad exacta sin efectos
+(diferencia 0,000), y las seis pasadas modifican la imagen.
+
+**Los 4 fallos restantes son ajenos**: `test_logros_por_estudiante` ×3 y
+`test_particion_de_stage_scene`, que viene de que `stage_scene.py` sigue por
+encima del presupuesto de 1.500 líneas por trabajo en paralelo.
+
+La referencia consolidada de todo esto —cadena de pasadas, reparto CPU/GPU,
+costes y cómo un escenario enciende cada efecto— es
+`docs/74_TUBERIA_DE_GPU.md`.
+
+### Numeración: la tercera colisión seguida
+
+`CLAUDE.md` §4 vuelve a quedarse corto. Esta iteración tuvo que renumerar
+**cinco veces**: 197–202 -> 212–217, luego 212 -> 222 (lo tomó
+`drawing_system`), 218 -> 223 y 219 -> 224 (los tomaron `inventory` y
+`score_system`), y finalmente 217 -> 226 porque el informe ya citaba ese número
+para stage4_1.
+
+La causa es estructural, no un descuido: `git log -1` sólo ve lo commiteado, y
+aquí hay varios frentes con trabajo sin commitear que ya consumen números. El
+procedimiento que funciona es escanear el árbol entero —commiteado o no— y
+tomar el primero libre por encima del máximo.
+
+---
+
+## Iteración 12 — 2026-08-03 — Los dos cabos sueltos de la 11
+
+Los dos salieron anotados al final de la iteración anterior. Ninguno es grande;
+los dos son consecuencia directa de lo que aquella iteración cambió.
+
+### AUD-234 — todos los recogibles se veían iguales
+
+`DrawingSystem._draw_interactables` pintaba **todos** los recogibles con el
+mismo `_COLOR_RECOGIBLE = (240, 210, 90)`. Una moneda de oro, una llave roja y
+una vasija de corazón eran tres rectángulos idénticos en pantalla.
+
+No era estético: desde AUD-218 los enemigos sueltan monedas, así que el suelo
+de un nivel se llena de recogibles y el jugador ya no puede saber de un vistazo
+si eso de ahí es la llave que le falta o el cambio de matar a un esbirro.
+AUD-238 lo empeoró — la reliquia del jefe cae junto a las monedas, del mismo
+color que ellas.
+
+El dato **ya existía**: `ItemDef.icon_color` lleva desde el principio en el
+catálogo, con un dorado para `coin` y un rojo para `heart_vessel`, y sólo lo
+leía el aviso de recogida. Otra vez el patrón del proyecto: el dato estaba,
+quien lo necesitaba estaba, y no había camino entre los dos.
+
+Un `item_id` libre —el que invente un estudiante— no está en el catálogo y
+conserva el color de siempre. Ese es el control de la prueba: **ninguno de los
+niveles entregados cambia de aspecto.**
+
+### AUD-239 — parar una embestida sólo la aplazaba
+
+`EnemyCharger` y `EnemyWalker` llevan su propia máquina de ataque en banderas
+(`_is_charging`, `_is_winding_up`), y `stun()` sólo cambiaba el estado de la
+base. Al salir del aturdimiento, `_alert_behavior` se encontraba
+`_is_charging = True` y **reanudaba la misma embestida** — contra el jugador
+que se había acercado a castigar durante los 0,9 s.
+
+Ya pasaba antes de AUD-206: con los 0,3 s de `HURT` el parpadeo era corto y se
+confundía con un empujón. Con la ventana larga el enemigo se queda quieto, el
+jugador entra a pegar, y entonces arranca. **Es peor que no aturdir**: enseña
+que parar es una trampa.
+
+El arreglo es un gancho, `EnemyBase._cancelar_ataque_en_curso()`, que `stun()`
+llama tras la guarda. Vacío por defecto; lo sobreescriben los dos enemigos que
+guardan «estoy atacando» fuera de `EnemyState`. Es un gancho y no un `stun()`
+sobreescrito en cada subclase porque así queda documentado para las entregas:
+si tu enemigo lleva banderas propias, límpialas ahí.
+
+**El segundo defecto, más silencioso.** `EnemyCharger.__init__` declaraba
+`self._stun_timer`, **el mismo nombre que usa `EnemyBase` para la rama
+`STUNNED`**. Dos dueños para una variable: la base la descuenta en su rama y el
+charger en `_alert_behavior`. No chocaban porque hasta AUD-206 nadie llamaba a
+`stun()` en producción — una colisión latente que sólo se activó al conectar el
+parry. Renombrada a `_recuperacion_timer`, que es lo que de verdad es: su
+exposición tras embestir, no un aturdimiento.
+
+### Gates
+
+```
+pytest (los 4 ficheros nuevos + vecinos)  → 55 passed
+pytest -k "charger or walker or enemy or interact or drawing or stage0" → 237 passed
+ruff <ficheros tocados>                   → All checks passed
+```
+
+---
+
+## Iteración 13 — 2026-08-03 — Barrido de mecánicas: qué funciona de verdad
+
+Esta iteración no arregla un defecto encontrado por casualidad: **busca** el
+modo de fallo del repositorio de forma sistemática, con la herramienta que
+AUD-233 escribió justo para eso (`scripts/check_orphan_systems.py --todos`) más
+verificación manual candidato a candidato. El script avisa de que su salida
+«son preguntas, no defectos», y así se trató: de 180 símbolos señalados, la
+inmensa mayoría son utilidades y material docente que el juego no tiene por qué
+llamar. Dos preguntas resultaron ser defectos.
+
+### AUD-243 — parar el ataque de un jefe no hacía nada
+
+La cadena estaba entera y desconectada **por arriba**:
+
+```
+BossAttack(parriable=True) → AttackScheduler.se_puede_desviar
+→ AttackScheduler.desviar() → BossBase.recibir_parry() → ???
+```
+
+`recibir_parry()` se describe a sí misma como «el punto de entrada de la
+mecánica» y no tenía **un solo llamante en todo el repositorio**: ni en
+producción ni en pruebas. Medido con `grep -rn "recibir_parry"`: una línea, su
+propia definición. `parriable`, `aturde_al_parry` y `se_puede_desviar` se
+probaban por unidad y no cambiaban nada en ningún jefe.
+
+Es el mismo defecto que AUD-206 arregló para los enemigos normales, en la mitad
+de los jefes. Se conecta con un gancho —`EnemyBase._aturdimiento_por_parry()`,
+que `BossBase` sobreescribe— para no meter conocimiento de jefes en la clase
+base. La prueba incluye **la comprobación que lo habría evitado**: que
+`recibir_parry` tenga llamante en `src/`, no sólo en `tests/`.
+
+### GAP-032 — cinco de siete mecánicas de F5 no las invoca nadie
+
+`docs/56_FASE_5_ECS_Y_MECANICAS.md` lista siete bajo el epígrafe «Y en
+código:». Medidas una por una:
+
+| Mecánica | ¿La usa el juego? |
+|---|---|
+| Parry del jefe | Sí, desde AUD-243 |
+| Fase invulnerable | Sí (`boss_base.py:208`) |
+| Tiempo bala | **No** — se construye y no se vuelve a tocar |
+| Scroll forzado | **No** — ni `arrancar()`, ni `update()`, ni `se_quedo_atras()` |
+| Bullet hell | **No** — 0 usos fuera de su módulo |
+| Escalado de fase | **No** — `escala_de_fase` sólo se define |
+| Teletransporte | **No** — 0 usos |
+
+El caso más claro es `ScrollForzado`. Su docstring explica con detalle por qué
+el borde mata en vez de empujar —«el nivel dijo *sígueme* y no lo seguiste»— y
+ese borde no mata a nadie, porque la cámara nunca se mueve sola.
+
+**No se cablearon aquí, y es una decisión.** Cada una necesita una decisión de
+diseño, no sólo conectarla: quién enciende el scroll y el tiempo bala (una
+propiedad TMX o un `Disparador`, y eso toca `06_TMX_SPEC.md`, que es contrato
+para las 26 entregas), y qué jefe usa el enjambre, el teletransporte y el
+escalado. Lo que **sí** era urgente es que el documento dejara de decir «y en
+código» sobre cosas que no ocurren: lleva ahora la tabla de arriba y el aviso
+de no diseñar contando con las cinco que faltan.
+
+### Validación completa
+
+```
+pytest (suite completa)              → 3439 passed, 4 failed, 4 skipped
+scripts/grade_stage.py assets/maps/  → 16 mapas, media 79,8 %
+scripts/grade_boss.py boss_venado    → exit 0
+los 6 validadores de CI              → exit 0 los seis
+mypy <mypy_scope.txt>                → no issues found in 20 source files
+```
+
+**Los 4 fallos, atribuidos uno por uno y ninguno de esta iteración:**
+
+* `test_particion_de_stage_scene` — `stage_scene.py` va por 1.923 líneas contra
+  un presupuesto de 1.500. Al empezar la sesión estaba en 1.695; de las 423 de
+  exceso, 12 son de la iteración 11 y ~216 las ha añadido el trabajo en
+  paralelo mientras corría esto.
+* `test_salida_de_consola[check_orphan_systems.py]` — el guardián de AUD-233 no
+  fija su salida de consola; es del otro frente (última vez tocado en AUD-245).
+* `test_teaching_tools` — `preview_tmx.py` no menciona «estación» en su
+  resumen. Anterior a esta sesión.
+* `test_reported_ui_bugs::test_la_interfaz_se_dibuja_despues_del_post_procesado`
+  — **pasa en aislado**. Es una comprobación de `inspect.getsource` sobre
+  ficheros que el otro frente está reescribiendo en caliente.
+
+Los 2 errores de `ruff` que quedan (`numpy` sin usar) están en
+`tests/test_stage4_1.py`, sin commitear y del otro frente.

@@ -369,13 +369,13 @@ The three Evaluación Práctica checkpoints in this schedule (Class 5, 8, 11) co
 | Milestone 2 | Class 8 | Evaluación Práctica II – Vertical Slice | Previously referred to informally as "Stage 2 Deliverable" |
 | Milestone 3 | Class 11 | Evaluación Práctica III – Integración Final | Previously referred to informally as "Stage 3 Deliverable" |
 
-**Clarification (see `00_SYLLABUS_ALIGNMENT_AUDIT.md` §2 A.1):** All three milestones apply to the **same single Stage or Boss** that the student selected in Class 1. "Stage 1 / Stage 2 / Stage 3" in earlier internal documentation never meant three different stages — it meant three sequential states of completeness (prototype → vertical slice → final integration) of one assignment. This schedule uses the official Evaluación Práctica I/II/III naming going forward to eliminate ambiguity.
+**Clarification (see `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2 A.1):** All three milestones apply to the **same single Stage or Boss** that the student selected in Class 1. "Stage 1 / Stage 2 / Stage 3" in earlier internal documentation never meant three different stages — it meant three sequential states of completeness (prototype → vertical slice → final integration) of one assignment. This schedule uses the official Evaluación Práctica I/II/III naming going forward to eliminate ambiguity.
 
 ---
 
 ## Appendix A — Corrected Repository Structure Reference
 
-See `00_SYLLABUS_ALIGNMENT_AUDIT.md` §7 for the full corrected repository tree reflecting the real GitHub structure (`docs/`, `assets/`, `src/`, `student_templates/`, `main.py`, `requirements.txt`).
+See `77_SYLLABUS_ALIGNMENT_AUDIT.md` §7 for the full corrected repository tree reflecting the real GitHub structure (`docs/`, `assets/`, `src/`, `student_templates/`, `main.py`, `requirements.txt`).
 
 
 ---

@@ -4,7 +4,7 @@ title: "Legacy of InFest — Syllabus Alignment Audit"
 aliases: ["Syllabus Alignment Audit", "Syllabus Audit"]
 tags: ["syllabus", "audit", "academic"]
 description: "Audit reconciling documentation against official syllabus"
-source: "docs/00_SYLLABUS_ALIGNMENT_AUDIT.md"
+source: "docs/77_SYLLABUS_ALIGNMENT_AUDIT.md"
 date_processed: "2026-07-14"
 ---
 
@@ -222,7 +222,7 @@ LICENSE
 | **El Rey Terciopelo** | 2 — Contenium Data Center | **Syllabus-official** | Verbatim from syllabus: *"Una entidad formada por miles de serpientes terciopelo que actúan como un único organismo."* Fully consistent with `17_BOSS_SPEC.md` §4. |
 | **El Gavilán Camionero Mascarero** | 3 — Campus Heredia | **Project-defined (post-syllabus), now professor-confirmed as official.** *(See addendum below — originally pending at the time of this audit, since resolved.)* | **Syllabus explicitly states the Zone 3 boss is "Pendiente de definición final dentro de la narrativa general."** This boss was authored by the documentation project, not the syllabus. It is **preserved** as a legitimate framework extension per the instruction *"si un elemento fue definido posteriormente como parte oficial del framework, debe conservarse"* — it has since been adopted as the working Zone 3 boss design and is now treated as the project's official answer to the syllabus's open item. **Addendum:** the professor has since confirmed this design as final (see `28_DECISION_LOG.md` ADR-008, updated). This boss is no longer pending. |
 
-**Addendum (post-audit confirmation):** At the time this audit was originally written, El Gavilán Camionero Mascarero's status was "pending final professor sign-off." The professor has since reviewed and confirmed this boss design as the official, permanent Zone 3 boss. This addendum is recorded here to preserve the audit's historical accuracy as a point-in-time document, while `28_DECISION_LOG.md` ADR-008 and `31_RISK_REGISTER.md` (RISK-A04, closed) hold the current authoritative status going forward.
+**Addendum (post-audit confirmation):** At the time this audit was originally written, El Gavilán Camionero Mascarero's status was "pending final professor sign-off." The professor has since reviewed and confirmed this boss design as the official, permanent Zone 3 boss. This addendum is recorded here to preserve the audit's historical accuracy as a point-in-time document, while `28_DECISION_LOG.md` ADR-008 and `81_RISK_REGISTER.md` (RISK-A04, closed) hold the current authoritative status going forward.
 | **Gran Shaman Paburu (Final Boss)** | Zone Final | **Syllabus-official** | Verbatim from syllabus: *"Paburu. El guardián ancestral que busca restaurar el equilibrio natural y recuperar las reliquias que provocaron su despertar."* The 4-form structure (stone head → spectral mask → relic-form A/B → spirit) in `17_BOSS_SPEC.md` §6 is a **project-defined elaboration** of the syllabus's one-paragraph description — classified as a legitimate framework extension, not a contradiction, since the syllabus gives no contrary detail to elaborate against. |
 
 **Action taken:** `17_BOSS_SPEC.md` Section 1 (Overview) is updated with a notice clarifying that El Gavilán Camionero Mascarero is a project-defined boss filling a syllabus-acknowledged gap, and that its design remains subject to final confirmation by the professor as the authoritative course owner. No boss is removed or redesigned.
@@ -323,7 +323,7 @@ Per the restriction in the realignment instructions, the following are confirmed
 
 | Document | Purpose |
 |---|---|
-| `00_SYLLABUS_ALIGNMENT_AUDIT.md` | This document |
+| `77_SYLLABUS_ALIGNMENT_AUDIT.md` | This document |
 | `21_COURSE_SCHEDULE.md` | Complete 11-class + Invenio Fest trimester calendar with theory/practice split and evaluation checkpoints |
 
 ---

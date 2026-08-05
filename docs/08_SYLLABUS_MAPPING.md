@@ -502,7 +502,7 @@ Not demonstrated directly in Stage 0. Unit IX is demonstrated in the unit test `
 
 ## 12. Milestone-to-Unit Assignment
 
-**Corrected per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.1 and §9.** The labels "Stage 1," "Stage 2," and "Stage 3" used throughout this and other framework documents do **not** refer to three different stages assigned to one student. Per the official syllabus, Legacy of InFest is an **individual project**: each student selects exactly **one** Stage or Boss in Class 1 (see `21_COURSE_SCHEDULE.md`) and develops that single assignment through three cumulative completeness milestones, each corresponding to one official Evaluación Práctica:
+**Corrected per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.1 and §9.** The labels "Stage 1," "Stage 2," and "Stage 3" used throughout this and other framework documents do **not** refer to three different stages assigned to one student. Per the official syllabus, Legacy of InFest is an **individual project**: each student selects exactly **one** Stage or Boss in Class 1 (see `21_COURSE_SCHEDULE.md`) and develops that single assignment through three cumulative completeness milestones, each corresponding to one official Evaluación Práctica:
 
 | Internal Label (legacy) | Official Name | Class | Cumulative Units Demonstrated |
 |---|---|---|---|

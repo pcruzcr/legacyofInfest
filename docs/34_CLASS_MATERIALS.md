@@ -99,5 +99,5 @@ Para el cronograma detallado clase por clase, consultar el documento original en
 ---
 ## 🔗 Documentos Relacionados
 
-- [[34_EDUCATIONAL_ROADMAP.md|Educational Roadmap]]
+- [[84_EDUCATIONAL_ROADMAP.md|Educational Roadmap]]
 - [[21_COURSE_SCHEDULE.md|Course Schedule]]

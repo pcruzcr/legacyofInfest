@@ -4,7 +4,7 @@ title: "Legacy of InFest — Environment Setup Guide"
 aliases: ["Environment Setup Guide"]
 tags: ["setup", "environment", "guide"]
 description: "Step-by-step machine setup, troubleshooting"
-source: "docs/32_ENVIRONMENT_SETUP_GUIDE.md"
+source: "docs/82_ENVIRONMENT_SETUP_GUIDE.md"
 date_processed: "2026-07-14"
 ---
 
@@ -13,14 +13,14 @@ date_processed: "2026-07-14"
 **Document ID:** LOI-SETUP-032  
 **Version:** 1.0.0  
 **Status:** Official  
-**Compatibility:** Requires `10_LIBRARIES_AND_DEPENDENCIES.md`, `23_DATA_SCHEMAS.md` §9, `31_RISK_REGISTER.md`  
+**Compatibility:** Requires `10_LIBRARIES_AND_DEPENDENCIES.md`, `23_DATA_SCHEMAS.md` §9, `81_RISK_REGISTER.md`  
 **Audience:** Professor, Students (Class 1 onboarding)
 
 ---
 
 ## 1. Purpose
 
-`10_LIBRARIES_AND_DEPENDENCIES.md` §14 covers installation in 6 lines. This document is the **operational, step-by-step guide** a student actually follows during Class 1's "Framework Orientation" practice block (`21_COURSE_SCHEDULE.md` Class 1), including platform-specific instructions, non-Python tooling (Tiled, VS Code), and a troubleshooting table covering every failure mode flagged in `31_RISK_REGISTER.md` §5.
+`10_LIBRARIES_AND_DEPENDENCIES.md` §14 covers installation in 6 lines. This document is the **operational, step-by-step guide** a student actually follows during Class 1's "Framework Orientation" practice block (`21_COURSE_SCHEDULE.md` Class 1), including platform-specific instructions, non-Python tooling (Tiled, VS Code), and a troubleshooting table covering every failure mode flagged in `81_RISK_REGISTER.md` §5.
 
 **Target:** A student following this guide reaches a running `python main.py` within 30 minutes, leaving the remaining Class 1 practice time for the 15-minute template onboarding from `26_STUDENT_TEMPLATE_SPEC.md` §8.
 
@@ -79,7 +79,7 @@ git clone <repository-url>
 cd legacy-of-infest
 ```
 
-Replace `<repository-url>` with the private GitHub repository URL provided by the professor (per `00_SYLLABUS_ALIGNMENT_AUDIT.md` §7 for the expected resulting structure).
+Replace `<repository-url>` with the private GitHub repository URL provided by the professor (per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §7 for the expected resulting structure).
 
 ---
 
@@ -152,7 +152,7 @@ Every line should print a version number with no `ModuleNotFoundError` or `Impor
 
 ## 7. Step 5 — Install Tiled Map Editor (Non-Python Tool)
 
-**This is a separate application, not a pip package** — flagged explicitly in `31_RISK_REGISTER.md` RISK-T03 as a common onboarding gap. Required only if your assignment is a **Stage** (Boss assignments may not need it, per `17_BOSS_SPEC.md` §6.2).
+**This is a separate application, not a pip package** — flagged explicitly in `81_RISK_REGISTER.md` RISK-T03 as a common onboarding gap. Required only if your assignment is a **Stage** (Boss assignments may not need it, per `17_BOSS_SPEC.md` §6.2).
 
 1. Download from [mapeditor.org](https://www.mapeditor.org/) — free and open source.
 2. Install for your platform (standard installer on Windows/macOS; package manager or AppImage on Linux).
@@ -192,7 +192,7 @@ If a window does not appear at all (no error, no window), see §9.6 below.
 
 ## 10. Troubleshooting
 
-This table directly addresses the technical risks cataloged in `31_RISK_REGISTER.md` §5, with concrete fixes.
+This table directly addresses the technical risks cataloged in `81_RISK_REGISTER.md` §5, with concrete fixes.
 
 ### 10.1 `ModuleNotFoundError: No module named 'cv2'`
 
@@ -209,7 +209,7 @@ sudo apt install libgl1 libglib2.0-0
 
 ### 10.2 `pygame-ce` Conflicts with `pygame`
 
-**Cause:** Both packages installed simultaneously cause import ambiguity (`31_RISK_REGISTER.md` RISK-T02).  
+**Cause:** Both packages installed simultaneously cause import ambiguity (`81_RISK_REGISTER.md` RISK-T02).  
 **Fix:**
 ```bash
 pip uninstall pygame
@@ -249,7 +249,7 @@ Always verify with `python -c "import pygame; print(pygame.version.ver)"` — th
 
 ### 10.8 `joblib`/Model Loading Fails with a Version Warning or Error
 
-**Cause:** Per `31_RISK_REGISTER.md` RISK-T04, scikit-learn version mismatch between when a `.pkl` was saved and when it's being loaded.  
+**Cause:** Per `81_RISK_REGISTER.md` RISK-T04, scikit-learn version mismatch between when a `.pkl` was saved and when it's being loaded.  
 **Fix:** Confirm your `requirements.txt` matches exactly what the professor used to generate `assets/models/professor_sample.pkl` — re-run `pip install -r requirements.txt` to ensure no local version drift, and report persistent mismatches to the professor (this may indicate the pin table in `23_DATA_SCHEMAS.md` §9 needs updating for the current trimester).
 
 ---
