@@ -601,12 +601,31 @@ class ConoDeVision:
 
 @dataclass(slots=True)
 class Alerta:
-    """Normal → sospecha → alerta, y la vuelta lenta.
+    """Tranquilo → sospecha → alerta → búsqueda, y la vuelta lenta.
 
     La vuelta es lenta a propósito. Un guardia que olvida al instante convierte
     el sigilo en prueba y error sin coste; uno que no olvida nunca lo convierte
     en una partida perdida. Los segundos de memoria son la palanca de
     dificultad de todo el sistema.
+
+    La búsqueda, y por qué faltaba (AUD-286)
+    ----------------------------------------
+    Hasta AUD-286 esto tenía tres estados y el tercero se apagaba solo: al
+    perder de vista al jugador, el nivel bajaba y el guardia volvía a patrullar
+    **como si no hubiera pasado nada**. Eso convierte el sigilo en un juego de
+    esquinas: basta con romper la línea de visión un segundo y el mundo se
+    reinicia.
+
+    El cuarto estado es lo que hace que esconderse cueste algo. Al perder de
+    vista a un jugador que ya estaba **en alerta** —no en simple sospecha—, el
+    guardia recuerda `ultimo_visto` y se queda buscando ahí unos segundos. Es lo
+    que hacen MGS, Dishonored y Mark of the Ninja, y la razón es siempre la
+    misma: el jugador tiene que **moverse** después de romper la visión, no
+    quedarse quieto detrás de la caja esperando a que se le olvide.
+
+    Sólo se entra en búsqueda desde alerta. Desde sospecha no: un guardia que se
+    pone a registrar la sala porque creyó ver algo un instante hace el sigilo
+    imposible de leer.
     """
 
     nivel: float = 0.0
@@ -614,11 +633,34 @@ class Alerta:
     bajada_por_segundo: float = 0.35
     umbral_sospecha: float = 0.4
     umbral_alerta: float = 1.0
+    #: Dónde se le vio por última vez. `None` = nunca se le ha visto.
+    ultimo_visto: pygame.Vector2 | None = None
+    #: Segundos que se queda buscando tras perderlo estando en alerta.
+    #:
+    #: Tres. Menos no da tiempo a que el jugador tenga que reposicionarse, que
+    #: es el punto; más deja al guardia clavado lejos de su ronda y rompe el
+    #: patrullaje que el nivel había diseñado.
+    segundos_de_busqueda: float = 3.0
+    #: Lo que queda de búsqueda. Lo lleva `sistema_alerta`.
+    busqueda_restante: float = 0.0
+    #: ¿Lo veía el fotograma anterior? Lo lleva `sistema_alerta`.
+    #:
+    #: Hace falta para armar la búsqueda **una sola vez**, en el instante exacto
+    #: en que se pierde de vista. Sin este flanco, el nivel de alerta tarda
+    #: 1,4 s en caer por debajo de su umbral y durante todo ese rato la
+    #: condición «estaba en alerta y no lo ve» seguiría siendo cierta: la cuenta
+    #: atrás se rearmaría cada fotograma y la búsqueda duraría 4,4 s en vez de 3.
+    _veia: bool = False
 
     @property
     def estado(self) -> str:
         if self.nivel >= self.umbral_alerta:
             return "alerta"
+        # La búsqueda va **antes** que la sospecha: un guardia que acaba de
+        # perder de vista al jugador está más despierto que uno que cree haber
+        # visto algo, aunque su nivel numérico ya haya caído por debajo.
+        if self.busqueda_restante > 0.0:
+            return "busqueda"
         if self.nivel >= self.umbral_sospecha:
             return "sospecha"
         return "tranquilo"

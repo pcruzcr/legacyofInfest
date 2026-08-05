@@ -450,16 +450,39 @@ def sistema_conos_de_vision(mundo: World, dt: float) -> None:
 
 
 def sistema_alerta(mundo: World, dt: float) -> None:
-    """Sube mientras te ven, baja despacio cuando te pierden.
+    """Sube mientras te ven, baja despacio cuando te pierden, y busca después.
 
     La bajada es más lenta que la subida —0,35 contra 2,0 por segundo— y no es
     un capricho: si olvidaran al mismo ritmo, esconderse un instante bastaría y
     el sigilo se resolvería a base de intentarlo. La asimetría es lo que obliga
     a planear la ruta antes de moverse.
+
+    AUD-286 — la búsqueda. Al perder de vista a alguien que **ya estaba en
+    alerta**, el guardia se queda con `ultimo_visto` y arranca su cuenta atrás
+    de búsqueda. Sin esto, romper la línea de visión un segundo devolvía el
+    mundo al estado inicial y esconderse no costaba nada.
     """
+    jugador = rect_del_jugador(mundo)
     for entidad, alerta in mundo.cada(Alerta):
         cono = mundo.obtener(entidad, ConoDeVision)
         viendo = cono is not None and cono.ve_al_jugador
+        estaba_en_alerta = alerta.nivel >= alerta.umbral_alerta
+
+        if viendo:
+            if jugador is not None:
+                alerta.ultimo_visto = pygame.Vector2(jugador.center)
+            # Volver a verlo cancela la búsqueda: ya no hay nada que buscar.
+            alerta.busqueda_restante = 0.0
+        elif alerta._veia and estaba_en_alerta:
+            # El flanco: el fotograma exacto en que lo pierde de vista. Se arma
+            # aquí y una sola vez. Si la condición fuera sólo «no lo ve y estaba
+            # en alerta», se rearmaría durante el segundo y medio que tarda el
+            # nivel en bajar del umbral, y la búsqueda duraría 4,4 s.
+            alerta.busqueda_restante = alerta.segundos_de_busqueda
+        elif alerta.busqueda_restante > 0.0:
+            alerta.busqueda_restante = max(0.0, alerta.busqueda_restante - dt)
+        alerta._veia = viendo
+
         alerta.nivel += (alerta.subida_por_segundo if viendo else -alerta.bajada_por_segundo) * dt
         alerta.nivel = max(0.0, min(alerta.umbral_alerta * 1.5, alerta.nivel))
 
