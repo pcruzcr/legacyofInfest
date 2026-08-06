@@ -305,6 +305,12 @@ class StageData:
     #: lo que mueven no es una entidad del mundo, es **el jugador**, y quien lo
     #: posee es la escena.
     warps: list[ZonaDeWarp] = field(default_factory=list)
+    #: AUD-294 — este mapa regala las mecánicas de jefe.
+    #:
+    #: Para un escenario nuevo que quiera jugarse suelto, sin la campaña
+    #: detrás. Los mapas entregados **no** la necesitan: van por la lista de
+    #: `settings`, para no tener que tocar sus ficheros.
+    habilidades_libres: bool = False
     #: AUD-249 — scroll forzado declarado desde Tiled con `ScrollZone`.
     #:
     #: No es un componente ECS: `ScrollForzado` mueve la **cámara**, no una
@@ -680,6 +686,8 @@ class StageLoader:
             props.get("profundidad_max", 1.0), "profundidad_max"))
         sombras_proyectadas = cls._bool_de(
             props.get("sombras_proyectadas"), por_defecto=False)
+        habilidades_libres = cls._bool_de(
+            props.get("habilidades_libres"), por_defecto=False)
         camara = str(props.get("camara") or props.get("camera") or "seguir").strip().lower()
         if camara not in MODOS_DE_CAMARA:
             logger.warning(
@@ -758,6 +766,7 @@ class StageLoader:
             profundidad_min=profundidad_min,
             profundidad_max=profundidad_max,
             sombras_proyectadas=sombras_proyectadas,
+            habilidades_libres=habilidades_libres,
             camara=camara,
             climate=climate,
             zone=zone,
