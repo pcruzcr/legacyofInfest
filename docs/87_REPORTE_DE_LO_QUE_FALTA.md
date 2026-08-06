@@ -868,8 +868,9 @@ tres números.
 
 1. **El jefe Gavilán** — 45 % de la rúbrica, y es **asignación de estudiante**
    (§7). No es deuda del motor.
-2. **`SpriteBatch` y la ruta de sprites en GPU** — medir en la máquina destino
-   antes de escribir nada (AUD-148). Con el monitor de F11 (AUD-283) ya se puede.
+2. ~~**`SpriteBatch` y la ruta de sprites en GPU**~~ — **HECHO (AUD-301,
+   AUD-302).** Medido con las dos tarjetas del equipo; el lote de CPU está
+   puesto y la ruta de GPU está medida y justificadamente sin poner. Ver §18.
 3. **Los cinco sonidos de jefe sin emisor** — pertenecen a ataques de jefes que
    los estudiantes aún no han escrito.
 4. **`LuaScriptEnemy`** — completo y probado, sin conectar. Depende de si el
@@ -877,5 +878,72 @@ tres números.
 5. **Ampliar las pruebas doc↔código** — sigue habiendo un solo documento de 95
    con pruebas de contenido.
 
-Nada de esa lista es un defecto del motor esperando arreglo: cuatro son
-decisiones de curso y una es una medición pendiente.
+Nada de esa lista es un defecto del motor esperando arreglo: son decisiones de
+curso y asignaciones de estudiante. **La medición que quedaba pendiente ya está
+hecha** (§18), y con ella no queda ningún punto abierto que dependa del motor.
+
+---
+
+## 18. La GPU, medida con las dos tarjetas (2026-08-06)
+
+El último punto que dependía del motor. §17.3 lo dejó como «medir la ruta de
+sprites en GPU antes de escribir nada (AUD-148)», y al medirlo apareció algo que
+no estaba en la pregunta: **este equipo tiene dos tarjetas y el juego usaba la
+peor**.
+
+### 18.1 El equipo tiene dos, y ninguna herramienta elige la buena
+
+Una Intel HD Graphics 530 integrada y una **Quadro M2200** dedicada. Comprobado:
+ni el contexto standalone de ModernGL, ni una ventana OpenGL real de SDL, ni
+pasar `device_index`, ni el backend EGL —que esta instalación de `glcontext` no
+trae— seleccionan la dedicada. En Windows eso lo decide una preferencia por
+aplicación que hay que dar de alta para `python.exe`.
+
+Dada de alta, todo cambia:
+
+| Medida | Intel HD 530 | Quadro M2200 |
+|---|---|---|
+| Camino GL completo (`docs/74` §4) | 3,76 ms | **1,46 ms** (2,6×) |
+| Dibujar 8.000 sprites en GPU | 5,177 ms | **0,898 ms** (5,8×) |
+| Bajarlos a una `Surface` | 8,305 ms | **2,020 ms** (4,1×) |
+
+### 18.2 SpriteBatch: qué se hizo y por qué no hay ruta de GPU
+
+Lo que se implementó (AUD-302) es el lote de CPU, `Surface.blits()`, y va donde
+el perfil dice que paga: los degradados de los focos y las sombras bajo los
+pies, que son los dos sitios donde el número de llamadas **crece con el
+contenido**. Las sombras además no cacheaban nada — creaban una superficie y
+rasterizaban una elipse por sombra y por fotograma para pintar las mismas ocho
+del fotograma anterior. Medido en nuestros dos mapas: `stage4_1` de 6,42 a
+5,93 ms, `stage0` dentro del ruido.
+
+**La ruta de GPU está medida y no está puesta.** Con la Quadro gana siempre
+dibujando —4,2× con 500 sprites, 10,4× con 8.000— pero el juego dibuja unas
+veinte entidades por fotograma, y a esa escala lo que costaría subirlas y
+bajarlas es más que dibujarlas en CPU. El día que el fotograma entero se componga
+en la tarjeta, la ruta gana desde el primer sprite y el banco de pruebas está
+escrito para volver a comprobarlo.
+
+### 18.3 Y una predicción mía que salió al revés
+
+Antes de medir la Quadro escribí que bajar los píxeles de una tarjeta discreta
+sería **peor** que de una integrada, porque cruza el bus PCIe mientras que la
+integrada comparte la memoria del sistema. Es la clase de razonamiento que suena
+bien y hay que comprobar igual: medido, la lectura de vuelta en la Quadro es
+**tres veces más rápida** —1,45–2,02 ms contra 5,69–8,31—.
+
+La conclusión que había sacado de esa predicción —«con lectura de vuelta la GPU
+no compensa nunca»— era falsa. La buena es que con la dedicada compensa a partir
+de unos 1.500 sprites. Es la tercera vez en este reporte que una frase escrita
+antes de la medición resulta estar mal; las otras dos están en §16.1.
+
+### 18.4 De paso, dos cosas que la documentación decía mal
+
+* **`docs/74` daba sus milisegundos sin decir de qué tarjeta eran.** Ahora lleva
+  el aviso y los dos números.
+* **`bench_gpu_postproc.py` explicaba el mal resultado de `PresentadorGPU` con
+  «SDL está cayendo a software».** Es falso: sus seis drivers de render
+  —direct3d, direct3d11, direct3d12, opengl, opengles2— salen todos como
+  acelerados. Lo caro es subir el fotograma entero a una textura nueva en cada
+  pasada, y eso no lo arregla una tarjeta mejor. El veredicto de AUD-148 se
+  mantiene; su explicación, no.

@@ -6,7 +6,9 @@ midiéndose a sí misma.
 
 En el equipo donde se escribió esto —sin GPU, con `SDL_VIDEODRIVER=dummy`— el
 bloom en GPU salió **cinco veces más lento** que el de numpy: el renderizador
-«acelerado» de SDL cae a software y entonces son los mismos píxeles por CPU
+«acelerado» de SDL no siempre lo es — aunque AUD-301 comprobó que aquí sí lo
+son: lo caro no es el rasterizado, es subir el fotograma entero a una textura
+nueva cada vez
 más el coste de subirlos. En un portátil con tarjeta el resultado puede ser el
 contrario, y ésa es exactamente la razón de que esto sea un banco de pruebas y
 no una afirmación en un documento.
@@ -120,8 +122,13 @@ def main() -> int:
         print("  → En esta máquina la GPU gana con holgura. Merece la pena")
         print("    plantearse mover el post-procesado.")
     elif gpu_ms > numpy_ms:
-        print("  → En esta máquina la GPU sale PEOR. Casi seguro que no hay")
-        print("    aceleración real: SDL está cayendo a software.")
+        print("  → En esta máquina la GPU sale PEOR, y AUD-301 midió por qué:")
+        print("    NO es que SDL caiga a software. Sus drivers de render")
+        print("    —direct3d, direct3d11, opengl— salen todos como acelerados.")
+        print("    Lo caro es subir el fotograma entero a una textura nueva en")
+        print("    cada pasada, que es lo que hace este camino de `_sdl2`.")
+        print("    La tubería de ModernGL, que es la que usa el juego, sí gana:")
+        print("    1,46 ms el camino completo en la Quadro (`docs/74` §4).")
     else:
         print("  → Empate. Cambiar el motor entero por esto no compensa.")
     print("\n  El filtro de daltonismo seguirá por CPU en cualquier caso:")

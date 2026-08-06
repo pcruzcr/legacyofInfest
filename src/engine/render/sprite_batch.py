@@ -8,35 +8,43 @@ Qué es esto, medido antes de escribirlo
 =======================================
 `SpriteBatch` llevaba desde AUD-148 en la lista de pendientes con la nota
 «medir primero en la máquina destino». `scripts/bench_sprite_batch.py` es esa
-medición, y en esta máquina —Intel HD Graphics 530, que es la tarjeta que el
-juego coge de verdad— dio esto, en milisegundos:
+medición, y AUD-301 la hizo con **las dos tarjetas del equipo**, que resultó
+ser la mitad del asunto.
 
-=========  =======  =========  ======  ===========
- sprites    blits    blits()     GPU    GPU+bajar
-=========  =======  =========  ======  ===========
-      500    0,735      0,533   0,982        3,325
-    2.000    3,110      2,334   1,907        5,392
-    8.000   12,943     11,005   5,286        8,430
-=========  =======  =========  ======  ===========
+Milisegundos, mediana de treinta pasadas:
 
-Tres conclusiones, y las tres mandan sobre lo que hay aquí:
+===========  ==========  ==========  ==========  ============
+   sprites   Intel: CPU   Intel: GPU  Quadro: GPU  Quadro: +bajar
+===========  ==========  ==========  ==========  ============
+        500       0,651       1,145        0,202          1,906
+      2.000       4,014       2,109        0,330          1,454
+      8.000      16,882       5,177        0,898          2,020
+===========  ==========  ==========  ==========  ============
 
-1. **`blits()` gana siempre.** Es el mismo trabajo con el bucle en C: 1,38× con
-   500 sprites y 1,18× con 8.000. Gratis y sin riesgo. Es lo que hace esta
-   clase.
-2. **La GPU gana a partir de unos 2.000 sprites** y llega a 2,08× con 8.000.
-3. **Y la pierde entera si hay que bajar los píxeles.** `GPU+bajar` es peor que
-   la CPU en todos los casos salvo el de 8.000. Mientras el fotograma se
-   componga en una `Surface` —que es lo que hace este motor—, mover los sprites
-   a la tarjeta significa subirlos y volver a bajarlos, y eso cuesta más de lo
-   que ahorra dibujarlos.
+(«CPU» es `Surface.blits()`, que es lo que hace esta clase; la columna de CPU no
+depende de la tarjeta y se da una sola vez.)
 
-**Por eso aquí no hay ruta de GPU.** No es que falte: es que la medición dice
-que hoy perdería. La ruta de GPU tiene sentido el día que el fotograma entero se
-componga en la tarjeta, y ese día el umbral son 2.000 sprites. El banco de
-pruebas se queda en el repositorio para poder rehacer el número en otra máquina
-—en ésta hay una Quadro M2200 que ni SDL ni ModernGL eligen por su cuenta— sin
-volver a escribirlo.
+Lo que dice, y lo que corrige
+=============================
+1. **`blits()` gana siempre a los blits sueltos.** 1,25× con 500 y 1,23× con
+   8.000, medido en la misma pasada. Gratis y sin riesgo: es esta clase.
+2. **La tarjeta importa muchísimo más de lo que parecía.** La Quadro dibuja
+   8.000 sprites en 0,898 ms; la Intel tarda 5,177. Y ojo con esto: el juego
+   coge la Intel salvo que se dé de alta `python.exe` como «alto rendimiento»
+   en Windows, cosa que ni SDL ni ModernGL hacen por su cuenta.
+3. **Y aquí me equivoqué al predecir.** Escribí que bajar los píxeles de una
+   tarjeta discreta sería *peor* por tener que cruzar el bus PCIe. Medido, es
+   **tres veces mejor**: 1,45–2,02 ms en la Quadro contra 5,69–8,31 en la
+   Intel. La conclusión que saqué de aquella predicción —«nunca compensa»— era
+   falsa, y ésta es la buena: con la Quadro, la GPU gana **también con lectura
+   de vuelta** a partir de unos 1.500 sprites.
+
+**Por eso aquí sigue sin haber ruta de GPU, pero por otro motivo.** No es que
+pierda: es que el juego no llega a esos números. Un escenario real dibuja unas
+veinte entidades, y a 500 sprites la CPU todavía gana (0,651 contra 1,906 con
+lectura). La ruta de GPU es correcta y está medida; el día que el fotograma
+entero se componga en la tarjeta —sin lectura de vuelta— gana desde el primer
+sprite, 4,2× con 500 y 10,4× con 8.000.
 
 Dónde paga en este juego, también medido
 ========================================
