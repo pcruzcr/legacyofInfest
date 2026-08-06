@@ -146,13 +146,32 @@ class SaveData(BaseModel):
         return data
 
     def to_json(self) -> bytes:
-        """Serializa los datos a JSON binario."""
-        return orjson.dumps(self.to_dict())
+        """Serializa los datos a JSON binario, **firmado** (AUD-295)."""
+        from src.engine.core.integridad import volcar
+
+        return volcar(self.to_dict(), indentado=False)
 
     @classmethod
     def from_json(cls, raw: bytes | str) -> SaveData:
-        """Deserializa datos desde JSON (bytes o string)."""
+        """Deserializa datos desde JSON (bytes o string), comprobando la firma.
+
+        AUD-295 — una firma que no cuadra lanza `ValueError`, igual que un JSON
+        roto, y por el mismo motivo: quien llama ya sabe qué hacer con una
+        partida que no se puede leer —`SaveManager.load` la registra y devuelve
+        `None`— y no sabría qué hacer con datos a medias.
+
+        Los ficheros escritos antes de AUD-295 no llevan firma y se aceptan:
+        rechazarlos sería borrarle la partida a todo el que actualice.
+        """
+        from src.engine.core.integridad import CAMPO_FIRMA, verificar
+
         if isinstance(raw, str):
             raw = raw.encode("utf-8")
         data = orjson.loads(raw)
+        if not verificar(data):
+            raise ValueError(
+                "la firma de la partida no cuadra: se escribió a medias o "
+                "alguien la editó",
+            )
+        data.pop(CAMPO_FIRMA, None)
         return cls.from_dict(data)
