@@ -106,6 +106,21 @@ parecido por accidente.
 
 ## 4. Lo que cuesta, medido
 
+> **Aviso de 2026-08-06 (AUD-301): los números de esta sección son de la Intel.**
+> Este equipo tiene **dos** tarjetas —una Intel HD 530 integrada y una Quadro
+> M2200— y ni SDL ni ModernGL eligen la dedicada por su cuenta: hay que dar de
+> alta `python.exe` como «alto rendimiento» en Windows o en el panel de NVIDIA.
+> Hecho eso y vuelto a medir, **el camino GL completo pasa de 3,76 ms a
+> 1,46 ms**, 2,6×. Todo lo que sigue vale como cota superior; en la dedicada
+> sobra fotograma.
+>
+> Lo que **no** cambia es el veredicto de `PresentadorGPU` (AUD-148): el camino
+> de `pygame._sdl2` sigue saliendo peor. Lo que sí cambia es la explicación que
+> se daba —«SDL cae a software»—, que AUD-301 comprobó falsa: sus seis drivers
+> de render salen como acelerados. Lo caro es subir el fotograma entero a una
+> textura nueva en cada pasada, y eso no lo arregla una tarjeta mejor.
+
+
 Con la configuración real del juego (bloom e iluminación encendidos, el resto
 apagado):
 

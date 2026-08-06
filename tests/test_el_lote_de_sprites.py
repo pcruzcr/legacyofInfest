@@ -1,25 +1,28 @@
 """AUD-301 y AUD-302 — `SpriteBatch`, con la medición que lo justifica.
 
-Lo que la medición dijo, y lo que por eso NO hay aquí
------------------------------------------------------
-`scripts/bench_sprite_batch.py` midió las tres rutas en esta máquina —Intel HD
-Graphics 530, que es la tarjeta que el juego coge de verdad aunque el equipo
-tenga también una Quadro—, en milisegundos:
+Lo que la medición dijo, con las dos tarjetas
+---------------------------------------------
+`scripts/bench_sprite_batch.py` (AUD-301) midió las tres rutas en las **dos**
+tarjetas del equipo, y la diferencia entre ellas resultó ser la mitad del
+asunto. Milisegundos:
 
-    sprites   blits   blits()    GPU   GPU+bajar
-        500   0,735    0,533   0,982      3,325
-      2.000   3,110    2,334   1,907      5,392
-      8.000  12,943   11,005   5,286      8,430
+    sprites   CPU blits()   Intel GPU   Quadro GPU   Quadro +bajar
+        500         0,651       1,145        0,202           1,906
+      2.000         4,014       2,109        0,330           1,454
+      8.000        16,882       5,177        0,898           2,020
 
-* `blits()` gana siempre: 1,38× con 500 y 1,18× con 8.000. Eso es esta clase.
-* La GPU gana a partir de unos 2.000 sprites, y llega a 2,08× con 8.000.
-* **Y lo pierde todo si hay que bajar los píxeles.** Mientras el fotograma se
-  componga en una `Surface`, subir los sprites y volver a bajarlos cuesta más
-  que dibujarlos en CPU.
+* `blits()` gana siempre a los blits sueltos. Eso es esta clase.
+* **La Quadro dibuja 8.000 sprites en 0,898 ms; la Intel tarda 5,177.** Y el
+  juego coge la Intel salvo que se dé de alta `python.exe` como «alto
+  rendimiento»: ni SDL ni ModernGL eligen la dedicada por su cuenta.
+* **Predije mal la lectura de vuelta.** Escribí que en una tarjeta discreta
+  sería peor por cruzar el bus PCIe; medido, es tres veces mejor. Con la
+  Quadro, la GPU gana también con lectura a partir de unos 1.500 sprites.
 
-Por eso no hay ruta de GPU en el motor: la medición dice que hoy perdería. El
-banco se queda para rehacer el número el día que el fotograma entero viva en la
-tarjeta.
+No hay ruta de GPU en el motor, y ahora por el motivo correcto: **el juego no
+llega a esos números**. Un escenario real dibuja unas veinte entidades, y a 500
+sprites la CPU todavía gana. El día que el fotograma entero viva en la tarjeta
+—sin lectura de vuelta— la GPU gana desde el primer sprite: 4,2× con 500.
 
 En el juego, medido en nuestros dos mapas
 ------------------------------------------
