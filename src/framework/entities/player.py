@@ -258,6 +258,10 @@ class Player(BaseEntity):
         #: código que instancie un jugador suelto se encontraría sin doble
         #: salto sin haber pedido progresión.
         self._habilidades_libres: bool = True
+        #: AUD-297 — las cuestas del escenario. Las pasa `update`.
+        self._pendientes: list[Any] = []
+        #: ¿Pisaba suelo antes de resolver este fotograma? Ver `_resolve_collision`.
+        self._venia_del_suelo: bool = False
 
         # --- State pattern ---
         self._state_instance: PlayerStateBase
@@ -666,17 +670,23 @@ class Player(BaseEntity):
         collision_rects: list[pygame.Rect] | None = None,
         input_manager: InputManager | None = None,
         one_way_rects: list[pygame.Rect] | None = None,
+        pendientes: list[Any] | None = None,
     ) -> None:
         """
         Main update loop. Called every frame.
         If collision_rects is provided, performs AABB collision resolution.
         input_manager is injected by the stage — never accessed via App singleton.
         one_way_rects are platforms passable from below.
+
+        AUD-297 — `pendientes` es el suelo inclinado, y va al final de la firma
+        con valor por defecto por lo de siempre: las 26 entregas llaman a esto
+        por posición. Sin pendientes, el paso entero se salta.
         """
         if collision_rects is None:
             collision_rects = []
         if one_way_rects is None:
             one_way_rects = []
+        self._pendientes = pendientes or []
 
         # Tick timers (includes animation_timer)
         self._tick_timers(dt)
@@ -712,6 +722,13 @@ class Player(BaseEntity):
 
         # Collision resolution (axis-separated) — X then Y
         self._resolve_collision(dt, collision_rects)
+
+        # AUD-297 — el suelo inclinado, **después** del eje Y y antes de las
+        # plataformas de un sentido. Después de Y porque la pendiente corrige
+        # la altura que la caja acaba de dejar; antes de las de un sentido
+        # porque una repisa atravesable por encima de una cuesta tiene que
+        # poder atraparlo, y eso exige que ya esté colocado en la cuesta.
+        self._resolver_pendientes()
 
         # One-way platforms (only resolve Y when falling)
         #
@@ -1046,6 +1063,13 @@ class Player(BaseEntity):
         prev_top = self.position.y
         self.position.y += self.velocity.y * dt
         was_grounded = self.is_grounded
+        # AUD-297 — se guarda para el paso de pendientes, que corre después de
+        # este y necesita saber si el jugador **venía** pisando suelo. Leer
+        # `is_grounded` allí no vale: esta línea acaba de ponerlo a False, así
+        # que bajar una cuesta se vería siempre como caer y el margen de pegado
+        # no se aplicaría nunca — el traqueteo que ese margen existe para
+        # evitar.
+        self._venia_del_suelo = was_grounded
         self.is_grounded = False
         if collision_rects:
             py = pygame.Rect(int(self.position.x), int(self.position.y), w, h)
@@ -1069,6 +1093,33 @@ class Player(BaseEntity):
                     self.position.y = float(py.y)
                     check.y = py.y - 1
                     check.height = py.height + 2
+
+    def _resolver_pendientes(self) -> None:
+        """Coloca los pies sobre la cuesta que se esté pisando — AUD-297.
+
+        La geometría vive en `framework/stage/pendientes.py`, que no toca al
+        jugador: devuelve una `y` y aquí se aplica. Un módulo de geometría que
+        mueve entidades ajenas es cómo se acaba con dos sistemas discutiendo la
+        misma posición.
+        """
+        if not self._pendientes:
+            return
+        from src.framework.stage.pendientes import resolver
+
+        rect = pygame.Rect(int(self.position.x), int(self.position.y),
+                           self.rect.width, self.rect.height)
+        superficie = resolver(rect, self.velocity.y,
+                              self._venia_del_suelo or self.is_grounded,
+                              self._pendientes)
+        if superficie is None:
+            return
+        if not self.is_grounded and self.velocity.y > 0:
+            self._event_bus.emit(Events.SFX_PLAYER_LAND)
+        self.position.y = float(superficie) - self.rect.height
+        self.velocity.y = 0.0
+        self.is_grounded = True
+        self._air_dash_count = 0
+        self._air_jumps_used = 0
 
     def _resolve_one_way_collision(self, dt: float, one_way_rects: list[pygame.Rect]) -> None:
         """Resolve Y-axis collision for one-way platforms (passable from below).

@@ -28,7 +28,7 @@ date_processed: "2026-07-31"
 1. [El bucle: qué pasa en un fotograma](#1)
 2. [Anatomía de un escenario TMX](#2)
 3. [Propiedades del mapa — las 17](#3)
-4. [Los 76 tipos de objeto, uno por uno](#4)
+4. [Los 77 tipos de objeto, uno por uno](#4)
 5. [El jugador: 26 estados y qué los provoca](#5)
 6. [Enemigos: 37 tipos y 13 estados](#6)
 7. [Jefes](#7)
@@ -219,9 +219,9 @@ efecto, mira la consola antes que el código.
 ---
 
 <a id="4"></a>
-## 4. Los 76 tipos de objeto, uno por uno
+## 4. Los 77 tipos de objeto, uno por uno
 
-El motor acepta **76 tipos** en la capa `Objects`: 37 integrados del framework
+El motor acepta **77 tipos** en la capa `Objects`: 38 integrados del framework
 y 37 enemigos del registro, más `Solid` y `Platform` en `Collision`. Todos los
 números se convierten a `float` automáticamente.
 
@@ -495,6 +495,23 @@ El borde **mata** en vez de empujar, y es deliberado: empujar deja al jugador
 aplastado contra la geometría o atascado en un saliente mientras la cámara
 sigue. Matar es honesto —el nivel dijo «sígueme» y no lo seguiste— y el
 reintento es inmediato si has puesto checkpoints. Ponlos.
+
+**`Slope` — suelo inclinado de verdad (AUD-297).** Sonic, DKC, Celeste. Hasta
+AUD-297 una cuesta había que fingirla apilando bloques escalonados, y eso no es
+una cuesta: es una escalera que frena al jugador en cada peldaño.
+
+| Type | Propiedad | Por defecto | Qué hace |
+|---|---|---|---|
+| `Slope` | `sube` | `derecha` | Dónde está el lado alto: `derecha` o `izquierda` |
+
+El rectángulo que dibujes es el **triángulo entero**, no la línea de la
+superficie: se dibuja como se dibujaría la roca, y la hipotenusa va de esquina a
+esquina. No la metas en la capa `Collision`: una pendiente que además fuera caja
+pararía al jugador en seco al pie de la rampa.
+
+Bajarla funciona igual de bien que subirla, y eso no es gratis — el motor pega
+al jugador a la superficie con ocho píxeles de margen. Sin eso, descender una
+cuesta se hace a saltitos.
 
 **`WarpZone` — cruzar el mapa de una punta a otra (AUD-287).** Las cuevas de
 Zelda, los ascensores de Metroid, los Stagways de Hollow Knight. Hasta AUD-287

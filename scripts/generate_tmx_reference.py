@@ -151,6 +151,12 @@ def build_table() -> str:
                        "detiene ahí; sin ella, hasta el final del mapa). "
                        "Al pisarlo la cámara arranca sola y **el borde "
                        "izquierdo mata**: SMB3 Airship, Cuphead, Ori"),
+        "Slope": ("Rectángulo (el **triángulo entero**, no la línea)",
+                  "`sube` (`derecha` por defecto, o `izquierda`: dónde está el "
+                  "lado alto). Suelo inclinado de verdad — la hipotenusa va de "
+                  "esquina a esquina. **No se apila con bloques escalonados**: "
+                  "eso es una escalera que frena al jugador en cada peldaño. "
+                  "Sonic, DKC, Celeste (AUD-297)"),
         "WarpZone": ("Rectángulo (el disparador)",
                      "`destino_x` / `destino_y` (**obligatorias**: adónde van "
                      "los **pies** del jugador, en píxeles de mundo) · "

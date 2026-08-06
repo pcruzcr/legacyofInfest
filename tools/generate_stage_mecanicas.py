@@ -345,6 +345,22 @@ def _objetos() -> list[str]:
     obj("Spring", (s10 + 19) * TS, suelo_px - TS, 2 * TS, TS,
         impulso=-520.0, rearme=0.2)
 
+    # ── La cuesta ─────────────────────────────────────────────
+    #
+    # AUD-297. Hasta aquí, una cuesta había que fingirla apilando bloques
+    # escalonados, y eso no es una cuesta: es una escalera que frena al jugador
+    # en cada peldaño. `Slope` es suelo de verdad, con su hipotenusa.
+    #
+    # Van dos, subiendo y bajando, y pegadas: bajar es el caso que se rompe
+    # solo si nadie lo prueba —el jugador desciende a saltitos— y ponerlas
+    # juntas obliga a que el laboratorio lo enseñe.
+    s11 = 2 * SALA + 4
+    obj("Slope", s11 * TS, suelo_px - 3 * TS, 3 * TS, 3 * TS, sube="derecha")
+    obj("Slope", (s11 + 3) * TS, suelo_px - 3 * TS, 3 * TS, 3 * TS,
+        sube="izquierda")
+    obj("MessageTrigger_Once", (s11 - 2) * TS, suelo_px - 64, 48, 48,
+        text="Una cuesta de verdad. Subela y bajala.")
+
     # ── El atajo de vuelta ────────────────────────────────────
     #
     # AUD-287. `WarpZone` teletransporta **dentro del mismo mapa**, que es lo
