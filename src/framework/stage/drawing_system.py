@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 import pygame
 
 from src.engine.core import settings
+from src.engine.render.sprite_batch import SpriteBatch
 from src.framework.stage import culling
 from src.framework.stage.profundidad import EscalaPorProfundidad
 from src.framework.vfx.sombras import Sombra
@@ -579,10 +580,15 @@ class DrawingSystem:
         # leería como una mancha flotando sobre su cabeza.
         solidos = getattr(stage, "collision_rects", None) or []
         if solidos:
+            # AUD-302 — las sombras van en un lote. Son todas iguales salvo la
+            # talla, y con la caché de elipses la mayoría comparten superficie:
+            # N llamadas de Python se convierten en una.
+            lote = SpriteBatch()
             for drawable, _depth in drawables:
                 rect = getattr(drawable, "rect", None)
                 if rect is not None and getattr(drawable, "proyecta_sombra", True):
-                    self._sombra.dibujar(surface, rect, solidos, offset)
+                    self._sombra.dibujar(surface, rect, solidos, offset, lote)
+            lote.volcar(surface)
 
         escala = self._escala_de_profundidad(stage)
         for drawable, _depth in drawables:

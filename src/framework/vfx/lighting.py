@@ -5,6 +5,7 @@ import math
 import numpy as np
 import pygame
 
+from src.engine.render.sprite_batch import SpriteBatch
 from src.framework.vfx.sombras_proyectadas import ProyectorDeSombras
 
 
@@ -245,6 +246,16 @@ class LightSystem:
             int(self.ambient_color[2] * b),
         ))
 
+        # AUD-302 — los degradados van en un lote, uno por foco.
+        #
+        # **Salvo con sombras proyectadas.** Con obstáculos, la sombra de cada
+        # luz se resta justo después de sumarla y antes de la siguiente
+        # (AUD-278): agruparlas rompería ese orden y las sombras de un muro
+        # borrarían la luz de focos que ese muro no tapa. Con obstáculos se
+        # dibuja como siempre, uno por uno.
+        por_lotes = not self._obstaculos
+        lote = SpriteBatch() if por_lotes else None
+
         for light in self.lights:
             screen_pos = (
                 int(light.position.x - camera_offset.x),
@@ -254,6 +265,10 @@ class LightSystem:
             gw, gh = gradient.get_size()
             blit_x = screen_pos[0] - gw // 2
             blit_y = screen_pos[1] - gh // 2
+            if lote is not None:
+                lote.dibujar(gradient, (blit_x, blit_y), None,
+                             pygame.BLEND_RGBA_MAX)
+                continue
             self._multiplier.blit(gradient, (blit_x, blit_y), special_flags=pygame.BLEND_RGBA_MAX)
             # AUD-278 — la sombra se resta **de esta luz**, justo después de
             # sumarla y antes de la siguiente. Hacerlo al final, sobre la
@@ -263,6 +278,9 @@ class LightSystem:
                 self._proyector.proyectar(
                     self._multiplier, light.position,
                     light.get_current_radius(), self._obstaculos, camera_offset)
+
+        if lote is not None:
+            lote.volcar(self._multiplier)
 
         target.blit(self._multiplier, (0, 0), special_flags=pygame.BLEND_RGB_MULT)
 
