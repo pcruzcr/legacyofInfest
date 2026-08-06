@@ -1,0 +1,23 @@
+"""Ejemplo de plugin. Para probarlo, quítale el `.txt` y el `_` del nombre.
+
+Va desactivado a propósito: un plugin de ejemplo que se carga solo es una
+sorpresa en la pantalla de quien no pidió nada.
+"""
+
+
+def registrar(gestor):
+    estado = {"fotogramas": 0}
+
+    def contar(escena, dt, **_):
+        estado["fotogramas"] += 1
+
+    def pintar(superficie, escena, **_):
+        import pygame
+
+        fuente = pygame.font.Font(None, 16)
+        texto = fuente.render(f"fotogramas: {estado['fotogramas']}", True,
+                              (255, 255, 0))
+        superficie.blit(texto, (4, 4))
+
+    gestor.enganchar("escenario_actualizado", contar)
+    gestor.enganchar("escenario_dibujado", pintar)

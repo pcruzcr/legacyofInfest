@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 import pygame
 
-from src.engine.core import settings
+from src.engine.core import plugins, settings
 from src.engine.core.achievements import AchievementSystem
 from src.engine.core.events import Events
 from src.engine.core.experience import ExperienceSystem
@@ -665,6 +665,10 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, SonidoDeEscenario,
         # éste y no depende de qué reliquias haya mañana.
         self._aplicar_exencion_de_habilidades()
         self._aplicar_partida_pendiente()
+        # AUD-296 — aquí y no antes: un plugin que reciba el escenario lo
+        # quiere **ya cargado**, con sus entidades y su jugador colocado.
+        plugins.get_gestor().disparar(
+            "escenario_cargado", escena=self, stage=self._stage_data)
         self._stage_complete = False
         self._game_over = False
         self._pending_game_over = False
@@ -949,6 +953,9 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, SonidoDeEscenario,
             self._update_trail(dt)
         if self._hud and self._hud.current_time <= 0 and self._hud.is_countdown and not self._game_over:
             self._kill_player()
+        # AUD-296 — al final del fotograma, con el mundo ya resuelto: un plugin
+        # que lea posiciones las quiere definitivas, no a medio integrar.
+        plugins.get_gestor().disparar("escenario_actualizado", escena=self, dt=dt)
 
     def _handle_input(self) -> None:
         im = self.input
@@ -1934,3 +1941,9 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, SonidoDeEscenario,
         self._subtitles.draw(surface)
         self._achievements.draw_notifications(surface)
         get_inventory().draw_notifications(surface)
+        # AUD-296 — lo último, encima de todo. Es el punto que el bus de
+        # eventos no podía dar: nadie publica un evento por fotograma con la
+        # superficie dentro, así que un overlay propio obligaba a editar
+        # `DrawingSystem`.
+        plugins.get_gestor().disparar(
+            "escenario_dibujado", superficie=surface, escena=self)
