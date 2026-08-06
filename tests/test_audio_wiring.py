@@ -44,14 +44,16 @@ def _fichero_del_mapa_de_sonidos() -> pathlib.Path:
     """Dónde vive la tabla `Events.SFX_… → nombre de muestra`.
 
     Se pregunta al módulo en vez de escribir la ruta a mano. AUD-152 movió la
-    tabla de `stage_scene.py` a `stage_parts/senales.py` y una constante fija
-    habría hecho que estas pruebas fallaran con «ya no está cableado», que es
-    una acusación falsa: el cableado estaba intacto y lo que se movió fue el
-    archivo. Un `getsourcefile` sigue al módulo se mueva donde se mueva.
+    tabla de `stage_scene.py` a `stage_parts/senales.py`, y AUD-290 de ahí a
+    `stage_parts/sonido.py`. Una constante fija habría hecho que estas pruebas
+    fallaran con «ya no está cableado», que es una acusación falsa: el cableado
+    estaba intacto y lo que se movió fue el archivo. Un `getsourcefile` sigue al
+    módulo se mueva donde se mueva — lo que hay que actualizar es **qué módulo**
+    se mira, y eso es una línea.
     """
-    from src.framework.scenes.stage_parts import senales
+    from src.framework.scenes.stage_parts import sonido
 
-    ruta = inspect.getsourcefile(senales)
+    ruta = inspect.getsourcefile(sonido)
     assert ruta is not None
     return pathlib.Path(ruta)
 

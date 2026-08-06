@@ -36,8 +36,23 @@ PARTES = {
     ),
     "senales": (
         "SenalesDeEscenario",
-        ("_subscribe_event_handlers", "_unsubscribe_all_handlers",
-         "_make_sfx_handler", "_play_sfx_named", "_play_sfx_spatial"),
+        ("_subscribe_event_handlers", "_unsubscribe_all_handlers"),
+    ),
+    # AUD-290 — la mitad sonora sale de `senales`. El docstring de aquel módulo
+    # ya decía que eran «dos familias»; compartían fichero hasta que el fichero
+    # llegó a su presupuesto.
+    "sonido": (
+        "SonidoDeEscenario",
+        ("_subscribe_sfx_handlers", "_make_sfx_handler",
+         "_play_sfx_named", "_play_sfx_spatial"),
+    ),
+    "diagnostico": (
+        "DiagnosticoDeEscenario",
+        ("medidas_de_depuracion", "_retirar_entidad_rota"),
+    ),
+    "cinematicas": (
+        "CinematicasDeEscenario",
+        ("_actualizar_escenas", "_montar_director_de_escenas"),
     ),
     "fantasma": (
         "FantasmaDeCarrera",
