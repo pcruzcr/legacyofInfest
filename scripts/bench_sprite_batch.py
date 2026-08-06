@@ -23,6 +23,28 @@ lento. Una ruta de GPU que gane en la tarjeta y pierda en el trayecto de vuelta
 no sirve de nada mientras el resto del fotograma siga en CPU — y eso sólo se ve
 midiendo las dos cosas por separado.
 
+Con qué tarjeta mide
+====================
+Con la que le dé Windows, y lo dice al terminar. En este equipo hay dos —una
+Intel HD 530 integrada y una Quadro M2200— y **ni SDL ni ModernGL eligen la
+Quadro por su cuenta**: ni con contexto standalone, ni con ventana OpenGL real.
+No es cosa del motor; en Windows la ruta OpenGL de un proceso la decide una
+preferencia por aplicación que hay que dar de alta.
+
+Para medir con la dedicada, una de estas dos, y volver a ejecutar esto:
+
+* Panel de control de NVIDIA → Administrar configuración 3D → Configuración de
+  programa → añadir `python.exe` → «Procesador NVIDIA de alto rendimiento».
+* Configuración de Windows → Sistema → Pantalla → Gráficos → añadir
+  `python.exe` → Alto rendimiento.
+
+**Y lo que la tarjeta dedicada no va a cambiar.** La columna `GPU` mejorará; la
+de `GPU+bajar`, probablemente **empeore**: bajar píxeles de una tarjeta discreta
+cruza el bus PCIe, mientras que la integrada comparte la memoria del sistema. La
+conclusión —que no compensa mover los sprites a la tarjeta mientras el fotograma
+se componga en CPU— se refuerza, no se debilita. Lo que sí bajará es el umbral a
+partir del cual la GPU gana dibujando.
+
 Uso::
 
     python scripts/bench_sprite_batch.py            # 500, 2.000 y 8.000
