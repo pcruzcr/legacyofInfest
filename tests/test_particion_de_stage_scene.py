@@ -32,7 +32,9 @@ PARTES = {
     "ambiente": (
         "MezclaDeAmbiente",
         ("_setup_lighting", "_setup_post_processing", "_setup_ambient_particles",
-         "_setup_season", "_setup_day_night", "_aplicar_hora", "_clima_efectivo"),
+         "_setup_season", "_setup_day_night", "_aplicar_hora", "_clima_efectivo",
+         "_configurar_vfx_opcionales", "_publicar_los_rayos_de_luz",
+         "_capture_enemy_trails"),
     ),
     "senales": (
         "SenalesDeEscenario",
@@ -52,7 +54,18 @@ PARTES = {
     ),
     "cinematicas": (
         "CinematicasDeEscenario",
-        ("_actualizar_escenas", "_montar_director_de_escenas"),
+        ("_actualizar_escenas", "_montar_director_de_escenas",
+         "_cargar_los_arboles_de_dialogo"),
+    ),
+    # AUD-299 — las dos que bajaron el fichero a su presupuesto.
+    "arco": (
+        "ArcoDelJugador",
+        ("_raton_esta_apuntando", "_direccion_de_tiro", "_actualizar_arco",
+         "_dibujar_trayectoria_del_arco"),
+    ),
+    "mundo_ecs": (
+        "MundoDelEscenario",
+        ("_construir_planificador", "_poblar_mundo_ecs", "_actualizar_agarres"),
     ),
     "fantasma": (
         "FantasmaDeCarrera",

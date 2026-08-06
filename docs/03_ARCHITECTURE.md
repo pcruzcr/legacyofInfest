@@ -283,6 +283,8 @@ legacy-of-infest/                      # Actual repo root
 │   │   │       ├── diagnostico.py         #   AUD-290: lo que enseña F11 y qué pasa si una
 │   │   │       │                          #   entidad revienta (AUD-283, AUD-289)
 │   │   │       ├── cinematicas.py         #   AUD-290: monta el director de escenas y lo corre
+│   │   │       ├── arco.py                #   AUD-299: apuntar, disparar y la parábola
+│   │   │       ├── mundo_ecs.py           #   AUD-299: planificador, población y agarres
 │   │   │       ├── fantasma.py            #   silueta de la mejor carrera
 │   │   │       ├── rush.py                #   AUD-261: conduce el Boss Rush —
 │   │   │       │                          #   golpes, tiempo y arrastre de vida
