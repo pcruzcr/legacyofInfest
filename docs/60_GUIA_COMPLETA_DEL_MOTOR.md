@@ -28,7 +28,7 @@ date_processed: "2026-07-31"
 1. [El bucle: qué pasa en un fotograma](#1)
 2. [Anatomía de un escenario TMX](#2)
 3. [Propiedades del mapa — las 17](#3)
-4. [Los 75 tipos de objeto, uno por uno](#4)
+4. [Los 76 tipos de objeto, uno por uno](#4)
 5. [El jugador: 26 estados y qué los provoca](#5)
 6. [Enemigos: 37 tipos y 13 estados](#6)
 7. [Jefes](#7)
@@ -219,9 +219,9 @@ efecto, mira la consola antes que el código.
 ---
 
 <a id="4"></a>
-## 4. Los 75 tipos de objeto, uno por uno
+## 4. Los 76 tipos de objeto, uno por uno
 
-El motor acepta **75 tipos** en la capa `Objects`: 36 integrados del framework
+El motor acepta **76 tipos** en la capa `Objects`: 37 integrados del framework
 y 37 enemigos del registro, más `Solid` y `Platform` en `Collision`. Todos los
 números se convierten a `float` automáticamente.
 
@@ -495,6 +495,31 @@ El borde **mata** en vez de empujar, y es deliberado: empujar deja al jugador
 aplastado contra la geometría o atascado en un saliente mientras la cámara
 sigue. Matar es honesto —el nivel dijo «sígueme» y no lo seguiste— y el
 reintento es inmediato si has puesto checkpoints. Ponlos.
+
+**`WarpZone` — cruzar el mapa de una punta a otra (AUD-287).** Las cuevas de
+Zelda, los ascensores de Metroid, los Stagways de Hollow Knight. Hasta AUD-287
+esto no se podía declarar: `NextTrigger` cambia de escenario y `Door` abre un
+paso, y no había nada entre medias, así que un mapa grande obligaba a
+recorrerlo entero para volver.
+
+| Type | Propiedad | Por defecto | Qué hace |
+|---|---|---|---|
+| `WarpZone` | `destino_x` | **obligatoria** | px de mundo; ahí van los **pies** del jugador |
+| | `destino_y` | **obligatoria** | idem |
+| | `automatico` | `true` | `false` pide el botón de usar |
+| | `una_vez` | `false` | para un pasadizo de ida sin vuelta |
+| | `key_id` | — | hace falta esa llave |
+| | `enfriamiento` | `0.5` | segundos antes de poder repetirlo |
+| | `mensaje` | — | texto al cruzar |
+
+Sin destino **no se carga**, y el cargador te lo dice: un warp que manda a la
+esquina del mapa parece un fallo del motor, no un mapa a medio configurar. El
+enfriamiento tampoco es decorativo — un destino que cae dentro de otra zona de
+warp, o dentro de sí misma, produce un bucle a 60 fps.
+
+Piénsalo dos veces antes de ponerlo automático. En un corredor por el que se
+pasa andando se dispara sin querer, y si el tramo tiene scroll forzado, eso es
+una trampa.
 
 **`BossSpawn` — dónde entra el jefe (AUD-259).** `17_BOSS_SPEC.md` §8.2 lo
 pide en todo mapa de jefe desde que se escribió, y hasta AUD-259 **el motor no
