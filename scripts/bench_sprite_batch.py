@@ -59,6 +59,10 @@ import sys
 import time
 from pathlib import Path
 
+# AUD-177: esto imprime «→» y «×», y la consola de Windows usa cp1252.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
