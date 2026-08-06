@@ -82,6 +82,7 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── achievements.py            # Achievement system
 │   │   │   ├── difficulty.py              # Difficulty scaling (Difficulty enum, set_difficulty)
 │   │   │   ├── experience.py              # XP por enemigo, curva de nivel y puntos de habilidad (AUD-249)
+│   │   │   ├── skill_tree.py              # AUD-293: el árbol — vitalidad, fuerza e ímpetu
 │   │   │   ├── i18n.py                    # Internationalization (gettext wrapper)
 │   │   │   ├── inventory.py               # Item/collectible management
 │   │   │   ├── registro.py                # AUD-268: los avisos van al fichero, no a la consola
@@ -134,6 +135,7 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── collision_lab_scene.py     # Unit VI — Collision lab
 │   │   │   ├── combo_demo_scene.py        # Combo system state machine demo
 │   │   │   ├── inventory_scene.py         # Inventory screen (grid; equip/unequip)
+│   │   │   ├── skill_tree_scene.py       # AUD-293: gastar puntos de experiencia
 │   │   │   ├── shop_scene.py              # Shop: buy/sell clothing with coins
 │   │   │   ├── boss_rush_entry.py         # Boss rush entry point (two helper functions)
 │   │   │   ├── achievement_scene.py       # Achievement screen (locked/unlocked)

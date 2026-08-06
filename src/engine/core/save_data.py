@@ -63,6 +63,8 @@ class SaveData(BaseModel):
     #: cargar una partida le devolvería al jugador todos los puntos que ya se
     #: había gastado en el árbol — y con ellos podría comprarlo dos veces.
     exp_estado: dict[str, int] = Field(default_factory=dict)
+    #: AUD-293 — los rangos comprados del árbol de habilidades.
+    arbol: dict[str, int] = Field(default_factory=dict)
 
     @field_validator("health", "max_health")
     @classmethod
@@ -139,6 +141,7 @@ class SaveData(BaseModel):
             data.setdefault("inventory_items", {})
             data.setdefault("inventory_equipped", {})
             data.setdefault("exp_estado", {})
+            data.setdefault("arbol", {})
             data["version"] = 3
         return data
 

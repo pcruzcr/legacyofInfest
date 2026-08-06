@@ -130,6 +130,9 @@ class UltimateState(PlayerStateBase):
         from src.framework.entities.player import PlayerState
         super().__init__(PlayerState.ULTIMATE)
         self._timer: float = 0.0
+        #: AUD-293 — el árbol puede alargarlo. Se lee al entrar en el estado
+        #: y no en el constructor: el jugador puede comprar el rango entre dos
+        #: usos, y una duración leída una vez obligaría a reiniciar el nivel.
         self._duration: float = 0.6
         self._has_hit: bool = False
 
@@ -160,7 +163,7 @@ class UltimateState(PlayerStateBase):
             player._active_hitbox = None
             player._damage_mult = 1.0
 
-        if self._timer >= self._duration:
+        if self._timer >= self._duration + getattr(player, "_bonus_ultimate", 0.0):
             player._active_hitbox = None
             player._damage_mult = 1.0
             from src.framework.entities.states import IdleState

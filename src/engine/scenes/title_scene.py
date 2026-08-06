@@ -75,6 +75,10 @@ class TitleScene(BaseScene):
             MenuItem("TUTORIAL", value="TUTORIAL"),
             MenuItem("WORLD MAP", value="WORLD MAP"),
             MenuItem("INVENTORY", value="INVENTORY"),
+            # AUD-293 — junto al inventario y no al final: los dos son «lo que
+            # llevo encima», y el árbol enterrado bajo Opciones sería otra
+            # pantalla que existe y nadie encuentra.
+            MenuItem("SKILL TREE", value="SKILL TREE"),
             # AUD-221: la tienda va pegada al inventario porque son las dos
             # mitades de lo mismo — aquí se compra la ropa y allí se pone.
             MenuItem("SHOP", value="SHOP"),
@@ -211,6 +215,10 @@ class TitleScene(BaseScene):
             from src.engine.scenes.inventory_scene import InventoryScene
             self.context.scene_manager.transition.start_fade_out(0.4)
             self.context.scene_manager.replace(InventoryScene(self.context))
+        elif opt == "SKILL TREE":
+            from src.engine.scenes.skill_tree_scene import SkillTreeScene
+            self.context.scene_manager.transition.start_fade_out(0.4)
+            self.context.scene_manager.replace(SkillTreeScene(self.context))
         elif opt == "SHOP":
             from src.engine.scenes.shop_scene import ShopScene
             self.context.scene_manager.transition.start_fade_out(0.4)

@@ -34,6 +34,10 @@ MIGRATED = {
     "game_over_scene.py",
     "stage_error_scene.py",
     "title_scene.py",
+    # AUD-293 — nace en el kit: `draw_screen`, `draw_key_hints` y las fuentes
+    # del tema. Una pantalla nueva que empiece con su propia paleta nace ya
+    # con deuda, y esta lista existe justamente para que eso no pase.
+    "skill_tree_scene.py",
     # ── Los 17 laboratorios ────────────────────────────────────────
     # Estas escenas no importan `theme` ni `widgets` directamente: usan
     # `demo_layout`, que **deriva toda su paleta del tema** (`COLOR_BG =

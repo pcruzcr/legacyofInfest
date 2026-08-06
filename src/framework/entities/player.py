@@ -235,6 +235,13 @@ class Player(BaseEntity):
         self._bonus_max_health: float = 0.0
         self._bonus_speed: float = 0.0
         self._bonus_damage: float = 0.0
+        #: AUD-293 — lo que aporta el árbol de habilidades, aparte de las
+        #: reliquias. Separado y no sumado en el mismo campo para que la
+        #: pantalla del árbol pueda decir cuánto viene de dónde.
+        self._bonus_arbol_salud: float = 0.0
+        self._bonus_arbol_dano: float = 0.0
+        #: Segundos extra que dura el ultimate. Los lee `UltimateState`.
+        self._bonus_ultimate: float = 0.0
 
         # --- State pattern ---
         self._state_instance: PlayerStateBase
@@ -346,8 +353,17 @@ class Player(BaseEntity):
 
     @property
     def max_health(self) -> float:
-        """Maximum health, including bonuses granted by collected relics."""
-        return settings.PLAYER_MAX_HEALTH + self._bonus_max_health
+        """Vida máxima: base + reliquias + árbol, con tope de diez corazones.
+
+        AUD-293 — el tope es del diseño y se aplica aquí, en el único sitio por
+        el que pasan todos los sumandos. Recortarlo en el árbol dejaría que las
+        reliquias se lo saltaran, y recortarlo en las reliquias, al revés.
+        """
+        from src.engine.core.skill_tree import CORAZONES_MAXIMOS
+
+        total = (settings.PLAYER_MAX_HEALTH + self._bonus_max_health
+                 + self._bonus_arbol_salud)
+        return min(total, CORAZONES_MAXIMOS)
 
     @property
     def walk_speed(self) -> float:
@@ -362,8 +378,8 @@ class Player(BaseEntity):
 
     @property
     def damage_multiplier(self) -> float:
-        """Outgoing damage multiplier from relics (1.0 = no bonus)."""
-        return 1.0 + self._bonus_damage
+        """Multiplicador de daño: reliquias y árbol (1,0 = sin bonificación)."""
+        return 1.0 + self._bonus_damage + self._bonus_arbol_dano
 
     def apply_relic_bonuses(self, inventory: Any) -> None:
         """Recompute stat bonuses from the player's collected relics.
@@ -375,6 +391,17 @@ class Player(BaseEntity):
         on stage entry and whenever an item is collected.
         """
         previous_max = self.max_health
+        # AUD-293 — el árbol se recalcula aquí, con las reliquias, porque los
+        # dos alimentan los mismos tres números y porque este método ya se
+        # llama justo cuando hay que rehacerlos: al entrar al escenario y al
+        # recoger algo. El nombre se queda como estaba: lo llaman las 26
+        # entregas y renombrarlo por precisión rompería veintiséis ficheros.
+        from src.engine.core.skill_tree import ArbolDeHabilidades
+
+        arbol = ArbolDeHabilidades.get_instance()
+        self._bonus_arbol_salud = float(arbol.bonus_corazones())
+        self._bonus_arbol_dano = float(arbol.bonus_dano())
+        self._bonus_ultimate = float(arbol.bonus_ultimate())
         self._bonus_max_health = float(inventory.get_total_hp_bonus())
         # AUD-070: el inventario guarda el bono de velocidad en **porcentaje**
         # —`swift_feather` declara `speed_bonus=10.0` y se describe como «Move
