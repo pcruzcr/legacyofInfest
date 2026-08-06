@@ -146,6 +146,16 @@ class App:
         from src.engine.scenes.debug_overlay import DebugOverlay
         self.debug_overlay = DebugOverlay(self.event_bus)
 
+        # AUD-296 — los plugins, antes de montar nada más. Uno puede querer
+        # engancharse a `juego_arrancado` y tocar lo que venga después; si se
+        # descubrieran al final, ese gancho llegaría tarde a su propio nombre.
+        from src.engine.core.plugins import get_gestor
+        self.plugins = get_gestor()
+        cuantos = self.plugins.descubrir()
+        if cuantos:
+            logger.info("plugins: %d cargado(s): %s", cuantos,
+                        ", ".join(self.plugins.cargados))
+
         # AUD-036: load persisted player preferences before anything reads them,
         # and apply the ones other subsystems own (volumes, difficulty). The
         # options screen previously wrote these to disk and nothing loaded them
@@ -223,6 +233,7 @@ class App:
     MAX_CONSECUTIVE_FRAME_ERRORS = 10
 
     def run(self) -> None:
+        self.plugins.disparar("juego_arrancado", app=self)
         self.running = True
         consecutive_errors = 0
         while self.running and self.context.running:
