@@ -91,6 +91,23 @@ def es_correo_valido(correo: str) -> bool:
     return bool(_CORREO.match(_normalizar_correo(correo)))
 
 
+#: Largo máximo del apodo. Cabe en la franja de diálogo a escala 2,0 sin
+#: recortar la frase que lo rodea, que es el límite que importa.
+APODO_MAX: int = 16
+
+
+def _limpiar_apodo(apodo: str) -> str:
+    """Recorta y quita lo que rompería un cuadro de diálogo.
+
+    Se filtran los saltos de línea y los caracteres de control: un apodo con
+    un `
+` parte la frase en dos y deja media línea colgando, y eso no se
+    diagnostica mirando el diálogo — se diagnostica mirando el JSON.
+    """
+    limpio = "".join(c for c in str(apodo) if c.isprintable())
+    return limpio.strip()[:APODO_MAX]
+
+
 def nombre_de_fichero(correo: str) -> str:
     """Nombre de fichero seguro derivado del correo.
 
@@ -108,8 +125,15 @@ def nombre_de_fichero(correo: str) -> str:
 class ProgresoAcademico:
     """Las notas de un estudiante y qué puede abrir con ellas."""
 
-    def __init__(self, correo: str = "") -> None:
+    def __init__(self, correo: str = "", apodo: str = "") -> None:
         self.correo: str = _normalizar_correo(correo)
+        #: Cómo quiere que le llamen — AUD-291.
+        #:
+        #: El correo identifica; el apodo es lo que se lee. Son cosas distintas
+        #: y por eso son dos campos: un diálogo que te llame
+        #: «a01234567@tec.mx» no es personalización, es una fuga de dato
+        #: personal proyectada en la pantalla de un aula.
+        self.apodo: str = _limpiar_apodo(apodo)
         #: unidad -> mejor número de aciertos conseguido.
         self._mejor: dict[str, int] = {}
         #: unidad -> cuántas veces lo ha intentado. Le sirve al profesor para
@@ -205,6 +229,7 @@ class ProgresoAcademico:
         return {
             "version": VERSION,
             "correo": self.correo,
+            "apodo": self.apodo,
             "mejor": dict(self._mejor),
             "intentos": dict(self._intentos),
         }
@@ -212,7 +237,7 @@ class ProgresoAcademico:
     @classmethod
     def desde_dict(cls, datos: dict[str, Any]) -> ProgresoAcademico:
         datos = _migrar(datos)
-        progreso = cls(str(datos.get("correo", "")))
+        progreso = cls(str(datos.get("correo", "")), str(datos.get("apodo", "")))
         conocidas = set(ids_de_unidades())
         for clave, valor in dict(datos.get("mejor", {})).items():
             # Se descarta lo que ya no está en el temario en vez de arrastrarlo:

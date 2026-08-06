@@ -50,7 +50,7 @@ from src.engine.scenes.demo_common import (
 )
 from src.engine.scenes.demo_layout import area_de_contenido
 from src.engine.utils.asset_loader import AssetLoader
-from src.framework.academic.progress import es_correo_valido
+from src.framework.academic.progress import APODO_MAX, es_correo_valido
 from src.framework.academic.sesion import SesionAcademica
 
 if TYPE_CHECKING:
@@ -74,6 +74,14 @@ class StudentLoginScene(BaseScene):
     def __init__(self, context: GameContext) -> None:
         super().__init__(context)
         self._buffer: str = ""
+        #: AUD-291 — el apodo, en su propio campo.
+        #:
+        #: Dos campos y no uno: el correo identifica y el apodo es lo que se
+        #: lee en pantalla. Derivar el apodo del correo dejaría a los diálogos
+        #: llamando «a01234567» a la gente, que es peor que no personalizar.
+        self._apodo: str = ""
+        #: Cuál de los dos campos recibe las teclas. TAB cambia.
+        self._campo: int = 0
         self._mensaje: str = ""
         self._cursor_visible: bool = True
         self._cursor_timer: float = 0.0
@@ -88,7 +96,10 @@ class StudentLoginScene(BaseScene):
     def on_enter(self) -> None:
         # Se precarga el correo actual: lo normal en un aula es corregir una
         # letra, no volver a escribirlo entero.
-        self._buffer = SesionAcademica.instancia().correo
+        sesion = SesionAcademica.instancia()
+        self._buffer = sesion.correo
+        self._apodo = sesion.progreso.apodo
+        self._campo = 0
         self._mensaje = ""
         self._cursor_visible = True
         self._cursor_timer = 0.0
@@ -101,13 +112,27 @@ class StudentLoginScene(BaseScene):
         for evento in events:
             if evento.type != pygame.KEYDOWN:
                 continue
+            if evento.key == pygame.K_TAB:
+                self._campo = 1 - self._campo
+                continue
             if evento.key == pygame.K_BACKSPACE:
-                self._buffer = self._buffer[:-1]
+                if self._campo == 0:
+                    self._buffer = self._buffer[:-1]
+                else:
+                    self._apodo = self._apodo[:-1]
                 self._mensaje = ""
                 continue
-            caracter = (getattr(evento, "unicode", "") or "").lower()
-            if caracter in PERMITIDOS and len(self._buffer) < MAX_LONGITUD:
-                self._buffer += caracter
+            crudo = getattr(evento, "unicode", "") or ""
+            if self._campo == 0:
+                caracter = crudo.lower()
+                if caracter in PERMITIDOS and len(self._buffer) < MAX_LONGITUD:
+                    self._buffer += caracter
+                    self._mensaje = ""
+            # El apodo admite mayúsculas, tildes y espacios: es un nombre, no
+            # un identificador. Lo único que se filtra son los caracteres que
+            # partirían un cuadro de diálogo, y eso lo hace `_limpiar_apodo`.
+            elif crudo.isprintable() and len(self._apodo) < APODO_MAX:
+                self._apodo += crudo
                 self._mensaje = ""
 
     def update(self, dt: float) -> None:
@@ -129,6 +154,9 @@ class StudentLoginScene(BaseScene):
 
     def _confirmar(self) -> None:
         if SesionAcademica.instancia().entrar(self._buffer):
+            # El apodo va **después** de entrar: `entrar()` carga el progreso
+            # desde el disco y sobreescribiría lo que se hubiera puesto antes.
+            SesionAcademica.instancia().poner_apodo(self._apodo)
             self._recargar_logros()
             self.context.event_bus.emit(Events.SFX_MENU_CONFIRM)
             self._volver()
@@ -144,6 +172,8 @@ class StudentLoginScene(BaseScene):
         SesionAcademica.instancia().salir()
         self._recargar_logros()
         self._buffer = ""
+        self._apodo = ""
+        self._campo = 0
         self._mensaje = "Sesión cerrada. El progreso guardado sigue en el disco."
         self.context.event_bus.emit(Events.SFX_MENU_CANCEL)
 
@@ -175,6 +205,7 @@ class StudentLoginScene(BaseScene):
 
         explicacion = [
             "Escribe el correo de la universidad para que tu progreso se guarde.",
+            "El apodo es como te llamará el juego. TAB cambia de campo.",
             "Sin identificarte también puedes jugar: no se guardará nada.",
         ]
         for linea in explicacion:
@@ -191,10 +222,29 @@ class StudentLoginScene(BaseScene):
         pygame.draw.rect(surface, (18, 18, 34), campo, border_radius=4)
         pygame.draw.rect(surface, borde, campo, 2, border_radius=4)
 
-        texto = self._buffer + ("_" if self._cursor_visible else " ")
+        cursor = "_" if self._cursor_visible else " "
+        texto = self._buffer + (cursor if self._campo == 0 else "")
         render = self._font_medium.render(texto, True, COLOR_HIGHLIGHT)
         surface.blit(render, (campo.x + 12, campo.centery - render.get_height() // 2))
-        y = campo.bottom + 16
+        etiqueta = self._font_small.render("correo", True, (120, 120, 140))
+        surface.blit(etiqueta, (campo.x + 2, campo.y - etiqueta.get_height() - 2))
+        y = campo.bottom + 14
+
+        # AUD-291 — el campo del apodo, debajo y más estrecho: es más corto y
+        # que se vea que no es lo mismo que el correo.
+        campo_apodo = pygame.Rect(cx - ancho_campo // 2, y, ancho_campo // 2, 46)
+        borde_apodo = COLOR_ACCENT if self._campo == 1 else (90, 90, 110)
+        pygame.draw.rect(surface, (18, 18, 34), campo_apodo, border_radius=4)
+        pygame.draw.rect(surface, borde_apodo, campo_apodo, 2, border_radius=4)
+        texto_apodo = self._apodo + (cursor if self._campo == 1 else "")
+        render = self._font_medium.render(texto_apodo, True, COLOR_HIGHLIGHT)
+        surface.blit(render, (campo_apodo.x + 12,
+                              campo_apodo.centery - render.get_height() // 2))
+        etiqueta = self._font_small.render(
+            f"apodo (máx. {APODO_MAX})", True, (120, 120, 140))
+        surface.blit(etiqueta, (campo_apodo.x + 2,
+                                campo_apodo.y - etiqueta.get_height() - 2))
+        y = campo_apodo.bottom + 16
 
         # Estado: se dice si el correo vale **antes** de pulsar Enter, que es
         # cuando sirve de algo.
@@ -215,12 +265,14 @@ class StudentLoginScene(BaseScene):
         if sesion.identificado:
             aprobadas = len(sesion.progreso.unidades_aprobadas())
             actual = self._font_small.render(
-                f"Sesión actual: {sesion.correo} · {aprobadas} unidad(es) aprobadas",
+                f"Sesión actual: {sesion.apodo} ({sesion.correo}) · "
+                f"{aprobadas} unidad(es) aprobadas",
                 True, COLOR_ACCENT,
             )
             surface.blit(actual, (cx - actual.get_width() // 2, y + 14))
 
         draw_bottom_bar(
             surface,
-            "Escribe el correo  |  ENTER: Entrar  |  SUPR: Cerrar sesión  |  ESC: Volver",
+            "TAB: cambiar de campo  |  ENTER: Entrar  |  "
+            "SUPR: Cerrar sesión  |  ESC: Volver",
         )

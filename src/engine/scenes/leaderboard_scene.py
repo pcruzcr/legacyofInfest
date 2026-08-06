@@ -175,7 +175,14 @@ class LeaderboardScene(BaseScene):
         """
         filas = _ESCENARIOS if self._mode == 0 else _JEFES
         ancho = max(len(nombre) for _, nombre in filas) + 2
-        lineas = [
+        # AUD-291 — de quién son estos tiempos. En un aula con un usuario
+        # compartido, una tabla sin dueño es una tabla que nadie reclama.
+        from src.framework.academic.sesion import SesionAcademica
+
+        sesion = SesionAcademica.instancia()
+        encabezado = ([f"Marcas de {sesion.apodo}", ""]
+                      if sesion.identificado else [])
+        lineas = encabezado + [
             f"{nombre + ':':<{ancho}}"
             + (self._format_time(self._marcas[stage_id])
                if stage_id in self._marcas else SIN_MARCA)

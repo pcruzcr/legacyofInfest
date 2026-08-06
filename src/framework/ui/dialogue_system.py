@@ -87,6 +87,32 @@ VELOCIDADES_DE_TEXTO: dict[str, float] = {
 }
 
 
+#: AUD-291 — la marca que un guion pone donde va el nombre del jugador.
+#:
+#: Llaves y no `$nombre` ni `%s`: es lo que ya usa cualquiera que haya escrito
+#: una plantilla, y no choca con la puntuación normal de una frase en español.
+MARCA_DE_APODO: str = "{apodo}"
+
+
+def personalizar(texto: str) -> str:
+    """Cambia `{apodo}` por cómo se llama quien está jugando — AUD-291.
+
+    Se hace aquí, al dibujar, y **no** al cargar el árbol: el apodo se puede
+    cambiar a mitad de partida desde la pantalla de identificación, y un texto
+    sustituido al cargar seguiría diciendo el nombre viejo hasta reiniciar el
+    nivel. Es la misma razón por la que la escala de accesibilidad se lee en
+    cada fotograma.
+
+    Un guion que no use la marca no paga nada: la comprobación es un `in` sobre
+    una cadena corta, y se hace antes de tocar la sesión académica.
+    """
+    if MARCA_DE_APODO not in texto:
+        return texto
+    from src.framework.academic.sesion import SesionAcademica
+
+    return texto.replace(MARCA_DE_APODO, SesionAcademica.instancia().apodo)
+
+
 def dividir_en_lineas(
     texto: str, fuente: pygame.font.Font, ancho_max: int,
 ) -> list[str]:
@@ -433,7 +459,8 @@ class DialogueSystem:
             return [[]]
         ancho = (settings.INTERNAL_WIDTH - MARGEN * 2
                  - int(48 * self._escala_actual()) - Theme.SPACE_M * 3)
-        lineas = dividir_en_lineas(self._current_node.text, self._font_text, ancho)
+        lineas = dividir_en_lineas(
+            personalizar(self._current_node.text), self._font_text, ancho)
         if not lineas:
             return [[]]
         por_pagina = self._lineas_por_pagina()
