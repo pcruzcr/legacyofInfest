@@ -23,6 +23,12 @@ lista, empieza por [§15.0](#150-seis-cifras-de-la-lista-que-la-medición-no-con
 seis de sus cifras no coinciden con lo medido, y tres de ellas cambian la
 conclusión de su propia propuesta.
 
+**§16 (5 de agosto de 2026)** es lo que se implementó después: los once puntos
+que §15.10 daba por baratos o medianos, de AUD-279 a AUD-289. Incluye
+[§16.1](#161-las-tres-veces-que-la-medición-contradijo-a-este-documento), las
+tres veces que la medición contradijo a este mismo documento — que es la parte
+que conviene leer antes de fiarse de una recomendación de aquí.
+
 ---
 
 ## 0. Resumen para quien tiene prisa
@@ -575,13 +581,13 @@ función**. El trabajo está hecho; lo que quedaba —medirlo— es esta fila.
 | Ajustar el arco de salto | **No tocar sin decidirlo antes** | `GRAVITY` y `PLAYER_JUMP_FORCE` recalibran **los 16 mapas ya calificados**. `tests/test_calibracion_del_salto.py` existe como trinquete precisamente para que nadie los cambie sin enterarse. Y con el salto aéreo el arco ya es 1,90:1 |
 | *Hit-stop* | **HECHO** | `FUENTE_HITSTOP` en `clock.py`, con los tres relojes de AUD-118/119 para que congelar el golpe no congele la música ni los bloques rítmicos |
 | *Knockback* | **HECHO** | `states/damage.py`, `player.py` |
-| *Screen shake* **direccional** | **PENDIENTE (pequeño)** | `Camera.apply_shake(amplitude, duration)` sacude en aleatorio; no recibe dirección del golpe. Respeta «movimiento reducido», así que la variante direccional tendría que hacerlo también |
+| ~~*Screen shake* **direccional**~~ | **HECHO (AUD-282)** | `apply_shake(..., direccion=)`: onda de un ciclo sobre el eje del golpe, con 25 % de temblor cruzado. Sin el parámetro se comporta como antes. Lo usan el daño al jugador y el pisotón |
 | Telegrafiar el ataque enemigo | **HECHO en jefes, parcial en enemigos** | `BossBase` tiene fase de aviso con `0-1` publicado para el HUD (`boss_base.py:429-546`). Los enemigos comunes no tienen ventana de aviso declarada |
 | *Spacing* y cajas de ataque | **La maquinaria está; el ajuste es diseño** | Hay `hitbox`/`hurtbox` separadas por entidad y `_attack_timer` por estado. Cambiar los alcances es una decisión de diseño que afecta a las entregas |
 | *Pogo* | **HECHO (AUD-134)** | `POGO_IMPULSO = -300.0`, menor que el salto a propósito: no debe ser una forma más rápida de subir |
 | *Bash* sobre proyectiles | **NO EXISTE** | Sin coincidencias en `src/`. Es aditivo y de riesgo bajo, pero necesita decidir qué proyectiles admiten impulso |
 | Habilidades atadas a jefes | **HECHO (AUD-238)** | El jefe suelta el recogible (aditivo) y `PLAYER_SKILLS_REQUIRE_UNLOCK = False` deja el candado apagado, porque exigir el doble salto rompería niveles ya entregados (invariante 2) |
-| Micro-recompensas al recoger | **PARCIAL** | `INTERACT_ITEM_PICKED` llega a `senales.py` y **sólo actualiza el inventario**: ni partículas, ni rebote de la interfaz. Hay `damage_numbers.py` para el daño, así que el patrón existe y falta aplicarlo a la recogida |
+| ~~Micro-recompensas al recoger~~ | **HECHO (AUD-281)** | Chispas doradas que suben, sonido panoramizado y rebote del contador de monedas. El evento no llevaba ni posición: ahora sí |
 
 ### 15.2 Diseño de niveles
 
@@ -591,8 +597,8 @@ función**. El trabajo está hecho; lo que quedaba —medirlo— es esta fila.
 | Métricas de salto estandarizadas | **HECHO como herramienta, incumplido en los mapas** | `JumpEnvelope` + `grade_stage.py` califican los 16 mapas. Hoy hay **13 huecos imposibles en `stage1_2_la_soda`**, 5 en `stage3_4_boss_gavilan`, 3 en `stage3_3_el_patio` y 2 en `hall` y `stage_mecanicas` |
 | Válvulas de seguridad (*pacing*) | **NO MEDIDO** | El calificador no tiene métrica de tensión. Añadirla es viable: ya cuenta enemigos, huecos y checkpoints por mapa |
 | Densidad y checkpoints | **Confirmado, y es el peor dato de la tanda** | `worst_checkpoint_gap` de `stage2_1_oficinas.tmx` = **3.048,17 px**. El segundo peor es 944,0. No es una tendencia: es un mapa |
-| Zonas de *warp* | **NO EXISTE** | De los 68 tipos de objeto TMX no hay ninguno de teletransporte. `NextTrigger` cambia de nivel; dentro del mapa no hay nada |
-| Sigilo de tres estados | **HECHO, con un estado menos del que pide la lista** | `Alerta.estado` da `tranquilo → sospecha → alerta`, con subida 2,0/s y bajada 0,35/s; `sistema_conos_de_vision` compara cosenos en vez de llamar a `acos`. Falta el estado de **evasión** (ir al último punto donde se vio al jugador) |
+| ~~Zonas de *warp*~~ | **HECHO (AUD-287)** | Tipo `WarpZone` con destino obligatorio, enfriamiento y llave opcional. Dos colocadas en el laboratorio |
+| ~~Sigilo de tres estados~~ | **HECHO, y ahora con cuatro (AUD-286)** | `tranquilo → sospecha → alerta → búsqueda`. La búsqueda dura 3 s en el último punto visto y sólo se entra desde alerta: desde sospecha haría el sigilo ilegible |
 | Fricción variable | **HECHO** | Tipo TMX `FrictionZone` (hielo, miel), con la salvedad medida en AUD-236: actúa como escala de velocidad, no como coeficiente |
 
 ### 15.3 Interfaz y dirección de arte
@@ -608,7 +614,7 @@ función**. El trabajo está hecho; lo que quedaba —medirlo— es esta fila.
 |---|---|---|
 | `SpriteBatch` | **PENDIENTE (medir primero)** | AUD-148. Ver la fila siguiente antes de escribirlo |
 | Atlas de texturas | **EXISTE Y NO LO USA NADIE — a propósito** | `sprite_atlas.py` está medido: **2.000 blits sueltos 2,06 ms; desde el atlas 2,35 ms**. En el camino de CPU de pygame el atlas sale *peor*. Lo que sí gana es la carga: 200 PNG 12,9 ms → atlas 4,3 ms, y `blits()` 2,06 → 1,74 ms. El atlas es el cimiento de la ruta de GPU, no una optimización de hoy |
-| *Culling* agresivo | **NO EXISTE, y es lo más rentable que queda aquí** | `stage_scene.py:1405-1420` actualiza **todos** los enemigos cada fotograma, y `drawing_system.py:533` los encola todos para dibujar. Nada consulta el rectángulo de la cámara |
+| ~~*Culling* agresivo~~ | **HECHO (AUD-279), y la justificación de esta fila era falsa** | En los mapas que hay no gana nada (5,007 ms con / 4,931 sin). Lo que compra es que el coste no crezca con el mapa: 200 enemigos en 10.000 px, **1,52×**. Ver §16.1 |
 | *GPU instancing* | **NO APLICABLE HOY** | La tubería GL (`gl_pipeline.py`) es post-proceso a pantalla completa: los sprites siguen yendo por CPU. Sin ruta de sprites en GPU no hay nada que instanciar — es la misma decisión que `SpriteBatch`, no una aparte |
 | *Object pooling* de VFX | **HECHO (AUD-275)** | 0,658 → 0,453 ms/fotograma, 1,45×. Más `SurfacePool`, usado por jugador, enemigos y tutorial. Queda el pooling de **proyectiles**, que es pequeño |
 | Post-procesado nativo | **HECHO (AUD-229/230)** | Subir el fotograma 10,98 → 0,20 ms; bloom 3,39 → 1,70 ms; todas las pasadas 25,80 → 15,32 ms |
@@ -619,9 +625,9 @@ función**. El trabajo está hecho; lo que quedaba —medirlo— es esta fila.
 
 | Propuesta | Veredicto | Evidencia |
 |---|---|---|
-| *Ducking* | **HECHO a medias (AUD-144)** | `mixer_buses.py` agacha la música **bajo la voz**, y `play_voz(..., duracion_duck=)` es quien lo dispara. Lo que la lista pide —que un SFX crítico agache la música— **no tiene disparador**: el mecanismo está, falta la llamada |
+| ~~*Ducking*~~ | **HECHO del todo (AUD-144 + AUD-284)** | Un efecto crítico baja la música un 30 % durante un segundo —no al 35 % como una voz: bajo un jefe que cae la música es parte del momento—. Cuatro eventos en la lista, y corta a propósito |
 | Panoramización 2D | **HECHO** | `AudioManager.play_sfx_at()` calcula el *pan* por la posición en X respecto al centro de la pantalla |
-| Gestión de voces (polifonía) | **NO EXISTE** | `SoundBank.play()` llama a `sound.play()` sin contar instancias. Cinco enemigos muriendo a la vez reproducen el sonido cinco veces |
+| ~~Gestión de voces (polifonía)~~ | **HECHO (AUD-280)** | Dentro de 40 ms una repetición sube la voz que ya suena en vez de abrir otra; pasada la ventana, tope de tres. Cinco muertes simultáneas = una voz y cuatro refuerzos |
 | Reloj musical (F6) | **HECHO (AUD-137)** | `music_clock.py` lee la posición del mezclador; `bpm`/`compas`/`desfase_audio` se declaran en el mapa |
 
 ### 15.6 Arquitectura y seguridad
@@ -635,24 +641,24 @@ función**. El trabajo está hecho; lo que quedaba —medirlo— es esta fila.
 | Hash de integridad en los JSON | **NO EXISTE, y conviene pensarlo antes** | `save_manager.py` escribe con `orjson`, sin firma. Pero el *salt* viviría en el código, y el código lo leen las 26 personas de las que se querría defender: sería ofuscación, no integridad. Sirve para detectar corrupción accidental; no para un tiempo de *speedrun* alterado a conciencia |
 | Eliminar `pickle` | **HECHO donde importaba (AUD-035)** | La persistencia usa `orjson`, y `tests/test_seguridad_del_motor.py` lo fija para que nadie lo deshaga. Queda **acotado y documentado** en el modelo de referencia de la Unidad IX (`joblib`), con aviso explícito de que deserializar ejecuta código |
 | Carga perezosa | **HECHO** | Ver §15.0 |
-| Carga asíncrona en hilo | **EXISTE Y NADIE LA USA** | `LoadingScene` tiene su hilo trabajador y su barra de progreso, y la única referencia en todo el repositorio es `tests/test_scene_smoke.py`. **No está en el registro de escenas**, así que no se puede alcanzar jugando |
+| ~~Carga asíncrona en hilo~~ | **HECHO (AUD-288)** | Abrir el laboratorio de la Unidad IX pasa de **2.461 ms de congelación a 2 ms**. No se enganchó a la transición de escenario: medido, ahí no procede (§16.1) |
 
 ### 15.7 Herramientas internas
 
 | Propuesta | Veredicto | Evidencia |
 |---|---|---|
-| Gizmos de depuración | **PARCIAL** | **F1** dentro de un escenario dibuja `rect` (verde), `hurtbox` (rojo), `hitbox` (azul) y el jugador (cian), más el recuento de entidades y la posición de la cámara. Faltan los **vectores de velocidad** y los **conos de visión**, que es lo único que hoy no se puede ver aunque el dato exista |
-| Monitor de rendimiento | **PARCIAL** | **F3** abre la consola: FPS, cola de eventos con los cinco primeros y árbol de módulos (F4/F5/F6). Faltan RAM, el reparto GPU/CPU en ms y el número de sprites activos — justo lo que haría falta para decidir sobre `SpriteBatch` |
+| ~~Gizmos de depuración~~ | **HECHO (AUD-285)** | F1 añade el vector de velocidad —una predicción a 0,25 s, no la velocidad a escala— y el cono de visión con el barrido aplicado, amarillo o rojo según vea al jugador |
+| ~~Monitor de rendimiento~~ | **HECHO (AUD-283), y la consola no la abría nadie** | Es **F11**, no F3 —F3 es `LEARN_PHYSICS`—, y hasta AUD-283 no tenía un solo llamante. Ahora da ms de fotograma, objetos vivos, enemigos simulados de vivos, partículas y las decisiones del escuadrón. La RAM del proceso sigue fuera: medirla en Windows y Linux sin dependencias nuevas obliga a `ctypes` por plataforma |
 
 ### 15.8 Arquitectura para enseñar
 
 | Propuesta | Veredicto | Evidencia |
 |---|---|---|
-| Aislamiento de errores | **HECHO al cargar (AUD-055), NO al ejecutar** | Si el `.tmx` no carga, `StageErrorScene` pone el diagnóstico en pantalla y `R` recarga. Pero en el bucle de juego **no hay red**: el único `except Exception` de `stage_scene.py` está en la suscripción de manejadores. Una entidad de estudiante que lance en `update()` tumba el fotograma |
+| ~~Aislamiento de errores~~ | **HECHO entero (AUD-055 + AUD-289)** | Al cargar, `StageErrorScene` con recarga por `R`. Al ejecutar, la entidad que lanza se retira del nivel con su traza en el registro y su aviso en la consola de F11; el dibujado también. `AISLAR_FALLOS_DE_ENTIDAD = False` vuelve a propagar |
 | API estricta para entidades | **HECHO** | `EnemyBase` es plantilla con cinco `@abstractmethod` y ganchos opcionales antes y después del update; `BossBase` hereda de ella. Un estudiante no puede olvidarse de implementar lo obligatorio: falla al instanciar |
 | Rúbrica que modele la movilidad | **PARCIAL** | AUD-192 exime de `design_completable` a los mapas con objetos de movilidad; `classify_gap` sigue fuera de la exención (GAP-024) |
 | Filtros «hechos a mano» | **HECHO** | `sobel_edge_propio` y `canny_edge_propio` en `filter_tools.py`, con los cinco pasos de Canny escritos, y `cv2` conservado al lado como referencia de rendimiento — que es exactamente lo que la lista pide |
-| Visualización de la IA | **NO EXISTE, y hay un documento que dice lo contrario** | `SquadBrain.stats()` está comentado como «introspección para el overlay de debug» y **no tiene un solo llamante**. El dato está calculado (fracción de decisiones por modelo frente a por reglas) y no se muestra en ningún sitio |
+| ~~Visualización de la IA~~ | **HECHO (AUD-283)** | `SquadBrain.stats` ya tiene llamante: la consola de F11 enseña qué fracción de las decisiones sale del modelo y cuántas de las reglas |
 | Traducir los 12 manuales | **PENDIENTE** | Compatible con la invariante 5 y sin hacer. Ver §12 |
 
 ### 15.9 Accesibilidad y contenido
@@ -667,30 +673,31 @@ función**. El trabajo está hecho; lo que quedaba —medirlo— es esta fila.
 
 ### 15.10 Lo que queda, ordenado por lo que cuesta
 
+> **Los once primeros están hechos** (AUD-279 … AUD-289, 5 de agosto de 2026).
+> Lo que se midió al hacerlos —incluidas las dos veces que la medición
+> contradijo a esta misma lista— está en [§16](#16-los-once-implementados-2026-08-05).
+
 **Barato y con efecto medible** (un `AUD-NNN` cada uno, sin tocar contratos):
 
-1. ***Culling* de actualización y dibujado.** Hoy no existe ninguno. Es la
-   optimización con mejor relación coste/beneficio que queda, y es aditiva.
-2. **Polifonía en `SoundBank`.** Un contador por sonido y un tope.
-3. **Micro-recompensas al recoger.** El evento ya llega; falta emitir
-   partículas y sonido.
-4. **Sacudida direccional.** `apply_shake` recibiendo un vector.
-5. **`stats()` del escuadrón en el overlay de F3**, junto a RAM y número de
-   sprites. Cierra a la vez la fila de «visualización de IA» y media de
-   «monitor de rendimiento».
-6. ***Ducking* disparado por SFX crítico.** El bus ya existe.
+1. ~~***Culling* de actualización y dibujado.**~~ **HECHO (AUD-279).** Y la
+   justificación de esta fila era falsa: no era «lo más rentable que queda».
+2. ~~**Polifonía en `SoundBank`.**~~ **HECHO (AUD-280).**
+3. ~~**Micro-recompensas al recoger.**~~ **HECHO (AUD-281).**
+4. ~~**Sacudida direccional.**~~ **HECHO (AUD-282).**
+5. ~~**`stats()` del escuadrón en el overlay**, junto a RAM y sprites.~~
+   **HECHO (AUD-283)** — y de paso salió que la consola **no la abría nadie**.
+6. ~~***Ducking* disparado por SFX crítico.**~~ **HECHO (AUD-284).**
 
 **Medio, y decidible sin romper nada:**
 
-7. **Vectores de velocidad y conos de visión en F1.** El dato ya está.
-8. **Estado de evasión en el sigilo.** Cuarto estado de `Alerta`.
-9. **Zonas de *warp*.** Tipo TMX nuevo; aditivo por construcción.
-10. **Enganchar `LoadingScene`.** Está escrita y probada; falta registrarla y
-    usarla en la transición de escenario.
-11. **Aislar el fallo de una entidad de estudiante.** `try/except` alrededor de
-    `enemy.update(dt)` que retire la entidad y registre el error. Es la mejora
-    con más valor **docente** de toda la lista: hoy un bucle mal escrito en una
-    entrega tumba la demo de clase.
+7. ~~**Vectores de velocidad y conos de visión en F1.**~~ **HECHO (AUD-285).**
+8. ~~**Estado de evasión en el sigilo.**~~ **HECHO (AUD-286).**
+9. ~~**Zonas de *warp*.**~~ **HECHO (AUD-287).**
+10. ~~**Enganchar `LoadingScene`.**~~ **HECHO (AUD-288)** — pero **no** en la
+    transición de escenario, que era lo que esta fila pedía: medido, ahí no
+    procede.
+11. ~~**Aislar el fallo de una entidad de estudiante.**~~ **HECHO (AUD-289).**
+    Era, como decía esta fila, la de más valor docente de toda la lista.
 
 **Grande, o pendiente de una decisión que no es técnica:**
 
@@ -711,3 +718,63 @@ función**. El trabajo está hecho; lo que quedaba —medirlo— es esta fila.
 `PLAYER_JUMP_FORCE` para «arreglar» el arco del salto, y sustituir `GameContext`
 por un `ServiceContainer`. El primero recalibra dieciséis mapas ya calificados;
 el segundo cambia una dependencia visible por una escondida.
+
+---
+
+## 16. Los once, implementados (2026-08-05)
+
+Los puntos 1 a 11 de §15.10, uno por commit, con prueba que falla antes y pasa
+después. Lo que sigue es **lo que se aprendió al hacerlos**, que es la parte que
+no se puede escribir por adelantado.
+
+| AUD | Qué era | Medida |
+|---|---|---|
+| **279** | El motor simulaba y dibujaba todo el mapa, mirase donde mirase la cámara | Stage 0: 5,007 ms con culling / 4,931 sin. 200 enemigos en 10.000 px: **10,292 → 6,753 ms, 1,52×** |
+| **280** | Cinco muertes a la vez eran cinco copias en fase del mismo fichero | Una voz y cuatro refuerzos, tope de 3 voces por sonido |
+| **281** | Recoger una moneda no producía **nada** | Partículas, sonido y rebote del contador; el evento ahora lleva `pos` |
+| **282** | La sacudida decía «pasó algo», no «de dónde» | Onda de un ciclo por golpe sobre el eje del impacto |
+| **283** | La consola de depuración **no la abría nadie** | F11 (F3 estaba ocupada por `LEARN_PHYSICS`), con ms, objetos vivos y las cuentas de la escena |
+| **284** | El *ducking* sólo lo pedía la voz | Efecto crítico: −30 % de música durante 1 s |
+| **285** | F1 dibujaba cajas y nada más | Vector de velocidad (predicción a 0,25 s) y cono de visión con su color de alerta |
+| **286** | Romper la línea de visión un segundo reiniciaba el mundo | Cuarto estado: búsqueda de 3 s en el último punto visto |
+| **287** | No había forma de teletransportar dentro de un mapa | Tipo `WarpZone`, con dos colocados en el laboratorio |
+| **288** | La pantalla de carga estaba escrita y sin llamante | Abrir la Unidad IX pasa de **2.461 ms de congelación a 2 ms** |
+| **289** | Una entidad de estudiante que fallaba tumbaba la clase | Se retira ella sola, con traza en el registro y aviso en la consola |
+
+### 16.1 Las tres veces que la medición contradijo a este documento
+
+Esto es lo que justifica el método, así que va con nombre y apellidos.
+
+**El culling no era «lo más rentable que queda» (§15.4).** Esa frase salía de que
+no existiera, no de haberlo medido. Medido, en los mapas que hay **no gana
+nada**: stage 0 da 5,007 ms con culling y 4,931 sin él. Lo que compra es que el
+coste deje de crecer con el tamaño del mapa —200 enemigos en 10.000 px, 1,52×—,
+y eso importa por el escenario que un estudiante construye, no por los
+dieciséis que hay. Se quedó por esa razón, escrita en su módulo.
+
+**Y casi rompe stage 0.** El primer margen fue de 400 px, el doble del alcance de
+cualquier proyectil. Cuatro de los nueve enemigos de stage 0 quedaban fuera de
+la zona con la cámara en el arranque, y `test_every_enemy_in_stage0_moves` los
+encontró convertidos en estatuas. La prueba que existía desde AUD-116 hizo
+exactamente su trabajo. El margen es 800 porque el mapa de referencia —el que
+copian los estudiantes— tiene que comportarse igual que antes.
+
+**«Enganchar `LoadingScene` en la transición de escenario» (§15.10, punto 10) era
+la recomendación equivocada.** Entrar en un escenario cuesta entre 41 ms
+(`lobby_datacenter`) y 134 ms (`stage1_3_las_aulas`), 163 en frío: una pantalla
+de carga ahí aparece y se va antes de que el ojo la resuelva, y eso no se lee
+como «estaba cargando» sino como un parpadeo. Donde sí hacía falta era en el
+laboratorio de la Unidad IX, que **congelaba 2.461 ms** importando scikit-learn
+en el hilo del dibujado. El umbral de 0,25 s de `LoadingScene` es lo que permite
+enchufarla en cualquier sitio sin medir antes: si la carga acaba antes, no se
+dibuja ni un fotograma.
+
+### 16.2 Y una cosa que apareció por el camino
+
+**La consola de depuración no la abría nadie, y §15.7 la describía funcionando.**
+El módulo estaba entero y sin un solo llamante en `src/engine`; la tecla con la
+que decía abrirse, F3, es `LEARN_PHYSICS` en el mapa de acciones. El barrido de
+huérfanos no lo vio porque busca símbolos que **las pruebas ejercitan y el juego
+no invoca**, y lo que no prueba nadie y no usa nadie le resulta invisible. Es un
+hueco del barrido que conviene recordar: hay una prueba nueva justamente para
+que ese caso ya no sea ciego.
