@@ -103,8 +103,10 @@ class TestLaEscenaAplicaLoQueDiceElMapa:
         import ast
         import pathlib
 
+        # AUD-299 movió `_configurar_vfx_opcionales` a `stage_parts/ambiente`,
+        # que es donde vive el resto de lo que el TMX enciende.
         ruta = (pathlib.Path(__file__).resolve().parent.parent
-                / "src" / "framework" / "scenes" / "stage_scene.py")
+                / "src" / "framework" / "scenes" / "stage_parts" / "ambiente.py")
         arbol = ast.parse(ruta.read_text(encoding="utf-8"))
         llamadas = {
             nodo.func.attr

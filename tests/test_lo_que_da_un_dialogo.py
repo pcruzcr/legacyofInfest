@@ -64,9 +64,10 @@ class _EscenaMinima:
 def escena(event_bus, monkeypatch):
     from src.engine.core.game_context import GameContext
     from src.framework.scenes.stage_parts.senales import SenalesDeEscenario
+    from src.framework.scenes.stage_parts.sonido import SonidoDeEscenario
     from src.framework.stage.interactable_system import InteractableSystem
 
-    class _Senales(SenalesDeEscenario, _EscenaMinima):
+    class _Senales(SenalesDeEscenario, SonidoDeEscenario, _EscenaMinima):
         pass
 
     context = GameContext(

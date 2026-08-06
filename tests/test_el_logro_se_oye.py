@@ -28,8 +28,9 @@ class TestElEventoTieneQuienLoEscuche:
     def test_el_desbloqueo_esta_en_la_tabla_de_sonidos(self) -> None:
         from pathlib import Path
 
+        # AUD-290 movió la tabla de sonidos de `senales.py` a `sonido.py`.
         senales = (Path(__file__).resolve().parents[1]
-                   / "src" / "framework" / "scenes" / "stage_parts" / "senales.py")
+                   / "src" / "framework" / "scenes" / "stage_parts" / "sonido.py")
         texto = senales.read_text(encoding="utf-8")
 
         assert "Events.ACHIEVEMENT_UNLOCKED:" in texto, (
