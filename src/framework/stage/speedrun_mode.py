@@ -262,6 +262,22 @@ class GhostData:
     def frame_count(self) -> int:
         return len(self._frames)
 
+def _apodo_actual() -> str:
+    """Cómo se llama quien juega, o cadena vacía si no se identificó.
+
+    No lanza ni aunque la sesión académica esté a medio montar: anotar una
+    marca corre al terminar un nivel, y perder la marca por no saber el nombre
+    sería cambiar un dato de adorno por uno real.
+    """
+    try:
+        from src.framework.academic.sesion import SesionAcademica
+
+        sesion = SesionAcademica.instancia()
+        return sesion.apodo if sesion.identificado else ""
+    except Exception:  # pragma: no cover - la sesión no puede tumbar un nivel
+        return ""
+
+
 def registrar_marca(
     stage_id: str, tiempo: float, path: str | Path | None = None,
 ) -> None:
@@ -317,6 +333,14 @@ def registrar_marca(
         # que espera; quien lea récords usa `splits`.
         "global_time": sum(marcas.values()),
         "splits": [{"stage_id": sid, "time": t} for sid, t in sorted(marcas.items())],
+        # AUD-291 — de quién son estas marcas.
+        #
+        # El fichero vive en el perfil del sistema, así que en un aula con un
+        # usuario compartido las marcas de treinta personas se pisaban sin que
+        # nadie supiera de quién era cada una. El apodo no las separa —para eso
+        # haría falta un fichero por estudiante— pero al menos dice a quién
+        # pertenece la tabla que se está mirando.
+        "apodo": _apodo_actual(),
     }
     try:
         ruta.parent.mkdir(parents=True, exist_ok=True)

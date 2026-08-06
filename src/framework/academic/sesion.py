@@ -73,6 +73,36 @@ class SesionAcademica:
         return self._progreso.correo
 
     @property
+    def apodo(self) -> str:
+        """Cómo llamar a esta persona en pantalla — AUD-291.
+
+        Cae al correo sin dominio si no ha puesto apodo, y a «Estudiante» si
+        tampoco hay correo. Nunca devuelve cadena vacía: quien lo consume lo
+        mete en una frase, y una frase con un hueco se lee como un fallo del
+        juego, no como un dato que falta.
+        """
+        if self._progreso.apodo:
+            return self._progreso.apodo
+        correo = self._progreso.correo
+        if correo:
+            return correo.split("@", 1)[0]
+        return "Estudiante"
+
+    def poner_apodo(self, apodo: str) -> None:
+        """Cambia el apodo y lo persiste. Sin identificar no hace nada.
+
+        No hace nada a propósito: sin correo no hay fichero donde guardarlo, y
+        aceptarlo en memoria daría un apodo que desaparece al cerrar el juego
+        sin decir por qué.
+        """
+        from src.framework.academic.progress import _limpiar_apodo
+
+        if not self.identificado:
+            return
+        self._progreso.apodo = _limpiar_apodo(apodo)
+        self._progreso.guardar(self._directorio)
+
+    @property
     def identificado(self) -> bool:
         return bool(self._progreso.correo)
 
