@@ -1391,7 +1391,8 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, SonidoDeEscenario,
             if moviles:
                 solidos = solidos + moviles
 
-            player.update(dt, solidos, im, one_way_rects=stage.one_way_rects)
+            player.update(dt, solidos, im, one_way_rects=stage.one_way_rects,
+                          pendientes=stage.pendientes)
             self._nado.update(dt, player, self._mundo, self.context.event_bus)
             self._actualizar_agarres(player, im)
             self._interactables.update(

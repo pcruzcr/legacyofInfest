@@ -344,6 +344,7 @@ Para instrucciones detalladas de registro y pruebas, consultar el documento orig
 | `Stalker` | Punto | `velocidad` (px/s, 55) · `distancia_retirada` (px, 480) · `reaparicion` (s, 6.0) |
 | `ScrollZone` | Rectángulo (el **disparador**, no la zona de muerte) | `velocidad_x` (px/s, 40) · `velocidad_y` (px/s, 0) · `margen_de_gracia` (px que se puede rebasar el borde antes de morir, 24) · `parar_en_x` (la cámara se detiene ahí; sin ella, hasta el final del mapa). Al pisarlo la cámara arranca sola y **el borde izquierdo mata**: SMB3 Airship, Cuphead, Ori |
 | `WarpZone` | Rectángulo (el disparador) | `destino_x` / `destino_y` (**obligatorias**: adónde van los **pies** del jugador, en píxeles de mundo) · `automatico` (al tocar, true) · `una_vez` (false) · `key_id` · `enfriamiento` (s antes de poder repetirlo, 0.5) · `mensaje`. Teletransporta **dentro del mismo mapa**, que es lo que `NextTrigger` no hace: Zelda, Metroid, Hollow Knight. Sin destino no se carga y el cargador avisa |
+| `Slope` | Rectángulo (el **triángulo entero**, no la línea) | `sube` (`derecha` por defecto, o `izquierda`: dónde está el lado alto). Suelo inclinado de verdad — la hipotenusa va de esquina a esquina. **No se apila con bloques escalonados**: eso es una escalera que frena al jugador en cada peldaño. Sonic, DKC, Celeste (AUD-297) |
 | `Vine` | Rectángulo (alto = lo que se trepa) | `ancho_de_agarre` (px, 10) · `velocidad` (px/s de trepada, 70) |
 | `Zipline` | Rectángulo (la esquina es el enganche) | `destino_dx` (px, 96), `destino_dy` (px, 64) **relativos** · `velocidad` (px/s, 190) · `radio_de_enganche` (px, 14) · `solo_de_bajada` (bool, sí) |
 | `BossSpawn` | Punto (dónde entra el jefe) | `boss` (**obligatoria**: el nombre registrado del jefe, p. ej. `BossVenado`). Produce la misma entidad que escribir ese nombre como `type`; sin `boss`, o con uno que no esté registrado, el cargador avisa. Lo pide `17_BOSS_SPEC.md` §8.2 en todo mapa de jefe |
@@ -398,6 +399,6 @@ propiedad del objeto en Tiled.
 | *(ninguno)* o `Solid` | Colisión AABB completa |
 | `Platform` | Plataforma atravesable desde abajo |
 
-Total aceptado en `Objects`: **67** tipos.
+Total aceptado en `Objects`: **68** tipos.
 
 <!-- END GENERATED: tipos de objeto -->

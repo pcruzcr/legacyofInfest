@@ -234,6 +234,7 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── profundidad.py             # AUD-277: escala 2.5D por altura (apagada por defecto)
 │   │   │   ├── rejilla.py                 # AUD-276: rejilla espacial + raycast (línea de visión)
 │   │   │   ├── culling.py                 # AUD-279: qué se simula y qué se dibuja cerca de la cámara
+│   │   │   ├── pendientes.py             # AUD-297: suelo inclinado (Slope)
 │   │   │   ├── stage_loader.py            # StageLoader: parse TMX, build layer stack, spawn
 │   │   │   ├── interactables.py           # Recogible/Cerradura/Cofre/Disparador/Llavero (F4.1)
 │   │   │   ├── bloques.py                 # PushBlock y BreakableBlock: empujar y romper (AUD-140)

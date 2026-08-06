@@ -101,6 +101,10 @@ BUILTIN_OBJECT_TYPES: tuple[str, ...] = (
     # a la otra no se podía declarar de ninguna forma, así que un mapa grande no
     # tenía manera de conectar sus extremos.
     "WarpZone",        # Zelda (cuevas), Metroid (ascensores), Hollow Knight
+    # AUD-297 — suelo inclinado. Hasta aquí, una cuesta había que fingirla
+    # apilando bloques escalonados, y eso no es una cuesta: es una escalera que
+    # frena al jugador en cada peldaño.
+    "Slope",           # Sonic, DKC, Celeste
     # F5.14 — de escalada no había **nada**: ni `Ladder`, ni `Rope`, ni `Climb`,
     # ni un estado que suspendiera la gravedad. Y no se podía improvisar:
     # apilar `Solid` estrechos para simular una cuerda deja al jugador al lado

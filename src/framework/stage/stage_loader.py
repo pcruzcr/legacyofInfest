@@ -31,6 +31,7 @@ from src.framework.stage.interactables import (
     Recogible,
     ZonaDeWarp,
 )
+from src.framework.stage.pendientes import Pendiente
 from src.framework.stage.tmx_diagnostics import (
     TmxObjectProblem,
     TmxReport,
@@ -305,6 +306,12 @@ class StageData:
     #: lo que mueven no es una entidad del mundo, es **el jugador**, y quien lo
     #: posee es la escena.
     warps: list[ZonaDeWarp] = field(default_factory=list)
+    #: AUD-297 — el suelo inclinado del mapa.
+    #:
+    #: Lista aparte de `collision_rects` **a propósito**: si una pendiente
+    #: entrara ahí, el eje X la trataría como pared y el jugador se pararía en
+    #: seco al pie de la rampa.
+    pendientes: list[Pendiente] = field(default_factory=list)
     #: AUD-294 — este mapa regala las mecánicas de jefe.
     #:
     #: Para un escenario nuevo que quiera jugarse suelto, sin la campaña
@@ -1036,6 +1043,9 @@ class StageLoader:
             elif obj_type == "WarpZone":
                 cls._handle_warp(stage, obj, props)
 
+            elif obj_type == "Slope":
+                cls._handle_pendiente(stage, obj, props)
+
             # F5.3–F5.6 — mecánicas del Top 200 declaradas desde Tiled.
             elif obj_type in _TIPOS_DE_COMPONENTE:
                 cls._handle_componente(stage, obj, props, obj_type)
@@ -1334,6 +1344,30 @@ class StageLoader:
             automatico=cls._bool_de(props.get("automatico"), por_defecto=True),
             una_vez=cls._bool_de(props.get("una_vez"), por_defecto=True),
             key_id=str(props.get("key_id", "")),
+        ))
+
+    @classmethod
+    def _handle_pendiente(cls, stage: StageData, obj: Any,
+                          props: dict[str, Any]) -> None:
+        """`Slope` — suelo inclinado (AUD-297).
+
+        El rectángulo del objeto es el **triángulo entero**, no la línea de la
+        superficie: se dibuja en Tiled como se dibujaría la roca. La hipotenusa
+        va de esquina a esquina, y `sube` dice cuál de las dos está arriba.
+
+        `sube` admite `derecha` (por defecto) o `izquierda`. Una palabra y no un
+        booleano porque «sube=false» no dice hacia dónde, y en Tiled se lee la
+        propiedad sin el código delante.
+        """
+        sube = str(props.get("sube", "derecha")).strip().lower()
+        if sube not in ("derecha", "izquierda"):
+            logger.warning(
+                "Slope en (%s, %s): `sube` es %r y sólo vale 'derecha' o "
+                "'izquierda'. Se toma 'derecha'.", obj.x, obj.y, sube)
+            sube = "derecha"
+        stage.pendientes.append(Pendiente(
+            rect=cls._rect_de(obj),
+            sube_a_la_derecha=sube == "derecha",
         ))
 
     @classmethod
