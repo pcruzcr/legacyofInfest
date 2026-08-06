@@ -23,8 +23,9 @@ lista, empieza por [§15.0](#150-seis-cifras-de-la-lista-que-la-medición-no-con
 seis de sus cifras no coinciden con lo medido, y tres de ellas cambian la
 conclusión de su propia propuesta.
 
-**§16 (5 de agosto de 2026)** es lo que se implementó después: los once puntos
-que §15.10 daba por baratos o medianos, de AUD-279 a AUD-289. Incluye
+**§16 y §17 (5 de agosto de 2026)** son lo que se implementó después: los once
+puntos baratos y medianos de §15.10 (AUD-279 a AUD-289) y luego los grandes
+(AUD-291 a AUD-299), incluido el árbol de habilidades. Incluye
 [§16.1](#161-las-tres-veces-que-la-medición-contradijo-a-este-documento), las
 tres veces que la medición contradijo a este mismo documento — que es la parte
 que conviene leer antes de fiarse de una recomendación de aquí.
@@ -40,16 +41,18 @@ que conviene leer antes de fiarse de una recomendación de aquí.
 | Rendimiento / GPU | ✅ **Completo salvo una pieza** | `SpriteBatch` (no existe) |
 | Monedas al matar | ✅ **Completo** | — |
 | Experiencia al matar | ✅ **Completo desde hoy** (AUD-267) | — |
-| **Árbol de habilidades** | ❌ **NO EXISTE** | Todo: nodos, coste, efectos y pantalla |
+| ~~Árbol de habilidades~~ | ✅ **HECHO (AUD-293)** | — |
 | Tienda | ✅ **Completo** | — |
 | Inventario | ✅ **Completo** | — |
 | Transiciones entre escenas | ✅ **Completo** | — |
 | **Mapa del mundo** | ✅ **Reparado hoy** (AUD-266) | — |
-| Guardado (JSON) | ⚠️ **Funciona, y está repartido** | Unificar: la partida no incluye inventario ni logros |
+| Guardado (JSON) | ✅ **Unificado (AUD-292)** y firmado (AUD-295) | — |
 | Jefe Gavilán | ⚠️ **45 % de la rúbrica** | Asignación abierta **para estudiantes** |
 
-**Lo único que no existe en absoluto es el árbol de habilidades.** Todo lo
-demás está construido; lo que faltaba era cableado, y hoy está puesto.
+~~**Lo único que no existe en absoluto es el árbol de habilidades.**~~ Ya
+existe: AUD-293. A 5 de agosto de 2026 **lo único abierto que depende del motor
+es medir la ruta de sprites en GPU**; el resto son asignaciones de estudiante y
+decisiones de curso. La lista corta está en [§17.3](#173-lo-que-sigue-abierto-y-ya-es-corto).
 
 ---
 
@@ -801,3 +804,78 @@ huérfanos no lo vio porque busca símbolos que **las pruebas ejercitan y el jue
 no invoca**, y lo que no prueba nadie y no usa nadie le resulta invisible. Es un
 hueco del barrido que conviene recordar: hay una prueba nueva justamente para
 que ese caso ya no sea ciego.
+
+---
+
+## 17. Lo que quedaba, cerrado (2026-08-05, cuarta pasada)
+
+Los puntos 12 a 18 de §15.10 —los «grandes, o pendientes de una decisión que no
+es técnica»— más lo que salió al preguntar por ellos. Nueve `AUD-NNN`, del 291
+al 299.
+
+| AUD | Qué era | Lo que se hizo |
+|---|---|---|
+| **291** | El juego sabía tu correo y no cómo llamarte | Apodo propio, `{apodo}` en los guiones y dueño en la tabla de récords |
+| **292** | La partida guardaba dónde estabas y no lo que tenías | Versión 3 del esquema: inventario, marcador y experiencia viajan con el slot |
+| **293** | **El árbol de habilidades no existía** | Tres ramas de estadística con tope, pantalla y persistencia |
+| **294** | La mecánica de un jefe estaba disponible antes de derrotarlo | Candado encendido, con los dieciséis mapas entregados exentos uno por uno |
+| **295** | Los JSON del jugador se escribían sin firma | HMAC-SHA256 en partidas y récords |
+| **296** | No había forma de extender el motor sin tocarlo | `plugins/`, cuatro ganchos, fallos aislados |
+| **297** | Las cuestas había que fingirlas apilando bloques | Tipo `Slope`, integrado en la resolución de colisión |
+| **298** | «17 pares de ciclos de importación» | **Cero**. Ver abajo |
+| **299** | `stage_scene.py` sobre su presupuesto desde AUD-152 | 1.950 → **1.457** líneas, cuatro grupos cohesivos fuera |
+
+### 17.1 Las tres cifras que volvió a corregir la medición
+
+**Los ciclos de importación no existían (AUD-298).** §15.0 contó 17 pares y
+§15.10 recomendó reducirlos. Ese barrido contaba **todos** los `import`,
+incluidos los de dentro de una función, y un import diferido no es un ciclo: se
+resuelve al llamar, con el árbol ya cargado. Contando sólo los del cuerpo del
+módulo —los únicos que producen un `ImportError` circular— salen **cero**. No
+había nada que arreglar; había que medir mejor. La recomendación de §15.10 era
+trabajo con forma de progreso y sin efecto.
+
+**Encender el candado de habilidades rompe seis mapas de dieciséis, y dos dejan
+de poder terminarse (AUD-294).** Medido con `grade_stage`, con y sin salto
+aéreo: `stage0` —el mapa de referencia— y `stage3_4_boss_gavilan` se quedan sin
+salida alcanzable; `stage1_1`, `stage2_2`, `stage3_3_el_patio` y `stage4_1`
+ganan huecos imposibles. Por eso el candado va con una lista de exentos y no
+solo. La media de calificación sigue en 79,9 %.
+
+**`exp_total` no bastaba para restaurar la experiencia (AUD-292).** Lo decía el
+propio `ExperienceSystem` y nadie lo había leído: los puntos **gastados** no se
+deducen de la experiencia. Con sólo el total, cargar una partida devolvía todos
+los puntos ya gastados y el árbol se podía comprar dos veces. El slot guarda los
+tres números.
+
+### 17.2 Decisiones tomadas, y quién las tomó
+
+* **Traducir los doce manuales: no.** Se mantiene la política de la invariante 5,
+  «bilingüe donde hay lector». Queda cerrado, no pendiente.
+* **Pendientes integradas en la resolución de colisión, no aditivas.** §11
+  recomendaba lo contrario por el riesgo sobre las veintiséis entregas; se pidió
+  integrado y así está, con la calificación de los dieciséis mapas como control
+  antes y después. Lo que lo hace seguro no es el cuidado: es que ningún mapa
+  entregado tiene una sola pendiente, así que el paso nuevo no se ejecuta en
+  ninguno de ellos.
+* **Hash de integridad: sí, con su alcance escrito.** El *salt* vive en el
+  código que leen las veintiséis personas de las que defendería, así que detecta
+  corrupción y edición casual, y no a quien quiera alterar su tiempo a
+  conciencia. Está dicho en la primera línea del módulo y en la primera de su
+  prueba, para que nadie lo cite como lo que no es.
+
+### 17.3 Lo que sigue abierto, y ya es corto
+
+1. **El jefe Gavilán** — 45 % de la rúbrica, y es **asignación de estudiante**
+   (§7). No es deuda del motor.
+2. **`SpriteBatch` y la ruta de sprites en GPU** — medir en la máquina destino
+   antes de escribir nada (AUD-148). Con el monitor de F11 (AUD-283) ya se puede.
+3. **Los cinco sonidos de jefe sin emisor** — pertenecen a ataques de jefes que
+   los estudiantes aún no han escrito.
+4. **`LuaScriptEnemy`** — completo y probado, sin conectar. Depende de si el
+   guion en Lua entra en el curso.
+5. **Ampliar las pruebas doc↔código** — sigue habiendo un solo documento de 95
+   con pruebas de contenido.
+
+Nada de esa lista es un defecto del motor esperando arreglo: cuatro son
+decisiones de curso y una es una medición pendiente.
