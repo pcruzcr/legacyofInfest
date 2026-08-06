@@ -174,6 +174,7 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── gl_pipeline.py             # GLRenderer, GLRenderConfig: ModernGL pipeline
 │   │   │   ├── shaders.py                 # GLSL shader sources
 │   │   │   └── gpu_present.py            # PresentadorGPU: presentar por SDL2 (AUD-148, opcional)
+│   │   │   ├── sprite_batch.py           # AUD-302: muchos sprites en una llamada (blits)
 │   │   │
 │   │   ├── ui/
 │   │   │   ├── __init__.py

@@ -33,6 +33,8 @@ misma que le pasa al jugador cada fotograma.
 """
 from __future__ import annotations
 
+from typing import Any
+
 import pygame
 
 #: A partir de esta altura sobre el suelo, la sombra ya no se ve. Una sombra
@@ -68,8 +70,46 @@ def suelo_bajo(cuerpo: pygame.Rect, solidos: list[pygame.Rect]) -> int | None:
     return mejor
 
 
+#: Cuántas elipses distintas se guardan antes de tirar la caché.
+#:
+#: AUD-302. La sombra cambia de tamaño con la altura, así que en un salto se
+#: piden decenas de tallas distintas; sin tope, la caché crecería con cada
+#: entidad y cada altura hasta ocupar más que los sprites del juego. 96 cubre
+#: de sobra las tallas de una escena —lo medido en stage 0 son ocho entidades
+#: con menos de treinta tallas vivas— y el desalojo entero es más barato que
+#: llevar una cuenta de uso.
+_MAXIMO_DE_TALLAS: int = 96
+
+
 class Sombra:
-    """Dibuja la elipse de sombra de una entidad."""
+    """Dibuja la elipse de sombra de una entidad.
+
+    AUD-302 — la elipse se cachea y las sombras van en lote
+    =======================================================
+    Antes, cada sombra creaba una `Surface` nueva y dibujaba una elipse en ella
+    **cada fotograma**: con ocho entidades en pantalla son ocho reservas de
+    memoria y ocho rasterizaciones por fotograma para pintar exactamente las
+    mismas ocho elipses que el fotograma anterior.
+
+    Ahora se guardan por `(ancho, alto, alfa)`, que es todo lo que las
+    distingue, y quien dibuja varias puede pedir un `SpriteBatch` y soltarlas
+    de una sola llamada.
+    """
+
+    def __init__(self) -> None:
+        self._cache: dict[tuple[int, int, int], pygame.Surface] = {}
+
+    def _elipse(self, ancho: int, alto: int, alfa: int) -> pygame.Surface:
+        """La elipse de esta talla, reutilizada si ya se pintó."""
+        clave = (ancho, alto, alfa)
+        capa = self._cache.get(clave)
+        if capa is None:
+            if len(self._cache) >= _MAXIMO_DE_TALLAS:
+                self._cache.clear()
+            capa = pygame.Surface((ancho, alto), pygame.SRCALPHA)
+            pygame.draw.ellipse(capa, (0, 0, 0, alfa), capa.get_rect())
+            self._cache[clave] = capa
+        return capa
 
     def medidas(self, cuerpo: pygame.Rect, suelo_y: int) -> tuple[int, int, int]:
         """`(ancho, alto, alfa)` de la sombra para esta altura.
@@ -89,8 +129,15 @@ class Sombra:
         return ancho, alto, int(ALFA_MAXIMO * cercania)
 
     def dibujar(self, surface: pygame.Surface, cuerpo: pygame.Rect,
-                solidos: list[pygame.Rect], camera_offset: pygame.Vector2) -> None:
-        """Pinta la sombra de `cuerpo` sobre el suelo que tenga debajo."""
+                solidos: list[pygame.Rect], camera_offset: pygame.Vector2,
+                lote: Any = None) -> None:
+        """Pinta la sombra de `cuerpo` sobre el suelo que tenga debajo.
+
+        Con `lote`, la encola en vez de dibujarla: quien pinta ocho sombras
+        seguidas las suelta todas con una llamada (AUD-302). Sin él se comporta
+        exactamente como antes, que es lo que necesitan las entregas que llaman
+        a esto por su cuenta.
+        """
         suelo_y = suelo_bajo(cuerpo, solidos)
         if suelo_y is None:
             return
@@ -98,9 +145,12 @@ class Sombra:
         if alfa <= 0:
             return
 
-        capa = pygame.Surface((ancho, alto), pygame.SRCALPHA)
-        pygame.draw.ellipse(capa, (0, 0, 0, alfa), capa.get_rect())
-        surface.blit(capa, (
+        capa = self._elipse(ancho, alto, alfa)
+        posicion = (
             int(cuerpo.centerx - ancho / 2 - camera_offset.x),
             int(suelo_y - alto / 2 - camera_offset.y),
-        ))
+        )
+        if lote is not None:
+            lote.dibujar(capa, posicion)
+            return
+        surface.blit(capa, posicion)
