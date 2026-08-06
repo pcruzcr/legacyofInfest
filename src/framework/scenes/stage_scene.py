@@ -527,6 +527,20 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, SonidoDeEscenario,
         destino = pygame.Vector2(pending.checkpoint_x, pending.checkpoint_y)
         self._player.set_spawn(destino)
         self._player.set_health(pending.health)
+        # AUD-292 — y la experiencia. `exp_total` se guardaba desde AUD-267 y
+        # **nadie la volvía a leer**: cargar una partida devolvía al jugador a
+        # nivel 1 con sus puntos de habilidad a cero, que es la misma familia de
+        # defecto que aquel cerró por el otro extremo.
+        #
+        # Aquí y no sólo en `LoadGameScene` porque a un escenario se puede
+        # llegar con una partida pendiente por más de un camino —el mapa del
+        # mundo, `--stage`, la cadena de niveles—, y la experiencia tiene que
+        # ser la misma llegue por donde llegue.
+        estado = dict(getattr(pending, "exp_estado", {}) or {})
+        if not estado and pending.exp_total:
+            estado = {"exp": int(pending.exp_total)}
+        if estado:
+            ExperienceSystem.get_instance().from_dict(estado)
         self._checkpoint_position = destino
         self._restaurar_banderas(self.context, pending)
         self.context.pending_load = None

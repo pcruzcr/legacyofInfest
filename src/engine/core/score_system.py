@@ -168,6 +168,15 @@ class ScoreSystem:
         self._score = 0
         self.save()
 
+    def set_score(self, puntos: int) -> None:
+        """Deja la puntuación que traía una partida guardada — AUD-292.
+
+        Sin esto, cargar un slot dejaba la puntuación del anterior: el marcador
+        vivía en un fichero global que no sabía de partidas.
+        """
+        self._score = max(0, int(puntos))
+        self.save()
+
     def save(self) -> None:
         _SCORE_PATH.parent.mkdir(parents=True, exist_ok=True)
         _SCORE_PATH.write_bytes(orjson.dumps({"score": self._score}))

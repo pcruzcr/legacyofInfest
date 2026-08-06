@@ -99,6 +99,13 @@ class LoadGameScene(BaseScene):
         target_index = min(data.stage_index, len(stages) - 1)
         target_class = stages[target_index]
 
+        # AUD-292 — la partida trae su cartera, su ropa y su marcador, y hay
+        # que aplicarlos **antes** de montar el escenario: el HUD lee la
+        # puntuación en su primer fotograma y el jugador lee el inventario al
+        # calcular sus bonificaciones.
+        from src.engine.core.save_manager import aplicar_estado_de
+
+        aplicar_estado_de(data)
         self.context.pending_load = data
         sm = self.context.scene_manager
         sm.set_stage_queue(stages)

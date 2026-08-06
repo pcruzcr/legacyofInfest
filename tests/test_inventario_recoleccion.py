@@ -36,6 +36,7 @@ import pytest
 from src.engine.core.event_bus import EventBus
 from src.engine.core.inventory import get_inventory
 from src.framework.scenes.stage_parts.senales import SenalesDeEscenario
+from src.framework.scenes.stage_parts.sonido import SonidoDeEscenario
 from src.framework.stage.interactable_system import InteractableSystem
 from src.framework.stage.interactables import Recogible
 
@@ -79,10 +80,12 @@ def _escena_con_recogible(item_id: str, automatico: bool = True):
     escena._post_processing.set_damage_vignette = MagicMock()
     escena._post_processing.set_bloom = MagicMock()
     # `_make_sfx_handler` y `_play_sfx_*` son métodos reales del mixin; al
-    # enlazarlos a la escena simulada funcionan con `audio=None`.
-    escena._make_sfx_handler = SenalesDeEscenario._make_sfx_handler.__get__(escena)
-    escena._play_sfx_named = SenalesDeEscenario._play_sfx_named.__get__(escena)
-    escena._play_sfx_spatial = SenalesDeEscenario._play_sfx_spatial.__get__(escena)
+    # enlazarlos a la escena simulada funcionan con `audio=None`. AUD-290 los
+    # movió de `senales` a `sonido`, que es donde vive ahora la mitad sonora.
+    escena._make_sfx_handler = SonidoDeEscenario._make_sfx_handler.__get__(escena)
+    escena._play_sfx_named = SonidoDeEscenario._play_sfx_named.__get__(escena)
+    escena._play_sfx_spatial = SonidoDeEscenario._play_sfx_spatial.__get__(escena)
+    escena._subscribe_sfx_handlers = SonidoDeEscenario._subscribe_sfx_handlers.__get__(escena)
 
     # Suscribir los manejadores reales del mixin, incluido `_on_item_picked`.
     SenalesDeEscenario._subscribe_event_handlers(escena)

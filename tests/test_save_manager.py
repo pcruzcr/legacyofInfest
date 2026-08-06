@@ -65,7 +65,7 @@ class TestSaveData:
         restored = SaveData.from_dict(data)
         assert restored.slot_id == 0
         assert restored.timestamp == ""
-        assert restored.version == 2
+        assert restored.version == 3
         assert restored.stage_id == ""
         assert restored.stage_index == 0
         assert restored.checkpoint_x == 0.0
@@ -84,26 +84,39 @@ class TestSaveData:
         assert restored.max_health == 5.0
         assert restored.zone_flags == {}
 
-    def test_migrate_v0_to_v2(self) -> None:
+    def test_migrate_v0_to_v3(self) -> None:
         old = {"version": 0, "stage_id": "stage0"}
         migrated = SaveData.migrate(old)
-        assert migrated["version"] == 2
+        assert migrated["version"] == 3
         assert "zone_flags" in migrated
         assert migrated["zone_flags"] == {}
         assert "completed_stages" in migrated
         assert migrated["completed_stages"] == []
+        assert migrated["inventory_items"] == {}
 
-    def test_migrate_v1_to_v2(self) -> None:
+    def test_migrate_v1_to_v3(self) -> None:
         data = {"version": 1, "stage_id": "stage0", "zone_flags": {"a": True}}
         migrated = SaveData.migrate(data)
-        assert migrated["version"] == 2
+        assert migrated["version"] == 3
         assert migrated["zone_flags"] == {"a": True}
         assert migrated["completed_stages"] == []
 
-    def test_migrate_already_v2(self) -> None:
-        data = {"version": 2, "stage_id": "stage0", "zone_flags": {"a": True}, "completed_stages": []}
+    def test_migrate_v2_conserva_lo_que_traia(self) -> None:
+        """AUD-292 — una partida de la versión 2 no pierde nada al subir."""
+        data = {"version": 2, "stage_id": "stage0", "zone_flags": {"a": True},
+                "completed_stages": ["stage0"], "exp_total": 400}
         migrated = SaveData.migrate(data)
-        assert migrated["version"] == 2
+        assert migrated["version"] == 3
+        assert migrated["completed_stages"] == ["stage0"]
+        assert migrated["exp_total"] == 400
+        assert migrated["score"] == 0
+
+    def test_migrate_already_v3(self) -> None:
+        data = {"version": 3, "stage_id": "stage0", "zone_flags": {"a": True},
+                "completed_stages": [], "score": 120}
+        migrated = SaveData.migrate(data)
+        assert migrated["version"] == 3
+        assert migrated["score"] == 120
 
     def test_timestamp_auto_fill(self) -> None:
         data = SaveData(stage_id="test")
@@ -114,8 +127,10 @@ class TestSaveData:
         assert MAX_SLOTS == 5
 
     def test_version_constant(self) -> None:
+        """AUD-292 la subió a 3: la partida se lleva inventario, marcador y el
+        estado completo de experiencia."""
         from src.engine.core.save_data import SAVE_VERSION
-        assert SAVE_VERSION == 2
+        assert SAVE_VERSION == 3
 
 
 class TestSaveManager:
