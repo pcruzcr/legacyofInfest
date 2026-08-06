@@ -98,6 +98,12 @@ GANCHOS = frozenset({
 #:
 #: Formato: nombre -> por qué no es un defecto.
 VERIFICADOS: dict[str, str] = {
+    # ── Uso dentro del propio fichero ────────────────────────────
+    "personalizar": (
+        "AUD-291: la llama `_paginas_de_texto` en su mismo módulo, al dibujar "
+        "cada diálogo. El barrido sólo ve usos desde fuera del fichero"
+    ),
+
     # ── Alias por propiedad: el juego los llama por el atributo ──
     "set_music_volume": "lo invoca el setter de la propiedad `music_volume`, desde app.py",
     "set_sfx_volume": "lo invoca el setter de la propiedad `sfx_volume`, desde app.py",

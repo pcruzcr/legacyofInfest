@@ -439,10 +439,13 @@ class TestSaveDataIntegration:
         assert restored.stage_id == "boss"
 
     def test_migrate_static_preserved(self) -> None:
-        from src.engine.core.save_data import SaveData
+        """AUD-292 subió el esquema a la versión 3. Se compara con la constante
+        y no con un número escrito a mano: es lo que hace que la próxima
+        versión no vuelva a poner esta prueba en rojo por nada."""
+        from src.engine.core.save_data import SAVE_VERSION, SaveData
         old = {"version": 0, "stage_id": "stage0"}
         result = SaveData.migrate(old)
-        assert result["version"] == 2
+        assert result["version"] == SAVE_VERSION
 
     def test_from_dict_validates_health(self) -> None:
         from src.engine.core.save_data import SaveData
