@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import pygame
 
+from src.engine.core import settings
 from src.framework.vfx.lighting import LightSource
 
 
@@ -250,3 +251,130 @@ class MezclaDeAmbiente:
         # resultado es casi blanco, y de madrugada en invierno, azul doble.
         self._lighting.ambient_color = aplicar_tinte(luz.color, self._estacion)
 
+    def _configurar_vfx_opcionales(self) -> None:
+        """Enciende la niebla de guerra y el efecto de agua si el mapa los pide.
+
+        Los dos estaban escritos, documentados (`docs/46_`, `docs/47_`) y con
+        pruebas que los ejercitaban en aislamiento, y **ninguna escena los
+        instanciaba**: un jugador no podía llegar a ellos por ningún camino. Es
+        el mismo patrón que el nado y que el ultimate.
+
+        Se activan por propiedad de mapa y no por defecto porque los dos pintan
+        una superficie del tamaño de la pantalla en cada fotograma. Encenderlos
+        siempre le cobraría ese coste a los catorce escenarios que no los
+        quieren.
+        """
+        from src.framework.vfx.fog_of_war import FogOfWar
+        from src.framework.vfx.water_effect import WaterEffect
+
+        datos = self._stage_data
+        self._niebla = None
+        self._agua_vfx = None
+
+        radio = getattr(datos, "fog_of_war", 0.0)
+        if radio and radio > 0:
+            self._niebla = FogOfWar(radius=int(radio))
+        if getattr(datos, "water_effect", False):
+            self._agua_vfx = WaterEffect()
+            # AUD-240 — el agua se configura desde el mapa.
+            #
+            # `docs/47` documenta cinco mandos y decía «all adjustable via
+            # `set_params()`». Nadie la llamaba: aquí se construía un
+            # `WaterEffect()` a secas, así que el charco de una cueva y el mar
+            # de un acantilado ondulaban exactamente igual. Los `getattr` con
+            # defecto son por las entregas de estudiante que traen su propio
+            # `StageData` sin estos campos.
+            self._agua_vfx.set_params(
+                speed=float(getattr(datos, "water_speed", 1.5)),
+                amplitude=int(getattr(datos, "water_amplitude", 4)),
+                frequency=float(getattr(datos, "water_frequency", 0.04)),
+                alpha=int(getattr(datos, "water_alpha", 100)),
+                tint=tuple(getattr(datos, "water_tint", (40, 80, 160))),
+            )
+
+    def _publicar_los_rayos_de_luz(self) -> None:
+        """Enciende los rayos volumétricos y decide de qué luz salen.
+
+        AUD-226 — el sombreador necesita un foco, y la tubería no tiene forma
+        de saber cuál: sólo ve una textura de luz ya compuesta, sin separar
+        los focos que la formaron. Quien sí lo sabe es la escena.
+
+        Se elige la luz **más fuerte que esté en pantalla**, ponderando
+        intensidad y radio: es la que domina la iluminación del fotograma y,
+        por tanto, la que el ojo lee como fuente. Elegir la más cercana al
+        jugador daría rayos que saltan de una farola a otra al caminar.
+
+        Si el escenario pide rayos y no hay ninguna luz visible, se apagan en
+        vez de dejarlos en el centro de la pantalla: un abanico saliendo de la
+        nada es peor que ninguno.
+        """
+        fuerza = getattr(self._stage_data, "god_rays", 0.0)
+        if not fuerza or fuerza <= 0:
+            return
+
+        from src.engine.core import gpu_effects
+
+        w, h = settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT
+        off = self._camera.offset
+        mejor = None
+        mejor_peso = 0.0
+        for luz in self._lighting.lights:
+            sx = luz.position.x - off.x
+            sy = luz.position.y - off.y
+            radio = luz.get_current_radius()
+            # Fuera de pantalla con todo su radio: no aporta nada al fotograma.
+            if sx + radio < 0 or sx - radio > w or sy + radio < 0 or sy - radio > h:
+                continue
+            peso = luz.get_current_intensity() * radio
+            if peso > mejor_peso:
+                mejor_peso = peso
+                mejor = (sx, sy)
+
+        if mejor is None:
+            return
+        # A UV, y con la Y volteada: la tubería sube la escena invertida
+        # (`pygame.image.tostring(..., True)`) y el sombreador muestrea en ese
+        # sistema. Es el mismo desfase que documenta `region_to_gl_uv`.
+        gpu_effects.publish_god_rays(
+            (mejor[0] / w, 1.0 - mejor[1] / h), float(fuerza),
+        )
+
+    def _capture_enemy_trails(self, dt: float) -> None:
+        """Estela para los enemigos que se mueven rápido, jefes incluidos.
+
+        Se usa un `TrailSystem` aparte del jugador a propósito: los dos
+        comparten un único temporizador de intervalo, así que meterlos en el
+        mismo sistema haría que el jugador y el jefe se robaran capturas y
+        ninguno de los dos dejara una estela continua.
+
+        La velocidad se deduce del desplazamiento entre fotogramas porque los
+        enemigos **no tienen atributo `velocity`**: a diferencia del jugador,
+        mueven `position` directamente. El primer intento comprobaba
+        `entity.velocity` y por tanto nunca capturaba nada, lo que habría
+        pasado por una característica que "no se nota".
+        """
+        if self._stage_data is None or dt <= 0:
+            return
+        mas_rapido = None
+        mejor_velocidad = self.ENEMY_TRAIL_SPEED
+        for entity in self._stage_data.entity_list:
+            if entity.rect is None or not getattr(entity, "visible", True):
+                continue
+            anterior = self._enemy_prev_x.get(id(entity))
+            self._enemy_prev_x[id(entity)] = entity.position.x
+            if anterior is None:
+                continue
+            velocidad = abs(entity.position.x - anterior) / dt
+            if velocidad > mejor_velocidad:
+                mejor_velocidad = velocidad
+                mas_rapido = entity
+
+        if mas_rapido is None:
+            return
+        # Rojo tenue: se distingue del azul del jugador de un vistazo, que es
+        # lo que hace falta cuando las dos estelas se cruzan.
+        self._enemy_trail_system.capture_at(
+            mas_rapido.position.x, mas_rapido.position.y,
+            (mas_rapido.rect.width, mas_rapido.rect.height),
+            (255, 90, 70, 110),
+        )

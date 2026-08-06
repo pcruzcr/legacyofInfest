@@ -23,10 +23,8 @@ from src.engine.ui.subtitle_overlay import SubtitleOverlay
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.audio.dynamic_music import DynamicMusicSystem
 from src.framework.ecs import systems as ecs_systems
-from src.framework.ecs.components import EsJugador, Salud, Velocidad
-from src.framework.ecs.scheduler import Fase, Planificador
+from src.framework.ecs.scheduler import Planificador
 from src.framework.ecs.world import World
-from src.framework.entities.base_entity import BaseEntity
 from src.framework.entities.bestiary import Bestiary
 from src.framework.entities.boss_base import BossBase
 from src.framework.entities.enemy_base import EnemyBase
@@ -34,9 +32,11 @@ from src.framework.entities.player import Player
 from src.framework.entities.squad_brain import SquadBrain
 from src.framework.scenes.stage_parts import dibujo_mecanicas
 from src.framework.scenes.stage_parts.ambiente import MezclaDeAmbiente
+from src.framework.scenes.stage_parts.arco import ArcoDelJugador
 from src.framework.scenes.stage_parts.cinematicas import CinematicasDeEscenario
 from src.framework.scenes.stage_parts.diagnostico import DiagnosticoDeEscenario
 from src.framework.scenes.stage_parts.fantasma import FantasmaDeCarrera
+from src.framework.scenes.stage_parts.mundo_ecs import MundoDelEscenario
 from src.framework.scenes.stage_parts.rush import ConduccionDelBossRush
 from src.framework.scenes.stage_parts.senales import SenalesDeEscenario
 from src.framework.scenes.stage_parts.sonido import SonidoDeEscenario
@@ -71,31 +71,15 @@ if TYPE_CHECKING:
     from src.framework.stage.stage_loader import StageData
 
 
-#: Segundos que el apuntado sigue siendo del ratón tras el último
-#: movimiento. Corto, pero no tanto como para que soltar el ratón un
-#: instante devuelva el tiro al frente en mitad de una pelea.
-MEMORIA_DEL_RATON: float = 1.5
 
 
-#: Color de los puntos que previsualizan el tiro del arco.
-#:
-#: AUD-194. Un blanco roto, el mismo tono del contorno del jugador
-#: (AUD-190): los fondos de este juego son oscuros y saturados, y
-#: cualquier color con tinte se confunde con el decorado de alguna zona.
-TINTA_DE_LA_TRAYECTORIA: tuple[int, int, int] = (236, 232, 220)
 
 
-#: Congelación al clavar una flecha, en segundos de tiempo real.
-#:
-#: AUD-196. Menos que los 0,05 s del cuerpo a cuerpo
-#: (`collision_system.HITSTOP_DURATION`): el impacto ocurre lejos del
-#: jugador y darle el mismo peso que a un golpe en la cara miente sobre
-#: lo que acaba de pasar. Con cero no se notaría que la flecha acertó.
-HITSTOP_DEL_FLECHAZO: float = 0.035
 
 
 class StageScene(MezclaDeAmbiente, SenalesDeEscenario, SonidoDeEscenario,
                  DiagnosticoDeEscenario, CinematicasDeEscenario,
+                 ArcoDelJugador, MundoDelEscenario,
                  FantasmaDeCarrera, ConduccionDelBossRush, BaseScene):
     """El escenario jugable: carga un TMX y lo hace jugar.
 
@@ -249,198 +233,9 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, SonidoDeEscenario,
             self._tutorial.show("move", duration=6.0)
             self._tutorial_shown.add("move")
 
-    def _dibujar_trayectoria_del_arco(self, surface: pygame.Surface) -> None:
-        """La parábola punteada, mientras se apunta.
 
-        AUD-194. Sólo aparece cuando el jugador está apuntando de verdad —stick
-        o ratón— y le quedan flechas. Con el disparo horizontal de teclado no
-        se dibuja nada: ahí la curva no aporta información y sería ruido
-        permanente en pantalla.
 
-        Se dibuja **después** del mundo y antes de la niebla y el HUD: tiene
-        que verse sobre el decorado, pero no sobre el marcador ni tapar un
-        diálogo.
-        """
-        jugador, arco = self._player, getattr(self._player, "arco", None)
-        if jugador is None or arco is None or arco.vacio:
-            return
-        entrada = self.input
-        if entrada is None:
-            return
 
-        direccion = self._direccion_de_tiro(jugador, entrada)
-        if not isinstance(direccion, pygame.Vector2):
-            return
-
-        from src.framework.entities.ranged_weapon import trayectoria
-
-        desplazamiento = (self._camera.offset if self._camera is not None
-                          else pygame.Vector2(0, 0))
-        origen = pygame.Vector2(jugador.rect.centerx, jugador.rect.centery)
-        # AUD-195: la curva se dibuja con la potencia acumulada, así que
-        # tensar se **ve**: la parábola se estira mientras se mantiene pulsado.
-        # Esa es la mitad del valor del tensado — sin previsualización, cargar
-        # sería una espera a ciegas.
-        puntos = trayectoria(origen, direccion, potencia=arco.potencia)
-
-        # Punteada y desvaneciéndose: una línea continua se lee como una
-        # cuerda tendida y sugiere que la flecha llega hasta el final, cuando
-        # en realidad choca con lo primero que encuentre. El punteado dice
-        # «por aquí pasará», no «aquí terminará».
-        total = len(puntos)
-        marco = surface.get_rect()
-        for indice, punto in enumerate(puntos):
-            # Uno de cada dos: el muestreo del cálculo es más fino que lo que
-            # hace falta ver, y dibujarlos todos da una línea continua.
-            if indice % 2:
-                continue
-            # La cola se corta en vez de desvanecerse a nada: el final de la
-            # curva es el menos fiable —cualquier pared la interrumpe antes— y
-            # dibujarlo entero prometería un alcance que no existe.
-            if indice / max(total - 1, 1) > 0.75:
-                break
-            pantalla = punto - desplazamiento
-            if not marco.collidepoint(pantalla.x, pantalla.y):
-                continue
-            radio = 2 if indice < total // 3 else 1
-            pygame.draw.circle(
-                surface,
-                TINTA_DE_LA_TRAYECTORIA,
-                (int(pantalla.x), int(pantalla.y)),
-                radio,
-            )
-
-    def _raton_esta_apuntando(self) -> bool:
-        """¿El jugador está usando el ratón, o sólo está ahí quieto?
-
-        AUD-193 — sin esto, el ratón secuestra el apuntado. La primera versión
-        preguntaba únicamente por `mouse.get_focused()`, y entonces un jugador
-        de teclado disparaba hacia donde el cursor se hubiera quedado olvidado:
-        medido en stage0, hacia arriba y a la izquierda, en diagonal, sin haber
-        tocado el ratón.
-
-        Se considera que apunta con el ratón si lo ha movido hace poco. Es lo
-        que hacen los juegos que admiten los dos controles a la vez, y evita
-        tener que elegir uno en un menú.
-        """
-        if not pygame.mouse.get_focused():
-            self._raton_ultimo_movimiento = 0.0
-            return False
-
-        posicion = pygame.mouse.get_pos()
-        if not hasattr(self, "_raton_posicion_previa"):
-            # Primera lectura: se toma como referencia, no como movimiento. Sin
-            # esto, comparar contra `None` cuenta siempre como que el ratón se
-            # ha movido y el apuntado arranca secuestrado antes de que el
-            # jugador toque nada.
-            self._raton_posicion_previa = posicion
-            return False
-        if posicion != self._raton_posicion_previa:
-            self._raton_posicion_previa = posicion
-            self._raton_ultimo_movimiento = MEMORIA_DEL_RATON
-        return getattr(self, "_raton_ultimo_movimiento", 0.0) > 0.0
-
-    def _direccion_de_tiro(self, player: object, im: object) -> object:
-        """Hacia dónde sale la flecha: apuntado libre si lo hay, si no de frente.
-
-        AUD-193. Devuelve un `Vector2` cuando el jugador está apuntando de
-        verdad —stick derecho fuera de su zona muerta, o ratón— y el entero de
-        siempre cuando no. Esa caída al comportamiento anterior no es pereza:
-        es lo que permite que los 17 mapas calibrados y las entregas de
-        estudiantes se sigan jugando igual con sólo el teclado.
-
-        El ratón se lee en coordenadas de pantalla y hay que restarle el
-        desplazamiento de la cámara, porque el jugador vive en coordenadas de
-        mundo. Sin eso, apuntar funcionaría sólo con la cámara en el origen —el
-        defecto clásico de mezclar los dos espacios.
-        """
-        eje = getattr(im, "aim_axis", None)
-        if callable(eje):
-            # Se comprueba el tipo y no sólo que exista: `getattr` sobre un
-            # doble de prueba con `__getattr__` genérico devuelve un invocable
-            # para cualquier nombre, y llamar a `length_squared()` sobre lo que
-            # sea que conteste revienta la escena entera en mitad del combate.
-            vector = eje()
-            if isinstance(vector, pygame.Vector2) and vector.length_squared() > 0.0:
-                return vector
-
-        if self._raton_esta_apuntando():
-            raton = pygame.Vector2(pygame.mouse.get_pos())
-            camara = getattr(self, "_camera", None)
-            desplazamiento = (camara.offset if camara is not None
-                              else pygame.Vector2(0, 0))
-            objetivo = raton + desplazamiento
-            apuntado = objetivo - pygame.Vector2(
-                player.rect.centerx, player.rect.centery,
-            )
-            # Un cursor pegado al jugador da una dirección sin sentido: por
-            # debajo de media baldosa se dispara de frente.
-            if apuntado.length_squared() > 64.0:
-                return apuntado
-
-        return player.facing
-
-    def _actualizar_arco(self, dt: float, player: object, im: object, stage: object) -> None:
-        """F4.2 — disparo a distancia.
-
-        El arma no conoce la escena ni la escena decide su munición: el arco
-        informa de qué flecha tocó a quién y aquí se aplica el daño, porque
-        quién puede dañar a quién es una regla del escenario y no del arma.
-        """
-        arco = getattr(player, "arco", None)
-        if arco is None:
-            return
-
-        arco.update(dt)
-        self._raton_ultimo_movimiento = max(
-            0.0, getattr(self, "_raton_ultimo_movimiento", 0.0) - dt)
-
-        # AUD-195 — tensar y soltar.
-        #
-        # Se dispara al **soltar**, no al pulsar: es lo que permite que
-        # mantener signifique algo. Un toque rápido sigue disparando —la
-        # potencia mínima es utilizable— así que quien no quiera cargar no
-        # tiene que aprender nada nuevo.
-        # AUD-196: sólo se salta el **disparo**, no el resto del método. Mi
-        # primera versión de esto retornaba aquí, y sin gestor de entrada las
-        # flechas ya lanzadas dejaban de volar, de chocar con las paredes y de
-        # impactar en los enemigos. Una escena sin entrada —un guion, una
-        # demostración automática— se quedaba con las flechas colgadas en el
-        # aire.
-        if im is not None and im.is_action_pressed(Action.RANGED_ATTACK):
-            arco.tensar(dt)
-        elif arco.tensando:
-            origen = pygame.Vector2(player.rect.centerx, player.rect.centery)
-            direccion = self._direccion_de_tiro(player, im)
-            if arco.disparar(origen, direccion) is not None:
-                self.context.event_bus.emit(Events.SFX_PLAYER_SHORT_ATTACK)
-            else:
-                # Sin munición o en enfriamiento: se suelta la tensión igual,
-                # o el arco se quedaría cargado para siempre y el siguiente
-                # disparo saldría con una potencia que nadie pidió.
-                arco.soltar_tension()
-
-        # Una flecha que da en la pared se para; si no, atraviesa el nivel.
-        arco.choca_con_muros(stage.collision_rects)
-
-        enemigos = [e for e in stage.entity_list if hasattr(e, "apply_hit")]
-        for flecha, objetivo in arco.impactos_contra(enemigos):
-            objetivo.apply_hit(flecha.damage, (flecha.rect.centerx, flecha.rect.centery))
-            # AUD-196 — un flechazo tiene que pesar igual que un espadazo.
-            #
-            # El cuerpo a cuerpo ya congelaba el mundo al conectar (AUD-001) y
-            # la cámara ya se sacude en seis eventos del juego, pero el arco
-            # —añadido en AUD-193— entró sin nada de eso: acertar a veinte
-            # baldosas bajaba un número y no se notaba. La congelación es más
-            # corta que la del cuerpo a cuerpo y la sacudida menor: el impacto
-            # ocurre lejos del jugador, y darle el mismo peso que a un golpe
-            # en la cara miente sobre lo que acaba de pasar.
-            self._collision.trigger_hitstop(HITSTOP_DEL_FLECHAZO)
-            if self._camera is not None:
-                self._camera.apply_shake(amplitude=1.5, duration=0.08)
-            self._damage_numbers.add(
-                flecha.rect.centerx, flecha.rect.top, str(round(flecha.damage, 1)),
-            )
 
     def on_player_landed(self) -> None:
         if "landed" not in self._tutorial_shown and hasattr(self, '_player') and self._player is not None:
@@ -1030,87 +825,7 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, SonidoDeEscenario,
             self._kill_player()
 
     # ── AUD-111 — VFX opcionales declarados en el TMX ──────────
-    def _configurar_vfx_opcionales(self) -> None:
-        """Enciende la niebla de guerra y el efecto de agua si el mapa los pide.
 
-        Los dos estaban escritos, documentados (`docs/46_`, `docs/47_`) y con
-        pruebas que los ejercitaban en aislamiento, y **ninguna escena los
-        instanciaba**: un jugador no podía llegar a ellos por ningún camino. Es
-        el mismo patrón que el nado y que el ultimate.
-
-        Se activan por propiedad de mapa y no por defecto porque los dos pintan
-        una superficie del tamaño de la pantalla en cada fotograma. Encenderlos
-        siempre le cobraría ese coste a los catorce escenarios que no los
-        quieren.
-        """
-        from src.framework.vfx.fog_of_war import FogOfWar
-        from src.framework.vfx.water_effect import WaterEffect
-
-        datos = self._stage_data
-        self._niebla = None
-        self._agua_vfx = None
-
-        radio = getattr(datos, "fog_of_war", 0.0)
-        if radio and radio > 0:
-            self._niebla = FogOfWar(radius=int(radio))
-        if getattr(datos, "water_effect", False):
-            self._agua_vfx = WaterEffect()
-            # AUD-240 — el agua se configura desde el mapa.
-            #
-            # `docs/47` documenta cinco mandos y decía «all adjustable via
-            # `set_params()`». Nadie la llamaba: aquí se construía un
-            # `WaterEffect()` a secas, así que el charco de una cueva y el mar
-            # de un acantilado ondulaban exactamente igual. Los `getattr` con
-            # defecto son por las entregas de estudiante que traen su propio
-            # `StageData` sin estos campos.
-            self._agua_vfx.set_params(
-                speed=float(getattr(datos, "water_speed", 1.5)),
-                amplitude=int(getattr(datos, "water_amplitude", 4)),
-                frequency=float(getattr(datos, "water_frequency", 0.04)),
-                alpha=int(getattr(datos, "water_alpha", 100)),
-                tint=tuple(getattr(datos, "water_tint", (40, 80, 160))),
-            )
-
-    def _cargar_los_arboles_de_dialogo(self) -> None:
-        """Lee las conversaciones del escenario de `data/dialogues/<id>.json`.
-
-        AUD-244 — `DialogueTree.desde_datos` existe desde AUD-127, escrita para
-        que un diseñador que no programa pueda escribir un diálogo en un fichero
-        de datos en vez de instanciar `DialogueNode` en Python. No la llamaba
-        nadie: la única forma de tener conversación seguía siendo escribirla en
-        el código del escenario, que es exactamente lo que aquello quería
-        evitar. `stage0` lo hace así y por eso era el único que las tenía.
-
-        Un escenario sin fichero no es un error: la inmensa mayoría no habla.
-        Un fichero ilegible **sí** se avisa, porque el diseñador lo escribió
-        esperando que se leyera.
-        """
-        import json
-
-        from src.framework.ui.dialogue_system import DialogueTree
-
-        self._arboles_de_dialogo = {}
-        stage_id = str(getattr(self._stage_data, "stage_id", "") or "")
-        if not stage_id:
-            return
-        ruta = settings.PROJECT_ROOT / "data" / "dialogues" / f"{stage_id}.json"
-        if not ruta.is_file():
-            return
-        try:
-            crudo = json.loads(ruta.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            logging.getLogger(__name__).warning(
-                "diálogo: %s no se puede leer; el escenario se juega sin "
-                "conversaciones", ruta, exc_info=True)
-            return
-
-        arboles = crudo if isinstance(crudo, list) else [crudo]
-        for datos in arboles:
-            if not isinstance(datos, dict):
-                continue
-            arbol = DialogueTree.desde_datos(datos)
-            if arbol.tree_id:
-                self._arboles_de_dialogo[arbol.tree_id] = arbol
 
     def _publicar_o_dibujar_el_agua(self, surface) -> None:
         """El agua la pinta el sombreador si hay GL, y `WaterEffect` si no.
@@ -1136,180 +851,11 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, SonidoDeEscenario,
         else:
             self._agua_vfx.draw(surface, self._camera.offset)
 
-    def _publicar_los_rayos_de_luz(self) -> None:
-        """Enciende los rayos volumétricos y decide de qué luz salen.
-
-        AUD-226 — el sombreador necesita un foco, y la tubería no tiene forma
-        de saber cuál: sólo ve una textura de luz ya compuesta, sin separar
-        los focos que la formaron. Quien sí lo sabe es la escena.
-
-        Se elige la luz **más fuerte que esté en pantalla**, ponderando
-        intensidad y radio: es la que domina la iluminación del fotograma y,
-        por tanto, la que el ojo lee como fuente. Elegir la más cercana al
-        jugador daría rayos que saltan de una farola a otra al caminar.
-
-        Si el escenario pide rayos y no hay ninguna luz visible, se apagan en
-        vez de dejarlos en el centro de la pantalla: un abanico saliendo de la
-        nada es peor que ninguno.
-        """
-        fuerza = getattr(self._stage_data, "god_rays", 0.0)
-        if not fuerza or fuerza <= 0:
-            return
-
-        from src.engine.core import gpu_effects
-
-        w, h = settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT
-        off = self._camera.offset
-        mejor = None
-        mejor_peso = 0.0
-        for luz in self._lighting.lights:
-            sx = luz.position.x - off.x
-            sy = luz.position.y - off.y
-            radio = luz.get_current_radius()
-            # Fuera de pantalla con todo su radio: no aporta nada al fotograma.
-            if sx + radio < 0 or sx - radio > w or sy + radio < 0 or sy - radio > h:
-                continue
-            peso = luz.get_current_intensity() * radio
-            if peso > mejor_peso:
-                mejor_peso = peso
-                mejor = (sx, sy)
-
-        if mejor is None:
-            return
-        # A UV, y con la Y volteada: la tubería sube la escena invertida
-        # (`pygame.image.tostring(..., True)`) y el sombreador muestrea en ese
-        # sistema. Es el mismo desfase que documenta `region_to_gl_uv`.
-        gpu_effects.publish_god_rays(
-            (mejor[0] / w, 1.0 - mejor[1] / h), float(fuerza),
-        )
 
     # ── F5.14 — lianas y tirolesas ─────────────────────────────
-    def _actualizar_agarres(self, player, im) -> None:
-        """Agarrarse a una liana o engancharse a una tirolesa.
-
-        Se hace aquí y no en un sistema ECS por la misma razón que el nado:
-        quien decide en qué estado está el jugador es su máquina de estados, y
-        empujarle un cambio desde un sistema sería el desorden que la fase 5
-        quiso evitar. El sistema **informa**; la escena **pregunta**.
-
-        Con el botón de agarrar y no automáticamente: una liana que te atrapa
-        al pasar corriendo por delante convierte un adorno en una trampa, y es
-        el fallo que más se repite en los juegos que las tienen.
-        """
-        from src.framework.entities.states import TirolesaState, TrepandoState
-
-        if player is None or im is None:
-            return
-        actual = getattr(player, "_state_instance", None)
-        if isinstance(actual, (TrepandoState, TirolesaState)):
-            return
-        if not im.is_action_just_pressed(Action.GRAB):
-            return
-
-        cable = ecs_systems.tirolesa_alcanzable(self._mundo, player.rect)
-        if cable is not None:
-            player._change_state_instance(TirolesaState(cable))
-            return
-        liana = ecs_systems.liana_alcanzable(self._mundo, player.rect)
-        if liana is not None:
-            player._change_state_instance(TrepandoState(liana))
 
     # ── F5 — el mundo ECS del escenario ────────────────────────
-    def _poblar_mundo_ecs(self) -> None:
-        """Vuelca al mundo los componentes del TMX, el jugador y los enemigos.
 
-        Mundo nuevo por escenario y no reutilizado: arrastrar el anterior
-        llevaría al nivel siguiente las plataformas del anterior y su estado a
-        medio ciclo. Es el mismo motivo por el que `InteractableSystem` se
-        reconstruye justo arriba.
-
-        F5.11 — el jugador y los enemigos entran al mundo
-        -------------------------------------------------
-        Hasta ahora sólo entraban las mecánicas del TMX, y el jugador se pasaba
-        por parámetro a los dos sistemas que lo necesitaban. Eso dejaba una
-        rareza que se notaba jugando: **el viento y las corrientes no empujaban
-        a los enemigos**, porque los enemigos no estaban en el mundo. Un nivel
-        con viento tenía viento para el jugador y calma para todo lo demás.
-
-        Ahora entran los tres. `adoptar_en` traslada los componentes que ya
-        tienen —el mismo `Transform`, por referencia— del mundo privado que cada
-        entidad crea al nacer, al mundo de la escena.
-        """
-        self._mundo = World()
-        for grupo in self._stage_data.componentes:
-            self._mundo.crear(*grupo)
-
-        if self._player is not None:
-            self._player.adoptar_en(self._mundo)
-            self._mundo.poner(self._player.entidad, EsJugador())
-            self._mundo.poner(self._player.entidad, Velocidad(self._player.velocity))
-
-        for entidad in self._stage_data.entity_list:
-            if isinstance(entidad, BaseEntity):
-                entidad.adoptar_en(self._mundo)
-                # Sin `Velocidad` un enemigo tiene posición pero nada que
-                # empujar, así que el viento y las corrientes lo ignorarían.
-                self._mundo.poner(entidad.entidad, Velocidad(entidad.velocity))
-                # F5.12 — `Salud` como **vista** sobre `current_health`, no como
-                # copia sincronizada. Las zonas letales escriben aquí y la vida
-                # del enemigo baja de verdad, sin un paso de sincronización que
-                # alguien pueda olvidar.
-                if hasattr(entidad, "current_health"):
-                    self._mundo.poner(entidad.entidad, Salud(duenio=entidad))
-
-    @staticmethod
-    def _construir_planificador() -> Planificador:
-        """El orden de un fotograma de mecánicas, declarado una sola vez.
-
-        F5.11 — esto **sustituye** a `_mundo_ecs_paso`, que llamaba a los once
-        sistemas a mano. Aquella función existía por un motivo concreto: los
-        sistemas de sigilo recibían el rectángulo del jugador por parámetro, y
-        con una firma distinta a `Sistema` no cabían en el planificador. Ahora
-        lo buscan por su marca `EsJugador` y todos tienen la misma firma.
-
-        La diferencia no es estética. Con la llamada a mano, el orden vivía en
-        el cuerpo de un método de la escena y sólo se podía leer entero
-        leyéndolo entero; una mecánica nueva se insertaba «donde pareciera». Con
-        el planificador, cada sistema declara **en qué fase** corre, el orden
-        sale de ahí, y `framework/ecs/scheduler.py` explica cada fase con los
-        fallos concretos que produce equivocarse.
-
-        Además el planificador mide cada sistema por separado, así que cuando el
-        fotograma se pase de presupuesto se sabrá cuál fue sin tener que
-        adivinarlo.
-        """
-        p = Planificador()
-        p.registrar(Fase.IA, "conos_de_vision", ecs_systems.sistema_conos_de_vision)
-        p.registrar(Fase.IA + 1, "alerta", ecs_systems.sistema_alerta)
-        p.registrar(Fase.IA + 2, "acosador", ecs_systems.sistema_acosador)
-        # AUD-131 — el resorte va **antes** del viento y de la integración:
-        # impone la velocidad de rebote y deja que el resto del fotograma la
-        # use. Después, la colisión del suelo la habría puesto a cero.
-        p.registrar(Fase.FUERZAS, "resortes", ecs_systems.sistema_resortes)
-        p.registrar(Fase.FUERZAS, "viento", ecs_systems.sistema_viento)
-        p.registrar(
-            Fase.FUERZAS + 1, "corriente", ecs_systems.sistema_corriente_de_agua,
-        )
-        p.registrar(
-            Fase.ESCENARIO, "plataformas_moviles",
-            ecs_systems.sistema_plataformas_moviles,
-        )
-        p.registrar(
-            Fase.ESCENARIO + 1, "bloques_ritmicos",
-            ecs_systems.sistema_bloques_ritmicos,
-        )
-        p.registrar(
-            Fase.ESCENARIO + 2, "plataformas_hundibles",
-            ecs_systems.sistema_plataformas_hundibles,
-        )
-        p.registrar(
-            Fase.ARRASTRE, "arrastre", ecs_systems.sistema_arrastre_de_plataformas,
-        )
-        # La fricción va en ZONAS y no en FUERZAS porque arrastra posición, no
-        # velocidad: tiene que correr sobre la posición ya resuelta.
-        p.registrar(Fase.ZONAS, "friccion", ecs_systems.sistema_friccion)
-        p.registrar(Fase.ZONAS + 1, "zonas_letales", ecs_systems.sistema_zonas_letales)
-        return p
 
     def _update_gameplay(self, dt: float) -> None:
         player = self._player
@@ -1799,45 +1345,6 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, SonidoDeEscenario,
         self._capture_enemy_trails(dt)
         self._enemy_trail_system.update(dt)
 
-    def _capture_enemy_trails(self, dt: float) -> None:
-        """Estela para los enemigos que se mueven rápido, jefes incluidos.
-
-        Se usa un `TrailSystem` aparte del jugador a propósito: los dos
-        comparten un único temporizador de intervalo, así que meterlos en el
-        mismo sistema haría que el jugador y el jefe se robaran capturas y
-        ninguno de los dos dejara una estela continua.
-
-        La velocidad se deduce del desplazamiento entre fotogramas porque los
-        enemigos **no tienen atributo `velocity`**: a diferencia del jugador,
-        mueven `position` directamente. El primer intento comprobaba
-        `entity.velocity` y por tanto nunca capturaba nada, lo que habría
-        pasado por una característica que "no se nota".
-        """
-        if self._stage_data is None or dt <= 0:
-            return
-        mas_rapido = None
-        mejor_velocidad = self.ENEMY_TRAIL_SPEED
-        for entity in self._stage_data.entity_list:
-            if entity.rect is None or not getattr(entity, "visible", True):
-                continue
-            anterior = self._enemy_prev_x.get(id(entity))
-            self._enemy_prev_x[id(entity)] = entity.position.x
-            if anterior is None:
-                continue
-            velocidad = abs(entity.position.x - anterior) / dt
-            if velocidad > mejor_velocidad:
-                mejor_velocidad = velocidad
-                mas_rapido = entity
-
-        if mas_rapido is None:
-            return
-        # Rojo tenue: se distingue del azul del jugador de un vistazo, que es
-        # lo que hace falta cuando las dos estelas se cruzan.
-        self._enemy_trail_system.capture_at(
-            mas_rapido.position.x, mas_rapido.position.y,
-            (mas_rapido.rect.width, mas_rapido.rect.height),
-            (255, 90, 70, 110),
-        )
 
     def _save_and_quit(self) -> None:
         if self._stage_data is not None and self._player is not None:

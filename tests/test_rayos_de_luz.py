@@ -513,9 +513,12 @@ class TestLosRayosLleganDesdeElEscenario:
         )
 
     def test_la_escena_elige_la_luz_que_manda(self) -> None:
+        """AUD-299 movió `_publicar_los_rayos_de_luz` a `stage_parts/ambiente`,
+        que es donde vive el resto de la luz. El código no cambió; cambió de
+        fichero, y esta prueba mira el módulo nuevo."""
         import inspect
 
-        from src.framework.scenes import stage_scene
+        from src.framework.scenes.stage_parts import ambiente as stage_scene
 
         fuente = inspect.getsource(stage_scene)
         assert "publish_god_rays" in fuente

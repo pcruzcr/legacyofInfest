@@ -272,7 +272,8 @@ class TestLaPrevisualizacionEnPantalla:
 
     @staticmethod
     def _tinta(superficie: pygame.Surface) -> int:
-        from src.framework.scenes.stage_scene import TINTA_DE_LA_TRAYECTORIA
+        # AUD-299: la constante se fue con el arco a su propio módulo.
+        from src.framework.scenes.stage_parts.arco import TINTA_DE_LA_TRAYECTORIA
 
         r, g, b = TINTA_DE_LA_TRAYECTORIA
         pixeles = pygame.surfarray.array3d(superficie)
