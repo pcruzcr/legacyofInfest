@@ -309,6 +309,40 @@ class Inventory:
         """¿Tiene el jugador esta habilidad (drop de jefe)?"""
         return self._items.get(skill_id, 0) > 0
 
+    def all_items(self) -> dict[str, int]:
+        """Copia de lo que lleva encima. Para volcarlo en la partida (AUD-292)."""
+        return dict(self._items)
+
+    def restaurar(self, items: dict[str, int],
+                  equipado: dict[str, str] | None = None) -> None:
+        """Sustituye el inventario entero por el de una partida — AUD-292.
+
+        **Sustituye, no funde.** Cargar la partida 2 tiene que dejar la cartera
+        de la partida 2; fundirla con lo que hubiera en memoria daría a quien
+        cambia de slot el dinero de los dos, que es exactamente el defecto que
+        esto viene a cerrar.
+
+        Se descarta lo que no está en el catálogo, por lo mismo que `load`: un
+        fichero editado a mano no debe poder meter objetos inventados.
+        """
+        self._items = {
+            str(k): max(0, int(v))
+            for k, v in dict(items or {}).items()
+            if k in _ITEM_DEFS and int(v) > 0
+        }
+        # Y la ropa con el mismo filtro que `load`: sólo prendas que se tienen
+        # y en su propia ranura. Una partida editada a mano no debe poder
+        # cobrar el bonus de algo que no está en el inventario (AUD-207).
+        self._equipped = {
+            str(slot): str(iid)
+            for slot, iid in dict(equipado or {}).items()
+            if (defn := _ITEM_DEFS.get(str(iid))) is not None
+            and defn.slot == slot
+            and defn.slot != "skill"
+            and self._items.get(str(iid), 0) > 0
+        }
+        self.save()
+
     def save(self) -> None:
         data = {"items": dict(self._items), "equipped": dict(self._equipped)}
         _INVENTORY_PATH.parent.mkdir(parents=True, exist_ok=True)

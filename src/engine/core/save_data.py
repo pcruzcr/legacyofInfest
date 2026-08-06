@@ -12,7 +12,7 @@ from typing import Any
 import orjson
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-SAVE_VERSION = 2
+SAVE_VERSION = 3
 MAX_SLOTS = 5
 
 
@@ -42,6 +42,27 @@ class SaveData(BaseModel):
     #: la sesión siguiente. Con reserva 0, las partidas anteriores se cargan
     #: sin tocar nada.
     exp_total: int = 0
+    #: AUD-292 — la partida se lleva **todo** lo que el jugador acumuló.
+    #:
+    #: Hasta hoy estaba repartido en tres sitios que no se hablaban: la
+    #: puntuación en `data/score.json`, el inventario —y con él las monedas—
+    #: en `data/inventory.json`, y sólo la experiencia dentro del slot. Los tres
+    #: primeros eran **globales**: cargar la partida de otro slot dejaba el
+    #: dinero y la ropa del anterior, y empezar una partida nueva no vaciaba
+    #: nada. Dos personas turnándose en el mismo equipo compartían cartera.
+    #:
+    #: Con esto, un slot es una partida entera. Los ficheros globales siguen
+    #: existiendo para quien juega sin identificarse y sin guardar.
+    score: int = 0
+    inventory_items: dict[str, int] = Field(default_factory=dict)
+    inventory_equipped: dict[str, str] = Field(default_factory=dict)
+    #: Los tres números de `ExperienceSystem`, no sólo el total.
+    #:
+    #: `exp_total` sola no basta y su propio módulo lo dice: los puntos ya
+    #: **gastados** no se deducen de la experiencia. Restaurando sólo el total,
+    #: cargar una partida le devolvería al jugador todos los puntos que ya se
+    #: había gastado en el árbol — y con ellos podría comprarlo dos veces.
+    exp_estado: dict[str, int] = Field(default_factory=dict)
 
     @field_validator("health", "max_health")
     @classmethod
@@ -108,6 +129,17 @@ class SaveData(BaseModel):
         if ver < 2:
             data.setdefault("completed_stages", [])
             data["version"] = 2
+        if ver < 3:
+            # AUD-292. Con reserva vacía, una partida de la versión 2 se carga
+            # y **conserva** el inventario global que hubiera: la primera
+            # grabación la vuelca dentro del slot y a partir de ahí viaja con
+            # ella. Migrar copiando el fichero global aquí sería peor — daría a
+            # los cinco slots la misma cartera.
+            data.setdefault("score", 0)
+            data.setdefault("inventory_items", {})
+            data.setdefault("inventory_equipped", {})
+            data.setdefault("exp_estado", {})
+            data["version"] = 3
         return data
 
     def to_json(self) -> bytes:

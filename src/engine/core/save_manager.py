@@ -19,6 +19,64 @@ logger = logging.getLogger(__name__)
 _SAVES_HEREDADO = settings.PROJECT_ROOT / "saves"
 
 
+def volcar_estado_en(data: SaveData) -> None:
+    """Copia inventario y puntuación **actuales** dentro de la partida — AUD-292.
+
+    Se lee del estado vivo y no de los ficheros globales: en el instante de
+    guardar, lo que el jugador tiene es lo que hay en memoria, y los ficheros
+    pueden llevar un segundo de retraso.
+
+    No lanza. Guardar es lo último que hace un escenario al llegar a un
+    checkpoint, y quedarse sin guardar la posición por no poder leer el
+    inventario sería cambiar un dato importante por uno accesorio.
+    """
+    try:
+        from src.engine.core.experience import ExperienceSystem
+        from src.engine.core.inventory import get_inventory
+        from src.engine.core.score_system import ScoreSystem
+
+        inventario = get_inventory()
+        data.inventory_items = dict(inventario.all_items())
+        data.inventory_equipped = dict(inventario.get_equipped())
+        data.score = int(ScoreSystem.get_instance().score)
+        data.exp_estado = dict(ExperienceSystem.get_instance().to_dict())
+    except Exception:  # pragma: no cover - nunca a costa de la posición
+        logger.warning("no se pudo volcar inventario/puntuación en la partida",
+                       exc_info=True)
+
+
+def aplicar_estado_de(data: SaveData) -> None:
+    """Lo contrario: deja el juego como lo dejó esa partida — AUD-292.
+
+    Se llama al **cargar** un slot, y es la mitad que faltaba: sin esto, elegir
+    la partida 2 dejaba el dinero y la ropa de la partida 1, porque el
+    inventario nunca supo de slots.
+
+    Una partida de la versión 2 llega con los tres campos vacíos. Ahí no se
+    toca nada: vaciar la cartera de quien cargó una partida antigua sería
+    cobrarle la migración.
+    """
+    try:
+        from src.engine.core.experience import ExperienceSystem
+        from src.engine.core.inventory import get_inventory
+        from src.engine.core.score_system import ScoreSystem
+
+        if data.inventory_items or data.inventory_equipped:
+            get_inventory().restaurar(data.inventory_items, data.inventory_equipped)
+        if data.version >= 3:
+            ScoreSystem.get_instance().set_score(int(data.score))
+        if data.exp_estado:
+            ExperienceSystem.get_instance().from_dict(data.exp_estado)
+        elif data.exp_total:
+            # Partida de la versión 2: sólo hay el total. Se restaura lo que
+            # hay y se acepta el efecto conocido —los puntos gastados vuelven—
+            # porque la alternativa es empezar de cero, que es peor.
+            ExperienceSystem.get_instance().from_dict({"exp": int(data.exp_total)})
+    except Exception:  # pragma: no cover
+        logger.warning("no se pudo aplicar el inventario de la partida",
+                       exc_info=True)
+
+
 class SaveManager:
     """Las partidas guardadas, en el directorio del usuario.
 
@@ -199,4 +257,7 @@ class SaveManager:
         # puede hacer retroceder el nivel del jugador.
         if exp_total is not None:
             data.exp_total = max(data.exp_total, int(exp_total))
+        # AUD-292 — y la cartera, la ropa y la puntuación, que hasta hoy vivían
+        # en ficheros globales fuera de la partida.
+        volcar_estado_en(data)
         return self.save(slot, data)
