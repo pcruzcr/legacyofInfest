@@ -162,7 +162,8 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── audio_manager.py           # AudioManager: music + sfx + ambient + stingers
 │   │   │   ├── audio_pipeline.py          # Audio processing pipeline
 │   │   │   ├── music_clock.py            # RelojMusical: pulsos, compases y latencia (F6)
-│   │   │   └── mixer_buses.py           # Mezclador: buses y ducking (AUD-144)
+│   │   │   ├── mixer_buses.py           # Mezclador: buses y ducking (AUD-144)
+│   │   │   └── polifonia.py             # AUD-280: cuántas veces suena a la vez el mismo efecto
 │   │   │
 │   │   ├── render/
 │   │   │   ├── __init__.py
@@ -228,6 +229,7 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── __init__.py
 │   │   │   ├── profundidad.py             # AUD-277: escala 2.5D por altura (apagada por defecto)
 │   │   │   ├── rejilla.py                 # AUD-276: rejilla espacial + raycast (línea de visión)
+│   │   │   ├── culling.py                 # AUD-279: qué se simula y qué se dibuja cerca de la cámara
 │   │   │   ├── stage_loader.py            # StageLoader: parse TMX, build layer stack, spawn
 │   │   │   ├── interactables.py           # Recogible/Cerradura/Cofre/Disparador/Llavero (F4.1)
 │   │   │   ├── bloques.py                 # PushBlock y BreakableBlock: empujar y romper (AUD-140)
@@ -271,7 +273,11 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   └── stage_parts/               # AUD-152: mixins de lectura de StageScene
 │   │   │       ├── __init__.py            #   por qué son mixins y no colaboradores
 │   │   │       ├── ambiente.py            #   luz, bloom, viñeta, estación, hora
-│   │   │       ├── senales.py             #   suscripciones al bus: VFX y 38 sonidos
+│   │   │       ├── senales.py             #   suscripciones al bus: VFX, inventario y warp
+│   │   │       ├── sonido.py              #   AUD-290: la mitad sonora — 38 eventos y su tabla
+│   │   │       ├── diagnostico.py         #   AUD-290: lo que enseña F11 y qué pasa si una
+│   │   │       │                          #   entidad revienta (AUD-283, AUD-289)
+│   │   │       ├── cinematicas.py         #   AUD-290: monta el director de escenas y lo corre
 │   │   │       ├── fantasma.py            #   silueta de la mejor carrera
 │   │   │       ├── rush.py                #   AUD-261: conduce el Boss Rush —
 │   │   │       │                          #   golpes, tiempo y arrastre de vida

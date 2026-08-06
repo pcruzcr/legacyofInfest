@@ -34,9 +34,12 @@ from src.framework.entities.player import Player
 from src.framework.entities.squad_brain import SquadBrain
 from src.framework.scenes.stage_parts import dibujo_mecanicas
 from src.framework.scenes.stage_parts.ambiente import MezclaDeAmbiente
+from src.framework.scenes.stage_parts.cinematicas import CinematicasDeEscenario
+from src.framework.scenes.stage_parts.diagnostico import DiagnosticoDeEscenario
 from src.framework.scenes.stage_parts.fantasma import FantasmaDeCarrera
 from src.framework.scenes.stage_parts.rush import ConduccionDelBossRush
 from src.framework.scenes.stage_parts.senales import SenalesDeEscenario
+from src.framework.scenes.stage_parts.sonido import SonidoDeEscenario
 from src.framework.stage import culling
 from src.framework.stage.camera import Camera
 from src.framework.stage.collision_system import CollisionSystem
@@ -91,8 +94,9 @@ TINTA_DE_LA_TRAYECTORIA: tuple[int, int, int] = (236, 232, 220)
 HITSTOP_DEL_FLECHAZO: float = 0.035
 
 
-class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
-                 ConduccionDelBossRush, BaseScene):
+class StageScene(MezclaDeAmbiente, SenalesDeEscenario, SonidoDeEscenario,
+                 DiagnosticoDeEscenario, CinematicasDeEscenario,
+                 FantasmaDeCarrera, ConduccionDelBossRush, BaseScene):
     """El escenario jugable: carga un TMX y lo hace jugar.
 
     AUD-152 — los tres primeros padres son **mixins de lectura**, no capas de
@@ -1580,62 +1584,6 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
                 pygame.draw.line(surface, (60, 55, 50), (r.left + 2, y),
                                  (r.right - 2, y), 1)
 
-    def _actualizar_escenas(self, dt: float) -> bool:
-        """Corre el director. Devuelve `True` si el juego debe quedarse quieto.
-
-        El salto se lee con CANCEL, la misma tecla con la que stage 0 lo hacía
-        a mano, pero ahora saltar **ejecuta el final** del guion en vez de
-        tirarlo a medias (`CutsceneScript.saltar`).
-        """
-        director = self._cutscenes
-        if director is None or self._player is None:
-            return False
-        im = self.input
-        saltar = bool(im is not None and im.is_action_just_pressed(Action.CANCEL))
-        director.update(dt, self._player.rect, saltar=saltar)
-        return bool(director.bloquea)
-
-    def _montar_director_de_escenas(self) -> None:
-        """AUD-136 (D3) — conecta las escenas del TMX con el motor.
-
-        Antes de esto, el único escenario del proyecto que reproducía una
-        cutscene era stage 0, a mano, apagando el guion desde fuera tocando un
-        atributo privado. El sistema de escenas estaba escrito, probado y sin
-        nadie que lo ejecutara: la novena vez este mes que aparece el mismo
-        patrón —código correcto que no llega al jugador—.
-        """
-        from src.framework.stage.cutscene_director import CutsceneDirector
-        from src.framework.stage.cutscene_guion import ContextoDeGuion
-
-        stage = self._stage_data
-        if stage is None:
-            self._cutscenes = None
-            return
-        entidades = {
-            nombre: e for e in stage.entity_list
-            if (nombre := getattr(e, "name", "") or getattr(e, "entity_id", ""))
-        }
-        contexto = ContextoDeGuion(
-            camara=self._camera,
-            jugador=self._player,
-            bus=self.context.event_bus,
-            dialogo=self._dialogue,
-            entidades=entidades,
-        )
-        self._cutscenes = CutsceneDirector(
-            contexto,
-            getattr(stage, "escenas", []),
-            bus=self.context.event_bus,
-            vistas=self._escenas_vistas,
-        )
-        if self._cutscenes.errores:
-            # Los errores de guion no cancelan la escena —se ignora la línea y
-            # se sigue—, pero tienen que verse: un guion que calla es un guion
-            # que el estudiante da por bueno.
-            registro = logging.getLogger(__name__)
-            for error in self._cutscenes.errores:
-                registro.warning("guion de escena en %s: %s", stage.stage_id, error)
-
     def _update_audio(self, dt: float) -> None:
         if self._dynamic_music is None:
             return
@@ -1871,98 +1819,6 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, FantasmaDeCarrera,
         self.context.event_bus.emit(Events.SFX_UI_GAME_OVER)
         from src.engine.scenes.game_over_scene import GameOverScene
         self.context.scene_manager.push(GameOverScene(self.context, self))
-
-    def _retirar_entidad_rota(self, entidad: Any) -> None:
-        """Una entidad que lanza se va del nivel; el nivel sigue — AUD-289.
-
-        Por qué esto existe
-        -------------------
-        Este motor **ejecuta código de veintiséis estudiantes**. Hasta AUD-289 no
-        había red ninguna en el bucle de juego: un `IndexError` en el `update` de
-        un enemigo de una entrega tumbaba el fotograma entero, `App` lo cazaba
-        arriba del todo y devolvía al menú de título. Desde el asiento del
-        estudiante eso se ve como «el juego se cierra», y el mensaje que explica
-        qué pasó queda en un fichero de registro que nadie mira mientras juega.
-
-        Al cargar sí había red desde AUD-055 (`StageErrorScene`): un `.tmx` mal
-        formado enseña su diagnóstico en pantalla y `R` recarga. Faltaba la otra
-        mitad, la de ejecución.
-
-        Lo importante: **esto no silencia nada.** Registra con traza completa
-        —`logger.exception`, al fichero de registro que AUD-268 dejó junto a las
-        partidas—, lo apunta en `entidades_retiradas` para que la consola de F11
-        lo enseñe mientras se juega, y retira a la entidad para que el fallo no
-        se repita sesenta veces por segundo. Un `except` que se calla
-        convertiría un fallo ruidoso en uno invisible, que es peor que el
-        problema original.
-
-        Y se puede apagar. `settings.AISLAR_FALLOS_DE_ENTIDAD = False` vuelve a
-        propagar la excepción, que es lo que quiere quien está depurando el
-        motor y necesita la traza donde ocurre.
-        """
-        if not getattr(settings, "AISLAR_FALLOS_DE_ENTIDAD", True):
-            raise
-
-        nombre = type(entidad).__name__
-        logging.getLogger(__name__).exception(
-            "la entidad %r falló en update() y se retira del nivel", nombre)
-        # Se marca muerta **y** se saca de la lista: sólo lo primero la dejaría
-        # sin dibujar pero seguiría recibiendo `set_player_ref` cada fotograma,
-        # y `on_enemy_died` la contaría como una baja del jugador — puntuación y
-        # monedas por un fallo de programación.
-        entidad.is_alive = False
-        entidad._was_alive = False
-        if self._stage_data is not None:
-            try:
-                self._stage_data.entity_list.remove(entidad)
-            except ValueError:
-                pass
-        self._squad.forget(entidad)
-        self.entidades_retiradas.append(nombre)
-        self._subtitles.push(f"[{nombre} falló y se retiró: mira el registro]")
-
-    def medidas_de_depuracion(self) -> dict[str, object]:
-        """Lo que este escenario publica en la consola (F11) — AUD-283.
-
-        Las cuatro cuentas que hacen falta para decidir sobre rendimiento en
-        este motor: cuántas entidades se están simulando de verdad —no cuántas
-        hay, que con el culling de AUD-279 ya no es lo mismo—, cuántas
-        partículas vivas, y qué está decidiendo la IA.
-
-        Lo del escuadrón es lo que cierra un cabo suelto de su propio módulo:
-        `SquadBrain.stats()` llevaba desde AUD-050 comentado como «introspección
-        para el overlay de debug» **sin un solo llamante**. El dato se calculaba
-        cada fotograma y no se enseñaba en ninguna parte.
-        """
-        from src.framework.entities.enemy_base import EnemyBase
-
-        stage = self._stage_data
-        entidades = list(stage.entity_list) if stage is not None else []
-        vivos = [e for e in entidades if isinstance(e, EnemyBase) and e.is_alive]
-        zona = culling.zona_activa(self._camera.offset)
-        simulados = sum(1 for e in vivos if culling.se_simula(e, zona))
-
-        particulas = 0
-        sistema = getattr(self, "_particle_system", None)
-        if sistema is not None:
-            particulas = sum(em.count for em in sistema._emitters.values())
-
-        stats = self._squad.stats
-        medidas: dict[str, object] = {
-            "Enemigos": f"{simulados} simulados de {len(vivos)} vivos",
-            "Partículas": particulas,
-            "Escuadrón": (
-                f"{stats['fraccion_modelo'] * 100:.0f}% por modelo, "
-                f"{int(stats['por_reglas'])} por reglas"
-            ),
-        }
-        # AUD-289 — arriba del todo si ha pasado, y ausente si no. Una fila
-        # «Entidades retiradas: 0» permanente enseña a ignorarla, y el día que
-        # ponga 1 nadie lo va a mirar.
-        if self.entidades_retiradas:
-            medidas["!! Entidades retiradas"] = ", ".join(
-                sorted(set(self.entidades_retiradas)))
-        return medidas
 
     def draw(self, surface: pygame.Surface) -> None:
         if self._stage_data is None or self._player is None:

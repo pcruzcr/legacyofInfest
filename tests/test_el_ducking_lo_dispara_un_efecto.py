@@ -96,21 +96,21 @@ class TestQuienLoDispara:
     def test_la_lista_de_criticos_es_corta(self) -> None:
         """El ducking funciona porque es raro: si lo pidiera cada golpe, el
         bombeo se oiría más que los propios efectos."""
-        from src.framework.scenes.stage_parts.senales import EVENTOS_CRITICOS
+        from src.framework.scenes.stage_parts.sonido import EVENTOS_CRITICOS
 
         assert 0 < len(EVENTOS_CRITICOS) <= 6
 
     def test_la_muerte_de_un_enemigo_no_esta(self) -> None:
         """Mueren a docenas."""
         from src.engine.core.events import Events
-        from src.framework.scenes.stage_parts.senales import EVENTOS_CRITICOS
+        from src.framework.scenes.stage_parts.sonido import EVENTOS_CRITICOS
 
         assert Events.SFX_ENEMY_DIE_SMALL not in EVENTOS_CRITICOS
         assert Events.SFX_HIT_CONNECT not in EVENTOS_CRITICOS
 
     def test_el_logro_y_el_fin_de_escenario_si(self) -> None:
         from src.engine.core.events import Events
-        from src.framework.scenes.stage_parts.senales import EVENTOS_CRITICOS
+        from src.framework.scenes.stage_parts.sonido import EVENTOS_CRITICOS
 
         assert Events.ACHIEVEMENT_UNLOCKED in EVENTOS_CRITICOS
         assert Events.SFX_STAGE_COMPLETE in EVENTOS_CRITICOS
@@ -139,7 +139,7 @@ class TestElCableado:
     def test_la_escena_marca_los_criticos_al_suscribir(self) -> None:
         import inspect
 
-        from src.framework.scenes.stage_parts import senales
+        from src.framework.scenes.stage_parts import sonido
 
-        fuente = inspect.getsource(senales)
+        fuente = inspect.getsource(sonido)
         assert "critico=evt in EVENTOS_CRITICOS" in fuente

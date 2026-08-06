@@ -707,7 +707,10 @@ función**. El trabajo está hecho; lo que quedaba —medirlo— es esta fila.
     (AUD-148), y el monitor del punto 5 es lo que permitiría medirlo.
 14. **Reducir los 17 pares de importación mutua** — once son el patrón del
     menú y se resuelven con una importación diferida en `title_scene`.
-15. **Partir `stage_scene.py`** — aplazado por acuerdo.
+15. **Partir `stage_scene.py`** — aplazado por acuerdo. AUD-290 le quitó tres
+    partes más (1.923 → **1.900** líneas) porque los presupuestos de
+    `senales.py` lo obligaron; el presupuesto de 1.500 sigue sin cumplirse y
+    su prueba sigue en rojo, igual que antes de esta tanda (§16.2).
 16. **Árbol de habilidades** — sigue siendo lo único que no existe en absoluto
     (§0), y necesita decisión de diseño antes que código.
 17. **Traducir los 12 manuales del estudiante.**
@@ -740,6 +743,7 @@ no se puede escribir por adelantado.
 | **287** | No había forma de teletransportar dentro de un mapa | Tipo `WarpZone`, con dos colocados en el laboratorio |
 | **288** | La pantalla de carga estaba escrita y sin llamante | Abrir la Unidad IX pasa de **2.461 ms de congelación a 2 ms** |
 | **289** | Una entidad de estudiante que fallaba tumbaba la clase | Se retira ella sola, con traza en el registro y aviso en la consola |
+| **290** | `senales.py` reventó su presupuesto de 400 líneas al recibir lo de arriba | Tres partes nuevas: `sonido`, `diagnostico`, `cinematicas`. `stage_scene` 1.923 → 1.900 |
 
 ### 16.1 Las tres veces que la medición contradijo a este documento
 
@@ -769,7 +773,26 @@ en el hilo del dibujado. El umbral de 0,25 s de `LoadingScene` es lo que permite
 enchufarla en cualquier sitio sin medir antes: si la carga acaba antes, no se
 dibuja ni un fotograma.
 
-### 16.2 Y una cosa que apareció por el camino
+### 16.2 Lo que los presupuestos de líneas obligaron a hacer (AUD-290)
+
+`senales.py` estaba **exactamente** en su presupuesto de 400 líneas, así que
+AUD-281, AUD-284 y AUD-287 lo pasaron a 503 y pusieron en rojo una prueba que
+llevaba verde desde AUD-152. No se subió el número: se partió, y por el eje que
+el propio docstring del módulo llevaba años anunciando —«son **dos** familias,
+efectos visuales y sonido»—. La mitad sonora entera vive ahora en
+`stage_parts/sonido.py`.
+
+De paso salieron dos partes más, y las dos por cohesión y no por tamaño:
+`diagnostico.py` (lo que enseña F11 y qué pasa cuando una entidad revienta —
+AUD-283 y AUD-289 nacieron el mismo día por el mismo motivo) y `cinematicas.py`
+(montar el director de escenas y correrlo).
+
+Efecto en `stage_scene.py`: **1.923 → 1.900 líneas**. Sigue sobre el presupuesto
+de 1.500 y su prueba sigue en rojo, que es el estado que ya tenía antes de esta
+tanda y que §15.10 punto 15 mantiene aplazado por acuerdo. Lo que no se ha hecho
+es empeorarlo.
+
+### 16.3 Y una cosa que apareció por el camino
 
 **La consola de depuración no la abría nadie, y §15.7 la describía funcionando.**
 El módulo estaba entero y sin un solo llamante en `src/engine`; la tecla con la
