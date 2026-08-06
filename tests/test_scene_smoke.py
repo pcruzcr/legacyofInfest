@@ -104,6 +104,7 @@ SCENE_PATHS: list[tuple[str, str]] = [
     ("src.engine.scenes.options_scene", "OptionsScene"),
     ("src.engine.scenes.keybinding_scene", "KeybindingScene"),
     ("src.engine.scenes.load_game_scene", "LoadGameScene"),
+    ("src.engine.scenes.skill_tree_scene", "SkillTreeScene"),
     ("src.engine.scenes.tutorial_scene", "TutorialScene"),
     ("src.engine.scenes.game_over_scene", "GameOverScene"),
     ("src.engine.scenes.stage_error_scene", "StageErrorScene"),

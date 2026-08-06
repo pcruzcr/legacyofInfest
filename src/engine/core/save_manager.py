@@ -40,6 +40,9 @@ def volcar_estado_en(data: SaveData) -> None:
         data.inventory_equipped = dict(inventario.get_equipped())
         data.score = int(ScoreSystem.get_instance().score)
         data.exp_estado = dict(ExperienceSystem.get_instance().to_dict())
+        from src.engine.core.skill_tree import ArbolDeHabilidades
+
+        data.arbol = dict(ArbolDeHabilidades.get_instance().to_dict())
     except Exception:  # pragma: no cover - nunca a costa de la posición
         logger.warning("no se pudo volcar inventario/puntuación en la partida",
                        exc_info=True)
@@ -65,6 +68,9 @@ def aplicar_estado_de(data: SaveData) -> None:
             get_inventory().restaurar(data.inventory_items, data.inventory_equipped)
         if data.version >= 3:
             ScoreSystem.get_instance().set_score(int(data.score))
+        from src.engine.core.skill_tree import ArbolDeHabilidades
+
+        ArbolDeHabilidades.get_instance().from_dict(data.arbol)
         if data.exp_estado:
             ExperienceSystem.get_instance().from_dict(data.exp_estado)
         elif data.exp_total:
