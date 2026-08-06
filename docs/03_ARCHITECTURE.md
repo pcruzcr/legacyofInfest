@@ -85,6 +85,7 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── skill_tree.py              # AUD-293: el árbol — vitalidad, fuerza e ímpetu
 │   │   │   ├── i18n.py                    # Internationalization (gettext wrapper)
 │   │   │   ├── inventory.py               # Item/collectible management
+│   │   │   ├── integridad.py             # AUD-295: firma HMAC de los JSON del jugador
 │   │   │   ├── registro.py                # AUD-268: los avisos van al fichero, no a la consola
 │   │   │   ├── save_data.py               # SaveData dataclass, SAVE_VERSION, MAX_SLOTS
 │   │   │   ├── score_system.py            # Points and coin drops per enemy type

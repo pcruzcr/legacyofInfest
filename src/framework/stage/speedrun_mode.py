@@ -12,6 +12,8 @@ from typing import Any
 
 import orjson
 
+from src.engine.core.integridad import verificar
+
 # AUD-157 — el estado del jugador va al directorio del usuario.
 #
 # `PROJECT_ROOT` es el árbol de instalación, y una versión empaquetada
@@ -59,10 +61,24 @@ def _leer_json(ruta: Path) -> Any:
         return _AUSENTE
 
     try:
-        return orjson.loads(crudo)
+        datos = orjson.loads(crudo)
     except orjson.JSONDecodeError:
         logger.warning("speedrun: %s es ilegible (JSON corrupto); se empieza de cero", ruta)
         return _AUSENTE
+
+    # AUD-295 — la firma se comprueba **después** de parsear y sólo sobre
+    # objetos. El fantasma se guarda como una lista de marcos, y una lista no
+    # tiene dónde llevar la firma: pedírsela lo dejaría sin cargar nunca.
+    #
+    # Un objeto **sin** firma pasa: son los ficheros que escribió el juego
+    # antes de AUD-295, y rechazarlos borraría los récords de todo el mundo por
+    # una mejora.
+    if isinstance(datos, dict) and not verificar(datos):
+        logger.warning(
+            "speedrun: la firma de %s no cuadra — se escribió a medias o "
+            "alguien lo editó; se empieza de cero", ruta)
+        return _AUSENTE
+    return datos
 
 
 class SpeedrunTimer:
@@ -344,7 +360,11 @@ def registrar_marca(
     }
     try:
         ruta.parent.mkdir(parents=True, exist_ok=True)
-        ruta.write_bytes(orjson.dumps(contenido, option=orjson.OPT_INDENT_2))
+        # AUD-295 — firmado. El libro de récords es justo donde ocurre la
+        # edición casual: abrirlo, poner 0.5 y volver a entrar.
+        from src.engine.core.integridad import volcar
+
+        ruta.write_bytes(volcar(contenido))
     except OSError:
         logger.warning("speedrun: no se pudo anotar la marca en %s", ruta,
                        exc_info=True)
