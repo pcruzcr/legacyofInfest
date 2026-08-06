@@ -508,6 +508,27 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, SonidoDeEscenario,
         data = getattr(self, "_stage_data", None)
         return str(getattr(data, "stage_id", "") or "")
 
+    def _aplicar_exencion_de_habilidades(self) -> None:
+        """¿Este escenario regala las mecánicas de jefe? — AUD-294.
+
+        Dos caminos para eximir, y los dos existen por lo mismo: los mapas
+        entregados no se tocan. La lista de `settings` los exime desde el motor;
+        la propiedad `habilidades_libres` es para un mapa **nuevo** que quiera
+        jugarse suelto y prefiera decirlo en su propio fichero.
+
+        Lo que se escribe aquí es el `False`: el jugador nace libre (ver
+        `Player.__init__`) y es **la escena** la que le pone el candado cuando
+        el mapa no está exento. Así, un jugador construido fuera de un
+        escenario se comporta como antes de AUD-294.
+        """
+        if self._player is None:
+            return
+        identidades = {self.stage_key,
+                       str(getattr(self._stage_data, "stage_id", "") or "")}
+        por_lista = bool(identidades & settings.ESCENARIOS_CON_HABILIDADES_LIBRES)
+        por_mapa = bool(getattr(self._stage_data, "habilidades_libres", False))
+        self._player._habilidades_libres = por_lista or por_mapa
+
     def _aplicar_partida_pendiente(self) -> None:
         """Coloca al jugador donde lo dejó la partida guardada, si es aquí.
 
@@ -642,6 +663,7 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, SonidoDeEscenario,
         # inflada. No conseguí reproducirlo con las reliquias que existen hoy
         # —ninguna de las que probé sube el máximo—, pero el orden correcto es
         # éste y no depende de qué reliquias haya mañana.
+        self._aplicar_exencion_de_habilidades()
         self._aplicar_partida_pendiente()
         self._stage_complete = False
         self._game_over = False

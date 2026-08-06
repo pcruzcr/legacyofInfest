@@ -44,6 +44,7 @@ from src.engine.core.event_bus import EventBus
 from src.engine.core.events import Events
 from src.engine.core.inventory import get_inventory
 from src.framework.scenes.stage_parts.senales import SenalesDeEscenario
+from src.framework.scenes.stage_parts.sonido import SonidoDeEscenario
 from src.framework.stage.interactable_system import InteractableSystem
 
 DT = 1.0 / 60.0
@@ -87,9 +88,9 @@ def _escena():
     escena._post_processing.set_bloom = MagicMock()
     escena._BOTIN_TAM = SenalesDeEscenario._BOTIN_TAM
     escena._soltar_botin = SenalesDeEscenario._soltar_botin.__get__(escena)
-    escena._make_sfx_handler = SenalesDeEscenario._make_sfx_handler.__get__(escena)
-    escena._play_sfx_named = SenalesDeEscenario._play_sfx_named.__get__(escena)
-    escena._play_sfx_spatial = SenalesDeEscenario._play_sfx_spatial.__get__(escena)
+    escena._make_sfx_handler = SonidoDeEscenario._make_sfx_handler.__get__(escena)
+    escena._play_sfx_named = SonidoDeEscenario._play_sfx_named.__get__(escena)
+    escena._play_sfx_spatial = SonidoDeEscenario._play_sfx_spatial.__get__(escena)
 
     SenalesDeEscenario._subscribe_event_handlers(escena)
     return escena, interactables, bus
@@ -175,9 +176,14 @@ class TestElJefeSueltaLaHabilidad:
 class TestConElCandadoApagadoNadaCambia:
     """El control que protege las 26 entregas. No puede ponerse en rojo.
 
-    Con `PLAYER_SKILLS_REQUIRE_UNLOCK = False` —el valor por defecto— el
-    inventario **no se consulta**: un jugador sin ninguna habilidad salta y
-    corre exactamente igual que antes de AUD-238.
+    AUD-294 **encendió** el candado, así que lo que protege a las entregas ya
+    no es que esté apagado: es que el jugador nace libre y sólo la escena le
+    pone el candado, y sólo en los mapas que no están exentos.
+
+    La diferencia importa. Esta clase comprobaba el mecanismo —«la constante
+    vale False»— y no la propiedad —«las entregas siguen funcionando»—. Al
+    cambiar el mecanismo, un guardián escrito así acusa de romper algo a quien
+    no lo rompió. Ahora comprueba la propiedad.
     """
 
     def _jugador(self):
@@ -189,11 +195,23 @@ class TestConElCandadoApagadoNadaCambia:
         jugador._air_jumps_used = 0
         return jugador
 
-    def test_el_valor_por_defecto_es_apagado(self) -> None:
-        assert settings.PLAYER_SKILLS_REQUIRE_UNLOCK is False, (
-            "encenderlo por defecto convierte en imposibles los saltos que "
-            "las entregas diseñaron contando con el doble salto"
-        )
+    def test_el_candado_esta_encendido(self) -> None:
+        """AUD-294: la progresión existe."""
+        assert settings.PLAYER_SKILLS_REQUIRE_UNLOCK is True
+
+    def test_y_los_dieciseis_mapas_entregados_estan_exentos(self) -> None:
+        """Medido: sin la exención se rompen seis, y **dos dejan de poder
+        terminarse** — `stage0` y `stage3_4_boss_gavilan`."""
+        exentos = settings.ESCENARIOS_CON_HABILIDADES_LIBRES
+        assert "stage0" in exentos
+        assert "stage3_4_boss_gavilan" in exentos
+        assert len(exentos) == 16
+
+    def test_un_jugador_suelto_nace_libre(self) -> None:
+        """Una prueba de física o el arnés de un estudiante no piden
+        progresión: construir un `Player` tiene que seguir dando el doble salto
+        como antes de AUD-294."""
+        assert self._jugador()._habilidades_libres is True
 
     def test_sin_habilidad_el_doble_salto_sigue_disponible(
         self, _inventario_aislado,
@@ -286,7 +304,12 @@ class TestElCandadoNoDejaElJuegoSinSalida:
 
 
 class TestConElCandadoEncendidoElInventarioDecide:
-    """Lo que un escenario nuevo puede pedir si lo enciende a propósito."""
+    """Lo que pasa en un escenario **no exento**: la mecánica se gana.
+
+    `_habilidades_libres = False` es lo que le pone la escena a un mapa que no
+    está en `ESCENARIOS_CON_HABILIDADES_LIBRES`, o sea a cualquier mapa nuevo
+    (AUD-294). Ponerlo a mano aquí es reproducir exactamente eso.
+    """
 
     @pytest.fixture(autouse=True)
     def _con_candado(self, monkeypatch):
@@ -296,6 +319,7 @@ class TestConElCandadoEncendidoElInventarioDecide:
         from src.framework.entities.player import Player
 
         jugador = Player(pygame.Vector2(100, 100))
+        jugador._habilidades_libres = False
         jugador.is_grounded = False
         jugador._coyote_counter = settings.PLAYER_COYOTE_FRAMES + 1
         jugador._air_jumps_used = 0
@@ -339,6 +363,7 @@ class TestConElCandadoEncendidoElInventarioDecide:
         from src.framework.entities.player import Player
         from src.framework.entities.states.helpers import _can_dash
         jugador = Player(pygame.Vector2(100, 100))
+        jugador._habilidades_libres = False
         jugador.is_grounded = True
         jugador._dash_cooldown = 0.0
         assert _can_dash(jugador, MagicMock()) is False
@@ -348,6 +373,91 @@ class TestConElCandadoEncendidoElInventarioDecide:
         from src.framework.entities.states.helpers import _can_dash
         _inventario_aislado.collect("skill_dash")
         jugador = Player(pygame.Vector2(100, 100))
+        jugador._habilidades_libres = False
         jugador.is_grounded = True
         jugador._dash_cooldown = 0.0
         assert _can_dash(jugador, MagicMock()) is True
+
+
+class TestLaExencionPorEscenario:
+    """AUD-294 — el candado encendido sin romper los mapas entregados.
+
+    Medido antes de encenderlo, comparando `grade_stage` con y sin salto aéreo:
+    seis de los dieciséis mapas cambian y **dos dejan de poder terminarse**,
+    `stage0` y `stage3_4_boss_gavilan`. De ahí la lista de exentos.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _video(self):
+        pygame.init()
+        if pygame.display.get_surface() is None:
+            pygame.display.set_mode((800, 600))
+
+    @staticmethod
+    def _escena(clase_o_tmx):
+        from src.engine.audio.audio_manager import AudioManager
+        from src.engine.core.event_bus import EventBus
+        from src.engine.core.game_context import GameContext
+        from src.engine.core.save_manager import SaveManager
+        from src.engine.input.input_manager import InputManager
+        from src.engine.scene.scene_manager import SceneManager
+        from src.framework.entities import entity_factory
+
+        entity_factory.ensure_registered()
+        ctx = GameContext(
+            input_manager=InputManager(), audio_manager=AudioManager(),
+            scene_manager=None, event_bus=EventBus(), clock=None,
+            save_manager=SaveManager(),
+        )
+        ctx.scene_manager = SceneManager(ctx)
+        escena = clase_o_tmx(ctx)
+        escena.awake()
+        escena.start()
+        escena.on_enter()
+        return escena
+
+    def test_stage0_entra_con_las_mecanicas_puestas(self) -> None:
+        """El mapa de referencia, el que copian los estudiantes."""
+        from src.stages.stage0.stage0 import Stage0
+
+        escena = self._escena(Stage0)
+        try:
+            assert escena._player._habilidades_libres is True
+        finally:
+            escena.on_exit()
+
+    def test_un_mapa_nuevo_entra_con_el_candado(self) -> None:
+        """Lo que se pedía: en un escenario nuevo, la mecánica se gana."""
+        from pathlib import Path
+
+        from src.engine.core import settings as st
+        from src.framework.scenes.stage_scene import StageScene
+
+        tmx = Path(st.ASSETS_DIR) / "maps" / "stage0" / "stage0.tmx"
+        escena = self._escena(lambda ctx: StageScene(ctx, tmx))
+        try:
+            # Se le cambia la identidad para simular un mapa que no está en la
+            # lista: es lo mismo que hará el escenario diecisiete.
+            escena._stage_data.stage_id = "stage17_de_un_estudiante"
+            escena._aplicar_exencion_de_habilidades()
+            assert escena._player._habilidades_libres is False
+        finally:
+            escena.on_exit()
+
+    def test_la_propiedad_del_mapa_tambien_exime(self) -> None:
+        """Para un mapa nuevo que quiera jugarse suelto y prefiera decirlo en
+        su propio fichero en vez de en el motor."""
+        from pathlib import Path
+
+        from src.engine.core import settings as st
+        from src.framework.scenes.stage_scene import StageScene
+
+        tmx = Path(st.ASSETS_DIR) / "maps" / "stage0" / "stage0.tmx"
+        escena = self._escena(lambda ctx: StageScene(ctx, tmx))
+        try:
+            escena._stage_data.stage_id = "stage17_de_un_estudiante"
+            escena._stage_data.habilidades_libres = True
+            escena._aplicar_exencion_de_habilidades()
+            assert escena._player._habilidades_libres is True
+        finally:
+            escena.on_exit()

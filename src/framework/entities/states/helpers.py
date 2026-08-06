@@ -85,14 +85,23 @@ def _handle_grounded_jump_input(
     return False
 
 
-def _tiene_habilidad(skill_id: str) -> bool:
-    """¿Está desbloqueada esta habilidad? (AUD-238)
+def _tiene_habilidad(skill_id: str, player: Player | None = None) -> bool:
+    """¿Está desbloqueada esta habilidad? (AUD-238, AUD-294)
 
-    Con `PLAYER_SKILLS_REQUIRE_UNLOCK` apagado —el valor por defecto— devuelve
-    `True` sin tocar el inventario. Eso es lo que mantiene intactas las 26
-    entregas: no es que se consulte y salga que sí, es que **no se consulta**.
+    Dos salidas rápidas antes de tocar el inventario:
+
+    * `PLAYER_SKILLS_REQUIRE_UNLOCK` apagado — el candado entero fuera;
+    * el **escenario** exime, que es lo que mantiene intactas las entregas
+      anteriores a AUD-294. La escena pone `_habilidades_libres` al entrar
+      según `ESCENARIOS_CON_HABILIDADES_LIBRES` o la propiedad del mapa.
+
+    Se pregunta al jugador y no a un global porque la exención es por
+    escenario: pasar de un mapa exento a uno con candado dentro de la misma
+    partida tiene que cambiar la respuesta.
     """
     if not settings.PLAYER_SKILLS_REQUIRE_UNLOCK:
+        return True
+    if player is not None and getattr(player, "_habilidades_libres", False):
         return True
     from src.engine.core.inventory import get_inventory
     return get_inventory().has_skill(skill_id)
@@ -107,7 +116,7 @@ def _can_jump(player: Player) -> bool:
         return True
     return (
         player._air_jumps_used < settings.PLAYER_AIR_JUMPS
-        and _tiene_habilidad("skill_double_jump")
+        and _tiene_habilidad("skill_double_jump", player)
     )
 
 
@@ -182,7 +191,7 @@ def _can_dash(player: Player, inp: _InputSnapshot) -> bool:
     # AUD-238: la habilidad se comprueba aquí por el mismo motivo que la
     # estamina — es el único sitio del motor donde se decide si un dash
     # empieza. Con el candado apagado no se consulta nada.
-    if not _tiene_habilidad("skill_dash"):
+    if not _tiene_habilidad("skill_dash", player):
         return False
     if player.is_grounded:
         return True

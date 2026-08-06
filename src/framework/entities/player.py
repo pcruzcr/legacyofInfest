@@ -242,6 +242,22 @@ class Player(BaseEntity):
         self._bonus_arbol_dano: float = 0.0
         #: Segundos extra que dura el ultimate. Los lee `UltimateState`.
         self._bonus_ultimate: float = 0.0
+        #: AUD-294 — ¿este escenario regala las mecánicas de jefe?
+        #:
+        #: Lo pone la escena al entrar. Vive en el jugador y no en un global
+        #: porque la exención es **por escenario**: pasar de un mapa entregado
+        #: a uno nuevo dentro de la misma partida tiene que cambiar la
+        #: respuesta, y un global obligaría a acordarse de restaurarlo.
+        #:
+        #: **Arranca en `True`, y esa es la decisión que protege la invariante
+        #: 2.** Un `Player` construido fuera de un escenario —una prueba de
+        #: física, el arnés de un estudiante, un laboratorio— se comporta
+        #: exactamente como antes de AUD-294. El candado lo **enciende la
+        #: escena** para los mapas que no están exentos, que son los nuevos.
+        #: Al revés —arrancar bloqueado y que la escena libere— cualquier
+        #: código que instancie un jugador suelto se encontraría sin doble
+        #: salto sin haber pedido progresión.
+        self._habilidades_libres: bool = True
 
         # --- State pattern ---
         self._state_instance: PlayerStateBase

@@ -41,20 +41,49 @@ PLAYER_COYOTE_FRAMES: int = 6
 PLAYER_DASH_SPEED: float = 200.0
 PLAYER_AIR_DASH_LIMIT: int = 1
 PLAYER_AIR_JUMPS: int = 1
-#: ¿Hay que ganarse el doble salto y el dash? (AUD-238)
+#: ¿Hay que ganarse el doble salto y el dash? (AUD-238, AUD-294)
 #:
-#: **Apagado por defecto, y esa es la decisión importante.** El catálogo tiene
-#: `skill_double_jump` y `skill_dash` desde el principio y nadie los consultaba;
-#: consultarlos siempre habría roto la invariante 2 de `CLAUDE.md`: las 26
-#: entregas existentes diseñaron sus saltos contando con el doble salto
-#: disponible desde el primer fotograma, y condicionarlo dejaría niveles ya
-#: corregidos sin poder completarse.
+#: **Encendido desde AUD-294**, que es lo que convierte derrotar a un jefe en
+#: progresión de verdad: la mecánica no está disponible hasta que la suelta.
 #:
-#: Con `True`, `_can_jump` y `_can_dash` preguntan a `Inventory.has_skill()` y
-#: la progresión existe. Es lo que enciende un escenario nuevo que quiera que
-#: derrotar al jefe signifique algo. Nunca bloquea el salto desde el suelo ni
-#: el coyote: eso no es progresión, es un juego roto.
-PLAYER_SKILLS_REQUIRE_UNLOCK: bool = False
+#: AUD-238 lo dejó apagado por una razón que sigue siendo cierta —las entregas
+#: existentes diseñaron sus saltos contando con el doble salto desde el primer
+#: fotograma— y por eso encenderlo no basta con cambiar este `False` por un
+#: `True`: hace falta `ESCENARIOS_CON_HABILIDADES_LIBRES`, que exime uno por uno
+#: a los mapas anteriores. Medido, sin esa lista se rompen seis de dieciséis.
+#:
+#: Nunca bloquea el salto desde el suelo ni el coyote: eso no es progresión, es
+#: un juego roto.
+PLAYER_SKILLS_REQUIRE_UNLOCK: bool = True
+
+#: Los escenarios que arrancan con todas las mecánicas concedidas — AUD-294.
+#:
+#: Por qué existe esta lista, medido
+#: ---------------------------------
+#: Encender el candado a secas rompe seis de los dieciséis mapas entregados, y
+#: **dos dejan de poder terminarse**: `stage0` —el mapa de referencia, el que
+#: copian los estudiantes— y `stage3_4_boss_gavilan`. Comparado con
+#: `grade_stage`, con y sin salto aéreo:
+#:
+#:     stage0                 salida alcanzable True -> False
+#:     stage3_4_boss_gavilan  salida alcanzable True -> False
+#:     stage1_1, stage2_2, stage3_3_el_patio, stage4_1
+#:                            aparecen huecos imposibles
+#:
+#: La invariante 2 dice que esas entregas siguen funcionando sin tocar una
+#: línea, y eso incluye no tocar sus `.tmx`. Así que la exención vive **aquí**,
+#: en el motor, con la lista explícita de lo que se entregó antes del candado.
+#: Un escenario nuevo no está en la lista y nace con la progresión encendida,
+#: que es lo que se pedía.
+#:
+#: Un mapa nuevo que quiera lo mismo lo declara con la propiedad TMX
+#: `habilidades_libres`, y así queda escrito en el mapa y no en el motor.
+ESCENARIOS_CON_HABILIDADES_LIBRES: frozenset[str] = frozenset({
+    "stage0", "stage1_1", "stage1_2_la_soda", "stage1_3_las_aulas",
+    "stage2_1", "stage2_2", "3-1", "stage3_3_el_patio",
+    "stage3_4_boss_gavilan", "stage4_1", "hall", "stage_template",
+    "stage_mecanicas", "boss_venado", "boss_rey", "boss_paburu",
+})
 PLAYER_SHORT_ATTACK_DURATION: float = 0.15
 PLAYER_LONG_ATTACK_DURATION: float = 0.4
 PLAYER_COOLDOWN_SHORT: float = 0.0
