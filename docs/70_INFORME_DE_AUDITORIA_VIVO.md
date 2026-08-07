@@ -1705,7 +1705,7 @@ tomar el primero libre por encima del máximo.
 
 ---
 
-## Iteración 12 — 2026-08-03 — Los dos cabos sueltos de la 11
+## Iteración 12 — continuación — 2026-08-03 — Los dos cabos sueltos de la 11
 
 Los dos salieron anotados al final de la iteración anterior. Ninguno es grande;
 los dos son consecuencia directa de lo que aquella iteración cambió.
@@ -1852,3 +1852,80 @@ mypy <mypy_scope.txt>                → no issues found in 20 source files
 
 Los 2 errores de `ruff` que quedan (`numpy` sin usar) están en
 `tests/test_stage4_1.py`, sin commitear y del otro frente.
+
+---
+
+## Iteración 14 — 2026-08-06 — D1–D9 (barrido completo de dominios)
+
+**Commit auditado:** `a82a2ee` (último AUD: 303). Árbol de trabajo con la
+limpieza staged de 36 documentos de `docs/` (sin commitear), la biblia técnica
+`75_BIBLIA_TECNICA.md` nueva y el índice maestro actualizado.
+
+### Gates ejecutados (todos en la máquina con el `.venv`, Python 3.14.6, SDL dummy)
+
+| Gate | Resultado | Salida resumida |
+|---|---|---|
+| `ruff check src/engine src/framework src/stages/stage0 tests/ scripts/ tools/` | **ROJO → VERDE (AUD-304)** | `LOG004 .exception()` fuera de handler en `stage_parts/diagnostico.py:71` → corregido → `All checks passed!` |
+| `mypy` (trinquete `mypy_scope.txt`) | ✅ VERDE | `Success: no issues found in 25 source files` |
+| `scripts/check_dependency_sync.py` | ✅ VERDE | `OK 14 dependencies agree across pyproject.toml and requirements.txt` |
+| `scripts/check_translations.py --ci` | ✅ VERDE | `Catálogos en orden` (38 es / 82 en; 40 cadenas sin entrada, correcto si el original ya está en ese idioma) |
+| `scripts/check_tmx_coverage.py --ci` | ✅ VERDE | `Cobertura correcta`; nota: `BossSpawn` es el único de 70 tipos que ningún mapa usa |
+| `scripts/generate_tmx_reference.py --check` | ✅ VERDE | `STAGE_CREATION.md: al día` |
+| `scripts/validate_assets.py` | ✅ VERDE | `0 errors, 0 warning(s)` |
+| `scripts/validate_tmx.py --ci` | ✅ VERDE | `17/17 passed` |
+| `scripts/grade_stage.py assets/maps/ --json` | ✅ VERDE | 16 mapas, media **79,9 %**, 0 errors (peor dato de diseño: `stage2_1_oficinas` sin ningún checkpoint, 3048 px) |
+| `scripts/grade_boss.py src/stages/boss_venado/boss_venado.py --json` | ✅ VERDE | 1 jefe, **100 %**, 0 errors |
+| `pytest tests/` (suite completa) | **NO VERIFICADO** | abortado por el usuario a los pocos segundos; se corrió subconjunto en su lugar: `189 passed, 3860 deselected` en 23 s |
+| smoke `python main.py` (renderer dummy) | ✅ VERDE | `SMOKE OK`; warning de OpenGL esperado con el driver dummy (cae al renderer no-rápido, no rompe el arranque) |
+
+### Hallazgos
+
+| ID | Dominio | Severidad | Estado | Resumen |
+|---|---|---|---|---|
+| AUD-304 | D1 | BLOQUEANTE | **CERRADO** | `LOG004` en `diagnostico.py:71`: `.exception()` fuera de un handler según ruff. Falso positivo estático: el único llamante es un `except Exception:` (`stage_scene.py:1038`). Fix: `# noqa: LOG004` con comentario AUD. Prueba: el propio gate (rojo → verde). |
+| AUD-305 | D2 | ALTA | **CERRADO** | `docs/70_INFORME_DE_AUDITORIA_VIVO.md` estaba retirado (borrado staged en la limpieza de 36 docs) pero el contrato vigente del prompt 69 §7 ordena mantenerlo, y `KNOWN_GAPS.md` (líneas 33 y 96), `74_TUBERIA_DE_GPU.md` (iteración 12), `75_BIBLIA_TECNICA.md` y dos tests lo citan. Causa raíz: la limpieza retiró el informe sin reconciliar el contrato que lo exige. Decisión (consulta al usuario): **restaurar desde git y continuar**. Fix: `git restore --staged --worktree`, este informe de vuelta, fila añadida al índice maestro. |
+| AUD-306 | D2 | BAJA | **CERRADO** | Encabezado «Iteración 12» duplicado en este informe (la segunda sección es la continuación de la 11). Renombrado a «Iteración 12 — continuación». |
+| AUD-307 | D2 | ALTA | **CERRADO** | `docs/22_API_CONTRACTS.md` documentaba APIs que no existen o con nombre/ruta vieja. Verificado con un comprobador AST (temp): **50 de 381 símbolos** citados no existían. Corregidas 13 entradas: funciones de módulo de `event_bus` que no existen; `DynamicMusicSystem` (vive en `framework/audio/dynamic_music.py`, movido a §4.3 y sin `sfx_volume`/`is_muted`); `HUD.bind_player` → API real (17 métodos); `MessageBox.is_active` → `is_visible`; `Checkpoint.is_active` → `is_activated`; `FrameworkUsageError` (en `framework/__init__.py`); extractores `extract_*` de `PatternRecognitionTools` que no existen (viven en VisionTools); rutas de los 7 lab scenes; `SceneRegistry.list_scenes/register_demo_scenes` (método vs función de módulo); `GameContext` (en §2.5); `DebugOverlay.toggle/update/is_active` → `visible/handle_input`; `draw_panel_label`; `SourceSurfaceManager.next/current/...` → `cycle/current_source/...`; `ErrorDisplay.show` → `set_error`; bloque boss duplicado con `_begin_phase_transition` (real: `_start/_finish_phase_transition`) y `BossVenado` en la ruta correcta; numeración de secciones duplicada (2.6, 17.1, 18, 19) renumerada. Prueba: comprobador AST sobre el doc — **rojo (50 fallos) → verde (374 símbolos, todos existen)**. Riesgo: el doc es la fuente de verdad de firmas; los cambios la alinean con el código ejecutado. |
+| AUD-308 | D3 | MEDIA | **CERRADO** | `test_coyote_time_expires` y `test_coyote_time_allows_late_jump` fijan el contador a mano y sólo comprueban la comparación: nadie defendía el **avance** (`_coyote_counter += dt * 60.0`). Una mutación que congelaba el contador pasaba la suite. Fix: `test_coyote_counter_avanza_con_el_tiempo` y `test_coyote_time_expira_por_acumulacion` en `tests/test_player_physics.py`. Prueba: mutante línea 958 muere con las nuevas pruebas (24 % → 32 % de defensa global del módulo). |
+| AUD-309 | D3 | MEDIA | **CERRADO** | La fórmula de `max_health` (base + reliquias + árbol, tope `CORAZONES_MAXIMOS`) no la defendía nadie: `Add → Sub` pasaba la suite. Fix: `test_max_health_suma_los_bonus` y `test_max_health_respeta_el_tope` en `tests/test_player_damage.py`. Prueba: mutante línea 374 muere con las nuevas pruebas. |
+| GAP-033 | D3 | — | **ABIERTO** | El módulo `player.py` queda en **32 %** de defensa por mutación: 17 supervivientes, clasificados en `KNOWN_GAPS.md` (los valiosos: daño ofensivo línea 480, `draw()` completo, `ledge grab`, SFX de aterrizaje; benignos: constantes de animación, guards numéricos). Nota: el mutante de `heal` sigue vivo porque el `heal_mult` por defecto es 1.0 — la mutación es indistinguible bajo config por defecto. |
+| D4 | D4 | — | **SIN HALLAZGOS** | Barrido de `except Exception:` en `src/engine` y `src/framework`: los 21 tienen log con traza, re-raise con limpieza o comentario que explica el porqué (patrón AUD-289). `check_orphan_systems.py`: 209 símbolos ejercitados, 25 verificados no-defectos, 4 huérfanos reales **ya anotados** (GAP-032), ningún módulo «declarado terminado» que mienta. Sin TODO/FIXME reales fuera de `src/stages/`. |
+| D5 | D5 | — | **SIN HALLAZGOS** | Estados y sensación: GAP-024 (calibración del salto) resuelto por decisión; 60 tests de legibilidad/calibración/máquina de estados pasan; coyote y buffer ahora defendidos (AUD-308). |
+| D6 | D6 | — | **SIN HALLAZGOS** | 229 tests de enemigos/IA pasan (state machine, SquadBrain, doble tabla TMX↔código, guardia que busca). |
+| D7 | D7 | — | **SIN HALLAZGOS** | 266 tests de jefes pasan (boss_base, encounter, grader, rush, fase, parry); `grade_boss` del venado: **100 %**, 0 errors. GAP-030 resuelto. |
+| D8 | D8 | — | **MEDICIONES, SIN CORRECCIÓN** | `grade_stage`: 16 mapas, media **79,9 %**. Perfectos: `stage0` (100 %) y `stage2_2` (100 %). Peores datos de diseño: `stage2_1_oficinas` **0 checkpoints en 200×38** (3048 px sin punto de guardado), `stage1_3_las_aulas` repecho de 544 px imposible de saltar, `stage_mecanicas` 944 px sin checkpoint + 3 plataformas aisladas, `stage4_1` sin enemigos (¿vertical deliberado?). Las arenas de jefe puntúan bajo en `design_completable` por diseño (el propio grader advierte que no aplica). Cambiar un TMX toca entregas: **queda como decisión de diseño, no se toca sin orden**. |
+| D9 | D9 | — | **PROPUESTA (no ejecutada)** | Presentación: la tubería GPU (`74_TUBERIA_DE_GPU.md`) sigue apagada por defecto (fallback software); los sprites de Stage0 no coinciden con `07_STAGE0_DESIGN.md` (240×14 vs 100×38). Ambas requieren decisión humana antes de tocar nada. |
+
+### Recuento de pruebas
+
+- Suite completa: **NO MEDIDO** en esta iteración (abortada por el usuario).
+- Subconjunto `-k "rutas or diagnostico or stage_scene or app"`: 189 passed / 0 failed / 0 skipped, 3860 deselected, 23,01 s.
+- Subconjunto `-k "player or coyote or heal or mutation"`: 165 passed / 0 failed, 3891 deselected, 36,20 s (incluye los 6 tests nuevos de AUD-308/309).
+- `tests/test_player_physics.py` + `tests/test_player_damage.py`: 47 passed.
+- Subconjuntos orientados a D5 (estados/sensación), D6 (enemigos/IA) y D7
+  (jefes): **60 / 229 / 266 passed**, 0 failed cada uno.
+- `mutation_check.py --ci` (conjunto por defecto): 84,0 % / 72,0 % / 96,0 %, 240 s — OK.
+- `mutation_check.py --objetivo player.py --pruebas <suite jugador>`: **24 % → 32 %** tras AUD-308/309.
+
+### GAPs
+
+- Nuevos: GAP-033 (defensa por mutación del módulo jugador, 17 supervivientes clasificados).
+- Cerrados: ninguno.
+
+### Dominios de §8
+
+- Cubiertos: D1 (gates y arranque), D2 (consistencia doc ↔ código: índice
+  maestro, rutas citadas en docs — 96 refs a scripts/tools, todas existen —
+  y contraste AST de `22_API_CONTRACTS.md` contra firmas reales), D3
+  (honestidad de las pruebas: mutación por defecto OK; defensa del jugador
+  medida y mejorada de 24 % a 32 %), D4 (barrido de `except` y huérfanos),
+  D5 (estados y sensación), D6 (enemigos e IA), D7 (jefes) y D8 (niveles:
+  mediciones `grade_stage` completas, sin tocar TMX).
+- Pendientes de decisión humana: D9 (propuestas de presentación registradas,
+  sin ejecutar).
+
+### Lo que NO se pudo verificar y por qué
+
+- `pytest tests/` completo: abortado por el usuario (duración); se sustituyó por subconjunto orientado al cambio.
+- Matriz 3.11/3.12/3.13 de CI: esta máquina sólo tiene 3.14.6; la matriz sólo la corre CI.
+- Jugabilidad real (renderer, sonido): driver dummy en este entorno sin pantalla.
