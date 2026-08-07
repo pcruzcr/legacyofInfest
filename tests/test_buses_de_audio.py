@@ -363,6 +363,55 @@ class TestElGestorDeAudioLosUsa:
         audio.toggle_mute()
         assert audio.mezcla.silencio != estado
 
+    def test_desmutear_respeta_el_duck_vivo(self, monkeypatch) -> None:
+        """AUD-311 — desmutear escribía el volumen crudo a mano: con un
+        diálogo abierto, la música volvía a pleno volumen a pesar de que
+        estuviera agachada."""
+        import pygame
+
+        from src.engine.audio.audio_manager import AudioManager
+
+        if pygame.mixer.get_init() is None:
+            try:
+                pygame.mixer.init()
+            except pygame.error as exc:  # sin dispositivo de audio: se salta
+                pytest.skip(f"sin mezclador disponible: {exc}")
+
+        capturados: list[float] = []
+        monkeypatch.setattr(pygame.mixer.music, "set_volume", capturados.append)
+        audio = AudioManager()
+        audio.play_voz("sfx_ui_menu_confirm")  # agacha la música
+        for _ in range(120):
+            audio.update(1 / 60)
+        assert audio.mezcla.musica_agachada
+
+        audio.toggle_mute()  # silencio
+        audio.toggle_mute()  # desmutear: debe componer con el duck
+        assert capturados, "la música nunca se aplicó al mezclador de SDL"
+        assert capturados[-1] == pytest.approx(
+            audio.mezcla.ganancia(BUS_MUSICA), abs=0.001
+        )
+        assert capturados[-1] < 0.999, (
+            "desmutear levantó la música por encima del duck en curso"
+        )
+
+    def test_el_stinger_pasa_por_el_bus_de_efectos(self, monkeypatch) -> None:
+        """AUD-311 — el stinger multiplicaba `_sfx_volume` a mano y se
+        saltaba `Mezclador.ganancia`: ignoraba el volumen del bus y el del
+        maestro."""
+        from src.engine.audio.audio_manager import AudioManager
+
+        audio = AudioManager()
+        audio.mezcla.ajustar(BUS_EFECTOS, 0.5)
+        audio.mezcla.maestro = 0.5
+        llamadas: list[float] = []
+        monkeypatch.setattr(
+            audio.sound_bank, "play", lambda name, volume: llamadas.append(volume)
+        )
+        audio.play_stinger("cualquiera")
+        assert llamadas
+        assert llamadas[0] == pytest.approx(0.5 * 0.5 * 0.8, abs=0.001)
+
     def test_hablar_agacha_la_musica(self) -> None:
         audio = self._audio()
         audio.play_voz("sfx_ui_menu_confirm")

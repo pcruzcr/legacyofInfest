@@ -29,7 +29,15 @@ class DynamicMusicSystem:
         self._bgm_base = bgm_track
 
     def set_intensity(self, level: int) -> None:
-        """Switch to a new intensity level with crossfade."""
+        """Switch to a new intensity level with fade-in on the new track.
+
+        AUD-313 — `_fade_duration` se declaraba y nadie lo leía: cada
+        transición calm↔combat reiniciaba la pista de golpe. SDL_mixer tiene
+        un único canal de música, así que un *crossfade* verdadero (dos pistas
+        sonando a la vez) no es posible; lo honesto es fundir la entrada de la
+        nueva pista. El fundido se hace dentro del audio manager, que es quien
+        habla con pygame.mixer.music.
+        """
         if level == self._current_intensity:
             return
         track = self._get_track_for_intensity(level)
@@ -37,7 +45,7 @@ class DynamicMusicSystem:
             return
         self._current_intensity = level
         if self._audio is not None:
-            self._audio.play_music(track)
+            self._audio.play_music(track, fundido_ms=int(self._fade_duration * 1000))
 
     def detect_intensity_from_state(self, has_boss: bool, has_alive_enemies: bool) -> int:
         """Auto-detect intensity from game state."""
