@@ -162,9 +162,19 @@ que un alumno que juegue tu nivel por primera vez **no** la conoce.
 
 ### 1.5 Vocabulario de objetos disponible (resumen de `06_TMX_SPEC.md`)
 
-`PlayerSpawn`, `EnemySpawn` (con `enemy_type`, `waypoints`), `Checkpoint`,
-`Portal`/`NextTrigger`, `HazardZone` (daño 0.25), `CameraLock` (lock_x / lock_y),
-`OneWay` (plataformas de un sentido), `Solid`/`Platform` (colisión),
+`PlayerSpawn`, `Checkpoint`, `NextTrigger`, `HazardZone` (daño 0.25),
+`CameraLock` (lock_x / lock_y), `Solid`/`Platform` (colisión — `Platform` es la
+de un solo sentido, se atraviesa desde abajo),
+
+<!-- cita-historica -->
+> **AUD-311 — tres nombres de esta lista no existían.** `EnemySpawn` (los
+> enemigos se colocan con su propio `type`: `Walker`, `FlyingBird`,
+> `WalkerGuardia`…, no con un tipo genérico y una propiedad `enemy_type`),
+> `Portal` (es `NextTrigger` para cambiar de escenario y `WarpZone` para saltar
+> dentro del mismo mapa) y `OneWay` (es `Platform`). La lista autoritativa de
+> los 70 tipos está en [`STAGE_CREATION.md`](STAGE_CREATION.md), que se genera
+> desde el registro y por eso no puede envejecer.
+<!-- /cita-historica -->
 `MessageTrigger` (mensajes didácticos), `BossSpawn`, decoración en capas
 `Terrain_Detail` y `FG_Overlay`. Los niveles de jefe requieren además
 `BossSpawn` + `CameraLock` total y **no** llevan `NextTrigger` (la salida la
@@ -307,7 +317,7 @@ checkpoint tras la cerca.
 | Dificultad | 5/10 |
 | Dimensiones | 120 × 50 tiles = **1920 × 800 px** (el único con scroll vertical real) |
 | Duración | 170 s |
-| Enemigos | `WalkerGuardia` × 2 (garita), `FlyingAntena` × 4 (patrulla orbital de antenas), `ShooterSerpiente` × 3 (plataformas de azotea) |
+| Enemigos | `WalkerGuardia` × 2 (garita), `FlyingHalcon` × 4 (patrulla orbital sobre las antenas), `ShooterSerpienteArbol` × 3 (plataformas de azotea) |
 | Peligros | Caída libre en la sección vertical (un error de salto es caro); escalera de plataformas |
 | Checkpoints | 1, al pie de la escalera (antes del bloque vertical) |
 | Reglas | CameraLock con lock_x=true, lock_y=false al llegar a la escalera; la sección horizontal es ancha (320 px), la vertical es una cadena de plataformas |
@@ -380,6 +390,25 @@ jugador decide **cuándo** curar — la tensión es de decisión, no de reflejos
 
 ## 4. Fichas de jefes
 
+<!-- cita-historica -->
+> **Qué de esto está construido (AUD-311).** Estas fichas son **diseño**, y
+> la mayor parte todavía no existe en el código. Medido el 6 de agosto de
+> 2026: hay **cuatro clases de jefe** y **17 patrones de ataque**
+> implementados de los cuarenta largos que se describen aquí y en
+> `17_BOSS_SPEC.md`.
+>
+> En concreto: el **Venado** y el **Paburu** están completos (100 % de
+> `grade_boss`); del **Rey Terciopelo** existe la fase 1 con `VENOM_SPIT` —
+> «La División» y «El Frenesí», con `ReyMetad`, `BODY_SLAM` y `SERPENT_CARPET`,
+> son diseño sin escribir—; y el **Gavilán** es una clase con una fase y
+> **ningún** ataque, al 45 % de la rúbrica, porque es asignación de
+> estudiante.
+>
+> La tabla jefe por jefe, con qué patrón existe y cuál no, está en
+> [`17_BOSS_SPEC.md`](17_BOSS_SPEC.md) §0. Leer una ficha de aquí como si
+> describiera el juego de hoy es el error que este aviso viene a evitar.
+<!-- /cita-historica -->
+
 ### 4.0 Protocolo común de arena (todos los jefes)
 
 | Elemento | Regla |
@@ -421,6 +450,7 @@ velocidad. Patrones nuevos: `VINE_SWEEP` (cada 5 s, hitbox de piso completo
   2 mata más de 3 veces al jugador medio, bajar el multiplicador a 1.3×.
 
 ### 4.2 Stage 2-4 — El Rey Terciopelo (El Datacenter)
+<!-- diseno-pendiente -->
 
 | Campo | Valor |
 |---|---|
@@ -532,6 +562,7 @@ ecos de los tres jefes al 50% de daño, un ataque cada uno), `MASK_PULSE`
 (a 2 corazones, una vez: las reliquias convergen con 2 s de telegrafía, 2.0 —
 esquivable en los bordes extremos).
 
+<!-- /diseno-pendiente -->
 **Consejos de diseño:**
 - La Forma 2 castiga la memoria (los ecos repiten lo aprendido) y la Forma 3
   castiga el estilo (3A castiga al pasivo, 3B castiga al agresivo). Eso es

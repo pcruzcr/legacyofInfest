@@ -53,7 +53,7 @@ Create your map in **Tiled** with the following settings:
 | `stage_id` | string | `"stage1"` |
 | `stage_name` | string | `"The Descent"` |
 | `time_limit` | int | `180` (0 = no limit) |
-| `bgm_track` | string | `"bgm_stage1"` |
+| `bgm_track` | string | `"bgm_zone1"` — un fichero real de `assets/music/` |
 | `background_zone` | string (optional) | `"cave"` — loads `assets/backgrounds/bg_cave_{far,mid,near}.png` |
 | `gravity_multiplier` | float (optional) | `1.0` |
 
@@ -143,11 +143,18 @@ type: PlayerSpawn
 
 ### Enemy Spawns (Point)
 
+> **La tabla autoritativa es la de «Arquetipos de enemigo»**, más abajo, dentro
+> del bloque `GENERATED`: la produce `scripts/generate_tmx_reference.py` desde
+> el registro real y el CI comprueba que coincida. Ésta de aquí es un resumen de
+> lectura y se mantiene a mano — si las dos se contradicen, gana la generada.
+> (AUD-309: se contradijeron. `admite_bash` entró en la generada y esta llevaba
+> una tanda sin enterarse.)
+
 | Type | Required Properties | Optional Properties |
 |---|---|---|
 | `Walker` | — | `patrol_length`, `facing`, `patrol_speed`, `alert_speed`, `damage_on_contact` |
 | `Flying` | — | `flight_mode`, `flight_speed`, `sine_amplitude`, `sine_frequency` |
-| `Shooter` | — | `fire_rate`, `projectile_speed`, `projectile_damage`, `patrol_length` |
+| `Shooter` | — | `fire_rate`, `projectile_speed`, `projectile_damage`, `patrol_length`, `admite_bash` |
 | `Charger` | — | `charge_speed`, `patrol_speed`, `alert_speed` |
 | `Archer` | — | `fire_rate`, `projectile_speed` |
 | `Brute` | — | `patrol_speed`, `alert_speed`, `max_health` |
@@ -355,7 +362,7 @@ Para instrucciones detalladas de registro y pruebas, consultar el documento orig
 |---|---|
 | `Walker` | `patrol_length`, `facing`, `patrol_speed`, `alert_speed`, `damage_on_contact` |
 | `Flying` | `flight_mode`, `flight_speed`, `sine_amplitude`, `sine_frequency` |
-| `Shooter` | `fire_rate`, `projectile_speed`, `projectile_damage`, `patrol_length` |
+| `Shooter` | `fire_rate`, `projectile_speed`, `projectile_damage`, `patrol_length`, `admite_bash` (bool, no: deja que el jugador se impulse golpeando sus disparos) |
 | `Charger` | `charge_speed`, `patrol_speed`, `alert_speed` |
 | `Archer` | `fire_rate`, `projectile_speed` |
 | `Brute` | `patrol_speed`, `alert_speed`, `max_health` |

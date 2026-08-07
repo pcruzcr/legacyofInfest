@@ -86,7 +86,7 @@ Total subscribe sites: **23**
 |-------|-------|
 | **Emitter** | `BossVenado._do_stomp()` (`boss_venado.py:225,230,237,294`), `EnemyCaster` (`enemy_caster.py:147`), `EnemyBrute._do_attack()` (`enemy_brute.py:66`), `EnemyAssassin` (`enemy_assassin.py:100`) |
 | **Payload** | `pattern: str`, `rect: pygame.Rect` |
-| **Subscribers** | StageScene — `_play_sfx_named` handler (mapped to `sfx_bosses_venado_*` via `_sfx_map`) |
+| **Subscribers** | StageScene — `_play_sfx_named` handler (mapped to `sfx_bosses_venado_*` via `sfx_map` (en `stage_parts/sonido.py` desde AUD-290)) |
 | **Trigger** | When a boss/miniboss performs a telegraphed attack |
 
 ### BOSS_PHASE_CHANGED
@@ -136,7 +136,7 @@ Total subscribe sites: **23**
 | **Emitter** | `DialogueSystem` action handler (`dialogue_system.py:96`) |
 | **Payload** | `item_id: str` |
 | **Subscribers** | *(none — reserved for future inventory system)* |
-| **Trigger** | When a dialogue node executes a `collect_item` action |
+| **Trigger** | When a dialogue node executes a `give_item:` action |
 | **Note** | Event constant was missing from `Events` class until 2026-07-16. No subscribers exist. |
 
 ### MUSIC_STINGER
@@ -185,7 +185,7 @@ Total subscribe sites: **23**
 |-------|-------|
 | **Emitter** | `collision_system.py:106` (via `Events.SFX_ENEMY_HIT`) — *see SFX_ENEMY_HIT* |
 | **Payload** | *(same as SFX_ENEMY_HIT)* |
-| **Subscribers** | Mapped via StageScene `_sfx_map` to `"sfx_boss_hit"` |
+| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) to `"sfx_boss_hit"` |
 | **Notes** | This event constant is **defined but never emitted** — it exists for future boss-specific hit sounds. |
 
 ### SFX_BOSS_PHASE_CHANGE
@@ -197,7 +197,7 @@ Total subscribe sites: **23**
 ### SFX_BOSSES_VENADO_CHARGE / STOMP / VINE
 | Field | Value |
 |-------|-------|
-| **Emitter** | `BossVenado` emits `Events.BOSS_ATTACK`, mapped via `_sfx_map` |
+| **Emitter** | `BossVenado` emits `Events.BOSS_ATTACK`, mapped via `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
 | **Payload** | *(derived from BOSS_ATTACK payload)* |
 | **Subscribers** | StageScene SFX handler (`stage_scene.py:424-439`) |
 | **Trigger** | When Boss Venado performs charge / stomp / vine attacks |
@@ -207,7 +207,7 @@ Total subscribe sites: **23**
 |-------|-------|
 | **Emitter** | `ProgressionSystem.process_checkpoints()` (`progression_system.py:35`) |
 | **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `_sfx_map` to `"sfx_checkpoint"` |
+| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) to `"sfx_checkpoint"` |
 | **Trigger** | When the player touches a checkpoint |
 
 ### SFX_ENEMIES_PROJECTILE_HIT_WALL
@@ -218,7 +218,7 @@ Total subscribe sites: **23**
 |-------|-------|
 | **Emitter** | `EnemyBase._die()` (`enemy_base.py:418`) |
 | **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `_sfx_map` |
+| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
 | **Trigger** | When an enemy dies (LARGE for bosses/brutes, SMALL for walkers/flying) |
 
 ### SFX_ENEMY_HIT
@@ -240,7 +240,7 @@ Total subscribe sites: **23**
 |-------|-------|
 | **Emitter** | `HazardSystem.update()` (`hazard_system.py:48`) |
 | **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `_sfx_map` |
+| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
 | **Trigger** | When the player takes damage from a hazard zone |
 
 ### SFX_HIT_CONNECT
@@ -256,7 +256,7 @@ Total subscribe sites: **23**
 |-------|-------|
 | **Emitter** | `DemoMenuScene` (`demo_menu_scene.py:115`), `OptionsScene` (`options_scene.py:116`), `TitleScene` (`title_scene.py:121`), `WorldMapScene` (`world_map_scene.py:89`) |
 | **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `_sfx_map` |
+| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
 | **Trigger** | When the user navigates over a menu item |
 
 ### SFX_MENU_CONFIRM
@@ -264,7 +264,7 @@ Total subscribe sites: **23**
 |-------|-------|
 | **Emitter** | `DemoMenuScene` (`demo_menu_scene.py:118`), `OptionsScene` (`options_scene.py:130`), `TitleScene` (`title_scene.py:128`), `WorldMapScene` (`world_map_scene.py:93`) |
 | **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `_sfx_map` |
+| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
 | **Trigger** | When the user confirms a menu selection |
 
 ### SFX_MENU_CANCEL
@@ -272,7 +272,7 @@ Total subscribe sites: **23**
 |-------|-------|
 | **Emitter** | `DemoMenuScene` (`demo_menu_scene.py:134`), `OptionsScene` (`options_scene.py:118`), `TitleScene` (`title_scene.py:132`) |
 | **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `_sfx_map` |
+| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
 | **Trigger** | When the user cancels/dismisses a menu |
 
 ### SFX_PLAYER_CROUCH
@@ -283,15 +283,15 @@ Total subscribe sites: **23**
 |-------|-------|
 | **Emitter** | `Player.apply_damage()` (`player.py:344`) |
 | **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `_sfx_map` |
+| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
 | **Trigger** | When the player dies |
 
 ### SFX_PLAYER_FOOTSTEP
 | Field | Value |
 |-------|-------|
-| **Emitter** | `PlayerStates` walking states (`player_states.py:358`) |
+| **Emitter** | `WalkingState` (`states/grounded.py:83`) |
 | **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `_sfx_map` |
+| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
 | **Trigger** | On each footstep during player walk animation |
 
 ### SFX_PLAYER_HEAL
@@ -302,15 +302,15 @@ Total subscribe sites: **23**
 |-------|-------|
 | **Emitter** | `Player.apply_damage()` (`player.py:348`) |
 | **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `_sfx_map` |
+| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
 | **Trigger** | When the player takes damage (but doesn't die) |
 
 ### SFX_PLAYER_JUMP
 | Field | Value |
 |-------|-------|
-| **Emitter** | `PlayerStates.JumpingState` (`player_states.py:145`), `WallJumpState` (`player_states.py:1600`) |
+| **Emitter** | `JumpingState` (`states/airborne.py:79`), `WallSlideState` (`states/wall.py:13`) |
 | **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `_sfx_map` |
+| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
 | **Trigger** | When the player jumps |
 
 ### SFX_PLAYER_LAND
@@ -318,15 +318,15 @@ Total subscribe sites: **23**
 |-------|-------|
 | **Emitter** | `Player` physics update (`player.py:654`) |
 | **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `_sfx_map` |
+| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
 | **Trigger** | When the player lands on the ground after being airborne |
 
 ### SFX_PLAYER_LONG_ATTACK
 | Field | Value |
 |-------|-------|
-| **Emitter** | `PlayerStates` attacking states (`player_states.py:179,243`) |
+| **Emitter** | los estados de ataque de `states/attack.py` |
 | **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `_sfx_map` |
+| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
 | **Trigger** | When the player performs a long/heavy attack |
 
 ### SFX_PLAYER_PARRY
@@ -335,9 +335,9 @@ Total subscribe sites: **23**
 ### SFX_PLAYER_SHORT_ATTACK
 | Field | Value |
 |-------|-------|
-| **Emitter** | `PlayerStates` attacking states (`player_states.py:174,240`) |
+| **Emitter** | los estados de ataque de `states/attack.py` |
 | **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `_sfx_map` |
+| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
 | **Trigger** | When the player performs a quick/short attack |
 
 ### SFX_PROJECTILE_FIRE
@@ -345,7 +345,7 @@ Total subscribe sites: **23**
 |-------|-------|
 | **Emitter** | `EnemyCaster` (`enemy_caster.py:180`), `EnemyArcher` (`enemy_archer.py:119`), `EnemyShooter` (`enemy_shooter.py:315`) |
 | **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `_sfx_map` |
+| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
 | **Trigger** | When an enemy fires a projectile |
 
 ### SFX_STAGE_BANNER
@@ -353,7 +353,7 @@ Total subscribe sites: **23**
 |-------|-------|
 | **Emitter** | `StageScene` (`stage_scene.py:194`) |
 | **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `_sfx_map` |
+| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
 | **Trigger** | When the stage name banner is displayed |
 
 ### SFX_STAGE_COMPLETE
@@ -361,7 +361,7 @@ Total subscribe sites: **23**
 |-------|-------|
 | **Emitter** | `StageScene.check_stage_complete()` (`stage_scene.py:622,625`) |
 | **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `_sfx_map` |
+| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
 | **Trigger** | When the player completes a stage |
 
 ### SFX_UI_GAME_OVER
@@ -386,7 +386,7 @@ Total subscribe sites: **23**
 ### VFX_CHARGE
 | Field | Value |
 |-------|-------|
-| **Emitter** | `PlayerStates.ChargingState` (`player_states.py:1025`), `PlayerStates.WallJumpState` (`player_states.py:1609`) |
+| **Emitter** | `ChargingState` (`states/ability.py:279`), `WallSlideState` (`states/wall.py:13`) |
 | **Payload** | `pos: tuple[float, float]`, `level: int` |
 | **Subscribers** | StageScene `_on_vfx_charge` (charge particles, `stage_scene.py:360`) |
 | **Trigger** | When the player charges an attack |
@@ -394,7 +394,7 @@ Total subscribe sites: **23**
 ### VFX_PARRY
 | Field | Value |
 |-------|-------|
-| **Emitter** | `PlayerStates.ParryState` (`player_states.py:971`), `EnemyBase._on_parried()` (`enemy_base.py:526`), `EnemyCaster` (`enemy_caster.py:208`), `EnemyArcher` (`enemy_archer.py:147`), `EnemyShooter` (`enemy_shooter.py:204`) |
+| **Emitter** | `ParryState` (`states/ability.py:93`), `EnemyBase._on_parried()` (`enemy_base.py:526`), `EnemyCaster` (`enemy_caster.py:208`), `EnemyArcher` (`enemy_archer.py:147`), `EnemyShooter` (`enemy_shooter.py:204`) |
 | **Payload** | `pos: tuple[float, float]` |
 | **Subscribers** | StageScene `_on_vfx_parry` (parry particles, camera shake, flash, bloom, `stage_scene.py:359`), Achievements `_on_parry` (`achievements.py:126`) |
 | **Trigger** | When a player parry connects with an enemy attack |

@@ -21,8 +21,12 @@ date_processed: "2026-07-14"
 ## 0. Qué de esto existe hoy (AUD-150)
 
 > **Leer esto antes que nada.** Este documento describe **cuatro jefes** y
-> unos cuarenta patrones de ataque. En el código hay **tres clases de jefe** y
-> **nueve patrones**. Lo demás es diseño: legítimo, útil y **no implementado**.
+> unos cuarenta patrones de ataque. En el código hay **cuatro clases de jefe** y
+> **17 patrones**. Lo demás es diseño: legítimo, útil y **no implementado**.
+>
+> *(Medido el 6 de agosto de 2026 — AUD-311. La versión anterior decía «tres
+> clases y nueve patrones», y era cierta al escribirse: desde entonces apareció
+> `BossGavilan` y `BossPaburu` pasó de una forma a cuatro.)*
 >
 > El registro de pendientes (`63`) lo llamaba «22 patrones que ningún jefe
 > implementa» y sugería reescribir la especificación contra los jefes reales.
@@ -36,8 +40,8 @@ date_processed: "2026-07-14"
 |---|---|---|---|---|
 | El Venado Sagrado (§3) | `BossVenado` | 2 | `STOMP`, `CHARGE`, `VINE_TOSS`, `VINE_SWEEP`, `MUSHROOM_SPORE` | — |
 | El Rey Terciopelo (§4) | `BossRey` | **1** | `VENOM_SPIT` | `SERPENT_CARPET`, `VENOM_BURST`, `SERPENT_WAVE`, y las formas `ReyMetad` de las fases 2-3 |
-| El Gavilán Mascarero (§5) | **ninguna** | — | **ninguno** | todo §5 |
-| El Gran Shaman Paburu (§6) | `BossPaburu` | 1 de 4 formas | `STONE_SPIT`, `EYE_BEAM`, `EL_SELLO` | las formas 2, 3 y 4 (marcadas como EP3 en el propio código) |
+| El Gavilán Mascarero (§5) | `BossGavilan` | **1** | **ninguno** (`attack_patterns=[]`) | todo §5. Es **asignación de estudiante**: 45 % de la rúbrica de `grade_boss` |
+| El Gran Shaman Paburu (§6) | `BossPaburu` | **4 formas** | Piedra: `STONE_SPIT`, `EYE_BEAM`, `EL_SELLO` · Máscara: `SPIRIT_WAVE`, `DUELO_DE_ECOS`, `MASK_PULSE` · Espíritu: `RELIC_SURGE`, `SPIRIT_FORM`, `ANCIENT_CALL`, `CONVERGENCE`, `EL_OFRECIMIENTO` | La Reliquia (forma 3) tiene `attack_patterns=[]`: se llenan al elegir 3A/3B, y esa elección no está escrita |
 
 <!-- /cita-historica -->
 
@@ -68,12 +72,14 @@ en `boss_gavilan.py`— están **sin asignar**: nadie las mantiene hoy.
 **El desarrollo completo del jefe Gavilán queda a cargo de los estudiantes.**
 Es una asignación abierta, no deuda del motor. Quien la tome recibe:
 
+<!-- cita-historica -->
 | Lo que ya está hecho | Lo que falta por hacer |
 |---|---|
 | La clase `BossGavilan(BossBase)` con la fase 1, «El Vuelo Circular» (§5.3): órbita paramétrica con vectores explícitos (Unidad II) | Las **fases 2 y 3** completas |
 | Su escena `Stage3_4BossGavilanScene` y su mapa (58,7 KB), ya en el registro y jugables | Los **patrones de ataque** de §5: `DIVE_BOMB`, `FEATHER_STORM`, `MASK_BEAM`, `ORBIT_SHRINK`, `RAPID_DIVE`, `FULL_FEATHER_STORM`, `MASK_FRAGMENT_STORM`, `FEATHER_TOSS` — hoy `attack_patterns=[]` |
 | Nueve sprites en `assets/sprites/bosses/` (`dive`, `feather`, `glide`, `hover`, `masked`, `mask_frag`, `storm`, `hurt`, `death`) | Los **puntos débiles** (`WeakPoint`) y la **telegrafía** de cada ataque |
 | Todo `BossBase` heredado gratis: fases, parry (AUD-243), escala de fase y teletransporte (AUD-257), arena, invocaciones | Los sonidos `SFX_BOSSES_GAVILAN_DIVE` y `_MASK_BEAM`, que **existen con fichero** y esperan su emisor |
+<!-- /cita-historica -->
 
 **Por dónde empezar, medido:** `src/stages/boss_venado/boss_venado.py` es el
 jefe de referencia y hace las mismas cosas que §5 pide — telegrafía, puntos
@@ -301,9 +307,11 @@ Phase 2: `FilterTools.apply_kernel(sobel_x_kernel)` applied every 3 frames creat
 
 ## 4. Boss 2 — El Rey Terciopelo
 
+<!-- cita-historica -->
 > **Estado (AUD-150): fase 1 implementada, fases 2 y 3 no.** `BossRey` existe
 > con una sola `BossPhase` y un único patrón, `VENOM_SPIT`. Todo lo que este
 > apartado dice de serpientes, ráfagas y mitades `ReyMetad` es diseño.
+<!-- /cita-historica -->
 
 ### 4.1 Concept
 
@@ -334,6 +342,7 @@ El Rey Terciopelo is not a single creature — it is thousands of terciopelo (fe
 **Phase 1 Hurtbox:** 28×48 px
 
 ### 4.3 Phases
+<!-- diseno-pendiente -->
 
 #### Phase 1 — "La Marioneta" (Health: 15 → 10 hearts)
 
@@ -390,6 +399,7 @@ Phase 3 introduces a pattern recognition mechanic. The boss alternates between t
 
 The professor's implementation includes inline comments documenting that a student with Unit IX knowledge could implement a classifier to detect the current sub-state by analyzing the boss sprite's position history or the density of active serpent entities on screen — and use that to inform player strategy. This is documented in Stage 2-4's README as an extension exercise.
 
+<!-- /diseno-pendiente -->
 ### 4.4 Defeat Sequence
 
 1. Death animation: body collapses, serpents scatter and writhe
@@ -402,11 +412,13 @@ The professor's implementation includes inline comments documenting that a stude
 
 ## 5. Boss 3 — El Gavilán Camionero Mascarero
 
+<!-- cita-historica -->
 > **Estado (AUD-150): NO EXISTE.** No hay clase, ni sprites, ni escena. El
 > registro de escenarios reserva el hueco `stage3_4_boss_gavilan` y los
 > créditos ya lo citan, pero el jefe está entero por hacer. Todo este apartado
 > es diseño; ninguno de sus patrones —`DIVE_BOMB`, `FEATHER_STORM`,
 > `MASK_BEAM` y los demás— aparece en el código.
+<!-- /cita-historica -->
 
 ### 5.1 Concept
 
@@ -440,6 +452,7 @@ El Gavilán is a common roadside hawk (Buteo magnirostris — the Roadside Hawk,
 **Hurtbox:** 40×28 px (body center, excluding wing tips)
 
 ### 5.3 Phases
+<!-- diseno-pendiente -->
 
 #### Phase 1 — "El Vuelo Circular" (Health: 14 → 9 hearts)
 
@@ -505,6 +518,7 @@ Phase 2: `FilterTools.gaussian_blur(boss_surface, sigma=0.8)` applied every 3 fr
 **Academic Highlight (Unit IX):**  
 Phase 3's movement pattern — a combination of diving and erratic hovering — can theoretically be classified using a trained classifier on positional history. The professor documents this in Stage 3-4's README as an advanced exercise: given the hawk's Y-position over the last 10 frames, classify whether the next action will be `DIVE` or `HOVER` and position the player accordingly.
 
+<!-- /diseno-pendiente -->
 ### 5.4 Defeat Sequence
 
 1. Death animation: hawk drops to the arena floor
@@ -518,10 +532,12 @@ Phase 3's movement pattern — a combination of diving and erratic hovering — 
 
 ## 6. Final Boss — El Gran Shaman Paburu
 
+<!-- cita-historica -->
 > **Estado (AUD-150): Forma 1 implementada.** `BossPaburu` tiene sus tres
 > patrones —`STONE_SPIT`, `EYE_BEAM`, `EL_SELLO`— y su arena. Las formas 2, 3
 > y 4 están por hacer, y el propio código lo dice en un comentario que remite
 > a EP3.
+<!-- /cita-historica -->
 
 ### 6.1 Concept
 
@@ -569,7 +585,9 @@ His four forms are not separate entities — they are layers of his power, each 
 |---|---|---|
 | `STONE_SPIT` | Every 4 seconds | Spits stone projectiles in an arc (3 projectiles, spread 15° apart). Damage: 0.5 hearts each. |
 | `EYE_BEAM` | Every 8 seconds | Fires a horizontal beam from both eyes simultaneously. Beam is 8px tall, travels at 200px/s. Damage: 1.0 heart. |
+<!-- diseno-pendiente -->
 | `GROUND_SLAM` | Every 10 seconds | Causes screen shake (camera offset oscillates ±4px for 0.5s). Fissure HazardZones appear at 3 random X positions (24px wide, full height). Damage: 0.5 hearts. Duration: 2 seconds. |
+<!-- /diseno-pendiente -->
 
 **Visual Effect (Unit V):**  
 `ColorTools.apply_tint(stone_surface, (0, 120, 40))` — the stone head has a permanent green spectral tint, reinforcing the cemetery supernatural atmosphere.
@@ -592,7 +610,9 @@ When reduced to 15 hearts: the stone head cracks. The three spirit silhouettes f
 | Pattern | Trigger | Description |
 |---|---|---|
 | `SPIRIT_WAVE` | Every 5 seconds | Sends a wave of spectral energy along the floor (crouching avoids it) OR along the ceiling (jumping avoids it). Alternates. Damage: 0.5 hearts. |
+<!-- diseno-pendiente -->
 | `SUMMON_ECHOES` | Every 12 seconds | Summons spectral copies of the three defeated bosses (venado echo, serpiente echo, gavilán echo) — they each perform one attack then dissipate. Echo damage: 50% of original. |
+<!-- /diseno-pendiente -->
 | `MASK_PULSE` | Every 7 seconds | The mask releases a circular shockwave. Damage within 80px: 0.75 hearts. |
 
 **Visual Effect (Unit VII):**  
@@ -607,6 +627,7 @@ The three echoes are lightweight entity instances using the same sprites as the 
 ---
 
 ### 6.5 Form 3 — "La Reliquia" (Health: 10 → 5) — Random Phase
+<!-- diseno-pendiente -->
 
 **Visual Transition:**
 1. Spectral mask form dissolves
@@ -666,6 +687,7 @@ The PULL attack directly implements a simplified gravitational attraction: `attr
 
 ---
 
+<!-- /diseno-pendiente -->
 ### 6.6 Form 4 — "El Espíritu del Shaman" (Health: 5 → 0)
 
 **Transition Narrative:**

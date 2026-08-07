@@ -78,7 +78,7 @@ engine/scenes/
     ├── demo_common.py                  ← Legacy re-exports from demo_layout + demo_utils
     ├── scene_registry.py               ← DI Container: register → build pattern
     ├── param_panel.py                  ← Reusable ParamPanel widget
-    └── debug_overlay.py                ← F3 debug console (app-wide, not scene-specific)
+    └── debug_overlay.py                ← F11 debug console (app-wide, not scene-specific)
 ```
 
 All demo/lab scene files are in `engine/scenes/`. They are professor-owned. Students do not modify them.

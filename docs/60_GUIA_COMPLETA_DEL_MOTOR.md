@@ -170,7 +170,7 @@ sin ellas el nivel no valida y pierde 10 puntos de rúbrica.
 |---|---|---|
 | `stage_id` | string | `stage1` |
 | `stage_name` | string | `LAS AULAS` |
-| `bgm_track` | string | `bgm_stage1` |
+| `bgm_track` | string | `bgm_zone1` (AUD-311: tiene que ser un fichero real de `assets/music/`; si no existe, el nivel se juega en silencio y sólo lo dice el registro) |
 
 ### Del escenario
 
@@ -1279,4 +1279,3 @@ consola y no el foro.
 - [[STAGE_CREATION.md|Guía breve de creación]]
 - [[05_ENEMY_SPEC.md|Especificación de enemigos]]
 - [[17_BOSS_SPEC.md|Especificación de jefes]]
-- [[56_FASE_5_ECS_Y_MECANICAS.md|Las once mecánicas de la fase 5]]

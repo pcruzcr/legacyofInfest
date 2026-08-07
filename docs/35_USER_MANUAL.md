@@ -62,11 +62,11 @@ Ver `docs/82_ENVIRONMENT_SETUP_GUIDE.md` para instalación detallada y solución
 | `ESC` | Pausa / menú anterior |
 | `ENTER` / `Z` | Confirmar en menús |
 
-### 4.2 Debug (F3)
+### 4.2 Debug (F11)
 
 | Tecla | Acción |
 |---|---|
-| `F3` | Activar/desactivar overlay de depuración |
+| `F11` | Activar/desactivar la consola de depuración |
 | `F4` | Mostrar árbol de módulos cargados |
 | `F5` | Mostrar colisiones y hurtboxes |
 | `F6` | Mostrar eventos en cola |
