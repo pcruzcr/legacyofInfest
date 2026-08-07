@@ -10,8 +10,8 @@ date_processed: "2026-08-02"
 
 Documento de curso. Inventario verificado contra el código en ejecución de todo
 lo que un estudiante puede usar para construir su nivel o su juego: funciones,
-métodos, estados, enemigos, objetos y elementos. Complementa la revisión de
-`docs/71_REVISION_DE_JUEGO.md` y la guía de mapas `docs/STAGE_CREATION.md`.
+métodos, estados, enemigos, objetos y elementos. Complementa el informe
+`docs/70_INFORME_DE_AUDITORIA_VIVO.md` y la guía de mapas `docs/STAGE_CREATION.md`.
 
 Regla del curso: **todo número de aquí sale de un comando**; donde el número no
 se pudo medir, no se escribe.
@@ -131,7 +131,7 @@ comprueba doc ↔ código.
 ### 2.4. Jefes (`src/stages/boss_*`, `src/framework/entities/boss_base.py`)
 
 - `BossVenado` (referencia, 2 fases): pisada, carga, lianas, esporas.
-- `BossReyTerciopelo` (1 fase `VENOM_SPIT`) — hitbox corregida en AUD-165.
+- `BossRey` (1 fase, `VENOM_SPIT`) — hitbox corregida en AUD-165.
 - `BossGavilan` (clase parcial, fase orbital) — `stage3_4_boss_gavilan/`.
 - `BossPaburu` (`STONE_SPIT` / `EYE_BEAM` / `EL_SELLO`).
 
@@ -155,13 +155,13 @@ Propiedades por tipo (default) — ver tabla completa de `STAGE_CREATION.md`:
 |---|---|
 | `Pickup` | `item_id` (oblig), `automatico` (True), `mensaje` |
 | `Door`/`Cage`/`LockedDoor` | `key_id`, `consume_llave` (False), `evento`, `abre_con` (AUD-132), `cierra_en` (0) |
-| `EventTrigger` | `evento`, `automatico`, `cierta_vez` |
+| `EventTrigger` | `evento`, `automatico`, `una_vez` |
 | `HazardZone` | `damage` (0.25), `sube`/`sube_hasta`, `arranca_con` |
 | `Cutscene` | `guion` (obligatorio, AUD-136) |
 | `Spring` | `impulso` (-520), `rearme` (0.15) |
 | `WindZone` | `fuerza_x`, `fuerza_y`, `periodo` |
 | `FrictionZone`/`Conveyor` | `multiplicador`, `arrastre` |
-| `Laser`/`Shockwave` | `encendido` (1), `apagado` (1), `desfase` |
+| `LaserZone`/`ShockwaveZone` | `encendido` (1), `apagado` (1), `desfase` |
 | `WaterZone` | `corriente_x/y` |
 | `MovingPlatform` | `destino_dx/dy`, `velocidad` (40), `espera`, `atravesable` |
 | `RhythmBlock` | `visible_seg` (1), `oculto_seg` (1), `desfase`, `patron` ("x.x.") |
@@ -240,7 +240,7 @@ El bus es con referencias débiles y sin singleton (`core/event_bus.py`, AUD-019
 | Clima | `WeatherSystem.clear/rain/snow/fog/storm` | `weather_system.py` |
 | Ambiente | `AmbientParticleSystem` (dust/leaves/embers/spores/ash) | `ambient_particles.py` |
 | Estela | `TrailSystem` | `trail_system.py` |
-| Post | `flash`, `vignette`, `bloom`, `tint`, `motion_blur`, `color_grading`, daltonico | `post_processing.py` |
+| Post | `flash`, `set_vignette`, `set_bloom`, `set_tint`, `set_motion_blur`, `set_color_grading`, daltónico | `post_processing.py` |
 | Niebla de guerra | `fog_of_war.py` (prop TMX `fog_of_war`) | — |
 | Efecto de agua | `water_effect.py` (prop `water_effect`) | — |
 | Transiciones | `start_fade_in/out`, `start_wipe`, `start_slide`, `start_circle` | `scenes/transition_manager.py` |
@@ -267,8 +267,10 @@ El bus es con referencias débiles y sin singleton (`core/event_bus.py`, AUD-019
 4. **`patrol_speed`/`alert_speed`/`fire_rate`** documentados para
    Brute/Caster/Assassin `no` son aceptados por sus constructores.
 5. **Boss Gavilán**: el docs «no existía», el código sí.
+<!-- cita-historica -->
 6. **`Message` vs `MessageTrigger`**: el TMX solo acepta
    `MessageTrigger`(_Once); usar `Message` produce un error.
+<!-- /cita-historica -->
 7. **Conteos de la doc inconciliables**: `60` dice 73 tipos / 37 enemigos,
    `62` dice 62/30; el código tiene **65 tipos declarables** (34 + 2 collision +
    8 arquetipos + 21 especies) y los 26 ctas de jugador.
@@ -277,7 +279,7 @@ El bus es con referencias débiles y sin singleton (`core/event_bus.py`, AUD-019
 
 ## Documentos relacionados
 
-- `docs/71_REVISION_DE_JUEGO.md` — revisión medida de mecánica y gameplay
+- `docs/70_INFORME_DE_AUDITORIA_VIVO.md` — revisión de juego y auditoría vivas
 - `docs/STAGE_CREATION.md` — cómo crear un mapa (generado, al día)
 - `docs/18_ENEMY_ROSTER.md` — las 21 especies, verificadas
 - `docs/04_PLAYER_SPEC.md` — especificación del jugador

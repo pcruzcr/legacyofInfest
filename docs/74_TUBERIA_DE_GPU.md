@@ -361,6 +361,6 @@ asset ni tocar cómo dibujan las 26 entregas.
 ## Documentos relacionados
 
 - `docs/70_INFORME_DE_AUDITORIA_VIVO.md` — iteración 12, con el detalle de cada hallazgo
-- `docs/72_VIABILIDAD_PROPUESTA_V2.md` — la propuesta que originó este trabajo
+- la propuesta `72_VIABILIDAD_PROPUESTA_V2` (retirada) originó este trabajo
 - `docs/03_ARCHITECTURE.md` — capas y reglas que acotan dónde puede vivir el reparto
 - `CLAUDE.md` — las invariantes

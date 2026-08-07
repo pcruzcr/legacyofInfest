@@ -189,7 +189,9 @@ colocan con su tipo propio.
 | Prometido | Estado real |
 |---|---|
 | `WIND_UP` | **No existe**, y es correcto: `TELEGRAPHING` cumple su función. Lo que hay que corregir es el documento |
+<!-- cita-historica -->
 | `detection_rect`, `patrol_origin` | Nombres viejos. Existen como `detection_range_x` y `detection_range_y` |
+<!-- /cita-historica -->
 | `sfx_walker_die`, `sfx_flying_die`, `sfx_shooter_die` | Nombres viejos. El motor usa **dos** sonidos por tamaño —`SFX_ENEMY_DIE_SMALL` y `_LARGE`— en vez de uno por especie, que con treinta especies es mejor diseño: dos ficheros que mantener en vez de treinta |
 
 **HECHO (AUD-150).** `05_ENEMY_SPEC.md` abre con una §0 que corrige los cinco
@@ -234,7 +236,9 @@ El documento ya no aparece en el barrido.
 
 | Documento | Qué cita | Comprobado el 2026-08-04 |
 |---|---|---|
+<!-- cita-historica -->
 | `09_HUD_SPEC.md` | `hurt_display_timer`, `reveal_count`, `Message` | **No existen.** La clase real es `MessageBox` (`ui/message_box.py:17`) |
+<!-- /cita-historica -->
 | `04_PLAYER_SPEC.md` | `_health`, `facing_direction`, `damage_amount` | `_health` y `facing_direction` **sí existen**; sólo `damage_amount` es un nombre muerto |
 | `11_FILTER_TOOLS_SPEC.md` | `KERNEL_X`, `KERNEL_Y`, `umbral_alto`, `umbral_bajo` | **Los cuatro existen**, en `edge_detection.py`. Falso positivo |
 | `12_VISION_TOOLS_SPEC.md` | `label_array`, `component_sizes`, `bounding_rect`, `local_binary_pattern` | **Los cuatro existen**, en `vision_tools.py`. Falso positivo |
@@ -261,7 +265,7 @@ Esto no sale del barrido automático: sale de la auditoría de agosto
 | ~~Atlas de sprites y batching~~ | **HECHO** (AUD-138), con una salvedad medida: el atlas **no** acelera el dibujado en la ruta software (2,06 → 2,35 ms). Lo que gana es carga (3×) y `blits()` (16 %) |
 | **Post-procesado en GPU** | gráficos | **MEDIDO** (AUD-148), y la respuesta no era la esperada: en la máquina de medida el bloom en GPU sale **5× más lento** (8,3 ms contra 1,7 ms) porque SDL cae a software sin tarjeta. Presentar sí es barato (0,18–0,36 ms). Queda `scripts/bench_gpu_postproc.py` para medirlo donde toque y `PresentadorGPU` apagado por defecto |
 | ~~Cutscenes: acciones nuevas, guiones desde TMX, no bloquear~~ | **HECHO** (AUD-136). Tipo `Cutscene`, guion en texto, escenas que no bloquean y salto que ejecuta el final | — |
-| ~~Curva de dificultad medida~~ | **HECHO** (AUD-151). `scripts/difficulty_curve.py` mide once escenarios y `docs/67_CURVA_DE_DIFICULTAD.md` recoge lo que salió: el tutorial `stage0` es el nivel normal más exigente (48,8) y hay dos escalones de más del doble. Los jefes quedan exentos: un jefe *debe* ser un pico | — |
+| ~~Curva de dificultad medida~~ | **HECHO** (AUD-151). `scripts/difficulty_curve.py` mide once escenarios y `tests/test_curva_de_dificultad.py` fija lo que salió: el tutorial `stage0` es el nivel normal más exigente (48,8) y hay dos escalones de más del doble. Los jefes quedan exentos: un jefe *debe* ser un pico | — |
 | ~~Partir `stage_scene.py`~~ | **HECHO** (AUD-152). De 1.884 a 1.405 líneas, con tres mixins de lectura en `scenes/stage_parts/`: ambiente, señales y fantasma. Separación por legibilidad, no por dependencia — las subclases de los estudiantes siguen sobreescribiendo lo mismo | — |
 | ~~Mutación en CI~~ | **HECHO** (AUD-147). `scripts/mutation_check.py`, semanal y a mano; acotado a tres módulos para que el informe se lea | — |
 | ~~Tipos de objeto sin usar en ningún mapa~~ | **HECHO** (AUD-153). Eran **17**, no 15: siete de escenario y diez especies del bestiario. Colocados en las salas 8 y 9 del laboratorio, con una prueba que vuelve a rojo si alguien añade un tipo y no lo coloca. Los hace alcanzables y ejercitados; **no** arregla la curva de dificultad del juego | — |
@@ -320,5 +324,4 @@ calificación que este mes hubo que arreglar por castigar trabajo correcto.
 ## Documentos relacionados
 
 - [[62_ESTADO_DEL_PROYECTO.md|Qué hay, qué mejorar, qué falta]]
-- [[61_AUDITORIA_AAA_2026-08.md|Auditoría y puntuación]]
 - [[60_GUIA_COMPLETA_DEL_MOTOR.md|Manual del diseñador]]

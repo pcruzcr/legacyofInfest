@@ -185,7 +185,7 @@ python -m pytest tests/ -v -k <tu_id>
 | API del framework | `docs/22_API_CONTRACTS.md` |
 | Formato de datos | `docs/23_DATA_SCHEMAS.md` |
 | Rúbricas de evaluación | `docs/27_ACADEMIC_RUBRICS.md` |
-| Flujo de trabajo git | `docs/29_GIT_WORKFLOW_AND_STANDARDS.md` |
+| Flujo de trabajo git | `CONTRIBUTING.md` |
 | Guía rápida de demos | `docs/37_DEMO_QUICK_GUIDE.md` |
 | Guía rápida de niveles/boss | `docs/38_STAGE_BOSS_GUIDE.md` |
 
@@ -203,4 +203,3 @@ python -m pytest tests/ -v -k <tu_id>
 - [[37_DEMO_QUICK_GUIDE.md|Demo Quick Guide]]
 - [[38_STAGE_BOSS_GUIDE.md|Stage Boss Guide]]
 - [[27_ACADEMIC_RUBRICS.md|Academic Rubrics]]
-- [[29_GIT_WORKFLOW_AND_STANDARDS.md|Git Workflow]]

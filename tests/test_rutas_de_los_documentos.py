@@ -68,7 +68,14 @@ DOCUMENTOS: list[pathlib.Path] = [
 ]
 
 #: Raíces de primer nivel que son rutas del repositorio y no prosa.
-_RAICES = "src|scripts|tools|tests|assets|locale|data|colab|exams|web"
+#:
+#: `docs` entró en AUD-322: el borrado deliberado de 36 documentos dejó quince
+#: citas vivas a documentos retirados —tablas de "documentos relacionados",
+#: registros históricos y listas de fuentes— y el guardián, que sólo miraba
+#: rutas de código y recursos, no las veía. Un documento que cita a otro que
+#: ya no existe envejece exactamente igual que un documento que cita un
+#: módulo movido: el lector concluye que el enlace roto es culpa suya.
+_RAICES = "docs|src|scripts|tools|tests|assets|locale|data|colab|exams|web"
 
 #: El `(?<![\w/.-])` importa: sin él, `loi-tools/editor/stage_wizard.py` —una
 #: propuesta de un repositorio que aún no existe, en 50_IMPROVEMENT_ROADMAP—
@@ -106,6 +113,10 @@ MODULOS_RETIRADOS: frozenset[str] = frozenset({
     "src/engine/utils/spritesheet.py",
     # AUD-111: cinco clases de transición con cero usos en todo el árbol.
     "src/engine/scene/transitions.py",
+    # AUD-308: borrado deliberado de la documentación de julio de 2026. El
+    # reporte 87 §21.2 explica la decisión y cita el `git show` para recuperar
+    # el fichero: la mención es historia, no una ruta que deba existir.
+    "docs/VERIFICACION_FINAL.md",
 })
 
 _EXENTAS = MARCADORES_DE_POSICION | MODULOS_RETIRADOS

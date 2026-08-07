@@ -320,8 +320,8 @@ python main.py --boss <tu_id>
 | API del framework | `docs/22_API_CONTRACTS.md` |
 | Plantillas de estudiante | `docs/26_STUDENT_TEMPLATE_SPEC.md` |
 | Rúbricas de evaluación | `docs/27_ACADEMIC_RUBRICS.md` |
-| Flujo de trabajo git | `docs/29_GIT_WORKFLOW_AND_STANDARDS.md` |
-| Roadmap de implementación | `docs/25_IMPLEMENTATION_ROADMAP.md` |
+| Flujo de trabajo git | `CONTRIBUTING.md` |
+| Roadmap de implementación | `docs/63_REGISTRO_DE_LO_NO_IMPLEMENTADO.md` |
 
 
 ---

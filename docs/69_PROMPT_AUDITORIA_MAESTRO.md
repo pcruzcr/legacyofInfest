@@ -335,4 +335,4 @@ Para y PREGUNTA, en vez de decidir tú, cuando:
 - `docs/62_ESTADO_DEL_PROYECTO.md` — qué existe, medido
 - `docs/63_REGISTRO_DE_LO_NO_IMPLEMENTADO.md` — qué falta
 - `KNOWN_GAPS.md` — deuda registrada
-- `docs/68_AUDITORIA_DE_INGENIERIA.md` — la auditoría anterior
+- `docs/70_INFORME_DE_AUDITORIA_VIVO.md` — el informe de auditoría vivo
