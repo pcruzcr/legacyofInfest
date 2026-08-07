@@ -68,7 +68,10 @@ class DiagnosticoDeEscenario:
             raise
 
         nombre = type(entidad).__name__
-        logging.getLogger(__name__).exception(
+        # AUD-304 — ruff no ve el contexto entre llamada y handler: este método
+        # sólo se invoca desde un `except Exception` (stage_scene.py), donde
+        # `.exception()` sí tiene contexto de excepción vivo.
+        logging.getLogger(__name__).exception(  # noqa: LOG004
             "la entidad %r falló en update() y se retira del nivel", nombre)
         # Se marca muerta **y** se saca de la lista: sólo lo primero la dejaría
         # sin dibujar pero seguiría recibiendo `set_player_ref` cada fotograma,
