@@ -78,3 +78,79 @@ class TestInputManager:
         for action in Action:
             assert action in manager._bindings
             assert len(manager._bindings[action]) > 0
+
+
+class _FakeJoystick:
+    """Un mando sin SDL: sólo responde a `get_axis`."""
+
+    def __init__(self, axis_x: float = 0.0, axis_y: float = 0.0) -> None:
+        self._x, self._y = axis_x, axis_y
+
+    def get_axis(self, i: int) -> float:
+        return self._x if i == 0 else self._y
+
+
+class TestElMandoNavegaLosMenus:
+    """AUD-320 — el mando no podía navegar los menús: los menús leen
+    `is_raw_key_pressed(K_UP/K_DOWN)` y el `InputManager` nunca sintetizaba
+    esas teclas desde el mando (ni el hat de la cruceta ni el eje Y)."""
+
+    def test_el_hat_arriba_sintetiza_la_flecha_arriba(self, manager: InputManager) -> None:
+        manager.pump([pygame.event.Event(pygame.JOYHATMOTION, {"hat": 0, "value": (0, 1)})])
+        assert manager.is_raw_key_pressed(pygame.K_UP)
+
+    def test_el_hat_abajo_sintetiza_la_flecha_abajo(self, manager: InputManager) -> None:
+        manager.pump([pygame.event.Event(pygame.JOYHATMOTION, {"hat": 0, "value": (0, -1)})])
+        assert manager.is_raw_key_pressed(pygame.K_DOWN)
+
+    def test_el_hat_izquierda_sintetiza_la_flecha_izquierda(self, manager: InputManager) -> None:
+        manager.pump([pygame.event.Event(pygame.JOYHATMOTION, {"hat": 0, "value": (-1, 0)})])
+        assert manager.is_raw_key_pressed(pygame.K_LEFT)
+
+    def test_el_hat_solo_pulsa_un_fotograma(self, manager: InputManager) -> None:
+        manager.pump([pygame.event.Event(pygame.JOYHATMOTION, {"hat": 0, "value": (0, 1)})])
+        assert manager.is_raw_key_pressed(pygame.K_UP)
+        manager.pump([])
+        assert not manager.is_raw_key_pressed(pygame.K_UP), (
+            "la navegación del hat tiene que ser de un fotograma: si se repite, "
+            "el menú recorre varias filas por pulsación"
+        )
+
+    def test_el_eje_vertical_sintetiza_la_flecha_arriba(self, manager: InputManager) -> None:
+        manager._joystick = _FakeJoystick(axis_y=-0.9)
+        manager.pump([pygame.event.Event(pygame.JOYAXISMOTION, {"axis": 0})])
+        assert manager.is_raw_key_pressed(pygame.K_UP)
+
+    def test_el_eje_en_la_banda_muerta_no_pulsa_nada(self, manager: InputManager) -> None:
+        manager._joystick = _FakeJoystick(axis_y=0.2)
+        manager.pump([pygame.event.Event(pygame.JOYAXISMOTION, {"axis": 0})])
+        assert not manager.is_raw_key_pressed(pygame.K_UP)
+        assert not manager.is_raw_key_pressed(pygame.K_DOWN)
+
+    def test_el_hat_navega_el_menu_de_demos_de_verdad(self) -> None:
+        """Extremo a extremo: hat abajo y la selección del menú baja."""
+        from unittest.mock import MagicMock
+
+        from src.engine.core.event_bus import EventBus
+        from src.engine.core.game_context import GameContext
+        from src.engine.scenes.demo_menu_scene import DemoMenuScene
+
+        pygame.init()
+        pygame.font.init()
+        im = InputManager()
+        ctx = GameContext(
+            input_manager=im,
+            audio_manager=MagicMock(),
+            scene_manager=MagicMock(),
+            event_bus=EventBus(),
+        )
+        escena = DemoMenuScene(ctx)
+        escena.on_enter()
+        inicial = escena._selected
+
+        im.pump([pygame.event.Event(pygame.JOYHATMOTION, {"hat": 0, "value": (0, -1)})])
+        escena.update(0.016)
+
+        assert escena._selected == inicial + 1, (
+            "el hat no movió la selección del menú: el mando no navega"
+        )

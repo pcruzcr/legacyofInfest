@@ -73,6 +73,23 @@ class InputManager:
         self._controller_axis_right: float = 0.0
         self._controller_axis_up: bool = False
         self._controller_axis_down: bool = False
+        #: AUD-320 — el mando y la navegación de menús.
+        #:
+        #: Los menús de este juego se manejan con
+        #: `is_raw_key_pressed(K_UP/K_DOWN/...)`; el mando no genera teclas.
+        #: En vez de reescribir escenas (los hay que leen las teclas en tres
+        #: sitios) se sintetiza aquí, una sola vez: cuando el hat de la
+        #: cruceta o el eje vertical cruzan la banda muerta, el fotograma
+        #: lleva una flecha de más. Lo que nunca se hace es repetir la
+        #: pulsación mientras se sostiene: un menú recorrería varias filas
+        #: por toque.
+        self._controller_hat: tuple[int, int] = (0, 0)
+        self._hat_edge_up = self._hat_edge_down = False
+        self._hat_edge_left = self._hat_edge_right = False
+        self._hat_held_up = self._hat_held_down = False
+        self._hat_held_left = self._hat_held_right = False
+        self._axis_edge_up = self._axis_edge_down = False
+        self._axis_edge_left = self._axis_edge_right = False
 
     def _init_joystick(self) -> None:
         """Initialize the first available joystick."""
@@ -92,6 +109,10 @@ class InputManager:
         self._raw_keys_pressed.clear()
         self._controller_buttons_pressed.clear()
         self._controller_buttons_released.clear()
+        self._hat_edge_up = self._hat_edge_down = False
+        self._hat_edge_left = self._hat_edge_right = False
+        self._axis_edge_up = self._axis_edge_down = False
+        self._axis_edge_left = self._axis_edge_right = False
 
         for e in events:
             if e.type == pygame.KEYDOWN:
@@ -111,6 +132,12 @@ class InputManager:
                 self._controller_buttons_released.add(e.button)
             elif e.type == pygame.JOYAXISMOTION:
                 self._poll_axes()
+            elif e.type == pygame.JOYHATMOTION:
+                self._poll_hat(e.value)
+
+        # AUD-320 — una vez por fotograma, y aquí: los menús leen teclas
+        # crudas, y éste es el único sitio donde el mando puede ponérselas.
+        self._sintetizar_navegacion_por_mando()
 
         # AUD-126 — una vez por fotograma, y aquí: `is_action_held` es una
         # pregunta y una pregunta no debe tener efectos.
@@ -210,21 +237,69 @@ class InputManager:
         if self._joystick is None:
             return
         try:
+            prev_left = self._controller_axis_left
+            prev_up = self._controller_axis_up
+            prev_down = self._controller_axis_down
             x = self._joystick.get_axis(CONTROLLER_AXIS_LEFT_X)
             y = self._joystick.get_axis(CONTROLLER_AXIS_LEFT_Y)
             self._controller_axis_left = x if abs(x) > CONTROLLER_DEADZONE else 0.0
             self._controller_axis_right = 0.0
             self._controller_axis_up = y < -CONTROLLER_DEADZONE
             self._controller_axis_down = y > CONTROLLER_DEADZONE
+            # AUD-320: el borde (cruzar la banda muerta) es la pulsación; el
+            # eje sostenido en el mismo sitio no puede repetirla.
+            self._axis_edge_up = self._controller_axis_up and not prev_up
+            self._axis_edge_down = self._controller_axis_down and not prev_down
+            self._axis_edge_left = self._controller_axis_left < 0 and prev_left >= 0
+            self._axis_edge_right = self._controller_axis_left > 0 and prev_left <= 0
         except pygame.error:
             logger.warning("input_manager: failed to poll joystick axes")
+
+    def _poll_hat(self, value: tuple[int, int]) -> None:
+        """El hat de la cruceta: digital, y con borde por dirección.
+
+        AUD-320 — un `JOYHATMOTION` se recibe cada vez que el valor cambia,
+        así que el borde se calcula comparando con lo que había: la pulsación
+        es el cambio, no el estado.
+        """
+        x, y = value
+        self._hat_edge_up = y == 1 and not self._hat_held_up
+        self._hat_edge_down = y == -1 and not self._hat_held_down
+        self._hat_edge_left = x == -1 and not self._hat_held_left
+        self._hat_edge_right = x == 1 and not self._hat_held_right
+        self._hat_held_up = y == 1
+        self._hat_held_down = y == -1
+        self._hat_held_left = x == -1
+        self._hat_held_right = x == 1
+        self._controller_hat = (x, y)
+
+    def _sintetizar_navegacion_por_mando(self) -> None:
+        """Traduce hat y eje del mando a flechas del teclado, un fotograma.
+
+        AUD-320 — los menús navegan con `is_raw_key_pressed(K_UP/...)` y
+        nunca recibirían nada del mando. Esta es la única puerta entre los
+        dos mundos: la cruceta o el palo en un menú se comportan como si
+        hubiera una flecha pulsada durante ese fotograma.
+        """
+        if self._hat_edge_up or self._axis_edge_up:
+            self._raw_keys_pressed.add(pygame.K_UP)
+        if self._hat_edge_down or self._axis_edge_down:
+            self._raw_keys_pressed.add(pygame.K_DOWN)
+        if self._hat_edge_left or self._axis_edge_left:
+            self._raw_keys_pressed.add(pygame.K_LEFT)
+        if self._hat_edge_right or self._axis_edge_right:
+            self._raw_keys_pressed.add(pygame.K_RIGHT)
 
     def _action_from_controller(self, action: Action) -> bool:
         """Check if any controller binding matches the action."""
         if action == Action.MOVE_LEFT:
-            return self._controller_axis_left < 0
+            return self._controller_axis_left < 0 or self._hat_edge_left
         if action == Action.MOVE_RIGHT:
-            return self._controller_axis_left > 0
+            return self._controller_axis_left > 0 or self._hat_edge_right
+        if action == Action.MOVE_UP:
+            return self._axis_edge_up or self._hat_edge_up
+        if action == Action.MOVE_DOWN:
+            return self._axis_edge_down or self._hat_edge_down
         if action == Action.JUMP:
             btn = next((b for b, a in _CONTROLLER_BUTTON_MAP.items() if a == Action.JUMP), None)
             return btn is not None and (btn in self._controller_buttons_pressed or self._controller_axis_up)
@@ -239,9 +314,13 @@ class InputManager:
     def _action_held_from_controller(self, action: Action) -> bool:
         """Check if action is being held on controller."""
         if action == Action.MOVE_LEFT:
-            return self._controller_axis_left < 0
+            return self._controller_axis_left < 0 or self._hat_held_left
         if action == Action.MOVE_RIGHT:
-            return self._controller_axis_left > 0
+            return self._controller_axis_left > 0 or self._hat_held_right
+        if action == Action.MOVE_UP:
+            return self._controller_axis_up or self._hat_held_up
+        if action == Action.MOVE_DOWN:
+            return self._controller_axis_down or self._hat_held_down
         if action == Action.CROUCH:
             return self._controller_axis_down
         btn = next((b for b, a in _CONTROLLER_BUTTON_MAP.items() if a == action), None)
@@ -252,7 +331,11 @@ class InputManager:
     def _action_released_from_controller(self, action: Action) -> bool:
         """Check if action was released on controller."""
         if action in (Action.MOVE_LEFT, Action.MOVE_RIGHT):
-            return abs(self._controller_axis_left) < CONTROLLER_DEADZONE
+            return abs(self._controller_axis_left) < CONTROLLER_DEADZONE and self._controller_hat[0] == 0
+        if action == Action.MOVE_UP:
+            return not self._controller_axis_up and not self._hat_held_up
+        if action == Action.MOVE_DOWN:
+            return not self._controller_axis_down and not self._hat_held_down
         if action == Action.CROUCH:
             return not self._controller_axis_down
         btn = next((b for b, a in _CONTROLLER_BUTTON_MAP.items() if a == action), None)
