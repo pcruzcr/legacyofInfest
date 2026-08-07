@@ -318,7 +318,7 @@ Nunca borrar entradas - marcar como resueltas.
   Pendiente: agregar tooltip en los rects que muestre `prev_bottom`, `tile.top`,
   `velocity.y` al hacer hover o pausa. (deferido por complejidad UI)
 
-## [GAP-015] StageScene sin descomposición — monolito de 1200+ líneas
+## ~~[GAP-015] StageScene sin descomposición — monolito de 1200+ líneas~~ *(Resuelto)*
 
 - **File:** `src/framework/scenes/stage_scene.py`
 - **Phase:** ARC-027 (deferred)
@@ -339,6 +339,23 @@ Nunca borrar entradas - marcar como resueltas.
   con un presupuesto de 1.500 en la prueba. Es decir, la descomposición ocurrió
   pero el monolito siguió creciendo. Marcarlo resuelto sería falsear la
   medición.
+- **Resolution (2026-08-06, AUD-299):** cerrado, y por la condición que esta
+  misma entrada se puso. AUD-299 sacó cuatro grupos cohesivos más del fichero y
+  lo dejó en **1.457 líneas**, por debajo del presupuesto de 1.500, con la
+  prueba que lo vigila en verde:
+
+  ```
+  $ wc -l src/framework/scenes/stage_scene.py
+  1457
+  $ python -m pytest tests/test_particion_de_stage_scene.py -q
+  57 passed in 4.77s
+  ```
+
+  Lo que enseñó tener este hueco abierto cuatro días con el trabajo ya hecho
+  desde AUD-184: estaba redactado contra un **número reproducible** y no contra
+  una impresión de arquitectura, así que no se pudo cerrar por optimismo. Es la
+  forma que conviene copiar para los que queden. Registro en
+  `docs/87_REPORTE_DE_LO_QUE_FALTA.md` §19.3.
 
 ## ~~[GAP-016] GameContext sin separación — 400+ líneas con UI y game state mezclados~~ *(Resuelto)*
 
@@ -867,3 +884,32 @@ Nunca borrar entradas - marcar como resueltas.
      `skill_drop`: una línea en la clase del jefe y un ejemplo en el material
      que los estudiantes copian. `escala_de_fase` además **no la aplica nadie**:
      devuelve el multiplicador y ningún sitio escala el sprite con él.
+
+## [GAP-033] El módulo del jugador está mal defendido: la mutación deja 17 supervivientes
+
+- **File:** `src/framework/entities/player.py`
+- **Phase:** auditoría 2026-08-06, AUD-308/AUD-309 (iteración 14)
+- **Reason:** `scripts/mutation_check.py --objetivo src/framework/entities/player.py
+  --pruebas <suite completa del jugador>` da **32 %** (17 de 25 mutantes viven).
+  Antes de AUD-308/309 era 8 % con la física sola y 24 % con la suite del
+  jugador. Clasificación de los 17 supervivientes:
+
+  - **Vale la pena testear** (comportamiento observable sin defender):
+    línea 480 (daño ofensivo SHORT/LONG: ``and`` vs ``or``), línea 503
+    (``heal``: AUD-308 bis añadió pruebas del comportamiento básico, pero la
+    mutación ``*`` → ``/`` sigue viviendo porque el ``heal_mult`` por defecto
+    es 1.0, donde ambas son idénticas; haría falta un test con config no
+    trivial para matarla), líneas 794/805/818/844 (todo el ``draw()``: ninguna
+    prueba llama a dibujar; una mutación que lanza ``ZeroDivisionError`` en el
+    centrado del sprite pasó la suite), líneas 1031/1041 (``ledge grab`` sin
+    probar: la condición ``_can_ledge_grab`` no la defiende nadie), línea 1069
+    (SFX de aterrizaje, audio no probado).
+  - **Benigno / marginal** (borde numérico o configuración): líneas 76/90/105/116
+    (frames de animación por estado), línea 201 (ruteo de `__setattr__`),
+    línea 543 (guard `dt <= 0`), línea 751 (borde del timer de salto),
+    línea 1017 (borde `velocity.x < 0`).
+
+  El guiador del propio script: cada superviviente es una pregunta. Las de la
+  primera fila necesitan prueba; las de la segunda se pueden dejar con la
+  respuesta «da igual».
+- **Resolution:** pendiente.
