@@ -120,7 +120,7 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── end_credits_scene.py       # Credits / completion screen
 │   │   │   ├── demo_menu_scene.py         # Academic Demos selector (10+ scenes)
 │   │   │   ├── scene_registry.py          # DI Container: register → build pattern
-│   │   │   ├── debug_overlay.py           # F3 debug console (FPS, events, modules)
+│   │   │   ├── debug_overlay.py           # F11 debug console (FPS, events, modules)
 │   │   │   ├── param_panel.py             # Reusable ParamPanel widget
 │   │   │   ├── demo_layout.py             # Layout constants & draw helpers
 │   │   │   ├── demo_utils.py              # SourceSurfaceManager, FrameThrottle, etc.
@@ -295,6 +295,7 @@ legacy-of-infest/                      # Actual repo root
 │   │   ├── vfx/
 │   │   │   ├── __init__.py
 │   │   │   ├── particle_system.py         # ParticleSystem: emitters, bursts
+│   │   │   ├── contorno.py                # AUD-304: el contorno de silueta, sin dueño (jugador y enemigos)
 │   │   │   ├── sombras.py                 # AUD-273: la elipse bajo los pies (dónde vas a caer)
 │   │   │   ├── sombras_proyectadas.py     # AUD-278: la luz ya no atraviesa las paredes
 │   │   │   ├── hit_effects.py             # HitEffects: burst configs per hit type

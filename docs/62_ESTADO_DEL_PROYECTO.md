@@ -311,6 +311,3 @@ ningún software vivo. El techo realista por categoría está en
 ## Documentos relacionados
 
 - [[60_GUIA_COMPLETA_DEL_MOTOR.md|Manual del diseñador]]
-- [[61_AUDITORIA_AAA_2026-08.md|Auditoría y puntuación]]
-- [[59_STAGE_0_REGENERADO.md|Regeneración del escenario de referencia]]
-- [[56_FASE_5_ECS_Y_MECANICAS.md|Las once mecánicas]]

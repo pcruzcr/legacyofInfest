@@ -51,10 +51,10 @@ Each TMX file must declare the following custom properties at the map level:
 | `time_limit` | int | Yes | Stage time limit in seconds |
 | `bgm_track` | string | Yes | Name of the BGM file (without extension) |
 | `background_zone` | string | No | Zone key for loading parallax backgrounds (`assets/backgrounds/{background_zone}/`). If set, `StageLoader` loads `bg_{zone}_{far,mid,near}.png`. If absent or empty, no background layers are loaded. |
-| `background_color` | color | No | Sky/background fill color (default: `#000000`) |
+| ~~`background_color`~~ | — | — | **NO IMPLEMENTADA (AUD-310).** Ningún módulo la lee. Para el fondo usa `background_zone`, arriba. |
 | `gravity_multiplier` | float | No | Stage-level gravity scale (default: `1.0`) |
 | `climate` | string | No | Weather climate key (`"clear"`, `"rain"`, `"snow"`, `"fog"`, `"storm"`). Empty string = `"clear"`. Drives `WeatherSystem` particles + ambient audio (default: `""`) |
-| `debug_mode` | bool | No | Enable debug overlay rendering (default: `false`) |
+| ~~`debug_mode`~~ | — | — | **NO IMPLEMENTADA (AUD-310).** Ningún módulo la lee. La consola de depuración se abre en el juego con **F11**, y las cajas de colisión con **F1**. |
 
 ---
 
@@ -129,7 +129,7 @@ All object positions in Tiled use pixel coordinates with the origin at the top-l
 | `MessageTrigger` | Rectangle | `text`, `duration` | Show a tutorial message |
 | `MessageTrigger_Once` | Rectangle | `text`, `duration` | Same, but only the first time |
 | `Waypoint` | Point | `owner_id`, `waypoint_index` | Bézier/patrol waypoint for an entity |
-| `HazardZone` | Rectangle | `damage`, `damage_type`, `sube`, `sube_hasta`, `arranca_con`, `avisar` | Persistent damage zone. El motor la dibuja con un aviso rojo que late; ponle `avisar=false` si tu mapa ya pinta sus propios pinchos (AUD-228) |
+| `HazardZone` | Rectangle | `damage`, `sube`, `sube_hasta`, `arranca_con`, `avisar` (`damage_type` **no está implementada** — AUD-310) | Persistent damage zone. El motor la dibuja con un aviso rojo que late; ponle `avisar=false` si tu mapa ya pinta sus propios pinchos (AUD-228) |
 | `DeathPit` | Rectangle | — | Falling in kills the player |
 | `CameraLock` | Rectangle | `lock_x`, `lock_y` | Override camera scroll in zone |
 | `BossVenado` | Point | — | Spawn the boss as a normal entity type |
@@ -349,7 +349,7 @@ The `Terrain` and `Terrain_Detail` tile layers are **not** used for collision. C
 If a student wishes to define per-tile collision in Tiled (rather than placing individual collision objects), they must:
 
 1. Configure tile collision shapes in the Tiled tileset editor.
-2. Set the TMX map property `use_tile_collision` to `true`.
+2. ~~Set the TMX map property `use_tile_collision` to `true`.~~ **NO IMPLEMENTADO (AUD-310):** ningún módulo lee esa propiedad. La colisión sale siempre de la capa de objetos `Collision`.
 3. `StageLoader` will then extract collision rects from tile properties instead of the `Collision` object layer.
 
 This approach is permitted but not recommended for beginners, as it is harder to debug.
@@ -368,7 +368,7 @@ A `MessageTrigger` object is a rectangle trigger in the `Objects` layer. When th
 |---|---|---|
 | `text` | string | The message to display |
 | `duration` | float | Seconds before auto-dismiss (0 = manual dismiss) |
-| `trigger_once` | bool | If `true`, the message only triggers the first time the player enters |
+| ~~`trigger_once`~~ | — | **NO IMPLEMENTADA (AUD-310).** Ningún módulo la lee, y `stage1_2_la_soda.tmx` la usa creyendo que sí. Para que el mensaje salga una sola vez, el objeto tiene que ser del **tipo** `MessageTrigger_Once` — no es una propiedad, es otro `type`. |
 
 ### 10.3 Message Text Rules
 
@@ -391,7 +391,7 @@ A `MessageTrigger` object is a rectangle trigger in the `Objects` layer. When th
     <property name="stage_id" value="stage1"/>
     <property name="stage_name" value="The Descent"/>
     <property name="time_limit" type="int" value="180"/>
-    <property name="bgm_track" value="bgm_stage1_tense"/>
+    <property name="bgm_track" value="bgm_zone1"/>
   </properties>
 
   <tileset firstgid="1" source="../assets/tilesets/tileset_dungeon.tsx"/>
@@ -416,11 +416,10 @@ A `MessageTrigger` object is a rectangle trigger in the `Objects` layer. When th
         <property name="checkpoint_id" type="int" value="0"/>
       </properties>
     </object>
-    <object id="4" type="Message" name="Message_01" x="144" y="160" width="48" height="32">
+    <object id="4" type="MessageTrigger_Once" name="Message_01" x="144" y="160" width="48" height="32">
       <properties>
         <property name="text" value="Walk right to continue.\nUse Z to attack enemies."/>
         <property name="duration" type="float" value="5.0"/>
-        <property name="trigger_once" type="bool" value="true"/>
       </properties>
     </object>
     <object id="5" type="NextTrigger" name="NextTrigger_01" x="1248" y="160" width="16" height="64"/>
@@ -477,7 +476,6 @@ A `MessageTrigger` object is a rectangle trigger in the `Objects` layer. When th
 <object id="30" type="HazardZone" name="Hazard_Spikes01" x="512" y="176" width="48" height="16">
   <properties>
     <property name="damage" type="float" value="1.0"/>
-    <property name="damage_type" value="spike"/>
   </properties>
 </object>
 

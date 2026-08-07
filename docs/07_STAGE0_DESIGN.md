@@ -395,5 +395,3 @@ comprueba. Si hay que cambiar el trazado, se cambia el generador; editar el
 
 - [[06_TMX_SPEC.md|Especificación TMX]]
 - [[30_ASSIGNMENT_01_STAGE_DESIGN.md|Práctica 1: diseño de escenario]]
-- [[56_FASE_5_ECS_Y_MECANICAS.md|Fase 5: ECS y mecánicas nuevas]]
-- [[59_STAGE_0_REGENERADO.md|Informe de la regeneración]]

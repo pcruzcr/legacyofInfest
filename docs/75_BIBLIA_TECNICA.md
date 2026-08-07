@@ -102,7 +102,7 @@ Los 16 niveles por id: `stage0`, `stage_mecanicas`, `stage1_1`, `stage1_2_la_sod
 | `LOI_DISPLAY_SCALE` | Escala de ventana |
 | `SIN_BICHOS` (stage1_1), `LOI_SIN_ENEMIGOS` (stage2_2) | Quita enemigos para depurar |
 | `APPDATA` / `XDG_CONFIG_HOME` / `XDG_CACHE_HOME` | Ubicación de preferencias y cachés |
-| `LOI_TOP_BAR_H`, `LOI_PANEL_W` | Dimensiones del kit de demos (depuración) |
+| ~~`LOI_TOP_BAR_H`, `LOI_PANEL_W`~~ | **Retiradas (AUD-312).** Nunca funcionaron: la función que las habría leído no tenía llamante y las constantes se calculan de `settings`. El kit de demos no se ajusta desde el entorno |
 
 ---
 
@@ -161,7 +161,7 @@ con `enter(player)`, `update(player, dt, input_manager)`, `exit(player)`. La má
 | `GRAVITY` | 800 px/s² | |
 | `PLAYER_WALK_SPEED` | 90 px/s | |
 | `PLAYER_JUMP_FORCE` | −380 px/s | |
-| `PLAYER_FALL_SPEED` | 500 px/s | velocidad terminal |
+| `PLAYER_MAX_FALL_SPEED` | 500 px/s | velocidad terminal |
 | `PLAYER_COYOTE_FRAMES` | 6 (~100 ms) | coyote time |
 | Buffer de salto | 8 frames (~130 ms) | |
 | `PLAYER_AIR_JUMPS` | 1 | salto doble EXISTE en el código |
@@ -556,7 +556,7 @@ aciertos)`, `guardar()`, `progreso()`, `correo()`, `identificado()`.
 ### 13.1 `core/`
 | Módulo | API |
 |---|---|
-| `app.py` | `Application` — raíz de composición (cablea todo; `App().run()`) |
+| `app.py` | `App` — raíz de composición (cablea todo; `App().run()`) |
 | `clock.py` | `DeltaClock` — 3 relojes: `dt` (escalado), `dt_mundo` (sin hit-stop), `unscaled_dt` (real); `time_scale` compone factores con nombre; `MAX_FRAME_TIME=0.05` |
 | `events.py` | `Events` — catálogo central (ver §15.1) |
 | `event_bus.py` | `EventBus` — cola + suscriptores weak-ref: `subscribe`, `unsubscribe`, `emit`, `queue_snapshot()`, `subscribers_snapshot()` (debug) |
@@ -568,7 +568,7 @@ aciertos)`, `guardar()`, `progreso()`, `correo()`, `identificado()`.
 | `save_data.py` / `save_manager.py` | `SaveData` (dataclass, `MAX_SLOTS`), `SaveManager.list_slots()`, `load(slot)`, `newest_slot()`; guardado atómico con `fsync` + `os.replace` |
 | `achievements.py` | `AchievementSystem.get_instance()` → `get_all_achievements()`; carga por estudiante |
 | `inventory.py` | `Inventory` — monedas/ítems; economía de tienda |
-| `experience.py` | `Experience` — XP/niveles |
+| `experience.py` | `ExperienceSystem` — XP/niveles |
 | `score_system.py` | `ScoreSystem` — puntos + mejores marcas (verdad de leaderboard) |
 | `stage_registry.py` | `STAGE_ORDER` (16 ids) + `discover_stages()` + `_STAGE_MODULE_MAP` (rutas no convencionales) |
 | `gpu_effects.py` | Gestor de efectos GL |
@@ -590,7 +590,7 @@ aciertos)`, `guardar()`, `progreso()`, `correo()`, `identificado()`.
   `play_sfx_at(nombre, world_x, volumen)` (pan), `play_ambient`, `crossfade_ambient`,
   `play_stinger`, `play_voz` (baja la música a 35 %), `toggle_mute`, `is_muted`, `ajustar_bus`.
   **4 buses:** `musica`, `efectos`, `voz`, `ambiente`; volumen = master × bus × petición.
-- `mixer_buses.py`: `MixerBus`; el diálogo duce la música (baja 0.15 s, sube 0.5 s).
+- `mixer_buses.py`: `Mezclador`; el diálogo duce la música (baja 0.15 s, sube 0.5 s).
 - `sound_bank.py`: `SoundBank` (carga perezosa + caché; `load_all()` en `AudioManager.__init__`).
 - `music_clock.py`: `RelojMusical(bpm, compas, …)` — reloj sincronizado a la posición de la pista
   (AUD-137); API `en_ventana()`, `cuantizar(t)`, `pulsos_cruzados`; bloques rítmicos con `patron`.
@@ -630,9 +630,9 @@ aciertos)`, `guardar()`, `progreso()`, `correo()`, `identificado()`.
 | Grupo | Escenas |
 |---|---|
 | Flujo | `SplashScene` (3 s, warmup JIT + sklearn), `TitleScene` (menú principal), `TutorialScene`, `StoryScene` (3 capítulos), `GameOverScene`, `EndCreditsScene`, `LoadingScene`, `StageErrorScene` (fallo de carga en pantalla, `R` reintenta), `TransitionManager` |
-| Menús | `OptionsScene`, `KeybindingScene`, `LoadGameScene`, `WorldMapScene`, `ProgressScene` (panel del estudiante), `LeaderboardScene`, `AchievementScene`, `BestiaryScene`, `InventoryScene`, `ShopScene`, `StudentLoginScene`, `BossRushEntry`, `StageWizardScene` (plantillas de nivel) |
+| Menús | `OptionsScene`, `KeybindingScene`, `LoadGameScene`, `WorldMapScene`, `ProgressScene` (panel del estudiante), `LeaderboardScene`, `AchievementScene`, `BestiaryScene`, `InventoryScene`, `ShopScene`, `StudentLoginScene`, `StageWizardScene` (plantillas de nivel) |
 | Académicas | `VectorLabScene` (4 modos), `TransformLabScene` (5 modos), `InterpolationLabScene`, `NoiseLabScene` (Perlin), `ColorTheoryScene` (RGB/HSV/HSL/CMYK + reto), `CollisionLabScene`, `ComboDemoScene`, `CurveEditorScene`, `FilterDemoScene` (10 modos), `PipelineBuilderScene` (11 filtros, 6 presets), `VisionDemoScene` (10 modos), `PatternDemoScene` (6 modos), `UnitTheoryScene` (teoría + examen), `DemoMenuScene` (hub), `SandboxScene` |
-| Infra | `DebugOverlay`, `CodePanel` (C), `ParamPanel`, `QuizManager` (Q), `TutorialOverlay` (T), `SceneRegistry`, `DemoLayout` (lienzo autorado 320×224 en ventana 800×600) |
+| Infra | `DebugOverlay`, `CodePanel` (C), `ParamPanel`, `QuizManager` (Q), `TutorialOverlay` (T), `SceneRegistry`, `demo_layout` (módulo de funciones: lienzo autorado 320×224 en ventana 800×600) |
 
 Kit de demos (`demo_common.py`): `build_default_sources()`, `save_png`, `draw_top_bar`,
 `draw_bottom_bar`, `draw_histogram_bars`, `FrameThrottle`, paleta y fuentes compartidas.
@@ -837,7 +837,8 @@ de la cola de eventos pygame antes de cada test.
 ## 21. Auditoría: implementado / huérfano / a medias
 
 > Fuentes: `62_ESTADO_DEL_PROYECTO.md`, `63_REGISTRO_DE_LO_NO_IMPLEMENTADO.md`, `KNOWN_GAPS.md`,
-> `70_INFORME_DE_AUDITORIA_VIVO.md` (13 iteraciones), `51_IMPLEMENTATION_AUDIT.md`.
+> `70_INFORME_DE_AUDITORIA_VIVO.md` (iteraciones 1-13; `51_IMPLEMENTATION_AUDIT.md` se retiró en la
+> limpieza de docs de 2026-08-06 y vive sólo en el historial de git).
 > Método: cada fila indica si existe código que lo respalde y si algo lo invoca.
 
 ### 21.1 Implementado y verificado (resumen por dominio)
@@ -889,10 +890,14 @@ de la cola de eventos pygame antes de cada test.
 - `03_ARCHITECTURE.md` (histórico): `transitions.py` con 5 clases y **cero usos**.
 - `17_BOSS_SPEC.md`: 22 patrones (`BODY_SLAM`, `DIVE_BOMB`, `MASK_BEAM`, `ORBIT_SHRINK`, …) que
   ningún jefe implementa + habla de 4 jefes cuando el Gavilán es parcial.
+<!-- cita-historica -->
 - `05_ENEMY_SPEC.md`: `WIND_UP` (no existe; es `TELEGRAPHING`), `detection_rect`/`patrol_origin`
+<!-- /cita-historica -->
   (nombres viejos), 3 SFX por enemigo (el motor usa 2 por tamaño).
 - `09_HUD_SPEC.md` / `04_PLAYER_SPEC.md` / `11_*` / `12_*` / `14_*`: nombres de API antiguos
+<!-- cita-historica -->
   (`hurt_display_timer`, `_health`, `facing_direction`, `KERNEL_X`, `label_array`, …).
+<!-- /cita-historica -->
 - `22_API_CONTRACTS.md` (histórico): módulos eliminados (`utils/spritesheet.py`,
   `scene/transitions.py`).
 - Conteos de estados: docs 19/25/26 según edición; **el código tiene 26**.
@@ -958,8 +963,8 @@ siempre es (0,0) por diseño.
 
 `docs/60_GUIA_COMPLETA_DEL_MOTOR.md` (referencia general), `62_ESTADO_DEL_PROYECTO.md`,
 `63_REGISTRO_DE_LO_NO_IMPLEMENTADO.md`, `70_INFORME_DE_AUDITORIA_VIVO.md`,
-`71_REVISION_DE_JUEGO.md`, `72_VIABILIDAD_PROPUESTA_V2.md`, `73_CATALOGO_DE_RECURSOS_PARA_ESTUDIANTES.md`,
-`74_TUBERIA_DE_GPU.md`, `KNOWN_GAPS.md`, `51_IMPLEMENTATION_AUDIT.md`, y verificación directa de
+`73_CATALOGO_DE_RECURSOS_PARA_ESTUDIANTES.md`,
+`74_TUBERIA_DE_GPU.md`, `KNOWN_GAPS.md`, y verificación directa de
 `src/engine/` (95 ficheros), `src/framework/` (101 ficheros), `src/stages/` (16 escenarios),
 `scripts/` (28), `tools/` (13), `tests/` (161), `pyproject.toml`, `.github/workflows/ci.yml`,
 `main.py`.

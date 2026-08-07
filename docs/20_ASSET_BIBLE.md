@@ -340,7 +340,7 @@ Each tileset must contain tiles organized in the following categories (columns):
 
 Location: `assets/backgrounds/`
 
-Each stage requires three background layers: `_far`, `_mid`, `_near`. Dimensions must match or exceed the stage map width × 224px. Stage 0's set is the exception at 800×600 (the game's internal resolution).
+Each stage requires three background layers, named `bg_<zona>_far.png`, `bg_<zona>_mid.png` and `bg_<zona>_near.png`. Dimensions must match or exceed the stage map width × 224px. Stage 0's set is the exception at 800×600 (the game's internal resolution).
 
 ### 8.1 Stage 0
 
@@ -513,7 +513,9 @@ All paths relative to `assets/sfx/bosses/`.
 | `sfx_bosses_phase_change.wav` | Any boss phase transition |
 | `sfx_bosses_relic_appear.wav` | Relic fragment appears post-boss |
 
+<!-- cita-historica -->
 Missing aspirational boss SFX (not yet on disk): `sfx_venado_die`, `sfx_rey_die`, `sfx_gavilan_die`, `sfx_paburu_gold_rush`, `sfx_paburu_pull`, `sfx_paburu_convergence`, `sfx_paburu_transcend`.
+<!-- /cita-historica -->
 
 ### 12.4 UI SFX
 

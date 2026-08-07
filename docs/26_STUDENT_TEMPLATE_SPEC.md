@@ -350,15 +350,15 @@ ___________________________
 
 | Test | Assertion |
 |---|---|
-| `test_stage_template_import` | `StageTemplate` can be imported |
-| `test_stage_template_instantiate` | `StageTemplate(context)` constructs without exception |
-| `test_stage_template_tmx_exists` | The default TMX file exists at `TMX_PATH` |
-| `test_stage_template_has_required_layers` | The TMX contains all 8 required layer names |
-| `test_stage_template_has_stage_scene_attrs` | Instance has `_stage_data`, `_player`, `_camera` (inherited from StageScene) |
-| `test_boss_template_import` | `BossTemplate` can be imported |
-| `test_boss_template_constructs` | `BossTemplate(pygame.Vector2(0, 0))` does not raise |
-| `test_boss_template_has_required_methods` | Instance has `_patrol_behavior`, `_alert_behavior`, `_get_animation_key`, `_build_hitbox`, `_build_hurtbox` |
-| `test_boss_template_has_one_phase` | `len(BossTemplate(...).phases) == 1` (the placeholder phase) |
+| `TestStageTemplate::test_import` | `StageTemplate` can be imported |
+| `TestStageTemplate::test_can_instantiate` | `StageTemplate(context)` constructs without exception |
+| `TestStageTemplate::test_tmx_exists` | The default TMX file exists at `TMX_PATH` |
+| `TestStageTemplate::test_default_tmx_has_required_layers` | The TMX contains all 8 required layer names |
+| `TestStageTemplate::test_has_stage_scene_attributes` | Instance has `_stage_data`, `_player`, `_camera` (inherited from StageScene) |
+| `TestBossTemplate::test_import` | `BossTemplate` can be imported |
+| `TestBossTemplate::test_constructs` | `BossTemplate(pygame.Vector2(0, 0))` does not raise |
+| `TestBossTemplate::test_has_required_methods` | Instance has `_patrol_behavior`, `_alert_behavior`, `_get_animation_key`, `_build_hitbox`, `_build_hurtbox` |
+| `TestBossTemplate::test_has_one_phase` | `len(BossTemplate(...).phases) == 1` (the placeholder phase) |
 
 ---
 
