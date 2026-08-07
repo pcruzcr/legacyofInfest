@@ -128,6 +128,11 @@ class SpeedrunTimer:
         return list(self._splits)
 
     def save(self, path: str | Path | None = None) -> None:
+        # AUD-315 — firmado como `registrar_marca`: el fichero que escribe
+        # `save()` es el mismo libro de récords que lee la pantalla, y si
+        # cualquiera de los dos se escribía sin firma bastaba editar el JSON
+        # para «mejorar» un tiempo. AUD-316 — y por `escribir_atomicamente`:
+        # un corte a mitad de escritura dejaba roto el libro entero.
         data = {
             "global_time": self._global_time,
             # AUD-245: por el accesor público, que devuelve una copia. Volcar
@@ -137,8 +142,10 @@ class SpeedrunTimer:
             "splits": self.get_splits(),
         }
         path = Path(path) if path is not None else _DEFAULT_SAVE_PATH
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(orjson.dumps(data, option=orjson.OPT_INDENT_2))
+        from src.engine.core.integridad import volcar
+        from src.engine.core.save_manager import escribir_atomicamente
+
+        escribir_atomicamente(path, volcar(data))
 
     def load(self, path: str | Path | None = None) -> None:
         ruta = Path(path) if path is not None else _DEFAULT_SAVE_PATH
@@ -253,8 +260,11 @@ class GhostData:
 
     def save(self, path: str | Path) -> None:
         path = Path(path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(orjson.dumps(self._frames, option=orjson.OPT_INDENT_2))
+        from src.engine.core.save_manager import escribir_atomicamente
+
+        # AUD-316: el fantasma no lleva firma (AUD-295: una lista no tiene
+        # dónde ponerla), pero sí escritura atómica.
+        escribir_atomicamente(path, orjson.dumps(self._frames, option=orjson.OPT_INDENT_2))
 
     def load(self, path: str | Path) -> None:
         ruta = Path(path)
@@ -359,12 +369,13 @@ def registrar_marca(
         "apodo": _apodo_actual(),
     }
     try:
-        ruta.parent.mkdir(parents=True, exist_ok=True)
         # AUD-295 — firmado. El libro de récords es justo donde ocurre la
-        # edición casual: abrirlo, poner 0.5 y volver a entrar.
+        # edición casual: abrirlo, poner 0.5 y volver a entrar. AUD-316 — y
+        # atómico: pisar el libro a mitad de escritura lo dejaba ilegible.
         from src.engine.core.integridad import volcar
+        from src.engine.core.save_manager import escribir_atomicamente
 
-        ruta.write_bytes(volcar(contenido))
+        escribir_atomicamente(ruta, volcar(contenido))
     except OSError:
         logger.warning("speedrun: no se pudo anotar la marca en %s", ruta,
                        exc_info=True)

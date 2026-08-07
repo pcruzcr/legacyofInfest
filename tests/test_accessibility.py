@@ -97,6 +97,26 @@ class TestUserSettings:
         blocked.mkdir()
         assert user_settings.UserSettings().save(blocked) is False
 
+    def test_a_save_failure_does_not_eat_the_previous_file(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        """AUD-316 — `write_bytes` pisa el fichero en su sitio: un corte a
+        mitad de la escritura dejaba la configuración anterior rota. Con el
+        reemplazo atómico, si el renombrado falla lo de antes queda intacto."""
+        from src.engine.core import save_manager
+
+        target = tmp_path / "config.json"
+        target.write_text("antes", encoding="utf-8")
+
+        def _renombre_que_falla(_tmp: str, _ruta: str) -> None:
+            raise OSError("disco lleno")
+
+        monkeypatch.setattr(save_manager.os, "replace", _renombre_que_falla)
+        assert user_settings.UserSettings().save(target) is False
+        assert target.read_text(encoding="utf-8") == "antes", (
+            "el guardado fallido se comió la configuración anterior"
+        )
+
 
 # ── the colourblind filter actually filters ──────────────────────
 

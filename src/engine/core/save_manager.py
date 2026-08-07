@@ -19,6 +19,42 @@ logger = logging.getLogger(__name__)
 _SAVES_HEREDADO = settings.PROJECT_ROOT / "saves"
 
 
+def escribir_atomicamente(path: Path, datos: bytes) -> None:
+    """Escribe `datos` en `path` sin poder dejar el fichero a medias (AUD-316).
+
+    La misma receta que `save()` de abajo —fichero temporal en el mismo
+    directorio, `fsync` y `os.replace`— exportada para los demás datos del
+    jugador. `write_bytes` pisa el fichero en su sitio, y un corte a mitad de
+    la escritura (disco lleno, apagón) dejaba roto lo que había; con el
+    temporal, el fichero bueno sigue entero hasta que el nuevo está listo.
+
+    Lanza `OSError` si algo falla —con el temporal limpiado—; cada llamador
+    decide si eso se avisa o se traga.
+    """
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
+    try:
+        try:
+            f = os.fdopen(fd, "wb")
+        except Exception:
+            os.close(fd)
+            os.unlink(tmp)
+            raise
+        with f:
+            f.write(datos)
+            # Flush to the OS *and* to the platter before the rename:
+            # without the fsync, a power loss can leave the new entry pointing
+            # at unwritten (zero-filled) blocks.
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, str(path))
+    except Exception:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+        raise
+
+
 def volcar_estado_en(data: SaveData) -> None:
     """Copia inventario y puntuación **actuales** dentro de la partida — AUD-292.
 

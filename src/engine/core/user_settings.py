@@ -147,6 +147,15 @@ class UserSettings:
     hold_to_press: bool = False
     #: Velocidad de la máquina de escribir. `instant` muestra el texto entero.
     text_speed: str = "normal"
+    #: Contorno de silueta también sobre los enemigos (AUD-304).
+    #:
+    #: Apagada por defecto a propósito, y no por lo que cuesta. El contorno del
+    #: jugador (AUD-190) existe para decir «este eres tú»; si todo lo que se
+    #: mueve lleva borde, esa señal desaparece. Y encenderla por defecto
+    #: cambiaría el aspecto de los dieciséis mapas ya calificados, que es lo que
+    #: la invariante 2 no permite. El razonamiento entero está en
+    #: `framework/vfx/contorno.py`.
+    contorno_de_enemigos: bool = False
 
     # Not persisted: resolved at load time so callers need not handle None.
     _path: Path | None = field(default=None, repr=False, compare=False)
@@ -235,8 +244,12 @@ class UserSettings:
             k: v for k, v in asdict(self).items() if not k.startswith("_")
         }
         try:
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(orjson.dumps(payload, option=orjson.OPT_INDENT_2))
+            from src.engine.core.save_manager import escribir_atomicamente
+
+            # AUD-316: escribir a un temporal y renombrar; `write_bytes` pisa
+            # el fichero en su sitio y un corte a mitad dejaba la config
+            # anterior rota.
+            escribir_atomicamente(target, orjson.dumps(payload, option=orjson.OPT_INDENT_2))
         except OSError as exc:
             logger.warning("UserSettings: could not write %s (%s)", target, exc)
             return False
