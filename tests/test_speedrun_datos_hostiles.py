@@ -172,3 +172,47 @@ class TestElFantasma:
 
         assert leido.frame_count == 2
         assert leido.get_frame(1) == {"x": 3.0, "y": 4.0}
+
+
+class TestElGuardadoFirmaYEsAtomico:
+    """AUD-315/316 — `registrar_marca` firmaba los récords (AUD-295) pero
+    `save()` sobreescribía ese mismo fichero sin firma, y los guardados
+    pisaban el fichero en su sitio: un corte a mitad de escritura dejaba roto
+    lo que había."""
+
+    def test_el_cronometro_firma_al_guardar(self, tmp_path) -> None:
+        from src.engine.core import integridad
+
+        crono = SpeedrunTimer()
+        crono.split("stage0")
+        destino = tmp_path / "speedrun.json"
+        crono.save(destino)
+
+        datos = integridad.cargar(destino.read_bytes(), origen="test")
+        assert datos is not None and integridad.esta_firmado(datos), (
+            "save() escribe sin firma: el libro de récords queda editable a mano"
+        )
+
+    def test_un_guardado_que_falla_no_pierde_el_fichero_anterior(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        from src.engine.core import save_manager
+
+        destino = tmp_path / "speedrun.json"
+        destino.write_text("antes", encoding="utf-8")
+        crono = SpeedrunTimer()
+        crono._global_time = 7.0
+
+        def _renombre_que_falla(_tmp: str, _ruta: str) -> None:
+            raise OSError("disco lleno")
+
+        monkeypatch.setattr(save_manager.os, "replace", _renombre_que_falla)
+        with pytest.raises(OSError):
+            crono.save(destino)
+
+        assert destino.read_text(encoding="utf-8") == "antes", (
+            "el guardado fallido se comió el fichero bueno de antes"
+        )
+        assert not list(tmp_path.glob("*.tmp")), (
+            "el fallo dejó basura temporal en el directorio de guardados"
+        )
