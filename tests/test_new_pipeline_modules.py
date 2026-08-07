@@ -85,6 +85,32 @@ class TestAudioPipeline:
         second = pipeline.load_as_wav(wav)
         assert first == second
 
+    def test_el_reverb_no_envuelve_el_audio(self) -> None:
+        """AUD-314 — `samples + wet` se volcaba a int16 antes de saturar: una
+        muestra a volumen máximo con su eco (30000 + 0.5·30000 ≈ 45000) se
+        envolvía a -20536. La mezcla tiene que recortar, no envolver."""
+        import struct
+
+        import numpy as np
+        from pydub import AudioSegment
+
+        from src.engine.audio.audio_pipeline import AudioPipeline
+
+        pipeline = AudioPipeline()
+        delay = int(44100 * 50 / 1000)
+        nivel = 30000
+        seg = AudioSegment(
+            struct.pack(f"<{delay * 2}h", *[nivel] * (delay * 2)),
+            frame_rate=44100, sample_width=2, channels=1,
+        )
+        con_eco = pipeline._apply_reverb(seg, decay=0.5)
+        muestras = np.array(con_eco.get_array_of_samples(), dtype=np.int32)
+        assert muestras.max() <= 32767, "el reverb desbordó a int16"
+        assert muestras.min() >= -32768, "el reverb desbordó a int16"
+        assert muestras[delay] == 32767, (
+            "la mezcla envolvió en vez de saturar: se oye un crujido"
+        )
+
 
 # ── Lua Scripting (lupa) ────────────────────────────────────────────────
 
