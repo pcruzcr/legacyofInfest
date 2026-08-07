@@ -9,6 +9,7 @@ zones, checkpoints, and the next-trigger portal.
 from __future__ import annotations
 
 import logging
+import re
 import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -445,6 +446,15 @@ _NUMERIC_PROPS: tuple[str, ...] = (
     "detection_range_x", "detection_range_y", "charge_speed",
 )
 
+#: Propiedades de enemigo que son booleanas (AUD-305).
+#:
+#: Hacen falta declaradas porque un estudiante que escriba `admite_bash` en
+#: Tiled **sin marcar el tipo `bool`** entrega la cadena `"false"`, y una cadena
+#: no vacía es cierta en Python. Sin esta lista, escribir «false» encendía la
+#: propiedad — el peor fallo posible, porque parece que la opción no funciona
+#: cuando lo que pasa es que no se puede apagar.
+_BOOL_PROPS: tuple[str, ...] = ("admite_bash",)
+
 
 class StageLoader:
     _entity_registry: dict[str, type[BaseEntity]] = {}
@@ -547,12 +557,86 @@ class StageLoader:
         if cached is not None:
             return cached
 
+        cls._rechazar_mapa_hostil(resolved)
         tmx_data = load_pygame(str(resolved))
         # Only ever keep one parse in flight; stages are large and holding
         # several maps' tilesets resident is not worth the memory.
         cls._tmx_cache.clear()
         cls._tmx_cache[key] = tmx_data
         return tmx_data
+
+    #: `source="..."` aparece en `<tileset>`, `<image>` y `<objecttemplate>`.
+    #: Es la lista de rutas que pytmx abrirá por su cuenta.
+    _FUENTE_TMX = re.compile(rb'source="([^"]*)"')
+
+    @classmethod
+    def _rechazar_mapa_hostil(cls, tmx_path: Path) -> None:
+        """AUD-317 — dos cosas que pytmx hace sin preguntar y que un TMX
+        hostil puede explotar:
+
+        * **Expansión de entidades XML** (*billion laughs*): el parser de
+          pytmx expande `<!ENTITY>` sin límite; un mapa de 400 bytes puede
+          pedir gigabytes de RAM. Tiled jamás exporta entidades propias, así
+          que cualquier `<!ENTITY>` es un ataque y se corta antes de parsear.
+        * **Travesía de rutas**: las `source="..."` se resuelven contra el
+          directorio del mapa y pytmx abre el resultado sin preguntar. Para
+          los mapas dentro del árbol del juego, ninguna source puede resolver
+          fuera de él (los mapas reales usan `../../../assets/...`, que
+          vuelve a entrar en el árbol). Los mapas fuera del árbol —pruebas,
+          herramientas— no se juzgan: no hay raíz que usar como contención.
+
+        Falla duro y pronto: un mapa envenenado no debe llegar a abrir ficheros.
+        """
+        try:
+            crudo = tmx_path.read_bytes()
+        except OSError:
+            # El fichero no se puede leer: pytmx ya dirá su error. No cambia
+            # el comportamiento, sólo no mete una lectura extra en el camino.
+            return
+
+        if b"<!ENTITY" in crudo.upper():
+            raise ValueError(
+                f"mapa hostil: {tmx_path.name} declara entidades XML "
+                "(<!ENTITY>); el parser las expande sin límite. Se rechaza "
+                "antes de parsear para que no haya expansión que acotar."
+            )
+
+        if cls._bajo(tmx_path, settings.PROJECT_ROOT):
+            cls._rechazar_travesia_en(tmx_path, crudo)
+
+    @classmethod
+    def _rechazar_travesia_en(cls, tmx_path: Path, crudo: bytes) -> None:
+        """Recorre las `source="..."` del TMX y de sus TSX comprobando que
+        ninguna resuelva fuera de `PROJECT_ROOT`."""
+        pendientes: list[tuple[Path, bytes]] = [(tmx_path, crudo)]
+        vistos: set[Path] = set()
+        while pendientes:
+            archivo, texto = pendientes.pop()
+            vistos.add(archivo)
+            for m in cls._FUENTE_TMX.finditer(texto):
+                referencia = m.group(1).decode("utf-8", "replace")
+                if not referencia:
+                    continue
+                destino = (archivo.parent / referencia).resolve()
+                if not cls._bajo(destino, settings.PROJECT_ROOT):
+                    raise ValueError(
+                        f"mapa hostil: {tmx_path.name} referencia {referencia!r}, "
+                        f"que resuelve fuera del árbol del juego ({destino}). "
+                        "Los mapas y sus tilesets viven dentro del proyecto."
+                    )
+                if destino.suffix.lower() == ".tsx" and destino not in vistos:
+                    try:
+                        pendientes.append((destino, destino.read_bytes()))
+                    except OSError:
+                        pass  # pytmx dirá que falta; aquí no hay travesía que juzgar
+
+    @staticmethod
+    def _bajo(ruta: Path, raiz: Path) -> bool:
+        try:
+            ruta.relative_to(raiz)
+            return True
+        except ValueError:
+            return False
 
     @classmethod
     def clear_tmx_cache(cls) -> None:
@@ -1170,6 +1254,8 @@ class StageLoader:
                 cleaned[k] = cls._safe_int(v, "zone")
             elif k in _NUMERIC_PROPS:
                 cleaned[k] = cls._safe_float(v, k)
+            elif k in _BOOL_PROPS:
+                cleaned[k] = cls._bool_de(v, por_defecto=False)
             else:
                 cleaned[k] = v
         return cleaned
