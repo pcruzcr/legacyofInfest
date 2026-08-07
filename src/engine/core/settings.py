@@ -35,6 +35,13 @@ STUDENT_TEMPLATES_DIR: Path = _PROJECT_ROOT / "student_templates"
 PLAYER_MAX_HEALTH: float = 5.0
 GRAVITY: float = 800.0
 PLAYER_WALK_SPEED: float = 90.0
+#: Base del deslizamiento sostenido en cuesta (AUD-326): sin entrada
+#: horizontal, la gravedad desliza al jugador cuesta abajo a
+#: `PLAYER_SLOPE_SLIDE_SPEED * sin(fi) * cos(fi)` px/s — la componente
+#: paralela de la gravedad a lo largo de la hipotenusa, como la proyección
+#: de aterrizaje de AUD-324, pero acotada: velocidad constante, no una
+#: aceleración en fuga. La mitad de `PLAYER_WALK_SPEED` como máximo (45°).
+PLAYER_SLOPE_SLIDE_SPEED: float = 90.0
 PLAYER_JUMP_FORCE: float = -380.0
 PLAYER_MAX_FALL_SPEED: float = 500.0
 PLAYER_COYOTE_FRAMES: int = 6

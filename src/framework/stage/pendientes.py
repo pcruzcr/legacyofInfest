@@ -37,6 +37,31 @@ fotograma y desciende a saltitos. `MARGEN_DE_PEGADO` es lo que lo arregla:
 estando ya en el suelo, se pega a la superficie aunque esté unos píxeles por
 debajo. Es lo que hacen todos los plataformas 2D con cuestas, y sin ello la
 mecánica se siente rota aunque los números sean correctos.
+
+Las entradas laterales (AUD-323)
+================================
+El eje X se mueve libre y el eje Y coloca sobre la hipotenusa; eso deja dos
+huecos que `resolver_lateral` tapa: la **cara empinada** —el segmento
+vertical del extremo alto, que se atraviesa y luego el eje Y absorbe hacia
+arriba— y la hipotenusa a media altura de una rampa estrecha. La regla que
+los hace seguros es una sola: **el centro sobre la rampa es territorio del
+eje Y**, y un jugador que está pisando la hipotenusa tiene la esquina
+hundida unos píxeles en la roca —al subir y al bajar— que es el precio
+normal de un suelo de un solo punto de apoyo. Frenar esa esquina rompería
+la marcha, así que la pared lateral sólo existe para quien tiene el centro
+fuera de la rampa y entra por un lado.
+
+Proyección de velocidad al aterrizar (AUD-324)
+==============================================
+`docs/87` §11 pidió por escrito "normales de superficie y proyección de
+velocidad". La normal está implícita en la hipotenusa; la proyección es
+`componente_de_deslizamiento`: al aterrizar, el impulso de la caída se
+descompone en el vector director de la superficie, y la componente
+perpendicular la absorbe el suelo. Caer en vertical sobre una cuesta de 45°
+empuja al jugador cuesta abajo a la mitad de la velocidad de caída — es
+seno por coseno, la misma cuenta de la Unidad II — en vez de pararlo en
+seco, que es lo que hace que una cuesta se sienta como un suelo y no como
+un escalón gigante.
 """
 from __future__ import annotations
 
@@ -95,19 +120,37 @@ def resolver(
 
     Reglas, y las tres importan:
 
-    * **Cayendo o quieto** (`velocidad_y >= 0`). Subiendo no: saltar desde una
-      cuesta tiene que despegar, no re-pegar al fotograma siguiente.
+    * **Cayendo o quieto** (`velocidad_y >= 0`). Subiendo no: saltar desde
+      una cuesta tiene que despegar, no re-pegar al fotograma siguiente.
     * **Los pies dentro de la franja** de la pendiente. Por encima de lo alto
       se está volando por encima; por debajo del pie, se está debajo del
       triángulo y ahí no hay suelo.
     * **Al bajar, con margen.** Ver `MARGEN_DE_PEGADO`.
     """
+    mejor, _ = resolver_con_ganadora(
+        rect, velocidad_y, en_el_suelo, pendientes)
+    return mejor
+
+
+def resolver_con_ganadora(
+    rect: pygame.Rect,
+    velocidad_y: float,
+    en_el_suelo: bool,
+    pendientes: list[Pendiente],
+) -> tuple[float | None, Pendiente | None]:
+    """Lo que devuelve `resolver`, más la pendiente que gana (AUD-324).
+
+    Quien proyecta la velocidad al aterrizar necesita saber **sobre qué**
+    aterriza, no sólo a qué altura. `resolver` conserva su contrato (un
+    `float`) y esta función es la que lleva el trabajo de verdad.
+    """
     if not pendientes or velocidad_y < 0:
-        return None
+        return None, None
 
     x = float(rect.centerx)
     pies = float(rect.bottom)
     mejor: float | None = None
+    ganadora: Pendiente | None = None
     for pendiente in pendientes:
         superficie = pendiente.altura_en(x)
         if superficie is None:
@@ -123,4 +166,108 @@ def resolver(
         # está pisando de verdad.
         if mejor is None or superficie < mejor:
             mejor = superficie
-    return mejor
+            ganadora = pendiente
+    return mejor, ganadora
+
+
+def resolver_lateral(
+    rect: pygame.Rect,
+    pendientes: list[Pendiente],
+) -> float | None:
+    """A qué `x` hay que mover el rectángulo, o `None` si nada lo frena.
+
+    La pared lateral de la rampa (AUD-323), con la misma convención que
+    `resolver`: devuelve una coordenada y no muta el rectángulo, que es de
+    quien lo posee. Dos paredes, en el orden en que se cruzan:
+
+    * **La cara empinada**: el segmento vertical del extremo alto. Es la
+      entrada que dejaba ver el hueco de AUD-297 — el jugador la cruzaba y
+      luego el eje Y lo absorbía hacia la superficie de la cuesta.
+    * **La hipotenusa a media altura**: en una rampa normal la resuelve el
+      eje Y antes de que llegue a importar (el centro entra en el rango
+      antes que el borde), pero en una rampa más estrecha que el jugador la
+      roca a la altura de los pies tiene huella y hay que frenar en el
+      cruce.
+
+    Las dos son **independientes de la dirección**: cruzarse con la pared
+    *es* la detección — el rectángulo que la cruza está incrustado, y se
+    empuja hacia fuera el mínimo. Quien sólo está rozando la esquina al
+    subir o al bajar tiene el centro sobre la rampa y se salta por la regla
+    del eje Y; y el pie de la cuesta tampoco es pared, porque quien sube
+    desde el suelo llano lo hace por el margen de pegado y frenarlo ahí lo
+    congelaría en el primer escalón.
+    """
+    if not pendientes:
+        return None
+    px = pygame.Rect(rect)
+    pies = float(px.bottom)
+    nueva_x: float | None = None
+    for pendiente in pendientes:
+        # Franja vertical del triángulo: sobrevolando la cima o bajo el pie
+        # no hay pared, igual que en `resolver`.
+        if (pies < pendiente.rect.top + 1.0
+                or pies > pendiente.rect.bottom + 1.0):
+            continue
+        # El centro sobre la rampa lo resuelve el eje Y: ni pared, ni freno.
+        if pendiente.altura_en(px.centerx) is not None:
+            continue
+        # Cara empinada: el extremo alto es un muro en toda su altura.
+        if pendiente.sube_a_la_derecha:
+            pared = float(pendiente.rect.right)
+            if px.left < pared < px.right:
+                px.left = pared
+                nueva_x = pared
+        else:
+            pared = float(pendiente.rect.left)
+            if px.left < pared < px.right:
+                px.right = pared
+                nueva_x = pared - rect.width
+        # Hipotenusa: la roca a la altura de los pies ocupa de `cruce` al
+        # lado alto (sube a la derecha) o del lado alto a `cruce` (sube a la
+        # izquierda); cruzarse con `cruce` es estar incrustado.
+        if pendiente.rect.height <= 0:
+            continue
+        # Cerca del pie la huella es de un píxel y el eje Y la resuelve con
+        # el margen de pegado: frenar aquí congelaría al jugador al bajarse.
+        if pies >= pendiente.rect.bottom - MARGEN_DE_PEGADO:
+            continue
+        factor = pendiente.rect.width / pendiente.rect.height
+        if pendiente.sube_a_la_derecha:
+            cruce = pendiente.rect.left + (pendiente.rect.bottom - pies) * factor
+            if px.left <= cruce < px.right:
+                px.right = cruce
+                nueva_x = cruce - rect.width
+        else:
+            cruce = pendiente.rect.right - (pendiente.rect.bottom - pies) * factor
+            if px.left < cruce <= px.right:
+                px.left = cruce
+                nueva_x = cruce
+    if nueva_x is None or px.x == rect.x:
+        return None
+    return nueva_x
+
+
+def componente_de_deslizamiento(
+    pendiente: Pendiente,
+    velocidad_y: float,
+) -> float:
+    """Cuánto del impulso de la caída se vuelve horizontal al aterrizar.
+
+    AUD-324 — la proyección de velocidad que `docs/87` §11 pidió por
+    escrito. Al caer con `velocidad_y` sobre una cuesta, la componente del
+    vector de caída a lo largo de la hipotenusa es
+    `sin(fi)·cos(fi)·velocidad_y`, donde `fi` es la inclinación: la
+    superficie empuja al jugador cuesta abajo. La componente perpendicular
+    la absorbe el suelo.
+
+    El signo lleva la dirección de bajada: `sube_a_la_derecha` baja hacia
+    la izquierda (negativo) y su espejo hacia la derecha. Devuelve 0 si no
+    hay caída o la pendiente es degenerada.
+    """
+    if velocidad_y <= 0 or pendiente.rect.height <= 0:
+        return 0.0
+    ancho = pendiente.rect.width
+    alto = pendiente.rect.height
+    factor = (ancho * alto) / (ancho * ancho + alto * alto)
+    signo = -1.0 if pendiente.sube_a_la_derecha else 1.0
+    return signo * velocidad_y * factor

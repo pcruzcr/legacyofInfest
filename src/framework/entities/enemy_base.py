@@ -139,6 +139,11 @@ class EnemyBase(BaseEntity):
         # --- Collision ---
         self._collision_rects: list[pygame.Rect] = []
         self._one_way_rects: list[pygame.Rect] = []
+        # AUD-325 â€” suelo inclinado para los enemigos. VacÃ­a por defecto:
+        # ningÃºn mapa entregado tiene pendientes, y el paso entero se salta.
+        # `_hug_slopes` excluye a los voladores, que no pisan suelo.
+        self._pendientes: list = []
+        self._hug_slopes: bool = True
 
         # --- Detection ---
         self.detection_range_x: float = detection_range_x
@@ -213,6 +218,10 @@ class EnemyBase(BaseEntity):
         self._tick_cooldowns(dt)
         self._advance_animation(dt)
         self._post_update(dt)
+        # AUD-325 â€” el suelo inclinado, al final: las subclases mueven la
+        # posiciÃ³n en distintos puntos (estado, knockback, `_post_update`),
+        # y Ã©ste es el Ãºnico lugar que las ve a todas.
+        self._resolver_pendientes()
 
     def _apply_knockback(self, dt: float) -> None:
         """Apply knockback velocity and decelerate."""
@@ -645,6 +654,36 @@ class EnemyBase(BaseEntity):
         """Store collision rects for Y-snapping and movement."""
         self._collision_rects = rects
         self._one_way_rects = one_way if one_way is not None else []
+
+    def set_pendientes(self, pendientes: list) -> None:
+        """Suelo inclinado que el enemigo respeta â€” AUD-325.
+
+        VacÃ­a por defecto: ningÃºn mapa entregado tiene pendientes, y el paso
+        entero se salta (la condiciÃ³n de siempre para no tocar nada).
+        """
+        self._pendientes = pendientes
+
+    def _resolver_pendientes(self) -> None:
+        """Pies pegados a la hipotenusa y freno lateral â€” AUD-325.
+
+        Los enemigos no tienen gravedad propia: andan sobre suelo llano a la
+        altura a la que se colocaron. Con pendientes, la misma geometrÃ­a del
+        jugador los mantiene sobre la cuesta (subiendo y bajando) y les
+        cierra la cara empinada, sin tocar la fÃ­sica de las subclases.
+        """
+        if not self._pendientes or not self._hug_slopes:
+            return
+        from src.framework.stage.pendientes import resolver, resolver_lateral
+
+        rect = pygame.Rect(int(self.position.x), int(self.position.y),
+                           self.rect.width, self.rect.height)
+        x = resolver_lateral(rect, self._pendientes)
+        if x is not None:
+            self.position.x = x
+            rect.x = int(x)
+        superficie = resolver(rect, 0.0, True, self._pendientes)
+        if superficie is not None:
+            self.position.y = float(superficie) - self.rect.height
 
     def _update_invincibility(self, dt: float) -> None:
         """Tick down invincibility timer and toggle flash."""

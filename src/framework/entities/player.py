@@ -25,6 +25,12 @@ from src.engine.utils.surface_pool import get_pool
 from src.framework.entities.base_entity import BaseEntity
 from src.framework.entities.player_state import PlayerStateData
 from src.framework.entities.ranged_weapon import ArcoDelJugador
+from src.framework.vfx.contorno import (
+    COLOR_JUGADOR,
+    COMPENSACIONES,
+    dibujar_con_contorno,
+    silueta_de,
+)
 
 if TYPE_CHECKING:
     from src.engine.input.input_manager import InputManager
@@ -47,30 +53,14 @@ SPRITE_H = 32
 #: fondo. No se toca ni un sprite; se dibuja la misma imagen teñida en cuatro
 #: desplazamientos, detrás. Las siluetas se cachean, así que cuesta cuatro
 #: blits por fotograma de una superficie ya calculada.
-_CONTORNO: tuple[tuple[int, int], ...] = ((-1, 0), (1, 0), (0, -1), (0, 1))
-
-#: Un blanco roto, no blanco puro: el blanco puro sobre pixel art oscuro se lee
-#: como un brillo y no como un borde.
-_COLOR_CONTORNO: tuple[int, int, int] = (236, 232, 220)
-
-_siluetas: dict[int, pygame.Surface] = {}
-
-
-def _silueta_de(frame: pygame.Surface) -> pygame.Surface:
-    """El mismo fotograma, teñido de un color plano, conservando su alfa."""
-    cacheada = _siluetas.get(id(frame))
-    if cacheada is not None:
-        return cacheada
-    silueta = frame.copy()
-    # BLEND_RGB_MAX y no MIN: el sprite del jugador es oscuro, y `min(oscuro,
-    # claro)` devuelve el oscuro — la primera versión de esto dibujaba cuatro
-    # copias de la misma sombra y el contraste medido no se movía ni una
-    # centésima. `max` lleva cada canal al color del borde allí donde el sprite
-    # es más oscuro, y las variantes RGB no tocan el alfa, así que la forma
-    # recortada se conserva.
-    silueta.fill(_COLOR_CONTORNO, special_flags=pygame.BLEND_RGB_MAX)
-    _siluetas[id(frame)] = silueta
-    return silueta
+#:
+#: AUD-304 — la implementación se mudó a `framework.vfx.contorno` para que los
+#: enemigos pudieran usarla también. Estos tres nombres se conservan porque son
+#: los que cita `tests/test_legibilidad_del_jugador.py`, que es la prueba que
+#: fija la medición de AUD-190 y no tiene por qué mudarse con el código.
+_CONTORNO = COMPENSACIONES
+_COLOR_CONTORNO = COLOR_JUGADOR
+_silueta_de = silueta_de
 
 # State -> (filename, frame_count)
 _PLAYER_SPRITE_MAP: dict[str, tuple[str, int]] = {
@@ -728,7 +718,7 @@ class Player(BaseEntity):
         # la altura que la caja acaba de dejar; antes de las de un sentido
         # porque una repisa atravesable por encima de una cuesta tiene que
         # poder atraparlo, y eso exige que ya esté colocado en la cuesta.
-        self._resolver_pendientes()
+        self._resolver_pendientes(dt)
 
         # One-way platforms (only resolve Y when falling)
         #
@@ -805,10 +795,7 @@ class Player(BaseEntity):
             offset_y = 0 if self._state_instance.state_enum == PlayerState.CROUCHING else self.rect.height - SPRITE_H
 
             destino = (screen_x + offset_x, screen_y + offset_y)
-            silueta = _silueta_de(frame)
-            for dx, dy in _CONTORNO:
-                surface.blit(silueta, (destino[0] + dx, destino[1] + dy))
-            surface.blit(frame, destino)
+            dibujar_con_contorno(surface, frame, destino)
             return
 
         # Fallback: colored rectangle when sprites are unavailable
@@ -1058,6 +1045,11 @@ class Player(BaseEntity):
                     self.velocity.x = 0.0
                     self.position.x = float(px.x)
 
+        # AUD-323 — la pared lateral de la rampa. Va después del bucle de
+        # cajas y antes del eje Y: la rampa no está en `collision_rects`, y
+        # esta es la única ventana del fotograma en que toca resolverla.
+        self._resolver_paredes_de_pendientes(w, h)
+
         # --- Y axis ---
         prev_bottom = self.position.y + h
         prev_top = self.position.y
@@ -1094,7 +1086,35 @@ class Player(BaseEntity):
                     check.y = py.y - 1
                     check.height = py.height + 2
 
-    def _resolver_pendientes(self) -> None:
+    def _resolver_paredes_de_pendientes(self, w: int, h: int) -> None:
+        """Frena la entrada lateral a la rampa — AUD-323.
+
+        El eje X se mueve libre y el eje Y coloca sobre la hipotenusa; eso
+        dejaba dos entradas laterales abiertas — la cara empinada del
+        extremo alto y la hipotenusa a media altura — por las que el
+        jugador cruzaba la roca y luego era absorbido hacia la superficie.
+        `resolver_lateral` devuelve la `x` corregida y esto la aplica, con
+        la velocidad frenada igual que contra una pared normal.
+        """
+        if not self._pendientes:
+            return
+        if self.vista_cenital:
+            # AUD-328 — la vista cenital no tiene gravedad, y sin gravedad
+            # no hay cuesta que resolver. En planta la rampa es terreno
+            # pintado: pegar al jugador a la hipotenusa sería una colisión
+            # que en esa vista no existe.
+            return
+        from src.framework.stage.pendientes import resolver_lateral
+
+        rect = pygame.Rect(int(self.position.x), int(self.position.y), w, h)
+        x = resolver_lateral(rect, self._pendientes)
+        if x is None:
+            return
+        if x != self.position.x:
+            self.velocity.x = 0.0
+        self.position.x = x
+
+    def _resolver_pendientes(self, dt: float) -> None:
         """Coloca los pies sobre la cuesta que se esté pisando — AUD-297.
 
         La geometría vive en `framework/stage/pendientes.py`, que no toca al
@@ -1104,17 +1124,49 @@ class Player(BaseEntity):
         """
         if not self._pendientes:
             return
-        from src.framework.stage.pendientes import resolver
+        if self.vista_cenital:
+            # AUD-328 — idem que la pared lateral: sin gravedad la rampa es
+            # terreno pintado y el glue vertical no debe activarse en la
+            # vista cenital.
+            return
+        from src.framework.stage.pendientes import (
+            componente_de_deslizamiento,
+            resolver_con_ganadora,
+        )
 
         rect = pygame.Rect(int(self.position.x), int(self.position.y),
                            self.rect.width, self.rect.height)
-        superficie = resolver(rect, self.velocity.y,
-                              self._venia_del_suelo or self.is_grounded,
-                              self._pendientes)
+        superficie, ganadora = resolver_con_ganadora(
+            rect, self.velocity.y,
+            self._venia_del_suelo or self.is_grounded,
+            self._pendientes)
         if superficie is None:
             return
         if not self.is_grounded and self.velocity.y > 0:
             self._event_bus.emit(Events.SFX_PLAYER_LAND)
+            # AUD-324 — la proyección de velocidad que `docs/87` §11 pidió:
+            # caer en vertical sobre una cuesta no debe parar al jugador en
+            # seco; el impulso de la caída se proyecta sobre la hipotenusa y
+            # lo empuja cuesta abajo.
+            if ganadora is not None:
+                self.velocity.x += componente_de_deslizamiento(
+                    ganadora, self.velocity.y)
+        elif ganadora is not None and self.velocity.x == 0.0:
+            # AUD-326 — el deslizamiento sostenido. El aterrizaje ya
+            # proyectó el impulso (AUD-324); aquí, estando ya en el suelo y
+            # sin entrada horizontal —la máquina de estados acaba de poner
+            # `velocity.x` a cero—, la gravedad desliza al jugador cuesta
+            # abajo a velocidad constante y acotada, sin aceleración en
+            # fuga. Andar —subiendo o bajando— manda: la entrada ya puso
+            # `velocity.x` y esto no se la discute.
+            desliz = componente_de_deslizamiento(
+                ganadora, settings.PLAYER_SLOPE_SLIDE_SPEED)
+            self.velocity.x = desliz
+            # Este método corre después de `_resolve_collision`: la
+            # velocidad que se ponga aquí no se integra este fotograma y la
+            # máquina de estados la pondrá a cero al siguiente, así que el
+            # deslizamiento se aplica sobre la posición directamente.
+            self.position.x += desliz * dt
         self.position.y = float(superficie) - self.rect.height
         self.velocity.y = 0.0
         self.is_grounded = True
