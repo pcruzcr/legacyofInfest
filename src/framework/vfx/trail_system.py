@@ -107,6 +107,16 @@ class TrailSystem:
         self._points = [p for p in self._points if p.alpha > 0]
 
     def draw(self, surface: pygame.Surface, offset: pygame.Vector2) -> None:
+        # AUD-329 — aquí no se usa `SpriteBatch`, y no es un pendiente.
+        #
+        # Los residuos comparten la superficie cacheada de `_silueta` y cada
+        # uno pide su alfa con `set_alpha` en el momento de dibujar. El lote
+        # leería **un solo** alfa para todas las órdenes: verificado con la
+        # misma superficie y alfas 180 y 90, `blit` suelto pinta 77 y 38 y
+        # `blits` agrupado pinta 77 y 77. Para agrupar sin romper el alfa
+        # habría que copiar la superficie por residuo y por fotograma, que es
+        # justo lo que F1.4a eliminó. El bucle está acotado por MAX_POINTS
+        # (24), así que el lote no tiene qué ganar aquí.
         for p in self._points:
             if p.alpha <= 0:
                 continue

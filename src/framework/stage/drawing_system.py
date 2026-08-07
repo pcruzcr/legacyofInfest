@@ -435,6 +435,12 @@ class DrawingSystem:
 
         view_w = surface.get_width()
         view_h = surface.get_height()
+        # AUD-329 — el wrap hacía un `blit` por copia de la capa, y una capa
+        # de 40 px sobre una vista de 800 eran veinte llamadas. Todas las
+        # copias son la misma superficie, sin `set_alpha` por capa ni
+        # banderas, así que el lote es transparente: un `blits` por fotograma
+        # para todo el fondo, en el mismo orden de capas.
+        lote = SpriteBatch()
         for index, layer in enumerate(layers):
             if not isinstance(layer, pygame.Surface):
                 continue
@@ -475,8 +481,9 @@ class DrawingSystem:
             y = -min(margen, max(0, int(camera.offset.y * factor * 0.5)))
             x = -shift_x
             while x < view_w:
-                surface.blit(layer, (x, y))
+                lote.dibujar(layer, (x, y))
                 x += layer_w
+        lote.volcar(surface)
 
     def _draw_stage_layers(
         self, surface: pygame.Surface, stage: StageData, camera: Camera,

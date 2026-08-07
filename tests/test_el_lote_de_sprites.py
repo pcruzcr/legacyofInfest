@@ -228,3 +228,98 @@ class TestLaIluminacion:
             return pygame.image.tobytes(destino, "RGB")
 
         assert pintar(True) == pintar(False)
+
+
+class TestElFondoDeParallax:
+    """AUD-329 — el wrap del fondo hacía un `blit` por copia de la capa.
+
+    Una capa de 40 px sobre una vista de 800 son veinte `blit` seguidos con la
+    misma superficie y las mismas banderas: el caso exacto para el que existe
+    `SpriteBatch`. Lo que cambia entre copias es la posición, no el origen ni
+    el estado de la superficie — no hay `set_alpha` por capa como en las
+    estelas —, así que el lote es transparente.
+    """
+
+    @staticmethod
+    def _escenario(anchos, factores):
+        capas = [pygame.Surface((a, 40), pygame.SRCALPHA) for a in anchos]
+        for i, capa in enumerate(capas):
+            capa.fill((40 * i + 30, 60, 90, 255))
+        return type("E", (), {
+            "background_layers": capas,
+            "background_factors": factores,
+        })()
+
+    @staticmethod
+    def _camara(x=0.0, y=0.0):
+        return type("C", (), {"offset": pygame.Vector2(x, y)})()
+
+    class _LienzoQueCuenta:
+        """Delega en una superficie real contando `blit` y `blits`."""
+
+        def __init__(self, ancho, alto):
+            self.superficie = pygame.Surface((ancho, alto))
+            self.blit_llamadas = 0
+            self.blits_llamadas = 0
+
+        def blit(self, *a, **k):
+            self.blit_llamadas += 1
+            return self.superficie.blit(*a, **k)
+
+        def blits(self, *a, **k):
+            self.blits_llamadas += 1
+            return self.superficie.blits(*a, **k)
+
+        def get_width(self):
+            return self.superficie.get_width()
+
+        def get_height(self):
+            return self.superficie.get_height()
+
+    def test_el_wrap_de_una_capa_estrecha_es_una_sola_llamada(self):
+        """Veinte copias de una capa de 40 px eran veinte llamadas."""
+        from src.framework.stage.drawing_system import DrawingSystem
+
+        lienzo = self._LienzoQueCuenta(800, 600)
+        escenario = self._escenario([40], [0.3])
+        DrawingSystem()._draw_background(lienzo, escenario, self._camara())
+        assert lienzo.blits_llamadas == 1, (
+            f"{lienzo.blits_llamadas} Surface.blits para una capa que se envuelve"
+        )
+        assert lienzo.blit_llamadas == 0, (
+            f"{lienzo.blit_llamadas} blit sueltos en el wrap del fondo"
+        )
+        assert lienzo.superficie.get_at((795, 5))[:3] != (0, 0, 0), (
+            "el wrap no llegó al borde derecho de la pantalla"
+        )
+
+    def test_el_lote_pinta_lo_mismo_que_blit_a_blit(self):
+        """El control es el comportamiento anterior, no una expectativa a mano."""
+        from src.framework.stage.drawing_system import DrawingSystem
+
+        escenario = self._escenario([40, 90, 400], [0.15, 0.35, 0.6])
+        camara = self._camara(37.0, 123.0)
+        view_w, view_h = 800, 600
+
+        def blit_a_blit(lienzo):
+            for index, capa in enumerate(escenario.background_layers):
+                factor = escenario.background_factors[index]
+                layer_w, layer_h = capa.get_width(), capa.get_height()
+                shift_x = int(camara.offset.x * factor) % layer_w
+                margen = max(0, layer_h - view_h)
+                y = -min(margen, max(0, int(camara.offset.y * factor * 0.5)))
+                x = -shift_x
+                while x < view_w:
+                    lienzo.blit(capa, (x, y))
+                    x += layer_w
+
+        uno = pygame.Surface((view_w, view_h))
+        uno.fill((0, 0, 0))
+        blit_a_blit(uno)
+
+        otro = pygame.Surface((view_w, view_h))
+        otro.fill((0, 0, 0))
+        DrawingSystem()._draw_background(otro, escenario, camara)
+
+        assert pygame.image.tobytes(uno, "RGBA") == \
+            pygame.image.tobytes(otro, "RGBA")

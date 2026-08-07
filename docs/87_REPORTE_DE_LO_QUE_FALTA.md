@@ -941,6 +941,27 @@ rasterizaban una elipse por sombra y por fotograma para pintar las mismas ocho
 del fotograma anterior. Medido en nuestros dos mapas: `stage4_1` de 6,42 a
 5,93 ms, `stage0` dentro del ruido.
 
+AUD-329 añadió el tercer sitio donde las llamadas crecen con el contenido: el
+**wrap del parallax** envolvía cada capa con un `blit` por copia — una capa de
+40 px sobre una vista de 800 eran veinte llamadas — y ahora el fondo entero
+sale en un solo `blits` por fotograma, en el mismo orden de capas.
+
+Y se comprobó lo que no se puede agrupar, con evidencia en lugar de silencio:
+
+* **Estelas** — los residuos comparten la superficie cacheada y piden su alfa
+  por punto con `set_alpha`; un lote lee un solo alfa para todas las órdenes
+  (verificado: `blit` suelto pinta 77 y 38, `blits` agrupado 77 y 77).
+  Agruparlas exigiría copiar la superficie por residuo y por fotograma, que es
+  justo lo que F1.4a eliminó.
+* **Números de daño** — cada número devuelve su superficie al pool antes de
+  poder volcar el lote; agrupar es comprar una copia por número.
+* **Partículas** — ya estaba medido (comentario del propio sistema): `blits`
+  con cuadrados cacheados mejora un 4 % con 508 partículas, empeora con 2.008,
+  y rompe el alfa de `SRCALPHA` porque `blits` mezcla donde `fill` escribe.
+
+El lote se queda donde es transparente, y cada sitio que lo rechaza tiene su
+razón escrita junto al código.
+
 **La ruta de GPU está medida y no está puesta.** Con la Quadro gana siempre
 dibujando —4,2× con 500 sprites, 10,4× con 8.000— pero el juego dibuja unas
 veinte entidades por fotograma, y a esa escala lo que costaría subirlas y
@@ -1822,6 +1843,7 @@ de esto, y la calificación de los dieciséis mapas se mantiene como control.
 | **325** | Los enemigos atravesaban la rampa | Los enemigos resuelven pendientes con la misma geometría, dentro de su propio bucle de resolución |
 | **326** | Quieto en la cuesta, el jugador quedaba clavado | Deslizamiento sostenido: sin entrada horizontal, la gravedad lo desliza cuesta abajo a `PLAYER_SLOPE_SLIDE_SPEED` por el factor de la pendiente — velocidad constante y acotada, sin aceleración en fuga; andar manda |
 | **328** | En vista cenital la rampa pegaba y frenaba | Sin gravedad no hay cuesta que resolver: en planta la rampa es terreno pintado — ni glue a la hipotenusa ni pared en la cara; lo que frena es la capa Collision, como siempre |
+| **329** | El wrap del parallax hacía un `blit` por copia de la capa | Un `SpriteBatch` por fotograma para todo el fondo: el wrap entero sale en un `blits`. Y se documenta, con evidencia, por qué no se agrupan estelas (alfa por punto sobre superficie compartida), números de daño (pool) y partículas (medición previa) |
 
 La física queda servida para cualquier contexto sin cambiar el contrato: la
 gravedad por escenario ya existía (`gravity_multiplier` en el TMX, con prueba
