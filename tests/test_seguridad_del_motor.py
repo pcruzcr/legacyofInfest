@@ -172,11 +172,50 @@ class TestUnTmxHostilNoRompeElCargador:
         )
         StageLoader.clear_tmx_cache()
 
-        # Lo que importa es que termine y falle por su cuenta, no que cargue:
-        # un mapa sin capas es inválido y el cargador debe decirlo.
+        # AUD-317 — la guarda tiene que cortar la bomba **antes** de expandir:
+        # si el rechazo llega tarde y por otro motivo, la prueba no demuestra
+        # que la expansión esté acotada, sólo que el cargador no reventó.
         with pytest.raises(Exception) as fallo:
             StageLoader.load(bomba)
-        assert "memory" not in str(fallo.value).lower()
+        assert "entidad" in str(fallo.value).lower(), (
+            "el mapa bomba debe rechazarse por la guarda de entidades XML, no "
+            "por un fallo tardío del parser: ese es el único rechazo que "
+            "prueba que nada se expandió"
+        )
+
+    def test_una_travesia_real_se_rechaza_por_geometria(self, tmp_path, monkeypatch) -> None:
+        """AUD-317 — el test de arriba se libraba porque `win.ini` no es un
+        tileset; una travesía hacia un fichero que sí lo parece se leería. La
+        guarda tiene que cortarla por geometría: ninguna `source=` puede
+        resolver fuera del árbol del juego."""
+        from src.engine.core import settings as cfg
+        from src.framework.stage.stage_loader import StageLoader
+
+        arbol = tmp_path / "arbol"
+        (arbol / "assets" / "maps").mkdir(parents=True)
+        objetivo = tmp_path / "fuera.txt"
+        objetivo.write_text("secreto", encoding="utf-8")
+        monkeypatch.setattr(cfg, "PROJECT_ROOT", arbol)
+
+        mapa = arbol / "assets" / "maps" / "travesia.tmx"
+        mapa.write_text(
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<map version="1.10" orientation="orthogonal" width="4" height="4" '
+            'tilewidth="16" tileheight="16">\n'
+            ' <tileset firstgid="1" source="../../../fuera.txt"/>\n'
+            ' <layer id="1" name="Terrain" width="4" height="4">'
+            '<data encoding="csv">0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0</data></layer>\n'
+            "</map>",
+            encoding="utf-8",
+        )
+        StageLoader.clear_tmx_cache()
+
+        with pytest.raises(Exception) as fallo:
+            StageLoader.load(mapa)
+        assert "hostil" in str(fallo.value).lower(), (
+            "una source= que escapa del árbol debe rechazarse por la guarda, "
+            "no por lo que le pase a pytmx con el fichero"
+        )
 
     def test_un_tileset_con_travesia_de_rutas_se_rechaza(self, tmp_path) -> None:
         """`source="../../../Windows/win.ini"` — el intento evidente de que el
