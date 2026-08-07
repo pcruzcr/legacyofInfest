@@ -53,12 +53,12 @@ que la suite pase. La suite hay que correrla en la máquina con el `.venv`.
 | AUD-168 | ALTA | `docs/22_API_CONTRACTS.md` §5.2, §5.3, §6.3 | contrato de API que documenta `AssetLoader.load_spritesheet → SpriteSheet`, un módulo `utils/spritesheet.py` y cuatro clases `*Transition` en `scene/transitions.py`. Los dos módulos se retiraron en AUD-098 y AUD-111; el método real es `load_sprite_sheet → list[pygame.Surface]` | **Corregido** |
 | AUD-168 | ALTA | `docs/48_SCREEN_TRANSITIONS.md` §1, §5 | describe una arquitectura de dos capas y da `199 lines` para un fichero que no existe | **Corregido** |
 | AUD-168 | MEDIA | `docs/22_API_CONTRACTS.md` §6.4 | firmas divergentes: doc `start_wipe(direction="left_to_right", duration=0.5)`, real `start_wipe(direction="left", duration=0.4, old_surface=None)`; doc `start_circle(expand=…)`, real `expanding=…` | **Corregido** |
-| AUD-168 | MEDIA | `docs/77_SYLLABUS_ALIGNMENT_AUDIT.md`, `10_LIBRARIES_AND_DEPENDENCIES.md`, `20_ASSET_BIBLE.md` | los tres mandan ejecutar `validate_assets.py` desde `tools/`; el script vive en `scripts/` | **Corregido** |
+| AUD-168 | MEDIA | `10_LIBRARIES_AND_DEPENDENCIES.md`, `20_ASSET_BIBLE.md` | los dos mandan ejecutar `validate_assets.py` desde `tools/`; el script vive en `scripts/` | **Corregido** |
 | AUD-168 | MEDIA | `CONTRIBUTING.md` | «369 tests» (hay 2.142 funciones definidas); «Branch from `main`» (las ramas son `prod`/`pprod`/`dev`); `ruff check src/` y `mypy src/` en vez de los alcances reales del CI; sección *New Enemy* que ignora la decisión AUD-046 | **Corregido** |
-| AUD-168 | MEDIA | `docs/24_TEST_PLAN.md` §12.1 y árboles | declara fixtures `reference_sprite_32x32.png` y `sample_dataset_tiny.npz` que no existen; las entradas se generan en `conftest.py` | **Corregido** |
+| AUD-168 | MEDIA | el antiguo `24_TEST_PLAN` (§12.1, retirado con la fusión de docs) y sus árboles | declara fixtures `reference_sprite_32x32.png` y `sample_dataset_tiny.npz` que no existen; las entradas se generan en `conftest.py` | **Corregido** |
 | AUD-168 | BAJA | `docs/17_BOSS_SPEC.md` | ruta `src/stages/boss_gavilan/` → real `src/stages/stage3_4_boss_gavilan/` | **Corregido** |
 | AUD-168 | BAJA | `KNOWN_GAPS.md` GAP | `game_context.py` situado en `framework/core/` → vive en `src/engine/core/game_context.py` | **Corregido** |
-| AUD-168 | BAJA | `docs/80_TICKET_BACKLOG.md`, `50_IMPROVEMENT_ROADMAP.md` | tickets y tabla de migración apuntando a los dos módulos retirados, y un ejemplo que carga `stage0.tmx` desde `assets/maps/` sin su directorio | **Corregido** |
+| AUD-168 | BAJA | tickets del `80_TICKET_BACKLOG` y tabla del `50_IMPROVEMENT_ROADMAP` (retirados) | tickets y tabla de migración apuntando a los dos módulos retirados, y un ejemplo que carga `stage0.tmx` desde `assets/maps/` sin su directorio | **Corregido** |
 | AUD-169 | MEDIA | `docs/00_MASTER_INDEX.md` §2 | la «lista autoritativa» no mencionaba 13 documentos; la fila 68 apuntaba a un documento de `niveles/` | **Corregido** |
 
 ### Corrección estructural
@@ -670,8 +670,8 @@ un cuarto objetivo si conviene medirlo igual.
 **Alcance:** mecánicas, gameplay, *funfactor*, level design y el inventario
 completo de lo que un estudiante puede declarar en un TMX.
 **Hallazgo:** AUD-182.
-**Informe completo:** `docs/71_REVISION_DE_JUEGO.md` — aquí sólo va el resumen
-y la evidencia de la corrección.
+**Informe completo:** la revisión de juego se fusionó en este informe; aquí
+va el resumen y la evidencia de la corrección.
 
 ### Inventario medido
 
@@ -1801,8 +1801,8 @@ base. La prueba incluye **la comprobación que lo habría evitado**: que
 
 ### GAP-032 — cinco de siete mecánicas de F5 no las invoca nadie
 
-`docs/56_FASE_5_ECS_Y_MECANICAS.md` lista siete bajo el epígrafe «Y en
-código:». Medidas una por una:
+La fase 5 de la migración ECS (documento retirado en la fusión) listaba siete
+mecánicas bajo el epígrafe «Y en código:». Medidas una por una:
 
 | Mecánica | ¿La usa el juego? |
 |---|---|

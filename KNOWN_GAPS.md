@@ -816,7 +816,8 @@ Nunca borrar entradas - marcar como resueltas.
 
 - **File:** `src/framework/stage/level_mechanics.py`, `src/framework/ecs/bullet_swarm.py`, `src/framework/entities/boss_base.py`
 - **Phase:** auditoría 2026-08-03, AUD-243
-- **Reason:** `docs/56_FASE_5_ECS_Y_MECANICAS.md` lista siete mecánicas bajo el
+- **Reason:** la fase 5 de la migración ECS (documento retirado en la fusión)
+  listaba siete mecánicas bajo el
   epígrafe **«Y en código:»**. Medido una por una con `grep -rn` sobre `src/`,
   excluyendo el módulo propio de cada una:
 
