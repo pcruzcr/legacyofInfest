@@ -55,6 +55,30 @@ uno cada uno y no se pueden agrupar con nada.
 Los que **sí** crecen con el contenido son dos, y son los que usan esto: los
 degradados de los focos —uno por luz— y las sombras bajo los pies —una por
 entidad—. Ahí el lote convierte N llamadas de Python en una.
+
+El régimen bajo, re-medido (AUD-330)
+====================================
+AUD-329 dejó escrito que el cruce «blits contra blit suelto» estaba en
+**cientos** de llamadas, porque el wrap del parallax —seis llamadas de
+pantalla completa— salía 2-3× más lento con lote. Se re-midió a propósito
+para el umbral automático, en la misma máquina y con los dos regímenes que
+hay en el juego: recortes de 32 px (sprites, sombras) y áreas de vista
+completa (parallax, iluminación):
+
+* 32 px, N = 2..500: `blits()` **gana siempre**, 0,73-0,82× del blit suelto
+  — ya con dos llamadas.
+* Vista completa, N = 2..20: **empate**, 0,97-1,03× — dentro del ruido.
+
+La diferencia de 2-3× de AUD-329 no se reproduce en ningún punto: era carga
+de máquina (la misma que hacía flak-ear `TestCabeEnElPresupuestoDeFotograma`).
+La conclusión de AUD-329 —no bachear el wrap— sigue en pie, pero por la razón
+correcta: es un empate medido, y el lote no compra nada donde ya son seis
+llamadas de pantalla completa.
+
+Por eso el umbral automático existe pero el valor medido es 1: `blits()` no
+pierde contra el bucle en **ninguna** talla de las medidas, así que lo único
+que hace el umbral es dejar la puerta abierta a un hardware donde el cruce
+se invierta — la medición está para repetirla con `scripts/bench_sprite_batch.py`.
 """
 from __future__ import annotations
 
@@ -84,12 +108,23 @@ class SpriteBatch:
     que se añade, igual que si se llamara a `blit` una vez tras otra. Ordenar
     por profundidad sigue siendo responsabilidad de quien dibuja, que es quien
     sabe qué significa «detrás».
+
+    `umbral` — cuántas órdenes hay que tener para agrupar (AUD-330)
+    ----------------------------------------------------------------
+    Por debajo del umbral, `volcar` hace un `blit` por orden; con el umbral o
+    más, un solo `blits()`. El valor por defecto es **1 — agrupar siempre**,
+    porque es lo que la medición sostiene: `blits()` gana o empata contra el
+    bucle suelto en todo el rango medido (0,73-1,03×, recortes de 32 px y
+    áreas de pantalla completa, N de 2 a 8.000). Subir el umbral sólo tiene
+    sentido en un hardware donde la medición se invierta, y la medición está
+    en `scripts/bench_sprite_batch.py` para repetirla ahí.
     """
 
-    __slots__ = ("_ordenes",)
+    __slots__ = ("_ordenes", "_umbral")
 
-    def __init__(self) -> None:
+    def __init__(self, umbral: int = 1) -> None:
         self._ordenes: list[_Orden] = []
+        self._umbral = umbral
 
     def __len__(self) -> int:
         return len(self._ordenes)
@@ -118,7 +153,15 @@ class SpriteBatch:
             return 0
         cuantos = len(self._ordenes)
         try:
-            destino.blits(self._ordenes, doreturn=False)
+            if cuantos < self._umbral:
+                # AUD-330 — el camino individual, por debajo del umbral.
+                # `blit(*orden)` cubre las tres aridades que admite `dibujar`:
+                # (origen, destino), (…, área) y (…, área, banderas), que son
+                # exactamente los argumentos posicionales de `Surface.blit`.
+                for orden in self._ordenes:
+                    destino.blit(*orden)
+            else:
+                destino.blits(self._ordenes, doreturn=False)
         finally:
             self._ordenes.clear()
         return cuantos

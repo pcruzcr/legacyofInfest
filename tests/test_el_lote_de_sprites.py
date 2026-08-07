@@ -117,6 +117,98 @@ class TestLoQueDibuja:
         assert destino.get_at((10, 10))[:3] == (0, 0, 0), "el área no se respetó"
 
 
+class TestElUmbralAutomatico:
+    """AUD-330 — por debajo del umbral, un `blit` por orden; con el umbral o
+    más, un solo `blits()`. El píxel resultante es el mismo en los dos caminos,
+    y el valor medido para el umbral por defecto es 1 — agrupar siempre."""
+
+    class _Registro:
+        def __init__(self) -> None:
+            self.blits_llamadas = 0
+            self.blit_llamadas = 0
+
+        def blit(self, *_a, **_k) -> None:
+            self.blit_llamadas += 1
+
+        def blits(self, *_a, **_k) -> None:
+            self.blits_llamadas += 1
+
+    def _cargar(self, lote, cuantos: int) -> None:
+        for i in range(cuantos):
+            lote.dibujar(_cuadro((10 + i, 20, 30)), (i * 7, i * 3))
+
+    def test_con_el_umbral_por_defecto_un_solo_blits(self) -> None:
+        lote = SpriteBatch()
+        self._cargar(lote, 8)
+        registro = self._Registro()
+        assert lote.volcar(registro) == 8
+        assert registro.blits_llamadas == 1
+        assert registro.blit_llamadas == 0
+
+    def test_debajo_del_umbral_un_blit_por_orden(self) -> None:
+        lote = SpriteBatch(umbral=5)
+        self._cargar(lote, 3)
+        registro = self._Registro()
+        assert lote.volcar(registro) == 3
+        assert registro.blit_llamadas == 3
+        assert registro.blits_llamadas == 0
+
+    def test_con_el_umbral_o_mas_un_solo_blits(self) -> None:
+        lote = SpriteBatch(umbral=5)
+        self._cargar(lote, 5)
+        registro = self._Registro()
+        assert lote.volcar(registro) == 5
+        assert registro.blits_llamadas == 1
+        assert registro.blit_llamadas == 0
+
+    def test_debajo_del_umbral_dibuja_igual_que_el_bucle(self) -> None:
+        """El camino individual tiene que producir los mismos píxeles que
+        llamar a `blit` a mano — es la condición de AUD-302, en el otro
+        camino."""
+        piezas = [(_cuadro((10 * i, 200 - 10 * i, 50)), (i * 7, i * 3))
+                  for i in range(8)]
+
+        uno = pygame.Surface((100, 100))
+        uno.fill((0, 0, 0))
+        for origen, pos in piezas:
+            uno.blit(origen, pos)
+
+        otro = pygame.Surface((100, 100))
+        otro.fill((0, 0, 0))
+        lote = SpriteBatch(umbral=100)
+        for origen, pos in piezas:
+            lote.dibujar(origen, pos)
+        lote.volcar(otro)
+
+        assert pygame.image.tobytes(uno, "RGBA") == pygame.image.tobytes(otro, "RGBA")
+
+    def test_debajo_del_umbral_respeta_area_y_banderas(self, destino) -> None:
+        """El desempaguetado `blit(*orden)` tiene que cubrir la aridad de
+        tres y de cuatro, que es donde el área y las banderas se jugarían la
+        vida."""
+        lote = SpriteBatch(umbral=10)
+        lote.dibujar(_cuadro((100, 100, 100), 20), (0, 0),
+                     pygame.Rect(0, 0, 5, 5), pygame.BLEND_RGB_ADD)
+        assert lote.volcar(destino) == 1
+        assert destino.get_at((2, 2))[:3] == (100, 100, 100)
+        assert destino.get_at((10, 10))[:3] == (0, 0, 0), "el área no se respetó"
+
+    def test_debajo_del_umbral_tambien_se_vacia_si_falla(self) -> None:
+        """El `finally` tiene que cubrir el camino individual, igual que el
+        agrupado: un lote que conserva sus órdenes tras un error las
+        repetiría en el fotograma siguiente."""
+
+        class _Roto:
+            def blit(self, *_a, **_k):
+                raise pygame.error("superficie muerta")
+
+        lote = SpriteBatch(umbral=5)
+        lote.dibujar(_cuadro((255, 0, 0)), (0, 0))
+        with pytest.raises(pygame.error):
+            lote.volcar(_Roto())
+        assert len(lote) == 0
+
+
 class TestElCicloDeVida:
     def test_volcar_vacia_el_lote(self, destino) -> None:
         lote = SpriteBatch()
