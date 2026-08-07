@@ -135,11 +135,25 @@ class TestDemoMenuScene:
         assert scene._selected == 0
 
     def test_confirm_selects_scene(self, context) -> None:
+        """AUD-318 — el test pulsaba CONFIRM y no afirmaba nada: pasaba
+        aunque el menú ignorara la pulsación. Ahora tiene que llamar a
+        `_abrir` con la entrada que está resaltada.
+
+        Se espía `_abrir` y no el resultado de `_abrir`: abrir una demo de
+        verdad pasa por `get_registry().build()`, y el registro sólo se llena
+        con el arranque completo de la aplicación — el contexto de test llega
+        con el registro vacío y `_abrir` se cae en «faltan recursos». Lo que
+        esta prueba mide es el cableado CONFIRM → entrada seleccionada, que
+        es lo que antes no medía nadie."""
         scene = DemoMenuScene(context)
         scene.on_enter()
+        scene._selected = 2
+        abierta = MagicMock()
+        scene._abrir = abierta
         context.input_manager.is_raw_key_pressed.return_value = False
-        context.input_manager.is_action_pressed.side_effect = lambda a: a == Action.CONFIRM
+        context.input_manager.is_action_just_pressed.side_effect = lambda a: a == Action.CONFIRM
         scene.update(0.016)
+        abierta.assert_called_once_with(scene._entradas[2])
 
     def test_scroll_offset_stays_zero_when_all_visible(self, context) -> None:
         scene = DemoMenuScene(context)

@@ -21,6 +21,17 @@ def _ensure_output_dir() -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def _png_guardado(ruta: Path) -> None:
+    """El PNG de inspección existe, no está vacío y tiene cabecera real.
+
+    AUD-319 — estos tests se llaman «guarda PNG» y no comprobaban nada: si
+    `pygame.image.save` fallara en silencio seguirían pasando. El artefacto
+    de inspección tiene que existir de verdad."""
+    assert ruta.exists(), f"no se escribió {ruta}"
+    assert ruta.stat().st_size > 60, f"{ruta} tiene un tamaño sospechoso"
+    assert ruta.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n", f"{ruta} no es un PNG"
+
+
 def _mask_surface(w: int = 32, h: int = 32) -> pygame.Surface:
     surf = pygame.Surface((w, h))
     surf.fill((0, 0, 0))
@@ -64,6 +75,7 @@ class TestThresholdBinary:
         surf = _mask_surface()
         result = VisionTools.threshold_binary(surf, 50)
         pygame.image.save(result, str(OUTPUT_DIR / "threshold_binary.png"))
+        _png_guardado(OUTPUT_DIR / "threshold_binary.png")
 
 
 class TestThresholdOtsu:
@@ -79,6 +91,7 @@ class TestThresholdOtsu:
         surf = _mask_surface()
         mask, _t = VisionTools.threshold_otsu(surf)
         pygame.image.save(mask, str(OUTPUT_DIR / "threshold_otsu.png"))
+        _png_guardado(OUTPUT_DIR / "threshold_otsu.png")
 
 
 class TestMorphology:
@@ -115,6 +128,7 @@ class TestMorphology:
                          ("close", VisionTools.morphological_close)]:
             result = op(mask, 3)
             pygame.image.save(result, str(OUTPUT_DIR / f"morphological_{name}.png"))
+            _png_guardado(OUTPUT_DIR / f"morphological_{name}.png")
 
 
 class TestConnectedComponents:
@@ -131,6 +145,7 @@ class TestConnectedComponents:
         mask = _mask_surface()
         result = VisionTools.connected_components(mask)
         pygame.image.save(result.label_surface, str(OUTPUT_DIR / "connected_components.png"))
+        _png_guardado(OUTPUT_DIR / "connected_components.png")
 
 
 class TestFilterComponentsByArea:
@@ -203,6 +218,7 @@ class TestWatershed:
         surf = _mask_surface(32, 32)
         label_surf, _ = VisionTools.watershed_segment(surf)
         pygame.image.save(label_surf, str(OUTPUT_DIR / "watershed.png"))
+        _png_guardado(OUTPUT_DIR / "watershed.png")
 
 
 class TestFeatureExtraction:

@@ -20,6 +20,17 @@ def _ensure_output_dir() -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def _png_guardado(ruta: Path) -> None:
+    """El PNG de inspección existe, no está vacío y tiene cabecera real.
+
+    AUD-319 — estos tests se llaman «guarda PNG» y no comprobaban nada: si
+    `pygame.image.save` fallara en silencio seguirían pasando. El artefacto
+    de inspección tiene que existir de verdad."""
+    assert ruta.exists(), f"no se escribió {ruta}"
+    assert ruta.stat().st_size > 60, f"{ruta} tiene un tamaño sospechoso"
+    assert ruta.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n", f"{ruta} no es un PNG"
+
+
 def _test_surface(w: int = 32, h: int = 32) -> pygame.Surface:
     surf = pygame.Surface((w, h))
     surf.fill((100, 150, 200))
@@ -104,6 +115,7 @@ class TestAdjustBrightness:
         surf = _test_surface()
         result = FilterTools.adjust_brightness(surf, 0.5)
         pygame.image.save(result, str(OUTPUT_DIR / "adjust_brightness.png"))
+        _png_guardado(OUTPUT_DIR / "adjust_brightness.png")
 
 
 class TestAdjustContrast:
@@ -132,6 +144,7 @@ class TestAdjustContrast:
         surf = _test_surface()
         result = FilterTools.adjust_contrast(surf, 2.0)
         pygame.image.save(result, str(OUTPUT_DIR / "adjust_contrast.png"))
+        _png_guardado(OUTPUT_DIR / "adjust_contrast.png")
 
 
 class TestStretchContrast:
@@ -155,6 +168,7 @@ class TestStretchContrast:
         surf = _test_surface()
         result = FilterTools.stretch_contrast(surf)
         pygame.image.save(result, str(OUTPUT_DIR / "stretch_contrast.png"))
+        _png_guardado(OUTPUT_DIR / "stretch_contrast.png")
 
 
 class TestStandardKernels:
@@ -202,6 +216,7 @@ class TestApplyKernel:
         kernel = FilterTools.get_standard_kernel("sharpen")
         result = FilterTools.apply_kernel(surf, kernel)
         pygame.image.save(result, str(OUTPUT_DIR / "apply_kernel_sharpen.png"))
+        _png_guardado(OUTPUT_DIR / "apply_kernel_sharpen.png")
 
 
 class TestGaussianBlur:
@@ -232,6 +247,7 @@ class TestGaussianBlur:
         surf = _test_surface()
         result = FilterTools.gaussian_blur(surf, 2.0)
         pygame.image.save(result, str(OUTPUT_DIR / "gaussian_blur.png"))
+        _png_guardado(OUTPUT_DIR / "gaussian_blur.png")
 
 
 class TestSobelEdge:
@@ -255,6 +271,7 @@ class TestSobelEdge:
         surf = _test_surface(64, 64)
         result = FilterTools.sobel_edge(surf)
         pygame.image.save(result, str(OUTPUT_DIR / "sobel_edge.png"))
+        _png_guardado(OUTPUT_DIR / "sobel_edge.png")
 
 
 class TestCannyEdge:
@@ -277,6 +294,7 @@ class TestCannyEdge:
         surf = _test_surface(64, 64)
         result = FilterTools.canny_edge(surf, 50, 150)
         pygame.image.save(result, str(OUTPUT_DIR / "canny_edge.png"))
+        _png_guardado(OUTPUT_DIR / "canny_edge.png")
 
 
 class TestSurfaceValidation:
