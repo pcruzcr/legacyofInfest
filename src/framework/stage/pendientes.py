@@ -111,6 +111,7 @@ def resolver(
     velocidad_y: float,
     en_el_suelo: bool,
     pendientes: list[Pendiente],
+    margen: float = MARGEN_DE_PEGADO,
 ) -> float | None:
     """A qué `y` hay que poner los pies, o `None` si ninguna pendiente manda.
 
@@ -125,10 +126,12 @@ def resolver(
     * **Los pies dentro de la franja** de la pendiente. Por encima de lo alto
       se está volando por encima; por debajo del pie, se está debajo del
       triángulo y ahí no hay suelo.
-    * **Al bajar, con margen.** Ver `MARGEN_DE_PEGADO`.
+    * **Al bajar, con margen.** Ver `MARGEN_DE_PEGADO`; AUD-333 — el margen
+      es parámetro porque un contexto de física distinto (un suelo con otro
+      agarre) lo declara en su perfil en vez de heredarlo por defecto.
     """
     mejor, _ = resolver_con_ganadora(
-        rect, velocidad_y, en_el_suelo, pendientes)
+        rect, velocidad_y, en_el_suelo, pendientes, margen=margen)
     return mejor
 
 
@@ -137,6 +140,7 @@ def resolver_con_ganadora(
     velocidad_y: float,
     en_el_suelo: bool,
     pendientes: list[Pendiente],
+    margen: float = MARGEN_DE_PEGADO,
 ) -> tuple[float | None, Pendiente | None]:
     """Lo que devuelve `resolver`, más la pendiente que gana (AUD-324).
 
@@ -159,8 +163,8 @@ def resolver_con_ganadora(
         # sobre ella. No es suelo.
         if pies > pendiente.rect.bottom + 1.0:
             continue
-        margen = MARGEN_DE_PEGADO if en_el_suelo else 1.0
-        if pies < superficie - margen:
+        margen_efectivo = margen if en_el_suelo else 1.0
+        if pies < superficie - margen_efectivo:
             continue
         # Con dos pendientes solapadas gana la más alta: es la que el jugador
         # está pisando de verdad.
@@ -173,6 +177,7 @@ def resolver_con_ganadora(
 def resolver_lateral(
     rect: pygame.Rect,
     pendientes: list[Pendiente],
+    margen: float = MARGEN_DE_PEGADO,
 ) -> float | None:
     """A qué `x` hay que mover el rectángulo, o `None` si nada lo frena.
 
@@ -229,7 +234,7 @@ def resolver_lateral(
             continue
         # Cerca del pie la huella es de un píxel y el eje Y la resuelve con
         # el margen de pegado: frenar aquí congelaría al jugador al bajarse.
-        if pies >= pendiente.rect.bottom - MARGEN_DE_PEGADO:
+        if pies >= pendiente.rect.bottom - margen:
             continue
         factor = pendiente.rect.width / pendiente.rect.height
         if pendiente.sube_a_la_derecha:

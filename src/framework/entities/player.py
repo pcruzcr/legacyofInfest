@@ -25,6 +25,7 @@ from src.engine.utils.surface_pool import get_pool
 from src.framework.entities.base_entity import BaseEntity
 from src.framework.entities.player_state import PlayerStateData
 from src.framework.entities.ranged_weapon import ArcoDelJugador
+from src.framework.physics.perfil import CENITAL, PLATAFORMAS, PhysicsProfile
 from src.framework.vfx.contorno import (
     COLOR_JUGADOR,
     COMPENSACIONES,
@@ -210,9 +211,13 @@ class Player(BaseEntity):
         super().__init__(spawn_position, event_bus)
 
         # ── Canonical state dataclass ──────────────────────────
+        # AUD-333 — el perfil de física se crea antes que cualquier dato que
+        # lo lea: el estado canónico arranca con el coyote del perfil, que
+        # por defecto vale exactamente lo de `settings`.
+        self.perfil = PhysicsProfile.plataformas()
         self._state = PlayerStateData()
         self._state.health = settings.PLAYER_MAX_HEALTH
-        self._state.coyote_counter = settings.PLAYER_COYOTE_FRAMES + 1
+        self._state.coyote_counter = self.perfil.coyote_frames + 1
         self._state.prev_foot_y = spawn_position.y + 32.0
 
         # --- Physics state ---
@@ -314,12 +319,14 @@ class Player(BaseEntity):
         self.gravity_multiplier: float = 1.0
         #: AUD-129 — vista cenital: sin gravedad y con movimiento en dos ejes.
         #:
-        #: Es una bandera del jugador y no un estado nuevo a propósito. Los 26
-        #: estados que ya existen —atacar, recibir daño, morir, parry— siguen
-        #: valiendo tal cual desde arriba; lo único que cambia es **cómo se
-        #: integra el movimiento**. Un `PlayerState.CENITAL` habría obligado a
-        #: duplicar la mitad de la máquina de estados para no ganar nada.
-        self.vista_cenital: bool = False
+        #: Es un **modo del perfil de física** (AUD-333) y no un estado nuevo a
+        #: propósito. Los 26 estados que ya existen —atacar, recibir daño,
+        #: morir, parry— siguen valiendo tal cual desde arriba; lo único que
+        #: cambia es **cómo se integra el movimiento**. Un
+        #: `PlayerState.CENITAL` habría obligado a duplicar la mitad de la
+        #: máquina de estados para no ganar nada. `vista_cenital` se conserva
+        #: como propiedad: la leen y la escriben las escenas, y detrás es
+        #: `self.perfil.modo`.
 
         # --- Direction ---
         self.facing_direction: int = 1  # -1 left, 1 right
@@ -383,8 +390,26 @@ class Player(BaseEntity):
         directly, which is why ``Inventory.get_total_speed_bonus()`` had no
         callers — there was nowhere for the bonus to be applied. Routing speed
         through the player means every state picks up relic effects for free.
+
+        AUD-333 — la base sale del perfil de física: un contexto con otra
+        velocidad de suelo la declara en su perfil y todos los estados la
+        heredan sin tocar una línea.
         """
-        return settings.PLAYER_WALK_SPEED * (1.0 + self._bonus_speed)
+        return self.perfil.velocidad_suelo * (1.0 + self._bonus_speed)
+
+    @property
+    def vista_cenital(self) -> bool:
+        """AUD-333 — la vista cenital es un **modo del perfil**, no una bandera.
+
+        La propiedad conserva el contrato de siempre —las escenas leen y
+        escriben `player.vista_cenital`— y detrás el modo es `perfil.modo`:
+        un contexto nuevo cambia el perfil y el integrador entero se entera.
+        """
+        return self.perfil.modo == CENITAL
+
+    @vista_cenital.setter
+    def vista_cenital(self, valor: bool) -> None:
+        self.perfil.modo = CENITAL if valor else PLATAFORMAS
 
     @property
     def damage_multiplier(self) -> float:
@@ -922,19 +947,23 @@ class Player(BaseEntity):
         self._wall_side = 0
         if not self.is_grounded:
             gm = self.gravity_multiplier
-            # Wall slide: reduced gravity when touching wall
+            # AUD-333 — gravedad, caída máxima y factores de muro salen del
+            # perfil: un contexto declara su física, el integrador la lee.
             if wall_side != 0 and self.velocity.y > 0:
-                self.velocity.y += settings.GRAVITY * gm * 0.3 * dt
+                self.velocity.y += (
+                    self.perfil.gravedad * gm
+                    * self.perfil.muro.factor_gravedad * dt
+                )
                 self.velocity.y = min(
                     self.velocity.y,
-                    settings.PLAYER_MAX_FALL_SPEED * gm * 0.5,
+                    self.perfil.max_caida * gm * self.perfil.muro.factor_max_caida,
                 )
                 self._wall_slide_timer += dt
             else:
-                self.velocity.y += settings.GRAVITY * gm * dt
+                self.velocity.y += self.perfil.gravedad * gm * dt
                 self.velocity.y = min(
                     self.velocity.y,
-                    settings.PLAYER_MAX_FALL_SPEED * gm,
+                    self.perfil.max_caida * gm,
                 )
                 self._wall_slide_timer = 0.0
 
@@ -1107,7 +1136,9 @@ class Player(BaseEntity):
         from src.framework.stage.pendientes import resolver_lateral
 
         rect = pygame.Rect(int(self.position.x), int(self.position.y), w, h)
-        x = resolver_lateral(rect, self._pendientes)
+        x = resolver_lateral(
+            rect, self._pendientes,
+            margen=self.perfil.cuestas.margen_pegado)
         if x is None:
             return
         if x != self.position.x:
@@ -1139,7 +1170,8 @@ class Player(BaseEntity):
         superficie, ganadora = resolver_con_ganadora(
             rect, self.velocity.y,
             self._venia_del_suelo or self.is_grounded,
-            self._pendientes)
+            self._pendientes,
+            margen=self.perfil.cuestas.margen_pegado)
         if superficie is None:
             return
         if not self.is_grounded and self.velocity.y > 0:
@@ -1160,7 +1192,7 @@ class Player(BaseEntity):
             # fuga. Andar —subiendo o bajando— manda: la entrada ya puso
             # `velocity.x` y esto no se la discute.
             desliz = componente_de_deslizamiento(
-                ganadora, settings.PLAYER_SLOPE_SLIDE_SPEED)
+                ganadora, self.perfil.cuestas.velocidad_deslizamiento)
             self.velocity.x = desliz
             # Este método corre después de `_resolve_collision`: la
             # velocidad que se ponga aquí no se integra este fotograma y la
