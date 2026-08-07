@@ -435,12 +435,15 @@ class DrawingSystem:
 
         view_w = surface.get_width()
         view_h = surface.get_height()
-        # AUD-329 — el wrap hacía un `blit` por copia de la capa, y una capa
-        # de 40 px sobre una vista de 800 eran veinte llamadas. Todas las
-        # copias son la misma superficie, sin `set_alpha` por capa ni
-        # banderas, así que el lote es transparente: un `blits` por fotograma
-        # para todo el fondo, en el mismo orden de capas.
-        lote = SpriteBatch()
+        # AUD-329 — el wrap del parallax NO se bachea, y no es un pendiente.
+        #
+        # Se intentó con `SpriteBatch` y se midió en el mapa real: con las
+        # tres capas de 4-1 y seis copias por fotograma, el lote costaba
+        # 2,4-3,0 ms y el blit a blit 0,8-1,4 ms. `Surface.blits` gana al
+        # `blit` suelto a partir de cientos de llamadas — el banco de
+        # `test_el_lote_de_sprites.py` lo mide a 500-8.000 — y el wrap nunca
+        # llega ahí: su tope es ancho de vista entre ancho de capa, unas
+        # veinte copias por capa en el peor caso.
         for index, layer in enumerate(layers):
             if not isinstance(layer, pygame.Surface):
                 continue
@@ -481,9 +484,8 @@ class DrawingSystem:
             y = -min(margen, max(0, int(camera.offset.y * factor * 0.5)))
             x = -shift_x
             while x < view_w:
-                lote.dibujar(layer, (x, y))
+                surface.blit(layer, (x, y))
                 x += layer_w
-        lote.volcar(surface)
 
     def _draw_stage_layers(
         self, surface: pygame.Surface, stage: StageData, camera: Camera,
