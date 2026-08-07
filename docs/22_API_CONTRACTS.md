@@ -101,14 +101,9 @@ class EventBus:
         """Clear all subscribers and pending events. Useful for testing."""
 
 
-# Module-level convenience functions delegate to a default instance:
-def subscribe(event_name: str, callback: Callable[..., None]) -> None: ...
-def unsubscribe(event_name: str, callback: Callable[..., None]) -> None: ...
-def unsubscribe_all(events: list[str], callback: Callable[..., None]) -> None: ...
-def subscriber_count() -> int: ...
-def emit(event_name: str, **data: Any) -> None: ...
-def dispatch() -> None: ...
-def clear() -> None: ...
+# AUD-307: estas funciones de conveniencia a nivel de módulo **no existen** en
+# el código (verificado con AST el 2026-08-06). El bus es de instancia: crea un
+# EventBus y pásalo. `App` ya inyecta el suyo en los escenarios.
 ```
 
 **Standard event payloads** (exact `**data` keys — see `23_DATA_SCHEMAS.md` §2 for the full table):
@@ -351,10 +346,22 @@ class AudioManager:
     @music_volume.setter
     def music_volume(self, value: float) -> None: ...
 
-# Dynamic music lives in the framework, not on AudioManager. The methods
-# `play_dynamic_music` / `stop_dynamic_music` / `set_music_intensity` /
-# `update_dynamic_music` were documented here once and never existed on the
-# class; `StageScene` drives `DynamicMusicSystem` (framework/audio) instead.
+# AUD-307: `DynamicMusicSystem` NO vive en este módulo — se documenta en §4.3
+# (`src/framework/audio/dynamic_music.py`). Aquí termina `AudioManager`.
+```
+
+<!-- cita-historica -->
+> **AUD-022 / AUD-312 — la música dinámica no vive en `AudioManager`.** Los
+> métodos `play_dynamic_music`, `stop_dynamic_music`, `set_music_intensity` y
+> `update_dynamic_music` estuvieron documentados aquí y **no existen en la
+> clase**: eran una segunda implementación completa de música por capas que no
+> llamaba nadie, y AUD-022 la retiró. La viva es
+> `framework.audio.DynamicMusicSystem`, y quien la conduce es `StageScene`.
+<!-- /cita-historica -->
+
+### 4.3 `src/framework/audio/dynamic_music.py`
+
+```python
 class DynamicMusicSystem:
     INTENSITY_CALM = 0
     INTENSITY_COMBAT = 1
@@ -367,17 +374,11 @@ class DynamicMusicSystem:
         """Switch to a new intensity level with crossfade."""
     def detect_intensity_from_state(self, has_boss: bool, has_alive_enemies: bool) -> int:
         """Auto-detect intensity from game state."""
-
-    @property
-    def sfx_volume(self) -> float: ...
-    @sfx_volume.setter
-    def sfx_volume(self, value: float) -> None: ...
-
-    @property
-    def is_muted(self) -> bool: ...
-    @property
-    def current_music(self) -> str | None: ...
+    def _get_track_for_intensity(self, level: int) -> Path | None: ...
 ```
+
+> **AUD-307.** La clase **no** expone volumen ni mute: `sfx_volume` e `is_muted`
+> son de `AudioManager` (§4.2), no de la música dinámica.
 
 ---
 
@@ -435,6 +436,7 @@ class AssetLoader:
 
 ### 5.3 `src/engine/utils/sprite_atlas.py`
 
+<!-- cita-historica -->
 > **AUD-168.** Esta sección documentaba `src/engine/utils/spritesheet.py` y una
 > clase `SpriteSheet` con `get_frame`/`get_frames`/`frame_count`. AUD-098 ya
 > había retirado ese módulo por ser una segunda implementación muerta que nadie
@@ -442,6 +444,7 @@ class AssetLoader:
 > atrás. El recorte de hojas de sprites lo hace `AssetLoader.load_sprite_sheet`,
 > que devuelve una lista de superficies; el empaquetado en atlas lo hace
 > `SpriteAtlas`.
+<!-- /cita-historica -->
 
 ```python
 class SpriteAtlas:
@@ -555,6 +558,7 @@ destroy()   → called once after on_exit() for final cleanup
 
 ### 6.3 Transiciones — dónde están de verdad
 
+<!-- cita-historica -->
 > **AUD-168.** Aquí había una sección que documentaba
 > `src/engine/scene/transitions.py` con cuatro clases —`FadeTransition`,
 > `WipeTransition`, `SlideTransition`, `CircleTransition`—, y otros cuatro
@@ -567,6 +571,7 @@ destroy()   → called once after on_exit() for final cleanup
 > Un contrato de API que describe clases inexistentes es peor que no tener
 > contrato: quien lo lee escribe `from src.engine.scene.transitions import
 > FadeTransition` y descubre el error en tiempo de importación.
+<!-- /cita-historica -->
 
 ### 6.4 `src/engine/scenes/transition_manager.py`
 
@@ -607,19 +612,19 @@ class TransitionManager:
 
 ```python
 class HUD:
-    def __init__(self) -> None:
+    def __init__(self, event_bus: EventBus) -> None:
         """Subscribes to PLAYER_DAMAGED, PLAYER_HEALED, PLAYER_DIED via EventBus."""
 
     def update(self, dt: float) -> None: ...
     def draw(self, surface: pygame.Surface) -> None: ...
+    def destroy(self) -> None: ...
 
-    def start_timer(self, seconds: int) -> None:
-        """seconds=0 means an ascending (count-up) timer (Stage 0 mode)."""
+    def start_timer(self, time_limit: int = 0) -> None:
+        """time_limit=0 means an ascending (count-up) timer (Stage 0 mode)."""
 
+    def stop_timer(self) -> None: ...
     def pause_timer(self) -> None: ...
     def resume_timer(self) -> None: ...
-    def bind_player(self, player: "Player") -> None:
-        """Stores a weak reference for portrait-state queries only; HUD never mutates Player."""
 
     def set_combo_count(self, count: int) -> None:
         """Updates the combo counter for display."""
@@ -628,24 +633,51 @@ class HUD:
                      phase: int, phase_count: int) -> None: ...
 
     def clear_boss_hud(self) -> None: ...
-
+    def set_score(self, puntos: int, monedas: int = 0) -> None: ...
+    def set_boss_rush(self, progreso: str, jefe: str, ...) -> None: ...
+    def pulso_de_recogida(self) -> None: ...
     def trigger_save_notification(self) -> None:
         """Shows a 'Game Saved' indicator for 2 seconds."""
+    def set_special_meter(self, current: float, max_val: float) -> None: ...
+    def set_estamina(self, current: float, max_val: float) -> None: ...
+    def set_tiempo_bala(self, fraccion: float, activo: bool) -> None: ...
+
+    @property
+    def current_time(self) -> float: ...
+    @current_time.setter
+    def current_time(self, value: float) -> None: ...
+    @property
+    def time_limit(self) -> int: ...
+    @property
+    def is_countdown(self) -> bool: ...
+    @is_countdown.setter
+    def is_countdown(self, value: bool) -> None: ...
 ```
+
+> **AUD-307.** `bind_player` (daba un "retrato" del estado del jugador) **no
+> existe en el HUD de hoy**: la escena de nivel le pasa cada fotograma lo que
+> necesita vía `set_score`, `set_estamina`, `set_special_meter`,
+> `set_tiempo_bala` y el retrato lo calcula internamente (`_get_portrait_state`).
 
 ### 7.2 `src/engine/ui/message_box.py`
 
 ```python
 class MessageBox:
-    def __init__(self) -> None:
+    def __init__(self, event_bus: EventBus) -> None:
         """Subscribes to SHOW_MESSAGE, HIDE_MESSAGE."""
 
     def update(self, dt: float) -> None: ...
     def draw(self, surface: pygame.Surface) -> None: ...
+    def hide(self) -> None: ...
 
     @property
-    def is_active(self) -> bool: ...
+    def is_visible(self) -> bool: ...
+    @property
+    def is_dismiss_on_confirm(self) -> bool: ...
 ```
+
+> **AUD-307.** La propiedad se llama `is_visible` (antes `is_active`), y
+> `MessageBox` además recibe el `event_bus` en `__init__`.
 
 ### 7.3 `src/engine/ui/screen_banner.py`
 
@@ -947,8 +979,10 @@ class Checkpoint(BaseEntity):
     def draw(self, surface: pygame.Surface, camera_offset: pygame.Vector2) -> None: ...
 
     @property
-    def is_active(self) -> bool: ...
+    def is_activated(self) -> bool: ...
 ```
+
+> **AUD-307.** La propiedad se llama `is_activated` (antes `is_active`).
 
 ### 11.3 `src/framework/stage/stage_loader.py`
 
@@ -992,9 +1026,8 @@ class StageLoader:
         """
 
 
-class FrameworkUsageError(Exception):
-    """Raised when student/stage code misuses the framework API."""
-```
+> **AUD-307.** `FrameworkUsageError` está definido en
+> `src/framework/__init__.py`, no en `stage_loader.py` (que lo importa).
 
 ### 11.4 `src/framework/stage/collision_system.py`
 
@@ -1337,15 +1370,9 @@ class EvaluationResult:
 
 
 class PatternRecognitionTools:
-    # --- Feature extractors (delegate to VisionTools) ---
-    @classmethod
-    def extract_hog(cls, surface: pygame.Surface) -> "np.ndarray": ...
-    @classmethod
-    def extract_lbp(cls, surface: pygame.Surface) -> "np.ndarray": ...
-    @classmethod
-    def extract_color_histogram(cls, surface: pygame.Surface, bins: int = 256) -> "np.ndarray": ...
-    @classmethod
-    def extract_combined(cls, surface: pygame.Surface) -> "np.ndarray": ...
+    # AUD-307: los `extract_hog/lbp/color_histogram/combined` que documentaba
+    # esta sección NO existen aquí. La extracción de rasgos vive en
+    # `VisionTools` (§14.1): `extract_features/hog/lbp/color_histogram`.
 
     # --- Training pipeline (offline use only) ---
     @classmethod
@@ -1517,55 +1544,50 @@ from typing import Callable
 class SceneRegistry:
     """Dependency-injection container for lazy scene construction."""
 
-    @classmethod
-    def register(cls, name: str, builder: Callable[[], "BaseScene"]) -> None:
-        """Register a scene builder function under a name."""
-
-    @classmethod
-    def build(cls, name: str) -> "BaseScene":
-        """Build and return a scene instance. Raises KeyError if not registered."""
-
-    @classmethod
-    def list_scenes(cls) -> list[str]:
-        """Return sorted list of registered scene names."""
-
-    @classmethod
-    def register_demo_scenes(cls) -> None:
-        """Register all 10 academic demo/lab scenes."""
-
-
-class GameContext:
-    """Holds shared references to engine singletons, passed to each BaseScene.__init__."""
     def __init__(self) -> None: ...
-    app: "App"
-    scene_manager: "SceneManager"
-    input_manager: "InputManager"
-    audio_manager: "AudioManager"
-    asset_loader: "AssetLoader"
-    event_bus: "EventBus"
+
+    def register(self, key: str, factory: SceneFactory) -> None:
+        """Register a scene builder under a key."""
+
+    def build(self, key: str, ctx: GameContext) -> BaseScene | None:
+        """Build and return a scene instance. Returns None if not registered."""
+
+    def keys(self) -> frozenset[str]:
+        """All registered scene keys."""
+
+
+def register_demo_scenes() -> None:
+    """Module-level function (no de SceneRegistry): registra las escenas demo/lab."""
 ```
+
+> **AUD-307.** `list_scenes` no existe: usa `keys()`. `register_demo_scenes` es
+> función de módulo, no método de la clase. `GameContext` no vive aquí — se
+> documenta en §2.5 (`src/engine/core/game_context.py`); `scene_registry.py`
+> sólo lo importa.
 
 ### 17.2 `src/engine/scenes/debug_overlay.py`
 
 ```python
 class DebugOverlay:
-    """F3-toggleable debug console. Renders on top of all other scene content."""
+    """F11-toggleable debug console. Renders on top of all other scene content."""
 
-    def __init__(self, app: "App") -> None: ...
-
-    def toggle(self) -> None: ...
-
-    def update(self, dt: float) -> None: ...
-
-    def draw(self, surface: pygame.Surface) -> None: ...
+    def __init__(self, event_bus: EventBus | None = None) -> None: ...
 
     @property
-    def is_active(self) -> bool: ...
-    # F3: toggle overlay
+    def visible(self) -> bool: ...
+
+    def handle_input(self, input_manager: Any) -> None: ...
+
+    def draw(self, surface: pygame.Surface, fps: float, ...) -> None: ...
+    # F11: toggle overlay
     # F4: event queue snapshot
     # F5: registered scenes list
     # F6: module dependency tree browser
 ```
+
+> **AUD-307.** El overlay no expone `toggle()` ni `update(dt)`; alterna por
+> entrada (`handle_input`) y su estado es la propiedad `visible` (antes
+> `is_active`).
 
 ### 17.3 `src/engine/scenes/param_panel.py`
 
@@ -1603,9 +1625,16 @@ BOTTOM_BAR_H: int = 22
 
 def draw_top_bar(surface: pygame.Surface, title: str, unit: str, font) -> None: ...
 def draw_bottom_bar(surface: pygame.Surface, text: str, font) -> None: ...
+def draw_bottom_bar_error(surface: pygame.Surface, error: str) -> None: ...
 def draw_divider(surface: pygame.Surface) -> None: ...
-def draw_panel_label(surface: pygame.Surface, panel_rect, label: str, font) -> None: ...
+def draw_panel_border(surface: pygame.Surface, panel_rect: pygame.Rect) -> None: ...
+def draw_save_notification(surface: pygame.Surface, saved_path: str, font) -> None: ...
+def draw_histogram_bars(...) -> None: ...
 ```
+
+> **AUD-307.** `draw_panel_label` no existe. Además del grupo de dibujo, el
+> módulo tiene `area_de_contenido`, `centrar_bloque`, `esta_centrado`,
+> `area_con_columna` y la clase `Lienzo` (coordenadas 0-100 → píxeles).
 
 ### 17.5 `src/engine/scenes/demo_utils.py`
 
@@ -1613,37 +1642,33 @@ def draw_panel_label(surface: pygame.Surface, panel_rect, label: str, font) -> N
 class SourceSurfaceManager:
     """Manages the 5 source surface options cycled via SPACE in demo scenes."""
 
-    def __init__(self) -> None:
-        """Pre-loads player, background, tileset, enemy sprites. Stage 0 live capture is optional."""
-
-    def next(self) -> pygame.Surface:
-        """Cycle to next source. Returns current source surface."""
-
-    def current(self) -> pygame.Surface:
-        """Return the current source surface without cycling."""
+    def cycle(self) -> None:
+        """Cycle to next source."""
 
     @property
-    def source_name(self) -> str: ...
-
+    def current_source(self) -> pygame.Surface | None: ...
     @property
-    def index(self) -> int: ...
+    def current_name(self) -> str: ...
+    def freeze(self) -> None: ...
+    def unfreeze(self) -> None: ...
+    @property
+    def is_frozen(self) -> bool: ...
 
 
 class FrameThrottle:
     """Throttles expensive operations to every Nth frame."""
 
-    def __init__(self, interval: int = 1) -> None: ...
-
-    def should_update(self) -> bool:
+    def __init__(self) -> None: ...
+    def tick(self) -> int: ...
+    def should_update(self, interval: int) -> bool:
         """Returns True once every N frames."""
-
     def reset(self) -> None: ...
 
 
 class ErrorDisplay:
     """Displays transient error messages in the bottom bar."""
 
-    def show(self, message: str, duration: float = 2.0) -> None: ...
+    def set_error(self, message: str) -> None: ...
     def update(self, dt: float) -> None: ...
     def draw(self, surface: pygame.Surface, font, rect) -> None: ...
     @property
@@ -1709,52 +1734,14 @@ def check_palette(path: Path) -> None:
 
 ---
 
-## 19. Exception Types Reference
+## 19. Boss Framework — subclase de referencia (API completa en §10.5)
 
-## 17. Boss Framework
+La API de `BossBase` (fases, transiciones, kit de encuentro) vive en §10.5
+(`src/framework/entities/boss_base.py`). Este bloque sólo documenta el ejemplo
+de subclase que los estudiantes copian — AUD-307: antes duplicaba media API
+aquí, y la copia envejeció (`_begin_phase_transition` no existe).
 
-### 17.1 `src/framework/entities/boss_base.py`
-
-```python
-from dataclasses import dataclass
-
-@dataclass
-class BossPhase:
-    phase_index: int
-    health_threshold: float
-    attack_patterns: list[str]
-    movement_type: str            # 'stationary' | 'bezier' | 'sine' | 'random_walk'
-    speed_multiplier: float
-    sprite_override: str | None = None
-    filter_effect: str | None = None   # 'sobel' | 'canny' | 'tint_green' | ... | None
-
-
-class BossBase(EnemyBase):
-    def __init__(
-        self,
-        spawn_position: pygame.Vector2,
-        max_health: float = 20.0,
-        damage_on_contact: float = 1.0,
-    ) -> None: ...
-
-    def set_phases(self, phases: list["BossPhase"]) -> None: ...
-    def set_boss_name(self, name: str) -> None: ...
-    def _load_boss_sprites(self, prefix: str, fw: int = 48, fh: int = 48) -> None: ...
-
-    def update(self, dt: float) -> None:
-        """Extends EnemyBase.update with phase-transition checking."""
-
-    # --- Phase transition protocol (provided, do not override) ---
-    def _check_phase_transition(self) -> None: ...
-    def _begin_phase_transition(self, next_phase_index: int) -> None: ...
-
-    current_phase: int
-    is_transitioning: bool
-    transition_timer: float
-    boss_name: str
-```
-
-**Reference subclass example** (El Venado Sagrado, actual code):
+### 19.1 `src/stages/boss_venado/boss_venado.py` — El Venado Sagrado
 
 ```python
 class BossVenado(BossBase):
@@ -1787,9 +1774,15 @@ class BossVenado(BossBase):
         self.set_phases(phases)
 ```
 
+> **AUD-307.** `BossBase` no redefinió nunca `update` (lo hereda de
+> `EnemyBase`); el chequeo de transición de fase ocurre dentro de
+> `_pre_update` → `_check_phase_transition`, y la transición en sí la llevan
+> `_start_phase_transition` / `_finish_phase_transition` (la documentación
+> antigua decía `_begin_phase_transition`).
+
 ---
 
-## 18. Exception Types Reference
+## 20. Exception Types Reference
 
 Every framework module must raise one of these — never a bare `Exception` or an unrelated builtin where one of these is more specific:
 
@@ -1805,7 +1798,7 @@ class EngineError(RuntimeError):
 
 ---
 
-## 19. Naming Convention Quick Reference
+## 21. Naming Convention Quick Reference
 
 (Restates `02_CODEX_CONTEXT.md` §5.2 for fast lookup during code generation.)
 
@@ -1816,7 +1809,7 @@ class EngineError(RuntimeError):
 | Method/function | `snake_case` | `apply_damage()` |
 | Property | `snake_case` | `current_health` |
 | Constant | `UPPER_SNAKE_CASE` | `PLAYER_MAX_HEALTH` |
-| Private | leading underscore | `_collision_rect` |
+| Private | leading underscore | `_collision_rects` |
 | Event name string | `UPPER_SNAKE_CASE` | `"PLAYER_DAMAGED"` |
 | Enum member | `UPPER_SNAKE_CASE` | `PlayerState.IDLE` |
 
@@ -1854,7 +1847,7 @@ Este documento es la única fuente de verdad para firmas exactas de funciones y 
 
 ### 2.2 clock.py — Clase DeltaClock con tick(), fps, time_scale.
 
-### 2.3 event_bus.py — Clase EventBus con subscribe, unsubscribe, emit (cola), dispatch, clear. Funciones de conveniencia a nivel de módulo. Eventos estándar: PLAYER_DAMAGED, PLAYER_HEALED, PLAYER_DIED, CHECKPOINT_REACHED, ENEMY_DIED, STAGE_COMPLETE, BOSS_PHASE_CHANGED, SHOW_MESSAGE, HIDE_MESSAGE.
+### 2.3 event_bus.py — Clase EventBus con subscribe, unsubscribe, emit (cola), dispatch, clear. (AUD-307: las «funciones de conveniencia a nivel de módulo» no existen; el bus es de instancia.) Eventos estándar: PLAYER_DAMAGED, PLAYER_HEALED, PLAYER_DIED, CHECKPOINT_REACHED, ENEMY_DIED, STAGE_COMPLETE, BOSS_PHASE_CHANGED, SHOW_MESSAGE, HIDE_MESSAGE.
 
 ### 2.4 app.py — Clase App que inicializa pygame, crea superficies, construye DeltaClock, EventBus, AssetLoader, InputManager, AudioManager, SceneManager.
 
@@ -1876,7 +1869,19 @@ Este documento es la única fuente de verdad para firmas exactas de funciones y 
 
 ### 4.1 sound_bank.py — Clase SoundBank con load_all, load, get, play.
 
-### 4.2 audio_manager.py — Clase AudioManager con play_music, stop_music, play_sfx, play_ambient, crossfade_ambient, play_dynamic_music, control de volumen, mute.
+### 4.2 audio_manager.py — Clase AudioManager con play_music, stop_music, play_sfx, play_ambient, crossfade_ambient, control de volumen, mute.
+
+<!-- cita-historica -->
+> **AUD-312.** Esta línea listaba también `play_dynamic_music`, y el propio
+> documento explica doscientas líneas más arriba que ese método **no existe**:
+> AUD-022 lo retiró junto con `stop_dynamic_music`, `set_music_intensity` y
+> `update_dynamic_music`, porque eran una segunda implementación completa de
+> música por capas que no llamaba nadie. La viva es
+> `framework.audio.DynamicMusicSystem`, y la conduce `StageScene`.
+>
+> Un documento que se contradice consigo mismo es peor que uno desactualizado:
+> quien lea el índice se fía y no baja a leer el aviso.
+<!-- /cita-historica -->
 
 ---
 
@@ -1904,7 +1909,7 @@ Este documento es la única fuente de verdad para firmas exactas de funciones y 
 
 ## 7. UI del Motor (src/engine/ui/)
 
-### 7.1 hud.py — Clase HUD que se suscribe a eventos del jugador. Métodos: update, draw, start_timer, bind_player, set_combo_count, set_boss_hud, clear_boss_hud, trigger_save_notification.
+### 7.1 hud.py — Clase HUD que se suscribe a eventos del jugador. Métodos: update, draw, start_timer, stop_timer, pause_timer, resume_timer, set_combo_count, set_boss_hud, clear_boss_hud, trigger_save_notification, set_score, set_boss_rush, set_special_meter, set_estamina, set_tiempo_bala. (AUD-307: `bind_player` no existe.)
 
 ### 7.2 message_box.py — Clase MessageBox para mostrar mensajes tipo máquina de escribir.
 
@@ -1986,7 +1991,7 @@ DemoMenuScene, FilterDemoScene (9 modos), VisionDemoScene (10 modos), PatternDem
 
 ### 17.1 scene_registry.py — SceneRegistry (contenedor DI) y GameContext.
 
-### 17.2 debug_overlay.py — DebugOverlay con F3-F6.
+### 17.2 debug_overlay.py — DebugOverlay con F11.
 
 ### 17.3 param_panel.py — ParamPanel con add_int, add_float, handle_input.
 
@@ -2027,6 +2032,6 @@ FrameworkUsageError para mal uso de API del marco. EngineError para fallos irrec
 | Método/función | snake_case | apply_damage() |
 | Propiedad | snake_case | current_health |
 | Constante | UPPER_SNAKE_CASE | PLAYER_MAX_HEALTH |
-| Privado | guión bajo inicial | _collision_rect |
+| Privado | guión bajo inicial | _collision_rects |
 | Evento | UPPER_SNAKE_CASE | PLAYER_DAMAGED |
 | Enum | UPPER_SNAKE_CASE | PlayerState.IDLE |
