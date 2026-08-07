@@ -32,7 +32,6 @@ from typing import TYPE_CHECKING
 
 import pygame
 
-from src.engine.core import settings
 from src.engine.core.events import Events
 from src.framework.entities.states.base import PlayerStateBase, _InputSnapshot
 
@@ -95,7 +94,7 @@ class TrepandoState(PlayerStateBase):
 
         # Soltarse saltando, con impulso hacia donde se mire.
         if inp.jump_pressed and self._t > 0.08:
-            player.velocity.y = settings.PLAYER_JUMP_FORCE * 0.9
+            player.velocity.y = player.perfil.salto_impulso * 0.9
             player.velocity.x = float(inp.move_x or player.facing_direction) * (
                 self.IMPULSO_AL_SALTAR
             )
@@ -163,7 +162,7 @@ class TirolesaState(PlayerStateBase):
         llego = self._cable.progreso(pygame.Vector2(player.rect.center)) >= 0.995
         if (inp.jump_pressed and self._t > 0.08) or llego:
             if inp.jump_pressed and self._t > 0.08:
-                player.velocity.y = settings.PLAYER_JUMP_FORCE * 0.8
+                player.velocity.y = player.perfil.salto_impulso * 0.8
                 player._event_bus.emit(Events.SFX_PLAYER_JUMP)
             else:
                 # Al llegar al final se conserva el impulso del cable. Frenar en

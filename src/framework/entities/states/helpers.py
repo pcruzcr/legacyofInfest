@@ -34,9 +34,9 @@ def _handle_wall_jump(player: Player, inp: _InputSnapshot) -> bool:
     if player._can_wall_jump and inp.jump_pressed:
         wall_dir = player._wall_side
         player._air_jumps_used = 0
-        player.velocity.y = settings.PLAYER_JUMP_FORCE * 0.85
+        player.velocity.y = player.perfil.salto_impulso * 0.85
         player.is_grounded = False
-        player._coyote_counter = settings.PLAYER_COYOTE_FRAMES + 1
+        player._coyote_counter = player.perfil.coyote_frames + 1
         player._jump_cut_applied = False
         player._wall_side = 0
         player._can_wall_jump = False
@@ -112,22 +112,22 @@ def _can_jump(player: Player) -> bool:
     # son fotogramas de gracia del salto normal llegando tarde, no un salto
     # aéreo. Bloquearlos dejaría al jugador sin poder subir un escalón, que no
     # es progresión sino un juego roto.
-    if player.is_grounded or player._coyote_counter < settings.PLAYER_COYOTE_FRAMES:
+    if player.is_grounded or player._coyote_counter < player.perfil.coyote_frames:
         return True
     return (
-        player._air_jumps_used < settings.PLAYER_AIR_JUMPS
+        player._air_jumps_used < player.perfil.saltos_aereos
         and _tiene_habilidad("skill_double_jump", player)
     )
 
 
 def _do_jump(player: Player) -> None:
     was_grounded = player.is_grounded
-    was_truly_airborne = not was_grounded and player._coyote_counter >= settings.PLAYER_COYOTE_FRAMES
-    player.velocity.y = settings.PLAYER_JUMP_FORCE
+    was_truly_airborne = not was_grounded and player._coyote_counter >= player.perfil.coyote_frames
+    player.velocity.y = player.perfil.salto_impulso
     player.is_grounded = False
-    player._coyote_counter = settings.PLAYER_COYOTE_FRAMES + 1
+    player._coyote_counter = player.perfil.coyote_frames + 1
     player._jump_cut_applied = False
-    if was_truly_airborne and player._air_jumps_used < settings.PLAYER_AIR_JUMPS:
+    if was_truly_airborne and player._air_jumps_used < player.perfil.saltos_aereos:
         player._air_jumps_used += 1
     from src.framework.entities.states import JumpingState
     player._change_state_instance(JumpingState())

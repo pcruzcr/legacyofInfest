@@ -230,6 +230,10 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── bridge.py                   #   ComponentesDeEntidad: BaseEntity sobre componentes
 │   │   │   └── bullet_swarm.py             #   EnjambreDeBalas: bullet hell con NumPy (F5.8)
 │   │   │
+│   │   ├── physics/                       # AUD-333 — la física declarada por contexto
+│   │   │   ├── __init__.py
+│   │   │   └── perfil.py                   #   PhysicsProfile: física por modo de juego
+│   │   │
 │   │   ├── stage/
 │   │   │   ├── __init__.py
 │   │   │   ├── profundidad.py             # AUD-277: escala 2.5D por altura (apagada por defecto)
