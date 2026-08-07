@@ -14,6 +14,43 @@ def test_initial_health() -> None:
     assert player.current_health == settings.PLAYER_MAX_HEALTH
 
 
+# AUD-308 bis — `heal` no lo defendía nadie: una mutación `Mult → Div` en
+# `health + amount * heal_mult` pasaba la suite entera.
+def test_heal_restaura_salud() -> None:
+    player = Player(pygame.Vector2(50.0, 0.0))
+    player.apply_damage(2.0, (50.0, 0.0))
+    player.heal(1.0)
+    assert player.current_health == settings.PLAYER_MAX_HEALTH - 1.0
+
+
+def test_heal_no_pasa_de_la_vida_maxima() -> None:
+    player = Player(pygame.Vector2(50.0, 0.0))
+    player.apply_damage(0.5, (50.0, 0.0))
+    player.heal(99.0)
+    assert player.current_health == player.max_health
+
+
+# AUD-309 — la fórmula de vida máxima (base + reliquias + árbol, con tope)
+# no la defendía nadie: una mutación que restara los bonus pasaba la suite.
+def test_max_health_suma_los_bonus() -> None:
+    from src.engine.core import skill_tree
+
+    player = Player(pygame.Vector2(50.0, 0.0))
+    player._bonus_max_health = 2.0
+    player._bonus_arbol_salud = 1.0
+    assert player.max_health == settings.PLAYER_MAX_HEALTH + 3.0
+    assert player.max_health <= skill_tree.CORAZONES_MAXIMOS
+
+
+def test_max_health_respeta_el_tope() -> None:
+    from src.engine.core import skill_tree
+
+    player = Player(pygame.Vector2(50.0, 0.0))
+    player._bonus_max_health = 20.0
+    player._bonus_arbol_salud = 20.0
+    assert player.max_health == skill_tree.CORAZONES_MAXIMOS
+
+
 def test_damage_reduces_health() -> None:
     player = Player(pygame.Vector2(50.0, 0.0))
     initial = player.current_health

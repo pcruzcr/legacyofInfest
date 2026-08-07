@@ -89,6 +89,26 @@ def test_coyote_time_expires() -> None:
     assert not player._can_jump()
 
 
+# AUD-308 — las dos pruebas de arriba fijan el contador a mano y sólo
+# comprueban la comparación; nadie defendía el AVANCE (`+= dt * 60.0`).
+# Una mutación que dejara el contador congelado en cero pasaba la suite.
+def test_coyote_counter_avanza_con_el_tiempo() -> None:
+    player = _make_player()
+    player.is_grounded = False
+    player._coyote_counter = 0.0
+    player._apply_physics(1.0 / 60.0)
+    assert player._coyote_counter == pytest.approx(1.0, abs=1e-6)
+
+
+def test_coyote_time_expira_por_acumulacion() -> None:
+    player = _make_player()
+    player.is_grounded = False
+    player._air_jumps_used = settings.PLAYER_AIR_JUMPS
+    player._coyote_counter = 0.0
+    player._apply_physics((settings.PLAYER_COYOTE_FRAMES + 1) / 60.0)
+    assert not player._can_jump()
+
+
 def test_air_jump_allowed_when_coyote_expired() -> None:
     player = _make_player()
     player.is_grounded = False
