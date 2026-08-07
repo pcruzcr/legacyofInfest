@@ -102,7 +102,7 @@ PYGAME_HIDE_SUPPORT_PROMPT=1
 ## 4. Convenciones
 
 **Identificadores de hallazgo.** Todo defecto encontrado y corregido lleva un
-`AUD-NNN` correlativo (el último usado va por AUD-322; compruébalo con
+`AUD-NNN` correlativo (el último usado va por AUD-328; compruébalo con
 `git log --oneline -1` antes de asignar uno). Se cita en:
 el mensaje de commit, el comentario del código que explica *por qué* existe el
 arreglo, y el documento de auditoría correspondiente. Los huecos conocidos y no
