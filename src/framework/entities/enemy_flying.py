@@ -61,6 +61,9 @@ class EnemyFlying(EnemyBase):
         self.sine_amplitude: float = sine_amplitude
         self.sine_frequency: float = sine_frequency
         self.waypoints: list[tuple[float, float]] | None = waypoints
+        # AUD-325 — los voladores no pisan suelo: se les excluye del pegado a
+        # las cuestas, que los clavaría a la hipotenusa en mitad del vuelo.
+        self._hug_slopes = False
 
         # Strategy Pattern: delegate movement to the selected strategy
         self._strategy: IFlightStrategy = make_strategy(flight_mode)

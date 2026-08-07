@@ -17,13 +17,31 @@ Lo que se fija aquí
 2. Que subir funcione, que **bajar** funcione —el caso que se rompe solo si
    nadie lo prueba— y que saltar despegue.
 3. Que sin pendientes el jugador se comporte exactamente igual que antes.
+4. La pared lateral (AUD-323): la cara empinada y la hipotenusa a media
+   altura se frenan, y nadie que esté **pisando** la cuesta —subiendo,
+   bajando o en el pie— se ve frenado por su propia esquina.
+5. La proyección de velocidad (AUD-324): caer sobre una cuesta desliza
+   cuesta abajo en vez de parar en seco.
+6. El deslizamiento sostenido (AUD-326): quieto en la cuesta, la gravedad
+   desliza al jugador cuesta abajo a velocidad constante y acotada —
+   sin aceleración en fuga — y andar, subiendo o bajando, manda.
+7. La vista cenital (AUD-328): sin gravedad no hay cuesta que resolver.
+   En planta la rampa es terreno pintado: ni pega a la hipotenusa ni frena
+   el paso; eso lo decide la capa Collision, como siempre.
 """
 from __future__ import annotations
 
 import pygame
 import pytest
 
-from src.framework.stage.pendientes import MARGEN_DE_PEGADO, Pendiente, resolver
+from src.framework.stage.pendientes import (
+    MARGEN_DE_PEGADO,
+    Pendiente,
+    componente_de_deslizamiento,
+    resolver,
+    resolver_con_ganadora,
+    resolver_lateral,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -118,6 +136,114 @@ class TestResolver:
         assert resolver(rect, 0.0, True, [baja, alta]) == pytest.approx(75.0)
 
 
+class TestResolverConGanadora:
+    def test_devuelve_la_pendiente_ganadora(self) -> None:
+        """AUD-324: quien proyecta la velocidad al aterrizar necesita saber
+        **sobre qué** aterriza, no sólo a qué altura."""
+        baja = Pendiente(pygame.Rect(0, 100, 100, 20), sube_a_la_derecha=True)
+        alta = Pendiente(pygame.Rect(0, 50, 100, 50), sube_a_la_derecha=True)
+        rect = pygame.Rect(40, 80, 20, 20)
+        superficie, ganadora = resolver_con_ganadora(
+            rect, 0.0, True, [baja, alta])
+        assert superficie == pytest.approx(75.0)
+        assert ganadora is alta
+
+    def test_sin_superficie_no_hay_ganadora(self) -> None:
+        assert resolver_con_ganadora(
+            pygame.Rect(0, 0, 20, 20), 5.0, False, []) == (None, None)
+
+
+class TestResolverLateral:
+    """AUD-323 — las entradas laterales a la rampa.
+
+    El eje X se mueve libre y el eje Y coloca sobre la hipotenusa; eso deja
+    dos huecos: la **cara empinada** (el segmento vertical del extremo alto,
+    que se atraviesa y luego el eje Y absorbe hacia arriba) y la hipotenusa
+    a media altura. Lo que frena aquí no es la roca entera, es la pared que
+    queda sin resolver.
+    """
+
+    @staticmethod
+    def _cuesta():
+        # Sube a la derecha, de y=100 (pie) a y=50 (cima).
+        return [Pendiente(pygame.Rect(0, 50, 100, 50), sube_a_la_derecha=True)]
+
+    def test_la_cara_empinada_frena(self) -> None:
+        """Atravesar la rampa por el lado alto: la pared vertical la frena."""
+        rect = pygame.Rect(96, 54, 20, 20)   # centro x=106, pies en 74
+        assert resolver_lateral(rect,self._cuesta()) == pytest.approx(100.0)
+
+    def test_la_cara_empinada_mirror(self) -> None:
+        """Sube a la izquierda: la cara está en el otro extremo."""
+        cuesta = [Pendiente(pygame.Rect(0, 50, 100, 50), sube_a_la_derecha=False)]
+        rect = pygame.Rect(-15, 54, 20, 20)  # centro x=-5, fuera de la rampa
+        assert resolver_lateral(rect,cuesta) == pytest.approx(-20.0)
+
+    def test_el_centro_sobre_la_rampa_no_tiene_pared(self) -> None:
+        """Pisando la cuesta, la esquina se hunde unos píxeles en la roca al
+        subir y al bajar: frenarla aquí rompería la marcha. Es el precio
+        normal de un suelo de un solo punto de apoyo."""
+        cuesta = self._cuesta()
+        # Bajando: centro x=94, pies en 54 == superficie en 94.
+        rect = pygame.Rect(84, 34, 20, 20)
+        assert resolver_lateral(rect,cuesta) is None
+        # Subiendo: centro x=88, pies en 56 == superficie en 88.
+        rect2 = pygame.Rect(78, 36, 20, 20)
+        assert resolver_lateral(rect2,cuesta) is None
+
+    def test_sobrevolando_la_cima_no_hay_pared(self) -> None:
+        rect = pygame.Rect(96, 20, 20, 20)   # pies en 40, sobre la cima
+        assert resolver_lateral(rect,self._cuesta()) is None
+
+    def test_bajo_el_pie_no_hay_pared(self) -> None:
+        rect = pygame.Rect(96, 84, 20, 20)   # pies en 104, bajo el triángulo
+        assert resolver_lateral(rect,self._cuesta()) is None
+
+    def test_el_pie_de_la_cuesta_no_es_pared(self) -> None:
+        """Subir desde el suelo llano del pie lo resuelve el eje Y con el
+        margen de pegado: frenar aquí dejaría al jugador congelado al pie."""
+        rect = pygame.Rect(-8, 80, 20, 20)   # pies en 100, nivel del pie
+        assert resolver_lateral(rect,self._cuesta()) is None
+
+    def test_sin_pendientes_no_hay_pared(self) -> None:
+        assert resolver_lateral(pygame.Rect(96, 54, 20, 20), []) is None
+
+    def test_pegado_a_la_cara_no_hay_nada_que_empujar(self) -> None:
+        """Flush contra la pared: sin incrustación no hay corrección."""
+        rect = pygame.Rect(100, 54, 20, 20)  # centro x=110, pies en 74
+        assert resolver_lateral(rect, self._cuesta()) is None
+
+    def test_la_hipotenusa_a_media_altura(self) -> None:
+        """Una rampa más estrecha que el jugador: la roca a la altura de los
+        pies tiene huella, y entrar por su diagonal se frena en el cruce."""
+        cuesta = [Pendiente(pygame.Rect(0, 50, 10, 100), sube_a_la_derecha=True)]
+        rect = pygame.Rect(-12, 55, 20, 20)  # centro x=-2, pies en 75
+        assert resolver_lateral(rect, cuesta) == pytest.approx(-12.5)
+
+
+class TestComponenteDeDeslizamiento:
+    """AUD-324 — la proyección de la caída sobre la hipotenusa."""
+
+    @staticmethod
+    def _cuarenta_y_cinco():
+        return Pendiente(pygame.Rect(0, 50, 100, 100), sube_a_la_derecha=True)
+
+    def test_45_grados_la_mitad_de_la_caida(self) -> None:
+        """Sin(45)·cos(45) = 0,5: caer a 400 px/s empuja a 200 px/s cuesta
+        abajo. Es la misma cuenta de la Unidad II, vista en el suelo."""
+        assert componente_de_deslizamiento(
+            self._cuarenta_y_cinco(), 400.0) == pytest.approx(-200.0)
+
+    def test_mirror_desliza_hacia_el_otro_lado(self) -> None:
+        p = Pendiente(pygame.Rect(0, 50, 100, 100), sube_a_la_derecha=False)
+        assert componente_de_deslizamiento(p, 400.0) == pytest.approx(200.0)
+
+    def test_no_cae_no_desliza(self) -> None:
+        p = self._cuarenta_y_cinco()
+        assert componente_de_deslizamiento(p, 0.0) == 0.0
+        assert componente_de_deslizamiento(p, -5.0) == 0.0
+
+
 class TestElJugadorEnLaCuesta:
     @staticmethod
     def _jugador():
@@ -176,6 +302,200 @@ class TestElJugadorEnLaCuesta:
         assert jugador.rect.bottom == 200
 
 
+class TestLaParedLateral:
+    """AUD-323, a través del jugador."""
+
+    @staticmethod
+    def _jugador():
+        from src.framework.entities.player import Player
+
+        return Player(pygame.Vector2(50, 40))
+
+    def test_no_atraviesa_la_cara_empinada(self) -> None:
+        """Caminando contra la cara de la rampa se frena en su x, y el eje Y
+        no lo absorbe hacia la superficie de la cuesta."""
+        jugador = self._jugador()
+        cuesta = [Pendiente(pygame.Rect(0, 50, 100, 50), sube_a_la_derecha=True)]
+        suelo = [pygame.Rect(100, 100, 200, 20)]   # llano al nivel del pie
+        jugador.position.update(160.0, 60.0)
+        for _ in range(60):
+            jugador.update(1 / 60.0, suelo, None, pendientes=cuesta)
+        assert jugador.is_grounded
+        assert jugador.rect.bottom == 100
+
+        for _ in range(30):
+            jugador.position.x -= 3.0
+            jugador.update(1 / 60.0, suelo, None, pendientes=cuesta)
+        assert jugador.rect.left >= 100.0 - 1.0, (
+            "la cara de la rampa no frenó al jugador"
+        )
+        assert jugador.rect.bottom == 100, (
+            "el jugador fue absorbido hacia la superficie de la cuesta"
+        )
+
+
+class TestDeslizamientoAlAterrizar:
+    """AUD-324, a través del jugador."""
+
+    @staticmethod
+    def _jugador():
+        from src.framework.entities.player import Player
+
+        return Player(pygame.Vector2(50, 40))
+
+    def test_caer_en_vertical_sobre_una_cuesta_de_45_grados_desliza(self) -> None:
+        """Caer en vertical sobre una cuesta no debe parar al jugador en
+        seco: el impulso de la caída se proyecta y lo empuja cuesta abajo.
+        Es la proyección de velocidad que `docs/87` §11 pidió por escrito."""
+        jugador = self._jugador()
+        cuesta = [Pendiente(pygame.Rect(0, 50, 100, 100), sube_a_la_derecha=True)]
+        # Aterriza cerca de la cima: el deslizamiento (AUD-326) lo lleva
+        # hacia el pie sin sacarlo de la rampa durante la ventana de 90
+        # fotogramas.
+        jugador.position.update(80.0, 40.0)
+        deslizo = False
+        for _ in range(90):
+            jugador.update(1 / 60.0, [], None, pendientes=cuesta)
+            if jugador.is_grounded and jugador.velocity.x < 0:
+                deslizo = True
+        assert jugador.is_grounded
+        assert deslizo, "al aterrizar en la cuesta el jugador no deslizó cuesta abajo"
+
+    def test_la_cuesta_mirror_desliza_al_otro_lado(self) -> None:
+        jugador = self._jugador()
+        cuesta = [Pendiente(pygame.Rect(0, 50, 100, 100), sube_a_la_derecha=False)]
+        jugador.position.update(20.0, 40.0)
+        deslizo = False
+        for _ in range(90):
+            jugador.update(1 / 60.0, [], None, pendientes=cuesta)
+            if jugador.is_grounded and jugador.velocity.x > 0:
+                deslizo = True
+        assert jugador.is_grounded
+        assert deslizo
+
+    def test_aterrizar_en_suelo_llano_no_cambia_la_fisica(self) -> None:
+        """Sin pendiente no hay proyección: es la vieja física, intacta."""
+        jugador = self._jugador()
+        suelo = [pygame.Rect(0, 150, 200, 20)]
+        piso = False
+        for _ in range(90):
+            jugador.update(1 / 60.0, suelo, None)
+            if jugador.is_grounded and not piso:
+                piso = True
+                assert jugador.velocity.x == 0.0
+        assert piso
+
+
+class TestDeslizamientoSostenido:
+    """AUD-326 — quieto en la cuesta, la gravedad desliza.
+
+    El aterrizaje ya proyecta el impulso de la caída (AUD-324); falta lo
+    que pasa **después**: sin entrada horizontal el jugador no se queda
+    clavado en la cuesta, se desliza cuesta abajo. El deslizamiento es de
+    velocidad constante — la que da `PLAYER_SLOPE_SLIDE_SPEED` por el
+    factor de la pendiente — no una aceleración en fuga. Y andar, subiendo
+    o bajando, manda: la entrada ya puso `velocity.x` y el deslizamiento
+    no se la discute.
+    """
+
+    @staticmethod
+    def _jugador():
+        from src.framework.entities.player import Player
+
+        return Player(pygame.Vector2(50, 40))
+
+    def test_quieto_en_cuesta_se_desliza_cuesta_abajo(self) -> None:
+        jugador = self._jugador()
+        cuesta = [Pendiente(pygame.Rect(0, 50, 100, 100),
+                            sube_a_la_derecha=False)]
+        for _ in range(30):
+            jugador.update(1 / 60.0, [], None, pendientes=cuesta)
+        assert jugador.is_grounded
+        x0 = jugador.position.x
+        for _ in range(60):
+            jugador.update(1 / 60.0, [], None, pendientes=cuesta)
+        assert jugador.position.x > x0, \
+            "quieto en la cuesta no se deslizó hacia el pie"
+
+    def test_mirror_desliza_hacia_el_otro_lado(self) -> None:
+        jugador = self._jugador()
+        cuesta = [Pendiente(pygame.Rect(0, 50, 100, 100),
+                            sube_a_la_derecha=True)]
+        for _ in range(30):
+            jugador.update(1 / 60.0, [], None, pendientes=cuesta)
+        x0 = jugador.position.x
+        for _ in range(60):
+            jugador.update(1 / 60.0, [], None, pendientes=cuesta)
+        assert jugador.position.x < x0, \
+            "quieto en la cuesta no se deslizó hacia el pie"
+
+    def test_el_deslizamiento_es_de_velocidad_constante(self) -> None:
+        """Sin aceleración en fuga: el mismo `velocity.x` fotograma tras
+        fotograma, cuesta abajo."""
+        jugador = self._jugador()
+        cuesta = [Pendiente(pygame.Rect(0, 50, 200, 100),
+                            sube_a_la_derecha=True)]
+        jugador.position.update(160.0, 40.0)
+        for _ in range(30):
+            jugador.update(1 / 60.0, [], None, pendientes=cuesta)
+        assert jugador.is_grounded
+        v1 = jugador.velocity.x
+        for _ in range(60):
+            jugador.update(1 / 60.0, [], None, pendientes=cuesta)
+        v2 = jugador.velocity.x
+        assert v1 == v2 and v1 < 0, \
+            "el deslizamiento sostenido no es de velocidad constante"
+
+    def test_en_suelo_llano_no_desliza(self) -> None:
+        jugador = self._jugador()
+        suelo = [pygame.Rect(0, 150, 200, 20)]
+        for _ in range(30):
+            jugador.update(1 / 60.0, suelo, None)
+        x0 = jugador.position.x
+        for _ in range(30):
+            jugador.update(1 / 60.0, suelo, None)
+        assert jugador.position.x == pytest.approx(x0)
+
+
+class TestPendientesEnCenital:
+    """AUD-328 — en la vista cenital no hay gravedad, y sin gravedad no hay
+    cuesta que resolver: la mecánica es de la vista lateral.
+
+    En planta la rampa es terreno pintado: ni pega al jugador a su
+    hipotenusa ni frena su paso. Lo que frena en cenital es la capa
+    Collision, como siempre.
+    """
+
+    @staticmethod
+    def _jugador():
+        from src.framework.entities.player import Player
+
+        return Player(pygame.Vector2(50, 40))
+
+    def test_no_se_pega_a_la_hipotenusa(self) -> None:
+        jugador = self._jugador()
+        jugador.vista_cenital = True
+        cuesta = [Pendiente(pygame.Rect(0, 50, 100, 100),
+                            sube_a_la_derecha=True)]
+        jugador.position.update(50.0, 60.0)
+        for _ in range(30):
+            jugador.update(1 / 60.0, [], None, pendientes=cuesta)
+        assert jugador.position.y == pytest.approx(60.0), \
+            "en cenital la rampa pegó al jugador a su superficie"
+
+    def test_no_bloquea_el_paso_por_la_cara(self) -> None:
+        jugador = self._jugador()
+        jugador.vista_cenital = True
+        cuesta = [Pendiente(pygame.Rect(0, 50, 100, 100),
+                            sube_a_la_derecha=True)]
+        jugador.position.update(160.0, 60.0)
+        for _ in range(30):
+            jugador.position.x -= 3.0
+            jugador.update(1 / 60.0, [], None, pendientes=cuesta)
+        assert jugador.rect.left <= 90.0, \
+            "en cenital la cara de la rampa frenó el paso"
+
+
 class TestDesdeElMapa:
     def test_slope_es_un_tipo_conocido(self) -> None:
         from src.framework.stage.tmx_diagnostics import known_object_types
@@ -228,3 +548,4 @@ class TestDesdeElMapa:
             if 'type="Slope"' in tmx.read_text(encoding="utf-8")
         ]
         assert con_pendiente == ["stage_mecanicas"]
+

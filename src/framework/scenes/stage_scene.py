@@ -429,6 +429,11 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, SonidoDeEscenario,
                     self._stage_data.collision_rects,
                     one_way=self._stage_data.one_way_rects,
                 )
+            # AUD-325 — los enemigos comparten el suelo inclinado del
+            # escenario: sin esto, un caminante atravesaría la cara de una
+            # rampa, que el jugador ya respeta desde AUD-323.
+            if hasattr(enemy, "set_pendientes"):
+                enemy.set_pendientes(self._stage_data.pendientes)
             if isinstance(enemy, BossBase):
                 # AUD-061: el jefe necesita saber dónde acaba su arena, y la
                 # escena es quien conoce el tamaño del mapa. `BossVenado` la
