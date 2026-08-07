@@ -941,10 +941,15 @@ rasterizaban una elipse por sombra y por fotograma para pintar las mismas ocho
 del fotograma anterior. Medido en nuestros dos mapas: `stage4_1` de 6,42 a
 5,93 ms, `stage0` dentro del ruido.
 
-AUD-329 añadió el tercer sitio donde las llamadas crecen con el contenido: el
-**wrap del parallax** envolvía cada capa con un `blit` por copia — una capa de
-40 px sobre una vista de 800 eran veinte llamadas — y ahora el fondo entero
-sale en un solo `blits` por fotograma, en el mismo orden de capas.
+AUD-329 intentó añadir el tercer sitio donde las llamadas podrían crecer con
+el contenido: el **wrap del parallax** envolvía cada capa con un `blit` por
+copia — una capa de 40 px sobre una vista de 800 son veinte llamadas — y se
+midió en el mapa real antes de decidir. Con las tres capas de `stage4_1` y
+seis copias por fotograma, el lote costaba **2,4-3,0 ms y el `blit` a blit
+0,8-1,4 ms**: `Surface.blits()` gana al `blit` suelto a partir de cientos de
+llamadas — el banco lo mide a 500-8.000 — y el wrap nunca llega ahí, porque
+su tope es ancho de vista entre ancho de capa. Revertido y documentado junto
+al código; es el mismo caso que las partículas, al revés.
 
 Y se comprobó lo que no se puede agrupar, con evidencia en lugar de silencio:
 
@@ -1843,7 +1848,7 @@ de esto, y la calificación de los dieciséis mapas se mantiene como control.
 | **325** | Los enemigos atravesaban la rampa | Los enemigos resuelven pendientes con la misma geometría, dentro de su propio bucle de resolución |
 | **326** | Quieto en la cuesta, el jugador quedaba clavado | Deslizamiento sostenido: sin entrada horizontal, la gravedad lo desliza cuesta abajo a `PLAYER_SLOPE_SLIDE_SPEED` por el factor de la pendiente — velocidad constante y acotada, sin aceleración en fuga; andar manda |
 | **328** | En vista cenital la rampa pegaba y frenaba | Sin gravedad no hay cuesta que resolver: en planta la rampa es terreno pintado — ni glue a la hipotenusa ni pared en la cara; lo que frena es la capa Collision, como siempre |
-| **329** | El wrap del parallax hacía un `blit` por copia de la capa | Un `SpriteBatch` por fotograma para todo el fondo: el wrap entero sale en un `blits`. Y se documenta, con evidencia, por qué no se agrupan estelas (alfa por punto sobre superficie compartida), números de daño (pool) y partículas (medición previa) |
+| **329** | ¿Se bachea el wrap del parallax? Medido en 4-1 antes de decidir | **No**: con tres capas y seis copias, el lote costó 2,4-3,0 ms contra 0,8-1,4 del `blit` suelto — `blits` gana a partir de cientos de llamadas y el wrap no llega nunca ahí. Revertido y documentado junto al código; el mismo trato que las partículas. Y quedan documentados, con evidencia, por qué no se agrupan estelas (alfa por punto sobre superficie compartida) y números de daño (pool) |
 
 La física queda servida para cualquier contexto sin cambiar el contrato: la
 gravedad por escenario ya existía (`gravity_multiplier` en el TMX, con prueba
