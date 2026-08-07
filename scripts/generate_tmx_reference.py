@@ -224,7 +224,12 @@ def build_table() -> str:
     archetype_props = {
         "Walker": "`patrol_length`, `facing`, `patrol_speed`, `alert_speed`, `damage_on_contact`",
         "Flying": "`flight_mode`, `flight_speed`, `sine_amplitude`, `sine_frequency`",
-        "Shooter": "`fire_rate`, `projectile_speed`, `projectile_damage`, `patrol_length`",
+        # AUD-305 — `admite_bash` sólo aquí: es el único arquetipo cuyos
+        # proyectiles pasan por `EnemyShooter._fire`, que es quien la hereda.
+        # Ponerla en `Archer` o `Caster` la publicaría sin que hiciera nada.
+        "Shooter": ("`fire_rate`, `projectile_speed`, `projectile_damage`, "
+                    "`patrol_length`, `admite_bash` (bool, no: deja que el "
+                    "jugador se impulse golpeando sus disparos)"),
         "Charger": "`charge_speed`, `patrol_speed`, `alert_speed`",
         "Archer": "`fire_rate`, `projectile_speed`",
         "Brute": "`patrol_speed`, `alert_speed`, `max_health`",

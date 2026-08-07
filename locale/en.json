@@ -13,7 +13,10 @@
   "Confirmar": "Confirm",
   "DEMOSTRACIONES ACADÉMICAS": "ACADEMIC DEMONSTRATIONS",
   "Demo": "Demo",
+  "ESTUDIANTE": "STUDENT",
+  "EXPERIENCIA": "EXPERIENCE",
   "El registro no encontró ninguno que cargar": "The registry found none to load",
+  "Elegir": "Choose",
   "Elige tu destino": "Choose your destination",
   "Elige una acción y pulsa Enter para cambiarla": "Pick an action and press Enter to rebind",
   "Enemigos que has encontrado": "Enemies you have encountered",
@@ -22,6 +25,7 @@
   "FILTER PIPELINE BUILDER": "FILTER PIPELINE BUILDER",
   "FREE MODE": "FREE MODE",
   "GAME OVER": "GAME OVER",
+  "IDENTIFICACIÓN": "SIGN IN",
   "INTERPOLATION LAB": "INTERPOLATION LAB",
   "INVENTARIO": "INVENTORY",
   "LOAD": "LOAD",
@@ -52,6 +56,7 @@
   "Seleccionar": "Select",
   "Select": "Select",
   "Siguiente": "Next",
+  "Subir rango": "Rank up",
   "TEMARIO": "SYLLABUS",
   "TIENDA": "SHOP",
   "TRANSFORM LAB": "TRANSFORM LAB",
@@ -74,5 +79,6 @@
   "Vendido": "Sold",
   "Volver": "Back",
   "Volver al título": "Quit to Title",
+  "ÁRBOL DE HABILIDADES": "SKILL TREE",
   "—": "—"
 }

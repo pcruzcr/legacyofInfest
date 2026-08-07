@@ -361,6 +361,16 @@ def _objetos() -> list[str]:
     obj("MessageTrigger_Once", (s11 - 2) * TS, suelo_px - 64, 48, 48,
         text="Una cuesta de verdad. Subela y bajala.")
 
+    # AUD-306 — y una tercera, tendida.
+    #
+    # Las dos de arriba miden 3×3 baldosas, o sea 45°, y con sólo cuadrados no
+    # hay de dónde deducir lo que de verdad manda: que la hipotenusa va de
+    # esquina a esquina **del rectángulo que dibujas**, así que la inclinación
+    # la eliges con la forma. Ésta mide 6×1,5 y se sube casi sin frenar.
+    obj("Slope", (s11 + 7) * TS, suelo_px - 24, 6 * TS, 24, sube="derecha")
+    obj("MessageTrigger_Once", (s11 + 7) * TS, suelo_px - 64, 96, 40,
+        text="La inclinacion sale del rectangulo: ancha y baja, cuesta suave.")
+
     # ── El atajo de vuelta ────────────────────────────────────
     #
     # AUD-287. `WarpZone` teletransporta **dentro del mismo mapa**, que es lo

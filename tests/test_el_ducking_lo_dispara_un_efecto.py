@@ -143,3 +143,39 @@ class TestElCableado:
 
         fuente = inspect.getsource(sonido)
         assert "critico=evt in EVENTOS_CRITICOS" in fuente
+
+
+class TestElDuckPersistente:
+    """AUD-310 — el duck del diálogo vivía en el mismo booleano que el de los
+    efectos temporizados: cuando expiraba el temporizador de un crítico,
+    liberaba también la petición persistente y la música volvía a pleno
+    volumen a mitad de la línea de voz."""
+
+    def test_un_efecto_temporizado_no_suelta_un_dialogo_abierto(
+        self, mezcla
+    ) -> None:
+        mezcla.agachar_musica()  # diálogo: petición persistente
+        _asentar(mezcla, 0.5)
+        assert mezcla.musica_agachada
+
+        mezcla.agachar_musica(1.0, nivel=DUCK_NIVEL_EFECTO)  # crítico encima
+        _asentar(mezcla, 0.5)
+        assert mezcla.factor_de_duck == pytest.approx(DUCK_NIVEL, abs=0.01)
+
+        _asentar(mezcla, 3.0)  # expira el temporizado
+        assert mezcla.musica_agachada, (
+            "el efecto crítico se acabó, pero el diálogo sigue abierto: la "
+            "música debe seguir agachada al nivel de la voz"
+        )
+
+    def test_el_temporizado_si_suelta_cuando_no_hay_dialogo(self, mezcla) -> None:
+        mezcla.agachar_musica(0.1, nivel=DUCK_NIVEL_EFECTO)
+        _asentar(mezcla, 3.0)
+        assert mezcla.factor_de_duck == pytest.approx(1.0, abs=0.01)
+
+    def test_soltar_manual_sigue_liberando_el_persistente(self, mezcla) -> None:
+        mezcla.agachar_musica()
+        _asentar(mezcla, 0.5)
+        mezcla.soltar_musica()
+        _asentar(mezcla, 3.0)
+        assert mezcla.factor_de_duck == pytest.approx(1.0, abs=0.01)

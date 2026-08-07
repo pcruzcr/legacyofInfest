@@ -53,6 +53,17 @@ KNOCKBACK_IMPULSE_Y: float = -100.0
 # Freeze duration on a connected hit, in *real* seconds.
 HITSTOP_DURATION: float = 0.05
 
+#: AUD-305 — impulso que devuelve el *bash* sobre un proyectil, en px/s.
+#:
+#: El vertical es el mismo número que `POGO_IMPULSO` y por el mismo motivo: da
+#: para reencuadrar y para encadenar, y **no** para subir más que saltando
+#: (-380). Si el bash ganara al salto, el jugador dejaría de saltar.
+BASH_IMPULSO_Y: float = -300.0
+#: El horizontal es menor que el retroceso que reparte el jugador (200) más un
+#: margen: tiene que apartarte de lo que acabas de golpear sin que parezca que
+#: te ha dado a ti.
+BASH_IMPULSO_X: float = 260.0
+
 
 class CollisionSystem:
     """Resolves player attacks against enemies for a single stage.
@@ -235,11 +246,67 @@ class CollisionSystem:
             self._hit_this_swing.add(id(entity))
             connected = True
 
+        if self._procesar_bash(player, stage, hitbox):
+            connected = True
+
         if connected:
             self.trigger_hitstop(HITSTOP_DURATION)
             # Retire the hitbox so a multi-frame swing cannot re-damage the
             # same enemy on the following frames (AUD-003).
             player.consume_hitbox()
+
+    def _procesar_bash(
+        self, player: Player, stage: StageData, hitbox: pygame.Rect,
+    ) -> bool:
+        """AUD-305 — golpear un proyectil marcado impulsa al jugador (*bash*).
+
+        Es la pareja del pogo (AUD-134): el pogo convierte una fila de enemigos
+        en un camino, y el *bash* hace lo mismo con lo que te disparan. La
+        mecánica de Hollow Knight y Ori.
+
+        Dos decisiones que conviene no revertir sin leer esto:
+
+        **Sólo los proyectiles con `admite_bash`.** La alternativa —que valiera
+        cualquiera— cambia sola la dificultad de los dieciséis mapas
+        entregados, porque convierte a cada tirador en una plataforma. Aquí no
+        hay ni un proyectil marcado en los mapas que existen, así que este
+        método recorre la lista y no hace nada: exactamente el mismo trato que
+        recibieron las pendientes en AUD-297.
+
+        **El proyectil se consume.** Si sobreviviera al golpe, el impulso te
+        dejaría dentro de la cosa que acabas de golpear y te haría daño en el
+        fotograma siguiente. Rebotar sobre algo y que ese algo te mate es la
+        clase de mecánica que el jugador lee como un fallo del motor.
+        """
+        from src.framework.entities.enemy_shooter import Projectile
+
+        impulsado = False
+        for entity in stage.entity_list:
+            if not isinstance(entity, Projectile) or not entity.is_active:
+                continue
+            if not getattr(entity, "admite_bash", False):
+                continue
+            if id(entity) in self._hit_this_swing:
+                continue
+            if not hitbox.colliderect(entity.rect):
+                continue
+
+            # Hacia arriba si el golpe iba hacia abajo, y hacia atrás si iba de
+            # lado: el impulso va siempre en contra del ataque, que es lo que
+            # hace que el jugador lo sienta como apoyarse en el proyectil y no
+            # como que el juego lo empuja.
+            if hitbox.centery > player.rect.centery:
+                player.velocity.y = BASH_IMPULSO_Y
+                player._air_dash_count = 0
+            else:
+                player.velocity.x = -player.facing_direction * BASH_IMPULSO_X
+                player.velocity.y = min(player.velocity.y, BASH_IMPULSO_Y * 0.5)
+
+            entity.is_active = False
+            self._hit_this_swing.add(id(entity))
+            impulsado = True
+
+        return impulsado
 
     def _calculate_damage(self, player: Player, enemy: EnemyBase) -> float:
         """Damage this swing deals to ``enemy``.

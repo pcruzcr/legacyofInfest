@@ -17,12 +17,17 @@ from src.engine.utils.asset_loader import AssetLoader
 
 # ── Computed Layout Constants ──────────────────────────────────────
 # These scale with INTERNAL_WIDTH and INTERNAL_HEIGHT.
-# Override via env vars: LOI_TOP_BAR_H=40 LOI_PANEL_W=300 etc.
-
-def _env_int(key: str, default: int) -> int:
-    import os
-    val = os.environ.get(key)
-    return int(val) if val and val.lstrip("-").isdigit() else default
+#
+# AUD-312: aquí había un `_env_int()` y un comentario que prometía «override
+# via env vars: LOI_TOP_BAR_H=40 LOI_PANEL_W=300». Ni la función tenía un solo
+# llamante ni ninguna de las constantes de abajo consultaba el entorno: se
+# calculan de `settings` y ya está. `75_BIBLIA_TECNICA.md` documentaba esas dos
+# variables como si funcionaran, así que la promesa había llegado a un
+# documento — que es como una función muerta acaba costando el tiempo de
+# alguien que intenta usarla.
+#
+# Retirados los dos. Si algún día hace falta ajustar el kit de demos desde
+# fuera, se escribe entonces y con su llamante.
 
 # Top bar: 5% of height, min 28px, max 48px
 TOP_BAR_H: int = max(28, min(48, int(settings.INTERNAL_HEIGHT * 0.055)))

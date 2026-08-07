@@ -269,8 +269,11 @@ class TestLaEscalaDeTextoLlegaAOpciones:
         from src.engine.core import settings
 
         escena = self._pantalla(contexto, escala)
+        # `_btn_contorno` entró en la lista con AUD-304, que es justo lo que
+        # esta prueba cazó: la opción nueva empujaba el menú 20 px fuera de la
+        # pantalla. Vigilarlo evita que la próxima haga lo mismo sin avisar.
         for nombre in ("_btn_back", "_btn_keybindings", "_btn_mantener",
-                       "_dropdown_texto", "_slider_music"):
+                       "_btn_contorno", "_dropdown_texto", "_slider_music"):
             r = getattr(escena, nombre).get_abs_rect()
             assert r.bottom <= settings.INTERNAL_HEIGHT, (
                 f"a {escala}× «{nombre}» acaba en y={r.bottom}, fuera de la "

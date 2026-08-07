@@ -149,6 +149,39 @@ def main() -> int:
                   "(se muestran tal cual; correcto si el original ya está "
                   "en este idioma)")
 
+    # AUD-307 — la comprobación que faltaba, y que sí se puede hacer exacta.
+    #
+    # Lo de arriba explica por qué «sin entrada» no basta para acusar a nadie:
+    # el código fuente es bilingüe y un literal ya castellano no necesita
+    # entrada en `es.json`. Pero de ahí no se sigue que no haya nada que
+    # comprobar, y durante seis cadenas no se comprobó nada.
+    #
+    # La regla exacta sale de para qué sirve cada catálogo. `es.json` traduce
+    # del inglés al castellano, así que **una cadena que no está en `es.json`
+    # es que ya estaba en castellano** — no hay heurística de idioma aquí, lo
+    # dice el propio catálogo. Y una cadena en castellano tiene que tener su
+    # entrada en `en.json`, o el jugador que juega en inglés la ve en español.
+    #
+    # Medido al escribir esto: seis la incumplían —'ESTUDIANTE', 'EXPERIENCIA',
+    # 'Elegir', 'IDENTIFICACIÓN', 'Subir rango' y 'ÁRBOL DE HABILIDADES'—, y
+    # las dos últimas son de AUD-293 y AUD-267. O sea, el modo de fallo no es
+    # que alguien renombre una cadena: es que una **función nueva** llega con
+    # sus textos y nadie se acuerda del catálogo. Eso es lo que esto vigila.
+    ruta_es = _RAIZ / "locale" / "es.json"
+    ruta_en = _RAIZ / "locale" / "en.json"
+    if ruta_es.exists() and ruta_en.exists():
+        cat_es = json.loads(ruta_es.read_text(encoding="utf-8"))
+        cat_en = json.loads(ruta_en.read_text(encoding="utf-8"))
+        castellanas = {s for s in visibles if s not in cat_es}
+        sin_ingles = sorted(castellanas - set(cat_en))
+        if sin_ingles:
+            print(f"\n  [ERROR] {len(sin_ingles)} cadena(s) en castellano sin "
+                  f"traducción en en.json — se verían en español jugando en "
+                  f"inglés:")
+            for s in sin_ingles:
+                print(f"           {s!r}")
+            problemas += 1
+
     print()
     if problemas:
         print(f"{problemas} problema(s) en los catálogos")
