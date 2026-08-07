@@ -99,12 +99,16 @@ class AudioPipeline:
 
     def _apply_reverb(self, seg, decay: float = 0.3):
         samples = np.array(seg.get_array_of_samples(), dtype=np.float32)
+        max_int = 2 ** (seg.sample_width * 8 - 1) - 1
+        # AUD-314 — mezclar en int16 envolvía (32767 + eco ≈ 45000 → -20536):
+        # se trabaja en [-1, 1] y se recorta antes de volver a int16.
+        norm = samples / max_int
         delay_ms = 50
         delay_samples = int(seg.frame_rate * delay_ms / 1000)
-        wet = np.zeros_like(samples)
-        wet[delay_samples:] = samples[:-delay_samples] * decay
-        mixed = (samples + wet).astype(np.int16)
-        return seg._spawn(struct.pack(f"<{len(mixed)}h", *mixed))
+        wet = np.zeros_like(norm)
+        wet[delay_samples:] = norm[:-delay_samples] * decay
+        mixed = np.clip(norm + wet, -1.0, 1.0) * max_int
+        return seg._spawn(struct.pack(f"<{len(mixed)}h", *mixed.astype(np.int16)))
 
     def _load_cached(self, name: str) -> bytes | None:
         if self._cache_dir is None:
