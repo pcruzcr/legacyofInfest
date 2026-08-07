@@ -106,6 +106,13 @@ class Mezclador:
         self._duck_restante: float = 0.0
         #: AUD-284 — hasta dónde baja el duck vivo. Voz 0,35; efecto 0,70.
         self._duck_nivel: float = DUCK_NIVEL
+        #: AUD-310 — la petición persistente (diálogo) vive aparte de la
+        #: temporizada. Antes ambas compartían `_duck_pedido`, y la expiración
+        #: del temporizador de un efecto crítico soltaba también el duck que el
+        #: diálogo había pedido sin duración: la música volvía a pleno volumen
+        #: a mitad de la línea de voz.
+        self._duck_persistente: bool = False
+        self._duck_nivel_persistente: float = DUCK_NIVEL
 
     # ── volúmenes ─────────────────────────────────────────────────
     def volumen_de(self, bus: str) -> float:
@@ -165,13 +172,24 @@ class Mezclador:
         silencio tiene más que perder que quien pide sitio.
         """
         nivel = max(0.0, min(1.0, float(nivel)))
-        self._duck_nivel = min(self._duck_nivel, nivel) if self._duck_pedido else nivel
-        self._duck_pedido = True
         if segundos > 0.0:
+            self._duck_nivel = min(self._duck_nivel, nivel) if self._duck_pedido else nivel
+            self._duck_pedido = True
             self._duck_restante = max(self._duck_restante, float(segundos))
+        else:
+            # AUD-310 — petición persistente: guarda su propio nivel para poder
+            # restaurarlo cuando expire un duck temporizado pedido encima.
+            self._duck_nivel_persistente = (
+                min(self._duck_nivel_persistente, nivel)
+                if self._duck_persistente else nivel
+            )
+            self._duck_nivel = min(self._duck_nivel, nivel) if self._duck_pedido else nivel
+            self._duck_persistente = True
+            self._duck_pedido = True
 
     def soltar_musica(self) -> None:
         self._duck_pedido = False
+        self._duck_persistente = False
         self._duck_restante = 0.0
         self._duck_nivel = DUCK_NIVEL
 
@@ -193,8 +211,15 @@ class Mezclador:
         if self._duck_restante > 0.0:
             self._duck_restante -= dt
             if self._duck_restante <= 0.0:
-                self._duck_pedido = False
-                self._duck_nivel = DUCK_NIVEL
+                # AUD-310 — expirar un temporizado no libera una petición
+                # persistente: si el diálogo sigue abierto, se restaura su
+                # nivel; si no, la música vuelve arriba del todo.
+                self._duck_restante = 0.0
+                if self._duck_persistente:
+                    self._duck_nivel = self._duck_nivel_persistente
+                else:
+                    self._duck_pedido = False
+                    self._duck_nivel = DUCK_NIVEL
 
         objetivo = self._duck_nivel if self._duck_pedido else 1.0
         if self._duck == objetivo:

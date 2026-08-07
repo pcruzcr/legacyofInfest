@@ -71,13 +71,19 @@ class AudioManager:
     # of them dead, is worse than one: it doubles the surface that can rot and
     # makes it unclear which is authoritative. The dead copy has been removed.
 
-    def play_music(self, path: str | Path, loops: int = -1) -> None:
-        """Play background music. -1 loops = infinite. Falls back silently."""
+    def play_music(self, path: str | Path, loops: int = -1, fundido_ms: int = 0) -> None:
+        """Play background music. -1 loops = infinite. Falls back silently.
+
+        `fundido_ms` funde la entrada de la pista (AUD-313): SDL_mixer no
+        permite dos pistas de música a la vez, así que el crossfade completo no
+        existe aquí; el fundido de entrada es lo que hace audible el cambio de
+        intensidad en vez de un corte seco.
+        """
         path_str = str(path)
         try:
             pygame.mixer.music.load(path_str)
             pygame.mixer.music.set_volume(0.0 if self._muted else self._music_volume)
-            pygame.mixer.music.play(loops=loops)
+            pygame.mixer.music.play(loops=loops, fade_ms=fundido_ms)
             self._current_music = path_str
         except (pygame.error, FileNotFoundError, OSError) as e:  # BUG-074 FIX: pygame.error no atrapa FileNotFoundError
             logger.warning("AudioManager: no se pudo cargar música %s: %s", path_str, e)
@@ -165,7 +171,10 @@ class AudioManager:
         """Play a music stinger (short SFX overlay) without interrupting music."""
         if self._muted:
             return
-        self.sound_bank.play(name, volume=self._sfx_volume * volume)
+        # AUD-311 — por el bus como el resto: antes multiplicaba `_sfx_volume`
+        # a mano y se saltaba `Mezclador.ganancia`, con lo que el stinger
+        # ignoraba el volumen del bus de efectos (y el silencio del maestro).
+        self.sound_bank.play(name, volume=self.mezcla.ganancia(BUS_EFECTOS, volume))
 
     def play_ambient(self, path: str | Path, volume: float = 0.5, loops: int = -1) -> None:
         """Play ambient audio layer (wind, rain, machinery) with crossfade."""
@@ -351,8 +360,11 @@ class AudioManager:
         """Toggle mute on/off."""
         self._muted = not self._muted
         self.mezcla.silencio = self._muted
-        if self._mixer_listo():
-            pygame.mixer.music.set_volume(0.0 if self._muted else self._music_volume)
+        # AUD-311 — por la composición del bus, no a mano: `ganancia(BUS_MUSICA)`
+        # ya devuelve 0 con el silencio puesto, y además respeta el *ducking*
+        # vivo. Antes, desmutear con un diálogo abierto devolvía la música a
+        # pleno volumen a pesar de que estuviera agachada.
+        self._aplicar_volumen_de_musica()
         if self._ambient_channel:
             self._ambient_channel.set_volume(0.0 if self._muted else self._ambient_volume * self._sfx_volume)
 

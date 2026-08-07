@@ -442,11 +442,28 @@ class TestLaMusicaDinamicaEligeSegunLaSituacion:
             def __init__(self):
                 self.reproducido = []
 
-            def play_music(self, ruta, loops=-1):
+            def play_music(self, ruta, loops=-1, fundido_ms=0):
                 self.reproducido.append(str(ruta))
 
         audio = _AudioFalso()
         return DynamicMusicSystem(audio), audio
+
+    def test_el_cambio_de_intensidad_pide_fundido(self):
+        """AUD-313 — `_fade_duration` se declaraba y nadie lo leía: cada
+        transición calm↔combat reiniciaba la pista de golpe. El cambio tiene
+        que llegar a `play_music` con el fundido pedido."""
+        sistema, audio = self._sistema()
+        audio.fundidos = []
+
+        def _play_fundido(ruta, loops=-1, fundido_ms=0):
+            audio.fundidos.append(fundido_ms)
+
+        audio.play_music = _play_fundido
+        sistema.set_zone(1, "bgm_zone1")
+        sistema.set_intensity(sistema.INTENSITY_COMBAT)
+        assert audio.fundidos and audio.fundidos[0] == 500, (
+            "set_intensity no pasó el fundido de _fade_duration a play_music"
+        )
 
     def test_un_jefe_manda_sobre_todo_lo_demas(self):
         sistema, _audio = self._sistema()
