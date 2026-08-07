@@ -8,10 +8,10 @@ Visión por Computadora y Reconocimiento de Patrones.
 - DI Container (SceneRegistry) para lazy-loading de escenas, ParamPanel widget reutilizable
 - Sistema completo de stages 2D con físicas, colisiones, cámara, HUD y jefes
 - Framework de procesamiento: ColorTools, CurveTools, FilterTools, VisionTools, PatternRecognitionTools
-- Debug overlay (F3) con FPS, event queue snapshot y árbol de módulos
+- Consola de depuración (F11) con FPS, cola de eventos y árbol de módulos; cajas de colisión en F1
 - Atmósfera configurable desde Tiled: iluminación por focos, clima, partículas
   de ambiente, bloom y viñeta — sin escribir una línea de Python
-- 4.007 pruebas automatizadas + validadores de TMX, assets y dependencias en CI
+- 4.073 pruebas automatizadas + validadores de TMX, assets y dependencias en CI
 
 ```
 pip install -r requirements.txt

@@ -85,7 +85,7 @@ PYGAME_HIDE_SUPPORT_PROMPT=1
    `docs/23_DATA_SCHEMAS.md` §8.
 5. **La política bilingüe es "bilingüe donde hay lector", no por decreto.**
    Obligatorio en dos idiomas: `README.md`/`README.en.md` y los informes de
-   auditoría publicables. El material de curso va en español. Traducir los 95
+   auditoría publicables. El material de curso va en español. Traducir los 67
    documentos duplicaría la superficie de desincronización — la decisión está
    razonada en `tests/test_documentacion_bilingue.py`.
 6. **Los números en la documentación son verificables o no se escriben.**
@@ -102,7 +102,7 @@ PYGAME_HIDE_SUPPORT_PROMPT=1
 ## 4. Convenciones
 
 **Identificadores de hallazgo.** Todo defecto encontrado y corregido lleva un
-`AUD-NNN` correlativo (el último usado va por AUD-180; compruébalo con
+`AUD-NNN` correlativo (el último usado va por AUD-322; compruébalo con
 `git log --oneline -1` antes de asignar uno). Se cita en:
 el mensaje de commit, el comentario del código que explica *por qué* existe el
 arreglo, y el documento de auditoría correspondiente. Los huecos conocidos y no
@@ -115,8 +115,8 @@ Ejemplo real: `AUD-156: cargar una partida devolvía al principio del nivel`.
 que repite el código sobra; un comentario que explica qué falló y por qué la
 solución es esa, se queda. Sigue ese registro.
 
-**Ramas.** `prod`, `pprod`, `dev`. No existe `main` — `CONTRIBUTING.md` aún
-dice lo contrario y es un defecto pendiente.
+**Ramas.** `prod`, `pprod`, `dev`. No existe `main` — `CONTRIBUTING.md` ya lo
+dice así desde AUD-168.
 
 **Documentos.** Numerados `NN_NOMBRE.md` en `docs/`, indexados en la tabla
 autoritativa de `docs/00_MASTER_INDEX.md`. Un documento nuevo sin fila en el
