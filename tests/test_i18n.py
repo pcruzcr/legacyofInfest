@@ -204,6 +204,62 @@ class TestLaTraduccionLlegaALasPantallas:
             "la pantalla de inventario se ve idéntica en español e inglés"
         )
 
+    def test_el_menu_de_titulo_cambia_con_el_idioma(self, display):
+        """AUD-321 — el título era 100 % inglés: sus rótulos se dibujaban
+        tal cual y la pantalla se veía idéntica en español e inglés."""
+        import numpy as np
+
+        from src.engine.audio.audio_manager import AudioManager
+        from src.engine.core.event_bus import EventBus
+        from src.engine.core.game_context import GameContext
+        from src.engine.core.save_manager import SaveManager
+        from src.engine.input.input_manager import InputManager
+        from src.engine.scene.scene_manager import SceneManager
+        from src.engine.scenes.title_scene import TitleScene
+
+        ctx = GameContext(
+            input_manager=InputManager(), audio_manager=AudioManager(),
+            scene_manager=None, event_bus=EventBus(), clock=None,
+            save_manager=SaveManager(),
+        )
+        ctx.scene_manager = SceneManager(ctx)
+
+        def pintar(idioma):
+            i18n.set_idioma(idioma)
+            escena = TitleScene(ctx)
+            escena.on_enter()
+            s = pygame.Surface((800, 600))
+            escena.draw(s)
+            return pygame.surfarray.array3d(s)
+
+        assert not np.array_equal(pintar("es"), pintar("en")), (
+            "el menú del título se ve idéntico en español e inglés"
+        )
+
+    def test_los_rotulos_del_titulo_tienen_traduccion_espanola(self):
+        """AUD-321 — envolver en `_()` no traduce nada si la clave no tiene
+        entrada en el catálogo español: los rótulos del título tienen que
+        estar ahí, con su traducción."""
+        i18n.set_idioma("es")
+        esperado = {
+            "START": "JUGAR",
+            "WORLD MAP": "MAPA MUNDIAL",
+            "INVENTORY": "INVENTARIO",
+            "SKILL TREE": "ÁRBOL DE HABILIDADES",
+            "SHOP": "TIENDA",
+            "BESTIARY": "BESTIARIO",
+            "ACHIEVEMENTS": "LOGROS",
+            "RECORDS": "RÉCORDS",
+            "ACADEMIC DEMOS": "DEMOS ACADÉMICAS",
+            "OPTIONS": "OPCIONES",
+            "QUIT": "SALIR",
+            "CONTINUE": "CONTINUAR",
+        }
+        for clave, traducida in esperado.items():
+            assert i18n._(clave) == traducida, (
+                f"«{clave}» no traduce a «{traducida}» en el catálogo español"
+            )
+
 
 class TestElIdiomaSePersiste:
     def test_el_ajuste_existe_y_su_valor_por_defecto_es_espanol(self):

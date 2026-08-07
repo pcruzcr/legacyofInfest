@@ -158,7 +158,9 @@ class MenuList:
             else:
                 color = Theme.TEXT
 
-            label = label_font.render(item.label, True, color)
+            # AUD-321: el rótulo va por el catálogo, como el resto del kit.
+            # El `value` se queda intacto: es la clave de ruteo, no texto.
+            label = label_font.render(_(item.label), True, color)
             surface.blit(label, (row.x + Theme.SPACE_M, row.centery - label.get_height() // 2))
 
             if item.trailing:
@@ -179,7 +181,7 @@ class MenuList:
         item = self.current
         if item is None or not item.hint:
             return
-        text = font(Theme.FONT_SMALL).render(item.hint, True, Theme.TEXT_MUTED)
+        text = font(Theme.FONT_SMALL).render(_(item.hint), True, Theme.TEXT_MUTED)
         surface.blit(text, ((settings.INTERNAL_WIDTH - text.get_width()) // 2, y))
 
 
