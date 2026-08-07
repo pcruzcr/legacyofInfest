@@ -439,11 +439,19 @@ class DrawingSystem:
         #
         # Se intentó con `SpriteBatch` y se midió en el mapa real: con las
         # tres capas de 4-1 y seis copias por fotograma, el lote costaba
-        # 2,4-3,0 ms y el blit a blit 0,8-1,4 ms. `Surface.blits` gana al
-        # `blit` suelto a partir de cientos de llamadas — el banco de
-        # `test_el_lote_de_sprites.py` lo mide a 500-8.000 — y el wrap nunca
-        # llega ahí: su tope es ancho de vista entre ancho de capa, unas
-        # veinte copias por capa en el peor caso.
+        # 2,4-3,0 ms y el blit a blit 0,8-1,4 ms. Se revirtió.
+        #
+        # AUD-330 — esa diferencia no se reproduce. Re-medida en la misma
+        # máquina, con áreas de vista completa y N de 2 a 20, el lote empata
+        # (0,97-1,03×) y con recortes de 32 px gana ya desde dos llamadas
+        # (0,73-0,82×). El 2-3× de AUD-329 era carga de máquina, la misma que
+        # hacía flak-ear el test del presupuesto de fotograma.
+        #
+        # Se mantiene el blit suelto, y el motivo correcto es el empate: seis
+        # llamadas de pantalla completa son seis, no crecen con el contenido,
+        # y un lote que no gana es código que sobra. El umbral automático de
+        # `SpriteBatch` queda en 1 — agrupar siempre — porque es lo que la
+        # medición entera sostiene.
         for index, layer in enumerate(layers):
             if not isinstance(layer, pygame.Surface):
                 continue
