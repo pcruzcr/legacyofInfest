@@ -20,6 +20,7 @@ from src.engine.core.events import Events
 from src.engine.utils.asset_loader import AssetLoader
 from src.engine.utils.surface_pool import get_pool
 from src.framework.entities.base_entity import BaseEntity
+from src.framework.vfx.contorno import COLOR_ENEMIGO, dibujar_con_contorno
 
 if TYPE_CHECKING:
     from src.framework.entities.player import Player
@@ -139,8 +140,8 @@ class EnemyBase(BaseEntity):
         # --- Collision ---
         self._collision_rects: list[pygame.Rect] = []
         self._one_way_rects: list[pygame.Rect] = []
-        # AUD-325 â€” suelo inclinado para los enemigos. VacÃ­a por defecto:
-        # ningÃºn mapa entregado tiene pendientes, y el paso entero se salta.
+        # AUD-325 — suelo inclinado para los enemigos. Vacía por defecto:
+        # ningún mapa entregado tiene pendientes, y el paso entero se salta.
         # `_hug_slopes` excluye a los voladores, que no pisan suelo.
         self._pendientes: list = []
         self._hug_slopes: bool = True
@@ -218,9 +219,9 @@ class EnemyBase(BaseEntity):
         self._tick_cooldowns(dt)
         self._advance_animation(dt)
         self._post_update(dt)
-        # AUD-325 â€” el suelo inclinado, al final: las subclases mueven la
-        # posiciÃ³n en distintos puntos (estado, knockback, `_post_update`),
-        # y Ã©ste es el Ãºnico lugar que las ve a todas.
+        # AUD-325 — el suelo inclinado, al final: las subclases mueven la
+        # posición en distintos puntos (estado, knockback, `_post_update`),
+        # y éste es el único lugar que las ve a todas.
         self._resolver_pendientes()
 
     def _apply_knockback(self, dt: float) -> None:
@@ -372,7 +373,26 @@ class EnemyBase(BaseEntity):
                 frame = frames[frame_idx]
             ox = (self.rect.width - self._sprite_fw) // 2
             oy = self.rect.height - self._sprite_fh
-            surface.blit(frame, (screen_x + ox, screen_y + oy))
+            destino = (screen_x + ox, screen_y + oy)
+            # AUD-304 — el contorno de AUD-190, disponible también aquí. Se
+            # consulta cada fotograma y no se cachea en el enemigo a propósito:
+            # la opción se cambia desde el menú sin salir de la partida, y una
+            # copia local haría falso el interruptor hasta reiniciar. Es el
+            # mismo patrón que `reduced_motion` en `stage/camera.py`.
+            #
+            # Y el import va aquí dentro por el mismo motivo que allí, que
+            # costó un fallo descubrir: `user_settings` importa `orjson`, y
+            # subirlo al cuerpo del módulo mete esa dependencia en la cadena de
+            # `stage_loader` → `entities` → `enemy_base`. `grade_stage.py`
+            # carga escenarios en un entorno pelado, así que el calificador
+            # empezó a dar 0 de 12 en `design_completable` a los dieciséis
+            # mapas — incluido stage0, que tenía nota perfecta.
+            from src.engine.core import user_settings
+
+            if user_settings.preferencia("contorno_de_enemigos", False):
+                dibujar_con_contorno(surface, frame, destino, COLOR_ENEMIGO)
+            else:
+                surface.blit(frame, destino)
             return
 
         # Hit reaction tint overlay
@@ -656,20 +676,20 @@ class EnemyBase(BaseEntity):
         self._one_way_rects = one_way if one_way is not None else []
 
     def set_pendientes(self, pendientes: list) -> None:
-        """Suelo inclinado que el enemigo respeta â€” AUD-325.
+        """Suelo inclinado que el enemigo respeta — AUD-325.
 
-        VacÃ­a por defecto: ningÃºn mapa entregado tiene pendientes, y el paso
-        entero se salta (la condiciÃ³n de siempre para no tocar nada).
+        Vacía por defecto: ningún mapa entregado tiene pendientes, y el paso
+        entero se salta (la condición de siempre para no tocar nada).
         """
         self._pendientes = pendientes
 
     def _resolver_pendientes(self) -> None:
-        """Pies pegados a la hipotenusa y freno lateral â€” AUD-325.
+        """Pies pegados a la hipotenusa y freno lateral — AUD-325.
 
         Los enemigos no tienen gravedad propia: andan sobre suelo llano a la
-        altura a la que se colocaron. Con pendientes, la misma geometrÃ­a del
+        altura a la que se colocaron. Con pendientes, la misma geometría del
         jugador los mantiene sobre la cuesta (subiendo y bajando) y les
-        cierra la cara empinada, sin tocar la fÃ­sica de las subclases.
+        cierra la cara empinada, sin tocar la física de las subclases.
         """
         if not self._pendientes or not self._hug_slopes:
             return

@@ -40,6 +40,7 @@ class Projectile(BaseEntity):
         damage: float,
         lifetime: float = 3.0,
         gravity: float = 0.0,
+        admite_bash: bool = False,
     ) -> None:
         """Initialize the projectile.
 
@@ -59,6 +60,15 @@ class Projectile(BaseEntity):
         self.velocity: pygame.Vector2 = velocity
         self.gravity: float = gravity
         self.damage: float = damage
+        #: AUD-305 — este proyectil se puede usar como impulso (*bash*).
+        #:
+        #: **Falso por defecto, y opt-in por proyectil.** La alternativa —que
+        #: todo proyectil enemigo sirviera— vuelve franqueables huecos que hoy
+        #: no lo son en los dieciséis mapas ya calificados: convierte a cada
+        #: tirador en una plataforma, y con ella cambia la dificultad de mapas
+        #: que nadie ha vuelto a jugar. Así, el autor del escenario decide
+        #: dónde el *bash* es parte del reto y ninguna entrega cambia sola.
+        self.admite_bash: bool = admite_bash
         self._lifetime: float = lifetime
         self._elapsed: float = 0.0
         self._expired: bool = False
@@ -156,6 +166,7 @@ class EnemyShooter(EnemyBase):
         max_health: float = 3.0,
         damage_on_contact: float = 0.25,
         zone: int = 0,
+        admite_bash: bool = False,
         **kwargs,
     ) -> None:
         """Initialize the shooter enemy."""
@@ -172,6 +183,10 @@ class EnemyShooter(EnemyBase):
         self.fire_rate: float = fire_rate  # shots per second
         self.projectile_speed: float = projectile_speed
         self.projectile_damage: float = projectile_damage
+        #: AUD-305 — se hereda a cada proyectil que dispare este tirador. Se
+        #: declara desde Tiled con `admite_bash` en el objeto del enemigo, que
+        #: es donde el autor del mapa está pensando en el reto.
+        self.admite_bash: bool = admite_bash
         self.patrol_length: float = patrol_length
         self._patrol_origin: pygame.Vector2 = pygame.Vector2(spawn_position)
         self._active_projectiles: list[Projectile] = []
@@ -346,6 +361,7 @@ class EnemyShooter(EnemyBase):
             velocity=vel,
             damage=self.projectile_damage,
             lifetime=3.0,
+            admite_bash=self.admite_bash,
         )
         self._active_projectiles.append(projectile)
         self._event_bus.emit(Events.SFX_PROJECTILE_FIRE)

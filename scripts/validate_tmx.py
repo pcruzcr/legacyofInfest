@@ -26,6 +26,14 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 MAPS_DIR = _PROJECT_ROOT / "assets" / "maps"
+
+#: AUD-306 — la plantilla que copian los estudiantes también se valida.
+#:
+#: Sin esta línea el barrido por defecto miraba los dieciséis mapas del motor y
+#: **no** `student_templates/`, que es de donde sale el primer TMX de cada
+#: entrega. Es justo el fichero donde un fallo se multiplica por veintiséis: se
+#: copia antes de que nadie lo haya ejecutado.
+PLANTILLAS_DIR = _PROJECT_ROOT / "student_templates"
 KNOWN_TILESETS = ["tileset_stage0", "tileset_zone1", "tileset_zone2", "tileset_zone3"]
 KNOWN_TMX_PROPERTIES = {
     "stage_id", "stage_name", "bgm_track", "time_limit",
@@ -401,6 +409,8 @@ def main() -> int:
             tmx_files.extend(find_tmx_files(p))
     else:
         tmx_files = find_tmx_files(MAPS_DIR)
+        if PLANTILLAS_DIR.exists():
+            tmx_files.extend(find_tmx_files(PLANTILLAS_DIR))
 
     if not tmx_files:
         print("No TMX files found.")

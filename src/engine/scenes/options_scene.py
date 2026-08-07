@@ -34,6 +34,7 @@ class OptionsScene(BaseScene):
         self._dropdown_texto: Any = None
         self._btn_movimiento: Any = None
         self._btn_mantener: Any = None
+        self._btn_contorno: Any = None
         self._movimiento_reducido: bool = False
         self._mantener_pulsado: bool = False
 
@@ -245,12 +246,31 @@ class OptionsScene(BaseScene):
         self._fila(y, "MOVIMIENTO REDUCIDO", x_etq, ancho_etq)
         y += paso
 
+        # AUD-304 — estas dos comparten fila, y sin etiqueta al lado.
+        #
+        # Al añadir el contorno como una fila más, `_btn_back` y
+        # `_btn_keybindings` se salieron de la pantalla: 620 px de fondo contra
+        # los 600 que hay, y la prueba de AUD-157 lo cazó a las cuatro escalas
+        # de texto. El menú estaba lleno, así que había que hacer sitio y no
+        # empujar.
+        #
+        # Se hace sitio aquí porque son las dos únicas filas cuya etiqueta
+        # lateral sobra: el texto del propio botón ya dice qué hace y en qué
+        # estado está. Con media fila cada uno hay ancho de sobra para decirlo
+        # entero, que es lo que antes no cabía en el control de un tercio.
+        w_toggle = (ancho_util - 12) // 2
+
         self._mantener_pulsado = bool(cfg.get("hold_to_press", False))
         self._btn_mantener = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((izq, y), (w_ctrl, alto)),
+            relative_rect=pygame.Rect((izq, y), (w_toggle, alto)),
             text=self._mantener_label(), manager=self._gui_manager,
         )
-        self._fila(y, "PULSAR EN VEZ DE MANTENER", x_etq, ancho_etq)
+
+        self._contorno_enemigos = bool(cfg.get("contorno_de_enemigos", False))
+        self._btn_contorno = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect((izq + w_toggle + 12, y), (w_toggle, alto)),
+            text=self._contorno_label(), manager=self._gui_manager,
+        )
         y += paso
 
         # Los dos botones van en la misma fila: apilados, la última se salía
@@ -273,8 +293,13 @@ class OptionsScene(BaseScene):
     def _movimiento_label(self) -> str:
         return f"MOVIMIENTO: {'REDUCIDO' if self._movimiento_reducido else 'NORMAL'}"
 
+    #: Estos dos van sin etiqueta al lado (ver `_build_ui`), así que el texto
+    #: tiene que decir qué se conmuta y no sólo cómo está.
     def _mantener_label(self) -> str:
         return f"ENTRADA: {'PULSAR' if self._mantener_pulsado else 'MANTENER'}"
+
+    def _contorno_label(self) -> str:
+        return f"CONTORNO ENEMIGOS: {'SI' if self._contorno_enemigos else 'NO'}"
 
     #: Nombres que se muestran, en su propio idioma. Un desplegable que dijera
     #: «Español / Inglés» en inglés es exactamente lo que no ayuda a quien no
@@ -308,6 +333,7 @@ class OptionsScene(BaseScene):
             "text_scale": prefs.text_scale,
             "reduced_motion": prefs.reduced_motion,
             "hold_to_press": prefs.hold_to_press,
+            "contorno_de_enemigos": prefs.contorno_de_enemigos,
         }
 
     def _save_config(self) -> None:
@@ -335,6 +361,8 @@ class OptionsScene(BaseScene):
             prefs.reduced_motion = self._movimiento_reducido
         if self._btn_mantener is not None:
             prefs.hold_to_press = self._mantener_pulsado
+        if self._btn_contorno is not None:
+            prefs.contorno_de_enemigos = self._contorno_enemigos
         # Cambiar la escala invalida toda la caché de fuentes: las que hay
         # dentro se crearon con el tamaño anterior y seguirían saliendo
         # pequeñas hasta reiniciar, que es cuando el jugador concluye que la
@@ -424,6 +452,16 @@ class OptionsScene(BaseScene):
             self._mantener_pulsado = not self._mantener_pulsado
             self._btn_mantener.set_text(self._mantener_label())
             prefs.hold_to_press = self._mantener_pulsado
+            return True
+
+        if self._btn_contorno is not None and elemento == self._btn_contorno:
+            self._contorno_enemigos = not self._contorno_enemigos
+            self._btn_contorno.set_text(self._contorno_label())
+            # Se escribe en `prefs` aquí y no sólo al guardar: los enemigos
+            # consultan la preferencia cada fotograma, así que el efecto se ve
+            # en el nivel de detrás mientras el menú sigue abierto. Es el mismo
+            # trato que reciben las otras dos conmutaciones de accesibilidad.
+            prefs.contorno_de_enemigos = self._contorno_enemigos
             return True
 
         if elemento == self._btn_keybindings:
