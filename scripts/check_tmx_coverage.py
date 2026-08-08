@@ -42,6 +42,7 @@ PROPIEDADES_MAPA: tuple[str, ...] = (
     "ambient_light", "bloom", "vignette",
     "ambient_fx", "ambient_fx_rate",
     "start_hour", "day_length", "season",
+    "profundidad_curva", "orden_por_y",
 )
 
 #: Las que un mapa **debe** tener para cargar.

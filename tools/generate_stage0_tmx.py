@@ -338,6 +338,8 @@ tileheight="{TS}" infinite="0" nextlayerid="20" nextobjectid="900">
   <property name="zone" type="int" value="0"/>
   <property name="bloom" type="float" value="0.18"/>
   <property name="vignette" type="float" value="0.30"/>
+  <property name="profundidad_curva" type="float" value="1.0"/>
+  <property name="orden_por_y" type="bool" value="false"/>
   <property name="ambient_fx" value="spores"/>
   <property name="ambient_fx_rate" type="float" value="14"/>
  </properties>

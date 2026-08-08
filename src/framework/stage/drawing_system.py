@@ -23,6 +23,22 @@ logger = logging.getLogger(__name__)
 #: cubre de sobra al sprite más grande del bestiario.
 _MARGEN_DIBUJADO: int = 64
 
+
+def _ancla_de_profundidad(drawable: Any) -> int:
+    """La altura que decide el orden del pintor para una entidad (AUD-339).
+
+    Con `orden_por_y` activo, lo que se escala igual se ordena igual: la
+    escala 2.5D ancla en los pies (`rect.bottom`) y la ordenación debe usar
+    el mismo punto. La excepción es `depth_y`: una entidad voladora la
+    declara con su **proyección en el suelo**, porque un volador alto se
+    dibuja sobre quien está debajo de él aunque su centro esté lejos — y con
+    su centro, el orden lo pondría detrás de cosas que debería tapar.
+    """
+    if (declarado := getattr(drawable, "depth_y", None)) is not None:
+        return int(declarado)
+    rect = getattr(drawable, "rect", None)
+    return rect.bottom if rect is not None else 0
+
 if TYPE_CHECKING:
     from src.engine.ui.hud import HUD
     from src.engine.ui.message_box import MessageBox
@@ -588,6 +604,25 @@ class DrawingSystem:
         for checkpoint in checkpoints:
             if hasattr(checkpoint, "draw"):
                 drawables.append((checkpoint, checkpoint.rect.centery))
+
+        # AUD-339 — 2.5D fase 6: el orden por Y del pintor, opcional.
+        #
+        # AUD-067 ordenó por `rect.centery`, y eso basta para las entidades
+        # de cuerpo compacto de las entregas. Pero el 2.5D de AUD-277 **escala**
+        # por los pies (`rect.bottom`) y **ordena** por el centro: dos anclas
+        # distintas para la misma profundidad. Un volador alto se escala como
+        # lo lejano que está, pero se ordena como lo cercano que parece.
+        #
+        # `orden_por_y` en el TMX cambia la clave de ordenación a la misma
+        # ancla que usa la escala: `depth_y` si la entidad lo declara (un
+        # volador que quiere ordenarse por su proyección en el suelo), si no
+        # sus pies. Con la propiedad ausente o `False`, se queda el orden de
+        # AUD-067 intacto — los mapas existentes no cambian.
+        orden_por_y = bool(getattr(stage, "orden_por_y", False))
+        if orden_por_y:
+            drawables = [
+                (d, _ancla_de_profundidad(d)) for d, _ in drawables
+            ]
 
         drawables.sort(key=lambda pair: pair[1])
 

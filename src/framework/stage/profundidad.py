@@ -41,10 +41,18 @@ class EscalaPorProfundidad:
     """
 
     def __init__(self, mapa_alto: int = 0,
-                 minimo: float = 1.0, maximo: float = 1.0) -> None:
+                 minimo: float = 1.0, maximo: float = 1.0,
+                 curva: float = 1.0) -> None:
         self.mapa_alto = max(0, int(mapa_alto))
         self.minimo = float(minimo)
         self.maximo = float(maximo)
+        # AUD-339 — la curva de la escala. 1.0 es la interpolación lineal de
+        # AUD-277; con más de 1.0 las filas del fondo se encogen más rápido,
+        # que es lo que hace un espacio con perspectiva de verdad: la fila
+        # siguiente a tus pies casi no cambia y el horizonte se comprime.
+        # Negativa o cero invertiría el degradado o lo congelaría, así que se
+        # sujeta igual que `hardness` en la niebla.
+        self.curva = max(0.01, float(curva))
 
     @property
     def activa(self) -> bool:
@@ -62,9 +70,14 @@ class EscalaPorProfundidad:
         por debajo del mapa se agrandaría sin límite, y uno lanzado por encima
         del borde superior se haría diminuto: dos formas de que un fallo de
         física se convierta en un fallo visual espectacular.
+
+        La curva se aplica sobre la altura normalizada, antes de interpolar:
+        con `curva = 2.0` la mitad del mapa ya ha recorrido las tres cuartas
+        partes de la escala, y con `curva = 1.0` la fórmula es exactamente la
+        de AUD-277.
         """
         if not self.activa:
             return 1.0
         t = y / self.mapa_alto
         t = 0.0 if t < 0.0 else (1.0 if t > 1.0 else t)
-        return self.minimo + (self.maximo - self.minimo) * t
+        return self.minimo + (self.maximo - self.minimo) * (t ** self.curva)

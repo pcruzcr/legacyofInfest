@@ -187,6 +187,8 @@ sin ellas el nivel no valida y pierde 10 puntos de rúbrica.
 | `tiempo_bala` | float | `0` | segundos de reserva de cámara lenta. **`0` = apagado.** Se mantiene pulsada `Q`/`R`: gasta reserva mientras dura y se recarga despacio al soltar (AUD-260) |
 | `profundidad_min` | float | `1` | **2.5D (AUD-277).** Escala de las entidades arriba del todo del mapa —lo más lejano—. Igual a `profundidad_max` = apagado |
 | `profundidad_max` | float | `1` | Escala abajo del todo —lo más cercano—. Un `0.75`/`1.0` da profundidad clara sin deformar. **No toca la física**: sólo el dibujado |
+| `profundidad_curva` | float | `1` | **2.5D fase 6 (AUD-339).** Curva de la escala por profundidad: `1` es lineal (AUD-277); con más de `1` las filas del fondo se encogen más rápido, como una perspectiva de verdad. `2.0` en un mapa de 38 baldosas de alto comprime ya el tercio superior |
+| `orden_por_y` | bool | `false` | **2.5D fase 6 (AUD-339).** Orden del pintor opcional: con `true`, las entidades se ordenan por la misma ancla que escala —los pies, o `depth_y` si la entidad la declara (una voladora se ordena por su proyección en el suelo)— en vez de por `rect.centery`. Sin la propiedad, el orden de AUD-067 queda intacto |
 | `sombras_proyectadas` | bool | `false` | **AUD-278.** Los focos dejan de atravesar las paredes: cada obstáculo proyecta su cuña de sombra. Cuesta una proyección por foco y por obstáculo — enciéndelo en escenarios de noche, donde se nota |
 | `bpm` | float | `0` | pulsos por minuto; enciende el reloj musical (§10.1) |
 
