@@ -230,9 +230,10 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── bridge.py                   #   ComponentesDeEntidad: BaseEntity sobre componentes
 │   │   │   └── bullet_swarm.py             #   EnjambreDeBalas: bullet hell con NumPy (F5.8)
 │   │   │
-│   │   ├── physics/                       # AUD-333 — la física declarada por contexto
+│   │   ├── physics/                       # AUD-333/334 — física por contexto + resolutor compartido
 │   │   │   ├── __init__.py
-│   │   │   └── perfil.py                   #   PhysicsProfile: física por modo de juego
+│   │   │   ├── perfil.py                   #   PhysicsProfile: física por modo de juego
+│   │   │   └── resolucion.py               #   AUD-334: resolutor de mundo (EstadoDeMovimiento→Contacto)
 │   │   │
 │   │   ├── stage/
 │   │   │   ├── __init__.py

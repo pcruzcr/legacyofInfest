@@ -1856,6 +1856,12 @@ propia), el viento por zonas vive en el ECS (`sistema_viento`), y el
 deslizamiento es una constante de `settings` que cualquier escenario puede
 declarar — el mismo motor sirve tierra, espacio, hielo y cualquier vista.
 
+AUD-334 (decimotercera pasada) llevó la resolución a `framework/physics/
+resolucion.py`: ahora el contrato de AUD-297 se puede heredar sin copiarlo —
+una entidad nueva llama a `resolver_movimiento` con su perfil y recibe los
+hechos. El jugador pasó a ser consumidor (adaptadores delgados), y la
+suite completa verificó que el port no cambió ni un comportamiento.
+
 ## 27. El motor libre: decisión del dueño y plan (2026-08-07, decimotercera pasada)
 
 **Decisión del dueño (reversible, registrada en `CLAUDE.md` §3):** las
@@ -1870,8 +1876,8 @@ El programa, por fases, con lo hecho y lo pendiente:
 
 | Fase | Qué entrega | Estado |
 |---|---|---|
-| **1. Perfil de física por contexto** | `framework/physics/perfil.py`: `PhysicsProfile` declara todo el modo (gravedad, caída, salto, coyote, muro, pendientes); presets `plataformas()` (el juego actual, valores de `settings`) y `cenital()` (AUD-328 como perfil, no como bandera); el jugador y su máquina de estados lo consumen; `pendientes.py` parametriza el margen de pegado y la velocidad de deslizamiento | **HECHO (AUD-333)**, 15 pruebas nuevas, suite 4.122 verdes |
-| **2. Resolutor de mundo compartido** | Sacar la resolución AABB + pendientes + plataformas de un sentido de `Player.update`/`EnemyBase.update` a un solucionador único `framework/physics/resolucion.py` que ambos (y cualquier entidad nueva) usen con su perfil | Pendiente |
+| **1. Perfil de física por contexto** | `framework/physics/perfil.py`: `PhysicsProfile` declara todo el modo (gravedad, caída, salto, coyote, muro, pendientes); presets `plataformas()` (el juego actual, valores de `settings`) y `cenital()` (AUD-328 como perfil, no como bandera); el jugador y su máquina de estados lo consumen; `pendientes.py` parametriza el margen de pegado y la velocidad de deslizamiento | **HECHO (AUD-333)**, 15 pruebas nuevas, suite 4.147 verdes |
+| **2. Resolutor de mundo compartido** | Sacar la resolución AABB + pendientes + plataformas de un sentido de `Player.update`/`EnemyBase.update` a un solucionador único `framework/physics/resolucion.py` que ambos (y cualquier entidad nueva) usen con su perfil | **HECHO (AUD-334)**: `EstadoDeMovimiento` + `Contacto` (hechos, no reglas) y cinco pasos puros —eje X, pared lateral de cuestas, eje Y, cuestas, repisas— compuestos por `resolver_movimiento` (con perfil, sin perfil asume plataformas; modo cenital salta cuestas y repisas). El jugador conserva `_resolve_collision`/`_resolver_pendientes`/`_resolve_one_way_collision` como adaptadores delgados con los mismos nombres y firmas —los llaman pruebas y material copiado—; sonidos y recargas de salto quedaron fuera del resolutor (los decide la entidad con los hechos). 25 pruebas puras nuevas; suite 4.147 verdes; `test_rect_fusionado_suelo_y_pared` ahora fija el umbral `v_overlap <= 2` en `resolver_eje_x`, donde vive |
 | **3. Física ampliada** | Fricción por superficie desde el TMX (materiales: hielo, arena…), aceleración/fricción por perfil, modo `vuelo` integrado (8 direcciones sin gravedad) | Pendiente |
 | **4. SpriteBatch** | Umbral automático + docstrings corregidos con la medición re-hecha (blits() gana o empata en todo el rango, 0,73-1,03×) | **HECHO (AUD-330)** |
 | **5. GPU** | La ruta de sprites en tarjeta (quads instanciados, composición en GPU según `docs/74`), aislada y medible con `scripts/bench_sprite_batch.py`; activable por contexto | Pendiente, proyecto de varias sesiones |

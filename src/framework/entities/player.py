@@ -26,6 +26,14 @@ from src.framework.entities.base_entity import BaseEntity
 from src.framework.entities.player_state import PlayerStateData
 from src.framework.entities.ranged_weapon import ArcoDelJugador
 from src.framework.physics.perfil import CENITAL, PLATAFORMAS, PhysicsProfile
+from src.framework.physics.resolucion import (
+    EstadoDeMovimiento,
+    resolver_cuestas,
+    resolver_eje_x,
+    resolver_eje_y,
+    resolver_paredes_de_pendientes,
+    resolver_repisas,
+)
 from src.framework.vfx.contorno import (
     COLOR_JUGADOR,
     COMPENSACIONES,
@@ -992,166 +1000,55 @@ class Player(BaseEntity):
 
     def _resolve_collision(self, dt: float, collision_rects: list[pygame.Rect]) -> None:
         """
-        True axis-separated AABB resolution:
-        1. Integrate X, resolve X against overlapping rects.
-        2. Integrate Y, resolve Y against overlapping rects, using the
-           direction of motion (came-from-above lands, came-from-below bonks).
-        No heuristics needed: each axis only sees penetration caused by
-        its own movement.
+        AUD-334 — este método ya no resuelve: delega en el resolutor
+        compartido (`framework/physics/resolucion.py`) y aplica sus hechos.
 
-        AUD-130 — este método también **integra**, y ahí estaba el defecto
-        ---------------------------------------------------------------------
-        La primera línea era::
-
-            if not collision_rects:
-                return
-
-        …y como la integración de la posición vive dentro de este método, un
-        escenario **sin ninguna caja de colisión dejaba al jugador congelado**:
-        la velocidad crecía fotograma a fotograma y la posición no se movía
-        nunca. Salir por «no hay nada contra lo que chocar» también saltaba el
-        «avanzar».
-
-        En los quince mapas del curso no se notaba porque todos tienen suelo.
-        Se notaría en el primer mapa de un estudiante con la capa `Collision`
-        vacía —que es un error frecuentísimo, y ya avisado por el validador—:
-        el síntoma sería «no me muevo», que no apunta ni de lejos a la causa.
-        Lo encontró la vista cenital, donde probar sin geometría es lo natural.
-
-        El nombre del método miente un poco y eso es lo que lo hizo posible:
-        se llama «resolver colisión» y hace dos cosas. Se deja el nombre —lo
-        llaman el jugador y las pruebas de los estudiantes— y se arregla el
-        contrato: **integrar siempre, resolver sólo si hay contra qué**.
+        Se conservan el nombre y la firma —lo llaman el jugador y las
+        pruebas de los estudiantes— y el contrato de AUD-130: **integrar
+        siempre, resolver sólo si hay contra qué**. La historia de por qué
+        es de ejes separados, el umbral `v_overlap <= 2` y el `pre_mutate`
+        del ledge grab viven ahora en `resolver_eje_x` y `resolver_eje_y`,
+        que son el código que las cumple.
         """
-        w, h = self.rect.width, self.rect.height
-
-        # --- X axis ---
-        self._wall_side = 0
-        self._can_wall_jump = False
-        self._can_ledge_grab = False
-        self.position.x += self.velocity.x * dt
-        if collision_rects:
-            for tile in collision_rects:
-                px = pygame.Rect(int(self.position.x), int(self.position.y), w, h)
-                if px.colliderect(tile):
-                    # BUG-003 FIX: Save pre-mutation top for ledge grab check
-                    pre_mutate_top = px.top
-                    pre_px = pygame.Rect(int(self.position.x - self.velocity.x * dt), int(self.position.y), w, h)
-                    v_overlap = min(pre_px.bottom, tile.bottom) - max(pre_px.top, tile.top)
-                    if v_overlap <= 2:
-                        continue
-                    if self.velocity.x > 0:
-                        px.right = tile.left
-                        self._wall_side = 1
-                    elif self.velocity.x < 0:
-                        px.left = tile.right
-                        self._wall_side = -1
-                    else:
-                        if (px.right - tile.left) < (tile.right - px.left):
-                            px.right = tile.left
-                            self._wall_side = 1
-                        else:
-                            px.left = tile.right
-                            self._wall_side = -1
-                    if self._wall_side != 0 and not self.is_grounded:
-                        self._can_wall_jump = True
-                        ledge_check = pygame.Rect(
-                            tile.left if self._wall_side == 1 else tile.right - 2,
-                            tile.top - 16,
-                            max(tile.width, 2),
-                            16,
-                        )
-                        ledge_found = False
-                        for t2 in collision_rects:
-                            if ledge_check.colliderect(t2):
-                                ledge_found = True
-                                break
-                        self._can_ledge_grab = (
-                            not ledge_found
-                            and pre_mutate_top <= tile.top + 8
-                            and pre_mutate_top >= tile.top - 16
-                        )
-                    self.velocity.x = 0.0
-                    self.position.x = float(px.x)
-
-        # AUD-323 — la pared lateral de la rampa. Va después del bucle de
-        # cajas y antes del eje Y: la rampa no está en `collision_rects`, y
-        # esta es la única ventana del fotograma en que toca resolverla.
-        self._resolver_paredes_de_pendientes(w, h)
-
-        # --- Y axis ---
-        prev_bottom = self.position.y + h
-        prev_top = self.position.y
-        self.position.y += self.velocity.y * dt
-        was_grounded = self.is_grounded
-        # AUD-297 — se guarda para el paso de pendientes, que corre después de
-        # este y necesita saber si el jugador **venía** pisando suelo. Leer
-        # `is_grounded` allí no vale: esta línea acaba de ponerlo a False, así
-        # que bajar una cuesta se vería siempre como caer y el margen de pegado
-        # no se aplicaría nunca — el traqueteo que ese margen existe para
-        # evitar.
-        self._venia_del_suelo = was_grounded
-        self.is_grounded = False
-        if collision_rects:
-            py = pygame.Rect(int(self.position.x), int(self.position.y), w, h)
-            check = py.inflate(0, 2)
-            check.y = py.y - 1
-            for tile in collision_rects:
-                if check.colliderect(tile):
-                    if self.velocity.y >= 0 and prev_bottom <= tile.top + 1:
-                        # Came from above: land
-                        if not was_grounded and self.velocity.y > 0:
-                            self._event_bus.emit(Events.SFX_PLAYER_LAND)
-                        py.bottom = tile.top
-                        self.velocity.y = 0.0
-                        self.is_grounded = True
-                        self._air_dash_count = 0
-                        self._air_jumps_used = 0
-                    elif self.velocity.y < 0 and prev_top >= tile.bottom - 1:
-                        # Came from below: bonk
-                        py.top = tile.bottom
-                        self.velocity.y = 0.0
-                    self.position.y = float(py.y)
-                    check.y = py.y - 1
-                    check.height = py.height + 2
-
-    def _resolver_paredes_de_pendientes(self, w: int, h: int) -> None:
-        """Frena la entrada lateral a la rampa — AUD-323.
-
-        El eje X se mueve libre y el eje Y coloca sobre la hipotenusa; eso
-        dejaba dos entradas laterales abiertas — la cara empinada del
-        extremo alto y la hipotenusa a media altura — por las que el
-        jugador cruzaba la roca y luego era absorbido hacia la superficie.
-        `resolver_lateral` devuelve la `x` corregida y esto la aplica, con
-        la velocidad frenada igual que contra una pared normal.
-        """
-        if not self._pendientes:
-            return
-        if self.vista_cenital:
+        estado = EstadoDeMovimiento(
+            posicion=self.position,
+            velocidad=self.velocity,
+            ancho=self.rect.width,
+            alto=self.rect.height,
+            en_el_suelo=self.is_grounded,
+            prev_foot_y=self._prev_foot_y,
+        )
+        eje_x = resolver_eje_x(estado, dt, collision_rects)
+        if not self.vista_cenital:
             # AUD-328 — la vista cenital no tiene gravedad, y sin gravedad
-            # no hay cuesta que resolver. En planta la rampa es terreno
-            # pintado: pegar al jugador a la hipotenusa sería una colisión
-            # que en esa vista no existe.
-            return
-        from src.framework.stage.pendientes import resolver_lateral
+            # no hay cuesta que resolver (pared lateral incluida).
+            resolver_paredes_de_pendientes(
+                estado, self._pendientes,
+                margen=self.perfil.cuestas.margen_pegado)
+        eje_y = resolver_eje_y(estado, dt, collision_rects)
 
-        rect = pygame.Rect(int(self.position.x), int(self.position.y), w, h)
-        x = resolver_lateral(
-            rect, self._pendientes,
-            margen=self.perfil.cuestas.margen_pegado)
-        if x is None:
-            return
-        if x != self.position.x:
-            self.velocity.x = 0.0
-        self.position.x = x
+        self.position = estado.posicion
+        self.velocity = estado.velocidad
+        self.is_grounded = estado.en_el_suelo
+        self._wall_side = eje_x.lado_de_pared
+        self._can_wall_jump = eje_x.pared_en_el_aire
+        self._can_ledge_grab = eje_x.repisa_libre
+        # AUD-297 — se guarda para el paso de pendientes, que corre después
+        # de este y necesita saber si el jugador **venía** pisando suelo.
+        self._venia_del_suelo = estado.venia_del_suelo
+        if eje_y.aterrizo_en == "suelo":
+            self._event_bus.emit(Events.SFX_PLAYER_LAND)
+            self._air_dash_count = 0
+            self._air_jumps_used = 0
 
     def _resolver_pendientes(self, dt: float) -> None:
-        """Coloca los pies sobre la cuesta que se esté pisando — AUD-297.
+        """AUD-334 — delega en `resolver_cuestas`; los pies sobre la cuesta.
 
         La geometría vive en `framework/stage/pendientes.py`, que no toca al
-        jugador: devuelve una `y` y aquí se aplica. Un módulo de geometría que
-        mueve entidades ajenas es cómo se acaba con dos sistemas discutiendo la
-        misma posición.
+        jugador: devuelve una `y` y aquí se aplica. Un módulo de geometría
+        que mueve entidades ajenas es cómo se acaba con dos sistemas
+        discutiendo la misma posición. AUD-297: las cuestas corren después
+        del eje Y y antes de las repisas de un sentido.
         """
         if not self._pendientes:
             return
@@ -1160,92 +1057,58 @@ class Player(BaseEntity):
             # terreno pintado y el glue vertical no debe activarse en la
             # vista cenital.
             return
-        from src.framework.stage.pendientes import (
-            componente_de_deslizamiento,
-            resolver_con_ganadora,
+        estado = EstadoDeMovimiento(
+            posicion=self.position,
+            velocidad=self.velocity,
+            ancho=self.rect.width,
+            alto=self.rect.height,
+            en_el_suelo=self.is_grounded,
+            venia_del_suelo=self._venia_del_suelo,
         )
+        contacto = resolver_cuestas(
+            estado, dt, self._pendientes, self.perfil.cuestas)
 
-        rect = pygame.Rect(int(self.position.x), int(self.position.y),
-                           self.rect.width, self.rect.height)
-        superficie, ganadora = resolver_con_ganadora(
-            rect, self.velocity.y,
-            self._venia_del_suelo or self.is_grounded,
-            self._pendientes,
-            margen=self.perfil.cuestas.margen_pegado)
-        if superficie is None:
-            return
-        if not self.is_grounded and self.velocity.y > 0:
+        self.position = estado.posicion
+        self.velocity = estado.velocidad
+        self.is_grounded = estado.en_el_suelo
+        if contacto.aterrizo_en == "cuesta":
             self._event_bus.emit(Events.SFX_PLAYER_LAND)
-            # AUD-324 — la proyección de velocidad que `docs/87` §11 pidió:
-            # caer en vertical sobre una cuesta no debe parar al jugador en
-            # seco; el impulso de la caída se proyecta sobre la hipotenusa y
-            # lo empuja cuesta abajo.
-            if ganadora is not None:
-                self.velocity.x += componente_de_deslizamiento(
-                    ganadora, self.velocity.y)
-        elif ganadora is not None and self.velocity.x == 0.0:
-            # AUD-326 — el deslizamiento sostenido. El aterrizaje ya
-            # proyectó el impulso (AUD-324); aquí, estando ya en el suelo y
-            # sin entrada horizontal —la máquina de estados acaba de poner
-            # `velocity.x` a cero—, la gravedad desliza al jugador cuesta
-            # abajo a velocidad constante y acotada, sin aceleración en
-            # fuga. Andar —subiendo o bajando— manda: la entrada ya puso
-            # `velocity.x` y esto no se la discute.
-            desliz = componente_de_deslizamiento(
-                ganadora, self.perfil.cuestas.velocidad_deslizamiento)
-            self.velocity.x = desliz
-            # Este método corre después de `_resolve_collision`: la
-            # velocidad que se ponga aquí no se integra este fotograma y la
-            # máquina de estados la pondrá a cero al siguiente, así que el
-            # deslizamiento se aplica sobre la posición directamente.
-            self.position.x += desliz * dt
-        self.position.y = float(superficie) - self.rect.height
-        self.velocity.y = 0.0
-        self.is_grounded = True
-        self._air_dash_count = 0
-        self._air_jumps_used = 0
+        if contacto.aterrizo:
+            self._air_dash_count = 0
+            self._air_jumps_used = 0
 
     def _resolve_one_way_collision(self, dt: float, one_way_rects: list[pygame.Rect]) -> None:
-        """Resolve Y-axis collision for one-way platforms (passable from below).
-        Only resolves when falling (velocity.y >= 0) AND the player's feet
-        were at or above the platform top on the previous frame. Walking into
-        a platform from lower ground passes through (true one-way semantics:
-        07_STAGE0_DESIGN §Zone E — "Jump up through it; fall back down")."""
+        """AUD-334 — delega en `resolver_repisas`.
+
+        Los guardas —sólo cayendo, con los pies a la altura del borde el
+        fotograma anterior— viven en el resolutor. El sonido lo decide el
+        jugador con el hecho `aterrizo_desde_el_aire`: AUD-255 — posarse en
+        una repisa atravesable era **mudo**, y el evento existía con fichero
+        y tabla desde el principio, sin emisor. Sólo al llegar desde el
+        aire: si no, sonaría cada fotograma de pie encima.
+        """
         if not one_way_rects:
             return
         if self.velocity.y < 0:
             return
-
-        player_rect = pygame.Rect(
-            int(self.position.x),
-            int(self.position.y),
-            self.rect.width,
-            self.rect.height,
+        estado = EstadoDeMovimiento(
+            posicion=self.position,
+            velocidad=self.velocity,
+            ancho=self.rect.width,
+            alto=self.rect.height,
+            en_el_suelo=self.is_grounded,
+            prev_foot_y=self._prev_foot_y,
         )
-        # Inflate by 2px so edge-aligned platforms (player bottom == plat top)
-        # are detected via colliderect's strict comparison.
-        collision_check_rect = player_rect.inflate(0, 2)
-        estaba_en_el_aire = not self.is_grounded
-        for plat in one_way_rects:
-            if (collision_check_rect.colliderect(plat)
-                    and self._prev_foot_y <= plat.top + 1):
-                # AUD-255 — posarse en una repisa atravesable era **mudo**:
-                # `SFX_PLAYER_LAND` lo emite `_resolve_collision`, que es la
-                # ruta del suelo sólido, y ésta es la otra. El evento
-                # `SFX_ENVIRONMENT_ONE_WAY_PLATFORM` existía con fichero y
-                # tabla desde el principio, sin emisor. Sólo al llegar desde
-                # el aire: si no, sonaría cada fotograma de pie encima.
-                if estaba_en_el_aire and self._event_bus is not None:
-                    self._event_bus.emit(Events.SFX_ENVIRONMENT_ONE_WAY_PLATFORM)
-                player_rect.bottom = plat.top
-                self.velocity.y = 0.0
-                self.is_grounded = True
-                self._air_dash_count = 0
-                self._air_jumps_used = 0
-                self.position.y = float(player_rect.y)
-                if self.position.y + self.rect.height > plat.top + 4:
-                    self.position.y = float(plat.top - self.rect.height)
-                break
+        contacto = resolver_repisas(estado, one_way_rects)
+
+        self.position = estado.posicion
+        self.velocity = estado.velocidad
+        self.is_grounded = estado.en_el_suelo
+        if contacto.aterrizo:
+            self._air_dash_count = 0
+            self._air_jumps_used = 0
+        if contacto.aterrizo_desde_el_aire and self._event_bus is not None:
+            self._event_bus.emit(Events.SFX_ENVIRONMENT_ONE_WAY_PLATFORM)
 
     # ──────────────────────────────────────────────
     # Rect / Hurtbox sizing
