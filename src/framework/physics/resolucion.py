@@ -41,7 +41,7 @@ from dataclasses import dataclass
 
 import pygame
 
-from src.framework.physics.perfil import CENITAL, Cuestas, PhysicsProfile
+from src.framework.physics.perfil import PLATAFORMAS, Cuestas, PhysicsProfile
 from src.framework.stage.pendientes import (
     MARGEN_DE_PEGADO,
     Pendiente,
@@ -365,16 +365,16 @@ def resolver_movimiento(
 
     Es la puerta de entrada para las entidades y modos nuevos: un contexto
     que no es el jugador llama a esto una vez por fotograma y consume el
-    `Contacto`. El perfil decide el comportamiento — con `modo ==
-    "cenital"` no hay cuestas ni repisas que resolver (AUD-328 y AUD-129) —
-    y sin perfil se asume el contexto de plataformas con los valores por
-    defecto.
+    `Contacto`. El perfil decide el comportamiento — con `modo` distinto de
+    `plataformas` no hay cuestas ni repisas que resolver (AUD-328 y
+    AUD-129; AUD-335: el vuelo idem, son semántica de plataformas) — y sin
+    perfil se asume el contexto de plataformas con los valores por defecto.
     """
     solidos = solidos or []
     repisas = repisas or []
     pendientes = pendientes or []
     cuestas = perfil.cuestas if perfil is not None else Cuestas()
-    activas = perfil is None or perfil.modo != CENITAL
+    activas = perfil is None or perfil.modo == PLATAFORMAS
 
     eje_x = resolver_eje_x(estado, dt, solidos)
     eje_cuestas: Contacto | None = None
