@@ -379,6 +379,17 @@ class StageData:
     #: dieciséis mapas entregados.
     profundidad_min: float = 1.0
     profundidad_max: float = 1.0
+    #: AUD-339 — 2.5D fase 6. Curva de la escala por profundidad: 1.0 es la
+    #: interpolación lineal de AUD-277; con más de 1.0 las filas del fondo se
+    #: encogen más rápido, como en una perspectiva de verdad.
+    profundidad_curva: float = 1.0
+    #: AUD-339 — 2.5D fase 6. Orden por Y del pintor, **opcional**: con
+    #: `False` (por defecto) se mantiene el orden por `rect.centery` de
+    #: AUD-067; con `True` las entidades se ordenan por su **ancla de
+    #: profundidad** —`depth_y` si la entidad lo declara, si no sus pies
+    #: (`rect.bottom`)—, el mismo ancla que usa la escala: lo que se escala
+    #: igual se ordena igual.
+    orden_por_y: bool = False
     #: AUD-278 — sombras proyectadas desde los focos. **Apagadas por defecto**:
     #: cuestan una proyección por foco y por obstáculo, y el reporte 87 §11 las
     #: dejó anotadas como «viable, con coste».
@@ -775,6 +786,12 @@ class StageLoader:
             props.get("profundidad_min", 1.0), "profundidad_min"))
         profundidad_max = max(0.05, cls._safe_float(
             props.get("profundidad_max", 1.0), "profundidad_max"))
+        # AUD-339 — la curva comparte el suelo de 0.05 con los extremos: una
+        # curva negativa invertiría el degradado y una de 0.0 lo congelaría.
+        profundidad_curva = max(0.05, cls._safe_float(
+            props.get("profundidad_curva", 1.0), "profundidad_curva"))
+        orden_por_y = cls._bool_de(
+            props.get("orden_por_y"), por_defecto=False)
         sombras_proyectadas = cls._bool_de(
             props.get("sombras_proyectadas"), por_defecto=False)
         habilidades_libres = cls._bool_de(
@@ -856,6 +873,8 @@ class StageLoader:
             tiempo_bala=tiempo_bala,
             profundidad_min=profundidad_min,
             profundidad_max=profundidad_max,
+            profundidad_curva=profundidad_curva,
+            orden_por_y=orden_por_y,
             sombras_proyectadas=sombras_proyectadas,
             habilidades_libres=habilidades_libres,
             camara=camara,
