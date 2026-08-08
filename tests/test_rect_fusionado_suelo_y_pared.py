@@ -135,7 +135,11 @@ class TestElMuroSigueFrenando:
         """
         import inspect
 
-        fuente = inspect.getsource(Player._resolve_collision)
+        from src.framework.physics.resolucion import resolver_eje_x
+
+        # AUD-334 — el umbral vive en el resolutor compartido, que es donde
+        # corre el eje X del jugador desde el port.
+        fuente = inspect.getsource(resolver_eje_x)
         assert "v_overlap <= 2" in fuente, (
             "cambió el umbral de solape vertical del X-skip; era `<= 2` y es lo "
             "que separa «estoy de pie encima» de «me estoy dando contra ello»"
