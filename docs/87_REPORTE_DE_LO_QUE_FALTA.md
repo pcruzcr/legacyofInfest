@@ -1848,10 +1848,44 @@ de esto, y la calificación de los dieciséis mapas se mantiene como control.
 | **325** | Los enemigos atravesaban la rampa | Los enemigos resuelven pendientes con la misma geometría, dentro de su propio bucle de resolución |
 | **326** | Quieto en la cuesta, el jugador quedaba clavado | Deslizamiento sostenido: sin entrada horizontal, la gravedad lo desliza cuesta abajo a `PLAYER_SLOPE_SLIDE_SPEED` por el factor de la pendiente — velocidad constante y acotada, sin aceleración en fuga; andar manda |
 | **328** | En vista cenital la rampa pegaba y frenaba | Sin gravedad no hay cuesta que resolver: en planta la rampa es terreno pintado — ni glue a la hipotenusa ni pared en la cara; lo que frena es la capa Collision, como siempre |
-| **329** | ¿Se bachea el wrap del parallax? Medido en 4-1 antes de decidir | **No**: con tres capas y seis copias, el lote costó 2,4-3,0 ms contra 0,8-1,4 del `blit` suelto — `blits` gana a partir de cientos de llamadas y el wrap no llega nunca ahí. Revertido y documentado junto al código; el mismo trato que las partículas. Y quedan documentados, con evidencia, por qué no se agrupan estelas (alfa por punto sobre superficie compartida) y números de daño (pool) |
+| **329** | ¿Se bachea el wrap del parallax? Medido en 4-1 antes de decidir | **No**, aunque la medición original se corrigió en AUD-330: el 2-3× contra el `blit` suelto no se reproduce re-medido (empate 0,97-1,03×; con sprites pequeños `blits()` gana desde dos llamadas). Se mantiene el blit suelto por el motivo correcto —no hay nada que ganar— y quedan documentados, con evidencia, por qué no se agrupan estelas (alfa por punto sobre superficie compartida) y números de daño (pool) |
 
 La física queda servida para cualquier contexto sin cambiar el contrato: la
 gravedad por escenario ya existía (`gravity_multiplier` en el TMX, con prueba
 propia), el viento por zonas vive en el ECS (`sistema_viento`), y el
 deslizamiento es una constante de `settings` que cualquier escenario puede
 declarar — el mismo motor sirve tierra, espacio, hielo y cualquier vista.
+
+## 27. El motor libre: decisión del dueño y plan (2026-08-07, decimotercera pasada)
+
+**Decisión del dueño (reversible, registrada en `CLAUDE.md` §3):** las
+invariantes 1 y 2 quedan suspendidas. El motor y el framework evolucionan
+**libres** para servir contextos y modos de juego distintos —colisiones por
+contexto, física ampliada, SpriteBatch, GPU, 2.5D— aunque una entrega
+existente se rompa por el camino, y el contenido de referencia (niveles,
+jefes y demos de clase) se reconstruirá **después** de la fase de motor para
+lucir las características nuevas. La regla de `revisar/` no se toca.
+
+El programa, por fases, con lo hecho y lo pendiente:
+
+| Fase | Qué entrega | Estado |
+|---|---|---|
+| **1. Perfil de física por contexto** | `framework/physics/perfil.py`: `PhysicsProfile` declara todo el modo (gravedad, caída, salto, coyote, muro, pendientes); presets `plataformas()` (el juego actual, valores de `settings`) y `cenital()` (AUD-328 como perfil, no como bandera); el jugador y su máquina de estados lo consumen; `pendientes.py` parametriza el margen de pegado y la velocidad de deslizamiento | **HECHO (AUD-333)**, 15 pruebas nuevas, suite 4.122 verdes |
+| **2. Resolutor de mundo compartido** | Sacar la resolución AABB + pendientes + plataformas de un sentido de `Player.update`/`EnemyBase.update` a un solucionador único `framework/physics/resolucion.py` que ambos (y cualquier entidad nueva) usen con su perfil | Pendiente |
+| **3. Física ampliada** | Fricción por superficie desde el TMX (materiales: hielo, arena…), aceleración/fricción por perfil, modo `vuelo` integrado (8 direcciones sin gravedad) | Pendiente |
+| **4. SpriteBatch** | Umbral automático + docstrings corregidos con la medición re-hecha (blits() gana o empata en todo el rango, 0,73-1,03×) | **HECHO (AUD-330)** |
+| **5. GPU** | La ruta de sprites en tarjeta (quads instanciados, composición en GPU según `docs/74`), aislada y medible con `scripts/bench_sprite_batch.py`; activable por contexto | Pendiente, proyecto de varias sesiones |
+| **6. 2.5D** | Modo de orden por Y (pintor) opcional + mejora de `profundidad.py` | Pendiente |
+| **7. Reconstrucción de contenido** | Niveles y jefes de referencia rehechos para lucir las fases 1-6 | Pendiente, después de la 6 |
+
+Dos notas de la fase 1 que conviene no perder:
+
+* **El trinquete de calibración sigue vivo.** El preset `plataformas()` lee
+  `settings` al construir el perfil, así que `test_calibracion_del_salto`
+  sigue midiendo lo mismo y sigue fallando en voz alta si `GRAVITY` o
+  `PLAYER_JUMP_FORCE` cambian.
+* **La medición corrigió a AUD-329.** El «cruce en cientos de llamadas» que
+  justificaba no bachear el parallax no se reproduce re-medido: es empate
+  (0,97-1,03×) y con sprites pequeños `blits()` gana desde dos llamadas. La
+  decisión de AUD-329 —no bachear el wrap— se mantiene, pero por el motivo
+  correcto: no hay nada que ganar (AUD-330).
