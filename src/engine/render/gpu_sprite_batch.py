@@ -125,9 +125,15 @@ class SpriteBatchGPU:
         )
         self._textura_normal_plana.use(1)
 
-        self._atlas: dict[int, tuple[moderngl.Texture, int, int]] = {}
+        self._atlas: dict[
+            int, tuple[moderngl.Texture, moderngl.Texture | None, int, int],
+        ] = {}
         self._atlas_contador = 0
         self._texturas_a_release: list[moderngl.Texture] = []
+        # AUD-342 — el atlas de cada orden encolada: `volcar` dibuja con un
+        # solo sampler de atlas, así que saber qué atlas pidió cada orden es
+        # lo que permite rechazar la mezcla con un error en vez de arte.
+        self._atlas_de_cada_orden: list[int] = []
 
         self._luz_ambiental = (0.35, 0.35, 0.38)
         self._luz_dir_direccion = (0.0, 0.0, 1.0)
@@ -153,6 +159,11 @@ class SpriteBatchGPU:
         y con los recortes en las mismas posiciones. Sin él, los sprites de
         este atlas se dibujan con la normal plana —y de todos modos la luz
         no los toca salvo que la orden lleve la bandera de iluminado.
+
+        El sombreador tiene un sampler de atlas por llamada: quien dibuje
+        con dos atlas distintos tiene que volcar entre ellos, porque
+        `volcar` se niega a mezclar atlas (dibujarlos juntos leería la
+        textura equivocada, que no da error: da arte).
         """
         color = self.ctx.texture(
             superficie.get_size(), 4,
@@ -176,7 +187,9 @@ class SpriteBatchGPU:
             self._texturas_a_release.append(normal_tex)
 
         self._atlas_contador += 1
-        self._atlas[self._atlas_contador] = (color, *superficie.get_size())
+        self._atlas[self._atlas_contador] = (
+            color, normal_tex, *superficie.get_size(),
+        )
         return self._atlas_contador
 
     @staticmethod
@@ -208,7 +221,8 @@ class SpriteBatchGPU:
         """
         # `_atlas[id]` lanza KeyError con un id desconocido en vez de dibujar
         # con la textura equivocada, que no daría error: daría arte.
-        _color, ancho_atlas, alto_atlas = self._atlas[atlas_id]
+        _color, _normales, ancho_atlas, alto_atlas = self._atlas[atlas_id]
+        self._atlas_de_cada_orden.append(atlas_id)
         u0, v0, u1, v1 = _rect_a_uv(recorte, ancho_atlas, alto_atlas)
         if normales_recorte is not None:
             n0, m0, n1, m1 = _rect_a_uv(normales_recorte, ancho_atlas, alto_atlas)
@@ -237,20 +251,42 @@ class SpriteBatchGPU:
         o `fbo.use()` para un búfer intermedio. Devuelve cuántas órdenes
         dibujó (0 si no había nada, que además evita una llamada de render
         vacía por fotograma en los escenarios sin sprites de GPU).
+
+        AUD-342 — antes de dibujar enlaza el atlas de color en la unidad 0 y
+        el de normales en la 1 (o la normal plana, si el atlas no trae mapa):
+        sin el enlace el sampler lee la textura que haya quedado en la
+        unidad, la de la escena, y los sprites salen invisibles sin ningún
+        error.
         """
         cuantas = self._cuentas
         if cuantas == 0:
             return 0
+        primero = self._atlas_de_cada_orden[0]
+        for atlas_id in self._atlas_de_cada_orden[1:cuantas]:
+            if atlas_id != primero:
+                raise ValueError(
+                    "un `volcar` no puede mezclar atlas: el sombreador tiene "
+                    "un solo sampler y mezclarlos daría sprites con texturas "
+                    "ajenas. Dibuja y vuelca por atlas, o sube una sola hoja."
+                )
+        color, normales_tex, _ancho, _alto = self._atlas[primero]
+        color.use(0)
+        if normales_tex is not None:
+            normales_tex.use(1)
+        else:
+            self._textura_normal_plana.use(1)
         self._vbo_instancias.write(
             self._instancias[:cuantas].tobytes(), 0,
         )
         self._vao.render(moderngl.TRIANGLES, instances=cuantas)
         self._cuentas = 0
+        self._atlas_de_cada_orden.clear()
         return cuantas
 
     def limpiar(self) -> None:
         """Tira lo encolado sin dibujarlo."""
         self._cuentas = 0
+        self._atlas_de_cada_orden.clear()
 
     def __len__(self) -> int:
         return self._cuentas

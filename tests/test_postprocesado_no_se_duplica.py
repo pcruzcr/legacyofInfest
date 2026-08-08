@@ -246,6 +246,11 @@ class TestLaRaizDeComposicionCablearElReparto:
         assert "published_bloom" in fuente, (
             "el reparto quita el bloom de la CPU y no se lo da a la GPU"
         )
+        assert "published_lote_de_sprites" in fuente, (
+            "el lote de sprites de GPU (AUD-342) no llega del canal de "
+            "gpu_effects al renderer: una escena que lo publique no se "
+            "compondría nunca"
+        )
 
 
 class TestLoQueCuestaCadaEfecto:

@@ -53,7 +53,7 @@ mismo. Se comprobó pasada por pasada:
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Final
+from typing import Any, Final
 
 #: Halo de las zonas brillantes. `PostProcessing._apply_bloom` frente a
 #: `bloom_frag`.
@@ -118,28 +118,33 @@ def reset() -> None:
     estado de proceso y una prueba que lo deje puesto contamina a la siguiente.
     """
     global _en_la_gpu, _bloom_publicado, _aberracion_pedida, _agua_region, _rayos
+    global _lote_de_sprites
     _en_la_gpu = frozenset()
     _bloom_publicado = 0.0
     _aberracion_pedida = 0.0
     _agua_region = None
     _rayos = None
+    _lote_de_sprites = None
 
 
 def begin_frame() -> None:
     """Olvida los parámetros publicados en el fotograma anterior.
 
-    Sin esto, un menú —que no ejecuta post-procesado— heredaría el bloom del
+    Sin esto, un menú -que no ejecuta post-procesado- heredaría el bloom del
     nivel del que se acaba de salir y seguiría brillando hasta que otra escena
     publicara otro valor.
     """
-    global _bloom_publicado, _agua_region, _rayos
+    global _bloom_publicado, _agua_region, _rayos, _lote_de_sprites
     _bloom_publicado = 0.0
-    # AUD-216/217 — el agua y los rayos también se olvidan cada fotograma, y
+    # AUD-216/217 - el agua y los rayos también se olvidan cada fotograma, y
     # por la misma razón que el bloom: los menús no dibujan escenario, así que
     # sin este borrón la pantalla de pausa heredaría el estanque y los rayos
     # del nivel del que se acaba de salir.
     _agua_region = None
     _rayos = None
+    # AUD-342 - y el lote de sprites de GPU con ellos: un menú que se apoya
+    # encima del nivel no debe re-componer las órdenes del fotograma anterior.
+    _lote_de_sprites = None
 
 
 def publish_bloom(intensity: float) -> None:
@@ -217,6 +222,35 @@ def publish_god_rays(origin_uv: tuple[float, float], strength: float) -> None:
 
 def published_god_rays() -> tuple[tuple[float, float], float] | None:
     return _rayos
+
+
+#: El lote de sprites de GPU que la escena rellenó este fotograma. AUD-342.
+_lote_de_sprites: Any = None
+
+
+def publish_lote_de_sprites(lote: Any) -> None:
+    """Publica el lote de sprites que la escena acaba de rellenar en la GPU.
+
+    AUD-342, fase 5 lote 2 — el canal que activa la composición de sprites en
+    la tarjeta **por contexto**: una escena que quiera dibujar sus sprites en
+    la GPU rellena el lote que le da `GameContext.lote_de_sprites` —cámara,
+    luces y órdenes— y lo publica aquí. `App` lo recoge y se lo pasa a la
+    pasada de composición del `GLRenderer`, que lo mezcla sobre la escena
+    entre la subida y la refracción. Una escena que no publica nada sigue
+    dibujando por CPU, que es el camino de siempre, sin pagar una pasada.
+
+    El lote se pasa sin tipo porque este módulo no puede importar la clase:
+    vive en `engine.render`, que carga ModernGL, y este canal existe para
+    que la CPU no dependa de que haya tarjeta. Es un dato opaco que viaja
+    de la escena al renderer, como el agua o los rayos.
+    """
+    global _lote_de_sprites
+    _lote_de_sprites = lote
+
+
+def published_lote_de_sprites() -> Any:
+    """El lote publicado este fotograma, o `None` si nadie dibujó en GPU."""
+    return _lote_de_sprites
 
 
 def consume_chromatic_aberration() -> float:

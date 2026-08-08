@@ -383,10 +383,20 @@ asset ni tocar cómo dibujan las 26 entregas.
 > (`SpriteBatchGPU`, `src/engine/render/gpu_sprite_batch.py`): quads
 > instanciados contra el atlas, tinte, cámara y luz ambiental + direccional +
 > focos puntuales, con una rama plana que dibuja los sprites sin luz
-> EXACTAMENTE como un blit. Lo que **no** entrega todavía es la composición
-> dentro de esta tubería —dibujar el lote en un FBO y mezclarlo con la escena
-> como una pasada más—, que es el lote 2 y el que de verdad decide el aspecto
-> final. El estado vivo de la fase 5 está en `docs/87` §27.
+> EXACTAMENTE como un blit.
+>
+> **Actualización (AUD-342, fase 5 lote 2).** La composición dentro de esta
+> tubería ya está: `GLRenderer.render()` tiene la pasada 1.5 que dibuja el
+> lote sobre `_scene_fbo` entre la subida de la escena y la refracción, y el
+> canal por `gpu_effects` (`publish_lote_de_sprites`/`published_lote_de_sprites`)
+> la hace activable por contexto —la escena publica el lote que rellenó y
+> `App` lo pasa al renderer cada fotograma; un fotograma sin lote publicado no
+> paga ni una llamada de render. Dos límites honestos, probados: `volcar`
+> enlaza el atlas a las unidades del sombreador en cada llamada (sin el
+> enlace el sampler lee la textura que haya en la unidad y los sprites salen
+> invisibles) y se niega con un error a mezclar dos atlas en un mismo volcar
+> (un sampler por llamada: la mezcla daría sprites con texturas ajenas). El
+> estado vivo de la fase 5 está en `docs/87` §27.
 
 ---
 

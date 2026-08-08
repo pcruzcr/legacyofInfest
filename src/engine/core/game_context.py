@@ -63,6 +63,13 @@ class GameContext:
         # `SaveData.zone_flags` en el siguiente checkpoint. Ese campo existía
         # desde el principio y sólo lo escribían las pruebas.
         self.banderas: dict[str, bool] = {}
+        # AUD-342 — el lote de sprites de GPU que App pone a disposición de
+        # la escena. `None` = sin tarjeta o renderer que no lo creó: el camino
+        # de CPU de siempre. Una escena que quiera la ruta de GPU rellena
+        # órdenes aquí —cámara, luces, sprites—, publica el lote por
+        # `gpu_effects.publish_lote_de_sprites` y el renderer lo compone
+        # encima de la escena; la activación es por contexto, no global.
+        self.lote_de_sprites: Any = None
 
     @property
     def audio(self) -> Any:

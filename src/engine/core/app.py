@@ -130,6 +130,9 @@ class App:
         # dejaría a la CPU sin dibujar el bloom en una máquina que acaba de
         # caerse al camino software.
         gpu_effects.set_effects_on_gpu(cfg.cpu_effects_taken_over())
+        # AUD-342 — el lote de sprites de GPU, compartido con el contexto para
+        # que una escena rellene órdenes sin tener que importar ModernGL.
+        self.context.lote_de_sprites = self._gl_renderer.crear_lote_de_sprites()
 
     def _init_subsystems(self) -> None:
         # AUD-268 — lo primero de todo: sin esto, Python usa su manejador de
@@ -367,6 +370,11 @@ class App:
             cfg.godray_enabled = rayos is not None
             if rayos is not None:
                 cfg.godray_origin, cfg.godray_exposure = rayos
+            # AUD-342 — el lote que la escena rellenó y publicó mientras
+            # dibujaba. `None` si ninguna escena usó la ruta de GPU este
+            # fotograma (menús y escenarios de CPU), y entonces la pasada de
+            # composición del renderer no corre.
+            self._gl_renderer.lote_de_sprites = gpu_effects.published_lote_de_sprites()
             self._gl_renderer.render(self.internal_surface, self._current_light_surface())
         else:
             # AUD-013: this used to upscale internal_surface by
