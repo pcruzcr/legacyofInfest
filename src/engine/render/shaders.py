@@ -420,3 +420,110 @@ void main() {
     fragColor = vec4(clamp(color, 0.0, 1.0), 1.0);
 }
 """
+
+
+# ── AUD-340 — la ruta de sprites en tarjeta (fase 5, lote 1) ────────────────
+#
+# Un cuadrángulo por sprite, todos en una llamada `render(instances=N)`. El
+# VAO mezcla un búfer de cuatro esquinas (compartido) con un búfer de
+# instancias donde cada fila es UN sprite: posición, tamaño, recorte del
+# atlas, recorte del mapa de normales, tinte y bandera de iluminado.
+#
+# La geometría del vértice se deja en NDC con la cámara ya restada, y la
+# conversión píxel→NDC vive aquí y no en la CPU para no tocar el búfer de
+# instancias cuando la cámara se mueve — que es lo que pasa todos los
+# fotogramas en un escenario con scroll.
+
+sprite_vert = """
+#version 330
+in vec2 en_esquina;      // 0..1 por esquina: dónde cae cada vértice del cuadrángulo
+in vec2 en_pos;          // esquina superior izquierda del sprite, en píxeles del MUNDO
+in vec2 en_tam;          // tamaño del sprite, en píxeles
+in vec4 en_uv;           // recorte del atlas: (u0, v0, u1, v1)
+in vec4 en_nuv;          // recorte del mapa de normales; vacío (0,0,0,0) = sprite plano
+in vec4 en_tinte;        // RGBA multiplicativo
+in float en_iluminado;   // 0 = se dibuja tal cual; 1 = la luz lo modela
+uniform vec2 pantalla;   // tamaño del destino, en píxeles
+uniform vec2 camara;     // esquina superior izquierda de la cámara, en píxeles del mundo
+out vec2 uv;
+out vec2 nuv;
+out vec4 tinte;
+out vec2 mundo_px;       // posición del fragmento en el mundo, para los focos
+flat out float iluminado;
+void main() {
+    vec2 px = en_pos - camara + en_esquina * en_tam;
+    vec2 ndc = vec2(px.x / pantalla.x * 2.0 - 1.0,
+                    1.0 - px.y / pantalla.y * 2.0);
+    uv = en_uv.xy + en_esquina * en_uv.zw;
+    nuv = en_nuv.xy + en_esquina * en_nuv.zw;
+    mundo_px = en_pos + en_esquina * en_tam;
+    tinte = en_tinte;
+    iluminado = en_iluminado;
+    gl_Position = vec4(ndc, 0.0, 1.0);
+}
+"""
+
+#: Cuántos focos puntuales puede llevar un lote. Límite de compilación, no de
+#: diseño: los uniformes son arrays de tamaño fijo. Cuatro focos en pantalla
+#: cubren los escenarios existentes (la escena elige cuáles mandan).
+SPRITE_MAX_FOCOS = 4
+
+sprite_frag = f"""
+#version 330
+const int MAX_FOCOS = {SPRITE_MAX_FOCOS};
+uniform sampler2D atlas;
+uniform sampler2D normales;
+uniform vec3 luz_ambiental;        // luz que llega sin dirección
+uniform vec3 luz_dir_direccion;    // hacia dónde apunta la luz direccional (normalizada en CPU)
+uniform vec3 luz_dir_color;
+uniform int n_focos;
+uniform vec2 foco_pos[MAX_FOCOS];      // píxeles del mundo
+uniform vec3 foco_color[MAX_FOCOS];
+uniform float foco_radio[MAX_FOCOS];
+uniform float foco_altura[MAX_FOCOS];  // altura del foco sobre el plano, en píxeles
+in vec2 uv;
+in vec2 nuv;
+in vec4 tinte;
+in vec2 mundo_px;
+flat in float iluminado;
+out vec4 fragColor;
+
+void main() {{
+    vec4 albedo = texture(atlas, uv);
+
+    // AUD-340 — la rama plana existe para que la ruta sin normales dibuje
+    // EXACTAMENTE el sprite: sin ella, un sprite sin mapa de normales se
+    // oscurecería con el ambiente y el direccional, y la ruta de GPU sería
+    // otra cosa distinta de un blit. Quien quiere luz encarga normales
+    // (procedimentales o propias); quien no, recibe el píxel tal cual.
+    if (iluminado < 0.5) {{
+        fragColor = albedo * tinte;
+        return;
+    }}
+
+    vec3 n = normalize(texture(normales, nuv).xyz * 2.0 - 1.0);
+    vec3 luz = luz_ambiental;
+
+    // Direccional: coseno del ángulo entre la normal y la luz.
+    float ndl = max(dot(n, luz_dir_direccion), 0.0);
+    luz += luz_dir_color * ndl;
+
+    // Focos puntuales: coseno por atenuación cuadrática del radio. La altura
+    // del foco da un z al vector de luz; sin ella la luz sería paralela al
+    // plano del sprite y la normal nunca importaría para puntuales.
+    for (int i = 0; i < MAX_FOCOS; i++) {{
+        if (i >= n_focos) break;
+        vec2 hacia_2d = foco_pos[i] - mundo_px;
+        float dist = length(hacia_2d);
+        if (dist < foco_radio[i]) {{
+            vec3 hacia = vec3(hacia_2d, foco_altura[i]);
+            vec3 l = normalize(hacia);
+            float atenuacion = 1.0 - dist / foco_radio[i];
+            atenuacion *= atenuacion;
+            luz += foco_color[i] * max(dot(n, l), 0.0) * atenuacion;
+        }}
+    }}
+
+    fragColor = vec4(albedo.rgb * luz, albedo.a) * tinte;
+}}
+"""

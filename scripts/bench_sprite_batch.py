@@ -49,6 +49,11 @@ Uso::
 
     python scripts/bench_sprite_batch.py            # 500, 2.000 y 8.000
     python scripts/bench_sprite_batch.py --sprites 20000
+
+La columna `lote GPU` (AUD-340) es el `SpriteBatchGPU` del motor, con su
+atlas y sus órdenes reales; la columna `GPU` es la misma ruta de dibujado
+con el mínimo de plomería. La diferencia entre las dos es la de clase: la
+segunda entra a medir el algoritmo, la primera a medir el componente.
 """
 from __future__ import annotations
 
@@ -203,6 +208,41 @@ def medir_gpu(cantidad: int) -> tuple[float, float, str]:
     return resultado
 
 
+def medir_lote_gpu(cantidad: int) -> float:
+    """El `SpriteBatchGPU` del motor (AUD-340): atlas real + órdenes reales.
+
+    Mide lo mismo que la columna `GPU` de arriba —el dibujado instanciado
+    contra el atlas— pero con la clase que usa el juego, sin duplicar el
+    algoritmo de la medición: registra el atlas, encola `cantidad` órdenes
+    con su recorte y suelta el lote. La subida del atlas no se mide: ocurre
+    una vez, no por fotograma.
+    """
+    import moderngl
+
+    from src.engine.render.gpu_sprite_batch import SpriteBatchGPU
+
+    ctx = moderngl.create_standalone_context()
+    hoja, posiciones = _sprites_de_prueba(cantidad)
+    fbo = ctx.simple_framebuffer((ANCHO, ALTO))
+    lote = SpriteBatchGPU(ctx, ANCHO, ALTO)
+    atlas = lote.registrar_atlas(hoja)
+    recortes = [pygame.Rect((i % 4) * LADO, (i // 4) * LADO, LADO, LADO)
+                for i in range(16)]
+    for n, pos in enumerate(posiciones):
+        lote.dibujar(atlas, pos, recortes[n % 16])
+    fbo.use()
+
+    def volcar() -> None:
+        fbo.clear(0.0, 0.0, 0.0, 1.0)
+        lote.volcar()
+        ctx.finish()
+
+    resultado = _mediana(volcar)
+    lote.destruir()
+    ctx.release()
+    return resultado
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--sprites", type=int, nargs="*",
@@ -213,7 +253,7 @@ def main() -> int:
     pygame.display.set_mode((ANCHO, ALTO))
 
     print(f"{'sprites':>8}  {'blits':>8}  {'blits()':>8}  {'GPU':>8}  "
-          f"{'GPU+bajar':>10}")
+          f"{'GPU+bajar':>10}  {'lote GPU':>9}")
     tarjeta = "?"
     for cantidad in args.sprites:
         sueltos, lote = medir_cpu(cantidad)
@@ -223,8 +263,13 @@ def main() -> int:
         except Exception as e:  # pragma: no cover - sin tarjeta utilizable
             gpu_txt, bajada_txt = f"{'n/d':>8}", f"{'n/d':>10}"
             tarjeta = f"sin GPU utilizable ({type(e).__name__}: {e})"
+        try:
+            lote_txt = f"{medir_lote_gpu(cantidad):9.3f}"
+        except Exception as e:  # pragma: no cover - sin tarjeta utilizable
+            lote_txt = f"{'n/d':>9}"
+            tarjeta = f"sin GPU utilizable ({type(e).__name__}: {e})"
         print(f"{cantidad:8d}  {sueltos:8.3f}  {lote:8.3f}  {gpu_txt}  "
-              f"{bajada_txt}")
+              f"{bajada_txt}  {lote_txt}")
 
     print(f"\ntarjeta: {tarjeta}")
     print("Milisegundos, mediana de", REPETICIONES, "pasadas.")
