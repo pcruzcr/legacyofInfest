@@ -35,10 +35,25 @@ caída. La técnica es la de `LightSource.build_gradient`
 alfa escrito de una vez con `surfarray`. Lo que **no** se copia de allí es la
 caché de discos: aquélla existe porque un foco parpadeante reconstruye el suyo
 cada fotograma (182 MB en diez segundos sin tope, está medido en ese fichero).
-Aquí la máscara se construye una sola vez en el constructor y `draw()` la
-reutiliza, así que una caché sólo añadiría piezas móviles sin ahorrar nada.
+
+AUD-338 — el velo respira
+==========================
+El velo estaba congelado: la máscara se construía una vez y el overlay era
+idéntico en cada fotograma. Un jugador quieto miraba una foto. Ahora, con
+`animado=True` (el valor por defecto), el radio de los agujeros y el alfa del
+velo oscilan despacio en **antifase** —el velo oscurece mientras los agujeros
+se encogen y se aclara mientras crecen—, que es el ciclo con el que un velo
+parece vivo sin llamar la atención.
+
+La reconstrucción sigue siendo la del comentario de AUD-213: la máscara vive
+en `_hole_mask` y sólo se reconstruye cuando cambian (radio, alfa). Con
+`animado=False` el módulo vuelve a ser el de siempre, y en `t = 0` ambas
+animaciones están en su fase inicial, así que una prueba que no llame a
+`update()` dibuja exactamente lo mismo que antes.
 """
 from __future__ import annotations
+
+import math
 
 import numpy as np
 import pygame
@@ -57,19 +72,31 @@ class FogOfWar:
     _ALFA_DEL_VELO = 220
 
     def __init__(self, width: int = settings.INTERNAL_WIDTH, height: int = settings.INTERNAL_HEIGHT,
-                 radius: int = 80, hardness: float = 0.6) -> None:
+                 radius: int = 80, hardness: float = 0.6,
+                 animado: bool = True, velocidad: float = 0.15,
+                 pulso: float = 3.0, pulso_del_velo: float = 6.0) -> None:
         self._width = width
         self._height = height
         self._radius = radius
         # Se sujeta a [0, 1] porque los valores llegan del TMX en el futuro y
         # un 1,5 daría una banda negativa que invierte el degradado.
         self._hardness = min(1.0, max(0.0, hardness))
+        # El pulso nunca puede comerse el radio entero: un agujero que llega a
+        # cero "respira" para dejar de existir un instante, que es un parpadeo.
+        self._pulso = min(pulso, radius - 1)
+        self._pulso_del_velo = max(0.0, pulso_del_velo)
+        self._velocidad = max(0.0, velocidad)
+        self._animado = animado
+        self._t = 0.0
+        self._radio_actual = radius
+        self._alfa_actual = self._ALFA_DEL_VELO
         self._overlay = pygame.Surface((width, height), pygame.SRCALPHA)
         self._revealed: set[tuple[int, int]] = set()
         self._hole_mask = self._construir_mascara(radius, self._hardness)
 
     @classmethod
-    def _construir_mascara(cls, radius: int, hardness: float) -> pygame.Surface:
+    def _construir_mascara(cls, radius: int, hardness: float,
+                           alfa_pico: int = 220) -> pygame.Surface:
         """Disco degradado: revelado en el núcleo, nulo en el borde.
 
         `hardness` es la fracción del radio que queda **completamente**
@@ -104,7 +131,7 @@ class FogOfWar:
         # canales de color que ya valen cero no tendría nada que restar.
         alfa = pygame.surfarray.pixels_alpha(mask)
         try:
-            alfa[:] = (revelado * cls._ALFA_DEL_VELO).astype(np.uint8)
+            alfa[:] = (revelado * alfa_pico).astype(np.uint8)
         finally:
             del alfa
         return mask
@@ -120,14 +147,38 @@ class FogOfWar:
             self._revealed.add((int(x), int(y)))
 
     def update(self, dt: float) -> None:
-        """No-op placeholder for future fading."""
+        """Avanza el reloj de la animación (AUD-338).
+
+        Antes era un no-op anunciando un "future fading" que no llegó; ahora
+        es el corazón del respiro. Sin llamarlo, el velo se queda en su fase
+        inicial, que coincide con el comportamiento de siempre.
+        """
+        self._t += dt
+
+    def _fase(self) -> float:
+        """Ángulo del ciclo de respiro. La fase cero es el velo estático."""
+        return self._t * self._velocidad * math.tau
+
+    def _perfil_de_respiro(self) -> tuple[int, int]:
+        """(radio, alfa) del fotograma, o el par estático si no hay animación."""
+        if not self._animado:
+            return self._radius, self._ALFA_DEL_VELO
+        fase = self._fase()
+        # Antifase: el velo se oscurece mientras el agujero se encoge.
+        radio = self._radius + round(math.sin(fase) * self._pulso)
+        alfa = self._ALFA_DEL_VELO + round(math.sin(fase + math.pi) * self._pulso_del_velo)
+        return radio, max(0, min(255, alfa))
 
     def draw(self, surface: pygame.Surface, offset: pygame.Vector2) -> None:
-        self._overlay.fill((0, 0, 0, self._ALFA_DEL_VELO))
+        radio, alfa = self._perfil_de_respiro()
+        if (radio, alfa) != (self._radio_actual, self._alfa_actual):
+            self._hole_mask = self._construir_mascara(radio, self._hardness, alfa)
+            self._radio_actual, self._alfa_actual = radio, alfa
+        self._overlay.fill((0, 0, 0, alfa))
         for x, y in self._revealed:
             sx = x - int(offset.x)
             sy = y - int(offset.y)
             self._overlay.blit(self._hole_mask,
-                               (sx - self._radius, sy - self._radius),
+                               (sx - radio, sy - radio),
                                special_flags=pygame.BLEND_RGBA_SUB)
         surface.blit(self._overlay, (0, 0))

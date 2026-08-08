@@ -27,13 +27,17 @@ The Fog of War (`src/framework/vfx/fog_of_war.py`) is a full-screen black overla
 
 ### 2.1 FogOfWar
 - **Overlay:** Full-screen `Surface` at (0, 0, 0, 220) alpha
-- **Mask:** A radial-gradient disc built **once** in the constructor (`_construir_mascara`), blitted at every revealed position
+- **Mask:** A radial-gradient disc (`_construir_mascara`) blitted at every
+  revealed position. Built in the constructor and **rebuilt only when the
+  breathing profile changes** (AUD-338) — the same phase draws the same mask
 - **Composite:** `mask` is subtracted from `overlay` via `BLEND_RGBA_SUB`, creating soft-edged transparent holes
 
-The mask peaks at alpha **220**, not 255, on purpose: `BLEND_RGBA_SUB`
-saturates at zero, so any alpha above the veil's own 220 would reveal exactly
-like 220 and the first stretch of the gradient would be lost to the clamp.
-Matching them puts the whole falloff inside the visible range.
+The mask peaks at the veil's **current** alpha (220 at rest), not 255, on
+purpose: `BLEND_RGBA_SUB` saturates at zero, so any alpha above the veil's
+own would reveal exactly like it and the first stretch of the gradient would
+be lost to the clamp. Matching them puts the whole falloff inside the visible
+range. When the veil breathes, the mask is rebuilt with the new peak so the
+profile stays exact.
 
 ### 2.2 Parameters
 - `radius` — default 80px reveal radius
@@ -42,6 +46,19 @@ Matching them puts the whole falloff inside the visible range.
   following a smoothstep (`3t² - 2t³`) that reaches zero with zero slope at
   both seams. `hardness = 1.0` reproduces the old hard-edged disc;
   `hardness = 0.0` fades from the very centre. Values are clamped to [0, 1].
+- `animado` — default `True` (AUD-338). With `False`, the veil is the static
+  overlay of v1.0.0. At phase zero (`t = 0`, no `update()` call yet) the
+  animated veil draws **exactly** the static one, so tests and code that
+  never call `update()` see no change
+- `velocidad` — default 0.15. Breathing cycles per second: one full inhale
+  and exhale every ~6.7 s. Clamped to `>= 0` (0 freezes the veil)
+- `pulso` — default 3.0. How many pixels the hole radius swells and shrinks
+  around `radius`, in sine. Clamped so the hole can never shrink to zero (a
+  hole that disappears for an instant is a flicker, not a breath)
+- `pulso_del_velo` — default 6.0. How many alpha units the veil darkens and
+  lightens, **in antiphase** with the radius: the veil darkens while the
+  holes shrink (inhale) and lightens while they grow (exhale). The result is
+  clamped to [0, 255]
 
 Measured mask alpha along a radius (`radius = 80`), sampled at fractions of
 the radius — reproducible with `_hole_mask` and `pygame.surfarray.pixels_alpha`:
@@ -61,8 +78,8 @@ the radius — reproducible with `_hole_mask` and `pygame.surfarray.pixels_alpha
 | `clear()` | Reset all revealed areas |
 | `reveal(x, y)` | Add a reveal point at world coordinates |
 | `reveal_all(points)` | Batch-add reveal points |
-| `update(dt)` | No-op placeholder for future animated fading |
-| `draw(surface, offset)` | Render fog overlay, transforming world points to screen |
+| `update(dt)` | Advance the breathing clock (AUD-338). Without it the veil stays at phase zero — the static behaviour |
+| `draw(surface, offset)` | Render fog overlay, transforming world points to screen; rebuilds the mask only when the breathing profile changed |
 
 ---
 

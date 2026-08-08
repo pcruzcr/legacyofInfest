@@ -1265,6 +1265,12 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, SonidoDeEscenario,
             self._aplicar_hora()
         self._weather.update(dt, self._camera.offset)
         self._dialogue.update(dt)
+        # AUD-338 — sin esto el respiro de la niebla de guerra nunca avanzaría:
+        # `_niebla` se crea en `_setup_ambiente` y `draw` se llama en el pintado,
+        # pero nadie movía su reloj interno. El velo animado se queda congelado
+        # en la fase cero, que es exactamente el velo estático de siempre.
+        if self._niebla is not None:
+            self._niebla.update(dt)
 
     def _update_lighting(self, dt: float) -> None:
         stage = self._stage_data
