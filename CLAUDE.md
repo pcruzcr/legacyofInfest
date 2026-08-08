@@ -71,13 +71,26 @@ PYGAME_HIDE_SUPPORT_PROMPT=1
 
 ## 3. Invariantes — romper cualquiera de estas es un fallo, no un trade-off
 
+> **ANULACIÓN PARCIAL POR DECISIÓN DEL DUEÑO (2026-08-07, reversible).**
+> Las invariantes 1 y 2 — `src/stages/` intocable y las 26 clases de
+> escenario funcionando sin tocar una línea — quedan **suspendidas**: el
+> motor y el framework evolucionan libres para servir contextos y modos de
+> juego distintos, aunque eso rompa entregas existentes, y el contenido
+> (niveles y jefes de referencia) se reconstruirá después para lucir las
+> características nuevas. Véase `docs/87_REPORTE_DE_LO_QUE_FALTA.md` §27
+> (el plan completo) y la fila AUD-333. La regla de `revisar/` (invariante
+> 3) NO está anulada. Si esta anulación se revierte, las invariantes 1 y 2
+> vuelven a su redacción original.
+
 1. **`src/stages/` es código de estudiantes.** No se refactoriza, no se
    relintea, no se "moderniza". Está fuera del alcance de ruff (salvo
    `stage0`), fuera de mypy y fuera de cualquier reescritura. Se califica con
    la rúbrica, no con el linter. Excepción: `src/stages/stage0` y los jefes de
    referencia (`boss_venado`), que son el material que los estudiantes copian.
+   *(SUSPENDIDA 2026-08-07 — ver nota de arriba.)*
 2. **Las 26 clases de escenario existentes deben seguir funcionando sin tocar
    una línea.** Fue la restricción explícita del ECS y sigue vigente.
+   *(SUSPENDIDA 2026-08-07 — ver nota de arriba.)*
 3. **`revisar/` son entregas de estudiantes.** No se abre, no se modifica, no
    se audita como si fuera código del motor.
 4. **`KNOWN_GAPS.md` no se borra nunca.** Una entrada resuelta se marca
@@ -102,7 +115,7 @@ PYGAME_HIDE_SUPPORT_PROMPT=1
 ## 4. Convenciones
 
 **Identificadores de hallazgo.** Todo defecto encontrado y corregido lleva un
-`AUD-NNN` correlativo (el último usado va por AUD-329; compruébalo con
+`AUD-NNN` correlativo (el último usado va por AUD-333; compruébalo con
 `git log --oneline -1` antes de asignar uno). Se cita en:
 el mensaje de commit, el comentario del código que explica *por qué* existe el
 arreglo, y el documento de auditoría correspondiente. Los huecos conocidos y no
