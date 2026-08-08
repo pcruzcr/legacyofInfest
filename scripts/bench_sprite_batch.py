@@ -272,6 +272,15 @@ def main() -> int:
               f"{bajada_txt}  {lote_txt}")
 
     print(f"\ntarjeta: {tarjeta}")
+    # La Quadro de este equipo se presenta sin el prefijo "NVIDIA":
+    # ("Quadro M2200/PCIe/SSE2"), así que hay que aceptar ambas marcas.
+    if not any(marca in tarjeta.lower() for marca in ("nvidia", "quadro")):
+        print(
+            "AVISO: no corre en una tarjeta NVIDIA. Asigna python.exe a la "
+            "Quadro (Panel de control de NVIDIA o Windows → Pantalla → "
+            "Gráficos → Alto rendimiento) o esta medición no vale como "
+            "referencia."
+        )
     print("Milisegundos, mediana de", REPETICIONES, "pasadas.")
     return 0
 

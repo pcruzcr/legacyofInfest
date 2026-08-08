@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import math
 from dataclasses import dataclass
 from typing import Any
@@ -26,6 +27,9 @@ from src.engine.render.shaders import (
     vignette_frag,
 )
 
+logger = logging.getLogger(__name__)
+
+
 # AUD-215: por debajo de esta intensidad la separación de canales es de
 # centésimas de píxel — invisible, pero bastaría para mantener encendida una
 # pasada de pantalla completa indefinidamente, porque un decaimiento
@@ -37,6 +41,20 @@ _CHROMATIC_ABERRATION_EPSILON = 1e-3
 # el origen arriba a la izquierda: es el único sistema de coordenadas que una
 # escena de pygame maneja. Convertirlo al de OpenGL es cosa de esta tubería y
 # de nadie más.
+
+
+def _es_tarjeta_nvidia(renderer: str) -> bool:
+    """¿El contexto OpenGL corre en una tarjeta NVIDIA?
+
+    En Windows la ruta OpenGL de un proceso la decide una preferencia por
+    aplicación, no SDL ni ModernGL (lo documenta `scripts/bench_sprite_batch.py`
+    desde AUD-301). El renderer es lo único que dice la verdad en caliente, así
+    que el aviso se basa en él y no en suposiciones sobre el portátil.
+    """
+    renderer = renderer.lower()
+    # La Quadro de este equipo se presenta como "Quadro M2200/PCIe/SSE2", sin
+    # el prefijo "NVIDIA": una marca sola no basta.
+    return "nvidia" in renderer or "quadro" in renderer
 
 
 def region_to_gl_uv(
@@ -272,6 +290,18 @@ class GLRenderer:
             pygame.OPENGL | pygame.DOUBLEBUF,
         )
         self.ctx = moderngl.create_context()
+        renderer = str(self.ctx.info.get("GL_RENDERER", "?"))
+        logger.info("GL_RENDERER: %s", renderer)
+        if not _es_tarjeta_nvidia(renderer):
+            logger.warning(
+                "El contexto OpenGL no corre en una tarjeta NVIDIA (%s). "
+                "Si hay una Quadro en el equipo, asígnala a python.exe: "
+                "Panel de control de NVIDIA → Administrar configuración 3D → "
+                "Configuración de programa → python.exe → Procesador NVIDIA de "
+                "alto rendimiento (o Windows → Pantalla → Gráficos → Alto "
+                "rendimiento). Sin eso, las mediciones de GPU no valen.",
+                renderer,
+            )
         self.ctx.enable(moderngl.BLEND)
         self.ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA
         w, h = settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT
