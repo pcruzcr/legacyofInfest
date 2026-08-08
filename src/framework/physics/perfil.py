@@ -23,13 +23,15 @@ Qué está cableado hoy (AUD-333) y qué falta
 Cableado: la gravedad, la caída máxima y los factores de muro del bloque de
 física del jugador; la velocidad de suelo (`walk_speed`); el impulso de
 salto, el coyote y los saltos aéreos de la máquina de estados; el margen de
-pegado y la velocidad de deslizamiento de las pendientes; y el modo cenital,
-que ahora es el preset `cenital()` en vez de una bandera suelta.
+pegado y la velocidad de deslizamiento de las pendientes; el modo cenital,
+que ahora es el preset `cenital()` en vez de una bandera suelta; y el modo
+`vuelo` (AUD-335), el preset que los contextos de vuelo eligen para
+heredar la integración sin gravedad con su propia velocidad.
 
-Pendiente (próxima fase): el modo `vuelo` — el perfil lo declara, pero el
-integrador del jugador aún no tiene una integración de vuelo que lo
-consuma. Mientras no exista, el preset `vuelo()` no se publica: un modo sin
-comportamiento es código muerto, y este repositorio lo persigue.
+Pendiente (próxima fase): fricción por superficie desde el TMX (materiales:
+hielo, arena…) y aceleración/fricción por perfil. El perfil no las declara
+todavía: un campo sin consumidor es código muerto, y este repositorio lo
+persigue.
 """
 from __future__ import annotations
 
@@ -110,6 +112,26 @@ class PhysicsProfile:
         """
         return cls(
             modo=CENITAL,
+            gravedad=0.0,
+            max_caida=0.0,
+            salto_impulso=0.0,
+            coyote_frames=0,
+            saltos_aereos=0,
+        )
+
+    @classmethod
+    def vuelo(cls) -> PhysicsProfile:
+        """AUD-335 — el modo vuelo: sin gravedad, movimiento en dos ejes.
+
+        La integración es la misma que la cenital — sin gravedad, sin
+        caída, sin salto, velocidad desde la entrada — porque la física
+        del vuelo ES esa: el modo la declara y hereda el comportamiento.
+        Un contexto de vuelo construye el suyo propio con la velocidad que
+        quiera; las repisas de un sentido y las cuestas no se resuelven en
+        vuelo, son semántica de plataformas (ver `resolucion.py`).
+        """
+        return cls(
+            modo=VUELO,
             gravedad=0.0,
             max_caida=0.0,
             salto_impulso=0.0,

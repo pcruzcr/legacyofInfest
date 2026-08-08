@@ -25,7 +25,7 @@ from src.engine.utils.surface_pool import get_pool
 from src.framework.entities.base_entity import BaseEntity
 from src.framework.entities.player_state import PlayerStateData
 from src.framework.entities.ranged_weapon import ArcoDelJugador
-from src.framework.physics.perfil import CENITAL, PLATAFORMAS, PhysicsProfile
+from src.framework.physics.perfil import CENITAL, PLATAFORMAS, VUELO, PhysicsProfile
 from src.framework.physics.resolucion import (
     EstadoDeMovimiento,
     resolver_cuestas,
@@ -738,7 +738,12 @@ class Player(BaseEntity):
             self._advance_animation(dt)
 
         # Physics (gravity + movement)
-        if self.vista_cenital:
+        if self.perfil.modo in (CENITAL, VUELO):
+            # AUD-335 — el vuelo es la integración cenital declarada por su
+            # perfil: sin gravedad, dos ejes libres, velocidad desde la
+            # entrada. La diferencia entre modos es el dato (velocidad,
+            # futura inercia), no el integrador: un contexto de vuelo
+            # declara su perfil y hereda el comportamiento.
             self._aplicar_fisica_cenital(dt, input_manager)
         else:
             self._apply_physics(dt)
@@ -759,7 +764,7 @@ class Player(BaseEntity):
         # vista en planta no es una repisa: es un rectángulo que frena al
         # jugador por un lado y no por el otro, sin nada en pantalla que lo
         # explique. El jugador concluye que el juego está roto, y tiene razón.
-        if not self.vista_cenital:
+        if self.perfil.modo == PLATAFORMAS:
             self._resolve_one_way_collision(dt, one_way_rects)
         else:
             # AUD-129 — el suelo se restituye **después** de la colisión.
@@ -776,6 +781,9 @@ class Player(BaseEntity):
             # Con el suelo siempre presente, el estado aéreo se abandona al
             # fotograma siguiente y la velocidad vertical la fija el
             # movimiento, no el impulso.
+            #
+            # AUD-335 — en vuelo idem, por la misma razón: las repisas son
+            # semántica de plataformas y sin gravedad no hay «en el aire».
             self.is_grounded = True
 
         # Decay pending jump timer so the buffer only lasts ~5 frames
@@ -1019,9 +1027,10 @@ class Player(BaseEntity):
             prev_foot_y=self._prev_foot_y,
         )
         eje_x = resolver_eje_x(estado, dt, collision_rects)
-        if not self.vista_cenital:
-            # AUD-328 — la vista cenital no tiene gravedad, y sin gravedad
-            # no hay cuesta que resolver (pared lateral incluida).
+        if self.perfil.modo == PLATAFORMAS:
+            # AUD-328/335 — sin gravedad no hay cuesta que resolver (pared
+            # lateral incluida): en planta y en vuelo la rampa es terreno
+            # pintado.
             resolver_paredes_de_pendientes(
                 estado, self._pendientes,
                 margen=self.perfil.cuestas.margen_pegado)
@@ -1052,10 +1061,10 @@ class Player(BaseEntity):
         """
         if not self._pendientes:
             return
-        if self.vista_cenital:
+        if self.perfil.modo != PLATAFORMAS:
             # AUD-328 — idem que la pared lateral: sin gravedad la rampa es
             # terreno pintado y el glue vertical no debe activarse en la
-            # vista cenital.
+            # vista cenital; AUD-335 — el vuelo idem, por la misma razón.
             return
         estado = EstadoDeMovimiento(
             posicion=self.position,

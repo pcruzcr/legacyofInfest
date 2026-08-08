@@ -18,7 +18,7 @@ import pygame
 import pytest
 
 from src.framework.physics import resolucion as r
-from src.framework.physics.perfil import CENITAL, Cuestas, PhysicsProfile
+from src.framework.physics.perfil import CENITAL, VUELO, Cuestas, PhysicsProfile
 from src.framework.stage.pendientes import Pendiente
 
 DT = 1.0 / 60.0
@@ -249,6 +249,17 @@ class TestElResolutorCompuesto:
         rampa = Pendiente(pygame.Rect(0, 200, 64, 32))
         estado = _estado(16.0, 186.0, grounded=True)
         perfil = PhysicsProfile(modo=CENITAL)
+        contacto = r.resolver_movimiento(
+            estado, DT, [], pendientes=[rampa], perfil=perfil)
+        assert contacto.en_el_suelo is False
+        assert estado.posicion.y == pytest.approx(186.0)
+
+    def test_el_perfil_vuelo_no_pega_a_la_cuesta(self) -> None:
+        """AUD-335 — en vuelo la rampa tampoco es suelo: son semánticas de
+        plataformas, y el resolutor las reserva para ese modo."""
+        rampa = Pendiente(pygame.Rect(0, 200, 64, 32))
+        estado = _estado(16.0, 186.0, grounded=True)
+        perfil = PhysicsProfile(modo=VUELO)
         contacto = r.resolver_movimiento(
             estado, DT, [], pendientes=[rampa], perfil=perfil)
         assert contacto.en_el_suelo is False
