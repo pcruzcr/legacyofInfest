@@ -28,6 +28,7 @@ from src.framework.entities.ranged_weapon import ArcoDelJugador
 from src.framework.physics.perfil import CENITAL, PLATAFORMAS, VUELO, PhysicsProfile
 from src.framework.physics.resolucion import (
     EstadoDeMovimiento,
+    acercarse_a,
     resolver_cuestas,
     resolver_eje_x,
     resolver_eje_y,
@@ -230,6 +231,10 @@ class Player(BaseEntity):
 
         # --- Physics state ---
         self.velocity: pygame.Vector2 = pygame.Vector2(0.0, 0.0)
+        # AUD-336 — el estado de la integración horizontal del perfil: la
+        # velocidad «real» cuando `aceleracion` > 0, espejo de la del estado
+        # cuando no.
+        self._vx_integrada: float = 0.0
         self.is_grounded: bool = False
 
         # --- Relic bonuses (AUD-022) ---
@@ -529,6 +534,9 @@ class Player(BaseEntity):
         self.rect.x = int(self.position.x)
         self.rect.y = int(self.position.y)
         self.velocity = pygame.Vector2(0.0, 0.0)
+        # AUD-336 — reaparecer no puede dejar inercia: la integración del
+        # perfil arranca de cero como la velocidad.
+        self._vx_integrada = 0.0
 
     def heal(self, amount: float) -> None:
         from src.engine.core.difficulty import get_config
@@ -983,6 +991,10 @@ class Player(BaseEntity):
                 )
                 self._wall_slide_timer = 0.0
 
+        # AUD-336 — la aceleración/fricción del perfil se aplica a la
+        # velocidad horizontal que la máquina de estados acaba de fijar.
+        self._aplicar_friccion_y_aceleracion(dt)
+
         # Coyote time
         if self.is_grounded:
             self._coyote_counter = 0
@@ -1001,6 +1013,42 @@ class Player(BaseEntity):
             # constante pública ni las comparaciones, pero la unidad ya es
             # real: `PLAYER_COYOTE_FRAMES = 6` son 100 ms en cualquier equipo.
             self._coyote_counter += dt * 60.0
+
+    def _aplicar_friccion_y_aceleracion(self, dt: float) -> None:
+        """AUD-336 — acerca la velocidad horizontal a la que fijó el estado.
+
+        La máquina de estados sigue decidiendo la velocidad (`velocity.x`):
+        andando, en el aire, en dash, al recibir daño. Con `aceleracion` en
+        0 —el juego actual, los presets— esa cifra ES la velocidad, y aquí
+        no hay nada que hacer. Con `aceleracion` > 0 la cifra pasa a ser el
+        **objetivo**: la velocidad real parte de la del fotograma anterior
+        (`_vx_integrada`) y se acerca al objetivo a ritmo acotado, de modo
+        que un contexto de hielo o de inercia declara su perfil y el
+        comportamiento lo hereda sin tocar los estados.
+
+        Sin entrada el estado fija 0 y aquí se frena a ritmo de `friccion`
+        (o de `aceleracion` si `friccion` no está). Las zonas del TMX
+        (`sistema_friccion`, AUD-236) recortan la velocidad ya producida,
+        así que multiplican la integración sin saber que existe.
+        """
+        if self.perfil.aceleracion <= 0.0 and self.perfil.friccion <= 0.0:
+            self._vx_integrada = self.velocity.x
+            return
+        objetivo = self.velocity.x
+        if objetivo != 0.0:
+            if self.perfil.aceleracion > 0.0:
+                self._vx_integrada = acercarse_a(
+                    self._vx_integrada, objetivo,
+                    self.perfil.aceleracion * dt)
+            else:
+                # Sin aceleración, el objetivo ES la velocidad: andar sigue
+                # siendo instantáneo y `friccion` sólo manda al soltar.
+                self._vx_integrada = objetivo
+        else:
+            tasa = self.perfil.friccion or self.perfil.aceleracion
+            self._vx_integrada = acercarse_a(
+                self._vx_integrada, 0.0, tasa * dt)
+        self.velocity.x = self._vx_integrada
 
     # ──────────────────────────────────────────────
     # Collision resolution (AABB, axis-separated)

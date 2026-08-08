@@ -404,3 +404,17 @@ def resolver_movimiento(
         repisa_libre=eje_x.repisa_libre,
         venia_del_suelo=estado.venia_del_suelo,
     )
+
+
+def acercarse_a(actual: float, objetivo: float, max_delta: float) -> float:
+    """Mueve `actual` hacia `objetivo` sin pasarse (AUD-336).
+
+    El `move_toward` de Godot y el `approach` de Unity: el paso del
+    integrador por perfil. `max_delta` negativo (un perfil mal declarado)
+    no cambia nada, igual que en los otros dos.
+    """
+    if max_delta <= 0.0:
+        return actual
+    if actual < objetivo:
+        return min(actual + max_delta, objetivo)
+    return max(actual - max_delta, objetivo)
