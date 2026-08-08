@@ -28,10 +28,14 @@ que ahora es el preset `cenital()` en vez de una bandera suelta; y el modo
 `vuelo` (AUD-335), el preset que los contextos de vuelo eligen para
 heredar la integración sin gravedad con su propia velocidad.
 
-Pendiente (próxima fase): fricción por superficie desde el TMX (materiales:
-hielo, arena…) y aceleración/fricción por perfil. El perfil no las declara
-todavía: un campo sin consumidor es código muerto, y este repositorio lo
-persigue.
+AUD-336 cerró lo que quedaba de la fase: `aceleracion` y `friccion` (px/s²)
+declaran cómo se acerca la velocidad horizontal a la que fija la máquina de
+estados, y el jugador las consume en `_aplicar_friccion_y_aceleracion`. Con
+las dos en 0 —los presets `plataformas()`, `cenital()` y `vuelo()`— el
+comportamiento es el de siempre: la velocidad ES la del estado. La fricción
+por superficie desde el TMX ya vivía en el ECS (`ZonaDeFriccion` +
+`sistema_friccion`, AUD-236): recorta la velocidad que el integrador acaba
+de producir, así que compone con la aceleración del perfil sin tocarse.
 """
 from __future__ import annotations
 
@@ -95,6 +99,15 @@ class PhysicsProfile:
     saltos_aereos: int = settings.PLAYER_AIR_JUMPS
     muro: Muro = field(default_factory=Muro)
     cuestas: Cuestas = field(default_factory=Cuestas)
+    #: Aceleración horizontal hacia la velocidad que fija la máquina de
+    #: estados, en px/s². Con 0 (el juego actual) la velocidad es la del
+    #: estado, al instante; con más de 0, ésa pasa a ser el **objetivo** y la
+    #: velocidad real se acerca a él a ritmo acotado (AUD-336).
+    aceleracion: float = 0.0
+    #: Frenado sin entrada, en px/s². Con 0 se frena a ritmo de
+    #: `aceleracion`; con las dos en 0 el juego actual no frena porque no
+    #: tiene inercia que disipar.
+    friccion: float = 0.0
 
     @classmethod
     def plataformas(cls) -> PhysicsProfile:
