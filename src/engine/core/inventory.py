@@ -9,6 +9,8 @@ import pygame
 from pydantic import BaseModel
 
 from src.engine.core import settings
+from src.engine.core.save_manager import migrar_desde_el_arbol
+from src.engine.core.user_settings import user_data_dir
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +23,15 @@ class _NotificationData(TypedDict):
     timer: float
 
 
-_INVENTORY_PATH = settings.PROJECT_ROOT / "data/inventory.json"
+#: Dónde vive el inventario del jugador. AUD-337 — nació en
+#: `data/inventory.json`, dentro del árbol del proyecto; una instalación
+#: empaquetada puede tener ese árbol en un sitio de sólo lectura, así que
+#: el estado del jugador va al directorio del usuario, como las partidas
+#: (AUD-157) y los logros. El fichero viejo se migra una vez (no se borra).
+_RUTA_POR_DEFECTO = user_data_dir() / "inventory.json"
+_INVENTORY_PATH = _RUTA_POR_DEFECTO
+#: De dónde se migra: el sitio histórico, sólo lectura en empaquetado.
+_RUTA_ANTIGUA = settings.PROJECT_ROOT / "data/inventory.json"
 
 
 class ItemDef(BaseModel):
@@ -124,6 +134,17 @@ _ITEM_DEFS: dict[str, ItemDef] = {
         icon_color=(255, 200, 100), slot="skill",
     ),
 }
+
+
+def _migrar_inventario() -> None:
+    """Migra el fichero viejo una vez, y sólo con la ruta de producción.
+
+    Las pruebas redirigen `_INVENTORY_PATH` a un directorio temporal: ahí no
+    se migra nada, el fichero viejo del repositorio es de desarrollo y no
+    tiene por qué colarse en una prueba.
+    """
+    if _INVENTORY_PATH == _RUTA_POR_DEFECTO:
+        migrar_desde_el_arbol(_INVENTORY_PATH, _RUTA_ANTIGUA)
 
 
 class Inventory:
@@ -344,11 +365,13 @@ class Inventory:
         self.save()
 
     def save(self) -> None:
+        _migrar_inventario()
         data = {"items": dict(self._items), "equipped": dict(self._equipped)}
         _INVENTORY_PATH.parent.mkdir(parents=True, exist_ok=True)
         _INVENTORY_PATH.write_bytes(orjson.dumps(data, option=orjson.OPT_INDENT_2))
 
     def load(self) -> None:
+        _migrar_inventario()
         try:
             raw = _INVENTORY_PATH.read_bytes()
             data = orjson.loads(raw)

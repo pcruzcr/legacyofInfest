@@ -52,7 +52,8 @@ class SaveData(BaseModel):
     #: nada. Dos personas turnándose en el mismo equipo compartían cartera.
     #:
     #: Con esto, un slot es una partida entera. Los ficheros globales siguen
-    #: existiendo para quien juega sin identificarse y sin guardar.
+    #: existiendo para quien juega sin identificarse y sin guardar — desde
+    #: AUD-337 ya viven en el directorio del usuario, no en `data/`.
     score: int = 0
     inventory_items: dict[str, int] = Field(default_factory=dict)
     inventory_equipped: dict[str, str] = Field(default_factory=dict)

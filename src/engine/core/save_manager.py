@@ -55,6 +55,32 @@ def escribir_atomicamente(path: Path, datos: bytes) -> None:
         raise
 
 
+def migrar_desde_el_arbol(nuevo: Path, antiguo: Path) -> None:
+    """Copia una vez el estado del jugador desde el árbol del proyecto (AUD-337).
+
+    La receta de AUD-157 aplicada a los demás datos del jugador: `score.json`
+    e `inventory.json` nacieron dentro de `data/` y una versión empaquetada
+    puede tener el árbol de instalación en un sitio de sólo lectura. Si el
+    destino no existe y el origen sí, se copia; no se sobreescribe (un
+    destino existente manda) ni se borra el origen (volver a una versión
+    anterior no pierde nada).
+
+    Los catálogos de sólo lectura (`data/achievements.json`,
+    `data/bestiary.json`) NO pasan por aquí: son contenido del juego, no
+    estado del jugador.
+    """
+    nuevo = Path(nuevo)
+    antiguo = Path(antiguo)
+    if nuevo.exists() or not antiguo.exists():
+        return
+    try:
+        nuevo.parent.mkdir(parents=True, exist_ok=True)
+        nuevo.write_bytes(antiguo.read_bytes())
+        logger.info("estado migrado %s -> %s", antiguo, nuevo)
+    except OSError as exc:
+        logger.warning("no se pudo migrar %s (%s)", antiguo, exc)
+
+
 def volcar_estado_en(data: SaveData) -> None:
     """Copia inventario y puntuación **actuales** dentro de la partida — AUD-292.
 
