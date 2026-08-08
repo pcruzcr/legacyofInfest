@@ -5,6 +5,8 @@ bloom, color grading, vignette, motion blur, and deferred lighting.
 """
 
 from src.engine.render.gl_pipeline import GLRenderConfig, GLRenderer
+from src.engine.render.gpu_sprite_batch import SpriteBatchGPU
+from src.engine.render.normales import generar_normales_desde_alfa
 from src.engine.render.shaders import (
     bloom_frag,
     color_grading_frag,
@@ -16,9 +18,11 @@ from src.engine.render.shaders import (
 __all__ = [
     "GLRenderConfig",
     "GLRenderer",
+    "SpriteBatchGPU",
     "bloom_frag",
     "color_grading_frag",
     "default_vert",
+    "generar_normales_desde_alfa",
     "motion_blur_frag",
     "vignette_frag",
 ]

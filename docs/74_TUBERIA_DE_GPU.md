@@ -339,6 +339,17 @@ se dibuja sobre el mundo ya compuesto. Una pasada instanciada sobre la textura
 de escena no tocaría el API que usan los 26 escenarios. Es la única de las
 propuestas de «acelerar por GPU» que no choca con la invariante 2.
 
+> **Nota de fiabilidad de la medición (2026-08-08).** La prueba del presupuesto
+> de `stage4_1` —`TestCabeEnElPresupuestoDeFotograma`, 12 ms, visión a 1/4 de
+> resolución— es sensible a la carga de la máquina y queda justo en el borde:
+> en este portátil (Quadro M2200) la visión mide ~7-8 ms con la máquina fría y
+> 13-16 ms bajo carga térmica o procesos en segundo plano (el 2026-08-08 dos
+> `_val.py` de VS Code consumían dos núcleos enteros durante horas). Verificado
+> que **no** es dependiente del orden de pruebas (falla también aislada bajo
+> carga) y que es preexistente: con `git stash` sobre un estado commiteado sin
+> cambios de AUD-340 falla igual. No se toca el umbral de 12 ms: el docstring
+> del nivel documenta el razonamiento del 1/4 de resolución y sus 4,6 ms.
+
 ### Iluminación y sombras en los sprites
 
 **La luz ya llega a los sprites**: `lighting_frag` multiplica la escena por el
@@ -355,6 +366,27 @@ no hay información de relieve que consultar.
 El orden sensato es el de la tabla: las sombras bajo la entidad dan la mayor
 parte de la sensación de volumen por una fracción del coste, y no piden ni un
 asset ni tocar cómo dibujan las 26 entregas.
+
+> **Actualización de la fila de normal mapping (AUD-340, fase 5 lote 1).** La
+> tabla de arriba se escribió antes de la petición del dueño de 2026-08-07 y
+> de la suspensión de las invariantes 1-2 que la acompañó. Las dos objeciones
+> que la anclaban en «Baja» han cambiado:
+>
+> * «no existe ningún mapa de normales» — resuelto, y sin pipeline de assets:
+>   `src/engine/render/normales.py` **deriva** la normal del alfa del sprite
+>   (tratar lo opaco como altura y tomar su gradiente), y quien quiera una
+>   normal hecha a mano la pasa como segundo atlas.
+> * «rompería el dibujado que usan las entregas» — la restricción que lo
+>   prohibía quedó suspendida el mismo día.
+>
+> Lo que el lote 1 entrega es el renderizador aislado
+> (`SpriteBatchGPU`, `src/engine/render/gpu_sprite_batch.py`): quads
+> instanciados contra el atlas, tinte, cámara y luz ambiental + direccional +
+> focos puntuales, con una rama plana que dibuja los sprites sin luz
+> EXACTAMENTE como un blit. Lo que **no** entrega todavía es la composición
+> dentro de esta tubería —dibujar el lote en un FBO y mezclarlo con la escena
+> como una pasada más—, que es el lote 2 y el que de verdad decide el aspecto
+> final. El estado vivo de la fase 5 está en `docs/87` §27.
 
 ---
 
