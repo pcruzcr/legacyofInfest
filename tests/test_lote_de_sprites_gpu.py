@@ -66,9 +66,10 @@ class _Textura:
         self.data = data
         self.filter: Any = None
         self.liberada = False
+        self.usos: list[int] = []
 
-    def use(self, _lugar: int = 0) -> None:
-        pass
+    def use(self, lugar: int = 0) -> None:
+        self.usos.append(lugar)
 
     def release(self) -> None:
         self.liberada = True
@@ -265,6 +266,67 @@ class TestElAtlasSubeComoTieneQueSubir:
         lote_gpu.destruir()
         assert all(t.liberada for t in ctx.texturas)
         assert ctx.vaos[0].liberado
+
+
+class TestVolcarEnlazaLasTexturasDeSuAtlas:
+    """AUD-342 — el sampler de `atlas` lee la unidad 0 y el de `normales` la 1.
+
+    Sin el enlace, `volcar` dibujaría con la textura que haya quedado en la
+    unidad (la de la escena, en la tubería) y los sprites saldrían
+    invisibles sin ningún error: este contrato existe para que el error no
+    pueda volver.
+    """
+
+    def test_el_atlas_de_color_se_enlaza_en_la_unidad_cero(self, lote) -> None:
+        lote_gpu, ctx = lote
+        atlas = lote_gpu.registrar_atlas(_hoja((200, 100, 50)))
+        lote_gpu.dibujar(atlas, (0, 0), (0, 0, 16, 16))
+        color = ctx.texturas[1]
+        color.usos.clear()
+        lote_gpu.volcar()
+        assert color.usos == [0]
+
+    def test_el_atlas_de_normales_se_enlaza_en_la_unidad_uno(self, lote) -> None:
+        lote_gpu, ctx = lote
+        atlas = lote_gpu.registrar_atlas(
+            _hoja((10, 10, 10)), normales=_hoja((128, 128, 255)))
+        lote_gpu.dibujar(atlas, (0, 0), (0, 0, 16, 16), iluminado=True)
+        normales = ctx.texturas[2]
+        normales.usos.clear()
+        lote_gpu.volcar()
+        assert normales.usos == [1]
+
+    def test_sin_mapa_de_normales_se_restaura_la_plana(self, lote) -> None:
+        lote_gpu, ctx = lote
+        atlas = lote_gpu.registrar_atlas(_hoja((10, 10, 10)))
+        lote_gpu.dibujar(atlas, (0, 0), (0, 0, 16, 16))
+        plana = ctx.texturas[0]  # la normal plana se enlazó en `__init__`
+        plana.usos.clear()
+        lote_gpu.volcar()
+        assert plana.usos == [1]
+
+    def test_mezclar_dos_atlas_en_un_volcar_es_error_en_voz_alta(self, lote) -> None:
+        lote_gpu, _ctx = lote
+        a = lote_gpu.registrar_atlas(_hoja((10, 10, 10)))
+        b = lote_gpu.registrar_atlas(_hoja((20, 20, 20)))
+        lote_gpu.dibujar(a, (0, 0), (0, 0, 16, 16))
+        lote_gpu.dibujar(b, (40, 0), (0, 0, 16, 16))
+        with pytest.raises(ValueError, match="mezclar atlas"):
+            lote_gpu.volcar()
+        # el error no destruye lo encolado: quien llama decide si reencola o
+        # descarta; el descarte explícito deja el lote dibujable otra vez
+        lote_gpu.limpiar()
+        assert lote_gpu.volcar() == 0
+
+    def test_limpiar_despeja_el_registro_de_atlas(self, lote) -> None:
+        lote_gpu, _ctx = lote
+        a = lote_gpu.registrar_atlas(_hoja((10, 10, 10)))
+        b = lote_gpu.registrar_atlas(_hoja((20, 20, 20)))
+        lote_gpu.dibujar(a, (0, 0), (0, 0, 16, 16))
+        lote_gpu.dibujar(b, (40, 0), (0, 0, 16, 16))
+        lote_gpu.limpiar()
+        lote_gpu.dibujar(a, (0, 0), (0, 0, 16, 16))
+        assert lote_gpu.volcar() == 1
 
 
 class TestLaCamaraYLuzesLleganAlShader:

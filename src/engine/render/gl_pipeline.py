@@ -10,6 +10,7 @@ import numpy as np
 import pygame
 
 from src.engine.core import gpu_effects, settings
+from src.engine.render.gpu_sprite_batch import SpriteBatchGPU
 from src.engine.render.shaders import (
     GODRAY_DEFAULT_SAMPLES,
     bloom_extract_frag,
@@ -280,6 +281,47 @@ class GLRenderer:
         self._quad_vbo: moderngl.Buffer | None = None
         self._quad_ibo: moderngl.Buffer | None = None
         self._screen_texture: moderngl.Texture | None = None
+        # AUD-342 — el lote de sprites de GPU que este renderer compone en
+        # `render()`. Lo crea `crear_lote_de_sprites` y lo pasa `App` desde el
+        # canal de `gpu_effects` cada fotograma; `None` = nadie usó la ruta de
+        # GPU este fotograma y la pasada no corre.
+        self._lote_de_sprites: SpriteBatchGPU | None = None
+
+    def crear_lote_de_sprites(self) -> SpriteBatchGPU:
+        """Crea (una vez) el lote de sprites de GPU que compone este renderer.
+
+        AUD-342, fase 5 lote 2 — la pasada de composición. El lote dibuja
+        sobre `_scene_fbo` en `render()`, justo después de que la escena
+        entre y antes de la refracción: los sprites se mezclan sobre el fondo
+        con el alfa de cada texel —igual que un `blit`— y el bloom, la luz y
+        la viñeta operan después sobre lo ya compuesto. `App` comparte el
+        mismo lote con `GameContext.lote_de_sprites` para que la escena
+        rellene órdenes sin tener que importar ModernGL; una escena que no
+        publica nada deja el lote vacío y `volcar` cuesta cero.
+        """
+        if self.ctx is None:
+            raise RuntimeError(
+                "no hay contexto OpenGL: el lote de sprites de GPU no existe "
+                "en el camino software",
+            )
+        if self._lote_de_sprites is None:
+            self._lote_de_sprites = SpriteBatchGPU(
+                self.ctx, settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT,
+            )
+        return self._lote_de_sprites
+
+    @property
+    def lote_de_sprites(self) -> SpriteBatchGPU | None:
+        """El lote que se compone este fotograma, o `None` si nadie lo publicó.
+
+        Lo fija `App` cada fotograma desde el canal de `gpu_effects`; en el
+        camino software siempre vale `None` y la pasada no corre.
+        """
+        return self._lote_de_sprites
+
+    @lote_de_sprites.setter
+    def lote_de_sprites(self, lote: SpriteBatchGPU | None) -> None:
+        self._lote_de_sprites = lote
 
     def init(self, window_surface: pygame.Surface) -> None:
         display_w, display_h = window_surface.get_size()
@@ -626,6 +668,18 @@ class GLRenderer:
             target_fbo=read_fbo,
         )
 
+        # 1.5. Composición del lote de sprites de GPU (AUD-342, fase 5 lote 2)
+        #
+        # La escena ya está dentro de `_scene_fbo`; el lote que la escena
+        # rellenó y publicó por `gpu_effects` se mezcla ahora encima, con el
+        # alfa de cada texel —igual que un `blit`— y la refracción, el bloom
+        # y el resto deforman lo ya compuesto. Sin lote publicado, o vacío,
+        # esto no cuesta nada: `volcar` devuelve 0 y no hay ni llamada de
+        # render.
+        if self._lote_de_sprites is not None:
+            read_fbo.use()
+            self._lote_de_sprites.volcar()
+
         # 1.5. Refracción bajo el agua (AUD-216)
         #
         # Va aquí, sobre la escena cruda y antes de todo lo demás, porque
@@ -926,6 +980,10 @@ class GLRenderer:
         if self._light_texture is not None:
             self._light_texture.release()
             self._light_texture = None
+        # AUD-342 — el lote de sprites de GPU pertenece a este renderer.
+        if self._lote_de_sprites is not None:
+            self._lote_de_sprites.destruir()
+            self._lote_de_sprites = None
         if self._upload_prog is not None:
             self._upload_prog.release()
             self._upload_prog = None
