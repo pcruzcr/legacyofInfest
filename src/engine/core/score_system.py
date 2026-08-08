@@ -3,7 +3,9 @@ Module: score_system
 System: engine.core
 Academic Unit: N/A
 Description: Puntos por derrotar enemigos. Escucha `ENEMY_DIED` y acumula
-una puntuación según el tipo de enemigo. Persistencia en `data/score.json`.
+una puntuación según el tipo de enemigo. Persistencia en el directorio del
+usuario (`score.json`; AUD-337 lo sacó de `data/score.json`, migrando el
+fichero viejo una vez).
 
 Por qué existe
 --------------
@@ -31,10 +33,20 @@ import orjson
 from src.engine.core import settings
 from src.engine.core.event_bus import EventBus
 from src.engine.core.events import Events
+from src.engine.core.save_manager import migrar_desde_el_arbol
+from src.engine.core.user_settings import user_data_dir
 
 logger = logging.getLogger(__name__)
 
-_SCORE_PATH = settings.PROJECT_ROOT / "data/score.json"
+#: Dónde vive la puntuación del jugador. AUD-337 — nació en
+#: `data/score.json`, dentro del árbol del proyecto; una instalación
+#: empaquetada puede tener ese árbol en un sitio de sólo lectura, así que
+#: el estado del jugador va al directorio del usuario, como las partidas
+#: (AUD-157) y los logros. El fichero viejo se migra una vez (no se borra).
+_RUTA_POR_DEFECTO = user_data_dir() / "score.json"
+_SCORE_PATH = _RUTA_POR_DEFECTO
+#: De dónde se migra: el sitio histórico, sólo lectura en empaquetado.
+_RUTA_ANTIGUA = settings.PROJECT_ROOT / "data/score.json"
 
 #: Puntos por tipo de enemigo. Los jefes valen mucho más.
 #: Se deduce del nombre de la clase (`EnemyWalker` → `walker`).
@@ -100,6 +112,17 @@ def coins_for(entity_id: str) -> int:
     un nivel hecho sólo con enemigos propios no daría para comprar nada.
     """
     return _COINS_BY_TYPE.get(_tipo_de(entity_id), 1)
+
+
+def _migrar_score() -> None:
+    """Migra el fichero viejo una vez, y sólo con la ruta de producción.
+
+    Las pruebas redirigen `_SCORE_PATH` a un directorio temporal: ahí no se
+    migra nada, el fichero viejo del repositorio es de desarrollo y no tiene
+    por qué colarse en una prueba.
+    """
+    if _SCORE_PATH == _RUTA_POR_DEFECTO:
+        migrar_desde_el_arbol(_SCORE_PATH, _RUTA_ANTIGUA)
 
 
 class ScoreSystem:
@@ -178,10 +201,12 @@ class ScoreSystem:
         self.save()
 
     def save(self) -> None:
+        _migrar_score()
         _SCORE_PATH.parent.mkdir(parents=True, exist_ok=True)
         _SCORE_PATH.write_bytes(orjson.dumps({"score": self._score}))
 
     def load(self) -> None:
+        _migrar_score()
         try:
             raw = _SCORE_PATH.read_bytes()
             data = orjson.loads(raw)
