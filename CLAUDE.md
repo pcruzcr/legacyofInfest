@@ -65,6 +65,14 @@ SDL_AUDIODRIVER=dummy
 PYGAME_HIDE_SUPPORT_PROMPT=1
 ```
 
+**GPU: se mide siempre con la tarjeta NVIDIA (Quadro M2200).** Windows elige
+la tarjeta por aplicación, no SDL ni ModernGL; `python.exe` ya está dado de
+alta para la Quadro, y `GLRenderer` y `scripts/bench_sprite_batch.py` avisan
+en voz alta si el renderer no es NVIDIA (`GL_RENDERER`). Si un aviso aparece,
+asignar `python.exe` a la Quadro (Panel de control de NVIDIA → Configuración
+de programa, o Windows → Pantalla → Gráficos → Alto rendimiento) y re-medir;
+una medición de GPU tomada en la integrada no vale como referencia.
+
 **Python >= 3.11.** CI corre la matriz 3.11 / 3.12 / 3.13.
 
 ---
