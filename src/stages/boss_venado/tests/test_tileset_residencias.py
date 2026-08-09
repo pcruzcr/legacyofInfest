@@ -30,6 +30,14 @@ ART_LIB = "src.stages.boss_venado.tools.art_lib"
 # gravel(+_curb), tire, and the sedan/pickup(4x2) + tractor(3x2) vehicle blocks.
 EXPECTED_NAMES_SHA = "e5831bd3c5a0e25357edbf1c4a20743870275a66cf45095f427ffdf3ff2b2c68"
 
+# Frozen atlas contract (AUD-345): sha256 of the atlas PNG regenerated from the
+# CURRENT generator code. The layout of the atlas is the registration ORDER of
+# TILES, and NAME_TO_INDEX (which gen_level_residencias uses to name TMX tiles)
+# is the same order: any refactor of the generator must not move a single pixel.
+# Bumped on 2026-08-08 when the 2364-line module was split into the
+# gen_tileset_residencias package (the split is verbatim, order preserved).
+EXPECTED_ATLAS_SHA = "398a7cefd99300cb701279fb11f10f99af79f6256d9750142996d4d019b50fae"
+
 
 def test_atlas_names_are_dense_and_unique() -> None:
     g = importlib.import_module(MOD)
@@ -80,3 +88,17 @@ def test_name_contract_is_frozen() -> None:
     g = importlib.import_module(MOD)
     names_sha = hashlib.sha256(",".join(sorted(g.NAME_TO_INDEX)).encode()).hexdigest()
     assert names_sha == EXPECTED_NAMES_SHA
+
+
+def test_atlas_is_frozen(tmp_path: Path) -> None:
+    # AUD-345 — un refactor del generador no puede mover ni un pixel del atlas:
+    # el layout es el orden de registro de TILES y gen_level_residencias nombra
+    # los tiles del TMX con NAME_TO_INDEX, que es ese mismo orden.
+    g = importlib.import_module(MOD)
+    out = tmp_path / "atlas.png"
+    g.main(out_png=out, contact_png=tmp_path / "contact.png")
+    atlas_sha = hashlib.sha256(out.read_bytes()).hexdigest()
+    assert atlas_sha == EXPECTED_ATLAS_SHA, (
+        "el atlas cambio de píxeles tras un refactor: se rompió el orden de "
+        "registro de TILES o un pintor de tiles"
+    )
