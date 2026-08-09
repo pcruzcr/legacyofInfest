@@ -256,6 +256,7 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── hazard_system.py           # HazardSystem: damage zones, death pits
 │   │   │   ├── progression_system.py      # ProgressionSystem: stage completion, triggers
 │   │   │   ├── drawing_system.py          # DrawingSystem: layered rendering pipeline
+gizmos.py                  # AUD-352: mixin GizmosDeDepuracion: cajas, flechas y conos de F1
 │   │   │   ├── cutscene_system.py         # CutsceneSystem: scripted cutscenes
 │   │   │   ├── cutscene_director.py       # CutsceneDirector: escenas declaradas en TMX (AUD-136)
 │   │   │   ├── cutscene_guion.py          # analizar_guion: texto de guion a acciones (AUD-136)
