@@ -244,6 +244,8 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── culling.py                 # AUD-279: qué se simula y qué se dibuja cerca de la cámara
 │   │   │   ├── pendientes.py             # AUD-297: suelo inclinado (Slope)
 │   │   │   ├── stage_loader.py            # StageLoader: parse TMX, build layer stack, spawn
+│   │   │   ├── stage_data.py              # AUD-350: StageData y vocabulario de Tiled (dataclasses, capas)
+│   │   │   ├── stage_objetos.py           # AUD-350: mixin ObjetosDeTiled: un manejador por objeto de Tiled
 │   │   │   ├── interactables.py           # Recogible/Cerradura/Cofre/Disparador/Llavero (F4.1)
 │   │   │   ├── bloques.py                 # PushBlock y BreakableBlock: empujar y romper (AUD-140)
 │   │   │   ├── interactable_system.py     # InteractableSystem: llaves, puertas, cofres y eventos (F4.1)
@@ -779,6 +781,14 @@ Parses a TMX file using `pytmx`, constructs the layer stack using `pyscroll`, sp
 - `stage_name: str` — Display name
 - `time_limit: int` — Countdown time in seconds (0 = no limit)
 - `bgm_track: str` — Background music track name
+
+#### `framework/stage/stage_data.py` — `StageData` and the Tiled vocabulary
+
+Split from `stage_loader.py` in AUD-350 (the loader was a 1.886-line god file; no logic changed). Holds the data contract the loader fills: the seven `@dataclass`es (`StageData`, `MessageTrigger`, `HazardZone`, `EscenaGuionizada`, `DeathPit`, `CameraLock`, `LightSpec`), the layer/property vocabularies (`REQUIRED_LAYERS`, `_NUMERIC_PROPS`, `_BOOL_PROPS`), the view/camera modes (`VISTAS_VALIDAS`, `MODOS_DE_CAMARA`) and `_TIPOS_DE_COMPONENTE`. `stage_loader.py` re-exports every public name, so import sites did not change.
+
+#### `framework/stage/stage_objetos.py` — `ObjetosDeTiled`
+
+Split from `stage_loader.py` in AUD-350. Mixin inherited by `StageLoader`: the dispatcher `_process_objects` walks the `Objects` layer and routes each Tiled `type` to one handler (`_handle_*`). Unknown types are diagnosed instead of silently dropped (AUD-055) and accumulated in `TmxReport`. Handlers share Tiled-friendly property names and converters that clamp instead of rejecting.
 
 #### `framework/stage/camera.py` — `Camera`
 
