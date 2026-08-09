@@ -296,6 +296,8 @@ legacy-of-infest/                      # Actual repo root
 │   │   │       ├── arco.py                #   AUD-299: apuntar, disparar y la parábola
 │   │   │       ├── mundo_ecs.py           #   AUD-299: planificador, población y agarres
 │   │   │       ├── fantasma.py            #   silueta de la mejor carrera
+│   │   │       ├── actualizaciones.py     #   AUD-351: la familia _update_* — audio,
+│   │   │       │                         #   HUD, efectos, luz, logros, minimapa y estelas
 │   │   │       ├── rush.py                #   AUD-261: conduce el Boss Rush —
 │   │   │       │                          #   golpes, tiempo y arrastre de vida
 │   │   │       └── dibujo_mecanicas.py    #   pinta lo del ECS: bloques rítmicos,

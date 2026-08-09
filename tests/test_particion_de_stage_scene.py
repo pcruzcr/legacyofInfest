@@ -72,6 +72,15 @@ PARTES = {
         ("_ruta_del_fantasma", "_preparar_fantasma",
          "_guardar_fantasma_si_es_mejor", "_dibujar_fantasma"),
     ),
+    # AUD-351 — la familia `_update_*` de periféricos (audio, HUD, efectos,
+    # luz, logros, temporizadores, minimapa y estelas) salió al agotarse el
+    # presupuesto. La simulación (`_update_gameplay`) se quedó en la escena.
+    "actualizaciones": (
+        "ActualizacionesDeEscenario",
+        ("_update_audio", "_update_hud_ui", "_update_vfx",
+         "_update_lighting", "_update_tracking", "_update_timers",
+         "_update_minimap", "_update_trail"),
+    ),
 }
 
 TODOS_LOS_METODOS = [

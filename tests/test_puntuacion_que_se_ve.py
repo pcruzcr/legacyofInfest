@@ -45,10 +45,15 @@ def _video():
 
 @pytest.fixture(scope="module")
 def fuente() -> str:
-    """El texto de `stage_scene.py`, para comprobar quién llama a qué."""
-    return (RAIZ / "src/framework/scenes/stage_scene.py").read_text(
-        encoding="utf-8",
-    )
+    """El texto de `stage_scene.py` y su mixin de actualizaciones, para
+    comprobar quién llama a qué. AUD-351 movió `_update_hud_ui` (el `set_score`
+    del HUD) a `stage_parts/actualizaciones.py`, así que el texto se lee de
+    los dos sitios."""
+    return (
+        RAIZ / "src/framework/scenes/stage_scene.py"
+    ).read_text(encoding="utf-8") + (
+        RAIZ / "src/framework/scenes/stage_parts/actualizaciones.py"
+    ).read_text(encoding="utf-8")
 
 
 @pytest.fixture(autouse=True)
