@@ -209,7 +209,14 @@ class GhostData:
     INTERVALO: float = 1.0 / 30.0
 
     def __init__(self) -> None:
-        self._frames: list[dict[str, float]] = []
+        # AUD-363 — `float | str`, no `float`: cada marco guarda `x` e `y`
+        # (números) y `state` (el nombre del estado del jugador, una
+        # cadena). La anotación decía `float` y llevaba así desde que se
+        # escribió, así que mentía en uno de sus tres campos. Este módulo
+        # está fuera del trinquete de `mypy_scope.txt`, que es por lo que
+        # nadie la comprobó: la anotación es para quien lo lea, y una que
+        # miente es peor que ninguna.
+        self._frames: list[dict[str, float | str]] = []
         self._t: float = 0.0
         self._desde_ultima: float = 0.0
 
@@ -248,7 +255,7 @@ class GhostData:
     def record(self, x: float, y: float, state: str) -> None:
         self._frames.append({"x": x, "y": y, "state": state})
 
-    def get_frame(self, index: int) -> dict[str, float] | None:
+    def get_frame(self, index: int) -> dict[str, float | str] | None:
         if 0 <= index < len(self._frames):
             return self._frames[index]
         return None
