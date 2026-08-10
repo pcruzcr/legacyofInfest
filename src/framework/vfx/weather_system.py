@@ -7,6 +7,7 @@ import pygame
 
 from src.engine.core import settings
 from src.framework.vfx.particle_system import ParticleEmitter
+from src.framework.world.simulation import viento_de
 
 
 class WeatherSystem:
@@ -43,17 +44,19 @@ class WeatherSystem:
         self._overlay_alpha: int = params["overlay_alpha"]
         self._overlay_color: tuple[int, int, int] = params["overlay_color"]
         self._overlay_listo = False
-        # Viento lateral en px/s. Los valores de la tormenta son los que
-        # pretendía la línea muerta que se corrigió en `_angulo_con_viento`:
-        # ±50 a 100, que sobre una caída de 280 px/s da entre 10 y 20 grados de
-        # inclinación. El ±30 anterior daba como máximo 6 grados, indistinguible
-        # de la vertical. La nieve deriva menos porque cae mucho más despacio y
-        # el mismo viento la desvía más.
-        self._wind = {
-            "storm": random.choice([-1, 1]) * random.uniform(50, 100),
-            "snow": random.uniform(-12, 12),
-            "rain": random.uniform(-15, 15),
-        }.get(self._climate, 0.0)
+        # AUD-374 — el viento ya no se inventa aquí. Era la segunda tabla del
+        # mismo hecho: `CLIMAS` en `world/simulation.py` tenía las magnitudes
+        # (75 en tormenta, 15 en lluvia, 12 en nieve) y esto sorteaba las
+        # suyas con `random.uniform` (±50 a 100, ±15, ±12). Los números
+        # coincidían porque uno se copió del otro, y copiado es como se
+        # desincroniza: cambiar la tormenta en la tabla del mundo no movía la
+        # inclinación de una sola gota.
+        #
+        # Este repliegue es para quien construye un `WeatherSystem` suelto —una
+        # prueba, `stage0`, una entrega—: sigue soplando, y sopla lo que dice
+        # la única tabla que queda. Cuando hay escenario, `_aplicar_hora` le
+        # pasa el viento del `EnvironmentState` y ése manda.
+        self._wind = viento_de(self._climate, random.Random())
 
     def set_climate(self, climate: str) -> None:
         if climate == self._climate:
@@ -102,6 +105,17 @@ class WeatherSystem:
     @property
     def climate(self) -> str:
         return self._climate
+
+    def aplicar_viento(self, viento: float) -> None:
+        """Toma el viento del ambiente — AUD-374.
+
+        La entrada que faltaba. `EnvironmentState.viento` se calculaba cada
+        fotograma y no había forma de dárselo a quien dibuja la lluvia, así
+        que el campo estaba huérfano y este sistema soplaba por su cuenta.
+
+        Con signo: negativo inclina la lluvia hacia la izquierda.
+        """
+        self._wind = float(viento)
 
     @property
     def _particles(self) -> list:  # backward compat for tests

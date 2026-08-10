@@ -60,6 +60,7 @@ Catálogo y prioridades en `docs/92_CATALOGO_DE_FENOMENOS.md`.
 from __future__ import annotations
 
 import math
+import random
 
 from src.framework.stage.day_night import HORAS_POR_DIA, RelojDeMundo, luz_a_las
 from src.framework.stage.seasons import POR_DEFECTO, aplicar_tinte, estacion
@@ -91,6 +92,28 @@ CLIMAS: dict[str, dict[str, float]] = {
     "storm": {"humedad": 1.00, "viento": 75.0, "nubes": 1.00,
               "precipitacion": 1.00, "visibilidad": 0.76},
 }
+
+def viento_de(clima: str, rng: random.Random) -> float:
+    """Viento **con signo** del clima, en px/s. Negativo = hacia la izquierda.
+
+    AUD-374 — existía por duplicado. `CLIMAS` daba la magnitud y
+    `WeatherSystem._set_climate_params` sorteaba su propia tabla con
+    `random.uniform`; que los números coincidieran —75 aquí frente al centro
+    del `uniform(50, 100)` de allí, 15 frente a `uniform(-15, 15)`, 12 frente
+    a `uniform(-12, 12)`— delata que era una decisión copiada, no dos.
+
+    Vive aquí, con la tabla, porque el viento es un hecho del mundo: la
+    dirección en la que sopla no puede depender de quién pregunte. El sistema
+    de clima lo consume; ya no lo inventa.
+
+    El signo lo pone quien llama y **se queda**: sortearlo en cada consulta
+    del estado haría que la lluvia cambiase de lado por fotograma.
+    """
+    magnitud = CLIMAS.get(clima, CLIMAS["clear"])["viento"]
+    if magnitud == 0.0:
+        return 0.0
+    return rng.choice((-1.0, 1.0)) * magnitud
+
 
 #: Altura solar por debajo de la cual empieza cada banda. Los tres crepúsculos
 #: de verdad se definen por grados bajo el horizonte (-6, -12, -18); aquí el
@@ -151,6 +174,7 @@ class WorldSimulation:
         clima: str = "clear",
         dia_inicial: int = 0,
         desfase_lunar: float = 0.0,
+        rng: random.Random | None = None,
     ) -> None:
         # El reloj no se reimplementa: es el de `day_night.py`, con su curva de
         # luz medida en Stage 0 y su prueba de jugabilidad nocturna detrás.
@@ -163,6 +187,12 @@ class WorldSimulation:
         self._hora_previa = self._reloj.hora
         #: Sustituciones del diseñador, por nombre de campo. Ver `forzar`.
         self._forzados: dict[str, object] = {}
+        # AUD-374 — el azar de la simulación es suyo, no el global. Sembrarlo
+        # es lo que permite repetir una tormenta en una prueba, y es el primer
+        # trozo de GAP-042: un `Random` propio se puede fijar; el módulo
+        # `random` lo comparte todo el proceso y no se puede aislar.
+        self._rng = rng if rng is not None else random.Random()
+        self._viento = viento_de(self._clima, self._rng)
 
     # ── Configuración ─────────────────────────────────────────────────
 
@@ -181,6 +211,10 @@ class WorldSimulation:
 
     def set_clima(self, nombre: str) -> None:
         self._clima = str(nombre or "clear")
+        # La dirección se sortea **aquí** y no en `estado()`: el estado se
+        # consulta por fotograma, así que sortear allí haría que la lluvia
+        # cambiara de lado sesenta veces por segundo.
+        self._viento = viento_de(self._clima, self._rng)
 
     def set_estacion(self, nombre: str) -> None:
         self._estacion_nombre = str(nombre or POR_DEFECTO)
@@ -247,7 +281,10 @@ class WorldSimulation:
             clima=self._clima,
             precipitacion=tiempo["precipitacion"],
             humedad=tiempo["humedad"],
-            viento=tiempo["viento"],
+            # AUD-374 — el viento sale del atributo, no de la tabla: la tabla
+            # sólo tiene magnitudes y el campo declara signo. La dirección se
+            # decidió al fijar el clima y se mantiene hasta que cambie.
+            viento=self._viento,
             visibilidad=tiempo["visibilidad"],
             cobertura_nubes=tiempo["nubes"],
             altura_solar=altura,

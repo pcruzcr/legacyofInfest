@@ -238,7 +238,10 @@ class Stage4_1(StageScene):
             return
         self._acto_actual = acto.numero - 1
 
-        self._weather.set_climate(acto.clima)
+        # AUD-374 — al mundo, no al VFX. Medido antes de este cambio: con el
+        # mapa en `fog` y el acto en `storm`, la humedad se quedaba en 0,50 y
+        # el suelo nunca se mojaba. Los actos de tormenta no resbalaban.
+        self._cambiar_clima(acto.clima)
         self._ambient_particles.set_effect(*acto.particulas)
         # El ambiente del acto pasa a ser la base sobre la que el ciclo
         # día/noche modula. Se escribe en `_ambiente_base` y no en el sistema

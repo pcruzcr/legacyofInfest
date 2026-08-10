@@ -170,7 +170,10 @@ class Stage0(StageScene):
         # Zone F — storm finale
         if px > 85 * self.TILE and 3 not in self._zone_entered:
             self._zone_entered.add(3)
-            self._weather.set_climate("storm")
+            # AUD-374 — se le pide al mundo, no al sistema que dibuja la
+            # lluvia. Pedírselo al VFX dejaba la humedad en el clima del TMX,
+            # así que la tormenta del clímax se veía y no mojaba el suelo.
+            self._cambiar_clima("storm")
             # AUD-066: era `self._context`, que no existe en `BaseScene` —el
             # atributo es `self.context`—. Sólo se ejecuta al pasar del tile 85,
             # así que el juego crasheaba a los tres cuartos del escenario y
