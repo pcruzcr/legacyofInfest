@@ -78,6 +78,20 @@ OBJETIVOS: tuple[tuple[str, str], ...] = (
     ("src/engine/audio/mixer_buses.py", "tests/test_buses_de_audio.py"),
     ("src/engine/audio/music_clock.py", "tests/test_reloj_musical.py"),
     ("src/framework/stage/bloques.py", "tests/test_bloques.py"),
+    # AUD-371 — el resolutor compartido entra al conjunto de CI. Es el módulo
+    # del que cuelga el movimiento de TODAS las entidades desde AUD-334, y
+    # llevaba sin medir.
+    #
+    # La medición tiene una lección dentro. Con `test_resolucion_de_movimiento`
+    # sola da **52 %**, por debajo del umbral; con las tres suites que de
+    # verdad lo ejercitan da **100 % (25/25)**. O sea: el módulo estaba bien
+    # defendido y la defensa vivía repartida, así que medirlo por su fichero
+    # «obvio» habría dado un número falso y una conclusión falsa —«hay que
+    # escribir pruebas»— cuando lo que había que hacer era mirar dónde estaban.
+    ("src/framework/physics/resolucion.py",
+     "tests/test_resolucion_de_movimiento.py "
+     "tests/test_resolucion_data_hostil.py "
+     "tests/test_player_physics.py"),
 )
 
 #: Nota mínima para dar por buena la defensa de un módulo.

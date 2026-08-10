@@ -37,13 +37,17 @@ RAIZ = pathlib.Path(__file__).resolve().parent.parent
 CI = RAIZ / ".github" / "workflows" / "ci.yml"
 ALCANCE = RAIZ / "mypy_scope.txt"
 
-#: Tamaño del trinquete cuando se creó. Sólo puede subir.
+#: Tamaño del trinquete. Sólo puede subir.
+#:
+#: AUD-371 lo llevó de 2 a 6. Los cuatro que entraron ya estaban limpios y
+#: estaban fuera por inercia: la razón original —«el árbol entero daría
+#: cientos de errores»— era cierta para el árbol y falsa para ellos.
 #:
 #: Un número escrito a mano es exactamente lo que este proyecto ha estado
 #: retirando de otros sitios, pero aquí es el punto: la prueba **tiene** que
 #: fallar cuando alguien quita un paquete, y para eso hace falta recordar
 #: cuántos había. Subirlo al añadir es parte del trabajo de añadir.
-PAQUETES_MINIMOS = 2
+PAQUETES_MINIMOS = 6
 
 
 def _paquetes_del_alcance() -> list[str]:

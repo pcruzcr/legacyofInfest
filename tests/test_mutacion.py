@@ -163,9 +163,23 @@ class TestLosObjetivosSonReales:
     @pytest.mark.parametrize(("modulo", "pruebas"), mut.OBJETIVOS)
     def test_el_modulo_y_sus_pruebas_existen(self, modulo, pruebas) -> None:
         """Un objetivo que apunta a un fichero borrado convierte la
-        herramienta en un adorno que siempre pasa."""
+        herramienta en un adorno que siempre pasa.
+
+        AUD-371 — el campo de pruebas admite **varios** ficheros separados por
+        espacios, porque se le pasa a pytest tal cual y pytest acepta varias
+        rutas. Hacía falta al medir `resolucion.py`: con su fichero «obvio»
+        solo da 52 %, y con las tres suites que de verdad lo ejercitan, 100 %.
+        La defensa de un módulo compartido vive repartida, y obligar a un solo
+        fichero daba un número falso.
+
+        Esta prueba comprobaba `(RAIZ / pruebas).exists()` sobre la cadena
+        entera y se puso roja con el primer objetivo de varios ficheros, que
+        es exactamente su trabajo: avisó de que la forma del dato había
+        cambiado.
+        """
         assert (RAIZ / modulo).exists(), modulo
-        assert (RAIZ / pruebas).exists(), pruebas
+        for fichero in pruebas.split():
+            assert (RAIZ / fichero).exists(), fichero
 
 
 class TestLaHerramientaNoDejaResiduo:
