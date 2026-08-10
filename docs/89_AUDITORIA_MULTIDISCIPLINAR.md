@@ -259,7 +259,7 @@ instanciable; el roster es la especificación).
 | P3 | Baja | `docs/00_MASTER_INDEX.md:13,27` | Recuento de documentos contradictorio | Consensuar al cerrar la otra frente |
 | P4 | Media | `KNOWN_GAPS.md` GAP-024 | Salto aéreo documentado pero sin conectar; congelado por test a propósito | Decisión docente, no se toca |
 | P5 | Baja | `stage2_1`, `stage1_3`, `stage4_1` | Cero checkpoints; repecho 544 px; vertical sin enemigos | Decisión docente (rúbrica los permite) |
-| P6 | Baja | `docs/63_REGISTRO_DE_LO_NO_IMPLEMENTADO.md` | Sin métrica de acierto de la IA predictiva | Añadir cuando la capa ML se mida |
+| ~~P6~~ | ~~Baja~~ | ~~`docs/63`~~ | ~~Sin métrica de acierto de la IA predictiva~~ *(Resuelto: AUD-368)* | **Medido: 82,1 % de fidelidad a la heurística.** Y el número se lee al revés de como parece: el modelo se entrena **sólo** con la salida de las reglas (`squad_brain.py:171-180`), así que su techo es imitarlas y el 17,9 % restante es degradación pura, no aprendizaje. Las desviaciones no son inocuas: `charge → attack_ranged` (43 casos) es un enemigo cuerpo a cuerpo intentando disparar. `scripts/medir_ia.py` + `tests/test_la_ia_contra_su_heuristica.py`. **No se apaga**: su valor aquí es docente, no táctico (unidad de Reconocimiento de Patrones). Qué hacer con ese 17,9 % es decisión del dueño, ahora con un número delante |
 | P7 | Baja | suite | 3 skips por dependencia opcional (`pydub`) o motivo escrito | No son pruebas muertas: verificado |
 
 ## 7. Evidencia final de la iteración
