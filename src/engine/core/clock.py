@@ -58,6 +58,8 @@ al hit-stop no.
 """
 from __future__ import annotations
 
+from collections import deque
+
 import pygame
 
 from src.engine.core import settings
@@ -66,6 +68,11 @@ from src.engine.core import settings
 # integrators in the player/enemy state machines from tunnelling through
 # geometry after a stall (breakpoint, window drag, GC pause, disk hitch).
 MAX_FRAME_TIME: float = 0.05  # 20 FPS floor
+
+#: Cuántos fotogramas guarda el historial para los cuantiles de F11 (AUD-346).
+#: 180 a 60 FPS son 3 segundos: bastante para separar el tropezón de la
+#: tendencia, y poco para que la memoria no sea parte de la medición.
+FOTOGRAMAS_EN_EL_HISTORIAL: int = 180
 
 #: Nombre de la fuente del hit-stop. `dt_mundo` la ignora a propósito.
 FUENTE_HITSTOP: str = "hitstop"
@@ -84,6 +91,10 @@ class DeltaClock:
         self._dt: float = 0.0
         self._unscaled_dt: float = 0.0
         self._dt_mundo: float = 0.0
+        # AUD-346 — los milisegundos reales de los últimos fotogramas, para
+        # los cuantiles de la consola (F11). El deque recorta solo.
+        self._historial: deque[float] = deque(
+            maxlen=FOTOGRAMAS_EN_EL_HISTORIAL)
 
     # ── Composición de escalas ────────────────────────────────────────
 
@@ -137,7 +148,20 @@ class DeltaClock:
         self._unscaled_dt = raw_dt
         self._dt = raw_dt * self.time_scale
         self._dt_mundo = raw_dt * self._producto(excluir=FUENTE_HITSTOP)
+        # AUD-346 — se guarda lo **real**, no lo escalado: la pregunta de la
+        # consola es «cuánto duró el fotograma», no «a qué velocidad iba el
+        # mundo» (la cámara lenta la contaría como un fotograma rápido).
+        self._historial.append(raw_dt * 1000.0)
         return self._dt
+
+    def historial_ms(self) -> tuple[float, ...]:
+        """Los milisegundos reales de los últimos fotogramas (AUD-346)."""
+        return tuple(self._historial)
+
+    def estadisticas(self) -> dict[str, float]:
+        """P50/P95/P99/media/peor del historial. Vacío si aún no hay nada."""
+        from src.engine.core.estadisticas import cuantiles
+        return cuantiles(self._historial)
 
     @property
     def dt(self) -> float:
