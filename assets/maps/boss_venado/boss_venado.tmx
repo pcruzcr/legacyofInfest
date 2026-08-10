@@ -3,6 +3,7 @@
  <properties>
   <property name="stage_id" value="boss_venado"/>
   <property name="stage_name" value="VENADO"/>
+  <property name="author" value="Equipo docente — Legacy of Infest"/>
   <property name="time_limit" type="int" value="0"/>
   <property name="bgm_track" value="bgm_zone1_boss"/>
   <property name="background_zone" value="zone1"/>
