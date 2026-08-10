@@ -19,6 +19,7 @@ from src.framework import FrameworkUsageError
 
 if TYPE_CHECKING:
     from src.engine.render import GLRenderer
+    from src.engine.scene.base_scene import BaseScene
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +71,6 @@ class App:
                     (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
                     pygame.OPENGL | pygame.DOUBLEBUF,
                 )
-                self._init_gl()
             # `(ImportError, pygame.error, Exception)` was redundant — Exception
             # subsumes both — and swallowed genuine GL bugs as "not available".
             # We still fall back on any failure, but say what actually broke.
@@ -85,13 +85,7 @@ class App:
                 self._use_gl = False
 
         if not self._use_gl:
-            # SCALED lets SDL letterbox/upscale the window for us, so the
-            # display surface stays at the internal resolution and _draw() can
-            # blit 1:1. See _draw() for why DISPLAY_SCALE is not applied here.
-            pygame.display.set_mode(
-                (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
-                pygame.SCALED,
-            )
+            self._abrir_ventana_software()
 
         # AUD-012: an unguarded mixer.init() aborts startup on any machine with
         # no audio device — headless CI, a locked ALSA device, a VM without a
@@ -107,10 +101,35 @@ class App:
         self.internal_surface = pygame.Surface(
             (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
         )
+        # AUD-343 — la superficie donde una escena con la ruta de GPU dibuja
+        # su interfaz, separada del mundo. La cadena de pasadas consume
+        # `internal_surface`; esta se compone al final, encima de todo, para
+        # que el HUD no reciba la luz del escenario (igual que en el camino
+        # software, donde la interfaz se dibuja después de la luz).
+        #
+        # AUD-344 — nace translúcida (`SRCALPHA`), y el relleno de cada
+        # fotograma usa alfa 0: la pasada 9b compone el overlay con blend
+        # SRC_ALPHA, así que un overlay opaco relleno de `BG_COLOR` reemplaza
+        # el fotograma entero y el escenario se ve negro en la ruta GPU. El
+        # fondo lo pinta el mundo; el overlay sólo aporta los píxeles de la
+        # interfaz.
+        self._ui_overlay_surface = pygame.Surface(
+            (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
+            pygame.SRCALPHA,
+        )
         self._scaled_surface: pygame.Surface | None = None
         self._last_scale: int = 0
         self.clock = DeltaClock()
         self.running: bool = False
+
+    def _abrir_ventana_software(self) -> None:
+        # SCALED lets SDL letterbox/upscale the window for us, so the
+        # display surface stays at the internal resolution and _draw() can
+        # blit 1:1. See _draw() for why DISPLAY_SCALE is not applied here.
+        pygame.display.set_mode(
+            (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
+            pygame.SCALED,
+        )
 
     def _init_gl(self) -> None:
         try:
@@ -121,7 +140,21 @@ class App:
         except Exception as e:
             logger.warning("GL initialization failed: %s", e)
             self._use_gl = False
+            self._gl_renderer = None
+            # AUD-343 — la ventana ya era OPENGL; si el renderer no nace, hay
+            # que volver a una ventana normal o el blit de `_draw` no
+            # pintaría nada (SDL mezcla contextos y superficies del sistema).
+            self._abrir_ventana_software()
             return
+        # AUD-343 — orden de cableado: esta función ahora se llama desde
+        # `_init_subsystems`, cuando `self.context` ya existe. Antes vivía en
+        # `_init_pygame`, que corre antes, y el acceso a `self.context` de la
+        # línea siguiente reventaba con AttributeError: el `except Exception`
+        # del arranque lo tragaba y **el juego entero caía siempre al camino
+        # software en máquinas con GPU** — la tubería GL era código muerto.
+        # La bandera es la activación por contexto de AUD-342: una escena no
+        # puede importar ModernGL, pero sí puede leer esto.
+        self.context.usar_gl = True
         # AUD-222 — el reparto se declara aquí y en ningún otro sitio: ésta es
         # la única función del árbol que sabe a la vez que el contexto GL se
         # creó **de verdad** y qué pasadas trae encendidas la configuración.
@@ -175,6 +208,16 @@ class App:
         self.audio_manager = AudioManager()
         self.save_manager = SaveManager()
 
+        # AUD-345 — los menús sonaban mudos: los suscriptores de los eventos
+        # SFX_MENU_* vivían dentro de StageScene, así que ninguna pantalla
+        # fuera del escenario oía nada. El menú es del motor, no del nivel;
+        # su sonido también. `conectar_menu_al_audio` guarda sus manejadores
+        # aquí (el bus usa referencias débiles) y compartimos muestras con
+        # `SonidoDeEscenario` para que el gesto suene igual en ambos sitios.
+        from src.framework.audio.menu_sfx import conectar_menu_al_audio
+        self._sfx_de_menu = conectar_menu_al_audio(
+            self.event_bus, self.audio_manager)
+
         self.audio_manager.music_volume = self.user_settings.music_volume
         self.audio_manager.sfx_volume = self.user_settings.sfx_volume
         for difficulty in Difficulty:
@@ -203,6 +246,15 @@ class App:
             credits_factory=EndCreditsScene,
         )
         self.context.scene_manager = self.scene_manager
+
+        # AUD-343 — el cableado GL se monta aquí, cuando `self.context` ya
+        # existe. Antes vivía en `_init_pygame`, que corre antes de
+        # `_init_subsystems`: `_init_gl` necesita el contexto para el lote de
+        # sprites de AUD-342, reventaba con AttributeError y el juego caía
+        # siempre al camino software, GPU y todo. Si `_init_gl` falla, ya
+        # deja dicho `_use_gl = False` y volvió la ventana a SCALED.
+        if self._use_gl:
+            self._init_gl()
 
         from src.framework.entities.entity_factory import ensure_registered
         ensure_registered()
@@ -313,8 +365,25 @@ class App:
         # que se acaba de salir y seguiría brillando hasta entrar en otro.
         gpu_effects.begin_frame()
         self.internal_surface.fill(settings.BG_COLOR)
+        # AUD-354 — la escena del fotograma se liga **antes** del `if`, no
+        # dentro. La rama de GPU de más abajo vuelve a leer este nombre y no
+        # repite la comprobación de la pila, así que con la pila vacía (el
+        # fotograma que sigue al `pop` de la última escena) el acceso era un
+        # `UnboundLocalError`: `run()` lo atrapaba y devolvía al jugador a la
+        # pantalla de título sola. No salió en la suite porque en CI no hay
+        # tarjeta y `_use_gl` es siempre `False`; ver
+        # `tests/test_el_fotograma_sin_escena.py`.
+        escena: BaseScene | None = None
         if self.scene_manager.stack_size > 0:
-            self.scene_manager.current.draw(self.internal_surface)
+            # AUD-343 — una escena con la ruta de GPU (sólo `StageScene` hoy)
+            # dibuja el mundo y la interfaz por separado: el mundo entra en la
+            # cadena de pasadas y la interfaz se compone después. Para todo lo
+            # demás, `draw` sigue siendo el dibujo entero de una vez.
+            escena = self.scene_manager.current
+            if callable(getattr(escena, "dibujar_mundo", None)):
+                escena.dibujar_mundo(self.internal_surface)
+            else:
+                escena.draw(self.internal_surface)
         self.scene_manager.transition.draw(self.internal_surface)
 
         # AUD-283 — la consola, encima de la escena y debajo del post-procesado.
@@ -336,7 +405,8 @@ class App:
                     logger.exception("medidas_de_depuracion falló")
                     medidas = {"medidas": "error (ver el registro)"}
             self.debug_overlay.draw(
-                self.internal_surface, self.clock.fps, medidas)
+                self.internal_surface, self.clock.fps, medidas,
+                self.clock.estadisticas())
 
         if self._use_gl and self._gl_renderer:
             # La escena acaba de decir cuánto bloom quiere mientras dibujaba;
@@ -375,7 +445,25 @@ class App:
             # fotograma (menús y escenarios de CPU), y entonces la pasada de
             # composición del renderer no corre.
             self._gl_renderer.lote_de_sprites = gpu_effects.published_lote_de_sprites()
-            self._gl_renderer.render(self.internal_surface, self._current_light_surface())
+            # AUD-343 — la interfaz de la escena se dibuja en su propia
+            # superficie y el renderer la compone al final, después de la
+            # cadena de pasadas: el HUD pasa por la tarjeta sin recibir la luz
+            # del escenario, igual que en el camino software (AUD-090). Las
+            # escenas sin `dibujar_mundo` no dividen el dibujo y no aportan
+            # overlay: todo su fotograma —incluida la consola de AUD-283— va
+            # por la cadena, como siempre.
+            overlay: pygame.Surface | None = None
+            if callable(getattr(escena, "dibujar_ui", None)):
+                # AUD-344 — alfa 0, no BG_COLOR: el overlay es translúcido y
+                # la pasada 9b lo compone con blend SRC_ALPHA. Un relleno
+                # opaco ocultaría el mundo entero bajo el fondo (medido).
+                self._ui_overlay_surface.fill((0, 0, 0, 0))
+                escena.dibujar_ui(self._ui_overlay_surface)
+                overlay = self._ui_overlay_surface
+            self._gl_renderer.render(
+                self.internal_surface, self._current_light_surface(),
+                overlay=overlay,
+            )
         else:
             # AUD-013: this used to upscale internal_surface by
             # settings.DISPLAY_SCALE and blit the result at (0, 0). The display
@@ -390,22 +478,20 @@ class App:
     def _current_light_surface(self) -> pygame.Surface | None:
         """The active scene's lighting buffer, if it exposes one.
 
-        Scenes opt in by implementing ``light_surface``; the previous code
-        reached through two layers of privates
-        (``scene._lighting._surface``), which coupled the application shell to
-        the internals of a specific VFX class.
+        AUD-343 — el mapa sólo viaja a la tarjeta cuando la escena usa la
+        ruta de GPU, que es la que dibuja el mundo sin aplicar la luz en CPU
+        (`dibujar_mundo`) y deja el multiplicador en `light_surface`. Una
+        escena que dibuja y aplica su luz en CPU no tiene nada que ofrecer:
+        subir su mapa la multiplicaría dos veces (una en el blit, otra en el
+        sombreador).
         """
         if self.scene_manager.stack_size == 0:
             return None
         scene = self.scene_manager.current
+        if not callable(getattr(scene, "dibujar_mundo", None)):
+            return None
         surface = getattr(scene, "light_surface", None)
-        if isinstance(surface, pygame.Surface):
-            return surface
-        # Backward compatibility with scenes that have not adopted the
-        # property yet.
-        lighting = getattr(scene, "_lighting", None)
-        legacy = getattr(lighting, "_surface", None)
-        return legacy if isinstance(legacy, pygame.Surface) else None
+        return surface if isinstance(surface, pygame.Surface) else None
 
     def _show_usage_error(self, exc: Exception) -> None:
         """Muestra en pantalla un error de uso del framework.

@@ -139,6 +139,8 @@ class TestElCableado:
     def test_la_escena_lo_pasa(self) -> None:
         import inspect
 
-        from src.framework.scenes import stage_scene
+        # AUD-343 — el contexto de dibujo se construye en el mixin de dibujo,
+        # que es donde vive ahora el `draw` partido en mundo/UI.
+        from src.framework.scenes.stage_parts import dibujo
 
-        assert "mundo=self._mundo" in inspect.getsource(stage_scene)
+        assert "mundo=self._mundo" in inspect.getsource(dibujo)

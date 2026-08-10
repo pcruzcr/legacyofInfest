@@ -281,3 +281,32 @@ class TestCadaPasadaDibujaConSuPropioPrograma:
         assert len(ctx._vaos) > 1, "el caso interesante es con varios VAOs"
         r.destroy()
         assert r._vaos == {}
+
+
+class TestLaInterfazSeComponeDespuesDeLaCadena:
+    """La pasada 9b: la UI de una escena con ruta de GPU (AUD-343).
+
+    La interfaz se dibuja en una superficie aparte y el renderer la compone
+    con una pasada de copia **después** de la cadena entera: la luz, el bloom
+    y la viñeta ya se aplicaron sobre la escena y no tocan el HUD, igual que
+    en el camino software (AUD-090). Sin overlay no se paga ni pasada ni
+    textura.
+    """
+
+    def test_con_overlay_la_pasada_de_copia_corre_una_vez_mas(self) -> None:
+        r1, c1 = _renderer(GLRenderConfig())
+        r1.render(_superficie(), _superficie())
+        sin_overlay = sum(len(v.dibujados) for v in c1._vaos)
+
+        r2, c2 = _renderer(GLRenderConfig())
+        r2.render(_superficie(), _superficie(), overlay=_superficie())
+        con_overlay = sum(len(v.dibujados) for v in c2._vaos)
+        assert con_overlay == sin_overlay + 1, (
+            "el overlay no se compuso con su pasada de copia: el HUD quedaría "
+            "sin dibujar en la ruta de GPU"
+        )
+
+    def test_sin_overlay_no_se_crea_ni_textura(self) -> None:
+        r, _ = _renderer(GLRenderConfig())
+        r.render(_superficie(), _superficie())
+        assert r._overlay_texture is None

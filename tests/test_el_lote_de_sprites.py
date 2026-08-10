@@ -296,7 +296,10 @@ class TestLaIluminacion:
 
         from src.framework.vfx import lighting
 
-        fuente = inspect.getsource(lighting.LightSystem.render)
+        # AUD-343 — el contrato se movió de `render` a `render_map` cuando la
+        # composición y la aplicación se separaron (el mapa viaja a la GPU).
+        # Lo que se protege es el mismo: la decisión de agrupar.
+        fuente = inspect.getsource(lighting.LightSystem.render_map)
         assert "por_lotes = not self._obstaculos" in fuente
 
     def test_sin_obstaculos_los_focos_se_ven_igual(self) -> None:

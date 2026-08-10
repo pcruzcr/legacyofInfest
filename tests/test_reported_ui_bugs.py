@@ -94,16 +94,22 @@ class TestLaInterfazNoLaOscureceLaLuzDelMundo:
         )
 
     def test_la_interfaz_se_dibuja_despues_del_post_procesado(self, contexto):
-        """El orden es el arreglo; esta prueba lo fija."""
+        """El orden es el arreglo; esta prueba lo fija.
+
+        AUD-343 — `draw` se partió en `dibujar_mundo` (el post-procesado
+        cierra el mundo) y `dibujar_ui` (la interfaz), así que el orden se
+        mira entre los dos métodos del mixin: la UI siempre después.
+        """
         import inspect
 
-        from src.framework.scenes.stage_scene import StageScene
+        from src.framework.scenes.stage_parts import dibujo
 
-        fuente = inspect.getsource(StageScene.draw)
+        fuente = inspect.getsource(dibujo)
+        pos_mundo = fuente.find("dibujar_mundo")
         pos_post = fuente.find("_post_processing.apply")
-        pos_ui = fuente.find("draw_ui")
+        pos_ui = fuente.find("def dibujar_ui")
         assert pos_post != -1 and pos_ui != -1
-        assert pos_ui > pos_post, (
+        assert pos_post > pos_mundo and pos_ui > pos_post, (
             "la interfaz vuelve a dibujarse antes del post-procesado"
         )
 

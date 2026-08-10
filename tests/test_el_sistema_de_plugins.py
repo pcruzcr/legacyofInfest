@@ -151,12 +151,19 @@ class TestElCableado:
     def test_el_escenario_dispara_los_tres_suyos(self) -> None:
         import inspect
 
+        # AUD-343 — `escenario_dibujado` se dispara desde el mixin de dibujo
+        # (el `draw` partido en mundo/UI); los otros dos viven en la escena.
         from src.framework.scenes import stage_scene
+        from src.framework.scenes.stage_parts import dibujo
 
-        fuente = inspect.getsource(stage_scene)
+        fuentes = (
+            inspect.getsource(stage_scene) + inspect.getsource(dibujo)
+        )
         for gancho in ("escenario_cargado", "escenario_actualizado",
                        "escenario_dibujado"):
-            assert f'"{gancho}"' in fuente, f"{gancho} no se dispara desde ninguna parte"
+            assert f'"{gancho}"' in fuentes, (
+                f"{gancho} no se dispara desde ninguna parte"
+            )
 
     def test_el_gestor_global_es_uno_solo(self) -> None:
         assert get_gestor() is get_gestor()

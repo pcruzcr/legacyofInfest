@@ -281,6 +281,10 @@ class GLRenderer:
         self._quad_vbo: moderngl.Buffer | None = None
         self._quad_ibo: moderngl.Buffer | None = None
         self._screen_texture: moderngl.Texture | None = None
+        # AUD-343 — la textura de la interfaz que una escena con la ruta de
+        # GPU dibuja aparte. Se reutiliza como el resto (ver `_subir`): se
+        # recrea sólo si cambia el tamaño, que no ocurre dentro de una sesión.
+        self._overlay_texture: moderngl.Texture | None = None
         # AUD-342 — el lote de sprites de GPU que este renderer compone en
         # `render()`. Lo crea `crear_lote_de_sprites` y lo pasa `App` desde el
         # canal de `gpu_effects` cada fotograma; `None` = nadie usó la ruta de
@@ -636,6 +640,7 @@ class GLRenderer:
         self,
         scene_surface: pygame.Surface,
         light_surface: pygame.Surface | None = None,
+        overlay: pygame.Surface | None = None,
     ) -> None:
         if not self._initialized or self.ctx is None:
             self._software_fallback(scene_surface)
@@ -915,6 +920,21 @@ class GLRenderer:
         self._run_shader_pass(
             self._passthrough_prog, read_fbo.color_attachments[0],
         )
+
+        # 9b. Interfaz encima de todo (AUD-343)
+        #
+        # La UI de una escena con la ruta de GPU se pinta en una superficie
+        # aparte y se compone aquí, con una pasada de copia después de la
+        # cadena entera y sin pasar por ella. Es el equivalente GPU del orden
+        # software de `StageScene`: la luz, el bloom, la viñeta y la aberración
+        # de AUD-215 ya se aplicaron sobre la escena y la interfaz se dibuja
+        # encima, sin ser tocada por ninguna (AUD-090). Sin overlay no se paga
+        # nada: ni textura ni pasada.
+        if overlay is not None:
+            self._overlay_texture = self._subir(overlay, self._overlay_texture)
+            self._run_shader_pass(
+                self._passthrough_prog, self._overlay_texture,
+            )
         pygame.display.flip()
 
     def _software_fallback(self, surface: pygame.Surface) -> None:
@@ -976,6 +996,10 @@ class GLRenderer:
         if self._screen_texture:
             self._screen_texture.release()
             self._screen_texture = None
+        # AUD-343 — la textura de la interfaz vive tanto como el renderizador.
+        if self._overlay_texture is not None:
+            self._overlay_texture.release()
+            self._overlay_texture = None
         # AUD-229 — la textura del mapa de luz vive tanto como el renderizador.
         if self._light_texture is not None:
             self._light_texture.release()
