@@ -149,6 +149,24 @@ class AchievementSystem:
 
     @classmethod
     def init_instance(cls) -> AchievementSystem:
+        """Sustituye el singleton por uno limpio. **Sólo para pruebas.**
+
+        AUD-366 — esto salía como huérfano real desde AUD-233 y la pregunta
+        llevaba abierta desde entonces. Respuesta, con el código delante: no
+        tiene ni debe tener llamante de producción. Cambiar de estudiante ya se
+        resuelve con `load()`, que vuelve el progreso a cero antes de leer
+        (AUD-200) **sobre la misma instancia**, y ésa es la forma correcta.
+
+        Aquí está el peligro que justifica el aviso: esto no reinicia el
+        sistema, lo **reemplaza**. Cualquiera que guardara la instancia
+        anterior —`inventory.py:193`, `progress_scene.py:102` y tres sitios
+        más la piden por `get_instance()` cada vez, pero nada impide
+        guardarla— seguiría escribiendo logros en un objeto que ya no lee
+        nadie, y el jugador vería desaparecer medallas sin ningún error.
+
+        Se conserva porque una prueba necesita un singleton limpio de verdad
+        (`test_guia_del_motor.py:74`) y `load()` no da eso: da uno recargado.
+        """
         cls._instance = AchievementSystem()
         return cls._instance
 

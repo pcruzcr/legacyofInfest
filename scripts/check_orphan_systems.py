@@ -170,6 +170,19 @@ VERIFICADOS: dict[str, str] = {
     "reveal_all": "docs/46 §API la publica para que un escenario revele zonas en lote",
     "play_voz": "GAP-031 resuelto (AUD-263): llamante en boss_venado.py:732; src/stages/ fuera del barrido",
 
+    # AUD-366 — los tres de logros, mirados uno a uno.
+    "AchievementDef": (
+        "AUD-366: es el tipo de dato del propio módulo — lo construye "
+        "`_cargar_definiciones`, lo anota `_defs` y lo devuelve `achievements()`. "
+        "El barrido lo ve suelto por su regla de cohesión, no por estar suelto"
+    ),
+    "AchievementProgress": "AUD-366: ídem; lo construye `register` y lo valida `load`",
+    "init_instance": (
+        "AUD-366: seam de pruebas a propósito (test_guia_del_motor.py:74). No "
+        "debe tener llamante de producción: cambiar de estudiante se resuelve "
+        "con `load()`, que reinicia sobre la MISMA instancia (AUD-200)"
+    ),
+
     # AUD-364 — el triaje de la sección «sólo los re-exporta su paquete», hecho
     # una vez para que la sección quede como lo que es: un cable trampa. Cada
     # línea dice por qué NO es un defecto; si alguna deja de ser cierta, se
@@ -210,13 +223,15 @@ VERIFICADOS: dict[str, str] = {
 #: lleva el GAP que lo sigue. La diferencia con `VERIFICADOS` importa —aquéllos
 #: no son defectos; éstos sí, y esperan una decisión de diseño.
 PENDIENTES: dict[str, str] = {
-    # La reescritura de logros por estudiante aterrizó (AUD-197-200,
-    # `src/engine/core/achievements.py`, 2026-08-04). Los tres símbolos siguen
-    # sin consumidor fuera del módulo y siguen a la espera de una decisión de
-    # diseño: no se juzgan aquí.
-    "AchievementDef": "logros por estudiante: sin consumidor fuera del módulo",
-    "AchievementProgress": "ídem",
-    "init_instance": "ídem",
+    # AUD-366 — vacío, y eso es un resultado. Los tres símbolos que vivían aquí
+    # desde AUD-233 (`AchievementDef`, `AchievementProgress`, `init_instance`)
+    # se miraron uno a uno y ninguno era la pregunta que parecía; el detalle,
+    # con su motivo, está arriba en VERIFICADOS.
+    #
+    # Que esté vacío NO significa que no quede deuda: significa que no queda
+    # deuda **de esta clase**. Un huérfano nuevo aparece aquí en cuanto alguien
+    # escriba un subsistema y se olvide de enchufarlo, que es exactamente para
+    # lo que se escribió este guardián.
 }
 
 

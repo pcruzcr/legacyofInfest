@@ -57,6 +57,22 @@ PROPIEDADES_LUZ: tuple[str, ...] = (
 MAPA_REFERENCIA = "assets/maps/stage0/stage0.tmx"
 
 
+#: Tipos que son **grafía alternativa** de otro, no características aparte.
+#: AUD-366 — medido: cambiar la arena del venado de `BossVenado` a `BossSpawn`
+#: deja `BossVenado` sin usar. El conteo no mejora porque no hay nada que
+#: mejorar: los dos producen la misma entidad (`stage_objetos.py:222` lo dice
+#: literalmente), así que cubrir uno descubre el otro. Es un límite de la
+#: métrica, no un hueco del contenido, y el informe lo dice en vez de dejar
+#: que alguien lo persiga cada seis meses.
+ALTERNATIVAS: dict[str, str] = {
+    "BossSpawn": (
+        "grafía indirecta de los tipos de jefe: `BossSpawn` con `boss=\"X\"` "
+        "construye exactamente lo mismo que el tipo `X`. Las cuatro arenas usan "
+        "el tipo directo; cubrir éste descubriría aquéllos"
+    ),
+}
+
+
 def _props_de_mapa(raiz: ET.Element) -> dict[str, str]:
     return {p.get("name", ""): p.get("value", "")
             for p in raiz.findall("./properties/property")}
@@ -177,6 +193,9 @@ def main() -> int:
         print(f"\nTipos de objeto que ningún mapa usa ({len(tipos_sin_usar)} de "
               f"{len(del_motor)}):")
         print("  " + ", ".join(sorted(tipos_sin_usar)))
+        for tipo in sorted(tipos_sin_usar):
+            if tipo in ALTERNATIVAS:
+                print(f"    ({tipo}: {ALTERNATIVAS[tipo]})")
 
     print()
     if problemas:
