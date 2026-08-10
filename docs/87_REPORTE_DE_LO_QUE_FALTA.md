@@ -1908,3 +1908,322 @@ Dos notas de la fase 1 que conviene no perder:
   (0,97-1,03×) y con sprites pequeños `blits()` gana desde dos llamadas. La
   decisión de AUD-329 —no bachear el wrap— se mantiene, pero por el motivo
   correcto: no hay nada que ganar (AUD-330).
+
+---
+
+## 28. La lista de mejoras del dueño, contrastada fila a fila (2026-08-10, AUD-376)
+
+El dueño trajo una tabla de ~250 filas de mejoras con prioridad (🔴🟠🟡🟢) y una
+columna «situación actual», y preguntó si se puede implementar todo.
+
+**La respuesta corta: técnicamente sí —es Python y el motor tiene los anclajes—
+pero la tabla no sirve como plan tal cual, y el motivo no es el alcance.** Es
+que su columna «situación actual» está desfasada respecto al árbol de hoy, y
+como la prioridad se derivó de esa columna, la prioridad tampoco es utilizable.
+Ejecutar la tabla al pie de la letra reescribiría trabajo hecho y probado.
+
+Se sondearon ~45 de las filas más pesadas contra el código, no las 250.
+
+### 28.1 Filas marcadas 🔴 que ya están hechas y probadas
+
+Una muestra, con el sitio donde vive cada una:
+
+| Fila de la lista | Qué hay realmente |
+|---|---|
+| Event Bus 🔴 | `engine/core/event_bus.py`, por inyección, sin global |
+| Lifecycle global 🔴, estados globales 🟠 | `App._init_subsystems`/`_shutdown`; `SceneManager` + `TransitionManager` + `SceneRegistry` perezoso |
+| Consolidar ECS 🔴, scheduling 🔴, prioridades 🔴 | `ecs/world.py`, `ecs/scheduler.py` con `Fase` explícita, borrado diferido, `censo()` |
+| Frame budget 🔴, time scale 🟠, pause 🟠 | `DeltaClock`: tres relojes, composición de escalas por nombre, `MAX_FRAME_TIME`; `test_frame_budget` |
+| Input mapping 🔴, rebinding 🟠, gamepad 🟠 | `Action` + `InputManager.rebind()`, ejes y hat de mando, `KeybindingScene` |
+| Separar locomoción / combate / interacción 🔴 | Ya partido: `entities/states/{grounded,airborne,attack,ability,damage,rope,swim,wall}.py`, 27 clases (medido hoy con AST) |
+| Triggers 🔴, debug renderer de física 🔴 | `hazard_system`, `interactable_system`, `gizmos.py`, `CollisionSystem.draw_debug` |
+| **Raycasts 🔴** | `RejillaEspacial.rayo()` (AUD-276) — existe, pero ver GAP-037 |
+| Slopes 🔴, one-way 🟠, moving platforms 🟠, ice/mud 🟠 | `pendientes.py`, `_resolve_one_way_collision`, `PlataformaMovil`, `ZonaDeFriccion` |
+| Movement profiles data-driven 🔴 | `PhysicsProfile` con `plataformas()`/`cenital()`/`vuelo()` (AUD-333/335/336) |
+| Render passes 🔴, batching 🔴, culling 🔴, render targets 🔴 | `gl_pipeline.py` (FBOs, `_run_shader_pass`), `gpu_sprite_batch.py` instanciado, `culling.py` |
+| Shader fallback 🔴 | `GLRenderer._software_fallback` |
+| Normal maps 🟢 | `render/normales.py` (AUD-340) |
+| Light manager 🔴, shadows 🔴 | `LightSystem`, `sombras.py`, `sombras_proyectadas.py`, `day_night.py` |
+| Camera bounds 🔴, dead zone 🟠, look-ahead 🟠, shake 🟠 | `_CameraLock`, `_fuera_de_la_zona`, `anticipacion`, `apply_shake` con dirección |
+| 2.5D depth sorting 🔴, depth_y 🟢, curva 🟢 | AUD-339: `orden_por_y`, `profundidad_curva` |
+| **World Simulation «Nuevo» 🔴** | Ya es módulo: `world/simulation.py` + `environment.py` |
+| Audio buses 🔴, music state machine 🔴 | `mixer_buses.py`, `dynamic_music.py`, `music_clock.py` |
+| **Dialogue «existente conceptualmente» 🔴** | `ui/dialogue_system.py`, 533 líneas: `DialogueTree.desde_datos()`, ramificación, retratos, acciones, paginado, i18n |
+| **Boss «existente conceptualmente» 🔴** | `boss_base.py` + `boss_kit.py`: fases, `TELEGRAPHING`, puntos débiles, parry, arena; `grade_boss.py` en CI |
+| Level validation 🔴, metadata 🔴 | `validate_tmx.py --ci`, `check_tmx_coverage.py --ci`, `generate_tmx_reference.py --check` — los tres bloquean merge |
+| Asset cache 🔴, fallback 🔴, atlas 🔴 | `AssetLoader` con caché, desalojo y *scopes*; placeholder por categoría; `sprite_atlas.py` |
+| Save slots 🔴, serialization 🔴, migration 🟠 | `SaveManager` con escritura atómica y migración; `integridad.py`; `test_corrupt_saves_are_loud` |
+| Structured logging 🔴, crash context 🔴 | `core/registro.py` (AUD-268) |
+| Central error handling 🔴, TMX errors con contexto 🔴 | `App.run` con `FrameworkUsageError` → `StageErrorScene`, corte a los N fallos seguidos |
+| Build reproducible 🔴, packaging 🔴 | `scripts/build_executable.py`, pyinstaller+nuitka en `[dev]`, `test_version_coherence` |
+| Architecture docs 🔴 | `03_ARCHITECTURE.md` + `test_architecture_doc_matches_tree` (la doc falla si el árbol cambia) |
+
+Cuatro filas de la columna «situación actual» son directamente incorrectas y
+conviene dejarlas por escrito, porque son las que más trabajo harían repetir:
+**World Simulation** no es «nuevo» (es un módulo con pruebas), **Dialogue** y
+**Boss** no son «existentes conceptualmente» (están implementados y calificados
+por CI), y **«Enemies: 10 tipos»** son 30 registrados sobre ocho arquetipos.
+
+### 28.2 Lo que sí falta — catorce huecos, en `KNOWN_GAPS.md`
+
+Registrados como **GAP-036 … GAP-049**. Resumen:
+
+| GAP | Hueco | Coste |
+|---|---|---|
+| 036 | Bucle sin paso fijo ni interpolación | Alto — ver §28.3 |
+| 037 | La rejilla espacial existe y las colisiones no la usan | **Bajo** |
+| 038 | Sin capas ni máscaras de colisión (= R-03, abierto desde julio) | Medio |
+| 039 | Sin materiales de superficie (hay fricción, falta restitución) | Bajo |
+| 040 | Buffer de entrada sólo para el salto, y dentro de `Player` | **Bajo** |
+| 041 | ECS sin reciclado de ids, sin pools, sin serialización | Bajo |
+| 042 | Sin determinismo reproducible (ningún `random.seed()` en `src/`) | Medio |
+| 043 | Sin tipos de daño, armadura ni resistencias | Diseño |
+| 044 | Sin buff/debuff | Diseño |
+| 045 | Sin pathfinding ni árbol de comportamiento | Medio |
+| 046 | La percepción de enemigos vive en código de escenario | Bajo |
+| 047 | Sin sistema de misiones ni objetivos | Diseño |
+| 048 | Sin streaming de niveles ni versionado de mapas | Bajo (versionado) |
+| 049 | Sin contadores de recursos: llamadas de dibujo, memoria, fugas | Bajo (llamadas) |
+
+Catorce sobre ~250 filas. Ahí está todo el valor de la lista.
+
+### 28.3 Cinco filas que chocan con decisiones ya medidas de este repositorio
+
+No son imposibles; son cosas que ya se decidieron **con medición**, y volver a
+abrirlas exige volver a medir, no volver a opinar.
+
+* **«Batching 🔴» y «GPU particles»** — AUD-330 re-midió: `blits()` gana o
+  empata en todo el rango (0,73-1,03×). §10.3 de este documento lo tiene como
+  *«viable, y medido en contra»*. La ruta de GPU existe (AUD-340/342) y está
+  activable por contexto; lo que no procede es rehacer el batching de CPU.
+* **«Utility AI»** — invariante 7: sklearn es opcional y no se mete ML donde
+  una FSM determinista rinde igual. Cabe, con el fallback intacto.
+* **«Dialogue localization» y «Text externalization»** — el juego ya es
+  bilingüe (`i18n.py` + `check_translations.py --ci`). Traducir los 67
+  documentos sigue chocando con la invariante 5, razonada en §21.6.
+* **«Reducir estados redundantes 🔴»** — las clases de estado ya están
+  separadas por responsabilidad en ocho ficheros. Sin señalar una redundancia
+  concreta, esto es refactor por refactor. De paso, la cifra: son **27 clases**
+  en `entities/states/`, y `AirborneState` es base de `JumpingState` y
+  `FallingState` en vez de un estado en el que se pueda estar — de ahí los
+  **26 estados** que cuenta §A de `62_ESTADO_DEL_PROYECTO.md`. Los dos números
+  son correctos y cuentan cosas distintas; la lista del dueño dice 29, que no
+  sale de ninguna de las dos cuentas.
+* **«Definir arquitectura definitiva, límites entre módulos»** — definir
+  contratos sí. Partir el paquete en `loi-math`/`loi-physics`/`loi-render` está
+  declarado **inviable** en §10.2 y no ha cambiado nada que lo reabra.
+
+**Y el paso fijo (GAP-036) merece párrafo propio**, porque es el único cambio
+estructural de la lista y el único que puede romper contenido. La calibración
+entera está atada al `dt` variable: `test_calibracion_del_salto` fija el salto
+en **72 px**, que es la unidad con la que están medidos los 16 mapas de
+`assets/` y las guías de `66_GUIA_DE_LEVEL_DESIGN.md`. Escribir el acumulador
+es media tarde;
+re-calibrar el salto y revisar si cada obstáculo sigue cabiendo, no. Es
+decisión del dueño, no de ingeniería, porque lo que se decide es si se rompe la
+métrica de 72 px.
+
+### 28.4 Las dos veces que la medición corrigió a mi primera pasada
+
+Mismo patrón que §16.1 y §17.1, y por eso se deja escrito:
+
+1. **Dije que no había buffer de entrada. Sí lo hay.** `Player.update` lleva
+   salto con buffer (`_pending_jump`, ~5 fotogramas) desde antes de esta
+   auditoría. El hueco real es más estrecho y más barato de lo que escribí:
+   existe para *una* acción y vive en la entidad, no en `InputManager`
+   (GAP-040).
+2. **Dije que las capas de colisión eran un hueco nuevo. Estaban registradas
+   desde julio.** Son el punto de refactor **R-03** de `AUDIT_2026-07.es.md`,
+   abierto, con su motivo y con un aviso que yo no tenía: AUD-004 quitó una
+   fachada de pymunk cuyas categorías `_CAT_*` iban a `shape.collision_type`
+   en vez de a `shape.filter`, y `add_static_collision` creaba un cuerpo por
+   tile sin fusionar. Si vuelve una tubería de cuerpo rígido, no puede volver
+   sin fusión de rectángulos (GAP-038).
+
+En los dos casos el error iba en la misma dirección: **dar por ausente lo que
+no encontré con la primera consulta**. La primera búsqueda de buffer usó
+alternancia ERE mal escrita (`\|` dentro de `-E`) y no encontró nada en ningún
+sitio; la segunda, ya correcta, encontró el salto con buffer. Un `grep` que
+devuelve cero no es una medición hasta que se comprueba que el `grep` era
+capaz de devolver algo.
+
+---
+
+## 29. El primer cable de la integración: el clima y el viento (2026-08-10, AUD-374)
+
+Primer lote de la fase de *integration hardening* que fijó el dueño: hacer que
+lo ya construido se comunique, sea observable, determinista y medible. El
+orden acordado empieza por **comunicación**, y dentro de ella por el defecto
+más barato de demostrar: un campo del ambiente que se calculaba y nadie leía.
+
+### 29.1 Qué estaba mal
+
+`EnvironmentState.viento` se computaba cada fotograma desde AUD-358 y tenía
+**cero consumidores**. En paralelo, `WeatherSystem._set_climate_params`
+sorteaba su propio viento con `random.uniform` y una segunda tabla de valores.
+Que los números coincidieran —75 en `CLIMAS` frente al centro del
+`uniform(50, 100)` del otro, 15 frente a `uniform(-15, 15)`, 12 frente a
+`uniform(-12, 12)`— delata el origen: una decisión copiada, no dos decisiones.
+
+Es la especie dominante de esta etapa, y aparece en el mismo fichero cuyo
+docstring documenta F1.3 —*un viento calculado y asignado a nada*—. Se arregló
+el síntoma en su día y quedó la causa. La familia completa: AUD-343 (la tubería
+GL era código muerto), AUD-355 (la verja de datos hostiles estaba en la puerta
+que nadie usa), AUD-366 (los tres huérfanos de logros).
+
+### 29.2 Lo que la medición añadió, y era peor
+
+El diagnóstico de GAP-050 decía que la divergencia «hoy no se nota porque los
+dieciséis mapas declaran su `climate`». Se notaba, y en jugabilidad. Con la
+secuencia real de `stage4_1` —mapa `fog`, acto `storm` pedido al VFX—:
+
+    humedad 0,50 → suelo_mojado False
+
+**Los actos de tormenta de `stage4_1` nunca resbalaron.** AUD-362 construyó el
+hilo entero `lluvia → humedad → suelo mojado → frenado → control`, la escena lo
+consume y hay pruebas que lo cubren; lo que fallaba es que el escenario cambiaba
+el clima llamando al sistema de VFX, así que la simulación se quedaba con el
+clima del TMX para siempre. El dato no faltaba: **llegaba caducado**, que es
+bastante más difícil de ver que si no llegara.
+
+Segundo defecto que el primero tapaba: el campo declara signo —«negativo =
+hacia la izquierda»— y `CLIMAS` sólo tenía magnitudes positivas. El viento del
+ambiente **nunca soplaba hacia la izquierda**. El contrato prometía un rango
+que el productor no emitía.
+
+### 29.3 Qué se hizo
+
+* `viento_de(clima, rng)` en `world/simulation.py` es la única tabla de viento,
+  y devuelve el valor **con signo**. `WeatherSystem` borró la suya.
+* `WeatherSystem.aplicar_viento()` — la entrada que no existía.
+* `SimulacionDeEscenario._cambiar_clima(nombre)` es ahora **la puerta** para
+  cambiar el clima en marcha: se le pide al mundo, no al que dibuja la lluvia.
+  `stage0.py:173` y `stage4_1.py:241` migrados.
+* `_aplicar_clima(estado)` reparte clima y viento al VFX desde el mismo sitio
+  donde `_aplicar_hora` reparte luz, bloom, tinte y agarre.
+* `WorldSimulation` acepta un `rng: random.Random` propio — primer ladrillo de
+  GAP-042, y lo que hace la prueba de la dirección reproducible.
+
+13 pruebas nuevas en `tests/test_el_viento_es_uno_solo.py`, las 13 rojas antes.
+Incluyen un cable trampa (`test_el_campo_viento_tiene_consumidor`) para que el
+campo no vuelva a quedarse huérfano en silencio.
+
+### 29.4 La dirección se probó al revés primero, y la suite la rechazó
+
+El primer intento reconciliaba al contrario: la simulación siguiendo al
+`WeatherSystem`, con la ventaja de no tocar ningún escenario. Pasaban las 13
+pruebas nuevas y las 100 del lote dirigido. La suite completa devolvió **seis
+en rojo**: las cinco de `TestElClimaCambiaLasReglas` y una de
+`TestElMapaConfiguraYLaSimulacionCalcula` hacen `_simulacion.set_clima(...)` y
+después `_aplicar_hora()` — o sea que el contrato «la simulación es la
+autoridad» estaba escrito en las pruebas desde AUD-362, y el atajo lo violaba.
+
+Se anota por dos motivos. El primero es que el atajo era tentador: costaba cero
+cambios en escenarios y arreglaba el defecto visible. El segundo es que **un
+lote dirigido en verde no es la suite en verde**, y aquí la diferencia fue
+justamente la arquitectura.
+
+Se registró también, y luego se retiró, un GAP nuevo para la flecha invertida:
+otra sesión ya lo había escrito como GAP-050 mientras este trabajo estaba en
+curso, con el número AUD-374 ya reservado para él. Coordinación por fichero, no
+por conversación.
+
+### 29.5 Y la suite volvió a corregir el trabajo, una segunda vez
+
+Ya con la dirección buena, `_aplicar_clima` llamaba a `set_climate` en cada
+fotograma y se apoyaba en la guarda interna de esa función —que se ignora a sí
+misma cuando el clima no cambia— para no vaciar el emisor de la tormenta.
+Funcionalmente inocuo, y sin embargo rojo:
+`test_el_acto_se_aplica_una_vez_y_no_en_cada_fotograma` vigila que la **llamada
+no ocurra**, no que sea inofensiva, y esa prueba salió de una comprobación de
+mutación donde reaplicar el clima sin parar dejaba toda la suite en verde.
+
+La comparación pasó al llamante. La lección es más general que el arreglo:
+apoyarse en la guarda de otro módulo convierte un detalle de implementación
+ajeno en algo de lo que dependes sin declararlo, y el día que esa guarda se
+optimice, el emisor se vacía sesenta veces por segundo y nadie sabe por qué.
+
+---
+
+## 30. La semilla del azar (2026-08-10, AUD-375)
+
+Segundo lote de *integration hardening*. Ataca la más débil de las cuatro
+propiedades de la fase: **el motor no podía repetir una partida.**
+
+### 30.1 Por qué antes que las sombras dirigidas por el sol
+
+El orden que se había anunciado ponía Sol → Sombras en segundo lugar, por
+`GAP-051` y por `docs/92` §4, que lo marca 🟡 «alto valor visual, el sistema de
+proyección ya existe». Una comprobación previa lo desaconsejó:
+
+    $ grep -rl "sombras_proyectadas" assets/
+    (nada)
+
+**Ningún mapa enciende las sombras proyectadas.** El sistema está construido,
+cableado, medido y probado desde AUD-278, y no lo usa ningún contenido —es
+opt-in por una propiedad de mapa, y nadie la ha puesto—. Añadirle una fuente
+solar sería ampliar una característica que **nunca ha corrido en un mapa
+real**, que es literalmente lo que la lista de «no hacer» del dueño prohíbe.
+
+Se anota, además, porque el sistema es un caso más de la especie que domina
+esta fase: construido, correcto, sin consumidor. La diferencia con el viento
+huérfano (AUD-374) es que aquí la ausencia de consumidor es **una decisión de
+contenido**, no un cable suelto — pero el efecto sobre el valor entregado es el
+mismo, y merece decidirse en vez de heredarse.
+
+### 30.2 El defecto
+
+Cero llamadas a `random.seed()` en `src/engine` y `src/framework`. Las 46
+llamadas a `random.*` del motor —repartidas en 15 módulos, con las partículas
+de ambiente (12), el clima (9) y el sistema de partículas (6) a la cabeza—
+tiraban del generador global sin sembrarlo nunca.
+
+Lo que costaba, con nombres:
+
+* **AUD-359** — «la prueba de presupuesto del 4-1 fallaba por el azar de una
+  sola muestra». Sin poder fijar el azar, una prueba se escribe tolerante, y
+  una prueba tolerante deja pasar las regresiones pequeñas.
+* **Un informe de fallo no se puede reproducir.** «Se me cayó en el acto IV» no
+  basta cuando la disposición de las partículas, el instante del rayo y la
+  decisión del enemigo eran otras esa vez.
+* **El fantasma del speedrun** no se puede validar contra una repetición.
+
+### 30.3 Qué se hizo
+
+`engine/core/azar.py`: `sembrar()`, `semilla_actual()` y `generador()`. `App`
+siembra **inmediatamente después de configurar el registro**, y `main.py`
+acepta `--semilla N` en las tres rutas de arranque (normal, `--stage`,
+`--boss`).
+
+La decisión que hace esto útil el primer día: **la semilla se escribe en el
+registro** con nivel `INFO`. El registro va a un fichero junto a las partidas
+(AUD-268), así que viaja dentro de cualquier informe sin que el jugador sepa
+qué es una semilla. Sin eso, sembrar sólo sirve a quien ya sabe reproducir el
+fallo — o sea, a quien no lo necesita.
+
+Y por eso el orden importa y hay una prueba que lo fija: sembrar antes de
+configurar el registro tira esa línea, y el defecto sería invisible —todo
+funciona, sólo que el fichero no trae el número—.
+
+**No se siembra con una constante.** Una partida que reparte siempre el mismo
+rayo en el mismo segundo se lee como rota. Sin `--semilla` se inventa una y se
+anota: azar de verdad, reproducible a posteriori. No ser determinista y no
+saber qué pasó son cosas distintas.
+
+11 pruebas nuevas en `tests/test_la_semilla_del_azar.py`, incluidas dos de
+cable trampa: que `App` siga sembrando, y que las tres rutas de arranque pasen
+la semilla —si una se olvida, repetir un fallo funciona en unos modos y no en
+otros, que se diagnostica como «no se reproduce»—.
+
+### 30.4 Lo que este lote NO cierra
+
+`GAP-042` sigue abierto, con el alcance ya medido:
+
+* **Aislamiento** — los 46 usos siguen compartiendo el generador global, así
+  que añadir una tirada en las partículas desplaza la dispersión de los
+  disparos. El camino es `azar.generador()`, y `WorldSimulation` ya lo recorrió
+  (AUD-374). Van por lotes: son 15 módulos.
+* **Trayectoria** — el mismo replay bit a bit necesita el paso fijo de
+  `GAP-036`. Con `dt` variable, dos ejecuciones divergen aunque el azar
+  coincida. Sembrar da decisiones repetibles, no trayectorias repetibles, y
+  conviene no confundir las dos al leer este lote.
