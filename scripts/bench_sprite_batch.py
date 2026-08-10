@@ -162,8 +162,9 @@ def medir_gpu(cantidad: int) -> tuple[float, float, str]:
     ctx = moderngl.create_standalone_context()
     hoja, posiciones = _sprites_de_prueba(cantidad)
     ancho_hoja, alto_hoja = hoja.get_size()
+    # AUD-357 — `tobytes` en vez de la obsoleta `tostring` (ver `gl_pipeline`).
     textura = ctx.texture((ancho_hoja, alto_hoja), 4,
-                          pygame.image.tostring(hoja, "RGBA", False))
+                          pygame.image.tobytes(hoja, "RGBA", False))
     textura.filter = (moderngl.NEAREST, moderngl.NEAREST)
     textura.use(0)
 

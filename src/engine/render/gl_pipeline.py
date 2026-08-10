@@ -549,7 +549,12 @@ class GLRenderer:
         if self._swizzle is not None and self._swizzle_de(surface) == self._swizzle:
             datos: Any = surface.get_view("0")
         else:
-            datos = pygame.image.tostring(surface, "RGBA", True)
+            # AUD-357 — `tobytes`, no `tostring`: la segunda está obsoleta
+            # desde pygame 2.3 y dejaba 20 avisos por ejecución de la suite,
+            # que es como se aprende a no leer el resumen de avisos. Misma
+            # firma y mismo retorno; el proyecto exige `pygame-ce>=2.5`, así
+            # que no hace falta camino de compatibilidad.
+            datos = pygame.image.tobytes(surface, "RGBA", True)
         if textura is None or textura.size != tam:
             if textura is not None:
                 textura.release()
