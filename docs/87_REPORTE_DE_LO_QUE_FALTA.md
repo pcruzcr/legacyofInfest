@@ -2280,3 +2280,82 @@ mostrados).
 Queda abierto el resto de `GAP-049`: memoria de textura, VRAM/RAM y detección
 de fugas, que exigen instrumentar la subida de texturas, más el reparto
 CPU/GPU del tiempo.
+
+---
+
+## 32. El guardián que no se miraba a sí mismo (2026-08-10, AUD-378)
+
+Cuarto lote de *integration hardening*. Éste no salió de la lista de mejoras
+sino del propio trabajo: al descartar las sombras dirigidas por el sol porque
+**ningún mapa enciende las sombras proyectadas** (§30.1), quedaba una pregunta
+incómoda. El repositorio tiene un guion escrito exactamente para detectar eso.
+¿Por qué no lo había dicho?
+
+### 32.1 Porque no estaba mirando
+
+`check_tmx_coverage.py` vigilaba **18** propiedades de mapa. `StageLoader` lee
+**38**. El informe cerraba con «Todas las propiedades de mapa están demostradas
+en algún mapa» sin haber mirado veinte de ellas.
+
+La causa es una comprobación de un solo sentido. `test_student_guidance.py`
+verificaba que cada propiedad **declarada** existiera en `StageData`; nunca lo
+contrario. Un guardián así no puede enterarse jamás de una propiedad que el
+motor gane después — y el motor ganó veinte.
+
+Es el patrón de esta fase con una vuelta de tuerca: lo construido-y-no-leído
+era **el propio detector de cosas construidas-y-no-leídas**.
+
+### 32.2 Dos preguntas que el guion confundía en una
+
+Arreglarlo no era añadir veinte nombres a la lista: `--ci` falla si el mapa de
+referencia cubre menos del 85%, y pasar de 18/18 a 18/38 lo habría puesto rojo
+por un cambio de definición. Las salidas fáciles —bajar el mínimo, o llenar
+`stage0.tmx` de `estamina`, `tiempo_bala` y `desfase_audio`— son apagar el gate
+y arruinar el mapa que los estudiantes copian.
+
+Lo que había debajo eran **dos preguntas distintas**, y ahora se responden por
+separado:
+
+| Pregunta | Métrica |
+|---|---|
+| ¿lo **enseña** el mapa de referencia? | `PROPIEDADES_MAPA`, la lista pedagógica, con su 85% |
+| ¿lo ejercita **algún** mapa? | `PROPIEDADES_DEL_MOTOR`, todo lo que el cargador lee |
+
+La segunda no existía. Es la que habría cazado `sombras_proyectadas`.
+
+### 32.3 Las tres veces que la medición corrigió este mismo lote
+
+Merece la pena por lo seguido que fue:
+
+1. **El barrido por `props.get` se dejaba cuatro fuera.** `water_alpha`,
+   `water_amplitude`, `water_frequency` y `water_speed` se leen con
+   `_parse_unit_prop`. El punto ciego era de 21, no de 17. Lo cazó la prueba
+   nueva en cuanto se escribió la lista a mano.
+2. **El informe dio 20 «sin demostrar» y dos eran falsas.** Una sustitución que
+   falló por su ancla abortó la del acumulador, así que el guion restaba la
+   lista completa de una cobertura acumulada sólo sobre la pedagógica: todo lo
+   de fuera de las 18 salía como no usado, incluido `bpm`, que declara
+   `stage4_1.tmx:20`.
+3. **`owner_id` no es propiedad de mapa.** AUD-350 se llevó los 19
+   manejadores `_handle_*` a `stage_objetos.py`, lo que hacía razonable suponer
+   que lo que queda en `stage_loader.py` es nivel de mapa. No del todo:
+   `_build_waypoints` lee el `owner_id` de los objetos `Waypoint` con la misma
+   forma. Cinco mapas lo declaran —en objetos— y el informe lo daba por no
+   demostrado.
+
+Las tres eran falsos positivos, y las tres habrían mandado a alguien a
+perseguir un hueco inexistente. Por eso las 17 finales se verificaron **una a
+una** con `grep` contra los `.tmx` antes de escribir el número en ninguna parte.
+
+### 32.4 Lo que ahora se ve
+
+17 características del TMX que no ejercita ningún mapa, registradas en
+`KNOWN_GAPS.md` como **GAP-052**. No es una lista de tareas —varias son
+deliberadamente opcionales, y `sombras_proyectadas` está apagada por defecto
+porque cuesta y su módulo lo mide— pero sí es una decisión de contenido que
+antes estaba escondida y ahora está a la vista.
+
+El paso que convertiría el informe en guardián —triaje al estilo de
+`check_orphan_systems.py`, con `--ci` fallando por lo que aparece **nuevo**— se
+deja para cuando exista esa decisión: hoy nacería en rojo por las diecisiete, y
+un gate que nace en rojo se desactiva.

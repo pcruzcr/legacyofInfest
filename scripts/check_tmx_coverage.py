@@ -45,6 +45,69 @@ PROPIEDADES_MAPA: tuple[str, ...] = (
     "profundidad_curva", "orden_por_y",
 )
 
+#: **Todas** las propiedades de mapa que el motor lee — AUD-378.
+#:
+#: `PROPIEDADES_MAPA` de arriba mide otra cosa y por eso no vale para esto: es
+#: la lista **de enseñanza**, la que se le pide al mapa de referencia porque un
+#: estudiante la descubre abriéndolo en Tiled. Confundir las dos era el punto
+#: ciego: el guion vigilaba 18 propiedades mientras el cargador leía 35, y el
+#: informe cerraba con «todas demostradas» sin haber mirado diecisiete —entre
+#: ellas `sombras_proyectadas`, que **ningún mapa enciende** desde AUD-278—.
+#:
+#: Son dos preguntas distintas y ahora se responden por separado:
+#:
+#:   * ¿lo **enseña** el mapa de referencia?  → `PROPIEDADES_MAPA`, con su 85%
+#:   * ¿lo ejercita **algún** mapa?           → esta lista
+#:
+#: Se declara a mano por el mismo motivo que la otra —extraerla con regex
+#: mezclaba propiedades de mapa con las de objeto— y la mantiene honesta
+#: `test_el_guardian_de_tmx_lo_mira_todo.py`, que compara **en los dos
+#: sentidos** contra el AST de `stage_loader.py`. La comprobación de un solo
+#: sentido es lo que dejó crecer el punto ciego durante meses.
+PROPIEDADES_DEL_MOTOR: tuple[str, ...] = tuple(sorted({
+    *PROPIEDADES_MAPA,
+    "bpm", "compas", "desfase_audio",
+    "camara", "vista",
+    "estamina", "habilidades_libres", "tiempo_bala",
+    "fog_of_war", "god_rays",
+    # Las cinco del agua. Las cuatro últimas no aparecían en un barrido por
+    # `props.get`: se leen con `_parse_unit_prop`, que es justo el motivo de
+    # que este contraste vaya por AST y no por texto — la primera versión de
+    # esta lista se dejó cuatro fuera y la prueba las cazó.
+    "water_effect", "water_tint",
+    "water_alpha", "water_amplitude", "water_frequency", "water_speed",
+    "sombras_proyectadas",
+    "profundidad_min", "profundidad_max",
+}))
+
+#: Propiedades **de objeto** que se leen dentro de `stage_loader.py`, y que por
+#: eso aparecen en un barrido del fichero sin ser de mapa.
+#:
+#: AUD-350 se llevó los 19 manejadores `_handle_*` a `stage_objetos.py`, lo que
+#: hacía razonable suponer que lo que queda es nivel de mapa. No del todo:
+#: `_build_waypoints` recorre los objetos `Waypoint` y lee su `owner_id` con la
+#: misma forma `props.get(...)`. El primer barrido lo contó como propiedad de
+#: mapa y el informe lo dio por «no demostrado» mientras cinco mapas lo
+#: declaran —en objetos—. Se excluye con su motivo escrito en vez de afinar el
+#: AST: distinguir el ámbito exigiría resolver de dónde viene cada `props`, que
+#: es el mismo problema que ya hizo descartar las expresiones regulares.
+PROPIEDADES_DE_OBJETO: dict[str, str] = {
+    "owner_id": (
+        "propiedad del objeto `Waypoint`, no del mapa: la lee "
+        "`StageLoader._build_waypoints` recorriendo la capa `Objects`"
+    ),
+}
+
+#: Grafías alternativas de la misma propiedad. Mismo caso que `ALTERNATIVAS`
+#: con los tipos de objeto (AUD-366): contarlas por separado da una cobertura
+#: peor de lo que es y manda a alguien a perseguir un hueco inexistente.
+#: `stage_loader.py` las lee con un `or` —la castellana primero—, así que
+#: declarar cualquiera de las dos enciende la característica.
+ALIAS_DE_PROPIEDAD: dict[str, str] = {
+    "camera": "camara",
+    "view": "vista",
+}
+
 #: Las que un mapa **debe** tener para cargar.
 OBLIGATORIAS: frozenset[str] = frozenset({"stage_id", "stage_name"})
 
@@ -111,9 +174,17 @@ def analizar(ruta: Path) -> dict:
     raiz = ET.parse(ruta).getroot()
     props = _props_de_mapa(raiz)
     tipos = _tipos_de_objeto(raiz)
+    # AUD-378 — el mapa puede declarar la grafía inglesa; cuenta igual, porque
+    # `stage_loader` las lee con un `or` y encienden la misma característica.
+    declaradas = {ALIAS_DE_PROPIEDAD.get(p, p) for p in props}
     return {
         "props_usadas": {p for p in PROPIEDADES_MAPA if p in props},
         "props_sin_usar": {p for p in PROPIEDADES_MAPA if p not in props},
+        #: Sobre todo lo que el motor lee, para la detección de características
+        #: que ningún mapa ejercita. Es otra pregunta que la cobertura del mapa
+        #: de referencia, y por eso va en otra clave.
+        "del_motor_usadas": {p for p in PROPIEDADES_DEL_MOTOR
+                             if p in declaradas},
         "tipos_usados": tipos,
         "props_luz_usadas": _props_de_luces(raiz),
         "valores": props,
@@ -145,7 +216,12 @@ def main() -> int:
     for mapa in mapas:
         rel = mapa.relative_to(_RAIZ)
         r = analizar(mapa)
-        cubiertos_por_algun_mapa |= r["props_usadas"]
+        # AUD-378 — se acumula sobre **todo** lo que el motor lee, no sobre la
+        # lista de enseñanza. Acumular la pedagógica y restarla de la completa
+        # daba un informe que llamaba «no usada» a cualquier propiedad fuera de
+        # las 18, incluidas las que sí declara un mapa: `bpm` sale en
+        # `stage4_1.tmx:20` y aparecía como sin demostrar.
+        cubiertos_por_algun_mapa |= r["del_motor_usadas"]
         tipos_en_algun_mapa |= r["tipos_usados"]
 
         cobertura = len(r["props_usadas"]) / len(PROPIEDADES_MAPA)
@@ -181,7 +257,12 @@ def main() -> int:
             if args.ci:
                 problemas += 1
 
-    sin_demostrar = set(PROPIEDADES_MAPA) - cubiertos_por_algun_mapa
+    # AUD-378 — sobre **todo** lo que el motor lee, no sobre la lista de
+    # enseñanza. Ésta es la pregunta que el guion decía responder y llevaba sin
+    # responder: mirando sólo las 18 pedagógicas, el informe cerraba con «todas
+    # demostradas» mientras veintiuna características quedaban sin que ningún
+    # mapa las ejercitara y nadie podía enterarse.
+    sin_demostrar = set(PROPIEDADES_DEL_MOTOR) - cubiertos_por_algun_mapa
     tipos_sin_usar = del_motor - tipos_en_algun_mapa
     print()
     if sin_demostrar:
