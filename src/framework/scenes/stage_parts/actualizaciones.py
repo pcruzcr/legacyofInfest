@@ -128,8 +128,11 @@ class ActualizacionesDeEscenario:
         self._damage_numbers.update(dt)
         self._post_processing.update(dt)
         self._ambient_particles.update(dt, self._camera.offset)
+        # AUD-362 — se avanza la simulación, no el reloj suelto: el calendario
+        # se lleva detectando la vuelta de la hora, así que un reloj movido por
+        # fuera dejaría los días sin contar.
         if not self._reloj.congelado:
-            self._reloj.update(dt)
+            self._simulacion.update(dt)
             self._aplicar_hora()
         self._weather.update(dt, self._camera.offset)
         self._dialogue.update(dt)

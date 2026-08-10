@@ -40,6 +40,7 @@ from src.framework.scenes.stage_parts.fantasma import FantasmaDeCarrera
 from src.framework.scenes.stage_parts.mundo_ecs import MundoDelEscenario
 from src.framework.scenes.stage_parts.rush import ConduccionDelBossRush
 from src.framework.scenes.stage_parts.senales import SenalesDeEscenario
+from src.framework.scenes.stage_parts.simulacion import SimulacionDeEscenario
 from src.framework.scenes.stage_parts.sonido import SonidoDeEscenario
 from src.framework.stage import culling
 from src.framework.stage.camera import Camera
@@ -72,7 +73,8 @@ if TYPE_CHECKING:
     from src.framework.stage.stage_loader import StageData
 
 
-class StageScene(MezclaDeAmbiente, SenalesDeEscenario, SonidoDeEscenario,
+class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
+                 SenalesDeEscenario, SonidoDeEscenario,
                  DiagnosticoDeEscenario, CinematicasDeEscenario,
                  ArcoDelJugador, MundoDelEscenario, ActualizacionesDeEscenario, DibujoDeEscenario,
                  FantasmaDeCarrera, ConduccionDelBossRush, BaseScene):

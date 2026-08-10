@@ -70,6 +70,14 @@ UMBRAL_SUELO_MOJADO: float = 0.55
 #: un control roto, no como lluvia.
 PERDIDA_MAXIMA_DE_FRICCION: float = 0.40
 
+#: Ritmo de frenado horizontal en el suelo mojado, px/s², justo al cruzar el
+#: umbral de humedad. A la velocidad de paseo (200 px/s) son ~0,09 s de
+#: derrape; con la humedad al máximo, `factor_friccion` lo baja a 1.320 y el
+#: derrape sube a ~0,15 s. Se busca que el jugador **note** la lluvia sin
+#: perder el control: un frenado de 400 px/s² sería hielo, y el hielo ya tiene
+#: su propio sistema (`ZonaDeFriccion` del TMX, AUD-236).
+FRENADO_EN_MOJADO: float = 2_200.0
+
 #: Las bandas del día, de la más luminosa a la más oscura. Son las que usa la
 #: astronomía de verdad —los tres crepúsculos se definen por la altura del sol
 #: bajo el horizonte— y aquí sirven para lo mismo que allí: nombrar los tramos
@@ -182,6 +190,30 @@ class EnvironmentState:
             return 1.0
         exceso = (self.humedad - UMBRAL_SUELO_MOJADO) / (1.0 - UMBRAL_SUELO_MOJADO)
         return 1.0 - PERDIDA_MAXIMA_DE_FRICCION * min(1.0, max(0.0, exceso))
+
+    @property
+    def frenado_del_suelo(self) -> float:
+        """Ritmo de frenado horizontal, en px/s², para `PhysicsProfile.friccion`.
+
+        Cero con el suelo seco, y cero significa **instantáneo**: es lo que
+        hacen hoy los tres presets y lo que sienten los dieciséis escenarios
+        existentes. Soltar el mando para en seco.
+
+        Con el suelo mojado pasa a ser un ritmo finito y el jugador **derrapa**
+        al soltar. Ése es el hilo entero del sistema —lluvia → humedad → suelo
+        mojado → frenado → control— y es la primera vez que
+        `PhysicsProfile.friccion` (AUD-336) tiene un consumidor: se escribió,
+        se probó, y los tres presets la dejaban en 0.
+
+        Sí, hay un salto: de instantáneo a `FRENADO_EN_MOJADO` en cuanto se
+        cruza el umbral. Es deliberado y es la consecuencia de que
+        `suelo_mojado` sea un booleano: el jugador tiene que **notar** que
+        empezó a llover. Una rampa continua desde el suelo seco haría el
+        cambio imperceptible, que es justo lo que este sistema viene a evitar.
+        """
+        if not self.suelo_mojado:
+            return 0.0
+        return FRENADO_EN_MOJADO * self.factor_friccion
 
     @classmethod
     def neutro(cls) -> EnvironmentState:
