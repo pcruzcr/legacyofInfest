@@ -1101,3 +1101,367 @@ así que la resurrección de cualquiera de estos huérfanos deja la suite en roj
   comprobó en rojo volviendo a `ruff>=0.6` antes de darlo por bueno. La
   mitigación de AUD-353 —ejecutar ruff dentro de la suite— se queda: fijar
   evita la deriva, ejecutarlo la detecta si aun así ocurre.
+
+---
+
+# Huecos abiertos por la lista del dueño (2026-08-10, AUD-371)
+
+Los catorce de abajo salen de contrastar la lista de mejoras de 2026-08-10
+contra el árbol. **No son todo lo que la lista pedía**: la mayor parte de sus
+filas ya existe y está probada, y eso se detalla en
+`docs/87_REPORTE_DE_LO_QUE_FALTA.md` §28. Aquí sólo queda lo que de verdad no
+está.
+
+## [GAP-036] El bucle no tiene paso fijo ni interpolación
+
+- **File:** `src/engine/core/app.py`
+- **Phase:** auditoría 2026-08-10, lista del dueño (AUD-376)
+- **Reason:** `App.run` integra con `dt` variable y punto. No hay acumulador,
+  no hay `fixed_update` y no hay interpolación al pintar. Lo que sí hay es el
+  tope `MAX_FRAME_TIME = 0.05`, que evita atravesar paredes por un tirón
+  convirtiéndolo en cámara lenta — mitiga el síntoma peor sin dar
+  reproducibilidad. Es el único cambio *estructural* que pide la lista.
+- **Resolution plan:** No planificado, y no por pereza: toda la calibración de
+  física está atada al `dt` variable. `test_calibracion_del_salto` fija el
+  salto en 72 px, que es la unidad con la que están medidos los 16 mapas de
+  `assets/` y las guías de diseño de nivel. Un paso fijo cambia la
+  integración y por tanto la altura, así que el trabajo real no es el acumulador —es media tarde— sino
+  re-calibrar el salto y revisar los mapas. Hacerlo exige decisión del dueño
+  sobre romper la métrica de 72 px. Ver §28.3 de `docs/87`.
+
+## [GAP-037] La rejilla espacial existe y las colisiones no la usan
+
+- **File:** `src/framework/stage/rejilla.py`
+- **Phase:** auditoría 2026-08-10, lista del dueño (AUD-376)
+- **Reason:** `RejillaEspacial` (AUD-276) ya da las tres operaciones que pide
+  la lista —`cercanos()` (fase amplia), `rayo()` (trazado) y `hay_vision()`
+  (línea de visión)— y está probada en
+  `tests/test_rejilla_espacial_y_raycast.py`. Su **único consumidor de
+  producción es `vfx/sombras_proyectadas.py`**. Ni `framework/physics/resolucion.py`
+  ni `stage/collision_system.py` la construyen: el camino de colisión sigue
+  recorriendo `stage.collision_rects` entero, que es exactamente lo que la
+  rejilla se escribió para evitar. `stage4_1` trae miles de rectángulos y la
+  inmensa mayoría están a pantallas de distancia de la pregunta.
+- **Resolution plan:** Viable y barato — la pieza está hecha y probada; falta
+  construirla una vez por escenario y llamar a `cercanos()` desde el resolutor.
+  Reservado **AUD-372**. Es el candidato con mejor relación coste/ganancia de
+  toda la lista.
+
+## [GAP-038] No hay capas ni máscaras de colisión
+
+- **File:** `src/framework/stage/collision_system.py`
+- **Phase:** auditoría 2026-08-10, lista del dueño (AUD-376) — ya registrado
+  como refactor **R-03** en `docs/AUDIT_2026-07.es.md`
+- **Reason:** El filtrado de hoy es por tipo de entidad, escrito a mano en cada
+  llamada. No es un descuido nuevo: AUD-004 retiró una fachada de pymunk que
+  *aparentaba* tener categorías de colisión y no las tenía —las constantes
+  `_CAT_*` se asignaban a `shape.collision_type` (clave de despacho) en vez de
+  a `shape.filter` (el bitmask real), y nunca se registró un manejador, así que
+  no filtraban nada—. La fachada se quitó en vez de dejarla mintiendo.
+- **Resolution plan:** Es la decisión R-03, todavía abierta: o se conecta una
+  tubería de cuerpo rígido de verdad (cuerpos, `shape.filter`, manejadores,
+  rectángulos estáticos **fusionados**, plataformas unidireccionales reales) o
+  se implementan capas propias sobre el resolutor AABB actual. La segunda es
+  mucho más barata y encaja con lo que ya hay. Aviso heredado de la auditoría
+  de julio: si vuelve pymunk, no puede volver sin fusión de rectángulos —
+  `add_static_collision` creaba un cuerpo+forma por tile, miles de cajas.
+
+## [GAP-039] Sin materiales de superficie: hay fricción, no hay restitución
+
+- **File:** `src/framework/physics/perfil.py`
+- **Phase:** auditoría 2026-08-10, lista del dueño (AUD-376)
+- **Reason:** La fricción por superficie desde el TMX existe (`ZonaDeFriccion`
+  + `sistema_friccion`, AUD-236) y el perfil declara `aceleracion`/`friccion`
+  (AUD-336). Lo que no existe es un **material** como cosa nombrada que agrupe
+  fricción y restitución y se declare en el tileset en vez de por zona. Sin
+  restitución no hay rebote: hielo y musgo se pueden expresar hoy, goma no.
+- **Resolution plan:** Viable sin tocar el bucle: un `Material` con
+  `friccion`/`restitucion` leído del tileset, consumido por `resolver_eje_y`.
+  Sin fecha; no lo pide ningún nivel existente.
+
+## [GAP-040] El buffer de entrada existe sólo para el salto, y vive en el jugador
+
+- **File:** `src/framework/entities/player.py`
+- **Phase:** auditoría 2026-08-10, lista del dueño (AUD-376)
+- **Reason:** Hay salto con buffer (`_pending_jump`, ~5 fotogramas) y hay
+  *coyote time* (`PhysicsProfile.coyote_frames`), o sea que las dos concesiones
+  clásicas de *game feel* están. Pero el buffer está cableado a mano dentro de
+  `Player.update` para una sola acción: ninguna otra —ataque, dash, parry— lo
+  tiene, y `InputManager` no ofrece la primitiva. Tampoco hay prioridad entre
+  acciones cuando dos caen en el mismo fotograma.
+- **Resolution plan:** Subir el buffer a `InputManager` como ventana por
+  acción, dejando el salto llamando a la primitiva nueva. Reservado
+  **AUD-373**. Barato y sin riesgo para la calibración: no toca la integración.
+
+## [GAP-041] El ECS no recicla identificadores, no agrupa componentes y no serializa
+
+- **File:** `src/framework/ecs/world.py`
+- **Phase:** auditoría 2026-08-10, lista del dueño (AUD-376)
+- **Reason:** `crear()` incrementa un contador monótono y `aplicar_bajas()` no
+  devuelve el id al saco, así que un escenario que cree y destruya mucho
+  —balas, partículas— hace crecer el espacio de ids sin techo. No hay *pools*
+  de componentes (cada uno es un objeto suelto) ni forma de volcar el mundo a
+  disco. Las consultas `cada()`/`con()` son recorrido lineal sobre el índice
+  por tipo, no arquetipos.
+- **Resolution plan:** Ninguno de los tres duele hoy: el enjambre de balas ya
+  esquiva el ECS entero por NumPy (`bullet_swarm.py`, 180×), que era el caso
+  que lo habría dolido. Reciclar ids es media hora y no rompe nada; los pools y
+  los arquetipos son optimización sin medición que la respalde, y este repo no
+  optimiza sin medir antes (AUD-329, AUD-330).
+
+## [GAP-042] No hay determinismo reproducible
+
+- **File:** `src/engine/core/app.py`
+- **Phase:** auditoría 2026-08-10, lista del dueño (AUD-376)
+- **Reason:** No hay una sola llamada a `random.seed()` en `src/engine` ni en
+  `src/framework`. Todo lo aleatorio —partículas, sacudida de cámara,
+  dispersión de disparos, comportamiento de enemigos— tira del `random` global
+  sin semilla, así que dos ejecuciones del mismo escenario no coinciden. Afecta
+  a tres cosas concretas: el fantasma del speedrun no se puede validar contra
+  una repetición, un fallo de física no se puede reproducir desde un informe, y
+  las pruebas que tocan azar se escriben tolerantes en vez de exactas.
+- **Resolution plan:** Sembrar en `App.__init__` desde una semilla guardada en
+  la partida, y pasar un `random.Random` propio a los sistemas que lo pidan en
+  vez del global. Lo segundo es lo caro: hay que auditar cada uso. Sin fecha.
+
+- **Avance (2026-08-10, AUD-374):** el primer consumidor ya lo tiene.
+  `WorldSimulation` acepta un `rng: random.Random` propio y lo usa para la
+  dirección del viento, así que una tormenta se repite en una prueba fijando la
+  semilla. Es un ladrillo, no el cierre: el resto del motor sigue tirando del
+  `random` global. El hueco sigue abierto.
+
+- **Avance (2026-08-10, AUD-375):** la semilla del proceso ya existe.
+  `engine/core/azar.py` la fija (`sembrar`), la recuerda (`semilla_actual`) y
+  **la escribe en el registro** con `INFO`; `App` la siembra justo después de
+  configurar el registro —el orden importa: al revés se pierde la única línea
+  que hace reproducible un informe— y `main.py` la acepta por `--semilla` en
+  las tres rutas de arranque.
+
+  Lo que esto cambia: con el generador global sembrado, los 46 usos de
+  `random.*` del motor **ya son reproducibles** sin tocarlos. Un informe de
+  fallo lleva su semilla dentro sin que el jugador sepa qué es una semilla.
+
+  Lo que falta, y por qué el hueco sigue abierto: darle a cada sistema su
+  propio `random.Random` (`azar.generador`), que es aislamiento, no
+  reproducibilidad — hoy catorce módulos compiten por el estado global, así que
+  añadir una tirada en las partículas desplaza la dispersión de los disparos.
+  Y la reproducibilidad de **trayectoria** —el mismo replay bit a bit— sigue
+  necesitando el paso fijo de GAP-036: con `dt` variable dos ejecuciones
+  divergen aunque el azar coincida.
+
+## [GAP-043] No hay tipos de daño, armadura ni resistencias
+
+- **File:** `src/framework/stage/collision_system.py`
+- **Phase:** auditoría 2026-08-10, lista del dueño (AUD-376)
+- **Reason:** `_calculate_damage` produce un escalar. No hay canal —físico,
+  fuego, veneno— ni mitigación por tipo, así que un enemigo no puede ser débil
+  a una cosa y resistente a otra. Es una carencia de **diseño de juego**, no un
+  defecto: nada de lo que hay hoy lo pide.
+- **Resolution plan:** No hacerlo hasta que un jefe o un enemigo lo necesite.
+  Meterlo antes es superficie que mantener sin lector, que es el mismo
+  razonamiento con el que la invariante 5 decide qué se traduce.
+
+## [GAP-044] No hay sistema de buff/debuff
+
+- **File:** `src/framework/entities/player_state.py`
+- **Phase:** auditoría 2026-08-10, lista del dueño (AUD-376)
+- **Reason:** Cero coincidencias en `src/`. Hay efectos temporales sueltos
+  —`damage_mult`, `invincibility_timer`— cada uno con su temporizador a mano
+  dentro de `PlayerStateData`. Lo que falta es la abstracción que los agrupe:
+  efecto con duración, acumulación y caducidad, aplicable también a enemigos.
+- **Resolution plan:** Encaja limpio como componente ECS. Sin fecha; mismo
+  razonamiento que GAP-043 — el árbol de habilidades (AUD-293) da mejoras
+  permanentes, no temporales, y nadie ha pedido temporales.
+
+## [GAP-045] No hay pathfinding ni árbol de comportamiento
+
+- **File:** `src/framework/entities/enemy_base.py`
+- **Phase:** auditoría 2026-08-10, lista del dueño (AUD-376)
+- **Reason:** Los enemigos usan máquina de estados (13 estados, incluido
+  `TELEGRAPHING`) y `squad_brain.py` para coordinación con scikit-learn. No hay
+  A*, ni malla de navegación, ni árbol de comportamiento. En la práctica los
+  enemigos persiguen en línea recta y caen por los huecos.
+- **Resolution plan:** El A* sobre la rejilla de tiles es viable y la rejilla
+  espacial de GAP-037 le sirve de base. El árbol de comportamiento es otra
+  historia: la invariante 7 pide no meter maquinaria donde una FSM determinista
+  rinde igual, y con 13 estados por enemigo nadie ha enseñado que rinda peor.
+  Hacer A* sí; BT sólo con un caso que la FSM no pueda expresar.
+
+## [GAP-046] La percepción de enemigos vive en código de escenario
+
+- **File:** `src/stages/stage1_1/combat/guard_system.py`
+- **Phase:** auditoría 2026-08-10, lista del dueño (AUD-376)
+- **Reason:** El cono de visión y el perseguidor —el sigilo de la fase 5— están
+  implementados dentro de un escenario, no en el framework. Cualquier otro
+  escenario que quiera un guardia lo copia. Y la pieza que lo haría bien ya
+  existe fuera: `RejillaEspacial.hay_vision()` (ver GAP-037).
+- **Resolution plan:** Subir la percepción —visión con cono y oclusión por
+  `hay_vision()`, más oído por radio— a `framework/entities/` como componente,
+  dejando el guardia del escenario como primer consumidor. Nota de alcance:
+  `revisar/` no se toca (invariante 3), pero `src/stages/stage1_1` sí es
+  material del repo.
+
+## [GAP-047] No hay sistema de misiones ni objetivos
+
+- **File:** `src/framework/stage/progression_system.py`
+- **Phase:** auditoría 2026-08-10, lista del dueño (AUD-376)
+- **Reason:** Cero coincidencias de `mision`/`objective`/`quest` en `src/`.
+  `progression_system.py` lleva el avance entre escenarios y `zone_flags` en la
+  partida, que es otra cosa: no hay objetivos declarados, ni seguimiento, ni
+  estado de completado por objetivo. El diálogo (`DialogueSystem._execute_action`)
+  ya ejecuta acciones, así que el enganche existe.
+- **Resolution plan:** Sin fecha. Es contenido narrativo, y la fase 7 del plan
+  del motor —reconstrucción de contenido— está suspendida por decisión del
+  dueño (`docs/87` §27).
+
+## [GAP-048] Sin streaming de niveles ni versionado de mapas
+
+- **File:** `src/framework/stage/stage_loader.py`
+- **Phase:** auditoría 2026-08-10, lista del dueño (AUD-376)
+- **Reason:** El TMX se carga entero y de una vez. No molesta —los mapas
+  actuales caben— pero no hay corte por salas ni carga por proximidad, y el
+  encuadre por sala de la cámara (`Camera._encuadrar_sala`) es visual, no de
+  carga. Aparte: ningún mapa declara versión de esquema, así que un TMX viejo
+  con una propiedad renombrada falla como dato malo en vez de como versión
+  antigua.
+- **Resolution plan:** El versionado sí conviene y es barato: una propiedad de
+  mapa `schema_version` validada por `scripts/validate_tmx.py`, que ya corre en
+  CI. El streaming no, hasta que un mapa no quepa.
+
+## [GAP-049] No se cuentan los recursos: llamadas de dibujo, memoria de textura, fugas
+
+- **File:** `src/engine/render/gl_pipeline.py`
+- **Phase:** auditoría 2026-08-10, lista del dueño (AUD-376)
+- **Reason:** Hay medición de **tiempo** por todas partes —`DeltaClock.historial_ms`,
+  `Planificador.tiempos()` por sistema, `test_frame_budget`,
+  `bench_sprite_batch.py`, `bench_gpu_postproc.py`— y ninguna de **recursos**:
+  nadie cuenta llamadas de dibujo por fotograma, ni cuánta memoria de textura
+  hay viva, ni detecta que una superficie no se libera. La caché del
+  `AssetLoader` tiene desalojo acotado, así que la fuga clásica está tapada,
+  pero nadie lo comprueba.
+- **Resolution plan:** Las llamadas de dibujo son fáciles —un contador en
+  `GLRenderer` y una línea en `DebugOverlay`— y son la cifra que la lista pide
+  con 🔴. Memoria de textura y detección de fugas exigen instrumentar la subida
+  de texturas; sin fecha.
+
+## ~~[GAP-050] El clima tiene dos autoridades: la simulación lo calcula y el VFX lo ignora~~ *(Resuelto)*
+
+- **File:** `src/framework/scenes/stage_parts/ambiente.py`
+- **Phase:** auditoría 2026-08-10, segunda pasada sobre la lista del dueño
+  (AUD-371)
+- **Reason:** AUD-362 hizo que la escena **consumiera** `EnvironmentState` en
+  vez de componer el ambiente por su cuenta, y lo hizo para la luz: en
+  `_aplicar_hora` salen `ambient_brightness` (con el suelo que sube por
+  `luz_lunar`), `ambient_color`, el bloom y el agarre del suelo. **El clima se
+  quedó fuera de esa mudanza.** `WorldSimulation` calcula `clima`,
+  `precipitacion`, `viento`, `visibilidad` y `cobertura_nubes`, y el sistema
+  que de verdad dibuja la lluvia, la nieve y la niebla —`WeatherSystem`— no
+  lee ninguno: se alimenta de `_clima_efectivo()` (`ambiente.py:175`), que
+  devuelve la cadena `climate` del TMX o, si falta, el clima por defecto de la
+  estación, y llega por `set_climate(str)`.
+
+  Son dos autoridades sobre el mismo hecho, que es exactamente el defecto que
+  `WorldSimulation` vino a cerrar y que §1 de `docs/92` enuncia como la regla
+  que lo sostiene («un fenómeno **lee** el estado y nunca lo escribe»). Hoy no
+  se nota porque los dieciséis mapas declaran su `climate` y la simulación
+  arranca del mismo dato, así que las dos autoridades coinciden por
+  construcción; se notará el día que el clima cambie durante la partida —que
+  es justamente lo que la simulación sabe hacer y el TMX no—. `stage4_1` ya
+  llama a `set_climate` por acto (`stage4_1.py:241`) sin pasar por el estado.
+
+  Alcance de lo que sí está garantizado, para no re-medirlo: `test_el_ambiente
+  _llega_al_juego.py` cubre hora, estación, visibilidad y agarre. Ninguna
+  prueba ata el VFX de clima al estado, y por eso la divergencia no la ve
+  nadie.
+- **Resolution plan:** Barato y sin riesgo de calibración: que
+  `_clima_efectivo()` lea `self.ambiente.clima` y que el TMX pase a ser el
+  **valor inicial** de la simulación en vez de la fuente permanente —que es la
+  separación de responsabilidades que la propia lista del dueño pide en sus
+  filas de TMX («TMX como configuración del mundo, no simulador»)—. La prueba
+  que falta es de una línea: mover la simulación a `storm` y comprobar que el
+  `WeatherSystem` lo sigue. Reservado **AUD-374**.
+
+
+- **Resolution (2026-08-10, AUD-374):** el mundo manda y el VFX consume.
+
+  * **Una puerta.** `SimulacionDeEscenario._cambiar_clima(nombre)` se lo pide a
+    `WorldSimulation` y recompone el ambiente. Es la única forma de cambiar el
+    clima en marcha; `stage0.py:173` (el clímax) y `stage4_1.py:241` (por acto)
+    están migrados.
+  * **Un consumidor.** `_aplicar_clima(estado)` pasa `estado.clima` y
+    `estado.viento` al `WeatherSystem` desde el mismo sitio donde `_aplicar_hora`
+    reparte luz, bloom, tinte y agarre. `set_climate` ya se ignoraba a sí misma
+    cuando el clima no cambia, así que llamarla por fotograma no vacía el
+    emisor. El TMX queda como **valor inicial** de la simulación, que es la
+    separación que pedía el plan.
+  * **Un viento.** Era el caso extremo de las dos autoridades:
+    `EnvironmentState.viento` se calculaba cada fotograma y **nadie lo leía**,
+    mientras `WeatherSystem._set_climate_params` sorteaba el suyo con
+    `random.uniform` y una segunda tabla. Que los números coincidieran —75
+    frente al centro del `uniform(50, 100)`, 15 frente a `uniform(-15, 15)`, 12
+    frente a `uniform(-12, 12)`— delataba que era una decisión copiada. Ahora
+    `viento_de(clima, rng)` en `world/simulation.py` es la única tabla, y el
+    sistema de clima la consume o cae a ella; `aplicar_viento` es la entrada que
+    no existía.
+
+  **Lo que la medición añadió al diagnóstico de este GAP.** Decía «hoy no se
+  nota porque los dieciséis mapas declaran su `climate`». Sí se notaba, y en
+  jugabilidad: con la secuencia real de `stage4_1` —mapa `fog`, acto `storm`—
+  la humedad se quedaba en 0,50 y `suelo_mojado` en falso. **Los actos de
+  tormenta de ese escenario nunca resbalaron**, con AUD-362 entero construido y
+  la escena consumiéndolo. El dato no faltaba: llegaba caducado, que es más
+  difícil de ver.
+
+  Y un segundo defecto que el primero tapaba: el campo declara signo
+  («negativo = hacia la izquierda») y `CLIMAS` sólo tenía magnitudes positivas,
+  así que el viento del ambiente **nunca soplaba hacia la izquierda**.
+  `test_declarar_tormenta_produce_un_mundo_de_tormenta_entero` pasó a comprobar
+  la magnitud (`abs(e.viento) > 50`), porque su `> 50` fijaba justo el defecto.
+
+  **La dirección se probó al revés primero, y la suite la rechazó.** El primer
+  intento reconciliaba al contrario —la simulación siguiendo al `WeatherSystem`,
+  para no tocar ningún escenario— y dejó seis pruebas en rojo: las cinco de
+  `TestElClimaCambiaLasReglas` y una de `TestElMapaConfiguraYLaSimulacionCalcula`
+  hacen `_simulacion.set_clima(...)` y luego `_aplicar_hora()`, o sea que el
+  contrato «la simulación es la autoridad» ya estaba escrito en las pruebas
+  desde AUD-362. Queda anotado porque el atajo era tentador y costaba cero
+  cambios en escenarios.
+
+  13 pruebas nuevas en `tests/test_el_viento_es_uno_solo.py`, las 13 rojas
+  antes.
+
+## [GAP-051] El estado ambiental llega a la luz y se para ahí: sombras, audio y color grading tienen sus propias fuentes
+
+- **File:** `src/framework/world/environment.py`
+- **Phase:** auditoría 2026-08-10, segunda pasada sobre la lista del dueño
+  (AUD-371)
+- **Reason:** Es el hermano mayor de GAP-050 y conviene separarlo, porque
+  aquél es un **defecto** (dos autoridades sobre un dato) y éste es
+  **integración que no se ha escrito**. Fuera de `world/`, el único fichero de
+  producción que importa `EnvironmentState` es
+  `scenes/stage_parts/simulacion.py`. Tres consumidores que la lista del dueño
+  marca 🔴 siguen sin enterarse:
+
+  * **Sombras proyectadas.** `vfx/sombras_proyectadas.py` proyecta desde un
+    `foco` de luz, no desde el sol. Y no puede: `EnvironmentState` publica
+    `altura_solar` pero **no azimut**, así que el dato para orientar la sombra
+    no existe todavía. Es el único de los tres que necesita un campo nuevo.
+  * **Audio ambiental.** `stage_parts/sonido.py` es despacho de SFX por
+    eventos; nada lee `viento`, `precipitacion` ni `fase_del_dia`. El
+    mezclador y el audio espacial ya existen (AUD-144, `play_sfx_at`), o sea
+    que lo que falta es quién los llama, no con qué.
+  * **Color grading.** La pasada existe en `gl_pipeline.py` y se controla por
+    `gpu_effects`; el estado no la alimenta.
+
+  No es un descuido: AUD-357/358 entregaron el productor y AUD-362 cableó el
+  primer consumidor a propósito, para que el cableado se hiciera de uno en uno
+  y con pruebas. Se registra para que no se lea el módulo como «hecho» cuando
+  lo hecho es la mitad productora.
+- **Resolution plan:** Un consumidor por commit, en el orden de §4 de
+  `docs/92`, que ya los tiene priorizados por efecto visible: azimut solar
+  (campo nuevo, 🟢) → sombras dirigidas por el sol (🟡, «alto valor visual por
+  poco coste») → audio → color grading. **No se abre una fila por fenómeno
+  aquí**: el catálogo de arcoíris, halos, meteoros y demás vive en `docs/92`
+  §3 con su coste medido, y duplicarlo en este fichero produciría dos listas
+  que se desincronizan. Este GAP cubre la *tubería*; `docs/92` cubre la cola
+  larga que la recorre.
