@@ -81,11 +81,19 @@ jobs:
       # para bloquear la entrega de un estudiante a las once de la noche, pero
       # si para que aparezca en el resumen del CI. Cuando el equipo tenga
       # costumbre de mirarlo, se sube a bloqueante.
+      #
+      # AUD-370: llevaba ADEMAS un `|| true`, y esa combinacion anulaba
+      # justamente lo que el parrafo de arriba dice querer. `continue-on-error`
+      # ya impide que el paso tumbe el trabajo, pero lo marca en amarillo en el
+      # resumen; con el `|| true` encima, pip-audit salia con 0 pase lo que
+      # pase y el paso aparecia en VERDE. O sea: un escaneo de vulnerabilidades
+      # que no podia avisar de una vulnerabilidad. Dos redes para la misma
+      # caida, y la segunda tapaba la senal de la primera.
       - name: Audit dependencies for known vulnerabilities
         continue-on-error: true
         run: |
           pip install pip-audit
-          pip-audit --desc --strict || true
+          pip-audit --desc --strict
 
       - name: Verify dependency manifests agree
         run: python scripts/check_dependency_sync.py
@@ -198,8 +206,16 @@ jobs:
       - name: Validate TMX maps
         run: python scripts/validate_tmx.py --ci
 
+      # AUD-370: esto salia con 0 tanto con 100/100 como con 40/100, asi que el
+      # paso no podia fallar nunca. Ahora son dos ordenes con dos trabajos
+      # distintos: la primera exige que el mapa de REFERENCIA —el que los
+      # estudiantes abren para copiar— siga en 100, y la segunda informa de
+      # todos los mapas sin exigir nada, porque una entrega al 59 % es el
+      # resultado del alumno, no un fallo del CI.
       - name: Grade reference stage
-        run: python scripts/grade_stage.py assets/maps/ --json
+        run: |
+          python scripts/grade_stage.py assets/maps/stage0 --minimo 100
+          python scripts/grade_stage.py assets/maps/ --json > /dev/null
 
       # AUD-104: esto calificaba `boss_base.py`, la clase **base** del
       # framework. No hereda de sí misma ni declara fases, así que sacaba
@@ -207,5 +223,8 @@ jobs:
       # referencia, que es el que los estudiantes copian: si su nota baja, es
       # que el calificador o el jefe han dejado de estar de acuerdo, y eso hay
       # que verlo antes de un día de entrega.
+      # AUD-370: mismo defecto. El comentario de arriba lleva desde AUD-104
+      # diciendo «si su nota baja... eso hay que verlo antes de un dia de
+      # entrega», y nadie miraba el numero.
       - name: Grade reference boss
-        run: python scripts/grade_boss.py src/stages/boss_venado/boss_venado.py --json
+        run: python scripts/grade_boss.py src/stages/boss_venado/boss_venado.py --minimo 100
