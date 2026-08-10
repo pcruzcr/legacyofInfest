@@ -385,7 +385,18 @@ def grade_stage(path: Path) -> dict[str, Any]:
     result["categories"]["metadata"] = {"score": puntos, "max": RUBRIC["metadata"], "msg": f"{meta_score}/{total_props} props found"}
     if meta_score < len(REQUIRED_GRADE_PROPS):
         missing = [p for p in REQUIRED_GRADE_PROPS if p not in props]
-        result["warnings"].append(f"Missing metadata: {missing}")
+        # AUD-367 — el aviso dice de quién es el trabajo de arreglarlo. Esta
+        # metadata **puntúa** (`REQUIRED_GRADE_PROPS` está en la rúbrica), así
+        # que rellenar el `author` de la entrega de un estudiante no es una
+        # mejora de calidad: es regalarle nota y firmar su trabajo con otro
+        # nombre. Se midió el 2026-08-09 al intentarlo: de once mapas sin
+        # `author`, sólo tres se podían rellenar con fundamento —el jefe de
+        # referencia, que es material docente, y los dos niveles cuyo autor
+        # consta en su propio código—. En los otros ocho, el aviso ES la
+        # rúbrica funcionando.
+        pista = (" — lo rellena quien firma el mapa: `author` puntúa"
+                 if "author" in missing else "")
+        result["warnings"].append(f"Missing metadata: {missing}{pista}")
 
     # Tileset
     #

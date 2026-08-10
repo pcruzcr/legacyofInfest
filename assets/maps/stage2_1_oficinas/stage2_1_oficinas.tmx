@@ -7,6 +7,7 @@
   <property name="bloom" type="float" value="0.3"/>
   <property name="stage_id" value="stage2_1"/>
   <property name="stage_name" value="STAGE 2-1 - OFICINAS"/>
+  <property name="author" value="Saul"/>
   <property name="vignette" type="float" value="0.4"/>
  </properties>
  <tileset firstgid="1" name="tileset_oficinas" tilewidth="16" tileheight="16" tilecount="16" columns="8">

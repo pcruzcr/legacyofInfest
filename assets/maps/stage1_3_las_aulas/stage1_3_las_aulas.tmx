@@ -3,6 +3,7 @@
  <properties>
   <property name="stage_id" value="stage1_3_las_aulas"/>
   <property name="stage_name" value="STAGE 1-3 — LAS AULAS"/>
+  <property name="author" value="Yariel"/>
   <property name="time_limit" type="int" value="0"/>
   <property name="bgm_track" value="bgm_zone1_traverse"/>
   <property name="background_zone" value="aulas"/>
