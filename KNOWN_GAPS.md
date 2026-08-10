@@ -157,7 +157,7 @@ Nunca borrar entradas - marcar como resueltas.
   evitarlo renumerando; es el coste que la entrada anterior describía y que la
   decisión acepta.
 
-## [GAP-002] Collision rect depth usada para X-skip heurística
+## ~~[GAP-002] Collision rect depth usada para X-skip heurística~~ *(Resuelto)*
 
 - **File:** `src/framework/entities/player.py` (línea 582)
 - **Phase:** FIX-2
@@ -170,6 +170,13 @@ Nunca borrar entradas - marcar como resueltas.
 - **Nota:** Si en el futuro se crean stage TMX con rectos de colisión que
   mezclen piso y pared vertical en un solo objeto, esta heurística podría
   necesitar refinamiento (ej. dividir rectos por pendiente o etiqueta).
+- **Resolution:** La heurística `centery` desapareció con AUD-334: el resolutor
+  de mundo compartido (`src/framework/physics/resolucion.py:140-141`) la
+  sustituyó por el umbral de solape vertical `v_overlap <= 2`, que distingue
+  «estoy de pie encima» de «me estoy dando contra ello» sin mirar la altura
+  del recto. El caso temido —un rect fusionado piso+pared— tiene prueba propia
+  (`tests/test_rect_fusionado_suelo_y_pared.py`). El código del jugador ya no
+  contiene `centery` ni la heurística X-skip.
 
 ## ~~[GAP-003] SoundBank no conectado — sin llamadas a `play_sfx()`~~ *(Resuelto)*
 
@@ -773,7 +780,7 @@ Nunca borrar entradas - marcar como resueltas.
   hueco vale tanto como una que describe una función, siempre que falle cuando
   el hueco se cierra.
 
-## [GAP-031] El motor sabe reproducir voz y no hay un solo fichero de voz
+## ~~[GAP-031] El motor sabe reproducir voz y no hay un solo fichero de voz~~ *(Resuelto)*
 
 - **File:** `src/engine/audio/audio_manager.py`
 - **Phase:** auditoría 2026-08-03, AUD-233 → AUD-245
@@ -811,8 +818,21 @@ Nunca borrar entradas - marcar como resueltas.
   ninguna entrada en la puerta. `tests/test_apis_que_nadie_llamaba.py` fija las
   cuatro delegaciones —cinco de sus nueve pruebas fallan sin ellas— y
   `tests/test_sistemas_huerfanos.py` vigila que no aparezcan nuevos.
+- **Resolution (2026-08-09):** el contenido llegó y el llamador también, los
+  dos en el jefe de referencia. `boss_venado.py` habla al cambiar de fase:
+  `_finish_phase_transition` llama a `audio.play_voz` (boss_venado.py:732) y
+  su comentario (AUD-263) explica que `play_voz` aparta la música al 35 % por
+  su cuenta. Hay tres ficheros de voz trackeados en `assets/sfx/voz/`
+  (`sfx_voz_venado_fase1/2/muerte.wav`), generados con
+  `tools/generate_all_assets.py`, igual que todos los sonidos del proyecto.
+  `tests/test_los_tres_huerfanos_en_el_venado.py` (TestLaVozDelVenado) fija
+  las cuatro cosas: que los archivos existan, que el cambio de fase diga una
+  línea, que sin gestor de audio no reviente y que `play_voz(` tenga llamante
+  fuera de `audio_manager`. El barrido de `check_orphan_systems.py` sigue sin
+  ver el llamante porque `src/stages/` queda fuera de CONSUMIDORES por la
+  invariante 1; la anotación pasó a VERIFICADOS con esa razón.
 
-## [GAP-032] Dos mecánicas de F5 siguen escritas, documentadas «en código» y sin que nadie las invoque
+## ~~[GAP-032] Dos mecánicas de F5 siguen escritas, documentadas «en código» y sin que nadie las invoque~~ *(Resuelto)*
 
 - **File:** `src/framework/stage/level_mechanics.py`, `src/framework/ecs/bullet_swarm.py`, `src/framework/entities/boss_base.py`
 - **Phase:** auditoría 2026-08-03, AUD-243
@@ -825,21 +845,42 @@ Nunca borrar entradas - marcar como resueltas.
   |---|---|
   | Parry del jefe (`BossAttack.parriable`) | ~~0 llamantes~~ → **resuelto en AUD-243** |
   | Fase invulnerable (`BossPhase.invulnerable`) | OK: `boss_base.py:208` la consulta |
-  | **Tiempo bala** (`TiempoBala`) | **se construye y no se vuelve a tocar** |
+  | ~~Tiempo bala (`TiempoBala`)~~ | **resuelto en AUD-260**: declarado desde Tiled, `stage_scene.py:872` lo actualiza |
   | ~~Scroll forzado (`ScrollForzado`)~~ | **resuelto en AUD-249**: tipo TMX `ScrollZone` |
-  | **Bullet hell** (`EnjambreDeBalas`) | **0 usos fuera de su módulo** |
+  | ~~Bullet hell (`EnjambreDeBalas`)~~ | **resuelto en AUD-263**: `boss_venado.py:121`, abanico en la fase 2 |
   | ~~Escalado de fase (`BossPhase.escala`)~~ | **resuelto en AUD-257** |
   | ~~Teletransporte (`BossBase.teletransportar`)~~ | **resuelto en AUD-257** |
 
-  **Actualización (2026-08-04, AUD-257/AUD-258).** De las cinco quedan **dos**:
-  `TiempoBala` y `EnjambreDeBalas`. El escalado de fase se aplica de verdad
+**Actualización (2026-08-04, AUD-257/AUD-258).** De las cinco quedan **dos**:
+`TiempoBala` y `EnjambreDeBalas`. El escalado de fase se aplica de verdad
   —`_aplicar_escala_de_fase()` redimensiona la caja anclada por los pies y el
   sprite la sigue— y el teletransporte tiene llamante: los dos los declara
   `boss_venado`, que es el jefe de referencia, para que el patrón esté en el
   material que los estudiantes copian y no sólo en la clase base. `ScrollZone`,
   además, ya está **colocado**: sala 10 del laboratorio, acotada con
-  `parar_en_x` (AUD-258); hasta entonces la mecánica existía y era inalcanzable
-  jugando.
+`parar_en_x` (AUD-258); hasta entonces la mecánica existía y era inalcanzable
+jugando.
+
+**Actualización (2026-08-09, AUD-260/AUD-263).** Cerraron las dos últimas, con
+el patrón que esta entrada ya recomendaba —tipo de mapa nuevo para la zona,
+una línea en el jefe de referencia para el arma—:
+
+- **`TiempoBala`** (AUD-260, commit 803cbd6): se declara desde Tiled como
+  propiedad del mapa y `stage_scene.py:396` lo construye con ella;
+  `stage_scene.py:872-873` lo actualiza cuando `reserva_maxima > 0.0`. La tecla
+  y el interruptor viven en `action_map.py`, documentados ahí como AUD-260.
+  Aditivo como se pedía: un mapa sin la propiedad tiene reserva 0 y la rama no
+  entra, así que ninguna entrega cambia.
+- **`EnjambreDeBalas`** (AUD-263, commit 9946d9f): `boss_venado.py:121` lo
+  construye (`self.esporas`) y la fase 2 abre un abanico de esporas
+  (`_soltar_abanico_de_esporas`), con su coste medido en el docstring del test:
+  2.000 balas en 12,94 ms → 0,072 ms.
+
+`tests/test_los_tres_huerfanos_en_el_venado.py` fija las siete cosas —que el
+jefe tenga el enjambre, que la fase 2 dispare, que las esporas dañen, que
+`EnjambreDeBalas` se use fuera de su módulo, que `skill_parry` se suelte, que
+la forma antigua de `skill_drop` siga valiendo y que haya voz con llamante—,
+así que la resurrección de cualquiera de estos huérfanos deja la suite en rojo.
 
   El caso más claro es `ScrollForzado`. `StageScene.__init__` hace
   `self._scroll_forzado = ScrollForzado()` en la línea 167 y **ese es su único
@@ -868,7 +909,7 @@ Nunca borrar entradas - marcar como resueltas.
      el sistema que ya hace ese trabajo**. Un tipo que nadie declara no puede
      romper ningún mapa entregado, así que la invariante 2 no lo bloquea.
 
-  2. **`TiempoBala` no encaja en ese patrón, y conviene saberlo antes de
+  ~~2. **`TiempoBala` no encaja en ese patrón, y conviene saberlo antes de
      empezar.** Su firma es `update(dt_real, quiere, reloj)`: ese `quiere` es
      entrada del jugador, así que **es una habilidad, no una zona**. Necesita
      cuatro cosas y no una: una `Action` nueva en `action_map`, su tecla en el
@@ -877,16 +918,25 @@ Nunca borrar entradas - marcar como resueltas.
      de nivel entero y no posicional— y una barra en el HUD, que para eso
      `TiempoBala.fraccion` devuelve 0→1 y hoy no la lee nadie. Encenderla
      siempre sería un cambio de comportamiento en las 26 entregas; por nivel,
-     es aditiva.
-  3. **`EnjambreDeBalas`** necesita un jefe que lo use; hoy ninguno de los
-     cuatro dispara patrones.
-  4. **`teletransportar` y `escala_de_fase`** necesitan un jefe que los declare
+     es aditiva.~~ — **resuelto en AUD-260**: las cuatro piezas llegaron —mapa,
+     `action_map`, interruptor por nivel y actualización en `stage_scene.py:872`.
+  ~~3. **`EnjambreDeBalas`** necesita un jefe que lo use; hoy ninguno de los
+     cuatro dispara patrones.~~ — **resuelto en AUD-263**: `boss_venado.py:121`
+     y el abanico de la fase 2.
+  ~~4. **`teletransportar` y `escala_de_fase`** necesitan un jefe que los declare
      en su transición de fase. Es el mismo patrón que AUD-238 resolvió con
      `skill_drop`: una línea en la clase del jefe y un ejemplo en el material
      que los estudiantes copian. `escala_de_fase` además **no la aplica nadie**:
-     devuelve el multiplicador y ningún sitio escala el sprite con él.
+     devuelve el multiplicador y ningún sitio escala el sprite con él.~~ —
+     **resuelto en AUD-257**: `boss_venado` declara ambos.
 
-## [GAP-033] El módulo del jugador está mal defendido: la mutación deja 17 supervivientes
+- **Resolution (2026-08-09):** las siete filas de la tabla salieron de la
+  columna «sin llamantes»; ninguna mecánica de F5 queda sin invocar. La
+  medida que lo atestigua es `tests/test_los_tres_huerfanos_en_el_venado.py`
+  (AUD-263), que comprueba usos reales fuera de cada módulo, y
+  `scripts/check_orphan_systems.py --ci` sigue en verde.
+
+## ~~[GAP-033] El módulo del jugador está mal defendido~~ *(Resuelto)*
 
 - **File:** `src/framework/entities/player.py`
 - **Phase:** auditoría 2026-08-06, AUD-308/AUD-309 (iteración 14)
@@ -913,4 +963,115 @@ Nunca borrar entradas - marcar como resueltas.
   El guiador del propio script: cada superviviente es una pregunta. Las de la
   primera fila necesitan prueba; las de la segunda se pueden dejar con la
   respuesta «da igual».
-- **Resolution:** pendiente.
+- **Resolution:** resuelto 2026-08-08 (auditoría iteración 15). Medición final con
+  las pruebas nuevas, unión de los dos suites del jugador
+  (`tests/test_player_physics.py` + `tests/test_player_damage.py`): **44 % de
+  defensa** (11 de 25 mutantes muertos; 28 % con la física y 20 % con el daño
+  por separado — antes de esta iteración era 16 %/8 %). De los 14
+  supervivientes restantes, **ninguno es del grupo «vale la pena testear»**:
+
+  - 518 (`and` → `or` de daño SHORT/LONG) y 527 (`*` → `/` de `current_attack_damage`)
+    — **muertos** con dificultad HARD (`outgoing 0.75`) y bonus de daño
+    (`_bonus_damage`), los únicos regímenes donde la multiplicación es
+    distinguible de la división.
+  - 430 (`Add → Sub` en `damage_multiplier`) — **muerto** con los mismos bonus,
+    y 651 (`Sub → Add` del daño recibido) — **muerto** por las pruebas de vida y
+    daño existentes (AUD-308/309 y las nuevas).
+  - `draw()` completo (cámara `Sub → Add`, ancho 20, color respaldo, centrado
+    `// 2`, parpadeo de invencibilidad And → Or) — **muerto** con 6 pruebas que
+    pintan píxeles en ambas ramas (sprite y rectángulo).
+  - SFX de aterrizaje (`aterrizo_en == "suelo"` → `!=`) — **muerto** en
+    `test_aterrizar_en_suelo_emite_sfx_land`.
+  - `ledge grab` — ya no vive en `player.py`: AUD-334 lo movió a
+    `resolucion.py` (`_can_ledge_grab = eje_x.repisa_libre` es una asignación,
+    no un operador mutadalizable).
+- Supervivientes restantes, todos benignos por la clasificación de arriba:
+    líneas 84/93/105/118/127 (frames y duraciones de animación), 203 (ruteo de
+    `__setattr__`/`__getattr__`), 283 (`combo_active` inicial), 575 (guard de
+    estamina), 609 (bit `_hitbox_consumed` redundante: `consume_hitbox()`
+    también vacía `_active_hitbox` en la misma línea, la mutación no es
+    observable), 670 (`force=True` del DYING), 869 (periodo de parpadeo),
+    892 (fps de animación por defecto) y 966 (multiplicador de velocidad
+    cenital). La 483 (hurtbox agachado 20×18) ya la defiende aparte
+    `tests/test_player_hurtbox.py`, que no entraba en la unión medida.
+  Prueba: `mutation_check` con cada suite; unión de muertes documentada arriba.
+
+## [GAP-034] La definición de «verde» del CI depende de una versión que nadie fija
+
+- **File:** `pyproject.toml` (`[project.optional-dependencies] dev`, línea del
+  linter), `.github/workflows/ci.yml` (paso *Lint with ruff*)
+- **Phase:** auditoría 2026-08-09, AUD-353
+- **Reason:** el proyecto declara `ruff>=0.6` sin tope y el CI instala con
+  `pip install -e ".[dev]"`, así que el linter que decide si una rama entra es
+  **el que hubiera publicado río arriba esa mañana**. No es teórico: ya pasó.
+  `AUD-304` añadió un `# noqa: LOG004` legítimo; ruff movió LOG004 a *preview*
+  en una versión posterior; con la regla apagada esa directiva pasó a ser un
+  `RUF100` («noqa inútil») y **el gate de lint quedó en rojo en `dev` sin que
+  cambiara una sola línea del fichero afectado**. Medido con ruff 0.15.20 sobre
+  el árbol en el commit 3902137, cuyo mensaje afirma «ruff limpio» — y lo era,
+  con la versión de aquel día.
+
+  Las tres pruebas que decían proteger el gate (`test_ruff_sigue_en_el_ci`,
+  `test_ruff_no_se_aplica_a_las_entregas`, `test_los_validadores_siguen_en_el_ci`)
+  sólo comprobaban que la **orden siguiera escrita** en `ci.yml`. Ninguna la
+  ejecutaba, que es la misma familia de defecto que AUD-124 encontró con mypy:
+  una herramienta declarada y no ejecutada es documentación, no verificación.
+
+  **Mitigado, no cerrado.** AUD-353 quita la directiva caducada y añade
+  `test_ruff_esta_limpio_en_el_alcance_del_ci`, que **ejecuta** ruff sobre el
+  alcance leído de `ci.yml` (leído, no copiado: una lista propia se
+  desincroniza). Con eso la deriva se detecta en la máquina de quien programa
+  y en la primera pasada de CI, en vez de a las semanas. Lo que queda abierto
+  es la causa: la versión sigue sin fijar, así que la deriva se **detecta**
+  pronto pero se sigue **importando** sin avisar.
+
+  No se pone un tope (`ruff<0.16`) por decisión: congelaría también las reglas
+  nuevas que este proyecto ha usado para encontrar defectos reales (B023, DTZ,
+  LOG), y un tope que nadie sube envejece hasta ser un pin. La salida limpia es
+  fijar la versión exacta en un fichero de herramientas y subirla a mano, con
+  su commit, para que actualizar el linter sea un cambio revisable como
+  cualquier otro. Eso toca `pyproject.toml`, `requirements.txt` y
+  `scripts/check_dependency_sync.py`, que compara los dos: es una decisión de
+  política de dependencias del dueño del repositorio, no un arreglo de paso.
+- **Coste de no cerrarlo:** una versión de ruff con reglas nuevas o reglas
+  movidas puede poner el CI en rojo en cualquier rama, en cualquier momento,
+  sin relación con el cambio que se esté revisando. El riesgo real no es el
+  rojo: es que un equipo que ve rojos que no ha causado deja de mirar el CI
+  (el razonamiento de AUD-106, aplicado a la versión en vez de al alcance).
+
+## [GAP-035] El detector de huérfanos no ve una función a la que sólo llama su propio `__init__.py`
+
+- **File:** `scripts/check_orphan_systems.py` (`huerfanos()`, `referencias()`)
+- **Phase:** auditoría 2026-08-09, AUD-355
+- **Reason:** el detector exonera un símbolo en cuanto lo referencia **un
+  fichero de producción distinto del que lo define**. Un `from .resolucion
+  import resolver_movimiento` en el `__init__.py` del paquete es un fichero
+  distinto, así que **toda la superficie pública re-exportada por un paquete
+  queda automáticamente exonerada**, la llame el juego o no.
+
+  Es lo que dejó pasar AUD-355: la verja de datos hostiles de AUD-344 se
+  escribió dentro de `resolver_movimiento`, que ninguna entidad llama —el
+  jugador compone los pasos a mano—, y el detector la dio por conectada
+  porque `src/framework/physics/__init__.py` la re-exporta. Una protección
+  con pruebas en verde que no protegía nada, y el guardián que existe
+  precisamente para eso no dijo ni una palabra.
+
+- **Por qué no se corrige aquí, medido:** el arreglo evidente —no contar los
+  `__init__.py` como consumidores— se probó antes de escribir esta entrada.
+  Resultado: **212 huérfanos → 224**, doce nuevos, y once son **falsos
+  positivos**: `WalkingState`, `LedgeGrabState`, `AerialSlamState` y compañía
+  son estados vivos que sus módulos hermanos instancian con un import diferido
+  dentro del propio fichero (`grounded.py:68`, `wall.py:30`,
+  `airborne.py:211`), y `Contacto` es el tipo de retorno de medio módulo. La
+  única captura real de las doce es `resolver_movimiento`.
+
+  Once falsos por uno verdadero convierte el informe en ruido, y un guardián
+  ruidoso se desactiva —el mismo razonamiento de AUD-106 con el lint de las
+  entregas—. La regla correcta no es «ignorar `__init__.py`» sino «un import
+  o un `__all__` no es una llamada»: distinguir referencia de invocación
+  exige mirar `ast.Call` y la cadena de atributos, no el nombre suelto, y eso
+  es reescribir el analizador, no parchear una condición.
+- **Coste de no cerrarlo:** cualquier función pública re-exportada por un
+  paquete puede quedarse sin llamantes —o nacer sin ellos, como pasó aquí— sin
+  que ningún gate lo note. Afecta a los `__init__.py` de `framework/physics`,
+  `framework/entities/states`, `engine/render` y `framework/academic`.

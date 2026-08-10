@@ -75,6 +75,7 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── app.py                     # App class: display init, main loop, scene pump
 │   │   │   ├── settings.py                # All global constants
 │   │   │   ├── clock.py                   # DeltaClock: delta time, FPS cap, time scale
+│   │   │   ├── estadisticas.py            # AUD-346: cuantiles P50/P95/P99 del fotograma
 │   │   │   ├── event_bus.py               # EventBus: pub/sub event dispatch
 │   │   │   ├── events.py                  # Event name constants (Events class)
 │   │   │   ├── game_context.py            # GameContext: DI container for all subsystems
@@ -168,7 +169,6 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── music_clock.py            # RelojMusical: pulsos, compases y latencia (F6)
 │   │   │   ├── mixer_buses.py           # Mezclador: buses y ducking (AUD-144)
 │   │   │   └── polifonia.py             # AUD-280: cuántas veces suena a la vez el mismo efecto
-│   │   │
 │   │   ├── render/
 │   │   │   ├── __init__.py
 │   │   │   ├── gl_pipeline.py             # GLRenderer, GLRenderConfig: ModernGL pipeline
@@ -237,6 +237,11 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── perfil.py                   #   PhysicsProfile: física por modo de juego
 │   │   │   └── resolucion.py               #   AUD-334: resolutor de mundo (EstadoDeMovimiento→Contacto)
 │   │   │
+│   │   ├── world/                          # AUD-358 — el mundo como simulación, no como tres sistemas sueltos
+│   │   │   ├── __init__.py
+│   │   │   ├── environment.py               #   EnvironmentState: la foto inmutable del ambiente del fotograma
+│   │   │   └── simulation.py                #   AUD-358: WorldSimulation — reloj, calendario, estación, astronomía y clima → un estado
+│   │   │
 │   │   ├── stage/
 │   │   │   ├── __init__.py
 │   │   │   ├── profundidad.py             # AUD-277: escala 2.5D por altura (apagada por defecto)
@@ -256,7 +261,7 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── hazard_system.py           # HazardSystem: damage zones, death pits
 │   │   │   ├── progression_system.py      # ProgressionSystem: stage completion, triggers
 │   │   │   ├── drawing_system.py          # DrawingSystem: layered rendering pipeline
-gizmos.py                  # AUD-352: mixin GizmosDeDepuracion: cajas, flechas y conos de F1
+│   │   │   ├── gizmos.py                  # AUD-352: mixin GizmosDeDepuracion: cajas, flechas y conos de F1
 │   │   │   ├── cutscene_system.py         # CutsceneSystem: scripted cutscenes
 │   │   │   ├── cutscene_director.py       # CutsceneDirector: escenas declaradas en TMX (AUD-136)
 │   │   │   ├── cutscene_guion.py          # analizar_guion: texto de guion a acciones (AUD-136)
@@ -275,7 +280,8 @@ gizmos.py                  # AUD-352: mixin GizmosDeDepuracion: cajas, flechas y
 │   │   │
 │   │   ├── audio/
 │   │   │   ├── __init__.py
-│   │   │   └── dynamic_music.py           # DynamicMusic: cross-fade calm <-> combat
+│   │   │   ├── dynamic_music.py           # DynamicMusic: cross-fade calm <-> combat
+│   │   │   └── menu_sfx.py                # AUD-345: los menús también suenan
 │   │   │
 │   │   ├── academic/
 │   │   │   ├── __init__.py
@@ -299,6 +305,8 @@ gizmos.py                  # AUD-352: mixin GizmosDeDepuracion: cajas, flechas y
 │   │   │       ├── fantasma.py            #   silueta de la mejor carrera
 │   │   │       ├── actualizaciones.py     #   AUD-351: la familia _update_* — audio,
 │   │   │       │                         #   HUD, efectos, luz, logros, minimapa y estelas
+│   │   │       ├── dibujo.py              #   AUD-343: draw partido en mundo/UI
+│   │   │       │                          #   y el mapa de luz que viaja a la GPU
 │   │   │       ├── rush.py                #   AUD-261: conduce el Boss Rush —
 │   │   │       │                          #   golpes, tiempo y arrastre de vida
 │   │   │       └── dibujo_mecanicas.py    #   pinta lo del ECS: bloques rítmicos,
