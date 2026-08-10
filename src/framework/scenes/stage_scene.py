@@ -30,12 +30,12 @@ from src.framework.entities.boss_base import BossBase
 from src.framework.entities.enemy_base import EnemyBase
 from src.framework.entities.player import Player
 from src.framework.entities.squad_brain import SquadBrain
-from src.framework.scenes.stage_parts import dibujo_mecanicas
 from src.framework.scenes.stage_parts.actualizaciones import ActualizacionesDeEscenario
 from src.framework.scenes.stage_parts.ambiente import MezclaDeAmbiente
 from src.framework.scenes.stage_parts.arco import ArcoDelJugador
 from src.framework.scenes.stage_parts.cinematicas import CinematicasDeEscenario
 from src.framework.scenes.stage_parts.diagnostico import DiagnosticoDeEscenario
+from src.framework.scenes.stage_parts.dibujo import DibujoDeEscenario
 from src.framework.scenes.stage_parts.fantasma import FantasmaDeCarrera
 from src.framework.scenes.stage_parts.mundo_ecs import MundoDelEscenario
 from src.framework.scenes.stage_parts.rush import ConduccionDelBossRush
@@ -74,7 +74,7 @@ if TYPE_CHECKING:
 
 class StageScene(MezclaDeAmbiente, SenalesDeEscenario, SonidoDeEscenario,
                  DiagnosticoDeEscenario, CinematicasDeEscenario,
-                 ArcoDelJugador, MundoDelEscenario, ActualizacionesDeEscenario,
+                 ArcoDelJugador, MundoDelEscenario, ActualizacionesDeEscenario, DibujoDeEscenario,
                  FantasmaDeCarrera, ConduccionDelBossRush, BaseScene):
     """El escenario jugable: carga un TMX y lo hace jugar.
 
@@ -888,6 +888,15 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, SonidoDeEscenario,
             # cambiarla para simular un estado es el atajo que después nadie
             # sabe deshacer.
             cerradas = self._interactables.rects_solidos()
+            # AUD-349 — los sólidos con que los bloques empujan y caen se
+            # componían DOS veces por fotograma (empujar y caer, cada uno con
+            # `stage.collision_rects + cerradas`). En stage 4-1, cuyo mapa son
+            # miles de rectángulos, eso son dos copias O(n) por frame de pura
+            # churn. Se compone una vez y se comparte la misma lista: `caer`
+            # y `empujar` sólo la leen y mutan los rectángulos que contiene,
+            # nunca la estructura.
+            con_cerradas = (stage.collision_rects + cerradas
+                            if cerradas else stage.collision_rects)
             # AUD-140: los bloques entran en la lista de sólidos por el mismo
             # camino que las puertas cerradas, sumando y sin mutar la lista
             # del cargador.
@@ -906,8 +915,8 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, SonidoDeEscenario,
                         direccion = -1
                 if player is not None and player.is_grounded:
                     self._bloques.empujar(player.rect, direccion, dt,
-                                          stage.collision_rects + cerradas)
-                self._bloques.caer(dt, stage.collision_rects + cerradas)
+                                          con_cerradas)
+                self._bloques.caer(dt, con_cerradas)
 
             # F5.3–F5.6 — las mecánicas nuevas corren ANTES que el jugador.
             #
@@ -1205,88 +1214,3 @@ class StageScene(MezclaDeAmbiente, SenalesDeEscenario, SonidoDeEscenario,
         self.context.event_bus.emit(Events.SFX_UI_GAME_OVER)
         from src.engine.scenes.game_over_scene import GameOverScene
         self.context.scene_manager.push(GameOverScene(self.context, self))
-
-    def draw(self, surface: pygame.Surface) -> None:
-        if self._stage_data is None or self._player is None:
-            return
-        from src.framework.stage.drawing_system import DrawContext
-        ctx = DrawContext(
-            surface=surface,
-            stage=self._stage_data,
-            player=self._player,
-            checkpoints=self._checkpoints,
-            camera=self._camera,
-            hud=self._hud,
-            msg_box=self._msg_box,
-            banner=self._banner,
-            paused=self._paused,
-            debug=self._debug,
-            pause_selected=self._pause_selected,
-            pause_options=self._pause_options,
-            particle_system=self._particle_system,
-            damage_numbers=self._damage_numbers,
-            ambient_particles=self._ambient_particles,
-            weather_system=self._weather,
-            trail_system=self._trail_system,
-            enemy_trail_system=self._enemy_trail_system,
-            interactables=self._interactables,
-            tutorial_overlay=self._tutorial,
-            learning_overlay=self._learning,
-            dialogue_system=self._dialogue,
-            fondo_del_escenario=self.dibujar_fondo,
-            # AUD-285 — para los conos de visión de F1. Los conos son
-            # componentes del ECS, no entidades, y sin el mundo no hay de dónde
-            # sacarlos.
-            mundo=self._mundo,
-        )
-        self._drawing.draw(ctx)
-        # AUD-111 — la niebla y el agua, que llevaban meses escritas sin que
-        # nadie las dibujara.
-        #
-        # Van **entre** el mundo y la iluminación, y ése es el único sitio
-        # correcto: después de la luz, la niebla taparía los focos que definen
-        # lo que se ve; antes del mundo, no taparía nada. Las dos se activan
-        # desde el TMX (`fog_of_war`, `water_effect`), así que un escenario que
-        # no las pide no paga nada por ellas.
-        if self._niebla is not None:
-            self._niebla.reveal(self._player.rect.centerx, self._player.rect.centery) \
-                if self._player is not None else None
-            self._niebla.draw(surface, self._camera.offset)
-        if self._agua_vfx is not None:
-            self._publicar_o_dibujar_el_agua(surface)
-        self._publicar_los_rayos_de_luz()
-        self._lighting.render(surface, self._camera.offset)
-        self._post_processing.apply(surface)
-        # AUD-194 — la previsualización del tiro va DESPUÉS de la
-        # iluminación y el post-procesado. Puesta antes, la luz la
-        # apagaba: medido, cero píxeles dibujados en stage0, que tiene
-        # doce focos. Es una ayuda de interfaz, no un objeto del mundo,
-        # así que no debe recibir la luz del escenario.
-        self._dibujar_trayectoria_del_arco(surface)
-        # AUD-090: la interfaz va DESPUÉS de la luz y del post-procesado. Antes
-        # se pintaba dentro de `_drawing.draw` y el ambiente la multiplicaba:
-        # medido, el HUD perdía el 58 % de su brillo y el indicador de combo
-        # desaparecía por completo.
-        # AUD-136 — las escenas se dibujan sobre el mundo y bajo la interfaz:
-        # las bandas cinematográficas tienen que tapar el juego, no el HUD.
-        if self._bloques is not None:
-            self._dibujar_bloques(surface)
-            # AUD-242 — lo del ECS tampoco lo pintaba nadie. Ver `stage_parts/`.
-            dibujo_mecanicas.dibujar_mecanicas_ecs(
-                surface, getattr(self, "_mundo", None), self._camera.offset)
-        self._dibujar_fantasma(surface)
-        if self._cutscenes is not None:
-            self._cutscenes.draw(surface)
-        self._drawing.draw_ui(ctx)
-        self._minimap.draw(surface)
-        # Captions render after post-processing so the colourblind filter does
-        # not wash out text that exists precisely for accessibility (AUD-036).
-        self._subtitles.draw(surface)
-        self._achievements.draw_notifications(surface)
-        get_inventory().draw_notifications(surface)
-        # AUD-296 — lo último, encima de todo. Es el punto que el bus de
-        # eventos no podía dar: nadie publica un evento por fotograma con la
-        # superficie dentro, así que un overlay propio obligaba a editar
-        # `DrawingSystem`.
-        plugins.get_gestor().disparar(
-            "escenario_dibujado", superficie=surface, escena=self)
