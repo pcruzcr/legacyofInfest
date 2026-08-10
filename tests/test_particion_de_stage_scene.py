@@ -32,9 +32,18 @@ PARTES = {
     "ambiente": (
         "MezclaDeAmbiente",
         ("_setup_lighting", "_setup_post_processing", "_setup_ambient_particles",
-         "_setup_season", "_setup_day_night", "_aplicar_hora", "_clima_efectivo",
-         "_configurar_vfx_opcionales", "_publicar_los_rayos_de_luz",
-         "_capture_enemy_trails"),
+         "_clima_efectivo", "_configurar_vfx_opcionales",
+         "_publicar_los_rayos_de_luz", "_capture_enemy_trails"),
+    ),
+    # AUD-362 — el ciclo día/noche y la estación salen de `ambiente`. Aquel
+    # módulo resolvía la precedencia del TMX (mapa > zona > motor) y además
+    # componía y aplicaba la luz de la hora; lo segundo dejó de ser trabajo
+    # suyo cuando `WorldSimulation` pasó a componerlo, y el fichero había
+    # llegado a su presupuesto.
+    "simulacion": (
+        "SimulacionDeEscenario",
+        ("_setup_season", "_setup_day_night", "_aplicar_hora",
+         "_aplicar_agarre"),
     ),
     "senales": (
         "SenalesDeEscenario",

@@ -294,7 +294,8 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── stage_scene.py             # StageScene: main gameplay scene
 │   │   │   └── stage_parts/               # AUD-152: mixins de lectura de StageScene
 │   │   │       ├── __init__.py            #   por qué son mixins y no colaboradores
-│   │   │       ├── ambiente.py            #   luz, bloom, viñeta, estación, hora
+│   │   │       ├── ambiente.py            #   luz, bloom, viñeta y partículas: la precedencia del TMX
+│   │   │       ├── simulacion.py          #   AUD-362: monta WorldSimulation y consume su EnvironmentState
 │   │   │       ├── senales.py             #   suscripciones al bus: VFX, inventario y warp
 │   │   │       ├── sonido.py              #   AUD-290: la mitad sonora — 38 eventos y su tabla
 │   │   │       ├── diagnostico.py         #   AUD-290: lo que enseña F11 y qué pasa si una

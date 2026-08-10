@@ -1,0 +1,217 @@
+"""La mitad de `WorldSimulation` que vive en la escena — AUD-362.
+
+Por qué es una parte propia
+===========================
+`ambiente.py` reunía dos trabajos distintos que se parecían: **resolver la
+precedencia** de las propiedades del TMX (mapa > zona > motor) y **componer y
+aplicar** el ciclo día/noche con la estación. El segundo dejó de ser trabajo
+de la escena cuando `WorldSimulation` (AUD-358) pasó a componerlo: aquí sólo
+queda montar la simulación desde el mapa y consumir su estado.
+
+Separarlos no es cosmético. `_aplicar_hora` componía la cuenta *además* de
+aplicarla, y eso es lo que impedía que nadie más pudiera preguntar por el
+ambiente: para saber si llovía había que ir a `_weather._climate`, un privado
+de otra parte. Ahora la escena publica `self.ambiente` —un `EnvironmentState`
+inmutable— y cualquiera lo lee.
+
+Lo que este módulo aporta al escenario
+--------------------------------------
+* `_setup_season` / `_setup_day_night` — el mapa **configura**: hora, estación
+  y clima. La simulación calcula el resto.
+* `_aplicar_hora` — consume el estado: luz ambiente, bloom, tinte y agarre.
+* `_aplicar_agarre` — el hilo que convierte el ambiente en jugabilidad:
+  lluvia → humedad → suelo mojado → frenado → control.
+* `_estacion` — una **vista** de la estación que lleva la simulación, no una
+  segunda copia del mismo hecho.
+"""
+from __future__ import annotations
+
+from src.framework.world import EnvironmentState
+
+
+class SimulacionDeEscenario:
+    """El escenario monta un mundo y consume su ambiente.
+
+    Espera de la escena: `_stage_data`, `_lighting`, `_post_processing`,
+    `_player` (puede no existir aún) y `_clima_efectivo` (de `MezclaDeAmbiente`).
+    """
+
+    def _setup_season(self) -> None:
+        """Resuelve la estación del escenario. Ver `framework.stage.seasons`.
+
+        Asigna por la **propiedad**, no por el atributo de respaldo: el
+        `setter` es quien avisa a la simulación. La primera versión escribía
+        `_estacion_nombre` directamente y las pruebas de estaciones se
+        quedaron en rojo — cambiar la estación después de montar el escenario
+        no llegaba al dibujo, que es exactamente el defecto que este cambio
+        viene a cerrar. Que el camino corto no funcione es la propiedad
+        buena: sólo hay una manera de cambiar la estación.
+        """
+        self._estacion = str(getattr(self._stage_data, "season", "") or "")
+
+    # AUD-362 — `_estacion` pasa a ser una **vista** de la estación que lleva
+    # la simulación, no un objeto aparte. Antes eran dos: la escena guardaba
+    # su `Estacion` y componía la luz con ella, y ahora quien compone es
+    # `WorldSimulation`. Dejar las dos habría sido el defecto de siempre —dos
+    # sistemas con su copia del mismo hecho— y la primera vez que alguien
+    # cambiara una, la otra seguiría mandando en el dibujo.
+    #
+    # Se conserva como atributo (lectura y escritura) porque lo usan
+    # `_setup_ambient_particles`, `_clima_efectivo`, las pruebas y
+    # posiblemente alguna entrega: asignarle una estación sigue funcionando y
+    # ahora, además, llega hasta la luz.
+
+    @property
+    def _estacion(self):  # type: ignore[no-untyped-def]
+        from src.framework.stage.seasons import estacion
+
+        return estacion(getattr(self, "_estacion_nombre", ""))
+
+    @_estacion.setter
+    def _estacion(self, valor) -> None:  # type: ignore[no-untyped-def]
+        from src.framework.stage.seasons import ESTACIONES, POR_DEFECTO, es_valida
+
+        if isinstance(valor, str):
+            # Un nombre mal escrito en Tiled produce un aviso y un escenario
+            # jugable, no un error de carga: la misma decisión que toma
+            # `seasons.estacion()` y por el mismo motivo — el estudiante que
+            # escribe `invierno` necesita ver su nivel para darse cuenta.
+            nombre = valor.strip().lower()
+            self._estacion_nombre = nombre if es_valida(nombre) else POR_DEFECTO
+        else:
+            # Un `Estacion` no sabe cómo se llama, así que se busca. Son
+            # cuatro entradas y la asignación ocurre al montar la escena o en
+            # una prueba, nunca por fotograma.
+            self._estacion_nombre = next(
+                (n for n, e in ESTACIONES.items() if e == valor), POR_DEFECTO)
+        simulacion = getattr(self, "_simulacion", None)
+        if simulacion is not None:
+            simulacion.set_estacion(self._estacion_nombre)
+
+    def _setup_day_night(self) -> None:
+        """Arranca el reloj del escenario a partir del TMX.
+
+        F2.1: sin `day_length` el reloj queda congelado en su hora inicial y el
+        escenario se comporta exactamente como antes de esta fase. Es
+        deliberado: un prólogo de tres minutos no gana nada con un ciclo, y
+        obligar a todos los mapas a tener uno sería imponer una decisión de
+        diseño desde el motor.
+        """
+        from src.framework.world import WorldSimulation
+
+        hora = getattr(self._stage_data, "start_hour", None)
+        if hora is None:
+            hora = self.HORA_POR_DEFECTO
+        # AUD-362 — el escenario ya no habla con tres sistemas ambientales por
+        # separado: monta **una** simulación y luego consume su estado. El
+        # mapa configura (hora, estación, clima) y ella calcula el resto.
+        self._simulacion = WorldSimulation(
+            hora_inicial=hora,
+            duracion_dia=getattr(self._stage_data, "day_length", 0.0) or 0.0,
+            estacion=getattr(self, "_estacion_nombre", "") or "summer",
+            clima=self._clima_efectivo(),
+        )
+        # `_reloj` se conserva como alias del reloj de la simulación: lo leen
+        # las pruebas, `actualizaciones.py` y cualquier entrega que consultara
+        # la hora. Es el mismo objeto, así que no hay dos relojes que
+        # desincronizar — que es justamente lo que este cambio viene a evitar.
+        self._reloj = self._simulacion.reloj
+        # Se guardan los valores base del escenario porque el ciclo los
+        # **modula**: si se sobrescribieran, cada fotograma partiría del
+        # resultado del anterior y la luz se iría a cero en unos segundos.
+        self._ambiente_base = self._lighting.ambient_brightness
+        self._bloom_base_escenario = self._post_processing._bloom_base
+        self._aplicar_hora()
+
+    #: Hora que se usa cuando el mapa no declara `start_hour`. Mediodía, es
+    #: decir, el factor de ambiente 1.0: un escenario que no pide ciclo se ve
+    #: exactamente con el `ambient_light` que escribió su autor.
+    HORA_POR_DEFECTO = 12.0
+
+    #: Suelo de luz ambiente aplicada. Por debajo de esto el nivel deja de ser
+    #: jugable.
+    #:
+    #: F2.1: el ciclo **multiplica** el ambiente del escenario, así que los dos
+    #: factores se componen. Medido en Stage 0, que declara `ambient_light`
+    #: 0,70: a medianoche el factor 0,35 daba un ambiente aplicado de 0,245 y
+    #: un brillo de pantalla de 12,7 sobre 255. El jugador no ve los enemigos.
+    #: Una noche realista que impide jugar es un defecto, no una decisión
+    #: artística: la hora se comunica con el color, que sí cambia por completo.
+    MIN_AMBIENTE = 0.45
+
+    #: Cuánto sube el suelo de luz con la luna llena (AUD-362). 0,10 sobre
+    #: 0,45 es una noche clara frente a una cerrada: se nota al jugar sin
+    #: convertir la noche en día, que es lo que haría 0,30.
+    LUNA_LLENA_SUMA = 0.10
+
+    def _aplicar_hora(self) -> None:
+        """Aplica el ambiente del fotograma: luz, bloom, tinte y agarre.
+
+        AUD-362 — antes esto **componía** la cuenta (hora × estación) además de
+        aplicarla, y hacía lo mismo que `WorldSimulation` hace ahora. Componer
+        y aplicar en el mismo sitio es lo que impedía que nadie más pudiera
+        preguntar por el ambiente: para saber si llovía había que ir a un
+        privado de la escena.
+
+        Ahora la escena **consume** un `EnvironmentState`. Los números son
+        exactamente los de antes —lo fija
+        `test_la_luz_compuesta_es_la_misma_que_calcula_la_escena_hoy` sobre 7
+        horas × 4 estaciones—, así que los dieciséis escenarios existentes se
+        ven igual.
+
+        Se conserva el nombre porque lo llaman `actualizaciones.py`, las
+        pruebas y posiblemente alguna entrega.
+        """
+        estado = self._simulacion.estado()
+        # AUD-362 — el suelo de luz de la noche sube con la luna. Es la
+        # primera consecuencia jugable de la astronomía: una noche de luna
+        # llena se ve y una de luna nueva da miedo, sin que el escenario
+        # tenga que saber qué día es ni tocar una propiedad del mapa.
+        # `luz_lunar` ya vale 0 de día, así que esto no toca el mediodía.
+        suelo = self.MIN_AMBIENTE
+        if estado.es_de_noche:
+            suelo += self.LUNA_LLENA_SUMA * estado.luz_lunar
+        #: El ambiente de este fotograma, público. Ésta es la API que faltaba:
+        #: un enemigo que quiera comportarse distinto de noche, o un efecto
+        #: que quiera saber si llueve, leen esto y no un privado ajeno.
+        self.ambiente = estado
+
+        self._lighting.ambient_brightness = max(
+            suelo, self._ambiente_base * estado.factor_ambiente)
+        self._post_processing.set_base_bloom(
+            self._bloom_base_escenario + estado.bloom_extra)
+        # El tinte de la hora ya viene compuesto con el de la estación: los dos
+        # son multiplicadores y la simulación los compone sin que ninguno
+        # tenga que conocer al otro. A mediodía en verano sale casi blanco; de
+        # madrugada en invierno, azul doble.
+        self._lighting.ambient_color = estado.color_ambiente
+        self._aplicar_agarre(estado)
+
+    #: El ambiente antes de que exista simulación: mediodía despejado, que
+    #: es la identidad. Una escena preguntada antes de `on_enter` responde
+    #: un estado válido en vez de reventar, y ningún consumidor necesita
+    #: una rama `if ambiente is None` — la rama que nunca se prueba.
+    ambiente = EnvironmentState.neutro()
+
+    def _aplicar_agarre(self, estado: EnvironmentState) -> None:
+        """El suelo mojado hace derrapar al jugador — AUD-362.
+
+        Es el hilo que convierte el ambiente en jugabilidad y no en decoración:
+        `lluvia → humedad → suelo mojado → frenado → control`. Con el suelo
+        seco el frenado es 0, que en `PhysicsProfile` significa instantáneo, o
+        sea exactamente lo que hacen hoy los dieciséis escenarios.
+
+        El jugador puede no existir todavía (el ambiente se monta antes que
+        las entidades) y una entrega puede tener un jugador sin perfil: en los
+        dos casos no hay nada que ajustar y no es un error.
+        """
+        jugador = getattr(self, "_player", None)
+        perfil = getattr(jugador, "perfil", None)
+        if perfil is None:
+            return
+        # La guarda es explícita, y no sólo `frenado_del_suelo` (que ya
+        # devuelve 0 en seco), para que quien lea esto vea la condición que
+        # importa: el suelo mojado es lo que cambia la regla.
+        perfil.friccion = (
+            estado.frenado_del_suelo if estado.suelo_mojado else 0.0)
+

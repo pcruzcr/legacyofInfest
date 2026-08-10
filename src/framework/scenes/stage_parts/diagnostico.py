@@ -144,6 +144,21 @@ class DiagnosticoDeEscenario:
             lento = planificador.tiempos()[:2]
             detalles = ", ".join(f"{n} {ms:.1f} ms" for n, ms in lento)
             medidas["ECS"] = f"{planificador.total_ms():.2f} ms | {detalles}"
+        # AUD-362 — el ambiente del fotograma. Es la fila que faltaba para
+        # poder depurar un escenario atmosférico: con la luz, la niebla y el
+        # agarre saliendo todos de la misma simulación, «se ve raro» deja de
+        # tener una causa evidente. Aquí están los cuatro números que la
+        # explican, en el orden en que se propagan (hora → clima → humedad →
+        # agarre), y `factor_friccion` en vez de `frenado_del_suelo` porque lo
+        # que hay que poder leer de un vistazo es **cuánto** se ha perdido de
+        # agarre, no el px/s² que sale de esa fracción.
+        ambiente = getattr(self, "ambiente", None)
+        if ambiente is not None:
+            medidas["Ambiente"] = (
+                f"{ambiente.hora:04.1f}h {ambiente.fase_del_dia} | "
+                f"{ambiente.clima} | humedad {ambiente.humedad:.0%} | "
+                f"agarre {ambiente.factor_friccion:.0%}"
+            )
         # AUD-289 — arriba del todo si ha pasado, y ausente si no. Una fila
         # «Entidades retiradas: 0» permanente enseña a ignorarla, y el día que
         # ponga 1 nadie lo va a mirar.
