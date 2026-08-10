@@ -81,7 +81,13 @@ class SubtitleOverlay:
         self._bus = event_bus
         self._font: pygame.font.Font | None = None
         # (text, remaining_seconds)
-        self._active: list[list[object]] = []
+        # AUD-371 — `list[tuple[str, float]]`, no `list[list[object]]`.
+        # El tipo flojo obligaba a `float(...)` y `str(...)` en cada uso y a
+        # dos `# type: ignore`, o sea a repetir en cada línea lo que la
+        # declaración debía haber dicho una vez. Tuplas y no listas porque
+        # el rótulo no se muta: se sustituye, que es lo que ya hacía el
+        # filtro de `update`. Indexar `entry[0]` sigue funcionando igual.
+        self._active: list[tuple[str, float]] = []
         self._handlers: dict[str, Callable[..., None]] = {}
         self._subscribe()
 
@@ -128,20 +134,23 @@ class SubtitleOverlay:
         of stacking, so a rapidly repeating sound does not flood the band."""
         if not self.enabled:
             return
-        for entry in self._active:
-            if entry[0] == text:
-                entry[1] = CAPTION_DURATION
+        for i, (rotulo, _) in enumerate(self._active):
+            if rotulo == text:
+                self._active[i] = (rotulo, CAPTION_DURATION)
                 return
-        self._active.append([text, CAPTION_DURATION])
+        self._active.append((text, CAPTION_DURATION))
         if len(self._active) > MAX_VISIBLE:
             del self._active[0]
 
     def update(self, dt: float) -> None:
         if not self._active:
             return
-        for entry in self._active:
-            entry[1] = float(entry[1]) - dt  # type: ignore[arg-type]
-        self._active = [e for e in self._active if float(e[1]) > 0.0]  # type: ignore[arg-type]
+        # Se descuenta y se filtra en una sola pasada: el resultado es el
+        # mismo que decrementar todos y quedarse con los positivos.
+        self._active = [
+            (rotulo, restante - dt) for rotulo, restante in self._active
+            if restante - dt > 0.0
+        ]
 
     # ── rendering ──────────────────────────────────────────────
 
@@ -160,8 +169,8 @@ class SubtitleOverlay:
         y = settings.INTERNAL_HEIGHT - 150 - (len(self._active) - 1) * 18
         for text, remaining in self._active:
             # Fade the last half-second so captions leave calmly.
-            alpha = 255 if float(remaining) > 0.5 else int(255 * float(remaining) / 0.5)
-            label = font.render(str(text), True, (235, 235, 245))
+            alpha = 255 if remaining > 0.5 else int(255 * remaining / 0.5)
+            label = font.render(text, True, (235, 235, 245))
             label.set_alpha(max(0, min(255, alpha)))
             x = (settings.INTERNAL_WIDTH - label.get_width()) // 2
             backdrop = pygame.Surface(

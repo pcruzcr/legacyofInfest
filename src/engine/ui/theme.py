@@ -111,8 +111,14 @@ _font_cache: dict[tuple[str | None, int], pygame.font.Font] = {}
 #: Centinela: `None` es una respuesta válida de `_tipografia_del_juego()` —
 #: significa «no está el fichero, usa la de pygame»— así que no sirve para
 #: marcar «aún no lo he mirado».
-_SIN_RESOLVER: object = object()
-_RUTA_JUEGO_CACHE: object | str | None = _SIN_RESOLVER
+# AUD-371 — antes esto era un centinela `object()` con la caché anotada
+# `object | str | None`. Funcionaba, y hacía que la función mintiera: su
+# firma promete `str | None` y devolvía un tipo que incluye `object`, así
+# que quien la llamara con el comprobador puesto veía un error donde no lo
+# había. Una bandera separada dice lo mismo sin ensuciar el tipo de la
+# caché, que es el valor que de verdad viaja.
+_RUTA_JUEGO_CACHE: str | None = None
+_RUTA_JUEGO_RESUELTA: bool = False
 
 #: Tamaño mínimo en píxeles. Por debajo de esto la fuente por defecto de
 #: pygame deja de tener trazos distinguibles y el texto es una mancha.
@@ -169,12 +175,13 @@ def _tipografia_del_juego() -> str | None:
     Si el fichero no está se devuelve `None` y se cae a la de pygame: el juego
     tiene que poder dibujar texto aunque falte un asset.
     """
-    global _RUTA_JUEGO_CACHE
-    if _RUTA_JUEGO_CACHE is _SIN_RESOLVER:
+    global _RUTA_JUEGO_CACHE, _RUTA_JUEGO_RESUELTA
+    if not _RUTA_JUEGO_RESUELTA:
         from src.engine.core import settings
 
         ruta = settings.ASSETS_DIR / "fonts" / "game.ttf"
         _RUTA_JUEGO_CACHE = str(ruta) if ruta.is_file() else None
+        _RUTA_JUEGO_RESUELTA = True
     return _RUTA_JUEGO_CACHE
 
 
