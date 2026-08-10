@@ -163,6 +163,37 @@ class TestLasPuertasQueYaExistian:
         for validador in ("check_dependency_sync.py", "validate_tmx.py"):
             assert validador in texto, f"{validador} salió del CI"
 
+    def test_los_linters_van_fijados_y_no_con_mayor_o_igual(self) -> None:
+        """AUD-369 / GAP-034 — la causa de fondo del gate rojo de AUD-353.
+
+        Con `ruff>=0.6`, la definición de «verde» del proyecto la decidía quien
+        publicara río arriba esa mañana. Y ocurrió: una regla que ruff movió a
+        *preview* convirtió una supresión legítima en `RUF100` y dejó el gate
+        de lint en rojo **sin que cambiara una línea del fichero afectado**.
+
+        Fijar no congela: convierte subir el linter en un cambio revisable, con
+        su commit y su `AUD-NNN`. Lo que esta prueba impide es volver a `>=`,
+        que es la forma silenciosa de reabrir GAP-034.
+        """
+        import re
+
+        texto = (RAIZ / "pyproject.toml").read_text(encoding="utf-8")
+        m = re.search(r"^dev = \[(.*?)^\]", texto, re.M | re.S)
+        assert m, "el extra `dev` de pyproject.toml ya no se puede leer"
+        bloque = m.group(1)
+
+        for herramienta in ("ruff", "mypy"):
+            declarado = re.search(
+                rf'"{herramienta}([^"]*)"', bloque)
+            assert declarado, f"{herramienta} salió del extra `dev`"
+            spec = declarado.group(1)
+            assert spec.startswith("=="), (
+                f"{herramienta} está declarado como `{herramienta}{spec}`. "
+                f"Un linter sin versión fija puede poner el CI en rojo en "
+                f"cualquier rama sin relación con el cambio que se revisa "
+                f"(GAP-034). Súbelo a mano, con su commit"
+            )
+
     def test_ruff_esta_limpio_en_el_alcance_del_ci(self) -> None:
         """No que el paso exista: que el árbol lo pase, aquí y ahora.
 

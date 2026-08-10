@@ -61,7 +61,7 @@ git si hace falta consultarlos.
 |---|---|
 | [`04_PLAYER_SPEC.md`](04_PLAYER_SPEC.md) | Player Specification |
 | [`05_ENEMY_SPEC.md`](05_ENEMY_SPEC.md) | Enemy Specification |
-| [`17_BOSS_SPEC.md`](17_BOSS_SPEC.md) | Boss Specification |
+| [`17_BOSS_SPEC.md`](17_BOSS_SPEC.md) | Catálogo de diseño de los 4 jefes — 20 de 47 patrones implementados; **no es un contrato** (AUD-369) |
 | [`09_HUD_SPEC.md`](09_HUD_SPEC.md) | HUD Specification |
 | [`18_ENEMY_ROSTER.md`](18_ENEMY_ROSTER.md) | Enemy Roster |
 | [`06_TMX_SPEC.md`](06_TMX_SPEC.md) | TMX Specification |

@@ -116,13 +116,34 @@ dev = [
     "pytest-cov>=5",
     "pytest-mock>=3",
     "hypothesis>=6",
-    "ruff>=0.6",
+    # ── AUD-369 / GAP-034: los dos linters van FIJADOS, no con `>=` ──
+    #
+    # Con `ruff>=0.6`, la definición de «verde» de este proyecto la decidía
+    # quien publicara río arriba esa mañana. No es teórico: pasó. AUD-304
+    # añadió una supresión legítima de LOG004; ruff movió esa regla a preview
+    # en una versión posterior; con la regla apagada la directiva pasó a ser
+    # RUF100 y **el gate de lint quedó en rojo en `dev` sin que cambiara una
+    # sola línea del fichero afectado**. Lo encontró AUD-353, semanas después,
+    # ejecutando el gate a mano.
+    #
+    # El riesgo real no es el rojo: es que un equipo que ve rojos que no ha
+    # causado deja de mirar el CI. Es el razonamiento de AUD-106 —el lint de
+    # las entregas fuera del CI— aplicado a la versión en vez de al alcance.
+    #
+    # Fijar no es congelar. Subir el linter pasa a ser un cambio **revisable**:
+    # su commit, su `AUD-NNN`, y las reglas nuevas se adoptan mirando lo que
+    # encuentran, en vez de descubriéndolas en rojo un lunes. `mypy` va igual
+    # por la misma exposición: un comprobador de tipos que cambia de opinión
+    # solo tumba el trinquete de AUD-124.
+    #
+    # `tests/test_puertas_de_calidad.py` vigila que sigan fijados.
+    "ruff==0.15.20",
     # AUD-174: faltaba. CI ejecuta `mypy` sobre `mypy_scope.txt` y sólo instala
     # este extra, así que el paso terminaba en `command not found` y el
     # trinquete de tipos que AUD-124 puso en marcha no comprobaba nada desde
     # entonces. Un gate que no se ejecuta es peor que no tenerlo: aparece en el
     # workflow y en CLAUDE.md, así que nadie vuelve a mirarlo.
-    "mypy>=1.11",
+    "mypy==2.2.0",
 ]
 build = [
     "pyinstaller>=6",
