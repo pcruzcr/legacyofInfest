@@ -169,6 +169,40 @@ VERIFICADOS: dict[str, str] = {
     # podría usarla».
     "reveal_all": "docs/46 §API la publica para que un escenario revele zonas en lote",
     "play_voz": "GAP-031 resuelto (AUD-263): llamante en boss_venado.py:732; src/stages/ fuera del barrido",
+
+    # AUD-364 — el triaje de la sección «sólo los re-exporta su paquete», hecho
+    # una vez para que la sección quede como lo que es: un cable trampa. Cada
+    # línea dice por qué NO es un defecto; si alguna deja de ser cierta, se
+    # borra y el símbolo vuelve a salir.
+    #
+    # Los estados del jugador: cada uno lo instancia un módulo hermano dentro
+    # de su propio fichero (`grounded.py:68`, `wall.py:30`, `airborne.py:211`,
+    # `ability.py`), que el detector ignora por su regla de cohesión. Son
+    # estados vivos que el jugador alcanza jugando.
+    "WalkingState": "AUD-364: la instancia grounded.py en su propio fichero",
+    "SlideState": "AUD-364: ídem, grounded.py",
+    "CrouchingState": "AUD-364: ídem, grounded.py",
+    "AirborneState": "AUD-364: ídem, airborne.py",
+    "AirChaseState": "AUD-364: ídem, airborne.py",
+    "AerialSlamState": "AUD-364: ídem, airborne.py:211",
+    "LedgeGrabState": "AUD-364: ídem, wall.py:31",
+    "ThrowState": "AUD-364: ídem, ability.py",
+    "ChargeReleaseState": "AUD-364: ídem, ability.py",
+    "Contacto": (
+        "AUD-364: es el tipo de retorno de los cinco pasos de resolucion.py, "
+        "citado en cada firma del módulo"
+    ),
+    "unidad_de_escena": "AUD-364: lo consume la sesión académica por nombre de escena",
+    "siguiente_unidad": "AUD-364: ídem",
+    # `resolver_movimiento` sí estaba sin llamantes de producción, y ése fue
+    # AUD-355. Se conserva como **fachada de composición** —la que docs/87 §27
+    # fase 2 documenta para entidades y modos nuevos— y ya no es peligrosa: la
+    # verja de datos hostiles vive en `_verja`, compartida por los cinco pasos,
+    # así que la fachada no puede divergir de lo que usa el jugador.
+    "resolver_movimiento": (
+        "AUD-355/364: fachada de composición documentada (docs/87 §27 fase 2); "
+        "la verja compartida vive en _verja, no aquí, así que no puede divergir"
+    ),
 }
 
 #: Huérfanos **reales**, verificados y ya anotados donde toca. Están aquí para
@@ -278,6 +312,49 @@ def referencias(bases) -> dict[str, set[Path]]:
     return refs
 
 
+def solo_reexportados() -> dict[str, Path]:
+    """Símbolos cuyo único consumidor de producción es un `__init__.py`.
+
+    AUD-364 — el punto ciego que dejó pasar AUD-355, cerrado con una regla
+    **estrecha**. La verja de datos hostiles de AUD-344 se escribió dentro de
+    `resolver_movimiento`, que no llama ninguna entidad del juego; el detector
+    la dio por conectada porque `framework/physics/__init__.py` la re-exporta,
+    y una re-exportación no es un consumidor: es una puerta.
+
+    Por qué esta regla y no la evidente, con la medición delante
+    ------------------------------------------------------------
+    Se probaron las dos alternativas anchas antes de escribir ésta, y las dos
+    salen peor que no hacer nada:
+
+    * **«no contar los `__init__.py` como consumidores»** → 212 huérfanos pasan
+      a 224, y **once de los doce nuevos son falsos positivos**: `WalkingState`,
+      `LedgeGrabState` y compañía son estados vivos que sus módulos hermanos
+      instancian, sólo que dentro del mismo fichero.
+    * **«un import no es un uso»** → 212 pasan a 268, y **cincuenta y seis de
+      los cincuenta y seis nuevos son falsos**: `Events`, `Action`,
+      `PhysicsProfile` o `VisionTools` se usan por **atributo**
+      (`Events.SFX_PLAYER_JUMP`), no por llamada, así que la regla los da por
+      muertos. Distinguir uso de mención de verdad exige resolver ámbitos, o
+      sea reescribir el analizador, no parchear una condición.
+
+    Un guardián ruidoso se desactiva —el razonamiento de AUD-106 aplicado a
+    otro sitio—, así que esto no entra en `--ci` ni en el recuento de
+    huérfanos: es una sección **informativa** de doce entradas que un humano
+    tría una vez. Doce preguntas al año son manejables; cincuenta y seis
+    respuestas equivocadas, no.
+    """
+    defs = definiciones()
+    en_juego = referencias(CONSUMIDORES)
+    resultado: dict[str, Path] = {}
+    for nombre, origen in defs.items():
+        fuera = {f for f in en_juego.get(nombre, set()) if f != origen}
+        if not fuera:
+            continue          # ya sale como huérfano por la vía normal
+        if all(f.name == "__init__.py" for f in fuera):
+            resultado[nombre] = origen
+    return resultado
+
+
 def huerfanos() -> dict[str, Path]:
     """Lo que las pruebas ejercitan y el juego no llama."""
     defs = definiciones()
@@ -357,6 +434,17 @@ def main() -> int:
         print(f"      sin invocar : {', '.join(sorted(contradicciones[ruta]))}")
         print(f"      lo declara  : {', '.join(sorted(declarados[rel]))}")
     if not contradicciones:
+        print("  (ninguno)")
+
+    # AUD-364 — informativa, nunca bloqueante. Ver `solo_reexportados`.
+    puerta = {n: r for n, r in solo_reexportados().items()
+              if n not in VERIFICADOS and n not in PENDIENTES}
+    print("\n=== Sólo los re-exporta su paquete ===")
+    print("    (nadie más los toca en producción: mira si tienen llamante\n"
+          "     de verdad o si son una puerta a un cuarto vacío — AUD-355)\n")
+    for nombre, ruta in sorted(puerta.items(), key=lambda kv: (str(kv[1]), kv[0])):
+        print(f"  {ruta.relative_to(RAIZ).as_posix():52s} {nombre}")
+    if not puerta:
         print("  (ninguno)")
 
     if args.todos:
