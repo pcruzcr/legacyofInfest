@@ -168,6 +168,7 @@ VERIFICADOS: dict[str, str] = {
     # de la especificación la publique en su tabla de API. No vale «alguien
     # podría usarla».
     "reveal_all": "docs/46 §API la publica para que un escenario revele zonas en lote",
+    "play_voz": "GAP-031 resuelto (AUD-263): llamante en boss_venado.py:732; src/stages/ fuera del barrido",
 }
 
 #: Huérfanos **reales**, verificados y ya anotados donde toca. Están aquí para
@@ -175,12 +176,13 @@ VERIFICADOS: dict[str, str] = {
 #: lleva el GAP que lo sigue. La diferencia con `VERIFICADOS` importa —aquéllos
 #: no son defectos; éstos sí, y esperan una decisión de diseño.
 PENDIENTES: dict[str, str] = {
-    "play_voz": "GAP-031: el motor sabe reproducir voz y no hay un solo fichero de voz",
-    # `achievements.py` lo está reescribiendo otra sesión (logros por
-    # estudiante). No se juzga aquí: se mirará cuando aquello asiente.
-    "AchievementDef": "en obras: logros por estudiante, sesión paralela",
-    "AchievementProgress": "en obras, ídem",
-    "init_instance": "en obras, ídem",
+    # La reescritura de logros por estudiante aterrizó (AUD-197-200,
+    # `src/engine/core/achievements.py`, 2026-08-04). Los tres símbolos siguen
+    # sin consumidor fuera del módulo y siguen a la espera de una decisión de
+    # diseño: no se juzgan aquí.
+    "AchievementDef": "logros por estudiante: sin consumidor fuera del módulo",
+    "AchievementProgress": "ídem",
+    "init_instance": "ídem",
 }
 
 
