@@ -186,6 +186,58 @@ class SimulacionDeEscenario:
         # madrugada en invierno, azul doble.
         self._lighting.ambient_color = estado.color_ambiente
         self._aplicar_agarre(estado)
+        self._aplicar_clima(estado)
+
+    def _cambiar_clima(self, nombre: str) -> None:
+        """Cambia el clima del mundo. **Ésta** es la puerta — AUD-374.
+
+        Un escenario que quiera tormenta en su tercer acto la pide aquí, no al
+        sistema que dibuja la lluvia. La diferencia no es de estilo: el clima
+        decide humedad, viento, visibilidad y nubes, y de la humedad cuelga el
+        suelo mojado y el control del jugador (AUD-362). Pedírselo al VFX deja
+        todo eso en el clima del TMX para siempre.
+
+        Medido antes de existir esta puerta, con la secuencia real de
+        `stage4_1` —mapa `fog`, acto `storm` vía `WeatherSystem.set_climate`—:
+        humedad 0,50 y `suelo_mojado` en falso. Sus actos de tormenta **nunca
+        resbalaron**, con el hilo entero construido y consumido. El dato
+        llegaba caducado, que se ve peor que si no llegara.
+
+        El sistema de clima se entera solo: `_aplicar_hora` le pasa el clima y
+        el viento del estado en el mismo sitio donde reparte la luz.
+        """
+        self._simulacion.set_clima(nombre)
+        self._aplicar_hora()
+
+    def _aplicar_clima(self, estado: EnvironmentState) -> None:
+        """El mundo dice qué tiempo hace; el VFX lo pinta — AUD-374.
+
+        Antes iba al revés y por dos caminos que no se hablaban: el clima
+        llegaba al `WeatherSystem` como cadena desde `_clima_efectivo()`, y el
+        `EnvironmentState` calculaba el suyo en paralelo. El viento era el caso
+        extremo de esa separación —se calculaba cada fotograma y **nadie lo
+        leía**, mientras el sistema de clima sorteaba uno propio con su
+        segunda tabla de valores.
+
+        La comparación se hace **aquí** y no se delega en la guarda interna de
+        `set_climate`. Las dos evitan que se vacíe el emisor, pero
+        `test_el_acto_se_aplica_una_vez_y_no_en_cada_fotograma` vigila que la
+        llamada no ocurra, no que sea inocua — y con razón: esa prueba salió de
+        una comprobación de mutación, donde reaplicar el clima sin parar dejaba
+        todo en verde. Apoyarse en la guarda ajena convierte un invariante
+        comprobado en una propiedad de la que depende otro módulo sin decirlo.
+
+        El sistema puede no existir todavía —el ambiente se monta antes que
+        los efectos— y una entrega puede no tenerlo: en los dos casos no hay
+        nada que pintar y no es un error, igual que en `_aplicar_agarre` con
+        el jugador.
+        """
+        clima = getattr(self, "_weather", None)
+        if clima is None:
+            return
+        if clima.climate != estado.clima:
+            clima.set_climate(estado.clima)
+        clima.aplicar_viento(estado.viento)
 
     #: El ambiente antes de que exista simulación: mediodía despejado, que
     #: es la identidad. Una escena preguntada antes de `on_enter` responde

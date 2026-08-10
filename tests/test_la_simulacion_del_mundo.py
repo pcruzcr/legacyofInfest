@@ -160,7 +160,12 @@ class TestElMapaConfiguraYLaSimulacionCalcula:
         e = WorldSimulation(clima="storm").estado()
         assert e.precipitacion == 1.0
         assert e.cobertura_nubes == 1.0
-        assert e.viento > 50.0
+        # AUD-374 — por la magnitud, no por el valor: el viento pasó a llevar
+        # signo, que es lo que el campo declaraba desde el principio
+        # («negativo = hacia la izquierda») y lo que el productor no emitía. Un
+        # `> 50` fijaba justo el defecto: una tormenta que jamás sopla a la
+        # izquierda.
+        assert abs(e.viento) > 50.0
         assert e.visibilidad < 0.8
         assert e.suelo_mojado          # y por tanto se resbala
         assert e.factor_friccion < 1.0
