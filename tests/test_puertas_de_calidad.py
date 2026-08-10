@@ -194,6 +194,59 @@ class TestLasPuertasQueYaExistian:
                 f"(GAP-034). Súbelo a mano, con su commit"
             )
 
+    def test_ninguna_orden_del_ci_se_traga_su_codigo_de_salida(self) -> None:
+        """AUD-370 — «un gate que ejecute los gates», §5.3 del plan de cierre.
+
+        AUD-353 (ruff comprobado por estar escrito) y AUD-356 (`--json` que
+        nadie parseaba) eran el mismo defecto en dos sitios, y el plan avisaba
+        de que habría más órdenes en `ci.yml` cuya salida nadie mira. Había
+        dos:
+
+        * `pip-audit --desc --strict || true` — el paso ya llevaba
+          `continue-on-error: true`, que impide que tumbe el trabajo **y lo
+          marca en amarillo**. El `|| true` encima lo dejaba en verde pase lo
+          que pase: un escaneo de vulnerabilidades incapaz de avisar de una.
+        * los dos calificadores, que salían con 0 tanto con 100/100 como con
+          40/100.
+
+        Lo que esta prueba impide es que vuelva a colarse un silenciador. No
+        prohíbe `continue-on-error`, que es una decisión legítima y explicada;
+        prohíbe **taparlo dos veces**.
+        """
+        ordenes = [
+            linea for linea in CI.read_text(encoding="utf-8").splitlines()
+            if not linea.lstrip().startswith("#")
+        ]
+        silenciadas = [
+            linea.strip() for linea in ordenes
+            if "|| true" in linea or "|| :" in linea
+        ]
+        assert not silenciadas, (
+            "órdenes de CI que descartan su código de salida:\n"
+            + "\n".join(silenciadas)
+            + "\nUna orden que no puede fallar no es una comprobación."
+        )
+
+    def test_el_material_de_referencia_se_califica_con_suelo(self) -> None:
+        """Calificar sin mínimo es informar, y CI necesita comprobar.
+
+        El mapa y el jefe de referencia son los que los estudiantes copian: si
+        su nota baja, es que el calificador y el material han dejado de estar
+        de acuerdo. Eso hay que verlo antes de un día de entrega, que es lo
+        que el comentario de AUD-104 lleva pidiendo desde que se escribió.
+        """
+        texto = CI.read_text(encoding="utf-8")
+        for guion in ("grade_stage.py", "grade_boss.py"):
+            lineas = [
+                linea for linea in texto.splitlines()
+                if guion in linea and not linea.lstrip().startswith("#")
+            ]
+            assert lineas, f"{guion} salió del CI"
+            assert any("--minimo" in linea for linea in lineas), (
+                f"{guion} se ejecuta en CI sin `--minimo`, así que sale con "
+                f"éxito con cualquier nota y el paso no puede fallar nunca"
+            )
+
     def test_ruff_esta_limpio_en_el_alcance_del_ci(self) -> None:
         """No que el paso exista: que el árbol lo pase, aquí y ahora.
 

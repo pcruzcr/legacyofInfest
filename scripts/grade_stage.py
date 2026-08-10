@@ -679,6 +679,20 @@ def main() -> int:
     parser.add_argument("paths", nargs="+", help="TMX files or directories")
     parser.add_argument("--json", action="store_true", help="Output JSON")
     parser.add_argument("--dir", help="Scan directory for TMX files")
+    # AUD-370 — `--minimo` existe porque estos dos guiones **nunca podían
+    # fallar**. El paso de CI que califica el material de referencia lleva
+    # escrito desde AUD-104 que «si su nota baja, es que el calificador o el
+    # jefe han dejado de estar de acuerdo, y eso hay que verlo antes de un
+    # día de entrega» — y nadie miraba el número: el guion salía con 0 tanto
+    # con 100/100 como con 40/100. Es el mismo defecto que AUD-353 (gate
+    # comprobado por estar escrito) y AUD-356 (`--json` que nadie parseaba),
+    # en un tercer sitio.
+    #
+    # Sin la bandera no cambia nada, y eso importa: calificar la entrega de
+    # un estudiante **debe** salir con éxito aunque saque 40, porque el 40 es
+    # el resultado, no un error de la herramienta.
+    parser.add_argument("--minimo", type=float, default=None,
+                        help="nota mínima exigida (0-100). Sin esto el guion informa y siempre sale con éxito, que es lo correcto al calificar a un estudiante y lo contrario de lo que CI necesita del material de referencia")
     args = parser.parse_args()
 
     tmx_files: list[Path] = []
@@ -731,6 +745,11 @@ def main() -> int:
     print(f"  Total graded: {len(all_results)}", file=resumen)
     print(f"  Average grade: {avg:.1f}%", file=resumen)
     print(f"{'='*50}", file=resumen)
+
+    if args.minimo is not None and avg < args.minimo:
+        print(f"  [FAIL] media {avg:.1f} % por debajo del mínimo exigido "
+              f"({args.minimo:.1f} %).", file=resumen)
+        return 1
 
     return 0
 
