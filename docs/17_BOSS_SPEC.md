@@ -39,7 +39,7 @@ date_processed: "2026-07-14"
 | Jefe | Clase en el código | Fases reales | Patrones que EXISTEN | Patrones sólo diseñados |
 |---|---|---|---|---|
 | El Venado Sagrado (§3) | `BossVenado` | 2 | `STOMP`, `CHARGE`, `VINE_TOSS`, `VINE_SWEEP`, `MUSHROOM_SPORE` | — |
-| El Rey Terciopelo (§4) | `BossRey` | **1** | `VENOM_SPIT` | `SERPENT_CARPET`, `VENOM_BURST`, `SERPENT_WAVE`, y las formas `ReyMetad` de las fases 2-3 |
+| El Rey Terciopelo (§4) | `BossRey` | **1** | `VENOM_SPIT` | `SERPENT_CARPET`, `VENOM_BURST`, `SERPENT_WAVE`, y las formas ReyMetad de las fases 2-3 (nombre de diseño: no hay clase con ese nombre, y por eso va sin acentos graves — AUD-365) |
 | El Gavilán Mascarero (§5) | `BossGavilan` | **1** | **ninguno** (`attack_patterns=[]`) | todo §5. Es **asignación de estudiante**: 45 % de la rúbrica de `grade_boss` |
 | El Gran Shaman Paburu (§6) | `BossPaburu` | **4 formas** | Piedra: `STONE_SPIT`, `EYE_BEAM`, `EL_SELLO` · Máscara: `SPIRIT_WAVE`, `DUELO_DE_ECOS`, `MASK_PULSE` · Espíritu: `RELIC_SURGE`, `SPIRIT_FORM`, `ANCIENT_CALL`, `CONVERGENCE`, `EL_OFRECIMIENTO` | La Reliquia (forma 3) tiene `attack_patterns=[]`: se llenan al elegir 3A/3B, y esa elección no está escrita |
 
@@ -185,7 +185,7 @@ A dedicated boss health bar is rendered at the bottom of the screen during boss 
 
 | Element | Description |
 |---|---|
-| Boss name | Displayed left-aligned in gold `banner_medium` font |
+| Boss name | Left-aligned, gold. **AUD-365:** este documento nombraba una fuente «banner_medium» que nunca ha existido — sin acentos graves ahora, porque no es una API. `hud.py:215` lo dibuja con la fuente por defecto de pygame a 12 px. Darle una fuente de mapa de bits propia es trabajo de diseño abierto, no un defecto |
 | Health bar | Fills left to right. Color: red for full health, shifts to orange then yellow as depleted |
 | Phase indicator | `[P1]`, `[P2]`, etc. — updates on phase change |
 
@@ -310,7 +310,7 @@ Phase 2: `FilterTools.apply_kernel(sobel_x_kernel)` applied every 3 frames creat
 <!-- cita-historica -->
 > **Estado (AUD-150): fase 1 implementada, fases 2 y 3 no.** `BossRey` existe
 > con una sola `BossPhase` y un único patrón, `VENOM_SPIT`. Todo lo que este
-> apartado dice de serpientes, ráfagas y mitades `ReyMetad` es diseño.
+> apartado dice de serpientes, ráfagas y mitades ReyMetad es diseño.
 <!-- /cita-historica -->
 
 ### 4.1 Concept
@@ -364,17 +364,17 @@ Phase 1: `ColorTools.apply_tint(boss_surface, (30, 80, 0))` — a sickly green t
 
 **Transition:**
 1. Body shudders and collapses
-2. Two streams of serpents exit and form two **independent sub-bosses**: `ReyMetad` (Left Half) and `ReyMetad` (Right Half)
+2. Two streams of serpents exit and form two **independent sub-bosses**: ReyMetad (Left Half) and ReyMetad (Right Half)
 3. Each half has 3 hearts of its own health
 4. When both halves are reduced to 0, Phase 3 begins
 
 **Sub-Boss Behavior:**
-- Each `ReyMetad` behaves like an enlarged `EnemyWalker` with Phase 1's `VENOM_SPIT`
+- Each ReyMetad behaves like an enlarged `EnemyWalker` with Phase 1's `VENOM_SPIT`
 - They coordinate: one attacks while the other repositions
 - Contact damage: 0.5 hearts
 
 **How Phase 3 Triggers:**  
-When both `ReyMetad` entities reach 0 health, they are not killed — they simultaneously trigger `BOSS_PHASE_CHANGED`. The stage catches this event and initiates Phase 3.
+When both ReyMetad entities reach 0 health, they are not killed — they simultaneously trigger `BOSS_PHASE_CHANGED`. The stage catches this event and initiates Phase 3.
 
 #### Phase 3 — "El Frenesí" (Health: 4 → 0 hearts)
 

@@ -116,6 +116,14 @@ jobs:
       - name: Verify the example map demonstrates every TMX property
         run: python scripts/check_tmx_coverage.py --ci
 
+      # AUD-365: AUD-307 midio las specs con un comprobador de usar y tirar y
+      # encontro 50 simbolos citados que no existian. Corrigio el documento y
+      # borro el comprobador, asi que nada impedia que volvieran a divergir.
+      # Una spec que promete un simbolo inexistente manda a quien la lee a
+      # programar contra algo que no esta.
+      - name: Verify the specs only promise symbols that exist
+        run: python scripts/check_doc_symbols.py --ci
+
       - name: Run tests
         run: |
           python -m pytest tests/ -v --tb=short \

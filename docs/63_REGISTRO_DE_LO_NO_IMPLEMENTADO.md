@@ -245,7 +245,26 @@ El documento ya no aparece en el barrido.
 | `14_PROFESSOR_DELIVERABLE_MATRIX.md` | `AnimationController`, `SpriteSheet`, `OneWay_` | **No existen.** Fila correcta |
 | `23_DATA_SCHEMAS.md` | esquemas de guardado con campos que ya no están | Sin volver a medir |
 
-Lo que queda en pie: `09_HUD_SPEC.md` y `14_PROFESSOR_DELIVERABLE_MATRIX.md`
+**Cerrado el 2026-08-09 (AUD-365).** Esta sección estaba **desactualizada**, y
+por poco hace que se «arreglara» lo ya arreglado: los tres documentos que se
+daban por pendientes —`09_HUD_SPEC`, `14_PROFESSOR_DELIVERABLE_MATRIX` y la
+línea de `04_PLAYER_SPEC`— llevan sus correcciones desde AUD-150/AUD-307, en
+bloques `<!-- cita-historica -->` que explican qué se prometió y por qué no
+existe. Un registro de lo pendiente que no se recuenta es tan peligroso como
+la spec que describe: manda a trabajar en algo que ya está hecho.
+
+Lo que faltaba no era corregir documentos: era **el guardián**. AUD-307 midió
+con un comprobador de usar y tirar y lo borró. `scripts/check_doc_symbols.py`
+lo repone y corre en CI y en la suite: hoy **173 símbolos citados en seis
+especificaciones, 0 rotos**. Lo que encontró al ponerse —siete promesas rotas
+de verdad, incluida una fuente `banner_medium` que nunca ha existido— está en
+`tests/test_los_simbolos_de_las_specs_existen.py`.
+
+Y `23_DATA_SCHEMAS.md`, la fila que decía «sin volver a medir», ya está medida:
+49 símbolos citados, todos existen.
+
+Lo que quedaba en pie antes de esta medición: `09_HUD_SPEC.md` y
+`14_PROFESSOR_DELIVERABLE_MATRIX.md`
 citan API que no existe, y una línea de `04_PLAYER_SPEC.md`. Son documentos
 escritos antes del código y nunca revisados contra él. Ninguno rompe nada hoy;
 esos tres engañan a quien los lea para programar.
