@@ -195,6 +195,22 @@ def vocabulario_de_audio() -> set[str]:
                            ruta.read_text(encoding="utf-8")))
 
 
+def vocabulario_de_herramientas() -> set[str]:
+    """Los nombres de los guiones de `scripts/` y `tools/`.
+
+    AUD-369 — una spec que cita `grade_boss` o `check_doc_symbols` nombra una
+    **herramienta**, y existe. Se añaden sólo los nombres de fichero, no sus
+    símbolos internos: una spec no promete la API interna de un guion del
+    profesor, y meterla entera debilitaría la comprobación de lo que sí
+    promete.
+    """
+    nombres: set[str] = set()
+    for base in (RAIZ / "scripts", RAIZ / "tools"):
+        if base.is_dir():
+            nombres |= {r.stem for r in base.rglob("*.py")}
+    return nombres
+
+
 def _sin_ruido(texto: str) -> str:
     """Quita los bloques de código y las citas históricas."""
     texto = re.sub(r"```.*?```", "", texto, flags=re.DOTALL)
@@ -237,7 +253,7 @@ def main() -> int:
     args = ap.parse_args()
 
     existen = (simbolos_del_codigo() | vocabulario_de_tiled()
-               | vocabulario_de_audio())
+               | vocabulario_de_audio() | vocabulario_de_herramientas())
     total = rotas = 0
     for nombre in SPECS:
         doc = DOCS / nombre

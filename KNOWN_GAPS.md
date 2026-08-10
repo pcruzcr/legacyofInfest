@@ -996,7 +996,7 @@ así que la resurrección de cualquiera de estos huérfanos deja la suite en roj
     `tests/test_player_hurtbox.py`, que no entraba en la unión medida.
   Prueba: `mutation_check` con cada suite; unión de muertes documentada arriba.
 
-## [GAP-034] La definición de «verde» del CI depende de una versión que nadie fija
+## ~~[GAP-034] La definición de «verde» del CI depende de una versión que nadie fija~~ *(Resuelto)*
 
 - **File:** `pyproject.toml` (`[project.optional-dependencies] dev`, línea del
   linter), `.github/workflows/ci.yml` (paso *Lint with ruff*)
@@ -1089,3 +1089,15 @@ así que la resurrección de cualquiera de estos huérfanos deja la suite en roj
   «(ninguno)», que es lo que debe ser un cable trampa. La regla correcta de
   verdad —distinguir uso de mención resolviendo ámbitos— sigue siendo
   reescribir el analizador, y sigue sin merecer la pena.
+
+- **Resolution (2026-08-09, AUD-369):** los dos linters van **fijados**:
+  `ruff==0.15.20` y `mypy==2.2.0` en el extra `dev` de `pyproject.toml`, con la
+  política escrita al lado. Fijar no congela: convierte subir el linter en un
+  cambio revisable —su commit, su `AUD-NNN`— y las reglas nuevas se adoptan
+  mirando lo que encuentran, en vez de descubriéndolas en rojo un lunes.
+  `mypy` entra por la misma exposición: un comprobador de tipos que cambia de
+  opinión solo tumba el trinquete de AUD-124.
+  Lo vigila `test_los_linters_van_fijados_y_no_con_mayor_o_igual`, que se
+  comprobó en rojo volviendo a `ruff>=0.6` antes de darlo por bueno. La
+  mitigación de AUD-353 —ejecutar ruff dentro de la suite— se queda: fijar
+  evita la deriva, ejecutarlo la detecta si aun así ocurre.

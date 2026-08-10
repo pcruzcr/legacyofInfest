@@ -1,20 +1,59 @@
 ---
 document_id: "LOI-BOSS-017"
-title: "Legacy of InFest — Boss Specification"
-aliases: ["Boss Specification", "Boss Spec"]
-tags: ["boss", "specification", "entity"]
-description: "Los 4 jefes de diseño; 3 implementados. Ver §0 para el estado real"
+title: "Legacy of InFest — Catálogo de jefes (diseño)"
+aliases: ["Boss Specification", "Boss Spec", "Catálogo de jefes"]
+tags: ["boss", "catalogo", "diseno", "entity"]
+description: "Catálogo de diseño de los 4 jefes: 20 de 47 patrones implementados. NO es un contrato de API — ver §0.0"
 source: "docs/17_BOSS_SPEC.md"
 date_processed: "2026-07-14"
 ---
 
-# Legacy of InFest — Boss Specification
+# Legacy of InFest — Catálogo de jefes (diseño)
 
 **Document ID:** LOI-BOSS-017  
-**Version:** 1.0.0  
-**Status:** Official  
+**Version:** 2.0.0  
+**Status:** Catálogo de diseño — **no es un contrato** (AUD-369)  
 **Compatibility:** Requires LOI-ENEMY-005, LOI-WORLD-016, LOI-ARCH-003, LOI-FILTER-011, LOI-VISION-012, LOI-PATTERN-013  
 **Audience:** Professor, Teaching Assistants, AI coding assistants
+
+---
+
+## 0.0 Qué es este documento, y qué no — AUD-369
+
+**Esto es un catálogo de diseño, no una especificación.** El cambio de
+etiqueta no es cosmético: cambia qué significa cada línea de lo que sigue.
+
+Medido el 2026-08-09: de los **47** patrones de ataque que este documento
+nombra, el motor implementa **20**. Los otros 27 —FEATHER_STORM,
+SERPENT_CARPET, MASK_BEAM, DIVE_BOMB y compañía, sin acentos graves porque
+no existen— están descritos aquí y no están en ninguna parte del código.
+
+(Que este párrafo tuviera que perder los acentos graves es la regla de
+AUD-365 funcionando: `scripts/check_doc_symbols.py` lo puso en rojo en la
+primera ejecución, sobre el texto que anunciaba justamente eso.)
+
+Durante meses eso se leyó como deuda: veintisiete cosas que faltaban por
+hacer. No lo es, y llamarlo así tenía un coste real. Dos de los cuatro jefes
+—el Gavilán y las fases 2-3 del Rey— **son asignaciones de estudiante**: el
+45 % de la rúbrica de `grade_boss` es precisamente que el alumno diseñe e
+implemente sus patrones. Un documento que los da por especificados le está
+quitando el trabajo y, a la vez, mintiendo sobre el estado del motor.
+
+Y una especificación que nadie cumple envejece hasta ser mentira. El jefe de
+referencia (`boss_venado`) saca **100/100** con la rúbrica actual sin
+implementar ni uno de esos 27, lo que dice bastante sobre si eran requisitos.
+
+Cómo leerlo entonces:
+
+| Lo que ves | Cómo se lee |
+|---|---|
+| Un patrón con clase en el código | Contrato: existe y se llama así. `scripts/check_doc_symbols.py` lo vigila |
+| Un patrón sólo descrito aquí | **Idea de diseño.** Material para el estudiante, no promesa del motor |
+| §0 (abajo) | El estado real, medido, jefe por jefe |
+
+Lo que **sí** es contrato vinculante de un jefe vive en `22_API_CONTRACTS.md`
+(la API de `BossBase`) y en `scripts/grade_boss.py` (la rúbrica). Este
+documento alimenta a los dos, y no manda sobre ninguno.
 
 ---
 

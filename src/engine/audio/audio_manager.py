@@ -31,6 +31,21 @@ logger = logging.getLogger(__name__)
 #: entero y lo que está a la vuelta de la esquina se va apagando, lineal.
 RADIO_AUDIBLE_EFECTOS: float = 2_000.0
 
+#: Volumen mínimo de un efecto **crítico**, por lejos que ocurra (AUD-369).
+#:
+#: `play_sfx_critico` agacha la música un 30 % para hacerle sitio al sonido.
+#: Con el desvanecimiento de AUD-348 aplicado sin suelo, un cambio de fase de
+#: jefe más allá de `RADIO_AUDIBLE_EFECTOS` dejaba la música hundida un segundo
+#: **y ningún sonido que lo justificara**: el jugador no oye «algo lejos», oye
+#: que la música se cae sin motivo. Peor que no haber hecho nada, porque el
+#: ducking anuncia un sonido que no llega.
+#:
+#: Es un suelo y no una exención a propósito: el crítico se sigue alejando como
+#: cualquier otro efecto —la distancia se nota— pero nunca por debajo de esto.
+#: 0,35 es «se oye que pasó algo»; por debajo de 0,2 lo tapa la propia música
+#: agachada al 70 %, y por encima de 0,5 deja de leerse como lejano.
+SUELO_CRITICO: float = 0.35
+
 class AudioManager:
     """Manages music and SFX playback. Graceful fallback on missing assets."""
 
@@ -248,7 +263,8 @@ class AudioManager:
             logger.warning("AudioManager: no se pudo crossfade audio ambiental: %s", e)
             self._ambient_active = False
 
-    def play_sfx_at(self, name: str, world_x: float, screen_center_x: float | None = None, volume: float = 1.0) -> None:
+    def play_sfx_at(self, name: str, world_x: float, screen_center_x: float | None = None,
+                    volume: float = 1.0, suelo: float = 0.0) -> None:
         """Play SFX with stereo pan based on X position relative to screen center.
 
         AUD-348 — el sonido se **desvanece con la distancia**, no sólo se
@@ -267,7 +283,10 @@ class AudioManager:
         left = 1.0 - max(0.0, pan)
         right = 1.0 + min(0.0, pan)
         distancia = abs(world_x - screen_center_x)
-        atenuacion = max(0.0, 1.0 - distancia / RADIO_AUDIBLE_EFECTOS)
+        # AUD-369 — `suelo` lo pone quien reproduce, no esta función: sólo la
+        # llamada sabe si el sonido es prescindible. Por defecto 0, o sea el
+        # desvanecimiento completo de AUD-348 para todo lo demás.
+        atenuacion = max(suelo, 1.0 - distancia / RADIO_AUDIBLE_EFECTOS)
         self.sound_bank.play(
             name, volume=self.mezcla.ganancia(BUS_EFECTOS, volume * atenuacion),
             pan=(left, right))
@@ -303,7 +322,10 @@ class AudioManager:
         self.mezcla.agachar_musica(DUCK_EFECTO_SEGUNDOS, nivel=DUCK_NIVEL_EFECTO)
         self._aplicar_volumen_de_musica()
         if world_x is not None:
-            self.play_sfx_at(name, world_x, screen_center_x, volume=volume)
+            # AUD-369 — con suelo: este efecto acaba de agachar la música y
+            # tiene que llegar.
+            self.play_sfx_at(name, world_x, screen_center_x, volume=volume,
+                             suelo=SUELO_CRITICO)
         else:
             self.play_sfx(name, volume=volume)
 
