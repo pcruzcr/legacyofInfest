@@ -106,13 +106,18 @@ class DebugOverlay:
             self._tree_level = (self._tree_level + 1) % len(TREE_LEVELS)
 
     def draw(self, surface: pygame.Surface, fps: float,
-             medidas: dict[str, Any] | None = None) -> None:
+             medidas: dict[str, Any] | None = None,
+             estadisticas: dict[str, float] | None = None) -> None:
         """Pinta la consola. `medidas` es lo que la escena quiera publicar.
 
         Un diccionario y no una estructura fija a propósito: cada escena mide
         cosas distintas —un escenario tiene enemigos y partículas, un menú no—
         y una estructura con campos obligatorios obligaría a los menús a
         rellenar ceros que no significan nada.
+
+        `estadisticas` son los cuantiles de AUD-346 —P50/P95/P99/media/peor
+        del historial de fotogramas— y los enseña `App` al lado del FPS
+        instantáneo, porque el número de un segundo no cuenta los tropezones.
         """
         if not self._visible:
             return
@@ -139,6 +144,14 @@ class DebugOverlay:
         # milisegundos como hay que poder leerlo.
         ms = 1000.0 / fps if fps > 0 else 0.0
         lines.append(f"FPS: {fps:.0f}   ({ms:.2f} ms de 16,67)")
+        # AUD-346 — el FPS instantáneo es un promedio de un segundo; los
+        # cuantiles cuentan la estabilidad real. «60» puede ocultar 59
+        # fotogramas de 16 ms y uno de 250: aquí se ve el troyano.
+        if estadisticas:
+            q = estadisticas
+            lines.append(
+                "P50 {p50:.2f} | P95 {p95:.2f} | P99 {p99:.2f} | "
+                "peor {peor:.2f} ms".format(**q))
         lines.append(f"Objetos vivos: {len(gc.get_objects())}")
         for etiqueta, valor in (medidas or {}).items():
             lines.append(f"{etiqueta}: {valor}")
