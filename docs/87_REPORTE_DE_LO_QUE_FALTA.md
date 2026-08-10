@@ -2227,3 +2227,56 @@ otros, que se diagnostica como «no se reproduce»—.
   `GAP-036`. Con `dt` variable, dos ejecuciones divergen aunque el azar
   coincida. Sembrar da decisiones repetibles, no trayectorias repetibles, y
   conviene no confundir las dos al leer este lote.
+
+---
+
+## 31. La primera cifra de recurso: llamadas de dibujo (2026-08-10, AUD-377)
+
+Tercer lote de *integration hardening*, sobre la tercera propiedad de la fase:
+**observable**.
+
+### 31.1 El desequilibrio que había
+
+Este motor mide el tiempo por todas partes —`DeltaClock.historial_ms`, los
+cuantiles P50/P95/P99 (AUD-346), `Planificador.tiempos()` por sistema del ECS
+(AUD-347), `test_frame_budget`, `bench_sprite_batch.py`,
+`bench_gpu_postproc.py`— y no medía **ni un solo recurso**.
+
+La diferencia importa cuando algo va lento. «El fotograma cuesta 22 ms» no
+distingue entre sobran pasadas de post-procesado y va lenta la CPU; el número
+de llamadas separa las dos. Y es una cifra que esta tubería puede disparar sin
+que se note, porque las pasadas se encienden por configuración —`gpu_effects`,
+propiedades de mapa, opciones del jugador— y no por código nuevo que alguien
+revise.
+
+### 31.2 Las dos decisiones que hacen que el número no mienta
+
+**Se suma después de las salidas tempranas.** `_run_shader_pass` se sale sin
+dibujar en tres casos: sin contexto, sin VAO de quad y sin VAO del programa.
+Un contador que sume al entrar mentiría exactamente cuando más falta hace,
+porque el síntoma que se diagnostica con él es «esto no se está dibujando», y
+la cifra tiene que **bajar** cuando algo deja de pintarse.
+
+**El lote de sprites cuenta como una llamada, no como N sprites.**
+`SpriteBatchGPU.volcar` manda 500 sprites en un `render` instanciado
+(AUD-340), y ya devolvía cuántas órdenes dibujó sin que nadie mirase el valor.
+Contar por sprite diría lo contrario de lo que la instanciación consiguió, que
+es justo el número que alguien miraría para decidir si vale la pena.
+
+### 31.3 Y quién publica la fila
+
+La pone `App`, no la escena. `medidas_de_depuracion` es de la escena y sirve
+para lo que la escena sabe —sus enemigos, sus partículas, su escuadrón—; la
+tubería es del motor, y una escena no sabe cuántas pasadas de post-procesado
+están encendidas, que es precisamente lo que hace subir el número.
+
+7 pruebas nuevas, las 7 rojas antes. Dos son cable trampa contra la especie de
+defecto que este repositorio lleva un mes cazando —una medición sin lector—:
+que `App` publique la cifra y que la reinicie. El precedente está en AUD-050
+(`SquadBrain.stats()` se calculaba desde siempre «para el overlay de debug» sin
+un solo llamante) y en AUD-347 (los tiempos del ECS, medidos y nunca
+mostrados).
+
+Queda abierto el resto de `GAP-049`: memoria de textura, VRAM/RAM y detección
+de fugas, que exigen instrumentar la subida de texturas, más el reparto
+CPU/GPU del tiempo.

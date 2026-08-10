@@ -1344,6 +1344,20 @@ está.
   con 🔴. Memoria de textura y detección de fugas exigen instrumentar la subida
   de texturas; sin fecha.
 
+- **Avance (2026-08-10, AUD-377):** las llamadas de dibujo ya se cuentan y se
+  ven. `GLRenderer.llamadas_de_dibujo` suma **después** de las tres salidas
+  tempranas de `_run_shader_pass` —sumar al entrar mentiría justo cuando se
+  diagnostica «esto no se dibuja»— y `anotar_volcado` cuenta el lote de sprites
+  como **una** llamada instanciada, no como N sprites, que es lo que enseña en
+  la consola lo que compró AUD-340. `App` lo reinicia por fotograma junto al
+  resto de lo que caduca y publica la fila; la pone `App` y no la escena porque
+  una escena no sabe cuántas pasadas de post-procesado hay encendidas, que es
+  justo lo que hace subir el número.
+
+  Sigue abierto lo demás del hueco: memoria de textura, VRAM/RAM y detección de
+  fugas, que exigen instrumentar la subida de texturas. Y el reparto CPU/GPU
+  del tiempo, que la lista del dueño pide aparte.
+
 ## ~~[GAP-050] El clima tiene dos autoridades: la simulación lo calcula y el VFX lo ignora~~ *(Resuelto)*
 
 - **File:** `src/framework/scenes/stage_parts/ambiente.py`

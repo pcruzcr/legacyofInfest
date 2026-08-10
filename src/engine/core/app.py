@@ -377,6 +377,12 @@ class App:
         # este borrón la pantalla de título heredaría el bloom del nivel del
         # que se acaba de salir y seguiría brillando hasta entrar en otro.
         gpu_effects.begin_frame()
+        # AUD-377 — el contador de llamadas de dibujo es por fotograma, así que
+        # se pone a cero junto al resto de lo que caduca, y no al final: si se
+        # reiniciara después de pintar, un fotograma que reviente a mitad
+        # dejaría la cifra del anterior en la consola.
+        if self._gl_renderer is not None:
+            self._gl_renderer.reiniciar_llamadas()
         self.internal_surface.fill(settings.BG_COLOR)
         # AUD-354 — la escena del fotograma se liga **antes** del `if`, no
         # dentro. La rama de GPU de más abajo vuelve a leer este nombre y no
@@ -417,6 +423,13 @@ class App:
                     # parte del juego.
                     logger.exception("medidas_de_depuracion falló")
                     medidas = {"medidas": "error (ver el registro)"}
+            # AUD-377 — esta fila la pone `App` y no la escena, porque la
+            # tubería es del motor: una escena no sabe cuántas pasadas de
+            # post-procesado están encendidas, que es justo lo que hace subir
+            # el número. Va aparte de `medidas_de_depuracion` por eso.
+            if self._gl_renderer is not None:
+                medidas["Llamadas de dibujo"] = (
+                    self._gl_renderer.llamadas_de_dibujo)
             self.debug_overlay.draw(
                 self.internal_surface, self.clock.fps, medidas,
                 self.clock.estadisticas())
