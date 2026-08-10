@@ -10,7 +10,7 @@ date_processed: "2026-08-06"
 
 # Índice maestro de documentación
 
-**Fecha:** 6 de agosto de 2026 · **Documentos:** 68
+**Fecha:** 8 de agosto de 2026 · **Documentos:** 69
 
 Ésta es la **lista autoritativa**: si un documento no aparece aquí, está mal
 puesto. Está agrupada por *para qué sirve*, no por el orden en que se
@@ -23,8 +23,9 @@ hacer X».
 > programador, un diseñador de juego y un diseñador de niveles, con los
 > comandos de cada uno.
 
-**Qué pasó con los documentos que no están.** Esta documentación tenía 96
-ficheros y ahora tiene 66. Se retiraron 31: auditorías cerradas, informes
+**Qué pasó con los documentos que no están.** Esta documentación tenía 102
+ficheros y hoy son 69 (el encabezado de arriba los cuenta). Se retiraron 35:
+auditorías cerradas, informes
 de fase, hojas de ruta cumplidas y registros de decisiones ya tomadas. No eran
 documentación técnica y ninguno describía el motor de hoy — varios citaban
 pruebas y símbolos que hace tiempo que no existen. Siguen en el historial de
@@ -87,6 +88,7 @@ git si hace falta consultarlos.
 | [`BOSS_CREATION.md`](BOSS_CREATION.md) | Boss Creation Guide |
 | [`SCENE_CREATION.md`](SCENE_CREATION.md) | Scene Creation Guide |
 | [`66_GUIA_DE_LEVEL_DESIGN.md`](66_GUIA_DE_LEVEL_DESIGN.md) | Guía de Level Design |
+| [`90_INVENTARIO_DE_LEVEL_DESIGN.md`](90_INVENTARIO_DE_LEVEL_DESIGN.md) | Inventario de Level Design — todo lo que el motor ofrece, por categoría, y qué usar en cada nivel |
 | [`73_CATALOGO_DE_RECURSOS_PARA_ESTUDIANTES.md`](73_CATALOGO_DE_RECURSOS_PARA_ESTUDIANTES.md) | Catálogo de recursos para construir niveles y juegos |
 | [`26_STUDENT_TEMPLATE_SPEC.md`](26_STUDENT_TEMPLATE_SPEC.md) | Student Template Specification |
 | [`20_ASSET_BIBLE.md`](20_ASSET_BIBLE.md) | Asset Bible |
@@ -148,6 +150,8 @@ git si hace falta consultarlos.
 | [`AUDIT_2026-07.es.md`](AUDIT_2026-07.es.md) | Auditoría Multidisciplinaria de Producción |
 | [`AUDIT_2026-07.en.md`](AUDIT_2026-07.en.md) | Multidisciplinary Production Audit |
 | [`89_AUDITORIA_MULTIDISCIPLINAR.md`](89_AUDITORIA_MULTIDISCIPLINAR.md) | Auditoría multidisciplinar agosto 2026 — 16 disciplinas, AUD-310 a AUD-322 |
+| [`91_PLAN_DE_CIERRE.md`](91_PLAN_DE_CIERRE.md) | Plan de cierre — inventario medido de todo lo abierto (gaps, avisos, huecos) y los ocho lotes que lo cierran; `WorldSimulation` es el último rasgo |
+| [`92_CATALOGO_DE_FENOMENOS.md`](92_CATALOGO_DE_FENOMENOS.md) | Catálogo de fenómenos ambientales — los ~90 de la taxonomía contra lo que cuesta cada uno de verdad, y los cinco que no valen la pena |
 
 ---
 

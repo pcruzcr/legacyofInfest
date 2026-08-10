@@ -107,8 +107,10 @@ daño y efectos de impacto. Todo configurable desde Tiled sin escribir Python.
 
 ### Calidad
 
-* **1.608 funciones de prueba**, que con parametrización pasan de 2.000 casos.
-* 75 pruebas de humo que **arrancan, actualizan y dibujan** cada escena.
+* **459 funciones de prueba**, que con parametrización pasan de 4.342 casos
+  (`pytest --collect-only -q`).
+* 84 pruebas de humo que **arrancan, actualizan y dibujan** cada escena
+  (`test_scene_smoke.py` y `test_stage0_smoke.py`).
 * `ruff` limpio, `mypy` en CI con trinquete, validadores en CI.
 * Stage 0: **130/130**. Las 26 entregas integradas y calificadas.
 

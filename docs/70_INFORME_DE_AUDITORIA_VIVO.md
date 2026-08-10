@@ -1888,7 +1888,7 @@ limpieza staged de 36 documentos de `docs/` (sin commitear), la biblia técnica
 | AUD-307 | D2 | ALTA | **CERRADO** | `docs/22_API_CONTRACTS.md` documentaba APIs que no existen o con nombre/ruta vieja. Verificado con un comprobador AST (temp): **50 de 381 símbolos** citados no existían. Corregidas 13 entradas: funciones de módulo de `event_bus` que no existen; `DynamicMusicSystem` (vive en `framework/audio/dynamic_music.py`, movido a §4.3 y sin `sfx_volume`/`is_muted`); `HUD.bind_player` → API real (17 métodos); `MessageBox.is_active` → `is_visible`; `Checkpoint.is_active` → `is_activated`; `FrameworkUsageError` (en `framework/__init__.py`); extractores `extract_*` de `PatternRecognitionTools` que no existen (viven en VisionTools); rutas de los 7 lab scenes; `SceneRegistry.list_scenes/register_demo_scenes` (método vs función de módulo); `GameContext` (en §2.5); `DebugOverlay.toggle/update/is_active` → `visible/handle_input`; `draw_panel_label`; `SourceSurfaceManager.next/current/...` → `cycle/current_source/...`; `ErrorDisplay.show` → `set_error`; bloque boss duplicado con `_begin_phase_transition` (real: `_start/_finish_phase_transition`) y `BossVenado` en la ruta correcta; numeración de secciones duplicada (2.6, 17.1, 18, 19) renumerada. Prueba: comprobador AST sobre el doc — **rojo (50 fallos) → verde (374 símbolos, todos existen)**. Riesgo: el doc es la fuente de verdad de firmas; los cambios la alinean con el código ejecutado. |
 | AUD-308 | D3 | MEDIA | **CERRADO** | `test_coyote_time_expires` y `test_coyote_time_allows_late_jump` fijan el contador a mano y sólo comprueban la comparación: nadie defendía el **avance** (`_coyote_counter += dt * 60.0`). Una mutación que congelaba el contador pasaba la suite. Fix: `test_coyote_counter_avanza_con_el_tiempo` y `test_coyote_time_expira_por_acumulacion` en `tests/test_player_physics.py`. Prueba: mutante línea 958 muere con las nuevas pruebas (24 % → 32 % de defensa global del módulo). |
 | AUD-309 | D3 | MEDIA | **CERRADO** | La fórmula de `max_health` (base + reliquias + árbol, tope `CORAZONES_MAXIMOS`) no la defendía nadie: `Add → Sub` pasaba la suite. Fix: `test_max_health_suma_los_bonus` y `test_max_health_respeta_el_tope` en `tests/test_player_damage.py`. Prueba: mutante línea 374 muere con las nuevas pruebas. |
-| GAP-033 | D3 | — | **ABIERTO** | El módulo `player.py` queda en **32 %** de defensa por mutación: 17 supervivientes, clasificados en `KNOWN_GAPS.md` (los valiosos: daño ofensivo línea 480, `draw()` completo, `ledge grab`, SFX de aterrizaje; benignos: constantes de animación, guards numéricos). Nota: el mutante de `heal` sigue vivo porque el `heal_mult` por defecto es 1.0 — la mutación es indistinguible bajo config por defecto. |
+| GAP-033 | D3 | — | **CERRADO** | El módulo `player.py` quedaba en **32 %** de defensa por mutación: 17 supervivientes, los valiosos sin ninguna prueba (daño ofensivo línea 480, `draw()` completo, `ledge grab`, SFX de aterrizaje) y el de `heal` indistinguible bajo `heal_mult=1.0`. Fix: 9 pruebas nuevas en `tests/test_player_damage.py` (guarda `and` → `or` del golpe, combo `*`→`/` y multiplicadores de `current_attack_damage` bajo HARD + bonus, `heal` bajo HARD, `_hitbox_consumed`) y 6 de `draw()` en `tests/test_player_physics.py` (cámara, rectángulo, sprite centrado `// 2`, parpadeo, color HURT, más `test_aterrizar_en_suelo_emite_sfx_land`). El `ledge grab` ya no vive en `player.py` (AUD-334 lo movió a `resolucion.py`). Prueba: **unión de ambos suites = 44 %** (11/25 muertes; 28 % física, 20 % daño por separado); supervivientes restantes todos benignos (constantes de animación, guard numéricos, `__setattr__`, bit `_hitbox_consumed` redundante). Detalle en `KNOWN_GAPS.md`. |
 | D4 | D4 | — | **SIN HALLAZGOS** | Barrido de `except Exception:` en `src/engine` y `src/framework`: los 21 tienen log con traza, re-raise con limpieza o comentario que explica el porqué (patrón AUD-289). `check_orphan_systems.py`: 209 símbolos ejercitados, 25 verificados no-defectos, 4 huérfanos reales **ya anotados** (GAP-032), ningún módulo «declarado terminado» que mienta. Sin TODO/FIXME reales fuera de `src/stages/`. |
 | D5 | D5 | — | **SIN HALLAZGOS** | Estados y sensación: GAP-024 (calibración del salto) resuelto por decisión; 60 tests de legibilidad/calibración/máquina de estados pasan; coyote y buffer ahora defendidos (AUD-308). |
 | D6 | D6 | — | **SIN HALLAZGOS** | 229 tests de enemigos/IA pasan (state machine, SquadBrain, doble tabla TMX↔código, guardia que busca). |
@@ -1901,16 +1901,16 @@ limpieza staged de 36 documentos de `docs/` (sin commitear), la biblia técnica
 - Suite completa: **NO MEDIDO** en esta iteración (abortada por el usuario).
 - Subconjunto `-k "rutas or diagnostico or stage_scene or app"`: 189 passed / 0 failed / 0 skipped, 3860 deselected, 23,01 s.
 - Subconjunto `-k "player or coyote or heal or mutation"`: 165 passed / 0 failed, 3891 deselected, 36,20 s (incluye los 6 tests nuevos de AUD-308/309).
-- `tests/test_player_physics.py` + `tests/test_player_damage.py`: 47 passed.
+- `tests/test_player_physics.py` + `tests/test_player_damage.py` + `tests/test_player_hurtbox.py` + `tests/test_audit_regressions.py`: **98 passed** (GAP-033, 16 pruebas nuevas: daño ofensivo, combo, heal bajo HARD, hitbox consumida, draw por píxel en ambas ramas y SFX de aterrizaje).
 - Subconjuntos orientados a D5 (estados/sensación), D6 (enemigos/IA) y D7
   (jefes): **60 / 229 / 266 passed**, 0 failed cada uno.
 - `mutation_check.py --ci` (conjunto por defecto): 84,0 % / 72,0 % / 96,0 %, 240 s — OK.
-- `mutation_check.py --objetivo player.py --pruebas <suite jugador>`: **24 % → 32 %** tras AUD-308/309.
+- `mutation_check.py --objetivo player.py --pruebas <suite jugador>`: **24 % → 32 %** tras AUD-308/309; **44 % (11/25)** con la unión de la física + daño tras GAP-033.
 
 ### GAPs
 
 - Nuevos: GAP-033 (defensa por mutación del módulo jugador, 17 supervivientes clasificados).
-- Cerrados: ninguno.
+- Cerrados: GAP-033 (unión de suites **44 %**, ningún superviviente valioso).
 
 ### Dominios de §8
 
@@ -1929,3 +1929,96 @@ limpieza staged de 36 documentos de `docs/` (sin commitear), la biblia técnica
 - `pytest tests/` completo: abortado por el usuario (duración); se sustituyó por subconjunto orientado al cambio.
 - Matriz 3.11/3.12/3.13 de CI: esta máquina sólo tiene 3.14.6; la matriz sólo la corre CI.
 - Jugabilidad real (renderer, sonido): driver dummy en este entorno sin pantalla.
+
+---
+
+## Iteración 15 — 2026-08-09 — D1 y D4: los gates que decían protegernos
+
+**Commit auditado:** `3902137` (último AUD del log: 352). Árbol de trabajo con
+las tres frentes sin commitear que el propio `docs/89` §18.7 ya señalaba como
+el riesgo de proceso más urgente (AUD-343…352 + este lote).
+
+**Cómo empezó.** Se pidió una auditoría multidisciplinar completa con el prompt
+genérico —el mismo que `docs/69` §Parte 1 analiza y descarta—. Se ejecutó el
+prompt calibrado de `docs/69` §Parte 2 en su lugar, en el orden de dominios de
+§8. Los dos primeros gates de D1 destaparon el hallazgo bloqueante, así que la
+iteración se quedó en D1, D3 y D4 y no bajó a D5-D9.
+
+### Gates ejecutados (máquina con el `.venv`, Python 3.14.6, SDL dummy)
+
+| Gate | Resultado | Salida resumida |
+|---|---|---|
+| `ruff check src/engine src/framework src/stages/stage0 tests/ scripts/ tools/` | **ROJO → VERDE (AUD-353)** | `RUF100 Unused noqa (non-enabled: LOG004)` en `stage_parts/diagnostico.py:74` → `All checks passed!` |
+| `mypy` (trinquete `mypy_scope.txt`) | ✅ VERDE | `Success: no issues found in 26 source files` |
+| `scripts/check_dependency_sync.py` | ✅ VERDE | `OK 14 dependencies agree across pyproject.toml and requirements.txt` |
+| `scripts/check_translations.py --ci` | ✅ VERDE | `Catálogos en orden` (48 es / 82 en) |
+| `scripts/check_tmx_coverage.py --ci` | ✅ VERDE | `Cobertura correcta`; `BossSpawn` sigue siendo el único de 70 tipos sin mapa |
+| `scripts/generate_tmx_reference.py --check` | ✅ VERDE | `STAGE_CREATION.md: al día` |
+| `scripts/validate_assets.py` | ✅ VERDE | `0 errors, 0 warning(s)` |
+| `scripts/validate_tmx.py --ci` | ✅ VERDE | `17/17 passed` |
+| `scripts/check_orphan_systems.py` | ✅ VERDE | 3 huérfanos reales ya anotados; ningún módulo «declarado terminado» que mienta |
+| `scripts/grade_stage.py assets/maps/ --json` | ✅ VERDE (con nota, AUD-356) | 16 mapas, media **79,9 %** — sin deriva desde la iteración 14. El `--json` **no era JSON**: ver AUD-356 |
+| `scripts/grade_boss.py … --json` | ✅ VERDE (ídem) | 1 jefe, **100 %** |
+| `pytest tests/` (suite completa) | ✅ VERDE | **4.335 passed, 7 skipped**, 489 s (línea base, antes de tocar nada) |
+
+### Hallazgos
+
+| ID | Dominio | Severidad | Estado | Resumen |
+|---|---|---|---|---|
+| AUD-353 | D1 | **BLOQUEANTE** | **CERRADO** | El gate de lint del CI estaba **rojo en `dev`** y nadie lo sabía. `AUD-304` añadió `# noqa: LOG004` a `diagnostico.py:74` cuando ruff marcaba esa línea; ruff movió LOG004 a *preview*, y con la regla apagada la directiva pasó a ser `RUF100`. Nada del fichero cambió: cambió el linter. Causa raíz doble — (a) la supresión caducó, (b) `ruff>=0.6` no tiene tope, así que la definición de «verde» del proyecto la fija quien publique río arriba. Fix: quitar la directiva conservando el comentario que explica por qué `.exception()` es correcto ahí, y `test_ruff_esta_limpio_en_el_alcance_del_ci`, que **ejecuta** ruff sobre el alcance **leído de `ci.yml`** (leído, no copiado: una lista propia se desincroniza). Las tres pruebas que ya existían sólo miraban que la orden siguiera escrita — la misma familia de AUD-124 con mypy. Prueba: roja con el fallo real pegado → verde. Riesgo: si LOG004 vuelve a activarse, el sitio para reponer la supresión queda señalado en el código. La causa (b) queda en **GAP-034**. |
+| AUD-354 | D4 | ALTA | **CERRADO** | `App._draw` liga `escena` **dentro** del `if stack_size > 0` y lo lee ochenta líneas después, ya fuera, en la rama de GPU que compone la interfaz de AUD-343: con la pila vacía y la tarjeta activa es un `UnboundLocalError`. La pila se vacía porque `SceneManager.pop` no tiene suelo (`game_over_scene.py:70`, `combo_demo_scene.py:106`) y `run()` no vuelve a mirarla entre `update` y `_draw`. `run()` atrapa la excepción y llama a `_fallback_to_title()`: el jugador ve el título aparecer solo; diez fotogramas así y `MAX_CONSECUTIVE_FRAME_ERRORS` aborta el juego. **No lo veía nadie porque en CI `_use_gl` es siempre `False`** — el mismo modo de fallo que AUD-343, código que sólo corre en la máquina del jugador. Fix: ligar `escena: BaseScene | None = None` antes del `if`. Prueba: `tests/test_el_fotograma_sin_escena.py` (3 casos: pila vacía, escena de GPU, escena de CPU), con el cableado GL montado a mano. Riesgo: ninguno para las rutas existentes — los otros dos casos fijan que el overlay de AUD-343 sigue llegando igual. |
+| AUD-355 | D4 | ALTA | **CERRADO** | La verja de datos hostiles de **AUD-344** se escribió dentro de `resolver_movimiento`… **a la que no llama ninguna entidad del juego**: sólo aparece en su módulo, en el `__all__` del paquete y en los tests. El jugador compone los pasos a mano (`player.py:1077, 1085, 1125, 1159`), y es `resolver_eje_x` quien hace el `pygame.Rect(int(estado.posicion.x), …)` que revienta con NaN. O sea: protección escrita, probada, en verde, y el fotograma del jugador exactamente igual de frágil que antes. Fix: la comprobación pasa a `_verja()` y la aplican `resolver_eje_x`, `resolver_eje_y`, `resolver_cuestas` y `resolver_repisas`; `resolver_movimiento` la comparte y conserva su salida temprana con `dt <= 0`. `dt` no finito o negativo → `0.0`, sin salir del paso: con `dt` cero no se integra nada, pero la resolución sí corre, y eso es lo que saca a quien ya está incrustado en un tile. Prueba: 8 casos nuevos en `tests/test_resolucion_data_hostil.py`, **rojos con `ValueError: cannot convert float NaN to integer` en las cuatro funciones** → verdes. Riesgo: cuatro `math.isfinite` por paso y fotograma; `test_physics_1000_entities` no se mueve (32,2 ms frente a 34,4 ms de la línea base). |
+| AUD-356 | D1 | MEDIA | **CERRADO** | `grade_stage.py --json` y `grade_boss.py --json` imprimían el documento **y detrás el resumen humano**, por la misma salida estándar: `… --json \| jq` falla con *Extra data*, igual que `json.loads`. Las dos órdenes están listadas como gates de CI en `CLAUDE.md` §2 y en `docs/69` §3, y «pasaban» porque lo que se mira es el código de salida. Fix: con `--json`, el resumen va a **stderr** — no se calla, porque calificar a mano las 26 entregas usa esa media. Prueba: `tests/test_los_calificadores_hablan_json.py` (6 casos: parseo, el resumen sigue existiendo, y sin `--json` nada cambia de sitio). |
+| GAP-035 | D3 | — | **ABIERTO** | `check_orphan_systems.py` no podía ver lo de AUD-355: exonera un símbolo en cuanto lo referencia otro fichero de producción, y el `__init__.py` del paquete que lo re-exporta cuenta como tal. El arreglo evidente se **midió** antes de descartarlo: no contar los `__init__.py` da 212 → 224 huérfanos, y **once de los doce nuevos son falsos positivos** (estados vivos que sus módulos hermanos instancian con import diferido, `Contacto` como tipo de retorno). Once por uno es ruido, y un guardián ruidoso se desactiva. La regla correcta —«un import no es una llamada»— exige mirar `ast.Call`, o sea reescribir el analizador. |
+
+### Recuento de pruebas
+
+- Línea base, antes de tocar nada: **4.335 passed, 7 skipped**, 489 s.
+- Regresión final, con los cuatro arreglos dentro: **4.353 passed, 7 skipped, 0 failed**, 372 s.
+- `pytest --collect-only -q`: **4.342** recogidas antes de esta iteración (el README declara 4.301 → 0,9 % de desvío, dentro del 5 % que tolera `test_documentacion_bilingue.py`; con las 18 nuevas sube a 1,3 %, sigue dentro y por eso el README no se toca — lo está editando otra frente).
+- Pruebas nuevas de esta iteración: **18** (1 de AUD-353, 3 de AUD-354, 8 de AUD-355, 6 de AUD-356). 4.335 + 18 = 4.353, sin ninguna prueba existente rota.
+- Lote dirigido tras los arreglos (`-k "player or fisica or physics or pendiente or cuesta or repisa or colision or collision or stage_scene or app or resolucion"`): **453 passed**, 3.901 deselected, 42,7 s.
+
+### GAPs
+
+- Nuevos: **GAP-034** (la versión de ruff que define «verde» no está fijada; mitigado por AUD-353, causa abierta) y **GAP-035** (punto ciego del detector de huérfanos, con la medición de por qué el arreglo obvio no vale).
+- Cerrados: ninguno.
+
+### Dominios de §8
+
+- Cubiertos: **D1** (gates: los doce ejecutados, uno rojo encontrado y cerrado) y **D4** (corrección del código: un defecto de alcance de nombre y otro de *destino* de un arreglo, ambos en código que CI no puede ejecutar). **D3** parcialmente: se auditó la honestidad de los **gates**, no la de la suite.
+- Pendientes: D2 (consistencia doc ↔ código, no re-verificada en esta iteración), D5-D9.
+
+### Lo que NO se pudo verificar y por qué
+
+- **La ruta de GPU de verdad.** El arreglo de AUD-354 se verifica con el cableado montado a mano; en esta sesión no se levantó un contexto GL real sobre la Quadro. Un `render()` con overlay sobre hardware sigue sin medirse.
+- **Matriz 3.11/3.12/3.13.** Esta máquina sólo tiene 3.14.6. La cadena de fallo de AUD-353 es, además, específica de la versión instalada: lo que aquí sale rojo con ruff 0.15.20 puede salir verde con otra, que es justamente GAP-034.
+- **Jugabilidad, mezcla de audio y presentación (D9).** Driver dummy, sin pantalla ni salida de sonido.
+- **`mutation_check.py`.** No se ejecutó; la defensa por mutación sigue siendo la medida en la iteración 14.
+
+### Continuación — plan de cierre y lote 1 (mismo día)
+
+Por encargo del dueño, la iteración siguió hacia el **cierre**: reunir todo lo
+abierto, medido, y arrancar el plan. Resultado en
+`docs/91_PLAN_DE_CIERRE.md` (con fila en el índice maestro): 38 ítems en cinco
+bloques (herramientas, documentación, motor, contenido y la última
+característica), ocho lotes en orden, y cinco preguntas que sólo puede
+responder el dueño. El inventario sale de comandos, no de memoria: cada bloque
+lleva el suyo.
+
+| ID | Dominio | Severidad | Estado | Resumen |
+|---|---|---|---|---|
+| AUD-357 | D3 | MEDIA | **CERRADO** | La suite dejaba **20 `DeprecationWarning` por ejecución** (`pygame.image.tostring`, obsoleta desde pygame 2.3) en `gl_pipeline.py:552` y `bench_sprite_batch.py:166`. Veinte avisos en verde son peores que uno en rojo: un resumen que siempre dice lo mismo enseña a no leerlo, y el aviso número veintiuno pasa entre ellos. `pyproject.toml` exige `pygame-ce>=2.5`, así que `tobytes` existe en toda instalación soportada y no hace falta compatibilidad. Prueba: `tests/test_sin_avisos_de_obsolescencia.py`, roja con las dos llamadas exactas → verde; el guardián mira **llamadas** por AST, no menciones, porque varios docstrings citan `tostring` a propósito contando la medición de AUD-229. Efecto lateral encontrado al verificar: el comentario de AUD-353 contenía la palabra mágica `noqa` en prosa y ruff avisaba de que la frase no era un código de regla — reescrito; el lint queda con **0 avisos**, no sólo con código de salida 0. |
+| AUD-358 | E1 | — | **PARCIAL** | `EnvironmentState` (`src/framework/world/environment.py`): el contrato inmutable del ambiente del fotograma, el primer medio del lote 5. Entregado **antes** que `WorldSimulation` a propósito: un contrato escrito después del productor acaba teniendo la forma del productor. 22 pruebas fijan las cuatro propiedades que lo hacen utilizable — es un valor (congelado, comparable, sin pygame), `neutro()` es la identidad (permite conectarlo sin tocar un escenario), lo derivado se deriva una vez (`suelo_mojado`, `factor_friccion`, `es_de_noche`, `luz_lunar`) y está acotado (la tormenta más cerrada deja el juego jugable, misma decisión que `MIN_AMBIENTE` con la noche). El guardián `test_architecture_doc_matches_tree` cazó el paquete a medias en cuanto apareció, que es exactamente su trabajo. |
+
+| AUD-358 | E1 | — | **CERRADO (núcleo)** | `WorldSimulation` (`src/framework/world/simulation.py`): el productor de `EnvironmentState`. Compone reloj, calendario, estación, astronomía y clima en una foto por fotograma. **No reimplementa nada**: `RelojDeMundo` (con su curva de 9 paradas medida en Stage 0) y `Estacion` siguen siendo la fuente de verdad, y la tabla `CLIMAS` deriva la visibilidad del `overlay_alpha` que el sistema de clima ya pintaba, en vez de declarar un número nuevo — un hecho, una fuente. Añade lo que faltaba: calendario por vuelta del reloj, altura solar (armónico), las **cinco bandas del día** (día + los tres crepúsculos + noche, porque un consumidor que sólo distinga día/noche no puede pintar la diferencia entre las 18:20 y las 19:00), fase lunar por periodo sinódico real (29,530588 d, el de verdad: es material del curso) y `forzar()`, la válvula con la que un nivel narrativo rompe el realismo sin dejar el mundo incoherente. 26 pruebas; la que hace conectable el sistema es `test_la_luz_compuesta_es_la_misma_que_calcula_la_escena_hoy`, que replica verbatim la cuenta de `stage_parts/ambiente.py::_aplicar_hora` sobre 7 horas × 4 estaciones: si se pone roja, enchufar la simulación deja de ser una refactorización. Catálogo de fenómenos y prioridades en `docs/92_CATALOGO_DE_FENOMENOS.md`. **Pendiente del lote 5:** el cableado en `ambiente.py` y el hilo de fricción hasta el jugador. |
+
+**Recuento tras la continuación:** **4.377 passed, 7 skipped** (+48 de
+AUD-357/358 sin volver a pasar la suite completa: los ficheros nuevos y los
+guardianes de documentación y arquitectura sí, en verde). El único fallo
+de la pasada completa —`test_stage4_1::test_con_la_vision_puesta_tambien`— es
+contaminación de carga y no una regresión: esa ejecución tardó **9.051 s** en
+vez de los 372 s habituales (la máquina estaba saturada con otras sesiones) y
+el fichero entero pasa en aislado (84 passed, 34 s). Es, de paso, la evidencia
+que justifica el ítem **A6** del plan: una prueba de milisegundos que depende
+de la carga de la máquina no es un gate fiable.

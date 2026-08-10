@@ -24,7 +24,7 @@ código; quedan **11 bugs abiertos** (§12) medidos con su ubicación exacta.
 
 | # | Disciplina | Puntuación | Cambio en esta iteración |
 |---|---|---|---|
-| 1 | Rendimiento | 88 | Hallazgo pendiente: luz GPU sin conectar (P1) |
+| 1 | Rendimiento | 88 | AUD-343: la luz GPU queda conectada (P1 resuelto) |
 | 2 | Audio | 94 | AUD-310, AUD-311, AUD-313, AUD-314 |
 | 3 | Memoria y recursos | 87 | Sin defectos nuevos; validadores de assets verdes |
 | 4 | Input | 92 | AUD-320: el mando navega los menús |
@@ -89,14 +89,24 @@ cae a software; el presentado es barato (0,18-0,36 ms). `PresentadorGPU` sigue
 apagado por defecto — decisión tomada, con `scripts/bench_gpu_postproc.py`
 para medir donde toque.
 
-**Hallazgo P1 (pendiente): luz GPU sin conectar.** `src/engine/core/app.py:370`
-llama a `self._gl_renderer.render(...)` con `_current_light_surface()` y
-`app.py:382-399` sólo lo obtiene si la escena expone `light_surface` o un
-`_lighting._surface` heredado. `gl_pipeline.py:154` declara
-`lighting_enabled: bool = True` con su mapa de luz. Ninguna escena activa
-expone esas propiedades: la tubería de luz GL no pinta nada. No se corrige
-porque enganchar la luz exige tocar `src/stages/` (las escenas de los
-estudiantes) y porque la ruta de presentación real es software.
+**Hallazgo P1 (RESUELTO, AUD-343): luz GPU sin conectar.** El P1 real era
+doble. Primero, el cableado: `_init_gl` se llamaba desde `_init_pygame`,
+**antes** de que existiera `App.context`, y el acceso a
+`self.context.lote_de_sprites` reventaba con AttributeError que el
+`except Exception` del arranque tragaba: el juego entero caía siempre al
+camino software en máquinas con GPU y la tubería GL completa era código
+muerto (medido: `App()._use_gl == False` sobre la Quadro; el renderer
+inicializado quedaba colgado sin destroy). Segundo, la conexión: ninguna
+escena exponía el mapa de luz a `_current_light_surface()`, así que la
+pasada de iluminación nunca tuvo entrada. AUD-343 mueve `_init_gl` a
+`_init_subsystems` (después del contexto), declara `context.usar_gl` como
+activación por contexto (la misma de AUD-342), parte `StageScene.draw` en
+`dibujar_mundo`/`dibujar_ui` (mixin `stage_parts/dibujo.py`): el mundo
+deja el multiplicador en `light_surface` y la interfaz se compone después
+de la cadena de pasadas (pasada 9b en `GLRenderer.render`), igual que en
+software (AUD-090). Verificado en la Quadro M2200: `GL_RENDERER` NVIDIA,
+`use_gl True`, `light_surface` Surface subida a la tarjeta, reparto
+bloom/water declarado.
 
 ### 4.2 Audio — 94
 
@@ -230,7 +240,7 @@ del profesor.
 
 Guardianes activos: rutas (AUD-322, ahora con docs), documentación bilingüe,
 arquitectura, capas, TMX, keys prometidas, sin duplicados, índices. La deuda
-conocida (mypy fuera de alcance, luz GPU, consola de depuración) está
+conocida (mypy fuera de alcance, consola de depuración §15.7) está
 localizada con archivo:línea en este informe y en `KNOWN_GAPS.md`.
 
 ## 5. Bestiario y catálogo
@@ -244,7 +254,7 @@ instanciable; el roster es la especificación).
 
 | Id | Severidad | Dónde | Qué es | Decisión |
 |---|---|---|---|---|
-| P1 | Media | `src/engine/core/app.py:370,382-399`; `gl_pipeline.py:154` | Luz GPU nunca se enciende: ninguna escena expone `light_surface` | Anotar; tocar `src/stages/` o la ruta software implica decisión |
+| ~~P1~~ | ~~Media~~ | ~~`app.py:370,382-399`; `gl_pipeline.py:154`~~ | ~~Luz GPU nunca se enciende~~ *(Resuelto: AUD-343)* | `_init_gl` corría antes de `App.context`; el split mundo/UI (mixín `stage_parts/dibujo.py`) sube el mapa con `light_surface` |
 | P2 | Baja | `src/framework/stage/speedrun_mode.py:249` | Anotación `"state": str` incorrecta, fuera del trinquete mypy | Anotar para quien amplíe `mypy_scope.txt` |
 | P3 | Baja | `docs/00_MASTER_INDEX.md:13,27` | Recuento de documentos contradictorio | Consensuar al cerrar la otra frente |
 | P4 | Media | `KNOWN_GAPS.md` GAP-024 | Salto aéreo documentado pero sin conectar; congelado por test a propósito | Decisión docente, no se toca |
@@ -313,7 +323,7 @@ Candidatos a AUD para la siguiente ronda, todos con criterio de aceptación:
 
 | Candidato | Qué | Dónde | Gate |
 |---|---|---|---|
-| Luz GPU | Decidir entre conectar `light_surface` o retirar la tubería GL | P1 | grep de usos + test que fije la decisión |
+| ~~Luz GPU~~ | ~~Decidir entre conectar `light_surface` o retirar la tubería GL~~ | ~~P1~~ | ~~grep de usos + test que fije la decisión~~ *(Hecho: AUD-343 conecta la tubería; `test_la_luz_viaja_a_la_gpu.py` fija el contrato)* |
 | Consola de depuración | Conectarla o declararla retirada | `docs/87` §15.7 | test de apertura real |
 | Trinquete mypy | Ampliar `mypy_scope.txt` a `framework/stage` | P2 | `mypy` Success sobre el alcance nuevo |
 | Controles de mando | Diagrama verificable de la asignación de botones | §4.4 | test `test_las_teclas...` extendido |
@@ -344,11 +354,11 @@ hay commit y prueba que lo fija; **abierto** = medido y sin decisión.
 | Guardián de rutas ciego a `docs/NN_*.md` | Media | `tests/test_rutas_de_los_documentos.py` | AUD-322 | 77/78 passed |
 | 17 citas vivas a documentos retirados | Media | 11 documentos vivos | AUD-322 | 94 passed (docs) |
 
-### 12.2 Abiertos (11)
+### 12.2 Abiertos (10)
 
 | Id | Severidad | Ubicación | Qué es | Por qué sigue abierto |
 |---|---|---|---|---|
-| P1 | Media | `src/engine/core/app.py:370,382-399`; `gl_pipeline.py:154` | Luz GPU sin conectar | Exigiría tocar `src/stages/` o una decisión de retirada |
+| ~~P1~~ | ~~Media~~ | ~~`app.py:370,382-399`; `gl_pipeline.py:154`~~ | ~~Luz GPU sin conectar~~ *(Resuelto: AUD-343)* | ~~Exigiría tocar `src/stages/` o una decisión de retirada~~ |
 | P2 | Baja | `src/framework/stage/speedrun_mode.py:249` | Anotación mypy incorrecta fuera del trinquete | El trinquete no la cubre; ampliarlo es otra iteración |
 | P3 | Baja | `docs/00_MASTER_INDEX.md:13,27` | Recuento de documentos contradictorio | Depende de cerrar la otra frente |
 | P4 | Media | `KNOWN_GAPS.md` GAP-024 | Salto aéreo sin conectar, congelado por test | Decisión docente deliberada |
@@ -372,7 +382,7 @@ riesgo (lo que puede romper algo real) y por valor educativo.
 
 | # | Refactor | Objetivo | Por qué ahora | Criterio de aceptación |
 |---|---|---|---|---|
-| R1 | Retirar la tubería GL o conectarla | Que `gl_pipeline.py` no sea código muerto (P1) | Bajo riesgo si se mide el uso real primero | `grep -rn "gl_renderer|gl_pipeline" src/` medido; test que fije la decisión |
+| ~~R1~~ | ~~Retirar la tubería GL o conectarla~~ | ~~Que `gl_pipeline.py` no sea código muerto (P1)~~ | ~~Bajo riesgo si se mide el uso real primero~~ | ~~grep + test que fije la decisión~~ *(Hecho: AUD-343 la CONECTA; `test_la_luz_viaja_a_la_gpu.py` + `test_cada_pasada_ejecuta_su_shader.py` fijan el contrato; medido en Quadro M2200)* |
 | R2 | Ampliar el trinquete mypy a `framework/stage` | Que `speedrun_mode.py:249` pase a ser error visible | La deuda crece en silencio fuera del trinquete | `mypy` Success sobre el alcance ampliado; fix de la anotación primero |
 | R3 | Conectar o retirar la consola de depuración | Cerrar el §15.7 de `docs/87` | La documentación la describe como funcional | test de apertura real (tecla + escena) |
 | R4 | Documentar los controles de mando | Que la asignación de botones sea verificable | El diagrama falta y la UI ya navega con mando (AUD-320) | `test_las_teclas_que_la_doc_promete` ampliado |
@@ -483,3 +493,224 @@ criterio de aceptación de este proyecto. La tendencia entre iteraciones es
 positiva: 13 fixes con prueba previa en esta ronda, 0 regresiones, y el
 guardián de rutas que cerró AUD-322 hace más difícil que la documentación
 vuelva a mentir.
+
+---
+
+## 18. Segunda ronda — auditoría AAA (2026-08-08)
+
+**Fecha:** 8 de agosto de 2026 · **Base:** `a2efb9f` (AUD-342) + árbol con
+AUD-343 a AUD-348 sin commitear (tubería GL, consola F11 con cuantiles,
+estadísticas de fotograma) · **Prompt:** las 16 disciplinas de `docs/69`,
+disparado con el rol extendido de auditoría AAA.
+
+### 18.1 Resumen ejecutivo
+
+Se re-ejecutó la batería entera de CI sobre el estado actual, que incluye la
+segunda frente (tubería GL, consola con cuantiles P50/P95/P99, registro de
+fotograma) sin commitear. Resultado medido en una sola sesión:
+
+```
+pytest tests/                      4301 passed, 3 skipped, 21 warnings (406 s)
+ruff check (alcance CI)            All checks passed
+mypy (trinquete, 26 ficheros)      Success: no issues found
+scripts/mutation_check.py --ci     OK (music_clock 72 %, bloques 96 %)
+scripts/validate_tmx.py --ci       17/17 mapas
+scripts/validate_assets.py         0 errores, 0 avisos
+scripts/check_bestiary.py          9 fichas, catálogo en orden
+scripts/check_translations.py --ci 0 claves huérfanas
+scripts/grade_stage.py             16 mapas, media 79,9 %
+scripts/grade_boss.py              boss_venado 100,0 %
+```
+
+Hallazgos nuevos de esta ronda (sección §3 ampliada):
+
+| AUD | Hallazgo | Fix | Evidencia |
+|---|---|---|---|
+| AUD-349 | La escena compone `stage.collision_rects + cerradas` **dos veces por fotograma** (empujar y caer) | Se compone una sola vez y se comparte | 44 passed (test_bloques) |
+| — | El historial del reloj (AUD-346) no tenía medición de coste | Medido: `tick()` con historial ≈ 0,9 µs; `estadisticas()` ≈ 26 µs | bench inline (ver §18.4) |
+| — | README decía 4.300 pruebas y la suite da 4.301 | Número actualizado en `README.md`/`README.en.md` | invariant 6 |
+
+### 18.2 Ajustes de numeración
+
+AUD-346 (reloj con historial y cuantiles) quedó en el árbol sin commit; el
+siguiente libre es AUD-349, usado para el fix de la composición doble
+(`stage_scene.py:899` + `test_bloques.py`). CLAUDE.md quedará al día al
+commitear con el mensaje `AUD-349:`.
+
+### 18.3 Hallazgos de la auditoría AAA por disciplina
+
+Mismo método que §8: 100 menos descuentos por defectos **abiertos** medidos.
+Las tres P pendientes de la iteración anterior (P2, P3, P6) siguen abiertas y
+se puntúan igual; P1 se re-puntúa porque la tubería GL queda conectada.
+
+| # | Disciplina | Punt. | Cambios respecto a iteración 1 |
+|---|---|---|---|
+| 1 | Rendimiento | 90 | +2: tubería GL conectada (AUD-343, hoy en la matriz); historial del reloj medido (0,9 µs/26 µs) |
+| 2 | Audio | 94 | sin cambios |
+| 3 | Memoria y recursos | 87 | sin cambios |
+| 4 | Input | 93 | +1: no hay hallazgos nuevos; diagrama de mando pendiente (P8) |
+| 5 | Física y colisiones | 87 | +1: fix AUD-349 (una sola composición de sólidos) |
+| 6 | IA | 80 | sin cambios (P6) |
+| 7 | Seguridad | 95 | sin cambios |
+| 8 | Arquitectura | 91 | sin cambios (P2) |
+| 9 | UI / UX | 90 | +1: la consola de depuración abre con F11 y enseña los cuantiles (AUD-346) |
+| 10 | Accesibilidad | 87 | sin cambios |
+| 11 | Localización | 93 | sin cambios |
+| 12 | Documentación | 88 | +2: `docs/89` ampliado; recuento del índice sigue pendiente (P3) |
+| 13 | TMX / datos | 91 | sin cambios |
+| 14 | Tooling y CI | 94 | +1: mutation_check vuelve a cubrir bloques.py (96 %) |
+| 15 | Valor educativo | 95 | sin cambios |
+| 16 | Mantenibilidad | 90 | sin cambios |
+
+**Media: 90,3/100** (la iteración 1 documentada 89,4). Los +1/+2 de
+correcciones nuevas están reflejados; las deudas abiertas son las mismas §12.2.
+
+### 18.4 Medición del coste del historial del reloj
+
+```
+tick() completo (con historial, sin throttle)   0,89 µs promedio (300k fotogramas)
+estadisticas() (180 frames)                      26,45 µs promedio (10k llamadas)
+```
+
+El coste del reloj sigue siendo despreciable: 0,89 µs sobre un fotograma de
+16.666 µs es 0,005 %. La consola de F11 puede llamar a `estadisticas()` una vez
+por fotograma sin que se note (26 µs = 0,16 %). Método reproducible tal y como
+está pegado en esta sección; el bench no queda como script porque la medida
+es por construcción (deque de 180 + sorted sobre 180).
+
+### 18.5 Hallazgo C de la ronda anterior — descartado
+
+El hallazgo «C» apuntaba a un doble `draw()` del sprite en un módulo llamado
+de alguna forma "verbose"; **no existe ningún módulo así** (grep del árbol
+completo), el dueño del repo no pudo localizar el archivo (confirmado en la
+sesión), y 10 dedup manuales por `sprite.draw()` no encontraron ningún doble
+dibujado por fotograma. Se descarta sin entrada en `KNOWN_GAPS.md` (no es
+un hueco; es una pista sin evidencia).
+
+### 18.6 Bug list nueva (añadida a la §12)
+
+| Id | Severidad | Ubicación | Qué es | Estado |
+|---|---|---|---|---|
+| AUD-349 | Baja | `src/framework/scenes/stage_scene.py:899` | Lista compuesta dos veces por frame | Corregido (este árbol, sin commit) |
+| — | Media | `src/engine/core/estadisticas.py` | Estadísticas sin fotograma de calibración en CI | Documentado en §18.4; no hay gate |
+
+### 18.7 Próxima ronda (candidatos)
+
+1. **Commitear** la segunda frente (AUD-343 a AUD-349 + README): el árbol
+   tiene 22 ficheros pendientes y el informe vivo (@docs/70) exige commit por
+   AUD.
+2. Cerrar P3 (recuento del índice) con la otra frente.
+3. Ampliar `mypy_scope.txt` a `framework/stage` (R2 de la iteración 1).
+4. Conectar o retirar la consola de depuración F11 (si queda corto — hoy abre
+   con F11 y muestra los cuantiles; queda el test de apertura real).
+5. Métrica de IA (R6/P6).
+
+**Veredicto:** la madurez del repositorio sigue en 3,5/5; el riesgo más
+urgente ya no es técnico (la tubería GL está conectada y medida) sino de
+proceso: 22+ archivos sin commitear con tres conjuntos de trabajo mezclados.
+
+---
+
+## 19. Tercera ronda — auditoría AAA (2026-08-09)
+
+**Commit auditado:** `3902137`. Árbol de trabajo con tres frentes sin
+commitear. Detalle completo, con la salida de cada gate, en
+`docs/70_INFORME_DE_AUDITORIA_VIVO.md` § «Iteración 15».
+
+### 19.1 Resumen ejecutivo
+
+Cuatro hallazgos, dos GAPs nuevos. Los cuatro tienen la misma forma, y esa
+forma es el resultado de la ronda:
+
+> **Este repositorio comprueba que sus verificaciones existan, no que
+> funcionen.**
+
+- El gate de lint del CI llevaba tiempo **rojo en `dev`** y las tres pruebas
+  que lo vigilaban seguían verdes: comprobaban que la orden estuviera escrita
+  en `ci.yml`, no que el árbol la pasara (AUD-353).
+- Una verja contra datos hostiles se escribió, se probó y se documentó… en una
+  función a la que **ninguna entidad del juego llama**. El fotograma del
+  jugador seguía reventando igual (AUD-355).
+- Dos gates que el CI ejecuta con `--json` no emitían JSON parseable, y
+  «pasaban» porque lo único que se miraba era el código de salida (AUD-356).
+- El detector de huérfanos, que existe justo para cazar lo de AUD-355, no
+  podía verlo: la re-exportación del `__init__.py` de un paquete cuenta como
+  consumidor de producción (GAP-035).
+
+El único hallazgo de otra familia —AUD-354, un `UnboundLocalError` en la rama
+de GPU de `App._draw`— comparte causa con AUD-343: **CI no tiene tarjeta, así
+que el camino de GPU es código que ninguna prueba mira** salvo que se le monte
+el contexto a mano. Esta ronda añade ese montaje.
+
+Nada de esto es deuda nueva: es deuda que ya estaba y que los gates existentes
+no podían ver. La salud técnica medida no se movió (suite verde, `grade_stage`
+79,9 %, `grade_boss` 100 %, mypy limpio).
+
+### 19.2 Hallazgos (bug list, se añade a §12 y §18.6)
+
+| Id | Severidad | Ubicación | Qué es | Estado |
+|---|---|---|---|---|
+| AUD-353 | **Bloqueante** | `src/framework/scenes/stage_parts/diagnostico.py:74` | `# noqa: LOG004` caducado → `RUF100` → gate de lint del CI en rojo sin que cambiara el fichero | Corregido (este árbol, sin commit) |
+| AUD-354 | Alta | `src/engine/core/app.py:446` | `escena` leída fuera del `if` que la liga: `UnboundLocalError` con la pila de escenas vacía y la tarjeta activa | Corregido (ídem) |
+| AUD-355 | Alta | `src/framework/physics/resolucion.py` | La verja de AUD-344 vivía en `resolver_movimiento`, sin llamantes de producción; los cuatro pasos que el jugador sí usa seguían crudos | Corregido (ídem) |
+| AUD-356 | Media | `scripts/grade_stage.py:709`, `scripts/grade_boss.py:443` | `--json` imprimía el documento y detrás el resumen humano, por stdout: no parseable | Corregido (ídem) |
+| GAP-034 | Media | `pyproject.toml` (`ruff>=0.6`) | La definición de «verde» del proyecto la fija la última versión publicada río arriba | **Abierto**, mitigado por AUD-353 |
+| GAP-035 | Media | `scripts/check_orphan_systems.py` | Un `__init__.py` que re-exporta exonera al símbolo; el arreglo obvio da 11 falsos positivos de 12 (medido) | **Abierto** |
+| — | Media | `src/engine/audio/audio_manager.py:289` | `play_sfx_critico` **agacha la música** y luego pasa el efecto por la atenuación de AUD-348: un cambio de fase de jefe a más de `RADIO_AUDIBLE_EFECTOS` deja la música bajada y el efecto **mudo**. Un sonido declarado crítico no debería poder atenuarse a cero | **Abierto**: la mezcla es decisión humana (D9). Fix propuesto: suelo de atenuación en la ruta crítica |
+| — | Baja | raíz del repositorio | `computer-vision-course/` (8,2 MB, con su propio `tests/`) está sin seguir y **sin ignorar**: un `git add -A` lo commitea. `testpaths = ["tests"]` protege a `pytest`, así que hoy no rompe nada | **Abierto**: o `.gitignore` o fuera del árbol; es decisión del dueño |
+
+### 19.3 Puntuación por disciplina (misma rúbrica de §8)
+
+Sólo cambian las disciplinas con **defectos abiertos nuevos**. Las
+correcciones de esta ronda no suman puntos, por la regla de §8.
+
+| # | Disciplina | Punt. | Cambio respecto a §18.3 |
+|---|---|---|---|
+| 1 | Rendimiento | 90 | sin cambios (la verja de AUD-355 son 4 `isfinite` por paso; `test_physics_1000_entities` no se mueve) |
+| 2 | Audio | **90** | −4: efecto crítico atenuable a cero mientras la música se agacha (§19.2) |
+| 3 | Memoria y recursos | 87 | sin cambios |
+| 4 | Input | 93 | sin cambios |
+| 5 | Física y colisiones | 87 | sin cambios — AUD-355 no añade deuda: convierte en real una protección que era nominal |
+| 6 | IA | 80 | sin cambios (P6) |
+| 7 | Seguridad | 95 | sin cambios |
+| 8 | Arquitectura | 91 | sin cambios |
+| 9 | UI / UX | 90 | sin cambios |
+| 10 | Accesibilidad | 87 | sin cambios |
+| 11 | Localización | 93 | sin cambios |
+| 12 | Documentación | 88 | sin cambios (los dos GAPs nuevos están escritos con su medición) |
+| 13 | TMX / datos | 91 | sin cambios |
+| 14 | Tooling y CI | **86** | −4 GAP-034, −4 GAP-035. Es la disciplina que esta ronda audita, y la que peor sale |
+| 15 | Valor educativo | 95 | sin cambios |
+| 16 | Mantenibilidad | 90 | sin cambios |
+
+**Media: 89,6** (era 90,7).
+
+### 19.4 Pruebas nuevas
+
+18 casos, todos rojos antes del arreglo con la salida pegada en `docs/70`:
+
+| Fichero | Casos | Qué fija |
+|---|---|---|
+| `tests/test_puertas_de_calidad.py` (+1) | 1 | Ejecuta ruff sobre el alcance **leído de `ci.yml`**. La primera prueba de este repositorio que comprueba el *resultado* del lint y no su presencia |
+| `tests/test_el_fotograma_sin_escena.py` | 3 | El fotograma con la pila vacía por la ruta de GPU; y que el overlay de AUD-343 sigue llegando en las otras dos rutas |
+| `tests/test_resolucion_data_hostil.py` (+8) | 8 | NaN/∞ en las cuatro funciones que el jugador **sí** llama |
+| `tests/test_los_calificadores_hablan_json.py` | 6 | `--json` parseable, resumen que no se pierde, y modo humano intacto |
+
+### 19.5 Plan de refactorización (propuesta, no ejecutada)
+
+1. **Fijar la versión de las herramientas de lint** y subirla con su commit
+   (GAP-034). Toca `pyproject.toml`, `requirements.txt` y
+   `check_dependency_sync.py`: es política de dependencias, decisión del dueño.
+2. **Reescribir el detector de huérfanos** sobre `ast.Call` en vez de sobre
+   nombres sueltos (GAP-035). Con la medición ya hecha: el parche barato no
+   vale.
+3. **Un gate que ejecute los gates.** AUD-353 y AUD-356 son el mismo defecto en
+   dos sitios; hay más órdenes en `ci.yml` cuya salida nadie comprueba.
+4. **Commitear las tres frentes.** Sigue siendo el riesgo de proceso número uno
+   de §18.7, y ahora son cuatro conjuntos de trabajo mezclados en el árbol.
+
+### 19.6 Lo que esta ronda NO cubrió
+
+D2 (consistencia doc ↔ código) y D5-D9 no se re-auditaron: la iteración se
+consumió en D1/D3/D4 al aparecer el bloqueante en el primer gate. La ronda
+anterior (§18) sigue siendo la medición vigente para esas disciplinas.
