@@ -233,7 +233,24 @@ class LightSystem:
             light.update(dt)
 
     def render(self, target: pygame.Surface, camera_offset: pygame.Vector2) -> None:
-        w, h = target.get_size()
+        mapa = self.render_map(target.get_size(), camera_offset)
+        if mapa is not None:
+            target.blit(mapa, (0, 0), special_flags=pygame.BLEND_RGB_MULT)
+
+    def render_map(self, size: tuple[int, int],
+                   camera_offset: pygame.Vector2) -> pygame.Surface:
+        """Compone el multiplicador de luz para un tamaño y lo devuelve.
+
+        AUD-343 — mismo trabajo que `render`, pero sin aplicar nada al
+        `target`: en la ruta de GPU el mapa se sube a la tarjeta y es el
+        sombreador de iluminación quien lo multiplica sobre la escena, una
+        vez, en el mismo punto del orden de pintado que aquí. Que la
+        composición y la aplicación sean dos llamadas separadas es lo que
+        evita que la luz se multiplique dos veces: una escena con la ruta de
+        GPU llama a `render_map` (o se la deja hacer a `render`, que ahora es
+        `render_map` + un blit) y el renderer hace la otra mitad.
+        """
+        w, h = size
 
         if self._multiplier is None or self._multiplier.get_size() != (w, h):
             self._multiplier = pygame.Surface((w, h), pygame.SRCALPHA)
@@ -282,7 +299,18 @@ class LightSystem:
         if lote is not None:
             lote.volcar(self._multiplier)
 
-        target.blit(self._multiplier, (0, 0), special_flags=pygame.BLEND_RGB_MULT)
+        return self._multiplier
+
+    def mapa_de_luz(self) -> pygame.Surface | None:
+        """El último multiplicador compuesto, o `None` si nadie compuso aún.
+
+        AUD-343 — el documento que una escena con la ruta de GPU expone por
+        su propiedad `light_surface`: es el mapa del fotograma actual, no una
+        copia, así que sólo se puede leer después de `render_map`. Antes de
+        eso devuelve `None`, que es lo que `App` necesita para saber que no
+        hay nada que subir a la tarjeta.
+        """
+        return self._multiplier
 
     def get_player_light(self, player_pos: pygame.Vector2, is_combat: bool) -> LightSource:
         """Create/return a dynamic light for the player."""

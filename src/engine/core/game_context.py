@@ -70,6 +70,14 @@ class GameContext:
         # `gpu_effects.publish_lote_de_sprites` y el renderer lo compone
         # encima de la escena; la activación es por contexto, no global.
         self.lote_de_sprites: Any = None
+        # AUD-343 — si el juego corre de verdad por la tarjeta. Lo pone App
+        # al terminar de montar el contexto GL (y lo apaga si cae al camino
+        # software); `False` por defecto para que ninguna escena cambie de
+        # comportamiento en CI, que nunca tiene GPU. Una escena con la ruta
+        # de GPU no se pregunta «¿hay renderer?» (no puede importarlo sin
+        # arrastrar ModernGL): pregunta por esta bandera, que es la misma
+        # activación por contexto de `lote_de_sprites`.
+        self.usar_gl: bool = False
 
     @property
     def audio(self) -> Any:
