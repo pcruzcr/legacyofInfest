@@ -75,6 +75,7 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── app.py                     # App class: display init, main loop, scene pump
 │   │   │   ├── settings.py                # All global constants
 │   │   │   ├── clock.py                   # DeltaClock: delta time, FPS cap, time scale
+│   │   │   ├── azar.py                    # AUD-375: la semilla del proceso, anotada en el registro
 │   │   │   ├── estadisticas.py            # AUD-346: cuantiles P50/P95/P99 del fotograma
 │   │   │   ├── event_bus.py               # EventBus: pub/sub event dispatch
 │   │   │   ├── events.py                  # Event name constants (Events class)
