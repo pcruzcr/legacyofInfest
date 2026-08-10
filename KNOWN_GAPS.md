@@ -1039,7 +1039,7 @@ así que la resurrección de cualquiera de estos huérfanos deja la suite en roj
   rojo: es que un equipo que ve rojos que no ha causado deja de mirar el CI
   (el razonamiento de AUD-106, aplicado a la versión en vez de al alcance).
 
-## [GAP-035] El detector de huérfanos no ve una función a la que sólo llama su propio `__init__.py`
+## ~~[GAP-035] El detector de huérfanos no ve una función a la que sólo llama su propio `__init__.py`~~ *(Resuelto)*
 
 - **File:** `scripts/check_orphan_systems.py` (`huerfanos()`, `referencias()`)
 - **Phase:** auditoría 2026-08-09, AUD-355
@@ -1075,3 +1075,17 @@ así que la resurrección de cualquiera de estos huérfanos deja la suite en roj
   paquete puede quedarse sin llamantes —o nacer sin ellos, como pasó aquí— sin
   que ningún gate lo note. Afecta a los `__init__.py` de `framework/physics`,
   `framework/entities/states`, `engine/render` y `framework/academic`.
+
+- **Resolution (2026-08-09, AUD-364):** cerrado con una regla **estrecha**, no
+  con la reescritura. Las dos alternativas anchas se midieron antes de
+  descartarlas y las dos salen peor que no hacer nada: ignorar los
+  `__init__.py` da 212 → 224 huérfanos con **11 falsos de 12**, y «un import no
+  es un uso» da 212 → 268 con **56 falsos de 56** (`Events`, `Action`,
+  `PhysicsProfile` y `VisionTools` se usan por *atributo*, no por llamada).
+  Lo que entra es una sección **informativa y nunca bloqueante** —«sólo los
+  re-exporta su paquete»— con los símbolos cuyo único consumidor de producción
+  es un `__init__.py`: doce entradas, que es lo que un humano tría una vez.
+  Triadas las doce en `VERIFICADOS` con su motivo; la sección queda en
+  «(ninguno)», que es lo que debe ser un cable trampa. La regla correcta de
+  verdad —distinguir uso de mención resolviendo ámbitos— sigue siendo
+  reescribir el analizador, y sigue sin merecer la pena.
