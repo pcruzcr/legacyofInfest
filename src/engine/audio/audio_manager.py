@@ -26,6 +26,11 @@ from src.engine.core import settings
 
 logger = logging.getLogger(__name__)
 
+#: Distancia (píxeles de mundo) a la que un efecto espacial deja de oírse
+#: (AUD-348). Dos pantallas y media: lo que está dentro de la cámara se oye
+#: entero y lo que está a la vuelta de la esquina se va apagando, lineal.
+RADIO_AUDIBLE_EFECTOS: float = 2_000.0
+
 class AudioManager:
     """Manages music and SFX playback. Graceful fallback on missing assets."""
 
@@ -244,7 +249,16 @@ class AudioManager:
             self._ambient_active = False
 
     def play_sfx_at(self, name: str, world_x: float, screen_center_x: float | None = None, volume: float = 1.0) -> None:
-        """Play SFX with stereo pan based on X position relative to screen center."""
+        """Play SFX with stereo pan based on X position relative to screen center.
+
+        AUD-348 — el sonido se **desvanece con la distancia**, no sólo se
+        desplaza. Antes, un enemigo dos pantallas a la izquierda sonaba a la
+        misma potencia que uno a tu lado: el pan lo movía, la mezcla no lo
+        callaba, y un combate con varios emisores fuera de cámara se oía como
+        una pared de ruido que estorbaba a lo que de verdad estaba pasando.
+        El desvanecimiento es lineal hasta el radio audible y cero después;
+        lo que está en pantalla se oye entero, lo que no está, se acerca.
+        """
         if self._muted:
             return
         if screen_center_x is None or screen_center_x <= 0:
@@ -252,8 +266,10 @@ class AudioManager:
         pan = max(-1.0, min(1.0, (world_x - screen_center_x) / screen_center_x))
         left = 1.0 - max(0.0, pan)
         right = 1.0 + min(0.0, pan)
+        distancia = abs(world_x - screen_center_x)
+        atenuacion = max(0.0, 1.0 - distancia / RADIO_AUDIBLE_EFECTOS)
         self.sound_bank.play(
-            name, volume=self.mezcla.ganancia(BUS_EFECTOS, volume),
+            name, volume=self.mezcla.ganancia(BUS_EFECTOS, volume * atenuacion),
             pan=(left, right))
 
     # ── AUD-144: buses y ducking ──────────────────────────────────
