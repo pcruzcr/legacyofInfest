@@ -443,11 +443,15 @@ def main() -> int:
     if args.json:
         print(json.dumps(all_results, indent=2))
 
+    # AUD-356 — mismo arreglo que en `grade_stage.py`, y por el mismo motivo:
+    # el resumen humano detrás del documento hacía que `--json` no produjera
+    # JSON parseable. Con la bandera puesta, el resumen va a stderr.
+    resumen = sys.stderr if args.json else sys.stdout
     avg = sum(r["percentage"] for r in all_results) / len(all_results) if all_results else 0
-    print(f"\n{'='*50}")
-    print(f"  Total graded: {len(all_results)}")
-    print(f"  Average grade: {avg:.1f}%")
-    print(f"{'='*50}")
+    print(f"\n{'='*50}", file=resumen)
+    print(f"  Total graded: {len(all_results)}", file=resumen)
+    print(f"  Average grade: {avg:.1f}%", file=resumen)
+    print(f"{'='*50}", file=resumen)
 
     return 0
 
