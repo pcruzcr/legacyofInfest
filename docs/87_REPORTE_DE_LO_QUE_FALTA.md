@@ -2359,3 +2359,82 @@ El paso que convertiría el informe en guardián —triaje al estilo de
 `check_orphan_systems.py`, con `--ci` fallando por lo que aparece **nuevo**— se
 deja para cuando exista esa decisión: hoy nacería en rojo por las diecisiete, y
 un gate que nace en rojo se desactiva.
+
+---
+
+## 33. La rejilla en las colisiones: medida en contra (2026-08-10, AUD-379)
+
+`GAP-037` era, según lo escribí yo mismo en §28, «el candidato con mejor
+relación coste/ganancia de toda la lista». Medido, no lo es. Y el motivo por el
+que parecía serlo es un número que nadie había verificado.
+
+### 33.1 La premisa
+
+`rejilla.py` (AUD-276) justificaba su existencia diciendo que «`stage4_1` trae
+miles de rectángulos y la inmensa mayoría están a pantallas de distancia de la
+pregunta». `GAP-037` lo repitió, porque venía del docstring del módulo.
+
+Contado sobre los dieciséis mapas del repositorio:
+
+    51  stage4_1
+    27  stage1_2_la_soda
+    22  stage3_4_boss_gavilan
+    14  stage2_2
+    12  stage1_1
+     …
+
+**Cincuenta y uno**, no miles. Y no es que haya fusión de rectángulos en el
+cargador —no la hay—: los mapas sencillamente no son tan densos.
+
+### 33.2 La medición
+
+Sobre `stage4_1`, cuerpo del tamaño del jugador, 4 rectángulos dentro de la
+zona activa, 3.000 repeticiones de `resolver_eje_x` + `resolver_eje_y`:
+
+| | ms/fotograma |
+|---|---|
+| lista completa (lo de hoy) | 0,0419 |
+| con `cercanos()` (rejilla construida una vez) | 0,0310 |
+
+1,35× más rápido, y **0,011 ms** de ahorro sobre un presupuesto de 16,67: un
+**0,07%**. A cambio de eso habría que mantener un índice que se desincroniza
+con lo que la escena ya recompone cada fotograma —plataformas móviles, bloques
+rítmicos, interactivos que abren y cierran— y una ruta más que probar.
+
+No se hace. Es la tercera vez en este repositorio que una optimización
+estructuralmente correcta se cae al medirla: AUD-329/330 con el bacheo del
+parallax, la propia rejilla en las sombras, y ahora ésta.
+
+### 33.3 Lo que la medición explica hacia atrás
+
+`sombras_proyectadas.py` dice, medido: «El cuello de botella es el relleno de
+polígonos, no la búsqueda. La rejilla de AUD-276 se usa para no recorrer los
+miles de rectángulos del mapa, y es la estructura correcta, pero medida no
+cambia el resultado.»
+
+Ahora se sabe por qué: **no había nada que acelerar**. Ese módulo recibe
+exactamente la misma lista de 51 rectángulos.
+
+### 33.4 Lo que NO se cae
+
+La rejilla se queda, y su valor no era la fase amplia. `rayo()` y
+`hay_vision()` contestan «¿qué hay **entre** este punto y aquel otro?», que
+ninguna lista de rectángulos contesta por barrido, y son la base sobre la que
+se apoya `GAP-046` —subir la percepción de enemigos al framework—. El docstring
+del módulo queda corregido: dice lo que resuelve y dice lo que creía resolver y
+no resolvía.
+
+La decisión se vigila sola.
+`tests/test_los_mapas_no_traen_miles_de_rectangulos.py` se pone rojo si algún
+mapa supera 500 rectángulos, que es donde esta medición dejaría de valer, con
+el mensaje explicando que hay que rehacerla. Es la misma especie que
+`test_calibracion_del_salto`: no arregla nada, vigila la premisa de una
+decisión.
+
+### 33.5 Y una nota sobre el método
+
+El primer intento de medir esto tardó más de diez minutos y hubo que tirarlo:
+reconstruía la rejilla 300 veces por mapa, que no es lo que haría el motor
+—se construiría una vez por escenario—. Medir mal es fácil y da números que
+parecen respuestas. El que vale aquí es el de la rejilla construida una vez,
+porque es el único que se parece a lo que costaría de verdad.

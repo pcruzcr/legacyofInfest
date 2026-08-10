@@ -1129,7 +1129,7 @@ está.
   re-calibrar el salto y revisar los mapas. Hacerlo exige decisión del dueño
   sobre romper la métrica de 72 px. Ver §28.3 de `docs/87`.
 
-## [GAP-037] La rejilla espacial existe y las colisiones no la usan
+## ~~[GAP-037] La rejilla espacial existe y las colisiones no la usan~~ *(Resuelto)*
 
 - **File:** `src/framework/stage/rejilla.py`
 - **Phase:** auditoría 2026-08-10, lista del dueño (AUD-376)
@@ -1146,6 +1146,33 @@ está.
   construirla una vez por escenario y llamar a `cercanos()` desde el resolutor.
   Reservado **AUD-372**. Es el candidato con mejor relación coste/ganancia de
   toda la lista.
+
+- **Resolution (2026-08-10, AUD-379): medido en contra, y la premisa era
+  falsa.** Este hueco decía que «`stage4_1` trae miles de rectángulos», copiando
+  el docstring de `rejilla.py`. **Son 51**, y el resto de mapas están por
+  debajo: el segundo es `stage1_2_la_soda` con 27. No hay fusión de
+  rectángulos en el cargador; sencillamente los mapas no son tan densos.
+
+  Medido sobre `stage4_1`, con el cuerpo en el centro y 4 rectángulos cerca::
+
+      lista completa : 0,0419 ms/fotograma
+      con rejilla    : 0,0310 ms/fotograma   (1,35x)
+
+  Son **0,011 ms** de un presupuesto de 16,67 — un 0,07%. A cambio habría que
+  mantener un índice que se desincroniza con lo que ya recompone la escena cada
+  fotograma (plataformas móviles, bloques, interactivos), y una ruta nueva que
+  probar. No se hace.
+
+  **No invalida la rejilla.** `rayo()` y `hay_vision()` contestan «¿qué hay
+  entre estos dos puntos?», que ninguna lista contesta por barrido, y siguen
+  siendo la base de GAP-046 (la percepción de enemigos). Lo que se cae es sólo
+  el argumento de la fase amplia — y de paso explica por qué
+  `sombras_proyectadas` dice, medido, que la rejilla «no cambia el resultado».
+
+  La decisión se vigila sola:
+  `tests/test_los_mapas_no_traen_miles_de_rectangulos.py` se pone rojo si algún
+  mapa supera 500 rectángulos, que es donde la medición dejaría de valer.
+  **AUD-372**, que estaba reservado para el cableado, queda libre.
 
 ## [GAP-038] No hay capas ni máscaras de colisión
 
@@ -1515,6 +1542,17 @@ está.
   que no declararlas no es lo mismo que no usarlas. Lo que sí es cierto de las
   diecisiete es que **ningún mapa las demuestra**, y ésa es una decisión de
   contenido que ahora está a la vista en vez de escondida.
+- **Decisión del dueño (2026-08-10):** *«la idea es que todo este cableado
+  [sea] para que los estudiantes lo usen»*. Eso resuelve la ambigüedad con la
+  que se redactó este hueco: **no son opcionales aceptables**. Una
+  característica que ningún mapa demuestra no la descubre el estudiante —no la
+  ve al jugar y no la encuentra abriendo un mapa en Tiled—, así que el estado
+  de las diecisiete es un hueco de contenido de verdad, no un límite de la
+  métrica. La frase de arriba sobre «no leerlo como una lista de tareas» queda
+  matizada por esto: sigue siendo cierto que `sombras_proyectadas` está apagada
+  por defecto **por coste**, pero apagada por coste y no demostrada en ningún
+  sitio son cosas distintas, y lo segundo hay que arreglarlo.
+
 - **Resolution plan:** Es del dueño, no de ingeniería: decidir cuáles merecen
   aparecer en un mapa —empezando por el de referencia, que es el que los
   estudiantes copian— y cuáles se quedan como opcionales documentadas. Cuando
