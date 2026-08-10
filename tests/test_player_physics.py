@@ -216,3 +216,119 @@ def test_vertical_landing_sets_grounded() -> None:
             break
     assert player.is_grounded
     assert player.velocity.y == pytest.approx(0.0)
+
+
+# ── GAP-033: `draw()` no lo dibujaba nadie en pruebas ────────────────
+#
+# AUD-308/309 blindaron física y vida máxima; el dibujo (AUD-310,
+# AUD-311, AUD-316, AUD-317) y el SFX de aterrizaje (AUD-313) seguían sin
+# una sola prueba que pintara el jugador. Aquí se cierran las dos ramas de
+# `draw()` (sprite, con el centrado `// 2`, y rectángulo de respaldo) y el
+# aterrizaje que emite `SFX_PLAYER_LAND`.
+
+
+def _sin_sprites(player: Player) -> None:
+    """Fuerza el rectángulo de respaldo: en CI los PNG existen."""
+    for key in player._sprite_frames:
+        player._sprite_frames[key] = []
+
+
+def test_draw_fallback_no_pinta_cuando_invisible() -> None:
+    """Con `_flash_visible=True` la guarda `and not _flash_visible` deja
+    pintar; la mutación `And → Or` lo ocultaría todo el parpadeo."""
+    player = _make_player()
+    _sin_sprites(player)
+    player._invincibility_timer = 999.0
+    player._flash_visible = True
+    surface = pygame.Surface((640, 400))
+    surface.fill((0, 0, 0))
+    player.draw(surface, pygame.Vector2(0.0, 0.0))
+    assert surface.get_at((55, 5))[:3] == (0, 120, 255)
+
+
+def test_draw_oculta_cuando_el_flash_no_es_visible() -> None:
+    player = _make_player()
+    _sin_sprites(player)
+    player._invincibility_timer = 999.0
+    player._flash_visible = False
+    surface = pygame.Surface((640, 400))
+    surface.fill((0, 0, 0))
+    player.draw(surface, pygame.Vector2(0.0, 0.0))
+    assert surface.get_at((55, 5))[:3] == (0, 0, 0)
+
+
+def test_draw_fallback_centra_el_rectangulo_respecto_a_la_camara() -> None:
+    """Sin sprites se pinta el rectángulo de respaldo en pantalla.
+
+    La cámara en (50, 40) resta: el jugador en (50, 100) debe quedar en
+    (0, 60). Una mutación `Sub → Add` lo dejaría en (100, 140) y el píxel
+    del rectángulo quedaría vacío; las constantes de ancho/alto a cero
+    pintarían un rectángulo sin área.
+    """
+    player = _make_player(y=100.0)
+    _sin_sprites(player)
+    surface = pygame.Surface((640, 400))
+    surface.fill((0, 0, 0))
+    player.draw(surface, pygame.Vector2(50.0, 40.0))
+    assert surface.get_at((5, 65))[:3] == (0, 120, 255)
+    assert surface.get_at((15, 88))[:3] == (0, 120, 255)
+    assert surface.get_at((110, 150))[:3] == (0, 0, 0)
+
+
+def test_draw_con_sprite_lo_centra_sobre_la_caja_de_colision() -> None:
+    """Con sprites de 32 px y caja de 20 px, el fotograma se centra:
+    `offset_x = (20 - 32) // 2 = -6`. La mutación `2 → 0` del divisor
+    explota con ZeroDivisionError; `Sub → Add` desplazaría el sprite fuera
+    del píxel que sí pinta la versión correcta.
+    """
+    player = _make_player(y=100.0)
+    frame = pygame.Surface((32, 32))
+    frame.fill((255, 0, 255))
+    player._sprite_frames["IDLE"] = [frame]
+    for key in player._sprite_frames:
+        if key != "IDLE":
+            player._sprite_frames[key] = []
+    surface = pygame.Surface((640, 400))
+    surface.fill((0, 0, 0))
+    player.draw(surface, pygame.Vector2(0.0, 0.0))
+    # (50-6, 100) → dentro del sprite de 32x32.
+    assert surface.get_at((50, 100))[:3] == (255, 0, 255)
+    assert surface.get_at((81, 100))[:3] == (0, 0, 0)
+
+
+def test_draw_del_estado_hurt_usa_su_color_de_respaldo() -> None:
+    """El rectángulo de respaldo de `HURT` es de un rojo distinto al azul
+    de IDLE: la constante de color no es decoración, es semántica."""
+    from src.framework.entities.states import HurtState
+    player = _make_player(y=100.0)
+    _sin_sprites(player)
+    player._state_instance = HurtState()
+    player._invincibility_timer = 0.0
+    player._flash_visible = True
+    surface = pygame.Surface((640, 400))
+    surface.fill((0, 0, 0))
+    player.draw(surface, pygame.Vector2(50.0, 40.0))
+    assert surface.get_at((5, 65))[:3] == (255, 100, 100)
+
+
+def test_aterrizar_en_suelo_emite_sfx_land() -> None:
+    """AUD-317/AUD-033: la mutación `Ecuación → NoEcuación` en
+    `aterrizo_en == "suelo"` silenciaba el aterrizaje sin que la suite lo
+    notara."""
+    from src.engine.core.event_bus import EventBus
+    from src.engine.core.events import Events
+    bus = EventBus()
+    player = Player(pygame.Vector2(50.0, 100.0), event_bus=bus)
+    landed = False
+    def on_land() -> None:
+        nonlocal landed
+        landed = True
+    bus.subscribe(Events.SFX_PLAYER_LAND, on_land)
+    player.velocity.y = 200.0
+    dt = 1.0 / 60.0
+    for _ in range(120):
+        player.update(dt, _make_floor_rect(200.0))
+        if player.is_grounded:
+            break
+    bus.dispatch()
+    assert landed
