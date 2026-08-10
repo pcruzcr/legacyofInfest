@@ -7,14 +7,27 @@ AUD-276 — la rejilla espacial y el trazado de rayos.
 
 Qué problema resuelve
 =====================
-Todo lo que pregunta «¿qué hay aquí?» recorría `stage.collision_rects` de punta
-a punta: la sombra bajo los pies (AUD-273), el suelo del jugador, las zonas de
-daño. `stage4_1` trae miles de rectángulos y la inmensa mayoría están a
-pantallas de distancia de la pregunta.
+No había forma de preguntar «¿qué hay **entre** este punto y aquel otro?». Sin
+eso no se puede hacer la línea de visión de un guardia, ni un disparo
+instantáneo, ni comprobar si una plataforma tapa un foco. Ésa es la razón por
+la que este módulo existe, y `rayo()` y `hay_vision()` son lo que la sirve.
 
-Y no había forma de preguntar «¿qué hay **entre** este punto y aquel otro?».
-Sin eso no se puede hacer la línea de visión de un guardia, ni un disparo
-instantáneo, ni comprobar si una plataforma tapa un foco.
+Lo que este módulo NO resuelve, y decía que sí
+-----------------------------------------------
+AUD-379 — la primera versión de este texto justificaba también la fase amplia
+diciendo que «`stage4_1` trae miles de rectángulos y la inmensa mayoría están a
+pantallas de distancia». **Son 51.** El número nunca se verificó, y con él se
+cae el argumento: medido sobre ese mapa, resolver contra la lista entera cuesta
+0,0419 ms por fotograma y hacerlo contra `cercanos()` cuesta 0,0310 — un ahorro
+de 0,011 ms sobre un presupuesto de 16,67, o sea un 0,07%.
+
+Por eso GAP-037 —cablear esto al camino de colisión— quedó **medido en contra**,
+y por eso el módulo de sombras dice, también medido, que la rejilla «no cambia
+el resultado»: no había nada que acelerar. `cercanos()` se queda porque `rayo()`
+lo usa por dentro y porque el día que un mapa traiga miles de rectángulos la
+estructura ya está; lo vigila
+`tests/test_los_mapas_no_traen_miles_de_rectangulos.py`, que se pone rojo si
+alguna vez ocurre y obliga a re-medir.
 
 Por qué una rejilla uniforme y no un árbol
 -------------------------------------------
