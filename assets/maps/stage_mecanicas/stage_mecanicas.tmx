@@ -18,6 +18,30 @@
   <property name="vignette" type="float" value="0.25"/>
   <property name="ambient_fx" value="dust"/>
   <property name="ambient_fx_rate" type="float" value="8"/>
+  <!-- AUD-380 (GAP-052): el desfase de audio, que completa el trio del compas.
+       Este mapa ya declaraba `bpm` y `compas`, y esta era la unica de las tres
+       que ningun mapa del repositorio declaraba: los bloques ritmicos seguian
+       a la musica con la latencia de la tarjeta sin forma de corregirla. En
+       segundos, positivo = adelantar la señal respecto al reloj. 0.05 es un
+       valor pequeño y deliberado: se declara para que se vea como se declara,
+       no para desincronizar el laboratorio. -->
+  <property name="desfase_audio" type="float" value="0.05"/>
+  <!-- AUD-380 (GAP-052): las seis del agua. Este es el unico mapa del
+       repositorio con `WaterZone`, asi que es el unico sitio donde se pueden
+       demostrar, y ninguna se declaraba en ninguna parte: el efecto existia
+       desde `docs/47_WATER_EFFECT.md` y un estudiante solo podia enterarse
+       leyendo ese documento.
+
+       Los valores son los del motor salvo dos, subidos para que la diferencia
+       se VEA al abrir el mapa —que es de lo que va demostrar algo—: la
+       amplitud pasa de 4 a 6 px y el alfa de 100 a 120. El tinte es el mismo
+       azul por defecto, escrito explicitamente para que se lea el formato. -->
+  <property name="water_effect" type="bool" value="true"/>
+  <property name="water_tint" value="#2850a0"/>
+  <property name="water_alpha" type="float" value="120"/>
+  <property name="water_amplitude" type="float" value="6"/>
+  <property name="water_frequency" type="float" value="0.04"/>
+  <property name="water_speed" type="float" value="1.5"/>
  </properties>
  <tileset firstgid="1" name="tileset_stage0" tilewidth="16" tileheight="16" tilecount="4096" columns="64">
   <image source="../../tilesets/tileset_stage0.png" width="1024" height="1024"/>

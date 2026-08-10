@@ -1553,6 +1553,31 @@ está.
   por defecto **por coste**, pero apagada por coste y no demostrada en ningún
   sitio son cosas distintas, y lo segundo hay que arreglarlo.
 
+- **Avance (2026-08-10, AUD-380):** siete demostradas, de 17 a 10. El bloque
+  sin riesgo, y sin tocar `stage0` —el mapa que copian los estudiantes, cuya
+  lección es el prólogo y no ser un muestrario—:
+
+  * **Las seis del agua** en `stage_mecanicas`, que es el **único** mapa del
+    repositorio con `WaterZone`, o sea el único sitio donde se pueden
+    demostrar. Los valores son los del motor salvo dos subidos para que la
+    diferencia se vea al abrir el mapa (amplitud 4→6 px, alfa 100→120); el
+    tinte es el azul por defecto escrito explícito, para que se lea el formato.
+  * **`desfase_audio`** en el mismo mapa, que ya declaraba `bpm` y `compas` y
+    era la única de las tres sin declarar en ningún sitio.
+
+  Se editó `tools/generate_stage_mecanicas.py`, no el `.tmx`: el mapa es
+  generado y tocar la salida se pierde en la siguiente regeneración.
+
+  **Las diez que quedan, por qué no se cierran igual:** `camara` y `vista` son
+  modos de juego enteros —`vista=cenital` no es una propiedad que se añada,
+  es un mapa que se diseña— y son el hueco más grande que queda desde el
+  criterio del dueño, porque el motor sabe hacer cenital y ningún mapa lo
+  muestra. `sombras_proyectadas` y `god_rays` cuestan, y la primera tiene
+  medición detrás (≤4-5 focos): encenderlas exige elegir el mapa mirando sus
+  focos. `estamina`, `tiempo_bala` y `habilidades_libres` cambian cómo se juega
+  y son decisión de diseño. `fog_of_war`, `profundidad_min` y
+  `profundidad_max` esperan a un mapa que las pida.
+
 - **Resolution plan:** Es del dueño, no de ingeniería: decidir cuáles merecen
   aparecer en un mapa —empezando por el de referencia, que es el que los
   estudiantes copian— y cuáles se quedan como opcionales documentadas. Cuando
