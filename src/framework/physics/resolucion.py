@@ -37,6 +37,8 @@ cuesta tiene que poder atrapar al jugador ya colocado en la cuesta.
 """
 from __future__ import annotations
 
+import logging
+import math
 from dataclasses import dataclass
 
 import pygame
@@ -49,6 +51,8 @@ from src.framework.stage.pendientes import (
     resolver_con_ganadora,
     resolver_lateral,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -96,6 +100,60 @@ class Contacto:
     venia_del_suelo: bool = False
 
 
+def _verja(estado: EstadoDeMovimiento, dt: float, paso: str) -> float:
+    """Deja el estado en números utilizables y devuelve el `dt` a usar.
+
+    AUD-344 escribió esta comprobación, y AUD-355 la movió aquí. El defecto
+    de AUD-355 es de los que no se ven leyendo el arreglo, sólo leyendo a
+    quién llama: la verja se puso dentro de `resolver_movimiento`, la
+    fachada «resuelve el fotograma entero», y **ninguna entidad del juego
+    llama a esa fachada**. El jugador compone los pasos a mano
+    (`player.py:1077, 1085, 1125, 1159`), así que la protección existía,
+    tenía pruebas en verde, y el fotograma del jugador seguía reventando con
+    el mismo `int(NaN)` de siempre. Un arreglo en una función sin llamantes
+    de producción no es un arreglo: es documentación ejecutable.
+
+    Qué hace, y por qué eso y no otra cosa:
+
+    * `dt` no finito o negativo → `0.0`. **No** se sale del paso: con `dt`
+      cero no se integra nada, pero la resolución sí corre, y eso es lo que
+      saca a una entidad que ya está incrustada en un tile. Salir temprano
+      la dejaría dentro.
+    * Posición no finita → la entidad vuelve a (0, 0), el spawn por
+      convención de los mapas, con la velocidad cortada: una coordenada NaN
+      no se puede corregir, sólo sustituir, y cualquier otro sitio sería un
+      número inventado.
+    * Velocidad no finita → se corta y la simulación sigue. La posición aún
+      es buena; conservarla es la diferencia entre un tirón y una teleportación.
+
+    El registro es `warning` y no `exception` a propósito: esto no es un
+    fallo del motor, es un dato de entrada roto —típicamente de una entidad
+    de estudiante— y quien lee el log necesita el qué y el dónde, no una
+    traza del resolutor, que no tiene la culpa. Como el estado queda saneado,
+    el aviso no se repite cada fotograma salvo que la fuente siga inyectando
+    NaN, que es justamente cuando sí interesa verlo repetido.
+    """
+    if not math.isfinite(dt) or dt < 0.0:
+        logger.warning(
+            "resolucion.%s: dt inválido (%r): no se integra este fotograma",
+            paso, dt)
+        dt = 0.0
+    if not (math.isfinite(estado.posicion.x) and math.isfinite(estado.posicion.y)):
+        logger.warning(
+            "resolucion.%s: posición no finita %r; se devuelve a (0, 0)",
+            paso, estado.posicion)
+        estado.posicion.update(0.0, 0.0)
+        estado.velocidad.update(0.0, 0.0)
+        estado.en_el_suelo = False
+        return dt
+    if not (math.isfinite(estado.velocidad.x) and math.isfinite(estado.velocidad.y)):
+        logger.warning(
+            "resolucion.%s: velocidad no finita %r; se corta la velocidad",
+            paso, estado.velocidad)
+        estado.velocidad.update(0.0, 0.0)
+    return dt
+
+
 def resolver_eje_x(
     estado: EstadoDeMovimiento,
     dt: float,
@@ -115,6 +173,7 @@ def resolver_eje_x(
     contra ello». Subirlo haría atravesable un escalón bajo; bajarlo a
     cero engancharía al jugador con el suelo sobre el que está de pie.
     """
+    dt = _verja(estado, dt, "eje_x")  # AUD-355
     w, h = estado.ancho, estado.alto
     contacto = Contacto(
         posicion=estado.posicion, velocidad=estado.velocidad,
@@ -217,6 +276,7 @@ def resolver_eje_y(
     AUD-297 — `venia_del_suelo` se guarda aquí, antes de poner
     `en_el_suelo` a False, para el paso de cuestas que corre después.
     """
+    dt = _verja(estado, dt, "eje_y")  # AUD-355
     w, h = estado.ancho, estado.alto
     contacto = Contacto(
         posicion=estado.posicion, velocidad=estado.velocidad,
@@ -267,6 +327,7 @@ def resolver_cuestas(
     quieto) viven aquí. La geometría está en `pendientes.py`, que no toca
     entidades: devuelve una `y` y esto la aplica.
     """
+    dt = _verja(estado, dt, "cuestas")  # AUD-355
     contacto = Contacto(
         posicion=estado.posicion, velocidad=estado.velocidad,
         en_el_suelo=estado.en_el_suelo)
@@ -324,6 +385,9 @@ def resolver_repisas(
     andar hacia una plataforma desde un suelo más bajo la atraviesa (la
     semántica de un solo sentido del prólogo — saltar a través, caer encima).
     """
+    # AUD-355 — este paso no integra, así que no tiene `dt` que sanear; lo
+    # que sí tiene es el mismo `int(estado.posicion.x)` que revienta.
+    _verja(estado, 0.0, "repisas")
     contacto = Contacto(
         posicion=estado.posicion, velocidad=estado.velocidad,
         en_el_suelo=estado.en_el_suelo)
@@ -369,7 +433,28 @@ def resolver_movimiento(
     `plataformas` no hay cuestas ni repisas que resolver (AUD-328 y
     AUD-129; AUD-335: el vuelo idem, son semántica de plataformas) — y sin
     perfil se asume el contexto de plataformas con los valores por defecto.
+
+    AUD-344 — la verja de entrada. Antes no la había: un `dt` quebrado o unas
+    coordenadas que ya no son números (NaN/∞) se propagaban hasta que
+    `int(pos.x)` de algún paso reventaba el fotograma — para el jugador, un
+    cierre de partida en mitad de un nivel que no le explica nada. Aquí no se
+    silencia nada: se corta la velocidad y la posición se devuelve a (0,0) —
+    el spawn por convención de los mapas — y se registra el porqué con la
+    entidad que fue. Un habitante del mundo puede morir; la simulación no.
     """
+    # AUD-355 — la verja compartida, que ahora vive en `_verja` y la aplican
+    # también los pasos sueltos (que es por donde entra el jugador de
+    # verdad). Aquí se conserva además la salida temprana con `dt <= 0`: la
+    # fachada promete «resuelve el fotograma entero», y un fotograma de
+    # duración cero no tiene nada que resolver.
+    posicion_rota = not (math.isfinite(estado.posicion.x)
+                         and math.isfinite(estado.posicion.y))
+    dt = _verja(estado, dt, "movimiento")
+    if dt <= 0.0 or posicion_rota:
+        return Contacto(
+            posicion=estado.posicion, velocidad=estado.velocidad,
+            en_el_suelo=estado.en_el_suelo)
+
     solidos = solidos or []
     repisas = repisas or []
     pendientes = pendientes or []
