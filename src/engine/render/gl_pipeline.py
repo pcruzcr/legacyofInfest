@@ -242,6 +242,10 @@ class GLRenderer:
         self.config = config or GLRenderConfig()
         self.ctx: moderngl.Context | None = None
         self._initialized = False
+        #: AUD-377 — llamadas de dibujo de ESTE fotograma. La única cifra de
+        #: **recurso** que mide el motor; todo lo demás que mide es tiempo. Se
+        #: reinicia por fotograma desde `App`.
+        self.llamadas_de_dibujo: int = 0
 
         self._scene_fbo: moderngl.Framebuffer | None = None
         self._bloom_fbo: moderngl.Framebuffer | None = None
@@ -596,6 +600,36 @@ class GLRenderer:
                         v.value = value
 
         vao.render(moderngl.TRIANGLES)
+        # AUD-377 — se suma **aquí**, después de las tres salidas tempranas
+        # (sin contexto, sin quad, sin VAO del programa) y no al entrar. Un
+        # contador que sume al entrar miente justo cuando más falta hace: el
+        # síntoma que se está diagnosticando es «esto no se dibuja», y la cifra
+        # tiene que bajar cuando algo deja de pintarse.
+        self.llamadas_de_dibujo += 1
+
+    def reiniciar_llamadas(self) -> None:
+        """Pone el contador a cero. Lo llama `App` al empezar el fotograma.
+
+        Es por fotograma y no acumulado desde el arranque porque la pregunta
+        que responde es «¿cuánto cuesta ESTE fotograma?»: un total creciente
+        obliga a restar dos lecturas para saber lo único que interesa.
+        """
+        self.llamadas_de_dibujo = 0
+
+    def anotar_volcado(self, cuantos_sprites: int) -> None:
+        """Apunta el volcado del lote de sprites como **una** llamada.
+
+        `SpriteBatchGPU.volcar` devuelve cuántas órdenes dibujó y las manda en
+        una sola llamada instanciada (AUD-340: 500 sprites, un `render`). Sumar
+        por sprite diría lo contrario de lo que la instanciación consiguió, que
+        es precisamente el número que alguien miraría para decidir si vale la
+        pena.
+
+        Un volcado vacío no llega a llamar a la tarjeta —`volcar` devuelve 0
+        antes— así que tampoco cuenta.
+        """
+        if cuantos_sprites > 0:
+            self.llamadas_de_dibujo += 1
 
     # ── AUD-216 — refracción bajo el agua ───────────────────────────────
 
@@ -688,7 +722,11 @@ class GLRenderer:
         # render.
         if self._lote_de_sprites is not None:
             read_fbo.use()
-            self._lote_de_sprites.volcar()
+            # AUD-377 — `volcar` ya devolvía cuántas órdenes dibujó y nadie
+            # miraba el valor. Es **una** llamada instanciada por volcado, sea
+            # de un sprite o de quinientos: contarla así es lo que enseña en la
+            # consola lo que compró AUD-340.
+            self.anotar_volcado(self._lote_de_sprites.volcar())
 
         # 1.5. Refracción bajo el agua (AUD-216)
         #
