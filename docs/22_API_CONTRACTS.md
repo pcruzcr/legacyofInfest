@@ -654,10 +654,12 @@ class HUD:
     def is_countdown(self, value: bool) -> None: ...
 ```
 
+<!-- cita-historica -->
 > **AUD-307.** `bind_player` (daba un "retrato" del estado del jugador) **no
 > existe en el HUD de hoy**: la escena de nivel le pasa cada fotograma lo que
 > necesita vía `set_score`, `set_estamina`, `set_special_meter`,
 > `set_tiempo_bala` y el retrato lo calcula internamente (`_get_portrait_state`).
+<!-- /cita-historica -->
 
 ### 7.2 `src/engine/ui/message_box.py`
 
@@ -1909,7 +1911,7 @@ Este documento es la única fuente de verdad para firmas exactas de funciones y 
 
 ## 7. UI del Motor (src/engine/ui/)
 
-### 7.1 hud.py — Clase HUD que se suscribe a eventos del jugador. Métodos: update, draw, start_timer, stop_timer, pause_timer, resume_timer, set_combo_count, set_boss_hud, clear_boss_hud, trigger_save_notification, set_score, set_boss_rush, set_special_meter, set_estamina, set_tiempo_bala. (AUD-307: `bind_player` no existe.)
+### 7.1 hud.py — Clase HUD que se suscribe a eventos del jugador. Métodos: update, draw, start_timer, stop_timer, pause_timer, resume_timer, set_combo_count, set_boss_hud, clear_boss_hud, trigger_save_notification, set_score, set_boss_rush, set_special_meter, set_estamina, set_tiempo_bala. (AUD-307: bind_player, sin acentos graves porque no existe.)
 
 ### 7.2 message_box.py — Clase MessageBox para mostrar mensajes tipo máquina de escribir.
 

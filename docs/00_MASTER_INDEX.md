@@ -10,7 +10,10 @@ date_processed: "2026-08-06"
 
 # Índice maestro de documentación
 
-**Fecha:** 8 de agosto de 2026 · **Documentos:** 69
+**Fecha:** 9 de agosto de 2026 · **Documentos:** 71 en `docs/` (70 indexados abajo + este índice), más 5 ficheros de la raíz
+(`README`, `CLAUDE`, `CONTRIBUTING`, `CHANGELOG` y `KNOWN_GAPS`), que también tienen fila.
+
+> **AUD-365.** Este encabezado decía 69 y la tabla tenía 75 filas: el hallazgo P3 de `docs/89`. No era una fila de más ni un documento de menos — eran **dos formas distintas de contar** sin decir cuál se usaba. Ahora el número se comprueba: `tests/test_el_indice_maestro_cuenta_bien.py` lo recuenta contra el sistema de ficheros en cada suite, que es lo que la invariante 6 de `CLAUDE.md` exige de cualquier cifra escrita en un documento.
 
 Ésta es la **lista autoritativa**: si un documento no aparece aquí, está mal
 puesto. Está agrupada por *para qué sirve*, no por el orden en que se
@@ -24,7 +27,7 @@ hacer X».
 > comandos de cada uno.
 
 **Qué pasó con los documentos que no están.** Esta documentación tenía 102
-ficheros y hoy son 69 (el encabezado de arriba los cuenta). Se retiraron 35:
+ficheros y hoy son 71 (el encabezado de arriba los cuenta). Se retiraron 35:
 auditorías cerradas, informes
 de fase, hojas de ruta cumplidas y registros de decisiones ya tomadas. No eran
 documentación técnica y ninguno describía el motor de hoy — varios citaban
