@@ -2438,3 +2438,69 @@ reconstruía la rejilla 300 veces por mapa, que no es lo que haría el motor
 —se construiría una vez por escenario—. Medir mal es fácil y da números que
 parecen respuestas. El que vale aquí es el de la rejilla construida una vez,
 porque es el único que se parece a lo que costaría de verdad.
+
+---
+
+## 34. Siete de las diecisiete, demostradas (2026-08-10, AUD-380)
+
+Primer lote sobre `GAP-052`, y el primero de esta sesión que sale de una
+**decisión del dueño** en vez de de una medición: *«la idea es que todo este
+cableado [sea] para que los estudiantes lo usen»*.
+
+Eso resuelve la ambigüedad con la que se había redactado el hueco. Yo lo
+escribí como «no es una lista de tareas, varias son opcionales a propósito», y
+con ese criterio está mal: una característica que ningún mapa declara no la
+descubre nadie —no se ve al jugar y no aparece abriendo un mapa en Tiled—, así
+que las diecisiete son hueco de contenido de verdad. Apagada por coste y no
+demostrada en ningún sitio son cosas distintas.
+
+### 34.1 El bloque sin riesgo
+
+Siete propiedades, todas sobre `stage_mecanicas`:
+
+* **Las seis del agua.** Es el **único** mapa del repositorio con `WaterZone`,
+  o sea el único sitio donde se pueden demostrar. El efecto existía desde
+  `docs/47_WATER_EFFECT.md` y un estudiante sólo podía enterarse leyendo ese
+  documento.
+* **`desfase_audio`.** El mapa ya declaraba `bpm` y `compas`; ésta era la
+  única de las tres que no declaraba ningún mapa, así que los bloques rítmicos
+  seguían a la música con la latencia de la tarjeta y sin forma de corregirla.
+
+Los valores son los del motor salvo dos, subidos para que la diferencia **se
+vea** al abrir el mapa —que es de lo que va demostrar algo—: amplitud 4→6 px y
+alfa 100→120. El tinte es el azul por defecto escrito explícito, para que se
+lea el formato: `#2850a0` carga como `(40, 80, 160)`, comprobado.
+
+**Se editó `tools/generate_stage_mecanicas.py`, no el `.tmx`.** El mapa es
+generado, y tocar la salida se habría perdido en la siguiente regeneración —
+todo el lote, sin que ninguna prueba lo notara hasta meses después.
+
+**No se tocó `stage0`.** Es el mapa que copian los estudiantes y su lección es
+el prólogo; llenarlo de propiedades lo convierte en muestrario y le quita
+justo lo que lo hace útil.
+
+    Propiedades que ningún mapa usa: 17 → 10
+
+### 34.2 Las diez que quedan, y por qué no van igual
+
+No es pereza; cada una tiene un motivo distinto y conviene que estén separados:
+
+* **`camara` y `vista`** son modos de juego enteros. `vista=cenital` no es una
+  propiedad que se añada a un mapa: es un mapa que se diseña. Desde el criterio
+  del dueño éste es **el hueco más grande que queda** — el motor sabe hacer
+  cenital, tiene sus pruebas, y ningún estudiante puede descubrirlo.
+* **`sombras_proyectadas` y `god_rays`** cuestan, y la primera tiene medición
+  detrás: el envolvente utilizable son cuatro o cinco focos. Encenderlas exige
+  elegir el mapa mirando sus focos, no a bulto.
+* **`estamina`, `tiempo_bala`, `habilidades_libres`** cambian cómo se juega el
+  mapa donde se pongan. Es decisión de diseño, no de cableado.
+* **`fog_of_war`, `profundidad_min`, `profundidad_max`** esperan a un mapa que
+  las pida.
+
+### 34.3 Lo que este lote enseña sobre el anterior
+
+`AUD-378` abrió el guardián para que dijera la verdad, y la verdad resultó ser
+accionable en una hora para siete de las diecisiete. Merece la pena anotarlo
+porque el orden importó: **primero se arregló el instrumento, después se leyó
+lo que medía**. Con el guardián ciego, estas siete llevaban desde AUD-216 y
+AUD-137 sin que nadie supiera que faltaban.
