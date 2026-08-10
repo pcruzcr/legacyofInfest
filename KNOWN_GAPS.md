@@ -1479,3 +1479,47 @@ está.
   §3 con su coste medido, y duplicarlo en este fichero produciría dos listas
   que se desincronizan. Este GAP cubre la *tubería*; `docs/92` cubre la cola
   larga que la recorre.
+
+## [GAP-052] Diecisiete características del TMX que no ejercita ningún mapa
+
+- **File:** `assets/maps/`
+- **Phase:** AUD-378 (2026-08-10)
+- **Reason:** Con el punto ciego del guardián cerrado, `check_tmx_coverage.py`
+  puede por fin responder la pregunta para la que se escribió. La respuesta:
+  de las 38 propiedades de mapa que lee el motor, **17 no las declara ningún
+  mapa del repositorio**:
+
+      camara / vista            (modo de cámara y proyección)
+      fog_of_war  god_rays      sombras_proyectadas
+      water_effect  water_tint  water_alpha
+      water_amplitude  water_frequency  water_speed
+      tiempo_bala  estamina  habilidades_libres
+      desfase_audio
+      profundidad_min  profundidad_max
+
+  Verificadas una a una contra los `.tmx` — cero falsos positivos, después de
+  que el primer barrido diera dos (`bpm` y `owner_id`).
+
+  No es un defecto del motor: las diecisiete están implementadas, probadas y
+  documentadas. Es que **el contenido no las usa**, y el propio guion enuncia
+  por qué eso importa: «una característica que el motor lee del TMX pero que
+  ningún mapa declara es, en la práctica, una característica que no existe» —
+  el estudiante no la ve al jugar, no la encuentra abriendo un mapa en Tiled, y
+  sólo puede enterarse leyendo la documentación, que es justo lo que no se
+  hace. `sombras_proyectadas` es el caso que destapó todo esto: construida y
+  medida en AUD-278, encendida por nadie desde entonces.
+
+  Conviene no leerlo como una lista de tareas. Varias son deliberadamente
+  opcionales (`sombras_proyectadas` está apagada por defecto porque cuesta, y
+  su módulo lo mide), y `camara`/`vista` tienen valor por defecto sensato, así
+  que no declararlas no es lo mismo que no usarlas. Lo que sí es cierto de las
+  diecisiete es que **ningún mapa las demuestra**, y ésa es una decisión de
+  contenido que ahora está a la vista en vez de escondida.
+- **Resolution plan:** Es del dueño, no de ingeniería: decidir cuáles merecen
+  aparecer en un mapa —empezando por el de referencia, que es el que los
+  estudiantes copian— y cuáles se quedan como opcionales documentadas. Cuando
+  esa decisión exista, el paso siguiente para el guion es la triaje al estilo
+  de `check_orphan_systems.py` (listas `VERIFICADOS`/`PENDIENTES` y `--ci` que
+  falla por lo que **aparece nuevo**), que es lo que convierte el informe en
+  guardián. Hoy no se hace porque fallaría de entrada por las diecisiete, y un
+  gate que nace en rojo se desactiva.
