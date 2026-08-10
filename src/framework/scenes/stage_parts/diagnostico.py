@@ -123,6 +123,15 @@ class DiagnosticoDeEscenario:
                 f"{int(stats['por_reglas'])} por reglas"
             ),
         }
+        # AUD-347 — los tiempos del ECS, que el planificador mide desde
+        # siempre con `perf_counter` y nadie mostraba: la pregunta de F11
+        # cuando el juego va lento es «cuál sistema», no «cuánto va el
+        # juego». El total primero y los dos sistemas más caros después.
+        planificador = getattr(self, "_planificador", None)
+        if planificador is not None and planificador.total_ms() > 0.0:
+            lento = planificador.tiempos()[:2]
+            detalles = ", ".join(f"{n} {ms:.1f} ms" for n, ms in lento)
+            medidas["ECS"] = f"{planificador.total_ms():.2f} ms | {detalles}"
         # AUD-289 — arriba del todo si ha pasado, y ausente si no. Una fila
         # «Entidades retiradas: 0» permanente enseña a ignorarla, y el día que
         # ponga 1 nadie lo va a mirar.
