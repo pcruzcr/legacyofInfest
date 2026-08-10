@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.engine.audio.audio_manager import AudioManager
-from src.engine.core import gpu_effects, settings, user_settings
+from src.engine.core import azar, gpu_effects, settings, user_settings
 from src.engine.core.clock import DeltaClock
 from src.engine.core.difficulty import Difficulty, set_difficulty
 from src.engine.core.event_bus import EventBus
@@ -47,9 +47,15 @@ def modo_daltonico_gl(ajustes: object | None) -> int:
 
 
 class App:
-    def __init__(self, use_gl: bool = True, depurar: bool = False) -> None:
+    def __init__(self, use_gl: bool = True, depurar: bool = False,
+                 semilla: int | None = None) -> None:
         self.depurar = depurar
         self._use_gl = use_gl
+        #: AUD-375 — con qué semilla arranca el azar. `None` inventa una y la
+        #: anota en el registro, que es lo que quiere una partida normal: azar
+        #: de verdad y repetible después. Se pasa un número para **repetir** un
+        #: fallo del que ya se tiene el registro.
+        self.semilla = semilla
         # AUD-124 — sin anotación, mypy infiere el tipo `None` y toda
         # llamada posterior a `self._gl_renderer.init(...)` es un error.
         # `GLRenderer` sólo se importa para comprobar tipos: importarlo
@@ -173,6 +179,13 @@ class App:
         # consola mientras el jugador juega. Van a un fichero junto a las
         # partidas; `--debug` los devuelve a la pantalla.
         configurar_registro(depurar=self.depurar)
+        # AUD-375 — inmediatamente después del registro, y por eso: la semilla
+        # se escribe en él, así que sembrar antes de configurarlo tiraría la
+        # única línea que hace reproducible un informe de fallo. El motor no
+        # sembraba nunca (GAP-042), y sin semilla «se me cayó en el acto IV» no
+        # se puede repetir: las partículas, el instante del rayo y la decisión
+        # del enemigo eran otras esa vez.
+        azar.sembrar(self.semilla)
         self.event_bus = EventBus()
 
         # AUD-283 — la consola de depuración, que existía sin que nadie la

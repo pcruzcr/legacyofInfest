@@ -24,6 +24,16 @@ def _parse_args() -> argparse.Namespace:
         help="Muestra los avisos del motor en la consola (por defecto van al "
              "registro, junto a las partidas)",
     )
+    # AUD-375 — la otra mitad de la semilla. El motor la escribe en el registro
+    # de cada partida; esto es cómo se devuelve. Sin la bandera, un informe con
+    # la semilla dentro no sirve de nada: se sabría con qué azar pasó y no
+    # habría forma de repetirlo.
+    parser.add_argument(
+        "--semilla", type=int, default=None, metavar="N",
+        help="Arranca con una semilla concreta para repetir una partida. La "
+             "del arranque queda anotada en el registro como «semilla del "
+             "azar»",
+    )
     return parser.parse_args()
 
 
@@ -118,7 +128,7 @@ if __name__ == "__main__":
             print(f"ERROR: No StageScene subclass found in src.stages.{args.stage}")
             sys.exit(1)
         from src.engine.core.app import App
-        app = App(depurar=args.debug)
+        app = App(depurar=args.debug, semilla=args.semilla)
         app.scene_manager.push(scene_cls(app.context))
         app.run()
 
@@ -147,10 +157,10 @@ if __name__ == "__main__":
             )
             sys.exit(1)
         from src.engine.core.app import App
-        app = App(depurar=args.debug)
+        app = App(depurar=args.debug, semilla=args.semilla)
         app.scene_manager.push(scene_cls(app.context))
         app.run()
 
     else:
         from src.engine.core.app import App
-        App(depurar=args.debug).run()
+        App(depurar=args.debug, semilla=args.semilla).run()
