@@ -557,3 +557,53 @@ class TestLleganAlJuegoDeVerdad:
                 escena.draw(pantalla)
         finally:
             escena.on_exit()
+
+    def test_empujar_y_caer_comparten_la_misma_lista_de_solidos(self) -> None:
+        """AUD-349 — la lista que pasa la escena se componía DOS veces por
+        fotograma: `empujar` recibía `stage.collision_rects + cerradas` y
+        `caer` lo recomponía. Con miles de rectángulos por mapa (stage 4-1)
+        son dos copias O(n) por frame de pura churn.
+
+        La prueba vigila por identidad, que es lo que detecta la doble
+        composición: `empujar` y `caer` deben recibir el MISMO objeto, no dos
+        copias iguales.
+        """
+        escena = self._escena()
+        try:
+            bloques = escena._bloques
+            assert bloques is not None
+            if escena._player is not None:
+                escena._player.is_grounded = True
+
+            marcos: dict[int, dict[str, list]] = {}
+            marco_actual = [0]
+            original_empujar = bloques.empujar
+            original_caer = bloques.caer
+
+            def _espia(nombre, original):
+                def espia(*args):
+                    marcos.setdefault(
+                        marco_actual[0], {})[nombre] = args[-1]
+                    return original(*args)
+                return espia
+
+            bloques.empujar = _espia("empujar", original_empujar)  # type: ignore[method-assign]
+            bloques.caer = _espia("caer", original_caer)  # type: ignore[method-assign]
+
+            for _ in range(10):
+                marco_actual[0] += 1
+                escena.update(1 / 60)
+
+            con_ambos = [m for m in marcos.values()
+                         if "empujar" in m and "caer" in m]
+            assert con_ambos, (
+                "ningún fotograma empujó y dejó caer bloques a la vez: la "
+                "prueba no está tocando el bloque empujable del laboratorio"
+            )
+            assert con_ambos[0]["empujar"] is con_ambos[0]["caer"], (
+                "empujar y caer recibieron listas DISTINTAS: la escena "
+                "compone `stage.collision_rects + cerradas` una vez por "
+                "método, dos copias O(n) por fotograma"
+            )
+        finally:
+            escena.on_exit()
