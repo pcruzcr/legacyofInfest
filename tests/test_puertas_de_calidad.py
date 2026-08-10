@@ -162,3 +162,43 @@ class TestLasPuertasQueYaExistian:
         texto = CI.read_text(encoding="utf-8")
         for validador in ("check_dependency_sync.py", "validate_tmx.py"):
             assert validador in texto, f"{validador} salió del CI"
+
+    def test_ruff_esta_limpio_en_el_alcance_del_ci(self) -> None:
+        """No que el paso exista: que el árbol lo pase, aquí y ahora.
+
+        AUD-353 — las tres pruebas de arriba comprueban que la orden sigue
+        escrita en `ci.yml`, y ninguna la ejecuta. Así que el repositorio
+        pasó a `prod` con el linter en rojo y la suite entera en verde: un
+        `# noqa: LOG004` de AUD-304 dejó de hacer falta cuando ruff movió esa
+        regla a *preview*, RUF100 lo denunció como directiva inútil, y nadie
+        se enteró hasta que alguien ejecutó el gate a mano.
+
+        La causa de fondo es que `ruff>=0.6` no tiene tope: la definición de
+        «verde» de este proyecto cambia sola cuando río arriba publican una
+        versión. No se arregla poniendo un tope —eso congela también las
+        correcciones— sino ejecutando el linter dentro de la suite, que es lo
+        único que corre en cada máquina y en cada rama. Está registrado como
+        GAP-034.
+
+        El alcance se **lee del CI**, no se copia: una prueba con su propia
+        lista de rutas se desincroniza del gate que dice proteger.
+        """
+        import re
+        import subprocess
+        import sys
+
+        texto = CI.read_text(encoding="utf-8")
+        m = re.search(r"^\s*ruff check (.+?)--output-format",
+                      texto, re.MULTILINE | re.DOTALL)
+        assert m, "el CI ya no invoca `ruff check`; esta prueba quedó ciega"
+        rutas = m.group(1).replace("\\\n", " ").split()
+        assert rutas, "el paso de ruff del CI no lintea ninguna ruta"
+
+        proceso = subprocess.run(
+            [sys.executable, "-m", "ruff", "check", *rutas],
+            capture_output=True, text=True, cwd=str(RAIZ), check=False,
+        )
+        assert proceso.returncode == 0, (
+            "el gate de ruff del CI está en rojo con la versión instalada "
+            f"({' '.join(rutas)}):\n{proceso.stdout[-3000:]}"
+        )

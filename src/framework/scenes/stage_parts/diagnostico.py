@@ -70,8 +70,20 @@ class DiagnosticoDeEscenario:
         nombre = type(entidad).__name__
         # AUD-304 — ruff no ve el contexto entre llamada y handler: este método
         # sólo se invoca desde un `except Exception` (stage_scene.py), donde
-        # `.exception()` sí tiene contexto de excepción vivo.
-        logging.getLogger(__name__).exception(  # noqa: LOG004
+        # `.exception()` sí tiene contexto de excepción vivo. Esa es la razón
+        # por la que `.exception()` aquí es correcto y hay que conservarla.
+        #
+        # AUD-353 — la supresión de LOG004 que acompañaba a este comentario
+        # se ha quitado: ruff movió esa regla a *preview*, así que con la
+        # regla apagada la directiva pasó a ser RUF100 («supresión inútil») y
+        # **el gate de lint del CI quedó en rojo sin que cambiara una línea
+        # de este fichero**. Si LOG004 vuelve a activarse, el sitio donde
+        # reponerla es éste, y el motivo sigue escrito arriba.
+        #
+        # (La directiva no se escribe literalmente en esta explicación: ruff
+        # lee cualquier comentario que empiece por la palabra mágica, aunque
+        # sea prosa, y avisaba de que la frase no era un código de regla.)
+        logging.getLogger(__name__).exception(
             "la entidad %r falló en update() y se retira del nivel", nombre)
         # Se marca muerta **y** se saca de la lista: sólo lo primero la dejaría
         # sin dibujar pero seguiría recibiendo `set_player_ref` cada fotograma,
