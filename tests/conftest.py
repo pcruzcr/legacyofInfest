@@ -4,6 +4,7 @@ Shared test fixtures for the Legacy of InFest test suite.
 from __future__ import annotations
 
 import os
+import sys
 
 # Set dummy video driver BEFORE any pygame import so display.set_mode
 # never triggers the "no fast renderer available" warning.
@@ -122,3 +123,55 @@ def sample_surface_bw_32x32(_pygame_init) -> pygame.Surface:
             v = 255 if (x // 4 + y // 4) % 2 == 0 else 0
             surf.set_at((x, y), (v, v, v))
     return surf
+
+
+# ── AUD-363: el presupuesto de tiempo de la suite ───────────────────────────
+#
+# Una suite que se hace lenta poco a poco deja de ejecutarse antes de cada
+# commit, y entonces protege lo mismo que una que no existe. Esto es lo único
+# que puede medirla: una prueba no puede cronometrar la sesión que la
+# contiene.
+#
+# Sólo se aplica a la ejecución **completa**. Un lote dirigido —lo que se corre
+# noventa veces al día mientras se programa— no tiene nada que ver con el
+# presupuesto de la suite, y hacerlo saltar ahí sería ruido.
+_INICIO_DE_SESION: float = 0.0
+
+#: Debajo de esto se asume lote dirigido, no suite completa. La suite ronda
+#: las 4.400 pruebas; 3.000 deja margen para que alguien añada o quite
+#: ficheros sin desactivar el guardia por accidente.
+_PRUEBAS_MINIMAS_PARA_MEDIR: int = 3_000
+
+
+def pytest_sessionstart(session):
+    global _INICIO_DE_SESION
+    import time
+
+    _INICIO_DE_SESION = time.perf_counter()
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Falla la sesión completa si la suite se pasa de su presupuesto.
+
+    Se avisa por stderr **y** se cambia el estado de salida: un aviso que sólo
+    se imprime se pierde entre las cien líneas del resumen de pytest, que es
+    exactamente cómo los veinte avisos de obsolescencia de AUD-357 sobrevivieron
+    tanto tiempo.
+    """
+    import time
+
+    recogidas = getattr(session, "testscollected", 0) or 0
+    if recogidas < _PRUEBAS_MINIMAS_PARA_MEDIR or _INICIO_DE_SESION == 0.0:
+        return
+    from tests.test_la_suite_se_vigila_a_si_misma import PRESUPUESTO_DE_SUITE_S
+
+    duracion = time.perf_counter() - _INICIO_DE_SESION
+    if duracion <= PRESUPUESTO_DE_SUITE_S:
+        return
+    print(
+        f"\n[AUD-363] la suite tardó {duracion:.0f} s y el presupuesto son "
+        f"{PRESUPUESTO_DE_SUITE_S:.0f} s. Si la máquina no estaba cargada, "
+        f"esto es una regresión de tiempo: mira `pytest --durations=20`.",
+        file=sys.stderr,
+    )
+    session.exitstatus = 1
