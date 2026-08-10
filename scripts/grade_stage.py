@@ -709,11 +709,17 @@ def main() -> int:
     if args.json:
         print(json.dumps(all_results, indent=2))
 
+    # AUD-356 — con `--json`, el resumen se va a stderr. Antes salía por la
+    # misma salida estándar, detrás del documento, y eso convertía la bandera
+    # en inútil para lo único que existe: `grade_stage.py … --json | jq`
+    # fallaba con «Extra data». La media no se calla, porque calificar a mano
+    # las 26 entregas también usa esta bandera y esa cifra es el resultado.
+    resumen = sys.stderr if args.json else sys.stdout
     avg = sum(r["percentage"] for r in all_results) / len(all_results) if all_results else 0
-    print(f"\n{'='*50}")
-    print(f"  Total graded: {len(all_results)}")
-    print(f"  Average grade: {avg:.1f}%")
-    print(f"{'='*50}")
+    print(f"\n{'='*50}", file=resumen)
+    print(f"  Total graded: {len(all_results)}", file=resumen)
+    print(f"  Average grade: {avg:.1f}%", file=resumen)
+    print(f"{'='*50}", file=resumen)
 
     return 0
 
