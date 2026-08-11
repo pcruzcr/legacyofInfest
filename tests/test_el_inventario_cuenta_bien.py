@@ -114,7 +114,23 @@ def _motor():
             "registro_runtime": len(StageLoader._entity_registry),
         }
     finally:
-        StageLoader._entity_registry.clear()
+        # AUD-415 — se repone lo ajeno **sin** vaciar antes, y ésa es toda la
+        # diferencia.
+        #
+        # Aquí había un `clear()` delante. El efecto era revertir el
+        # `discover_stages()` de unas líneas más arriba, y eso no se puede
+        # deshacer: los módulos de escenario ya importados **no** vuelven a
+        # ejecutar su `register_entity` de nivel de módulo (AUD-144), así que
+        # el registro se quedaba con los 30 integrados para siempre. La
+        # siguiente prueba que contara tipos medía 71 donde el juego ve 78 —
+        # exactamente los 7 tipos de las entregas—, y `test_guia_del_motor`
+        # fallaba o no según qué otras pruebas hubieran cargado un mapa antes
+        # de ella. Un guardián de cifras cuyo resultado depende del orden no
+        # vigila nada.
+        #
+        # `update` sin `clear` conserva lo descubierto y devuelve por encima lo
+        # que otras pruebas hubieran dejado puesto a mano, que es lo que el
+        # docstring de esta fixture dice que hace.
         StageLoader._entity_registry.update(anterior)
         entity_factory._registered = registered_previo
 
