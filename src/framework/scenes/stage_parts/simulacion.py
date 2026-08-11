@@ -26,6 +26,7 @@ Lo que este módulo aporta al escenario
 """
 from __future__ import annotations
 
+from src.framework.vfx import pulso
 from src.framework.world import EnvironmentState
 
 
@@ -176,8 +177,21 @@ class SimulacionDeEscenario:
         #: que quiera saber si llueve, leen esto y no un privado ajeno.
         self.ambiente = estado
 
-        self._lighting.ambient_brightness = max(
-            suelo, self._ambiente_base * estado.factor_ambiente)
+        # AUD-425 — el pulso visual, la última pieza del reloj musical.
+        #
+        # `music_clock.py` sabía desde AUD-137 en qué punto del compás va la
+        # música y **ningún consumidor visual lo miraba**: la información
+        # estaba, faltaba enchufarla. Sin `bpm` en el mapa no hay reloj, así
+        # que `factor_de_luz` devuelve 1,0 y los diecisiete escenarios se ven
+        # exactamente igual que antes.
+        #
+        # Se aplica sobre el brillo ya compuesto y no sobre `_ambiente_base`
+        # para que el latido no se acumule con el ciclo de día y noche: de
+        # madrugada late poco porque hay poca luz que modular, que es lo que se
+        # espera.
+        self._lighting.ambient_brightness = min(1.0, max(
+            suelo, self._ambiente_base * estado.factor_ambiente,
+        ) * pulso.factor_de_luz(self._reloj_musical))
         self._post_processing.set_base_bloom(
             self._bloom_base_escenario + estado.bloom_extra)
         # El tinte de la hora ya viene compuesto con el de la estación: los dos

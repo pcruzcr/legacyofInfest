@@ -232,7 +232,7 @@ tenga costumbre de mirarlo, se sube a bloqueante.
 | Objetos cuantizados a compás | **HECHO** (AUD-137). `patron` en `BloqueRitmico` (`components.py`) |
 | Compensación de latencia | **HECHO** (AUD-137). `desfase` / `desfase_audio` en el mapa |
 | Línea de tiempo de coreografía | **HECHO** (AUD-136). Guion en texto y escenas que no bloquean |
-| **Pulso visual** | **Sigue sin existir.** Cámara, escala y luz al compás: no hay ni un consumidor del reloj en `camera.py` ni en la iluminación. Es la única fila viva de esta tabla |
+| **Pulso visual** | **HECHO (2026-08-11, AUD-425).** `framework/vfx/pulso.py`: la cámara baja 1,5 px y el brillo ambiental sube un 6 % en el golpe, con el primer tiempo del compás pesando el doble. Decae a cero antes del pulso siguiente —un latido continuo es un temblor, no una acentuación— y sin `bpm` en el mapa no late nada, así que los diecisiete escenarios se ven igual |
 
 AUD-119 quitó el obstáculo técnico: el hit-stop ya no desincroniza la
 maquinaria del nivel.

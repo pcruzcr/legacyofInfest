@@ -61,6 +61,7 @@ from src.framework.stage.stage_loader import StageLoader
 from src.framework.ui.dialogue_system import DialogueSystem
 from src.framework.ui.learning_overlay import LearningOverlay
 from src.framework.ui.tutorial_overlay import TutorialOverlay
+from src.framework.vfx import pulso
 from src.framework.vfx.ambient_particles import AmbientParticleSystem
 from src.framework.vfx.damage_numbers import DamageNumberManager
 from src.framework.vfx.lighting import LightSource, LightSystem
@@ -1092,6 +1093,15 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
     def _update_camera_map(self, dt: float) -> None:
         stage = self._stage_data
         self._camera.update(dt)
+        # AUD-425 — el latido de la cámara, después de `update` y antes de que
+        # el mapa lea el `offset`.
+        #
+        # Se suma al offset ya resuelto en vez de dárselo a la cámara como
+        # objetivo: el suavizado de `follow` se comería un empujón de 1,5 px
+        # antes de que se viera, que es justo la clase de sistema correcto que
+        # no llega a ninguna parte. Sin `bpm` en el mapa no hay reloj y esto
+        # suma cero.
+        self._camera.offset.y += pulso.offset_de_camara(self._reloj_musical)
         if stage.map_layer is not None and hasattr(stage.map_layer, '_map_layer'):
             stage.map_layer._map_layer.view_rect = pygame.Rect(
                 self._camera.offset.x, self._camera.offset.y,
