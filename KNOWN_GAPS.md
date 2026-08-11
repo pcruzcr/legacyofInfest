@@ -1368,7 +1368,7 @@ está.
   `escudo` para hacerlo, pero migrarlos cambia el comportamiento del jugador y
   va en su propio lote.
 
-## [GAP-045] No hay pathfinding ni árbol de comportamiento
+## ~~[GAP-045] No hay pathfinding ni árbol de comportamiento~~ *(Resuelto — el A*; el BT sigue descartado)*
 
 - **File:** `src/framework/entities/enemy_base.py`
 - **Phase:** auditoría 2026-08-10, lista del dueño (AUD-376)
@@ -1381,6 +1381,36 @@ está.
   historia: la invariante 7 pide no meter maquinaria donde una FSM determinista
   rinde igual, y con 13 estados por enemigo nadie ha enseñado que rinda peor.
   Hacer A* sí; BT sólo con un caso que la FSM no pueda expresar.
+
+- **Resolution (2026-08-10, AUD-389):** A* sobre tiles, hecho, con el diseño
+  que eligió el dueño —waypoints como pista y recálculo por cadencia
+  escalonada—. `framework/ai/navegacion.py`.
+
+  **No es un sistema buscando quién lo use.** `sistema_acosador` perseguía con
+  `hacia.normalize()`: línea recta, atravesando muros. Un perseguidor que se
+  empotra y tiembla contra una pared no da la tensión de Nemesis que su propio
+  docstring describe. El A* es el arreglo de ese comportamiento.
+
+  **Lo que cuesta, medido** sobre `stage4_1` (malla de 60×240 celdas, 3.230
+  bloqueadas) a la distancia real de persecución (480 px = 30 celdas):
+
+  | Tope de nodos | ms/consulta | Rutas halladas |
+  |---|---|---|
+  | 1.500 | 3,616 | 192/200 |
+  | 400 | 1,830 | 80/200 |
+  | 150 | 0,877 | 39/200 |
+
+  Bajar el tope abarata y **rompe la característica**, así que lo que se acota
+  no es el coste de cada A* sino cuántos se hacen por fotograma. Con la
+  cadencia de 4 Hz escalonada: 1 navegante 0,241 ms (1,4 % del presupuesto), 4
+  navegantes 0,964 ms, **30 navegantes 7,232 ms (43 %)**. El envolvente
+  utilizable son unos pocos, que es el caso para el que existe.
+
+  Sin diagonales a propósito: un paso diagonal atraviesa la esquina entre dos
+  muros y produce rutas que el cuerpo no puede recorrer.
+
+  **El árbol de comportamiento sigue descartado**, por la invariante 7 y porque
+  nadie ha enseñado que la FSM de 13 estados rinda peor.
 
 ## ~~[GAP-046] La percepción de enemigos vive en código de escenario~~ *(Resuelto — la premisa era falsa)*
 

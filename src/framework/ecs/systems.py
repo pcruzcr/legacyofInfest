@@ -43,6 +43,7 @@ from src.framework.ecs.components import (
     Efectos,
     EsJugador,
     Liana,
+    Navegante,
     PlataformaHundible,
     PlataformaMovil,
     Resorte,
@@ -596,9 +597,65 @@ def sistema_acosador(mundo: World, dt: float) -> None:
             acos._fuera = acos.reaparicion
             continue
         if distancia > 1.0:
-            t.posicion += hacia.normalize() * acos.velocidad * dt
+            # AUD-389 — rodear en vez de empotrarse. `_paso_del_acosador`
+            # devuelve la direccion: la del siguiente tramo de la ruta si hay
+            # malla publicada, y la recta de siempre si no la hay.
+            direccion = _paso_del_acosador(mundo, entidad, t, objetivo, dt)
+            t.posicion += direccion * acos.velocidad * dt
             t.rect.topleft = (int(t.posicion.x), int(t.posicion.y))
-            t.facing = 1 if hacia.x >= 0 else -1
+            t.facing = 1 if direccion.x >= 0 else -1
+
+
+def _paso_del_acosador(mundo: World, entidad, t, objetivo: pygame.Vector2,
+                       dt: float) -> pygame.Vector2:
+    """Hacia donde da el siguiente paso el perseguidor — AUD-389.
+
+    **Sin malla publicada devuelve la recta de siempre**, y eso no es una
+    concesion: un mundo que no ha publicado geometria no permite deducir donde
+    estan los muros, y quedarse quieto seria peor que ir recto. Es la misma
+    decision que la oclusion de AUD-381.
+
+    Con malla, re-planifica como mucho cuatro veces por segundo y escalonado
+    (ver `Navegante`), y entre re-planificaciones consume la ruta que ya tiene.
+    Recalcular cada fotograma costaria un A* por enemigo y por fotograma, que
+    es justo lo que la cadencia evita.
+    """
+    from src.framework.ai import navegacion
+
+    recta = objetivo - pygame.Vector2(t.rect.center)
+    if recta.length_squared() == 0.0:
+        return pygame.Vector2(0, 0)
+    recta = recta.normalize()
+
+    malla = mundo.recurso("malla_navegacion")
+    if not isinstance(malla, navegacion.MallaDeNavegacion):
+        return recta
+
+    nav = mundo.obtener(entidad, Navegante)
+    if nav is None:
+        nav = Navegante()
+        mundo.poner(entidad, nav)
+
+    nav.proximo -= dt
+    if nav.proximo <= 0.0:
+        nav.proximo = navegacion.CADENCIA
+        nav.ruta = navegacion.a_estrella(
+            malla, malla.celda_de(pygame.Vector2(t.rect.center)),
+            malla.celda_de(objetivo),
+        )
+
+    # Se descartan los tramos ya alcanzados: sin esto el perseguidor se queda
+    # empujando contra el centro de la celda en la que ya esta.
+    centro = pygame.Vector2(t.rect.center)
+    while nav.ruta and centro.distance_to(malla.centro_de(nav.ruta[0])) < malla.tile * 0.5:
+        nav.ruta.pop(0)
+    if not nav.ruta:
+        return recta
+
+    hacia_tramo = malla.centro_de(nav.ruta[0]) - centro
+    if hacia_tramo.length_squared() == 0.0:
+        return recta
+    return hacia_tramo.normalize()
 
 
 # ══════════════════════════════════════════════════════════════

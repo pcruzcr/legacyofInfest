@@ -353,7 +353,8 @@ legacy-of-infest/                      # Actual repo root
 │   │   │
 │   │   └── ai/
 │   │       ├── __init__.py
-│   │       └── lua_script.py              # LuaScript: Lua scripting for enemy AI
+│   │       ├── lua_script.py              # LuaScript: Lua scripting for enemy AI
+│   │       └── navegacion.py              # AUD-389: A* sobre tiles, con su coste medido
 │   │
 │   └── stages/
 │       ├── stage0/                        # PROFESSOR-OWNED. Executable documentation.
