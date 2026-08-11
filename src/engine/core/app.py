@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol, cast
 
 import pygame
 
@@ -22,6 +22,47 @@ if TYPE_CHECKING:
     from src.engine.scene.base_scene import BaseScene
 
 logger = logging.getLogger(__name__)
+
+
+class EscenaConRutaDeGPU(Protocol):
+    """Una escena que parte su dibujo en mundo e interfaz — AUD-343.
+
+    AUD-371 — esto era un contrato **por pato**: `callable(getattr(escena,
+    "dibujar_mundo", None))` en tres sitios. Funcionaba y tenía dos costes.
+    El primero, que el contrato no estaba escrito en ninguna parte: quien
+    quisiera que su escena usara la ruta de GPU tenía que deducir los nombres
+    leyendo `_draw`. El segundo lo destapó ampliar el trinquete de mypy con
+    `src/engine/scene`: con `BaseScene` por fin analizada de verdad, las tres
+    llamadas pasaron a ser errores de tipo, porque `getattr` no estrecha nada.
+
+    No lleva `@runtime_checkable`, y eso también se midió. Desde Python 3.12
+    el `isinstance` contra un Protocol usa `getattr_static`, que **no ve
+    atributos creados dinámicamente**: ni los de un `MagicMock` con `spec`
+    —tres pruebas se pusieron rojas al intentarlo— ni los de una escena de
+    estudiante que delegue por `__getattr__`. Sustituir el chequeo de pato por
+    `isinstance` habría cambiado el comportamiento en silencio justo para el
+    tipo de escena que este motor tiene que aguantar.
+
+    Así que el Protocol es el **contrato escrito** —quien quiera la ruta de
+    GPU ya no tiene que deducir los nombres leyendo `_draw`— y la
+    comprobación sigue siendo por pato, con `_soporta`.
+    """
+
+    def dibujar_mundo(self, destino: pygame.Surface) -> None: ...
+
+    def dibujar_ui(self, destino: pygame.Surface) -> None: ...
+
+
+def _soporta(escena: object | None, metodo: str) -> bool:
+    """¿Esta escena implementa ese trozo de la ruta de GPU?
+
+    Se comprueban por separado —y no los dos juntos— para no cambiar el
+    comportamiento de AUD-343: hoy `dibujar_mundo` decide si el mundo se pinta
+    aparte y si su mapa de luz sube a la tarjeta, y `dibujar_ui` decide si hay
+    overlay. Unificarlos sería una decisión de diseño distinta, no una
+    refactorización.
+    """
+    return escena is not None and callable(getattr(escena, metodo, None))
 
 
 def modo_daltonico_gl(ajustes: object | None) -> int:
@@ -399,8 +440,9 @@ class App:
             # cadena de pasadas y la interfaz se compone después. Para todo lo
             # demás, `draw` sigue siendo el dibujo entero de una vez.
             escena = self.scene_manager.current
-            if callable(getattr(escena, "dibujar_mundo", None)):
-                escena.dibujar_mundo(self.internal_surface)
+            if _soporta(escena, "dibujar_mundo"):
+                cast("EscenaConRutaDeGPU", escena).dibujar_mundo(
+                    self.internal_surface)
             else:
                 escena.draw(self.internal_surface)
         self.scene_manager.transition.draw(self.internal_surface)
@@ -479,12 +521,17 @@ class App:
             # overlay: todo su fotograma —incluida la consola de AUD-283— va
             # por la cadena, como siempre.
             overlay: pygame.Surface | None = None
-            if callable(getattr(escena, "dibujar_ui", None)):
+            # AUD-371 — el `is not None` es explícito y no redundante: `escena`
+            # viene de una unión con `None` (AUD-354, la pila vacía) y mypy no
+            # descarta el `None` al comprobar contra un Protocol. Escribirlo
+            # también dice lo que pasa aquí sin tener que subir ochenta líneas.
+            if _soporta(escena, "dibujar_ui"):
                 # AUD-344 — alfa 0, no BG_COLOR: el overlay es translúcido y
                 # la pasada 9b lo compone con blend SRC_ALPHA. Un relleno
                 # opaco ocultaría el mundo entero bajo el fondo (medido).
                 self._ui_overlay_surface.fill((0, 0, 0, 0))
-                escena.dibujar_ui(self._ui_overlay_surface)
+                cast("EscenaConRutaDeGPU", escena).dibujar_ui(
+                    self._ui_overlay_surface)
                 overlay = self._ui_overlay_surface
             self._gl_renderer.render(
                 self.internal_surface, self._current_light_surface(),
@@ -514,7 +561,7 @@ class App:
         if self.scene_manager.stack_size == 0:
             return None
         scene = self.scene_manager.current
-        if not callable(getattr(scene, "dibujar_mundo", None)):
+        if not _soporta(scene, "dibujar_mundo"):
             return None
         surface = getattr(scene, "light_surface", None)
         return surface if isinstance(surface, pygame.Surface) else None
