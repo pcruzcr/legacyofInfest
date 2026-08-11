@@ -105,6 +105,22 @@ class MundoDelEscenario:
         entidad crea al nacer, al mundo de la escena.
         """
         self._mundo = World()
+        # AUD-381 — la geometría del nivel, para que los conos de visión no
+        # atraviesen las paredes. Se publica **una vez** al montar y no por
+        # fotograma: `RejillaEspacial` indexa la lista al construirse, y
+        # rehacerla cada fotograma costaría más que la consulta que ahorra
+        # (AUD-379 midió lo que vale ese índice: 0,011 ms sobre 51
+        # rectángulos).
+        #
+        # Se publican los sólidos del mapa y no los de la escena compuesta
+        # —plataformas móviles, bloques rítmicos, puertas— a propósito: ésos
+        # cambian cada fotograma y reindexarlos por cada cambio devolvería el
+        # coste que AUD-379 descartó. Una plataforma móvil no tapa la vista de
+        # un vigilante; un muro sí, y los muros no se mueven.
+        from src.framework.stage.rejilla import RejillaEspacial
+
+        self._mundo.poner_recurso(
+            "geometria", RejillaEspacial(list(self._stage_data.collision_rects)))
         for grupo in self._stage_data.componentes:
             self._mundo.crear(*grupo)
 

@@ -2504,3 +2504,82 @@ accionable en una hora para siete de las diecisiete. Merece la pena anotarlo
 porque el orden importó: **primero se arregló el instrumento, después se leyó
 lo que medía**. Con el guardián ciego, estas siete llevaban desde AUD-216 y
 AUD-137 sin que nadie supiera que faltaban.
+
+---
+
+## 35. Los guardias veían a través de las paredes (2026-08-10, AUD-381)
+
+`GAP-046` decía que la percepción de enemigos vivía en código de escenario y
+había que subirla al framework. **Era falso**, y debajo había un defecto
+distinto y peor.
+
+### 35.1 La premisa, corregida
+
+`ConoDeVision` es un componente del ECS desde hace tiempo: vive en
+`framework/ecs/components.py`, lo mueve `sistema_conos_de_vision`, tiene su
+`Alerta` de cuatro estados y su gizmo de depuración en `stage/gizmos.py`. Su
+docstring dice, literalmente, que existe «para no reescribirlo cada estudiante
+que quiera un guardia» — justo lo contrario de lo que el hueco afirmaba.
+
+El error vino de asociar `stages/stage1_1/combat/guard_system.py` con un
+guardia enemigo. Es la mecánica de **defensa del jugador** —bloquear— y
+coincidió en una búsqueda por texto que no verifiqué.
+
+Es la **segunda** premisa falsa de las catorce que escribí en §28, después de
+la de `GAP-037` («stage4_1 trae miles de rectángulos»: son 51). Las dos
+salieron de dar por bueno el resultado de una búsqueda sin abrir el fichero.
+
+### 35.2 El defecto que sí había
+
+`sistema_conos_de_vision` decidía con dos cosas: distancia y ángulo. Nada más.
+Un vigilante al otro lado de un muro **veía al jugador igual que si el muro no
+existiera** — el mismo defecto que AUD-278 arregló para la luz, abierto
+todavía para la vista.
+
+Y pesa más que en la luz, porque cambia una regla en vez de un píxel: el sigilo
+con muros no funcionaba, así que un nivel diseñado alrededor de esconderse
+detrás de algo no se podía hacer.
+
+### 35.3 La pieza estaba escrita para esto
+
+`RejillaEspacial` (AUD-276) justificaba su existencia así: «no había forma de
+preguntar "¿qué hay **entre** este punto y aquel otro?". Sin eso no se puede
+hacer la línea de visión de un guardia».
+
+Se construyó `hay_vision()`, se probó — y el guardia se escribió después sin
+llamarla. Es la especie que domina esta fase, con una vuelta de tuerca nueva:
+aquí el consumidor previsto llegó **más tarde** que la pieza y aun así no la
+usó.
+
+Cierra además el arco de AUD-379, que midió que la fase amplia de la rejilla no
+aportaba nada y dejó dicho que su valor real eran `rayo()` y `hay_vision()`.
+Éste es ese valor, cobrado: la rejilla pasa de un consumidor a dos.
+
+### 35.4 Cómo llega la geometría
+
+Por recurso del mundo (`poner_recurso("geometria", ...)`), que es el canal que
+el ECS ya usa para `reloj_musical`. Dos decisiones que conviene no perder:
+
+* **Sin recurso publicado, el sistema se comporta como antes.** No es una
+  concesión a la compatibilidad: un mundo que no ha publicado geometría no
+  permite deducir que hay un muro, e inventárselo dejaría ciegos a los
+  vigilantes de cualquier prueba o entrega que monte un mundo desnudo. Las tres
+  pruebas de sigilo de `test_ecs.py` siguen en verde sin tocarlas.
+* **Se publican los sólidos del mapa, no los de la escena compuesta.** Las
+  plataformas móviles, los bloques rítmicos y las puertas cambian cada
+  fotograma, y reindexarlos por cada cambio devolvería exactamente el coste que
+  AUD-379 descartó. Una plataforma móvil no tapa la vista de un vigilante; un
+  muro sí, y los muros no se mueven.
+
+6 pruebas nuevas, incluido el cable trampa de que el escenario publique el
+recurso — sin él la lógica sería correcta y no se ejecutaría nunca, que es el
+modo de fallo de AUD-050 y AUD-347.
+
+### 35.5 Lo que esto obliga a hacer con las otras doce
+
+Dos premisas falsas de catorce no es mala suerte: es que §28 se escribió
+sondeando ~45 filas en una pasada y varias conclusiones se apoyaron en
+búsquedas por texto sin abrir el fichero. Las doce entradas abiertas que quedan
+de aquella pasada **no están verificadas al mismo nivel** que las cuatro que se
+han trabajado desde entonces, y conviene decirlo antes de que alguien planifique
+sobre ellas.

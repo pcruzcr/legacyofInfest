@@ -1314,7 +1314,7 @@ está.
   rinde igual, y con 13 estados por enemigo nadie ha enseñado que rinda peor.
   Hacer A* sí; BT sólo con un caso que la FSM no pueda expresar.
 
-## [GAP-046] La percepción de enemigos vive en código de escenario
+## ~~[GAP-046] La percepción de enemigos vive en código de escenario~~ *(Resuelto — la premisa era falsa)*
 
 - **File:** `src/stages/stage1_1/combat/guard_system.py`
 - **Phase:** auditoría 2026-08-10, lista del dueño (AUD-376)
@@ -1327,6 +1327,40 @@ está.
   dejando el guardia del escenario como primer consumidor. Nota de alcance:
   `revisar/` no se toca (invariante 3), pero `src/stages/stage1_1` sí es
   material del repo.
+
+- **Resolution (2026-08-10, AUD-381): la premisa era falsa, y debajo había un
+  defecto distinto y peor.**
+
+  La percepción **no** vive en código de escenario. `ConoDeVision` es un
+  componente del ECS (`framework/ecs/components.py`), con su sistema
+  (`sistema_conos_de_vision`), su `Alerta` de cuatro estados y su gizmo de
+  depuración (`stage/gizmos.py`). Su propio docstring dice que existe «para no
+  reescribirlo cada estudiante que quiera un guardia» — justo lo contrario de
+  lo que este hueco afirmaba. El error vino de asociar
+  `stages/stage1_1/combat/guard_system.py` con un guardia enemigo: es la
+  mecánica de **defensa del jugador** (bloquear), y coincidió en una búsqueda
+  por texto.
+
+  Lo que sí era cierto, y no lo decía este hueco: **el cono no comprobaba
+  oclusión**. Decidía con distancia y ángulo, así que un vigilante al otro lado
+  de un muro veía igual que si el muro no existiera. Es el mismo defecto que
+  AUD-278 arregló para la luz, abierto todavía para la vista, y cambia una
+  regla del juego en vez de un píxel: el sigilo con muros no funcionaba y un
+  nivel diseñado alrededor de esconderse no se podía hacer.
+
+  Y la pieza que lo resuelve estaba escrita **para esto**: `RejillaEspacial`
+  (AUD-276) se justificaba diciendo «sin esto no se puede hacer la línea de
+  visión de un guardia». Se construyó `hay_vision()`, se probó, y el guardia se
+  escribió después sin llamarla — la misma especie que domina esta fase, con la
+  vuelta de tuerca de que el consumidor previsto llegó más tarde y no la usó.
+
+  Arreglado en `sistema_conos_de_vision`, con la geometría llegando por recurso
+  del mundo (`poner_recurso("geometria", ...)`, el canal que el ECS ya usa para
+  `reloj_musical`). Sin recurso publicado el sistema se comporta exactamente
+  como antes, que es lo correcto: un mundo desnudo no permite deducir que hay un
+  muro. Se publican los sólidos del mapa y no los de la escena compuesta —las
+  plataformas móviles cambian cada fotograma y reindexarlas devolvería el coste
+  que AUD-379 descartó; un muro no se mueve—. 6 pruebas nuevas.
 
 ## [GAP-047] No hay sistema de misiones ni objetivos
 
