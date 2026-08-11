@@ -97,6 +97,18 @@ FASES_DEL_DIA: tuple[str, ...] = (
 #: aquí se copiaría en la práctica del alumno.
 DIAS_DEL_MES_LUNAR: float = 29.530588
 
+#: AUD-399 — tope del alargamiento de la sombra solar.
+#:
+#: El largo va como 1/altura, así que tiende a infinito cuando el sol roza el
+#: horizonte. Cuatro veces la altura del objeto es lo que se sigue leyendo como
+#: sombra; a partir de ahí se lee como un fallo de dibujado, que es lo que pasa
+#: si se deja crecer sin tope al amanecer y al atardecer.
+_SOMBRA_MAXIMA: float = 4.0
+
+#: Suelo de la altura solar para ese mismo cociente, por no dividir entre cero
+#: en el instante exacto del amanecer.
+_ALTURA_MINIMA: float = 0.05
+
 
 @dataclass(frozen=True, slots=True)
 class EnvironmentState:
@@ -142,6 +154,22 @@ class EnvironmentState:
     #: Altura del sol sobre el horizonte, -1 (medianoche) a 1 (mediodía).
     #: 0 es el horizonte: amanecer subiendo, ocaso bajando.
     altura_solar: float = 1.0
+    #: AUD-399 — de qué lado viene la luz, -1 (este) a 1 (oeste). Cierra el
+    #: primer paso de GAP-051.
+    #:
+    #: `altura_solar` decía **cuánta** luz hay y no de dónde, así que una sombra
+    #: no se podía orientar: el dato para hacerlo no existía. Por eso
+    #: `vfx/sombras_proyectadas.py` proyecta desde un foco y no desde el sol.
+    #:
+    #: Se publica normalizado y no en grados porque el juego es **2D de perfil**:
+    #: lo único que se puede pintar de la posición del sol es hacia qué lado se
+    #: alarga la sombra y cuánto. Un azimut de verdad, en grados sobre el plano
+    #: horizontal, sería un número más exacto y con dos de sus tres dimensiones
+    #: imposibles de dibujar aquí.
+    #:
+    #: A mediodía vale 0 —el sol está arriba y la sombra cae a plomo—, por la
+    #: mañana negativo y por la tarde positivo.
+    azimut_solar: float = 0.0
     #: Fase lunar, 0 a 1. 0 y 1 son luna nueva; 0,5, llena.
     fase_lunar: float = 0.0
     #: Banda del día, de `FASES_DEL_DIA`. No es `día`/`noche`: el crepúsculo
@@ -156,6 +184,32 @@ class EnvironmentState:
     def es_de_noche(self) -> bool:
         """El sol está bajo el horizonte."""
         return self.altura_solar <= 0.0
+
+    @property
+    def direccion_de_sombra(self) -> tuple[float, float]:
+        """Hacia dónde se alarga una sombra, y cuánto — AUD-399.
+
+        Devuelve `(dx, largo)`: el sentido horizontal, -1 a 1, y el
+        multiplicador de longitud. Es el derivado que hace del azimut un dato
+        usable en un juego de perfil, y vive aquí y en ningún otro sitio por lo
+        mismo que `luz_lunar` y `es_de_noche`: si cada consumidor recalculara la
+        sombra a su manera, las sombras de las paredes y las de los personajes
+        acabarían apuntando a sitios distintos.
+
+        De noche no hay sombra solar —largo 0—: pintar una con el sol bajo el
+        horizonte es el error clásico de este cálculo, y sale gratis evitarlo
+        aquí en vez de en cada consumidor.
+
+        El largo tiende a infinito cuando el sol roza el horizonte, así que se
+        acota: una sombra de mil píxeles al amanecer no se lee como sombra, se
+        lee como un fallo de dibujado.
+        """
+        if self.altura_solar <= 0.0:
+            return (0.0, 0.0)
+        # La sombra se alarga en sentido **contrario** al sol.
+        dx = -self.azimut_solar
+        largo = min(_SOMBRA_MAXIMA, 1.0 / max(self.altura_solar, _ALTURA_MINIMA))
+        return (dx, largo)
 
     @property
     def luz_lunar(self) -> float:

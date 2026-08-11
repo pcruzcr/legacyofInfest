@@ -138,6 +138,21 @@ def _altura_solar(hora: float) -> float:
     return math.sin(2.0 * math.pi * (hora - 6.0) / HORAS_POR_DIA)
 
 
+def _azimut_solar(hora: float) -> float:
+    """De qué lado viene la luz, -1 (este) a 1 (oeste) — AUD-399.
+
+    Es el coseno del mismo ángulo del que `_altura_solar` toma el seno, o sea
+    la otra proyección del mismo sol: a las 6 vale -1 (sale por el este y la
+    sombra se alarga hacia el oeste), 0 a mediodía —sol arriba, sombra a
+    plomo— y 1 a las 18.
+
+    Se saca del mismo ángulo a propósito. Calcularlo con su propia fórmula
+    dejaría dos modelos del sol que se pueden desincronizar, que es el defecto
+    que GAP-050 documentó cuando había dos autoridades sobre un mismo dato.
+    """
+    return -math.cos(2.0 * math.pi * (hora - 6.0) / HORAS_POR_DIA)
+
+
 def _fase_del_dia(altura: float) -> str:
     for umbral, nombre in _BANDAS:
         if altura >= umbral:
@@ -288,6 +303,7 @@ class WorldSimulation:
             visibilidad=tiempo["visibilidad"],
             cobertura_nubes=tiempo["nubes"],
             altura_solar=altura,
+            azimut_solar=_azimut_solar(hora),
             fase_lunar=_fase_lunar(self._dia, self._desfase_lunar),
             fase_del_dia=_fase_del_dia(altura),
         )

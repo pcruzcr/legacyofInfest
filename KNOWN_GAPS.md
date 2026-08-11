@@ -1874,6 +1874,32 @@ está.
   que se desincronizan. Este GAP cubre la *tubería*; `docs/92` cubre la cola
   larga que la recorre.
 
+- **Avance (2026-08-11, AUD-399): el campo que faltaba, hecho. 1 de 4.**
+  `EnvironmentState.azimut_solar` existe y la simulación lo publica, así que el
+  dato para orientar una sombra ya está — era el bloqueo que el propio hueco
+  señalaba («es el único de los tres que necesita un campo nuevo»).
+  Sale del **mismo ángulo** que `altura_solar`: uno es el seno y el otro el
+  coseno de `2π(hora−6)/24`. Con su propia fórmula habría dos modelos del sol
+  capaces de desincronizarse, que es exactamente el defecto que GAP-050
+  documentó, y hay una prueba de `sen² + cos² = 1` para impedirlo.
+  Se publica normalizado (−1 este, 1 oeste) y no en grados porque el juego es
+  2D de perfil: lo único pintable de la posición del sol es hacia qué lado se
+  alarga la sombra y cuánto. `EnvironmentState.direccion_de_sombra` es el
+  derivado que lo hace usable —y vive ahí, como `luz_lunar`, para que las
+  sombras de las paredes y las de los personajes no acaben apuntando a sitios
+  distintos—; de noche devuelve largo 0, que es el error clásico de este
+  cálculo, y el largo está acotado a 4× porque va como 1/altura y al amanecer
+  tiende a infinito.
+  **El hueco sigue abierto**, y esto no es un cierre disfrazado: faltan los tres
+  consumidores que la lista del dueño marca 🔴 —sombras dirigidas por el sol,
+  audio ambiental y color grading—, que es donde está el efecto visible. El plan
+  pide un consumidor por commit y éste entrega el paso previo que los tres
+  necesitaban.
+  Cable trampa: `tests/test_azimut_solar.py` (11 pruebas), incluida una que
+  comprueba que el campo llega al estado que leen los consumidores — sin ella
+  `_azimut_solar` sería una función correcta que nadie llama, que es
+  precisamente lo que este GAP registra que pasó con la mitad productora.
+
 ## ~~[GAP-052] Diecisiete características del TMX que no ejercita ningún mapa~~ *(Resuelto)*
 
 - **File:** `assets/maps/`
