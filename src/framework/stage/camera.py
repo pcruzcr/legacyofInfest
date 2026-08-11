@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any
 import pygame
 
 from src.engine.core import settings
+from src.engine.core.azar import generador
 
 #: AUD-282 — ciclos completos que da la sacudida direccional en toda su duración.
 #:
@@ -66,7 +67,17 @@ class Camera:
     per-layer parallax, map boundary clamping, screen shake, and camera lock zones.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, rng: random.Random | None = None) -> None:
+        #: AUD-398 — el azar de la sacudida, propio (GAP-042).
+        #:
+        #: Sin semilla nace del global, que `azar.sembrar` ya fijó, así que la
+        #: partida sigue siendo igual de reproducible que antes. Lo que cambia
+        #: es que la cámara deja de **competir** por el estado global: mientras
+        #: tiraba de `random` a secas, añadir una partícula más al escenario
+        #: desplazaba la secuencia y la misma semilla daba otra sacudida. Un
+        #: determinismo que se rompe al tocar un módulo vecino no sirve para
+        #: reproducir un fallo, que es para lo que se pidió.
+        self._rng = rng if rng is not None else generador()
         self.offset: pygame.Vector2 = pygame.Vector2(0.0, 0.0)
         self._target: BaseEntity | None = None
         self.lerp_speed: float = 8.0
@@ -396,8 +407,8 @@ class Camera:
         if self._shake_timer > 0:
             self._shake_timer -= dt
             if self._shake_dir is None:
-                sx = random.uniform(-1.0, 1.0) * self._shake_amplitude
-                sy = random.uniform(-1.0, 1.0) * self._shake_amplitude
+                sx = self._rng.uniform(-1.0, 1.0) * self._shake_amplitude
+                sy = self._rng.uniform(-1.0, 1.0) * self._shake_amplitude
             else:
                 # AUD-282 — oscilación coherente a lo largo del eje del golpe:
                 # sale entera en el primer fotograma y vuelve amortiguándose.
@@ -416,7 +427,7 @@ class Camera:
                 # en vez de competir con él.
                 cruz = pygame.Vector2(-self._shake_dir.y, self._shake_dir.x)
                 cruz *= (self._shake_amplitude * _SACUDIDA_CRUZADA
-                         * random.uniform(-1.0, 1.0))
+                         * self._rng.uniform(-1.0, 1.0))
                 sx, sy = eje.x + cruz.x, eje.y + cruz.y
             self._shake_offset.update(sx, sy)
         else:

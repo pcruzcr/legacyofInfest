@@ -6,6 +6,7 @@ import random
 import pygame
 
 from src.engine.core import settings
+from src.engine.core.azar import generador
 from src.framework.vfx.particle_system import ParticleEmitter
 from src.framework.world.simulation import viento_de
 
@@ -21,7 +22,12 @@ class WeatherSystem:
         "storm":  {"particles": 100,"overlay_alpha": 60,  "overlay_color": (40, 40, 50)},
     }
 
-    def __init__(self, climate: str = "clear") -> None:
+    def __init__(self, climate: str = "clear",
+                 rng: random.Random | None = None) -> None:
+        #: AUD-398 — azar propio (GAP-042). Ver `Camera.__init__` para el
+        #: porqué: reproducible igual, pero sin competir por el estado
+        #: global con los otros catorce módulos que tiran de `random`.
+        self._rng = rng if rng is not None else generador()
         self._emitter = ParticleEmitter()
         self._timer: float = 0.0
         self._climate: str = climate
@@ -56,7 +62,7 @@ class WeatherSystem:
         # prueba, `stage0`, una entrega—: sigue soplando, y sopla lo que dice
         # la única tabla que queda. Cuando hay escenario, `_aplicar_hora` le
         # pasa el viento del `EnvironmentState` y ése manda.
-        self._wind = viento_de(self._climate, random.Random())
+        self._wind = viento_de(self._climate, self._rng)
 
     def set_climate(self, climate: str) -> None:
         if climate == self._climate:
@@ -83,9 +89,10 @@ class WeatherSystem:
     #: cegar — el jugador tiene que seguir viendo dónde pisa.
     ALFA_DESTELLO: int = 110
 
-    @staticmethod
-    def _espera_hasta_el_proximo_rayo() -> float:
-        return random.uniform(*WeatherSystem.ESPERA_ENTRE_RAYOS)
+    # AUD-398 — era `@staticmethod` y ya no puede serlo: la espera sale del
+    # generador de **esta** tormenta, no del azar global (GAP-042).
+    def _espera_hasta_el_proximo_rayo(self) -> float:
+        return self._rng.uniform(*WeatherSystem.ESPERA_ENTRE_RAYOS)
 
     def forzar_relampago(self) -> None:
         """Dispara un rayo ahora. Para las cinemáticas y para las pruebas."""
@@ -169,28 +176,28 @@ class WeatherSystem:
         self._emitter.clear()
 
     def _spawn_particle(self, camera_offset: pygame.Vector2) -> None:
-        sx = camera_offset.x + random.uniform(-20, settings.INTERNAL_WIDTH + 20)
+        sx = camera_offset.x + self._rng.uniform(-20, settings.INTERNAL_WIDTH + 20)
         sy = camera_offset.y - 10
         color = self._get_particle_color()
 
         if self._climate == "rain":
             self._emitter.emit_directed(
                 sx, sy, angle=self._angulo_con_viento(), speed=280,
-                count=1, lifetime=random.uniform(*self._VIDA_LLUVIA),
+                count=1, lifetime=self._rng.uniform(*self._VIDA_LLUVIA),
                 size=(1, 2), color=color, spread=5,
                 gravity=980, friction=0.99,
             )
         elif self._climate == "snow":
             self._emitter.emit_directed(
-                sx, sy, angle=self._angulo_con_viento(), speed=random.uniform(30, 60),
-                count=1, lifetime=random.uniform(2.0, 4.0),
+                sx, sy, angle=self._angulo_con_viento(), speed=self._rng.uniform(30, 60),
+                count=1, lifetime=self._rng.uniform(2.0, 4.0),
                 size=(2, 4), color=color, spread=20,
                 gravity=50, friction=0.95,
             )
         elif self._climate == "storm":
             self._emitter.emit_directed(
                 sx, sy, angle=self._angulo_con_viento(), speed=280,
-                count=1, lifetime=random.uniform(*self._VIDA_LLUVIA),
+                count=1, lifetime=self._rng.uniform(*self._VIDA_LLUVIA),
                 size=(1, 3), color=color, spread=10,
                 gravity=980, friction=0.99,
             )
@@ -210,7 +217,7 @@ class WeatherSystem:
         F1.3 — el viento de la tormenta no existía. La línea que lo calculaba
         era::
 
-            random.choice([-1, 1]) * random.uniform(50, 100)
+            random.choice([-1, 1]) * self._rng.uniform(50, 100)
 
         Un valor calculado y **asignado a nada**: una sentencia sin efecto.
         `_set_climate_params` sí rellenaba `self._wind`, pero nadie lo leía, así
