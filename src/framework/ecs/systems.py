@@ -400,6 +400,33 @@ def rect_del_jugador(mundo: World) -> pygame.Rect | None:
     return None
 
 
+def _hay_linea_libre(mundo: World, desde: pygame.Vector2,
+                     hasta: pygame.Vector2) -> bool:
+    """¿No hay geometría entre esos dos puntos? — AUD-381.
+
+    La geometría llega por recurso del mundo, que es el canal que el ECS ya
+    tiene para esto (`poner_recurso`, igual que `reloj_musical`). El escenario
+    la publica una vez al montar; el sistema no conoce ni al escenario ni al
+    cargador.
+
+    **Sin recurso publicado devuelve `True`**, y eso es lo correcto, no una
+    concesión: un mundo que no ha publicado geometría no permite deducir que
+    hay un muro, e inventárselo dejaría ciegos a los vigilantes de cualquier
+    prueba o entrega que monte un mundo desnudo. Un `ConoDeVision` sin
+    geometría se comporta exactamente como antes de este cambio.
+
+    Lo mismo con un recurso que no sea una rejilla: una entrega puede publicar
+    cualquier cosa con ese nombre, y la decisión es la del cargador con un
+    clima mal escrito — el estudiante necesita ver su nivel para darse cuenta,
+    no un fallo de arranque.
+    """
+    geometria = mundo.recurso("geometria")
+    consulta = getattr(geometria, "hay_vision", None)
+    if not callable(consulta):
+        return True
+    return bool(consulta(desde, hasta))
+
+
 def sistema_conos_de_vision(mundo: World, dt: float) -> None:
     """¿Ve alguien al jugador?
 
@@ -439,14 +466,26 @@ def sistema_conos_de_vision(mundo: World, dt: float) -> None:
             math.sin(base + math.radians(oscilacion)),
         )
 
-        v = centro_jugador - pygame.Vector2(t.rect.center)
+        ojo = pygame.Vector2(t.rect.center)
+        v = centro_jugador - ojo
         distancia = v.length()
         if distancia > cono.alcance or distancia == 0.0:
             cono.ve_al_jugador = False
             continue
-        cono.ve_al_jugador = (v / distancia).dot(mira) >= math.cos(
+        dentro = (v / distancia).dot(mira) >= math.cos(
             math.radians(cono.semiangulo),
         )
+        # AUD-381 — y que no haya una pared en medio. Sin esto la detección era
+        # distancia y ángulo, así que un vigilante al otro lado de un muro veía
+        # igual que si el muro no existiera: el mismo defecto que AUD-278
+        # arregló para la luz, abierto todavía para la vista. Y cambia una
+        # regla, no un píxel — el sigilo con muros no funcionaba.
+        #
+        # La pieza estaba escrita para esto: `RejillaEspacial` (AUD-276) se
+        # justificaba diciendo «sin esto no se puede hacer la línea de visión
+        # de un guardia», se probó, y el guardia se escribió después sin
+        # llamarla.
+        cono.ve_al_jugador = dentro and _hay_linea_libre(mundo, ojo, centro_jugador)
 
 
 def sistema_alerta(mundo: World, dt: float) -> None:
