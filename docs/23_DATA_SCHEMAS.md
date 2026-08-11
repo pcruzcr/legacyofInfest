@@ -331,6 +331,41 @@ Per `25_IMPLEMENTATION_ROADMAP.md` §19, any unresolved `TODO`/`NotImplementedEr
 - **Resolution plan:** <when/how this gets resolved, or "N/A — out of scope">
 ```
 
+### 8.1 Cómo se cierra una entrada (AUD-421)
+
+La invariante 4 de `CLAUDE.md` remitía aquí para el formato de cierre y esta
+sección **sólo describía el alta**. Remitir a un sitio que no contiene lo
+prometido es la misma clase de defecto que persigue la fase entera: una
+referencia que se lee como autoridad y no dice nada. Queda escrito:
+
+```markdown
+## ~~[GAP-001] <título>~~ *(Resuelto)*
+
+  …el cuerpo original se conserva entero, y debajo…
+
+- **Resolution (<fecha>, AUD-NNN):** <qué se hizo y con qué evidencia>
+```
+
+Tres reglas, y el motivo de cada una:
+
+* **La entrada no se borra ni se reescribe.** Se tacha el encabezado y se
+  añade la resolución debajo. El texto original es la única constancia de qué
+  se creía que pasaba, y en esta fase se ha dado tres veces el caso de que el
+  hueco describía mal su propio problema (`GAP-036`, `GAP-037`, `GAP-046`):
+  borrarlo habría borrado también esa lección.
+* **`**Resolution:**` es la etiqueta canónica.** Se acepta `**Decisión:**`
+  cuando el hueco se cierra por criterio del dueño sin tocar código —`GAP-024`
+  y `GAP-041` son de ese tipo— porque forzar la palabra «Resolution» ahí sería
+  llamar arreglo a lo que fue un juicio. Lo que no vale es no poner ninguna.
+* **La resolución dice *cómo se comprobó*, no sólo *que se hizo*.** Un hueco
+  tachado sin evidencia obliga a la siguiente persona a rehacer la
+  investigación entera para saber si se arregló, se midió y se descartó, o se
+  decidió no hacerlo.
+
+Lo vigila `tests/test_los_huecos_cerrados_dicen_como.py`, que existe porque
+`GAP-034` estuvo meses tachado sin resolución escrita y se encontró a mano
+(AUD-412).
+
 ---
 
 ## 9. Dependency Version Pin Table
