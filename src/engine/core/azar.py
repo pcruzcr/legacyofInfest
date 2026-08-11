@@ -57,6 +57,10 @@ from __future__ import annotations
 
 import logging
 import random
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +116,29 @@ def sembrar(semilla: int | None = None) -> int:
 def semilla_actual() -> int | None:
     """La semilla del proceso, o `None` si nadie ha sembrado todavía."""
     return _semilla
+
+
+def generador_numpy(semilla: int | None = None) -> np.random.Generator:
+    """Un generador de NumPy propio, aislado del global — AUD-386.
+
+    El hermano de `generador()` para los módulos que sortean con NumPy, que en
+    este motor son los que mueven arreglos: partículas, ruido, patrones.
+
+    Devuelve un `Generator` moderno y no el `RandomState` heredado: es el
+    camino que NumPy recomienda desde 1.17, es más rápido, y sobre todo **no
+    comparte estado con `np.random`**, que es justamente el punto. Cuidado con
+    una diferencia de nombre al migrar: `Generator` tiene `integers`, no
+    `randint`.
+
+    Sin semilla, se deriva del global —que `sembrar()` ya fijó—, así que hereda
+    la reproducibilidad del proceso sin necesidad de un número propio y sin que
+    quien lo pide tenga que saber nada de semillas.
+    """
+    import numpy as np
+
+    if semilla is None:
+        semilla = int(np.random.randint(0, 2**32, dtype=np.int64))
+    return np.random.default_rng(int(semilla))
 
 
 def generador(semilla: int | None = None) -> random.Random:
