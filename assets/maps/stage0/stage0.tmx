@@ -69,17 +69,34 @@
  </objectgroup>
  <objectgroup id="8" name="Objects">
   <object id="201" name="PlayerSpawn_201" type="PlayerSpawn" x="48" y="432" width="16" height="32"/>
-  <object id="202" name="MessageTrigger_Once_202" type="MessageTrigger_Once" x="80" y="416" width="48" height="48">
+  <object id="202" name="Objective_202" type="Objective" x="48" y="400" width="0" height="0">
+   <properties>
+    <property name="objective_id" value="llegar_al_final"/>
+    <property name="text" value="Llega al final del prologo"/>
+    <property name="kind" value="bandera"/>
+    <property name="target" value="stage0_completado"/>
+   </properties>
+  </object>
+  <object id="203" name="Objective_203" type="Objective" x="64" y="400" width="0" height="0">
+   <properties>
+    <property name="objective_id" value="tres_infectados"/>
+    <property name="text" value="Derrota a tres infectados"/>
+    <property name="kind" value="derrotar"/>
+    <property name="count" type="int" value="3"/>
+    <property name="optional" type="bool" value="true"/>
+   </properties>
+  </object>
+  <object id="204" name="MessageTrigger_Once_204" type="MessageTrigger_Once" x="80" y="416" width="48" height="48">
    <properties>
     <property name="text" value="Flechas para moverte. Espacio para saltar."/>
    </properties>
   </object>
-  <object id="203" name="MessageTrigger_Once_203" type="MessageTrigger_Once" x="224" y="416" width="48" height="48">
+  <object id="205" name="MessageTrigger_Once_205" type="MessageTrigger_Once" x="224" y="416" width="48" height="48">
    <properties>
     <property name="text" value="Z ataca. Tambien puedes saltar por encima."/>
    </properties>
   </object>
-  <object id="204" name="Walker_204" type="Walker" x="288" y="452" width="24" height="28">
+  <object id="206" name="Walker_206" type="Walker" x="288" y="452" width="24" height="28">
    <properties>
     <property name="max_health" type="float" value="2.0"/>
     <property name="patrol_length" type="float" value="80.0"/>
@@ -87,30 +104,30 @@
     <property name="alert_speed" type="float" value="90.0"/>
    </properties>
   </object>
-  <object id="205" name="Checkpoint_205" type="Checkpoint" x="352" y="448" width="16" height="32">
+  <object id="207" name="Checkpoint_207" type="Checkpoint" x="352" y="448" width="16" height="32">
    <properties>
     <property name="checkpoint_id" type="int" value="0"/>
    </properties>
   </object>
-  <object id="206" name="MessageTrigger_Once_206" type="MessageTrigger_Once" x="400" y="416" width="48" height="48">
+  <object id="208" name="MessageTrigger_Once_208" type="MessageTrigger_Once" x="400" y="416" width="48" height="48">
    <properties>
     <property name="text" value="Sube. Con X te agarras a la liana."/>
    </properties>
   </object>
-  <object id="207" name="Vine_207" type="Vine" x="528" y="304" width="8" height="176">
+  <object id="209" name="Vine_209" type="Vine" x="528" y="304" width="8" height="176">
    <properties>
     <property name="velocidad" type="float" value="75.0"/>
     <property name="ancho_de_agarre" type="float" value="12.0"/>
    </properties>
   </object>
-  <object id="208" name="Pickup_208" type="Pickup" x="608" y="336" width="16" height="16">
+  <object id="210" name="Pickup_210" type="Pickup" x="608" y="336" width="16" height="16">
    <properties>
     <property name="item_id" value="fragmento_1"/>
     <property name="automatico" type="bool" value="true"/>
     <property name="mensaje" value="Fragmento 1 de 3."/>
    </properties>
   </object>
-  <object id="209" name="Flying_209" type="Flying" x="480" y="368" width="20" height="14">
+  <object id="211" name="Flying_211" type="Flying" x="480" y="368" width="20" height="14">
    <properties>
     <property name="flight_mode" value="sine"/>
     <property name="flight_speed" type="float" value="60.0"/>
@@ -118,97 +135,97 @@
     <property name="sine_frequency" type="float" value="2.0"/>
    </properties>
   </object>
-  <object id="210" name="Checkpoint_210" type="Checkpoint" x="688" y="448" width="16" height="32">
+  <object id="212" name="Checkpoint_212" type="Checkpoint" x="688" y="448" width="16" height="32">
    <properties>
     <property name="checkpoint_id" type="int" value="1"/>
    </properties>
   </object>
-  <object id="211" name="MessageTrigger_Once_211" type="MessageTrigger_Once" x="720" y="416" width="48" height="48">
+  <object id="213" name="MessageTrigger_Once_213" type="MessageTrigger_Once" x="720" y="416" width="48" height="48">
    <properties>
     <property name="text" value="La llave abre la puerta del fondo."/>
    </properties>
   </object>
-  <object id="212" name="Key_212" type="Key" x="752" y="460" width="16" height="16">
+  <object id="214" name="Key_214" type="Key" x="752" y="460" width="16" height="16">
    <properties>
     <property name="item_id" value="llave_prologo"/>
     <property name="automatico" type="bool" value="true"/>
     <property name="mensaje" value="Has cogido la llave."/>
    </properties>
   </object>
-  <object id="213" name="Charger_213" type="Charger" x="800" y="456" width="28" height="24">
+  <object id="215" name="Charger_215" type="Charger" x="800" y="456" width="28" height="24">
    <properties>
     <property name="charge_speed" type="float" value="250.0"/>
    </properties>
   </object>
-  <object id="214" name="Archer_214" type="Archer" x="864" y="452" width="16" height="28">
+  <object id="216" name="Archer_216" type="Archer" x="864" y="452" width="16" height="28">
    <properties>
     <property name="fire_rate" type="float" value="2.0"/>
     <property name="projectile_speed" type="float" value="100.0"/>
     <property name="projectile_damage" type="float" value="2.0"/>
    </properties>
   </object>
-  <object id="215" name="Brute_215" type="Brute" x="912" y="420" width="100" height="60">
+  <object id="217" name="Brute_217" type="Brute" x="912" y="420" width="100" height="60">
    <properties>
     <property name="max_health" type="float" value="6.0"/>
    </properties>
   </object>
-  <object id="216" name="LockedDoor_216" type="LockedDoor" x="960" y="432" width="16" height="48">
+  <object id="218" name="LockedDoor_218" type="LockedDoor" x="960" y="432" width="16" height="48">
    <properties>
     <property name="key_id" value="llave_prologo"/>
     <property name="clase" value="puerta"/>
     <property name="mensaje_bloqueado" value="Cerrada. Busca la llave."/>
    </properties>
   </object>
-  <object id="217" name="Checkpoint_217" type="Checkpoint" x="976" y="448" width="16" height="32">
+  <object id="219" name="Checkpoint_219" type="Checkpoint" x="976" y="448" width="16" height="32">
    <properties>
     <property name="checkpoint_id" type="int" value="2"/>
    </properties>
   </object>
-  <object id="218" name="MessageTrigger_Once_218" type="MessageTrigger_Once" x="944" y="416" width="48" height="48">
+  <object id="220" name="MessageTrigger_Once_220" type="MessageTrigger_Once" x="944" y="416" width="48" height="48">
    <properties>
     <property name="text" value="Salta el foso, o cruza por encima."/>
    </properties>
   </object>
-  <object id="219" name="DeathPit_219" type="DeathPit" x="992" y="576" width="96" height="32"/>
-  <object id="220" name="RhythmBlock_220" type="RhythmBlock" x="1008" y="400" width="32" height="16">
+  <object id="221" name="DeathPit_221" type="DeathPit" x="992" y="576" width="96" height="32"/>
+  <object id="222" name="RhythmBlock_222" type="RhythmBlock" x="1008" y="400" width="32" height="16">
    <properties>
     <property name="visible_seg" type="float" value="1.8"/>
     <property name="oculto_seg" type="float" value="1.0"/>
     <property name="desfase" type="float" value="0.0"/>
    </properties>
   </object>
-  <object id="221" name="RhythmBlock_221" type="RhythmBlock" x="1040" y="400" width="32" height="16">
+  <object id="223" name="RhythmBlock_223" type="RhythmBlock" x="1040" y="400" width="32" height="16">
    <properties>
     <property name="visible_seg" type="float" value="1.8"/>
     <property name="oculto_seg" type="float" value="1.0"/>
     <property name="desfase" type="float" value="0.6"/>
    </properties>
   </object>
-  <object id="222" name="RhythmBlock_222" type="RhythmBlock" x="1072" y="400" width="32" height="16">
+  <object id="224" name="RhythmBlock_224" type="RhythmBlock" x="1072" y="400" width="32" height="16">
    <properties>
     <property name="visible_seg" type="float" value="1.8"/>
     <property name="oculto_seg" type="float" value="1.0"/>
     <property name="desfase" type="float" value="1.2"/>
    </properties>
   </object>
-  <object id="223" name="HazardZone_223" type="HazardZone" x="1120" y="464" width="48" height="16">
+  <object id="225" name="HazardZone_225" type="HazardZone" x="1120" y="464" width="48" height="16">
    <properties>
     <property name="damage" type="float" value="0.25"/>
    </properties>
   </object>
-  <object id="224" name="MessageTrigger_Once_224" type="MessageTrigger_Once" x="1152" y="416" width="48" height="48">
+  <object id="226" name="MessageTrigger_Once_226" type="MessageTrigger_Once" x="1152" y="416" width="48" height="48">
    <properties>
     <property name="text" value="El viento empuja. Espera a que amaine."/>
    </properties>
   </object>
-  <object id="225" name="WindZone_225" type="WindZone" x="1184" y="320" width="160" height="160">
+  <object id="227" name="WindZone_227" type="WindZone" x="1184" y="320" width="160" height="160">
    <properties>
     <property name="fuerza_x" type="float" value="210.0"/>
     <property name="fuerza_y" type="float" value="0.0"/>
     <property name="periodo" type="float" value="3.4"/>
    </properties>
   </object>
-  <object id="226" name="Shooter_226" type="Shooter" x="1248" y="456" width="16" height="24">
+  <object id="228" name="Shooter_228" type="Shooter" x="1248" y="456" width="16" height="24">
    <properties>
     <property name="fire_rate" type="float" value="2.0"/>
     <property name="projectile_speed" type="float" value="100.0"/>
@@ -217,57 +234,57 @@
     <property name="patrol_speed" type="float" value="30.0"/>
    </properties>
   </object>
-  <object id="227" name="Caster_227" type="Caster" x="1296" y="452" width="20" height="28"/>
-  <object id="228" name="Pickup_228" type="Pickup" x="1216" y="460" width="16" height="16">
+  <object id="229" name="Caster_229" type="Caster" x="1296" y="452" width="20" height="28"/>
+  <object id="230" name="Pickup_230" type="Pickup" x="1216" y="460" width="16" height="16">
    <properties>
     <property name="item_id" value="fragmento_2"/>
     <property name="automatico" type="bool" value="true"/>
     <property name="mensaje" value="Fragmento 2 de 3."/>
    </properties>
   </object>
-  <object id="229" name="Checkpoint_229" type="Checkpoint" x="1344" y="448" width="16" height="32">
+  <object id="231" name="Checkpoint_231" type="Checkpoint" x="1344" y="448" width="16" height="32">
    <properties>
     <property name="checkpoint_id" type="int" value="3"/>
    </properties>
   </object>
-  <object id="230" name="MessageTrigger_Once_230" type="MessageTrigger_Once" x="1360" y="416" width="48" height="48">
+  <object id="232" name="MessageTrigger_Once_232" type="MessageTrigger_Once" x="1360" y="416" width="48" height="48">
    <properties>
     <property name="text" value="Combina todo. U es el ataque definitivo."/>
    </properties>
   </object>
-  <object id="231" name="Assassin_231" type="Assassin" x="1408" y="456" width="16" height="24"/>
-  <object id="232" name="Walker_232" type="Walker" x="1456" y="452" width="24" height="28">
+  <object id="233" name="Assassin_233" type="Assassin" x="1408" y="456" width="16" height="24"/>
+  <object id="234" name="Walker_234" type="Walker" x="1456" y="452" width="24" height="28">
    <properties>
     <property name="max_health" type="float" value="2.0"/>
    </properties>
   </object>
-  <object id="233" name="Pickup_233" type="Pickup" x="1440" y="320" width="16" height="16">
+  <object id="235" name="Pickup_235" type="Pickup" x="1440" y="320" width="16" height="16">
    <properties>
     <property name="item_id" value="fragmento_3"/>
     <property name="automatico" type="bool" value="true"/>
     <property name="mensaje" value="Fragmento 3 de 3."/>
    </properties>
   </object>
-  <object id="234" name="Chest_234" type="Chest" x="1488" y="320" width="16" height="16">
+  <object id="236" name="Chest_236" type="Chest" x="1488" y="320" width="16" height="16">
    <properties>
     <property name="contenido" value="reliquia_prologo"/>
     <property name="mensaje" value="Una reliquia del prologo."/>
    </properties>
   </object>
-  <object id="235" name="Zipline_235" type="Zipline" x="1472" y="320" width="8" height="8">
+  <object id="237" name="Zipline_237" type="Zipline" x="1472" y="320" width="8" height="8">
    <properties>
     <property name="destino_dx" type="int" value="80"/>
     <property name="destino_dy" type="int" value="128"/>
     <property name="velocidad" type="float" value="200.0"/>
    </properties>
   </object>
-  <object id="236" name="CameraLock_236" type="CameraLock" x="1376" y="0" width="224" height="608">
+  <object id="238" name="CameraLock_238" type="CameraLock" x="1376" y="0" width="224" height="608">
    <properties>
     <property name="lock_y" type="bool" value="true"/>
    </properties>
   </object>
-  <object id="237" name="NextTrigger_237" type="NextTrigger" x="1552" y="432" width="32" height="48"/>
-  <object id="238" name="Light_238" type="Light" x="96" y="400" width="16" height="16">
+  <object id="239" name="NextTrigger_239" type="NextTrigger" x="1552" y="432" width="32" height="48"/>
+  <object id="240" name="Light_240" type="Light" x="96" y="400" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="150.0"/>
     <property name="color" value="fire"/>
@@ -277,77 +294,77 @@
     <property name="flicker_amount" type="float" value="0.18"/>
    </properties>
   </object>
-  <object id="239" name="Light_239" type="Light" x="224" y="384" width="16" height="16">
+  <object id="241" name="Light_241" type="Light" x="224" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="140.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.85"/>
    </properties>
   </object>
-  <object id="240" name="Light_240" type="Light" x="352" y="384" width="16" height="16">
+  <object id="242" name="Light_242" type="Light" x="352" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="150.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.9"/>
    </properties>
   </object>
-  <object id="241" name="Light_241" type="Light" x="480" y="384" width="16" height="16">
+  <object id="243" name="Light_243" type="Light" x="480" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="160.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.85"/>
    </properties>
   </object>
-  <object id="242" name="Light_242" type="Light" x="608" y="384" width="16" height="16">
+  <object id="244" name="Light_244" type="Light" x="608" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="140.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.9"/>
    </properties>
   </object>
-  <object id="243" name="Light_243" type="Light" x="736" y="384" width="16" height="16">
+  <object id="245" name="Light_245" type="Light" x="736" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="150.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.85"/>
    </properties>
   </object>
-  <object id="244" name="Light_244" type="Light" x="864" y="384" width="16" height="16">
+  <object id="246" name="Light_246" type="Light" x="864" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="160.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.9"/>
    </properties>
   </object>
-  <object id="245" name="Light_245" type="Light" x="960" y="384" width="16" height="16">
+  <object id="247" name="Light_247" type="Light" x="960" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="140.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.85"/>
    </properties>
   </object>
-  <object id="246" name="Light_246" type="Light" x="1120" y="384" width="16" height="16">
+  <object id="248" name="Light_248" type="Light" x="1120" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="150.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.9"/>
    </properties>
   </object>
-  <object id="247" name="Light_247" type="Light" x="1248" y="384" width="16" height="16">
+  <object id="249" name="Light_249" type="Light" x="1248" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="160.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.85"/>
    </properties>
   </object>
-  <object id="248" name="Light_248" type="Light" x="1376" y="384" width="16" height="16">
+  <object id="250" name="Light_250" type="Light" x="1376" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="140.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.9"/>
    </properties>
   </object>
-  <object id="249" name="Light_249" type="Light" x="1504" y="384" width="16" height="16">
+  <object id="251" name="Light_251" type="Light" x="1504" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="150.0"/>
     <property name="color" value="warm"/>

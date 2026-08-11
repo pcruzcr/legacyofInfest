@@ -1638,7 +1638,7 @@ está.
   plataformas móviles cambian cada fotograma y reindexarlas devolvería el coste
   que AUD-379 descartó; un muro no se mueve—. 6 pruebas nuevas.
 
-## [GAP-047] No hay sistema de misiones ni objetivos
+## ~~[GAP-047] No hay sistema de misiones ni objetivos~~ *(Resuelto)*
 
 - **File:** `src/framework/stage/progression_system.py`
 - **Phase:** auditoría 2026-08-10, lista del dueño (AUD-376)
@@ -1650,6 +1650,39 @@ está.
 - **Resolution plan:** Sin fecha. Es contenido narrativo, y la fase 7 del plan
   del motor —reconstrucción de contenido— está suspendida por decisión del
   dueño (`docs/87` §27).
+
+- **Resolution (2026-08-11, AUD-400):** el dueño **levantó la suspensión** de la
+  fase 7 ese día y pidió cerrarlo. Se hace constar porque el plan de arriba
+  decía lo contrario y sigue escrito.
+  `src/framework/stage/objetivos.py`: `Objetivo` (id, texto, tipo, objetivo,
+  cantidad, opcional) y `SistemaDeObjetivos`, que **no inventa ninguna fuente de
+  verdad**: se suscribe a los eventos que el juego ya emitía —`ENEMY_DIED`,
+  `ITEM_COLLECTED`, `FLAG_SET`, `DIALOGUE_FINISHED`, `CHECKPOINT_REACHED`— y
+  lleva la cuenta. Los cinco tipos existen porque hay cinco eventos que los
+  pueden completar: un tipo que ningún evento cierra sería un objetivo
+  imposible, y eso es peor que no tener objetivos.
+  Se declara en el TMX con el tipo `Objective`, que es un **punto**: un objetivo
+  no ocurre en un sitio, ocurre cuando pasa algo. `stage0` declara dos —uno
+  obligatorio y uno opcional— porque un tipo de objeto que sólo existe en la
+  documentación no lo usa nadie, y stage0 es el que se copia.
+  Compatibilidad: un escenario sin objetivos declarados da `todo_hecho == True`.
+  Es lo que mantiene intactos los diecisiete mapas anteriores, y hay una prueba
+  sólo de eso.
+  Consumidores, para que no sea un sistema que nadie llama: `StageScene` lo
+  construye y le da de alta los del mapa; `complete_objective:` desde un árbol
+  de diálogo lo cierra por id vía `OBJECTIVE_REQUESTED` —el enganche que el
+  propio hueco daba por existente—; y la consola de F11 enseña el estado, porque
+  un objetivo que el jugador no puede ver no sirve de nada.
+  Lo que enseñó el bus, y que casi cuesta una prueba falsa: `EventBus.emit`
+  **encola**, reparte `dispatch()`, y hay guardia de reentrada —lo que un
+  suscriptor emite mientras se le atiende se encola para la vuelta siguiente—.
+  Las primeras diez pruebas fallaron por emitir sin despachar, que es el
+  contrato real y no un detalle.
+  Cable trampa: `tests/test_objetivos.py` (25 pruebas), tres de ellas cargando
+  `stage0` de verdad para comprobar que lo declarado en el TMX llega al sistema.
+  Fuera de alcance, y dicho: **el HUD no los pinta**. Se ven en la consola de
+  depuración, no en pantalla durante la partida. Es trabajo de interfaz y va
+  aparte.
 
 ## [GAP-048] Sin streaming de niveles ni versionado de mapas
 

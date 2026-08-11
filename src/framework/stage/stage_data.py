@@ -39,6 +39,7 @@ from src.framework.stage.interactables import (
     Recogible,
     ZonaDeWarp,
 )
+from src.framework.stage.objetivos import Objetivo
 from src.framework.stage.pendientes import Pendiente
 
 #: Puntos de vista que el motor sabe jugar (AUD-129).
@@ -292,6 +293,10 @@ class StageData:
     #: Las dos vistas dicen lo mismo; la que manda al construirlas es ésta, y
     #: `StageLoader._load_collision` las llena a la vez.
     capas: MapaDeCapas = field(default_factory=MapaDeCapas)
+    #: AUD-400 — los objetivos que este mapa declara (GAP-047). Vacía en los
+    #: diecisiete mapas anteriores, y un escenario sin objetivos no tiene nada
+    #: pendiente: por eso añadirlos no cambia ninguno.
+    objetivos: list[Objetivo] = field(default_factory=list)
     entity_list: list[BaseEntity] = field(default_factory=list)
     checkpoints: list[Checkpoint] = field(default_factory=list)
     spawn_point: pygame.Vector2 = field(default_factory=lambda: pygame.Vector2(0, 0))

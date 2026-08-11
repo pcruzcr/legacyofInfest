@@ -73,6 +73,10 @@ BUILTIN_OBJECT_TYPES: tuple[str, ...] = (
     "Cage",
     "Chest",
     "EventTrigger",
+    #: AUD-400 — un objetivo del nivel, declarado en el mapa (GAP-047). Es un
+    #: punto sin geometría: un objetivo no ocurre en un sitio, ocurre cuando
+    #: pasa algo.
+    "Objective",
     # F5.3/F5.4/F5.6 — las mecánicas de los dossiers del Top 200, puestas al
     # alcance de Tiled. Cada una nace de niveles concretos, y el nombre se
     # eligió por lo que la cosa **es** y no por cómo está implementada: un

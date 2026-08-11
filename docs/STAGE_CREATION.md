@@ -346,6 +346,7 @@ Para instrucciones detalladas de registro y pruebas, consultar el documento orig
 | `Cage` | Rectángulo **obligatorio** | Igual que `Door` pero se dibuja como jaula |
 | `Chest` | Rectángulo | `contenido` (o `item_id`: lo que entrega) · `key_id` (llave que hace falta) · `mensaje` · `evento` (al abrir). Se abre con el botón de interactuar y entrega una sola vez |
 | `EventTrigger` | Rectángulo | `evento` **obligatoria** (vale el nombre del objeto) · `automatico` (bool, sí: al entrar; no: hay que pulsar) · `una_vez` (bool, sí) · `key_id` |
+| `Objective` | Punto | `objective_id` **obligatoria** · `text` **obligatoria** · `kind` (derrotar/recoger/bandera/hablar/llegar, «bandera») · `target` (qué enemigo, objeto o bandera; vacío = cualquiera) · `count` (int, 1) · `optional` (bool, false). Sin geometría: un objetivo no ocurre en un sitio, ocurre cuando pasa algo |
 | `WindZone` | Rectángulo | `fuerza_x`, `fuerza_y` (px/s², 0) · `periodo` (s: con valor, el viento sopla a rachas) |
 | `FrictionZone` | Rectángulo | `multiplicador` (1.0; por debajo de 1 resbala) · `arrastre` (px/s, 0) |
 | `Conveyor` | Rectángulo | Igual que `FrictionZone`, pero `arrastre` vale 60 px/s por defecto: una cinta sin arrastre no es una cinta |
@@ -415,6 +416,6 @@ propiedad del objeto en Tiled.
 | *(ninguno)* o `Solid` | Colisión AABB completa |
 | `Platform` | Plataforma atravesable desde abajo |
 
-Total aceptado en `Objects`: **68** tipos.
+Total aceptado en `Objects`: **69** tipos.
 
 <!-- END GENERATED: tipos de objeto -->

@@ -380,6 +380,7 @@ def generar() -> str:
 renderorder="right-down" width="{MW}" height="{MH}" tilewidth="{TS}" \
 tileheight="{TS}" infinite="0" nextlayerid="20" nextobjectid="900">
  <properties>
+  <property name="schema_version" value="1"/>
   <property name="stage_id" value="stage4_1"/>
   <property name="stage_name" value="4-1  LA ENTRADA AL CEMENTERIO"/>
   <property name="author" value="Equipo docente — Legacy of Infest"/>

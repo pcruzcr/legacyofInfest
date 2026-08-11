@@ -135,6 +135,15 @@ class DiagnosticoDeEscenario:
                 f"{int(stats['por_reglas'])} por reglas"
             ),
         }
+        # AUD-400 — los objetivos del mapa (GAP-047). Un objetivo que el
+        # jugador no puede ver no sirve de nada, y ésta es la superficie que
+        # este motor ya tiene para enseñar el estado de un escenario. La fila
+        # sólo aparece si el mapa declara alguno, para que los diecisiete que
+        # no lo hacen no ganen una línea vacía en la consola.
+        objetivos = getattr(self, "_objetivos", None)
+        if objetivos is not None and objetivos.objetivos:
+            medidas["Objetivos"] = " · ".join(objetivos.resumen())
+
         # AUD-347 — los tiempos del ECS, que el planificador mide desde
         # siempre con `perf_counter` y nadie mostraba: la pregunta de F11
         # cuando el juego va lento es «cuál sistema», no «cuánto va el

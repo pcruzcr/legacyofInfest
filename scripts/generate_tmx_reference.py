@@ -80,6 +80,13 @@ def build_table() -> str:
         "PushBlock": ("Rectángulo", "`velocidad` (px/s, 45) · `con_gravedad`"),
         "BreakableBlock": ("Rectángulo",
                            "`golpes` (int, 1) · `evento_al_romper`"),
+        "Objective": ("Punto",
+                      "`objective_id` **obligatoria** · `text` **obligatoria** · "
+                      "`kind` (derrotar/recoger/bandera/hablar/llegar, «bandera») · "
+                      "`target` (qué enemigo, objeto o bandera; vacío = cualquiera) · "
+                      "`count` (int, 1) · `optional` (bool, false). "
+                      "Sin geometría: un objetivo no ocurre en un sitio, ocurre "
+                      "cuando pasa algo"),
         "Cutscene": ("Rectángulo o punto",
                      "`guion` **obligatoria** · `bloquea` · `saltable` · "
                      "`una_vez` · `arranca_con`. Punto = al empezar; "
