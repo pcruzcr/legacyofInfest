@@ -30,6 +30,7 @@ from src.framework.entities.boss_base import BossBase
 from src.framework.entities.enemy_base import EnemyBase
 from src.framework.entities.player import Player
 from src.framework.entities.squad_brain import SquadBrain
+from src.framework.physics.capas import MASCARA_POR_DEFECTO, Capa
 from src.framework.scenes.stage_parts.actualizaciones import ActualizacionesDeEscenario
 from src.framework.scenes.stage_parts.ambiente import MezclaDeAmbiente
 from src.framework.scenes.stage_parts.arco import ArcoDelJugador
@@ -419,9 +420,21 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
             if hasattr(enemy, "set_player_ref"):
                 enemy.set_player_ref(self._player.rect)
             if hasattr(enemy, "set_collision_rects"):
+                # AUD-395 — lo que frena a este enemigo lo decide su máscara
+                # (GAP-038). Antes se le pasaban las dos listas del escenario
+                # y punto: si un enemigo tenía que ignorar algo, se lo filtraba
+                # él por dentro, a mano, y cada uno a su manera.
+                #
+                # `Capa.SOLIDO` y `Capa.PLATAFORMA` se pasan por separado y no
+                # sumadas porque `set_collision_rects` distingue las dos —las
+                # plataformas se atraviesan desde abajo y los sólidos no—, así
+                # que fundirlas aquí perdería justo la diferencia que el
+                # resolutor necesita.
+                mascara = getattr(enemy, "mascara_de_colision", MASCARA_POR_DEFECTO)
                 enemy.set_collision_rects(
-                    self._stage_data.collision_rects,
-                    one_way=self._stage_data.one_way_rects,
+                    self._stage_data.capas.solidos_para(mascara & Capa.SOLIDO),
+                    one_way=self._stage_data.capas.solidos_para(
+                        mascara & Capa.PLATAFORMA),
                 )
             # AUD-325 — los enemigos comparten el suelo inclinado del
             # escenario: sin esto, un caminante atravesaría la cara de una

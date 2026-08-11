@@ -23,6 +23,7 @@ from src.engine.core import settings
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework import FrameworkUsageError
 from src.framework.entities.base_entity import BaseEntity
+from src.framework.physics.capas import Capa
 from src.framework.stage.stage_data import (
     _TIPOS_DE_COMPONENTE,
     MODOS_DE_CAMARA,
@@ -741,6 +742,19 @@ class StageLoader(ObjetosDeTiled):
                         stage.collision_rects.append(rect)
         except ValueError:
             logger.warning("StageLoader: Collision layer not found")
+
+        # AUD-395 — la misma clasificación, indexada por capa (GAP-038).
+        #
+        # Aquí ya se decidía la clase de cada caja —`Platform` o no— y se
+        # guardaba esa decisión en *qué lista* iba a parar. Eso es una capa,
+        # sólo que expresada de una forma que no se puede consultar ni ampliar:
+        # para preguntar «¿qué frena a esta entidad?» había que saberse las
+        # listas y sumarlas a mano en cada sitio.
+        #
+        # Se publican las dos vistas de la misma verdad, y se llenan juntas
+        # para que no puedan discrepar.
+        stage.capas.poner(Capa.SOLIDO, stage.collision_rects)
+        stage.capas.poner(Capa.PLATAFORMA, stage.one_way_rects)
 
     # ── Safe converters ───────────────────────────────────────────
 

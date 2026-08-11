@@ -208,10 +208,9 @@ class TestBufferDeSalto:
     def test_el_buffer_caduca(self) -> None:
         """Si no caducara, un salto pulsado hace tres segundos saldría solo
         al aterrizar, y el jugador no sabría por qué salta."""
-        from src.framework.entities.player import Player
-
         from src.engine.input.action_map import DEFAULT_KEY_BINDINGS, Action
         from src.engine.input.input_manager import InputManager
+        from src.framework.entities.player import Player
 
         im = InputManager()
         jugador = Player(pygame.Vector2(100, 100))

@@ -1208,7 +1208,7 @@ está.
   mapa supera 500 rectángulos, que es donde la medición dejaría de valer.
   **AUD-372**, que estaba reservado para el cableado, queda libre.
 
-## [GAP-038] No hay capas ni máscaras de colisión
+## ~~[GAP-038] No hay capas ni máscaras de colisión~~ *(Resuelto — capas propias sobre el AABB, sin pymunk)*
 
 - **File:** `src/framework/stage/collision_system.py`
 - **Phase:** auditoría 2026-08-10, lista del dueño (AUD-376) — ya registrado
@@ -1226,6 +1226,38 @@ está.
   mucho más barata y encaja con lo que ya hay. Aviso heredado de la auditoría
   de julio: si vuelve pymunk, no puede volver sin fusión de rectángulos —
   `add_static_collision` creaba un cuerpo+forma por tile, miles de cajas.
+
+- **Resolution (2026-08-11, AUD-395): capas propias, segunda opción de R-03.**
+  Decisión del dueño: no vuelve pymunk. `src/framework/physics/capas.py` es lo
+  que aquella fachada aparentaba ser, en ~60 líneas y sin dependencia nueva:
+  `Capa` es un `IntFlag` —`SOLIDO`, `PLATAFORMA`, `DESTRUCTIBLE`, `PUERTA`—
+  porque la pregunta que se hace no es «¿de qué clase eres?» sino «¿estás entre
+  las que me frenan?», y eso es una intersección de bits.
+  `MapaDeCapas.solidos_para(mascara)` responde la pregunta que antes no tenía
+  dónde vivir. `BaseEntity.mascara_de_colision` la declara por especie, en una
+  línea, como atributo de clase.
+  Lo que se descubrió al entrar: **la capa ya existía, cableada**.
+  `_load_collision` decidía `Platform` o no-`Platform` y guardaba esa decisión
+  en *qué lista* iba a parar. Era una capa binaria imposible de consultar o
+  ampliar, y por eso cada consumidor la recomponía a mano —`bloques.py` suma
+  tres listas, una entrega de estudiante suma dos, `StageScene` pasaba las dos
+  a todos los enemigos por igual—.
+  Compatibilidad: `collision_rects` y `one_way_rects` **no cambian de tipo** —
+  las leen las 26 entregas, el arco del jefe, la cámara y el calificador—; el
+  mapa de capas se publica al lado y el cargador llena las dos vistas juntas
+  para que no puedan discrepar. `MASCARA_POR_DEFECTO` es `SOLIDO | PLATAFORMA`
+  y no `TODO`, a propósito: con `TODO`, una entidad que nunca había visto un
+  destructible empezaría a chocar con él y eso cambiaría los mapas entregados
+  sin que nadie lo pidiera.
+  Fuera de alcance, y dicho: el filtrado **por tipo de entidad** del combate
+  sigue escrito a mano —`process_attack` recorre `entity_list` con
+  `isinstance(EnemyBase)` y `_procesar_bash` la recorre otra vez con
+  `isinstance(Projectile)`—. Son capas de *daño*, no de colisión geométrica,
+  y unificarlas cambia el orden de resolución de los golpes; se deja como
+  trabajo aparte en vez de colarlo aquí.
+  Cable trampa: `tests/test_capas_de_colision.py` (12 pruebas), con una que
+  comprueba que la máscara por defecto sigue viendo exactamente lo que se veía
+  antes en `stage0`.
 
 ## [GAP-039] Sin materiales de superficie: hay fricción, no hay restitución
 
