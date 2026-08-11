@@ -1101,7 +1101,8 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         # antes de que se viera, que es justo la clase de sistema correcto que
         # no llega a ninguna parte. Sin `bpm` en el mapa no hay reloj y esto
         # suma cero.
-        self._camera.offset.y += pulso.offset_de_camara(self._reloj_musical)
+        self._camera.offset.y += pulso.offset_de_camara(
+            getattr(self, "_reloj_musical", None))
         if stage.map_layer is not None and hasattr(stage.map_layer, '_map_layer'):
             stage.map_layer._map_layer.view_rect = pygame.Rect(
                 self._camera.offset.x, self._camera.offset.y,

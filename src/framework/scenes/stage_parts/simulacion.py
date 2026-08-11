@@ -189,9 +189,14 @@ class SimulacionDeEscenario:
         # para que el latido no se acumule con el ciclo de día y noche: de
         # madrugada late poco porque hay poca luz que modular, que es lo que se
         # espera.
+        # `getattr` y no `self._reloj_musical` a secas: esto es un **mixin**, y
+        # lo usan escenas de prueba y escenarios que no montan el reloj. La
+        # primera versión accedía al atributo directamente y tiraba cinco
+        # pruebas con `AttributeError` — un adorno que tumba el fotograma que
+        # decora, que es justo lo que AUD-413 vino a corregir en otro sitio.
         self._lighting.ambient_brightness = min(1.0, max(
             suelo, self._ambiente_base * estado.factor_ambiente,
-        ) * pulso.factor_de_luz(self._reloj_musical))
+        ) * pulso.factor_de_luz(getattr(self, "_reloj_musical", None)))
         self._post_processing.set_base_bloom(
             self._bloom_base_escenario + estado.bloom_extra)
         # El tinte de la hora ya viene compuesto con el de la estación: los dos
