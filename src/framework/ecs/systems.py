@@ -40,6 +40,7 @@ from src.framework.ecs.components import (
     Alerta,
     BloqueRitmico,
     ConoDeVision,
+    Efectos,
     EsJugador,
     Liana,
     PlataformaHundible,
@@ -425,6 +426,39 @@ def _hay_linea_libre(mundo: World, desde: pygame.Vector2,
     if not callable(consulta):
         return True
     return bool(consulta(desde, hasta))
+
+
+def sistema_efectos(mundo: World, dt: float) -> None:
+    """Descuenta las duraciones y aplica el dano continuo — AUD-388.
+
+    Dos trabajos y en este orden: primero cobra el veneno del intervalo que
+    acaba de pasar, y despues descuenta. Al reves, un efecto de 0,1 s con un
+    fotograma de 0,2 s expiraria sin haber hecho nada, y el jugador veria un
+    veneno que no envenena.
+
+    La vida se recorta a cero por abajo. Un efecto continuo no deberia poder
+    matar por debajo de cero -las pruebas de muerte comparan con `<= 0`- y
+    dejar el numero negativo hace que la barra de vida dibuje un ancho
+    negativo, que es el defecto que AUD-149 arreglo en otro sitio.
+
+    Recorre solo las entidades con `Efectos`, que son las pocas que tienen algo
+    encima: una escena normal tiene decenas de entidades y ninguna envenenada.
+    """
+    from src.framework.combate import efectos as reglas
+
+    for entidad, comp in mundo.cada(Efectos):
+        if not comp.activos:
+            continue
+
+        por_segundo = reglas.dano_por_segundo(comp)
+        if por_segundo > 0.0:
+            salud = mundo.obtener(entidad, Salud)
+            if salud is not None:
+                salud.actual = max(0.0, salud.actual - por_segundo * dt)
+
+        for activo in comp.activos:
+            activo.restante -= dt
+        comp.activos[:] = [a for a in comp.activos if a.restante > 0.0]
 
 
 def sistema_conos_de_vision(mundo: World, dt: float) -> None:

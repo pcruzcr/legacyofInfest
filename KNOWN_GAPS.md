@@ -1329,7 +1329,7 @@ está.
   21 pruebas nuevas. Falta la armadura como estadística aparte, que va con los
   efectos temporales de GAP-044.
 
-## [GAP-044] No hay sistema de buff/debuff
+## ~~[GAP-044] No hay sistema de buff/debuff~~ *(Resuelto)*
 
 - **File:** `src/framework/entities/player_state.py`
 - **Phase:** auditoría 2026-08-10, lista del dueño (AUD-376)
@@ -1340,6 +1340,33 @@ está.
 - **Resolution plan:** Encaja limpio como componente ECS. Sin fecha; mismo
   razonamiento que GAP-043 — el árbol de habilidades (AUD-293) da mejoras
   permanentes, no temporales, y nadie ha pedido temporales.
+
+- **Resolution (2026-08-10, AUD-388):** hecho por decisión del dueño, que
+  eligió el componente ECS con efectos declarados en datos y las cuatro
+  estadísticas modificables: daño infligido, daño recibido, velocidad y daño
+  por segundo.
+
+  **Nace con consumidor**, que es la lección de los diez lotes anteriores de
+  esta fase: una `HazardZone` con `damage_type="veneno"` (AUD-387) ya no sólo
+  pica, envenena, y el efecto sigue restando cuando el jugador ha salido de la
+  charca. Ésa es la única diferencia observable entre *un tipo de daño* y *una
+  cantidad*; sin ella el canal veneno era daño físico con otro nombre.
+
+  Cuatro decisiones: reaplicar **refresca** y no acumula (dos charcas no
+  envenenan el doble); los factores **multiplican** y no suman (`0,65 × 0,8` es
+  lento, `−0,35 − 0,2` acabaría andando hacia atrás); la correspondencia
+  canal→efecto es **por nombre** y no una tabla aparte (un tercer sitio que
+  sincronizar es un sitio donde olvidarse); y el sistema corre en `ZONAS + 5`,
+  después de las zonas letales, para que el primer tick no se cobre en el mismo
+  fotograma y se lea como daño doble.
+
+  El componente es el mismo para jugador y enemigos, que era justo lo imposible
+  con los temporizadores sueltos de `PlayerStateData`.
+
+  21 pruebas nuevas. Falta absorber los temporizadores que ya existían
+  (`damage_mult`, `invincibility_timer`): el catálogo ya trae `fuerza` y
+  `escudo` para hacerlo, pero migrarlos cambia el comportamiento del jugador y
+  va en su propio lote.
 
 ## [GAP-045] No hay pathfinding ni árbol de comportamiento
 

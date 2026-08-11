@@ -224,6 +224,15 @@ class Player(BaseEntity):
         # lo lea: el estado canónico arranca con el coyote del perfil, que
         # por defecto vale exactamente lo de `settings`.
         self.perfil = PhysicsProfile.plataformas()
+        #: AUD-388 — los efectos temporales que lleva encima. Vacío casi
+        #: siempre; lo llenan las charcas de veneno, los potenciadores y lo que
+        #: venga. Es el mismo componente que llevan los enemigos, y por eso
+        #: envenenar a uno es la misma llamada que envenenar al jugador — que
+        #: era justo lo que no se podía hacer con los temporizadores sueltos de
+        #: `PlayerStateData`.
+        from src.framework.ecs.components import Efectos
+
+        self.efectos = Efectos()
         self._state = PlayerStateData()
         self._state.health = settings.PLAYER_MAX_HEALTH
         self._state.coyote_counter = self.perfil.coyote_frames + 1
