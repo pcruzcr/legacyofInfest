@@ -175,6 +175,21 @@ def _objetos() -> list[str]:
 
     obj("PlayerSpawn", 3 * TS, suelo - 48, 16, 32)
 
+    # AUD-400 — los objetivos del prólogo (GAP-047).
+    #
+    # Van en el mapa de referencia porque es el que los estudiantes copian: un
+    # tipo de objeto que sólo existe en la documentación no lo usa nadie. Son
+    # dos y no más para que se vea la diferencia que importa —uno obligatorio y
+    # uno opcional—, que es lo que separa la misión del coleccionable.
+    obj("Objective", 3 * TS, suelo - 80, 0, 0,
+        objective_id="llegar_al_final",
+        text="Llega al final del prologo",
+        kind="bandera", target="stage0_completado")
+    obj("Objective", 4 * TS, suelo - 80, 0, 0,
+        objective_id="tres_infectados",
+        text="Derrota a tres infectados",
+        kind="derrotar", count=3, optional=True)
+
     # ── Zona A — moverse y saltar, sin nada que pueda matarte ──
     obj("MessageTrigger_Once", 5 * TS, suelo - 64, 48, 48,
         text="Flechas para moverte. Espacio para saltar.")
@@ -323,6 +338,7 @@ def generar() -> str:
 renderorder="right-down" width="{MW}" height="{MH}" tilewidth="{TS}" \
 tileheight="{TS}" infinite="0" nextlayerid="20" nextobjectid="900">
  <properties>
+  <property name="schema_version" value="1"/>
   <property name="stage_id" value="stage0"/>
   <property name="stage_name" value="STAGE 0 - PROLOGUE"/>
   <property name="author" value="Equipo docente — Legacy of Infest"/>

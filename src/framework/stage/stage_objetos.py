@@ -103,6 +103,9 @@ class ObjetosDeTiled:
             elif obj_type == "Cutscene":
                 cls._handle_cutscene(stage, obj, props)
 
+            elif obj_type == "Objective":
+                cls._handle_objetivo(stage, obj, props, obj_name)
+
             elif obj_type == "DeathPit":
                 if obj.width > 0 and obj.height > 0:
                     stage.death_pits.append(DeathPit(rect=pygame.Rect(obj.x, obj.y, obj.width, obj.height)))
@@ -883,6 +886,27 @@ class ObjetosDeTiled:
                 golpes=max(1, cls._safe_int(props.get("golpes", 1), "golpes")),
                 evento_al_romper=str(props.get("evento_al_romper", "") or ""),
             ))
+
+    @classmethod
+    def _handle_objetivo(cls, stage: StageData, obj: Any, props: dict[str, Any],
+                         nombre: str = "") -> None:
+        """AUD-400 — `Objective` en Tiled. Cierra GAP-047.
+
+        Es un objeto **punto**: no tiene geometría porque un objetivo no ocurre
+        en un sitio, ocurre cuando pasa algo. Se pone donde el diseñador quiera
+        verlo al abrir el mapa.
+
+        La conversión vive en `objetivos.py` y no aquí para que se pueda probar
+        sin cargar un TMX; esto sólo la llama y guarda el resultado. Un
+        objetivo mal declarado se ignora con aviso —lo decide
+        `objetivo_desde_tiled`— en vez de romper el nivel, que es el trato que
+        el resto del cargador da al dato incompleto.
+        """
+        from src.framework.stage.objetivos import objetivo_desde_tiled
+
+        objetivo = objetivo_desde_tiled(props, nombre)
+        if objetivo is not None:
+            stage.objetivos.append(objetivo)
 
     @classmethod
     def _handle_cutscene(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:

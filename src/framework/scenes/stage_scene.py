@@ -54,6 +54,7 @@ from src.framework.stage.level_mechanics import (
     ScrollForzado,
     TiempoBala,
 )
+from src.framework.stage.objetivos import SistemaDeObjetivos
 from src.framework.stage.progression_system import ProgressionSystem
 from src.framework.stage.speedrun_mode import SpeedrunTimer, registrar_marca
 from src.framework.stage.stage_loader import StageLoader
@@ -133,6 +134,14 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         self._hazards = HazardSystem(context)
         # F4.1 — recogibles, cerraduras, cofres y disparadores.
         self._interactables = InteractableSystem(bus=context.event_bus)
+        #: AUD-400 — los objetivos del escenario (GAP-047).
+        #:
+        #: Se construye aquí, con la escena, y no al poblar el mundo: el bus
+        #: guarda referencias **débiles**, así que el sistema tiene que vivir
+        #: tanto como la suscripción tiene que durar. Un mapa que no declara
+        #: objetivos deja esto vacío, y un sistema vacío da `todo_hecho` — que
+        #: es lo que mantiene intactos los diecisiete mapas anteriores.
+        self._objetivos = SistemaDeObjetivos(context.event_bus)
         # AUD-136 (D3) — el director de escenas. Se construye al cargar el
         # escenario; `_escenas_vistas` vive en la ESCENA y no en el director
         # para que sobreviva a las muertes: recargar el mapa crea objetos
@@ -512,6 +521,11 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
             bus=self.context.event_bus,
         )
         self._configurar_vfx_opcionales()
+        # AUD-400 — los objetivos que declara el mapa (GAP-047). Se dan de alta
+        # aquí, con el resto del contenido del TMX, para que el sistema esté
+        # escuchando antes de que el jugador pueda matar o recoger nada.
+        for objetivo in getattr(self._stage_data, "objetivos", ()):
+            self._objetivos.declarar(objetivo)
         self._poblar_mundo_ecs()
         # AUD-139 — el reloj musical va DESPUÉS de poblar el mundo.
         #

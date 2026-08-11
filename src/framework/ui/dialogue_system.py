@@ -313,6 +313,19 @@ class DialogueSystem:
             self._context.event_bus.emit(Events.ITEM_COLLECTED, item_id=arg)
         elif cmd == "set_flag":
             self._context.event_bus.emit(Events.FLAG_SET, flag=arg)
+        elif cmd == "complete_objective":
+            # AUD-400 — un guion puede dar un objetivo por cumplido (GAP-047).
+            #
+            # Es el enganche que el hueco daba por existente —«el diálogo ya
+            # ejecuta acciones»— y el que hace posible «habla con el vigía»
+            # como objetivo: hablar no emite nada contable hasta que la
+            # conversación termina, y a veces sólo cuenta una rama concreta.
+            #
+            # Se emite por el bus en vez de llamar al sistema de objetivos: el
+            # diálogo no tiene por qué saber que ese sistema existe, y así
+            # cualquier otra cosa puede reaccionar al mismo aviso.
+            self._context.event_bus.emit(Events.OBJECTIVE_REQUESTED,
+                                         objective_id=arg)
 
     def end_dialogue(self) -> None:
         """Cierra el diálogo y **avisa**.

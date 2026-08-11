@@ -256,6 +256,7 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── rejilla.py                 # AUD-276: rejilla espacial + raycast (línea de visión)
 │   │   │   ├── culling.py                 # AUD-279: qué se simula y qué se dibuja cerca de la cámara
 │   │   │   ├── pendientes.py             # AUD-297: suelo inclinado (Slope)
+│   │   │   ├── objetivos.py               # AUD-400: objetivos declarados en el mapa y su seguimiento (GAP-047)
 │   │   │   ├── stage_loader.py            # StageLoader: parse TMX, build layer stack, spawn
 │   │   │   ├── stage_data.py              # AUD-350: StageData y vocabulario de Tiled (dataclasses, capas)
 │   │   │   ├── stage_objetos.py           # AUD-350: mixin ObjetosDeTiled: un manejador por objeto de Tiled

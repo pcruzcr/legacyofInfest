@@ -130,6 +130,31 @@ class Events:
     en el juego es una pantalla de texto, no una mecánica.
     """
 
+    # ── Objetivos (AUD-400, GAP-047) ────────────────────────────────
+    OBJECTIVE_REQUESTED: str = "OBJECTIVE_REQUESTED"
+    """Alguien pide dar por cumplido un objetivo. Carga: objective_id.
+
+    Lo emite `complete_objective:` desde un árbol de diálogo. Es la **entrada**
+    del sistema de objetivos, al revés que los dos de abajo, que son su salida:
+    hay cosas que no se pueden contar con los eventos del juego —«habla con el
+    vigía», donde a veces sólo cuenta una rama concreta de la conversación— y
+    esto es cómo se dan por hechas sin fingir un recuento.
+    """
+    OBJECTIVE_COMPLETED: str = "OBJECTIVE_COMPLETED"
+    """Un objetivo del mapa se ha cumplido. Carga: objective_id, text.
+
+    Es lo que permite que el HUD lo tache y que suene algo sin que el sistema
+    de objetivos sepa que existen un HUD y un mezclador.
+    """
+    OBJECTIVES_COMPLETED: str = "OBJECTIVES_COMPLETED"
+    """Están hechos todos los objetivos **obligatorios** del escenario.
+
+    Los opcionales no cuentan: si contaran, cada coleccionable del mapa
+    bloquearía este aviso y con él lo que dependa de él. Se emite **una sola
+    vez** por escenario — sin ese pestillo, cada objetivo opcional cumplido
+    después volvería a anunciar el final.
+    """
+
     # ── Save / persist ──────────────────────────────────────────────
     SAVE_REQUESTED: str = "SAVE_REQUESTED"
     """Emitted when a save should be persisted. Payload: stage_id, stage_index,
