@@ -111,3 +111,37 @@ class TestNoRompeNada:
             w = WeatherSystem(climate=clima)
             _avanzar(w, 1.0)
             w.draw(superficie, pygame.Vector2(0, 0))
+
+
+class TestElDestelloNoCompraSuperficies:
+    def test_el_fogonazo_no_reasigna_pantalla_en_cada_fotograma(self, monkeypatch) -> None:
+        """AUD-410 — cada fotograma de destello compraba una `Surface` nueva.
+
+        El velo de la tormenta (AUD-270) se cachea porque rellenar 800×600 con
+        alfa costaba 1,79 ms; el fogonazo del mismo rayo, que también es un
+        relleno de pantalla completa con alfa que decae, asignaba 800×600×4
+        bytes **en cada `draw`** mientras duraba el brillo. La primera pasada
+        puede comprar la caché; las siguientes tienen que reutilizarla.
+        """
+        w = WeatherSystem(climate="storm")
+        w.forzar_relampago()
+        superficie = pygame.Surface((800, 600))
+        w.draw(superficie, pygame.Vector2(0, 0))  # calienta la caché
+
+        real = pygame.Surface
+        creadas = 0
+
+        def _contadas(*args, **kwargs):
+            nonlocal creadas
+            creadas += 1
+            return real(*args, **kwargs)
+
+        monkeypatch.setattr(pygame, "Surface", _contadas)
+
+        w.draw(superficie, pygame.Vector2(0, 0))
+        w.draw(superficie, pygame.Vector2(0, 0))
+
+        assert creadas == 0, (
+            f"el destello creó {creadas} superficies nuevas tras la primera "
+            "pasada: churn de memoria por fotograma durante el rayo"
+        )

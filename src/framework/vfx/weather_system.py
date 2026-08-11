@@ -42,6 +42,15 @@ class WeatherSystem:
         self._relampagos: int = 0
         #: La capa de color sólo se repinta cuando cambia el clima.
         self._overlay_listo: bool = False
+        # AUD-410 — el fogonazo del rayo con la misma disciplina que el velo
+        # de arriba: una superficie que se rellena, no una compra por
+        # fotograma. AUD-270 lo dejó asignando `pygame.Surface` de pantalla
+        # completa en cada `draw` mientras el brillo decaía — ~1,9 MB por
+        # fotograma durante un rayo, en el presupuesto de 16,67 ms. La caché
+        # es perezosa y al tamaño real del destino, y `_destello_alfa` evita
+        # hasta el `fill` si el brillo no ha cambiado.
+        self._destello: pygame.Surface | None = None
+        self._destello_alfa: int = -1
         self._set_climate_params()
 
     def _set_climate_params(self) -> None:
@@ -166,11 +175,21 @@ class WeatherSystem:
 
         # AUD-270 — el fogonazo va **encima** del velo de la tormenta: un rayo
         # que se dibujara debajo quedaría teñido de gris y no se vería.
+        # AUD-410 — la superficie es una caché rellenable (ver `__init__`):
+        # antes se compraba una nueva en cada fotograma con brillo.
         if self._brillo_rayo > 0.0:
-            destello = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
-            destello.fill((255, 253, 240,
-                           int(self.ALFA_DESTELLO * self._brillo_rayo)))
-            surface.blit(destello, (0, 0))
+            if (
+                self._destello is None
+                or self._destello.get_size() != surface.get_size()
+            ):
+                self._destello = pygame.Surface(
+                    surface.get_size(), pygame.SRCALPHA)
+                self._destello_alfa = -1
+            alfa = int(self.ALFA_DESTELLO * self._brillo_rayo)
+            if alfa != self._destello_alfa:
+                self._destello.fill((255, 253, 240, alfa))
+                self._destello_alfa = alfa
+            surface.blit(self._destello, (0, 0))
 
     def clear(self) -> None:
         self._emitter.clear()
