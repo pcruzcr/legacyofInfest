@@ -2583,3 +2583,76 @@ búsquedas por texto sin abrir el fichero. Las doce entradas abiertas que quedan
 de aquella pasada **no están verificadas al mismo nivel** que las cuatro que se
 han trabajado desde entonces, y conviene decirlo antes de que alguien planifique
 sobre ellas.
+
+*(Resuelto en §36, AUD-382: se verificaron las doce y las doce se sostienen.
+Esta advertencia se conserva porque explica por qué se hizo esa pasada.)*
+
+---
+
+## 36. Las doce premisas restantes, verificadas (2026-08-10, AUD-382)
+
+§35.5 dejó dicho que las doce entradas abiertas de §28 no estaban verificadas
+al mismo nivel que las trabajadas, después de que dos de catorce resultaran
+falsas. Esta pasada las verifica una a una, **abriendo el código** y no
+buscando texto. No implementa nada.
+
+### 36.1 Resultado: las doce se sostienen
+
+| GAP | Premisa | Comprobación |
+|---|---|---|
+| 036 | El bucle no tiene paso fijo | AST de `App.run`: sin acumulador, sin `fixed_update`, `dt` del reloj ✅ |
+| 038 | Sin capas ni máscaras de colisión | AST de `collision_system`, `resolucion` y `components`: ni una definición ni un campo con `layer`/`mask`/`filter` ✅ |
+| 039 | Materiales sin restitución | `PhysicsProfile` tiene 15 campos y ninguno es restitución ni rebote ✅ |
+| 040 | Buffer sólo para el salto | `_pending_jump` en `Player`, y `InputManager` sin la primitiva ✅ |
+| 041 | El ECS no recicla identificadores | AST de `crear` y `aplicar_bajas`: sin lista de libres ✅ |
+| 042 | Sin determinismo | Cero `random.seed()`; parcialmente cerrado por AUD-375 ✅ |
+| 043 | Sin tipos de daño | `_calculate_damage(self, player, enemy) -> float`, escalar; sin campos de tipo o resistencia ✅ |
+| 044 | Sin buff/debuff | Sin campos de efecto temporal en componentes ni en `PlayerStateData` ✅ |
+| 045 | Sin pathfinding ni árbol de comportamiento | Ninguna definición; ver §36.2 ✅ |
+| 047 | Sin misiones ni objetivos | `ProgressionSystem` son puntos de control, disparadores y fin de escenario; ver §36.2 ✅ |
+| 048 | Sin versionado de mapas | `schema_version` no aparece en el cargador ni en ningún `.tmx` ✅ |
+| 049 | Sin contadores de recurso | Llamadas de dibujo ya sí (AUD-377); memoria de textura, VRAM y fugas, no ✅ |
+
+### 36.2 Y tres falsos positivos más, de la misma familia
+
+La verificación por AST destapó que las búsquedas por texto que había usado
+originalmente estaban contaminadas por **coincidencias de subcadena**:
+
+* `gastar_estamina` y `gastar` contienen **`astar`**. Ésa era la mitad del ruido
+  de la búsqueda de pathfinding.
+* `_on_save_requested`, `request_chromatic_aberration` y `_current_question`
+  contienen **`quest`**. Ésa era toda la señal aparente de un sistema de
+  misiones.
+
+Ninguno es una definición real. Buscar por nombre de definición —clases y
+funciones, con AST— los elimina de un golpe, y es lo que había que haber hecho
+desde el principio.
+
+### 36.3 El patrón que separa las dos falsas de las doce buenas
+
+Merece la pena porque es predictivo, no anecdótico. Las dos premisas que
+fallaron eran **afirmaciones positivas**:
+
+* `GAP-037`: «`stage4_1` trae **miles** de rectángulos» — una cantidad. Son 51.
+* `GAP-046`: «la percepción **vive en** `stages/stage1_1`» — una ubicación. Vive
+  en el ECS desde hace tiempo.
+
+Las doce que se sostienen son todas **afirmaciones negativas**: «no existe X».
+
+Tiene sentido y conviene explotarlo: una ausencia se establece bien con una
+búsqueda exhaustiva —si no aparece en ningún sitio, no está—, mientras que una
+cantidad o una ubicación exigen **abrir el fichero y mirar**. Una búsqueda que
+devuelve resultados dice dónde mirar; no dice qué hay allí.
+
+La regla operativa para las próximas auditorías de este repositorio: *un «no
+hay X» se puede sostener con una búsqueda bien hecha; un «X está en tal sitio»
+o «X vale N» no se escribe sin haber abierto el fichero.*
+
+### 36.4 Por qué esta pasada no trae prueba
+
+No cambia comportamiento: confirma premisas. Escribir una prueba por cada una
+—«sigue sin haber tipos de daño»— convertiría doce decisiones pendientes en
+doce cables trampa que se pondrían rojos justamente el día que alguien las
+implemente, que es el día que queremos. Los cables trampa se ponen sobre
+decisiones *tomadas* (`test_los_mapas_no_traen_miles_de_rectangulos`, AUD-379),
+no sobre huecos abiertos.
