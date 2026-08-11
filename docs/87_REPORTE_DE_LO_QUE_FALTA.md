@@ -2728,3 +2728,71 @@ Ninguna es cableado; las seis son decisión:
   —el envolvente son cuatro o cinco focos—, así que encenderlas exige elegir el
   mapa mirando sus focos y no a bulto.
 * `fog_of_war` espera a un mapa que la pida.
+
+---
+
+## 38. Cero propiedades sin demostrar (2026-08-10, AUD-384)
+
+Tercer y último lote de `GAP-052`. El informe de cobertura cierra con **«todas
+las propiedades de mapa están demostradas en algún mapa»**, que es la primera
+vez que puede decirlo de verdad: hasta AUD-378 lo decía sin haber mirado veinte
+de las treinta y ocho.
+
+    17 (AUD-378, medido) → 10 (AUD-380) → 6 (AUD-383) → 0 (AUD-384)
+
+### 38.1 Las seis últimas, y por qué cada una donde está
+
+* **`estamina`, `tiempo_bala`, `habilidades_libres`** → `stage_mecanicas`. Sus
+  propios docstrings explican por qué estaban apagadas: «encenderla para todos
+  cambiaría cómo se juegan sin que sus autores lo pidan», «los dieciséis
+  escenarios entregados están calificados». El laboratorio es exactamente donde
+  eso no aplica, porque cambiar la jugabilidad **es su función**.
+* **`sombras_proyectadas` y `god_rays`** → `stage_mecanicas`, con **dos** focos
+  nuevos y no más. El módulo de sombras mide su propio coste y deja escrito que
+  el envolvente utilizable son cuatro o cinco focos; con ocho, incluso con
+  tope, se come el fotograma. Medido en este mapa antes de encenderlas:
+
+      2 focos, 6 obstáculos
+      sin sombras : 0,499 ms
+      con sombras : 0,657 ms   (+0,158 ms = 1,0% del presupuesto)
+
+  Los focos van en la sala del viento, que tiene techo, porque **una sombra
+  proyectada se lee cuando hay una pared donde caer**. En campo abierto el
+  efecto existe y no se ve, que es la peor forma de demostrar algo.
+* **`fog_of_war`** → `stage_cenital`, y no al laboratorio lateral. Una vista en
+  planta con niebla es la mazmorra clásica y se entiende sola; oscurecer el
+  laboratorio de mecánicas taparía las once mecánicas que ese mapa existe para
+  enseñar. 220 px deja ver la sala en la que estás y esconde las otras dos.
+
+### 38.2 Tres cables trampa que saltaron, y qué se hizo con ellos
+
+`test_profundidad_25d`, `test_sombras_proyectadas` y `test_tiempo_bala_enchufado`
+tenían cada uno una prueba de la forma «ningún mapa entregado declara esta
+propiedad». Se escribieron para demostrar que cada característica era
+**aditiva**: que añadirla no cambiaba el juego de los dieciséis escenarios ya
+calificados. Al encenderlas en los laboratorios, los tres se pusieron rojos —
+correctamente.
+
+La reacción fácil era borrarlos o relajarlos. En los tres se hizo lo mismo:
+
+1. **Exceptuar el laboratorio por nombre**, no relajar la aserción: lo que
+   vigilan sigue importando, y es que el contenido **entregado** no cambie.
+2. **Añadir la prueba del sentido contrario.** Sin ella, si alguien borra la
+   propiedad del laboratorio, la primera seguiría en verde —no habría mapas
+   inesperados— y la característica volvería a no estar demostrada en ninguna
+   parte. Que es el estado del que `GAP-052` la sacó.
+
+Un cable trampa que salta cuando debe no es un estorbo: es la única señal de
+que el cambio hizo algo. Relajarlo habría convertido tres guardianes en tres
+comentarios.
+
+### 38.3 Y el guardián que impide reabrirlo
+
+`test_todas_las_propiedades_las_demuestra_algun_mapa` es estricto y no un
+porcentaje. Con el criterio del dueño —el cableado existe *para que los
+estudiantes lo usen*— «casi todas» no significa nada. Desde ahora, añadir una
+propiedad al motor obliga a decidir, **en el mismo lote**, en qué mapa se
+enseña, o a escribir por qué no.
+
+Es la respuesta durable a cómo se abrió este hueco: no por una decisión, sino
+por diecisiete veces que nadie tuvo que tomarla.

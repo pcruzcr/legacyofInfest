@@ -135,6 +135,41 @@ class TestElSentidoQueFaltaba:
         )
 
 
+def test_todas_las_propiedades_las_demuestra_algun_mapa():
+    """El cable trampa de GAP-052 — AUD-384.
+
+    Cerrado el punto ciego (AUD-378) resultó que **diecisiete** propiedades no
+    las declaraba ningún mapa, entre ellas un modo de juego entero. Se fueron
+    cerrando en tres lotes —AUD-380, AUD-383 y AUD-384— hasta cero.
+
+    Esta prueba impide que se vuelva a abrir en silencio, que es como se abrió:
+    una propiedad nueva del cargador entra sin que nadie note que ningún mapa
+    la enseña, y la característica existe sin que ningún estudiante pueda
+    descubrirla. Ahora, añadir una propiedad al motor obliga a decidir —en el
+    mismo lote— dónde se demuestra.
+
+    Es deliberadamente estricta y no un porcentaje: el criterio del dueño es
+    que el cableado existe *para que los estudiantes lo usen*, y con ese
+    criterio «casi todas» no significa nada.
+    """
+    from pathlib import Path
+
+    from scripts.check_tmx_coverage import analizar
+
+    raiz = Path(__file__).resolve().parent.parent
+    cubiertas: set[str] = set()
+    for mapa in (raiz / "assets" / "maps").rglob("*.tmx"):
+        cubiertas |= analizar(mapa)["del_motor_usadas"]
+
+    sin_demostrar = sorted(set(PROPIEDADES_DEL_MOTOR) - cubiertas)
+    assert not sin_demostrar, (
+        f"{len(sin_demostrar)} propiedades que el motor lee y ningún mapa "
+        f"declara: {sin_demostrar}. Una característica que ningún mapa "
+        "demuestra no la descubre ningún estudiante — decide en este mismo "
+        "lote en qué mapa se enseña, o documenta por qué no en GAP-052"
+    )
+
+
 class TestLosAlias:
     """`camara`/`camera` y `vista`/`view` son la misma característica.
 

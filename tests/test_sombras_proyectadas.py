@@ -138,7 +138,33 @@ class TestApagadoPorDefecto:
             if 'name="sombras_proyectadas"' in p.read_text(
                 encoding="utf-8", errors="replace")
         ]
-        assert not con_prop, f"ya lo usaban: {con_prop}"
+        # AUD-384 — el laboratorio de mecánicas las enciende, con **dos** focos:
+        # este módulo mide que el envolvente utilizable son cuatro o cinco, y
+        # dos deja margen de sobra. Medido antes de encenderlas: +0,158 ms
+        # sobre 0,499, un 1,0% del presupuesto de fotograma.
+        #
+        # Se exceptúa por nombre y no relajando la prueba: lo que ésta vigila
+        # sigue importando, que es que **el contenido entregado** no cambie de
+        # coste por haber añadido la característica.
+        inesperados = sorted(set(con_prop) - {"stage_mecanicas.tmx"})
+        assert not inesperados, f"ya lo usaban: {inesperados}"
+
+    def test_el_laboratorio_si_las_enciende(self) -> None:
+        """El otro sentido: la excepción no puede vaciarse en silencio.
+
+        Si el laboratorio deja de declararlas, la prueba de arriba seguiría en
+        verde —no habría mapas inesperados— y la característica volvería a no
+        estar demostrada en ninguna parte, que es el estado del que GAP-052 la
+        sacó.
+        """
+        from pathlib import Path
+
+        raiz = Path(__file__).resolve().parents[1]
+        mapa = raiz / "assets" / "maps" / "stage_mecanicas" / "stage_mecanicas.tmx"
+        assert 'name="sombras_proyectadas"' in mapa.read_text(
+            encoding="utf-8", errors="replace"), (
+            "el laboratorio dejó de declarar `sombras_proyectadas`"
+        )
 
     def test_el_sistema_de_luz_sabe_recibirlas(self) -> None:
         from src.framework.vfx.lighting import LightSystem
