@@ -233,9 +233,10 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── bridge.py                   #   ComponentesDeEntidad: BaseEntity sobre componentes
 │   │   │   └── bullet_swarm.py             #   EnjambreDeBalas: bullet hell con NumPy (F5.8)
 │   │   │
-│   │   ├── combate/                        # AUD-387 — reglas de combate compartidas
+│   │   ├── combate/                        # AUD-387/388 — reglas de combate compartidas
 │   │   │   ├── __init__.py
-│   │   │   └── dano.py                     #   canales de daño y mitigación (data/damage_types.json)
+│   │   │   ├── dano.py                     #   canales de daño y mitigación (data/damage_types.json)
+│   │   │   └── efectos.py                  #   AUD-388: efectos temporales (data/effects.json)
 │   │   │
 │   │   ├── physics/                       # AUD-333/334 — física por contexto + resolutor compartido
 │   │   │   ├── __init__.py

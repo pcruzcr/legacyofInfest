@@ -82,6 +82,11 @@ class MundoDelEscenario:
         # velocidad: tiene que correr sobre la posición ya resuelta.
         p.registrar(Fase.ZONAS, "friccion", ecs_systems.sistema_friccion)
         p.registrar(Fase.ZONAS + 1, "zonas_letales", ecs_systems.sistema_zonas_letales)
+        # AUD-388 — los efectos temporales, junto al resto de lo que reacciona
+        # a la posición ya resuelta. Van **después** de las zonas letales para
+        # que una charca que acaba de envenenar cobre su primer tick en el
+        # fotograma siguiente y no en el mismo, que se leería como daño doble.
+        p.registrar(Fase.ZONAS + 5, "efectos", ecs_systems.sistema_efectos)
         return p
 
     def _poblar_mundo_ecs(self) -> None:

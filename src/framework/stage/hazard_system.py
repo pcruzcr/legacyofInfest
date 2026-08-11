@@ -13,7 +13,6 @@ if TYPE_CHECKING:
     from src.framework.entities.player import Player
     from src.framework.stage.stage_loader import StageData
 
-
 class HazardSystem:
     def __init__(self, context: GameContext) -> None:
         self._context = context
@@ -117,6 +116,16 @@ class HazardSystem:
                 continue
             if trigger_rect.colliderect(hz.rect) and player.rect is not None:
                 player.apply_damage(hz.damage, player.rect.center)
+                # AUD-388 — una charca de veneno envenena, no sólo pica. Es lo
+                # que hace que el canal `veneno` de AUD-387 no sea daño físico
+                # con otro nombre: el efecto sigue restando vida cuando el
+                # jugador ya ha salido de la zona, que es la única diferencia
+                # observable entre un tipo de daño y una cantidad.
+                #
+                # Sólo si el canal tiene un efecto del mismo nombre en el
+                # catálogo: `fisico` no lo tiene, así que las zonas de los
+                # dieciséis mapas entregados se comportan igual que antes.
+                self._envenenar(player, hz.damage_type)
                 hz.timer = hz.cooldown
                 self._context.event_bus.emit(Events.SFX_HAZARD_ZONE)
 
@@ -133,6 +142,25 @@ class HazardSystem:
             if not hz.activa and hz.arranca_con in self._eventos_vistos:
                 hz.arrancar()
             hz.avanzar(dt)
+
+    @staticmethod
+    def _envenenar(player: Any, canal: str) -> None:
+        """Aplica el efecto que corresponda al canal, si existe uno.
+
+        La correspondencia es **por nombre**: el canal `veneno` aplica el
+        efecto `veneno`. Es una convención y no una tabla aparte a propósito —
+        una tabla sería un tercer sitio que mantener sincronizado con los otros
+        dos catálogos, y el día que alguien añada un canal sin su fila, el
+        efecto no saltaría y nadie sabría por qué.
+        """
+        from src.framework.combate import efectos as reglas
+
+        if not reglas.existe(canal):
+            return
+        comp = getattr(player, "efectos", None)
+        if comp is None:
+            return
+        reglas.aplicar(comp, canal)
 
     def _kill_player(self) -> None:
         self._pending_death = True

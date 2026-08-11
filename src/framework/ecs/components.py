@@ -299,6 +299,26 @@ class Resorte:
 
 
 @dataclass(slots=True)
+class Efectos:
+    """Los efectos temporales que lleva encima una entidad — AUD-388.
+
+    Sirve igual para el jugador y para un enemigo, que es la mitad de la
+    gracia: antes cada temporizador vivia en `PlayerStateData` y por eso no se
+    podia envenenar a nada que no fuera el jugador.
+
+    La lista suele estar **vacia**, y eso importa: `sistema_efectos` recorre
+    solo las entidades que tienen el componente, y `modificador()` devuelve 1,0
+    sin efectos, asi que quien lo consulta multiplica siempre y no necesita una
+    rama `if hay_efectos`.
+
+    El catalogo y las reglas viven en `framework/combate/efectos.py`; aqui solo
+    esta el dato.
+    """
+
+    activos: list = field(default_factory=list)
+
+
+@dataclass(slots=True)
 class ZonaDeViento:
     """Empuja a quien esté dentro. Mega Man 2 (Air Man), Celeste (Golden Ridge).
 

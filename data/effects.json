@@ -1,0 +1,45 @@
+{
+  "comment": "AUD-388 (GAP-044) — efectos temporales del motor. Anadir uno aqui basta para que exista: `framework/combate/efectos.py` lo lee. `modifica` tiene que ser una de las cuatro estadisticas modificables; `factor` es un multiplicador (0,7 = -30%, 1,3 = +30%) y `por_segundo` es dano continuo en puntos de vida.",
+  "efectos": [
+    {
+      "id": "veneno",
+      "nombre": "Veneno",
+      "descripcion": "La plaga en la sangre. Resta poco y sigue restando cuando ya has salido de la charca: es lo que hace que el canal veneno de AUD-387 no sea dano fisico con otro nombre.",
+      "modifica": "por_segundo",
+      "por_segundo": 2.0,
+      "duracion": 4.0
+    },
+    {
+      "id": "lentitud",
+      "nombre": "Lentitud",
+      "descripcion": "Cuesta moverse. Pensado para el barro y para el aliento de un jefe.",
+      "modifica": "velocidad",
+      "factor": 0.65,
+      "duracion": 3.0
+    },
+    {
+      "id": "atolladero",
+      "nombre": "Atolladero",
+      "descripcion": "Segunda fuente de lentitud, para que se vea que dos efectos sobre la misma estadistica componen multiplicando en vez de pisarse.",
+      "modifica": "velocidad",
+      "factor": 0.8,
+      "duracion": 2.0
+    },
+    {
+      "id": "fuerza",
+      "nombre": "Fuerza",
+      "descripcion": "Pega mas fuerte. Es el que absorbe el `damage_mult` que vivia suelto en PlayerStateData.",
+      "modifica": "dano_infligido",
+      "factor": 1.5,
+      "duracion": 8.0
+    },
+    {
+      "id": "escudo",
+      "nombre": "Escudo",
+      "descripcion": "Recibe menos. Es la armadura que GAP-043 dejo fuera: alli se resolvio la resistencia POR CANAL, y esto es la mitigacion general y temporal.",
+      "modifica": "dano_recibido",
+      "factor": 0.5,
+      "duracion": 6.0
+    }
+  ]
+}
