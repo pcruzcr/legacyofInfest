@@ -2,6 +2,7 @@
 <map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="48" height="38" tilewidth="16" tileheight="16" infinite="0" nextlayerid="9" nextobjectid="228">
  <properties>
   <property name="schema_version" value="1"/>
+  <property name="author" value="Equipo docente — Legacy of Infest"/>
   <property name="stage_id" value="stage1_2_la_soda"/>
   <property name="stage_name" value="1-2  LA SODA"/>
   <property name="time_limit" type="int" value="150"/>

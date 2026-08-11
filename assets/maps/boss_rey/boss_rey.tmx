@@ -4,6 +4,7 @@
   <property name="background_zone" value="zone2"/>
   <property name="bgm_track" value="bgm_zone2_boss"/>
   <property name="schema_version" value="1"/>
+  <property name="author" value="Equipo docente — Legacy of Infest"/>
   <property name="stage_id" value="boss_rey"/>
   <property name="stage_name" value="El Rey Terciopelo"/>
   <property name="time_limit" type="int" value="0"/>
