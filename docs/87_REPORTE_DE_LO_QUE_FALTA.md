@@ -127,7 +127,7 @@ qué esa frase importa:
 | Atlas de sprites | ✅ (AUD-138) |
 | `SurfacePool` | ✅ y en uso |
 | Enjambre de balas en NumPy | ✅ y **ya se usa** (AUD-263): 2.000 balas de 12,94 ms a 0,072 ms |
-| `SpriteBatch` | ❌ **no existe** |
+| `SpriteBatch` | ✅ existe (AUD-302): lote en CPU con `blits()`, medido con `scripts/bench_sprite_batch.py` |
 
 **La medición que manda (AUD-148):** en una máquina sin tarjeta real, el bloom
 en GPU sale **5× más lento** que en CPU (8,3 ms contra 1,7), porque SDL cae a
@@ -157,7 +157,16 @@ tenía dónde guardarla.
 Hoy la escena lo enlaza junto a los logros y la puntuación, y el autoguardado
 se lleva `exp_total`. Las partidas anteriores se cargan sin tocar nada.
 
-### Árbol de habilidades — **NO EXISTE**
+### Árbol de habilidades — ~~**NO EXISTE**~~ **HECHO (AUD-293)**
+
+> **Corrección con fecha.** La sección de abajo se escribió cuando el árbol
+> no existía, y dejó de ser verdad con AUD-293: `skill_tree.py` define
+> `ArbolDeHabilidades` con `CATALOGO` de tres ramas (vitalidad, fuerza,
+> ímpetu) y `comprar()`/`puede_comprar()`/`motivo_para_no_comprar()`;
+> `skill_tree_scene.py` es la pantalla, con su entrada desde el menú de
+> título; la compra se cobra de `exp_total` y persiste en la partida
+> (AUD-295 firmó el guardado). Lo que queda de la sección es la **decisión
+> de diseño**, que sigue en pie: el árbol no se paga con monedas.
 
 Esto es lo que la lista de QA pedía validar, y la respuesta honesta es que **no
 hay nada que validar**:
@@ -178,8 +187,10 @@ tienda se queda sin habilidades sin saber por qué.
 **Lo que falta, en orden:** decidir los nodos y su coste en puntos → decidir
 qué hace cada uno (y si toca la física, cómo no rompe las 26 entregas) →
 `gastar(nodo)` en `ExperienceSystem` → persistir qué nodos están comprados →
-la pantalla. Es una funcionalidad, no un cableado: **necesita una decisión de
-diseño del curso antes de escribir código.**
+la pantalla. *(AUD-293 adelantó esta lista: el catálogo y la pantalla ya
+existen; queda la decisión de diseño y cuadrar el gasto con
+`ArbolDeHabilidades.comprar`.)* Es una funcionalidad, no un cableado:
+**necesita una decisión de diseño del curso antes de escribir código.**
 
 ---
 
@@ -1315,7 +1326,10 @@ en el índice, y dos filas del índice —`15_DISENO_4_1_EL_CEMENTERIO.md` y
   `AUDITORIA_2026-07-27_MEDICION.md`, partido por mi propio patrón.
 
 Tres acusaciones, cero defectos, y la herramienta que las produjo era mía y
-recién escrita. Es el mismo modo de fallo que §19.1 documenta para los «24 pares
+recién escrita. *(Nota de 2026-08-11: el `61_AUDITORIA_AAA_2026-08.md` que
+esta sección defiende fue retirado después en la purga de documentación
+(030375a) junto con otros 35 documentos; su sucesor es
+`89_AUDITORIA_MULTIDISCIPLINAR.md`.)* Es el mismo modo de fallo que §19.1 documenta para los «24 pares
 de ciclos de importación»: **una medición mal hecha no da menos confianza que
 una bien hecha, da la misma**. Por eso se comprueba cada hallazgo contra el
 fichero antes de escribirlo, incluso —sobre todo— cuando el hallazgo es tuyo.

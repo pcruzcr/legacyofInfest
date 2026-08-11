@@ -106,8 +106,9 @@ Desde AUD-233 lo hace `scripts/check_orphan_systems.py`, con
 `tests/test_sistemas_huerfanos.py` ejecutándolo en la suite. Su puerta es
 estrecha a propósito: sólo falla cuando un módulo **que un documento declara
 terminado** tiene un símbolo que las pruebas ejercitan, el juego no invoca y
-nadie ha clasificado todavía. Medida actual: 181 candidatos, 16 verificados como
-no-defectos, 8 huérfanos reales anotados en **GAP-031**.
+nadie ha clasificado todavía. Medida actual (2026-08-11, `check_orphan_systems.py`):
+**221 candidatos, 28 verificados como no-defectos, 0 huérfanos reales
+anotados**. Los 8 reales que había quedaron clasificados en su día (GAP-031).
 
 ---
 
@@ -126,6 +127,14 @@ SERPENT_WAVE     SUMMON_ECHOES    VENOM_BURST      WIND_BLAST
 
 Más `BossSpawn` —un tipo de objeto de Tiled que la especificación describe y
 que el motor **no acepta**— y `ReyMetad`.
+
+> **Corrección (AUD-259). `BossSpawn` sí está implementado desde entonces.**
+> El cargador lo acepta (`stage_objetos.py`) y valida su propiedad `boss`
+> contra el registro de entidades; `check_tmx_coverage.py` lo lista como el
+> único tipo que ningún mapa usa en su forma indirecta, porque las cuatro
+> arenas se colocan con su tipo directo. Un estudiante que escriba
+> `BossSpawn` en Tiled recibe la construcción exacta del jefe, no un aviso
+> de tipo desconocido.
 
 **Cómo leerlo con justicia.** Los cuatro jefes entregados por los estudiantes
 tienen sus propios ataques, con otros nombres. La especificación describe un
@@ -163,9 +172,8 @@ Los 22 patrones siguen apareciendo en el barrido, y **está bien que
 aparezcan**: no existen. La diferencia es que ahora el documento lo dice
 primero.
 
-`BossSpawn` sigue sin implementarse y §0 lo advierte: un estudiante que lo
-escriba en Tiled recibe un aviso de tipo desconocido. Los tres jefes reales se
-colocan con su tipo propio.
+`BossSpawn` se implementó en AUD-259 (ver corrección más arriba) y §0 de
+`17_BOSS_SPEC.md` está al día con el jefe que lo colocó.
 
 ---
 
@@ -274,7 +282,8 @@ esos tres engañan a quien los lea para programar.
 ## 5. Lo que falta de sistema, no de nombre
 
 Esto no sale del barrido automático: sale de la auditoría de agosto
-(`61_AUDITORIA_AAA_2026-08.md`) y del inventario (`62_ESTADO_DEL_PROYECTO.md`).
+(`89_AUDITORIA_MULTIDISCIPLINAR.md`, sucesora de la `61` retirada en la purga)
+y del inventario (`62_ESTADO_DEL_PROYECTO.md`).
 
 | Falta | Bloquea | Esfuerzo |
 |---|---|---|
