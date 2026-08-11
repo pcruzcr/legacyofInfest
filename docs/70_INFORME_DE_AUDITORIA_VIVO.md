@@ -2043,3 +2043,44 @@ llevaba meses sin resolución escrita, que es el formato que exige
 `docs/23_DATA_SCHEMAS.md` §8). Se respetó el árbol en vuelo de la sesión
 anterior: `docs/60`, `gpu_effects.py` y `memoria_de_textura.py` (AUD-404)
 quedan fuera de estos commits, y `computer-vision-course/` sigue sin trackear.
+
+> **Nota de la sesión paralela (2026-08-11).** Ese trabajo en vuelo acabó
+> commiteado como **AUD-413**, no como AUD-404: cuando se cerró, el correlativo
+> ya iba por 412, y numerar hacia atrás habría dejado un `AUD-404` posterior a
+> un `AUD-412`. El número que citaba el párrafo de arriba era el que llevaban
+> los comentarios del árbol sin commitear, no un lote publicado.
+
+---
+
+## Iteración 16 — 2026-08-11 — Lo que sólo se ve corriendo la suite entera
+
+| ID | Dominio | Sev. | Estado | Qué era |
+|---|---|---|---|---|
+| AUD-413 | D6 | **ALTA** | **CERRADO** | `bytes_de()` (AUD-397) desempaquetaba `textura.size` a pelo y reventaba con el renderer de mentira de `test_aberracion_cromatica`: el `size` de un doble no es un par de enteros. **Nueve pruebas rojas** — la instrumentación de recursos se llevaba por delante justo lo que instrumentaba. Un contador no puede tumbar el fotograma que mide (misma regla que `App` con `medidas_de_depuracion`). En el mismo lote: `publish_color_matrix` (AUD-401) **prometía en su docstring** que un menú no hereda el tinte del nivel anterior y no estaba enganchada ni a `reset()` ni a `begin_frame()` — cuyo propio docstring avisa de esto—; y `docs/60` no documentaba el tipo `Objective` (AUD-400) ni había subido su recuento de 77 a 78 tipos. |
+| AUD-414 | D7 | MEDIA | **CERRADO** | Tres afirmaciones de la documentación contradecían al código, verificadas abriendo el fichero: `docs/62` §C1 decía «Nada del motor está atado a la música […] no hay concepto de BPM, compás ni posición de la pista» (falso desde AUD-137: `music_clock.py` son 280 líneas; comprobada fila a fila la tabla, **cinco de seis piezas hechas** y la sexta —pulso visual— realmente ausente, que ahora se dice en vez de esconderse entre cinco falsos); `docs/62` §C1 Audio decía «sin buses de mezcla, sin *ducking*» (los hay desde AUD-144; lo que sí falta es reverberación por zona, y **no por coste**: SDL no tiene efectos en su mezclador); y `docs/87` §27.1 daba *normal mapping* por «Pendiente» mientras §28.1 del **mismo documento** lo daba por hecho (AUD-340). Además `stage1_2_la_soda` declaraba `climate=""`: el motor ya cae a `clear`, así que explicitarlo es cero cambio y un aviso menos (los avisos de TMX bajan de 6 a 4). |
+| AUD-415 | D1 | **ALTA** | **CERRADO** | La fixture `_motor` de `test_el_inventario_cuenta_bien` (AUD-412) hacía `clear()` del registro de entidades y reponía el estado **anterior** a su propio `discover_stages()`. Eso no se deshace: los módulos de escenario ya importados no repiten su `register_entity` de nivel de módulo (AUD-144), así que el registro se quedaba en los 30 integrados y perdía los 7 tipos de las entregas. Efecto: `test_guia_del_motor` medía **71 tipos donde el juego ve 78** y fallaba o no según qué otras pruebas hubieran cargado un mapa antes. Un guardián de cifras cuyo resultado depende del orden de ejecución no vigila nada. Se quita el `clear()`; `update()` sin vaciar conserva lo descubierto y repone lo ajeno, que es lo que su docstring ya decía que hacía. Verificado en los dos órdenes. |
+
+**Recuento tras el lote:** **4.730 passed, 7 skipped, 1 failed** en pasada
+completa, corrida en ocho trozos. El único fallo es
+`test_puertas_de_calidad::test_ruff_esta_limpio_en_el_alcance_del_ci`, y **no
+es un defecto**: el `.venv` local tiene `ruff 0.15.20` y el repo pinea
+`0.16.1`, donde `LOG004` sí existe y el `noqa` de `diagnostico.py:93` es
+correcto. Quitarlo pondría el lint local en verde y **rompería CI** — es
+exactamente el ajuste que cerró AUD-408.
+
+**Lo que enseñó esta iteración, y es lo que hay que llevarse.** Los tres lotes
+salieron de correr la suite **entera**; los lotes dirigidos de AUD-397, 400 y
+401 estaban todos en verde cuando se commitearon. AUD-415 explica por qué:
+`test_guia_del_motor` pasaba o fallaba según el conjunto en que se ejecutara,
+así que verificarlo en aislado no probaba nada. No era falta de cobertura —la
+prueba existía y era correcta—, era un guardián que **se contaminaba a sí
+mismo**.
+
+**Y una lección de operación, que costó 3,5 horas.** La suite lanzada en
+segundo plano con `| tail -N` **se cuelga**: `tail` no consume hasta el final,
+el buffer del pipe se llena y pytest se bloquea escribiendo. Los síntomas
+engañan —fichero de salida en 0 bytes, proceso vivo, 326 s de CPU acumulados en
+3,5 h de reloj, o sea parado—. Los mismos 133 ficheros pasaron en **4 min 12 s**
+partidos en cuartos y corridos en primer plano. No hay `pytest-timeout`
+instalado, así que no se puede acotar por prueba: la única defensa es partir y
+no canalizar.
