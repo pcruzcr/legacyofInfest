@@ -50,12 +50,21 @@ Create your map in **Tiled** with the following settings:
 
 | Property | Type | Example |
 |---|---|---|
+| `schema_version` | int | `1` — la versión del formato TMX que lee el motor |
 | `stage_id` | string | `"stage1"` |
 | `stage_name` | string | `"The Descent"` |
 | `time_limit` | int | `180` (0 = no limit) |
 | `bgm_track` | string | `"bgm_zone1"` — un fichero real de `assets/music/` |
 | `background_zone` | string (optional) | `"cave"` — loads `assets/backgrounds/bg_cave_{far,mid,near}.png` |
 | `gravity_multiplier` | float (optional) | `1.0` |
+
+> **Sobre `schema_version` (AUD-393).** La plantilla ya la trae puesta y
+> normalmente no hay que tocarla. Existe para que un mapa escrito para otra
+> versión del motor se pueda distinguir de un mapa mal escrito: sin ella, un
+> TMX antiguo falla con «falta la capa Collision» y uno se pone a buscar el
+> error dentro del mapa. Un mapa que **no** la declara carga igual —se asume la
+> `1`—; uno que declare una versión mayor que la del motor se rechaza al abrir,
+> porque usa cosas que este código todavía no entiende.
 
 ### Atmósfera (opcional) — propiedades de la Fase 1
 

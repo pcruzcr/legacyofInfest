@@ -44,9 +44,25 @@ from src.framework.stage.tmx_diagnostics import (
 
 logger = logging.getLogger(__name__)
 
+#: AUD-393 — la versión del contrato TMX que este cargador entiende.
+#:
+#: Cierra la mitad viva de GAP-048. El problema que resuelve no es hipotético:
+#: sin versión, un mapa escrito para otra época del motor —una propiedad
+#: renombrada, un tipo de objeto que cambió de significado— falla como **dato
+#: malo**. El mensaje habla de una capa que falta, y quien lo lee busca el
+#: error dentro de su mapa en vez de en la distancia entre su mapa y este
+#: motor.
+#:
+#: Sube cuando cambie el significado de algo que ya existe —renombrar una
+#: propiedad, cambiar unidades, retirar un tipo de objeto—. **No** sube por
+#: añadir una propiedad nueva: un mapa que no la declara sigue cargando igual,
+#: que es justo lo que la hace compatible hacia atrás.
+SCHEMA_VERSION = 1
+
 __all__ = [
     "MODOS_DE_CAMARA",
     "REQUIRED_LAYERS",
+    "SCHEMA_VERSION",
     "VISTAS_VALIDAS",
     "_TIPOS_DE_COMPONENTE",
     "CameraLock",
@@ -285,6 +301,10 @@ class StageLoader(ObjetosDeTiled):
         cls._ensure_entities_registered()
 
         tmx_data = cls._parse_tmx(tmx_path)
+        # AUD-393 — la versión, antes que las capas. Si el mapa es de otra
+        # época, «falta la capa Collision» es un diagnóstico engañoso: la capa
+        # no falta, en esa versión se llamaba de otra manera.
+        cls._validate_schema_version(tmx_data)
         cls._validate_layers(tmx_data)
         stage = cls._build_stage_data(tmx_data)
 
@@ -355,6 +375,49 @@ class StageLoader(ObjetosDeTiled):
         return stage
 
     # ── Internal helpers ──────────────────────────────────────────
+
+    @classmethod
+    def _validate_schema_version(cls, tmx_data: Any) -> None:
+        """Rechaza un mapa escrito para una versión del motor posterior a ésta.
+
+        AUD-393 — las tres ramas, y por qué no son simétricas
+        -----------------------------------------------------
+        * **No la declara**: se asume `1` y se sigue en silencio. Ningún TMX
+          anterior a este lote la lleva, incluidas las entregas ya calificadas,
+          y llenarles la consola de avisos por una propiedad inventada después
+          no ayuda a nadie. Quien quiera la queja tiene
+          `scripts/validate_tmx.py`, que sí avisa — ahí es donde se arreglan
+          los mapas.
+        * **Mayor que la del motor**: se rechaza. Ese mapa usa cosas que este
+          cargador no entiende; abrirlo a medias da comportamiento incorrecto
+          en silencio, que es peor que no abrirlo. Es la única rama que
+          interrumpe.
+        * **No es un número**: aviso y se sigue. Es dato malo, no
+          incompatibilidad, y el resto del cargador trata el dato malo así
+          (`_safe_int`, `_safe_float`, la vista y la cámara desconocidas).
+
+        Una versión **menor** que la actual carga sin decir nada: ése es el
+        sentido de tener versiones. El día que un cambio rompa la
+        compatibilidad hacia atrás, aquí es donde se escribe la conversión.
+        """
+        declarada = tmx_data.properties.get("schema_version")
+        if declarada is None:
+            return
+        try:
+            version = int(str(declarada).strip())
+        except (TypeError, ValueError):
+            logger.warning(
+                "StageLoader: schema_version %r no es un número — se asume %d",
+                declarada, SCHEMA_VERSION,
+            )
+            return
+        if version > SCHEMA_VERSION:
+            raise FrameworkUsageError(
+                f"El mapa declara schema_version={version} y este motor "
+                f"entiende hasta la {SCHEMA_VERSION}. El mapa es más nuevo que "
+                "el código: actualiza el motor, o vuelve a exportar el mapa "
+                "con la versión de esquema que este motor lee."
+            )
 
     @classmethod
     def _validate_layers(cls, tmx_data: Any) -> None:

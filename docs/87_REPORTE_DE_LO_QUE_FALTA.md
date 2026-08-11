@@ -3148,3 +3148,72 @@ estudiante que declara la suya en el TMX y la consume desde su propia
 `StageScene` está usando bien el framework. Suspenderlo por eso sería AUD-106
 otra vez —el validador reprobando a quien hace lo que se le pidió—. Avisa,
 sugiere la grafía parecida con `suggest_types`, y deja decidir a quien lee.
+
+---
+
+## 44. La versión de esquema del mapa (AUD-393) — media `GAP-048`
+
+`GAP-048` son dos cosas bajo un título, y su propio plan las separa: *«el
+versionado sí conviene y es barato […]. El streaming no, hasta que un mapa no
+quepa»*. Este lote hace el versionado. El *streaming* sigue sin hacer falta y
+la entrada se queda abierta por él.
+
+### 44.1 Las reglas, y por qué son asimétricas
+
+`StageLoader.SCHEMA_VERSION` es el contrato; vale `1`. Los 17 mapas del motor y
+la plantilla de estudiantes la declaran. Decisión del dueño (2026-08-11):
+
+| Caso | Validador | Cargador |
+|---|---|---|
+| No la declara | aviso, con el valor que hay que poner | carga, asume `1` |
+| Mayor que la del motor | **error** | **`FrameworkUsageError`** |
+| No es un número | **error** | aviso, asume `1` |
+| Menor o igual | silencio | silencio |
+
+Las dos asimetrías tienen motivo escrito. **Que falte no suspende** porque
+ningún TMX anterior a este lote la lleva —entregas ya calificadas incluidas— y
+convertirla en obligatoria las reprobaría todas de golpe por una propiedad
+inventada después de que las entregaran: AUD-106 otra vez. **Un valor no
+numérico suspende en el validador y no en el cargador** porque son sitios
+distintos: en el validador hay alguien delante que puede corregirlo ahora
+mismo; a mitad de partida, negarse a abrir un nivel por un dato mal escrito es
+peor que asumir la versión actual, y es como trata el dato malo el resto del
+cargador (`_safe_int`, `_safe_float`, la vista y la cámara desconocidas).
+
+La validación de versión corre **antes** que la de capas, y esa línea lleva su
+comentario: si el mapa es de otra época, «falta la capa Collision» es un
+diagnóstico engañoso — la capa no falta, en esa versión se llamaba de otra
+manera. Ése es exactamente el fallo que la entrada describía.
+
+### 44.2 Lo que costó llegar hasta aquí
+
+El versionado en sí son unas cuarenta líneas. Los dos lotes anteriores —§42 y
+§43— salieron de intentar escribirlo: iban a añadirse reglas nuevas a
+`validate_tmx.py` sin haber comprobado que ese validador **suspendiera**, y no
+suspendía. Y la comprobación de propiedades desconocidas que `GAP-048` quería
+comprar con el versionado ya estaba escrita en ese mismo fichero desde el
+principio, sin enchufar.
+
+Es §41.4 confirmándose una vez más, y con una vuelta nueva: no es sólo que los
+huecos describan mal su problema, es que **el camino hacia un hueco pasa por
+los defectos del código que va a tener que sostenerlo**. Medir antes de
+construir no es sólo medir el problema: es medir las herramientas con las que
+uno iba a arreglarlo.
+
+### 44.3 Verificación
+
+`tests/test_version_de_esquema_del_mapa.py`, once pruebas. Las cuatro del
+cargador cargan `stage0` de verdad y mutan la propiedad sobre el objeto
+cacheado, restaurándola después con `clear_tmx_cache()` — si no, la mutación se
+filtra a las demás pruebas de la sesión, que cargan `stage0` constantemente.
+
+El cable trampa está comprobado **por mutación**, que es lo único que distingue
+una prueba de un adorno en este repositorio: sustituir la llamada de `load()`
+por un `pass` —el consumidor desconectado, que es el modo de fallo de esta
+casa— pone dos pruebas en rojo.
+
+Gates ejecutados en verde tras el lote: `validate_tmx.py --ci`,
+`check_tmx_coverage.py --ci`, `generate_tmx_reference.py --check`, y las 105
+pruebas de `test_student_guidance` / `test_teaching_tools` /
+`test_puertas_de_calidad` / `test_pendientes_en_plantillas` /
+`test_tmx_validator`.

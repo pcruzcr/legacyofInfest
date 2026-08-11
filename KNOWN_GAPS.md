@@ -1521,6 +1521,32 @@ está.
   mapa `schema_version` validada por `scripts/validate_tmx.py`, que ya corre en
   CI. El streaming no, hasta que un mapa no quepa.
 
+- **Avance (2026-08-11, AUD-393): el versionado está hecho.** La entrada queda
+  abierta por el *streaming*, que sigue sin hacer falta: ningún mapa se acerca
+  a no caber. Lo que hay ahora:
+  `StageLoader.SCHEMA_VERSION` es el contrato, los 17 mapas del motor y la
+  plantilla de estudiantes declaran `schema_version=1`, y las reglas son
+  asimétricas a propósito (decisión del dueño, 2026-08-11): **falta** → aviso
+  del validador con el texto que hay que escribir, nunca error, porque ninguna
+  entrega anterior a este lote la lleva y suspenderlas a todas por una
+  propiedad inventada después sería AUD-106 otra vez; **versión mayor que la
+  del motor** → error en el validador y `FrameworkUsageError` al cargar, porque
+  abrir a medias un mapa que usa lo que este código no entiende da
+  comportamiento incorrecto en silencio; **valor no numérico** → error en el
+  validador (hay alguien delante que puede arreglarlo) y sólo aviso en el
+  cargador (a mitad de partida no interesa negarse a abrir un nivel por un dato
+  mal escrito). La comprobación de versión corre **antes** que la de capas:
+  si el mapa es de otra época, «falta la capa Collision» es un diagnóstico
+  engañoso.
+  Se destaparon dos defectos por el camino, los dos en el validador que iba a
+  hacer cumplir esto: `AUD-391` —`--ci` leía una lista que se vaciaba por
+  fichero, así que imprimía «FAILED» y devolvía 0— y `AUD-392` —la lista de
+  propiedades conocidas estaba escrita, sin usar, y desincronizada 6×, de modo
+  que `gravty_multiplier` pasaba en verde—. Ese segundo era, literalmente, el
+  fallo que esta entrada quería detectar con el versionado.
+  Cable trampa: `tests/test_version_de_esquema_del_mapa.py`, verificado por
+  mutación —desconectar la llamada en `load()` pone dos pruebas en rojo—.
+
 ## [GAP-049] No se cuentan los recursos: llamadas de dibujo, memoria de textura, fugas
 
 - **File:** `src/engine/render/gl_pipeline.py`

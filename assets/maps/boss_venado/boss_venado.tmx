@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="205" height="38" tilewidth="16" tileheight="16" infinite="0" nextlayerid="20" nextobjectid="99">
  <properties>
+  <property name="schema_version" value="1"/>
   <property name="stage_id" value="boss_venado"/>
   <property name="stage_name" value="VENADO"/>
   <property name="author" value="Equipo docente — Legacy of Infest"/>
