@@ -74,6 +74,7 @@ FUERA_DE_LA_CURVA: dict[str, str] = {
     "hall": "vestíbulo sin combate",
     "lobby_datacenter": "zona de tránsito",
     "stage_mecanicas": "laboratorio del profesor, no una parada del juego",
+    "stage_cenital": "laboratorio de la vista cenital, no una parada del juego",
     "stage3_4_boss_gavilan": "el jefe no existe (ver 17_BOSS_SPEC §0)",
 }
 

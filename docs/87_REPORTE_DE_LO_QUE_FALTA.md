@@ -2656,3 +2656,75 @@ doce cables trampa que se pondrían rojos justamente el día que alguien las
 implemente, que es el día que queremos. Los cables trampa se ponen sobre
 decisiones *tomadas* (`test_los_mapas_no_traen_miles_de_rectangulos`, AUD-379),
 no sobre huecos abiertos.
+
+---
+
+## 37. El laboratorio de la vista cenital (2026-08-10, AUD-383)
+
+Segundo lote sobre `GAP-052`, y el que cierra el hueco más grande de los
+diecisiete: **un modo de juego entero que ningún estudiante podía descubrir**.
+
+### 37.1 Lo que faltaba
+
+`vista=cenital` existe desde AUD-129. Apaga la gravedad, da movimiento en dos
+ejes, ignora las plataformas de un solo sentido —desde arriba son muros
+invisibles— y trae los tres modos de cámara. Tiene su preset de física
+(`PhysicsProfile.cenital()`), sus pruebas unitarias (`test_vista_cenital.py`) y
+su fila en la guía del motor.
+
+Ningún mapa lo declaraba. Así que la vista cenital era, en la práctica, una
+característica que no existía: no se ve jugando, no aparece abriendo un mapa en
+Tiled, y sólo se podía encontrar leyendo la especificación — que es justo lo que
+no se hace.
+
+Es la misma forma de fallo que `stage_mecanicas` cerró para las once mecánicas
+de la fase 5, un escalón más arriba: allí faltaban mecánicas, aquí faltaba una
+**vista**.
+
+### 37.2 El mapa
+
+Tres salas de 18×14 comunicadas por puertas, 58×16 baldosas en total. Cabe en
+pantalla y media, que es lo que se puede leer de un vistazo en Tiled.
+
+Tres y no una porque `camara` tiene tres modos y el mapa existe para
+enseñarlos: `seguir` va pegada, `zona_muerta` no reacciona hasta salir de un
+margen central, y `sala` encuadra el recinto entero. El TMX declara `sala` —el
+que da sentido a una planta con habitaciones— y lleva los otros dos comentados
+al lado, a un cambio de palabra de probarse.
+
+Cuatro propiedades que ningún otro mapa declaraba: `vista`, `camara`,
+`profundidad_min` y `profundidad_max`. Las dos últimas van a 1,0 las dos, o sea
+escala plana, que es lo que quiere una vista en planta pura; el comentario del
+TMX dice cómo devolver la perspectiva.
+
+**Sin enemigos, a propósito.** Los arquetipos actuales asumen plataformas, y
+mezclar esa conversación aquí convertiría «así se declara una vista cenital» en
+«así se hace un nivel cenital». Lo que faltaba era lo primero.
+
+**Sin lógica en la clase**, igual que `stage_mecanicas` y por el mismo motivo:
+todo vive en el TMX, así que un estudiante lo reproduce sin escribir una línea
+de Python. Si hiciera falta código, no demostraría lo que pretende.
+
+### 37.3 La prueba que importaba
+
+`test_vista_cenital.py` ya comprobaba la física en aislamiento: un jugador con
+`vista_cenital = True` no cae. Eso seguiría en verde con el mapa borrado.
+
+Lo que faltaba era el camino entero —TMX → cargador → escena → jugador—, que es
+donde estaba el hueco. La prueba nueva monta el escenario real, lo juega un
+segundo y comprueba que el jugador **no se ha movido en Y**: en lateral, un
+segundo de caída libre son cientos de píxeles. Mismo razonamiento que
+`TestLaAtmosferaLlegaAlJuego` en `test_ambience.py`.
+
+    Propiedades que ningún mapa usa: 17 → 10 → 6
+
+### 37.4 Las seis que quedan
+
+Ninguna es cableado; las seis son decisión:
+
+* `estamina`, `tiempo_bala`, `habilidades_libres` cambian cómo se juega el mapa
+  donde se pongan. Es diseño.
+* `sombras_proyectadas` y `god_rays` cuestan, y la primera tiene medición detrás
+  —el envolvente son cuatro o cinco focos—, así que encenderlas exige elegir el
+  mapa mirando sus focos y no a bulto.
+* `fog_of_war` espera a un mapa que la pida.
