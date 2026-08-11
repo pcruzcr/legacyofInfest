@@ -126,6 +126,20 @@ class MundoDelEscenario:
 
         self._mundo.poner_recurso(
             "geometria", RejillaEspacial(list(self._stage_data.collision_rects)))
+        # AUD-389 — la malla de navegación, para que el acosador rodee en vez
+        # de empotrarse. Se construye una vez por escenario, como la rejilla y
+        # por el mismo motivo: indexar por fotograma costaría más que las
+        # consultas que ahorra.
+        #
+        # Los mismos sólidos del mapa, y no los de la escena compuesta: una
+        # plataforma móvil no es un muro que haya que rodear —se pisa— y
+        # reindexar por cada cambio devolvería el coste que AUD-379 descartó.
+        from src.framework.ai.navegacion import MallaDeNavegacion
+
+        ancho, alto = getattr(self._stage_data, "map_pixel_size", (0, 0)) or (0, 0)
+        if ancho and alto:
+            self._mundo.poner_recurso("malla_navegacion", MallaDeNavegacion.desde_rects(
+                list(self._stage_data.collision_rects), int(ancho), int(alto)))
         for grupo in self._stage_data.componentes:
             self._mundo.crear(*grupo)
 

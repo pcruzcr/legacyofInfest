@@ -299,6 +299,38 @@ class Resorte:
 
 
 @dataclass(slots=True)
+class Navegante:
+    """Lo que necesita quien va a rodear en vez de ir recto — AUD-389.
+
+    `proximo` nace **con un valor aleatorio dentro de la cadencia**, y eso es
+    la mitad del diseno: sin escalonar, treinta enemigos que aparecen en el
+    mismo fotograma recalculan en el mismo fotograma para siempre, y el coste
+    deja de ser "cuatro A* por segundo" para ser "treinta A* de golpe, cuatro
+    veces por segundo".
+
+    La ruta es una lista de celdas que se va consumiendo por delante. Vacia
+    significa las cuatro cosas a la vez -no hay camino, ya llegue, la meta esta
+    en un muro, se agoto el tope- y el consumidor las trata igual: va recto.
+    """
+
+    ruta: list = field(default_factory=list)
+    proximo: float = field(default_factory=lambda: _espera_inicial())
+
+
+def _espera_inicial() -> float:
+    """Un instante cualquiera dentro de la cadencia, para escalonar.
+
+    Usa el generador propio de AUD-386 y no el global: pedirle un numero al
+    global aqui desplazaria la dispersion de las particulas cada vez que nace
+    un enemigo, que es justo el acoplamiento que aquel lote quito.
+    """
+    from src.engine.core import azar
+    from src.framework.ai import navegacion
+
+    return azar.generador().uniform(0.0, navegacion.CADENCIA)
+
+
+@dataclass(slots=True)
 class Efectos:
     """Los efectos temporales que lleva encima una entidad — AUD-388.
 
