@@ -1724,6 +1724,17 @@ está.
   Cable trampa: `tests/test_version_de_esquema_del_mapa.py`, verificado por
   mutación —desconectar la llamada en `load()` pone dos pruebas en rojo—.
 
+- **El streaming sigue sin hacerse, y ahora con la medición delante
+  (2026-08-11).** El plan decía «hasta que un mapa no quepa». Medido: el mapa
+  más grande es `stage4_1` con 60×240 y 6 capas —86.400 tiles, 191 KiB— y los
+  diecisiete TMX juntos ocupan **1,2 MiB** en disco. No hay ninguno que no
+  quepa, ni de lejos.
+  Construirlo hoy sería exactamente lo que esta fase entera ha estado
+  desmontando: un sistema correcto que nadie necesita, con su coste de
+  mantenimiento y sin un caso que lo pida. Esta entrada se queda abierta **sólo
+  por eso**, y el día que se abra por necesidad la medición de arriba es contra
+  lo que hay que comparar.
+
 ## ~~[GAP-049] No se cuentan los recursos: llamadas de dibujo, memoria de textura, fugas~~ *(Resuelto)*
 
 - **File:** `src/engine/render/gl_pipeline.py`
