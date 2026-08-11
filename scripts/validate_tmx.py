@@ -264,16 +264,77 @@ def _tipos_registrados_por_el_estudiante(tmx: Path) -> set[str]:
     if diferidos:
         # AUD-106: aviso, no error. El juego funciona —la escena registra en su
         # constructor, antes de cargar el mapa—, pero cargar el TMX suelto no:
-        # ni el previsualizador ni el calificador construyen la escena. Decirlo
-        # es más útil que aprobarlo en silencio o suspenderlo sin explicar.
+        # ni el previsualizador ni el calificador construyen la escena.
+        #
+        # AUD-418 — el texto decía «no podrán construir esos objetos» y era
+        # **falso**. Medido sobre `stage1_1`: el previsualizador dice
+        # «entidades: 11» y `StageLoader` devuelve `EnemyWalker` x6,
+        # `EnemyFlying` x3 y `EnemyShooter` x2. Los construye; con otra clase.
+        # Y eso es peor que no construir nada — un hueco se ve, un enemigo que
+        # parece el tuyo y no lo es, no.
         warn(
             "registro dentro de una función: "
             + ", ".join(sorted(diferidos))
-            + ". Al jugar funciona, pero el previsualizador y las herramientas "
-              "que abren el mapa suelto no podrán construir esos objetos. "
+            + ". Al jugar funciona. Pero el previsualizador y las herramientas "
+              "que abren el mapa suelto no ejecutan esa función, así que esos "
+              "tipos los resuelve **otra clase** —la del bestiario, si el "
+              "nombre existe ahí— y verás un enemigo genérico donde esperabas "
+              "el tuyo, sin que nada falle. "
               "Registra a nivel de módulo, como en stage1_3_las_aulas."
         )
+
+    _avisar_de_choques_con_el_bestiario(tipos)
     return tipos
+
+
+def _avisar_de_choques_con_el_bestiario(tipos: set[str]) -> None:
+    """AUD-418 — nombres del escenario que el bestiario del motor ya usa.
+
+    `FlyingBird` y `ShooterFrog` son especies del motor *y* clases propias de
+    `stage1_1`. Cuando el registro del estudiante llega a ejecutarse, la suya
+    gana; cuando no —porque está dentro de una función—, gana la del bestiario.
+    O sea que **qué enemigo aparece depende de si una función se ejecutó**, y
+    eso no se diagnostica mirando el mapa.
+
+    Medido sobre los once tipos que registran los escenarios: dos chocan y
+    nueve no, así que esto no es un aviso que salte por todo — señala un caso
+    real y poco frecuente.
+
+    No suspende: registrar un tipo con el nombre de una especie del motor es
+    una forma legítima de **sustituirla**, y hay quien lo hace a propósito. Lo
+    que no puede es pasar inadvertido.
+    """
+    if not tipos:
+        return
+    try:
+        from src.framework.entities import entity_factory
+
+        entity_factory.ensure_registered()
+        # `_REGISTERED_NAMES` y **no** `StageLoader._entity_registry`.
+        #
+        # El registro global es estado compartido: en cuanto una prueba —o el
+        # propio validador, unas líneas más arriba— importa el paquete de un
+        # escenario, sus tipos entran ahí y pasan a parecer «del motor». Leerlo
+        # como si fuera una constante hacía que **todo** chocara en cuanto se
+        # validaba más de un mapa seguido, y las pruebas de este lote pasaban
+        # sueltas y fallaban en lote. Es la misma piedra de AUD-415.
+        #
+        # `_REGISTERED_NAMES` sólo contiene lo que da de alta el motor, así que
+        # no depende de qué se haya importado antes.
+        del_motor = set(entity_factory._REGISTERED_NAMES)
+    except Exception:
+        return
+
+    choques = sorted(tipos & del_motor)
+    if choques:
+        warn(
+            "estos tipos ya son especies del bestiario del motor: "
+            + ", ".join(choques)
+            + ". Registrarlos las **sustituye**, lo cual vale si es lo que "
+              "quieres; pero si el registro está dentro de una función, cuál "
+              "de las dos clases aparece depende de si esa función llegó a "
+              "ejecutarse. Ponles un nombre propio para que no haya duda."
+        )
 
 
 def _valid_object_types(tmx: Path | None = None) -> list[str]:
