@@ -428,6 +428,19 @@ def _objetos() -> list[str]:
     # Los dos de siempre, para que el escenario no sea sólo un museo.
     obj("Walker", (SALA + 20) * TS, suelo_px - 28, 24, 28)
     obj("FlyingBoa", (2 * SALA + 12) * TS, suelo_px - 6 * TS, 20, 14)
+
+    # AUD-384 — dos focos, y **dos** a propósito: `sombras_proyectadas` cuesta
+    # una proyección por foco y por obstáculo, y su módulo mide que el
+    # envolvente utilizable son cuatro o cinco. Con ocho, incluso con el tope
+    # de `MAX_SOMBRAS_POR_FOCO`, se come el fotograma.
+    #
+    # Van en la sala 1 —la del viento, que tiene techo— porque una sombra
+    # proyectada se lee cuando hay una pared donde caer. En campo abierto el
+    # efecto existe y no se ve, que es la peor forma de demostrar algo.
+    obj("Light", (SALA // 2) * TS, (SUELO_Y - 6) * TS, 16, 16,
+        radius=180, color="#ffe9a8", intensity=0.9)
+    obj("Light", (SALA - 6) * TS, (SUELO_Y - 6) * TS, 16, 16,
+        radius=150, color="#a8d8ff", intensity=0.7)
     return o
 
 
@@ -516,6 +529,28 @@ tileheight="{TS}" infinite="0" nextlayerid="20" nextobjectid="900">
   <property name="water_amplitude" type="float" value="6"/>
   <property name="water_frequency" type="float" value="0.04"/>
   <property name="water_speed" type="float" value="1.5"/>
+  <!-- AUD-384 (GAP-052): los tres interruptores de juego que ningun mapa
+       encendia. Estan apagados en los dieciseis escenarios entregados a
+       proposito -encenderlos alli cambiaria el juego que sus autores
+       disenaron, y estan calificados-, y por eso el laboratorio es el sitio:
+       aqui cambiar la jugabilidad ES su funcion.
+
+       estamina: maximo del medidor (0 = apagado). 100 da margen para probar
+       la carrera y el planeo sin que se agote a los dos segundos.
+       tiempo_bala: segundos de reserva. 3 bastan para ver la ralentizacion
+       entera en la sala de los laseres.
+       habilidades_libres: regala las mecanicas de jefe, que es lo que un
+       laboratorio necesita para poder probarlas sin la campana detras. -->
+  <property name="estamina" type="float" value="100"/>
+  <property name="tiempo_bala" type="float" value="3"/>
+  <property name="habilidades_libres" type="bool" value="true"/>
+  <!-- AUD-384: las sombras proyectadas y los rayos de luz. Se encienden con
+       DOS focos y no mas: el modulo mide su propio coste y el envolvente
+       utilizable son cuatro o cinco -con ocho, incluso con tope, se come el
+       fotograma-. Dos deja margen de sobra y demuestra el efecto igual.
+       Medido en este mapa antes de encenderlo; el numero va en 87 seccion 38. -->
+  <property name="sombras_proyectadas" type="bool" value="true"/>
+  <property name="god_rays" type="float" value="0.35"/>
  </properties>
  <tileset firstgid="1" name="tileset_stage0" tilewidth="{TS}" tileheight="{TS}" \
 tilecount="{TS_TOTAL}" columns="{TS_COLUMNAS}">

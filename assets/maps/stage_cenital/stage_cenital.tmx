@@ -27,6 +27,16 @@
        pura. Subir el maximo devuelve la perspectiva. -->
   <property name="profundidad_min" type="float" value="1.0"/>
   <property name="profundidad_max" type="float" value="1.0"/>
+  <!-- AUD-384 (GAP-052): la niebla de guerra, que no declaraba ningun mapa.
+       Va AQUI y no en el laboratorio de mecanicas por una razon de lectura:
+       una vista en planta con niebla es la mazmorra clasica -Zelda- y se
+       entiende sola, mientras que oscurecer el laboratorio lateral taparia
+       las once mecanicas que ese mapa existe para ensenar.
+
+       220 px de radio deja ver la sala en la que estas y esconde las otras
+       dos, que es exactamente lo que la caracteristica hace. Con 0 se apaga
+       y el mapa se ve entero: es la comparacion de un solo cambio. -->
+  <property name="fog_of_war" type="float" value="220"/>
  </properties>
  <tileset firstgid="1" name="tileset_stage0" tilewidth="16" tileheight="16" tilecount="4096" columns="64">
   <image source="../../tilesets/tileset_stage0.png" width="1024" height="1024"/>

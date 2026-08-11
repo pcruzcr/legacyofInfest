@@ -75,7 +75,32 @@ class TestLaPropiedadDelMapa:
             p.name for p in (raiz / "assets" / "maps").rglob("*.tmx")
             if 'name="tiempo_bala"' in p.read_text(encoding="utf-8", errors="replace")
         ]
-        assert not con_prop, f"ya la usaban: {con_prop}"
+        # AUD-384 — el laboratorio de mecánicas sí la declara. Está apagada en
+        # los dieciséis escenarios entregados a propósito —encenderla allí
+        # cambiaría el juego que sus autores diseñaron, y están calificados—, y
+        # el laboratorio es justo donde cambiar la jugabilidad es su función.
+        #
+        # Se exceptúa por nombre y no relajando la prueba: lo que ésta vigila
+        # sigue importando, que es que el cambio siga siendo **aditivo** para
+        # el contenido entregado.
+        inesperados = sorted(set(con_prop) - {"stage_mecanicas.tmx"})
+        assert not inesperados, f"ya la usaban: {inesperados}"
+
+    def test_el_laboratorio_si_la_declara(self) -> None:
+        """El otro sentido: la excepción no puede vaciarse en silencio.
+
+        Si el laboratorio deja de declararla, la prueba de arriba seguiría en
+        verde y la característica volvería a no estar demostrada en ninguna
+        parte, que es el estado del que GAP-052 la sacó.
+        """
+        from pathlib import Path
+
+        raiz = Path(__file__).resolve().parents[1]
+        mapa = raiz / "assets" / "maps" / "stage_mecanicas" / "stage_mecanicas.tmx"
+        assert 'name="tiempo_bala"' in mapa.read_text(
+            encoding="utf-8", errors="replace"), (
+            "el laboratorio dejó de declarar `tiempo_bala`"
+        )
 
 
 class TestLoQueHaceCuandoEstaEncendido:

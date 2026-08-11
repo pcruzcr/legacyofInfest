@@ -1541,7 +1541,7 @@ está.
   que se desincronizan. Este GAP cubre la *tubería*; `docs/92` cubre la cola
   larga que la recorre.
 
-## [GAP-052] Diecisiete características del TMX que no ejercita ningún mapa
+## ~~[GAP-052] Diecisiete características del TMX que no ejercita ningún mapa~~ *(Resuelto)*
 
 - **File:** `assets/maps/`
 - **Phase:** AUD-378 (2026-08-10)
@@ -1628,6 +1628,35 @@ está.
   juega el mapa donde se pongan; `sombras_proyectadas` y `god_rays` cuestan, y
   la primera tiene medición detrás (≤4-5 focos), así que encenderlas exige
   elegir el mapa mirando sus focos; `fog_of_war` espera a un mapa que la pida.
+
+- **Resolution (2026-08-10, AUD-384): cero.** El informe cierra con «todas las
+  propiedades de mapa están demostradas en algún mapa», y lo vigila
+  `test_todas_las_propiedades_las_demuestra_algun_mapa`, que es estricto y no
+  un porcentaje: con el criterio del dueño —el cableado existe *para que los
+  estudiantes lo usen*— «casi todas» no significa nada. Añadir una propiedad al
+  motor obliga desde ahora a decidir, en el mismo lote, en qué mapa se enseña.
+
+  Las seis últimas, y dónde:
+
+  * **`estamina`, `tiempo_bala`, `habilidades_libres`** → `stage_mecanicas`.
+    Están apagadas en los dieciséis escenarios entregados a propósito —sus
+    docstrings lo dicen: encenderlas allí cambiaría el juego que sus autores
+    diseñaron, y están calificados—, y el laboratorio es justo donde cambiar la
+    jugabilidad **es su función**.
+  * **`sombras_proyectadas` y `god_rays`** → `stage_mecanicas`, con **dos**
+    focos nuevos y no más: el módulo mide que el envolvente utilizable son
+    cuatro o cinco. Medido antes de encenderlo: **+0,158 ms sobre 0,499, un
+    1,0% del presupuesto de fotograma**. Los focos van en la sala del viento,
+    que tiene techo, porque una sombra proyectada se lee cuando hay una pared
+    donde caer; en campo abierto el efecto existe y no se ve.
+  * **`fog_of_war`** → `stage_cenital`, y no al laboratorio lateral. Una vista
+    en planta con niebla es la mazmorra clásica y se entiende sola; oscurecer
+    el laboratorio de mecánicas taparía las once mecánicas que ese mapa existe
+    para enseñar. 220 px deja ver la sala en la que estás y esconde las otras
+    dos.
+
+  Los tres lotes: AUD-380 (siete), AUD-383 (cuatro, con el mapa cenital nuevo)
+  y AUD-384 (seis).
 
 - **Resolution plan:** Es del dueño, no de ingeniería: decidir cuáles merecen
   aparecer en un mapa —empezando por el de referencia, que es el que los
