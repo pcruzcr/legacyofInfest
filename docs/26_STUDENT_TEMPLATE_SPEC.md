@@ -133,24 +133,80 @@ The template TMX is not reproduced as raw XML in this document (TMX is a binary-
 
 | Element | Content |
 |---|---|
-| Map dimensions | 40 tiles wide × 14 tiles tall (640×224 px) — small enough to be a trivial starting point, large enough to be non-degenerate |
+> **Actualizado 2026-08-11 (AUD-417). La plantilla ya no es «mínima»: es un
+> catálogo.** Medida con la rúbrica del propio curso (`scripts/grade_stage.py`),
+> la versión mínima que este documento describía sacaba **84/130 = 64,6 %**, y
+> `validate_tmx.py` la daba por `[OK]` sin decir nada — el estudiante empezaba
+> cuesta arriba y sin saberlo. Ahora saca **92,3 %** y trae **un ejemplar de
+> cada tipo** que un nivel puede llevar.
+>
+> Y no más de uno: con tres coleccionables y tres puntos de control llegaba a
+> 100/130 y `test_teaching_tools` saltó con razón —«stage0 saca 100 % y la
+> plantilla vacía 100 %: la rúbrica no distingue trabajo hecho de trabajo sin
+> hacer»—. Demostrar cada tipo, no llenar la rúbrica.
+>
+> **El fichero se genera**, no se edita: `tools/generate_stage_template.py`,
+> con `tests/test_la_plantilla_del_estudiante.py` comprobando que el TMX del
+> repositorio y su generador siguen de acuerdo. Es el mismo trato que
+> `stage_mecanicas` desde AUD-153, y por el mismo motivo: un defecto aquí se
+> multiplica por veintiséis antes de que nadie lo ejecute.
+
+| Element | Content |
+|---|---|
+| Map dimensions | 60 tiles wide × 16 tiles tall (960×256 px) — cabe un hueco exigente y sigue entrando entera en Tiled |
 | Tileset reference | `assets/tilesets/tileset_stage0.png` (neutral, always available, swappable later) |
-| Layers (all 8 required, per `06_TMX_SPEC.md` §3.1) | `BG_Far`, `BG_Mid`, `BG_Near` — each filled with a single repeating placeholder tile; `Terrain` — a flat floor row at the bottom; `Terrain_Detail` — empty; `Objects` — see §4.2; `Collision` — one `Solid_Floor` rect matching the `Terrain` floor row; `FG_Overlay` — empty |
-| Map custom properties | `stage_id="stage_template"`, `stage_name="Untitled Stage"`, `time_limit=120`, `bgm_track="bgm_stage0"` (placeholder; student changes per their zone) |
+| Layers (all 8 required, per `06_TMX_SPEC.md` §3.1) | `BG_Far`, `BG_Mid`, `BG_Near` y `Terrain_Detail` vacías; `Terrain` — suelo de dos filas **con un hueco de 5 baldosas**; `Objects` — see §4.2; `Collision` — dos `Solid` (el suelo partido por el hueco) y un `Platform` sobre él; `FG_Overlay` — empty |
+| Map custom properties | `schema_version=1`, `stage_id="stage_template"`, `stage_name="Untitled Stage"`, **`author="TU NOMBRE AQUI"`**, `time_limit=120`, `bgm_track="bgm_stage0"`, `climate="clear"`, `zone=1`, `ambient_light=1.0` |
+
+**Sobre `author`:** la puntúa la rúbrica (`grade_stage.REQUIRED_GRADE_PROPS`) y
+hasta AUD-416 ninguna herramienta se lo decía al estudiante. Lleva un valor que
+pide ser cambiado y no una cadena vacía, porque un campo en blanco se entrega
+en blanco.
+
+**Sobre el hueco:** 5 baldosas son 80 px. Medido con
+`JumpEnvelope.from_settings()`, el salto normal cruza hasta **85,5 px** y lo
+«cómodo» acaba en **68,4**, así que 80 cae en *exigente* y se cruza sin salto
+aéreo. Con tres baldosas el calificador respondía «el recorrido no tiene ningún
+salto exigente»; con siete haría falta una técnica que aún no está
+desbloqueada.
 
 ### 4.2 Required `Objects` Layer Content
 
-| Object | Properties |
+| Object | Por qué está |
 |---|---|
-| `PlayerSpawn_01` | Positioned on the flat floor, near the left edge |
-| `NextTrigger_01` | Positioned at the right edge, full floor-to-ceiling height |
-| `Checkpoint_01` | Positioned at the horizontal midpoint, `checkpoint_id=0` |
+| `PlayerSpawn_01` | Sobre el suelo, cerca del borde izquierdo |
+| `Checkpoint_01`, `Checkpoint_02` | `checkpoint_id` 0 y 1 — enseñan que va correlativo. Dos, no tres: colocar el resto según dónde duela morir es la decisión que el estudiante tiene que aprender |
+| `NextTrigger_01` | Borde derecho, altura completa |
+| `Slope_sube`, `Slope_baja` | Suelo inclinado, con `sube="derecha"` / `"izquierda"` |
+| `Walker_ejemplo_01`, `Flying_ejemplo_01`, `Shooter_ejemplo_01` | Un arquetipo de cada uno. Los tres básicos y no especies del bestiario: son los que la guía explica primero y los que se sustituyen por los propios sin tocar nada más |
+| `Pickup_ejemplo_01` | Con `item_id="moneda"` — sin `item_id` el cargador lo ignora con un aviso |
+| `Light_ejemplo_01` | `radius`, `color`, `intensity`. Es el objeto que más se beneficia de `preview_tmx.py`: en Tiled es un cuadrado de 16×16 idéntico a cualquier otro |
+| `Mensaje_bienvenida` | Un `MessageTrigger` con texto que pide ser editado |
+| `Pinchos_ejemplo` | Un `HazardZone` **en `Objects`, no en `Collision`** — ver abajo |
+| `Objetivo_principal` | Un `Objective` (AUD-400) con `objective_id`, `text` y `kind="llegar"` |
 
-**This is intentionally the minimum valid stage** — it passes `StageLoader.load()` (per `tests/test_stage_loader.py` validation rules) with zero enemies and zero messages. The student adds enemies, messages, hazards, and additional terrain as their first Class 1–5 work, per their zone's design in `16_WORLD_DESIGN.md` and enemy roster in `18_ENEMY_ROSTER.md`.
+**Por qué `HazardZone` va en `Objects` y no en `Collision`.** Es el error que
+comete todo el mundo y que un mapa del motor todavía tiene
+(`stage3_3_el_patio`, objeto id=130): la capa `Collision` sólo acepta `Solid` y
+`Platform`, así que cualquier otra cosa puesta ahí **se trata como suelo
+sólido**. La trampa deja de hacer daño y encima se convierte en plataforma. La
+plantilla enseña dónde va cada cosa, y
+`tests/test_la_plantilla_del_estudiante.py` lo fija.
 
-### 4.3 Generation Method for AI Assistants
+**Ya no es «el escenario válido mínimo».** Lo era, y sacaba 64,6 %. Ahora es un
+catálogo con un ejemplar de cada cosa: se aprende más borrando un enemigo que
+sobra que buscando en la documentación cómo se coloca el primero. Lo que el
+estudiante añade sigue siendo lo suyo —más enemigos, su terreno, su zona— según
+`16_WORLD_DESIGN.md` y `18_ENEMY_ROSTER.md`.
 
-Since TMX is XML, an AI assistant with file-write access generates this file directly as XML following the exact structure documented in `06_TMX_SPEC.md` §11.1 ("Minimal Valid TMX Structure"), populated with the values from §4.1–4.2 above. Do not invent additional layers, objects, or properties beyond what is listed here — the template's entire purpose is minimalism.
+### 4.3 Cómo se genera
+
+`python tools/generate_stage_template.py` lo escribe;
+`python tools/generate_stage_template.py --check` falla si el fichero del
+repositorio se ha editado a mano y se ha desviado del generador. **No se edita
+el TMX directamente**: el porqué de cada objeto vive en el generador, y editar
+a mano deja el generador viejo hasta que la siguiente ejecución borra los
+cambios sin avisar.
 
 ---
 
