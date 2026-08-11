@@ -174,8 +174,31 @@ cosas, y son las dos de más valor por línea escrita:
 
 Y una tercera de coste medio y efecto grande:
 
-3. **Transiciones de clima** (🟡) — que no se pase de despejado a tormenta en
-   un fotograma.
+3. ~~**Transiciones de clima** (🟡) — que no se pase de despejado a tormenta en
+   un fotograma.~~ **HECHO (2026-08-11, AUD-424).**
+   `WorldSimulation.SEGUNDOS_DE_TRANSICION = 6.0` y los valores meteorológicos
+   —precipitación, humedad, nubes, visibilidad y viento— se acercan al objetivo
+   a ritmo constante. El **nombre** del clima sigue cambiando al instante:
+   es la intención del diseñador, y quien pregunte «¿está lloviendo?» debe
+   recibir la respuesta nueva enseguida; lo que llega tarde es el efecto.
+
+   Tres decisiones que conviene no revertir sin leer esto:
+
+   * **Se arranca ya en el objetivo.** Un mapa con `climate=storm` abre con
+     tormenta. Sin eso, todo nivel de tormenta empezaría despejado y se
+     ensuciaría durante los primeros segundos — peor que el salto que esto
+     arregla.
+   * **La transición avanza aunque el reloj esté congelado.**
+     `RelojDeMundo.congelado` sale de `duracion_dia <= 0`, que es como se
+     declara un mapa **sin ciclo de día y noche**: la mayoría. Meterla detrás
+     de ese corte habría dejado la característica sin funcionar en casi todos
+     los niveles.
+   * **Interpolación lineal, no exponencial.** Una exponencial se acerca sin
+     llegar nunca, así que la precipitación se quedaría en 0,98 para siempre y
+     no se podría escribir una prueba de que la transición **termina**.
+
+   `set_clima(nombre, inmediato=True)` salta la transición, para cargar un
+   nivel o cortar en seco en una cutscene.
 
 **Nivel 2 — alto valor visual, coste bajo.** Arcoíris, halos, coronas,
 meteoros, polvo, humo, bruma, rocío, escarcha, constelaciones propias.

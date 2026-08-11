@@ -93,6 +93,21 @@ CLIMAS: dict[str, dict[str, float]] = {
               "precipitacion": 1.00, "visibilidad": 0.76},
 }
 
+def _acercar(actual: float, destino: float, paso: float) -> float:
+    """Mueve `actual` hacia `destino` como mucho `paso`, sin pasarse — AUD-424.
+
+    El tope es lo que hace que la transición **termine**: sin él, el último
+    fotograma sobrepasaría el objetivo y el siguiente lo devolvería, con la
+    precipitación oscilando alrededor de 1,0 para siempre.
+    """
+    if actual == destino:
+        return destino
+    delta = destino - actual
+    if abs(delta) <= paso:
+        return destino
+    return actual + (paso if delta > 0 else -paso)
+
+
 def viento_de(clima: str, rng: random.Random) -> float:
     """Viento **con signo** del clima, en px/s. Negativo = hacia la izquierda.
 
@@ -181,6 +196,17 @@ class WorldSimulation:
         estado = mundo.estado()      # EnvironmentState, listo para consumir
     """
 
+    #: AUD-424 — cuánto tarda un cambio de clima en completarse, en segundos.
+    #:
+    #: Seis, y no es un número redondo por casualidad: por debajo de tres el
+    #: cambio se sigue leyendo como un corte, y por encima de diez el jugador
+    #: cruza la sala entera antes de que la tormenta llegue, así que la señal
+    #: —«esto se está poniendo feo»— deja de significar nada. Se declara aquí y
+    #: no en `settings` porque es una constante de esta simulación, no un ajuste
+    #: del juego; un escenario que quiera otro ritmo lo pide cambiando esto en
+    #: su instancia.
+    SEGUNDOS_DE_TRANSICION: float = 6.0
+
     def __init__(
         self,
         hora_inicial: float = 12.0,
@@ -208,6 +234,14 @@ class WorldSimulation:
         # `random` lo comparte todo el proceso y no se puede aislar.
         self._rng = rng if rng is not None else random.Random()
         self._viento = viento_de(self._clima, self._rng)
+        # AUD-424 — los valores meteorológicos **vigentes**, que no son los de
+        # la tabla mientras haya una transición en curso.
+        #
+        # Se arranca ya en el objetivo, y eso es deliberado: sin ello, todo
+        # nivel con `climate=storm` abriría despejado y se ensuciaría durante
+        # los primeros segundos, que es peor que el salto que esto arregla.
+        self._meteo = dict(CLIMAS.get(self._clima, CLIMAS["clear"]))
+        self._viento_objetivo = self._viento
 
     # ── Configuración ─────────────────────────────────────────────────
 
@@ -224,12 +258,33 @@ class WorldSimulation:
     def clima(self) -> str:
         return self._clima
 
-    def set_clima(self, nombre: str) -> None:
+    def set_clima(self, nombre: str, inmediato: bool = False) -> None:
+        """Cambia el clima. El **nombre** cambia ya; los valores, poco a poco.
+
+        Con `inmediato=True` los valores saltan al objetivo sin transición, que
+        es lo que hace falta en tres sitios concretos: al **cargar** un nivel
+        —un mapa con `climate=storm` abre con tormenta, no escampado—, en una
+        **cutscene** que corta en seco a propósito, y en las pruebas que
+        comprueban el estado establecido y no el camino hasta él.
+
+        AUD-424 — la distinción es la característica. Quien pregunte «¿está
+        lloviendo?» debe recibir la respuesta nueva enseguida, porque el nombre
+        es la intención del diseñador. Lo que no puede saltar es el efecto:
+        antes, `set_clima("storm")` movía la precipitación de 0,0 a 1,0, las
+        nubes de 0,05 a 1,00 y el viento de 0 a 75 px/s entre dos fotogramas.
+        """
         self._clima = str(nombre or "clear")
         # La dirección se sortea **aquí** y no en `estado()`: el estado se
         # consulta por fotograma, así que sortear allí haría que la lluvia
         # cambiara de lado sesenta veces por segundo.
-        self._viento = viento_de(self._clima, self._rng)
+        #
+        # AUD-424 — y por eso el objetivo guarda el viento **con signo** y la
+        # interpolación va del actual a ése: interpolar magnitudes y volver a
+        # sortear el signo reintroduciría exactamente aquel defecto.
+        self._viento_objetivo = viento_de(self._clima, self._rng)
+        if inmediato:
+            self._meteo = dict(CLIMAS.get(self._clima, CLIMAS["clear"]))
+            self._viento = self._viento_objetivo
 
     def set_estacion(self, nombre: str) -> None:
         self._estacion_nombre = str(nombre or POR_DEFECTO)
@@ -262,6 +317,16 @@ class WorldSimulation:
         con un acumulador aparte daría dos relojes que se desincronizan, que
         es el defecto que este módulo entero viene a evitar.
         """
+        # AUD-424 — el clima avanza **antes** del corte del reloj, y no es un
+        # detalle de orden.
+        #
+        # `RelojDeMundo.congelado` sale de `duracion_dia <= 0`, que es como se
+        # declara un mapa **sin ciclo de día y noche**: la mayoría de los
+        # diecisiete. Meter la transición detrás de ese `return` habría dejado
+        # la característica sin funcionar en casi todos los niveles del juego.
+        # Son dos relojes distintos y sólo uno se para desde el mapa.
+        self._avanzar_clima(dt)
+
         if self._reloj.congelado:
             return
         self._reloj.update(dt)
@@ -270,12 +335,36 @@ class WorldSimulation:
             self._dia += 1
         self._hora_previa = hora
 
+    def _avanzar_clima(self, dt: float) -> None:
+        """Acerca los valores meteorológicos a los del clima vigente — AUD-424.
+
+        Interpolación lineal a ritmo constante y no exponencial: una
+        exponencial se acerca al objetivo sin llegar nunca, así que la
+        precipitación se quedaría en 0,98 para siempre y una prueba que
+        comprueba que la transición **termina** no podría escribirse. Con
+        ritmo constante hay un instante en que la transición acaba, y ese
+        instante se puede afirmar.
+        """
+        objetivo = CLIMAS.get(self._clima, CLIMAS["clear"])
+        paso = dt / self.SEGUNDOS_DE_TRANSICION if self.SEGUNDOS_DE_TRANSICION else 1.0
+        for clave, destino in objetivo.items():
+            self._meteo[clave] = _acercar(self._meteo.get(clave, destino), destino, paso)
+        # El viento lleva signo, así que se interpola sobre el valor con signo
+        # y el paso se escala con la magnitud mayor: si no, ir de 0 a 75 px/s
+        # tardaría lo mismo que ir de 0 a 0,6 de precipitación, y 75 px/s
+        # llegando en un segundo se siente como un empujón, no como viento.
+        escala = max(1.0, abs(self._viento_objetivo), abs(self._viento))
+        self._viento = _acercar(self._viento, self._viento_objetivo, paso * escala)
+
     def estado(self) -> EnvironmentState:
         """La foto del fotograma. Es lo único que los consumidores necesitan."""
         hora = self._reloj.hora
         est = estacion(self._estacion_nombre)
         luz = luz_a_las(hora)
-        tiempo = CLIMAS.get(self._clima, CLIMAS["clear"])
+        # AUD-424 — los valores vigentes, que durante una transición NO son los
+        # de la tabla. `self._clima` sigue siendo el nombre nuevo desde el
+        # primer fotograma; esto es el efecto, que llega más tarde.
+        tiempo = self._meteo
         altura = _altura_solar(hora)
 
         # La luz compuesta es EXACTAMENTE la cuenta que `_aplicar_hora` hace

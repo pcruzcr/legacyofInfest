@@ -86,11 +86,20 @@ class TestLaSimulacionProduceElViento:
         )
 
     def test_cambiar_de_clima_vuelve_a_sortear(self):
+        """AUD-424 — el viento llega, pero ya no de golpe.
+
+        Antes esta prueba consultaba el estado justo después de `set_clima` y
+        esperaba los 75 px/s puestos. Desde que el clima transiciona, eso mide
+        el primer fotograma de la subida; lo que sigue siendo cierto —y lo que
+        la prueba quería decir— es que **acaba** soplando lo que dice la tabla.
+        """
         mundo = WorldSimulation(clima="clear", rng=random.Random(5))
         assert mundo.estado().viento == 0.0
         mundo.set_clima("storm")
+        for _ in range(600):
+            mundo.update(1 / 60)
         assert abs(mundo.estado().viento) == pytest.approx(
-            CLIMAS["storm"]["viento"])
+            CLIMAS["storm"]["viento"], abs=0.5)
 
 
 class TestElClimaConsumeElViento:
@@ -256,10 +265,24 @@ class TestElMundoMandaSobreElClima:
             "en tormenta"
         )
 
+    @staticmethod
+    def _dejar_llegar(escena, segundos: float = 10.0) -> None:
+        """Avanza la simulación hasta que el clima nuevo esté puesto.
+
+        AUD-424 — el clima transiciona en seis segundos, así que la
+        consecuencia jugable de un acto ya no es inmediata. Estas pruebas
+        miran que **llegue**, que es lo que decían; el camino tiene sus
+        propias pruebas en `test_transiciones_de_clima.py`.
+        """
+        for _ in range(int(segundos * 60)):
+            escena._simulacion.update(1 / 60)
+        escena._aplicar_hora()
+
     def test_la_tormenta_del_acto_moja_el_suelo(self, display):
         """La consecuencia jugable, que es la que importa."""
         escena = self._escena("fog")
         escena._cambiar_clima("storm")
+        self._dejar_llegar(escena)
         assert escena.ambiente.suelo_mojado, (
             f"humedad {escena.ambiente.humedad}: los actos de tormenta nunca "
             "resbalaron"
@@ -268,6 +291,7 @@ class TestElMundoMandaSobreElClima:
     def test_la_tormenta_del_acto_sopla(self, display):
         escena = self._escena("fog")
         escena._cambiar_clima("storm")
+        self._dejar_llegar(escena)
         assert escena._weather._wind != 0.0, (
             "la lluvia del acto cae completamente vertical"
         )
