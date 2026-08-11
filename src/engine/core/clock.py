@@ -69,6 +69,32 @@ from src.engine.core import settings
 # geometry after a stall (breakpoint, window drag, GC pause, disk hitch).
 MAX_FRAME_TIME: float = 0.05  # 20 FPS floor
 
+#: AUD-390 — el paso de simulación. Cierra GAP-036.
+#:
+#: Es `1/TARGET_FPS` y no otro número, y la elección es la clave del lote. Los
+#: dieciséis mapas están medidos contra los **72 px** de salto que se alcanzan
+#: a 60 fps; con este paso, a 60 fps la integración es **idéntica** a la del
+#: `dt` variable de antes —un paso por fotograma, del mismo tamaño— y ningún
+#: mapa cambia. Cualquier otro valor habría obligado a re-calibrar de verdad.
+#:
+#: Lo que sí cambia es el fotograma lento. Antes, un tirón se integraba de una
+#: vez con un `dt` grande, y la altura del salto bajaba con él:
+#:
+#:     120 fps -> 88,67 px | 60 fps -> 87,11 | 30 fps -> 84,00 | 20 fps -> 81,00
+#:
+#: O sea que **el juego se jugaba distinto según la máquina**, y un obstáculo
+#: ajustado al límite era franqueable o no según el equipo. Ahora ese mismo
+#: tirón se reparte en varios pasos de `FIXED_DT` y el resultado converge al
+#: que los mapas suponen.
+FIXED_DT: float = 1.0 / settings.TARGET_FPS
+
+#: Tope de pasos por fotograma, contra la espiral de la muerte: si simular
+#: cuesta más que el tiempo simulado, el acumulador crece sin fin y el juego se
+#: congela intentando alcanzarse a sí mismo. Con 5 pasos se cubre un tirón de
+#: 83 ms —más que el `MAX_FRAME_TIME` de 50— y por encima de eso se prefiere
+#: ir a cámara lenta antes que dejar de responder.
+MAX_PASOS_POR_FOTOGRAMA: int = 5
+
 #: Cuántos fotogramas guarda el historial para los cuantiles de F11 (AUD-346).
 #: 180 a 60 FPS son 3 segundos: bastante para separar el tropezón de la
 #: tendencia, y poco para que la memoria no sea parte de la medición.
@@ -88,6 +114,8 @@ class DeltaClock:
     def __init__(self) -> None:
         self._clock = pygame.time.Clock()
         self._escalas: dict[str, float] = {}
+        #: AUD-390 — tiempo pendiente de simular, entre 0 y FIXED_DT.
+        self._acumulado: float = 0.0
         self._dt: float = 0.0
         self._unscaled_dt: float = 0.0
         self._dt_mundo: float = 0.0
@@ -153,6 +181,38 @@ class DeltaClock:
         # mundo» (la cámara lenta la contaría como un fotograma rápido).
         self._historial.append(raw_dt * 1000.0)
         return self._dt
+
+    def pasos_fijos(self, dt: float | None = None):
+        """Los pasos de simulación que toca dar para el tiempo transcurrido.
+
+        AUD-390 — el acumulador. Devuelve `FIXED_DT` tantas veces como quepa en
+        el tiempo acumulado, **guardando el sobrante** para el fotograma
+        siguiente. Sin guardarlo, a 120 fps la mitad de los fotogramas no
+        simularían y el juego iría a la mitad de velocidad.
+
+        Con `dt` a `None` usa el del último `tick()`, que es lo que hace el
+        bucle; se puede pasar uno para las pruebas.
+
+        Se consume el escalado (`self.dt`) y no el real, porque la cámara lenta
+        y el hit-stop tienen que seguir funcionando: ralentizar el mundo es dar
+        **menos** pasos por segundo real, no pasos más cortos — pasos más
+        cortos volverían a hacer la física dependiente del reloj, que es
+        justamente lo que este cambio quita.
+
+        El tope corta la espiral de la muerte. Cuando se alcanza, el tiempo
+        sobrante se **tira**: conservarlo dejaría una deuda que el fotograma
+        siguiente tampoco puede pagar, y el juego se quedaría clavado
+        intentando alcanzarse a sí mismo. Se prefiere ir a cámara lenta antes
+        que dejar de responder.
+        """
+        self._acumulado += self._dt if dt is None else float(dt)
+        dados = 0
+        while self._acumulado >= FIXED_DT and dados < MAX_PASOS_POR_FOTOGRAMA:
+            self._acumulado -= FIXED_DT
+            dados += 1
+            yield FIXED_DT
+        if dados >= MAX_PASOS_POR_FOTOGRAMA:
+            self._acumulado = 0.0
 
     def historial_ms(self) -> tuple[float, ...]:
         """Los milisegundos reales de los últimos fotogramas (AUD-346)."""

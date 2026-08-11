@@ -1112,7 +1112,7 @@ filas ya existe y está probada, y eso se detalla en
 `docs/87_REPORTE_DE_LO_QUE_FALTA.md` §28. Aquí sólo queda lo que de verdad no
 está.
 
-## [GAP-036] El bucle no tiene paso fijo ni interpolación
+## ~~[GAP-036] El bucle no tiene paso fijo ni interpolación~~ *(Resuelto — el paso fijo; la interpolación se deja fuera con motivo)*
 
 - **File:** `src/engine/core/app.py`
 - **Phase:** auditoría 2026-08-10, lista del dueño (AUD-376)
@@ -1128,6 +1128,40 @@ está.
   integración y por tanto la altura, así que el trabajo real no es el acumulador —es media tarde— sino
   re-calibrar el salto y revisar los mapas. Hacerlo exige decisión del dueño
   sobre romper la métrica de 72 px. Ver §28.3 de `docs/87`.
+
+- **Resolution (2026-08-10, AUD-390): la re-calibración no hizo falta, y el
+  defecto era peor de lo que decía este hueco.**
+
+  Esta entrada hablaba de reproducibilidad y de replays. Lo que había debajo es
+  que **la física dependía de los fotogramas por segundo de la máquina**.
+  Simulado sobre la integración real del salto::
+
+      120 fps -> 88,67 px | 60 -> 87,11 | 30 -> 84,00 | 20 fps -> 81,00
+
+  Un jugador con equipo lento salta **un 7 % menos alto**, o sea más de un
+  tercio de baldosa, y los dieciséis mapas están medidos contra los 72 px de 60
+  fps: un obstáculo ajustado al límite era franqueable o no **según el
+  hardware**.
+
+  **La clave del lote es `FIXED_DT = 1/TARGET_FPS`.** A 60 fps eso da un paso
+  por fotograma del mismo tamaño que el `dt` variable de antes, así que la
+  integración es idéntica y ningún mapa cambia; el fotograma lento, que antes
+  se integraba de una vez, ahora se reparte y **converge** al valor que los
+  mapas suponen. Cualquier otro valor habría obligado a re-calibrar de verdad.
+
+  Verificado, no supuesto: **111 pruebas de calibración, física del jugador,
+  perfiles y pendientes, verdes sin tocar un número.**
+
+  Tres decisiones del acumulador: el sobrante se guarda (a 120 fps, tirarlo
+  dejaría el juego a media velocidad); las transiciones siguen con `dt`
+  variable porque son presentación y trocearlas produce parpadeo; y el tope de
+  5 pasos corta la espiral de la muerte **tirando** el tiempo sobrante, porque
+  conservarlo deja una deuda impagable.
+
+  **La interpolación se deja fuera a propósito**, y por eso este hueco no se
+  marca resuelto del todo: con paso de 1/60 a 60 fps el fotograma casi siempre
+  cae sobre un paso, así que no hay nada visible que interpolar. Se hará el día
+  que se note.
 
 ## ~~[GAP-037] La rejilla espacial existe y las colisiones no la usan~~ *(Resuelto)*
 

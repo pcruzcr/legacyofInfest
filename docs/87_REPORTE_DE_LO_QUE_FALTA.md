@@ -2854,3 +2854,82 @@ Las tres afirmaciones que quedaron mal en lo ya publicado —el docstring de
 reescritas: dicen lo que decían y a continuación lo que faltaba. Un documento
 que borra su error pierde la única señal de que ahí hay algo fácil de volver a
 equivocar.
+
+---
+
+## 40. El paso fijo, y la re-calibración que no hizo falta (2026-08-10, AUD-390)
+
+`GAP-036` llevaba toda la sesión etiquetado como el lote peligroso: «el único
+cambio estructural que queda», «el que puede mover el diseño de los dieciséis
+mapas», «necesita decisión del dueño sobre romper la métrica de 72 px». Resultó
+costar horas y no mover un solo mapa, y el motivo merece escribirse porque es
+generalizable.
+
+### 40.1 El defecto no era «falta el paso fijo»
+
+Era que **la física dependía de los fotogramas por segundo de la máquina**.
+Simulado sobre la integración real del salto (`GRAVITY = 800`,
+`PLAYER_JUMP_FORCE = -380`, gravedad y luego integrar, que es el orden del
+resolutor):
+
+    120 fps        -> 88,67 px de ápice
+     60 fps        -> 87,11 px
+     30 fps        -> 84,00 px
+    tope 0,05 s    -> 81,00 px   (MAX_FRAME_TIME, o sea 20 fps)
+    casi continuo  -> 90,06 px
+
+Un jugador con equipo lento salta **un 7 % menos alto**. Los dieciséis mapas
+están medidos contra los 72 px que se alcanzan a 60 fps, así que un obstáculo
+ajustado al límite era franqueable o no **según el hardware**. Eso llevaba ahí
+desde el primer día y nadie lo había escrito como defecto: el `GAP-036`
+original hablaba de reproducibilidad y de replays, no de que el juego se
+jugara distinto en cada máquina.
+
+### 40.2 Por qué la re-calibración fue una comprobación
+
+La clave está en elegir `FIXED_DT = 1/TARGET_FPS`, o sea `1/60`:
+
+* **A 60 fps la integración es idéntica a la de antes.** Un paso por fotograma,
+  del mismo tamaño. Los mapas no cambian porque no cambia nada de lo que ya
+  funcionaba.
+* **El fotograma lento converge al valor bueno.** Antes, un tirón se integraba
+  de una vez con un `dt` grande y el salto perdía hasta 6 px —más de un tercio
+  de baldosa—. Ahora se reparte en varios pasos de `1/60` y el resultado se
+  acerca al que los mapas suponen.
+
+Cualquier otro valor —`1/120`, `1/50`, un paso «más preciso»— habría obligado a
+re-calibrar de verdad y a revisar los dieciséis mapas. Elegir **el que los mapas
+ya suponían** convierte semanas en horas.
+
+Verificado, no supuesto: **111 pruebas de calibración, física del jugador,
+perfiles y pendientes, todas en verde sin tocar un número.**
+
+### 40.3 Tres decisiones del acumulador
+
+* **El sobrante se guarda.** A 120 fps, un fotograma de cada dos no simula; si
+  se tirara el resto, el juego iría a la mitad de velocidad.
+* **Las transiciones siguen con `dt` variable.** Son presentación, no
+  simulación: trocearlas no las hace más correctas y las dejaría a cero en un
+  fotograma rápido, que es un parpadeo visible.
+* **El tope de 5 pasos corta la espiral de la muerte**, y al alcanzarlo **tira**
+  el tiempo sobrante. Conservarlo dejaría una deuda que el fotograma siguiente
+  tampoco puede pagar, y el juego se quedaría clavado intentando alcanzarse a sí
+  mismo. Se prefiere ir a cámara lenta antes que dejar de responder.
+
+Y una que no es del acumulador: se consume el `dt` **escalado**, para que la
+cámara lenta y el hit-stop sigan funcionando. Ralentizar el mundo es dar
+**menos pasos por segundo real**, no pasos más cortos — pasos más cortos
+volverían a hacer la física dependiente del reloj, que es justo lo que este
+lote quita.
+
+### 40.4 Lo que este lote NO cierra
+
+La reproducibilidad de **trayectoria** —el mismo replay bit a bit— necesita
+además que el azar esté sembrado, y lo está desde AUD-375/385. Con las dos
+piezas, dos ejecuciones con la misma semilla y las mismas entradas deberían
+coincidir; comprobarlo de punta a punta es un lote propio y no se ha hecho aquí.
+
+Y sigue faltando la **interpolación** al pintar: con el paso fijo, si el
+fotograma no cae justo sobre un paso, la posición dibujada es la del último
+paso y no la interpolada. A 60 fps con paso de 1/60 eso casi nunca ocurre, así
+que se deja fuera hasta que se note.
