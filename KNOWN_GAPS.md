@@ -1665,7 +1665,7 @@ está.
   Cable trampa: `tests/test_version_de_esquema_del_mapa.py`, verificado por
   mutación —desconectar la llamada en `load()` pone dos pruebas en rojo—.
 
-## [GAP-049] No se cuentan los recursos: llamadas de dibujo, memoria de textura, fugas
+## ~~[GAP-049] No se cuentan los recursos: llamadas de dibujo, memoria de textura, fugas~~ *(Resuelto)*
 
 - **File:** `src/engine/render/gl_pipeline.py`
 - **Phase:** auditoría 2026-08-10, lista del dueño (AUD-376)
@@ -1694,6 +1694,37 @@ está.
   Sigue abierto lo demás del hueco: memoria de textura, VRAM/RAM y detección de
   fugas, que exigen instrumentar la subida de texturas. Y el reparto CPU/GPU
   del tiempo, que la lista del dueño pide aparte.
+
+- **Resolution (2026-08-11, AUD-397): memoria de textura y fugas, hechas.**
+  `src/engine/render/memoria_de_textura.py`. Vive **fuera** de `gl_pipeline.py`
+  por un motivo que es la mitad del valor del lote: `gl_pipeline` necesita un
+  contexto ModernGL para casi todo y en CI no hay ninguno, así que una medición
+  escrita dentro de esa clase sería código que no se ejecuta hasta que alguien
+  abra el juego en una máquina con tarjeta. Instrumentación que sólo corre
+  donde nadie mira es exactamente lo que este hueco existía para evitar. El
+  registro no toca OpenGL: pesa objetos que declaran `size` y `components`, y
+  eso lo cumple `moderngl.Texture` igual que un doble de tres líneas.
+  Se instrumentan los dos sitios donde nacen texturas: `_subir` —la baja va
+  pegada al `release()`, porque separarlos es como se desincroniza un contador
+  de recursos— y `_create_fbos`, que son los cinco adjuntos de color y con
+  diferencia la mayor parte de la memoria del juego. `App` publica la fila
+  junto a la de llamadas de dibujo, por lo mismo que aquélla.
+  La detección de fugas **no tiene umbral de bytes**, a propósito: cuánta
+  memoria es «mucha» depende del nivel y de la resolución, y cualquier número
+  ahí sería inventado. Lo que delata la fuga es la forma de la serie —sube y no
+  baja ni una vez en diez segundos— y los primeros 120 fotogramas no cuentan,
+  porque cargar un nivel siempre sube y llamar fuga a eso sería un aviso que se
+  aprende a ignorar.
+  Defecto propio, cazado por la prueba en su primera ejecución: el registro
+  indexaba por `id()`, y CPython **reutiliza** los identificadores de los
+  objetos que recolecta, así que cinco texturas creadas y soltadas en un bucle
+  se contaban como tres. En producción habría dado un contador que subestima
+  justo cuando más rotación hay, que es cuando se mira.
+  Cable trampa: `tests/test_memoria_de_textura.py` (15 pruebas), incluida una
+  que comprueba que el historial del propio detector está acotado — un detector
+  de fugas que se fuga sería un buen chiste y un mal detector.
+  Sigue abierto y no se toca aquí: el **reparto CPU/GPU** del tiempo, que la
+  lista del dueño pide aparte y que no es una cifra de recurso sino de tiempo.
 
 ## ~~[GAP-050] El clima tiene dos autoridades: la simulación lo calcula y el VFX lo ignora~~ *(Resuelto)*
 
