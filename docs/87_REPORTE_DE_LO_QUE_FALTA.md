@@ -3081,3 +3081,70 @@ pasa devolviendo `1` siempre: una comprueba que un mapa sano sigue dando 0, y
 otra que un aviso por sí solo no suspende. El mapa roto se llama `a_roto.tmx`
 y el sano `z_sano.tmx` **a propósito** — con los nombres al revés la prueba
 pasa contra el código defectuoso.
+
+---
+
+## 43. La lista de propiedades que estaba escrita y no se miraba (AUD-392)
+
+Segunda parada camino de `GAP-048`. `scripts/validate_tmx.py` declaraba desde
+su primera versión:
+
+```python
+KNOWN_TILESETS = ["tileset_stage0", "tileset_zone1", ...]
+KNOWN_TMX_PROPERTIES = {
+    "stage_id", "stage_name", "bgm_track", "time_limit",
+    "climate", "background_zone", "gravity_multiplier",
+}
+```
+
+Una búsqueda por todo el repositorio devuelve **dos** apariciones de cada
+nombre: la línea que lo define y nada más. Comprobaciones que alguien pensó,
+escribió y no llegó a conectar.
+
+### 43.1 Muertas y además podridas
+
+`KNOWN_TMX_PROPERTIES` declaraba 7 propiedades. Extraídas por AST del cargador,
+`StageLoader` lee **40**. Conectarla tal cual habría avisado en falso sobre
+`bloom`, `vignette`, `season`, `water_effect` y treinta más — que es
+probablemente la razón por la que nunca se conectó: quien lo intentó vio un
+muro de avisos falsos y lo dejó.
+
+Los números, medidos y no deducidos:
+
+| Cuenta | Valor |
+|---|---|
+| Propiedades que declara la lista muerta | 7 |
+| Propiedades que el cargador lee (AST) | 40 |
+| Propiedades distintas usadas en los 18 TMX | 38 |
+| De ésas, no leídas por el cargador | 1 (`author`) |
+
+La última fila es la que hizo el lote barato: hoy no hay ni una errata en los
+mapas del motor, así que la comprobación nueva entra en verde y sólo puede
+cazar la siguiente.
+
+### 43.2 Lo que costaba
+
+Un mapa con `gravty_multiplier` pasaba la validación en verde. El cargador no
+encuentra la propiedad, aplica el valor por defecto y el nivel se juega con la
+gravedad equivocada sin que nada lo diga en ningún sitio. Es **el mismo fallo**
+que `GAP-048` quería comprar con el versionado de esquema —«un TMX viejo con
+una propiedad renombrada falla como dato malo en vez de como versión
+antigua»—. El detector ya estaba escrito; le faltaba el enchufe.
+
+### 43.3 Un inventario, no dos
+
+El arreglo no escribe una lista nueva: importa
+`check_tmx_coverage.PROPIEDADES_DEL_MOTOR`, que ya existe y que
+`test_el_guardian_de_tmx_lo_mira_todo.py` contrasta en los dos sentidos contra
+el AST de `stage_loader.py` desde AUD-378. Copiarla habría reproducido el
+defecto que este lote arregla. Es el mismo criterio que `_loader_required_layers()`
+usa desde AUD-058: el validador no declara el contrato, lo lee de quien lo
+define.
+
+### 43.4 Avisa, no suspende
+
+Decisión deliberada. Una propiedad que el motor no lee puede ser legítima: un
+estudiante que declara la suya en el TMX y la consume desde su propia
+`StageScene` está usando bien el framework. Suspenderlo por eso sería AUD-106
+otra vez —el validador reprobando a quien hace lo que se le pidió—. Avisa,
+sugiere la grafía parecida con `suggest_types`, y deja decidir a quien lee.
