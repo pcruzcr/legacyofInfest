@@ -136,12 +136,13 @@ position.y += velocity.y * dt
 
 **Air jump: constant present, mechanic absent (GAP-024).** `PLAYER_AIR_JUMPS = 1`
 exists in `settings.py` and `_can_jump()` has a branch for it, but no mid-air
-jump can ever fire: `AirborneState` stores a jump press in `_pending_jump` to
-spend it on landing, and the `_can_jump()` air branch is only ever reached from
-the grounded states, where the player is already standing on something. Measured
-reach is unchanged by pressing jump in mid-air. Do not design levels around a
-double jump, and do not treat `max_gap_with_air_jump` in `level_metrics.py` as a
-reachable distance.
+jump can ever fire: jump presses are buffered by `InputManager` and spent on
+landing (`pulsada_en_buffer` / `consumir_buffer`, AUD-373; see
+`Player.update`), and the `_can_jump()` air branch is
+only ever reached from the grounded states, where the player is already
+standing on something. Measured reach is unchanged by pressing jump in
+mid-air. Do not design levels around a double jump, and do not treat
+`max_gap_with_air_jump` in `level_metrics.py` as a reachable distance.
 
 ### 4.3 Collision Resolution
 
