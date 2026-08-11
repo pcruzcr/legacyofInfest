@@ -129,7 +129,7 @@ All object positions in Tiled use pixel coordinates with the origin at the top-l
 | `MessageTrigger` | Rectangle | `text`, `duration` | Show a tutorial message |
 | `MessageTrigger_Once` | Rectangle | `text`, `duration` | Same, but only the first time |
 | `Waypoint` | Point | `owner_id`, `waypoint_index` | Bézier/patrol waypoint for an entity |
-| `HazardZone` | Rectangle | `damage`, `sube`, `sube_hasta`, `arranca_con`, `avisar` (`damage_type` **no está implementada** — AUD-310) | Persistent damage zone. El motor la dibuja con un aviso rojo que late; ponle `avisar=false` si tu mapa ya pinta sus propios pinchos (AUD-228) |
+| `HazardZone` | Rectangle | `damage`, `damage_type`, `sube`, `sube_hasta`, `arranca_con`, `avisar` | Persistent damage zone. El motor la dibuja con un aviso rojo que late; ponle `avisar=false` si tu mapa ya pinta sus propios pinchos (AUD-228). **`damage_type`** (AUD-387) es el canal: `fisico` por defecto, o `veneno`/`fuego` del catálogo de `data/damage_types.json`. Llevaba documentada como «no implementada» desde AUD-310, y ahora sí lo está |
 | `DeathPit` | Rectangle | — | Falling in kills the player |
 | `CameraLock` | Rectangle | `lock_x`, `lock_y` | Override camera scroll in zone |
 | `BossVenado` | Point | — | Spawn the boss as a normal entity type |

@@ -233,6 +233,10 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── bridge.py                   #   ComponentesDeEntidad: BaseEntity sobre componentes
 │   │   │   └── bullet_swarm.py             #   EnjambreDeBalas: bullet hell con NumPy (F5.8)
 │   │   │
+│   │   ├── combate/                        # AUD-387 — reglas de combate compartidas
+│   │   │   ├── __init__.py
+│   │   │   └── dano.py                     #   canales de daño y mitigación (data/damage_types.json)
+│   │   │
 │   │   ├── physics/                       # AUD-333/334 — física por contexto + resolutor compartido
 │   │   │   ├── __init__.py
 │   │   │   ├── perfil.py                   #   PhysicsProfile: física por modo de juego

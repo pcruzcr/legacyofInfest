@@ -157,6 +157,18 @@ class HazardZone:
     #: `visible_seg` en vez de `visible`.
     avisar: bool = True
 
+    #: AUD-387 — el canal de daño de la zona. Cierra una promesa que
+    #: `06_TMX_SPEC.md` llevaba rota desde AUD-310: la propiedad estaba
+    #: documentada como «no está implementada», y no podía estarlo porque el
+    #: motor no tenía canales — prometer un tipo cuando sólo sabes restar un
+    #: número es prometer nada.
+    #:
+    #: Por defecto el físico, así que las zonas de los dieciséis mapas
+    #: entregados hacen exactamente el mismo daño que antes. Con `veneno`, una
+    #: charca deja de ser una zona de daño con otro nombre y la resistencia de
+    #: cada enemigo empieza a significar algo.
+    damage_type: str = "fisico"
+
     #: Estado interno. `_alto_inicial` guarda la altura original porque el
     #: `rect` es mutable y lo vamos a modificar en sitio.
     activa: bool = True

@@ -19,6 +19,7 @@ from src.engine.core import settings
 from src.engine.core.events import Events
 from src.engine.utils.asset_loader import AssetLoader
 from src.engine.utils.surface_pool import get_pool
+from src.framework.combate import dano as combate_dano
 from src.framework.entities.base_entity import BaseEntity
 from src.framework.vfx.contorno import COLOR_ENEMIGO, dibujar_con_contorno
 
@@ -136,6 +137,14 @@ class EnemyBase(BaseEntity):
         self._telegraph_duration: float = 0.4
         self._ground_y: float = spawn_position.y
         self._is_airborne: bool = False
+
+        #: AUD-387 — resistencias por canal de daño. Multiplicadores: 0,5 es
+        #: resistencia, 2,0 debilidad, 0,0 inmunidad. **Vacío por defecto**, y
+        #: eso importa: sin resistencias declaradas la mitigación es 1,0 y las
+        #: 26 llamadas a `apply_hit` que viven en entregas siguen pegando
+        #: exactamente lo mismo. Se declara en Tiled con la propiedad
+        #: `resistencias`, por ejemplo `veneno:0.5, fuego:2`.
+        self.resistencias: dict[str, float] = {}
 
         # --- Collision ---
         self._collision_rects: list[pygame.Rect] = []
@@ -475,6 +484,7 @@ class EnemyBase(BaseEntity):
         self,
         damage: float,
         source_position: tuple[float, float],
+        canal: str | None = None,
     ) -> None:
         """
         Apply damage to the enemy. No-op if invincibility is active
@@ -483,12 +493,23 @@ class EnemyBase(BaseEntity):
           light  (< 0.8)  -> short stun, small knockback
           heavy  (>= 0.8) -> long stun, big knockback
           launch (>= 1.5) -> airborne knockback
+
+        AUD-387 — `canal` es el tipo de daño, y entra **al final y opcional**
+        porque este método tiene 32 llamantes y 26 están en `src/stages/`, o
+        sea en entregas de estudiantes. Sin canal se aplica el físico, y sin
+        `resistencias` declaradas la mitigación es 1,0: un enemigo que nadie
+        toque se comporta exactamente igual que antes de este cambio.
+
+        El aturdimiento sigue decidiéndose con el daño **ya mitigado**, que es
+        lo coherente: si el veneno apenas le hace nada a un enemigo resistente,
+        tampoco debería frenarlo como un mazazo.
         """
         if self._invincibility_timer > 0:
             return
         if self.state == EnemyState.DYING:
             return
 
+        damage = combate_dano.mitigar(damage, canal, self.resistencias)
         self.current_health -= damage
 
         # AUD-064: el sonido de impacto tenía archivo, handler y hasta subtítulo
