@@ -88,6 +88,48 @@ def _propiedades_de_mapa_conocidas() -> set[str]:
     return {*PROPIEDADES_DEL_MOTOR, *ALIAS_DE_PROPIEDAD, *METADATOS_DE_MAPA}
 
 
+def _validar_version_de_esquema(prop_dict: dict[str, str]) -> None:
+    """AUD-393 — la versión de esquema del mapa. Cierra la mitad viva de GAP-048.
+
+    Más estricto que el cargador, y a propósito: éste es el sitio donde se
+    arreglan los mapas, no donde se juega. Un valor no numérico aquí es un
+    error —hay alguien delante que puede corregirlo ahora mismo— mientras que
+    en `StageLoader` es sólo un aviso, porque a mitad de partida no interesa
+    negarse a abrir un nivel por un dato mal escrito.
+
+    Que **falte** no suspende. Es decisión del dueño (2026-08-11): ningún TMX
+    anterior a este lote la declara, entregas de estudiantes incluidas, y
+    convertirla en obligatoria las reprobaría a todas de golpe por una
+    propiedad inventada después de que las entregaran.
+    """
+    from src.framework.stage.stage_loader import SCHEMA_VERSION
+
+    crudo = prop_dict.get("schema_version")
+    if crudo is None:
+        warn(
+            "no declara 'schema_version'. Añádela como propiedad de mapa en "
+            f"Tiled con el valor {SCHEMA_VERSION} para que un motor futuro "
+            "pueda distinguir un mapa antiguo de un mapa mal escrito."
+        )
+        return
+    try:
+        version = int(str(crudo).strip())
+    except (TypeError, ValueError):
+        error(
+            f"schema_version='{crudo}' no es un número entero. "
+            f"La versión que este motor entiende es la {SCHEMA_VERSION}."
+        )
+        return
+    if version > SCHEMA_VERSION:
+        error(
+            f"schema_version={version} es posterior a la que entiende este "
+            f"motor ({SCHEMA_VERSION}). El mapa se escribió para una versión "
+            "más nueva del código y no se cargará."
+        )
+    elif version < 1:
+        error(f"schema_version={version} no es una versión válida (la primera es 1).")
+
+
 def _tipos_registrados_por_el_estudiante(tmx: Path) -> set[str]:
     """Tipos que el paquete de este escenario registra, leídos sin ejecutarlo.
 
@@ -263,6 +305,8 @@ def validate_tmx(path: Path) -> bool:
             error(f"Missing required map property: '{req}'")
     if "climate" in prop_dict and prop_dict["climate"] not in KNOWN_CLIMATES:
         warn(f"Unknown climate '{prop_dict['climate']}', known: {sorted(KNOWN_CLIMATES)}")
+
+    _validar_version_de_esquema(prop_dict)
 
     # AUD-392 — la errata silenciosa. `gravty_multiplier` pasaba en verde: el
     # cargador no la encuentra, aplica el valor por defecto, y el nivel se juega

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.10" tiledversion="1.10.2" orientation="orthogonal" renderorder="right-down" width="310" height="24" tilewidth="16" tileheight="16" infinite="0" nextlayerid="20" nextobjectid="900">
  <properties>
+  <property name="schema_version" value="1"/>
   <property name="stage_id" value="stage_mecanicas"/>
   <property name="stage_name" value="LABORATORIO DE MECANICAS"/>
   <property name="author" value="Equipo docente — Legacy of Infest"/>

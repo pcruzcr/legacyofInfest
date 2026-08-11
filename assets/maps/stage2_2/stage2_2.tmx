@@ -4,6 +4,7 @@
   <property name="author" value="César Ubáu Calvo"/>
   <property name="bgm_track" value="bgm_zone2_traverse"/>
   <property name="climate" value="clear"/>
+  <property name="schema_version" value="1"/>
   <property name="stage_id" value="stage2_2"/>
   <property name="stage_name" value="2-2  ENTRADA Y ANTENAS"/>
   <property name="time_limit" type="int" value="170"/>

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.10" tiledversion="1.11.0" orientation="orthogonal" renderorder="right-down" width="40" height="14" tilewidth="16" tileheight="16" infinite="0" nextlayerid="9" nextobjectid="21">
  <properties>
+  <property name="schema_version" value="1"/>
   <property name="stage_id" value="stage_template"/>
   <property name="stage_name" value="Untitled Stage"/>
   <property name="time_limit" type="int" value="120"/>

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="60" height="38" tilewidth="16" tileheight="16" infinite="0" nextlayerid="9" nextobjectid="200">
  <properties>
+  <property name="schema_version" value="1"/>
   <property name="stage_id" value="stage3_3_el_patio"/>
   <property name="stage_name" value="3-3  EL PATIO"/>
   <property name="zone" type="int" value="3"/>

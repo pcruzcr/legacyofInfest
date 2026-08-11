@@ -78,6 +78,11 @@ PROPIEDADES_DEL_MOTOR: tuple[str, ...] = tuple(sorted({
     "water_alpha", "water_amplitude", "water_frequency", "water_speed",
     "sombras_proyectadas",
     "profundidad_min", "profundidad_max",
+    # AUD-393 — no es una característica jugable como el resto, es el contrato
+    # del formato. Entra en esta lista y no en `PROPIEDADES_MAPA` por lo mismo
+    # que las demás: el guardián bidireccional exige que todo lo que
+    # `stage_loader.py` lea esté vigilado, y esto lo lee.
+    "schema_version",
 }))
 
 #: Propiedades **de objeto** que se leen dentro de `stage_loader.py`, y que por
