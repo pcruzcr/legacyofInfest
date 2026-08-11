@@ -83,7 +83,14 @@ class DiagnosticoDeEscenario:
         # (La directiva no se escribe literalmente en esta explicación: ruff
         # lee cualquier comentario que empiece por la palabra mágica, aunque
         # sea prosa, y avisaba de que la frase no era un código de regla.)
-        logging.getLogger(__name__).exception(
+        #
+        # AUD-408 — y se activó: LOG004 salió de *preview* en ruff 0.16.0,
+        # exactamente el modo de fallo que GAP-034 describía. Vuelve la
+        # directiva con la versión fijada en `pyproject.toml` (0.16.1) y la
+        # explicación de por qué el falso positivo es legítimo. El bloque
+        # de arriba queda como registro: la cadena completa de la regla es
+        # preview → activa → preview → activa.
+        logging.getLogger(__name__).exception(  # noqa: LOG004 — ver AUD-304/408
             "la entidad %r falló en update() y se retira del nivel", nombre)
         # Se marca muerta **y** se saca de la lista: sólo lo primero la dejaría
         # sin dibujar pero seguiría recibiendo `set_player_ref` cada fotograma,

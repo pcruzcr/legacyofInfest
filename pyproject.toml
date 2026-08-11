@@ -137,7 +137,13 @@ dev = [
     # solo tumba el trinquete de AUD-124.
     #
     # `tests/test_puertas_de_calidad.py` vigila que sigan fijados.
-    "ruff==0.15.20",
+    # AUD-408 — subido de 0.15.20 a 0.16.1: ruff estabilizó LOG004 en 0.16.0
+    # (la regla del `.exception()` fuera de handler que este proyecto suprime
+    # con motivo en `diagnostico.py`, AUD-304). Con el pin viejo y la directiva
+    # repuesta, el gate quedaría en rojo por RUF100; con el pin nuevo y la
+    # directiva, queda verde en las dos máquinas. La política de arriba es la
+    # misma: subir el linter es un cambio revisable, con su commit y su AUD.
+    "ruff==0.16.1",
     # AUD-174: faltaba. CI ejecuta `mypy` sobre `mypy_scope.txt` y sólo instala
     # este extra, así que el paso terminaba en `command not found` y el
     # trinquete de tipos que AUD-124 puso en marcha no comprobaba nada desde
