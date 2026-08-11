@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 import pygame
 
@@ -195,9 +197,25 @@ class ParticleEmitter:
         ("gravity", np.float32), ("friction", np.float32),
     )
 
-    def __init__(self, capacidad: int = CAPACIDAD_INICIAL) -> None:
+    def __init__(self, capacidad: int = CAPACIDAD_INICIAL,
+                 rng: Any = None) -> None:
         self._n: int = 0
         self._capacidad: int = 0
+        #: AUD-386 — el azar de ESTE emisor, no el global de NumPy.
+        #:
+        #: Con el global compartido, añadir una tirada en un sitio desplazaba
+        #: el resultado de todos los demás: una chispa más en el golpe movía la
+        #: dispersión de la lluvia. Eso obliga a escribir tolerante cualquier
+        #: prueba que toque partículas, y una prueba tolerante deja pasar las
+        #: regresiones pequeñas — el coste que ya se pagó en AUD-359.
+        #:
+        #: Sin `rng` se deriva del global, que `azar.sembrar()` fija al
+        #: arrancar (AUD-375/385): quien construya un emisor a secas —las
+        #: entregas, `ParticleSystem.get_emitter`, media suite— hereda la
+        #: reproducibilidad sin enterarse de que existe una semilla.
+        from src.engine.core import azar
+
+        self._rng = rng if rng is not None else azar.generador_numpy()
         self._reservar(max(1, capacidad))
 
     def _reservar(self, capacidad: int) -> None:
@@ -257,12 +275,12 @@ class ParticleEmitter:
         n = config.count
         if n <= 0:
             return
-        angles = np.random.uniform(0, config.spread, n)
+        angles = self._rng.uniform(0, config.spread, n)
         rad = np.radians(angles)
-        spd = np.random.uniform(config.speed * 0.5, config.speed, n)
+        spd = self._rng.uniform(config.speed * 0.5, config.speed, n)
         vx_arr = np.cos(rad) * spd
         vy_arr = np.sin(rad) * spd
-        sizes = np.random.randint(config.size_min, config.size_max + 1, n)
+        sizes = self._rng.integers(config.size_min, config.size_max + 1, n)
         lives = np.full(n, config.lifetime, dtype=np.float32)
         alphas = np.full(n, 255, dtype=np.int32)
         gravities = np.full(n, config.gravity, dtype=np.float32)
@@ -278,12 +296,12 @@ class ParticleEmitter:
     ) -> None:
         if count <= 0:
             return
-        angles = angle + np.random.uniform(-spread, spread, count)
+        angles = angle + self._rng.uniform(-spread, spread, count)
         rad = np.radians(angles)
-        spd = np.random.uniform(speed * 0.7, speed, count)
+        spd = self._rng.uniform(speed * 0.7, speed, count)
         vx_arr = np.cos(rad) * spd
         vy_arr = np.sin(rad) * spd
-        sz = np.random.randint(size[0], size[1] + 1, count)
+        sz = self._rng.integers(size[0], size[1] + 1, count)
         lives = np.full(count, lifetime, dtype=np.float32)
         alphas = np.full(count, 255, dtype=np.int32)
         gravities = np.full(count, gravity, dtype=np.float32)
