@@ -113,6 +113,13 @@ class TestLianas:
             def is_action_just_pressed(self, a):
                 return self.is_action_pressed(a)
 
+            # AUD-407 — `_InputSnapshot` (base.py) lee el buffer de AUD-373
+            # para todas las acciones desde que existe; un doble que no lo
+            # ofrezca muere con AttributeError antes de llegar a la lógica
+            # que este test quiere medir.
+            def pulsada_en_buffer(self, a):
+                return False
+
         liana = Liana(rect=pygame.Rect(100, 0, 4, 300))
         jugador._change_state_instance(TrepandoState(liana))
         jugador._state_instance._t = 0.5     # ya lleva un rato agarrado
