@@ -2084,3 +2084,36 @@ engañan —fichero de salida en 0 bytes, proceso vivo, 326 s de CPU acumulados 
 partidos en cuartos y corridos en primer plano. No hay `pytest-timeout`
 instalado, así que no se puede acotar por prueba: la única defensa es partir y
 no canalizar.
+
+---
+
+## Iteración 17 — 2026-08-11 — Las herramientas del estudiante
+
+| ID | Dominio | Sev. | Estado | Qué era |
+|---|---|---|---|---|
+| AUD-416 | D7 | **ALTA** | **CERRADO** | Las dos herramientas del estudiante no coincidían: `validate_tmx.REQUIRED_MAP_PROPS = [stage_id, stage_name, bgm_track]` frente a `grade_stage.REQUIRED_GRADE_PROPS = [author, stage_id, stage_name]`. **`author` puntúa en la rúbrica y el validador no la pedía**, así que un mapa sin ella salía `[OK]` y perdía 3 de los 10 puntos de metadata sin que nada lo dijera. Es AUD-058 girado: aquella vez el validador aprobaba lo que el *motor* rechazaba; aquí, lo que la *rúbrica* penaliza — que para quien está siendo calificado es lo mismo. Avisa y no suspende (`author` no impide jugar; rechazar un mapa jugable sería AUD-106), y la lista se **importa** de `grade_stage` en vez de copiarse, por lo mismo que AUD-392. |
+| AUD-417 | D7 | **ALTA** | **CERRADO** | `stage_template.tmx`, el fichero que copian los veintiséis en la primera clase, sacaba **84/130 = 64,6 %** en la rúbrica del propio curso: sin enemigos, sin coleccionables, sin `climate`, sin `author`, un checkpoint y ningún salto exigente. Regenerado desde cero con `tools/generate_stage_template.py` como **catálogo** —un ejemplar de cada tipo: tres arquetipos de enemigo, coleccionable, luz, mensaje, zona de daño, objetivo, pendientes, plataforma de un sentido— y un hueco de 5 baldosas. Los 80 px están medidos con `JumpEnvelope`: el salto normal cruza 85,5 y lo «cómodo» acaba en 68,4, así que cae en *exigente* y se cruza sin salto aéreo. |
+
+**Lo que corrigió una prueba, y es la parte que importa.** La primera versión de
+la plantilla llegó a **130/130** poniendo tres coleccionables y tres puntos de
+control, y `test_teaching_tools` saltó: *«stage0 saca 100 % y la plantilla vacía
+100 %: la rúbrica no distingue trabajo hecho de trabajo sin hacer»*. Tenía
+razón. Se perseguía la nota en vez del objetivo: la plantilla existe para
+**demostrar** cada tipo, no para **llenar** la rúbrica. Bajada a un
+coleccionable y dos checkpoints queda en **92,3 %**, con `stage0` por encima en
+100 % y el margen donde tiene que estar.
+
+El TMX pasa a **generarse**, como `stage_mecanicas` desde AUD-153: un defecto
+aquí se multiplica por veintiséis antes de que nadie lo ejecute.
+`tests/test_la_plantilla_del_estudiante.py` comprueba que el fichero y su
+generador siguen de acuerdo. El validador cazó el primer bug del generador en
+la primera ejecución —faltaba la coma al final de cada fila del CSV, 945 tiles
+de 960—, que es exactamente para lo que está.
+
+**`stage0` se midió y NO se tocó.** Se planteó regenerarlo también. Medido:
+**130/130** en la rúbrica, **18/18** propiedades de mapa, **6/6** propiedades de
+`Light`, 27 tipos de objeto distintos y 61 objetos. No hay métrica del
+repositorio que pueda mejorar, y a cambio se arriesgaban las **71 pruebas** que
+lo citan y la curva de dificultad que AUD-151 calibró. Reescribir lo que ya
+está al máximo es trabajo con riesgo alto y ganancia cero — la decisión queda
+anotada aquí para que no haya que volver a medirlo.
