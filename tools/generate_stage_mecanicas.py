@@ -488,6 +488,7 @@ def generar() -> str:
 renderorder="right-down" width="{MW}" height="{MH}" tilewidth="{TS}" \
 tileheight="{TS}" infinite="0" nextlayerid="20" nextobjectid="900">
  <properties>
+  <property name="schema_version" value="1"/>
   <property name="stage_id" value="stage_mecanicas"/>
   <property name="stage_name" value="LABORATORIO DE MECANICAS"/>
   <property name="author" value="Equipo docente — Legacy of Infest"/>

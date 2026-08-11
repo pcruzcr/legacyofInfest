@@ -30,6 +30,7 @@ from abc import ABC, abstractmethod
 import pygame
 
 from src.framework.ecs.bridge import ComponentesDeEntidad
+from src.framework.physics.capas import MASCARA_POR_DEFECTO, Capa
 
 
 class BaseEntity(ComponentesDeEntidad, ABC):
@@ -38,6 +39,22 @@ class BaseEntity(ComponentesDeEntidad, ABC):
     Manages world position, a Pygame Rect for collision, visibility,
     active state, and the basic update/draw lifecycle.
     """
+
+    #: AUD-395 — contra qué clases de sólido choca esta entidad (GAP-038).
+    #:
+    #: Atributo **de clase** y no de instancia: la respuesta es de la especie,
+    #: no del individuo —todos los fantasmas atraviesan las plataformas—, y así
+    #: se declara en una línea al escribir el enemigo:
+    #:
+    #:     class Fantasma(EnemyBase):
+    #:         mascara_de_colision = Capa.SOLIDO
+    #:
+    #: El valor por defecto es el comportamiento que tenían todas las entidades
+    #: antes de que existieran las capas —sólidos y plataformas—, no `Capa.TODO`:
+    #: con `TODO`, una entidad que nunca había visto un destructible empezaría a
+    #: chocar con él, y eso cambiaría los mapas entregados sin que nadie lo
+    #: pidiera.
+    mascara_de_colision: Capa = MASCARA_POR_DEFECTO
 
     def __init__(self, position: pygame.Vector2, event_bus=None) -> None:
         """Initialize the entity at the given world-space position."""

@@ -240,6 +240,7 @@ legacy-of-infest/                      # Actual repo root
 │   │   │
 │   │   ├── physics/                       # AUD-333/334 — física por contexto + resolutor compartido
 │   │   │   ├── __init__.py
+│   │   │   ├── capas.py                    #   AUD-395: capas de colisión sobre el AABB (GAP-038)
 │   │   │   ├── perfil.py                   #   PhysicsProfile: física por modo de juego
 │   │   │   └── resolucion.py               #   AUD-334: resolutor de mundo (EstadoDeMovimiento→Contacto)
 │   │   │

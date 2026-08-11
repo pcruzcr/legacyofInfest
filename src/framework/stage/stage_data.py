@@ -27,6 +27,7 @@ import pyscroll
 import pyscroll.data
 
 from src.framework.entities.base_entity import BaseEntity
+from src.framework.physics.capas import MapaDeCapas
 from src.framework.stage.bloques import (
     BloqueDestructible,
     BloqueEmpujable,
@@ -280,6 +281,17 @@ class StageData:
     map_pixel_size: tuple[int, int] = (0, 0)
     collision_rects: list[pygame.Rect] = field(default_factory=list)
     one_way_rects: list[pygame.Rect] = field(default_factory=list)
+    #: AUD-395 — las mismas cajas, indexadas por clase de sólido (GAP-038).
+    #:
+    #: Se publica **aparte** y no sustituyendo a las dos listas de arriba por
+    #: el mismo motivo que `velocidades_parallax` unas líneas más abajo: esas
+    #: dos las leen las veintiséis entregas, el arco del jefe, la cámara y el
+    #: calificador de escenarios. Cambiarles el tipo para ganar capas habría
+    #: sido pagar la característica con todo el contenido del curso.
+    #:
+    #: Las dos vistas dicen lo mismo; la que manda al construirlas es ésta, y
+    #: `StageLoader._load_collision` las llena a la vez.
+    capas: MapaDeCapas = field(default_factory=MapaDeCapas)
     entity_list: list[BaseEntity] = field(default_factory=list)
     checkpoints: list[Checkpoint] = field(default_factory=list)
     spawn_point: pygame.Vector2 = field(default_factory=lambda: pygame.Vector2(0, 0))
