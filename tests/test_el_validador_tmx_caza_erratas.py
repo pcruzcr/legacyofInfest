@@ -104,7 +104,16 @@ class TestLoQueNoDebeAvisar:
 
         for mapa in mapas:
             v.validate_tmx(mapa)
-            propios = [a for a in v._warnings if "propiedad de mapa" in a]
+            # AUD-416 — se filtra por «el motor no la lee», que es la frase
+            # exclusiva de ESTE aviso, y no por «propiedad de mapa».
+            #
+            # Con el filtro genérico, el aviso nuevo de AUD-416 —que termina
+            # «Añádela como propiedad de mapa en Tiled»— se colaba aquí y ponía
+            # roja una prueba que no tenía nada que ver. Filtrar avisos por una
+            # subcadena que otro aviso puede contener es la misma trampa que
+            # buscar código por texto: funciona hasta que alguien escribe una
+            # frase parecida.
+            propios = [a for a in v._warnings if "el motor no la lee" in a]
             if propios:
                 sucios[mapa.parent.name] = propios
         assert not sucios, f"mapas con propiedades desconocidas: {sucios}"

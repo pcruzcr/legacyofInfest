@@ -88,6 +88,54 @@ def _propiedades_de_mapa_conocidas() -> set[str]:
     return {*PROPIEDADES_DEL_MOTOR, *ALIAS_DE_PROPIEDAD, *METADATOS_DE_MAPA}
 
 
+def _propiedades_que_puntuan() -> list[str]:
+    """Las propiedades de mapa que la **rúbrica** valora, leídas de la rúbrica.
+
+    AUD-416 — las dos herramientas del estudiante no se hablaban
+    -----------------------------------------------------------
+    Quien construye un nivel usa dos guiones y le decían cosas distintas del
+    mismo fichero: `validate_tmx.py` mientras trabaja, `grade_stage.py` para la
+    nota. Y no coincidían::
+
+        REQUIRED_MAP_PROPS  = ["stage_id", "stage_name", "bgm_track"]
+        REQUIRED_GRADE_PROPS = ["author", "stage_id", "stage_name"]
+
+    `author` puntúa y este validador no la pedía, así que un mapa sin ella salía
+    `[OK]` y perdía 3 de los 10 puntos de metadata sin que nada lo hubiera
+    dicho. Medido sobre la plantilla que copia todo el mundo.
+
+    Se importa la lista en vez de copiarla, por lo mismo que
+    `_propiedades_de_mapa_conocidas()` importa el inventario del cargador
+    (AUD-392): una segunda lista a mano se desincroniza, y de eso ya hubo un
+    caso en este mismo fichero. Si la rúbrica añade una propiedad puntuable,
+    el validador se entera solo.
+    """
+    from scripts.grade_stage import REQUIRED_GRADE_PROPS
+
+    return list(REQUIRED_GRADE_PROPS)
+
+
+def _avisar_de_lo_que_puntua(prop_dict: dict[str, str]) -> None:
+    """Avisa de las propiedades que la rúbrica valora y el mapa no declara.
+
+    Avisa y no suspende: `author` no impide cargar el nivel —el motor ni la
+    lee, es metadato— y rechazar un mapa que se juega perfectamente sería
+    AUD-106 otra vez. Lo que faltaba no era prohibir, era decírselo.
+
+    Las que ya son obligatorias aquí (`REQUIRED_MAP_PROPS`) se saltan: ésas
+    tienen su propio error unas líneas más arriba y avisar dos veces del mismo
+    fallo enseña a leer por encima.
+    """
+    for prop in _propiedades_que_puntuan():
+        if prop in prop_dict or prop in REQUIRED_MAP_PROPS:
+            continue
+        warn(
+            f"no declara '{prop}'. No impide jugar el nivel, pero **cuenta "
+            f"para la nota**: `scripts/grade_stage.py` la puntúa en la "
+            f"categoría de metadatos. Añádela como propiedad de mapa en Tiled."
+        )
+
+
 def _validar_version_de_esquema(prop_dict: dict[str, str]) -> None:
     """AUD-393 — la versión de esquema del mapa. Cierra la mitad viva de GAP-048.
 
@@ -306,6 +354,7 @@ def validate_tmx(path: Path) -> bool:
     if "climate" in prop_dict and prop_dict["climate"] not in KNOWN_CLIMATES:
         warn(f"Unknown climate '{prop_dict['climate']}', known: {sorted(KNOWN_CLIMATES)}")
 
+    _avisar_de_lo_que_puntua(prop_dict)
     _validar_version_de_esquema(prop_dict)
 
     # AUD-392 — la errata silenciosa. `gravty_multiplier` pasaba en verde: el
