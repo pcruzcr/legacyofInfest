@@ -3275,3 +3275,86 @@ leyendo con más atención**: se resuelven midiendo. Y la precedencia de
 `CLAUDE.md` §5 ya lo decía —«el código y las pruebas que pasan» van primero—,
 sólo que aquí el código no afirmaba un valor sino una intención, y una
 intención sí se puede comprobar contando llamantes.
+
+---
+
+## 46. El buffer de entrada, y dos pruebas que mintieron (AUD-373, cierra GAP-040)
+
+El juego perdonaba al jugador que se adelanta, pero **sólo al saltar**. El
+mecanismo estaba escrito a mano dentro del jugador —`_pending_jump` y su
+temporizador, armados desde `AirborneState`— y servía a una acción. Pulsar dash
+un fotograma antes de aterrizar se perdía: el estado aéreo veía la pulsación,
+`_can_dash` decía que no, y ahí moría. La misma queja del jugador —«lo pulsé,
+no salió»— tenía dos respuestas según qué botón fuera.
+
+### 46.1 Qué se hizo
+
+`InputManager.pulsada_en_buffer(accion, ventana)` y `consumir_buffer(accion)`.
+Vive ahí porque es un problema de **entrada**, no de física. Cuenta en
+fotogramas de `pump()` y no en segundos: el buffer es una concesión al tiempo
+de reacción humano, y desde AUD-390 la simulación va a paso fijo, así que
+contar fotogramas es determinista y acumular `dt` no lo era. La ventana por
+defecto son los 8 fotogramas (~133 ms) que ya usaba el salto — conservados tal
+cual para no re-calibrar de paso algo que estaba ajustado.
+
+Consumidores, porque un buffer que nadie consulta es el modo de fallo de esta
+casa: el **salto**, que pierde su mecanismo propio —`pending_jump` y
+`pending_jump_timer` salen de `PlayerStateData`—, y el **dash**, que es lo que
+el hueco pedía.
+
+El dash usa un campo aparte del snapshot (`dash_en_buffer`) y sólo en los
+estados de suelo. Meterlo dentro de `dash_pressed` habría cambiado también el
+dash en el aire, que nadie pidió; lo que GAP-040 describe es el que se pierde
+**al aterrizar**, así que el perdón se aplica donde ocurre.
+
+La calibración no se movió: las siete pruebas de `test_calibracion_del_salto.py`
+—las que miden cuántas baldosas se cruzan de un salto— pasan sin tocarlas.
+
+### 46.2 Las dos pruebas que siguieron en verde sin mecanismo
+
+Esto es lo que hay que llevarse de este lote. `test_sensacion_y_camara.py`
+comprobaba el buffer así:
+
+```python
+assert "_pending_jump = True" in inspect.getsource(airborne)
+assert "8.0 / 60.0" in inspect.getsource(airborne)
+```
+
+Se retiró el mecanismo entero —el atributo, el temporizador, el armado, los dos
+campos del estado canónico— y **las dos siguieron pasando**. El motivo es casi
+cómico: al quitar el código dejé en `airborne.py` un comentario que cita las
+líneas viejas para explicar adónde se fueron. La subcadena estaba ahí. La
+prueba nunca comprobó que el juego hiciera nada; comprobaba que alguien hubiera
+escrito unas letras en un fichero.
+
+Es exactamente el aviso que traía el traspaso —«un cable trampa tiene que
+ejercitar comportamiento; uno que busca una subcadena pasa con el método fuera
+de la clase»— confirmado por accidente y en la dirección más incómoda: no es
+que el cable trampa sea débil, es que **un refactor honesto lo desactiva sin
+que nadie se entere**, porque documentar lo que quitaste conserva el texto que
+la prueba buscaba.
+
+Las dos se reescribieron: una pulsa saltar y comprueba que la pulsación sigue
+viva tres fotogramas después; la otra lee la ventana de donde está declarada y
+comprueba que caiga entre 100 y 160 ms.
+
+### 46.3 Lo que el arnés del bot enseñó
+
+El primer intento rompió las siete pruebas de calibración con un
+`AttributeError` en vez de con un fallo: el `_StubInput` de `tests/playtest/bot.py`
+lanza a propósito cuando el jugador consulta algo que el bot no sabe simular,
+en vez de devolver `False` por `__getattr__`. Su docstring explica que una
+versión permisiva anterior hizo que un bot que no se movía se leyera como un
+nivel mal diseñado.
+
+Funcionó exactamente como estaba previsto: el bot aprendió a simular el buffer
+—si no, saltaría peor que un humano y los huecos del nivel saldrían más
+difíciles de lo que son— y las siete volvieron a verde.
+
+### 46.4 Lo que queda fuera, y se dice
+
+La **prioridad entre acciones** que caen en el mismo fotograma sigue sin
+existir. El hueco la mencionaba y no se ha construido: al medir no apareció
+ningún caso real —el orden de los `if` de cada estado ya la impone de hecho— y
+sin un caso que la pida sería otro mecanismo sin consumidor, que es lo que esta
+fase entera está desmontando.

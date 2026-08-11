@@ -61,9 +61,11 @@ class PlayerStateData:
     flash_visible: bool = True
 
     # Jump buffering
+    #
+    # AUD-373 — `pending_jump` y `pending_jump_timer` vivían aquí. El buffer
+    # subió a `InputManager`, que lo ofrece para todas las acciones y no sólo
+    # para el salto (GAP-040), así que el jugador ya no guarda esa ventana.
     prev_foot_y: float = 0.0
-    pending_jump: bool = False
-    pending_jump_timer: float = 0.0
 
     # Parry
     parry_window: float = 0.0
@@ -111,8 +113,6 @@ class PlayerStateData:
         self.flash_timer = 0.0
         self.flash_visible = True
         self.prev_foot_y = 0.0
-        self.pending_jump = False
-        self.pending_jump_timer = 0.0
         self.parry_window = 0.0
         self.parry_active = False
         self.parry_success = False

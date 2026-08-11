@@ -33,7 +33,9 @@ class PlayerStateBase(ABC):
 
 class _InputSnapshot:
     __slots__ = (
+        "_im",
         "crouch_held",
+        "dash_en_buffer",
         "dash_pressed",
         "grab_pressed",
         "jump_held",
@@ -56,6 +58,15 @@ class _InputSnapshot:
         # F5.14 — subir. Hasta las lianas no hacía falta: MOVE_UP existía en
         # `Action` y no lo leía nadie, así que pulsar arriba no hacía nada.
         move_y_up = False
+        # AUD-373 — el dash que se pulsó hace unos fotogramas y todavía vale.
+        #
+        # Va en un campo aparte y **no** dentro de `dash_pressed` a propósito:
+        # `dash_pressed` lo leen también los estados aéreos, y meterle la
+        # ventana ahí cambiaría el dash en el aire de paso. Lo que GAP-040
+        # describe es el dash que se pierde **al aterrizar**, así que el
+        # perdón se aplica donde ocurre — en los estados de suelo — y el resto
+        # del juego sigue exactamente igual.
+        dash_en_buffer = False
 
         if im is not None:
             if im.is_action_held(Action.MOVE_LEFT):
@@ -70,7 +81,10 @@ class _InputSnapshot:
             dash_pressed = im.is_action_pressed(Action.DASH)
             grab_pressed = im.is_action_pressed(Action.GRAB)
             move_y_up = im.is_action_held(Action.MOVE_UP)
+            dash_en_buffer = im.pulsada_en_buffer(Action.DASH)
 
+        self._im = im
+        self.dash_en_buffer = dash_en_buffer
         self.move_x = move_x
         self.move_y_up = move_y_up
         self.jump_pressed = jump_pressed
@@ -80,3 +94,12 @@ class _InputSnapshot:
         self.long_attack = long_attack
         self.dash_pressed = dash_pressed
         self.grab_pressed = grab_pressed
+
+    def consumir(self, action: Action) -> None:
+        """Da por gastada una pulsación recogida del buffer (AUD-373).
+
+        Quien ejecuta la acción la consume. Sin esto, un dash guardado saldría
+        en cada fotograma de la ventana en vez de una sola vez.
+        """
+        if self._im is not None:
+            self._im.consumir_buffer(action)

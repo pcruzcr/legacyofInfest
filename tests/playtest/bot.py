@@ -132,10 +132,23 @@ class _StubInput:
     def __init__(self) -> None:
         self._held: set[Action] = set()
         self._prev: set[Action] = set()
+        #: AUD-373 — el buffer de entrada, igual que en `InputManager`.
+        #:
+        #: El bot tiene que simularlo o mediría un juego que no existe: desde
+        #: GAP-040 el salto **no** sale del fotograma en que se pulsa, sale de
+        #: la ventana que abre esa pulsación. Un stub sin buffer haría que el
+        #: bot saltara peor que un humano y los huecos del nivel saldrían más
+        #: difíciles de lo que son — que es justo el diagnóstico equivocado
+        #: contra el que este stub lanza excepciones.
+        self._fotograma = 0
+        self._pulsada_en_fotograma: dict[Action, int] = {}
 
     def set_actions(self, actions: set[Action]) -> None:
         self._prev = self._held
         self._held = set(actions)
+        self._fotograma += 1
+        for accion in self._held - self._prev:
+            self._pulsada_en_fotograma[accion] = self._fotograma
 
     # ── la API que el jugador realmente usa ────────────────────
 
@@ -148,6 +161,18 @@ class _StubInput:
 
     def is_action_just_pressed(self, action: Action) -> bool:
         return self.is_action_pressed(action)
+
+    def pulsada_en_buffer(self, action: Action, ventana: int | None = None) -> bool:
+        from src.engine.input.input_manager import InputManager
+
+        marca = self._pulsada_en_fotograma.get(action)
+        if marca is None:
+            return False
+        ventana = InputManager.VENTANA_DE_BUFFER if ventana is None else ventana
+        return (self._fotograma - marca) < ventana
+
+    def consumir_buffer(self, action: Action) -> None:
+        self._pulsada_en_fotograma.pop(action, None)
 
     def __getattr__(self, name: str):
         if name in self._SAFE_FALSE:

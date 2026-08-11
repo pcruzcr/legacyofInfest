@@ -91,6 +91,32 @@ class InputManager:
         self._axis_edge_up = self._axis_edge_down = False
         self._axis_edge_left = self._axis_edge_right = False
 
+        #: AUD-373 — el buffer de entrada, para todas las acciones. Cierra GAP-040.
+        #:
+        #: El salto ya tenía buffer, cableado a mano dentro de `Player`
+        #: (`_pending_jump` + su temporizador) y para una sola acción. Ninguna
+        #: otra lo tenía: pulsar dash o atacar un fotograma antes de aterrizar
+        #: se perdía sin más, porque el estado que recibe la pulsación decide
+        #: que no puede ejecutarla y la tira.
+        #:
+        #: Vive aquí y no en el jugador porque es un problema de **entrada**,
+        #: no de física: «lo pulsé, tú no lo viste» es la misma queja para
+        #: saltar que para atacar, y resolverla una vez por acción es lo que
+        #: evitaba que hubiera dos mecanismos distintos haciendo lo mismo.
+        #:
+        #: Se cuenta en fotogramas de `pump()` y no en segundos: el buffer es
+        #: una concesión al tiempo de reacción humano medido en fotogramas
+        #: —los 8 de aquí son ~133 ms a 60 Hz—, y desde AUD-390 la simulación
+        #: avanza en pasos fijos, así que contar fotogramas es determinista y
+        #: contar `dt` acumulado no lo era.
+        self._fotograma: int = 0
+        self._pulsada_en_fotograma: dict[Action, int] = {}
+
+    #: Ventana por defecto, en fotogramas. Los 8 son los que ya usaba el salto
+    #: (`8.0 / 60.0` en `AirborneState`), conservados tal cual para no
+    #: re-calibrar de paso algo que ya estaba ajustado y probado.
+    VENTANA_DE_BUFFER: int = 8
+
     def _init_joystick(self) -> None:
         """Initialize the first available joystick."""
         try:
@@ -142,6 +168,15 @@ class InputManager:
         # AUD-126 — una vez por fotograma, y aquí: `is_action_held` es una
         # pregunta y una pregunta no debe tener efectos.
         self._actualizar_conmutadas()
+
+        # AUD-373 — el sello de las pulsaciones de este fotograma, para el
+        # buffer. Va al final de `pump` porque `_sintetizar_navegacion_por_mando`
+        # todavía puede añadir pulsaciones, y una que llegue después del sello
+        # no entraría en el buffer.
+        self._fotograma += 1
+        for accion in self._bindings:
+            if self.is_action_just_pressed(accion):
+                self._pulsada_en_fotograma[accion] = self._fotograma
 
     def is_action_just_pressed(self, action: Action) -> bool:
         """True only on the frame the action's key was first pressed."""
@@ -219,6 +254,38 @@ class InputManager:
         if any(k in self._released_this_frame for k in keys):
             return True
         return self._action_released_from_controller(action)
+
+    def pulsada_en_buffer(self, action: Action, ventana: int | None = None) -> bool:
+        """¿Se pulsó esta acción en los últimos `ventana` fotogramas?
+
+        AUD-373 — la primitiva que `GAP-040` pedía. Cierra ese hueco.
+
+        Es lo que convierte «lo pulsé justo antes de tocar el suelo» en una
+        acción que sale, en vez de en una que se pierde. El estado que no puede
+        ejecutar la acción ahora **no** tiene que acordarse de guardarla: la
+        pulsación sigue estando aquí unos fotogramas y el estado que sí pueda
+        la recoge.
+
+        La ventana se puede afinar por acción —un dash perdonado durante medio
+        segundo se sentiría fantasmal, y un salto de dos fotogramas no
+        perdonaría nada— pero el valor por defecto es el que ya estaba
+        calibrado para el salto.
+        """
+        marca = self._pulsada_en_fotograma.get(action)
+        if marca is None:
+            return False
+        ventana = self.VENTANA_DE_BUFFER if ventana is None else ventana
+        return (self._fotograma - marca) < ventana
+
+    def consumir_buffer(self, action: Action) -> None:
+        """Da la pulsación por gastada, para que no salga dos veces.
+
+        Sin esto, un salto con buffer se dispararía en cada fotograma de la
+        ventana: el jugador tocaría suelo y saldría disparado ocho veces.
+        Quien ejecuta la acción es quien la consume — la misma regla que
+        `consume()` sigue para `is_action_just_pressed`.
+        """
+        self._pulsada_en_fotograma.pop(action, None)
 
     def consume(self, action: Action) -> None:
         """Consume an action so is_pressed returns False for the rest of the frame."""

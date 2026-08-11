@@ -143,13 +143,27 @@ class TestCoyoteTime:
 class TestBufferDeSalto:
     """Pulsar saltar un poco antes de aterrizar tiene que valer."""
 
-    def test_el_estado_aereo_guarda_la_pulsacion(self) -> None:
-        import inspect
+    def test_la_pulsacion_en_el_aire_sobrevive_al_fotograma(self) -> None:
+        """AUD-373 — antes esto buscaba `"_pending_jump = True"` en el fuente.
 
-        from src.framework.entities.states import airborne
+        Esa prueba se quedó **en verde** cuando el mecanismo desapareció, y
+        siguió en verde durante la migración entera: el código viejo quedó
+        citado en un comentario de `airborne.py` que explica adónde se fue, y
+        la subcadena estaba ahí. Un cable trampa que busca texto no comprueba
+        que el juego haga nada; comprueba que alguien escribió unas letras.
 
-        fuente = inspect.getsource(airborne)
-        assert "_pending_jump = True" in fuente, (
+        Esto sí ejercita comportamiento: se pulsa saltar y, tres fotogramas
+        después sin tocar nada, la pulsación sigue disponible.
+        """
+        from src.engine.input.action_map import DEFAULT_KEY_BINDINGS, Action
+        from src.engine.input.input_manager import InputManager
+
+        im = InputManager()
+        im.pump([pygame.event.Event(
+            pygame.KEYDOWN, key=DEFAULT_KEY_BINDINGS[Action.JUMP][0])])
+        for _ in range(3):
+            im.pump([])
+        assert im.pulsada_en_buffer(Action.JUMP), (
             "nadie guarda el salto pulsado en el aire: el buffer existiría "
             "sin que nada lo alimentase"
         )
@@ -169,35 +183,63 @@ class TestBufferDeSalto:
             jugador.update(1 / 60, suelo, None)
         assert jugador.is_grounded, "no llegó a aterrizar"
 
-        jugador._pending_jump = True
-        jugador._pending_jump_timer = 8 / 60
-        jugador.velocity.y = 0.0
-        jugador.update(1 / 60, suelo, None)
+        from src.engine.input.action_map import DEFAULT_KEY_BINDINGS, Action
+        from src.engine.input.input_manager import InputManager
+
+        im = InputManager()
+        jugador.is_grounded = False
+        jugador.position.y -= 4
+        im.pump([pygame.event.Event(
+            pygame.KEYDOWN, key=DEFAULT_KEY_BINDINGS[Action.JUMP][0])])
+        im.pump([pygame.event.Event(
+            pygame.KEYUP, key=DEFAULT_KEY_BINDINGS[Action.JUMP][0])])
+
+        for _ in range(6):
+            if jugador.velocity.y < 0 and jugador.is_grounded:
+                break
+            jugador.update(1 / 60, suelo, im)
+            im.pump([])
         assert jugador.velocity.y < 0, (
             "el salto guardado no se disparó al tocar suelo: el jugador que "
             "se adelanta un fotograma se queda sin saltar"
         )
-        assert jugador._pending_jump is False
+        assert not im.pulsada_en_buffer(Action.JUMP)
 
     def test_el_buffer_caduca(self) -> None:
         """Si no caducara, un salto pulsado hace tres segundos saldría solo
         al aterrizar, y el jugador no sabría por qué salta."""
         from src.framework.entities.player import Player
 
+        from src.engine.input.action_map import DEFAULT_KEY_BINDINGS, Action
+        from src.engine.input.input_manager import InputManager
+
+        im = InputManager()
         jugador = Player(pygame.Vector2(100, 100))
         jugador.is_grounded = False
-        jugador._pending_jump = True
-        jugador._pending_jump_timer = 8 / 60
+        im.pump([pygame.event.Event(
+            pygame.KEYDOWN, key=DEFAULT_KEY_BINDINGS[Action.JUMP][0])])
+        im.pump([pygame.event.Event(
+            pygame.KEYUP, key=DEFAULT_KEY_BINDINGS[Action.JUMP][0])])
         for _ in range(30):
-            jugador.update(1 / 60, [], None)
-        assert jugador._pending_jump is False
+            jugador.update(1 / 60, [], im)
+            im.pump([])
+        assert not im.pulsada_en_buffer(Action.JUMP)
 
     def test_la_ventana_ronda_los_130_milisegundos(self) -> None:
-        import inspect
+        """AUD-373 — antes buscaba `"8.0 / 60.0"` en el fuente de `airborne`.
 
-        from src.framework.entities.states import airborne
+        También se quedó en verde tras la migración, y por el mismo motivo:
+        la constante seguía citada en el comentario que explica dónde vive
+        ahora. La ventana se comprueba donde está declarada, y en la unidad en
+        la que se cuenta: fotogramas.
+        """
+        from src.engine.input.input_manager import InputManager
 
-        assert "8.0 / 60.0" in inspect.getsource(airborne)
+        ventana_ms = InputManager.VENTANA_DE_BUFFER / 60.0 * 1000.0
+        assert 100 <= ventana_ms <= 160, (
+            f"la ventana de buffer son {ventana_ms:.0f} ms; fuera de ese "
+            "rango deja de perdonar o empieza a saltar sola"
+        )
 
 
 class TestAnticipacion:
