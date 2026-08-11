@@ -331,6 +331,7 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── hit_effects.py             # HitEffects: burst configs per hit type
 │   │   │   ├── damage_numbers.py          # DamageNumberManager: floating damage text
 │   │   │   ├── post_processing.py         # PostProcessing: bloom, vignette, motion blur
+│   │   │   ├── pulso.py                   #   AUD-425: el pulso visual — cámara y luz al compás
 │   │   │   ├── lighting.py                # LightSystem: 2D dynamic lighting
 │   │   │   ├── ambient_particles.py       # AmbientParticleSystem: dust, leaves, embers
 │   │   │   ├── trail_system.py            # TrailSystem: motion trails
