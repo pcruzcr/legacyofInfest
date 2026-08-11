@@ -2933,3 +2933,85 @@ Y sigue faltando la **interpolación** al pintar: con el paso fijo, si el
 fotograma no cae justo sobre un paso, la posición dibujada es la del último
 paso y no la interpolada. A 60 fps con paso de 1/60 eso casi nunca ocurre, así
 que se deja fuera hasta que se note.
+
+---
+
+## 41. Dónde se retoma: las nueve que quedan, ordenadas por dependencia (2026-08-10)
+
+La sesión de hoy cerró ocho huecos —`036`, `037`, `043`, `044`, `045`, `046`,
+`050`, `052`— en veinte lotes, `AUD-374` a `AUD-390`. Esta sección existe para
+que retomar no dependa de acordarse de nada.
+
+### 41.1 El orden, y por qué es ése
+
+No es por tamaño ni por prioridad: es por **qué desbloquea a qué**. El criterio
+que lo generó fue una pregunta del dueño —«ordénalos de forma que se pueda
+trabajar en paralelo y que lo grande salga primero»— y produjo una corrección
+al plan anterior.
+
+**Corrección registrada:** `GAP-036` estaba planificado *el último*, «para no
+rehacer trabajo». Era al revés. Toca la integración física, y `038` (capas),
+`039` (materiales) y `040` (buffer, que cuenta en fotogramas) **son física**:
+construidos antes, habría habido que re-calibrarlos después. Se hizo primero
+(AUD-390) y por eso la ola siguiente ya puede escribirse una sola vez.
+
+### 41.2 Las tres olas que quedan
+
+**Ola 2 — tres frentes que no comparten ficheros. Pueden ir en paralelo.**
+
+| Frente | Huecos | Ficheros que toca |
+|---|---|---|
+| Física *(desbloqueado por AUD-390)* | `038` capas, `039` materiales, `040` buffer | `resolucion.py`, `collision_system.py`, `perfil.py`, `input_manager.py` |
+| Observabilidad | `049` memoria de textura y fugas | `gl_pipeline.py`, `debug_overlay.py` |
+| Datos e infraestructura | `048` `schema_version`, `041` pools e ids del ECS | `stage_loader.py`, `validate_tmx.py`, `world.py` |
+
+**Ola 3 — espera a que la ola 2 suelte sus ficheros.**
+
+* `042b` — aislar el azar en `ambient_particles`, `weather_system` y `camera`.
+  Va **antes** que `051`, porque `051` toca esos mismos módulos.
+* `051` — ambiente → sombras, audio y color grading. **No puede ir a la vez que
+  `049`**: los dos escriben en `gl_pipeline.py`, que son 1.081 líneas y donde
+  ya hubo un choque con otra sesión.
+
+**Ola 4 — contenido.** `047`, objetivos declarados en TMX. No depende de nada
+técnico.
+
+### 41.3 Lo que exige una máquina despejada
+
+`049` es medición de recursos y `038`/`039` cambian el camino de colisión, que
+es lo que miden las dos pruebas de presupuesto de fotograma. Con la máquina
+cargada esos números no valen.
+
+La comprobación previa, que ya está en la memoria del proyecto y merece estar
+aquí:
+
+    python -c "import time;t=time.perf_counter();x=0
+    for i in range(3_000_000): x+=i
+    print(f'{(time.perf_counter()-t)*1000:.0f} ms')"
+
+Máquina ociosa: **150-250 ms**. Al cerrar esta sesión marcaba **1.081**, o sea
+cinco veces más lenta, y con eso la suite completa pasó de 5:39 a 12:17 y las
+dos pruebas de milisegundos fallaron. **No se mide nada por encima de ~300 ms**,
+y por encima de ~500 conviene ni lanzar la suite completa: no cabe en el tope de
+diez minutos del entorno y hay que partirla en dos mitades.
+
+### 41.4 Lo que esta sesión enseñó sobre los propios huecos
+
+Tres de los cerrados hoy demostraron que **la entrada describía mal el
+problema**, y en los tres el problema real era peor y más barato de arreglar:
+
+* `GAP-037` decía «cablear la rejilla al camino de colisión». Medido, ahorraba
+  0,011 ms de 16,67 — y su premisa era falsa: `stage4_1` no trae «miles de
+  rectángulos», trae **51**.
+* `GAP-046` decía «la percepción vive en código de escenario». Falso: es un
+  componente del ECS desde hace tiempo. Debajo había guardias que **veían a
+  través de las paredes**.
+* `GAP-036` decía «falta el paso fijo, y re-calibrar los 72 px es caro». Debajo
+  había que **la física dependía de los FPS de la máquina**, y la re-calibración
+  no hizo falta.
+
+El patrón: los huecos se escribieron **desde fuera**, mirando qué falta. Los
+defectos aparecen **al entrar**, mirando qué hace el código. Por eso los lotes
+que empiezan midiendo salen mejor que los que empiezan construyendo, y por eso
+§36.3 —«un "no existe X" se sostiene con una búsqueda; un "X vale N" o "X está
+en tal sitio", no»— es la regla más rentable de las que salieron hoy.
