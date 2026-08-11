@@ -357,7 +357,23 @@ class App:
 
             frame_failed = False
             try:
-                self.scene_manager.update(dt)
+                # AUD-390 — la simulación avanza en pasos de tamaño fijo, no
+                # con el `dt` del fotograma. Antes, la física dependía de los
+                # FPS de la máquina: el mismo salto medía 87 px a 60 fps y 81
+                # con un tirón, y los dieciséis mapas están diseñados contra
+                # los 72 px que se alcanzan a 60. Un obstáculo ajustado al
+                # límite era franqueable o no según el equipo.
+                #
+                # A 60 fps esto da un paso por fotograma del mismo tamaño que
+                # antes, así que no cambia nada de lo que ya funcionaba; lo que
+                # cambia es que un fotograma lento se reparte en varios pasos
+                # en vez de integrarse de una vez.
+                for paso in self.clock.pasos_fijos():
+                    self.scene_manager.update(paso)
+                # Las transiciones van con el tiempo del fotograma y **no** en
+                # pasos fijos: son presentación, no simulación. Trocearlas no
+                # las haría más correctas y sí las dejaría a cero en un
+                # fotograma rápido, que es un parpadeo visible.
                 self.scene_manager.transition.update(dt)
             except FrameworkUsageError as exc:
                 # AUD-055: un mapa mal formado no es un fallo del motor, es un
