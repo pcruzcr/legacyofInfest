@@ -421,9 +421,22 @@ def main() -> int:
     passed = 0
     failed = 0
 
+    # AUD-391 — el recuento acumulado, y por qué no basta con `_errors`.
+    #
+    # `_errors` es de módulo y `validate_tmx()` la vacía al entrar a cada
+    # fichero, así que al salir del bucle contiene los errores del **último
+    # mapa**, no los de la ejecución. `--ci` la leía para decidir el código de
+    # salida: un fallo en el primer mapa y un último mapa limpio imprimían
+    # «1/2 FAILED» y devolvían 0. El gate de TMX de CI no podía ponerse rojo.
+    con_errores = 0
+    hubo_avisos = False
+
     print(f"Validating {total} TMX file(s)...\n")
     for tmx in sorted(tmx_files):
         ok = validate_tmx(tmx)
+        if _errors:
+            con_errores += 1
+        hubo_avisos = hubo_avisos or bool(_warnings)
         rel = display_path(tmx, _PROJECT_ROOT)
         # Use ASCII-safe markers
         if ok and not _errors and not _warnings:
@@ -443,7 +456,7 @@ def main() -> int:
             failed += 1
 
     print(f"\n{'='*40}")
-    print(f"  {passed}/{total} passed{' with warnings' if _warnings else ''}")
+    print(f"  {passed}/{total} passed{' with warnings' if hubo_avisos else ''}")
     if failed:
         print(f"  {failed}/{total} FAILED")
     if args.fix:
@@ -454,8 +467,11 @@ def main() -> int:
         print("  4. Verify tile counts match width*height")
         print("  5. Use known prefixes for layer names")
 
+    # `--ci` significa «no suspendas por avisos», y eso lo decide ya
+    # `validate_tmx()`, que sólo devuelve False cuando hubo errores. La
+    # diferencia entre las dos ramas es de intención, no de resultado.
     if args.ci:
-        return 1 if _errors else 0
+        return 1 if con_errores else 0
     return 1 if failed else 0
 
 
