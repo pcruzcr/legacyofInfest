@@ -803,18 +803,25 @@ class Player(BaseEntity):
             # semántica de plataformas y sin gravedad no hay «en el aire».
             self.is_grounded = True
 
-        # Decay pending jump timer so the buffer only lasts ~5 frames
-        if self._pending_jump:
-            self._pending_jump_timer -= dt
-            if self._pending_jump_timer <= 0:
-                self._pending_jump = False
-
-        # Buffered jump: fires only if the buffer hasn't expired
-        if self._pending_jump and self.is_grounded:
-            self._pending_jump = False
-            self._pending_jump_timer = 0.0
-            from src.framework.entities.states import _do_jump
-            _do_jump(self)
+        # AUD-373 — el salto con buffer. La ventana ya no se lleva aquí.
+        #
+        # Esto era `_pending_jump` + su temporizador, armados a mano desde
+        # `AirborneState` y decrementados en esta misma función: el único
+        # buffer del juego, para la única acción que lo tenía (GAP-040). Ahora
+        # la ventana la cuenta `InputManager` para **todas** las acciones, y
+        # aquí sólo queda la pregunta que le corresponde al jugador: ¿estoy en
+        # el suelo y había un salto pendiente?
+        #
+        # No hace falta comprobar que el salto no salga dos veces: si el
+        # estado ya saltó este fotograma, `_do_jump` dejó `is_grounded` en
+        # False y esta condición no se cumple. Aun así se consume la
+        # pulsación, porque quien ejecuta una acción es quien la gasta.
+        if input_manager is not None and self.is_grounded:
+            from src.engine.input.action_map import Action
+            if input_manager.pulsada_en_buffer(Action.JUMP):
+                input_manager.consumir_buffer(Action.JUMP)
+                from src.framework.entities.states import _do_jump
+                _do_jump(self)
 
         # Sync rect position to final resolved position
         self.rect.x = int(self.position.x)

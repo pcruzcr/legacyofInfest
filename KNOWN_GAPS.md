@@ -1240,7 +1240,7 @@ está.
   `friccion`/`restitucion` leído del tileset, consumido por `resolver_eje_y`.
   Sin fecha; no lo pide ningún nivel existente.
 
-## [GAP-040] El buffer de entrada existe sólo para el salto, y vive en el jugador
+## ~~[GAP-040] El buffer de entrada existe sólo para el salto, y vive en el jugador~~ *(Resuelto)*
 
 - **File:** `src/framework/entities/player.py`
 - **Phase:** auditoría 2026-08-10, lista del dueño (AUD-376)
@@ -1253,6 +1253,33 @@ está.
 - **Resolution plan:** Subir el buffer a `InputManager` como ventana por
   acción, dejando el salto llamando a la primitiva nueva. Reservado
   **AUD-373**. Barato y sin riesgo para la calibración: no toca la integración.
+
+- **Resolution (2026-08-11, AUD-373):** hecho tal como decía el plan, y sin
+  mover la calibración: las siete pruebas de `test_calibracion_del_salto.py`
+  —las que miden cuántas baldosas se cruzan— pasan sin tocarlas.
+  `InputManager.pulsada_en_buffer(accion, ventana)` y `consumir_buffer(accion)`
+  cuentan en **fotogramas** de `pump()` y no en segundos: el buffer es una
+  concesión al tiempo de reacción humano, y desde AUD-390 la simulación avanza
+  a paso fijo, así que contar fotogramas es determinista. La ventana por
+  defecto son los 8 fotogramas (~133 ms) que ya usaba el salto, conservados
+  para no re-calibrar de paso algo que estaba ajustado.
+  Consumidores: el salto —que deja de tener mecanismo propio; `pending_jump` y
+  `pending_jump_timer` salen de `PlayerStateData`, y `AirborneState` ya no
+  arma nada a mano— y el dash, que es lo que el hueco pedía. El dash usa un
+  campo aparte del snapshot (`dash_en_buffer`) y sólo en los estados de suelo:
+  meterlo en `dash_pressed` habría cambiado también el dash en el aire, y lo
+  que se describe es el que se pierde **al aterrizar**.
+  Sin cerrar, y dicho aquí en vez de fingir que estaba en el alcance: **la
+  prioridad entre acciones que caen en el mismo fotograma** sigue sin existir.
+  No apareció ningún caso real al medir —el orden de los `if` de cada estado ya
+  la impone de hecho— y sin un caso que la pida sería un mecanismo sin
+  consumidor.
+  Efecto colateral que merece constar: al migrar, dos pruebas de
+  `test_sensacion_y_camara.py` que comprobaban el buffer buscando subcadenas en
+  el fuente (`"_pending_jump = True"`, `"8.0 / 60.0"`) **siguieron en verde**
+  con el mecanismo ya retirado, porque el código viejo quedó citado en el
+  comentario que explica adónde se fue. Las dos se reescribieron para ejercitar
+  comportamiento.
 
 ## ~~[GAP-041] El ECS no recicla identificadores, no agrupa componentes y no serializa~~ *(Resuelto — la premisa era falsa; se mide y se cierra sin tocar el ECS)*
 

@@ -44,9 +44,16 @@ class AirborneState(PlayerStateBase):
         if _handle_wall_jump(player, inp):
             return
 
-        if inp.jump_pressed:
-            player._pending_jump = True
-            player._pending_jump_timer = 8.0 / 60.0
+        # AUD-373 — aquí se armaba el buffer del salto a mano:
+        #
+        #     if inp.jump_pressed:
+        #         player._pending_jump = True
+        #         player._pending_jump_timer = 8.0 / 60.0
+        #
+        # Ya no hace falta. `InputManager` sella cada pulsación al recibirla,
+        # así que la de saltar sigue estando disponible unos fotogramas sin que
+        # ningún estado tenga que acordarse de guardarla — que es justo lo que
+        # ninguno hacía para el dash ni para el ataque (GAP-040).
 
         if inp.move_x != 0:
             player.velocity.x = float(inp.move_x) * player.walk_speed * 0.5

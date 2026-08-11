@@ -50,7 +50,13 @@ class IdleState(PlayerStateBase):
         if _handle_grounded_attack_input(player, inp):
             return
 
-        if inp.dash_pressed and _can_dash(player, inp):
+        # AUD-373 — el dash también se perdona (GAP-040). Pulsarlo un fotograma
+        # antes de tocar el suelo lo tiraba: el estado aéreo lo veía, `_can_dash`
+        # decía que no, y ahí moría la pulsación. El salto llevaba años con
+        # este perdón y ninguna otra acción lo tenía.
+        from src.engine.input.action_map import Action
+        if (inp.dash_pressed or inp.dash_en_buffer) and _can_dash(player, inp):
+            inp.consumir(Action.DASH)
             from src.framework.entities.states import DashingState
             player._change_state_instance(DashingState())
             return
@@ -116,7 +122,13 @@ class WalkingState(PlayerStateBase):
         if _handle_grounded_attack_input(player, inp):
             return
 
-        if inp.dash_pressed and _can_dash(player, inp):
+        # AUD-373 — el dash también se perdona (GAP-040). Pulsarlo un fotograma
+        # antes de tocar el suelo lo tiraba: el estado aéreo lo veía, `_can_dash`
+        # decía que no, y ahí moría la pulsación. El salto llevaba años con
+        # este perdón y ninguna otra acción lo tenía.
+        from src.engine.input.action_map import Action
+        if (inp.dash_pressed or inp.dash_en_buffer) and _can_dash(player, inp):
+            inp.consumir(Action.DASH)
             from src.framework.entities.states import DashingState
             player._change_state_instance(DashingState())
             return
@@ -182,7 +194,13 @@ class CrouchingState(PlayerStateBase):
         if _handle_grounded_attack_input(player, inp):
             return
 
-        if inp.dash_pressed and _can_dash(player, inp):
+        # AUD-373 — el dash también se perdona (GAP-040). Pulsarlo un fotograma
+        # antes de tocar el suelo lo tiraba: el estado aéreo lo veía, `_can_dash`
+        # decía que no, y ahí moría la pulsación. El salto llevaba años con
+        # este perdón y ninguna otra acción lo tenía.
+        from src.engine.input.action_map import Action
+        if (inp.dash_pressed or inp.dash_en_buffer) and _can_dash(player, inp):
+            inp.consumir(Action.DASH)
             from src.framework.entities.states import DashingState
             player._change_state_instance(DashingState())
             return

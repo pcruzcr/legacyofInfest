@@ -157,13 +157,32 @@ def test_jump_cut_halves_velocity_on_release() -> None:
     assert player.velocity.y == pytest.approx(-150.0)
 
 
-def test_jump_buffering_sets_pending_jump() -> None:
-    player = _make_player()
-    player.is_grounded = False
-    player._pending_jump = True
-    player._pending_jump_timer = 8.0 / 60.0
-    assert player._pending_jump
-    assert player._pending_jump_timer > 0
+def _input_con_salto_pulsado():
+    """Un `InputManager` que acaba de recibir un salto y ya lo soltó.
+
+    AUD-373 — antes estas dos pruebas escribían `player._pending_jump = True`
+    a mano. Ese atributo ya no existe: el buffer vive en `InputManager` y sirve
+    a todas las acciones, no sólo al salto (GAP-040). Escribir el estado
+    interno a mano además hacía que la primera de ellas no comprobara nada —
+    ponía un valor y afirmaba que estaba puesto.
+    """
+    from src.engine.input.action_map import DEFAULT_KEY_BINDINGS, Action
+    from src.engine.input.input_manager import InputManager
+
+    im = InputManager()
+    tecla = DEFAULT_KEY_BINDINGS[Action.JUMP][0]
+    im.pump([pygame.event.Event(pygame.KEYDOWN, key=tecla)])
+    im.pump([pygame.event.Event(pygame.KEYUP, key=tecla)])
+    return im
+
+
+def test_jump_buffering_keeps_the_press_alive() -> None:
+    from src.engine.input.action_map import Action
+
+    im = _input_con_salto_pulsado()
+    for _ in range(3):
+        im.pump([])
+    assert im.pulsada_en_buffer(Action.JUMP)
 
 
 def test_buffered_jump_fires_on_landing() -> None:
@@ -171,13 +190,13 @@ def test_buffered_jump_fires_on_landing() -> None:
     floor = _make_floor_rect(200.0)
     player.is_grounded = False
     player.velocity.y = 200.0
-    player._pending_jump = True
-    player._pending_jump_timer = 8.0 / 60.0
+    im = _input_con_salto_pulsado()
     dt = 1.0 / 60.0
     for _ in range(120):
-        player.update(dt, floor)
+        player.update(dt, floor, im)
         if player.velocity.y == settings.PLAYER_JUMP_FORCE:
             break
+        im.pump([])
     assert player.velocity.y == settings.PLAYER_JUMP_FORCE
 
 
