@@ -1696,7 +1696,7 @@ está.
   depuración, no en pantalla durante la partida. Es trabajo de interfaz y va
   aparte.
 
-## [GAP-048] Sin streaming de niveles ni versionado de mapas
+## ~~[GAP-048] Sin streaming de niveles ni versionado de mapas~~ *(Resuelto — el versionado hecho, el streaming descartado por medición)*
 
 - **File:** `src/framework/stage/stage_loader.py`
 - **Phase:** auditoría 2026-08-10, lista del dueño (AUD-376)
@@ -1735,6 +1735,27 @@ está.
   fallo que esta entrada quería detectar con el versionado.
   Cable trampa: `tests/test_version_de_esquema_del_mapa.py`, verificado por
   mutación —desconectar la llamada en `load()` pone dos pruebas en rojo—.
+
+- **Resolution (2026-08-11, AUD-423): la otra mitad se cierra sin construirla,
+  y con la medición delante.** El propio plan de arriba ya lo decía —«el
+  streaming no, hasta que un mapa no quepa»—; lo que faltaba era comprobar que
+  ninguno se acerca. Medido sobre los diecisiete:
+
+  | | |
+  |---|---|
+  | Mapa mayor (`stage4_1`) | **191 KiB**, 60×240 tiles |
+  | Segundo (`stage1_1`) | 146 KiB |
+  | Los diecisiete juntos | **1.183 KiB** |
+
+  Todos los mapas del juego caben a la vez en poco más de un megabyte, así que
+  cortar por salas y cargar por proximidad no ahorraría memoria que a nadie le
+  falte y a cambio metería un sistema de carga asíncrona en el camino que hoy
+  es un `load()` y ya está. Es optimización sin medición que la respalde, que
+  es justo lo que este repositorio no hace (AUD-329, AUD-330).
+
+  **Cuándo reabrirlo:** el día que un mapa no quepa o que cargar uno se note al
+  entrar. Hoy entrar en un escenario cuesta 41–134 ms medidos (AUD-288), que es
+  por debajo de lo que una pantalla de carga tarda en dejar de parpadear.
 
 - **El streaming sigue sin hacerse, y ahora con la medición delante
   (2026-08-11).** El plan decía «hasta que un mapa no quepa». Medido: el mapa
