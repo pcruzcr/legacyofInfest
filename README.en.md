@@ -37,13 +37,13 @@ Built on the State pattern, the Strategy pattern and dependency injection:
   `AERIAL_SLAM` `AIR_CHASE` `CHARGE_RELEASE`
 - **Stages** — TMX loading with pyscroll rendering, collision layers,
   checkpoints, hazards, death pits, camera locks and parallax backgrounds.
-  62 object types accepted from Tiled
+  69 object types accepted from Tiled
 - **Enemies** — 30 registered types over eight archetypes (walker, flier,
   shooter, archer, charger, brute, caster, assassin) with a 13-state machine
 - **Bosses** — phases, telegraphing, weak points, parry, summons and
   arena bounds
 - **ECS** — components and systems underneath the existing inheritance, so the
-  26 student stage classes keep working unchanged
+  student stage classes keep working unchanged
 - **Effects** — particles, weather (rain/snow/fog/storm), damage numbers,
   trails, screen shake, post-processing and dynamic lighting
 - **Audio** — dynamic music system and a pydub pipeline with caching
