@@ -1612,6 +1612,23 @@ está.
   y son decisión de diseño. `fog_of_war`, `profundidad_min` y
   `profundidad_max` esperan a un mapa que las pida.
 
+- **Avance (2026-08-10, AUD-383):** cuatro más, de 10 a 6. `stage_cenital` —el
+  laboratorio de la vista de arriba— declara `vista`, `camara`,
+  `profundidad_min` y `profundidad_max`, que no declaraba ningún mapa.
+
+  Era el hueco más grande de los diecisiete: un **modo de juego entero** que el
+  motor sabía hacer desde AUD-129 —sin gravedad, dos ejes, tres modos de
+  cámara, con su preset de física y sus pruebas— y que ningún estudiante podía
+  descubrir. Tres salas, una por modo de cámara, sin enemigos y sin lógica en
+  la clase: todo vive en el TMX, así que se copia sin escribir Python. Lo
+  genera `tools/generate_stage_cenital.py`.
+
+  Quedan **seis**, y las seis son decisión de diseño o de coste, no de
+  cableado: `estamina`, `tiempo_bala` y `habilidades_libres` cambian cómo se
+  juega el mapa donde se pongan; `sombras_proyectadas` y `god_rays` cuestan, y
+  la primera tiene medición detrás (≤4-5 focos), así que encenderlas exige
+  elegir el mapa mirando sus focos; `fog_of_war` espera a un mapa que la pida.
+
 - **Resolution plan:** Es del dueño, no de ingeniería: decidir cuáles merecen
   aparecer en un mapa —empezando por el de referencia, que es el que los
   estudiantes copian— y cuáles se quedan como opcionales documentadas. Cuando

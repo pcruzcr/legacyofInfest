@@ -92,6 +92,16 @@ class TestComoLaLeeElMapa:
         assert por_nombre["profundidad_min"] == pytest.approx(1.0)
         assert por_nombre["profundidad_max"] == pytest.approx(1.0)
 
+    #: AUD-383 — el laboratorio de la vista cenital sí las declara, y ése es su
+    #: trabajo: era una de las cuatro propiedades que ningún mapa demostraba
+    #: (GAP-052), y una característica que ningún mapa declara no la descubre
+    #: ningún estudiante. Se exceptúa por nombre y no relajando la prueba,
+    #: porque lo que ésta vigila sigue importando: que **el contenido que ya
+    #: existía** no cambie de aspecto por haber añadido la propiedad.
+    LABORATORIOS_QUE_LAS_DEMUESTRAN: frozenset[str] = frozenset({
+        "stage_cenital.tmx",
+    })
+
     def test_ningun_mapa_entregado_las_declara(self) -> None:
         from pathlib import Path
 
@@ -101,7 +111,26 @@ class TestComoLaLeeElMapa:
             if 'name="profundidad_min"' in p.read_text(encoding="utf-8",
                                                        errors="replace")
         ]
-        assert not con_prop, f"ya la usaban: {con_prop}"
+        inesperados = sorted(set(con_prop) - self.LABORATORIOS_QUE_LAS_DEMUESTRAN)
+        assert not inesperados, f"ya la usaban: {inesperados}"
+
+    def test_el_laboratorio_cenital_las_declara(self) -> None:
+        """El otro sentido: la excepción no puede quedarse vacía en silencio.
+
+        Si alguien borra la propiedad del laboratorio, la prueba de arriba
+        seguiría en verde —no habría mapas inesperados— y la característica
+        volvería a no estar demostrada en ninguna parte, que es el estado del
+        que AUD-383 la sacó.
+        """
+        from pathlib import Path
+
+        raiz = Path(__file__).resolve().parents[1]
+        cenital = raiz / "assets" / "maps" / "stage_cenital" / "stage_cenital.tmx"
+        assert 'name="profundidad_min"' in cenital.read_text(
+            encoding="utf-8", errors="replace"), (
+            "el laboratorio cenital dejó de declarar `profundidad_min`: "
+            "ningún mapa la demuestra otra vez"
+        )
 
 
 class TestElDibujadoLaUsa:

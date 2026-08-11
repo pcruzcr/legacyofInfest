@@ -180,7 +180,7 @@ sin ellas el nivel no valida y pierde 10 puntos de rúbrica.
 | `time_limit` | int | `0` | segundos; `0` = sin límite |
 | `gravity_multiplier` | float | `1.0` | `0.5` = lunar, `1.5` = pesado |
 | `zone` | int | `0` | zona del mundo; decide paleta y bestiario por defecto |
-| `vista` | string | `lateral` | `lateral` o `cenital`. Cenital apaga la gravedad, da movimiento en dos ejes y **ignora las plataformas de un solo sentido** — desde arriba son muros invisibles |
+| `vista` | string | `lateral` | `lateral` o `cenital`. Cenital apaga la gravedad, da movimiento en dos ejes y **ignora las plataformas de un solo sentido** — desde arriba son muros invisibles. Hay un mapa que lo demuestra: `stage_cenital`, tres salas y una por modo de cámara (AUD-383) |
 | `background_zone` | string | — | carga `assets/backgrounds/bg_<zona>_{far,mid,near}.png` |
 | `camara` | string | `seguir` | `seguir`, `zona_muerta` o `sala` (§1.1) |
 | `estamina` | float | `0` | máximo del medidor. **`0` = apagado.** Con `100`, cuatro dashes seguidos y una pausa de 0,6 s antes de recuperar |
