@@ -34,12 +34,15 @@ MAPS_DIR = _PROJECT_ROOT / "assets" / "maps"
 #: entrega. Es justo el fichero donde un fallo se multiplica por veintiséis: se
 #: copia antes de que nadie lo haya ejecutado.
 PLANTILLAS_DIR = _PROJECT_ROOT / "student_templates"
-KNOWN_TILESETS = ["tileset_stage0", "tileset_zone1", "tileset_zone2", "tileset_zone3"]
-KNOWN_TMX_PROPERTIES = {
-    "stage_id", "stage_name", "bgm_track", "time_limit",
-    "climate", "background_zone", "gravity_multiplier",
-}
 KNOWN_CLIMATES = {"rain", "fog", "wind", "snow", "clear", "storm", "sandstorm"}
+
+#: AUD-392 — propiedades que nadie lee y que **no** son erratas.
+#:
+#: `author` la declaran diez mapas y no la consume ningún código: es metadato
+#: para quien abre el fichero en Tiled. Sin esta excepción el aviso nuevo
+#: señalaría diez mapas sanos, y un validador que avisa de lo correcto se
+#: ignora entero.
+METADATOS_DE_MAPA = {"author"}
 KNOWN_LAYER_PREFIXES = {"BG_", "Terrain", "Collision", "Objects", "FG_"}
 REQUIRED_MAP_PROPS = ["stage_id", "stage_name", "bgm_track"]
 
@@ -55,6 +58,34 @@ def _loader_required_layers() -> list[str]:
     from src.framework.stage.stage_loader import REQUIRED_LAYERS as LOADER_LAYERS
 
     return list(LOADER_LAYERS)
+
+
+def _propiedades_de_mapa_conocidas() -> set[str]:
+    """El inventario de propiedades de mapa, tomado de donde ya se mantiene.
+
+    AUD-392 — la lista muerta, y por qué no se escribe otra
+    -------------------------------------------------------
+    Aquí había un `KNOWN_TMX_PROPERTIES` con siete nombres que **no usaba
+    nadie**: se declaraba y se quedaba ahí. Mientras tanto `StageLoader` pasó a
+    leer cuarenta. Conectarla tal cual habría avisado en falso sobre `bloom`,
+    `season`, `water_effect` y treinta más, que es seguramente por lo que nunca
+    se conectó.
+
+    El inventario bueno ya existe: `check_tmx_coverage.PROPIEDADES_DEL_MOTOR`,
+    que `test_el_guardian_de_tmx_lo_mira_todo.py` contrasta **en los dos
+    sentidos** contra el AST de `stage_loader.py` (AUD-378). Se importa en vez
+    de copiarse, porque una segunda lista a mano se desincroniza igual que la
+    primera — que es el defecto que este lote arregla, no uno que repetir.
+
+    Mismo criterio que `_loader_required_layers()` unas líneas más abajo: el
+    validador no declara el contrato, lo lee de quien lo define.
+    """
+    from scripts.check_tmx_coverage import (
+        ALIAS_DE_PROPIEDAD,
+        PROPIEDADES_DEL_MOTOR,
+    )
+
+    return {*PROPIEDADES_DEL_MOTOR, *ALIAS_DE_PROPIEDAD, *METADATOS_DE_MAPA}
 
 
 def _tipos_registrados_por_el_estudiante(tmx: Path) -> set[str]:
@@ -232,6 +263,27 @@ def validate_tmx(path: Path) -> bool:
             error(f"Missing required map property: '{req}'")
     if "climate" in prop_dict and prop_dict["climate"] not in KNOWN_CLIMATES:
         warn(f"Unknown climate '{prop_dict['climate']}', known: {sorted(KNOWN_CLIMATES)}")
+
+    # AUD-392 — la errata silenciosa. `gravty_multiplier` pasaba en verde: el
+    # cargador no la encuentra, aplica el valor por defecto, y el nivel se juega
+    # con la gravedad equivocada sin que nada lo diga.
+    #
+    # Avisa y no suspende a propósito: una propiedad que el motor no lee puede
+    # ser perfectamente legítima —un estudiante que declara la suya en el TMX y
+    # la lee desde su propia `StageScene`—. Suspender por eso sería AUD-106 otra
+    # vez, el validador reprobando a quien usa bien el framework.
+    from src.framework.stage.tmx_diagnostics import suggest_types
+
+    conocidas = _propiedades_de_mapa_conocidas()
+    for nombre in sorted(prop_dict):
+        if not nombre or nombre in conocidas:
+            continue
+        parecidas = suggest_types(nombre, sorted(conocidas))
+        pista = f" ¿Quisiste decir {' o '.join(parecidas)}?" if parecidas else ""
+        warn(
+            f"propiedad de mapa '{nombre}': el motor no la lee, así que no hace "
+            f"nada.{pista}"
+        )
 
     layers = root.findall("layer")
     object_group_names = [og.get("name", "") for og in root.findall("objectgroup")]
