@@ -259,7 +259,12 @@ class AudioManager:
                 self._ambient_channel = new_channel
                 self._ambient_volume = volume
                 self._ambient_active = True
-        except pygame.error as e:
+        # AUD-411 — la misma red que `play_ambient` (línea ~217): `Sound` con
+        # un `.wav` que se borró o se volvió ilegible lanza
+        # `FileNotFoundError`/`OSError`, no `pygame.error`. La gemela lo
+        # capturaba y degradaba con un aviso; ésta dejaba escapar el fallo a
+        # la transición de escena.
+        except (pygame.error, FileNotFoundError, OSError) as e:
             logger.warning("AudioManager: no se pudo crossfade audio ambiental: %s", e)
             self._ambient_active = False
 

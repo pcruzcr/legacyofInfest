@@ -412,6 +412,41 @@ class TestElGestorDeAudioLosUsa:
         assert llamadas
         assert llamadas[0] == pytest.approx(0.5 * 0.5 * 0.8, abs=0.001)
 
+    def test_un_ambiente_que_falta_no_tumba_el_crossfade(self, monkeypatch) -> None:
+        """AUD-411 — `crossfade_ambient` capturaba menos que `play_ambient`.
+
+        Las dos cargan un `.wav` del disco con `pygame.mixer.Sound`; la
+        primera captura `pygame.error, FileNotFoundError, OSError` y degrada
+        con un aviso, la segunda sólo `pygame.error`. Un fichero que se borra
+        o se vuelve ilegible entre el `exists()` del llamador y la carga
+        —ventana TOCTOU, o una instalación en medio de solo lectura— lanzaba
+        fuera del método y la transición de escena terminaba en la pantalla
+        de error. Degradar o lanzar es una decisión, pero no puede ser
+        distinta en dos métodos hermanos que hacen lo mismo.
+        """
+        import pygame
+
+        from src.engine.audio.audio_manager import AudioManager
+
+        if pygame.mixer.get_init() is None:
+            try:
+                pygame.mixer.init()
+            except pygame.error as exc:  # sin dispositivo de audio: se salta
+                pytest.skip(f"sin mezclador disponible: {exc}")
+
+        audio = AudioManager()
+
+        def _rota(*args, **kwargs):
+            raise FileNotFoundError("el ambiente desapareció del disco")
+
+        monkeypatch.setattr(pygame.mixer, "Sound", _rota)
+
+        audio.crossfade_ambient("assets/audio/ambiente/inexistente.wav")
+
+        assert not audio._ambient_active, (
+            "el ambiente roto quedó marcado como activo: el audio miente"
+        )
+
     def test_hablar_agacha_la_musica(self) -> None:
         audio = self._audio()
         audio.play_voz("sfx_ui_menu_confirm")
