@@ -3217,3 +3217,61 @@ Gates ejecutados en verde tras el lote: `validate_tmx.py --ci`,
 pruebas de `test_student_guidance` / `test_teaching_tools` /
 `test_puertas_de_calidad` / `test_pendientes_en_plantillas` /
 `test_tmx_validator`.
+
+---
+
+## 45. `GAP-041`: el hueco contra el docstring, y quién tenía razón (AUD-394)
+
+Éste se cierra **sin tocar una línea del ECS**, y merece contarse porque es el
+primero de la fase donde el hueco y el código se contradicen a la cara.
+
+El plan de `GAP-041` decía «reciclar ids es media hora y no rompe nada».
+`world.py:70` dice, como invariante declarada:
+
+> Un identificador **nunca se reutiliza**. Reciclarlos ahorra memoria y produce
+> el peor error de esta arquitectura: un sistema guarda el id 7, el 7 muere,
+> nace otro 7 distinto y el sistema opera sobre el nuevo creyendo que es el
+> viejo.
+
+Los dos no pueden tener razón. La instrucción del dueño fue medir antes de
+elegir bando.
+
+### 45.1 La medición
+
+Tres motivos independientes, y basta uno:
+
+| # | Hecho | Cómo se comprobó |
+|---|---|---|
+| 1 | Las balas **no entran** al mundo de la escena | `adoptar_en` tiene dos llamantes, los dos en `_poblar_mundo_ecs` |
+| 2 | El contador **se reinicia** en cada montaje | `_poblar_mundo_ecs` hace `self._mundo = World()` |
+| 3 | El consumo por montaje es de **37 ids** en el peor mapa | los 17 mapas cargados y contados |
+
+El punto 1 es el que tumba el hueco entero. Un `Projectile` no consume un id
+del mundo de la escena: nace en el mundo **privado** que cada `BaseEntity` se
+construye en `bridge.py:66`, donde su identificador es siempre 1. El hueco
+imaginaba un ECS con una cola de balas dentro; lo que hay es un ECS que las
+balas nunca pisan.
+
+A 37 ids por montaje, agotar los enteros pequeños de CPython pediría unos 29
+millones de cargas de escenario.
+
+### 45.2 Por qué el cierre lleva pruebas si no hay código nuevo
+
+Porque las tres condiciones que sostienen el cierre se pueden romper sin
+querer, y una de ellas es **tentadora**: el día que se quiera que el viento
+empuje a los proyectiles —que es una petición razonable y que ya se hizo una
+vez para los enemigos, según el propio comentario de `_poblar_mundo_ecs`—, la
+forma obvia de conseguirlo es llamar a `adoptar_en` en runtime. Ahí `GAP-041`
+pasaría de premisa falsa a problema real sin que nadie lo note.
+
+`tests/test_los_ids_del_ecs_no_crecen.py` lo convierte en una prueba roja en
+vez de en una nota de hace seis meses. Es la diferencia entre cerrar un hueco y
+archivarlo.
+
+### 45.3 La regla que sale de aquí
+
+Un hueco y un comentario del código que se contradicen **no se resuelven
+leyendo con más atención**: se resuelven midiendo. Y la precedencia de
+`CLAUDE.md` §5 ya lo decía —«el código y las pruebas que pasan» van primero—,
+sólo que aquí el código no afirmaba un valor sino una intención, y una
+intención sí se puede comprobar contando llamantes.

@@ -1254,7 +1254,7 @@ está.
   acción, dejando el salto llamando a la primitiva nueva. Reservado
   **AUD-373**. Barato y sin riesgo para la calibración: no toca la integración.
 
-## [GAP-041] El ECS no recicla identificadores, no agrupa componentes y no serializa
+## ~~[GAP-041] El ECS no recicla identificadores, no agrupa componentes y no serializa~~ *(Resuelto — la premisa era falsa; se mide y se cierra sin tocar el ECS)*
 
 - **File:** `src/framework/ecs/world.py`
 - **Phase:** auditoría 2026-08-10, lista del dueño (AUD-376)
@@ -1269,6 +1269,36 @@ está.
   que lo habría dolido. Reciclar ids es media hora y no rompe nada; los pools y
   los arquetipos son optimización sin medición que la respalde, y este repo no
   optimiza sin medir antes (AUD-329, AUD-330).
+
+- **Resolution (2026-08-11, AUD-394): la premisa no se sostiene, y el ECS no
+  se toca.** El plan decía «reciclar ids es media hora y no rompe nada».
+  `world.py:70` dice lo contrario y como decisión deliberada: *«un
+  identificador nunca se reutiliza […] reciclarlos produce el peor error de
+  esta arquitectura»* —el id colgante—. Uno de los dos estaba mal. Medido, el
+  hueco, por tres motivos independientes de los que basta uno:
+  1. **Las balas no entran al mundo de la escena.** `adoptar_en` es la única
+     puerta a ese mundo y se llama desde exactamente dos sitios, los dos
+     dentro de `_poblar_mundo_ecs`, al montar. Ninguno en runtime. Un
+     `Projectile` vive en el mundo **privado** que cada `BaseEntity` construye
+     para sí (`bridge.py:66`), donde su id es siempre 1.
+  2. **El contador se reinicia en cada montaje**: `_poblar_mundo_ecs` hace
+     `self._mundo = World()`, así que no acumula ni entre respawns.
+  3. **El consumo por montaje es diminuto**: medido sobre los 17 mapas, 37 ids
+     en el peor (`stage_mecanicas`) y 1 en el más vacío.
+
+  A 37 por montaje, agotar los enteros pequeños de CPython pediría del orden de
+  29 millones de cargas de escenario. Los pools y los arquetipos siguen siendo
+  optimización sin medición que la respalde, que es lo que el propio plan ya
+  decía; la serialización del mundo no la pide nada hoy y, si se pide, es un
+  hueco nuevo y con otro nombre.
+
+  No se cambia una línea de `world.py`: lo que faltaba no era código, era la
+  medición que respalda la decisión que ya estaba tomada. Lo que sí se añade es
+  `tests/test_los_ids_del_ecs_no_crecen.py` (20 pruebas), que fija las **tres
+  condiciones** de arriba — sobre todo la primera, porque el día que alguien
+  quiera que el viento empuje a los proyectiles, `adoptar_en` en runtime es la
+  forma obvia de conseguirlo y ahí sí empezaría el crecimiento que el hueco
+  describía.
 
 ## [GAP-042] No hay determinismo reproducible
 
