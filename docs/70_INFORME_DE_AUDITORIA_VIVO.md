@@ -2022,3 +2022,24 @@ vez de los 372 s habituales (la máquina estaba saturada con otras sesiones) y
 el fichero entero pasa en aislado (84 passed, 34 s). Es, de paso, la evidencia
 que justifica el ítem **A6** del plan: una prueba de milisegundos que depende
 de la carga de la máquina no es un gate fiable.
+
+### Lote de cierre de agosto (2026-08-11) — AUD-407..412
+
+| ID | Dominio | Severidad | Estado | Resumen |
+|---|---|---|---|---|
+| AUD-407 | D5 | MEDIA | **CERRADO** | El stub de `Mando` de `test_lianas_y_tirolesas.py` no implementaba `pulsada_en_buffer`, y el motor llama a ese método desde la rama de lianas: la prueba de una mecánica completa quedaba roja por el doble de pruebas, no por la mecánica. |
+| AUD-408 | D1 | **BLOQUEANTE** | **CERRADO** | La causa abierta de GAP-034 se cierra con la salida que el propio hueco describía: `pyproject.toml` fija `ruff==0.16.1` (la versión que ya corría en el `.venv`). LOG004 se estabilizó en 0.16.0, así que el `# noqa` de `diagnostico.py:86` vuelve a tener la regla que lo justifica y deja de poder caducar por deriva río arriba. Verificado: `ruff check` sobre el alcance del CI en verde, y `test_ruff_esta_limpio_en_el_alcance_del_ci` ejecuta ahora **la versión fijada**. |
+| AUD-409 | D7 | MEDIA | **CERRADO** | `docs/04_PLAYER_SPEC.md` seguía citando `_pending_jump`, eliminado en AUD-373: el contrato describía una máquina de estados que ya no existe. Reescrito contra `pulsada_en_buffer`/`consumir_buffer`, y `check_doc_symbols.py --ci` (que impone la cita histórica con resolución) verifica en verde. |
+| AUD-410 | D3 | MEDIA | **CERRADO** | El destello del rayo (`weather_system.py`) compraba una superficie nueva en cada fotograma de la tormenta y la liberaba con `surface.fill` al mismo tiempo que la sombreaba, encima de la tabla periódica de `gl_pipeline` que ya cachea sus destellos. Caché perezosa por tamaño (mismo patrón que `_destello_alfa`), medida con una prueba que cuenta superficies vivas. |
+| AUD-411 | D2 | MEDIA | **CERRADO** | `audio_manager.crossfade_ambient` capturaba `pygame.error` pero el fallo real de un ambiente ausente llega como `FileNotFoundError` (o `OSError`) desde la carga: un ambiente que faltaba tumbaba el crossfade, y encima se apoderaba de los `assert` del test de stinger colindante en la primera pasada. Catch ampliado a `(pygame.error, FileNotFoundError, OSError)`, con su prueba roja→verde y los asserts devueltos a su test. |
+| AUD-412 | D7 | MEDIA | **CERRADO** | El inventario medido (`docs/62`) no tenía guardián y **trece afirmaciones habían envejecido**: 62 tipos cuando el motor acepta 78 (39 integrados + 37 del registro con escenarios + `Solid`/`Platform`), 479→1.100 líneas de `gl_pipeline`, 1.549→1.245 de `stage_scene`, 1.608→4.751 pruebas, la cita a la auditoría 61 (retirada en la purga) y más; mismo trabajo en `docs/63` y `docs/87` y en `README.en.md`. Nuevo `tests/test_el_inventario_cuenta_bien.py` mide las cuentas del cargador (con el desglose 69/71/76/78; el registro base de 69 sólo existe en intérprete limpio, así que sale de un subproceso como en `generate_tmx_reference.py`) y que el inventario no cite a la auditoría retirada. |
+
+**Recuento tras el lote:** **4.753 passed, 3 skipped** en pasada completa
+(5:54 en esta máquina, con el fallo de contaminación de carga ausente), sin
+regresiones. El aviso único es de pydub (no hay ffmpeg en esta máquina),
+preexistente y ajeno a estos cambios. **GAP-034 queda cerrado** con su
+`**Resolution:**` en `KNOWN_GAPS.md` (la marca *(Resuelto)* del encabezado
+llevaba meses sin resolución escrita, que es el formato que exige
+`docs/23_DATA_SCHEMAS.md` §8). Se respetó el árbol en vuelo de la sesión
+anterior: `docs/60`, `gpu_effects.py` y `memoria_de_textura.py` (AUD-404)
+quedan fuera de estos commits, y `computer-vision-course/` sigue sin trackear.

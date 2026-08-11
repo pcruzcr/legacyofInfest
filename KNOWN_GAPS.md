@@ -1038,6 +1038,18 @@ así que la resurrección de cualquiera de estos huérfanos deja la suite en roj
   sin relación con el cambio que se esté revisando. El riesgo real no es el
   rojo: es que un equipo que ve rojos que no ha causado deja de mirar el CI
   (el razonamiento de AUD-106, aplicado a la versión en vez de al alcance).
+- **Resolution (AUD-408, 2026-08-11):** la salida limpia que el propio hueco
+  describía —fijar la versión exacta con su commit— se tomó en AUD-408:
+  `pyproject.toml` pasa de `ruff>=0.6` (sin tope) a `ruff==0.16.1`, la misma
+  versión que ya ejecutaba el `.venv` de desarrollo. Con la versión fijada,
+  LOG004 vuelve a estar estable (se estabilizó en 0.16.0) y el `# noqa` de
+  `diagnostico.py` restaurado en AUD-408 deja de poder caducar por una deriva
+  río arriba. `test_ruff_esta_limpio_en_el_alcance_del_ci` sigue ejecutando
+  el linter de verdad, y ahora lo ejecuta **contra la versión fijada**:
+  detectar la deriva y no importarla quedan cubiertos por la misma línea de
+  `pyproject.toml`. `requirements.lock` sólo cubre runtime, así que no hubo
+  segundo fichero que sincronizar; si el dueño añade un lockfile de
+  herramientas, el pin vive ahí y este hueco se cierra del todo.
 
 ## ~~[GAP-035] El detector de huérfanos no ve una función a la que sólo llama su propio `__init__.py`~~ *(Resuelto)*
 
