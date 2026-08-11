@@ -1268,6 +1268,18 @@ está.
   `random.*` del motor **ya son reproducibles** sin tocarlos. Un informe de
   fallo lleva su semilla dentro sin que el jugador sepa qué es una semilla.
 
+- **Corrección (2026-08-10, AUD-385): eran 46 de 66.** Lo de arriba es cierto y
+  estaba incompleto: NumPy mantiene **su propio** generador global y
+  `random.seed()` no lo toca. Hay **20 usos de `np.random`**, y doce están en
+  `vfx/particle_system.py`, que dibuja todas las partículas del juego. O sea
+  que la partida seguía sin poder repetirse justo en lo más visible mientras
+  AUD-375 daba el asunto por cerrado. Demostrado sobre el sistema real: dos
+  ráfagas con la misma semilla daban velocidades de -39,565 y 23,154.
+
+  `sembrar()` siembra ahora los dos. Se descubrió al empezar el aislamiento y
+  mirar **de qué generador tira cada módulo**, en vez de fiarse del recuento de
+  `random.*` — que sólo contaba la mitad de la historia.
+
   Lo que falta, y por qué el hueco sigue abierto: darle a cada sistema su
   propio `random.Random` (`azar.generador`), que es aislamiento, no
   reproducibilidad — hoy catorce módulos compiten por el estado global, así que

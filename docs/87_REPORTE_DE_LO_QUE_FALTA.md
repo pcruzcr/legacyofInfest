@@ -2223,6 +2223,9 @@ otros, que se diagnostica como «no se reproduce»—.
   que añadir una tirada en las partículas desplaza la dispersión de los
   disparos. El camino es `azar.generador()`, y `WorldSimulation` ya lo recorrió
   (AUD-374). Van por lotes: son 15 módulos.
+
+  *(AUD-385: y eran 46 de **66**. Faltaban los 20 de `np.random`, que es otro
+  global distinto — ver §39.)*
 * **Trayectoria** — el mismo replay bit a bit necesita el paso fijo de
   `GAP-036`. Con `dt` variable, dos ejecuciones divergen aunque el azar
   coincida. Sembrar da decisiones repetibles, no trayectorias repetibles, y
@@ -2796,3 +2799,58 @@ enseña, o a escribir por qué no.
 
 Es la respuesta durable a cómo se abrió este hueco: no por una decisión, sino
 por diecisiete veces que nadie tuvo que tomarla.
+
+---
+
+## 39. La semilla no sembraba el otro generador (2026-08-10, AUD-385)
+
+AUD-375 tituló «el motor no podía repetir una partida, y ahora anota con qué
+azar arrancó». La segunda mitad era cierta. La primera, no del todo.
+
+### 39.1 El defecto
+
+`azar.sembrar()` llamaba a `random.seed()`. **NumPy mantiene su propio
+generador global**, ajeno a ése. Y el motor tiene **20 usos de `np.random`**:
+
+    12  src/framework/vfx/particle_system.py
+     6  src/engine/scenes/noise_lab_scene.py
+     2  src/engine/scenes/pattern_demo_scene.py
+
+Los doce primeros son los que importan: `ParticleEmitter` dibuja **todas** las
+partículas del juego —chispas, sangre, polvo, lluvia—, y saca sus ángulos,
+velocidades y tamaños de `np.random.uniform`. Así que la partida seguía sin
+poder repetirse justo en lo más visible, mientras el lote anterior daba el
+asunto por cerrado.
+
+Demostrado sobre el sistema real, no sobre el generador: dos ráfagas de
+`emit_directed` con la misma semilla daban velocidades de **-39,565 y 23,154**.
+
+### 39.2 Cómo apareció
+
+No lo encontró una prueba: apareció al empezar el aislamiento de `GAP-042b` y
+mirar, módulo por módulo, **de qué generador tira cada uno**. El recuento de
+`random.*` con el que se dimensionó AUD-375 —46 usos, 15 módulos— era correcto
+y contaba sólo la mitad de la historia, porque la pregunta que hacía era «¿usa
+`random`?» y no «¿de dónde saca el azar?».
+
+Es primo del patrón de §36.3: la afirmación era **positiva** —«los 46 usos ya
+son reproducibles»— y las positivas hay que verificarlas abriendo el fichero.
+Aquí la trampa fue más fina: el número era verdad, pero el conjunto que contaba
+no era el conjunto que importaba.
+
+### 39.3 El arreglo, y lo que deliberadamente no hace
+
+`sembrar()` siembra los dos globales. Se usa `np.random.seed` y no un
+`Generator` nuevo a propósito: el código existente llama a `np.random.uniform`
+directamente, y cambiar eso es el trabajo de aislamiento de `GAP-042b`. Esto
+hace reproducible **lo que ya hay**, que es lo que AUD-375 prometía.
+
+La prueba que lo fija no comprueba el generador —eso pasaría con un
+`np.random.seed` puesto y nadie usándolo— sino `ParticleEmitter` de verdad, que
+es quien tira de NumPy doce veces.
+
+Las tres afirmaciones que quedaron mal en lo ya publicado —el docstring de
+`azar.py`, la entrada de `GAP-042` y §30.4— están corregidas en vez de
+reescritas: dicen lo que decían y a continuación lo que faltaba. Un documento
+que borra su error pierde la única señal de que ahí hay algo fácil de volver a
+equivocar.

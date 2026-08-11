@@ -28,12 +28,18 @@ Qué hace este módulo, y qué no
 Hace **una** cosa: fijar la semilla del generador global una vez, al arrancar,
 y dejarla escrita en el registro.
 
-No convierte los 46 usos para que cada sistema reciba su generador. Eso es
+Hace **una** cosa con dos generadores: el de `random` y el de NumPy. Son
+globales distintos y `random.seed()` no toca el segundo — AUD-375 sembró sólo
+el primero y dio la partida por reproducible cuando no lo era, porque los doce
+usos de `np.random` de `vfx/particle_system.py` seguían saliendo distintos cada
+vez (AUD-385).
+
+No convierte los 66 usos para que cada sistema reciba su generador. Eso es
 auditar uso por uso y va por lotes (GAP-042). Pero es el paso que hace
-verificable todo lo demás: con el global sembrado, un sistema que todavía tira
-de `random.random()` **ya es reproducible**, y el trabajo de darle su propio
-generador pasa a ser una mejora de aislamiento en vez del arreglo del que todo
-depende.
+verificable todo lo demás: con los dos globales sembrados, un sistema que
+todavía tira de `random.random()` o de `np.random.uniform()` **ya es
+reproducible**, y el trabajo de darle su propio generador pasa a ser una mejora
+de aislamiento en vez del arreglo del que todo depende.
 
 Por qué se siembra aunque no se pida
 ------------------------------------
@@ -79,6 +85,22 @@ def sembrar(semilla: int | None = None) -> int:
         semilla = random.randrange(_TOPE)
     semilla = int(semilla)
     random.seed(semilla)
+    # AUD-385 — NumPy tiene **su propio** generador global, ajeno a
+    # `random.seed()`. Sembrar sólo el de Python dejaba fuera 20 usos, y doce
+    # están en `vfx/particle_system.py`, que es quien dibuja todas las
+    # partículas del juego: chispas, sangre, polvo, lluvia. O sea que la
+    # partida seguía sin poder repetirse justo en lo más visible, mientras
+    # AUD-375 daba el asunto por cerrado.
+    #
+    # Se descubrió mirando de qué generador tira cada módulo en vez de fiarse
+    # del recuento de `random.*`, que sólo contaba la mitad de la historia.
+    #
+    # `np.random.seed` y no un `Generator` nuevo a propósito: el código que hay
+    # llama a `np.random.uniform` directamente, y cambiar eso es el trabajo de
+    # aislamiento de GAP-042b. Esto es lo que hace reproducible lo que YA hay.
+    import numpy as np
+
+    np.random.seed(semilla % 2**32)
     _semilla = semilla
     # INFO y no DEBUG: esto tiene que estar en el registro de una partida
     # normal, porque el informe que lo necesita se escribe después del fallo,

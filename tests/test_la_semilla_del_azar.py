@@ -104,6 +104,68 @@ class TestSembrar:
         ]
 
 
+class TestElOtroGeneradorGlobal:
+    """AUD-385 — NumPy tiene el suyo, y `sembrar` no lo tocaba.
+
+    AUD-375 sembró `random` y dio por reproducible el motor. No lo era: hay
+    **20 usos de `np.random`**, y doce están en `vfx/particle_system.py`, que
+    es quien dibuja **todas** las partículas del juego —chispas, sangre, polvo,
+    lluvia—. NumPy mantiene su propio estado global, ajeno a `random.seed()`.
+
+    O sea que la disposición de las partículas seguía siendo distinta en cada
+    ejecución con la misma semilla, que es justo lo que la semilla venía a
+    arreglar. Un informe de fallo con «se me cayó aquí» seguía sin poder
+    repetirse si lo que fallaba dependía de dónde cayó una chispa.
+
+    Se descubrió al ir a aislar el azar por sistema (GAP-042b) y mirar de qué
+    generador tira cada módulo, en vez de fiarse del recuento de `random.*`.
+    """
+
+    def test_sembrar_fija_tambien_el_de_numpy(self):
+        import numpy as np
+
+        azar.sembrar(31415)
+        primera = np.random.uniform(0, 1, 5).tolist()
+        azar.sembrar(31415)
+        assert np.random.uniform(0, 1, 5).tolist() == primera
+
+    def test_dos_semillas_distintas_separan_tambien_numpy(self):
+        import numpy as np
+
+        azar.sembrar(1)
+        una = np.random.uniform(0, 1, 5).tolist()
+        azar.sembrar(2)
+        assert np.random.uniform(0, 1, 5).tolist() != una
+
+    def test_las_particulas_se_repiten_con_la_misma_semilla(self):
+        """La consecuencia observable, sobre el sistema real.
+
+        Es la prueba que importa: las dos de arriba pasarían con un
+        `np.random.seed` puesto y nadie usándolo. Ésta ejercita
+        `ParticleEmitter`, que es quien tira de NumPy doce veces.
+        """
+        import pygame
+
+        from src.framework.vfx.particle_system import ParticleEmitter
+
+        pygame.init()
+
+        def disparo() -> list[float]:
+            azar.sembrar(777)
+            em = ParticleEmitter()
+            em.emit_directed(
+                100.0, 100.0, angle=90, speed=120, count=24, lifetime=1.0,
+                size=(2, 4), color=(255, 255, 255),
+            )
+            n = em.count
+            return [round(float(v), 6) for v in em.vx[:n]]
+
+        assert disparo() == disparo(), (
+            "dos ráfagas con la misma semilla dan partículas distintas: el "
+            "azar de NumPy no está sembrado"
+        )
+
+
 class TestLaSemillaLlegaAlRegistro:
     """Lo que convierte esto en herramienta y no en apunte.
 
