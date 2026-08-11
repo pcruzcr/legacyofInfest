@@ -174,6 +174,7 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── __init__.py
 │   │   │   ├── gl_pipeline.py             # GLRenderer, GLRenderConfig: ModernGL pipeline
 │   │   │   ├── gpu_sprite_batch.py        # AUD-340: SpriteBatchGPU, sprites instanciados con normal mapping (fase 5)
+│   │   │   ├── memoria_de_textura.py      # AUD-397: memoria de textura viva y detección de fugas (GAP-049)
 │   │   │   ├── normales.py                # AUD-340: normales procedurales del alfa del sprite
 │   │   │   ├── shaders.py                 # GLSL shader sources
 │   │   │   └── gpu_present.py            # PresentadorGPU: presentar por SDL2 (AUD-148, opcional)

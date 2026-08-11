@@ -11,6 +11,7 @@ import pygame
 
 from src.engine.core import gpu_effects, settings
 from src.engine.render.gpu_sprite_batch import SpriteBatchGPU
+from src.engine.render.memoria_de_textura import MemoriaDeTexturas
 from src.engine.render.shaders import (
     GODRAY_DEFAULT_SAMPLES,
     bloom_extract_frag,
@@ -246,6 +247,10 @@ class GLRenderer:
         #: **recurso** que mide el motor; todo lo demás que mide es tiempo. Se
         #: reinicia por fotograma desde `App`.
         self.llamadas_de_dibujo: int = 0
+        #: AUD-397 — la otra mitad de GAP-049: cuánta memoria de textura hay
+        #: viva y si deja de bajar. El registro vive en su propio módulo para
+        #: poder probarse sin GPU; aquí sólo se le dan las altas y las bajas.
+        self.memoria_de_textura = MemoriaDeTexturas()
 
         self._scene_fbo: moderngl.Framebuffer | None = None
         self._bloom_fbo: moderngl.Framebuffer | None = None
@@ -365,25 +370,34 @@ class GLRenderer:
         if ctx is None:
             return
 
+        # AUD-397 — los adjuntos de color se pesan (GAP-049). Son la mayor
+        # parte de la memoria de textura del juego con diferencia: cinco
+        # objetivos a resolución de pantalla pesan más que todos los sprites
+        # juntos, así que un contador que los ignorara mediría lo pequeño.
+        def _color(tam: tuple[int, int]) -> Any:
+            tex = ctx.texture(tam, 4, dtype="f1")
+            self.memoria_de_textura.registrar(tex)
+            return tex
+
         self._scene_fbo = ctx.framebuffer(
-            color_attachments=[ctx.texture((w, h), 4, dtype="f1")],
+            color_attachments=[_color((w, h))],
             depth_attachment=ctx.depth_texture((w, h)),
         )
 
         self._temp_fbo = ctx.framebuffer(
-            color_attachments=[ctx.texture((w, h), 4, dtype="f1")],
+            color_attachments=[_color((w, h))],
         )
 
         self._bloom_fbo = ctx.framebuffer(
-            color_attachments=[ctx.texture((w // 2, h // 2), 4, dtype="f1")],
+            color_attachments=[_color((w // 2, h // 2))],
         )
 
         self._prev_fbo = ctx.framebuffer(
-            color_attachments=[ctx.texture((w, h), 4, dtype="f1")],
+            color_attachments=[_color((w, h))],
         )
 
         self._light_fbo = ctx.framebuffer(
-            color_attachments=[ctx.texture((w, h), 4, dtype="f1")],
+            color_attachments=[_color((w, h))],
         )
 
     def _create_shaders(self) -> None:
@@ -561,8 +575,13 @@ class GLRenderer:
             datos = pygame.image.tobytes(surface, "RGBA", True)
         if textura is None or textura.size != tam:
             if textura is not None:
+                # AUD-397 — la baja va junto al `release()` y no en otro sitio:
+                # separarlos es como se desincroniza un contador de recursos.
+                self.memoria_de_textura.soltar(textura)
                 textura.release()
-            return ctx.texture(tam, 4, data=datos, dtype="f1")
+            nueva = ctx.texture(tam, 4, data=datos, dtype="f1")
+            self.memoria_de_textura.registrar(nueva)
+            return nueva
         textura.write(datos)
         return textura
 

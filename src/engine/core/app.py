@@ -488,6 +488,17 @@ class App:
             if self._gl_renderer is not None:
                 medidas["Llamadas de dibujo"] = (
                     self._gl_renderer.llamadas_de_dibujo)
+                # AUD-397 — la otra cifra de recurso (GAP-049). Va aquí por lo
+                # mismo que la de arriba: la tubería es del motor, y una escena
+                # no sabe cuántos objetivos de post-procesado hay reservados,
+                # que es lo que ocupa.
+                memoria = self._gl_renderer.memoria_de_textura
+                memoria.anotar_fotograma()
+                medidas["Memoria de textura"] = memoria.resumen()
+                if memoria.parece_fuga():
+                    # Un aviso y no una cifra: que suba está bien, que no baje
+                    # nunca en diez segundos no lo está.
+                    medidas["Memoria de textura"] += "  ¡SUBE Y NO BAJA!"
             self.debug_overlay.draw(
                 self.internal_surface, self.clock.fps, medidas,
                 self.clock.estadisticas())
