@@ -3015,3 +3015,69 @@ defectos aparecen **al entrar**, mirando qué hace el código. Por eso los lotes
 que empiezan midiendo salen mejor que los que empiezan construyendo, y por eso
 §36.3 —«un "no existe X" se sostiene con una búsqueda; un "X vale N" o "X está
 en tal sitio", no»— es la regla más rentable de las que salieron hoy.
+
+---
+
+## 42. El gate de TMX imprimía «FAILED» y devolvía 0 (2026-08-11, AUD-391)
+
+Este lote iba a ser `GAP-048` —declarar `schema_version` en el TMX y hacerlo
+cumplir por `scripts/validate_tmx.py`—. Antes de escribir la validación nueva
+había que mirar cómo suspende hoy el validador, y ahí estaba el defecto: **no
+suspendía**.
+
+### 42.1 Lo que pasaba
+
+`validate_tmx.py --ci` es uno de los siete validadores que CI ejecuta. Cerraba
+así:
+
+```python
+if args.ci:
+    return 1 if _errors else 0
+```
+
+`_errors` es una lista de módulo y `validate_tmx()` la vacía al entrar a cada
+fichero. Al salir del bucle no tiene los errores de la ejecución: tiene los del
+**último mapa validado**. Los mapas se recorren con `sorted()`, así que el
+último es siempre `student_templates/stage_template`. Un fallo en cualquier
+otro daba esto —medido, no deducido—:
+
+```
+  [FAIL] .../a_roto.tmx
+       [ERROR] Missing required map property: 'stage_id'
+  ...
+  1/2 passed with warnings
+  1/2 FAILED
+=== CODIGO DE SALIDA CON --ci: 0 ===
+```
+
+El guion diagnostica bien, lo imprime bien, y le dice a CI que todo está en
+orden. La línea del resumen tenía el mismo fallo por el mismo motivo:
+`' with warnings' if _warnings else ''` también miraba sólo al último.
+
+### 42.2 Por qué importa más que el hueco que lo destapó
+
+`GAP-048` quiere que un TMX con una propiedad renombrada se detecte como
+versión antigua en vez de como dato malo. Ese hueco supone que el detector
+funciona. Añadir reglas a un validador cuyo código de salida está clavado en 0
+habría producido exactamente el modo de fallo que este repositorio persigue:
+**código correcto que nadie ejecuta en serio**.
+
+Es la tercera vuelta del patrón de AUD-378, donde el detector de cosas
+construidas-y-no-leídas resultó ser él mismo cosa no-leída. Aquí el que no se
+leía era el código de salida.
+
+### 42.3 El arreglo, y lo que se rechazó
+
+`failed` ya contaba bien, porque `validate_tmx()` sólo devuelve `False` cuando
+hubo errores —los avisos no suspenden—. O sea que `return 1 if failed else 0`
+habría bastado para las dos ramas. Se descartó: esa equivalencia es real pero
+exige leer tres funciones para convencerse, y confiar en ella sin comprobarla
+es lo que produjo el defecto. El arreglo lleva un contador acumulado propio,
+`con_errores`, que dice en su sitio lo que la condición de CI necesita saber.
+
+`tests/test_el_validador_tmx_falla_en_ci.py` lo fija con tres pruebas. La
+primera es la del defecto; las otras dos existen porque la primera sola se
+pasa devolviendo `1` siempre: una comprueba que un mapa sano sigue dando 0, y
+otra que un aviso por sí solo no suspende. El mapa roto se llama `a_roto.tmx`
+y el sano `z_sano.tmx` **a propósito** — con los nombres al revés la prueba
+pasa contra el código defectuoso.
