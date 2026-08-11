@@ -111,7 +111,15 @@ class TestElClimaCambiaLasReglas:
 
     @staticmethod
     def _con_clima(escena, clima: str):
-        escena._simulacion.set_clima(clima)
+        """Deja el clima **ya establecido**, no a mitad de llegar.
+
+        AUD-424 — desde que el clima transiciona, `set_clima` sólo fija el
+        objetivo: la humedad tarda seis segundos en subir. Estas pruebas miran
+        el estado establecido —«bajo tormenta el jugador derrapa»—, no el
+        camino, así que piden el cambio inmediato. El camino tiene sus propias
+        pruebas en `test_transiciones_de_clima.py`.
+        """
+        escena._simulacion.set_clima(clima, inmediato=True)
         escena._aplicar_hora()
         return escena
 
@@ -158,7 +166,9 @@ class TestElDerrapeSeNotaEnElMovimiento:
     def test_al_soltar_el_mando_bajo_tormenta_la_velocidad_no_cae_de_golpe(
             self, escena) -> None:
         jugador = escena._player
-        escena._simulacion.set_clima("storm")
+        # AUD-424 — inmediato: se mide el derrape con la tormenta ya puesta,
+        # no mientras llega.
+        escena._simulacion.set_clima("storm", inmediato=True)
         escena._aplicar_hora()
 
         # El estado fija el objetivo a 0 (nadie pulsa nada) y la integración
