@@ -54,6 +54,16 @@ from src.framework.stage.pendientes import (
 
 logger = logging.getLogger(__name__)
 
+#: AUD-396 — por debajo de este rebote (px/s) se da el bote por terminado.
+#:
+#: Es lo que la gravedad del juego acumula en unos dos fotogramas a 60 Hz. Sin
+#: umbral, un personaje sobre goma nunca termina de posarse: los botes se hacen
+#: infinitamente pequeños pero no llegan a cero, `en_el_suelo` parpadea cada
+#: fotograma y la máquina de estados entra y sale de «en el aire» para siempre.
+#: Es el defecto clásico de la restitución mal terminada, y no se ve venir
+#: hasta que el personaje vibra.
+_UMBRAL_DE_REBOTE = 30.0
+
 
 @dataclass
 class EstadoDeMovimiento:
@@ -75,6 +85,13 @@ class EstadoDeMovimiento:
     #: consume `resolver_cuestas` — AUD-297: leer `en_el_suelo` allí no
     #: vale, porque el paso Y lo pone a False.
     venia_del_suelo: bool = False
+    #: AUD-396 — fracción de la velocidad de impacto que devuelve el suelo
+    #: (GAP-039). 0 es el comportamiento de siempre: aterrizar pone la
+    #: velocidad vertical a cero. Lo pone la entidad desde
+    #: `perfil.material.restitucion`; el resolutor no sabe de materiales, sólo
+    #: de este número — la misma división que con `Contacto`, que da hechos y
+    #: no reglas.
+    restitucion: float = 0.0
 
 
 @dataclass
@@ -301,8 +318,24 @@ def resolver_eje_y(
                         contacto.aterrizo = True
                         contacto.aterrizo_en = "suelo"
                     py.bottom = tile.top
-                    estado.velocidad.y = 0.0
-                    estado.en_el_suelo = True
+                    # AUD-396 — el rebote (GAP-039). Con `restitucion` a 0
+                    # —todos los mapas de hoy— esto es exactamente la línea de
+                    # antes: `velocidad.y = 0`.
+                    #
+                    # El umbral no es un detalle de implementación: sin él, un
+                    # personaje parado sobre goma rebota eternamente con saltos
+                    # cada vez más pequeños y nunca queda apoyado, así que
+                    # `en_el_suelo` parpadea y la máquina de estados entra y
+                    # sale de "en el aire" para siempre. Por debajo de lo que
+                    # la gravedad acumula en dos fotogramas el rebote ya no se
+                    # ve, así que ahí se corta y se deja apoyado.
+                    rebote = -estado.velocidad.y * estado.restitucion
+                    if estado.restitucion > 0.0 and abs(rebote) > _UMBRAL_DE_REBOTE:
+                        estado.velocidad.y = rebote
+                        estado.en_el_suelo = False
+                    else:
+                        estado.velocidad.y = 0.0
+                        estado.en_el_suelo = True
                 elif estado.velocidad.y < 0 and prev_top >= tile.bottom - 1:
                     # Came from below: bonk.
                     py.top = tile.bottom

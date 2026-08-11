@@ -51,6 +51,55 @@ CENITAL = "cenital"
 VUELO = "vuelo"
 
 
+@dataclass(frozen=True)
+class Material:
+    """Una superficie con nombre: cuánto frena y cuánto devuelve — AUD-396.
+
+    Cierra GAP-039. La fricción por superficie ya existía desde AUD-236
+    (`ZonaDeFriccion` + `sistema_friccion`) y el perfil ya declaraba
+    `friccion` desde AUD-336. Lo que no había era el **material** como cosa
+    nombrada que agrupe las dos propiedades, y por eso faltaba la segunda:
+    sin restitución no hay rebote, así que el hielo y el musgo se podían
+    expresar y la goma no.
+
+    `frozen=True` porque un material es una constante del mundo, no un estado:
+    dos plataformas de goma comparten la misma instancia y nadie debe poder
+    ablandar una de ellas por accidente desde otro sitio.
+
+    `restitucion` es la fracción de velocidad vertical que se devuelve al
+    chocar: 0 se queda pegado —lo de siempre—, 1 rebotaría para siempre.
+    """
+
+    nombre: str = "roca"
+    #: Multiplicador de la fricción del perfil. 1 = la de siempre.
+    friccion: float = 1.0
+    #: Fracción de la velocidad de impacto que se devuelve. 0 = sin rebote.
+    restitucion: float = 0.0
+
+
+#: El suelo normal: no rebota. Es el material por defecto **a propósito**, para
+#: que los mapas que ya existen se jueguen exactamente igual que antes.
+ROCA = Material("roca")
+#: Resbala. La fricción baja ya se podía expresar con `ZonaDeFriccion`; aquí
+#: está por completar el catálogo con un nombre en vez de con un número suelto.
+HIELO = Material("hielo", friccion=0.15)
+#: Frena mucho.
+MUSGO = Material("musgo", friccion=2.5)
+#: La que no se podía expresar hasta ahora, y el motivo del hueco.
+#:
+#: 0,6 y no más: por encima de ~0,8 el rebote tarda tanto en amortiguarse que
+#: el jugador pierde el control del personaje varios segundos, que se lee como
+#: un fallo y no como una mecánica.
+GOMA = Material("goma", restitucion=0.6)
+
+#: Los materiales que el motor conoce, por su nombre. Es lo que permite
+#: declararlos desde datos —un TMX, un tileset— sin que el cargador tenga que
+#: importar cada constante.
+MATERIALES: dict[str, Material] = {
+    m.nombre: m for m in (ROCA, HIELO, MUSGO, GOMA)
+}
+
+
 @dataclass
 class Muro:
     """Cómo se comporta la gravedad al rozar una pared vertical en el aire.
@@ -108,6 +157,12 @@ class PhysicsProfile:
     #: `aceleracion`; con las dos en 0 el juego actual no frena porque no
     #: tiene inercia que disipar.
     friccion: float = 0.0
+    #: AUD-396 — la superficie sobre la que se cae (GAP-039).
+    #:
+    #: `ROCA` por defecto: restitución 0, o sea el comportamiento de siempre
+    #: —tocar suelo pone la velocidad vertical a cero—. Los dieciséis mapas
+    #: entregados no cambian.
+    material: Material = field(default_factory=lambda: ROCA)
 
     @classmethod
     def plataformas(cls) -> PhysicsProfile:

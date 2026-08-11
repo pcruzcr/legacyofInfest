@@ -1259,7 +1259,7 @@ está.
   comprueba que la máscara por defecto sigue viendo exactamente lo que se veía
   antes en `stage0`.
 
-## [GAP-039] Sin materiales de superficie: hay fricción, no hay restitución
+## ~~[GAP-039] Sin materiales de superficie: hay fricción, no hay restitución~~ *(Resuelto)*
 
 - **File:** `src/framework/physics/perfil.py`
 - **Phase:** auditoría 2026-08-10, lista del dueño (AUD-376)
@@ -1271,6 +1271,35 @@ está.
 - **Resolution plan:** Viable sin tocar el bucle: un `Material` con
   `friccion`/`restitucion` leído del tileset, consumido por `resolver_eje_y`.
   Sin fecha; no lo pide ningún nivel existente.
+
+- **Resolution (2026-08-11, AUD-396):** hecho, y sin tocar el bucle como decía
+  el plan. `Material` es un dataclass **congelado** en `physics/perfil.py` —un
+  material es una constante del mundo, no un estado: dos plataformas de goma
+  comparten instancia y nadie debe poder ablandar una desde otro sitio—, con
+  catálogo `ROCA`/`HIELO`/`MUSGO`/`GOMA` y un índice `MATERIALES` por nombre,
+  que es lo que permitirá declararlos desde datos.
+  `PhysicsProfile.material` por defecto `ROCA` (restitución 0): los dieciséis
+  mapas entregados se juegan exactamente igual. `EstadoDeMovimiento.restitucion`
+  la lleva al resolutor, y el jugador la pone desde su perfil — el resolutor no
+  sabe de materiales, sólo del número, que es la misma división que ya hace
+  `Contacto` al dar hechos en vez de reglas.
+  Lo que costó de verdad no fue el rebote sino **terminarlo**: sin umbral, un
+  cuerpo sobre goma nunca acaba de posarse —botes cada vez más pequeños que no
+  llegan a cero, `en_el_suelo` parpadeando cada fotograma y la máquina de
+  estados entrando y saliendo de «en el aire» para siempre—. `_UMBRAL_DE_REBOTE`
+  corta por debajo de lo que la gravedad acumula en dos fotogramas, y hay dos
+  pruebas sobre eso, una de ellas dejando caer el cuerpo diez segundos para
+  comprobar que acaba quieto.
+  La restitución de `GOMA` es 0,6 y no más: por encima de ~0,8 el rebote tarda
+  tanto en amortiguarse que el jugador pierde el control varios segundos, y eso
+  se lee como un fallo, no como una mecánica.
+  Fuera de alcance, y dicho: **no se lee del tileset todavía**. El plan lo
+  proponía y el catálogo ya está preparado para ello (`MATERIALES` indexa por
+  nombre justo para eso), pero ningún mapa pide hoy una superficie que rebote y
+  cablear el TMX sin un mapa que lo use sería otro sistema sin consumidor. El
+  consumidor que sí existe es el perfil de física, que ya se aplica por
+  escenario.
+  Cable trampa: `tests/test_materiales_de_superficie.py` (14 pruebas).
 
 ## ~~[GAP-040] El buffer de entrada existe sólo para el salto, y vive en el jugador~~ *(Resuelto)*
 

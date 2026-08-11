@@ -1089,6 +1089,10 @@ class Player(BaseEntity):
             alto=self.rect.height,
             en_el_suelo=self.is_grounded,
             prev_foot_y=self._prev_foot_y,
+            # AUD-396 — el rebote sale del material del perfil (GAP-039). Con
+            # `ROCA`, que es el de todos los mapas de hoy, vale 0 y el
+            # resolutor hace exactamente lo de siempre.
+            restitucion=self.perfil.material.restitucion,
         )
         eje_x = resolver_eje_x(estado, dt, collision_rects)
         if self.perfil.modo == PLATAFORMAS:
