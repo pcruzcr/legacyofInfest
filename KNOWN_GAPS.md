@@ -1871,7 +1871,7 @@ está.
   13 pruebas nuevas en `tests/test_el_viento_es_uno_solo.py`, las 13 rojas
   antes.
 
-## [GAP-051] El estado ambiental llega a la luz y se para ahí: sombras, audio y color grading tienen sus propias fuentes
+## ~~[GAP-051] El estado ambiental llega a la luz y se para ahí: sombras, audio y color grading tienen sus propias fuentes~~ *(Resuelto — los tres consumidores cableados)*
 
 - **File:** `src/framework/world/environment.py`
 - **Phase:** auditoría 2026-08-10, segunda pasada sobre la lista del dueño
@@ -1932,6 +1932,51 @@ está.
   comprueba que el campo llega al estado que leen los consumidores — sin ella
   `_azimut_solar` sería una función correcta que nadie llama, que es
   precisamente lo que este GAP registra que pasó con la mitad productora.
+
+- **Resolution (2026-08-11, AUD-401/402/403): los tres consumidores, cableados.**
+  El plan pedía uno por commit y así se hizo, en el orden que marcaba.
+
+  * **Color grading (AUD-401).** Era el más barato porque no necesitaba dato
+    nuevo. La pasada llevaba compilada desde hace tiempo con
+    `color_matrix = (1,0,0, 0,1,0, 0,0,1)` **fija en el config**: un efecto
+    construido, ejecutándose y multiplicando por la identidad.
+    `EnvironmentState.matriz_de_color` sale de `color_ambiente` —el tinte que
+    la hora y la estación ya calculaban— y de `visibilidad`. Se normaliza al
+    canal más alto porque el brillo ya lo lleva `factor_ambiente` y aplicarlo
+    dos veces oscurecería el doble al atardecer; y desatura con niebla usando
+    pesos de luminancia Rec. 601, tope 0,6, porque en blanco y negro no se
+    distingue un enemigo venenoso de uno normal.
+  * **Audio ambiental (AUD-402).** `EnvironmentState.intensidad_sonora`, con la
+    lluvia pesando más que el viento —una tormenta sin lluvia suena a poco— y
+    el viento en valor absoluto. Se **modula** el volumen del bus, no se fija:
+    fijarlo pisaría la preferencia del jugador, que es lo que ese bus existe
+    para respetar (AUD-149). Suelo de 0,35, porque un silencio absoluto se oye
+    como un fallo de audio y no como calma.
+  * **Sombras dirigidas por el sol (AUD-403).** `sombra_direccional()`, que es
+    proyección **paralela** y no radial. Ésa era la razón de fondo de que el
+    módulo proyectara desde un foco: una sombra radial con el foco muy lejos no
+    es una paralela, es una paralela *en el límite*, y para acercarse habría que
+    poner el foco a millones de píxeles con lo que la coma flotante se rompe
+    mucho antes. `LightSystem.set_sombra_solar` la recibe ya derivada, por lo
+    mismo que `set_obstaculos` recibe la lista hecha.
+
+  Un intento fallido que merece constar: la primera versión del grading buscaba
+  el renderer con `getattr(self.context, "gl_renderer", None)`. Ese atributo
+  **no existe**, y por diseño — el comentario de `GameContext` lo dice: «una
+  escena con la ruta de GPU no se pregunta "¿hay renderer?" (no puede importarlo
+  sin arrastrar ModernGL)». Habría sido una función que no hace nada nunca. El
+  canal correcto es `gpu_effects.publish_*`, el mismo del bloom.
+  Y una decisión de prueba: cuando `_LuzFalsa` de `test_el_viento_es_uno_solo.py`
+  se quedó sin el método nuevo, se le **enseñó al doble** en vez de poner un
+  `hasattr` en `simulacion.py`. Un `hasattr` ahí dejaría que el cableado se
+  rompiera sin que nada se entere, que es el patrón que AUD-039 anotó:
+  «`getattr` contra un campo que no existe no falla, calla».
+  Cables trampa: `tests/test_grading_desde_el_ambiente.py` (10) y
+  `tests/test_ambiente_llega_a_todo.py` (16), incluidas tres que comprueban por
+  AST que `_aplicar_hora` llama de verdad a los tres consumidores.
+  Lo que queda fuera y no es de este hueco: el catálogo de fenómenos —arcoíris,
+  halos, meteoros— sigue en `docs/92` §3 con su coste medido. Este GAP cubría la
+  tubería, y la tubería está entera.
 
 ## ~~[GAP-052] Diecisiete características del TMX que no ejercita ningún mapa~~ *(Resuelto)*
 

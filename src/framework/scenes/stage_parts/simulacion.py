@@ -187,6 +187,58 @@ class SimulacionDeEscenario:
         self._lighting.ambient_color = estado.color_ambiente
         self._aplicar_agarre(estado)
         self._aplicar_clima(estado)
+        self._aplicar_grading(estado)
+        self._aplicar_audio_ambiental(estado)
+        # AUD-403 — el sol orienta las sombras (GAP-051). Hasta aquí el sistema
+        # de luz sólo proyectaba desde focos, porque el dato para orientar una
+        # sombra solar no existía hasta AUD-399.
+        if self._lighting is not None:
+            self._lighting.set_sombra_solar(estado.direccion_de_sombra)
+
+    def _aplicar_audio_ambiental(self, estado: EnvironmentState) -> None:
+        """El ambiente se oye — AUD-402 (GAP-051).
+
+        `sonido.py` es despacho de efectos por eventos, y nada leía el clima:
+        el canal de ambiente y su bus existían desde AUD-149 y sonaban igual en
+        calma que en tormenta.
+
+        Se **modula** el volumen del bus en vez de fijarlo. Llamar a
+        `set_ambient_volume` con un número propio pisaría la preferencia del
+        jugador, que es lo que ese bus existe para respetar: aquí sólo se
+        multiplica lo que él eligió por lo que hace el tiempo.
+        """
+        # `getattr` sobre el propio `self` y no `self.context` a secas: este
+        # mixin lo usan escenas mínimas de prueba que no montan contexto, y una
+        # línea de audio no puede tumbarlas.
+        contexto = getattr(self, "context", None)
+        audio = getattr(contexto, "audio", None) if contexto is not None else None
+        if audio is None or not hasattr(audio, "set_ambient_volume"):
+            return
+        base = 1.0
+        mezcla = getattr(audio, "mezcla", None)
+        if mezcla is not None and hasattr(mezcla, "volumen_de"):
+            from src.engine.audio.mixer_buses import BUS_AMBIENTE
+
+            base = mezcla.volumen_de(BUS_AMBIENTE)
+        audio.set_ambient_volume(base * estado.intensidad_sonora)
+
+    def _aplicar_grading(self, estado: EnvironmentState) -> None:
+        """La corrección de color, desde el ambiente — AUD-401 (GAP-051).
+
+        La pasada existía en `gl_pipeline.py` con una matriz **fija en el
+        config** que no tocaba nadie: un efecto compilado y alimentado con la
+        identidad, o sea apagado de hecho. Aquí es donde se entera de la hora,
+        de la estación y de la niebla.
+
+        Se publica por `gpu_effects` y no tocando el renderer porque una escena
+        **no puede alcanzarlo**: el contexto expone `usar_gl` y no el objeto,
+        deliberadamente, para que el framework no arrastre ModernGL. Es el mismo
+        canal que usa el bloom. Sin tarjeta, `App` no lee la publicación y no
+        pasa nada — que es exactamente lo que pasaba antes de este lote.
+        """
+        from src.engine.core import gpu_effects
+
+        gpu_effects.publish_color_matrix(estado.matriz_de_color)
 
     def _cambiar_clima(self, nombre: str) -> None:
         """Cambia el clima del mundo. **Ésta** es la puerta — AUD-374.
