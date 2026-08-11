@@ -118,13 +118,20 @@ def reset() -> None:
     estado de proceso y una prueba que lo deje puesto contamina a la siguiente.
     """
     global _en_la_gpu, _bloom_publicado, _aberracion_pedida, _agua_region, _rayos
-    global _lote_de_sprites
+    global _lote_de_sprites, _matriz_de_color
     _en_la_gpu = frozenset()
     _bloom_publicado = 0.0
     _aberracion_pedida = 0.0
     _agua_region = None
     _rayos = None
     _lote_de_sprites = None
+    # AUD-413 — la matriz de color entra aquí, y no estaba: AUD-401 la publicó
+    # sin engancharla a este borrón, así que una prueba que la dejaba puesta
+    # encendía la pasada de grading para las siguientes y les cambiaba el
+    # número de pasadas de la cadena. Es literalmente lo que avisa el docstring
+    # de arriba, y aun así costó nueve pruebas rojas en
+    # `test_aberracion_cromatica.py`.
+    _matriz_de_color = None
 
 
 def begin_frame() -> None:
@@ -135,6 +142,7 @@ def begin_frame() -> None:
     publicara otro valor.
     """
     global _bloom_publicado, _agua_region, _rayos, _lote_de_sprites
+    global _matriz_de_color
     _bloom_publicado = 0.0
     # AUD-216/217 - el agua y los rayos también se olvidan cada fotograma, y
     # por la misma razón que el bloom: los menús no dibujan escenario, así que
@@ -145,6 +153,11 @@ def begin_frame() -> None:
     # AUD-342 - y el lote de sprites de GPU con ellos: un menú que se apoya
     # encima del nivel no debe re-componer las órdenes del fotograma anterior.
     _lote_de_sprites = None
+    # AUD-413 - el tinte del ambiente, por lo mismo. `publish_color_matrix`
+    # decía en su docstring que un menú no hereda el tinte del nivel anterior
+    # y **no era verdad**: AUD-401 no lo enganchó a este borrón. La promesa
+    # estaba escrita y el código no la cumplía.
+    _matriz_de_color = None
 
 
 def publish_bloom(intensity: float) -> None:
