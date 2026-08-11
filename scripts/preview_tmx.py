@@ -21,6 +21,20 @@ Uso:
     python scripts/preview_tmx.py mi_mapa.tmx --salida vista.png
     python scripts/preview_tmx.py mi_mapa.tmx --sin-luz --con-etiquetas
     python scripts/preview_tmx.py mi_mapa.tmx --hora 22       # nocturno
+    python scripts/preview_tmx.py mi_mapa.tmx --diagnostico   # marca los saltos
+
+AUD-419 — `--diagnostico`, y por qué no hay un editor propio
+------------------------------------------------------------
+Tiled ya resuelve **colocar**, y mejor de lo que se puede rehacer aquí. Lo que
+Tiled no puede saber es si un salto se cruza: eso depende de la gravedad y del
+impulso del jugador, números que viven en `settings.py` y no en el editor.
+
+Así que lo que faltaba no era editor sino **realimentación**.
+`level_metrics.analyse_stage` detecta desde AUD-049 los huecos imposibles, los
+exigentes, los repechos y los recogibles inalcanzables —con coordenadas— y los
+escupía como texto. «Hueco imposible en (1520, 384)» no se traduce a un sitio
+del mapa sin contar baldosas a mano. `--diagnostico` lo pinta encima: rojo lo
+que rompe el nivel, ámbar lo que sólo lo endurece.
 """
 from __future__ import annotations
 
@@ -75,6 +89,7 @@ def construir_vista(
     con_luz: bool = True,
     con_etiquetas: bool = False,
     hora: float | None = None,
+    con_diagnostico: bool = False,
 ):
     """Devuelve una superficie con el mapa completo dibujado.
 
@@ -109,7 +124,12 @@ def construir_vista(
 
     # 3. Calco de diagnóstico encima: siempre visible, aunque haya luz.
     _dibujar_objetos(lienzo, datos_tmx, con_etiquetas)
-    return lienzo, stage, (ancho, alto)
+
+    # 4. AUD-419 — y encima de todo, lo que el análisis de nivel detecta. Va el
+    # último a propósito: son los avisos, y un aviso tapado por una luz no es
+    # un aviso.
+    diagnostico = _dibujar_diagnostico(lienzo, stage) if con_diagnostico else []
+    return lienzo, stage, (ancho, alto), diagnostico
 
 
 def _aplicar_luz(lienzo, stage, datos_tmx, hora: float | None) -> None:
@@ -130,8 +150,18 @@ def _aplicar_luz(lienzo, stage, datos_tmx, hora: float | None) -> None:
         hora = 12.0
     luz_hora = luz_a_las(float(hora))
 
-    sistema = LightSystem(ambient_brightness=max(
-        0.30, ambiente * luz_hora.factor_ambiente * est.factor_luz))
+    # AUD-419 — el techo, que faltaba. Había `max(0.30, ...)`: suelo sin techo.
+    #
+    # `ambient_color` se multiplica canal a canal por este brillo en
+    # `LightSystem.render_map`, así que en cuanto el producto pasa de 1 el
+    # resultado se sale de [0, 255] y pygame rechaza el color entero:
+    # «invalid color (color sequence must have size 3 or 4…)». Y no era un caso
+    # rebuscado — basta un mapa con `ambient_light = 1.0`, que es un valor
+    # perfectamente legal y el que trae la plantilla nueva. El previsualizador
+    # se negaba a dibujar el nivel y remitía a `validate_tmx.py`, que lo daba
+    # por bueno con razón: el mapa no tenía nada malo.
+    sistema = LightSystem(ambient_brightness=min(
+        1.0, max(0.30, ambiente * luz_hora.factor_ambiente * est.factor_luz)))
     sistema.ambient_color = aplicar_tinte(luz_hora.color, est)
     for spec in getattr(stage, "lights", []):
         sistema.add_light(LightSource(
@@ -181,6 +211,75 @@ def _dibujar_objetos(lienzo, datos_tmx, con_etiquetas: bool) -> None:
                 lienzo.blit(etiqueta, (rect.x, max(0, rect.y - 12)))
 
 
+#: AUD-419 — colores del calco de diagnóstico. Rojo lo que rompe el nivel,
+#: ámbar lo que sólo lo endurece. La distinción importa: un hueco exigente es
+#: **información de diseño**, no un defecto, y pintarlo igual que uno imposible
+#: enseñaría a quitar los saltos difíciles, que es lo contrario de lo que se
+#: quiere.
+COLOR_IMPOSIBLE = (255, 64, 64)
+COLOR_EXIGENTE = (255, 176, 64)
+COLOR_INALCANZABLE = (255, 64, 255)
+
+
+def _dibujar_diagnostico(lienzo, stage) -> list[str]:
+    """Pinta sobre el mapa lo que `level_metrics` ya sabe — AUD-419.
+
+    Por qué esto y no un editor visual propio
+    -----------------------------------------
+    Tiled ya resuelve **colocar**: capas, objetos, propiedades, y lo hace mejor
+    de lo que se puede rehacer aquí. Lo que Tiled no puede saber es si un salto
+    se cruza, porque eso depende de la gravedad y del impulso del jugador —
+    números que viven en `settings.py`, no en el editor.
+
+    Esa es exactamente la brecha: no falta editor, falta **realimentación**. El
+    análisis existe desde AUD-049 (`level_metrics.analyse_stage`) y devuelve
+    coordenadas, pero las escupía como texto —«hueco imposible en (1520, 384)»—
+    y nadie traduce eso a un sitio del mapa sin contar baldosas a mano.
+
+    Aquí se dibuja encima. Es la diferencia entre leer que hay un problema y
+    verlo dónde está.
+
+    Devuelve las líneas del resumen, para imprimirlas junto al resto.
+    """
+    import pygame
+
+    from src.framework.stage.level_metrics import JumpEnvelope, analyse_stage
+
+    informe = analyse_stage(stage)
+    env = JumpEnvelope.from_settings()
+    lineas: list[str] = []
+
+    def _marca(x: float, y: float, ancho: float, color, alto: int = 6) -> None:
+        rect = pygame.Rect(int(x), int(y) - alto // 2, max(2, int(ancho)), alto)
+        pygame.draw.rect(lienzo, color, rect, 2)
+
+    for x, y, ancho in informe.impossible_gaps:
+        _marca(x, y, ancho, COLOR_IMPOSIBLE)
+    for x, y, ancho in informe.demanding_gaps:
+        _marca(x, y, ancho, COLOR_EXIGENTE)
+    for x, y, alto in informe.impossible_ledges:
+        pygame.draw.rect(lienzo, COLOR_IMPOSIBLE,
+                         pygame.Rect(int(x) - 4, int(y) - int(alto), 8, int(alto)), 2)
+    for x, y in informe.unreachable_pickups:
+        pygame.draw.circle(lienzo, COLOR_INALCANZABLE, (int(x), int(y)), 10, 2)
+
+    lineas.append(f"  huecos imposibles: {len(informe.impossible_gaps)}"
+                  f"   exigentes: {len(informe.demanding_gaps)}")
+    lineas.append(f"  repechos imposibles: {len(informe.impossible_ledges)}"
+                  f"   recogibles inalcanzables: {len(informe.unreachable_pickups)}")
+    lineas.append(f"  plataformas huérfanas: {informe.orphan_platforms}"
+                  f" de {informe.total_platforms}")
+    lineas.append(f"  la salida se alcanza: {'sí' if informe.exit_reachable else 'NO'}")
+    peor = max(informe.checkpoint_gaps, default=0.0)
+    if peor:
+        lineas.append(f"  mayor tramo sin punto de control: {peor:.0f} px")
+    # Los números del salto, para que el ámbar y el rojo signifiquen algo.
+    lineas.append(f"  (el salto cruza {env.max_gap:.0f} px; cómodo hasta "
+                  f"{env.max_gap * env.COMFORT:.0f}; con salto aéreo "
+                  f"{env.max_gap_with_air_jump:.0f})")
+    return lineas
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Previsualiza un escenario TMX sin lanzar el juego")
@@ -192,6 +291,10 @@ def main() -> int:
                         help="escribir el tipo junto a cada objeto")
     parser.add_argument("--hora", type=float,
                         help="hora del día a simular, de 0 a 24")
+    parser.add_argument("--diagnostico", action="store_true",
+                        help="marcar sobre el mapa los huecos imposibles "
+                             "(rojo), los exigentes (ámbar) y los recogibles "
+                             "inalcanzables (magenta)")
     args = parser.parse_args()
 
     ruta = Path(args.tmx)
@@ -208,9 +311,10 @@ def main() -> int:
         pygame.display.set_mode((640, 480))
 
     try:
-        lienzo, stage, (ancho, alto) = construir_vista(
+        lienzo, stage, (ancho, alto), diagnostico = construir_vista(
             ruta, con_luz=not args.sin_luz,
-            con_etiquetas=args.con_etiquetas, hora=args.hora)
+            con_etiquetas=args.con_etiquetas, hora=args.hora,
+            con_diagnostico=args.diagnostico)
     except Exception as e:
         print(f"No se pudo dibujar {display_path(ruta, _RAIZ)}: "
               f"{type(e).__name__}: {e}")
@@ -223,6 +327,8 @@ def main() -> int:
     print(f"  puntos de control: {len(getattr(stage, 'checkpoints', []))}")
     print(f"  clima           : {getattr(stage, 'climate', '') or '(sin declarar)'}")
     print(f"  estación        : {getattr(stage, 'season', '') or '(sin declarar)'}")
+    for linea in diagnostico:
+        print(linea)
 
     if args.salida:
         destino = Path(args.salida)
