@@ -59,10 +59,22 @@ def bytes_de(textura: Any, dtype: str = "f1") -> int:
     —la tubería no genera ninguno— y ése es el motivo de que la cuenta sea
     exacta y no una estimación: el día que se generen, esto miente y hay que
     volver aquí.
+
+    AUD-413 — devuelve 0 si el objeto no sabe decir su tamaño, en vez de
+    propagar. Un contador de recursos **no puede tumbar el fotograma que
+    mide**: es la misma regla por la que `App` envuelve
+    `medidas_de_depuracion`, y aquí no era hipotética. La primera versión
+    desempaquetaba `textura.size` a pelo y reventó las nueve pruebas de
+    `test_aberracion_cromatica.py`, que ejercitan la cadena de post-procesado
+    con un renderer de mentira: el `size` de un doble no es un par de enteros,
+    y la instrumentación se llevó por delante lo que instrumentaba.
     """
-    ancho, alto = textura.size
-    componentes = getattr(textura, "components", 4)
-    return ancho * alto * componentes * _BYTES_POR_DTYPE.get(dtype, 1)
+    try:
+        ancho, alto = textura.size
+        componentes = getattr(textura, "components", 4)
+        return int(ancho) * int(alto) * int(componentes) * _BYTES_POR_DTYPE.get(dtype, 1)
+    except (TypeError, ValueError):
+        return 0
 
 
 class MemoriaDeTexturas:

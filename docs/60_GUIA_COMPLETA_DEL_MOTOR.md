@@ -223,7 +223,7 @@ efecto, mira la consola antes que el código.
 <a id="4"></a>
 ## 4. Los 77 tipos de objeto, uno por uno
 
-El motor acepta **77 tipos** en la capa `Objects`: 38 integrados del framework
+El motor acepta **78 tipos** en la capa `Objects`: 39 integrados del framework
 y 37 enemigos del registro, más `Solid` y `Platform` en `Collision`. Todos los
 números se convierten a `float` automáticamente.
 
@@ -284,6 +284,27 @@ avisos que conviene repetir.
 
 Sin `evento` ni nombre, se ignora con un aviso: emitir la cadena vacía no
 serviría de nada.
+
+#### `Objective`
+
+Un objetivo del nivel, declarado en el mapa (AUD-400). Es un **punto**: un
+objetivo no ocurre en un sitio, ocurre cuando pasa algo.
+
+| Propiedad | Tipo | Por defecto | Qué hace |
+|---|---|---|---|
+| `objective_id` | string | — | **obligatoria**. Con este nombre lo cierra `complete_objective:` desde un guion de diálogo |
+| `text` | string | — | **obligatoria**. Lo que lee el jugador |
+| `kind` | string | `bandera` | `derrotar`, `recoger`, `bandera`, `hablar` o `llegar` |
+| `target` | string | - | contra qué se compara: la especie que muere, el objeto recogido, la bandera puesta. **Vacío = cualquiera**, que es lo que permite «derrota a cinco enemigos» sin enumerar especies |
+| `count` | int | `1` | cuántas veces hay que hacerlo |
+| `optional` | bool | `false` | `true` = no impide terminar el nivel. Es la diferencia entre la misión y el coleccionable |
+
+Los cinco tipos existen porque hay cinco eventos del motor que los pueden
+completar; uno que ningún evento cierre sería un objetivo imposible. Un
+escenario que **no declara ninguno** no tiene nada pendiente, que es lo que
+mantiene intactos los mapas anteriores. Sin `objective_id` o sin `text` se
+ignora con un aviso. `stage0` declara dos como ejemplo, uno obligatorio y uno
+opcional.
 
 #### `Cutscene`
 
