@@ -282,6 +282,13 @@ class StageData:
     map_pixel_size: tuple[int, int] = (0, 0)
     collision_rects: list[pygame.Rect] = field(default_factory=list)
     one_way_rects: list[pygame.Rect] = field(default_factory=list)
+    #: AUD-426 — cielo procedural en vez de un PNG de cielo.
+    #:
+    #: Apagado por defecto: un degradado calculado debajo de un fondo que ya
+    #: trae su cielo pintado no se vería y costaría, y un mapa sin fondo
+    #: pasaría de `BG_COLOR` a un degradado sin que nadie lo hubiera pedido.
+    #: Lo enciende la propiedad de mapa `cielo`.
+    cielo: bool = False
     #: AUD-395 — las mismas cajas, indexadas por clase de sólido (GAP-038).
     #:
     #: Se publica **aparte** y no sustituyendo a las dos listas de arriba por

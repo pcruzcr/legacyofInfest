@@ -489,6 +489,8 @@ class StageLoader(ObjetosDeTiled):
         # AUD-111 — VFX opcionales. Apagados salvo que el mapa los pida.
         fog_of_war = cls._safe_float(props.get("fog_of_war", 0.0), "fog_of_war")
         water_effect = cls._bool_de(props.get("water_effect"), por_defecto=False)
+        # AUD-426 — cielo procedural. Apagado salvo que el mapa lo pida.
+        cielo = cls._bool_de(props.get("cielo"), por_defecto=False)
         # AUD-240 — los mandos del agua. Los rangos no son decorativos: una
         # amplitud de 40 px convierte la lámina en ruido y un alfa de 255 tapa
         # el escenario. Se acotan aquí y no en el efecto para que un mapa mal
@@ -553,6 +555,7 @@ class StageLoader(ObjetosDeTiled):
             season=season,
             fog_of_war=fog_of_war,
             water_effect=water_effect,
+            cielo=cielo,
             water_speed=1.5 if water_speed is None else water_speed,
             water_amplitude=4 if water_amplitude is None else int(water_amplitude),
             water_frequency=0.04 if water_frequency is None else water_frequency,
