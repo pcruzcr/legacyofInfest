@@ -5,6 +5,7 @@ import random
 import pygame
 
 from src.engine.core import settings
+from src.engine.core.azar import generador
 from src.framework.vfx.particle_system import ParticleEmitter
 
 
@@ -28,7 +29,12 @@ class AmbientParticleSystem:
     #: escribir "leafs" debe avisar, no dejar el nivel sin partículas y callar.
     TIPOS: tuple[str, ...] = ("dust", "leaves", "embers", "spores", "ash")
 
-    def __init__(self) -> None:
+    def __init__(self, rng: random.Random | None = None) -> None:
+        #: AUD-398 — azar propio (GAP-042). Sin semilla nace del global,
+        #: que ya está sembrado, así que la partida no cambia; lo que
+        #: cambia es que estas partículas dejan de desplazar la secuencia
+        #: que leen la cámara y el clima.
+        self._rng = rng if rng is not None else generador()
         self._emitter = ParticleEmitter()
         self._rate: float = 0.0
         self._timer: float = 0.0
@@ -85,27 +91,27 @@ class AmbientParticleSystem:
         return []
 
     def _spawn(self, camera_offset: pygame.Vector2) -> None:
-        sx = camera_offset.x + random.uniform(0, settings.INTERNAL_WIDTH)
-        sy = camera_offset.y + random.uniform(0, settings.INTERNAL_HEIGHT)
+        sx = camera_offset.x + self._rng.uniform(0, settings.INTERNAL_WIDTH)
+        sy = camera_offset.y + self._rng.uniform(0, settings.INTERNAL_HEIGHT)
 
         if self._particle_type == "dust":
             self._emitter.emit_directed(
-                sx, sy, angle=270, speed=random.uniform(5, 15),
-                count=1, lifetime=random.uniform(2, 4),
+                sx, sy, angle=270, speed=self._rng.uniform(5, 15),
+                count=1, lifetime=self._rng.uniform(2, 4),
                 size=(1, 2), color=(120, 100, 80), spread=30,
                 gravity=0,
             )
         elif self._particle_type == "leaves":
             self._emitter.emit_directed(
-                sx, sy, angle=random.uniform(60, 120), speed=random.uniform(10, 30),
-                count=1, lifetime=random.uniform(3, 6),
+                sx, sy, angle=self._rng.uniform(60, 120), speed=self._rng.uniform(10, 30),
+                count=1, lifetime=self._rng.uniform(3, 6),
                 size=(2, 4), color=(60, 140, 40), spread=20,
                 gravity=0,
             )
         elif self._particle_type == "embers":
             self._emitter.emit_directed(
-                sx, sy, angle=270, speed=random.uniform(3, 30),
-                count=1, lifetime=random.uniform(1, 3),
+                sx, sy, angle=270, speed=self._rng.uniform(3, 30),
+                count=1, lifetime=self._rng.uniform(1, 3),
                 size=(2, 3), color=(255, 150, 50), spread=15,
                 gravity=0,
             )
@@ -113,16 +119,16 @@ class AmbientParticleSystem:
             # Esporas del bosque infestado: suben despacio, en todas
             # direcciones, y viven mucho para que la pantalla nunca esté vacía.
             self._emitter.emit_directed(
-                sx, sy, angle=random.uniform(240, 300), speed=random.uniform(2, 10),
-                count=1, lifetime=random.uniform(4, 8),
+                sx, sy, angle=self._rng.uniform(240, 300), speed=self._rng.uniform(2, 10),
+                count=1, lifetime=self._rng.uniform(4, 8),
                 size=(1, 3), color=(150, 255, 130), spread=60,
                 gravity=-2,
             )
         elif self._particle_type == "ash":
             # Ceniza: cae, a diferencia de todo lo demás en esta lista.
             self._emitter.emit_directed(
-                sx, sy, angle=random.uniform(60, 120), speed=random.uniform(8, 20),
-                count=1, lifetime=random.uniform(3, 7),
+                sx, sy, angle=self._rng.uniform(60, 120), speed=self._rng.uniform(8, 20),
+                count=1, lifetime=self._rng.uniform(3, 7),
                 size=(1, 2), color=(90, 85, 80), spread=25,
                 gravity=6,
             )

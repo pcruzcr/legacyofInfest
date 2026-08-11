@@ -1388,7 +1388,7 @@ está.
   forma obvia de conseguirlo y ahí sí empezaría el crecimiento que el hueco
   describía.
 
-## [GAP-042] No hay determinismo reproducible
+## ~~[GAP-042] No hay determinismo reproducible~~ *(Resuelto)*
 
 - **File:** `src/engine/core/app.py`
 - **Phase:** auditoría 2026-08-10, lista del dueño (AUD-376)
@@ -1402,6 +1402,32 @@ está.
 - **Resolution plan:** Sembrar en `App.__init__` desde una semilla guardada en
   la partida, y pasar un `random.Random` propio a los sistemas que lo pidan en
   vez del global. Lo segundo es lo caro: hay que auditar cada uso. Sin fecha.
+
+- **Resolution (2026-08-11, AUD-398): los tres que quedaban, aislados.**
+  `ambient_particles`, `weather_system` y `camera` aceptan `rng` y, sin él,
+  nacen de `azar.generador()` — que deriva del global ya sembrado, así que la
+  partida es tan reproducible como antes y ni un mapa cambia.
+  Por qué importaba si ya estaban sembrados, que es la parte no obvia: **ya
+  eran reproducibles y no eran independientes**. Compartiendo un generador, el
+  orden de las llamadas entre módulos forma parte del resultado, así que añadir
+  una partícula de ambiente desplazaba la secuencia que después leían el clima
+  y la cámara y la misma semilla daba otra sacudida. Un determinismo que se
+  rompe al tocar un módulo vecino no sirve para lo que se pidió —reproducir un
+  fallo desde un informe, validar el fantasma del speedrun contra una
+  repetición—, porque cualquier cambio en cualquier sitio lo invalida. Hay una
+  prueba justamente de eso: gastar azar en las partículas ya no mueve la cámara.
+  Efecto secundario obligado: `WeatherSystem._espera_hasta_el_proximo_rayo`
+  deja de ser `@staticmethod`. La espera sale del generador de **esa** tormenta,
+  y un método estático no tiene de dónde sacarlo.
+  Dos falsos verdes propios, cazados escribiendo las pruebas y anotados porque
+  son el mismo error dos veces: la primera versión leía `cam.offset.x` —que sin
+  objetivo al que seguir vale 0,0— y además no le daba objetivo a la cámara, así
+  que `update()` salía temprano. Las dos pruebas comparaban listas de ceros y
+  pasaban con el azar completamente roto.
+  Cable trampa: `tests/test_azar_aislado.py` (8 pruebas), con una comprobación
+  por AST de que ninguno de los tres vuelve a llamar a `random.*` de módulo —
+  por AST y no por texto, porque `import random` y el tipo `random.Random |
+  None` de la firma son legítimos y un `grep` los daría por infracciones.
 
 - **Avance (2026-08-10, AUD-374):** el primer consumidor ya lo tiene.
   `WorldSimulation` acepta un `rng: random.Random` propio y lo usa para la
