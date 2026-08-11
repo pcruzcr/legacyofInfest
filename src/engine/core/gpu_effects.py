@@ -164,6 +164,34 @@ def published_bloom() -> float:
     return _bloom_publicado
 
 
+#: AUD-401 — la matriz de corrección de color que pide la escena (GAP-051).
+#:
+#: `None` = nadie ha pedido nada y la pasada se queda como estaba. Es lo que
+#: hace que un menú, o un escenario que no monta simulación de mundo, no herede
+#: el tinte del nivel anterior.
+_matriz_de_color: tuple[float, ...] | None = None
+
+
+def publish_color_matrix(matriz: tuple[float, ...] | None) -> None:
+    """El tinte y la desaturación que pide el ambiente de este escenario.
+
+    Va por aquí y no tocando el renderer directamente porque una escena **no
+    puede alcanzarlo**: el contexto expone `usar_gl` y no el objeto, a
+    propósito, para que el framework no tenga que importar ModernGL. Es el
+    mismo canal que `publish_bloom` y por el mismo motivo.
+
+    La pasada de *color grading* llevaba compilada desde hace tiempo con una
+    matriz fija en el config que no cambiaba nadie: encendida y multiplicando
+    por la identidad. Esto es quien la alimenta.
+    """
+    global _matriz_de_color
+    _matriz_de_color = tuple(matriz) if matriz is not None else None
+
+
+def published_color_matrix() -> tuple[float, ...] | None:
+    return _matriz_de_color
+
+
 #: Golpe de aberración cromática pendiente de recoger. AUD-215/AUD-222.
 _aberracion_pedida: float = 0.0
 

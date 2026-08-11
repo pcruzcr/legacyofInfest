@@ -109,6 +109,18 @@ _SOMBRA_MAXIMA: float = 4.0
 #: en el instante exacto del amanecer.
 _ALTURA_MINIMA: float = 0.05
 
+#: AUD-401 — cuánto llega a desaturar la peor visibilidad.
+#:
+#: 0,6 y no 1: con desaturación total la niebla deja el juego en blanco y negro,
+#: y entonces no se distingue un enemigo venenoso de uno normal. La legibilidad
+#: manda sobre el efecto, que es la misma regla que fijó el suelo de luz
+#: ambiente para que una noche no fuera injugable.
+_DESATURACION_MAXIMA: float = 0.6
+
+#: AUD-402 — suelo del ambiente sonoro. Un escenario en calma tiene fondo; un
+#: silencio absoluto se oye como un fallo de audio, no como calma.
+_SUELO_SONORO: float = 0.35
+
 
 @dataclass(frozen=True, slots=True)
 class EnvironmentState:
@@ -184,6 +196,75 @@ class EnvironmentState:
     def es_de_noche(self) -> bool:
         """El sol está bajo el horizonte."""
         return self.altura_solar <= 0.0
+
+    @property
+    def intensidad_sonora(self) -> float:
+        """Cuánto ruido hace el ambiente ahora mismo, 0 a 1 — AUD-402.
+
+        Cierra el segundo consumidor de GAP-051. `stage_parts/sonido.py` es
+        despacho de efectos por eventos y **nada leía** `viento`,
+        `precipitacion` ni `fase_del_dia`: el canal de ambiente existía, el
+        mezclador tenía su bus desde AUD-149 y el volumen no dependía de si
+        fuera había tormenta o calma.
+
+        La lluvia manda sobre el viento porque es lo que de verdad se oye: una
+        tormenta sin lluvia suena a poco, y un vendaval sin agua no llena el
+        espectro. El viento aporta la mitad, y en valor absoluto —una racha
+        hacia el oeste no suena más floja que una hacia el este—.
+
+        Nunca llega a 0: un escenario en calma tiene ambiente de fondo, y
+        callarlo del todo se oye como un fallo de audio, no como silencio.
+        """
+        de_la_lluvia = max(0.0, min(1.0, self.precipitacion))
+        del_viento = min(1.0, abs(self.viento))
+        cruda = _SUELO_SONORO + (1.0 - _SUELO_SONORO) * (
+            0.65 * de_la_lluvia + 0.35 * del_viento
+        )
+        return max(0.0, min(1.0, cruda))
+
+    @property
+    def matriz_de_color(self) -> tuple[float, ...]:
+        """La matriz 3×3 de corrección de color que pide este ambiente — AUD-401.
+
+        Cierra el tercer consumidor de GAP-051. La pasada de *color grading*
+        existe en `gl_pipeline.py` desde hace tiempo con una matriz **fija en el
+        config** que nadie tocaba nunca: un efecto construido, compilado y
+        alimentado con la identidad, o sea apagado de hecho.
+
+        No inventa datos: sale de `color_ambiente` —el tinte que la hora y la
+        estación ya calculan— y de `visibilidad`, que es lo que la niebla y la
+        lluvia bajan. Dos cosas que el motor ya sabía y que no llegaban a la
+        imagen final.
+
+        La forma es una diagonal de ganancia por canal mezclada hacia gris:
+
+        * la **diagonal** tiñe —dorado al atardecer, azul de madrugada—;
+        * la **mezcla hacia gris** desatura cuando hay poca visibilidad, que es
+          lo que hace la niebla de verdad y lo que ninguna cantidad de tinte
+          consigue imitar.
+
+        Se devuelve aplanada, en el orden por filas que espera el uniforme
+        `colorMatrix` del sombreador.
+        """
+        r, g, b = (c / 255.0 for c in self.color_ambiente[:3])
+        # Normalizada al canal más alto: el tinte cambia el **balance** de
+        # color, no el brillo. El brillo ya lo lleva `factor_ambiente`, y
+        # multiplicar dos veces por lo mismo oscurecería el doble al atardecer.
+        pico = max(r, g, b, 1e-6)
+        r, g, b = r / pico, g / pico, b / pico
+
+        # 1 con visibilidad plena, 0 con niebla cerrada.
+        gris = 1.0 - max(0.0, min(1.0, self.visibilidad))
+        mezcla = gris * _DESATURACION_MAXIMA
+        # Pesos de luminancia Rec. 601: desaturar por media aritmética
+        # ennegrece los rojos y aclara los verdes, y se nota.
+        lr, lg, lb = 0.299, 0.587, 0.114
+        directo = 1.0 - mezcla
+        return (
+            r * (directo + mezcla * lr), r * mezcla * lg, r * mezcla * lb,
+            g * mezcla * lr, g * (directo + mezcla * lg), g * mezcla * lb,
+            b * mezcla * lr, b * mezcla * lg, b * (directo + mezcla * lb),
+        )
 
     @property
     def direccion_de_sombra(self) -> tuple[float, float]:

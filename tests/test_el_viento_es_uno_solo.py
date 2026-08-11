@@ -284,6 +284,19 @@ class _LuzFalsa:
     ambient_brightness = 1.0
     ambient_color = (255, 255, 255)
 
+    def __init__(self) -> None:
+        self.sombra_solar: tuple[float, float] = (0.0, 0.0)
+
+    def set_sombra_solar(self, direccion_y_largo: tuple[float, float]) -> None:
+        """AUD-403 — `_aplicar_hora` orienta las sombras del sol (GAP-051).
+
+        Se le enseña al doble en vez de hacer defensiva la llamada en
+        `simulacion.py`. Un `hasattr` allí haría que el cableado se pudiera
+        romper sin que nada se enterase, que es el patrón que AUD-039 dejó
+        anotado: «`getattr` contra un campo que no existe no falla, calla».
+        """
+        self.sombra_solar = direccion_y_largo
+
 
 class _PostFalso:
     _bloom_base = 0.0

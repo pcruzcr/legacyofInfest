@@ -204,6 +204,23 @@ class LightSystem:
         self.ambient_color: tuple[int, int, int] = (255, 255, 255)
         self._darkness_surf: pygame.Surface | None = None
         self._multiplier: pygame.Surface | None = None
+        #: AUD-403 — hacia dónde y cuánto se alargan las sombras del sol
+        #: (GAP-051). `(0, 0)` es «no hay sol que proyecte»: de noche, o con él
+        #: justo encima. Es el caso por defecto, así que un escenario que no
+        #: publique el ambiente se ve exactamente como antes.
+        self.sombra_solar: tuple[float, float] = (0.0, 0.0)
+
+    def set_sombra_solar(self, direccion_y_largo: tuple[float, float]) -> None:
+        """De dónde viene el sol, para las sombras direccionales (AUD-403).
+
+        Se recibe ya derivado —`EnvironmentState.direccion_de_sombra`— y no el
+        azimut crudo, por lo mismo que `set_obstaculos` recibe la lista hecha:
+        este sistema no sabe de horas ni de estaciones, sabe de sombras. Y así
+        el cálculo vive en un solo sitio, que es lo que evita que las sombras
+        de las paredes y las de los personajes acaben apuntando a sitios
+        distintos.
+        """
+        self.sombra_solar = direccion_y_largo
 
     def set_obstaculos(self, rects: list[pygame.Rect] | None) -> None:
         """La geometría que tapa la luz (AUD-278).

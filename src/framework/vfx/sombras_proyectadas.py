@@ -118,6 +118,39 @@ def silueta_de(foco: pygame.Vector2,
     return extremos[0], extremos[1]
 
 
+def sombra_direccional(
+    rect: pygame.Rect, direccion: float, largo: float,
+) -> tuple[pygame.Vector2, ...]:
+    """La sombra que proyecta `rect` con luz **paralela**: la del sol — AUD-403.
+
+    Cierra el último consumidor de GAP-051. Todo este módulo proyecta desde un
+    `foco`, o sea de forma **radial**, porque una antorcha está a dos metros. El
+    sol no: sus rayos llegan paralelos, y una sombra radial con el foco muy
+    lejos no es lo mismo que una paralela — es lo mismo *en el límite*, y para
+    llegar a ese límite habría que poner el foco a millones de píxeles, con lo
+    que la aritmética de coma flotante deja de valer mucho antes.
+
+    Por eso el hueco decía que las sombras «proyectan desde un foco de luz, no
+    desde el sol»: no era un descuido, era que faltaban las dos cosas —el dato
+    (`azimut_solar`, AUD-399) y esta proyección—.
+
+    `direccion` y `largo` salen tal cual de `EnvironmentState.direccion_de_sombra`.
+    Devuelve el cuadrilátero de la sombra, o vacío si no hay ninguna que pintar:
+    de noche, o con el sol justo encima.
+    """
+    if largo <= 0.0 or direccion == 0.0 or rect.height <= 0:
+        return ()
+    # Proporcional a la altura del objeto: lo que hace que una columna proyecte
+    # más sombra que un escalón, que es de lo que se entera el ojo.
+    desplazamiento = direccion * largo * rect.height
+    return (
+        pygame.Vector2(rect.left, rect.top),
+        pygame.Vector2(rect.right, rect.top),
+        pygame.Vector2(rect.right + desplazamiento, rect.bottom),
+        pygame.Vector2(rect.left + desplazamiento, rect.bottom),
+    )
+
+
 class ProyectorDeSombras:
     """Oscurece lo que queda detrás de la geometría, foco a foco.
 

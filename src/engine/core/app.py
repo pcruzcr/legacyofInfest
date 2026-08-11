@@ -508,6 +508,18 @@ class App:
             # se recoge aquí, ya con todas las capas dentro, y antes de que la
             # pasada lo lea.
             self._gl_renderer.config.bloom_intensity = gpu_effects.published_bloom()
+            # AUD-401 — el tinte del ambiente llega a la imagen (GAP-051). La
+            # pasada de color grading llevaba compilada desde hace tiempo con
+            # una matriz fija en el config que no cambiaba nadie: encendida y
+            # multiplicando por la identidad. Se recoge junto al bloom y por el
+            # mismo canal.
+            #
+            # Sin publicación no se toca nada: un menú, o un escenario que no
+            # monta simulación de mundo, no hereda el tinte del nivel anterior.
+            matriz = gpu_effects.published_color_matrix()
+            if matriz is not None:
+                self._gl_renderer.config.color_matrix = matriz
+                self._gl_renderer.config.color_grading_enabled = True
             # AUD-215 — el golpe que pidió la escena al recibir daño, y el
             # decaimiento. El impulso se recoge (y se borra) aquí; mantenerlo
             # vivo mientras se apaga es cosa del renderizador, que es quien
