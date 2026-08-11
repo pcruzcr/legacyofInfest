@@ -217,34 +217,53 @@ tenga costumbre de mirarlo, se sube a bloqueante.
 
 ### C1. Lo que conviene hacer
 
-#### Reloj musical (la fase F6)
+#### Reloj musical (la fase F6) — **hecho salvo una fila (AUD-137/144)**
 
-**Nada del motor está atado a la música.** Cada objeto rítmico acumula su
-propio temporizador en segundos y no hay concepto de BPM, compás ni posición de
-la pista. Falta:
+> **Corrección (2026-08-11, AUD-414).** Esta sección afirmaba *«Nada del motor
+> está atado a la música […] no hay concepto de BPM, compás ni posición de la
+> pista»*, y llevaba envejecida desde AUD-137. Es falso: `music_clock.py` son
+> 280 líneas con `bpm`, `compas`, `desfase` y alineación contra la posición
+> real de la pista. Comprobado fila a fila contra el código, no deducido.
 
-| Pieza | Por qué |
+| Pieza | Estado |
 |---|---|
-| Reloj alimentado por la posición de la pista | acumular `dt` deriva del reloj de audio; ocho minutos de nivel acaban fuera de compás |
-| `bpm` y `compas` como propiedades de mapa | a 128 BPM un tiempo son 0,46875 s y nadie escribe eso en cuarenta bloques |
-| Objetos cuantizados a compás | `beats_visible` en vez de `visible_seg` |
-| Compensación de latencia | 20–60 ms entre mezclador y altavoz; sin ella todo «a tiempo» se siente tarde |
-| Línea de tiempo de coreografía | las cutscenes van en segundos y **bloquean** el juego |
-| Pulso visual | cámara, escala y luz al compás |
+| Reloj alimentado por la posición de la pista | **HECHO** (AUD-137). `RelojMusical.fuente` pide `posicion_musica()` y `alinear()` corrige la deriva; acumular `dt` derivaba del reloj de audio |
+| `bpm` y `compas` como propiedades de mapa | **HECHO** (AUD-137). Las lee `StageLoader._build_stage_data` |
+| Objetos cuantizados a compás | **HECHO** (AUD-137). `patron` en `BloqueRitmico` (`components.py`) |
+| Compensación de latencia | **HECHO** (AUD-137). `desfase` / `desfase_audio` en el mapa |
+| Línea de tiempo de coreografía | **HECHO** (AUD-136). Guion en texto y escenas que no bloquean |
+| **Pulso visual** | **Sigue sin existir.** Cámara, escala y luz al compás: no hay ni un consumidor del reloj en `camera.py` ni en la iluminación. Es la única fila viva de esta tabla |
 
 AUD-119 quitó el obstáculo técnico: el hit-stop ya no desincroniza la
 maquinaria del nivel.
 
 #### Audio
 
-Sin buses de mezcla, sin *ducking*, sin reverberación por zona. La música
-dinámica cambia de pista por intensidad, no mezcla capas con precisión de
-muestra.
+> **Corrección (2026-08-11, AUD-414).** Decía «sin buses de mezcla, sin
+> *ducking*». Los hay desde AUD-144: `engine/audio/mixer_buses.py`, cuatro
+> buses y la música se aparta cuando alguien habla.
+
+Lo que sigue faltando de verdad:
+
+* **Reverberación por zona** — y no por coste, sino porque **no se puede sobre
+  SDL**: su mezclador no tiene efectos. Haría falta convolucionar cada sonido
+  al cargarlo o meter una biblioteca de DSP. Está razonado en `mixer_buses.py`.
+* **Mezcla de capas con precisión de muestra** — la música dinámica cambia de
+  pista por intensidad, no superpone capas.
 
 #### Renderizado
 
-Atlas de sprites, *batching*, y llevar el post-procesado a la tubería GL que ya
-existe.
+> **Corrección (2026-08-11, AUD-414).** El atlas de sprites y el *batching*
+> están hechos (AUD-138), con la salvedad medida de que el atlas **no** acelera
+> el dibujado en la ruta software (2,06 → 2,35 ms): lo que gana es carga (3×) y
+> `blits()` (16 %). Llevar el post-procesado a la tubería GL se midió en
+> AUD-148 y salió **en contra** — el bloom en GPU es 5× más lento en la máquina
+> de medida porque SDL cae a software sin tarjeta. `PresentadorGPU` queda
+> apagado por defecto y `scripts/bench_gpu_postproc.py` existe para re-medirlo
+> donde toque.
+
+Lo que sigue abierto aquí es el catálogo de fenómenos atmosféricos de
+`92_CATALOGO_DE_FENOMENOS.md` §4: cielo procedural y transiciones de clima.
 
 #### Calidad
 

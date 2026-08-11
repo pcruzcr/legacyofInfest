@@ -6,7 +6,7 @@
   <property name="stage_name" value="1-2  LA SODA"/>
   <property name="time_limit" type="int" value="150"/>
   <property name="bgm_track" value="bgm_zone1"/>
-  <property name="climate" value=""/>
+  <property name="climate" value="clear"/>
   <property name="ambient_fx" value="dust"/>
   <property name="ambient_fx_rate" type="float" value="5.0"/>
  </properties>
