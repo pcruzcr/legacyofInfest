@@ -206,6 +206,14 @@ class ObjetosDeTiled:
         if obj_name and obj_name in waypoints_by_owner:
             cleaned["waypoints"] = waypoints_by_owner[obj_name]
         entity = entity_class(pygame.Vector2(obj.x, obj.y), **cleaned)
+        # AUD-387 - las resistencias por canal, si el objeto las declara. Se
+        # asignan despues de construir y no como argumento del constructor
+        # porque las 30 especies tienen firmas distintas y varias las heredan
+        # de entregas: un `**cleaned` con una clave que su `__init__` no espera
+        # revienta el nivel entero.
+        resistencias = cls._resistencias_de(props.get("resistencias"))
+        if resistencias:
+            entity.resistencias = resistencias
         stage.entity_list.append(entity)
 
     @classmethod
@@ -337,6 +345,65 @@ class ObjetosDeTiled:
             flicker_amount=max(0.0, min(1.0, cls._safe_float(
                 props.get("flicker_amount", 0.15), "light flicker_amount"))),
         ))
+
+    @classmethod
+    def _canal_de(cls, props: dict[str, Any]) -> str:
+        """El canal de dano declarado por un objeto, o el fisico.
+
+        AUD-387 - la propiedad se llama `damage_type` y no `canal` porque ese
+        es el nombre que `06_TMX_SPEC.md` lleva documentando desde AUD-310,
+        aunque marcado como no implementado. Cumplir la promesa con el nombre
+        prometido evita que los mapas que ya la escribieron -confiando en el
+        documento- tengan que cambiar.
+        """
+        from src.framework.combate import dano
+
+        return dano.normalizar(props.get("damage_type"))
+
+    @classmethod
+    def _resistencias_de(cls, valor: Any) -> dict[str, float]:
+        """Lee `resistencias="veneno:0.5, fuego:2"` de un objeto de Tiled.
+
+        AUD-387 — el formato es una cadena y no una propiedad por canal a
+        propósito: Tiled no tiene diccionarios, y una propiedad por canal
+        obligaría a tocar el motor cada vez que el catálogo crezca. Así, añadir
+        un canal a `data/damage_types.json` basta para poder declararlo.
+
+        Multiplicadores: 0,5 resiste, 2 es débil, 0 es inmune.
+
+        **Lo ilegible se ignora y el resto entra.** Un `fuego:x` o un canal
+        inventado no puede costarle el nivel entero al estudiante: se avisa en
+        el registro y las parejas buenas se aplican. Es la misma decisión que
+        toma este cargador con un clima mal escrito o una estación inexistente,
+        y por el mismo motivo — el estudiante necesita ver su nivel para darse
+        cuenta del error.
+        """
+        from src.framework.combate import dano
+
+        if not valor or not isinstance(valor, str):
+            return {}
+        salida: dict[str, float] = {}
+        for trozo in valor.split(","):
+            if ":" not in trozo:
+                if trozo.strip():
+                    logger.warning(
+                        "resistencias: «%s» no tiene la forma canal:factor",
+                        trozo.strip())
+                continue
+            canal, _, factor = trozo.partition(":")
+            canal = canal.strip().lower()
+            if not dano.canal_valido(canal):
+                logger.warning(
+                    "resistencias: canal «%s» desconocido. Válidos: %s",
+                    canal, ", ".join(sorted(dano.CANALES)))
+                continue
+            try:
+                salida[canal] = float(factor.strip())
+            except ValueError:
+                logger.warning(
+                    "resistencias: «%s» no es un número para el canal «%s»",
+                    factor.strip(), canal)
+        return salida
 
     @classmethod
     def _parse_light_color(cls, valor: Any) -> tuple[int, int, int]:
@@ -778,6 +845,10 @@ class ObjetosDeTiled:
             sube=max(0.0, sube),
             sube_hasta=sube_hasta,
             arranca_con=str(props.get("arranca_con", "") or ""),
+            # AUD-387 - cierra la promesa que 06_TMX_SPEC.md llevaba rota desde
+            # AUD-310. Un canal desconocido cae al fisico con un aviso, en vez
+            # de impedir la carga: el estudiante necesita ver su nivel.
+            damage_type=cls._canal_de(props),
             # Tiled escribe los booleanos como `"true"`/`"false"`, y la cadena
             # `"false"` es verdadera en Python: leerla sin convertir haría que
             # `avisar=false` no apagara nada.

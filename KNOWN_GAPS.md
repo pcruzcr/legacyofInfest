@@ -1288,7 +1288,7 @@ está.
   necesitando el paso fijo de GAP-036: con `dt` variable dos ejecuciones
   divergen aunque el azar coincida.
 
-## [GAP-043] No hay tipos de daño, armadura ni resistencias
+## ~~[GAP-043] No hay tipos de daño, armadura ni resistencias~~ *(Resuelto)*
 
 - **File:** `src/framework/stage/collision_system.py`
 - **Phase:** auditoría 2026-08-10, lista del dueño (AUD-376)
@@ -1299,6 +1299,35 @@ está.
 - **Resolution plan:** No hacerlo hasta que un jefe o un enemigo lo necesite.
   Meterlo antes es superficie que mantener sin lector, que es el mismo
   razonamiento con el que la invariante 5 decide qué se traduce.
+
+- **Resolution (2026-08-10, AUD-387):** hecho por decisión del dueño, que
+  eligió el modelo de datos: catálogo en `data/damage_types.json` y
+  resistencias declaradas en Tiled.
+
+  Tres canales de salida —`fisico`, `veneno`, `fuego`— y no una lista genérica:
+  son los que el lore sostiene (`veneno` aparece ocho veces en
+  `65_EL_LORE_EXTENSO.md`, `fuego` tres; hielo y electricidad, ninguna). Un
+  canal sin contenido detrás es una característica que nadie usa, que es lo que
+  GAP-052 vino a cerrar.
+
+  **La restricción que mandó sobre el diseño:** `apply_hit` tiene 32 llamantes
+  y **26 están en `src/stages/`**. Por eso `canal` va al final y opcional, y
+  `EnemyBase.resistencias` nace vacío: un enemigo que nadie toque se comporta
+  exactamente igual que antes, y ésa es la primera prueba del fichero.
+
+  El factor es multiplicador y no porcentaje restado, porque el mismo número
+  dice las tres cosas: `0.5` resiste, `2.0` es débil, `0.0` es inmune. Un
+  bestiario se vuelve interesante por las debilidades.
+
+  **Y cerró de paso una promesa rota del spec.** `06_TMX_SPEC.md` documentaba
+  `damage_type` en `HazardZone` como «no está implementada» desde AUD-310, con
+  una prueba vigilando que siguiera sin estarlo. No era descuido: sin canales,
+  prometer un *tipo* cuando el motor sólo sabe restar un número es prometer
+  nada. Ahora existe, con el nombre que el documento prometía —para que un mapa
+  que la escribiera confiando en él funcione sin cambios—.
+
+  21 pruebas nuevas. Falta la armadura como estadística aparte, que va con los
+  efectos temporales de GAP-044.
 
 ## [GAP-044] No hay sistema de buff/debuff
 

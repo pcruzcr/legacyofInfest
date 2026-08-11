@@ -55,7 +55,12 @@ NO_IMPLEMENTADAS = (
     "background_color",
     "debug_mode",
     "use_tile_collision",
-    "damage_type",
+    # AUD-387 — `damage_type` sale de esta lista: ya está implementada. Llevaba
+    # aquí desde AUD-310 y no por descuido, sino porque el motor no tenía
+    # canales de daño — prometer un *tipo* cuando sólo sabes restar un número
+    # es prometer nada. Con el catálogo de `data/damage_types.json`, una
+    # `HazardZone` puede declarar `damage_type="veneno"` y la resistencia de
+    # cada enemigo empieza a significar algo.
     "trigger_once",
 )
 
