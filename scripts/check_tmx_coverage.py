@@ -83,6 +83,8 @@ PROPIEDADES_DEL_MOTOR: tuple[str, ...] = tuple(sorted({
     # que las demás: el guardián bidireccional exige que todo lo que
     # `stage_loader.py` lea esté vigilado, y esto lo lee.
     "schema_version",
+    # AUD-426 — el cielo procedural.
+    "cielo",
 }))
 
 #: Propiedades **de objeto** que se leen dentro de `stage_loader.py`, y que por

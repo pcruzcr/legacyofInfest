@@ -115,6 +115,9 @@ class DrawingSystem(GizmosDeDepuracion):
         self._pause_overlay: pygame.Surface | None = None
         self._pause_font = pygame.font.Font(None, 20)
         self._debug_font = pygame.font.Font(None, 14)
+        #: AUD-426 — el cielo procedural, perezoso: sólo existe si algún mapa
+        #: lo pide. El módulo tampoco se importa hasta entonces.
+        self._cielo: Any | None = None
         #: AUD-135 — lienzo del agua, cacheado al tamaño de la pantalla.
         self._agua_cache: pygame.Surface | None = None
         self._peligro_cache: pygame.Surface | None = None
@@ -141,6 +144,13 @@ class DrawingSystem(GizmosDeDepuracion):
 
         # Draw order, back to front. Parallax backdrops first, then the tile
         # map, then world-space effects, then entities, then screen-space UI.
+        #
+        # AUD-426 — y antes que el parallax, el cielo procedural, si el mapa lo
+        # pide. Va debajo de todo porque es el fondo del fondo: las capas de
+        # parallax se dibujan encima y las que traigan alfa lo dejan pasar,
+        # que es lo que permite tener silueta de montañas sobre cielo
+        # calculado en vez de un PNG con el cielo pintado dentro.
+        self._dibujar_cielo(surface, stage, ctx)
         self._draw_background(surface, stage, camera)
         if ctx.fondo_del_escenario is not None:
             # AUD-162 — el escenario pinta su propio fondo aquí, entre el
@@ -429,6 +439,30 @@ class DrawingSystem(GizmosDeDepuracion):
     # Parallax speed per backdrop layer, far to near. Index 0 is the most
     # distant layer and therefore moves least.
     _PARALLAX_FACTORS: tuple[float, ...] = (0.15, 0.35, 0.6, 0.8)
+
+    def _dibujar_cielo(self, surface: pygame.Surface, stage: StageData,
+                       ctx: Any) -> None:
+        """El cielo procedural, si el mapa lo declara — AUD-426.
+
+        Se pide con la propiedad de mapa `cielo`. Sin ella no se dibuja nada y
+        los mapas de siempre se ven igual: un cielo calculado debajo de un PNG
+        que ya trae su propio cielo pintado no se vería, pero costaría, y un
+        mapa sin fondo pasaría de `BG_COLOR` a un degradado sin que nadie lo
+        hubiera pedido.
+
+        El estado sale del ambiente de la escena. Si no hay —una escena de
+        prueba, un escenario que no monta la simulación— no se dibuja: el
+        cielo depende de la hora, y sin mundo no hay hora que consultar.
+        """
+        if not getattr(stage, "cielo", False):
+            return
+        estado = getattr(ctx, "ambiente", None)
+        if estado is None:
+            return
+        if self._cielo is None:
+            from src.framework.vfx.cielo import CieloProcedural
+            self._cielo = CieloProcedural()
+        self._cielo.dibujar(surface, estado)
 
     def _draw_background(
         self, surface: pygame.Surface, stage: StageData, camera: Camera,

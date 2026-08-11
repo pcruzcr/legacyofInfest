@@ -167,8 +167,23 @@ nubes, viento, lluvia, tormenta, rayos, niebla, humedad, iluminación.
 **Estado: ✅ construido o declarable hoy.** Lo que falta del Nivel 1 son dos
 cosas, y son las dos de más valor por línea escrita:
 
-1. **Cielo procedural** (🟡) — desbloquea el crepúsculo de verdad, las
-   auroras, los halos y quita tres PNG de cielo.
+1. ~~**Cielo procedural** (🟡) — desbloquea el crepúsculo de verdad, las
+   auroras, los halos y quita tres PNG de cielo.~~ **HECHO (2026-08-11,
+   AUD-426).** `framework/vfx/cielo.py`: degradado entre cénit y horizonte
+   interpolado sobre la **altura solar**, con las nubes apagándolo. Lo
+   enciende la propiedad de mapa `cielo`, apagada por defecto — un degradado
+   calculado debajo de un PNG que ya trae su cielo pintado no se vería y
+   costaría. Se demuestra en `stage_mecanicas`, que es el laboratorio.
+
+   Lo que desbloquea, medido en la propia tabla de paradas: con el sol en el
+   horizonte el cénit sigue azul y la parte de abajo tira a naranja. **Esa
+   diferencia dentro de la misma imagen** es lo que un PNG que también tiene
+   que servir para el mediodía no puede dar, y es la razón de que el ciclo
+   día/noche llevara desde AUD-111 limitándose a oscurecer una foto fija.
+
+   El caché va por la clave redondeada (altura a dos decimales, nubes a dos):
+   sin ese redondeo, `altura_solar` cambia cada fotograma y las 180 líneas del
+   degradado se repintarían sesenta veces por segundo.
 2. **Sombras dirigidas por el sol** (🟡) — sombra larga al amanecer, corta a
    mediodía, blanda con nubes. El sistema de proyección ya existe.
 

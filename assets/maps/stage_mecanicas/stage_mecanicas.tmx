@@ -12,6 +12,10 @@
   <property name="compas" type="int" value="4"/>
   <property name="background_zone" value="stage0"/>
   <property name="climate" value="clear"/>
+  <!-- AUD-426: el cielo procedural. Aqui y no en un mapa de historia porque
+       este es el laboratorio: quien quiera ver el degradado moverse con la
+       hora abre este mapa y cambia `start_hour`. -->
+  <property name="cielo" type="bool" value="true"/>
   <property name="time_limit" value="0"/>
   <property name="zone" type="int" value="0"/>
   <property name="ambient_light" type="float" value="0.78"/>
