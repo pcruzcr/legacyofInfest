@@ -211,7 +211,31 @@ sin ellas el nivel no valida y pierde 10 puntos de rúbrica.
 | Propiedad | Tipo | Por defecto | Qué hace |
 |---|---|---|---|
 | `fog_of_war` | float | `0` | radio de visión en píxeles. `0` = apagado. Con `220` el jugador sólo ve su entorno |
+| `god_rays` | float | `0` | rayos de luz que bajan desde arriba, de `0` a `1`. Se nota con `ambient_light` baja |
+| `cielo` | bool | `false` | **cielo procedural** (AUD-426): el degradado sale de la altura del sol en vez de un PNG. Enciéndelo si tu mapa **no** trae fondo con cielo pintado; si lo trae, el degradado queda debajo y no se ve |
+| `habilidades_libres` | bool | `false` | exime a este escenario del candado de habilidades: el jugador entra con todo desbloqueado. Para laboratorios y pruebas |
 | `water_effect` | bool | `false` | ondulación y refracción sobre las `WaterZone` |
+
+#### Los cinco mandos del agua
+
+Sólo hacen algo con `water_effect = true`. Los rangos se recortan a propósito
+(AUD-240): una amplitud de 40 px convierte la lámina en ruido y un alfa de 255
+tapa el escenario, así que un mapa mal escrito se ve raro pero **jugable**, que
+es la regla del resto del cargador.
+
+| Propiedad | Tipo | Rango | Qué hace |
+|---|---|---|---|
+| `water_speed` | float | 0 – 8 | a qué velocidad se mueve la ondulación |
+| `water_amplitude` | float | 0 – 16 | cuánto sube y baja la onda, en píxeles |
+| `water_frequency` | float | 0 – 1 | cuántas ondas caben a lo ancho |
+| `water_alpha` | float | 0 – 255 | opacidad de la lámina |
+| `water_tint` | color | `#rrggbb` | color del agua. Por defecto un azul verdoso |
+
+> **Añadidas el 2026-08-11 (AUD-430).** Estas ocho propiedades las lee el motor
+> y **ningún documento de referencia las mencionaba** — ni éste, ni
+> `06_TMX_SPEC.md`, ni `STAGE_CREATION.md`. Ocho características construidas,
+> probadas y que ningún estudiante podía descubrir. Ahora lo impide
+> `test_toda_propiedad_del_motor_esta_documentada`.
 
 Los valores fuera de rango se **recortan**, no se rechazan: `bloom = 5`
 significa «mucho». Un valor mal escrito —`leafs` en vez de `leaves`— avisa por
