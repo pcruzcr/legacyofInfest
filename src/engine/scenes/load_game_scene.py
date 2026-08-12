@@ -18,7 +18,7 @@ from src.engine.scenes.demo_common import (
     draw_bottom_bar,
     draw_top_bar,
 )
-from src.engine.utils.asset_loader import AssetLoader
+from src.engine.ui.theme import font
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -85,7 +85,7 @@ class LoadGameScene(BaseScene):
         #: partida en la ranura seleccionada.
         self._creando: bool = False
         self._nombre: str = ""
-        self._font_small = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_SMALL)
+        self._font_small = font(FONT_SMALL)
 
     # ── lo que la pantalla deja consultar ──────────────────────────
 

@@ -40,7 +40,7 @@ haber encontrado mientras nada lo mostraba:
    (La primera versión de este comentario decía «unos 1.100 px». Era una
    estimación mía, no una medición, y estaba mal por 300 px. La cazó la propia
    prueba, que empieza comprobando que el texto de ejemplo de verdad no cabe.)
-2. **Fuentes fuera del tema.** `pygame.font.Font(None, 16)` directo, así que la
+2. **Fuentes fuera del tema.** `font(16)` directo, así que la
    escala de texto de accesibilidad (AUD-126) **no se aplicaba justo en la
    pantalla con más texto de todo el juego**.
 3. **Sin adelantar.** Pulsar confirmar mientras el texto se escribe no hacía

@@ -39,7 +39,7 @@ from src.engine.scenes.demo_common import (
     draw_top_bar,
     save_png,
 )
-from src.engine.utils.asset_loader import AssetLoader
+from src.engine.ui.theme import font
 from src.framework.processing.filter_tools import FilterTools
 
 logger = logging.getLogger(__name__)
@@ -121,9 +121,9 @@ class FilterDemoScene(BaseScene):
         self._conv_step_acc: float = 0.0
         self._conv_show_formula: bool = True
 
-        self._font_small = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_SMALL)
-        self._font_medium = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_MEDIUM)
-        self._font_large = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_LARGE)
+        self._font_small = font(FONT_SMALL)
+        self._font_medium = font(FONT_MEDIUM)
+        self._font_large = font(FONT_LARGE)
 
     def on_enter(self) -> None:
         self._mode = 0

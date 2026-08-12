@@ -15,41 +15,21 @@ import pygame
 from src.engine.core import settings
 from src.engine.core.event_bus import EventBus
 from src.engine.core.events import Events
-from src.engine.ui.theme import font
+from src.engine.ui.theme import ANCHO_DE_DISENO as theme_ancho_de_diseno
+from src.engine.ui.theme import ESCALA_DE_INTERFAZ, escalar, font
 from src.engine.utils.asset_loader import AssetLoader
 
 logger = logging.getLogger(__name__)
 
-#: Ancho para el que se dibujó la maqueta original del HUD — AUD-451.
-#:
-#: `09_HUD_SPEC.md` §2 lo decía con todas las letras: «the HUD occupies fixed
-#: regions of the 320×224 internal screen». La resolución interna pasó a
-#: 800×600 y el HUD se quedó escrito en píxeles de la de antes, dibujándose
-#: **sin escalar**: ocupaba el 40 % del ancho, arrinconado arriba a la
-#: izquierda, y por eso el marcador se veía diminuto.
-ANCHO_DE_DISENO: int = 320
+#: AUD-453 — la escala vive en `theme`, que es el módulo de los tokens de
+#: diseño. Estaba aquí desde AUD-451, y eso obligaba al cuadro de mensajes, a
+#: la franja del escenario y a los subtítulos a importar del HUD para
+#: colocarse: una dependencia que no significa nada. Se reexporta con el
+#: nombre de antes porque hay pruebas que lo nombran.
+ANCHO_DE_DISENO = theme_ancho_de_diseno
+ESCALA_DEL_HUD: float = ESCALA_DE_INTERFAZ
 
-
-def _escala_del_hud() -> float:
-    """Cuánto hay que agrandar la maqueta para la pantalla de verdad.
-
-    Se calcula en vez de escribirse por lo que enseñó AUD-187 con el menú de
-    título: una maqueta escrita en píxeles de una resolución concreta se queda
-    obsoleta en silencio el día que la resolución cambia, y nadie lo nota hasta
-    que alguien lo mira de cerca. Aquí pasaron 800/320 = 2,5 veces sin que
-    saltara nada.
-    """
-    return settings.INTERNAL_WIDTH / ANCHO_DE_DISENO
-
-
-#: La escala vigente. Se resuelve al importar porque la resolución interna es
-#: una constante del motor, no una preferencia que cambie en caliente.
-ESCALA_DEL_HUD: float = _escala_del_hud()
-
-
-def _e(valor: int | float) -> int:
-    """Un número de la maqueta original, llevado a la pantalla actual."""
-    return round(valor * ESCALA_DEL_HUD)
+_e = escalar
 
 
 def _rect_escalado(x: int, y: int, w: int, h: int) -> pygame.Rect:

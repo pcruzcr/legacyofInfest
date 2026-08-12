@@ -30,7 +30,6 @@ from typing import TYPE_CHECKING
 
 import pygame
 
-from src.engine.core import settings
 from src.engine.core.events import Events
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
@@ -47,7 +46,7 @@ from src.engine.scenes.demo_common import (
     draw_top_bar,
 )
 from src.engine.scenes.demo_layout import area_de_contenido
-from src.engine.utils.asset_loader import AssetLoader
+from src.engine.ui.theme import font
 from src.framework.academic.curriculum import Unidad, unidad
 from src.framework.academic.progress import ACIERTOS_PARA_APROBAR
 from src.framework.academic.sesion import SesionAcademica
@@ -104,12 +103,8 @@ class UnitTheoryScene(BaseScene):
         self._respondida: bool = False
         self._aciertos: int = 0
         self._resultado = None
-        self._font_medium = AssetLoader.load_font(
-            settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_MEDIUM,
-        )
-        self._font_small = AssetLoader.load_font(
-            settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_SMALL,
-        )
+        self._font_medium = font(FONT_MEDIUM)
+        self._font_small = font(FONT_SMALL)
 
     # -- ciclo de vida ---------------------------------------------
     def on_enter(self) -> None:

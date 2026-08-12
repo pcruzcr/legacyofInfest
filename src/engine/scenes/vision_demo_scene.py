@@ -38,7 +38,7 @@ from src.engine.scenes.demo_common import (
     draw_top_bar,
     save_png,
 )
-from src.engine.utils.asset_loader import AssetLoader
+from src.engine.ui.theme import font
 from src.framework.processing.vision_tools import ComponentResult, RegionInfo, VisionTools
 
 logger = logging.getLogger(__name__)
@@ -101,11 +101,11 @@ class VisionDemoScene(BaseScene):
         self._inter_pipeline_desc: str = ""
         self._inter_overlay: pygame.Surface | None = None
 
-        self._font_small = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_SMALL)
-        self._font_medium = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_MEDIUM)
-        self._font_large = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_LARGE)
-        self._font_overlay_small = pygame.font.Font(None, 11)
-        self._font_overlay_med = pygame.font.Font(None, 13)
+        self._font_small = font(FONT_SMALL)
+        self._font_medium = font(FONT_MEDIUM)
+        self._font_large = font(FONT_LARGE)
+        self._font_overlay_small = font(11)
+        self._font_overlay_med = font(13)
 
     def on_enter(self) -> None:
         self._mode = 0

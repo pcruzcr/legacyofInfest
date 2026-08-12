@@ -44,6 +44,7 @@ import pygame
 
 from src.engine.core import settings
 from src.engine.core.event_bus import EventBus
+from src.engine.ui.theme import font
 
 logger = logging.getLogger(__name__)
 
@@ -77,9 +78,7 @@ class DebugOverlay:
     def _ensure_font(self) -> None:
         if self._font is not None:
             return
-        from src.engine.utils.asset_loader import AssetLoader
-        self._font = AssetLoader.load_font(
-            settings.ASSETS_DIR / "fonts" / "game.ttf", 7)
+        self._font = font(7)
 
     @property
     def visible(self) -> bool:

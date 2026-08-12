@@ -5,7 +5,7 @@ import logging
 import pygame
 
 from src.engine.core import settings
-from src.engine.ui.theme import Theme, font
+from src.engine.ui.theme import Theme, escalar, font
 from src.engine.utils.asset_loader import AssetLoader
 from src.engine.utils.math_utils import ease_in_quad, ease_out_quad
 
@@ -23,7 +23,10 @@ class ScreenBanner:
         self._hold_duration: float = 2.0
         self._slide_out_duration: float = 0.4
         self._offset: float = float(settings.INTERNAL_WIDTH * 2)
-        self._banner_height: int = 40
+        # AUD-453 — la franja se dibujaba con 40 px de alto en y=88, los de
+        # la maqueta de 224. Sobre 600 px eso es un rótulo de escenario que
+        # ocupa la sexta parte de lo que le toca.
+        self._banner_height: int = escalar(40)
 
         self._banner_top: pygame.Surface | None = None
         self._banner_bottom: pygame.Surface | None = None
@@ -47,6 +50,16 @@ class ScreenBanner:
         self._fallback_font = font(Theme.FONT_BODY)
         self._name_surf: pygame.Surface | None = None
         self._name_fallback_surf: pygame.Surface | None = None
+
+    @property
+    def alto(self) -> int:
+        """Alto de la franja, ya escalado a la pantalla real."""
+        return self._banner_height
+
+    @property
+    def y_superior(self) -> int:
+        """Dónde empieza la franja. Lo consulta la prueba de maqueta."""
+        return escalar(88)
 
     def play(self, stage_id: str, stage_name: str) -> None:
         self._stage_id = stage_id
@@ -88,7 +101,7 @@ class ScreenBanner:
             return
 
         bx = int(self._offset - settings.INTERNAL_WIDTH)
-        by = 88
+        by = self.y_superior
         bw = settings.INTERNAL_WIDTH
 
         # Draw two-tone banner background

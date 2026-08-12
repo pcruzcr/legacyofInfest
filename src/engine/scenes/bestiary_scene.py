@@ -13,7 +13,7 @@ filas— y su propia navegación, que **se fijaba** en los extremos mientras
 `inventory_scene` y `world_map_scene` daban la vuelta. Dos pantallas contiguas
 del mismo juego respondían distinto a la misma tecla.
 
-También cargaba sus cuatro fuentes con `pygame.font.Font(None, …)`, saltándose
+También cargaba sus cuatro fuentes con `font(…)`, saltándose
 la escala tipográfica del tema y la caché de fuentes: cuatro objetos nuevos por
 escena que nadie reutilizaba.
 """

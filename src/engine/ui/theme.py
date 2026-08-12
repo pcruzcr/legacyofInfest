@@ -33,6 +33,8 @@ from typing import Final
 
 import pygame
 
+from src.engine.core import settings
+
 RGB = tuple[int, int, int]
 RGBA = tuple[int, int, int, int]
 
@@ -104,6 +106,35 @@ class Theme:
     # ── Radii ───────────────────────────────────────────────────
     RADIUS: Final[int] = 4
     RADIUS_L: Final[int] = 8
+
+
+#: Ancho para el que se dibujó la maqueta original de la interfaz — AUD-453.
+#:
+#: El juego se diseñó sobre una pantalla de 320×224 y pasó a 800×600 sin que
+#: la interfaz se recolocara. AUD-451 lo encontró en el HUD; la misma huella
+#: estaba en el cuadro de mensajes, en la franja del título de escenario y en
+#: los subtítulos. Todos dibujaban números de la pantalla vieja **sin
+#: escalar**, así que salían a menos de la mitad de su tamaño.
+#:
+#: Vive aquí y no en `hud` porque es un token de diseño, igual que los colores
+#: y los espaciados: la relación entre la maqueta y la pantalla es de todos, y
+#: tenerla en el HUD obligaba a los demás a importar del HUD para colocarse.
+ANCHO_DE_DISENO: Final[int] = 320
+
+#: La escala vigente. Se resuelve al importar porque la resolución interna es
+#: una constante del motor, no una preferencia que cambie en caliente.
+ESCALA_DE_INTERFAZ: Final[float] = settings.INTERNAL_WIDTH / ANCHO_DE_DISENO
+
+
+def escalar(valor: int | float) -> int:
+    """Un número de la maqueta original, llevado a la pantalla actual.
+
+    Se calcula en vez de escribirse por lo que enseñó AUD-187 con el menú de
+    título: una maqueta escrita en píxeles de una resolución concreta se queda
+    obsoleta en silencio el día que la resolución cambia. Aquí pasaron
+    800/320 = 2,5 veces sin que saltara nada.
+    """
+    return round(valor * ESCALA_DE_INTERFAZ)
 
 
 _font_cache: dict[tuple[str | None, int], pygame.font.Font] = {}

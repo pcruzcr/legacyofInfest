@@ -50,7 +50,7 @@ from src.engine.scenes.demo_common import (
     draw_top_bar,
 )
 from src.engine.scenes.scene_registry import get_registry
-from src.engine.utils.asset_loader import AssetLoader
+from src.engine.ui.theme import font
 from src.framework.academic.curriculum import PLAN
 from src.framework.academic.progress import ACIERTOS_PARA_APROBAR, PREGUNTAS_POR_UNIDAD
 from src.framework.academic.sesion import SesionAcademica
@@ -118,12 +118,8 @@ class DemoMenuScene(BaseScene):
         self._scroll_offset: int = 0
         self._error_msg: str = ""
         self._error_timer: float = 0.0
-        self._font_medium = AssetLoader.load_font(
-            settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_MEDIUM,
-        )
-        self._font_small = AssetLoader.load_font(
-            settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_SMALL,
-        )
+        self._font_medium = font(FONT_MEDIUM)
+        self._font_small = font(FONT_SMALL)
 
     # -- consulta del progreso -------------------------------------
     @property

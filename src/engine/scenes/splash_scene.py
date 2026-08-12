@@ -8,6 +8,7 @@ import pygame
 from src.engine.core import settings
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import BOTTOM_BAR_Y
+from src.engine.ui.theme import font
 from src.engine.utils.asset_loader import AssetLoader
 
 if TYPE_CHECKING:
@@ -57,12 +58,8 @@ class SplashScene(BaseScene):
 
         self._music = assets / "bck.wav"
 
-        self._font_game = AssetLoader.load_font(
-            settings.ASSETS_DIR / "fonts" / "game.ttf", 14,
-        )
-        self._font_small = AssetLoader.load_font(
-            settings.ASSETS_DIR / "fonts" / "game.ttf", 10,
-        )
+        self._font_game = font(14)
+        self._font_small = font(10)
 
     def on_enter(self) -> None:
         self._timer = 0.0

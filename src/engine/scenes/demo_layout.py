@@ -12,8 +12,7 @@ from __future__ import annotations
 import pygame
 
 from src.engine.core import settings
-from src.engine.ui.theme import Theme
-from src.engine.utils.asset_loader import AssetLoader
+from src.engine.ui.theme import Theme, font
 
 # ── Computed Layout Constants ──────────────────────────────────────
 # These scale with INTERNAL_WIDTH and INTERNAL_HEIGHT.
@@ -310,8 +309,7 @@ def clear_demo_font_cache() -> None:
 def _get_demo_font(size: int) -> pygame.font.Font:
     key = size
     if key not in _FONT_CACHE:
-        _FONT_CACHE[key] = AssetLoader.load_font(
-            settings.ASSETS_DIR / "fonts" / "game.ttf", size)
+        _FONT_CACHE[key] = font(size)
     return _FONT_CACHE[key]
 
 

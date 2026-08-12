@@ -12,8 +12,8 @@ from pathlib import Path
 
 import pygame
 
-from src.engine.core import settings
 from src.engine.scenes.demo_layout import FONT_LARGE, PANEL_SIZE
+from src.engine.ui.theme import font
 from src.engine.utils.asset_loader import AssetLoader
 
 logger = logging.getLogger(__name__)
@@ -123,7 +123,7 @@ def build_default_sources() -> SourceSurfaceManager:
 def _make_fallback_surface(label: str, color: tuple[int, int, int]) -> pygame.Surface:
     surf = pygame.Surface(PANEL_SIZE)
     surf.fill(color)
-    fnt = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_LARGE)
+    fnt = font(FONT_LARGE)
     ts = fnt.render(label, True, (255, 255, 255))
     surf.blit(ts, (4, 4))
     return surf

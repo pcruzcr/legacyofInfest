@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING
 
 import pygame
 
-from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
@@ -32,7 +31,7 @@ from src.engine.scenes.demo_common import (
     draw_panel_border,
     draw_top_bar,
 )
-from src.engine.utils.asset_loader import AssetLoader
+from src.engine.ui.theme import font
 from src.framework.processing.filter_tools import FilterTools
 
 logger = logging.getLogger(__name__)
@@ -74,10 +73,8 @@ class PipelineBuilderScene(BaseScene):
         self._pipeline: list[int] = []
         self._selected_filter: int = 0
         self._cursor: int = -1  # -1 = not inserting, >=0 = position
-        self._font_small = AssetLoader.load_font(
-            settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_SMALL)
-        self._font_medium = AssetLoader.load_font(
-            settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_MEDIUM)
+        self._font_small = font(FONT_SMALL)
+        self._font_medium = font(FONT_MEDIUM)
         self._cached_result: pygame.Surface | None = None
         self._cached_left_scaled: pygame.Surface | None = None
         self._cached_left_src: pygame.Surface | None = None

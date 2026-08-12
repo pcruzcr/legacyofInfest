@@ -27,7 +27,7 @@ import pygame
 from src.engine.core import settings, user_settings
 from src.engine.core.event_bus import EventBus
 from src.engine.core.events import Events
-from src.engine.ui.theme import Theme, font
+from src.engine.ui.theme import Theme, escalar, font
 
 logger = logging.getLogger(__name__)
 
@@ -166,12 +166,22 @@ class SubtitleOverlay:
             self._font = font(Theme.FONT_SMALL)
         return self._font
 
+    def y_de_la_banda(self, cuantas: int) -> int:
+        """Dónde empieza la banda de subtítulos — AUD-453.
+
+        Era `INTERNAL_HEIGHT - 150 - (n-1) * 18`: el 150 y el 18 son de la
+        maqueta de 224 px de alto. Sobre 600, la banda se quedaba a medio
+        camino de la pantalla en vez de justo encima del borde, y las líneas
+        se apretaban unas contra otras.
+        """
+        return settings.INTERNAL_HEIGHT - escalar(56) - (cuantas - 1) * escalar(18)
+
     def draw(self, surface: pygame.Surface) -> None:
         if not self.enabled or not self._active:
             return
         font = self._ensure_font()
         # Anchored above the bottom edge, clear of the HUD and the dialogue box.
-        y = settings.INTERNAL_HEIGHT - 150 - (len(self._active) - 1) * 18
+        y = self.y_de_la_banda(len(self._active))
         for text, remaining in self._active:
             # Fade the last half-second so captions leave calmly.
             alpha = 255 if remaining > 0.5 else int(255 * remaining / 0.5)

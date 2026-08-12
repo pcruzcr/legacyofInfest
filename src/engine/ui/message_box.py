@@ -7,7 +7,7 @@ import pygame
 from src.engine.core import settings
 from src.engine.core.event_bus import EventBus
 from src.engine.core.events import Events
-from src.engine.ui.theme import Theme, font
+from src.engine.ui.theme import Theme, escalar, font
 
 logger = logging.getLogger(__name__)
 
@@ -160,13 +160,23 @@ class MessageBox:
                 y += s.get_height() + 2
         return self._cached_text_surf
 
+    def caja_rect(self) -> pygame.Rect:
+        """Dónde va el cuadro, derivado de la maqueta original — AUD-453.
+
+        Era `pygame.Rect(0, 64, INTERNAL_WIDTH, 28)`: el ancho sí seguía a la
+        pantalla, pero el alto y la posición eran los de la maqueta de 224 px.
+        Sobre los 600 actuales, el cuadro donde se leen los diálogos y los
+        avisos del escenario ocupaba el 4,7 % del alto en vez del 12,5 % que
+        le corresponde.
+        """
+        return pygame.Rect(0, escalar(64), settings.INTERNAL_WIDTH, escalar(28))
+
     def draw(self, surface: pygame.Surface) -> None:
         if not self._visible or not self._text:
             return
 
-        box_height = 28
-        box_rect = pygame.Rect(0, 64,
-                               settings.INTERNAL_WIDTH, box_height)
+        box_rect = self.caja_rect()
+        box_height = box_rect.height
         if self._overlay_surf is None:
             self._overlay_surf = pygame.Surface((box_rect.width, box_rect.height))
         overlay = self._overlay_surf
