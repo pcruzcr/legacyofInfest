@@ -23,6 +23,7 @@ from src.engine.render.shaders import (
     godray_frag,
     lighting_frag,
     motion_blur_frag,
+    overlay_frag,
     passthrough_frag,
     refraction_frag,
     upload_frag,
@@ -274,6 +275,11 @@ class GLRenderer:
         # orden de canales para el que se compiló. `None` = no se detectó un
         # formato conocido y se sube por el camino lento de `tostring`.
         self._upload_prog: moderngl.Program | None = None
+        #: AUD-435 — el gemelo de `_upload_prog` que conserva el alfa, para el
+        #: overlay de interfaz. Mismo volteo y mismo swizzle; lo que cambia es
+        #: que no fuerza el alfa a opaco, porque el del HUD es el que decide
+        #: qué parte del escenario se sigue viendo.
+        self._overlay_prog: moderngl.Program | None = None
         self._swizzle: bool | None = None
         #: Textura del mapa de luz, reutilizada entre fotogramas.
         self._light_texture: moderngl.Texture | None = None
@@ -462,6 +468,13 @@ class GLRenderer:
                 vertex_shader=default_vert,
                 fragment_shader=upload_frag(self._swizzle),
             )
+            # AUD-435 — el gemelo que conserva el alfa, para el overlay de
+            # interfaz. Se compila junto al otro y por la misma razón: el
+            # orden de canales va horneado en el fuente.
+            self._overlay_prog = ctx.program(
+                vertex_shader=default_vert,
+                fragment_shader=overlay_frag(self._swizzle),
+            )
 
     def _create_quad(self, w: int, h: int) -> None:
         ctx = self.ctx
@@ -542,6 +555,33 @@ class GLRenderer:
     def _subida_directa(self, surface: pygame.Surface) -> bool:
         """¿Esta superficie sube sin convertir, con el sombreador compilado?"""
         return self._swizzle is not None and self._swizzle_de(surface) == self._swizzle
+
+    def _programa_de_subida(
+        self, surface: pygame.Surface, *, conserva_alfa: bool,
+    ) -> moderngl.Program | None:
+        """El sombreador que coloca ESTA superficie recién subida.
+
+        AUD-435 — el camino de subida y el sombreador que lo compensa son una
+        sola decisión, y estaban escritos por separado. La escena la tomaba
+        bien; el overlay de interfaz se quedó con `_passthrough_prog` fijo, que
+        no voltea ni intercambia canales, así que el HUD salía del revés y con
+        rojo y azul cambiados en cuanto su superficie calificaba para el camino
+        rápido — que califica siempre, medido en
+        `tests/test_el_hud_no_sale_del_reves.py`.
+
+        Emparejarlos en una función es la corrección de verdad: mientras la
+        elección se pueda escribir dos veces, se podrá olvidar una.
+
+        `conserva_alfa` distingue los dos consumidores y no es un detalle:
+        `upload_frag` fuerza el alfa a opaco porque la superficie de la escena
+        no tiene canal alfa, y hacer lo mismo con el overlay taparía el
+        escenario entero (AUD-344).
+        """
+        if not self._subida_directa(surface):
+            # `tobytes(..., True)` ya entregó los píxeles colocados y en RGBA:
+            # aquí el correcto es el que no toca nada.
+            return self._passthrough_prog
+        return self._overlay_prog if conserva_alfa else self._upload_prog
 
     def _subir(
         self, surface: pygame.Surface, textura: moderngl.Texture | None,
@@ -725,8 +765,7 @@ class GLRenderer:
         read_fbo.use()
         ctx.clear(0.06, 0.06, 0.16, 1.0)
         self._run_shader_pass(
-            self._upload_prog if self._subida_directa(scene_surface)
-            else self._passthrough_prog,
+            self._programa_de_subida(scene_surface, conserva_alfa=False),
             self._screen_texture,
             target_fbo=read_fbo,
         )
@@ -994,8 +1033,12 @@ class GLRenderer:
         # nada: ni textura ni pasada.
         if overlay is not None:
             self._overlay_texture = self._subir(overlay, self._overlay_texture)
+            # AUD-435 — el sombreador acompaña al camino de subida, igual que
+            # en la pasada 1. Aquí estaba fijo en `_passthrough_prog` y el HUD
+            # salía invertido en vertical y con los canales cambiados.
             self._run_shader_pass(
-                self._passthrough_prog, self._overlay_texture,
+                self._programa_de_subida(overlay, conserva_alfa=True),
+                self._overlay_texture,
             )
         pygame.display.flip()
 
@@ -1073,6 +1116,11 @@ class GLRenderer:
         if self._upload_prog is not None:
             self._upload_prog.release()
             self._upload_prog = None
+        # AUD-435 — se suelta junto a su gemelo: separarlos es como se filtra
+        # un programa en cada `destroy()`.
+        if self._overlay_prog is not None:
+            self._overlay_prog.release()
+            self._overlay_prog = None
         # AUD-223 — se liberan todos los VAOs, no sólo el del passthrough: al
         # haber uno por programa, soltar sólo `_quad_vao` dejaba los otros
         # nueve vivos en cada `destroy()`.
