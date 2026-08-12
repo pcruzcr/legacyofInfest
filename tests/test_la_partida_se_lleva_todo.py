@@ -46,7 +46,8 @@ def limpio():
 
 class TestElEsquema:
     def test_la_version_subio(self) -> None:
-        assert SAVE_VERSION == 3
+        # AUD-438 la llevó a 4 al meter los logros dentro de la partida.
+        assert SAVE_VERSION == 4
 
     def test_una_partida_nueva_trae_los_campos(self) -> None:
         data = SaveData()

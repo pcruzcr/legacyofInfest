@@ -374,6 +374,64 @@ class AchievementSystem:
         destino.parent.mkdir(parents=True, exist_ok=True)
         destino.write_bytes(orjson.dumps(data, option=orjson.OPT_INDENT_2))
 
+    def volcar(self) -> dict[str, Any]:
+        """El progreso de logros, para que viaje dentro de la partida — AUD-438.
+
+        Devuelve exactamente la misma forma que escribe `save()` en disco. Es
+        deliberado: reutilizar el formato deja `restaurar()` y `load()` leyendo
+        lo mismo, y una partida guardada hoy se puede seguir leyendo si algún
+        día vuelve a haber fichero global.
+
+        Existe porque los logros son progreso, y el progreso pertenece al
+        perfil. Antes vivían en `achievements.json`, uno por instalación, así
+        que lo desbloqueado jugando una ranura aparecía desbloqueado en todas.
+        """
+        return {
+            "progress": {
+                aid: p.model_dump() for aid, p in self._progress.items()
+            },
+            "stats": {**self._stats, "explored_stages": self._explored_stages},
+        }
+
+    def restaurar(self, data: dict[str, Any] | None) -> None:
+        """Deja los logros como los dejó esa partida — AUD-438.
+
+        **Siempre se vuelve a cero primero**, incluso con `data` vacío, y ahí
+        está el defecto que esto corrige: cargar una ranura nueva conservaba
+        los logros de la anterior porque nadie los limpiaba. Un diccionario
+        vacío significa «esta partida no tiene logros», no «no toques nada» —
+        quien tenga que ser indulgente con una partida antigua lo decide en
+        `aplicar_estado_de` mirando la versión, que es donde se sabe.
+
+        Es la misma limpieza que hace `load()` por el motivo de AUD-200: este
+        sistema es un singleton de proceso y hereda lo que no se le borre.
+        """
+        self._progress = {aid: AchievementProgress() for aid in self._defs}
+        self._explored_stages = []
+        self._stats = {}
+        if not data:
+            return
+        guardado = data.get("progress", {})
+        if isinstance(guardado, dict):
+            for aid, pdata in guardado.items():
+                if aid in self._progress:
+                    try:
+                        self._progress[aid] = AchievementProgress.model_validate(pdata)
+                    except ValueError:
+                        # Un logro ilegible no puede tumbar los otros nueve.
+                        logger.warning("achievements: progreso ilegible en %r", aid)
+        stats = data.get("stats", {})
+        if isinstance(stats, dict):
+            visitados = stats.get("explored_stages", [])
+            self._explored_stages = (
+                [s for s in visitados if isinstance(s, str)]
+                if isinstance(visitados, list) else []
+            )
+            self._stats = {
+                k: v for k, v in stats.items()
+                if k != "explored_stages" and isinstance(v, int)
+            }
+
     def load(self) -> None:
         # AUD-200 — antes de leer, se vuelve a cero: este sistema es un
         # singleton de proceso, y cambiar de estudiante sin limpiar dejaría
