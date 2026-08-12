@@ -24,6 +24,41 @@ logger = logging.getLogger(__name__)
 _SAVES_HEREDADO = settings.PROJECT_ROOT / "saves"
 
 
+#: El `SaveManager` vivo, para que quien necesite saber qué partida se juega
+#: no tenga que recibirlo por parámetro desde el otro extremo del árbol.
+_gestor_activo: SaveManager | None = None
+
+
+def ruta_del_perfil(nombre: str) -> Path:
+    """Dónde guarda este fichero la partida que se está jugando — AUD-450.
+
+    El bestiario y los récords escribían en `saves/bestiary.json` y
+    `saves/speedrun.json`: **uno por instalación**. Es el mismo defecto que
+    AUD-438 quitó de los logros, y con la misma consecuencia — empiezas una
+    partida nueva y el bestiario ya está descubierto.
+
+    No se meten dentro de `SaveData` como se hizo con los logros porque son
+    otra cosa: aquéllos son diez entradas y caben; el bestiario crece con cada
+    enemigo del juego y los récords con cada escenario, y los dos ya saben
+    serializarse y aceptan una ruta. Derivar la ruta consigue el aislamiento
+    sin duplicar esa serialización ni subir la versión del esquema otra vez.
+
+    El número de partida va en la **carpeta** y no en el nombre del fichero:
+    así borrar un perfil es borrar un directorio. Con el número en el nombre
+    —`bestiary_1.json`— habría que recordar la lista de ficheros que le
+    pertenecen, y el día que se añada uno nuevo se quedaría huérfano.
+
+    Sin partida activa se devuelve la ruta de siempre. Un escenario lanzado
+    con `--stage` no declara ranura, y quedarse sin sitio donde escribir sería
+    peor que compartirlo.
+    """
+    base = SaveManager.SAVES_DIR
+    ranura = _gestor_activo.ranura_activa if _gestor_activo is not None else None
+    if ranura is None:
+        return base / nombre
+    return base / f"slot_{ranura}" / nombre
+
+
 def _ahora() -> float:
     """El reloj monótono con el que se mide el tiempo jugado — AUD-442.
 
@@ -224,6 +259,11 @@ class SaveManager:
         self._ranura_activa: int | None = None
         #: AUD-442 — cuándo empezó la sesión de la partida activa.
         self._inicio_de_sesion: float = _ahora()
+        # AUD-450 — el último construido es el del juego. `ruta_del_perfil` lo
+        # consulta para saber en qué carpeta escribe el bestiario y los
+        # récords, que no reciben el gestor por parámetro.
+        global _gestor_activo
+        _gestor_activo = self
 
     def anotar_tiempo_jugado(self, data: SaveData) -> None:
         """Suma a la partida los segundos jugados desde la última anotación.

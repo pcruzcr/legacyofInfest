@@ -27,6 +27,17 @@ logger = logging.getLogger(__name__)
 _DEFAULT_SAVE_PATH: Path = user_data_dir() / "saves" / "speedrun.json"
 
 
+def _ruta_por_defecto() -> Path:
+    """Los récords de la partida que se juega — AUD-450.
+
+    Misma razón que en el bestiario: era una constante, así que los tiempos de
+    una partida aparecían como récords de todas.
+    """
+    from src.engine.core.save_manager import ruta_del_perfil
+
+    return ruta_del_perfil("speedrun.json")
+
+
 #: Marca de «aquí no hay nada que cargar». No se usa `None` porque `null` es
 #: un contenido JSON válido: un fichero con `null` dentro devolvería `None` y
 #: se confundiría con «el fichero no existe», que es el único caso que no
@@ -141,14 +152,14 @@ class SpeedrunTimer:
             # estaría editando lo que se acababa de escribir.
             "splits": self.get_splits(),
         }
-        path = Path(path) if path is not None else _DEFAULT_SAVE_PATH
+        path = Path(path) if path is not None else _ruta_por_defecto()
         from src.engine.core.integridad import volcar
         from src.engine.core.save_manager import escribir_atomicamente
 
         escribir_atomicamente(path, volcar(data))
 
     def load(self, path: str | Path | None = None) -> None:
-        ruta = Path(path) if path is not None else _DEFAULT_SAVE_PATH
+        ruta = Path(path) if path is not None else _ruta_por_defecto()
         datos = _leer_json(ruta)
         if datos is _AUSENTE:
             return
@@ -343,7 +354,7 @@ def registrar_marca(
     ilegible se sustituye por uno nuevo con esta marca: es lo único recuperable
     y deja al jugador en mejor sitio que borrarlo del todo.
     """
-    ruta = Path(path) if path is not None else _DEFAULT_SAVE_PATH
+    ruta = Path(path) if path is not None else _ruta_por_defecto()
 
     datos = _leer_json(ruta)
     marcas: dict[str, float] = {}
