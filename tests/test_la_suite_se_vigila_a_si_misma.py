@@ -125,6 +125,16 @@ def _literal(nodo: ast.AST) -> str:
     """
     if isinstance(nodo, ast.Constant) and isinstance(nodo.value, str):
         return nodo.value
+    # AUD-454 — un motivo sacado de una tabla también es un motivo.
+    #
+    # `test_toda_propiedad_esta_documentada` omite con
+    # `pytest.skip(NO_SE_DOCUMENTAN[propiedad])`: cada propiedad tiene el suyo,
+    # escrito en un diccionario, y eso es **más** explicación que una cadena
+    # repetida en el `skip`. Esta función sólo entendía literales y f-strings,
+    # así que lo denunciaba como omisión muda — justo lo contrario de lo que
+    # persigue, y lo que su propia docstring ya decía que debía aceptar.
+    if isinstance(nodo, ast.Subscript):
+        return ast.unparse(nodo)
     if isinstance(nodo, ast.JoinedStr):
         return "".join(
             v.value for v in nodo.values

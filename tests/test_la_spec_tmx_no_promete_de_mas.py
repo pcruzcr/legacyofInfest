@@ -92,12 +92,27 @@ class TestLasCincoSiguenSinImplementar:
     def test_el_documento_avisa(self, propiedad: str, spec: str) -> None:
         """Y si esto falla, alguien volvió a documentarla como si funcionara."""
         for linea in spec.splitlines():
-            if propiedad in linea:
-                assert "no está implementada" in linea.lower() \
-                    or "no implementad" in linea.lower(), (
-                    f"06_TMX_SPEC.md menciona `{propiedad}` sin avisar de que "
-                    f"no está implementada:\n    {linea.strip()[:160]}"
-                )
+            if propiedad not in linea:
+                continue
+            bajo = linea.lower()
+            # AUD-454 — el tachado cuenta como aviso.
+            #
+            # El documento las agrupa bajo «2.2 Propiedades que **no** existen»
+            # y las tacha: `~~`background_color`~~`. Eso avisa mejor que
+            # repetir la frase en cada fila —lo dice una vez, para toda la
+            # tabla, y con una notación que se ve de un vistazo—, pero esta
+            # prueba miraba línea a línea y no veía ni la cabecera ni el
+            # tachado, así que exigía una redacción concreta.
+            #
+            # Una fila sin tachar y sin la frase sigue fallando, que es lo que
+            # esta prueba existe para cazar: documentar como si funcionara algo
+            # que no funciona.
+            tachada = f"~~`{propiedad}`~~" in linea
+            assert tachada or "no está implementada" in bajo \
+                or "no implementad" in bajo, (
+                f"06_TMX_SPEC.md menciona `{propiedad}` sin avisar de que "
+                f"no está implementada:\n    {linea.strip()[:160]}"
+            )
 
 
 class TestLosEjemplosCargarian:
@@ -121,6 +136,18 @@ class TestLosEjemplosCargarian:
         entity_factory.ensure_registered()
         conocidos = set(known_object_types(list(StageLoader._entity_registry)))
         conocidos |= set(StageLoader._registro_historico)
+        # AUD-454 — los tipos de la capa `Collision` también cuentan.
+        #
+        # `Platform` y `Solid` no están en el vocabulario de la capa `Objects`
+        # —que es lo que devuelve `known_object_types`— pero el cargador **sí**
+        # los reconoce: `stage_loader` los reparte entre `one_way_rects` y
+        # `collision_rects` según el tipo. Sin esto, un ejemplo correcto de la
+        # capa de colisión se denunciaba como tipo inventado, que es la misma
+        # clase de falso positivo que AUD-096 y AUD-112: la herramienta
+        # castigando trabajo bien hecho.
+        from src.framework.stage.tmx_diagnostics import COLLISION_OBJECT_TYPES
+
+        conocidos |= set(COLLISION_OBJECT_TYPES)
 
         usados = set(re.findall(r'<object[^>]*\stype="(\w+)"', spec))
         desconocidos = sorted(t for t in usados if t not in conocidos)
