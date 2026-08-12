@@ -19,7 +19,7 @@ from src.engine.scenes.demo_common import BOTTOM_BAR_Y
 # de que el splash pudiera dibujar su primer fotograma. Las otras seis
 # opciones de este mismo menu ya se importaban asi; estas cuatro se
 # quedaron arriba.
-from src.engine.ui.theme import Theme
+from src.engine.ui.theme import Theme, font
 from src.engine.ui.widgets import (
     MenuItem,
     MenuList,
@@ -150,10 +150,7 @@ class TitleScene(BaseScene):
         deseado = Theme.FONT_BODY + Theme.SPACE_S
         line_h = max(11, min(deseado, available // max(n, 1)))
         self._font_size = max(14, line_h - Theme.SPACE_XS)
-        self._font_game = AssetLoader.load_font(
-            settings.ASSETS_DIR / "fonts" / "game.ttf",
-            self._font_size,
-        )
+        self._font_game = font(self._font_size)
         self._option_spacing = line_h
         # AUD-446 — el tope lo pone la ventana, no el hueco. Con el hueco, al
         # agrandar el logo seguían cabiendo diez filas apretadas y la portada

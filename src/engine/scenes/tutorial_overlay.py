@@ -10,6 +10,7 @@ import pygame
 
 from src.engine.core import settings
 from src.engine.scenes.demo_common import COLOR_ACCENT, COLOR_HIGHLIGHT, COLOR_TEXT
+from src.engine.ui.theme import font
 from src.engine.utils.surface_pool import get_pool
 
 TUTORIAL_CONTENT: dict[str, list[dict[str, str]]] = {
@@ -54,9 +55,9 @@ class TutorialOverlay:
         self._steps: list[dict[str, str]] = TUTORIAL_CONTENT.get(lab_key, [
             {"title": "No Tutorial", "text": "No tutorial content available for this lab."},
         ])
-        self._font_step = pygame.font.Font(None, 11)
-        self._font_text = pygame.font.Font(None, 12)
-        self._font_hint = pygame.font.Font(None, 15)
+        self._font_step = font(11)
+        self._font_text = font(12)
+        self._font_hint = font(15)
 
     @property
     def active(self) -> bool:

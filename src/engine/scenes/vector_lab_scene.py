@@ -23,7 +23,6 @@ from typing import TYPE_CHECKING
 
 import pygame
 
-from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
@@ -44,7 +43,7 @@ from src.engine.scenes.demo_layout import (
     Lienzo,
     area_con_columna,
 )
-from src.engine.utils.asset_loader import AssetLoader
+from src.engine.ui.theme import font
 from src.engine.utils.math_utils import vec2_dot
 
 if TYPE_CHECKING:
@@ -104,10 +103,8 @@ class VectorLabScene(BaseScene):
         self._speed: float = 100.0
         self._show_normalized: bool = False
 
-        self._font_small = AssetLoader.load_font(
-            settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_SMALL)
-        self._font_medium = AssetLoader.load_font(
-            settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_MEDIUM)
+        self._font_small = font(FONT_SMALL)
+        self._font_medium = font(FONT_MEDIUM)
 
         self._status_msg: str = ""
         self._status_timer: float = 0.0

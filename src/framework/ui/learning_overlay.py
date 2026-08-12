@@ -4,6 +4,7 @@ import pygame
 
 from src.engine.core import settings
 from src.engine.input.action_map import Action
+from src.engine.ui.theme import font
 
 LEARNING_PANELS: dict[Action, dict[str, object]] = {
     Action.LEARN_MATH: {
@@ -156,8 +157,8 @@ class LearningOverlay:
 
     def __init__(self) -> None:
         self._active_key: Action | None = None
-        self._font = pygame.font.Font(None, 14)
-        self._title_font = pygame.font.Font(None, 18)
+        self._font = font(14)
+        self._title_font = font(18)
         self._box_surf = None
 
     def toggle(self, action: Action) -> None:

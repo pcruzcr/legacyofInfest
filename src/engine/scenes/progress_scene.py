@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING
 
 import pygame
 
-from src.engine.core import settings
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
@@ -29,7 +28,7 @@ from src.engine.scenes.demo_common import (
     draw_bottom_bar,
     draw_top_bar,
 )
-from src.engine.utils.asset_loader import AssetLoader
+from src.engine.ui.theme import font
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -55,10 +54,8 @@ CATEGORY_COLORS = [
 class ProgressScene(BaseScene):
     def __init__(self, context: GameContext) -> None:
         super().__init__(context)
-        self._font_small = AssetLoader.load_font(
-            settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_SMALL)
-        self._font_medium = AssetLoader.load_font(
-            settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_MEDIUM)
+        self._font_small = font(FONT_SMALL)
+        self._font_medium = font(FONT_MEDIUM)
         # AUD-154 — los cinco totales estaban escritos a mano y tres de las
         # cinco barras eran ficción:
         #

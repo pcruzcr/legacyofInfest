@@ -41,7 +41,7 @@ from src.engine.scenes.demo_common import (
     save_png,
 )
 from src.engine.scenes.demo_layout import TOP_BAR_H, Lienzo, area_de_contenido
-from src.engine.utils.asset_loader import AssetLoader
+from src.engine.ui.theme import font
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -97,10 +97,8 @@ class CollisionLabScene(BaseScene):
         self._spawn_y = 100.0
 
         # Fonts
-        self._font_small = AssetLoader.load_font(
-            settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_SMALL)
-        self._font_medium = AssetLoader.load_font(
-            settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_MEDIUM)
+        self._font_small = font(FONT_SMALL)
+        self._font_medium = font(FONT_MEDIUM)
 
         # ErrorDisplay-like message
         self._status_msg: str = ""

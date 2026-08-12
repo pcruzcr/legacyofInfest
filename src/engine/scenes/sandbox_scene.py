@@ -28,7 +28,7 @@ from src.engine.scenes.demo_common import (
     draw_bottom_bar,
     draw_top_bar,
 )
-from src.engine.utils.asset_loader import AssetLoader
+from src.engine.ui.theme import font
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -44,10 +44,8 @@ class SandboxScene(BaseScene):
     def __init__(self, context: GameContext) -> None:
         """Initialize sandbox with player, empty enemy/collectible/projectile lists."""
         super().__init__(context)
-        self._font_small = AssetLoader.load_font(
-            settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_SMALL)
-        self._font_medium = AssetLoader.load_font(
-            settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_MEDIUM)
+        self._font_small = font(FONT_SMALL)
+        self._font_medium = font(FONT_MEDIUM)
 
         self._player_pos = pygame.Vector2(200.0, 150.0)
         self._enemies: list[pygame.Vector2] = []

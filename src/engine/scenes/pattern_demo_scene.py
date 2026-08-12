@@ -41,7 +41,7 @@ from src.engine.scenes.demo_common import (
 )
 from src.engine.scenes.demo_layout import COLOR_ERROR
 from src.engine.scenes.param_panel import ParamPanel
-from src.engine.utils.asset_loader import AssetLoader
+from src.engine.ui.theme import font
 from src.framework.processing.pattern_recognition_tools import (
     PatternRecognitionTools,
     TrainedModel,
@@ -133,9 +133,9 @@ class PatternDemoScene(BaseScene):
         self._status_msg: str = ""
         self._status_timer: float = 0.0
 
-        self._font_small = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_SMALL)
-        self._font_medium = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_MEDIUM)
-        self._font_large = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_LARGE)
+        self._font_small = font(FONT_SMALL)
+        self._font_medium = font(FONT_MEDIUM)
+        self._font_large = font(FONT_LARGE)
 
         # Pre-computed dataset samples (for class grid)
         self._dataset_samples: list[tuple[np.ndarray, str]] = []

@@ -48,7 +48,7 @@ from src.engine.scenes.demo_common import (
     save_png,
 )
 from src.engine.scenes.demo_layout import area_de_contenido
-from src.engine.utils.asset_loader import AssetLoader
+from src.engine.ui.theme import font
 from src.framework.processing.curve_tools import CurveTools
 
 logger = logging.getLogger(__name__)
@@ -154,10 +154,8 @@ class CurveEditorScene(BaseScene):
         self._status_timer: float = 0.0
         self._n_samples: int = N_SAMPLES
 
-        self._font_small = AssetLoader.load_font(
-            settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_SMALL)
-        self._font_medium = AssetLoader.load_font(
-            settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_MEDIUM)
+        self._font_small = font(FONT_SMALL)
+        self._font_medium = font(FONT_MEDIUM)
 
     def _reset_to_mode(self, mode: int) -> None:
         self._mode = mode

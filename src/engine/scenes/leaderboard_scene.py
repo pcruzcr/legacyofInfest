@@ -28,7 +28,6 @@ from typing import TYPE_CHECKING, Any
 
 import pygame
 
-from src.engine.core import settings
 from src.engine.core.user_settings import user_data_dir
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
@@ -42,7 +41,7 @@ from src.engine.scenes.demo_common import (
     draw_bottom_bar,
     draw_top_bar,
 )
-from src.engine.utils.asset_loader import AssetLoader
+from src.engine.ui.theme import font
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -134,10 +133,8 @@ class LeaderboardScene(BaseScene):
         super().__init__(context)
         self._mode: int = 0
         self._marcas: dict[str, float] = {}
-        self._font_small = AssetLoader.load_font(
-            settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_SMALL)
-        self._font_medium = AssetLoader.load_font(
-            settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_MEDIUM)
+        self._font_small = font(FONT_SMALL)
+        self._font_medium = font(FONT_MEDIUM)
 
     def on_enter(self) -> None:
         self._mode = 0

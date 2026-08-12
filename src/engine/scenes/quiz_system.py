@@ -22,6 +22,7 @@ from src.engine.scenes.demo_common import (
     COLOR_HIGHLIGHT,
     COLOR_TEXT,
 )
+from src.engine.ui.theme import font
 
 
 class QuizManager:
@@ -37,8 +38,8 @@ class QuizManager:
         self._results: list[bool] = []
         self._active: bool = False
         self._overlay: pygame.Surface | None = None
-        self._font_question = pygame.font.Font(None, 13)
-        self._font_answer = pygame.font.Font(None, 15)
+        self._font_question = font(13)
+        self._font_answer = font(15)
 
     def toggle(self) -> None:
         self._active = not self._active

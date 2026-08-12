@@ -33,7 +33,6 @@ from typing import TYPE_CHECKING
 
 import pygame
 
-from src.engine.core import settings
 from src.engine.core.events import Events
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
@@ -49,7 +48,7 @@ from src.engine.scenes.demo_common import (
     draw_top_bar,
 )
 from src.engine.scenes.demo_layout import area_de_contenido
-from src.engine.utils.asset_loader import AssetLoader
+from src.engine.ui.theme import font
 from src.framework.academic.progress import APODO_MAX, es_correo_valido
 from src.framework.academic.sesion import SesionAcademica
 
@@ -85,12 +84,8 @@ class StudentLoginScene(BaseScene):
         self._mensaje: str = ""
         self._cursor_visible: bool = True
         self._cursor_timer: float = 0.0
-        self._font_medium = AssetLoader.load_font(
-            settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_MEDIUM,
-        )
-        self._font_small = AssetLoader.load_font(
-            settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_SMALL,
-        )
+        self._font_medium = font(FONT_MEDIUM)
+        self._font_small = font(FONT_SMALL)
 
     # -- ciclo de vida ---------------------------------------------
     def on_enter(self) -> None:

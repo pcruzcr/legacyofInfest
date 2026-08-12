@@ -10,6 +10,7 @@ import pygame
 
 from src.engine.core import settings
 from src.engine.scenes.demo_common import COLOR_HIGHLIGHT
+from src.engine.ui.theme import font
 
 _CODE_EXAMPLES: dict[str, list[str]] = {
     "normalize": [
@@ -104,8 +105,8 @@ class CodePanel:
         self._code_key: str = code_key
         self._custom_lines: list[str] | None = custom_lines
         self._overlay: pygame.Surface | None = None
-        self._font_info = pygame.font.Font(None, 12)
-        self._font_label = pygame.font.Font(None, 14)
+        self._font_info = font(12)
+        self._font_label = font(14)
 
     @property
     def active(self) -> bool:

@@ -44,7 +44,7 @@ from src.engine.scenes.demo_layout import (
     Lienzo,
     area_de_contenido,
 )
-from src.engine.utils.asset_loader import AssetLoader
+from src.engine.ui.theme import font
 from src.engine.utils.math_utils import (
     ease_in_cubic,
     ease_in_out_quad,
@@ -127,10 +127,8 @@ class InterpolationLabScene(BaseScene):
         self._anim_t: float = 0.0
         self._anim_dir: int = 1
 
-        self._font_small = AssetLoader.load_font(
-            settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_SMALL)
-        self._font_medium = AssetLoader.load_font(
-            settings.ASSETS_DIR / "fonts" / "game.ttf", FONT_MEDIUM)
+        self._font_small = font(FONT_SMALL)
+        self._font_medium = font(FONT_MEDIUM)
 
         self._status_msg: str = ""
         self._status_timer: float = 0.0
