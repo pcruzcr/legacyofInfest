@@ -1239,7 +1239,8 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
                 checkpoint_x=self._player.rect.centerx,
                 checkpoint_y=self._player.rect.centery,
                 health=self._player.current_health,
-                max_health=settings.PLAYER_MAX_HEALTH,
+                # AUD-439 — el máximo real del jugador, no la constante.
+                max_health=float(self._player.max_health),
             )
         self._quit_to_title()
 

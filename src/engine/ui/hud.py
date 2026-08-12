@@ -285,6 +285,34 @@ class HUD:
         self._timer_running = False
         self._timer_paused = False
 
+    @property
+    def ranuras_de_corazon(self) -> int:
+        """Cuántos corazones dibuja el marcador ahora mismo — AUD-439."""
+        return max(1, int(self._max_health))
+
+    def set_salud_maxima(self, maxima: float) -> None:
+        """La vida máxima **real** del jugador, reliquias y árbol incluidos.
+
+        AUD-439 — `_max_health` se fijaba una vez en `__init__` desde
+        `settings.PLAYER_MAX_HEALTH` y no había forma de cambiarlo, así que el
+        marcador dibujaba cinco corazones aunque el jugador tuviera diez.
+        Comprar el casco de la tienda no producía ningún cambio en pantalla.
+
+        Lo empuja el escenario cada fotograma, igual que la puntuación o la
+        estamina, y por lo mismo: es un valor del jugador, no del marcador, y
+        el que manda es el jugador. No se hace por eventos porque el máximo no
+        cambia con un suceso puntual sino con lo que llevas encima.
+
+        Se acota por abajo a un corazón: `max_health` sale de sumar
+        bonificaciones y una partida editada a mano puede traer un cero o un
+        negativo. Un marcador sin ranuras no dice nada y además rompería el
+        recorrido de dibujo.
+        """
+        self._max_health = max(1.0, float(maxima))
+        # Si el tope baja —se quita una reliquia— la vida no puede quedarse por
+        # encima: se verían corazones fuera del marcador.
+        self._health = min(self._health, self._max_health)
+
     def set_boss_hud(self, name: str, health: float, max_health: float, phase: int, phase_count: int) -> None:
         self._boss_name = name
         self._boss_health = health
