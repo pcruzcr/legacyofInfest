@@ -104,6 +104,18 @@ VERIFICADOS: dict[str, str] = {
         "cada diálogo. El barrido sólo ve usos desde fuera del fichero"
     ),
 
+    # ── API pública del kit, ofrecida a las escenas de estudiantes ──
+    "start_wipe": (
+        "AUD-454: es uno de los cuatro modos que `48_SCREEN_TRANSITIONS.md` §3 "
+        "declara como API del gestor de transiciones, junto a `start_slide` y "
+        "`start_circle`. Ninguna pantalla del juego base lo usa —todas hacen "
+        "fundido— y eso no lo convierte en código muerto: el kit existe para "
+        "que una escena de estudiante elija su transición, igual que elige su "
+        "paleta. Quien lo adopte será el primero, y por eso hay pruebas que lo "
+        "ejercitan. Si algún día se decide que el juego base debe usarlo, la "
+        "decisión es de diseño y no de limpieza"
+    ),
+
     # ── Alias por propiedad: el juego los llama por el atributo ──
     "set_music_volume": "lo invoca el setter de la propiedad `music_volume`, desde app.py",
     "set_sfx_volume": "lo invoca el setter de la propiedad `sfx_volume`, desde app.py",
