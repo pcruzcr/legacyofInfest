@@ -1,409 +1,437 @@
 ---
 document_id: "LOI-TMX-006"
-title: "Legacy of InFest — TMX Specification"
-aliases: ["TMX Specification", "Map Format"]
-tags: ["tmx", "tiled", "map", "format"]
-description: "Map file format, layers, object types"
+title: "Legacy of InFest — Especificación TMX"
+aliases: ["Especificación TMX", "Formato de mapa", "TMX Specification"]
+tags: ["tmx", "tiled", "mapa", "formato"]
+description: "El formato del fichero de mapa: capas, objetos y reglas de colocación"
 source: "docs/06_TMX_SPEC.md"
-date_processed: "2026-07-14"
+date_processed: "2026-08-11"
 ---
 
-# Legacy of InFest — TMX Specification
+# Legacy of InFest — Especificación TMX
 
-**Document ID:** LOI-TMX-006  
-**Version:** 1.1.0  
-**Status:** Official  
-**Audience:** Professor, Teaching Assistants, Students, AI coding assistants
-
----
-
-## 1. Overview
-
-Stage maps are designed in **Tiled Map Editor** and exported as `.tmx` files (XML format). The `StageLoader` module parses these files using `pytmx` and `pyscroll` to assemble the complete stage environment: tile layers, entity spawn points, collision zones, checkpoints, portals, and triggers.
-
-This specification defines the exact conventions that all TMX files in Legacy of InFest must follow. Non-conforming TMX files will cause `StageLoader` to raise a `FrameworkUsageError` with a descriptive message identifying the violation.
+**Identificador:** LOI-TMX-006
+**Versión:** 2.0.0
+**Estado:** Oficial
+**Público:** profesorado, personal de apoyo, estudiantes y asistentes de código
 
 ---
 
-## 2. File Properties
+## 1. Panorama
 
-Every TMX file must have the following global map properties configured in Tiled:
+Los mapas se diseñan en **Tiled Map Editor** y se exportan como `.tmx` (XML).
+`StageLoader` los lee con `pytmx` y `pyscroll` y monta el escenario completo:
+capas de baldosas, puntos de aparición, zonas de colisión, puntos de control,
+portales y disparadores.
 
-| Property | Value | Notes |
+Este documento define **la estructura del fichero**: qué capas hacen falta,
+cómo se nombran las cosas y dónde se pone cada objeto. Un TMX que no la cumpla
+hace que `StageLoader` lance un `FrameworkUsageError` con el motivo.
+
+> **Dónde está cada cosa, para no buscar de más:**
+>
+> | Si buscas… | Míralo en |
+> |---|---|
+> | Las **propiedades de mapa** y qué hace cada una | [[60_GUIA_COMPLETA_DEL_MOTOR.md]] |
+> | Los **tipos de objeto** con sus propiedades | [[60_GUIA_COMPLETA_DEL_MOTOR.md]] y `docs/STAGE_CREATION.md` |
+> | **La estructura del fichero** y las reglas de colocación | este documento |
+>
+> Esta separación es deliberada (AUD-430). Aquí había una tabla de propiedades
+> que citaba **23** de las **39** que el motor lee, y llevaba desactualizada
+> quién sabe cuánto. La guía 60 tiene veintidós pruebas que la atan al código;
+> una segunda lista aquí volvería a desincronizarse, que es exactamente lo que
+> AUD-392 desmontó. **La lista viva manda.**
+>
+> Y la respuesta definitiva no está en ningún documento, sino en el validador:
+>
+> ```bash
+> python scripts/validate_tmx.py assets/maps/mi_mapa/mi_mapa.tmx
+> ```
+>
+> Lee el registro, no este texto, así que no puede envejecer.
+
+---
+
+## 2. Propiedades del fichero
+
+Todo TMX tiene que estar configurado así en Tiled:
+
+| Propiedad | Valor | Notas |
 |---|---|---|
-| Orientation | Orthogonal | No isometric or hexagonal |
-| Tile width | 16 | pixels |
-| Tile height | 16 | pixels |
-| Infinite | No | Maps have fixed dimensions |
-| Render order | Right-down | Standard rendering order |
-| Minimum map width | 20 tiles (320 px) | Must fill at least one screen |
-| Minimum map height | 14 tiles (224 px) | Must fill at least one screen |
-| Maximum map width | 512 tiles (8192 px) | Performance constraint |
+| Orientación | Ortogonal | Ni isométrica ni hexagonal |
+| Ancho de baldosa | 16 | píxeles |
+| Alto de baldosa | 16 | píxeles |
+| Infinito | No | Los mapas tienen dimensiones fijas |
+| Orden de dibujado | Derecha-abajo | El estándar |
+| Ancho mínimo | 20 baldosas (320 px) | Tiene que llenar una pantalla |
+| Alto mínimo | 14 baldosas (224 px) | Tiene que llenar una pantalla |
+| Ancho máximo | 512 baldosas (8192 px) | Límite de rendimiento |
 
-### 2.1 Custom Map Properties
+### 2.1 Las cuatro propiedades obligatorias
 
-Each TMX file must declare the following custom properties at the map level:
+Sin estas cuatro el mapa no carga:
 
-| Property Name | Type | Required | Description |
-|---|---|---|---|
-| `stage_id` | string | Yes | Unique stage identifier (`stage0`, `stage1`, etc.) |
-| `stage_name` | string | Yes | Display name for the HUD banner (e.g., `"The Awakening"`) |
-| `time_limit` | int | Yes | Stage time limit in seconds |
-| `bgm_track` | string | Yes | Name of the BGM file (without extension) |
-| `background_zone` | string | No | Zone key for loading parallax backgrounds (`assets/backgrounds/{background_zone}/`). If set, `StageLoader` loads `bg_{zone}_{far,mid,near}.png`. If absent or empty, no background layers are loaded. |
-| ~~`background_color`~~ | — | — | **NO IMPLEMENTADA (AUD-310).** Ningún módulo la lee. Para el fondo usa `background_zone`, arriba. |
-| `gravity_multiplier` | float | No | Stage-level gravity scale (default: `1.0`) |
-| `climate` | string | No | Weather climate key (`"clear"`, `"rain"`, `"snow"`, `"fog"`, `"storm"`). Empty string = `"clear"`. Drives `WeatherSystem` particles + ambient audio (default: `""`) |
-| ~~`debug_mode`~~ | — | — | **NO IMPLEMENTADA (AUD-310).** Ningún módulo la lee. La consola de depuración se abre en el juego con **F11**, y las cajas de colisión con **F1**. |
-
----
-
-## 3. Layer Standards
-
-Every TMX file must contain layers in the following order, from bottom to top (render order). Layers must be named exactly as specified.
-
-### 3.1 Required Layers
-
-| Layer Order | Layer Name | Layer Type | Description |
-|---|---|---|---|
-| 1 | `BG_Far` | Tile Layer | Distant background (sky, mountains) — slowest parallax |
-| 2 | `BG_Mid` | Tile Layer | Mid-distance background (trees, architecture) — medium parallax |
-| 3 | `BG_Near` | Tile Layer | Near background (decorative foreground elements) — fast parallax |
-| 4 | `Terrain` | Tile Layer | Primary solid terrain tiles |
-| 5 | `Terrain_Detail` | Tile Layer | Non-solid decorative terrain overlays |
-| 6 | `Objects` | Object Layer | Entity spawns, triggers, checkpoints, portals |
-| 7 | `Collision` | Object Layer | Collision rects (invisible at runtime) |
-| 8 | `FG_Overlay` | Tile Layer | Foreground tiles that render above entities (optional) |
-
-### 3.2 Parallax Factors
-
-Each background layer scrolls at a different speed relative to camera movement. These factors are applied automatically by the `Camera` based on the layer name:
-
-| Layer Name | Parallax Factor X | Parallax Factor Y |
+| Propiedad | Tipo | Qué es |
 |---|---|---|
-| `BG_Far` | 0.15 | 0.05 |
-| `BG_Mid` | 0.40 | 0.15 |
-| `BG_Near` | 0.70 | 0.30 |
-| `Terrain` | 1.00 | 1.00 |
+| `stage_id` | cadena | Identificador único (`stage0`, `stage1`…) |
+| `stage_name` | cadena | El nombre que sale en el cartel del HUD |
+| `time_limit` | entero | Segundos de límite. `0` = sin límite |
+| `bgm_track` | cadena | Nombre del fichero de música, sin extensión |
 
-### 3.3 Layer Visibility at Runtime
+Y una quinta que **cuenta para la nota** aunque el motor no la lea:
 
-| Layer | Visible at Runtime |
+| Propiedad | Tipo | Qué es |
+|---|---|---|
+| `author` | cadena | Tu nombre. `scripts/grade_stage.py` la puntúa en metadatos |
+
+Las otras treinta y cinco —atmósfera, clima, hora, cámara, agua, profundidad,
+ritmo…— están en la guía del motor. `validate_tmx.py` avisa de las que faltan y
+de las que están mal escritas.
+
+### 2.2 Propiedades que **no** existen
+
+Se documentaron alguna vez y ningún módulo las lee. Escribirlas no hace nada:
+
+| Propiedad | Qué usar en su lugar |
 |---|---|
-| `BG_Far`, `BG_Mid`, `BG_Near` | Yes |
-| `Terrain`, `Terrain_Detail` | Yes |
-| `FG_Overlay` | Yes |
-| `Objects` | No (spawns entities, then invisible) |
-| `Collision` | No (processed into `pygame.Rect` list, then invisible) |
-
-### 3.4 Additional Layers (Optional)
-
-Students may add additional tile layers for visual effect, following this naming rule:
-
-- Additional background layers: prefix with `BG_` followed by a unique descriptor (e.g., `BG_Clouds`)
-- Additional foreground layers: prefix with `FG_` followed by a unique descriptor
-- No additional object or collision layers are permitted; all data must remain in `Objects` and `Collision`
+| ~~`background_color`~~ | `background_zone` |
+| ~~`debug_mode`~~ | En el juego: **F11** abre la consola, **F1** las cajas de colisión |
+| ~~`use_tile_collision`~~ | La colisión sale **siempre** de la capa `Collision` |
+| ~~`trigger_once`~~ | No es una propiedad: es otro **tipo**, `MessageTrigger_Once` |
 
 ---
 
-## 4. Object Standards
+## 3. Las capas
 
-The `Objects` layer contains all non-tile game data. Each object is a Tiled rectangle or point with a `type` property and optional custom properties.
+Todo TMX contiene estas ocho capas, en este orden de abajo arriba, y **con
+estos nombres exactos**:
 
-### 4.1 Object Coordinate System
-
-All object positions in Tiled use pixel coordinates with the origin at the top-left of the map. The `StageLoader` reads these coordinates and converts them to world-space `pygame.Vector2` positions.
-
-**Spawn Y convention:** The TMX Y coordinate of `PlayerSpawn` (and all enemy spawns) represents the entity's **feet** position (bottom edge of the sprite). `StageLoader` converts this to the top-left origin expected by pygame rects by subtracting the entity's tile height: `spawn_point.y = obj.y - 32`. This conversion aligns the visual sprite bottom with the intended surface. See §6.1 for details.
-
-### 4.2 Object Type Registry
-
-| Object Type | Shape | Required Properties | Description |
+| Orden | Nombre | Tipo | Qué es |
 |---|---|---|---|
-| `PlayerSpawn` | Point | — | Player start position |
-| `Walker` | Point | `patrol_length`, `facing` | Spawn a Walker enemy |
-| `Flying` | Point | `flight_mode`, `flight_speed` | Spawn a Flying enemy |
-| `Shooter` | Point | `fire_rate`, `projectile_speed` | Spawn a Shooter enemy |
-| `Checkpoint` | Rectangle | `checkpoint_id` | Checkpoint trigger zone |
-| `NextTrigger` | Rectangle | — | Stage completion trigger |
-| `MessageTrigger` | Rectangle | `text`, `duration` | Show a tutorial message |
-| `MessageTrigger_Once` | Rectangle | `text`, `duration` | Same, but only the first time |
-| `Waypoint` | Point | `owner_id`, `waypoint_index` | Bézier/patrol waypoint for an entity |
-| `HazardZone` | Rectangle | `damage`, `damage_type`, `sube`, `sube_hasta`, `arranca_con`, `avisar` | Persistent damage zone. El motor la dibuja con un aviso rojo que late; ponle `avisar=false` si tu mapa ya pinta sus propios pinchos (AUD-228). **`damage_type`** (AUD-387) es el canal: `fisico` por defecto, o `veneno`/`fuego` del catálogo de `data/damage_types.json`. Llevaba documentada como «no implementada» desde AUD-310, y ahora sí lo está |
-| `DeathPit` | Rectangle | — | Falling in kills the player |
-| `CameraLock` | Rectangle | `lock_x`, `lock_y` | Override camera scroll in zone |
-| `BossVenado` | Point | — | Spawn the boss as a normal entity type |
+| 1 | `BG_Far` | Baldosas | Fondo lejano (cielo, montañas) |
+| 2 | `BG_Mid` | Baldosas | Fondo medio (árboles, arquitectura) |
+| 3 | `BG_Near` | Baldosas | Fondo cercano |
+| 4 | `Terrain` | Baldosas | El terreno sólido |
+| 5 | `Terrain_Detail` | Baldosas | Decoración sin colisión |
+| 6 | `Objects` | Objetos | Apariciones, disparadores, puntos de control |
+| 7 | `Collision` | Objetos | Rectángulos de colisión (invisibles al jugar) |
+| 8 | `FG_Overlay` | Baldosas | Primer plano, por delante de las entidades |
 
----
+### 3.1 El parallax
 
-## 5. Naming Rules
+Cada capa de fondo se mueve a distinta velocidad respecto de la cámara. El
+factor sale **del nombre del fichero**, no del orden de carga:
 
-### 5.1 Object Naming
-
-All objects in the `Objects` layer must have a unique name. The name format is:
-
-```
-<type>_<id>
-```
-
-Examples:
-- `PlayerSpawn_01`
-- `Walker_01`, `Walker_02`
-- `Checkpoint_01`, `Checkpoint_02`
-- `Message_01`, `Message_02`
-- `Waypoint_01` (with `owner_id` pointing to `Flying_01`)
-
-### 5.2 Tileset Naming
-
-Tilesets referenced by a TMX file must be named and stored according to the standard in `02_CODEX_CONTEXT.md`:
-
-```
-tileset_<environment>.png
-```
-
-The tileset file must reside in `assets/tilesets/` (for professor-provided tilesets) or `student_assets/tilesets/` (for student-created tilesets).
-
-### 5.3 Property Naming
-
-All custom object properties use `snake_case`. No spaces, no hyphens. Property names must exactly match those defined in this specification or in the entity class that consumes them.
-
----
-
-## 6. Spawn Rules
-
-### 6.1 Player Spawn
-
-- Exactly one `PlayerSpawn` object must exist per TMX map.
-- It is a point object placed on a solid tile surface (player spawns on the ground).
-- **Its Y position represents the player's feet (bottom edge of the 32px-tall sprite), not the top-left corner.** The TMX designer places the point where the player's feet should rest.
-- `StageLoader` converts feet→top-left by subtracting the player's pixel height: `stage.spawn_point = pygame.Vector2(obj.x, obj.y - 32)`. This places the player rect correctly above the ground.
-- If no `PlayerSpawn` is found, `StageLoader` raises `FrameworkUsageError("No PlayerSpawn found in TMX")`.
-
-### 6.2 Enemy Spawn
-
-- Enemy objects are point objects placed at the spawn position.
-- The spawn position represents the entity's bottom-center (feet), consistent with the player.
-- Properties defined on the TMX object override the entity class defaults.
-- If a required property is missing, the entity class default is used and a warning is logged.
-
-#### Walker TMX Properties
-
-| Property | Type | Default | Description |
-|---|---|---|---|
-| `patrol_length` | int | 96 | Total patrol distance in pixels |
-| `facing` | string | `"right"` | Initial facing: `"left"` or `"right"` |
-| `patrol_speed` | float | 45.0 | Override patrol speed |
-| `alert_speed` | float | 75.0 | Override alert speed |
-| `damage_on_contact` | float | 0.5 | Override contact damage |
-
-#### Flying TMX Properties
-
-| Property | Type | Default | Description |
-|---|---|---|---|
-| `flight_mode` | string | `"sine"` | `"sine"`, `"bezier"`, or `"patrol"` |
-| `flight_speed` | float | 60.0 | Path traversal speed |
-| `sine_amplitude` | float | 28.0 | Vertical oscillation amplitude (sine mode only) |
-| `sine_frequency` | float | 1.5 | Oscillation frequency Hz (sine mode only) |
-| `owner_id` | string | — | Used on Waypoint objects to link to this entity's name |
-
-#### Shooter TMX Properties
-
-| Property | Type | Default | Description |
-|---|---|---|---|
-| `fire_rate` | float | 0.5 | Shots per second |
-| `projectile_speed` | float | 120.0 | Projectile velocity in px/s |
-| `projectile_damage` | float | 0.5 | Damage per projectile hit |
-| `patrol_length` | int | 0 | 0 = stationary, >0 = slow patrol |
-
-### 6.3 Waypoint Linking
-
-When a `Flying` enemy uses `flight_mode=bezier` or `flight_mode=patrol`, it reads waypoints from the `Objects` layer. Waypoints are linked by matching the `owner_id` property of the waypoint to the `name` of the Flying object.
-
-Waypoints are sorted by their `waypoint_index` property (integer, 0-based) to form the control point sequence. The resulting array is passed to `CurveTools.bezier()`.
-
-**Example Tiled configuration:**
-```
-Object: Flying_01 (type: Flying, name: Flying_01)
-  Properties: flight_mode=bezier, flight_speed=55.0
-
-Object: Waypoint_01 (type: Waypoint, name: Waypoint_01)
-  Properties: owner_id=Flying_01, waypoint_index=0
-
-Object: Waypoint_02 (type: Waypoint, name: Waypoint_02)
-  Properties: owner_id=Flying_01, waypoint_index=1
-
-Object: Waypoint_03 (type: Waypoint, name: Waypoint_03)
-  Properties: owner_id=Flying_01, waypoint_index=2
-```
-
----
-
-## 7. Checkpoint Rules
-
-### 7.1 Definition
-
-A checkpoint is a rectangle object in the `Objects` layer, type `Checkpoint`. When the player's rect overlaps the checkpoint's rect, the checkpoint activates.
-
-### 7.2 Required Properties
-
-| Property | Type | Description |
-|---|---|---|
-| `checkpoint_id` | int | Unique integer within the stage (0-based, ascending order) |
-
-### 7.3 Behavior
-
-- Checkpoints activate only once. After activation, they are marked as consumed and will not re-trigger.
-- Upon activation, the checkpoint broadcasts `CHECKPOINT_REACHED` via the EventBus with its `checkpoint_id`.
-- The `StageLoader` updates the stage's current respawn position to the checkpoint's pixel center X, bottom Y.
-- If the player dies after a checkpoint is activated, they respawn at that checkpoint's position with full health.
-- Checkpoints are ordered by their `checkpoint_id`. The player must activate them in order — activating checkpoint 2 before checkpoint 1 is valid but checkpoint 1 will not re-activate if reached later.
-
-### 7.4 Visual Feedback
-
-Checkpoints are rendered as a glowing post or flag sprite (non-animated when inactive, animated when active). The visual is part of `assets/sprites/shared/checkpoint.png`. Students may not replace this sprite.
-
-### 7.5 Placement Rules
-
-- At least one checkpoint must be present in every student stage.
-- No two checkpoint rects may overlap.
-- Checkpoints must be placed on solid ground (their bottom edge must align with a terrain tile top edge).
-- Checkpoint rects must be at minimum 16×32 pixels.
-
----
-
-## 8. Portal Rules
-
-The `NextTrigger` object marks the end of a stage.
-
-### 8.1 Definition
-
-A `NextTrigger` is a rectangle object in the `Objects` layer. When the player's rect overlaps it, the stage emits `STAGE_COMPLETE` via the EventBus.
-
-### 8.2 Placement Rules
-
-- Exactly one `NextTrigger` must exist per TMX map.
-- It is typically placed at the rightmost extent of the stage, spanning the full vertical space of a doorway or exit.
-- The player must be grounded (not jumping) to trigger it. This prevents accidental activation by jumping over it at a wrong angle.
-- A minimum rect size of 16×32 pixels is required.
-
-### 8.3 Behavior on Trigger
-
-1. `STAGE_COMPLETE` event emitted.
-2. `SceneManager` receives the event and initiates transition to the next scene.
-3. Audio fades out over 500ms.
-4. Screen fades to black over 800ms.
-5. Next scene (next stage or end scene) is pushed onto the stack.
-
----
-
-## 9. Collision Rules
-
-### 9.1 Collision Layer
-
-All solid collision geometry is defined in the `Collision` object layer as rectangle objects. These rectangles are invisible at runtime — they are converted to a `list[pygame.Rect]` by `StageLoader` and used for physics resolution.
-
-### 9.2 Collision Object Types
-
-Each object in the `Collision` layer has a `type` attribute. `StageLoader` uses the `type` attribute to classify the object:
-
-| `type` Attribute | Behavior |
+| Capa | Factor |
 |---|---|
-| `Solid` | Full AABB resolution for player and Walker/Shooter |
-| `Platform` | One-way platform — passable from below, solid from above |
+| `sky` | 0,06 |
+| `deep` | 0,10 |
+| `far` | 0,15 |
+| `mid` | 0,35 |
+| `near` | 0,60 |
 
-Any object type other than `Platform` is treated as `Solid`. Objects with `type="Solid"`, or objects left with no type, all resolve as solid ground.
+> **Corregido el 2026-08-11 (AUD-431).** Esta tabla decía que había **tres**
+> capas y que `mid` era 0,40 y `near` 0,70. Son **cinco** —`sky` y `deep` son
+> opcionales, las otras tres avisan si faltan— y los factores reales son 0,35 y
+> 0,60. También listaba un «factor de parallax Y» por capa que no existe: el
+> desplazamiento vertical es el mismo factor **multiplicado por 0,5**.
+>
+> Que el factor salga del nombre y no del índice es deliberado: antes salía de
+> la posición de carga, así que un mapa que añadiera una capa por delante hacía
+> que `far` pasara de 0,15 a 0,35 y el mismo fondo se moviera distinto en dos
+> escenarios.
 
-For hazards, death pits, camera locks, and similar non-collision zones, place those objects in the `Objects` layer (not the `Collision` layer) with the appropriate `type` value (`HazardZone`, `DeathPit`, `CameraLock`, etc.).
+Los ficheros van en `assets/backgrounds/{background_zone}/` y se llaman
+`bg_{zona}_{nombre}.png`.
 
-**Note:** Collision objects should align to the 16-pixel tile grid. Sub-tile-precision collision is permitted but must be justified (e.g., a sloped surface approximated with thin rectangles).
+### 3.2 Qué se ve al jugar
 
-### 9.3 Collision Resolution Order (Axis-Separated AABB)
+| Capa | ¿Se ve? |
+|---|---|
+| `BG_Far`, `BG_Mid`, `BG_Near` | Sí |
+| `Terrain`, `Terrain_Detail` | Sí |
+| `FG_Overlay` | Sí, por delante de las entidades |
+| `Objects` | No: crea las entidades y desaparece |
+| `Collision` | No: se convierte en una lista de rectángulos |
 
-The player's `_resolve_collision` resolves collisions in **axis-separated** order — X first, then Y — as specified in `04_PLAYER_SPEC.md` §4.3:
+### 3.3 Capas de más
 
-1. **Integrate X** — `self.position.x += self.velocity.x * dt`
-2. **Resolve X** — For each overlapping `Solid` rect, resolve the X penetration. Grazing contacts (`v_overlap <= 2px`) are skipped to prevent floor/ceiling tiles from blocking lateral movement.
-3. **Integrate Y** — `self.position.y += self.velocity.y * dt`
-4. **Resolve Y** — For each overlapping `Solid` rect, determine direction of motion:
-   - **Coming from above** (`velocity.y >= 0` and `prev_bottom <= tile.top + 1`): land on the tile (set `py.bottom = tile.top`, `velocity.y = 0`, `is_grounded = True`).
-   - **Coming from below** (`velocity.y < 0` and `prev_top >= tile.bottom - 1`): bonk head (set `py.top = tile.bottom`, `velocity.y = 0`).
+Puedes añadir capas de baldosas para decorar:
 
-One-way platforms (`Platform` type) are resolved separately in `_resolve_one_way_collision`:
-- Only when falling (`velocity.y >= 0`) and the player's previous-frame bottom was at or above the platform top (`prev_bottom <= plat.top`).
+- fondo: prefijo `BG_` y un nombre propio (`BG_Clouds`);
+- primer plano: prefijo `FG_`.
 
-### 9.4 Resolution Priority
-
-When multiple collision rects overlap simultaneously:
-
-1. `Death_` — applied first (overrides everything)
-2. `Solid_` — axis-separated AABB resolution (X→Y)
-3. `Platform` — resolved in separate pass, only if descending and prev_bottom ≤ plat.top
-4. `Hazard_` — damage applied, no movement resolution
-
-### 9.5 Terrain vs. Collision Layer
-
-The `Terrain` and `Terrain_Detail` tile layers are **not** used for collision. Collision is derived exclusively from the `Collision` object layer. This separation is intentional: it allows visual terrain to be shaped freely without being constrained by collision geometry, and it allows collision zones (like invisible walls or death pits) to exist without visual tiles.
-
-### 9.6 Tileset Collision Override
-
-If a student wishes to define per-tile collision in Tiled (rather than placing individual collision objects), they must:
-
-1. Configure tile collision shapes in the Tiled tileset editor.
-2. ~~Set the TMX map property `use_tile_collision` to `true`.~~ **NO IMPLEMENTADO (AUD-310):** ningún módulo lee esa propiedad. La colisión sale siempre de la capa de objetos `Collision`.
-3. `StageLoader` will then extract collision rects from tile properties instead of the `Collision` object layer.
-
-This approach is permitted but not recommended for beginners, as it is harder to debug.
+**No se admiten capas de objetos ni de colisión adicionales.** Todo tiene que
+estar en `Objects` y en `Collision`.
 
 ---
 
-## 10. Message Trigger Rules
+## 4. Los objetos
 
-### 10.1 Definition
+La capa `Objects` lleva todo lo que no son baldosas: cada objeto es un
+rectángulo o un punto de Tiled con un `type` y sus propiedades.
 
-A `MessageTrigger` object is a rectangle trigger in the `Objects` layer. When the player enters the rectangle, the HUD's `MessageBox` displays the configured text.
+### 4.1 El sistema de coordenadas
 
-### 10.2 Required Properties
+Las posiciones son píxeles con el origen arriba a la izquierda del mapa.
 
-| Property | Type | Description |
+**Convención de la Y en las apariciones:** la coordenada Y de un `PlayerSpawn`
+—y de cualquier enemigo— es la de los **pies**, no la de la esquina superior.
+Colocas el punto donde quieres que se apoye el personaje, y `StageLoader`
+convierte restando la altura: `spawn_point.y = obj.y - 32`.
+
+### 4.2 Los tipos de objeto
+
+En ejecución el motor acepta **78**: 39 integrados del framework y 37 del
+registro de entidades una vez descubiertos los escenarios, más `Solid` y
+`Platform` en la capa `Collision`.
+
+La lista completa, con las propiedades de cada uno, está en
+[[60_GUIA_COMPLETA_DEL_MOTOR.md]]. Los imprescindibles para que un mapa cargue:
+
+| Tipo | Forma | Qué es |
 |---|---|---|
-| `text` | string | The message to display |
-| `duration` | float | Seconds before auto-dismiss (0 = manual dismiss) |
-| ~~`trigger_once`~~ | — | **NO IMPLEMENTADA (AUD-310).** Ningún módulo la lee, y `stage1_2_la_soda.tmx` la usa creyendo que sí. Para que el mensaje salga una sola vez, el objeto tiene que ser del **tipo** `MessageTrigger_Once` — no es una propiedad, es otro `type`. |
+| `PlayerSpawn` | Punto | Dónde empieza el jugador. **Exactamente uno** |
+| `NextTrigger` | Rectángulo | El final del escenario. **Exactamente uno** |
+| `Checkpoint` | Rectángulo | Punto de control. `checkpoint_id` obligatorio |
 
-### 10.3 Message Text Rules
-
-- Maximum 80 characters per line.
-- Maximum 3 lines per message (the MessageBox renders up to 3 lines).
-- Use `\n` within the `text` property string to create line breaks.
-- No special formatting codes. Plain text only.
+`Platform` **no** va en `Objects`: pertenece a `Collision`, donde un rectángulo
+con ese tipo se convierte en plataforma de un sentido. En `Objects` no es un
+tipo válido y el cargador lo dice.
 
 ---
 
-## 11. Examples
+## 5. Cómo se nombran las cosas
 
-### 11.1 Minimal Valid TMX Structure (Pseudocode)
+### 5.1 Los objetos
+
+Nombre único, con el formato `<tipo>_<número>`:
+
+`PlayerSpawn_01` · `Walker_01` · `Checkpoint_02` · `Waypoint_01`
+
+El nombre importa de verdad en dos casos: los `Waypoint`, que se enlazan por
+nombre, y los `Pickup`, que lo usan como `item_id` si no declaras uno.
+
+### 5.2 Los tilesets
+
+`tileset_<entorno>.png`, en `assets/tilesets/` si lo da el profesorado o en
+`student_assets/tilesets/` si lo haces tú.
+
+### 5.3 Las propiedades
+
+`snake_case`. Sin espacios ni guiones. Los nombres tienen que coincidir
+**exactamente** con los que espera el motor: `validate_tmx.py` avisa de los que
+no reconoce y sugiere el parecido, porque `gravty_multiplier` no da error — el
+cargador usa el valor por defecto y el nivel se juega con la gravedad
+equivocada en silencio (AUD-392).
+
+---
+
+## 6. Apariciones
+
+### 6.1 El jugador
+
+- **Exactamente un** `PlayerSpawn` por mapa.
+- Es un punto, colocado sobre suelo sólido.
+- Su Y son los **pies**, no la esquina superior.
+- Sin él, `StageLoader` lanza `FrameworkUsageError("No PlayerSpawn found in TMX")`.
+
+### 6.2 Los enemigos
+
+- Son puntos, colocados donde aparecen.
+- La posición es la del centro-abajo, igual que el jugador.
+- Las propiedades del objeto **sustituyen** a los valores por defecto de la clase.
+- Si falta una propiedad se usa el valor por defecto y se avisa por consola.
+
+#### `Walker`
+
+| Propiedad | Tipo | Por defecto | Qué hace |
+|---|---|---|---|
+| `patrol_length` | entero | 96 | Distancia de patrulla en píxeles |
+| `facing` | cadena | `right` | Hacia dónde empieza mirando |
+| `patrol_speed` | flotante | 45,0 | Velocidad patrullando |
+| `alert_speed` | flotante | 75,0 | Velocidad persiguiendo |
+| `damage_on_contact` | flotante | 0,5 | Daño al tocarlo |
+
+#### `Flying`
+
+| Propiedad | Tipo | Por defecto | Qué hace |
+|---|---|---|---|
+| `flight_mode` | cadena | `sine` | `sine`, `bezier` o `patrol` |
+| `flight_speed` | flotante | 60,0 | Velocidad de recorrido |
+| `sine_amplitude` | flotante | 28,0 | Amplitud vertical (sólo en `sine`) |
+| `sine_frequency` | flotante | 1,5 | Frecuencia en Hz (sólo en `sine`) |
+
+#### `Shooter`
+
+| Propiedad | Tipo | Por defecto | Qué hace |
+|---|---|---|---|
+| `fire_rate` | flotante | 0,5 | Disparos por segundo |
+| `projectile_speed` | flotante | 120,0 | Velocidad del proyectil, px/s |
+| `projectile_damage` | flotante | 0,5 | Daño por impacto |
+| `patrol_length` | entero | 0 | `0` = quieto; mayor = patrulla lenta |
+
+### 6.3 Los puntos de ruta
+
+Un `Flying` con `flight_mode=bezier` o `patrol` lee sus puntos de la capa
+`Objects`. Se enlazan haciendo coincidir el `owner_id` del `Waypoint` con el
+**nombre** del objeto volador, y se ordenan por `waypoint_index` (entero, desde
+0). La secuencia resultante va a `CurveTools.bezier()`.
+
+```
+Flying_01   (type: Flying)   → flight_mode=bezier, flight_speed=55.0
+Waypoint_01 (type: Waypoint) → owner_id=Flying_01, waypoint_index=0
+Waypoint_02 (type: Waypoint) → owner_id=Flying_01, waypoint_index=1
+Waypoint_03 (type: Waypoint) → owner_id=Flying_01, waypoint_index=2
+```
+
+---
+
+## 7. Puntos de control
+
+Un `Checkpoint` es un rectángulo de la capa `Objects`. Se activa cuando el
+rectángulo del jugador lo toca.
+
+| Propiedad | Tipo | Qué es |
+|---|---|---|
+| `checkpoint_id` | entero | Único dentro del escenario, empezando en 0 |
+
+**Comportamiento:**
+
+- Se activan **una sola vez**; después quedan consumidos.
+- Al activarse emiten `CHECKPOINT_REACHED` por el bus de eventos.
+- La posición de reaparición pasa a ser el centro X y la base Y del rectángulo.
+- Al morir, el jugador reaparece ahí con la vida llena.
+- Activar el 2 antes que el 1 es válido, pero el 1 ya no se activará después.
+
+**Dónde ponerlos:**
+
+- **Al menos uno** en todo escenario de estudiante.
+- No pueden solaparse entre sí.
+- Sobre suelo sólido: su base tiene que coincidir con el borde de una baldosa.
+- Mínimo 16×32 píxeles.
+- El calificador recomienda **no pasar de 500 px** entre uno y otro. Morir y
+  rehacer medio nivel es la forma más rápida de que alguien deje de jugar.
+
+El aspecto sale de `assets/sprites/shared/checkpoint.png` y no se sustituye.
+
+---
+
+## 8. El final del escenario
+
+Un `NextTrigger` marca la salida.
+
+- **Exactamente uno** por mapa.
+- Suele ir al extremo derecho, cubriendo el alto de una puerta.
+- El jugador tiene que estar **apoyado** para dispararlo, y no saltando: así no
+  se activa por accidente al pasar por encima.
+- Mínimo 16×32 píxeles.
+
+Al tocarlo: se emite `STAGE_COMPLETE`, `SceneManager` prepara la transición, el
+audio se funde en 500 ms, la pantalla en 800 ms, y entra la escena siguiente.
+
+---
+
+## 9. Colisión
+
+### 9.1 La capa
+
+Toda la geometría sólida vive en la capa de objetos `Collision`, como
+rectángulos. Son invisibles al jugar: `StageLoader` los convierte en una lista
+de `pygame.Rect` para la física.
+
+### 9.2 Los dos tipos
+
+| `type` | Qué hace |
+|---|---|
+| `Solid` | Sólido por los cuatro lados |
+| `Platform` | Plataforma de un sentido: se atraviesa desde abajo |
+
+Cualquier otro tipo —o ninguno— se trata como `Solid`. Poner ahí un
+`HazardZone` no lo convierte en zona de daño: lo convierte en **suelo**, y el
+validador avisa de ello.
+
+Las zonas de peligro, los fosos y los bloqueos de cámara van en `Objects`.
+
+Los rectángulos deberían alinearse a la rejilla de 16 px. Se admite más
+precisión si está justificada —una rampa aproximada con rectángulos finos—,
+aunque para eso existe el tipo `Slope`.
+
+### 9.3 El orden de resolución
+
+Se resuelve **por ejes separados**, X y luego Y:
+
+1. **Integrar X** — `posicion.x += velocidad.x * dt`
+2. **Resolver X** — para cada sólido solapado, deshacer la penetración. Los
+   roces de 2 px o menos se ignoran, o el suelo bloquearía el avance lateral.
+3. **Integrar Y** — `posicion.y += velocidad.y * dt`
+4. **Resolver Y** — según de dónde venía:
+   - **desde arriba** (`velocidad.y >= 0` y el borde inferior anterior estaba
+     sobre la baldosa): aterriza;
+   - **desde abajo** (`velocidad.y < 0` y el borde superior anterior estaba
+     bajo la baldosa): se golpea la cabeza.
+
+Las plataformas de un sentido se resuelven aparte, y sólo al caer.
+
+**Prioridad cuando varias cosas se solapan:** muerte → sólido → plataforma →
+peligro.
+
+### 9.4 Terreno y colisión son cosas distintas
+
+Las capas `Terrain` y `Terrain_Detail` **no** producen colisión. Sale
+exclusivamente de la capa `Collision`.
+
+La separación es a propósito: permite dibujar terreno libremente sin que la
+forma condicione la física, y permite muros invisibles o fosos sin baldosa que
+los dibuje.
+
+---
+
+## 10. Mensajes
+
+Un `MessageTrigger` es un rectángulo que, al entrar el jugador, muestra un
+texto en la caja del HUD.
+
+| Propiedad | Tipo | Qué es |
+|---|---|---|
+| `text` | cadena | El mensaje |
+| `duration` | flotante | Segundos hasta que se va. `0` = hasta que lo cierren |
+
+Para que salga **una sola vez**, el objeto tiene que ser del tipo
+`MessageTrigger_Once`. No es una propiedad; es otro tipo.
+
+**Reglas del texto:** 80 caracteres por línea como mucho, tres líneas como
+mucho, `\n` para separarlas y texto plano sin códigos de formato.
+
+---
+
+## 11. Ejemplos
+
+### 11.1 La estructura mínima
 
 ```xml
 <map version="1.10" orientation="orthogonal" renderorder="right-down"
      width="80" height="14" tilewidth="16" tileheight="16">
 
   <properties>
+    <property name="schema_version" value="1"/>
     <property name="stage_id" value="stage1"/>
-    <property name="stage_name" value="The Descent"/>
+    <property name="stage_name" value="El Descenso"/>
+    <property name="author" value="TU NOMBRE AQUI"/>
     <property name="time_limit" type="int" value="180"/>
     <property name="bgm_track" value="bgm_zone1"/>
   </properties>
 
   <tileset firstgid="1" source="../assets/tilesets/tileset_dungeon.tsx"/>
 
-  <layer name="BG_Far" .../>     <!-- sky tiles -->
-  <layer name="BG_Mid" .../>     <!-- rock wall tiles -->
-  <layer name="BG_Near" .../>    <!-- pillars -->
-  <layer name="Terrain" .../>    <!-- solid floor and platforms -->
+  <layer name="BG_Far" .../>
+  <layer name="BG_Mid" .../>
+  <layer name="BG_Near" .../>
+  <layer name="Terrain" .../>
   <layer name="Terrain_Detail" .../>
 
   <objectgroup name="Objects">
-    <!-- PlayerSpawn Y = FEET position; StageLoader converts to top-left -->
+    <!-- La Y del PlayerSpawn son los PIES: el cargador resta 32 -->
     <object id="1" type="PlayerSpawn" name="PlayerSpawn_01" x="48" y="192"/>
     <object id="2" type="Walker" name="Walker_01" x="256" y="164">
       <properties>
@@ -418,7 +446,7 @@ A `MessageTrigger` object is a rectangle trigger in the `Objects` layer. When th
     </object>
     <object id="4" type="MessageTrigger_Once" name="Message_01" x="144" y="160" width="48" height="32">
       <properties>
-        <property name="text" value="Walk right to continue.\nUse Z to attack enemies."/>
+        <property name="text" value="Camina a la derecha.\nPulsa Z para atacar."/>
         <property name="duration" type="float" value="5.0"/>
       </properties>
     </object>
@@ -426,9 +454,8 @@ A `MessageTrigger` object is a rectangle trigger in the `Objects` layer. When th
   </objectgroup>
 
   <objectgroup name="Collision">
-    <object id="10" name="Solid_Floor" x="0" y="192" width="1280" height="32"/>
-    <object id="11" name="Solid_Platform01" x="256" y="160" width="80" height="16"/>
-    <object id="12" name="Death_Pit01" x="512" y="224" width="64" height="16"/>
+    <object id="10" type="Solid" name="Solid_Floor" x="0" y="192" width="1280" height="32"/>
+    <object id="11" type="Platform" name="Platform_01" x="256" y="160" width="80" height="8"/>
   </objectgroup>
 
   <layer name="FG_Overlay" .../>
@@ -436,10 +463,9 @@ A `MessageTrigger` object is a rectangle trigger in the `Objects` layer. When th
 </map>
 ```
 
-### 11.2 Bézier-Path Flying Enemy Configuration
+### 11.2 Un volador con recorrido de Bézier
 
 ```xml
-<!-- In Objects layer -->
 <object id="20" type="Flying" name="Flying_01" x="400" y="96">
   <properties>
     <property name="flight_mode" value="bezier"/>
@@ -460,35 +486,23 @@ A `MessageTrigger` object is a rectangle trigger in the `Objects` layer. When th
     <property name="waypoint_index" type="int" value="1"/>
   </properties>
 </object>
-
-<object id="23" type="Waypoint" name="Waypoint_03" x="720" y="112">
-  <properties>
-    <property name="owner_id" value="Flying_01"/>
-    <property name="waypoint_index" type="int" value="2"/>
-  </properties>
-</object>
 ```
 
-### 11.3 Hazard Zone Configuration
+### 11.3 Una zona de daño
+
+Va en `Objects`, **nunca** en `Collision`:
 
 ```xml
-<!-- In Objects layer -->
 <object id="30" type="HazardZone" name="Hazard_Spikes01" x="512" y="176" width="48" height="16">
   <properties>
     <property name="damage" type="float" value="1.0"/>
   </properties>
 </object>
-
-<!-- In Collision layer — hazard geometry is separate from collision geometry -->
-<!-- Hazard objects in Objects layer handle damage; no Solid_ rect needed below spikes -->
-<!-- Death zone beneath spikes: -->
-<object id="31" name="Death_Pit_Spikes" x="512" y="192" width="48" height="16"/>
 ```
 
-### 11.4 Camera Lock Zone
+### 11.4 Un bloqueo de cámara
 
 ```xml
-<!-- Lock horizontal scroll inside a room, allow vertical scroll -->
 <object id="40" type="CameraLock" name="CameraLock_Room01" x="800" y="0" width="320" height="224">
   <properties>
     <property name="lock_x" type="bool" value="true"/>
@@ -497,49 +511,13 @@ A `MessageTrigger` object is a rectangle trigger in the `Objects` layer. When th
 </object>
 ```
 
-When the player is inside this zone, the camera's X offset is clamped to keep the room viewport fixed (useful for vertical-scroll room segments or boss arenas).
-
-
---- Traducción al Español ---
-
-## Especificación TMX
-
-Los mapas se diseñan en Tiled Map Editor y se exportan como archivos .tmx (formato XML). El módulo StageLoader procesa estos archivos para ensamblar el entorno completo del escenario.
-
-### Propiedades del Mapa
-- Orientación: Ortogonal
-- Tamaño de tile: 16×16 píxeles
-- Ancho mínimo: 20 tiles (320 px)
-- Alto mínimo: 14 tiles (224 px)
-
-### Capas Requeridas (de abajo a arriba)
-1. BG_Far (Tile) — Fondo distante
-2. BG_Mid (Tile) — Fondo medio
-3. BG_Near (Tile) — Fondo cercano
-4. Terrain (Tile) — Terreno sólido principal
-5. Terrain_Detail (Tile) — Decoración no sólida
-6. Objects (Object) — Spawns, disparadores, checkpoints
-7. Collision (Object) — Rectángulos de colisión
-8. FG_Overlay (Tile) — Primer plano (opcional)
-
-### Registro de Tipos de Objeto
-PlayerSpawn, Checkpoint, NextTrigger, MessageTrigger, MessageTrigger_Once,
-Waypoint, HazardZone, DeathPit, CameraLock — plus every registered entity type
-(Walker, Flying, Shooter, Charger, Archer, Brute, Caster, Assassin, the 21
-named species of `docs/18_ENEMY_ROSTER.md`, and BossVenado).
-
-`Platform` is **not** in this list: it belongs to the `Collision` layer, where a
-rectangle with that type becomes a one-way platform. In the `Objects` layer it
-is not a valid type and the loader will say so.
-
-Run `python scripts/validate_tmx.py <map>` for the authoritative list — it reads
-the registry rather than this document, so it cannot go out of date.
-
-Para la especificación completa de propiedades, reglas de spawn, checkpoints y formato XML, consultar el documento original en inglés.
-
+Con el jugador dentro, la cámara deja de moverse en X. Sirve para salas de
+desplazamiento vertical y para arenas de jefe.
 
 ---
-## 🔗 Documentos Relacionados
 
-- [[07_STAGE0_DESIGN.md|Stage 0 Design]]
-- [[STAGE_CREATION.md|Stage Creation Guide]]
+## 🔗 Documentos relacionados
+
+- [[60_GUIA_COMPLETA_DEL_MOTOR.md|Guía completa del motor — todas las propiedades y tipos]]
+- [[STAGE_CREATION.md|Guía de creación de escenarios]]
+- [[07_STAGE0_DESIGN.md|Diseño del escenario 0]]
