@@ -94,9 +94,22 @@ class StoryScene(BaseScene):
 
         self._music = self._assets / "story.wav"
 
-        self._font_title = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", 20)
-        self._font_text = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", 14)
-        self._font_hint = AssetLoader.load_font(settings.ASSETS_DIR / "fonts" / "game.ttf", 11)
+        # AUD-436 — por `theme.font()`, no por `AssetLoader.load_font()`.
+        #
+        # Las dos cargan el mismo `game.ttf`; la diferencia es que sólo la
+        # primera pasa por `escalar_texto`. Con la carga directa, el aviso
+        # «Presiona CONFIRM para continuar» medía 7 px de tinta real y seguía
+        # midiendo 7 px con la accesibilidad al 200 %: es la pantalla en la
+        # que desemboca el tutorial, y era ilegible sin forma de arreglarlo
+        # desde Opciones.
+        #
+        # Los tamaños suben a los tokens del tema en vez de quedarse en
+        # 20/14/11. `game.ttf` entrega bastante menos alto del que se le pide
+        # (AUD-203), así que 11 px no eran 11 px de letra sino 7; el token
+        # `FONT_TINY` es el mínimo que este proyecto ya considera legible.
+        self._font_title = font(Theme.FONT_HEADING)
+        self._font_text = font(Theme.FONT_SMALL)
+        self._font_hint = font(Theme.FONT_TINY)
 
     def on_enter(self) -> None:
         if self._chapter == 1:
@@ -143,6 +156,22 @@ class StoryScene(BaseScene):
                 if self.audio is not None:
                     self.audio.stop_music()
 
+    def _alto_de_linea(self) -> int:
+        """Separación entre renglones del cuerpo, sacada de la fuente.
+
+        AUD-436 — era `y += 22`, una constante escrita cuando el cuerpo medía
+        14 px y nunca crecía. Al pasar la tipografía por `theme.font()` sí
+        crece, y con el texto al 200 % cada renglón invadía el siguiente: se
+        habría cambiado un texto ilegible por pequeño por otro ilegible por
+        solaparse.
+
+        El holgor es proporcional y no fijo por el mismo motivo: 4 px de aire
+        entre líneas de 34 px se leen apretados aunque entre líneas de 14 px
+        sobraran.
+        """
+        alto = self._font_text.get_height()
+        return alto + max(4, alto // 4)
+
     def draw(self, surface: pygame.Surface) -> None:
         surface.blit(self._background, (0, 0))
 
@@ -166,11 +195,12 @@ class StoryScene(BaseScene):
 
         lines = display_text.split("\n")
         y = 70
+        paso = self._alto_de_linea()
         for line in lines:
             text_surf = self._font_text.render(line, True, (240, 240, 230))
             text_x = (settings.INTERNAL_WIDTH - text_surf.get_width()) // 2
             surface.blit(text_surf, (text_x, y))
-            y += 22
+            y += paso
 
         if self._typewriter_full:
             hint = self._font_hint.render("Presiona CONFIRM para continuar", True, (180, 180, 160))
