@@ -155,7 +155,7 @@ class OptionsScene(BaseScene):
         ancho_etq = settings.INTERNAL_WIDTH - x_etq - izq
 
         y = self._MARGEN_SUP
-        titulo = "OPTIONS"
+        titulo = "OPCIONES"
         ancho_t = min(self._medir(titulo), ancho_util)
         pygame_gui.elements.UILabel(
             relative_rect=pygame.Rect(
@@ -170,7 +170,7 @@ class OptionsScene(BaseScene):
                                 float(audio.music_volume if audio else 0.7)),
             value_range=(0.0, 1.0), manager=self._gui_manager,
         )
-        self._fila(y, "MUSIC VOLUME", x_etq, ancho_etq)
+        self._fila(y, "VOLUMEN DE MÚSICA", x_etq, ancho_etq)
         y += paso
 
         self._slider_sfx = pygame_gui.elements.UIHorizontalSlider(
@@ -179,7 +179,7 @@ class OptionsScene(BaseScene):
                                 float(audio.sfx_volume if audio else 1.0)),
             value_range=(0.0, 1.0), manager=self._gui_manager,
         )
-        self._fila(y, "SFX VOLUME", x_etq, ancho_etq)
+        self._fila(y, "VOLUMEN DE EFECTOS", x_etq, ancho_etq)
         y += paso
 
         self._dropdown_difficulty = pygame_gui.elements.UIDropDownMenu(
@@ -188,7 +188,7 @@ class OptionsScene(BaseScene):
             relative_rect=pygame.Rect((izq, y), (w_ctrl, alto)),
             manager=self._gui_manager,
         )
-        self._fila(y, "DIFFICULTY", x_etq, ancho_etq)
+        self._fila(y, "DIFICULTAD", x_etq, ancho_etq)
         y += paso
 
         self._dropdown_cb = pygame_gui.elements.UIDropDownMenu(
@@ -197,7 +197,7 @@ class OptionsScene(BaseScene):
             relative_rect=pygame.Rect((izq, y), (w_ctrl, alto)),
             manager=self._gui_manager,
         )
-        self._fila(y, "COLORBLIND MODE", x_etq, ancho_etq)
+        self._fila(y, "MODO DALTÓNICO", x_etq, ancho_etq)
         y += paso
 
         # AUD-036: subtitles had no UI at all. Captions for non-speech audio are
@@ -208,7 +208,7 @@ class OptionsScene(BaseScene):
             relative_rect=pygame.Rect((izq, y), (w_ctrl, alto)),
             text=self._subtitles_label(), manager=self._gui_manager,
         )
-        self._fila(y, "SUBTITLES (audio captions)", x_etq, ancho_etq)
+        self._fila(y, "SUBTÍTULOS DE SONIDO", x_etq, ancho_etq)
         y += paso
 
         # F3.1: selector de idioma. Sin esto la traducción existiría y nadie
@@ -218,7 +218,7 @@ class OptionsScene(BaseScene):
             relative_rect=pygame.Rect((izq, y), (w_ctrl, alto)),
             text=self._language_label(), manager=self._gui_manager,
         )
-        self._fila(y, "IDIOMA / LANGUAGE", x_etq, ancho_etq)
+        self._fila(y, "IDIOMA", x_etq, ancho_etq)
         y += paso
 
         # ── Accesibilidad (AUD-126) ────────────────────────────
@@ -226,7 +226,7 @@ class OptionsScene(BaseScene):
         # gente encuentran en un plataformas. Van juntas y con etiqueta propia
         # para que se encuentren: una opción de accesibilidad escondida entre
         # los ajustes de volumen no la usa quien la necesita.
-        self._fila(y, "ACCESIBILIDAD / ACCESSIBILITY", izq, ancho_util)
+        self._fila(y, "ACCESIBILIDAD", izq, ancho_util)
         y += paso
 
         self._dropdown_texto = pygame_gui.elements.UIDropDownMenu(
@@ -235,7 +235,7 @@ class OptionsScene(BaseScene):
             relative_rect=pygame.Rect((izq, y), (w_ctrl, alto)),
             manager=self._gui_manager,
         )
-        self._fila(y, "TAMANO DEL TEXTO", x_etq, ancho_etq)
+        self._fila(y, "TAMAÑO DEL TEXTO", x_etq, ancho_etq)
         y += paso
 
         self._movimiento_reducido = bool(cfg.get("reduced_motion", False))
@@ -278,11 +278,11 @@ class OptionsScene(BaseScene):
         w_boton = (ancho_util - 12) // 2
         self._btn_keybindings = pygame_gui.elements.UIButton(
             relative_rect=pygame.Rect((izq, y), (w_boton, alto)),
-            text="KEY BINDINGS", manager=self._gui_manager,
+            text="CONTROLES", manager=self._gui_manager,
         )
         self._btn_back = pygame_gui.elements.UIButton(
             relative_rect=pygame.Rect((izq + w_boton + 12, y), (w_boton, alto)),
-            text="BACK", manager=self._gui_manager,
+            text="VOLVER", manager=self._gui_manager,
         )
 
         self.context.scene_manager.transition.start_fade_in(0.5)
