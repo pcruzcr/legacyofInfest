@@ -37,6 +37,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from typing import ClassVar
 
 import pygame
 
@@ -70,6 +71,20 @@ class MenuList:
     items: list[MenuItem] = field(default_factory=list)
     index: int = 0
     _elapsed: float = 0.0
+    #: AUD-446 — cuántas filas se ven a la vez. `None` las enseña todas, que
+    #: es lo que quieren las listas cortas: los logros, el inventario o la
+    #: tienda caben enteros y hacerlas desplazarse sólo escondería filas que
+    #: hoy se ven. Se pone un número donde la lista es larga —el título tiene
+    #: catorce opciones, 420 px de los 600 que hay— y entonces la lista se
+    #: desliza para mantener la seleccionada dentro.
+    visible_rows: int | None = None
+    #: Desplazamiento actual, en filas. Es `float` porque se interpola.
+    _desplazamiento: float = 0.0
+
+    #: Cuánto del camino que falta se recorre por segundo. 12 da una respuesta
+    #: que se siente inmediata sin que el ojo pierda de vista dónde estaba:
+    #: llega en unos 250 ms.
+    VELOCIDAD_DE_DESPLAZAMIENTO: ClassVar[float] = 12.0
 
     # ── navigation ──────────────────────────────────────────────
 
@@ -118,8 +133,52 @@ class MenuList:
         if not self.items[self.index].enabled:
             self._step(1)
 
+    # ── la ventana de filas visibles (AUD-446) ──────────────────
+
+    @property
+    def desplazamiento(self) -> float:
+        """Cuántas filas se han deslizado hacia arriba, ahora mismo."""
+        return self._desplazamiento
+
+    def _desplazamiento_deseado(self) -> float:
+        """Dónde debería estar la ventana para que el foco se vea.
+
+        Se centra el foco en la ventana y luego se acota a los extremos. Lo
+        segundo importa tanto como lo primero: sin ello, al llegar al final de
+        la lista la ventana seguiría bajando y dejaría filas vacías debajo.
+        """
+        if self.visible_rows is None:
+            return 0.0
+        maximo = max(0, len(self.items) - self.visible_rows)
+        centrado = self.index - (self.visible_rows - 1) // 2
+        return float(max(0, min(centrado, maximo)))
+
+    def filas_visibles(self) -> list[int]:
+        """Índices de las filas que se dibujan ahora mismo.
+
+        Redondea el desplazamiento en curso: a mitad de la animación la
+        ventana está entre dos filas, y lo que se pregunta aquí es qué se ve.
+        """
+        if self.visible_rows is None:
+            return list(range(len(self.items)))
+        primera = round(self._desplazamiento)
+        primera = max(0, min(primera, max(0, len(self.items) - self.visible_rows)))
+        return list(range(primera, min(primera + self.visible_rows, len(self.items))))
+
     def update(self, dt: float) -> None:
         self._elapsed += dt
+        if self.visible_rows is None:
+            return
+        # AUD-446 — interpolación exponencial hacia el destino. Saltar de golpe
+        # cuando el foco cruza el borde hace perder de vista dónde estabas: el
+        # ojo no sigue un salto instantáneo de tres filas.
+        objetivo = self._desplazamiento_deseado()
+        avance = min(1.0, self.VELOCIDAD_DE_DESPLAZAMIENTO * max(0.0, dt))
+        self._desplazamiento += (objetivo - self._desplazamiento) * avance
+        # Sin esto la interpolación nunca termina del todo y la lista queda
+        # temblando a una milésima de fila de su sitio.
+        if abs(objetivo - self._desplazamiento) < 0.01:
+            self._desplazamiento = objetivo
 
     # ── rendering ───────────────────────────────────────────────
 
@@ -134,8 +193,24 @@ class MenuList:
         label_font = font(Theme.FONT_BODY)
         trail_font = font(Theme.FONT_SMALL)
 
+        # AUD-446 — con ventana se recorta a lo que se ve y se desplaza el
+        # origen. El recorte es lo que impide que la fila que está entrando
+        # asome por encima del logo mientras se desliza.
+        recorte_previo = surface.get_clip()
+        desplazamiento_px = 0
+        if self.visible_rows is not None:
+            visibles = min(self.visible_rows, len(self.items))
+            surface.set_clip(pygame.Rect(x, y, width, visibles * height))
+            desplazamiento_px = round(self._desplazamiento * height)
+
         for i, item in enumerate(self.items):
-            row = pygame.Rect(x, y + i * height, width, height - Theme.SPACE_XS)
+            row = pygame.Rect(x, y + i * height - desplazamiento_px, width,
+                              height - Theme.SPACE_XS)
+            if self.visible_rows is not None and (
+                row.bottom < y or row.top > y + self.visible_rows * height
+            ):
+                # Fuera de la ventana: ni se dibuja ni se paga su tipografía.
+                continue
             focused = (i == self.index)
 
             if focused:
@@ -174,6 +249,13 @@ class MenuList:
                      row.centery - trailing.get_height() // 2),
                 )
 
+        # AUD-446 — se devuelve el recorte anterior pase lo que pase: dejarlo
+        # puesto cortaría todo lo que se dibuje después —los avisos de abajo,
+        # el logo— por una región que no es suya, y eso se ve como «desapareció
+        # media pantalla».
+        surface.set_clip(recorte_previo)
+        if self.visible_rows is not None:
+            return y + min(self.visible_rows, len(self.items)) * height
         return y + len(self.items) * height
 
     def draw_hint(self, surface: pygame.Surface, y: int) -> None:
