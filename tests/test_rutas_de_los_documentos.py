@@ -127,7 +127,29 @@ MODULOS_RETIRADOS: frozenset[str] = frozenset({
     "docs/AUDIT_2026-07.en.md",
 })
 
-_EXENTAS = MARCADORES_DE_POSICION | MODULOS_RETIRADOS
+#: Estado del jugador: ficheros que el juego **escribe al jugarse** y que
+#: `.gitignore` mantiene fuera del control de versiones — AUD-444.
+#:
+#: No son ejemplos didácticos (existen de verdad, en cuanto alguien juega) ni
+#: módulos retirados (no se han quitado). Son la tercera cosa: rutas que un
+#: documento cita con razón y que en un árbol limpio no están.
+#:
+#: Se descubrió al borrar los datos de partida para empezar de cero: tres
+#: documentos citaban `data/inventory.json` y la prueba se puso roja. Pero el
+#: fichero está en `.gitignore` desde AUD-197, así que **un clon recién hecho
+#: falla igual**: esta prueba llevaba tiempo dependiendo de que quien la
+#: ejecutara hubiera jugado antes en esa máquina.
+#:
+#: La diferencia con un marcador de posición importa al leer la lista: un
+#: marcador dice «esto nunca existirá»; esto dice «esto existe cuando se
+#: juega». Confundirlos invitaría a borrar el fichero del `.gitignore` para
+#: «arreglar» la prueba, que es exactamente lo que AUD-157 deshizo.
+ESTADO_DE_EJECUCION: frozenset[str] = frozenset({
+    "data/inventory.json",
+    "data/score.json",
+})
+
+_EXENTAS = MARCADORES_DE_POSICION | MODULOS_RETIRADOS | ESTADO_DE_EJECUCION
 
 
 #: Bloques cercados que son **volcados**, no afirmaciones: salida de un
