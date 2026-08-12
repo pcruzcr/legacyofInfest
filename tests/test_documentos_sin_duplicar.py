@@ -139,11 +139,25 @@ def test_la_traduccion_no_es_una_copia_del_original() -> None:
                 f"({len(arriba)} líneas arriba, {len(abajo)} abajo)"
             )
 
-    # Si el separador desaparece del repo, esta prueba dejaría de comprobar
-    # nada sin que nadie se entere. Mejor que falle y se borre a conciencia.
-    assert revisados >= 40, (
-        f"sólo {revisados} documentos declaran traducción; eran 49. Si la "
-        f"convención bilingüe cambió, esta prueba ya no vigila lo que cree"
+    # AUD-432 — el umbral se invierte: ahora sólo puede BAJAR.
+    #
+    # Este `assert` pedía `revisados >= 40` y su mensaje avisaba de lo que
+    # acabó pasando: «si la convención bilingüe cambió, esta prueba ya no
+    # vigila lo que cree». Cambió en AUD-428 —el español pasa a ser la lengua
+    # única— y cada documento traducido **elimina** su apéndice, así que el
+    # suelo convertía el progreso en un fallo.
+    #
+    # Lo que hay que vigilar ahora es lo contrario: que quede al menos uno
+    # mientras el trabajo esté a medias —si llegan a cero antes de tiempo es
+    # que alguien borró apéndices sin traducir el cuerpo— y que los que queden
+    # no sean copias del original, que es lo que esta prueba siempre midió.
+    #
+    # Cuando `revisados` llegue a 0 de verdad, esta prueba se borra: ya no
+    # habrá apéndices que comprobar.
+    assert revisados >= 1, (
+        "ningún documento declara ya un apéndice de traducción. Si es porque "
+        "se han traducido todos, borra esta prueba — ya no vigila nada. Si no, "
+        "alguien ha quitado los apéndices sin traducir el cuerpo"
     )
     assert not infractores, (
         "estas 'traducciones' son copias del original, no traducciones. "
