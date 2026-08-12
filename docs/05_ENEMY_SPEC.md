@@ -671,18 +671,34 @@ que el Charger añadía `WIND_UP`/`CHARGE`/`STUN`; usa `TELEGRAPHING`, `CHASE` y
 `STUNNED`, que son esos mismos tres con los nombres del enum).
 <!-- /cita-historica -->
 
-| State Name | Base Enum | Applicable To | Description |
-|---|---|---|---|
-| `PATROL` | ✅ Yes | All | Default movement behavior |
-| `ALERT` | ✅ Yes | All | Player detected, reactive behavior |
-| `TELEGRAPHING` | ✅ Yes | Archer, Brute, Caster | Pre-attack warning period |
-| `FIRING` | ✅ Yes | Shooter, Archer, Caster | Emitting a projectile |
-| `LAUNCHED` | ✅ Yes | Pushed/knocked back | Enemy is airborne from knockback (undocumented in earlier docs) |
-| `HURT` | ✅ Yes | All | Damage received, brief stun |
-| `DYING` | ✅ Yes | All | Death animation playing |
-| ~~`WIND_UP`~~ | **No existe.** Es `TELEGRAPHING`, y está en el enum base | — | AUD-150 |
-| `CHARGE` | ❌ Subclass only | Charger only | High-speed rush |
-| `STUN` | ❌ Subclass only | Charger only | Post-charge recovery |
+Los trece, con lo que hace cada uno. **Todos están en el enum base y ninguna
+subclase añade ninguno.**
+
+| Estado | Quién lo usa | Qué es |
+|---|---|---|
+| `IDLE` | Estacionarios (`patrol_length = 0`) | Quieto. Sin este estado, uno inmóvil seguía «patrullando» sin moverse |
+| `PATROL` | Todos | El movimiento por defecto |
+| `SEARCH` | Todos | Vio al jugador y lo perdió: busca donde lo vio. Sin él, el enemigo se olvida en el acto |
+| `ALERT` | Todos | Consciente del jugador |
+| `CHASE` | Todos | Persecución activa. Distinta de `ALERT`: perseguir no es estar en guardia |
+| `TELEGRAPHING` | Arquero, bruto, hechicero | El aviso antes de atacar |
+| `FIRING` | Tirador, arquero, hechicero | Lanzando el proyectil |
+| `RECOVER` | Todos | Ventana de vulnerabilidad tras atacar. Es **la** pieza que hace legible un combate |
+| `RETREAT` | Todos | Repliegue con poca vida. `SquadBrain` ya emitía la táctica antes de que existiera el estado |
+| `STUNNED` | Todos | Aturdido por un *parry* o un golpe pesado. Recompensa defenderse bien |
+| `HURT` | Todos | Aturdimiento breve por daño |
+| `LAUNCHED` | Empujados fuerte | Por el aire, con gravedad |
+| `DYING` | Todos | Animación de muerte |
+
+> **Corregido el 2026-08-11 (AUD-433).** El párrafo de arriba ya decía «trece»
+> desde AUD-150, y **esta tabla seguía contradiciéndolo**: listaba siete
+> estados y añadía `CHARGE` y `STUN` como «sólo de subclase», que es
+> exactamente lo que AUD-150 había desmentido tres líneas antes. No existen:
+> son `CHASE` y `STUNNED`, y están en el enum base como todos los demás.
+>
+> Una corrección aplicada al texto y no a la tabla es peor que no haberla
+> hecho: deja el documento contradiciéndose consigo mismo, y quien lea sólo la
+> tabla —que es lo que se consulta— se lleva el dato viejo.
 
 ---
 
