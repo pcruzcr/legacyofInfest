@@ -27,6 +27,7 @@ import pygame
 from src.engine.core import settings, user_settings
 from src.engine.core.event_bus import EventBus
 from src.engine.core.events import Events
+from src.engine.ui.theme import Theme, font
 
 logger = logging.getLogger(__name__)
 
@@ -158,7 +159,11 @@ class SubtitleOverlay:
         if self._font is None:
             if not pygame.font.get_init():
                 pygame.font.init()
-            self._font = pygame.font.Font(None, 16)
+            # AUD-451 — por el tema, para que la escala de accesibilidad
+            # llegue también a los subtítulos. Que precisamente éstos la
+            # ignoraran es lo peor del defecto: existen para quien los
+            # necesita.
+            self._font = font(Theme.FONT_SMALL)
         return self._font
 
     def draw(self, surface: pygame.Surface) -> None:

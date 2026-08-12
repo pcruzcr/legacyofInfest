@@ -5,6 +5,7 @@ import logging
 import pygame
 
 from src.engine.core import settings
+from src.engine.ui.theme import Theme, font
 from src.engine.utils.asset_loader import AssetLoader
 from src.engine.utils.math_utils import ease_in_quad, ease_out_quad
 
@@ -38,24 +39,12 @@ class ScreenBanner:
         except (pygame.error, FileNotFoundError, PermissionError):
             logger.warning("screen_banner: failed to load banner images")
 
-        self._font_large: pygame.font.Font | None = None
-        self._font_medium: pygame.font.Font | None = None
-        try:
-            self._font_large = pygame.font.Font(
-                settings.ASSETS_DIR / "fonts" / "game.ttf", 22,
-            )
-        except (pygame.error, FileNotFoundError, PermissionError):
-            logger.warning("screen_banner: failed to load game.ttf (22)")
-            self._font_large = None
-        try:
-            self._font_medium = pygame.font.Font(
-                settings.ASSETS_DIR / "fonts" / "game.ttf", 20,
-            )
-        except (pygame.error, FileNotFoundError, PermissionError):
-            logger.warning("screen_banner: failed to load game.ttf (20)")
-            self._font_medium = None
-
-        self._fallback_font = pygame.font.Font(None, 18)
+        # AUD-451 — por el tema. `theme.font()` ya resuelve `game.ttf` y cae a
+        # la de pygame si falta, así que los tres `try` sobraban, y además
+        # aplica la escala de accesibilidad que aquí no llegaba.
+        self._font_large: pygame.font.Font | None = font(Theme.FONT_TITLE)
+        self._font_medium: pygame.font.Font | None = font(Theme.FONT_HEADING)
+        self._fallback_font = font(Theme.FONT_BODY)
         self._name_surf: pygame.Surface | None = None
         self._name_fallback_surf: pygame.Surface | None = None
 

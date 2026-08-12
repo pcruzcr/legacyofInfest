@@ -96,10 +96,22 @@ class TestHUD:
         assert hud.current_time == pytest.approx(1.0)
 
     def test_draw_does_not_crash(self, event_bus: EventBus) -> None:
+        """AUD-451 — la superficie y el punto salen del HUD, no de un 320×224.
+
+        Antes se pintaba sobre una superficie de 320×224 y se miraba el píxel
+        (3, 3), que caía dentro del marco del retrato. La maqueta ya no está
+        escrita para esa pantalla: se escala a la resolución interna, así que
+        el retrato empieza en (5, 5) y en una superficie de 320 de ancho ni
+        siquiera cabría el cronómetro.
+        """
+        from src.engine.core import settings
+
         hud = HUD(event_bus)
-        surface = pygame.Surface((320, 224))
+        surface = pygame.Surface(
+            (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
         hud.draw(surface)
-        assert surface.get_at((3, 3))[:3] != (0, 0, 0)
+        retrato = hud.regiones()["retrato"]
+        assert surface.get_at(retrato.center)[:3] != (0, 0, 0)
 
 
 class TestHUDDestroy:

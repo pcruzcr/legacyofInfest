@@ -7,6 +7,7 @@ import pygame
 from src.engine.core import settings
 from src.engine.core.event_bus import EventBus
 from src.engine.core.events import Events
+from src.engine.ui.theme import Theme, font
 
 logger = logging.getLogger(__name__)
 
@@ -30,15 +31,11 @@ class MessageBox:
         self._queue: list[dict[str, object]] = []
         self._destroyed: bool = False
 
-        self._font: pygame.font.Font = pygame.font.Font(None, 12)
-        if hasattr(settings, "ASSETS_DIR"):
-            try:
-                self._font = pygame.font.Font(
-                    settings.ASSETS_DIR / "fonts" / "game.ttf", 12,
-                )
-            except (pygame.error, FileNotFoundError, PermissionError):
-                logger.warning("message_box: failed to load game.ttf font")
-                self._font = pygame.font.Font(None, 12)
+        # AUD-451 — por `theme.font()`, que aplica la escala de accesibilidad
+        # y ya cae a la tipografía de pygame si `game.ttf` falta. Construida a
+        # pelo, subir el texto en Opciones no le llegaba: es el cuadro donde se
+        # leen los diálogos y los avisos del escenario.
+        self._font: pygame.font.Font = font(Theme.FONT_SMALL)
 
         if hasattr(settings, "ASSETS_DIR"):
             try:

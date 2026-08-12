@@ -6,6 +6,7 @@ import pygame
 
 from src.engine.core import settings
 from src.engine.input.action_map import Action
+from src.engine.ui.theme import Theme, font
 
 if TYPE_CHECKING:
     from src.engine.input.input_manager import InputManager
@@ -38,8 +39,10 @@ class TutorialOverlay:
         self._lines: list[str] = []
         self._timer: float = 0.0
         self._duration: float = 5.0
-        self._font = pygame.font.Font(None, 14)
-        self._title_font = pygame.font.Font(None, 18)
+        # AUD-451 — por el tema, para que la escala de accesibilidad llegue a
+        # los avisos del tutorial, que son texto que se lee jugando.
+        self._font = font(Theme.FONT_SMALL)
+        self._title_font = font(Theme.FONT_BODY)
         self._box_surf = None
 
     def show(self, tip_key: str, duration: float = 5.0) -> None:

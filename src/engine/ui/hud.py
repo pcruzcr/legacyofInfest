@@ -15,9 +15,47 @@ import pygame
 from src.engine.core import settings
 from src.engine.core.event_bus import EventBus
 from src.engine.core.events import Events
+from src.engine.ui.theme import font
 from src.engine.utils.asset_loader import AssetLoader
 
 logger = logging.getLogger(__name__)
+
+#: Ancho para el que se dibujó la maqueta original del HUD — AUD-451.
+#:
+#: `09_HUD_SPEC.md` §2 lo decía con todas las letras: «the HUD occupies fixed
+#: regions of the 320×224 internal screen». La resolución interna pasó a
+#: 800×600 y el HUD se quedó escrito en píxeles de la de antes, dibujándose
+#: **sin escalar**: ocupaba el 40 % del ancho, arrinconado arriba a la
+#: izquierda, y por eso el marcador se veía diminuto.
+ANCHO_DE_DISENO: int = 320
+
+
+def _escala_del_hud() -> float:
+    """Cuánto hay que agrandar la maqueta para la pantalla de verdad.
+
+    Se calcula en vez de escribirse por lo que enseñó AUD-187 con el menú de
+    título: una maqueta escrita en píxeles de una resolución concreta se queda
+    obsoleta en silencio el día que la resolución cambia, y nadie lo nota hasta
+    que alguien lo mira de cerca. Aquí pasaron 800/320 = 2,5 veces sin que
+    saltara nada.
+    """
+    return settings.INTERNAL_WIDTH / ANCHO_DE_DISENO
+
+
+#: La escala vigente. Se resuelve al importar porque la resolución interna es
+#: una constante del motor, no una preferencia que cambie en caliente.
+ESCALA_DEL_HUD: float = _escala_del_hud()
+
+
+def _e(valor: int | float) -> int:
+    """Un número de la maqueta original, llevado a la pantalla actual."""
+    return round(valor * ESCALA_DEL_HUD)
+
+
+def _rect_escalado(x: int, y: int, w: int, h: int) -> pygame.Rect:
+    """Una región de la maqueta original, a escala."""
+    return pygame.Rect(_e(x), _e(y), _e(w), _e(h))
+
 
 def _heart_slot_state(health: float, slot: int) -> str:
     v = max(0.0, min(1.0, health - slot))
@@ -54,8 +92,8 @@ class HUD:
         self._pulso_timer: float = 0.0
 
         # Portrait frame (34x34 with 1px border, inner sprite at 3,3)
-        self._portrait_frame_rect = pygame.Rect(2, 2, 34, 34)
-        self._portrait_sprite_rect = pygame.Rect(3, 3, 32, 32)
+        self._portrait_frame_rect = _rect_escalado(2, 2, 34, 34)
+        self._portrait_sprite_rect = _rect_escalado(3, 3, 32, 32)
         self._portrait_fill = None
         self._portrait_edges: dict[str, pygame.Surface] = {}
         self._timer_fill = None
@@ -101,20 +139,20 @@ class HUD:
             self._frame_edges = {}
             self._frame_fill = None
 
-        self._hearts_x: int = 38
-        self._hearts_y: int = 6
-        self._heart_spacing: int = 16
+        self._hearts_x: int = _e(38)
+        self._hearts_y: int = _e(6)
+        self._heart_spacing: int = _e(16)
         # AUD-219 — marcador de puntos y monedas.
         #
         # Va entre los corazones (38..118) y el marco del cronómetro (258..320)
         # porque es el único hueco libre de la franja superior. Se declara como
         # región en `09_HUD_SPEC.md` §2.1: el doc es contrato, y una prueba
         # comprueba que lo que se dibuja cabe en lo que el doc promete.
-        self._score_region = pygame.Rect(124, 2, 128, 14)
+        self._score_region = _rect_escalado(124, 2, 128, 14)
         self._score: int = 0
         self._coins: int = 0
         # Timer frame (reuse hud_frame.png 9-slice at timer size 90x16)
-        self._timer_bg_rect = pygame.Rect(258, 1, 62, 16)
+        self._timer_bg_rect = _rect_escalado(258, 1, 62, 16)
         # Pre-scale timer background once (deferred from frame load block)
         self._timer_fill = (
             pygame.transform.scale(
@@ -132,8 +170,8 @@ class HUD:
                 "left": pygame.transform.scale(self._frame_edges["left"], (2, tr.height - 4)),
                 "right": pygame.transform.scale(self._frame_edges["right"], (2, tr.height - 4)),
             }
-        self._timer_rect = pygame.Rect(288, 2, 32, 14)
-        self._timer_label_rect = pygame.Rect(260, 2, 26, 12)
+        self._timer_rect = _rect_escalado(288, 2, 32, 14)
+        self._timer_label_rect = _rect_escalado(260, 2, 26, 12)
         self._timer_flash_timer: float = 0.0
         self._timer_flash_on: bool = False
         # Load timer font (TTF preferred for readability)
@@ -212,7 +250,15 @@ class HUD:
         self._rush_golpes: int = 0
         self._special_max: float = 100.0
 
-        self._font = pygame.font.Font(None, 12)
+        # AUD-451 — por `theme.font()` y a la escala de la maqueta.
+        #
+        # Era `pygame.font.Font(None, 12)`: 6 px de tinta medidos, la
+        # tipografía por defecto de pygame en vez de la del juego, y sin pasar
+        # por `escalar_texto`, así que subir el texto en Opciones no le
+        # llegaba. El 12 se escala como el resto de la maqueta porque es un
+        # número de la misma maqueta: dejarlo fijo habría agrandado el marco y
+        # no lo que va dentro.
+        self._font = font(_e(12))
 
         self._event_bus.subscribe(Events.PLAYER_DAMAGED, self._on_player_damaged)
         self._event_bus.subscribe(Events.PLAYER_HEALED, self._on_player_healed)
@@ -284,6 +330,31 @@ class HUD:
         self._health = 0.0
         self._timer_running = False
         self._timer_paused = False
+
+    def timer_rect(self) -> pygame.Rect:
+        """El marco del cronómetro. Lo consulta la prueba de maqueta."""
+        return pygame.Rect(self._timer_bg_rect)
+
+    def heart_row_rect(self) -> pygame.Rect:
+        """Lo que ocupa la fila de corazones, a la escala actual."""
+        alto = _e(8)
+        ancho = max(1, self.ranuras_de_corazon) * self._heart_spacing
+        return pygame.Rect(self._hearts_x, self._hearts_y, ancho, alto)
+
+    def regiones(self) -> dict[str, pygame.Rect]:
+        """Las cuatro zonas de la franja superior — AUD-451.
+
+        Existe para que una prueba pueda comprobar de una vez que ninguna se
+        sale de la pantalla ni pisa a otra. Escalar una maqueta sin comprobar
+        eso sólo cambia un defecto por otro: lo que antes era ilegible por
+        pequeño pasaría a ser ilegible por solaparse.
+        """
+        return {
+            "retrato": pygame.Rect(self._portrait_frame_rect),
+            "corazones": self.heart_row_rect(),
+            "marcador": pygame.Rect(self._score_region),
+            "cronometro": self.timer_rect(),
+        }
 
     @property
     def ranuras_de_corazon(self) -> int:
