@@ -85,6 +85,50 @@ class TransitionManager:
         self._max_radius = (w ** 2 + h ** 2) ** 0.5
         self._old_surface = old_surface
 
+    def asegurar_fundido_de_entrada(self, duracion: float = FADE_DURATION) -> None:
+        """Garantiza que el velo acabará levantándose tras un cambio de escena.
+
+        AUD-434 — por qué esto vive aquí y no en cada escena
+        ----------------------------------------------------
+        El patrón del juego es: la pantalla que se va arranca un fundido de
+        salida y **acto seguido** cambia de escena. Quien levanta el velo es la
+        escena de destino, llamando a `start_fade_in` en su `on_enter`.
+
+        Ese contrato no se puede cumplir: obliga a cada pantalla nueva a
+        acordarse de deshacer algo que no puso ella. Trece lo hacen y dos no
+        —`LeaderboardScene` y `SkillTreeScene`—, y en esas dos el fundido de
+        salida llega a su fin, `update` deja el alfa en 255 y `draw` lo pinta
+        mientras el alfa sea mayor que cero, mire o no si la transición sigue
+        viva. La pantalla aparece, se oscurece y se queda negra con la escena
+        corriendo debajo.
+
+        Ya se había cobrado una víctima: AUD-201 lo sufrió con BOSS RUSH, dejó
+        el diagnóstico escrito y lo arregló reordenando dos líneas en la
+        *llamada*. Van dos de dos, así que la garantía se mueve al sitio que
+        conoce el estado del velo y la invoca quien sabe que hubo cambio de
+        escena (`SceneManager`).
+
+        No se limpia el alfa a pelo: eso cortaría en seco el velo que **sí**
+        tiene que cubrir el salto de `SplashScene` a la pantalla de título.
+        Lo que se hace es asegurar que existe un camino de vuelta a
+        transparente.
+        """
+        # Los otros modos no miran `_fade_alpha` —`draw` exige `_old_surface`—
+        # así que un velo pendiente no es asunto suyo.
+        if self._mode != "fade":
+            return
+        # La escena pidió su propia entrada: se respeta, duración incluida.
+        # Reiniciarla cambiaría el ritmo de trece transiciones que hoy están
+        # bien, que es exactamente el precio que esta red de seguridad no debe
+        # cobrar.
+        if self._active and self._direction == 1:
+            return
+        # Sin velo puesto no hay nada que levantar, y arrancar un fundido aquí
+        # sería un parpadeo negro donde antes había un corte limpio.
+        if not self._active and self._fade_alpha <= 0:
+            return
+        self.start_fade_in(duracion)
+
     def update(self, dt: float) -> None:
         if not self._active:
             return

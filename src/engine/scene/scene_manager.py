@@ -126,6 +126,7 @@ class SceneManager:
         scene.awake()
         scene.start()
         scene.on_enter()
+        self._levantar_el_velo()
 
     def pop(self) -> None:
         """Pop the top scene. Resumes the scene below if any."""
@@ -147,6 +148,21 @@ class SceneManager:
         scene.awake()
         scene.start()
         scene.on_enter()
+        self._levantar_el_velo()
+
+    def _levantar_el_velo(self) -> None:
+        """Tras un cambio de escena, el velo de transición no puede quedarse.
+
+        AUD-434 — se llama **después** de `on_enter` a propósito: así una
+        escena que arranca su propio fundido de entrada gana, y esto sólo actúa
+        sobre las que no lo hacen. Ver `TransitionManager.asegurar_fundido_de_entrada`
+        para por qué la garantía no puede vivir en las escenas.
+
+        Éste es el único sitio del árbol que sabe que acaba de haber un cambio
+        de escena, que es la condición exacta bajo la que un fundido de salida
+        pendiente pasa a ser basura.
+        """
+        self._transition.asegurar_fundido_de_entrada()
 
     def set_stage_queue(self, stages: list[type[BaseScene]]) -> None:
         """Set the ordered list of stage classes to advance through."""
