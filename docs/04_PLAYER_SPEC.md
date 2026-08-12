@@ -1,603 +1,594 @@
 ---
 document_id: "LOI-PLAYER-004"
-title: "Legacy of InFest — Player Specification"
-aliases: ["Player Specification", "Player Spec"]
-tags: ["player", "specification", "entity"]
-description: "Player physics, states, combat — complete behavioral spec"
+title: "Legacy of InFest — Especificación del jugador"
+aliases: ["Especificación del jugador", "Player Specification"]
+tags: ["jugador", "fisica", "estados", "combate"]
+description: "El personaje jugable: controles, física, salud, daño, ataques, estados y cajas"
 source: "docs/04_PLAYER_SPEC.md"
-date_processed: "2026-07-14"
+date_processed: "2026-08-11"
 ---
 
-# Legacy of InFest — Player Specification
+# Legacy of InFest — Especificación del jugador
 
-**Document ID:** LOI-PLAYER-004  
-**Version:** 1.0.0  
-**Status:** Official  
-**Audience:** Professor, Teaching Assistants, AI coding assistants
-
----
-
-<!-- cita-historica -->
-> **Corrección AUD-150 — nombres que este documento daba por existentes.**
-> Comprobados uno por uno contra el código. Ninguno rompe nada al jugar; todos
-> engañan a quien lea el documento para programar.
->
-> * `damage_amount` **no existe.** El daño se pasa como argumento a `apply_damage(cantidad, origen)`; el jugador no guarda un campo con la cantidad del último golpe.
-<!-- /cita-historica -->
-
-
-## 1. Concept
-
-The player character is a hooded figure of indeterminate identity. The hood is not a costume choice — it is a narrative device. The character intentionally does not reveal whether it is John or Jin, the two protagonists of the Legacy of InFest universe. This ambiguity serves the tutorial context of Stage 0: the character is an avatar of the player and of the student, not a story character in the full sense.
-
-The visual design must communicate:
-
-- Agility (lean silhouette, fluid animation)
-- Mystery (deep hood, face never visible)
-- SNES-era authenticity (limited palette, clear readable silhouette at 16×16 to 32×32 sprite size)
-
-The player character is not customizable. Students do not modify the player. The player is a shared framework resource.
+**Identificador:** LOI-PLAYER-004
+**Versión:** 2.0.0
+**Estado:** Oficial
+**Público:** profesorado, personal de apoyo, estudiantes y asistentes de código
 
 ---
 
-## 2. Purpose
+## 1. Concepto
 
-Within the framework's academic context, the player entity serves three purposes:
+El personaje jugable es una figura encapuchada de identidad indeterminada. La
+capucha no es una elección estética: es un recurso narrativo. El personaje no
+revela deliberadamente si es Jhon o Jin, los dos protagonistas del universo de
+Legacy of InFest. Esa ambigüedad sirve al contexto tutorial del escenario 0: el
+personaje es el avatar del jugador y del estudiante, no un personaje de la
+historia en sentido pleno.
 
-**2.1 Interaction Anchor**  
-The player is the primary agent through which students and players interact with every stage system. Checkpoints are reached by the player. Enemies react to the player. The HUD reflects the player's state. All stage demonstration systems in Stage 0 are triggered by player proximity or player action.
+El diseño visual tiene que comunicar:
 
-**2.2 State Machine Reference**  
-The player's finite state machine is the most complete example of entity state management in the framework. Students study the player's state machine to understand how to structure their own custom entities.
+- **agilidad** — silueta esbelta, animación fluida;
+- **misterio** — capucha profunda, cara nunca visible;
+- **autenticidad de la época SNES** — paleta limitada y silueta legible a
+  16×16 y 32×32.
 
-**2.3 Academic Concept Carrier**  
-The player's movement, physics, and animation systems embody course concepts from Units II through VI: vector arithmetic, transformation matrices, frame interpolation, collision detection, sprite animation, and alpha blending.
+El personaje **no es personalizable**. Los estudiantes no lo modifican: es un
+recurso compartido del framework.
 
 ---
 
-## 3. Controls
+## 2. Para qué sirve
 
-All player controls are routed through the `InputManager`. The player entity never queries Pygame directly.
+**2.1 Ancla de interacción.** Es el agente por el que estudiantes y jugadores
+tocan todos los sistemas del escenario. Los puntos de control los alcanza él,
+los enemigos reaccionan a él, el HUD refleja su estado y las demostraciones del
+escenario 0 se disparan por su proximidad o su acción.
 
-| Action | Keyboard Default | Controller Default |
+**2.2 Referencia de máquina de estados.** Su autómata es el ejemplo más
+completo de gestión de estados del framework. Es el que se estudia antes de
+escribir una entidad propia.
+
+**2.3 Portador de conceptos académicos.** Su movimiento, su física y su
+animación encarnan conceptos de las Unidades II a VI: aritmética vectorial,
+matrices de transformación, interpolación de fotogramas, detección de
+colisiones, animación de sprites y mezcla alfa.
+
+---
+
+## 3. Controles
+
+Todo pasa por el `InputManager`. El jugador **nunca** consulta pygame
+directamente.
+
+| Acción | Teclado | Mando |
 |---|---|---|
-| Walk Left | Left Arrow / A | D-Pad Left / Left Stick Left |
-| Walk Right | Right Arrow / D | D-Pad Right / Left Stick Right |
-| Jump | Space / W / Up Arrow | A (Xbox) / Cross (PS) |
-| Crouch | Down Arrow / S | D-Pad Down / Left Stick Down |
-| Short Attack | Z / J | X (Xbox) / Square (PS) |
-| Long Attack | X / K | Y (Xbox) / Triangle (PS) |
+| Caminar a la izquierda | ← · A | Cruceta izquierda · stick izquierdo |
+| Caminar a la derecha | → · D | Cruceta derecha · stick derecho |
+| Saltar | Espacio · W · ↑ | A (Xbox) · Cruz (PS) |
+| Agacharse | ↓ · S | Cruceta abajo · stick abajo |
+| Ataque corto | Z · J | X (Xbox) · Cuadrado (PS) |
+| Ataque largo | X · K | Y (Xbox) · Triángulo (PS) |
 
-**Control Rules:**
-- Jump is only available when the player is grounded (`GROUNDED` state).
-- Short Attack and Long Attack can be performed while walking, standing, or crouching.
-- Long Attack while crouching performs a low sweep.
-- The player cannot change horizontal direction during an attack animation.
-- Jump cancels are not permitted (no double jump, no jump buffering beyond 4 frames).
+**Reglas:**
+
+- Saltar exige estar apoyado **o dentro de la ventana de *coyote time***
+  (§4.2). No es lo mismo, y la diferencia se nota al jugar.
+- Los dos ataques funcionan andando, quieto o agachado.
+- El ataque largo agachado hace un barrido bajo.
+- No se puede cambiar de dirección durante la animación de ataque.
+- **La pulsación de salto se guarda 8 fotogramas** (§4.2).
+
+> **Corregido el 2026-08-11 (AUD-432).** Este apartado decía «saltar sólo está
+> disponible estando apoyado» y «sin buffer de salto más allá de 4 fotogramas».
+> Lo primero **contradice a la propia §4.2** de este documento, que explica el
+> *coyote time*; lo segundo era un número obsoleto — la ventana la lleva
+> `InputManager.VENTANA_DE_BUFFER` y son **8**.
 
 ---
 
-## 4. Movement
+## 4. Movimiento
 
-### 4.1 Horizontal Movement
+### 4.1 Horizontal
 
-The player moves horizontally at a constant speed. There is no acceleration or deceleration ramp. This keeps the movement model simple and SNES-authentic (Super Castlevania IV reference).
+Velocidad constante, sin rampa de aceleración ni de frenado. Mantiene el modelo
+simple y fiel a la época (la referencia es *Super Castlevania IV*).
 
-That speed is **not** the same on the ground and in the air.
+Y **no es la misma en el suelo que en el aire**:
 
-| Property | Value | Unit |
+| Propiedad | Valor | Unidad |
 |---|---|---|
-| Walk speed (grounded) | 90.0 | pixels/second |
-| Air control speed | 45.0 (`walk_speed * 0.5`) | pixels/second |
-| Direction | -1 (left) or +1 (right) | — |
-| Facing | Stored as `facing_direction: int` | — |
+| Velocidad en suelo | 90,0 | px/s |
+| Control aéreo | 45,0 (`walk_speed * 0.5`) | px/s |
+| Dirección | −1 (izquierda) o +1 (derecha) | — |
+| Orientación | `facing_direction: int` | — |
 
-**Velocity Calculation (per frame):** velocity is set, not accumulated; `dt` is
-applied later, when `_resolve_collision` integrates position.
+La velocidad **se asigna, no se acumula**; el `dt` se aplica después, cuando el
+resolutor integra la posición:
+
 ```
-grounded:  velocity.x = direction * PLAYER_WALK_SPEED          # 90 px/s
-airborne:  velocity.x = direction * PLAYER_WALK_SPEED * 0.5    # 45 px/s
+en suelo:  velocity.x = direccion * PLAYER_WALK_SPEED          # 90 px/s
+en el aire: velocity.x = direccion * PLAYER_WALK_SPEED * 0.5   # 45 px/s
 ```
 
-**Momentum carry (AUD-204).** Both assignments only happen when a direction key
-is held. `AirborneState` leaves `velocity.x` untouched when `move_x == 0`
-(`src/framework/entities/states/airborne.py`), so **releasing the direction key
-after take-off preserves the 90 px/s of the ground run** instead of dropping to
-the 45 px/s of air control. Holding the key forward is the slower option.
+**La inercia que se conserva (AUD-204).** Las dos asignaciones sólo ocurren
+mientras se **mantiene** una dirección. `AirborneState` deja `velocity.x`
+intacta cuando `move_x == 0`, así que **soltar la dirección después de
+despegar conserva los 90 px/s de la carrera** en vez de bajar a los 45 del
+control aéreo. Mantener la tecla hacia delante es la opción **más lenta**.
 
-This is not a quirk of the spec — it is measured. `tests/playtest/jump_bench.py`
-runs the real `Player` over synthetic gaps: holding the direction clears **3
-tiles**, releasing it clears **5**. Level designers need the first number, not
-the second; see `66_GUIA_DE_LEVEL_DESIGN.md` §1.3.
+No es una rareza de la especificación: está medido.
+`tests/playtest/jump_bench.py` corre el `Player` real sobre huecos sintéticos —
+manteniendo la dirección se cruzan **3 baldosas**; soltándola, **5**. Quien
+diseña niveles necesita el primer número, no el segundo.
 
-**Crouch Lock:** When `CROUCHING`, horizontal velocity is forced to 0. The player cannot walk while crouched.
+**Bloqueo al agacharse.** En `CROUCHING` la velocidad horizontal se fuerza a 0.
 
-### 4.2 Vertical Movement (Physics)
+### 4.2 Vertical
 
-Gravity is applied continuously. The player is grounded when their bottom edge rests on a collision rect.
+La gravedad se aplica siempre. El jugador está apoyado cuando su borde inferior
+descansa sobre un rectángulo de colisión.
 
-| Property | Value | Unit |
+| Propiedad | Valor | Unidad |
 |---|---|---|
-| Gravity | 800.0 | pixels/second² |
-| Jump initial velocity | -380.0 | pixels/second |
-| Max fall speed | 500.0 | pixels/second |
-| Coyote time | 6 | frames |
+| Gravedad | 800,0 | px/s² |
+| Impulso de salto | −380,0 | px/s |
+| Caída máxima | 500,0 | px/s |
+| *Coyote time* | 6 | fotogramas |
+| Buffer de salto | 8 | fotogramas |
 
-**Gravity Application (per frame):**
 ```
 velocity.y += GRAVITY * dt
-velocity.y = clamp(velocity.y, -INF, MAX_FALL_SPEED)
+velocity.y = acotar(velocity.y, -INF, MAX_FALL_SPEED)
 position.y += velocity.y * dt
 ```
 
-**Coyote Time:** The player may jump up to 6 frames after walking off a platform edge. This is a standard SNES-era movement quality-of-life feature.
+**Coyote time.** Se puede saltar hasta 6 fotogramas después de haber dejado el
+borde de una plataforma.
 
-**Jump Cut:** If the player releases the jump button while ascending (velocity.y < 0), the vertical velocity is multiplied by 0.5 on that frame, producing a shorter hop. This allows variable jump height.
+**Buffer de salto.** Si se pulsa saltar hasta 8 fotogramas **antes** de
+aterrizar, el salto sale al tocar suelo en vez de perderse. Desde AUD-373 la
+ventana vive en `InputManager` y sirve para **todas** las acciones, no sólo
+para el salto: `pulsada_en_buffer(accion)` y `consumir_buffer(accion)`.
 
-**Air jump: constant present, mechanic absent (GAP-024).** `PLAYER_AIR_JUMPS = 1`
-exists in `settings.py` and `_can_jump()` has a branch for it, but no mid-air
-jump can ever fire: jump presses are buffered by `InputManager` and spent on
-landing (`pulsada_en_buffer` / `consumir_buffer`, AUD-373; see
-`Player.update`), and the `_can_jump()` air branch is
-only ever reached from the grounded states, where the player is already
-standing on something. Measured reach is unchanged by pressing jump in
-mid-air. Do not design levels around a double jump, and do not treat
-`max_gap_with_air_jump` in `level_metrics.py` as a reachable distance.
+Las dos concesiones juntas son lo que hace que el personaje responda: una
+perdona llegar tarde y la otra llegar pronto.
 
-### 4.3 Collision Resolution
+**Corte del salto.** Si se suelta el botón mientras se asciende
+(`velocity.y < 0`), la velocidad vertical se multiplica por 0,5 ese fotograma.
+Da altura de salto variable.
 
-Collision is axis-separated: horizontal movement is resolved first, then vertical.
+**Salto aéreo: la constante está, la mecánica no (GAP-024).**
+`PLAYER_AIR_JUMPS = 1` existe en `settings.py` y `_can_jump()` tiene una rama
+para él, pero **ningún salto en el aire llega a dispararse**: la pulsación se
+guarda en el buffer y se gasta al aterrizar, y la rama aérea de `_can_jump()`
+sólo se alcanza desde los estados de suelo. El alcance medido no cambia por
+pulsar saltar en el aire.
 
-**Horizontal Resolution:**
-1. Move `position.x` by `velocity.x * dt`
-2. Check for overlap with any collision rect
-3. If overlapping: push back to the edge of the rect, set `velocity.x = 0`
+No diseñes niveles contando con doble salto, y no trates
+`max_gap_with_air_jump` de `level_metrics.py` como una distancia alcanzable.
 
-**Vertical Resolution:**
-1. Move `position.y` by `velocity.y * dt`
-2. Check for overlap with any collision rect
-3. If overlapping and moving down (velocity.y > 0): land on top, set `velocity.y = 0`, set `is_grounded = True`
-4. If overlapping and moving up (velocity.y < 0): push down to bottom of rect, set `velocity.y = 0`
+### 4.3 Resolución de colisiones
 
-### 4.4 One-Way Platforms
+Por **ejes separados**: primero el horizontal, después el vertical.
 
-Collision rects tagged as `one_way` in the TMX map are passable from below and from the sides. They only resolve collision when the player is moving downward and their previous bottom-edge position was above the platform's top edge.
+**Horizontal:** se mueve `position.x`, se busca solape y, si lo hay, se empuja
+al borde y se pone `velocity.x = 0`. Los roces de 2 px o menos se ignoran: sin
+esa tolerancia, el suelo y el techo bloquearían el avance lateral.
+
+**Vertical:** se mueve `position.y` y, según de dónde se venga:
+
+- **desde arriba** (`velocity.y >= 0` y el borde inferior anterior estaba sobre
+  la baldosa): aterriza, `velocity.y = 0`, `is_grounded = True`;
+- **desde abajo** (`velocity.y < 0` y el borde superior anterior estaba bajo la
+  baldosa): se golpea la cabeza y `velocity.y = 0`.
+
+Desde AUD-396 el aterrizaje admite **restitución**: con un material que la
+declare, parte de la velocidad se devuelve en vez de anularse. Con `ROCA` —el
+material por defecto de todos los mapas— vale 0 y el comportamiento es el de
+siempre.
+
+### 4.4 Plataformas de un sentido
+
+Las que el TMX marca como `Platform` se atraviesan desde abajo y por los lados.
+Sólo resuelven colisión cuando el jugador cae y su borde inferior del fotograma
+anterior estaba por encima del borde superior de la plataforma.
 
 ---
 
-## 5. Health System
+## 5. Salud
 
-### 5.1 Heart Representation
+### 5.1 Corazones
 
-The player's health is measured in hearts, displayed as a row of heart icons in the HUD.
-
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Maximum health | 5.0 hearts |
-| Starting health | 5.0 hearts |
-| Minimum health | 0.0 hearts |
-| Health type | float (supports fractional values) |
+| Salud máxima | 5,0 corazones |
+| Salud inicial | 5,0 corazones |
+| Salud mínima | 0,0 |
+| Tipo | flotante (admite fracciones) |
 
-### 5.2 Heart Display States
+### 5.2 Cómo se dibujan
 
-Each heart icon in the HUD renders one of four states based on remaining health:
+Cada icono del HUD toma uno de cinco aspectos según lo que le quede:
 
-| State | Threshold | Visual |
+| Estado | Umbral |
+|---|---|
+| Lleno | ≥ 1,0 |
+| Tres cuartos | ≥ 0,75 |
+| Medio | ≥ 0,50 |
+| Un cuarto | ≥ 0,25 |
+| Vacío | 0,0 |
+
+Se dibujan de izquierda a derecha y **se vacía primero el de la derecha**.
+
+### 5.3 Invencibilidad
+
+Tras recibir daño hay un periodo breve en el que no se recibe más.
+
+| Dificultad | Duración |
+|---|---|
+| Fácil | 2,0 s |
+| Normal | **1,5 s** |
+| Difícil | 1,0 s |
+
+El sprite parpadea: la opacidad alterna cada 6 fotogramas.
+
+> **Corregido el 2026-08-11 (AUD-432).** Este documento daba «1,5 segundos»
+> como constante del motor. Es el valor de **normal**: sale de
+> `get_config().invincibility_duration` y el jugador la elige en el menú. Lo
+> mismo pasa con el retroceso y con el daño recibido (§6). Calibrar un peligro
+> contra 1,5 s es calibrarlo sólo para una de las tres dificultades.
+
+---
+
+## 6. Daño
+
+### 6.1 Los tres niveles
+
+| Nivel | Corazones | De dónde viene |
 |---|---|---|
-| Full | ≥ 1.0 remaining for this heart | Solid heart sprite |
-| Three-quarter | ≥ 0.75 remaining | Three-quarter heart sprite |
-| Half | ≥ 0.50 remaining | Half heart sprite |
-| Quarter | ≥ 0.25 remaining | Quarter heart sprite |
-| Empty | 0.0 remaining | Empty heart outline sprite |
+| Ligero | 0,25 | Roce de proyectil, enemigo débil |
+| Medio | 0,50 | Contacto normal, proyectil corriente |
+| Fuerte | 1,00 | Enemigo fuerte, zona de peligro, golpe de jefe |
 
-Health is rendered left to right. The rightmost heart is the first to be depleted.
+Estos valores se **multiplican** por la dificultad: ×0,5 en fácil, ×1,0 en
+normal y ×1,5 en difícil.
 
-### 5.3 Invincibility Frames
+### 6.2 Cómo se aplica
 
-After receiving damage, the player enters a brief invincibility period during which no further damage is applied.
+Cuando la **caja de daño** del jugador (§11) solapa con la **caja de golpe** de
+un enemigo o con un rectángulo de peligro:
 
-| Property | Value |
+1. Si `invincibility_timer > 0`, no pasa nada.
+2. Si el estado es `DYING`, tampoco.
+3. Se resta de `current_health` la cantidad **que llega como argumento** a
+   `apply_damage(cantidad, origen)`, multiplicada por la dificultad. El jugador
+   **no** guarda un campo con el daño del último golpe (AUD-150).
+4. Se acota `current_health` a `[0,0, MAX_HEALTH]`.
+5. Se arranca el temporizador de invencibilidad.
+6. Se emite `PLAYER_DAMAGED` con la cantidad y el origen.
+7. Se pasa al estado `HURT`.
+8. Se aplica el retroceso.
+9. Si la salud llega a 0, se emite `PLAYER_DIED`.
+
+### 6.3 Retroceso
+
+| Propiedad | Valor en normal |
 |---|---|
-| Invincibility duration | 1.5 seconds |
-| Visual feedback | Player sprite flashes (alternates visible/invisible every 6 frames) |
+| Horizontal | 150,0 px/s, alejándose del origen |
+| Vertical | −200,0 px/s, hacia arriba |
+| Duración | 0,3 s |
+
+Los dos primeros se multiplican por la dificultad: ×0,7 en fácil, ×1,0 en
+normal, ×1,3 en difícil.
+
+Mientras dura, **la entrada del jugador se ignora**.
+
+### 6.4 Muerte
+
+Al llegar a 0: se emite `PLAYER_DIED`, se pasa a `DYING`, se reproduce la
+animación y, al terminarla, `SceneManager` empuja la escena de fin de partida.
 
 ---
 
-## 6. Damage System
+## 7. Ataques
 
-### 6.1 Damage Levels
+### 7.1 Ataque corto (puños)
 
-Three tiers of damage exist to allow staged difficulty within a stage:
-
-| Level | Hearts Lost | Typical Source |
-|---|---|---|
-| Light | 0.25 | Grazing projectile, weak enemy contact |
-| Medium | 0.50 | Standard enemy contact, normal projectile |
-| Heavy | 1.00 | Strong enemy contact, hazard zone, boss hit |
-
-### 6.2 Damage Application
-
-Damage is applied when the player's **hurtbox** (see Section 8.2) overlaps with an **enemy hitbox** or **hazard rect**.
-
-**Damage Application Sequence:**
-1. Check: Is `invincibility_timer > 0`? If yes, skip.
-2. Resta del `current_health` la cantidad **que llega como argumento** a `apply_damage(cantidad, origen)`. El jugador no guarda un campo con el daño del último golpe (AUD-150).
-3. Clamp `current_health` to `[0.0, MAX_HEALTH]`.
-4. Set `invincibility_timer = INVINCIBILITY_DURATION`.
-5. Emit `PLAYER_DAMAGED` event with `amount` and `source`.
-6. Trigger `HURT` animation state.
-7. Apply knockback velocity (see below).
-8. If `current_health == 0.0`: emit `PLAYER_DIED`.
-
-### 6.3 Knockback
-
-When the player takes damage, a brief knockback impulse is applied:
-
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Knockback horizontal speed | 150.0 pixels/second (away from source) |
-| Knockback vertical speed | -200.0 pixels/second (upward) |
-| Knockback duration | 0.3 seconds |
+| Alcance | 20 px por delante |
+| Anchura | 12 px |
+| Altura | 16 px |
+| Daño | 0,50 corazones |
+| Fotogramas activos | 3 (los 2–4 de 6) |
+| Enfriamiento | 0 — se puede encadenar |
+| *Hitstop* | 2 fotogramas |
 
-During knockback duration, player input is ignored. The player resumes normal control after the knockback timer expires.
+La caja se posiciona según `facing_direction`. Agachado, baja para acompañar la
+postura.
 
-### 6.4 Death
+### 7.2 Ataque largo (palo)
 
-When `current_health` reaches 0.0:
+| Propiedad | Valor |
+|---|---|
+| Alcance | 36 px por delante |
+| Anchura | 36 px |
+| Altura | 20 px |
+| Daño | 1,00 corazón |
+| Fotogramas activos | 4 (los 4–7 de 10) |
+| Enfriamiento | 4 fotogramas |
+| *Hitstop* | 4 fotogramas |
 
-1. The `PLAYER_DIED` event is emitted.
-2. The player enters the `DYING` state and plays the death animation.
-3. After the death animation completes, `SceneManager` receives the event and pushes `GameOverScene`.
+El arco barre ligeramente hacia arriba en el fotograma 4, horizontal en el 5 y
+el 6, y hacia abajo en el 7. Agachado, el arco es todo bajo: altura 12 px a
+ras de suelo.
+
+### 7.3 *Hitstop*
+
+Cuando un ataque conecta:
+
+1. `DeltaClock.time_scale` baja a **0,15** durante el *hitstop*: todo el tiempo
+   de juego —física, animaciones, IA— va al 15 %.
+2. Dura `fotogramas / 60` segundos: **2** en el corto, **4** en el largo.
+3. Después vuelve a 1,0.
+4. Se llama a `apply_hit()` del enemigo.
+5. **La caja del jugador se consume**: sólo un enemigo por golpe recibe daño.
+6. Sólo el primer impacto dispara la ralentización; los demás del mismo
+   fotograma reciben daño sin volver a activarla.
+
+El temporizador decrece **al margen de `time_scale`**, para que la
+ralentización dure los fotogramas de pantalla previstos y no se ralentice a sí
+misma.
 
 ---
 
-## 7. Attack System
+## 8. Estados
 
-### 7.1 Short Attack (Fists)
+El jugador se gobierna por una máquina de estados finitos: sólo uno activo a la
+vez. El enumerado `PlayerState` declara **26**.
 
-The short attack is a rapid close-range punch.
+> **Corregido el 2026-08-11 (AUD-432).** Este documento decía **19**, dos
+> veces, y su tabla listaba diecinueve. Los siete que faltaban —`CLIMBING`,
+> `ZIPLINE`, `ULTIMATE`, `AERIAL_ATTACK`, `AERIAL_SLAM`, `AIR_CHASE`,
+> `CHARGE_RELEASE`— son mecánicas construidas que ningún estudiante podía saber
+> que existían leyendo esto.
 
-| Property | Value |
-|---|---|
-| Reach | 20 pixels in front of player |
-| Width | 12 pixels |
-| Height | 16 pixels |
-| Damage | 0.50 hearts |
-| Active frames | 3 |
-| Total animation frames | 6 |
-| Cooldown after animation | 0 frames (can chain) |
-| Hitstop | 2 frames |
+### 8.1 La tabla
 
-**Behavior:**
-- The hitbox is only active during frames 2–4 of the animation.
-- The hitbox is positioned relative to the player's facing direction.
-- Short attacks can be performed while crouching; the hitbox drops to match the crouched posture.
-
-### 7.2 Long Attack (Stick)
-
-The long attack swings a stick in a wider arc.
-
-| Property | Value |
-|---|---|
-| Reach | 36 pixels in front of player |
-| Width | 36 pixels |
-| Height | 20 pixels |
-| Damage | 1.00 heart |
-| Active frames | 4 |
-| Total animation frames | 10 |
-| Cooldown after animation | 4 frames |
-| Hitstop | 4 frames |
-
-**Behavior:**
-- The hitbox is active during frames 4–7.
-- The arc sweeps slightly upward on frame 4, horizontal on frames 5–6, slightly downward on frame 7. This is represented by offsetting the hitbox rect's vertical position per active frame.
-- Long attack while crouching: the arc is entirely low, covering the floor zone. Hitbox height is 12 pixels, positioned at floor level.
-
-### 7.3 Hitstop
-
-When a player attack connects with an enemy:
-1. The game loop's `DeltaClock.time_scale` is set to `0.15` for the hitstop duration, slowing all game-time updates (physics, animations, AI) to 15% speed.
-2. Hitstop duration is `frames / 60.0` seconds: **2 frames** for Short Attack (0.5 damage), **4 frames** for Long Attack (1.0 damage).
-3. After the hitstop duration expires, `time_scale` is restored to `1.0`.
-4. The enemy's `apply_hit()` method is called with the damage amount.
-5. The player's hitbox is consumed on any connect — only one enemy per swing takes damage.
-6. Only the first enemy hitbox collision triggers hitstop — later enemies hitting the same frame are damaged without re-triggering slowdown (break after first hit).
-
-Implementation: `stage_scene.py` lines 199-211. The timer decrements each frame regardless of `time_scale` so the real-world slowdown persists for the intended number of display frames.
-
----
-
-## 8. States
-
-The player is governed by a finite state machine. Only one state is active at a time. The `PlayerState` enum in `src/framework/entities/player.py` defines **19 states**.
-
-### 8.1 State Table
-
-| State | Entry Condition | Exit Condition | Input Accepted |
+| Estado | Se entra | Se sale | Entrada aceptada |
 |---|---|---|---|
-| `IDLE` | Grounded + no input | Move input OR attack input | All |
-| `WALKING` | Grounded + horizontal input | No horizontal input OR jump OR attack | All |
-| `JUMPING` | Jump pressed while grounded or within coyote frames | Vertical velocity ≤ 0 (peak) | Move, Attack |
-| `FALLING` | Vertical velocity > 0 and not grounded | Land on ground | Move, Attack |
-| `CROUCHING` | Down input while grounded | Down released | Short Attack, Long Attack |
-| `SHORT_ATTACK` | Short attack input | Animation complete | None (locked) |
-| `LONG_ATTACK` | Long attack input | Animation complete + cooldown | None (locked) |
-| `HURT` | Damage received | Knockback timer expires | None (locked) |
-| `DYING` | Health == 0 | Death animation complete | None (locked) |
-| `DASHING` | Dash input while grounded or within air dash limit | Dash timer expires (0.15s) | None (locked) |
-| `PARRY` | Attack + crouch simultaneously | Timer expires (0.2s) | None |
-| `CHARGE_ATTACK` | Hold long attack | Release long attack | Parry |
-| `DASH_ATTACK` | Attack while dashing | Animation complete | None (locked) |
-| `WALL_SLIDE` | Touch wall while falling + holding toward wall | Move away from wall or land | Jump, Attack |
-| `LEDGE_GRAB` | Reach ledge edge while wall sliding | Jump up or drop down | Jump |
-| `GRAB` | Long attack + crouch (no short attack) | Hit connects | Attack (throw) |
-| `THROW` | Attack while grabbing | Animation complete | None |
-| `SLIDE` | Crouch + momentum while running | Timer expires or crouch released | None (locked) |
-| `SWIMMING` | Enter water zone | Leave water (surface/ground) | Move, Jump |
+| `IDLE` | Apoyado y sin entrada | Movimiento o ataque | Toda |
+| `WALKING` | Apoyado con dirección | Sin dirección, salto o ataque | Toda |
+| `JUMPING` | Salto estando apoyado o en *coyote* | Velocidad vertical ≤ 0 | Mover, atacar |
+| `FALLING` | Cayendo y sin apoyo | Al tocar suelo | Mover, atacar |
+| `CROUCHING` | Abajo estando apoyado | Al soltar abajo | Los dos ataques |
+| `SHORT_ATTACK` | Ataque corto | Fin de la animación | Ninguna |
+| `LONG_ATTACK` | Ataque largo | Fin de animación y enfriamiento | Ninguna |
+| `HURT` | Al recibir daño | Fin del retroceso | Ninguna |
+| `DYING` | Salud a 0 | Fin de la animación | Ninguna |
+| `DASHING` | Dash | A los 0,15 s | Ninguna |
+| `PARRY` | Ataque y agacharse a la vez | A los 0,2 s | Ninguna |
+| `CHARGE_ATTACK` | Mantener el ataque largo | Al soltarlo | Parry |
+| `CHARGE_RELEASE` | Soltar la carga | Fin de la animación | Ninguna |
+| `DASH_ATTACK` | Atacar durante el dash | Fin de la animación | Ninguna |
+| `WALL_SLIDE` | Tocar pared cayendo, con dirección hacia ella | Separarse o aterrizar | Saltar, atacar |
+| `LEDGE_GRAB` | Llegar al borde deslizando por la pared | Subir o soltarse | Saltar |
+| `GRAB` | Ataque largo agachado | Al conectar | Atacar (lanzar) |
+| `THROW` | Atacar mientras se agarra | Fin de la animación | Ninguna |
+| `SLIDE` | Agacharse con carrera | Fin del temporizador o soltar | Ninguna |
+| `SWIMMING` | Entrar en zona de agua | Salir del agua | Mover, saltar |
+| `CLIMBING` | Agarrarse a una liana | Soltarse o llegar arriba | Mover, saltar |
+| `ZIPLINE` | Engancharse a una tirolesa | Llegar al final o soltarse | Saltar |
+| `ULTIMATE` | Medidor lleno y activación | Fin de la animación | Ninguna |
+| `AERIAL_ATTACK` | Atacar en el aire | Fin de la animación | Ninguna |
+| `AERIAL_SLAM` | Ataque hacia abajo en el aire | Al tocar suelo | Ninguna |
+| `AIR_CHASE` | Persecución aérea tras un impacto | Fin del temporizador | Mover |
 
-### 8.2 State Transition Diagram (Simplified — Subset of Core States)
+La implementación está repartida por familias en
+`src/framework/entities/states/`: `grounded.py`, `airborne.py`, `attack.py`,
+`ability.py`, `damage.py`, `rope.py`, `swim.py` y `wall.py`.
 
-The full state machine spans 19 states in the `PlayerState` enum. The diagram below shows the most common transitions. Additional states (PARRY, CHARGE_ATTACK, DASH_ATTACK, WALL_SLIDE, LEDGE_GRAB, GRAB, THROW, SLIDE, SWIMMING) follow similar patterns — see `src/framework/entities/player_states.py` for complete implementation.
+### 8.2 Las transiciones más comunes
 
 ```
-              ┌─────────────────────────────────────────────┐
-              │                                             │
-           [IDLE] ←──────── move released ──────────── [WALKING]
-              │                                             │
-         move input                                    move input
-              │                                             │
-              └──────────────────────────────────────► [WALKING]
-              │
-         jump input ──────────────────────────────────► [JUMPING]
-              │                                             │
-         crouch input ──────────────────────────────► [CROUCHING]   ─► [SHORT_ATTACK]
-              │                                                        ─► [LONG_ATTACK]
-         attack inputs ─────────────────────────────► [SHORT_ATTACK]
-                                                      ► [LONG_ATTACK]
+           [IDLE] ←──── se suelta la dirección ────→ [WALKING]
+              │                                          │
+         salto │                                         │ salto
+              ▼                                          ▼
+          [JUMPING] ──── al llegar al pico ────────→ [FALLING]
+                                                         │
+                                              al aterrizar│
+                                                         ▼
+                                                      [IDLE]
 
-[JUMPING] ──── peak velocity ────────────────────────► [FALLING]
-[FALLING] ──── land ─────────────────────────────────► [IDLE]
+  [IDLE] [WALKING] [CROUCHING] [JUMPING] [FALLING] ─ dash ─→ [DASHING]
+  [DASHING] ─ fin del temporizador ─→ [IDLE] si hay suelo, [FALLING] si no
 
-[IDLE] [WALKING] [CROUCHING]
-       [JUMPING] [FALLING] ──── dash input ────────► [DASHING]
-
-[DASHING] ──── timer expires + grounded ────────────► [IDLE]
-[DASHING] ──── timer expires + airborne ────────────► [FALLING]
-
-any state (except DYING) ──── damage ───────────────► [HURT]
-[HURT] ──── knockback end ───────────────────────────► [IDLE]
-
-any state ──── health == 0 ──────────────────────────► [DYING]
-[DYING] ──── animation complete ─────────────────────► (PLAYER_DIED event)
+  cualquier estado salvo DYING ─ daño ─→ [HURT] ─ fin del retroceso ─→ [IDLE]
+  cualquier estado ─ salud 0 ─→ [DYING] ─ fin de animación ─→ (PLAYER_DIED)
 ```
 
 ---
 
-## 9. Animations
+## 9. Animaciones
 
-All player animations are horizontal sprite sheets stored in `assets/sprites/player/`.
+Hojas horizontales en `assets/sprites/player/`.
 
-### 9.1 Animation Specifications
-
-| Animation Name | File | Frame Count | FPS | Loop |
+| Animación | Fichero | Fotogramas | FPS | Bucle |
 |---|---|---|---|---|
-| Idle | `player_idle.png` | 4 | 8 | Yes |
-| Walk | `player_walk.png` | 8 | 12 | Yes |
-| Jump (ascending) | `player_jump.png` | 3 | 12 | No (hold last frame) |
-| Fall (descending) | `player_fall.png` | 2 | 8 | Yes |
-| Crouch | `player_crouch.png` | 2 | 8 | No (hold last frame) |
-| Short Attack | `player_short_attack.png` | 6 | 18 | No |
-| Long Attack | `player_long_attack.png` | 10 | 16 | No |
-| Hurt | `player_hurt.png` | 4 | 12 | No |
-| Dash | `player_walk.png` | 4 | 12 | No (hold last frame) |
-| Die | `player_die.png` | 8 | 10 | No |
+| Reposo | `player_idle.png` | 4 | 8 | Sí |
+| Andar | `player_walk.png` | 8 | 12 | Sí |
+| Salto | `player_jump.png` | 3 | 12 | No |
+| Caída | `player_fall.png` | 2 | 8 | Sí |
+| Agachado | `player_crouch.png` | 2 | 8 | No |
+| Ataque corto | `player_short_attack.png` | 6 | 18 | No |
+| Ataque largo | `player_long_attack.png` | 10 | 16 | No |
+| Daño | `player_hurt.png` | 4 | 12 | No |
+| Dash | `player_walk.png` | 4 | 12 | No |
+| Muerte | `player_die.png` | 8 | 10 | No |
 
-### 9.2 Animation Rules
+**Reglas:**
 
-- When entering a non-looping animation, the frame counter always resets to 0.
-- When a non-looping animation reaches its last frame, the frame holds until the state exits.
-- All animations flip horizontally based on `facing_direction`. The sprite sheets are drawn facing right.
-- During the invincibility flashing period, the sprite's alpha alternates between 255 and 0 every 6 frames.
-- Sprite frame size: 32×32 pixels. The bounding rect is smaller (see hitbox/hurtbox below).
-
-### 9.3 Animation Controller Logic
-
-```
-AnimationController:
-  current_animation: str
-  current_frame: int
-  frame_timer: float
-
-  update(dt: float):
-    frame_timer += dt
-    if frame_timer >= (1.0 / current_fps):
-      frame_timer = 0
-      if not at_last_frame OR is_looping:
-        current_frame = (current_frame + 1) % frame_count
-
-  get_surface() → pygame.Surface:
-    raw = spritesheet.get_frame(current_frame)
-    if facing_left: raw = pygame.transform.flip(raw, True, False)
-    if flashing and flash_visible: raw.set_alpha(0)
-    return raw
-```
+- Al entrar en una animación sin bucle, el contador vuelve a 0.
+- Al llegar al último fotograma de una sin bucle, se mantiene hasta salir.
+- Todas se voltean según `facing_direction`; las hojas miran a la derecha.
+- Durante la invencibilidad, la opacidad alterna cada 6 fotogramas.
+- Fotograma de 32×32 px. Las cajas son más pequeñas (§10 y §11).
 
 ---
 
-## 10. Hitboxes
+## 10. Cajas de golpe
 
-Hitboxes are the regions in which the player's attacks can deal damage to enemies. Hitboxes are only active during the defined active frames of an attack animation.
+Son las zonas con las que el jugador hace daño. **Sólo están activas** durante
+los fotogramas activos de la animación.
 
-### 10.1 Short Attack Hitbox
+### 10.1 Ataque corto
 
-Positioned relative to the player's center, offset in the `facing_direction`.
-
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Offset X | 8 pixels toward facing direction from player center |
-| Offset Y | -4 pixels (slightly upward from center) |
-| Width | 20 pixels |
-| Height | 16 pixels |
-| Active frames | 2, 3, 4 (of 6 total) |
+| Desplazamiento X | 8 px hacia donde mira, desde el centro |
+| Desplazamiento Y | −4 px |
+| Anchura | 20 px |
+| Altura | 16 px |
+| Fotogramas activos | 2, 3 y 4 de 6 |
 
-**Crouching modifier:** Offset Y = +8 pixels (drops to lower zone).
+Agachado, el desplazamiento Y pasa a +8 px.
 
-### 10.2 Long Attack Hitbox
+### 10.2 Ataque largo
 
-The long attack hitbox shifts position across its active frames to simulate a swing arc.
+La caja se mueve entre fotogramas para simular el arco:
 
-| Active Frame | Offset X | Offset Y | Width | Height |
+| Fotograma | Desp. X | Desp. Y | Anchura | Altura |
 |---|---|---|---|---|
-| 4 | 12 px facing | -10 px | 36 px | 20 px |
-| 5 | 18 px facing | -4 px | 36 px | 20 px |
-| 6 | 18 px facing | 0 px | 36 px | 20 px |
-| 7 | 12 px facing | +6 px | 36 px | 20 px |
+| 4 | 12 px | −10 px | 36 px | 20 px |
+| 5 | 18 px | −4 px | 36 px | 20 px |
+| 6 | 18 px | 0 px | 36 px | 20 px |
+| 7 | 12 px | +6 px | 36 px | 20 px |
 
-**Crouching modifier:** All Y offsets raised by +12 px. Width remains 36 px, height reduced to 12 px.
-
----
-
-## 11. Hurtboxes
-
-The hurtbox is the region in which the player can receive damage from enemies and hazards. Unlike hitboxes, the hurtbox is always active (except during invincibility frames and the `DYING` state).
-
-### 11.1 Standard Hurtbox
-
-| Property | Value |
-|---|---|
-| Offset X | 6 pixels from sprite left edge |
-| Offset Y | 4 pixels from sprite top edge |
-| Width | 20 pixels |
-| Height | 28 pixels |
-
-The hurtbox is centered within the 32×32 sprite frame, smaller than the sprite to allow visual near-misses consistent with SNES-era feel.
-
-### 11.2 Crouching Hurtbox
-
-When in the `CROUCHING` state, the hurtbox shrinks vertically:
-
-| Property | Value |
-|---|---|
-| Offset X | 6 pixels from sprite left |
-| Offset Y | 14 pixels from sprite top |
-| Width | 20 pixels |
-| Height | 18 pixels |
-
-Crouching allows the player to duck under projectiles that pass above the crouching hurtbox.
-
-### 11.3 Hurtbox During Attack States
-
-During `SHORT_ATTACK` and `LONG_ATTACK`, the hurtbox uses the standard dimensions. There is no extended vulnerability during attacks (unlike some action games).
+Agachado: todos los desplazamientos Y suben 12 px y la altura baja a 12 px.
 
 ---
 
-## 12. Restrictions
+## 11. Caja de daño
 
-The following constraints apply to the player entity and must not be violated by framework modifications or stage code:
+Es la zona por la que el jugador **recibe**. Siempre activa, salvo durante la
+invencibilidad y en `DYING`.
 
-| Restriction | Reason |
+### 11.1 De pie
+
+| Propiedad | Valor |
 |---|---|
-| Player class is not subclassed by students | The player is a shared framework resource |
-| Player's `_health` attribute is not accessed directly | Always use `player.apply_damage()` and `player.current_health` property |
-| Player's state machine is not bypassed | Do not set `player._state` directly from stage code |
-| Player sprite files are not replaced | Visual consistency across all stages |
-| Player's `InputManager` binding is not modified from stage code | Input is a global system |
-| Player's `rect` is not repositioned directly | Use `player.set_spawn(position)` |
+| Desplazamiento X | 6 px desde el borde izquierdo del sprite |
+| Desplazamiento Y | 4 px desde el borde superior |
+| Anchura | 20 px |
+| Altura | 28 px |
+
+Es **más pequeña que el sprite** a propósito: permite los roces visuales que
+dan la sensación de la época.
+
+### 11.2 Agachado
+
+| Propiedad | Valor |
+|---|---|
+| Desplazamiento X | 6 px |
+| Desplazamiento Y | 14 px |
+| Anchura | 20 px |
+| Altura | 18 px |
+
+Agacharse deja pasar por encima los proyectiles altos.
+
+### 11.3 Durante los ataques
+
+Dimensiones normales. **No** hay vulnerabilidad extra al atacar, a diferencia
+de otros juegos de acción.
 
 ---
 
-## 13. Examples
+## 12. Restricciones
 
-### 13.1 Spawning the Player in a Stage
+| Restricción | Motivo |
+|---|---|
+| Los estudiantes no heredan de `Player` | Es un recurso compartido del framework |
+| No se toca `_health` directamente | Usa `apply_damage()` y la propiedad `current_health` |
+| No se puentea la máquina de estados | No asignes `player._state` desde el escenario |
+| No se sustituyen los sprites del jugador | Coherencia visual entre escenarios |
+| No se reconfigura el `InputManager` desde el escenario | La entrada es un sistema global |
+| No se reposiciona `rect` a mano | Usa `player.set_spawn(posicion)` |
+
+---
+
+## 13. Ejemplos
+
+### 13.1 Crear al jugador
 
 ```python
-from framework.entities.player import Player
+from src.framework.entities.player import Player
 
-# In Stage.on_enter():
-player = Player(
-    spawn_position=stage_data.spawn_point,
-)
+# En Stage.on_enter():
+player = Player(spawn_position=stage_data.spawn_point)
 self.entities.append(player)
 self.camera.follow(player)
 self.hud.bind_player(player)
 ```
 
-### 13.2 Checking Player Health from Stage Code
+### 13.2 Consultar la salud
 
 ```python
-# Correct: use the property
+# Bien: por la propiedad
 if player.current_health <= 1.0:
-    self.event_bus.emit("SHOW_MESSAGE", text="Warning: Low health!", duration=3.0)
+    self.event_bus.emit("SHOW_MESSAGE", text="¡Cuidado: poca vida!", duration=3.0)
 ```
 
-### 13.3 Subscribing to Player Events in a Custom Stage Entity
+### 13.3 Escuchar los eventos del jugador
 
 ```python
-from engine.core.event_bus import EventBus
+from src.engine.core.event_bus import EventBus
 
-class MyTrigger(BaseEntity):
-    def __init__(self):
+class MiDisparador(BaseEntity):
+    def __init__(self, bus: EventBus):
         super().__init__()
-        EventBus.subscribe("PLAYER_DAMAGED", self._on_player_damaged)
+        self._bus = bus
+        bus.subscribe("PLAYER_DAMAGED", self._al_recibir_dano)
 
-    def _on_player_damaged(self, amount, source):
-        # React to player taking damage
+    def _al_recibir_dano(self, amount, source):
         if amount >= 1.0:
-            self.activate_heavy_damage_effect()
+            self.activar_efecto_de_dano_fuerte()
 
     def on_destroy(self):
-        EventBus.unsubscribe("PLAYER_DAMAGED", self._on_player_damaged)
+        self._bus.unsubscribe("PLAYER_DAMAGED", self._al_recibir_dano)
 ```
 
-### 13.4 Academic Concept — Bounding Box Transformation (Unit II)
+El bus se **recibe**, no se toma de un global: es lo que permite probar la
+entidad sola, y lo que evita que una prueba emita en un bus y escuche en otro
+(AUD-019).
 
-The player's hurtbox and hitboxes are defined in local space (relative to the sprite origin) and transformed into world space each frame using a translation matrix. This directly illustrates Unit II's transformation concepts:
+### 13.4 Concepto académico — transformación de la caja (Unidad II)
+
+Las cajas se definen en espacio **local** (relativo al origen del sprite) y se
+transforman a espacio de mundo cada fotograma con una traslación:
 
 ```
-world_hurtbox_origin = player.position + local_hurtbox_offset
+origen_mundo = player.position + desplazamiento_local
 ```
 
-In matrix form (homogeneous 2D coordinates):
+En forma matricial, con coordenadas homogéneas 2D:
+
 ```
-[1  0  tx] [local_x]   [world_x]
-[0  1  ty] [local_y] = [world_y]
-[0  0   1] [  1    ]   [  1    ]
+[1  0  tx] [local_x]   [mundo_x]
+[0  1  ty] [local_y] = [mundo_y]
+[0  0   1] [   1   ]   [   1   ]
 ```
 
-Where `tx, ty = player.position`. Students are expected to recognize this pattern and document it in their stage README when implementing custom entity hitboxes.
-
-
---- Traducción al Español ---
-
-## Especificación del Jugador
-
-### Concepto
-El personaje jugable es una figura encapuchada de identidad indeterminada. El diseño visual debe comunicar agilidad, misterio y autenticidad SNES.
-
-### Propósitos
-1. **Ancla de interacción** — El jugador es el agente principal que interactúa con todos los sistemas del escenario.
-2. **Referencia de máquina de estados** — La máquina de estados finitos del jugador es el ejemplo más completo de gestión de estados en el framework.
-3. **Portador de conceptos académicos** — El movimiento, la física y la animación incorporan conceptos de las Unidades II a VI.
-
-### Controles
-| Acción | Teclado | Control |
-|--------|---------|---------|
-| Caminar Izquierda | Flecha Izquierda / A | D-Pad Izquierdo / Stick Izquierdo |
-| Caminar Derecha | Flecha Derecha / D | D-Pad Derecho / Stick Derecho |
-| Saltar | Espacio / W / Flecha Arriba | A (Xbox) |
-| Agacharse | Flecha Abajo / S | D-Pad Abajo |
-| Ataque Corto | Z / J | X (Xbox) |
-| Ataque Largo | X / K | Y (Xbox) |
-
-### Estados del Jugador
-El jugador tiene 19 estados: IDLE, WALKING, JUMPING, FALLING, CROUCHING, SHORT_ATTACK, LONG_ATTACK, HURT, DYING, DASHING, PARRY, CHARGE_ATTACK, DASH_ATTACK, WALL_SLIDE, LEDGE_GRAB, GRAB, THROW, SLIDE, SWIMMING.
-
-Para la especificación completa con tablas de física, sistema de daño, hitboxes y ejemplos de código, consultar el documento original en inglés.
-
+Donde `tx, ty` son `player.position`. Se espera que reconozcas este patrón y lo
+documentes en el README de tu escenario al implementar las cajas de tus
+entidades.
 
 ---
-## 🔗 Documentos Relacionados
 
-- [[45_SWIMMING_SPEC.md|Swimming Spec]]
-- [[09_HUD_SPEC.md|HUD Specification]]
-- [[03_ARCHITECTURE.md|Architecture]]
+## 🔗 Documentos relacionados
+
+- [[45_SWIMMING_SPEC.md|Especificación del nado]]
+- [[09_HUD_SPEC.md|Especificación del HUD]]
+- [[03_ARCHITECTURE.md|Arquitectura]]
+- [[06_TMX_SPEC.md|Especificación TMX]]
