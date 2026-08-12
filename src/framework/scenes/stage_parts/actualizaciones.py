@@ -97,6 +97,12 @@ class ActualizacionesDeEscenario:
             # las monedas *son* el objeto `coin`, y duplicar el número acabaría
             # con los dos desincronizados en cuanto la tienda cobre algo.
             self._hud.set_score(self._score.score, get_inventory().coins)
+            # AUD-439 — el tope de vida se empuja como el resto de los valores
+            # del jugador. `HUD` lo fijaba una vez desde la constante, así que
+            # los corazones ganados con reliquias o con el árbol no se
+            # dibujaban nunca.
+            if self._player is not None:
+                self._hud.set_salud_maxima(self._player.max_health)
             self._hud.update(dt)
         self._subtitles.update(dt)
         if self._msg_box:

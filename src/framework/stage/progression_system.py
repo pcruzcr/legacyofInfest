@@ -44,8 +44,15 @@ class ProgressionSystem:
             if not cp.is_activated and cp.check_collision(player.rect):
                 checkpoint_position = pygame.Vector2(cp.rect.center)
                 self._context.event_bus.emit(Events.SFX_CHECKPOINT)
-                if player.current_health < settings.PLAYER_MAX_HEALTH:
-                    heal_amount = settings.PLAYER_MAX_HEALTH - player.current_health
+                # AUD-439 — hasta el máximo **del jugador**, no hasta la
+                # constante. `Player.max_health` suma reliquias y árbol
+                # (AUD-293), así que curar contra `PLAYER_MAX_HEALTH` dejaba a
+                # quien se hubiera mejorado permanentemente por debajo de su
+                # tope, sin ninguna forma de recuperar esos corazones en un
+                # punto de control.
+                tope = float(getattr(player, "max_health", settings.PLAYER_MAX_HEALTH))
+                if player.current_health < tope:
+                    heal_amount = tope - player.current_health
                     player.heal(heal_amount)
                     self._context.event_bus.emit(
                         Events.PLAYER_HEALED, amount=heal_amount
@@ -57,7 +64,10 @@ class ProgressionSystem:
                     checkpoint_x=player.rect.centerx,
                     checkpoint_y=player.rect.centery,
                     health=player.current_health,
-                    max_health=settings.PLAYER_MAX_HEALTH,
+                    # AUD-439 — se guarda el máximo real; anotar la constante
+                    # hacía que recargar la partida declarase el tope de
+                    # fábrica y perdiera los corazones ganados.
+                    max_health=tope,
                 )
                 if hud is not None:
                     hud.trigger_save_notification()
