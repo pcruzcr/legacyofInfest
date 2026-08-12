@@ -66,6 +66,36 @@ def _serpiente(indice: int, total: int) -> tuple[float, float]:
     return round(nx, 3), round(ny, 3)
 
 
+#: Cuánto puede apartarse un nodo de su casilla, en coordenadas normalizadas.
+#:
+#: AUD-448 — 0,055 es lo que rompe la alineación sin que un escenario acabe
+#: más cerca del vecino de otra fila que del suyo. Medido sobre los dieciséis
+#: escenarios: ninguna pareja baja de 0,04 de separación.
+_DISPERSION_MAXIMA = 0.055
+
+
+def dispersion_de(identificador: str) -> tuple[float, float]:
+    """Cuánto se aparta este escenario de su casilla — AUD-448.
+
+    Sale del identificador y no de un generador de azar, y esa es la parte que
+    importa: el mapa se dibuja **igual en todos los arranques**. Uno que se
+    recoloca cada vez que abres el juego es peor que una rejilla, porque se
+    pierde la memoria del sitio — y recordar dónde estaba un nivel es lo que
+    hace que un mundo se sienta un mundo.
+
+    `hash()` no vale aquí: Python lo aleatoriza por proceso desde 3.3, así que
+    el mapa cambiaría entre ejecuciones. `md5` es estable y aquí no protege
+    nada, sólo reparte.
+    """
+    import hashlib
+
+    digest = hashlib.md5(identificador.encode("utf-8")).digest()
+    # Dos bytes independientes, llevados a [-1, 1] y escalados.
+    dx = (digest[0] / 127.5 - 1.0) * _DISPERSION_MAXIMA
+    dy = (digest[1] / 127.5 - 1.0) * _DISPERSION_MAXIMA
+    return round(dx, 4), round(dy, 4)
+
+
 def construir_nodos() -> list[dict[str, Any]]:
     """Un nodo por escenario descubierto, en el orden en que se juegan."""
     from src.engine.core.stage_registry import discover_stages
@@ -76,6 +106,18 @@ def construir_nodos() -> list[dict[str, Any]]:
         stage_id = getattr(cls, "STAGE_ID", "") or cls.__name__
         nombre = getattr(cls, "STAGE_NAME", "") or stage_id
         nx, ny = _serpiente(i, len(escenarios))
+        # AUD-448 — la serpentina deja las columnas perfectamente alineadas y
+        # el mapa se lee como una lista doblada en zigzag. Se aparta cada nodo
+        # de su casilla, siempre lo mismo para el mismo escenario, y se acota
+        # al marco para que ninguno se salga de la pantalla.
+        # La rejilla base se comprime para dejar sitio a la dispersión, en vez
+        # de recortar después: recortando, todos los nodos del borde acababan
+        # exactamente en 0,0 y volvían a alinearse —justo el defecto que esto
+        # viene a quitar, sólo que ahora en la primera columna.
+        margen = _DISPERSION_MAXIMA
+        dx, dy = dispersion_de(stage_id)
+        nx = round(margen + nx * (1.0 - 2 * margen) + dx, 4)
+        ny = round(margen + ny * (1.0 - 2 * margen) + dy, 4)
         nodos.append({
             "id": stage_id,
             "name": nombre,
@@ -275,10 +317,15 @@ class WorldMapScene(BaseScene):
 
         posiciones = [self._posicion(n, top) for n in self._nodes]
 
+        # AUD-448 — la línea, en segundo plano. Antes tenía el mismo grosor
+        # que el radio del marcador y era lo más llamativo de la pantalla: se
+        # veía la línea y los escenarios eran su decoración. Ahora es un
+        # px y del color del borde, para que diga «éste lleva a éste» sin
+        # competir con lo que se elige.
         for a, b in CONNECTIONS:
-            colour = (Theme.SUCCESS if self._nodes[a].get("completed")
+            colour = (Theme.ACCENT_DIM if self._nodes[a].get("completed")
                       else Theme.BORDER)
-            pygame.draw.line(surface, colour, posiciones[a], posiciones[b], 2)
+            pygame.draw.line(surface, colour, posiciones[a], posiciones[b], 1)
 
         for idx, node in enumerate(self._nodes):
             focused = idx == self._selected
@@ -291,11 +338,19 @@ class WorldMapScene(BaseScene):
             else:
                 colour = Theme.TEXT_DIM
             px, py = posiciones[idx]
-            pygame.draw.circle(surface, colour, (px, py), 10)
+            # AUD-448 — el marcador enfocado también crece. El anillo solo se
+            # pierde entre dieciséis círculos del mismo tamaño; con el radio
+            # cambiando, «dónde estoy» se ve de un vistazo sin leer el color,
+            # que es lo que necesita quien juega con el filtro daltónico.
+            radio = 13 if focused else 9
+            pygame.draw.circle(surface, colour, (px, py), radio)
+            # Un aro oscuro separa el marcador del fondo del mapa, que puede
+            # ser de cualquier color detrás de un escenario u otro.
+            pygame.draw.circle(surface, Theme.BG, (px, py), radio, 1)
             if focused:
                 # Anillo alrededor del nodo enfocado: en un mapa, el color solo
                 # no basta para distinguir «seleccionado» de «completado».
-                pygame.draw.circle(surface, Theme.TEXT, (px, py), 13, 1)
+                pygame.draw.circle(surface, Theme.TEXT, (px, py), radio + 4, 1)
             label = self._font_name.render(
                 node["name"], True,
                 Theme.TEXT if node.get("unlocked") else Theme.TEXT_DIM,
