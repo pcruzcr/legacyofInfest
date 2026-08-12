@@ -96,6 +96,8 @@ MARCADORES_DE_POSICION: frozenset[str] = frozenset({
     "assets/maps/your_stage.tmx",
     "assets/maps/your_stage_name.tmx",
     "src/stages/mi_nivel/mi_nivel.py",
+    # AUD-429: el ejemplo de registro de la guía de enemigos traducida.
+    "src/stages/mi_nivel/mi_enemigo.py",
     "src/stages/stageX/boss_your_boss.py",
     "tests/test_stageN_smoke.py",
 })
