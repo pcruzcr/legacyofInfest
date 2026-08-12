@@ -1,29 +1,36 @@
 ---
 document_id: "LOI-GUIDE-ENEMY"
-title: "Enemy Creation Guide"
-aliases: ["Enemy Creation Guide"]
-tags: ["enemy", "creation", "guide", "tutorial"]
-description: "Enemy creation tutorial"
+title: "Guía de creación de enemigos"
+aliases: ["Guía de creación de enemigos", "Enemy Creation Guide"]
+tags: ["enemigo", "creacion", "guia", "tutorial"]
+description: "Cómo escribir un enemigo nuevo: herencia, métodos obligatorios, la máquina de estados y el registro"
 source: "docs/ENEMY_CREATION.md"
-date_processed: "2026-07-14"
+date_processed: "2026-08-11"
 ---
 
-# Enemy Creation Guide
+# Guía de creación de enemigos
 
-## 1. Overview
+## 1. Panorama
 
-All enemies inherit from `EnemyBase` (`src/framework/entities/enemy_base.py`), which itself inherits from `BaseEntity`. The base class provides a state machine (FSM), detection system, hitbox/hurtbox infrastructure, contact damage, invincibility frames, and death handling.
+Todos los enemigos heredan de `EnemyBase`
+(`src/framework/entities/enemy_base.py`), que a su vez hereda de `BaseEntity`.
+La clase base te da hechos: la máquina de estados, la detección del jugador, la
+infraestructura de cajas de golpe y de daño, el daño por contacto, los
+fotogramas de invulnerabilidad y la muerte.
+
+Lo que escribes tú es **el comportamiento**: qué hace cuando patrulla y qué
+hace cuando te ve.
 
 ---
 
-## 2. Inherit from EnemyBase
+## 2. Heredar de `EnemyBase`
 
 ```python
 from __future__ import annotations
 import pygame
 from src.framework.entities.enemy_base import EnemyBase
 
-class EnemyMyType(EnemyBase):
+class EnemyMiTipo(EnemyBase):
     def __init__(
         self,
         spawn_position: pygame.Vector2,
@@ -49,11 +56,12 @@ class EnemyMyType(EnemyBase):
 
 ---
 
-## 3. Required Methods
+## 3. Métodos que hay que escribir
 
 ### `_build_hitbox(self) -> pygame.Rect`
 
-Return a **local-space** rect for the enemy's active damage zone (the area that hurts the player on contact):
+Devuelve un rectángulo **en coordenadas locales** con la zona que hace daño al
+jugador al tocarla:
 
 ```python
 def _build_hitbox(self) -> pygame.Rect:
@@ -62,27 +70,34 @@ def _build_hitbox(self) -> pygame.Rect:
 
 ### `_build_hurtbox(self) -> pygame.Rect`
 
-Return a **local-space** rect for where the enemy receives damage:
+Devuelve un rectángulo **en coordenadas locales** con la zona por la que el
+enemigo recibe daño:
 
 ```python
 def _build_hurtbox(self) -> pygame.Rect:
     return pygame.Rect(4, 2, 24, 28)
 ```
 
+Que sean dos rectángulos distintos y no uno es lo que permite un enemigo con
+punto débil: una caja de daño pequeña en la espalda y una de golpe grande al
+frente.
+
 ### `_get_animation_key(self) -> str`
 
-Return the sprite animation key for non-DYING/non-HURT states:
+Devuelve la clave de animación para los estados que no son `DYING` ni `HURT`:
 
 ```python
 def _get_animation_key(self) -> str:
     return "walk"
 ```
 
-Animation keys must correspond to sprite sheets loaded by `_load_zone_sprites()` or `_load_extra_sprites()`. Default loaded keys are `"walk"`, `"hurt"`, `"die"`.
+Las claves tienen que corresponder a hojas de sprites cargadas por
+`_load_zone_sprites()` o `_load_extra_sprites()`. Las que se cargan por defecto
+son `"walk"`, `"hurt"` y `"die"`.
 
 ### `_patrol_behavior(self, dt: float) -> None`
 
-Movement/AI when no player is detected:
+Movimiento e IA cuando **no** hay jugador detectado:
 
 ```python
 def _patrol_behavior(self, dt: float) -> None:
@@ -91,7 +106,7 @@ def _patrol_behavior(self, dt: float) -> None:
 
 ### `_alert_behavior(self, dt: float) -> None`
 
-AI when the player is within detection range:
+IA cuando el jugador está dentro del rango de detección:
 
 ```python
 def _alert_behavior(self, dt: float) -> None:
@@ -101,97 +116,147 @@ def _alert_behavior(self, dt: float) -> None:
 
 ---
 
-## 4. FSM States
+## 4. La máquina de estados
 
-The state machine (`_run_state_machine` in `EnemyBase`) manages these states automatically:
+`_run_state_machine`, en `EnemyBase`, gestiona **trece** estados por su cuenta.
 
-| State | Triggered By | Description |
+> **Corregido el 2026-08-11 (AUD-429).** Esta guía documentaba **siete**. Los
+> otros seis existen desde que se añadieron y un estudiante que leyera sólo
+> esto no sabía que su enemigo podía buscar, perseguir, replegarse o quedar
+> aturdido. Seis estados invisibles en la guía son seis mecánicas que nadie usa.
+
+| Estado | Lo dispara | Qué es |
 |---|---|---|
-| `PATROL` | Default / deaggro | Enemy patrols normally |
-| `ALERT` | Player detected | Enemy pursues / attacks |
-| `TELEGRAPHING` | Enemy logic | Wind-up before attack (0.4s default) |
-| `FIRING` | After telegraph | Execute attack |
-| `HURT` | `apply_hit()` called | Hitstun (timer-based) |
-| `LAUNCHED` | Heavy knockback (≥1.5 dmg) | Airborne state with gravity |
-| `DYING` | Health ≤ 0 | Death animation, then removal |
+| `IDLE` | `patrol_length = 0` | Enemigo estacionario. Sin este estado, uno quieto seguía «patrullando» sin moverse |
+| `PATROL` | Por defecto, o al perder al jugador | Patrulla normal |
+| `SEARCH` | Vio al jugador y lo perdió | Busca donde lo vio. Sin él, el enemigo se olvida en el acto |
+| `ALERT` | Jugador detectado | Consciente del jugador |
+| `CHASE` | Persecución activa | Distinto de `ALERT`: perseguir no es lo mismo que estar en guardia |
+| `TELEGRAPHING` | Lógica del enemigo | El aviso antes de atacar (0,4 s por defecto) |
+| `FIRING` | Tras el telegrafiado | Ejecuta el ataque |
+| `RECOVER` | Tras atacar | Ventana de vulnerabilidad. Es **la** pieza que hace que un combate se pueda leer |
+| `RETREAT` | Poca vida | Repliegue. `SquadBrain` ya emitía la táctica antes de que existiera el estado |
+| `STUNNED` | Parada o golpe pesado | Aturdido. Recompensa al que hace *parry* |
+| `HURT` | `apply_hit()` | Aturdimiento breve por daño |
+| `LAUNCHED` | Empuje fuerte (≥ 1,5 de daño) | Por el aire, con gravedad |
+| `DYING` | Vida ≤ 0 | Animación de muerte y retirada |
 
-**Priority order**: `DYING > LAUNCHED > HURT > TELEGRAPHING > FIRING > ALERT > PATROL`
+**Orden de prioridad:**
+`DYING > LANZADO > HURT > STUNNED > TELEGRAPHING > FIRING > RECOVER > CHASE > ALERT > SEARCH > PATROL > IDLE`
 
-### Transition helpers
+### Ayudas para las transiciones
 
-- `self._face_player()` — flip facing direction toward player
-- `self._telegraph_timer` / `self._telegraph_duration` — control telegraph timing
-- `self.state = EnemyState.FIRING` — transition to firing (then `_firing_behavior` is called)
+- `self._face_player()` — gira al enemigo hacia el jugador
+- `self._telegraph_timer` / `self._telegraph_duration` — controlan el aviso
+- `self.state = EnemyState.FIRING` — pasa a disparar, y entonces se llama a
+  `_firing_behavior`
 
-Override `_firing_behavior(dt)` to customize what happens in the FIRING state:
+Sobreescribe `_firing_behavior(dt)` para decidir qué ocurre al atacar:
 
 ```python
 def _firing_behavior(self, dt: float) -> None:
-    # Fire a projectile, then return to ALERT
+    # Lanza un proyectil y vuelve a estar alerta
     self._spawn_projectile()
     self.state = EnemyState.ALERT
 ```
 
 ---
 
-## 5. Detection System
+## 5. La detección
 
-Detection is handled automatically. The base class manages:
+Funciona sola. La clase base se encarga de:
 
-- `detection_range_x` / `detection_range_y` — set in `__init__`
-- `set_player_ref(player_rect)` — called by `StageScene` to provide the player's rect
-- `_check_detection_range()` — returns `True` if player is within range
-- Deaggro hysteresis — once `ALERT`, player must leave range + 32px margin before returning to `PATROL`
+- `detection_range_x` y `detection_range_y` — se fijan en el `__init__`;
+- `set_player_ref(player_rect)` — lo llama `StageScene` para pasarle el
+  rectángulo del jugador;
+- `_check_detection_range()` — devuelve si el jugador está a tiro;
+- **histéresis**: una vez en `ALERT`, el jugador tiene que salir del rango
+  **más 32 px** para que vuelva a `PATROL`. Sin ese margen, un enemigo en el
+  borde exacto parpadea entre los dos estados.
 
 ---
 
-## 6. Optional Hooks
+## 6. Ganchos opcionales
 
 ### `_pre_update(self, dt: float) -> bool`
 
-Called at the start of `update()`. Return `True` to skip the rest of the update (used by `BossBase` for phase transitions).
+Se llama al principio de `update()`. Devolver `True` **salta el resto** de la
+actualización; es lo que usa `BossBase` para las transiciones de fase.
 
 ### `_post_update(self, dt: float)`
 
-Called at the end of `update()`. Used by `EnemyShooter` to update projectiles.
+Se llama al final de `update()`. Lo usa `EnemyShooter` para mover sus
+proyectiles.
 
 ### `_load_extra_sprites(self, zone: int, fw: int, fh: int)`
 
-Load additional sprite sheets beyond `walk`/`hurt`/`die`:
+Carga hojas de sprites además de `walk`, `hurt` y `die`:
 
 ```python
 def _load_extra_sprites(self, zone: int, fw: int, fh: int) -> None:
-    path = settings.ASSETS_DIR / "sprites" / "enemies" / f"zone{zone}" / "enemy_mytype_shoot.png"
-    frames = AssetLoader.load_sprite_sheet(path, fw, fh)
+    ruta = settings.ASSETS_DIR / "sprites" / "enemies" / f"zone{zone}" / "enemy_mitipo_shoot.png"
+    frames = AssetLoader.load_sprite_sheet(ruta, fw, fh)
     self._sprite_frames["shoot"] = frames
 ```
 
 ---
 
-## 7. Animations
+## 7. Animaciones
 
-The base class expects sprite sheets at `assets/sprites/enemies/zone{zone}/`:
+La clase base espera las hojas en `assets/sprites/enemies/zone{zone}/`:
 
 - `enemy_zone{zone}_walk.png`
 - `enemy_zone{zone}_hurt.png`
 - `enemy_zone{zone}_die.png`
 
-Animation FPS can be tuned via class variables:
+La cadencia se ajusta con variables de clase:
 
 ```python
 _ANIM_FPS = {"walk": 10.0, "hurt": 12.0, "die": 10.0, "shoot": 16.0}
-_ALERT_ANIM_FPS = {"walk": 14.0}  # faster in alert mode
+_ALERT_ANIM_FPS = {"walk": 14.0}  # más rápido cuando está alerta
 ```
 
 ---
 
-## 8. Adding to the Spawn Registry
+## 8. Registrar el enemigo
 
-Register the new enemy in `src/framework/entities/entity_factory.py`:
+Aquí hay **dos caminos**, y el que te toca casi seguro es el segundo.
+
+### 8.1 Desde tu propio paquete — el camino del estudiante
+
+Es lo que pide el curso y lo que hacen las entregas. Al final de tu módulo, a
+**nivel de módulo**:
 
 ```python
-from src.framework.entities.enemy_mytype import EnemyMyType   # add this import
+# src/stages/mi_nivel/mi_enemigo.py
+from src.framework.stage.stage_loader import StageLoader
 
+class MiEnemigo(EnemyBase):
+    ...
+
+StageLoader.register_entity("MiEnemigo", MiEnemigo)
+```
+
+La cadena `"MiEnemigo"` es lo que escribes en el campo `type` del objeto en
+Tiled.
+
+**A nivel de módulo, no dentro de una función.** Si registras dentro de un
+método, esa línea sólo se ejecuta cuando alguien llama al método — y el
+previsualizador, el validador y el calificador **abren tu mapa sin construir la
+escena**. El resultado no es que falte el enemigo: es que aparece **otro**, el
+que el bestiario tenga con ese nombre, y nada falla (AUD-418).
+
+**Ponle un nombre propio.** Si registras `FlyingBird` o `ShooterFrog`, estás
+sustituyendo una especie que el motor ya trae, y cuál de las dos aparece pasa
+a depender de si tu función se ejecutó. `validate_tmx.py` te avisa de las dos
+cosas.
+
+### 8.2 Dentro del motor — sólo si añades un arquetipo
+
+Los ocho arquetipos y el jefe de referencia se dan de alta en
+`ensure_registered()`, dentro de `src/framework/entities/entity_factory.py`:
+
+```python
 _ENTITY_REGISTRY: dict[str, type[EnemyBase]] = {
     "Walker": EnemyWalker,
     "Flying": EnemyFlying,
@@ -201,42 +266,30 @@ _ENTITY_REGISTRY: dict[str, type[EnemyBase]] = {
     "Brute": EnemyBrute,
     "Caster": EnemyCaster,
     "Assassin": EnemyAssassin,
-    "MyType": EnemyMyType,   # add this line
     "BossVenado": BossVenado,
 }
 ```
 
-The string key (`"MyType"`) is what you use as the `type` field on TMX objects.
+Ojo: es una variable **local de esa función**, no un diccionario de módulo que
+puedas importar y modificar desde fuera.
+
+Y las **21 especies con nombre** —`WalkerInsect`, `ShooterQuetzal`…— no están
+ahí: se registran en `_register_named_species()` a partir de
+`bestiary_registry.SPECIES`, cada una como una factoría que aplica sus
+estadísticas sobre el arquetipo que le corresponde. Si lo tuyo es una especie
+nueva y no un arquetipo, ése es el sitio.
 
 ---
 
-## 9. Full Example (EnemyWalker)
+## 9. Un ejemplo completo
 
-See `src/framework/entities/enemy_walker.py` for a complete walker implementation with patrol, ledge detection, alert pursuit, and charge attack.
-
-
---- Traducción al Español ---
-
-## Guía de Creación de Enemigos
-
-### Resumen
-Todos los enemigos heredan de `EnemyBase`, que a su vez hereda de `BaseEntity`.
-
-### Métodos Requeridos
-- `_build_hitbox()` — Rectángulo de zona de daño activa
-- `_build_hurtbox()` — Rectángulo donde recibe daño
-- `_get_animation_key()` — Clave de animación
-- `_patrol_behavior(dt)` — IA en modo patrulla
-- `_alert_behavior(dt)` — IA cuando detecta al jugador
-
-### Estados del FSM
-PATROL, ALERT, TELEGRAPHING, FIRING, HURT, LAUNCHED, DYING
-
-Para ejemplos completos de código y registro en EntityFactory, consultar el documento original en inglés.
-
+`src/framework/entities/enemy_walker.py` es un caminante terminado: patrulla,
+detección de bordes para no caerse, persecución y ataque de embestida.
 
 ---
-## 🔗 Documentos Relacionados
 
-- [[05_ENEMY_SPEC.md|Enemy Specification]]
-- [[BOSS_CREATION.md|Boss Creation Guide]]
+## 🔗 Documentos relacionados
+
+- [[05_ENEMY_SPEC.md|Especificación de enemigos]]
+- [[18_ENEMY_ROSTER.md|Bestiario: las 21 especies]]
+- [[BOSS_CREATION.md|Guía de creación de jefes]]
