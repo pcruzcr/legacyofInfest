@@ -35,6 +35,19 @@ SONIDOS_DE_MENU: dict[str, str] = {
     Events.SFX_MENU_HOVER: "sfx_select",
     Events.SFX_MENU_CONFIRM: "sfx_select",
     Events.SFX_MENU_CANCEL: "sfx_ui_menu_cancel",
+    # AUD-443 — `Events.SFX_VOZ_PABURU` **no** se declara aquí todavía, y no
+    # es un olvido.
+    #
+    # La risa se emite ya: `LoadGameScene` la dispara en el flanco de
+    # confirmación del personaje y hay pruebas que fijan que suena una sola
+    # vez. Lo que falta es el fichero, `assets/sfx/voz/sfx_voz_paburu_risa.wav`,
+    # que es material de autor —`tools/convert_audio.py` convierte, no genera—.
+    #
+    # Declararlo antes de tiempo rompe `test_las_muestras_existen_en_el_banco_real`,
+    # y ese guardián tiene razón: una muestra declarada y ausente es un menú
+    # que enmudece en silencio. Cuando el `.wav` esté, esto es una línea:
+    #
+    #     Events.SFX_VOZ_PABURU: "sfx_voz_paburu_risa",
 }
 
 

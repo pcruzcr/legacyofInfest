@@ -77,6 +77,13 @@ class Events:
     SFX_STAGE_BANNER: str = "SFX_STAGE_BANNER"
     SFX_STAGE_COMPLETE: str = "SFX_STAGE_COMPLETE"
     SFX_HAZARD_ZONE: str = "SFX_HAZARD_ZONE"
+    #: AUD-443 — la risa de Paburu al confirmar el personaje.
+    #:
+    #: Es un evento y no una llamada directa al audio por lo mismo que el
+    #: resto de los SFX de menú (AUD-345): quien decide *cuándo* suena es la
+    #: pantalla, y quién lo reproduce es cosa del motor. Así la pantalla no
+    #: necesita conocer el gestor de audio ni la ruta del fichero.
+    SFX_VOZ_PABURU: str = "SFX_VOZ_PABURU"
     SFX_PLAYER_PARRY: str = "SFX_PLAYER_PARRY"
     SFX_PLAYER_CROUCH: str = "SFX_PLAYER_CROUCH"
     SFX_PLAYER_HEAL: str = "SFX_PLAYER_HEAL"
