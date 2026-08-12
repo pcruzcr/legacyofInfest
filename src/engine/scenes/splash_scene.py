@@ -8,7 +8,6 @@ import pygame
 from src.engine.core import settings
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import BOTTOM_BAR_Y
-from src.engine.scenes.title_scene import TitleScene
 from src.engine.utils.asset_loader import AssetLoader
 
 if TYPE_CHECKING:
@@ -77,7 +76,15 @@ class SplashScene(BaseScene):
     def update(self, dt: float) -> None:
         if self._fading_out:
             if self.context.scene_manager.transition.finished:
-                self.context.scene_manager.replace(TitleScene(self.context))
+                # AUD-445 — a la pantalla de partidas, no al menú.
+                #
+                # Antes se entregaba al título, y desde ahí el mundo, el
+                # inventario, las habilidades y la tienda se abrían **antes**
+                # de saber de quién era el progreso que enseñaban. Con una
+                # sola partida no se nota; con cinco, el menú muestra lo de la
+                # que quedara activa por casualidad.
+                from src.engine.scenes.load_game_scene import LoadGameScene
+                self.context.scene_manager.replace(LoadGameScene(self.context))
             return
         self._timer += dt
         self._warm_up_particles()

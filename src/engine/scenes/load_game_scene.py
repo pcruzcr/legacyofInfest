@@ -40,6 +40,32 @@ def _stage_display_name(stage_id: str) -> str:
 PERSONAJE_POR_DEFECTO = "paburu"
 
 
+def entrar_al_escenario(context: GameContext, data: SaveData) -> bool:
+    """Monta la cola de escenarios y entra por donde iba la partida — AUD-445.
+
+    Vive fuera de la pantalla de partidas porque ahora hay dos caminos que
+    llegan aquí: elegir una partida y luego CONTINUAR desde el menú. Dejarlo
+    dentro de la escena obligaría al menú a instanciar una pantalla que no va
+    a mostrar sólo para reutilizar un método.
+
+    Devuelve `False` si no hay escenarios que jugar, para que quien llame
+    decida qué decirle al jugador; aquí no se sabe si hay una barra de estado
+    donde escribirlo.
+    """
+    from src.engine.core.stage_registry import discover_stages
+
+    escenarios = discover_stages()
+    if not escenarios:
+        return False
+    indice = max(0, min(int(data.stage_index), len(escenarios) - 1))
+    context.pending_load = data
+    gestor = context.scene_manager
+    gestor.set_stage_queue(escenarios)
+    gestor.set_stage_index(indice)
+    gestor.replace(escenarios[indice](context))
+    return True
+
+
 class LoadGameScene(BaseScene):
     """Las partidas guardadas: elegir una, o crear una donde no hay.
 
@@ -144,7 +170,7 @@ class LoadGameScene(BaseScene):
                 self._creando = True
                 self._nombre = ""
             else:
-                self._load_save(data)
+                self._cargar_partida(data)
 
         if im.is_action_just_pressed(Action.CANCEL):
             from src.engine.scenes.title_scene import TitleScene
@@ -199,36 +225,32 @@ class LoadGameScene(BaseScene):
         self._nombre = ""
         self._refresh_slots()
 
-    def _load_save(self, data: SaveData) -> None:
-        from src.engine.core.stage_registry import discover_stages
+    def _cargar_partida(self, data: SaveData | None) -> None:
+        """Activa el perfil elegido y abre el menú principal — AUD-445.
 
-        stages = discover_stages()
-        if not stages:
-            self._error_msg = "No hay stages disponibles"
-            self._error_timer = 2.0
+        Antes esto entraba **directo al escenario**, y por eso el jugador que
+        quería mirar su inventario tenía que entrar a jugar y volver atrás. El
+        menú principal es lo que se viene a ver después de elegir partida.
+
+        El estado se aplica aquí y no al entrar al escenario: en cuanto se
+        vuelve al menú, la tienda y el inventario ya tienen que estar
+        enseñando lo de **esta** partida.
+        """
+        if data is None:
             return
-
-        target_index = min(data.stage_index, len(stages) - 1)
-        target_class = stages[target_index]
-
-        # AUD-292 — la partida trae su cartera, su ropa y su marcador, y hay
-        # que aplicarlos **antes** de montar el escenario: el HUD lee la
-        # puntuación en su primer fotograma y el jugador lee el inventario al
-        # calcular sus bonificaciones.
         from src.engine.core.save_manager import aplicar_estado_de
+        from src.engine.scenes.title_scene import TitleScene
 
+        # AUD-292 — la partida trae su cartera, su ropa y su marcador.
         aplicar_estado_de(data)
-        # AUD-441 — se declara qué partida se juega antes de entrar. Sin esto
-        # el autoguardado elige destino por marca de tiempo y, con dos partidas
-        # en disco, escribe el progreso de ésta encima de la otra.
-        sm_partidas = self.context.save_manager
-        if sm_partidas is not None and data.slot_id:
-            sm_partidas.ranura_activa = data.slot_id
+        # AUD-441 — se declara qué partida se juega. Sin esto el autoguardado
+        # elige destino por marca de tiempo y, con dos partidas en disco,
+        # escribe el progreso de ésta encima de la otra.
+        gestor = self.context.save_manager
+        if gestor is not None and data.slot_id:
+            gestor.ranura_activa = data.slot_id
         self.context.pending_load = data
-        sm = self.context.scene_manager
-        sm.set_stage_queue(stages)
-        sm.set_stage_index(target_index)
-        sm.replace(target_class(self.context))
+        self.context.scene_manager.replace(TitleScene(self.context))
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill(COLOR_BG)

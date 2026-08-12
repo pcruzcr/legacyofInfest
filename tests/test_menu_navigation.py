@@ -101,12 +101,24 @@ def _navigate_to(ctx: ContextManager, target_idx: int) -> None:
         ctx.step(3)
 
 
-def test_splash_to_title(ctx: ContextManager) -> None:
+def test_la_presentacion_entrega_a_la_pantalla_de_partidas(
+    ctx: ContextManager,
+) -> None:
+    """AUD-445 — antes entregaba al título; ahora, a elegir partida.
+
+    El cambio es deliberado: desde el título se abren el mundo, el inventario,
+    las habilidades y la tienda, y todos ellos enseñan progreso. Abrirlos antes
+    de saber **de qué partida** es ese progreso enseña el de la que quedara
+    activa por casualidad.
+    """
+    from src.engine.scenes.load_game_scene import LoadGameScene
+
     ctx.validate_scene("SplashScene start", SplashScene)
     ctx.step(250)
     assert ctx.sm.stack_size > 0, "SplashScene -- stack empty after timeout"
-    assert isinstance(ctx.current, TitleScene), (
-        f"SplashScene -- expected TitleScene, got {type(ctx.current).__name__}"
+    assert isinstance(ctx.current, LoadGameScene), (
+        f"la presentación entregó a {type(ctx.current).__name__}: el juego "
+        f"sigue empezando sin preguntar en qué partida"
     )
 
 
@@ -291,7 +303,7 @@ def main() -> int:
     ctx.app.context.running = True
 
     tests = [
-        ("Splash -> Title", test_splash_to_title),
+        ("Splash -> Partidas", test_la_presentacion_entrega_a_la_pantalla_de_partidas),
         ("Title menu options", test_title_menu_options),
         ("Options scene", test_options_scene),
         ("Demo menu", test_demo_menu),

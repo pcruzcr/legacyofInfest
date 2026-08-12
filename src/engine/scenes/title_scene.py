@@ -191,9 +191,23 @@ class TitleScene(BaseScene):
 
     def _activate_option(self, opt: str) -> None:
         if opt == "CONTINUE":
-            from src.engine.scenes.load_game_scene import LoadGameScene
+            # AUD-445 — reanuda la partida que ya se eligió al arrancar.
+            #
+            # Antes esto abría la lista de partidas, y con el orden nuevo eso
+            # sería preguntar dos veces lo mismo: la partida se decide en el
+            # arranque. Sólo se vuelve a preguntar si no hay ninguna activa —un
+            # arranque de emergencia tras un fallo, por ejemplo—, porque ahí
+            # preguntar es mejor que adivinar cuál reanudar.
+            from src.engine.scenes.load_game_scene import (
+                LoadGameScene,
+                entrar_al_escenario,
+            )
             self.context.scene_manager.transition.start_fade_out(0.4)
-            self.context.scene_manager.replace(LoadGameScene(self.context))
+            gestor = self.context.save_manager
+            activa = gestor.ranura_activa if gestor is not None else None
+            datos = gestor.load(activa) if (gestor and activa) else None
+            if datos is None or not entrar_al_escenario(self.context, datos):
+                self.context.scene_manager.replace(LoadGameScene(self.context))
         elif opt == "START":
             from src.engine.scenes.story_scene import StoryScene
             from src.engine.scenes.tutorial_scene import TutorialScene
