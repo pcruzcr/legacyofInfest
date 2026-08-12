@@ -24,6 +24,18 @@ logger = logging.getLogger(__name__)
 # a las preferencias y a los logros y que aquí se quedó sin aplicar.
 _DEFAULT_BESTIARY_PATH: Path = user_data_dir() / "saves" / "bestiary.json"
 
+
+def _ruta_por_defecto() -> Path:
+    """El bestiario de la partida que se juega — AUD-450.
+
+    Era una constante, y por eso las cinco ranuras compartían bestiario:
+    empezabas una partida nueva y ya estaba medio descubierto. La ruta la
+    decide ahora el `SaveManager`, que es quien sabe qué perfil está activo.
+    """
+    from src.engine.core.save_manager import ruta_del_perfil
+
+    return ruta_del_perfil("bestiary.json")
+
 #: Los textos de las fichas clásicas viven en `data/bestiary.json` (AUD-199):
 #: editar un nombre o un lore ya no exige tocar el motor, y
 #: `scripts/check_bestiary.py` valida el fichero.
@@ -226,7 +238,7 @@ class Bestiary:
 
     def save(self, path: str | Path | None = None) -> None:
         data = {eid: entry.to_dict() for eid, entry in self._entries.items()}
-        path = Path(path) if path is not None else _DEFAULT_BESTIARY_PATH
+        path = Path(path) if path is not None else _ruta_por_defecto()
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(orjson.dumps(data, option=orjson.OPT_INDENT_2))
 
@@ -249,7 +261,7 @@ class Bestiary:
            ninguna pista. `ProgresoAcademico.cargar` ya avisaba ante lo mismo;
            tres sitios del proyecto hacían lo contrario.
         """
-        destino = Path(path) if path is not None else _DEFAULT_BESTIARY_PATH
+        destino = Path(path) if path is not None else _ruta_por_defecto()
         try:
             data = orjson.loads(destino.read_bytes())
             for eid, entry_data in data.items():
