@@ -34,6 +34,8 @@ class SplashScene(BaseScene):
         self._frames_shown = 0
         self._warmed_up = False
         self._warmup_index = 0
+        #: AUD-449 — lo que se está preparando ahora mismo, para decirlo.
+        self._tarea: str = ""
         assets = settings.ASSETS_DIR / "splash"
 
         self._background = AssetLoader.load_image(
@@ -128,6 +130,23 @@ class SplashScene(BaseScene):
     #: el fundido sigue avanzando.
     _WARMUP_STEPS = ("_precalentar_particulas", "_precalentar_ia")
 
+    #: Qué se le dice al jugador mientras cada paso bloquea — AUD-449.
+    #:
+    #: En el registro del dueño estos dos pasos tardaron 1.890 ms y 3.005 ms.
+    #: Durante ese tiempo el proceso no dibuja, así que lo que se queda en
+    #: pantalla es el fotograma anterior. Anunciándolo **antes**, ese fotograma
+    #: congelado ya dice qué está pasando: la espera sigue siendo la misma y
+    #: deja de parecer un cuelgue.
+    _NOMBRES_DE_TAREA: dict[str, str] = {
+        "_precalentar_particulas": "Preparando efectos...",
+        "_precalentar_ia": "Preparando la inteligencia de los enemigos...",
+    }
+
+    @property
+    def tarea_en_curso(self) -> str:
+        """Lo que se está preparando, o vacío si no hay nada pendiente."""
+        return self._tarea
+
     def _warm_up_particles(self) -> None:
         """Ejecuta un paso de precalentamiento por fotograma.
 
@@ -146,6 +165,19 @@ class SplashScene(BaseScene):
             return
 
         paso = self._WARMUP_STEPS[self._warmup_index]
+
+        # AUD-449 — se anuncia un fotograma antes de ejecutarlo.
+        #
+        # El paso corre aquí, dentro de `update()`, y el dibujo va después.
+        # Ejecutándolo en el mismo fotograma en que se anuncia, el texto se
+        # pintaría **al terminar** el bloqueo: el jugador leería «preparando
+        # efectos» justo cuando ya no hace falta. Anunciando primero y
+        # ejecutando en la vuelta siguiente, el fotograma que se queda
+        # congelado en pantalla es el que lleva el mensaje.
+        if self._tarea != self._NOMBRES_DE_TAREA.get(paso, ""):
+            self._tarea = self._NOMBRES_DE_TAREA.get(paso, "")
+            return
+
         t0 = time.perf_counter()
         getattr(self, paso)()
         coste = time.perf_counter() - t0
@@ -158,6 +190,9 @@ class SplashScene(BaseScene):
         self._warmup_index += 1
         if self._warmup_index >= len(self._WARMUP_STEPS):
             self._warmed_up = True
+            # Sin esto el último anuncio se queda escrito para siempre bajo el
+            # logo, diciendo que se prepara algo que ya está listo.
+            self._tarea = ""
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.blit(self._background, (0, 0))
@@ -169,7 +204,11 @@ class SplashScene(BaseScene):
         surface.blit(self._logo_shadow, (logo_rect.x + 3, logo_rect.y + 3))
         surface.blit(self._logo, logo_rect)
 
-        loading = self._font_game.render("Cargando...", True, (255, 255, 255))
+        # AUD-449 — si hay una tarea en curso, se dice cuál. Es el fotograma
+        # que se queda congelado mientras el paso bloquea, así que es el único
+        # sitio donde ese mensaje sirve de algo.
+        texto = self._tarea or "Cargando..."
+        loading = self._font_game.render(texto, True, (255, 255, 255))
         lr = loading.get_rect(center=(settings.INTERNAL_WIDTH // 2, BOTTOM_BAR_Y - 36))
         loading.set_alpha(int(min(self._timer / self.SPLASH_TIME, 1.0) * 255))
         surface.blit(loading, lr)
