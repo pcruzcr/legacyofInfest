@@ -24,6 +24,21 @@ logger = logging.getLogger(__name__)
 _SAVES_HEREDADO = settings.PROJECT_ROOT / "saves"
 
 
+def _ahora() -> float:
+    """El reloj monótono con el que se mide el tiempo jugado — AUD-442.
+
+    Se aísla en una función para poder sustituirlo en las pruebas: medir una
+    acumulación con el reloj real obligaría a dormir, y una prueba que duerme
+    es una prueba que nadie ejecuta.
+
+    Monótono y no `time()`: cambiar la hora del sistema a mitad de partida no
+    puede regalar ni robar horas jugadas.
+    """
+    import time
+
+    return time.monotonic()
+
+
 def escribir_atomicamente(path: Path, datos: bytes) -> None:
     """Escribe `datos` en `path` sin poder dejar el fichero a medias (AUD-316).
 
@@ -207,6 +222,28 @@ class SaveManager:
         #: AUD-441 — qué partida se está jugando. `None` mientras nadie lo haya
         #: declarado, y entonces se cae al comportamiento anterior.
         self._ranura_activa: int | None = None
+        #: AUD-442 — cuándo empezó la sesión de la partida activa.
+        self._inicio_de_sesion: float = _ahora()
+
+    def anotar_tiempo_jugado(self, data: SaveData) -> None:
+        """Suma a la partida los segundos jugados desde la última anotación.
+
+        AUD-442 — se **acumula**, no se recalcula. Deducirlo de la marca de
+        tiempo del fichero contaría también las horas con el juego cerrado, y
+        una partida abandonada un mes aparecería con un mes jugado.
+
+        El contador se reinicia aquí mismo: sin eso, dos guardados seguidos
+        sumarían el mismo tramo dos veces, y en una partida con checkpoints
+        cada pocos minutos el error crece rápido.
+
+        Sin partida activa no se inventa nada: no se sabe a quién imputarlo.
+        """
+        if self._ranura_activa is None:
+            return
+        ahora = _ahora()
+        data.play_time = float(data.play_time) + max(
+            0.0, ahora - self._inicio_de_sesion)
+        self._inicio_de_sesion = ahora
 
     @property
     def ranura_activa(self) -> int | None:
@@ -224,6 +261,10 @@ class SaveManager:
 
     @ranura_activa.setter
     def ranura_activa(self, slot: int | None) -> None:
+        # AUD-442 — cambiar de partida cierra el contador de la anterior y
+        # abre el de la nueva. Sin esto, el hueco entre dejar una partida y
+        # volver a ella se le sumaría a la que estuviera activa.
+        self._inicio_de_sesion = _ahora()
         if slot is not None and (slot < 1 or slot > MAX_SLOTS):
             # Falla donde se pone y no al guardar: un número imposible aquí
             # significa que quien lo declaró se equivocó, y enterarse tres
@@ -259,6 +300,12 @@ class SaveManager:
         if slot < 1 or slot > MAX_SLOTS:
             raise ValueError(f"Slot must be 1-{MAX_SLOTS}, got {slot}")
         data.slot_id = slot
+        # AUD-442 — el tiempo jugado se cierra aquí, en el único punto por el
+        # que pasan todos los guardados. Ponerlo en los llamadores dejaría el
+        # campo a cero en cuanto uno se olvidara, que es como se queda muerto
+        # un dato que nadie mira hasta que hace falta.
+        if slot == self._ranura_activa:
+            self.anotar_tiempo_jugado(data)
         path = self._slot_path(slot)
         fd, tmp = tempfile.mkstemp(dir=str(self.SAVES_DIR), suffix=".tmp")
         try:

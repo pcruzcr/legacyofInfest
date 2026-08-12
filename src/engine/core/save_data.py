@@ -7,7 +7,7 @@ y serialización/deserialización en JSON.
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, ClassVar
 
 import orjson
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -79,6 +79,26 @@ class SaveData(BaseModel):
     exp_estado: dict[str, int] = Field(default_factory=dict)
     #: AUD-293 — los rangos comprados del árbol de habilidades.
     arbol: dict[str, int] = Field(default_factory=dict)
+    #: AUD-442 — quién es esta partida, no sólo por dónde va.
+    #:
+    #: Sin estos tres campos la pantalla de selección enseña cinco filas
+    #: indistinguibles y elegir partida es elegir por marca de tiempo.
+    #:
+    #: No suben `SAVE_VERSION` a propósito: son aditivos y con valores por
+    #: defecto sanos, así que una partida anterior se lee sin nombre y la
+    #: pantalla la muestra como «Partida N». Ningún comportamiento depende de
+    #: la versión aquí, y un escalón de migración que no hace nada sólo añade
+    #: ruido donde luego hay que leer para entender por qué una partida vieja
+    #: no carga.
+    profile_name: str = ""
+    #: El personaje elegido al crear la partida. Hoy sólo hay uno; el campo
+    #: existe porque la elección es parte de crear el perfil y añadirlo
+    #: después obligaría a migrar todas las partidas.
+    character: str = "paburu"
+    #: Segundos jugados, acumulados. Lo suma `SaveManager.anotar_tiempo_jugado`
+    #: al guardar; no se deduce de la marca de tiempo del fichero, que contaría
+    #: también las horas con el juego cerrado.
+    play_time: float = 0.0
     #: AUD-438 — con qué versión se escribió esta partida **antes** de migrar.
     #:
     #: Hace falta porque `migrate()` reescribe `version` a la última: para
@@ -106,6 +126,18 @@ class SaveData(BaseModel):
     @classmethod
     def _round_health(cls, v: float) -> float:
         return round(v, 1)
+
+    #: Tope del nombre de partida, en caracteres — AUD-442.
+    #:
+    #: La fila de la pantalla de selección tiene un ancho, y el fichero tiene
+    #: un lector humano. Sin tope, un nombre pegado desde el portapapeles
+    #: desborda la fila y empuja la marca de tiempo fuera de la pantalla.
+    LARGO_MAXIMO_DEL_NOMBRE: ClassVar[int] = 24
+
+    @field_validator("profile_name")
+    @classmethod
+    def _limpiar_nombre(cls, v: str) -> str:
+        return str(v).strip()[: cls.LARGO_MAXIMO_DEL_NOMBRE]
 
     @field_validator("checkpoint_x", "checkpoint_y")
     @classmethod
