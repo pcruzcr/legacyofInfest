@@ -204,6 +204,35 @@ class SaveManager:
     def __init__(self) -> None:
         self.SAVES_DIR.mkdir(parents=True, exist_ok=True)
         self._migrar_partidas_antiguas()
+        #: AUD-441 — qué partida se está jugando. `None` mientras nadie lo haya
+        #: declarado, y entonces se cae al comportamiento anterior.
+        self._ranura_activa: int | None = None
+
+    @property
+    def ranura_activa(self) -> int | None:
+        """La ranura que se está jugando, o `None` si nadie lo ha dicho.
+
+        AUD-441 — nadie era dueño de esta pregunta. `auto_save` la deducía del
+        disco con `newest_slot()`, y una deducción no es una decisión: acierta
+        mientras haya una sola partida y falla en cuanto hay dos. Cargando la
+        ranura 1 con una ranura 2 más reciente, el autoguardado escribía el
+        progreso de la 1 **encima** de la 2 y destruía esa partida.
+
+        Lo declara quien carga o crea una partida, que es quien lo sabe.
+        """
+        return self._ranura_activa
+
+    @ranura_activa.setter
+    def ranura_activa(self, slot: int | None) -> None:
+        if slot is not None and (slot < 1 or slot > MAX_SLOTS):
+            # Falla donde se pone y no al guardar: un número imposible aquí
+            # significa que quien lo declaró se equivocó, y enterarse tres
+            # checkpoints después convierte un error de programación en una
+            # partida perdida.
+            raise ValueError(
+                f"ranura {slot} fuera de rango: hay {MAX_SLOTS} ranuras",
+            )
+        self._ranura_activa = slot
 
     def _migrar_partidas_antiguas(self) -> None:
         """Copia las partidas del sitio viejo si el nuevo no las tiene."""
@@ -256,7 +285,14 @@ class SaveManager:
         logger.info("SaveManager: saved slot %d -> %s", slot, path)
         return str(path)
 
-    def load(self, slot: int) -> SaveData | None:
+    def load(self, slot: int, *, activar: bool = False) -> SaveData | None:
+        """Lee una partida. Con `activar`, además la declara la que se juega.
+
+        AUD-441 — activar es una decisión explícita y no un efecto de leer, y
+        eso importa: la pantalla de ranuras carga las cinco para pintar la
+        lista. Si leer activara, pintar dejaría como activa la última fila
+        dibujada y el autoguardado siguiente iría a parar ahí.
+        """
         if slot < 1 or slot > MAX_SLOTS:
             return None
         path = self._slot_path(slot)
@@ -264,10 +300,15 @@ class SaveManager:
             return None
         try:
             raw = path.read_bytes()
-            return SaveData.from_json(raw)
+            datos = SaveData.from_json(raw)
         except (orjson.JSONEncodeError, OSError, KeyError, ValueError) as e:
             logger.warning("SaveManager: corrupt save slot %d: %s", slot, e)
             return None
+        if activar:
+            # Sólo si se pudo leer: declarar activa una partida ilegible
+            # mandaría el autoguardado a un fichero roto.
+            self.ranura_activa = slot
+        return datos
 
     def delete(self, slot: int) -> None:
         if slot < 1 or slot > MAX_SLOTS:
@@ -326,7 +367,11 @@ class SaveManager:
         The fix is read-modify-write: load whatever is already in the slot and
         mutate only the fields autosave actually owns.
         """
-        slot = self.newest_slot()
+        # AUD-441 — la ranura que se está jugando manda. `newest_slot()` queda
+        # de respaldo para los arranques que todavía no la declaran (un
+        # escenario lanzado con `--stage`, por ejemplo), pero elegir por marca
+        # de tiempo con dos partidas en disco escribe en la equivocada.
+        slot = self.ranura_activa or self.newest_slot()
         if slot is None:
             slot = 1
 

@@ -106,6 +106,12 @@ class LoadGameScene(BaseScene):
         from src.engine.core.save_manager import aplicar_estado_de
 
         aplicar_estado_de(data)
+        # AUD-441 — se declara qué partida se juega antes de entrar. Sin esto
+        # el autoguardado elige destino por marca de tiempo y, con dos partidas
+        # en disco, escribe el progreso de ésta encima de la otra.
+        sm_partidas = self.context.save_manager
+        if sm_partidas is not None and data.slot_id:
+            sm_partidas.ranura_activa = data.slot_id
         self.context.pending_load = data
         sm = self.context.scene_manager
         sm.set_stage_queue(stages)
