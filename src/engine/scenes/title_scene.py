@@ -47,8 +47,14 @@ class TitleScene(BaseScene):
         )
 
         raw_logo = AssetLoader.load_image(assets / "logo.png")
+        # AUD-446 — el logo pasa de 80 a 160 px de alto.
+        #
+        # Con catorce opciones dibujándose a la vez, el logo estaba encajonado
+        # y la portada no tenía jerarquía: el nombre del juego pesaba lo mismo
+        # que «RÉCORDS». Ahora que el menú sólo enseña cuatro filas hay sitio,
+        # y el sitio se le da a lo que el jugador tiene que reconocer primero.
         max_logo_w = settings.INTERNAL_WIDTH - 40
-        max_logo_h = 80
+        max_logo_h = 160
         lw, lh = raw_logo.get_size()
         scale = min(max_logo_w / lw, max_logo_h / lh, 1.0)
         self._logo = AssetLoader.load_image(
@@ -106,11 +112,35 @@ class TitleScene(BaseScene):
         self._particle_system: object | None = None
         self._particle_timer: float = 0.0
 
+    #: AUD-446 — cuántas opciones se ven a la vez.
+    #:
+    #: Catorce a la vez ocupaban 336 px de los 600 y dejaban al logo peleando
+    #: por el sitio. Cuatro es lo que pedía el encargo y lo que deja leer la
+    #: jerarquía: primero el nombre del juego, luego lo que se puede hacer.
+    #: Ninguna opción se quita; las que no caben se alcanzan desplazándose.
+    OPCIONES_VISIBLES: int = 4
+
+    def logo_rect(self) -> pygame.Rect:
+        """Dónde acaba el logo. Lo consulta la maqueta y lo fija una prueba."""
+        return self._logo.get_rect(
+            center=(settings.INTERNAL_WIDTH // 2,
+                    int(self._logo.get_height() // 2 + Theme.MARGIN
+                        + self._logo_y_offset)),
+        )
+
+    def primera_fila_y(self) -> int:
+        """Dónde empieza la primera opción visible."""
+        return self.logo_rect().bottom + Theme.SPACE_XL
+
     def _recalc_layout(self) -> None:
         h = settings.INTERNAL_HEIGHT
-        logo_bottom = h // 3 + 20
-        available = h - logo_bottom - 16
-        n = len(self._menu.items)
+        # AUD-446 — el reparto sale del logo real y no de un tercio de la
+        # pantalla: al crecer el logo, el hueco del menú tenía que encogerse
+        # solo, y una fracción fija lo habría dejado solapando.
+        self._menu.visible_rows = self.OPCIONES_VISIBLES
+        logo_bottom = self.logo_rect().bottom + Theme.SPACE_XL
+        available = h - logo_bottom - Theme.SPACE_XL
+        n = min(len(self._menu.items), self.OPCIONES_VISIBLES)
         # AUD-187: el techo era `min(18, …)`, un número heredado de cuando la
         # superficie interna medía 320x240. A los 800x600 actuales sobraba
         # sitio —con diez opciones caben 36 px por fila— y el menú principal se
@@ -125,7 +155,12 @@ class TitleScene(BaseScene):
             self._font_size,
         )
         self._option_spacing = line_h
-        self._max_visible = max(1, available // line_h)
+        # AUD-446 — el tope lo pone la ventana, no el hueco. Con el hueco, al
+        # agrandar el logo seguían cabiendo diez filas apretadas y la portada
+        # volvía a ser una lista.
+        self._max_visible = max(1, min(self.OPCIONES_VISIBLES,
+                                       available // max(line_h, 1)))
+        self._menu.visible_rows = self._max_visible
 
     def on_enter(self) -> None:
         self._menu.index = 0
@@ -172,14 +207,11 @@ class TitleScene(BaseScene):
         if self._menu.index != previous:
             self.context.event_bus.emit(Events.SFX_MENU_HOVER)
 
-        # La lista puede ser más larga que la pantalla, así que la ventana
-        # visible sigue al foco. Se recalcula tras navegar, no dentro de la
-        # navegación: el kit decide el índice y esta escena decide qué parte
-        # de la lista enseña.
-        if self._menu.index < self._scroll_offset:
-            self._scroll_offset = self._menu.index
-        elif self._menu.index >= self._scroll_offset + self._max_visible:
-            self._scroll_offset = self._menu.index - self._max_visible + 1
+        # AUD-446 — la ventana la lleva `MenuList`, que además la desliza en
+        # vez de saltar de página. Aquí ya no se calcula nada: el kit decide
+        # el índice **y** qué parte de la lista se ve, y esta escena decide
+        # cómo se pinta. Antes esto era un salto entero de ventana, y cruzar
+        # el borde hacía perder de vista dónde estabas.
 
     def _on_confirm(self, item: MenuItem) -> None:
         self.context.event_bus.emit(Events.SFX_MENU_CONFIRM)
@@ -330,9 +362,7 @@ class TitleScene(BaseScene):
     def draw(self, surface: pygame.Surface) -> None:
         surface.blit(self._background, (0, 0))
 
-        logo_rect = self._logo.get_rect(
-            center=(settings.INTERNAL_WIDTH // 2, int(settings.INTERNAL_HEIGHT // 3 + self._logo_y_offset)),
-        )
+        logo_rect = self.logo_rect()
         surface.blit(self._logo, logo_rect)
 
         if self._particle_system is not None:
@@ -345,16 +375,26 @@ class TitleScene(BaseScene):
         # pantalla; ahora usa el mismo ámbar de acento y el mismo gris de texto
         # que el resto del juego. El fondo NO se toca: esta pantalla tiene arte
         # propio, y migrar no es sustituir el arte por una pantalla genérica.
-        start_y = logo_rect.bottom + 8
-        end = self._scroll_offset + self._max_visible
-        visible = self._menu.items[self._scroll_offset:end]
+        # AUD-446 — el origen sale de la maqueta y el desplazamiento del kit.
+        # `desplazamiento` es fraccionario mientras la lista se desliza, y de
+        # ahí sale el movimiento suave sin que esta escena lleve su propia
+        # animación.
+        start_y = self.primera_fila_y()
+        primera = int(self._menu.desplazamiento)
+        sobrante = int((self._menu.desplazamiento - primera) * self._option_spacing)
+        visible = self._menu.items[primera:primera + self._max_visible + 1]
         for idx, item in enumerate(visible):
-            i = self._scroll_offset + idx
+            i = primera + idx
             focused = i == self._menu.index
             color = Theme.ACCENT if focused else Theme.TEXT_MUTED
             text = self._font_game.render(item.label, True, color)
             ox = (settings.INTERNAL_WIDTH - text.get_width()) // 2
-            oy = start_y + idx * self._option_spacing
+            oy = start_y + idx * self._option_spacing - sobrante
+            # AUD-446 — la fila que entra o sale de la ventana se descarta.
+            # Sin esto, la de más asomaría por encima del logo mientras la
+            # lista se desliza.
+            if oy < start_y - self._option_spacing // 2:
+                continue
             if oy + self._font_size > settings.INTERNAL_HEIGHT:
                 continue
             if focused:
