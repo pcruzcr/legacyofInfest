@@ -25,7 +25,6 @@ pydantic>=2.7
 orjson>=3.10
 
 # UI
-pygame-gui>=0.6
 
 # Academic / processing
 scipy>=1.13

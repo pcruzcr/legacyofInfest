@@ -1,17 +1,64 @@
+"""
+Module: options_scene
+System: engine.scenes
+Academic Unit: N/A
+
+Los ajustes del jugador, con el kit de interfaz del propio juego.
+
+Por qué se dejó `pygame_gui` (AUD-452)
+--------------------------------------
+Todo el juego se maneja con listas de teclado dibujadas por
+`engine.ui.widgets`: el título, los archivos de partida, los logros, el
+bestiario, la tienda y —lo que más duele en la comparación— **Controles**,
+que está justo al lado en este mismo menú. Sólo esta pantalla usaba
+`pygame_gui`, con deslizadores y desplegables de ratón, su propia tipografía
+y su propio tema.
+
+No era un problema de estilo sino de manejo: en Controles te mueves con las
+flechas y confirmas con Enter; aquí había que arrastrar un deslizador y
+desplegar una lista. En un juego que se juega con teclado, un desplegable con
+foco de ratón es un cuerpo extraño.
+
+La alternativa era escribir deslizador, desplegable e interruptor propios. Se
+descartó porque replicaría widgets de ratón dentro de un menú de teclado:
+seguirían conviviendo dos formas de manejarse. El patrón que se adopta es el
+de consola —una fila por ajuste, ←→ cambia el valor, el valor se lee a la
+derecha—, que usa lo que ya existe (`MenuList` y su campo `trailing`) y hereda
+gratis dos cosas: el desplazamiento de AUD-446 —que cierra BUG-002, porque
+once filas no caben— y la escala de accesibilidad, porque el kit dibuja con
+`theme.font()`.
+
+Lo que NO se pierde al migrar
+-----------------------------
+Los once ajustes siguen estando, y hay una prueba por cada uno. También el
+aprendizaje de AUD-154: allí se descubrió que los eventos de `pygame_gui` no
+llegaban y **nada de lo que el jugador elegía se guardaba**. Aquí no hay
+eventos de terceros que puedan cambiar de API: cada cambio escribe en
+`user_settings` en el acto.
+"""
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 import pygame
-import pygame_gui
 
-from src.engine.core import settings, user_settings
+from src.engine.core import user_settings
 from src.engine.core.difficulty import Difficulty, set_difficulty
-from src.engine.core.user_settings import ESCALAS_DE_TEXTO
+from src.engine.core.events import Events
+from src.engine.core.user_settings import COLORBLIND_MODES, ESCALAS_DE_TEXTO
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.ui.theme import clear_font_cache
+from src.engine.ui.widgets import (
+    MenuItem,
+    MenuList,
+    draw_key_hints,
+    draw_screen,
+    handle_menu_navigation,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -19,474 +66,248 @@ if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
 
 
+#: Pasos del volumen. Discreto y no continuo a propósito: con el teclado, un
+#: deslizador continuo obliga a mantener la flecha y adivinar dónde parar.
+#: Once escalones dan un 0-100 % que se recorre en once pulsaciones.
+_PASOS_DE_VOLUMEN: tuple[float, ...] = tuple(i / 10 for i in range(11))
+
+_SI_NO: tuple[bool, ...] = (False, True)
+
+#: Nombres que se muestran, cada uno en su propio idioma — viene de antes de
+#: esta migración y sigue valiendo: un selector que dijera «Español / Inglés»
+#: en inglés es exactamente lo que no ayuda a quien no sabe inglés.
+_NOMBRES_IDIOMA = {"es": "ESPAÑOL", "en": "ENGLISH"}
+
+_NOMBRES_DIFICULTAD = {"easy": "FÁCIL", "normal": "NORMAL", "hard": "DIFÍCIL"}
+
+_NOMBRES_DALTONISMO = {
+    "off": "NINGUNO",
+    "protanopia": "PROTANOPIA",
+    "deuteranopia": "DEUTERANOPIA",
+    "tritanopia": "TRITANOPIA",
+}
+
+
+@dataclass
+class _Ajuste:
+    """Una fila de la pantalla: qué se ajusta y entre qué valores.
+
+    Se describen como datos y no como código porque así la lista de ajustes se
+    lee de un vistazo y añadir uno es una línea. La versión con `pygame_gui`
+    necesitaba doce líneas por ajuste —construir el widget, colocarlo, poner
+    la etiqueta, leerlo al guardar— repartidas por tres métodos distintos, y
+    ahí es donde se pierde uno.
+    """
+
+    clave: str
+    etiqueta: str
+    valores: tuple[Any, ...]
+    #: Cómo se enseña el valor. Por defecto, tal cual en mayúsculas.
+    mostrar: Callable[[Any], str] = field(default=lambda v: str(v).upper())
+
+    def indice_de(self, valor: Any) -> int:
+        """Dónde cae el valor actual, o 0 si no está entre los posibles.
+
+        Un `config.json` editado a mano puede traer cualquier cosa; caer al
+        primero es preferible a reventar la pantalla de ajustes, que es
+        justamente adonde iría alguien a arreglar el problema.
+        """
+        try:
+            return self.valores.index(valor)
+        except ValueError:
+            return 0
+
+
+def _porcentaje(v: Any) -> str:
+    return f"{float(v) * 100:.0f} %"
+
+
+def _si_no(v: Any) -> str:
+    return "SÍ" if v else "NO"
+
+
 class OptionsScene(BaseScene):
+    """Los ajustes, como una lista de teclado igual que el resto del juego."""
+
+    #: Cuántas filas se ven a la vez. Once ajustes más dos acciones no caben en
+    #: la pantalla, y recortar ajustes para que quepan sería resolver el
+    #: problema equivocado (BUG-002).
+    FILAS_VISIBLES = 5
+
     def __init__(self, context: GameContext) -> None:
         super().__init__(context)
-        self._gui_manager = pygame_gui.UIManager(
-            (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
-        )
-        self._ui_elements: list[pygame_gui.core.UIElement] = []
-        self._dirty = False
-        self._btn_subtitles: Any = None
-        self._btn_language: Any = None
-        self._idioma_actual: str = "es"
-        self._subtitles_on: bool = False
-        self._dropdown_texto: Any = None
-        self._btn_movimiento: Any = None
-        self._btn_mantener: Any = None
-        self._btn_contorno: Any = None
-        self._movimiento_reducido: bool = False
-        self._mantener_pulsado: bool = False
+        self.ajustes: list[_Ajuste] = [
+            _Ajuste("music_volume", "VOLUMEN DE MÚSICA",
+                    _PASOS_DE_VOLUMEN, _porcentaje),
+            _Ajuste("sfx_volume", "VOLUMEN DE EFECTOS",
+                    _PASOS_DE_VOLUMEN, _porcentaje),
+            _Ajuste("difficulty", "DIFICULTAD",
+                    ("easy", "normal", "hard"),
+                    lambda v: _NOMBRES_DIFICULTAD.get(str(v), str(v).upper())),
+            _Ajuste("colorblind_mode", "MODO DALTÓNICO",
+                    COLORBLIND_MODES,
+                    lambda v: _NOMBRES_DALTONISMO.get(str(v), str(v).upper())),
+            _Ajuste("subtitles_enabled", "SUBTÍTULOS DE SONIDO", _SI_NO, _si_no),
+            _Ajuste("language", "IDIOMA", ("es", "en"),
+                    lambda v: _NOMBRES_IDIOMA.get(str(v), str(v).upper())),
+            # AUD-126 — las tres barreras que más gente encuentran en un
+            # plataformas van juntas y detrás del daltonismo, para que se
+            # encuentren: una opción de accesibilidad escondida entre los
+            # ajustes de volumen no la usa quien la necesita.
+            _Ajuste("text_scale", "TAMAÑO DEL TEXTO",
+                    ESCALAS_DE_TEXTO, lambda v: f"{float(v):g}x"),
+            _Ajuste("reduced_motion", "MOVIMIENTO REDUCIDO", _SI_NO, _si_no),
+            _Ajuste("hold_to_press", "MANTENER PULSADO", _SI_NO, _si_no),
+            _Ajuste("contorno_de_enemigos", "CONTORNO DE ENEMIGOS",
+                    _SI_NO, _si_no),
+        ]
+        self._menu = MenuList()
+        self._menu.visible_rows = self.FILAS_VISIBLES
+        self._construir_filas()
 
-    #: Tamaño base de la tipografía de pygame_gui, en píxeles.
-    #:
-    #: AUD-160 — la escala de texto no llegaba a esta pantalla.
-    #:
-    #: `text_scale` la aplica `engine.ui.theme.escalar_texto`, que usan el kit
-    #: de interfaz y el sistema de diálogo. Esta pantalla no usa ninguno de los
-    #: dos: la dibuja `pygame_gui`, con su propia tipografía y su propio tema.
-    #: Así que elegir «2.0x» agrandaba el texto de todo el juego **menos el de
-    #: la pantalla donde se elige**, que es justo donde alguien que no puede
-    #: leer el texto pequeño lo necesita.
-    _TAM_FUENTE_BASE = 14
+    # ── construcción de la lista ───────────────────────────────
 
-    #: Los tipos de elemento que hay en esta pantalla.
-    #:
-    #: Hay que nombrarlos uno a uno: un bloque `defaults` **no** llega a los
-    #: elementos. Comprobado — con `defaults` el botón seguía midiendo 37×20 px
-    #: y con `button` pasó a 72×39. Es el tipo de detalle que hace que un
-    #: arreglo parezca aplicado y no lo esté.
-    _ELEMENTOS_CON_TEXTO = ("label", "button", "drop_down_menu",
-                            "horizontal_slider")
+    def _construir_filas(self) -> None:
+        filas = [
+            MenuItem(a.etiqueta, value=a.clave,
+                     trailing=a.mostrar(self.valor_de(a.clave)))
+            for a in self.ajustes
+        ]
+        filas.append(MenuItem("CONTROLES", value="CONTROLES",
+                              hint="Cambiar las teclas"))
+        filas.append(MenuItem("VOLVER", value="VOLVER"))
+        self._menu.items = filas
+        self._menu.ensure_valid()
 
-    def _tema_escalado(self) -> dict[str, Any]:
-        """El tema de pygame_gui con la tipografía a la escala del jugador."""
-        from src.engine.ui.theme import escalar_texto
+    def _refrescar_fila(self, clave: str) -> None:
+        ajuste = self._ajuste(clave)
+        for item in self._menu.items:
+            if item.value == clave and ajuste is not None:
+                item.trailing = ajuste.mostrar(self.valor_de(clave))
+                return
 
-        fuente = {"name": "noto_sans",
-                  "size": str(escalar_texto(self._TAM_FUENTE_BASE))}
-        return {elemento: {"font": dict(fuente)}
-                for elemento in self._ELEMENTOS_CON_TEXTO}
+    def _ajuste(self, clave: str) -> _Ajuste | None:
+        for a in self.ajustes:
+            if a.clave == clave:
+                return a
+        return None
 
-    def _nuevo_gestor(self) -> pygame_gui.UIManager:
-        gestor = pygame_gui.UIManager(
-            (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
-        )
-        try:
-            gestor.get_theme().load_theme(self._tema_escalado())
-            gestor.rebuild_all_from_changed_theme_data()
-        except Exception:  # una versión de pygame_gui sin temas por diccionario
-            logger.warning(
-                "opciones: no se pudo aplicar la escala de texto al tema de "
-                "pygame_gui; la pantalla se dibuja al tamaño base",
-                exc_info=True,
-            )
-        return gestor
+    # ── leer y escribir preferencias ───────────────────────────
 
-    # ── Disposición ───────────────────────────────────────────
-    #
-    # AUD-160 — la maqueta se calcula; no está clavada en píxeles.
-    #
-    # Todas las medidas eran literales: `Rect((200, y), (320, 28))`. Escritas
-    # para la escala 1×, de modo que al subir el tamaño del texto pygame_gui
-    # avisaba de once etiquetas que no caben en su rectángulo —«MOVIMIENTO
-    # REDUCIDO (sacudida, estelas)» se salía por 264 px— y las filas se
-    # desbordaban por debajo de la pantalla. La opción de accesibilidad
-    # producía justo lo contrario de lo que promete: texto grande y cortado.
-    #
-    # La pantalla mide 800 × 600 y no se puede estirar, así que **no** se
-    # escala todo por igual:
-    #
-    # * la **tipografía y el alto de fila** sí siguen la escala del jugador;
-    # * el **ancho** se reparte sobre el que hay: el control ocupa una fracción
-    #   y la etiqueta se lleva el resto, recortada al borde;
-    # * el **paso vertical** sale de dividir el alto disponible entre las filas
-    #   que hay, así que añadir una opción no vuelve a tirar la última fuera.
-    _COL_IZQ = 40
-    _MARGEN_SUP = 16
-    _MARGEN_INF = 12
-    #: Filas: título, dos deslizadores, dos desplegables, dos interruptores,
-    #: la cabecera de accesibilidad, tres controles más y la fila de botones.
-    _FILAS = 12
+    def valor_de(self, clave: str) -> Any:
+        """El valor vigente de un ajuste, leído de las preferencias vivas."""
+        return getattr(user_settings.get(), clave)
 
-    def _tam_fuente(self) -> int:
-        from src.engine.ui.theme import escalar_texto
+    def cambiar_valor(self, direccion: int) -> None:
+        """Mueve el ajuste enfocado un paso, y lo aplica en el acto.
 
-        return escalar_texto(self._TAM_FUENTE_BASE)
-
-    def _paso(self) -> int:
-        """Alto de una fila: lo que cabe, nunca menos que el texto."""
-        util = settings.INTERNAL_HEIGHT - self._MARGEN_SUP - self._MARGEN_INF
-        return max(self._alto_control() + 4, util // self._FILAS)
-
-    def _alto_control(self) -> int:
-        return self._tam_fuente() + 12
-
-    def _medir(self, texto: str) -> int:
-        """Ancho real del texto con la tipografía del tema, más un margen."""
-        try:
-            fuente = self._gui_manager.get_theme().get_font(["label"])
-            return fuente.size(texto)[0] + 12
-        except Exception:      # sin tema utilizable, se estima
-            return len(texto) * max(6, self._tam_fuente() // 2)
-
-    def _fila(self, y: int, texto: str, x: int, ancho_max: int) -> None:
-        """Dibuja la etiqueta de una fila, recortada para que no se salga."""
-        ancho = min(self._medir(texto), max(1, ancho_max))
-        pygame_gui.elements.UILabel(
-            pygame.Rect((x, y), (ancho, self._alto_control())),
-            texto, self._gui_manager,
-        )
-
-    def on_enter(self) -> None:
-        audio = self.audio
-        cfg = self._load_config()
-        self._gui_manager = self._nuevo_gestor()
-        self._ui_elements.clear()
-
-        izq = self._COL_IZQ
-        alto = self._alto_control()
-        paso = self._paso()
-        ancho_util = settings.INTERNAL_WIDTH - izq * 2
-        # El control se lleva un tercio y la etiqueta el resto. Con el texto
-        # grande el deslizador encoge en vez de empujar la etiqueta fuera.
-        w_ctrl = max(90, int(ancho_util * 0.32))
-        x_etq = izq + w_ctrl + 12
-        ancho_etq = settings.INTERNAL_WIDTH - x_etq - izq
-
-        y = self._MARGEN_SUP
-        titulo = "OPCIONES"
-        ancho_t = min(self._medir(titulo), ancho_util)
-        pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(
-                ((settings.INTERNAL_WIDTH - ancho_t) // 2, y), (ancho_t, alto)),
-            text=titulo, manager=self._gui_manager,
-        )
-        y += paso
-
-        self._slider_music = pygame_gui.elements.UIHorizontalSlider(
-            relative_rect=pygame.Rect((izq, y), (w_ctrl, alto)),
-            start_value=cfg.get("music_volume",
-                                float(audio.music_volume if audio else 0.7)),
-            value_range=(0.0, 1.0), manager=self._gui_manager,
-        )
-        self._fila(y, "VOLUMEN DE MÚSICA", x_etq, ancho_etq)
-        y += paso
-
-        self._slider_sfx = pygame_gui.elements.UIHorizontalSlider(
-            relative_rect=pygame.Rect((izq, y), (w_ctrl, alto)),
-            start_value=cfg.get("sfx_volume",
-                                float(audio.sfx_volume if audio else 1.0)),
-            value_range=(0.0, 1.0), manager=self._gui_manager,
-        )
-        self._fila(y, "VOLUMEN DE EFECTOS", x_etq, ancho_etq)
-        y += paso
-
-        self._dropdown_difficulty = pygame_gui.elements.UIDropDownMenu(
-            options_list=["easy", "normal", "hard"],
-            starting_option=cfg.get("difficulty", "normal"),
-            relative_rect=pygame.Rect((izq, y), (w_ctrl, alto)),
-            manager=self._gui_manager,
-        )
-        self._fila(y, "DIFICULTAD", x_etq, ancho_etq)
-        y += paso
-
-        self._dropdown_cb = pygame_gui.elements.UIDropDownMenu(
-            options_list=["off", "protanopia", "deuteranopia", "tritanopia"],
-            starting_option=cfg.get("colorblind_mode", "off"),
-            relative_rect=pygame.Rect((izq, y), (w_ctrl, alto)),
-            manager=self._gui_manager,
-        )
-        self._fila(y, "MODO DALTÓNICO", x_etq, ancho_etq)
-        y += paso
-
-        # AUD-036: subtitles had no UI at all. Captions for non-speech audio are
-        # implemented by engine.ui.subtitle_overlay; this is how a player turns
-        # them on.
-        self._subtitles_on = bool(cfg.get("subtitles_enabled", False))
-        self._btn_subtitles = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((izq, y), (w_ctrl, alto)),
-            text=self._subtitles_label(), manager=self._gui_manager,
-        )
-        self._fila(y, "SUBTÍTULOS DE SONIDO", x_etq, ancho_etq)
-        y += paso
-
-        # F3.1: selector de idioma. Sin esto la traducción existiría y nadie
-        # podría cambiarla sin editar config.json a mano.
-        self._idioma_actual = cfg.get("language", "es")
-        self._btn_language = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((izq, y), (w_ctrl, alto)),
-            text=self._language_label(), manager=self._gui_manager,
-        )
-        self._fila(y, "IDIOMA", x_etq, ancho_etq)
-        y += paso
-
-        # ── Accesibilidad (AUD-126) ────────────────────────────
-        # El modo daltonismo ya estaba; faltaban las tres barreras que más
-        # gente encuentran en un plataformas. Van juntas y con etiqueta propia
-        # para que se encuentren: una opción de accesibilidad escondida entre
-        # los ajustes de volumen no la usa quien la necesita.
-        self._fila(y, "ACCESIBILIDAD", izq, ancho_util)
-        y += paso
-
-        self._dropdown_texto = pygame_gui.elements.UIDropDownMenu(
-            options_list=[f"{e:g}x" for e in ESCALAS_DE_TEXTO],
-            starting_option=f"{cfg.get('text_scale', 1.0):g}x",
-            relative_rect=pygame.Rect((izq, y), (w_ctrl, alto)),
-            manager=self._gui_manager,
-        )
-        self._fila(y, "TAMAÑO DEL TEXTO", x_etq, ancho_etq)
-        y += paso
-
-        self._movimiento_reducido = bool(cfg.get("reduced_motion", False))
-        self._btn_movimiento = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((izq, y), (w_ctrl, alto)),
-            text=self._movimiento_label(), manager=self._gui_manager,
-        )
-        self._fila(y, "MOVIMIENTO REDUCIDO", x_etq, ancho_etq)
-        y += paso
-
-        # AUD-304 — estas dos comparten fila, y sin etiqueta al lado.
-        #
-        # Al añadir el contorno como una fila más, `_btn_back` y
-        # `_btn_keybindings` se salieron de la pantalla: 620 px de fondo contra
-        # los 600 que hay, y la prueba de AUD-157 lo cazó a las cuatro escalas
-        # de texto. El menú estaba lleno, así que había que hacer sitio y no
-        # empujar.
-        #
-        # Se hace sitio aquí porque son las dos únicas filas cuya etiqueta
-        # lateral sobra: el texto del propio botón ya dice qué hace y en qué
-        # estado está. Con media fila cada uno hay ancho de sobra para decirlo
-        # entero, que es lo que antes no cabía en el control de un tercio.
-        w_toggle = (ancho_util - 12) // 2
-
-        self._mantener_pulsado = bool(cfg.get("hold_to_press", False))
-        self._btn_mantener = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((izq, y), (w_toggle, alto)),
-            text=self._mantener_label(), manager=self._gui_manager,
-        )
-
-        self._contorno_enemigos = bool(cfg.get("contorno_de_enemigos", False))
-        self._btn_contorno = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((izq + w_toggle + 12, y), (w_toggle, alto)),
-            text=self._contorno_label(), manager=self._gui_manager,
-        )
-        y += paso
-
-        # Los dos botones van en la misma fila: apilados, la última se salía
-        # de la pantalla en cuanto el texto crecía.
-        w_boton = (ancho_util - 12) // 2
-        self._btn_keybindings = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((izq, y), (w_boton, alto)),
-            text="CONTROLES", manager=self._gui_manager,
-        )
-        self._btn_back = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((izq + w_boton + 12, y), (w_boton, alto)),
-            text="VOLVER", manager=self._gui_manager,
-        )
-
-        self.context.scene_manager.transition.start_fade_in(0.5)
-
-    def _subtitles_label(self) -> str:
-        return f"SUBTITLES: {'ON' if self._subtitles_on else 'OFF'}"
-
-    def _movimiento_label(self) -> str:
-        return f"MOVIMIENTO: {'REDUCIDO' if self._movimiento_reducido else 'NORMAL'}"
-
-    #: Estos dos van sin etiqueta al lado (ver `_build_ui`), así que el texto
-    #: tiene que decir qué se conmuta y no sólo cómo está.
-    def _mantener_label(self) -> str:
-        return f"ENTRADA: {'PULSAR' if self._mantener_pulsado else 'MANTENER'}"
-
-    def _contorno_label(self) -> str:
-        return f"CONTORNO ENEMIGOS: {'SI' if self._contorno_enemigos else 'NO'}"
-
-    #: Nombres que se muestran, en su propio idioma. Un desplegable que dijera
-    #: «Español / Inglés» en inglés es exactamente lo que no ayuda a quien no
-    #: sabe inglés.
-    _NOMBRES_IDIOMA = {"es": "ESPAÑOL", "en": "ENGLISH"}
-
-    def _language_label(self) -> str:
-        return self._NOMBRES_IDIOMA.get(self._idioma_actual, self._idioma_actual)
-
-    def _toggle_language(self) -> None:
-        """Alterna entre los idiomas disponibles y lo aplica al momento."""
-        from src.engine.core.i18n import IDIOMAS, set_idioma
-
-        indice = IDIOMAS.index(self._idioma_actual) if \
-            self._idioma_actual in IDIOMAS else 0
-        self._idioma_actual = IDIOMAS[(indice + 1) % len(IDIOMAS)]
-        set_idioma(self._idioma_actual)
-        if self._btn_language is not None:
-            self._btn_language.set_text(self._language_label())
-
-    def _load_config(self) -> dict[str, Any]:
-        """Current preference values, for populating the widgets."""
-        prefs = user_settings.get()
-        return {
-            "music_volume": prefs.music_volume,
-            "sfx_volume": prefs.sfx_volume,
-            "difficulty": prefs.difficulty,
-            "colorblind_mode": prefs.colorblind_mode,
-            "subtitles_enabled": prefs.subtitles_enabled,
-            "language": prefs.language,
-            "text_scale": prefs.text_scale,
-            "reduced_motion": prefs.reduced_motion,
-            "hold_to_press": prefs.hold_to_press,
-            "contorno_de_enemigos": prefs.contorno_de_enemigos,
-        }
-
-    def _save_config(self) -> None:
-        """Apply the widget values to the live preferences and persist them.
-
-        AUD-036: this used to write the values straight to a JSON file that
-        nothing ever read back, so the colourblind dropdown persisted a choice
-        that never reached the renderer. Writing through ``user_settings`` means
-        the change takes effect on the very next frame *and* survives a restart.
+        Se guarda al momento y no al salir. AUD-154 encontró esta pantalla
+        guardando **nada** porque un `if` sobre una API vieja de `pygame_gui`
+        nunca se cumplía, y el jugador no tenía forma de saberlo: los cambios
+        duraban la sesión y se perdían al cerrar. Escribiendo aquí no hay
+        ningún camino en el que el ajuste se quede sin aplicar.
         """
+        item = self._menu.current
+        if item is None:
+            return
+        ajuste = self._ajuste(str(item.value))
+        if ajuste is None:
+            return
+        actual = ajuste.indice_de(self.valor_de(ajuste.clave))
+        nuevo = ajuste.valores[(actual + direccion) % len(ajuste.valores)]
+        self._aplicar(ajuste.clave, nuevo)
+        self._refrescar_fila(ajuste.clave)
+        self.context.event_bus.emit(Events.SFX_MENU_HOVER)
+
+    def _aplicar(self, clave: str, valor: Any) -> None:
+        """Escribe el ajuste, lo persiste y hace lo que tenga efecto inmediato."""
         prefs = user_settings.get()
-        prefs.music_volume = self._slider_music.get_current_value()
-        prefs.sfx_volume = self._slider_sfx.get_current_value()
-        prefs.difficulty = self._dropdown_difficulty.selected_option[0]
-        prefs.colorblind_mode = self._dropdown_cb.selected_option[0]
-        if self._btn_subtitles is not None:
-            prefs.subtitles_enabled = self._subtitles_on
-        if self._btn_language is not None:
-            prefs.language = self._idioma_actual
-        if self._dropdown_texto is not None:
-            # El desplegable muestra «1.5x»; se guarda el número.
-            prefs.text_scale = float(
-                self._dropdown_texto.selected_option[0].rstrip("x"))
-        if self._btn_movimiento is not None:
-            prefs.reduced_motion = self._movimiento_reducido
-        if self._btn_mantener is not None:
-            prefs.hold_to_press = self._mantener_pulsado
-        if self._btn_contorno is not None:
-            prefs.contorno_de_enemigos = self._contorno_enemigos
-        # Cambiar la escala invalida toda la caché de fuentes: las que hay
-        # dentro se crearon con el tamaño anterior y seguirían saliendo
-        # pequeñas hasta reiniciar, que es cuando el jugador concluye que la
-        # opción no hace nada.
-        clear_font_cache()
+        setattr(prefs, clave, valor)
+
+        audio = self.audio
+        if clave == "music_volume" and audio is not None:
+            audio.music_volume = float(valor)
+        elif clave == "sfx_volume" and audio is not None:
+            audio.sfx_volume = float(valor)
+        elif clave == "difficulty":
+            for d in Difficulty:
+                if d.value == valor:
+                    set_difficulty(d)
+                    break
+        elif clave == "language":
+            from src.engine.core.i18n import set_idioma
+
+            set_idioma(str(valor))
+        elif clave == "text_scale":
+            # Cambiar la escala invalida toda la caché de fuentes: las que hay
+            # dentro se crearon con el tamaño anterior y seguirían saliendo
+            # pequeñas hasta reiniciar, que es cuando el jugador concluye que
+            # la opción no hace nada.
+            clear_font_cache()
+            self._construir_filas()
         prefs.save()
 
+    # ── ciclo de vida ──────────────────────────────────────────
+
+    def on_enter(self) -> None:
+        self._menu.index = 0
+        self._construir_filas()
+        self.context.scene_manager.transition.start_fade_in(0.5)
+
     def on_exit(self) -> None:
-        if self._dirty:
-            self._save_config()
-        audio = self.audio
-        if audio is not None:
-            audio.music_volume = self._slider_music.get_current_value()
-            audio.sfx_volume = self._slider_sfx.get_current_value()
-        diff_val = self._dropdown_difficulty.selected_option[0]
-        for d in Difficulty:
-            if d.value == diff_val:
-                set_difficulty(d)
-                break
-
-    #: Los eventos de pygame_gui que significan «el jugador tocó algo».
-    #:
-    #: AUD-154 — esta pantalla comprobaba `event.type == pygame.USEREVENT` y
-    #: luego `event.user_type`. Ésa es la API de pygame_gui **0.5**. Desde 0.6
-    #: cada evento tiene su propio tipo (`UI_BUTTON_PRESSED` es 32866, y
-    #: `USEREVENT` es 32865), así que la condición era falsa para todos ellos y
-    #: el cuerpo entero de este método no se ejecutaba nunca.
-    #:
-    #: Lo que eso significaba, comprobado antes de tocar nada:
-    #:
-    #: * los botones VOLVER y ATAJOS DE TECLADO no hacían nada —sólo la tecla
-    #:   Escape salía de la pantalla, y la de atajos era **inalcanzable**—;
-    #:   subtítulos, idioma, movimiento reducido y pulsar/mantener tampoco;
-    #: * `_dirty` no se ponía nunca, así que `_save_config()` no corría y
-    #:   **nada de lo que el jugador elegía se guardaba**: volumen, dificultad,
-    #:   daltonismo, tamaño de texto. Al reiniciar volvía todo al principio.
-    #:
-    #: La dificultad y los volúmenes se aplicaban igualmente porque `on_exit`
-    #: los lee del widget sin mirar `_dirty`, así que duraban la sesión y se
-    #: perdían al cerrar. Es la peor forma de fallar: parece que funciona.
-    _EVENTOS_DE_CAMBIO = (
-        pygame_gui.UI_HORIZONTAL_SLIDER_MOVED,
-        pygame_gui.UI_DROP_DOWN_MENU_CHANGED,
-    )
-
-    def process_events(self, events: list[pygame.event.Event]) -> None:
-        for event in events:
-            self._gui_manager.process_events(event)
-            if event.type == pygame_gui.UI_BUTTON_PRESSED:
-                self._dirty = True
-                if self._pulsar_boton(event.ui_element):
-                    return
-            elif event.type in self._EVENTOS_DE_CAMBIO:
-                self._dirty = True
-
-    def _pulsar_boton(self, elemento: object) -> bool:
-        """Atiende un botón. Devuelve `True` si hay que dejar de procesar.
-
-        Está extraído porque la lista creció a seis botones y dos de ellos
-        —movimiento reducido y pulsar/mantener— se quedaron sin rama cuando se
-        añadieron en AUD-126: aunque el evento hubiera llegado, esos dos
-        seguirían sin hacer nada. En una cadena de `if` dentro de un bucle
-        dentro de un `if` eso no se ve; en un método corto, sí.
-        """
-        prefs = user_settings.get()
-
-        if self._btn_subtitles is not None and elemento == self._btn_subtitles:
-            self._subtitles_on = not self._subtitles_on
-            self._btn_subtitles.set_text(self._subtitles_label())
-            # Se aplica al momento para que el jugador pueda comprobarlo sin
-            # salir del menú.
-            prefs.subtitles_enabled = self._subtitles_on
-            return True
-
-        if self._btn_language is not None and elemento == self._btn_language:
-            self._toggle_language()
-            prefs.language = self._idioma_actual
-            return True
-
-        if self._btn_movimiento is not None and elemento == self._btn_movimiento:
-            self._movimiento_reducido = not self._movimiento_reducido
-            self._btn_movimiento.set_text(self._movimiento_label())
-            prefs.reduced_motion = self._movimiento_reducido
-            return True
-
-        if self._btn_mantener is not None and elemento == self._btn_mantener:
-            self._mantener_pulsado = not self._mantener_pulsado
-            self._btn_mantener.set_text(self._mantener_label())
-            prefs.hold_to_press = self._mantener_pulsado
-            return True
-
-        if self._btn_contorno is not None and elemento == self._btn_contorno:
-            self._contorno_enemigos = not self._contorno_enemigos
-            self._btn_contorno.set_text(self._contorno_label())
-            # Se escribe en `prefs` aquí y no sólo al guardar: los enemigos
-            # consultan la preferencia cada fotograma, así que el efecto se ve
-            # en el nivel de detrás mientras el menú sigue abierto. Es el mismo
-            # trato que reciben las otras dos conmutaciones de accesibilidad.
-            prefs.contorno_de_enemigos = self._contorno_enemigos
-            return True
-
-        if elemento == self._btn_keybindings:
-            from src.engine.scenes.keybinding_scene import KeybindingScene
-            self.context.scene_manager.replace(KeybindingScene(self.context))
-            return True
-
-        if elemento == self._btn_back:
-            from src.engine.scenes.title_scene import TitleScene
-            self.context.scene_manager.replace(TitleScene(self.context))
-            return True
-
-        return False
+        pass
 
     def update(self, dt: float) -> None:
+        self._menu.update(dt)
         im = self.input
         if im is None:
             return
-        if im.is_action_just_pressed(Action.CANCEL):
-            from src.engine.scenes.title_scene import TitleScene
-            self.context.scene_manager.replace(TitleScene(self.context))
-            return
+        # Arriba/abajo, confirmar y cancelar salen del kit: una sola
+        # implementación para todas las pantallas, y así rebindear una tecla en
+        # Controles surte efecto en todas a la vez.
+        handle_menu_navigation(
+            self._menu, im,
+            on_confirm=self._activar, on_cancel=lambda: self._volver(),
+        )
+        # Izquierda/derecha es lo propio de esta pantalla: cambiar el valor de
+        # la fila enfocada sin salir de ella.
+        if im.is_action_just_pressed(Action.MOVE_RIGHT):
+            self.cambiar_valor(+1)
+        elif im.is_action_just_pressed(Action.MOVE_LEFT):
+            self.cambiar_valor(-1)
 
-        self._gui_manager.update(dt)
+    def _activar(self, item: MenuItem | None = None) -> None:
+        item = item or self._menu.current
+        if item is None:
+            return
+        if item.value == "CONTROLES":
+            from src.engine.scenes.keybinding_scene import KeybindingScene
+
+            self.context.event_bus.emit(Events.SFX_MENU_CONFIRM)
+            self.context.scene_manager.replace(KeybindingScene(self.context))
+        elif item.value == "VOLVER":
+            self._volver()
+        else:
+            # Confirmar sobre un ajuste avanza, como la flecha derecha: es lo
+            # que hace todo el mundo antes de leer que se cambia con ←→.
+            self.cambiar_valor(+1)
+
+    def _volver(self) -> None:
+        from src.engine.scenes.title_scene import TitleScene
+
+        self.context.event_bus.emit(Events.SFX_MENU_CANCEL)
+        self.context.scene_manager.replace(TitleScene(self.context))
+
+    # ── dibujo ─────────────────────────────────────────────────
 
     def draw(self, surface: pygame.Surface) -> None:
-        surface.fill((20, 20, 30))
-        self._gui_manager.draw_ui(surface)
+        top = draw_screen(surface, "OPCIONES", "Ajustes del jugador")
+        fin = self._menu.draw(surface, 40, top + 8,
+                              surface.get_width() - 80)
+        self._menu.draw_hint(surface, fin + 8)
+        draw_key_hints(surface, [
+            ("↑↓", "Elegir"),
+            ("←→", "Cambiar"),
+            ("Enter", "Aceptar"),
+            ("Esc", "Volver"),
+        ])

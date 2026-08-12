@@ -26,6 +26,8 @@ from __future__ import annotations
 import pygame
 import pytest
 
+from src.engine.ui.theme import Theme, font
+
 
 @pytest.fixture(scope="module")
 def _video():
@@ -258,51 +260,58 @@ class TestLaEscalaDeTextoLlegaAOpciones:
         return escena
 
     def test_el_texto_crece_con_la_escala(self, contexto) -> None:
-        pequeno = self._pantalla(contexto, 1.0)._btn_back.font.size("BACK")[1]
-        grande = self._pantalla(contexto, 2.0)._btn_back.font.size("BACK")[1]
+        """AUD-452 — se mide sobre el kit del juego, no sobre pygame_gui.
+
+        Lo que la prueba vigila no cambia: que subir el tamaño de texto en
+        Opciones llegue **a la propia pantalla de Opciones**, que es donde se
+        acaba de tocar. Antes se medía la fuente de un botón de `pygame_gui`;
+        ahora, la del kit, que es lo que dibuja la lista.
+        """
+        from src.engine.ui.theme import Theme, font
+
+        self._pantalla(contexto, 1.0)
+        pequeno = font(Theme.FONT_BODY).size("VOLVER")[1]
+        self._pantalla(contexto, 2.0)
+        grande = font(Theme.FONT_BODY).size("VOLVER")[1]
         assert grande > pequeno, (
-            f"la escala no llega a pygame_gui: {pequeno} px → {grande} px"
+            f"la escala no llega a la pantalla: {pequeno} px → {grande} px"
         )
 
     @pytest.mark.parametrize("escala", [1.0, 1.25, 1.5, 2.0])
     def test_nada_se_sale_de_la_pantalla(self, contexto, escala) -> None:
+        """AUD-304 destapó esto: una opción nueva empujaba el menú 20 px fuera.
+
+        Con la lista desplazable de AUD-446 el problema ya no puede darse por
+        acumulación —sólo se dibujan cinco filas—, pero sí por ancho: una
+        etiqueta larga con el texto al 200 % se sale por la derecha. Se
+        comprueba dibujando de verdad y mirando dónde acaba cada fila.
+        """
         from src.engine.core import settings
 
         escena = self._pantalla(contexto, escala)
-        # `_btn_contorno` entró en la lista con AUD-304, que es justo lo que
-        # esta prueba cazó: la opción nueva empujaba el menú 20 px fuera de la
-        # pantalla. Vigilarlo evita que la próxima haga lo mismo sin avisar.
-        for nombre in ("_btn_back", "_btn_keybindings", "_btn_mantener",
-                       "_btn_contorno", "_dropdown_texto", "_slider_music"):
-            r = getattr(escena, nombre).get_abs_rect()
-            assert r.bottom <= settings.INTERNAL_HEIGHT, (
-                f"a {escala}× «{nombre}» acaba en y={r.bottom}, fuera de la "
-                f"pantalla ({settings.INTERNAL_HEIGHT})"
+        escena.update(1 / 60)
+        superficie = pygame.Surface(
+            (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
+        fin = escena._menu.draw(superficie, 40, 100,
+                                settings.INTERNAL_WIDTH - 80)
+        assert fin <= settings.INTERNAL_HEIGHT, (
+            f"a {escala}x la lista acaba en y={fin}, fuera de la pantalla "
+            f"({settings.INTERNAL_HEIGHT})"
+        )
+        for item in escena._menu.items:
+            ancho = font(Theme.FONT_BODY).size(f"{item.label}  {item.trailing}")[0]
+            assert ancho <= settings.INTERNAL_WIDTH - 80, (
+                f"a {escala}x la fila «{item.label}» mide {ancho} px y el "
+                f"hueco es {settings.INTERNAL_WIDTH - 80}"
             )
-            assert r.right <= settings.INTERNAL_WIDTH, (
-                f"a {escala}× «{nombre}» acaba en x={r.right}, fuera de la "
-                f"pantalla ({settings.INTERNAL_WIDTH})"
-            )
-
-    @pytest.mark.parametrize("escala", [1.0, 2.0])
-    def test_pygame_gui_no_avisa_de_texto_recortado(self, contexto, escala) -> None:
-        """`UILabel` avisa cuando el texto no cabe en su rectángulo. Con la
-        maqueta en píxeles literales avisaba once veces a 2×."""
-        import warnings
-
-        with warnings.catch_warnings(record=True) as capturados:
-            warnings.simplefilter("always")
-            self._pantalla(contexto, escala)
-        recortes = [str(w.message) for w in capturados
-                    if "too small for text" in str(w.message)]
-        assert recortes == [], f"a {escala}× se recorta: {recortes}"
 
     def test_los_botones_siguen_respondiendo_con_el_texto_grande(
             self, contexto) -> None:
         """Cambiar la maqueta no puede desconectar lo que AUD-154 arregló."""
-        import pygame_gui
-
         escena = self._pantalla(contexto, 2.0)
-        escena.process_events([pygame.event.Event(
-            pygame_gui.UI_BUTTON_PRESSED, {"ui_element": escena._btn_back})])
+        for i, item in enumerate(escena._menu.items):
+            if item.value == "VOLVER":
+                escena._menu.index = i
+                break
+        escena._activar()
         assert type(contexto.scene_manager.current).__name__ == "TitleScene"

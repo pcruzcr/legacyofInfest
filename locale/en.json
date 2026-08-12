@@ -1,5 +1,7 @@
 {
   "ARCHIVOS": "FILES",
+  "Aceptar": "Accept",
+  "Ajustes del jugador": "Player settings",
   "Asignar": "Assign",
   "BESTIARIO": "BESTIARY",
   "COLLISION LAB": "COLLISION LAB",
@@ -41,6 +43,7 @@
   "No te alcanza": "Not enough coins",
   "No tienes ninguno": "You have none",
   "ONBOARDING": "ONBOARDING",
+  "OPCIONES": "OPTIONS",
   "Objetos recogidos": "Items collected",
   "PARTIDAS": "FILES",
   "PATTERN DEMO": "PATTERN DEMO",

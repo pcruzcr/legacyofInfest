@@ -43,19 +43,30 @@ _DELATORES = (
 
 
 def _rotulos() -> list[str]:
-    """Los textos que la pantalla dibuja, leídos del fuente.
+    """Los textos que la pantalla enseña: etiquetas y valores.
 
-    Se leen del fichero y no construyendo la escena porque `pygame_gui`
-    necesita un gestor vivo y un tema cargado: para comprobar que un rótulo
-    está en español no hace falta levantar media interfaz.
+    AUD-452 — se leen de la tabla de ajustes y no del fuente con expresiones
+    regulares. Aquellas buscaban `_fila(...)` y `text="..."`, que eran la
+    forma que tenía la pantalla cuando la dibujaba `pygame_gui`; al migrarla
+    al kit del juego dejaron de encontrar nada y la prueba habría pasado en
+    verde sobre una lista vacía.
+
+    Preguntar por la estructura en vez de por el texto del fichero también
+    cubre más: ahora entran los **valores** —«SÍ», «FÁCIL», «NINGUNO»—, que
+    son la mitad de lo que se lee en esta pantalla y que las expresiones
+    regulares no veían.
     """
-    fuente = RUTA.read_text(encoding="utf-8")
-    encontrados: list[str] = []
-    # `self._fila(y, "TEXTO", ...)` y `text="TEXTO"`.
-    encontrados += re.findall(r'_fila\(\s*[^,]+,\s*"([^"]+)"', fuente)
-    encontrados += re.findall(r'text="([^"]+)"', fuente)
-    encontrados += re.findall(r'titulo = "([^"]+)"', fuente)
-    return encontrados
+    from src.engine.scenes.options_scene import OptionsScene
+
+    # La pantalla sólo necesita el contexto para navegar; construirla para
+    # leer sus rótulos no requiere ni gestor de escenas ni audio.
+    escena = OptionsScene(None)          # type: ignore[arg-type]
+    textos: list[str] = ["OPCIONES"]
+    for ajuste in escena.ajustes:
+        textos.append(ajuste.etiqueta)
+        textos.extend(ajuste.mostrar(valor) for valor in ajuste.valores)
+    textos += [str(item.label) for item in escena._menu.items]
+    return textos
 
 
 def test_la_pantalla_declara_rotulos() -> None:
