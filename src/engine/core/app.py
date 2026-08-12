@@ -168,6 +168,47 @@ class App:
         self._last_scale: int = 0
         self.clock = DeltaClock()
         self.running: bool = False
+        self._pintar_primer_fotograma()
+
+    def _pintar_primer_fotograma(self) -> None:
+        """Algo en pantalla en cuanto hay ventana — AUD-449.
+
+        `_init_subsystems` tarda: plugins, audio, contexto GL, registro de
+        entidades y de escenas, y la sesión académica. Medido en la máquina de
+        auditoría, 1.986 ms entre abrir la ventana y tener una escena que
+        dibujar, más los imports de antes. Durante todo eso la ventana existe y
+        está sin pintar, y quien arranca el juego no sabe si pasó algo.
+
+        Esto no acelera el arranque ni lo pretende: pone una señal de vida
+        donde había un hueco. Es deliberadamente lo más tonto posible —un
+        color de fondo y una palabra— porque cualquier cosa mejor necesitaría
+        justo lo que todavía no está montado: el cargador de recursos, el
+        tema, la caché de tipografías.
+
+        Falla en silencio: quedarse sin arrancar por no poder pintar un
+        rótulo de cortesía sería absurdo.
+        """
+        try:
+            pantalla = pygame.display.get_surface()
+            if pantalla is None:
+                return
+            pantalla.fill(settings.BG_COLOR)
+            if not pygame.font.get_init():
+                pygame.font.init()
+            fuente = pygame.font.Font(None, 28)
+            texto = fuente.render("Cargando...", True, (200, 200, 210))
+            pantalla.blit(texto, texto.get_rect(center=(
+                settings.INTERNAL_WIDTH // 2,
+                settings.INTERNAL_HEIGHT // 2)))
+            # En la ruta GL la ventana es un contexto de OpenGL y este `flip`
+            # no publica una superficie del sistema, así que sólo se hace en
+            # el camino software. Con GL, el hueco lo tapa el primer fotograma
+            # del renderizador.
+            if not self._use_gl:
+                pygame.display.flip()
+        except pygame.error:
+            logger.debug("no se pudo pintar el fotograma de cortesía",
+                         exc_info=True)
 
     def _abrir_ventana_software(self) -> None:
         # SCALED lets SDL letterbox/upscale the window for us, so the
