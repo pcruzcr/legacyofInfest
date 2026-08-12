@@ -39,7 +39,6 @@ RAIZ = Path(__file__).resolve().parent.parent
 #: Los ficheros que un humano lee para saber qué tecla pulsar.
 DOCUMENTOS = (
     "README.md",
-    "README.en.md",
     "docs/35_USER_MANUAL.md",
     "docs/03_ARCHITECTURE.md",
     "docs/22_API_CONTRACTS.md",

@@ -10,7 +10,7 @@ date_processed: "2026-08-06"
 
 # Índice maestro de documentación
 
-**Fecha:** 9 de agosto de 2026 · **Documentos:** 71 en `docs/` (70 indexados abajo + este índice), más 5 ficheros de la raíz
+**Fecha:** 9 de agosto de 2026 · **Documentos:** 70 en `docs/` (69 indexados abajo + este índice), más 4 ficheros de la raíz
 (`README`, `CLAUDE`, `CONTRIBUTING`, `CHANGELOG` y `KNOWN_GAPS`), que también tienen fila.
 
 > **AUD-365.** Este encabezado decía 69 y la tabla tenía 75 filas: el hallazgo P3 de `docs/89`. No era una fila de más ni un documento de menos — eran **dos formas distintas de contar** sin decir cuál se usaba. Ahora el número se comprueba: `tests/test_el_indice_maestro_cuenta_bien.py` lo recuenta contra el sistema de ficheros en cada suite, que es lo que la invariante 6 de `CLAUDE.md` exige de cualquier cifra escrita en un documento.
@@ -27,7 +27,7 @@ hacer X».
 > comandos de cada uno.
 
 **Qué pasó con los documentos que no están.** Esta documentación tenía 102
-ficheros y hoy son 71 (el encabezado de arriba los cuenta). Se retiraron 35:
+ficheros y hoy son 70 (el encabezado de arriba los cuenta). Se retiraron 35:
 auditorías cerradas, informes
 de fase, hojas de ruta cumplidas y registros de decisiones ya tomadas. No eran
 documentación técnica y ninguno describía el motor de hoy — varios citaban
@@ -151,7 +151,6 @@ git si hace falta consultarlos.
 | [`69_PROMPT_AUDITORIA_MAESTRO.md`](69_PROMPT_AUDITORIA_MAESTRO.md) | Prompt maestro de auditoría |
 | [`70_INFORME_DE_AUDITORIA_VIVO.md`](70_INFORME_DE_AUDITORIA_VIVO.md) | Informe de auditoría vivo — datos medidos por iteración (AUD-305: restaurado; el §7 del prompt 69 lo exige) |
 | [`AUDIT_2026-07.es.md`](AUDIT_2026-07.es.md) | Auditoría Multidisciplinaria de Producción |
-| [`AUDIT_2026-07.en.md`](AUDIT_2026-07.en.md) | Multidisciplinary Production Audit |
 | [`89_AUDITORIA_MULTIDISCIPLINAR.md`](89_AUDITORIA_MULTIDISCIPLINAR.md) | Auditoría multidisciplinar agosto 2026 — 16 disciplinas, AUD-310 a AUD-322 |
 | [`91_PLAN_DE_CIERRE.md`](91_PLAN_DE_CIERRE.md) | Plan de cierre — inventario medido de todo lo abierto (gaps, avisos, huecos) y los ocho lotes que lo cierran; `WorldSimulation` es el último rasgo |
 | [`92_CATALOGO_DE_FENOMENOS.md`](92_CATALOGO_DE_FENOMENOS.md) | Catálogo de fenómenos ambientales — los ~90 de la taxonomía contra lo que cuesta cada uno de verdad, y los cinco que no valen la pena |
@@ -162,7 +161,7 @@ git si hace falta consultarlos.
 
 | Fichero | Qué contiene |
 |---|---|
-| [`../README.md`](../README.md) / [`../README.en.md`](../README.en.md) | La puerta de entrada del repositorio, en los dos idiomas |
+| [`../README.md`](../README.md) | La puerta de entrada del repositorio |
 | [`../CLAUDE.md`](../CLAUDE.md) | Las reglas permanentes del repositorio: invariantes, comandos reales y convenciones |
 | [`../KNOWN_GAPS.md`](../KNOWN_GAPS.md) | Huecos conocidos y su resolución. No se borra nunca una entrada: se tacha |
 | [`../CONTRIBUTING.md`](../CONTRIBUTING.md) | Cómo contribuir: ramas, mensajes de commit, qué pasa CI |
