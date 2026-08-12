@@ -104,11 +104,22 @@ una medición de GPU tomada en la integrada no vale como referencia.
 4. **`KNOWN_GAPS.md` no se borra nunca.** Una entrada resuelta se marca
    `~~[GAP-NNN] ...~~ *(Resuelto)*` y se le añade `**Resolution:**`. Formato en
    `docs/23_DATA_SCHEMAS.md` §8.
-5. **La política bilingüe es "bilingüe donde hay lector", no por decreto.**
-   Obligatorio en dos idiomas: `README.md`/`README.en.md` y los informes de
-   auditoría publicables. El material de curso va en español. Traducir los 67
-   documentos duplicaría la superficie de desincronización — la decisión está
-   razonada en `tests/test_documentacion_bilingue.py`.
+5. **Todo en español. Sin excepciones.**
+
+   > **DECISIÓN DEL DUEÑO (2026-08-11) — sustituye a la política bilingüe.**
+   > El español es la lengua del proyecto. No hay documentos en inglés, no hay
+   > parejas que sincronizar y no hay `.en.md`. Un documento nuevo se escribe
+   > en español; uno heredado en inglés se traduce, no se duplica.
+
+   Lo que esta decisión cambia respecto de la anterior, y por qué era
+   defendible antes: la política era «bilingüe donde hay lector», y su
+   argumento —traducir 95 documentos daría 190 ficheros que desincronizar—
+   sigue siendo cierto **para la duplicación**. Por eso aquí no se duplica: se
+   **sustituye**. Un solo idioma es exactamente la mitad de superficie que dos,
+   no el doble.
+
+   El curso es en español, los estudiantes son hispanohablantes y quien mantiene
+   el repositorio también. Lo vigila `tests/test_documentacion_en_espanol.py`.
 6. **Los números en la documentación son verificables o no se escriben.**
    El recuento de pruebas del README lo comprueba una prueba. Si cambias la
    suite, actualiza el número.

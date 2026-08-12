@@ -55,7 +55,6 @@ RAIZ = pathlib.Path(__file__).resolve().parent.parent
 DOCUMENTOS: list[pathlib.Path] = [
     *sorted((RAIZ / "docs").glob("*.md")),
     RAIZ / "README.md",
-    RAIZ / "README.en.md",
     RAIZ / "CONTRIBUTING.md",
     RAIZ / "KNOWN_GAPS.md",
     RAIZ / "CLAUDE.md",
@@ -117,6 +116,11 @@ MODULOS_RETIRADOS: frozenset[str] = frozenset({
     # reporte 87 §21.2 explica la decisión y cita el `git show` para recuperar
     # el fichero: la mención es historia, no una ruta que deba existir.
     "docs/VERIFICACION_FINAL.md",
+    # AUD-428: el proyecto pasa a español como lengua única y la política
+    # bilingüe se retira. Los tres se citan como historia —el porqué de la
+    # decisión anterior sigue siendo interesante— y ya no existen.
+    "tests/test_documentacion_bilingue.py",
+    "docs/AUDIT_2026-07.en.md",
 })
 
 _EXENTAS = MARCADORES_DE_POSICION | MODULOS_RETIRADOS

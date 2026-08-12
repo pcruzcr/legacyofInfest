@@ -29,7 +29,6 @@ legacy-of-infest/                      # Actual repo root
 ├── requirements.txt
 ├── requirements.lock
 ├── README.md
-├── README.en.md
 ├── LICENSE
 ├── pyproject.toml                     # Build config, dependencies, ruff/pytest/mypy settings
 ├── build.spec                         # PyInstaller build spec
