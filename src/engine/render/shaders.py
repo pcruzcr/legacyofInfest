@@ -317,6 +317,40 @@ void main() {{
 """
 
 
+def overlay_frag(swap_rb: bool) -> str:
+    """Coloca el overlay de interfaz, igual que `upload_frag` pero con su alfa.
+
+    AUD-435 — el HUD salía del revés y con rojo y azul cambiados.
+
+    El overlay de AUD-343 sube por el mismo camino rápido que la escena —su
+    superficie califica, medido— así que llega crudo: en el orden de filas de
+    pygame y con los canales de la plataforma. Se pintaba con
+    `passthrough_frag`, que no coloca nada, y de ahí las dos inversiones.
+
+    No se puede reutilizar `upload_frag` para esto: aquel termina en
+    ``vec4(color, 1.0)`` y fuerza el alfa a opaco, que es correcto para la
+    escena —su superficie no tiene canal alfa— y catastrófico aquí. AUD-344
+    dejó dicho por qué: la pasada 9b compone este overlay con `SRC_ALPHA`, y
+    uno opaco sustituye el fotograma entero dejando el escenario en negro.
+
+    De ahí que sea un sombreador propio y no un parámetro del otro: lo que
+    cambia no es un ajuste, es qué se conserva.
+    """
+    canales = "bgra" if swap_rb else "rgba"
+    return f"""
+#version 330
+uniform sampler2D scene;
+in vec2 uv;
+out vec4 fragColor;
+void main() {{
+    // Mismo volteo que `upload_frag` —OpenGL numera las filas de abajo arriba
+    // y pygame de arriba abajo— y mismo orden de canales. Lo que NO se hace
+    // es tocar el alfa: es el que decide qué parte del HUD deja ver el mundo.
+    fragColor = texture(scene, vec2(uv.x, 1.0 - uv.y)).{canales};
+}}
+"""
+
+
 GODRAY_DEFAULT_SAMPLES = 32
 
 
