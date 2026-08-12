@@ -51,86 +51,86 @@ class ItemDef(BaseModel):
 _ITEM_DEFS: dict[str, ItemDef] = {
     # ── Mejoras permanentes (se recogen en el mapa) ────────────────
     "heart_vessel": ItemDef(
-        id="heart_vessel", name="Heart Vessel",
-        description="+1 max HP",
+        id="heart_vessel", name="Vasija de corazón",
+        description="+1 de vida máxima",
         icon_color=(220, 60, 60), max_hp_bonus=1.0,
     ),
     "hollow_eye": ItemDef(
-        id="hollow_eye", name="Hollow Eye",
-        description="See enemy telegraphs clearer (damage +0.3)",
+        id="hollow_eye", name="Ojo hueco",
+        description="Lees mejor los avisos del enemigo (+0,3 de daño)",
         icon_color=(180, 100, 220), damage_bonus=0.3,
     ),
     "ancients_rib": ItemDef(
-        id="ancients_rib", name="Ancient's Rib",
-        description="+2 max HP, resists decay",
+        id="ancients_rib", name="Costilla del anciano",
+        description="+2 de vida máxima, resiste la putrefacción",
         icon_color=(200, 180, 100), max_hp_bonus=2.0,
     ),
     "swift_feather": ItemDef(
-        id="swift_feather", name="Swift Feather",
-        description="Move 10% faster",
+        id="swift_feather", name="Pluma veloz",
+        description="Te mueves un 10 % más rápido",
         icon_color=(100, 200, 220), speed_bonus=10.0,
     ),
     "thorn_ring": ItemDef(
-        id="thorn_ring", name="Thorn Ring",
-        description="Damage +0.5",
+        id="thorn_ring", name="Anillo de espinas",
+        description="+0,5 de daño",
         icon_color=(60, 180, 60), damage_bonus=0.5,
     ),
     "sunken_crown": ItemDef(
-        id="sunken_crown", name="Sunken Crown",
-        description="+3 max HP, damage +0.8",
+        id="sunken_crown", name="Corona hundida",
+        description="+3 de vida máxima, +0,8 de daño",
         icon_color=(220, 200, 40), max_hp_bonus=3.0, damage_bonus=0.8,
     ),
     # ── Moneda ─────────────────────────────────────────────────────
     "coin": ItemDef(
-        id="coin", name="Coin",
-        description="Currency for the shop",
+        id="coin", name="Moneda",
+        description="La moneda de la tienda",
         icon_color=(255, 215, 0),
     ),
     # ── Ropa equipable (se compra en la tienda) ────────────────────
     "hood_leaf": ItemDef(
-        id="hood_leaf", name="Leaf Hood",
-        description="Jungle hood. +0.2 damage",
+        id="hood_leaf", name="Capucha de hoja",
+        description="Capucha de selva. +0,2 de daño",
         icon_color=(80, 160, 60), slot="head", damage_bonus=0.2, price=30,
     ),
     "hood_ember": ItemDef(
-        id="hood_ember", name="Ember Hood",
-        description="Warm hood. +0.5 max HP",
+        id="hood_ember", name="Capucha de brasa",
+        description="Capucha abrigada. +0,5 de vida máxima",
         icon_color=(220, 120, 40), slot="head", max_hp_bonus=0.5, price=40,
     ),
     "cloak_reed": ItemDef(
-        id="cloak_reed", name="Reed Cloak",
-        description="Light cloak. +5% speed",
+        id="cloak_reed", name="Capa de junco",
+        description="Capa ligera. +5 % de velocidad",
         icon_color=(120, 180, 120), slot="body", speed_bonus=5.0, price=35,
     ),
     "cloak_serpent": ItemDef(
-        id="cloak_serpent", name="Serpent Cloak",
-        description="Venom cloak. +0.4 damage",
+        id="cloak_serpent", name="Capa de serpiente",
+        description="Capa venenosa. +0,4 de daño",
         icon_color=(60, 140, 60), slot="body", damage_bonus=0.4, price=50,
     ),
     "boots_swift": ItemDef(
-        id="boots_swift", name="Swift Boots",
-        description="+8% speed",
+        id="boots_swift", name="Botas veloces",
+        description="+8 % de velocidad",
         icon_color=(100, 200, 220), slot="feet", speed_bonus=8.0, price=45,
     ),
     "boots_stone": ItemDef(
-        id="boots_stone", name="Stone Boots",
-        description="+1 max HP",
+        id="boots_stone", name="Botas de piedra",
+        description="+1 de vida máxima",
         icon_color=(160, 160, 160), slot="feet", max_hp_bonus=1.0, price=40,
     ),
     # ── Habilidades (drops de jefes) ───────────────────────────────
     "skill_double_jump": ItemDef(
-        id="skill_double_jump", name="Double Jump",
-        description="Boss drop: jump again in mid-air",
+        id="skill_double_jump", name="Salto doble",
+        description="Botín de jefe: saltas otra vez en el aire",
         icon_color=(200, 100, 255), slot="skill",
     ),
     "skill_dash": ItemDef(
-        id="skill_dash", name="Dash",
-        description="Boss drop: quick dash forward",
+        id="skill_dash", name="Impulso",
+        description="Botín de jefe: impulso rápido hacia delante",
         icon_color=(100, 200, 255), slot="skill",
     ),
     "skill_parry": ItemDef(
-        id="skill_parry", name="Parry",
-        description="Boss drop: deflect attacks",
+        id="skill_parry", name="Parada",
+        description="Botín de jefe: desvías los ataques",
         icon_color=(255, 200, 100), slot="skill",
     ),
 }
