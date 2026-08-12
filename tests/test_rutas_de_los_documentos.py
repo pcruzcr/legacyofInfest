@@ -92,6 +92,8 @@ _PATRON = re.compile(
 MARCADORES_DE_POSICION: frozenset[str] = frozenset({
     "assets/maps/boss_your_boss.tmx",
     "assets/maps/mi_nivel/mi_nivel.tmx",
+    # AUD-431: el ejemplo de `validate_tmx.py` en la especificación traducida.
+    "assets/maps/mi_mapa/mi_mapa.tmx",
     "assets/maps/tu_stage.tmx",
     "assets/maps/your_stage.tmx",
     "assets/maps/your_stage_name.tmx",
