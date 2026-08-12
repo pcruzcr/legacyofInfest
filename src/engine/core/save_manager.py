@@ -10,7 +10,12 @@ from typing import Any
 import orjson
 
 from src.engine.core import settings
-from src.engine.core.save_data import MAX_SLOTS, SaveData
+from src.engine.core.save_data import (
+    MAX_SLOTS,
+    VERSION_CON_INVENTARIO,
+    VERSION_CON_LOGROS,
+    SaveData,
+)
 from src.engine.core.user_settings import user_data_dir
 
 logger = logging.getLogger(__name__)
@@ -105,6 +110,10 @@ def volcar_estado_en(data: SaveData) -> None:
         from src.engine.core.skill_tree import ArbolDeHabilidades
 
         data.arbol = dict(ArbolDeHabilidades.get_instance().to_dict())
+        # AUD-438 — los logros viajan con la partida, no con la instalación.
+        from src.engine.core.achievements import AchievementSystem
+
+        data.logros = dict(AchievementSystem.get_instance().volcar())
     except Exception:  # pragma: no cover - nunca a costa de la posición
         logger.warning("no se pudo volcar inventario/puntuación en la partida",
                        exc_info=True)
@@ -122,11 +131,24 @@ def aplicar_estado_de(data: SaveData) -> None:
     cobrarle la migración.
     """
     try:
+        from src.engine.core.achievements import AchievementSystem
         from src.engine.core.experience import ExperienceSystem
         from src.engine.core.inventory import get_inventory
         from src.engine.core.score_system import ScoreSystem
 
-        if data.inventory_items or data.inventory_equipped:
+        # AUD-438 — la guarda pasa a mirar la versión, no el contenido.
+        #
+        # Era `if data.inventory_items or data.inventory_equipped`, y esa
+        # condición no puede distinguir «vacío porque la partida es antigua y
+        # no pudo guardarlo» de «vacío porque acaba de empezar». Resultado
+        # medido: cargar una ranura nueva conservaba las 250 monedas y los
+        # objetos de la anterior. La versión sí los distingue, y viene dentro
+        # de la propia partida.
+        if data.version_original >= VERSION_CON_INVENTARIO:
+            get_inventory().restaurar(data.inventory_items, data.inventory_equipped)
+        elif data.inventory_items or data.inventory_equipped:
+            # Indulgencia de AUD-292: a una partida anterior a la versión 3 no
+            # se le vacía la cartera, porque no tuvo dónde guardarla.
             get_inventory().restaurar(data.inventory_items, data.inventory_equipped)
         if data.version >= 3:
             ScoreSystem.get_instance().set_score(int(data.score))
@@ -140,8 +162,16 @@ def aplicar_estado_de(data: SaveData) -> None:
             # hay y se acepta el efecto conocido —los puntos gastados vuelven—
             # porque la alternativa es empezar de cero, que es peor.
             ExperienceSystem.get_instance().from_dict({"exp": int(data.exp_total)})
+        # AUD-438 — los logros, que iban por libre en un fichero global.
+        #
+        # Misma regla de versión que el inventario y por lo mismo: desde la
+        # versión 4, lo que traiga la partida es la verdad —vacío incluido—, y
+        # por debajo se conserva lo que hubiera, porque esas partidas no
+        # pudieron guardar nada.
+        if data.version_original >= VERSION_CON_LOGROS:
+            AchievementSystem.get_instance().restaurar(data.logros)
     except Exception:  # pragma: no cover
-        logger.warning("no se pudo aplicar el inventario de la partida",
+        logger.warning("no se pudo aplicar el estado de la partida",
                        exc_info=True)
 
 

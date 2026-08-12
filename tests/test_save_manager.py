@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from src.engine.core.save_data import MAX_SLOTS, SaveData
+from src.engine.core.save_data import MAX_SLOTS, SAVE_VERSION, SaveData
 from src.engine.core.save_manager import SaveManager
 
 
@@ -65,7 +65,7 @@ class TestSaveData:
         restored = SaveData.from_dict(data)
         assert restored.slot_id == 0
         assert restored.timestamp == ""
-        assert restored.version == 3
+        assert restored.version == SAVE_VERSION
         assert restored.stage_id == ""
         assert restored.stage_index == 0
         assert restored.checkpoint_x == 0.0
@@ -84,20 +84,20 @@ class TestSaveData:
         assert restored.max_health == 5.0
         assert restored.zone_flags == {}
 
-    def test_migrate_v0_to_v3(self) -> None:
+    def test_migrate_v0_a_la_ultima(self) -> None:
         old = {"version": 0, "stage_id": "stage0"}
         migrated = SaveData.migrate(old)
-        assert migrated["version"] == 3
+        assert migrated["version"] == SAVE_VERSION
         assert "zone_flags" in migrated
         assert migrated["zone_flags"] == {}
         assert "completed_stages" in migrated
         assert migrated["completed_stages"] == []
         assert migrated["inventory_items"] == {}
 
-    def test_migrate_v1_to_v3(self) -> None:
+    def test_migrate_v1_a_la_ultima(self) -> None:
         data = {"version": 1, "stage_id": "stage0", "zone_flags": {"a": True}}
         migrated = SaveData.migrate(data)
-        assert migrated["version"] == 3
+        assert migrated["version"] == SAVE_VERSION
         assert migrated["zone_flags"] == {"a": True}
         assert migrated["completed_stages"] == []
 
@@ -106,16 +106,16 @@ class TestSaveData:
         data = {"version": 2, "stage_id": "stage0", "zone_flags": {"a": True},
                 "completed_stages": ["stage0"], "exp_total": 400}
         migrated = SaveData.migrate(data)
-        assert migrated["version"] == 3
+        assert migrated["version"] == SAVE_VERSION
         assert migrated["completed_stages"] == ["stage0"]
         assert migrated["exp_total"] == 400
         assert migrated["score"] == 0
 
-    def test_migrate_already_v3(self) -> None:
-        data = {"version": 3, "stage_id": "stage0", "zone_flags": {"a": True},
-                "completed_stages": [], "score": 120}
+    def test_migrate_de_la_ultima_no_toca_nada(self) -> None:
+        data = {"version": SAVE_VERSION, "stage_id": "stage0",
+                "zone_flags": {"a": True}, "completed_stages": [], "score": 120}
         migrated = SaveData.migrate(data)
-        assert migrated["version"] == 3
+        assert migrated["version"] == SAVE_VERSION
         assert migrated["score"] == 120
 
     def test_timestamp_auto_fill(self) -> None:
@@ -127,10 +127,14 @@ class TestSaveData:
         assert MAX_SLOTS == 5
 
     def test_version_constant(self) -> None:
-        """AUD-292 la subió a 3: la partida se lleva inventario, marcador y el
-        estado completo de experiencia."""
-        from src.engine.core.save_data import SAVE_VERSION
-        assert SAVE_VERSION == 3
+        """AUD-292 la subió a 3 —inventario, marcador y experiencia dentro de
+        la partida— y AUD-438 a 4, que mete además los logros.
+
+        Existe para que subir la versión sea una decisión y no un descuido: si
+        falla, hay un escalón nuevo en la escalera y toca comprobar que las
+        partidas viejas siguen cargando sin perder nada.
+        """
+        assert SAVE_VERSION == 4
 
 
 class TestSaveManager:

@@ -12,8 +12,21 @@ from typing import Any
 import orjson
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-SAVE_VERSION = 3
+SAVE_VERSION = 4
 MAX_SLOTS = 5
+
+#: Primera versión que guarda el inventario dentro de la partida (AUD-292).
+#:
+#: AUD-438 — hace falta el número, no un `>= SAVE_VERSION`. Desde aquí hacia
+#: arriba, un inventario vacío significa **vacío** y se aplica tal cual; por
+#: debajo se conserva el que hubiera, porque esas partidas no pudieron
+#: guardarlo. Sin esta distinción, «vacío porque es antiguo» y «vacío porque
+#: acaba de empezar» se escriben igual, y una ranura nueva heredaba la cartera
+#: de la anterior.
+VERSION_CON_INVENTARIO = 3
+
+#: Primera versión que guarda los logros dentro de la partida (AUD-438).
+VERSION_CON_LOGROS = 4
 
 
 class SaveData(BaseModel):
@@ -66,6 +79,28 @@ class SaveData(BaseModel):
     exp_estado: dict[str, int] = Field(default_factory=dict)
     #: AUD-293 — los rangos comprados del árbol de habilidades.
     arbol: dict[str, int] = Field(default_factory=dict)
+    #: AUD-438 — con qué versión se escribió esta partida **antes** de migrar.
+    #:
+    #: Hace falta porque `migrate()` reescribe `version` a la última: para
+    #: cuando alguien la lee, toda partida dice ser de la versión actual y no
+    #: hay forma de saber si su inventario vacío es «no tenía» o «no pudo
+    #: guardarlo». Ese olvido convertía la indulgencia de AUD-292 en letra
+    #: muerta y le vaciaba la cartera a quien cargara una partida de la
+    #: versión 2 — lo cazó `test_una_partida_vieja_no_vacia_la_cartera`.
+    #:
+    #: Una partida nueva nace con la versión actual, que es lo correcto: sus
+    #: campos vacíos significan vacío.
+    version_original: int = SAVE_VERSION
+    #: AUD-438 — los logros, dentro de la partida y no en un fichero global.
+    #:
+    #: `AchievementSystem` persistía en `achievements.json`, uno por
+    #: instalación: lo desbloqueado jugando una ranura aparecía desbloqueado en
+    #: todas. Un logro es progreso, y el progreso pertenece al perfil.
+    #:
+    #: Se guarda el progreso completo —no sólo qué está desbloqueado— porque un
+    #: logro de contador («mata 50 enemigos») lleva su cuenta a medias, y
+    #: perderla al cargar sería peor que no guardarlo.
+    logros: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
     @field_validator("health", "max_health")
     @classmethod
@@ -98,8 +133,26 @@ class SaveData(BaseModel):
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> SaveData:
-        """Construye una instancia desde un diccionario."""
-        return cls.model_validate(data)
+        """Construye una instancia desde un diccionario **leído de fuera**.
+
+        AUD-438 — aquí, y no en `migrate()`, se anota de qué versión viene la
+        partida. La diferencia importa: por el validador pasa **todo**,
+        incluida una `SaveData()` construida en código, y ahí el diccionario
+        crudo tampoco trae `version` porque es un valor por defecto. Anotando
+        el origen dentro de la migración, una partida nueva se marcaba como
+        versión 0 y recibía la indulgencia pensada para las antiguas — o sea,
+        heredaba el inventario de la ranura anterior, que es el defecto que
+        todo esto viene a cerrar.
+
+        Este método es el que se usa al leer de disco (`from_json` delega
+        aquí), así que es el único sitio donde «de dónde viene» tiene
+        respuesta. Sin `version` se asume antigua y se es indulgente: una
+        partida anterior a que existiera el campo no pudo guardar su
+        inventario, y vaciárselo sería cobrarle la migración (AUD-292).
+        """
+        crudo = dict(data)
+        crudo.setdefault("version_original", crudo.get("version", 0))
+        return cls.model_validate(crudo)
 
     def to_dict(self) -> dict[str, Any]:
         """Convierte la instancia a diccionario, asignando timestamp si está vacío.
@@ -144,6 +197,16 @@ class SaveData(BaseModel):
             data.setdefault("exp_estado", {})
             data.setdefault("arbol", {})
             data["version"] = 3
+        if ver < 4:
+            # AUD-438. Vacío a propósito, y con la misma lógica que AUD-292
+            # aplicó al inventario: una partida anterior a la versión 4 no
+            # pudo guardar sus logros, así que al cargarla se **conservan**
+            # los que hubiera en el fichero global. La primera grabación los
+            # vuelca dentro de la partida y a partir de ahí viajan con ella.
+            # Copiarlos aquí desde el fichero global sería peor: les daría a
+            # las cinco ranuras el mismo historial.
+            data.setdefault("logros", {})
+            data["version"] = 4
         return data
 
     def to_json(self) -> bytes:
