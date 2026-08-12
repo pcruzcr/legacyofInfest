@@ -39,35 +39,49 @@ All HUD graphics are pixel art sprites consistent with the SNES-era aesthetic. N
 
 ## 2. Layout
 
-The HUD occupies fixed regions of the 320×224 internal screen. All coordinates are in pixels, origin at top-left.
+El HUD se diseñó sobre una pantalla de 320 px de ancho y se **escala** a la
+resolución interna real (`settings.INTERNAL_WIDTH`), hoy 800×600. El factor sale
+de dividir una por otra: 800/320 = **2,5**.
+
+AUD-451 — hasta esa auditoría, las coordenadas estaban escritas en píxeles de
+la pantalla de 320 y se dibujaban **sin escalar** sobre la de 800: el HUD
+ocupaba el 40 % del ancho, arrinconado arriba a la izquierda, y el marcador de
+puntos se veía diminuto. La tabla de abajo da las dos columnas —el número de
+diseño y el que resulta en pantalla— porque el código sigue escribiéndose en
+el primero: es el que se lee junto al dibujo del layout.
+
+Todas las coordenadas son en píxeles, origen arriba a la izquierda.
 
 ```
 ┌──────────────────────────────────────────────────────────────┐  Y=0
 │  ═══════════════════════════════════════════════════════════  │
 │  │   TUTORIAL / STORY MESSAGE BOX (if active)               │  Y=0
-│  │   320×28 pixels, top of screen                          ││
+│  │   320×28 de diseño (800×70 en pantalla), arriba          ││
 │  │                                                           │  Y=14
 │  └─────────────────────────────────────────────────────────┘ │
 │  [PORTRAIT]  [♥♥♥♥♥]                          [TIMER: 0:00] │  Y=16
 │   32×32       76×8                               54×12       │
 │                                                               │  Y=28
 │                                                               │
-│                                                               │  Y=224
+│                                                               │  Y=224 (diseño)
 └──────────────────────────────────────────────────────────────┘
 ```
 
 ### 2.1 HUD Regions
 
-| Element | X | Y | Width | Height | Notes |
+Las columnas X/Y/Ancho/Alto son de **diseño** (pantalla de 320). Entre
+paréntesis, lo que mide en pantalla al multiplicar por 2,5.
+
+| Element | X | Y | Width | Height | En pantalla (×2,5) | Notes |
 |---|---|---|---|---|---|---|
-| Message box | 0 | 0 | 320 | 28 | Top overlay (moved from bottom in v1.1.0) |
-| Portrait frame | 2 | 16 | 34 | 34 | Shifted down to accommodate message box |
-| Portrait sprite | 3 | 17 | 32 | 32 | Inner sprite |
-| Heart row | 38 | 20 | 76 | 8 | Five hearts at 14px each + 2px gap |
-| Score | 124 | 2 | 128 | 14 | Points and coin balance, right-aligned (AUD-219) |
-| Timer box | 262 | 16 | 56 | 12 | Right-aligned |
-| Timer digits | 264 | 24 | — | — | Format: `M:SS` |
-| Stage banner | 0 | 88 | 320 | 48 | Center screen, slide-in |
+| Message box | 0 | 0 | 320 | 28 | 0,0 800×70 | Top overlay (moved from bottom in v1.1.0) |
+| Portrait frame | 2 | 2 | 34 | 34 | 5,5 85×85 | Marco del retrato |
+| Portrait sprite | 3 | 3 | 32 | 32 | 8,8 80×80 | Inner sprite |
+| Heart row | 38 | 6 | 76 | 8 | 95,15 190×20 | Cinco corazones, separación 16 de diseño |
+| Score | 124 | 2 | 128 | 14 | 310,5 320×35 | Puntos y monedas, alineado a la derecha (AUD-219) |
+| Timer box | 258 | 1 | 62 | 16 | 645,2 155×40 | Alineado a la derecha |
+| Timer digits | 288 | 2 | 32 | 14 | 720,5 80×35 | Formato `M:SS` |
+| Stage banner | 0 | 88 | 320 | 48 | 0,220 800×120 | Centro de pantalla, entra deslizando |
 
 ---
 
@@ -273,7 +287,7 @@ Tutorial messages are text boxes that appear at the bottom of the screen. They a
 | Property | Value |
 |---|---|
 | Position | X=0, Y=0 |
-| Size | 320×28 px |
+| Size | 320×28 de diseño (800×70 en pantalla) |
 | Background | Semi-transparent dark (alpha 180/255) |
 | Border | 1px solid gold |
 | Text color | White |
@@ -422,7 +436,7 @@ Students do not call `HUD.draw()` directly. The stage base class calls it automa
 El HUD es la capa persistente en pantalla que comunica el estado del jugador, información del escenario y eventos del juego.
 
 ### Diseño
-El HUD ocupa regiones fijas de la pantalla interna de 320×224. Todos los elementos se dibujan en espacio de pantalla (no se mueven con la cámara).
+El HUD ocupa regiones fijas, escritas en el espacio de diseño de 320 px de ancho y escaladas a la resolución interna real (AUD-451). Todos los elementos se dibujan en espacio de pantalla: no se mueven con la cámara.
 
 ### Elementos
 - **Retrato** — 32×32 px, esquina superior izquierda

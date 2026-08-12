@@ -143,7 +143,13 @@ class TestElHudLosDibuja:
         return HUD(EventBus())
 
     def _pinta(self, hud) -> pygame.Surface:
-        lienzo = pygame.Surface((320, 224))
+        # AUD-451 — la superficie es la resolución interna real. Con 320×224
+        # el marcador cae fuera del lienzo desde que la maqueta se escala, y
+        # la prueba mediría un recorte en vez del HUD.
+        from src.engine.core import settings
+
+        lienzo = pygame.Surface(
+            (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
         lienzo.fill((0, 0, 0))
         hud.draw(lienzo)
         return lienzo
@@ -167,12 +173,21 @@ class TestElHudLosDibuja:
         )
 
     def test_el_marcador_cabe_en_la_pantalla_interna(self) -> None:
-        """320×224 es todo lo que hay; salirse es recortar el número."""
+        """Salirse de la pantalla es recortar el número.
+
+        AUD-451 — el límite sale de `settings`, no de un 320×224 escrito a
+        mano. Ese número era el de la resolución que el juego dejó atrás, y
+        fijarlo aquí hacía que la prueba aprobara una maqueta que ocupaba el
+        40 % de la pantalla real.
+        """
+        from src.engine.core import settings
+
         hud = self._hud()
         hud.set_score(999999, 999)
         r = hud.score_rect()
 
-        assert r.right <= 320 and r.bottom <= 224
+        assert r.right <= settings.INTERNAL_WIDTH
+        assert r.bottom <= settings.INTERNAL_HEIGHT
         assert r.left >= 0 and r.top >= 0
 
     def test_no_pisa_ni_los_corazones_ni_el_cronometro(self) -> None:
@@ -243,8 +258,19 @@ class TestLaDocumentacionDiceLaVerdad:
         campos = [c.strip() for c in fila[0].split("|")]
         x, y, w, h = (int(campos[i]) for i in range(2, 6))
 
+        # AUD-451 — la tabla del doc está en espacio de **diseño** (320 de
+        # ancho) porque es el espacio en el que se lee junto al dibujo del
+        # layout, y el código se sigue escribiendo así. Para comparar con lo
+        # que se dibuja hay que aplicarle la misma escala que aplica el HUD.
+        from src.engine.ui.hud import ESCALA_DEL_HUD
+
+        declarada = pygame.Rect(
+            int(x * ESCALA_DEL_HUD), int(y * ESCALA_DEL_HUD),
+            round(w * ESCALA_DEL_HUD), round(h * ESCALA_DEL_HUD),
+        )
         hud = HUD(EventBus())
         hud.set_score(999999, 999)
-        assert pygame.Rect(x, y, w, h).contains(hud.score_rect()), (
-            f"el doc declara {(x, y, w, h)} y el HUD dibuja {hud.score_rect()}"
+        assert declarada.contains(hud.score_rect()), (
+            f"el doc declara {declarada} (diseño {(x, y, w, h)} x"
+            f"{ESCALA_DEL_HUD}) y el HUD dibuja {hud.score_rect()}"
         )

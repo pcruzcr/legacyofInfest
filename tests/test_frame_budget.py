@@ -183,6 +183,22 @@ class TestElPrecalentamientoDeParticulasHaceLoQuePromete:
         warmup()
         assert warmup() == 0.0, "la segunda llamada debe ser gratis"
 
+    @staticmethod
+    def _fotogramas_necesarios(escena_cls) -> int:
+        """Cuántos fotogramas tarda el precalentado entero, con holgura.
+
+        AUD-449 — cada paso consume **dos** fotogramas, no uno: se anuncia en
+        el primero y se ejecuta en el segundo. Ese anuncio previo es el arreglo
+        entero, porque el paso corre dentro de `update()` y el dibujo va
+        después: ejecutándolo en el mismo fotograma en que se anuncia, el texto
+        se pintaría cuando el bloqueo ya terminó.
+
+        Se calcula en vez de escribirse para que añadir un tercer paso de
+        precalentado no ponga esta prueba en rojo por una razón que no tiene
+        nada que ver con lo que mide.
+        """
+        return escena_cls._WARMUP_AFTER_FRAMES + len(escena_cls._WARMUP_STEPS) * 2
+
     def test_la_escena_de_inicio_precalienta_sola(self, hacer_contexto):
         """Si nadie la llama, la función de precalentamiento no sirve de nada."""
         from src.engine.scenes.splash_scene import SplashScene
@@ -191,11 +207,28 @@ class TestElPrecalentamientoDeParticulasHaceLoQuePromete:
         assert escena._warmed_up is False
         superficie = pygame.Surface((800, 600))
         escena.on_enter()
-        for _ in range(4):
+        for _ in range(self._fotogramas_necesarios(SplashScene)):
             escena.update(1 / 60)
             escena.draw(superficie)
         assert escena._warmed_up is True, (
             "la escena de inicio nunca precalienta: el tirón vuelve al título"
+        )
+
+    def test_precalentar_no_se_come_la_pantalla_de_inicio(self, hacer_contexto):
+        """El anuncio previo no puede alargar el arranque de forma visible.
+
+        Cuesta un fotograma por paso. La pantalla de inicio dura tres segundos
+        —180 fotogramas—, así que el presupuesto tiene que quedarse muy por
+        debajo: si algún día se acerca, el precalentado habrá dejado de caber
+        donde se puso justamente para que no se notara.
+        """
+        from src.engine.scenes.splash_scene import SplashScene
+
+        necesarios = self._fotogramas_necesarios(SplashScene)
+        presupuesto = int(SplashScene.SPLASH_TIME * 60)
+        assert necesarios < presupuesto // 4, (
+            f"el precalentado necesita {necesarios} de los {presupuesto} "
+            f"fotogramas que dura la pantalla de inicio"
         )
 
     def test_precalienta_un_paso_por_fotograma(self, hacer_contexto):
@@ -211,7 +244,7 @@ class TestElPrecalentamientoDeParticulasHaceLoQuePromete:
         escena.on_enter()
         superficie = pygame.Surface((800, 600))
         indices = []
-        for _ in range(len(SplashScene._WARMUP_STEPS) + 3):
+        for _ in range(self._fotogramas_necesarios(SplashScene)):
             escena.update(1 / 60)
             escena.draw(superficie)
             indices.append(escena._warmup_index)
