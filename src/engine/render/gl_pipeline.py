@@ -1043,11 +1043,43 @@ class GLRenderer:
         pygame.display.flip()
 
     def _software_fallback(self, surface: pygame.Surface) -> None:
+        """Dibuja el fotograma sin GL **y lo presenta**.
+
+        AUD-437 — presentar es parte de dibujar, y aquí faltaba.
+
+        En todo el motor hay dos `display.flip()`: el de `App.run`, que sólo
+        corre `if not self._use_gl`, y el del final de `render()`. Con tarjeta,
+        `App` no presenta nunca: delega. Y `render()` empieza con una salida
+        temprana que llama aquí y retorna **antes** de su flip.
+
+        Así que con `_use_gl` puesto y el contexto caído —perdido por el
+        driver, o nunca montado— nadie presentaba en ningún fotograma. La
+        ventana se quedaba clavada en la última imagen mientras la simulación,
+        el audio y el ratón seguían corriendo: se veía como un cuelgue y no lo
+        era. El síntoma que lo delató fue que el ratón seguía moviendo el arco
+        con la pantalla parada.
+
+        Va dentro de esta función y no en un `if` de `render()` a propósito:
+        una función que se llama «dibuja el fotograma sin GL» y deja la imagen
+        sin publicar no ha terminado su trabajo, y dejarlo fuera es justo cómo
+        se vuelve a perder cuando aparezca una tercera salida.
+        """
         display_surf = pygame.display.get_surface()
         if display_surf:
-            pygame.transform.scale_by(
-                surface, self.config.display_scale, display_surf,
-            )
+            # Se escala al tamaño **real** de la ventana, no a `surface` por
+            # `display_scale`. `scale_by` con destino exige que el destino mida
+            # exactamente eso y lanza `ValueError: Destination surface not the
+            # given width or height` cuando no coincide — y no tiene por qué
+            # coincidir: `App` abre la ventana a la resolución interna y deja
+            # que SDL la reescale (AUD-013), así que el factor del config no
+            # describe esta relación. Reventar aquí sería especialmente malo:
+            # ésta es la ruta que corre justo cuando el camino bueno ya falló.
+            if display_surf.get_size() == surface.get_size():
+                display_surf.blit(surface, (0, 0))
+            else:
+                pygame.transform.scale(surface, display_surf.get_size(),
+                                       display_surf)
+        pygame.display.flip()
 
     def trigger_chromatic_aberration(self, strength: float = 0.6) -> None:
         """Enciende la aberración cromática para un impacto fuerte.
