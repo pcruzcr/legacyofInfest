@@ -31,7 +31,6 @@ partidas reales, y el registro de escenarios de verdad.
 from __future__ import annotations
 
 import pygame
-import pygame_gui
 import pytest
 
 
@@ -74,71 +73,103 @@ def opciones(contexto):
     return escena
 
 
-def _pulsar(escena, boton) -> None:
-    """Un clic tal y como lo entrega pygame_gui 0.6."""
-    escena.process_events([
-        pygame.event.Event(pygame_gui.UI_BUTTON_PRESSED, {"ui_element": boton}),
-    ])
+def _enfocar(escena, clave: str) -> None:
+    """Pone el foco en la fila de un ajuste, por su clave."""
+    for i, item in enumerate(escena._menu.items):
+        if item.value == clave:
+            escena._menu.index = i
+            return
+    raise AssertionError(f"no hay fila para {clave!r} en Opciones")
 
 
 class TestLosBotonesDeOpcionesLlegan:
+    """AUD-452 — las mismas garantías, con el kit del juego.
+
+    Estas pruebas nacieron en AUD-154, cuando se descubrió que los eventos de
+    `pygame_gui` no llegaban y **nada de lo que el jugador elegía se
+    guardaba**. La pantalla ya no usa `pygame_gui`, pero lo que protegen sigue
+    valiendo palabra por palabra: que VOLVER salga, que CONTROLES sea
+    alcanzable, que los interruptores conmuten y que lo elegido se persista.
+    Sólo cambia por dónde se toca.
+    """
+
     def test_volver_sale_de_la_pantalla(self, contexto, opciones) -> None:
-        _pulsar(opciones, opciones._btn_back)
+        _enfocar(opciones, "VOLVER")
+        opciones._activar()
         assert type(contexto.scene_manager.current).__name__ == "TitleScene", (
-            "el botón VOLVER no hacía nada: sólo se salía con Escape"
+            "la fila VOLVER no lleva a ninguna parte"
         )
 
     def test_atajos_de_teclado_es_alcanzable(self, contexto, opciones) -> None:
         """Era la única puerta a la pantalla de teclas, y estaba tapiada."""
-        _pulsar(opciones, opciones._btn_keybindings)
+        _enfocar(opciones, "CONTROLES")
+        opciones._activar()
         assert type(contexto.scene_manager.current).__name__ == "KeybindingScene"
 
-    @pytest.mark.parametrize("boton,atributo", [
-        ("_btn_subtitles", "_subtitles_on"),
-        ("_btn_movimiento", "_movimiento_reducido"),
-        ("_btn_mantener", "_mantener_pulsado"),
+    @pytest.mark.parametrize("clave", [
+        "subtitles_enabled", "reduced_motion", "hold_to_press",
+        "contorno_de_enemigos",
     ])
-    def test_los_interruptores_cambian(self, opciones, boton, atributo) -> None:
-        antes = getattr(opciones, atributo)
-        _pulsar(opciones, getattr(opciones, boton))
-        assert getattr(opciones, atributo) is not antes
+    def test_los_interruptores_cambian(self, opciones, clave) -> None:
+        _enfocar(opciones, clave)
+        antes = opciones.valor_de(clave)
+        opciones.cambiar_valor(+1)
+        assert opciones.valor_de(clave) is not antes
 
     def test_el_idioma_cambia(self, opciones) -> None:
-        antes = opciones._idioma_actual
-        _pulsar(opciones, opciones._btn_language)
-        assert opciones._idioma_actual != antes
+        _enfocar(opciones, "language")
+        antes = opciones.valor_de("language")
+        opciones.cambiar_valor(+1)
+        assert opciones.valor_de("language") != antes
         # Se deja como estaba: `set_idioma` es global y contaminaría el resto.
-        _pulsar(opciones, opciones._btn_language)
+        opciones.cambiar_valor(-1)
 
 
 class TestLoQueSeEligeSeGuarda:
-    """`_dirty` no se ponía nunca, así que `_save_config()` no corría jamás."""
+    """AUD-154 — `_dirty` no se ponía nunca y `_save_config()` no corría jamás.
 
-    def test_mover_un_deslizador_marca_que_hay_que_guardar(self, opciones) -> None:
-        assert opciones._dirty is False
-        opciones.process_events([pygame.event.Event(
-            pygame_gui.UI_HORIZONTAL_SLIDER_MOVED,
-            {"ui_element": opciones._slider_music, "value": 0.2})])
-        assert opciones._dirty is True
+    AUD-452 quitó el problema de raíz en vez de vigilarlo: ya no hay un
+    «pendiente de guardar» que pueda quedarse a medias, porque cada cambio
+    escribe en las preferencias en el acto. Lo que se comprueba, entonces, es
+    lo que de verdad importaba: que el ajuste llegue a `user_settings`.
+    """
 
-    def test_cambiar_un_desplegable_tambien(self, opciones) -> None:
-        opciones.process_events([pygame.event.Event(
-            pygame_gui.UI_DROP_DOWN_MENU_CHANGED,
-            {"ui_element": opciones._dropdown_difficulty, "text": "hard"})])
-        assert opciones._dirty is True, (
+    def test_mover_el_volumen_llega_a_las_preferencias(self, opciones) -> None:
+        from src.engine.core import user_settings
+
+        _enfocar(opciones, "music_volume")
+        antes = float(user_settings.get().music_volume)
+        opciones.cambiar_valor(+1)
+        assert float(user_settings.get().music_volume) != antes
+
+    def test_cambiar_la_dificultad_tambien(self, opciones) -> None:
+        from src.engine.core import user_settings
+
+        _enfocar(opciones, "difficulty")
+        antes = user_settings.get().difficulty
+        opciones.cambiar_valor(+1)
+        assert user_settings.get().difficulty != antes, (
             "elegir dificultad no se guardaba: duraba la sesión y se perdía "
             "al cerrar el juego"
         )
 
-    def test_salir_aplica_la_dificultad_elegida(self, opciones) -> None:
-        from src.engine.core.difficulty import Difficulty, get_difficulty
+    def test_elegir_la_dificultad_la_aplica_al_momento(self, opciones) -> None:
+        """Antes se aplicaba en `on_exit`; ahora, al elegirla.
 
-        opciones._dropdown_difficulty.selected_option = ("hard", "hard")
-        opciones.on_exit()
+        Es mejor sitio: salir de la pantalla por un camino que no pasara por
+        ahí —un fallo, un cambio de escena desde otro sitio— dejaba la
+        dificultad elegida sin aplicar.
+        """
+        from src.engine.core.difficulty import Difficulty, get_difficulty, set_difficulty
+
+        _enfocar(opciones, "difficulty")
         try:
+            for _ in range(len(("easy", "normal", "hard"))):
+                opciones.cambiar_valor(+1)
+                if opciones.valor_de("difficulty") == "hard":
+                    break
             assert get_difficulty() is Difficulty.HARD
         finally:
-            from src.engine.core.difficulty import set_difficulty
             set_difficulty(Difficulty.NORMAL)
 
 

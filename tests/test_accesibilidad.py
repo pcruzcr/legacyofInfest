@@ -264,10 +264,37 @@ class TestLaPantallaDeOpcionesLasOfrece:
 
         Y ese es exactamente el momento en que alguien concluye que la opción
         de accesibilidad no funciona y deja de buscar ayuda en el menú.
+
+        AUD-452 — se comprueba el efecto y no el texto del método.
+
+        Antes se leía el fuente de `_save_config` buscando la llamada a
+        `clear_font_cache`. Eso ataba la prueba al nombre de un método: al
+        migrar la pantalla al kit del juego, el método pasó a llamarse
+        `_aplicar`, la garantía se seguía cumpliendo y la prueba se ponía roja
+        igual. Mirar si la fuente devuelta cambia de tamaño cubre lo mismo y
+        no se rompe al renombrar nada.
         """
-        import inspect
+        from src.engine.core import user_settings
+        from src.engine.scenes.options_scene import OptionsScene
+        from src.engine.ui.theme import Theme, clear_font_cache, font
 
-        from src.engine.scenes import options_scene
+        class _ContextoMinimo:
+            """Lo único que `_aplicar` le pide al contexto."""
 
-        guardar = inspect.getsource(options_scene.OptionsScene._save_config)
-        assert "clear_font_cache" in guardar
+            audio_manager = None
+            event_bus = None
+
+        user_settings.get().text_scale = 1.0
+        clear_font_cache()
+        escena = OptionsScene(_ContextoMinimo())   # type: ignore[arg-type]
+        antes = font(Theme.FONT_BODY).get_height()
+
+        try:
+            escena._aplicar("text_scale", 2.0)
+            assert font(Theme.FONT_BODY).get_height() > antes, (
+                "la caché sigue devolviendo la fuente del tamaño anterior: el "
+                "texto no crecería hasta reiniciar"
+            )
+        finally:
+            user_settings.get().text_scale = 1.0
+            clear_font_cache()

@@ -317,34 +317,58 @@ class TestElJugadorPuedeCambiarDeIdioma:
         escena.on_enter()
         return escena
 
+    @staticmethod
+    def _enfocar_idioma(opciones) -> None:
+        for i, item in enumerate(opciones._menu.items):
+            if item.value == "language":
+                opciones._menu.index = i
+                return
+        raise AssertionError("Opciones ya no ofrece la fila de idioma")
+
     def test_la_pantalla_de_opciones_ofrece_el_selector(self, opciones):
-        assert opciones._btn_language is not None, (
+        """AUD-452 — se pregunta por la fila, no por un botón de pygame_gui.
+
+        Lo que protege esta prueba no ha cambiado: que exista una forma de
+        cambiar de idioma **desde el juego**, porque una traducción que sólo se
+        activa editando `config.json` no existe. Lo que cambia es por dónde se
+        toca.
+        """
+        claves = [str(i.value) for i in opciones._menu.items]
+        assert "language" in claves, (
             "no hay forma de cambiar de idioma desde el juego"
         )
 
     def test_alternar_recorre_los_idiomas_y_vuelve(self, opciones):
-        inicial = opciones._idioma_actual
+        self._enfocar_idioma(opciones)
+        inicial = opciones.valor_de("language")
         vistos = {inicial}
         for _ in range(len(i18n.IDIOMAS)):
-            opciones._toggle_language()
-            vistos.add(opciones._idioma_actual)
+            opciones.cambiar_valor(+1)
+            vistos.add(opciones.valor_de("language"))
         assert vistos == set(i18n.IDIOMAS), (
             f"alternando sólo se llega a {vistos}"
         )
-        assert opciones._idioma_actual == inicial, (
+        assert opciones.valor_de("language") == inicial, (
             "dar la vuelta completa no devuelve al idioma de partida"
         )
 
     def test_alternar_aplica_el_idioma_al_momento(self, opciones):
         """Sin esto el jugador no vería el efecto hasta reiniciar."""
-        opciones._toggle_language()
-        assert i18n.idioma_actual() == opciones._idioma_actual
+        self._enfocar_idioma(opciones)
+        opciones.cambiar_valor(+1)
+        try:
+            assert i18n.idioma_actual() == opciones.valor_de("language")
+        finally:
+            # `set_idioma` es global: se deja como estaba o contamina el resto.
+            opciones.cambiar_valor(-1)
 
     def test_cada_idioma_se_nombra_en_su_propia_lengua(self, opciones):
-        """Un botón que diga «Spanish» en inglés no ayuda a quien no sabe inglés."""
-        assert opciones._NOMBRES_IDIOMA["es"] == "ESPAÑOL"
-        assert opciones._NOMBRES_IDIOMA["en"] == "ENGLISH"
+        """Un rótulo que diga «Spanish» en inglés no ayuda a quien no sabe inglés."""
+        from src.engine.scenes.options_scene import _NOMBRES_IDIOMA
+
+        assert _NOMBRES_IDIOMA["es"] == "ESPAÑOL"
+        assert _NOMBRES_IDIOMA["en"] == "ENGLISH"
         for codigo in i18n.IDIOMAS:
-            assert codigo in opciones._NOMBRES_IDIOMA, (
+            assert codigo in _NOMBRES_IDIOMA, (
                 f"el idioma '{codigo}' no tiene nombre para mostrar"
             )
