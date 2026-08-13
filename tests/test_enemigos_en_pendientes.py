@@ -39,7 +39,9 @@ class TestElCaminanteEnLaCuesta:
         """Subiendo en patrulla, los pies se pegan a la superficie: una
         cuesta ya no es un muro invisible para los enemigos."""
         cuesta = _cuesta()
-        enemigo = EnemyWalker(pygame.Vector2(30, 130), patrol_length=500)
+        # AUD-455: el y del spawn es la esquina superior (semántica de Tiled),
+        # así que para que los pies partan de y=130 el y tiene que ser 130-28.
+        enemigo = EnemyWalker(pygame.Vector2(30, 102), patrol_length=500)
         enemigo.set_collision_rects([])
         enemigo.set_pendientes(cuesta)
         for _ in range(200):
@@ -52,8 +54,9 @@ class TestElCaminanteEnLaCuesta:
         """La pared lateral del jugador (AUD-323) vale para los enemigos:
         caminando contra la cara, se frena en ella."""
         cuesta = _cuesta()
+        # AUD-455: y del spawn = esquina superior → pies a 130 igual que antes.
         enemigo = EnemyWalker(
-            pygame.Vector2(300, 130), patrol_length=1000, facing="left")
+            pygame.Vector2(300, 102), patrol_length=1000, facing="left")
         enemigo.set_collision_rects([])
         enemigo.set_pendientes(cuesta)
         for _ in range(400):

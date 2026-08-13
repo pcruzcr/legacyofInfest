@@ -51,10 +51,15 @@ class EnemyWalker(EnemyBase):
         self.facing_direction = 1 if facing == "right" else -1
 
         # Set rect size
+        # AUD-455: aquí se restaba `self.rect.height` al y del spawn, según la
+        # convención «la y del TMX son los pies». Todos los mapas del repo
+        # colocan los objetos con la base sobre el suelo —semántica nativa de
+        # Tiled, y=esquina superior—, así que todos los enemigos de suelo
+        # flotaban a la altura de su caja (el Walker de stage0 se quedaba a
+        # 1 px de poder tocar al jugador de pie). El y del TMX es la esquina
+        # superior, como lo dibuja Tiled.
         self.rect.width = 24
         self.rect.height = 28
-        self.position.y -= self.rect.height
-        self.rect.y = int(self.position.y)
 
         # Load sprites
         self._load_zone_sprites(zone, 16, 12)

@@ -104,10 +104,11 @@ class EnemyCaster(EnemyBase):
         )
 
         self._patrol_origin: pygame.Vector2 = pygame.Vector2(spawn_position)
+        # AUD-455: el y del TMX es la esquina superior (semántica nativa de
+        # Tiled); el descuento de altura hacía flotar a todos los enemigos de
+        # suelo. Ver `enemy_walker` para el porqué completo.
         self.rect.width = 20
         self.rect.height = 28
-        self.position.y -= self.rect.height
-        self.rect.y = int(self.position.y)
 
         self._shoot_cooldown: float = 0.0
         self._fire_rate: float = 2.5
