@@ -184,19 +184,17 @@ class BehaviorPredictor:
         player_health_pct: float,
         has_ranged: bool = False,
     ) -> str:
-        if health_pct < 0.3 and dist < 60:
-            return "evade"
-        if dist < 40:
-            return "attack_melee" if not has_ranged else "retreat"
-        if dist < 120 and has_ranged:
-            return "attack_ranged"
-        if dist < 120:
-            return "charge"
-        if player_health_pct < 0.3 and dist < 150:
-            return "attack_melee"
-        if dist > 200:
-            return "approach"
-        return "circle"
+        # AUD-456 — la heurística vive en `tactica_por_reglas` para que la
+        # reserva sea usable sin importar este módulo (que arrastra sklearn).
+        # Esta firma se queda como punto de entrada pública.
+        from src.framework.entities.tactica_por_reglas import accion_por_distancia
+
+        return accion_por_distancia(
+            dist=dist,
+            health_pct=health_pct,
+            player_health_pct=player_health_pct,
+            has_ranged=has_ranged,
+        )
 
 
 _global_predictor: BehaviorPredictor | None = None
