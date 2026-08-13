@@ -32,10 +32,11 @@ class EnemyAssassin(EnemyBase):
         )
 
         self._patrol_origin: pygame.Vector2 = pygame.Vector2(spawn_position)
+        # AUD-455: el y del TMX es la esquina superior (semántica nativa de
+        # Tiled); el descuento de altura hacía flotar a todos los enemigos de
+        # suelo. Ver `enemy_walker` para el porqué completo.
         self.rect.width = 16
         self.rect.height = 24
-        self.position.y -= self.rect.height
-        self.rect.y = int(self.position.y)
 
         self._is_cloaked: bool = False
         self._is_lunging: bool = False

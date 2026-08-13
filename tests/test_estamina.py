@@ -58,10 +58,10 @@ class TestApagadaNoSeNota:
 
         hud = HUD(EventBus())
         hud.set_estamina(0.0, 0.0)
-        lienzo = pygame.Surface((320, 240))
+        lienzo = pygame.Surface((800, 600))
         lienzo.fill((0, 0, 0))
         hud._draw_estamina(lienzo)
-        assert lienzo.get_at((90, 41))[:3] == (0, 0, 0)
+        assert lienzo.get_at((225, 103))[:3] == (0, 0, 0)
 
 
 class TestEncendida:
@@ -182,26 +182,26 @@ class TestLaBarra:
 
         hud = HUD(EventBus())
         hud.set_estamina(actual, maximo)
-        lienzo = pygame.Surface((320, 240))
+        lienzo = pygame.Surface((800, 600))
         lienzo.fill((0, 0, 0))
         hud._draw_estamina(lienzo)
         return lienzo
 
     def test_encendida_se_dibuja(self) -> None:
         lienzo = self._hud(100, 100)
-        assert lienzo.get_at((90, 41))[:3] != (0, 0, 0)
+        assert lienzo.get_at((225, 103))[:3] != (0, 0, 0)
 
     def test_avisa_en_ambar_cuando_queda_poco(self) -> None:
         """El jugador tiene que poder decidir **antes** de intentar el dash
         que no le va a salir."""
-        llena = self._hud(100, 100).get_at((86, 41))[:3]
-        poca = self._hud(20, 100).get_at((86, 41))[:3]
+        llena = self._hud(100, 100).get_at((215, 103))[:3]
+        poca = self._hud(20, 100).get_at((215, 103))[:3]
         assert llena != poca
 
     def test_vacia_ensena_el_carril_pero_no_el_relleno(self) -> None:
         """Vacía sigue viéndose el hueco de la barra, y eso es lo correcto:
         una barra que desaparece al gastarse no dice cuánto falta."""
-        vacia = self._hud(0, 100).get_at((100, 41))[:3]
-        llena = self._hud(100, 100).get_at((100, 41))[:3]
+        vacia = self._hud(0, 100).get_at((250, 103))[:3]
+        llena = self._hud(100, 100).get_at((250, 103))[:3]
         assert vacia != llena
         assert vacia != (0, 0, 0), "la barra desaparece al vaciarse"

@@ -204,11 +204,11 @@ class EnemyShooter(EnemyBase):
         self._use_burst: bool = False
         self._predictive_aim: bool = True
 
-        # Rect size — offset Y so the bottom aligns with spawn Y (feet on floor)
+        # Rect size — AUD-455: el y del TMX es la esquina superior (semántica
+        # nativa de Tiled), y el descuento de altura hacía flotar a todos los
+        # enemigos de suelo. Ver `enemy_walker` para el porqué completo.
         self.rect.width = 16
         self.rect.height = 24
-        self.position.y -= self.rect.height
-        self.rect.y = int(self.position.y)
 
         # Cached surfaces
         self._telegraph_warn_surf: pygame.Surface | None = None
