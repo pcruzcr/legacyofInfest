@@ -52,7 +52,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 logger = logging.getLogger(__name__)
 
@@ -162,7 +162,32 @@ class SquadBrain:
 
     def _decide_batch(self, batch: list[EnemyBase], player: Player) -> None:
         """Una sola llamada al modelo para todo el lote."""
-        from src.framework.entities.ai_predictor import get_predictor
+        # AUD-456 — si la IA aún se está cargando en segundo plano (flujo
+        # `--stage`, que se salta la pantalla de inicio de AUD-088), no se
+        # bloquea: se decide por reglas, que es la política de reserva y no
+        # necesita scikit-learn. El lote siguiente, con la carga terminada,
+        # usa el modelo. Ver `precarga_ia` para el porqué completo.
+        from src.framework.entities.precarga_ia import ia_lista
+        from src.framework.entities.tactica_por_reglas import accion_por_distancia
+
+        if not ia_lista():
+            for enemy in batch:
+                self._decisions[id(enemy)] = self._rule_decision(
+                    enemy, player, accion_por_distancia)
+                self._rule_calls += 1
+            return
+
+        try:
+            from src.framework.entities.ai_predictor import get_predictor
+        except ImportError:
+            # scikit-learn no está instalado: la IA es la heurística, para
+            # siempre. Sin esta red el ImportError subiría hasta la escena y
+            # retiraría al enemigo como si fuera un error de esa entidad.
+            for enemy in batch:
+                self._decisions[id(enemy)] = self._rule_decision(
+                    enemy, player, accion_por_distancia)
+                self._rule_calls += 1
+            return
 
         predictor = get_predictor()
         features = [self._features(e, player) for e in batch]
@@ -173,7 +198,8 @@ class SquadBrain:
             # lo que las reglas deciden para que aprenda de una política válida
             # en lugar de de ruido.
             for enemy, feature_row in zip(batch, features, strict=True):
-                decision = self._rule_decision(enemy, player)
+                decision = self._rule_decision(
+                    enemy, player, accion_por_distancia)
                 self._decisions[id(enemy)] = decision
                 predictor.add_example(
                     feature_row, predictor.action_index(decision.action),
@@ -202,15 +228,29 @@ class SquadBrain:
         )
 
     @staticmethod
-    def _rule_decision(enemy: EnemyBase, player: Player) -> Decision:
+    def _rule_decision(
+        enemy: EnemyBase,
+        player: Player,
+        reglas: Any = None,
+    ) -> Decision:
         """Política determinista de reserva.
 
         Es también la política que entrena al modelo: aprender de reglas
         sensatas converge mucho más rápido que aprender de acciones aleatorias, y
         además garantiza que el peor caso del modelo sea "se comporta como las
         reglas" en lugar de "se comporta al azar".
+
+        AUD-456 — `reglas` es la heurística pura de `tactica_por_reglas`,
+        pasada por el llamante para que este camino nunca importe
+        scikit-learn. La firma conserva el parámetro por defecto para no
+        romper llamadas externas.
         """
-        from src.framework.entities.ai_predictor import get_predictor
+        if reglas is None:
+            from src.framework.entities.tactica_por_reglas import (
+                accion_por_distancia,
+            )
+
+            reglas = accion_por_distancia
 
         dx = float(player.position.x) - float(enemy.position.x)
         dy = float(player.position.y) - float(enemy.position.y)
@@ -222,7 +262,7 @@ class SquadBrain:
         player_pct = float(player.current_health) / player_max
         has_ranged = hasattr(enemy, "fire_rate") or hasattr(enemy, "_projectiles")
 
-        action = get_predictor().get_rule_based_action(
+        action = reglas(
             dist=dist, health_pct=hp_pct,
             player_health_pct=player_pct, has_ranged=has_ranged,
         )
