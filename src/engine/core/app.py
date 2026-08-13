@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import TYPE_CHECKING, Protocol, cast
 
 import pygame
@@ -65,6 +66,26 @@ def _soporta(escena: object | None, metodo: str) -> bool:
     return escena is not None and callable(getattr(escena, metodo, None))
 
 
+def _publicar_software(origen: pygame.Surface, destino: pygame.Surface) -> None:
+    """Publica el fotograma interno en la ventana — AUD-460.
+
+    AUD-013 suprimió el escalado manual porque la ventana se creaba al tamaño
+    interno y un blit agrandado quedaba recortado a la esquina superior
+    izquierda. Ese defecto era del **tamaño de la ventana**, no del blit:
+    eliges mal las dos variables y el arreglo correcto es arreglar la
+    variable equivocada. Desde AUD-460 la ventana mide interior ×
+    `DISPLAY_SCALE` (ver `_abrir_ventana_software`), así que aquí se escala el
+    fotograma **hacia** esa ventana, y cuando coinciden no se escala nada.
+
+    El blit con destino (`pygame.transform.scale`) evita crear una superficie
+    nueva por fotograma.
+    """
+    if origen.get_size() == destino.get_size():
+        destino.blit(origen, (0, 0))
+    else:
+        pygame.transform.scale(origen, destino.get_size(), destino)
+
+
 def modo_daltonico_gl(ajustes: object | None) -> int:
     """Traduce la preferencia del jugador al entero que espera el sombreador.
 
@@ -106,8 +127,51 @@ class App:
         self._gl_renderer: GLRenderer | None = None
         self._init_pygame()
         self._init_subsystems()
+        # AUD-458 — el kernel JIT de partículas se compila ANTES del bucle.
+        self._precalentar_particulas()
+
+    def _precalentar_particulas(self) -> None:
+        """Compila el kernel JIT de partículas antes de que se necesite.
+
+        `_update_particles_njit` compila en la primera llamada con partículas
+        vivas. En el flujo normal lo paga la splash (AUD-082); en `--stage` y
+        `--boss` no hay splash —la escena se empuja encima—, y la primera
+        tanda de partículas ambientales o el primer ataque pagaban la
+        compilación: medido, 1,1 s de fotograma congelado con la caché fría en
+        la máquina de auditoría, 0,3-0,5 s en la de estudiante.
+
+        Vive aquí y no en cada flujo de entrada a propósito: si el calentador
+        se coloca en `main.py` para dos flujos, un tercer flujo lo vuelve a
+        perder. `warmup()` es idempotente —la segunda llamada vuelve al
+        instante—, así que el calentamiento de la splash sigue funcionando y
+        sólo se paga un arranque. La espera coincide con el fotograma
+        «Cargando…» de AUD-449, que por fin tiene algo que anunciar.
+
+        Falla en silencio (mismo criterio que AUD-449): un entorno sin numba
+        no puede quedarse sin arrancar por una cortesía.
+        """
+        try:
+            from src.framework.vfx.particle_system import warmup
+
+            warmup()
+        except Exception:
+            logger.debug(
+                "no se pudo precalentar el kernel de partículas", exc_info=True,
+            )
 
     def _init_pygame(self) -> None:
+        # AUD-460 — la ventana tiene que medir lo que dice. Windows escala
+        # por DPI las ventanas que no se declaran conscientes: un
+        # `set_mode((800, 600))` se presentaba borroso a un tamaño distinto en
+        # cada pantalla. Declararse consciente de DPI hace que 800×600 sean
+        # píxeles físicos.
+        if os.name == "nt":
+            try:
+                import ctypes
+
+                ctypes.windll.user32.SetProcessDPIAware()
+            except (AttributeError, OSError):
+                pass
         pygame.init()
         pygame.display.set_caption("Legacy of InFest")
 
@@ -115,7 +179,10 @@ class App:
             try:
                 import moderngl  # noqa: F401
                 pygame.display.set_mode(
-                    (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
+                    (
+                        settings.INTERNAL_WIDTH * settings.DISPLAY_SCALE,
+                        settings.INTERNAL_HEIGHT * settings.DISPLAY_SCALE,
+                    ),
                     pygame.OPENGL | pygame.DOUBLEBUF,
                 )
             # `(ImportError, pygame.error, Exception)` was redundant — Exception
@@ -198,8 +265,7 @@ class App:
             fuente = pygame.font.Font(None, 28)
             texto = fuente.render("Cargando...", True, (200, 200, 210))
             pantalla.blit(texto, texto.get_rect(center=(
-                settings.INTERNAL_WIDTH // 2,
-                settings.INTERNAL_HEIGHT // 2)))
+                pantalla.get_width() // 2, pantalla.get_height() // 2)))
             # En la ruta GL la ventana es un contexto de OpenGL y este `flip`
             # no publica una superficie del sistema, así que sólo se hace en
             # el camino software. Con GL, el hueco lo tapa el primer fotograma
@@ -211,12 +277,19 @@ class App:
                          exc_info=True)
 
     def _abrir_ventana_software(self) -> None:
-        # SCALED lets SDL letterbox/upscale the window for us, so the
-        # display surface stays at the internal resolution and _draw() can
-        # blit 1:1. See _draw() for why DISPLAY_SCALE is not applied here.
+        # AUD-460 — la ventana se crea al tamaño REAL que se quiere, sin la
+        # bandera de escalado automático de SDL: esa bandera delega en SDL el
+        # tamaño del marco y cada plataforma lo interpreta a su manera —en
+        # unas agranda la ventana hasta el escritorio, en otras la deja como
+        # está—, así que la pantalla no medía lo que `settings` promete. Aquí
+        # la medida es exacta: interior × `DISPLAY_SCALE`, y `_draw` escala
+        # el blit con `_publicar_software`.
+        escala = settings.DISPLAY_SCALE
         pygame.display.set_mode(
-            (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
-            pygame.SCALED,
+            (
+                settings.INTERNAL_WIDTH * escala,
+                settings.INTERNAL_HEIGHT * escala,
+            ),
         )
 
     def _init_gl(self) -> None:
@@ -347,7 +420,8 @@ class App:
         # `_init_subsystems`: `_init_gl` necesita el contexto para el lote de
         # sprites de AUD-342, reventaba con AttributeError y el juego caía
         # siempre al camino software, GPU y todo. Si `_init_gl` falla, ya
-        # deja dicho `_use_gl = False` y volvió la ventana a SCALED.
+        # deja dicho `_use_gl = False` y la ventana pasa al tamaño de
+        # `_abrir_ventana_software` (AUD-460).
         if self._use_gl:
             self._init_gl()
 
@@ -618,15 +692,11 @@ class App:
                 overlay=overlay,
             )
         else:
-            # AUD-013: this used to upscale internal_surface by
-            # settings.DISPLAY_SCALE and blit the result at (0, 0). The display
-            # surface, however, is created at the *internal* resolution, so with
-            # LOI_DISPLAY_SCALE=2 the game rendered an 1600x1200 image into an
-            # 800x600 window: everything but the top-left quadrant was clipped
-            # away, and two full-screen scale operations were paid every frame
-            # for the privilege. pygame.SCALED already asks SDL to upscale the
-            # window for us on the GPU, so the correct blit is 1:1.
-            pygame.display.get_surface().blit(self.internal_surface, (0, 0))
+            # AUD-460 — la ventana mide interior × DISPLAY_SCALE y aquí se
+            # escala el fotograma hacia ella. Ver `_publicar_software` sobre
+            # la historia de AUD-013.
+            _publicar_software(
+                self.internal_surface, pygame.display.get_surface())
 
     def _current_light_surface(self) -> pygame.Surface | None:
         """The active scene's lighting buffer, if it exposes one.
