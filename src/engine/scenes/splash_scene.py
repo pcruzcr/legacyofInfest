@@ -115,11 +115,17 @@ class SplashScene(BaseScene):
 
         scikit-learn es opcional: sin él la IA cae a su heurística, así que un
         `ImportError` no es un fallo.
+
+        AUD-457 — SIN HILO: esta pantalla es el único importador de
+        `ai_predictor` en el flujo normal, y cargar en paralelo con otro
+        importador deadlockea (scipy 1.9 + CPython 3.14: `_DeadlockError`
+        en `scipy.linalg.cython_blas`, o un cuelgue permanente — el que el
+        dueño veía). El flujo `--stage` / `--boss` paga su propia carga en
+        `main.py`, antes del bucle; aquí nunca hay dos importadores.
         """
-        try:
-            from src.framework.entities import ai_predictor  # noqa: F401
-        except ImportError:
-            pass
+        from src.framework.entities.precarga_ia import precargar_ia
+
+        precargar_ia()
 
     #: Un paso por fotograma. Ejecutarlos todos de golpe sumaba 3,4 s de
     #: congelación —más que la propia pantalla de inicio— y el logo se quedaba

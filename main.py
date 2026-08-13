@@ -128,6 +128,14 @@ if __name__ == "__main__":
             print(f"ERROR: No StageScene subclass found in src.stages.{args.stage}")
             sys.exit(1)
         from src.engine.core.app import App
+        from src.framework.entities.precarga_ia import precargar_ia
+        # AUD-457 — la carga de la IA va ANTES del bucle, síncrona. La splash
+        # no se actualiza en este flujo (el escenario se empuja encima), y si
+        # la carga cayera en el primer lote de `SquadBrain` congelaría la
+        # partida cuando un enemigo está encima. Un import en paralelo
+        # deadlockea (scipy 1.9 + CPython 3.14), así que aquí es el único
+        # importador: el coste (2-3 s) se paga antes de abrir la ventana.
+        precargar_ia()
         app = App(depurar=args.debug, semilla=args.semilla)
         app.scene_manager.push(scene_cls(app.context))
         app.run()
@@ -157,6 +165,10 @@ if __name__ == "__main__":
             )
             sys.exit(1)
         from src.engine.core.app import App
+        from src.framework.entities.precarga_ia import precargar_ia
+        # AUD-457 — la carga de la IA va ANTES del bucle, síncrona (ver el
+        # comentario homólogo en la rama `--stage`).
+        precargar_ia()
         app = App(depurar=args.debug, semilla=args.semilla)
         app.scene_manager.push(scene_cls(app.context))
         app.run()
