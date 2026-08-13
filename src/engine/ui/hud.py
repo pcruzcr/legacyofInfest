@@ -83,8 +83,8 @@ class HUD:
             raw_frame = AssetLoader.load_image(settings.ASSETS_DIR / "ui" / "hud_frame.png")
             fw, fh = raw_frame.get_size()
             if fw >= 6 and fh >= 6:
-                c = 2  # corner size
-                self._frame_corners = {
+                c = 2  # corner size, en la maqueta
+                esquinas = {
                     "tl": raw_frame.subsurface((0, 0, c, c)),
                     "tr": raw_frame.subsurface((fw - c, 0, c, c)),
                     "bl": raw_frame.subsurface((0, fh - c, c, c)),
@@ -96,6 +96,15 @@ class HUD:
                     "left": raw_frame.subsurface((0, c, c, fh - 2 * c)),
                     "right": raw_frame.subsurface((fw - c, c, c, fh - 2 * c)),
                 }
+                # AUD-459 — las esquinas y el grosor del borde iban a 2 px
+                # dentro de marcos de 80 px: el 9-slice escalaba el relleno y
+                # no la orla. Se escalan al mismo factor que la maqueta y los
+                # bordes se pre-escalan contra ese grosor (`ce`), no contra 2.
+                ce = _e(c)
+                self._frame_corners = {
+                    k: pygame.transform.scale(v, (ce, ce))
+                    for k, v in esquinas.items()
+                }
                 self._frame_edges = src_edges
                 src_fill = raw_frame.subsurface((c, c, fw - 2 * c, fh - 2 * c))
                 self._frame_fill = src_fill
@@ -103,10 +112,10 @@ class HUD:
                 pr = self._portrait_frame_rect
                 self._portrait_fill = pygame.transform.scale(src_fill, (pr.width, pr.height))
                 self._portrait_edges = {
-                    "top": pygame.transform.scale(src_edges["top"], (pr.width - 4, 2)),
-                    "bottom": pygame.transform.scale(src_edges["bottom"], (pr.width - 4, 2)),
-                    "left": pygame.transform.scale(src_edges["left"], (2, pr.height - 4)),
-                    "right": pygame.transform.scale(src_edges["right"], (2, pr.height - 4)),
+                    "top": pygame.transform.scale(src_edges["top"], (pr.width - 2 * ce, ce)),
+                    "bottom": pygame.transform.scale(src_edges["bottom"], (pr.width - 2 * ce, ce)),
+                    "left": pygame.transform.scale(src_edges["left"], (ce, pr.height - 2 * ce)),
+                    "right": pygame.transform.scale(src_edges["right"], (ce, pr.height - 2 * ce)),
                 }
                 # Timer background pre-scaling deferred until _timer_bg_rect is set
             else:
@@ -144,25 +153,24 @@ class HUD:
         )
         if self._frame_edges:
             tr = self._timer_bg_rect
+            # AUD-459 — grosor del borde a escala, igual que en el retrato.
+            ce = _e(2)
             self._timer_edges = {
-                "top": pygame.transform.scale(self._frame_edges["top"], (tr.width - 4, 2)),
-                "bottom": pygame.transform.scale(self._frame_edges["bottom"], (tr.width - 4, 2)),
-                "left": pygame.transform.scale(self._frame_edges["left"], (2, tr.height - 4)),
-                "right": pygame.transform.scale(self._frame_edges["right"], (2, tr.height - 4)),
+                "top": pygame.transform.scale(self._frame_edges["top"], (tr.width - 2 * ce, ce)),
+                "bottom": pygame.transform.scale(self._frame_edges["bottom"], (tr.width - 2 * ce, ce)),
+                "left": pygame.transform.scale(self._frame_edges["left"], (ce, tr.height - 2 * ce)),
+                "right": pygame.transform.scale(self._frame_edges["right"], (ce, tr.height - 2 * ce)),
             }
         self._timer_rect = _rect_escalado(288, 2, 32, 14)
         self._timer_label_rect = _rect_escalado(260, 2, 26, 12)
         self._timer_flash_timer: float = 0.0
         self._timer_flash_on: bool = False
         # Load timer font (TTF preferred for readability)
-        self._timer_digit_font: pygame.font.Font | None = None
-        try:
-            self._timer_digit_font = pygame.font.Font(
-                settings.ASSETS_DIR / "fonts" / "game.ttf", 12,
-            )
-        except (pygame.error, FileNotFoundError, PermissionError):
-            logger.warning("hud: failed to load game.ttf for timer")
-            self._timer_digit_font = None
+        # AUD-455 — iba por fuera de `theme.font()`, así que el 12 nunca se
+        # escalaba ni se le aplicaba la preferencia de accesibilidad: a 800×600
+        # el reloj se veía a 12 px reales, un tercio del que debía (AUD-451
+        # escaló el marcador y el marco del reloj, no la cifra que va dentro).
+        self._timer_digit_font: pygame.font.Font = font(_e(12))
 
         # Heart damage flash state
         self._heart_flash_timer: float = 0.0
@@ -183,14 +191,22 @@ class HUD:
             path = settings.ASSETS_DIR / "ui" / f"heart_{state}.png"
             try:
                 surf = AssetLoader.load_image(path)
-                self._heart_sprites[state] = surf
+                # AUD-459 — los rects estaban a ×escala (AUD-451) y el sprite
+                # a pelo: un corazón de 14×8 px dentro de una hilera espaciada
+                # a 40 px. El sprite se escala igual que la maqueta.
+                self._heart_sprites[state] = pygame.transform.scale(
+                    surf, (_e(surf.get_width()), _e(surf.get_height())),
+                )
             except (pygame.error, FileNotFoundError, PermissionError):
                 logger.warning("hud: failed to load heart sprite %s", path)
-                self._heart_sprites[state] = pygame.Surface((14, 8))
+                self._heart_sprites[state] = pygame.Surface((_e(14), _e(8)))
 
         try:
             sparkle_path = settings.ASSETS_DIR / "ui" / "heart_sparkle.png"
-            self._sparkle_frames = AssetLoader.load_sprite_sheet(sparkle_path, 8, 8)
+            self._sparkle_frames = [
+                pygame.transform.scale(f, (_e(8), _e(8)))
+                for f in AssetLoader.load_sprite_sheet(sparkle_path, 8, 8)
+            ]
         except (pygame.error, FileNotFoundError, PermissionError):
             logger.warning("hud: failed to load heart_sparkle.png")
             self._sparkle_frames = []
@@ -200,7 +216,9 @@ class HUD:
         for state in _PORTRAIT_STATES:
             path = settings.ASSETS_DIR / "ui" / f"portrait_{state}.png"
             try:
-                surf = AssetLoader.load_image(path, size=(32, 32))
+                # AUD-459 — el retrato se subía a 32×32 a pelo; el marco
+                # media 80×80. Misma lección que los corazones.
+                surf = AssetLoader.load_image(path, size=(_e(32), _e(32)))
                 self._portraits[state] = surf
             except (pygame.error, FileNotFoundError, PermissionError):
                 logger.warning("hud: failed to load portrait %s", state)
@@ -609,7 +627,11 @@ class HUD:
     def _draw_tiempo_bala(self, surface: pygame.Surface) -> None:
         if self._bala_fraccion < 0.0:
             return
-        bar_w, bar_h, bar_x, bar_y = 60, 4, 84, 46
+        # AUD-455 — estas tres barras eran la última maqueta sin escalar: el
+        # medidor especial, la estamina y el tiempo bala se dibujaban a 60×4 px
+        # de verdad sobre 800×600, invisibles en la esquina mientras el resto
+        # del HUD (retrato, corazones, marcador, reloj) ya estaba a ×2,5.
+        bar_x, bar_y, bar_w, bar_h = _e(84), _e(46), _e(60), _e(4)
         pct = max(0.0, min(1.0, self._bala_fraccion))
         pygame.draw.rect(surface, (30, 30, 50), (bar_x, bar_y, bar_w, bar_h))
         if pct > 0:
@@ -624,7 +646,7 @@ class HUD:
     def _draw_estamina(self, surface: pygame.Surface) -> None:
         if self._estamina_max <= 0.0:
             return
-        bar_w, bar_h, bar_x, bar_y = 60, 4, 84, 40
+        bar_x, bar_y, bar_w, bar_h = _e(84), _e(40), _e(60), _e(4)
         pct = max(0.0, min(1.0, self._estamina_actual / self._estamina_max))
         pygame.draw.rect(surface, (25, 45, 30), (bar_x, bar_y, bar_w, bar_h))
         if pct > 0:
@@ -636,10 +658,7 @@ class HUD:
         pygame.draw.rect(surface, (150, 210, 160), (bar_x, bar_y, bar_w, bar_h), 1)
 
     def _draw_special_meter(self, surface: pygame.Surface) -> None:
-        bar_w = 60
-        bar_h = 6
-        bar_x = 84
-        bar_y = 30
+        bar_x, bar_y, bar_w, bar_h = _e(84), _e(30), _e(60), _e(6)
         pct = min(1.0, self._special_current / max(self._special_max, 1.0))
         bg_color = (40, 20, 60)
         fill_color = (100, 150, 255) if pct < 1.0 else (255, 220, 50)
@@ -651,7 +670,7 @@ class HUD:
             flash = (int(pygame.time.get_ticks() / 200) % 2 == 0)
             if flash:
                 label = self._font.render("ULTIMATE READY", True, (255, 220, 50))
-                surface.blit(label, (bar_x, bar_y - 14))
+                surface.blit(label, (bar_x, bar_y - _e(14)))
 
     def _draw_save_notification(self, surface: pygame.Surface) -> None:
         if self._save_notify_timer <= 0:
@@ -692,7 +711,7 @@ class HUD:
         # Draw 9-slice frame with pre-scaled edges
         if self._frame_corners:
             r = self._portrait_frame_rect
-            c = 2
+            c = _e(2)
             surface.blit(self._frame_corners["tl"], (r.x, r.y))
             surface.blit(self._frame_corners["tr"], (r.right - c, r.y))
             surface.blit(self._frame_corners["bl"], (r.x, r.bottom - c))
@@ -729,7 +748,7 @@ class HUD:
                     "full": (200, 20, 20),
                 }
                 color = color_map.get(state, (100, 0, 0))
-                rect = pygame.Rect(x, y, 14, 8)
+                rect = pygame.Rect(x, y, _e(14), _e(8))
                 pygame.draw.rect(surface, color, rect)
                 pygame.draw.rect(surface, (255, 50, 50), rect, 1)
 
@@ -743,30 +762,32 @@ class HUD:
 
     def _draw_boss_hud(self, surface: pygame.Surface) -> None:
         """Draw boss health bar and name at top of screen."""
-        bar_width = 200
-        bar_height = 12
+        # AUD-459 — la barra era la última maqueta sin escalar: 200×12 a pelo
+        # sobre 800×600. Se escala como el resto del HUD.
+        bar_width = _e(200)
+        bar_height = _e(12)
         bar_x = (settings.INTERNAL_WIDTH - bar_width) // 2
-        bar_y = 4
+        bar_y = _e(4)
         # Boss name
         phase_text = f"PHASE {self._boss_phase_count}" if self._boss_phase_count > 0 else ""
         label = f"{self._boss_name}  {phase_text}" if phase_text else self._boss_name
         name_surf = self._font.render(label, True, (200, 180, 120))
         nx = bar_x + (bar_width - name_surf.get_width()) // 2
-        surface.blit(name_surf, (nx, bar_y - 2))
+        surface.blit(name_surf, (nx, bar_y - _e(2)))
         # Background bar
-        pygame.draw.rect(surface, (40, 30, 20), (bar_x, bar_y + 10, bar_width, bar_height))
-        pygame.draw.rect(surface, (100, 80, 50), (bar_x, bar_y + 10, bar_width, bar_height), 1)
+        pygame.draw.rect(surface, (40, 30, 20), (bar_x, bar_y + _e(10), bar_width, bar_height))
+        pygame.draw.rect(surface, (100, 80, 50), (bar_x, bar_y + _e(10), bar_width, bar_height), 1)
         # Health fill
         if self._boss_max_health > 0:
             ratio = max(0.0, self._boss_health / self._boss_max_health)
             fill_w = int(bar_width * ratio)
             color = (200, 60, 40) if ratio < 0.3 else (200, 180, 60)
             if fill_w > 0:
-                pygame.draw.rect(surface, color, (bar_x, bar_y + 10, fill_w, bar_height))
+                pygame.draw.rect(surface, color, (bar_x, bar_y + _e(10), fill_w, bar_height))
 
     def _draw_timer_background(self, surface: pygame.Surface) -> None:
         r = self._timer_bg_rect
-        c = 2
+        c = _e(2)
         if self._frame_corners:
             surface.blit(self._frame_corners["tl"], (r.x, r.y))
             surface.blit(self._frame_corners["tr"], (r.right - c, r.y))

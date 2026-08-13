@@ -11,9 +11,11 @@ from typing import Final
 INTERNAL_WIDTH: int = 800
 INTERNAL_HEIGHT: int = 600
 TARGET_FPS: int = 60
-# Window upscale factor. Applied by SDL via pygame.SCALED, not by blitting a
-# pre-scaled surface — see App._draw and AUD-013 for why doing it manually
-# clipped three quarters of the screen.
+# Window upscale factor. AUD-460: the window is really created at
+# interior × DISPLAY_SCALE and the frame blit is scaled to it
+# (`App._publicar_software`); before that the factor was only a promise.
+# El camino GL (App._init_pygame) y el software (App._abrir_ventana_software)
+# la aplican los dos.
 _raw_scale = os.environ.get("LOI_DISPLAY_SCALE", "1")
 DISPLAY_SCALE: int = max(1, int(_raw_scale) if _raw_scale.isdigit() else 1)
 

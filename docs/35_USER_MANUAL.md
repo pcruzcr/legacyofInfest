@@ -15,6 +15,16 @@ date_processed: "2026-07-14"
 **Estado:** Oficial  
 **Audiencia:** Usuarios, Jugadores, Evaluadores
 
+> **AUD-455 (2026-08-13).** Cuatro correcciones verificadas contra el
+> código real: exigía Python 3.14 cuando el mínimo real es 3.11 (CI corre
+> 3.11/3.12/3.13, ver `CLAUDE.md` y `10_LIBRARIES_AND_DEPENDENCIES.md`);
+> asignaba `X` a «Agacharse» cuando `X`/`K` es ataque largo y agacharse es
+> `↓`/`S` (ver `04_PLAYER_SPEC.md` §3); apuntaba a `assets/audio/`, una
+> carpeta que no existe — la música vive en `assets/music/` y los efectos
+> en `assets/sfx/` (ver `20_ASSET_BIBLE.md`); y el diagrama del HUD seguía
+> mostrando el área de juego a 320×224, la resolución retirada por AUD-451
+> — la interna real es 800×600.
+
 ---
 
 ## 1. ¿Qué es Legacy of InFest?
@@ -25,7 +35,7 @@ Es un motor de videojuegos 2D educativo tipo *side-scroller* ambientado en la mi
 
 | Componente | Especificación |
 |---|---|
-| Python | 3.14 o superior |
+| Python | 3.11 o superior (CI corre 3.11 / 3.12 / 3.13) |
 | Dependencias | Ver `requirements.txt` (~12 paquetes) |
 | Disco | ~500 MB (con assets) |
 | Sistema | Windows 10+, macOS 12+, Linux con X11 |
@@ -57,8 +67,9 @@ Ver `docs/82_ENVIRONMENT_SETUP_GUIDE.md` para instalación detallada y solución
 |---|---|
 | `←` / `→` | Moverse izquierda / derecha |
 | `ESPACIO` / `↑` | Saltar |
-| `Z` | Atacar (espada) |
-| `X` | Agacharse |
+| `↓` | Agacharse |
+| `Z` | Ataque corto |
+| `X` | Ataque largo |
 | `ESC` | Pausa / menú anterior |
 | `ENTER` / `Z` | Confirmar en menús |
 
@@ -86,7 +97,7 @@ Al iniciar el juego verás:
 ┌──────────────────────────────────────────────────┐
 │ ❤ ❤ ❤ ❤ ❤                     ⏱ 01:45     │
 │                                                    │
-│              [Área de juego 320×224 px]             │
+│              [Área de juego 800×600 px]             │
 │                                                    │
 │                                                    │
 │                                                    │
@@ -154,8 +165,8 @@ Desde el menú principal, selecciona **Academic Demos** para acceder a 10 labora
 |---|---|
 | "ModuleNotFoundError" | Activar venv y `pip install -r requirements.txt` |
 | Ventana no aparece | Verificar display (no WSL headless) |
-| FPS bajos | Cerrar otras aplicaciones; reducir `DISPLAY_SCALE` en `settings.py` |
-| Audio no funciona | Verificar `bgm_track` en TMX; archivos en `assets/audio/` |
+| FPS bajos | Cerrar otras aplicaciones; reducir la escala de ventana con `LOI_DISPLAY_SCALE=1` (AUD-460: la ventana se crea a interior × escala, así que el factor ahora sí cambia de verdad el tamaño y el coste) |
+| Audio no funciona | Verificar `bgm_track` en TMX; la música vive en `assets/music/` y los efectos en `assets/sfx/` |
 | Texto borroso | Usar `SDL_HINT_RENDER_SCALE_QUALITY=0` (default en el motor) |
 
 ## 10. Archivos de Salida

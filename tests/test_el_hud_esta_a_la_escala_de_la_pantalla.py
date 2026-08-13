@@ -127,6 +127,50 @@ class TestLaEscalaSaleDeLaResolucion:
         )
 
 
+class TestLosSpritesVanALaEscala:
+    def test_el_corazon_entero_mide_35x20(self, hud) -> None:
+        """AUD-459 — los rects estaban a ×2,5 y los sprites a pelo.
+
+        El corazón de 14×8 px dentro de una hilera espaciada a 40 px es la
+        mitad del defecto del «HUD desacomodado»: la maqueta prometía una
+        silueta de 35×20 y en pantalla había una de 14×8.
+        """
+        from src.engine.ui.theme import escalar
+
+        assert hud._heart_sprites["full"].get_size() == (
+            escalar(14), escalar(8),
+        )
+
+    def test_el_retrato_mide_80x80(self, hud) -> None:
+        """Un retrato de 32×32 dentro de un marco de 85×85 es una miniatura."""
+        from src.engine.ui.theme import escalar
+
+        assert hud._portraits["normal"].get_size() == (
+            escalar(32), escalar(32),
+        )
+
+    def test_la_barra_del_jefe_ocupa_mas_de_la_mitad(self, hud) -> None:
+        """La barra del jefe era la última maqueta sin escalar: 200 px a pelo."""
+        hud.set_boss_hud("JEFE", 50.0, 100.0, 1, 0)
+        lienzo = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
+        hud._draw_boss_hud(lienzo)
+        rachas_anchas = []
+        for y in range(lienzo.get_height()):
+            racha = 0
+            for x in range(lienzo.get_width()):
+                if lienzo.get_at((x, y))[:3] != (0, 0, 0):
+                    racha += 1
+                elif racha:
+                    rachas_anchas.append(racha)
+                    racha = 0
+            if racha:
+                rachas_anchas.append(racha)
+        assert rachas_anchas, "la barra del jefe no se dibujó"
+        assert max(rachas_anchas) >= settings.INTERNAL_WIDTH // 2, (
+            "la barra del jefe sigue a la escala de la maqueta de 320 px"
+        )
+
+
 class TestElDocumentoDiceLaVerdad:
     def test_la_spec_no_sigue_hablando_de_320(self) -> None:
         """Invariante 6 de CLAUDE.md: los números del doc son verificables."""
