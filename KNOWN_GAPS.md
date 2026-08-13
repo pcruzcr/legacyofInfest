@@ -2147,3 +2147,132 @@ está.
   falla por lo que **aparece nuevo**), que es lo que convierte el informe en
   guardián. Hoy no se hace porque fallaría de entrada por las diecisiete, y un
   gate que nace en rojo se desactiva.
+
+## ~~[GAP-053] Cuatro módulos de `src/engine/ui/` sin ninguna entrada en `22_API_CONTRACTS.md`~~ *(Resuelto)*
+
+- **File:** `src/engine/ui/minimap.py`, `subtitle_overlay.py`, `theme.py`, `widgets.py`
+- **Phase:** AUD-455 (2026-08-13), revisión manual de código línea a línea
+- **Reason:** `22_API_CONTRACTS.md` §7 documenta `HUD`, `MessageBox` y
+  `ScreenBanner`, pero los otros cuatro módulos de `src/engine/ui/` —el
+  minimapa, los subtítulos, el sistema de tema (`Theme`/`escalar`/`font`, del
+  que dependen `MessageBox` y `ScreenBanner` para la escala de accesibilidad
+  de AUD-451) y los widgets compartidos— no tienen ninguna sección. Se citan
+  por nombre en `03_ARCHITECTURE.md`, `52_EVENT_MAP.md` y otros documentos,
+  pero nunca se documenta su API pública.
+- **Resolution:** Añadidas `### 7.4`–`7.7` a `22_API_CONTRACTS.md` con la API
+  pública real de las cuatro clases (`Theme`, `MenuItem`/`MenuList` y el
+  mobiliario de pantalla de `widgets.py`, `Minimap`, `SubtitleOverlay`),
+  verificada contra los cuatro ficheros fuente.
+
+## ~~[GAP-054] `src/framework/ecs/components.py` — 20 componentes sin documentar en `23_DATA_SCHEMAS.md`~~ *(Resuelto)*
+
+- **File:** `src/framework/ecs/components.py`, `docs/23_DATA_SCHEMAS.md`
+- **Phase:** AUD-455 (2026-08-13), revisión manual de código línea a línea
+- **Reason:** El módulo define 20 clases de componente (confirmado por
+  `grep -n "^class "`); `23_DATA_SCHEMAS.md` no menciona ninguna por nombre.
+  Es el mismo patrón de deuda que motivó el resto de las correcciones AUD-455
+  en `22_API_CONTRACTS.md` (código que evolucionó sin que el contrato lo
+  siguiera).
+- **Resolution:** Añadida la sección §11 a `23_DATA_SCHEMAS.md` con los 20
+  componentes, sus campos y para qué sirve cada uno (incluidos los 3
+  retirados por AUD-123: `Gravedad`, `Renderizable`, `Etiqueta`, marcados como
+  inexistentes en vez de omitidos en silencio). De paso se corrigió la tabla
+  de espacios de coordenadas de la misma §10, que documentaba «espacio de
+  pantalla» como 320×224 cuando la resolución interna real es 800×600.
+
+## ~~[GAP-055] 28 escenas de `src/engine/scenes/` sin ninguna entrada en `22_API_CONTRACTS.md`~~ *(Resuelto)*
+
+- **File:** `src/engine/scenes/` — `achievement_scene.py`, `bestiary_scene.py`,
+  `boss_rush_entry.py`, `code_panel.py`, `combo_demo_scene.py`,
+  `end_credits_scene.py`, `game_over_scene.py`, `inventory_scene.py`,
+  `keybinding_scene.py`, `leaderboard_scene.py`, `load_game_scene.py`,
+  `loading_scene.py`, `pipeline_builder_scene.py`, `progress_scene.py`,
+  `quiz_system.py`, `sandbox_scene.py`, `shop_scene.py`, `skill_tree_scene.py`,
+  `splash_scene.py`, `stage_error_scene.py`, `stage_wizard_scene.py`,
+  `story_scene.py`, `student_login_scene.py`, `title_scene.py`,
+  `transition_manager.py` (parcialmente documentada en §6.3/6.4),
+  `tutorial_overlay.py`, `tutorial_scene.py`, `unit_theory_scene.py`,
+  `world_map_scene.py`
+- **Phase:** AUD-455 (2026-08-13), revisión manual de código línea a línea
+- **Reason:** De las 48 escenas de `src/engine/scenes/`, `22_API_CONTRACTS.md`
+  §16-17 sólo documenta las 4 demo/laboratorio con API pública propia
+  (`DemoMenuScene`, `FilterDemoScene`, `VisionDemoScene`, `PatternDemoScene`),
+  las 7 escenas de laboratorio teórico (§16.5, verificadas en esta misma
+  pasada — sus listas de modos coinciden con el código real) y la
+  infraestructura compartida (`scene_registry`, `debug_overlay`,
+  `param_panel`, `demo_layout`, `demo_utils`, `options_scene`,
+  `demo_common`). Las 28 escenas de contenido/menú listadas arriba —
+  inventario, tienda, bestiario, créditos, game over, mapa del mundo, login
+  de estudiante, etc.— no aparecen en el documento ni una sola vez (grep de
+  sus 15 nombres de clase principales: **un** acierto, y era una mención de
+  paso en la sección de `SceneManager`). No se abrieron los 28 ficheros en
+  esta pasada por volumen: se deja como hueco explícito en vez de una
+  cobertura desigual.
+- **Resolution:** Añadida `### 17.8` a `22_API_CONTRACTS.md`. De los 28
+  ficheros: 16 escenas sólo implementan los 4 métodos abstractos de
+  `BaseScene` sin API propia —se dice explícitamente en vez de dejarlo en
+  silencio—; 7 escenas tienen `__init__` u otros métodos propios
+  (`GameOverScene`, `UnitTheoryScene`, `StageErrorScene`, `LoadGameScene`,
+  `StudentLoginScene`, `TitleScene`, `SplashScene`); 4 ficheros no son
+  `BaseScene` en absoluto y documentan sus propias clases auxiliares
+  (`code_panel.py`, `loading_scene.py` con `LoadTask`+`LoadingScene`,
+  `quiz_system.py`, `tutorial_overlay.py`); y `boss_rush_entry.py` resultó no
+  ser una escena en absoluto sino un módulo de funciones (AUD-191) — también
+  documentado. 16+7+4+1 = 28. Verificado contra los 28 ficheros fuente.
+
+## ~~[GAP-056] `StageScene`, física, mundo, combate, IA y academic sin API en `22_API_CONTRACTS.md`~~ *(Resuelto)*
+
+- **File:** `src/framework/scenes/stage_scene.py`, `src/framework/physics/`,
+  `src/framework/world/`, `src/framework/combate/`, `src/framework/ai/`,
+  `src/framework/academic/`
+- **Phase:** AUD-455 (2026-08-13), revisión manual de código línea a línea
+- **Reason:** `StageScene` es la clase que orquesta cada nivel jugable y se
+  citaba narrativamente en 8 documentos sin tener nunca una sección de API en
+  `22_API_CONTRACTS.md`. Los directorios de física, combate, IA, mundo y
+  material académico estaban en la misma situación.
+- **Resolution:** Añadida `### 11.8` con la API pública real de `StageScene`
+  (ganchos sobreescribibles, `stage_key`, métodos heredados de los mixins de
+  `stage_parts/`) y `## 20` completa (12 subsecciones, `20.1`–`20.12`) con
+  `physics/` (capas de colisión, perfiles de física, el resolutor de
+  movimiento), `combate/` (canales de daño, efectos temporales), `ai/`
+  (A* de navegación, y el script Lua marcado explícitamente como no
+  conectado — AUD-022/R-11) y `academic/` (el temario de 10 unidades, el
+  progreso del estudiante, la sesión): 12 ficheros con API pública
+  documentada (`physics/` 3, `combate/` 2, `ai/` 2, `world/` 2, `academic/`
+  3), más `stage_scene.py` y los 12 mixins de `stage_parts/` leídos para
+  extraer la superficie pública de `StageScene` — 25 ficheros en total
+  abiertos en esta pasada. No documentada la API interna de los mixins de
+  `stage_parts/` (casi enteramente privada) — ver [[GAP-057]] para lo que
+  queda de `vfx/`.
+- **Nota:** al resolverse, este hueco se dividió: lo que quedaba de `vfx/`
+  (13 módulos) pasó a [[GAP-057]] por ser una superficie distinta (efectos
+  visuales, no lógica de juego) con su propio criterio de prioridad.
+
+## ~~[GAP-057] 13 módulos de `src/framework/vfx/` sin API en `22_API_CONTRACTS.md`~~ *(Resuelto)*
+
+- **File:** `src/framework/vfx/ambient_particles.py`, `cielo.py`, `contorno.py`,
+  `damage_numbers.py`, `hit_effects.py`, `lighting.py`, `particle_system.py`,
+  `post_processing.py`, `pulso.py`, `sombras.py`, `sombras_proyectadas.py`,
+  `trail_system.py`, `weather_system.py`
+- **Phase:** AUD-455 (2026-08-13), revisión manual de código línea a línea
+- **Reason:** Desprendido de [[GAP-056]] al resolverse: `fog_of_war.py` y
+  `water_effect.py` ya tienen descripción de comportamiento (no firmas) en
+  `46_FOG_OF_WAR.md`/`47_WATER_EFFECT.md`, pero los otros 13 módulos de
+  efectos visuales de `src/framework/vfx/` no tenían ninguna sección de API
+  ni documento dedicado.
+- **Resolution:** Añadidas `### 20.13`–`20.25` a `22_API_CONTRACTS.md` con
+  la API pública real de los 13 módulos — partículas (`ParticleEmitter`/
+  `ParticleSystem`, con el kernel numba opcional), iluminación (`LightSource`/
+  `LightSystem`), sombras proyectadas por vector (Unidad II), el cielo
+  procedural derivado de `EnvironmentState`, el contorno de silueta de
+  accesibilidad, la sombra bajo los pies, números de daño, el catálogo de
+  `HitEffects`, post-procesado de pantalla completa (bloom, viñeta, filtro de
+  daltonismo — con la optimización de AUD-138 documentada), el pulso visual
+  al compás, estelas de movimiento, partículas de ambiente y el sistema de
+  clima. Verificado contra los 13 ficheros fuente. `src/framework/vfx/`
+  queda completo en `22_API_CONTRACTS.md`.
+- **Nota:** con esto se cierra la cadena GAP-053→057; `22_API_CONTRACTS.md`
+  cubre ahora la totalidad de `src/framework/` y `src/engine/` con secciones
+  de API verificadas, salvo los métodos internos (`_`-prefijados, casi
+  siempre privados) de los mixins de `src/framework/scenes/stage_parts/`,
+  que se dejaron fuera deliberadamente por bajo valor de contrato público.

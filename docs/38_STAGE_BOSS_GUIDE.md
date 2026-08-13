@@ -15,6 +15,16 @@ date_processed: "2026-07-14"
 **Estado:** Oficial  
 **Audiencia:** Estudiantes (referencia rápida para construir su asignación)
 
+> **AUD-455 (2026-08-13).** Tres correcciones verificadas contra el código
+> real. §2.2 inventaba los tipos de `Collision` `Solid_OneWay`/`Hazard`/
+> `Death` — la capa sólo admite `Solid` y `Platform`; poner ahí un peligro
+> lo convierte en suelo sólido en silencio (ver `06_TMX_SPEC.md` §9.2). §3.2
+> pasaba `phases=`/`boss_name=` al constructor de `BossBase`, que no los
+> acepta — se fijan después con `set_phases()`/`set_boss_name()` (ver
+> `BOSS_CREATION.md` §2 y `src/stages/boss_venado/boss_venado.py`). Y el
+> mismo ejemplo definía `_get_animation_state()`, un nombre que la clase
+> base nunca llama — el gancho real es `_get_animation_key()`.
+
 ---
 
 ## 1. Primeros Pasos
@@ -93,12 +103,18 @@ Abre Tiled → Nuevo mapa:
 
 **Colisiones en `Collision`:**
 
+La capa `Collision` sólo admite **dos** tipos — cualquier otro valor, o ninguno, se trata como `Solid`:
+
 | Tipo | Descripción |
 |---|---|
 | `Solid` | Paredes, pisos, techos (colisión completa) |
-| `Solid_OneWay` | Plataforma de un solo sentido (solo desde arriba) |
-| `Hazard` | Zonas de daño al contacto |
-| `Death` | Muerte instantánea al tocar |
+| `Platform` | Plataforma de un solo sentido (atravesable desde abajo) |
+
+**Los peligros van en `Objects`, nunca en `Collision`.** `HazardZone` (daño al
+contacto) y `DeathPit` (muerte instantánea) son objetos de la capa `Objects`,
+con su propio `type` (ver `06_TMX_SPEC.md` §9.2). Ponerlos en `Collision` no
+los convierte en zona de daño: los convierte en **suelo sólido**,
+silenciosamente — es el error más común al construir un mapa.
 
 ### 2.3 Escribir la Clase del Stage
 
@@ -189,11 +205,18 @@ Los bosses no requieren TMX (el arena se define en código o en un TMX separado)
 ```python
 import pygame
 from src.framework.entities.boss_base import BossBase, BossPhase
-from src.framework.entities.enemy_base import EnemyState
 
 class MiBoss(BossBase):
     def __init__(self, spawn_position: pygame.Vector2):
-        phases = [
+        # `BossBase.__init__` NO acepta `phases` ni `boss_name` — se fijan
+        # después, con `set_phases()` y `set_boss_name()`.
+        super().__init__(
+            spawn_position=spawn_position,
+            max_health=100.0,
+            damage_on_contact=0.5,
+        )
+        self.set_boss_name("Mi Boss")
+        self.set_phases([
             BossPhase(
                 phase_index=0,
                 health_threshold=0.0,      # Transiciona en health < threshold
@@ -203,13 +226,7 @@ class MiBoss(BossBase):
             ),
             # Fase 2 (health < 50%):
             # BossPhase(phase_index=1, health_threshold=0.5, ...)
-        ]
-        super().__init__(
-            spawn_position=spawn_position,
-            max_health=100.0,
-            phases=phases,
-            boss_name="Mi Boss",
-        )
+        ])
 
     def _patrol_behavior(self, dt):
         # Movimiento idle/patrulla
@@ -219,7 +236,7 @@ class MiBoss(BossBase):
         # Movimiento en combate + disparar ataques
         pass
 
-    def _get_animation_state(self) -> str:
+    def _get_animation_key(self) -> str:
         return "idle"
 
     def _build_hitbox(self) -> pygame.Rect:

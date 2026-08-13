@@ -1,162 +1,174 @@
 ---
 document_id: "LOI-SYLLABUS-028B"
-title: "Sample Syllabus — Legacy of InFest: Game Development Practicum"
-aliases: ["Sample Syllabus"]
-tags: ["syllabus", "sample", "academic"]
-description: "Sample course syllabus"
+title: "Programa de muestra — Legacy of InFest: prácticas de desarrollo de videojuegos"
+aliases: ["Programa de muestra", "Sample Syllabus"]
+tags: ["silabo", "muestra", "academico"]
+description: "Programa de curso de muestra"
 source: "docs/78_SAMPLE_SYLLABUS.md"
-date_processed: "2026-07-14"
+date_processed: "2026-08-13"
 ---
 
-# Sample Syllabus — Legacy of InFest: Game Development Practicum
+# Programa de muestra — Legacy of InFest: prácticas de desarrollo de videojuegos
 
-**Course:** CS 4XXX / GDD 4XXX — Game Development & Digital Image Processing  
-**Instructor:** [Name]  
-**Term:** [Semester]  
-**Prerequisites:** CS 2XXX (Object-Oriented Programming) or equivalent  
-**Credits:** 3-4 (varies by institution)
+**Curso:** CS 4XXX / GDD 4XXX — Desarrollo de videojuegos y procesamiento digital de imágenes
+**Profesor(a):** [Nombre]
+**Periodo:** [Semestre]
+**Prerrequisitos:** CS 2XXX (Programación orientada a objetos) o equivalente
+**Créditos:** 3-4 (varía según la institución)
 
----
-
-## Course Description
-
-Students build a complete 2D action-platformer game using the Legacy of InFest framework, applying concepts from linear algebra, computer graphics, digital image processing, and pattern recognition. The course is project-based: students design levels, program enemy AI, create bosses, and integrate processing pipelines for visual effects.
-
----
-
-## Learning Objectives
-
-By the end of this course, students will be able to:
-
-1. Apply vector mathematics to game movement and collision
-2. Implement Bézier curves and interpolation for animation
-3. Manipulate color spaces and alpha blending
-4. Use AABB collision detection and resolution
-5. Apply convolution kernels (blur, sharpen, edge detection)
-6. Implement image segmentation and feature extraction
-7. Build pattern recognition pipelines (K-means, PCA, template matching)
-8. Design and implement a multi-phase boss encounter
-9. Create a complete, playable game stage with enemies and collectibles
-10. Use TMX-based level design tools
+> **AUD-455.** Traduce el documento. Es una **plantilla de muestra** para
+> que otros profesores adapten, no una descripción literal de la API de
+> este repositorio — de ahí los corchetes `[Nombre]`/`[Semestre]`. Aun así,
+> dos de sus temas semanales citan operaciones que `VisionTools` y
+> `PatternRecognitionTools` **no implementan** en este código
+> (transformada de Hough, esquinas de Harris, K-means, PCA, template
+> matching — ver `12_VISION_TOOLS_SPEC.md` y `13_PATTERN_RECOGNITION_SPEC.md`
+> para la API real: umbralización/Otsu/morfología/watershed/HOG/LBP en
+> Vision, y k-NN/árbol/bosque/SVM en Pattern Recognition). Se deja como
+> nota aquí en vez de reescribir el programa: quien lo adopte debe ajustar
+> las Semanas 12 y 13 a las operaciones que el framework sí ofrece.
 
 ---
 
-## Required Materials
+## Descripción del curso
 
-- Python 3.12+
-- Legacy of InFest framework (GitHub Classroom)
-- Tiled Map Editor (https://www.mapeditor.org/)
-- Git + GitHub account
+Los estudiantes construyen un videojuego 2D completo de acción y plataformas usando el framework Legacy of InFest, aplicando conceptos de álgebra lineal, gráficas por computadora, procesamiento digital de imágenes, y reconocimiento de patrones. El curso está basado en proyectos: los estudiantes diseñan niveles, programan IA de enemigos, crean jefes, e integran tuberías de procesamiento para efectos visuales.
 
 ---
 
-## Weekly Schedule
+## Objetivos de aprendizaje
 
-### Unit I: Foundations (Weeks 1-2)
+Al final de este curso, los estudiantes podrán:
 
-| Week | Topic | Lab | Assignment |
+1. Aplicar matemática vectorial al movimiento y la colisión del juego
+2. Implementar curvas de Bézier e interpolación para animación
+3. Manipular espacios de color y mezcla alfa
+4. Usar detección y resolución de colisión AABB
+5. Aplicar kernels de convolución (desenfoque, realce, detección de bordes)
+6. Implementar segmentación de imágenes y extracción de características
+7. Construir tuberías de reconocimiento de patrones
+8. Diseñar e implementar un encuentro de jefe multi-fase
+9. Crear un escenario de juego completo y jugable, con enemigos y coleccionables
+10. Usar herramientas de diseño de nivel basadas en TMX
+
+---
+
+## Materiales requeridos
+
+- Python 3.11+
+- Framework Legacy of InFest (GitHub Classroom)
+- Editor de mapas Tiled (https://www.mapeditor.org/)
+- Cuenta de Git + GitHub
+
+---
+
+## Calendario semanal
+
+### Unidad I: Fundamentos (Semanas 1-2)
+
+| Semana | Tema | Laboratorio | Entrega |
 |------|-------|-----|------------|
-| 1 | Course intro, Python, Pygame, framework setup | Tour of Legacy engine | Fork repo, run Stage 0 |
-| 2 | Game loop, input handling, scene management | Explore demo menu | Create a test scene |
+| 1 | Introducción al curso, Python, Pygame, configuración del framework | Recorrido por el motor Legacy | Bifurcar el repo, ejecutar Stage 0 |
+| 2 | Bucle de juego, manejo de entrada, gestión de escenas | Explorar el menú de demos | Crear una escena de prueba |
 
-### Unit II: Vectors & Transformations (Weeks 3-4)
+### Unidad II: Vectores y transformaciones (Semanas 3-4)
 
-| Week | Topic | Lab | Assignment |
+| Semana | Tema | Laboratorio | Entrega |
 |------|-------|-----|------------|
-| 3 | Vector arithmetic, normalization, dot product | VectorLabScene | Stage 1 TMX layout |
-| 4 | 2D transformations (translation, rotation, scale) | TransformLabScene | Place enemies in TMX |
+| 3 | Aritmética vectorial, normalización, producto punto | VectorLabScene | Maquetación TMX de Stage 1 |
+| 4 | Transformaciones 2D (traslación, rotación, escala) | TransformLabScene | Colocar enemigos en el TMX |
 
-### Unit III: Curves & Interpolation (Weeks 5-6)
+### Unidad III: Curvas e interpolación (Semanas 5-6)
 
-| Week | Topic | Lab | Assignment |
+| Semana | Tema | Laboratorio | Entrega |
 |------|-------|-----|------------|
-| 5 | Bézier curves, de Casteljau algorithm | CurveEditorScene | Enemy patrol paths |
-| 6 | Interpolation, easing functions | InterpolationLabScene | Camera movement |
+| 5 | Curvas de Bézier, algoritmo de de Casteljau | CurveEditorScene | Rutas de patrulla de enemigos |
+| 6 | Interpolación, funciones de easing | InterpolationLabScene | Movimiento de cámara |
 
-### Unit IV: Collision (Week 7)
+### Unidad IV: Colisión (Semana 7)
 
-| Week | Topic | Lab | Assignment |
+| Semana | Tema | Laboratorio | Entrega |
 |------|-------|-----|------------|
-| 7 | AABB collision detection & resolution | CollisionLabScene | Hazards and triggers |
+| 7 | Detección y resolución de colisión AABB | CollisionLabScene | Peligros y disparadores |
 
-### Unit V: Color & Noise (Weeks 8-9)
+### Unidad V: Color y ruido (Semanas 8-9)
 
-| Week | Topic | Lab | Assignment |
+| Semana | Tema | Laboratorio | Entrega |
 |------|-------|-----|------------|
-| 8 | RGB/HSV/HSL/CMYK color spaces | ColorTheoryScene | Color-coded damage |
-| 9 | Procedural noise generation | NoiseLabScene | Terrain decoration |
+| 8 | Espacios de color RGB/HSV/HSL/CMYK | ColorTheoryScene | Daño codificado por color |
+| 9 | Generación de ruido procedural | NoiseLabScene | Decoración de terreno |
 
-### Unit VI: Digital Image Processing (Weeks 10-11)
+### Unidad VI: Procesamiento digital de imágenes (Semanas 10-11)
 
-| Week | Topic | Lab | Assignment |
+| Semana | Tema | Laboratorio | Entrega |
 |------|-------|-----|------------|
-| 10 | Histograms, brightness, contrast | FilterDemoScene | Post-processing effects |
-| 11 | Convolution, Sobel, Canny edge detection | FilterDemoScene | Edge glow, painterly |
+| 10 | Histogramas, brillo, contraste | FilterDemoScene | Efectos de post-procesamiento |
+| 11 | Convolución, detección de bordes de Sobel y Canny | FilterDemoScene | Brillo de bordes, estilo pictórico |
 
-### Unit VII: Vision & Segmentation (Week 12)
+### Unidad VII: Visión y segmentación (Semana 12)
 
-| Week | Topic | Lab | Assignment |
+| Semana | Tema | Laboratorio | Entrega |
 |------|-------|-----|------------|
-| 12 | Hough transform, Harris corners, thresholding | VisionDemoScene | Boss telegraph detection |
+| 12 | Umbralización, Otsu, morfología, componentes conectados | VisionDemoScene | Detección de telegrafiado de jefe |
 
-### Unit VIII: Pattern Recognition (Week 13)
+### Unidad VIII: Reconocimiento de patrones (Semana 13)
 
-| Week | Topic | Lab | Assignment |
+| Semana | Tema | Laboratorio | Entrega |
 |------|-------|-----|------------|
-| 13 | K-means, PCA, template matching | PatternDemoScene | Color quantization |
+| 13 | k-NN, árbol de decisión, bosque aleatorio, SVM | PatternDemoScene | Clasificación de regiones |
 
-### Unit IX: Boss Design (Weeks 14-15)
+### Unidad IX: Diseño de jefes (Semanas 14-15)
 
-| Week | Topic | Lab | Assignment |
+| Semana | Tema | Laboratorio | Entrega |
 |------|-------|-----|------------|
-| 14 | Boss state machines, phases, telegraphs | Boss Venado analysis | Boss prototype |
-| 15 | Boss polish, events, achievements | Playtesting | Final boss submission |
+| 14 | Máquinas de estado de jefe, fases, telegrafiado | Análisis del Boss Venado | Prototipo de jefe |
+| 15 | Pulido de jefe, eventos, logros | Pruebas de juego | Entrega final del jefe |
 
-### Finals Week
+### Semana de finales
 
-| Week | Topic |
+| Semana | Tema |
 |------|-------|
-| 16 | Project showcase, peer review, final deliverables |
+| 16 | Muestra de proyectos, revisión entre pares, entregas finales |
 
 ---
 
-## Grading Rubric
+## Rúbrica de calificación
 
-| Component | Weight | Details |
+| Componente | Peso | Detalles |
 |-----------|--------|---------|
-| Stage 1 (TMX) | 15% | Terrain, enemies, collectibles, checkpoints |
-| Stage 2 (TMX) | 15% | Advanced terrain, hazards, weather |
-| Boss Enemy | 25% | 2+ phases, 2+ attack patterns, telegraphs |
-| Labs (10) | 20% | 2% each, completion-based |
-| Processing Project | 15% | Pipeline using FilterTools/VisionTools |
-| Participation | 10% | Peer review, playtesting, code review |
+| Escenario 1 (TMX) | 15% | Terreno, enemigos, coleccionables, checkpoints |
+| Escenario 2 (TMX) | 15% | Terreno avanzado, peligros, clima |
+| Jefe | 25% | 2+ fases, 2+ patrones de ataque, telegrafiado |
+| Laboratorios (10) | 20% | 2% cada uno, basado en completitud |
+| Proyecto de procesamiento | 15% | Tubería usando FilterTools/VisionTools |
+| Participación | 10% | Revisión entre pares, pruebas de juego, revisión de código |
 
-**Scale:** 90-100% A, 80-89% B, 70-79% C, 60-69% D, <60% F
+**Escala:** 90-100% A, 80-89% B, 70-79% C, 60-69% D, <60% F
 
 ---
 
-## Late Policy
+## Política de entregas tardías
 
-- Assignments submitted within 24h of deadline: -10%
+- Entregas dentro de las 24h del plazo: -10%
 - 24-48h: -25%
-- 48h+: not accepted without prior arrangement
+- 48h+: no se aceptan sin arreglo previo
 
 ---
 
-## Academic Integrity
+## Integridad académica
 
-All work must be your own. You may discuss concepts with classmates but may not share code or TMX files. Plagiarism detection scripts compare student submissions for structural similarity.
+Todo el trabajo debe ser propio. Se puede discutir conceptos con compañeros de clase, pero no se puede compartir código ni ficheros TMX. Los scripts de detección de plagio comparan las entregas de los estudiantes por similitud estructural.
 
 ---
 
-## Deliverable Checklist
+## Lista de entregables
 
-- [ ] Stage 0 playthrough (comprehension check)
-- [ ] Stage 1 TMX (terrain + enemies)
-- [ ] Stage 2 TMX (hazards + weather)
-- [ ] Boss Python file (class inheriting BossBase)
-- [ ] Boss TMX (arena map)
-- [ ] 10 lab checkpoints (F2-F10 screenshots)
-- [ ] Processing pipeline demo (PipelineBuilder or script)
-- [ ] Peer review (2 classmates)
-- [ ] Final repository submission
+- [ ] Recorrido de Stage 0 (comprobación de comprensión)
+- [ ] TMX de Stage 1 (terreno + enemigos)
+- [ ] TMX de Stage 2 (peligros + clima)
+- [ ] Fichero Python del jefe (clase que hereda de BossBase)
+- [ ] TMX del jefe (mapa de la arena)
+- [ ] 10 checkpoints de laboratorio (capturas F2-F10)
+- [ ] Demo de tubería de procesamiento (PipelineBuilder o script)
+- [ ] Revisión entre pares (2 compañeros de clase)
+- [ ] Entrega final del repositorio

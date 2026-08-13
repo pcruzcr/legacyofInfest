@@ -1,22 +1,29 @@
 ---
 document_id: "LOI-DELIVERABLE-014"
-title: "Legacy of InFest — Professor Deliverable Matrix"
-aliases: ["Professor Deliverable Matrix"]
-tags: ["deliverable", "academic", "matrix"]
-description: "Full syllabus-to-framework-to-assessment traceability"
+title: "Legacy of InFest — Matriz de entregables del profesorado"
+aliases: ["Matriz de entregables del profesorado", "Professor Deliverable Matrix"]
+tags: ["entregable", "academico", "matriz"]
+description: "Trazabilidad completa del programa al framework y a la evaluación"
 source: "docs/14_PROFESSOR_DELIVERABLE_MATRIX.md"
-date_processed: "2026-07-14"
+date_processed: "2026-08-13"
 ---
 
-# Legacy of InFest — Professor Deliverable Matrix
+# Legacy of InFest — Matriz de entregables del profesorado
 
-**Document ID:** LOI-MATRIX-014  
-**Version:** 1.0.0  
-**Status:** Official  
-**Compatibility:** All LOI documents  
-**Audience:** Professor, Teaching Assistants, University Academic Committee
+**ID del documento:** LOI-MATRIX-014
+**Versión:** 1.1.0
+**Estado:** Oficial
+**Compatibilidad:** Todos los documentos LOI
+**Audiencia:** Profesor, ayudantes de cátedra, comité académico universitario
 
----
+> **AUD-455.** Traduce el documento. Corrige la ruta de módulo, que
+> carecía del prefijo `src/` en las tablas de §3–§11 (§13 y §14 ya lo
+> tenían, de una corrección AUD-150 anterior); quita cuatro referencias a
+> `77_SYLLABUS_ALIGNMENT_AUDIT.md`, que no existe en este repositorio
+> (§12, §13, §14); y corrige §11.1: `extract_hog()`, `extract_lbp()` y
+> `extract_color_histogram()` **no existen** en `PatternRecognitionTools`
+> — viven en `VisionTools` (ver `13_PATTERN_RECOGNITION_SPEC.md` §7 y
+> `12_VISION_TOOLS_SPEC.md` §13).
 
 <!-- cita-historica -->
 > **Corrección AUD-150 — nombres que este documento daba por existentes.**
@@ -27,339 +34,335 @@ date_processed: "2026-07-14"
 > * `OneWay_` no es un prefijo de nada. Las plataformas atravesables se declaran con el tipo «Platform» en la capa `Collision`.
 <!-- /cita-historica -->
 
+## 1. Visión general
 
-## 1. Overview
+Este documento da trazabilidad completa entre el programa del curso y el framework de Legacy of InFest. Para cada tema de cada unidad del curso, define qué entrega el profesorado, qué produce el estudiante, qué componente del framework se usa, qué bibliotecas participan, dónde aparece el concepto en Stage 0, qué debe demostrar un escenario de estudiante, y cómo se evalúa.
 
-This document provides complete traceability between the course syllabus and the Legacy of InFest framework. For every topic in every course unit, it defines what the professor delivers, what the student produces, which framework component is used, which libraries participate, where the concept appears in Stage 0, what a student stage must demonstrate, and how it is assessed.
-
-This matrix is the authoritative reference for:
-- Designing evaluation instruments
-- Reviewing student stage submissions
-- Auditing framework completeness
-- Aligning course content with software deliverables
+Esta matriz es la referencia autoritativa para:
+- Diseñar instrumentos de evaluación
+- Revisar entregas de escenario de estudiante
+- Auditar la completitud del framework
+- Alinear el contenido del curso con los entregables de software
 
 ---
 
-## 2. Reading Guide
+## 2. Guía de lectura
 
-Each unit section contains a **deliverable table** covering every topic, followed by a **learning evidence summary** for the unit as a whole.
+Cada sección de unidad contiene una **tabla de entregables** que cubre cada tema, seguida de un **resumen de evidencia de aprendizaje** para la unidad como un todo.
 
-| Column | Meaning |
+| Columna | Significado |
 |---|---|
-| **Topic** | Exact syllabus topic name |
-| **Professor Delivers** | What exists before the student starts |
-| **Student Delivers** | What the student must produce |
-| **Framework Component** | Module in `engine/` or `framework/` that carries this |
-| **Libraries** | Third-party libraries involved (hidden from students) |
-| **Stage 0 Example** | Where this is demonstrated in the professor's stage |
-| **Student Stage** | Which stage is expected to demonstrate this |
-| **Assessment** | Which graded instrument covers this |
-| **Doc Reference** | Which specification document covers this in detail |
+| **Tema** | Nombre exacto del tema del programa |
+| **Entrega el profesorado** | Qué existe antes de que el estudiante empiece |
+| **Entrega el estudiante** | Qué debe producir el estudiante |
+| **Componente del framework** | Módulo en `src/engine/` o `src/framework/` que lo lleva |
+| **Bibliotecas** | Bibliotecas de terceros involucradas (ocultas a los estudiantes) |
+| **Ejemplo en Stage 0** | Dónde se demuestra en el escenario del profesorado |
+| **Escenario del estudiante** | Qué escenario se espera que lo demuestre |
+| **Evaluación** | Qué instrumento calificado lo cubre |
+| **Referencia de documento** | Qué documento de especificación lo cubre en detalle |
 
 ---
 
-## 3. Unit I — Introduction to Computer Graphics
+## 3. Unidad I — Introducción a gráficas por computadora
 
-### 3.1 Deliverable Table
+### 3.1 Tabla de entregables
 
-| Topic | Professor Delivers | Student Delivers | Framework Component | Libraries | Stage 0 Example | Student Stage | Assessment | Doc Reference |
+| Tema | Entrega el profesorado | Entrega el estudiante | Componente del framework | Bibliotecas | Ejemplo en Stage 0 | Escenario del estudiante | Evaluación | Referencia |
 |---|---|---|---|---|---|---|---|---|
-| History of CG / raster vs. vector | Lecture slides + framework as a running raster system | README section explaining internal resolution choice | `engine/core/app.py` (internal surface) | `pygame-ce` | Entire Stage 0 running at 320×224 | All stages | Exam I (theory) | LOI-ARCH-003 |
-| Display technology and pixel grids | `settings.py` constants (`INTERNAL_WIDTH`, `INTERNAL_HEIGHT`, `TILE_SIZE`) | README documents tile grid used in TMX | `engine/core/settings.py` | `pygame-ce` | Debug overlay shows pixel grid (F1) | All stages | Exam I | LOI-ARCH-003 §2.1 |
-| The game loop as a real-time graphics system | `App.run()` main loop with delta time | README explains the update/draw cycle in their stage | `engine/core/app.py`, `engine/core/clock.py` | `pygame-ce` | Running stage — 60 FPS observable | All stages | Exam I + Stage README | LOI-ARCH-003 §5 |
-| Frame rate, delta time, temporal coherence | `DeltaClock.tick()` returning `dt` | All entity movement uses `velocity * dt`; documented | `engine/core/clock.py` | `pygame-ce` | All entities in Stage 0 move correctly at any FPS | All stages | Code review | LOI-ARCH-003 §2.1 |
-| Coordinate systems (screen space intro) | `Camera.world_to_screen()` and `Camera.screen_to_world()` | Stage uses camera offset correctly in all entity draws | `framework/stage/camera.py` | `pygame-ce` | All entities in Stage 0 draw at correct screen positions | All stages | Code review | LOI-ARCH-003 §2.8 |
+| Historia de CG / raster frente a vectorial | Diapositivas de clase + el framework como sistema raster en marcha | Sección del README explicando la elección de resolución interna | `src/engine/core/app.py` (superficie interna) | `pygame-ce` | Todo Stage 0 corriendo | Todos los escenarios | Examen I (teoría) | `03_ARCHITECTURE.md` |
+| Tecnología de pantalla y cuadrículas de píxel | Constantes de `settings.py` (`INTERNAL_WIDTH`, `INTERNAL_HEIGHT`, `TILE_SIZE`) | El README documenta la cuadrícula de baldosas usada en el TMX | `src/engine/core/settings.py` | `pygame-ce` | La superposición de depuración muestra la cuadrícula de píxeles (F1) | Todos los escenarios | Examen I | `03_ARCHITECTURE.md` §2.1 |
+| El bucle de juego como sistema gráfico en tiempo real | Bucle principal `App.run()` con delta time | El README explica el ciclo update/draw en su escenario | `src/engine/core/app.py`, `src/engine/core/clock.py` | `pygame-ce` | Escenario en marcha — 60 FPS observables | Todos los escenarios | Examen I + README del escenario | `03_ARCHITECTURE.md` §5 |
+| Tasa de fotogramas, delta time, coherencia temporal | `DeltaClock.tick()` devolviendo `dt` | Todo el movimiento de entidad usa `velocity * dt`; documentado | `src/engine/core/clock.py` | `pygame-ce` | Todas las entidades de Stage 0 se mueven correctamente a cualquier FPS | Todos los escenarios | Revisión de código | `03_ARCHITECTURE.md` §2.1 |
+| Sistemas de coordenadas (introducción al espacio de pantalla) | `Camera.world_to_screen()` y `Camera.screen_to_world()` | El escenario usa el desplazamiento de cámara correctamente en todo el dibujo de entidades | `src/framework/stage/camera.py` | `pygame-ce` | Todas las entidades de Stage 0 se dibujan en las posiciones de pantalla correctas | Todos los escenarios | Revisión de código | `03_ARCHITECTURE.md` §2.8 |
 
-### 3.2 Learning Evidence — Unit I
+### 3.2 Evidencia de aprendizaje — Unidad I
 
-A student demonstrates Unit I mastery when their stage:
-- Runs stably at 60 FPS on the course development machine.
-- Applies `dt` to all velocity-based movements (zero hardcoded pixel-per-frame values).
-- Documents the game loop, frame rate, and coordinate system in their stage README.
+Un estudiante demuestra dominio de la Unidad I cuando su escenario:
+- Corre de forma estable a 60 FPS en la máquina de desarrollo del curso.
+- Aplica `dt` a todos los movimientos basados en velocidad (cero valores de píxel-por-fotograma fijos en código).
+- Documenta el bucle de juego, la tasa de fotogramas, y el sistema de coordenadas en el README de su escenario.
 
 ---
 
-## 4. Unit II — Coordinate Systems, Vectors, Matrices, Transformations
+## 4. Unidad II — Sistemas de coordenadas, vectores, matrices, transformaciones
 
-### 4.1 Deliverable Table
+### 4.1 Tabla de entregables
 
-| Topic | Professor Delivers | Student Delivers | Framework Component | Libraries | Stage 0 Example | Student Stage | Assessment | Doc Reference |
+| Tema | Entrega el profesorado | Entrega el estudiante | Componente del framework | Bibliotecas | Ejemplo en Stage 0 | Escenario del estudiante | Evaluación | Referencia |
 |---|---|---|---|---|---|---|---|---|
-| 2D Cartesian coordinate system | World vs. screen coordinate explanation in ARCH doc; `Camera.world_to_screen()` | Stage README explains world-space vs. screen-space | `framework/stage/camera.py` | `pygame-ce` | Debug mode shows coordinates | Stage 1 | Exam I + README | LOI-ARCH-003 §2.8 |
-| Vector arithmetic | `math_utils.py`: `vec2_normalize`, `vec2_dot`, `vec2_distance`, `vec2_length` | At least one custom entity uses explicit vector math for movement | `engine/utils/math_utils.py` | `pygame-ce`, `numpy` | Zone E Shooter atan2 calculation | Stage 1 | Practical I | LOI-ARCH-003 §2.6 |
-| Translation and rotation matrices | Player hitbox transform (local → world space documented in PLAYER spec) | README documents the local→world transform for their custom hitbox | `framework/entities/base_entity.py` | `pygame-ce` | Debug mode: hitboxes at correct world positions | Stage 1 | Code review + README | LOI-PLAYER-004 §12 |
-| Homogeneous coordinates | Documented in PLAYER spec §13.4 as matrix illustration | Student documents the matrix form of their entity's translation | `framework/entities/base_entity.py` | `numpy` | Stage 0 source comments | Stage 1 | Exam I (theory) | LOI-PLAYER-004 §13.4 |
-| Vector normalization for movement | `vec2_normalize()` in math_utils | Custom entity moves toward target at constant speed using normalization | `engine/utils/math_utils.py` | `numpy` | Player knockback direction vector | Stage 1 | Practical I | LOI-ARCH-003 §2.6 |
-| Dot product and distance | `vec2_dot()`, `vec2_distance()` | Custom detection range uses distance calculation | `engine/utils/math_utils.py` | `numpy` | Enemy detection zone | Stage 1 | Practical I | LOI-ENEMY-005 §10.1 |
-| Transformation of bounding boxes | `_update_rects()` in BaseEntity | Student's custom entity correctly updates hitbox/hurtbox in world space | `framework/entities/base_entity.py` | `pygame-ce` | All Stage 0 entities | Stage 1 | Code review | LOI-PLAYER-004 §10, §11 |
+| Sistema de coordenadas cartesiano 2D | Explicación de coordenadas de mundo frente a pantalla en el doc de arquitectura; `Camera.world_to_screen()` | El README del escenario explica espacio de mundo frente a espacio de pantalla | `src/framework/stage/camera.py` | `pygame-ce` | El modo depuración muestra coordenadas | Stage 1 | Examen I + README | `03_ARCHITECTURE.md` §2.8 |
+| Aritmética vectorial | `math_utils.py`: `vec2_normalize`, `vec2_dot`, `vec2_distance`, `vec2_length` | Al menos una entidad propia usa matemática vectorial explícita para movimiento | `src/engine/utils/math_utils.py` | `pygame-ce`, `numpy` | Cálculo de atan2 del disparador de la Zona E | Stage 1 | Práctica I | `03_ARCHITECTURE.md` §2.6 |
+| Matrices de traslación y rotación | Transformación de hitbox del jugador (local → mundo, documentada en la especificación del jugador) | El README documenta la transformación local→mundo de su hitbox propia | `src/framework/entities/base_entity.py` | `pygame-ce` | Modo depuración: hitboxes en posiciones de mundo correctas | Stage 1 | Revisión de código + README | `04_PLAYER_SPEC.md` §12 |
+| Coordenadas homogéneas | Documentadas en la especificación del jugador §13.4 como ilustración de matriz | El estudiante documenta la forma matricial de la traslación de su entidad | `src/framework/entities/base_entity.py` | `numpy` | Comentarios de fuente de Stage 0 | Stage 1 | Examen I (teoría) | `04_PLAYER_SPEC.md` §13.4 |
+| Normalización de vector para movimiento | `vec2_normalize()` en math_utils | Una entidad propia se mueve hacia el objetivo a velocidad constante usando normalización | `src/engine/utils/math_utils.py` | `numpy` | Vector de dirección del retroceso del jugador | Stage 1 | Práctica I | `03_ARCHITECTURE.md` §2.6 |
+| Producto punto y distancia | `vec2_dot()`, `vec2_distance()` | Un rango de detección propio usa el cálculo de distancia | `src/engine/utils/math_utils.py` | `numpy` | Zona de detección de enemigo | Stage 1 | Práctica I | `05_ENEMY_SPEC.md` §10.1 |
+| Transformación de cajas envolventes | `_update_rects()` en BaseEntity | La entidad propia del estudiante actualiza correctamente hitbox/hurtbox en espacio de mundo | `src/framework/entities/base_entity.py` | `pygame-ce` | Todas las entidades de Stage 0 | Stage 1 | Revisión de código | `04_PLAYER_SPEC.md` §10, §11 |
 
-### 4.2 Learning Evidence — Unit II
+### 4.2 Evidencia de aprendizaje — Unidad II
 
-A student demonstrates Unit II mastery when they can:
-- Write the translation matrix for their entity's hitbox offset in their README.
-- Show a custom entity using `vec2_normalize()` for constant-speed pursuit.
-- Explain the difference between world-space and screen-space coordinates verbally in the final presentation.
+Un estudiante demuestra dominio de la Unidad II cuando puede:
+- Escribir la matriz de traslación del desplazamiento de hitbox de su entidad en su README.
+- Mostrar una entidad propia usando `vec2_normalize()` para persecución a velocidad constante.
+- Explicar verbalmente la diferencia entre coordenadas de espacio de mundo y de pantalla en la presentación final.
 
 ---
 
-## 5. Unit III — Bézier Curves, B-Splines, NURBS, Trajectories
+## 5. Unidad III — Curvas de Bézier, B-Splines, NURBS, trayectorias
 
-### 5.1 Deliverable Table
+### 5.1 Tabla de entregables
 
-| Topic | Professor Delivers | Student Delivers | Framework Component | Libraries | Stage 0 Example | Student Stage | Assessment | Doc Reference |
+| Tema | Entrega el profesorado | Entrega el estudiante | Componente del framework | Bibliotecas | Ejemplo en Stage 0 | Escenario del estudiante | Evaluación | Referencia |
 |---|---|---|---|---|---|---|---|---|
-| Parametric curves | `CurveTools` module with all curve functions | At least one entity or effect follows a computed parametric path | `framework/processing/curve_tools.py` | `numpy` | Zone D Flying_02 (Bézier path) | Stage 1 | Practical I + Stage README | LOI-ARCH-003 §2.9 |
-| Bernstein basis polynomials | `CurveTools.bezier()` implements Bernstein basis | README includes the Bernstein formula and the student's control points | `framework/processing/curve_tools.py` | `numpy` | Zone D debug mode shows control polygon | Stage 1 | Exam I (theory) + README | LOI-ARCH-003 §2.9 |
-| De Casteljau algorithm | Implemented inside `bezier()` | Not required to implement — required to explain in README | `framework/processing/curve_tools.py` | `numpy` | Stage 0 source comments | Stage 1 | README | LOI-ARCH-003 §2.9 |
-| B-Spline curves | `CurveTools.b_spline()` | Student demonstrates a B-Spline path (≥ 5 control points) | `framework/processing/curve_tools.py` | `numpy` | Not in Stage 0 — student first use | Stage 1 or 2 | Stage deliverable | LOI-ARCH-003 §2.9 |
-| NURBS | `CurveTools.nurbs()` | Optional advanced: student demonstrates NURBS with custom weights | `framework/processing/curve_tools.py` | `numpy` | Not in Stage 0 | Stage 2 (optional) | Bonus | LOI-ARCH-003 §2.9 |
-| Catmull-Rom splines | `CurveTools.catmull_rom()` | Student may use for smooth interpolation through waypoints | `framework/processing/curve_tools.py` | `numpy` | Not in Stage 0 | Stage 1 | Stage deliverable | LOI-ARCH-003 §2.9 |
-| Path parametrization | `CurveTools.sample_path(path, t)` | Entity advances along path using `t` driven by speed | `framework/processing/curve_tools.py` | `numpy` | Zone D: Flying_02 path traversal | Stage 1 | Code review | LOI-ARCH-003 §2.9 |
+| Curvas paramétricas | Módulo `CurveTools` con todas las funciones de curva | Al menos una entidad o efecto sigue una ruta paramétrica calculada | `src/framework/processing/curve_tools.py` | `numpy` | Zona D Flying_02 (ruta Bézier) | Stage 1 | Práctica I + README | `03_ARCHITECTURE.md` §2.9 |
+| Polinomios base de Bernstein | `CurveTools.bezier()` implementa la base de Bernstein | El README incluye la fórmula de Bernstein y los puntos de control del estudiante | `src/framework/processing/curve_tools.py` | `numpy` | El modo depuración de la Zona D muestra el polígono de control | Stage 1 | Examen I (teoría) + README | `03_ARCHITECTURE.md` §2.9 |
+| Algoritmo de de Casteljau | Implementado dentro de `bezier()` | No se exige implementarlo — se exige explicarlo en el README | `src/framework/processing/curve_tools.py` | `numpy` | Comentarios de fuente de Stage 0 | Stage 1 | README | `03_ARCHITECTURE.md` §2.9 |
+| Curvas B-Spline | `CurveTools.b_spline()` | El estudiante demuestra una ruta B-Spline (≥ 5 puntos de control) | `src/framework/processing/curve_tools.py` | `numpy` | No está en Stage 0 — primer uso del estudiante | Stage 1 o 2 | Entrega de escenario | `03_ARCHITECTURE.md` §2.9 |
+| NURBS | `CurveTools.nurbs()` | Avanzado opcional: el estudiante demuestra NURBS con pesos propios | `src/framework/processing/curve_tools.py` | `numpy` | No está en Stage 0 | Stage 2 (opcional) | Bono | `03_ARCHITECTURE.md` §2.9 |
+| Splines Catmull-Rom | `CurveTools.catmull_rom()` | El estudiante puede usarlo para interpolación suave entre puntos de referencia | `src/framework/processing/curve_tools.py` | `numpy` | No está en Stage 0 | Stage 1 | Entrega de escenario | `03_ARCHITECTURE.md` §2.9 |
+| Parametrización de trayectoria | `CurveTools.sample_path(path, t)` | La entidad avanza por la ruta usando `t` dirigido por velocidad | `src/framework/processing/curve_tools.py` | `numpy` | Zona D: recorrido de ruta de Flying_02 | Stage 1 | Revisión de código | `03_ARCHITECTURE.md` §2.9 |
 
-### 5.2 Learning Evidence — Unit III
+### 5.2 Evidencia de aprendizaje — Unidad III
 
-A student demonstrates Unit III mastery when they can:
-- Present a diagram of their control points and the resulting curve.
-- Explain what `t` represents in their path traversal implementation.
-- Describe in writing the difference between Bézier, B-Spline, and Catmull-Rom for their specific use case.
+Un estudiante demuestra dominio de la Unidad III cuando puede:
+- Presentar un diagrama de sus puntos de control y la curva resultante.
+- Explicar qué representa `t` en su implementación de recorrido de ruta.
+- Describir por escrito la diferencia entre Bézier, B-Spline, y Catmull-Rom para su caso de uso específico.
 
 ---
 
-## 6. Unit IV — Objects, Scenes, Layers, Sprites, Buffers
+## 6. Unidad IV — Objetos, escenas, capas, sprites, búferes
 
-### 6.1 Deliverable Table
+### 6.1 Tabla de entregables
 
-| Topic | Professor Delivers | Student Delivers | Framework Component | Libraries | Stage 0 Example | Student Stage | Assessment | Doc Reference |
+| Tema | Entrega el profesorado | Entrega el estudiante | Componente del framework | Bibliotecas | Ejemplo en Stage 0 | Escenario del estudiante | Evaluación | Referencia |
 |---|---|---|---|---|---|---|---|---|
-| Scene graph concepts | `SceneManager` with push/pop/replace | Student stage implements `BaseScene` correctly with `on_enter`, `update`, `draw` | `engine/scene/scene_manager.py`, `engine/scene/base_scene.py` | `pygame-ce` | All scenes in the game flow | All stages | Code review | LOI-ARCH-003 §2.2 |
-| Layered rendering | TMX layer system (BG_Far through FG_Overlay) | TMX map has all required layers; parallax visually observable | `framework/stage/stage_loader.py`, `pyscroll` | `pygame-ce`, `pyscroll`, `pytmx` | All zones: parallax scrolling | All stages | TMX review + demo | LOI-TMX-006 §3 |
-| Sprite as textured quad | `AssetLoader` (AUD-150: no hay ninguna clase de hoja de sprites) | At least one custom animated sprite created by student | `engine/utils/asset_loader.py` | `pygame-ce` | Player and enemy sprites | All stages | Code review | LOI-ARCH-003 §2.6 |
-| Sprite animation | la animación vive en cada entidad, no en un controlador aparte | Custom entity has multi-frame animation with correct FPS | `framework/entities/base_entity.py` + player/enemy | `pygame-ce` | All animated entities in Stage 0 | All stages | Code review | LOI-PLAYER-004 §9 |
-| Double buffering | `App.internal_surface` (320×224) blitted to window | README explains double buffering (internal → window) | `engine/core/app.py` | `pygame-ce` | Entire Stage 0 | All stages (README) | README | LOI-ARCH-003 §4.1 |
-| Z-ordering / draw calls | `BaseEntity.layer` property; pyscroll group | Entity layer values produce correct visual depth order | `framework/entities/base_entity.py`, `pyscroll` | `pygame-ce` | Stage 0 entities at correct depths | All stages | Visual review | LOI-ARCH-003 §2.7 |
-| Object lifecycle | `BaseEntity.is_active`, `is_visible` | Custom entities correctly set `is_active = False` on death | `framework/entities/base_entity.py` | `pygame-ce` | Enemy death in Stage 0 | All stages | Code review | LOI-ARCH-003 §2.7 |
+| Conceptos de grafo de escena | `SceneManager` con push/pop/replace | El escenario del estudiante implementa `BaseScene` correctamente con `on_enter`, `update`, `draw` | `src/engine/scene/scene_manager.py`, `src/engine/scene/base_scene.py` | `pygame-ce` | Todas las escenas del flujo del juego | Todos los escenarios | Revisión de código | `03_ARCHITECTURE.md` §2.2 |
+| Renderizado por capas | Sistema de capas TMX (de BG_Far a FG_Overlay) | El mapa TMX tiene todas las capas obligatorias; el parallax es observable visualmente | `src/framework/stage/stage_loader.py`, `pyscroll` | `pygame-ce`, `pyscroll`, `pytmx` | Todas las zonas: desplazamiento de parallax | Todos los escenarios | Revisión de TMX + demo | `06_TMX_SPEC.md` §3 |
+| El sprite como quad texturizado | `AssetLoader` (AUD-150: no hay ninguna clase de hoja de sprites) | Al menos un sprite animado propio creado por el estudiante | `src/engine/utils/asset_loader.py` | `pygame-ce` | Sprites del jugador y enemigos | Todos los escenarios | Revisión de código | `03_ARCHITECTURE.md` §2.6 |
+| Animación de sprites | La animación vive en cada entidad, no en un controlador aparte | La entidad propia tiene animación multi-fotograma con los FPS correctos | `src/framework/entities/base_entity.py` + jugador/enemigo | `pygame-ce` | Todas las entidades animadas de Stage 0 | Todos los escenarios | Revisión de código | `04_PLAYER_SPEC.md` §9 |
+| Doble búfer | `App.internal_surface` con blit a la ventana | El README explica el doble búfer (interno → ventana) | `src/engine/core/app.py` | `pygame-ce` | Todo Stage 0 | Todos los escenarios (README) | README | `03_ARCHITECTURE.md` §4.1 |
+| Ordenamiento en Z / llamadas de dibujo | Propiedad `BaseEntity.layer`; grupo de pyscroll | Los valores de capa de la entidad producen un orden de profundidad visual correcto | `src/framework/entities/base_entity.py`, `pyscroll` | `pygame-ce` | Entidades de Stage 0 a las profundidades correctas | Todos los escenarios | Revisión visual | `03_ARCHITECTURE.md` §2.7 |
+| Ciclo de vida del objeto | `BaseEntity.is_active`, `is_visible` | Las entidades propias fijan correctamente `is_active = False` al morir | `src/framework/entities/base_entity.py` | `pygame-ce` | Muerte de enemigo en Stage 0 | Todos los escenarios | Revisión de código | `03_ARCHITECTURE.md` §2.7 |
 
-### 6.2 Learning Evidence — Unit IV
+### 6.2 Evidencia de aprendizaje — Unidad IV
 
-A student demonstrates Unit IV mastery when their stage:
-- Has a correct TMX layer stack with visible parallax.
-- Has at least one custom animated sprite with documented frame count and FPS.
-- Includes a README diagram of the layer rendering order.
+Un estudiante demuestra dominio de la Unidad IV cuando su escenario:
+- Tiene una pila de capas TMX correcta con parallax visible.
+- Tiene al menos un sprite animado propio con conteo de fotogramas y FPS documentados.
+- Incluye un diagrama en el README del orden de renderizado de capas.
 
 ---
 
-## 7. Unit V — RGB, HSV, HSL, CMYK, Transparency, Alpha Blending, Lighting
+## 7. Unidad V — RGB, HSV, HSL, CMYK, transparencia, mezcla alfa, iluminación
 
-### 7.1 Deliverable Table
+### 7.1 Tabla de entregables
 
-| Topic | Professor Delivers | Student Delivers | Framework Component | Libraries | Stage 0 Example | Student Stage | Assessment | Doc Reference |
+| Tema | Entrega el profesorado | Entrega el estudiante | Componente del framework | Bibliotecas | Ejemplo en Stage 0 | Escenario del estudiante | Evaluación | Referencia |
 |---|---|---|---|---|---|---|---|---|
-| RGB color model | `ColorTools.surface_to_array()` returns RGB ndarray | Student documents an RGB value from their stage and explains each channel | `framework/processing/color_tools.py` | `numpy`, `pygame-ce` | Debug mode: pixel inspector | Stage 1 | Exam I (theory) + README | LOI-ARCH-003 §2.9 |
-| HSV color model | `ColorTools.rgb_to_hsv()`, `hsv_to_rgb()` | Student applies HSV manipulation (e.g., hue rotation, saturation change) | `framework/processing/color_tools.py` | `numpy` | Not in Stage 0 — student first use | Stage 1 | Practical I | LOI-ARCH-003 §2.9 |
-| HSL color model | `ColorTools.rgb_to_hsl()`, `hsl_to_rgb()` | Student applies lightness adjustment via HSL | `framework/processing/color_tools.py` | `numpy` | Not in Stage 0 | Stage 1 | Stage deliverable | LOI-ARCH-003 §2.9 |
-| CMYK color model | `ColorTools.rgb_to_cmyk()`, `cmyk_to_rgb()` | Student converts a sprite palette to CMYK and documents the values | `framework/processing/color_tools.py` | `numpy` | Not in Stage 0 | Stage 1 (theory exercise) | README | LOI-ARCH-003 §2.9 |
-| Alpha channel and transparency | `pygame.Surface.set_alpha()`, `ColorTools.alpha_blend()` | At least one visual effect uses alpha transparency | `framework/processing/color_tools.py` | `pygame-ce`, `numpy` | Debug overlays (semi-transparent) | Stage 1 | Code review | LOI-ARCH-003 §2.9 |
-| Alpha blending equation | `ColorTools.alpha_blend()` | Student documents the blending formula in README: `out = src * α + dst * (1-α)` | `framework/processing/color_tools.py` | `numpy` | Invincibility flash | Stage 1 | README | LOI-ARCH-003 §2.9 |
-| Simulated 2D lighting | `ColorTools.apply_tint()` + `adjust_brightness()` | Student creates a directional or ambient light effect using color tinting | `framework/processing/color_tools.py`, `framework/processing/filter_tools.py` | `numpy`, `pygame-ce` | Not in Stage 0 | Stage 1 or 2 | Stage deliverable | LOI-FILTER-011 §8.2 |
+| Modelo de color RGB | `ColorTools.surface_to_array()` devuelve un ndarray RGB | El estudiante documenta un valor RGB de su escenario y explica cada canal | `src/framework/processing/color_tools.py` | `numpy`, `pygame-ce` | Modo depuración: inspector de píxeles | Stage 1 | Examen I (teoría) + README | `03_ARCHITECTURE.md` §2.9 |
+| Modelo de color HSV | `ColorTools.rgb_to_hsv()`, `hsv_to_rgb()` | El estudiante aplica manipulación HSV (p. ej., rotación de matiz, cambio de saturación) | `src/framework/processing/color_tools.py` | `numpy` | No está en Stage 0 — primer uso del estudiante | Stage 1 | Práctica I | `03_ARCHITECTURE.md` §2.9 |
+| Modelo de color HSL | `ColorTools.rgb_to_hsl()`, `hsl_to_rgb()` | El estudiante aplica ajuste de luminosidad vía HSL | `src/framework/processing/color_tools.py` | `numpy` | No está en Stage 0 | Stage 1 | Entrega de escenario | `03_ARCHITECTURE.md` §2.9 |
+| Modelo de color CMYK | `ColorTools.rgb_to_cmyk()`, `cmyk_to_rgb()` | El estudiante convierte una paleta de sprite a CMYK y documenta los valores | `src/framework/processing/color_tools.py` | `numpy` | No está en Stage 0 | Stage 1 (ejercicio teórico) | README | `03_ARCHITECTURE.md` §2.9 |
+| Canal alfa y transparencia | `pygame.Surface.set_alpha()`, `ColorTools.alpha_blend()` | Al menos un efecto visual usa transparencia alfa | `src/framework/processing/color_tools.py` | `pygame-ce`, `numpy` | Superposiciones de depuración (semitransparentes) | Stage 1 | Revisión de código | `03_ARCHITECTURE.md` §2.9 |
+| Ecuación de mezcla alfa | `ColorTools.alpha_blend()` | El estudiante documenta la fórmula de mezcla en el README: `out = src * α + dst * (1-α)` | `src/framework/processing/color_tools.py` | `numpy` | Parpadeo de invencibilidad | Stage 1 | README | `03_ARCHITECTURE.md` §2.9 |
+| Iluminación 2D simulada | `ColorTools.apply_tint()` + `adjust_brightness()` | El estudiante crea un efecto de luz direccional o ambiental usando tinte de color | `src/framework/processing/color_tools.py`, `src/framework/processing/filter_tools.py` | `numpy`, `pygame-ce` | No está en Stage 0 | Stage 1 o 2 | Entrega de escenario | `11_FILTER_TOOLS_SPEC.md` §8.2 |
 
-### 7.2 Learning Evidence — Unit V
+### 7.2 Evidencia de aprendizaje — Unidad V
 
-A student demonstrates Unit V mastery when they can:
-- Convert a sampled pixel from their stage between RGB, HSV, and HSL by hand (shown in README).
-- Show a visual effect driven by a color space operation.
-- Explain the alpha blending formula and how it is applied in their stage.
+Un estudiante demuestra dominio de la Unidad V cuando puede:
+- Convertir a mano un píxel muestreado de su escenario entre RGB, HSV, y HSL (mostrado en el README).
+- Mostrar un efecto visual dirigido por una operación de espacio de color.
+- Explicar la fórmula de mezcla alfa y cómo se aplica en su escenario.
 
 ---
 
-## 8. Unit VI — Textures, Animation, Interpolation, Collisions, Interaction
+## 8. Unidad VI — Texturas, animación, interpolación, colisiones, interacción
 
-### 8.1 Deliverable Table
+### 8.1 Tabla de entregables
 
-| Topic | Professor Delivers | Student Delivers | Framework Component | Libraries | Stage 0 Example | Student Stage | Assessment | Doc Reference |
+| Tema | Entrega el profesorado | Entrega el estudiante | Componente del framework | Bibliotecas | Ejemplo en Stage 0 | Escenario del estudiante | Evaluación | Referencia |
 |---|---|---|---|---|---|---|---|---|
-| Texture mapping | `AssetLoader.load_image()` | Student's entities use correctly sized textures (16-color constraint) | `engine/utils/asset_loader.py` | `pygame-ce` | All sprite entities | All stages | Asset review | LOI-ARCH-003 §2.6 |
-| Frame-based animation | `_advance_animation` y `_sprite_frames` en cada entidad | Custom entity animation with documented frame count, FPS, loop mode | `framework/entities/base_entity.py` | `pygame-ce` | Player and enemy animations | All stages | Code review | LOI-PLAYER-004 §9 |
-| Linear interpolation | `math_utils.lerp()` | At least one lerp-driven value (camera follow, platform movement, fade) | `engine/utils/math_utils.py` | — | Camera follow uses lerp | Stage 1 or 2 | Code review | LOI-ARCH-003 §2.6 |
-| Easing functions | `math_utils.ease_*` functions + `pytweening` | At least one entity or UI uses an ease function (not plain lerp) | `engine/utils/math_utils.py` | `pytweening` | Screen banner slide (ease_out_quad) | Stage 1 or 2 | Practical I | LOI-ARCH-003 §2.6 |
-| AABB collision detection | Player and enemy collision resolution in engine | Student's custom entity resolves AABB collision correctly | `framework/entities/player.py`, `framework/entities/enemy_base.py` | `pygame-ce` | All Zone A–F interactions | All stages | Code review | LOI-PLAYER-004 §4.3 |
-| Interaction events | `EventBus` pub/sub system | Custom trigger zone emits an event; another entity subscribes | `engine/core/event_bus.py` | — | Checkpoint → HUD; Shooter → projectile | Stage 1 or 2 | Code review | LOI-ARCH-003 §2.1 |
-| One-way platforms | objetos de tipo «Platform» en la capa `Collision` (AUD-150: no hay ningún prefijo especial en los nombres) | Student designs a stage zone with one-way platforms | TMX `Collision` layer, `framework/stage/stage_loader.py` | `pygame-ce`, `pytmx` | Zone E one-way platform | Stage 1 or 2 | TMX review | LOI-TMX-006 §9.2 |
+| Mapeo de texturas | `AssetLoader.load_image()` | Las entidades del estudiante usan texturas del tamaño correcto (restricción de 16 colores) | `src/engine/utils/asset_loader.py` | `pygame-ce` | Todas las entidades con sprite | Todos los escenarios | Revisión de recursos | `03_ARCHITECTURE.md` §2.6 |
+| Animación basada en fotogramas | `_advance_animation` y `_sprite_frames` en cada entidad | Animación de entidad propia con conteo de fotogramas, FPS, y modo de bucle documentados | `src/framework/entities/base_entity.py` | `pygame-ce` | Animaciones del jugador y enemigos | Todos los escenarios | Revisión de código | `04_PLAYER_SPEC.md` §9 |
+| Interpolación lineal | `math_utils.lerp()` | Al menos un valor dirigido por lerp (seguimiento de cámara, movimiento de plataforma, desvanecido) | `src/engine/utils/math_utils.py` | — | El seguimiento de cámara usa lerp | Stage 1 o 2 | Revisión de código | `03_ARCHITECTURE.md` §2.6 |
+| Funciones de easing | Funciones `math_utils.ease_*` (implementación propia, sin `pytweening` — ver `10_LIBRARIES_AND_DEPENDENCIES.md`) | Al menos una entidad o UI usa una función de easing (no lerp plano) | `src/engine/utils/math_utils.py` | — | Deslizamiento del banner de pantalla (ease_out_quad) | Stage 1 o 2 | Práctica I | `03_ARCHITECTURE.md` §2.6 |
+| Detección de colisión AABB | Resolución de colisión del jugador y enemigos en el motor | La entidad propia del estudiante resuelve colisión AABB correctamente | `src/framework/entities/player.py`, `src/framework/entities/enemy_base.py` | `pygame-ce` | Todas las interacciones de Zona A–F | Todos los escenarios | Revisión de código | `04_PLAYER_SPEC.md` §4.3 |
+| Eventos de interacción | Sistema publicación/suscripción de `EventBus` | Una zona de disparo propia emite un evento; otra entidad se suscribe | `src/engine/core/event_bus.py` | — | Checkpoint → HUD; Disparador → proyectil | Stage 1 o 2 | Revisión de código | `03_ARCHITECTURE.md` §2.1 |
+| Plataformas de un solo sentido | Objetos de tipo «Platform» en la capa `Collision` (AUD-150: no hay ningún prefijo especial en los nombres) | El estudiante diseña una zona de escenario con plataformas de un solo sentido | Capa TMX `Collision`, `src/framework/stage/stage_loader.py` | `pygame-ce`, `pytmx` | Plataforma de un solo sentido de la Zona E | Stage 1 o 2 | Revisión de TMX | `06_TMX_SPEC.md` §9.2 |
 
-### 8.2 Learning Evidence — Unit VI
+### 8.2 Evidencia de aprendizaje — Unidad VI
 
-A student demonstrates Unit VI mastery when:
-- Their custom entity uses `ease_out_quad` (or equivalent) and the visual deceleration is observable.
-- Their stage has a working EventBus interaction between two entities.
-- Their AABB collision is resolved without tunneling at 60 FPS.
+Un estudiante demuestra dominio de la Unidad VI cuando:
+- Su entidad propia usa `ease_out_quad` (o equivalente) y la desaceleración visual es observable.
+- Su escenario tiene una interacción funcional de EventBus entre dos entidades.
+- Su colisión AABB se resuelve sin atravesar paredes a 60 FPS.
 
 ---
 
-## 9. Unit VII — Histogram, Brightness, Contrast, Convolution, Gaussian Blur, Sobel, Canny
+## 9. Unidad VII — Histograma, brillo, contraste, convolución, desenfoque gaussiano, Sobel, Canny
 
-### 9.1 Deliverable Table
+### 9.1 Tabla de entregables
 
-| Topic | Professor Delivers | Student Delivers | Framework Component | Libraries | Stage 0 Example | Student Stage | Assessment | Doc Reference |
+| Tema | Entrega el profesorado | Entrega el estudiante | Componente del framework | Bibliotecas | Ejemplo en Stage 0 | Escenario del estudiante | Evaluación | Referencia |
 |---|---|---|---|---|---|---|---|---|
-| Histogram | `FilterTools.compute_histogram()` | Student uses histogram output to trigger a game event; documents histogram shape | `framework/processing/filter_tools.py` | `numpy`, `pygame-ce` | Unit test + Zone F (demo) | Stage 2 | Practical II | LOI-FILTER-011 §8.1 |
-| Histogram equalization | `FilterTools.histogram_equalize()` | Student applies equalization to a surface and shows before/after in README | `framework/processing/filter_tools.py` | `opencv-python`, `numpy` | Demo Scene | Stage 2 | Stage deliverable | LOI-FILTER-011 §8.1 |
-| Brightness adjustment | `FilterTools.adjust_brightness()` | Student creates a health-based or time-based brightness effect | `framework/processing/filter_tools.py` | `numpy` | Zone F (demonstrated) | Stage 2 | Code review | LOI-FILTER-011 §8.2 |
-| Contrast adjustment | `FilterTools.adjust_contrast()` | Student creates a contrast-based visual mode toggle | `framework/processing/filter_tools.py` | `numpy` | Demo Scene | Stage 2 | Stage deliverable | LOI-FILTER-011 §8.3 |
-| Convolution | `FilterTools.apply_kernel()`, `get_standard_kernel()` | Student applies a custom or standard kernel and documents the kernel matrix | `framework/processing/filter_tools.py` | `scipy.ndimage`, `numpy` | Unit test | Stage 2 | Practical II | LOI-FILTER-011 §8.4 |
-| Gaussian blur | `FilterTools.gaussian_blur()` | Student applies blur to a background or sprite region with documented sigma | `framework/processing/filter_tools.py` | `scipy.ndimage`, `numpy` | Demo Scene (interactive sigma) | Stage 2 | Code review | LOI-FILTER-011 §8.5 |
-| Sobel edge detection | `FilterTools.sobel_edge()` | Student applies Sobel and uses the edge map as a visual overlay | `framework/processing/filter_tools.py` | `opencv-python`, `numpy` | Demo Scene | Stage 2 | Practical II | LOI-FILTER-011 §8.6 |
-| Canny edge detection | `FilterTools.canny_edge()` | Student applies Canny with documented thresholds; shows result in README | `framework/processing/filter_tools.py` | `opencv-python`, `numpy` | Demo Scene | Stage 2 | Stage deliverable | LOI-FILTER-011 §8.6 |
+| Histograma | `FilterTools.compute_histogram()` | El estudiante usa la salida del histograma para disparar un evento de juego; documenta la forma del histograma | `src/framework/processing/filter_tools.py` | `numpy`, `pygame-ce` | Prueba unitaria + Zona F (demo) | Stage 2 | Práctica II | `11_FILTER_TOOLS_SPEC.md` §8.1 |
+| Ecualización de histograma | `FilterTools.histogram_equalize()` | El estudiante aplica ecualización a una superficie y muestra antes/después en el README | `src/framework/processing/filter_tools.py` | `numpy` únicamente (AUD-455: no usa `opencv-python` — CDF calculado a mano, ver `11_FILTER_TOOLS_SPEC.md` §8.1) | Escena demo | Stage 2 | Entrega de escenario | `11_FILTER_TOOLS_SPEC.md` §8.1 |
+| Ajuste de brillo | `FilterTools.adjust_brightness()` | El estudiante crea un efecto de brillo basado en salud o tiempo | `src/framework/processing/filter_tools.py` | `numpy` | Zona F (demostrado) | Stage 2 | Revisión de código | `11_FILTER_TOOLS_SPEC.md` §8.2 |
+| Ajuste de contraste | `FilterTools.adjust_contrast()` | El estudiante crea un alternador de modo visual basado en contraste | `src/framework/processing/filter_tools.py` | `numpy` | Escena demo | Stage 2 | Entrega de escenario | `11_FILTER_TOOLS_SPEC.md` §8.3 |
+| Convolución | `FilterTools.apply_kernel()`, `get_standard_kernel()` | El estudiante aplica un kernel propio o estándar y documenta la matriz de kernel | `src/framework/processing/filter_tools.py` | `scipy.ndimage`, `numpy` | Prueba unitaria | Stage 2 | Práctica II | `11_FILTER_TOOLS_SPEC.md` §8.4 |
+| Desenfoque gaussiano | `FilterTools.gaussian_blur()` | El estudiante aplica desenfoque a un fondo o región de sprite con sigma documentado | `src/framework/processing/filter_tools.py` | `scipy.ndimage`, `numpy` | Escena demo (sigma interactivo) | Stage 2 | Revisión de código | `11_FILTER_TOOLS_SPEC.md` §8.5 |
+| Detección de bordes de Sobel | `FilterTools.sobel_edge()` | El estudiante aplica Sobel y usa el mapa de bordes como superposición visual | `src/framework/processing/filter_tools.py` | `opencv-python`, `numpy` | Escena demo | Stage 2 | Práctica II | `11_FILTER_TOOLS_SPEC.md` §8.6 |
+| Detección de bordes de Canny | `FilterTools.canny_edge()` | El estudiante aplica Canny con umbrales documentados; muestra el resultado en el README | `src/framework/processing/filter_tools.py` | `opencv-python`, `numpy` | Escena demo | Stage 2 | Entrega de escenario | `11_FILTER_TOOLS_SPEC.md` §8.6 |
 
-### 9.2 Learning Evidence — Unit VII
+### 9.2 Evidencia de aprendizaje — Unidad VII
 
-A student demonstrates Unit VII mastery when they can:
-- Write the mathematical definition of convolution and match it to their applied kernel.
-- Show a histogram of a surface from their stage and explain what it reveals.
-- Demonstrate a Sobel edge map and explain why certain edges appear stronger.
-- Justify their Canny thresholds and explain hysteresis in their own words.
+Un estudiante demuestra dominio de la Unidad VII cuando puede:
+- Escribir la definición matemática de la convolución y hacerla coincidir con el kernel que aplicó.
+- Mostrar el histograma de una superficie de su escenario y explicar qué revela.
+- Demostrar un mapa de bordes de Sobel y explicar por qué ciertos bordes aparecen más fuertes.
+- Justificar sus umbrales de Canny y explicar la histéresis con sus propias palabras.
 
 ---
 
-## 10. Unit VIII — Threshold, Otsu, Morphology, Connected Components, Watershed, Region Analysis, Feature Extraction
+## 10. Unidad VIII — Umbral, Otsu, morfología, componentes conectados, watershed, análisis de regiones, extracción de características
 
-### 10.1 Deliverable Table
+### 10.1 Tabla de entregables
 
-| Topic | Professor Delivers | Student Delivers | Framework Component | Libraries | Stage 0 Example | Student Stage | Assessment | Doc Reference |
+| Tema | Entrega el profesorado | Entrega el estudiante | Componente del framework | Bibliotecas | Ejemplo en Stage 0 | Escenario del estudiante | Evaluación | Referencia |
 |---|---|---|---|---|---|---|---|---|
-| Binary thresholding | `VisionTools.threshold_binary()` | Student applies threshold to a stage surface; threshold value documented | `framework/processing/vision_tools.py` | `opencv-python`, `numpy` | Demo Scene | Stage 2 or 3 | Practical II | LOI-VISION-012 §8.1 |
-| Otsu's method | `VisionTools.threshold_otsu()` | Student applies Otsu and documents the computed threshold | `framework/processing/vision_tools.py` | `opencv-python`, `numpy` | Demo Scene | Stage 2 or 3 | Practical II | LOI-VISION-012 §8.2 |
-| Morphological erosion | `VisionTools.morphological_erode()` | Student applies erosion after threshold; shows noise removal | `framework/processing/vision_tools.py` | `opencv-python`, `numpy` | Demo Scene | Stage 2 or 3 | Code review | LOI-VISION-012 §9.1 |
-| Morphological dilation | `VisionTools.morphological_dilate()` | Student applies dilation; shows gap filling | `framework/processing/vision_tools.py` | `opencv-python`, `numpy` | Demo Scene | Stage 2 or 3 | Code review | LOI-VISION-012 §9.2 |
-| Opening and closing | `VisionTools.morphological_open()`, `morphological_close()` | Student documents the sequence (erosion→dilation or vice versa) | `framework/processing/vision_tools.py` | `opencv-python` | Demo Scene | Stage 3 | Stage deliverable | LOI-VISION-012 §9.3, §9.4 |
-| Connected components | `VisionTools.connected_components()` | Student counts distinct regions; uses region count to drive game logic | `framework/processing/vision_tools.py` | `opencv-python`, `numpy` | Demo Scene | Stage 3 | Practical II | LOI-VISION-012 §10.1 |
-| Region analysis | `VisionTools.analyze_regions()` | Student documents a `RegionInfo` object (area, centroid, bounding rect) | `framework/processing/vision_tools.py` | `scikit-image`, `opencv-python` | Demo Scene | Stage 3 | README + Practical II | LOI-VISION-012 §11.1 |
-| Watershed segmentation | `VisionTools.watershed_segment()` | Student applies watershed and shows color-coded segment overlay in stage | `framework/processing/vision_tools.py` | `opencv-python`, `numpy` | Demo Scene | Stage 3 | Stage deliverable | LOI-VISION-012 §12.1 |
-| Feature extraction (HOG, LBP) | `VisionTools.extract_hog()`, `extract_lbp()`, `extract_color_histogram()` | Student extracts features and documents vector dimensionality | `framework/processing/vision_tools.py` | `scikit-image`, `numpy` | Demo Scene | Stage 3 | Practical II + III | LOI-VISION-012 §13 |
+| Umbralización binaria | `VisionTools.threshold_binary()` | El estudiante aplica umbral a una superficie del escenario; documenta el valor de umbral | `src/framework/processing/vision_tools.py` | `opencv-python`, `numpy` | Escena demo | Stage 2 o 3 | Práctica II | `12_VISION_TOOLS_SPEC.md` §8.1 |
+| Método de Otsu | `VisionTools.threshold_otsu()` | El estudiante aplica Otsu y documenta el umbral calculado | `src/framework/processing/vision_tools.py` | `opencv-python`, `numpy` | Escena demo | Stage 2 o 3 | Práctica II | `12_VISION_TOOLS_SPEC.md` §8.2 |
+| Erosión morfológica | `VisionTools.morphological_erode()` | El estudiante aplica erosión tras el umbral; muestra eliminación de ruido | `src/framework/processing/vision_tools.py` | `opencv-python`, `numpy` | Escena demo | Stage 2 o 3 | Revisión de código | `12_VISION_TOOLS_SPEC.md` §9.1 |
+| Dilatación morfológica | `VisionTools.morphological_dilate()` | El estudiante aplica dilatación; muestra relleno de huecos | `src/framework/processing/vision_tools.py` | `opencv-python`, `numpy` | Escena demo | Stage 2 o 3 | Revisión de código | `12_VISION_TOOLS_SPEC.md` §9.2 |
+| Apertura y cierre | `VisionTools.morphological_open()`, `morphological_close()` | El estudiante documenta la secuencia (erosión→dilatación o viceversa) | `src/framework/processing/vision_tools.py` | `opencv-python` | Escena demo | Stage 3 | Entrega de escenario | `12_VISION_TOOLS_SPEC.md` §9.3, §9.4 |
+| Componentes conectados | `VisionTools.connected_components()` | El estudiante cuenta regiones distintas; usa el conteo de regiones para dirigir la lógica del juego | `src/framework/processing/vision_tools.py` | `opencv-python`, `numpy` | Escena demo | Stage 3 | Práctica II | `12_VISION_TOOLS_SPEC.md` §10.1 |
+| Análisis de regiones | `VisionTools.analyze_regions()` | El estudiante documenta un objeto `RegionInfo` (área, centroide, caja envolvente) | `src/framework/processing/vision_tools.py` | `scikit-image`, `opencv-python` | Escena demo | Stage 3 | README + Práctica II | `12_VISION_TOOLS_SPEC.md` §11.1 |
+| Segmentación watershed | `VisionTools.watershed_segment()` | El estudiante aplica watershed y muestra la superposición de segmento coloreada por código en el escenario | `src/framework/processing/vision_tools.py` | `opencv-python`, `numpy` | Escena demo | Stage 3 | Entrega de escenario | `12_VISION_TOOLS_SPEC.md` §12.1 |
+| Extracción de características (HOG, LBP) | `VisionTools.extract_hog()`, `extract_lbp()`, `extract_color_histogram()` | El estudiante extrae características y documenta la dimensionalidad del vector | `src/framework/processing/vision_tools.py` | `scikit-image`, `numpy` | Escena demo | Stage 3 | Práctica II + III | `12_VISION_TOOLS_SPEC.md` §13 |
 
-### 10.2 Learning Evidence — Unit VIII
+### 10.2 Evidencia de aprendizaje — Unidad VIII
 
-A student demonstrates Unit VIII mastery when:
-- Their README contains a real `RegionInfo` printout from their stage.
-- They show a before/after comparison of morphological operations.
-- They explain Otsu's criterion (maximize inter-class variance) in their presentation.
-- They demonstrate segmentation output changing game behavior in at least two cases.
+Un estudiante demuestra dominio de la Unidad VIII cuando:
+- Su README contiene una impresión real de `RegionInfo` de su escenario.
+- Muestra una comparación de antes/después de operaciones morfológicas.
+- Explica el criterio de Otsu (maximizar la varianza inter-clase) en su presentación.
+- Demuestra que la salida de segmentación cambia el comportamiento del juego en al menos dos casos.
 
 ---
 
-## 11. Unit IX — Pattern Recognition, Classification, Computer Vision, Interactive Applications, Machine Learning
+## 11. Unidad IX — Reconocimiento de patrones, clasificación, visión por computadora, aplicaciones interactivas, aprendizaje automático
 
-### 11.1 Deliverable Table
+### 11.1 Tabla de entregables
 
-| Topic | Professor Delivers | Student Delivers | Framework Component | Libraries | Stage 0 Example | Student Stage | Assessment | Doc Reference |
+| Tema | Entrega el profesorado | Entrega el estudiante | Componente del framework | Bibliotecas | Ejemplo en Stage 0 | Escenario del estudiante | Evaluación | Referencia |
 |---|---|---|---|---|---|---|---|---|
-| HOG descriptor | `PatternRecognitionTools.extract_hog()` (via VisionTools) | Student's README documents HOG parameters and vector length | `framework/processing/pattern_recognition_tools.py` | `scikit-image`, `numpy` | Demo Scene | Stage 3 | README + Practical III | LOI-PATTERN-013 §7.1 |
-| LBP descriptor | `PatternRecognitionTools.extract_lbp()` | Student uses LBP and documents texture pattern interpretation | `framework/processing/pattern_recognition_tools.py` | `scikit-image`, `numpy` | Demo Scene | Stage 3 | README | LOI-PATTERN-013 §7.2 |
-| Color histogram descriptor | `PatternRecognitionTools.extract_color_histogram()` | Student shows how color distribution distinguishes their classes | `framework/processing/pattern_recognition_tools.py` | `numpy` | Demo Scene | Stage 3 | README | LOI-PATTERN-013 §7.3 |
-| Dataset construction | `tools/build_dataset.py` script (professor-provided) | Student builds a labeled `.npz` dataset (≥ 3 classes, ≥ 30 samples/class) | Build script + `student_assets/datasets/` | `numpy`, `scikit-image` | Sample dataset provided | Stage 3 | Dataset deliverable | LOI-PATTERN-013 §8 |
-| K-NN classification | `PatternRecognitionTools.train(..., 'knn')` | Student trains, evaluates, and documents a k-NN model | `framework/processing/pattern_recognition_tools.py` | `scikit-learn` | Demo Scene | Stage 3 | Practical III | LOI-PATTERN-013 §14.1 |
-| Decision tree | `PatternRecognitionTools.train(..., 'tree')` | Student trains a tree; documents depth and split criterion | `framework/processing/pattern_recognition_tools.py` | `scikit-learn` | Demo Scene | Stage 3 | Practical III | LOI-PATTERN-013 §14.2 |
-| Random forest | `PatternRecognitionTools.train(..., 'forest')` | Student compares forest vs. single tree on their dataset | `framework/processing/pattern_recognition_tools.py` | `scikit-learn` | Demo Scene | Stage 3 | Stage deliverable | LOI-PATTERN-013 §14.3 |
-| SVM | `PatternRecognitionTools.train(..., 'svm')` | Optional: student applies SVM and compares to other classifiers | `framework/processing/pattern_recognition_tools.py` | `scikit-learn` | Demo Scene | Stage 3 (optional) | Bonus | LOI-PATTERN-013 §14.4 |
-| Model training pipeline | `train()` + `evaluate()` workflow | Student documents training accuracy, test accuracy, confusion matrix | `framework/processing/pattern_recognition_tools.py` | `scikit-learn`, `numpy` | Notebook template | Stage 3 | Practical III | LOI-PATTERN-013 §9, §10 |
-| Model serialization | `save_model()` / `load_model()` | `.pkl` file in `student_assets/models/`; loaded in `on_enter()` | `framework/processing/pattern_recognition_tools.py` | `joblib` | — | Stage 3 | Code review | LOI-PATTERN-013 §11 |
-| Runtime inference | `predict()` in game loop | Classification result changes observable game behavior | `framework/processing/pattern_recognition_tools.py` | `scikit-learn`, `numpy` | Demo Scene | Stage 3 | Live demo | LOI-PATTERN-013 §13.3 |
-| Interactive application | Full pipeline: Filter → Vision → Pattern → Behavior | Stage 3 is a complete interactive ML application | All processing modules | All libraries | Demo Scene | Stage 3 | Final presentation | LOI-PATTERN-013 |
+| Descriptor HOG | `VisionTools.extract_hog()` | El README del estudiante documenta los parámetros de HOG y la longitud del vector | `src/framework/processing/vision_tools.py` | `scikit-image`, `numpy` | Escena demo | Stage 3 | README + Práctica III | `12_VISION_TOOLS_SPEC.md` §13.2 |
+| Descriptor LBP | `VisionTools.extract_lbp()` | El estudiante usa LBP y documenta la interpretación del patrón de textura | `src/framework/processing/vision_tools.py` | `scikit-image`, `numpy` | Escena demo | Stage 3 | README | `12_VISION_TOOLS_SPEC.md` §13.3 |
+| Descriptor de histograma de color | `VisionTools.extract_color_histogram()` | El estudiante muestra cómo la distribución de color distingue sus clases | `src/framework/processing/vision_tools.py` | `numpy` | Escena demo | Stage 3 | README | `12_VISION_TOOLS_SPEC.md` §13.4 |
+| Construcción de dataset | Script `tools/build_dataset.py` (provisto por el profesorado) | El estudiante construye un dataset `.npz` etiquetado (≥ 3 clases, ≥ 30 muestras/clase) | Script de construcción + `student_assets/datasets/` | `numpy`, `scikit-image` | Dataset de muestra provisto | Stage 3 | Entrega de dataset | `13_PATTERN_RECOGNITION_SPEC.md` §8 |
+| Clasificación k-NN | `PatternRecognitionTools.train(..., 'knn')` | El estudiante entrena, evalúa, y documenta un modelo k-NN | `src/framework/processing/pattern_recognition_tools.py` | `scikit-learn` | Escena demo | Stage 3 | Práctica III | `13_PATTERN_RECOGNITION_SPEC.md` §14.1 |
+| Árbol de decisión | `PatternRecognitionTools.train(..., 'tree')` | El estudiante entrena un árbol; documenta la profundidad y el criterio de división | `src/framework/processing/pattern_recognition_tools.py` | `scikit-learn` | Escena demo | Stage 3 | Práctica III | `13_PATTERN_RECOGNITION_SPEC.md` §14.2 |
+| Bosque aleatorio | `PatternRecognitionTools.train(..., 'forest')` | El estudiante compara bosque frente a árbol único sobre su dataset | `src/framework/processing/pattern_recognition_tools.py` | `scikit-learn` | Escena demo | Stage 3 | Entrega de escenario | `13_PATTERN_RECOGNITION_SPEC.md` §14.3 |
+| SVM | `PatternRecognitionTools.train(..., 'svm')` | Opcional: el estudiante aplica SVM y lo compara con otros clasificadores | `src/framework/processing/pattern_recognition_tools.py` | `scikit-learn` | Escena demo | Stage 3 (opcional) | Bono | `13_PATTERN_RECOGNITION_SPEC.md` §14.4 |
+| Tubería de entrenamiento de modelo | Flujo `train()` + `evaluate()` | El estudiante documenta la precisión de entrenamiento, de prueba, y la matriz de confusión | `src/framework/processing/pattern_recognition_tools.py` | `scikit-learn`, `numpy` | Plantilla de notebook | Stage 3 | Práctica III | `13_PATTERN_RECOGNITION_SPEC.md` §9, §10 |
+| Serialización de modelo | `save_model()` / `load_model()` | Fichero `.pkl` en `student_assets/models/`; cargado en `on_enter()` | `src/framework/processing/pattern_recognition_tools.py` | `joblib` | — | Stage 3 | Revisión de código | `13_PATTERN_RECOGNITION_SPEC.md` §11 |
+| Inferencia en tiempo de ejecución | `predict()` en el bucle de juego | El resultado de clasificación cambia el comportamiento observable del juego | `src/framework/processing/pattern_recognition_tools.py` | `scikit-learn`, `numpy` | Escena demo | Stage 3 | Demo en vivo | `13_PATTERN_RECOGNITION_SPEC.md` §13.3 |
+| Aplicación interactiva | Tubería completa: Filter → Vision → Pattern → Comportamiento | Stage 3 es una aplicación de ML interactiva completa | Todos los módulos de procesamiento | Todas las bibliotecas | Escena demo | Stage 3 | Presentación final | `13_PATTERN_RECOGNITION_SPEC.md` |
 
-### 11.2 Learning Evidence — Unit IX
+### 11.2 Evidencia de aprendizaje — Unidad IX
 
-A student demonstrates Unit IX mastery when they can:
-- Present a complete `EvaluationResult` with accuracy ≥ 70%.
-- Show live in their Stage 3 that two different visual inputs produce different classification outputs and different game behavior.
-- Explain mathematically how k-NN finds the nearest neighbors (distance formula, k selection).
-- Compare two classifier types on their dataset and explain the tradeoff.
+Un estudiante demuestra dominio de la Unidad IX cuando puede:
+- Presentar un `EvaluationResult` completo con precisión ≥ 70%.
+- Mostrar en vivo en su Stage 3 que dos entradas visuales distintas producen salidas de clasificación y comportamientos de juego distintos.
+- Explicar matemáticamente cómo k-NN encuentra los vecinos más cercanos (fórmula de distancia, selección de k).
+- Comparar dos tipos de clasificador sobre su dataset y explicar el compromiso.
 
 ---
 
-## 12. Assessment Instrument Summary
+## 12. Resumen de instrumentos de evaluación
 
-**Corrected per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.2.** The table below replaces the prior invented instrument set with the six **official** instruments and their **official weighting**, as defined by the course syllabus. Full class-by-class scheduling is in `21_COURSE_SCHEDULE.md`.
+La tabla siguiente da los seis instrumentos **oficiales** y su ponderación **oficial**, según los define el programa del curso. La programación completa clase por clase está en `21_COURSE_SCHEDULE.md`.
 
-| Instrumento | Porcentaje | Units Covered | Class | Format |
+| Instrumento | Porcentaje | Unidades cubiertas | Clase | Formato |
 |---|---|---|---|---|
-| **Quices** | 15% | Distributed: I–II, III, V, VIII | Classes 2, 4, 6, 9 | Short written/conceptual checks |
-| **Prácticas de laboratorio** | 20% | Distributed: II, V, VIII | Classes 3, 6, 9 | Individual hands-on Python lab exercises |
-| **Evaluación Práctica I – Prototipo Funcional** | 15% | II, III, IV, V | Class 5 | Stage/Boss submission — coordinates, transformations, basic scenario, initial interaction |
-| **Evaluación Práctica II – Vertical Slice** | 15% | III, IV, V, VI | Class 8 | Stage/Boss submission — curves, scenes, color/transparency, textures/animation |
-| **Evaluación Práctica III – Integración Final** | 15% | VII, VIII, IX | Class 11 | Stage/Boss submission — image processing, segmentation, pattern recognition, full integration |
-| **Proyecto Integrador Invenio Fest** | 20% | I–IX (applied) | Class 12 | Group interdisciplinary presentation; this course grades the graphics/visual contribution only |
+| **Quices** | 15% | Distribuido: I–II, III, V, VIII | Clases 2, 4, 6, 9 | Comprobaciones cortas escritas/conceptuales |
+| **Prácticas de laboratorio** | 20% | Distribuido: II, V, VIII | Clases 3, 6, 9 | Ejercicios de laboratorio de Python individuales y prácticos |
+| **Evaluación Práctica I – Prototipo Funcional** | 15% | II, III, IV, V | Clase 5 | Entrega de Escenario/Jefe — coordenadas, transformaciones, escenario básico, interacción inicial |
+| **Evaluación Práctica II – Vertical Slice** | 15% | III, IV, V, VI | Clase 8 | Entrega de Escenario/Jefe — curvas, escenas, color/transparencia, texturas/animación |
+| **Evaluación Práctica III – Integración Final** | 15% | VII, VIII, IX | Clase 11 | Entrega de Escenario/Jefe — procesamiento de imágenes, segmentación, reconocimiento de patrones, integración completa |
+| **Proyecto Integrador Invenio Fest** | 20% | I–IX (aplicado) | Clase 12 | Presentación grupal interdisciplinaria; este curso califica sólo la contribución gráfica/visual |
 | **Total** | **100%** | | | |
 
-Each Evaluación Práctica is a submission of the **same single Stage or Boss** the student selected individually in Class 1 — not a different stage per checkpoint. See `08_SYLLABUS_MAPPING.md` §12 for the full milestone-to-unit mapping.
+Cada Evaluación Práctica es una entrega del **mismo Escenario o Jefe único** que el estudiante eligió individualmente en la Clase 1 — no un escenario distinto por punto de control. Ver `08_SYLLABUS_MAPPING.md` §12 para el mapeo completo de hito a unidad.
 
 ---
 
-## 13. Professor Pre-Semester Checklist
+## 13. Lista de verificación pre-semestre del profesorado
 
-The following items must be delivered before the course begins:
+Los siguientes elementos deben entregarse antes de que empiece el curso:
 
-**Corrected per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.3 and §2.A.6** — timeline uses Class numbers (11-class trimester, see `21_COURSE_SCHEDULE.md`) instead of Week numbers, and paths reflect the `src/` relocation.
-
-| Deliverable | Status Target | Document |
+| Entregable | Objetivo de estado | Documento |
 |---|---|---|
-| `src/engine/` fully implemented and tested | Before Class 1 | LOI-ARCH-003 |
-| `src/framework/entities/` fully implemented and tested | Before Class 1 | LOI-PLAYER-004, LOI-ENEMY-005 |
-| `src/framework/processing/filter_tools.py` fully implemented | Before Class 8 | LOI-FILTER-011 |
-| `src/framework/processing/vision_tools.py` fully implemented | Before Class 9 | LOI-VISION-012 |
-| `src/framework/processing/pattern_recognition_tools.py` fully implemented | Before Class 10 | LOI-PATTERN-013 |
-| `src/stages/stage0/` fully implemented | Before Class 1 | LOI-STAGE0-007 |
-| Demo Scenes (Units VII, VIII, IX) implemented | Before Classes 8, 9, 10 respectively | LOI-DEMO-015 |
-| All unit tests passing | Continuous | All spec docs |
-| `tools/build_dataset.py` available | Before Class 10 | LOI-PATTERN-013 §20 |
-| Training notebook template available | Before Class 10 | LOI-PATTERN-013 §20 |
-| `assets/datasets/sample_dataset.npz` available | Before Class 10 | LOI-PATTERN-013 §8 |
-| `student_templates/stage_template/` and `student_templates/boss_template/` available | Before Class 1 | This document, §1 |
+| `src/engine/` completamente implementado y probado | Antes de la Clase 1 | `03_ARCHITECTURE.md` |
+| `src/framework/entities/` completamente implementado y probado | Antes de la Clase 1 | `04_PLAYER_SPEC.md`, `05_ENEMY_SPEC.md` |
+| `src/framework/processing/filter_tools.py` completamente implementado | Antes de la Clase 8 | `11_FILTER_TOOLS_SPEC.md` |
+| `src/framework/processing/vision_tools.py` completamente implementado | Antes de la Clase 9 | `12_VISION_TOOLS_SPEC.md` |
+| `src/framework/processing/pattern_recognition_tools.py` completamente implementado | Antes de la Clase 10 | `13_PATTERN_RECOGNITION_SPEC.md` |
+| `src/stages/stage0/` completamente implementado | Antes de la Clase 1 | `07_STAGE0_DESIGN.md` |
+| Escenas demo (Unidades VII, VIII, IX) implementadas | Antes de las Clases 8, 9, 10 respectivamente | `15_ACADEMIC_DEMO_SCENES.md` |
+| Todas las pruebas unitarias pasando | Continuo | Todos los docs de especificación |
+| `tools/build_dataset.py` disponible | Antes de la Clase 10 | `13_PATTERN_RECOGNITION_SPEC.md` §20 |
+| Plantilla de notebook de entrenamiento disponible | Antes de la Clase 10 | `13_PATTERN_RECOGNITION_SPEC.md` §20 |
+| `assets/datasets/sample_dataset.npz` disponible | Antes de la Clase 10 | `13_PATTERN_RECOGNITION_SPEC.md` §8 |
+| `student_templates/stage_template/` y `student_templates/boss_template/` disponibles | Antes de la Clase 1 | Este documento, §1 |
 
 ---
 
-## 14. Student Deliverable Checklist (Per Evaluación Práctica)
+## 14. Lista de verificación de entregables del estudiante (por Evaluación Práctica)
 
-**Corrected per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.1 and §9.** The checklists below apply to the **single Stage or Boss individually assigned** to each student in Class 1 — they are **not** three different stages. "14.1 / 14.2 / 14.3" are the three cumulative completeness checkpoints of that one assignment, renamed to match the official Evaluación Práctica I/II/III instruments.
+Las listas de verificación de abajo aplican al **único Escenario o Jefe asignado individualmente** a cada estudiante en la Clase 1 — **no** son tres escenarios distintos. "14.1 / 14.2 / 14.3" son los tres puntos de control acumulativos de completitud de esa única entrega, nombrados según los instrumentos oficiales Evaluación Práctica I/II/III.
 
-### 14.1 Evaluación Práctica I — Prototipo Funcional Checklist (Class 5)
+### 14.1 Lista de verificación de la Evaluación Práctica I — Prototipo Funcional (Clase 5)
 
-| Item | Units | Required |
+| Elemento | Unidades | Obligatorio |
 |---|---|---|
-| `<assignment>.tmx` — valid TMX with all required layers (Stages only) | I, IV | Mandatory |
-| `<assignment>.py` — correct `BaseScene` (Stage) or `BossBase` (Boss) subclass | I, IV | Mandatory |
-| At least one custom entity using vector math | II | Mandatory |
-| At least one entity following a curve path | III | Mandatory |
-| Color space operation applied to a surface | V | Mandatory |
-| `README.md` — all academic concepts documented | I–V | Mandatory |
+| `<entrega>.tmx` — TMX válido con todas las capas obligatorias (sólo Escenarios) | I, IV | Obligatorio |
+| `<entrega>.py` — subclase correcta de `BaseScene` (Escenario) o `BossBase` (Jefe) | I, IV | Obligatorio |
+| Al menos una entidad propia que use matemática vectorial | II | Obligatorio |
+| Al menos una entidad que siga una ruta de curva | III | Obligatorio |
+| Operación de espacio de color aplicada a una superficie | V | Obligatorio |
+| `README.md` — todos los conceptos académicos documentados | I–V | Obligatorio |
 
-### 14.2 Evaluación Práctica II — Vertical Slice Checklist (Class 8)
+### 14.2 Lista de verificación de la Evaluación Práctica II — Vertical Slice (Clase 8)
 
-| Item | Units | Required |
+| Elemento | Unidades | Obligatorio |
 |---|---|---|
-| All Evaluación Práctica I requirements maintained | I–V | Mandatory |
-| Easing function used in movement or animation | VI | Mandatory |
-| `FilterTools.compute_histogram()` used to drive logic | VII | Mandatory |
-| `FilterTools.adjust_brightness()` or `adjust_contrast()` applied | VII | Mandatory |
-| `FilterTools.apply_kernel()` or `gaussian_blur()` applied | VII | Mandatory |
-| At least one edge detection result (Sobel or Canny) | VII | Mandatory |
-| README: kernel matrix, filter applied, before/after screenshots | VI, VII | Mandatory |
+| Se mantienen todos los requisitos de la Evaluación Práctica I | I–V | Obligatorio |
+| Función de easing usada en movimiento o animación | VI | Obligatorio |
+| `FilterTools.compute_histogram()` usado para dirigir lógica | VII | Obligatorio |
+| `FilterTools.adjust_brightness()` o `adjust_contrast()` aplicado | VII | Obligatorio |
+| `FilterTools.apply_kernel()` o `gaussian_blur()` aplicado | VII | Obligatorio |
+| Al menos un resultado de detección de bordes (Sobel o Canny) | VII | Obligatorio |
+| README: matriz de kernel, filtro aplicado, capturas de antes/después | VI, VII | Obligatorio |
 
-### 14.3 Evaluación Práctica III — Integración Final Checklist (Class 11)
+### 14.3 Lista de verificación de la Evaluación Práctica III — Integración Final (Clase 11)
 
-| Item | Units | Required |
+| Elemento | Unidades | Obligatorio |
 |---|---|---|
-| All Evaluación Práctica I and II requirements maintained | I–VII | Mandatory |
-| `VisionTools.threshold_binary()` or `threshold_otsu()` applied | VIII | Mandatory |
-| At least one morphological operation applied | VIII | Mandatory |
-| `VisionTools.connected_components()` or `analyze_regions()` used | VIII | Mandatory |
-| `VisionTools.extract_features()` produces training features | VIII, IX | Mandatory |
-| Labeled dataset in `assets/datasets/` or student assignment folder | IX | Mandatory |
-| Trained model in student assignment folder (`.pkl`) | IX | Mandatory |
-| `EvaluationResult` with accuracy ≥ 70% in README | IX | Mandatory |
-| Classifier runs at runtime; result changes game behavior | IX | Mandatory |
-| README: full training pipeline documentation | IX | Mandatory |
-
+| Se mantienen todos los requisitos de la Evaluación Práctica I y II | I–VII | Obligatorio |
+| `VisionTools.threshold_binary()` o `threshold_otsu()` aplicado | VIII | Obligatorio |
+| Al menos una operación morfológica aplicada | VIII | Obligatorio |
+| `VisionTools.connected_components()` o `analyze_regions()` usado | VIII | Obligatorio |
+| `VisionTools.extract_features()` produce características de entrenamiento | VIII, IX | Obligatorio |
+| Dataset etiquetado en `assets/datasets/` o la carpeta de entrega del estudiante | IX | Obligatorio |
+| Modelo entrenado en la carpeta de entrega del estudiante (`.pkl`) | IX | Obligatorio |
+| `EvaluationResult` con precisión ≥ 70% en el README | IX | Obligatorio |
+| El clasificador corre en tiempo de ejecución; el resultado cambia el comportamiento del juego | IX | Obligatorio |
+| README: documentación completa de la tubería de entrenamiento | IX | Obligatorio |
 
 ---
-## 🔗 Documentos Relacionados
+## 🔗 Documentos relacionados
 
-- [[08_SYLLABUS_MAPPING.md|Syllabus Mapping]]
-- [[27_ACADEMIC_RUBRICS.md|Academic Rubrics]]
+- [[08_SYLLABUS_MAPPING.md|Mapeo del programa del curso]]
+- [[27_ACADEMIC_RUBRICS.md|Rúbricas académicas]]

@@ -59,7 +59,7 @@ Total mínimo **8 enemigos**.
 | `Portal` | 1 | → 3-2 |
 | `MessageTrigger` | 1 | Presenta las losas (Unidad VI) |
 | Coleccionables | ≥ 5 | En las jardineras y bordes |
-| `OneWay` | 2+ | Jardineras como cubierta |
+| `Platform` | 2+ | Jardineras como cubierta |
 
 ## Mapa sugerido (canónico del Entregable 1)
 

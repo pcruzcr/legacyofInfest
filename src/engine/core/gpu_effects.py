@@ -41,12 +41,15 @@ mismo. Se comprobó pasada por pasada:
 * **desenfoque de movimiento** — el sombreador mezcla con el fotograma anterior
   de forma incondicional; el de CPU lo enciende el juego (`set_motion_blur`).
   Igual que el anterior: parecidos, no equivalentes.
-* **daltonismo** — `colorblind_frag` existe y **nadie le pasa nunca el modo del
-  jugador**: `GLRenderConfig.colorblind_mode` vale 0 y `App` no lo toca, o sea
-  que el sombreador está escrito y no se ejecuta jamás. Sus matrices tampoco
-  son las de la CPU (AUD-138). Enchufarlo cambiaría lo que ve un jugador
-  daltónico sin que nadie lo haya mirado en una pantalla, así que es trabajo
-  aparte y no parte de quitar una duplicación.
+* **daltonismo** — `colorblind_frag` existe y, desde AUD-252, `App` sí le pasa
+  el modo del jugador (`modo_daltonico_gl()` en `app.py` traduce
+  `UserSettings.colorblind_mode` al entero que espera `GLRenderConfig`). Antes
+  de AUD-252 nadie escribía ese campo y el sombreador no se ejecutaba nunca;
+  este comentario describía ese estado y quedó desactualizado cuando se
+  corrigió. Sus matrices tampoco son las de la CPU (AUD-138) — eso sigue sin
+  resolver, así que aunque el modo llega al sombreador, un jugador daltónico
+  puede ver una corrección distinta según si su máquina usa GL o el camino de
+  software.
 * **iluminación** — la aplica `LightSystem`, no `PostProcessing`; se reparte en
   otro sitio.
 """

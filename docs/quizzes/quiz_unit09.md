@@ -1,56 +1,40 @@
 ---
 document_id: "LOI-QUIZZES-QUIZ_UNIT09"
-title: "Quiz — Unit IX: Pattern Recognition"
+title: "Quiz — Unidad IX: reconocimiento de patrones"
 aliases: ["Quiz Unit09", "quiz_unit09"]
-tags: ["quiz", "academic", "evaluation"]
-description: "Quizzes document: quiz_unit09"
-source: "docs/docs\quizzes/quiz_unit09.md"
-date_processed: "2026-07-14"
+tags: ["quiz", "academico", "evaluacion"]
+description: "Documento de quizzes: quiz_unit09"
+source: "docs/quizzes/quiz_unit09.md"
+date_processed: "2026-08-13"
 ---
 
-# Quiz — Unit IX: Pattern Recognition
+# Quiz — Unidad IX: reconocimiento de patrones
 
-**Course:** Legacy of InFest  
-**Duration:** 15 minutes  
-**Total:** 10 points  
+**Curso:** Legacy of InFest
+**Duración:** 15 minutos
+**Total:** 10 puntos
 
 ---
 
-## Questions
+## Preguntas
 
-### 1. Feature Extraction (2 pts)
-Name three feature extraction methods and describe what each captures about an image.
+### 1. Extracción de características (2 pts)
+Nombre tres métodos de extracción de características y describa qué captura cada uno de una imagen.
 
-### 2. HOG Descriptor (2 pts)
-What does a Histogram of Oriented Gradients (HOG) descriptor measure? What are its key parameters?
+### 2. Descriptor HOG (2 pts)
+¿Qué mide un descriptor de Histograma de Gradientes Orientados (HOG)? ¿Cuáles son sus parámetros clave?
 
-### 3. Classification (2 pts)
-Given a trained KNN model with k=3 and the 3 nearest neighbors belonging to classes [A, A, B], what class is predicted? What is the confidence?
+### 3. Clasificación (2 pts)
+Dado un modelo KNN entrenado con k=3 y los 3 vecinos más cercanos pertenecientes a las clases [A, A, B], ¿qué clase se predice? ¿Cuál es la confianza?
 
-### 4. Overfitting (1 pt)
-What is overfitting and how can you detect it using train/test accuracy?
+### 4. Sobreajuste (1 pt)
+¿Qué es el sobreajuste (overfitting) y cómo se puede detectar usando la precisión de entrenamiento/prueba?
 
-### 5. Confusion Matrix (2 pts)
-Draw a 2×2 confusion matrix for a binary classifier. Label: TP, TN, FP, FN. What does each cell represent?
+### 5. Matriz de confusión (2 pts)
+Dibuje una matriz de confusión 2×2 para un clasificador binario. Etiquete: VP, VN, FP, FN. ¿Qué representa cada celda?
 
-### 6. Model Evaluation (1 pt)
-Given accuracy = 0.95 on training and 0.60 on test data, is the model likely overfit? What would you do?
+### 6. Evaluación de modelo (1 pt)
+Dada una precisión de 0.95 en entrenamiento y 0.60 en datos de prueba, ¿es probable que el modelo esté sobreajustado? ¿Qué haría al respecto?
 
-### 7. Feature Vector (1 pt)
-Why must feature vectors have the same dimension at training and inference time? What would `_find_nearest()` do if dimensions differ?
-
-
---- Traducción al Español ---
-
-## Quiz — Unidad IX: Reconocimiento de Patrones
-
-**Duración:** 15 minutos | **Total:** 10 puntos
-
-### Preguntas
-1. Extracción de características (2 pts)
-2. Descriptor HOG (2 pts)
-3. Clasificación KNN (2 pts)
-4. Sobreajuste (1 pt)
-5. Matriz de confusión (2 pts)
-6. Evaluación de modelo (1 pt)
-7. Vector de características (1 pt)
+### 7. Vector de características (1 pt)
+¿Por qué los vectores de características deben tener la misma dimensión en el entrenamiento y en la inferencia? ¿Qué haría `_find_nearest()` si las dimensiones difieren?

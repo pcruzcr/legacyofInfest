@@ -1,80 +1,103 @@
 ---
 document_id: "LOI-ASSET-020"
-title: "Legacy of InFest — Asset Bible"
-aliases: ["Asset Bible"]
-tags: ["asset", "bible", "art", "audio"]
-description: "Every visual/audio asset, path, dimensions, palette"
+title: "Legacy of InFest — Biblia de recursos"
+aliases: ["Biblia de recursos", "Asset Bible"]
+tags: ["asset", "recursos", "arte", "audio"]
+description: "Cada recurso visual/de audio, su ruta, dimensiones y paleta"
 source: "docs/20_ASSET_BIBLE.md"
-date_processed: "2026-07-14"
+date_processed: "2026-08-12"
 ---
 
-# Legacy of InFest — Asset Bible
+# Legacy of InFest — Biblia de recursos
 
-**Document ID:** LOI-ASSET-020  
-**Version:** 1.0.0  
-**Status:** Official  
-**Compatibility:** Requires LOI-CODEX-002, LOI-WORLD-016, LOI-BOSS-017, LOI-ROSTER-018  
-**Audience:** Professor, Students, Artists, AI coding assistants
+**ID del documento:** LOI-ASSET-020
+**Versión:** 1.1.0
+**Estado:** Oficial
+**Compatibilidad:** Requiere `16_WORLD_DESIGN.md`, `17_BOSS_SPEC.md`, `18_ENEMY_ROSTER.md`
+**Audiencia:** Profesor, estudiantes, artistas, asistentes de programación con IA
+
+> **AUD-455.** Traduce el documento (tenía el cuerpo completo en inglés y un
+> resumen condensado en español duplicado al final, con datos que no
+> coincidían entre sí). Corrige dos discrepancias reales entre ambas
+> versiones, en favor de la que coincide con el código:
+> - **Resolución interna:** el cuerpo en inglés decía «800×600 internal
+>   render» y el resumen en español decía «320x224» — son
+>   `INTERNAL_WIDTH`/`INTERNAL_HEIGHT` de `settings.py` (ver
+>   `22_API_CONTRACTS.md` §2.1), y valen **800×600**. El 320×224 es la
+>   resolución antigua, ya retirada (ver los commits recientes AUD-450 a
+>   AUD-454 sobre la maquetación fija a 320×224).
+> - **Fotogramas de animación del jugador:** el cuerpo en inglés decía
+>   `player_jump.png` 4 fotogramas, `player_fall.png` 3, `player_crouch.png`
+>   3; el resumen en español decía 3, 2 y 2. Verificado contra
+>   `PLAYER_ANIM_MAP` en `src/framework/entities/player.py`: gana el
+>   resumen — **3, 2 y 2** son los valores reales.
+>
+> **AUD-455 (2026-08-13).** §3 (árbol de directorios) listaba `assets/music/`
+> con extensión `.ogg`, contradiciendo a §11 unas líneas más abajo, que ya
+> documentaba correctamente que las pistas se guardan como **`.wav`** hoy.
+> Confirmado contra `stage_scene.py`: la carga real intenta `.wav` primero y
+> sólo cae a `.ogg` si el `.wav` no existe. Corregido el árbol de §3 para que
+> coincida con §11 y con el código.
 
 ---
 
-## 1. Overview
+## 1. Visión general
 
-This document defines every visual and audio asset required by Legacy of InFest. It is the authoritative reference for artists, students creating custom assets, and AI coding assistants generating asset loading code.
+Este documento define cada recurso visual y de audio que necesita Legacy of InFest. Es la referencia autoritativa para artistas, estudiantes que crean recursos propios, y asistentes de programación con IA que generan código de carga de recursos.
 
-Every asset listed here has a defined path, format, dimensions, palette constraints, and usage context. Assets not listed here are either student-created (placed in `student_assets/`) or are generated at runtime by the processing pipeline.
+Cada recurso listado aquí tiene ruta, formato, dimensiones, restricciones de paleta y contexto de uso definidos. Los recursos que no aparecen aquí, o bien los crean los estudiantes (en `student_assets/`), o bien los genera en tiempo de ejecución la tubería de procesamiento.
 
 ---
 
-## 2. Global Asset Standards
+## 2. Estándares globales de recursos
 
-### 2.1 Visual Standards
+### 2.1 Estándares visuales
 
-| Property | Standard |
+| Propiedad | Estándar |
 |---|---|
-| Pixel format | PNG with alpha channel (RGBA) |
-| Color depth | 8 bits per channel |
-| Palette constraint | Maximum 16 colors per sprite sheet |
-| Global palette | Maximum 256 colors across the entire game |
-| Pixel size | 1:1 — no sub-pixel rendering |
-| Anti-aliasing | Never |
-| Transparency | Binary (fully transparent or opaque) OR smooth alpha (for effects only) |
-| Internal resolution | All assets designed for the 800×600 internal render |
+| Formato de píxel | PNG con canal alfa (RGBA) |
+| Profundidad de color | 8 bits por canal |
+| Restricción de paleta | Máximo 16 colores por hoja de sprites |
+| Paleta global | Máximo 256 colores en todo el juego |
+| Tamaño de píxel | 1:1 — sin renderizado de subpíxeles |
+| Anti-aliasing | Nunca |
+| Transparencia | Binaria (totalmente transparente u opaca) O alfa suave (sólo para efectos) |
+| Resolución interna | Todos los recursos se diseñan para el render interno de 800×600 |
 
-### 2.2 Sprite Sheet Format
+### 2.2 Formato de hoja de sprites
 
-All animated sprites are **horizontal sprite sheets**: frames arranged left to right, equal width, top-left origin.
+Todos los sprites animados son **hojas de sprites horizontales**: fotogramas dispuestos de izquierda a derecha, mismo ancho, origen en la esquina superior izquierda.
 
 ```
-[Frame 0][Frame 1][Frame 2][Frame 3]...
+[Fotograma 0][Fotograma 1][Fotograma 2][Fotograma 3]...
 ```
 
-Sheet width = frame_width × frame_count  
-Sheet height = frame_height (single row only — no multi-row sheets)
+Ancho de la hoja = ancho_fotograma × número_fotogramas
+Alto de la hoja = alto_fotograma (una sola fila — sin hojas multifila)
 
-### 2.3 Tile Format
+### 2.3 Formato de baldosas (tiles)
 
-| Property | Standard |
+| Propiedad | Estándar |
 |---|---|
-| Tile size | 16×16 pixels |
-| Sheet arrangement | Row-major grid |
-| Maximum tiles per set | 256 |
-| Sheet dimensions | 128×128 px (8×8 tile grid) |
+| Tamaño de baldosa | 16×16 píxeles |
+| Disposición de hoja | Cuadrícula por filas |
+| Máximo de baldosas por conjunto | 256 |
+| Dimensiones de hoja | 128×128 px (cuadrícula de 8×8 baldosas) |
 
-### 2.4 Audio Standards
+### 2.4 Estándares de audio
 
-| Property | Music | SFX |
+| Propiedad | Música | SFX |
 |---|---|---|
-| Format | OGG Vorbis | WAV or OGG |
-| Sample rate | 44100 Hz | 22050 Hz |
-| Bit depth | 16-bit | 16-bit |
-| Channels | Stereo | Mono |
-| Loop point | Must be defined for BGM | N/A |
-| Volume normalization | -12 dBFS peak | -6 dBFS peak |
+| Formato | OGG Vorbis | WAV u OGG |
+| Frecuencia de muestreo | 44100 Hz | 22050 Hz |
+| Profundidad de bits | 16 bits | 16 bits |
+| Canales | Estéreo | Mono |
+| Punto de bucle | Obligatorio en BGM | N/D |
+| Normalización de volumen | Pico -12 dBFS | Pico -6 dBFS |
 
 ---
 
-## 3. Directory Structure
+## 3. Estructura de directorios
 
 ```
 assets/
@@ -129,19 +152,19 @@ assets/
 │   ├── banner_medium.png
 │   ├── gameover_font.png
 │   └── menu_font.png
-├── music/
-│   ├── bgm_splash.ogg
-│   ├── bgm_title.ogg
-│   ├── bgm_story.ogg
-│   ├── bgm_stage0.ogg
-│   ├── bgm_zone1_traverse.ogg
-│   ├── bgm_zone1_boss.ogg
-│   ├── bgm_zone2_traverse.ogg
-│   ├── bgm_zone2_boss.ogg
-│   ├── bgm_zone3_traverse.ogg
-│   ├── bgm_zone3_boss.ogg
-│   ├── bgm_final_approach.ogg
-│   └── bgm_paburu.ogg
+├── music/                       # .wav hoy en disco; StageScene cae a .ogg si el .wav no existe (§11)
+│   ├── bgm_splash.wav
+│   ├── bgm_title.wav
+│   ├── bgm_story.wav
+│   ├── bgm_stage0.wav
+│   ├── bgm_zone1_traverse.wav
+│   ├── bgm_zone1_boss.wav
+│   ├── bgm_zone2_traverse.wav
+│   ├── bgm_zone2_boss.wav
+│   ├── bgm_zone3_traverse.wav
+│   ├── bgm_zone3_boss.wav
+│   ├── bgm_final_approach.wav
+│   └── bgm_paburu.wav
 └── sfx/
     ├── player/
     ├── enemies/
@@ -152,655 +175,465 @@ assets/
 
 ---
 
-## 4. Player Sprites
+## 4. Sprites del jugador
 
-All player sprites are located in `assets/sprites/player/`.  
-Frame size: **32×32 pixels** for all animations.
+Todos los sprites del jugador están en `assets/sprites/player/`.
+Tamaño de fotograma: **32×32 píxeles** en todas las animaciones.
 
-| File | Frames | FPS | Loop | State |
+| Fichero | Fotogramas | FPS | Bucle | Estado |
 |---|---|---|---|---|
-| `player_idle.png` | 4 | 8 | Yes | IDLE |
-| `player_walk.png` | 8 | 12 | Yes | WALKING |
-| `player_jump.png` | 4 | 12 | No (hold last) | JUMPING |
-| `player_fall.png` | 3 | 8 | Yes | FALLING |
-| `player_crouch.png` | 3 | 8 | No (hold last) | CROUCHING |
+| `player_idle.png` | 4 | 8 | Sí | IDLE |
+| `player_walk.png` | 8 | 12 | Sí | WALKING |
+| `player_jump.png` | 3 | 12 | No (mantiene el último) | JUMPING |
+| `player_fall.png` | 2 | 8 | Sí | FALLING |
+| `player_crouch.png` | 2 | 8 | No (mantiene el último) | CROUCHING |
 | `player_short_attack.png` | 6 | 18 | No | SHORT_ATTACK |
 | `player_long_attack.png` | 10 | 16 | No | LONG_ATTACK |
 | `player_hurt.png` | 4 | 12 | No | HURT |
 | `player_die.png` | 8 | 10 | No | DYING |
 
-**Palette:**  
-The player (hooded protagonist) uses a restricted palette of exactly 12 colors:
-- 3 hood shadow tones (deep gray-blue, mid gray-blue, light gray)
-- 2 skin tones (warm tan, shadow)
-- 2 cloth tones (dark navy, mid navy)
-- 2 rope/belt tones (brown, dark brown)
-- 1 eye glow (pale gold — visible in very dark scenes only)
-- 1 pure black (outline)
-- 1 pure transparent
+**Paleta:**
+El jugador (protagonista encapuchado) usa una paleta restringida de exactamente 12 colores:
+- 3 tonos de sombra de capucha (gris azulado oscuro, medio, gris claro)
+- 2 tonos de piel (canela cálida, sombra)
+- 2 tonos de tela (azul marino oscuro, medio)
+- 2 tonos de cuerda/cinturón (marrón, marrón oscuro)
+- 1 brillo de ojos (dorado pálido — visible sólo en escenas muy oscuras)
+- 1 negro puro (contorno)
+- 1 transparente puro
 
 ---
 
-## 5. Enemy Sprites
+## 5. Sprites de enemigos
 
-Enemy sprites use generic zone-based naming. Zone-specific thematic variants
-are aspirational; the sprites on disk are shared across all enemy types within
-a zone and use the concrete type prefix (`walker`, `fly`, `shoot`).
+Los sprites de enemigos usan nombres genéricos por zona. Las variantes
+temáticas por zona son aspiracionales; los sprites que existen en disco se
+comparten entre todos los tipos de enemigo de una zona y usan el prefijo del
+tipo concreto (`walker`, `fly`, `shoot`).
 
 ### 5.1 Walker (universal)
 
-Location: `assets/sprites/enemies/`
+Ubicación: `assets/sprites/enemies/`
 
-| File | Enemy | Frame Size | Frames | FPS | Loop |
+| Fichero | Enemigo | Tamaño de fotograma | Fotogramas | FPS | Bucle |
 |---|---|---|---|---|---|
-| `enemy_walker_walk.png` | Walker | 20×16 | 6 | 10 | Yes |
+| `enemy_walker_walk.png` | Walker | 20×16 | 6 | 10 | Sí |
 
-### 5.2 Zone-sprited Enemies
+### 5.2 Enemigos con sprite por zona
 
-Location: `assets/sprites/enemies/zoneN/`
+Ubicación: `assets/sprites/enemies/zoneN/`
 
-| File | Enemy | Frames | FPS |
+| Fichero | Enemigo | Fotogramas | FPS |
 |---|---|---|---|
-| `enemy_zoneN_walk.png` | Zone walker | 6 | 10 |
-| `enemy_zoneN_hurt.png` | Any (damage) | 3 | 12 |
-| `enemy_zoneN_die.png` | Any (death) | 5 | 8 |
-| `enemy_fly_zoneN.png` | Zone flyer | 4 | 12 |
-| `enemy_shoot_zoneN.png` | Zone shooter | 4 | 6 |
+| `enemy_zoneN_walk.png` | Walker de zona | 6 | 10 |
+| `enemy_zoneN_hurt.png` | Cualquiera (daño) | 3 | 12 |
+| `enemy_zoneN_die.png` | Cualquiera (muerte) | 5 | 8 |
+| `enemy_fly_zoneN.png` | Volador de zona | 4 | 12 |
+| `enemy_shoot_zoneN.png` | Disparador de zona | 4 | 6 |
 
-Where `N` is the zone number (1–3). All sprites use 16×16 frame size
-(placeholder; actual frame sizes depend on the thematic replacement).
+Donde `N` es el número de zona (1–3). Todos los sprites usan tamaño de
+fotograma 16×16 (marcador de posición; el tamaño real depende del reemplazo
+temático).
 
 ---
 
-## 6. Boss Sprites
+## 6. Sprites de jefes
 
-Location: `assets/sprites/bosses/`
+Ubicación: `assets/sprites/bosses/`
 
 ### 6.1 El Venado Sagrado
 
-Frame size: 48×48 px
+Tamaño de fotograma: 48×48 px
 
-| File | Frames | FPS | Loop | Status |
+| Fichero | Fotogramas | FPS | Bucle | Estado |
 |---|---|---|---|---|
-| `boss_venado_drift.png` | 6 | 8 | Yes | ✅ |
+| `boss_venado_drift.png` | 6 | 8 | Sí | ✅ |
 | `boss_venado_stomp.png` | 8 | 12 | No | ✅ |
 | `boss_venado_charge.png` | 6 | 14 | No | ✅ |
-| `boss_venado_frenzy_drift.png` | 6 | 14 | Yes | ✅ |
+| `boss_venado_frenzy_drift.png` | 6 | 14 | Sí | ✅ |
 | `boss_venado_vine.png` | 10 | 12 | No | ✅ |
 | `boss_venado_hurt.png` | 4 | 12 | No | ✅ |
 | `boss_venado_death.png` | 12 | 8 | No | ✅ |
-| `boss_venado_skull.png` | 1 | — | — | ⚠️ Placeholder |
-| `boss_venado_proyectil_vine.png` | 4 | 10 | Yes | ⚠️ Placeholder |
+| `boss_venado_skull.png` | 1 | — | — | ⚠️ Marcador de posición |
+| `boss_venado_proyectil_vine.png` | 4 | 10 | Sí | ⚠️ Marcador de posición |
 
-**Palette Notes:** Bone white (`#E8DCC8`), moss dark (`#2D4A1E`), moss mid (`#4A7832`), earth brown (`#6B4423`), fungus cream (`#C8B896`), beetle black (`#0A0A0A`), root tan (`#8C6E3C`), shadow (`#1A1A2E`) + transparent.
+**Notas de paleta:** blanco hueso (`#E8DCC8`), musgo oscuro (`#2D4A1E`), musgo medio (`#4A7832`), tierra (`#6B4423`), crema hongo (`#C8B896`), negro escarabajo (`#0A0A0A`), tostado raíz (`#8C6E3C`), sombra (`#1A1A2E`) + transparente.
 
 ### 6.2 El Rey Terciopelo
 
-Phase 1 frame size: 40×56 px. Sub-boss (Phase 2) frame size: 24×28 px.
+Tamaño de fotograma Fase 1: 40×56 px. Sub-jefe (Fase 2): 24×28 px.
 
-| File | Frames | FPS | Loop | Status |
+| Fichero | Fotogramas | FPS | Bucle | Estado |
 |---|---|---|---|---|
-| `boss_rey_walk.png` | 8 | 10 | Yes | ✅ |
+| `boss_rey_walk.png` | 8 | 10 | Sí | ✅ |
 | `boss_rey_spit.png` | 6 | 12 | No | ✅ |
-| `boss_rey_split.png` | 8 | 10 | Yes | ✅ |
-| `boss_rey_metad_walk.png` | 6 | 12 | Yes | ⚠️ Placeholder |
+| `boss_rey_split.png` | 8 | 10 | Sí | ✅ |
+| `boss_rey_metad_walk.png` | 6 | 12 | Sí | ⚠️ Marcador de posición |
 | `boss_rey_merge.png` | 6 | 8 | No | ✅ |
-| `boss_rey_rampage.png` | 8 | 16 | Yes | ✅ |
+| `boss_rey_rampage.png` | 8 | 16 | Sí | ✅ |
 | `boss_rey_hurt.png` | 4 | 12 | No | ✅ |
 | `boss_rey_death.png` | 14 | 8 | No | ✅ |
-| `boss_rey_venom_glob.png` | 3 | 8 | Yes | ⚠️ Placeholder |
+| `boss_rey_venom_glob.png` | 3 | 8 | Sí | ⚠️ Marcador de posición |
 
-**Palette Notes:** Terciopelo tan (`#C8A264`), terciopelo dark (`#4A3218`), terciopelo mid (`#8C6432`), decay gray (`#7D7D7D`), decay dark (`#3C3C3C`), venom green (`#32A050`), venom bright (`#50C878`), shadow (`#0A0A14`).
+**Notas de paleta:** terciopelo tostado (`#C8A264`), terciopelo oscuro (`#4A3218`), terciopelo medio (`#8C6432`), gris descomposición (`#7D7D7D`), gris oscuro descomposición (`#3C3C3C`), verde veneno (`#32A050`), verde veneno brillante (`#50C878`), sombra (`#0A0A14`).
 
 ### 6.3 El Gavilán Camionero Mascarero
 
-Frame size: 56×40 px (wide — wingspan)
+Tamaño de fotograma: 56×40 px (ancho — envergadura)
 
-| File | Frames | FPS | Loop | Status |
+| Fichero | Fotogramas | FPS | Bucle | Estado |
 |---|---|---|---|---|
-| `boss_gavilan_glide.png` | 8 | 10 | Yes | ✅ |
+| `boss_gavilan_glide.png` | 8 | 10 | Sí | ✅ |
 | `boss_gavilan_dive.png` | 6 | 16 | No | ✅ |
-| `boss_gavilan_hover.png` | 4 | 8 | Yes | ✅ |
+| `boss_gavilan_hover.png` | 4 | 8 | Sí | ✅ |
 | `boss_gavilan_storm.png` | 8 | 12 | No | ✅ |
-| `boss_gavilan_masked.png` | 6 | 14 | Yes | ✅ |
+| `boss_gavilan_masked.png` | 6 | 14 | Sí | ✅ |
 | `boss_gavilan_hurt.png` | 4 | 12 | No | ✅ |
 | `boss_gavilan_death.png` | 16 | 8 | No | ✅ |
-| `boss_gavilan_mask_frag.png` | 4 | 12 | No | ⚠️ Placeholder |
-| `boss_gavilan_feather.png` | 3 | 10 | Yes | ⚠️ Placeholder |
+| `boss_gavilan_mask_frag.png` | 4 | 12 | No | ⚠️ Marcador de posición |
+| `boss_gavilan_feather.png` | 3 | 10 | Sí | ⚠️ Marcador de posición |
 
-**Palette Notes:** Hawk brown (`#8C5A28`), hawk tan (`#C88C3C`), hawk white (`#E8DCC8`), mask gold (`#D4A017`), mask dark gold (`#8C6800`), mask teal (`#1E6B6B`), mask red-orange (`#D45A00`), eye glow (`#50FF50`), shadow black (`#0A0A0A`).
+**Notas de paleta:** marrón halcón (`#8C5A28`), tostado halcón (`#C88C3C`), blanco halcón (`#E8DCC8`), oro máscara (`#D4A017`), oro oscuro máscara (`#8C6800`), verde azulado máscara (`#1E6B6B`), naranja rojizo máscara (`#D45A00`), brillo de ojos (`#50FF50`), negro sombra (`#0A0A0A`).
 
-### 6.4 El Gran Shaman Paburu
+### 6.4 El Gran Chamán Paburu
 
-Multiple frame sizes per form.
+Varios tamaños de fotograma según la forma.
 
-| File | Form | Frame Size | Frames | FPS | Loop | Status |
+| Fichero | Forma | Tamaño de fotograma | Fotogramas | FPS | Bucle | Estado |
 |---|---|---|---|---|---|---|
-| `boss_paburu_stone.png` | 1 | 64×64 | 4 | 6 | Yes | ✅ |
+| `boss_paburu_stone.png` | 1 | 64×64 | 4 | 6 | Sí | ✅ |
 | `boss_paburu_stone_slam.png` | 1 | 64×64 | 8 | 12 | No | ✅ |
-| `boss_paburu_stone_crack.png` | 1→2 | 64×64 | 8 | 8 | No | ⚠️ Placeholder |
-| `boss_paburu_mask.png` | 2 | 56×72 | 6 | 10 | Yes | ✅ |
-| `boss_paburu_mask_wave.png` | 2 | 56×72 | 8 | 12 | No | ⚠️ Placeholder |
-| `boss_paburu_gold.png` | 3A | 32×32 | 6 | 14 | Yes | ✅ |
-| `boss_paburu_black.png` | 3B | 32×32 | 6 | 14 | Yes | ✅ |
-| `boss_paburu_relic_atk.png` | 3A/B | 32×32 | 10 | 14 | No | ⚠️ Placeholder |
-| `boss_paburu_spirit.png` | 4 | 64×80 | 8 | 10 | Yes | ✅ |
-| `boss_paburu_spirit_surge.png` | 4 | 64×80 | 12 | 14 | No | ⚠️ Placeholder |
-| `boss_paburu_hurt.png` | All | 64×64 | 4 | 12 | No | ✅ |
-| `boss_paburu_transcend.png` | Death | 64×64 | 20 | 8 | No | ⚠️ Placeholder |
-| `boss_paburu_stone_proyectil.png` | Form 1 | 8×8 | 3 | 8 | Yes | ⚠️ Placeholder |
-| `boss_paburu_gold_orb.png` | Form 3A | 6×6 | 3 | 12 | Yes | ⚠️ Placeholder |
-| `boss_paburu_black_orb.png` | Form 3B | 6×6 | 3 | 12 | Yes | ⚠️ Placeholder |
+| `boss_paburu_stone_crack.png` | 1→2 | 64×64 | 8 | 8 | No | ⚠️ Marcador de posición |
+| `boss_paburu_mask.png` | 2 | 56×72 | 6 | 10 | Sí | ✅ |
+| `boss_paburu_mask_wave.png` | 2 | 56×72 | 8 | 12 | No | ⚠️ Marcador de posición |
+| `boss_paburu_gold.png` | 3A | 32×32 | 6 | 14 | Sí | ✅ |
+| `boss_paburu_black.png` | 3B | 32×32 | 6 | 14 | Sí | ✅ |
+| `boss_paburu_relic_atk.png` | 3A/B | 32×32 | 10 | 14 | No | ⚠️ Marcador de posición |
+| `boss_paburu_spirit.png` | 4 | 64×80 | 8 | 10 | Sí | ✅ |
+| `boss_paburu_spirit_surge.png` | 4 | 64×80 | 12 | 14 | No | ⚠️ Marcador de posición |
+| `boss_paburu_hurt.png` | Todas | 64×64 | 4 | 12 | No | ✅ |
+| `boss_paburu_transcend.png` | Muerte | 64×64 | 20 | 8 | No | ⚠️ Marcador de posición |
+| `boss_paburu_stone_proyectil.png` | Forma 1 | 8×8 | 3 | 8 | Sí | ⚠️ Marcador de posición |
+| `boss_paburu_gold_orb.png` | Forma 3A | 6×6 | 3 | 12 | Sí | ⚠️ Marcador de posición |
+| `boss_paburu_black_orb.png` | Forma 3B | 6×6 | 3 | 12 | Sí | ⚠️ Marcador de posición |
 
-**Palette Notes — Form 1 (Stone):** Stone green (`#3C6432`), stone mid (`#5A8C50`), stone light (`#8CB496`), carving shadow (`#1E3C1E`), eye glow green (`#50FF50`), moss accent (`#2D5A28`), outline (`#0A0A0A`).
+**Notas de paleta — Forma 1 (Piedra):** verde piedra (`#3C6432`), verde piedra medio (`#5A8C50`), verde piedra claro (`#8CB496`), sombra de talla (`#1E3C1E`), brillo de ojos verde (`#50FF50`), acento musgo (`#2D5A28`), contorno (`#0A0A0A`).
 
-**Palette Notes — Form 2 (Spectral):** Spectral green bright (`#50FF78`), spectral green mid (`#28C850`), spectral green dark (`#0A6428`), mask teal (`#1E8C8C`), mask gold (`#D4A017`), spirit white (`#E8FFE8`), void black (`#000000`), glow white (`#FFFFFF`).
+**Notas de paleta — Forma 2 (Espectral):** verde espectral brillante (`#50FF78`), verde espectral medio (`#28C850`), verde espectral oscuro (`#0A6428`), verde azulado máscara (`#1E8C8C`), oro máscara (`#D4A017`), blanco espíritu (`#E8FFE8`), negro vacío (`#000000`), blanco brillo (`#FFFFFF`).
 
-**Palette Notes — Form 3A (Gold):** Gold bright (`#FFD700`), gold mid (`#C8A800`), gold dark (`#8C7000`), gold shadow (`#3C3200`), energy white (`#FFFFF0`), outline black (`#1A1000`).
+**Notas de paleta — Forma 3A (Oro):** oro brillante (`#FFD700`), oro medio (`#C8A800`), oro oscuro (`#8C7000`), sombra oro (`#3C3200`), blanco energía (`#FFFFF0`), negro contorno (`#1A1000`).
 
-**Palette Notes — Form 3B (Pearl):** Pearl black (`#0A0A14`), pearl dark sheen (`#1E1E3C`), pearl mid (`#3C3C64`), pearl highlight (`#7878A0`), void center (`#000000`), outline (`#5A5A8C`).
+**Notas de paleta — Forma 3B (Perla):** negro perla (`#0A0A14`), brillo oscuro perla (`#1E1E3C`), medio perla (`#3C3C64`), brillo perla (`#7878A0`), centro vacío (`#000000`), contorno (`#5A5A8C`).
 
 ---
 
 ## 7. Tilesets
 
-Location: `assets/tilesets/`
+Ubicación: `assets/tilesets/`
 
-| File | Used In | Theme | Size |
+| Fichero | Se usa en | Tema | Tamaño |
 |---|---|---|---|
-| `tileset_stage0.png` | Stage 0 | Neutral stone corridor | 1024×1024 |
-| `tileset_jungle_stone.png` | Zone 1 Stage 1-1, 1-4 | Mountain jungle with stone | 128×128 |
-| `tileset_cafeteria.png` | Zone 1 Stage 1-2 | Interior cafeteria, checkered floor | 128×128 |
-| `tileset_aulas.png` | Zone 1 Stage 1-3 | Classroom interior, wood and plaster | 128×128 |
-| `tileset_planicie.png` | Zone 2 Stage 2-1 | Open agricultural flatlands | 128×128 |
-| `tileset_datacenter_ext.png` | Zone 2 Stage 2-2 | Concrete exterior, antennas | 128×128 |
-| `tileset_datacenter.png` | Zone 2 Stages 2-3, 2-4 | Steel floor, glass partitions, servers | 128×128 |
-| `tileset_heredia_stone.png` | Zone 3 Stages 3-1, 3-4 | Stone path and bungaló architecture | 128×128 |
-| `tileset_heredia_interior.png` | Zone 3 Stages 3-2, 3-3 | Interior hall, courtyard | 128×128 |
-| `tileset_cemetery.png` | Zone Final | Stone markers, ceremonial carvings | 128×128 |
+| `tileset_stage0.png` | Stage 0 | Corredor de piedra neutral | 1024×1024 |
+| `tileset_jungle_stone.png` | Zona 1, escenarios 1-1, 1-4 | Jungla de montaña con piedra | 128×128 |
+| `tileset_cafeteria.png` | Zona 1, escenario 1-2 | Cafetería interior, piso ajedrezado | 128×128 |
+| `tileset_aulas.png` | Zona 1, escenario 1-3 | Interior de aula, madera y yeso | 128×128 |
+| `tileset_planicie.png` | Zona 2, escenario 2-1 | Llanura agrícola abierta | 128×128 |
+| `tileset_datacenter_ext.png` | Zona 2, escenario 2-2 | Exterior de concreto, antenas | 128×128 |
+| `tileset_datacenter.png` | Zona 2, escenarios 2-3, 2-4 | Piso de acero, mamparas de vidrio, servidores | 128×128 |
+| `tileset_heredia_stone.png` | Zona 3, escenarios 3-1, 3-4 | Sendero de piedra y arquitectura de bungaló | 128×128 |
+| `tileset_heredia_interior.png` | Zona 3, escenarios 3-2, 3-3 | Salón interior, patio | 128×128 |
+| `tileset_cemetery.png` | Zona Final | Lápidas, tallas ceremoniales | 128×128 |
 
-### 7.1 Tileset Tile Categories
+### 7.1 Categorías de baldosas del tileset
 
-Each tileset must contain tiles organized in the following categories (columns):
+Cada tileset debe contener baldosas organizadas en las siguientes categorías (columnas):
 
-| Column | Category | Description |
+| Columna | Categoría | Descripción |
 |---|---|---|
-| 0–1 | Solid floor | Main walkable surface |
-| 2–3 | Solid wall | Left and right walls |
-| 4–5 | Platform edge | Left/right edge of platforms |
-| 6 | Platform top | One-way platform surface |
-| 7 | Solid corner | Interior corners |
-| 8–9 | Decorative overlay | Non-solid decorative tiles |
-| 10–11 | Background fill | Used in BG layers |
-| 12–15 | Special/Environment | Zone-specific (vines, servers, antennas, graves) |
+| 0–1 | Suelo sólido | Superficie principal transitable |
+| 2–3 | Pared sólida | Paredes izquierda y derecha |
+| 4–5 | Borde de plataforma | Borde izquierdo/derecho de plataformas |
+| 6 | Techo de plataforma | Superficie de plataforma de un solo sentido |
+| 7 | Esquina sólida | Esquinas interiores |
+| 8–9 | Superposición decorativa | Baldosas decorativas no sólidas |
+| 10–11 | Relleno de fondo | Se usa en las capas BG |
+| 12–15 | Especial/Entorno | Específico de zona (enredaderas, servidores, antenas, tumbas) |
 
 ---
 
-## 8. Background Layers
+## 8. Capas de fondo
 
-Location: `assets/backgrounds/`
+Ubicación: `assets/backgrounds/`
 
-Each stage requires three background layers, named `bg_<zona>_far.png`, `bg_<zona>_mid.png` and `bg_<zona>_near.png`. Dimensions must match or exceed the stage map width × 224px. Stage 0's set is the exception at 800×600 (the game's internal resolution).
+Cada escenario necesita tres capas de fondo, con nombre `bg_<zona>_far.png`, `bg_<zona>_mid.png` y `bg_<zona>_near.png`. Las dimensiones deben igualar o superar el ancho del mapa del escenario × 224px. El conjunto de Stage 0 es la excepción, a 800×600 (la resolución interna del juego).
 
 ### 8.1 Stage 0
 
-| File | Layer | Size | Parallax |
+| Fichero | Capa | Tamaño | Parallax |
 |---|---|---|---|
 | `stage0/bg_stage0_far.png` | BG_Far | 800×600 | 0.15× |
 | `stage0/bg_stage0_mid.png` | BG_Mid | 800×600 | 0.40× |
 | `stage0/bg_stage0_near.png` | BG_Near | 800×600 | 0.70× |
 
-Each zone uses a single generic background set loaded by `StageLoader` using
-the pattern `bg_{zone}_{layer}.png` (e.g. `bg_zone1_far.png`). Thematic
-background variants (cafeteria, aulas, planicie, etc.) are aspirational;
-all stages within a zone currently share the same generic background.
+Cada zona usa un único conjunto de fondo genérico que carga `StageLoader`
+con el patrón `bg_{zone}_{layer}.png` (p. ej. `bg_zone1_far.png`). Las
+variantes temáticas de fondo (cafetería, aulas, planicie, etc.) son
+aspiracionales; todos los escenarios de una zona comparten hoy el mismo
+fondo genérico.
 
-### 8.2 Zone 1
+### 8.2 Zona 1
 
-| File | Layer | Size |
+| Fichero | Capa | Tamaño |
 |---|---|---|
 | `zone1/bg_zone1_far.png` | BG_Far | 320×224 |
 | `zone1/bg_zone1_mid.png` | BG_Mid | 640×224 |
 | `zone1/bg_zone1_near.png` | BG_Near | 960×224 |
 
-### 8.3 Zone 2
+### 8.3 Zona 2
 
-| File | Layer | Size |
+| Fichero | Capa | Tamaño |
 |---|---|---|
 | `zone2/bg_zone2_far.png` | BG_Far | 320×224 |
 | `zone2/bg_zone2_mid.png` | BG_Mid | 640×224 |
 | `zone2/bg_zone2_near.png` | BG_Near | 960×224 |
 
-### 8.4 Zone 3
+### 8.4 Zona 3
 
-| File | Layer | Size |
+| Fichero | Capa | Tamaño |
 |---|---|---|
 | `zone3/bg_zone3_far.png` | BG_Far | 320×224 |
 | `zone3/bg_zone3_mid.png` | BG_Mid | 640×224 |
 | `zone3/bg_zone3_near.png` | BG_Near | 960×224 |
 
-### 8.5 Zone Final
+### 8.5 Zona Final
 
-| File | Layer | Size |
+| Fichero | Capa | Tamaño |
 |---|---|---|
 | `final/bg_final_far.png` | BG_Far | 320×224 |
 | `final/bg_final_mid.png` | BG_Mid | 640×224 |
 | `final/bg_final_near.png` | BG_Near | 960×224 |
 
-**Cemetery background palette:** Deep purple-black (`#0A0014`), cemetery stone (`#4A4A5A`), spirit green glow (`#28C850`), pale moonlight (`#C8D4C8`), dark soil (`#1E1410`).
-
----
-
-## 9. UI Sprites
-
-Location: `assets/ui/`
-
-| File | Size | Description |
-|---|---|---|
-| `portrait_normal.png` | 32×32 | Player portrait — neutral |
-| `portrait_hurt.png` | 32×32 | Player portrait — hurt expression |
-| `portrait_critical.png` | 32×32 | Player portrait — critical health |
-| `portrait_dead.png` | 32×32 | Player portrait — deceased |
-| `banner_top.png` | 320×24 | Top half of stage entry banner |
-| `banner_bottom.png` | 320×24 | Bottom half of stage entry banner |
-| `hud_frame.png` | 36×36 | Portrait frame (9-slice) |
-| `message_arrow.png` | 5×7 | Animated confirm arrow (2 frames) |
-| `menu_arrow.png` | 5×8 | Menu selection arrow |
-| `heart_sparkle.png` | 8×8 | Heart restore sparkle (4 frames, 12 FPS) |
-| `heart_full.png` | 14×8 | Full heart |
-| `heart_three_quarter.png` | 14×8 | Three-quarter heart |
-| `heart_half.png` | 14×8 | Half heart |
-| `heart_quarter.png` | 14×8 | Quarter heart |
-| `heart_empty.png` | 14×8 | Empty heart outline |
-| `relic_pepita.png` | 8×6 | Gold nugget HUD icon (animated, 3 frames) |
-| `relic_perla.png` | 7×7 | Black pearl HUD icon (animated, 3 frames) |
-| `relic_fragment1.png` | 12×12 | Relic fragment 1 (antler) — Zone 1 cleared |
-| `relic_fragment2.png` | 12×12 | Relic fragment 2 (coil) — Zone 2 cleared |
-| `relic_fragment3.png` | 12×12 | Relic fragment 3 (mask) — Zone 3 cleared |
-
----
-
-## 10. Fonts
-
-Location: `assets/fonts/`
-
-All fonts are bitmap pixel sprite sheets (horizontal, one row per character set).
-
-| File | Char Size | Character Set | Used For |
-|---|---|---|---|
-| `hud_digits.png` | 6×8 | `0-9 : ` (12 chars) | HUD timer display |
-| `message_font.png` | 5×7 | ASCII printable (96 chars) | Tutorial messages |
-| `banner_large.png` | 10×14 | A-Z 0-9 space (37 chars) | Stage number on banner |
-| `banner_medium.png` | 6×9 | A-Z a-z 0-9 space .:- (66 chars) | Stage name on banner |
-| `gameover_font.png` | 12×16 | A-Z space (27 chars) | GAME OVER text |
-| `menu_font.png` | 6×9 | ASCII printable (96 chars) | Menu options |
-
----
-
-## 11. Music Tracks
-
-Location: `assets/music/`
-
-| File | Used In | Mood | Loop |
-|---|---|---|---|
-All tracks are stored as **WAV** (not OGG). The engine's `stage_scene.py`
-loads music via `assets/music/{bgm_track}.wav`. Conversion to OGG is deferred
-until the final asset pipeline (Phase 3.6 in the remediation plan).
-
-| File | Used In | Mood | Loop |
-|---|---|---|---|
-| `bgm_splash.wav` | Splash screen | Ambient, brief | No |
-| `bgm_title.wav` | Title screen | Heroic, inviting | Yes |
-| `bgm_story.wav` | Story screens 1-3 | Atmospheric, mysterious | Yes |
-| `bgm_stage0.wav` | Stage 0 | Tense, instructional | Yes |
-| `bgm_zone1_traverse.wav` | Zone 1 stages | Jungle percussion, humid tension | Yes |
-| `bgm_zone1_boss.wav` | Stage 1-4 (Venado) | Forest spirit, ancient rhythm | Yes |
-| `bgm_zone2_traverse.wav` | Zone 2 stages | Electronic drone, industrial | Yes |
-| `bgm_zone2_boss.wav` | Stage 2-4 (Rey) | Collective whisper, metallic | Yes |
-| `bgm_zone3_traverse.wav` | Zone 3 stages | Aerial, hunting tension | Yes |
-| `bgm_zone3_boss.wav` | Stage 3-4 (Gavilán) | Wing beats, ceremonial | Yes |
-| `bgm_final_approach.wav` | Stage 4-1 | Silence punctuated by ritual drums | Yes |
-| `bgm_paburu.wav` | Stage 4-2 | Four-part adaptive track (one section per form) | Yes |
-
-**`bgm_paburu.wav` — Adaptive Note:** This track is structured with a loop point that the `AudioManager` advances manually at each `BOSS_PHASE_CHANGED` event for Paburu. The track has four internally consistent sections that each loop independently. The `AudioManager.advance_music_section()` method (Paburu-specific) skips to the next section's loop point.
-
----
-
-## 12. Sound Effects
-
-Location: `assets/sfx/`
-
-### 12.1 Player SFX
-
-| File | Trigger |
-|---|---|
-| `player/sfx_player_jump.wav` | Jump action |
-| `player/sfx_player_land.wav` | Landing after fall |
-| `player/sfx_player_short_attack.wav` | Short attack swing |
-| `player/sfx_player_long_attack.wav` | Long attack swing |
-| `player/sfx_player_hit_connect.wav` | Player attack hits enemy |
-| `player/sfx_player_hurt.wav` | Player receives damage |
-| `player/sfx_player_die.wav` | Player death |
-| `player/sfx_player_crouch.wav` | Crouch start |
-
-### 12.2 Enemy SFX
-
-All paths relative to `assets/sfx/enemies/`.
-
-| File | Trigger |
-|---|---|
-| `sfx_enemies_hit.wav` | Any enemy receives damage |
-| `sfx_enemies_die_small.wav` | Small enemies (health ≤ 1.0) |
-| `sfx_enemies_die_large.wav` | Larger enemies (health ≥ 2.0) |
-| `sfx_enemies_projectile_fire.wav` | Any projectile fired |
-| `sfx_enemies_projectile_hit_wall.wav` | Projectile hits terrain |
-
-### 12.3 Boss SFX
-
-All paths relative to `assets/sfx/bosses/`.
-
-| File | Trigger |
-|---|---|
-| `sfx_bosses_venado_stomp.wav` | Venado stomp attack |
-| `sfx_bosses_venado_charge.wav` | Venado charge |
-| `sfx_bosses_venado_vine.wav` | Venado vine toss |
-| `sfx_bosses_rey_spit.wav` | Rey venom spit |
-| `sfx_bosses_rey_split.wav` | Rey Phase 2 split |
-| `sfx_bosses_gavilan_dive.wav` | Gavilán dive bomb |
-| `sfx_bosses_gavilan_mask_beam.wav` | Gavilán mask beam |
-| `sfx_bosses_paburu_eye_beam.wav` | Paburu eye beam (Form 1) |
-| `sfx_bosses_paburu_wave.wav` | Paburu spirit wave (Form 2) |
-| `sfx_bosses_phase_change.wav` | Any boss phase transition |
-| `sfx_bosses_relic_appear.wav` | Relic fragment appears post-boss |
-
-<!-- cita-historica -->
-Missing aspirational boss SFX (not yet on disk): `sfx_venado_die`, `sfx_rey_die`, `sfx_gavilan_die`, `sfx_paburu_gold_rush`, `sfx_paburu_pull`, `sfx_paburu_convergence`, `sfx_paburu_transcend`.
-<!-- /cita-historica -->
-
-### 12.4 UI SFX
-
-All paths relative to `assets/sfx/ui/`.
-
-| File | Trigger |
-|---|---|
-| `sfx_ui_menu_move.wav` | Menu cursor navigation |
-| `sfx_ui_menu_confirm.wav` | Menu selection confirm |
-| `sfx_ui_menu_cancel.wav` | Menu back |
-| `sfx_ui_checkpoint.wav` | Checkpoint activated |
-| `sfx_ui_stage_banner.wav` | Stage banner slide-in |
-| `sfx_ui_game_over.wav` | Game Over screen |
-| `sfx_ui_heart_restore.wav` | Heart refill animation |
-| `sfx_ui_stage_complete.wav` | Stage completion |
-
-### 12.5 Environment SFX
-
-All paths relative to `assets/sfx/environment/`.
-
-| File | Trigger |
-|---|---|
-| `sfx_environment_jungle_ambient.wav` | Zone 1 ambient loop |
-| `sfx_environment_datacenter_hum.wav` | Zone 2 ambient loop |
-| `sfx_environment_wind_indoor.wav` | Zone 3 ambient loop |
-| `sfx_environment_cemetery_silence.wav` | Zone Final ambient (minimal) |
-| `sfx_environment_screen_shake.wav` | Screen shake events |
-| `sfx_environment_hazard_zone.wav` | Hazard zone damage tick |
-| `sfx_environment_one_way_platform.wav` | Landing on one-way platform |
-
----
-
-## 13. Shared Sprites
-
-Location: `assets/sprites/shared/`
-
-| File | Size | Frames | FPS | Description |
-|---|---|---|---|---|
-| `checkpoint.png` | 16×32 | 6 (animated), 1 (inactive) | 8 | Checkpoint post — glows when active |
-| `torch_anim.png` | 8×16 | 4 | 8 | Torch flame animation |
-| `fountain_anim.png` | 24×24 | 6 | 10 | Fountain water animation (Zone 3-3) — ⚠️ Placeholder |
-| `spirit_echo_overlay.png` | 1×1 | 1 | — | Alpha overlay tint for spirit echoes — ⚠️ Placeholder |
-
----
-
-## 14. Student Asset Guidelines
-
-Students adding assets to `student_assets/` must comply with all standards in Section 2. Additionally:
-
-| Rule | Requirement |
-|---|---|
-| Palette validation | Run `scripts/validate_assets.py` on all new sprites before committing |
-| Naming convention | Follow the same naming pattern as the asset type (see Section 2.5 of Codex) |
-| No modification of `assets/` | Students only add to `student_assets/` |
-| File format | PNG only for visuals; WAV or OGG for audio |
-| Maximum new assets per stage | 20 sprite sheets, 5 music tracks, 15 SFX files |
-| Color palette | Maximum 16 colors per sprite sheet; must be compatible with the zone's visual palette |
-
----
-
-## 15. Asset Loading Reference
-
-All assets are loaded through `AssetLoader`. The following shows the canonical loading pattern for each asset type:
-
-```python
-# Image loading:
-surface = AssetLoader.load_image(ASSETS_DIR / "sprites" / "player" / "player_idle.png")
-
-# Spritesheet loading:
-sheet = AssetLoader.load_spritesheet(
-    ASSETS_DIR / "sprites" / "player" / "player_walk.png",
-    frame_w=32,
-    frame_h=32
-)
-
-# Sound loading:
-sound = AssetLoader.load_sound(ASSETS_DIR / "sfx" / "player" / "sfx_player_jump.wav")
-
-# Background loading (direct image):
-bg_far = AssetLoader.load_image(ASSETS_DIR / "backgrounds" / "zone1" / "bg_zone1_far.png")
-
-# UI image loading:
-heart = AssetLoader.load_image(ASSETS_DIR / "ui" / "heart_full.png")
-```
-
-Students use the same `AssetLoader` API for their student assets:
-```python
-# Student asset loading:
-custom_sprite = AssetLoader.load_image(STUDENT_ASSETS_DIR / "sprites" / "my_enemy.png")
-```
-
-
----
-## 🔗 Documentos Relacionados
-
-- [[06_TMX_SPEC.md|TMX Specification]]
-- [[07_STAGE0_DESIGN.md|Stage 0 Design]]
-- [[16_WORLD_DESIGN.md|World Design]]
-
----
---- Traducción al Español ---
-
-*This document is also available in English above.*
-
-# Legacy of InFest — Biblia de Recursos
-
-**ID del Documento:** LOI-ASSET-020
-**Versión:** 1.0.0
-**Estado:** Oficial
-**Compatibilidad:** Requiere LOI-CODEX-002, LOI-WORLD-016, LOI-BOSS-017, LOI-ROSTER-018
-**Audiencia:** Profesor, Estudiantes, Artistas, asistentes de codificación IA
-
----
-
-## 1. Descripción General
-
-Este documento define cada recurso visual y de audio requerido por Legacy of InFest. Es la referencia autoritativa para artistas, estudiantes que crean recursos personalizados y asistentes de codificación IA que generan código de carga de recursos.
-
-Cada recurso listado aquí tiene una ruta, formato, dimensiones, restricciones de paleta y contexto de uso definidos. Los recursos no listados aquí son creados por estudiantes (ubicados en student_assets/) o son generados en tiempo de ejecución por el pipeline de procesamiento.
-
----
-
-## 2. Estándares Globales de Recursos
-
-### 2.1 Estándares Visuales
-
-| Propiedad | Estándar |
-|---|---|
-| Formato de píxel | PNG con canal alfa (RGBA) |
-| Profundidad de color | 8 bits por canal |
-| Restricción de paleta | Máximo 16 colores por hoja de sprites |
-| Paleta global | Máximo 256 colores en todo el juego |
-| Tamaño de píxel | 1:1 — sin renderizado de subpíxeles |
-| Anti-aliasing | Nunca |
-| Transparencia | Binaria (totalmente transparente u opaca) O alfa suave (solo para efectos) |
-| Resolución interna | Todos los recursos diseñados para visualización 320x224 |
-
-### 2.2 Formato de Hoja de Sprites
-
-Todos los sprites animados son hojas de sprites horizontales: fotogramas dispuestos de izquierda a derecha, ancho igual, origen en la esquina superior izquierda.
-
-### 2.3 Formato de Tiles
-
-| Propiedad | Estándar |
-|---|---|
-| Tamaño de tile | 16x16 píxeles |
-| Disposición de hoja | Cuadrícula de orden mayor de fila |
-| Máximo de tiles por conjunto | 256 |
-| Dimensiones de hoja | 128x128 px |
-
-### 2.4 Estándares de Audio
-
-| Propiedad | Música | SFX |
-|---|---|---|
-| Formato | OGG Vorbis | WAV u OGG |
-| Tasa de muestreo | 44100 Hz | 22050 Hz |
-| Profundidad de bits | 16 bits | 16 bits |
-| Canales | Estéreo | Mono |
-| Punto de bucle | Debe definirse para BGM | N/A |
-| Normalización de volumen | Pico -12 dBFS | Pico -6 dBFS |
-
----
-
-## 3. Estructura de Directorios
-
-assets/sprites/player/, assets/sprites/enemies/, assets/sprites/bosses/, assets/tilesets/, assets/backgrounds/, assets/ui/, assets/fonts/, assets/music/, assets/sfx/
-
----
-
-## 4. Sprites del Jugador
-
-Todos los sprites del jugador están ubicados en assets/sprites/player/. Tamaño de fotograma: 32x32 píxeles para todas las animaciones.
-
-| Archivo | Fotogramas | FPS | Bucle | Estado |
-|---|---|---|---|---|
-| player_idle.png | 4 | 8 | Sí | IDLE |
-| player_walk.png | 8 | 12 | Sí | WALKING |
-| player_jump.png | 3 | 12 | No | JUMPING |
-| player_fall.png | 2 | 8 | Sí | FALLING |
-| player_crouch.png | 2 | 8 | No | CROUCHING |
-| player_short_attack.png | 6 | 18 | No | SHORT_ATTACK |
-| player_long_attack.png | 10 | 16 | No | LONG_ATTACK |
-| player_hurt.png | 4 | 12 | No | HURT |
-| player_die.png | 8 | 10 | No | DYING |
-
----
-
-## 5. Sprites de Enemigos
-
-Los sprites de enemigos usan nombres genéricos basados en zonas.
-
-### 5.1 Walker (universal)
-
-Ubicación: assets/sprites/enemies/
-
-| Archivo | Enemigo | Tamaño | Fotogramas | FPS |
-|---|---|---|---|---|
-| enemy_walker_walk.png | Walker | 20x16 | 6 | 10 |
-
-### 5.2 Enemigos con Sprites por Zona
-
-Ubicación: assets/sprites/enemies/zoneN/
-
-| Archivo | Enemigo | Fotogramas | FPS |
-|---|---|---|---|
-| enemy_zoneN_walk.png | Walker de zona | 6 | 10 |
-| enemy_zoneN_hurt.png | Cualquiera | 3 | 12 |
-| enemy_zoneN_die.png | Cualquiera | 6 | 8 |
-| enemy_fly_zoneN.png | Volador | 4 | 12 |
-| enemy_shoot_zoneN.png | Disparador | 4 | 6 |
-
----
-
-## 6. Sprites de Jefes
-
-Ubicación: assets/sprites/bosses/
-
-### 6.1 El Venado Sagrado — Tamaño: 48x48 px
-
-| Archivo | Fotogramas | FPS |
-|---|---|---|
-| boss_venado_drift.png | 6 | 8 |
-| boss_venado_stomp.png | 8 | 12 |
-| boss_venado_charge.png | 6 | 14 |
-| boss_venado_frenzy_drift.png | 6 | 14 |
-| boss_venado_vine.png | 10 | 12 |
-| boss_venado_hurt.png | 4 | 12 |
-| boss_venado_death.png | 12 | 8 |
-
-### 6.2 El Rey Terciopelo — Fase 1: 40x56 px, Subjefe: 24x28 px
-
-### 6.3 El Gavilán Camionero Mascarero — 56x40 px
-
-### 6.4 El Gran Shaman Paburu — Múltiples tamaños por forma
-
----
-
-## 7. Tilesets
-
-Ubicación: assets/tilesets/. 10 tilesets para los diferentes niveles y zonas. Cada tileset usa formato de cuadrícula 8x8 con categorías que incluyen suelo sólido, pared sólida, borde de plataforma, etc.
-
----
-
-## 8. Capas de Fondo
-
-Ubicación: assets/backgrounds/. Cada nivel requiere tres capas: _far, _mid, _near con tamaños 320x224, 640x224, y 960x224 respectivamente.
+**Paleta de fondo del cementerio:** negro púrpura profundo (`#0A0014`), piedra de cementerio (`#4A4A5A`), brillo verde espíritu (`#28C850`), luz de luna pálida (`#C8D4C8`), tierra oscura (`#1E1410`).
 
 ---
 
 ## 9. Sprites de UI
 
-Ubicación: assets/ui/. Incluye retratos del jugador (32x32), banners (320x24), marco de HUD (36x36), flechas animadas, iconos de corazón (14x8) y fragmentos de reliquia.
+Ubicación: `assets/ui/`
+
+| Fichero | Tamaño | Descripción |
+|---|---|---|
+| `portrait_normal.png` | 32×32 | Retrato del jugador — neutral |
+| `portrait_hurt.png` | 32×32 | Retrato del jugador — expresión de dolor |
+| `portrait_critical.png` | 32×32 | Retrato del jugador — salud crítica |
+| `portrait_dead.png` | 32×32 | Retrato del jugador — fallecido |
+| `banner_top.png` | 320×24 | Mitad superior del banner de entrada de escenario |
+| `banner_bottom.png` | 320×24 | Mitad inferior del banner de entrada de escenario |
+| `hud_frame.png` | 36×36 | Marco de retrato (9-slice) |
+| `message_arrow.png` | 5×7 | Flecha animada de confirmar (2 fotogramas) |
+| `menu_arrow.png` | 5×8 | Flecha de selección de menú |
+| `heart_sparkle.png` | 8×8 | Brillo de restauración de corazón (4 fotogramas, 12 FPS) |
+| `heart_full.png` | 14×8 | Corazón lleno |
+| `heart_three_quarter.png` | 14×8 | Corazón tres cuartos |
+| `heart_half.png` | 14×8 | Corazón medio |
+| `heart_quarter.png` | 14×8 | Corazón un cuarto |
+| `heart_empty.png` | 14×8 | Contorno de corazón vacío |
+| `relic_pepita.png` | 8×6 | Icono de HUD de la pepita de oro (animado, 3 fotogramas) |
+| `relic_perla.png` | 7×7 | Icono de HUD de la perla negra (animado, 3 fotogramas) |
+| `relic_fragment1.png` | 12×12 | Fragmento de reliquia 1 (cornamenta) — Zona 1 superada |
+| `relic_fragment2.png` | 12×12 | Fragmento de reliquia 2 (espiral) — Zona 2 superada |
+| `relic_fragment3.png` | 12×12 | Fragmento de reliquia 3 (máscara) — Zona 3 superada |
 
 ---
 
 ## 10. Fuentes
 
-Ubicación: assets/fonts/. Fuentes de mapa de bits para HUD, mensajes, banners, texto GAME OVER y menús.
+Ubicación: `assets/fonts/`
+
+Todas las fuentes son hojas de sprites de mapa de bits (horizontales, una fila por conjunto de caracteres).
+
+| Fichero | Tamaño de carácter | Conjunto de caracteres | Uso |
+|---|---|---|---|
+| `hud_digits.png` | 6×8 | `0-9 : ` (12 caracteres) | Cronómetro del HUD |
+| `message_font.png` | 5×7 | ASCII imprimible (96 caracteres) | Mensajes de tutorial |
+| `banner_large.png` | 10×14 | A-Z 0-9 espacio (37 caracteres) | Número de escenario en el banner |
+| `banner_medium.png` | 6×9 | A-Z a-z 0-9 espacio .:- (66 caracteres) | Nombre de escenario en el banner |
+| `gameover_font.png` | 12×16 | A-Z espacio (27 caracteres) | Texto de GAME OVER |
+| `menu_font.png` | 6×9 | ASCII imprimible (96 caracteres) | Opciones de menú |
 
 ---
 
-## 11. Pistas de Música
+## 11. Pistas de música
 
-Ubicación: assets/music/. 12 pistas en formato WAV para pantalla de presentación, título, historia, niveles de zona y jefes. bgm_paburu.wav tiene 4 secciones adaptativas.
+Ubicación: `assets/music/`
+
+Todas las pistas se guardan como **WAV** (no OGG). `stage_scene.py`, del motor,
+carga la música vía `assets/music/{bgm_track}.wav`. La conversión a OGG queda
+pendiente hasta la tubería de recursos final.
+
+| Fichero | Se usa en | Ambiente | Bucle |
+|---|---|---|---|
+| `bgm_splash.wav` | Pantalla de presentación | Ambiental, breve | No |
+| `bgm_title.wav` | Pantalla de título | Heroico, acogedor | Sí |
+| `bgm_story.wav` | Pantallas de historia 1-3 | Atmosférico, misterioso | Sí |
+| `bgm_stage0.wav` | Stage 0 | Tenso, instructivo | Sí |
+| `bgm_zone1_traverse.wav` | Escenarios de Zona 1 | Percusión de jungla, tensión húmeda | Sí |
+| `bgm_zone1_boss.wav` | Escenario 1-4 (Venado) | Espíritu de bosque, ritmo ancestral | Sí |
+| `bgm_zone2_traverse.wav` | Escenarios de Zona 2 | Zumbido electrónico, industrial | Sí |
+| `bgm_zone2_boss.wav` | Escenario 2-4 (Rey) | Susurro colectivo, metálico | Sí |
+| `bgm_zone3_traverse.wav` | Escenarios de Zona 3 | Aéreo, tensión de cacería | Sí |
+| `bgm_zone3_boss.wav` | Escenario 3-4 (Gavilán) | Aleteo, ceremonial | Sí |
+| `bgm_final_approach.wav` | Escenario 4-1 | Silencio puntuado por tambores rituales | Sí |
+| `bgm_paburu.wav` | Escenario 4-2 | Pista adaptativa de cuatro partes (una sección por forma) | Sí |
+
+**`bgm_paburu.wav` — nota adaptativa:** esta pista tiene un punto de bucle que `AudioManager` avanza manualmente en cada evento `BOSS_PHASE_CHANGED` de Paburu. La pista tiene cuatro secciones internamente consistentes, cada una con bucle independiente. El método `AudioManager.advance_music_section()` (específico de Paburu) salta al punto de bucle de la siguiente sección.
 
 ---
 
-## 12. Efectos de Sonido
+## 12. Efectos de sonido
 
-Ubicación: assets/sfx/. Efectos categorizados por jugador, enemigos, jefes, UI y entorno.
+Ubicación: `assets/sfx/`
+
+### 12.1 SFX del jugador
+
+| Fichero | Disparador |
+|---|---|
+| `player/sfx_player_jump.wav` | Acción de saltar |
+| `player/sfx_player_land.wav` | Aterrizaje tras una caída |
+| `player/sfx_player_short_attack.wav` | Golpe de ataque corto |
+| `player/sfx_player_long_attack.wav` | Golpe de ataque largo |
+| `player/sfx_player_hit_connect.wav` | El ataque del jugador conecta con un enemigo |
+| `player/sfx_player_hurt.wav` | El jugador recibe daño |
+| `player/sfx_player_die.wav` | Muerte del jugador |
+| `player/sfx_player_crouch.wav` | Inicio de agacharse |
+
+### 12.2 SFX de enemigos
+
+Todas las rutas relativas a `assets/sfx/enemies/`.
+
+| Fichero | Disparador |
+|---|---|
+| `sfx_enemies_hit.wav` | Cualquier enemigo recibe daño |
+| `sfx_enemies_die_small.wav` | Enemigos pequeños (salud ≤ 1.0) |
+| `sfx_enemies_die_large.wav` | Enemigos grandes (salud ≥ 2.0) |
+| `sfx_enemies_projectile_fire.wav` | Se dispara cualquier proyectil |
+| `sfx_enemies_projectile_hit_wall.wav` | El proyectil golpea terreno |
+
+### 12.3 SFX de jefes
+
+Todas las rutas relativas a `assets/sfx/bosses/`.
+
+| Fichero | Disparador |
+|---|---|
+| `sfx_bosses_venado_stomp.wav` | Pisotón del Venado |
+| `sfx_bosses_venado_charge.wav` | Embestida del Venado |
+| `sfx_bosses_venado_vine.wav` | Lanzamiento de enredadera del Venado |
+| `sfx_bosses_rey_spit.wav` | Escupitajo de veneno del Rey |
+| `sfx_bosses_rey_split.wav` | División del Rey en Fase 2 |
+| `sfx_bosses_gavilan_dive.wav` | Picado del Gavilán |
+| `sfx_bosses_gavilan_mask_beam.wav` | Rayo de máscara del Gavilán |
+| `sfx_bosses_paburu_eye_beam.wav` | Rayo de ojo de Paburu (Forma 1) |
+| `sfx_bosses_paburu_wave.wav` | Onda de espíritu de Paburu (Forma 2) |
+| `sfx_bosses_phase_change.wav` | Cualquier transición de fase de jefe |
+| `sfx_bosses_relic_appear.wav` | Aparece un fragmento de reliquia tras el jefe |
+
+<!-- cita-historica -->
+Faltan SFX de jefe aspiracionales (aún no están en disco): `sfx_venado_die`, `sfx_rey_die`, `sfx_gavilan_die`, `sfx_paburu_gold_rush`, `sfx_paburu_pull`, `sfx_paburu_convergence`, `sfx_paburu_transcend`.
+<!-- /cita-historica -->
+
+### 12.4 SFX de UI
+
+Todas las rutas relativas a `assets/sfx/ui/`.
+
+| Fichero | Disparador |
+|---|---|
+| `sfx_ui_menu_move.wav` | Navegación del cursor de menú |
+| `sfx_ui_menu_confirm.wav` | Confirmar selección de menú |
+| `sfx_ui_menu_cancel.wav` | Retroceder en el menú |
+| `sfx_ui_checkpoint.wav` | Checkpoint activado |
+| `sfx_ui_stage_banner.wav` | Entrada deslizante del banner de escenario |
+| `sfx_ui_game_over.wav` | Pantalla de Game Over |
+| `sfx_ui_heart_restore.wav` | Animación de relleno de corazón |
+| `sfx_ui_stage_complete.wav` | Escenario completado |
+
+### 12.5 SFX de entorno
+
+Todas las rutas relativas a `assets/sfx/environment/`.
+
+| Fichero | Disparador |
+|---|---|
+| `sfx_environment_jungle_ambient.wav` | Bucle ambiental de Zona 1 |
+| `sfx_environment_datacenter_hum.wav` | Bucle ambiental de Zona 2 |
+| `sfx_environment_wind_indoor.wav` | Bucle ambiental de Zona 3 |
+| `sfx_environment_cemetery_silence.wav` | Ambiente de Zona Final (mínimo) |
+| `sfx_environment_screen_shake.wav` | Eventos de sacudida de pantalla |
+| `sfx_environment_hazard_zone.wav` | Tictac de daño de zona de peligro |
+| `sfx_environment_one_way_platform.wav` | Aterrizar en plataforma de un solo sentido |
 
 ---
 
-## 13. Sprites Compartidos
+## 13. Sprites compartidos
 
-Ubicación: assets/sprites/shared/. Incluye checkpoint, antorcha, fuente y superposición de eco espiritual.
+Ubicación: `assets/sprites/shared/`
+
+| Fichero | Tamaño | Fotogramas | FPS | Descripción |
+|---|---|---|---|---|
+| `checkpoint.png` | 16×32 | 6 (animado), 1 (inactivo) | 8 | Poste de checkpoint — brilla cuando está activo |
+| `torch_anim.png` | 8×16 | 4 | 8 | Animación de llama de antorcha |
+| `fountain_anim.png` | 24×24 | 6 | 10 | Animación de agua de fuente (Zona 3-3) — ⚠️ Marcador de posición |
+| `spirit_echo_overlay.png` | 1×1 | 1 | — | Superposición de tinte alfa para ecos de espíritu — ⚠️ Marcador de posición |
 
 ---
 
-## 14. Directrices para Estudiantes
+## 14. Directrices de recursos para estudiantes
 
-Los estudiantes añaden recursos a student_assets/ cumpliendo reglas de validación de paleta, convención de nombres, formato PNG/WAV/OGG, máximo 20 hojas de sprites por nivel y 16 colores por hoja.
+Los estudiantes que añaden recursos a `student_assets/` deben cumplir todos los estándares de la Sección 2. Además:
+
+| Regla | Requisito |
+|---|---|
+| Validación de paleta | Ejecutar `scripts/validate_assets.py` sobre cada sprite nuevo antes de hacer commit |
+| Convención de nombres | Seguir el mismo patrón de nombres que el tipo de recurso |
+| No modificar `assets/` | Los estudiantes sólo añaden a `student_assets/` |
+| Formato de fichero | Sólo PNG para lo visual; WAV u OGG para audio |
+| Máximo de recursos nuevos por escenario | 20 hojas de sprites, 5 pistas de música, 15 ficheros de SFX |
+| Paleta de color | Máximo 16 colores por hoja de sprites; debe ser compatible con la paleta visual de la zona |
 
 ---
 
-## 15. Referencia de Carga de Recursos
+## 15. Referencia de carga de recursos
 
-Todos los recursos se cargan a través de AssetLoader con métodos load_image, load_sound y load_spritesheet. Los estudiantes usan la misma API con STUDENT_ASSETS_DIR.
+Todos los recursos se cargan a través de `AssetLoader`. Lo siguiente muestra el patrón de carga canónico para cada tipo de recurso:
+
+```python
+# Carga de imagen:
+surface = AssetLoader.load_image(ASSETS_DIR / "sprites" / "player" / "player_idle.png")
+
+# Carga de hoja de sprites:
+sheet = AssetLoader.load_sprite_sheet(
+    ASSETS_DIR / "sprites" / "player" / "player_walk.png",
+    frame_width=32,
+    frame_height=32,
+)
+
+# Carga de sonido:
+sound = AssetLoader.load_sound(ASSETS_DIR / "sfx" / "player" / "sfx_player_jump.wav")
+
+# Carga de fondo (imagen directa):
+bg_far = AssetLoader.load_image(ASSETS_DIR / "backgrounds" / "zone1" / "bg_zone1_far.png")
+
+# Carga de imagen de UI:
+heart = AssetLoader.load_image(ASSETS_DIR / "ui" / "heart_full.png")
+```
+
+Los estudiantes usan la misma API de `AssetLoader` para sus propios recursos:
+```python
+# Carga de recurso de estudiante:
+custom_sprite = AssetLoader.load_image(STUDENT_TEMPLATES_DIR.parent / "student_assets" / "sprites" / "my_enemy.png")
+```
+
+---
+## 🔗 Documentos relacionados
+
+- [[06_TMX_SPEC.md|Especificación de TMX]]
+- [[07_STAGE0_DESIGN.md|Diseño de Stage 0]]
+- [[16_WORLD_DESIGN.md|Diseño del mundo]]

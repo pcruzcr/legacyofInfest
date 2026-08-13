@@ -69,31 +69,13 @@ UMBRAL_INGLES = 65
 #: Los que todavía no se han traducido, con su tamaño. Esta lista **sólo puede
 #: encoger**: `test_la_lista_solo_encoge` falla si alguien añade uno.
 #:
-#: Es un trinquete, no una excusa. Son 55 documentos y ~820 KiB de prosa: el
-#: trabajo es real y se hace por lotes, pero mientras tanto ninguno nuevo puede
-#: entrar en inglés.
-PENDIENTES: frozenset[str] = frozenset({
-    "03_ARCHITECTURE.md", "04_PLAYER_SPEC.md", "05_ENEMY_SPEC.md",
-    "06_TMX_SPEC.md", "08_SYLLABUS_MAPPING.md", "09_HUD_SPEC.md",
-    "10_LIBRARIES_AND_DEPENDENCIES.md", "11_FILTER_TOOLS_SPEC.md",
-    "12_VISION_TOOLS_SPEC.md", "13_PATTERN_RECOGNITION_SPEC.md",
-    "14_PROFESSOR_DELIVERABLE_MATRIX.md", "15_ACADEMIC_DEMO_SCENES.md",
-    "16_WORLD_DESIGN.md", "17_BOSS_SPEC.md", "18_ENEMY_ROSTER.md",
-    "19_NARRATIVE_AND_LORE.md", "20_ASSET_BIBLE.md", "21_COURSE_SCHEDULE.md",
-    "22_API_CONTRACTS.md", "23_DATA_SCHEMAS.md", "26_STUDENT_TEMPLATE_SPEC.md",
-    "27_ACADEMIC_RUBRICS.md", "30_ASSIGNMENT_01_STAGE_DESIGN.md",
-    "31_ASSIGNMENT_02_BOSS_DESIGN.md", "32_ASSIGNMENT_03_LAB_EXERCISES.md",
-    "33_ASSIGNMENT_04_FINAL_PROJECT.md", "34_CLASS_MATERIALS.md",
-    "40_DIALOGUE_SYSTEM.md", "41_BESTIARY_CODEX.md", "42_CUTSCENE_SYSTEM.md",
-    "43_SPEEDRUN_MODE.md", "44_BOSS_RUSH_MODE.md", "45_SWIMMING_SPEC.md",
-    "46_FOG_OF_WAR.md", "48_SCREEN_TRANSITIONS.md", "49_AMBIENT_AUDIO.md",
-    "52_EVENT_MAP.md", "78_SAMPLE_SYLLABUS.md", "79_TA_GUIDE.md",
-    "82_ENVIRONMENT_SETUP_GUIDE.md", "BOSS_CREATION.md", "CONTRIBUTING.md",
-    "ENEMY_CREATION.md", "SCENE_CREATION.md",
-    "entregables.md", "eval_practica.md", "rubricas.md", "exam_bank.md",
-    "lab01.md", "lab02.md", "lab03.md",
-    "quiz_unit02.md", "quiz_unit04.md", "quiz_unit06.md", "quiz_unit09.md",
-})
+#: AUD-455: vacía. Los 55 documentos y ~820 KiB de prosa que llevaba este
+#: trinquete cuando se escribió ya se tradujeron, por lotes, a lo largo de
+#: varias sesiones. Sigue siendo un trinquete y no una excusa: un documento
+#: nuevo que entre en inglés vuelve a fallar `test_la_lista_de_pendientes_solo_encoge`
+#: igual que antes — la lista vacía no es una pausa de la regla, es la regla
+#: cumplida.
+PENDIENTES: frozenset[str] = frozenset()
 
 
 def _documentos() -> list[pathlib.Path]:

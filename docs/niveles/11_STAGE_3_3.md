@@ -57,9 +57,9 @@ Total mínimo **10 enemigos**.
 | `PlayerSpawn` | 1 | Entrada del patio |
 | `Checkpoint` | 1 | A la entrada (obligatorio) |
 | `Portal` | 1 | → 3-4 |
-| Fuente curativa | 1 | Centro: OneWay + cura 0.25 por activación |
+| Fuente curativa | 1 | Centro: Platform + cura 0.25 por activación |
 | Coleccionables | ≥ 5 | Tras las jardineras y el borde de la fuente |
-| `OneWay` | 3+ | Jardineras (32 px) |
+| `Platform` | 3+ | Jardineras (32 px) |
 
 ## Mapa sugerido (canónico del Entregable 1)
 

@@ -244,7 +244,7 @@ class TestLaDocumentacionDiceLaVerdad:
 
     def test_el_hud_spec_declara_la_region(self) -> None:
         spec = (RAIZ / "docs/09_HUD_SPEC.md").read_text(encoding="utf-8")
-        assert "Score" in spec, (
+        assert "Puntuación" in spec, (
             "el HUD dibuja una región que su especificación no declara"
         )
 
@@ -253,8 +253,8 @@ class TestLaDocumentacionDiceLaVerdad:
         from src.engine.ui.hud import HUD
 
         spec = (RAIZ / "docs/09_HUD_SPEC.md").read_text(encoding="utf-8")
-        fila = [ln for ln in spec.splitlines() if ln.startswith("| Score")]
-        assert fila, "falta la fila `| Score` en la tabla de regiones §2.1"
+        fila = [ln for ln in spec.splitlines() if ln.startswith("| Puntuación")]
+        assert fila, "falta la fila `| Puntuación` en la tabla de regiones §2.1"
         campos = [c.strip() for c in fila[0].split("|")]
         x, y, w, h = (int(campos[i]) for i in range(2, 6))
 

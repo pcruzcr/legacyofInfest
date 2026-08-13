@@ -69,7 +69,7 @@ orden no es arbitrario y cada posición está razonada en el código:
 | 4 | **Corrección de color** | si `color_grading_enabled` | — |
 | 5 | **Aberración cromática** | si `strength > 0` | Después del bloom (el halo se separa en canales) y antes de la viñeta (la aberración es máxima en los bordes) |
 | 6 | **Viñeta** | si `vignette_enabled` | Apagada por defecto, ver §3 |
-| 7 | **Daltonismo** | si `colorblind_mode > 0` | Escrito y **nunca ejecutado**, ver §6 |
+| 7 | **Daltonismo** | si `colorblind_mode > 0` | Conectado desde AUD-252, ver §6 |
 | 8 | **Desenfoque de movimiento** | si `motion_blur_enabled` | Acumula el fotograma ya compuesto |
 | 9 | **Volcado a pantalla** | siempre | — |
 
@@ -101,6 +101,26 @@ importar `moderngl` sin romper las reglas de capas que vigila
 Ampliar `gpu_effects.DELEGABLES` exige comprobar que la pasada de GL hace *lo
 mismo* que la de CPU —o que la sustituye a conciencia, como el agua—, no algo
 parecido por accidente.
+
+### 3.1 Cómo un escenario enciende la ruta de GPU (AUD-343/AUD-371)
+
+> **AUD-455.** Sección nueva — el protocolo que sigue no estaba documentado
+> en ningún sitio salvo un informe de auditoría.
+
+Una escena no "activa" la GPU con una bandera: la activa **teniendo los dos
+métodos que separan mundo e interfaz**. `App` comprueba con `_soporta()` si la
+escena implementa `dibujar_mundo(destino)` y `dibujar_ui(destino)` por
+separado (protocolo `EscenaConRutaDeGPU` en `src/engine/core/app.py`); si los
+tiene, el mundo se compone aparte y su mapa de luz puede subir a la tarjeta, y
+la interfaz se dibuja como una superposición encima. Una escena sin esos dos
+métodos usa el camino de siempre.
+
+La comprobación es por pato (`hasattr`), no `isinstance` contra el
+`Protocol`: desde Python 3.12 `isinstance` contra un `Protocol` sin
+`@runtime_checkable` usa `getattr_static`, que no ve atributos creados
+dinámicamente — ni los de un `MagicMock` con `spec` ni los de una escena de
+estudiante que delegue por `__getattr__`. El `Protocol` existe como contrato
+**escrito**, no como mecanismo de comprobación en tiempo de ejecución.
 
 ---
 
@@ -232,11 +252,20 @@ es peor que ninguno.
 
 ## 6. Límites conocidos
 
-- **El filtro de daltonismo de GL no se ejecuta jamás.** `colorblind_frag`
-  existe, pero `GLRenderConfig.colorblind_mode` vale 0 y `App` no lo toca
-  nunca. Sus matrices además no son las de la CPU (AUD-138). Enchufarlo
-  cambiaría lo que ve un jugador daltónico sin que nadie lo haya mirado en una
-  pantalla: es trabajo aparte, no parte de quitar una duplicación.
+> **AUD-455.** Esta entrada decía que el filtro de daltonismo de GL nunca se
+> ejecutaba. Eso era cierto cuando se escribió, pero AUD-252
+> (`src/engine/core/app.py::modo_daltonico_gl`) conectó
+> `UserSettings.colorblind_mode` con `GLRenderConfig.colorblind_mode` — el
+> comentario en `gpu_effects.py` que decía lo mismo quedó desactualizado y
+> también se corrigió en esta misma pasada. El límite que sigue vigente es
+> otro, y es el que queda abajo.
+
+- **Las matrices de corrección de GL no son las de la CPU (AUD-138).** El modo
+  del jugador sí llega al sombreador desde AUD-252, pero el sombreador y el
+  filtro de `PostProcessing` (camino CPU) implementan la corrección con
+  matrices distintas — no se ha verificado que produzcan el mismo resultado
+  visual. Un jugador daltónico puede ver una corrección ligeramente distinta
+  según si su máquina renderiza por GL o por software.
 - **Ninguna pasada tiene prueba de píxeles en CI.** `SDL_VIDEODRIVER=dummy` no
   da contexto OpenGL. Lo que se prueba sin tarjeta es el plumbing, el orden de
   la cadena, la conversión de coordenadas y que las pasadas se salten cuando

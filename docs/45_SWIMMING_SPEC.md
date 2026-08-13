@@ -1,87 +1,75 @@
 ---
 document_id: "LOI-SWIMMING-045"
-title: "Legacy of InFest — Swimming Mechanics Specification"
-aliases: ["Swimming Spec"]
-tags: ["swimming", "mechanics", "player"]
-description: "Swimming mechanics"
+title: "Legacy of InFest — Especificación de la mecánica de natación"
+aliases: ["Especificación de natación", "Swimming Spec"]
+tags: ["natacion", "mecanica", "jugador"]
+description: "Mecánica de natación"
 source: "docs/45_SWIMMING_SPEC.md"
-date_processed: "2026-07-14"
+date_processed: "2026-08-12"
 ---
 
-# Legacy of InFest — Swimming Mechanics Specification
+# Legacy of InFest — Especificación de la mecánica de natación
 
-**Document ID:** LOI-SWIMMING-045
-**Version:** 1.0.0
-**Status:** Official
-**Audience:** Professor, Teaching Assistants, Students, AI coding assistants
+**ID del documento:** LOI-SWIMMING-045
+**Versión:** 1.1.0
+**Estado:** Oficial
+**Audiencia:** Profesor, ayudantes, estudiantes, asistentes de código
+
+> **AUD-455.** Traduce el documento completo (antes en inglés). Verificado
+> contra `src/framework/entities/states/swim.py`: el modificador de
+> gravedad (×0.3), el periodo de burbujas (0.3s) y el máximo de un salto en
+> el agua coinciden exactamente con el código.
 
 ---
 
-## 1. Overview
+## 1. Visión general
 
-Swimming is a player state (`SwimmingState` in `src/framework/entities/states/swim.py`) that activates when the player enters water zones. It provides buoyancy, reduced gravity, slower horizontal movement, and swim-jump mechanics. Bubbles are emitted during swimming for visual feedback.
+Nadar es un estado del jugador (`SwimmingState` en `src/framework/entities/states/swim.py`) que se activa cuando el jugador entra en zonas de agua. Da flotabilidad, gravedad reducida, movimiento horizontal más lento y la mecánica de salto nadando. Se emiten burbujas mientras se nada, como retroalimentación visual.
 
 ---
 
-## 2. Physics
+## 2. Física
 
-| Property | Value |
+| Propiedad | Valor |
 |----------|-------|
-| Gravity modifier | 0.3× normal |
-| Max vertical speed | −60 px/s (rise), +120 px/s (sink) |
-| Horizontal acceleration | 60 px/s² |
-| Max horizontal speed | ±120 px/s |
-| Horizontal deceleration | 0.9× multiplier/frame |
-| Swim jump velocity | −120 px/s |
-| Max swim jumps | 1 |
-| Swim-dive (crouch) | +200 px/s² |
-| Surface eject velocity | −200 px/s |
-| Bubble emission period | 0.3 s |
+| Modificador de gravedad | ×0.3 de lo normal |
+| Velocidad vertical máxima | −60 px/s (subir), +120 px/s (hundirse) |
+| Aceleración horizontal | 60 px/s² |
+| Velocidad horizontal máxima | ±120 px/s |
+| Desaceleración horizontal | multiplicador ×0.9/fotograma |
+| Velocidad de salto nadando | −120 px/s |
+| Saltos nadando máximos | 1 |
+| Buceo agachado | +200 px/s² |
+| Velocidad de expulsión a la superficie | −200 px/s |
+| Periodo de emisión de burbujas | 0.3 s |
 
 ---
 
-## 3. State Transitions
+## 3. Transiciones de estado
 
-- **Enter:** Player overlaps a water zone → state changes to `SWIMMING`. Vertical velocity is zeroed on entry; horizontal velocity is halved.
-- **Exit:** Player leaves water zone → transitions to appropriate ground/air state.
-- **Surface Y:** Recorded at entry (`player.y − 16`), used for surface visual effects.
-- **Surface eject:** If the player rises above `surface_y − 8` px, they are ejected upward at −200 px/s into `JUMPING`.
-- **Grounding:** Touching ground transitions to `IDLE`.
-
----
-
-## 4. Bubble Particles
-
-Bubble timer spawns visual bubble particles at regular intervals while swimming. Implemented inline in `SwimmingState.update()`: every 0.3 s the state emits `Events.VFX_BUBBLE` at the player position; `StageScene` subscribes and spawns `HitEffects.BUBBLE` from the `"bubble"` emitter.
+- **Entrada:** el jugador se solapa con una zona de agua → el estado pasa a `SWIMMING`. La velocidad vertical se pone a cero al entrar; la horizontal se reduce a la mitad.
+- **Salida:** el jugador sale de la zona de agua → transición al estado de suelo/aire correspondiente.
+- **Y de superficie:** se registra al entrar (`player.y − 16`), se usa para los efectos visuales de superficie.
+- **Expulsión en superficie:** si el jugador sube por encima de `surface_y − 8` px, se le expulsa hacia arriba a −200 px/s hacia `JUMPING`.
+- **Aterrizaje:** tocar el suelo pasa a `IDLE`.
 
 ---
 
-## 5. Implementation Status
+## 4. Partículas de burbujas
 
-**File:** `src/framework/entities/states/swim.py`
-**Class:** `SwimmingState(PlayerStateBase)` with `PlayerState.SWIMMING`
-**Status:** ✅ Complete — swimming physics, buoyancy, bubble timer, surface eject
-**Missing:** No dedicated water zone detection; depends on stage collision system to trigger state change
-
-
---- Traducción al Español ---
-
-## Especificación de Natación
-
-### Descripción
-Mecánica de natación para el jugador en zonas de agua.
-
-### Características
-- Movimiento vertical y horizontal en agua
-- Flotabilidad y gravedad reducida
-- Transición entrada/salida del agua
-- Animaciones de natación
-
-Para la especificación completa con atributos físicos y estados, consultar el documento original en inglés.
-
+Un temporizador de burbujas genera partículas visuales de burbuja a intervalos regulares mientras se nada. Implementado en línea en `SwimmingState.update()`: cada 0.3 s el estado emite `Events.VFX_BUBBLE` en la posición del jugador; `StageScene` se suscribe y genera `HitEffects.BUBBLE` desde el emisor `"bubble"`.
 
 ---
-## 🔗 Documentos Relacionados
 
-- [[04_PLAYER_SPEC.md|Player Specification]]
-- [[47_WATER_EFFECT.md|Water Effect]]
+## 5. Estado de implementación
+
+**Fichero:** `src/framework/entities/states/swim.py`
+**Clase:** `SwimmingState(PlayerStateBase)` con `PlayerState.SWIMMING`
+**Estado:** ✅ Completo — física de natación, flotabilidad, temporizador de burbujas, expulsión en superficie
+**Falta:** sin detección dedicada de zona de agua; depende del sistema de colisión del escenario para disparar el cambio de estado
+
+---
+## 🔗 Documentos relacionados
+
+- [[04_PLAYER_SPEC.md|Especificación del jugador]]
+- [[47_WATER_EFFECT.md|Especificación del efecto de agua]]

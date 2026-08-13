@@ -1,59 +1,43 @@
 ---
 document_id: "LOI-QUIZZES-QUIZ_UNIT02"
-title: "Quiz — Unit II: Vectors & 2D Transformations"
+title: "Quiz — Unidad II: vectores y transformaciones 2D"
 aliases: ["Quiz Unit02", "quiz_unit02"]
-tags: ["quiz", "academic", "evaluation"]
-description: "Quizzes document: quiz_unit02"
-source: "docs/docs\quizzes/quiz_unit02.md"
-date_processed: "2026-07-14"
+tags: ["quiz", "academico", "evaluacion"]
+description: "Documento de quizzes: quiz_unit02"
+source: "docs/quizzes/quiz_unit02.md"
+date_processed: "2026-08-13"
 ---
 
-# Quiz — Unit II: Vectors & 2D Transformations
+# Quiz — Unidad II: vectores y transformaciones 2D
 
-**Course:** Legacy of InFest  
-**Duration:** 15 minutes  
-**Total:** 10 points  
+**Curso:** Legacy of InFest
+**Duración:** 15 minutos
+**Total:** 10 puntos
 
 ---
 
-## Questions
+## Preguntas
 
-### 1. Vector Operations (2 pts)
-Given vectors **a** = (3, 4) and **b** = (1, -2), compute:
+### 1. Operaciones vectoriales (2 pts)
+Dados los vectores **a** = (3, 4) y **b** = (1, -2), calcule:
 a) **a** + **b**
-b) **a** · **b** (dot product)
-c) |**a**| (magnitude)
+b) **a** · **b** (producto punto)
+c) |**a**| (magnitud)
 
-### 2. Normalization (1 pt)
-What is the normalized version of vector **v** = (3, 4)?
+### 2. Normalización (1 pt)
+¿Cuál es la versión normalizada del vector **v** = (3, 4)?
 
-### 3. Translation Matrix (2 pts)
-Write the 3×3 translation matrix that moves a point by (tx, ty).
+### 3. Matriz de traslación (2 pts)
+Escriba la matriz de traslación 3×3 que mueve un punto por (tx, ty).
 
-### 4. Rotation (1 pt)
-A point (x, y) is rotated 90° counterclockwise about the origin. What are the new coordinates?
+### 4. Rotación (1 pt)
+Un punto (x, y) se rota 90° en sentido antihorario alrededor del origen. ¿Cuáles son las nuevas coordenadas?
 
-### 5. Composite Transformations (2 pts)
-Explain why the order of matrix multiplication matters when combining a rotation and a translation.
+### 5. Transformaciones compuestas (2 pts)
+Explique por qué importa el orden de la multiplicación de matrices al combinar una rotación y una traslación.
 
-### 6. Basis Vectors (1 pt)
-What are the standard basis vectors in 2D space? How do they change under a shear transformation?
+### 6. Vectores base (1 pt)
+¿Cuáles son los vectores base estándar en el espacio 2D? ¿Cómo cambian bajo una transformación de cizalladura?
 
-### 7. Affine vs Linear (1 pt)
-What distinguishes an affine transformation from a purely linear one?
-
-
---- Traducción al Español ---
-
-## Quiz — Unidad II: Vectores y Transformaciones 2D
-
-**Duración:** 15 minutos | **Total:** 10 puntos
-
-### Preguntas
-1. Operaciones vectoriales (2 pts) — Suma, producto punto, magnitud
-2. Normalización (1 pt) — Versión normalizada de un vector
-3. Matriz de traslación (2 pts) — Matriz 3×3 que mueve un punto
-4. Rotación (1 pt) — Rotación de 90° sobre el origen
-5. Transformaciones compuestas (2 pts) — Orden de multiplicación de matrices
-6. Vectores base (1 pt) — Vectores base estándar en 2D
-7. Afín vs Lineal (1 pt) — Diferencia entre transformación afín y lineal
+### 7. Afín frente a lineal (1 pt)
+¿Qué distingue a una transformación afín de una puramente lineal?

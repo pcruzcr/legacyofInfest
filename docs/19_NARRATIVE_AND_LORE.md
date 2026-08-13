@@ -1,181 +1,187 @@
 ---
 document_id: "LOI-LORE-019"
-title: "Legacy of InFest — Narrative and Lore"
-aliases: ["Narrative and Lore"]
-tags: ["narrative", "lore", "story"]
-description: "Story, characters, cultural grounding (Tilawa)"
+title: "Legacy of InFest — Narrativa y trasfondo"
+aliases: ["Narrativa y trasfondo", "Narrative and Lore"]
+tags: ["narrativa", "trasfondo", "historia"]
+description: "Historia, personajes, arraigo cultural (Tilawa)"
 source: "docs/19_NARRATIVE_AND_LORE.md"
-date_processed: "2026-07-14"
+date_processed: "2026-08-13"
 ---
 
-# Legacy of InFest — Narrative and Lore
+# Legacy of InFest — Narrativa y trasfondo
 
-**Document ID:** LOI-LORE-019  
-**Version:** 1.0.0  
-**Status:** Official  
-**Compatibility:** Requires LOI-WORLD-016, LOI-BOSS-017  
-**Audience:** Professor, Students, Artists
+**ID del documento:** LOI-LORE-019
+**Versión:** 1.1.0
+**Estado:** Oficial
+**Compatibilidad:** Requiere `16_WORLD_DESIGN.md`, `17_BOSS_SPEC.md`
+**Audiencia:** Profesor, estudiantes, artistas
 
----
-
-## 1. Overview
-
-**Corrected per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.5.** This document defines the complete narrative framework of Legacy of InFest: the story of John and Jin, the nature and origin of the four spirits, the cultural grounding of the **Tilawa** mythology — the official fictional culture named in the course syllabus — and the meaning of the relics.
-
-The narrative is intentionally understated during gameplay — it is told through environment, sprite design, the identity of the bosses, and the three story screens that precede Stage 0. Students and players are not expected to engage with deep lore during a stage. The story enriches the experience for those who seek it.
+> **AUD-455.** Traduce el documento. Quita cinco referencias a
+> `77_SYLLABUS_ALIGNMENT_AUDIT.md`, un documento que no existe en este
+> repositorio — el contenido que citaban se conserva porque es consistente
+> con `65_EL_LORE_EXTENSO.md` (ya en español, la expansión creativa
+> canónica del mundo), sólo se retira la cita a la fuente inexistente.
 
 ---
 
-## 2. Cultural Grounding
+## 1. Visión general
 
-### 2.1 The Tilawa Culture (Official, Fictional)
+Este documento define el marco narrativo completo de Legacy of InFest: la historia de John y Jin, la naturaleza y origen de los cuatro espíritus, el arraigo cultural de la mitología **Tilawa** — la cultura ficticia oficial nombrada en el programa del curso — y el significado de las reliquias.
 
-**Corrected per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.5.** The course syllabus names the in-universe ancestral culture as **Tilawa**, verbatim: *"Paburu, un antiguo chamán de la cultura ancestral de Tilawa, juró proteger a su pueblo y a la naturaleza que habitaba la región."* Tilawa is a **fictional culture** invented for Legacy of InFest — it is not a literal stand-in for any single real-world indigenous nation, though it is clearly inspired by the broader heritage of Costa Rican and Central American indigenous peoples, consistent with the game's grounding in real Costa Rican geography, ecology, and university settings.
+La narrativa es intencionalmente discreta durante la jugabilidad — se cuenta a través del entorno, el diseño de sprites, la identidad de los jefes, y las tres pantallas de historia que preceden a Stage 0. No se espera que los estudiantes y jugadores se involucren con el trasfondo profundo durante un escenario. La historia enriquece la experiencia de quienes la buscan.
 
-**Production guideline (preserved from prior design work):** Even though Tilawa is fictional, all design work involving it must maintain the same standard of respect, dignity, and avoidance of caricature that would be required for a real culture. Real-world tribal names, sacred object names, and ceremonial terminology belonging to actual living indigenous peoples of Costa Rica must **not** be used in official game text — only the fictional Tilawa equivalents defined by this document and the syllabus.
+---
 
-**Use of Tilawa Cultural Elements in Legacy of InFest:**
+## 2. Arraigo cultural
 
-| Element | How It Appears | Treatment |
+### 2.1 La cultura Tilawa (oficial, ficticia)
+
+El programa del curso nombra la cultura ancestral del universo del juego como **Tilawa**, literalmente: *"Paburu, un antiguo chamán de la cultura ancestral de Tilawa, juró proteger a su pueblo y a la naturaleza que habitaba la región."* Tilawa es una **cultura ficticia** inventada para Legacy of InFest — no es un sustituto literal de ninguna nación indígena real específica, aunque está claramente inspirada en la herencia más amplia de los pueblos indígenas de Costa Rica y Centroamérica, consistente con el arraigo del juego en la geografía, ecología, y entornos universitarios reales de Costa Rica.
+
+**Pauta de producción (conservada de trabajo de diseño previo):** aunque Tilawa es ficticia, todo el trabajo de diseño que la involucre debe mantener el mismo estándar de respeto, dignidad, y evitación de caricatura que se exigiría para una cultura real. Los nombres tribales del mundo real, los nombres de objetos sagrados, y la terminología ceremonial que pertenece a pueblos indígenas vivos reales de Costa Rica **no** deben usarse en el texto oficial del juego — sólo los equivalentes ficticios de Tilawa definidos por este documento y el programa.
+
+**Uso de elementos culturales de Tilawa en Legacy of InFest:**
+
+| Elemento | Cómo aparece | Tratamiento |
 |---|---|---|
-| Tilawa ceremonial mask | Worn by El Gavilán; final form of Paburu's mask | Depicted as a sacred object of power — not as costume or decoration |
-| Paburu | Name of the Grand Shaman character, as defined by the syllabus | Derived with respect — Paburu is a powerful, complex figure, not a villain |
-| Ceremonial space | The sacred cemetery setting of Zone Final | Treated with solemnity and visual reverence |
-| Spiritual cosmology | The concept of awakened land spirits | Reflects a Tilawa cosmological relationship with the natural world |
+| Máscara ceremonial Tilawa | La lleva El Gavilán; forma final de la máscara de Paburu | Representada como un objeto sagrado de poder — no como disfraz o decoración |
+| Paburu | Nombre del personaje del Gran Chamán, según lo define el programa | Elaborado con respeto — Paburu es una figura poderosa y compleja, no un villano |
+| Espacio ceremonial | La ambientación del cementerio sagrado de la Zona Final | Tratado con solemnidad y reverencia visual |
+| Cosmología espiritual | El concepto de espíritus de la tierra despiertos | Refleja una relación cosmológica Tilawa con el mundo natural |
 
-**Important Design Principle:** The Tilawa elements in Legacy of InFest are used with respect and awareness, in the same spirit that would be required if they were drawn from a real living culture. The bosses are not evil — they are guardians responding to the presence of the relics. Paburu is not a villain — he is a test. The game does not mock any cultural element, real or fictional. The professor reviewing student stage content must ensure this tone is maintained.
+**Principio de diseño importante:** los elementos de Tilawa en Legacy of InFest se usan con respeto y conciencia, con el mismo espíritu que se exigiría si vinieran de una cultura viva real. Los jefes no son malvados — son guardianes que responden a la presencia de las reliquias. Paburu no es un villano — es una prueba. El juego no se burla de ningún elemento cultural, real o ficticio. El profesorado que revisa el contenido del escenario de un estudiante debe asegurar que se mantenga este tono.
 
-### 2.2 Costa Rican Natural History
+### 2.2 Historia natural costarricense
 
-Every enemy and boss in the game is grounded in Costa Rican ecology:
+Cada enemigo y jefe del juego está arraigado en la ecología de Costa Rica:
 
-| Creature | Species | Notes |
+| Criatura | Especie | Notas |
 |---|---|---|
-| White-tailed deer | Odocoileus virginianus | Present in Costa Rican forests, culturally significant |
-| Terciopelo | Bothrops asper | Most dangerous snake in Costa Rica, significant in folklore |
-| Roadside hawk | Buteo magnirostris | Extremely common along highways — "gavilán camionero" is the colloquial name |
-| Strawberry poison-dart frog | Oophaga pumilio | Native to Caribbean slopes of Costa Rica |
-| Resplendent quetzal | Pharomachrus mocinno | Present in cloud forests, sacred in Mesoamerican cultures |
-| Great blue heron | Ardea herodias | Common in wetlands and coastlines |
-| Black vulture | Coragyps atratus | Extremely common urban and rural scavenger |
+| Venado cola blanca | Odocoileus virginianus | Presente en los bosques de Costa Rica, culturalmente significativo |
+| Terciopelo | Bothrops asper | La serpiente más peligrosa de Costa Rica, significativa en el folclor |
+| Gavilán chapulinero | Buteo magnirostris | Extremadamente común a lo largo de las carreteras — "gavilán camionero" es el nombre coloquial |
+| Rana venenosa de fresa | Oophaga pumilio | Nativa de las laderas caribeñas de Costa Rica |
+| Quetzal resplandeciente | Pharomachrus mocinno | Presente en los bosques nubosos, sagrado en las culturas mesoamericanas |
+| Garza azulada | Ardea herodias | Común en humedales y costas |
+| Zopilote negro | Coragyps atratus | Carroñero urbano y rural extremadamente común |
 
-This ecological grounding is intentional: the game's world is recognizably Costa Rican. Students and professors who live and work in Costa Rica will recognize their environment.
+Este arraigo ecológico es intencional: el mundo del juego es reconociblemente costarricense. Los estudiantes y profesorado que viven y trabajan en Costa Rica reconocerán su entorno.
 
 ---
 
-## 3. The Protagonists
+## 3. Los protagonistas
 
-**Corrected per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.4.** The official syllabus defines John and Jin as exchange students arriving in Costa Rica to study at Universidad Invenio, each carrying a relic tied to their family's industry. The text below replaces the prior, non-official origin (hiking discovery / beach discovery) with the syllabus-accurate backstory.
+El programa oficial define a John y Jin como estudiantes de intercambio que llegan a Costa Rica a estudiar en la Universidad Invenio, cada uno cargando una reliquia ligada a la industria de su familia.
 
 ### 3.1 John
 
-John is the son of a businessman tied to **mining** ("hijo de un empresario vinculado a la explotación minera"). He came to Costa Rica as an exchange student at Universidad Invenio. He carries **La Pepita** — a gold nugget that came from **Crucitas**, the historic gold-mining region in northern Costa Rica, almost certainly connected to his father's business interests. He does not fully understand what the nugget is — only that it feels warm and that things have been strange since he arrived with it.
+John es hijo de un empresario vinculado a la **explotación minera**. Llegó a Costa Rica como estudiante de intercambio en la Universidad Invenio. Lleva consigo **La Pepita** — una pepita de oro que vino de **Crucitas**, la histórica región minera de oro en el norte de Costa Rica, casi con certeza conectada a los intereses comerciales de su padre. No entiende del todo qué es la pepita — sólo que se siente cálida y que las cosas han estado extrañas desde que llegó con ella.
 
-John is direct, impatient, physical. He acts before thinking. In combat, he favors the short attack.
+John es directo, impaciente, físico. Actúa antes de pensar. En combate, favorece el ataque corto.
 
-**Design Note:** John's identity is intentionally left partially obscured in Stage 0 (the hooded protagonist). The hood is lifted only in story screens. His full sprite design is used in Zone 1 onward.
+**Nota de diseño:** la identidad de John queda intencionalmente parcialmente oculta en Stage 0 (el protagonista encapuchado). La capucha sólo se levanta en las pantallas de historia. Su diseño de sprite completo se usa desde la Zona 1 en adelante.
 
 ### 3.2 Jin
 
-Jin is the daughter of a family tied to the **fishing industry** ("hija de una familia relacionada con la industria pesquera"). She also came to Costa Rica as an exchange student at Universidad Invenio. She carries **La Perla** — a strange pearl born in a rare marine coral, connected to her family's fishing and maritime trade. She recognizes it as unusual and has been studying it since she arrived.
+Jin es hija de una familia relacionada con la **industria pesquera**. Ella también llegó a Costa Rica como estudiante de intercambio en la Universidad Invenio. Lleva consigo **La Perla** — una extraña perla nacida en un raro coral marino, conectada al negocio pesquero y marítimo de su familia. La reconoce como inusual y la ha estado estudiando desde que llegó.
 
-Jin is methodical, observant, cautious. She thinks before acting. In gameplay terms, her character favors ranged approaches — but since the framework uses one unified player entity, their differences are expressed in story screens and environmental storytelling only.
+Jin es metódica, observadora, cautelosa. Piensa antes de actuar. En términos de jugabilidad, su personaje favorece los enfoques a distancia — pero como el framework usa una única entidad de jugador unificada, sus diferencias se expresan sólo en las pantallas de historia y la narrativa ambiental.
 
-**Design Note:** The hood in Stage 0 conceals which protagonist the player is — John or Jin. This is narratively intentional: Stage 0 is the "before" — before identities matter, before the spirits notice them.
+**Nota de diseño:** la capucha en Stage 0 oculta cuál protagonista es el jugador — John o Jin. Esto es narrativamente intencional: Stage 0 es el "antes" — antes de que las identidades importen, antes de que los espíritus los noten.
 
-### 3.3 The Relationship Between John and Jin
+### 3.3 La relación entre John y Jin
 
-John and Jin do not know each other at the start of the game. They arrive at the campus on the same day as international exchange students, both drawn by the same sense that something has changed. Their first meeting happens between Stage 1-1 and 1-2 (shown in a brief cutscene sprite sequence — no dialogue boxes, only sprites interacting).
+John y Jin no se conocen al comienzo del juego. Llegan al campus el mismo día como estudiantes de intercambio internacional, ambos atraídos por la misma sensación de que algo ha cambiado. Su primer encuentro ocurre entre el Escenario 1-1 y el 1-2 (mostrado en una breve secuencia de sprites de escena cinemática — sin cajas de diálogo, sólo sprites interactuando).
 
-They travel together from Zone 1 onward. The game does not explicitly define their relationship as romantic, familial, or anything else. This is intentional — the focus is on the journey and the spirits, not on the protagonists' personal relationship.
-
----
-
-## 4. The Relics
-
-**Corrected per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.4.** The official syllabus names the precise origin of each relic verbatim: *"Una pepita de oro proveniente de Crucitas. Una extraña perla nacida en un raro coral marino."* Both relics are connected to the protagonists' family industries (mining for John, fishing for Jin), reinforcing the human/nature tension that triggers the story.
-
-### 4.1 La Pepita (The Gold Nugget)
-
-A small, rounded nugget of pure gold from **Crucitas** — warm to the touch, even in the cold. Crucitas is a real region in northern Costa Rica historically associated with gold mining, which grounds John's family business in the actual geography of the country. In Tilawa cosmology, gold is associated with the sun, with warmth, with action and energy. La Pepita amplifies force and speed — whoever carries it is drawn toward confrontation.
-
-**In-Game Role:**
-- John's carried relic, originating from Crucitas
-- Form 3A of Paburu manifests through La Pepita: the gold sphere, aggressive, fast
-- La Pepita is one of two keys to Paburu's final ritual
-
-**Visual Design:** Small oblong nugget, 8×6 px sprite, warm gold glow (animated pulsing using `ColorTools.apply_tint`). Used in HUD as John's player indicator.
-
-### 4.2 La Perla (The Pearl)
-
-A deep black pearl, born in a rare marine coral — smooth, cold, absorbing light rather than reflecting it. Its origin in a rare coral ties it to Jin's family's fishing industry background. In Tilawa coastal tradition, black pearls are associated with depth, patience, and the ocean's memory. La Perla amplifies perception and defense — whoever carries it is drawn toward observation.
-
-**In-Game Role:**
-- Jin's carried relic, born in a rare marine coral
-- Form 3B of Paburu manifests through La Perla: the black sphere, defensive, methodical
-- La Perla is the second key
-
-**Visual Design:** Round pearl, 7×7 px sprite, deep obsidian sheen with a subtle white glint. Used in HUD as Jin's player indicator.
-
-### 4.3 The Relics and Paburu's Purpose
-
-Paburu does not want the relics to destroy them. He wants to **test the carriers**. In Tilawa spiritual tradition, objects of power are only valid in the hands of those worthy to hold them. The four spirits — venado, serpiente, gavilán, and Paburu himself — are guardians of a test that has been waiting for the right bearers to arrive.
-
-The spirits did not awaken because John and Jin are threats. They awakened because the combination of La Pepita (from Crucitas) and La Perla (from the rare marine coral) broke the natural balance — per the syllabus: *"La combinación de ambos objetos rompe el equilibrio natural y despierta a Paburu."*
+Viajan juntos desde la Zona 1 en adelante. El juego no define explícitamente su relación como romántica, familiar, o de otro tipo. Esto es intencional — el foco está en el viaje y los espíritus, no en la relación personal de los protagonistas.
 
 ---
 
+## 4. Las reliquias
 
+El programa oficial nombra el origen preciso de cada reliquia, literalmente: *"Una pepita de oro proveniente de Crucitas. Una extraña perla nacida en un raro coral marino."* Ambas reliquias están conectadas a las industrias familiares de los protagonistas (minería para John, pesca para Jin), reforzando la tensión humano/naturaleza que dispara la historia.
 
-## 5. The Four Spirits
+### 4.1 La Pepita
 
-### 5.1 El Venado Sagrado — The Spirit of the Forest
+Una pepita pequeña y redondeada de oro puro de **Crucitas** — cálida al tacto, incluso en el frío. Crucitas es una región real en el norte de Costa Rica históricamente asociada con la minería de oro, lo que arraiga el negocio familiar de John en la geografía real del país. En la cosmología Tilawa, el oro se asocia con el sol, con el calor, con la acción y la energía. La Pepita amplifica la fuerza y la velocidad — quien la lleva es atraído hacia la confrontación.
 
-**Origin:** The deer lived in the forest surrounding the university for years — decades. It was old when it died, its bones slowly absorbed into the root system of an ancient tree. When La Pepita and La Perla entered the campus, the tree's roots stirred and the bones assembled.
+**Rol en el juego:**
+- Reliquia que lleva John, proveniente de Crucitas
+- La Forma 3A de Paburu se manifiesta a través de La Pepita: la esfera dorada, agresiva, rápida
+- La Pepita es una de las dos llaves del ritual final de Paburu
 
-**Nature:** El Venado Sagrado is not angry. It is protective. The forest does not hate John and Jin — it does not trust that they are ready. The deer tests their reflexes, their patience, their ability to endure contact with the wild.
+**Diseño visual:** pepita pequeña y alargada, sprite de 8×6 px, brillo dorado cálido (pulso animado usando `ColorTools.apply_tint`). Se usa en el HUD como indicador de jugador de John.
 
-**After Defeat:** The venado's spirit does not disappear — it follows John and Jin. In Zone 2 onwards, the deer's silhouette is occasionally visible in background layers (as a BG_Mid sprite). It is watching.
+### 4.2 La Perla
 
-### 5.2 El Rey Terciopelo — The Spirit of Collective Intelligence
+Una perla negra profunda, nacida en un raro coral marino — suave, fría, que absorbe la luz en vez de reflejarla. Su origen en un coral raro la liga al trasfondo de la industria pesquera de la familia de Jin. En la tradición costera Tilawa, las perlas negras se asocian con la profundidad, la paciencia, y la memoria del océano. La Perla amplifica la percepción y la defensa — quien la lleva es atraído hacia la observación.
 
-**Origin:** The terciopelo serpents have always lived near the datacenter — the warmth drew them before it was even built. When the datacenter was constructed, the snakes adapted. When the relics arrived, their collective whisper found a voice — El Rey.
+**Rol en el juego:**
+- Reliquia que lleva Jin, nacida en un raro coral marino
+- La Forma 3B de Paburu se manifiesta a través de La Perla: la esfera negra, defensiva, metódica
+- La Perla es la segunda llave
 
-**Nature:** El Rey Terciopelo does not have a singular consciousness the way a person does. It is a democracy of venom — thousands of individual wills aligned toward a single purpose. It is alien, distributed, cold. It does not test courage. It tests **adaptability** — can John and Jin handle something that doesn't think the way they do?
+**Diseño visual:** perla redonda, sprite de 7×7 px, brillo obsidiana profundo con un destello blanco sutil. Se usa en el HUD como indicador de jugador de Jin.
 
-**After Defeat:** The serpents disperse back into the walls and floors of the datacenter. The collective breaks. El Rey, as an entity, is gone — but the serpents remember. Their venom-knowledge is absorbed into La Pepita and La Perla (game mechanic: post-Zone 2, the relics pulse with green light occasionally).
+### 4.3 Las reliquias y el propósito de Paburu
 
-### 5.3 El Gavilán Camionero Mascarero — The Spirit of Aerial Sight
+Paburu no quiere que las reliquias los destruyan. Quiere **poner a prueba a los portadores**. En la tradición espiritual Tilawa, los objetos de poder sólo son válidos en manos de quienes son dignos de sostenerlos. Los cuatro espíritus — venado, serpiente, gavilán, y el propio Paburu — son guardianes de una prueba que ha estado esperando a que lleguen los portadores correctos.
 
-**Origin:** The Tilawa ceremonial mask was placed at the university campus decades ago — a cultural artifact, respectfully displayed. When La Pepita and La Perla crossed the building's threshold, the mask recognized what they were. The nearest creature with sufficient presence was a roadside hawk that had been nesting in the roof. The mask found it.
-
-**Nature:** El Gavilán is the only spirit that communicates — not in words, but in pattern. Its attacks are readable. Its dive-bombs follow arcs that can be anticipated. The hawk is testing John and Jin's ability to **recognize patterns** and respond intelligently. (This is not coincidental — it directly mirrors the Unit IX academic content of Stage 3.)
-
-**After Defeat:** The mask lifts away from the hawk, which returns to its natural size and flies free. The mask does not disappear — it floats upward into the sky, seeking Paburu. The hawk perches briefly on a rafter and looks at John and Jin before departing. This is one of the few moments of warmth in the game.
-
-### 5.4 El Gran Shaman Paburu — The Spirit of the Test
-
-**Origin:** Paburu was a great Tilawa shaman — ancient, powerful, exactly as defined by the course syllabus. He died performing a ritual to seal the relics away until worthy carriers appeared. The seal was the sacred cemetery. The seal was him. He has been waiting, entombed in stone, for the bearers to arrive.
-
-**Nature:** Paburu is not the villain. He is the goal. His four forms are not desperation — they are structure. He shows John and Jin the stone that guarded the relics (Form 1), the power of the Tilawa tradition (Form 2), the nature of the relics themselves (Form 3 — random, because the relics themselves are uncertain), and finally himself — his true spirit form — as the final acknowledgment.
-
-**After Defeat:** Paburu ascends. He is not destroyed. He is released. He looks at John and Jin with recognition — not pride exactly, but something close. The relics remain with John and Jin. The spirits of the venado, the rey, and the gavilán gather briefly around Paburu's ascending form — not in defeat, but in ceremony.
-
-The world is quiet. The test is complete. What comes next is the students' story.
+Los espíritus no despertaron porque John y Jin sean amenazas. Despertaron porque la combinación de La Pepita (de Crucitas) y La Perla (del raro coral marino) rompió el equilibrio natural — según el programa: *"La combinación de ambos objetos rompe el equilibrio natural y despierta a Paburu."*
 
 ---
 
-## 6. Story Screens
 
-Three story screens precede Stage 0. They are atmospheric illustrations with minimal text — large pixel art backgrounds with sprite characters and brief caption text.
 
-### 6.1 Story Screen 1 — "La Llegada"
+## 5. Los cuatro espíritus
 
-**Background:** A painted view of the university campus at dusk — jungle mountains in the background, campus buildings silhouetted.
+### 5.1 El Venado Sagrado — el espíritu del bosque
 
-**Sprites:** John (from the left edge) and Jin (from the right edge) walking toward the campus entrance. They don't see each other yet.
+**Origen:** el venado vivió en el bosque que rodea la universidad durante años — décadas. Era viejo cuando murió, sus huesos absorbidos lentamente por el sistema de raíces de un árbol ancestral. Cuando La Pepita y La Perla entraron al campus, las raíces del árbol se agitaron y los huesos se ensamblaron.
 
-**Caption text:**
+**Naturaleza:** El Venado Sagrado no está enojado. Es protector. El bosque no odia a John y Jin — no confía en que estén listos. El venado pone a prueba sus reflejos, su paciencia, su capacidad de soportar el contacto con lo salvaje.
+
+**Tras la derrota:** el espíritu del venado no desaparece — sigue a John y Jin. Desde la Zona 2 en adelante, la silueta del venado es ocasionalmente visible en las capas de fondo (como sprite BG_Mid). Está observando.
+
+### 5.2 El Rey Terciopelo — el espíritu de la inteligencia colectiva
+
+**Origen:** las serpientes terciopelo siempre han vivido cerca del datacenter — el calor las atrajo incluso antes de que se construyera. Cuando se construyó el datacenter, las serpientes se adaptaron. Cuando llegaron las reliquias, su susurro colectivo encontró una voz — El Rey.
+
+**Naturaleza:** El Rey Terciopelo no tiene una conciencia singular como la tiene una persona. Es una democracia de veneno — miles de voluntades individuales alineadas hacia un solo propósito. Es alienígena, distribuido, frío. No pone a prueba el valor. Pone a prueba la **adaptabilidad** — ¿pueden John y Jin lidiar con algo que no piensa como ellos?
+
+**Tras la derrota:** las serpientes se dispersan de vuelta a las paredes y pisos del datacenter. El colectivo se rompe. El Rey, como entidad, se ha ido — pero las serpientes recuerdan. Su conocimiento del veneno se absorbe en La Pepita y La Perla (mecánica de juego: después de la Zona 2, las reliquias pulsan ocasionalmente con luz verde).
+
+### 5.3 El Gavilán Camionero Mascarero — el espíritu de la vista aérea
+
+**Origen:** la máscara ceremonial Tilawa se colocó en el campus universitario décadas atrás — un artefacto cultural, exhibido con respeto. Cuando La Pepita y La Perla cruzaron el umbral del edificio, la máscara reconoció qué eran. La criatura más cercana con presencia suficiente era un gavilán chapulinero que había estado anidando en el techo. La máscara lo encontró.
+
+**Naturaleza:** El Gavilán es el único espíritu que se comunica — no con palabras, sino con patrones. Sus ataques son legibles. Sus picadas siguen arcos que se pueden anticipar. El gavilán pone a prueba la capacidad de John y Jin de **reconocer patrones** y responder inteligentemente. (Esto no es coincidencia — refleja directamente el contenido académico de la Unidad IX de Stage 3.)
+
+**Tras la derrota:** la máscara se separa del gavilán, que vuelve a su tamaño natural y vuela libre. La máscara no desaparece — flota hacia arriba, hacia el cielo, buscando a Paburu. El gavilán se posa brevemente en una viga y mira a John y Jin antes de partir. Éste es uno de los pocos momentos de calidez del juego.
+
+### 5.4 El Gran Chamán Paburu — el espíritu de la prueba
+
+**Origen:** Paburu fue un gran chamán Tilawa — ancestral, poderoso, exactamente como lo define el programa del curso. Murió realizando un ritual para sellar las reliquias hasta que aparecieran portadores dignos. El sello fue el cementerio sagrado. El sello fue él mismo. Ha estado esperando, sepultado en piedra, a que llegaran los portadores.
+
+**Naturaleza:** Paburu no es el villano. Es la meta. Sus cuatro formas no son desesperación — son estructura. Le muestra a John y Jin la piedra que guardaba las reliquias (Forma 1), el poder de la tradición Tilawa (Forma 2), la naturaleza de las reliquias mismas (Forma 3 — aleatoria, porque las reliquias mismas son inciertas), y finalmente a sí mismo — su verdadera forma espiritual — como el reconocimiento final.
+
+**Tras la derrota:** Paburu asciende. No es destruido. Es liberado. Mira a John y Jin con reconocimiento — no exactamente orgullo, pero algo cercano. Las reliquias permanecen con John y Jin. Los espíritus del venado, el rey, y el gavilán se reúnen brevemente alrededor de la forma ascendente de Paburu — no en derrota, sino en ceremonia.
+
+El mundo queda en silencio. La prueba está completa. Lo que viene después es la historia de los estudiantes.
+
+---
+
+## 6. Pantallas de historia
+
+Tres pantallas de historia preceden a Stage 0. Son ilustraciones atmosféricas con texto mínimo — fondos grandes de arte de píxeles con personajes en sprite y texto de leyenda breve.
+
+### 6.1 Pantalla de historia 1 — "La Llegada"
+
+**Fondo:** una vista pintada del campus universitario al atardecer — montañas de jungla al fondo, edificios del campus en silueta.
+
+**Sprites:** John (desde el borde izquierdo) y Jin (desde el borde derecho) caminando hacia la entrada del campus. Todavía no se ven.
+
+**Texto de leyenda:**
 ```
 Llegaron el mismo día.
 Sin conocerse.
@@ -183,13 +189,13 @@ Sin saber que el bosque
 ya los esperaba.
 ```
 
-### 6.2 Story Screen 2 — "Las Reliquias"
+### 6.2 Pantalla de historia 2 — "Las Reliquias"
 
-**Background:** Close-up of a river stone (La Pepita glowing inside it) and a coastal scene (La Perla on the sand at the tide line).
+**Fondo:** primer plano de una piedra de río (La Pepita brillando en su interior) y una escena costera (La Perla en la arena, en la línea de marea).
 
-**Sprites:** John's hand picking up the nugget (left panel). Jin's hand picking up the pearl (right panel).
+**Sprites:** la mano de John recogiendo la pepita (panel izquierdo). La mano de Jin recogiendo la perla (panel derecho).
 
-**Caption text:**
+**Texto de leyenda:**
 ```
 Cada uno encontró algo
 que no debía quedarse perdido.
@@ -197,13 +203,13 @@ O quizás...
 algo que los encontró a ellos.
 ```
 
-### 6.3 Story Screen 3 — "El Bosque Recuerda"
+### 6.3 Pantalla de historia 3 — "El Bosque Recuerda"
 
-**Background:** The university entrance, now with visible jungle vines creeping in. A distant deer silhouette in the tree line.
+**Fondo:** la entrada de la universidad, ahora con enredaderas de jungla visibles colándose. Una silueta de venado distante en la línea de árboles.
 
-**Sprites:** The hooded protagonist — the Stage 0 avatar — standing at the campus entrance, looking inward.
+**Sprites:** el protagonista encapuchado — el avatar de Stage 0 — de pie en la entrada del campus, mirando hacia adentro.
 
-**Caption text:**
+**Texto de leyenda:**
 ```
 El bosque no olvida.
 Los espíritus despiertan.
@@ -214,43 +220,40 @@ La prueba comienza.
 
 ---
 
-## 7. Narrative Rules for Student Stages
+## 7. Reglas narrativas para escenarios de estudiante
 
-Students building traversal stages must maintain the following narrative consistency:
+Los estudiantes que construyen escenarios de recorrido deben mantener la siguiente consistencia narrativa:
 
-| Rule | Description |
+| Regla | Descripción |
 |---|---|
-| Enemy hostility is environmental, not personal | Zone 1 enemies are displaced wildlife, not soldiers. Zone 2 are serpents under influence. Zone 3 are birds under the hawk's influence. |
-| No dialogue in traversal stages | The world tells its story through environment and enemy behavior, not text boxes. Tutorial messages are gameplay-explanatory only. |
-| Checkpoints are rest points, not narrative beats | Checkpoints exist for gameplay pacing. They do not trigger story events in student stages. |
-| Boss stages are professor-owned | Students do not modify boss encounter stages. |
-| The relics are mentioned in the academic context only | La Pepita and La Perla are narrative objects — they do not create gameplay items in student stages. |
-| Cultural elements are treated with respect | No mockery, no caricature of indigenous elements, no stereotyping of Costa Rican culture or wildlife. |
+| La hostilidad de los enemigos es ambiental, no personal | Los enemigos de la Zona 1 son fauna desplazada, no soldados. Los de la Zona 2 son serpientes bajo influencia. Los de la Zona 3 son aves bajo la influencia del gavilán. |
+| Sin diálogo en escenarios de recorrido | El mundo cuenta su historia a través del entorno y el comportamiento de los enemigos, no de cajas de texto. Los mensajes de tutorial son sólo explicativos de la jugabilidad. |
+| Los checkpoints son puntos de descanso, no beats narrativos | Los checkpoints existen para el ritmo de la jugabilidad. No disparan eventos de historia en los escenarios de estudiante. |
+| Los escenarios de jefe son propiedad del profesorado | Los estudiantes no modifican los escenarios de encuentro de jefe. |
+| Las reliquias se mencionan sólo en el contexto académico | La Pepita y La Perla son objetos narrativos — no crean objetos de jugabilidad en los escenarios de estudiante. |
+| Los elementos culturales se tratan con respeto | Sin burla, sin caricatura de elementos indígenas, sin estereotipar la cultura o la fauna costarricense. |
 
 ---
 
-## 8. Lore Glossary
+## 8. Glosario de trasfondo
 
-**Corrected per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.4, §2.A.5, §5.**
-
-| Term | Meaning |
+| Término | Significado |
 |---|---|
-| **La Pepita** | The Gold Nugget, from Crucitas — John's relic, tied to his father's mining business |
-| **La Perla** | The Pearl, born in a rare marine coral — Jin's relic, tied to her family's fishing industry |
-| **Crucitas** | Historic gold-mining region in northern Costa Rica; official source of La Pepita per the syllabus |
-| **El Venado Sagrado** | The Sacred Deer — Zone 1 boss, forest spirit (syllabus-official) |
-| **El Rey Terciopelo** | The Fer-de-Lance King — Zone 2 boss, collective serpent spirit (syllabus-official) |
-| **El Gavilán Camionero Mascarero** | The Masked Trucker Hawk — Zone 3 boss, masked hawk spirit (project-defined design, professor-confirmed as the official and permanent Zone 3 boss) |
-| **Gran Shaman Paburu** | The Grand Shaman — Final boss, keeper of the test (syllabus-official identity; 4-form structure is a project-defined elaboration) |
-| **Terciopelo** | Common name for Bothrops asper, Costa Rica's most dangerous viper |
-| **Gavilán camionero** | Colloquial name for the roadside hawk (Buteo magnirostris) |
-| **Tilawa** | The official fictional ancestral culture named in the course syllabus; Paburu's people |
-| **InFest** | The name of the game and the implied infestation — the relics have "infested" the land with awakened spirits |
-
+| **La Pepita** | La pepita de oro, de Crucitas — reliquia de John, ligada al negocio minero de su padre |
+| **La Perla** | La perla, nacida en un raro coral marino — reliquia de Jin, ligada a la industria pesquera de su familia |
+| **Crucitas** | Región histórica de minería de oro en el norte de Costa Rica; fuente oficial de La Pepita según el programa |
+| **El Venado Sagrado** | El venado sagrado — jefe de la Zona 1, espíritu del bosque (oficial según el programa) |
+| **El Rey Terciopelo** | El rey terciopelo — jefe de la Zona 2, espíritu serpiente colectivo (oficial según el programa) |
+| **El Gavilán Camionero Mascarero** | El gavilán camionero enmascarado — jefe de la Zona 3, espíritu de gavilán enmascarado (diseño definido por el proyecto, confirmado por el profesorado como el jefe oficial y permanente de la Zona 3) |
+| **Gran Chamán Paburu** | El gran chamán — jefe final, guardián de la prueba (identidad oficial del programa; la estructura de 4 formas es una elaboración definida por el proyecto) |
+| **Terciopelo** | Nombre común de Bothrops asper, la víbora más peligrosa de Costa Rica |
+| **Gavilán camionero** | Nombre coloquial del gavilán chapulinero (Buteo magnirostris) |
+| **Tilawa** | La cultura ancestral ficticia oficial nombrada en el programa del curso; el pueblo de Paburu |
+| **InFest** | El nombre del juego y la infestación implícita — las reliquias han "infestado" la tierra con espíritus despiertos |
 
 ---
-## 🔗 Documentos Relacionados
+## 🔗 Documentos relacionados
 
-- [[16_WORLD_DESIGN.md|World Design]]
-- [[17_BOSS_SPEC.md|Boss Specification]]
-- [[65_EL_LORE_EXTENSO.md|El Lore Extenso]] — expansión creativa canónica del mundo
+- [[16_WORLD_DESIGN.md|Diseño del mundo]]
+- [[17_BOSS_SPEC.md|Especificación de jefes]]
+- [[65_EL_LORE_EXTENSO.md|El lore extenso]] — expansión creativa canónica del mundo

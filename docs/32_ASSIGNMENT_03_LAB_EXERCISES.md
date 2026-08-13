@@ -1,113 +1,100 @@
 ---
 document_id: "LOI-ASGN03-032B"
-title: "Assignment 3: Lab Exercise Completion"
-aliases: ["Assignment 3: Lab Exercises"]
-tags: ["assignment", "lab", "exercises", "academic"]
-description: "Lab exercises assignment"
+title: "Entrega 3: finalización de ejercicios de laboratorio"
+aliases: ["Entrega 3: ejercicios de laboratorio", "Assignment 3: Lab Exercises"]
+tags: ["entrega", "laboratorio", "ejercicios", "academico"]
+description: "Entrega de ejercicios de laboratorio"
 source: "docs/32_ASSIGNMENT_03_LAB_EXERCISES.md"
-date_processed: "2026-07-14"
+date_processed: "2026-08-13"
 ---
 
-# Assignment 3: Lab Exercise Completion
+# Entrega 3: finalización de ejercicios de laboratorio
 
-**Due:** Ongoing (Week 2-15) | **Points:** 100 total | **Units:** II-VIII
+**Entrega:** continua, a lo largo del trimestre | **Instrumento:** Prácticas de laboratorio (ver `21_COURSE_SCHEDULE.md` §4, `27_ACADEMIC_RUBRICS.md` §3) | **Unidades:** II–VIII
 
-## Objective
+> **AUD-455.** Traduce el documento. El resumen en español que traía al
+> final no correspondía a este tema — era el contenido (mal pegado) de la
+> entrega de reconocimiento de patrones. Se sustituye por un resumen
+> fiel al contenido real del documento (ejercicios de laboratorio de las
+> Unidades II–VIII).
 
-Complete the interactive lab exercises embedded in the game. Each lab tests a core concept from the course units.
+## Objetivo
 
-## Lab Schedule
+Completar los ejercicios de laboratorio interactivos incrustados en el juego. Cada laboratorio pone a prueba un concepto central de las unidades del curso — ver `15_ACADEMIC_DEMO_SCENES.md` para la especificación completa de cada escena de laboratorio.
 
-| Week | Lab | Unit | Points |
-|---|---|---|---|
-| 2 | Vector Lab | II — Vectors | 15 |
-| 3 | Transform Lab | II — Transforms | 10 |
-| 4 | Curve Editor | III — Curves | 15 |
-| 5 | Interpolation Lab | III/IV — Interpolation | 10 |
-| 6 | Color Theory | V — Color Spaces | 15 |
-| 7 | Noise Lab | V/VIII — Noise | 5 |
-| 8 | Collision Lab | VI — Collision | 10 |
-| 9 | Filter Lab | VII — Filters | 10 |
-| 10 | Vision Lab | VIII — Vision | 10 |
+## Calendario de laboratorios
 
-## Requirements
+| Laboratorio | Unidad |
+|---|---|
+| VectorLabScene | II — Vectores |
+| TransformLabScene | II — Transformaciones |
+| CurveEditorScene | III — Curvas |
+| InterpolationLabScene | III/IV — Interpolación |
+| ColorTheoryScene | V — Espacios de color |
+| NoiseLabScene | V/VIII — Ruido |
+| CollisionLabScene | VI — Colisión |
+| FilterDemoScene | VII — Filtros |
+| VisionDemoScene | VIII — Visión |
 
-For each lab, you must:
+La distribución exacta entre las Clases 2–9 está en `21_COURSE_SCHEDULE.md` §4.
 
-1. **Open the lab** via the Demo Menu in the game
-2. **Explore all modes** — cycle through with TAB
-3. **Answer quiz questions** — press Q to open quiz mode, answer all questions
-4. **Demonstrate understanding** — each lab tracks completion when all questions answered
+## Requisitos
 
-### Completion Criteria
+Para cada laboratorio, el estudiante debe:
 
-A lab is marked complete when:
-- The student has cycled through all modes at least once
-- Quiz questions are answered (50%+ correct)
-- Screenshot is saved (press S in any mode)
+1. **Abrir el laboratorio** desde el Menú de Demos del juego
+2. **Explorar todos los modos** — ciclar con TAB
+3. **Responder las preguntas del quiz** — el sistema de quiz (`QuizManager`, `src/engine/scenes/quiz_system.py`) registra las respuestas
+4. **Demostrar comprensión** — cada laboratorio registra su completitud cuando se responden todas las preguntas
 
-## Grading
+### Criterios de completitud
 
-- Each lab is graded independently
-- Labs completed = points earned (no partial credit for incomplete labs)
-- Late labs: -20% per week
+Un laboratorio se marca completo cuando:
+- El estudiante ha recorrido todos los modos al menos una vez
+- Las preguntas del quiz están respondidas (50%+ correctas)
+- Se guardó una captura (tecla S en cualquier modo)
 
-## Quiz Questions by Lab
+## Calificación
 
-### Vector Lab
-1. What does `Vector2.normalize()` return?
-2. What is the dot product of perpendicular vectors?
-3. What interpolation curve uses 4 control points?
-4. What does `distance()` return?
+- Cada laboratorio se califica de forma independiente
+- Laboratorios completados = puntos obtenidos (sin crédito parcial por laboratorios incompletos)
+- Laboratorios tardíos: -20% por semana de retraso
 
-### Color Theory  
-1. What are the 3 channels of HSV?
-2. What does alpha blending combine?
-3. What is grayscale conversion formula?
+## Ejemplos de preguntas de quiz por laboratorio
 
-### Filter Lab
-1. What convolution kernel detects edges?
-2. What does a box blur kernel do?
-3. What is the Sobel operator computing?
+### Laboratorio de vectores
+1. ¿Qué devuelve `Vector2.normalize()`?
+2. ¿Cuál es el producto punto de vectores perpendiculares?
+3. ¿Qué curva de interpolación usa 4 puntos de control?
+4. ¿Qué devuelve `distance()`?
 
-### Curve Editor
-1. What curve interpolates through all control points?
-2. What algorithm evaluates Bezier curves?
-3. What is a NURBS weight?
+### Teoría del color
+1. ¿Cuáles son los 3 canales de HSV?
+2. ¿Qué combina la mezcla alfa?
+3. ¿Cuál es la fórmula de conversión a escala de grises?
 
-## Running the Auto-Grader
+### Laboratorio de filtros
+1. ¿Qué kernel de convolución detecta bordes?
+2. ¿Qué hace un kernel de desenfoque de caja?
+3. ¿Qué calcula el operador de Sobel?
+
+### Editor de curvas
+1. ¿Qué curva interpola a través de todos los puntos de control?
+2. ¿Qué algoritmo evalúa las curvas de Bézier?
+3. ¿Qué es un peso de NURBS?
+
+## Verificar el progreso
 
 ```bash
-# Check your progress in-game
-# Open the Progress Dashboard from Demo Menu
+# Comprobar el progreso dentro del juego:
+# Abrir el Panel de Progreso desde el Menú de Demos
 
-# Or run from CLI
-python -c "from src.engine.scenes.progress_scene import ProgressScene; print('Progress checked')"
+# O desde la línea de comandos:
+python -c "from src.engine.scenes.progress_scene import ProgressScene; print('Progreso comprobado')"
 ```
 
-
---- Traducción al Español ---
-
-## Asignación 03: Ejercicios de Laboratorio
-
-### Evaluación Práctica III — Integración Final (Clase 11)
-**Valor:** 15% de la nota final
-
-### Requisitos
-- Todos los entregables de Eval I + II mantenidos
-- threshold_binary() o threshold_otsu() aplicado
-- Operación morfológica aplicada
-- connected_components() o analyze_regions() usado
-- extract_features() produce características de entrenamiento
-- Dataset etiquetado en assets/datasets/
-- Modelo entrenado (.pkl) en carpeta de asignación
-- Clasificador se ejecuta en tiempo de ejecución
-
-Para la rúbrica detallada, consultar el documento original en inglés.
-
-
 ---
-## 🔗 Documentos Relacionados
+## 🔗 Documentos relacionados
 
-- [[15_ACADEMIC_DEMO_SCENES.md|Academic Demo Scenes]]
-- [[27_ACADEMIC_RUBRICS.md|Academic Rubrics]]
+- [[15_ACADEMIC_DEMO_SCENES.md|Escenas de demostración académica]]
+- [[27_ACADEMIC_RUBRICS.md|Rúbricas académicas]]

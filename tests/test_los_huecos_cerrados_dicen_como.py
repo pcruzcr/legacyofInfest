@@ -106,7 +106,7 @@ def test_la_invariante_remite_a_un_sitio_que_lo_documenta() -> None:
     autoridad y no dice nada.
     """
     esquemas = (_RAIZ / "docs" / "23_DATA_SCHEMAS.md").read_text(encoding="utf-8")
-    i = esquemas.find("`KNOWN_GAPS.md` Entry Schema")
+    i = esquemas.find("Esquema de entrada de `KNOWN_GAPS.md`")
     assert i > 0, "no se encontró §8 en 23_DATA_SCHEMAS.md"
     seccion = esquemas[i:i + 4000]
     assert "Resolution:" in seccion, (

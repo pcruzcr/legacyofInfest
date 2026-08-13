@@ -1,116 +1,58 @@
 ---
 document_id: "LOI-ASGN04-033B"
-title: "Assignment 4: Final Project — Complete Zone"
-aliases: ["Assignment 4: Final Project"]
-tags: ["assignment", "final", "project", "academic"]
-description: "Final project assignment"
+title: "Entrega 4: proyecto final"
+aliases: ["Entrega 4: proyecto final", "Assignment 4: Final Project"]
+tags: ["entrega", "final", "proyecto", "academico"]
+description: "Entrega del proyecto final"
 source: "docs/33_ASSIGNMENT_04_FINAL_PROJECT.md"
-date_processed: "2026-07-14"
+date_processed: "2026-08-13"
 ---
 
-# Assignment 4: Final Project — Complete Zone
+# Entrega 4: proyecto final
 
-**Due:** Week 16 | **Points:** 200 | **Units:** II-VIII (Comprehensive)
+> **AUD-455.** Traduce y corrige el documento. El cuerpo en inglés
+> describía un proyecto de "zona completa" (3 escenarios + jefe + hub)
+> que **contradice directamente** el modelo de entrega individual —
+> ya establecido y verificado repetidas veces en `08_SYLLABUS_MAPPING.md`
+> §12, `21_COURSE_SCHEDULE.md` §7, y `27_ACADEMIC_RUBRICS.md`: cada
+> estudiante elige **un solo** Escenario o Jefe en la Clase 1 y lo
+> desarrolla a través de tres hitos acumulativos, no tres escenarios
+> distintos. El resumen en español del final ya identificaba
+> correctamente el instrumento real (Proyecto Integrador Invenio Fest,
+> Clase 12, 20%), así que este documento se reescribe consistente con
+> ese instrumento, en vez de con el proyecto multi-escenario obsoleto.
 
-## Objective
+## Objetivo
 
-Design and implement a complete game zone consisting of 3 stages, 1 boss stage, and 1 hub area. This is a capstone assessment covering all skills learned in the course.
+El "proyecto final" del curso tiene dos entregables distintos, que no deben confundirse:
 
-## Deliverables
+1. **Evaluación Práctica III — Integración Final** (Clase 11, 15% de la nota): el cierre del **único** Escenario o Jefe que el estudiante viene desarrollando desde la Clase 1. Su rúbrica completa está en `27_ACADEMIC_RUBRICS.md` §6 — no se repite aquí.
+2. **Proyecto Integrador Invenio Fest** (Clase 12, 20% de la nota): la presentación grupal interdisciplinaria donde el estudiante aporta su contribución gráfica al proyecto conjunto del trimestre. Su rúbrica completa está en `27_ACADEMIC_RUBRICS.md` §7.
 
-| Item | Points | Description |
-|---|---|---|
-| Stage 1 | 40 | Entry level for zone |
-| Stage 2 | 40 | Mid-zone challenge |
-| Boss Stage | 50 | Boss encounter |
-| Hub Area | 30 | Safe zone connecting stages |
-| Integration | 40 | All stages connect, save/load works |
+Este documento cubre el segundo — Invenio Fest — porque es el evento que cierra el curso.
 
-## Requirements
+## Qué se entrega en Invenio Fest
 
-### Zone Theme
-Choose one:
-- **Forest** — Green tileset, tree enemies, nature collectibles
-- **Cemetery** — Dark tileset, undead enemies, spirit collectibles
-- **Factory** — Industrial tileset, mechanical enemies, gear collectibles
-- **Ice** — Blue tileset, ice physics, crystal collectibles
-- **Lava** — Red tileset, fire hazards, magma collectibles
+Según `21_COURSE_SCHEDULE.md` §3 Clase 12, Invenio Fest **no** es una sesión de clase regular de este curso: es un festival de proyecto grupal interdisciplinario donde participan varios cursos del trimestre a la vez. Este curso evalúa **sólo la contribución gráfica/visual** del estudiante dentro de ese proyecto grupal — no el proyecto grupal como un todo.
 
-### Stage Requirements (per stage)
-- TMX map: 40x23-80x60 tiles, 32x32 tile size
-- Player spawn + 2+ checkpoints
-- 3-8 enemies (valid types)
-- 5+ collectibles
-- Climate property matches zone theme
-- Metadata: author, zone, stage_id, stage_name
+El conocimiento y el código producidos en el Escenario o Jefe individual del estudiante (Legacy of InFest) pueden transferirse al proyecto grupal de Invenio Fest, consistente con el modelo de aprendizaje dual de la Universidad Invenio.
 
-### Boss Requirements
-- Inherits `BossBase`
-- 2+ phases with HP thresholds
-- 2+ attack patterns
-- Telegraph before attacks
-- Event wiring (phase/death/hurt)
-- Proper class structure (5+ methods)
+## Requisitos
 
-### Hub Area
-- Safe zone (no enemies)
-- Connects to all 3 stages
-- Contains visual narrative elements
-- Portal/exit objects for stage transitions
+- Contribución individual identificable dentro del proyecto grupal (vía historial de commits, un rol declarado, o un segmento presentado individualmente)
+- Aplicación efectiva de al menos una técnica de las Unidades I–IX del curso, apropiada al dominio de aplicación elegido por el grupo
+- Si la contribución incluye una interfaz gráfica o salida visual, debe ser funcional y legible
+- El código de gráficas/imágenes debe estar conectado a la lógica real de la aplicación del grupo, no ser una demo aislada
+- Capacidad de explicar y demostrar en vivo la contribución durante el festival
 
-### Integration
-- Stage queue advances correctly (hub→stage1→hub→stage2→hub→boss→complete)
-- Save/load works between stages
-- Player state persists through zone
-- No softlocks (all paths reachable)
+Ver `27_ACADEMIC_RUBRICS.md` §7 para los seis criterios calificados y su ponderación exacta.
 
-## Grading Rubric
+## Entrega
 
-| Category | Points | Criteria |
-|---|---|---|
-| Stage Design (x3) | 30 | Each stage passes grade_stage.py rubrics |
-| Boss Design | 30 | Passes grade_boss.py rubric |
-| Hub Area | 15 | Connects all stages, safe zone |
-| Map Quality | 20 | Coherent layout, visible effort |
-| Enemies | 15 | Appropriate placement and types |
-| Collectibles | 15 | Sufficient and well-placed |
-| Navigation | 15 | Stage queue works, no softlocks |
-| Save/Load | 15 | Progress persists across sessions |
-| Polish | 15 | Visual quality, performance |
-| Integration | 15 | All pieces work together |
-| Metadata | 5 | Properties set correctly |
-| Documentation | 10 | README for the zone |
-
-## Submission
-
-```bash
-# All files in your repo
-git add assets/maps/zoneX/
-git add src/stages/zoneX/
-git commit -m "feat: final project zone X complete"
-git push
-```
-
-The CI pipeline will run auto-grading on all TMX and boss files.
-
-
---- Traducción al Español ---
-
-## Asignación 04: Proyecto Final
-
-### Proyecto Integrador Invenio Fest (Clase 12)
-**Valor:** 20% de la nota final
-
-### Requisitos
-- Integración completa de todas las unidades
-- Presentación interdisciplinaria
-- Demostración funcional del proyecto
-
-Para la rúbrica completa y criterios de evaluación, consultar el documento original en inglés.
-
+La logística de entrega (repositorio, fecha, formato de presentación) la define el profesorado para cada cohorte, ya que Invenio Fest es un evento coordinado entre varios cursos del trimestre — no sigue el flujo de `git push` + CI automático de las Evaluaciones Prácticas I–III.
 
 ---
-## 🔗 Documentos Relacionados
+## 🔗 Documentos relacionados
 
-- [[16_WORLD_DESIGN.md|World Design]]
-- [[27_ACADEMIC_RUBRICS.md|Academic Rubrics]]
+- [[21_COURSE_SCHEDULE.md|Calendario del curso]]
+- [[27_ACADEMIC_RUBRICS.md|Rúbricas académicas]]

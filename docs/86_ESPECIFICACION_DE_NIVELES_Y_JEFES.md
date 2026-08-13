@@ -16,6 +16,15 @@ date_processed: "2026-08-01"
 **Compatibilidad:** Requiere `66_GUIA_DE_LEVEL_DESIGN.md`, `16_WORLD_DESIGN.md`, `17_BOSS_SPEC.md`, `06_TMX_SPEC.md`, `30_ASSIGNMENT_01_STAGE_DESIGN.md`, `31_ASSIGNMENT_02_BOSS_DESIGN.md`
 **Público:** estudiantes, profesorado
 
+> **AUD-455 (2026-08-13).** Cuatro correcciones verificadas contra el código
+> real: §2.2 y §2.3 inventaban objetos `EnemySpawn` y una capa `Collectibles`
+> que no existen — los enemigos se colocan con su `type` real en `Objects` y
+> los coleccionables son objetos `Pickup`, también en `Objects` (ver
+> `06_TMX_SPEC.md`). §3 daba `afternoon`(16:00)=1.00 y `dusk`(19:00)=0.66;
+> recalculado con la interpolación lineal real de `luz_a_las()` en
+> `src/framework/stage/day_night.py` entre las paradas (14.0→1.00, 18.0→0.80)
+> y (18.0→0.80, 20.0→0.66): son **0.90** y **0.73**.
+
 > **Qué es esto.** La especificación que **obliga** a cada nivel y cada jefe del
 > proyecto: tamaño mínimo, cantidad mínima de enemigos, tipos de enemigo,
 > objetos mínimos, control de día/noche, dificultad objetivo y mapa sugerido.
@@ -72,8 +81,11 @@ Entregable 3 debe cumplir las reglas del Entregable 2 **y** las generales.
 | Nivel de jefe | — | — | los patrones del jefe | los del jefe + ≤ 6 invocados |
 | 4-1 Cementerio | **0** | 0 | 0 (regla de oro: la atmósfera es el desafío) | 0 |
 
-- Todos los enemigos heredan de `EnemyBase` y se colocan con objetos
-  `EnemySpawn` (con su `type` y `waypoints` si vuelan/patrullan).
+- Todos los enemigos heredan de `EnemyBase` y se colocan como objetos punto en
+  la capa `Objects` con su `type` real (`Walker`, `Flying`, `Shooter`, o una
+  especie con nombre del bestiario — no existe un tipo genérico `EnemySpawn`).
+  Los voladores en modo `bezier`/`patrol` enlazan sus `Waypoint` por
+  `owner_id` (ver `06_TMX_SPEC.md` §6.3).
 - Los 3 tipos máx. deben incluir **al menos un caminante y un volador o un
   tirador**: la composición suelo/aire/fondo es obligatoria en niveles de 3
   tipos.
@@ -88,7 +100,7 @@ Entregable 3 debe cumplir las reglas del Entregable 2 **y** las generales.
 | `Checkpoint` | 1 por cada pantalla y media (~1200 px) | Nunca bloqueado por enemigos; visible |
 | `Portal`/`NextTrigger` | 1 (final) | Niveles de jefe: **prohibido** (sale por `STAGE_COMPLETE`) |
 | `HazardZone` | 1 desde el nivel 2 de cada zona | Daño 0.25; nunca en el tramo de presentación |
-| Coleccionables | 5 como mínimo | Capa `Collectibles` (monedas = tile 1, gemas = tile 2) |
+| Coleccionables | 5 como mínimo | Objetos `Pickup` en la capa `Objects`, con `item_id` fijado (no existe una capa `Collectibles` — ver `06_TMX_SPEC.md`) |
 | `MessageTrigger` | 1 en el nivel inicial de cada zona | Didáctico: presenta el concepto de la zona |
 | `CameraLock` | 1 (solo donde hace falta) | Obligatorio en jefes (lock_x+lock_y) y en el ascenso vertical |
 | `BossSpawn` | 1 (jefes) | Punto de entrada del jefe |
@@ -132,8 +144,8 @@ Nombres válidos de `start_hour` (definidos en `src/framework/stage/day_night.py
 | `dawn` | 07:00 | Amanecer cálido (factor 0.72) |
 | `morning` | 10:00 | Mañana (factor 1.00) |
 | `noon` | 12:00 | Mediodía (factor 1.00) |
-| `afternoon` | 16:00 | Tarde (factor 1.00) |
-| `dusk` | 19:00 | Ocaso (factor 0.66) |
+| `afternoon` | 16:00 | Tarde (factor 0.90) |
+| `dusk` | 19:00 | Ocaso (factor 0.73) |
 | `night` | 22:00 | Noche (factor 0.55) |
 | `midnight` | 00:00 | Madrugada cerrada (factor 0.52) |
 

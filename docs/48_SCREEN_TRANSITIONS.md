@@ -1,25 +1,30 @@
 ---
 document_id: "LOI-TRANSITION-048"
-title: "Legacy of InFest — Screen Transitions Specification"
-aliases: ["Screen Transitions"]
-tags: ["transition", "screen", "vfx"]
-description: "Fade/wipe/slide/circle transitions"
+title: "Legacy of InFest — Especificación de transiciones de pantalla"
+aliases: ["Especificación de transiciones de pantalla", "Screen Transitions"]
+tags: ["transicion", "pantalla", "vfx"]
+description: "Transiciones de fundido/barrido/deslizamiento/círculo"
 source: "docs/48_SCREEN_TRANSITIONS.md"
-date_processed: "2026-07-14"
+date_processed: "2026-08-12"
 ---
 
-# Legacy of InFest — Screen Transitions Specification
+# Legacy of InFest — Especificación de transiciones de pantalla
 
-**Document ID:** LOI-TRANSITIONS-048
-**Version:** 1.0.0
-**Status:** Official
-**Audience:** Professor, Teaching Assistants, Students, AI coding assistants
+**ID del documento:** LOI-TRANSITIONS-048
+**Versión:** 1.1.0
+**Estado:** Oficial
+**Audiencia:** Profesor, ayudantes, estudiantes, asistentes de código
+
+> **AUD-455.** Traduce el documento (el cuerpo ya tenía las correcciones
+> AUD-168 en español; sólo §2–§4 y el resumen final seguían en inglés).
+> Actualiza el conteo de líneas de `transition_manager.py`: decía 164, hoy
+> tiene 208.
 
 ---
 
-## 1. Overview
+## 1. Visión general
 
-The Screen Transitions system provides visual effects between scene changes.
+El sistema de transiciones de pantalla da efectos visuales entre cambios de escena.
 
 > **AUD-168.** Este documento describía dos capas, y la de abajo —un módulo
 > `src/engine/scene/transitions.py` con cuatro clases de efecto— **fue retirada
@@ -36,80 +41,63 @@ separadas.
 
 ---
 
-## 2. Transition Types
+## 2. Modos de transición
 
-### 2.1 FadeTransition
-Fades to/from a solid color (default black) over duration. Parameter: `fade_in` boolean, `color` tint.
+### 2.1 Fundido
+Funde a/desde un color sólido (negro por defecto) durante una duración. Parámetros: booleano `fade_in`, tinte `color`.
 
-### 2.2 WipeTransition
-Horizontal wipe revealing the new scene. Direction: `left_to_right` / `right_to_left`. Requires a snapshot of the old surface.
+### 2.2 Barrido
+Barrido horizontal que revela la nueva escena. Dirección: `left_to_right` / `right_to_left`. Necesita una instantánea de la superficie anterior.
 
-### 2.3 SlideTransition
-Slides the old scene out in a direction (`left`, `right`, `up`, `down`) to reveal the new scene beneath.
+### 2.3 Deslizamiento
+Desliza la escena anterior hacia fuera en una dirección (`left`, `right`, `up`, `down`) para revelar la nueva escena debajo.
 
-### 2.4 CircleTransition
-Expanding or contracting circle wipe centered on screen.
+### 2.4 Círculo
+Barrido circular que se expande o se contrae, centrado en la pantalla.
 
 ---
 
-## 3. TransitionManager
+## 3. `TransitionManager`
 
-Single controller that wraps all transition types with a unified API.
+Un único controlador que envuelve todos los modos de transición con una API unificada.
 
-| Method | Duration | Details |
+| Método | Duración | Detalles |
 |--------|----------|---------|
-| `start_fade_out(dur)` | 0.35s | Fade to black |
-| `start_fade_in(dur)` | 0.35s | Fade from black |
-| `start_wipe(dir, dur)` | 0.4s | Wipe reveal |
-| `start_slide(dir, dur)` | 0.4s | Slide out |
-| `start_circle(expanding, dur)` | 0.4s | Circle wipe |
+| `start_fade_out(dur)` | 0.35s | Funde a negro |
+| `start_fade_in(dur)` | 0.35s | Funde desde negro |
+| `start_wipe(dir, dur)` | 0.4s | Revelado por barrido |
+| `start_slide(dir, dur)` | 0.4s | Deslizamiento hacia fuera |
+| `start_circle(expanding, dur)` | 0.4s | Barrido circular |
 
-The `update(dt)` method drives the animation; `draw(surface)` renders the overlay. Properties `active` and `finished` report state.
+El método `update(dt)` conduce la animación; `draw(surface)` dibuja la capa. Las propiedades `active` y `finished` informan del estado.
 
 ---
 
-## 4. Usage
+## 4. Uso
 
-Called by `SceneManager` before/after scene swaps:
+Lo llama `SceneManager` antes/después de cambiar de escena:
 ```python
 tm.start_fade_out()
-# ... swap scene ...
+# ... cambio de escena ...
 tm.start_fade_in()
 ```
 
 ---
 
-## 5. Implementation Status
+## 5. Estado de implementación
 
-**Files:**
-- `src/engine/scenes/transition_manager.py` (164 lines) — el controlador, con
+**Ficheros:**
+- `src/engine/scenes/transition_manager.py` (208 líneas) — el controlador, con
   los cuatro modos dentro
 
-**Status:** ✅ Complete — fade, wipe, slide, circle transitions
+**Estado:** ✅ Completo — transiciones de fundido, barrido, deslizamiento y círculo
 
 > **AUD-168.** Esta lista incluía un segundo fichero «(199 lines) — 4
 > transition effect classes» que llevaba retirado desde AUD-111. Un recuento de
 > líneas es exactamente la clase de dato que hace creer que alguien lo miró.
 
-
---- Traducción al Español ---
-
-## Transiciones de Pantalla
-
-### Descripción
-Sistema de transiciones entre escenas: fundido, barrido, deslizamiento y círculo.
-
-### Tipos de Transición
-- Fundido (Fade) — entrada/salida en negro
-- Barrido (Wipe) — barrido horizontal o vertical
-- Deslizamiento (Slide) — diapositiva desde un borde
-- Círculo (Circle) — revelado circular
-
-Para la especificación completa de duraciones y easing, consultar el documento original en inglés.
-
-
 ---
-## 🔗 Documentos Relacionados
+## 🔗 Documentos relacionados
 
-- [[42_CUTSCENE_SYSTEM.md|Cutscene System]]
-- [[46_FOG_OF_WAR.md|Fog of War]]
+- [[42_CUTSCENE_SYSTEM.md|Sistema de escenas cinemáticas]]
+- [[46_FOG_OF_WAR.md|Especificación de la niebla de guerra]]

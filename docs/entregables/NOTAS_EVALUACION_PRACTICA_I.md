@@ -187,8 +187,9 @@ en un comentario, no afecta a nada.
 Registra dos enemigos propios (`LaSodaWalkerRaton`, `LaSodaFlyingCucaracha`) a
 nivel de módulo, que es la forma correcta. Pierde por:
 
-- Sin `climate` (−5). Los válidos son `clear`, `fog`, `rain`, `sandstorm`,
-  `snow`, `storm`, `wind`.
+- Sin `climate` (−5). Los válidos son `clear`, `rain`, `snow`, `fog`, `storm`
+  (AUD-455: esta nota decía siete, con `sandstorm` y `wind` — no existen;
+  verificado contra `src/framework/vfx/weather_system.py`).
 - Falta `author`.
 - Ningún salto pone a prueba al jugador: el nivel se recorre andando. Es el
   aviso de ritmo, y es el que más pesa aquí.

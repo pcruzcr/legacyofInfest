@@ -61,7 +61,7 @@ Total mínimo **10 enemigos**. Distribución por zonas del watershed: entrada
 | `Portal` | 1 | → 3-3 |
 | `MessageTrigger` | 1 | Presenta las zonas (Unidad VIII) |
 | Coleccionables | ≥ 5 | En los balcones (recompensan la subida) |
-| `OneWay`/escaleras | 2 | Acceso a los balcones |
+| `Platform`/escaleras | 2 | Acceso a los balcones |
 | `FG_Overlay` | libre | Vigas y claraboyas |
 
 ## Mapa sugerido (canónico del Entregable 1)

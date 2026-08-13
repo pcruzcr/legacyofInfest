@@ -1,56 +1,60 @@
 ---
 document_id: "LOI-BOSSRUSH-044"
-title: "Legacy of InFest — Boss Rush Mode Specification"
-aliases: ["Boss Rush Mode"]
-tags: ["boss", "rush", "mode", "gameplay"]
-description: "Boss gauntlet mode"
+title: "Legacy of InFest — Especificación del modo Boss Rush"
+aliases: ["Especificación del modo Boss Rush", "Boss Rush Mode"]
+tags: ["boss", "rush", "modo", "juego"]
+description: "Modo de jefes consecutivos"
 source: "docs/44_BOSS_RUSH_MODE.md"
-date_processed: "2026-07-14"
+date_processed: "2026-08-12"
 ---
 
-# Legacy of InFest — Boss Rush Mode Specification
+# Legacy of InFest — Especificación del modo Boss Rush
 
-**Document ID:** LOI-BOSSRUSH-044
-**Version:** 1.0.0
-**Status:** Official
-**Audience:** Professor, Teaching Assistants, Students, AI coding assistants
+**ID del documento:** LOI-BOSSRUSH-044
+**Versión:** 1.1.0
+**Estado:** Oficial
+**Audiencia:** Profesor, ayudantes, estudiantes, asistentes de código
 
----
-
-## 1. Overview
-
-Boss Rush Mode (`src/framework/stage/boss_rush_mode.py`) is the design for a consecutive boss gauntlet with health carry-over and scoring.
-
-**What ships today (AUD-261), measured:** choosing BOSS RUSH from the title screen chains the four bosses back to back, health carries over between encounters with a declared partial heal (`CURACION_ENTRE_COMBATES`), hits are counted, and the score is computed per fight from time and damage taken — see §4.
-
-**History, kept on purpose.** Between AUD-232 and AUD-261 this paragraph read: «That is the whole of it. Health does *not* persist between encounters, no score is computed, and hits are not counted.» Before AUD-232 it read «✅ Complete — gauntlet logic, scoring, health carry-over», and all three were false. The middle version was the honest one, and it is what made the fix possible: it named what was missing instead of claiming it was there.
+> **AUD-455.** Traduce el documento (el cuerpo técnico ya estaba en español
+> y bien mantenido, con historial honesto de AUD-232/261; sólo §1–§3 y el
+> resumen final seguían en inglés).
 
 ---
 
-## 2. Architecture
+## 1. Visión general
 
-### 2.1 BossRushStage
-Represents a single boss encounter:
-- `boss_id`, `boss_name` — identification
-- `scene_builder` — callable that creates the boss scene
-- `phase_count` — boss phase complexity
-- `defeated`, `time`, `hits_taken` — runtime state
+El modo Boss Rush (`src/framework/stage/boss_rush_mode.py`) es el diseño de una sucesión de jefes consecutivos con arrastre de vida y puntuación.
 
-### 2.2 BossRushMode
-- `add_stage(stage)` — append to gauntlet
-- `start()` — reset all stages, activate mode
-- `get_current_stage()` — current encounter
-- `advance_to_next()` — mark current defeated, apply score, move to next
-- `record_hit()` — penalty tracking
-- `is_complete()` — all bosses defeated
+**Lo que hay hoy (AUD-261), medido:** elegir BOSS RUSH desde la pantalla de título encadena los cuatro jefes uno tras otro, la vida se arrastra entre combates con una curación parcial declarada (`CURACION_ENTRE_COMBATES`), se cuentan los golpes recibidos, y la puntuación se calcula por combate a partir del tiempo y el daño recibido — ver §4.
+
+**Historia, conservada a propósito.** Entre AUD-232 y AUD-261 este párrafo decía: «Eso es todo lo que hay. La vida *no* persiste entre combates, no se calcula puntuación y no se cuentan los golpes.» Antes de AUD-232 decía «✅ Completo — lógica de la sucesión, puntuación, arrastre de vida», y las tres versiones eran falsas. La del medio era la honesta, y fue la que hizo posible el arreglo: nombraba lo que faltaba en vez de afirmar que ya estaba.
 
 ---
 
-## 3. Scoring
+## 2. Arquitectura
 
-Per boss: `max(0, 1000 − int(time * 10)) − hits_taken * 50`
-- Faster clears = higher score
-- Each hit taken deducts 50 points
+### 2.1 `BossRushStage`
+Representa un combate de jefe:
+- `boss_id`, `boss_name` — identificación
+- `scene_builder` — función que crea la escena del jefe
+- `phase_count` — complejidad de fases del jefe
+- `defeated`, `time`, `hits_taken` — estado en tiempo de ejecución
+
+### 2.2 `BossRushMode`
+- `add_stage(stage)` — añade a la sucesión
+- `start()` — reinicia todos los combates, activa el modo
+- `get_current_stage()` — el combate actual
+- `advance_to_next()` — marca el actual como derrotado, aplica la puntuación, pasa al siguiente
+- `record_hit()` — seguimiento de penalización
+- `is_complete()` — todos los jefes derrotados
+
+---
+
+## 3. Puntuación
+
+Por jefe: `max(0, 1000 − int(tiempo * 10)) − golpes_recibidos * 50`
+- Terminar más rápido = puntuación más alta
+- Cada golpe recibido resta 50 puntos
 
 ---
 
@@ -81,24 +85,8 @@ eso esta tabla está actualizada: la prueba hizo imposible cerrar el hueco sin
 tocar el documento.
 
 
---- Traducción al Español ---
-
-## Modo Boss Rush
-
-### Descripción
-Modo de juego de jefes consecutivos donde el jugador enfrenta a todos los jefes en secuencia.
-
-### Características
-- Jefes consecutivos sin descanso
-- Salud persistente entre combates
-- Tabla de clasificación por tiempo
-- Dificultad progresiva
-
-Para la especificación completa, consultar el documento original en inglés.
-
-
 ---
-## 🔗 Documentos Relacionados
+## 🔗 Documentos relacionados
 
-- [[43_SPEEDRUN_MODE.md|Speedrun Mode]]
-- [[17_BOSS_SPEC.md|Boss Specification]]
+- [[43_SPEEDRUN_MODE.md|Modo speedrun]]
+- [[17_BOSS_SPEC.md|Catálogo de jefes]]

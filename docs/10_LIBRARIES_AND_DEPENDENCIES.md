@@ -1,66 +1,95 @@
 ---
 document_id: "LOI-DEPS-010"
-title: "Legacy of InFest — Libraries and Dependencies"
-aliases: ["Libraries and Dependencies"]
-tags: ["dependencies", "libraries", "setup"]
-description: "Every third-party library, purpose, integration rules"
+title: "Legacy of InFest — Librerías y dependencias"
+aliases: ["Librerías y dependencias", "Libraries and Dependencies"]
+tags: ["dependencias", "librerias", "setup"]
+description: "Cada librería de terceros, para qué sirve y cómo se integra"
 source: "docs/10_LIBRARIES_AND_DEPENDENCIES.md"
-date_processed: "2026-07-14"
+date_processed: "2026-08-12"
 ---
 
-# Legacy of InFest — Libraries and Dependencies
+# Legacy of InFest — Librerías y dependencias
 
-**Document ID:** LOI-LIBS-010  
-**Version:** 1.0.0  
-**Status:** Official  
-**Audience:** Professor, Teaching Assistants, Students, AI coding assistants
+**ID del documento:** LOI-LIBS-010
+**Versión:** 1.1.0
+**Estado:** Oficial
+**Audiencia:** Profesor, ayudantes, estudiantes, asistentes de programación con IA
 
 ---
 
-## 1. Overview
+## 1. Visión general
 
-This document provides the complete specification of every library used in Legacy of InFest: what it is, why it exists in this project, how it is used, what restrictions apply, and concrete examples of its integration within the framework.
+Este documento especifica cada librería de terceros que usa Legacy of InFest:
+qué es, por qué existe en este proyecto, cómo se usa, qué restricciones tiene y
+ejemplos concretos de su integración en el motor.
 
-All libraries listed here are included in `requirements.txt`. Students must not import any library not present in this document without explicit professor approval. Adding an unapproved library dependency is a code review rejection condition.
+Todas las librerías listadas aquí están en `requirements.txt` y en
+`[project.dependencies]` de `pyproject.toml`, que es la fuente de verdad única
+(`scripts/check_dependency_sync.py` comprueba que los dos ficheros no
+diverjan). Los estudiantes no deben importar ninguna librería que no esté en
+este documento sin aprobación explícita del profesor.
+
+> **AUD-455.** Esta versión traduce el documento (antes íntegramente en
+> inglés, con un resumen al final que remitía de vuelta al original en
+> inglés) y corrige varios desajustes verificados contra el código real:
+> todos los ejemplos usaban rutas de importación `from framework...` /
+> `from engine...`, que no existen — el paquete real es `src.framework` /
+> `src.engine` (746 importaciones en el árbol lo confirman, cero con la ruta
+> corta). La sección de `pytweening` describía una librería que
+> `pyproject.toml` retiró explícitamente por no tener ningún importador
+> (`# AUD-007: Packages removed... pytweening`) — `math_utils.py` implementa
+> sus propias funciones de easing, no envuelve esa librería. La sección de
+> `scikit-learn` documentaba una función `VisionTools.classify_region()` que
+> no existe en `vision_tools.py`; la integración real de scikit-learn está en
+> `ai_predictor.py` (IA de enemigos) y en `reference_model.py` /
+> `pattern_recognition_tools.py` (demo académica de la Unidad IX). Faltaban
+> por completo `pydantic`, `orjson` y `matplotlib`, que sí son dependencias
+> obligatorias reales. La tabla de dependencias y el `requirements.txt` de
+> ejemplo estaban desactualizados frente al fichero real del repositorio.
 
 ---
 
 ## 2. pygame-ce
 
-### 2.1 Identity
+### 2.1 Identidad
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Package name | `pygame-ce` |
-| Import name | `pygame` |
-| Version | Latest stable (CE branch) |
-| Type | Game framework |
-| License | LGPL 2.1 |
+| Nombre del paquete | `pygame-ce` |
+| Nombre al importar | `pygame` |
+| Versión mínima | `>=2.5` (`pyproject.toml`) |
+| Tipo | Framework de videojuegos |
+| Licencia | LGPL 2.1 |
 
-### 2.2 Purpose
+### 2.2 Propósito
 
-Pygame CE (Community Edition) is the primary game development framework for Legacy of InFest. It provides the display surface, the event loop, hardware-accelerated surface blitting, sprite management, audio playback, input handling (keyboard and gamepad), and font rendering.
+Pygame CE (Community Edition) es el framework principal de Legacy of InFest.
+Da la superficie de vídeo, el bucle de eventos, el volcado acelerado de
+superficies, la gestión de sprites, la reproducción de audio, la entrada
+(teclado y mando) y el renderizado de texto.
 
-Pygame CE is the fork of the original Pygame maintained by the community. It offers improved performance, better controller support, and active maintenance — advantages over the legacy Pygame package.
+Es el fork comunitario del Pygame original: mejor rendimiento, mejor soporte
+de mandos y mantenimiento activo.
 
-### 2.3 Why It Exists
+### 2.3 Por qué existe
 
-The entire visual output, input processing, audio system, and real-time loop of the game runs on Pygame CE. Without it, the framework does not execute.
+Toda la salida visual, el procesamiento de entrada, el audio y el bucle en
+tiempo real del juego corren sobre Pygame CE. Sin él, el motor no arranca.
 
-### 2.4 Usage Rules
+### 2.4 Reglas de uso
 
-| Rule | Description |
+| Regla | Descripción |
 |---|---|
-| Import via engine only | Students never import `pygame` directly in stage code. All Pygame functionality is accessed through the engine API. |
-| No direct display calls | `pygame.display.set_mode()` is called only in `engine/core/app.py`. |
-| No direct input polling | `pygame.key.get_pressed()` is not called in entities or stages. Use `InputManager`. |
-| No direct sound calls | `pygame.mixer.Sound.play()` is not called in stages. Use `AudioManager`. |
-| No direct image loading | `pygame.image.load()` is not called in stages. Use `AssetLoader`. |
-| Surface creation permitted | Students may create `pygame.Surface` objects in stage code for off-screen rendering. |
+| Importar sólo a través del motor | El código de escenario no importa `pygame` directamente; se accede vía la API del motor |
+| Sin llamadas directas a la pantalla | `pygame.display.set_mode()` se llama sólo en `src/engine/core/app.py` |
+| Sin sondeo directo de entrada | No se llama a `pygame.key.get_pressed()` en entidades o escenarios; se usa `InputManager` |
+| Sin llamadas directas de sonido | No se llama a `pygame.mixer.Sound.play()` en escenarios; se usa el gestor de audio |
+| Sin carga directa de imágenes | No se llama a `pygame.image.load()` en escenarios; se usa el cargador de recursos |
+| Creación de superficies permitida | Se pueden crear objetos `pygame.Surface` en código de escenario para renderizado fuera de pantalla |
 
-### 2.5 Integration Rules
+### 2.5 Reglas de integración
 
-Pygame CE is initialized exclusively in `engine/core/app.py`:
+Pygame CE se inicializa exclusivamente en `src/engine/core/app.py`:
 
 ```python
 pygame.init()
@@ -68,165 +97,137 @@ pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
 pygame.display.set_mode(window_size, pygame.SCALED | pygame.RESIZABLE)
 ```
 
-The `pygame.SCALED` flag enables hardware-accelerated integer scaling from 320×224 to the window size.
+El flag `pygame.SCALED` activa el escalado entero acelerado por hardware
+desde 320×224 al tamaño de ventana real.
 
-### 2.6 Examples
+### 2.6 Ejemplos
 
-#### Surface creation for off-screen filter processing (student stage):
+#### Superficie fuera de pantalla para filtrado (escenario de estudiante):
 ```python
-from framework.processing.filter_tools import FilterTools
+from src.framework.processing.filter_tools import FilterTools
 
-# Create an off-screen copy of the background for filtering
 bg_copy = self.background_surface.copy()
 filtered_bg = FilterTools.gaussian_blur(bg_copy, sigma=1.5)
-# Blit filtered version at the appropriate parallax offset
+# volcar la versión filtrada con el desplazamiento de parallax correspondiente
 ```
 
-#### Controller detection:
+#### Detección de mando (la hace el motor, no se escribe en un escenario):
 ```python
-# Engine handles this in InputManager — students do not write this:
 joystick_count = pygame.joystick.get_count()
 if joystick_count > 0:
-    self.joystick = pygame.joystick.Joystick(0)
-    self.joystick.init()
+    joystick = pygame.joystick.Joystick(0)
+    joystick.init()
 ```
 
 ---
 
 ## 3. numpy
 
-### 3.1 Identity
+### 3.1 Identidad
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Package name | `numpy` |
-| Import name | `numpy` (aliased as `np`) |
-| Version | Latest stable |
-| Type | Numerical computation library |
-| License | BSD 3-Clause |
+| Nombre del paquete | `numpy` |
+| Nombre al importar | `numpy` (con alias `np`) |
+| Versión mínima | `>=1.26` (sin tope superior, ver nota de AUD-173 en `pyproject.toml`) |
+| Tipo | Librería de cómputo numérico |
+| Licencia | BSD 3-Clause |
 
-### 3.2 Purpose
+### 3.2 Propósito
 
-NumPy provides the N-dimensional array type (`ndarray`) used throughout the image processing pipeline. Pygame surfaces are converted to NumPy arrays for efficient per-pixel operations. All convolution, color space conversion, and segmentation operations work on NumPy arrays rather than on Pygame surfaces directly.
+NumPy da el tipo de arreglo N-dimensional (`ndarray`) usado en todo el
+pipeline de procesamiento de imágenes. Las superficies de Pygame se
+convierten a arreglos de NumPy para operar por píxel de forma eficiente.
 
-### 3.3 Why It Exists
+### 3.3 Por qué existe
 
-Per-pixel operations on Pygame surfaces using pure Python loops are prohibitively slow at 60 FPS. NumPy enables vectorized operations — applying a transformation to all pixels simultaneously — making image processing practical in real time.
+Operar píxel a píxel sobre una superficie de Pygame con bucles puros de
+Python es demasiado lento para 60 FPS. NumPy vectoriza esas operaciones.
 
-### 3.4 Usage Rules
+### 3.4 Reglas de uso
 
-| Rule | Description |
+| Regla | Descripción |
 |---|---|
-| Always alias as `np` | `import numpy as np` throughout the codebase |
-| Use `np.uint8` dtype for pixel data | Pixel arrays must be in `uint8` (0–255) range |
-| Convert back to surface after processing | Use `array_to_surface()` from `color_tools.py` |
-| Do not store large arrays in entity state | Arrays are transient — created, used, and discarded per operation |
+| Alias siempre `np` | `import numpy as np` en todo el árbol |
+| `np.uint8` para datos de píxel | Los arreglos de píxeles van en rango `uint8` (0–255) |
+| Reconvertir a superficie tras procesar | Usar las utilidades de `color_tools.py` |
+| No guardar arreglos grandes en el estado de una entidad | Son transitorios: se crean, se usan y se descartan por operación |
 
-### 3.5 Integration Rules
-
-The bridge between Pygame surfaces and NumPy arrays is standardized in `color_tools.py`:
+### 3.5 Reglas de integración
 
 ```python
-# Surface → ndarray (shape: height × width × 3 for RGB, or × 4 for RGBA)
-array = pygame.surfarray.array3d(surface)           # RGB only
-array_alpha = pygame.surfarray.array_alpha(surface) # Alpha only
+# Superficie → ndarray (alto × ancho × 3 para RGB, × 4 para RGBA)
+array = pygame.surfarray.array3d(surface)
+array_alpha = pygame.surfarray.array_alpha(surface)
 
-# ndarray → Surface
+# ndarray → Superficie
 surface = pygame.surfarray.make_surface(array)
 ```
 
-**Important:** `pygame.surfarray.array3d()` returns an array with shape `(width, height, 3)` — note the axis order is transposed relative to standard image conventions (which use `height × width`). All filter operations must account for this.
+**Importante:** `pygame.surfarray.array3d()` devuelve un arreglo con forma
+`(ancho, alto, 3)` — el orden de ejes está invertido respecto a la convención
+habitual de imagen (`alto × ancho`). Todas las operaciones de filtrado deben
+tenerlo en cuenta.
 
-### 3.6 Examples
+### 3.6 Ejemplos
 
-#### Brightness adjustment:
 ```python
 import numpy as np
 import pygame
 
-def adjust_brightness(surface: pygame.Surface, factor: float) -> pygame.Surface:
-    """
-    Multiply all pixel values by factor.
-    Academic Unit VII: Brightness adjustment.
-    """
+def ajustar_brillo(surface: pygame.Surface, factor: float) -> pygame.Surface:
+    """Multiplica cada valor de píxel por `factor`. Unidad VII: ajuste de brillo."""
     arr = pygame.surfarray.array3d(surface).astype(np.float32)
     arr = np.clip(arr * factor, 0, 255).astype(np.uint8)
     return pygame.surfarray.make_surface(arr)
-```
-
-#### Histogram computation:
-```python
-def compute_histogram(surface: pygame.Surface) -> dict:
-    arr = pygame.surfarray.array3d(surface)
-    return {
-        'r': np.histogram(arr[:, :, 0], bins=256, range=(0, 255))[0],
-        'g': np.histogram(arr[:, :, 1], bins=256, range=(0, 255))[0],
-        'b': np.histogram(arr[:, :, 2], bins=256, range=(0, 255))[0],
-    }
 ```
 
 ---
 
 ## 4. scipy
 
-### 4.1 Identity
+### 4.1 Identidad
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Package name | `scipy` |
-| Import name | `scipy` |
-| Version | Latest stable |
-| Type | Scientific computation library |
-| License | BSD 3-Clause |
+| Nombre del paquete | `scipy` |
+| Nombre al importar | `scipy` |
+| Versión mínima | `>=1.13` |
+| Tipo | Librería de cómputo científico |
+| Licencia | BSD 3-Clause |
 
-### 4.2 Purpose
+### 4.2 Propósito
 
-SciPy provides the `ndimage` submodule used for spatial convolution operations. It is more convenient and efficient than implementing convolution from scratch with NumPy alone for arbitrary kernel shapes.
+SciPy aporta el submódulo `ndimage`, usado para convolución espacial. Es más
+conveniente y eficiente que implementar la convolución a mano con NumPy para
+núcleos de forma arbitraria.
 
-### 4.3 Why It Exists
+### 4.3 Por qué existe
 
-`scipy.ndimage.convolve` and `scipy.ndimage.gaussian_filter` provide academically correct implementations of the convolution and Gaussian blur operations taught in Unit VII. Using SciPy ensures that the mathematical implementation is correct and trusted, allowing students to focus on applying the concepts rather than debugging low-level kernel arithmetic.
+`scipy.ndimage.convolve` y `scipy.ndimage.gaussian_filter` dan
+implementaciones académicamente correctas de convolución y desenfoque
+gaussiano, los conceptos de la Unidad VII.
 
-### 4.4 Usage Rules
+### 4.4 Reglas de uso
 
-| Rule | Description |
+| Regla | Descripción |
 |---|---|
-| Use only `scipy.ndimage` | No other SciPy submodule is used in this project |
-| Always applied to `np.float32` arrays | Convert to float before filtering, back to uint8 after |
-| Do not apply to full-screen surfaces every frame | Computationally expensive — apply to sub-surfaces or at reduced frequency |
+| Sólo `scipy.ndimage` | Ningún otro submódulo de SciPy se usa en el proyecto |
+| Siempre sobre `np.float32` | Convertir a float antes de filtrar, volver a uint8 después |
+| No aplicar a pantalla completa cada fotograma | Es caro; aplicar a sub-superficies o a frecuencia reducida |
 
-### 4.5 Integration Rules
+### 4.5 Reglas de integración
 
-SciPy is used exclusively inside `framework/processing/filter_tools.py`. Stage code never imports SciPy directly.
+SciPy se usa exclusivamente dentro de `src/framework/processing/filter_tools.py`. El código de escenario nunca lo importa directamente.
 
-### 4.6 Examples
+### 4.6 Ejemplos
 
-#### Convolution with custom kernel (Unit VII):
 ```python
-from scipy.ndimage import convolve
+from scipy.ndimage import gaussian_filter
 import numpy as np
 import pygame
 
-def apply_kernel(surface: pygame.Surface, kernel: np.ndarray) -> pygame.Surface:
-    """
-    Apply an arbitrary convolution kernel to the surface.
-    Academic Unit VII: Convolution as a mathematical operation.
-    """
-    arr = pygame.surfarray.array3d(surface).astype(np.float32)
-    # Apply kernel to each channel independently
-    result = np.stack([
-        convolve(arr[:, :, c], kernel, mode='reflect')
-        for c in range(3)
-    ], axis=-1)
-    result = np.clip(result, 0, 255).astype(np.uint8)
-    return pygame.surfarray.make_surface(result)
-```
-
-#### Gaussian blur:
-```python
-from scipy.ndimage import gaussian_filter
-
-def gaussian_blur(surface: pygame.Surface, sigma: float) -> pygame.Surface:
+def desenfoque_gaussiano(surface: pygame.Surface, sigma: float) -> pygame.Surface:
     arr = pygame.surfarray.array3d(surface).astype(np.float32)
     blurred = gaussian_filter(arr, sigma=[sigma, sigma, 0])
     return pygame.surfarray.make_surface(blurred.astype(np.uint8))
@@ -236,594 +237,479 @@ def gaussian_blur(surface: pygame.Surface, sigma: float) -> pygame.Surface:
 
 ## 5. opencv-python
 
-### 5.1 Identity
+### 5.1 Identidad
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Package name | `opencv-python` |
-| Import name | `cv2` |
-| Version | Latest stable |
-| Type | Computer vision library |
-| License | Apache 2.0 |
+| Nombre del paquete | `opencv-python` |
+| Nombre al importar | `cv2` |
+| Versión mínima | `>=4.10` |
+| Tipo | Librería de visión por computadora |
+| Licencia | Apache 2.0 |
 
-### 5.2 Purpose
+### 5.2 Propósito
 
-OpenCV provides advanced computer vision functions: Canny edge detection, Otsu thresholding, watershed segmentation, morphological operations, and feature extraction utilities. These are the primary tools for Units VII, VIII, and IX.
+OpenCV aporta detección de bordes de Canny, umbralización de Otsu,
+segmentación por watershed, operaciones morfológicas y extracción de
+características — las herramientas principales de las Unidades VII, VIII y IX.
 
-### 5.3 Why It Exists
+### 5.3 Por qué existe
 
-The academic topics in Units VII, VIII, and IX require implementations of established computer vision algorithms that would be impractical to implement from scratch in the context of a student project. OpenCV provides industry-standard, academically recognized implementations of these algorithms. Using OpenCV allows students to apply the concepts and interpret the results rather than reimplementing well-understood algorithms.
+Reimplementar estos algoritmos desde cero no es razonable en el contexto de
+un proyecto estudiantil. OpenCV da implementaciones estándar de la industria
+y académicamente reconocidas, para que el estudiante aplique el concepto en
+vez de depurar aritmética de bajo nivel.
 
-### 5.4 Usage Rules
+### 5.4 Reglas de uso
 
-| Rule | Description |
+| Regla | Descripción |
 |---|---|
-| Import as `cv2` | Standard convention |
-| Note BGR vs RGB | OpenCV uses BGR channel order; Pygame uses RGB. Always convert. |
-| Use only via `vision_tools.py` | Students access OpenCV through the framework's vision tools, not directly |
-| Do not process full-screen every frame | OpenCV operations are expensive; use sub-surfaces or throttled updates |
+| Importar como `cv2` | Convención estándar |
+| Ojo con BGR vs RGB | OpenCV usa orden de canal BGR; Pygame usa RGB. Convertir siempre |
+| Sólo vía `vision_tools.py` | El acceso a OpenCV pasa por las herramientas de visión del framework, no directo |
+| No procesar pantalla completa cada fotograma | Las operaciones de OpenCV son caras; usar sub-superficies o limitar la frecuencia |
 
-### 5.5 BGR/RGB Conversion Rule
-
-This is a critical integration detail. OpenCV represents images as NumPy arrays in BGR (Blue-Green-Red) channel order. Pygame uses RGB. All conversions must be explicit:
+### 5.5 Regla de conversión BGR/RGB
 
 ```python
-# Pygame/NumPy array (RGB) → OpenCV (BGR):
-bgr_array = cv2_array[:, :, ::-1]  # Reverse channel axis
+# Pygame/NumPy (RGB) → OpenCV (BGR):
+bgr_array = cv2_array[:, :, ::-1]
 
-# OpenCV result (BGR) → Pygame (RGB):
+# Resultado de OpenCV (BGR) → Pygame (RGB):
 rgb_array = cv2_result[:, :, ::-1]
 ```
 
-All BGR/RGB conversions are handled inside `vision_tools.py`. Students never deal with this directly.
+Todas las conversiones BGR/RGB están dentro de
+`src/framework/processing/vision_tools.py`. El estudiante nunca las maneja
+directamente.
 
-### 5.6 Integration Rules
-
-OpenCV operations require the input array shape to be `(height, width, channels)`. Pygame's `surfarray.array3d()` returns `(width, height, channels)`. A transpose is required:
+### 5.6 Reglas de integración
 
 ```python
-# Pygame surfarray → OpenCV-compatible shape
 arr = pygame.surfarray.array3d(surface)
-arr_cv = np.transpose(arr, (1, 0, 2))  # (width, height, 3) → (height, width, 3)
-arr_bgr = arr_cv[:, :, ::-1]           # RGB → BGR
-
-# After OpenCV operation, convert back:
-arr_rgb = cv2_result[:, :, ::-1]       # BGR → RGB
-arr_pygame = np.transpose(arr_rgb, (1, 0, 2))  # (height, width, 3) → (width, height, 3)
+arr_cv = np.transpose(arr, (1, 0, 2))   # (ancho, alto, 3) → (alto, ancho, 3)
+arr_bgr = arr_cv[:, :, ::-1]            # RGB → BGR
+# ... operación de OpenCV ...
+arr_rgb = cv2_result[:, :, ::-1]        # BGR → RGB
+arr_pygame = np.transpose(arr_rgb, (1, 0, 2))
 surface = pygame.surfarray.make_surface(arr_pygame)
 ```
 
-### 5.7 Examples
+### 5.7 Ejemplos
 
-#### Canny edge detection (Unit VII):
-```python
-import cv2
-import numpy as np
-import pygame
-
-def canny_edge(surface: pygame.Surface, low: int, high: int) -> pygame.Surface:
-    """
-    Apply Canny edge detection. Returns a grayscale surface.
-    Academic Unit VII: Multi-stage edge detection.
-    """
-    arr = pygame.surfarray.array3d(surface)
-    arr_cv = np.transpose(arr, (1, 0, 2))[:, :, ::-1]  # → BGR
-    gray = cv2.cvtColor(arr_cv.astype(np.uint8), cv2.COLOR_BGR2GRAY)
-    edges = cv2.Canny(gray, low, high)
-    edges_rgb = cv2.cvtColor(edges, cv2.COLOR_GRAY2RGB)
-    result = np.transpose(edges_rgb, (1, 0, 2))
-    return pygame.surfarray.make_surface(result)
-```
-
-#### Watershed segmentation (Unit VIII):
-```python
-def watershed_segment(surface: pygame.Surface) -> pygame.Surface:
-    """
-    Apply watershed segmentation. Returns a labeled color overlay.
-    Academic Unit VIII: Region segmentation.
-    """
-    arr = pygame.surfarray.array3d(surface)
-    arr_cv = np.transpose(arr, (1, 0, 2))[:, :, ::-1].astype(np.uint8)
-    gray = cv2.cvtColor(arr_cv, cv2.COLOR_BGR2GRAY)
-    _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    # Distance transform + watershed (implementation in vision_tools.py)
-    # ... (full implementation is in the module)
-```
+Ver `FilterTools.canny_edge()` y `VisionTools.watershed_segment()` en
+`src/framework/processing/filter_tools.py` y
+`src/framework/processing/vision_tools.py` para las implementaciones reales
+usadas por el motor.
 
 ---
 
 ## 6. scikit-image
 
-### 6.1 Identity
+### 6.1 Identidad
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Package name | `scikit-image` |
-| Import name | `skimage` |
-| Version | Latest stable |
-| Type | Image processing library |
-| License | BSD 3-Clause |
+| Nombre del paquete | `scikit-image` |
+| Nombre al importar | `skimage` |
+| Versión mínima | `>=0.24` |
+| Tipo | Librería de procesamiento de imágenes |
+| Licencia | BSD 3-Clause |
 
-### 6.2 Purpose
+### 6.2 Propósito
 
-scikit-image provides image processing utilities that complement OpenCV, with a more Pythonic API. It is particularly useful for morphological operations, local binary patterns (LBP), and histogram of oriented gradients (HOG) feature extraction.
+scikit-image complementa a OpenCV con una API más "pythónica". Es
+particularmente útil para operaciones morfológicas, patrones binarios
+locales (LBP) e histograma de gradientes orientados (HOG).
 
-### 6.3 Why It Exists
+### 6.3 Por qué existe
 
-Some Unit VIII and IX operations — particularly HOG and LBP feature extraction — are more cleanly expressed in scikit-image's API than in OpenCV's. scikit-image also has excellent support for structured arrays and labeled images, which are useful for region analysis.
+`VisionTools.extract_hog()` y `VisionTools.extract_lbp()`
+(`src/framework/processing/vision_tools.py`) usan `skimage.feature.hog` y
+`skimage.feature.local_binary_pattern` para la extracción de características
+de las Unidades VIII y IX.
 
-### 6.4 Usage Rules
+### 6.4 Reglas de uso
 
-| Rule | Description |
+| Regla | Descripción |
 |---|---|
-| Use only via `vision_tools.py` | Stage code does not import `skimage` directly |
-| LBP feature extraction | `skimage.feature.local_binary_pattern()` |
-| HOG feature extraction | `skimage.feature.hog()` |
-| Note float [0,1] range | scikit-image functions often expect float arrays in [0,1], not uint8 in [0,255] |
+| Sólo vía `vision_tools.py` | El código de escenario no importa `skimage` directamente |
+| Rango float [0, 1] | Las funciones de scikit-image suelen esperar arreglos float en [0,1], no uint8 en [0,255] |
 
-### 6.5 Integration Rules
+### 6.5 Ejemplos
 
 ```python
-# scikit-image expects float [0, 1] for most operations:
 arr_float = arr.astype(np.float32) / 255.0
-
-# After operation, convert back:
+# ... operación de scikit-image ...
 result_uint8 = (result_float * 255).astype(np.uint8)
-```
-
-### 6.6 Examples
-
-#### HOG feature extraction (Unit IX):
-```python
-from skimage.feature import hog
-import numpy as np
-import pygame
-
-def extract_features(surface: pygame.Surface) -> np.ndarray:
-    """
-    Extract HOG feature vector from surface.
-    Academic Unit IX: Feature extraction for classification.
-    """
-    arr = pygame.surfarray.array3d(surface)
-    arr_t = np.transpose(arr, (1, 0, 2)).astype(np.float32) / 255.0
-    # Convert to grayscale for HOG
-    gray = 0.299 * arr_t[:, :, 0] + 0.587 * arr_t[:, :, 1] + 0.114 * arr_t[:, :, 2]
-    features = hog(
-        gray,
-        orientations=8,
-        pixels_per_cell=(8, 8),
-        cells_per_block=(2, 2),
-        feature_vector=True
-    )
-    return features
 ```
 
 ---
 
 ## 7. scikit-learn
 
-### 7.1 Identity
+### 7.1 Identidad
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Package name | `scikit-learn` |
-| Import name | `sklearn` |
-| Version | Latest stable |
-| Type | Machine learning library |
-| License | BSD 3-Clause |
+| Nombre del paquete | `scikit-learn` |
+| Nombre al importar | `sklearn` |
+| Versión mínima | `>=1.5` |
+| Tipo | Librería de aprendizaje automático |
+| Licencia | BSD 3-Clause |
 
-### 7.2 Purpose
+### 7.2 Propósito
 
-scikit-learn provides the classification algorithms used in Unit IX. Students train classifiers offline (in a Jupyter notebook or script) and serialize them to disk. At runtime, the game loads the serialized model and runs inference against in-game visual features.
+scikit-learn aporta los algoritmos de clasificación de la Unidad IX. Hay dos
+integraciones reales en el motor, no una sola:
 
-### 7.3 Why It Exists
+1. **`src/framework/entities/ai_predictor.py`** — `BehaviorPredictor` usa
+   `KNeighborsClassifier` y `DecisionTreeClassifier` para recomendar tácticas
+   a los enemigos. No se consulta enemigo por enemigo y fotograma a fotograma
+   (saldría demasiado caro: 1,89 ms por inferencia individual, ver el
+   docstring de `squad_brain.py`); `SquadBrain`
+   (`src/framework/entities/squad_brain.py`) agrupa a todos los enemigos
+   vivos de la escena y reevalúa el lote a 4 Hz.
+2. **`src/framework/processing/reference_model.py`** y
+   **`pattern_recognition_tools.py`** — el modelo de referencia de la demo
+   académica de la Unidad IX (`pattern_demo_scene.py`). Entrena
+   `KNeighborsClassifier`, `DecisionTreeClassifier`, `RandomForestClassifier`
+   o `SVC` (según lo que elija el estudiante) desde
+   `assets/datasets/sample_dataset.npz` **en la máquina de quien juega**, en
+   vez de cargar un estimador ya serializado — un `.pkl` entrenado con otra
+   versión de scikit-learn produce resultados distintos sin ningún aviso en
+   pantalla (`InconsistentVersionWarning`), y deserializar con `joblib.load`
+   ejecuta código arbitrario, dos razones para no repartir el archivo
+   entrenado entre estudiantes.
 
-Unit IX requires classification. scikit-learn provides well-documented, academically standard implementations of k-NN, decision trees, random forests, and SVMs. Its consistent `fit` / `predict` API means that swapping classifiers (from k-NN to random forest, for example) is a one-line change — useful for comparative experiments.
+### 7.3 Por qué existe
 
-### 7.4 Usage Rules
+La Unidad IX exige clasificación. scikit-learn da implementaciones
+documentadas y estándar de k-NN, árboles de decisión, bosques aleatorios y
+SVM, con una API `fit`/`predict` consistente.
 
-| Rule | Description |
+### 7.4 Reglas de uso
+
+| Regla | Descripción |
 |---|---|
-| Train offline | Models are trained outside the game (in a script or notebook), then serialized |
-| Serialize with `joblib` | `joblib.dump(model, path)` / `joblib.load(path)` |
-| Load model in stage `on_enter()` | Do not load the model every frame |
-| Max inference time | Single inference on a feature vector must complete in < 2ms |
-| Use only via `vision_tools.py` | `classify_region()` is the framework entry point |
+| Nunca por entidad y por fotograma | Usar el lote de `SquadBrain`, no una llamada individual por enemigo |
+| Entrenar desde datos, no distribuir el modelo | El estimador entrenado no se versiona ni se reparte; se reentrena desde el dataset |
+| Serializar con `joblib` cuando haga falta | `joblib.dump(model, ruta)` / `joblib.load(ruta)` |
 
-### 7.5 Integration Rules
+### 7.5 Nota sobre disponibilidad en tiempo de ejecución
 
-#### Training script (offline, not part of game runtime):
+`scikit-learn` está en `[project.dependencies]` de `pyproject.toml` — es una
+dependencia **obligatoria** de instalación, no un extra opcional. `ai_predictor.py`
+sigue importándolo a nivel de módulo sin `try`/`except`.
+
+> **AUD-455/AUD-457.** Que la instalación sea obligatoria ya no significa que
+> el fallo en runtime sea un `ImportError` sin red: `SquadBrain._decide_batch`
+> (en `src/framework/entities/squad_brain.py`) envuelve su `import` de
+> `ai_predictor` en `try`/`except ImportError` y, si falla, recurre a
+> `src/framework/entities/tactica_por_reglas.py` — una heurística por reglas
+> sin ninguna dependencia de sklearn. `src/framework/entities/precarga_ia.py`
+> hace lo mismo al precargar el módulo desde la pantalla de presentación o
+> desde `main.py --stage`/`--boss`. En la práctica sklearn siempre está
+> instalado (es obligatoria), así que esta ruta de repliegue rara vez se
+> ejercita — pero a diferencia de lo que decía una versión anterior de esta
+> nota, hoy sí es una degradación real y alcanzable, no una promesa sin
+> implementar.
+
+### 7.6 Ejemplos
+
+Entrenamiento y evaluación reales están en
+`src/framework/processing/reference_model.py::TrainedModel`. La toma de
+decisión de un enemigo, en `src/framework/entities/ai_predictor.py`:
+
 ```python
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.model_selection import train_test_split
-import joblib
-import numpy as np
+from src.framework.entities.ai_predictor import get_predictor
 
-# Load pre-extracted features and labels
-X = np.load("features.npy")
-y = np.load("labels.npy")
-
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-model = KNeighborsClassifier(n_neighbors=5)
-model.fit(X_train, y_train)
-
-accuracy = model.score(X_test, y_test)
-print(f"Test accuracy: {accuracy:.3f}")
-
-joblib.dump(model, "student_assets/models/sprite_classifier.pkl")
-```
-
-#### Runtime classification (in stage):
-```python
-import joblib
-from framework.processing.vision_tools import VisionTools
-
-class Stage3Scene(BaseScene):
-    def on_enter(self):
-        # Load model once at stage start
-        self.classifier = joblib.load(STUDENT_ASSETS_DIR / "models" / "sprite_classifier.pkl")
-
-    def _classify_screen_region(self, region_surface):
-        features = VisionTools.extract_features(region_surface)
-        label = VisionTools.classify_region(features, self.classifier)
-        return label
-```
-
-### 7.6 Examples
-
-#### classify_region in vision_tools.py:
-```python
-def classify_region(features: np.ndarray, model) -> str:
-    """
-    Classify a feature vector using a pre-trained scikit-learn model.
-    Academic Unit IX: Pattern recognition and classification.
-    
-    Args:
-        features: Feature vector (e.g., from extract_features())
-        model: A fitted scikit-learn classifier with a .predict() method
-    
-    Returns:
-        Predicted class label as a string.
-    """
-    prediction = model.predict(features.reshape(1, -1))
-    return str(prediction[0])
+predictor = get_predictor()
+acciones = predictor.predict_batch(lista_de_vectores_de_caracteristicas)
 ```
 
 ---
 
 ## 8. Pillow
 
-### 8.1 Identity
+### 8.1 Identidad
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Package name | `Pillow` |
-| Import name | `PIL` |
-| Version | Latest stable |
-| Type | Image I/O and manipulation library |
-| License | HPND (open source) |
+| Nombre del paquete | `Pillow` |
+| Nombre al importar | `PIL` |
+| Versión mínima | `>=12.3.0` (suelo de seguridad, AUD-176 — ver `SUELOS_POR_SEGURIDAD` en `tests/test_dependencias_coherentes.py`) |
+| Tipo | Librería de E/S y manipulación de imágenes |
+| Licencia | HPND (código abierto) |
 
-### 8.2 Purpose
+### 8.2 Propósito
 
-Pillow handles image loading and format conversion for the asset pipeline. While Pygame CE can load PNG and JPEG files natively, Pillow provides more robust support for edge cases: palette-mode PNGs, indexed color images, and images that require pre-processing before being loaded as Pygame surfaces.
+Pillow gestiona la carga y conversión de formato de imagen del pipeline de
+recursos. Aunque Pygame CE carga PNG y JPEG de forma nativa, Pillow soporta
+mejor los casos límite: PNG en modo paleta, imágenes de color indexado, e
+imágenes que necesitan preprocesarse antes de cargarse como superficie de
+Pygame.
 
-Pillow is also used by the asset validation script (`scripts/validate_assets.py`) to check that student assets conform to palette and dimension constraints.
+También la usa `scripts/validate_assets.py` para comprobar que los recursos
+de los estudiantes cumplen las restricciones de paleta y dimensiones.
 
-### 8.3 Why It Exists
+### 8.3 Reglas de uso
 
-Some SNES-era sprite assets are created as indexed-color PNGs (palette mode `P`) in Aseprite. Pygame's `image.load()` handles these, but validation of the palette (checking that no more than 16 colors are used per sprite sheet) requires Pillow.
-
-### 8.4 Usage Rules
-
-| Rule | Description |
+| Regla | Descripción |
 |---|---|
-| Not used at runtime | Pillow is a development and validation tool; it is not imported in any engine or framework module |
-| Asset validation only | `scripts/validate_assets.py` uses Pillow to check palette compliance |
-| Not in student stage code | Students do not import Pillow |
-
-### 8.5 Integration Rules
-
-Pillow is only used in offline tooling:
-
-```python
-from PIL import Image
-
-def validate_sprite_palette(path: str, max_colors: int = 16) -> bool:
-    """Check that a PNG sprite does not exceed max_colors in its palette."""
-    img = Image.open(path)
-    if img.mode == 'P':
-        palette = img.getpalette()
-        used_colors = len(set(img.getdata()))
-        return used_colors <= max_colors
-    elif img.mode == 'RGBA':
-        colors = img.getcolors(maxcolors=65536)
-        return len(colors) <= max_colors
-    return True
-```
+| No se usa en tiempo de ejecución del juego | Es una herramienta de desarrollo y validación; ningún módulo del motor o del framework la importa |
+| Sólo validación de recursos | `scripts/validate_assets.py` la usa para comprobar la paleta |
+| No en código de escenario de estudiante | El estudiante no la importa |
 
 ---
 
 ## 9. pytmx
 
-### 9.1 Identity
+### 9.1 Identidad
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Package name | `pytmx` |
-| Import name | `pytmx` |
-| Version | Latest stable |
-| Type | Tiled map file parser |
-| License | LGPL |
+| Nombre del paquete | `pytmx` |
+| Nombre al importar | `pytmx` |
+| Versión mínima | `>=3.32` |
+| Tipo | Analizador de ficheros de mapa de Tiled |
+| Licencia | LGPL |
 
-### 9.2 Purpose
+### 9.2 Propósito
 
-`pytmx` parses `.tmx` files created by the Tiled map editor. It reads tile layers, object layers, tileset references, and custom properties, and exposes them as Python objects.
+`pytmx` analiza los ficheros `.tmx` creados con el editor Tiled: capas de
+baldosas, capas de objetos, referencias de tileset y propiedades
+personalizadas, expuestos como objetos de Python.
 
-### 9.3 Why It Exists
+### 9.3 Reglas de uso
 
-Manual XML parsing of TMX files would be verbose and error-prone. `pytmx` provides a clean, well-tested API that integrates directly with Pygame CE, returning tile data as surface references.
-
-### 9.4 Usage Rules
-
-| Rule | Description |
+| Regla | Descripción |
 |---|---|
-| Used only in `StageLoader` | `framework/stage/stage_loader.py` is the only module that imports `pytmx` |
-| Students never import pytmx | TMX parsing is an engine responsibility |
-| All map access via `StageData` | `StageLoader` returns a `StageData` object; students use that |
+| Se usa sólo en el cargador de escenarios | Es responsabilidad exclusiva del motor |
+| El estudiante nunca importa pytmx | El análisis de TMX es responsabilidad del motor |
+| Todo acceso al mapa vía los datos de escenario que expone el cargador | No se toca `pytmx` directamente desde un escenario |
 
-### 9.5 Integration Rules
+### 9.4 Reglas de integración
 
 ```python
 import pytmx
-import pygame
 
 tmx_data = pytmx.util_pygame.load_pygame(str(tmx_path))
 
-# Accessing tile layers:
 for layer in tmx_data.visible_layers:
     if isinstance(layer, pytmx.TiledTileLayer):
         for x, y, gid in layer:
             tile_surface = tmx_data.get_tile_image_by_gid(gid)
-            if tile_surface:
-                # blit to appropriate layer surface
-
-# Accessing object layers:
-for obj in tmx_data.objects:
-    if obj.type == "Walker":
-        patrol_length = obj.properties.get("patrol_length", 96)
-        spawn_pos = pygame.Vector2(obj.x, obj.y)
 ```
 
 ---
 
 ## 10. pyscroll
 
-### 10.1 Identity
+### 10.1 Identidad
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Package name | `pyscroll` |
-| Import name | `pyscroll` |
-| Version | Latest stable |
-| Type | Scrolling map renderer for pytmx |
-| License | LGPL |
+| Nombre del paquete | `pyscroll` |
+| Nombre al importar | `pyscroll` |
+| Versión mínima | `>=2.31` |
+| Tipo | Renderizador de mapas con scroll para pytmx |
+| Licencia | LGPL |
 
-### 10.2 Purpose
+### 10.2 Propósito
 
-`pyscroll` provides an efficient scrolling tile map renderer that integrates with `pytmx`. It renders only the visible portion of the map each frame, manages the camera viewport, and handles parallax layer scrolling.
+`pyscroll` renderiza sólo la parte visible del mapa en cada fotograma,
+gestiona la ventana de cámara y el scroll de capas de parallax.
 
-### 10.3 Why It Exists
+### 10.3 Por qué existe
 
-Rendering an entire 3840-pixel-wide map to a 320×224 surface on every frame is unnecessary and slow. `pyscroll` renders only the tiles that are currently in the viewport, using a buffered approach that pre-renders surrounding tiles for smooth scrolling.
+Redibujar un mapa entero de miles de píxeles de ancho sobre una superficie de
+320×224 en cada fotograma es innecesario y lento. `pyscroll` sólo renderiza
+las baldosas visibles, con un búfer que precalcula las baldosas cercanas para
+un scroll fluido.
 
-### 10.4 Usage Rules
-
-| Rule | Description |
-|---|---|
-| Used only in `StageLoader` and `Camera` | Students do not interact with pyscroll directly |
-| Camera drives the pyscroll center | `Camera.update()` sets the pyscroll group center |
-
-### 10.5 Integration Rules
+### 10.4 Reglas de integración
 
 ```python
 import pyscroll
 
 map_data = pyscroll.data.TiledMapData(tmx_data)
-map_layer = pyscroll.BufferedRenderer(
-    map_data,
-    size=(320, 224),
-    clamp_camera=True
-)
+map_layer = pyscroll.BufferedRenderer(map_data, size=(320, 224), clamp_camera=True)
 group = pyscroll.PyscrollGroup(map_layer=map_layer, default_layer=4)
 
-# In stage draw():
+# en el draw() del escenario:
 group.center(player.rect.center)
 group.draw(surface)
 ```
 
 ---
 
-## 11. pytweening
+## 11. Funciones de easing (`src/engine/utils/math_utils.py`)
 
-### 11.1 Identity
+**No hay ninguna dependencia `pytweening` en este proyecto.** La versión
+anterior de este documento la documentaba como una librería instalada; se
+retiró de `pyproject.toml` porque nada en el árbol la importaba
+(`# AUD-007: Packages removed... pytweening`). Las funciones de easing que
+usa el motor están **implementadas directamente** en
+`src/engine/utils/math_utils.py`: `ease_in_quad`, `ease_out_quad`,
+`ease_in_out_quad`, `ease_in_cubic`, `ease_out_cubic`, `ease_out_bounce`,
+`ease_out_elastic`, `ease_in_sine`, `ease_out_sine`.
 
-| Property | Value |
+Siguen ilustrando el contenido de la Unidad VI del curso: la interpolación y
+las funciones de aceleración/desaceleración no son una caja negra — son
+funciones matemáticas (polinómicas, senoidales) aplicadas a un parámetro
+normalizado `t ∈ [0, 1]`, y en este motor están a la vista, no detrás de una
+librería externa.
+
+### 11.1 Reglas de uso
+
+| Regla | Descripción |
 |---|---|
-| Package name | `pytweening` |
-| Import name | `pytweening` |
-| Version | Latest stable |
-| Type | Easing functions library |
-| License | BSD |
+| `t` debe estar en [0, 1] | Las funciones de easing no están definidas fuera de ese rango |
+| La función no muta `t` | Es sin estado; quien llama gestiona el avance de `t` |
 
-### 11.2 Purpose
+### 11.2 Ejemplo
 
-`pytweening` provides a complete set of easing functions for smooth animation interpolation. These functions map a linear parameter `t ∈ [0, 1]` to a non-linear output, creating natural-feeling motion with acceleration and deceleration.
-
-### 11.3 Why It Exists
-
-The `engine/utils/math_utils.py` module wraps `pytweening` functions for use throughout the engine and framework. Implementing easing functions from scratch is error-prone and unnecessary. `pytweening` provides the full Robert Penner easing function set, which is the academic standard for animation interpolation.
-
-The use of `pytweening` directly illustrates Unit VI course content: interpolation and ease functions are not abstractions — they are mathematical functions (polynomial, sinusoidal, exponential) applied to a normalized parameter.
-
-### 11.4 Usage Rules
-
-| Rule | Description |
-|---|---|
-| Always through `math_utils.py` | Stages use `ease_out_quad(t)` from `math_utils.py`, not `pytweening.easeOutQuad(t)` directly |
-| `t` must be in [0, 1] | Easing functions are undefined outside this range |
-| Do not mutate `t` inside the function | The easing function is stateless; the caller manages `t` progression |
-
-### 11.5 Available Easing Functions (via math_utils.py)
-
-| Function | math_utils name | Description |
-|---|---|---|
-| `pytweening.easeInQuad` | `ease_in_quad(t)` | Quadratic, slow start |
-| `pytweening.easeOutQuad` | `ease_out_quad(t)` | Quadratic, slow end |
-| `pytweening.easeInOutQuad` | `ease_in_out_quad(t)` | Quadratic, slow start and end |
-| `pytweening.easeInCubic` | `ease_in_cubic(t)` | Cubic, slow start |
-| `pytweening.easeOutCubic` | `ease_out_cubic(t)` | Cubic, slow end |
-| `pytweening.easeOutBounce` | `ease_out_bounce(t)` | Bounce at end |
-| `pytweening.easeOutElastic` | `ease_out_elastic(t)` | Elastic overshoot at end |
-| `pytweening.easeInSine` | `ease_in_sine(t)` | Sinusoidal, slow start |
-| `pytweening.easeOutSine` | `ease_out_sine(t)` | Sinusoidal, slow end |
-| `pytweening.linear` | (use plain `lerp`) | Linear — not wrapped |
-
-### 11.6 Examples
-
-#### Moving platform with ease-in-out:
 ```python
-from engine.utils.math_utils import ease_in_out_quad, lerp
+from src.engine.utils.math_utils import ease_in_out_quad, lerp
 
-class MovingPlatform(BaseEntity):
-    def __init__(self, start_pos, end_pos, duration):
-        super().__init__()
-        self.start_pos = start_pos
-        self.end_pos = end_pos
-        self.duration = duration
-        self.t = 0.0
-        self.direction = 1
-
-    def update(self, dt: float):
-        self.t += (dt / self.duration) * self.direction
-        if self.t >= 1.0:
-            self.t = 1.0
-            self.direction = -1
-        elif self.t <= 0.0:
-            self.t = 0.0
-            self.direction = 1
-
-        # Apply easing to t before lerping position
-        eased_t = ease_in_out_quad(self.t)
-        self.position.x = lerp(self.start_pos.x, self.end_pos.x, eased_t)
-        self.position.y = lerp(self.start_pos.y, self.end_pos.y, eased_t)
-        self.rect.topleft = (int(self.position.x), int(self.position.y))
+eased_t = ease_in_out_quad(self.t)
+self.position.x = lerp(self.start_pos.x, self.end_pos.x, eased_t)
 ```
 
 ---
 
-## 12. Dependency Summary Table
+## 12. pydantic
 
-| Library | Runtime | Dev/Validation | Stage Code | Framework Code | Engine Code |
-|---|---|---|---|---|---|
-| `pygame-ce` | ✅ | — | ❌ (indirect only) | ✅ | ✅ |
-| `numpy` | ✅ | — | ❌ (indirect only) | ✅ | — |
-| `scipy` | ✅ | — | ❌ | ✅ | — |
-| `opencv-python` | ✅ | — | ❌ | ✅ | — |
-| `scikit-image` | ✅ | — | ❌ | ✅ | — |
-| `scikit-learn` | ✅ | — | ✅ (model load) | ✅ | — |
-| `Pillow` | — | ✅ | ❌ | — | — |
-| `pytmx` | ✅ | — | ❌ | ✅ (stage only) | — |
-| `pyscroll` | ✅ | — | ❌ | ✅ (stage only) | — |
-| `pytweening` | ✅ | — | ❌ (via math_utils) | — | ✅ |
+| Propiedad | Valor |
+|---|---|
+| Nombre al importar | `pydantic` |
+| Versión mínima | `>=2.7` |
+| Tipo | Validación de datos y modelos tipados |
 
-**Legend:**
-- ✅ Used
-- ❌ Prohibited
-- — Not applicable
+Valida el esquema de los datos que se guardan y se cargan: logros
+(`src/engine/core/achievements.py`), dificultad (`difficulty.py`), inventario
+(`inventory.py`), partidas guardadas (`save_data.py`) y los parámetros del
+modelo de referencia de la Unidad IX (`pattern_recognition_tools.py`). Evita
+que una partida guardada con un campo corrupto o de tipo equivocado se cargue
+en silencio.
 
 ---
 
-## 13. requirements.txt
+## 13. orjson
 
-The complete `requirements.txt` for Legacy of InFest:
+| Propiedad | Valor |
+|---|---|
+| Nombre al importar | `orjson` |
+| Versión mínima | `>=3.10` |
+| Tipo | Serialización JSON rápida |
 
-```
-pygame-ce
-numpy
-scipy
-opencv-python
-scikit-image
-scikit-learn
-Pillow
-pytmx
-pyscroll
-pytweening
-joblib
-```
-
-`joblib` is included as an explicit dependency (it is a scikit-learn dependency but is listed explicitly for clarity, as it is used directly for model serialization/deserialization).
+Serializa y deserializa partidas guardadas, marcadores, ajustes de usuario y
+progreso — más rápido que el `json` de la biblioteca estándar en los ficheros
+que se escriben cada vez que se guarda la partida
+(`save_manager.py`, `score_system.py`, `user_settings.py`, `bestiary.py`,
+`enemy_base.py`, `speedrun_mode.py`, entre otros).
 
 ---
 
-## 14. Installation and Environment
+## 14. matplotlib
 
-### 14.1 Virtual Environment Setup
+| Propiedad | Valor |
+|---|---|
+| Nombre al importar | `matplotlib` |
+| Versión mínima | `>=3.10` |
+| Tipo | Trazado de gráficas |
+
+Genera las gráficas de la demo de reconocimiento de patrones
+(`pattern_demo_scene.py`) y el informe de entrenamiento de
+`reference_model.py`/`pattern_recognition_tools.py` (matriz de confusión,
+curvas). Si `matplotlib` o `scikit-learn` faltaran, esa ruta concreta lo
+registra como aviso y devuelve `None` en vez de fallar — es la única de las
+dependencias de procesamiento con una salida de repliegue explícita en el
+código (`except ImportError: logger.warning(...)`).
+
+---
+
+## 15. Extras opcionales
+
+Estos tres grupos **no** están en `[project.dependencies]`: el juego los
+detecta en tiempo de importación y sigue funcionando sin ellos, con una ruta
+de repliegue.
+
+| Extra | Instala | Repliegue si falta |
+|---|---|---|
+| `accel` | `numba>=0.62` (JIT del integrador de partículas), `ModernGL>=5.10` (post-proceso por GPU) | Integrador puro en Python; volcado por software |
+| `scripting` | `lupa>=2.1` (comportamientos de enemigo en Lua) | — |
+| `audiotools` | `pydub>=0.25` (conversión de audio fuera de línea, `tools/convert_audio.py`) | — |
 
 ```bash
-# Create virtual environment
-python -m venv .venv
-
-# Activate (Windows)
-.venv\Scripts\activate
-
-# Activate (macOS / Linux)
-source .venv/bin/activate
-
-# Install all dependencies
-pip install -r requirements.txt
-
-# Verify installation
-python -c "import pygame; print(pygame.version.ver)"
-python -c "import cv2; print(cv2.__version__)"
-python -c "import numpy; print(numpy.__version__)"
+pip install -e ".[accel]"
+pip install -e ".[scripting]"
+pip install -e ".[audiotools]"
 ```
 
-### 14.2 Troubleshooting
+---
 
-| Issue | Solution |
-|---|---|
-| `ModuleNotFoundError: No module named 'cv2'` | Run `pip install opencv-python` |
-| `pygame-ce` conflicts with `pygame` | Uninstall `pygame` first: `pip uninstall pygame && pip install pygame-ce` |
-| `pytmx` map loading fails | Ensure Tiled exported with `.tsx` tileset files relative to the `.tmx` |
-| Controller not detected | Update `pygame-ce` to the latest version; CE has improved controller support |
-| NumPy version conflict with scikit-learn | Ensure all packages installed in the same virtual environment |
+## 16. Tabla resumen de dependencias
 
-
---- Traducción al Español ---
-
-## Librerías y Dependencias
-
-Este documento especifica cada librería utilizada en Legacy of InFest.
-
-| Librería | Propósito |
-|----------|-----------|
-| pygame-ce | Framework de juego principal |
-| numpy | Arreglos N-dimensionales para procesamiento de imágenes |
-| scipy | Convolución espacial y filtros |
-| opencv-python | Visión por computadora avanzada |
-| scikit-image | Procesamiento de imágenes (HOG, LBP) |
-| scikit-learn | Algoritmos de clasificación (k-NN, árboles, SVM) |
-| Pillow | Validación de assets (solo herramientas) |
-| pytmx | Carga de archivos de mapa Tiled |
-| pyscroll | Renderizado eficiente de mapas |
-| pytweening | Funciones de easing para animación |
-| joblib | Serialización de modelos ML |
-
-Para reglas de uso, ejemplos de integración y configuración de entorno, consultar el documento original en inglés.
-
+| Librería | Obligatoria | Código de escenario | Código de framework | Código de motor |
+|---|---|---|---|---|
+| `pygame-ce` | ✅ | indirecto | ✅ | ✅ |
+| `numpy` | ✅ | indirecto | ✅ | — |
+| `pydantic` | ✅ | — | ✅ | ✅ |
+| `orjson` | ✅ | — | ✅ | ✅ |
+| `scipy` | ✅ | — | ✅ | — |
+| `opencv-python` | ✅ | — | ✅ | — |
+| `scikit-image` | ✅ | — | ✅ | — |
+| `scikit-learn` | ✅ | — | ✅ | — |
+| `Pillow` | ✅ (sólo herramientas) | — | — | — |
+| `pytmx` | ✅ | — | ✅ | — |
+| `pyscroll` | ✅ | — | ✅ | — |
+| `joblib` | ✅ | — | ✅ | — |
+| `matplotlib` | ✅ | — | ✅ (demo) | — |
+| `numba`, `ModernGL` | extra `accel` | — | — | ✅ |
+| `lupa` | extra `scripting` | — | ✅ | — |
+| `pydub` | extra `audiotools` | — | herramientas | — |
 
 ---
-## 🔗 Documentos Relacionados
 
-- [[82_ENVIRONMENT_SETUP_GUIDE.md|Environment Setup Guide]]
+## 17. `requirements.txt`
+
+El fichero real (sincronizado a mano con `pyproject.toml`,
+`scripts/check_dependency_sync.py` lo comprueba):
+
+```
+pygame-ce>=2.5
+numpy>=1.26
+pydantic>=2.7
+orjson>=3.10
+scipy>=1.13
+opencv-python>=4.10
+scikit-image>=0.24
+scikit-learn>=1.5
+Pillow>=12.3.0
+pytmx>=3.32
+pyscroll>=2.31
+joblib>=1.4
+matplotlib>=3.10
+```
+
+---
+
+## 18. Instalación y entorno
+
+Los pasos completos, con solución de problemas, están en
+[`82_ENVIRONMENT_SETUP_GUIDE.md`](82_ENVIRONMENT_SETUP_GUIDE.md). En resumen:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate      # macOS/Linux — en Windows: .venv\Scripts\Activate.ps1
+pip install -e ".[dev]"        # instalación recomendada, incluye pytest/ruff/mypy
+```
+
+---
+
+## Documentos relacionados
+
+- [[82_ENVIRONMENT_SETUP_GUIDE.md]]
+- [[23_DATA_SCHEMAS.md]]

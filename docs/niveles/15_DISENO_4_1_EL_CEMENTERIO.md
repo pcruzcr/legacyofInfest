@@ -167,10 +167,10 @@ construidos con el vocabulario del TMX + una propuesta nueva:
    presentación; en el IV están combinadas con lluvia.
 2. **Losas que ceden (propuesta nueva):** losas de piedra que aguantan ~1 s
    cuando se pisan y luego se hunden (hazard temporal — reutiliza `HazardZone`
-   activado por pisada o un objeto `OneWay` con temporizador). El jugador debe
+   activado por pisada o un objeto `Platform` con temporizador). El jugador debe
    **correr sin pararse** — es el único "reflejo" del nivel.
 3. **Lápidas derrumbadas como plataformas:** saltos entre bloques de lápida
-   rota; son `Solid`/`OneWay` normales. El diseño de salto usa las lápidas como
+   rota; son `Solid`/`Platform` normales. El diseño de salto usa las lápidas como
    peldaños — el terreno del cementerio es el terreno de juego.
 4. **Regla de los dos peligros:** nunca dos peligros simultáneos sin que el
    relámpago los haya mostrado (§5). En el Acto IV, la lluvia y el viento
@@ -263,11 +263,11 @@ ACTO V — EL UMBRAL                La tormenta cesa. Silencio. La luna toca
 | Clima por acto | Propiedad `climate` del TMX + `WeatherSystem.set_climate()` al cruzar los umbrales de acto (`fog` → `storm` → `clear`) |
 | Partículas | `AmbientParticles`: `ash` (actos I–III), `spores` (II), `embers` en cada brasero encendido |
 | Luna descendente | Sprite en `BG_Far` con offset_y + scale interpolados por acto (lerp) |
-| Braseros | `OneWay`/decorativo + luz puntual (`lighting.py`) + `embers`; secuencia por proximidad en el código del stage |
+| Braseros | `Platform`/decorativo + luz puntual (`lighting.py`) + `embers`; secuencia por proximidad en el código del stage |
 | Relámpago | Flash de brillo de ~0.4 s (subida momentánea de ambiente) + trueno con retardo; activa la visibilidad de las siluetas |
 | La Cegua y brujas | Sprites estáticos en `BG_Mid` con visibilidad por acto y por relámpago (sin colisión, sin IA) |
 | Lápidas | Capa `Terrain_Detail` + texto en TMX (nombres reales del profesor); `MessageTrigger` opcional en las grandes |
-| Grietas y losas | `HazardZone` (grietas pulsantes) + losas que ceden (OneWay con temporizador o HazardZone por pisada — propuesta nueva) |
+| Grietas y losas | `HazardZone` (grietas pulsantes) + losas que ceden (Platform con temporizador o HazardZone por pisada — propuesta nueva) |
 | Visión espectral | Ya existe (ataque largo): revela huellas de pezuña y la ruta de saltos |
 | Día/noche | `start_hour = "dusk"` (19:00), `day_length = 900` → 23:00 (la luna lo materializa) |
 | Checkpoints | 1 obligatorio (mitad, tras el Acto II) — los braseros ya cumplen de marcadores |

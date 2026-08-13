@@ -1,122 +1,79 @@
 ---
 document_id: "LOI-FOG-046"
-title: "Legacy of InFest — Fog of War Specification"
-aliases: ["Fog of War"]
-tags: ["fog", "war", "vfx", "visibility"]
-description: "Fog of war overlay"
+title: "Legacy of InFest — Especificación de la niebla de guerra"
+aliases: ["Especificación de la niebla de guerra", "Fog of War"]
+tags: ["niebla", "guerra", "vfx", "visibilidad"]
+description: "Capa de niebla de guerra"
 source: "docs/46_FOG_OF_WAR.md"
-date_processed: "2026-07-14"
+date_processed: "2026-08-12"
 ---
 
-# Legacy of InFest — Fog of War Specification
+# Legacy of InFest — Especificación de la niebla de guerra
 
-**Document ID:** LOI-FOG-046
-**Version:** 1.0.0
-**Status:** Official
-**Audience:** Professor, Teaching Assistants, Students, AI coding assistants
+**ID del documento:** LOI-FOG-046
+**Versión:** 1.1.0
+**Estado:** Oficial
+**Audiencia:** Profesor, ayudantes, estudiantes, asistentes de código
 
----
-
-## 1. Overview
-
-The Fog of War (`src/framework/vfx/fog_of_war.py`) is a full-screen black overlay with alpha holes revealed around player and enemy positions. It hides unexplored areas and gradually reveals the map as the player moves. The overlay is drawn in screen space and moves with the camera.
+> **AUD-455.** Traduce el documento completo (antes en inglés). Actualiza
+> el conteo de líneas: decía 133 en `fog_of_war.py`; hoy tiene 184.
 
 ---
 
-## 2. Architecture
+## 1. Visión general
 
-### 2.1 FogOfWar
-- **Overlay:** Full-screen `Surface` at (0, 0, 0, 220) alpha
-- **Mask:** A radial-gradient disc (`_construir_mascara`) blitted at every
-  revealed position. Built in the constructor and **rebuilt only when the
-  breathing profile changes** (AUD-338) — the same phase draws the same mask
-- **Composite:** `mask` is subtracted from `overlay` via `BLEND_RGBA_SUB`, creating soft-edged transparent holes
+La niebla de guerra (`src/framework/vfx/fog_of_war.py`) es una capa negra de pantalla completa con agujeros de alfa revelados alrededor de las posiciones del jugador y los enemigos. Oculta las áreas sin explorar y revela el mapa gradualmente según se mueve el jugador. La capa se dibuja en espacio de pantalla y se mueve con la cámara.
 
-The mask peaks at the veil's **current** alpha (220 at rest), not 255, on
-purpose: `BLEND_RGBA_SUB` saturates at zero, so any alpha above the veil's
-own would reveal exactly like it and the first stretch of the gradient would
-be lost to the clamp. Matching them puts the whole falloff inside the visible
-range. When the veil breathes, the mask is rebuilt with the new peak so the
-profile stays exact.
+---
 
-### 2.2 Parameters
-- `radius` — default 80px reveal radius
-- `hardness` — default 0.6. Fraction of the radius that stays **fully**
-  revealed; the remaining `1 - hardness` is the band where the veil returns,
-  following a smoothstep (`3t² - 2t³`) that reaches zero with zero slope at
-  both seams. `hardness = 1.0` reproduces the old hard-edged disc;
-  `hardness = 0.0` fades from the very centre. Values are clamped to [0, 1].
-- `animado` — default `True` (AUD-338). With `False`, the veil is the static
-  overlay of v1.0.0. At phase zero (`t = 0`, no `update()` call yet) the
-  animated veil draws **exactly** the static one, so tests and code that
-  never call `update()` see no change
-- `velocidad` — default 0.15. Breathing cycles per second: one full inhale
-  and exhale every ~6.7 s. Clamped to `>= 0` (0 freezes the veil)
-- `pulso` — default 3.0. How many pixels the hole radius swells and shrinks
-  around `radius`, in sine. Clamped so the hole can never shrink to zero (a
-  hole that disappears for an instant is a flicker, not a breath)
-- `pulso_del_velo` — default 6.0. How many alpha units the veil darkens and
-  lightens, **in antiphase** with the radius: the veil darkens while the
-  holes shrink (inhale) and lightens while they grow (exhale). The result is
-  clamped to [0, 255]
+## 2. Arquitectura
 
-Measured mask alpha along a radius (`radius = 80`), sampled at fractions of
-the radius — reproducible with `_hole_mask` and `pygame.surfarray.pixels_alpha`:
+### 2.1 `FogOfWar`
+- **Capa:** una `Surface` de pantalla completa a alfa (0, 0, 0, 220)
+- **Máscara:** un disco de degradado radial (`_construir_mascara`) volcado en cada posición revelada. Se construye en el constructor y **se reconstruye sólo cuando cambia el perfil de respiración** (AUD-338) — la misma fase dibuja la misma máscara
+- **Composición:** la `máscara` se resta de la `capa` vía `BLEND_RGBA_SUB`, creando agujeros transparentes de borde suave
+
+El pico de la máscara es el alfa **actual** del velo (220 en reposo), no 255, a propósito: `BLEND_RGBA_SUB` satura en cero, así que cualquier alfa por encima del propio velo revelaría exactamente igual y se perdería el primer tramo del degradado por el recorte. Igualarlos mete toda la caída dentro del rango visible. Cuando el velo respira, la máscara se reconstruye con el nuevo pico para que el perfil se mantenga exacto.
+
+### 2.2 Parámetros
+- `radius` — radio de revelado, 80px por defecto
+- `hardness` — 0.6 por defecto. Fracción del radio que queda revelada **por completo**; el resto, `1 - hardness`, es la banda donde vuelve el velo, siguiendo un smoothstep (`3t² - 2t³`) que llega a cero con pendiente cero en ambas costuras. `hardness = 1.0` reproduce el disco de borde duro de la v1.0.0; `hardness = 0.0` se desvanece desde el mismo centro. Los valores se recortan a [0, 1].
+- `animado` — `True` por defecto (AUD-338). Con `False`, el velo es la capa estática de la v1.0.0. En la fase cero (`t = 0`, sin ninguna llamada a `update()` todavía) el velo animado dibuja **exactamente** el estático, así que las pruebas y el código que nunca llaman a `update()` no ven ningún cambio
+- `velocidad` — 0.15 por defecto. Ciclos de respiración por segundo: una inhalación y exhalación completas cada ~6.7 s. Se recorta a `>= 0` (0 congela el velo)
+- `pulso` — 3.0 por defecto. Cuántos píxeles se hincha y encoge el radio del agujero alrededor de `radius`, en seno. Se recorta para que el agujero nunca pueda encoger a cero (un agujero que desaparece un instante es un parpadeo, no una respiración)
+- `pulso_del_velo` — 6.0 por defecto. Cuántas unidades de alfa se oscurece y aclara el velo, **en antifase** con el radio: el velo se oscurece mientras los agujeros encogen (inhalar) y se aclara mientras crecen (exhalar). El resultado se recorta a [0, 255]
+
+Alfa de la máscara medido a lo largo de un radio (`radius = 80`), muestreado en fracciones del radio — reproducible con `_hole_mask` y `pygame.surfarray.pixels_alpha`:
 
 | hardness | 0.0 | 0.25 | 0.50 | 0.60 | 0.75 | 0.90 | 0.99 |
 |---|---|---|---|---|---|---|---|
 | 0.0 | 220 | 185 | 110 | 77 | 34 | 6 | 0 |
-| 0.6 (default) | 220 | 220 | 220 | 220 | 150 | 34 | 0 |
+| 0.6 (por defecto) | 220 | 220 | 220 | 220 | 150 | 34 | 0 |
 | 1.0 | 220 | 220 | 220 | 220 | 220 | 220 | 220 |
 
 ---
 
 ## 3. API
 
-| Method | Description |
+| Método | Descripción |
 |--------|-------------|
-| `clear()` | Reset all revealed areas |
-| `reveal(x, y)` | Add a reveal point at world coordinates |
-| `reveal_all(points)` | Batch-add reveal points |
-| `update(dt)` | Advance the breathing clock (AUD-338). Without it the veil stays at phase zero — the static behaviour |
-| `draw(surface, offset)` | Render fog overlay, transforming world points to screen; rebuilds the mask only when the breathing profile changed |
+| `clear()` | Reinicia todas las áreas reveladas |
+| `reveal(x, y)` | Añade un punto de revelado en coordenadas de mundo |
+| `reveal_all(points)` | Añade varios puntos de revelado a la vez |
+| `update(dt)` | Avanza el reloj de respiración (AUD-338). Sin llamarlo, el velo se queda en fase cero — el comportamiento estático |
+| `draw(surface, offset)` | Dibuja la capa de niebla, transformando los puntos de mundo a pantalla; reconstruye la máscara sólo cuando cambió el perfil de respiración |
 
 ---
 
-## 4. Implementation Status
+## 4. Estado de implementación
 
-**File:** `src/framework/vfx/fog_of_war.py` (133 lines)
-**Status:** ✅ Complete — screen-space overlay with soft-edged alpha holes (AUD-198)
-**Missing:** No perma-reveal (explored areas stay black when off-screen). `draw()`
-iterates over every revealed point and that set is unbounded: measured at
-320x180 with `radius = 80`, the cost is linear at roughly 2.7 µs per point —
-0.55 ms at 100 points, 6.65 ms at 2000, 10.73 ms at 4000. A moving player adds
-about one point per frame, so the overlay eats a third of a 60 fps budget after
-half a minute of walking. Tracked separately; not addressed by AUD-198.
-**Note:** no TMX declares the `fog_of_war` map property yet, so no shipped
-stage currently turns the overlay on.
-
-
---- Traducción al Español ---
-
-## Niebla de Guerra
-
-### Descripción
-Superposición de niebla que oculta áreas no exploradas del mapa.
-
-### Características
-- Niebla negra con agujeros revelados de borde suave
-- El agujero cae en degradado radial; `hardness` (0,6 por omisión) marca qué
-  fracción del radio queda revelada del todo antes de que empiece la caída
-- Revelado progresivo por movimiento del jugador
-- Persistencia entre visitas
-- Efecto visual de descubrimiento
-
-Para la especificación completa de la implementación, consultar el documento original en inglés.
-
+**Fichero:** `src/framework/vfx/fog_of_war.py` (184 líneas)
+**Estado:** ✅ Completo — capa en espacio de pantalla con agujeros de alfa de borde suave (AUD-198)
+**Falta:** sin revelado permanente (las áreas exploradas vuelven a quedar negras fuera de pantalla). `draw()` recorre cada punto revelado y ese conjunto no tiene tope: medido a 320×180 con `radius = 80`, el coste es lineal, unos 2.7 µs por punto — 0.55 ms con 100 puntos, 6.65 ms con 2000, 10.73 ms con 4000. Un jugador en movimiento añade más o menos un punto por fotograma, así que la capa se come un tercio del presupuesto de 60 fps tras medio minuto caminando. Se sigue por separado; AUD-198 no lo resuelve.
+**Nota:** ningún TMX declara todavía la propiedad de mapa `fog_of_war`, así que ningún escenario entregado enciende hoy la capa.
 
 ---
-## 🔗 Documentos Relacionados
+## 🔗 Documentos relacionados
 
-- [[47_WATER_EFFECT.md|Water Effect]]
-- [[48_SCREEN_TRANSITIONS.md|Screen Transitions]]
+- [[47_WATER_EFFECT.md|Especificación del efecto de agua]]
+- [[48_SCREEN_TRANSITIONS.md|Especificación de transiciones de pantalla]]

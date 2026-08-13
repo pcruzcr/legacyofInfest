@@ -1,57 +1,40 @@
 ---
 document_id: "LOI-LABS-LAB03"
-title: "Lab 3: Vision & Pattern Recognition (Unit VIII)"
+title: "Laboratorio 3: visión y reconocimiento de patrones (Unidad VIII)"
 aliases: ["Lab03", "lab03"]
-tags: ["lab", "academic", "exercise"]
-description: "Labs document: lab03"
-source: "docs/docs\labs/lab03.md"
-date_processed: "2026-07-14"
+tags: ["laboratorio", "academico", "ejercicio"]
+description: "Documento de laboratorios: lab03"
+source: "docs/labs/lab03.md"
+date_processed: "2026-08-13"
 ---
 
-# Lab 3: Vision & Pattern Recognition (Unit VIII)
+# Laboratorio 3: visión y reconocimiento de patrones (Unidad VIII)
 
-**Objective:** Apply image processing and pattern recognition techniques using VisionDemoScene and PatternDemoScene.
+**Objetivo:** aplicar técnicas de procesamiento de imágenes y reconocimiento de patrones usando VisionDemoScene y PatternDemoScene.
 
-## Tasks
+## Tareas
 
-### Task 1 — Thresholding & Morphology (30 min)
-1. Open **VisionDemoScene** (Unit VIII from the demo menu)
-2. Cycle to THRESHOLD mode and adjust the threshold value
-3. Observe how binary masks change
-4. Cycle to ERODE and DILATE modes — what's the effect of kernel size?
-5. Record the optimal threshold for isolating the player sprite from the background
+### Tarea 1 — Umbralización y morfología (30 min)
+1. Abrir **VisionDemoScene** (Unidad VIII desde el menú de demos)
+2. Cambiar al modo THRESHOLD y ajustar el valor de umbral
+3. Observar cómo cambian las máscaras binarias
+4. Cambiar a los modos ERODE y DILATE — ¿cuál es el efecto del tamaño de kernel?
+5. Registrar el umbral óptimo para aislar el sprite del jugador del fondo
 
-### Task 2 — Connected Components (30 min)
-1. In **VisionDemoScene**, switch to COMPONENTS mode
-2. Count the number of connected regions detected
-3. Switch to REGIONS mode and analyze the largest region's properties (area, centroid, eccentricity)
-4. Explain: why does connected component labeling assign different colors to different regions?
+### Tarea 2 — Componentes conectados (30 min)
+1. En **VisionDemoScene**, cambiar al modo COMPONENTS
+2. Contar el número de regiones conectadas detectadas
+3. Cambiar al modo REGIONS y analizar las propiedades de la región más grande (área, centroide, excentricidad)
+4. Explicar: ¿por qué el etiquetado de componentes conectados asigna colores distintos a regiones distintas?
 
-### Task 3 — Classification Pipeline (30 min)
-1. Open **PatternDemoScene** (Unit IX from the demo menu)
-2. Observe the INFERENCE mode — what class is predicted?
-3. Switch to FEATURE_COMPARE mode and move the analysis rectangle
-4. How does the nearest training sample change as you move over different parts of the source image?
-5. Switch to PIPELINE mode and trace the full classification pipeline
+### Tarea 3 — Tubería de clasificación (30 min)
+1. Abrir **PatternDemoScene** (Unidad IX desde el menú de demos)
+2. Observar el modo INFERENCE — ¿qué clase se predice?
+3. Cambiar al modo FEATURE_COMPARE y mover el rectángulo de análisis
+4. ¿Cómo cambia la muestra de entrenamiento más cercana al moverse sobre distintas partes de la imagen fuente?
+5. Cambiar al modo PIPELINE y rastrear la tubería de clasificación completa
 
-## Deliverables
-- Screenshots showing thresholded masks, connected components, and inference results
-- The optimal threshold value found in Task 1
-- A short explanation of the classification pipeline (source → preprocessing → feature extraction → classification)
-
-
---- Traducción al Español ---
-
-## Laboratorio 3: Visión y Reconocimiento de Patrones (Unidad VIII)
-
-**Objetivo:** Aplicar técnicas de procesamiento de imágenes y reconocimiento de patrones.
-
-### Tareas
-1. **Umbralizado y Morfología** — Ajustar umbral, observar efectos de erosión/dilatación
-2. **Componentes Conectados** — Contar regiones conectadas, analizar propiedades
-3. **Pipeline de Clasificación** — Observar inferencia, comparar características
-
-### Entregables
-- Capturas de máscaras umbralizadas, componentes conectados e inferencia
-- Valor óptimo de umbral encontrado
-- Explicación del pipeline de clasificación
+## Entregables
+- Capturas mostrando máscaras umbralizadas, componentes conectados, y resultados de inferencia
+- El valor de umbral óptimo encontrado en la Tarea 1
+- Una explicación breve de la tubería de clasificación (fuente → preprocesamiento → extracción de características → clasificación)

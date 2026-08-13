@@ -1,165 +1,174 @@
 ---
 document_id: "LOI-VISION-012"
-title: "Legacy of InFest — Vision Tools Specification"
-aliases: ["Vision Tools Spec"]
-tags: ["vision", "segmentation", "processing"]
-description: "Unit VIII segmentation subsystem"
+title: "Legacy of InFest — Especificación de VisionTools"
+aliases: ["Especificación de VisionTools", "Vision Tools Spec"]
+tags: ["vision", "segmentacion", "processing"]
+description: "Subsistema de segmentación de la Unidad VIII"
 source: "docs/12_VISION_TOOLS_SPEC.md"
-date_processed: "2026-07-14"
+date_processed: "2026-08-12"
 ---
 
-# Legacy of InFest — Vision Tools Specification
+# Legacy of InFest — Especificación de VisionTools
 
-**Document ID:** LOI-VISION-012  
-**Version:** 1.0.0  
-**Status:** Official  
-**Compatibility:** Requires LOI-ARCH-003, LOI-FILTER-011, LOI-LIBS-010  
-**Audience:** Professor, Teaching Assistants, AI coding assistants (Claude Code, Cline, OpenCode, Codex)
+**ID del documento:** LOI-VISION-012
+**Versión:** 1.1.0
+**Estado:** Oficial
+**Compatibilidad:** Requiere `03_ARCHITECTURE.md`, `11_FILTER_TOOLS_SPEC.md`, `10_LIBRARIES_AND_DEPENDENCIES.md`
+**Audiencia:** Profesor, ayudantes de cátedra, asistentes de programación con IA
+
+> **AUD-455.** Traduce el documento (cuerpo en inglés, resumen condensado en
+> español al final). Corrige la ruta del módulo, que carecía del prefijo
+> `src/` en seis apariciones, y quita `classify_region(features, model)` del
+> resumen final: ese método **no existe** en `VisionTools` — verificado por
+> AST contra `src/framework/processing/vision_tools.py` — ni lo describe el
+> cuerpo en inglés del propio documento. La clasificación con un modelo
+> entrenado vive en `PatternRecognitionTools.classify()`
+> (`13_PATTERN_RECOGNITION_SPEC.md`), no aquí.
 
 ---
 
-## 1. Overview
+## 1. Visión general
 
-`VisionTools` is the segmentation and image analysis subsystem of the Legacy of InFest academic framework. It encapsulates all operations taught in **Unit VIII** of the course syllabus: thresholding, Otsu's method, morphological operations, connected component analysis, region analysis, watershed segmentation, and feature extraction.
+`VisionTools` es el subsistema de segmentación y análisis de imágenes del framework académico de Legacy of InFest. Encapsula todas las operaciones que enseña la **Unidad VIII** del programa del curso: umbralización, método de Otsu, operaciones morfológicas, análisis de componentes conectados, análisis de regiones, segmentación watershed y extracción de características.
 
-This module is the bridge between the raw filter operations of Unit VII (covered by `FilterTools`) and the classification operations of Unit IX (covered by `PatternRecognitionTools`). It transforms filtered surfaces into structured data — regions, labels, contours, masks, and feature vectors — that can be interpreted and acted upon by game logic.
+Este módulo es el puente entre las operaciones de filtro puras de la Unidad VII (cubiertas por `FilterTools`) y las operaciones de clasificación de la Unidad IX (cubiertas por `PatternRecognitionTools`). Transforma superficies filtradas en datos estructurados — regiones, etiquetas, contornos, máscaras y vectores de características — que la lógica del juego puede interpretar y sobre los que puede actuar.
 
-The module is located at:
+El módulo está en:
 
 ```
-framework/processing/vision_tools.py
+src/framework/processing/vision_tools.py
 ```
 
 ---
 
-## 2. Academic Purpose
+## 2. Propósito académico
 
-`VisionTools` makes Unit VIII concepts **spatially visible** within the game. Students do not process abstract scientific images — they process regions of their own game stage, identify meaningful zones within them, and let those zones drive game behavior. This transforms segmentation from a theoretical exercise into a design decision.
+`VisionTools` hace que los conceptos de la Unidad VIII sean **espacialmente visibles** dentro del juego. Los estudiantes no procesan imágenes científicas abstractas — procesan regiones de su propio escenario de juego, identifican zonas significativas dentro de ellas, y dejan que esas zonas dirijan el comportamiento del juego. Esto transforma la segmentación de un ejercicio teórico en una decisión de diseño.
 
-### 2.1 Learning Objectives Supported
+### 2.1 Objetivos de aprendizaje que soporta
 
-| Objective | VisionTools Mechanism |
+| Objetivo | Mecanismo de VisionTools |
 |---|---|
-| Apply binary thresholding as a decision boundary | `threshold_binary()` separates pixels into two classes |
-| Apply Otsu's method as automatic threshold selection | `threshold_otsu()` computes the optimal threshold adaptively |
-| Apply erosion and dilation to binary images | `morphological_erode()`, `morphological_dilate()` |
-| Identify connected regions in binary images | `connected_components()` returns labeled regions |
-| Extract region properties (area, centroid, bounding box) | `analyze_regions()` returns per-region statistics |
-| Apply watershed to over-segmented images | `watershed_segment()` returns a labeled surface |
-| Extract a feature vector from a surface region | `extract_features()` returns a numeric descriptor |
+| Aplicar umbralización binaria como frontera de decisión | `threshold_binary()` separa los píxeles en dos clases |
+| Aplicar el método de Otsu como selección automática de umbral | `threshold_otsu()` calcula el umbral óptimo de forma adaptativa |
+| Aplicar erosión y dilatación a imágenes binarias | `morphological_erode()`, `morphological_dilate()` |
+| Identificar regiones conectadas en imágenes binarias | `connected_components()` devuelve regiones etiquetadas |
+| Extraer propiedades de región (área, centroide, caja envolvente) | `analyze_regions()` devuelve estadísticas por región |
+| Aplicar watershed a imágenes sobre-segmentadas | `watershed_segment()` devuelve una superficie etiquetada |
+| Extraer un vector de características de una región de superficie | `extract_features()` devuelve un descriptor numérico |
 
-### 2.2 Position in the Academic Pipeline
+### 2.2 Posición en la tubería académica
 
 ```
-Raw Surface (game background, sprite, screen region)
-    ↓ FilterTools (Unit VII)
-Preprocessed Surface (blurred, edge-detected, brightness-adjusted)
-    ↓ VisionTools (Unit VIII)
-Structured Data (masks, regions, labels, feature vectors)
-    ↓ PatternRecognitionTools (Unit IX)
-Classification result → Game behavior
+Superficie cruda (fondo de juego, sprite, región de pantalla)
+    ↓ FilterTools (Unidad VII)
+Superficie preprocesada (desenfocada, con bordes detectados, brillo ajustado)
+    ↓ VisionTools (Unidad VIII)
+Datos estructurados (máscaras, regiones, etiquetas, vectores de características)
+    ↓ PatternRecognitionTools (Unidad IX)
+Resultado de clasificación → Comportamiento de juego
 ```
 
 ---
 
-## 3. Framework Location
+## 3. Ubicación en el framework
 
 ```
-framework/
+src/framework/
 └── processing/
     ├── filter_tools.py
-    └── vision_tools.py          ← This module
+    └── vision_tools.py          ← Este módulo
 ```
 
-### 3.1 Position in the Dependency Hierarchy
+### 3.1 Posición en la jerarquía de dependencias
 
 ```
-Stages (student code)
+Escenarios (código de estudiante)
     ↓
-framework/processing/vision_tools.py   ← Students call this
+src/framework/processing/vision_tools.py   ← Los estudiantes llaman a esto
     ↓
-framework/processing/filter_tools.py   ← VisionTools may call FilterTools internally
+src/framework/processing/filter_tools.py   ← VisionTools puede llamar a FilterTools internamente
     ↓
 numpy, scipy, opencv-python, scikit-image
 ```
 
 ---
 
-## 4. Architecture Integration
+## 4. Integración con la arquitectura
 
-### 4.1 Connections to the Framework
+### 4.1 Conexiones con el framework
 
-| Integration Point | Description |
+| Punto de integración | Descripción |
 |---|---|
-| `FilterTools` | VisionTools may internally call `FilterTools.gaussian_blur()` for preprocessing within watershed; students may also chain them explicitly |
-| `PatternRecognitionTools` | VisionTools' `extract_features()` produces the feature vector that PatternRecognitionTools' classifiers consume |
-| Stage scenes (student code) | Students call `VisionTools` from stage `update()` to drive behavior from visual data |
-| Unit test suite (`tests/test_vision_tools.py`) | Each method saves labeled-image and mask PNG outputs to `tests/output/vision/` |
+| `FilterTools` | VisionTools puede llamar internamente a `FilterTools.gaussian_blur()` para preprocesar dentro de watershed; los estudiantes también pueden encadenarlos explícitamente |
+| `PatternRecognitionTools` | El `extract_features()` de VisionTools produce el vector de características que consumen los clasificadores de PatternRecognitionTools |
+| Escenas de escenario (código de estudiante) | Los estudiantes llaman a `VisionTools` desde el `update()` del escenario para dirigir el comportamiento a partir de datos visuales |
+| Suite de pruebas unitarias (`tests/test_vision_tools.py`) | Cada método guarda imágenes etiquetadas y máscaras PNG en `tests/output/vision/` |
 
-### 4.2 What VisionTools Does NOT Do
+### 4.2 Lo que VisionTools NO hace
 
-| Forbidden Action | Reason |
+| Acción prohibida | Razón |
 |---|---|
-| Does not call `EventBus` | Pure computation module |
-| Does not modify entity state directly | Students use the return values to modify state |
-| Does not call `InputManager` or `AudioManager` | No interaction logic |
-| Does not read or write files | All I/O through return values |
-| Does not modify input surfaces in place | All operations return new data |
+| No llama a `EventBus` | Módulo de cómputo puro |
+| No modifica el estado de entidades directamente | Los estudiantes usan los valores de retorno para modificar el estado |
+| No llama a `InputManager` ni `AudioManager` | Sin lógica de interacción |
+| No lee ni escribe ficheros | Toda la E/S es vía valores de retorno |
+| No modifica las superficies de entrada in situ | Todas las operaciones devuelven datos nuevos |
 
 ---
 
-## 5. Dependencies
+## 5. Dependencias
 
-| Library | Import | Used For |
+| Biblioteca | Importación | Se usa para |
 |---|---|---|
-| `numpy` | `import numpy as np` | Array representation, label arrays, feature vectors |
-| `cv2` (opencv-python) | `import cv2` | Threshold, morphology, connected components, watershed, contours |
-| `scipy.ndimage` | `from scipy.ndimage import label` | Connected component labeling (alternative to cv2) |
-| `skimage.feature` | `from skimage.feature import hog, local_binary_pattern` | HOG and LBP feature extraction |
-| `skimage.measure` | `from skimage.measure import regionprops` | Region properties (area, centroid, eccentricity) |
-| `pygame` | `import pygame` | Surface input/output |
+| `numpy` | `import numpy as np` | Representación en arreglo, arreglos de etiqueta, vectores de características |
+| `cv2` (opencv-python) | `import cv2` | Umbral, morfología, componentes conectados, watershed, contornos |
+| `scipy.ndimage` | `from scipy.ndimage import label` | Etiquetado de componentes conectados (alternativa a cv2) |
+| `skimage.feature` | `from skimage.feature import hog, local_binary_pattern` | Extracción de características HOG y LBP |
+| `skimage.measure` | `from skimage.measure import regionprops` | Propiedades de región (área, centroide, excentricidad) |
+| `pygame` | `import pygame` | Entrada/salida de superficies |
 
-**Students never import any of the above.**
+**Los estudiantes nunca importan nada de lo anterior.**
 
 ---
 
-## 6. Class Diagram
+## 6. Diagrama de clase
 
 ```
 VisionTools
 │
-├── [Threshold]
-│   ├── threshold_binary(surface, threshold) → Surface (mask)
+├── [Umbral]
+│   ├── threshold_binary(surface, threshold) → Surface (máscara)
 │   └── threshold_otsu(surface) → tuple[Surface, int]
 │
-├── [Morphology]
+├── [Morfología]
 │   ├── morphological_erode(surface, kernel_size) → Surface
 │   ├── morphological_dilate(surface, kernel_size) → Surface
 │   ├── morphological_open(surface, kernel_size) → Surface
 │   └── morphological_close(surface, kernel_size) → Surface
 │
-├── [Connected Components]
+├── [Componentes conectados]
 │   ├── connected_components(mask_surface) → ComponentResult
 │   └── filter_components_by_area(result, min_area, max_area) → ComponentResult
 │
-├── [Region Analysis]
+├── [Análisis de regiones]
 │   ├── analyze_regions(mask_surface) → list[RegionInfo]
 │   └── largest_region(mask_surface) → RegionInfo | None
 │
 ├── [Watershed]
-│   └── watershed_segment(surface) → Surface (labeled color overlay)
+│   └── watershed_segment(surface) → Surface (superposición de color etiquetada)
 │
-├── [Feature Extraction]
+├── [Extracción de características]
 │   ├── extract_features(surface, method) → np.ndarray
 │   ├── extract_hog(surface) → np.ndarray
 │   ├── extract_lbp(surface) → np.ndarray
 │   └── extract_color_histogram(surface, bins) → np.ndarray
 │
-├── [Bounding Boxes and Contours]
+├── [Cajas envolventes y contornos]
 │   ├── find_contours(mask_surface) → list[np.ndarray]
 │   └── bounding_boxes_from_mask(mask_surface) → list[pygame.Rect]
 │
-└── [Internal Utilities — private]
+└── [Utilidades internas — privadas]
     ├── _to_gray_array(surface) → np.ndarray
     ├── _to_binary_array(mask_surface) → np.ndarray
     ├── _label_array_to_color_surface(label_array) → Surface
@@ -167,254 +176,254 @@ VisionTools
     └── _validate_surface(surface) → None
 ```
 
-### 6.1 Return Type Definitions
+### 6.1 Definiciones de tipo de retorno
 
-#### `ComponentResult` (named tuple or dataclass)
+#### `ComponentResult` (named tuple o dataclass)
 
-| Field | Type | Description |
+| Campo | Tipo | Descripción |
 |---|---|---|
-| `label_array` | `np.ndarray` (`int32`, shape `(H, W)`) | Each pixel labeled with its component ID (0 = background) |
-| `num_components` | `int` | Total number of distinct connected components |
-| `component_sizes` | `dict[int, int]` | Mapping of label ID → pixel count |
-| `label_surface` | `pygame.Surface` | Color-coded surface for visual debugging |
+| `label_array` | `np.ndarray` (`int32`, forma `(H, W)`) | Cada píxel etiquetado con su ID de componente (0 = fondo) |
+| `num_components` | `int` | Número total de componentes conectados distintos |
+| `component_sizes` | `dict[int, int]` | Mapeo de ID de etiqueta → conteo de píxeles |
+| `label_surface` | `pygame.Surface` | Superficie coloreada por código, para depuración visual |
 
-#### `RegionInfo` (named tuple or dataclass)
+#### `RegionInfo` (named tuple o dataclass)
 
-| Field | Type | Description |
+| Campo | Tipo | Descripción |
 |---|---|---|
-| `label` | `int` | Component label ID |
-| `area` | `int` | Area in pixels |
-| `centroid` | `tuple[float, float]` | `(x, y)` centroid in pixel coordinates |
-| `bounding_rect` | `pygame.Rect` | Axis-aligned bounding box |
-| `eccentricity` | `float` | Shape eccentricity: 0 = circle, 1 = line |
-| `solidity` | `float` | Ratio of area to convex hull area |
-| `perimeter` | `float` | Perimeter in pixels |
+| `label` | `int` | ID de etiqueta del componente |
+| `area` | `int` | Área en píxeles |
+| `centroid` | `tuple[float, float]` | Centroide `(x, y)` en coordenadas de píxel |
+| `bounding_rect` | `pygame.Rect` | Caja envolvente alineada a los ejes |
+| `eccentricity` | `float` | Excentricidad de forma: 0 = círculo, 1 = línea |
+| `solidity` | `float` | Razón entre el área y el área de la envolvente convexa |
+| `perimeter` | `float` | Perímetro en píxeles |
 
 ---
 
-## 7. VisionTools Class
+## 7. Clase VisionTools
 
-### 7.1 Responsibilities
+### 7.1 Responsabilidades
 
-1. Accept `pygame.Surface` objects and return structured data.
-2. Convert surfaces to grayscale/binary arrays as needed by each operation.
-3. Apply the mathematical operation using the appropriate library.
-4. Return results as `pygame.Surface`, NumPy arrays, or documented data structures.
-5. Validate all inputs and raise descriptive exceptions.
+1. Aceptar objetos `pygame.Surface` y devolver datos estructurados.
+2. Convertir superficies a arreglos en escala de grises/binarios según necesite cada operación.
+3. Aplicar la operación matemática usando la biblioteca adecuada.
+4. Devolver los resultados como `pygame.Surface`, arreglos de NumPy, o estructuras de datos documentadas.
+5. Validar todas las entradas y lanzar excepciones descriptivas.
 
 ---
 
-## 8. Threshold Operations
+## 8. Operaciones de umbral
 
 ### 8.1 `VisionTools.threshold_binary(surface, threshold)`
 
-**Purpose:** Apply a fixed binary threshold to a grayscale representation of the surface. Every pixel with luminance ≥ `threshold` becomes white (255, 255, 255). Every pixel below becomes black (0, 0, 0). This separates the image into two classes and is the foundational operation of all binary image analysis.
+**Propósito:** aplica un umbral binario fijo a una representación en escala de grises de la superficie. Cada píxel con luminancia ≥ `threshold` se vuelve blanco (255, 255, 255). Cada píxel por debajo se vuelve negro (0, 0, 0). Esto separa la imagen en dos clases y es la operación fundacional de todo análisis de imagen binaria.
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Constraints | Description |
+| Parámetro | Tipo | Restricciones | Descripción |
 |---|---|---|---|
-| `surface` | `pygame.Surface` | RGB/RGBA, any size | Source surface |
-| `threshold` | `int` | `[0, 255]` | Intensity cutoff value |
+| `surface` | `pygame.Surface` | RGB/RGBA, cualquier tamaño | Superficie fuente |
+| `threshold` | `int` | `[0, 255]` | Valor de corte de intensidad |
 
-**Outputs:** New `pygame.Surface` of identical size. Binary: pixels are either pure white or pure black. RGB, no alpha.
+**Salidas:** nueva `pygame.Surface` de tamaño idéntico. Binaria: los píxeles son blanco puro o negro puro. RGB, sin alfa.
 
-**Internal Pipeline:**
+**Tubería interna:**
 ```
-surface → grayscale array (luminance formula: 0.299R + 0.587G + 0.114B)
+surface → arreglo en escala de grises (fórmula de luminancia: 0.299R + 0.587G + 0.114B)
        → cv2.threshold(arr, threshold, 255, cv2.THRESH_BINARY)
-       → binary uint8 array
-       → RGB surface (replicate grayscale across 3 channels)
+       → arreglo binario uint8
+       → superficie RGB (replica la escala de grises en los 3 canales)
 ```
 
-**Restrictions:**
+**Restricciones:**
 
-- `threshold` outside `[0, 255]` raises `ValueError`.
-- Output is always RGB binary (not grayscale single-channel).
-- Does not modify input.
+- `threshold` fuera de `[0, 255]` lanza `ValueError`.
+- La salida siempre es RGB binaria (no escala de grises de un solo canal).
+- No modifica la entrada.
 
-**Dependencies:** `numpy`, `opencv-python`
+**Dependencias:** `numpy`, `opencv-python`
 
-**Usage Example:**
+**Ejemplo de uso:**
 
 ```python
-from framework.processing.vision_tools import VisionTools
+from src.framework.processing.vision_tools import VisionTools
 
-# Segment a background layer — identify bright regions:
+# Segmentar una capa de fondo — identificar regiones brillantes:
 mask = VisionTools.threshold_binary(self.background_surface, threshold=128)
 
-# Count white pixels (bright regions):
+# Contar cajas de regiones brillantes:
 bright_boxes = VisionTools.bounding_boxes_from_mask(mask)
 if len(bright_boxes) > 3:
-    EventBus.emit("SHOW_MESSAGE", text="Many bright zones detected!", duration=2.0)
+    event_bus.emit("SHOW_MESSAGE", text="¡Se detectaron muchas zonas brillantes!", duration=2.0)
 ```
 
 ---
 
 ### 8.2 `VisionTools.threshold_otsu(surface)`
 
-**Purpose:** Apply Otsu's automatic thresholding method. Instead of requiring a manual threshold value, Otsu's method analyzes the histogram and finds the threshold that minimizes intra-class intensity variance (equivalently, maximizes inter-class variance). This demonstrates adaptive decision-making based on image statistics.
+**Propósito:** aplica el método de umbralización automática de Otsu. En vez de exigir un valor de umbral manual, el método de Otsu analiza el histograma y encuentra el umbral que minimiza la varianza de intensidad intra-clase (equivalentemente, maximiza la varianza inter-clase). Esto demuestra la toma de decisiones adaptativa basada en estadísticas de la imagen.
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Description |
+| Parámetro | Tipo | Descripción |
 |---|---|---|
-| `surface` | `pygame.Surface` | RGB/RGBA, any size |
+| `surface` | `pygame.Surface` | RGB/RGBA, cualquier tamaño |
 
-**Outputs:** A `tuple` of two values:
+**Salidas:** una `tuple` de dos valores:
 
-| Index | Type | Description |
+| Índice | Tipo | Descripción |
 |---|---|---|
-| `[0]` | `pygame.Surface` | Binary mask surface (same as `threshold_binary` output) |
-| `[1]` | `int` | The computed Otsu threshold value (for student documentation) |
+| `[0]` | `pygame.Surface` | Superficie de máscara binaria (igual que la salida de `threshold_binary`) |
+| `[1]` | `int` | El valor de umbral de Otsu calculado (para la documentación del estudiante) |
 
-**Internal Pipeline:**
+**Tubería interna:**
 ```
-surface → grayscale array
+surface → arreglo en escala de grises
        → cv2.threshold(arr, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-       → (binary_array, computed_threshold_value)
+       → (arreglo_binario, valor_de_umbral_calculado)
        → return (surface, int(threshold_value))
 ```
 
-**Restrictions:**
+**Restricciones:**
 
-- Requires the surface to have meaningful tonal variation. A uniform surface will produce an arbitrary threshold; a warning is logged.
-- Output surface is RGB binary.
-- Does not modify input.
+- Necesita que la superficie tenga variación tonal significativa. Una superficie uniforme producirá un umbral arbitrario; se registra un aviso.
+- La superficie de salida es RGB binaria.
+- No modifica la entrada.
 
-**Dependencies:** `numpy`, `opencv-python`
+**Dependencias:** `numpy`, `opencv-python`
 
-**Usage Example:**
+**Ejemplo de uso:**
 
 ```python
 mask, otsu_t = VisionTools.threshold_otsu(self.terrain_surface)
-print(f"Otsu threshold: {otsu_t}")  # For README documentation
+print(f"Umbral de Otsu: {otsu_t}")  # Para la documentación del README
 regions = VisionTools.analyze_regions(mask)
 ```
 
 ---
 
-## 9. Morphological Operations
+## 9. Operaciones morfológicas
 
-All morphological operations require a **binary mask surface** as input (output of `threshold_binary` or `threshold_otsu`). They use a square structuring element of size `kernel_size × kernel_size`.
+Todas las operaciones morfológicas necesitan una **superficie de máscara binaria** como entrada (salida de `threshold_binary` o `threshold_otsu`). Usan un elemento estructurante cuadrado de tamaño `kernel_size × kernel_size`.
 
 ### 9.1 `VisionTools.morphological_erode(surface, kernel_size)`
 
-**Purpose:** Apply morphological erosion to a binary mask. Erosion shrinks white regions by removing pixels on their boundaries. A pixel is kept white only if all pixels within the structuring element are also white. This removes small noise blobs and separates weakly connected regions.
+**Propósito:** aplica erosión morfológica a una máscara binaria. La erosión encoge las regiones blancas eliminando píxeles en sus bordes. Un píxel se conserva blanco sólo si todos los píxeles dentro del elemento estructurante también son blancos. Esto elimina pequeñas manchas de ruido y separa regiones débilmente conectadas.
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Constraints | Description |
+| Parámetro | Tipo | Restricciones | Descripción |
 |---|---|---|---|
-| `surface` | `pygame.Surface` | Binary mask (RGB or grayscale) | Source binary mask |
-| `kernel_size` | `int` | `≥ 1`, odd recommended | Side length of the square structuring element |
+| `surface` | `pygame.Surface` | Máscara binaria (RGB o escala de grises) | Máscara binaria fuente |
+| `kernel_size` | `int` | `≥ 1`, se recomienda impar | Longitud de lado del elemento estructurante cuadrado |
 
-**Outputs:** New `pygame.Surface` of identical size. Binary mask after erosion.
+**Salidas:** nueva `pygame.Surface` de tamaño idéntico. Máscara binaria tras la erosión.
 
-**Dependencies:** `opencv-python` (`cv2.erode`)
+**Dependencias:** `opencv-python` (`cv2.erode`)
 
-**Usage Example:**
+**Ejemplo de uso:**
 
 ```python
 mask = VisionTools.threshold_binary(bg_surface, 100)
 eroded = VisionTools.morphological_erode(mask, kernel_size=3)
-# Small isolated pixels removed from mask
+# Píxeles aislados pequeños eliminados de la máscara
 ```
 
 ---
 
 ### 9.2 `VisionTools.morphological_dilate(surface, kernel_size)`
 
-**Purpose:** Apply morphological dilation to a binary mask. Dilation grows white regions by adding pixels to their boundaries. A pixel becomes white if any pixel within the structuring element is white. This fills small holes and connects nearby regions.
+**Propósito:** aplica dilatación morfológica a una máscara binaria. La dilatación hace crecer las regiones blancas añadiendo píxeles a sus bordes. Un píxel se vuelve blanco si cualquier píxel dentro del elemento estructurante es blanco. Esto rellena pequeños huecos y conecta regiones cercanas.
 
-**Inputs/Outputs:** Same structure as `morphological_erode`.
+**Entradas/Salidas:** misma estructura que `morphological_erode`.
 
-**Dependencies:** `opencv-python` (`cv2.dilate`)
+**Dependencias:** `opencv-python` (`cv2.dilate`)
 
 ---
 
 ### 9.3 `VisionTools.morphological_open(surface, kernel_size)`
 
-**Purpose:** Apply morphological opening (erosion followed by dilation). Opening removes small objects while preserving the shape and size of larger objects. Useful for noise removal in binary masks.
+**Propósito:** aplica apertura morfológica (erosión seguida de dilatación). La apertura elimina objetos pequeños preservando la forma y el tamaño de los objetos más grandes. Útil para eliminar ruido en máscaras binarias.
 
-**Mathematical definition:** `open(A, B) = dilate(erode(A, B), B)`
+**Definición matemática:** `open(A, B) = dilate(erode(A, B), B)`
 
-**Inputs/Outputs:** Same structure as `morphological_erode`.
+**Entradas/Salidas:** misma estructura que `morphological_erode`.
 
-**Dependencies:** `opencv-python` (`cv2.MORPH_OPEN`)
+**Dependencias:** `opencv-python` (`cv2.MORPH_OPEN`)
 
 ---
 
 ### 9.4 `VisionTools.morphological_close(surface, kernel_size)`
 
-**Purpose:** Apply morphological closing (dilation followed by erosion). Closing fills small holes within regions and connects nearby regions while preserving the overall size of objects.
+**Propósito:** aplica cierre morfológico (dilatación seguida de erosión). El cierre rellena pequeños huecos dentro de las regiones y conecta regiones cercanas preservando el tamaño general de los objetos.
 
-**Mathematical definition:** `close(A, B) = erode(dilate(A, B), B)`
+**Definición matemática:** `close(A, B) = erode(dilate(A, B), B)`
 
-**Inputs/Outputs:** Same structure as `morphological_erode`.
+**Entradas/Salidas:** misma estructura que `morphological_erode`.
 
-**Dependencies:** `opencv-python` (`cv2.MORPH_CLOSE`)
+**Dependencias:** `opencv-python` (`cv2.MORPH_CLOSE`)
 
 ---
 
-### 9.5 Morphological Operations — Performance Table
+### 9.5 Operaciones morfológicas — tabla de rendimiento
 
-| Operation | Kernel 3×3 | Kernel 7×7 | Kernel 15×15 |
+| Operación | Kernel 3×3 | Kernel 7×7 | Kernel 15×15 |
 |---|---|---|---|
-| Erode | < 0.5ms | < 1ms | ~2ms |
-| Dilate | < 0.5ms | < 1ms | ~2ms |
-| Open | < 1ms | ~2ms | ~4ms |
-| Close | < 1ms | ~2ms | ~4ms |
+| Erosión | < 0.5ms | < 1ms | ~2ms |
+| Dilatación | < 0.5ms | < 1ms | ~2ms |
+| Apertura | < 1ms | ~2ms | ~4ms |
+| Cierre | < 1ms | ~2ms | ~4ms |
 
-All timings for a 320×224 surface.
+Todos los tiempos son para una superficie de 320×224.
 
 ---
 
-## 10. Connected Components
+## 10. Componentes conectados
 
 ### 10.1 `VisionTools.connected_components(mask_surface)`
 
-**Purpose:** Label all connected regions in a binary mask. Each distinct connected group of white pixels receives a unique integer label. The background (black pixels) is always label 0. This is the foundational operation for identifying distinct objects in a segmented image.
+**Propósito:** etiqueta todas las regiones conectadas en una máscara binaria. Cada grupo conectado distinto de píxeles blancos recibe una etiqueta entera única. El fondo (píxeles negros) siempre es la etiqueta 0. Es la operación fundacional para identificar objetos distintos en una imagen segmentada.
 
-**Connectivity:** 8-connected (diagonal neighbors are connected).
+**Conectividad:** 8-conectada (los vecinos diagonales están conectados).
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Description |
+| Parámetro | Tipo | Descripción |
 |---|---|---|
-| `mask_surface` | `pygame.Surface` | Binary mask (output of threshold or morphology operation) |
+| `mask_surface` | `pygame.Surface` | Máscara binaria (salida de una operación de umbral o morfología) |
 
-**Outputs:** `ComponentResult` (see Section 6.1):
-- `label_array`: `np.ndarray int32` shape `(H, W)` — each pixel holds its component label
-- `num_components`: total distinct foreground components
-- `component_sizes`: `{label_id: pixel_count}` for all labels
-- `label_surface`: color-coded surface for visual debugging (each component a different color)
+**Salidas:** `ComponentResult` (ver Sección 6.1):
+- `label_array`: `np.ndarray int32` de forma `(H, W)` — cada píxel contiene su etiqueta de componente
+- `num_components`: total de componentes de primer plano distintos
+- `component_sizes`: `{label_id: conteo_de_píxeles}` para todas las etiquetas
+- `label_surface`: superficie coloreada por código, para depuración visual (cada componente de un color distinto)
 
-**Internal Pipeline:**
+**Tubería interna:**
 ```
-mask_surface → binary uint8 grayscale array
+mask_surface → arreglo binario uint8 en escala de grises
              → cv2.connectedComponentsWithStats(arr, connectivity=8)
              → (num_labels, label_array, stats, centroids)
-             → build ComponentResult
-             → generate color-coded label_surface
+             → construir ComponentResult
+             → generar label_surface coloreada por código
 ```
 
-**Restrictions:**
+**Restricciones:**
 
-- Input must be a binary surface (white/black). A warning is issued if non-binary values are detected.
-- Maximum supported components: 32,767 (OpenCV limit).
-- Does not modify input.
+- La entrada debe ser una superficie binaria (blanco/negro). Se emite un aviso si se detectan valores no binarios.
+- Máximo de componentes soportados: 32.767 (límite de OpenCV).
+- No modifica la entrada.
 
-**Dependencies:** `numpy`, `opencv-python`
+**Dependencias:** `numpy`, `opencv-python`
 
-**Usage Example:**
+**Ejemplo de uso:**
 
 ```python
 mask = VisionTools.threshold_binary(self.ground_surface, 140)
 result = VisionTools.connected_components(mask)
 
-print(f"Found {result.num_components} regions")
-# Visual debug:
+print(f"Se encontraron {result.num_components} regiones")
+# Depuración visual:
 surface.blit(result.label_surface, (0, 0))
 ```
 
@@ -422,64 +431,64 @@ surface.blit(result.label_surface, (0, 0))
 
 ### 10.2 `VisionTools.filter_components_by_area(result, min_area, max_area)`
 
-**Purpose:** Filter a `ComponentResult` to retain only components whose pixel area falls within `[min_area, max_area]`. Returns a new `ComponentResult` with only the qualifying components, and a new `label_surface` reflecting the filter.
+**Propósito:** filtra un `ComponentResult` para conservar sólo los componentes cuya área en píxeles cae dentro de `[min_area, max_area]`. Devuelve un nuevo `ComponentResult` con sólo los componentes que califican, y una nueva `label_surface` que refleja el filtro.
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Constraints | Description |
+| Parámetro | Tipo | Restricciones | Descripción |
 |---|---|---|---|
-| `result` | `ComponentResult` | From `connected_components()` | Input result to filter |
-| `min_area` | `int` | `≥ 0` | Minimum component area in pixels |
-| `max_area` | `int` | `> min_area` | Maximum component area in pixels |
+| `result` | `ComponentResult` | De `connected_components()` | Resultado de entrada a filtrar |
+| `min_area` | `int` | `≥ 0` | Área mínima de componente en píxeles |
+| `max_area` | `int` | `> min_area` | Área máxima de componente en píxeles |
 
-**Outputs:** New `ComponentResult` with only qualifying components. Labels are **not renumbered** — the original label IDs are preserved to allow cross-referencing with the original `label_array`.
+**Salidas:** nuevo `ComponentResult` sólo con los componentes que califican. Las etiquetas **no se renumeran** — se preservan los ID de etiqueta originales para permitir referencia cruzada con el `label_array` original.
 
-**Usage Example:**
+**Ejemplo de uso:**
 
 ```python
 result = VisionTools.connected_components(mask)
-# Keep only medium-sized regions (not noise, not background):
+# Conservar sólo regiones de tamaño medio (ni ruido ni fondo):
 filtered = VisionTools.filter_components_by_area(result, min_area=50, max_area=2000)
 ```
 
 ---
 
-## 11. Region Analysis
+## 11. Análisis de regiones
 
 ### 11.1 `VisionTools.analyze_regions(mask_surface)`
 
-**Purpose:** Extract quantitative properties from each connected region in a binary mask. Returns a list of `RegionInfo` objects, one per foreground component, sorted by area (largest first). This is the bridge between a visual mask and numerical data that can drive game logic.
+**Propósito:** extrae propiedades cuantitativas de cada región conectada en una máscara binaria. Devuelve una lista de objetos `RegionInfo`, uno por componente de primer plano, ordenados por área (la más grande primero). Es el puente entre una máscara visual y datos numéricos que pueden dirigir la lógica del juego.
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Description |
+| Parámetro | Tipo | Descripción |
 |---|---|---|
-| `mask_surface` | `pygame.Surface` | Binary mask surface |
+| `mask_surface` | `pygame.Surface` | Superficie de máscara binaria |
 
-**Outputs:** `list[RegionInfo]`, sorted by area descending. Empty list if no foreground regions found.
+**Salidas:** `list[RegionInfo]`, ordenada por área descendente. Lista vacía si no se encuentran regiones de primer plano.
 
-**`RegionInfo` fields** (see Section 6.1 for full definition):
+**Campos de `RegionInfo`** (ver Sección 6.1 para la definición completa):
 - `label`, `area`, `centroid`, `bounding_rect`, `eccentricity`, `solidity`, `perimeter`
 
-**Internal Pipeline:**
+**Tubería interna:**
 ```
-mask_surface → binary array → cv2.connectedComponentsWithStats
-            → skimage.measure.regionprops (for eccentricity, solidity, perimeter)
-            → build list[RegionInfo]
-            → sort by area descending
+mask_surface → arreglo binario → cv2.connectedComponentsWithStats
+            → skimage.measure.regionprops (para excentricidad, solidez, perímetro)
+            → construir list[RegionInfo]
+            → ordenar por área descendente
 ```
 
-**Dependencies:** `numpy`, `opencv-python`, `scikit-image` (`skimage.measure.regionprops`)
+**Dependencias:** `numpy`, `opencv-python`, `scikit-image` (`skimage.measure.regionprops`)
 
-**Usage Example:**
+**Ejemplo de uso:**
 
 ```python
 regions = VisionTools.analyze_regions(mask)
 
 for region in regions:
-    print(f"Area: {region.area}, Centroid: {region.centroid}")
+    print(f"Área: {region.area}, Centroide: {region.centroid}")
 
-    # Spawn an entity at each large region centroid:
+    # Generar una entidad en el centroide de cada región grande:
     if region.area > 500:
         cx, cy = int(region.centroid[0]), int(region.centroid[1])
         spawn_position = pygame.Vector2(cx, cy)
@@ -491,11 +500,11 @@ for region in regions:
 
 ### 11.2 `VisionTools.largest_region(mask_surface)`
 
-**Purpose:** Convenience method. Returns the `RegionInfo` for the single largest connected region in the mask, or `None` if no foreground regions exist.
+**Propósito:** método de conveniencia. Devuelve el `RegionInfo` de la única región conectada más grande en la máscara, o `None` si no existen regiones de primer plano.
 
-**Inputs/Outputs:** Same as `analyze_regions` but returns a single `RegionInfo` or `None`.
+**Entradas/Salidas:** igual que `analyze_regions` pero devuelve un único `RegionInfo` o `None`.
 
-**Usage Example:**
+**Ejemplo de uso:**
 
 ```python
 largest = VisionTools.largest_region(mask)
@@ -506,197 +515,197 @@ if largest:
 
 ---
 
-## 12. Watershed Segmentation
+## 12. Segmentación watershed
 
 ### 12.1 `VisionTools.watershed_segment(surface)`
 
-**Purpose:** Apply watershed segmentation to identify distinct regions separated by ridge lines. The watershed algorithm treats the image as a topographic surface (intensity = elevation) and floods it from marked minima. The ridgelines between flooding fronts form the segment boundaries.
+**Propósito:** aplica segmentación watershed para identificar regiones distintas separadas por líneas de cresta. El algoritmo watershed trata la imagen como una superficie topográfica (intensidad = elevación) y la inunda desde mínimos marcados. Las líneas de cresta entre los frentes de inundación forman los bordes de segmento.
 
-This operation produces a richer segmentation than binary thresholding — it can separate touching or overlapping regions that thresholding would merge.
+Esta operación produce una segmentación más rica que la umbralización binaria — puede separar regiones que se tocan o se superponen y que la umbralización fusionaría.
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Description |
+| Parámetro | Tipo | Descripción |
 |---|---|---|
-| `surface` | `pygame.Surface` | Source surface (RGB/RGBA, any size) |
+| `surface` | `pygame.Surface` | Superficie fuente (RGB/RGBA, cualquier tamaño) |
 
-**Outputs:** New `pygame.Surface` of identical size. A color-coded label overlay where each segment is filled with a unique color. This is intended for **visual display** — not for further binary processing.
+**Salidas:** nueva `pygame.Surface` de tamaño idéntico. Una superposición de etiquetas coloreada por código donde cada segmento se rellena con un color único. Está pensada para **visualización** — no para procesamiento binario posterior.
 
-Additionally, returns a tuple: `(label_surface, label_array)` where `label_array` is the `np.ndarray int32` of component labels.
+Además, devuelve una tupla: `(label_surface, label_array)` donde `label_array` es el `np.ndarray int32` de etiquetas de componente.
 
-**Internal Pipeline:**
+**Tubería interna:**
 ```
-surface → grayscale → blur (Gaussian, sigma=1.0 internal)
-        → distance transform (cv2.distanceTransform)
-        → sure foreground mask (threshold at 70% of max distance)
-        → unknown region (dilate - sure_fg)
-        → connected components on sure_fg → markers
-        → cv2.watershed(original_bgr, markers)
-        → color-code each label → return label_surface
+surface → escala de grises → desenfoque (gaussiano, sigma=1.0 interno)
+        → transformada de distancia (cv2.distanceTransform)
+        → máscara de primer plano seguro (umbral al 70% de la distancia máxima)
+        → región desconocida (dilate - sure_fg)
+        → componentes conectados sobre sure_fg → marcadores
+        → cv2.watershed(original_bgr, marcadores)
+        → colorear cada etiqueta → devolver label_surface
 ```
 
-**Restrictions:**
+**Restricciones:**
 
-- Watershed is computationally expensive. Use on sub-surfaces or at reduced frequency (every 10+ frames).
-- Output `label_surface` uses 8 distinct hue-separated colors for label visualization. If more than 8 segments exist, colors repeat.
-- Does not modify input.
+- Watershed es computacionalmente costoso. Usar en subsuperficies o a frecuencia reducida (cada 10+ fotogramas).
+- La `label_surface` de salida usa 8 colores de tono distinto para visualizar las etiquetas. Si existen más de 8 segmentos, los colores se repiten.
+- No modifica la entrada.
 
-**Dependencies:** `numpy`, `opencv-python`
+**Dependencias:** `numpy`, `opencv-python`
 
-**Performance:** ~8–15ms for a 320×224 surface. Must be frame-throttled or pre-computed.
+**Rendimiento:** ~8–15ms para una superficie de 320×224. Debe limitarse por fotograma o precalcularse.
 
-**Usage Example:**
+**Ejemplo de uso:**
 
 ```python
-# Pre-compute at stage load:
+# Precalcular al cargar el escenario:
 label_surface, label_array = VisionTools.watershed_segment(self.background_surface)
 self.segment_overlay = label_surface
 self.segment_overlay.set_alpha(120)
 
-# Draw every frame (no per-frame recompute):
+# Dibujar cada fotograma (sin recalcular por fotograma):
 surface.blit(self.segment_overlay, (0, 0))
 ```
 
 ---
 
-## 13. Feature Extraction
+## 13. Extracción de características
 
-Feature extraction converts a surface region into a compact numerical vector (the "feature vector") that can be used as input to a classifier in Unit IX.
+La extracción de características convierte una región de superficie en un vector numérico compacto (el "vector de características") que se puede usar como entrada de un clasificador en la Unidad IX.
 
 ### 13.1 `VisionTools.extract_features(surface, method='hog')`
 
-**Purpose:** Compute a feature vector from a surface using the specified method. This is the primary integration point between VisionTools (Unit VIII) and PatternRecognitionTools (Unit IX).
+**Propósito:** calcula un vector de características de una superficie usando el método especificado. Es el punto de integración principal entre VisionTools (Unidad VIII) y PatternRecognitionTools (Unidad IX).
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Constraints | Description |
+| Parámetro | Tipo | Restricciones | Descripción |
 |---|---|---|---|
-| `surface` | `pygame.Surface` | RGB/RGBA, any size | Source surface |
-| `method` | `str` | `'hog'`, `'lbp'`, `'color_hist'`, `'combined'` | Feature extraction method |
+| `surface` | `pygame.Surface` | RGB/RGBA, cualquier tamaño | Superficie fuente |
+| `method` | `str` | `'hog'`, `'lbp'`, `'color_hist'`, `'combined'` | Método de extracción de características |
 
-**Outputs:** `np.ndarray` of shape `(n,)` — a 1D feature vector. Length `n` depends on method.
+**Salidas:** `np.ndarray` de forma `(n,)` — un vector de características 1D. La longitud `n` depende del método.
 
-| Method | Output Length | Description |
+| Método | Longitud de salida | Descripción |
 |---|---|---|
-| `'hog'` | Variable (depends on surface size and HOG parameters) | Histogram of Oriented Gradients |
-| `'lbp'` | 256 | Local Binary Pattern histogram |
-| `'color_hist'` | `bins * 3` (default: 256 × 3 = 768) | Per-channel color histogram |
-| `'combined'` | HOG + LBP + color_hist concatenated | All features combined |
+| `'hog'` | Variable (depende del tamaño de superficie y los parámetros de HOG) | Histograma de gradientes orientados |
+| `'lbp'` | 256 | Histograma de patrones binarios locales |
+| `'color_hist'` | `bins * 3` (por defecto: 256 × 3 = 768) | Histograma de color por canal |
+| `'combined'` | HOG + LBP + color_hist concatenados | Todas las características combinadas |
 
-**Restrictions:**
+**Restricciones:**
 
-- Surface should be at minimum 8×8 pixels for HOG to produce meaningful features.
-- Surface is internally resized to a canonical size (32×32) before feature extraction to ensure consistent vector length regardless of input size. This resizing is internal and does not affect the input surface.
-- Does not modify input.
+- La superficie debe ser de al menos 8×8 píxeles para que HOG produzca características significativas.
+- La superficie se redimensiona internamente a un tamaño canónico (32×32) antes de la extracción, para garantizar una longitud de vector consistente sin importar el tamaño de entrada. Este redimensionado es interno y no afecta a la superficie de entrada.
+- No modifica la entrada.
 
-**Dependencies:** `numpy`, `scikit-image` (`hog`, `local_binary_pattern`), `opencv-python` (resizing)
+**Dependencias:** `numpy`, `scikit-image` (`hog`, `local_binary_pattern`), `opencv-python` (redimensionado)
 
-**Usage Example:**
+**Ejemplo de uso:**
 
 ```python
-# Extract HOG features from a 32×32 region around the player:
+# Extraer características HOG de una región de 32×32 alrededor del jugador:
 player_region = screen_surface.subsurface(pygame.Rect(
     player.rect.centerx - 16,
     player.rect.centery - 16,
     32, 32
 ))
 features = VisionTools.extract_features(player_region, method='hog')
-# features is now ready for PatternRecognitionTools.classify()
+# features ya está listo para PatternRecognitionTools.classify()
 ```
 
 ---
 
 ### 13.2 `VisionTools.extract_hog(surface)`
 
-**Purpose:** Extract Histogram of Oriented Gradients (HOG) features. HOG captures the distribution of local gradient orientations — a shape descriptor that is robust to changes in illumination and small geometric distortions.
+**Propósito:** extrae características de Histograma de Gradientes Orientados (HOG). HOG captura la distribución de orientaciones de gradiente locales — un descriptor de forma robusto a cambios de iluminación y pequeñas distorsiones geométricas.
 
-**HOG Parameters (fixed for consistency across all stages):**
+**Parámetros de HOG (fijos para consistencia entre todos los escenarios):**
 
-| Parameter | Value |
+| Parámetro | Valor |
 |---|---|
-| Orientations | 8 |
-| Pixels per cell | 8×8 |
-| Cells per block | 2×2 |
-| Block normalization | L2-Hys |
-| Input size (canonical) | 32×32 |
+| Orientaciones | 8 |
+| Píxeles por celda | 8×8 |
+| Celdas por bloque | 2×2 |
+| Normalización de bloque | L2-Hys |
+| Tamaño de entrada (canónico) | 32×32 |
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Description |
+| Parámetro | Tipo | Descripción |
 |---|---|---|
-| `surface` | `pygame.Surface` | Source surface (internally resized to 32×32) |
+| `surface` | `pygame.Surface` | Superficie fuente (redimensionada internamente a 32×32) |
 
-**Outputs:** `np.ndarray` of shape `(n,)`. For 32×32 canonical size: `n = 4 * 4 * 2 * 2 * 8 = 512` dimensions.
+**Salidas:** `np.ndarray` de forma `(n,)`. Para el tamaño canónico 32×32: `n = 4 * 4 * 2 * 2 * 8 = 512` dimensiones.
 
-**Dependencies:** `scikit-image` (`skimage.feature.hog`), `opencv-python` (resize)
+**Dependencias:** `scikit-image` (`skimage.feature.hog`), `opencv-python` (redimensionado)
 
 ---
 
 ### 13.3 `VisionTools.extract_lbp(surface)`
 
-**Purpose:** Extract Local Binary Pattern (LBP) histogram. LBP describes texture by comparing each pixel to its 8 neighbors and encoding the pattern as a binary number. The histogram of all LBP codes describes the texture character of the region.
+**Propósito:** extrae el histograma de Patrones Binarios Locales (LBP). LBP describe la textura comparando cada píxel con sus 8 vecinos y codificando el patrón como un número binario. El histograma de todos los códigos LBP describe el carácter de textura de la región.
 
-**LBP Parameters:**
+**Parámetros de LBP:**
 
-| Parameter | Value |
+| Parámetro | Valor |
 |---|---|
-| Radius | 1 |
-| Number of neighbors | 8 |
-| Method | `'uniform'` (26 uniform patterns + 1 non-uniform = 27 bins) |
-| Output | 256-bin histogram (standard bins for `uniform` with radius 1, n_points 8) |
+| Radio | 1 |
+| Número de vecinos | 8 |
+| Método | `'uniform'` (26 patrones uniformes + 1 no uniforme = 27 bins) |
+| Salida | Histograma de 256 bins (bins estándar para `uniform` con radio 1, n_points 8) |
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Description |
+| Parámetro | Tipo | Descripción |
 |---|---|---|
-| `surface` | `pygame.Surface` | Source surface (internally resized to 32×32) |
+| `surface` | `pygame.Surface` | Superficie fuente (redimensionada internamente a 32×32) |
 
-**Outputs:** `np.ndarray` of shape `(256,)` — normalized histogram (sum = 1.0).
+**Salidas:** `np.ndarray` de forma `(256,)` — histograma normalizado (suma = 1.0).
 
-**Dependencies:** `scikit-image` (`skimage.feature.local_binary_pattern`), `numpy`
+**Dependencias:** `scikit-image` (`skimage.feature.local_binary_pattern`), `numpy`
 
 ---
 
 ### 13.4 `VisionTools.extract_color_histogram(surface, bins=256)`
 
-**Purpose:** Extract a concatenated per-channel color histogram. Computes the frequency distribution of intensity values for each R, G, B channel separately and concatenates them into a single vector. This descriptor captures the overall color distribution of the region.
+**Propósito:** extrae un histograma de color por canal concatenado. Calcula la distribución de frecuencia de los valores de intensidad para cada canal R, G, B por separado y los concatena en un único vector. Este descriptor captura la distribución de color general de la región.
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Constraints | Description |
+| Parámetro | Tipo | Restricciones | Descripción |
 |---|---|---|---|
-| `surface` | `pygame.Surface` | RGB/RGBA | Source surface |
-| `bins` | `int` | `[4, 256]` | Number of histogram bins per channel |
+| `surface` | `pygame.Surface` | RGB/RGBA | Superficie fuente |
+| `bins` | `int` | `[4, 256]` | Número de bins de histograma por canal |
 
-**Outputs:** `np.ndarray` of shape `(bins * 3,)` — normalized (sum per channel = 1.0).
+**Salidas:** `np.ndarray` de forma `(bins * 3,)` — normalizado (suma por canal = 1.0).
 
-**Dependencies:** `numpy`
+**Dependencias:** `numpy`
 
 ---
 
-## 14. Bounding Boxes and Contours
+## 14. Cajas envolventes y contornos
 
 ### 14.1 `VisionTools.find_contours(mask_surface)`
 
-**Purpose:** Find the boundaries of all foreground regions in a binary mask. Returns the contours as a list of NumPy arrays, where each array contains the (x, y) pixel coordinates of the contour points of one region.
+**Propósito:** encuentra los bordes de todas las regiones de primer plano en una máscara binaria. Devuelve los contornos como una lista de arreglos de NumPy, donde cada arreglo contiene las coordenadas de píxel (x, y) de los puntos de contorno de una región.
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Description |
+| Parámetro | Tipo | Descripción |
 |---|---|---|
-| `mask_surface` | `pygame.Surface` | Binary mask surface |
+| `mask_surface` | `pygame.Surface` | Superficie de máscara binaria |
 
-**Outputs:** `list[np.ndarray]` — each element is an array of shape `(N, 1, 2)` in OpenCV contour format, representing the (x, y) coordinates of contour points.
+**Salidas:** `list[np.ndarray]` — cada elemento es un arreglo de forma `(N, 1, 2)` en formato de contorno de OpenCV, que representa las coordenadas (x, y) de los puntos de contorno.
 
-**Dependencies:** `opencv-python` (`cv2.findContours`)
+**Dependencias:** `opencv-python` (`cv2.findContours`)
 
-**Usage Example:**
+**Ejemplo de uso:**
 
 ```python
 mask = VisionTools.threshold_binary(self.terrain_surface, 120)
 contours = VisionTools.find_contours(mask)
 
-# Draw all contours on the surface:
+# Dibujar todos los contornos en la superficie:
 for contour in contours:
     for point in contour:
         x, y = point[0]
@@ -707,179 +716,160 @@ for contour in contours:
 
 ### 14.2 `VisionTools.bounding_boxes_from_mask(mask_surface)`
 
-**Purpose:** Extract a list of `pygame.Rect` bounding boxes, one per connected foreground region in the mask. This converts the geometric output of segmentation directly into Pygame-compatible collision/render rectangles.
+**Propósito:** extrae una lista de cajas envolventes `pygame.Rect`, una por región de primer plano conectada en la máscara. Esto convierte la salida geométrica de la segmentación directamente en rectángulos compatibles con colisión/renderizado de Pygame.
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Description |
+| Parámetro | Tipo | Descripción |
 |---|---|---|
-| `mask_surface` | `pygame.Surface` | Binary mask surface |
+| `mask_surface` | `pygame.Surface` | Superficie de máscara binaria |
 
-**Outputs:** `list[pygame.Rect]`, one per foreground region. Rects are in pixel coordinates matching the mask_surface dimensions.
+**Salidas:** `list[pygame.Rect]`, uno por región de primer plano. Los rects están en coordenadas de píxel que coinciden con las dimensiones de mask_surface.
 
-**Dependencies:** `numpy`, `opencv-python`
+**Dependencias:** `numpy`, `opencv-python`
 
-**Usage Example:**
+**Ejemplo de uso:**
 
 ```python
 mask = VisionTools.threshold_binary(screen_copy, 150)
 boxes = VisionTools.bounding_boxes_from_mask(mask)
 
-# Draw debug boxes:
+# Dibujar cajas de depuración:
 for rect in boxes:
     pygame.draw.rect(surface, (0, 255, 0), rect, 1)
 
-# Use as trigger zones:
+# Usar como zonas de disparo:
 for box in boxes:
     if box.colliderect(player.rect):
-        EventBus.emit("SHOW_MESSAGE", text="Region contact!", duration=1.0)
+        event_bus.emit("SHOW_MESSAGE", text="¡Contacto con la región!", duration=1.0)
 ```
 
 ---
 
-## 15. Image Validation
+## 15. Validación de imagen
 
-### `_validate_surface(surface)` — Internal
+### `_validate_surface(surface)` — interno
 
-| Check | Exception |
+| Comprobación | Excepción |
 |---|---|
-| `None` input | `TypeError("VisionTools: surface cannot be None")` |
-| Not `pygame.Surface` | `TypeError(f"VisionTools: expected pygame.Surface, got {type(surface)}")` |
-| Zero dimensions | `ValueError("VisionTools: surface has zero dimensions")` |
+| Entrada `None` | `TypeError("VisionTools: surface cannot be None")` |
+| No es `pygame.Surface` | `TypeError(f"VisionTools: expected pygame.Surface, got {type(surface)}")` |
+| Dimensiones cero | `ValueError("VisionTools: surface has zero dimensions")` |
 
-### `_validate_mask(surface)` — Internal
+### `_validate_mask(surface)` — interno
 
-Additional check for methods requiring a binary mask:
+Comprobación adicional para métodos que necesitan una máscara binaria:
 
-| Check | Action |
+| Comprobación | Acción |
 |---|---|
-| Pixel values not in {0, 255} | Warning logged; operation continues (non-binary input is processed but results may be unexpected) |
+| Valores de píxel fuera de {0, 255} | Se registra un aviso; la operación continúa (la entrada no binaria se procesa pero los resultados pueden ser inesperados) |
 
 ---
 
-## 16. Performance Constraints
+## 16. Restricciones de rendimiento
 
-| Operation | 320×224 Surface | Recommendation |
+| Operación | Superficie 320×224 | Recomendación |
 |---|---|---|
-| `threshold_binary` | < 0.5ms | Safe every frame |
-| `threshold_otsu` | < 1ms | Safe every frame |
-| `morphological_erode/dilate` (k=3) | < 0.5ms | Safe every frame |
-| `morphological_open/close` (k=3) | < 1ms | Safe every frame |
-| `connected_components` | ~1.5ms | Every 3 frames |
-| `analyze_regions` | ~2ms | Every 5 frames |
-| `watershed_segment` | ~12ms | Every 15 frames or pre-compute |
-| `extract_hog` (32×32 canonical) | < 1ms | Safe every frame |
-| `extract_lbp` (32×32 canonical) | < 0.5ms | Safe every frame |
-| `find_contours` | < 1ms | Every 3 frames |
-| `bounding_boxes_from_mask` | < 0.5ms | Safe every frame |
+| `threshold_binary` | < 0.5ms | Seguro cada fotograma |
+| `threshold_otsu` | < 1ms | Seguro cada fotograma |
+| `morphological_erode/dilate` (k=3) | < 0.5ms | Seguro cada fotograma |
+| `morphological_open/close` (k=3) | < 1ms | Seguro cada fotograma |
+| `connected_components` | ~1.5ms | Cada 3 fotogramas |
+| `analyze_regions` | ~2ms | Cada 5 fotogramas |
+| `watershed_segment` | ~12ms | Cada 15 fotogramas o precalculado |
+| `extract_hog` (canónico 32×32) | < 1ms | Seguro cada fotograma |
+| `extract_lbp` (canónico 32×32) | < 0.5ms | Seguro cada fotograma |
+| `find_contours` | < 1ms | Cada 3 fotogramas |
+| `bounding_boxes_from_mask` | < 0.5ms | Seguro cada fotograma |
 
 ---
 
-## 17. Unit VIII Mapping
+## 17. Correspondencia con la Unidad VIII
 
-| Unit VIII Topic | VisionTools Method | Observable In-Game |
+| Tema de la Unidad VIII | Método de VisionTools | Observable en el juego |
 |---|---|---|
-| Binary Threshold | `threshold_binary()` | Binary mask drives entity spawn or trigger zones |
-| Otsu's Method | `threshold_otsu()` | Adaptive threshold — student logs computed value |
-| Morphological Erosion | `morphological_erode()` | Noise removal from mask |
-| Morphological Dilation | `morphological_dilate()` | Gap filling in mask |
-| Opening | `morphological_open()` | Artifact removal |
-| Closing | `morphological_close()` | Hole filling |
-| Connected Components | `connected_components()` | Label and count distinct regions |
-| Region Analysis | `analyze_regions()` | Centroid, area, shape metrics per region |
-| Watershed | `watershed_segment()` | Multi-region color-coded overlay |
-| Feature Extraction | `extract_features()` | Feature vector ready for classification |
+| Umbral binario | `threshold_binary()` | La máscara binaria dirige la generación de entidades o zonas de disparo |
+| Método de Otsu | `threshold_otsu()` | Umbral adaptativo — el estudiante registra el valor calculado |
+| Erosión morfológica | `morphological_erode()` | Eliminación de ruido de la máscara |
+| Dilatación morfológica | `morphological_dilate()` | Relleno de huecos en la máscara |
+| Apertura | `morphological_open()` | Eliminación de artefactos |
+| Cierre | `morphological_close()` | Relleno de huecos |
+| Componentes conectados | `connected_components()` | Etiquetar y contar regiones distintas |
+| Análisis de regiones | `analyze_regions()` | Centroide, área, métricas de forma por región |
+| Watershed | `watershed_segment()` | Superposición multi-región coloreada por código |
+| Extracción de características | `extract_features()` | Vector de características listo para clasificación |
 
 ---
 
-## 18. Assessment Mapping
+## 18. Correspondencia con la evaluación
 
-| Assessment | Unit | Required VisionTools Usage | Evidence |
+| Evaluación | Unidad | Uso requerido de VisionTools | Evidencia |
 |---|---|---|---|
-| Practical Exam II | VIII | Student applies threshold + morphology + region analysis | Running demo + README |
-| Stage 2 Deliverable | VIII | At least one segmentation result drives game behavior | Code review + oral |
-| Stage 3 Deliverable | VIII+IX | Feature extraction feeds classifier | Pipeline demonstrated live |
-| Final Presentation | VIII | Student explains Otsu's method mathematically | Oral + demo |
+| Examen práctico II | VIII | El estudiante aplica umbral + morfología + análisis de regiones | Demo en marcha + README |
+| Entrega de Escenario 2 | VIII | Al menos un resultado de segmentación dirige el comportamiento del juego | Revisión de código + oral |
+| Entrega de Escenario 3 | VIII+IX | La extracción de características alimenta un clasificador | Tubería demostrada en vivo |
+| Presentación final | VIII | El estudiante explica matemáticamente el método de Otsu | Oral + demo |
 
 ---
 
-## 19. Professor Deliverables
+## 19. Entregables del profesorado
 
-1. **`framework/processing/vision_tools.py`** — Complete, documented, tested implementation.
-2. **`tests/test_vision_tools.py`** — Unit tests with visual PNG output to `tests/output/vision/`.
-3. **Demo Scene (see Document 15)** — Interactive Unit VIII demo where students adjust threshold sliders and observe segmentation output in real time.
-4. **Pipeline walkthrough** — A commented Stage 0 sub-scene where the full pipeline (filter → threshold → morphology → region analysis) is demonstrated step by step.
-
----
-
-## 20. Student Reuse
-
-Students call `VisionTools` methods to:
-
-1. Segment regions of their stage's visual content.
-2. Count or locate regions to determine where entities should spawn or where events should trigger.
-3. Extract feature vectors for classification in Unit IX pipelines.
-4. Display segmentation overlays for debug or academic visualization.
-
-Students produce **no segmentation algorithms**. They produce **game logic driven by segmentation results**.
+1. **`src/framework/processing/vision_tools.py`** — Implementación completa, documentada y probada.
+2. **`tests/test_vision_tools.py`** — Pruebas unitarias con salida visual PNG en `tests/output/vision/`.
+3. **Escena demo (ver Documento 15)** — Demo interactiva de la Unidad VIII donde los estudiantes ajustan deslizadores de umbral y observan la salida de segmentación en tiempo real.
+4. **Recorrido guiado de la tubería** — Una subescena comentada de Stage 0 donde se demuestra paso a paso la tubería completa (filtro → umbral → morfología → análisis de regiones).
 
 ---
 
-## 21. Learning Evidence
+## 20. Reutilización por parte de los estudiantes
 
-A student has demonstrated Unit VIII learning when they can:
+Los estudiantes llaman a métodos de `VisionTools` para:
 
-1. **Explain** why they chose a specific threshold value (or why Otsu's method was appropriate).
-2. **Predict** what morphological operation will do to their mask before running it.
-3. **Show** a `RegionInfo` object in their README with the area, centroid, and bounding rect of a region in their stage.
-4. **Demonstrate** game behavior that is different in two different stage states because the segmentation result changed.
-5. **Document** the feature vector dimensionality and what each group of values represents.
+1. Segmentar regiones del contenido visual de su escenario.
+2. Contar o ubicar regiones para determinar dónde deben generarse entidades o dónde deben dispararse eventos.
+3. Extraer vectores de características para clasificación en tuberías de la Unidad IX.
+4. Mostrar superposiciones de segmentación para depuración o visualización académica.
+
+Los estudiantes no producen **ningún algoritmo de segmentación**. Producen **lógica de juego dirigida por los resultados de la segmentación**.
 
 ---
 
-## 22. Restrictions
+## 21. Evidencia de aprendizaje
 
-| Restriction | Scope |
+Un estudiante ha demostrado el aprendizaje de la Unidad VIII cuando puede:
+
+1. **Explicar** por qué eligió un valor de umbral específico (o por qué el método de Otsu era apropiado).
+2. **Predecir** qué le hará a su máscara una operación morfológica antes de ejecutarla.
+3. **Mostrar** un objeto `RegionInfo` en su README con el área, centroide y caja envolvente de una región de su escenario.
+4. **Demostrar** un comportamiento de juego distinto en dos estados de escenario diferentes porque cambió el resultado de la segmentación.
+5. **Documentar** la dimensionalidad del vector de características y qué representa cada grupo de valores.
+
+---
+
+## 22. Restricciones
+
+| Restricción | Alcance |
 |---|---|
-| Students never import `cv2`, `scipy`, `skimage` | All student files |
-| Students never call `cv2.threshold()`, `cv2.connectedComponents()`, `skimage.feature.hog()` directly | All student files |
-| `VisionTools` never calls `EventBus`, `InputManager`, `AudioManager` | Processing isolation |
-| `VisionTools` never modifies entity state | Return-value-based interface |
-| Watershed is not used every frame without throttling | Performance constraint |
+| Los estudiantes nunca importan `cv2`, `scipy`, `skimage` | Todos los ficheros de estudiante |
+| Los estudiantes nunca llaman a `cv2.threshold()`, `cv2.connectedComponents()`, `skimage.feature.hog()` directamente | Todos los ficheros de estudiante |
+| `VisionTools` nunca llama a `EventBus`, `InputManager`, `AudioManager` | Aislamiento de procesamiento |
+| `VisionTools` nunca modifica el estado de entidades | Interfaz basada en valores de retorno |
+| Watershed no se usa cada fotograma sin limitación | Restricción de rendimiento |
 
 ---
 
-## 23. Future Extensions
+## 23. Extensiones futuras
 
-| Extension | Description | Target Unit |
+| Extensión | Descripción | Unidad objetivo |
 |---|---|---|
-| `optical_flow(surface_a, surface_b)` | Dense optical flow between frames | Unit IX |
-| `skeleton(mask_surface)` | Morphological skeletonization | Unit VIII |
-| `convex_hull(mask_surface)` | Convex hull of foreground regions | Unit VIII |
-| `texture_segmentation(surface, method)` | LBP-based texture-driven segmentation | Unit VIII |
-| `depth_from_stereo(left, right)` | Stereo disparity map | Beyond course scope |
-
-
---- Traducción al Español ---
-
-## Especificación de VisionTools
-
-VisionTools proporciona utilidades de segmentación de imágenes y reconocimiento de patrones para las Unidades VIII y IX.
-
-### Funciones
-- `threshold_binary(surface, thresh)` — Umbral binario
-- `threshold_otsu(surface)` — Umbral automático de Otsu
-- `morphological_erode(surface, kernel_size)` — Erosión morfológica
-- `morphological_dilate(surface, kernel_size)` — Dilatación morfológica
-- `watershed_segment(surface)` — Segmentación Watershed
-- `extract_features(surface)` — Extracción de características HOG o LBP
-- `classify_region(features, model)` — Clasificación con modelo scikit-learn
-
-Para ejemplos detallados y parámetros, consultar el documento original en inglés.
-
+| `optical_flow(surface_a, surface_b)` | Flujo óptico denso entre fotogramas | Unidad IX |
+| `skeleton(mask_surface)` | Esqueletización morfológica | Unidad VIII |
+| `convex_hull(mask_surface)` | Envolvente convexa de regiones de primer plano | Unidad VIII |
+| `texture_segmentation(surface, method)` | Segmentación dirigida por textura basada en LBP | Unidad VIII |
+| `depth_from_stereo(left, right)` | Mapa de disparidad estéreo | Fuera del alcance del curso |
 
 ---
-## 🔗 Documentos Relacionados
+## 🔗 Documentos relacionados
 
-- [[11_FILTER_TOOLS_SPEC.md|Filter Tools Spec]]
-- [[13_PATTERN_RECOGNITION_SPEC.md|Pattern Recognition Spec]]
+- [[11_FILTER_TOOLS_SPEC.md|Especificación de FilterTools]]
+- [[13_PATTERN_RECOGNITION_SPEC.md|Especificación de reconocimiento de patrones]]

@@ -99,11 +99,14 @@ NO_SON_API: frozenset[str] = frozenset({
     "property", "staticmethod", "classmethod", "dataclass", "Enum", "Path",
     "NotImplementedError", "ValueError", "TypeError", "KeyError",
     "IndexError", "RuntimeError", "AttributeError", "FileNotFoundError",
+    "DeprecationWarning",
+    "Exception", "isinstance", "frozenset",
     # Capas de Tiled y vocabulario del formato: son nombres de datos, no de
     # código, y los vigilan `validate_tmx.py` y `check_tmx_coverage.py`.
     "Collision", "Objects", "Background", "Foreground", "Decoration",
     "Tiled", "TMX", "JSON", "GID", "gid", "px", "dt", "fps", "FPS",
     "png", "jpg", "ogg", "wav", "json", "tmx", "tsx", "csv", "yaml",
+    "toml",
     "x", "y", "w", "h", "r", "g", "b", "a", "n", "i", "j", "k", "v",
     # Bibliotecas externas. Sus símbolos existen, pero no en este repositorio:
     # comprobarlos aquí sería comprobar pygame, que ya se comprueba solo.
@@ -112,8 +115,20 @@ NO_SON_API: frozenset[str] = frozenset({
     "atan2", "sqrt", "sin", "cos", "hypot", "pi", "inf", "nan",
     "pytmx", "numpy", "pygame", "moderngl", "orjson", "sklearn", "cv2",
     "Pipeline", "string", "sine", "patrol", "bezier",
+    "pytweening", "pydantic", "pydub", "lupa", "ModernGL",
+    # Métodos y formatos de pygame (22_API_CONTRACTS los cita como
+    # operaciones de superficie) y de pydantic: existen, pero no aquí.
+    "subsurface", "blits", "blit", "ttf", "BaseModel",
     # Convenciones de nombres, no nombres.
     "snake_case", "PascalCase", "camelCase", "kebab_case",
+    # Valores de datos y nombres de módulos de curso, no símbolos de código.
+    "critical", "normal",
+    "interpolacion", "ruido",
+    # Clave del payload de BOSS_PHASE_CHANGED: dato, no símbolo.
+    "new_max_health",
+    # Nombres que 22_API_CONTRACTS cita para explicar que **no** existen
+    # (nombres antiguos o de otro código), y el uniform de un sombreador.
+    "_begin_phase_transition", "move_toward", "approach", "colorMatrix",
 })
 
 

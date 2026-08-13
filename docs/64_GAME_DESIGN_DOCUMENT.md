@@ -16,11 +16,25 @@ date_processed: "2026-08-01"
 **Compatibility:** Requires `01_PROJECT_CHARTER.md`, `16_WORLD_DESIGN.md`, `17_BOSS_SPEC.md`, `18_ENEMY_ROSTER.md`, `19_NARRATIVE_AND_LORE.md`, `20_ASSET_BIBLE.md`
 **Audience:** Professor, Teaching Assistants, Students, Artists, AI coding assistants
 
+> **AUD-455 (2026-08-13).** Verificado contra el código real: exigía Python
+> 3.14+ (el mínimo real del proyecto es 3.11, CI corre 3.11/3.12/3.13);
+> `§5.3` decía 19 estados de jugador y listaba 18 — el enum `PlayerState` real
+> tiene **26** (ver `04_PLAYER_SPEC.md` §8.1, recontado dos veces); `§6.1`
+> listaba sólo 4 estados de `EnemyBase` (`PATROL`/`ALERT`/`HURT`/`DYING`)
+> cuando el enum real tiene **13** (ver `05_ENEMY_SPEC.md`); y `§7` mezclaba
+> patrones de ataque entre jefes distintos — `PEARL_VOLLEY` y `GOLD_RUSH` son
+> patrones de diseño de **Paburu** (Formas 3B/3A), no de El Rey Terciopelo, y
+> `SUMMON_ECHOES` es de El Rey (Fase 2), no de Paburu; `RAPID_DIVE` es de El
+> Gavilán (Fase 3), no de Paburu. La tabla de `§7` no se reescribe aquí
+> entera para no introducir un segundo error por prisa — `17_BOSS_SPEC.md` es
+> la fuente autoritativa de patrones por jefe y ya distingue con cuidado lo
+> implementado de lo sólo diseñado.
+
 ---
 
 ## 1. Vision
 
-Legacy of InFest es un juego de plataformas y acción 2D de estética SNES ambientado en la Costa Rica contemporánea, construido sobre un motor educativo propio (Python 3.14+ / Pygame CE). Su propósito es pedagógico: ser el laboratorio semestral en el que los estudiantes de Gráficas por Computadora, Procesamiento de Imágenes, Visión por Computadora y Reconocimiento de Patrones aplican la teoría del curso dentro de un mundo de juego coherente.
+Legacy of InFest es un juego de plataformas y acción 2D de estética SNES ambientado en la Costa Rica contemporánea, construido sobre un motor educativo propio (Python 3.11+ / Pygame CE). Su propósito es pedagógico: ser el laboratorio semestral en el que los estudiantes de Gráficas por Computadora, Procesamiento de Imágenes, Visión por Computadora y Reconocimiento de Patrones aplican la teoría del curso dentro de un mundo de juego coherente.
 
 **Filosofía de diseño:** el juego existe para que la teoría sea visible. Cada sistema —de las curvas de Bézier al filtrado de convolución— tiene una manifestación concreta dentro del mundo jugable.
 
@@ -137,7 +151,7 @@ Colisión **axis-separada**: resolución en X seguida de resolución en Y. Plata
 
 ### 5.3 Estados del jugador
 
-El jugador implementa una máquina de estados de 19 estados canónicos (IDLE, WALKING, JUMPING, FALLING, CROUCHING, SHORT_ATTACK, LONG_ATTACK, HURT, DYING, DASHING, PARRY, CHARGE_ATTACK, DASH_ATTACK, WALL_SLIDE, LEDGE_GRAB, GRAB, THROW, SLIDE, SWIMMING). El estado SWIMMING se introduce cuando el jugador entra en agua.
+El jugador implementa una máquina de estados de 26 estados (ver `04_PLAYER_SPEC.md` §8.1 para la tabla completa): IDLE, WALKING, JUMPING, FALLING, CROUCHING, SHORT_ATTACK, LONG_ATTACK, HURT, DYING, DASHING, PARRY, CHARGE_ATTACK, CHARGE_RELEASE, DASH_ATTACK, WALL_SLIDE, LEDGE_GRAB, GRAB, THROW, SLIDE, SWIMMING, CLIMBING, ZIPLINE, ULTIMATE, AERIAL_ATTACK, AERIAL_SLAM, AIR_CHASE. El estado SWIMMING se introduce cuando el jugador entra en agua.
 
 ### 5.4 Combate
 
@@ -160,7 +174,7 @@ El jugador implementa una máquina de estados de 19 estados canónicos (IDLE, WA
 
 ### 6.1 Clase base `EnemyBase`
 
-Estados: `PATROL`, `ALERT`, `HURT`, `DYING`. Todos los enemigos heredan de esta clase y **no sobreescriben `update()`** — implementan `_patrol_behavior`, `_alert_behavior`, `_get_animation_key`, `_build_hitbox`, `_build_hurtbox`.
+13 estados (ver `05_ENEMY_SPEC.md`): `IDLE`, `PATROL`, `SEARCH`, `ALERT`, `CHASE`, `TELEGRAPHING`, `FIRING`, `RECOVER`, `RETREAT`, `STUNNED`, `HURT`, `LAUNCHED`, `DYING`. Todos los enemigos heredan de esta clase y **no sobreescriben `update()`** — implementan `_patrol_behavior`, `_alert_behavior`, `_get_animation_key`, `_build_hitbox`, `_build_hurtbox`.
 
 ### 6.2 Roster de enemigos (8 tipos)
 

@@ -41,17 +41,17 @@ git si hace falta consultarlos.
 | Documento | Qué contiene |
 |---|---|
 | [`88_QUE_PUEDE_HACER_CADA_ROL.md`](88_QUE_PUEDE_HACER_CADA_ROL.md) | Qué es este proyecto y qué puede hacer cada quien con él |
-| [`82_ENVIRONMENT_SETUP_GUIDE.md`](82_ENVIRONMENT_SETUP_GUIDE.md) | Environment Setup Guide |
-| [`10_LIBRARIES_AND_DEPENDENCIES.md`](10_LIBRARIES_AND_DEPENDENCIES.md) | Libraries and Dependencies |
+| [`82_ENVIRONMENT_SETUP_GUIDE.md`](82_ENVIRONMENT_SETUP_GUIDE.md) | Guía de instalación del entorno |
+| [`10_LIBRARIES_AND_DEPENDENCIES.md`](10_LIBRARIES_AND_DEPENDENCIES.md) | Librerías y dependencias |
 
 ## Referencia del motor
 
 | Documento | Qué contiene |
 |---|---|
-| [`03_ARCHITECTURE.md`](03_ARCHITECTURE.md) | Architecture |
-| [`22_API_CONTRACTS.md`](22_API_CONTRACTS.md) | API Contracts |
-| [`23_DATA_SCHEMAS.md`](23_DATA_SCHEMAS.md) | Data Schemas |
-| [`52_EVENT_MAP.md`](52_EVENT_MAP.md) | EventBus Event Map |
+| [`03_ARCHITECTURE.md`](03_ARCHITECTURE.md) | Arquitectura del motor |
+| [`22_API_CONTRACTS.md`](22_API_CONTRACTS.md) | Contratos de API |
+| [`23_DATA_SCHEMAS.md`](23_DATA_SCHEMAS.md) | Esquemas de datos |
+| [`52_EVENT_MAP.md`](52_EVENT_MAP.md) | Mapa de eventos del EventBus |
 | [`74_TUBERIA_DE_GPU.md`](74_TUBERIA_DE_GPU.md) | La tubería de GPU |
 | [`75_BIBLIA_TECNICA.md`](75_BIBLIA_TECNICA.md) | Biblia Técnica de Legacy of InFest |
 
@@ -59,63 +59,63 @@ git si hace falta consultarlos.
 
 | Documento | Qué contiene |
 |---|---|
-| [`04_PLAYER_SPEC.md`](04_PLAYER_SPEC.md) | Player Specification |
-| [`05_ENEMY_SPEC.md`](05_ENEMY_SPEC.md) | Enemy Specification |
+| [`04_PLAYER_SPEC.md`](04_PLAYER_SPEC.md) | Especificación del jugador |
+| [`05_ENEMY_SPEC.md`](05_ENEMY_SPEC.md) | Especificación de enemigos |
 | [`17_BOSS_SPEC.md`](17_BOSS_SPEC.md) | Catálogo de diseño de los 4 jefes — 20 de 47 patrones implementados; **no es un contrato** (AUD-369) |
-| [`09_HUD_SPEC.md`](09_HUD_SPEC.md) | HUD Specification |
-| [`18_ENEMY_ROSTER.md`](18_ENEMY_ROSTER.md) | Enemy Roster |
-| [`06_TMX_SPEC.md`](06_TMX_SPEC.md) | TMX Specification |
+| [`09_HUD_SPEC.md`](09_HUD_SPEC.md) | Especificación del HUD |
+| [`18_ENEMY_ROSTER.md`](18_ENEMY_ROSTER.md) | Elenco de enemigos |
+| [`06_TMX_SPEC.md`](06_TMX_SPEC.md) | Especificación TMX |
 
 ## Sistemas del juego
 
 | Documento | Qué contiene |
 |---|---|
-| [`40_DIALOGUE_SYSTEM.md`](40_DIALOGUE_SYSTEM.md) | Dialogue System Specification |
-| [`41_BESTIARY_CODEX.md`](41_BESTIARY_CODEX.md) | Bestiary / Codex Specification |
-| [`42_CUTSCENE_SYSTEM.md`](42_CUTSCENE_SYSTEM.md) | Cutscene System Specification |
-| [`43_SPEEDRUN_MODE.md`](43_SPEEDRUN_MODE.md) | Speedrun Mode Specification |
-| [`44_BOSS_RUSH_MODE.md`](44_BOSS_RUSH_MODE.md) | Boss Rush Mode Specification |
-| [`45_SWIMMING_SPEC.md`](45_SWIMMING_SPEC.md) | Swimming Mechanics Specification |
-| [`46_FOG_OF_WAR.md`](46_FOG_OF_WAR.md) | Fog of War Specification |
-| [`47_WATER_EFFECT.md`](47_WATER_EFFECT.md) | Water Effect Specification |
-| [`48_SCREEN_TRANSITIONS.md`](48_SCREEN_TRANSITIONS.md) | Screen Transitions Specification |
-| [`49_AMBIENT_AUDIO.md`](49_AMBIENT_AUDIO.md) | Ambient Audio Specification |
+| [`40_DIALOGUE_SYSTEM.md`](40_DIALOGUE_SYSTEM.md) | Especificación del sistema de diálogo |
+| [`41_BESTIARY_CODEX.md`](41_BESTIARY_CODEX.md) | Especificación del bestiario / códice |
+| [`42_CUTSCENE_SYSTEM.md`](42_CUTSCENE_SYSTEM.md) | Especificación del sistema de escenas cinemáticas |
+| [`43_SPEEDRUN_MODE.md`](43_SPEEDRUN_MODE.md) | Especificación del modo speedrun |
+| [`44_BOSS_RUSH_MODE.md`](44_BOSS_RUSH_MODE.md) | Especificación del modo boss rush |
+| [`45_SWIMMING_SPEC.md`](45_SWIMMING_SPEC.md) | Especificación de la mecánica de natación |
+| [`46_FOG_OF_WAR.md`](46_FOG_OF_WAR.md) | Especificación de la niebla de guerra |
+| [`47_WATER_EFFECT.md`](47_WATER_EFFECT.md) | Especificación del efecto de agua |
+| [`48_SCREEN_TRANSITIONS.md`](48_SCREEN_TRANSITIONS.md) | Especificación de transiciones de pantalla |
+| [`49_AMBIENT_AUDIO.md`](49_AMBIENT_AUDIO.md) | Especificación de audio ambiental |
 
 ## Guías de creación
 
 | Documento | Qué contiene |
 |---|---|
 | [`60_GUIA_COMPLETA_DEL_MOTOR.md`](60_GUIA_COMPLETA_DEL_MOTOR.md) | Guía completa del motor — todo lo que se puede poner en un nivel |
-| [`STAGE_CREATION.md`](STAGE_CREATION.md) | Stage Creation Guide |
-| [`ENEMY_CREATION.md`](ENEMY_CREATION.md) | Enemy Creation Guide |
-| [`BOSS_CREATION.md`](BOSS_CREATION.md) | Boss Creation Guide |
-| [`SCENE_CREATION.md`](SCENE_CREATION.md) | Scene Creation Guide |
-| [`66_GUIA_DE_LEVEL_DESIGN.md`](66_GUIA_DE_LEVEL_DESIGN.md) | Guía de Level Design |
-| [`90_INVENTARIO_DE_LEVEL_DESIGN.md`](90_INVENTARIO_DE_LEVEL_DESIGN.md) | Inventario de Level Design — todo lo que el motor ofrece, por categoría, y qué usar en cada nivel |
+| [`STAGE_CREATION.md`](STAGE_CREATION.md) | Guía de creación de escenarios |
+| [`ENEMY_CREATION.md`](ENEMY_CREATION.md) | Guía de creación de enemigos |
+| [`BOSS_CREATION.md`](BOSS_CREATION.md) | Guía de creación de jefes |
+| [`SCENE_CREATION.md`](SCENE_CREATION.md) | Guía de creación de escenas |
+| [`66_GUIA_DE_LEVEL_DESIGN.md`](66_GUIA_DE_LEVEL_DESIGN.md) | Guía de diseño de niveles |
+| [`90_INVENTARIO_DE_LEVEL_DESIGN.md`](90_INVENTARIO_DE_LEVEL_DESIGN.md) | Inventario de diseño de niveles — todo lo que el motor ofrece, por categoría, y qué usar en cada nivel |
 | [`73_CATALOGO_DE_RECURSOS_PARA_ESTUDIANTES.md`](73_CATALOGO_DE_RECURSOS_PARA_ESTUDIANTES.md) | Catálogo de recursos para construir niveles y juegos |
-| [`26_STUDENT_TEMPLATE_SPEC.md`](26_STUDENT_TEMPLATE_SPEC.md) | Student Template Specification |
-| [`20_ASSET_BIBLE.md`](20_ASSET_BIBLE.md) | Asset Bible |
+| [`26_STUDENT_TEMPLATE_SPEC.md`](26_STUDENT_TEMPLATE_SPEC.md) | Especificación de la plantilla de estudiante |
+| [`20_ASSET_BIBLE.md`](20_ASSET_BIBLE.md) | Biblia de recursos gráficos |
 
 ## Framework de procesamiento (Unidades VII–IX)
 
 | Documento | Qué contiene |
 |---|---|
-| [`11_FILTER_TOOLS_SPEC.md`](11_FILTER_TOOLS_SPEC.md) | Filter Tools Specification |
-| [`12_VISION_TOOLS_SPEC.md`](12_VISION_TOOLS_SPEC.md) | Vision Tools Specification |
-| [`13_PATTERN_RECOGNITION_SPEC.md`](13_PATTERN_RECOGNITION_SPEC.md) | Pattern Recognition Specification |
-| [`15_ACADEMIC_DEMO_SCENES.md`](15_ACADEMIC_DEMO_SCENES.md) | Academic Demo Scenes |
+| [`11_FILTER_TOOLS_SPEC.md`](11_FILTER_TOOLS_SPEC.md) | Especificación de herramientas de filtrado |
+| [`12_VISION_TOOLS_SPEC.md`](12_VISION_TOOLS_SPEC.md) | Especificación de herramientas de visión |
+| [`13_PATTERN_RECOGNITION_SPEC.md`](13_PATTERN_RECOGNITION_SPEC.md) | Especificación de reconocimiento de patrones |
+| [`15_ACADEMIC_DEMO_SCENES.md`](15_ACADEMIC_DEMO_SCENES.md) | Escenas de demostración académica |
 
 ## Curso: profesor y ayudante
 
 | Documento | Qué contiene |
 |---|---|
-| [`78_SAMPLE_SYLLABUS.md`](78_SAMPLE_SYLLABUS.md) | Sample Syllabus — Legacy of InFest: Game Development Practicum |
-| [`08_SYLLABUS_MAPPING.md`](08_SYLLABUS_MAPPING.md) | Syllabus Mapping |
-| [`21_COURSE_SCHEDULE.md`](21_COURSE_SCHEDULE.md) | Course Schedule |
-| [`27_ACADEMIC_RUBRICS.md`](27_ACADEMIC_RUBRICS.md) | Academic Rubrics |
-| [`14_PROFESSOR_DELIVERABLE_MATRIX.md`](14_PROFESSOR_DELIVERABLE_MATRIX.md) | Professor Deliverable Matrix |
-| [`79_TA_GUIDE.md`](79_TA_GUIDE.md) | TA Guide — Legacy of InFest |
-| [`34_CLASS_MATERIALS.md`](34_CLASS_MATERIALS.md) | Class Materials — Lecture Slides & Live Coding Scripts |
+| [`78_SAMPLE_SYLLABUS.md`](78_SAMPLE_SYLLABUS.md) | Programa de muestra — Legacy of InFest: Prácticas de Desarrollo de Videojuegos |
+| [`08_SYLLABUS_MAPPING.md`](08_SYLLABUS_MAPPING.md) | Correspondencia del programa con el curso |
+| [`21_COURSE_SCHEDULE.md`](21_COURSE_SCHEDULE.md) | Calendario del curso |
+| [`27_ACADEMIC_RUBRICS.md`](27_ACADEMIC_RUBRICS.md) | Rúbricas académicas |
+| [`14_PROFESSOR_DELIVERABLE_MATRIX.md`](14_PROFESSOR_DELIVERABLE_MATRIX.md) | Matriz de entregables del profesor |
+| [`79_TA_GUIDE.md`](79_TA_GUIDE.md) | Guía del ayudante — Legacy of InFest |
+| [`34_CLASS_MATERIALS.md`](34_CLASS_MATERIALS.md) | Material de clase — diapositivas y guiones de programación en vivo |
 
 ## Curso: estudiante
 
@@ -125,20 +125,20 @@ git si hace falta consultarlos.
 | [`35_USER_MANUAL.md`](35_USER_MANUAL.md) | Manual de Usuario |
 | [`37_DEMO_QUICK_GUIDE.md`](37_DEMO_QUICK_GUIDE.md) | Guía Rápida de Demos Académicas |
 | [`38_STAGE_BOSS_GUIDE.md`](38_STAGE_BOSS_GUIDE.md) | Guía Rápida de Creación de Stages y Bosses |
-| [`30_ASSIGNMENT_01_STAGE_DESIGN.md`](30_ASSIGNMENT_01_STAGE_DESIGN.md) | Assignment 1: Stage Design (TMX) |
-| [`31_ASSIGNMENT_02_BOSS_DESIGN.md`](31_ASSIGNMENT_02_BOSS_DESIGN.md) | Assignment 2: Boss Design (Python) |
-| [`32_ASSIGNMENT_03_LAB_EXERCISES.md`](32_ASSIGNMENT_03_LAB_EXERCISES.md) | Assignment 3: Lab Exercise Completion |
-| [`33_ASSIGNMENT_04_FINAL_PROJECT.md`](33_ASSIGNMENT_04_FINAL_PROJECT.md) | Assignment 4: Final Project — Complete Zone |
+| [`30_ASSIGNMENT_01_STAGE_DESIGN.md`](30_ASSIGNMENT_01_STAGE_DESIGN.md) | Tarea 1: diseño de escenario (TMX) |
+| [`31_ASSIGNMENT_02_BOSS_DESIGN.md`](31_ASSIGNMENT_02_BOSS_DESIGN.md) | Tarea 2: diseño de jefe (Python) |
+| [`32_ASSIGNMENT_03_LAB_EXERCISES.md`](32_ASSIGNMENT_03_LAB_EXERCISES.md) | Tarea 3: finalización de ejercicios de laboratorio |
+| [`33_ASSIGNMENT_04_FINAL_PROJECT.md`](33_ASSIGNMENT_04_FINAL_PROJECT.md) | Tarea 4: proyecto final — zona completa |
 
 ## Diseño, mundo y lore
 
 | Documento | Qué contiene |
 |---|---|
-| [`64_GAME_DESIGN_DOCUMENT.md`](64_GAME_DESIGN_DOCUMENT.md) | Game Design Document |
-| [`16_WORLD_DESIGN.md`](16_WORLD_DESIGN.md) | World Design Document |
+| [`64_GAME_DESIGN_DOCUMENT.md`](64_GAME_DESIGN_DOCUMENT.md) | Documento de diseño del juego |
+| [`16_WORLD_DESIGN.md`](16_WORLD_DESIGN.md) | Documento de diseño del mundo |
 | [`07_STAGE0_DESIGN.md`](07_STAGE0_DESIGN.md) | Diseño del Escenario 0 |
 | [`86_ESPECIFICACION_DE_NIVELES_Y_JEFES.md`](86_ESPECIFICACION_DE_NIVELES_Y_JEFES.md) | Especificación de Niveles y Jefes |
-| [`19_NARRATIVE_AND_LORE.md`](19_NARRATIVE_AND_LORE.md) | Narrative and Lore |
+| [`19_NARRATIVE_AND_LORE.md`](19_NARRATIVE_AND_LORE.md) | Narrativa y trasfondo |
 | [`65_EL_LORE_EXTENSO.md`](65_EL_LORE_EXTENSO.md) | El Lore Extenso |
 
 ## Estado del proyecto y auditoría
