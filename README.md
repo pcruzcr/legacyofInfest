@@ -69,16 +69,19 @@ docs/                  documentación completa
 
 ## Unidades académicas
 
+Ver `docs/08_SYLLABUS_MAPPING.md` para la trazabilidad completa (tema exacto,
+componente del framework, entregable, evidencia de aprendizaje) de cada unidad.
+
 | Unidad | Tema | Laboratorio |
 |--------|------|-------------|
-| II | Vectores y colisión | Físicas del escenario 2D |
-| III | Espacios de color | Laboratorio de `ColorTools` |
-| IV | Animación de sprites | Animación de jugador y enemigos |
-| V | Filtrado de imagen | Laboratorio de `FilterTools` |
-| VI | Segmentación de imagen | Laboratorio de `VisionTools` |
-| VII | Reconocimiento de patrones | Laboratorio de `PatternRecognitionTools` |
-| VIII | Procesamiento de audio | Laboratorio de la tubería con pydub |
-| IX | Dibujado 3D | Laboratorio de la tubería de ModernGL |
+| II | Coordenadas, vectores, matrices, transformaciones | VectorLabScene, TransformLabScene |
+| III | Curvas de Bézier, B-Spline, NURBS, trayectorias | CurveEditorScene, `CurveTools` |
+| IV | Objetos, escenas, capas, sprites, búferes | Sistema de escenario TMX |
+| V | RGB, HSV, HSL, CMYK, transparencia, iluminación | ColorTheoryScene, `ColorTools` |
+| VI | Texturas, animación, interpolación, colisión | CollisionLabScene, `math_utils` |
+| VII | Histograma, contraste, convolución, Sobel, Canny | FilterDemoScene, `FilterTools` |
+| VIII | Umbral, morfología, componentes, watershed | VisionDemoScene, `VisionTools` |
+| IX | Reconocimiento de patrones, clasificación | PatternDemoScene, `PatternRecognitionTools` |
 
 ## Licencia
 

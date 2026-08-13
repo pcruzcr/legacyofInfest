@@ -1,150 +1,159 @@
 ---
 document_id: "LOI-FILTER-011"
-title: "Legacy of InFest — Filter Tools Specification"
-aliases: ["Filter Tools Spec"]
-tags: ["filter", "processing", "image"]
-description: "Unit VII image processing subsystem"
+title: "Legacy of InFest — Especificación de FilterTools"
+aliases: ["Especificación de FilterTools", "Filter Tools Spec"]
+tags: ["filter", "processing", "imagen"]
+description: "Subsistema de procesamiento de imágenes de la Unidad VII"
 source: "docs/11_FILTER_TOOLS_SPEC.md"
-date_processed: "2026-07-14"
+date_processed: "2026-08-12"
 ---
 
-# Legacy of InFest — Filter Tools Specification
+# Legacy of InFest — Especificación de FilterTools
 
-**Document ID:** LOI-FILTER-011  
-**Version:** 1.0.0  
-**Status:** Official  
-**Compatibility:** Requires documents LOI-ARCH-003, LOI-LIBS-010  
-**Audience:** Professor, Teaching Assistants, AI coding assistants (Claude Code, Cline, OpenCode, Codex)
+**ID del documento:** LOI-FILTER-011
+**Versión:** 1.1.0
+**Estado:** Oficial
+**Compatibilidad:** Requiere `03_ARCHITECTURE.md`, `10_LIBRARIES_AND_DEPENDENCIES.md`
+**Audiencia:** Profesor, ayudantes de cátedra, asistentes de programación con IA
+
+> **AUD-455.** Traduce el documento completo (tenía el cuerpo en inglés y un
+> resumen condensado en español al final que remitía «al documento original
+> en inglés»; el Apéndice A que sigue a ese resumen ya estaba en español y no
+> se toca). Corrige la ruta del módulo: es `src/framework/processing/filter_tools.py`,
+> no `framework/processing/filter_tools.py` — falta el prefijo `src/` en las
+> siete apariciones del documento. Verificado contra el fichero real: los
+> nueve kernels de `get_standard_kernel` (§8.4) coinciden exactamente con
+> `_STANDARD_KERNELS` en el código.
 
 ---
 
-## 1. Overview
+## 1. Visión general
 
-`FilterTools` is the image processing subsystem of the Legacy of InFest academic framework. It encapsulates all digital image processing operations taught in **Unit VII** of the course syllabus: histogram analysis, brightness and contrast adjustment, convolution, Gaussian blur, Sobel edge detection, and Canny edge detection.
+`FilterTools` es el subsistema de procesamiento de imágenes del framework académico de Legacy of InFest. Encapsula todas las operaciones de procesamiento digital de imágenes que enseña la **Unidad VII** del programa del curso: análisis de histograma, ajuste de brillo y contraste, convolución, desenfoque gaussiano, detección de bordes de Sobel y detección de bordes de Canny.
 
-This subsystem is entirely professor-owned and professor-maintained. Students interact with it exclusively through its public API. Students never import `scipy`, `opencv-python`, or `scikit-image` directly. All third-party library complexity is hidden behind the `FilterTools` interface.
+Este subsistema es enteramente propiedad del profesorado y lo mantiene el profesorado. Los estudiantes interactúan con él exclusivamente a través de su API pública. Los estudiantes nunca importan `scipy`, `opencv-python` ni `scikit-image` directamente. Toda la complejidad de las bibliotecas de terceros queda oculta detrás de la interfaz de `FilterTools`.
 
-The module is located at:
+El módulo está en:
 
 ```
-framework/processing/filter_tools.py
+src/framework/processing/filter_tools.py
 ```
 
 ---
 
-## 2. Academic Purpose
+## 2. Propósito académico
 
-`FilterTools` exists to make Unit VII concepts **executable and observable** within the running game environment. Instead of processing abstract images in a notebook, students apply these operations to live game surfaces — backgrounds, sprites, screen regions — and observe the results in real time.
+`FilterTools` existe para hacer que los conceptos de la Unidad VII sean **ejecutables y observables** dentro del entorno de juego en marcha. En vez de procesar imágenes abstractas en un notebook, los estudiantes aplican estas operaciones a superficies de juego reales — fondos, sprites, regiones de pantalla — y observan los resultados en tiempo real.
 
-### 2.1 Learning Objectives Supported
+### 2.1 Objetivos de aprendizaje que soporta
 
-| Objective | FilterTools Mechanism |
+| Objetivo | Mecanismo de FilterTools |
 |---|---|
-| Understand histograms as frequency distributions of pixel intensities | `compute_histogram()` returns per-channel frequency arrays |
-| Apply brightness manipulation as a scalar transformation | `adjust_brightness()` scales pixel values uniformly |
-| Apply contrast stretching via histogram manipulation | `adjust_contrast()` expands/compresses intensity range |
-| Implement convolution as a kernel-surface operation | `apply_kernel()` applies an arbitrary kernel matrix |
-| Understand Gaussian blur as a separable convolution | `gaussian_blur()` uses a parameterized sigma value |
-| Detect edges using gradient magnitude | `sobel_edge()` returns a gradient magnitude surface |
-| Apply multi-stage edge detection | `canny_edge()` applies the full Canny pipeline |
+| Entender los histogramas como distribuciones de frecuencia de intensidades de píxel | `compute_histogram()` devuelve arreglos de frecuencia por canal |
+| Aplicar manipulación de brillo como una transformación escalar | `adjust_brightness()` escala los valores de píxel uniformemente |
+| Aplicar estiramiento de contraste vía manipulación de histograma | `adjust_contrast()` expande/comprime el rango de intensidad |
+| Implementar la convolución como una operación kernel-superficie | `apply_kernel()` aplica una matriz de kernel arbitraria |
+| Entender el desenfoque gaussiano como una convolución separable | `gaussian_blur()` usa un valor sigma parametrizado |
+| Detectar bordes usando la magnitud del gradiente | `sobel_edge()` devuelve una superficie de magnitud de gradiente |
+| Aplicar detección de bordes multi-etapa | `canny_edge()` aplica la tubería completa de Canny |
 
-### 2.2 Design Principle
+### 2.2 Principio de diseño
 
-All functions in `FilterTools` are **pure functions**: they receive a `pygame.Surface` and parameters, and return a new `pygame.Surface`. They do not hold state, do not modify the input surface, and do not emit events or call any engine system. This makes them safe to use in any context and easy to test in isolation.
+Todas las funciones de `FilterTools` son **funciones puras**: reciben una `pygame.Surface` y parámetros, y devuelven una nueva `pygame.Surface`. No mantienen estado, no modifican la superficie de entrada, y no emiten eventos ni llaman a ningún sistema del motor. Esto las hace seguras de usar en cualquier contexto y fáciles de probar de forma aislada.
 
 ---
 
-## 3. Framework Location
+## 3. Ubicación en el framework
 
 ```
-framework/
+src/framework/
 └── processing/
-    └── filter_tools.py          ← This module
+    └── filter_tools.py          ← Este módulo
 ```
 
-### 3.1 Position in the Dependency Hierarchy
+### 3.1 Posición en la jerarquía de dependencias
 
 ```
-Stages (student code)
+Escenarios (código de estudiante)
     ↓
-framework/processing/filter_tools.py   ← Students call this
+src/framework/processing/filter_tools.py   ← Los estudiantes llaman a esto
     ↓
-numpy, scipy, opencv-python            ← FilterTools calls these
+numpy, scipy, opencv-python                ← FilterTools llama a esto
     ↓
-(Hardware / OS)
+(Hardware / SO)
 ```
 
-Students are positioned **above** `filter_tools.py`. They call it. They never reach past it.
+Los estudiantes están posicionados **por encima** de `filter_tools.py`. Lo llaman. Nunca van más allá.
 
 ---
 
-## 4. Architecture Integration
+## 4. Integración con la arquitectura
 
-### 4.1 How FilterTools Connects to the Framework
+### 4.1 Cómo se conecta FilterTools al framework
 
-`FilterTools` is a stateless utility module. It integrates with the framework through the following touchpoints:
+`FilterTools` es un módulo utilitario sin estado. Se integra con el framework a través de los siguientes puntos de contacto:
 
-| Integration Point | Description |
+| Punto de integración | Descripción |
 |---|---|
-| `framework/processing/color_tools.py` | `ColorTools.surface_to_array()` and `array_to_surface()` are used internally to bridge Pygame surfaces and NumPy arrays |
-| Stage scenes (student code) | Students call `FilterTools` methods from their stage `update()` or `draw()` loops |
-| `engine/utils/asset_loader.py` | Loaded surfaces may be passed to `FilterTools` for pre-processing during stage initialization |
-| Unit test suite (`tests/test_filter_tools.py`) | Each method has an isolated unit test that saves visual output as PNG for academic verification |
+| `src/framework/processing/color_tools.py` | `ColorTools.surface_to_array()` y `array_to_surface()` se usan internamente para conectar superficies de Pygame y arreglos de NumPy |
+| Escenas de escenario (código de estudiante) | Los estudiantes llaman a métodos de `FilterTools` desde el `update()` o `draw()` de su escenario |
+| `src/engine/utils/asset_loader.py` | Las superficies cargadas pueden pasarse a `FilterTools` para preprocesamiento durante la inicialización del escenario |
+| Suite de pruebas unitarias (`tests/test_filter_tools.py`) | Cada método tiene una prueba unitaria aislada que guarda la salida visual como PNG para verificación académica |
 
-### 4.2 What FilterTools Does NOT Do
+### 4.2 Lo que FilterTools NO hace
 
-| Forbidden Action | Reason |
+| Acción prohibida | Razón |
 |---|---|
-| Does not call `EventBus` | It is a pure computation module |
-| Does not call `InputManager` | No interaction logic |
-| Does not call `AudioManager` | No audio coupling |
-| Does not access the scene manager | No scene knowledge |
-| Does not read TMX data | No map coupling |
-| Does not modify input surfaces in place | All operations return new surfaces |
+| No llama a `EventBus` | Es un módulo de cómputo puro |
+| No llama a `InputManager` | Sin lógica de interacción |
+| No llama a `AudioManager` | Sin acoplamiento de audio |
+| No accede al gestor de escenas | Sin conocimiento de escenas |
+| No lee datos TMX | Sin acoplamiento de mapas |
+| No modifica las superficies de entrada in situ | Todas las operaciones devuelven superficies nuevas |
 
 ---
 
-## 5. Dependencies
+## 5. Dependencias
 
-| Library | Import | Used For |
+| Biblioteca | Importación | Se usa para |
 |---|---|---|
-| `numpy` | `import numpy as np` | Array representation of pixel data, vectorized operations |
-| `scipy.ndimage` | `from scipy.ndimage import convolve, gaussian_filter` | Convolution and Gaussian blur |
-| `cv2` (opencv-python) | `import cv2` | Sobel, Canny, color space operations |
-| `pygame` | `import pygame` | Surface input/output, `surfarray` bridge |
+| `numpy` | `import numpy as np` | Representación en arreglo de datos de píxel, operaciones vectorizadas |
+| `scipy.ndimage` | `from scipy.ndimage import convolve, gaussian_filter` | Convolución y desenfoque gaussiano |
+| `cv2` (opencv-python) | `import cv2` | Sobel, Canny, operaciones de espacio de color |
+| `pygame` | `import pygame` | Entrada/salida de superficies, puente `surfarray` |
 
-**Students never import any of the above.** All imports live inside `filter_tools.py`.
+**Los estudiantes nunca importan nada de lo anterior.** Todas las importaciones viven dentro de `filter_tools.py` (algunas, como `scipy`/`cv2`, están importadas de forma perezosa dentro de cada método, no al principio del fichero).
 
 ---
 
-## 6. Class Diagram
+## 6. Diagrama de clase
 
 ```
 FilterTools
 │
-├── [Histogram]
+├── [Histograma]
 │   ├── compute_histogram(surface) → dict
 │   └── histogram_equalize(surface) → Surface
 │
-├── [Brightness]
+├── [Brillo]
 │   └── adjust_brightness(surface, factor) → Surface
 │
-├── [Contrast]
+├── [Contraste]
 │   ├── adjust_contrast(surface, factor) → Surface
 │   └── stretch_contrast(surface) → Surface
 │
-├── [Convolution]
+├── [Convolución]
 │   ├── apply_kernel(surface, kernel) → Surface
 │   └── get_standard_kernel(name) → np.ndarray
 │
-├── [Gaussian Blur]
+├── [Desenfoque gaussiano]
 │   └── gaussian_blur(surface, sigma) → Surface
 │
-├── [Edge Detection]
+├── [Detección de bordes]
 │   ├── sobel_edge(surface) → Surface
 │   └── canny_edge(surface, low_threshold, high_threshold) → Surface
 │
-└── [Internal Utilities — private]
+└── [Utilidades internas — privadas]
     ├── _surface_to_float_array(surface) → np.ndarray
     ├── _float_array_to_surface(array) → Surface
     ├── _to_opencv(surface) → np.ndarray
@@ -152,150 +161,157 @@ FilterTools
     └── _validate_surface(surface) → None
 ```
 
-All public methods are **class methods** (decorated with `@classmethod`). `FilterTools` is never instantiated. It is a namespace of operations.
+Todos los métodos públicos son **class methods** (decorados con `@classmethod`). `FilterTools` nunca se instancia. Es un espacio de nombres de operaciones.
 
 ---
 
-## 7. FilterTools Class
+## 7. Clase FilterTools
 
-### 7.1 Responsibilities
+### 7.1 Responsabilidades
 
-`FilterTools` is responsible for:
+`FilterTools` es responsable de:
 
-1. Accepting `pygame.Surface` objects as input.
-2. Converting surfaces to the appropriate NumPy array format for the operation.
-3. Applying the mathematical operation using the appropriate library.
-4. Converting the result back to a `pygame.Surface`.
-5. Returning the new surface to the caller.
-6. Validating all inputs and raising descriptive exceptions on misuse.
+1. Aceptar objetos `pygame.Surface` como entrada.
+2. Convertir superficies al formato de arreglo NumPy adecuado para la operación.
+3. Aplicar la operación matemática usando la biblioteca adecuada.
+4. Convertir el resultado de vuelta a una `pygame.Surface`.
+5. Devolver la nueva superficie a quien la llamó.
+6. Validar todas las entradas y lanzar excepciones descriptivas ante un mal uso.
 
-`FilterTools` is **not** responsible for:
+`FilterTools` **no** es responsable de:
 
-- Deciding when to apply filters (that is the stage's responsibility)
-- Caching processed surfaces (that is the `AssetLoader`'s responsibility)
-- Scheduling filter updates at reduced frame rates (that is the stage's responsibility)
+- Decidir cuándo aplicar filtros (eso es responsabilidad del escenario)
+- Cachear superficies procesadas (eso es responsabilidad de `AssetLoader`)
+- Programar actualizaciones de filtro a tasas de fotogramas reducidas (eso es responsabilidad del escenario)
 
 ---
 
-## 8. Public API
+## 8. API pública
 
-### 8.1 Histogram Operations
+### 8.1 Operaciones de histograma
 
 #### `FilterTools.compute_histogram(surface)`
 
-**Purpose:** Compute the per-channel frequency histogram of a surface's pixel intensities. Returns the distribution of R, G, B (and optionally A) values across all pixels. Used to analyze the tonal character of an image — a fundamental Unit VII diagnostic tool.
+**Propósito:** calcula el histograma de frecuencia por canal de las intensidades de píxel de una superficie. Devuelve la distribución de valores R, G, B (y opcionalmente A) en todos los píxeles. Se usa para analizar el carácter tonal de una imagen — una herramienta diagnóstica fundamental de la Unidad VII.
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Description |
+| Parámetro | Tipo | Descripción |
 |---|---|---|
-| `surface` | `pygame.Surface` | The source surface. Any size. RGB or RGBA. |
+| `surface` | `pygame.Surface` | La superficie fuente. Cualquier tamaño. RGB o RGBA. |
 
-**Outputs:**
+**Salidas:**
 
-| Key | Type | Shape | Description |
+| Clave | Tipo | Forma | Descripción |
 |---|---|---|---|
-| `'r'` | `np.ndarray` | `(256,)` | Frequency count per intensity level for Red channel |
-| `'g'` | `np.ndarray` | `(256,)` | Frequency count per intensity level for Green channel |
-| `'b'` | `np.ndarray` | `(256,)` | Frequency count per intensity level for Blue channel |
-| `'luminance'` | `np.ndarray` | `(256,)` | Frequency count per intensity for grayscale luminance |
-| `'total_pixels'` | `int` | scalar | Total pixel count (width × height) |
+| `'r'` | `np.ndarray` | `(256,)` | Conteo de frecuencia por nivel de intensidad del canal Rojo |
+| `'g'` | `np.ndarray` | `(256,)` | Conteo de frecuencia por nivel de intensidad del canal Verde |
+| `'b'` | `np.ndarray` | `(256,)` | Conteo de frecuencia por nivel de intensidad del canal Azul |
+| `'luminance'` | `np.ndarray` | `(256,)` | Conteo de frecuencia por intensidad de luminancia en escala de grises |
+| `'total_pixels'` | `int` | escalar | Conteo total de píxeles (ancho × alto) |
 
-Returns a `dict` with the above keys.
+Devuelve un `dict` con las claves anteriores.
 
-**Restrictions:**
+**Restricciones:**
 
-- Input surface must be at least 1×1 pixel.
-- Surface must be convertible to RGB or RGBA format.
-- This function does not modify the input surface.
+- La superficie de entrada debe ser de al menos 1×1 píxel.
+- La superficie debe ser convertible a formato RGB o RGBA.
+- Esta función no modifica la superficie de entrada.
 
-**Dependencies:** `numpy`, `pygame.surfarray`
+**Dependencias:** `numpy`, `pygame.surfarray`
 
-**Usage Example:**
+**Ejemplo de uso:**
 
 ```python
-# In a student stage — compute histogram of a background layer:
-from framework.processing.filter_tools import FilterTools
+# En un escenario de estudiante — calcular el histograma de una capa de fondo:
+from src.framework.processing.filter_tools import FilterTools
 
 hist = FilterTools.compute_histogram(self.background_surface)
 
-# Check average luminance:
+# Comprobar la luminancia promedio:
 avg_luminance = sum(i * hist['luminance'][i] for i in range(256)) / hist['total_pixels']
 
 if avg_luminance < 80:
-    EventBus.emit("SHOW_MESSAGE", text="The scene is very dark.", duration=2.0)
+    event_bus.emit("SHOW_MESSAGE", text="La escena está muy oscura.", duration=2.0)
 ```
 
 ---
 
 #### `FilterTools.histogram_equalize(surface)`
 
-**Purpose:** Apply histogram equalization to improve contrast by redistributing pixel intensities to span the full 0–255 range uniformly. Demonstrates the relationship between histogram shape and perceived image quality.
+**Propósito:** aplica ecualización de histograma para mejorar el contraste redistribuyendo las intensidades de píxel para que cubran uniformemente el rango completo 0–255. Demuestra la relación entre la forma del histograma y la calidad de imagen percibida.
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Description |
+| Parámetro | Tipo | Descripción |
 |---|---|---|
-| `surface` | `pygame.Surface` | Source surface. RGB or RGBA. |
+| `surface` | `pygame.Surface` | Superficie fuente. RGB o RGBA. |
 
-**Outputs:** A new `pygame.Surface` of the same size with equalized luminance. Color channels are equalized independently to preserve hue relationships (per-channel equalization).
+**Salidas:** una nueva `pygame.Surface` del mismo tamaño con luminancia ecualizada. Los canales de color se ecualizan de forma independiente para preservar las relaciones de tono (ecualización por canal).
 
-**Restrictions:**
+**Restricciones:**
 
-- Applied to grayscale or color surfaces.
-- Does not modify input surface.
-- Computationally expensive on large surfaces — use on sub-surfaces or at reduced frequency.
+- Se aplica a superficies en escala de grises o en color.
+- No modifica la superficie de entrada.
+- Computacionalmente costosa en superficies grandes — usar en subsuperficies o a frecuencia reducida.
 
-**Dependencies:** `numpy`, `opencv-python` (`cv2.equalizeHist`)
+**Dependencias:** `numpy` únicamente.
 
-**Usage Example:**
+> **AUD-455.** Esta ficha decía `opencv-python` (`cv2.equalizeHist`). El
+> código real no importa `cv2` en este método: calcula el histograma y el CDF
+> por canal a mano con `numpy` (`np.histogram`, `cumsum`, `np.ma.masked_equal`)
+> — es la implementación explícita, no la de la biblioteca, a propósito:
+> `histogram_equalize` es contenido de la Unidad VII, igual que `sobel_edge_propio`
+> del Apéndice A. Verificado contra `src/framework/processing/filter_tools.py`.
+
+**Ejemplo de uso:**
 
 ```python
-# Pre-process a dark background tile during stage initialization:
+# Preprocesar una baldosa de fondo oscura durante la inicialización del escenario:
 equalized_bg = FilterTools.histogram_equalize(raw_background_surface)
 self.background_surface = equalized_bg
 ```
 
 ---
 
-### 8.2 Brightness Operations
+### 8.2 Operaciones de brillo
 
 #### `FilterTools.adjust_brightness(surface, factor)`
 
-**Purpose:** Multiply all pixel channel values by `factor`. A value of `1.0` is identity. Values above `1.0` brighten. Values below `1.0` darken. Values at `0.0` produce black. This operation models the scalar multiplication of pixel vectors — a Unit VII concept.
+**Propósito:** multiplica todos los valores de canal de píxel por `factor`. Un valor de `1.0` es identidad. Valores por encima de `1.0` aclaran. Valores por debajo de `1.0` oscurecen. Un valor de `0.0` produce negro. Esta operación modela la multiplicación escalar de vectores de píxel — un concepto de la Unidad VII.
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Constraints | Description |
+| Parámetro | Tipo | Restricciones | Descripción |
 |---|---|---|---|
-| `surface` | `pygame.Surface` | Any size, RGB/RGBA | Source surface |
-| `factor` | `float` | `[0.0, 4.0]` | Brightness multiplier |
+| `surface` | `pygame.Surface` | Cualquier tamaño, RGB/RGBA | Superficie fuente |
+| `factor` | `float` | `[0.0, 4.0]` | Multiplicador de brillo |
 
-**Outputs:** New `pygame.Surface` of identical size. Pixel values clamped to `[0, 255]`.
+**Salidas:** nueva `pygame.Surface` de tamaño idéntico. Valores de píxel saturados a `[0, 255]`.
 
-**Restrictions:**
+**Restricciones:**
 
-- `factor` outside `[0.0, 4.0]` raises `ValueError`.
-- Alpha channel is preserved unmodified if surface has alpha.
-- Does not modify input surface.
+- `factor` fuera de `[0.0, 4.0]` lanza `ValueError`.
+- El canal alfa se preserva sin modificar si la superficie tiene alfa.
+- No modifica la superficie de entrada.
 
-**Dependencies:** `numpy`, `pygame.surfarray`
+**Dependencias:** `numpy`, `pygame.surfarray`
 
-**Internal Implementation Note (for AI assistants):**
+**Nota de implementación interna (para asistentes de IA):**
 
 ```
 arr = surfarray.array3d(surface).astype(float32)
 arr = clip(arr * factor, 0, 255).astype(uint8)
 result = surfarray.make_surface(arr)
-if surface has alpha:
+si surface tiene alfa:
     result.set_alpha(surface.get_alpha())
 return result
 ```
 
-**Usage Example:**
+**Ejemplo de uso:**
 
 ```python
-# Health-based screen darkening in a student stage:
+# Oscurecimiento de pantalla según la salud en un escenario de estudiante:
 health_ratio = player.current_health / 5.0
 dimmed = FilterTools.adjust_brightness(self.internal_surface_copy, factor=health_ratio)
 surface.blit(dimmed, (0, 0))
@@ -303,33 +319,33 @@ surface.blit(dimmed, (0, 0))
 
 ---
 
-### 8.3 Contrast Operations
+### 8.3 Operaciones de contraste
 
 #### `FilterTools.adjust_contrast(surface, factor)`
 
-**Purpose:** Apply linear contrast scaling around the midpoint (128). A `factor` of `1.0` is identity. Values above `1.0` increase contrast (push darks darker, lights lighter). Values below `1.0` reduce contrast (flatten toward gray). Models the affine pixel transformation: `out = (in - 128) * factor + 128`.
+**Propósito:** aplica escalado lineal de contraste alrededor del punto medio (128). Un `factor` de `1.0` es identidad. Valores por encima de `1.0` aumentan el contraste (oscurecen más los oscuros, aclaran más los claros). Valores por debajo de `1.0` reducen el contraste (aplanan hacia el gris). Modela la transformación afín de píxel: `out = (in - 128) * factor + 128`.
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Constraints | Description |
+| Parámetro | Tipo | Restricciones | Descripción |
 |---|---|---|---|
-| `surface` | `pygame.Surface` | Any size, RGB/RGBA | Source surface |
-| `factor` | `float` | `[0.0, 4.0]` | Contrast multiplier |
+| `surface` | `pygame.Surface` | Cualquier tamaño, RGB/RGBA | Superficie fuente |
+| `factor` | `float` | `[0.0, 4.0]` | Multiplicador de contraste |
 
-**Outputs:** New `pygame.Surface` of identical size. Values clamped to `[0, 255]`.
+**Salidas:** nueva `pygame.Surface` de tamaño idéntico. Valores saturados a `[0, 255]`.
 
-**Restrictions:**
+**Restricciones:**
 
-- `factor` outside `[0.0, 4.0]` raises `ValueError`.
-- Alpha preserved if present.
-- Does not modify input.
+- `factor` fuera de `[0.0, 4.0]` lanza `ValueError`.
+- Alfa preservado si está presente.
+- No modifica la entrada.
 
-**Dependencies:** `numpy`, `pygame.surfarray`
+**Dependencias:** `numpy`, `pygame.surfarray`
 
-**Usage Example:**
+**Ejemplo de uso:**
 
 ```python
-# High-contrast visual mode triggered by a stage event:
+# Modo visual de alto contraste disparado por un evento de escenario:
 high_contrast_bg = FilterTools.adjust_contrast(self.background_surface, factor=2.5)
 surface.blit(high_contrast_bg, camera_offset)
 ```
@@ -338,71 +354,71 @@ surface.blit(high_contrast_bg, camera_offset)
 
 #### `FilterTools.stretch_contrast(surface)`
 
-**Purpose:** Perform min-max contrast stretching. Finds the actual minimum and maximum pixel values in the surface and linearly remaps them to 0 and 255. Unlike `adjust_contrast()`, this is adaptive — it analyzes the surface before transforming it.
+**Propósito:** realiza estiramiento de contraste min-max. Encuentra el valor mínimo y máximo real de píxel en la superficie y los remapea linealmente a 0 y 255. A diferencia de `adjust_contrast()`, esto es adaptativo — analiza la superficie antes de transformarla.
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Description |
+| Parámetro | Tipo | Descripción |
 |---|---|---|
-| `surface` | `pygame.Surface` | Any size, RGB/RGBA |
+| `surface` | `pygame.Surface` | Cualquier tamaño, RGB/RGBA |
 
-**Outputs:** New `pygame.Surface` with full-range contrast. Each channel is stretched independently.
+**Salidas:** nueva `pygame.Surface` con contraste de rango completo. Cada canal se estira de forma independiente.
 
-**Restrictions:**
+**Restricciones:**
 
-- If min == max (uniform surface), returns the input surface unchanged and logs a warning.
-- Does not modify input.
+- Si min == max (superficie uniforme), devuelve la superficie de entrada sin cambios y registra un aviso.
+- No modifica la entrada.
 
-**Dependencies:** `numpy`, `pygame.surfarray`
+**Dependencias:** `numpy`, `pygame.surfarray`
 
-**Usage Example:**
+**Ejemplo de uso:**
 
 ```python
-# Stretch a low-contrast sprite sheet for visual clarity in debug mode:
+# Estirar una hoja de sprites de bajo contraste para claridad visual en modo depuración:
 stretched = FilterTools.stretch_contrast(sprite_surface)
 ```
 
 ---
 
-### 8.4 Convolution Operations
+### 8.4 Operaciones de convolución
 
 #### `FilterTools.apply_kernel(surface, kernel)`
 
-**Purpose:** Apply an arbitrary convolution kernel to the surface. This is the generalized form of all linear spatial filters. The kernel is a 2D NumPy array (square, odd-sized). The operation is the discrete 2D convolution:
+**Propósito:** aplica un kernel de convolución arbitrario a la superficie. Es la forma generalizada de todos los filtros espaciales lineales. El kernel es un arreglo NumPy 2D (cuadrado, de tamaño impar). La operación es la convolución 2D discreta:
 
 ```
-output(x, y) = Σ Σ kernel(i, j) * input(x+i, y+j)
+salida(x, y) = Σ Σ kernel(i, j) * entrada(x+i, y+j)
 ```
 
-Applied independently to each RGB channel.
+Se aplica de forma independiente a cada canal RGB.
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Constraints | Description |
+| Parámetro | Tipo | Restricciones | Descripción |
 |---|---|---|---|
-| `surface` | `pygame.Surface` | Any size, RGB/RGBA | Source surface |
-| `kernel` | `np.ndarray` | Shape `(n, n)`, `n` odd, `n ≥ 3` | Convolution kernel |
+| `surface` | `pygame.Surface` | Cualquier tamaño, RGB/RGBA | Superficie fuente |
+| `kernel` | `np.ndarray` | Forma `(n, n)`, `n` impar, `n ≥ 3` | Kernel de convolución |
 
-**Outputs:** New `pygame.Surface` of identical size. Values clamped to `[0, 255]`.
+**Salidas:** nueva `pygame.Surface` de tamaño idéntico. Valores saturados a `[0, 255]`.
 
-**Restrictions:**
+**Restricciones:**
 
-- Kernel must be square: `kernel.shape[0] == kernel.shape[1]`.
-- Kernel dimensions must be odd: `kernel.shape[0] % 2 == 1`.
-- Minimum kernel size: 3×3. Maximum kernel size: 15×15 (performance constraint).
-- Kernel values are not required to sum to 1 (unnormalized kernels are valid for edge detection).
-- Border handling: `mode='reflect'` (reflects pixels at edges).
-- Raises `ValueError` if kernel shape is invalid.
+- El kernel debe ser cuadrado: `kernel.shape[0] == kernel.shape[1]`.
+- Las dimensiones del kernel deben ser impares: `kernel.shape[0] % 2 == 1`.
+- Tamaño mínimo de kernel: 3×3. Tamaño máximo: 15×15 (restricción de rendimiento).
+- No se exige que los valores del kernel sumen 1 (los kernels sin normalizar son válidos para detección de bordes).
+- Manejo de borde: `mode='reflect'` (refleja los píxeles en los bordes).
+- Lanza `ValueError` si la forma del kernel es inválida.
 
-**Dependencies:** `numpy`, `scipy.ndimage.convolve`
+**Dependencias:** `numpy`, `scipy.ndimage.convolve`
 
-**Usage Example:**
+**Ejemplo de uso:**
 
 ```python
 import numpy as np
-from framework.processing.filter_tools import FilterTools
+from src.framework.processing.filter_tools import FilterTools
 
-# Sharpen kernel (Unit VII — custom convolution):
+# Kernel de realce (Unidad VII — convolución personalizada):
 sharpen_kernel = np.array([
     [ 0, -1,  0],
     [-1,  5, -1],
@@ -416,37 +432,37 @@ sharpened = FilterTools.apply_kernel(self.background_surface, sharpen_kernel)
 
 #### `FilterTools.get_standard_kernel(name)`
 
-**Purpose:** Return a pre-defined, academically standard convolution kernel by name. Provides students with correct kernel definitions without requiring them to construct them manually. Covers all kernels discussed in Unit VII.
+**Propósito:** devuelve un kernel de convolución predefinido y académicamente estándar por nombre. Da a los estudiantes definiciones de kernel correctas sin exigirles construirlas a mano. Cubre todos los kernels que se discuten en la Unidad VII.
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Description |
+| Parámetro | Tipo | Descripción |
 |---|---|---|
-| `name` | `str` | Kernel identifier (see table below) |
+| `name` | `str` | Identificador de kernel (ver tabla abajo) |
 
-**Available Kernels:**
+**Kernels disponibles:**
 
-| Name | Size | Description | Academic Topic |
+| Nombre | Tamaño | Descripción | Tema académico |
 |---|---|---|---|
-| `'identity'` | 3×3 | No-op kernel | Baseline for comparison |
-| `'sharpen'` | 3×3 | Laplacian-based sharpening | Convolution |
-| `'box_blur'` | 3×3 | Uniform average blur | Convolution |
-| `'box_blur_5'` | 5×5 | Larger uniform blur | Convolution |
-| `'edge_laplacian'` | 3×3 | Laplacian edge detection | Edge detection |
-| `'emboss'` | 3×3 | Emboss effect | Convolution |
-| `'ridge'` | 3×3 | Ridge/valley detection | Edge detection |
-| `'sobel_x'` | 3×3 | Sobel horizontal gradient | Sobel |
-| `'sobel_y'` | 3×3 | Sobel vertical gradient | Sobel |
+| `'identity'` | 3×3 | Kernel identidad (no hace nada) | Línea base de comparación |
+| `'sharpen'` | 3×3 | Realce basado en Laplaciano | Convolución |
+| `'box_blur'` | 3×3 | Desenfoque promedio uniforme | Convolución |
+| `'box_blur_5'` | 5×5 | Desenfoque uniforme más amplio | Convolución |
+| `'edge_laplacian'` | 3×3 | Detección de bordes por Laplaciano | Detección de bordes |
+| `'emboss'` | 3×3 | Efecto de relieve | Convolución |
+| `'ridge'` | 3×3 | Detección de cresta/valle | Detección de bordes |
+| `'sobel_x'` | 3×3 | Gradiente horizontal de Sobel | Sobel |
+| `'sobel_y'` | 3×3 | Gradiente vertical de Sobel | Sobel |
 
-**Outputs:** `np.ndarray` of the appropriate shape and dtype `float32`.
+**Salidas:** `np.ndarray` de la forma adecuada y dtype `float32`.
 
-**Restrictions:**
+**Restricciones:**
 
-- Raises `KeyError` with a list of valid names if `name` is unrecognized.
+- Lanza `KeyError` con la lista de nombres válidos si `name` no se reconoce.
 
-**Dependencies:** `numpy`
+**Dependencias:** `numpy`
 
-**Usage Example:**
+**Ejemplo de uso:**
 
 ```python
 kernel = FilterTools.get_standard_kernel('sharpen')
@@ -455,85 +471,85 @@ sharpened = FilterTools.apply_kernel(background, kernel)
 
 ---
 
-### 8.5 Gaussian Blur
+### 8.5 Desenfoque gaussiano
 
 #### `FilterTools.gaussian_blur(surface, sigma)`
 
-**Purpose:** Apply Gaussian blur to a surface. The blur is implemented as a separable convolution with a Gaussian kernel parameterized by `sigma` (standard deviation). Higher `sigma` values produce stronger blur. This demonstrates the Gaussian function as a spatial weighting kernel and its separability property.
+**Propósito:** aplica desenfoque gaussiano a una superficie. El desenfoque se implementa como una convolución separable con un kernel gaussiano parametrizado por `sigma` (desviación estándar). Valores de `sigma` más altos producen un desenfoque más fuerte. Esto demuestra la función gaussiana como un kernel de ponderación espacial y su propiedad de separabilidad.
 
-**Mathematical definition:**
+**Definición matemática:**
 
 ```
 G(x, y) = (1 / 2πσ²) * exp(-(x² + y²) / 2σ²)
 ```
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Constraints | Description |
+| Parámetro | Tipo | Restricciones | Descripción |
 |---|---|---|---|
-| `surface` | `pygame.Surface` | Any size, RGB/RGBA | Source surface |
-| `sigma` | `float` | `(0.0, 10.0]` | Standard deviation of the Gaussian |
+| `surface` | `pygame.Surface` | Cualquier tamaño, RGB/RGBA | Superficie fuente |
+| `sigma` | `float` | `(0.0, 10.0]` | Desviación estándar de la gaussiana |
 
-**Outputs:** New `pygame.Surface` of identical size, blurred according to the Gaussian kernel.
+**Salidas:** nueva `pygame.Surface` de tamaño idéntico, desenfocada según el kernel gaussiano.
 
-**Restrictions:**
+**Restricciones:**
 
-- `sigma ≤ 0.0` raises `ValueError`.
-- `sigma > 10.0` raises `ValueError` (performance guard — for strong blur, apply iteratively).
-- Border handling: `mode='reflect'`.
-- Alpha channel preserved if present.
-- Applied to each RGB channel independently.
+- `sigma ≤ 0.0` lanza `ValueError`.
+- `sigma > 10.0` lanza `ValueError` (protección de rendimiento — para desenfoque fuerte, aplicar iterativamente).
+- Manejo de borde: `mode='reflect'`.
+- Canal alfa preservado si está presente.
+- Se aplica a cada canal RGB de forma independiente.
 
-**Dependencies:** `numpy`, `scipy.ndimage.gaussian_filter`
+**Dependencias:** `numpy`, `scipy.ndimage.gaussian_filter`
 
-**Performance Note:** For `sigma > 3.0`, the effective kernel radius is large. On surfaces larger than 320×224 pixels, this can exceed the 2ms frame budget for real-time use. Apply to sub-surfaces or at reduced frequency.
+**Nota de rendimiento:** para `sigma > 3.0`, el radio efectivo del kernel es grande. En superficies mayores a 320×224 píxeles, esto puede superar el presupuesto de 2ms por fotograma para uso en tiempo real. Aplicar a subsuperficies o a frecuencia reducida.
 
-**Usage Example:**
+**Ejemplo de uso:**
 
 ```python
-# Apply blur to a background layer to simulate depth of field:
+# Aplicar desenfoque a una capa de fondo para simular profundidad de campo:
 blurred_far_bg = FilterTools.gaussian_blur(self.far_background, sigma=1.8)
 surface.blit(blurred_far_bg, far_bg_offset)
 ```
 
 ---
 
-### 8.6 Edge Detection
+### 8.6 Detección de bordes
 
 #### `FilterTools.sobel_edge(surface)`
 
-**Purpose:** Apply the Sobel operator to detect edges by computing the gradient magnitude at each pixel. The gradient in X and Y directions are computed separately using the Sobel kernels, then combined as the Euclidean magnitude. Returns a **grayscale** surface where bright pixels represent strong edges.
+**Propósito:** aplica el operador de Sobel para detectar bordes calculando la magnitud del gradiente en cada píxel. El gradiente en las direcciones X e Y se calcula por separado usando los kernels de Sobel, y luego se combina como la magnitud euclidiana. Devuelve una superficie en **escala de grises** donde los píxeles brillantes representan bordes fuertes.
 
-**Mathematical definition:**
+**Definición matemática:**
 
 ```
-Gx = sobel_x_kernel ⊗ I
-Gy = sobel_y_kernel ⊗ I
+Gx = kernel_sobel_x ⊗ I
+Gy = kernel_sobel_y ⊗ I
 |G| = sqrt(Gx² + Gy²)
 ```
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Description |
+| Parámetro | Tipo | Descripción |
 |---|---|---|
-| `surface` | `pygame.Surface` | Source surface. RGB or RGBA. |
+| `surface` | `pygame.Surface` | Superficie fuente. RGB o RGBA. |
 
-**Outputs:** New `pygame.Surface` of identical size. **Grayscale** (all three channels equal). White = strong edge. Black = no edge. Alpha is not preserved (output is always RGB).
+**Salidas:** nueva `pygame.Surface` de tamaño idéntico. **Escala de grises** (los tres canales iguales). Blanco = borde fuerte. Negro = sin borde. El alfa no se preserva (la salida siempre es RGB).
 
-**Restrictions:**
+**Restricciones:**
 
-- Input is converted to grayscale internally before applying Sobel. Color information is discarded for the computation.
-- Output is always an RGB surface (no alpha), suitable for blending over the scene.
-- Does not modify input.
+- La entrada se convierte a escala de grises internamente antes de aplicar Sobel. La información de color se descarta para el cálculo.
+- La salida siempre es una superficie RGB (sin alfa), apta para mezclar sobre la escena.
+- No modifica la entrada.
 
-**Dependencies:** `numpy`, `opencv-python` (`cv2.Sobel`, `cv2.convertScaleAbs`)
+**Dependencias:** `numpy`, `opencv-python` (`cv2.Sobel`, `cv2.convertScaleAbs`)
 
-**Usage Example:**
+**Ejemplo de uso:**
 
 ```python
-# Render an edge-detection overlay on the terrain layer:
+# Renderizar una superposición de detección de bordes sobre la capa de terreno:
 edge_map = FilterTools.sobel_edge(self.terrain_surface)
-edge_map.set_alpha(140)  # Semi-transparent overlay
+edge_map.set_alpha(140)  # Superposición semitransparente
 surface.blit(edge_map, camera_offset)
 ```
 
@@ -541,52 +557,52 @@ surface.blit(edge_map, camera_offset)
 
 #### `FilterTools.canny_edge(surface, low_threshold, high_threshold)`
 
-**Purpose:** Apply the Canny multi-stage edge detection algorithm. Canny uses Gaussian smoothing, Sobel gradients, non-maximum suppression, and double thresholding with hysteresis to produce clean, thin edges. Returns a binary (black and white) surface.
+**Propósito:** aplica el algoritmo de detección de bordes multi-etapa de Canny. Canny usa suavizado gaussiano, gradientes de Sobel, supresión no máxima y doble umbral con histéresis para producir bordes limpios y delgados. Devuelve una superficie binaria (blanco y negro).
 
-**The Canny pipeline (internal):**
+**La tubería de Canny (interna):**
 
 ```
-1. Convert to grayscale
-2. Apply Gaussian blur (sigma ≈ 1.4 — internal, fixed)
-3. Compute Sobel gradients (Gx, Gy)
-4. Non-maximum suppression along gradient direction
-5. Double threshold: pixels above high_threshold → strong edge
-                     pixels between low and high → weak edge (kept if connected to strong)
-                     pixels below low_threshold → rejected
-6. Edge tracking by hysteresis
+1. Convertir a escala de grises
+2. Aplicar desenfoque gaussiano (sigma ≈ 1.4 — interno, fijo)
+3. Calcular gradientes de Sobel (Gx, Gy)
+4. Supresión no máxima a lo largo de la dirección del gradiente
+5. Doble umbral: píxeles por encima de high_threshold → borde fuerte
+                 píxeles entre low y high → borde débil (se conserva si toca uno fuerte)
+                 píxeles por debajo de low_threshold → rechazado
+6. Seguimiento de bordes por histéresis
 ```
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Constraints | Description |
+| Parámetro | Tipo | Restricciones | Descripción |
 |---|---|---|---|
-| `surface` | `pygame.Surface` | RGB/RGBA, any size | Source surface |
-| `low_threshold` | `int` | `[1, 254]`, `< high_threshold` | Lower hysteresis threshold |
-| `high_threshold` | `int` | `[2, 255]`, `> low_threshold` | Upper hysteresis threshold |
+| `surface` | `pygame.Surface` | RGB/RGBA, cualquier tamaño | Superficie fuente |
+| `low_threshold` | `int` | `[1, 254]`, `< high_threshold` | Umbral de histéresis inferior |
+| `high_threshold` | `int` | `[2, 255]`, `> low_threshold` | Umbral de histéresis superior |
 
-**Recommended threshold pairs:**
+**Pares de umbral recomendados:**
 
-| Effect | Low | High |
+| Efecto | Bajo | Alto |
 |---|---|---|
-| Very sensitive (many edges) | 20 | 60 |
-| Balanced (default) | 50 | 150 |
-| Strict (strong edges only) | 100 | 200 |
+| Muy sensible (muchos bordes) | 20 | 60 |
+| Equilibrado (por defecto) | 50 | 150 |
+| Estricto (sólo bordes fuertes) | 100 | 200 |
 
-**Outputs:** New `pygame.Surface` of identical size. **Binary grayscale**: pixels are either white (edge) or black (no edge). Alpha not preserved.
+**Salidas:** nueva `pygame.Surface` de tamaño idéntico. **Escala de grises binaria**: los píxeles son blancos (borde) o negros (sin borde). Alfa no preservado.
 
-**Restrictions:**
+**Restricciones:**
 
-- `low_threshold >= high_threshold` raises `ValueError`.
-- Both thresholds must be in range `[1, 255]`.
-- Input is converted to grayscale internally.
-- Output is RGB (not RGBA).
+- `low_threshold >= high_threshold` lanza `ValueError`.
+- Ambos umbrales deben estar en el rango `[1, 255]`.
+- La entrada se convierte a escala de grises internamente.
+- La salida es RGB (no RGBA).
 
-**Dependencies:** `numpy`, `opencv-python` (`cv2.Canny`)
+**Dependencias:** `numpy`, `opencv-python` (`cv2.Canny`)
 
-**Usage Example:**
+**Ejemplo de uso:**
 
 ```python
-# Canny edge detection applied to an enemy sprite region:
+# Detección de bordes de Canny aplicada a la región de un sprite enemigo:
 enemy_region = self.stage_surface.subsurface(enemy.rect)
 edges = FilterTools.canny_edge(enemy_region, low_threshold=50, high_threshold=150)
 edges.set_alpha(180)
@@ -595,37 +611,37 @@ surface.blit(edges, enemy.rect.topleft)
 
 ---
 
-## 9. Kernel Standards
+## 9. Estándares de kernel
 
-All kernels in Legacy of InFest follow these standards:
+Todos los kernels de Legacy of InFest siguen estos estándares:
 
-### 9.1 Format
+### 9.1 Formato
 
-| Property | Standard |
+| Propiedad | Estándar |
 |---|---|
-| Data type | `np.float32` |
-| Shape | Square: `(n, n)` |
-| Dimension | Odd: `n ∈ {3, 5, 7, 9, 11, 13, 15}` |
-| Normalization | Optional. Normalized kernels (sum = 1.0) for blur. Unnormalized for detection. |
-| Orientation | Row-major NumPy convention |
+| Tipo de dato | `np.float32` |
+| Forma | Cuadrada: `(n, n)` |
+| Dimensión | Impar: `n ∈ {3, 5, 7, 9, 11, 13, 15}` |
+| Normalización | Opcional. Kernels normalizados (suma = 1.0) para desenfoque. Sin normalizar para detección. |
+| Orientación | Convención NumPy por filas |
 
-### 9.2 Standard Kernel Definitions
+### 9.2 Definiciones de kernel estándar
 
-**Identity (3×3):**
+**Identidad (3×3):**
 ```
 [[0, 0, 0],
  [0, 1, 0],
  [0, 0, 0]]
 ```
 
-**Box Blur (3×3):**
+**Desenfoque de caja (3×3):**
 ```
 [[1/9, 1/9, 1/9],
  [1/9, 1/9, 1/9],
  [1/9, 1/9, 1/9]]
 ```
 
-**Sharpen (3×3):**
+**Realce (3×3):**
 ```
 [[ 0, -1,  0],
  [-1,  5, -1],
@@ -646,7 +662,7 @@ All kernels in Legacy of InFest follow these standards:
  [ 1,  2,  1]]
 ```
 
-**Laplacian Edge (3×3):**
+**Borde Laplaciano (3×3):**
 ```
 [[ 0,  1,  0],
  [ 1, -4,  1],
@@ -655,121 +671,121 @@ All kernels in Legacy of InFest follow these standards:
 
 ---
 
-## 10. Image Format Standards
+## 10. Estándares de formato de imagen
 
-### 10.1 Input Surface Requirements
+### 10.1 Requisitos de la superficie de entrada
 
-| Property | Required Value |
+| Propiedad | Valor requerido |
 |---|---|
-| Format | `pygame.Surface` |
-| Pixel mode | RGB (24-bit) or RGBA (32-bit) |
-| Minimum size | 1×1 pixel |
-| Maximum size | 1920×1080 (performance ceiling) |
-| Color depth | 8 bits per channel |
+| Formato | `pygame.Surface` |
+| Modo de píxel | RGB (24 bits) o RGBA (32 bits) |
+| Tamaño mínimo | 1×1 píxel |
+| Tamaño máximo | 1920×1080 (techo de rendimiento) |
+| Profundidad de color | 8 bits por canal |
 
-### 10.2 Internal Array Format
+### 10.2 Formato de arreglo interno
 
-| Stage | Format | Shape |
+| Etapa | Formato | Forma |
 |---|---|---|
-| Pygame surface | `pygame.Surface` | — |
-| surfarray extraction | `np.ndarray`, `uint8` | `(W, H, 3)` |
-| Transposed for OpenCV | `np.ndarray`, `uint8` | `(H, W, 3)` |
-| Float computation | `np.ndarray`, `float32` | `(H, W, 3)` or `(H, W)` |
-| Result clip and cast | `np.ndarray`, `uint8` | `(W, H, 3)` |
-| surfarray reconstruct | `pygame.Surface` | — |
+| Superficie de Pygame | `pygame.Surface` | — |
+| Extracción con surfarray | `np.ndarray`, `uint8` | `(W, H, 3)` |
+| Transpuesto para OpenCV | `np.ndarray`, `uint8` | `(H, W, 3)` |
+| Cómputo en flotante | `np.ndarray`, `float32` | `(H, W, 3)` o `(H, W)` |
+| Saturación y conversión del resultado | `np.ndarray`, `uint8` | `(W, H, 3)` |
+| Reconstrucción con surfarray | `pygame.Surface` | — |
 
-**The axis transposition between Pygame and OpenCV is mandatory and always applied inside `FilterTools`.** Students never encounter this complexity.
+**La transposición de ejes entre Pygame y OpenCV es obligatoria y siempre se aplica dentro de `FilterTools`.** Los estudiantes nunca se topan con esta complejidad.
 
-### 10.3 Output Surface Guarantee
+### 10.3 Garantía de la superficie de salida
 
-All `FilterTools` methods guarantee:
+Todos los métodos de `FilterTools` garantizan:
 
-- Output surface has the **same dimensions** as the input surface.
-- Output surface is a **new object** — it does not share memory with the input.
-- Output pixel depth is **24-bit RGB** unless otherwise documented (e.g., edge detection always returns RGB).
+- La superficie de salida tiene las **mismas dimensiones** que la de entrada.
+- La superficie de salida es un **objeto nuevo** — no comparte memoria con la de entrada.
+- La profundidad de píxel de salida es **RGB de 24 bits**, salvo que se documente lo contrario (p. ej., la detección de bordes siempre devuelve RGB).
 
 ---
 
-## 11. Input Validation
+## 11. Validación de entrada
 
-All public methods call `_validate_surface(surface)` before processing:
+Todos los métodos públicos llaman a `_validate_surface(surface)` antes de procesar:
 
-### `_validate_surface(surface)` — Internal
+### `_validate_surface(surface)` — interno
 
-| Check | Exception Raised |
+| Comprobación | Excepción lanzada |
 |---|---|
-| `surface` is `None` | `TypeError("Surface cannot be None")` |
-| `surface` is not `pygame.Surface` | `TypeError(f"Expected pygame.Surface, got {type(surface)}")` |
-| Surface size is `(0, 0)` | `ValueError("Surface has zero dimensions")` |
-| Surface not locked (during surfarray ops) | Managed internally — surface is never left locked |
+| `surface` es `None` | `TypeError("Surface cannot be None")` |
+| `surface` no es `pygame.Surface` | `TypeError(f"Expected pygame.Surface, got {type(surface)}")` |
+| El tamaño de la superficie es `(0, 0)` | `ValueError("Surface has zero dimensions")` |
+| Superficie no bloqueada (durante operaciones de surfarray) | Gestionado internamente — la superficie nunca queda bloqueada |
 
-Parameter-specific validation:
+Validación específica por parámetro:
 
-| Method | Parameter | Validation |
+| Método | Parámetro | Validación |
 |---|---|---|
 | `adjust_brightness` | `factor` | `0.0 ≤ factor ≤ 4.0` |
 | `adjust_contrast` | `factor` | `0.0 ≤ factor ≤ 4.0` |
-| `apply_kernel` | `kernel` | Square, odd, 3–15 |
+| `apply_kernel` | `kernel` | Cuadrado, impar, 3–15 |
 | `gaussian_blur` | `sigma` | `0.0 < sigma ≤ 10.0` |
-| `canny_edge` | thresholds | `1 ≤ low < high ≤ 255` |
+| `canny_edge` | umbrales | `1 ≤ low < high ≤ 255` |
 
 ---
 
-## 12. Error Handling
+## 12. Manejo de errores
 
-`FilterTools` raises descriptive exceptions. It never returns `None` silently. It never logs and continues on bad input.
+`FilterTools` lanza excepciones descriptivas. Nunca devuelve `None` en silencio. Nunca registra y sigue adelante ante una entrada incorrecta.
 
-| Exception | When Raised | Message Pattern |
+| Excepción | Cuándo se lanza | Patrón del mensaje |
 |---|---|---|
-| `TypeError` | Wrong argument type | `"FilterTools.{method}: expected {type}, got {actual_type}"` |
-| `ValueError` | Out-of-range parameter | `"FilterTools.{method}: {param} must be in [{min}, {max}], got {value}"` |
-| `KeyError` | Unknown kernel name in `get_standard_kernel` | `"Unknown kernel '{name}'. Valid names: {list}"` |
-| `RuntimeError` | Internal processing failure (e.g., OpenCV error) | `"FilterTools.{method}: processing failed — {cv2_error_message}"` |
+| `TypeError` | Tipo de argumento incorrecto | `"FilterTools.{method}: expected {type}, got {actual_type}"` |
+| `ValueError` | Parámetro fuera de rango | `"FilterTools.{method}: {param} must be in [{min}, {max}], got {value}"` |
+| `KeyError` | Nombre de kernel desconocido en `get_standard_kernel` | `"Unknown kernel '{name}'. Valid names: {list}"` |
+| `RuntimeError` | Fallo interno de procesamiento (p. ej., error de OpenCV) | `"FilterTools.{method}: processing failed — {cv2_error_message}"` |
 
-Students who receive a `FilterTools` exception can immediately identify what they passed incorrectly. The exception message always includes the method name and the invalid value.
+Un estudiante que recibe una excepción de `FilterTools` puede identificar de inmediato qué pasó de forma incorrecta. El mensaje de excepción siempre incluye el nombre del método y el valor inválido.
 
 ---
 
-## 13. Performance Constraints
+## 13. Restricciones de rendimiento
 
-### 13.1 Time Budget
+### 13.1 Presupuesto de tiempo
 
-The full game loop frame budget at 60 FPS is **16.67ms**. Filter operations consume a portion of this budget.
+El presupuesto de fotograma del bucle de juego completo a 60 FPS es de **16.67ms**. Las operaciones de filtro consumen una parte de ese presupuesto.
 
-| Operation | Typical Time (320×224 surface) | Recommendation |
+| Operación | Tiempo típico (superficie 320×224) | Recomendación |
 |---|---|---|
-| `compute_histogram` | < 0.5ms | Safe every frame |
-| `adjust_brightness` | < 0.5ms | Safe every frame |
-| `adjust_contrast` | < 0.5ms | Safe every frame |
-| `stretch_contrast` | < 1.0ms | Safe every frame |
-| `apply_kernel` (3×3) | < 1.5ms | Safe every frame |
-| `apply_kernel` (7×7) | ~3ms | Every 3 frames |
-| `apply_kernel` (15×15) | ~8ms | Every 10 frames or pre-compute |
-| `gaussian_blur` (σ=1.0) | < 1ms | Safe every frame |
-| `gaussian_blur` (σ=3.0) | ~2.5ms | Every 3 frames |
-| `gaussian_blur` (σ=5.0) | ~5ms | Every 8 frames or pre-compute |
-| `sobel_edge` | ~2ms | Every 3 frames |
-| `canny_edge` | ~3ms | Every 5 frames |
+| `compute_histogram` | < 0.5ms | Seguro cada fotograma |
+| `adjust_brightness` | < 0.5ms | Seguro cada fotograma |
+| `adjust_contrast` | < 0.5ms | Seguro cada fotograma |
+| `stretch_contrast` | < 1.0ms | Seguro cada fotograma |
+| `apply_kernel` (3×3) | < 1.5ms | Seguro cada fotograma |
+| `apply_kernel` (7×7) | ~3ms | Cada 3 fotogramas |
+| `apply_kernel` (15×15) | ~8ms | Cada 10 fotogramas o precalculado |
+| `gaussian_blur` (σ=1.0) | < 1ms | Seguro cada fotograma |
+| `gaussian_blur` (σ=3.0) | ~2.5ms | Cada 3 fotogramas |
+| `gaussian_blur` (σ=5.0) | ~5ms | Cada 8 fotogramas o precalculado |
+| `sobel_edge` | ~2ms | Cada 3 fotogramas |
+| `canny_edge` | ~3ms | Cada 5 fotogramas |
 
-### 13.2 Sub-Surface Strategy
+### 13.2 Estrategia de subsuperficie
 
-Students are expected to apply expensive filters to **sub-surfaces** rather than the full screen. A sub-surface is created with `pygame.Surface.subsurface(rect)`.
+Se espera que los estudiantes apliquen los filtros costosos a **subsuperficies** en vez de a la pantalla completa. Una subsuperficie se crea con `pygame.Surface.subsurface(rect)`.
 
 ```
-# Instead of:
+# En vez de:
 filtered = FilterTools.canny_edge(full_320x224_surface, 50, 150)  # ~3ms
 
-# Prefer:
-region = full_surface.subsurface(pygame.Rect(0, 0, 160, 112))     # Quarter surface
+# Preferir:
+region = full_surface.subsurface(pygame.Rect(0, 0, 160, 112))     # Un cuarto de la superficie
 filtered_region = FilterTools.canny_edge(region, 50, 150)         # ~0.8ms
 ```
 
-### 13.3 Frame-Throttled Updates
+### 13.3 Actualizaciones limitadas por fotograma
 
-For expensive operations that don't need per-frame precision, students use a frame counter:
+Para operaciones costosas que no necesitan precisión por fotograma, los estudiantes usan un contador de fotogramas:
 
 ```
-# Concept — update filter result every 5 frames:
+# Concepto — actualizar el resultado del filtro cada 5 fotogramas:
 if self.frame_count % 5 == 0:
     self.cached_edge_map = FilterTools.sobel_edge(self.background_surface)
 self.frame_count += 1
@@ -778,119 +794,100 @@ surface.blit(self.cached_edge_map, (0, 0))
 
 ---
 
-## 14. Unit VII Mapping
+## 14. Correspondencia con la Unidad VII
 
-| Unit VII Topic | FilterTools Method | Observable In-Game |
+| Tema de la Unidad VII | Método de FilterTools | Observable en el juego |
 |---|---|---|
-| Histogram | `compute_histogram()` | Numeric output drives game logic |
-| Histogram Equalization | `histogram_equalize()` | Visual quality improvement on dark surfaces |
-| Brightness | `adjust_brightness()` | Screen dims/brightens based on health or time |
-| Contrast | `adjust_contrast()` | High/low contrast visual mode |
-| Contrast Stretching | `stretch_contrast()` | Low-contrast sprite made visually clear |
-| Convolution | `apply_kernel()` | Custom kernel applied to background |
-| Gaussian Blur | `gaussian_blur()` | Background blur simulating depth or fog |
-| Sobel | `sobel_edge()` | Edge overlay rendered on terrain or enemies |
-| Canny | `canny_edge()` | Binary edge map driving a visual effect |
+| Histograma | `compute_histogram()` | La salida numérica dirige la lógica del juego |
+| Ecualización de histograma | `histogram_equalize()` | Mejora de calidad visual en superficies oscuras |
+| Brillo | `adjust_brightness()` | La pantalla se atenúa/aclara según la salud o el tiempo |
+| Contraste | `adjust_contrast()` | Modo visual de alto/bajo contraste |
+| Estiramiento de contraste | `stretch_contrast()` | Un sprite de bajo contraste se vuelve visualmente claro |
+| Convolución | `apply_kernel()` | Kernel personalizado aplicado al fondo |
+| Desenfoque gaussiano | `gaussian_blur()` | Desenfoque de fondo que simula profundidad o niebla |
+| Sobel | `sobel_edge()` | Superposición de bordes renderizada sobre terreno o enemigos |
+| Canny | `canny_edge()` | Mapa de bordes binario que impulsa un efecto visual |
 
 ---
 
-## 15. Assessment Mapping
+## 15. Correspondencia con la evaluación
 
-| Assessment | Unit | Required FilterTools Usage | Evidence |
+| Evaluación | Unidad | Uso requerido de FilterTools | Evidencia |
 |---|---|---|---|
-| Practical Exam I | VII | Student applies at least 2 distinct filter operations in their stage | Running stage demo + README |
-| Stage 1 Deliverable | VII | At least one filter changes game behavior (not just visual) | README + code review |
-| Stage 2 Deliverable | VII | Filter pipeline with at least one kernel-based operation | Demo + explanation |
-| Final Presentation | VII | Student explains the mathematical basis of one filter live | Oral explanation |
+| Examen práctico I | VII | El estudiante aplica al menos 2 operaciones de filtro distintas en su escenario | Demo del escenario en marcha + README |
+| Entrega de Escenario 1 | VII | Al menos un filtro cambia el comportamiento del juego (no sólo lo visual) | README + revisión de código |
+| Entrega de Escenario 2 | VII | Tubería de filtros con al menos una operación basada en kernel | Demo + explicación |
+| Presentación final | VII | El estudiante explica en vivo la base matemática de un filtro | Explicación oral |
 
 ---
 
-## 16. Professor Deliverables
+## 16. Entregables del profesorado
 
-The professor delivers the following as part of `FilterTools`:
+El profesorado entrega lo siguiente como parte de `FilterTools`:
 
-1. **`framework/processing/filter_tools.py`** — Complete, documented, tested implementation.
-2. **`tests/test_filter_tools.py`** — Unit test suite. Each test saves a PNG output file to `tests/output/filter/` for visual verification.
-3. **Stage 0 Zone F** — Demonstrates `adjust_brightness`, `gaussian_blur`, and `sobel_edge` in a running stage context.
-4. **Demo Scene (see Document 15)** — An interactive scene where students can adjust filter parameters in real time using keyboard controls.
-5. **Kernel reference card** — A one-page PDF showing all standard kernels with their visual effect on a reference image.
-
----
-
-## 17. Student Reuse
-
-Students inherit the complete `FilterTools` API. They reuse it by:
-
-1. Importing `FilterTools` from `framework.processing.filter_tools`.
-2. Passing `pygame.Surface` objects (their backgrounds, sprites, or screen regions) to `FilterTools` methods.
-3. Using the returned surface as a visual overlay, replacement, or input to further processing.
-4. Using `compute_histogram()` output to make game logic decisions.
-
-Students write **zero image processing code**. They write game logic that uses image processing results.
+1. **`src/framework/processing/filter_tools.py`** — Implementación completa, documentada y probada.
+2. **`tests/test_filter_tools.py`** — Suite de pruebas unitarias. Cada prueba guarda un PNG de salida en `tests/output/filter/` para verificación visual.
+3. **Stage 0, Zona F** — Demuestra `adjust_brightness`, `gaussian_blur` y `sobel_edge` en el contexto de un escenario en marcha.
+4. **Escena demo (ver Documento 15)** — Una escena interactiva donde los estudiantes pueden ajustar los parámetros del filtro en tiempo real con controles de teclado.
+5. **Tarjeta de referencia de kernels** — Un PDF de una página que muestra todos los kernels estándar con su efecto visual sobre una imagen de referencia.
 
 ---
 
-## 18. Learning Evidence
+## 17. Reutilización por parte de los estudiantes
 
-A student has demonstrated Unit VII learning when they can:
+Los estudiantes heredan la API completa de `FilterTools`. La reutilizan al:
 
-1. **Explain** the convolution operation in their own words, using their stage's kernel as an example.
-2. **Predict** what their filter will do to a given surface before running it.
-3. **Justify** the kernel values they chose for their effect.
-4. **Show** in their running stage where the filter result changes observable game behavior.
-5. **Describe** why they applied the filter at the frequency they chose (every frame, every N frames, pre-computed).
+1. Importar `FilterTools` desde `src.framework.processing.filter_tools`.
+2. Pasar objetos `pygame.Surface` (sus fondos, sprites o regiones de pantalla) a los métodos de `FilterTools`.
+3. Usar la superficie devuelta como superposición visual, reemplazo, o entrada para procesamiento adicional.
+4. Usar la salida de `compute_histogram()` para tomar decisiones de lógica de juego.
+
+Los estudiantes escriben **cero código de procesamiento de imágenes**. Escriben lógica de juego que usa los resultados del procesamiento de imágenes.
 
 ---
 
-## 19. Restrictions
+## 18. Evidencia de aprendizaje
 
-| Restriction | Scope |
+Un estudiante ha demostrado el aprendizaje de la Unidad VII cuando puede:
+
+1. **Explicar** la operación de convolución con sus propias palabras, usando el kernel de su escenario como ejemplo.
+2. **Predecir** qué le hará su filtro a una superficie dada antes de ejecutarlo.
+3. **Justificar** los valores de kernel que eligió para su efecto.
+4. **Mostrar** en su escenario en marcha dónde el resultado del filtro cambia un comportamiento observable del juego.
+5. **Describir** por qué aplicó el filtro con la frecuencia que eligió (cada fotograma, cada N fotogramas, precalculado).
+
+---
+
+## 19. Restricciones
+
+| Restricción | Alcance |
 |---|---|
-| Students never import `scipy`, `cv2`, `skimage`, or `numpy` | All student stage files |
-| Students never call `pygame.surfarray` directly | All student stage files |
-| Students never call `cv2.Canny()`, `cv2.Sobel()`, or `scipy.ndimage.convolve()` directly | All student stage files |
-| `FilterTools` methods are never called from `engine/` | Engine does not depend on framework |
-| `FilterTools` never calls `EventBus`, `InputManager`, or `AudioManager` | Processing isolation |
-| No FilterTools method has side effects | All outputs via return value |
+| Los estudiantes nunca importan `scipy`, `cv2`, `skimage` ni `numpy` | Todos los ficheros de escenario de estudiante |
+| Los estudiantes nunca llaman a `pygame.surfarray` directamente | Todos los ficheros de escenario de estudiante |
+| Los estudiantes nunca llaman a `cv2.Canny()`, `cv2.Sobel()` ni `scipy.ndimage.convolve()` directamente | Todos los ficheros de escenario de estudiante |
+| Los métodos de `FilterTools` nunca se llaman desde `engine/` | El motor no depende del framework |
+| `FilterTools` nunca llama a `EventBus`, `InputManager` ni `AudioManager` | Aislamiento de procesamiento |
+| Ningún método de FilterTools tiene efectos secundarios | Todas las salidas vía valor de retorno |
 
 ---
 
-## 20. Future Extensions
+## 20. Extensiones futuras
 
-The following extensions are identified for potential future semesters. They are **not implemented in the current version** and are documented here only as placeholders for the professor's roadmap.
+Las siguientes extensiones están identificadas para posibles semestres futuros. **No están implementadas en la versión actual** y se documentan aquí sólo como marcadores de posición para la hoja de ruta del profesorado.
 
-| Extension | Description | Target Unit |
+| Extensión | Descripción | Unidad objetivo |
 |---|---|---|
-| `motion_blur(surface, direction, amount)` | Directional motion blur for fast-moving sprites | Unit VII |
-| `chromatic_aberration(surface, offset)` | RGB channel offset for visual glitch effect | Unit VII |
-| `barrel_distortion(surface, coefficient)` | Lens distortion effect | Unit VII |
-| `apply_kernel_to_sprite(entity, kernel)` | Apply filter to a specific entity's surface | Unit VII |
-| `compute_optical_flow(surface_a, surface_b)` | Dense optical flow between two frames | Unit IX |
-
-
---- Traducción al Español ---
-
-## Especificación de FilterTools
-
-FilterTools proporciona funciones de convolución y detección de bordes aplicadas a superficies de Pygame mediante NumPy y SciPy.
-
-### Funciones
-- `apply_kernel(surface, kernel)` — Aplicar kernel de convolución personalizado
-- `gaussian_blur(surface, sigma)` — Desenfoque gaussiano
-- `sobel_edge(surface)` — Detección de bordes Sobel
-- `canny_edge(surface, low, high)` — Detección de bordes Canny
-- `adjust_brightness(surface, factor)` — Ajuste de brillo
-- `adjust_contrast(surface, factor)` — Ajuste de contraste
-- `compute_histogram(surface)` — Histograma RGB
-
-Todas las funciones son de la Unidad VII del sílabo. Para ejemplos detallados de uso y kernels estándar, consultar el documento original en inglés.
-
+| `motion_blur(surface, direction, amount)` | Desenfoque de movimiento direccional para sprites rápidos | Unidad VII |
+| `chromatic_aberration(surface, offset)` | Desplazamiento de canal RGB para efecto de glitch visual | Unidad VII |
+| `barrel_distortion(surface, coefficient)` | Efecto de distorsión de lente | Unidad VII |
+| `apply_kernel_to_sprite(entity, kernel)` | Aplicar el filtro a la superficie de una entidad concreta | Unidad VII |
+| `compute_optical_flow(surface_a, surface_b)` | Flujo óptico denso entre dos fotogramas | Unidad IX |
 
 ---
-## 🔗 Documentos Relacionados
+## 🔗 Documentos relacionados
 
-- [[12_VISION_TOOLS_SPEC.md|Vision Tools Spec]]
-- [[13_PATTERN_RECOGNITION_SPEC.md|Pattern Recognition Spec]]
+- [[12_VISION_TOOLS_SPEC.md|Especificación de VisionTools]]
+- [[13_PATTERN_RECOGNITION_SPEC.md|Especificación de reconocimiento de patrones]]
 
 ---
 
@@ -901,9 +898,9 @@ Todas las funciones son de la Unidad VII del sílabo. Para ejemplos detallados d
 | Función | Implementación | Para qué sirve |
 |---|---|---|
 | `sobel_edge` | `cv2.Sobel` | Producción. Rápida. |
-| `sobel_edge_propio` | `framework.processing.edge_detection` | **Docencia.** Cada paso a la vista. |
+| `sobel_edge_propio` | `src.framework.processing.edge_detection` | **Docencia.** Cada paso a la vista. |
 | `canny_edge` | `cv2.Canny` | Producción. Rápida. |
-| `canny_edge_propio` | `framework.processing.edge_detection` | **Docencia.** Los cinco pasos separados. |
+| `canny_edge_propio` | `src.framework.processing.edge_detection` | **Docencia.** Los cinco pasos separados. |
 
 La auditoría de julio de 2026 señaló el problema: en las Unidades VII y VIII
 **Sobel y Canny son el contenido**, no una herramienta. Quien sólo ve

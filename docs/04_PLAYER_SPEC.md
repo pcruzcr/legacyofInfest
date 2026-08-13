@@ -353,6 +353,14 @@ vez. El enumerado `PlayerState` declara **26**.
 > `ZIPLINE`, `ULTIMATE`, `AERIAL_ATTACK`, `AERIAL_SLAM`, `AIR_CHASE`,
 > `CHARGE_RELEASE`— son mecánicas construidas que ningún estudiante podía saber
 > que existían leyendo esto.
+>
+> **Recontado el 2026-08-13 (AUD-455):** una revisión de esta misma auditoría
+> cambió por error este número a 25 durante unos minutos, tras un primer
+> conteo manual mal hecho de `src/framework/entities/player.py`. Recontado dos
+> veces contra las líneas 149–174 de ese fichero (26 líneas, una por miembro) y
+> contra las 26 filas de la tabla de §8.1: son **26**, y ambos ya coincidían
+> antes de tocar nada. Se documenta el error de más para que quien vuelva a
+> auditar esta cifra no confíe en la última corrección sin volver a contar.
 
 ### 8.1 La tabla
 

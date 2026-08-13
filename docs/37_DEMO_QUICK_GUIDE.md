@@ -128,6 +128,7 @@ Controles: `←→` mover, `ESPACIO`/`↑` saltar, `B` demo automática del bug.
 | SOBEL | `sobel_edge()` | — |
 | CANNY | `canny_edge(low, high)` | low 0–255, high 0–255 |
 | EQUALIZE | `histogram_equalize()` | — |
+| CONV_STEP | Convolución paso a paso (AUD-455: son 10 modos, no 9 — verificado contra `filter_demo_scene.py`) | — |
 
 ### 3.9 Vision Demo — Unidad VIII
 
@@ -153,6 +154,7 @@ Controles: `←→` mover, `ESPACIO`/`↑` saltar, `B` demo automática del bug.
 | CLASS_GRID | Grid 4×4 de muestras de entrenamiento |
 | CONFUSION | Matriz de confusión del modelo cargado |
 | PIPELINE | Pipeline visual paso a paso (filtro→visión→features→clasificar) |
+| TREE_VIEW | Visualización del árbol de decisión (AUD-455: son 6 modos, no 5 — verificado contra `pattern_demo_scene.py`) |
 
 Controles: `WASD` mueve rect de análisis, `+`/`-` cambia tamaño, `M` cambia método de características, `L` carga modelo del estudiante.
 

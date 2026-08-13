@@ -27,6 +27,11 @@ date_processed: "2026-07-31"
 > quiere entender el motor. Todas las cifras de aquí abajo se **derivan del
 > `.tmx`** y `tests/test_stage0_platform_solidity.py` las vuelve a comprobar en
 > cada ejecución de la suite.
+>
+> **AUD-455 (2026-08-13).** §7 citaba cuatro veces `56_FASE_5_ECS_Y_MECANICAS.md`,
+> un documento que no existe en `docs/` (verificado por glob). Redirigido a
+> `STAGE_CREATION.md`, cuyo bloque generado documenta `Vine`, `Zipline`,
+> `RhythmBlock` y `WindZone` con sus propiedades reales.
 
 ---
 
@@ -344,17 +349,17 @@ que quita media vida enseña a caerse dentro.
 | Invulnerabilidad tras recibir daño | B | `04_PLAYER_SPEC.md` §5.3 |
 | Plataforma de un solo sentido | C, E, G | `06_TMX_SPEC.md` §9.2 |
 | Vuelo senoidal (Unidad III) | C | `05_ENEMY_SPEC.md` §4 |
-| Liana / `TrepandoState` | C | `56_FASE_5_ECS_Y_MECANICAS.md` |
+| Liana / `TrepandoState` | C | `STAGE_CREATION.md` |
 | `Pickup` e inventario | C, F, G | `06_TMX_SPEC.md` §6 |
 | `Charger`, `Archer`, `Brute` | D | `05_ENEMY_SPEC.md` §5–7 |
 | `Key` y `LockedDoor` | D | `06_TMX_SPEC.md` §6 |
 | `DeathPit` | E | `06_TMX_SPEC.md` §9.3 |
-| `RhythmBlock` | E | `56_FASE_5_ECS_Y_MECANICAS.md` |
+| `RhythmBlock` | E | `STAGE_CREATION.md` |
 | `HazardZone` y daño leve | E | `04_PLAYER_SPEC.md` §6.1 |
 | `Shooter`, `Caster`, proyectiles, `atan2` | F | `05_ENEMY_SPEC.md` §5 |
-| `WindZone` | F | `56_FASE_5_ECS_Y_MECANICAS.md` |
+| `WindZone` | F | `STAGE_CREATION.md` |
 | `Assassin` | G | `05_ENEMY_SPEC.md` §8 |
-| Tirolesa / `TirolesaState` | G | `56_FASE_5_ECS_Y_MECANICAS.md` |
+| Tirolesa / `TirolesaState` | G | `STAGE_CREATION.md` |
 | `Chest` | G | `06_TMX_SPEC.md` §6 |
 | `CameraLock` | G | `06_TMX_SPEC.md` §8 |
 | `NextTrigger` y fin de escenario | G | `06_TMX_SPEC.md` §8 |

@@ -60,13 +60,13 @@ Total mínimo **6 enemigos**. Si se usan 2 tipos, la cantidad mínima sube a 8
 | `HazardZone` | 1+ | Zona de bandejas del mostrador |
 | `MessageTrigger` | 1 | Presenta la iluminación por color (Unidad V) |
 | Coleccionables | ≥ 5 | En bandejas y estanterías del entrepiso |
-| `OneWay` | 1+ | Plataforma de acceso al entrepiso |
+| `Platform` | 1+ | Plataforma de acceso al entrepiso |
 
 ## Mapa sugerido (canónico del Entregable 1)
 
 ```
  14:00 ── TARDE ───────────► 18:00
- entrada                [entrepiso estanterías - OneWay]
+ entrada                [entrepiso estanterías - Platform]
    │   mesas │  mesas │  ┌───┬─────┐
  SPAWN ─────[W][W]────[W][C][C][W]── [H] mostrador con HAZARD ─ [cocinero] ─ PORTAL
    │          │            │    sala fría (tinte azul)      cocina (tinte cálido)
@@ -82,5 +82,5 @@ orden presentar→exigir.
 - [ ] Tamaño ≥ 1600×608 px y suelo en y=480
 - [ ] ≥ 6 enemigos, 2–3 tipos, cocinero en tramo despejado
 - [ ] `start_hour = 14:00` y `day_length = 900`
-- [ ] HazardZone señalizado; dos pisos con OneWay
+- [ ] HazardZone señalizado; dos pisos con Platform
 - [ ] `validate_tmx.py --ci` y `grade_stage.py` en verde

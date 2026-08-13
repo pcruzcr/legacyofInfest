@@ -1,99 +1,99 @@
 ---
 document_id: "LOI-EVAL_PRACTICA-EVAL_PRACTICA"
-title: "Evaluación Práctica — Practical Evaluations"
+title: "Evaluación Práctica"
 aliases: ["Eval Practica", "eval_practica"]
-tags: ["evaluation", "practical", "academic"]
-description: "Eval Practica document: eval_practica"
-source: "docs/docs\eval_practica/eval_practica.md"
-date_processed: "2026-07-14"
+tags: ["evaluacion", "practica", "academico"]
+description: "Documento de Eval Practica: eval_practica"
+source: "docs/eval_practica/eval_practica.md"
+date_processed: "2026-08-13"
 ---
 
-# Evaluación Práctica — Practical Evaluations
+# Evaluación Práctica
 
-**Course:** Legacy of InFest
-**Reference:** `docs/27_ACADEMIC_RUBRICS.md` SS4–SS6, `docs/14_PROFESSOR_DELIVERABLE_MATRIX.md` SS14
+**Curso:** Legacy of InFest
+**Referencia:** `27_ACADEMIC_RUBRICS.md` §4–§6, `14_PROFESSOR_DELIVERABLE_MATRIX.md` §14
 
-Three cumulative practical evaluations, each worth **15% of the final grade**.
+Tres evaluaciones prácticas acumulativas, cada una con un valor de **15% de la nota final**.
 
 ---
 
-## Evaluación Práctica I — Functional Prototype (Class 5, 15%)
+## Evaluación Práctica I — Prototipo Funcional (Clase 5, 15%)
 
-**Units:** II (Vectors), III (Curves), IV (Scene/Object), V (Color/Transparency)
+**Unidades:** II (Vectores), III (Curvas), IV (Escena/Objeto), V (Color/Transparencia)
 
-### Grading Rubric (100 pts)
+### Rúbrica de calificación (100 pts)
 
-| Criterion | Points | Requirement |
+| Criterio | Puntos | Requisito |
 |-----------|--------|-------------|
-| Coordinate systems & vectors | 20 | Custom entity uses explicit vector math (`vec2_normalize`/`vec2_dot`/`vec2_distance`) |
-| Curves | 15 | Entity follows `CurveTools`-computed path; control points documented |
-| Scene representation | 20 | TMX stage has all 8 required layers; OR boss arena geometry complete |
-| Color/transparency | 15 | `ColorTools` operation (conversion or alpha blend) visually observable |
-| Functional completeness | 20 | Stage loads; player traverses without crashing |
-| README documentation | 10 | Valid front-matter per `23_DATA_SCHEMAS.md`; each unit's section explains formula |
-| **Total** | **100** | Pass: ≥60/100 |
+| Sistemas de coordenadas y vectores | 20 | La entidad propia usa matemática vectorial explícita (`vec2_normalize`/`vec2_dot`/`vec2_distance`) |
+| Curvas | 15 | La entidad sigue una ruta calculada con `CurveTools`; puntos de control documentados |
+| Representación de escena | 20 | El escenario TMX tiene las 8 capas obligatorias; O la geometría de la arena del jefe está completa |
+| Color/transparencia | 15 | Operación de `ColorTools` (conversión o mezcla alfa) observable visualmente |
+| Completitud funcional | 20 | El escenario carga; el jugador lo recorre sin fallos |
+| Documentación del README | 10 | Front-matter válido según `23_DATA_SCHEMAS.md`; la sección de cada unidad explica la fórmula |
+| **Total** | **100** | Aprobación: ≥60/100 |
 
-### Deliverables
-- `<assignment>.tmx` with required layers
-- `<assignment>.py` — correct `BaseScene` or `BossBase` subclass
-- Custom entity using vector math
-- Entity following a curve path
-- Color space operation on a surface
-- `README.md` with academic concepts
-
----
-
-## Evaluación Práctica II — Vertical Slice (Class 8, 15%)
-
-**Units:** +VI (Animation), +VII (Filters)
-
-### Grading Rubric (100 pts)
-
-| Criterion | Points | Requirement |
-|-----------|--------|-------------|
-| All Eval I criteria maintained | 25 | No regression |
-| Animation & interaction (Unit VI) | 20 | Easing-driven animation; custom `EventBus` interaction |
-| Histogram/brightness/contrast (Unit VII) | 15 | `FilterTools.compute_histogram()` drives logic |
-| Convolution/blur/edge detection (Unit VII) | 20 | `apply_kernel`/`gaussian_blur`/`sobel_edge`/`canny_edge` |
-| Functional completeness | 10 | Eval I still works; new features integrate cleanly |
-| README documentation | 10 | Units VI–VII sections with before/after screenshots |
-| **Total** | **100** | Pass: ≥60/100 |
-
-### Deliverables
-- All Eval I deliverables maintained
-- Easing function used in animation
-- `compute_histogram()` drives game logic
-- `adjust_brightness()` or `adjust_contrast()` applied
-- `apply_kernel()` or `gaussian_blur()` applied
-- Edge detection result (Sobel or Canny)
-- README: kernel matrix, before/after screenshots
+### Entregables
+- `<entrega>.tmx` con las capas obligatorias
+- `<entrega>.py` — subclase correcta de `BaseScene` o `BossBase`
+- Entidad propia que use matemática vectorial
+- Entidad que siga una ruta de curva
+- Operación de espacio de color sobre una superficie
+- `README.md` con los conceptos académicos
 
 ---
 
-## Evaluación Práctica III — Final Integration (Class 11, 15%)
+## Evaluación Práctica II — Vertical Slice (Clase 8, 15%)
 
-**Units:** +VIII (Segmentation), +IX (Pattern Recognition)
+**Unidades:** +VI (Animación), +VII (Filtros)
 
-### Grading Rubric (100 pts)
+### Rúbrica de calificación (100 pts)
 
-| Criterion | Points | Requirement |
+| Criterio | Puntos | Requisito |
 |-----------|--------|-------------|
-| All prior criteria maintained | 20 | Eval I + II intact |
-| Segmentation (Unit VIII) | 20 | Threshold + morphology + connected components |
-| Feature extraction & classification (Unit IX) | 25 | Features feed trained classifier; output changes behavior in ≥2 ways |
-| Model quality | 15 | ≥10 samples/class, ≥2 classes, accuracy ≥0.70 |
-| Full integration & polish | 10 | Complete, playable, no console errors |
-| README documentation | 10 | Full training pipeline: dataset, hyperparams, accuracy, confusion matrix |
-| **Total** | **100** | **15% of final grade** |
+| Se mantienen todos los criterios de Eval I | 25 | Sin retroceso |
+| Animación e interacción (Unidad VI) | 20 | Animación dirigida por easing; interacción propia de `EventBus` |
+| Histograma/brillo/contraste (Unidad VII) | 15 | `FilterTools.compute_histogram()` dirige la lógica |
+| Convolución/desenfoque/detección de bordes (Unidad VII) | 20 | `apply_kernel`/`gaussian_blur`/`sobel_edge`/`canny_edge` |
+| Completitud funcional | 10 | Eval I sigue funcionando; las características nuevas se integran limpiamente |
+| Documentación del README | 10 | Secciones de las Unidades VI–VII con capturas de antes/después |
+| **Total** | **100** | Aprobación: ≥60/100 |
 
-### Deliverables
-- All Eval I + II requirements maintained
-- `threshold_binary()` or `threshold_otsu()` applied
-- Morphological operation applied
-- `connected_components()` or `analyze_regions()` used
-- `extract_features()` produces training features
-- Labeled dataset in `assets/datasets/`
-- Trained model (`.pkl`)
-- `EvaluationResult` with accuracy ≥70% in README
-- Classifier runs at runtime; result changes game behavior in ≥2 ways
-- README: full training pipeline documentation
+### Entregables
+- Se mantienen todos los entregables de Eval I
+- Función de easing usada en animación
+- `compute_histogram()` dirige la lógica del juego
+- `adjust_brightness()` o `adjust_contrast()` aplicado
+- `apply_kernel()` o `gaussian_blur()` aplicado
+- Resultado de detección de bordes (Sobel o Canny)
+- README: matriz de kernel, capturas de antes/después
+
+---
+
+## Evaluación Práctica III — Integración Final (Clase 11, 15%)
+
+**Unidades:** +VIII (Segmentación), +IX (Reconocimiento de patrones)
+
+### Rúbrica de calificación (100 pts)
+
+| Criterio | Puntos | Requisito |
+|-----------|--------|-------------|
+| Se mantienen todos los criterios previos | 20 | Eval I + II intactas |
+| Segmentación (Unidad VIII) | 20 | Umbral + morfología + componentes conectados |
+| Extracción de características y clasificación (Unidad IX) | 25 | Las características alimentan un clasificador entrenado; la salida cambia el comportamiento de ≥2 formas |
+| Calidad del modelo | 15 | ≥10 muestras/clase, ≥2 clases, precisión ≥0.70 |
+| Integración y pulido completos | 10 | Completo, jugable, sin errores de consola |
+| Documentación del README | 10 | Tubería de entrenamiento completa: dataset, hiperparámetros, precisión, matriz de confusión |
+| **Total** | **100** | **15% de la nota final** |
+
+### Entregables
+- Se mantienen todos los requisitos de Eval I + II
+- `threshold_binary()` o `threshold_otsu()` aplicado
+- Operación morfológica aplicada
+- `connected_components()` o `analyze_regions()` usado
+- `extract_features()` produce características de entrenamiento
+- Dataset etiquetado en `assets/datasets/`
+- Modelo entrenado (`.pkl`)
+- `EvaluationResult` con precisión ≥70% en el README
+- El clasificador corre en tiempo de ejecución; el resultado cambia el comportamiento del juego de ≥2 formas
+- README: documentación completa de la tubería de entrenamiento

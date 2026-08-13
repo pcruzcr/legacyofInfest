@@ -1,102 +1,97 @@
 ---
 document_id: "LOI-CLASS-034"
-title: "Class Materials — Lecture Slides & Live Coding Scripts"
-aliases: ["Class Materials"]
-tags: ["class", "materials", "academic"]
-description: "Class materials and resources"
+title: "Materiales de clase — Diapositivas y guiones de codificación en vivo"
+aliases: ["Materiales de clase", "Class Materials"]
+tags: ["clase", "materiales", "academico"]
+description: "Materiales y recursos de clase"
 source: "docs/34_CLASS_MATERIALS.md"
-date_processed: "2026-07-14"
+date_processed: "2026-08-13"
 ---
 
-# Class Materials — Lecture Slides & Live Coding Scripts
+# Materiales de clase — Diapositivas y guiones de codificación en vivo
 
-This document indexes all professor-facing presentation and live coding materials.
-Files marked with ✅ exist in the repository. Files marked with ❌ are planned but not yet created.
+> **AUD-455.** Traduce el documento (cuerpo en inglés, resumen condensado
+> en español al final). El documento organiza los materiales por
+> «semana» (16 semanas); el calendario oficial vigente
+> (`21_COURSE_SCHEDULE.md`) es un trimestre de 11 clases de 4 horas. Se
+> deja la numeración de semana original sin remapear a clase — inventar
+> esa correspondencia sin una fuente que la confirme sería peor que
+> dejarla explícita como pendiente. Quien programe las sesiones debe
+> adaptar esta lista al calendario de 11 clases.
 
-## Unit I: Introduction (Week 1)
-- ❌ `slides/u01_intro.md` — Course overview, engine architecture, game loop
-- ❌ `live_code/u01_create_window.py` — Minimal pygame window setup
-- ❌ `exercise/u01_setup_environment.md` — Dev environment setup guide
+Este documento indexa todo el material de presentación y codificación en vivo dirigido al profesorado.
+Los ficheros marcados con ✅ existen en el repositorio. Los marcados con ❌ están planeados pero aún no creados.
 
-## Unit II: Vectors & Transforms (Weeks 2-3)
-- ❌ `slides/u02_vectors.md` — Vector math, normalization, dot product, transforms
-- ✅ `live_code/u02_vector_class.py` — Implement Vector2 from scratch (`docs/34_LIVE_CODE_u02_vector_class.py`)
-- ❌ `exercise/u02_vector_chase.md` — Implement NPC chase behavior
-- ❌ `slides/u02_transforms.md` — Translation, rotation, scale, shear matrices
+## Unidad I: Introducción (Semana 1)
+- ❌ `slides/u01_intro.md` — Visión general del curso, arquitectura del motor, bucle de juego
+- ❌ `live_code/u01_create_window.py` — Configuración mínima de una ventana de pygame
+- ❌ `exercise/u01_setup_environment.md` — Guía de configuración del entorno de desarrollo
 
-## Unit III: Curves & Interpolation (Weeks 4-5)
-- ❌ `slides/u03_curves.md` — Bezier, Catmull-Rom, B-spline, NURBS
-- ❌ `live_code/u03_de_casteljau.py` — Implement de Casteljau algorithm
-- ❌ `exercise/u03_curve_path.md` — Build a smooth patrol path
-- ❌ `slides/u03_interpolation.md` — Lerp, easing functions, keyframes
+## Unidad II: Vectores y transformaciones (Semanas 2-3)
+- ❌ `slides/u02_vectors.md` — Matemática vectorial, normalización, producto punto, transformaciones
+- ✅ `live_code/u02_vector_class.py` — Implementar Vector2 desde cero (`docs/34_LIVE_CODE_u02_vector_class.py`)
+- ❌ `exercise/u02_vector_chase.md` — Implementar comportamiento de persecución de NPC
+- ❌ `slides/u02_transforms.md` — Matrices de traslación, rotación, escala, cizalladura
 
-## Unit IV: OOP & State Machines (Weeks 6-7)
-- ❌ `slides/u04_inheritance.md` — BossBase subclass, override patterns
-- ❌ `live_code/u04_boss_template.py` — Create a boss from scratch
-- ❌ `slides/u04_state_machines.md` — Player states: idle, walk, jump, attack
-- ❌ `exercise/u04_state_machine.md` — Add a new player state
+## Unidad III: Curvas e interpolación (Semanas 4-5)
+- ❌ `slides/u03_curves.md` — Bézier, Catmull-Rom, B-spline, NURBS
+- ❌ `live_code/u03_de_casteljau.py` — Implementar el algoritmo de de Casteljau
+- ❌ `exercise/u03_curve_path.md` — Construir una ruta de patrulla suave
+- ❌ `slides/u03_interpolation.md` — Lerp, funciones de easing, fotogramas clave
 
-## Unit V: Color Spaces (Week 8)
-- ❌ `slides/u05_color.md` — RGB, HSV, HSL, CMYK, alpha blending
-- ❌ `live_code/u05_rgb_to_hsv.py` — Implement color conversion
-- ❌ `exercise/u05_color_match.md` — Color match challenge
+## Unidad IV: POO y máquinas de estado (Semanas 6-7)
+- ❌ `slides/u04_inheritance.md` — Subclase de BossBase, patrones de sobrescritura
+- ❌ `live_code/u04_boss_template.py` — Crear un jefe desde cero
+- ❌ `slides/u04_state_machines.md` — Estados del jugador: idle, walk, jump, attack
+- ❌ `exercise/u04_state_machine.md` — Añadir un estado nuevo al jugador
 
-## Unit VI: Collision Detection (Week 9)
-- ❌ `slides/u06_collision.md` — AABB, circle, SAT, spatial hashing
-- ❌ `live_code/u06_aabb_collision.py` — AABB overlap test
-- ❌ `exercise/u06_collision_resolve.md` — Resolve collision penetration
+## Unidad V: Espacios de color (Semana 8)
+- ❌ `slides/u05_color.md` — RGB, HSV, HSL, CMYK, mezcla alfa
+- ❌ `live_code/u05_rgb_to_hsv.py` — Implementar conversión de color
+- ❌ `exercise/u05_color_match.md` — Desafío de emparejamiento de color
 
-## Unit VII: Image Processing (Weeks 10-11)
-- ❌ `slides/u07_filters.md` — Convolution kernels, blur, sharpen, edge detection
-- ✅ `live_code/u07_convolution.py` — Manual convolution implementation (`docs/34_LIVE_CODE_u07_convolution.py`)
-- ❌ `exercise/u07_filter_chain.md` — Build a processing pipeline
-- ❌ `slides/u07_histogram.md` — Histogram equalization, stretching
+## Unidad VI: Detección de colisión (Semana 9)
+- ❌ `slides/u06_collision.md` — AABB, círculo, SAT, hash espacial
+- ❌ `live_code/u06_aabb_collision.py` — Prueba de solape AABB
+- ❌ `exercise/u06_collision_resolve.md` — Resolver la penetración de colisión
 
-## Unit VIII: Computer Vision (Weeks 12-14)
-- ❌ `slides/u08_vision.md` — Thresholding, morphology, components, watershed
-- ❌ `live_code/u08_otsu.py` — Implement Otsu thresholding
-- ❌ `exercise/u08_object_detection.md` — Detect and label objects
-- ❌ `live_code/u08_feature_extraction.py` — HOG, LBP, color histograms
+## Unidad VII: Procesamiento de imágenes (Semanas 10-11)
+- ❌ `slides/u07_filters.md` — Kernels de convolución, desenfoque, realce, detección de bordes
+- ✅ `live_code/u07_convolution.py` — Implementación manual de convolución (`docs/34_LIVE_CODE_u07_convolution.py`)
+- ❌ `exercise/u07_filter_chain.md` — Construir una tubería de procesamiento
+- ❌ `slides/u07_histogram.md` — Ecualización y estiramiento de histograma
 
-## Final Project (Weeks 15-16)
-- ❌ `slides/u09_final_project.md` — Integration, submission requirements
-- ❌ `exercise/u09_zone_design.md` — Complete zone deliverable checklist
+## Unidad VIII: Visión por computadora (Semanas 12-14)
+- ❌ `slides/u08_vision.md` — Umbralización, morfología, componentes, watershed
+- ❌ `live_code/u08_otsu.py` — Implementar la umbralización de Otsu
+- ❌ `exercise/u08_object_detection.md` — Detectar y etiquetar objetos
+- ❌ `live_code/u08_feature_extraction.py` — HOG, LBP, histogramas de color
 
-## Delivery Format
+## Proyecto final (Semanas 15-16)
+- ❌ `slides/u09_final_project.md` — Integración, requisitos de entrega
+- ❌ `exercise/u09_zone_design.md` — Lista de verificación de entrega de zona completa
 
-Each `slides/uXX_*.md` file follows this structure:
-1. Learning objectives (3-5 items)
-2. Key concepts with diagrams (ASCII)
-3. Code snippets showing framework usage
-4. Common pitfalls
-5. In-class activity
+## Formato de entrega
 
-Each `live_code/` script is a minimal standalone Python file the professor
-can run during lecture to demonstrate a concept interactively.
+Cada fichero `slides/uXX_*.md` sigue esta estructura:
+1. Objetivos de aprendizaje (3-5 elementos)
+2. Conceptos clave con diagramas (ASCII)
+3. Fragmentos de código mostrando el uso del framework
+4. Errores comunes
+5. Actividad en clase
 
-Each `exercise/` doc is a 1-page handout for in-class group work.
+Cada script de `live_code/` es un fichero Python mínimo e independiente que
+el profesorado puede ejecutar durante la clase para demostrar un concepto
+interactivamente.
 
-> **Note:** Only 2 of the 23 referenced files currently exist
-> (`docs/34_LIVE_CODE_u02_vector_class.py` and `docs/34_LIVE_CODE_u07_convolution.py`).
-> The remaining 21 files are placeholder entries to be created before the
-> corresponding class session.
+Cada documento de `exercise/` es una hoja de una página para trabajo grupal en clase.
 
-
---- Traducción al Español ---
-
-## Materiales de Clase
-
-Este documento contiene referencias a los materiales didácticos utilizados en cada clase del curso.
-
-### Estructura
-- 11 clases efectivas de 4 horas (2h teoría + 2h práctica)
-- 12ava sesión: Invenio Fest
-- 6 instrumentos de evaluación oficiales
-
-Para el cronograma detallado clase por clase, consultar el documento original en inglés.
-
+> **Nota:** sólo 2 de los 23 ficheros referenciados existen actualmente
+> (`docs/34_LIVE_CODE_u02_vector_class.py` y `docs/34_LIVE_CODE_u07_convolution.py`).
+> Los 21 ficheros restantes son entradas de marcador de posición que deben
+> crearse antes de la sesión de clase correspondiente.
 
 ---
-## 🔗 Documentos Relacionados
+## 🔗 Documentos relacionados
 
-- [[21_COURSE_SCHEDULE.md|Course Schedule]]
+- [[21_COURSE_SCHEDULE.md|Calendario del curso]]

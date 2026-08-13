@@ -15,6 +15,14 @@ date_processed: "2026-07-14"
 **Estado:** Oficial  
 **Audiencia:** Estudiantes de Gráficas por Computadora, Procesamiento de Imágenes, Visión por Computadora y Reconocimiento de Patrones
 
+> **AUD-455 (2026-08-13).** §5 daba `CurveTools` y `ColorTools` como
+> importables desde `src.engine.utils.*` — un estudiante que copiara ese
+> import literalmente recibía `ModuleNotFoundError`. Las dos viven en
+> `src.framework.processing.*`, igual que `FilterTools`/`VisionTools`/
+> `PatternRecognitionTools`, las tres filas correctas de la misma tabla.
+> Verificado contra `src/framework/processing/curve_tools.py` y
+> `color_tools.py`.
+
 ---
 
 ## 1. ¿Qué es Legacy of InFest?
@@ -122,8 +130,8 @@ Tus assignments usan estas APIs. Consulta `docs/22_API_CONTRACTS.md` para firmas
 
 | Herramienta | Unidad | Import |
 |---|---|---|
-| `CurveTools` | III | `from src.engine.utils.curve_tools import ...` |
-| `ColorTools` | V | `from src.engine.utils.color_tools import ...` |
+| `CurveTools` | III | `from src.framework.processing.curve_tools import CurveTools` |
+| `ColorTools` | V | `from src.framework.processing.color_tools import ColorTools` |
 | `FilterTools` | VII | `from src.framework.processing.filter_tools import FilterTools` |
 | `VisionTools` | VIII | `from src.framework.processing.vision_tools import VisionTools` |
 | `PatternRecognitionTools` | IX | `from src.framework.processing.pattern_recognition_tools import PatternRecognitionTools` |

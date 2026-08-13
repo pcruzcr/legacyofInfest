@@ -176,9 +176,11 @@ rectángulo o un punto de Tiled con un `type` y sus propiedades.
 Las posiciones son píxeles con el origen arriba a la izquierda del mapa.
 
 **Convención de la Y en las apariciones:** la coordenada Y de un `PlayerSpawn`
-—y de cualquier enemigo— es la de los **pies**, no la de la esquina superior.
-Colocas el punto donde quieres que se apoye el personaje, y `StageLoader`
-convierte restando la altura: `spawn_point.y = obj.y - 32`.
+es la de los **pies**, no la de la esquina superior: colocas el punto donde
+quieres que se apoye el personaje y `StageLoader` convierte restando la altura
+(`spawn_point.y = obj.y - 32`). Los **enemigos** no: su Y es la esquina
+superior del objeto, la semántica nativa de Tiled — se coloca el rectángulo
+con la base sobre el suelo y el motor lo respeta tal cual (AUD-455).
 
 ### 4.2 Los tipos de objeto
 
@@ -238,8 +240,10 @@ equivocada en silencio (AUD-392).
 
 ### 6.2 Los enemigos
 
-- Son puntos, colocados donde aparecen.
-- La posición es la del centro-abajo, igual que el jugador.
+- Son objetos rectangulares, colocados donde aparecen.
+- La Y es la de la **esquina superior** del rectángulo de Tiled (igual que
+  cualquier objeto): se dibuja la caja con la base sobre el suelo y esa misma
+  base es donde quedan los pies en juego (AUD-455).
 - Las propiedades del objeto **sustituyen** a los valores por defecto de la clase.
 - Si falta una propiedad se usa el valor por defecto y se avisa por consola.
 

@@ -44,8 +44,8 @@ source: "docs/niveles/06_STAGE_2_2.md"
 | Tipo | Cantidad mín. | Cantidad ref. | Rol en el nivel |
 |---|---|---|---|
 | `WalkerGuardia` | 2 | 2 | Planta baja: patrulla la garita (despejado, presentación) |
-| `FlyingAntena` | 3 | 4 | Órbita alrededor de las antenas: 2 en base, 2 en azotea |
-| `ShooterSerpiente` | 2 | 3 | Cubre los dos saltos más largos de la escalera |
+| `FlyingBoa` o `FlyingTerciovolador` | 3 | 4 | Órbita alrededor de las antenas: 2 en base, 2 en azotea |
+| `ShooterSerpienteArbol` o `ShooterVenomoLargo` | 2 | 3 | Cubre los dos saltos más largos de la escalera |
 
 Total mínimo **8 enemigos**. Si se usan solo 2 tipos, el mínimo sube a 10.
 
@@ -59,14 +59,14 @@ Total mínimo **8 enemigos**. Si se usan solo 2 tipos, el mínimo sube a 10.
 | `CameraLock` | 1 | Al iniciar la escalera (lock_x=true) |
 | `HazardZone` | 0–1 | Rejilla de calor de la azotea (opcional) |
 | Coleccionables | ≥ 5 | Repartidos en la escalera (recompensan la altura) |
-| `OneWay` | 1+ | Plataformas de la escalera |
+| `Platform` | 1+ | Plataformas de la escalera |
 
 ## Mapa sugerido (canónico del Entregable 1)
 
 ```
  20:30 ── NOCHE CAYENDO ────► 23:30
          [AZOTEA: antenas + voladores ×2 + tirador ×1] ── PORTAL
-              ▲  escalera de plataformas (OneWay)
+              ▲  escalera de plataformas (Platform)
               │  [CameraLock vertical aquí]
               │  tirador ×1 cubre el salto largo
               │  checkpoint al pie

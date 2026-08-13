@@ -1,95 +1,132 @@
 ---
 document_id: "LOI-CUTSCENE-042"
-title: "Legacy of InFest — Cutscene System Specification"
-aliases: ["Cutscene System"]
-tags: ["cutscene", "system", "cinematic"]
-description: "Scripted cutscene system"
+title: "Legacy of InFest — Especificación del sistema de escenas cinemáticas"
+aliases: ["Especificación de cinemáticas", "Cutscene System"]
+tags: ["cinematica", "sistema", "guion"]
+description: "Sistema de escenas cinemáticas guionizadas"
 source: "docs/42_CUTSCENE_SYSTEM.md"
-date_processed: "2026-07-14"
+date_processed: "2026-08-12"
 ---
 
-# Legacy of InFest — Cutscene System Specification
+# Legacy of InFest — Especificación del sistema de escenas cinemáticas
 
-**Document ID:** LOI-CUTSCENE-042
-**Version:** 1.0.0
-**Status:** Official
-**Audience:** Professor, Teaching Assistants, Students, AI coding assistants
+**ID del documento:** LOI-CUTSCENE-042
+**Versión:** 1.1.0
+**Estado:** Oficial
+**Audiencia:** Profesor, ayudantes, estudiantes, asistentes de código
 
----
-
-## 1. Overview
-
-The Cutscene System (`src/framework/stage/cutscene_system.py`) provides scripted, sequential action playback for in-engine cutscenes. Actions run in order; each reports completion before the next begins. Cutscenes are professor-owned — students trigger them via the script API but do not modify the system.
-
----
-
-## 2. Action Types
-
-### 2.1 CutsceneAction (Base)
-Abstract interface: `start()`, `update(dt) → bool`, `draw(surface)`.
-
-### 2.2 WaitAction
-Pauses for a fixed duration in seconds. Used for timing between actions.
-
-### 2.3 FadeAction
-Fades the screen to/from black over duration. Uses per-pixel alpha overlay.
-
-### 2.4 CameraMoveAction
-Lerps the camera offset to a target `(x, y)` over duration. Uses linear interpolation.
-
-### 2.5 DialogueAction
-Displays a text box with optional speaker name, waits for ENTER/SPACE press or duration expiry. Box anchored at bottom of screen, 60px tall, 20px inset.
+> **AUD-455.** Traduce el documento y lo actualiza a fondo: decía que
+> `cutscene_system.py` tenía 178 líneas y 5 tipos de acción; hoy tiene 562
+> líneas y **11 tipos de acción** concretos. Le faltaban por completo dos
+> módulos hermanos que existen y no son opcionales:
+> `cutscene_director.py` (191 líneas) — escenas declaradas directamente en el
+> TMX (AUD-136) — y `cutscene_guion.py` (242 líneas) — un mini-lenguaje de
+> texto plano, una orden por línea, que se traduce a la lista de acciones.
 
 ---
 
-## 3. CutsceneScript
+## 1. Visión general
 
-A sequential list of `CutsceneAction` objects:
-- `add_action(action)` — append to script
-- `start(callback)` — begin execution with optional completion callback
-- `update(dt)` — advance current action; move to next when complete
-- `draw(surface)` — render all active actions from current index forward
+Hay tres piezas, no una:
+
+| Módulo | Qué hace |
+|---|---|
+| `src/framework/stage/cutscene_system.py` | Las acciones y `CutsceneScript`: reproducción secuencial, una acción a la vez |
+| `src/framework/stage/cutscene_director.py` | `CutsceneDirector` — conecta escenas cinemáticas declaradas como propiedades de un objeto `Cutscene` en el TMX con el sistema de arriba |
+| `src/framework/stage/cutscene_guion.py` | `analizar_guion` — convierte un guion en texto plano (una orden por línea) en la lista de acciones que ejecuta `CutsceneScript` |
+
+Las acciones se ejecutan en orden; cada una informa cuándo termina antes de que empiece la siguiente. Las cinemáticas son del profesorado — los estudiantes las disparan vía la API de guion, pero no modifican el sistema.
 
 ---
 
-## 4. Execution Flow
+## 2. Tipos de acción (`cutscene_system.py`)
+
+### 2.1 `CutsceneAction` (base)
+Interfaz abstracta: `start()`, `update(dt) → bool`, `draw(surface)`.
+
+### 2.2 `WaitAction`
+Pausa una duración fija en segundos. Sirve para temporizar entre acciones.
+
+### 2.3 `FadeAction`
+Funde la pantalla a/desde negro durante una duración. Usa una capa de alfa por píxel.
+
+### 2.4 `CameraMoveAction`
+Interpola el desplazamiento de cámara hacia un `(x, y)` objetivo durante una duración. Interpolación lineal.
+
+### 2.5 `DialogueAction`
+Muestra una caja de texto con nombre de quien habla opcional, espera ENTER/ESPACIO o a que expire la duración. Caja anclada abajo, 60px de alto, 20px de margen.
+
+### 2.6 `MoverEntidadAction`
+Mueve una entidad del escenario a una posición objetivo durante una duración.
+
+### 2.7 `EventoAction`
+Emite un evento del EventBus con nombre y datos configurables.
+
+### 2.8 `SonidoAction`
+Reproduce un efecto de sonido con nombre.
+
+### 2.9 `TemblorAction`
+Sacude la cámara — amplitud y duración configurables.
+
+### 2.10 `EsperarEventoAction`
+Bloquea hasta que se emite un evento concreto, con un tope de 10 segundos para no colgar la cinemática si el evento nunca llega.
+
+### 2.11 `DialogoArbolAction`
+Muestra un árbol de diálogo completo (ver `40_DIALOGUE_SYSTEM.md`) dentro de la cinemática.
+
+### 2.12 `AccionParalela`
+Ejecuta varias acciones a la vez en vez de en secuencia — por ejemplo, mover una entidad mientras suena un efecto.
+
+---
+
+## 3. `CutsceneScript`
+
+Una lista secuencial de objetos `CutsceneAction`:
+- `add_action(action)` — añade al guion
+- `start(callback)` — empieza la ejecución con una función de fin opcional
+- `update(dt)` — avanza la acción actual; pasa a la siguiente al terminar
+- `draw(surface)` — dibuja todas las acciones activas desde el índice actual en adelante
+
+---
+
+## 4. El mini-lenguaje de guion (`cutscene_guion.py`)
+
+Una orden por línea, con `#` para comentarios, `+` al principio para marcar una acción como paralela con la anterior, y `.` para dejar una coordenada sin especificar (usa la actual). Palabras clave: `esperar`, `camara`, `mover`, `dialogo`, `evento`, `sonido`, `temblor`, `fundido`, `esperar_evento`. `analizar_guion(texto)` traduce ese texto a la lista de `CutsceneAction` que ejecuta `CutsceneScript`.
+
+---
+
+## 5. `CutsceneDirector` (`cutscene_director.py`, AUD-136)
+
+Conecta objetos `Cutscene` del TMX con el sistema de arriba, sin que el escenario tenga que escribir Python para cada cinemática:
+
+- `reproduzir_texto(guion)` — analiza y reproduce un guion directamente
+- `bloquea()` — si la cinemática actual congela al jugador
+- `update(dt, jugador_rect, saltar)` — avanza la cinemática activa
+- `saltar()` — ejecuta las acciones finales de golpe (no las cancela)
+- `draw`, `reset()`
+
+---
+
+## 6. Flujo de ejecución
 
 ```
 start() → action[0].start()
   ↓
-update() loop:
+bucle update():
   → action[N].update(dt)
-  → if complete: action[N+1].start()
-  → if no more actions: callback() called, active=false
+  → si termina: action[N+1].start()
+  → si no quedan más acciones: se llama a callback(), active=false
 ```
 
 ---
 
-## 5. Implementation Status
+## 7. Estado de implementación
 
-**File:** `src/framework/stage/cutscene_system.py` (178 lines)
-**Status:** ✅ Complete — 5 action types, sequential playback, callback on finish
-**Missing:** No visual scripting editor; actions must be coded manually
-
-
---- Traducción al Español ---
-
-## Sistema de Cinemáticas
-
-### Descripción
-Sistema de cinemáticas guionizadas para secuencias narrativas.
-
-### Características
-- Cinemáticas guionizadas con temporización
-- Transiciones entre escenas
-- Efectos visuales (fundidos, barras)
-- Soporte de audio sincronizado
-
-Para la especificación completa de la API, consultar el documento original en inglés.
-
+**Ficheros:** `cutscene_system.py` (562 líneas), `cutscene_director.py` (191 líneas), `cutscene_guion.py` (242 líneas)
+**Estado:** ✅ Completo — 11 tipos de acción, mini-lenguaje de guion, cinemáticas declaradas en TMX, reproducción secuencial y paralela, callback al terminar
 
 ---
-## 🔗 Documentos Relacionados
+## 🔗 Documentos relacionados
 
-- [[40_DIALOGUE_SYSTEM.md|Dialogue System]]
-- [[48_SCREEN_TRANSITIONS.md|Screen Transitions]]
+- [[40_DIALOGUE_SYSTEM.md|Sistema de diálogo]]
+- [[48_SCREEN_TRANSITIONS.md|Transiciones de pantalla]]

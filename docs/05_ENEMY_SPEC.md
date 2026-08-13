@@ -1,19 +1,25 @@
 ---
 document_id: "LOI-ENEMY-005"
-title: "Legacy of InFest — Enemy Specification"
-aliases: ["Enemy Specification", "Enemy Spec"]
-tags: ["enemy", "specification", "entity"]
-description: "Enemy base class and 8 enemy types"
+title: "Legacy of InFest — Especificación de enemigos"
+aliases: ["Especificación de enemigos", "Enemy Specification"]
+tags: ["enemigos", "especificacion", "entidad"]
+description: "La clase base de enemigo y los 8 tipos de enemigo"
 source: "docs/05_ENEMY_SPEC.md"
-date_processed: "2026-07-14"
+date_processed: "2026-08-12"
 ---
 
-# Legacy of InFest — Enemy Specification
+# Legacy of InFest — Especificación de enemigos
 
-**Document ID:** LOI-ENEMY-005  
-**Version:** 1.0.0  
-**Status:** Official  
-**Audience:** Professor, Teaching Assistants, Students, AI coding assistants
+**ID del documento:** LOI-ENEMY-005
+**Versión:** 1.1.0
+**Estado:** Oficial
+**Audiencia:** Profesor, ayudantes, estudiantes, asistentes de código
+
+> **AUD-455.** Traduce el documento completo (antes en inglés, con un
+> resumen final que remitía de vuelta al inglés para la especificación
+> completa) y corrige la numeración de subsecciones de §13–§16, que seguía
+> citando los números 8–11 de una versión anterior del documento (por
+> ejemplo, "### 9.2" bajo "## 14. Reglas de colisión").
 
 ---
 
@@ -49,53 +55,53 @@ que esos tres nombres describían.
 
 ---
 
-## 1. Enemy Philosophy
+## 1. Filosofía de los enemigos
 
-### 1.1 Enemies as Academic Vehicles
+### 1.1 Los enemigos como vehículo académico
 
-Enemies in Legacy of InFest are not designed for maximum gameplay difficulty. They are designed for maximum educational clarity. Each enemy template demonstrates a distinct combination of course concepts — pathfinding using curve mathematics, behavioral state machines, collision and interaction, and visual processing feedback.
+Los enemigos de Legacy of InFest no están diseñados para la máxima dificultad de juego. Están diseñados para la máxima claridad educativa. Cada plantilla de enemigo demuestra una combinación distinta de conceptos del curso — búsqueda de camino con matemática de curvas, máquinas de estado de comportamiento, colisión e interacción, y retroalimentación de procesamiento visual.
 
-Every enemy class is intentionally simple enough to be read and understood by a student in a single session. Every student who builds a custom enemy for their stage must be able to explain, in a written README, exactly which course concepts their enemy implements and how.
+Cada clase de enemigo es intencionalmente lo bastante simple como para que un estudiante la lea y la entienda en una sola sesión. Todo estudiante que construya un enemigo personalizado para su escenario debe poder explicar, en un README escrito, exactamente qué conceptos del curso implementa su enemigo y cómo.
 
-### 1.2 Enemy Design Constraints
+### 1.2 Restricciones de diseño de enemigos
 
-| Constraint | Reason |
+| Restricción | Razón |
 |---|---|
-| Maximum of 3 enemy types per student stage | Keeps scope manageable; forces depth over breadth |
-| All enemies inherit from `EnemyBase` | Ensures lifecycle compatibility with the stage system |
-| Enemies communicate with the player via EventBus only | Prevents tight coupling |
-| Enemies do not call `InputManager` | Enemies are autonomous agents; input is a player-only system |
-| Enemy sprite palettes must stay within 16 colors | SNES constraint |
+| Máximo 3 tipos de enemigo por escenario de estudiante | Mantiene el alcance manejable; obliga a profundidad antes que amplitud |
+| Todos los enemigos heredan de `EnemyBase` | Garantiza compatibilidad de ciclo de vida con el sistema de escenario |
+| Los enemigos se comunican con el jugador sólo vía EventBus | Evita acoplamiento fuerte |
+| Los enemigos no llaman a `InputManager` | Los enemigos son agentes autónomos; la entrada es un sistema exclusivo del jugador |
+| Las paletas de sprite de enemigo no superan los 16 colores | Restricción de la época SNES |
 
-### 1.3 Enemy Taxonomy
+### 1.3 Taxonomía de enemigos
 
-The framework provides three enemy archetypes (plus five advanced specialist types). Students may subclass any of these to create variations for their stages.
+El framework da tres arquetipos de enemigo (más cinco tipos especialistas avanzados). Los estudiantes pueden heredar de cualquiera de ellos para crear variaciones en sus escenarios.
 
-| Class | Movement | Attack | Academic Focus |
+| Clase | Movimiento | Ataque | Foco académico |
 |---|---|---|---|
-| `EnemyWalker` | Horizontal patrol | Contact damage | State machines, collision |
-| `EnemyFlying` | Curved/waypoint flight | Contact damage | Curve mathematics, interpolation |
-| `EnemyShooter` | Stationary or slow patrol | Projectile emission | Range detection, trigonometry |
+| `EnemyWalker` | Patrulla horizontal | Daño de contacto | Máquinas de estado, colisión |
+| `EnemyFlying` | Vuelo curvo/por waypoints | Daño de contacto | Matemática de curvas, interpolación |
+| `EnemyShooter` | Estacionario o patrulla lenta | Emisión de proyectiles | Detección de rango, trigonometría |
 
 ---
 
-## 2. Enemy Base Class — `EnemyBase`
+## 2. Clase base de enemigo — `EnemyBase`
 
-`EnemyBase` is the abstract root class for all enemies. It inherits from `BaseEntity` and adds the health system, damage reception, death handling, hitbox/hurtbox infrastructure, and animation state management.
+`EnemyBase` es la clase raíz abstracta de todos los enemigos. Hereda de `BaseEntity` y añade el sistema de salud, la recepción de daño, el manejo de la muerte, la infraestructura de hitbox/hurtbox y la gestión de estado de animación.
 
-### 2.1 Properties
+### 2.1 Propiedades
 
-| Property | Type | Default | Description |
+| Propiedad | Tipo | Por defecto | Descripción |
 |---|---|---|---|
-| `max_health` | float | Defined per subclass | Maximum hit points |
-| `current_health` | float | `max_health` | Current hit points |
-| `is_alive` | bool | `True` | False when health reaches 0 |
-| `facing_direction` | int | `1` (right) | -1 for left, +1 for right |
-| `state` | str | `"PATROL"` | Current FSM state name |
-| `hitbox` | pygame.Rect | Defined per subclass | Damage-dealing zone |
-| `hurtbox` | pygame.Rect | Defined per subclass | Damage-receiving zone |
-| `damage_on_contact` | float | 0.50 | Hearts of damage dealt on hurtbox collision |
-| `contact_knockback` | float | 120.0 | Horizontal knockback speed applied to player |
+| `max_health` | float | Definido por subclase | Puntos de vida máximos |
+| `current_health` | float | `max_health` | Puntos de vida actuales |
+| `is_alive` | bool | `True` | Falso cuando la vida llega a 0 |
+| `facing_direction` | int | `1` (derecha) | -1 para izquierda, +1 para derecha |
+| `state` | str | `"PATROL"` | Nombre del estado actual de la máquina de estados |
+| `hitbox` | pygame.Rect | Definido por subclase | Zona que inflige daño |
+| `hurtbox` | pygame.Rect | Definido por subclase | Zona que recibe daño |
+| `damage_on_contact` | float | 0.50 | Corazones de daño al colisionar hurtbox |
+| `contact_knockback` | float | 120.0 | Velocidad de empuje horizontal aplicada al jugador |
 
 <!-- cita-historica -->
 > **AUD-150: `death_sfx` y `hit_sfx` no son atributos y nunca lo fueron.**
@@ -106,116 +112,116 @@ The framework provides three enemy archetypes (plus five advanced specialist typ
 > treinta atributos.
 <!-- /cita-historica -->
 
-### 2.2 Required Overrides
+### 2.2 A sobreescribir obligatoriamente
 
-Subclasses must implement:
+Las subclases deben implementar:
 
-| Method | Signature | Description |
-|---|---|---|---|
-| `_patrol_behavior(dt)` | `(float) → None` | Default movement/AI when no player detected |
-| `_alert_behavior(dt)` | `(float) → None` | AI when player is within detection range |
-| `_get_animation_key()` | `() → str` | Return animation key for current state (subclasses override this; base `_get_animation_state()` calls it) |
-| `_build_hitbox()` | `() → pygame.Rect` | Define the local-space hitbox rect |
-| `_build_hurtbox()` | `() → pygame.Rect` | Define the local-space hurtbox rect |
+| Método | Firma | Descripción |
+|---|---|---|
+| `_patrol_behavior(dt)` | `(float) → None` | Movimiento/IA por defecto cuando no se detecta al jugador |
+| `_alert_behavior(dt)` | `(float) → None` | IA cuando el jugador está dentro del rango de detección |
+| `_get_animation_key()` | `() → str` | Devuelve la clave de animación del estado actual (las subclases la sobreescriben; la base `_get_animation_state()` la llama) |
+| `_build_hitbox()` | `() → pygame.Rect` | Define el rectángulo de hitbox en espacio local |
+| `_build_hurtbox()` | `() → pygame.Rect` | Define el rectángulo de hurtbox en espacio local |
 
-### 2.3 Provided Methods (Do Not Override)
+### 2.3 Métodos provistos (no sobreescribir)
 
-| Method | Description |
+| Método | Descripción |
 |---|---|
-| `apply_hit(damage, source_position)` | Apply damage, trigger hurt state, emit events |
-| `_die()` | Handle death: play animation, emit `ENEMY_DIED`, schedule removal |
-| `_update_invincibility(dt)` | Tick down invincibility timer, toggle flash |
-| `_check_player_contact(player)` | If hurtboxes overlap, deal contact damage to player |
-| `_update_rects()` | Recompute hitbox and hurtbox world positions from local offsets |
-| `update(dt)` | Master update: tick state machine, call behavior, update rects, animation |
-| `draw(surface, camera_offset)` | Blit current animation frame, optionally draw debug rects |
+| `apply_hit(damage, source_position)` | Aplica daño, dispara el estado de daño, emite eventos |
+| `_die()` | Gestiona la muerte: reproduce la animación, emite `ENEMY_DIED`, programa la eliminación |
+| `_update_invincibility(dt)` | Descuenta el temporizador de invencibilidad, alterna el parpadeo |
+| `_check_player_contact(player)` | Si las hurtbox se solapan, inflige daño de contacto al jugador |
+| `_update_rects()` | Recalcula las posiciones de mundo de hitbox y hurtbox a partir de los desplazamientos locales |
+| `update(dt)` | Actualización maestra: avanza la máquina de estados, llama al comportamiento, actualiza rects y animación |
+| `draw(surface, camera_offset)` | Vuelca el fotograma de animación actual, opcionalmente dibuja rects de depuración |
 
-### 2.4 Life Cycle
+### 2.4 Ciclo de vida
 
 ```
-EnemyBase instantiated
+Se instancia EnemyBase
     ↓
-on_spawn() called (optional override)
+Se llama a on_spawn() (sobreescritura opcional)
     ↓
-Every frame: update(dt)
+Cada fotograma: update(dt)
     ├── _update_invincibility(dt)
     ├── _run_state_machine(dt)
     │     ├── state == "PATROL" → _patrol_behavior(dt)
     │     ├── state == "ALERT" → _alert_behavior(dt)
-    │     ├── state == "HURT" → hurt timer tick
-    │     └── state == "DYING" → death animation tick → _die()
+    │     ├── state == "HURT" → cuenta atrás del temporizador de daño
+    │     └── state == "DYING" → avanza la animación de muerte → _die()
     ├── _update_rects()
     └── _check_player_contact(player)
     ↓
-apply_hit() called by player attack collision system
+apply_hit() la llama el sistema de colisión del ataque del jugador
     ├── current_health -= damage
-    ├── if current_health <= 0: state = "DYING"
-    └── else: state = "HURT", start hurt_timer
+    ├── si current_health <= 0: state = "DYING"
+    └── si no: state = "HURT", arranca hurt_timer
     ↓
-Death animation completes
+Termina la animación de muerte
     ├── EventBus.emit("ENEMY_DIED", entity_id, position)
-    └── is_active = False (removed from entity list next frame)
+    └── is_active = False (se quita de la lista de entidades el siguiente fotograma)
 ```
 
-### 2.5 Detection System
+### 2.5 Sistema de detección
 
 <!-- cita-historica -->
-All enemies share a detection range check. The player's position is compared against `detection_range_x` and `detection_range_y` — **two distances, not a stored rectangle** (AUD-150: this paragraph used to name a `detection_rect` that never existed).
+Todos los enemigos comparten una comprobación de rango de detección. La posición del jugador se compara contra `detection_range_x` y `detection_range_y` — **dos distancias, no un rectángulo guardado** (AUD-150: este párrafo antes nombraba un `detection_rect` que nunca existió).
 <!-- /cita-historica -->
 
-| Property | Default | Description |
+| Propiedad | Por defecto | Descripción |
 |---|---|---|
-| `detection_range_x` | 160 pixels | Horizontal half-width of detection zone |
-| `detection_range_y` | 64 pixels | Vertical half-height of detection zone |
+| `detection_range_x` | 160 píxeles | Medio ancho horizontal de la zona de detección |
+| `detection_range_y` | 64 píxeles | Medio alto vertical de la zona de detección |
 
-When the player enters the detection zone, the enemy transitions from `PATROL` to `ALERT`. When the player leaves the detection zone extended by a `deaggro_margin` (default 32 pixels), the enemy returns to `PATROL`.
+Cuando el jugador entra en la zona de detección, el enemigo pasa de `PATROL` a `ALERT`. Cuando el jugador sale de la zona de detección extendida por un `deaggro_margin` (32 píxeles por defecto), el enemigo vuelve a `PATROL`.
 
 ---
 
-## 3. Walker Enemy — `EnemyWalker`
+## 3. Enemigo Walker — `EnemyWalker`
 
-### 3.1 Description
+### 3.1 Descripción
 
-The Walker is a ground-bound enemy that patrols horizontally along a defined segment. It reverses direction at patrol limits or at ledge edges. When the player enters its detection range, it accelerates toward the player.
+El Walker es un enemigo terrestre que patrulla horizontalmente a lo largo de un segmento definido. Invierte de dirección en los límites de patrulla o en los bordes de repisa. Cuando el jugador entra en su rango de detección, acelera hacia él.
 
-The Walker is the simplest enemy and the primary demonstration vehicle for:
-- Horizontal state machine behavior
-- Platform edge detection
-- Contact damage and knockback
-- Basic collision resolution
+El Walker es el enemigo más simple y el vehículo principal de demostración de:
+- Comportamiento de máquina de estados horizontal
+- Detección de borde de plataforma
+- Daño de contacto y empuje
+- Resolución básica de colisión
 
-### 3.2 Attributes
+### 3.2 Atributos
 
-| Attribute | Value |
+| Atributo | Valor |
 |---|---|
-| Max health | 2.0 hearts |
-| Patrol speed | 45.0 px/s |
-| Alert speed | 75.0 px/s |
-| Damage on contact | 0.50 hearts |
-| Detection range X | 160 px |
-| Detection range Y | 48 px |
-| Patrol segment length | Defined in TMX properties (default 96 px) |
+| Vida máxima | 2.0 corazones |
+| Velocidad de patrulla | 45.0 px/s |
+| Velocidad de alerta | 75.0 px/s |
+| Daño de contacto | 0.50 corazones |
+| Rango de detección X | 160 px |
+| Rango de detección Y | 48 px |
+| Longitud del segmento de patrulla | Definida en propiedades de TMX (96 px por defecto) |
 
-### 3.3 States
+### 3.3 Estados
 
-| State | Behavior |
+| Estado | Comportamiento |
 |---|---|
-| `PATROL` | Move at patrol speed in facing direction. Reverse at patrol limit or ledge edge. |
-| `ALERT` | Move toward player at alert speed. Continue until player leaves deaggro zone. |
-| `HURT` | Halt movement for 0.25 seconds. Flash sprite. |
-| `DYING` | Play death animation. No movement. |
+| `PATROL` | Se mueve a velocidad de patrulla en la dirección de cara. Invierte en el límite de patrulla o en el borde de repisa. |
+| `ALERT` | Se mueve hacia el jugador a velocidad de alerta. Continúa hasta que el jugador sale de la zona de des-aggro. |
+| `HURT` | Detiene el movimiento 0.25 segundos. Parpadea el sprite. |
+| `DYING` | Reproduce la animación de muerte. Sin movimiento. |
 
-### 3.4 Patrol Limit Detection
+### 3.4 Detección del límite de patrulla
 
-The Walker tracks `_patrol_origin` (spawn position, private) and a public `patrol_length` read from the TMX. It reverses when:
+El Walker guarda `_patrol_origin` (posición de aparición, privada) y un `patrol_length` público leído del TMX. Invierte cuando:
 
 ```
 abs(position.x - _patrol_origin.x) >= patrol_length / 2
 ```
 
-### 3.5 Ledge Detection
+### 3.5 Detección de repisa
 
-Before each horizontal move, the Walker probes one tile ahead and one tile below using a point-cast against the collision rect list. If no floor tile is found below the next step, the Walker reverses. This is computed as:
+Antes de cada movimiento horizontal, el Walker sondea una baldosa por delante y una por debajo con un lanzamiento de punto contra la lista de rectángulos de colisión. Si no hay baldosa de suelo debajo del siguiente paso, el Walker invierte. Se calcula así:
 
 ```
 probe_x = position.x + (facing_direction * (rect.width / 2 + 2))
@@ -223,155 +229,155 @@ probe_y = position.y + rect.height + 4
 ledge_check = any(probe_x in r.x_range and probe_y in r.y_range for r in collision_rects)
 ```
 
-### 3.6 Animations
+### 3.6 Animaciones
 
-| State | File | Frames | FPS | Loop |
+| Estado | Fichero | Fotogramas | FPS | Bucle |
 |---|---|---|---|---|
-| Walk | `enemy_walker_walk.png` | 6 | 10 | Yes |
-| Alert walk | `enemy_walker_walk.png` | 6 | 14 | Yes |
-| Hurt | `enemy_walker_hurt.png` | 3 | 12 | No |
-| Die | `enemy_walker_die.png` | 6 | 10 | No |
+| Caminar | `enemy_walker_walk.png` | 6 | 10 | Sí |
+| Caminar alerta | `enemy_walker_walk.png` | 6 | 14 | Sí |
+| Daño | `enemy_walker_hurt.png` | 3 | 12 | No |
+| Morir | `enemy_walker_die.png` | 6 | 10 | No |
 
-### 3.7 Hitbox and Hurtbox
+### 3.7 Hitbox y hurtbox
 
-The Walker has no active attack hitbox — its damage is contact-based (hurtbox-to-hurtbox overlap with the player).
+El Walker no tiene hitbox de ataque activa — su daño es por contacto (solape de hurtbox con la del jugador).
 
-| Box | Offset X | Offset Y | Width | Height |
+| Caja | Desplaz. X | Desplaz. Y | Ancho | Alto |
 |---|---|---|---|---|
-| Hurtbox | 4 px from sprite left | 2 px from sprite top | 24 px | 28 px |
+| Hurtbox | 4 px desde el borde izquierdo del sprite | 2 px desde arriba | 24 px | 28 px |
 
 ---
 
-## 4. Flying Enemy — `EnemyFlying`
+## 4. Enemigo Flying — `EnemyFlying`
 
-### 4.1 Description
+### 4.1 Descripción
 
-The Flying enemy travels through the air along a computed path. In its default implementation, the path is a sine-wave oscillation or a Bézier curve defined by waypoints in the TMX map. This enemy is the primary academic demonstration of:
+El enemigo Flying viaja por el aire a lo largo de un camino calculado. En su implementación por defecto, el camino es una oscilación senoidal o una curva de Bézier definida por waypoints en el mapa TMX. Este enemigo es la demostración académica principal de:
 
-- Bézier curves and parametric path sampling (Unit III)
-- Sine-wave motion and trajectory mathematics (Unit III)
-- Interpolation between waypoints (Unit VI)
+- Curvas de Bézier y muestreo paramétrico de camino (Unidad III)
+- Movimiento senoidal y matemática de trayectoria (Unidad III)
+- Interpolación entre waypoints (Unidad VI)
 
-### 4.2 Attributes
+### 4.2 Atributos
 
-| Attribute | Value |
+| Atributo | Valor |
 |---|---|
-| Max health | 1.5 hearts |
-| Flight speed | 60.0 px/s (along path) |
-| Sine amplitude | 28.0 px (default) |
-| Sine frequency | 1.5 Hz (default) |
-| Damage on contact | 0.50 hearts |
-| Detection range X | 180 px |
-| Detection range Y | 96 px |
+| Vida máxima | 1.5 corazones |
+| Velocidad de vuelo | 60.0 px/s (a lo largo del camino) |
+| Amplitud senoidal | 28.0 px (por defecto) |
+| Frecuencia senoidal | 1.5 Hz (por defecto) |
+| Daño de contacto | 0.50 corazones |
+| Rango de detección X | 180 px |
+| Rango de detección Y | 96 px |
 
-### 4.3 Y-Tracking (Alert Mode)
+### 4.3 Seguimiento en Y (modo alerta)
 
-When the player enters detection range, the flying enemy accelerates path speed by 1.5× and actively tracks the player's Y position. This uses a **leaky-integrator offset** (`_y_track_offset`) that persists across strategy frames:
+Cuando el jugador entra en el rango de detección, el enemigo volador acelera la velocidad del camino ×1.5 y sigue activamente la posición Y del jugador. Usa un **desplazamiento de integrador con fuga** (`_y_track_offset`) que persiste entre fotogramas de estrategia:
 
 ```
-# Each alert frame:
-# 1. Strategy executes (fully resets position.y for sine/bezier modes)
-# 2. Compute Y error: player_center_y - (position.y + _y_track_offset + rect.height/2)
-# 3. Push offset toward player at 0.4 × flight_speed
-# 4. Damp offset: _y_track_offset *= 0.98
-# 5. Apply: position.y += _y_track_offset
+# Cada fotograma en alerta:
+# 1. La estrategia se ejecuta (resetea del todo position.y en los modos seno/bezier)
+# 2. Calcula el error en Y: player_center_y - (position.y + _y_track_offset + rect.height/2)
+# 3. Empuja el desplazamiento hacia el jugador a 0.4 × flight_speed
+# 4. Amortigua el desplazamiento: _y_track_offset *= 0.98
+# 5. Aplica: position.y += _y_track_offset
 ```
 
-The 0.98 damping prevents windup while keeping the enemy near the player's vertical position. The offset resets to 0.0 when returning to PATROL state.
+La amortiguación de 0.98 evita el sobregiro mientras mantiene al enemigo cerca de la posición vertical del jugador. El desplazamiento vuelve a 0.0 al regresar al estado PATROL.
 
-### 4.4 Flight Modes
+### 4.4 Modos de vuelo
 
-The flight mode is specified in the TMX object properties:
+El modo de vuelo se especifica en las propiedades del objeto TMX:
 
-| Mode | Property Key | Description |
+| Modo | Clave de propiedad | Descripción |
 |---|---|---|
-| `sine` | `flight_mode=sine` | Horizontal movement with sinusoidal vertical oscillation |
-| `bezier` | `flight_mode=bezier` | Follow a Bézier path defined by waypoint objects in TMX |
-| `patrol` | `flight_mode=patrol` | Linear ping-pong between two waypoints |
+| `sine` | `flight_mode=sine` | Movimiento horizontal con oscilación vertical senoidal |
+| `bezier` | `flight_mode=bezier` | Sigue un camino de Bézier definido por objetos waypoint en el TMX |
+| `patrol` | `flight_mode=patrol` | Vaivén lineal entre dos waypoints |
 
-**Sine Mode:**
+**Modo seno:**
 ```
 position.x += speed * facing_direction * dt
 position.y = origin.y + amplitude * sin(2π * frequency * elapsed_time)
 ```
 
-**Bézier Mode:**
-The TMX object layer defines control points as `Waypoint` objects tagged to this enemy's `id`. The `CurveTools.bezier(control_points, n_samples=64)` function pre-computes the path on spawn. The enemy then uses `CurveTools.sample_path(path_points, t)` to find its current position, where `t` advances at `speed / path_length` per second.
+**Modo Bézier:**
+La capa de objetos TMX define los puntos de control como objetos `Waypoint` etiquetados con el `id` de este enemigo. La función `CurveTools.bezier(control_points, n_samples=64)` precalcula el camino al aparecer. El enemigo usa entonces `CurveTools.sample_path(path_points, t)` para hallar su posición actual, donde `t` avanza a `speed / path_length` por segundo.
 
-### 4.4 States
+### 4.5 Estados
 
-| State | Behavior |
+| Estado | Comportamiento |
 |---|---|
 | `PATROL` | Follow defined flight path continuously |
-| `ALERT` | Accelerate path speed by 1.5×, track player's Y axis via leaky-integrator offset (`_y_track_offset`, damping 0.98) that survives strategy position resets |
-| `HURT` | Halt for 0.2 seconds. Flash. |
-| `DYING` | Slow fall animation with horizontal drift. No path following. |
+| `ALERT` | Acelera la velocidad del camino x1.5, sigue el eje Y del jugador vía el desplazamiento de integrador con fuga (`_y_track_offset`, amortiguacion 0.98) que sobrevive a los reseteos de posicion de la estrategia |
+| `HURT` | Se detiene 0.2 segundos. Parpadea. |
+| `DYING` | Animacion de caida lenta con deriva horizontal. Deja de seguir el camino. |
 
-### 4.5 Animations
+### 4.6 Animaciones
 
 | State | File | Frames | FPS | Loop |
 |---|---|---|---|---|
-| Fly | `enemy_flying_fly.png` | 4 | 12 | Yes |
-| Alert | `enemy_flying_fly.png` | 4 | 16 | Yes |
-| Hurt | `enemy_flying_hurt.png` | 3 | 12 | No |
-| Die | `enemy_flying_die.png` | 8 | 10 | No |
+| Volar | `enemy_flying_fly.png` | 4 | 12 | Sí |
+| Alerta | `enemy_flying_fly.png` | 4 | 16 | Sí |
+| Daño | `enemy_flying_hurt.png` | 3 | 12 | No |
+| Morir | `enemy_flying_die.png` | 8 | 10 | No |
 
-### 4.6 Hitbox and Hurtbox
+### 4.7 Hitbox y hurtbox
 
-| Box | Offset X | Offset Y | Width | Height |
+| Caja | Desplaz. X | Desplaz. Y | Ancho | Alto |
 |---|---|---|---|---|
-| Hurtbox | 6 px from sprite left | 4 px from sprite top | 20 px | 14 px |
+| Hurtbox | 6 px desde el borde izquierdo del sprite | 4 px desde arriba | 20 px | 14 px |
 
 ---
 
-## 5. Shooter Enemy — `EnemyShooter`
+## 5. Enemigo Shooter — `EnemyShooter`
 
-### 5.1 Description
+### 5.1 Descripción
 
-The Shooter enemy fires projectiles at the player when detection conditions are met. It may be stationary or perform a slow patrol. This enemy demonstrates:
+El enemigo Shooter dispara proyectiles al jugador cuando se cumplen las condiciones de detección. Puede ser estacionario o patrullar despacio. Este enemigo demuestra:
 
-- Range detection using distance calculation (Unit II — vectors)
-- Angle calculation using `atan2` (Unit II — vectors)
-- Projectile as a sub-entity with its own velocity and lifetime (Unit IV — sprites)
+- Detección de rango con cálculo de distancia (Unidad II — vectores)
+- Cálculo de ángulo con `atan2` (Unidad II — vectores)
+- El proyectil como sub-entidad con su propia velocidad y tiempo de vida (Unidad IV — sprites)
 
-### 5.2 Attributes
+### 5.2 Atributos
 
-| Attribute | Value |
+| Atributo | Valor |
 |---|---|
-| Max health | 3.0 hearts |
-| Patrol speed | 20.0 px/s (if mobile) |
-| Projectile speed | 120.0 px/s |
-| Projectile damage | 0.50 hearts |
-| Fire rate | 1 shot per 2.0 seconds |
-| Max active projectiles | 3 |
-| Detection range X | 200 px |
-| Detection range Y | 64 px |
-| Contact damage | 0.25 hearts |
+| Vida máxima | 3.0 corazones |
+| Velocidad de patrulla | 20.0 px/s (si es móvil) |
+| Velocidad del proyectil | 120.0 px/s |
+| Daño del proyectil | 0.50 corazones |
+| Cadencia de disparo | 1 shot per 2.0 seconds |
+| Proyectiles activos máximos | 3 |
+| Rango de detección X | 200 px |
+| Rango de detección Y | 64 px |
+| Daño de contacto | 0.25 corazones |
 
-### 5.3 States
+### 5.3 Estados
 
-| State | Behavior |
+| Estado | Comportamiento |
 |---|---|
 | `PATROL` | Slow horizontal movement or idle |
 | `ALERT` | Face player, enter firing stance |
 | `FIRING` | Emit projectile at computed angle, respect fire rate |
-| `HURT` | Interrupt firing for 0.4 seconds. Flash. |
+| `HURT` | Interrumpe el disparo 0.4 segundos. Parpadea. |
 | `DYING` | Play death animation. Expire all projectiles. |
 
-### 5.4 Projectile System
+### 5.4 Sistema de proyectiles
 
 #### Projectile Entity
 
-Each fired projectile is a lightweight `Projectile` entity with the following properties:
+Cada proyectil disparado es una entidad `Projectile` ligera con estas propiedades:
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Velocity | Computed from shooter → player angle at fire time |
+| Velocidad | Calculada del angulo tirador → jugador en el momento del disparo |
 | Lifetime | 3.0 seconds |
-| Damage | Inherited from parent shooter's `projectile_damage` |
+| Dano | Heredado del `projectile_damage` del tirador |
 | Sprite | `enemy_shooter_projectile.png` (4×4 px glowing orb) |
 | Hurtbox | 4×4 px, centered on position |
-| Collision | Expires on contact with collision tiles OR player hurtbox |
+| Colision | Expira al tocar baldosas de colision O la hurtbox del jugador |
 
 **Angle Calculation:**
 ```python
@@ -382,288 +388,288 @@ velocity_x = math.cos(angle) * PROJECTILE_SPEED
 velocity_y = math.sin(angle) * PROJECTILE_SPEED
 ```
 
-This calculation is documented inline in the source code as an illustration of Unit II vector mathematics.
+Este calculo esta documentado en linea en el codigo fuente como ilustracion de la matematica vectorial de la Unidad II.
 
 #### Projectile Lifecycle
 
 ```
-Shooter fires:
+El Shooter dispara:
   ├── Create Projectile at shooter's muzzle position
-  ├── Set velocity from angle calculation
+  ├── Fija la velocidad segun el calculo de angulo
   ├── Add to stage entity list
   └── Reset fire_cooldown_timer
 
-Each frame:
+Cada fotograma:
   ├── Update projectile position (velocity * dt)
-  ├── Check collision with solid tiles → expire
-  ├── Check hurtbox overlap with player → deal damage, expire
+  ├── Comprueba colision con baldosas solidas → expira
+  ├── Comprueba solape de hurtbox con el jugador → inflige dano, expira
   └── Check lifetime elapsed → expire
 
-Expiration:
+Expiracion:
   └── is_active = False (removed next frame)
 ```
 
-### 5.5 Animations
+### 5.5 Animaciones
 
 | State | File | Frames | FPS | Loop |
 |---|---|---|---|---|
-| Idle/Patrol | `enemy_shooter_idle.png` | 4 | 6 | Yes |
-| Alert/Aim | `enemy_shooter_aim.png` | 3 | 8 | No (hold last) |
-| Fire | `enemy_shooter_fire.png` | 5 | 16 | No |
-| Hurt | `enemy_shooter_hurt.png` | 3 | 12 | No |
-| Die | `enemy_shooter_die.png` | 7 | 10 | No |
+| Reposo/Patrulla | `enemy_shooter_idle.png` | 4 | 6 | Sí |
+| Alerta/Apuntar | `enemy_shooter_aim.png` | 3 | 8 | No (mantiene el último) |
+| Disparar | `enemy_shooter_fire.png` | 5 | 16 | No |
+| Daño | `enemy_shooter_hurt.png` | 3 | 12 | No |
+| Morir | `enemy_shooter_die.png` | 7 | 10 | No |
 
-### 5.6 Hitbox and Hurtbox
+### 5.6 Hitbox y hurtbox
 
-| Box | Offset X | Offset Y | Width | Height |
+| Caja | Desplaz. X | Desplaz. Y | Ancho | Alto |
 |---|---|---|---|---|
-| Hurtbox | 4 px from sprite left | 2 px from sprite top | 24 px | 30 px |
+| Hurtbox | 4 px desde el borde izquierdo del sprite | 2 px desde arriba | 24 px | 30 px |
 
 ---
 
-## 6. Charger Enemy — `EnemyCharger`
+## 6. Enemigo Charger — `EnemyCharger`
 
-### 6.1 Description
+### 6.1 Descripción
 
-The Charger rushes the player at high speed with a wind-up telegraph. Its attack cycle has three phases, and **los tres son estados del enum base**: `TELEGRAPHING` (barra roja) → `CHASE` (embestida) → `STUNNED` (recuperación). This enemy demonstrates:
+El Charger embiste al jugador a gran velocidad con un aviso previo. Su ciclo de ataque tiene tres fases, y **los tres son estados del enum base**: `TELEGRAPHING` (barra roja) → `CHASE` (embestida) → `STUNNED` (recuperación). Este enemigo demuestra:
 
-- Multi-phase attack state machine with timing
-- Telegraph indicators for player readability
-- Variable damage output depending on state
+- Maquina de estados de ataque multifase con temporizacion
+- Indicadores de aviso para que el jugador pueda leer el ataque
+- Dano variable segun el estado
 
-### 6.2 Attributes
+### 6.2 Atributos
 
-| Attribute | Value |
+| Atributo | Valor |
 |---|---|
-| Max health | 4.0 hearts |
-| Patrol speed | 30.0 px/s |
-| Charge speed | 250.0 px/s |
-| Wind-up duration | 0.4 s |
-| Charge duration | 0.7 s |
-| Stun duration | 1.0 s |
-| Damage on contact (charge) | 1.50 hearts |
-| Damage on contact (stun) | 0.50 hearts |
-| Detection range X | 200 px |
-| Detection range Y | 48 px |
-| Hurt duration | 0.3 s |
-| Invincibility after hit | 0.4 s |
+| Vida máxima | 4.0 corazones |
+| Velocidad de patrulla | 30.0 px/s |
+| Velocidad de embestida | 250.0 px/s |
+| Duración del aviso previo | 0.4 s |
+| Duración de la embestida | 0.7 s |
+| Duración del aturdimiento | 1.0 s |
+| Daño de contacto (embestida) | 1.50 corazones |
+| Daño de contacto (aturdido) | 0.50 corazones |
+| Rango de detección X | 200 px |
+| Rango de detección Y | 48 px |
+| Duración del daño | 0.3 s |
+| Invencibilidad tras el golpe | 0.4 s |
 
-### 6.3 States
+### 6.3 Estados
 
-| State | Behavior |
+| Estado | Comportamiento |
 |---|---|
-| `PATROL` | Slow back-and-forth movement, turns at ±48px from origin |
+| `PATROL` | Vaiven lento, gira a ±48 px del origen |
 | `ALERT` | Faces player; if 40-180px away, begins `TELEGRAPHING` → `CHASE` → `STUNNED` |
 | `TELEGRAPHING` | 0.4 s de aviso (barra roja) antes de embestir |
-| `CHARGE` | Dashes at 250.0 px/s for 0.7s, damage 1.5, then enters STUN |
-| `STUN` | Recovers for 1.0s, damage reduced to 0.5, returns to ALERT |
-| `HURT` | Halt for 0.3s |
+| `CHARGE` | Embiste a 250.0 px/s durante 0.7s, dano 1.5, luego entra en STUN |
+| `STUN` | Se recupera 1.0s, dano reducido a 0.5, vuelve a ALERT |
+| `HURT` | Se detiene 0.3s |
 | `DYING` | Play death animation |
 
-### 6.4 Charge Range
+### 6.4 Rango de embestida
 
-The charge only triggers when the player is between 40 and 180 pixels from the Charger. This proximity check prevents charging from off-screen or when the player is already too close.
+La embestida solo se dispara cuando el jugador esta entre 40 y 180 pixeles del Charger. Esta comprobacion de proximidad evita embestir desde fuera de pantalla o cuando el jugador ya esta demasiado cerca.
 
 ---
 
-## 7. Archer Enemy — `EnemyArcher`
+## 7. Enemigo Archer — `EnemyArcher`
 
-### 7.1 Description
+### 7.1 Descripción
 
-The Archer fires arcing projectiles at the player with predictive aim and variable arc height. This enemy demonstrates:
+El Archer dispara proyectiles en arco al jugador con punteria predictiva y altura de arco variable. Este enemigo demuestra:
 
-- Projectile physics with gravity and arc trajectory
-- Predictive targeting (lead) based on player distance
-- Telegraphed ranged attacks
+- Fisica de proyectil con gravedad y trayectoria en arco
+- Punteria predictiva (adelanto) segun la distancia al jugador
+- Ataques a distancia telegrafiados
 
-### 7.2 Attributes
+### 7.2 Atributos
 
-| Attribute | Value |
+| Atributo | Valor |
 |---|---|
-| Max health | 2.5 hearts |
-| Patrol speed | 15.0 px/s |
-| Projectile speed | 90.0 px/s |
-| Projectile damage | 0.75 hearts |
-| Fire rate | 1 shot per 3.75 s |
-| Max active projectiles | 4 |
-| Projectile lifetime | 3.0 s |
-| Detection range X | 220 px |
-| Detection range Y | 80 px |
-| Contact damage | 0.25 hearts |
+| Vida máxima | 2.5 corazones |
+| Velocidad de patrulla | 15.0 px/s |
+| Velocidad del proyectil | 90.0 px/s |
+| Daño del proyectil | 0.75 corazones |
+| Cadencia de disparo | 1 shot per 3.75 s |
+| Proyectiles activos máximos | 4 |
+| Tiempo de vida del proyectil | 3.0 s |
+| Rango de detección X | 220 px |
+| Rango de detección Y | 80 px |
+| Daño de contacto | 0.25 corazones |
 
-### 7.3 States
+### 7.3 Estados
 
-| State | Behavior |
+| Estado | Comportamiento |
 |---|---|
-| `PATROL` | Slow horizontal patrol, turns at ±48px from origin |
+| `PATROL` | Patrulla horizontal lenta, gira a ±48 px del origen |
 | `ALERT` | Faces player, counts down shoot cooldown |
 | `TELEGRAPHING` | 0.4s telegraph (orange glow), then FIRING |
-| `FIRING` | Fires arcing projectile with predictive aim, sets cooldown |
-| `HURT` | Interrupt firing for 0.35s |
+| `FIRING` | Dispara un proyectil en arco con punteria predictiva, fija el tiempo de espera |
+| `HURT` | Interrumpe el disparo 0.35s |
 | `DYING` | Play death animation |
 
-### 7.4 Predictive Aim
+### 7.4 Puntería predictiva
 
-The Archer uses a `predict_factor` of 0.3 to lead the target based on player distance. The projectile follows an arc trajectory: initial upward velocity with gravity applied each frame to create a parabolic arc.
+El Archer usa un `predict_factor` de 0.3 para adelantarse al objetivo segun la distancia del jugador. El proyectil sigue una trayectoria en arco: velocidad ascendente inicial con gravedad aplicada cada fotograma para crear una parabola.
 
 ---
 
-## 8. Brute Enemy — `EnemyBrute`
+## 8. Enemigo Brute — `EnemyBrute`
 
-### 8.1 Description
+### 8.1 Descripción
 
-The Brute is a heavy melee enemy with a ground-slam shockwave attack. Large, slow, and dangerous. This enemy demonstrates:
+El Brute es un enemigo cuerpo a cuerpo pesado con un ataque de onda de choque al golpear el suelo. Grande, lento y peligroso. Este enemigo demuestra:
 
-- Area-of-effect (AOE) attack with delayed damage zone
-- Multi-frame telegraph indicator (yellow rectangle)
-- Custom draw() with shockwave ellipse visual
+- Ataque de area (AOE) con zona de dano retardada
+- Indicador de aviso de varios fotogramas (rectangulo amarillo)
+- draw() personalizado con la elipse visual de la onda de choque
 
-### 8.2 Attributes
+### 8.2 Atributos
 
-| Attribute | Value |
+| Atributo | Valor |
 |---|---|
-| Max health | 5.0 hearts |
-| Patrol speed | 40.0 px/s |
-| Slam cooldown | 3.0 s |
-| Telegraph duration | 0.3 s |
-| Shockwave duration | 0.4 s |
-| Shockwave damage | 1.50 hearts |
-| Contact damage | 0.50 hearts |
-| Detection range X | 120 px |
-| Detection range Y | 60 px |
+| Vida máxima | 5.0 corazones |
+| Velocidad de patrulla | 40.0 px/s |
+| Tiempo de espera del golpe de tierra | 3.0 s |
+| Duración del aviso | 0.3 s |
+| Duración de la onda de choque | 0.4 s |
+| Daño de la onda de choque | 1.50 corazones |
+| Daño de contacto | 0.50 corazones |
+| Rango de detección X | 120 px |
+| Rango de detección Y | 60 px |
 
-### 8.3 States
+### 8.3 Estados
 
-| State | Behavior |
+| Estado | Comportamiento |
 |---|---|
-| `PATROL` | Slow patrol, turns at ±64px from origin |
+| `PATROL` | Patrulla lenta, gira a ±64 px del origen |
 | `ALERT` | Faces player, counts down slam cooldown (3.0s) |
-| `TELEGRAPHING` | 0.3s telegraph with yellow warning bar, then FIRING |
-| `FIRING` | Activates shockwave for 0.4s, deals 1.5 AOE damage |
-| `HURT` | Halt for 0.35s |
+| `TELEGRAPHING` | Aviso de 0.3s con barra amarilla, luego FIRING |
+| `FIRING` | Activa la onda de choque 0.4s, inflige 1.5 de dano en area |
+| `HURT` | Se detiene 0.35s |
 | `DYING` | Play death animation |
 
-### 8.4 Shockwave
+### 8.4 Onda de choque
 
-The shockwave is a damage zone (60x20 px at the Brute's feet) that remains active for 0.4 seconds. A visual ellipse (orange/yellow with alpha fade) is drawn on the ground. Damage is applied only once per shockwave via a `_shockwave_has_hit` flag.
+La onda de choque es una zona de dano (60x20 px a los pies del Brute) que permanece activa 0.4 segundos. Se dibuja una elipse visual (naranja/amarillo con desvanecimiento de alfa) en el suelo. El dano se aplica solo una vez por onda de choque, mediante un flag `_shockwave_has_hit`.
 
-### 8.5 Telegraph Visual
+### 8.5 Aviso visual
 
-A yellow rectangle grows horizontally during the telegraph phase, starting from the Brute's position and expanding to indicate the AOE area.
+Un rectangulo amarillo crece horizontalmente durante la fase de aviso, empezando en la posicion del Brute y expandiendose para indicar el area del AOE.
 
 ---
 
-## 9. Caster Enemy — `EnemyCaster`
+## 9. Enemigo Caster — `EnemyCaster`
 
-### 9.1 Description
+### 9.1 Descripción
 
-The Caster is a ranged magic enemy that fires homing orbs at the player. It actively maintains an ideal distance. This enemy demonstrates:
+El Caster es un enemigo magico a distancia que dispara orbes teledirigidos al jugador. Mantiene activamente una distancia ideal. Este enemigo demuestra:
 
-- Homing projectile with acceleration
-- Distance management AI (maintain ideal combat range)
-- Telegraphed charge-up with purple circle visual
+- Proyectil teledirigido con aceleracion
+- IA de gestion de distancia (mantener el rango de combate ideal)
+- Carga previa telegrafiada con un circulo purpura visual
 
-### 9.2 Attributes
+### 9.2 Atributos
 
-| Attribute | Value |
+| Atributo | Valor |
 |---|---|
-| Max health | 2.0 hearts |
-| Patrol speed | 15.0 px/s |
-| Orb speed | 120.0 px/s (accelerates to cap) |
-| Orb damage | 0.75 hearts |
-| Fire rate | 1 orb per 2.5 s |
-| Max active orbs | 5 |
-| Orb lifetime | 3.0 s |
-| Ideal distance | 150 px from player |
-| Detection range X | 250 px |
-| Detection range Y | 80 px |
+| Vida máxima | 2.0 corazones |
+| Velocidad de patrulla | 15.0 px/s |
+| Velocidad del orbe | 120.0 px/s (acelera hasta el tope) |
+| Daño del orbe | 0.75 corazones |
+| Cadencia de disparo | 1 orb per 2.5 s |
+| Orbes activos máximos | 5 |
+| Tiempo de vida del orbe | 3.0 s |
+| Distancia ideal | 150 px del jugador |
+| Rango de detección X | 250 px |
+| Rango de detección Y | 80 px |
 
-### 9.3 States
+### 9.3 Estados
 
-| State | Behavior |
+| Estado | Comportamiento |
 |---|---|
-| `PATROL` | Slow patrol, turns at ±48px from origin |
-| `ALERT` | Faces player, maintains ideal distance, counts down cooldown |
-| `TELEGRAPHING` | 0.3s telegraph (purple charging circle), then FIRING |
-| `FIRING` | Fires homing orb, resets cooldown to 2.5s |
-| `HURT` | Halt for 0.3s |
+| `PATROL` | Patrulla lenta, gira a ±48 px del origen |
+| `ALERT` | Mira al jugador, mantiene la distancia ideal, cuenta atrás el tiempo de espera |
+| `TELEGRAPHING` | Aviso de 0.3s (círculo de carga púrpura), luego FIRING |
+| `FIRING` | Dispara un orbe teledirigido, reinicia el tiempo de espera a 2.5s |
+| `HURT` | Se detiene 0.3s |
 | `DYING` | Play death animation |
 
-### 9.4 Homing Orb
+### 9.4 Orbe teledirigido
 
-HomingOrb accelerates toward the player at 60.0 px/s², capped at 120.0 px/s. Each orb has a 3-second lifetime and can be parried or destroyed by collision with world geometry.
+HomingOrb acelera hacia el jugador a 60.0 px/s2, con tope de 120.0 px/s. Cada orbe tiene 3 segundos de vida y puede pararse con parry o destruirse por colision con la geometria del mundo.
 
-### 9.5 Distance Management
+### 9.5 Gestión de distancia
 
-In ALERT state, the Caster checks distance to the player. If closer than 150px, it moves away. If farther, it moves closer. This keeps the Caster in effective combat range.
+En estado ALERT, el Caster comprueba la distancia al jugador. Si esta a menos de 150 px, se aleja. Si esta mas lejos, se acerca. Esto mantiene al Caster en rango de combate efectivo.
 
 ---
 
-## 10. Assassin Enemy — `EnemyAssassin`
+## 10. Enemigo Assassin — `EnemyAssassin`
 
-### 10.1 Description
+### 10.1 Descripción
 
-The Assassin is a stealthy enemy that cloaks, flanks, and lunges at the player. It retreats after a failed strike. This enemy demonstrates:
+El Assassin es un enemigo sigiloso que se camufla, flanquea y se lanza sobre el jugador. Se repliega tras un golpe fallido. Este enemigo demuestra:
 
-- Cloaking/stealth mechanic with alpha transparency
-- Multi-phase attack AI (flank → lunge → retreat)
-- Stateful melee attack cycle
+- Mecanica de camuflaje/sigilo con transparencia de alfa
+- IA de ataque multifase (flanquear → embestir → replegarse)
+- Ciclo de ataque cuerpo a cuerpo con estado
 
-### 10.2 Attributes
+### 10.2 Atributos
 
-| Attribute | Value |
+| Atributo | Valor |
 |---|---|
-| Max health | 1.5 hearts |
-| Patrol speed | 120.0 px/s |
-| Flank speed | 80.0 px/s |
-| Lunge speed | 200.0 px/s |
-| Retreat speed | 120.0 px/s |
-| Lunge damage | 1.00 hearts |
-| Lunge duration | 0.3 s |
-| Retreat duration | 2.0 s |
-| Approach range | 40 px (triggers lunge) |
-| Detection range X | 280 px (longest) |
-| Detection range Y | 80 px |
+| Vida máxima | 1.5 corazones |
+| Velocidad de patrulla | 120.0 px/s |
+| Velocidad de flanqueo | 80.0 px/s |
+| Velocidad de embestida | 200.0 px/s |
+| Velocidad de repliegue | 120.0 px/s |
+| Daño de la embestida | 1.00 corazones |
+| Duración de la embestida | 0.3 s |
+| Duración del repliegue | 2.0 s |
+| Rango de aproximación | 40 px (dispara la embestida) |
+| Rango de detección X | 280 px (el mayor) |
+| Rango de detección Y | 80 px |
 
-### 10.3 States
+### 10.3 Estados
 
-| State | Behavior |
+| Estado | Comportamiento |
 |---|---|
-| `PATROL` | Fast patrol at 120.0 px/s, turns at ±64px from origin |
+| `PATROL` | Patrulla rapida a 120.0 px/s, gira a ±64 px del origen |
 | `ALERT` | Full FSM: flank (cloaked) → lunge → retreat (cloaked) |
-| `HURT` | Halt for 0.25s |
+| `HURT` | Se detiene 0.25s |
 | `DYING` | Play death animation |
 
-### 10.4 Cloaking
+### 10.4 Camuflaje
 
-When flanking or retreating, the Assassin renders with semi-transparent alpha (80). While cloaked, contact damage is suppressed. The cloak visually distinguishes stealth vs. aggressive phases.
+Al flanquear o replegarse, el Assassin se renderiza con alfa semitransparente (80). Mientras esta camuflado, el dano de contacto se suprime. El camuflaje distingue visualmente las fases sigilosas de las agresivas.
 
-### 10.5 Attack Cycle
+### 10.5 Ciclo de ataque
 
-1. **Flank**: Move opposite to player direction (cloaked) until within 40px
-2. **Lunge**: Uncloak, dash at 200 px/s toward player for 0.3s, dealing 1.0 damage
-3. **Retreat**: Cloak and move away at 120 px/s for 2.0s
-4. Repeat from step 1
+1. **Flanquear**: se mueve en direccion opuesta al jugador (camuflado) hasta quedar a menos de 40px
+2. **Embestir**: se descamufla, se lanza a 200 px/s hacia el jugador durante 0.3s, infligiendo 1.0 de dano
+3. **Replegarse**: se camufla y se aleja a 120 px/s durante 2.0s
+4. Repite desde el paso 1
 
 ---
 
-## 11. Attributes Summary Table
+## 11. Tabla resumen de atributos
 
 | Attribute | EnemyWalker | EnemyFlying | EnemyShooter | EnemyCharger | EnemyArcher | EnemyBrute | EnemyCaster | EnemyAssassin |
-|---|---|---|---|
-| Max health | 2.0 | 1.5 | 3.0 | 4.0 | 2.5 | 5.0 | 2.0 | 1.5 |
-| Contact damage | 0.50 | 0.50 | 0.25 | 1.50 (charge) | 0.25 | 0.50 | 0.25 | 0.25 |
-| Invincibility after hit | 0.5 s | 0.3 s | 0.4 s | 0.4 s | 0.35 s | 0.5 s | 0.35 s | 0.35 s |
+|---|---|---|---|---|---|---|---|---|
+| Vida máxima | 2.0 | 1.5 | 3.0 | 4.0 | 2.5 | 5.0 | 2.0 | 1.5 |
+| Daño de contacto | 0.50 | 0.50 | 0.25 | 1.50 (charge) | 0.25 | 0.50 | 0.25 | 0.25 |
+| Invencibilidad tras el golpe | 0.5 s | 0.3 s | 0.4 s | 0.4 s | 0.35 s | 0.5 s | 0.35 s | 0.35 s |
 | Death SFX (AUD-133: por TAMAÑO, no por especie) | `sfx_enemies_die_small` | `sfx_enemies_die_small` | `sfx_enemies_die_small` | `sfx_enemies_die_large` | `sfx_enemies_die_small` | `sfx_enemies_die_large` | `sfx_enemies_die_small` | `sfx_enemies_die_small` |
-| Has projectiles | No | No | Yes | No | Yes (arc) | No | Yes (homing) | No |
-| Gravity affected | Yes | No | Yes (if mobile) | Yes | Yes | Yes | Yes | Yes |
-| Patrol limit (default) | 96 px | Path-based | 48 px | 96 px | 96 px | 128 px | 96 px | 128 px |
+| Tiene proyectiles | No | No | Sí | No | Sí (arco) | No | Sí (teledirigido) | No |
+| Afectado por gravedad | Sí | No | Sí (si es móvil) | Sí | Sí | Sí | Sí | Sí |
+| Límite de patrulla (por defecto) | 96 px | según camino | 48 px | 96 px | 96 px | 128 px | 96 px | 128 px |
 
 ---
 
-## 12. States Reference
+## 12. Referencia de estados
 
-All enemies share the base state names listed below. `EnemyState` define **trece** estados: `IDLE`, `PATROL`, `SEARCH`, `ALERT`,
+Todos los enemigos comparten los nombres de estado base listados abajo. `EnemyState` define **trece** estados: `IDLE`, `PATROL`, `SEARCH`, `ALERT`,
 `CHASE`, `TELEGRAPHING`, `FIRING`, `RECOVER`, `RETREAT`, `STUNNED`, `HURT`,
 <!-- cita-historica -->
 `LAUNCHED`, `DYING`. **Ninguna subclase añade estados** (AUD-150: aquí se decía
@@ -702,51 +708,51 @@ subclase añade ninguno.**
 
 ---
 
-## 13. Animation Rules
+## 13. Reglas de animación
 
-### 8.1 General Rules
+### 13.1 Reglas generales
 
-- All enemy sprite sheets are horizontal, equal-width frames.
-- All sheets face right. Horizontal flip is applied when `facing_direction == -1`.
-- Non-looping animations hold on the last frame until the state exits.
-- Looping animations restart from frame 0 when the animation completes.
+- Todas las hojas de sprite de enemigo son horizontales, con fotogramas de ancho igual.
+- Todas las hojas miran a la derecha. Se aplica volteo horizontal cuando `facing_direction == -1`.
+- Las animaciones sin bucle se mantienen en el ultimo fotograma hasta que el estado termina.
+- Las animaciones con bucle reinician desde el fotograma 0 al completarse.
 
-### 8.2 Death Animation Special Rule
+### 13.2 Regla especial de la animación de muerte
 
-The death animation is non-interruptible. Once `DYING` is entered, no incoming `apply_hit()` calls have any effect. The entity is immune to further state changes until `is_active = False`.
+La animacion de muerte no se puede interrumpir. Una vez que se entra en `DYING`, ninguna llamada a `apply_hit()` tiene efecto. La entidad es inmune a mas cambios de estado hasta `is_active = False`.
 
-### 8.3 Flashing During Hurt / Invincibility
+### 13.3 Parpadeo durante daño/invencibilidad
 
-When an enemy receives a hit and is within its invincibility window:
-- Alpha toggles between 255 and 0 every 4 frames.
-- The flash count equals `ceil(invincibility_duration * 60 / 4)`.
+Cuando un enemigo recibe un golpe y esta dentro de su ventana de invencibilidad:
+- El alfa alterna entre 255 y 0 cada 4 fotogramas.
+- El numero de parpadeos es `ceil(invincibility_duration * 60 / 4)`.
 
-### 8.4 Student Animation Extension Rule
+### 13.4 Regla de extensión de animación para estudiantes
 
-Students creating custom enemy subclasses must:
-1. Add a new sprite sheet to `student_assets/sprites/enemies/`.
-2. Define all animation entries in the subclass `__init__`, using `AssetLoader`.
-3. Override `_get_animation_state()` to return the correct key for the subclass's states.
-4. Not modify any existing animation files in `assets/sprites/enemies/`.
+Los estudiantes que creen subclases de enemigo personalizadas deben:
+1. Anadir una hoja de sprites nueva en `student_assets/sprites/enemies/`.
+2. Definir todas las entradas de animacion en el `__init__` de la subclase, usando `AssetLoader`.
+3. Sobreescribir `_get_animation_state()` para devolver la clave correcta de los estados de la subclase.
+4. No modificar ningun fichero de animacion existente en `assets/sprites/enemies/`.
 
 ---
 
-## 14. Collision Rules
+## 14. Reglas de colisión
 
-### 9.1 Enemy vs. Solid Tiles
+### 14.1 Enemigo contra baldosas sólidas
 
-Walkers and Shooters participate in gravity and platform collision identically to the player (axis-separated resolution). Flying enemies do not apply gravity and do not resolve tile collision — they pass over and through terrain (their path is defined above the terrain).
+Walkers y Shooters participan en la gravedad y la colision de plataformas igual que el jugador (resolucion por ejes separados). Los enemigos voladores no aplican gravedad ni resuelven colision de baldosas: pasan por encima y a traves del terreno (su camino se define por encima del terreno).
 
-### 9.2 Enemy vs. Player Hurtbox (Contact Damage)
+### 14.2 Enemigo contra hurtbox del jugador (daño de contacto)
 
-Every frame, each active enemy calls `_check_player_contact(player)`. If the enemy's `hurtbox` rect overlaps the player's `hurtbox` rect, and the player is not invincible:
+Cada fotograma, cada enemigo activo llama a `_check_player_contact(player)`. Si el rectangulo `hurtbox` del enemigo se solapa con el del jugador, y el jugador no es invencible:
 
-1. `player.apply_damage(self.damage_on_contact, self.rect.center, self.contact_knockback)` is called (the knockback force defaults to 120.0 and can be overridden per enemy).
-2. A 0.3-second cooldown prevents repeated damage application from sustained overlap.
+1. Se llama a `player.apply_damage(self.damage_on_contact, self.rect.center, self.contact_knockback)` (la fuerza de empuje es 120.0 por defecto y se puede sobreescribir por enemigo).
+2. Un tiempo de espera de 0.3 s evita aplicar dano repetido por un solape sostenido.
 
-### 9.3 Player Attack vs. Enemy Hurtbox
+### 14.3 Ataque del jugador contra hurtbox de enemigo
 
-The player's attack hitbox collision is checked by the stage's collision system (not by the enemy). In the stage update loop:
+La colision de la hitbox de ataque del jugador la comprueba el sistema de colision del escenario (no el enemigo). En el bucle de actualizacion del escenario:
 
 ```python
 for enemy in active_enemies:
@@ -758,9 +764,9 @@ for enemy in active_enemies:
         player.consume_hitbox()  # Prevent multi-hit on same frame
 ```
 
-### 9.4 Projectile vs. Player Hurtbox
+### 14.4 Proyectil contra hurtbox del jugador
 
-Projectile collision is checked in the projectile's own `update()` method:
+La colision del proyectil se comprueba en el propio metodo `update()` del proyectil:
 
 ```python
 if self.hurtbox.colliderect(player.hurtbox):
@@ -768,17 +774,17 @@ if self.hurtbox.colliderect(player.hurtbox):
     self.is_active = False
 ```
 
-### 9.5 Enemy vs. Enemy
+### 14.5 Enemigo contra enemigo
 
-Enemies do not collide with each other. They pass through each other's rects. This simplification is intentional — enemy-to-enemy collision is not an academic objective and adds unnecessary complexity.
+Los enemigos no colisionan entre si. Sus rectangulos se atraviesan. Esta simplificacion es intencionada: la colision enemigo-enemigo no es un objetivo academico y anade complejidad innecesaria.
 
 ---
 
-## 15. AI Rules
+## 15. Reglas de IA
 
-### 10.1 Detection Rule
+### 15.1 Regla de detección
 
-Detection is not line-of-sight. It is pure range check. This is intentional: it keeps AI simple enough to study and understand in the context of a course exercise.
+La deteccion no es linea de vision. Es una comprobacion de rango pura. Es intencionado: mantiene la IA lo bastante simple como para estudiarla y entenderla en el contexto de un ejercicio del curso.
 
 ```python
 @property
@@ -788,9 +794,9 @@ def _player_in_range(self) -> bool:
     return dx <= self.detection_range_x and dy <= self.detection_range_y
 ```
 
-### 10.2 Facing Rule
+### 15.2 Regla de orientación
 
-All enemies always face the direction of their current movement. When stationary in `ALERT` state, enemies face the player.
+Todos los enemigos siempre miran en la direccion de su movimiento actual. Estacionarios en estado `ALERT`, miran al jugador.
 
 ```python
 if target_x < self.rect.centerx:
@@ -799,30 +805,30 @@ elif target_x > self.rect.centerx:
     self.facing_direction = 1
 ```
 
-### 10.3 State Transition Timing
+### 15.3 Momento de transición de estado
 
-State transitions may not occur more than once per frame. If multiple conditions are simultaneously true (e.g., player in range AND health dropped to zero in the same frame), the priority order is:
+Las transiciones de estado no pueden ocurrir mas de una vez por fotograma. Si varias condiciones son ciertas a la vez (p. ej., jugador en rango Y vida a cero en el mismo fotograma), el orden de prioridad es:
 
 ```
 DYING > HURT > ALERT > PATROL
 ```
 
-### 10.4 Student AI Extension Rules
+### 15.4 Reglas de extensión de IA para estudiantes
 
-Students may extend enemy AI within their stage by subclassing the provided enemy templates. Custom AI must:
+Los estudiantes pueden extender la IA de enemigo dentro de su escenario heredando de las plantillas provistas. La IA personalizada debe:
 
-1. Call `super().update(dt)` to preserve base lifecycle behavior.
-2. Implement custom behavior only within overrides of `_patrol_behavior()` or `_alert_behavior()`.
-3. Not bypass the FSM by setting `self.state` directly from outside the class.
-4. Document the academic concept driving the custom AI in a comment block.
+1. Llamar a `super().update(dt)` para conservar el comportamiento base del ciclo de vida.
+2. Implementar el comportamiento personalizado solo dentro de sobreescrituras de `_patrol_behavior()` o `_alert_behavior()`.
+3. No saltarse la maquina de estados fijando `self.state` directamente desde fuera de la clase.
+4. Documentar en un bloque de comentario el concepto academico que motiva la IA personalizada.
 
 ---
 
-## 16. Examples
+## 16. Ejemplos
 
-### 11.1 Spawning a Walker via TMX
+### 16.1 Generar un Walker vía TMX
 
-In the TMX object layer, create an object of type `Walker` with the following properties:
+En la capa de objetos TMX, crea un objeto de tipo `Walker` con estas propiedades:
 
 ```
 Type: Walker
@@ -832,9 +838,9 @@ Properties:
   patrol_speed: 40.0
 ```
 
-`StageLoader` reads these properties and passes them to the `EnemyWalker` constructor.
+`StageLoader` lee estas propiedades y se las pasa al constructor de `EnemyWalker`.
 
-### 11.2 Custom Enemy Subclass (Student Example)
+### 16.2 Subclase de enemigo personalizada (ejemplo de estudiante)
 
 ```python
 # stages/stage1/entities/patrol_guard.py
@@ -844,8 +850,8 @@ from framework.processing.curve_tools import CurveTools
 
 class PatrolGuard(EnemyWalker):
     """
-    A Walker subclass that patrols along a Bézier curve path.
-    Academic Unit III: Bézier curves and parametric path sampling.
+    Una subclase de Walker que patrulla a lo largo de una curva de Bezier.
+    Unidad academica III: curvas de Bezier y muestreo parametrico de camino.
     """
 
     def __init__(self, spawn_position, control_points, **kwargs):
@@ -856,7 +862,7 @@ class PatrolGuard(EnemyWalker):
         self.path_speed = 0.4  # t-units per second
 
     def _patrol_behavior(self, dt: float) -> None:
-        # Advance along the Bézier path
+        # Avanza a lo largo del camino de Bezier
         self.path_t = (self.path_t + self.path_speed * dt) % 1.0
         target = CurveTools.sample_path(self.path, self.path_t)
         dx = target[0] - self.position.x
@@ -865,37 +871,14 @@ class PatrolGuard(EnemyWalker):
         self.position.y = target[1]
 ```
 
-### 11.3 Shooter Firing Range Visualization (Stage 0 Debug Mode)
+### 16.3 Visualización del rango de disparo del Shooter (modo depuración de Stage 0)
 
-In Stage 0, debug mode renders the Shooter's detection rect as a semi-transparent yellow overlay, and draws a line from the Shooter's muzzle to the player's center when in ALERT state. This visualization is toggled with the `F1` key and serves as a live demonstration of vector distance calculation from Unit II.
-
-
---- Traducción al Español ---
-
-## Especificación de Enemigos
-
-### Filosofía
-Los enemigos no están diseñados para máxima dificultad, sino para máxima claridad educativa. Cada tipo de enemigo demuestra una combinación distinta de conceptos del curso.
-
-### Taxonomía de Enemigos
-El framework provee 8 tipos de enemigos: Walker, Flying, Shooter, Charger, Archer, Brute, Caster, Assassin.
-
-### Clase Base — EnemyBase
-Todos los enemigos heredan de `EnemyBase`, que extiende `BaseEntity` y agrega sistema de salud, recepción de daño, manejo de muerte, infraestructura de hitbox/hurtbox y gestión de animaciones.
-
-### Métodos Requeridos
-Las subclases deben implementar:
-- `_patrol_behavior(dt)` — Movimiento/IA por defecto
-- `_alert_behavior(dt)` — IA cuando detecta al jugador
-- `_get_animation_key()` — Clave de animación actual
-- `_build_hitbox()` / `_build_hurtbox()` — Definir rectángulos de daño
-
-Para la especificación completa de cada tipo de enemigo con atributos, estados, animaciones y ejemplos, consultar el documento original en inglés.
+En Stage 0, el modo de depuracion dibuja el rectangulo de deteccion del Shooter como una capa amarilla semitransparente, y traza una linea del canon del Shooter al centro del jugador cuando esta en estado ALERT. Esta visualizacion se activa con la tecla `F1` y sirve de demostracion en vivo del calculo de distancia vectorial de la Unidad II.
 
 
 ---
-## 🔗 Documentos Relacionados
+## 🔗 Documentos relacionados
 
-- [[18_ENEMY_ROSTER.md|Enemy Roster]]
-- [[17_BOSS_SPEC.md|Boss Specification]]
-- [[03_ARCHITECTURE.md|Architecture]]
+- [[18_ENEMY_ROSTER.md|Elenco de enemigos]]
+- [[17_BOSS_SPEC.md|Especificación de jefes]]
+- [[03_ARCHITECTURE.md|Arquitectura]]

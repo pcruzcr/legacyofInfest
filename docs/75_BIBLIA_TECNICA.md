@@ -74,8 +74,26 @@ $env:SDL_VIDEODRIVER="dummy"; $env:SDL_AUDIODRIVER="dummy"; $env:PYGAME_HIDE_SUP
 
 **Extras opcionales** (el motor degrada con elegancia sin ellos): `[accel]` (numba + ModernGL),
 `[scripting]` (lupa, IA en Lua), `[audiotools]` (pydub), `[build]` (pyinstaller/nuitka).
-**scikit-learn es dependencia dura de `[dev]` pero la IA del juego funciona sin él** cayendo a
-heurística determinista (invariante 7).
+
+> **AUD-455/AUD-457 — el estado de esta afirmación cambió mientras se auditaba.**
+> Esta sección decía "scikit-learn es dependencia dura de `[dev]` pero la IA del juego
+> funciona sin él cayendo a heurística determinista (invariante 7)". A principios de esta
+> auditoría eso era falso —verificado contra el código—: `SquadBrain._decide_batch`
+> importaba `ai_predictor` sin `try`/`except`, y como `ai_predictor.py` importa sklearn a
+> nivel de módulo, un sklearn ausente habría lanzado `ImportError` en el primer lote de
+> decisiones, no degradado con elegancia.
+>
+> Con el trabajo AUD-456/AUD-457 (`src/framework/entities/tactica_por_reglas.py`,
+> `precarga_ia.py`, y el `try: from ...ai_predictor import get_predictor / except
+> ImportError` que ahora tiene `squad_brain._decide_batch`), la reserva **sí es real y
+> alcanzable**: la heurística vive en un módulo sin ninguna dependencia de sklearn, y
+> `SquadBrain` cae a ella tanto si `ia_lista()` dice que la carga aún no terminó como si
+> la importación de `ai_predictor` falla. `scikit-learn` sigue en
+> `[project.dependencies]` de `pyproject.toml` —es decir, sigue siendo obligatoria para
+> instalar el proyecto— pero la invariante 7 habla de comportamiento en **runtime**, no de
+> instalación: hoy, si el intérprete no tuviera sklearn disponible, la IA de enemigos
+> seguiría funcionando por reglas en vez de fallar. La invariante describe correctamente
+> el comportamiento actual.
 
 ---
 
@@ -90,8 +108,19 @@ heurística determinista (invariante 7).
 Los 16 niveles por id: `stage0`, `stage_mecanicas`, `stage1_1`, `stage1_2_la_soda`,
 `stage1_3_las_aulas`, `stage1_4_boss_venado` (carpeta `boss_venado`), `stage2_1` (carpeta
 `stage2_1_oficinas`), `stage2_2`, `stage2_3` (carpeta `lobby_datacenter`), `stage2_4_boss_rey`
-(carpeta `boss_rey`), `stage3_1`, `stage3_2` (carpeta `hall`), `stage3_3_el_patio`,
-`stage3_4_boss_gavilan`, `stage4_1`, `stage4_2_boss_paburu` (carpeta `boss_paburu`).
+(carpeta `boss_rey`), `stage3_1_la_entrada_de_piedra`, `stage3_2` (carpeta `hall`),
+`stage3_3_el_patio`, `stage3_4_boss_gavilan`, `stage4_1`, `stage4_2_boss_paburu` (carpeta
+`boss_paburu`).
+
+> **AUD-455.** Esta lista decía `stage3_1` a secas; la carpeta real es
+> `stage3_1_la_entrada_de_piedra` (así lo dice también su propio
+> `assignment_id` en el README) — `python main.py --stage stage3_1` fallaría
+> con `ModuleNotFoundError`, porque `main.py` construye la ruta de import
+> literalmente con el valor de `--stage`. También existe
+> `src/stages/stage_cenital/` (sin `README.md`, aparentemente un laboratorio
+> de vista cenital, no un escenario numerado de la progresión) que no
+> aparece en esta lista de 16; no está claro si falta aquí a propósito o por
+> descuido — se deja anotado en vez de adivinar.
 
 **Variables de entorno útiles:**
 
@@ -355,8 +384,10 @@ aturdimiento), `teletransportar(x, y)` (esquina superior-izquierda), `on_attack_
 | Movilidad | `Vine` (liana) `Zipline` (tirolesa) `Waypoint` |
 | Enemigos | Las 21 especies por nombre + los 8 arquetipos (tipos registrados vía `register_entity`) |
 
-> `BossSpawn` **no existe** en el motor: quien lo use recibe una advertencia de tipo desconocido
-> (doc 63 §2).
+> **AUD-455 — `BossSpawn` sí existe (AUD-259), esta nota estaba desactualizada.**
+> `StageObjetos._handle_boss_spawn()` lo reconoce: con propiedad `boss="BossVenado"` produce la
+> misma entidad que declarar `type="BossVenado"` directamente. Sólo avisa si falta `boss` o si
+> nombra una clave no registrada. Confirmado leyendo `src/framework/stage/stage_objetos.py`.
 
 ### 7.4 El flujo de carga
 
@@ -447,9 +478,14 @@ escenario siguen funcionando sin tocarlas). El puente: `ComponentesDeEntidad` (m
 - **`World`** (store): `poner_recurso/recurso`, `crear(*componentes) → EntityId` (no se reutilizan
   ids), `adoptar`, `existe`, `marcar_baja`, `aplicar_bajas`, `poner`, `quitar`, `obtener`, `tiene`,
   `cada(tipo)`, `con(*tipos)` (query all-of), `total_entidades()`, `censo()`, `censo_tipos()`.
-- **18 componentes** (`components.py`, datos puros): `Transform` (`posicion`, `rect`, `facing`,
+- **20 componentes** (`components.py`, datos puros — AUD-455: esta lista decía 18 y le faltaban
+  `Navegante` y `Efectos`, dos clases reales): `Transform` (`posicion`, `rect`, `facing`,
   vista sobre el dueño), `Velocidad`, `Solido` (`atravesable_desde_abajo`), `Salud` (vista),
-  `EsJugador` (marcador), `Resorte` (`impulso=-520`, `rearme=0.15`), `ZonaDeViento` (`fuerza`,
+  `EsJugador` (marcador), `Resorte` (`impulso=-520`, `rearme=0.15`),
+  `Navegante` (AUD-389: `ruta`, `proximo` con espera inicial aleatoria para escalonar el A* entre
+  enemigos), `Efectos` (AUD-388: `activos`, la lista de efectos temporales — veneno, etc. —
+  compartida entre jugador y enemigos; catálogo en `framework/combate/efectos.py`),
+  `ZonaDeViento` (`fuerza`,
   `periodo`), `ZonaDeFriccion` (`multiplicador`, `arrastre`; **ojo:** <1 frena, >1 acelera),
   `ZonaLetalTemporizada` (`dano=99`, `encendido/apagado/desfase`, `activa()`, `aviso()`),
   `ZonaDeAgua` (`corriente`), `PlataformaMovil` (`origen/destino/velocidad/espera/delta`),
@@ -500,7 +536,8 @@ escenario siguen funcionando sin tocarlas). El puente: `ComponentesDeEntidad` (m
   Fichero por defecto `user_data_dir()/saves/bestiary.json`; base en `data/bestiary.json`.
 - `squad_brain.py`: `SquadBrain` (IA táctica por lotes a 4 Hz) → `reset()`, `forget(enemy)`,
   `decision_for(enemy)`, `update(dt, player, enemies)`, `stats()`; `Decision(action, source, age)`.
-- `ai_predictor.py`: `BehaviorPredictor` (KNN + árbol, sklearn opcional) → `add_example`,
+- `ai_predictor.py`: `BehaviorPredictor` (KNN + árbol; sklearn es dependencia obligatoria y se
+  importa sin repliegue — ver la corrección de §1) → `add_example`,
   `is_trained()`, `action_names()`, `action_index(nombre)`, `extract_features(**kw)`,
   `predict_batch(rows)`, `predict(features)`, `predict_action_name(**kw)`,
   `get_rule_based_action(dist, health_pct, player_health_pct, has_ranged)`; `get_predictor()`.
@@ -846,7 +883,7 @@ de la cola de eventos pygame antes de cada test.
 | Dominio | Estado medido |
 |---|---|
 | Núcleo | 800×600 @60 FPS; 3 relojes; time_scale compuesto; event bus por inyección; `SceneRegistry` perezoso |
-| ECS | Bajo la herencia; 18 componentes; coste medido 9.07 vs 9.42 ms por fotograma |
+| ECS | Bajo la herencia; 20 componentes; coste medido 9.07 vs 9.42 ms por fotograma |
 | Jugador | 26 estados; 5.0 HP; combate completo; arco; estamina opt-in |
 | Enemigos | 30 tipos registrados (8 arquetipos + 21 especies + jefe ref) sobre 13 estados; squad brain con sklearn (lote 9 filas: 1.82 ms vs 11.87 ms) |
 | Jefes | Fases, telegrafía, puntos débiles, parry, invocaciones, arena |

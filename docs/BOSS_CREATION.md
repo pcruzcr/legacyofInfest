@@ -228,13 +228,20 @@ def _do_combo_slam_charge(self) -> None:
 
 ## 7. Combate
 
-### `apply_hit(damage, source_position)`
+### `apply_hit(damage, source_position, canal=None)`
 
-Sobreescríbelo para encadenar la muerte:
+Sobreescríbelo para encadenar la muerte. La firma real de `EnemyBase.apply_hit`
+lleva un tercer parámetro, `canal` (AUD-387, el tipo de daño — `"veneno"`,
+`"fisico"`…), opcional y con valor por defecto: si tu override no lo declara,
+una llamada futura que lo pase como palabra clave rompe tu jefe con un
+`TypeError` que no se ve hasta que alguien la haga.
 
 ```python
-def apply_hit(self, damage: float, source_position: tuple[float, float]) -> None:
-    super().apply_hit(damage, source_position)
+def apply_hit(
+    self, damage: float, source_position: tuple[float, float],
+    canal: str | None = None,
+) -> None:
+    super().apply_hit(damage, source_position, canal)
     if self.current_health <= 0 and self.is_alive:
         self.on_defeated()
 ```

@@ -1,287 +1,305 @@
 ---
 document_id: "LOI-PATTERN-013"
-title: "Legacy of InFest — Pattern Recognition Specification"
-aliases: ["Pattern Recognition Spec"]
-tags: ["pattern", "recognition", "ml"]
-description: "Unit IX machine learning subsystem"
+title: "Legacy of InFest — Especificación de PatternRecognitionTools"
+aliases: ["Especificación de PatternRecognitionTools", "Pattern Recognition Spec"]
+tags: ["pattern", "reconocimiento", "ml"]
+description: "Subsistema de aprendizaje automático de la Unidad IX"
 source: "docs/13_PATTERN_RECOGNITION_SPEC.md"
-date_processed: "2026-07-14"
+date_processed: "2026-08-13"
 ---
 
-# Legacy of InFest — Pattern Recognition Specification
+# Legacy of InFest — Especificación de PatternRecognitionTools
 
-**Document ID:** LOI-PATTERN-013  
-**Version:** 1.0.0  
-**Status:** Official  
-**Compatibility:** Requires LOI-VISION-012, LOI-FILTER-011, LOI-ARCH-003, LOI-LIBS-010  
-**Audience:** Professor, Teaching Assistants, AI coding assistants (Claude Code, Cline, OpenCode, Codex)
+**ID del documento:** LOI-PATTERN-013
+**Versión:** 1.1.0
+**Estado:** Oficial
+**Compatibilidad:** Requiere `12_VISION_TOOLS_SPEC.md`, `11_FILTER_TOOLS_SPEC.md`, `03_ARCHITECTURE.md`, `10_LIBRARIES_AND_DEPENDENCIES.md`
+**Audiencia:** Profesor, ayudantes de cátedra, asistentes de programación con IA
+
+> **AUD-455.** Traduce el documento (cuerpo en inglés, resumen condensado en
+> español al final). Corrige tres discrepancias reales contra
+> `src/framework/processing/pattern_recognition_tools.py` (verificado por AST):
+> - **§7 completo era falso.** Documentaba `PatternRecognitionTools.extract_hog()`,
+>   `extract_lbp()`, `extract_color_histogram()` y `extract_combined()` como
+>   métodos de paso a través hacia `VisionTools`. **Ninguno de los cuatro
+>   existe en la clase real.** Un estudiante que siguiera este documento
+>   escribiría `PatternRecognitionTools.extract_hog(surface)` y obtendría
+>   `AttributeError`. La extracción de características vive únicamente en
+>   `VisionTools` (`12_VISION_TOOLS_SPEC.md` §13) — se corrige la sección para
+>   decir eso.
+> - **`train()` tiene un parámetro `feature_method` que el documento no
+>   mencionaba** (por defecto `"hog"`), y se usa para poblar
+>   `TrainedModel.feature_method`.
+> - **`predict()` no tiene `method='hog'` por defecto**: el valor real por
+>   defecto es `None`, y si no se pasa nada cae a `model.feature_method`.
+> - Añade una mención de `generate_training_report()`, un método real con
+>   salida matplotlib (histograma de confusión, precisión por clase,
+>   importancia de características) que no estaba documentado en ninguna
+>   parte de este fichero.
 
 ---
 
-## 1. Overview
+## 1. Visión general
 
-`PatternRecognitionTools` is the machine learning subsystem of the Legacy of InFest academic framework. It encapsulates all classification and pattern recognition operations taught in **Unit IX** of the course syllabus: feature-based classification, model training, model serialization, runtime inference, and the integration of machine learning into an interactive application.
+`PatternRecognitionTools` es el subsistema de aprendizaje automático del framework académico de Legacy of InFest. Encapsula todas las operaciones de clasificación y reconocimiento de patrones que enseña la **Unidad IX** del programa del curso: clasificación basada en características, entrenamiento de modelos, serialización de modelos, inferencia en tiempo de ejecución, e integración del aprendizaje automático en una aplicación interactiva.
 
-This module is the final layer of the academic pipeline:
-
-```
-FilterTools (Unit VII) → VisionTools (Unit VIII) → PatternRecognitionTools (Unit IX)
-```
-
-`PatternRecognitionTools` receives feature vectors produced by `VisionTools.extract_features()` and returns class labels that drive observable game behavior. All classifier complexity — k-NN, decision trees, random forests, SVM — is hidden behind a unified API.
-
-The module is located at:
+Este módulo es la capa final de la tubería académica:
 
 ```
-framework/processing/pattern_recognition_tools.py
+FilterTools (Unidad VII) → VisionTools (Unidad VIII) → PatternRecognitionTools (Unidad IX)
+```
+
+`PatternRecognitionTools` recibe vectores de características producidos por `VisionTools.extract_features()` y devuelve etiquetas de clase que dirigen un comportamiento de juego observable. Toda la complejidad del clasificador — k-NN, árboles de decisión, bosques aleatorios, SVM — queda oculta detrás de una API unificada.
+
+El módulo está en:
+
+```
+src/framework/processing/pattern_recognition_tools.py
 ```
 
 ---
 
-## 2. Academic Purpose
+## 2. Propósito académico
 
-`PatternRecognitionTools` makes Unit IX concepts **executable within a real-time interactive application**. Students train classifiers offline, load them into their stage, and observe the classification result changing game behavior as the visual state of the stage evolves.
+`PatternRecognitionTools` hace que los conceptos de la Unidad IX sean **ejecutables dentro de una aplicación interactiva en tiempo real**. Los estudiantes entrenan clasificadores fuera de línea, los cargan en su escenario, y observan cómo el resultado de la clasificación cambia el comportamiento del juego a medida que evoluciona el estado visual del escenario.
 
-This answers the key question of the capstone unit: *Can a computer recognize patterns in visual data and respond intelligently?*
+Esto responde a la pregunta clave de la unidad de cierre: *¿puede una computadora reconocer patrones en datos visuales y responder inteligentemente?*
 
-### 2.1 Learning Objectives Supported
+### 2.1 Objetivos de aprendizaje que soporta
 
-| Objective | PatternRecognitionTools Mechanism |
+| Objetivo | Mecanismo de PatternRecognitionTools |
 |---|---|
-| Understand feature spaces | `extract_features()` (from VisionTools) produces the feature space |
-| Apply k-NN classification | `PatternRecognitionTools.classify(features, model='knn')` |
-| Apply decision tree classification | `classify(features, model='tree')` |
-| Apply random forest classification | `classify(features, model='forest')` |
-| Apply SVM classification | `classify(features, model='svm')` |
-| Train a classifier from a dataset | `PatternRecognitionTools.train(X, y, model_type)` |
-| Evaluate classifier performance | `PatternRecognitionTools.evaluate(model, X_test, y_test)` |
-| Serialize a model for runtime use | `PatternRecognitionTools.save_model(model, path)` |
-| Load a model at runtime | `PatternRecognitionTools.load_model(path)` |
-| Run inference in a game loop | `PatternRecognitionTools.predict(model, surface)` |
+| Entender los espacios de características | `extract_features()` (de VisionTools) produce el espacio de características |
+| Aplicar clasificación k-NN | `PatternRecognitionTools.classify(features, model='knn')` |
+| Aplicar clasificación por árbol de decisión | `classify(features, model='tree')` |
+| Aplicar clasificación por bosque aleatorio | `classify(features, model='forest')` |
+| Aplicar clasificación SVM | `classify(features, model='svm')` |
+| Entrenar un clasificador a partir de un dataset | `PatternRecognitionTools.train(X, y, model_type)` |
+| Evaluar el rendimiento del clasificador | `PatternRecognitionTools.evaluate(model, X_test, y_test)` |
+| Serializar un modelo para uso en tiempo de ejecución | `PatternRecognitionTools.save_model(model, path)` |
+| Cargar un modelo en tiempo de ejecución | `PatternRecognitionTools.load_model(path)` |
+| Ejecutar inferencia en un bucle de juego | `PatternRecognitionTools.predict(model, surface)` |
 
 ---
 
-## 3. Framework Location
+## 3. Ubicación en el framework
 
 ```
-framework/
+src/framework/
 └── processing/
     ├── filter_tools.py
     ├── vision_tools.py
-    └── pattern_recognition_tools.py    ← This module
+    └── pattern_recognition_tools.py    ← Este módulo
 ```
 
-### 3.1 Position in the Dependency Hierarchy
+### 3.1 Posición en la jerarquía de dependencias
 
 ```
-Stages (student code)
+Escenarios (código de estudiante)
     ↓
-framework/processing/pattern_recognition_tools.py   ← Students call this
+src/framework/processing/pattern_recognition_tools.py   ← Los estudiantes llaman a esto
     ↓
-framework/processing/vision_tools.py                ← For feature extraction
+src/framework/processing/vision_tools.py                ← Para extracción de características
     ↓
 scikit-learn, scikit-image, numpy, joblib, opencv-python
 ```
 
 ---
 
-## 4. Architecture Integration
+## 4. Integración con la arquitectura
 
-### 4.1 Connections to the Framework
+### 4.1 Conexiones con el framework
 
-| Integration Point | Description |
+| Punto de integración | Descripción |
 |---|---|
-| `VisionTools.extract_features()` | Primary source of feature vectors |
-| `VisionTools.extract_hog()`, `extract_lbp()`, `extract_color_histogram()` | Alternative direct feature sources |
-| Stage scenes (student code) | Students load models in `on_enter()`, run inference in `update()` |
-| `student_assets/models/` | Directory for serialized model files |
-| Unit test suite (`tests/test_pattern_recognition_tools.py`) | Tests training, inference, and serialization round-trips |
+| `VisionTools.extract_features()` | Fuente principal de vectores de características |
+| `VisionTools.extract_hog()`, `extract_lbp()`, `extract_color_histogram()` | Fuentes directas alternativas de características |
+| Escenas de escenario (código de estudiante) | Los estudiantes cargan modelos en `on_enter()`, ejecutan inferencia en `update()` |
+| `student_assets/models/` | Directorio para ficheros de modelo serializados |
+| Suite de pruebas unitarias (`tests/test_pattern_recognition_tools.py`) | Prueba el entrenamiento, la inferencia y los ciclos de serialización |
 
-### 4.2 What PatternRecognitionTools Does NOT Do
+### 4.2 Lo que PatternRecognitionTools NO hace
 
-| Forbidden Action | Reason |
+| Acción prohibida | Razón |
 |---|---|
-| Does not call `EventBus` | Pure computation module |
-| Does not modify entity state | Results are returned; students decide what to do |
-| Does not perform training at runtime | Training is always offline |
-| Does not read game state | All input is via explicit parameters |
-| Does not hold singleton state | Stateless class methods (except the Model Registry) |
+| No llama a `EventBus` | Módulo de cómputo puro |
+| No modifica el estado de entidades | Los resultados se devuelven; los estudiantes deciden qué hacer |
+| No entrena en tiempo de ejecución | El entrenamiento siempre es fuera de línea |
+| No lee el estado del juego | Toda la entrada es vía parámetros explícitos |
+| No mantiene estado singleton | Métodos de clase sin estado (salvo el Registro de Modelos) |
 
 ---
 
-## 5. Dependencies
+## 5. Dependencias
 
-| Library | Import | Used For |
+| Biblioteca | Importación | Se usa para |
 |---|---|---|
-| `numpy` | `import numpy as np` | Feature array handling |
-| `scikit-learn` | `from sklearn.neighbors import KNeighborsClassifier` etc. | All classifiers |
-| `joblib` | `import joblib` | Model serialization and loading |
-| `framework.processing.vision_tools` | `from framework.processing.vision_tools import VisionTools` | Internal feature extraction (for `predict()`) |
+| `numpy` | `import numpy as np` | Manejo de arreglos de características |
+| `scikit-learn` | `from sklearn.neighbors import KNeighborsClassifier`, etc. | Todos los clasificadores |
+| `joblib` | `import joblib` | Serialización y carga de modelos |
+| `src.framework.processing.vision_tools` | `from src.framework.processing.vision_tools import VisionTools` | Extracción de características interna (para `predict()`) |
 
-**Students never import scikit-learn or joblib directly.**
+**Los estudiantes nunca importan scikit-learn ni joblib directamente.**
 
 ---
 
-## 6. Class Diagram
+## 6. Diagrama de clase
 
 ```
 PatternRecognitionTools
 │
-├── [Feature Extractors]
-│   ├── extract_hog(surface) → np.ndarray            [delegates to VisionTools]
-│   ├── extract_lbp(surface) → np.ndarray            [delegates to VisionTools]
-│   ├── extract_color_histogram(surface, bins) → np.ndarray  [delegates to VisionTools]
-│   └── extract_combined(surface) → np.ndarray       [delegates to VisionTools]
-│
-├── [Training Pipeline]
-│   ├── train(X, y, model_type, **kwargs) → TrainedModel
+├── [Tubería de entrenamiento]
+│   ├── train(X, y, model_type, feature_method='hog', **kwargs) → TrainedModel
 │   └── evaluate(model, X_test, y_test) → EvaluationResult
 │
-├── [Model Serialization]
+├── [Serialización de modelos]
 │   ├── save_model(model, path) → None
 │   └── load_model(path) → TrainedModel
 │
-├── [Model Registry]
+├── [Registro de modelos]
 │   ├── register_model(name, model) → None
 │   ├── get_model(name) → TrainedModel
 │   └── list_models() → list[str]
 │
-├── [Inference Pipeline]
+├── [Tubería de inferencia]
 │   ├── classify(features, model) → str
 │   ├── classify_proba(features, model) → dict[str, float]
-│   └── predict(model, surface, method) → str
+│   └── predict(model, surface, method=None) → str
 │
-└── [Internal Utilities — private]
+├── [Informe de entrenamiento]
+│   └── generate_training_report(model, result, ...) → salida matplotlib
+│       (histograma de confusión, precisión por clase, importancia de
+│       características — ver §11.3)
+│
+└── [Utilidades internas — privadas]
     ├── _build_model(model_type, **kwargs) → sklearn estimator
     ├── _validate_features(features) → None
     ├── _validate_model(model) → None
     └── _validate_dataset(X, y) → None
 ```
 
-### 6.1 Return Type Definitions
+**Nota:** a diferencia de lo que documentaba una versión anterior de este
+fichero, `PatternRecognitionTools` **no tiene** métodos `extract_hog`,
+`extract_lbp`, `extract_color_histogram` ni `extract_combined`. La
+extracción de características vive únicamente en `VisionTools`
+(`12_VISION_TOOLS_SPEC.md` §13) — ver §7 más abajo.
+
+### 6.1 Definiciones de tipo de retorno
 
 #### `TrainedModel` (dataclass)
 
-| Field | Type | Description |
+| Campo | Tipo | Descripción |
 |---|---|---|
 | `model_type` | `str` | `'knn'`, `'tree'`, `'forest'`, `'svm'` |
-| `estimator` | sklearn estimator | The fitted scikit-learn model object |
-| `classes` | `list[str]` | Ordered list of class label strings |
-| `feature_method` | `str` | Feature extraction method used for training |
-| `feature_length` | `int` | Expected input vector length |
-| `training_accuracy` | `float` | Accuracy on the training set |
-| `metadata` | `dict` | Arbitrary metadata (hyperparameters, notes) |
+| `estimator` | sklearn `Pipeline` | El objeto de modelo scikit-learn ya entrenado |
+| `classes` | `list[str]` | Lista ordenada de cadenas de etiqueta de clase |
+| `feature_method` | `str` | Método de extracción de características usado en el entrenamiento |
+| `feature_length` | `int` | Longitud esperada del vector de entrada |
+| `training_accuracy` | `float` | Precisión sobre el conjunto de entrenamiento |
+| `metadata` | `dict` | Metadatos arbitrarios (hiperparámetros, notas) |
 
 #### `EvaluationResult` (dataclass)
 
-| Field | Type | Description |
+| Campo | Tipo | Descripción |
 |---|---|---|
-| `accuracy` | `float` | Overall accuracy on the test set |
-| `per_class_accuracy` | `dict[str, float]` | Per-class accuracy |
-| `confusion_matrix` | `np.ndarray` | Confusion matrix of shape `(n_classes, n_classes)` |
-| `report` | `str` | scikit-learn `classification_report` string |
+| `accuracy` | `float` | Precisión global sobre el conjunto de prueba |
+| `per_class_accuracy` | `dict[str, float]` | Precisión por clase |
+| `confusion_matrix` | `np.ndarray` | Matriz de confusión de forma `(n_classes, n_classes)` |
+| `report` | `str` | Cadena de `classification_report` de scikit-learn |
 
 ---
 
-## 7. Feature Extractors
+## 7. Extracción de características — vive en VisionTools
 
-`PatternRecognitionTools` exposes feature extractors as pass-through methods that delegate to `VisionTools`. This design means students only need to import `PatternRecognitionTools` to access the full Unit VIII + IX pipeline.
+`PatternRecognitionTools` **no** expone métodos propios de extracción de
+características. Los estudiantes importan `VisionTools` directamente para
+esa parte de la tubería y le pasan el vector resultante a `classify()` o
+usan `predict()` (§13.3), que hace la extracción internamente.
 
-### 7.1 `PatternRecognitionTools.extract_hog(surface)`
-
-Delegates to `VisionTools.extract_hog(surface)`. See `12_VISION_TOOLS_SPEC.md` §13.2 for full specification.
-
-**Returns:** `np.ndarray` of shape `(512,)` for 32×32 canonical input.
-
----
-
-### 7.2 `PatternRecognitionTools.extract_lbp(surface)`
-
-Delegates to `VisionTools.extract_lbp(surface)`. See `12_VISION_TOOLS_SPEC.md` §13.3.
-
-**Returns:** `np.ndarray` of shape `(256,)`.
-
----
-
-### 7.3 `PatternRecognitionTools.extract_color_histogram(surface, bins=256)`
-
-Delegates to `VisionTools.extract_color_histogram(surface, bins)`. See `12_VISION_TOOLS_SPEC.md` §13.4.
-
-**Returns:** `np.ndarray` of shape `(bins * 3,)`.
-
----
-
-### 7.4 `PatternRecognitionTools.extract_combined(surface)`
-
-Delegates to `VisionTools.extract_features(surface, method='combined')`. Concatenates HOG + LBP + color histogram into a single descriptor.
-
-**Returns:** `np.ndarray` of shape `(512 + 256 + 768,) = (1536,)`.
-
-**When to use:** When maximum discriminative power is needed. Note the larger vector increases training time and may require more training samples.
-
----
-
-## 8. Dataset Standards
-
-### 8.1 Dataset Format
-
-All training datasets used in Legacy of InFest must conform to the following standards:
-
-| Property | Standard |
+| Necesita | Llame a |
 |---|---|
-| Feature matrix `X` | `np.ndarray`, shape `(n_samples, n_features)`, dtype `float32` |
-| Label vector `y` | `np.ndarray`, shape `(n_samples,)`, dtype `str` or `int` |
-| Minimum samples per class | 10 |
-| Balanced classes | Recommended. Imbalanced datasets must be documented in README. |
-| Feature scaling | Applied automatically inside `train()` using `StandardScaler` |
+| Vector HOG | `VisionTools.extract_hog(surface)` — ver `12_VISION_TOOLS_SPEC.md` §13.2 |
+| Vector LBP | `VisionTools.extract_lbp(surface)` — ver `12_VISION_TOOLS_SPEC.md` §13.3 |
+| Histograma de color | `VisionTools.extract_color_histogram(surface, bins)` — ver `12_VISION_TOOLS_SPEC.md` §13.4 |
+| HOG + LBP + histograma de color concatenados | `VisionTools.extract_features(surface, method='combined')` — ver `12_VISION_TOOLS_SPEC.md` §13.1 |
 
-### 8.2 Dataset Sources
-
-Students collect their training dataset from **game assets and screenshots**. Acceptable sources:
-
-| Source | Method |
-|---|---|
-| Stage backgrounds | Save screenshots at different stage states; label manually |
-| Sprite sheets | Extract frames; label by animation state |
-| Synthetically generated | Generate surfaces programmatically with known properties |
-| Provided by professor | Professor may provide pre-labeled datasets for Unit IX |
-
-### 8.3 Dataset File Format
-
-Datasets are serialized as `.npz` files (NumPy compressed archive):
+**Ejemplo:**
 
 ```python
-# Saving a dataset (student training script):
+from src.framework.processing.vision_tools import VisionTools
+from src.framework.processing.pattern_recognition_tools import PatternRecognitionTools
+
+features = VisionTools.extract_hog(region_surface)
+label = PatternRecognitionTools.classify(features, self.classifier)
+```
+
+O, de forma equivalente y más corta, usando `predict()` (§13.3), que hace
+`extract_features()` + `classify()` en una sola llamada.
+
+---
+
+## 8. Estándares de dataset
+
+### 8.1 Formato del dataset
+
+Todos los datasets de entrenamiento usados en Legacy of InFest deben cumplir estos estándares:
+
+| Propiedad | Estándar |
+|---|---|
+| Matriz de características `X` | `np.ndarray`, forma `(n_samples, n_features)`, dtype `float32` |
+| Vector de etiquetas `y` | `np.ndarray`, forma `(n_samples,)`, dtype `str` o `int` |
+| Mínimo de muestras por clase | 10 |
+| Clases equilibradas | Recomendado. Los datasets desequilibrados deben documentarse en el README. |
+| Escalado de características | Se aplica automáticamente dentro de `train()` usando `StandardScaler` |
+
+### 8.2 Fuentes del dataset
+
+Los estudiantes recopilan su dataset de entrenamiento a partir de **recursos de juego y capturas de pantalla**. Fuentes aceptables:
+
+| Fuente | Método |
+|---|---|
+| Fondos de escenario | Guardar capturas en distintos estados del escenario; etiquetar a mano |
+| Hojas de sprites | Extraer fotogramas; etiquetar por estado de animación |
+| Generado sintéticamente | Generar superficies programáticamente con propiedades conocidas |
+| Provisto por el profesorado | El profesorado puede proveer datasets pre-etiquetados para la Unidad IX |
+
+### 8.3 Formato de fichero del dataset
+
+Los datasets se serializan como ficheros `.npz` (archivo comprimido de NumPy):
+
+```python
+# Guardar un dataset (script de entrenamiento del estudiante):
 np.savez('student_assets/datasets/my_dataset.npz', X=X, y=y)
 
-# Loading a dataset:
+# Cargar un dataset:
 data = np.load('student_assets/datasets/my_dataset.npz')
 X, y = data['X'], data['y']
 ```
 
 ---
 
-## 9. Training Pipeline
+## 9. Tubería de entrenamiento
 
-### 9.1 `PatternRecognitionTools.train(X, y, model_type, **kwargs)`
+### 9.1 `PatternRecognitionTools.train(X, y, model_type, feature_method='hog', **kwargs)`
 
-**Purpose:** Fit a classifier to the provided feature matrix and label vector. Returns a `TrainedModel` object ready for serialization or immediate use. This method is called from a **training script**, not from the game itself.
+**Propósito:** ajusta un clasificador a la matriz de características y el vector de etiquetas dados. Devuelve un objeto `TrainedModel` listo para serializar o usar de inmediato. Este método se llama desde un **script de entrenamiento**, no desde el juego mismo.
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Constraints | Description |
+| Parámetro | Tipo | Restricciones | Descripción |
 |---|---|---|---|
-| `X` | `np.ndarray` | Shape `(n_samples, n_features)`, float32 | Feature matrix |
-| `y` | `np.ndarray` | Shape `(n_samples,)` | Label vector |
-| `model_type` | `str` | `'knn'`, `'tree'`, `'forest'`, `'svm'` | Classifier type |
-| `**kwargs` | — | Model-specific | Hyperparameters (see §12) |
+| `X` | `np.ndarray` | Forma `(n_samples, n_features)`, float32 | Matriz de características |
+| `y` | `np.ndarray` | Forma `(n_samples,)` | Vector de etiquetas |
+| `model_type` | `str` | `'knn'`, `'tree'`, `'forest'`, `'svm'` | Tipo de clasificador |
+| `feature_method` | `str` | Por defecto `'hog'` | Se guarda en `TrainedModel.feature_method`; lo usa `predict()` cuando no se le pasa un `method` explícito |
+| `**kwargs` | — | Específico del modelo | Hiperparámetros (ver §14) |
 
-**Outputs:** `TrainedModel` object.
+**Salidas:** objeto `TrainedModel`.
 
-**Internal Pipeline:**
+**Tubería interna:**
 
 ```
-Inputs: X (n_samples, n_features), y (n_samples,)
+Entradas: X (n_samples, n_features), y (n_samples,)
     ↓
 _validate_dataset(X, y)
     ↓
@@ -297,39 +315,39 @@ return TrainedModel(
     model_type=model_type,
     estimator=Pipeline([('scaler', scaler), ('classifier', estimator)]),
     classes=list(unique_labels),
-    feature_method='external',  # Set by caller if known
+    feature_method=feature_method,
     feature_length=X.shape[1],
     training_accuracy=training_accuracy,
     metadata={'kwargs': kwargs}
 )
 ```
 
-**Important:** The `StandardScaler` is embedded inside the model's `Pipeline` object. This means the scaler is applied automatically on both training and inference — students do not need to scale features manually before calling `classify()`.
+**Importante:** el `StandardScaler` está embebido dentro del objeto `Pipeline` del modelo. Esto significa que el escalado se aplica automáticamente tanto en el entrenamiento como en la inferencia — los estudiantes no necesitan escalar las características a mano antes de llamar a `classify()`.
 
-**Restrictions:**
+**Restricciones:**
 
-- Minimum 2 distinct classes in `y`.
-- Minimum 10 samples total.
-- `model_type` must be one of the registered values.
-- Raises `ValueError` on validation failure.
+- Mínimo 2 clases distintas en `y`.
+- Mínimo 10 muestras en total.
+- `model_type` debe ser uno de los valores registrados.
+- Lanza `ValueError` si falla la validación.
 
-**Dependencies:** `scikit-learn`, `numpy`
+**Dependencias:** `scikit-learn`, `numpy`
 
-**Usage Example (training script — not game code):**
+**Ejemplo de uso (script de entrenamiento — no es código del juego):**
 
 ```python
 import numpy as np
-from framework.processing.pattern_recognition_tools import PatternRecognitionTools
+from src.framework.processing.pattern_recognition_tools import PatternRecognitionTools
 
-# Load dataset
+# Cargar el dataset
 data = np.load('student_assets/datasets/stage3_regions.npz')
 X, y = data['X'].astype(np.float32), data['y']
 
-# Train random forest
+# Entrenar un bosque aleatorio
 model = PatternRecognitionTools.train(X, y, model_type='forest', n_estimators=50)
-print(f"Training accuracy: {model.training_accuracy:.3f}")
+print(f"Precisión de entrenamiento: {model.training_accuracy:.3f}")
 
-# Save for runtime
+# Guardar para uso en tiempo de ejecución
 PatternRecognitionTools.save_model(model, 'student_assets/models/stage3_classifier.pkl')
 ```
 
@@ -337,26 +355,26 @@ PatternRecognitionTools.save_model(model, 'student_assets/models/stage3_classifi
 
 ### 9.2 `PatternRecognitionTools.evaluate(model, X_test, y_test)`
 
-**Purpose:** Evaluate a trained model on a held-out test set. Returns an `EvaluationResult` with accuracy, per-class accuracy, confusion matrix, and a classification report. This is called from the training script — not at runtime.
+**Propósito:** evalúa un modelo entrenado sobre un conjunto de prueba reservado. Devuelve un `EvaluationResult` con precisión, precisión por clase, matriz de confusión, y un informe de clasificación. Se llama desde el script de entrenamiento — no en tiempo de ejecución.
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Description |
+| Parámetro | Tipo | Descripción |
 |---|---|---|
-| `model` | `TrainedModel` | A fitted model from `train()` |
-| `X_test` | `np.ndarray` | Test feature matrix, shape `(n_test, n_features)` |
-| `y_test` | `np.ndarray` | Test labels, shape `(n_test,)` |
+| `model` | `TrainedModel` | Un modelo ya entrenado de `train()` |
+| `X_test` | `np.ndarray` | Matriz de características de prueba, forma `(n_test, n_features)` |
+| `y_test` | `np.ndarray` | Etiquetas de prueba, forma `(n_test,)` |
 
-**Outputs:** `EvaluationResult` (see Section 6.1).
+**Salidas:** `EvaluationResult` (ver Sección 6.1).
 
-**Restrictions:**
+**Restricciones:**
 
-- `X_test.shape[1]` must equal `model.feature_length`.
-- At least 1 sample per class in the test set.
+- `X_test.shape[1]` debe ser igual a `model.feature_length`.
+- Al menos 1 muestra por clase en el conjunto de prueba.
 
-**Dependencies:** `scikit-learn` (`classification_report`, `confusion_matrix`)
+**Dependencias:** `scikit-learn` (`classification_report`, `confusion_matrix`)
 
-**Usage Example:**
+**Ejemplo de uso:**
 
 ```python
 from sklearn.model_selection import train_test_split
@@ -366,174 +384,180 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 model = PatternRecognitionTools.train(X_train, y_train, model_type='knn', n_neighbors=5)
 result = PatternRecognitionTools.evaluate(model, X_test, y_test)
 
-print(f"Test accuracy: {result.accuracy:.3f}")
+print(f"Precisión de prueba: {result.accuracy:.3f}")
 print(result.report)
-# → Include this output in stage README as required documentation
+# → Incluir esta salida en el README del escenario como documentación obligatoria
 ```
 
 ---
 
-## 10. Validation Pipeline
+## 10. Tubería de validación
 
-The validation pipeline documents how students must test and document their classifiers before integrating them into their stage.
+La tubería de validación documenta cómo deben probar y documentar los estudiantes sus clasificadores antes de integrarlos en su escenario.
 
-### 10.1 Required Validation Steps
+### 10.1 Pasos de validación obligatorios
 
-| Step | Action | Documentation Required |
+| Paso | Acción | Documentación requerida |
 |---|---|---|
-| 1. Split dataset | Use `train_test_split` with `test_size=0.2`, `random_state=42` | State split ratio in README |
-| 2. Train model | Call `PatternRecognitionTools.train()` | State model type and hyperparameters |
-| 3. Evaluate | Call `PatternRecognitionTools.evaluate()` | Include full `EvaluationResult.report` in README |
-| 4. Verify feature length | Confirm `model.feature_length` matches runtime extraction | State in README |
-| 5. Sanity check | Run `classify()` on 3 known examples manually | Show predictions vs. expected in README |
+| 1. Dividir el dataset | Usar `train_test_split` con `test_size=0.2`, `random_state=42` | Indicar la proporción de división en el README |
+| 2. Entrenar el modelo | Llamar a `PatternRecognitionTools.train()` | Indicar el tipo de modelo y los hiperparámetros |
+| 3. Evaluar | Llamar a `PatternRecognitionTools.evaluate()` | Incluir el `EvaluationResult.report` completo en el README |
+| 4. Verificar la longitud de características | Confirmar que `model.feature_length` coincide con la extracción en tiempo de ejecución | Indicarlo en el README |
+| 5. Prueba de cordura | Ejecutar `classify()` sobre 3 ejemplos conocidos a mano | Mostrar predicciones frente a lo esperado en el README |
 
-### 10.2 Minimum Acceptable Performance
+### 10.2 Rendimiento mínimo aceptable
 
-| Metric | Threshold | Action If Below |
+| Métrica | Umbral | Acción si está por debajo |
 |---|---|---|
-| Test accuracy | ≥ 0.70 (70%) | Collect more samples, adjust hyperparameters, or change model type |
-| Per-class accuracy | ≥ 0.60 for every class | Check class balance, collect more samples for weak class |
+| Precisión de prueba | ≥ 0.70 (70%) | Recolectar más muestras, ajustar hiperparámetros, o cambiar el tipo de modelo |
+| Precisión por clase | ≥ 0.60 para cada clase | Revisar el equilibrio de clases, recolectar más muestras para la clase débil |
 
-A classifier below these thresholds may be submitted but must include a documented analysis of why the performance is limited and what would be needed to improve it.
+Se puede entregar un clasificador por debajo de estos umbrales, pero debe incluir un análisis documentado de por qué el rendimiento es limitado y qué haría falta para mejorarlo.
 
 ---
 
-## 11. Model Serialization
+## 11. Serialización de modelos
 
 ### 11.1 `PatternRecognitionTools.save_model(model, path)`
 
-**Purpose:** Serialize a `TrainedModel` to disk using `joblib`. The entire `TrainedModel` dataclass — including the fitted scikit-learn Pipeline (with scaler), class labels, feature length, and metadata — is serialized into a single `.pkl` file.
+**Propósito:** serializa un `TrainedModel` a disco usando `joblib`. Todo el dataclass `TrainedModel` — incluyendo el Pipeline de scikit-learn ya entrenado (con el escalador), las etiquetas de clase, la longitud de características y los metadatos — se serializa en un único fichero `.pkl`.
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Description |
+| Parámetro | Tipo | Descripción |
 |---|---|---|
-| `model` | `TrainedModel` | A fitted model from `train()` |
-| `path` | `str` or `pathlib.Path` | Output file path (must end in `.pkl`) |
+| `model` | `TrainedModel` | Un modelo ya entrenado de `train()` |
+| `path` | `str` o `pathlib.Path` | Ruta del fichero de salida (debe terminar en `.pkl`) |
 
-**Outputs:** None. File is written to `path`.
+**Salidas:** ninguna. El fichero se escribe en `path`.
 
-**File Location Convention:** All student model files must be saved to `student_assets/models/`.
+**Convención de ubicación de ficheros:** todos los ficheros de modelo de estudiante deben guardarse en `student_assets/models/`.
 
-**Restrictions:**
+**Restricciones:**
 
-- `path` must have `.pkl` extension. Raises `ValueError` otherwise.
-- Parent directory is created if it does not exist.
+- `path` debe tener extensión `.pkl`. Lanza `ValueError` en caso contrario.
+- El directorio padre se crea si no existe.
 
-**Dependencies:** `joblib`
+**Dependencias:** `joblib`
 
 ---
 
 ### 11.2 `PatternRecognitionTools.load_model(path)`
 
-**Purpose:** Deserialize a `TrainedModel` from disk. Verifies that the loaded object is a valid `TrainedModel` before returning it.
+**Propósito:** deserializa un `TrainedModel` desde disco. Verifica que el objeto cargado es un `TrainedModel` válido antes de devolverlo.
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Description |
+| Parámetro | Tipo | Descripción |
 |---|---|---|
-| `path` | `str` or `pathlib.Path` | Path to a `.pkl` file created by `save_model()` |
+| `path` | `str` o `pathlib.Path` | Ruta a un fichero `.pkl` creado por `save_model()` |
 
-**Outputs:** `TrainedModel` — ready for use with `classify()` and `predict()`.
+**Salidas:** `TrainedModel` — listo para usar con `classify()` y `predict()`.
 
-**Restrictions:**
+**Restricciones:**
 
-- File must exist. Raises `FileNotFoundError` if not found.
-- Loaded object must be a `TrainedModel`. Raises `TypeError` if not.
-- Do not load models from untrusted sources (`joblib.load` can execute arbitrary code — professor-provided datasets only in academic context).
+- El fichero debe existir. Lanza `FileNotFoundError` si no se encuentra.
+- El objeto cargado debe ser un `TrainedModel`. Lanza `TypeError` si no lo es.
+- No cargar modelos de fuentes no confiables (`joblib.load` puede ejecutar código arbitrario — sólo datasets provistos por el profesorado en el contexto académico).
 
-**Dependencies:** `joblib`
+**Dependencias:** `joblib`
 
-**Usage Example (in stage `on_enter()`):**
+**Ejemplo de uso (en `on_enter()` del escenario):**
 
 ```python
-from framework.processing.pattern_recognition_tools import PatternRecognitionTools
-from engine.core.settings import STUDENT_ASSETS_DIR
+from pathlib import Path
+
+from src.framework.processing.pattern_recognition_tools import PatternRecognitionTools
 
 class Stage3Scene(BaseScene):
     def on_enter(self):
-        model_path = STUDENT_ASSETS_DIR / "models" / "stage3_classifier.pkl"
+        # AUD-455: `STUDENT_ASSETS_DIR` no existe como constante en el motor
+        # (a diferencia de `STUDENT_TEMPLATES_DIR`, ver 22_API_CONTRACTS.md
+        # §2.1) — el estudiante construye la ruta directamente.
+        model_path = Path("student_assets") / "models" / "stage3_classifier.pkl"
         self.classifier = PatternRecognitionTools.load_model(model_path)
 ```
 
 ---
 
-## 12. Model Registry
+## 12. Registro de modelos
 
-The Model Registry provides an in-memory named store for loaded models. It allows a stage to load multiple models at startup and retrieve them by name without passing model objects through multiple method calls.
+El Registro de Modelos da un almacén con nombre, en memoria, para modelos cargados. Permite que un escenario cargue varios modelos al arrancar y los recupere por nombre sin pasar objetos de modelo a través de múltiples llamadas.
 
 ### 12.1 `PatternRecognitionTools.register_model(name, model)`
 
-**Purpose:** Store a loaded `TrainedModel` in the registry under a string name.
+**Propósito:** guarda un `TrainedModel` cargado en el registro bajo un nombre de cadena.
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Description |
+| Parámetro | Tipo | Descripción |
 |---|---|---|
-| `name` | `str` | Unique registry key for this model |
-| `model` | `TrainedModel` | Fitted model to register |
+| `name` | `str` | Clave única de registro para este modelo |
+| `model` | `TrainedModel` | Modelo ya entrenado a registrar |
 
-**Outputs:** None.
+**Salidas:** ninguna.
 
-**Restrictions:** If `name` already exists, the old model is replaced and a warning is logged.
+**Restricciones:** si `name` ya existe, el modelo anterior se reemplaza y se registra un aviso.
 
 ---
 
 ### 12.2 `PatternRecognitionTools.get_model(name)`
 
-**Purpose:** Retrieve a registered model by name.
+**Propósito:** recupera un modelo registrado por nombre.
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Description |
+| Parámetro | Tipo | Descripción |
 |---|---|---|
-| `name` | `str` | Registry key |
+| `name` | `str` | Clave de registro |
 
-**Outputs:** `TrainedModel`.
+**Salidas:** `TrainedModel`.
 
-**Restrictions:** Raises `KeyError` if `name` not found. Message includes `list_models()` output.
+**Restricciones:** lanza `KeyError` si `name` no se encuentra. El mensaje incluye la salida de `list_models()`.
 
 ---
 
 ### 12.3 `PatternRecognitionTools.list_models()`
 
-**Purpose:** Return the list of all currently registered model names.
+**Propósito:** devuelve la lista de todos los nombres de modelo actualmente registrados.
 
-**Outputs:** `list[str]`.
+**Salidas:** `list[str]`.
 
 ---
 
-## 13. Inference Pipeline
+## 13. Tubería de inferencia
 
 ### 13.1 `PatternRecognitionTools.classify(features, model)`
 
-**Purpose:** Classify a pre-computed feature vector using a `TrainedModel`. This is the core inference method. It applies the model's internal `StandardScaler` automatically (via the Pipeline) and returns the predicted class label as a string.
+**Propósito:** clasifica un vector de características ya calculado usando un `TrainedModel`. Es el método de inferencia central. Aplica automáticamente el `StandardScaler` interno del modelo (vía el Pipeline) y devuelve la etiqueta de clase predicha como cadena.
 
-**This is the primary runtime method.** It is designed for use inside `update()` loops.
+**Es el método principal en tiempo de ejecución.** Está pensado para usarse dentro de bucles `update()`.
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Constraints | Description |
+| Parámetro | Tipo | Restricciones | Descripción |
 |---|---|---|---|
-| `features` | `np.ndarray` | Shape `(n_features,)`, float32 | Feature vector from `VisionTools.extract_features()` |
-| `model` | `TrainedModel` | Must be a fitted model | The classifier to use |
+| `features` | `np.ndarray` | Forma `(n_features,)`, float32 | Vector de características de `VisionTools.extract_features()` |
+| `model` | `TrainedModel` | Debe ser un modelo ya entrenado | El clasificador a usar |
 
-**Outputs:** `str` — the predicted class label.
+**Salidas:** `str` — la etiqueta de clase predicha.
 
-**Restrictions:**
+**Restricciones:**
 
-- `features.shape[0]` must equal `model.feature_length`. Raises `ValueError` if not.
-- Must complete in < 2ms for safe use in a 60 FPS game loop.
-- Does not modify the model state.
+- `features.shape[0]` debe ser igual a `model.feature_length`. Lanza `ValueError` si no.
+- Debe completarse en < 2ms para uso seguro en un bucle de juego a 60 FPS.
+- No modifica el estado del modelo.
 
-**Dependencies:** `scikit-learn` (via model's internal Pipeline)
+**Dependencias:** `scikit-learn` (vía el Pipeline interno del modelo)
 
-**Usage Example:**
+**Ejemplo de uso:**
 
 ```python
-# In Stage3Scene.update(dt):
+# En Stage3Scene.update(dt):
+from src.framework.processing.vision_tools import VisionTools
+
 region_surface = self.stage_surface.subsurface(self.analysis_rect)
-features = PatternRecognitionTools.extract_hog(region_surface)
+features = VisionTools.extract_hog(region_surface)
 label = PatternRecognitionTools.classify(features, self.classifier)
 
 if label == 'dark_zone':
@@ -546,18 +570,18 @@ elif label == 'light_zone':
 
 ### 13.2 `PatternRecognitionTools.classify_proba(features, model)`
 
-**Purpose:** Return the class probability distribution for a feature vector. Instead of a single label, this returns the model's confidence for each class. Available only for models that support probability estimation (`knn`, `forest`, `svm` with `probability=True`).
+**Propósito:** devuelve la distribución de probabilidad de clase para un vector de características. En vez de una sola etiqueta, devuelve la confianza del modelo para cada clase. Disponible sólo para modelos que soportan estimación de probabilidad (`knn`, `forest`, `svm` con `probability=True`).
 
-**Inputs:** Same as `classify()`.
+**Entradas:** igual que `classify()`.
 
-**Outputs:** `dict[str, float]` — class label mapped to probability. Probabilities sum to 1.0.
+**Salidas:** `dict[str, float]` — etiqueta de clase mapeada a probabilidad. Las probabilidades suman 1.0.
 
-**Restrictions:**
+**Restricciones:**
 
-- Decision tree (`'tree'`) does not support probability estimation — raises `NotImplementedError`.
-- Probability calibration is not applied (raw `predict_proba()` output).
+- El árbol de decisión (`'tree'`) no soporta estimación de probabilidad — lanza `NotImplementedError`.
+- No se aplica calibración de probabilidad (salida cruda de `predict_proba()`).
 
-**Usage Example:**
+**Ejemplo de uso:**
 
 ```python
 proba = PatternRecognitionTools.classify_proba(features, self.classifier)
@@ -569,50 +593,52 @@ if proba.get('dark_zone', 0) > 0.6:
 
 ---
 
-### 13.3 `PatternRecognitionTools.predict(model, surface, method='hog')`
+### 13.3 `PatternRecognitionTools.predict(model, surface, method=None)`
 
-**Purpose:** Convenience method. Combines feature extraction and classification in one call. Internally calls `VisionTools.extract_features(surface, method)` then `classify(features, model)`.
+**Propósito:** método de conveniencia. Combina la extracción de características y la clasificación en una sola llamada. Internamente llama a `VisionTools.extract_features(surface, method)` y luego a `classify(features, model)`.
 
-**Inputs:**
+**Entradas:**
 
-| Parameter | Type | Description |
+| Parámetro | Tipo | Descripción |
 |---|---|---|
-| `model` | `TrainedModel` | Fitted model |
-| `surface` | `pygame.Surface` | Surface to classify |
-| `method` | `str` | Feature extraction method (`'hog'`, `'lbp'`, `'color_hist'`, `'combined'`) |
+| `model` | `TrainedModel` | Modelo ya entrenado |
+| `surface` | `pygame.Surface` | Superficie a clasificar |
+| `method` | `str \| None` | Método de extracción de características (`'hog'`, `'lbp'`, `'color_hist'`, `'combined'`). Si se omite (`None`, el valor por defecto real), usa `model.feature_method` |
 
-**Outputs:** `str` — predicted class label.
+**Salidas:** `str` — etiqueta de clase predicha.
 
-**Restrictions:**
+**Restricciones:**
 
-- `method` must match the method used during training. Raises `ValueError` if `model.feature_method` is set and does not match.
-- Inference time = feature extraction + classification; must remain < 2ms total.
+- El tiempo de inferencia = extracción de características + clasificación; debe mantenerse por debajo de 2ms en total.
 
-**Usage Example:**
+**Ejemplo de uso:**
 
 ```python
-# One-line classification:
+# Clasificación en una línea, usando el método de extracción con el que se entrenó el modelo:
+label = PatternRecognitionTools.predict(self.classifier, region_surface)
+
+# O forzando un método distinto al de entrenamiento:
 label = PatternRecognitionTools.predict(self.classifier, region_surface, method='hog')
 ```
 
 ---
 
-## 14. Classification API — Classifier Specifications
+## 14. API de clasificación — especificaciones de clasificador
 
-### 14.1 K-Nearest Neighbors (`'knn'`)
+### 14.1 K vecinos más cercanos (`'knn'`)
 
-| Parameter | Default | Description |
+| Parámetro | Por defecto | Descripción |
 |---|---|---|
-| `n_neighbors` | 5 | Number of neighbors to consider |
-| `weights` | `'uniform'` | `'uniform'` or `'distance'` |
-| `metric` | `'euclidean'` | Distance metric |
+| `n_neighbors` | 5 | Número de vecinos a considerar |
+| `weights` | `'uniform'` | `'uniform'` o `'distance'` |
+| `metric` | `'euclidean'` | Métrica de distancia |
 
-**Characteristics:**
-- Simple, interpretable — students can explain "the 5 most similar training examples"
-- No training phase (lazy learner) — `train()` is fast
-- Inference time grows with dataset size — keep training set small (< 500 samples) for < 2ms inference
+**Características:**
+- Simple, interpretable — los estudiantes pueden explicar "los 5 ejemplos de entrenamiento más parecidos"
+- Sin fase de entrenamiento (aprendizaje perezoso) — `train()` es rápido
+- El tiempo de inferencia crece con el tamaño del dataset — mantener el conjunto de entrenamiento pequeño (< 500 muestras) para inferencia < 2ms
 
-**Usage Example:**
+**Ejemplo de uso:**
 
 ```python
 model = PatternRecognitionTools.train(X, y, 'knn', n_neighbors=3, weights='distance')
@@ -620,22 +646,22 @@ model = PatternRecognitionTools.train(X, y, 'knn', n_neighbors=3, weights='dista
 
 ---
 
-### 14.2 Decision Tree (`'tree'`)
+### 14.2 Árbol de decisión (`'tree'`)
 
-| Parameter | Default | Description |
+| Parámetro | Por defecto | Descripción |
 |---|---|---|
-| `max_depth` | `None` (unlimited) | Maximum tree depth |
-| `min_samples_split` | 2 | Minimum samples to split a node |
-| `criterion` | `'gini'` | Split criterion: `'gini'` or `'entropy'` |
-| `random_state` | 42 | Reproducibility seed |
+| `max_depth` | `None` (ilimitada) | Profundidad máxima del árbol |
+| `min_samples_split` | 2 | Muestras mínimas para dividir un nodo |
+| `criterion` | `'gini'` | Criterio de división: `'gini'` o `'entropy'` |
+| `random_state` | 42 | Semilla de reproducibilidad |
 
-**Characteristics:**
-- Highly interpretable — students can inspect the decision tree structure
-- Prone to overfitting without `max_depth` — students should set this
-- Fast inference: O(log n_nodes)
-- Probability output not supported
+**Características:**
+- Altamente interpretable — los estudiantes pueden inspeccionar la estructura del árbol de decisión
+- Propenso al sobreajuste sin `max_depth` — los estudiantes deben fijarlo
+- Inferencia rápida: O(log n_nodos)
+- No soporta salida de probabilidad
 
-**Usage Example:**
+**Ejemplo de uso:**
 
 ```python
 model = PatternRecognitionTools.train(X, y, 'tree', max_depth=5, criterion='entropy')
@@ -643,21 +669,21 @@ model = PatternRecognitionTools.train(X, y, 'tree', max_depth=5, criterion='entr
 
 ---
 
-### 14.3 Random Forest (`'forest'`)
+### 14.3 Bosque aleatorio (`'forest'`)
 
-| Parameter | Default | Description |
+| Parámetro | Por defecto | Descripción |
 |---|---|---|
-| `n_estimators` | 50 | Number of trees in the forest |
-| `max_depth` | `None` | Maximum tree depth |
-| `max_features` | `'sqrt'` | Features per tree split |
-| `random_state` | 42 | Reproducibility seed |
+| `n_estimators` | 50 | Número de árboles en el bosque |
+| `max_depth` | `None` | Profundidad máxima del árbol |
+| `max_features` | `'sqrt'` | Características por división de árbol |
+| `random_state` | 42 | Semilla de reproducibilidad |
 
-**Characteristics:**
-- Robust to overfitting — good default choice for students
-- Slower training than single tree, but still fast for small datasets
-- Feature importance accessible via `model.estimator.named_steps['classifier'].feature_importances_`
+**Características:**
+- Robusto al sobreajuste — buena elección por defecto para estudiantes
+- Entrenamiento más lento que un solo árbol, pero aún rápido para datasets pequeños
+- Importancia de características accesible vía `model.estimator.named_steps['classifier'].feature_importances_`
 
-**Usage Example:**
+**Ejemplo de uso:**
 
 ```python
 model = PatternRecognitionTools.train(X, y, 'forest', n_estimators=100, max_depth=8)
@@ -665,22 +691,22 @@ model = PatternRecognitionTools.train(X, y, 'forest', n_estimators=100, max_dept
 
 ---
 
-### 14.4 Support Vector Machine (`'svm'`)
+### 14.4 Máquina de vectores de soporte (`'svm'`)
 
-| Parameter | Default | Description |
+| Parámetro | Por defecto | Descripción |
 |---|---|---|
-| `kernel` | `'rbf'` | Kernel type: `'linear'`, `'rbf'`, `'poly'` |
-| `C` | 1.0 | Regularization parameter |
-| `gamma` | `'scale'` | Kernel coefficient |
-| `probability` | `True` | Enable probability estimation (required for `classify_proba`) |
-| `random_state` | 42 | Reproducibility seed |
+| `kernel` | `'rbf'` | Tipo de kernel: `'linear'`, `'rbf'`, `'poly'` |
+| `C` | 1.0 | Parámetro de regularización |
+| `gamma` | `'scale'` | Coeficiente del kernel |
+| `probability` | `True` | Activa la estimación de probabilidad (necesaria para `classify_proba`) |
+| `random_state` | 42 | Semilla de reproducibilidad |
 
-**Characteristics:**
-- Strong performance on small datasets with high-dimensional features
-- Longer training time than tree methods for large datasets
-- Probability estimation with `probability=True` requires additional Platt scaling (slower training)
+**Características:**
+- Buen rendimiento en datasets pequeños con características de alta dimensión
+- Entrenamiento más lento que los métodos de árbol en datasets grandes
+- La estimación de probabilidad con `probability=True` necesita escalado de Platt adicional (entrenamiento más lento)
 
-**Usage Example:**
+**Ejemplo de uso:**
 
 ```python
 model = PatternRecognitionTools.train(X, y, 'svm', kernel='rbf', C=2.0)
@@ -688,22 +714,23 @@ model = PatternRecognitionTools.train(X, y, 'svm', kernel='rbf', C=2.0)
 
 ---
 
-## 15. Model Registry Usage Pattern
+## 15. Patrón de uso del registro de modelos
 
-The recommended pattern for a student stage using multiple classifiers:
+El patrón recomendado para un escenario de estudiante que usa varios clasificadores:
 
 ```python
-# In Stage3Scene.on_enter():
+# En Stage3Scene.on_enter():
+models_dir = Path("student_assets") / "models"
 PatternRecognitionTools.register_model(
     'region_classifier',
-    PatternRecognitionTools.load_model(STUDENT_ASSETS_DIR / 'models' / 'regions.pkl')
+    PatternRecognitionTools.load_model(models_dir / 'regions.pkl')
 )
 PatternRecognitionTools.register_model(
     'sprite_classifier',
-    PatternRecognitionTools.load_model(STUDENT_ASSETS_DIR / 'models' / 'sprites.pkl')
+    PatternRecognitionTools.load_model(models_dir / 'sprites.pkl')
 )
 
-# In Stage3Scene.update(dt):
+# En Stage3Scene.update(dt):
 region_label = PatternRecognitionTools.predict(
     PatternRecognitionTools.get_model('region_classifier'),
     self.background_region,
@@ -718,178 +745,162 @@ sprite_label = PatternRecognitionTools.predict(
 
 ---
 
-## 16. Prediction Workflow
+## 16. Flujo de predicción
 
-### 16.1 Complete Runtime Inference Flow
+### 16.1 Flujo completo de inferencia en tiempo de ejecución
 
 ```
-[Stage update() — every N frames]
+[update() del escenario — cada N fotogramas]
     ↓
-1. Capture surface region
+1. Capturar la región de superficie
    region = screen_surface.subsurface(analysis_rect)
     ↓
-2. Preprocess (optional — if training used filtered input)
+2. Preprocesar (opcional — si el entrenamiento usó entrada filtrada)
    preprocessed = FilterTools.gaussian_blur(region, sigma=1.0)
     ↓
-3. Extract features
-   features = PatternRecognitionTools.extract_hog(preprocessed)
+3. Extraer características
+   features = VisionTools.extract_hog(preprocessed)
     ↓
-4. Classify
+4. Clasificar
    label = PatternRecognitionTools.classify(features, self.classifier)
     ↓
-5. Act on result
-   if label == 'class_A': → game behavior A
-   if label == 'class_B': → game behavior B
+5. Actuar sobre el resultado
+   if label == 'class_A': → comportamiento de juego A
+   if label == 'class_B': → comportamiento de juego B
 ```
 
-### 16.2 Frame Throttling for Inference
+### 16.2 Limitación por fotograma para la inferencia
 
-Classification is not performed every frame. Students use a frame counter:
+La clasificación no se hace cada fotograma. Los estudiantes usan un contador de fotogramas:
 
-| Classifier Type | Recommended Inference Frequency |
+| Tipo de clasificador | Frecuencia de inferencia recomendada |
 |---|---|
-| k-NN (dataset < 100) | Every 3 frames |
-| k-NN (dataset 100–500) | Every 5 frames |
-| Decision Tree | Every 2 frames |
-| Random Forest (50 trees) | Every 3 frames |
-| SVM (RBF kernel) | Every 3 frames |
+| k-NN (dataset < 100) | Cada 3 fotogramas |
+| k-NN (dataset 100–500) | Cada 5 fotogramas |
+| Árbol de decisión | Cada 2 fotogramas |
+| Bosque aleatorio (50 árboles) | Cada 3 fotogramas |
+| SVM (kernel RBF) | Cada 3 fotogramas |
 
 ---
 
-## 17. Performance Constraints
+## 17. Restricciones de rendimiento
 
-### 17.1 Inference Time Budget
+### 17.1 Presupuesto de tiempo de inferencia
 
-Total inference budget per call: **< 2ms** (to remain within the 16.67ms frame budget alongside feature extraction).
+Presupuesto total de inferencia por llamada: **< 2ms** (para mantenerse dentro del presupuesto de fotograma de 16.67ms junto con la extracción de características).
 
-| Classifier | Dataset Size | Typical Inference Time |
+| Clasificador | Tamaño de dataset | Tiempo de inferencia típico |
 |---|---|---|
-| k-NN (k=5) | 100 samples | < 0.5ms |
-| k-NN (k=5) | 500 samples | ~1ms |
-| k-NN (k=5) | 1000+ samples | > 2ms ⚠ |
-| Decision Tree (depth 5) | Any | < 0.1ms |
-| Random Forest (50 trees) | Any | ~0.5ms |
-| SVM (RBF) | Any | < 1ms |
+| k-NN (k=5) | 100 muestras | < 0.5ms |
+| k-NN (k=5) | 500 muestras | ~1ms |
+| k-NN (k=5) | 1000+ muestras | > 2ms ⚠ |
+| Árbol de decisión (profundidad 5) | Cualquiera | < 0.1ms |
+| Bosque aleatorio (50 árboles) | Cualquiera | ~0.5ms |
+| SVM (RBF) | Cualquiera | < 1ms |
 
-### 17.2 Training Time (Offline Only)
+### 17.2 Tiempo de entrenamiento (sólo fuera de línea)
 
-| Classifier | Dataset 100 | Dataset 500 | Dataset 1000 |
+| Clasificador | Dataset 100 | Dataset 500 | Dataset 1000 |
 |---|---|---|---|
-| k-NN | ~0ms (lazy) | ~0ms (lazy) | ~0ms (lazy) |
-| Decision Tree | < 100ms | < 500ms | ~1s |
-| Random Forest (50) | ~500ms | ~2s | ~5s |
+| k-NN | ~0ms (perezoso) | ~0ms (perezoso) | ~0ms (perezoso) |
+| Árbol de decisión | < 100ms | < 500ms | ~1s |
+| Bosque aleatorio (50) | ~500ms | ~2s | ~5s |
 | SVM (RBF) | ~100ms | ~2s | ~10s |
 
 ---
 
-## 18. Unit IX Mapping
+## 18. Correspondencia con la Unidad IX
 
-| Unit IX Topic | PatternRecognitionTools Component | Observable In-Game |
+| Tema de la Unidad IX | Componente de PatternRecognitionTools | Observable en el juego |
 |---|---|---|
-| Descriptors (HOG, LBP) | `extract_hog()`, `extract_lbp()` | Feature vector printed in README |
-| Color-based features | `extract_color_histogram()` | Color distribution drives class |
-| Combined descriptors | `extract_combined()` | Multi-modal feature vector |
-| KNN Classification | `train(..., 'knn')` + `classify()` | Game changes behavior by class |
-| Decision Tree | `train(..., 'tree')` | Student inspects tree structure |
-| Random Forest | `train(..., 'forest')` | Robust classifier for capstone |
-| SVM | `train(..., 'svm')` | Advanced optional classifier |
-| Model training pipeline | `train()` + `evaluate()` | Accuracy documented in README |
-| Model serialization | `save_model()` / `load_model()` | `.pkl` file in student_assets/ |
-| Inference loop | `predict()` in `update()` | Real-time classification result |
-| Computer vision integration | Full pipeline (Filter→Vision→Pattern) | End-to-end demo in Stage 3 |
+| Descriptores (HOG, LBP) | `VisionTools.extract_hog()`, `extract_lbp()` | Vector de características impreso en el README |
+| Características basadas en color | `VisionTools.extract_color_histogram()` | La distribución de color dirige la clase |
+| Descriptores combinados | `VisionTools.extract_features(method='combined')` | Vector de características multi-modal |
+| Clasificación KNN | `train(..., 'knn')` + `classify()` | El juego cambia de comportamiento según la clase |
+| Árbol de decisión | `train(..., 'tree')` | El estudiante inspecciona la estructura del árbol |
+| Bosque aleatorio | `train(..., 'forest')` | Clasificador robusto para el proyecto de cierre |
+| SVM | `train(..., 'svm')` | Clasificador avanzado opcional |
+| Tubería de entrenamiento de modelo | `train()` + `evaluate()` | Precisión documentada en el README |
+| Serialización de modelo | `save_model()` / `load_model()` | Fichero `.pkl` en student_assets/ |
+| Bucle de inferencia | `predict()` en `update()` | Resultado de clasificación en tiempo real |
+| Integración de visión por computadora | Tubería completa (Filter→Vision→Pattern) | Demo de extremo a extremo en Stage 3 |
 
 ---
 
-## 19. Assessment Mapping
+## 19. Correspondencia con la evaluación
 
-| Assessment | Unit | Required Deliverable | Evidence |
+| Evaluación | Unidad | Entregable requerido | Evidencia |
 |---|---|---|---|
-| Practical Exam III | IX | Full pipeline: dataset → train → evaluate → integrate | Live demo + EvaluationResult in README |
-| Stage 3 Final | IX | Classifier running at runtime, changing game behavior | Code review + oral explanation |
-| Final Presentation | IX | Explain one classifier mathematically (decision boundary, feature space) | Oral + notebook |
+| Examen práctico III | IX | Tubería completa: dataset → entrenar → evaluar → integrar | Demo en vivo + EvaluationResult en el README |
+| Final de Stage 3 | IX | Clasificador funcionando en tiempo de ejecución, cambiando el comportamiento del juego | Revisión de código + explicación oral |
+| Presentación final | IX | Explicar un clasificador matemáticamente (frontera de decisión, espacio de características) | Oral + notebook |
 
 ---
 
-## 20. Professor Deliverables
+## 20. Entregables del profesorado
 
-1. **`framework/processing/pattern_recognition_tools.py`** — Complete, documented, tested implementation.
-2. **`tests/test_pattern_recognition_tools.py`** — Tests for training, serialization, inference, and the complete pipeline.
-3. **`tools/build_dataset.py`** — A helper script students use to extract features from labeled image directories and build a `.npz` dataset file.
-4. **`student_assets/datasets/sample_dataset.npz`** — A small sample dataset (50 samples, 3 classes) for students to verify their pipeline before building their own.
-5. **Demo Scene (see Document 15)** — Interactive Unit IX demo where a trained classifier is shown classifying screen regions in real time.
-6. **Training notebook template** — `notebooks/train_stage3_classifier.ipynb` — a Jupyter notebook template with all required steps pre-scaffolded.
-
----
-
-## 21. Student Reuse
-
-Students reuse `PatternRecognitionTools` by:
-
-1. Running `tools/build_dataset.py` to build their dataset from labeled surface screenshots.
-2. Using the training notebook template to train and evaluate their classifier.
-3. Calling `save_model()` to save the trained model.
-4. Loading the model in `Stage3Scene.on_enter()`.
-5. Calling `predict()` in `Stage3Scene.update()` every N frames.
-6. Using the predicted label to change game behavior.
-
-Students write **no machine learning code**. They write **game behavior conditioned on classification results**.
+1. **`src/framework/processing/pattern_recognition_tools.py`** — Implementación completa, documentada y probada.
+2. **`tests/test_pattern_recognition_tools.py`** — Pruebas de entrenamiento, serialización, inferencia y la tubería completa.
+3. **`tools/build_dataset.py`** — Un script de ayuda que los estudiantes usan para extraer características de directorios de imágenes etiquetadas y construir un fichero de dataset `.npz`.
+4. **`student_assets/datasets/sample_dataset.npz`** — Un dataset de muestra pequeño (50 muestras, 3 clases) para que los estudiantes verifiquen su tubería antes de construir la propia.
+5. **Escena demo (ver Documento 15)** — Demo interactiva de la Unidad IX donde se muestra un clasificador entrenado clasificando regiones de pantalla en tiempo real.
+6. **Plantilla de notebook de entrenamiento** — `notebooks/train_stage3_classifier.ipynb` — una plantilla de Jupyter notebook con todos los pasos requeridos ya preparados.
 
 ---
 
-## 22. Learning Evidence
+## 21. Reutilización por parte de los estudiantes
 
-A student has demonstrated Unit IX learning when they can:
+Los estudiantes reutilizan `PatternRecognitionTools` al:
 
-1. **Show** their dataset: number of samples, classes, feature method, and class balance.
-2. **Present** their `EvaluationResult`: accuracy, confusion matrix, and per-class report.
-3. **Explain** why they chose their classifier type (interpretability, accuracy, speed).
-4. **Demonstrate live** the classifier changing game behavior in at least two distinct classes.
-5. **Explain** mathematically what the decision boundary of their classifier looks like (linear for SVM linear, tree splits for decision tree, etc.).
-6. **Compare** two classifier types on their dataset and explain the tradeoff.
+1. Ejecutar `tools/build_dataset.py` para construir su dataset a partir de capturas de superficie etiquetadas.
+2. Usar la plantilla de notebook de entrenamiento para entrenar y evaluar su clasificador.
+3. Llamar a `save_model()` para guardar el modelo entrenado.
+4. Cargar el modelo en `Stage3Scene.on_enter()`.
+5. Llamar a `predict()` en `Stage3Scene.update()` cada N fotogramas.
+6. Usar la etiqueta predicha para cambiar el comportamiento del juego.
+
+Los estudiantes no escriben **ningún código de aprendizaje automático**. Escriben **comportamiento de juego condicionado por los resultados de la clasificación**.
 
 ---
 
-## 23. Restrictions
+## 22. Evidencia de aprendizaje
 
-| Restriction | Scope |
+Un estudiante ha demostrado el aprendizaje de la Unidad IX cuando puede:
+
+1. **Mostrar** su dataset: número de muestras, clases, método de características y equilibrio de clases.
+2. **Presentar** su `EvaluationResult`: precisión, matriz de confusión, e informe por clase.
+3. **Explicar** por qué eligió su tipo de clasificador (interpretabilidad, precisión, velocidad).
+4. **Demostrar en vivo** el clasificador cambiando el comportamiento del juego en al menos dos clases distintas.
+5. **Explicar** matemáticamente cómo es la frontera de decisión de su clasificador (lineal para SVM lineal, divisiones de árbol para árbol de decisión, etc.).
+6. **Comparar** dos tipos de clasificador sobre su dataset y explicar el compromiso.
+
+---
+
+## 23. Restricciones
+
+| Restricción | Alcance |
 |---|---|
-| Students never import `sklearn` directly | All student stage files |
-| Students never import `joblib` directly | All student stage files |
-| Model training never happens at runtime | Training is always offline |
-| Model files stored in `student_assets/models/` only | File system constraint |
-| `PatternRecognitionTools` never calls `EventBus` | Processing isolation |
-| Feature extraction method must match between training and inference | Enforced by `model.feature_method` check |
+| Los estudiantes nunca importan `sklearn` directamente | Todos los ficheros de escenario de estudiante |
+| Los estudiantes nunca importan `joblib` directamente | Todos los ficheros de escenario de estudiante |
+| El entrenamiento de modelos nunca ocurre en tiempo de ejecución | El entrenamiento siempre es fuera de línea |
+| Los ficheros de modelo se guardan sólo en `student_assets/models/` | Restricción del sistema de ficheros |
+| `PatternRecognitionTools` nunca llama a `EventBus` | Aislamiento de procesamiento |
+| El método de extracción de características usado en la inferencia por defecto es el de entrenamiento | `predict()` cae a `model.feature_method` cuando no se pasa `method` explícito |
 
 ---
 
-## 24. Future Extensions
+## 24. Extensiones futuras
 
-| Extension | Description | Target |
+| Extensión | Descripción | Objetivo |
 |---|---|---|
-| `cross_validate(X, y, model_type, folds)` | K-fold cross-validation | Unit IX advanced |
-| `hyperparameter_search(X, y, model_type, param_grid)` | Grid search | Unit IX advanced |
-| `explain_prediction(features, model)` | LIME/SHAP local explanation | Beyond scope |
-| `online_learning(model, new_X, new_y)` | Incremental model update at runtime | Beyond scope |
-| `neural_net(X, y, layers)` | Simple MLP via scikit-learn | Unit IX extension |
-
-
---- Traducción al Español ---
-
-## Especificación de PatternRecognitionTools
-
-PatternRecognitionTools proporciona entrenamiento, evaluación e inferencia de modelos de clasificación para la Unidad IX.
-
-### Funcionalidades
-- Entrenamiento de clasificadores (k-NN, árbol de decisión, random forest, SVM)
-- Evaluación con matriz de confusión y precisión
-- Serialización de modelos (joblib)
-- Inferencia en tiempo de ejecución
-
-Para la especificación completa de la API con ejemplos de código, consultar el documento original en inglés.
-
+| `cross_validate(X, y, model_type, folds)` | Validación cruzada de k iteraciones | Unidad IX avanzada |
+| `hyperparameter_search(X, y, model_type, param_grid)` | Búsqueda en cuadrícula | Unidad IX avanzada |
+| `explain_prediction(features, model)` | Explicación local LIME/SHAP | Fuera del alcance |
+| `online_learning(model, new_X, new_y)` | Actualización incremental del modelo en tiempo de ejecución | Fuera del alcance |
+| `neural_net(X, y, layers)` | MLP simple vía scikit-learn | Extensión de la Unidad IX |
 
 ---
-## 🔗 Documentos Relacionados
+## 🔗 Documentos relacionados
 
-- [[11_FILTER_TOOLS_SPEC.md|Filter Tools Spec]]
-- [[12_VISION_TOOLS_SPEC.md|Vision Tools Spec]]
+- [[11_FILTER_TOOLS_SPEC.md|Especificación de FilterTools]]
+- [[12_VISION_TOOLS_SPEC.md|Especificación de VisionTools]]

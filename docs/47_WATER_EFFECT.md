@@ -1,49 +1,53 @@
 ---
 document_id: "LOI-WATER-047"
-title: "Legacy of InFest — Water Effect Specification"
-aliases: ["Water Effect"]
-tags: ["water", "effect", "vfx"]
-description: "Water VFX"
+title: "Legacy of InFest — Especificación del efecto de agua"
+aliases: ["Especificación del efecto de agua", "Water Effect"]
+tags: ["agua", "efecto", "vfx"]
+description: "VFX de agua"
 source: "docs/47_WATER_EFFECT.md"
-date_processed: "2026-07-14"
+date_processed: "2026-08-12"
 ---
 
-# Legacy of InFest — Water Effect Specification
+# Legacy of InFest — Especificación del efecto de agua
 
-**Document ID:** LOI-WATER-047
-**Version:** 1.0.0
-**Status:** Official
-**Audience:** Professor, Teaching Assistants, Students, AI coding assistants
+**ID del documento:** LOI-WATER-047
+**Versión:** 1.1.0
+**Estado:** Oficial
+**Audiencia:** Profesor, ayudantes, estudiantes, asistentes de código
 
----
-
-## 1. Overview
-
-The Water Effect (`src/framework/vfx/water_effect.py`) is an animated visual overlay that renders sine-wave ripples with alpha blending. It provides a distortion effect appropriate for underwater scenes, pools, and rain puddles.
-
----
-
-## 2. Architecture
-
-### 2.1 WaterEffect
-- **Overlay:** Per-pixel alpha `Surface` at screen resolution
-- **Animation:** Each scanline (every 2px Y) computes a sine wave offset: `sin(y * frequency + time) * amplitude`
-- **Blending:** `BLEND_RGBA_ADD` for luminous water appearance
-- **Color Tint:** Default (40, 80, 160) blue at alpha 100
+> **AUD-455.** Traduce el documento completo (antes en inglés, salvo el
+> párrafo de AUD-240 que ya estaba en español). Actualiza el conteo de
+> líneas: decía 50 en `water_effect.py`; hoy tiene 67.
 
 ---
 
-## 3. Parameters
+## 1. Visión general
 
-| Parameter | Default | Description |
+El efecto de agua (`src/framework/vfx/water_effect.py`) es una capa visual animada que dibuja ondulaciones senoidales con mezcla de alfa. Da un efecto de distorsión apropiado para escenas bajo el agua, piscinas y charcos de lluvia.
+
+---
+
+## 2. Arquitectura
+
+### 2.1 `WaterEffect`
+- **Capa:** una `Surface` de alfa por píxel a la resolución de pantalla
+- **Animación:** cada línea de barrido (cada 2px de Y) calcula un desplazamiento de onda senoidal: `sin(y * frequency + time) * amplitude`
+- **Mezcla:** `BLEND_RGBA_ADD` para un aspecto luminoso del agua
+- **Tinte de color:** azul (40, 80, 160) a alfa 100 por defecto
+
+---
+
+## 3. Parámetros
+
+| Parámetro | Por defecto | Descripción |
 |-----------|---------|-------------|
-| `speed` | 1.5 | Wave animation speed multiplier |
-| `amplitude` | 4 | Maximum horizontal wave displacement (px) |
-| `frequency` | 0.04 | Wave frequency (cycles per pixel) |
-| `alpha` | 100 | Overlay transparency (0–255) |
-| `tint` | (40, 80, 160) | RGB color of water overlay |
+| `speed` | 1.5 | Multiplicador de velocidad de la animación de onda |
+| `amplitude` | 4 | Desplazamiento horizontal máximo de la onda (px) |
+| `frequency` | 0.04 | Frecuencia de la onda (ciclos por píxel) |
+| `alpha` | 100 | Transparencia de la capa (0–255) |
+| `tint` | (40, 80, 160) | Color RGB de la capa de agua |
 
-All adjustable via `set_params()` — **y desde el mapa** (AUD-240).
+Todo ajustable vía `set_params()` — **y desde el mapa** (AUD-240).
 
 Hasta AUD-240 esta frase describía sólo la API: `StageScene` construía un
 `WaterEffect()` con los valores por defecto y nunca llamaba a `set_params`, así
@@ -64,31 +68,14 @@ Un mapa que no declare nada se ve exactamente igual que antes.
 
 ---
 
-## 4. Implementation Status
+## 4. Estado de implementación
 
-**File:** `src/framework/vfx/water_effect.py` (50 lines)
-**Status:** ✅ Complete — animated sine-wave water with configurable parameters
-**Missing:** No refraction/distortion of underlying content; no surface reflections
-
-
---- Traducción al Español ---
-
-## Efecto de Agua
-
-### Descripción
-Efecto visual de agua animada usando ondas sinusoidales.
-
-### Características
-- Animación de ondas en superficie de agua
-- Distorsión de la imagen bajo el agua
-- Configuración de amplitud y frecuencia
-- Efecto de transparencia y reflejos
-
-Para la especificación completa, consultar el documento original en inglés.
-
+**Fichero:** `src/framework/vfx/water_effect.py` (67 líneas)
+**Estado:** ✅ Completo — agua animada con ondas senoidales y parámetros configurables
+**Falta:** sin refracción/distorsión del contenido subyacente; sin reflejos de superficie
 
 ---
-## 🔗 Documentos Relacionados
+## 🔗 Documentos relacionados
 
-- [[45_SWIMMING_SPEC.md|Swimming Spec]]
-- [[46_FOG_OF_WAR.md|Fog of War]]
+- [[45_SWIMMING_SPEC.md|Especificación de la mecánica de natación]]
+- [[46_FOG_OF_WAR.md|Especificación de la niebla de guerra]]

@@ -1,52 +1,36 @@
 ---
 document_id: "LOI-LABS-LAB01"
-title: "Lab 1: Vectors & Curves (Unit II)"
+title: "Laboratorio 1: vectores y curvas (Unidad II)"
 aliases: ["Lab01", "lab01"]
-tags: ["lab", "academic", "exercise"]
-description: "Labs document: lab01"
-source: "docs/docs\labs/lab01.md"
-date_processed: "2026-07-14"
+tags: ["laboratorio", "academico", "ejercicio"]
+description: "Documento de laboratorios: lab01"
+source: "docs/labs/lab01.md"
+date_processed: "2026-08-13"
 ---
 
-# Lab 1: Vectors & Curves (Unit II)
+# Laboratorio 1: vectores y curvas (Unidad II)
 
-**Objective:** Implement vector operations and Bézier curves in the VectorLabScene and CurveEditorScene.
+**Objetivo:** implementar operaciones vectoriales y curvas de Bézier en VectorLabScene y CurveEditorScene.
 
-## Tasks
+## Tareas
 
-### Task 1 — Vector Arithmetic (30 min)
-1. Open **VectorLabScene** (Unit II from the demo menu)
-2. Switch to CHASE mode using the TAB key
-3. Observe how the pursuit vector is computed from player position to target
-4. Modify the chase behavior to use a normalized direction vector multiplied by a fixed speed
+### Tarea 1 — Aritmética vectorial (30 min)
+1. Abrir **VectorLabScene** (Unidad II desde el menú de demos)
+2. Cambiar al modo CHASE con la tecla TAB
+3. Observar cómo se calcula el vector de persecución desde la posición del jugador hasta el objetivo
+4. Modificar el comportamiento de persecución para usar un vector de dirección normalizado multiplicado por una velocidad fija
 
-### Task 2 — Bézier Curves (30 min)
-1. Open **CurveEditorScene** (Unit III from the demo menu)
-2. Create a quadratic Bézier curve with 3 control points
-3. Toggle the de Casteljau visualization with the D key
-4. Observe how the recursive linear interpolation produces the curve
+### Tarea 2 — Curvas de Bézier (30 min)
+1. Abrir **CurveEditorScene** (Unidad III desde el menú de demos)
+2. Crear una curva de Bézier cuadrática con 3 puntos de control
+3. Alternar la visualización de de Casteljau con la tecla D
+4. Observar cómo la interpolación lineal recursiva produce la curva
 
-### Task 3 — Catmull-Rom Path (30 min)
-1. In **CurveEditorScene**, switch to CATMULL_ROM mode
-2. Place 5+ control points to create a path through all of them
-3. Note how Catmull-Rom interpolation passes through all control points (unlike Bézier)
+### Tarea 3 — Ruta Catmull-Rom (30 min)
+1. En **CurveEditorScene**, cambiar al modo CATMULL_ROM
+2. Colocar 5+ puntos de control para crear una ruta que pase por todos ellos
+3. Notar cómo la interpolación Catmull-Rom pasa por todos los puntos de control (a diferencia de Bézier)
 
-## Deliverables
-- Screenshots showing your vector chase behavior and Bézier curve
-- A brief explanation (2-3 sentences) of how de Casteljau's algorithm works
-
-
---- Traducción al Español ---
-
-## Laboratorio 1: Vectores y Curvas (Unidad II)
-
-**Objetivo:** Implementar operaciones vectoriales y curvas Bézier.
-
-### Tareas
-1. **Aritmética Vectorial** — Observar y modificar comportamiento de persecución vectorial
-2. **Curvas Bézier** — Crear curva Bézier cuadrática con 3 puntos de control
-3. **Trayectoria Catmull-Rom** — Crear trayectoria con 5+ puntos de control
-
-### Entregables
-- Capturas de pantalla del comportamiento vectorial y curva Bézier
-- Explicación breve del algoritmo de de Casteljau
+## Entregables
+- Capturas mostrando el comportamiento de persecución vectorial y la curva de Bézier
+- Una explicación breve (2-3 oraciones) de cómo funciona el algoritmo de de Casteljau

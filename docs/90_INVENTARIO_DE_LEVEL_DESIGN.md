@@ -94,9 +94,11 @@ Como diseñador **no invocas estados**: colocas objetos — `Vine`, `Zipline`,
 - **Prendas** (se equipan en `head`/`body`/`feet`; solo cuenta la puesta,
   AUD-207): capuchas y capas de daño o vida, botas de velocidad o vida,
   con precio en monedas (`coin`).
-- **Habilidades** sueltas por jefes: `skill_double_jump` ← `BossRey`,
-  `skill_dash` ← `BossVenado`, `skill_parry` ← nadie aún (la dejas tú con
-  `skill_drop = "skill_parry"` en tu jefe).
+- **Habilidades** sueltas por jefes: `skill_double_jump` ← `BossRey`;
+  `skill_dash` **y** `skill_parry` ← `BossVenado` (AUD-263: `skill_drop` acepta
+  una lista, no sólo una cadena, precisamente para que el venado pueda soltar
+  las dos a la vez — verificado contra `src/stages/boss_venado/boss_venado.py`,
+  corregido AUD-455, decía «`skill_parry` ← nadie aún»).
 - **Llaves narrativas**: `item_id` propios sin bonificación; circuito
   `Key` (`key_id`) → `LockedDoor` (mismo `key_id`), `consume_llave` para
   llaves de un solo uso.
@@ -157,14 +159,15 @@ desde el registro, no puede envejecer). El subconjunto que define mecánicas:
 | Cortes | `Cutscene` | guion de 10 órdenes; `bloquea=false` es la útil |
 | Colisión | `Solid` | 1 baldosa × 2–3 de alto = obstáculo; 4+ = muro |
 
-### 1.5 Enemigos: 37 tipos y 13 estados
+### 1.5 Enemigos: 36 tipos y 13 estados (AUD-455: decía 37/22)
 
 - **8 arquetipos**: `Walker`, `Flying`, `Shooter`, `Archer`, `Charger`,
   `Brute`, `Caster`, `Assassin` (roles y números en la [[66_GUIA_DE_LEVEL_DESIGN.md|guía 66 §7]]).
-- **22 variantes del bestiario** (garza, paloma, halcón, insecto, rata,
-  cucaracha, cuaderno, cocinero, tiza, quetzal, buitre, boa, serpiente…).
-  **15 no aparecen en ningún mapa del curso**: personalidad gratis para tu
-  zona.
+- **21 variantes del bestiario** (garza, paloma, halcón, insecto, rata,
+  cucaracha, cuaderno, cocinero, tiza, quetzal, buitre, boa, serpiente…) —
+  verificado contra `bestiary_registry.SPECIES` y `18_ENEMY_ROSTER.md` (21
+  especies exactas, no 22). Las que no aparecen en ningún mapa del curso son
+  personalidad gratis para tu zona.
 - **7 tipos de las entregas** (rata y cucaracha de la soda, estudiante y
   cuaderno del aula, jefes Gavilán/Rey/Paburu): solo existen dentro del
   paquete de su escenario. Registra los tuyos **al nivel del módulo** para
@@ -353,9 +356,11 @@ composición nominal de la guía 66. Los mapas marcados `[REF]` son diseño sin
    diseñadas en `17_BOSS_SPEC.md`, sin implementar.
 3. **Gavilán: sin ataques** — clase al 45 % de la rúbrica, asignación de
    estudiante.
-4. **`skill_parry` sin dueño** — se la puedes soltar a un jefe con
-   `skill_drop = "skill_parry"`.
-5. **15 bestiarios sin usar** de `docs/18_ENEMY_ROSTER.md`.
+4. ~~`skill_parry` sin dueño~~ — **corregido AUD-455**: ya la suelta
+   `BossVenado` (`skill_drop = ["skill_dash", "skill_parry"]`, AUD-263). No es
+   un espacio abierto.
+5. Bestiario de `docs/18_ENEMY_ROSTER.md` sin usar en ningún mapa del curso —
+   número no verificado en esta pasada, no se escribe uno sin volver a contar.
 
 Cualquiera de estos puede cerrar la curva de dificultad de la guía 66 §1.2 y
 conectarse con los logros (`collector`, `speed_demon`) sin tocar la
@@ -378,12 +383,12 @@ progresión.
 ## 6. Documentos relacionados
 
 - [[60_GUIA_COMPLETA_DEL_MOTOR.md|Guía completa del motor]] — el «cómo» de cada propiedad
-- [[66_GUIA_DE_LEVEL_DESIGN.md|Guía de Level Design]] — el «qué construir» de cada nivel
-- [[06_TMX_SPEC.md|Especificación TMX]], [[STAGE_CREATION.md|Stage Creation]]
-- [[05_ENEMY_SPEC.md|Enemigos]], [[18_ENEMY_ROSTER.md|Enemy Roster]],
+- [[66_GUIA_DE_LEVEL_DESIGN.md|Guía de diseño de niveles]] — el «qué construir» de cada nivel
+- [[06_TMX_SPEC.md|Especificación TMX]], [[STAGE_CREATION.md|Creación de escenarios]]
+- [[05_ENEMY_SPEC.md|Enemigos]], [[18_ENEMY_ROSTER.md|Elenco de enemigos]],
   [[17_BOSS_SPEC.md|Jefes]]
 - [[86_ESPECIFICACION_DE_NIVELES_Y_JEFES.md|Niveles y jefes]],
-  [[16_WORLD_DESIGN.md|World Design]]
+  [[16_WORLD_DESIGN.md|Diseño del mundo]]
 - [[62_ESTADO_DEL_PROYECTO.md|Estado del proyecto]],
   [[87_REPORTE_DE_LO_QUE_FALTA.md|Reporte de lo que falta]]
 - [[73_CATALOGO_DE_RECURSOS_PARA_ESTUDIANTES.md|Catálogo de recursos]]

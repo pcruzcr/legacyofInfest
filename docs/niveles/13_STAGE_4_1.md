@@ -245,7 +245,7 @@ Ninguno. El único "contenido" son:
 
 | Elemento | Cantidad | Nota |
 |---|---|---|
-| Cuencos de fuego | 3+ | Plataformas OneWay + luz por proximidad |
+| Cuencos de fuego | 3+ | Plataformas Platform + luz por proximidad |
 | Grietas pulsantes | 2+ | HazardZone 0.25 periódico |
 | Marcas ocultas | 5+ | Solo visibles con la visión espectral |
 | Ecos de espíritus | 3 | Siluetas BG_Mid (venado, Rey, Gavilán) |

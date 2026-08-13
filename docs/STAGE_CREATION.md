@@ -21,32 +21,32 @@ date_processed: "2026-07-14"
 > `EventTrigger`—. Si buscas algo y no está aquí, está en la guía completa
 > antes que en ningún sitio.
 
-## 1. TMX Map Requirements
+## 1. Requisitos del mapa TMX
 
-Create your map in **Tiled** with the following settings:
+Crea tu mapa en **Tiled** con esta configuración:
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Orientation | Orthogonal |
-| Tile width | 16 px |
-| Tile height | 16 px |
-| Render order | Right-down |
-| Infinite | No |
+| Orientación | Ortogonal |
+| Ancho de baldosa | 16 px |
+| Alto de baldosa | 16 px |
+| Orden de dibujado | Derecha-abajo |
+| Infinito | No |
 
-### Required Layers (bottom-to-top)
+### Capas obligatorias (de abajo arriba)
 
-| Order | Name | Type | Purpose |
+| Orden | Nombre | Tipo | Propósito |
 |---|---|---|---|
-| 1 | `BG_Far` | Tile | Distant background (slowest parallax) |
-| 2 | `BG_Mid` | Tile | Mid-distance background |
-| 3 | `BG_Near` | Tile | Near background (fast parallax) |
-| 4 | `Terrain` | Tile | Primary solid terrain |
-| 5 | `Terrain_Detail` | Tile | Decorative non-solid overlays |
-| 6 | `Objects` | Object | Entity spawns, triggers, checkpoints |
-| 7 | `Collision` | Object | Collision rectangles |
-| 8 | `FG_Overlay` | Tile | Foreground (renders above entities) |
+| 1 | `BG_Far` | Baldosas | Fondo lejano (parallax más lento) |
+| 2 | `BG_Mid` | Baldosas | Fondo medio |
+| 3 | `BG_Near` | Baldosas | Fondo cercano (parallax rápido) |
+| 4 | `Terrain` | Baldosas | Terreno sólido principal |
+| 5 | `Terrain_Detail` | Baldosas | Decoración sin colisión |
+| 6 | `Objects` | Objetos | Apariciones de entidad, disparadores, checkpoints |
+| 7 | `Collision` | Objetos | Rectángulos de colisión |
+| 8 | `FG_Overlay` | Baldosas | Primer plano (se dibuja encima de las entidades) |
 
-### Required Map-Level Custom Properties
+### Propiedades personalizadas obligatorias a nivel de mapa
 
 | Property | Type | Example |
 |---|---|---|
@@ -138,19 +138,19 @@ ves.
 
 ---
 
-## 2. Object Layer Conventions
+## 2. Convenciones de la capa de objetos
 
-Place all objects in the `Objects` layer as rectangles or points with the correct **type** field.
+Coloca todos los objetos en la capa `Objects` como rectángulos o puntos con el campo **type** correcto.
 
-### PlayerSpawn (Point)
+### PlayerSpawn (punto)
 
-Exactly one point object. **The Y coordinate is the player's feet position** — the engine subtracts 32 px automatically.
+Exactamente un objeto punto. **La coordenada Y es la posición de los pies del jugador** — el motor resta 32 px automáticamente.
 
 ```
 type: PlayerSpawn
 ```
 
-### Enemy Spawns (Point)
+### Apariciones de enemigo (punto)
 
 > **La tabla autoritativa es la de «Arquetipos de enemigo»**, más abajo, dentro
 > del bloque `GENERATED`: la produce `scripts/generate_tmx_reference.py` desde
@@ -170,24 +170,24 @@ type: PlayerSpawn
 | `Caster` | — | `fire_rate`, `projectile_damage` |
 | `Assassin` | — | `patrol_speed`, `alert_speed` |
 
-Numeric properties in TMX (`patrol_length`, `max_health`, etc.) are automatically cast to `float` by `StageLoader`.
+Las propiedades numéricas en el TMX (`patrol_length`, `max_health`, etc.) las convierte `StageLoader` a `float` automáticamente.
 
-### Checkpoint (Rectangle)
+### Checkpoint (rectángulo)
 
 ```
 type: Checkpoint
 properties:
-  - checkpoint_id (int, 0-based)
+  - checkpoint_id (int, base 0)
 ```
 
-### NextTrigger (Rectangle)
+### NextTrigger (rectángulo)
 
 ```
 type: NextTrigger
 ```
-No properties required. Player touches it → stage complete.
+No necesita propiedades. El jugador lo toca → el escenario se completa.
 
-### MessageTrigger (Rectangle)
+### MessageTrigger (rectángulo)
 
 ```
 type: MessageTrigger
@@ -195,56 +195,56 @@ properties:
   - text (string)
 ```
 
-Alternatively, use `type: MessageTrigger_Once` for one-time triggers.
+Alternativamente, usa `type: MessageTrigger_Once` para disparadores de una sola vez.
 
-### HazardZone (Rectangle)
+### HazardZone (rectángulo)
 
 ```
 type: HazardZone
 properties:
-  - damage (float, default: 0.25)
+  - damage (float, por defecto: 0.25)
 ```
 
-### DeathPit (Rectangle)
+### DeathPit (rectángulo)
 
 ```
 type: DeathPit
 ```
 
-### CameraLock (Rectangle)
+### CameraLock (rectángulo)
 
 ```
 type: CameraLock
 properties:
-  - lock_x (bool, default: false)
-  - lock_y (bool, default: false)
+  - lock_x (bool, por defecto: false)
+  - lock_y (bool, por defecto: false)
 ```
 
-### Waypoint (Point) — for Flying enemies
+### Waypoint (punto) — para enemigos Flying
 
 ```
 type: Waypoint
 properties:
-  - owner_id (string) — must match the Flying entity's **name**
-  - waypoint_index (int) — 0-based sort order
+  - owner_id (string) — debe coincidir con el **nombre** de la entidad Flying
+  - waypoint_index (int) — orden de clasificación, base 0
 ```
 
-### Collision Layer Objects
+### Objetos de la capa Collision
 
-In the `Collision` layer, each rectangle object's `type` determines behavior:
+En la capa `Collision`, el `type` de cada objeto rectángulo determina el comportamiento:
 
-| Type | Behavior |
+| Type | Comportamiento |
 |---|---|
-| *(none or `Solid`)* | Full AABB collision |
-| `Platform` | One-way platform (passable from below) |
+| *(ninguno o `Solid`)* | Colisión AABB completa |
+| `Platform` | Plataforma de un sentido (atravesable desde abajo) |
 
 ---
 
-## 3. Stage Registration
+## 3. Registro del escenario
 
-### 3.1 Create a Stage Class
+### 3.1 Crear una clase de escenario
 
-Create a file like `src/stages/<your_stage>/<your_stage>.py`:
+Crea un fichero como `src/stages/<tu_escenario>/<tu_escenario>.py`:
 
 ```python
 from pathlib import Path
@@ -263,54 +263,34 @@ class Stage1(StageScene):
         super().__init__(context, Path("assets/maps/stage1/stage1.tmx"))
 ```
 
-Place the TMX file at `assets/maps/<your_stage>/<your_stage>.tmx`.
+Coloca el fichero TMX en `assets/maps/<tu_escenario>/<tu_escenario>.tmx`.
 
-### 3.2 Wire Up Navigation
+### 3.2 Conectar la navegación
 
-The `ProgressionSystem` emits `Events.STAGE_COMPLETE` when the stage ends. A `WorldMapScene` or story scene should listen for this and transition to the next stage.
-
----
-
-## 4. Testing Your Stage
-
-1. **Validate the TMX** — ensure all 8 required layers exist and properties are set.
-2. **Check for `PlayerSpawn`** — exactly one must exist.
-3. **Place at least one `Checkpoint`** — otherwise death sends you to the start.
-4. **Verify collision** — draw `Collision` layer rectangles so the player can't fall through.
-5. **Run the game** — navigate to your stage and observe:
-   - Sprites render correctly
-   - Enemies move and detect the player
-   - Checkpoints activate and persist on death
-   - `NextTrigger` ends the stage
-
-For reference, see `src/stages/stage0/stage0.py` and `assets/maps/stage0/`.
-
-
---- Traducción al Español ---
-
-## Guía de Creación de Escenarios
-
-### Requisitos del Mapa TMX
-- Orientación: Ortogonal
-- Tiles: 16×16 px
-- 8 capas requeridas (BG_Far a FG_Overlay)
-- Propiedades personalizadas: stage_id, stage_name, time_limit, bgm_track
-
-### Convenciones de la Capa de Objetos
-- PlayerSpawn: Un punto, Y = posición de pies
-- Enemigos: Puntos con propiedades
-- Checkpoints: Rectángulos con checkpoint_id
-- NextTrigger: Rectángulo para finalizar escenario
-
-Para instrucciones detalladas de registro y pruebas, consultar el documento original en inglés.
-
+`ProgressionSystem` emite `Events.STAGE_COMPLETE` al terminar el escenario. Una `WorldMapScene` o una escena de historia debe escuchar este evento y hacer la transición al siguiente escenario.
 
 ---
-## 🔗 Documentos Relacionados
 
-- [[SCENE_CREATION.md|Scene Creation Guide]]
-- [[06_TMX_SPEC.md|TMX Specification]]
-- [[07_STAGE0_DESIGN.md|Stage 0 Design]]
+## 4. Probar tu escenario
+
+1. **Valida el TMX** — comprueba que existen las 8 capas obligatorias y que las propiedades están puestas.
+2. **Comprueba que hay `PlayerSpawn`** — debe existir exactamente uno.
+3. **Coloca al menos un `Checkpoint`** — si no, morir te manda al principio.
+4. **Verifica la colisión** — dibuja los rectángulos de la capa `Collision` para que el jugador no atraviese el suelo.
+5. **Ejecuta el juego** — navega a tu escenario y observa:
+   - Los sprites se dibujan correctamente
+   - Los enemigos se mueven y detectan al jugador
+   - Los checkpoints se activan y persisten al morir
+   - `NextTrigger` termina el escenario
+
+Como referencia, mira `src/stages/stage0/stage0.py` y `assets/maps/stage0/`.
+
+---
+## 🔗 Documentos relacionados
+
+- [[SCENE_CREATION.md|Guía de creación de escenas]]
+- [[06_TMX_SPEC.md|Especificación TMX]]
+- [[07_STAGE0_DESIGN.md|Diseño del Escenario 0]]
 
 ---
 

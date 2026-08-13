@@ -1,18 +1,32 @@
 ---
 document_id: "LOI-EVENTMAP-052"
-title: "EventBus Event Map — Observer Pattern Audit"
-aliases: ["EventMap", "Event Audit"]
-tags: ["event-bus", "observer", "audit", "architecture"]
-description: "Complete mapping of all EventBus events: emitters, subscribers, payloads, and dispatch order."
+title: "Mapa de eventos del EventBus — auditoría del patrón observador"
+aliases: ["Mapa de eventos", "EventMap", "Event Audit"]
+tags: ["event-bus", "observador", "auditoria", "arquitectura"]
+description: "Mapa completo de los eventos del EventBus: emisores, suscriptores, payloads y orden de despacho."
 source: "src/engine/core/events.py, src/engine/core/event_bus.py"
-date_processed: "2026-07-16"
+date_processed: "2026-08-12"
 ---
 
-# EventBus Event Map
+# Mapa de eventos del EventBus
 
-**Document ID:** LOI-EVENTMAP-052  
-**Version:** 1.0.0  
-**Status:** ⚠️ Medido contra el árbol del **2026-07-16**. Ver §0.
+**ID del documento:** LOI-EVENTMAP-052
+**Versión:** 1.1.0
+**Estado:** ⚠️ Medido contra el árbol del **2026-07-16**, con correcciones del **2026-08-04** (§0) y del **2026-08-12** (esta versión). Ver §0.
+
+> **AUD-455.** Traduce el documento y corrige el §1: decía 36 eventos
+> definidos, 83 sitios de `emit` y 23 de `subscribe`. Recontado hoy por
+> `grep` sobre `src/`: **65 eventos definidos, 103 sitios de `emit`, 36 de
+> `subscribe`.** Ya eran erróneos antes de esta corrección — ninguno de los
+> tres números cambió por el trabajo de esta sesión. Aplica además al §2 y al
+> §3 las correcciones que el propio §0 (AUD-254) ya había documentado en
+> prosa pero nunca se llevaron a las tablas — un lector que fuera directo a
+> la tabla de un evento seguía leyendo el dato viejo.
+>
+> Lo que **no** se ha vuelto a verificar entrada por entrada en esta pasada:
+> los ~40 eventos que el §0 no menciona (`VFX_CHARGE`, `SFX_PLAYER_JUMP`,
+> etc.) — no hay evidencia de que hayan cambiado, pero tampoco se han vuelto
+> a medir aquí; sus números de línea pueden haber corrido.
 
 ---
 
@@ -48,458 +62,490 @@ de `StageScene`, así que un sonido emitido desde un menú no suena.
 
 ---
 
-## 1. EventBus Architecture
+## 1. Arquitectura del EventBus
 
-The `EventBus` class (`src/engine/core/event_bus.py`) implements a queue-based pub/sub pattern:
+La clase `EventBus` (`src/engine/core/event_bus.py`) implementa un patrón publicación/suscripción basado en cola:
 
-1. **`emit(event_name, **data)`** — queues the event (deferred dispatch)
-2. **`dispatch()`** — called once per frame by `App` before scene update; drains the queue and invokes all subscribers
-3. **`subscribe(event_name, callback)`** — registers a callback for an event
-4. **`unsubscribe(event_name, callback)`** — removes a callback
+1. **`emit(event_name, **data)`** — encola el evento (despacho diferido)
+2. **`dispatch()`** — la llama `App` una vez por fotograma, antes del update de la escena; vacía la cola e invoca a todos los suscriptores
+3. **`subscribe(event_name, callback)`** — registra un callback para un evento
+4. **`unsubscribe(event_name, callback)`** — quita un callback
 
-Total events defined: **36** (in `src/engine/core/events.py`)
-Total emit sites: **83**
-Total subscribe sites: **23**
+Eventos definidos en total: **65** (en `src/engine/core/events.py`)
+Sitios de `emit` en total: **103**
+Sitios de `subscribe` en total: **36**
 
 ---
 
-## 2. Event Map (alphabetical by event name)
+## 2. Mapa de eventos (alfabético por nombre de evento)
 
 ### ACHIEVEMENT_PROGRESS
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `Achievements._unlock()` (`src/engine/core/achievements.py:150`) |
+| **Emisor** | `Achievements._unlock()` (`src/engine/core/achievements.py:150`) |
 | **Payload** | `achievement_id: str`, `progress: int`, `target: int` |
-| **Subscribers** | *(none — reserved for future UI)* |
-| **Trigger** | When achievement progress value changes |
+| **Suscriptores** | *(ninguno — reservado para UI futura)* |
+| **Se dispara** | Cuando cambia el valor de progreso de un logro |
 
 ### ACHIEVEMENT_UNLOCKED
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `Achievements._unlock()` (`src/engine/core/achievements.py:169`) |
+| **Emisor** | `Achievements._unlock()` (`src/engine/core/achievements.py:169`) |
 | **Payload** | `achievement_id: str`, `name: str` |
-| **Subscribers** | *(none — reserved for future UI)* |
-| **Trigger** | When an achievement is first unlocked |
+| **Suscriptores** | AUD-256: conectado — `sonido.py` lo mapea a `"sfx_ui_stage_complete"`. Antes se veía y no se oía. |
+| **Se dispara** | Cuando se desbloquea un logro por primera vez |
 
 ### BOSS_ATTACK
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `BossVenado._do_stomp()` (`boss_venado.py:225,230,237,294`), `EnemyCaster` (`enemy_caster.py:147`), `EnemyBrute._do_attack()` (`enemy_brute.py:66`), `EnemyAssassin` (`enemy_assassin.py:100`) |
+| **Emisor** | `BossVenado._do_stomp()` (`boss_venado.py:225,230,237,294`), `EnemyCaster` (`enemy_caster.py:147`), `EnemyBrute._do_attack()` (`enemy_brute.py:66`), `EnemyAssassin` (`enemy_assassin.py:100`) |
 | **Payload** | `pattern: str`, `rect: pygame.Rect` |
-| **Subscribers** | StageScene — `_play_sfx_named` handler (mapped to `sfx_bosses_venado_*` via `sfx_map` (en `stage_parts/sonido.py` desde AUD-290)) |
-| **Trigger** | When a boss/miniboss performs a telegraphed attack |
+| **Suscriptores** | StageScene — manejador `_play_sfx_named` (mapeado a `sfx_bosses_venado_*` vía `sfx_map`, en `stage_parts/sonido.py` desde AUD-290) |
+| **Se dispara** | Cuando un jefe/minijefe hace un ataque telegrafiado |
 
 ### BOSS_PHASE_CHANGED
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `BossBase._finish_phase_transition()` (`boss_base.py:164-179`) |
+| **Emisor** | `BossBase._finish_phase_transition()` (`boss_base.py:164-179`) |
 | **Payload** | `boss_name: str`, `phase: int`, `phase_name: str` |
-| **Subscribers** | `HUD._on_boss_phase_changed` (`hud.py:186`) |
-| **Trigger** | When a boss transitions to a new phase |
+| **Suscriptores** | `HUD._on_boss_phase_changed` (`hud.py:186`) |
+| **Se dispara** | Cuando un jefe pasa a una nueva fase |
 
 ### CHECKPOINT_REACHED
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `Checkpoint.activate()` (`checkpoint.py:68-70`) |
+| **Emisor** | `Checkpoint.activate()` (`checkpoint.py:68-70`) |
 | **Payload** | `checkpoint_id: int` |
-| **Subscribers** | `HUD._on_checkpoint_reached` (`hud.py:187`) |
-| **Trigger** | When the player touches a checkpoint for the first time |
+| **Suscriptores** | `HUD._on_checkpoint_reached` (`hud.py:187`) |
+| **Se dispara** | Cuando el jugador toca un checkpoint por primera vez |
 
 ### ENEMY_DIED
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `EnemyBase._die()` (`enemy_base.py:412`) |
+| **Emisor** | `EnemyBase._die()` (`enemy_base.py:412`) |
 | **Payload** | `entity_id: int`, `position: tuple[float, float]` |
-| **Subscribers** | StageScene `_on_enemy_died` (particle burst), Achievements `_on_enemy_died` (`achievements.py:125`) |
-| **Trigger** | When any enemy's health reaches 0 |
+| **Suscriptores** | StageScene `_on_enemy_died` (estallido de partículas), Achievements `_on_enemy_died` (`achievements.py:125`) |
+| **Se dispara** | Cuando la vida de cualquier enemigo llega a 0 |
 
 ### FLAG_SET
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `DialogueSystem` action handler (`dialogue_system.py:98`) |
+| **Emisor** | Manejador de acción de `DialogueSystem` (`dialogue_system.py:315`) |
 | **Payload** | `flag: str` |
-| **Subscribers** | *(none — reserved for future state tracking)* |
-| **Trigger** | When a dialogue node executes a `set_flag` action |
-| **Note** | Event constant was missing from `Events` class until 2026-07-16. No subscribers exist. |
+| **Suscriptores** | AUD-251: conectado en `stage_parts/senales.py` (`_on_flag_set`) |
+| **Se dispara** | Cuando un nodo de diálogo ejecuta una acción `set_flag` |
 
 ### HIDE_MESSAGE
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `MessageBox.hide()` (`message_box.py:96`) |
-| **Payload** | *(none)* |
-| **Subscribers** | `MessageBox._on_hide_message` (`message_box.py:57`) |
-| **Trigger** | When the message box overlay should be hidden |
+| **Emisor** | `MessageBox.hide()` (`message_box.py:96`) |
+| **Payload** | *(ninguno)* |
+| **Suscriptores** | `MessageBox._on_hide_message` (`message_box.py:57`) |
+| **Se dispara** | Cuando debe ocultarse la caja de mensajes |
 
 ### ITEM_COLLECTED
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `DialogueSystem` action handler (`dialogue_system.py:96`) |
+| **Emisor** | Manejador de acción de `DialogueSystem` (`dialogue_system.py:313`) |
 | **Payload** | `item_id: str` |
-| **Subscribers** | *(none — reserved for future inventory system)* |
-| **Trigger** | When a dialogue node executes a `give_item:` action |
-| **Note** | Event constant was missing from `Events` class until 2026-07-16. No subscribers exist. |
+| **Suscriptores** | AUD-251: conectado en `stage_parts/senales.py` — un diálogo que regalaba un objeto no se lo daba a nadie hasta esta corrección |
+| **Se dispara** | Cuando un nodo de diálogo ejecuta una acción `give_item:` |
 
 ### MUSIC_STINGER
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | *(none found — reserved)* |
+| **Emisor** | AUD-254: `BossBase._finish_phase_transition()` (`boss_base.py:415`) |
 | **Payload** | `name: str`, `volume: float` |
-| **Subscribers** | StageScene `_on_music_stinger` (audio stinger playback, `stage_scene.py:364`) |
-| **Trigger** | *(event is not currently emitted by any code — handler is registered but never called)* |
+| **Suscriptores** | `stage_parts/senales.py` `_on_music_stinger` (reproducción del sonido de acento musical), `subtitle_overlay.py` |
+| **Se dispara** | Al terminar una transición de fase de jefe |
 
 ### PLAYER_DAMAGED
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `Player.apply_damage()` (`player.py:334`) |
+| **Emisor** | `Player.apply_damage()` (`player.py:334`) |
 | **Payload** | `amount: float`, `source: tuple[float, float]` |
-| **Subscribers** | StageScene `_on_player_damaged` (blood particles, camera shake, flash, vignette, `stage_scene.py:357`), HUD `_on_player_damaged` (`hud.py:183`) |
-| **Trigger** | When the player takes damage from any source |
-| **Dispatch order** | StageScene handler first (VFX), then HUD (health bar update) |
+| **Suscriptores** | StageScene `_on_player_damaged` (partículas de sangre, sacudida de cámara, destello, viñeta, `stage_scene.py:357`), HUD `_on_player_damaged` (`hud.py:183`) |
+| **Se dispara** | Cuando el jugador recibe daño de cualquier fuente |
+| **Orden de despacho** | primero el manejador de StageScene (VFX), luego el de HUD (actualiza la barra de vida) |
 
 ### PLAYER_DIED
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `Player.apply_damage()` (`player.py:343`), `HUD` (`hud.py:312`), `StageScene._kill_player()` (`stage_scene.py:788`), `HazardSystem` (`hazard_system.py:26`) |
-| **Payload** | `pos: tuple[float, float]` (from StageScene), or empty (from HUD) |
-| **Subscribers** | StageScene `_on_player_died` (death particles, `stage_scene.py:358`), SceneManager `_on_player_died` (death timer, `scene_manager.py:43`), HUD `_on_player_died` (`hud.py:185`) |
-| **Trigger** | When the player's health reaches 0 or falls into a death pit |
+| **Emisor** | `Player.apply_damage()` (`player.py:343`), `HUD` (`hud.py:312`), `StageScene._kill_player()` (`stage_scene.py:788`), `HazardSystem` (`hazard_system.py:26`) |
+| **Payload** | `pos: tuple[float, float]` (desde StageScene), o vacío (desde HUD) |
+| **Suscriptores** | StageScene `_on_player_died` (partículas de muerte, `stage_scene.py:358`), SceneManager `_on_player_died` (temporizador de muerte, `scene_manager.py:43`), HUD `_on_player_died` (`hud.py:185`) |
+| **Se dispara** | Cuando la vida del jugador llega a 0 o cae en un pozo de muerte |
 
 ### PLAYER_HEALED
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `ProgressionSystem.process_checkpoints()` (`progression_system.py:39`), `Player.heal()` — indirect |
+| **Emisor** | `ProgressionSystem.process_checkpoints()` (`progression_system.py:39`), `Player.heal()` — indirect |
 | **Payload** | `amount: int` |
-| **Subscribers** | HUD `_on_player_healed` (`hud.py:184`) |
-| **Trigger** | When the player receives healing (from checkpoint or item) |
+| **Suscriptores** | HUD `_on_player_healed` (`hud.py:184`) |
+| **Se dispara** | Cuando el jugador recibe curación (de un checkpoint o un objeto) |
 
 ### SAVE_REQUESTED
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `ProgressionSystem.process_checkpoints()` (`progression_system.py:42`) |
+| **Emisor** | `ProgressionSystem.process_checkpoints()` (`progression_system.py:42`) |
 | **Payload** | `stage_id: str`, `stage_index: int`, `checkpoint_x: float`, `checkpoint_y: float`, `health: float`, `max_health: float` |
-| **Subscribers** | StageScene `_on_save_requested` (auto-save, `stage_scene.py:454`) |
-| **Trigger** | When the player reaches a new checkpoint |
+| **Suscriptores** | StageScene `_on_save_requested` (auto-save, `stage_scene.py:454`) |
+| **Se dispara** | Cuando el jugador llega a un checkpoint nuevo |
 
 ### SFX_BOSS_HIT
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `collision_system.py:106` (via `Events.SFX_ENEMY_HIT`) — *see SFX_ENEMY_HIT* |
-| **Payload** | *(same as SFX_ENEMY_HIT)* |
-| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) to `"sfx_boss_hit"` |
-| **Notes** | This event constant is **defined but never emitted** — it exists for future boss-specific hit sounds. |
+| **Emisor** | AUD-254: `EnemyBase._die()`/manejo de golpe (`enemy_base.py:521`), condicionado a `isinstance(self, BossBase)` |
+| **Payload** | *(igual que SFX_ENEMY_HIT)* |
+| **Suscriptores** | Mapeado vía `sfx_map` de StageScene (en `stage_parts/sonido.py` desde AUD-290) a `"sfx_boss_hit"` |
 
 ### SFX_BOSS_PHASE_CHANGE
-*(Defined in Events class, not currently emitted or subscribed)*
+| Campo | Valor |
+|-------|-------|
+| **Emisor** | AUD-254: `BossBase._finish_phase_transition()`, indirectamente vía `boss_base.py:370` |
+| **Payload** | *(ninguno)* |
+| **Suscriptores** | Mapeado en `stage_parts/sonido.py` a `"sfx_bosses_phase_change"` |
 
-### SFX_BOSSES_* (7 events: GAVILAN_DIVE, GAVILAN_MASK_BEAM, PABURU_EYE_BEAM, PABURU_WAVE, RELIC_APPEAR, REY_SPIT, REY_SPLIT)
-*(Defined in Events class, not currently emitted or subscribed — reserved for future bosses)*
+### SFX_BOSSES_* (7 eventos: GAVILAN_DIVE, GAVILAN_MASK_BEAM, PABURU_EYE_BEAM, PABURU_WAVE, RELIC_APPEAR, REY_SPIT, REY_SPLIT)
+AUD-254: `PABURU_EYE_BEAM` dejó de estar huérfano — lo emite `src/stages/boss_paburu/boss_paburu.py:438`, mapeado en `sonido.py`. Los otros seis siguen sin emisor a propósito: pertenecen a ataques de jefes de estudiantes todavía no implementados.
 
 ### SFX_BOSSES_VENADO_CHARGE / STOMP / VINE
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `BossVenado` emits `Events.BOSS_ATTACK`, mapped via `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
-| **Payload** | *(derived from BOSS_ATTACK payload)* |
-| **Subscribers** | StageScene SFX handler (`stage_scene.py:424-439`) |
-| **Trigger** | When Boss Venado performs charge / stomp / vine attacks |
+| **Emisor** | `BossVenado` emite `Events.BOSS_ATTACK`, mapeado vía `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
+| **Payload** | *(derivado del payload de BOSS_ATTACK)* |
+| **Suscriptores** | Manejador SFX de StageScene (`stage_scene.py:424-439`) |
+| **Se dispara** | Cuando el Venado Sagrado hace ataques de embestida / pisotón / enredadera |
 
 ### SFX_CHECKPOINT
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `ProgressionSystem.process_checkpoints()` (`progression_system.py:35`) |
-| **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) to `"sfx_checkpoint"` |
-| **Trigger** | When the player touches a checkpoint |
+| **Emisor** | `ProgressionSystem.process_checkpoints()` (`progression_system.py:35`) |
+| **Payload** | *(ninguno)* |
+| **Suscriptores** | Mapeado vía `sfx_map` de StageScene (en `stage_parts/sonido.py` desde AUD-290) a `"sfx_checkpoint"` |
+| **Se dispara** | Cuando el jugador toca un checkpoint |
 
 ### SFX_ENEMIES_PROJECTILE_HIT_WALL
-*(Defined but not emitted or subscribed)*
+| Campo | Valor |
+|-------|-------|
+| **Emisor** | AUD-255: `EnemyShooter` (`enemy_shooter.py:143`) |
+| **Payload** | `pos: tuple[float, float]` |
+| **Suscriptores** | Mapeado en `stage_parts/sonido.py` a `"sfx_enemies_projectile_hit_wall"` |
 
 ### SFX_ENEMY_DIE_LARGE / SFX_ENEMY_DIE_SMALL
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `EnemyBase._die()` (`enemy_base.py:418`) |
-| **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
-| **Trigger** | When an enemy dies (LARGE for bosses/brutes, SMALL for walkers/flying) |
+| **Emisor** | `EnemyBase._die()` (`enemy_base.py:418`) |
+| **Payload** | *(ninguno)* |
+| **Suscriptores** | Mapeado vía `sfx_map` de StageScene (en `stage_parts/sonido.py` desde AUD-290) |
+| **Se dispara** | Cuando muere un enemigo (LARGE para jefes/brutos, SMALL para caminantes/voladores) |
 
 ### SFX_ENEMY_HIT
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `CollisionSystem.check_attack_hits()` (`collision_system.py:106`) |
+| **Emisor** | `CollisionSystem.check_attack_hits()` (`collision_system.py:106`) |
 | **Payload** | `pos: list[float]`, `damage: float` |
-| **Subscribers** | StageScene `_on_enemy_hit` (blood particles, camera shake, `stage_scene.py:340`) |
-| **Trigger** | When the player's attack connects with an enemy |
+| **Suscriptores** | StageScene `_on_enemy_hit` (partículas de sangre, sacudida de cámara, `stage_scene.py:340`) |
+| **Se dispara** | Cuando el ataque del jugador conecta con un enemigo |
 
 ### SFX_ENVIRONMENT_ONE_WAY_PLATFORM
-*(Defined but not emitted or subscribed)*
+| Campo | Valor |
+|-------|-------|
+| **Emisor** | AUD-255: `Player` (`player.py:1188`) |
+| **Payload** | *(ninguno)* |
+| **Suscriptores** | Mapeado en `stage_parts/sonido.py` a `"sfx_environment_one_way_platform"` |
 
 ### SFX_ENVIRONMENT_SCREEN_SHAKE
-*(Defined but not emitted or subscribed)*
+| Campo | Valor |
+|-------|-------|
+| **Emisor** | AUD-254: `src/stages/boss_paburu/boss_paburu.py:451` |
+| **Payload** | *(ninguno)* |
+| **Suscriptores** | Mapeado en `stage_parts/sonido.py` a `"sfx_environment_screen_shake"` |
 
 ### SFX_HAZARD_ZONE
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `HazardSystem.update()` (`hazard_system.py:48`) |
-| **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
-| **Trigger** | When the player takes damage from a hazard zone |
+| **Emisor** | `HazardSystem.update()` (`hazard_system.py:48`) |
+| **Payload** | *(ninguno)* |
+| **Suscriptores** | Mapeado vía `sfx_map` de StageScene (en `stage_parts/sonido.py` desde AUD-290) |
+| **Se dispara** | Cuando el jugador recibe daño de una zona de peligro |
 
 ### SFX_HIT_CONNECT
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `CollisionSystem.check_attack_hits()` (`collision_system.py:121`) |
+| **Emisor** | `CollisionSystem.check_attack_hits()` (`collision_system.py:121`) |
 | **Payload** | `pos: list[float]`, `damage: float` |
-| **Subscribers** | StageScene `_on_hit_connect` (hit particles, damage numbers, `stage_scene.py:339`) |
-| **Trigger** | When any player attack hitbox connects (after processing per-enemy hits) |
+| **Suscriptores** | StageScene `_on_hit_connect` (hit particles, damage numbers, `stage_scene.py:339`) |
+| **Se dispara** | Cuando cualquier hitbox de ataque del jugador conecta (tras procesar los golpes por enemigo) |
 
 ### SFX_MENU_HOVER
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `DemoMenuScene` (`demo_menu_scene.py:115`), `OptionsScene` (`options_scene.py:116`), `TitleScene` (`title_scene.py:121`), `WorldMapScene` (`world_map_scene.py:89`) |
-| **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
-| **Trigger** | When the user navigates over a menu item |
+| **Emisor** | `DemoMenuScene` (`demo_menu_scene.py:115`), `OptionsScene` (`options_scene.py:116`), `TitleScene` (`title_scene.py:121`), `WorldMapScene` (`world_map_scene.py:89`) |
+| **Payload** | *(ninguno)* |
+| **Suscriptores** | Mapeado vía `sfx_map` de StageScene (en `stage_parts/sonido.py` desde AUD-290) |
+| **Se dispara** | Cuando el usuario navega sobre un elemento del menú |
 
 ### SFX_MENU_CONFIRM
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `DemoMenuScene` (`demo_menu_scene.py:118`), `OptionsScene` (`options_scene.py:130`), `TitleScene` (`title_scene.py:128`), `WorldMapScene` (`world_map_scene.py:93`) |
-| **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
-| **Trigger** | When the user confirms a menu selection |
+| **Emisor** | `DemoMenuScene` (`demo_menu_scene.py:118`), `OptionsScene` (`options_scene.py:130`), `TitleScene` (`title_scene.py:128`), `WorldMapScene` (`world_map_scene.py:93`) |
+| **Payload** | *(ninguno)* |
+| **Suscriptores** | Mapeado vía `sfx_map` de StageScene (en `stage_parts/sonido.py` desde AUD-290) |
+| **Se dispara** | Cuando el usuario confirma una selección de menú |
 
 ### SFX_MENU_CANCEL
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `DemoMenuScene` (`demo_menu_scene.py:134`), `OptionsScene` (`options_scene.py:118`), `TitleScene` (`title_scene.py:132`) |
-| **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
-| **Trigger** | When the user cancels/dismisses a menu |
+| **Emisor** | `DemoMenuScene` (`demo_menu_scene.py:134`), `OptionsScene` (`options_scene.py:118`), `TitleScene` (`title_scene.py:132`) |
+| **Payload** | *(ninguno)* |
+| **Suscriptores** | Mapeado vía `sfx_map` de StageScene (en `stage_parts/sonido.py` desde AUD-290) |
+| **Se dispara** | Cuando el usuario cancela o descarta un menú |
 
 ### SFX_PLAYER_CROUCH
-*(Defined but not emitted or subscribed)*
+| Campo | Valor |
+|-------|-------|
+| **Emisor** | AUD-255: `states/grounded.py:178` |
+| **Payload** | *(ninguno)* |
+| **Suscriptores** | Mapeado en `stage_parts/sonido.py` a `"sfx_player_crouch"` |
 
 ### SFX_PLAYER_DIE
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `Player.apply_damage()` (`player.py:344`) |
-| **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
-| **Trigger** | When the player dies |
+| **Emisor** | `Player.apply_damage()` (`player.py:344`) |
+| **Payload** | *(ninguno)* |
+| **Suscriptores** | Mapeado vía `sfx_map` de StageScene (en `stage_parts/sonido.py` desde AUD-290) |
+| **Se dispara** | Cuando el jugador muere |
 
 ### SFX_PLAYER_FOOTSTEP
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `WalkingState` (`states/grounded.py:83`) |
-| **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
-| **Trigger** | On each footstep during player walk animation |
+| **Emisor** | `WalkingState` (`states/grounded.py:83`) |
+| **Payload** | *(ninguno)* |
+| **Suscriptores** | Mapeado vía `sfx_map` de StageScene (en `stage_parts/sonido.py` desde AUD-290) |
+| **Se dispara** | En cada paso de la animación de caminar del jugador |
 
 ### SFX_PLAYER_HEAL
-*(Defined but not emitted or subscribed)*
+| Campo | Valor |
+|-------|-------|
+| **Emisor** | AUD-255: `Player.heal()` (`player.py:559`) |
+| **Payload** | *(ninguno)* |
+| **Suscriptores** | Mapeado en `stage_parts/sonido.py` a `"sfx_ui_heart_restore"` |
 
 ### SFX_PLAYER_HURT
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `Player.apply_damage()` (`player.py:348`) |
-| **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
-| **Trigger** | When the player takes damage (but doesn't die) |
+| **Emisor** | `Player.apply_damage()` (`player.py:348`) |
+| **Payload** | *(ninguno)* |
+| **Suscriptores** | Mapeado vía `sfx_map` de StageScene (en `stage_parts/sonido.py` desde AUD-290) |
+| **Se dispara** | Cuando el jugador recibe daño (pero no muere) |
 
 ### SFX_PLAYER_JUMP
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `JumpingState` (`states/airborne.py:79`), `WallSlideState` (`states/wall.py:13`) |
-| **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
-| **Trigger** | When the player jumps |
+| **Emisor** | `JumpingState` (`states/airborne.py:79`), `WallSlideState` (`states/wall.py:13`) |
+| **Payload** | *(ninguno)* |
+| **Suscriptores** | Mapeado vía `sfx_map` de StageScene (en `stage_parts/sonido.py` desde AUD-290) |
+| **Se dispara** | Cuando el jugador salta |
 
 ### SFX_PLAYER_LAND
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `Player` physics update (`player.py:654`) |
-| **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
-| **Trigger** | When the player lands on the ground after being airborne |
+| **Emisor** | `Player` physics update (`player.py:654`) |
+| **Payload** | *(ninguno)* |
+| **Suscriptores** | Mapeado vía `sfx_map` de StageScene (en `stage_parts/sonido.py` desde AUD-290) |
+| **Se dispara** | Cuando el jugador aterriza tras estar en el aire |
 
 ### SFX_PLAYER_LONG_ATTACK
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | los estados de ataque de `states/attack.py` |
-| **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
-| **Trigger** | When the player performs a long/heavy attack |
+| **Emisor** | los estados de ataque de `states/attack.py` |
+| **Payload** | *(ninguno)* |
+| **Suscriptores** | Mapeado vía `sfx_map` de StageScene (en `stage_parts/sonido.py` desde AUD-290) |
+| **Se dispara** | Cuando el jugador hace un ataque largo/pesado |
 
 ### SFX_PLAYER_PARRY
-*(Defined but not emitted or subscribed)*
+| Campo | Valor |
+|-------|-------|
+| **Emisor** | AUD-254: `EnemyBase` cuando un ataque de enemigo es parado (`enemy_base.py:783`) |
+| **Payload** | *(ninguno)* |
+| **Suscriptores** | Mapeado en `stage_parts/sonido.py` a `"sfx_parry"` |
 
 ### SFX_PLAYER_SHORT_ATTACK
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | los estados de ataque de `states/attack.py` |
-| **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
-| **Trigger** | When the player performs a quick/short attack |
+| **Emisor** | los estados de ataque de `states/attack.py` |
+| **Payload** | *(ninguno)* |
+| **Suscriptores** | Mapeado vía `sfx_map` de StageScene (en `stage_parts/sonido.py` desde AUD-290) |
+| **Se dispara** | Cuando el jugador hace un ataque corto/rápido |
 
 ### SFX_PROJECTILE_FIRE
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `EnemyCaster` (`enemy_caster.py:180`), `EnemyArcher` (`enemy_archer.py:119`), `EnemyShooter` (`enemy_shooter.py:315`) |
-| **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
-| **Trigger** | When an enemy fires a projectile |
+| **Emisor** | `EnemyCaster` (`enemy_caster.py:180`), `EnemyArcher` (`enemy_archer.py:119`), `EnemyShooter` (`enemy_shooter.py:315`) |
+| **Payload** | *(ninguno)* |
+| **Suscriptores** | Mapeado vía `sfx_map` de StageScene (en `stage_parts/sonido.py` desde AUD-290) |
+| **Se dispara** | Cuando un enemigo dispara un proyectil |
 
 ### SFX_STAGE_BANNER
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `StageScene` (`stage_scene.py:194`) |
-| **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
-| **Trigger** | When the stage name banner is displayed |
+| **Emisor** | `StageScene` (`stage_scene.py:194`) |
+| **Payload** | *(ninguno)* |
+| **Suscriptores** | Mapeado vía `sfx_map` de StageScene (en `stage_parts/sonido.py` desde AUD-290) |
+| **Se dispara** | Cuando se muestra el rótulo con el nombre del escenario |
 
 ### SFX_STAGE_COMPLETE
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `StageScene.check_stage_complete()` (`stage_scene.py:622,625`) |
-| **Payload** | *(none)* |
-| **Subscribers** | Mapped via StageScene `sfx_map` (en `stage_parts/sonido.py` desde AUD-290) |
-| **Trigger** | When the player completes a stage |
+| **Emisor** | `StageScene.check_stage_complete()` (`stage_scene.py:622,625`) |
+| **Payload** | *(ninguno)* |
+| **Suscriptores** | Mapeado vía `sfx_map` de StageScene (en `stage_parts/sonido.py` desde AUD-290) |
+| **Se dispara** | Cuando el jugador completa un escenario |
 
 ### SFX_UI_GAME_OVER
-*(Defined but not emitted or subscribed)*
+| Campo | Valor |
+|-------|-------|
+| **Emisor** | AUD-254: `StageScene` (`stage_scene.py:1255`) |
+| **Payload** | *(ninguno)* |
+| **Suscriptores** | Mapeado en `stage_parts/sonido.py` a `"sfx_ui_game_over"` |
 
 ### SHOW_MESSAGE
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `HazardSystem.update()` — message triggers (`hazard_system.py:38`) |
+| **Emisor** | `HazardSystem.update()` — message triggers (`hazard_system.py:38`) |
 | **Payload** | `text: str`, `duration: float` |
-| **Subscribers** | `MessageBox._on_show_message` (`message_box.py:56`) |
-| **Trigger** | When the player overlaps a message trigger zone |
+| **Suscriptores** | `MessageBox._on_show_message` (`message_box.py:56`) |
+| **Se dispara** | Cuando el jugador entra en una zona de disparo de mensaje |
 
 ### STAGE_COMPLETE
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `StageScene.check_stage_complete()` (`stage_scene.py:635`), `BossVenado.on_defeated()` — indirect |
+| **Emisor** | `StageScene.check_stage_complete()` (`stage_scene.py:635`), `BossVenado.on_defeated()` — indirect |
 | **Payload** | `stage_id: str` |
-| **Subscribers** | `SceneManager._on_stage_complete` (advance to next stage, `scene_manager.py:42`), `HUD._on_stage_complete` (`hud.py:188`) |
-| **Trigger** | When the stage exit is reached or final boss is defeated |
+| **Suscriptores** | `SceneManager._on_stage_complete` (advance to next stage, `scene_manager.py:42`), `HUD._on_stage_complete` (`hud.py:188`) |
+| **Se dispara** | Cuando se alcanza la salida del escenario o se derrota al jefe final |
 
 ### VFX_CHARGE
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `ChargingState` (`states/ability.py:279`), `WallSlideState` (`states/wall.py:13`) |
+| **Emisor** | `ChargingState` (`states/ability.py:279`), `WallSlideState` (`states/wall.py:13`) |
 | **Payload** | `pos: tuple[float, float]`, `level: int` |
-| **Subscribers** | StageScene `_on_vfx_charge` (charge particles, `stage_scene.py:360`) |
-| **Trigger** | When the player charges an attack |
+| **Suscriptores** | StageScene `_on_vfx_charge` (partículas de carga, `stage_scene.py:360`) |
+| **Se dispara** | Cuando el jugador carga un ataque |
 
 ### VFX_PARRY
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `ParryState` (`states/ability.py:93`), `EnemyBase._on_parried()` (`enemy_base.py:526`), `EnemyCaster` (`enemy_caster.py:208`), `EnemyArcher` (`enemy_archer.py:147`), `EnemyShooter` (`enemy_shooter.py:204`) |
+| **Emisor** | `ParryState` (`states/ability.py:93`), `EnemyBase._on_parried()` (`enemy_base.py:526`), `EnemyCaster` (`enemy_caster.py:208`), `EnemyArcher` (`enemy_archer.py:147`), `EnemyShooter` (`enemy_shooter.py:204`) |
 | **Payload** | `pos: tuple[float, float]` |
-| **Subscribers** | StageScene `_on_vfx_parry` (parry particles, camera shake, flash, bloom, `stage_scene.py:359`), Achievements `_on_parry` (`achievements.py:126`) |
-| **Trigger** | When a player parry connects with an enemy attack |
+| **Suscriptores** | StageScene `_on_vfx_parry` (partículas de parry, sacudida de cámara, destello, bloom, `stage_scene.py:359`), Achievements `_on_parry` (`achievements.py:126`) |
+| **Se dispara** | Cuando un parry del jugador conecta con un ataque enemigo |
 
 ### VFX_SLAM
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `PlayerStates.SlamState` (`player_states.py:1268`) |
+| **Emisor** | `PlayerStates.SlamState` (`player_states.py:1268`) |
 | **Payload** | `pos: tuple[float, float]` |
-| **Subscribers** | StageScene `_on_vfx_slam` (slam particles, camera shake, `stage_scene.py:361`) |
-| **Trigger** | When the player performs a ground slam |
+| **Suscriptores** | StageScene `_on_vfx_slam` (partículas de golpe de tierra, sacudida de cámara, `stage_scene.py:361`) |
+| **Se dispara** | Cuando el jugador hace un golpe de tierra |
 
 ### VFX_ULTIMATE
-| Field | Value |
+| Campo | Valor |
 |-------|-------|
-| **Emitter** | `PlayerStates.UltimateState` (`player_states.py:798`) |
+| **Emisor** | `PlayerStates.UltimateState` (`player_states.py:798`) |
 | **Payload** | `pos: tuple[float, float]` |
-| **Subscribers** | StageScene `_on_vfx_ultimate` (ultimate particles, bloom, flash, shake, `stage_scene.py:362`) |
-| **Trigger** | When the player uses the ultimate/special attack |
+| **Suscriptores** | StageScene `_on_vfx_ultimate` (partículas de ataque especial, bloom, destello, sacudida, `stage_scene.py:362`) |
+| **Se dispara** | Cuando el jugador usa el ataque especial/definitivo |
 
 ---
 
-## 3. Orphan Events (defined but never emitted nor subscribed)
+## 3. Eventos huérfanos (definidos pero nunca emitidos ni suscritos)
 
-These events exist in the `Events` class but have **zero emit sites and zero subscribers**:
+**AUD-455 — esta tabla decía 18 huérfanos; el §0 (AUD-254, 2026-08-04) ya
+documentaba en prosa que 13 de esos 18 habían dejado de serlo, pero nunca se
+actualizó esta tabla.** Quedan realmente **6** eventos sin emisor, y es una
+decisión de diseño (ataques de jefes de estudiantes aún no implementados),
+no un defecto:
 
-| Event | Notes |
+| Evento | Notas |
 |-------|-------|
-| `PLAYER_HEALED` | Subscribed by HUD, but only emitted indirectly via checkpoint healing in ProgressionSystem (not from Player.heal() directly). One-directional. |
-| `MUSIC_STINGER` | Subscribed by StageScene, never emitted by any code |
-| `SFX_BOSS_HIT` | Reserved |
-| `SFX_BOSS_PHASE_CHANGE` | Reserved |
-| `SFX_BOSSES_GAVILAN_DIVE` | Future boss |
-| `SFX_BOSSES_GAVILAN_MASK_BEAM` | Future boss |
-| `SFX_BOSSES_PABURU_EYE_BEAM` | Future boss |
-| `SFX_BOSSES_PABURU_WAVE` | Future boss |
-| `SFX_BOSSES_RELIC_APPEAR` | Future boss mechanic |
-| `SFX_BOSSES_REY_SPIT` | Future boss |
-| `SFX_BOSSES_REY_SPLIT` | Future boss |
-| `SFX_ENEMIES_PROJECTILE_HIT_WALL` | Unused |
-| `SFX_ENVIRONMENT_ONE_WAY_PLATFORM` | Unused |
-| `SFX_ENVIRONMENT_SCREEN_SHAKE` | Unused |
-| `SFX_PLAYER_CROUCH` | Unused |
-| `SFX_PLAYER_HEAL` | Unused |
-| `SFX_PLAYER_PARRY` | Unused |
-| `SFX_UI_GAME_OVER` | Unused |
+| `SFX_BOSSES_GAVILAN_DIVE` | Jefe futuro |
+| `SFX_BOSSES_GAVILAN_MASK_BEAM` | Jefe futuro |
+| `SFX_BOSSES_PABURU_WAVE` | Jefe futuro |
+| `SFX_BOSSES_RELIC_APPEAR` | Mecánica de jefe futura |
+| `SFX_BOSSES_REY_SPIT` | Jefe futuro |
+| `SFX_BOSSES_REY_SPLIT` | Jefe futuro |
+| `ACHIEVEMENT_PROGRESS` | Reservado a propósito — el propio código lo dice (ver §0) |
+
+Los siguientes **ya no son huérfanos** y sus entradas en §2 están corregidas
+en esta versión: `PLAYER_HEALED` (unidireccional: HUD lo escucha pero sólo
+lo emite la curación por checkpoint, no `Player.heal()` directamente — esto
+sigue siendo cierto, no es un error, es la regla de negocio), `MUSIC_STINGER`,
+`SFX_BOSS_HIT`, `SFX_BOSS_PHASE_CHANGE`, `SFX_BOSSES_PABURU_EYE_BEAM`,
+`SFX_ENEMIES_PROJECTILE_HIT_WALL`, `SFX_ENVIRONMENT_ONE_WAY_PLATFORM`,
+`SFX_ENVIRONMENT_SCREEN_SHAKE`, `SFX_PLAYER_CROUCH`, `SFX_PLAYER_HEAL`,
+`SFX_PLAYER_PARRY`, `SFX_UI_GAME_OVER`, `ITEM_COLLECTED`, `FLAG_SET`,
+`ACHIEVEMENT_UNLOCKED`.
 
 ---
 
-## 4. Undefined Events (emitted but not in Events class)
+## 4. Eventos sin definir (emitidos pero ausentes de la clase Events)
 
-These are **string literals** or attribute references that exist in emit/subscribe calls but are NOT defined in `Events`:
+Esto documenta un problema histórico, ya cerrado: literales de cadena o referencias de atributo que existían en llamadas `emit`/`subscribe` pero no estaban definidas en `Events`.
 
-| Event Literal | File | Line | Action Taken |
+| Literal de evento | Fichero | Línea | Acción tomada |
 |---------------|------|------|-------------|
-| `Events.ITEM_COLLECTED` | `dialogue_system.py` | 96 | ✅ Added to `Events` class (2026-07-16) |
-| `Events.FLAG_SET` | `dialogue_system.py` | 98 | ✅ Added to `Events` class (2026-07-16) |
+| `Events.ITEM_COLLECTED` | `dialogue_system.py` | 313 | ✅ Añadido a la clase `Events` (2026-07-16) |
+| `Events.FLAG_SET` | `dialogue_system.py` | 315 | ✅ Añadido a la clase `Events` (2026-07-16) |
 
 ---
 
-## 5. Subscriber Dispatch Order Map
+## 5. Mapa del orden de despacho a los suscriptores
 
-This section documents the **order** in which multiple subscribers receive the same event.
+Esta sección documenta el **orden** en que varios suscriptores reciben el mismo evento.
 
 ### PLAYER_DAMAGED
-1. **StageScene._on_player_damaged** — spawns blood particles, camera shake, flash, vignette
-2. **HUD._on_player_damaged** — updates health bar display
+1. **StageScene._on_player_damaged** — genera partículas de sangre, sacude la cámara, destello, viñeta
+2. **HUD._on_player_damaged** — actualiza la barra de vida
 
 ### PLAYER_DIED
-1. **StageScene._on_player_died** — death particles, camera shake, flash
-2. **HUD._on_player_died** — hides HUD
-3. **SceneManager._on_player_died** — starts death-timer → game over scene
-*(Note: depends on subscribe order in `StageScene.on_enter()` vs `SceneManager.__init__` vs `HUD.__init__`)*
+1. **StageScene._on_player_died** — partículas de muerte, sacudida de cámara, destello
+2. **HUD._on_player_died** — oculta el HUD
+3. **SceneManager._on_player_died** — arranca el temporizador de muerte → escena de fin de partida
+*(Nota: depende del orden de suscripción entre `StageScene.on_enter()`, `SceneManager.__init__` y `HUD.__init__`)*
 
 ### ENEMY_DIED
-1. **StageScene._on_enemy_died** — spawns death particles
-2. **Achievements._on_enemy_died** — tracks enemy kill count
+1. **StageScene._on_enemy_died** — genera partículas de muerte
+2. **Achievements._on_enemy_died** — cuenta las bajas de enemigos
 
 ### STAGE_COMPLETE
-1. **HUD._on_stage_complete** — plays stage complete animation
-2. **SceneManager._on_stage_complete** — advances to next stage or menu
+1. **HUD._on_stage_complete** — reproduce la animación de fin de escenario
+2. **SceneManager._on_stage_complete** — avanza al siguiente escenario o al menú
 
 ### VFX_PARRY
-1. **StageScene._on_vfx_parry** — parry particles, shake, flash, bloom
-2. **Achievements._on_parry** — tracks parry count
+1. **StageScene._on_vfx_parry** — partículas de parry, sacudida, destello, bloom
+2. **Achievements._on_parry** — cuenta los parries
 
 ---
 
-## 6. Findings & Recommendations
+## 6. Hallazgos y recomendaciones
 
-### 6.1 Findings
+### 6.1 Hallazgos
 
-1. **No subscriber for SFX events in non-StageScene contexts** — All SFX events are wired only inside `StageScene`. Menu SFX events (`SFX_MENU_HOVER`, `SFX_MENU_CONFIRM`, `SFX_MENU_CANCEL`) work because they use the same EventBus instance, but they depend on StageScene being the active scene.
+1. **Sin suscriptor para eventos SFX fuera de `StageScene`** — todos los eventos SFX se cablean sólo dentro de `StageScene`. Los eventos SFX de menú (`SFX_MENU_HOVER`, `SFX_MENU_CONFIRM`, `SFX_MENU_CANCEL`) funcionan porque usan la misma instancia de EventBus, pero dependen de que `StageScene` sea la escena activa.
 
-2. **ITEMS_COLLECTED and FLAG_SET had no event constants** — DialogueSystem emitted these via `Events.ITEM_COLLECTED` and `Events.FLAG_SET` but they were missing from the `Events` class. Fixed in this audit.
+2. **(Histórico, resuelto 2026-07-16) `ITEM_COLLECTED` y `FLAG_SET` no tenían constante de evento** — `DialogueSystem` los emitía vía `Events.ITEM_COLLECTED` y `Events.FLAG_SET` pero faltaban en la clase `Events`. Arreglado en esa auditoría; conectados a suscriptor real en AUD-251 (ver §0 y §2).
 
-3. **14 orphan events** — defined but never emitted. Some are reserved for future bosses.
+3. **(Histórico, parcialmente resuelto) Eventos huérfanos** — el §3 documentaba 18; hoy quedan 6, ver §3.
 
-4. **`MUSIC_STINGER` has a subscriber but no emitter** — StageScene registers a handler but nothing ever fires this event.
+4. **(Histórico, resuelto en AUD-254) `MUSIC_STINGER` tenía suscriptor pero no emisor** — ahora lo emite `BossBase._finish_phase_transition()`.
 
-5. **`PLAYER_HEALED` is emitted via raw event name** — `ProgressionSystem.process_checkpoints()` uses `Events.PLAYER_HEALED` but `Player.heal()` does NOT emit this event. Only checkpoint healing triggers it.
+5. **`PLAYER_HEALED` se emite con nombre de evento en crudo** — `ProgressionSystem.process_checkpoints()` usa `Events.PLAYER_HEALED`, pero `Player.heal()` **no** emite este evento directamente. Sólo lo dispara la curación por checkpoint. Esto sigue siendo así hoy — no es una regresión, es la regla de negocio actual, y su corrección (si se decide) es una decisión de diseño, no una limpieza de documentación.
 
-### 6.2 Recommendations
+### 6.2 Recomendaciones
 
-1. 🔴 **Remove orphan events** or add a lint check to warn about events with no emit sites
-2. 🟡 **Wire `MUSIC_STINGER`** into boss phase transitions (`BossBase._finish_phase_transition`)
-3. 🟢 **Add subscriber‑side integration tests** for all events that have both emitter and subscriber
-4. 🟢 **Consider an `unsubscribe_all_events(callback)`** helper on EventBus for cleaner cleanup
+1. 🔴 **Quitar los eventos huérfanos que quedan** (§3) o añadir una comprobación de lint que avise de eventos sin sitio de `emit`
+2. ~~🟡 Conectar `MUSIC_STINGER` a las transiciones de fase de jefe~~ — hecho en AUD-254 (`BossBase._finish_phase_transition`)
+3. 🟢 **Añadir pruebas de integración del lado del suscriptor** para todos los eventos que tienen emisor y suscriptor
+4. 🟢 **Considerar un `unsubscribe_all(events, callback)`** en el EventBus para una limpieza más ordenada — ya existe (ver §1); revisar si cubre el caso que motivó esta recomendación

@@ -116,7 +116,7 @@ El orden de dibujo combina dos mecanismos:
 
 **Política de cámara por zona**: `CameraLock` en el motor (`camera.py`) es un interruptor **global** — usa `any()` sobre toda la lista de locks e ignora el rect de cada uno. `BossVenadoScene` compensa esto desde la escena: `_locks_for_player_x` devuelve la lista original de locks del TMX solo cuando el jugador está dentro de la arena (`player_x >= ARENA_X0`) y una lista vacía fuera de ella, para que la cámara siga libremente al jugador en el resto del mapa y se fije en el gazebo durante la pelea. Además, `_sync_map_render` llama cada frame a `stage.map_layer.center(...)` (API pública de `pyscroll`) para compensar H-10: sin esta llamada el fondo del tilemap se queda pegado a su posición inicial aunque `camera.offset` sí avance correctamente para las entidades.
 
-**Nota de contrato**: el objeto del boss en el TMX usa `type="BossVenado"` (convención del motor y del TMX de referencia del profesor). El registro de `06_TMX_SPEC.md` §4.2 lista un tipo `BossSpawn` genérico que **no** está implementado por el loader real; `type="BossVenado"` es el valor que efectivamente instancia la clase.
+**Nota de contrato**: el objeto del boss en el TMX usa `type="BossVenado"` (convención del motor y del TMX de referencia del profesor). Desde AUD-259 el loader también acepta el tipo genérico `BossSpawn` con propiedad `boss="BossVenado"` (ver `06_TMX_SPEC.md` §4.2 y `23_DATA_SCHEMAS.md` §3.10): produce exactamente la misma entidad. Este mapa de referencia sigue usando `type="BossVenado"` directamente porque es anterior a AUD-259 y no había motivo para tocarlo.
 
 ### Unidad V — Color (`ColorTools`)
 

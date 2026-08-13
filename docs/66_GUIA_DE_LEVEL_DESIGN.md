@@ -649,11 +649,11 @@ del datacenter).
 
 ## 9. Documentos relacionados
 
-- [[16_WORLD_DESIGN.md|World Design]] — la geografía y los conteos canónicos
-- [[17_BOSS_SPEC.md|Boss Specification]] — el diseño fase a fase de los jefes
-- [[05_ENEMY_SPEC.md|Enemy Specification]] — los arquetipos y sus reglas
-- [[06_TMX_SPEC.md|TMX Specification]] — el vocabulario de objetos del mapa
+- [[16_WORLD_DESIGN.md|Diseño del mundo]] — la geografía y los conteos canónicos
+- [[17_BOSS_SPEC.md|Especificación de jefes]] — el diseño fase a fase de los jefes
+- [[05_ENEMY_SPEC.md|Especificación de enemigos]] — los arquetipos y sus reglas
+- [[06_TMX_SPEC.md|Especificación TMX]] — el vocabulario de objetos del mapa
 - [[07_STAGE0_DESIGN.md|Diseño del Escenario 0]] — la plantilla de referencia
-- [[18_ENEMY_ROSTER.md|Enemy Roster]] — el catálogo de enemigos
+- [[18_ENEMY_ROSTER.md|Elenco de enemigos]] — el catálogo de enemigos
 - [[38_STAGE_BOSS_GUIDE.md|Guía Rápida de Stages y Bosses]] — cómo construir, esta guía dice qué construir
 - [[65_EL_LORE_EXTENSO.md|El Lore Extenso]] — el porqué narrativo de cada zona

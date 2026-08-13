@@ -1,25 +1,47 @@
 ---
 document_id: "LOI-ARCH-003"
-title: "Legacy of InFest — Architecture"
-aliases: ["Architecture", "Engine Architecture"]
-tags: ["architecture", "engine", "structure"]
-description: "Full folder structure, module responsibilities, data flow"
+title: "Legacy of InFest — Arquitectura"
+aliases: ["Arquitectura", "Architecture", "Engine Architecture"]
+tags: ["arquitectura", "motor", "estructura"]
+description: "Estructura completa de carpetas, responsabilidad de cada módulo, flujo de datos"
 source: "docs/03_ARCHITECTURE.md"
-date_processed: "2026-07-14"
+date_processed: "2026-08-12"
 ---
 
-# Legacy of InFest — Architecture
+# Legacy of InFest — Arquitectura
 
-**Document ID:** LOI-ARCH-003
-**Version:** 1.1.0
-**Status:** Official
-**Audience:** Professor, Teaching Assistants, AI coding assistants
+**ID del documento:** LOI-ARCH-003
+**Versión:** 1.2.0
+**Estado:** Oficial
+**Audiencia:** Profesor, ayudantes, asistentes de programación con IA
+
+> **AUD-455.** Esta versión traduce el documento completo (antes en inglés,
+> con una nota final que remitía al lector de vuelta al inglés: *"Este
+> documento está disponible en inglés. Para una traducción completa al
+> español, contacte al profesor"*) y corrige varios defectos verificados
+> contra el árbol real y `tests/test_architecture_doc_matches_tree.py`:
+> citaba tres veces un documento inexistente, `77_SYLLABUS_ALIGNMENT_AUDIT.md`;
+> tenía la carpeta `framework/academic/` documentada **dos veces**, con dos
+> descripciones distintas de los mismos tres ficheros (una con los nombres de
+> clase reales — `PLAN`, `ProgresoAcademico`, `SesionAcademica` — y otra con
+> nombres inventados que no existen en el código); el árbol de `render/`
+> tenía `sprite_batch.py` fuera de su rama; `ai_predictor.py` se describía
+> como «predicción de la acción del jugador» cuando predice **tácticas de
+> enemigo**, no acciones del jugador; el mapa de dependencias de §3.1 seguía
+> citando `engine.scene.transitions`, un módulo que el propio documento (nota
+> AUD-111, más abajo) dice que se retiró por tener cero usos; la tabla de
+> `VisionTools` (§2.9) documentaba `classify_region(features, model)`, que no
+> existe en `vision_tools.py`; y la sección de pruebas enumeraba unos 75
+> ficheros de una carpeta `tests/` que hoy tiene 297 — no por desactualizada
+> unas líneas, sino por siete veces menos de lo real.
 
 ---
 
-## 1. Complete Folder Structure
+## 1. Estructura completa de carpetas
 
-**Corrected per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.6 and §7.** All paths below are relative to the actual private GitHub repository root. `engine/`, `framework/`, and `stages/` are relocated under `src/`; `student_templates/` is added. Every module, responsibility, and dependency rule documented elsewhere in this file is otherwise unchanged from the original design — only the path prefix changes.
+Todas las rutas de abajo son relativas a la raíz real del repositorio.
+`engine/`, `framework/` y `stages/` viven bajo `src/`; existe además
+`student_templates/`.
 
 ```
 legacy-of-infest/                      # Actual repo root
@@ -84,7 +106,7 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── difficulty.py              # Difficulty scaling (Difficulty enum, set_difficulty)
 │   │   │   ├── experience.py              # XP por enemigo, curva de nivel y puntos de habilidad (AUD-249)
 │   │   │   ├── skill_tree.py              # AUD-293: el árbol — vitalidad, fuerza e ímpetu
-│   │   │   ├── i18n.py                    # Internationalization (gettext wrapper)
+│   │   │   ├── i18n.py                    # AUD-455: catálogo JSON es/en propio — explícitamente NO gettext (ver F3.1 en el módulo)
 │   │   │   ├── inventory.py               # Item/collectible management
 │   │   │   ├── integridad.py             # AUD-295: firma HMAC de los JSON del jugador
 │   │   │   ├── plugins.py                # AUD-296: ganchos para extender sin tocar el núcleo
@@ -176,8 +198,8 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── memoria_de_textura.py      # AUD-397: memoria de textura viva y detección de fugas (GAP-049)
 │   │   │   ├── normales.py                # AUD-340: normales procedurales del alfa del sprite
 │   │   │   ├── shaders.py                 # GLSL shader sources
-│   │   │   └── gpu_present.py            # PresentadorGPU: presentar por SDL2 (AUD-148, opcional)
 │   │   │   ├── sprite_batch.py           # AUD-302: muchos sprites en una llamada (blits)
+│   │   │   └── gpu_present.py            # PresentadorGPU: presentar por SDL2 (AUD-148, opcional)
 │   │   │
 │   │   ├── ui/
 │   │   │   ├── __init__.py
@@ -218,7 +240,9 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── enemy_assassin.py          # EnemyAssassin: cloak + lunge
 │   │   │   ├── entity_factory.py          # EntityFactory: registry-based enemy creation
 │   │   │   ├── flight_strategies.py       # FlightStrategy: sine/bezier/random flight patterns
-│   │   │   ├── ai_predictor.py            # AIPredictor: ML-based player action prediction
+│   │   │   ├── ai_predictor.py            # BehaviorPredictor: KNN+árbol recomienda táctica de enemigo, consultado en lote por SquadBrain a 4 Hz
+│   │   │   ├── tactica_por_reglas.py      # accion_por_distancia: heurística sin sklearn para el primer lote (AUD-456)
+│   │   │   ├── precarga_ia.py             # precargar_ia/ia_lista: importa sklearn en hilo para no congelar el primer lote (AUD-456)
 │   │   │   ├── bestiary.py                # Bestiary: enemy encounter/kill tracking
 │   │   │   ├── bestiary_registry.py       # BestiaryRegistry: enemy data registry
 │   │   │   ├── ranged_weapon.py           # ArcoDelJugador: arco del jugador, munición y flechas (F4.2)
@@ -341,19 +365,13 @@ legacy-of-infest/                      # Actual repo root
 │   │   │
 │   │   ├── processing/
 │   │   │   ├── __init__.py
-│   │   │   ├── color_tools.py             # ColorTools: RGB↔HSV↔HSL↔CMYK, alpha blend
-│   │   │   ├── filter_tools.py            # FilterTools: convolution, blur, Sobel, Canny
-│   │   │   ├── curve_tools.py             # CurveTools: Bézier, B-Spline, NURBS, sample
-│   │   │   ├── vision_tools.py            # VisionTools: threshold, morphology, features
-│   │   │   ├── edge_detection.py          # EdgeDetection: additional edge detection methods
-│   │   │   ├── pattern_recognition_tools.py  # PatternRecognitionTools: training, inference
-│   │   │   └── reference_model.py         # ReferenceModel: reference ML model
-│   │   │
-│   │   ├── academic/
-│   │   │   ├── __init__.py
-│   │   │   ├── curriculum.py              # Curriculum: syllabus unit definitions
-│   │   │   ├── progress.py                # Progress: student progress tracking
-│   │   │   └── sesion.py                  # Sesion: class session management
+│   │   │   ├── color_tools.py             # ColorTools: RGB↔HSV↔HSL↔CMYK, mezcla alfa
+│   │   │   ├── filter_tools.py            # FilterTools: convolución, desenfoque, Sobel, Canny
+│   │   │   ├── curve_tools.py             # CurveTools: Bézier, B-Spline, NURBS, muestreo
+│   │   │   ├── vision_tools.py            # VisionTools: umbralización, morfología, características
+│   │   │   ├── edge_detection.py          # EdgeDetection: métodos adicionales de detección de bordes
+│   │   │   ├── pattern_recognition_tools.py  # PatternRecognitionTools: entrenamiento, inferencia
+│   │   │   └── reference_model.py         # AUD-455: modelo de referencia reentrenado en la máquina del jugador, no distribuido como .pkl
 │   │   │
 │   │   └── ai/
 │   │       ├── __init__.py
@@ -361,22 +379,22 @@ legacy-of-infest/                      # Actual repo root
 │   │       └── navegacion.py              # AUD-389: A* sobre tiles, con su coste medido
 │   │
 │   └── stages/
-│       ├── stage0/                        # PROFESSOR-OWNED. Executable documentation.
+│       ├── stage0/                        # DEL PROFESOR. Documentación ejecutable.
 │       │   ├── __init__.py
-│       │   ├── stage0.py                  # Stage0Scene class
-│       │   ├── stage0.tmx                 # Tiled map
+│       │   ├── stage0.py                  # Clase Stage0Scene
+│       │   ├── stage0.tmx                 # Mapa de Tiled
 │       │   └── README.md
-│       ├── boss_venado/                   # PROFESSOR-OWNED. Boss Venado implementation.
+│       ├── boss_venado/                   # DEL PROFESOR. Jefe de referencia.
 │       │   ├── __init__.py
 │       │   ├── boss_venado.py
 │       │   └── boss_venado_scene.py
-│       └── <student_assignment>/          # ONE folder per individually-assigned Stage/Boss
+│       └── <entrega_del_estudiante>/      # UNA carpeta por Stage/Boss asignado individualmente
 │           ├── __init__.py
-│           ├── <assignment>.py
-│           ├── <assignment>.tmx           # (Stages only — Bosses use a fixed arena, no TMX scroll)
+│           ├── <entrega>.py
+│           ├── <entrega>.tmx               # (sólo Stages — los Boss usan una arena fija, sin scroll)
 │           └── README.md
 │
-├── scripts/                            # Tooling scripts
+├── scripts/                            # Scripts de herramientas
 │   ├── _cli_paths.py                   # Shared path utilities for CLI scripts
 │   ├── audit_docs_vs_code.py           # Audits doc identifiers vs actual code (regenerates docs/63)
 │   ├── build_executable.py             # Build executable from source
@@ -404,7 +422,7 @@ legacy-of-infest/                      # Actual repo root
 │   ├── 02_color_spaces_exercises.ipynb # Unit V — Color space conversion exercises
 │   └── 03_filter_kernels_exercises.ipynb# Unit VII — Convolution kernel exercises
 │
-├── student_templates/                  # Canonical starter scaffold (copied into src/stages/ by each student)
+├── student_templates/                  # Plantilla canónica (cada estudiante la copia a src/stages/)
 │   ├── __init__.py
 │   ├── stage_template/
 │   │   ├── stage_template.py
@@ -414,101 +432,38 @@ legacy-of-infest/                      # Actual repo root
 │       ├── boss_template.py
 │       └── README_template.md
 │
-├── locale/                             # Localization files
-│   ├── en.json                         # English translations
-│   └── es.json                         # Spanish translations
+├── locale/                             # Ficheros de localización
+│   ├── en.json                         # Traducciones al inglés
+│   └── es.json                         # Traducciones al español
 │
-├── fonts/                              # Bundled font files
+├── fonts/                              # Fuentes empaquetadas
 │
-├── tools/                              # Developer tooling (not imported by game)
+├── tools/                              # Herramientas de desarrollo (el juego no las importa)
 │
-├── web/                                # Web dashboard (if applicable)
+├── web/                                # Panel web (si aplica)
 │
-├── exams/                              # Generated exam files
+├── exams/                              # Exámenes generados
 │
-├── PHASE_FIX_REPORT.md                 # Stage 0 collision/spawn fixes
-├── KNOWN_GAPS.md                       # Known gaps and their resolutions
-├── REMEDIATION_PLAN.md                 # 8-phase remediation plan
+├── PHASE_FIX_REPORT.md                 # Arreglos de colisión/spawn del Stage 0
+├── KNOWN_GAPS.md                       # Huecos conocidos y su resolución
+├── REMEDIATION_PLAN.md                 # Plan de remediación en 8 fases
 │
-└── tests/                              # Unit and integration tests (41+ files, 5,251+ LOC)
+└── tests/                              # AUD-455: 297 ficheros de prueba reales — ver §1.1, no se enumeran todos aquí
     ├── __init__.py
-    ├── conftest.py
-    ├── strategies.py                   # Hypothesis strategies for property-based testing
-    ├── test_academic_units.py
-    ├── test_accessibility.py
-    ├── test_ambience.py
-    ├── test_asset_loader.py
-    ├── test_audio_wiring.py
-    ├── test_audit_regressions.py
-    ├── test_benchmarks.py
-    ├── test_bestiary_roster.py
-    ├── test_boss_base.py
-    ├── test_boss_encounter.py
-    ├── test_camera.py
-    ├── test_checkpoint.py
-    ├── test_clock.py
-    ├── test_collision_edge_detect.py
-    ├── test_color_tools.py
-    ├── test_combo_system.py
-    ├── test_curve_tools.py
-    ├── test_day_night.py
-    ├── test_demo_centering.py
-    ├── test_demo_scenes.py
-    ├── test_edge_detection.py
-    ├── test_enemy_flying.py
-    ├── test_enemy_shooter.py
-    ├── test_enemy_state_machine.py
-    ├── test_enemy_walker.py
-    ├── test_event_bus.py
-    ├── test_event_integration.py
-    ├── test_filter_demo_perf.py
-    ├── test_filter_tools.py
-    ├── test_floor_x_skip.py
-    ├── test_frame_budget.py
-    ├── test_gameplay_integration.py
-    ├── test_hud.py
-    ├── test_i18n.py
-    ├── test_input_injection.py
-    ├── test_input_manager.py
-    ├── test_level_design_qa.py
-    ├── test_lighting.py
-    ├── test_math_utils.py
-    ├── test_menu_navigation.py
-    ├── test_message_box.py
-    ├── test_new_pipeline_modules.py
-    ├── test_noise_lab.py
-    ├── test_orphan_systems.py
-    ├── test_particle_systems.py
-    ├── test_pattern_demo.py
-    ├── test_pattern_recognition_tools.py
-    ├── test_player_damage.py
-    ├── test_player_hurtbox.py
-    ├── test_player_physics.py
-    ├── test_player_state_machine.py
-    ├── test_player_states_extended.py
-    ├── test_post_processing.py
-    ├── test_reported_ui_bugs.py
-    ├── test_save_manager.py
-    ├── test_scene_manager.py
-    ├── test_scene_registry_integrity.py
-    ├── test_scene_smoke.py
-    ├── test_seasons.py
-    ├── test_spawn_no_pop.py
-    ├── test_squad_brain.py
-    ├── test_stage_loader.py
-    ├── test_stage0_platform_solidity.py
-    ├── test_stage0_smoke.py
-    ├── test_student_guidance.py
-    ├── test_student_template.py
-    ├── test_teaching_tools.py
-    ├── test_tmx_diagnostics.py
-    ├── test_tmx_validator.py
-    ├── test_toolchain_consistency.py
-    ├── test_trails.py
-    ├── test_ui_consistency.py
-    ├── test_vision_tools.py
-    ├── test_visual_regression.py
-    ├── benchmarks/
+    ├── conftest.py                      # activa SDL_VIDEODRIVER=dummy antes de importar pygame
+    ├── strategies.py                    # estrategias de Hypothesis para pruebas basadas en propiedades
+    ├── test_layering.py                 # las 4 reglas de capas de §3.1, comprobadas en cada corrida
+    ├── test_architecture_doc_matches_tree.py  # este documento contra el árbol real de src/
+    ├── test_documentacion_en_espanol.py # qué documentos siguen en inglés (lista que sólo encoge)
+    ├── test_player_physics.py, test_player_state_machine.py, test_enemy_*.py, test_boss_*.py, …
+    │                                    # física, máquina de estados, IA de enemigos y jefes
+    ├── test_event_bus.py, test_stage_loader.py, test_camera.py, test_hud.py, …
+    │                                    # motor: eventos, carga de escenarios, cámara, UI
+    ├── test_color_tools.py, test_filter_tools.py, test_vision_tools.py, test_curve_tools.py, …
+    │                                    # unidades académicas VII–IX: filtros, visión, patrones
+    ├── (y unos 270 ficheros más — la mayoría con nombre descriptivo en español,
+    │    p. ej. test_la_ia_contra_su_heuristica.py, test_los_guardias_no_ven_a_traves_de_las_paredes.py)
+    ├── benchmarks/                      # 5 pruebas de presupuesto (memoria, física, render, arranque)
     │   ├── __init__.py
     │   ├── baseline_v1.json
     │   ├── test_memory_benchmark.py
@@ -525,66 +480,88 @@ legacy-of-infest/                      # Actual repo root
     │   └── vision/
     └── playtest/
         ├── __init__.py
-        └── bot.py
+        ├── bot.py
+        └── jump_bench.py
 ```
 
-**Clarification on individual assignment (per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.1):** Each student is assigned exactly one Stage or Boss in Class 1 (see `21_COURSE_SCHEDULE.md`). They copy the appropriate template from `student_templates/` into a new folder under `src/stages/` named for their assignment (e.g., `src/stages/stage1_2_la_soda/` or `src/stages/boss_venado/`). They develop that single folder through all three Evaluación Práctica checkpoints. No student creates more than one assignment folder.
+**AUD-455 — por qué esta sección no enumera los 297 ficheros de `tests/`.**
+La versión anterior enumeraba unos 75, con el encabezado «41+ files,
+5.251+ LOC». Los dos números eran ya falsos cuando se escribieron y llevan
+un tiempo sin corresponder a nada: hoy hay 297 ficheros de prueba. Una lista
+así se desactualiza en la primera prueba que se añade — que es casi cada
+commit — y nadie la vuelve a mirar hasta que alguien la sigue. La lista
+autoritativa es siempre `pytest --collect-only -q`; este documento describe
+las categorías, no los nombres.
 
-## 2. Module Responsibilities
+**Aclaración sobre la entrega individual:** cada estudiante tiene asignado
+exactamente un Stage o un Boss (ver `21_COURSE_SCHEDULE.md`). Copia la
+plantilla correspondiente de `student_templates/` a una carpeta nueva bajo
+`src/stages/`, con el nombre de su entrega (por ejemplo,
+`src/stages/stage1_2_la_soda/` o `src/stages/boss_venado/`). Desarrolla esa
+única carpeta a lo largo de las evaluaciones prácticas. Ningún estudiante
+crea más de una carpeta de entrega.
+
+## 2. Responsabilidad de cada módulo
 
 ### 2.1 Engine Core
 
 #### `engine/core/app.py` — `App`
 
-The root application class. It owns the Pygame display surface, the `DeltaClock`, the `SceneManager`, the `InputManager`, and the `AudioManager`. It runs the main loop, pumps events into the `InputManager` and `EventBus`, calls `update()` and `draw()` on the active scene, and handles display scaling from internal resolution to window resolution. The UI layout uses a responsive system based on percentage calculations rather than fixed pixel coordinates, ensuring consistent proportions across display scales.
+La clase raíz de la aplicación. Es dueña de la superficie de Pygame, el `DeltaClock`, el `SceneManager`, el `InputManager` y el `AudioManager`. Corre el bucle principal, bombea eventos al `InputManager` y al `EventBus`, llama a `update()` y `draw()` de la escena activa, y gestiona el escalado de la resolución interna a la de la ventana. La disposición de la UI usa un sistema responsivo basado en porcentajes, no en coordenadas de píxel fijas, para mantener proporciones consistentes entre escalas de pantalla.
 
-**Public Interface:**
-- `App()` — Initialize Pygame, create internal surface at settings.INTERNAL_WIDTH×settings.INTERNAL_HEIGHT, create all engine singletons
-- `App.run()` — Enter the main loop. Does not return until the application exits.
+**Interfaz pública:**
+- `App()` — inicializa Pygame, crea la superficie interna con `settings.INTERNAL_WIDTH`×`settings.INTERNAL_HEIGHT`, crea todos los singletons del motor
+- `App.run()` — entra al bucle principal. No retorna hasta que la aplicación termina.
 
-**Constraints:**
-- Only one `App` instance may exist.
-- `App` is instantiated in `main.py` only.
-- No other module calls `pygame.init()` or `pygame.display.set_mode()`.
+**Restricciones:**
+- Sólo puede existir una instancia de `App`.
+- `App` se instancia únicamente en `main.py`.
+- Ningún otro módulo llama a `pygame.init()` ni a `pygame.display.set_mode()`.
 
-#### `engine/core/settings.py` — Constants
+#### `engine/core/settings.py` — Constantes
 
-A flat module of uppercase constants. No classes, no functions.
+Un módulo plano de constantes en mayúsculas. Sin clases, sin funciones.
 
-| Constant | Type | Value | Description |
+| Constante | Tipo | Valor | Descripción |
 |---|---|---|---|
-| `INTERNAL_WIDTH` | int | 800 | Internal render width in pixels |
-| `INTERNAL_HEIGHT` | int | 600 | Internal render height in pixels |
-| `TARGET_FPS` | int | 60 | Target frames per second |
-| `DISPLAY_SCALE` | int | 1 | Default window scale multiplier — set to 2-4 on high-DPI displays |
-| `TILE_SIZE` | int | 16 | Standard tile size in pixels |
-| `ASSETS_DIR` | Path | `Path("assets")` | Root asset directory |
-| `STAGES_DIR` | Path | `Path("src/stages")` | Root stages directory |
-| `STUDENT_TEMPLATES_DIR` | Path | `Path("student_templates")` | Student templates directory |
-| `PLAYER_MAX_HEALTH` | float | 5.0 | Maximum player hearts |
-| `GRAVITY` | float | 800.0 | Pixels per second squared |
-| `PLAYER_WALK_SPEED` | float | 90.0 | Pixels per second |
-| `PLAYER_JUMP_FORCE` | float | -380.0 | Initial vertical jump velocity |
+| `INTERNAL_WIDTH` | int | 800 | Ancho de render interno en píxeles |
+| `INTERNAL_HEIGHT` | int | 600 | Alto de render interno en píxeles |
+| `TARGET_FPS` | int | 60 | Fotogramas por segundo objetivo |
+| `DISPLAY_SCALE` | int | 1 (por defecto) | Multiplicador de escala de ventana; se lee de una variable de entorno, con 1 si no está fijada o no es un entero |
+| `TILE_SIZE` | int | 16 | Tamaño estándar de baldosa en píxeles |
+| `ASSETS_DIR` | Path | `_PROJECT_ROOT / "assets"` | Carpeta raíz de recursos (ruta absoluta, ancla en la raíz del proyecto) |
+| `STAGES_DIR` | Path | `_PROJECT_ROOT / "src/stages"` | Carpeta raíz de escenarios |
+| `STUDENT_TEMPLATES_DIR` | Path | `_PROJECT_ROOT / "student_templates"` | Carpeta de plantillas de estudiante |
+| `PLAYER_MAX_HEALTH` | float | 5.0 | Corazones máximos del jugador |
+| `GRAVITY` | float | 800.0 | Píxeles por segundo al cuadrado |
+| `PLAYER_WALK_SPEED` | float | 90.0 | Píxeles por segundo |
+| `PLAYER_JUMP_FORCE` | float | -380.0 | Velocidad vertical inicial del salto |
 
 #### `engine/core/clock.py` — `DeltaClock`
 
-Wraps `pygame.time.Clock`. Provides delta time in seconds, accumulated time, a time scale multiplier (for slow-motion effects), and an FPS accessor.
+Envuelve `pygame.time.Clock`. Da el delta de tiempo en segundos, tiempo acumulado, un multiplicador de escala de tiempo (para cámara lenta) y un acceso a los FPS.
 
-**Public Interface:**
-- `DeltaClock.tick() → float` — Tick the clock. Returns delta time in seconds, scaled by `time_scale`.
-- `DeltaClock.fps → float` — Current frames per second.
-- `DeltaClock.time_scale: float` — Multiplier. 1.0 is normal. 0.5 is half speed.
+**Interfaz pública:**
+- `DeltaClock.tick() → float` — avanza el reloj. Devuelve el delta en segundos, escalado por `time_scale`.
+- `DeltaClock.fps → float` — fotogramas por segundo actuales.
+- `DeltaClock.time_scale → float` — **`@property`**, no un atributo simple: es el
+  producto de todas las escalas nombradas activas (`escalar(nombre, factor)` /
+  `restaurar(nombre)`), pensado para que el hitstop y una cámara lenta
+  manual puedan coexistir sin pisarse. Detalle completo en
+  `22_API_CONTRACTS.md` §2.2.
 
 #### `engine/core/event_bus.py` — `EventBus`
 
-An instance-based pub/sub event dispatcher. Entities and systems communicate through the event bus rather than holding direct references to each other. Module-level convenience functions (`emit`, `subscribe`, `unsubscribe`) delegate to a default module-level instance for ergonomic single-instance usage.
+Un despachador de eventos publicación/suscripción, por instancia. Las entidades y sistemas se comunican a través del bus en vez de guardar referencias directas entre sí. Los eventos no se despachan al emitirse: `emit()` los encola y `dispatch()` los vacía al principio del siguiente fotograma (ver §4.2) — un reentrante (un evento emitido *por* un suscriptor) se vuelve a encolar en vez de despacharse de forma recursiva, lo que hace imposible un bucle infinito de emisiones.
 
-**Public Interface:**
-- `EventBus.subscribe(event_name: str, callback: Callable)` — Register a listener.
-- `EventBus.unsubscribe(event_name: str, callback: Callable)` — Remove a listener.
-- `EventBus.emit(event_name: str, **data)` — Dispatch an event to all registered listeners.
+**Interfaz pública:**
+- `EventBus.subscribe(event_name: str, callback: Callable)` — registra un oyente.
+- `EventBus.unsubscribe(event_name: str, callback: Callable)` — quita un oyente.
+- `EventBus.unsubscribe_all(events: list[str], callback: Callable)` — quita un oyente de varios eventos a la vez.
+- `EventBus.emit(event_name: str, **data)` — encola un evento para el próximo `dispatch()`.
+- `EventBus.dispatch()` — vacía la cola, invocando a los suscriptores.
 
-**Standard Events:**
+**Eventos estándar:**
 
 | Event Name | Data Keys | Emitted By | Consumed By |
 |---|---|---|---|
@@ -594,7 +571,7 @@ An instance-based pub/sub event dispatcher. Entities and systems communicate thr
 | `CHECKPOINT_REACHED` | `checkpoint_id` | Checkpoint | StageLoader |
 | `ENEMY_DIED` | `entity_id`, `position` | EnemyBase | Stage, AudioManager |
 | `STAGE_COMPLETE` | — | NextTrigger | SceneManager |
-| `BOSS_PHASE_CHANGED` | `phase` | BossBase | Stage, HUD |
+| `BOSS_PHASE_CHANGED` | `boss_name`, `phase`, `phase_count`, `new_max_health` | BossBase | Stage, HUD |
 | `SHOW_MESSAGE` | `text`, `duration` | Stage | MessageBox |
 | `HIDE_MESSAGE` | — | Stage | MessageBox |
 
@@ -604,32 +581,32 @@ An instance-based pub/sub event dispatcher. Entities and systems communicate thr
 
 #### `engine/scene/scene_manager.py` — `SceneManager`
 
-Manages a stack of `BaseScene` objects. Supports push (overlay a scene), pop (return to previous), and replace (transition to new scene). Only the top scene receives `update()` and `draw()` calls.
+Gestiona una pila de objetos `BaseScene`. Soporta apilar (superponer una escena), desapilar (volver a la anterior) y reemplazar (transición a una nueva). Sólo la escena de arriba recibe llamadas a `update()` y `draw()`.
 
-**Public Interface:**
-- `SceneManager.push(scene: BaseScene)` — Push a scene onto the stack.
-- `SceneManager.pop()` — Pop the top scene. Resumes the scene below.
-- `SceneManager.replace(scene: BaseScene)` — Replace the top scene with a new one.
-- `SceneManager.current → BaseScene` — The currently active scene.
+**Interfaz pública:**
+- `SceneManager.push(scene: BaseScene)` — apila una escena.
+- `SceneManager.pop()` — desapila la escena de arriba. Reanuda la de debajo.
+- `SceneManager.replace(scene: BaseScene)` — reemplaza la escena de arriba por una nueva.
+- `SceneManager.current → BaseScene` — la escena activa actual.
 
 #### `engine/scene/base_scene.py` — `BaseScene`
 
-Abstract base class for all scenes (splash, title, story screens, stages). Constructor receives the `GameContext` dependency injection container.
+Clase base abstracta para todas las escenas (splash, título, pantallas de historia, escenarios). El constructor recibe el contenedor de inyección de dependencias `GameContext`.
 
 ```python
 class BaseScene:
     def __init__(self, context: GameContext) -> None: ...
 ```
 
-**Lifecycle Methods (called by SceneManager in this order):**
-- `awake()` — Called once when the scene is first instantiated (before `on_enter`).
-- `start()` — Called once on the first `update()` after `on_enter`.
-- `on_enter()` — Called when the scene becomes active.
-- `on_exit()` — Called when the scene is deactivated or removed.
-- `update(dt: float)` — Update scene state. `dt` is delta time in seconds.
-- `draw(surface: pygame.Surface)` — Draw the scene to the provided surface.
-- `on_pause()` — Called when another scene is pushed on top.
-- `on_resume()` — Called when the scene is resumed after a pop.
+**Métodos del ciclo de vida (en este orden, invocados por `SceneManager`):**
+- `awake()` — se llama una vez, al instanciar la escena (antes de `on_enter`).
+- `start()` — se llama una vez, en el primer `update()` tras `on_enter`.
+- `on_enter()` — se llama cuando la escena se activa.
+- `on_exit()` — se llama cuando la escena se desactiva o se quita.
+- `update(dt: float)` — actualiza el estado de la escena. `dt` es el delta de tiempo en segundos.
+- `draw(surface: pygame.Surface)` — dibuja la escena en la superficie dada.
+- `on_pause()` — se llama cuando se apila otra escena encima.
+- `on_resume()` — se llama cuando la escena se reanuda tras un `pop`.
 
 ---
 
@@ -637,27 +614,27 @@ class BaseScene:
 
 #### `engine/input/input_manager.py` — `InputManager`
 
-Unified input abstraction. Handles keyboard and gamepad input through the `ActionMap`. Entities query actions, not raw keys or buttons.
+Abstracción unificada de entrada. Gestiona teclado y mando a través del `ActionMap`. Las entidades consultan acciones, no teclas o botones en crudo.
 
-**Public Interface:**
-- `InputManager.is_action_pressed(action: str) → bool` — True on the frame the action was activated.
-- `InputManager.is_action_held(action: str) → bool` — True while the action is held.
-- `InputManager.is_action_released(action: str) → bool` — True on the frame the action was released.
-- `InputManager.pump(events: list)` — Called once per frame by `App` with the current event list.
+**Interfaz pública:**
+- `InputManager.is_action_pressed(action: str) → bool` — verdadero en el fotograma en que se activó la acción.
+- `InputManager.is_action_held(action: str) → bool` — verdadero mientras se mantiene la acción.
+- `InputManager.is_action_released(action: str) → bool` — verdadero en el fotograma en que se soltó la acción.
+- `InputManager.pump(events: list)` — la llama `App` una vez por fotograma con la lista de eventos actual.
 
-**Standard Actions:**
+**Acciones estándar:**
 
-| Action | Default Keyboard | Default Controller |
+| Acción | Teclado por defecto | Mando por defecto |
 |---|---|---|
-| `MOVE_LEFT` | Left Arrow / A | D-Pad Left / Left Stick Left |
-| `MOVE_RIGHT` | Right Arrow / D | D-Pad Right / Left Stick Right |
-| `JUMP` | Space / Up / W | A (Xbox) / Cross (PS) |
-| `CROUCH` | Down / S | D-Pad Down / Left Stick Down |
-| `SHORT_ATTACK` | Z / J | X (Xbox) / Square (PS) |
-| `LONG_ATTACK` | X / K | Y (Xbox) / Triangle (PS) |
+| `MOVE_LEFT` | Flecha izquierda / A | Cruceta izquierda / stick izquierdo a la izquierda |
+| `MOVE_RIGHT` | Flecha derecha / D | Cruceta derecha / stick izquierdo a la derecha |
+| `JUMP` | Espacio / Arriba / W | A (Xbox) / Cruz (PS) |
+| `CROUCH` | Abajo / S | Cruceta abajo / stick izquierdo abajo |
+| `SHORT_ATTACK` | Z / J | X (Xbox) / Cuadrado (PS) |
+| `LONG_ATTACK` | X / K | Y (Xbox) / Triángulo (PS) |
 | `PAUSE` | Escape / P | Start |
 | `CONFIRM` | Enter / Z | A (Xbox) |
-| `CANCEL` | Backspace / X | B (Xbox) |
+| `CANCEL` | Retroceso / X | B (Xbox) |
 
 ---
 
@@ -665,14 +642,14 @@ Unified input abstraction. Handles keyboard and gamepad input through the `Actio
 
 #### `engine/audio/audio_manager.py` — `AudioManager`
 
-Wraps `pygame.mixer`. Manages music playback (one track at a time) and SFX playback (multiple simultaneous channels). Volume control is applied globally.
+Envuelve `pygame.mixer`. Gestiona la reproducción de música (una pista a la vez) y de efectos (varios canales simultáneos). El control de volumen se aplica de forma global.
 
-**Public Interface:**
-- `AudioManager.play_music(path: str | Path, loops: int = -1)` — Play named BGM track.
-- `AudioManager.stop_music()` — Stop BGM.
-- `AudioManager.play_sfx(name: str, volume: float = 1.0)` — Play named sound effect.
-- `AudioManager.set_music_volume(volume: float)` — Set music volume 0.0–1.0.
-- `AudioManager.set_sfx_volume(volume: float)` — Set SFX volume 0.0–1.0.
+**Interfaz pública:**
+- `AudioManager.play_music(path: str | Path, loops: int = -1)` — reproduce una pista de música con nombre.
+- `AudioManager.stop_music()` — detiene la música.
+- `AudioManager.play_sfx(name: str, volume: float = 1.0)` — reproduce un efecto con nombre.
+- `AudioManager.set_music_volume(volume: float)` — fija el volumen de música, 0.0–1.0.
+- `AudioManager.set_sfx_volume(volume: float)` — fija el volumen de efectos, 0.0–1.0.
 
 ---
 
@@ -680,23 +657,23 @@ Wraps `pygame.mixer`. Manages music playback (one track at a time) and SFX playb
 
 #### `engine/ui/hud.py` — `HUD`
 
-Renders the player HUD: portrait, heart meter, timer, and score. The HUD is drawn on top of all stage content on every frame. It subscribes to `PLAYER_DAMAGED`, `PLAYER_HEALED`, and `PLAYER_DIED` events to update the heart display.
+Dibuja el HUD del jugador: retrato, medidor de corazones, temporizador y puntuación. Se dibuja encima de todo el contenido del escenario en cada fotograma. Se suscribe a `PLAYER_DAMAGED`, `PLAYER_HEALED` y `PLAYER_DIED` para actualizar el medidor de corazones.
 
-**Public Interface:**
-- `HUD.update(dt: float)` — Animate timer, flash states.
-- `HUD.draw(surface: pygame.Surface)` — Blit HUD elements onto the surface.
-- `HUD.start_timer(seconds: int)` — Initialize and start the countdown timer.
-- `HUD.pause_timer()` / `HUD.resume_timer()` — Pause/resume the timer.
+**Interfaz pública:**
+- `HUD.update(dt: float)` — anima el temporizador y los estados de parpadeo.
+- `HUD.draw(surface: pygame.Surface)` — vuelca los elementos del HUD sobre la superficie.
+- `HUD.start_timer(seconds: int)` — inicializa y arranca la cuenta atrás.
+- `HUD.pause_timer()` / `HUD.resume_timer()` — pausa/reanuda el temporizador.
 
-See `09_HUD_SPEC.md` for full layout specification.
+Ver `09_HUD_SPEC.md` para la especificación completa de la maqueta.
 
 #### `engine/ui/message_box.py` — `MessageBox`
 
-Displays tutorial messages at the bottom of the screen. Subscribes to `SHOW_MESSAGE` and `HIDE_MESSAGE` events. Supports scrolling text reveal and auto-dismiss after a configurable duration.
+Muestra mensajes de tutorial al pie de la pantalla. Se suscribe a `SHOW_MESSAGE` y `HIDE_MESSAGE`. Soporta texto que se revela con scroll y descarte automático tras una duración configurable.
 
 #### `engine/ui/screen_banner.py` — `ScreenBanner`
 
-Animates the stage entry banner. A two-part banner slides in from both sides of the screen, displays the stage name and number, holds for a beat, then slides out. Triggered at stage start.
+Anima el rótulo de entrada al escenario. Un rótulo en dos partes entra deslizándose desde ambos lados de la pantalla, muestra el nombre y número del escenario, se mantiene un instante y sale deslizándose. Se dispara al empezar el escenario.
 
 ---
 
@@ -704,15 +681,15 @@ Animates the stage entry banner. A two-part banner slides in from both sides of 
 
 #### `engine/utils/asset_loader.py` — `AssetLoader`
 
-Centralizes asset loading. Maintains an in-memory cache keyed by path string. Supports images, sounds, and fonts.
+Centraliza la carga de recursos. Mantiene una caché en memoria indexada por ruta. Soporta imágenes, sonidos y fuentes.
 
-**Public Interface:**
-- `AssetLoader.load_image(path: str | Path) → pygame.Surface` — Load and cache a PNG image.
-- `AssetLoader.load_sound(path: str | Path) → pygame.mixer.Sound` — Load and cache audio.
-- `AssetLoader.load_font(path: str | Path, size: int) → pygame.font.Font` — Load and cache a TTF font.
+**Interfaz pública:**
+- `AssetLoader.load_image(path: str | Path) → pygame.Surface` — carga y cachea una imagen PNG.
+- `AssetLoader.load_sound(path: str | Path) → pygame.mixer.Sound` — carga y cachea audio.
+- `AssetLoader.load_font(path: str | Path, size: int) → pygame.font.Font` — carga y cachea una fuente TTF.
 - `AssetLoader.load_sprite_sheet(path: str | Path, frame_width: int, frame_height: int) → list[pygame.Surface]`
-  — Slice a horizontal sheet into frames. This is the **only** sprite-sheet
-  path in the engine: `enemy_base`, `boss_base` and `player` all go through it.
+  — recorta una hoja horizontal en fotogramas. Es el **único** camino de hoja de
+  sprites del motor: `enemy_base`, `boss_base` y `player` pasan todos por aquí.
 
 > **AUD-098 — qué decía esta sección antes.**
 > Documentaba `AssetLoader.load_spritesheet` (sin guion bajo) devolviendo un
@@ -733,20 +710,29 @@ Centralizes asset loading. Maintains an in-memory cache keyed by path string. Su
 > lea, una implementación paralela sin usar no es código de reserva: es una
 > trampa para el estudiante que la encuentra primero.
 
-#### `engine/utils/math_utils.py` — Math Utilities
+#### `engine/utils/math_utils.py` — Utilidades matemáticas
 
-A collection of pure functions for common mathematical operations used throughout the framework.
+Una colección de funciones puras de matemática común, usadas en todo el framework.
 
-| Function | Signature | Description |
+| Función | Firma | Descripción |
 |---|---|---|
-| `lerp` | `(a, b, t) → float` | Linear interpolation |
-| `clamp` | `(value, min_v, max_v) → float` | Clamp value to range |
-| `ease_in_quad` | `(t) → float` | Quadratic ease-in |
-| `ease_out_quad` | `(t) → float` | Quadratic ease-out |
-| `vec2_normalize` | `(v: tuple) → tuple` | Normalize a 2D vector |
-| `vec2_length` | `(v: tuple) → float` | Length of a 2D vector |
-| `vec2_dot` | `(a, b: tuple) → float` | Dot product of two 2D vectors |
-| `vec2_distance` | `(a, b: tuple) → float` | Distance between two points |
+| `lerp` | `(a, b, t) → float` | Interpolación lineal |
+| `clamp` | `(value, min_v, max_v) → float` | Recorta un valor a un rango |
+| `ease_in_quad` | `(t) → float` | Cuadrática, entrada lenta |
+| `ease_out_quad` | `(t) → float` | Cuadrática, salida lenta |
+| `ease_in_out_quad` | `(t) → float` | Cuadrática, entrada y salida lentas |
+| `ease_in_cubic` | `(t) → float` | Cúbica, entrada lenta |
+| `ease_out_cubic` | `(t) → float` | Cúbica, salida lenta |
+| `ease_out_bounce` | `(t) → float` | Rebote al final |
+| `ease_out_elastic` | `(t) → float` | Sobrepaso elástico al final |
+| `ease_in_sine` | `(t) → float` | Senoidal, entrada lenta |
+| `ease_out_sine` | `(t) → float` | Senoidal, salida lenta |
+| `vec2_normalize` | `(v: pygame.Vector2) → pygame.Vector2` | Normaliza un vector 2D |
+| `vec2_length` | `(v: pygame.Vector2) → float` | Longitud de un vector 2D |
+| `vec2_dot` | `(a, b: pygame.Vector2) → float` | Producto punto de dos vectores 2D |
+| `vec2_distance` | `(a, b: pygame.Vector2) → float` | Distancia entre dos puntos |
+
+**No hay dependencia `pytweening`** (ver `10_LIBRARIES_AND_DEPENDENCIES.md` §11): las once funciones de easing de arriba están implementadas directamente en este módulo.
 
 ---
 
@@ -754,26 +740,26 @@ A collection of pure functions for common mathematical operations used throughou
 
 #### `framework/entities/base_entity.py` — `BaseEntity`
 
-Root class for all game objects. Manages world position, a Pygame `Rect` for collision, visibility, active state, and the basic `update` / `draw` lifecycle.
+Clase raíz de todos los objetos de juego. Gestiona la posición en el mundo, un `Rect` de Pygame para colisión, visibilidad, estado activo y el ciclo de vida básico `update`/`draw`.
 
-**Properties:**
-- `position: pygame.Vector2` — World-space position (top-left of bounding rect)
-- `rect: pygame.Rect` — Collision and render bounding rectangle
-- `is_active: bool` — Whether the entity participates in updates
-- `is_visible: bool` — Whether the entity participates in drawing
-- `layer: int` — Draw order layer
+**Propiedades:**
+- `position: pygame.Vector2` — posición en espacio de mundo (esquina superior izquierda del rectángulo)
+- `rect: pygame.Rect` — rectángulo de colisión y de render
+- `is_active: bool` — si la entidad participa en las actualizaciones
+- `is_visible: bool` — si la entidad participa en el dibujado
+- `layer: int` — capa de orden de dibujado
 
-**Required Override:**
-- `update(dt: float)` — Update entity state
-- `draw(surface: pygame.Surface, camera_offset: pygame.Vector2)` — Draw the entity
+**A sobreescribir obligatoriamente:**
+- `update(dt: float)` — actualiza el estado de la entidad
+- `draw(surface: pygame.Surface, camera_offset: pygame.Vector2)` — dibuja la entidad
 
 #### `framework/entities/player.py` — `Player`
 
-See `04_PLAYER_SPEC.md` for the complete specification.
+Ver `04_PLAYER_SPEC.md` para la especificación completa.
 
 #### `framework/entities/enemy_base.py` — `EnemyBase`
 
-See `05_ENEMY_SPEC.md` for the complete specification.
+Ver `05_ENEMY_SPEC.md` para la especificación completa.
 
 ---
 
@@ -781,52 +767,60 @@ See `05_ENEMY_SPEC.md` for the complete specification.
 
 #### `framework/stage/stage_loader.py` — `StageLoader`
 
-Parses a TMX file using `pytmx`, constructs the layer stack using `pyscroll`, spawns entities from object layers, registers checkpoints, and returns a fully assembled stage scene state.
+Analiza un fichero TMX con `pytmx`, construye la pila de capas con `pyscroll`, genera entidades desde las capas de objetos, registra los checkpoints y devuelve el estado ya ensamblado del escenario.
 
-**Public Interface:**
-- `StageLoader.load(tmx_path: Path) → StageData` — Load a TMX file and return the stage data structure.
+**Interfaz pública:**
+- `StageLoader.load(tmx_path: Path) → StageData` — carga un TMX y devuelve la estructura de datos del escenario.
 
-**`StageData` Contents (17 fields — see `src/framework/stage/stage_loader.py` for the exact `@dataclass`):**
-- `map_layer` — The `pyscroll` scrolling group
-- `map_pixel_size: tuple[int, int]` — Total map dimensions in pixels
-- `collision_rects: list[pygame.Rect]` — All solid collision rectangles
-- `one_way_rects: list[pygame.Rect]` — One-way platform collision rectangles
-- `entity_list: list[BaseEntity]` — All spawned entities
-- `checkpoints: list[Checkpoint]` — All checkpoint objects
-- `spawn_point: pygame.Vector2` — Player start position
-- `next_trigger: pygame.Rect | None` — Stage completion trigger zone
-- `background_layers: list[pygame.Surface]` — Parallax background layers
-- `message_triggers: list[MessageTrigger]` — Message trigger zones
-- `hazard_zones: list[HazardZone]` — Hazard zones
-- `death_pits: list[DeathPit]` — Death pit rects
-- `camera_locks: list[CameraLock]` — Camera lock zones
-- `stage_id: str` — Unique stage identifier
-- `stage_name: str` — Display name
-- `time_limit: int` — Countdown time in seconds (0 = no limit)
-- `bgm_track: str` — Background music track name
+**Contenido de `StageData` (núcleo; la lista completa ronda 50 campos tras
+AUD-350/AUD-426/AUD-339 y otros — ver el `@dataclass` exacto en
+`src/framework/stage/stage_data.py` y el detalle en `22_API_CONTRACTS.md`
+§11.3, no aquí, para no volver a desincronizarse en el próximo campo que se
+añada):**
+- `map_layer` — el grupo de scroll de `pyscroll`
+- `map_pixel_size: tuple[int, int]` — dimensiones totales del mapa en píxeles
+- `collision_rects: list[pygame.Rect]` — todos los rectángulos de colisión sólida
+- `one_way_rects: list[pygame.Rect]` — rectángulos de plataforma de un solo sentido
+- `entity_list: list[BaseEntity]` — todas las entidades generadas
+- `checkpoints: list[Checkpoint]` — todos los checkpoints
+- `spawn_point: pygame.Vector2` — posición inicial del jugador
+- `next_trigger: pygame.Rect | None` — zona de disparo de fin de escenario
+- `background_layers: list[pygame.Surface]` — capas de fondo con parallax
+- `message_triggers: list[MessageTrigger]` — zonas de disparo de mensaje
+- `hazard_zones: list[HazardZone]` — zonas de peligro
+- `death_pits: list[DeathPit]` — rectángulos de pozo de muerte
+- `camera_locks: list[CameraLock]` — zonas de bloqueo de cámara
+- `stage_id: str` — identificador único del escenario
+- `stage_name: str` — nombre visible
+- `time_limit: int` — cuenta atrás en segundos (0 = sin límite)
+- `bgm_track: str` — nombre de la pista de música
+- …y unos 33 campos más (cielo procedural, iluminación/clima ambiente,
+  objetivos, empujables/destructibles, recogibles/cerraduras/cofres/warps,
+  cámara, estamina, tiempo bala, escala 2.5D, niebla de guerra, efecto de
+  agua…) — ver `22_API_CONTRACTS.md` §11.3 para el inventario exacto.
 
-#### `framework/stage/stage_data.py` — `StageData` and the Tiled vocabulary
+#### `framework/stage/stage_data.py` — `StageData` y el vocabulario de Tiled
 
-Split from `stage_loader.py` in AUD-350 (the loader was a 1.886-line god file; no logic changed). Holds the data contract the loader fills: the seven `@dataclass`es (`StageData`, `MessageTrigger`, `HazardZone`, `EscenaGuionizada`, `DeathPit`, `CameraLock`, `LightSpec`), the layer/property vocabularies (`REQUIRED_LAYERS`, `_NUMERIC_PROPS`, `_BOOL_PROPS`), the view/camera modes (`VISTAS_VALIDAS`, `MODOS_DE_CAMARA`) and `_TIPOS_DE_COMPONENTE`. `stage_loader.py` re-exports every public name, so import sites did not change.
+Separado de `stage_loader.py` en AUD-350 (el cargador era un fichero de 1.886 líneas; ningún cambio de lógica). Contiene el contrato de datos que rellena el cargador: los siete `@dataclass` (`StageData`, `MessageTrigger`, `HazardZone`, `EscenaGuionizada`, `DeathPit`, `CameraLock`, `LightSpec`), los vocabularios de capas/propiedades (`REQUIRED_LAYERS`, `_NUMERIC_PROPS`, `_BOOL_PROPS`), los modos de vista/cámara (`VISTAS_VALIDAS`, `MODOS_DE_CAMARA`) y `_TIPOS_DE_COMPONENTE`. `stage_loader.py` reexporta cada nombre público, así que los sitios de importación no cambiaron.
 
 #### `framework/stage/stage_objetos.py` — `ObjetosDeTiled`
 
-Split from `stage_loader.py` in AUD-350. Mixin inherited by `StageLoader`: the dispatcher `_process_objects` walks the `Objects` layer and routes each Tiled `type` to one handler (`_handle_*`). Unknown types are diagnosed instead of silently dropped (AUD-055) and accumulated in `TmxReport`. Handlers share Tiled-friendly property names and converters that clamp instead of rejecting.
+Separado de `stage_loader.py` en AUD-350. Mixin heredado por `StageLoader`: el despachador `_process_objects` recorre la capa `Objects` y enruta cada `type` de Tiled a un manejador (`_handle_*`). Los tipos desconocidos se diagnostican en vez de descartarse en silencio (AUD-055) y se acumulan en `TmxReport`. Los manejadores comparten nombres de propiedad amigables con Tiled y conversores que recortan en vez de rechazar.
 
 #### `framework/stage/camera.py` — `Camera`
 
-Manages the viewport offset. Follows the player entity smoothly using configurable lerp speed. Supports parallax factor per background layer. Clamps the viewport to the map bounds.
+Gestiona el desplazamiento de la ventana. Sigue a la entidad jugador suavemente con una velocidad de interpolación configurable. Soporta un factor de parallax por capa de fondo. Recorta la ventana a los límites del mapa.
 
-**Public Interface:**
-- `Camera.follow(target: BaseEntity)` — Set the entity the camera follows.
-- `Camera.update(dt: float)` — Smooth the camera position.
-- `Camera.world_to_screen(pos: pygame.Vector2) → pygame.Vector2` — Convert world to screen coordinates.
-- `Camera.screen_to_world(pos: pygame.Vector2) → pygame.Vector2` — Convert screen to world coordinates.
-- `Camera.offset → pygame.Vector2` — Current pixel offset to apply to all world-space draws.
+**Interfaz pública:**
+- `Camera.follow(target: BaseEntity)` — fija la entidad que sigue la cámara.
+- `Camera.update(dt: float)` — suaviza la posición de la cámara.
+- `Camera.world_to_screen(pos: pygame.Vector2) → pygame.Vector2` — convierte coordenadas de mundo a pantalla.
+- `Camera.screen_to_world(pos: pygame.Vector2) → pygame.Vector2` — convierte coordenadas de pantalla a mundo.
+- `Camera.offset → pygame.Vector2` — desplazamiento de píxeles actual, a aplicar en todo dibujado de espacio de mundo.
 
 #### `framework/stage/checkpoint.py` — `Checkpoint`
 
-A trigger zone that records the player's current position as a respawn anchor. When the player enters the checkpoint's rect, it emits `CHECKPOINT_REACHED`. If the player subsequently dies, the stage restores the player to the last checkpoint position.
+Una zona de disparo que registra la posición actual del jugador como ancla de reaparición. Cuando el jugador entra en su rectángulo, emite `CHECKPOINT_REACHED`. Si el jugador muere después, el escenario lo restaura en el último checkpoint.
 
 ---
 
@@ -834,66 +828,72 @@ A trigger zone that records the player's current position as a respawn anchor. W
 
 #### `framework/processing/color_tools.py` — `ColorTools`
 
-Pure functions for color space conversions and per-pixel operations on Pygame surfaces.
+Funciones puras de conversión de espacio de color y operaciones por píxel sobre superficies de Pygame.
 
-| Function | Input | Output | Academic Unit |
+| Función | Entrada | Salida | Unidad académica |
 |---|---|---|---|
-| `rgb_to_hsv(r, g, b)` | 0–255 ints | (0–360, 0–1, 0–1) | Unit V |
-| `hsv_to_rgb(h, s, v)` | floats | (0–255 ints) | Unit V |
-| `rgb_to_hsl(r, g, b)` | 0–255 ints | (0–360, 0–1, 0–1) | Unit V |
-| `hsl_to_rgb(h, s, l)` | floats | (0–255 ints) | Unit V |
-| `rgb_to_cmyk(r, g, b)` | 0–255 ints | (0–1 floats) | Unit V |
-| `cmyk_to_rgb(c, m, y, k)` | 0–1 floats | (0–255 ints) | Unit V |
-| `alpha_blend(src, dst, alpha)` | surfaces, float | surface | Unit V |
-| `apply_tint(surface, color)` | surface, RGB | surface | Unit V |
-| `surface_to_array(surface)` | surface | numpy ndarray | Unit VI |
-| `array_to_surface(array)` | numpy ndarray | surface | Unit VI |
+| `rgb_to_hsv(r, g, b)` | enteros 0–255 | (0–360, 0–1, 0–1) | Unidad V |
+| `hsv_to_rgb(h, s, v)` | floats | enteros 0–255 | Unidad V |
+| `rgb_to_hsl(r, g, b)` | enteros 0–255 | (0–360, 0–1, 0–1) | Unidad V |
+| `hsl_to_rgb(h, s, l)` | floats | enteros 0–255 | Unidad V |
+| `rgb_to_cmyk(r, g, b)` | enteros 0–255 | floats 0–1 | Unidad V |
+| `cmyk_to_rgb(c, m, y, k)` | floats 0–1 | enteros 0–255 | Unidad V |
+| `alpha_blend(src, dst, alpha)` | superficies, float | superficie | Unidad V |
+| `apply_tint(surface, color)` | superficie, RGB | superficie | Unidad V |
+| `surface_to_array(surface)` | superficie | ndarray de numpy | Unidad VI |
+| `array_to_surface(array)` | ndarray de numpy | superficie | Unidad VI |
 
 #### `framework/processing/filter_tools.py` — `FilterTools`
 
-Convolution and edge detection filters applied to Pygame surfaces via NumPy and SciPy.
+Filtros de convolución y detección de bordes sobre superficies de Pygame, vía NumPy y SciPy.
 
-| Function | Description | Academic Unit |
+| Función | Descripción | Unidad académica |
 |---|---|---|
-| `apply_kernel(surface, kernel)` | Apply custom convolution kernel | Unit VII |
-| `gaussian_blur(surface, sigma)` | Gaussian blur by sigma | Unit VII |
-| `sobel_edge(surface)` | Sobel edge detection, returns grayscale | Unit VII |
-| `canny_edge(surface, low, high)` | Canny edge detection | Unit VII |
-| `adjust_brightness(surface, factor)` | Multiply pixel values by factor | Unit VII |
-| `adjust_contrast(surface, factor)` | Stretch histogram by factor | Unit VII |
-| `compute_histogram(surface)` | Return RGB histogram as dict | Unit VII |
+| `apply_kernel(surface, kernel)` | Aplica un núcleo de convolución arbitrario | Unidad VII |
+| `gaussian_blur(surface, sigma)` | Desenfoque gaussiano según sigma | Unidad VII |
+| `sobel_edge(surface)` | Detección de bordes de Sobel, devuelve escala de grises | Unidad VII |
+| `canny_edge(surface, low, high)` | Detección de bordes de Canny | Unidad VII |
+| `adjust_brightness(surface, factor)` | Multiplica los valores de píxel por `factor` | Unidad VII |
+| `adjust_contrast(surface, factor)` | Estira el contraste por `factor` | Unidad VII |
+| `compute_histogram(surface)` | Devuelve el histograma RGB como diccionario | Unidad VII |
 
 #### `framework/processing/curve_tools.py` — `CurveTools`
 
-Mathematical curve computation. All functions return lists of `(x, y)` tuples representing sampled points.
+Cómputo matemático de curvas. Todas las funciones devuelven listas de tuplas `(x, y)` con los puntos muestreados.
 
-| Function | Description | Academic Unit |
+| Función | Descripción | Unidad académica |
 |---|---|---|
-| `bezier(control_points, n_samples)` | Compute Bézier curve via Bernstein polynomials | Unit III |
-| `b_spline(control_points, degree, n_samples)` | Compute B-Spline curve | Unit III |
-| `nurbs(control_points, weights, knots, degree, n_samples)` | Compute NURBS curve | Unit III |
-| `catmull_rom(control_points, n_samples)` | Compute Catmull-Rom spline | Unit III |
-| `sample_path(points, t)` | Interpolate position on a sampled path at parameter t (0–1) | Unit III |
+| `bezier(control_points, n_samples)` | Curva de Bézier vía polinomios de Bernstein | Unidad III |
+| `b_spline(control_points, degree, n_samples)` | Curva B-Spline | Unidad III |
+| `nurbs(control_points, weights, knots, degree, n_samples)` | Curva NURBS | Unidad III |
+| `catmull_rom(control_points, n_samples)` | Spline de Catmull-Rom | Unidad III |
+| `sample_path(points, t)` | Interpola posición sobre un camino muestreado, parámetro t (0–1) | Unidad III |
 
 #### `framework/processing/vision_tools.py` — `VisionTools`
 
-Image segmentation and pattern recognition utilities.
+Utilidades de segmentación de imagen y reconocimiento de patrones.
 
-| Function | Description | Academic Unit |
+| Función | Descripción | Unidad académica |
 |---|---|---|
-| `threshold_binary(surface, thresh)` | Binary threshold | Unit VIII |
-| `threshold_otsu(surface)` | Otsu automatic threshold | Unit VIII |
-| `morphological_erode(surface, kernel_size)` | Morphological erosion | Unit VIII |
-| `morphological_dilate(surface, kernel_size)` | Morphological dilation | Unit VIII |
-| `watershed_segment(surface)` | Watershed segmentation | Unit VIII |
-| `extract_features(surface)` | Extract HOG or LBP feature vector | Unit IX |
-| `classify_region(features, model)` | Classify feature vector using scikit-learn model | Unit IX |
+| `threshold_binary(surface, thresh)` | Umbralización binaria | Unidad VIII |
+| `threshold_otsu(surface)` | Umbral automático de Otsu | Unidad VIII |
+| `morphological_erode(surface, kernel_size)` | Erosión morfológica | Unidad VIII |
+| `morphological_dilate(surface, kernel_size)` | Dilatación morfológica | Unidad VIII |
+| `watershed_segment(surface)` | Segmentación por watershed | Unidad VIII |
+| `extract_hog(surface)` / `extract_lbp(surface)` | Vector de características HOG / LBP | Unidad IX |
+
+**AUD-455 — `classify_region(features, model)` no existe en `vision_tools.py`.**
+La versión anterior de este documento la documentaba aquí; no hay tal función
+en el código. La clasificación con scikit-learn real vive en
+`framework/entities/ai_predictor.py` (tácticas de enemigo, ver §2.7) y en
+`framework/processing/reference_model.py` / `pattern_recognition_tools.py`
+(demo académica de la Unidad IX). Ver `10_LIBRARIES_AND_DEPENDENCIES.md` §7.
 
 ---
 
-## 3. Dependency Rules
+## 3. Reglas de dependencia
 
-### 3.1 Import Hierarchy
+### 3.1 Jerarquía de importación
 
 Cuatro reglas, y sólo cuatro. Están comprobadas en cada ejecución de la suite
 por `tests/test_layering.py`; si alguna deja de cumplirse, la suite se pone en
@@ -965,7 +965,6 @@ engine.core.app
 
 engine.scene.scene_manager
   → engine.scene.base_scene
-  → engine.scene.transitions
 
 framework.entities.*
   → engine.core.settings
@@ -978,7 +977,7 @@ framework.stage.*
   → framework.entities.*
 
 framework.processing.*
-  → (no engine or framework imports — pure functions only)
+  → (sin imports de engine ni framework — sólo funciones puras)
 
 stages.stage0.stage0
   → engine.scene.base_scene
@@ -988,91 +987,100 @@ stages.stage0.stage0
   → engine.core.event_bus
 ```
 
-### 3.2 Prohibited Cross-Stage Imports
+**AUD-455:** este mapa citaba `engine.scene.scene_manager → engine.scene.transitions`.
+Ese módulo es justo el que la nota de §1 (AUD-111) dice que se retiró por
+tener cero usos en todo el repositorio, ni siquiera en pruebas — el propio
+documento se contradecía a sí mismo. `SceneManager` no importa ningún módulo
+de transiciones; las transiciones de pantalla viven en
+`engine/scenes/transition_manager.py`, que es capa de aplicación, no núcleo.
 
-Stage modules must never import from other stage modules. Each stage is isolated.
+### 3.2 Importaciones prohibidas entre escenarios
+
+Un módulo de escenario nunca importa de otro escenario. Cada escenario está aislado.
 
 ```python
-# PROHIBITED:
-from stages.stage1.stage1 import MyCustomEnemy  # Never in stage2 or stage3
+# PROHIBIDO:
+from stages.stage1.stage1 import MyCustomEnemy  # Nunca en stage2 ni stage3
 ```
 
 ---
 
-## 4. Data Flow
+## 4. Flujo de datos
 
-### 4.1 Per-Frame Data Flow
+### 4.1 Flujo de datos por fotograma
 
 ```
 pygame.event.get()
     ↓
-InputManager.pump(events)        # Process raw input → action states
+InputManager.pump(events)        # entrada en crudo → estados de acción
     ↓
-EventBus (queued events)         # Events from previous frame resolved
+EventBus (eventos encolados)     # se resuelven los eventos del fotograma anterior
     ↓
-SceneManager.current.update(dt)  # Active scene updates all entities
+SceneManager.current.update(dt)  # la escena activa actualiza todas las entidades
     |
-    ├── Player.update(dt)        # Input → velocity → position → state
-    ├── EnemyX.update(dt)        # AI → velocity → position → state
-    ├── Checkpoint.update(dt)    # Trigger zone detection
-    └── Camera.update(dt)        # Smooth follow
+    ├── Player.update(dt)        # entrada → velocidad → posición → estado
+    ├── EnemyX.update(dt)        # IA → velocidad → posición → estado
+    ├── Checkpoint.update(dt)    # detección de zona de disparo
+    └── Camera.update(dt)        # seguimiento suave
     ↓
-App.internal_surface.fill(BG)   # Clear internal buffer
+App.internal_surface.fill(BG)   # limpia el búfer interno
     ↓
 SceneManager.current.draw(surface)
     |
-    ├── Background layers (parallax)
-    ├── pyscroll map render
-    ├── Entity renders (world-space, camera offset applied)
-    └── HUD render (screen-space, no offset)
+    ├── Capas de fondo (parallax)
+    ├── Render del mapa de pyscroll
+    ├── Render de entidades (espacio de mundo, con el desplazamiento de cámara aplicado)
+    └── Render del HUD (espacio de pantalla, sin desplazamiento)
     ↓
-pygame.transform.scale(internal, window_size)  # Responsive scaling — UI uses %-based layout
+pygame.transform.scale(internal, window_size)  # escalado responsivo — la UI usa layout por porcentaje
     ↓
 pygame.display.flip()
 ```
 
-### 4.2 Event Data Flow
+### 4.2 Flujo de datos de eventos
 
-Events are not processed immediately when emitted. They are queued and dispatched at the start of the next frame update. This prevents mid-frame state corruption.
+Los eventos no se procesan de inmediato al emitirse. Se encolan y se despachan
+al principio de la actualización del siguiente fotograma. Esto evita
+corrupción de estado a mitad de fotograma.
 
 ```
-Entity emits event              (e.g., Player dies → PLAYER_DIED)
+Una entidad emite un evento      (p. ej., el jugador muere → PLAYER_DIED)
     ↓
-EventBus.queue(event)           (stored in pending list)
+EventBus.emit(...)               (se guarda en la cola pendiente)
     ↓
-Next frame: EventBus.dispatch() (called at start of update)
+Siguiente fotograma: EventBus.dispatch()  (se llama al principio del update)
     ↓
-All registered listeners receive the event data
+Todos los oyentes registrados reciben los datos del evento
 ```
 
 ---
 
-## 5. Application Lifecycle
+## 5. Ciclo de vida de la aplicación
 
 ```
 main.py: App()
     ├── pygame.init()
     ├── pygame.mixer.init()
-    ├── Create internal surface (settings.INTERNAL_WIDTH × settings.INTERNAL_HEIGHT)
-    ├── Create window surface (scaled by settings.DISPLAY_SCALE)
-    ├── Instantiate DeltaClock
-    ├── Instantiate EventBus (singleton)
-    ├── Instantiate InputManager
-    ├── Instantiate AudioManager
-    ├── Instantiate SceneManager
-    └── Push SplashScene
+    ├── Crea la superficie interna (settings.INTERNAL_WIDTH × settings.INTERNAL_HEIGHT)
+    ├── Crea la superficie de ventana (escalada por settings.DISPLAY_SCALE)
+    ├── Instancia DeltaClock
+    ├── Instancia EventBus (singleton)
+    ├── Instancia InputManager
+    ├── Instancia AudioManager
+    ├── Instancia SceneManager
+    └── Apila SplashScene
 
 App.run()
-    └── Main Loop:
+    └── Bucle principal:
         ├── for event in pygame.event.get():
         │       if event.QUIT → App.quit()
         ├── InputManager.pump(events)
         ├── EventBus.dispatch()
         ├── dt = DeltaClock.tick()
         ├── SceneManager.current.update(dt)
-        ├── internal_surface.fill(BLACK)
+        ├── internal_surface.fill(NEGRO)
         ├── SceneManager.current.draw(internal_surface)
-        ├── Scale internal_surface → window_surface
+        ├── Escala internal_surface → window_surface
         └── pygame.display.flip()
 
 App.quit()
@@ -1083,66 +1091,67 @@ App.quit()
 
 ---
 
-## 6. Initialization Flow
+## 6. Flujo de inicialización
 
-### 6.1 Engine Initialization Order
+### 6.1 Orden de inicialización del motor
 
-1. `pygame.init()` — Initialize all Pygame subsystems
-2. `pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)` — Audio
-3. `pygame.display.set_mode(window_size)` — Create OS window
-4. `internal_surface = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))` — Create render target
-5. `DeltaClock()` — Wrap `pygame.time.Clock`
-6. `EventBus()` — Singleton event dispatcher
-7. `AssetLoader()` — Singleton asset cache
-8. `InputManager(action_map)` — Load default action bindings
-9. `AudioManager()` — Initialize mixer channels
-10. `SceneManager()` — Initialize empty scene stack
-11. `SceneManager.push(SplashScene())` — Start the application
+1. `pygame.init()` — inicializa todos los subsistemas de Pygame
+2. `pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)` — audio
+3. `pygame.display.set_mode(window_size)` — crea la ventana del sistema operativo
+4. `internal_surface = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))` — crea el destino de render
+5. `DeltaClock()` — envuelve `pygame.time.Clock`
+6. `EventBus()` — despachador de eventos singleton
+7. `AssetLoader()` — caché de recursos singleton
+8. `InputManager(action_map)` — carga los enlaces de acción por defecto
+9. `AudioManager()` — inicializa los canales del mezclador
+10. `SceneManager()` — inicializa la pila de escenas vacía
+11. `SceneManager.push(SplashScene())` — arranca la aplicación
 
-### 6.2 Stage Initialization Order
+### 6.2 Orden de inicialización de un escenario
 
-When a stage scene is pushed or replaced onto the scene manager:
+Cuando una escena de escenario se apila o reemplaza en el gestor de escenas:
 
-1. `Stage.on_enter()` called
+1. Se llama a `Stage.on_enter()`
 2. `AudioManager.play_music(stage_bgm)`
-3. `StageLoader.load(tmx_path)` — Parse map, build layers, collect spawn data
-4. Spawn `Player` at `StageData.spawn_point`
-5. Spawn all entities from `StageData.entity_list`
-6. Register all `StageData.checkpoints`
+3. `StageLoader.load(tmx_path)` — analiza el mapa, construye las capas, recoge los datos de aparición
+4. Genera al `Player` en `StageData.spawn_point`
+5. Genera todas las entidades de `StageData.entity_list`
+6. Registra todos los `StageData.checkpoints`
 7. `Camera.follow(player)`
 8. `HUD.start_timer(stage_time_limit)`
 9. `ScreenBanner.play(stage_name)`
 
 ---
 
-## 7. Scene Flow
+## 7. Flujo de escenas
 
 ```
-SplashScene          (professor logo, framework logo)
-    ↓ (auto-advance after 3 seconds)
-TitleScene           (game title, main menu: Start / Options / Academic Demos / Quit)
-    ↓ (player selects Start)
-StoryScene1          (story text with background illustration)
-    ↓ (player confirms)
+SplashScene          (logo del profesor, logo del framework)
+    ↓ (avanza sola tras 3 segundos)
+TitleScene           (título del juego, menú principal: Empezar / Opciones / Demos académicas / Salir)
+    ↓ (el jugador elige Empezar)
+StoryScene1          (texto de historia con ilustración de fondo)
+    ↓ (el jugador confirma)
 StoryScene2
     ↓
 StoryScene3
     ↓
-Stage0Scene          (professor-built demonstration stage)
-    ↓ (next trigger reached)
-Stage1Scene          (student stage)
-    ↓ (next trigger reached)
+Stage0Scene          (escenario de demostración construido por el profesor)
+    ↓ (se alcanza el disparador de avance)
+Stage1Scene          (escenario de estudiante)
+    ↓ (se alcanza el disparador de avance)
 Stage2Scene
     ↓
 Stage3Scene
     ↓
-EndScene             (credits / completion screen)
+EndScene             (créditos / pantalla de finalización)
+```
 
-**Academic Demos Flow (accessible from TitleScene menu):**
+**Flujo de las demos académicas (accesible desde el menú de TitleScene):**
 ```
 TitleScene
-    ↓ (player selects "ACADEMIC DEMOS")
-DemoMenuScene        (10 options: Units II–IX)
+    ↓ (el jugador elige "DEMOS ACADÉMICAS")
+DemoMenuScene        (10 opciones: Unidades II–IX)
     ↓      ↓         ↓           ↓            ↓
 Vector   Transform  Curve       Interpolate  Color
 (II)     (II/III)   (III)       (III/IV)     (V)
@@ -1154,78 +1163,70 @@ DemoMenuScene
     ↓ (ESC)
 TitleScene
 ```
-```
 
-**Game Over Flow:**
+**Flujo de fin de partida:**
 ```
-Player health reaches 0
-    ↓ EventBus emits PLAYER_DIED
-GameOverScene pushed on top of active stage
-    ↓ Player selects Continue
-GameOverScene popped → Stage resumes from last checkpoint
-    ↓ Player selects Quit
-GameOverScene popped → TitleScene
+La vida del jugador llega a 0
+    ↓ el EventBus emite PLAYER_DIED
+GameOverScene se apila encima del escenario activo
+    ↓ el jugador elige Continuar
+GameOverScene se desapila → el escenario se reanuda desde el último checkpoint
+    ↓ el jugador elige Salir
+GameOverScene se desapila → TitleScene
 ```
 
 ---
 
-## 8. System Integration
+## 8. Integración entre sistemas
 
-### 8.1 Player ↔ HUD Integration
+### 8.1 Integración Player ↔ HUD
 
-The `Player` entity emits `PLAYER_DAMAGED` and `PLAYER_HEALED` events via the `EventBus`. The `HUD` subscribes to these events and updates the heart meter display. The `HUD` does not hold a direct reference to the `Player`.
+La entidad `Player` emite `PLAYER_DAMAGED` y `PLAYER_HEALED` vía el `EventBus`. El `HUD` se suscribe a esos eventos y actualiza el medidor de corazones. El `HUD` no guarda una referencia directa al `Player`.
 
-### 8.2 Stage ↔ Camera Integration
+### 8.2 Integración Stage ↔ Camera
 
-The `Camera` holds a reference to the `Player` entity as its follow target. The `Camera.update(dt)` method smoothly moves the viewport toward the player's position. All world-space entities receive `camera.offset` as a parameter in their `draw()` call and subtract it from their world position to compute screen position.
+La `Camera` guarda una referencia a la entidad `Player` como objetivo a seguir. `Camera.update(dt)` mueve suavemente la ventana hacia la posición del jugador. Todas las entidades de espacio de mundo reciben `camera.offset` como parámetro en su `draw()` y lo restan de su posición de mundo para calcular la posición en pantalla.
 
-### 8.3 TMX ↔ StageLoader ↔ Entity Spawn Integration
+### 8.3 Integración TMX ↔ StageLoader ↔ generación de entidades
 
-The TMX file defines entity spawn points as Tiled object layer entries with `type` and `properties` attributes. `StageLoader` reads these objects, looks up the entity class in a registered factory dictionary, and instantiates the entity with the properties from the TMX object. This decouples entity implementation from map design.
+El fichero TMX define los puntos de aparición de entidades como objetos de capa de Tiled con atributos `type` y `properties`. `StageLoader` lee esos objetos, busca la clase de entidad en un diccionario de fábrica registrado, e instancia la entidad con las propiedades del objeto TMX. Esto desacopla la implementación de la entidad del diseño del mapa.
 
-**Entity Factory Registration:**
+**Registro en la fábrica de entidades:**
 ```python
-# In App or stage initialization — professor registers defaults:
+# En App o en la inicialización del escenario — el profesor registra las por defecto:
 StageLoader.register_entity("Walker", EnemyWalker)
 StageLoader.register_entity("Flying", EnemyFlying)
 StageLoader.register_entity("Shooter", EnemyShooter)
 StageLoader.register_entity("Checkpoint", Checkpoint)
 
-# Students register custom entities in their stage:
+# Los estudiantes registran sus entidades propias en su escenario:
 StageLoader.register_entity("MyCustomEnemy", MyCustomEnemy)
 ```
 
-### 8.4 Processing Tools ↔ Entity Integration
+### 8.4 Integración herramientas de procesamiento ↔ entidades
 
-Processing utilities in `framework/processing/` are used by entities and stages to transform visual data. For example, a student stage might apply a Gaussian blur to a background layer, or use `CurveTools.bezier()` to generate an enemy patrol path. The tools return data; the calling code decides how to use it.
+Las utilidades de `framework/processing/` las usan entidades y escenarios para transformar datos visuales. Por ejemplo, un escenario de estudiante puede aplicar un desenfoque gaussiano a una capa de fondo, o usar `CurveTools.bezier()` para generar la ruta de patrulla de un enemigo. Las herramientas devuelven datos; el código que las llama decide qué hacer con ellos.
 
-### 8.5 EventBus Integration Diagram
+### 8.5 Diagrama de integración del EventBus
 
 ```
-[Player]          → emits → PLAYER_DAMAGED, PLAYER_HEALED, PLAYER_DIED
-[EnemyBase]       → emits → ENEMY_DIED
-[Checkpoint]      → emits → CHECKPOINT_REACHED
-[NextTrigger]     → emits → STAGE_COMPLETE
-[Stage]           → emits → SHOW_MESSAGE, HIDE_MESSAGE
-[HUD]             → listens → PLAYER_DAMAGED, PLAYER_HEALED
-[AudioManager]    → listens → PLAYER_DAMAGED, ENEMY_DIED, STAGE_COMPLETE
-[SceneManager]    → listens → PLAYER_DIED, STAGE_COMPLETE
-[MessageBox]      → listens → SHOW_MESSAGE, HIDE_MESSAGE
-[StageLoader]     → listens → CHECKPOINT_REACHED
+[Player]          → emite → PLAYER_DAMAGED, PLAYER_HEALED, PLAYER_DIED
+[EnemyBase]       → emite → ENEMY_DIED
+[Checkpoint]      → emite → CHECKPOINT_REACHED
+[NextTrigger]     → emite → STAGE_COMPLETE
+[Stage]           → emite → SHOW_MESSAGE, HIDE_MESSAGE
+[HUD]             → escucha → PLAYER_DAMAGED, PLAYER_HEALED
+[AudioManager]    → escucha → PLAYER_DAMAGED, ENEMY_DIED, STAGE_COMPLETE
+[SceneManager]    → escucha → PLAYER_DIED, STAGE_COMPLETE
+[MessageBox]      → escucha → SHOW_MESSAGE, HIDE_MESSAGE
+[StageLoader]     → escucha → CHECKPOINT_REACHED
 ```
-
-
-
---- Traducción al Español ---
-
-*Este documento está disponible en inglés. Para una traducción completa al español, contacte al profesor.*
-
 
 ---
-## 🔗 Documentos Relacionados
+## 🔗 Documentos relacionados
 
-- [[04_PLAYER_SPEC.md|Player Specification]]
-- [[05_ENEMY_SPEC.md|Enemy Specification]]
-- [[06_TMX_SPEC.md|TMX Specification]]
-- [[10_LIBRARIES_AND_DEPENDENCIES.md|Libraries and Dependencies]]
-- [[22_API_CONTRACTS.md|API Contracts]]
+- [[04_PLAYER_SPEC.md|Especificación del jugador]]
+- [[05_ENEMY_SPEC.md|Especificación de enemigos]]
+- [[06_TMX_SPEC.md|Especificación TMX]]
+- [[10_LIBRARIES_AND_DEPENDENCIES.md|Librerías y dependencias]]
+- [[22_API_CONTRACTS.md|Contratos de API]]

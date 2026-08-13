@@ -1,77 +1,53 @@
 ---
 document_id: "LOI-EXAM_BANK-EXAM_BANK"
-title: "Exam Bank — Practice Exam Generator"
+title: "Banco de exámenes — generador de exámenes de práctica"
 aliases: ["Exam Bank", "exam_bank"]
-tags: ["exam", "bank", "academic"]
-description: "Exam Bank document: exam_bank"
-source: "docs/docs\exam_bank/exam_bank.md"
-date_processed: "2026-07-14"
+tags: ["examen", "banco", "academico"]
+description: "Documento de banco de exámenes: exam_bank"
+source: "docs/exam_bank/exam_bank.md"
+date_processed: "2026-08-13"
 ---
 
-# Exam Bank — Practice Exam Generator
+# Banco de exámenes — generador de exámenes de práctica
 
-**Course:** Legacy of InFest
-**Source:** Compiled from `docs/quizzes/` quizzes (Units II, IV, VI, IX)
+**Curso:** Legacy of InFest
+**Fuente:** compilado de los quizzes en `docs/quizzes/` (Unidades II, IV, VI, IX)
 
-## Usage
+## Uso
 
-Run `python scripts/generate_exam.py` to generate a random practice exam:
+Ejecutar `python scripts/generate_exam.py` para generar un examen de práctica aleatorio:
 
 ```bash
-python scripts/generate_exam.py                    # 10 random questions
-python scripts/generate_exam.py --unit II           # Unit II only
-python scripts/generate_exam.py --num-questions 5   # 5 questions
-```
-
-## Question Bank
-
-| Source | Unit | Topic | Questions |
-|--------|------|-------|-----------|
-| `quiz_unit02.md` | II | Vectors & 2D Transformations | 7 |
-| `quiz_unit04.md` | IV | Interpolation & Animation | 6 |
-| `quiz_unit06.md` | VI | Collision Detection & Resolution | 6 |
-| `quiz_unit09.md` | IX | Pattern Recognition | 7 |
-
-**Total bank:** 26 questions across 4 units.
-
-## Question Format
-
-Each question targets one of four skill levels:
-
-| Level | Weight | Description |
-|-------|--------|-------------|
-| Conceptual accuracy | 40% | Theoretical understanding |
-| Applied reasoning | 30% | Real-world application |
-| Mathematical correctness | 20% | Formula/algorithm computation |
-| Clarity of expression | 10% | Written communication |
-
-## Exam Generation Logic
-
-1. Select unit(s) based on `--unit` (or all if omitted)
-2. Shuffle questions within each unit
-3. Pick `--num-questions` (default: 10) distributing evenly across units
-4. Output randomized exam with answer key
-
-
---- Traducción al Español ---
-
-## Banco de Exámenes — Generador de Exámenes de Práctica
-
-**Fuente:** Compilado de los quizzes (Unidades II, IV, VI, IX)
-
-### Uso
-```
 python scripts/generate_exam.py                    # 10 preguntas aleatorias
-python scripts/generate_exam.py --unit II           # Solo Unidad II
+python scripts/generate_exam.py --unit II           # Sólo Unidad II
 python scripts/generate_exam.py --num-questions 5   # 5 preguntas
 ```
 
-### Banco de Preguntas
-- Unidad II (Vectores): 7 preguntas
-- Unidad IV (Interpolación): 6 preguntas
-- Unidad VI (Colisiones): 6 preguntas
-- Unidad IX (Patrones): 7 preguntas
-**Total:** 26 preguntas en 4 unidades.
+## Banco de preguntas
 
-### Formato de Preguntas
-Cada pregunta apunta a uno de cuatro niveles: Precisión conceptual (40%), Razonamiento aplicado (30%), Corrección matemática (20%), Claridad de expresión (10%).
+| Fuente | Unidad | Tema | Preguntas |
+|--------|------|-------|-----------|
+| `quiz_unit02.md` | II | Vectores y transformaciones 2D | 7 |
+| `quiz_unit04.md` | IV | Interpolación y animación | 6 |
+| `quiz_unit06.md` | VI | Detección y resolución de colisión | 6 |
+| `quiz_unit09.md` | IX | Reconocimiento de patrones | 7 |
+
+**Banco total:** 26 preguntas en 4 unidades.
+
+## Formato de pregunta
+
+Cada pregunta apunta a uno de cuatro niveles de habilidad:
+
+| Nivel | Peso | Descripción |
+|-------|--------|-------------|
+| Precisión conceptual | 40% | Comprensión teórica |
+| Razonamiento aplicado | 30% | Aplicación al mundo real |
+| Corrección matemática | 20% | Cómputo de fórmula/algoritmo |
+| Claridad de expresión | 10% | Comunicación escrita |
+
+## Lógica de generación del examen
+
+1. Seleccionar la(s) unidad(es) según `--unit` (o todas si se omite)
+2. Mezclar las preguntas dentro de cada unidad
+3. Elegir `--num-questions` (por defecto: 10) distribuyendo parejo entre unidades
+4. Producir el examen aleatorizado con clave de respuestas

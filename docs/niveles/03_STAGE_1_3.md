@@ -61,7 +61,7 @@ demuestra que se dominan los tres arquetipos.
 | `HazardZone` | 1+ | Púas entre las raíces (visibles bajo la regla de luz) |
 | `MessageTrigger` | 1 | Explica la mecánica de luz (Unidad VIII) |
 | Coleccionables | ≥ 5 | Repartidos en los 3 salones |
-| `OneWay` | 1+ | Umbrales de los salones |
+| `Platform` | 1+ | Umbrales de los salones |
 
 ## Mapa sugerido (canónico del Entregable 1)
 

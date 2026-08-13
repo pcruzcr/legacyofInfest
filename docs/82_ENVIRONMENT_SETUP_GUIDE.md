@@ -1,91 +1,113 @@
 ---
 document_id: "LOI-SETUP-032"
-title: "Legacy of InFest — Environment Setup Guide"
-aliases: ["Environment Setup Guide"]
-tags: ["setup", "environment", "guide"]
-description: "Step-by-step machine setup, troubleshooting"
+title: "Legacy of InFest — Guía de instalación del entorno"
+aliases: ["Guía de instalación del entorno", "Environment Setup Guide"]
+tags: ["setup", "entorno", "guia"]
+description: "Instalación paso a paso de la máquina y solución de problemas"
 source: "docs/82_ENVIRONMENT_SETUP_GUIDE.md"
-date_processed: "2026-07-14"
+date_processed: "2026-08-12"
 ---
 
-# Legacy of InFest — Environment Setup Guide
+# Legacy of InFest — Guía de instalación del entorno
 
-**Document ID:** LOI-SETUP-032  
-**Version:** 1.0.0  
-**Status:** Official  
-**Compatibility:** Requires `10_LIBRARIES_AND_DEPENDENCIES.md`, `23_DATA_SCHEMAS.md` §9, `81_RISK_REGISTER.md`  
-**Audience:** Professor, Students (Class 1 onboarding)
+**ID del documento:** LOI-SETUP-032
+**Versión:** 1.1.0
+**Estado:** Oficial
+**Relacionado con:** `10_LIBRARIES_AND_DEPENDENCIES.md`, `23_DATA_SCHEMAS.md`
+**Audiencia:** Profesor, estudiantes (incorporación en la primera clase)
 
----
-
-## 1. Purpose
-
-`10_LIBRARIES_AND_DEPENDENCIES.md` §14 covers installation in 6 lines. This document is the **operational, step-by-step guide** a student actually follows during Class 1's "Framework Orientation" practice block (`21_COURSE_SCHEDULE.md` Class 1), including platform-specific instructions, non-Python tooling (Tiled, VS Code), and a troubleshooting table covering every failure mode flagged in `81_RISK_REGISTER.md` §5.
-
-**Target:** A student following this guide reaches a running `python main.py` within 30 minutes, leaving the remaining Class 1 practice time for the 15-minute template onboarding from `26_STUDENT_TEMPLATE_SPEC.md` §8.
-
----
-
-## 2. Prerequisites Checklist
-
-Before starting, confirm:
-
-- [ ] Access to the private GitHub repository (provided by professor)
-- [ ] Git installed and configured (`git --version` succeeds; `git config user.name`/`user.email` set)
-- [ ] Administrator/sudo access on your machine (required for some installs below)
-- [ ] At least 2 GB free disk space
+> **AUD-455.** Esta versión sustituye a la anterior, que estaba íntegramente en
+> inglés (con un resumen en español al final que remitía al lector de vuelta al
+> inglés para la solución de problemas — la sección que más se necesita en una
+> guía de instalación) y citaba seis documentos que no existen en este
+> repositorio (`81_RISK_REGISTER.md`, `77_SYLLABUS_ALIGNMENT_AUDIT.md`,
+> `25_IMPLEMENTATION_ROADMAP.md`, `29_GIT_WORKFLOW_AND_STANDARDS.md`,
+> `24_TEST_PLAN.md`, `51_IMPLEMENTATION_AUDIT.md`), exigía Python 3.14+ cuando
+> `pyproject.toml` pide `>=3.11` y la matriz de CI llega hasta 3.13, y describía
+> un flujo de ramas `student/<assignment_id>` / `main` que no es el de este
+> repositorio (`prod`, `pprod`, `dev` — ver `CONTRIBUTING.md`, AUD-168). También
+> decía que `python main.py` imprimía un mensaje de scaffolding en una
+> supuesta "Fase 0"; hoy `main.py` arranca el juego completo directamente.
 
 ---
 
-## 3. Step 1 — Install Python 3.14+
+## 1. Propósito
+
+`10_LIBRARIES_AND_DEPENDENCIES.md` cubre la instalación en unas pocas líneas.
+Este documento es la **guía operativa paso a paso** que sigue un estudiante
+durante la incorporación de la primera clase: instrucciones por plataforma,
+herramientas que no son de Python (Tiled, VS Code) y una tabla de solución de
+problemas con los fallos más comunes de instalación.
+
+---
+
+## 2. Lista de requisitos previos
+
+Antes de empezar, confirma que tienes:
+
+- [ ] Acceso al repositorio (lo da el profesor)
+- [ ] Git instalado y configurado (`git --version` funciona; `git config user.name`/`user.email` están puestos)
+- [ ] Acceso de administrador/sudo en tu máquina (hace falta para algunas instalaciones de abajo)
+- [ ] Al menos 2 GB de espacio libre en disco
+
+---
+
+## 3. Paso 1 — Instalar Python
+
+El proyecto exige **Python 3.11 o superior** (`requires-python = ">=3.11"` en
+`pyproject.toml`). La matriz de integración continua (`.github/workflows/ci.yml`)
+prueba **3.11, 3.12 y 3.13** — cualquier versión de esa matriz es una elección
+segura. Una versión más nueva (3.14+) puede funcionar, pero no es la que se
+verifica en cada cambio del repositorio, así que si algo falla de forma rara,
+lo primero que hay que descartar es esa diferencia de versión.
 
 ### 3.1 Windows
 
-1. Download the installer from [python.org/downloads](https://python.org/downloads) — version 3.14 or later.
-2. Run the installer. **Check "Add Python to PATH"** on the first screen — this is the single most common setup failure if skipped.
-3. Verify: open a new terminal (PowerShell or Command Prompt) and run:
+1. Descarga el instalador desde [python.org/downloads](https://python.org/downloads) — versión 3.11, 3.12 o 3.13.
+2. Ejecuta el instalador. **Marca "Add Python to PATH"** en la primera pantalla — es el fallo de instalación más común cuando se olvida.
+3. Verifica: abre una terminal nueva (PowerShell o símbolo del sistema) y ejecuta:
    ```
    python --version
    ```
-   Expected output: `Python 3.14.x` or later.
+   Salida esperada: `Python 3.1x.x`.
 
 ### 3.2 macOS
 
-1. Recommended: use [Homebrew](https://brew.sh):
+1. Recomendado: usa [Homebrew](https://brew.sh):
    ```bash
-   brew install python@3.14
+   brew install python@3.12
    ```
-2. Verify:
+2. Verifica:
    ```bash
    python3 --version
    ```
 
-### 3.3 Linux (Debian/Ubuntu-based)
+### 3.3 Linux (basado en Debian/Ubuntu)
 
 ```bash
 sudo apt update
-sudo apt install python3.14 python3.14-venv python3-pip
-python3.14 --version
+sudo apt install python3.12 python3.12-venv python3-pip
+python3.12 --version
 ```
 
-If `python3.14` is not yet in your distribution's package repository, use [deadsnakes PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa) (Ubuntu) or build from source per python.org instructions.
+Si tu distribución no tiene todavía el paquete, usa el PPA [deadsnakes](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa) (Ubuntu) o compílalo desde el código fuente según las instrucciones de python.org.
 
 ---
 
-## 4. Step 2 — Clone the Repository
+## 4. Paso 2 — Clonar el repositorio
 
 ```bash
-git clone <repository-url>
-cd legacy-of-infest
+git clone <url-del-repositorio>
+cd legacyofInfest
 ```
 
-Replace `<repository-url>` with the private GitHub repository URL provided by the professor (per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §7 for the expected resulting structure).
+Sustituye `<url-del-repositorio>` por la URL real que te dé el profesor.
 
 ---
 
-## 5. Step 3 — Create and Activate a Virtual Environment
+## 5. Paso 3 — Crear y activar un entorno virtual
 
-**Always work inside a virtual environment.** This isolates the project's dependencies from your system Python and from other courses' projects.
+**Trabaja siempre dentro de un entorno virtual.** Esto aísla las dependencias del proyecto de tu Python del sistema y de otros proyectos.
 
 ### 5.1 Windows (PowerShell)
 
@@ -94,48 +116,65 @@ python -m venv .venv
 .venv\Scripts\Activate.ps1
 ```
 
-If you get an execution policy error, run PowerShell as Administrator once and execute:
+Si aparece un error de política de ejecución, abre PowerShell como administrador una vez y ejecuta:
 ```powershell
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
-Then retry activation.
+Luego reintenta la activación.
 
 ### 5.2 macOS / Linux
 
 ```bash
-python3.14 -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-### 5.3 Confirm Activation
+### 5.3 Confirmar la activación
 
-Your terminal prompt should now show `(.venv)` at the start of the line. Confirm with:
+El prompt de la terminal debería mostrar `(.venv)` al principio de la línea. Confírmalo con:
 
 ```bash
 which python    # macOS/Linux
 where python    # Windows
 ```
 
-The output should point **inside** your project's `.venv` folder, not a system Python location.
+La salida debe apuntar **dentro** de la carpeta `.venv` del proyecto, no a una ubicación del Python del sistema.
 
 ---
 
-## 6. Step 4 — Install Dependencies
+## 6. Paso 4 — Instalar las dependencias
 
-With the virtual environment active:
+Con el entorno virtual activo, la instalación recomendada (la única que documenta `CLAUDE.md`) es la que incluye también las herramientas de desarrollo:
 
 ```bash
-pip install --upgrade pip
+pip install -e ".[dev]"
+```
+
+Esto instala el motor más `pytest`, `ruff` y `mypy`. Si sólo necesitas ejecutar
+el juego, sin las herramientas de desarrollo:
+
+```bash
 pip install -r requirements.txt
 ```
 
-This installs the full pinned dependency set from `23_DATA_SCHEMAS.md` §9: `pygame-ce`, `numpy`, `scipy`, `opencv-python`, `scikit-image`, `scikit-learn`, `Pillow`, `pytmx`, `pyscroll`, `pytweening`, `joblib`, `matplotlib`.
+`requirements.txt` se mantiene sincronizado a mano con la tabla
+`[project.dependencies]` de `pyproject.toml` (lo vigila
+`scripts/check_dependency_sync.py`), y hoy instala: `pygame-ce`, `numpy`,
+`pydantic`, `orjson`, `scipy`, `opencv-python`, `scikit-image`,
+`scikit-learn`, `Pillow`, `pytmx`, `pyscroll`, `joblib`, `matplotlib`.
 
-**Expected install time:** 2–5 minutes depending on connection speed (OpenCV and scikit-learn are the largest packages).
+Hay además tres grupos de extras opcionales, que el juego detecta en tiempo de
+importación y para los que existe una ruta de repliegue si faltan:
 
-### 6.1 Verify the Install
+```bash
+pip install -e ".[accel]"       # numba (JIT) + ModernGL (post-proceso por GPU)
+pip install -e ".[scripting]"   # lupa — comportamientos de enemigo en Lua
+pip install -e ".[audiotools]"  # pydub — conversión de audio fuera de línea
+```
 
-Run the verification sequence from `10_LIBRARIES_AND_DEPENDENCIES.md` §14.1:
+**Tiempo de instalación esperado:** 2–5 minutos según la conexión (OpenCV y scikit-learn son los paquetes más grandes).
+
+### 6.1 Verificar la instalación
 
 ```bash
 python -c "import pygame; print(pygame.version.ver)"
@@ -146,177 +185,167 @@ python -c "import skimage; print(skimage.__version__)"
 python -c "import matplotlib; print(matplotlib.__version__)"
 ```
 
-Every line should print a version number with no `ModuleNotFoundError` or `ImportError`. If any line fails, see §9 Troubleshooting.
+Cada línea debe imprimir un número de versión, sin `ModuleNotFoundError` ni `ImportError`. Si alguna falla, ve a §10, Solución de problemas.
 
 ---
 
-## 7. Step 5 — Install Tiled Map Editor (Non-Python Tool)
+## 7. Paso 5 — Instalar Tiled (editor de mapas)
 
-**This is a separate application, not a pip package** — flagged explicitly in `81_RISK_REGISTER.md` RISK-T03 as a common onboarding gap. Required only if your assignment is a **Stage** (Boss assignments may not need it, per `17_BOSS_SPEC.md` §6.2).
+**Es una aplicación aparte, no un paquete de pip.** Hace falta sólo si tu tarea es un **Stage** (un escenario); las tareas de jefe pueden no necesitarlo.
 
-1. Download from [mapeditor.org](https://www.mapeditor.org/) — free and open source.
-2. Install for your platform (standard installer on Windows/macOS; package manager or AppImage on Linux).
-3. Open `student_templates/stage_template/stage_template.tmx` (after copying it per `26_STUDENT_TEMPLATE_SPEC.md` §8) to confirm Tiled opens project files correctly.
+1. Descárgalo de [mapeditor.org](https://www.mapeditor.org/) — gratis y de código abierto.
+2. Instálalo para tu plataforma (instalador estándar en Windows/macOS; gestor de paquetes o AppImage en Linux).
+3. Abre `student_templates/stage_template/stage_template.tmx` para confirmar que Tiled abre correctamente los ficheros del proyecto.
 
 ---
 
-## 8. Step 6 — Configure VS Code (Recommended Editor)
+## 8. Paso 6 — Configurar VS Code (editor recomendado)
 
-1. Install [VS Code](https://code.visualstudio.com/).
-2. Install the **Python** extension (Microsoft) from the Extensions panel.
-3. Open the cloned repository folder: `File → Open Folder...` → select `legacy-of-infest/`.
-4. Select the correct Python interpreter: `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS) → `Python: Select Interpreter` → choose the one inside `.venv/`.
-5. Confirm the bottom-left status bar shows the `.venv` interpreter, not a system Python.
+1. Instala [VS Code](https://code.visualstudio.com/).
+2. Instala la extensión **Python** (de Microsoft) desde el panel de extensiones.
+3. Abre la carpeta del repositorio clonado: `Archivo → Abrir carpeta...` → selecciona `legacyofInfest/`.
+4. Selecciona el intérprete de Python correcto: `Ctrl+Shift+P` (o `Cmd+Shift+P` en macOS) → `Python: Select Interpreter` → elige el que está dentro de `.venv/`.
+5. Confirma que la barra de estado, abajo a la izquierda, muestra el intérprete de `.venv`, no un Python del sistema.
 
-### 8.1 Recommended (Optional) Extensions
+### 8.1 Extensiones recomendadas (opcionales)
 
-| Extension | Purpose |
+| Extensión | Para qué sirve |
 |---|---|
-| Pylance | Type checking, autocomplete (pairs with the type hints throughout `22_API_CONTRACTS.md`) |
-| GitLens | Git history visibility, useful for following `29_GIT_WORKFLOW_AND_STANDARDS.md` |
-| Even Better TOML / YAML | Syntax highlighting for `requirements.txt`-adjacent config and README front-matter (`23_DATA_SCHEMAS.md` §7) |
+| Pylance | Comprobación de tipos y autocompletado (encaja con las anotaciones de tipo de `22_API_CONTRACTS.md`) |
+| GitLens | Visibilidad del historial de git, útil para seguir el flujo de ramas de `CONTRIBUTING.md` |
+| Even Better TOML / YAML | Resaltado de sintaxis para `pyproject.toml` y la cabecera de los documentos (`23_DATA_SCHEMAS.md` §7) |
 
 ---
 
-## 9. Step 7 — Run the Application
+## 9. Paso 7 — Ejecutar la aplicación
 
 ```bash
 python main.py
 ```
 
-**At Phase 0 of `25_IMPLEMENTATION_ROADMAP.md`,** this prints a scaffold placeholder message and exits. **From Phase 9 onward,** this launches the full scene flow (Splash → Title → Story → Stage 0).
+Esto arranca el flujo completo de escenas (Splash → Título → Historia → Stage 0). `main.py` también acepta:
 
-If a window does not appear at all (no error, no window), see §9.6 below.
+```bash
+python main.py --stage stage1_2_la_soda    # lanza un escenario concreto
+python main.py --boss boss_rey             # lanza un jefe concreto
+python main.py --debug                     # muestra los avisos del motor en consola
+python main.py --semilla 12345             # arranca con una semilla fija, para repetir una partida
+```
+
+Si no aparece ninguna ventana (sin error, sin ventana), ve a §10.6 más abajo.
 
 ---
 
-## 10. Troubleshooting
-
-This table directly addresses the technical risks cataloged in `81_RISK_REGISTER.md` §5, with concrete fixes.
+## 10. Solución de problemas
 
 ### 10.1 `ModuleNotFoundError: No module named 'cv2'`
 
-**Cause:** `opencv-python` failed to install, or you're not in the activated virtual environment.  
-**Fix:**
+**Causa:** `opencv-python` no se instaló, o no estás dentro del entorno virtual activado.
+**Arreglo:**
 ```bash
-# Confirm venv is active (see §5.3), then:
+# Confirma que el venv está activo (ver §5.3) y luego:
 pip install opencv-python
 ```
-If it still fails on Linux, you may be missing system libraries:
+Si sigue fallando en Linux, pueden faltar librerías del sistema:
 ```bash
 sudo apt install libgl1 libglib2.0-0
 ```
 
-### 10.2 `pygame-ce` Conflicts with `pygame`
+### 10.2 `pygame-ce` entra en conflicto con `pygame`
 
-**Cause:** Both packages installed simultaneously cause import ambiguity (`81_RISK_REGISTER.md` RISK-T02).  
-**Fix:**
+**Causa:** tener los dos paquetes instalados a la vez produce ambigüedad al importar.
+**Arreglo:**
 ```bash
 pip uninstall pygame
 pip install pygame-ce
 ```
-Always verify with `python -c "import pygame; print(pygame.version.ver)"` — the version string for `pygame-ce` typically includes distinguishing metadata; if uncertain, `pip show pygame-ce` confirms the correct package is installed.
+Verifica siempre con `python -c "import pygame; print(pygame.version.ver)"`; si tienes dudas, `pip show pygame-ce` confirma que el paquete correcto está instalado.
 
-### 10.3 `pip install -r requirements.txt` Fails on scikit-learn or scipy (Compilation Error)
+### 10.3 `pip install -r requirements.txt` falla en scikit-learn o scipy (error de compilación)
 
-**Cause:** Missing a pre-built wheel for your platform/Python version combination, falling back to source compilation which requires a C compiler.  
-**Fix:**
-- **Windows:** Install ["Build Tools for Visual Studio"](https://visualstudio.microsoft.com/visual-cpp-build-tools/), or more simply, ensure you're using a Python version with pre-built wheels available (check [PyPI](https://pypi.org/project/scikit-learn/#files) for wheel availability matching your Python version).
-- **macOS:** `xcode-select --install` to get command-line build tools.
+**Causa:** falta una rueda (`wheel`) precompilada para tu combinación de plataforma/versión de Python, y se cae a compilar desde el código fuente, lo que exige un compilador de C.
+**Arreglo:**
+- **Windows:** instala ["Build Tools for Visual Studio"](https://visualstudio.microsoft.com/visual-cpp-build-tools/), o más sencillo, usa una versión de Python con ruedas ya disponibles (comprueba en [PyPI](https://pypi.org/project/scikit-learn/#files) qué versiones tienen rueda).
+- **macOS:** `xcode-select --install` para las herramientas de compilación de línea de comandos.
 - **Linux:** `sudo apt install build-essential python3-dev`
 
-### 10.4 Tiled Map Editor: TMX File Won't Open / "Invalid Tileset Reference"
+### 10.4 Tiled: el fichero TMX no abre / "Invalid Tileset Reference"
 
-**Cause:** The `.tmx` file references a tileset by a relative path that doesn't match your local checkout structure.  
-**Fix:** Confirm the tileset file (e.g., `tileset_stage0.png` per `20_ASSET_BIBLE.md` §7) exists at the expected relative path from the `.tmx` file's location (`assets/tilesets/`). If you moved the `.tmx` file outside its original folder, Tiled's relative path breaks — keep `.tmx` files inside their designated `src/stages/<assignment_id>/` folder.
+**Causa:** el `.tmx` referencia un tileset por una ruta relativa que no coincide con tu copia local.
+**Arreglo:** confirma que el fichero del tileset (por ejemplo, `tileset_stage0.png`, ver `20_ASSET_BIBLE.md`) existe en la ruta relativa esperada desde la ubicación del `.tmx` (`assets/tilesets/`). Si moviste el `.tmx` fuera de su carpeta original, la ruta relativa de Tiled se rompe — mantén los ficheros `.tmx` dentro de su carpeta designada en `src/stages/`.
 
 ### 10.5 PowerShell: "running scripts is disabled on this system"
 
-**Cause:** Windows execution policy blocks the venv activation script (§5.1).  
-**Fix:** See §5.1's `Set-ExecutionPolicy` instruction.
+**Causa:** la política de ejecución de Windows bloquea el script de activación del venv (§5.1).
+**Arreglo:** repite la instrucción `Set-ExecutionPolicy` de §5.1.
 
-### 10.6 `python main.py` Runs With No Error But No Window Appears
+### 10.6 `python main.py` se ejecuta sin error pero no aparece ninguna ventana
 
-**Cause (common on Linux, especially WSL or headless/remote setups):** No display server available, or SDL is defaulting to a video driver incompatible with your environment.  
-**Fix:**
-- Confirm you are running on a machine with an actual display (not a headless server/CI environment — those should run tests via `pytest`, per `24_TEST_PLAN.md` §2.3, not launch the windowed app).
-- On WSL2, ensure WSLg is enabled (Windows 11) or an X server (e.g., VcXsrv) is running and `DISPLAY` is set correctly.
+**Causa habitual (sobre todo en Linux, WSL o entornos sin pantalla/remotos):** no hay servidor de vídeo disponible, o SDL está usando por defecto un controlador incompatible con tu entorno.
+**Arreglo:**
+- Confirma que estás en una máquina con pantalla real (no un servidor sin cabeza / un entorno de CI — esos deben ejecutar las pruebas con `pytest`, exportando antes `SDL_VIDEODRIVER=dummy`, `SDL_AUDIODRIVER=dummy` y `PYGAME_HIDE_SUPPORT_PROMPT=1`, tal como indica `CLAUDE.md`, en vez de lanzar la aplicación con ventana).
+- En WSL2, confirma que WSLg está activo (Windows 11) o que hay un servidor X (por ejemplo VcXsrv) corriendo y `DISPLAY` bien configurado.
 
-### 10.7 VS Code Shows Import Errors Despite `pip install` Succeeding
+### 10.7 VS Code muestra errores de importación aunque `pip install` funcionó
 
-**Cause:** VS Code is pointed at the wrong Python interpreter (system Python instead of `.venv`).  
-**Fix:** Re-run §8 step 4 (`Python: Select Interpreter`) and confirm the `.venv` path is selected.
+**Causa:** VS Code apunta al intérprete de Python equivocado (el del sistema en vez de `.venv`).
+**Arreglo:** repite el paso 4 de §8 (`Python: Select Interpreter`) y confirma que está seleccionada la ruta de `.venv`.
 
-### 10.8 `joblib`/Model Loading Fails with a Version Warning or Error
+### 10.8 La carga de `joblib`/un modelo falla con un aviso o error de versión
 
-**Cause:** Per `81_RISK_REGISTER.md` RISK-T04, scikit-learn version mismatch between when a `.pkl` was saved and when it's being loaded.  
-**Fix:** Confirm your `requirements.txt` matches exactly what the professor used to generate `assets/models/professor_sample.pkl` — re-run `pip install -r requirements.txt` to ensure no local version drift, and report persistent mismatches to the professor (this may indicate the pin table in `23_DATA_SCHEMAS.md` §9 needs updating for the current trimester).
+**Causa:** desajuste de versión de scikit-learn entre el momento en que se guardó un `.pkl` y el momento en que se carga.
+**Arreglo:** confirma que tu entorno coincide exactamente con el que generó `assets/models/professor_sample.pkl` — vuelve a ejecutar `pip install -e ".[dev]"` para que no haya deriva de versión local, y avisa al profesor si el desajuste persiste.
 
 ---
 
-## 11. Daily Workflow Quick Reference
+## 11. Referencia rápida del flujo de trabajo diario
 
-Once setup is complete, your typical session start looks like:
+Una vez completada la instalación, el arranque típico de una sesión es:
 
 ```bash
-cd legacy-of-infest
+cd legacyofInfest
 source .venv/bin/activate      # macOS/Linux
-# OR
+# o
 .venv\Scripts\Activate.ps1     # Windows PowerShell
 
-git checkout student/<your_assignment_id>
-git pull origin student/<your_assignment_id>
+git pull
 
-python main.py                 # run the game
-pytest tests/ -v                # run tests (once you have any to run, per 24_TEST_PLAN.md)
+python main.py                 # ejecutar el juego
+pytest                         # ejecutar las pruebas
 ```
 
-When done for the session:
+Al terminar la sesión:
 
 ```bash
-git add .
-git commit -m "[<YOUR_ASSIGNMENT_ID>] feat: <description>"   # per 29_GIT_WORKFLOW_AND_STANDARDS.md §3
-git push origin student/<your_assignment_id>
-deactivate                      # exits the virtual environment
+git add <ficheros concretos>
+git commit -m "AUD-NNN: qué se arregló, en lenguaje llano"   # ver CONTRIBUTING.md
+git push
+deactivate                      # sale del entorno virtual
 ```
 
----
-
-## 12. Verification Checklist (End of Setup)
-
-A student has completed environment setup successfully when **all** of the following are true:
-
-- [ ] `python --version` shows 3.14 or later
-- [ ] Terminal prompt shows `(.venv)` when working in the project
-- [ ] All six `import` verification lines in §6.1 succeed
-- [ ] Tiled Map Editor opens (Stage assignments only)
-- [ ] VS Code shows the `.venv` interpreter selected, no import errors in the editor
-- [ ] `python main.py` runs without exception (placeholder message or full scene flow, depending on Phase per `25_IMPLEMENTATION_ROADMAP.md`)
-- [ ] `git status` inside the repo shows you're on your own `student/<assignment_id>` branch, not `main`
-
-Once all boxes are checked, proceed to `26_STUDENT_TEMPLATE_SPEC.md` §8's 15-minute template onboarding.
-
-
---- Traducción al Español ---
-
-## Guía de Configuración del Entorno
-
-### Requisitos
-- Python 3.14+
-- Git
-- VS Code (recomendado)
-
-### Pasos de Instalación
-1. Clonar el repositorio: `git clone <repo-url>`
-2. Crear entorno virtual: `python -m venv .venv`
-3. Activar: `.venv\Scripts\Activate` (Windows) o `source .venv/bin/activate` (macOS/Linux)
-4. Instalar dependencias: `pip install -r requirements.txt`
-5. Verificar: `python main.py`
-
-Para solución de problemas y configuración adicional, consultar el documento original en inglés.
-
+El flujo real de ramas de este repositorio (`prod`, `pprod`, `dev`, y ramas
+`fix/`, `feat/`, `docs/` partiendo de `dev`) está en `CONTRIBUTING.md` — no
+existe una rama `main` (AUD-168).
 
 ---
-## 🔗 Documentos Relacionados
 
-- [[10_LIBRARIES_AND_DEPENDENCIES.md|Libraries and Dependencies]]
+## 12. Lista de verificación (fin de la instalación)
+
+La instalación del entorno está completa cuando **todo** esto es cierto:
+
+- [ ] `python --version` muestra 3.11 o superior
+- [ ] El prompt de la terminal muestra `(.venv)` al trabajar en el proyecto
+- [ ] Las seis líneas de verificación de importación de §6.1 funcionan
+- [ ] Tiled se abre (sólo para tareas de tipo Stage)
+- [ ] VS Code muestra el intérprete de `.venv` seleccionado, sin errores de importación en el editor
+- [ ] `python main.py` se ejecuta sin excepción y abre la ventana del juego
+- [ ] `git status` dentro del repositorio muestra la rama esperada, según el flujo de `CONTRIBUTING.md`
+
+---
+
+## Documentos relacionados
+
+- [[10_LIBRARIES_AND_DEPENDENCIES.md]]
+- [[23_DATA_SCHEMAS.md]]
+- `../CONTRIBUTING.md`
+- `../CLAUDE.md`

@@ -169,13 +169,22 @@ no tienen nada, y este mes **tres documentos** resultaron describir cosas que
 no existen. Extender el patrón a las especificaciones (05, 06, 17) es el
 siguiente paso obvio.
 
-### B6. Localización
+### B6. Localización — sección obsoleta (AUD-455, 2026-08-13)
 
-| | Documentos |
-|---|---|
-| Sólo español | 28 |
-| Sólo inglés | 66 |
-| Genuinamente bilingües | **2** |
+> **Esta sección describe una política que ya no rige.** La tabla de abajo
+> («28 sólo español / 66 sólo inglés / 2 bilingües») y la entrada C2 «Traducir
+> los 95 documentos — no» describen el régimen bilingüe **anterior** al
+> `CLAUDE.md` §3.5: la **decisión del dueño del 2026-08-11** sustituyó esa
+> política por español único, sin `.en.md`, sin parejas que sincronizar. Desde
+> entonces esta misma auditoría (AUD-455) tradujo decenas de los documentos
+> que esta tabla contaba como «sólo inglés» — prácticamente todos los citados
+> en las notas AUD-455 de `03_ARCHITECTURE.md`, `09_HUD_SPEC.md`,
+> `17_BOSS_SPEC.md`, `45`–`49`, entre muchos otros. Un recuento de cuántos
+> quedan en inglés hoy, hecho a mano aquí, sería el mismo error que el de
+> B5: un número en prosa que envejece en el primer documento que se traduzca.
+> La cifra viva es `tests/test_documentacion_en_espanol.py`, que
+> `CLAUDE.md` cita como la que vigila la invariante 5. La sección de catálogos
+> de interfaz que sigue no depende de esta política y no está afectada.
 
 Los catálogos de interfaz sí están completos (2.767 literales medidos por
 `check_translations.py`, `es` y `en`).
@@ -287,16 +296,18 @@ teoría.
 **2.5D sí es alcanzable**: capas por profundidad, escalado en Z y mapas
 normales sobre la superficie GL que ya existe.
 
-#### Traducir los 95 documentos — **no**
+#### Mantener documentación bilingüe — **no** (revertido, AUD-455)
 
-Serían 190 ficheros que mantener sincronizados, y el modo de fallo dominante de
-este proyecto —medido cuatro veces este mes— es exactamente que un documento se
-separe de la realidad. La única pareja bilingüe que ya existía llevaba meses
-mintiendo por los dos lados: el README decía **1.333** pruebas en español,
-**640** en inglés, y había **2.020**.
-
-La política implementada es bilingüe **donde hay lector**: la puerta de entrada
-y los informes publicables; español para el material del curso.
+> **Esta entrada describe una decisión que el dueño del proyecto revirtió el
+> 2026-08-11 (`CLAUDE.md` §3.5).** Decía que la política era «bilingüe donde
+> hay lector» —la puerta de entrada y los informes publicables en inglés y
+> español, el material del curso sólo en español— y defendía no duplicar 95
+> documentos por el coste de sincronización. Ese argumento seguía siendo
+> cierto para la **duplicación**, y es exactamente por lo que la decisión no
+> duplica: **sustituye**. El proyecto es española-único desde esa fecha, sin
+> `.en.md` y sin parejas que mantener. Se conserva este párrafo, tachado en el
+> espíritu si no en el Markdown, porque explica una decisión de producto real
+> y su porqué histórico — no porque siga vigente.
 
 #### Lintear el código de los estudiantes — **no**
 
@@ -325,7 +336,7 @@ ningún software vivo. El techo realista por categoría está en
 | Accesibilidad | 4 ayudas conectadas | — | — |
 | Persistencia | atómica y endurecida | — | — |
 | Calidad | 4.751 pruebas, CI con 5 puertas | cobertura, mypy, docs atadas | mutación, resistencia |
-| Localización | catálogos completos | 66 documentos en un idioma | — |
+| Localización | catálogos completos, política española-única desde AUD-455/2026-08-11 | ver `tests/test_documentacion_en_espanol.py` para el estado vivo | — |
 
 ---
 

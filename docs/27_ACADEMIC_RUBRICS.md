@@ -1,196 +1,203 @@
 ---
 document_id: "LOI-RUBRIC-027"
-title: "Legacy of InFest — Academic Rubrics"
-aliases: ["Academic Rubrics"]
-tags: ["rubric", "grading", "academic"]
-description: "Scoring criteria for every graded instrument"
+title: "Legacy of InFest — Rúbricas académicas"
+aliases: ["Rúbricas académicas", "Academic Rubrics"]
+tags: ["rubrica", "calificacion", "academico"]
+description: "Criterios de puntuación de cada instrumento calificado"
 source: "docs/27_ACADEMIC_RUBRICS.md"
-date_processed: "2026-07-14"
+date_processed: "2026-08-13"
 ---
 
-# Legacy of InFest — Academic Rubrics
+# Legacy of InFest — Rúbricas académicas
 
-**Document ID:** LOI-RUBRIC-027  
-**Version:** 1.0.0  
-**Status:** Official  
-**Compatibility:** Requires `77_SYLLABUS_ALIGNMENT_AUDIT.md`, `08_SYLLABUS_MAPPING.md`, `14_PROFESSOR_DELIVERABLE_MATRIX.md`, `21_COURSE_SCHEDULE.md`  
-**Audience:** Professor, Teaching Assistants
+**ID del documento:** LOI-RUBRIC-027
+**Versión:** 1.1.0
+**Estado:** Oficial
+**Compatibilidad:** Requiere `08_SYLLABUS_MAPPING.md`, `14_PROFESSOR_DELIVERABLE_MATRIX.md`, `21_COURSE_SCHEDULE.md`
+**Audiencia:** Profesor, ayudantes de cátedra
+
+> **AUD-455.** Traduce el documento (el Apéndice al final ya estaba en
+> español y no se toca). Quita cuatro referencias a documentos que no
+> existen en este repositorio: `77_SYLLABUS_ALIGNMENT_AUDIT.md`,
+> `02_CODEX_CONTEXT.md`, `28_DECISION_LOG.md`, y
+> `29_GIT_WORKFLOW_AND_STANDARDS.md` — las tres últimas remitían a un
+> checklist de calidad de código y de revisión que en este repositorio vive
+> en `CONTRIBUTING.md`.
 
 ---
 
-## 1. Purpose
+## 1. Propósito
 
-`08_SYLLABUS_MAPPING.md` and `14_PROFESSOR_DELIVERABLE_MATRIX.md` define **what** is evaluated and **how much it's worth** (the six official instruments and their percentages). Neither document defines **the point-level criteria a grader applies** to turn a student submission into a number. This document is that missing grading instrument — every rubric here is additive (criteria sum to 100% of that instrument's weight) and reproducible across graders.
+`08_SYLLABUS_MAPPING.md` y `14_PROFESSOR_DELIVERABLE_MATRIX.md` definen **qué** se evalúa y **cuánto vale** (los seis instrumentos oficiales y sus porcentajes). Ninguno de los dos documentos define **los criterios a nivel de punto que aplica quien califica** para convertir una entrega de estudiante en un número. Este documento es ese instrumento de calificación que faltaba — cada rúbrica aquí es aditiva (los criterios suman el 100% del peso de ese instrumento) y reproducible entre distintos calificadores.
 
-**Rule:** No rubric in this document introduces a new evaluation instrument or changes a percentage from `21_COURSE_SCHEDULE.md` §5. Rubrics only subdivide the existing six instruments into gradable criteria.
+**Regla:** ninguna rúbrica de este documento introduce un instrumento de evaluación nuevo ni cambia un porcentaje de `21_COURSE_SCHEDULE.md` §5. Las rúbricas sólo subdividen los seis instrumentos existentes en criterios calificables.
 
 ---
 
-## 2. Quices Rubric (15% of final grade)
+## 2. Rúbrica de Quices (15% de la nota final)
 
-Per `21_COURSE_SCHEDULE.md` §4, four quizzes are distributed across Classes 2, 4, 6, 9. Each quiz is worth an equal share unless the professor documents otherwise in `28_DECISION_LOG.md`.
+Según `21_COURSE_SCHEDULE.md` §4, se distribuyen cuatro quices en las Clases 2, 4, 6, 9. Cada quiz vale una fracción igual salvo que el profesorado documente lo contrario.
 
-### 2.1 Generic Quiz Rubric (applies to all 4 quizzes, content varies per `21_COURSE_SCHEDULE.md` §4)
+### 2.1 Rúbrica genérica de quiz (aplica a los 4 quices; el contenido varía según `21_COURSE_SCHEDULE.md` §4)
 
-| Criterion | Points | Description |
+| Criterio | Puntos | Descripción |
 |---|---|---|
-| Conceptual accuracy | 40 | Definitions and theoretical statements are correct |
-| Applied reasoning | 30 | Student connects the concept to a concrete graphics/imaging example (not just rote definition) |
-| Mathematical correctness | 20 | Any formula, computation, or derivation requested is correct |
-| Clarity of expression | 10 | Answer is legible, organized, and uses correct terminology |
-| **Total** | **100** | Scaled to (15% / 4) = 3.75% of final grade per quiz |
+| Precisión conceptual | 40 | Las definiciones y afirmaciones teóricas son correctas |
+| Razonamiento aplicado | 30 | El estudiante conecta el concepto con un ejemplo concreto de gráficas/imágenes (no sólo la definición de memoria) |
+| Corrección matemática | 20 | Cualquier fórmula, cómputo, o derivación pedida es correcta |
+| Claridad de expresión | 10 | La respuesta es legible, organizada, y usa la terminología correcta |
+| **Total** | **100** | Escalado a (15% / 4) = 3.75% de la nota final por quiz |
 
-### 2.2 Per-Quiz Topic Weighting (within the 100-point scale above)
+### 2.2 Ponderación de tema por quiz (dentro de la escala de 100 puntos de arriba)
 
-| Quiz | Class | Topics | Suggested Question Distribution |
+| Quiz | Clase | Temas | Distribución de preguntas sugerida |
 |---|---|---|---|
-| Quiz 1 | 2 | Unit I + Unit II (vectors, coordinate systems) | 30% raster/vector history, 70% vector algebra |
-| Quiz 2 | 4 | Unit III (curves, Bernstein polynomials) | 50% Bézier theory, 30% B-Spline/NURBS concept, 20% trajectory application |
-| Quiz 3 | 6 | Unit V (color theory, color space conversion) | 60% RGB/HSV/HSL/CMYK conversion math, 40% alpha blending and lighting concepts |
-| Quiz 4 | 9 | Unit VIII (segmentation, morphology theory) | 40% thresholding/Otsu, 30% morphological operations, 30% connected components/watershed concept |
+| Quiz 1 | 2 | Unidad I + Unidad II (vectores, sistemas de coordenadas) | 30% historia raster/vectorial, 70% álgebra vectorial |
+| Quiz 2 | 4 | Unidad III (curvas, polinomios de Bernstein) | 50% teoría de Bézier, 30% concepto de B-Spline/NURBS, 20% aplicación de trayectorias |
+| Quiz 3 | 6 | Unidad V (teoría del color, conversión de espacio de color) | 60% matemática de conversión RGB/HSV/HSL/CMYK, 40% mezcla alfa y conceptos de iluminación |
+| Quiz 4 | 9 | Unidad VIII (segmentación, teoría de morfología) | 40% umbralización/Otsu, 30% operaciones morfológicas, 30% concepto de componentes conectados/watershed |
 
 ---
 
-## 3. Prácticas de Laboratorio Rubric (20% of final grade)
+## 3. Rúbrica de Prácticas de laboratorio (20% de la nota final)
 
-Per `21_COURSE_SCHEDULE.md` §4, three labs are distributed across Classes 3, 6, 9.
+Según `21_COURSE_SCHEDULE.md` §4, se distribuyen tres laboratorios en las Clases 3, 6, 9.
 
-### 3.1 Generic Lab Rubric (applies to all 3 labs)
+### 3.1 Rúbrica genérica de laboratorio (aplica a los 3 laboratorios)
 
-| Criterion | Points | Description |
+| Criterio | Puntos | Descripción |
 |---|---|---|
-| Functional correctness | 35 | Code runs without errors and produces the expected output for the lab's stated task |
-| Correct use of framework API | 25 | Student calls `FilterTools`/`VisionTools`/`ColorTools`/etc. (as applicable) through the documented public API — never bypasses with direct library calls (`cv2`, `scipy`, `sklearn`) per `02_CODEX_CONTEXT.md` §11 |
-| Code quality | 20 | Follows `02_CODEX_CONTEXT.md` §5 naming/typing/docstring standards |
-| In-lab demonstration | 20 | Student can explain their code and its output verbally to the instructor during the 2-hour practice block |
-| **Total** | **100** | Scaled to (20% / 3) ≈ 6.67% of final grade per lab |
+| Corrección funcional | 35 | El código corre sin errores y produce la salida esperada para la tarea del laboratorio |
+| Uso correcto de la API del framework | 25 | El estudiante llama a `FilterTools`/`VisionTools`/`ColorTools`/etc. (según aplique) a través de la API pública documentada — nunca la evita con llamadas directas a la biblioteca subyacente (`cv2`, `scipy`, `sklearn`) |
+| Calidad de código | 20 | Sigue los estándares de nombres/tipado/docstrings de `CONTRIBUTING.md` |
+| Demostración en el laboratorio | 20 | El estudiante puede explicar su código y su salida verbalmente al instructor durante el bloque práctico de 2 horas |
+| **Total** | **100** | Escalado a (20% / 3) ≈ 6.67% de la nota final por laboratorio |
 
-### 3.2 Per-Lab Topic Weighting
+### 3.2 Ponderación de tema por laboratorio
 
-| Lab | Class | Topics | Direct API Exercised |
+| Laboratorio | Clase | Temas | API directa ejercitada |
 |---|---|---|---|
-| Lab 1 | 3 | Unit II (transformations, homogeneous coordinates) | `math_utils.py` vector functions, local→world hitbox transform |
-| Lab 2 | 6 | Unit V (color and lighting applied) | `ColorTools` conversions, `alpha_blend` |
-| Lab 3 | 9 | Unit VIII (segmentation and visual analysis applied) | `VisionTools` threshold/morphology/region analysis |
+| Laboratorio 1 | 3 | Unidad II (transformaciones, coordenadas homogéneas) | funciones vectoriales de `math_utils.py`, transformación de hitbox local→mundo |
+| Laboratorio 2 | 6 | Unidad V (color e iluminación aplicados) | conversiones de `ColorTools`, `alpha_blend` |
+| Laboratorio 3 | 9 | Unidad VIII (segmentación y análisis visual aplicados) | umbral/morfología/análisis de regiones de `VisionTools` |
 
 ---
 
-## 4. Evaluación Práctica I — Prototipo Funcional Rubric (15% of final grade)
+## 4. Rúbrica de Evaluación Práctica I — Prototipo Funcional (15% de la nota final)
 
-**Class 5.** Per `14_PROFESSOR_DELIVERABLE_MATRIX.md` (corrected), demonstrates Units II, III, IV, V on the student's single assigned Stage or Boss.
+**Clase 5.** Según `14_PROFESSOR_DELIVERABLE_MATRIX.md`, demuestra las Unidades II, III, IV, V sobre el único Escenario o Jefe asignado al estudiante.
 
-| Criterion | Points | Description |
+| Criterio | Puntos | Descripción |
 |---|---|---|
-| Coordinate systems & vectors (Unit II) | 20 | At least one custom entity uses explicit vector math (`vec2_normalize`/`vec2_dot`/`vec2_distance`) for movement or detection, correctly |
-| Curves (Unit III) | 15 | At least one entity or projectile follows a `CurveTools`-computed path; control points and curve type documented in README |
-| Scene/object representation (Unit IV) | 20 | TMX stage has all 8 required layers populated meaningfully (not just placeholder); OR for Boss assignments, arena geometry and entity layering is complete |
-| Color/transparency (Unit V) | 15 | A `ColorTools` operation (conversion or alpha blend) is applied and visually observable |
-| Functional completeness | 20 | Stage/Boss loads, player can traverse/fight without crashing, basic interaction (enemy contact, checkpoint, or boss hit) works |
-| README documentation quality | 10 | Front-matter present and valid per `23_DATA_SCHEMAS.md` §7; each unit's section explains the formula/algorithm used, not just names the feature |
-| **Total** | **100** | Scaled to 15% of final grade |
+| Sistemas de coordenadas y vectores (Unidad II) | 20 | Al menos una entidad propia usa matemática vectorial explícita (`vec2_normalize`/`vec2_dot`/`vec2_distance`) para movimiento o detección, correctamente |
+| Curvas (Unidad III) | 15 | Al menos una entidad o proyectil sigue una ruta calculada con `CurveTools`; puntos de control y tipo de curva documentados en el README |
+| Representación de escena/objeto (Unidad IV) | 20 | El TMX del escenario tiene las 8 capas obligatorias pobladas con sentido (no sólo marcadores de posición); O, para entregas de Jefe, la geometría de la arena y el ordenamiento de entidades está completo |
+| Color/transparencia (Unidad V) | 15 | Se aplica una operación de `ColorTools` (conversión o mezcla alfa) y es observable visualmente |
+| Completitud funcional | 20 | El Escenario/Jefe carga, el jugador puede recorrerlo/combatirlo sin fallos, funciona la interacción básica (contacto con enemigo, checkpoint, o golpe al jefe) |
+| Calidad de la documentación del README | 10 | El front-matter está presente y es válido según `23_DATA_SCHEMAS.md` §7; la sección de cada unidad explica la fórmula/algoritmo usado, no sólo nombra la característica |
+| **Total** | **100** | Escalado al 15% de la nota final |
 
-**Pass threshold:** A score below 60/100 on this instrument requires a mandatory remediation conversation with the professor before Evaluación Práctica II, since each subsequent milestone builds cumulatively on this one (per `08_SYLLABUS_MAPPING.md` §12).
+**Umbral de aprobación:** una nota por debajo de 60/100 en este instrumento exige una conversación de remediación obligatoria con el profesorado antes de la Evaluación Práctica II, ya que cada hito posterior se construye acumulativamente sobre éste (según `08_SYLLABUS_MAPPING.md` §12).
 
 ---
 
-## 5. Evaluación Práctica II — Vertical Slice Rubric (15% of final grade)
+## 5. Rúbrica de Evaluación Práctica II — Vertical Slice (15% de la nota final)
 
-**Class 8.** Adds Units VI, VII on top of the Evaluación Práctica I baseline.
+**Clase 8.** Añade las Unidades VI, VII sobre la base de la Evaluación Práctica I.
 
-| Criterion | Points | Description |
+| Criterio | Puntos | Descripción |
 |---|---|---|
-| All Evaluación Práctica I criteria maintained | 25 | Re-graded at a pass/partial/fail granularity — work must not have regressed |
-| Animation & interaction (Unit VI) | 20 | At least one easing-function-driven animation (`ease_*` from `math_utils.py`, not plain `lerp`); a custom `EventBus`-mediated interaction beyond standard collision |
-| Histogram/brightness/contrast (Unit VII, part 1) | 15 | `FilterTools.compute_histogram()` used to drive a game-logic decision (not purely cosmetic); brightness or contrast adjustment applied and documented |
-| Convolution/blur/edge detection (Unit VII, part 2) | 20 | At least one of `apply_kernel`/`gaussian_blur`/`sobel_edge`/`canny_edge` applied with a documented kernel matrix or parameter rationale |
-| Functional completeness | 10 | All Evaluación Práctica I functionality still works; new features integrate without breaking existing ones |
-| README documentation quality | 10 | Unit VI and VII sections added with before/after screenshots for filter operations |
-| **Total** | **100** | Scaled to 15% of final grade |
+| Se mantienen todos los criterios de la Evaluación Práctica I | 25 | Recalificado a granularidad aprobado/parcial/reprobado — el trabajo no debe haber retrocedido |
+| Animación e interacción (Unidad VI) | 20 | Al menos una animación dirigida por función de easing (`ease_*` de `math_utils.py`, no `lerp` plano); una interacción propia mediada por `EventBus` más allá de la colisión estándar |
+| Histograma/brillo/contraste (Unidad VII, parte 1) | 15 | Se usa `FilterTools.compute_histogram()` para dirigir una decisión de lógica de juego (no puramente cosmética); se aplica y documenta un ajuste de brillo o contraste |
+| Convolución/desenfoque/detección de bordes (Unidad VII, parte 2) | 20 | Se aplica al menos uno de `apply_kernel`/`gaussian_blur`/`sobel_edge`/`canny_edge` con una matriz de kernel documentada o justificación de parámetros |
+| Completitud funcional | 10 | Toda la funcionalidad de la Evaluación Práctica I sigue funcionando; las características nuevas se integran sin romper las existentes |
+| Calidad de la documentación del README | 10 | Se añaden las secciones de Unidad VI y VII con capturas de antes/después para las operaciones de filtro |
+| **Total** | **100** | Escalado al 15% de la nota final |
 
-**Pass threshold:** Same as §4 — below 60/100 triggers mandatory remediation before Evaluación Práctica III.
+**Umbral de aprobación:** igual que en §4 — por debajo de 60/100 dispara remediación obligatoria antes de la Evaluación Práctica III.
 
 ---
 
-## 6. Evaluación Práctica III — Integración Final Rubric (15% of final grade)
+## 6. Rúbrica de Evaluación Práctica III — Integración Final (15% de la nota final)
 
-**Class 11.** Adds Units VIII, IX — the capstone milestone for the student's single assignment.
+**Clase 11.** Añade las Unidades VIII, IX — el hito de cierre para la única entrega del estudiante.
 
-| Criterion | Points | Description |
+| Criterio | Puntos | Descripción |
 |---|---|---|
-| All prior criteria maintained | 20 | Evaluación Práctica I + II functionality intact, re-graded pass/partial/fail |
-| Segmentation (Unit VIII) | 20 | `VisionTools.threshold_binary()`/`threshold_otsu()` + at least one morphological operation applied; `connected_components()` or `analyze_regions()` drives observable behavior |
-| Feature extraction & pattern recognition (Unit IX) | 25 | `VisionTools.extract_features()` (or `PatternRecognitionTools` direct equivalent) produces a feature vector that is fed into a trained classifier; classifier output changes game behavior in at least 2 distinguishable ways |
-| Model quality | 15 | Dataset has ≥10 samples/class across ≥2 classes (per `23_DATA_SCHEMAS.md` §5.4); `EvaluationResult.accuracy` ≥ 0.70, OR a documented justification if below threshold (per `13_PATTERN_RECOGNITION_SPEC.md` §10.2) |
-| Full integration & polish | 10 | The single assigned Stage/Boss is complete, playable start-to-finish, no console errors during a full run |
-| README documentation quality | 10 | Full training pipeline documented: dataset description, classifier type/hyperparameters, accuracy, confusion matrix |
-| **Total** | **100** | Scaled to 15% of final grade |
+| Se mantienen todos los criterios previos | 20 | La funcionalidad de la Evaluación Práctica I + II está intacta, recalificada aprobado/parcial/reprobado |
+| Segmentación (Unidad VIII) | 20 | Se aplica `VisionTools.threshold_binary()`/`threshold_otsu()` + al menos una operación morfológica; `connected_components()` o `analyze_regions()` dirige un comportamiento observable |
+| Extracción de características y reconocimiento de patrones (Unidad IX) | 25 | `VisionTools.extract_features()` produce un vector de características que se alimenta a un clasificador entrenado (`PatternRecognitionTools`); la salida del clasificador cambia el comportamiento del juego de al menos 2 formas distinguibles |
+| Calidad del modelo | 15 | El dataset tiene ≥10 muestras/clase en ≥2 clases (según `23_DATA_SCHEMAS.md` §5.4); `EvaluationResult.accuracy` ≥ 0.70, O una justificación documentada si está por debajo del umbral (según `13_PATTERN_RECOGNITION_SPEC.md` §10.2) |
+| Integración y pulido completos | 10 | El único Escenario/Jefe asignado está completo, jugable de principio a fin, sin errores de consola durante una corrida completa |
+| Calidad de la documentación del README | 10 | Tubería de entrenamiento completa documentada: descripción del dataset, tipo de clasificador/hiperparámetros, precisión, matriz de confusión |
+| **Total** | **100** | Escalado al 15% de la nota final |
 
-**This is the final individual-course milestone.** No remediation gate applies after this point — the grade stands, feeding into the final course average alongside Quices, Labs, and Invenio Fest.
+**Éste es el hito final del curso individual.** No aplica ninguna puerta de remediación después de este punto — la nota queda fija, y alimenta el promedio final del curso junto con Quices, Laboratorios, e Invenio Fest.
 
 ---
 
-## 7. Proyecto Integrador Invenio Fest Rubric (20% of final grade)
+## 7. Rúbrica del Proyecto Integrador Invenio Fest (20% de la nota final)
 
-**Class 12.** Per `21_COURSE_SCHEDULE.md` §3 Class 12 and §7, this course grades **only the graphics/visual contribution** to the interdisciplinary group project — not the group project as a whole (other courses grade their own dimensions separately).
+**Clase 12.** Según `21_COURSE_SCHEDULE.md` §3 Clase 12 y §7, este curso califica **sólo la contribución gráfica/visual** al proyecto grupal interdisciplinario — no el proyecto grupal como un todo (los demás cursos califican sus propias dimensiones por separado).
 
-| Criterion | Points | Description |
+| Criterio | Puntos | Descripción |
 |---|---|---|
-| Effective application of visual techniques | 25 | The student's individual contribution to the group project visibly applies course techniques (any of Units I–IX) appropriately to the group's chosen application domain |
-| GUI/interface quality | 20 | If the student's contribution includes a graphical interface or visual output, it is functional, readable, and free of glaring usability issues |
-| Appropriate use of visual resources | 15 | Images, sprites, or generated visual assets are used purposefully, not decoratively or irrelevantly |
-| Integration of graphics components into the solution | 20 | The graphics/imaging code the student wrote is not a standalone demo — it is wired into the group's actual application logic |
-| Individual contribution clarity | 10 | The professor can clearly identify which part of the group deliverable is this specific student's work (via commit history, a stated role, or a individually-presented segment) |
-| Presentation and final demonstration | 10 | The student can explain and demonstrate their graphics contribution live during Invenio Fest |
-| **Total** | **100** | Scaled to 20% of final grade |
+| Aplicación efectiva de técnicas visuales | 25 | La contribución individual del estudiante al proyecto grupal aplica visiblemente técnicas del curso (cualquiera de las Unidades I–IX) de forma apropiada al dominio de aplicación elegido por el grupo |
+| Calidad de GUI/interfaz | 20 | Si la contribución del estudiante incluye una interfaz gráfica o salida visual, es funcional, legible, y sin problemas de usabilidad evidentes |
+| Uso apropiado de recursos visuales | 15 | Las imágenes, sprites, o recursos visuales generados se usan con propósito, no decorativa o irrelevantemente |
+| Integración de componentes gráficos en la solución | 20 | El código de gráficas/imágenes que escribió el estudiante no es una demo independiente — está conectado a la lógica real de la aplicación del grupo |
+| Claridad de la contribución individual | 10 | El profesorado puede identificar claramente qué parte de la entrega grupal es el trabajo de este estudiante en particular (vía historial de commits, un rol declarado, o un segmento presentado individualmente) |
+| Presentación y demostración final | 10 | El estudiante puede explicar y demostrar en vivo su contribución gráfica durante Invenio Fest |
+| **Total** | **100** | Escalado al 20% de la nota final |
 
-**Cross-course note:** This rubric is independent of whatever rubric the student's other trimester courses apply to the same Invenio Fest project — per `21_COURSE_SCHEDULE.md` §3 Class 12 table, each course evaluates its own dimension.
+**Nota entre cursos:** esta rúbrica es independiente de la rúbrica que apliquen los demás cursos del trimestre del estudiante al mismo proyecto de Invenio Fest — según la tabla de `21_COURSE_SCHEDULE.md` §3 Clase 12, cada curso evalúa su propia dimensión.
 
 ---
 
-## 8. Final Grade Computation
+## 8. Cómputo de la nota final
 
 ```
-Final Grade = (Quices_avg × 0.15)
-            + (Labs_avg × 0.20)
-            + (Eval_Practica_I × 0.15)
-            + (Eval_Practica_II × 0.15)
-            + (Eval_Practica_III × 0.15)
-            + (Invenio_Fest × 0.20)
+Nota final = (promedio_Quices × 0.15)
+           + (promedio_Laboratorios × 0.20)
+           + (Eval_Practica_I × 0.15)
+           + (Eval_Practica_II × 0.15)
+           + (Eval_Practica_III × 0.15)
+           + (Invenio_Fest × 0.20)
 ```
 
-Where each term on the right is the percentage score (0.0–1.0) on that instrument's 100-point rubric above, and the weights sum to 1.00 (100%), matching `21_COURSE_SCHEDULE.md` §5 exactly.
+Donde cada término de la derecha es la nota porcentual (0.0–1.0) sobre la rúbrica de 100 puntos de ese instrumento, y los pesos suman 1.00 (100%), coincidiendo exactamente con `21_COURSE_SCHEDULE.md` §5.
 
 ---
 
-## 9. Grading Consistency Notes for Multiple Graders
+## 9. Notas de consistencia de calificación para varios calificadores
 
-If a Teaching Assistant grades any portion of these rubrics:
+Si un ayudante de cátedra califica alguna parte de estas rúbricas:
 
-1. **Calibration session required** before Class 5 (first practical evaluation): professor and TA jointly grade 2–3 sample submissions and reconcile scoring differences before grading the full cohort.
-2. **Code-quality criteria** (`02_CODEX_CONTEXT.md` §5–6 compliance) should be checked with a shared checklist, not subjective impression — use `29_GIT_WORKFLOW_AND_STANDARDS.md` §4's code review checklist as the literal grading instrument for any "code quality" line item above.
-3. **Disagreements >15 points** between two graders on the same submission must be resolved by the professor directly, not averaged silently.
+1. **Se requiere una sesión de calibración** antes de la Clase 5 (primera evaluación práctica): el profesorado y el ayudante califican juntos 2-3 entregas de muestra y reconcilian diferencias de puntuación antes de calificar a toda la cohorte.
+2. **Los criterios de calidad de código** deben revisarse con un checklist compartido, no con impresión subjetiva — usar el checklist de revisión de código de `CONTRIBUTING.md` como el instrumento de calificación literal para cualquier renglón de "calidad de código" de arriba.
+3. **Los desacuerdos de más de 15 puntos** entre dos calificadores sobre la misma entrega deben resolverlos directamente el profesorado, no promediarse en silencio.
 
 ---
 
-## 10. Rubric Cross-Reference Index
+## 10. Índice de referencia cruzada de rúbricas
 
-| Rubric Section | Evaluation Instrument | Official Weight | Source Document for Content Scope |
+| Sección de rúbrica | Instrumento de evaluación | Peso oficial | Documento fuente para el alcance del contenido |
 |---|---|---|---|
 | §2 | Quices | 15% | `21_COURSE_SCHEDULE.md` §4, §6 |
 | §3 | Prácticas de laboratorio | 20% | `21_COURSE_SCHEDULE.md` §4 |
-| §4 | Evaluación Práctica I | 15% | `08_SYLLABUS_MAPPING.md` §12, `14_PROFESSOR_DELIVERABLE_MATRIX.md` §14.1 |
-| §5 | Evaluación Práctica II | 15% | `08_SYLLABUS_MAPPING.md` §12, `14_PROFESSOR_DELIVERABLE_MATRIX.md` §14.2 |
-| §6 | Evaluación Práctica III | 15% | `08_SYLLABUS_MAPPING.md` §12, `14_PROFESSOR_DELIVERABLE_MATRIX.md` §14.3 |
-| §7 | Invenio Fest | 20% | `21_COURSE_SCHEDULE.md` §3 Class 12 |
-
+| §4 | Evaluación Práctica I | 15% | `08_SYLLABUS_MAPPING.md` §12, `14_PROFESSOR_DELIVERABLE_MATRIX.md` |
+| §5 | Evaluación Práctica II | 15% | `08_SYLLABUS_MAPPING.md` §12, `14_PROFESSOR_DELIVERABLE_MATRIX.md` |
+| §6 | Evaluación Práctica III | 15% | `08_SYLLABUS_MAPPING.md` §12, `14_PROFESSOR_DELIVERABLE_MATRIX.md` |
+| §7 | Invenio Fest | 20% | `21_COURSE_SCHEDULE.md` §3 Clase 12 |
 
 ---
-## 🔗 Documentos Relacionados
+## 🔗 Documentos relacionados
 
-- [[30_ASSIGNMENT_01_STAGE_DESIGN.md|Assignment 1: Stage Design]]
-- [[31_ASSIGNMENT_02_BOSS_DESIGN.md|Assignment 2: Boss Design]]
-- [[32_ASSIGNMENT_03_LAB_EXERCISES.md|Assignment 3: Lab Exercises]]
-- [[33_ASSIGNMENT_04_FINAL_PROJECT.md|Assignment 4: Final Project]]
+- [[30_ASSIGNMENT_01_STAGE_DESIGN.md|Entrega 1: diseño de escenario]]
+- [[31_ASSIGNMENT_02_BOSS_DESIGN.md|Entrega 2: diseño de jefe]]
+- [[32_ASSIGNMENT_03_LAB_EXERCISES.md|Entrega 3: ejercicios de laboratorio]]
+- [[33_ASSIGNMENT_04_FINAL_PROJECT.md|Entrega 4: proyecto final]]
 
 ---
 

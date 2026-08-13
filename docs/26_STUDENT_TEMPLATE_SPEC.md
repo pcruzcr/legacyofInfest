@@ -1,32 +1,55 @@
 ---
 document_id: "LOI-TEMPLATE-026"
-title: "Legacy of InFest — Student Template Specification"
-aliases: ["Student Template Spec"]
-tags: ["template", "student", "starter"]
-description: "Exact starter files every student copies"
+title: "Legacy of InFest — Especificación de la plantilla de estudiante"
+aliases: ["Especificación de la plantilla de estudiante", "Student Template Spec"]
+tags: ["plantilla", "estudiante", "inicio"]
+description: "Los ficheros de partida exactos que copia cada estudiante"
 source: "docs/26_STUDENT_TEMPLATE_SPEC.md"
-date_processed: "2026-07-14"
+date_processed: "2026-08-12"
 ---
 
-# Legacy of InFest — Student Template Specification
+# Legacy of InFest — Especificación de la plantilla de estudiante
 
-**Document ID:** LOI-TEMPLATE-026  
-**Version:** 1.0.0  
-**Status:** Official  
-**Compatibility:** Requires `77_SYLLABUS_ALIGNMENT_AUDIT.md`, `22_API_CONTRACTS.md`, `23_DATA_SCHEMAS.md`, `21_COURSE_SCHEDULE.md`  
-**Audience:** Professor, AI coding assistants (Claude Code, Cline, OpenCode, Codex)
+**ID del documento:** LOI-TEMPLATE-026
+**Versión:** 1.1.0
+**Estado:** Oficial
+**Requiere:** `22_API_CONTRACTS.md`, `23_DATA_SCHEMAS.md`, `21_COURSE_SCHEDULE.md`
+**Audiencia:** Profesor, asistentes de programación con IA
+
+> **AUD-455.** Traduce el documento y quita cinco referencias a
+> `77_SYLLABUS_ALIGNMENT_AUDIT.md` y dos a `25_IMPLEMENTATION_ROADMAP.md`,
+> documentos que no existen en este repositorio. **Hallazgo aparte, no
+> corregido aquí:** los ficheros reales de la plantilla
+> (`student_templates/stage_template/stage_template.py`,
+> `boss_template.py`) están escritos en inglés — comentarios y docstrings
+> incluidos — pese a que el curso es en español. Los bloques de código de
+> este documento se dejan **fieles al fichero real** (que sigue en inglés);
+> traducir sólo el documento y no el código haría que dejaran de coincidir.
+>
+> **AUD-455 (2026-08-13).** El bloque de `boss_template.py` reproducido aquí
+> importaba `EnemyState` desde `enemy_base.py` — un import que el fichero real
+> no tiene. Los TODO de tres ganchos de `stage_template.py` también se habían
+> quedado cortos frente al texto real (`on_player_landed`, `on_enemy_died`,
+> `on_next_trigger_entered`, `on_debug_toggle`). Los dos `README_template.md`
+> de §6 y §7 habían perdido filas de tabla (Checkpoints, Enemy/Entity
+> Placements, Attack Patterns, Phase Transitions), la línea introductoria de
+> dos secciones y la nota de cierre («Complete this worksheet…») que sí trae
+> el fichero real. A diferencia del TMX de §4 (generado y con `--check` en
+> CI), estos cuatro bloques no tienen guardián automático que los ate al
+> fichero real — verificado por comparación directa con
+> `student_templates/{stage,boss}_template/`.
 
 ---
 
-## 1. Purpose
+## 1. Propósito
 
-`77_SYLLABUS_ALIGNMENT_AUDIT.md` §7 and `03_ARCHITECTURE.md` §1 both reference `student_templates/stage_template/` and `student_templates/boss_template/` as the canonical starting point every student copies in Class 1 (per `21_COURSE_SCHEDULE.md`). No prior document defines what those template files actually contain. This document is that definition — exact file contents, placeholders, and the README a student fills in.
+`student_templates/stage_template/` y `student_templates/boss_template/` son el punto de partida canónico que cada estudiante copia en la primera clase (según `21_COURSE_SCHEDULE.md`). Ningún otro documento define qué contienen exactamente esos ficheros de plantilla. Este documento es esa definición — el contenido exacto de los ficheros, los marcadores de posición y el README que rellena un estudiante.
 
-**Onboarding target (per `25_IMPLEMENTATION_ROADMAP.md` §18):** A student must be able to copy a template, rename it to their assignment, and have a *running* (if empty) Stage or Boss within 15 minutes of starting Class 1.
+**Objetivo de incorporación:** un estudiante debe poder copiar una plantilla, renombrarla según su entrega, y tener un Stage o Boss *en marcha* (aunque esté vacío) en menos de 15 minutos desde que empieza la primera clase.
 
 ---
 
-## 2. Directory Contents
+## 2. Contenido de la carpeta
 
 ```
 student_templates/
@@ -39,15 +62,15 @@ student_templates/
     └── README_template.md
 ```
 
-Bosses do not get a `.tmx` template — per `17_BOSS_SPEC.md` §6.2, boss arenas are fixed (320×224, no scrolling), so a boss's TMX (if the assignment is a boss with a scroll-free arena built in Tiled) is created by the student directly from a blank Tiled map rather than a pre-authored template, OR (more commonly) the arena is built directly in Python as static geometry per `17_BOSS_SPEC.md` boss arena tables — both approaches are valid and the `boss_template.py` below supports either.
+Los jefes no tienen plantilla `.tmx` — las arenas de jefe son fijas (320×224, sin scroll), así que el TMX de un jefe (si la entrega es un jefe con arena sin scroll construida en Tiled) lo crea el estudiante directamente desde un mapa de Tiled en blanco, en vez de a partir de una plantilla preescrita, O (más habitual) la arena se construye directamente en Python como geometría estática. Las dos formas son válidas y el `boss_template.py` de abajo soporta cualquiera de las dos.
 
 ---
 
 ## 3. `stage_template.py`
 
-This is the exact file content at `student_templates/stage_template/stage_template.py`. Every `# TODO(student):` comment marks a required student edit. Everything else must work unmodified the first time the student runs it.
+Este es el contenido exacto del fichero en `student_templates/stage_template/stage_template.py`. Cada comentario `# TODO(student):` marca una edición obligatoria del estudiante. Todo lo demás debe funcionar sin modificar la primera vez que el estudiante lo ejecuta.
 
-The template inherits from `StageScene` (not `BaseScene`), which provides all engine integration: collision system, hazard system, progression system, SFX, boss HUD, save/load, pause menu, camera locks, and time scaling — students only override lifecycle hooks.
+La plantilla hereda de `StageScene` (no de `BaseScene`), que da toda la integración con el motor: sistema de colisión, sistema de peligros, sistema de progresión, SFX, HUD de jefe, guardado/carga, menú de pausa, bloqueos de cámara y escala de tiempo — los estudiantes sólo sobreescriben los ganchos del ciclo de vida.
 
 ```python
 """
@@ -104,22 +127,22 @@ class StageTemplate(StageScene):
 
     def on_player_landed(self) -> None:
         """Called when the player first touches ground after being airborne.
-        TODO(student): e.g., trigger a message."""
+        TODO(student): e.g., trigger a message, activate a hazard."""
         pass
 
     def on_enemy_died(self, enemy) -> None:
         """Called when an enemy dies.
-        TODO(student): e.g., unlock a door."""
+        TODO(student): e.g., unlock a door, spawn a pickup."""
         pass
 
     def on_next_trigger_entered(self) -> None:
         """Called when the player touches NextTrigger.
-        TODO(student): e.g., play a cutscene."""
+        TODO(student): e.g., play a custom cutscene before stage ends."""
         pass
 
     def on_debug_toggle(self, enabled: bool) -> None:
-        """Called when F1 is pressed.
-        TODO(student): e.g., show/hide debug info."""
+        """Called when F1 is pressed to toggle debug overlay.
+        TODO(student): e.g., show/hide additional debug info."""
         pass
 ```
 
@@ -127,11 +150,11 @@ class StageTemplate(StageScene):
 
 ## 4. `stage_template.tmx`
 
-The template TMX is not reproduced as raw XML in this document (TMX is a binary-adjacent Tiled-editor format, not meant for hand-authoring in Markdown). Instead, this section specifies **exactly what the professor's `tools/` scripting (or an AI assistant with file-write access) must generate** so a student opens a valid, minimal, already-passing TMX in Tiled on day one.
+El TMX de la plantilla no se reproduce como XML en crudo en este documento (TMX es un formato del editor Tiled casi binario, no pensado para escribirse a mano en Markdown). En su lugar, esta sección especifica **exactamente lo que debe generar** el script del profesorado (o un asistente de IA con acceso de escritura) para que un estudiante abra, el primer día, un TMX válido, mínimo y que ya pasa la calificación en Tiled.
 
-### 4.1 Required Generated Content
+### 4.1 Contenido generado obligatorio
 
-| Element | Content |
+| Elemento | Contenido |
 |---|---|
 > **Actualizado 2026-08-11 (AUD-417). La plantilla ya no es «mínima»: es un
 > catálogo.** Medida con la rúbrica del propio curso (`scripts/grade_stage.py`),
@@ -151,12 +174,12 @@ The template TMX is not reproduced as raw XML in this document (TMX is a binary-
 > `stage_mecanicas` desde AUD-153, y por el mismo motivo: un defecto aquí se
 > multiplica por veintiséis antes de que nadie lo ejecute.
 
-| Element | Content |
+| Elemento | Contenido |
 |---|---|
-| Map dimensions | 60 tiles wide × 16 tiles tall (960×256 px) — cabe un hueco exigente y sigue entrando entera en Tiled |
-| Tileset reference | `assets/tilesets/tileset_stage0.png` (neutral, always available, swappable later) |
-| Layers (all 8 required, per `06_TMX_SPEC.md` §3.1) | `BG_Far`, `BG_Mid`, `BG_Near` y `Terrain_Detail` vacías; `Terrain` — suelo de dos filas **con un hueco de 5 baldosas**; `Objects` — see §4.2; `Collision` — dos `Solid` (el suelo partido por el hueco) y un `Platform` sobre él; `FG_Overlay` — empty |
-| Map custom properties | `schema_version=1`, `stage_id="stage_template"`, `stage_name="Untitled Stage"`, **`author="TU NOMBRE AQUI"`**, `time_limit=120`, `bgm_track="bgm_stage0"`, `climate="clear"`, `zone=1`, `ambient_light=1.0` |
+| Dimensiones del mapa | 60 baldosas de ancho × 16 de alto (960×256 px) — cabe un hueco exigente y sigue entrando entera en Tiled |
+| Referencia de tileset | `assets/tilesets/tileset_stage0.png` (neutral, siempre disponible, sustituible después) |
+| Capas (las 8 obligatorias, según `06_TMX_SPEC.md` §3) | `BG_Far`, `BG_Mid`, `BG_Near` y `Terrain_Detail` vacías; `Terrain` — suelo de dos filas **con un hueco de 5 baldosas**; `Objects` — ver §4.2; `Collision` — dos `Solid` (el suelo partido por el hueco) y un `Platform` sobre él; `FG_Overlay` — vacía |
+| Propiedades personalizadas del mapa | `schema_version=1`, `stage_id="stage_template"`, `stage_name="Untitled Stage"`, **`author="TU NOMBRE AQUI"`**, `time_limit=120`, `bgm_track="bgm_stage0"`, `climate="clear"`, `zone=1`, `ambient_light=1.0` |
 
 **Sobre `author`:** la puntúa la rúbrica (`grade_stage.REQUIRED_GRADE_PROPS`) y
 hasta AUD-416 ninguna herramienta se lo decía al estudiante. Lleva un valor que
@@ -212,6 +235,8 @@ cambios sin avisar.
 
 ## 5. `boss_template.py`
 
+Contenido exacto del fichero real (comentarios en inglés incluidos — ver la nota de arriba):
+
 ```python
 """
 Module: boss_template
@@ -236,7 +261,6 @@ from __future__ import annotations
 import pygame
 
 from src.framework.entities.boss_base import BossBase, BossPhase
-from src.framework.entities.enemy_base import EnemyState
 
 
 # TODO(student): Rename this class to match your assigned boss
@@ -293,9 +317,9 @@ class BossTemplate(BossBase):
 
 ---
 
-## 6. `README_template.md` (Stage Variant)
+## 6. `README_template.md` (variante de escenario)
 
-Located at `student_templates/stage_template/README_template.md`. This is a worksheet format — students fill in each section by hand.
+En `student_templates/stage_template/README_template.md`. Es un formato de hoja de trabajo — los estudiantes rellenan cada sección a mano. Contenido exacto del fichero real (en inglés — ver la nota de arriba):
 
 ```markdown
 # Custom Stage Design — Student Worksheet
@@ -313,16 +337,20 @@ ___________________________
 
 ## 2. Tileset Requirements
 
+What tiles will appear on your Terrain layer?
+
 | Tile ID | Description | Collision? |
 |---------|-------------|------------|
 | 0       | Empty / Air | No         |
 | 1       | ____________ | ______     |
 | 2       | ____________ | ______     |
+| 3       | ____________ | ______     |
 
 ## 3. Enemy / Entity Placements
 
 | X   | Y   | Type    | Properties             |
 |-----|-----|---------|------------------------|
+| ___ | ___ | ________ | ______________________ |
 | ___ | ___ | ________ | ______________________ |
 
 ## 4. Checkpoints
@@ -330,25 +358,30 @@ ___________________________
 | ID | X   | Y   |
 |----|-----|-----|
 | 0  | ___ | ___ |
+| 1  | ___ | ___ |
 
 ## 5. Custom Logic Notes
 
-Describe any custom behavior (moving platforms, conditional spawns, etc.).
+Describe any custom behavior (moving platforms, conditional spawns, pattern-recognition triggers, etc.).
 
 ___________________________
 
 ## 6. Reflection (2–3 sentences)
 
-What was the hardest part? What would you improve?
+What was the hardest part of designing this stage? What would you improve?
 
 ___________________________
+
+---
+
+*Complete this worksheet and submit it alongside your stage_template.tmx and any custom assets.*
 ```
 
 ---
 
-## 7. `README_template.md` (Boss Variant)
+## 7. `README_template.md` (variante de jefe)
 
-Located at `student_templates/boss_template/README_template.md`. Worksheet format:
+En `student_templates/boss_template/README_template.md`. Formato de hoja de trabajo, contenido exacto del fichero real (en inglés):
 
 ```markdown
 # Boss Battle Design — Student Worksheet
@@ -369,13 +402,18 @@ ___________________________
 | Attack Name | Type       | Damage | Cooldown | Description               |
 |-------------|------------|--------|----------|---------------------------|
 | ____________ | projectile | ____   | ________ | _________________________ |
+| ____________ | melee      | ____   | ________ | _________________________ |
+| ____________ | ________   | ____   | ________ | _________________________ |
 
 ## 3. Phase Transitions
+
+At what health thresholds does the boss change behaviour?
 
 | Phase | HP %   | New Behaviour                      |
 |-------|--------|------------------------------------|
 | 1     | 100–51 | __________________________________ |
 | 2     | 50–26  | __________________________________ |
+| 3     | 25–0   | __________________________________ |
 
 ## 4. Visual / Audio Design
 
@@ -385,57 +423,48 @@ ___________________________
 
 ## 5. Reflection (2–3 sentences)
 
-What was the most challenging aspect? What would you improve?
+What was the most challenging aspect of designing this boss? What would you improve?
 
 ___________________________
+
+---
+
+*Complete this worksheet and submit it alongside your boss_template.py and any custom assets.*
 ```
 
 ---
 
-## 8. Definition of Done for This Template Set
+## 8. Definición de "hecho" para este conjunto de plantillas
 
-(Restated and expanded from `25_IMPLEMENTATION_ROADMAP.md` Phase 15.)
-
-- [ ] `stage_template.py` imports cleanly with zero changes (`python -c "from student_templates.stage_template.stage_template import StageTemplate"` succeeds).
-- [ ] `stage_template.tmx` opens in Tiled with no validation errors and passes `StageLoader.load()` with zero exceptions (verified by `tests/test_student_template.py`).
-- [ ] `boss_template.py` imports cleanly and `BossTemplate(pygame.Vector2(0, 0))` constructs without exception.
-- [ ] Both README template files exist as worksheets (no YAML front-matter requirement — simple Markdown).
-- [ ] **15-minute onboarding test:** the professor (or a TA acting as a test student) copies `stage_template/` to a new `src/stages/test_assignment/` folder, renames the file/class, updates `TMX_PATH`, runs `python main.py --stage test_assignment`, and reaches a playable (if empty) stage with working player movement and a functioning `NextTrigger` — within 15 minutes.
+- [ ] `stage_template.py` se importa sin cambios (`python -c "from student_templates.stage_template.stage_template import StageTemplate"` funciona).
+- [ ] `stage_template.tmx` abre en Tiled sin errores de validación y pasa `StageLoader.load()` sin excepciones (verificado por `tests/test_student_template.py`).
+- [ ] `boss_template.py` se importa sin cambios y `BossTemplate(pygame.Vector2(0, 0))` se construye sin excepción.
+- [ ] Los dos ficheros README de plantilla existen como hojas de trabajo (sin cabecera YAML obligatoria — Markdown simple).
+- [ ] **Prueba de incorporación de 15 minutos:** el profesor (o un ayudante actuando como estudiante de prueba) copia `stage_template/` a una carpeta nueva `src/stages/test_assignment/`, renombra el fichero/la clase, actualiza `TMX_PATH`, ejecuta `python main.py --stage test_assignment`, y llega a un escenario jugable (aunque vacío) con movimiento del jugador funcionando y un `NextTrigger` operativo — en menos de 15 minutos.
 
 ### 8.1 `tests/test_student_template.py`
 
-| Test | Assertion |
+| Prueba | Afirmación |
 |---|---|
-| `TestStageTemplate::test_import` | `StageTemplate` can be imported |
-| `TestStageTemplate::test_can_instantiate` | `StageTemplate(context)` constructs without exception |
-| `TestStageTemplate::test_tmx_exists` | The default TMX file exists at `TMX_PATH` |
-| `TestStageTemplate::test_default_tmx_has_required_layers` | The TMX contains all 8 required layer names |
-| `TestStageTemplate::test_has_stage_scene_attributes` | Instance has `_stage_data`, `_player`, `_camera` (inherited from StageScene) |
-| `TestBossTemplate::test_import` | `BossTemplate` can be imported |
-| `TestBossTemplate::test_constructs` | `BossTemplate(pygame.Vector2(0, 0))` does not raise |
-| `TestBossTemplate::test_has_required_methods` | Instance has `_patrol_behavior`, `_alert_behavior`, `_get_animation_key`, `_build_hitbox`, `_build_hurtbox` |
-| `TestBossTemplate::test_has_one_phase` | `len(BossTemplate(...).phases) == 1` (the placeholder phase) |
+| `TestStageTemplate::test_import` | `StageTemplate` se puede importar |
+| `TestStageTemplate::test_can_instantiate` | `StageTemplate(context)` se construye sin excepción |
+| `TestStageTemplate::test_tmx_exists` | El fichero TMX por defecto existe en `TMX_PATH` |
+| `TestStageTemplate::test_default_tmx_has_required_layers` | El TMX contiene los 8 nombres de capa obligatorios |
+| `TestStageTemplate::test_has_stage_scene_attributes` | La instancia tiene `_stage_data`, `_player`, `_camera` (heredados de StageScene) |
+| `TestBossTemplate::test_import` | `BossTemplate` se puede importar |
+| `TestBossTemplate::test_constructs` | `BossTemplate(pygame.Vector2(0, 0))` no lanza excepción |
+| `TestBossTemplate::test_has_required_methods` | La instancia tiene `_patrol_behavior`, `_alert_behavior`, `_get_animation_key`, `_build_hitbox`, `_build_hurtbox` |
+| `TestBossTemplate::test_has_one_phase` | `len(BossTemplate(...).phases) == 1` (la fase de relleno) |
 
 ---
 
-## 9. Relationship to Student Assignment Folders
+## 9. Relación con las carpetas de entrega del estudiante
 
-Once a student completes the 15-minute onboarding copy-and-rename, their working folder lives at `src/stages/<assignment_id>/` (per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §7 and `03_ARCHITECTURE.md` §1) and is **no longer** part of `student_templates/`. The template directory itself is never modified after initial professor setup — it is read-only scaffolding that every student copies from independently, so one student's in-progress work never collides with another's, consistent with the individual-assignment model confirmed in `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2 A.1.
+Una vez que un estudiante completa la incorporación de 15 minutos (copiar y renombrar), su carpeta de trabajo vive en `src/stages/<assignment_id>/` y **deja de ser** parte de `student_templates/`. La carpeta de plantilla en sí no se modifica nunca después de la configuración inicial del profesorado — es un andamiaje de sólo lectura del que cada estudiante copia de forma independiente, así que el trabajo en curso de un estudiante nunca choca con el de otro.
 
+---
+## 🔗 Documentos relacionados
 
---- Traducción al Español ---
-
-## Especificación de Plantillas para Estudiantes
-
-Este documento especifica los archivos de plantilla que los estudiantes copian para comenzar sus asignaciones.
-
-### Plantilla de Escenario
-- `stage_template.py` — Clase base de escenario
-- `stage_template.tmx` — Mapa Tiled con estructura de capas
-- `README_template.md` — Documentación requerida
-
-### Plantilla de Jefe
-- `boss_template.py` — Clase base de jefe
-- `README_template.md` — Documentación requerida
-
-Para instrucciones detalladas de uso y verificación, consultar el documento original en inglés.
+- [[STAGE_CREATION.md|Guía de creación de escenarios]]
+- [[BOSS_CREATION.md|Guía de creación de jefes]]
+- [[21_COURSE_SCHEDULE.md|Calendario del curso]]

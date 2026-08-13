@@ -1,441 +1,447 @@
 ---
 document_id: "LOI-ENEMIES-018"
-title: "Legacy of InFest — Enemy Roster"
-aliases: ["Enemy Roster"]
-tags: ["enemy", "roster", "entities"]
-description: "Every standard enemy, by zone"
+title: "Legacy of InFest — Elenco de enemigos"
+aliases: ["Elenco de enemigos", "Enemy Roster"]
+tags: ["enemigos", "elenco", "entidades"]
+description: "Cada enemigo estándar, por zona"
 source: "docs/18_ENEMY_ROSTER.md"
-date_processed: "2026-07-14"
+date_processed: "2026-08-12"
 ---
 
-# Legacy of InFest — Enemy Roster
+# Legacy of InFest — Elenco de enemigos
 
-**Document ID:** LOI-ROSTER-018  
-**Version:** 1.0.0  
-**Status:** Official  
-**Compatibility:** Requires LOI-ENEMY-005, LOI-WORLD-016  
-**Audience:** Professor, Students, Artists, AI coding assistants
+**ID del documento:** LOI-ROSTER-018
+**Versión:** 1.1.0
+**Estado:** Oficial
+**Requiere:** `05_ENEMY_SPEC.md`
+**Audiencia:** Profesor, estudiantes, artistas, asistentes de código
 
----
-
-## 1. Overview
-
-This document defines every standard enemy (non-boss) that appears in Legacy of InFest. Each enemy is a subclass of one of the three base templates: `EnemyWalker`, `EnemyFlying`, or `EnemyShooter` (see `05_ENEMY_SPEC.md`).
-
-Enemies are organized by zone. Each zone has its own thematic enemy set that reflects the environment and the spirit that governs it. Students building traversal stages within a zone use the enemies defined for that zone — they do not create new base enemy types, but they may subclass and configure zone enemies with custom TMX properties.
+> **AUD-455.** Traduce el documento completo (antes en inglés). Verificado
+> con una muestra de 5 especies (`WalkerInsect`, `FlyingBird`, `ShooterFrog`,
+> `WalkerRaton`, `WalkerEstudiante`) contra `src/framework/entities/bestiary_registry.py`:
+> las 21 especies y todas las estadísticas de la muestra coinciden
+> exactamente con el código real.
 
 ---
 
-## 2. Zone 1 — Universidad Invenio Enemies
+## 1. Visión general
 
-Zone 1 enemies reflect the jungle campus: insects, small animals, and creatures displaced from the forest by the awakening of El Venado Sagrado.
+Este documento define cada enemigo estándar (no jefe) que aparece en Legacy of InFest. Cada enemigo es una subclase de una de las tres plantillas base: `EnemyWalker`, `EnemyFlying` o `EnemyShooter` (ver `05_ENEMY_SPEC.md`).
 
-### 2.1 `WalkerInsect` — Ground Insect
+Los enemigos se organizan por zona. Cada zona tiene su propio conjunto temático de enemigos que refleja el ambiente y el espíritu que la gobierna. Los estudiantes que construyen escenarios de travesía dentro de una zona usan los enemigos definidos para esa zona — no crean nuevos tipos base de enemigo, pero pueden heredar y configurar los enemigos de zona con propiedades TMX personalizadas.
 
-| Property | Value |
+---
+
+## 2. Zona 1 — Enemigos de la Universidad Invenio
+
+Los enemigos de la Zona 1 reflejan el campus de selva: insectos, animales pequeños y criaturas desplazadas del bosque por el despertar de El Venado Sagrado.
+
+### 2.1 `WalkerInsect` — Insecto de suelo
+
+| Propiedad | Valor |
 |---|---|
-| Base Class | `EnemyWalker` |
-| Appears In | Stage 1-1, 1-2 |
-| Health | 1.0 heart |
-| Contact Damage | 0.25 hearts |
-| Patrol Speed | 35 px/s |
-| Alert Speed | 55 px/s |
-| Detection Range X | 120 px |
-| Patrol Length (default) | 64 px |
+| Clase base | `EnemyWalker` |
+| Aparece en | Stage 1-1, 1-2 |
+| Vida | 1.0 corazón |
+| Daño de contacto | 0.25 corazones |
+| Velocidad de patrulla | 35 px/s |
+| Velocidad de alerta | 55 px/s |
+| Rango de detección X | 120 px |
+| Longitud de patrulla (por defecto) | 64 px |
 
-**Visual:** A large jungle beetle — dark brown carapace, six legs animated. Sprite: `enemy_insecto_walk.png` (6 frames, 10 FPS). Size: 16×12 px.
+**Visual:** un escarabajo grande de selva — caparazón marrón oscuro, seis patas animadas. Sprite: `enemy_insecto_walk.png` (6 fotogramas, 10 FPS). Tamaño: 16×12 px.
 
-**Behavior Note:** Slow, predictable. The first enemy the player encounters. Designed to teach the basic attack response without significant danger.
+**Nota de comportamiento:** lento, predecible. El primer enemigo que encuentra el jugador. Diseñado para enseñar la respuesta básica de ataque sin peligro significativo.
 
-**Academic Note (Unit II):** Ledge detection uses `vec2_distance` probe check. Documented in source.
+**Nota académica (Unidad II):** la detección de repisa usa una sonda `vec2_distance`. Documentado en el código fuente.
 
 ---
 
-### 2.2 `FlyingBird` — Jungle Bird
+### 2.2 `FlyingBird` — Ave de selva
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Base Class | `EnemyFlying` |
-| Appears In | Stage 1-1, 1-3 |
-| Health | 1.0 heart |
-| Contact Damage | 0.25 hearts |
-| Flight Mode | Sine |
-| Sine Amplitude | 24 px |
-| Sine Frequency | 1.4 Hz |
-| Flight Speed | 55 px/s |
-| Detection Range X | 160 px |
+| Clase base | `EnemyFlying` |
+| Aparece en | Stage 1-1, 1-3 |
+| Vida | 1.0 corazón |
+| Daño de contacto | 0.25 corazones |
+| Modo de vuelo | Seno |
+| Amplitud senoidal | 24 px |
+| Frecuencia senoidal | 1.4 Hz |
+| Velocidad de vuelo | 55 px/s |
+| Rango de detección X | 160 px |
 
-**Visual:** A small tropical bird (motmot-inspired coloring — teal and orange). Sprite: `enemy_pajaro_fly.png` (4 frames, 12 FPS). Size: 14×10 px.
+**Visual:** un ave tropical pequeña (coloración inspirada en el momoto — verde azulado y naranja). Sprite: `enemy_pajaro_fly.png` (4 fotogramas, 12 FPS). Tamaño: 14×10 px.
 
-**Behavior Note:** Swoops down across the path. The sine wave makes it difficult to jump over. Players learn to time ducks under it.
+**Nota de comportamiento:** baja en picado sobre el camino. La onda senoidal hace difícil saltarla. Los jugadores aprenden a agacharse a tiempo bajo ella.
 
 ---
 
-### 2.3 `ShooterFrog` — Poison Dart Frog
+### 2.3 `ShooterFrog` — Rana dardo venenosa
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Base Class | `EnemyShooter` |
-| Appears In | Stage 1-1, 1-3 |
-| Health | 2.0 hearts |
-| Contact Damage | 0.25 hearts |
-| Projectile Damage | 0.25 hearts |
-| Fire Rate | 0.4 shots/s |
-| Projectile Speed | 90 px/s |
-| Detection Range X | 180 px |
-| Patrol Length | 0 (stationary) |
+| Clase base | `EnemyShooter` |
+| Aparece en | Stage 1-1, 1-3 |
+| Vida | 2.0 corazones |
+| Daño de contacto | 0.25 corazones |
+| Daño de proyectil | 0.25 corazones |
+| Cadencia de disparo | 0.4 disparos/s |
+| Velocidad de proyectil | 90 px/s |
+| Rango de detección X | 180 px |
+| Longitud de patrulla | 0 (estacionaria) |
 
-**Visual:** A red-and-blue poison dart frog (Oophaga pumilio — the strawberry poison-dart frog, native to Costa Rica). Sprite: `enemy_rana_idle.png` (4 frames, 6 FPS). Size: 12×12 px. **Projectile:** small toxic droplet, `enemy_rana_proyectil.png` (2 frames, 8 FPS, 4×4 px).
+**Visual:** una rana dardo venenosa roja y azul (Oophaga pumilio — la rana dardo fresa, nativa de Costa Rica). Sprite: `enemy_rana_idle.png` (4 fotogramas, 6 FPS). Tamaño: 12×12 px. **Proyectil:** gotita tóxica pequeña, `enemy_rana_proyectil.png` (2 fotogramas, 8 FPS, 4×4 px).
 
-**Behavior Note:** Stationary — sits on rocks and elevated surfaces. Long-range threat that forces the player to close the gap.
+**Nota de comportamiento:** estacionaria — se posa en rocas y superficies elevadas. Amenaza de largo alcance que obliga al jugador a acortar distancia.
 
 ---
 
-### 2.4 `WalkerRaton` — Cafeteria Rat
+### 2.4 `WalkerRaton` — Rata de laboratorio
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Base Class | `EnemyWalker` |
-| Appears In | Stage 1-2 |
-| Health | 1.0 heart |
-| Contact Damage | 0.25 hearts |
-| Patrol Speed | 55 px/s |
-| Alert Speed | 90 px/s |
-| Detection Range X | 96 px |
-| Patrol Length | 48 px |
+| Clase base | `EnemyWalker` |
+| Aparece en | Stage 1-2 |
+| Vida | 1.0 corazón |
+| Daño de contacto | 0.25 corazones |
+| Velocidad de patrulla | 55 px/s |
+| Velocidad de alerta | 90 px/s |
+| Rango de detección X | 96 px |
+| Longitud de patrulla | 48 px |
 
-**Visual:** A large rat — gray, red eyes. Running animation. Sprite: `sprite_walker_raton_walk.png` (in `assets/maps/stage1_2_la_soda/`). Size: 14×10 px.
+**Visual:** una rata grande — gris, ojos rojos. Animación de carrera. Sprite: `sprite_walker_raton_walk.png` (en `assets/maps/stage1_2_la_soda/`). Tamaño: 14×10 px.
 
-**Behavior Note:** Faster than WalkerInsect. Alert state is notably quick — players who are not attentive get caught off guard. Teaches the importance of attention to detection ranges.
+**Nota de comportamiento:** más rápida que WalkerInsect. Su estado de alerta es notablemente veloz — los jugadores desatentos se ven sorprendidos. Enseña la importancia de prestar atención a los rangos de detección.
 
 ---
 
-### 2.5 `FlyingCucaracha` — Flying Cockroach
+### 2.5 `FlyingCucaracha` — Cucaracha voladora
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Base Class | `EnemyFlying` |
-| Appears In | Stage 1-2 |
-| Health | 1.0 heart |
-| Contact Damage | 0.25 hearts |
-| Flight Mode | Sine |
-| Sine Amplitude | 16 px |
-| Sine Frequency | 2.0 Hz |
-| Flight Speed | 45 px/s |
+| Clase base | `EnemyFlying` |
+| Aparece en | Stage 1-2 |
+| Vida | 1.0 corazón |
+| Daño de contacto | 0.25 corazones |
+| Modo de vuelo | Seno |
+| Amplitud senoidal | 16 px |
+| Frecuencia senoidal | 2.0 Hz |
+| Velocidad de vuelo | 45 px/s |
 
-**Visual:** A cockroach with wings spread — brown, glossy carapace. Sprite: `sprite_flying_cucaracha_fly.png` (in `assets/maps/stage1_2_la_soda/`). Size: 12×8 px. High-frequency wing beat animation.
+**Visual:** una cucaracha con las alas desplegadas — caparazón marrón, brillante. Sprite: `sprite_flying_cucaracha_fly.png` (en `assets/maps/stage1_2_la_soda/`). Tamaño: 12×8 px. Animación de aleteo de alta frecuencia.
 
-**Behavior Note:** High sine frequency makes movement erratic at close range. Fills the vertical mid-space of the cafeteria.
+**Nota de comportamiento:** la alta frecuencia senoidal hace su movimiento errático de cerca. Llena el espacio medio vertical de la cafetería.
 
 ---
 
-### 2.6 `ShooterCocinero` — Rogue Cook
+### 2.6 `ShooterCocinero` — Cocinero rebelde
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Base Class | `EnemyShooter` |
-| Appears In | Stage 1-2 (unique — 1 per stage) |
-| Health | 3.0 hearts |
-| Contact Damage | 0.25 hearts |
-| Projectile Damage | 0.50 hearts |
-| Fire Rate | 0.5 shots/s |
-| Projectile Speed | 110 px/s |
+| Clase base | `EnemyShooter` |
+| Aparece en | Stage 1-2 (único — 1 por escenario) |
+| Vida | 3.0 corazones |
+| Daño de contacto | 0.25 corazones |
+| Daño de proyectil | 0.50 corazones |
+| Cadencia de disparo | 0.5 disparos/s |
+| Velocidad de proyectil | 110 px/s |
 
-**Visual:** A cafeteria cook in stained uniform, throwing food items. Sprite: `enemy_cocinero_idle.png` and `enemy_cocinero_throw.png`. Size: 16×24 px. **Projectile:** food tray, `enemy_cocinero_tray.png` (2 frames, 8 FPS, 12×6 px, tumbling rotation).
+**Visual:** un cocinero de cafetería con uniforme manchado, lanzando comida. Sprites: `enemy_cocinero_idle.png` y `enemy_cocinero_throw.png`. Tamaño: 16×24 px. **Proyectil:** bandeja de comida, `enemy_cocinero_tray.png` (2 fotogramas, 8 FPS, 12×6 px, rotación tambaleante).
 
-**Behavior Note:** Stationed behind the cafeteria counter (uses counter as cover — hurtbox is partially obscured by counter geometry). Player must jump over the counter to close range.
+**Nota de comportamiento:** apostado tras el mostrador de la cafetería (lo usa como cobertura — la hurtbox queda parcialmente oculta por la geometría del mostrador). El jugador debe saltar el mostrador para acortar distancia.
 
 ---
 
-### 2.7 `WalkerEstudiante` — Disoriented Student
+### 2.7 `WalkerEstudiante` — Estudiante infestado
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Base Class | `EnemyWalker` |
-| Appears In | Stage 1-3 |
-| Health | 1.5 hearts |
-| Contact Damage | 0.50 hearts |
-| Patrol Speed | 40 px/s |
-| Alert Speed | 70 px/s |
-| Detection Range X | 144 px |
-| Patrol Length | 80 px |
+| Clase base | `EnemyWalker` |
+| Aparece en | Stage 1-3 |
+| Vida | 1.5 corazones |
+| Daño de contacto | 0.50 corazones |
+| Velocidad de patrulla | 40 px/s |
+| Velocidad de alerta | 70 px/s |
+| Rango de detección X | 144 px |
+| Longitud de patrulla | 80 px |
 
-**Visual:** A university student — backpack, smartphone in hand (acting as a weapon). Sprite: `enemy_estudiante_walk.png` (8 frames, 10 FPS). Size: 16×24 px. The smartphone projectile (if using ShooterEstudiante variant) is a small screen glow.
+**Visual:** un estudiante universitario — mochila, teléfono en mano (usado como arma). Sprite: `enemy_estudiante_walk.png` (8 fotogramas, 10 FPS). Tamaño: 16×24 px. El proyectil de teléfono (en la variante ShooterEstudiante) es un pequeño brillo de pantalla.
 
-**Behavior Note:** Slightly more health than Zone 1 walkers — represents the escalation heading into the classroom zone. Alert movement is believably human-speed.
+**Nota de comportamiento:** algo más de vida que los caminantes de la Zona 1 — representa la escalada hacia la zona de las aulas. Su movimiento de alerta es de velocidad humana creíble.
 
 ---
 
-### 2.8 `FlyingNotebook` — Animated Notebook Pages
+### 2.8 `FlyingNotebook` — Hojas de cuaderno animadas
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Base Class | `EnemyFlying` |
-| Appears In | Stage 1-3 |
-| Health | 0.5 hearts |
-| Contact Damage | 0.25 hearts |
-| Flight Mode | Sine |
-| Sine Amplitude | 32 px |
-| Sine Frequency | 1.0 Hz |
-| Flight Speed | 50 px/s |
+| Clase base | `EnemyFlying` |
+| Aparece en | Stage 1-3 |
+| Vida | 0.5 corazones |
+| Daño de contacto | 0.25 corazones |
+| Modo de vuelo | Seno |
+| Amplitud senoidal | 32 px |
+| Frecuencia senoidal | 1.0 Hz |
+| Velocidad de vuelo | 50 px/s |
 
-**Visual:** Animated loose notebook pages flying through the air — spinning slowly. Sprite: `enemy_hoja_fly.png` (4 frames, 8 FPS). Size: 10×14 px.
+**Visual:** hojas de cuaderno sueltas animadas, volando por el aire — girando despacio. Sprite: `enemy_hoja_fly.png` (4 fotogramas, 8 FPS). Tamaño: 10×14 px.
 
-**Behavior Note:** Very low health — one short attack kills it. But they come in pairs or threes. Teaches the distinction between individual and group threat.
+**Nota de comportamiento:** muy poca vida — un ataque corto la mata. Pero vienen en parejas o tríos. Enseña la distinción entre amenaza individual y de grupo.
 
 ---
 
-### 2.9 `ShooterTiza` — Chalk Thrower
+### 2.9 `ShooterTiza` — Lanzador de tiza
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Base Class | `EnemyShooter` |
-| Appears In | Stage 1-3 |
-| Health | 2.5 hearts |
-| Projectile Damage | 0.25 hearts |
-| Fire Rate | 1.0 shots/s |
-| Projectile Speed | 130 px/s |
-| Patrol Length | 0 (stationary) |
+| Clase base | `EnemyShooter` |
+| Aparece en | Stage 1-3 |
+| Vida | 2.5 corazones |
+| Daño de proyectil | 0.25 corazones |
+| Cadencia de disparo | 1.0 disparos/s |
+| Velocidad de proyectil | 130 px/s |
+| Longitud de patrulla | 0 (estacionario) |
 
-**Visual:** Animated blackboard eraser character (anthropomorphic — the classroom's spirit). Sprite: `enemy_tiza_idle.png`. Size: 14×14 px. **Projectile:** chalk stick, `enemy_tiza_proyectil.png` (1 frame, 4×4 px, fast tumble).
+**Visual:** un borrador de pizarra animado (antropomórfico — el espíritu del aula). Sprite: `enemy_tiza_idle.png`. Tamaño: 14×14 px. **Proyectil:** tiza, `enemy_tiza_proyectil.png` (1 fotograma, 4×4 px, giro rápido).
 
-**Behavior Note:** High fire rate. Stationary at blackboard ends. Long range. Creates a fire-zone that the player must breach through timed dashes between chalk shots.
+**Nota de comportamiento:** cadencia alta. Estacionario en los extremos de la pizarra. Largo alcance. Crea una zona de fuego que el jugador debe atravesar con carreras cronometradas entre disparos de tiza.
 
 ---
 
-## 3. Zone 2 — El Datacenter Enemies
+## 3. Zona 2 — Enemigos de El Datacenter
 
-Zone 2 enemies are serpent-based. All walkers are serpents. All flyers are airborne serpent variants. The shooter represents the long-range spit capability of the terciopelo.
+Los enemigos de la Zona 2 son a base de serpientes. Todos los caminantes son serpientes. Todos los voladores son variantes aéreas de serpiente. El tirador representa la capacidad de escupir a distancia de la terciopelo.
 
-### 3.1 `WalkerSerpientePequena` — Small Fer-de-Lance
+### 3.1 `WalkerSerpientePequena` — Terciopelo pequeña
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Base Class | `EnemyWalker` |
-| Appears In | Stage 2-1, 2-2, 2-3, 2-4 (as boss summon) |
-| Health | 1.0 heart |
-| Contact Damage | 0.50 hearts |
-| Patrol Speed | 55 px/s |
-| Alert Speed | 100 px/s |
-| Detection Range X | 96 px |
+| Clase base | `EnemyWalker` |
+| Aparece en | Stage 2-1, 2-2, 2-3, 2-4 (como invocación de jefe) |
+| Vida | 1.0 corazón |
+| Daño de contacto | 0.50 corazones |
+| Velocidad de patrulla | 55 px/s |
+| Velocidad de alerta | 100 px/s |
+| Rango de detección X | 96 px |
 
-**Visual:** A small terciopelo — brown and tan pattern. Slithering animation. Sprite: `enemy_terciopelo_small_walk.png` (6 frames, 12 FPS). Size: 20×8 px (wide, low).
+**Visual:** una terciopelo pequeña — patrón marrón y bronceado. Animación reptante. Sprite: `enemy_terciopelo_small_walk.png` (6 fotogramas, 12 FPS). Tamaño: 20×8 px (ancha, baja).
 
-**Behavior Note:** Low hitbox — crouching attacks are required. High contact damage for their health level — they are dangerous despite their size.
+**Nota de comportamiento:** hitbox baja — hacen falta ataques agachados. Alto daño de contacto para su nivel de vida — son peligrosas pese a su tamaño.
 
 ---
 
-### 3.2 `FlyingBoa` — Aerial Boa
+### 3.2 `FlyingBoa` — Boa aérea
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Base Class | `EnemyFlying` |
-| Appears In | Stage 2-1, 2-2 |
-| Health | 2.0 hearts |
-| Contact Damage | 0.50 hearts |
-| Flight Mode | Sine |
-| Sine Amplitude | 30 px |
-| Sine Frequency | 0.8 Hz |
-| Flight Speed | 45 px/s |
+| Clase base | `EnemyFlying` |
+| Aparece en | Stage 2-1, 2-2 |
+| Vida | 2.0 corazones |
+| Daño de contacto | 0.50 corazones |
+| Modo de vuelo | Seno |
+| Amplitud senoidal | 30 px |
+| Frecuencia senoidal | 0.8 Hz |
+| Velocidad de vuelo | 45 px/s |
 
-**Visual:** A large boa constrictor — airborne, undulating through the air. Sprite: `enemy_boa_fly.png` (6 frames, 10 FPS). Size: 32×12 px. Large hitbox — harder to dodge.
+**Visual:** una boa constrictora grande — aérea, ondulando por el aire. Sprite: `enemy_boa_fly.png` (6 fotogramas, 10 FPS). Tamaño: 32×12 px. Hitbox grande — más difícil de esquivar.
 
 ---
 
-### 3.3 `ShooterSerpienteArbol` — Tree Viper Shooter
+### 3.3 `ShooterSerpienteArbol` — Víbora arborícola tiradora
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Base Class | `EnemyShooter` |
-| Appears In | Stage 2-1, 2-2, 2-3 |
-| Health | 2.0 hearts |
-| Projectile Damage | 0.50 hearts (venom) |
-| Fire Rate | 0.6 shots/s |
-| Projectile Speed | 100 px/s |
-| Patrol Length | 0 (stationary) |
+| Clase base | `EnemyShooter` |
+| Aparece en | Stage 2-1, 2-2, 2-3 |
+| Vida | 2.0 corazones |
+| Daño de proyectil | 0.50 corazones (veneno) |
+| Cadencia de disparo | 0.6 disparos/s |
+| Velocidad de proyectil | 100 px/s |
+| Longitud de patrulla | 0 (estacionaria) |
 
-**Visual:** A green tree viper — coiled around an elevated object (fence post, antenna bracket, office partition top). Sprite: `enemy_serpiente_arbol_idle.png`. Size: 14×16 px. **Projectile:** venom glob, green, `enemy_venom_proyectil.png` (2 frames, 8 FPS, 5×5 px).
+**Visual:** una víbora arborícola verde — enroscada en un objeto elevado (poste de cerca, soporte de antena, parte superior de un separador de oficina). Sprite: `enemy_serpiente_arbol_idle.png`. Tamaño: 14×16 px. **Proyectil:** grumo de veneno verde, `enemy_venom_proyectil.png` (2 fotogramas, 8 FPS, 5×5 px).
 
 ---
 
-### 3.4 `WalkerTerciopelo` — Large Fer-de-Lance
+### 3.4 `WalkerTerciopelo` — Terciopelo grande
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Base Class | `EnemyWalker` |
-| Appears In | Stage 2-3 |
-| Health | 2.5 hearts |
-| Contact Damage | 0.75 hearts |
-| Patrol Speed | 40 px/s |
-| Alert Speed | 80 px/s |
-| Detection Range X | 160 px |
+| Clase base | `EnemyWalker` |
+| Aparece en | Stage 2-3 |
+| Vida | 2.5 corazones |
+| Daño de contacto | 0.75 corazones |
+| Velocidad de patrulla | 40 px/s |
+| Velocidad de alerta | 80 px/s |
+| Rango de detección X | 160 px |
 
-**Visual:** A large, full-grown terciopelo. Thicker body, slower but heavier. Sprite: `enemy_terciopelo_large_walk.png` (6 frames, 8 FPS). Size: 28×12 px.
+**Visual:** una terciopelo grande, adulta. Cuerpo más grueso, más lenta pero más pesada. Sprite: `enemy_terciopelo_large_walk.png` (6 fotogramas, 8 FPS). Tamaño: 28×12 px.
 
 ---
 
-### 3.5 `ShooterVenomoLargo` — Long-Range Venom Shooter
+### 3.5 `ShooterVenomoLargo` — Tirador de veneno de largo alcance
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Base Class | `EnemyShooter` |
-| Appears In | Stage 2-3 |
-| Health | 3.0 hearts |
-| Projectile Damage | 0.50 hearts |
-| Fire Rate | 0.4 shots/s |
-| Projectile Speed | 150 px/s |
-| Detection Range X | 220 px |
+| Clase base | `EnemyShooter` |
+| Aparece en | Stage 2-3 |
+| Vida | 3.0 corazones |
+| Daño de proyectil | 0.50 corazones |
+| Cadencia de disparo | 0.4 disparos/s |
+| Velocidad de proyectil | 150 px/s |
+| Rango de detección X | 220 px |
 
-**Visual:** A spitting cobra variant — elevated, swaying. Sprite: `enemy_cobra_idle.png`. Size: 16×20 px. **Projectile:** long-range venom stream, `enemy_venom_stream.png` (4 frames, 12 FPS, 8×4 px).
+**Visual:** una variante de cobra escupidora — elevada, balanceándose. Sprite: `enemy_cobra_idle.png`. Tamaño: 16×20 px. **Proyectil:** chorro de veneno de largo alcance, `enemy_venom_stream.png` (4 fotogramas, 12 FPS, 8×4 px).
 
 ---
 
-### 3.6 `FlyingTerciovolador` — Winged Serpent
+### 3.6 `FlyingTerciovolador` — Serpiente alada
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Base Class | `EnemyFlying` |
-| Appears In | Stage 2-3 |
-| Health | 1.5 hearts |
-| Contact Damage | 0.50 hearts |
-| Flight Mode | Bezier (short 3-point paths) |
-| Flight Speed | 70 px/s |
-| Detection Range X | 180 px |
+| Clase base | `EnemyFlying` |
+| Aparece en | Stage 2-3 |
+| Vida | 1.5 corazones |
+| Daño de contacto | 0.50 corazones |
+| Modo de vuelo | Bézier (caminos cortos de 3 puntos) |
+| Velocidad de vuelo | 70 px/s |
+| Rango de detección X | 180 px |
 
-**Visual:** A small winged serpent — mythological design, two small wings. Sprite: `enemy_terciovolador_fly.png` (6 frames, 12 FPS). Size: 18×14 px.
+**Visual:** una pequeña serpiente alada — diseño mitológico, dos alas pequeñas. Sprite: `enemy_terciovolador_fly.png` (6 fotogramas, 12 FPS). Tamaño: 18×14 px.
 
 ---
 
-### 3.7 `WalkerGuardia` — Datacenter Security Guard
+### 3.7 `WalkerGuardia` — Guardia de seguridad del Datacenter
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Base Class | `EnemyWalker` |
-| Appears In | Stage 2-2 (parking lot) |
-| Health | 3.0 hearts |
-| Contact Damage | 0.50 hearts |
-| Patrol Speed | 45 px/s |
-| Alert Speed | 65 px/s |
+| Clase base | `EnemyWalker` |
+| Aparece en | Stage 2-2 (estacionamiento) |
+| Vida | 3.0 corazones |
+| Daño de contacto | 0.50 corazones |
+| Velocidad de patrulla | 45 px/s |
+| Velocidad de alerta | 65 px/s |
 
-**Visual:** A security guard — uniform, flashlight. Under serpent influence (eyes glowing faintly green). Sprite: `enemy_guardia_walk.png` (8 frames, 10 FPS). Size: 16×24 px.
+**Visual:** un guardia de seguridad — uniforme, linterna. Bajo la influencia de las serpientes (ojos con un leve brillo verde). Sprite: `enemy_guardia_walk.png` (8 fotogramas, 10 FPS). Tamaño: 16×24 px.
 
 ---
 
-## 4. Zone 3 — Sede Heredia Enemies
+## 4. Zona 3 — Enemigos de la Sede Heredia
 
-Zone 3 enemies are bird-based — the domain of El Gavilán. All walkers are ground-dwelling birds. Flyers are raptors. Shooters are perching birds that fire feather or beak projectiles.
+Los enemigos de la Zona 3 son a base de aves — el dominio de El Gavilán. Todos los caminantes son aves terrestres. Los voladores son rapaces. Los tiradores son aves posadas que disparan proyectiles de plumas o pico.
 
-### 4.1 `WalkerGarza` — Heron
+### 4.1 `WalkerGarza` — Garza
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Base Class | `EnemyWalker` |
-| Appears In | Stage 3-1 |
-| Health | 2.0 hearts |
-| Contact Damage | 0.50 hearts |
-| Patrol Speed | 35 px/s |
-| Alert Speed | 60 px/s |
+| Clase base | `EnemyWalker` |
+| Aparece en | Stage 3-1 |
+| Vida | 2.0 corazones |
+| Daño de contacto | 0.50 corazones |
+| Velocidad de patrulla | 35 px/s |
+| Velocidad de alerta | 60 px/s |
 
-**Visual:** A large heron (Ardea herodias — Great Blue Heron variant). Slow, deliberate steps. Sprite: `enemy_garza_walk.png` (6 frames, 7 FPS). Size: 18×28 px (tall).
+**Visual:** una garza grande (variante de Ardea herodias — garza azulada). Pasos lentos y deliberados. Sprite: `enemy_garza_walk.png` (6 fotogramas, 7 FPS). Tamaño: 18×28 px (alta).
 
-**Behavior Note:** Tall hitbox — long-attack low sweep is effective. Short attack may miss if player is not crouching.
+**Nota de comportamiento:** hitbox alta — el barrido bajo del ataque largo es efectivo. El ataque corto puede fallar si el jugador no está agachado.
 
 ---
 
-### 4.2 `FlyingHalcon` — Roadside Hawk (standard)
+### 4.2 `FlyingHalcon` — Gavilán caminero (estándar)
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Base Class | `EnemyFlying` |
-| Appears In | Stage 3-1, 3-2, 3-3 |
-| Health | 2.0 hearts |
-| Contact Damage | 0.75 hearts |
-| Flight Mode | Sine + alert dive |
-| Sine Amplitude | 20 px |
-| Sine Frequency | 0.6 Hz |
-| Alert Behavior | Dives straight down to player X, then reascends |
-| Flight Speed | 65 px/s / 200 px/s (dive) |
+| Clase base | `EnemyFlying` |
+| Aparece en | Stage 3-1, 3-2, 3-3 |
+| Vida | 2.0 corazones |
+| Daño de contacto | 0.75 corazones |
+| Modo de vuelo | Seno + picado de alerta |
+| Amplitud senoidal | 20 px |
+| Frecuencia senoidal | 0.6 Hz |
+| Comportamiento de alerta | Se lanza en picado directo a la X del jugador, luego vuelve a subir |
+| Velocidad de vuelo | 65 px/s / 200 px/s (picado) |
 
-**Visual:** Roadside hawk in flight — brown and white underside. Sprite: `enemy_halcon_fly.png` (6 frames, 12 FPS) and `enemy_halcon_dive.png` (4 frames, 18 FPS). Size: 20×14 px.
+**Visual:** un gavilán caminero en vuelo — parte inferior marrón y blanca. Sprites: `enemy_halcon_fly.png` (6 fotogramas, 12 FPS) y `enemy_halcon_dive.png` (4 fotogramas, 18 FPS). Tamaño: 20×14 px.
 
-**Custom Behavior — Alert Dive:**  
-When the player enters detection range, the hawk transitions to a dive: moves horizontally to player's X position (50px/s), then dives at 200px/s. After reaching Y=200 or hitting a platform, reascends to patrol altitude. This overrides the standard alert behavior from `EnemyFlying`.
+**Comportamiento personalizado — picado de alerta:**
+Cuando el jugador entra en el rango de detección, el gavilán pasa a un picado: se mueve horizontalmente hasta la posición X del jugador (50px/s), luego se lanza en picado a 200px/s. Al llegar a Y=200 o tocar una plataforma, vuelve a subir a su altitud de patrulla. Esto sobreescribe el comportamiento de alerta estándar de `EnemyFlying`.
 
 ---
 
-### 4.3 `ShooterQuetzal` — Quetzal Sniper
+### 4.3 `ShooterQuetzal` — Quetzal francotirador
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Base Class | `EnemyShooter` |
-| Appears In | Stage 3-1, 3-2, 3-3 |
-| Health | 2.5 hearts |
-| Projectile Damage | 0.25 hearts (feather) |
-| Fire Rate | 0.8 shots/s |
-| Projectile Speed | 120 px/s |
-| Patrol Length | 0 (stationary) |
+| Clase base | `EnemyShooter` |
+| Aparece en | Stage 3-1, 3-2, 3-3 |
+| Vida | 2.5 corazones |
+| Daño de proyectil | 0.25 corazones (pluma) |
+| Cadencia de disparo | 0.8 disparos/s |
+| Velocidad de proyectil | 120 px/s |
+| Longitud de patrulla | 0 (estacionario) |
 
-**Visual:** A resplendent quetzal (Pharomachrus mocinno — sacred bird of Costa Rica). Perched on ledges and archway tops. Sprite: `enemy_quetzal_idle.png` (4 frames, 6 FPS). Size: 12×20 px (upright). **Projectile:** long tail feather, `enemy_quetzal_feather.png` (2 frames, spin, 3×10 px).
+**Visual:** un quetzal resplandeciente (Pharomachrus mocinno — ave sagrada de Costa Rica). Posado en repisas y remates de arcos. Sprite: `enemy_quetzal_idle.png` (4 fotogramas, 6 FPS). Tamaño: 12×20 px (erguido). **Proyectil:** pluma larga de la cola, `enemy_quetzal_feather.png` (2 fotogramas, con giro, 3×10 px).
 
-**Cultural Note:** The quetzal is one of the most revered birds in Central American culture. Its depiction here is respectful — it is under the maleku mask's influence, not naturally aggressive.
+**Nota cultural:** el quetzal es una de las aves más veneradas de la cultura centroamericana. Su representación aquí es respetuosa — está bajo la influencia de la máscara maleku, no es agresivo por naturaleza.
 
 ---
 
-### 4.4 `WalkerPalom` — Domestic Pigeon (corrupted)
+### 4.4 `WalkerPalom` — Paloma doméstica (corrompida)
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Base Class | `EnemyWalker` |
-| Appears In | Stage 3-2, 3-3 |
-| Health | 2.5 hearts |
-| Contact Damage | 0.50 hearts |
-| Patrol Speed | 30 px/s |
-| Alert Speed | 55 px/s |
-| Detection Range X | 128 px |
+| Clase base | `EnemyWalker` |
+| Aparece en | Stage 3-2, 3-3 |
+| Vida | 2.5 corazones |
+| Daño de contacto | 0.50 corazones |
+| Velocidad de patrulla | 30 px/s |
+| Velocidad de alerta | 55 px/s |
+| Rango de detección X | 128 px |
 
-**Visual:** A large, aggressive pigeon — eyes red from the hawk's influence. Puffed up. Sprite: `enemy_palom_walk.png` (6 frames, 8 FPS). Size: 16×16 px.
+**Visual:** una paloma grande y agresiva — ojos rojos por la influencia del gavilán. Envalentonada. Sprite: `enemy_palom_walk.png` (6 fotogramas, 8 FPS). Tamaño: 16×16 px.
 
-**Behavior Note:** Slow but sturdy. Fills the ground-level threat in the wide Hall stage. Their large health pool means they persist as a hazard even while the player deals with aerial threats.
+**Nota de comportamiento:** lenta pero resistente. Llena la amenaza a nivel de suelo en el amplio escenario del Hall. Su gran reserva de vida hace que persistan como peligro incluso mientras el jugador lidia con amenazas aéreas.
 
 ---
 
-### 4.5 `ShooterBuitre` — Black Vulture (Perching)
+### 4.5 `ShooterBuitre` — Zopilote negro (posado)
 
-| Property | Value |
+| Propiedad | Valor |
 |---|---|
-| Base Class | `EnemyShooter` |
-| Appears In | Stage 3-2 |
-| Health | 3.5 hearts |
-| Projectile Damage | 0.50 hearts |
-| Fire Rate | 0.35 shots/s |
-| Projectile Speed | 100 px/s |
-| Detection Range X | 240 px |
+| Clase base | `EnemyShooter` |
+| Aparece en | Stage 3-2 |
+| Vida | 3.5 corazones |
+| Daño de proyectil | 0.50 corazones |
+| Cadencia de disparo | 0.35 disparos/s |
+| Velocidad de proyectil | 100 px/s |
+| Rango de detección X | 240 px |
 
-**Visual:** A large black vulture (Coragyps atratus — common in urban Costa Rica). Perched on balcony railings, hunched. Sprite: `enemy_buitre_idle.png` (4 frames, 5 FPS). Size: 18×22 px. **Projectile:** bone fragment, `enemy_buitre_proyectil.png` (2 frames, tumbling, 8×6 px).
+**Visual:** un zopilote negro grande (Coragyps atratus — común en zonas urbanas de Costa Rica). Posado en barandillas de balcón, encorvado. Sprite: `enemy_buitre_idle.png` (4 fotogramas, 5 FPS). Tamaño: 18×22 px. **Proyectil:** fragmento de hueso, `enemy_buitre_proyectil.png` (2 fotogramas, tambaleante, 8×6 px).
 
-**Behavior Note:** Very long detection range — 240px means it can engage the player from off-screen at the start of the Hall. Paired with the hawk dives, it creates crossfire situations.
+**Nota de comportamiento:** rango de detección muy largo — 240px significa que puede enganchar al jugador desde fuera de pantalla al principio del Hall. Combinado con los picados del gavilán, crea situaciones de fuego cruzado.
 
 ---
 
-## 5. Zone Final — Cemetery Enemies
+## 5. Zona final — Enemigos del cementerio
 
-The cemetery has no standard enemies during Stage 4-1 (intentionally empty — see World Design). The only enemy encounters are with the final boss in Stage 4-2.
+El cementerio no tiene enemigos estándar durante el Stage 4-1 (vacío a propósito — ver el diseño del mundo). Los únicos encuentros de enemigo son con el jefe final en el Stage 4-2.
 
-However, **Spirit Echoes** — spectral versions of defeated zone enemies — may appear during El Gran Shaman Paburu's `ANCIENT_CALL` attack:
+Sin embargo, pueden aparecer **Ecos espirituales** — versiones espectrales de enemigos de zona ya derrotados — durante el ataque `ANCIENT_CALL` de El Gran Shamán Paburu:
 
-| Echo | Source | Health | Damage |
+| Eco | Origen | Vida | Daño |
 |---|---|---|---|
-| `EchoVenado` | El Venado Sagrado Phase 1 | N/A (single attack, then dissipate) | 50% of original |
-| `EchoRey` | El Rey Terciopelo Phase 1 | N/A (single attack) | 50% |
-| `EchoGavilán` | El Gavilán Phase 1 | N/A (single attack) | 50% |
+| `EchoVenado` | Fase 1 de El Venado Sagrado | N/D (un solo ataque, luego se disipa) | 50% del original |
+| `EchoRey` | Fase 1 de El Rey Terciopelo | N/D (un solo ataque) | 50% |
+| `EchoGavilán` | Fase 1 de El Gavilán | N/D (un solo ataque) | 50% |
 
-Spirit Echoes are implemented as temporary entity instances using the boss sprites with `set_alpha(120)`. They do not have health bars. One attack, then auto-destroy.
+Los Ecos espirituales se implementan como instancias de entidad temporales que usan los sprites del jefe con `set_alpha(120)`. No tienen barra de vida. Un ataque y se autodestruyen.
 
 ---
 
-## 6. Enemy Roster Summary Table
+## 6. Tabla resumen del elenco de enemigos
 
-| ID | Name | Zone | Stages | Base | Health | Contact | Projectile |
+| ID | Nombre | Zona | Escenarios | Base | Vida | Contacto | Proyectil |
 |---|---|---|---|---|---|---|---|
 | E-101 | WalkerInsect | 1 | 1-1, 1-2 | Walker | 1.0 | 0.25 | — |
 | E-102 | FlyingBird | 1 | 1-1, 1-3 | Flying | 1.0 | 0.25 | — |
@@ -446,45 +452,45 @@ Spirit Echoes are implemented as temporary entity instances using the boss sprit
 | E-107 | WalkerEstudiante | 1 | 1-3 | Walker | 1.5 | 0.50 | — |
 | E-108 | FlyingNotebook | 1 | 1-3 | Flying | 0.5 | 0.25 | — |
 | E-109 | ShooterTiza | 1 | 1-3 | Shooter | 2.5 | — | 0.25 |
-| E-201 | WalkerSerpientePequena | 2 | 2-1 to 2-4 | Walker | 1.0 | 0.50 | — |
+| E-201 | WalkerSerpientePequena | 2 | 2-1 a 2-4 | Walker | 1.0 | 0.50 | — |
 | E-202 | FlyingBoa | 2 | 2-1, 2-2 | Flying | 2.0 | 0.50 | — |
-| E-203 | ShooterSerpienteArbol | 2 | 2-1 to 2-3 | Shooter | 2.0 | — | 0.50 |
+| E-203 | ShooterSerpienteArbol | 2 | 2-1 a 2-3 | Shooter | 2.0 | — | 0.50 |
 | E-204 | WalkerTerciopelo | 2 | 2-3 | Walker | 2.5 | 0.75 | — |
 | E-205 | ShooterVenomoLargo | 2 | 2-3 | Shooter | 3.0 | — | 0.50 |
 | E-206 | FlyingTerciovolador | 2 | 2-3 | Flying | 1.5 | 0.50 | — |
 | E-207 | WalkerGuardia | 2 | 2-2 | Walker | 3.0 | 0.50 | — |
 | E-301 | WalkerGarza | 3 | 3-1 | Walker | 2.0 | 0.50 | — |
-| E-302 | FlyingHalcon | 3 | 3-1 to 3-3 | Flying | 2.0 | 0.75 | — |
-| E-303 | ShooterQuetzal | 3 | 3-1 to 3-3 | Shooter | 2.5 | — | 0.25 |
+| E-302 | FlyingHalcon | 3 | 3-1 a 3-3 | Flying | 2.0 | 0.75 | — |
+| E-303 | ShooterQuetzal | 3 | 3-1 a 3-3 | Shooter | 2.5 | — | 0.25 |
 | E-304 | WalkerPalom | 3 | 3-2, 3-3 | Walker | 2.5 | 0.50 | — |
 | E-305 | ShooterBuitre | 3 | 3-2 | Shooter | 3.5 | — | 0.50 |
 
 ---
 
-## 7. Enemy Design Constraints for Students
+## 7. Restricciones de diseño de enemigos para estudiantes
 
-Students building traversal stages (1-1 through 1-3, 2-1 through 2-3, 3-1 through 3-3) must follow these rules when placing enemies:
+Los estudiantes que construyen escenarios de travesía (1-1 a 1-3, 2-1 a 2-3, 3-1 a 3-3) deben seguir estas reglas al colocar enemigos:
 
-| Rule | Description |
+| Regla | Descripción |
 |---|---|
-| Use only zone-appropriate enemies | Zone 1 enemies in Zone 1 stages only, etc. |
-| Maximum 3 distinct enemy types per stage | Depth over breadth |
-| No mixing zone enemy rosters | No Zone 2 serpents in Zone 1 jungle stages |
-| Enemy properties may be overridden via TMX | `patrol_length`, `damage_on_contact`, speeds can be adjusted |
-| New enemy subclasses require professor approval | Custom enemies must extend a base template |
-| Enemy counts must be manageable | No more than 12 simultaneous active enemies in a single stage |
+| Usar sólo enemigos apropiados de la zona | Enemigos de la Zona 1 sólo en escenarios de la Zona 1, etc. |
+| Máximo 3 tipos de enemigo distintos por escenario | Profundidad antes que amplitud |
+| No mezclar elencos de zonas | Sin serpientes de la Zona 2 en escenarios de selva de la Zona 1 |
+| Las propiedades de enemigo se pueden sobreescribir vía TMX | `patrol_length`, `damage_on_contact`, las velocidades se pueden ajustar |
+| Las subclases de enemigo nuevas necesitan aprobación del profesor | Los enemigos personalizados deben extender una plantilla base |
+| Los recuentos de enemigo deben ser manejables | No más de 12 enemigos activos simultáneos en un mismo escenario |
 
 ---
 
-## 8. Enemy Progression
+## 8. Progresión de enemigos
 
-Difficulty escalates deliberately across zones and within each zone:
+La dificultad escala deliberadamente entre zonas y dentro de cada zona:
 
-| Zone | Health Range | Damage Range | Speed Profile |
+| Zona | Rango de vida | Rango de daño | Perfil de velocidad |
 |---|---|---|---|
-| 1 — Campus | 0.5–3.0 hearts | 0.25–0.50 hearts | Slow to moderate |
-| 2 — Datacenter | 1.0–3.5 hearts | 0.50–0.75 hearts | Moderate to fast |
-| 3 — Heredia | 2.0–3.5 hearts | 0.50–0.75 hearts | Moderate + aerial |
-| Final — Cemetery | Boss echoes only | 50% of boss values | Variable |
+| 1 — Campus | 0.5–3.0 corazones | 0.25–0.50 corazones | Lento a moderado |
+| 2 — Datacenter | 1.0–3.5 corazones | 0.50–0.75 corazones | Moderado a rápido |
+| 3 — Heredia | 2.0–3.5 corazones | 0.50–0.75 corazones | Moderado + aéreo |
+| Final — Cementerio | Sólo ecos de jefe | 50% de los valores de jefe | Variable |
 
-This progression ensures that Stage 0 (which uses Zone-neutral enemies) feels accessible, while student stages carry appropriate threat escalation.
+Esta progresión garantiza que el Stage 0 (que usa enemigos neutrales a la zona) se sienta accesible, mientras que los escenarios de estudiante llevan una escalada de amenaza apropiada.

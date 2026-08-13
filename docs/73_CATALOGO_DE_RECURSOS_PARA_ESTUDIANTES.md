@@ -21,9 +21,10 @@ se pudo medir, no se escribe.
 ## 0. Índice de números verificados
 
 `26` estados de jugador · `25` acciones de entrada · `13` estados de IA ·
-`8` arquetipos de enemigo · `21` especies del bestiario · `34` tipos de objeto
-TMX · `2` tipos de capa `Collision` · `18` componentes ECS · `60` eventos en el
-enum `Events` + `5` de interacción (`INTERACT_*`).
+`8` arquetipos de enemigo · `21` especies del bestiario · `39` tipos de objeto
+TMX (AUD-455: eran 34 el 2026-08-02, ver §3.1) · `2` tipos de capa `Collision`
+· `18` componentes ECS · `60` eventos en el enum `Events` + `5` de interacción
+(`INTERACT_*`).
 
 ---
 
@@ -139,15 +140,22 @@ comprueba doc ↔ código.
 
 ## 3. Los objetos que el mapa TMX puede declarar
 
-### 3.1. Tipos de capa «Objects» (`src/framework/stage/tmx_diagnostics.py:47-99`) — **34 tipos**
+### 3.1. Tipos de capa «Objects» — **39 tipos** (AUD-455: eran 34 el 2026-08-02, faltan 5)
 
 `PlayerSpawn`, `Checkpoint`, `NextTrigger`, `MessageTrigger`,
 `MessageTrigger_Once`, `HazardZone`, `DeathPit`, `CameraLock`, `Waypoint`,
 `Light`, `Cutscene`, `PushBlock`, `BreakableBlock`, `Pickup`, `Key`, `Door`,
-`LockedDoor`, `Cage`, `Chest`, `EventTrigger`, `WindZone`, `FrictionZone`,
-`Conveyor`, `LaserZone`, `ShockwaveZone`, `WaterZone`, `MovingPlatform`,
-`RhythmBlock`, `SinkingPlatform`, `Spring`, `Guard`, `Stalker`, `Vine`,
-`Zipline`.
+`LockedDoor`, `Cage`, `Chest`, `EventTrigger`, `Objective`, `WindZone`,
+`FrictionZone`, `Conveyor`, `LaserZone`, `ShockwaveZone`, `WaterZone`,
+`MovingPlatform`, `RhythmBlock`, `SinkingPlatform`, `Spring`, `Guard`,
+`Stalker`, `ScrollZone`, `WarpZone`, `Slope`, `Vine`, `Zipline`, `BossSpawn`.
+
+> **AUD-455 (2026-08-13).** Esta lista y su cuenta («34 tipos») son del
+> 2026-08-02 y no incluían `Objective` (AUD-400), `ScrollZone` (AUD-249),
+> `WarpZone`, `Slope` (AUD-297) ni `BossSpawn` (AUD-259) — los cinco añadidos
+> después de esa fecha. La lista viva y verificada por CI es el bloque
+> `GENERATED` de `STAGE_CREATION.md` §«Tipos estructurales» (39 tipos), que es
+> de donde sale la corrección de arriba.
 
 Propiedades por tipo (default) — ver tabla completa de `STAGE_CREATION.md`:
 
@@ -272,8 +280,9 @@ El bus es con referencias débiles y sin singleton (`core/event_bus.py`, AUD-019
    `MessageTrigger`(_Once); usar `Message` produce un error.
 <!-- /cita-historica -->
 7. **Conteos de la doc inconciliables**: `60` dice 73 tipos / 37 enemigos,
-   `62` dice 62/30; el código tiene **65 tipos declarables** (34 + 2 collision +
-   8 arquetipos + 21 especies) y los 26 ctas de jugador.
+   `62` dice 62/30; el código tiene **70 tipos declarables** (39 + 2 collision +
+   8 arquetipos + 21 especies, AUD-455 — eran 65/34 el 2026-08-02, ver §3.1) y
+   los 26 ctas de jugador.
 
 ---
 

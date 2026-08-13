@@ -90,17 +90,19 @@ _PATRON = re.compile(
 #: Añadir una entrada aquí es afirmar «esto es un ejemplo». Si no lo es, la
 #: respuesta correcta es arreglar la ruta en el documento.
 MARCADORES_DE_POSICION: frozenset[str] = frozenset({
-    "assets/maps/boss_your_boss.tmx",
+    # AUD-457: los ejemplos de las dos entregas se renombraron al español
+    # (AUD-428) — `your_stage`→`tu_escenario`, `boss_your_boss`→`tu_jefe` — y
+    # los viejos en inglés salieron de aquí con la misma migración.
+    "assets/maps/tu_escenario.tmx",
+    "assets/maps/tu_jefe.tmx",
     "assets/maps/mi_nivel/mi_nivel.tmx",
     # AUD-431: el ejemplo de `validate_tmx.py` en la especificación traducida.
     "assets/maps/mi_mapa/mi_mapa.tmx",
     "assets/maps/tu_stage.tmx",
-    "assets/maps/your_stage.tmx",
-    "assets/maps/your_stage_name.tmx",
+    "src/stages/tu_jefe/tu_jefe.py",
     "src/stages/mi_nivel/mi_nivel.py",
     # AUD-429: el ejemplo de registro de la guía de enemigos traducida.
     "src/stages/mi_nivel/mi_enemigo.py",
-    "src/stages/stageX/boss_your_boss.py",
     "tests/test_stageN_smoke.py",
 })
 
@@ -112,8 +114,6 @@ MARCADORES_DE_POSICION: frozenset[str] = frozenset({
 #: existir, `test_ningun_retirado_ha_vuelto` avisa — porque entonces la nota
 #: histórica pasa a ser falsa.
 MODULOS_RETIRADOS: frozenset[str] = frozenset({
-    # AUD-098: segunda implementación muerta de AssetLoader.load_sprite_sheet.
-    "src/engine/utils/spritesheet.py",
     # AUD-111: cinco clases de transición con cero usos en todo el árbol.
     "src/engine/scene/transitions.py",
     # AUD-308: borrado deliberado de la documentación de julio de 2026. El

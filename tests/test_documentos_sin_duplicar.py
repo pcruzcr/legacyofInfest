@@ -22,34 +22,23 @@ Por qué no basta con mirar el H1 repetido
 Es la comprobación obvia y se queda corta: en `Obsidian_Home` la pasada **sí**
 tradujo el titular («Obsidian Knowledge Base» → «Base de Conocimiento
 Obsidian»), así que los dos H1 eran distintos y el cuerpo seguía duplicado al
-88,6 %. Aquí están las dos reglas porque cada una ve un fallo que la otra no.
-
-Por qué el umbral está en 50 %
--------------------------------
-Medido sobre los 54 documentos con separador, la separación entre los dos grupos
-es enorme y no hay nada en medio:
-
-* duplicados accidentales: del **88,6 %** al 96,2 % de similitud;
-* bilingües legítimos: del 0 % al **24,8 %** (inglés arriba, español abajo).
-
-Cualquier corte entre 25 % y 88 % da el mismo veredicto. 50 % está en mitad del
-hueco, así que ni un bilingüe con mucho código compartido lo dispara ni un
-duplicado se escapa.
+88,6 %. Hubo una segunda regla —comparar las dos mitades del separador— que
+dejó de vigilar algo en AUD-428: el español pasó a ser la lengua única, cada
+documento traducido **eliminaba** su apéndice, y cuando el último llegó a cero
+la regla se retiró (AUD-457), que es justo lo que su propio mensaje de fallo
+ordenaba. Queda ésta, que sigue viendo el caso del titular duplicado. La
+historia del umbral del 50 % —medido sobre 54 documentos con separador, con un
+hueco enorme entre duplicados (88,6 %–96,2 %) y bilingües legítimos
+(0 %–24,8 %)— se conserva en el histórico de git.
 """
 from __future__ import annotations
 
-import difflib
 import pathlib
 import re
 import unicodedata
 
 RAIZ = pathlib.Path(__file__).resolve().parent.parent
 DOCS = RAIZ / "docs"
-
-SEPARADOR = re.compile(r"^-{2,}\s*Traducci[oó]n al Espa[nñ]ol\s*-{2,}\s*$", re.I)
-
-#: Por encima de esto, las dos mitades son la misma y una sobra.
-SIMILITUD_MAXIMA = 0.50
 
 
 def _documentos() -> list[pathlib.Path]:
@@ -111,59 +100,15 @@ def test_ningun_titular_aparece_dos_veces() -> None:
     )
 
 
-def test_la_traduccion_no_es_una_copia_del_original() -> None:
-    """Si hay separador bilingüe, los dos lados tienen que decir cosas distintas.
-
-    No se comprueba el idioma —detectarlo a ojo es frágil— sino que el texto
-    difiera. Una traducción real comparte tablas y nombres de fichero pero no
-    la prosa; una copia comparte todo.
-    """
-    infractores: list[str] = []
-    revisados = 0
-    for doc in _documentos():
-        lineas = doc.read_text(encoding="utf-8").splitlines()
-        corte = next(
-            (i for i, ln in enumerate(lineas) if SEPARADOR.match(ln)), None,
-        )
-        if corte is None:
-            continue
-        arriba = [ln.strip() for ln in lineas[:corte] if ln.strip()]
-        abajo = [ln.strip() for ln in lineas[corte + 1:] if ln.strip()]
-        if not abajo:
-            continue
-        revisados += 1
-        similitud = difflib.SequenceMatcher(None, arriba, abajo).ratio()
-        if similitud > SIMILITUD_MAXIMA:
-            infractores.append(
-                f"  {doc.relative_to(RAIZ).as_posix()}: {similitud:.1%} "
-                f"({len(arriba)} líneas arriba, {len(abajo)} abajo)"
-            )
-
-    # AUD-432 — el umbral se invierte: ahora sólo puede BAJAR.
-    #
-    # Este `assert` pedía `revisados >= 40` y su mensaje avisaba de lo que
-    # acabó pasando: «si la convención bilingüe cambió, esta prueba ya no
-    # vigila lo que cree». Cambió en AUD-428 —el español pasa a ser la lengua
-    # única— y cada documento traducido **elimina** su apéndice, así que el
-    # suelo convertía el progreso en un fallo.
-    #
-    # Lo que hay que vigilar ahora es lo contrario: que quede al menos uno
-    # mientras el trabajo esté a medias —si llegan a cero antes de tiempo es
-    # que alguien borró apéndices sin traducir el cuerpo— y que los que queden
-    # no sean copias del original, que es lo que esta prueba siempre midió.
-    #
-    # Cuando `revisados` llegue a 0 de verdad, esta prueba se borra: ya no
-    # habrá apéndices que comprobar.
-    assert revisados >= 1, (
-        "ningún documento declara ya un apéndice de traducción. Si es porque "
-        "se han traducido todos, borra esta prueba — ya no vigila nada. Si no, "
-        "alguien ha quitado los apéndices sin traducir el cuerpo"
-    )
-    assert not infractores, (
-        "estas 'traducciones' son copias del original, no traducciones. "
-        "Bórralas y quédate con una sola versión, en español si es material "
-        "de curso (CLAUDE.md §3, invariante 5):\n" + "\n".join(infractores)
-    )
+# AUD-432 → AUD-457: esta prueba se borró.
+#
+# Era `test_la_traduccion_no_es_una_copia_del_original`, y su último `assert`
+# —`revisados >= 1`— avisaba de lo que acabó pasando: «si la convención
+# bilingüe cambió, esta prueba ya no vigila lo que cree». Cambió en AUD-428 —el
+# español pasa a ser la lengua única— y cada documento traducido **elimina** su
+# apéndice, así que el suelo convertía el progreso en un fallo. El propio
+# mensaje de la prueba ordenaba borrarla cuando `revisados` llegara a 0: ya no
+# hay apéndices que comprobar, y un guardián que siempre falla es ruido.
 
 
 def _es_cjk(caracter: str) -> bool:

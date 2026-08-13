@@ -1,540 +1,531 @@
 ---
 document_id: "LOI-SYLLABUS-008"
-title: "Legacy of InFest — Syllabus Mapping"
-aliases: ["Syllabus Mapping"]
-tags: ["syllabus", "mapping", "academic"]
-description: "Framework component to syllabus unit mapping"
+title: "Legacy of InFest — Mapeo del programa del curso"
+aliases: ["Mapeo del programa del curso", "Syllabus Mapping"]
+tags: ["silabo", "mapeo", "academico"]
+description: "Mapeo de componente del framework a unidad del programa"
 source: "docs/08_SYLLABUS_MAPPING.md"
-date_processed: "2026-07-14"
+date_processed: "2026-08-13"
 ---
 
-# Legacy of InFest — Syllabus Mapping
+# Legacy of InFest — Mapeo del programa del curso
 
-**Document ID:** LOI-SYLLABUS-008  
-**Version:** 1.0.0  
-**Status:** Official  
-**Audience:** Professor, Teaching Assistants, Students
+**ID del documento:** LOI-SYLLABUS-008
+**Versión:** 1.1.0
+**Estado:** Oficial
+**Audiencia:** Profesor, ayudantes de cátedra, estudiantes
 
----
-
-## 1. Overview
-
-This document maps every topic in the course syllabus to its corresponding framework component, student deliverable, Stage 0 demonstration, and evaluation criteria. It is the authoritative reference for grading and for students deciding how to implement their academic features in their stages.
-
-Each course unit corresponds to a block of academic content. The framework provides the infrastructure for applying each topic. Students must implement at least one academic feature per unit assigned to their stage, document it in their stage README, and demonstrate it during the final presentation.
-
----
-
-## 2. Unit I — Introduction to Computer Graphics
-
-### 2.1 Topics
-
-- History and context of computer graphics
-- Raster vs. vector graphics
-- Display technology and pixel grids
-- The game loop as a real-time graphics system
-- Frame rate, delta time, and temporal coherence
-
-### 2.2 Framework Component
-
-| Component | File | Description |
-|---|---|---|
-| Application loop | `engine/core/app.py` | Implements the game loop with delta time |
-| Clock | `engine/core/clock.py` | `DeltaClock` manages temporal coherence |
-| Internal surface | `engine/core/app.py` | 320×224 raster buffer scaled to display |
-| Display scaling | `engine/core/app.py` | Integer-scale blit to OS window |
-
-### 2.3 Student Deliverable
-
-Students do not implement Unit I concepts in a stage directly. Unit I is demonstrated implicitly by the framework itself. Students are expected to document in their Stage README:
-
-- The internal resolution used (320×224)
-- The target frame rate (60 FPS)
-- An explanation of how `dt` (delta time) is used in at least one entity in their stage
-
-### 2.4 Stage 0 Demonstration
-
-Stage 0 serves as the Unit I demonstration. Its existence as a running 60 FPS game at 320×224 scaled to a modern display is the demonstration. The debug overlay (F1) shows the current FPS counter.
-
-### 2.5 Evaluation Criteria
-
-| Criterion | Weight | Standard |
-|---|---|---|
-| Stage runs at stable 60 FPS | Pass/Fail | No frame drops below 50 FPS during normal gameplay |
-| Delta time applied to all movement | Pass/Fail | All `velocity * dt` patterns present |
-| README explains game loop | 10% | Correct description of update/draw cycle |
+> **AUD-455.** Traduce el documento (cuerpo en inglés, resumen condensado en
+> español al final que remitía «al documento original en inglés»). Corrige:
+> la ruta de módulo, que carecía del prefijo `src/` en todas sus apariciones;
+> `classify_region(features, model)` en §10.2, que **no existe** en
+> `VisionTools` ni en `PatternRecognitionTools` (verificado por AST) — la
+> clasificación real es `PatternRecognitionTools.classify()`, ver
+> `13_PATTERN_RECOGNITION_SPEC.md`; `engine/utils/spritesheet.py` en §5.2 y
+> §7.2, retirado en AUD-098 — la carga de hojas de sprites real es
+> `AssetLoader.load_sprite_sheet()` en `src/engine/utils/asset_loader.py`;
+> y la referencia a `77_SYLLABUS_ALIGNMENT_AUDIT.md` en §12, un documento
+> que no existe en este repositorio.
 
 ---
 
-## 3. Unit II — Coordinate Systems, Vectors, Matrices, Transformations
+## 1. Visión general
 
-### 3.1 Topics
+Este documento mapea cada tema del programa del curso a su componente correspondiente del framework, el entregable del estudiante, la demostración en Stage 0, y los criterios de evaluación. Es la referencia autoritativa para calificar y para que los estudiantes decidan cómo implementar sus características académicas en sus escenarios.
 
-- 2D Cartesian coordinate system
-- Screen-space vs. world-space coordinates
-- Vector arithmetic (addition, subtraction, scaling, dot product, normalization)
-- Translation and rotation matrices
-- Homogeneous coordinates
-- Transformation of bounding boxes
-
-### 3.2 Framework Component
-
-| Component | File | Description |
-|---|---|---|
-| World/screen transform | `framework/stage/camera.py` | `world_to_screen()` applies camera offset |
-| Vector utilities | `engine/utils/math_utils.py` | `vec2_normalize`, `vec2_dot`, `vec2_distance` |
-| Hitbox transformation | `framework/entities/base_entity.py` | Local → world rect transform |
-| Projectile angle (atan2) | `framework/entities/enemy_shooter.py` | Vector from shooter to player |
-| Player knockback vector | `framework/entities/player.py` | Direction vector from damage source |
-
-### 3.3 Student Deliverable
-
-**Required:** At least one custom entity whose movement or behavior uses explicit vector arithmetic.
-
-Examples:
-- An enemy that normalizes the vector to the player to move at constant speed regardless of direction
-- A projectile that uses a computed direction vector rather than hardcoded horizontal/vertical movement
-- A trigger zone that computes the player's distance using `vec2_distance` and scales an effect by proximity
-
-**Required README documentation:**
-- The vector operation used, stated mathematically
-- Which framework utility function was used
-- A screenshot or GIF showing the behavior
-
-### 3.4 Stage 0 Demonstration
-
-- Zone E: Shooter `atan2` angle calculation is explicitly shown in the tutorial message and in the debug overlay (draws a line from shooter to player).
-- Zone B: Player knockback vector computed from damage source position.
-- Debug mode: All rects shown are local-space rects transformed to world space.
-
-### 3.5 Evaluation Criteria
-
-| Criterion | Weight | Standard |
-|---|---|---|
-| Correct vector normalization | 25% | Entity moves at constant speed toward target |
-| Transformation from local to world space | 25% | Hitbox/hurtbox positioned correctly in world |
-| Mathematical documentation in README | 30% | Formula written out, not just described |
-| Working demo in stage | 20% | Feature observable and functional |
+Cada unidad del curso corresponde a un bloque de contenido académico. El framework da la infraestructura para aplicar cada tema. Los estudiantes deben implementar al menos una característica académica por unidad asignada a su escenario, documentarla en el README de su escenario, y demostrarla durante la presentación final.
 
 ---
 
-## 4. Unit III — Bézier Curves, Bernstein Polynomials, B-Splines, NURBS, Trajectories
+## 2. Unidad I — Introducción a gráficas por computadora
 
-### 4.1 Topics
+### 2.1 Temas
 
-- Parametric curves
-- Bernstein basis polynomials
-- De Casteljau algorithm
-- Bézier curves (degree 2 and 3)
-- B-Spline basis functions and knot vectors
-- NURBS (Non-Uniform Rational B-Splines)
-- Path parametrization and arc-length re-parametrization
+- Historia y contexto de las gráficas por computadora
+- Gráficos raster frente a vectoriales
+- Tecnología de pantalla y cuadrículas de píxel
+- El bucle de juego como sistema gráfico en tiempo real
+- Tasa de fotogramas, delta time, y coherencia temporal
 
-### 4.2 Framework Component
+### 2.2 Componente del framework
 
-| Component | File | Description |
+| Componente | Fichero | Descripción |
 |---|---|---|
-| Bézier computation | `framework/processing/curve_tools.py` | `bezier(control_points, n_samples)` |
-| B-Spline computation | `framework/processing/curve_tools.py` | `b_spline(points, degree, n)` |
-| NURBS computation | `framework/processing/curve_tools.py` | `nurbs(points, weights, knots, degree, n)` |
-| Path sampling | `framework/processing/curve_tools.py` | `sample_path(points, t)` |
-| Catmull-Rom | `framework/processing/curve_tools.py` | `catmull_rom(points, n)` |
-| Flying enemy Bézier path | `framework/entities/enemy_flying.py` | Uses `bezier()` for patrol path |
+| Bucle de la aplicación | `src/engine/core/app.py` | Implementa el bucle de juego con delta time |
+| Reloj | `src/engine/core/clock.py` | `DeltaClock` gestiona la coherencia temporal |
+| Superficie interna | `src/engine/core/app.py` | Búfer raster de 800×600 escalado a la pantalla |
+| Escalado de pantalla | `src/engine/core/app.py` | Blit a escala entera a la ventana del SO |
 
-### 4.3 Student Deliverable
+### 2.3 Entregable del estudiante
 
-**Required:** At least one entity or environmental effect that uses a curve from `curve_tools.py`.
+Los estudiantes no implementan los conceptos de la Unidad I directamente en un escenario. La Unidad I la demuestra implícitamente el framework mismo. Se espera que los estudiantes documenten en el README de su escenario:
 
-Examples:
-- A flying enemy whose path is a B-Spline through 5+ waypoints defined in TMX
-- A projectile that follows a Catmull-Rom spline instead of a straight line
-- An environmental object (swinging pendulum, oscillating platform) whose position is computed from a Bézier segment
-- A visual effect trace (light trail) that draws the sampled points of a NURBS curve
+- La resolución interna usada (800×600)
+- La tasa de fotogramas objetivo (60 FPS)
+- Una explicación de cómo se usa `dt` (delta time) en al menos una entidad de su escenario
 
-**Required:** The stage README must include:
-- A plot or diagram of the curve (hand-drawn or generated)
-- The control points used
-- The type of curve (Bézier, B-Spline, NURBS, Catmull-Rom) and degree
-- An explanation of what `t` represents in the context of the entity
+### 2.4 Demostración en Stage 0
 
-### 4.4 Stage 0 Demonstration
+Stage 0 sirve como la demostración de la Unidad I. Su existencia como un juego corriendo a 60 FPS estables, con render interno escalado a una pantalla moderna, es la demostración. La superposición de depuración (F1) muestra el contador de FPS actual.
 
-- Zone D: Flying_02 uses a degree-3 Bézier path through 4 waypoints.
-- Debug mode (F1): Renders the sampled path as a series of dots, and the control polygon as thin lines.
-- Zone D tutorial message: Explains the relationship between control points and the curve.
+### 2.5 Criterios de evaluación
 
-### 4.5 Evaluation Criteria
-
-| Criterion | Weight | Standard |
+| Criterio | Peso | Estándar |
 |---|---|---|
-| Curve correctly implemented | 30% | Entity follows mathematical curve (verified vs. expected output) |
-| Correct curve type for degree | 20% | Degree matches control point count or knot vector |
-| Visual behavior matches documentation | 20% | Demo matches README description |
-| Written mathematical explanation | 30% | Bernstein basis or knot vector correctly described |
+| El escenario corre a 60 FPS estables | Aprobado/Reprobado | Sin caídas de fotogramas por debajo de 50 FPS en jugabilidad normal |
+| Delta time aplicado a todo el movimiento | Aprobado/Reprobado | Presente el patrón `velocity * dt` |
+| El README explica el bucle de juego | 10% | Descripción correcta del ciclo update/draw |
 
 ---
 
-## 5. Unit IV — Objects, Scenes, Layers, Sprites, Buffers
+## 3. Unidad II — Sistemas de coordenadas, vectores, matrices, transformaciones
 
-### 5.1 Topics
+### 3.1 Temas
 
-- Scene graph concepts
-- Layered rendering architecture
-- Sprite as a textured quad
-- Sprite animation (frame cycling)
-- Double buffering
-- Z-ordering and draw calls
+- Sistema de coordenadas cartesiano 2D
+- Coordenadas de espacio de pantalla frente a espacio de mundo
+- Aritmética vectorial (suma, resta, escalado, producto punto, normalización)
+- Matrices de traslación y rotación
+- Coordenadas homogéneas
+- Transformación de cajas envolventes
 
-### 5.2 Framework Component
+### 3.2 Componente del framework
 
-| Component | File | Description |
+| Componente | Fichero | Descripción |
 |---|---|---|
-| Scene management | `engine/scene/scene_manager.py` | Scene stack, push/pop/replace |
-| Layer stack | TMX `BG_Far`, `BG_Mid`, etc. | Ordered rendering layers |
-| Sprite animation | `engine/utils/spritesheet.py` | Frame cycling from sprite sheet |
-| Double buffer | `engine/core/app.py` | Internal surface blit to window |
-| Draw order | `BaseEntity.layer` | Z-order property on entities |
+| Transformación mundo/pantalla | `src/framework/stage/camera.py` | `world_to_screen()` aplica el desplazamiento de cámara |
+| Utilidades de vector | `src/engine/utils/math_utils.py` | `vec2_normalize`, `vec2_dot`, `vec2_distance` |
+| Transformación de hitbox | `src/framework/entities/base_entity.py` | Transformación de rect local → mundo |
+| Ángulo de proyectil (atan2) | `src/framework/entities/enemy_shooter.py` | Vector del disparador al jugador |
+| Vector de retroceso del jugador | `src/framework/entities/player.py` | Vector de dirección desde la fuente de daño |
 
-### 5.3 Student Deliverable
+### 3.3 Entregable del estudiante
 
-**Required:** The student stage must correctly use a minimum of three TMX tile layers (excluding collision and objects). At least one entity must have a multi-frame animated sprite created by the student or adapted from the asset library.
+**Obligatorio:** al menos una entidad personalizada cuyo movimiento o comportamiento use aritmética vectorial explícita.
 
-**Required README documentation:**
-- A diagram or table of the layer stack used in the stage
-- An explanation of how the double-buffer render cycle works
-- The frame count and FPS of at least one custom animation
+Ejemplos:
+- Un enemigo que normaliza el vector hacia el jugador para moverse a velocidad constante sin importar la dirección
+- Un proyectil que usa un vector de dirección calculado en vez de movimiento horizontal/vertical fijo en código
+- Una zona de disparo que calcula la distancia al jugador con `vec2_distance` y escala un efecto según la proximidad
 
-### 5.4 Stage 0 Demonstration
+**Documentación obligatoria en el README:**
+- La operación vectorial usada, expresada matemáticamente
+- Qué función utilitaria del framework se usó
+- Una captura o GIF mostrando el comportamiento
 
-- All zones: Three background layers (BG_Far, BG_Mid, BG_Near) scroll at different parallax rates.
-- Zone G: Torch sprite animation demonstrates a 4-frame looping object animation.
-- Debug mode shows layer boundaries as colored outlines.
+### 3.4 Demostración en Stage 0
 
-### 5.5 Evaluation Criteria
+- Zona E: el cálculo del ángulo `atan2` del disparador se muestra explícitamente en el mensaje de tutorial y en la superposición de depuración (dibuja una línea del disparador al jugador).
+- Zona B: vector de retroceso del jugador calculado desde la posición de la fuente de daño.
+- Modo depuración: todos los rects mostrados son rects en espacio local transformados a espacio de mundo.
 
-| Criterion | Weight | Standard |
+### 3.5 Criterios de evaluación
+
+| Criterio | Peso | Estándar |
 |---|---|---|
-| Minimum 3 tile layers present | Pass/Fail | TMX has BG_Far, BG_Mid, Terrain at minimum |
-| Parallax scrolls at correct rates | 25% | Visual confirmation of depth |
-| Custom animated sprite functional | 35% | Frames cycle at correct FPS |
-| Layer architecture documented | 40% | README diagram matches TMX |
+| Normalización de vector correcta | 25% | La entidad se mueve a velocidad constante hacia el objetivo |
+| Transformación de espacio local a mundo | 25% | Hitbox/hurtbox posicionadas correctamente en el mundo |
+| Documentación matemática en el README | 30% | Fórmula escrita, no sólo descrita |
+| Demo funcional en el escenario | 20% | Característica observable y funcional |
 
 ---
 
-## 6. Unit V — RGB, HSV, HSL, CMYK, Transparency, Alpha Blending, Lighting
+## 4. Unidad III — Curvas de Bézier, polinomios de Bernstein, B-Splines, NURBS, trayectorias
 
-### 6.1 Topics
+### 4.1 Temas
 
-- RGB color model and byte representation
-- HSV (Hue, Saturation, Value) color model
-- HSL (Hue, Saturation, Lightness) color model
-- CMYK color model
-- Alpha channel and transparency
-- Alpha blending equations
-- Additive and multiplicative blending
-- Simulated 2D lighting
+- Curvas paramétricas
+- Polinomios base de Bernstein
+- Algoritmo de de Casteljau
+- Curvas de Bézier (grado 2 y 3)
+- Funciones base de B-Spline y vectores de nudos
+- NURBS (B-Splines racionales no uniformes)
+- Parametrización de trayectorias y re-parametrización por longitud de arco
 
-### 6.2 Framework Component
+### 4.2 Componente del framework
 
-| Component | File | Description |
+| Componente | Fichero | Descripción |
 |---|---|---|
-| Color conversions | `framework/processing/color_tools.py` | `rgb_to_hsv`, `hsv_to_rgb`, `rgb_to_hsl`, etc. |
-| Alpha blending | `framework/processing/color_tools.py` | `alpha_blend(src, dst, alpha)` |
-| Tint application | `framework/processing/color_tools.py` | `apply_tint(surface, color)` |
-| Surface to array | `framework/processing/color_tools.py` | `surface_to_array()`, `array_to_surface()` |
-| Pygame alpha | `pygame.Surface.set_alpha()` | Direct surface transparency |
+| Cálculo de Bézier | `src/framework/processing/curve_tools.py` | `bezier(control_points, n_samples)` |
+| Cálculo de B-Spline | `src/framework/processing/curve_tools.py` | `b_spline(points, degree, n)` |
+| Cálculo de NURBS | `src/framework/processing/curve_tools.py` | `nurbs(points, weights, knots, degree, n)` |
+| Muestreo de trayectoria | `src/framework/processing/curve_tools.py` | `sample_path(points, t)` |
+| Catmull-Rom | `src/framework/processing/curve_tools.py` | `catmull_rom(points, n)` |
+| Trayectoria Bézier de enemigo volador | `src/framework/entities/enemy_flying.py` | Usa `bezier()` para la ruta de patrulla |
 
-### 6.3 Student Deliverable
+### 4.3 Entregable del estudiante
 
-**Required:** At least one visual effect in the student stage that demonstrates a color space transformation or alpha blending operation applied to a surface or entity.
+**Obligatorio:** al menos una entidad o efecto ambiental que use una curva de `curve_tools.py`.
 
-Examples:
-- A health-based tint: as the player's health decreases, the screen tint shifts from neutral to red using HSV manipulation
-- A day/night cycle overlay using alpha blending (a dark surface blended over the scene)
-- An enemy that changes color phase (rotating hue in HSV space) as a "phase transition" visual
-- A collectible that cycles through luminance values in HSL space to create a "glow" pulse
+Ejemplos:
+- Un enemigo volador cuya ruta sea un B-Spline por 5+ puntos de referencia definidos en el TMX
+- Un proyectil que siga un spline Catmull-Rom en vez de una línea recta
+- Un objeto ambiental (péndulo oscilante, plataforma oscilante) cuya posición se calcule desde un segmento de Bézier
+- Un rastro visual (estela de luz) que dibuje los puntos muestreados de una curva NURBS
 
-**Required README documentation:**
-- The color space(s) used and why that space was chosen
-- The mathematical formula for the transform applied
-- Before/after screenshots
+**Obligatorio:** el README del escenario debe incluir:
+- Un gráfico o diagrama de la curva (dibujado a mano o generado)
+- Los puntos de control usados
+- El tipo de curva (Bézier, B-Spline, NURBS, Catmull-Rom) y su grado
+- Una explicación de qué representa `t` en el contexto de la entidad
 
-### 6.4 Stage 0 Demonstration
+### 4.4 Demostración en Stage 0
 
-- Stage 0 does not implement a color effect directly, but the debug mode renders hitbox and hurtbox overlays using alpha-blended translucent colors (demonstrating `alpha_blend`).
-- Zone F: The invincibility flash demonstrates `set_alpha()` toggling.
+- Zona D: Flying_02 usa una ruta Bézier de grado 3 por 4 puntos de referencia.
+- Modo depuración (F1): renderiza la ruta muestreada como una serie de puntos, y el polígono de control como líneas finas.
+- Mensaje de tutorial de la Zona D: explica la relación entre los puntos de control y la curva.
 
-### 6.5 Evaluation Criteria
+### 4.5 Criterios de evaluación
 
-| Criterion | Weight | Standard |
+| Criterio | Peso | Estándar |
 |---|---|---|
-| Correct color space used | 25% | HSV used for hue rotation, HSL for lightness, etc. |
-| Mathematically valid formula | 25% | No formula errors (clamping, range normalization) |
-| Visual effect clearly observable | 30% | Effect is visible and behaves as documented |
-| README formula and rationale | 20% | Explains why that color space, not just what |
+| Curva correctamente implementada | 30% | La entidad sigue la curva matemática (verificado contra la salida esperada) |
+| Tipo de curva correcto para el grado | 20% | El grado coincide con el conteo de puntos de control o el vector de nudos |
+| El comportamiento visual coincide con la documentación | 20% | La demo coincide con la descripción del README |
+| Explicación matemática escrita | 30% | Base de Bernstein o vector de nudos correctamente descritos |
 
 ---
 
-## 7. Unit VI — Textures, Animation, Interpolation, Collisions, Interaction
+## 5. Unidad IV — Objetos, escenas, capas, sprites, búferes
 
-### 7.1 Topics
+### 5.1 Temas
 
-- Texture mapping fundamentals
-- Animation as time-parametric texture selection
-- Linear interpolation (lerp)
-- Ease functions (quadratic, cubic, sine)
-- AABB collision detection
-- Interaction event patterns
+- Conceptos de grafo de escena
+- Arquitectura de renderizado por capas
+- El sprite como quad texturizado
+- Animación de sprites (ciclo de fotogramas)
+- Doble búfer
+- Ordenamiento en Z y llamadas de dibujo
 
-### 7.2 Framework Component
+### 5.2 Componente del framework
 
-| Component | File | Description |
+| Componente | Fichero | Descripción |
 |---|---|---|
-| Sprite animation | `engine/utils/spritesheet.py` | Frame-based animation |
-| Interpolation | `engine/utils/math_utils.py` | `lerp`, `ease_in_quad`, `ease_out_quad` |
-| AABB collision | `framework/entities/player.py` | Axis-separated resolution |
-| Interaction events | `engine/core/event_bus.py` | Pub/sub interaction model |
-| Camera lerp | `framework/stage/camera.py` | Smooth follow via lerp |
+| Gestión de escenas | `src/engine/scene/scene_manager.py` | Pila de escenas, push/pop/replace |
+| Pila de capas | TMX `BG_Far`, `BG_Mid`, etc. | Capas de renderizado ordenadas |
+| Animación de sprites | `src/engine/utils/asset_loader.py` | `AssetLoader.load_sprite_sheet()`, ciclo de fotogramas |
+| Doble búfer | `src/engine/core/app.py` | Blit de la superficie interna a la ventana |
+| Orden de dibujo | `BaseEntity.layer` | Propiedad de orden en Z de las entidades |
 
-### 7.3 Student Deliverable
+### 5.3 Entregable del estudiante
 
-**Required:** At least one entity movement or UI animation in the stage that uses an ease function from `math_utils.py` (not linear interpolation alone).
+**Obligatorio:** el escenario del estudiante debe usar correctamente un mínimo de tres capas de baldosas TMX (sin contar colisión y objetos). Al menos una entidad debe tener un sprite animado multi-fotograma creado por el estudiante o adaptado de la biblioteca de recursos.
 
-Examples:
-- A platform that moves between two positions using `ease_in_out_quad` for smooth deceleration
-- An enemy that approaches the player using `ease_in_cubic` (slow start, fast approach)
-- A collectible bounce animation using `ease_out_bounce`
-- A door opening animation timed with easing
+**Documentación obligatoria en el README:**
+- Un diagrama o tabla de la pila de capas usada en el escenario
+- Una explicación de cómo funciona el ciclo de renderizado de doble búfer
+- El conteo de fotogramas y FPS de al menos una animación propia
 
-**Required:** At least one custom collision interaction beyond standard wall/floor (e.g., a trigger zone, a bouncing hazard, a movable block).
+### 5.4 Demostración en Stage 0
 
-### 7.4 Stage 0 Demonstration
+- Todas las zonas: tres capas de fondo (BG_Far, BG_Mid, BG_Near) se desplazan a tasas de parallax distintas.
+- Zona G: la animación del sprite de la antorcha demuestra una animación de objeto en bucle de 4 fotogramas.
+- El modo depuración muestra los límites de capa como contornos coloreados.
 
-- Camera follow uses `lerp` for smooth viewport movement.
-- The screen banner slides in/out using `ease_out_quad` and `ease_in_quad`.
-- Checkpoint activation uses alpha lerp for the activation glow effect.
+### 5.5 Criterios de evaluación
 
-### 7.5 Evaluation Criteria
-
-| Criterion | Weight | Standard |
+| Criterio | Peso | Estándar |
 |---|---|---|
-| Ease function applied | 30% | Not plain `lerp`; uses a curve |
-| Visually distinguishable from linear | 20% | Observer can see acceleration/deceleration |
-| Custom interaction event implemented | 30% | Beyond standard floor/wall collision |
-| README explains easing math | 20% | Correct mathematical description |
+| Mínimo 3 capas de baldosas presentes | Aprobado/Reprobado | El TMX tiene BG_Far, BG_Mid, Terrain como mínimo |
+| El parallax se desplaza a las tasas correctas | 25% | Confirmación visual de profundidad |
+| Sprite animado propio funcional | 35% | Los fotogramas ciclan a los FPS correctos |
+| Arquitectura de capas documentada | 40% | El diagrama del README coincide con el TMX |
 
 ---
 
-## 8. Unit VII — Histogram, Brightness, Contrast, Convolution, Gaussian Blur, Sobel, Canny
+## 6. Unidad V — RGB, HSV, HSL, CMYK, transparencia, mezcla alfa, iluminación
 
-### 8.1 Topics
+### 6.1 Temas
 
-- Image histograms and their interpretation
-- Brightness and contrast adjustment
-- Convolution as a mathematical operation
-- Gaussian blur kernel
-- Sobel edge detection operator
-- Canny multi-stage edge detection
+- Modelo de color RGB y su representación en bytes
+- Modelo de color HSV (Matiz, Saturación, Valor)
+- Modelo de color HSL (Matiz, Saturación, Luminosidad)
+- Modelo de color CMYK
+- Canal alfa y transparencia
+- Ecuaciones de mezcla alfa
+- Mezcla aditiva y multiplicativa
+- Iluminación 2D simulada
 
-### 8.2 Framework Component
+### 6.2 Componente del framework
 
-| Component | File | Description |
+| Componente | Fichero | Descripción |
 |---|---|---|
-| Histogram | `framework/processing/filter_tools.py` | `compute_histogram(surface)` |
-| Brightness | `framework/processing/filter_tools.py` | `adjust_brightness(surface, factor)` |
-| Contrast | `framework/processing/filter_tools.py` | `adjust_contrast(surface, factor)` |
-| Convolution | `framework/processing/filter_tools.py` | `apply_kernel(surface, kernel)` |
-| Gaussian blur | `framework/processing/filter_tools.py` | `gaussian_blur(surface, sigma)` |
-| Sobel | `framework/processing/filter_tools.py` | `sobel_edge(surface)` |
-| Canny | `framework/processing/filter_tools.py` | `canny_edge(surface, low, high)` |
+| Conversiones de color | `src/framework/processing/color_tools.py` | `rgb_to_hsv`, `hsv_to_rgb`, `rgb_to_hsl`, etc. |
+| Mezcla alfa | `src/framework/processing/color_tools.py` | `alpha_blend(src, dst, alpha)` |
+| Aplicación de tinte | `src/framework/processing/color_tools.py` | `apply_tint(surface, color)` |
+| Superficie a arreglo | `src/framework/processing/color_tools.py` | `surface_to_array()`, `array_to_surface()` |
+| Alfa de Pygame | `pygame.Surface.set_alpha()` | Transparencia directa de superficie |
 
-### 8.3 Student Deliverable
+### 6.3 Entregable del estudiante
 
-**Required:** At least one real-time or semi-real-time application of a filter from `filter_tools.py` to a surface or background layer.
+**Obligatorio:** al menos un efecto visual en el escenario del estudiante que demuestre una transformación de espacio de color o una operación de mezcla alfa aplicada a una superficie o entidad.
 
-Performance note: Full-surface convolution every frame at 60 FPS is computationally expensive. Students are expected to apply filters intelligently (e.g., update every 5 frames, apply to a small sub-surface, pre-compute for static elements).
+Ejemplos:
+- Un tinte basado en salud: a medida que baja la salud del jugador, el tinte de pantalla pasa de neutral a rojo usando manipulación en HSV
+- Una superposición de ciclo día/noche usando mezcla alfa (una superficie oscura mezclada sobre la escena)
+- Un enemigo que cambia de fase de color (rotando el matiz en espacio HSV) como visual de "transición de fase"
+- Un coleccionable que cicla valores de luminosidad en espacio HSL para crear un pulso de "brillo"
 
-Examples:
-- Apply Sobel edge detection to a background tile layer and render the edge map as a secondary visual overlay (e.g., for a "digital world" stage aesthetic)
-- Apply Gaussian blur to the background layers behind a semi-transparent fog element
-- Compute the brightness histogram of the current screen and use it to trigger a "darkness event" (play an alarm SFX) when average brightness drops below a threshold
-- Apply a Canny edge map to an enemy sprite and use the edge data for a stylized outline rendering effect
+**Documentación obligatoria en el README:**
+- El/los espacio(s) de color usado(s) y por qué se eligió ese espacio
+- La fórmula matemática de la transformación aplicada
+- Capturas de antes/después
 
-**Required README documentation:**
-- Which filter was applied
-- The kernel matrix used (if convolution)
-- The frame-update strategy (how often applied)
-- Before/after screenshot of the filtered surface
+### 6.4 Demostración en Stage 0
 
-### 8.4 Stage 0 Demonstration
+- Stage 0 no implementa un efecto de color directamente, pero el modo depuración renderiza superposiciones de hitbox y hurtbox usando colores translúcidos mezclados con alfa (demostrando `alpha_blend`).
+- Zona F: el parpadeo de invencibilidad demuestra la alternancia de `set_alpha()`.
 
-Stage 0 does not apply real-time filters (it demonstrates core gameplay systems). However, the `filter_tools.py` module is provided with runnable unit tests in `tests/test_filter_tools.py` that produce visual output files demonstrating each filter. Students are expected to run these tests and examine the output as part of their Unit VII study.
+### 6.5 Criterios de evaluación
 
-### 8.5 Evaluation Criteria
-
-| Criterion | Weight | Standard |
+| Criterio | Peso | Estándar |
 |---|---|---|
-| Filter applied to correct surface type | 25% | Applied to `pygame.Surface`, converted via `surface_to_array` |
-| Mathematically correct filter | 30% | Kernel values correct; output matches expected behavior |
-| Performance-conscious application | 20% | Not applied every frame to the full screen without justification |
-| README kernel + strategy explanation | 25% | Kernel shown as matrix; update frequency explained |
+| Espacio de color correcto usado | 25% | HSV para rotación de matiz, HSL para luminosidad, etc. |
+| Fórmula matemáticamente válida | 25% | Sin errores de fórmula (saturación, normalización de rango) |
+| Efecto visual claramente observable | 30% | El efecto es visible y se comporta como se documenta |
+| Fórmula y justificación en el README | 20% | Explica por qué ese espacio de color, no sólo qué es |
 
 ---
 
-## 9. Unit VIII — Segmentation, Threshold, Regions, Morphology, Watershed, Feature Extraction
+## 7. Unidad VI — Texturas, animación, interpolación, colisiones, interacción
 
-### 9.1 Topics
+### 7.1 Temas
 
-- Binary thresholding
-- Otsu's automatic threshold
-- Connected region analysis
-- Morphological operations (erosion, dilation, opening, closing)
-- Watershed segmentation algorithm
-- HOG (Histogram of Oriented Gradients)
-- LBP (Local Binary Patterns)
+- Fundamentos del mapeo de texturas
+- La animación como selección de textura paramétrica en el tiempo
+- Interpolación lineal (lerp)
+- Funciones de easing (cuadrática, cúbica, seno)
+- Detección de colisión AABB
+- Patrones de eventos de interacción
 
-### 9.2 Framework Component
+### 7.2 Componente del framework
 
-| Component | File | Description |
+| Componente | Fichero | Descripción |
 |---|---|---|
-| Binary threshold | `framework/processing/vision_tools.py` | `threshold_binary(surface, thresh)` |
-| Otsu threshold | `framework/processing/vision_tools.py` | `threshold_otsu(surface)` |
-| Morphological erosion | `framework/processing/vision_tools.py` | `morphological_erode(surface, k)` |
-| Morphological dilation | `framework/processing/vision_tools.py` | `morphological_dilate(surface, k)` |
-| Watershed | `framework/processing/vision_tools.py` | `watershed_segment(surface)` |
-| Feature extraction | `framework/processing/vision_tools.py` | `extract_features(surface)` |
+| Animación de sprites | `src/engine/utils/asset_loader.py` | Animación basada en fotogramas |
+| Interpolación | `src/engine/utils/math_utils.py` | `lerp`, `ease_in_quad`, `ease_out_quad` |
+| Colisión AABB | `src/framework/entities/player.py` | Resolución por eje separado |
+| Eventos de interacción | `src/engine/core/event_bus.py` | Modelo de interacción publicación/suscripción |
+| Lerp de cámara | `src/framework/stage/camera.py` | Seguimiento suave vía lerp |
 
-### 9.3 Student Deliverable
+### 7.3 Entregable del estudiante
 
-**Required:** At least one application of a segmentation or morphology operation to a surface, used to drive game behavior (not purely visual).
+**Obligatorio:** al menos un movimiento de entidad o animación de UI en el escenario que use una función de easing de `math_utils.py` (no sólo interpolación lineal).
 
-Examples:
-- Apply Otsu threshold to the current screen; count the number of dark pixels; if above a threshold, trigger an event (lights-off mechanic)
-- Apply erosion to a sprite's alpha channel to create a "dissolving" death effect
-- Use watershed segmentation on a background surface to identify and highlight distinct "zones" — render zone borders as a visual overlay
-- Extract HOG features from a tileset region and use the feature vector as input to a runtime classifier
+Ejemplos:
+- Una plataforma que se mueve entre dos posiciones usando `ease_in_out_quad` para desaceleración suave
+- Un enemigo que se acerca al jugador usando `ease_in_cubic` (inicio lento, acercamiento rápido)
+- Una animación de rebote de coleccionable usando `ease_out_bounce`
+- Una animación de apertura de puerta cronometrada con easing
 
-### 9.4 Stage 0 Demonstration
+**Obligatorio:** al menos una interacción de colisión personalizada más allá de pared/suelo estándar (p. ej., una zona de disparo, un peligro que rebota, un bloque movible).
 
-Unit tests in `tests/test_vision_tools.py` demonstrate each function with saved output images. Students must run and study these tests.
+### 7.4 Demostración en Stage 0
 
-### 9.5 Evaluation Criteria
+- El seguimiento de cámara usa `lerp` para un movimiento de viewport suave.
+- El banner de pantalla entra/sale deslizándose usando `ease_out_quad` y `ease_in_quad`.
+- La activación de checkpoint usa lerp de alfa para el efecto de brillo de activación.
 
-| Criterion | Weight | Standard |
+### 7.5 Criterios de evaluación
+
+| Criterio | Peso | Estándar |
 |---|---|---|
-| Correct function from vision_tools | 25% | Right tool for the right task |
-| Output drives game behavior | 35% | Segmentation result changes state, not just displayed |
-| Edge case handling | 20% | What happens on black/white/uniform surfaces |
-| README explanation | 20% | Algorithm explained, not just named |
+| Función de easing aplicada | 30% | No es `lerp` plano; usa una curva |
+| Visualmente distinguible de lo lineal | 20% | El observador puede ver aceleración/desaceleración |
+| Evento de interacción personalizado implementado | 30% | Más allá de la colisión estándar de suelo/pared |
+| El README explica la matemática del easing | 20% | Descripción matemática correcta |
 
 ---
 
-## 10. Unit IX — Pattern Recognition, Classification, Visualization, Interactive Systems, Computer Vision
+## 8. Unidad VII — Histograma, brillo, contraste, convolución, desenfoque gaussiano, Sobel, Canny
 
-### 10.1 Topics
+### 8.1 Temas
 
-- Feature spaces and classification
-- k-Nearest Neighbors (k-NN)
-- Decision Trees and Random Forests
-- scikit-learn model training and inference
-- Real-time computer vision loops
-- Interactive systems driven by visual state
+- Histogramas de imagen y su interpretación
+- Ajuste de brillo y contraste
+- La convolución como operación matemática
+- Kernel de desenfoque gaussiano
+- Operador de detección de bordes de Sobel
+- Detección de bordes multi-etapa de Canny
 
-### 10.2 Framework Component
+### 8.2 Componente del framework
 
-| Component | File | Description |
+| Componente | Fichero | Descripción |
 |---|---|---|
-| Feature extraction | `framework/processing/vision_tools.py` | `extract_features(surface)` |
-| Classification | `framework/processing/vision_tools.py` | `classify_region(features, model)` |
-| scikit-learn integration | `requirements.txt` | `scikit-learn` available |
-| OpenCV integration | `requirements.txt` | `opencv-python` available |
+| Histograma | `src/framework/processing/filter_tools.py` | `compute_histogram(surface)` |
+| Brillo | `src/framework/processing/filter_tools.py` | `adjust_brightness(surface, factor)` |
+| Contraste | `src/framework/processing/filter_tools.py` | `adjust_contrast(surface, factor)` |
+| Convolución | `src/framework/processing/filter_tools.py` | `apply_kernel(surface, kernel)` |
+| Desenfoque gaussiano | `src/framework/processing/filter_tools.py` | `gaussian_blur(surface, sigma)` |
+| Sobel | `src/framework/processing/filter_tools.py` | `sobel_edge(surface)` |
+| Canny | `src/framework/processing/filter_tools.py` | `canny_edge(surface, low, high)` |
 
-### 10.3 Student Deliverable
+### 8.3 Entregable del estudiante
 
-**Required:** At least one system in Stage 3 (the final student stage) that applies a trained classifier to visual game data and uses the classification result to drive game behavior.
+**Obligatorio:** al menos una aplicación en tiempo real o semi-real de un filtro de `filter_tools.py` a una superficie o capa de fondo.
 
-This is the capstone academic feature of the course. It must integrate concepts from all prior units.
+Nota de rendimiento: la convolución de superficie completa cada fotograma a 60 FPS es computacionalmente costosa. Se espera que los estudiantes apliquen filtros con inteligencia (p. ej., actualizar cada 5 fotogramas, aplicar a una subsuperficie pequeña, precalcular para elementos estáticos).
 
-Examples:
-- Train a k-NN classifier offline on sprite feature vectors (HOG or LBP). At runtime, classify new sprites and spawn different enemy types based on the classification.
-- Train a decision tree on screen histogram features. At runtime, classify the current screen's "mood" (bright/dark/red-heavy) and change BGM and lighting accordingly.
-- Use OpenCV to process a small screen region (e.g., around the player) and detect a visual pattern that triggers a game event.
-- Implement a real-time gesture recognizer using input history as a feature vector, classifying movement patterns into named player actions beyond the standard control set.
+Ejemplos:
+- Aplicar detección de bordes de Sobel a una capa de baldosas de fondo y renderizar el mapa de bordes como superposición visual secundaria (p. ej., para la estética de un escenario "mundo digital")
+- Aplicar desenfoque gaussiano a las capas de fondo detrás de un elemento de niebla semitransparente
+- Calcular el histograma de brillo de la pantalla actual y usarlo para disparar un "evento de oscuridad" (reproducir un SFX de alarma) cuando el brillo promedio cae por debajo de un umbral
+- Aplicar un mapa de bordes de Canny a un sprite enemigo y usar los datos de bordes para un efecto de renderizado de contorno estilizado
 
-**Required README documentation:**
-- Dataset description (what was used to train the classifier)
-- Feature vector definition and dimensionality
-- Classifier type and hyperparameters
-- Training accuracy and test accuracy
-- How the classification output changes game behavior
+**Documentación obligatoria en el README:**
+- Qué filtro se aplicó
+- La matriz de kernel usada (si es convolución)
+- La estrategia de actualización por fotograma (con qué frecuencia se aplica)
+- Captura de antes/después de la superficie filtrada
 
-### 10.4 Stage 0 Demonstration
+### 8.4 Demostración en Stage 0
 
-Not demonstrated directly in Stage 0. Unit IX is demonstrated in the unit test `tests/test_vision_tools.py` which includes a small k-NN example on generated sprite data.
+Stage 0 no aplica filtros en tiempo real (demuestra los sistemas centrales de jugabilidad). Sin embargo, el módulo `filter_tools.py` viene con pruebas unitarias ejecutables en `tests/test_filter_tools.py` que producen ficheros de salida visual demostrando cada filtro. Se espera que los estudiantes ejecuten estas pruebas y examinen la salida como parte de su estudio de la Unidad VII.
 
-### 10.5 Evaluation Criteria
+### 8.5 Criterios de evaluación
 
-| Criterion | Weight | Standard |
+| Criterio | Peso | Estándar |
 |---|---|---|
-| Classifier trained and serialized | 20% | Model loadable at runtime |
-| Features correctly extracted | 20% | Correct dimensionality, no data leakage |
-| Classification drives behavior | 30% | Distinct game response for each class |
-| Accuracy documented | 15% | Training and test accuracy reported |
-| README capstone explanation | 15% | End-to-end system described clearly |
+| Filtro aplicado al tipo de superficie correcto | 25% | Aplicado a `pygame.Surface`, convertido vía `surface_to_array` |
+| Filtro matemáticamente correcto | 30% | Valores de kernel correctos; la salida coincide con el comportamiento esperado |
+| Aplicación consciente del rendimiento | 20% | No aplicado cada fotograma a toda la pantalla sin justificación |
+| Explicación de kernel + estrategia en el README | 25% | Kernel mostrado como matriz; frecuencia de actualización explicada |
 
 ---
 
-## 11. Consolidated Mapping Table
+## 9. Unidad VIII — Segmentación, umbral, regiones, morfología, watershed, extracción de características
 
-| Unit | Topic Summary | Framework Module | Student Stage | Stage 0 Zone |
+### 9.1 Temas
+
+- Umbralización binaria
+- Umbral automático de Otsu
+- Análisis de regiones conectadas
+- Operaciones morfológicas (erosión, dilatación, apertura, cierre)
+- Algoritmo de segmentación watershed
+- HOG (Histograma de Gradientes Orientados)
+- LBP (Patrones Binarios Locales)
+
+### 9.2 Componente del framework
+
+| Componente | Fichero | Descripción |
+|---|---|---|
+| Umbral binario | `src/framework/processing/vision_tools.py` | `threshold_binary(surface, thresh)` |
+| Umbral de Otsu | `src/framework/processing/vision_tools.py` | `threshold_otsu(surface)` |
+| Erosión morfológica | `src/framework/processing/vision_tools.py` | `morphological_erode(surface, k)` |
+| Dilatación morfológica | `src/framework/processing/vision_tools.py` | `morphological_dilate(surface, k)` |
+| Watershed | `src/framework/processing/vision_tools.py` | `watershed_segment(surface)` |
+| Extracción de características | `src/framework/processing/vision_tools.py` | `extract_features(surface)` |
+
+### 9.3 Entregable del estudiante
+
+**Obligatorio:** al menos una aplicación de una operación de segmentación o morfología a una superficie, usada para dirigir el comportamiento del juego (no puramente visual).
+
+Ejemplos:
+- Aplicar umbral de Otsu a la pantalla actual; contar el número de píxeles oscuros; si supera un umbral, disparar un evento (mecánica de "luces apagadas")
+- Aplicar erosión al canal alfa de un sprite para crear un efecto de muerte "disolviéndose"
+- Usar segmentación watershed sobre una superficie de fondo para identificar y resaltar "zonas" distintas — renderizar los bordes de zona como superposición visual
+- Extraer características HOG de una región del tileset y usar el vector de características como entrada de un clasificador en tiempo de ejecución
+
+### 9.4 Demostración en Stage 0
+
+Las pruebas unitarias en `tests/test_vision_tools.py` demuestran cada función con imágenes de salida guardadas. Los estudiantes deben ejecutar y estudiar estas pruebas.
+
+### 9.5 Criterios de evaluación
+
+| Criterio | Peso | Estándar |
+|---|---|---|
+| Función correcta de vision_tools | 25% | La herramienta correcta para la tarea correcta |
+| La salida dirige el comportamiento del juego | 35% | El resultado de segmentación cambia el estado, no sólo se muestra |
+| Manejo de casos límite | 20% | Qué pasa en superficies negras/blancas/uniformes |
+| Explicación en el README | 20% | Algoritmo explicado, no sólo nombrado |
+
+---
+
+## 10. Unidad IX — Reconocimiento de patrones, clasificación, visualización, sistemas interactivos, visión por computadora
+
+### 10.1 Temas
+
+- Espacios de características y clasificación
+- k Vecinos Más Cercanos (k-NN)
+- Árboles de decisión y bosques aleatorios
+- Entrenamiento e inferencia de modelos con scikit-learn
+- Bucles de visión por computadora en tiempo real
+- Sistemas interactivos dirigidos por el estado visual
+
+### 10.2 Componente del framework
+
+| Componente | Fichero | Descripción |
+|---|---|---|
+| Extracción de características | `src/framework/processing/vision_tools.py` | `extract_features(surface)` |
+| Clasificación | `src/framework/processing/pattern_recognition_tools.py` | `PatternRecognitionTools.classify(features, model)` |
+| Integración de scikit-learn | `pyproject.toml` | `scikit-learn` como dependencia obligatoria |
+| Integración de OpenCV | `pyproject.toml` | `opencv-python` disponible |
+
+### 10.3 Entregable del estudiante
+
+**Obligatorio:** al menos un sistema en Stage 3 (el escenario final del estudiante) que aplique un clasificador entrenado a datos visuales del juego y use el resultado de clasificación para dirigir el comportamiento del juego.
+
+Ésta es la característica académica de cierre del curso. Debe integrar conceptos de todas las unidades anteriores.
+
+Ejemplos:
+- Entrenar un clasificador k-NN fuera de línea sobre vectores de características de sprites (HOG o LBP). En tiempo de ejecución, clasificar sprites nuevos y generar distintos tipos de enemigo según la clasificación.
+- Entrenar un árbol de decisión sobre características de histograma de pantalla. En tiempo de ejecución, clasificar el "ánimo" de la pantalla actual (clara/oscura/con mucho rojo) y cambiar la BGM y la iluminación en consecuencia.
+- Usar OpenCV para procesar una pequeña región de pantalla (p. ej., alrededor del jugador) y detectar un patrón visual que dispare un evento de juego.
+- Implementar un reconocedor de gestos en tiempo real usando el historial de entrada como vector de características, clasificando patrones de movimiento en acciones de jugador nombradas más allá del conjunto de control estándar.
+
+**Documentación obligatoria en el README:**
+- Descripción del dataset (qué se usó para entrenar el clasificador)
+- Definición y dimensionalidad del vector de características
+- Tipo de clasificador e hiperparámetros
+- Precisión de entrenamiento y de prueba
+- Cómo la salida de clasificación cambia el comportamiento del juego
+
+### 10.4 Demostración en Stage 0
+
+No se demuestra directamente en Stage 0. La Unidad IX se demuestra en `tests/test_pattern_recognition_tools.py`, que incluye un pequeño ejemplo de k-NN sobre datos de sprite generados.
+
+### 10.5 Criterios de evaluación
+
+| Criterio | Peso | Estándar |
+|---|---|---|
+| Clasificador entrenado y serializado | 20% | Modelo cargable en tiempo de ejecución |
+| Características correctamente extraídas | 20% | Dimensionalidad correcta, sin fuga de datos |
+| La clasificación dirige el comportamiento | 30% | Respuesta de juego distinta para cada clase |
+| Precisión documentada | 15% | Precisión de entrenamiento y de prueba reportadas |
+| Explicación de cierre en el README | 15% | Sistema de extremo a extremo descrito con claridad |
+
+---
+
+## 11. Tabla de mapeo consolidada
+
+| Unidad | Resumen de tema | Módulo del framework | Escenario del estudiante | Zona de Stage 0 |
 |---|---|---|---|---|
-| I | Game loop, raster, delta time | `app.py`, `clock.py` | All stages (implicit) | Entire Stage 0 |
-| II | Vectors, matrices, transforms | `math_utils.py`, `camera.py`, `base_entity.py` | Stage 1 or 2 | Zone E (atan2), debug overlay |
-| III | Bézier, B-Spline, NURBS, paths | `curve_tools.py`, `enemy_flying.py` | Stage 1 or 2 | Zone D (Flying_02) |
-| IV | Scenes, layers, sprites, buffers | `scene_manager.py`, `spritesheet.py` | All stages | All zones |
-| V | Color spaces, alpha, lighting | `color_tools.py` | Stage 1 or 2 | Debug overlays |
-| VI | Animation, interpolation, collision | `math_utils.py`, `player.py`, `camera.py` | Stage 1 or 2 | Camera, banner, checkpoint |
-| VII | Filters, convolution, edges | `filter_tools.py` | Stage 2 or 3 | Unit tests |
-| VIII | Segmentation, morphology, features | `vision_tools.py` | Stage 2 or 3 | Unit tests |
-| IX | Classification, computer vision | `vision_tools.py`, scikit-learn | Stage 3 | Unit tests |
+| I | Bucle de juego, raster, delta time | `app.py`, `clock.py` | Todos los escenarios (implícito) | Todo Stage 0 |
+| II | Vectores, matrices, transformaciones | `math_utils.py`, `camera.py`, `base_entity.py` | Stage 1 o 2 | Zona E (atan2), superposición de depuración |
+| III | Bézier, B-Spline, NURBS, trayectorias | `curve_tools.py`, `enemy_flying.py` | Stage 1 o 2 | Zona D (Flying_02) |
+| IV | Escenas, capas, sprites, búferes | `scene_manager.py`, `asset_loader.py` | Todos los escenarios | Todas las zonas |
+| V | Espacios de color, alfa, iluminación | `color_tools.py` | Stage 1 o 2 | Superposiciones de depuración |
+| VI | Animación, interpolación, colisión | `math_utils.py`, `player.py`, `camera.py` | Stage 1 o 2 | Cámara, banner, checkpoint |
+| VII | Filtros, convolución, bordes | `filter_tools.py` | Stage 2 o 3 | Pruebas unitarias |
+| VIII | Segmentación, morfología, características | `vision_tools.py` | Stage 2 o 3 | Pruebas unitarias |
+| IX | Clasificación, visión por computadora | `pattern_recognition_tools.py`, scikit-learn | Stage 3 | Pruebas unitarias |
 
 ---
 
-## 12. Milestone-to-Unit Assignment
+## 12. Asignación de hito a unidad
 
-**Corrected per `77_SYLLABUS_ALIGNMENT_AUDIT.md` §2.A.1 and §9.** The labels "Stage 1," "Stage 2," and "Stage 3" used throughout this and other framework documents do **not** refer to three different stages assigned to one student. Per the official syllabus, Legacy of InFest is an **individual project**: each student selects exactly **one** Stage or Boss in Class 1 (see `21_COURSE_SCHEDULE.md`) and develops that single assignment through three cumulative completeness milestones, each corresponding to one official Evaluación Práctica:
+Las etiquetas «Stage 1», «Stage 2» y «Stage 3» usadas en este y otros documentos del framework **no** se refieren a tres escenarios distintos asignados a un mismo estudiante. Según el programa oficial, Legacy of InFest es un **proyecto individual**: cada estudiante elige exactamente **un** Escenario o Jefe en la Clase 1 (ver `21_COURSE_SCHEDULE.md`) y desarrolla esa única entrega a través de tres hitos acumulativos de completitud, cada uno correspondiente a una Evaluación Práctica oficial:
 
-| Internal Label (legacy) | Official Name | Class | Cumulative Units Demonstrated |
+| Etiqueta interna (heredada) | Nombre oficial | Clase | Unidades acumuladas demostradas |
 |---|---|---|---|
-| "Stage 1" | Evaluación Práctica I – Prototipo Funcional | Class 5 | II, III, IV, V |
-| "Stage 2" | Evaluación Práctica II – Vertical Slice | Class 8 | + VI, VII |
-| "Stage 3" | Evaluación Práctica III – Integración Final | Class 11 | + VIII, IX |
+| «Stage 1» | Evaluación Práctica I – Prototipo Funcional | Clase 5 | II, III, IV, V |
+| «Stage 2» | Evaluación Práctica II – Vertical Slice | Clase 8 | + VI, VII |
+| «Stage 3» | Evaluación Práctica III – Integración Final | Clase 11 | + VIII, IX |
 
-A student's single assigned Stage or Boss must demonstrate Units II–V by Evaluación Práctica I, add Units VI–VII by Evaluación Práctica II, and add Units VIII–IX by Evaluación Práctica III — all within the **same** piece of work, progressively elaborated. Unit I is foundational and demonstrated implicitly from the start (see Section 2 of this document).
-
-
---- Traducción al Español ---
-
-## Mapeo del Sílabo
-
-Este documento mapea cada tema del sílabo del curso a su componente correspondiente en el framework, el entregable del estudiante, la demostración en el Escenario 0 y los criterios de evaluación.
-
-### Unidades Cubiertas
-I. Introducción a Gráficas por Computadora
-II. Sistemas de Coordenadas, Vectores, Matrices, Transformaciones
-III. Curvas de Bézier, Bernstein, B-Splines, NURBS
-IV. Objetos, Escenas, Capas, Sprites, Buffers
-V. RGB, HSV, HSL, CMYK, Transparencia, Iluminación
-VI. Texturas, Animación, Interpolación, Colisiones
-VII. Histograma, Brillo, Convolución, Gaussian Blur, Sobel, Canny
-VIII. Segmentación, Threshold, Morfología, Watershed
-IX. Reconocimiento de Patrones, Clasificación
-
-Para la tabla completa de mapeo con criterios de evaluación detallados, consultar el documento original en inglés.
-
+El único Escenario o Jefe asignado a un estudiante debe demostrar las Unidades II–V para la Evaluación Práctica I, sumar las Unidades VI–VII para la Evaluación Práctica II, y sumar las Unidades VIII–IX para la Evaluación Práctica III — todo dentro de la **misma** pieza de trabajo, elaborada progresivamente. La Unidad I es fundacional y se demuestra implícitamente desde el inicio (ver la Sección 2 de este documento).
 
 ---
-## 🔗 Documentos Relacionados
+## 🔗 Documentos relacionados
 
-- [[14_PROFESSOR_DELIVERABLE_MATRIX.md|Professor Deliverable Matrix]]
-- [[21_COURSE_SCHEDULE.md|Course Schedule]]
+- [[14_PROFESSOR_DELIVERABLE_MATRIX.md|Matriz de entregables del profesorado]]
+- [[21_COURSE_SCHEDULE.md|Calendario del curso]]
