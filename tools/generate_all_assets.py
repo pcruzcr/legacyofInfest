@@ -745,6 +745,7 @@ TILESET_THEMES = {
     "tileset_heredia_stone": {"floor": (100,90,80), "wall": (120,110,100), "deco": (80,70,60)},
     "tileset_heredia_interior": {"floor": (130,110,90), "wall": (150,130,110), "deco": (110,90,70)},
     "tileset_cemetery": {"floor": (50,50,70), "wall": (70,70,90), "deco": (40,40,60)},
+    "tileset_stage4_1": {"floor": (90,80,70), "wall": (58,56,70), "deco": (70,60,50)},
 }
 
 def _gen_gothic_tileset(path, ts=16, cols=8, rows=8):
@@ -941,11 +942,156 @@ def _gen_tileset_cementerio(path, ts=16, cols=8, rows=8):
     img.save(path)
 
 
+#: AUD-469 — el 4-1 reconstruido (`docs/niveles/15_DISENO_4_1_EL_CEMENTERIO.md`)
+#: tiene **seis secciones con terreno propio**, no una gradación de color
+#: sobre el mismo suelo de siempre — eso fue justo lo que el dueño del
+#: proyecto rechazó del primer intento (AUD-462…466). Cada familia de
+#: baldosa es una sección: cripta, bosque, camino de huesos, tierra
+#: quemada, tumbas, piedra sagrada. El musgo y el lodo de la Fase 2 siguen
+#: la misma regla que ya vale para el cementerio: la misma losa con otra
+#: superficie encima, no un material que no se parece a nada.
+S4_CRIPTA = (96, 96, 110)
+S4_CRIPTA_RELLENO = (46, 34, 28)
+S4_BOSQUE = (58, 64, 40)
+S4_BOSQUE_RELLENO = (32, 30, 20)
+S4_HUESOS = (168, 158, 132)
+S4_HUESOS_RELLENO = (90, 80, 64)
+S4_QUEMADO = (48, 40, 36)
+S4_QUEMADO_RELLENO = (26, 22, 20)
+S4_TUMBAS = (72, 58, 44)
+S4_TUMBAS_RELLENO = (40, 32, 24)
+S4_SAGRADA = (66, 66, 86)
+S4_SAGRADA_RELLENO = (36, 36, 50)
+S4_VERDE_ESPECTRAL = (124, 255, 160)
+
+#: El contrato con `generate_stage4_1.py` — igual que `CEM_ORDEN` para el
+#: cementerio: cambiar el orden aquí sin cambiarlo allí repinta el nivel
+#: entero con la baldosa equivocada (AUD-115).
+STAGE4_1_ORDEN = (
+    "vacio", "cripta", "cripta_relleno", "muro",
+    "bosque", "bosque_relleno", "musgo", "musgo_relleno",
+    "lodo", "lodo_relleno", "huesos", "huesos_relleno",
+    "quemado", "quemado_relleno", "tumbas", "tumbas_relleno",
+    "sagrada", "sagrada_relleno", "lapida_alta", "lapida_baja",
+    "cruz", "calavera",
+)
+
+
+def _gen_tileset_stage4_1(path, ts=16, cols=8, rows=3):
+    _ensure(path)
+    img = Image.new("RGBA", (ts * cols, ts * rows), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    rng = random.Random(4691)
+
+    def _relleno(ox, oy, color):
+        draw.rectangle((ox, oy, ox + ts - 1, oy + ts - 1), fill=color)
+        for _ in range(10):
+            px = rng.randint(ox + 1, ox + ts - 2)
+            py = rng.randint(oy + 1, oy + ts - 2)
+            draw.point((px, py), fill=tuple(max(0, c - 14) for c in color))
+
+    for indice, clase in enumerate(STAGE4_1_ORDEN):
+        ox, oy = (indice % cols) * ts, (indice // cols) * ts
+
+        if clase == "vacio":
+            continue
+        elif clase == "muro":
+            draw.rectangle((ox, oy, ox + ts - 1, oy + ts - 1), fill=CEM_MURO)
+            draw.line((ox, oy, ox + ts - 1, oy), fill=(78, 76, 90))
+        elif clase == "cripta":
+            _cem_losa(draw, ox, oy, ts, base=S4_CRIPTA, luz=CEM_LOSA_LUZ)
+        elif clase == "cripta_relleno":
+            _relleno(ox, oy, S4_CRIPTA_RELLENO)
+        elif clase == "bosque":
+            draw.rectangle((ox, oy, ox + ts - 1, oy + ts - 1), fill=S4_BOSQUE)
+            draw.line((ox, oy, ox + ts - 1, oy), fill=(80, 90, 56))
+            for _ in range(6):  # hierba
+                bx = rng.randint(ox + 1, ox + ts - 2)
+                draw.line((bx, oy, bx, oy - rng.randint(1, 3)), fill=(90, 110, 60))
+        elif clase == "bosque_relleno":
+            _relleno(ox, oy, S4_BOSQUE_RELLENO)
+        elif clase in ("musgo", "lodo"):
+            # La misma tierra de bosque debajo, con la superficie encima —
+            # la regla del cementerio, aplicada aquí también.
+            draw.rectangle((ox, oy, ox + ts - 1, oy + ts - 1), fill=S4_BOSQUE)
+            claro, oscuro = ((CEM_MUSGO_T, CEM_MUSGO_OSC) if clase == "musgo"
+                             else (CEM_LODO_T, CEM_LODO_OSC))
+            draw.rectangle((ox, oy, ox + ts - 1, oy + 5), fill=claro)
+            draw.line((ox, oy + 5, ox + ts - 1, oy + 5), fill=oscuro)
+            if clase == "musgo":
+                for mx in range(ox + 1, ox + ts - 1, 3):
+                    alto = rng.randint(2, 4)
+                    draw.line((mx, oy - alto + 6, mx, oy + 6), fill=claro)
+            else:
+                for _ in range(3):
+                    ry = rng.randint(oy + 1, oy + 4)
+                    draw.line((ox, ry, ox + ts - 1, ry + rng.randint(-1, 1)),
+                              fill=oscuro)
+        elif clase in ("musgo_relleno", "lodo_relleno"):
+            fondo = CEM_MUSGO_OSC if clase == "musgo_relleno" else CEM_LODO_OSC
+            _relleno(ox, oy, fondo)
+        elif clase == "huesos":
+            draw.rectangle((ox, oy, ox + ts - 1, oy + ts - 1), fill=S4_HUESOS)
+            # Una costilla curva, apenas insinuada — el camino está hecho de
+            # huesos, no sólo tiene huesos encima.
+            draw.arc((ox + 1, oy + 4, ox + ts - 2, oy + ts + 4), 200, 340,
+                     fill=(120, 112, 92))
+        elif clase == "huesos_relleno":
+            _relleno(ox, oy, S4_HUESOS_RELLENO)
+        elif clase == "quemado":
+            draw.rectangle((ox, oy, ox + ts - 1, oy + ts - 1), fill=S4_QUEMADO)
+            for _ in range(4):  # brasas apagadas
+                px = rng.randint(ox + 1, ox + ts - 2)
+                py = rng.randint(oy + 1, oy + ts - 2)
+                draw.point((px, py), fill=(90, 50, 30))
+        elif clase == "quemado_relleno":
+            _relleno(ox, oy, S4_QUEMADO_RELLENO)
+        elif clase == "tumbas":
+            draw.rectangle((ox, oy, ox + ts - 1, oy + ts - 1), fill=S4_TUMBAS)
+            draw.line((ox, oy + 2, ox + ts - 1, oy + 1), fill=(56, 46, 34))
+        elif clase == "tumbas_relleno":
+            _relleno(ox, oy, S4_TUMBAS_RELLENO)
+        elif clase == "sagrada":
+            draw.rectangle((ox, oy, ox + ts - 1, oy + ts - 1), fill=S4_SAGRADA)
+            # La veta verde que la Fase 6 enciende al paso (AUD-463): aquí
+            # sólo se insinúa, tenue — el brillo real lo pone la luz de la
+            # escena, no la baldosa.
+            vx = ox + ts // 2
+            for y in range(oy, oy + ts):
+                draw.point((vx, y), fill=(*S4_VERDE_ESPECTRAL, 90))
+        elif clase == "sagrada_relleno":
+            _relleno(ox, oy, S4_SAGRADA_RELLENO)
+        elif clase in ("lapida_alta", "lapida_baja"):
+            draw.rectangle((ox + 3, oy, ox + ts - 4, oy + ts - 1), fill=CEM_LOSA)
+            if clase == "lapida_alta":
+                draw.ellipse((ox + 3, oy, ox + ts - 4, oy + 9), fill=CEM_LOSA)
+                draw.line((ox + 5, oy + 9, ox + ts - 6, oy + 9), fill=CEM_LOSA_SOMBRA)
+            else:
+                draw.rectangle((ox + 1, oy + ts - 3, ox + ts - 2, oy + ts - 1),
+                               fill=CEM_LOSA_SOMBRA)
+            draw.line((ox + 3, oy, ox + 3, oy + ts - 1), fill=CEM_LOSA_LUZ)
+        elif clase == "cruz":
+            draw.rectangle((ox + 7, oy + 2, ox + 9, oy + ts - 1), fill=CEM_LOSA)
+            draw.rectangle((ox + 3, oy + 5, ox + ts - 4, oy + 7), fill=CEM_LOSA)
+        elif clase == "calavera":
+            # Un cráneo pequeño, hueco de ojos oscuro — el acento del camino
+            # de huesos, no el suelo entero.
+            draw.rectangle((ox, oy, ox + ts - 1, oy + ts - 1), fill=S4_HUESOS)
+            cx, cy = ox + ts // 2, oy + ts // 2
+            draw.ellipse((cx - 5, cy - 5, cx + 5, cy + 3), fill=(228, 220, 200))
+            draw.ellipse((cx - 3, cy - 2, cx - 1, cy), fill=(40, 36, 30))
+            draw.ellipse((cx + 1, cy - 2, cx + 3, cy), fill=(40, 36, 30))
+
+    img.save(path)
+
+
 def _gen_all_tilesets():
     print("  Tilesets...")
     for name, theme in TILESET_THEMES.items():
         if name == "tileset_cemetery":
             _gen_tileset_cementerio(A / "tilesets" / f"{name}.png")
+        elif name == "tileset_stage4_1":
+            _gen_tileset_stage4_1(A / "tilesets" / f"{name}.png")
         elif theme == "gothic":
             _gen_gothic_tileset(A / "tilesets" / f"{name}.png")
         else:
