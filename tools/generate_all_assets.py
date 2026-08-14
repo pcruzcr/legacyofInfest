@@ -1705,7 +1705,16 @@ SFX_CATEGORIES = {
                     # `WeatherSystem.SIN_ASSET` declaraba sin fichero desde
                     # AUD-145. Declararlo en voz alta estuvo bien; generarlos
                     # por el mismo camino que los demás lo cierra.
-                    "rain_ambient", "storm_ambient", "thunder"],
+                    "rain_ambient", "storm_ambient", "thunder",
+                    # AUD-465 — los cuatro ambientes propios del 4-1
+                    # rediseñado (`docs/niveles/15_DISENO_4_1_EL_CEMENTERIO.md`
+                    # §5): uno por fase que lo pide. `canto_ancestral` es un
+                    # coro sin palabras — el mismo principio que ya aplican
+                    # las voces de `venado_fase1`: una vocalización de
+                    # marcador de posición, no un intento de representar una
+                    # lengua o una ceremonia real.
+                    "viento_de_bosque", "grito_de_gavilan", "canto_ancestral",
+                    "resonancia_solemne"],
     # AUD-263 — las voces. GAP-031 decía «el motor sabe reproducir voz y no hay
     # ni un solo fichero», y se dejó así a propósito para no cablear mentiras.
     # Pero **todo** el audio de este juego está sintetizado aquí: los pasos, los
@@ -1731,7 +1740,9 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
              "paburu_eye_beam": 0.5, "paburu_wave": 0.6,
              "jungle_ambient": 2.0, "datacenter_hum": 2.0, "wind_indoor": 2.0, "cemetery_silence": 2.0,
              "venado_fase1": 0.9, "venado_fase2": 1.1, "venado_muerte": 1.4,
-             "rain_ambient": 2.0, "storm_ambient": 2.0, "thunder": 1.6}
+             "rain_ambient": 2.0, "storm_ambient": 2.0, "thunder": 1.6,
+             "viento_de_bosque": 2.0, "grito_de_gavilan": 0.7,
+             "canto_ancestral": 3.0, "resonancia_solemne": 4.0}
     
     dur = t_dur.get(name, 0.3)
     n = int(rate * dur)
@@ -1795,6 +1806,61 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
             t = i / rate
             env = max(0, 1 - t / dur)
             samples.append(_square(100, t, 0.3) * 0.2 + _square(150, t, 0.3) * 0.15 + random.uniform(-0.2, 0.2) * env)
+    elif name == "viento_de_bosque":
+        # Fase 2 (El Venado): el mismo filtrado paso-bajo que `rain_ambient`,
+        # pero con ráfagas más lentas (el viento entre árboles, no la lluvia)
+        # y un roce agudo y débil por encima — hojas, no gotas.
+        anterior = 0.0
+        samples = []
+        for i in range(n):
+            t_seg = i / rate
+            crudo = random.uniform(-1.0, 1.0)
+            anterior = anterior * 0.70 + crudo * 0.30
+            rafaga = 0.6 + 0.4 * math.sin(2.0 * math.pi * t_seg / 4.0)
+            hoja = random.uniform(-1.0, 1.0) * 0.15
+            samples.append((anterior * 0.14 + hoja * 0.05) * rafaga)
+    elif name == "grito_de_gavilan":
+        # Fase 4: un solo grito, aislado (lo dispara la escena, no un bucle).
+        # Empieza agudo y cae — el perfil de un chillido de ave rapaz, no una
+        # nota musical ni una palabra.
+        samples = []
+        for i in range(n):
+            t = i / rate
+            avance = t / dur
+            f = 1400.0 - 900.0 * avance
+            env = math.sin(min(1.0, avance) * math.pi) ** 0.6
+            aspereza = random.uniform(-0.3, 0.3)
+            samples.append((_tri(f, t) * 0.5 + aspereza * 0.3) * env)
+    elif name == "canto_ancestral":
+        # Fase 5 (La Planicie de los Muertos): un coro sin palabras. Tres
+        # voces en unísono ligeramente desafinado —la disonancia mínima que
+        # se lee como «varias voces» y no como un tono puro— con una
+        # respiración lenta de volumen. Nada de esto finge una lengua: es la
+        # misma vocalización de marcador de posición que ya usa el proyecto
+        # para `venado_fase1`, aquí en registro humano y sostenida.
+        voces = (98.0, 98.6, 147.3)  # sol grave, la misma nota un pelín
+                                      # desafinada, y su quinta
+        samples = []
+        for i in range(n):
+            t = i / rate
+            respira = 0.7 + 0.3 * math.sin(2.0 * math.pi * t / 5.0)
+            v = sum(_tri(f, t) for f in voces) / len(voces)
+            samples.append(v * 0.22 * respira)
+    elif name == "resonancia_solemne":
+        # Fase 6 (El Camino hacia Paburu): el mismo principio aditivo que
+        # `_gen_bgm_organo` —un armónico es un múltiplo entero de la
+        # fundamental— pero sin acordes que cambien: un solo acorde
+        # sostenido, la misma tónica de re menor del órgano de la pista
+        # (`bgm_final_approach`), como si siguiera resonando después de
+        # cruzar el umbral.
+        fundamental = 73.42  # Re2
+        armonicos = (1, 2, 3, 5)
+        samples = []
+        for i in range(n):
+            t = i / rate
+            tremolo = 1.0 + 0.05 * math.sin(2.0 * math.pi * t * 4.5)
+            v = sum(_tri(fundamental * h, t) / h for h in armonicos)
+            samples.append(v * 0.16 * tremolo)
     elif name.startswith("venado_"):
         # AUD-263 — voz de marcador de posición: una vocalización grave con
         # formantes, no una palabra. Un gruñido con inflexión se lee como «una
