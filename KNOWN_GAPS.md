@@ -2277,7 +2277,7 @@ está.
   siempre privados) de los mixins de `src/framework/scenes/stage_parts/`,
   que se dejaron fuera deliberadamente por bajo valor de contrato público.
 
-## [GAP-058] `stage4_1` (El Cementerio Sagrado) — arte propio por fase, diálogo de los espíritus y reverberación real
+## [GAP-058] `stage4_1` (El Cementerio Sagrado) — arte final por fase, diálogo de los espíritus y reverberación real
 
 - **File:** `assets/backgrounds/final/`, `assets/tilesets/tileset_cemetery.png`, `src/stages/stage4_1/stage4_1.py`
 - **Phase:** AUD-462/463/464 (2026-08-14), rediseño de `stage4_1` a seis fases
@@ -2298,9 +2298,21 @@ está.
   bajando el clima y las partículas a cero, no con una reverberación que se
   apaga.
 - **Resolution plan:** Encargar (o generar por código, siguiendo
-  `tools/generate_all_assets.py`) un fondo y unos elementos de
-  `Terrain_Detail` propios por fase una vez que el playtest del prototipo
-  confirme el ritmo de las seis fases — cambiar el arte antes de validar la
-  mecánica sería el orden caro. El diálogo de los espíritus y una
-  reverberación real (si el proyecto añade algún día un mezclador con DSP)
-  quedan igual de pendientes, sin fecha.
+  `tools/generate_all_assets.py`) un fondo bespoke por fase una vez que el
+  playtest del prototipo confirme el ritmo de las seis fases — cambiar el
+  arte antes de validar la mecánica sería el orden caro. El diálogo de los
+  espíritus y una reverberación real (si el proyecto añade algún día un
+  mezclador con DSP) quedan igual de pendientes, sin fecha.
+- **Nota (AUD-465, 2026-08-14):** parcialmente resuelto. Se generaron cuatro
+  ambientes propios por código (`viento_de_bosque`, `grito_de_gavilan`,
+  `canto_ancestral`, `resonancia_solemne` — sin fingir ninguna lengua, el
+  mismo principio que ya aplica `venado_fase1`) y se cableó
+  `sonido_ambiente` por fase con `crossfade_ambient`, corrigiendo de paso
+  que la tormenta de la Fase 3 nunca sonaba (`get_ambient_audio_key()` sólo
+  se consultaba una vez, al entrar al escenario). Se añadió decoración de
+  fondo propia —árboles cortados (Fase 4) y cruces de conquistador (Fase
+  5)— como contornos dibujados por código, igual que las siluetas de los
+  espíritus, sin PNG nuevo. **Sigue pendiente:** un fondo TMX bespoke por
+  fase con arte final (el tileset y los tres `bg_final_*` siguen siendo los
+  del diseño anterior), sombras de ave cruzando el fondo en la Fase 4, el
+  diálogo de los tres espíritus, y la reverberación real.
