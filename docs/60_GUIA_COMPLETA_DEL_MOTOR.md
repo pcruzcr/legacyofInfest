@@ -28,7 +28,7 @@ date_processed: "2026-07-31"
 1. [El bucle: qué pasa en un fotograma](#1)
 2. [Anatomía de un escenario TMX](#2)
 3. [Propiedades del mapa — las 17](#3)
-4. [Los 77 tipos de objeto, uno por uno](#4)
+4. [Los 78 tipos de objeto, uno por uno](#4)
 5. [El jugador: 26 estados y qué los provoca](#5)
 6. [Enemigos: 37 tipos y 13 estados](#6)
 7. [Jefes](#7)
@@ -245,11 +245,21 @@ efecto, mira la consola antes que el código.
 ---
 
 <a id="4"></a>
-## 4. Los 77 tipos de objeto, uno por uno
+## 4. Los 78 tipos de objeto, uno por uno
 
-El motor acepta **78 tipos** en la capa `Objects`: 39 integrados del framework
-y 37 enemigos del registro, más `Solid` y `Platform` en `Collision`. Todos los
-números se convierten a `float` automáticamente.
+> **AUD-455 (2026-08-13), corregido tras leer `docs/70` §Iteración 15-16.**
+> Esta nota decía primero que la cuenta correcta era 76, contando sólo la capa
+> `Objects` (39 + 37) y dejando `Solid`/`Platform` fuera por vivir en
+> `Collision`. Eso contradice AUD-412/AUD-413 (`70_INFORME_DE_AUDITORIA_VIVO.md`),
+> que ya habían medido y fijado el total en **78** — el mismo criterio que usa
+> `tests/test_el_inventario_cuenta_bien.py` — sumando las dos capas: 39
+> (`BUILTIN_OBJECT_TYPES`) + 37 (enemigos, §6) + 2 (`Solid`/`Platform`, capa
+> `Collision`). El índice decía 77 porque le faltaba subir tras AUD-400
+> (`Objective`); ésa era la única corrección real. Revertido a 78.
+
+El motor acepta **78 tipos**: 39 integrados del framework y 37 enemigos del
+registro, en la capa `Objects`, más `Solid` y `Platform` en `Collision`.
+Todos los números se convierten a `float` automáticamente.
 
 > Un objeto **punto** (ancho y alto 0) recibe el tamaño de una baldosa, porque
 > un rectángulo de área cero sería imposible de tocar.
@@ -1237,9 +1247,14 @@ forma más barata de cazar la capa que se te olvidó.
 
 ### La rúbrica, sobre 130
 
+> **AUD-455 (2026-08-13).** Esta tabla sumaba 110, no 130: faltaban las filas
+> `checkpoints` y `climate_valid`. Recontado contra el diccionario `RUBRIC` de
+> `scripts/grade_stage.py` (línea 63) y su `sum(RUBRIC.values())`.
+
 | Casilla | Puntos | Qué mide |
 |---|---|---|
 | `design_completable` | 12 | se llega andando del spawn a la salida |
+| `checkpoints` | 15 | 5 puntos por checkpoint, hasta 3 |
 | `collectibles` | 10 | ≥ 3 `Pickup`/`Key`/`Chest` |
 | `design_geometry` | 10 | sin saltos imposibles ni zonas aisladas |
 | `enemies_placed` | 10 | hay enemigos |
@@ -1248,6 +1263,7 @@ forma más barata de cazar la capa que se te olvidó.
 | `required_layers` | 10 | están las capas |
 | `metadata` | 10 | `stage_id`, `stage_name`, `bgm_track` |
 | `design_pacing` | 8 | checkpoints repartidos y **al menos un salto exigente** |
+| `climate_valid` | 5 | `climate` es uno de los valores válidos |
 | `file_parses` | 5 | el TMX es válido |
 | `map_bounds_reasonable` | 5 | tamaño sensato |
 | `tileset_valid` | 5 | el tileset existe |

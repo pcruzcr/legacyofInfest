@@ -3,7 +3,7 @@ document_id: "LOI-STUDENT-036"
 title: "Legacy of InFest — Manual de Estudiante"
 aliases: ["Student Manual", "Manual de Estudiante"]
 tags: ["student", "manual", "guide"]
-description: "Complete student manual"
+description: "Manual completo de estudiante"
 source: "docs/36_STUDENT_MANUAL.md"
 date_processed: "2026-07-14"
 ---

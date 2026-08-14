@@ -3,7 +3,7 @@ document_id: "LOI-USER-035"
 title: "Legacy of InFest — Manual de Usuario"
 aliases: ["User Manual", "Manual de Usuario"]
 tags: ["user", "manual", "guide"]
-description: "User manual for players and evaluators"
+description: "Manual de usuario para jugadores y evaluadores"
 source: "docs/35_USER_MANUAL.md"
 date_processed: "2026-07-14"
 ---

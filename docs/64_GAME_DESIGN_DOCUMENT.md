@@ -1,9 +1,9 @@
 ---
 document_id: "LOI-GDD-064"
-title: "Legacy of InFest — Game Design Document"
-aliases: ["Game Design Document", "GDD"]
+title: "Legacy of InFest — Documento de Diseño del Juego"
+aliases: ["Game Design Document", "GDD", "Documento de Diseño del Juego"]
 tags: ["gdd", "design", "gameplay", "narrative", "world"]
-description: "Complete game design reference: vision, narrative, world, gameplay, enemies, bosses, audio, modes"
+description: "Referencia completa de diseño del juego: visión, narrativa, mundo, jugabilidad, enemigos, jefes, audio, modos"
 source: "docs/64_GAME_DESIGN_DOCUMENT.md"
 date_processed: "2026-08-01"
 ---

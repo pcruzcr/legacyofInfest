@@ -1,9 +1,9 @@
 ---
 document_id: "LOI-GUIDE-STAGE"
-title: "Stage Creation Guide"
-aliases: ["Stage Creation Guide"]
+title: "Guía de Creación de Escenarios"
+aliases: ["Stage Creation Guide", "Guía de Creación de Escenarios"]
 tags: ["stage", "creation", "guide", "tutorial"]
-description: "Stage creation tutorial"
+description: "Tutorial de creación de escenarios"
 source: "docs/STAGE_CREATION.md"
 date_processed: "2026-07-14"
 ---

@@ -612,16 +612,21 @@ esquivable en los bordes extremos).
 
 ## 7. Composición de enemigos: guía rápida de arquetipos
 
+> **AUD-455 (2026-08-13).** La columna HP/Daño tenía cinco de ocho filas mal:
+> recontada contra los valores por defecto de `max_health`/`damage_on_contact`
+> en el `__init__` de cada clase (`src/framework/entities/enemy_*.py`), que es
+> lo mismo que ya usa `75_BIBLIA_TECNICA.md` §5.2. Sólo `Walker` estaba bien.
+
 | Arquetipo | HP / Daño | Rol en el nivel | Cuándo usarlo |
 |---|---|---|---|
 | `Walker` | 2 / 0.5 | Ritmo del suelo, empuje constante | Primer nivel de cada zona |
-| `Flying` | 1 / 0.5 | Ocupar el aire, forzar movimiento vertical | En tramos anchos o con doble altura |
-| `Shooter` | 2 / 1.0 | Amenaza de fondo, control de zonas | En tramos con cubierta disponible |
-| `Charger` | 3 / 1.5 | Aceleración, castigo a la quietud | Desde el nivel 2 de cada zona |
-| `Archer` | 2 / 1.0 | Precisa, disparo punzante | Examen de esquiva lateral |
-| `Brute` | 5 / 2.0 | Muro, lentitud con daño alto | Máximo 1 por nivel, siempre presentado antes |
-| `Caster` | 3 / 1.5 | Patrones radiales, área | Niveles de las Unidades V–VII |
-| `Assassin` | 2 / 2.0 | Sorpasso, ataque súbito | Solo en la Zona 3, como examen |
+| `Flying` | 1.5 / 0.5 | Ocupar el aire, forzar movimiento vertical | En tramos anchos o con doble altura |
+| `Shooter` | 3 / 0.25 | Amenaza de fondo, control de zonas | En tramos con cubierta disponible |
+| `Charger` | 4 / 1.5 | Aceleración, castigo a la quietud | Desde el nivel 2 de cada zona |
+| `Archer` | 2.5 / 0.25 | Precisa, disparo punzante | Examen de esquiva lateral |
+| `Brute` | 5 / 0.5 | Muro, lentitud con daño alto | Máximo 1 por nivel, siempre presentado antes |
+| `Caster` | 2 / 0.25 | Patrones radiales, área | Niveles de las Unidades V–VII |
+| `Assassin` | 1.5 / 0.25 | Sorpasso, ataque súbito | Solo en la Zona 3, como examen |
 
 Regla de composición: **un arquetipo nuevo por nivel, uno de los tres tipos
 máximo por escenario de estudiante**, y el tercer tipo debe ser una variante

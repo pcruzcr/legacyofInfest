@@ -3,7 +3,7 @@ document_id: "LOI-GUIDE-038"
 title: "Legacy of InFest — Guía Rápida de Creación de Stages y Bosses"
 aliases: ["Stage Boss Guide"]
 tags: ["stage", "boss", "guide", "creation"]
-description: "Quick reference for building stages/bosses"
+description: "Referencia rápida para construir escenarios y jefes"
 source: "docs/38_STAGE_BOSS_GUIDE.md"
 date_processed: "2026-07-14"
 ---

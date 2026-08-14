@@ -1310,6 +1310,15 @@ por analogía a unos ficheros que nadie miró al decidir habría sido inventarse
 permiso. Si el trato debe ser el mismo, es una frase, y estos tres ya están
 localizados.
 
+> **Corrección (2026-08-13, AUD-455).** La fila de AUD-308 nunca llegó a
+> `00_MASTER_INDEX.md`: se comprobó contra el índice actual y las tres siguen
+> sin fila. Entre medias, el índice registra una purga posterior de 35
+> documentos con exactamente este perfil («auditorías cerradas, informes de
+> fase, hojas de ruta cumplidas»), que sí se hizo hasta el final. Aplicar ese
+> mismo criterio, en vez de repetir la fila que quedó a medias, es lo
+> consistente: los tres se eliminaron (siguen en el historial de git). El
+> árbol de `03_ARCHITECTURE.md` ya no los lista.
+
 ### 21.4 Y mi primera medición dio tres falsos positivos
 
 Va aquí porque es la cuarta vez que pasa en este documento y la primera en que
@@ -1549,7 +1558,10 @@ Tres decisiones que conviene tener escritas:
 * **Se conservaron las cuatro fuentes que cita el `CLAUDE.md`** —`62`, `63`,
   `69` y este mismo `87`—, para que sus reglas sigan siendo ciertas.
 * **`PHASE_FIX_REPORT`, `REMEDIATION_PLAN` y `AUDIT_CHECKLIST`** siguen en la
-  raíz, ahora indexados y marcados `Historical`.
+  raíz, ahora indexados y marcados `Historical`. *(Corrección 2026-08-13,
+  AUD-455: ese indexado nunca se hizo — ver la nota de la §21.3. Los tres se
+  eliminaron al fin, con el mismo criterio que ya se había aplicado aquí a
+  otros 31 documentos de idéntica naturaleza.)*
 
 El índice maestro se reescribió entero. El anterior hablaba de «65 documentos»,
 de siete paquetes ZIP (`v1` … `v7`) que ya no existen, y mandaba al lector a
