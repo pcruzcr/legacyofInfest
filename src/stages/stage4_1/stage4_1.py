@@ -5,36 +5,40 @@ Academic Unit: V (color y gradación) + VII (clima y partículas)
 
 NIVEL 4-1 — EL CEMENTERIO SAGRADO
 
-La idea, en una frase: **el cementerio cambia de piel con el jugador**. Cada
-fase tiene su propia gradación de color, su propio clima, y un espíritu que
-testifica y asciende. Reemplaza al diseño anterior de La Cegua (AUD-462: ver
-`docs/niveles/13_STAGE_4_1.md` §0) heredando la forma de pozo que ya se
-demostró que funciona jugada (AUD-225).
+La idea, en una frase: **Jhon y Jin atraviesan seis espacios distintos**, y el
+cementerio cambia de piel —terreno, color, clima, sonido— en cada uno.
+Reconstruido desde cero (AUD-467…470: ver `docs/niveles/13_STAGE_4_1.md` §0)
+después de que el primer intento (AUD-462…466) heredara el pozo vertical del
+diseño de La Cegua y el dueño del proyecto lo rechazara jugado: una repisa
+que ocupa casi todo el ancho de pantalla se lee como una plataforma
+horizontal genérica, no como un pozo. Esta versión es un **pasillo
+horizontal** de verdad, con terreno propio por sección
+(`tools/generate_all_assets.py::_gen_tileset_stage4_1`) — no el mismo suelo
+con un filtro de color encima.
 
 Lo que este escenario NO tiene, y por qué
 ==========================================
-**Cero enemigos.** Sigue siendo la regla de oro (`docs/niveles/
-13_STAGE_4_1.md`). Las siluetas de Venado, Rey Terciopelo y Gavilán —ver
-`siluetas.py`, que no cambió: ya dibujaba exactamente estos tres— son
-contornos sin colisión, sin IA y sin salud: testifican, no atacan.
+**Cero enemigos.** Las siluetas de Venado, Rey Terciopelo y Gavilán —ver
+`siluetas.py`— son contornos sin colisión, sin IA y sin salud: testifican,
+no atacan.
 
 Lo que sí tiene
 ================
-* **Seis fases** (`fases.py`), leídas de la fila del jugador. Cada una trae
-  su gradación de color, su clima y —si le toca— su espíritu, su loma, su
-  silencio o su ciclo de luna.
-* **Gradación de color interpolada**: se pasa de la gradación de la fase
-  anterior a la de la actual a lo largo del propio tramo
-  (`PostProcessing.set_color_grading`, una matriz 3×3 real), para que el
-  cambio se vea progresivo y nunca se corte en seco.
-* **Un relámpago-linterna en la Fase 3** (El Rey Terciopelo): la tormenta del
-  guion, reusando el mismo mecanismo del diseño anterior.
-* **Un camera shake único, en la Fase 4** (El Gavilán): el silencio súbito
-  que pide el guion, con una sola sacudida fuerte y breve.
-* **Un ciclo de luna en la Fase 5** (La Planicie de los Muertos): la luz
-  ambiente oscila en vez de quedarse fija — la escena se ve y se pierde.
-* **Grietas que se iluminan al paso en la Fase 6** (El Camino hacia Paburu):
-  un rastro momentáneo, no una barra de progreso que se acumula.
+* **Seis fases** (`fases.py`), leídas de la **columna** del jugador — el
+  4-1 se atraviesa de izquierda a derecha, no se desciende.
+* **Gradación de color interpolada** por avance dentro de la sección
+  (`PostProcessing.set_color_grading`, una matriz 3×3 real).
+* **Un relámpago-linterna en la Fase 3**, una serpiente de fondo reptando
+  entre los huesos, y una loma real (`Slope`, AUD-297) que se sube de
+  verdad, no un parche decorativo.
+* **Un camera shake único en la Fase 4** tras un silencio súbito, y una
+  sombra de ave que cruza el cielo de vez en cuando después.
+* **Un ciclo de luna en la Fase 5**: la luz ambiente oscila.
+* **Grietas que se iluminan al paso en la Fase 6**: un rastro, no una
+  barra de progreso acumulada.
+* **Una cutscene de introducción** y **diálogo real** de los tres
+  espíritus (`data/dialogues/stage4_1.json`), disparados por el TMX sin
+  código nuevo — `CutsceneSystem` y `DialogueSystem` ya estaban completos.
 """
 from __future__ import annotations
 
@@ -87,6 +91,11 @@ class Stage4_1(StageScene):
     #: vuelve previsible a la tercera vez — el mismo motivo que ya usa
     #: `_espera_entre_rayos` para la tormenta de la Fase 3.
     ESPERA_ENTRE_GRITOS: tuple[float, float] = (4.0, 10.0)
+    #: Cada cuánto cruza la sombra del Gavilán el cielo, y cuánto tarda en
+    #: cruzar. La pieza que el primer intento (AUD-462…466) dejó fuera —
+    #: hasta ahora la presencia del Gavilán era sólo sonora.
+    ESPERA_ENTRE_SOMBRAS: tuple[float, float] = (6.0, 14.0)
+    DURACION_DEL_CRUCE = 3.5
 
     # ── El ciclo de luna (Fase 5) ──────────────────────────────
     PERIODO_DE_LA_LUNA = 6.0
@@ -117,6 +126,10 @@ class Stage4_1(StageScene):
         #: Cuándo suena el próximo grito aislado del Gavilán (Fase 4, sólo
         #: tras el silencio — ver `_actualizar_grito_del_gavilan`).
         self._proximo_grito: float = 0.0
+        #: Cuándo cruza la próxima sombra del Gavilán, y en qué punto de su
+        #: cruce va (-1 = no está cruzando ahora mismo).
+        self._proxima_sombra: float = 0.0
+        self._sombra_progreso: float = -1.0
         #: Las luces de las grietas de la Fase 6 — apagadas de fábrica en el
         #: TMX, encendidas por proximidad y no permanentes.
         self._grietas: list[LightSource] = []
@@ -153,25 +166,27 @@ class Stage4_1(StageScene):
         self._actualizar_rayos(dt)
         self._actualizar_silencio_y_shake()
         self._actualizar_grito_del_gavilan(dt)
+        self._actualizar_sombra_del_gavilan(dt)
         self._actualizar_grietas(dt)
 
     @property
     def fase(self) -> Fase:
         """La fase en la que está el jugador ahora mismo.
 
-        Se mira la **fila**, no la columna: el 4-1 es un pozo, se desciende.
+        Se mira la **columna**, no la fila: el 4-1 es un pasillo, se
+        atraviesa de izquierda a derecha (AUD-467).
         """
         if self._player is None:
             return FASES[0]
-        return fase_en(self._player.rect.centery / settings.TILE_SIZE)
+        return fase_en(self._player.rect.centerx / settings.TILE_SIZE)
 
     def _avance_en_fase(self, fase: Fase) -> float:
         """0 al entrar en la fase, 1 al salir. Para interpolar."""
         if self._player is None:
             return 0.0
-        recorrido = (self._player.rect.centery / settings.TILE_SIZE
-                     - fase.desde_fila)
-        return max(0.0, min(1.0, recorrido / trazado.ALTO_FASE))
+        recorrido = (self._player.rect.centerx / settings.TILE_SIZE
+                     - fase.desde_columna)
+        return max(0.0, min(1.0, recorrido / trazado.ANCHO_SECCION))
 
     def _actualizar_fase(self) -> None:
         """Aplica la fase nueva, si el jugador cambió de tramo.
@@ -214,6 +229,8 @@ class Stage4_1(StageScene):
         if fase.numero == 4:
             self._shake_disparado = False
             self._proximo_grito = self._espera_entre_gritos()
+            self._sombra_progreso = -1.0
+            self._proxima_sombra = self._espera_entre_sombras()
         if self._banner is not None and fase.numero > 1:
             self._banner.play(f"FASE {fase.numero}", fase.nombre)
 
@@ -363,6 +380,28 @@ class Stage4_1(StageScene):
             self._proximo_grito = self._espera_entre_gritos()
             self._play_sfx_named(fase.grito_aislado, volume=0.6)
 
+    # ── La sombra del Gavilán ────────────────────────────────────
+
+    def _espera_entre_sombras(self) -> float:
+        return random.uniform(*self.ESPERA_ENTRE_SOMBRAS)
+
+    def _actualizar_sombra_del_gavilan(self, dt: float) -> None:
+        """Cruza el cielo de vez en cuando — la pieza visual que el primer
+        intento dejó fuera (`GAP-058`): hasta ahora el Gavilán sólo se oía."""
+        fase = self.fase
+        if not fase.sombra_de_ave:
+            self._sombra_progreso = -1.0
+            return
+        if self._sombra_progreso >= 0.0:
+            self._sombra_progreso += dt / self.DURACION_DEL_CRUCE
+            if self._sombra_progreso >= 1.0:
+                self._sombra_progreso = -1.0
+                self._proxima_sombra = self._espera_entre_sombras()
+            return
+        self._proxima_sombra -= dt
+        if self._proxima_sombra <= 0.0:
+            self._sombra_progreso = 0.0
+
     # ── Las grietas de la Fase 6 ────────────────────────────────
 
     def _actualizar_grietas(self, dt: float) -> None:
@@ -390,6 +429,8 @@ class Stage4_1(StageScene):
         escenario, no primer plano."""
         self._dibujar_espiritu(surface, offset)
         self._dibujar_decoracion(surface, offset)
+        self._dibujar_serpiente_de_fondo(surface, offset)
+        self._dibujar_sombra_de_ave(surface, offset)
 
     @staticmethod
     def _fundido_del_espiritu(avance: float) -> float:
@@ -427,13 +468,13 @@ class Stage4_1(StageScene):
             siluetas.VERDE_ESPECTRAL, alfa,
         )
 
-    # ── La decoración propia por fase (AUD-465) ────────────────
+    # ── La decoración propia por fase (AUD-465, AUD-467) ────────
     #
-    #: Dónde se planta cada árbol/cruz, en fracción del ancho de pantalla.
-    #: Repartidas e impares a propósito, igual que `_SITIOS_ESPIRITU`: en
-    #: fila regular se leerían como una valla, no como un paisaje.
-    _SITIOS_BOSQUE_CORTADO: tuple[float, ...] = (0.06, 0.26, 0.48, 0.70, 0.90)
-    _SITIOS_TUMBAS_CONQUISTADOR: tuple[float, ...] = (0.12, 0.34, 0.58, 0.82)
+    # Posiciones en **columna de mundo** (no fracción de pantalla): con
+    # secciones de 150 columnas —cuatro pantallas— una silueta anclada a la
+    # pantalla se leería flotando junto a la cámara en vez de plantada en un
+    # sitio. `trazado.py` es la fuente de verdad de dónde va cada una — el
+    # mismo objeto del que lee el generador del mapa.
 
     def _dibujar_decoracion(self, surface: pygame.Surface,
                             offset: pygame.Vector2) -> None:
@@ -441,29 +482,97 @@ class Stage4_1(StageScene):
         if fase.decoracion == "bosque_cortado":
             self._dibujar_siluetas_de_fondo(
                 surface, offset, siluetas._arbol_cortado,
-                self._SITIOS_BOSQUE_CORTADO, alto=88,
-                color=siluetas.SILUETA_OSCURA, alfa=120, paralaje=0.10,
+                trazado.ARBOLES_FASE4, alto=88,
+                color=siluetas.SILUETA_OSCURA, alfa=140, paralaje=0.85,
             )
         elif fase.decoracion == "tumbas_conquistador":
             self._dibujar_siluetas_de_fondo(
                 surface, offset, siluetas._cruz_conquistador,
-                self._SITIOS_TUMBAS_CONQUISTADOR, alto=46,
-                color=siluetas.PIEDRA_FRIA, alfa=90, paralaje=0.08,
+                trazado.TUMBAS_FASE5, alto=46,
+                color=siluetas.PIEDRA_FRIA, alfa=110, paralaje=0.85,
             )
+        elif fase.decoracion == "lapidas_personales":
+            self._dibujar_fantasma_personal(surface, offset)
 
     def _dibujar_siluetas_de_fondo(
         self, surface: pygame.Surface, offset: pygame.Vector2, forma: object,
-        sitios: tuple[float, ...], alto: int, color: tuple[int, int, int],
+        columnas: tuple[int, ...], alto: int, color: tuple[int, int, int],
         alfa: int, paralaje: float,
     ) -> None:
-        """El dibujo genérico que comparten el bosque y las tumbas: una fila
-        repartida de la misma silueta, con parallax lento — están lejos, así
-        que se mueven poco con la cámara. A diferencia del espíritu, no
-        aparecen ni se van: son escenario, no un testigo."""
-        for sitio in sitios:
-            x = int(settings.INTERNAL_WIDTH * sitio
-                    - offset.x * paralaje) % (settings.INTERNAL_WIDTH + 200) - 100
+        """El dibujo genérico que comparten el bosque cortado y las tumbas:
+        una silueta por columna de mundo, con un parallax casi 1:1 —están
+        junto al camino, no en un horizonte lejano— para que se vean
+        plantadas en su sitio al pasar por delante, no flotando con la
+        cámara."""
+        ts = settings.TILE_SIZE
+        ancho_pantalla = settings.INTERNAL_WIDTH
+        for columna in columnas:
+            x = int(columna * ts - offset.x * paralaje)
+            if x < -200 or x > ancho_pantalla + 200:
+                continue
             siluetas.dibujar_contorno(
                 surface, forma, x, settings.INTERNAL_HEIGHT - alto - 40,
                 int(alto * 0.75), alto, color, alfa,
             )
+
+    def _dibujar_fantasma_personal(self, surface: pygame.Surface,
+                                   offset: pygame.Vector2) -> None:
+        """El easter egg de la Fase 1 (§7 del diseño): un fantasma sobrio
+        rondando la tumba de Teresa Murillo, junto a la de Hugo Salazar
+        Castillo. Distinto de los tres espíritus de jefe —color propio,
+        sin ascender, sin fundido de entrada— porque no es uno de ellos:
+        es un recuerdo de familia."""
+        ts = settings.TILE_SIZE
+        col = trazado.COLUMNA_LAPIDA_TERESA
+        x = int(col * ts - offset.x)
+        if x < -100 or x > settings.INTERNAL_WIDTH + 100:
+            return
+        fila_suelo = trazado.altura_del_suelo(col)
+        alto = 40
+        vaiven = math.sin(self._tiempo * 0.5) * 4.0
+        y = int(fila_suelo * ts - alto - 20 + vaiven) - int(offset.y)
+        alfa = 90 + int(30 * math.sin(self._tiempo * 0.8))
+        siluetas.dibujar_contorno(
+            surface, siluetas._fantasma, x, y, int(alto * 0.7), alto,
+            siluetas.BLANCO_RECUERDO, alfa,
+        )
+
+    # ── La serpiente de fondo (Fase 3) ──────────────────────────
+
+    def _dibujar_serpiente_de_fondo(self, surface: pygame.Surface,
+                                    offset: pygame.Vector2) -> None:
+        """Una presencia aparte de la que asciende: el guion pide
+        *«movimientos de serpientes... en el fondo»*, no sólo el espíritu
+        que testifica. Más pequeña, más tenue, repta despacio."""
+        fase = self.fase
+        if not fase.serpiente_de_fondo:
+            return
+        x = int(settings.INTERNAL_WIDTH * 0.30
+                - offset.x * 0.15) % (settings.INTERNAL_WIDTH + 200) - 100
+        vaiven = math.sin(self._tiempo * 0.6) * 10.0
+        y = int(420 + vaiven)
+        siluetas.dibujar_contorno(
+            surface, siluetas._serpiente, x, y, 46, 30,
+            siluetas.VERDE_ESPECTRAL, 70,
+        )
+
+    # ── La sombra del Gavilán, dibujo (Fase 4) ──────────────────
+
+    def _dibujar_sombra_de_ave(self, surface: pygame.Surface,
+                               offset: pygame.Vector2) -> None:
+        if self._sombra_progreso < 0.0:
+            return
+        margen = 150
+        recorrido = settings.INTERNAL_WIDTH + margen * 2
+        x = int(-margen + self._sombra_progreso * recorrido)
+        y = 80
+        # Se desvanece en los dos extremos del cruce: aparecer y
+        # desaparecer de golpe en el borde de la pantalla se lee como un
+        # error de dibujo, no como un ave que llega de lejos.
+        alfa = int(150 * math.sin(self._sombra_progreso * math.pi))
+        if alfa <= 0:
+            return
+        siluetas.dibujar_contorno(
+            surface, siluetas._gavilan, x, y, 70, 30,
+            siluetas.SILUETA_OSCURA, alfa,
+        )

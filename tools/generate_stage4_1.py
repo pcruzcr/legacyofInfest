@@ -62,6 +62,7 @@ from src.stages.stage4_1.trazado import (  # noqa: E402
     fase_de_la_columna,
     grietas_de_pisada,
     loma,
+    perfil_de_colision,
     perfil_del_suelo,
 )
 
@@ -182,7 +183,12 @@ def _colisiones() -> list[str]:
     # por columna: 900 cajas de 16 px serían el mismo defecto que
     # `check_los_mapas_no_traen_miles_de_rectangulos.py` vigila en el resto
     # del proyecto.
-    perfil = perfil_del_suelo()
+    #
+    # Es `perfil_de_colision()` y no `perfil_del_suelo()` a propósito
+    # (AUD-470): la colisión de la rampa se queda plana y es el `Slope`
+    # quien empuja al jugador hacia arriba — un escalón sólido por columna
+    # bloqueaba el paso antes de que el `Slope` llegara a intervenir.
+    perfil = perfil_de_colision()
     inicio = MURO_ANCHO
     for x in range(MURO_ANCHO + 1, MW - MURO_ANCHO + 1):
         if x == MW - MURO_ANCHO or perfil[x] != perfil[inicio]:
@@ -221,7 +227,11 @@ def _objetos() -> list[str]:
         cuerpo += "\n  </object>"
         o.append(cuerpo)
 
-    perfil = perfil_del_suelo()
+    # `perfil_de_colision()`: todo lo que se coloca aquí tiene que apoyarse
+    # en dónde el jugador **puede pisar de verdad**, no en la baldosa que
+    # se pinta (AUD-470) — si no, un disparador dentro de la rampa quedaría
+    # flotando sobre el suelo sólido real.
+    perfil = perfil_de_colision()
     spawn_col = MURO_ANCHO + 3
     obj("PlayerSpawn", spawn_col * TS, (perfil[spawn_col] - 3) * TS, 16, 32)
 
@@ -232,10 +242,12 @@ def _objetos() -> list[str]:
     # `stage_objetos.py::_handle_cutscene`). El guion está en el
     # mini-lenguaje de `cutscene_guion.py` — nada de Python nuevo.
     guion_intro = (
-        "fundido entrada 1.5\n"
-        "dialogo Voces;Los espiritus hablan de Paburu, en una lengua antigua.;2.5\n"
-        "camara . . 2.0\n"
-        "dialogo Jhon;Este lugar... lo reconozco.;2.0\n"
+        "fundido entra 1.5\n"
+        "texto Voces: Los espiritus hablan de Paburu, en una lengua antigua.\n"
+        "esperar 2.5\n"
+        "texto Jhon: Este lugar... lo reconozco.\n"
+        "esperar 2.0\n"
+        "fundido sale 1.0\n"
     )
     obj("Cutscene", spawn_col * TS, (perfil[spawn_col] - 3) * TS, 0, 0,
         guion=guion_intro, bloquea=True, saltable=True, una_vez=True)

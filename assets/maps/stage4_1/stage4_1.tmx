@@ -49,34 +49,16 @@
  <objectgroup id="7" name="Collision">
   <object id="2" type="Solid" x="0" y="0" width="32" height="608"/>
   <object id="3" type="Solid" x="14368" y="0" width="32" height="608"/>
-  <object id="4" type="Solid" x="32" y="480" width="5440" height="128"/>
-  <object id="5" type="Solid" x="5472" y="464" width="48" height="144"/>
-  <object id="6" type="Solid" x="5520" y="448" width="48" height="160"/>
-  <object id="7" type="Solid" x="5568" y="432" width="48" height="176"/>
-  <object id="8" type="Solid" x="5616" y="416" width="48" height="192"/>
-  <object id="9" type="Solid" x="5664" y="400" width="48" height="208"/>
-  <object id="10" type="Solid" x="5712" y="384" width="48" height="224"/>
-  <object id="11" type="Solid" x="5760" y="368" width="48" height="240"/>
-  <object id="12" type="Solid" x="5808" y="352" width="48" height="256"/>
-  <object id="13" type="Solid" x="5856" y="336" width="48" height="272"/>
-  <object id="14" type="Solid" x="5904" y="320" width="688" height="288"/>
-  <object id="15" type="Solid" x="6592" y="336" width="48" height="272"/>
-  <object id="16" type="Solid" x="6640" y="352" width="48" height="256"/>
-  <object id="17" type="Solid" x="6688" y="368" width="48" height="240"/>
-  <object id="18" type="Solid" x="6736" y="384" width="48" height="224"/>
-  <object id="19" type="Solid" x="6784" y="400" width="48" height="208"/>
-  <object id="20" type="Solid" x="6832" y="416" width="48" height="192"/>
-  <object id="21" type="Solid" x="6880" y="432" width="48" height="176"/>
-  <object id="22" type="Solid" x="6928" y="448" width="48" height="160"/>
-  <object id="23" type="Solid" x="6976" y="464" width="48" height="144"/>
-  <object id="24" type="Solid" x="7024" y="480" width="7344" height="128"/>
+  <object id="4" type="Solid" x="32" y="480" width="5888" height="128"/>
+  <object id="5" type="Solid" x="5920" y="320" width="640" height="288"/>
+  <object id="6" type="Solid" x="6560" y="480" width="7808" height="128"/>
  </objectgroup>
  <objectgroup id="8" name="Objects">
   <object id="101" name="PlayerSpawn_101" type="PlayerSpawn" x="80" y="432" width="16" height="32">
   </object>
   <object id="102" name="Cutscene_102" type="Cutscene" x="80" y="432" width="0" height="0">
    <properties>
-    <property name="guion" value="fundido entrada 1.5&#10;dialogo Voces;Los espiritus hablan de Paburu, en una lengua antigua.;2.5&#10;camara . . 2.0&#10;dialogo Jhon;Este lugar... lo reconozco.;2.0&#10;"/>
+    <property name="guion" value="fundido entra 1.5&#10;texto Voces: Los espiritus hablan de Paburu, en una lengua antigua.&#10;esperar 2.5&#10;texto Jhon: Este lugar... lo reconozco.&#10;esperar 2.0&#10;fundido sale 1.0&#10;"/>
     <property name="bloquea" type="bool" value="true"/>
     <property name="saltable" type="bool" value="true"/>
     <property name="una_vez" type="bool" value="true"/>
@@ -142,7 +124,7 @@
     <property name="checkpoint_id" type="int" value="12"/>
    </properties>
   </object>
-  <object id="115" name="Checkpoint_115" type="Checkpoint" x="5536" y="416" width="16" height="32">
+  <object id="115" name="Checkpoint_115" type="Checkpoint" x="5536" y="448" width="16" height="32">
    <properties>
     <property name="checkpoint_id" type="int" value="13"/>
    </properties>
@@ -157,7 +139,7 @@
     <property name="checkpoint_id" type="int" value="15"/>
    </properties>
   </object>
-  <object id="118" name="Checkpoint_118" type="Checkpoint" x="6880" y="400" width="16" height="32">
+  <object id="118" name="Checkpoint_118" type="Checkpoint" x="6880" y="448" width="16" height="32">
    <properties>
     <property name="checkpoint_id" type="int" value="16"/>
    </properties>
@@ -257,7 +239,7 @@
     <property name="dialogue" value="venado"/>
    </properties>
   </object>
-  <object id="138" name="MessageTrigger_Once_138" type="MessageTrigger_Once" x="5760" y="320" width="32" height="32">
+  <object id="138" name="MessageTrigger_Once_138" type="MessageTrigger_Once" x="5760" y="432" width="32" height="32">
    <properties>
     <property name="dialogue" value="rey_terciopelo"/>
    </properties>

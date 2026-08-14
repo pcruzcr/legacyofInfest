@@ -32,7 +32,7 @@ La loma de la Fase 3
 El guion pide *«ascender por lomas utilizando slopes»*. Aquí es un desnivel
 real: el suelo sube de la fila `FILA_SUELO` (30) a la fila `FILA_CIMA` (20)
 entre las columnas 340 y 370, se mantiene arriba hasta la 410, y baja de
-vuelta hasta la 440. `_altura_del_suelo(columna)` calcula la fila del suelo
+vuelta hasta la 440. `altura_del_suelo(columna)` calcula la fila del suelo
 para cualquier columna del mapa — el generador la usa para rellenar tierra
 y la escena para colocar decoración a la altura correcta. Dos objetos
 `Slope` (AUD-297) se superponen exactamente a las rampas para que se puedan
@@ -66,7 +66,7 @@ LOMA_FIN_BAJADA = 440
 FILA_CIMA = 20
 
 
-def _altura_del_suelo(columna: int) -> int:
+def altura_del_suelo(columna: int) -> int:
     """La fila del suelo en esa columna. `FILA_SUELO` en todas partes salvo
     en la loma de la Fase 3, que sube y vuelve a bajar."""
     if LOMA_INICIO_SUBIDA <= columna < LOMA_FIN_SUBIDA:
@@ -82,7 +82,37 @@ def _altura_del_suelo(columna: int) -> int:
 
 def perfil_del_suelo() -> tuple[int, ...]:
     """La fila del suelo, columna a columna, para todo el mapa."""
-    return tuple(_altura_del_suelo(c) for c in range(MW))
+    return tuple(altura_del_suelo(c) for c in range(MW))
+
+
+def altura_de_colision(columna: int) -> int:
+    """La fila **sólida** en esa columna — para colisión, no para pintar.
+
+    AUD-470 — por qué no es la misma que `altura_del_suelo`
+    -----------------------------------------------------------
+    La primera versión usaba el mismo perfil escalonado para pintar *y*
+    para la colisión: cada columna de la rampa generaba su propio rectángulo
+    sólido, un escalón de un renglón. Jugado, el jugador se quedaba clavado
+    contra el primer escalón — un muro vertical de 16 px es exactamente lo
+    que bloquea el movimiento horizontal en cualquier resolución de AABB,
+    y el `Slope` que se superponía nunca llegaba a intervenir porque el
+    jugador no conseguía entrar en su rectángulo.
+
+    La solución, la que ya describe `pendientes.py`: la colisión bajo una
+    rampa se queda **plana** —al mismo nivel que el suelo llano de siempre—
+    y es el propio `Slope` el que empuja al jugador hacia arriba según
+    camina, sin ningún escalón sólido de por medio. Sólo la meseta
+    (370-410) es terreno elevado de verdad y necesita su propio suelo
+    sólido, porque ahí no hay ninguna rampa que lo sustituya.
+    """
+    if LOMA_FIN_SUBIDA <= columna < LOMA_FIN_CIMA:
+        return FILA_CIMA
+    return FILA_SUELO
+
+
+def perfil_de_colision() -> tuple[int, ...]:
+    """La fila sólida, columna a columna — la que usa `_colisiones()`."""
+    return tuple(altura_de_colision(c) for c in range(MW))
 
 
 def loma() -> tuple[tuple[int, int, int, int, str], ...]:
@@ -111,10 +141,11 @@ CADA_CUANTAS_COLUMNAS_CHECKPOINT = 28
 
 
 def checkpoints() -> tuple[tuple[int, int], ...]:
-    """Los puntos de reaparición, en `(columna, fila)` — a la altura real
-    del suelo en esa columna, para que ninguno quede flotando en la loma."""
+    """Los puntos de reaparición, en `(columna, fila)` — a la altura
+    **sólida**, no la visual: uno colocado en la fila que pinta la rampa
+    quedaría flotando sobre el suelo llano de verdad que hay debajo."""
     columnas = range(10, MW - MURO_ANCHO - 10, CADA_CUANTAS_COLUMNAS_CHECKPOINT)
-    return tuple((c, _altura_del_suelo(c)) for c in columnas)
+    return tuple((c, altura_de_colision(c)) for c in columnas)
 
 
 # ── Fase 2 (El Venado): musgo y lodo ─────────────────────────────────────
@@ -156,7 +187,7 @@ GRIETAS_FASE6: tuple[int, ...] = tuple(range(760, 899, 20))
 
 
 def grietas_de_pisada() -> tuple[tuple[int, int], ...]:
-    return tuple((c, _altura_del_suelo(c)) for c in GRIETAS_FASE6)
+    return tuple((c, altura_del_suelo(c)) for c in GRIETAS_FASE6)
 
 
 # ── El easter egg de la Fase 1 ────────────────────────────────────────────

@@ -177,6 +177,26 @@ def _cruz_conquistador(ancho: int, alto: int) -> list[tuple[float, float]]:
     ]
 
 
+#: Cálido y sobrio — no el blanco frío de la Cegua ni el verde espectral de
+#: los jefes. El easter egg personal (§7 del diseño, AUD-467) es un
+#: recuerdo de familia, no una presencia folclórica ni un vencido: se
+#: dibuja distinto a propósito.
+BLANCO_RECUERDO: tuple[int, int, int] = (232, 230, 214)
+
+
+def _fantasma(ancho: int, alto: int) -> list[tuple[float, float]]:
+    """Una figura de pie, en calma. El easter egg personal de la Fase 1: dos
+    lápidas —Teresa Murillo y Hugo Salazar Castillo— con este fantasma
+    rondando la de Teresa. Deliberadamente simple y sin amenaza ni
+    caricatura: es un recuerdo, no uno de los tres espíritus de jefe."""
+    w, h = ancho, alto
+    return [
+        (0.50 * w, 0.05 * h), (0.30 * w, 0.20 * h), (0.24 * w, 0.45 * h),
+        (0.30 * w, 0.70 * h), (0.20 * w, 1.00 * h), (0.80 * w, 1.00 * h),
+        (0.70 * w, 0.70 * h), (0.76 * w, 0.45 * h), (0.70 * w, 0.20 * h),
+    ]
+
+
 def dibujar_contorno(
     superficie: pygame.Surface,
     forma: object,
