@@ -158,9 +158,95 @@ def _ground_spans(collision_rects: list[pygame.Rect]) -> list[pygame.Rect]:
     return sorted(collision_rects, key=lambda r: (r.top, r.left))
 
 
+def _extremos_de_pendiente(pendiente: object) -> tuple[float, float, float, float]:
+    """`(x_bajo, y_bajo, x_alto, y_alto)` de un `Pendiente` (AUD-297).
+
+    `y` crece hacia abajo, así que "bajo" es el `y` mayor. `sube_a_la_derecha`
+    ya dice cuál de las dos esquinas del rectángulo es la alta — no hace
+    falta preguntarle a `altura_en`, que está pensada para una `x` interior,
+    no para los dos extremos exactos.
+    """
+    rect = pendiente.rect
+    if pendiente.sube_a_la_derecha:
+        return float(rect.left), float(rect.bottom), float(rect.right), float(rect.top)
+    return float(rect.right), float(rect.bottom), float(rect.left), float(rect.top)
+
+
+def _pendiente_conecta(
+    pendientes: list[object] | None,
+    rect_alto: pygame.Rect,
+    rect_bajo: pygame.Rect,
+    tolerancia: float = 6.0,
+) -> bool:
+    """¿Hay un `Slope` cuyo pie está en `rect_bajo` y cuya cima en `rect_alto`?
+
+    AUD-472 — por qué existe esto. `reachable_platforms` y `analyse_geometry`
+    sólo conocían `collision_rects`, y un `Slope` **no entra ahí a propósito**
+    (`pendientes.py`: «si entrara, el eje X la trataría como pared»). El
+    resultado, medido sobre `stage4_1` reconstruido (AUD-467…471): una loma
+    real de 160 px —transitable de sobra caminando, comprobado con un
+    recorrido físico simulado— salía como «repecho imposible» y hundía
+    `design_geometry` a 1/10. El analizador no estaba mal diseñado para lo
+    que sabía mirar; sencillamente no sabía que las pendientes existen.
+    """
+    for pendiente in pendientes or ():
+        rect = getattr(pendiente, "rect", None)
+        sube = getattr(pendiente, "sube_a_la_derecha", None)
+        if rect is None or sube is None:
+            continue
+        x_bajo, y_bajo, x_alto, y_alto = _extremos_de_pendiente(pendiente)
+        if (rect_bajo.left - tolerancia <= x_bajo <= rect_bajo.right + tolerancia
+                and abs(rect_bajo.top - y_bajo) <= tolerancia
+                and rect_alto.left - tolerancia <= x_alto <= rect_alto.right + tolerancia
+                and abs(rect_alto.top - y_alto) <= tolerancia):
+            return True
+    return False
+
+
+def _pendiente_edges(
+    pendientes: list[object] | None,
+    collision_rects: list[pygame.Rect],
+    tolerancia: float = 6.0,
+) -> set[tuple[int, int]]:
+    """Pares de **índices** de `collision_rects` que conecta cada `Slope`.
+
+    Para `reachable_platforms`, que recorre por índice y no por identidad de
+    rect. Caminar una pendiente no es saltar, así que estos pares se dan por
+    conectados sin pasar por la envolvente de salto.
+    """
+    aristas: set[tuple[int, int]] = set()
+    for pendiente in pendientes or ():
+        rect = getattr(pendiente, "rect", None)
+        sube = getattr(pendiente, "sube_a_la_derecha", None)
+        if rect is None or sube is None:
+            continue
+        x_bajo, y_bajo, x_alto, y_alto = _extremos_de_pendiente(pendiente)
+        i_bajo = _plataforma_en(collision_rects, x_bajo, y_bajo, tolerancia)
+        i_alto = _plataforma_en(collision_rects, x_alto, y_alto, tolerancia)
+        if i_bajo is not None and i_alto is not None and i_bajo != i_alto:
+            aristas.add((i_bajo, i_alto))
+    return aristas
+
+
+def _plataforma_en(
+    rects: list[pygame.Rect], x: float, y: float, tolerancia: float = 6.0,
+) -> int | None:
+    """Índice del rect cuyo borde superior está en `y` y cuyo ancho cubre
+    `x`, o `None` si ninguno encaja dentro de la tolerancia."""
+    mejor: int | None = None
+    mejor_dy = tolerancia + 1.0
+    for i, r in enumerate(rects):
+        if r.left - tolerancia <= x <= r.right + tolerancia:
+            dy = abs(r.top - y)
+            if dy <= tolerancia and dy < mejor_dy:
+                mejor, mejor_dy = i, dy
+    return mejor
+
+
 def analyse_geometry(
     collision_rects: list[pygame.Rect],
     envelope: JumpEnvelope | None = None,
+    pendientes: list[object] | None = None,
 ) -> LevelReport:
     """Busca huecos y repechos que la física del jugador no puede superar."""
     env = envelope or JumpEnvelope.from_settings()
@@ -202,7 +288,8 @@ def analyse_geometry(
                 # repecho, es otra parte del mapa.
                 if upper.right < lower.left or upper.left > lower.right:
                     continue
-                if env.classify_ledge(rise) == "imposible":
+                if (env.classify_ledge(rise) == "imposible"
+                        and not _pendiente_conecta(pendientes, upper, lower)):
                     report.impossible_ledges.append(
                         (lower.left, lower.top, float(rise)),
                     )
@@ -243,6 +330,7 @@ def reachable_platforms(
     collision_rects: list[pygame.Rect],
     spawn: pygame.Vector2,
     envelope: JumpEnvelope | None = None,
+    pendientes: list[object] | None = None,
 ) -> set[int]:
     """Índices de plataformas alcanzables desde el spawn, por búsqueda en grafo.
 
@@ -261,14 +349,20 @@ def reachable_platforms(
     envolvente física desde A— y recorre desde el spawn. Es la métrica que un
     diseñador realmente quiere: le da igual que un hueco sea ancho si hay ruta.
 
-    Sigue siendo una aproximación: no modela dash, salto de pared ni plataformas
-    móviles, así que puede declarar *inalcanzable* algo que un jugador experto
-    alcanza. Por eso los tests la usan para detectar niveles **desconectados**,
-    no para juzgar dificultad.
+    Sigue siendo una aproximación: no modela dash ni salto de pared, así que
+    puede declarar *inalcanzable* algo que un jugador experto alcanza. Por
+    eso los tests la usan para detectar niveles **desconectados**, no para
+    juzgar dificultad. Las plataformas móviles siguen sin modelarse aquí —
+    `scripts/grade_stage.py` las excusa aparte por componente (AUD-192)—,
+    pero un `Slope` si se pasa en `pendientes` sí se tiene en cuenta
+    (AUD-472): caminar una rampa no es saltar, así que sus dos extremos se
+    dan por conectados sin pasar por la envolvente de salto.
     """
     env = envelope or JumpEnvelope.from_settings()
     if not collision_rects:
         return set()
+
+    aristas_pendiente = _pendiente_edges(pendientes, collision_rects)
 
     # Alcance vertical hacia arriba y horizontal, con el salto aéreo incluido.
     up = env.max_height
@@ -309,6 +403,9 @@ def reachable_platforms(
             ),
         )
 
+    def conectado_por_pendiente(i: int, j: int) -> bool:
+        return (i, j) in aristas_pendiente or (j, i) in aristas_pendiente
+
     seen = {start}
     frontier = [start]
     while frontier:
@@ -316,7 +413,8 @@ def reachable_platforms(
         for j, candidate in enumerate(collision_rects):
             if j in seen:
                 continue
-            if connected(collision_rects[current], candidate):
+            if (connected(collision_rects[current], candidate)
+                    or conectado_por_pendiente(current, j)):
                 seen.add(j)
                 frontier.append(j)
     return seen
@@ -327,12 +425,13 @@ def exit_is_reachable(
     spawn: pygame.Vector2,
     exit_rect: pygame.Rect | None,
     envelope: JumpEnvelope | None = None,
+    pendientes: list[object] | None = None,
 ) -> bool:
-    """¿Existe una cadena de saltos del spawn a la salida?"""
+    """¿Existe una cadena de saltos (o de rampas) del spawn a la salida?"""
     if exit_rect is None:
         return False
     env = envelope or JumpEnvelope.from_settings()
-    reachable = reachable_platforms(collision_rects, spawn, env)
+    reachable = reachable_platforms(collision_rects, spawn, env, pendientes)
     if not reachable:
         return False
     span = env.max_gap_with_air_jump
@@ -402,7 +501,11 @@ def analyse_stage(stage_data: object) -> LevelReport:
     # la misma causa: una exclusión aplicada en un sitio y olvidada en el otro.
     muros_idx = _boundary_walls(rects, stage_data)
     geometria = [r for i, r in enumerate(rects) if i not in muros_idx]
-    report = analyse_geometry(geometria)
+    # AUD-472 — los `Slope` (AUD-297) no viven en `collision_rects` a
+    # propósito (`pendientes.py`), así que sin esto ninguna de las tres
+    # funciones de abajo sabe que existen.
+    pendientes = list(getattr(stage_data, "pendientes", []) or [])
+    report = analyse_geometry(geometria, pendientes=pendientes)
     report.stage_id = str(getattr(stage_data, "stage_id", "") or "")
 
     exit_rect = getattr(stage_data, "next_trigger", None)
@@ -424,8 +527,10 @@ def analyse_stage(stage_data: object) -> LevelReport:
     report.total_platforms = len(plataformas)
 
     if spawn is not None and plataformas:
-        report.reachable_platforms = len(reachable_platforms(plataformas, spawn))
-        report.exit_reachable = exit_is_reachable(rects, spawn, exit_rect)
+        report.reachable_platforms = len(
+            reachable_platforms(plataformas, spawn, pendientes=pendientes))
+        report.exit_reachable = exit_is_reachable(
+            rects, spawn, exit_rect, pendientes=pendientes)
         report.checkpoint_gaps = analyse_checkpoints(
             list(getattr(stage_data, "checkpoints", []) or []),
             spawn,

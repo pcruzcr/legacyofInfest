@@ -106,6 +106,91 @@ class TestUnNivelSinMecanicasSigueJuzgandose:
         assert stage0["design"]["exit_reachable"] is True
 
 
+class TestLosSlopesNoSonRepechosImposibles:
+    """AUD-472 — el mismo defecto que AUD-192, con otra mecánica.
+
+    `Slope` (AUD-297) no entra en `collision_rects` a propósito
+    (`pendientes.py`: «si entrara, el eje X la trataría como pared»), así
+    que ni `reachable_platforms` ni `analyse_geometry` sabían que existía.
+    Medido sobre el 4-1 reconstruido (AUD-467…471, `feature/stage4_1-
+    cementerio-sagrado`): una loma real de 160 px —transitable de sobra,
+    comprobado con un recorrido físico simulado que sí sube— salía como
+    «repecho imposible» y hundía `design_geometry` a 1/10, con
+    `exit_reachable` en falso.
+
+    A diferencia de AUD-192 (que excusa la nota sin corregir el dato), aquí
+    se corrige el dato: `reachable_platforms`/`analyse_geometry` reciben la
+    lista de `Pendiente` y tratan sus dos extremos como conectados sin
+    pasar por la envolvente de salto, porque subir una rampa caminando no
+    es saltar.
+    """
+
+    def _plano_con_loma(self):
+        """Dos plataformas a distinta altura, unidas por una `Pendiente` —
+        la misma forma que la loma real del 4-1, en miniatura.
+
+        `alta` se solapa en `x` con `baja` a propósito: es exactamente la
+        forma que tenía el defecto real —una meseta elevada directamente
+        encima de una parte del suelo llano— y es lo que hace que
+        `analyse_geometry` la trate como «repecho» en vez de como dos
+        plataformas separadas por un hueco (esa otra forma la cubren ya los
+        huecos, no los repechos). El desnivel (300 px) es a propósito mucho
+        mayor que cualquier salto razonable de este motor (~90 px, medido
+        en `trazado.py` del 4-1): si el «control» sin rampa no fallara, la
+        prueba de abajo no demostraría nada.
+        """
+        import pygame as pg
+
+        from src.framework.stage.pendientes import Pendiente
+
+        baja = pg.Rect(0, 320, 300, 20)      # suelo llano, x:0-300, y=320
+        alta = pg.Rect(100, 20, 100, 20)     # meseta elevada, x:100-200, y=20
+        rampa = Pendiente(rect=pg.Rect(50, 20, 50, 300), sube_a_la_derecha=True)
+        return [baja, alta], [rampa]
+
+    def test_sin_la_pendiente_el_repecho_es_imposible(self) -> None:
+        """Control: sin decirle al analizador que hay una rampa, el mismo
+        mapa sale roto — así se sabe que la prueba de abajo mide lo que
+        dice medir, no un montaje que siempre pasaría."""
+        from src.framework.stage.level_metrics import analyse_geometry
+
+        rects, _rampa = self._plano_con_loma()
+        informe = analyse_geometry(rects)
+        assert len(informe.impossible_ledges) == 1
+
+    def test_con_la_pendiente_no_hay_repecho(self) -> None:
+        from src.framework.stage.level_metrics import analyse_geometry
+
+        rects, rampa = self._plano_con_loma()
+        informe = analyse_geometry(rects, pendientes=rampa)
+        assert informe.impossible_ledges == [], (
+            f"la rampa no bastó para conectar las dos plataformas: "
+            f"{informe.impossible_ledges}"
+        )
+
+    def test_la_meseta_es_alcanzable_con_la_pendiente(self) -> None:
+        import pygame as pg
+
+        from src.framework.stage.level_metrics import reachable_platforms
+
+        rects, rampa = self._plano_con_loma()
+        spawn = pg.Vector2(10, 310)
+        sin_rampa = reachable_platforms(rects, spawn)
+        con_rampa = reachable_platforms(rects, spawn, pendientes=rampa)
+        assert sin_rampa == {0}, "control: sin la rampa sólo se alcanza el suelo llano"
+        assert con_rampa == {0, 1}, "con la rampa debería alcanzarse también la meseta"
+
+    def test_stage4_1_reconstruido_es_completable_de_verdad(self) -> None:
+        """Extremo a extremo, contra el escenario real que descubrió el
+        defecto — no la nota excusada de AUD-192, la medición honesta."""
+        datos = _calificar("assets/maps/stage4_1/stage4_1.tmx")
+        assert datos["design"]["exit_reachable"] is True
+        assert datos["design"]["impossible_ledges"] == 0
+        assert datos["categories"]["design_completable"]["msg"] == (
+            "la salida es alcanzable andando desde el spawn"
+        ), "debería colarse por la ruta honesta, no por la excusa de movilidad"
+
+
 class TestLaDeteccionDeMovilidad:
     def test_reconoce_los_componentes_por_su_clase(self) -> None:
         """Se mira el resultado de la carga, no el XML: `Conveyor` y
