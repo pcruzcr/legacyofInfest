@@ -535,17 +535,29 @@ class TestDesdeElMapa:
         assert len(re.findall(r'type="Slope"', tmx)) >= 2
         assert 'value="izquierda"' in tmx
 
+    #: Mapas donde `Slope` puede aparecer sin que sea una fuga accidental
+    #: hacia una entrega calificada: `stage_mecanicas` es el laboratorio que
+    #: lo estrenó, y `stage4_1` es contenido de profesorado — «Entregable:
+    #: profesorado (no se asigna a estudiantes)», `docs/niveles/
+    #: 13_STAGE_4_1.md` — que usa un slope de verdad para la loma de su Fase
+    #: 3 (AUD-463). Lo que esta prueba de verdad protege es que el tipo no
+    #: aparezca en ninguna de las 26 entregas de estudiantes.
+    _MAPAS_CON_PENDIENTE_ESPERADOS = frozenset({"stage_mecanicas", "stage4_1"})
+
     def test_ningun_mapa_entregado_tiene_pendientes(self) -> None:
         """Lo que hace segura una integración en la resolución de colisión: el
-        paso nuevo no se ejecuta en ninguno de los mapas ya calificados."""
+        paso nuevo no se ejecuta en ninguna entrega de estudiante calificada."""
         from pathlib import Path
 
         from src.engine.core import settings
 
-        con_pendiente = [
+        con_pendiente = {
             tmx.parent.name
             for tmx in Path(settings.ASSETS_DIR).joinpath("maps").rglob("*.tmx")
             if 'type="Slope"' in tmx.read_text(encoding="utf-8")
-        ]
-        assert con_pendiente == ["stage_mecanicas"]
+        }
+        assert con_pendiente == self._MAPAS_CON_PENDIENTE_ESPERADOS, (
+            f"{con_pendiente - self._MAPAS_CON_PENDIENTE_ESPERADOS} usa Slope "
+            f"sin estar en la lista de mapas de profesorado esperados"
+        )
 
