@@ -2316,3 +2316,19 @@ está.
   fase con arte final (el tileset y los tres `bg_final_*` siguen siendo los
   del diseño anterior), sombras de ave cruzando el fondo en la Fase 4, el
   diálogo de los tres espíritus, y la reverberación real.
+- **Nota (AUD-467…471, 2026-08-14):** el dueño jugó el prototipo del pozo
+  (arriba) y lo rechazó — *«no es en nada lo solicitado... el nuevo nivel
+  es horizontal completamente»*. Se reconstruyó desde cero como un
+  pasillo horizontal de seis secciones, lo que resuelve la mayoría de lo
+  que quedaba pendiente aquí: **terreno propio por sección**
+  (`tileset_stage4_1.png`, seis familias — ya no es el mismo suelo con la
+  matriz de color encima), **el diálogo de los tres espíritus**
+  (`data/dialogues/stage4_1.json`), **la cutscene de introducción**, **la
+  sombra del Gavilán** y **una serpiente de fondo** en la Fase 3, y el
+  easter egg personal de la Fase 1. **Sigue pendiente:** un fondo de
+  parallax (`BG_Far`/`BG_Mid`/`BG_Near`) propio por sección — las seis
+  siguen compartiendo `bg_final_*.png` — y la reverberación real. De paso
+  se encontró que `scripts/grade_stage.py` no modela objetos `Slope` en su
+  analizador de rutas (marca la loma como «repecho imposible» y la salida
+  como inalcanzable; verificado falso con un recorrido físico real):
+  queda como sugerencia aparte, no se arregla en este lote.
