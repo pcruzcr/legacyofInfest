@@ -2276,3 +2276,31 @@ está.
   de API verificadas, salvo los métodos internos (`_`-prefijados, casi
   siempre privados) de los mixins de `src/framework/scenes/stage_parts/`,
   que se dejaron fuera deliberadamente por bajo valor de contrato público.
+
+## [GAP-058] `stage4_1` (El Cementerio Sagrado) — arte propio por fase, diálogo de los espíritus y reverberación real
+
+- **File:** `assets/backgrounds/final/`, `assets/tilesets/tileset_cemetery.png`, `src/stages/stage4_1/stage4_1.py`
+- **Phase:** AUD-462/463/464 (2026-08-14), rediseño de `stage4_1` a seis fases
+- **Reason:** El rediseño (ver `docs/niveles/13_STAGE_4_1.md` §0 y
+  `15_DISENO_4_1_EL_CEMENTERIO.md`) se construyó a propósito reusando el
+  fondo y el tileset del diseño anterior (`bg_final_*.png`,
+  `tileset_cemetery.png`) para probar primero la mecánica —gradación de
+  color por fase, clima, la loma, el shake, el ciclo de luna— antes de
+  encargar arte nuevo. Eso demuestra la transición de color de verdad, pero
+  **no** da a cada fase su identidad de contenido: la Fase 4 («bosque
+  cortado y muerto») y la Fase 5 («la Planicie de los Muertos», tumbas de
+  conquistadores) siguen mostrando el mismo cementerio de piedra que la Fase
+  1, sólo con la matriz de color distinta. Tampoco se escribió el diálogo de
+  los tres espíritus (el sistema de `40_DIALOGUE_SYSTEM.md` ya lo soporta,
+  el texto no) ni existe reverberación de audio real para el silencio
+  súbito de la Fase 4 — el mezclador SDL no tiene DSP por zona
+  (`90_INVENTARIO_DE_LEVEL_DESIGN.md` §1.1), así que el silencio se resuelve
+  bajando el clima y las partículas a cero, no con una reverberación que se
+  apaga.
+- **Resolution plan:** Encargar (o generar por código, siguiendo
+  `tools/generate_all_assets.py`) un fondo y unos elementos de
+  `Terrain_Detail` propios por fase una vez que el playtest del prototipo
+  confirme el ritmo de las seis fases — cambiar el arte antes de validar la
+  mecánica sería el orden caro. El diálogo de los espíritus y una
+  reverberación real (si el proyecto añade algún día un mezclador con DSP)
+  quedan igual de pendientes, sin fecha.
