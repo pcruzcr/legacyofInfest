@@ -2,48 +2,38 @@
 """
 Genera `assets/maps/stage4_1/stage4_1.tmx` — El Cementerio Sagrado.
 
-El nivel, en una frase
-=======================
-Un **descenso** de 288 filas sin un solo enemigo y sin una sola trampa
-mortal, donde el cementerio cambia de piel —color, blanco y negro, grises,
-vintage, noche, color y verde— mientras los espíritus de Venado, Rey
-Terciopelo y Gavilán ascienden uno a uno. La ficha
-(`docs/niveles/13_STAGE_4_1.md`) fija las reglas; el diseño
-(`15_DISENO_4_1_EL_CEMENTERIO.md`) fija los números de cada una de las seis
-fases.
+El nivel, en una frase (AUD-467)
+==================================
+Un **pasillo horizontal** de 900 columnas, seis secciones de 150 cada una,
+sin un solo enemigo y sin una sola trampa mortal (el suelo es firme en todas
+partes salvo la loma de la Fase 3, que sube, no perfora). Reemplaza al pozo
+vertical de AUD-462…466, que el dueño del proyecto rechazó jugado: *«el
+nuevo nivel es horizontal completamente»* leía como una repisa ancha en
+pantalla, no como un pozo — y el guion original pide justo eso, un pasillo
+que atraviesa espacios distintos.
 
-Qué hereda del diseño anterior, y qué no (AUD-462)
-----------------------------------------------------
-Se hereda la forma de pozo, las repisas en zigzag y la regla de superficies
-visibles (ver `trazado.py`). Se retiran los braseros-progreso, las lápidas
-con nombres, las losas rompibles/rítmicas/fantasma y las huellas de la
-visión espectral: eran mecánica del diseño de La Cegua que este guion no
-pide. En su lugar: musgo y lodo juntos en la Fase 2, un slope en la Fase 3,
-un silencio con camera shake en la Fase 4 (código de escena, no geometría),
-un ciclo de luna en la Fase 5, y grietas que se iluminan al paso en la Fase 6.
+Este generador usa todavía el tileset del cementerio
+(`tileset_cemetery.png`) como marcador de posición para el terreno — el
+tileset propio de seis familias (`tileset_stage4_1.png`) llega en el
+siguiente lote (AUD-468). Lo que ya es definitivo aquí es la **geometría**:
+la forma del pasillo, la loma real, los segmentos de musgo/lodo, la
+cutscene de introducción, el diálogo y el easter egg.
 
-Aquí sólo se coloca **lo que es geometría**; la gradación de color, el ciclo
-de luna, el shake y las siluetas de los espíritus los mueve la escena
-(`stage4_1.py`). Las columnas y filas de cada cosa viven en
+Aquí sólo se coloca lo que es geometría; la gradación de color, el ciclo de
+luna, el shake, la serpiente de fondo y la sombra del Gavilán los mueve la
+escena (`stage4_1.py`). Las columnas de cada cosa viven en
 `src/stages/stage4_1/trazado.py`, que es también de donde las lee la escena.
-
-Por qué se genera con código
------------------------------
-Igual que `generate_stage0_tmx.py`: un TMX a mano son miles de números en CSV
-que nadie puede revisar en un *pull request*. Generado, el diff es de diez
-líneas de Python y se lee lo que cambió.
 
 La regla de oro: **cero enemigos**
 -----------------------------------
-No se coloca ni uno. `tests/test_stage4_1.py` lo comprueba cargando el mapa y
-contando `entity_list`, no leyendo el XML.
+No se coloca ni uno. `tests/test_stage4_1.py` lo comprueba cargando el mapa
+y contando `entity_list`.
 """
 from __future__ import annotations
 
 import sys
 from pathlib import Path
 
-# AUD-177: imprime `→` y la consola de Windows usa cp1252, que no lo tiene.
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
@@ -52,43 +42,48 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.stages.stage4_1.trazado import (  # noqa: E402
-    ALTO_FASE,
+    ARBOLES_FASE4,
     ARRASTRE_DEL_MUSGO,
+    COLUMNA_LAPIDA_HUGO,
+    COLUMNA_LAPIDA_TERESA,
     FRENO_DEL_LODO,
-    GROSOR_REPISA,
+    HUESOS_FASE3,
+    LOMA_FIN_BAJADA,
+    LOMA_INICIO_SUBIDA,
     MH,
     MURO_ANCHO,
     MW,
-    SUELO_FINAL,
+    NOMBRE_LAPIDA_HUGO,
+    NOMBRE_LAPIDA_TERESA,
+    SEGMENTOS_FASE2,
     TS,
+    TUMBAS_FASE5,
     checkpoints,
-    fase_de_la_fila,
     grietas_de_pisada,
     loma,
-    repisas,
-    superficies,
+    perfil_del_suelo,
 )
 
 DESTINO = PROJECT_ROOT / "assets" / "maps" / "stage4_1" / "stage4_1.tmx"
 
-# La misma hoja del diseño anterior (AUD-237) — el cementerio sigue pisando su
-# propia piedra, y el rediseño no toca el arte del terreno, sólo el guion.
+# Marcador de posición: el tileset propio llega en AUD-468. Reusa el
+# cementerio para no bloquear la geometría en lo que se genera el nuevo.
 TILESET = "../../tilesets/tileset_cemetery.png"
-
 TS_COLUMNAS = 8
 TS_TOTAL = 64
 TS_IMAGEN_PX = 128
 
-# Los GID son `índice + 1` sobre `CEM_ORDEN` de `tools/generate_all_assets.py`
-# — un contrato que defiende `tests/test_stage4_1.py`.
 VACIO = 0
-PIEDRA = 2                # la losa que se pisa
-RELLENO = 3               # tierra bajo la superficie
-MURO = 4                  # piedra de cierre del pozo
-MUSGO = 5                 # losa con musgo y matas — arrastra
+PIEDRA = 2
+RELLENO = 3
+MURO = 4
+MUSGO = 5
 MUSGO_RELLENO = 6
-LODO = 7                  # losa con barro y raíces — frena
+LODO = 7
 LODO_RELLENO = 8
+LAPIDA_ALTA = 9
+LOSA = 10
+CRUZ = 11
 
 BALDOSAS = {
     "piedra": (PIEDRA, RELLENO),
@@ -97,34 +92,55 @@ BALDOSAS = {
 }
 
 
-def _terreno() -> list[list[int]]:
-    """La geometría del pozo, repisa a repisa."""
-    g = [[VACIO] * MW for _ in range(MH)]
+def _material_de(columna: int) -> str:
+    for inicio, ancho, material in SEGMENTOS_FASE2:
+        if inicio <= columna < inicio + ancho:
+            return material
+    return "piedra"
 
+
+def _terreno() -> list[list[int]]:
+    """La geometría del pasillo, columna a columna."""
+    g = [[VACIO] * MW for _ in range(MH)]
+    perfil = perfil_del_suelo()
+
+    for x in range(MW):
+        superficie = perfil[x]
+        material = _material_de(x)
+        arriba, abajo = BALDOSAS[material]
+        g[superficie][x] = arriba
+        for fila in range(superficie + 1, MH):
+            g[fila][x] = abajo
+
+    # Muros en los dos extremos — el pasillo no se sale por los lados.
     for y in range(MH):
         for x in range(MURO_ANCHO):
             g[y][x] = MURO
             g[y][MW - 1 - x] = MURO
 
-    for x in range(MURO_ANCHO, MW - MURO_ANCHO):
-        g[0][x] = MURO
+    # El easter egg: dos lápidas.
+    suelo_egg = perfil[COLUMNA_LAPIDA_TERESA]
+    g[suelo_egg - 1][COLUMNA_LAPIDA_TERESA] = LOSA
+    g[suelo_egg - 2][COLUMNA_LAPIDA_TERESA] = LAPIDA_ALTA
+    suelo_egg2 = perfil[COLUMNA_LAPIDA_HUGO]
+    g[suelo_egg2 - 1][COLUMNA_LAPIDA_HUGO] = LOSA
+    g[suelo_egg2 - 2][COLUMNA_LAPIDA_HUGO] = LAPIDA_ALTA
 
-    for x0, ancho, fila, material in superficies():
-        arriba, abajo = BALDOSAS[material]
-        for x in range(x0, x0 + ancho):
-            g[fila][x] = arriba
-            for d in range(1, GROSOR_REPISA):
-                g[fila + d][x] = abajo
+    # Los huesos de la Fase 3 — marcador de posición hasta AUD-468.
+    for col in HUESOS_FASE3:
+        fila = perfil[col]
+        g[fila - 1][col] = CRUZ
 
-    for y in range(SUELO_FINAL, MH):
-        for x in range(MURO_ANCHO, MW - MURO_ANCHO):
-            g[y][x] = PIEDRA if y == SUELO_FINAL else RELLENO
+    # Las tumbas de conquistador de la Fase 5 — cruces en el suelo.
+    for col in TUMBAS_FASE5:
+        fila = perfil[col]
+        g[fila - 1][col] = CRUZ
 
     return g
 
 
 def _colisiones() -> list[str]:
-    """La capa `Collision`: los muros, las repisas y el suelo del umbral."""
+    """La capa `Collision`: los muros y el suelo, columna a columna."""
     r: list[str] = []
     ident = [1]
 
@@ -138,14 +154,17 @@ def _colisiones() -> list[str]:
     solido(0, 0, MURO_ANCHO * TS, MH * TS)
     solido((MW - MURO_ANCHO) * TS, 0, MURO_ANCHO * TS, MH * TS)
 
-    # Las repisas son `Solid` y no `Platform` a propósito: se cae desde
-    # arriba a velocidad sobre una repisa de 16 px de grosor, y un
-    # colisionador de un solo sentido se atravesaría por velocidad.
-    for x0, ancho, fila in repisas():
-        solido(x0 * TS, fila * TS, ancho * TS, GROSOR_REPISA * TS)
-
-    solido(MURO_ANCHO * TS, SUELO_FINAL * TS,
-           (MW - 2 * MURO_ANCHO) * TS, (MH - SUELO_FINAL) * TS)
+    # El suelo se agrupa en tramos de la misma altura, en vez de una caja
+    # por columna: 900 cajas de 16 px serían el mismo defecto que
+    # `check_los_mapas_no_traen_miles_de_rectangulos.py` vigila en el resto
+    # del proyecto.
+    perfil = perfil_del_suelo()
+    inicio = MURO_ANCHO
+    for x in range(MURO_ANCHO + 1, MW - MURO_ANCHO + 1):
+        if x == MW - MURO_ANCHO or perfil[x] != perfil[inicio]:
+            fila = perfil[inicio]
+            solido(inicio * TS, fila * TS, (x - inicio) * TS, (MH - fila) * TS)
+            inicio = x
 
     return r
 
@@ -178,67 +197,80 @@ def _objetos() -> list[str]:
         cuerpo += "\n  </object>"
         o.append(cuerpo)
 
-    lista = repisas()
-    primera = lista[0]
+    perfil = perfil_del_suelo()
+    spawn_col = MURO_ANCHO + 3
+    obj("PlayerSpawn", spawn_col * TS, (perfil[spawn_col] - 3) * TS, 16, 32)
 
-    obj("PlayerSpawn", (primera[0] + 3) * TS, (primera[2] - 3) * TS, 16, 32)
+    # ── La cutscene de introducción ────────────────────────────
+    #
+    # Objeto-punto (ancho y alto 0): dispara al empezar el escenario, sin
+    # que el jugador tenga que cruzar ninguna zona (AUD-136,
+    # `stage_objetos.py::_handle_cutscene`). El guion está en el
+    # mini-lenguaje de `cutscene_guion.py` — nada de Python nuevo.
+    guion_intro = (
+        "fundido entrada 1.5\n"
+        "dialogo Voces;Los espiritus hablan de Paburu, en una lengua antigua.;2.5\n"
+        "camara . . 2.0\n"
+        "dialogo Jhon;Este lugar... lo reconozco.;2.0\n"
+    )
+    obj("Cutscene", spawn_col * TS, (perfil[spawn_col] - 3) * TS, 0, 0,
+        guion=guion_intro, bloquea=True, saltable=True, una_vez=True)
 
-    # ── Un mensaje al entrar en cada fase ──────────────────────
-    textos = {
-        1: "El Cementerio Sagrado. Los muertos de Tilaran, y algo mas.",
-        2: "El Venado testifica. El musgo tira, el lodo frena.",
-        3: "El Rey Terciopelo se enrosca entre las lapidas. Sube la loma.",
-        4: "El Gavilan vuela sobre el bosque cortado. Escucha el silencio.",
-        5: "La Planicie de los Muertos. Solo la luna alumbra.",
-        6: "El Camino hacia Paburu. Cada paso enciende una grieta.",
-    }
-    vistos: set[int] = set()
-    for x0, ancho, fila in lista:
-        fase = fase_de_la_fila(fila)
-        if fase in vistos:
+    # ── Los puntos de reaparición ──────────────────────────────
+    for i, (col, fila) in enumerate(checkpoints(), start=1):
+        obj("Checkpoint", col * TS, (fila - 2) * TS, 16, 32, checkpoint_id=i)
+
+    # ── El easter egg de la Fase 1 ──────────────────────────────
+    obj("MessageTrigger_Once",
+        (COLUMNA_LAPIDA_TERESA - 1) * TS, (perfil[COLUMNA_LAPIDA_TERESA] - 4) * TS,
+        3 * TS, 3 * TS, text=NOMBRE_LAPIDA_TERESA)
+    obj("MessageTrigger_Once",
+        (COLUMNA_LAPIDA_HUGO - 1) * TS, (perfil[COLUMNA_LAPIDA_HUGO] - 4) * TS,
+        3 * TS, 3 * TS, text=NOMBRE_LAPIDA_HUGO)
+
+    # ── El diálogo de los tres espíritus ────────────────────────
+    #
+    # `data/dialogues/stage4_1.json` trae los árboles; esto sólo coloca el
+    # disparador. Uno hacia la mitad de cada sección con espíritu.
+    from src.stages.stage4_1.fases import FASES
+
+    for fase in FASES:
+        if fase.dialogo_id is None:
             continue
-        vistos.add(fase)
-        obj("MessageTrigger_Once", (x0 + ancho // 2) * TS, (fila - 3) * TS,
-            48, 48, text=textos[fase])
+        col = fase.desde_columna + 60
+        obj("MessageTrigger_Once", col * TS, (perfil[col] - 3) * TS, 32, 32,
+            dialogue=fase.dialogo_id)
 
-    # ── Los puntos de reaparición ─────────────────────────────
-    for i, (cx, fila) in enumerate(checkpoints(), start=1):
-        obj("Checkpoint", cx * TS, (fila - 2) * TS, 16, 32, checkpoint_id=i)
-
-    # ── Las superficies que mueven al jugador (Fase 2) ────────
-    for x0, ancho, fila, material in superficies():
+    # ── Las superficies de la Fase 2 (musgo y lodo) ────────────
+    for inicio, ancho, material in SEGMENTOS_FASE2:
+        fila = perfil[inicio]
         if material == "musgo":
-            sentido = 1.0 if x0 == MURO_ANCHO else -1.0
-            obj("FrictionZone", x0 * TS, (fila - 2) * TS, ancho * TS, 2 * TS,
-                arrastre=ARRASTRE_DEL_MUSGO * sentido)
+            obj("FrictionZone", inicio * TS, (fila - 2) * TS, ancho * TS, 2 * TS,
+                arrastre=ARRASTRE_DEL_MUSGO)
         elif material == "lodo":
-            obj("FrictionZone", x0 * TS, (fila - 2) * TS, ancho * TS, 2 * TS,
+            obj("FrictionZone", inicio * TS, (fila - 2) * TS, ancho * TS, 2 * TS,
                 multiplicador=FRENO_DEL_LODO)
 
-    # ── Fase 3 — la loma: un Slope de verdad ──────────────────
-    #
-    # Ocupa sólo parte del hueco de su repisa; el resto sigue libre para
-    # caer. `sube="derecha"` — el borde derecho del rectángulo es el alto de
-    # la hipotenuse.
-    lx, lfila, lancho, lalto, lsube = loma()
-    obj("Slope", lx * TS, (lfila - lalto) * TS, lancho * TS, lalto * TS,
-        sube=lsube)
+    # ── La loma de la Fase 3: dos `Slope` reales ────────────────
+    for lx, lfila_arriba, lancho, lalto, lsube in loma():
+        obj("Slope", lx * TS, lfila_arriba * TS, lancho * TS, lalto * TS,
+            sube=lsube)
 
-    # ── Fase 3 — el viento del guion («carácter ventoso» de Tilarán) ──
-    obj("WindZone", MURO_ANCHO * TS, 2 * ALTO_FASE * TS,
-        (MW - 2 * MURO_ANCHO) * TS, ALTO_FASE * TS,
+    # ── El viento de la Fase 3 («carácter ventoso» de Tilarán) ──
+    obj("WindZone", (LOMA_INICIO_SUBIDA - 40) * TS, 0,
+        (LOMA_FIN_BAJADA - LOMA_INICIO_SUBIDA + 80) * TS, MH * TS,
         fuerza_x=-60.0, fuerza_y=0.0, periodo=3.2)
 
-    # ── Fase 6 — las grietas, apagadas: las enciende la escena ────
-    for cx, fila in grietas_de_pisada():
-        obj("Light", cx * TS, (fila - 2) * TS, TS, TS,
+    # ── Las grietas de la Fase 6, apagadas: las enciende la escena ──
+    for col, fila in grietas_de_pisada():
+        obj("Light", col * TS, (fila - 2) * TS, TS, TS,
             radius=70.0, color="#7CFFA0", intensity=0.0)
 
     # ── El umbral ──────────────────────────────────────────────
-    obj("MessageTrigger_Once", (MW // 2 - 6) * TS, (SUELO_FINAL - 5) * TS,
+    ultima = MW - MURO_ANCHO - 4
+    obj("MessageTrigger_Once", ultima * TS, (perfil[ultima] - 5) * TS,
         2 * TS, 5 * TS, text="Paburu despierta.")
-    obj("NextTrigger", (MW - MURO_ANCHO - 4) * TS, (SUELO_FINAL - 3) * TS,
-        2 * TS, 3 * TS)
+    obj("NextTrigger", ultima * TS, (perfil[ultima] - 3) * TS, 2 * TS, 3 * TS)
 
     return [x for x in o if x]
 
@@ -262,12 +294,11 @@ tileheight="{TS}" infinite="0" nextlayerid="20" nextobjectid="900">
   <property name="author" value="Equipo docente — Legacy of Infest"/>
   <property name="bgm_track" value="bgm_final_approach"/>
   <property name="background_zone" value="final"/>
-  <!-- El clima ARRANCA en calma (Fase 1) y lo cambia la escena por fase. -->
   <property name="climate" value="clear"/>
   <property name="ambient_fx" value="ash"/>
   <property name="ambient_fx_rate" type="float" value="5"/>
   <property name="start_hour" type="float" value="18"/>
-  <property name="day_length" type="float" value="1200"/>
+  <property name="day_length" type="float" value="1400"/>
   <property name="time_limit" type="int" value="0"/>
   <property name="zone" type="int" value="4"/>
   <property name="ambient_light" type="float" value="0.60"/>
@@ -297,12 +328,10 @@ tilecount="{TS_TOTAL}" columns="{TS_COLUMNAS}">
 def main() -> None:
     DESTINO.parent.mkdir(parents=True, exist_ok=True)
     DESTINO.write_text(generar(), encoding="utf-8")
-    musgo = sum(1 for *_, m in superficies() if m == "musgo")
-    lodo = sum(1 for *_, m in superficies() if m == "lodo")
     print(f"escrito {DESTINO.relative_to(PROJECT_ROOT)} "
-          f"({MW}×{MH} baldosas, {len(repisas())} repisas, "
-          f"{len(checkpoints())} checkpoints, {musgo} de musgo, {lodo} de lodo, "
-          f"1 loma, {len(grietas_de_pisada())} grietas de la Fase 6, "
+          f"({MW}×{MH} baldosas, 6 secciones, {len(checkpoints())} checkpoints, "
+          f"{len(ARBOLES_FASE4)} tocones, {len(TUMBAS_FASE5)} tumbas, "
+          f"{len(grietas_de_pisada())} grietas, 1 loma, "
           f"0 enemigos, 0 fosos, 0 zonas de daño)")
 
 
