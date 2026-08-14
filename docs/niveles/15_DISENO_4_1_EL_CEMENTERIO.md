@@ -77,7 +77,7 @@ musgo *arrastrara* (cinta transportadora, AUD-473: el jugador cruzaba sin
 soltar el control en ningún otro punto del nivel, y en una partida real se
 veía como el juego congelado) — corregido a un freno como el lodo, sólo que
 más leve. `sfx_environment_viento_de_bosque` (AUD-465) como ambiente. El
-Venado testifica y asciende al final del tramo.
+Venado testifica; asciende si el jugador lo libera (AUD-474, ver §5.1).
 
 ### 3.3 Fase 3 — El Rey Terciopelo (columnas 300–449)
 
@@ -90,7 +90,7 @@ del camino, no un parche de 80 px en un pozo. `sfx_environment_
 storm_ambient` (reusa el fichero del prototipo). Una silueta de serpiente
 —no la que asciende, una presencia de fondo aparte— repta despacio entre
 los huesos (§Fase 3 del guion: *«movimientos de serpientes, huesos... en el
-fondo»*). El Rey Terciopelo testifica y asciende.
+fondo»*). El Rey Terciopelo testifica; asciende si se libera (§5.1).
 
 ### 3.4 Fase 4 — El Gavilán (columnas 450–599)
 
@@ -101,7 +101,8 @@ es un silencio súbito). En ese silencio, un camera shake fuerte y breve,
 una sola vez. Después: el grito aislado del Gavilán (AUD-465,
 `sfx_environment_grito_de_gavilan`) **y ahora también una sombra de ave**
 cruzando el cielo de vez en cuando, coordinada con el grito — la pieza que
-el primer intento dejó fuera (`GAP-058`). El Gavilán asciende.
+el primer intento dejó fuera (`GAP-058`). El Gavilán testifica; asciende si
+se libera (§5.1).
 
 ### 3.5 Fase 5 — La Planicie de los Muertos (columnas 600–749)
 
@@ -139,6 +140,25 @@ abre con un `MessageTrigger` (`dialogue="venado"`, etc.) colocado donde
 aparece la silueta del espíritu. El texto es breve — un par de líneas en el
 tono del lore existente — y lo revisa el dueño del proyecto; no pretende
 ser definitivo.
+
+## 5.1 Liberar a los espíritus (AUD-474)
+
+La crítica de diseño que revisó el dueño del proyecto (2026-08-14, puntos
+15-16) señaló el defecto central de la primera pasada: la ascensión de
+Venado, Rey Terciopelo y Gavilán se calculaba sólo con cuánto del tramo
+llevaba andado el jugador — cruzar corriendo sin detenerse liberaba al
+espíritu exactamente igual que pararse a escucharlo. El jugador nunca
+*hacía* nada; sólo observaba.
+
+Unos pasos después del `MessageTrigger` del diálogo, cada fase con
+espíritu deja un `EventTrigger` con `automatico=False`: exige el botón de
+usar, no basta con caminar cerca. Sin esa acción, el espíritu se queda a
+la vista hasta el borde de la sección — no asciende nadie a quien nadie
+liberó. El umbral final ("Paburu despierta.") cuenta cuántos de los tres
+se liberaron de verdad y varía su texto en consecuencia — la única
+consecuencia narrativa medible de la interacción. Ninguno de los dos
+estados bloquea el avance: sigue sin haber ningún fallo posible, como pide
+la regla de oro del nivel.
 
 ## 6. Lo que se hereda sin cambios del primer intento
 
