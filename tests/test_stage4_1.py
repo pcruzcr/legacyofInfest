@@ -218,15 +218,68 @@ class TestLasSuperficiesDeLaFase2:
         return [z for _, z in escena._mundo.cada(ZonaDeFriccion)]
 
     def test_hay_musgo_y_lodo(self, escena) -> None:
+        """AUD-473 — ninguna de las dos superficies usa `arrastre`.
+
+        `arrastre` es la cinta transportadora de `ZonaDeFriccion`
+        (`components.py`, AUD-236): mueve `posicion.x` sin mirar la entrada
+        del jugador. La primera versión lo usaba para el musgo pensando en
+        «te arrastra» — el jugador cruzaba el tramo como pasajero, sin
+        soltar el control en ningún otro momento del nivel, lo que en una
+        partida real se veía exactamente como el nivel congelado. Las dos
+        superficies frenan (`multiplicador < 1`), sólo que el musgo frena
+        menos que el lodo.
+        """
         from src.stages.stage4_1 import trazado
 
         musgo = sum(1 for _i, _a, m in trazado.SEGMENTOS_FASE2 if m == "musgo")
         lodo = sum(1 for _i, _a, m in trazado.SEGMENTOS_FASE2 if m == "lodo")
-        arrastres = [z for z in self._zonas(escena) if z.arrastre]
-        frenos = [z for z in self._zonas(escena) if z.multiplicador != 1.0]
-        assert len(arrastres) == musgo
-        assert len(frenos) == lodo
-        assert all(0.0 < z.multiplicador < 1.0 for z in frenos)
+        zonas = self._zonas(escena)
+        arrastres = [z for z in zonas if z.arrastre]
+        frenos_de_musgo = [z for z in zonas if z.multiplicador == trazado.FRENO_DEL_MUSGO]
+        frenos_de_lodo = [z for z in zonas if z.multiplicador == trazado.FRENO_DEL_LODO]
+
+        assert arrastres == [], (
+            f"ninguna superficie de la Fase 2 debe usar arrastre (cinta "
+            f"transportadora): {arrastres}"
+        )
+        assert len(frenos_de_musgo) == musgo
+        assert len(frenos_de_lodo) == lodo
+        assert all(0.0 < z.multiplicador < 1.0 for z in zonas), (
+            "AUD-236: multiplicador > 1 se dispara sin tope en este motor — "
+            "ninguna zona de la Fase 2 debería usarlo"
+        )
+        assert trazado.FRENO_DEL_MUSGO > trazado.FRENO_DEL_LODO, (
+            "el musgo debe frenar menos que el lodo, no más"
+        )
+
+    def test_el_musgo_no_mueve_a_nadie_sin_velocidad(self) -> None:
+        """AUD-473 — regresión directa del defecto, contra el sistema real.
+
+        Mismo patrón que ya prueba la cinta transportadora de verdad
+        (`tests/test_ecs.py::test_la_cinta_arrastra_sin_acumular_velocidad`),
+        con la zona de musgo tal como la declara `stage4_1` — para que quede
+        constancia de que, a diferencia de una cinta, el musgo **no** mueve
+        a quien está quieto encima: sólo escala la velocidad que ya trae, y
+        con velocidad cero eso es 0 × 0,94 = 0.
+        """
+        import pygame
+
+        from src.framework.ecs import Transform, Velocidad, World, ZonaDeFriccion
+        from src.framework.ecs import systems as S
+        from src.stages.stage4_1 import trazado
+
+        m = World()
+        m.crear(ZonaDeFriccion(pygame.Rect(0, 0, 200, 200),
+                                multiplicador=trazado.FRENO_DEL_MUSGO))
+        e = m.crear(Transform(pygame.Vector2(10, 10), pygame.Rect(10, 10, 8, 8)),
+                    Velocidad(pygame.Vector2(0, 0)))
+        for _ in range(120):  # 2 s
+            S.sistema_friccion(m, 1 / 60)
+
+        assert m.obtener(e, Transform).posicion.x == 10.0, (
+            "el musgo movió a un jugador quieto — eso es arrastre, no fricción"
+        )
+        assert m.obtener(e, Velocidad).v.x == 0.0
 
     def test_los_segmentos_caen_en_la_fase_2(self) -> None:
         from src.stages.stage4_1 import trazado

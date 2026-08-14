@@ -43,7 +43,7 @@ recomienda el calificador — unos 32 en total.
 | Sección | Familia | Qué se ve |
 |---|---|---|
 | 1 | Cripta | Losa de piedra lisa, junta de mortero |
-| 2 | Bosque | Tierra con raíces, musgo y lodo como superficies (mismas físicas que el prototipo, AUD-236) |
+| 2 | Bosque | Tierra con raíces, musgo y lodo como superficies (dos frenos del mismo tipo, AUD-236/AUD-473) |
 | 3 | Camino de huesos | Tierra pálida con calaveras y costillas incrustadas |
 | 4 | Bosque quemado | Ceniza y tierra requemada, tocones |
 | 5 | Tumbas | Tierra desnuda, losas de tumba hundidas |
@@ -70,11 +70,14 @@ los dos nombres que dio el dueño del proyecto, nada inventado encima.
 ### 3.2 Fase 2 — El Venado (columnas 150–299)
 
 La lluvia marca la entrada, la imagen se desatura hasta blanco y negro de
-alto contraste. El suelo de bosque introduce musgo (arrastra, 62 px/s) y
-lodo (frena al 88 %) — la misma pareja de superficies y los mismos valores
-medidos del prototipo (AUD-236), ahora sobre tierra de bosque de verdad, no
-sobre piedra de cripta. `sfx_environment_viento_de_bosque` (AUD-465) como
-ambiente. El Venado testifica y asciende al final del tramo.
+alto contraste. El suelo de bosque introduce musgo (frena al 94 %) y lodo
+(frena al 88 %) — dos frenos del mismo mecanismo (`ZonaDeFriccion`,
+AUD-236), el musgo más suave que el lodo. La primera versión hacía que el
+musgo *arrastrara* (cinta transportadora, AUD-473: el jugador cruzaba sin
+soltar el control en ningún otro punto del nivel, y en una partida real se
+veía como el juego congelado) — corregido a un freno como el lodo, sólo que
+más leve. `sfx_environment_viento_de_bosque` (AUD-465) como ambiente. El
+Venado testifica y asciende al final del tramo.
 
 ### 3.3 Fase 3 — El Rey Terciopelo (columnas 300–449)
 

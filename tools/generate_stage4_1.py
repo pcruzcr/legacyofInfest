@@ -43,10 +43,10 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.stages.stage4_1.trazado import (  # noqa: E402
     ARBOLES_FASE4,
-    ARRASTRE_DEL_MUSGO,
     COLUMNA_LAPIDA_HUGO,
     COLUMNA_LAPIDA_TERESA,
     FRENO_DEL_LODO,
+    FRENO_DEL_MUSGO,
     HUESOS_FASE3,
     LOMA_FIN_BAJADA,
     LOMA_INICIO_SUBIDA,
@@ -282,7 +282,7 @@ def _objetos() -> list[str]:
         fila = perfil[inicio]
         if material == "musgo":
             obj("FrictionZone", inicio * TS, (fila - 2) * TS, ancho * TS, 2 * TS,
-                arrastre=ARRASTRE_DEL_MUSGO)
+                multiplicador=FRENO_DEL_MUSGO)
         elif material == "lodo":
             obj("FrictionZone", inicio * TS, (fila - 2) * TS, ancho * TS, 2 * TS,
                 multiplicador=FRENO_DEL_LODO)

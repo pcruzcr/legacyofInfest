@@ -24,8 +24,8 @@ Terreno propio, no color encima del mismo suelo
 Cada sección tiene su propia familia de baldosa en `tileset_stage4_1.png`
 (cripta, bosque, camino de huesos, bosque quemado, tumbas, piedra sagrada —
 ver `tools/generate_all_assets.py::_gen_tileset_stage4_1`). El musgo y el
-lodo de la Fase 2 son la misma física del prototipo anterior (AUD-236) sobre
-tierra de bosque de verdad.
+lodo de la Fase 2 son dos frenos del mismo tipo (AUD-473), no un arrastre y
+un freno — ver la nota junto a `FRENO_DEL_MUSGO` más abajo.
 
 La loma de la Fase 3
 ----------------------
@@ -150,9 +150,29 @@ def checkpoints() -> tuple[tuple[int, int], ...]:
 
 # ── Fase 2 (El Venado): musgo y lodo ─────────────────────────────────────
 #
-# Segmentos de suelo, en `(columna_inicio, ancho, material)`. La misma
-# física del prototipo anterior (AUD-236): el musgo arrastra, el lodo
-# frena — aquí sobre tierra de bosque, no sobre piedra de cripta.
+# Segmentos de suelo, en `(columna_inicio, ancho, material)`.
+#
+# AUD-473 — el musgo usaba `arrastre`, no `multiplicador`.
+# ---------------------------------------------------------
+# La primera versión ponía `arrastre=62.0` en el musgo pensando en «el musgo
+# te arrastra». Pero en `ZonaDeFriccion` (`components.py`, AUD-236)
+# `arrastre` es la cinta transportadora — mueve `posicion.x` directo, ignora
+# la entrada del jugador por completo — y `Conveyor` (el tipo de objeto TMX
+# dedicado a cintas) usa el mismo campo con 60.0 de valor por defecto. 62 era
+# casi ese valor por casualidad de nombre, no de mecánica: el jugador cruzaba
+# el tramo de musgo como pasajero de una cinta, sin soltar el control en
+# ningún otro momento — comprobado jugando el nivel de verdad, no en una
+# prueba (el propio dueño lo vio como «se congela», porque nada más en la
+# pantalla decía que el personaje se movía solo).
+#
+# El campo correcto para «resbaloso» es `multiplicador`, el mismo que ya usa
+# el lodo. Con un matiz: el docstring de `ZonaDeFriccion` avisa de que
+# `multiplicador > 1` «se dispara sin tope» porque se compone cada fotograma
+# mientras el jugador está dentro de la zona — no hay un valor «resbaloso
+# pero seguro» por encima de 1 en este motor. Así que el musgo no frena
+# menos que el lodo por ser más resbaloso: frena **un poco menos fuerte**,
+# con el mismo mecanismo probado (AUD-236), para poder distinguirlo del lodo
+# sin reintroducir el problema del arrastre.
 SEGMENTOS_FASE2: tuple[tuple[int, int, str], ...] = (
     (170, 15, "musgo"),
     (190, 15, "lodo"),
@@ -160,8 +180,8 @@ SEGMENTOS_FASE2: tuple[tuple[int, int, str], ...] = (
     (230, 15, "lodo"),
     (250, 15, "musgo"),
 )
-#: Cuánto arrastra el musgo, en px/s. Mismo valor medido del prototipo.
-ARRASTRE_DEL_MUSGO = 62.0
+#: Cuánto frena el musgo: se anda al 94 % — un roce más suave que el lodo.
+FRENO_DEL_MUSGO = 0.94
 #: Cuánto frena el lodo: se anda al 88 %.
 FRENO_DEL_LODO = 0.88
 

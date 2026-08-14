@@ -251,7 +251,7 @@
   </object>
   <object id="140" name="FrictionZone_140" type="FrictionZone" x="2720" y="448" width="240" height="32">
    <properties>
-    <property name="arrastre" type="float" value="62.0"/>
+    <property name="multiplicador" type="float" value="0.94"/>
    </properties>
   </object>
   <object id="141" name="FrictionZone_141" type="FrictionZone" x="3040" y="448" width="240" height="32">
@@ -261,7 +261,7 @@
   </object>
   <object id="142" name="FrictionZone_142" type="FrictionZone" x="3360" y="448" width="240" height="32">
    <properties>
-    <property name="arrastre" type="float" value="62.0"/>
+    <property name="multiplicador" type="float" value="0.94"/>
    </properties>
   </object>
   <object id="143" name="FrictionZone_143" type="FrictionZone" x="3680" y="448" width="240" height="32">
@@ -271,7 +271,7 @@
   </object>
   <object id="144" name="FrictionZone_144" type="FrictionZone" x="4000" y="448" width="240" height="32">
    <properties>
-    <property name="arrastre" type="float" value="62.0"/>
+    <property name="multiplicador" type="float" value="0.94"/>
    </properties>
   </object>
   <object id="145" name="Slope_145" type="Slope" x="5440" y="320" width="480" height="160">
