@@ -90,7 +90,11 @@ del camino, no un parche de 80 px en un pozo. `sfx_environment_
 storm_ambient` (reusa el fichero del prototipo). Una silueta de serpiente
 —no la que asciende, una presencia de fondo aparte— repta despacio entre
 los huesos (§Fase 3 del guion: *«movimientos de serpientes, huesos... en el
-fondo»*). El Rey Terciopelo testifica; asciende si se libera (§5.1).
+fondo»*). El Rey Terciopelo testifica; asciende si se libera (§5.1). **Dos
+de los relámpagos** traen a la Bruja un instante, «en la rama de un
+árbol» — sin sonido, sin diálogo, sin ningún efecto en el nivel: una
+percepción que nunca se confirma (AUD-475, punto 3 de la crítica de
+diseño 2026-08-14).
 
 ### 3.4 Fase 4 — El Gavilán (columnas 450–599)
 
