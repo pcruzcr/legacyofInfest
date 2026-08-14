@@ -121,17 +121,30 @@ No persigas "cero defectos". Persigue esto, que sí es comprobable:
 
 ## 2. INVARIANTES — NO NEGOCIABLES
 
+> **AUD-455 (2026-08-13).** Esta lista es una foto del 2026-08-02 y ya no
+> coincide con `CLAUDE.md` en dos puntos. Como este prompt ya manda «lee
+> CLAUDE.md antes que nada; sus invariantes mandan sobre cualquier instrucción
+> de este prompt» (línea siguiente al pegar), la salvaguarda existe — pero
+> corregir aquí evita que alguien actúe sobre el punto 5 antes de llegar a esa
+> línea. Los dos puntos:
+> - **1 y 2 están SUSPENDIDAS** desde la decisión del dueño del 2026-08-07
+>   (reversible): el motor y el framework pueden evolucionar libres, aunque
+>   rompan entregas existentes. Ver `CLAUDE.md` §3 y `docs/87` §27.
+> - **5 ya no es «política bilingüe».** La decisión del dueño del 2026-08-11
+>   la sustituyó por español único: no hay `.en.md`, y un documento heredado en
+>   inglés se traduce, no se duplica. Corregido abajo.
+
 Romper una de estas es un fallo de la auditoría, no un trade-off:
 
   1. `src/stages/` es código de estudiantes. No refactorizar, no relintear,
      no reescribir. Excepciones: `src/stages/stage0` y `boss_venado`, que son
-     material de referencia del curso.
+     material de referencia del curso. *(Suspendida — ver nota de arriba.)*
   2. Las 26 clases de escenario existentes deben seguir funcionando sin tocar
-     una línea.
+     una línea. *(Suspendida — ver nota de arriba.)*
   3. `revisar/` no se abre ni se audita.
   4. `KNOWN_GAPS.md` no pierde entradas nunca; se marcan resueltas.
-  5. Política bilingüe: sólo README y los informes de auditoría publicables.
-     No traducir docs por decreto.
+  5. Español único: no hay documentos en inglés ni `.en.md`. Un documento
+     heredado en inglés se traduce, no se duplica.
   6. `mypy_scope.txt` es un trinquete: puede crecer, nunca encoger.
   7. scikit-learn es opcional en runtime. No convertirlo en dependencia dura.
   8. Ningún número nuevo en la documentación sin una prueba que lo compruebe.

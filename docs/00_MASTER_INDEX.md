@@ -10,8 +10,12 @@ date_processed: "2026-08-06"
 
 # Índice maestro de documentación
 
-**Fecha:** 9 de agosto de 2026 · **Documentos:** 70 en `docs/` (69 indexados abajo + este índice), más 4 ficheros de la raíz
+**Fecha:** 13 de agosto de 2026 · **Documentos:** 70 en `docs/` (69 indexados abajo + este índice), más 5 ficheros de la raíz
 (`README`, `CLAUDE`, `CONTRIBUTING`, `CHANGELOG` y `KNOWN_GAPS`), que también tienen fila.
+
+> **AUD-455 (2026-08-13).** Decía «4 ficheros» y nombraba cinco — la tabla
+> «Fuera de `docs/`» de abajo también tiene cinco filas. Recontado por lectura
+> directa de esta misma tabla.
 
 > **AUD-365.** Este encabezado decía 69 y la tabla tenía 75 filas: el hallazgo P3 de `docs/89`. No era una fila de más ni un documento de menos — eran **dos formas distintas de contar** sin decir cuál se usaba. Ahora el número se comprueba: `tests/test_el_indice_maestro_cuenta_bien.py` lo recuenta contra el sistema de ficheros en cada suite, que es lo que la invariante 6 de `CLAUDE.md` exige de cualquier cifra escrita en un documento.
 

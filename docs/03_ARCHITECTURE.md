@@ -44,29 +44,27 @@ Todas las rutas de abajo son relativas a la raíz real del repositorio.
 `student_templates/`.
 
 ```
-legacy-of-infest/                      # Actual repo root
+legacy-of-infest/                      # Raíz real del repositorio
 │
-├── main.py                            # Entry point. Instantiates App and calls run().
-│                                     # Supports --stage and --boss CLI args for direct launch.
+├── main.py                            # Punto de entrada. Instancia App y llama a run().
+│                                     # Admite --stage y --boss para lanzar directo por CLI.
 ├── requirements.txt
 ├── requirements.lock
 ├── README.md
 ├── LICENSE
-├── pyproject.toml                     # Build config, dependencies, ruff/pytest/mypy settings
-├── build.spec                         # PyInstaller build spec
-├── build_nuitka.bat                   # Nuitka build script (Windows)
-├── .flake8                            # Flake8 config (legacy, superseded by ruff)
+├── pyproject.toml                     # Config de build, dependencias, ajustes de ruff/pytest/mypy
+├── build.spec                         # Spec de build de PyInstaller
+├── build_nuitka.bat                   # Script de build de Nuitka (Windows)
+├── .flake8                            # Config de Flake8 (heredado, sustituido por ruff)
 ├── .gitignore
 ├── .gitattributes
 ├── CHANGELOG.md
 ├── CONTRIBUTING.md
-├── KNOWN_GAPS.md                      # Known gaps and their resolutions
-├── PHASE_FIX_REPORT.md                # Stage 0 collision/spawn fixes
-├── REMEDIATION_PLAN.md                # 8-phase remediation plan
+├── KNOWN_GAPS.md                      # Huecos conocidos y su resolución
 │
-├── docs/                              # Official documentation package (00–52+)
+├── docs/                              # Paquete oficial de documentación (00–52+)
 │
-├── assets/                            # PROFESSOR-OWNED. Read-only for students.
+├── assets/                            # DEL PROFESOR. Sólo lectura para estudiantes.
 │   ├── sprites/
 │   │   ├── player/
 │   │   ├── enemies/
@@ -87,40 +85,40 @@ legacy-of-infest/                      # Actual repo root
 │   ├── scripts/
 │   └── tileset_stage0.tsx
 │
-├── src/                                # All Python source code
+├── src/                                # Todo el código fuente en Python
 │   │
-│   ├── engine/                         # PROFESSOR-OWNED. Do not modify.
+│   ├── engine/                         # DEL PROFESOR. No modificar.
 │   │   │
 │   │   ├── core/
 │   │   │   ├── __init__.py
-│   │   │   ├── app.py                     # App class: display init, main loop, scene pump
-│   │   │   ├── settings.py                # All global constants
-│   │   │   ├── clock.py                   # DeltaClock: delta time, FPS cap, time scale
+│   │   │   ├── app.py                     # Clase App: init de pantalla, bucle principal, bombeo de escenas
+│   │   │   ├── settings.py                # Todas las constantes globales
+│   │   │   ├── clock.py                   # DeltaClock: delta de tiempo, tope de FPS, escala de tiempo
 │   │   │   ├── azar.py                    # AUD-375: la semilla del proceso, anotada en el registro
 │   │   │   ├── estadisticas.py            # AUD-346: cuantiles P50/P95/P99 del fotograma
-│   │   │   ├── event_bus.py               # EventBus: pub/sub event dispatch
-│   │   │   ├── events.py                  # Event name constants (Events class)
-│   │   │   ├── game_context.py            # GameContext: DI container for all subsystems
+│   │   │   ├── event_bus.py               # EventBus: despacho de eventos pub/sub
+│   │   │   ├── events.py                  # Constantes de nombres de evento (clase Events)
+│   │   │   ├── game_context.py            # GameContext: contenedor de DI de todos los subsistemas
 │   │   │   ├── gpu_effects.py             # Reparto CPU/GPU del post-procesado (AUD-222)
-│   │   │   ├── achievements.py            # Achievement system
-│   │   │   ├── difficulty.py              # Difficulty scaling (Difficulty enum, set_difficulty)
+│   │   │   ├── achievements.py            # Sistema de logros
+│   │   │   ├── difficulty.py              # Escalado de dificultad (enum Difficulty, set_difficulty)
 │   │   │   ├── experience.py              # XP por enemigo, curva de nivel y puntos de habilidad (AUD-249)
 │   │   │   ├── skill_tree.py              # AUD-293: el árbol — vitalidad, fuerza e ímpetu
 │   │   │   ├── i18n.py                    # AUD-455: catálogo JSON es/en propio — explícitamente NO gettext (ver F3.1 en el módulo)
-│   │   │   ├── inventory.py               # Item/collectible management
+│   │   │   ├── inventory.py               # Gestión de ítems/coleccionables
 │   │   │   ├── integridad.py             # AUD-295: firma HMAC de los JSON del jugador
 │   │   │   ├── plugins.py                # AUD-296: ganchos para extender sin tocar el núcleo
 │   │   │   ├── registro.py                # AUD-268: los avisos van al fichero, no a la consola
-│   │   │   ├── save_data.py               # SaveData dataclass, SAVE_VERSION, MAX_SLOTS
-│   │   │   ├── score_system.py            # Points and coin drops per enemy type
-│   │   │   ├── save_manager.py            # SaveManager: JSON-based save/load/delete
-│   │   │   ├── stage_registry.py          # StageRegistry: auto-discover stages
-│   │   │   └── user_settings.py           # UserSettings: persisted player preferences
+│   │   │   ├── save_data.py               # dataclass SaveData, SAVE_VERSION, MAX_SLOTS
+│   │   │   ├── score_system.py            # Puntos y monedas soltadas por tipo de enemigo
+│   │   │   ├── save_manager.py            # SaveManager: guardar/cargar/borrar basado en JSON
+│   │   │   ├── stage_registry.py          # StageRegistry: descubre escenarios automáticamente
+│   │   │   └── user_settings.py           # UserSettings: preferencias del jugador persistidas
 │   │   │
 │   │   ├── scene/
 │   │   │   ├── __init__.py
-│   │   │   ├── scene_manager.py           # SceneManager: push/pop/replace scene stack
-│   │   │   └── base_scene.py              # BaseScene: abstract interface all scenes implement
+│   │   │   ├── scene_manager.py           # SceneManager: pila de escenas push/pop/replace
+│   │   │   └── base_scene.py              # BaseScene: interfaz abstracta que implementa toda escena
 │   │   │       # AUD-111: aquí vivía un módulo de transiciones con cinco
 │   │   │       # clases y CERO usos en todo el repositorio, ni siquiera en
 │   │   │       # pruebas. Competía con el gestor de transiciones de `scenes/`,
@@ -128,125 +126,125 @@ legacy-of-infest/                      # Actual repo root
 │   │   │       # buscaba «cómo hago una transición» encontraba el muerto la
 │   │   │       # mitad de las veces. Retirado.
 │   │   │
-│   │   ├── scenes/                        # All scene implementations (42+ files)
+│   │   ├── scenes/                        # Todas las implementaciones de escena (42+ ficheros)
 │   │   │   ├── __init__.py
-│   │   │   ├── splash_scene.py            # Professor logo, auto-advance
-│   │   │   ├── title_scene.py             # Main menu: Start / Academic Demos / Quit
-│   │   │   ├── story_scene.py             # Story sequence (scenes 1–3)
-│   │   │   ├── loading_scene.py           # Loading screen with progress indicator
-│   │   │   ├── tutorial_scene.py          # Controls tutorial overlay
-│   │   │   ├── tutorial_overlay.py        # Contextual help popups (engine-level)
-│   │   │   ├── options_scene.py           # Options: volume, difficulty, colorblind mode
-│   │   │   ├── keybinding_scene.py        # Rebind controls
-│   │   │   ├── load_game_scene.py         # Save file selector
-│   │   │   ├── game_over_scene.py         # Death screen with continue/quit
-│   │   │   ├── end_credits_scene.py       # Credits / completion screen
-│   │   │   ├── demo_menu_scene.py         # Academic Demos selector (10+ scenes)
-│   │   │   ├── scene_registry.py          # DI Container: register → build pattern
-│   │   │   ├── debug_overlay.py           # F11 debug console (FPS, events, modules)
-│   │   │   ├── param_panel.py             # Reusable ParamPanel widget
-│   │   │   ├── demo_layout.py             # Layout constants & draw helpers
+│   │   │   ├── splash_scene.py            # Logo del profesor, avance automático
+│   │   │   ├── title_scene.py             # Menú principal: Empezar / Demos Académicas / Salir
+│   │   │   ├── story_scene.py             # Secuencia de historia (escenas 1–3)
+│   │   │   ├── loading_scene.py           # Pantalla de carga con indicador de progreso
+│   │   │   ├── tutorial_scene.py          # Superposición del tutorial de controles
+│   │   │   ├── tutorial_overlay.py        # Ayudas contextuales emergentes (nivel motor)
+│   │   │   ├── options_scene.py           # Opciones: volumen, dificultad, modo daltónico
+│   │   │   ├── keybinding_scene.py        # Reasignar controles
+│   │   │   ├── load_game_scene.py         # Selector de partida guardada
+│   │   │   ├── game_over_scene.py         # Pantalla de muerte con continuar/salir
+│   │   │   ├── end_credits_scene.py       # Pantalla de créditos / finalización
+│   │   │   ├── demo_menu_scene.py         # Selector de Demos Académicas (10+ escenas)
+│   │   │   ├── scene_registry.py          # Contenedor de DI: patrón registrar → construir
+│   │   │   ├── debug_overlay.py           # Consola de depuración F11 (FPS, eventos, módulos)
+│   │   │   ├── param_panel.py             # Widget ParamPanel reutilizable
+│   │   │   ├── demo_layout.py             # Constantes de disposición y ayudantes de dibujo
 │   │   │   ├── demo_utils.py              # SourceSurfaceManager, FrameThrottle, etc.
-│   │   │   ├── demo_common.py             # Legacy re-exports from demo_layout + demo_utils
-│   │   │   ├── filter_demo_scene.py       # Unit VII — Filter demo (9 modes)
-│   │   │   ├── vision_demo_scene.py       # Unit VIII — Vision demo (10 modes)
-│   │   │   ├── pattern_demo_scene.py      # Unit IX — Pattern demo (5 modes)
-│   │   │   ├── vector_lab_scene.py        # Unit II — Vector lab
-│   │   │   ├── transform_lab_scene.py     # Unit II/III — Transform lab
-│   │   │   ├── curve_editor_scene.py      # Unit III — Curve editor
-│   │   │   ├── interpolation_lab_scene.py # Unit III/IV — Interpolation lab
-│   │   │   ├── color_theory_scene.py      # Unit V — Color theory lab
-│   │   │   ├── noise_lab_scene.py         # Unit V/VIII — Noise lab
-│   │   │   ├── collision_lab_scene.py     # Unit VI — Collision lab
-│   │   │   ├── combo_demo_scene.py        # Combo system state machine demo
-│   │   │   ├── inventory_scene.py         # Inventory screen (grid; equip/unequip)
+│   │   │   ├── demo_common.py             # Re-exportaciones heredadas de demo_layout + demo_utils
+│   │   │   ├── filter_demo_scene.py       # Unidad VII — Demo de filtros (9 modos)
+│   │   │   ├── vision_demo_scene.py       # Unidad VIII — Demo de visión (10 modos)
+│   │   │   ├── pattern_demo_scene.py      # Unidad IX — Demo de patrones (5 modos)
+│   │   │   ├── vector_lab_scene.py        # Unidad II — Laboratorio de vectores
+│   │   │   ├── transform_lab_scene.py     # Unidad II/III — Laboratorio de transformaciones
+│   │   │   ├── curve_editor_scene.py      # Unidad III — Editor de curvas
+│   │   │   ├── interpolation_lab_scene.py # Unidad III/IV — Laboratorio de interpolación
+│   │   │   ├── color_theory_scene.py      # Unidad V — Laboratorio de teoría del color
+│   │   │   ├── noise_lab_scene.py         # Unidad V/VIII — Laboratorio de ruido
+│   │   │   ├── collision_lab_scene.py     # Unidad VI — Laboratorio de colisión
+│   │   │   ├── combo_demo_scene.py        # Demo de la máquina de estados del sistema de combos
+│   │   │   ├── inventory_scene.py         # Pantalla de inventario (rejilla; equipar/desequipar)
 │   │   │   ├── skill_tree_scene.py       # AUD-293: gastar puntos de experiencia
-│   │   │   ├── shop_scene.py              # Shop: buy/sell clothing with coins
-│   │   │   ├── boss_rush_entry.py         # Boss rush entry point (two helper functions)
-│   │   │   ├── achievement_scene.py       # Achievement screen (locked/unlocked)
-│   │   │   ├── bestiary_scene.py          # Bestiary: enemy catalog
-│   │   │   ├── world_map_scene.py         # World map (connected nodes)
-│   │   │   ├── progress_scene.py          # Student progress dashboard (% per category)
-│   │   │   ├── leaderboard_scene.py       # Local speedrun / boss rush leaderboards
-│   │   │   ├── pipeline_builder_scene.py  # Visual filter chain builder (Unit VII/VIII)
-│   │   │   ├── quiz_system.py             # Quiz overlay for academic labs
-│   │   │   ├── code_panel.py              # Code display panel for teaching
-│   │   │   ├── sandbox_scene.py           # Sandbox for testing mechanics
-│   │   │   ├── stage_error_scene.py       # Error screen for stage load failures
-│   │   │   ├── stage_wizard_scene.py      # Stage creation wizard
-│   │   │   ├── transition_manager.py      # Manages screen transitions (fade/wipe/slide/circle)
+│   │   │   ├── shop_scene.py              # Tienda: comprar/vender ropa con monedas
+│   │   │   ├── boss_rush_entry.py         # Punto de entrada del boss rush (dos funciones auxiliares)
+│   │   │   ├── achievement_scene.py       # Pantalla de logros (bloqueados/desbloqueados)
+│   │   │   ├── bestiary_scene.py          # Bestiario: catálogo de enemigos
+│   │   │   ├── world_map_scene.py         # Mapa del mundo (nodos conectados)
+│   │   │   ├── progress_scene.py          # Panel de progreso del estudiante (% por categoría)
+│   │   │   ├── leaderboard_scene.py       # Marcadores locales de speedrun / boss rush
+│   │   │   ├── pipeline_builder_scene.py  # Constructor visual de cadena de filtros (Unidad VII/VIII)
+│   │   │   ├── quiz_system.py             # Superposición de cuestionario para laboratorios académicos
+│   │   │   ├── code_panel.py              # Panel de código fuente para enseñanza
+│   │   │   ├── sandbox_scene.py           # Sandbox para probar mecánicas
+│   │   │   ├── stage_error_scene.py       # Pantalla de error para fallos de carga de escenario
+│   │   │   ├── stage_wizard_scene.py      # Asistente de creación de escenarios
+│   │   │   ├── transition_manager.py      # Gestiona transiciones de pantalla (fundido/wipe/deslizar/círculo)
 │   │   │   ├── unit_theory_scene.py       # Teoria y examen de una unidad (AUD-095)
 │   │   │   └── student_login_scene.py     # Identificacion por correo (AUD-098)
 │   │   │
 │   │   ├── input/
 │   │   │   ├── __init__.py
-│   │   │   ├── input_manager.py           # InputManager: unified keyboard + controller
-│   │   │   └── action_map.py              # ActionMap: abstract action → device binding
+│   │   │   ├── input_manager.py           # InputManager: teclado + mando unificados
+│   │   │   └── action_map.py              # ActionMap: enlace abstracto acción → dispositivo
 │   │   │
 │   │   ├── audio/
 │   │   │   ├── __init__.py
-│   │   │   ├── sound_bank.py              # SoundBank: named sound registry
-│   │   │   ├── audio_manager.py           # AudioManager: music + sfx + ambient + stingers
-│   │   │   ├── audio_pipeline.py          # Audio processing pipeline
+│   │   │   ├── sound_bank.py              # SoundBank: registro de sonidos con nombre
+│   │   │   ├── audio_manager.py           # AudioManager: música + sfx + ambiente + stingers
+│   │   │   ├── audio_pipeline.py          # Tubería de procesamiento de audio
 │   │   │   ├── music_clock.py            # RelojMusical: pulsos, compases y latencia (F6)
 │   │   │   ├── mixer_buses.py           # Mezclador: buses y ducking (AUD-144)
 │   │   │   └── polifonia.py             # AUD-280: cuántas veces suena a la vez el mismo efecto
 │   │   ├── render/
 │   │   │   ├── __init__.py
-│   │   │   ├── gl_pipeline.py             # GLRenderer, GLRenderConfig: ModernGL pipeline
+│   │   │   ├── gl_pipeline.py             # GLRenderer, GLRenderConfig: tubería de ModernGL
 │   │   │   ├── gpu_sprite_batch.py        # AUD-340: SpriteBatchGPU, sprites instanciados con normal mapping (fase 5)
 │   │   │   ├── memoria_de_textura.py      # AUD-397: memoria de textura viva y detección de fugas (GAP-049)
 │   │   │   ├── normales.py                # AUD-340: normales procedurales del alfa del sprite
-│   │   │   ├── shaders.py                 # GLSL shader sources
+│   │   │   ├── shaders.py                 # Código fuente de los shaders GLSL
 │   │   │   ├── sprite_batch.py           # AUD-302: muchos sprites en una llamada (blits)
 │   │   │   └── gpu_present.py            # PresentadorGPU: presentar por SDL2 (AUD-148, opcional)
 │   │   │
 │   │   ├── ui/
 │   │   │   ├── __init__.py
-│   │   │   ├── hud.py                     # HUD: hearts, timer, portrait, score
-│   │   │   ├── message_box.py             # MessageBox: scrolling text, tutorial messages
-│   │   │   ├── screen_banner.py           # ScreenBanner: stage title animation
-│   │   │   ├── minimap.py                 # Minimap: fog-of-war exploration map
-│   │   │   ├── subtitle_overlay.py        # SubtitleOverlay: dialogue subtitles
-│   │   │   ├── theme.py                   # Theme: UI color scheme and styling
-│   │   │   └── widgets.py                 # Reusable UI widgets
+│   │   │   ├── hud.py                     # HUD: corazones, temporizador, retrato, puntaje
+│   │   │   ├── message_box.py             # MessageBox: texto con desplazamiento, mensajes de tutorial
+│   │   │   ├── screen_banner.py           # ScreenBanner: animación del título de escenario
+│   │   │   ├── minimap.py                 # Minimap: mapa de exploración con niebla de guerra
+│   │   │   ├── subtitle_overlay.py        # SubtitleOverlay: subtítulos de diálogo
+│   │   │   ├── theme.py                   # Theme: paleta de color y estilo de la interfaz
+│   │   │   └── widgets.py                 # Widgets de interfaz reutilizables
 │   │   │
 │   │   └── utils/
 │   │       ├── __init__.py
-│   │       ├── asset_loader.py            # AssetLoader: load+cache images, sounds, fonts
-│   │       ├── math_utils.py              # Vector2, lerp, clamp, ease functions
-│   │       ├── surface_pool.py            # SurfacePool: reuse temporary surfaces
+│   │       ├── asset_loader.py            # AssetLoader: carga y cachea imágenes, sonidos, fuentes
+│   │       ├── math_utils.py              # Vector2, lerp, clamp, funciones de easing
+│   │       ├── surface_pool.py            # SurfacePool: reutiliza superficies temporales
 │   │       └── sprite_atlas.py            # SpriteAtlas: muchos recortes en una hoja (G1)
 │   │
-│   ├── framework/                      # PROFESSOR-OWNED. Do not modify.
+│   ├── framework/                      # DEL PROFESOR. No modificar.
 │   │   │
 │   │   ├── entities/
 │   │   │   ├── __init__.py
-│   │   │   ├── base_entity.py             # BaseEntity: position, rect, update, draw lifecycle
-│   │   │   ├── player.py                  # Player: state machine, input response, damage
-│   │   │   ├── player_state.py            # PlayerState enum (all player states)
-│   │   │   ├── player_states.py           # Player state machine implementation
-│   │   │   ├── states/                    # Individual state classes (subdirectory)
-│   │   │   ├── enemy_base.py              # EnemyBase: abstract enemy with health + state
-│   │   │   ├── enemy_walker.py            # EnemyWalker: horizontal patrol, player detection
-│   │   │   ├── enemy_flying.py            # EnemyFlying: sine-wave or waypoint flight
-│   │   │   ├── enemy_shooter.py           # EnemyShooter: projectile emission, range trigger
-│   │   │   ├── boss_base.py               # BossBase: phase manager, boss health bar event
-│   │   │   ├── boss_kit.py                # BossKit: reusable boss components
-│   │   │   ├── enemy_charger.py           # EnemyCharger: wind-up + charge attack
-│   │   │   ├── enemy_archer.py            # EnemyArcher: ranged with arc shot
-│   │   │   ├── enemy_brute.py             # EnemyBrute: heavy melee + ground slam
-│   │   │   ├── enemy_caster.py            # EnemyCaster: homing orb magic
-│   │   │   ├── enemy_assassin.py          # EnemyAssassin: cloak + lunge
-│   │   │   ├── entity_factory.py          # EntityFactory: registry-based enemy creation
-│   │   │   ├── flight_strategies.py       # FlightStrategy: sine/bezier/random flight patterns
+│   │   │   ├── base_entity.py             # BaseEntity: posición, rect, ciclo de vida update/draw
+│   │   │   ├── player.py                  # Player: máquina de estados, respuesta a entrada, daño
+│   │   │   ├── player_state.py            # Enum PlayerState (todos los estados del jugador)
+│   │   │   ├── player_states.py           # Implementación de la máquina de estados del jugador
+│   │   │   ├── states/                    # Clases de estado individuales (subcarpeta)
+│   │   │   ├── enemy_base.py              # EnemyBase: enemigo abstracto con vida + estado
+│   │   │   ├── enemy_walker.py            # EnemyWalker: patrulla horizontal, detección del jugador
+│   │   │   ├── enemy_flying.py            # EnemyFlying: vuelo en senoide o por waypoints
+│   │   │   ├── enemy_shooter.py           # EnemyShooter: emisión de proyectiles, disparador de rango
+│   │   │   ├── boss_base.py               # BossBase: gestor de fases, evento de barra de vida del jefe
+│   │   │   ├── boss_kit.py                # BossKit: componentes reutilizables de jefe
+│   │   │   ├── enemy_charger.py           # EnemyCharger: preparación + ataque de embestida
+│   │   │   ├── enemy_archer.py            # EnemyArcher: a distancia, disparo en arco
+│   │   │   ├── enemy_brute.py             # EnemyBrute: cuerpo a cuerpo pesado + onda de choque
+│   │   │   ├── enemy_caster.py            # EnemyCaster: magia con orbe autoguiado
+│   │   │   ├── enemy_assassin.py          # EnemyAssassin: invisibilidad + estocada
+│   │   │   ├── entity_factory.py          # EntityFactory: creación de enemigos por registro
+│   │   │   ├── flight_strategies.py       # FlightStrategy: patrones de vuelo senoide/bézier/aleatorio
 │   │   │   ├── ai_predictor.py            # BehaviorPredictor: KNN+árbol recomienda táctica de enemigo, consultado en lote por SquadBrain a 4 Hz
 │   │   │   ├── tactica_por_reglas.py      # accion_por_distancia: heurística sin sklearn para el primer lote (AUD-456)
 │   │   │   ├── precarga_ia.py             # precargar_ia/ia_lista: importa sklearn en hilo para no congelar el primer lote (AUD-456)
-│   │   │   ├── bestiary.py                # Bestiary: enemy encounter/kill tracking
-│   │   │   ├── bestiary_registry.py       # BestiaryRegistry: enemy data registry
+│   │   │   ├── bestiary.py                # Bestiary: seguimiento de encuentros/muertes de enemigos
+│   │   │   ├── bestiary_registry.py       # BestiaryRegistry: registro de datos de enemigos
 │   │   │   ├── ranged_weapon.py           # ArcoDelJugador: arco del jugador, munición y flechas (F4.2)
-│   │   │   └── squad_brain.py             # SquadBrain: group enemy coordination AI
+│   │   │   └── squad_brain.py             # SquadBrain: IA de coordinación grupal de enemigos
 │   │   │
 │   │   ├── ecs/                            # F5 — entidades, componentes y sistemas
 │   │   │   ├── __init__.py                 #   Va DEBAJO de la jerarquía, no en su lugar:
@@ -280,39 +278,39 @@ legacy-of-infest/                      # Actual repo root
 │   │   │   ├── culling.py                 # AUD-279: qué se simula y qué se dibuja cerca de la cámara
 │   │   │   ├── pendientes.py             # AUD-297: suelo inclinado (Slope)
 │   │   │   ├── objetivos.py               # AUD-400: objetivos declarados en el mapa y su seguimiento (GAP-047)
-│   │   │   ├── stage_loader.py            # StageLoader: parse TMX, build layer stack, spawn
+│   │   │   ├── stage_loader.py            # StageLoader: parsea TMX, construye la pila de capas, aparece
 │   │   │   ├── stage_data.py              # AUD-350: StageData y vocabulario de Tiled (dataclasses, capas)
 │   │   │   ├── stage_objetos.py           # AUD-350: mixin ObjetosDeTiled: un manejador por objeto de Tiled
 │   │   │   ├── interactables.py           # Recogible/Cerradura/Cofre/Disparador/Llavero (F4.1)
 │   │   │   ├── bloques.py                 # PushBlock y BreakableBlock: empujar y romper (AUD-140)
 │   │   │   ├── interactable_system.py     # InteractableSystem: llaves, puertas, cofres y eventos (F4.1)
 │   │   │   ├── level_mechanics.py         # ControlDeNado, TiempoBala, ScrollForzado (F5.5/F5.6)
-│   │   │   ├── camera.py                  # Camera: viewport, parallax, follow target
-│   │   │   ├── checkpoint.py              # Checkpoint: trigger zone, respawn anchor
-│   │   │   ├── collision_system.py        # CollisionSystem: hitstop, attack processing
-│   │   │   ├── hazard_system.py           # HazardSystem: damage zones, death pits
-│   │   │   ├── progression_system.py      # ProgressionSystem: stage completion, triggers
-│   │   │   ├── drawing_system.py          # DrawingSystem: layered rendering pipeline
+│   │   │   ├── camera.py                  # Camera: viewport, parallax, sigue al objetivo
+│   │   │   ├── checkpoint.py              # Checkpoint: zona disparadora, ancla de reaparición
+│   │   │   ├── collision_system.py        # CollisionSystem: hitstop, procesamiento de ataques
+│   │   │   ├── hazard_system.py           # HazardSystem: zonas de daño, fosos de muerte
+│   │   │   ├── progression_system.py      # ProgressionSystem: finalización de escenario, disparadores
+│   │   │   ├── drawing_system.py          # DrawingSystem: tubería de dibujado por capas
 │   │   │   ├── gizmos.py                  # AUD-352: mixin GizmosDeDepuracion: cajas, flechas y conos de F1
-│   │   │   ├── cutscene_system.py         # CutsceneSystem: scripted cutscenes
+│   │   │   ├── cutscene_system.py         # CutsceneSystem: cutscenes guionizadas
 │   │   │   ├── cutscene_director.py       # CutsceneDirector: escenas declaradas en TMX (AUD-136)
 │   │   │   ├── cutscene_guion.py          # analizar_guion: texto de guion a acciones (AUD-136)
-│   │   │   ├── speedrun_mode.py           # SpeedrunTimer: global timer + ghost data
-│   │   │   ├── boss_rush_mode.py          # BossRushMode: consecutive boss gauntlet
-│   │   │   ├── day_night.py               # DayNight: day/night cycle system
-│   │   │   ├── level_metrics.py           # LevelMetrics: stage analysis metrics
-│   │   │   ├── seasons.py                 # Seasons: seasonal visual effects
-│   │   │   └── tmx_diagnostics.py         # TmxDiagnostics: TMX validation utilities
+│   │   │   ├── speedrun_mode.py           # SpeedrunTimer: cronómetro global + datos del fantasma
+│   │   │   ├── boss_rush_mode.py          # BossRushMode: enfrentamiento consecutivo de jefes
+│   │   │   ├── day_night.py               # DayNight: sistema de ciclo día/noche
+│   │   │   ├── level_metrics.py           # LevelMetrics: métricas de análisis de escenario
+│   │   │   ├── seasons.py                 # Seasons: efectos visuales estacionales
+│   │   │   └── tmx_diagnostics.py         # TmxDiagnostics: utilidades de validación de TMX
 │   │   │
 │   │   ├── ui/
 │   │   │   ├── __init__.py
-│   │   │   ├── tutorial_overlay.py        # TutorialOverlay: contextual help popups
-│   │   │   ├── dialogue_system.py         # DialogueSystem: branching dialogue with portraits
-│   │   │   └── learning_overlay.py        # LearningOverlay: academic context overlay
+│   │   │   ├── tutorial_overlay.py        # TutorialOverlay: ayudas contextuales emergentes
+│   │   │   ├── dialogue_system.py         # DialogueSystem: diálogo ramificado con retratos
+│   │   │   └── learning_overlay.py        # LearningOverlay: superposición de contexto académico
 │   │   │
 │   │   ├── audio/
 │   │   │   ├── __init__.py
-│   │   │   ├── dynamic_music.py           # DynamicMusic: cross-fade calm <-> combat
+│   │   │   ├── dynamic_music.py           # DynamicMusic: crossfade calma <-> combate
 │   │   │   └── menu_sfx.py                # AUD-345: los menús también suenan
 │   │   │
 │   │   ├── academic/
@@ -323,7 +321,7 @@ legacy-of-infest/                      # Actual repo root
 │   │   │
 │   │   ├── scenes/
 │   │   │   ├── __init__.py
-│   │   │   ├── stage_scene.py             # StageScene: main gameplay scene
+│   │   │   ├── stage_scene.py             # StageScene: la escena principal jugable
 │   │   │   └── stage_parts/               # AUD-152: mixins de lectura de StageScene
 │   │   │       ├── __init__.py            #   por qué son mixins y no colaboradores
 │   │   │       ├── ambiente.py            #   luz, bloom, viñeta y partículas: la precedencia del TMX
@@ -347,21 +345,21 @@ legacy-of-infest/                      # Actual repo root
 │   │   │
 │   │   ├── vfx/
 │   │   │   ├── __init__.py
-│   │   │   ├── particle_system.py         # ParticleSystem: emitters, bursts
+│   │   │   ├── particle_system.py         # ParticleSystem: emisores, ráfagas
 │   │   │   ├── contorno.py                # AUD-304: el contorno de silueta, sin dueño (jugador y enemigos)
 │   │   │   ├── sombras.py                 # AUD-273: la elipse bajo los pies (dónde vas a caer)
 │   │   │   ├── sombras_proyectadas.py     # AUD-278: la luz ya no atraviesa las paredes
-│   │   │   ├── hit_effects.py             # HitEffects: burst configs per hit type
-│   │   │   ├── damage_numbers.py          # DamageNumberManager: floating damage text
-│   │   │   ├── post_processing.py         # PostProcessing: bloom, vignette, motion blur
+│   │   │   ├── hit_effects.py             # HitEffects: configuraciones de ráfaga por tipo de golpe
+│   │   │   ├── damage_numbers.py          # DamageNumberManager: números de daño flotantes
+│   │   │   ├── post_processing.py         # PostProcessing: bloom, viñeta, motion blur
 │   │   │   ├── cielo.py                   #   AUD-426: cielo procedural (degradado desde la altura solar)
 │   │   │   ├── pulso.py                   #   AUD-425: el pulso visual — cámara y luz al compás
-│   │   │   ├── lighting.py                # LightSystem: 2D dynamic lighting
-│   │   │   ├── ambient_particles.py       # AmbientParticleSystem: dust, leaves, embers
-│   │   │   ├── trail_system.py            # TrailSystem: motion trails
-│   │   │   ├── fog_of_war.py              # FogOfWar: black overlay with revealed holes
-│   │   │   ├── water_effect.py            # WaterEffect: animated sine wave overlay
-│   │   │   └── weather_system.py          # WeatherSystem: rain, snow, fog effects
+│   │   │   ├── lighting.py                # LightSystem: iluminación dinámica 2D
+│   │   │   ├── ambient_particles.py       # AmbientParticleSystem: polvo, hojas, brasas
+│   │   │   ├── trail_system.py            # TrailSystem: estelas de movimiento
+│   │   │   ├── fog_of_war.py              # FogOfWar: superposición negra con huecos revelados
+│   │   │   ├── water_effect.py            # WaterEffect: superposición animada de onda senoidal
+│   │   │   └── weather_system.py          # WeatherSystem: efectos de lluvia, nieve, niebla
 │   │   │
 │   │   ├── processing/
 │   │   │   ├── __init__.py
@@ -375,7 +373,7 @@ legacy-of-infest/                      # Actual repo root
 │   │   │
 │   │   └── ai/
 │   │       ├── __init__.py
-│   │       ├── lua_script.py              # LuaScript: Lua scripting for enemy AI
+│   │       ├── lua_script.py              # LuaScript: scripting Lua para la IA de enemigos
 │   │       └── navegacion.py              # AUD-389: A* sobre tiles, con su coste medido
 │   │
 │   └── stages/
@@ -395,32 +393,32 @@ legacy-of-infest/                      # Actual repo root
 │           └── README.md
 │
 ├── scripts/                            # Scripts de herramientas
-│   ├── _cli_paths.py                   # Shared path utilities for CLI scripts
-│   ├── audit_docs_vs_code.py           # Audits doc identifiers vs actual code (regenerates docs/63)
-│   ├── build_executable.py             # Build executable from source
-│   ├── check_dependency_sync.py        # Verify dependency consistency
-│   ├── check_tmx_coverage.py           # Check TMX map coverage
-│   ├── check_translations.py           # Verify translation completeness
-│   ├── collect_palettes.py             # Collect palette data from assets
-│   ├── downloader.py                   # Asset downloader utility
-│   ├── feedback_generator.py           # Generate student feedback reports
-│   ├── generate_exam.py                # Generates practice exams from question bank
-│   ├── generate_tmx_reference.py       # Generate TMX reference documentation
-│   ├── grade_boss.py                   # Auto-grades student boss Python files
-│   ├── grade_exporter.py               # Export grades to external format
-│   ├── grade_stage.py                  # Auto-grades student stage TMX files
-│   ├── obsidianize.py                  # Convert docs to Obsidian format
-│   ├── plagiarism_detector.py          # Plagiarism detection for student work
-│   ├── preview_tmx.py                  # Preview TMX maps in terminal
-│   ├── project_stats.py                # Generate project statistics
-│   ├── train_reference_model.py        # Train reference ML model
-│   ├── validate_assets.py              # Validates fonts, models, maps
-│   └── validate_tmx.py                 # Validates TMX map files for common errors
+│   ├── _cli_paths.py                   # Utilidades de ruta compartidas para los scripts de CLI
+│   ├── audit_docs_vs_code.py           # Audita identificadores de doc contra el código real (regenera docs/63)
+│   ├── build_executable.py             # Construye el ejecutable a partir del código fuente
+│   ├── check_dependency_sync.py        # Verifica la consistencia de dependencias
+│   ├── check_tmx_coverage.py           # Comprueba la cobertura de los mapas TMX
+│   ├── check_translations.py           # Verifica que las traducciones estén completas
+│   ├── collect_palettes.py             # Recolecta datos de paleta de los assets
+│   ├── downloader.py                   # Utilidad para descargar assets
+│   ├── feedback_generator.py           # Genera informes de retroalimentación al estudiante
+│   ├── generate_exam.py                # Genera exámenes de práctica desde el banco de preguntas
+│   ├── generate_tmx_reference.py       # Genera la documentación de referencia de TMX
+│   ├── grade_boss.py                   # Califica automáticamente los ficheros Python de jefe del estudiante
+│   ├── grade_exporter.py               # Exporta calificaciones a un formato externo
+│   ├── grade_stage.py                  # Califica automáticamente los TMX de escenario del estudiante
+│   ├── obsidianize.py                  # Convierte la documentación al formato de Obsidian
+│   ├── plagiarism_detector.py          # Detección de plagio en el trabajo del estudiante
+│   ├── preview_tmx.py                  # Vista previa de mapas TMX en la terminal
+│   ├── project_stats.py                # Genera estadísticas del proyecto
+│   ├── train_reference_model.py        # Entrena el modelo de ML de referencia
+│   ├── validate_assets.py              # Valida fuentes, modelos, mapas
+│   └── validate_tmx.py                 # Valida ficheros de mapa TMX contra errores comunes
 │
-├── colab/                              # Google Colab notebooks for interactive exercises
-│   ├── 01_vector_math_exercises.ipynb  # Unit II — Vector mathematics exercises
-│   ├── 02_color_spaces_exercises.ipynb # Unit V — Color space conversion exercises
-│   └── 03_filter_kernels_exercises.ipynb# Unit VII — Convolution kernel exercises
+├── colab/                              # Notebooks de Google Colab para ejercicios interactivos
+│   ├── 01_vector_math_exercises.ipynb  # Unidad II — Ejercicios de matemática vectorial
+│   ├── 02_color_spaces_exercises.ipynb # Unidad V — Ejercicios de conversión de espacios de color
+│   └── 03_filter_kernels_exercises.ipynb# Unidad VII — Ejercicios de kernels de convolución
 │
 ├── student_templates/                  # Plantilla canónica (cada estudiante la copia a src/stages/)
 │   ├── __init__.py
@@ -444,9 +442,7 @@ legacy-of-infest/                      # Actual repo root
 │
 ├── exams/                              # Exámenes generados
 │
-├── PHASE_FIX_REPORT.md                 # Arreglos de colisión/spawn del Stage 0
 ├── KNOWN_GAPS.md                       # Huecos conocidos y su resolución
-├── REMEDIATION_PLAN.md                 # Plan de remediación en 8 fases
 │
 └── tests/                              # AUD-455: 297 ficheros de prueba reales — ver §1.1, no se enumeran todos aquí
     ├── __init__.py

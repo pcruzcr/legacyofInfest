@@ -369,7 +369,23 @@ aturdimiento), `teletransportar(x, y)` (esquina superior-izquierda), `on_attack_
 | `water_effect`, `water_speed/amplitude/frequency/alpha/tint` | Efecto de agua (AUD-240) |
 | `god_rays` | Rayos volumétricos (AUD-226) |
 
-### 7.3 Tipos de objeto de la capa `Objects` (34 del framework + 21 especies + 8 arquetipos = **65 tipos declarables**)
+### 7.3 Tipos de objeto (39 del framework + 21 especies + 8 arquetipos + `BossVenado` en `Objects`, + `Solid`/`Platform` en `Collision` = **71 tipos siempre declarables**)
+
+> **AUD-455 (2026-08-13), corregido tras leer `docs/70` §Iteración 15-16.**
+> Decía «34 del framework... = 65». `BUILTIN_OBJECT_TYPES` en
+> `src/framework/stage/tmx_diagnostics.py` tiene **39** entradas exactas. Con
+> las 21 especies, los 8 arquetipos y `BossVenado` (registrados por
+> `entity_factory.ensure_registered()` al arrancar, igual que cuenta la fila
+> «Enemigos» de la §21.1) más `Solid`/`Platform` de `Collision`, el total
+> siempre disponible es **71** — la misma cifra que ya usaba
+> `tests/test_el_inventario_cuenta_bien.py` para este alcance antes de que
+> AUD-415 corrigiera un bug de orden de ejecución (véase `docs/70`). Una
+> primera versión de esta nota decía 69 por no sumar `Solid`/`Platform`;
+> AUD-412/413 fijan que sí cuentan en el total del motor.
+> `60_GUIA_COMPLETA_DEL_MOTOR.md` §4 da **78**: cuenta además 7 tipos de
+> enemigo que sólo existen cuando se importa el paquete de su propio
+> escenario (`LaSodaWalkerRaton`, `BossRey`…) — un alcance más amplio, no una
+> contradicción.
 
 | Categoría | Tipos |
 |---|---|
@@ -685,14 +701,19 @@ Kit de demos (`demo_common.py`): `build_default_sources()`, `save_png`, `draw_to
 `SAVE_REQUESTED` `SHOW_MESSAGE` `HIDE_MESSAGE` `SHOW_DIALOGUE` `DIALOGUE_FINISHED`
 `ACHIEVEMENT_UNLOCKED` `ACHIEVEMENT_PROGRESS`.
 
-**SFX (41):** `SFX_PLAYER_JUMP/LAND/FOOTSTEP/SHORT_ATTACK/LONG_ATTACK/HURT/DIE/PARRY/CROUCH/HEAL`,
+**SFX (39, más `MUSIC_STINGER` aparte):** `SFX_PLAYER_JUMP/LAND/FOOTSTEP/SHORT_ATTACK/LONG_ATTACK/HURT/DIE/PARRY/CROUCH/HEAL`,
 `SFX_MENU_HOVER/CONFIRM/CANCEL`, `SFX_HIT_CONNECT`, `SFX_ENEMY_HIT`, `SFX_ENEMY_DIE_SMALL/LARGE`,
 `SFX_PROJECTILE_FIRE`, `SFX_CHECKPOINT`, `SFX_STAGE_BANNER/COMPLETE`, `SFX_HAZARD_ZONE`,
 `SFX_BOSS_HIT`, `SFX_BOSS_PHASE_CHANGE`, `SFX_UI_GAME_OVER`,
 `SFX_ENVIRONMENT_SCREEN_SHAKE/ONE_WAY_PLATFORM`, `SFX_ENEMIES_PROJECTILE_HIT_WALL`,
 `SFX_BOSSES_GAVILAN_DIVE/MASK_BEAM`, `SFX_BOSSES_PABURU_EYE_BEAM/WAVE`,
 `SFX_BOSSES_RELIC_APPEAR`, `SFX_BOSSES_REY_SPIT/SPLIT`,
-`SFX_BOSSES_VENADO_CHARGE/STOMP/VINE`, `MUSIC_STINGER`.
+`SFX_BOSSES_VENADO_CHARGE/STOMP/VINE`, `SFX_VOZ_PABURU` (AUD-443: se emite ya; sin muestra en el
+banco todavía, a propósito — falta el `.wav` de autor), `MUSIC_STINGER`.
+
+> **AUD-455 (2026-08-13).** Decía «SFX (41)» y faltaba `SFX_VOZ_PABURU` en la
+> lista. Recontado contra las constantes `SFX_*` de `src/engine/core/events.py`
+> (39 exactas) más `MUSIC_STINGER`, que no lleva el prefijo y se cuenta aparte.
 
 **VFX:** `VFX_PARRY` `VFX_CHARGE` `VFX_SLAM` `VFX_ULTIMATE` `VFX_BUBBLE`.
 
@@ -887,7 +908,7 @@ de la cola de eventos pygame antes de cada test.
 | Jugador | 26 estados; 5.0 HP; combate completo; arco; estamina opt-in |
 | Enemigos | 30 tipos registrados (8 arquetipos + 21 especies + jefe ref) sobre 13 estados; squad brain con sklearn (lote 9 filas: 1.82 ms vs 11.87 ms) |
 | Jefes | Fases, telegrafía, puntos débiles, parry, invocaciones, arena |
-| TMX | 34 tipos + 21 especies + 8 arquetipos declarables; 17+ propiedades; 8 capas |
+| TMX | 39 tipos del framework + 21 especies + 8 arquetipos + `BossVenado`, más `Solid`/`Platform` en `Collision` (71 declarables; ver §7.3); 17+ propiedades; 8 capas |
 | Mecánicas F5 | 11/11 en el motor (stage_mecanicas las enseña) |
 | VFX | Luz, bloom, viñeta, clima, partículas, día/noche, estaciones, niebla, agua, estelas, números de daño |
 | Persistencia | Atómica, hostil-probada |
@@ -940,8 +961,11 @@ de la cola de eventos pygame antes de cada test.
 - Conteos de estados: docs 19/25/26 según edición; **el código tiene 26**.
 - `EnemyState`: 4 miembros en 22_API vs **13 en código**.
 - Brute HP: 6.0 en GDD vs **5.0 en código**.
-- Conteos de tipos: doc 60 dice 73/37, doc 62 dice 62/30; **el código declara 65** (34 + 2
-  colisión + 8 arquetipos + 21 especies).
+- Conteos de tipos: doc 62 dice 62/30; **el código declara 39 tipos de framework** (+ 2 de
+  colisión + 8 arquetipos + 21 especies + `BossVenado` = 71 siempre disponibles; ver la
+  corrección de la §7.3). *(Nota 2026-08-13: la comparación con «doc 60 dice 73/37» ya no
+  aplica — ese documento se recontó y ahora dice 78, con `docs/70` AUD-412/413 como fuente,
+  con un alcance más amplio explicado en la §7.3.)*
 - README (histórico): "1.333 tests ES / 640 EN"; real ~2.872.
 
 ### 21.5 No implementado por decisión (no es deuda, es diseño)

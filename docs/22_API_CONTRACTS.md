@@ -3214,14 +3214,23 @@ class DebugOverlay:
 
     def draw(self, surface: pygame.Surface, fps: float, ...) -> None: ...
     # F11: alterna la superposición
-    # F4: instantánea de la cola de eventos
-    # F5: lista de escenas registradas
-    # F6: navegador del árbol de dependencias de módulos
+    # F12: rota el nivel del árbol de módulos (5 niveles fijos, ver abajo)
 ```
 
 > **AUD-307.** El overlay no expone `toggle()` ni `update(dt)`; alterna por
 > entrada (`handle_input`) y su estado es la propiedad `visible` (antes
 > `is_active`).
+>
+> **AUD-455 (2026-08-13).** Las teclas F4/F5/F6 para «cola de eventos»,
+> «lista de escenas» y «árbol de módulos» no existen — son exactamente las
+> tres teclas que el código evita a propósito por chocar con las lecciones
+> del curso (`LEARN_COLLISION`/`LEARN_FSM`/`LEARN_RENDER`; comentario en
+> `debug_overlay.py:102-104`). Sólo hay dos teclas: `TECLA_CONSOLA = F11`
+> (abre/cierra) y `TECLA_ARBOL = F12` (rota `_tree_level` entre los cinco
+> `TREE_LEVELS` fijos: `Engine/Core`, `Engine/IO`, `Framework/Scenes`,
+> `Framework/Entities`, `Framework/Processing`). No hay instantánea de cola
+> de eventos ni lista de escenas registradas en este overlay. Verificado
+> contra `src/engine/scenes/debug_overlay.py`.
 
 ### 17.3 `src/engine/scenes/param_panel.py`
 

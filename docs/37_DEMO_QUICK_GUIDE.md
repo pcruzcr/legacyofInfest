@@ -3,7 +3,7 @@ document_id: "LOI-DEMO-037"
 title: "Legacy of InFest — Guía Rápida de Demos Académicas"
 aliases: ["Demo Quick Guide"]
 tags: ["demo", "quick", "guide"]
-description: "Quick reference for using the demos"
+description: "Referencia rápida para usar las demos"
 source: "docs/37_DEMO_QUICK_GUIDE.md"
 date_processed: "2026-07-14"
 ---

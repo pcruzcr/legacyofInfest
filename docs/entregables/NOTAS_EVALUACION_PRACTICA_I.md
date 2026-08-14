@@ -3,7 +3,7 @@ document_id: "LOI-ENTREGABLES-NOTAS_EVALUACION_PRACTICA_I"
 title: "Evaluación Práctica I — notas por estudiante"
 aliases: ["Notas Evaluacion Practica I", "NOTAS_EVALUACION_PRACTICA_I"]
 tags: ["deliverable", "assignment"]
-description: "Entregables document: NOTAS_EVALUACION_PRACTICA_I"
+description: "Documento de entregables: NOTAS_EVALUACION_PRACTICA_I"
 source: "docs/entregables/NOTAS_EVALUACION_PRACTICA_I.md"
 date_processed: "2026-08-06"
 ---
