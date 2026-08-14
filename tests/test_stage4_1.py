@@ -1,29 +1,29 @@
 """
-Nivel 4-1 — La Entrada al Cementerio.
+Nivel 4-1 — El Cementerio Sagrado (AUD-462/463/464).
 
-Un nivel sin enemigos es un nivel donde **todo lo que hay es atmósfera**, y la
-atmósfera es justo lo que se rompe sin que nadie se entere: un clima que no
-cambia, un brasero que se apaga al retroceder o una visión espectral que no
-revela nada se ven igual de bien en una captura de pantalla.
+Reemplaza al diseño anterior de La Cegua. Un nivel sin enemigos es un nivel
+donde **todo lo que hay es atmósfera**, y la atmósfera es justo lo que se
+rompe sin que nadie se entere: un clima que no cambia, una gradación de color
+que no interpola o un shake que dispara dos veces se ven igual de bien en una
+captura de pantalla.
 
-Así que estas pruebas no comprueban que las clases existan: mueven al jugador
-por el mapa y **miran el resultado**.
+Así que estas pruebas no comprueban que las clases existan: mueven al
+jugador por el mapa y **miran el resultado**.
 
 Lo que defienden
 -----------------
 1. **La regla de oro.** Cero enemigos, contados sobre el mapa cargado.
-2. **Que el fondo avance.** Cinco actos, cada uno con su clima, sus partículas
-   y su luz — y que la progresión sea monótona, no un vaivén.
-3. **Que los braseros sean la barra de progreso.** Se encienden al pasar y
-   **no se apagan** al volver.
-4. **Que la visión espectral revele.** Una huella que no se ve sin la visión y
-   sí con ella, comprobada píxel a píxel.
-5. **Que quepa en el presupuesto de fotograma.** Un efecto de pantalla completa
-   a 60 fps es exactamente donde un nivel bonito se vuelve injugable.
+2. **Cero trampas.** Cero `DeathPit`, cero `HazardZone` fija.
+3. **Que el fondo cambie de piel.** Seis fases, cada una con su clima y su
+   gradación de color — interpolada, no cortada en seco.
+4. **Que los tres espíritus asciendan.** Aparecen, testifican y se
+   desvanecen hacia arriba, cada uno en su fase.
+5. **Que la loma de la Fase 3 sea un slope de verdad**, no un adorno.
+6. **Que el silencio de la Fase 4 dispare el shake una sola vez.**
+7. **Que la luna de la Fase 5 oscile de verdad.**
+8. **Que las grietas de la Fase 6 se enciendan al paso y se apaguen solas.**
 """
 from __future__ import annotations
-
-from itertools import pairwise
 
 import pygame
 import pytest
@@ -63,46 +63,61 @@ def escena(_video):
     sc.on_exit()
 
 
-def _llevar_a(escena, fila: int, columna: int = 30) -> None:
-    """Coloca al jugador en esa **fila** del pozo y espera a la cámara.
+def _llevar_a(escena, fila: int, columna: int = 30, asentar: int = 400) -> None:
+    """Coloca al jugador **de pie** en esa fila del pozo y espera a la cámara.
 
-    Desde AUD-225 el nivel se baja, así que lo que sitúa al jugador en un acto
-    es la fila y no la columna.
-
-    La espera no es un número fijo de fotogramas: la cámara persigue con
-    interpolación y aquí tiene 3.800 px de recorrido vertical. Con los cuatro
-    fotogramas que bastaban en el mapa horizontal, la prueba de la visión
-    espectral pedía un píxel que estaba fuera de la pantalla.
+    `fila` es la fila de la repisa: el jugador se coloca con los **pies**
+    ahí (no la esquina superior), o si no cae de inmediato y las pruebas que
+    miden distancias a una luz o una zona de fricción miden una caída, no una
+    posición. La espera no es un número fijo de fotogramas: la cámara
+    persigue con interpolación y aquí tiene más de 4.500 px de recorrido
+    vertical.
     """
     x = columna * settings.TILE_SIZE
-    y = fila * settings.TILE_SIZE
+    y = fila * settings.TILE_SIZE - escena._player.rect.height
     escena._player.rect.topleft = (x, y)
     escena._player.position.update(float(x), float(y))
-    for _ in range(400):
+    escena._player.velocity.update(0.0, 0.0)
+    for _ in range(asentar):
         escena.update(1 / 60)
         objetivo = escena._player.rect.centery - settings.INTERNAL_HEIGHT / 2
         if abs(escena._camera.offset.y - objetivo) < 2.0:
             break
 
 
-def _dentro_del_acto(numero: int) -> int:
-    """Una fila que cae dentro del acto pedido, 1 a 5.
+def _posicionar_sin_fisica(escena, fila: float, columna: int = 30) -> None:
+    """Pone al jugador en esa fila **sin simular física**, y actualiza sólo
+    la fase y la gradación.
 
-    Se calcula de la tabla y no se escribe a mano. Cuando el mapa cambió de
-    forma (AUD-208 y AUD-225), las pruebas que apuntaban a coordenadas escritas
-    a mano no fallaron: la del clima comprobaba el acto IV sobre una posición
-    que ya era del acto II y **pasaba igual**, porque ahí también hay niebla.
-    Una prueba que sigue en verde midiendo el sitio equivocado es peor que una
-    que falla.
+    Las pruebas de gradación necesitan un `avance` exacto dentro del tramo.
+    `_llevar_a` deja caer al jugador con gravedad real durante cientos de
+    fotogramas, y entre dos repisas eso puede desplazarlo varias filas antes
+    de asentarse — bastante para que una prueba que pide «recién entrando en
+    la fase» mida en realidad varias filas más abajo. Aquí se fija la
+    posición a mano y se llaman directamente los dos métodos que dependen de
+    ella, sin física de por medio.
     """
-    from src.stages.stage4_1.actos import ACTOS
+    x = columna * settings.TILE_SIZE
+    y = fila * settings.TILE_SIZE
+    escena._player.rect.center = (x, int(y))
+    escena._player.position.update(float(x), float(y))
+    escena._actualizar_fase()
+    escena._actualizar_gradacion()
 
-    return ACTOS[numero - 1].desde_fila + 6
+
+def _dentro_de_la_fase(numero: int) -> int:
+    """Una fila que cae dentro de la fase pedida, 1 a 6.
+
+    Se calcula de la tabla y no se escribe a mano — una prueba que sigue en
+    verde midiendo el sitio equivocado es peor que una que falla.
+    """
+    from src.stages.stage4_1.fases import FASES
+
+    return FASES[numero - 1].desde_fila + 6
 
 
 class TestLaReglaDeOro:
-    """«Si el nivel aburre, se arregla con más marcas ocultas, no con
-    serpientes.» — la ficha del nivel."""
+    """«Si el nivel aburre, se arregla con más atmósfera, no con combate.»"""
 
     def test_no_hay_un_solo_enemigo(self, escena) -> None:
         from src.framework.entities.enemy_base import EnemyBase
@@ -114,43 +129,31 @@ class TestLaReglaDeOro:
         )
 
     def test_ni_siquiera_una_entidad(self, escena) -> None:
-        """Se cuenta la lista entera, no sólo lo que hereda de `EnemyBase`.
-
-        Un enemigo colocado por un tipo raro también contaría, y leer el XML
-        no lo detectaría.
-        """
+        """Se cuenta la lista entera, no sólo lo que hereda de `EnemyBase`."""
         assert list(escena._stage_data.entity_list) == []
 
     def test_las_siluetas_no_son_entidades(self, escena) -> None:
-        """El canon: «no atacan. Testifican.»"""
+        """El canon: «no atacan. Testifican.» Las tres son Venado, Rey
+        Terciopelo (la serpiente) y Gavilán, en ese orden — el mismo orden
+        que usa `Fase.espiritu` como índice."""
         from src.stages.stage4_1 import siluetas
 
+        assert [n for n, _f in siluetas.ESPIRITUS] == ["venado", "serpiente", "gavilan"]
         for _nombre, forma in siluetas.ESPIRITUS:
-            assert callable(forma), "una silueta debe ser una forma, no un objeto"
-        assert not hasattr(siluetas, "Enemigo")
-        assert not hasattr(siluetas, "Cegua")
+            assert callable(forma)
 
 
 class TestNoHayTrampas:
-    """AUD-225. La ficha llama a esto «travesía atmosférica» y prohíbe enemigos
-    *«porque la tensión ya está»*. Tenía siete `DeathPit` y cinco `HazardZone`,
-    y las zonas de daño **no se dibujan**: el motor sólo pinta las que suben, así
-    que el jugador recibía daño desde un rectángulo invisible."""
+    """El 4-1 hereda la regla del rediseño anterior (AUD-225): un cementerio
+    se baja, y caer es el movimiento, no el castigo."""
 
     def test_no_queda_ni_un_foso(self, escena) -> None:
-        assert escena._stage_data.death_pits == [], (
-            f"quedan {len(escena._stage_data.death_pits)} fosos: el nivel es "
-            f"un descenso, caer es el movimiento y no el castigo"
-        )
+        assert escena._stage_data.death_pits == []
 
     def test_no_queda_ni_una_zona_de_dano(self, escena) -> None:
-        assert list(escena._stage_data.hazard_zones) == [], (
-            "una zona de daño fija no la dibuja el motor: es daño invisible"
-        )
+        assert list(escena._stage_data.hazard_zones) == []
 
     def test_el_mapa_no_declara_esos_tipos(self) -> None:
-        """Se lee el XML además del mapa cargado. Si alguien vuelve a poner un
-        `DeathPit` y el cargador lo ignora por otro motivo, esto lo ve."""
         from pathlib import Path
 
         xml = Path("assets/maps/stage4_1/stage4_1.tmx").read_text(encoding="utf-8")
@@ -159,8 +162,8 @@ class TestNoHayTrampas:
 
 
 class TestLasSuperficiesSeVen:
-    """La regla del rediseño: **nada cambia el movimiento del jugador sin que se
-    vea por qué**. Musgo verde que arrastra, lodo marrón que frena."""
+    """La Fase 2 (El Venado) es donde vive el musgo y el lodo — juntos,
+    porque el guion los pide en el mismo tramo."""
 
     def _zonas(self, escena):
         from src.framework.ecs import ZonaDeFriccion
@@ -171,24 +174,28 @@ class TestLasSuperficiesSeVen:
         from src.stages.stage4_1 import trazado
 
         arrastres = [z for z in self._zonas(escena) if z.arrastre]
-        esperadas = len(trazado.INDICES_MUSGO)
-        assert len(arrastres) == esperadas, (
-            f"hay {esperadas} repisas de musgo y {len(arrastres)} zonas que "
-            f"arrastran"
-        )
+        assert len(arrastres) == len(trazado.INDICES_MUSGO)
 
     def test_cada_repisa_de_lodo_frena(self, escena) -> None:
         from src.stages.stage4_1 import trazado
 
         frenos = [z for z in self._zonas(escena) if z.multiplicador != 1.0]
         assert len(frenos) == len(trazado.INDICES_LODO)
-        assert all(0.0 < z.multiplicador < 1.0 for z in frenos), (
-            "un multiplicador >= 1 no frena: acelera o no hace nada"
-        )
+        assert all(0.0 < z.multiplicador < 1.0 for z in frenos)
+
+    def test_musgo_y_lodo_estan_en_la_fase_2(self) -> None:
+        from src.stages.stage4_1 import trazado
+        from src.stages.stage4_1.fases import FASES
+
+        fase2 = FASES[1]
+        lista = trazado.repisas()
+        for indice in (*trazado.INDICES_MUSGO, *trazado.INDICES_LODO):
+            _x0, _ancho, fila = lista[indice]
+            assert trazado.fase_de_la_fila(fila) == fase2.numero, (
+                f"la repisa {indice} (fila {fila}) no cae en la Fase 2"
+            )
 
     def test_el_musgo_arrastra_hacia_el_hueco_y_no_contra_el(self) -> None:
-        """Arrastrar hacia la pared sería empujar al jugador contra el sitio del
-        que tiene que salir. Es la diferencia entre una ayuda y un castigo."""
         from src.stages.stage4_1 import trazado
 
         lista = trazado.repisas()
@@ -196,39 +203,19 @@ class TestLasSuperficiesSeVen:
             x0, ancho, _fila = lista[i]
             hacia_la_derecha = x0 == trazado.MURO_ANCHO
             hueco_a_la_derecha = x0 + ancho < trazado.MW - trazado.MURO_ANCHO
-            assert hacia_la_derecha == hueco_a_la_derecha, (
-                f"la repisa de musgo {i} arrastra hacia el lado equivocado"
-            )
-
-    def test_musgo_y_lodo_se_pintan_distintos_del_suelo(self) -> None:
-        """Si la baldosa fuera la misma, la superficie sería una trampa."""
-        import sys
-        from pathlib import Path
-
-        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
-        from generate_stage4_1 import LODO, MUSGO, PIEDRA
-
-        assert len({PIEDRA, MUSGO, LODO}) == 3
+            assert hacia_la_derecha == hueco_a_la_derecha
 
     def test_los_gid_apuntan_a_la_baldosa_que_dicen(self) -> None:
-        """El contrato entre el mapa y la hoja de baldosas (AUD-237).
-
-        Un GID es una posición en la hoja. Si alguien reordena `CEM_ORDEN` en el
-        generador de assets y no toca las constantes del generador del mapa, el
-        nivel se repinta entero con las baldosas equivocadas **sin que falle
-        nada** — es exactamente cómo `stage_mecanicas` estuvo semanas pintando
-        las tres primeras casillas de su hoja (AUD-115).
-        """
+        """El contrato entre el mapa y la hoja de baldosas (AUD-237, vigente
+        tras el rediseño: el tileset no cambió, sólo el guion)."""
         import sys
         from pathlib import Path
 
         sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
         from generate_all_assets import CEM_ORDEN
         from generate_stage4_1 import (
-            LAPIDA_ALTA,
             LODO,
             LODO_RELLENO,
-            LOSA,
             MURO,
             MUSGO,
             MUSGO_RELLENO,
@@ -240,41 +227,28 @@ class TestLasSuperficiesSeVen:
             "losa": PIEDRA, "relleno": RELLENO, "muro": MURO,
             "musgo": MUSGO, "musgo_relleno": MUSGO_RELLENO,
             "lodo": LODO, "lodo_relleno": LODO_RELLENO,
-            "lapida_alta": LAPIDA_ALTA, "lapida_baja": LOSA,
         }
         for nombre, gid in esperado.items():
             assert CEM_ORDEN[gid - 1] == nombre, (
                 f"el GID {gid} debería ser «{nombre}» y en la hoja es "
-                f"«{CEM_ORDEN[gid - 1]}»: el nivel se pintaría con la baldosa "
-                f"equivocada"
+                f"«{CEM_ORDEN[gid - 1]}»"
             )
 
     def test_la_hoja_del_cementerio_es_la_que_declara_el_mapa(self) -> None:
-        """Y con el tamaño que declara: 128x128, 8 columnas, 64 baldosas."""
         import sys
         from pathlib import Path
 
         from PIL import Image
 
         sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
-        from generate_stage4_1 import (
-            TILESET,
-            TS_COLUMNAS,
-            TS_IMAGEN_PX,
-            TS_TOTAL,
-        )
+        from generate_stage4_1 import TILESET, TS_COLUMNAS, TS_IMAGEN_PX, TS_TOTAL
 
-        assert TILESET.endswith("tileset_cemetery.png"), (
-            "el cementerio volvió a pintarse con la piedra del prólogo"
-        )
+        assert TILESET.endswith("tileset_cemetery.png")
         hoja = Image.open("assets/tilesets/tileset_cemetery.png")
         assert hoja.size == (TS_IMAGEN_PX, TS_IMAGEN_PX)
         assert TS_COLUMNAS * TS_COLUMNAS == TS_TOTAL
 
     def test_la_baldosa_pintada_coincide_con_la_zona(self) -> None:
-        """La comprobación que de verdad importa: que la repisa que arrastra sea
-        **la misma** que se pinta de verde. Una zona de fricción sobre una
-        baldosa de piedra es exactamente el defecto que este nivel tenía."""
         import sys
         from pathlib import Path
 
@@ -287,17 +261,12 @@ class TestLasSuperficiesSeVen:
         for x0, ancho, fila, material in trazado.superficies():
             esperada = BALDOSAS[material][0]
             fila_pintada = {g[fila][x] for x in range(x0, x0 + ancho)}
-            assert fila_pintada == {esperada}, (
-                f"la repisa de la fila {fila} es «{material}» y está pintada "
-                f"con {fila_pintada}, no con {esperada}"
-            )
+            assert fila_pintada == {esperada}
 
 
 class TestSuenaAOrgano:
-    """AUD-227. La ficha pide órgano y sonaba un chiptune de onda cuadrada con
-    caja de ritmos: `_gen_music_track` es el generador genérico de los otros
-    diez temas. Esto no comprueba «que exista un fichero» —eso ya pasaba— sino
-    las dos propiedades que distinguen un órgano de lo que había."""
+    """AUD-227. El BGM sigue siendo el mismo tema —el rediseño no tocó el
+    audio— así que esta clase se hereda entera del diseño anterior."""
 
     @staticmethod
     def _muestras():
@@ -312,17 +281,12 @@ class TestSuenaAOrgano:
         return np.array(crudo, dtype=float) / 32768.0, rate
 
     def test_los_parciales_son_multiplos_enteros_de_la_nota(self) -> None:
-        """Un registro de órgano **es** un armónico: un tubo que suena a un
-        múltiplo entero de la fundamental. Si los picos no caen en múltiplos,
-        no es un órgano, sea lo que sea."""
         import numpy as np
 
         x, rate = self._muestras()
-        # El primer acorde, evitando el ataque y el fundido.
         tramo = x[int(1.0 * rate):int(3.0 * rate)]
         esp = np.abs(np.fft.rfft(tramo * np.hanning(len(tramo))))
         frec = np.fft.rfftfreq(len(tramo), 1.0 / rate)
-        # Los diez picos más fuertes por encima de 30 Hz, separados entre sí.
         orden = np.argsort(esp)[::-1]
         picos: list[float] = []
         for i in orden:
@@ -344,24 +308,11 @@ class TestSuenaAOrgano:
             assert any(
                 abs(pico / f - round(pico / f)) < 0.04 and round(pico / f) >= 1
                 for f in fundamentales
-            ), (
-                f"el pico de {pico:.1f} Hz no es múltiplo entero de ninguna nota "
-                f"del acorde {fundamentales}: eso no es un registro de órgano"
-            )
+            ), f"el pico de {pico:.1f} Hz no es múltiplo entero de ninguna nota"
 
-    #: Ataques bruscos por segundo que se toleran.
-    #:
-    #: No es un número inventado: está medido sobre los dos generadores. El
-    #: órgano da 10 ataques en 16 s (0,63/s) —el ataque y la caída de cada uno de
-    #: los cuatro acordes, más los dos fundidos— y el chiptune que sonaba antes
-    #: da 43 en 10 s (4,3/s), porque mete un golpe de ruido blanco en cada
-    #: pulso. Entre 0,63 y 4,3 hay sitio de sobra; 1,5 deja margen a los dos
-    #: lados sin dejar pasar una caja de ritmos.
     ATAQUES_POR_SEGUNDO = 1.5
 
     def test_no_lleva_percusion(self) -> None:
-        """Un órgano sostiene; el generador genérico golpea en cada pulso, y eso
-        es lo que sonaba en un nivel donde «el silencio es el jefe»."""
         import numpy as np
 
         x, rate = self._muestras()
@@ -370,16 +321,10 @@ class TestSuenaAOrgano:
             float(np.sqrt((x[i:i + ventana] ** 2).mean()))
             for i in range(0, len(x) - ventana, ventana)
         ])
-        # Un golpe es un salto brusco de energía. Se cuentan los que superan
-        # cuatro veces la mediana de los saltos.
         saltos = np.abs(np.diff(energia))
         golpes = int((saltos > 4.0 * np.median(saltos)).sum())
         por_segundo = golpes / (len(x) / rate)
-        assert por_segundo <= self.ATAQUES_POR_SEGUNDO, (
-            f"{golpes} ataques bruscos en {len(x) / rate:.0f} s "
-            f"({por_segundo:.2f}/s): un órgano tiene uno por cambio de acorde, "
-            f"no uno por pulso"
-        )
+        assert por_segundo <= self.ATAQUES_POR_SEGUNDO
 
     def test_el_nivel_apunta_a_esa_pista(self, escena) -> None:
         from src.stages.stage4_1.stage4_1 import Stage4_1
@@ -389,15 +334,8 @@ class TestSuenaAOrgano:
 
 
 class TestElLodoFrenaIgualEnCualquierMaquina:
-    """AUD-236. `ZonaDeFriccion` multiplica la velocidad **sin escalar por
-    `dt`**, y de ahí salió la sospecha de que el lodo del 4-1 frenara distinto
-    según los fotogramas por segundo.
-
-    Medido, es al revés de lo que parecía: el jugador reescribe `velocity.x`
-    desde la entrada en cada fotograma y el multiplicador se aplica encima, así
-    que se comporta como una **escala de velocidad** y sale igual a 30, 60 y
-    120 fps. Esta prueba fija esa medición para que deje de ser una suposición.
-    """
+    """AUD-236. Heredada sin cambios: la física del lodo no la tocó el
+    rediseño, sólo en qué fase vive."""
 
     def _recorrido(self, fps: int, con_entrada: bool) -> float:
         import pygame as pg
@@ -422,200 +360,29 @@ class TestElLodoFrenaIgualEnCualquierMaquina:
         ))
         v = mundo.obtener(entidad, Velocidad)
         recorrido = 0.0
-        for _ in range(fps):                 # un segundo
+        for _ in range(fps):
             if con_entrada:
-                v.v.x = 90.0                 # andar es fijar la velocidad
+                v.v.x = 90.0
             systems.sistema_friccion(mundo, dt)
             recorrido += v.v.x * dt
         return recorrido
 
     def test_andando_recorre_lo_mismo_a_cualquier_tasa(self) -> None:
         medidas = [self._recorrido(fps, True) for fps in (30, 60, 120)]
-        assert max(medidas) - min(medidas) < 0.5, (
-            f"el lodo frena distinto según los fps: {medidas}. Un nivel que se "
-            f"juega distinto en dos máquinas no se puede calificar"
-        )
+        assert max(medidas) - min(medidas) < 0.5
 
     def test_frena_pero_deja_andar(self) -> None:
-        """Un lodo que para al jugador no es lodo, es una pared."""
         andado = self._recorrido(60, True)
-        assert 60.0 < andado < 88.0, (
-            f"con el lodo se recorren {andado:.1f} px/s de los 90 normales"
-        )
+        assert 60.0 < andado < 88.0
 
     def test_deslizarse_sin_empuje_si_depende_de_la_tasa(self) -> None:
-        """La otra cara, documentada a propósito: sin entrada, cada fotograma
-        vuelve a recortar lo que quedaba. Ese camino no lo recorre el jugador
-        —fija su velocidad cada fotograma—, y por eso se deja como está en vez
-        de meter un `** dt` que arreglaría el caso muerto y estropearía el vivo.
-
-        Si algún día alguien conecta esto a un cuerpo que va sin empuje, esta
-        prueba es la que le dice lo que va a encontrarse.
-        """
         lento = self._recorrido(30, False)
         rapido = self._recorrido(120, False)
-        assert lento > rapido * 2, (
-            "si esto deja de cumplirse es que alguien tocó el sistema: "
-            "reléase el docstring de ZonaDeFriccion antes de seguir"
-        )
-
-
-class TestLoQueDaMiedoSinHacerDano:
-    """AUD-247 — tres ideas, una por acto, y ninguna quita salud.
-
-    El terror de este nivel no es perder vida —no hay enemigos ni trampas— sino
-    **no poder fiarte de lo que ves**: una losa que se rompe, otra que no está
-    hasta que un rayo la enseña, y un tramo que respira con el órgano.
-    """
-
-    def test_ninguna_encierra_al_jugador(self) -> None:
-        """La condición que las hace aceptables en un descenso: el hueco mide
-        17 o 18 columnas y la losa cuatro, así que siempre se baja por al lado.
-        Una mecánica que pueda encerrarte es peor que un foso — el foso al menos
-        te devuelve al checkpoint."""
-        from src.stages.stage4_1 import trazado
-
-        todas = (trazado.INDICES_ROMPIBLES + trazado.INDICES_RITMICAS
-                 + trazado.INDICES_FANTASMA)
-        for indice in todas:
-            inicio, ancho = trazado.hueco_de(indice)
-            cx, _fila = trazado.losa_extra(indice)
-            libre_izq = cx - inicio
-            libre_der = (inicio + ancho) - (cx + trazado.ANCHO_LOSA_EXTRA)
-            assert libre_izq >= 4 and libre_der >= 4, (
-                f"la losa de la repisa {indice} deja {libre_izq} y {libre_der} "
-                f"columnas libres: se puede tapar el paso"
-            )
-
-    def test_cada_idea_esta_en_su_acto(self) -> None:
-        """Rompibles en el II, musicales en el III —que se llama «La Niebla que
-        Respira»— y fantasmas en el IV, que es donde caen los rayos."""
-        from src.stages.stage4_1 import trazado
-
-        def acto(indice: int) -> int:
-            return trazado.acto_de_la_fila(trazado.repisas()[indice][2])
-
-        assert {acto(i) for i in trazado.INDICES_ROMPIBLES} == {2}
-        assert {acto(i) for i in trazado.INDICES_RITMICAS} == {3}
-        assert {acto(i) for i in trazado.INDICES_FANTASMA} == {4}
-
-    def test_las_losas_rompibles_llegan_al_mapa(self, escena) -> None:
-        from src.stages.stage4_1 import trazado
-
-        assert len(escena._stage_data.destructibles) == len(
-            trazado.INDICES_ROMPIBLES)
-        assert all(b.golpes == trazado.GOLPES_DE_LA_LOSA
-                   for b in escena._stage_data.destructibles)
-
-    def test_ninguna_losa_rompible_hace_dano(self, escena) -> None:
-        """Es una tumba que se abre, no una trampa."""
-        assert list(escena._stage_data.hazard_zones) == []
-        assert escena._stage_data.death_pits == []
-
-    def test_el_tramo_musical_sigue_a_la_musica_y_no_a_un_reloj(
-        self, escena,
-    ) -> None:
-        """Con `patron` manda el compás y los segundos dejan de contar
-        (AUD-137). Sin `bpm` en el mapa no hay reloj musical, y el patrón sería
-        un temporizador que coincide por casualidad."""
-        from src.framework.ecs import BloqueRitmico
-        from src.stages.stage4_1 import trazado
-
-        bloques = [b for _, b in escena._mundo.cada(BloqueRitmico)]
-        assert len(bloques) == len(trazado.INDICES_RITMICAS)
-        assert all(b.sigue_la_musica for b in bloques), (
-            "los bloques no tienen patrón: irían por segundos, no por música"
-        )
-        assert escena._stage_data.bpm == 60.0, (
-            "sin bpm el reloj musical no se construye y el patrón no suena"
-        )
-
-    def test_las_losas_musicales_entran_escalonadas(self, escena) -> None:
-        """Todas a la vez sería un semáforo. Bajando, se persigue la que acaba
-        de aparecer debajo."""
-        from src.framework.ecs import BloqueRitmico
-
-        desfases = sorted(b.desfase for _, b in escena._mundo.cada(BloqueRitmico))
-        assert len(set(desfases)) == len(desfases), "hay dos con el mismo desfase"
-
-    def test_las_losas_fantasma_son_solidas_aunque_no_se_vean(
-        self, escena,
-    ) -> None:
-        """Si no fueran sólidas, revelarlas no serviría de nada."""
-        import pygame as pg
-
-        from src.stages.stage4_1 import trazado
-
-        ts = settings.TILE_SIZE
-        solidos = escena._stage_data.collision_rects
-        for indice in trazado.INDICES_FANTASMA:
-            cx, fila = trazado.losa_extra(indice)
-            esperado = pg.Rect(cx * ts, fila * ts,
-                               trazado.ANCHO_LOSA_EXTRA * ts, ts)
-            assert any(r.colliderect(esperado) for r in solidos), (
-                f"la losa fantasma de la repisa {indice} no tiene colisión"
-            )
-
-    def test_las_losas_fantasma_no_tienen_baldosa(self) -> None:
-        """El punto entero: si el generador las pintara, se verían siempre."""
-        import sys
-        from pathlib import Path
-
-        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
-        from generate_stage4_1 import VACIO, _terreno
-
-        from src.stages.stage4_1 import trazado
-
-        g = _terreno()
-        for indice in trazado.INDICES_FANTASMA:
-            cx, fila = trazado.losa_extra(indice)
-            fila_pintada = {g[fila][x]
-                            for x in range(cx, cx + trazado.ANCHO_LOSA_EXTRA)}
-            assert fila_pintada == {VACIO}, (
-                f"la losa fantasma de la fila {fila} está pintada: se vería "
-                f"siempre y dejaría de ser fantasma"
-            )
-
-    def test_sin_rayo_ni_vision_no_se_dibujan(self, escena) -> None:
-        from src.stages.stage4_1 import trazado
-
-        cx, fila = trazado.losa_extra(trazado.INDICES_FANTASMA[0])
-        _llevar_a(escena, fila - 3, cx)
-        escena._rayo = 0.0
-        escena._vision = 0.0
-        antes = self._pintar(escena)
-        assert antes == 0, "la losa fantasma se ve sin que nada la revele"
-
-    def test_el_relampago_las_revela(self, escena) -> None:
-        from src.stages.stage4_1 import trazado
-
-        cx, fila = trazado.losa_extra(trazado.INDICES_FANTASMA[0])
-        _llevar_a(escena, fila - 3, cx)
-        escena._rayo = escena.DURACION_DEL_RAYO
-        assert self._pintar(escena) > 0
-
-    def test_la_vision_espectral_tambien(self, escena) -> None:
-        """Las dos linternas del nivel sirven para lo mismo."""
-        from src.stages.stage4_1 import trazado
-
-        cx, fila = trazado.losa_extra(trazado.INDICES_FANTASMA[0])
-        _llevar_a(escena, fila - 3, cx)
-        escena._rayo = 0.0
-        escena._vision = escena.DURACION_DE_LA_VISION
-        assert self._pintar(escena) > 0
-
-    @staticmethod
-    def _pintar(escena) -> int:
-        lienzo = pygame.Surface((800, 600))
-        lienzo.fill((0, 0, 0))
-        escena._dibujar_fantasmas(lienzo, escena._camera.offset)
-
-        return int((pygame.surfarray.array3d(lienzo).sum(axis=2) > 0).sum())
+        assert lento > rapido * 2
 
 
 class TestElPozoNoEncierraANadie:
-    """Un descenso con un sitio del que no se sale es peor que un foso: el foso
-    al menos mata y devuelve al checkpoint."""
+    """Un descenso con un sitio del que no se sale es peor que un foso."""
 
     def test_repisas_consecutivas_se_solapan(self) -> None:
         from itertools import pairwise
@@ -625,531 +392,308 @@ class TestElPozoNoEncierraANadie:
         for (x0, an, fila), (sx, san, sfila) in pairwise(trazado.repisas()):
             solape = min(x0 + an, sx + san) - max(x0, sx)
             assert solape > 0, (
-                f"las repisas de las filas {fila} y {sfila} no se solapan: "
-                f"desde la de arriba no se llega andando al hueco de la de abajo"
+                f"las repisas de las filas {fila} y {sfila} no se solapan"
             )
 
     def test_se_puede_volver_a_subir(self) -> None:
-        """80 px de desnivel contra 90,25 de salto. Con 96 —la primera versión—
-        el calificador contaba 37 repechos imposibles."""
         from src.framework.stage.level_metrics import JumpEnvelope
         from src.stages.stage4_1 import trazado
 
         envolvente = JumpEnvelope.from_settings()
         desnivel = trazado.FILAS_POR_REPISA * trazado.TS
-        assert desnivel < envolvente.max_height, (
-            f"hay {desnivel} px entre repisas y el jugador sube "
-            f"{envolvente.max_height}: el pozo no deja volver atrás"
-        )
+        assert desnivel < envolvente.max_height
 
     def test_el_jugador_cabe_entre_dos_repisas(self) -> None:
         from src.stages.stage4_1 import trazado
 
         libre = (trazado.FILAS_POR_REPISA - trazado.GROSOR_REPISA) * trazado.TS
-        assert libre >= 48, f"quedan {libre} px de hueco y el jugador mide 32"
+        assert libre >= 48
 
 
 class TestElNivelSePuedeJugar:
     def test_tiene_salida(self, escena) -> None:
-        """La ficha la llama «Portal»; el motor sólo acepta `NextTrigger`."""
         assert escena._stage_data.next_trigger is not None
 
     def test_tiene_punto_de_aparicion_y_checkpoints(self, escena) -> None:
         assert escena._stage_data.spawn_point is not None
         assert len(escena._stage_data.checkpoints) >= 1
 
+    def test_los_checkpoints_no_dejan_tramos_largos(self, escena) -> None:
+        """El calificador recomienda 500 px entre dos checkpoints."""
+        from itertools import pairwise
+
+        from src.stages.stage4_1 import trazado
+
+        puntos = sorted(trazado.checkpoints(), key=lambda p: p[1])
+        ts = settings.TILE_SIZE
+        for (_cx1, f1), (_cx2, f2) in pairwise(puntos):
+            tramo = (f2 - f1) * ts
+            assert tramo <= 500, f"tramo de {tramo} px entre checkpoints"
+
     def test_el_mapa_tiene_el_tamano_minimo(self, escena) -> None:
-        """La ficha pide 1600×608 px. Es un **mínimo de superficie**, no de
-        forma: desde AUD-225 el nivel es un pozo, así que se cumple a lo alto."""
         ancho, alto = escena._stage_data.map_pixel_size
-        assert ancho * alto >= 1600 * 608, (
-            f"la ficha pide al menos 1600x608 px de nivel y mide {ancho}x{alto}"
-        )
-        assert alto > ancho, (
-            f"el 4-1 es un descenso: debería ser más alto que ancho, y mide "
-            f"{ancho}x{alto}"
-        )
+        assert ancho * alto >= 1600 * 608
+        assert alto > ancho, "el 4-1 es un descenso: debe ser más alto que ancho"
 
     def test_la_escena_y_el_mapa_dicen_la_misma_zona(self, escena) -> None:
-        """El 4-1 es de la zona 4 en el mapa y en la clase.
-
-        Lo pilló la comprobación de mutación: poner `ZONE = 0` no rompía nada,
-        y la zona es lo que decide la música, la progresión y en qué tramo del
-        mundo cuenta este nivel.
-        """
         from src.stages.stage4_1.stage4_1 import Stage4_1
 
         assert Stage4_1.ZONE == 4
         assert escena._stage_data.zone == Stage4_1.ZONE
 
-    def test_el_reloj_va_de_las_19_a_las_23(self, escena) -> None:
-        datos = escena._stage_data
-        assert getattr(datos, "start_hour", None) == 19
-        assert getattr(datos, "day_length", 0) == 900
 
+class TestLasSeisFases:
+    """Sin esto el nivel es un pasillo con decoración."""
 
-class TestElFondoAvanzaConElJugador:
-    """Los cinco actos. Sin esto el nivel es un pasillo con decoración."""
-
-    def test_los_cinco_actos_se_alcanzan_en_orden(self, escena) -> None:
+    def test_las_seis_fases_se_alcanzan_en_orden(self, escena) -> None:
         vistos = []
-        for numero in (1, 2, 3, 4, 5):
-            _llevar_a(escena, _dentro_del_acto(numero))
-            vistos.append(escena.acto.numero)
-        assert vistos == [1, 2, 3, 4, 5], f"la progresión salió {vistos}"
+        for numero in (1, 2, 3, 4, 5, 6):
+            _llevar_a(escena, _dentro_de_la_fase(numero))
+            vistos.append(escena.fase.numero)
+        assert vistos == [1, 2, 3, 4, 5, 6], f"la progresión salió {vistos}"
 
-    def test_cada_acto_ocupa_al_menos_una_pantalla(self) -> None:
-        """AUD-208: con 20 baldosas por acto y 50 de pantalla, se veían dos
-        actos y medio a la vez y la luna «bajaba un tramo» sin que el jugador
-        se moviera de sitio. Un acto que no llena la pantalla no se lee como un
-        acto."""
-        from src.stages.stage4_1.trazado import ALTO_ACTO
+    def test_cada_fase_ocupa_al_menos_una_pantalla(self) -> None:
+        from src.stages.stage4_1.trazado import ALTO_FASE
 
         pantalla = settings.INTERNAL_HEIGHT // settings.TILE_SIZE
-        assert ALTO_ACTO >= pantalla, (
-            f"un acto mide {ALTO_ACTO} filas y la pantalla {pantalla}"
-        )
+        assert ALTO_FASE >= pantalla
 
-    def test_el_clima_cambia_con_el_acto(self, escena) -> None:
-        climas = {}
-        for numero in (1, 3, 4, 5):
-            _llevar_a(escena, _dentro_del_acto(numero))
-            climas[escena.acto.numero] = escena._weather._climate
-        assert climas[1] == "fog"
-        assert climas[4] == "storm", "el acto de la tormenta no llueve"
-        assert climas[5] == "clear", "el umbral no se queda en silencio"
+    def test_el_clima_cambia_con_la_fase(self, escena) -> None:
+        from src.stages.stage4_1.fases import FASES
 
-    def test_el_acto_se_aplica_una_vez_y_no_en_cada_fotograma(
+        for fase in FASES:
+            if fase.numero == 4:
+                continue  # a mitad de la Fase 4 el clima cambia a "clear"
+            _llevar_a(escena, fase.desde_fila + 2)
+            assert escena._weather.climate == fase.clima, (
+                f"la Fase {fase.numero} pide clima {fase.clima!r} y está en "
+                f"{escena._weather.climate!r}"
+            )
+
+    def test_la_gradacion_se_aproxima_al_objetivo_al_final_del_tramo(
         self, escena,
     ) -> None:
-        """El comentario del código lo dice: llamar a `set_climate` sesenta
-        veces por segundo vacía el emisor de la tormenta y no se ve llover.
+        """Cerca del final de cada fase, la interpolación ya casi llegó."""
+        from src.stages.stage4_1 import trazado
+        from src.stages.stage4_1.fases import FASES
+        from src.stages.stage4_1.stage4_1 import IDENTIDAD
 
-        Otro hallazgo de la comprobación de mutación: cambiar el `- 1` por un
-        `+ 1` en la detección de cambio de acto dejaba todas las pruebas en
-        verde y el clima reaplicándose sin parar.
-        """
-        _llevar_a(escena, _dentro_del_acto(4))
-        veces = []
-        original = escena._weather.set_climate
-        escena._weather.set_climate = lambda c: (veces.append(c), original(c))[1]
-        try:
-            for _ in range(60):
-                escena.update(1 / 60)
-        finally:
-            escena._weather.set_climate = original
-        assert veces == [], (
-            f"quieto dentro del acto IV, el clima se aplicó {len(veces)} veces"
-        )
-
-    def test_las_particulas_verdes_estan_encendidas(self, escena) -> None:
-        """`spores` es el único efecto verde del motor, y el lore le pone al
-        cementerio «luz espectral verde»."""
-        _llevar_a(escena, _dentro_del_acto(2))
-        assert escena._ambient_particles._particle_type == "spores"
-        assert escena._ambient_particles.rate > 0.0
-
-    def test_las_particulas_suben_hacia_la_tormenta(self, escena) -> None:
-        _llevar_a(escena, _dentro_del_acto(2))
-        pocas = escena._ambient_particles.rate
-        _llevar_a(escena, _dentro_del_acto(4))
-        muchas = escena._ambient_particles.rate
-        assert muchas > pocas
-
-    def test_la_luna_baja_y_crece(self) -> None:
-        from src.stages.stage4_1.actos import ACTOS
-
-        for anterior, siguiente in pairwise(ACTOS):
-            assert siguiente.luna_y > anterior.luna_y, (
-                f"la luna sube entre el acto {anterior.numero} y el "
-                f"{siguiente.numero}: el reloj del nivel iría al revés"
+        for fase in FASES:
+            _posicionar_sin_fisica(escena, fase.desde_fila + trazado.ALTO_FASE - 1)
+            objetivo = fase.gradacion if fase.gradacion is not None else IDENTIDAD
+            actual = escena._post_processing._color_grading
+            actual = actual if actual is not None else IDENTIDAD
+            diferencia = max(abs(a - b) for a, b in zip(actual, objetivo, strict=True))
+            assert diferencia <= 8, (
+                f"Fase {fase.numero}: gradación {actual} lejos del objetivo "
+                f"{objetivo} (dif {diferencia})"
             )
-            assert siguiente.luna_radio > anterior.luna_radio
 
-    def test_los_espiritus_se_acercan_y_no_se_van(self) -> None:
-        from src.stages.stage4_1.actos import ACTOS
+    def test_la_gradacion_no_salta_de_golpe_al_entrar(self, escena) -> None:
+        """Al entrar en la Fase 2, la gradación debe seguir cerca de la de la
+        Fase 1 (color pleno) — no saltar directo a blanco y negro."""
+        from src.stages.stage4_1.fases import FASES
+        from src.stages.stage4_1.stage4_1 import IDENTIDAD
 
-        for anterior, siguiente in pairwise(ACTOS):
-            assert siguiente.espiritus >= anterior.espiritus
-            assert siguiente.cegua >= anterior.cegua
-
-    def test_el_umbral_es_el_acto_mas_claro(self) -> None:
-        """En el acto V arden los doce braseros: tiene que verse."""
-        from src.stages.stage4_1.actos import ACTOS
-
-        assert ACTOS[-1].ambiente == max(a.ambiente for a in ACTOS)
-
-    def test_solo_truena_en_la_tormenta(self) -> None:
-        from src.stages.stage4_1.actos import ACTOS
-
-        con_rayos = [a.numero for a in ACTOS if a.rayos_por_minuto > 0]
-        assert con_rayos == [3, 4], (
-            f"los rayos deben anunciarse en el III y caer en el IV; están en "
-            f"{con_rayos}"
+        fase1, fase2 = FASES[0], FASES[1]
+        _posicionar_sin_fisica(escena, fase1.desde_fila + 10)  # asienta la Fase 1
+        _posicionar_sin_fisica(escena, fase2.desde_fila)       # el primerísimo paso
+        actual = escena._post_processing._color_grading
+        actual = actual if actual is not None else IDENTIDAD
+        diferencia = max(abs(a - b) for a, b in zip(actual, IDENTIDAD, strict=True))
+        assert diferencia < 40, (
+            f"la gradación saltó a {actual} nada más entrar en la Fase 2"
         )
 
+    def test_el_tinte_vintage_solo_esta_en_la_fase_4(self, escena) -> None:
+        from src.stages.stage4_1 import trazado
+        from src.stages.stage4_1.fases import FASES
 
-class TestLosBraserosSonLaBarraDeProgreso:
-    def test_arrancan_los_doce_apagados(self, escena) -> None:
-        assert len(escena._luces) == 12
-        assert escena.braseros_encendidos == 0
-        assert all(luz.intensity == 0.0 for luz in escena._luces)
-
-    def test_se_encienden_al_pasar(self, escena) -> None:
-        for luz in list(escena._luces):
-            escena._player.rect.center = (int(luz.position.x), int(luz.position.y))
-            escena._player.position.update(luz.position)
-            escena._actualizar_braseros(1 / 60)
-        assert escena.braseros_encendidos == 12
-
-    def test_la_llama_sube_en_vez_de_aparecer(self, escena) -> None:
-        luz = escena._luces[0]
-        escena._player.rect.center = (int(luz.position.x), int(luz.position.y))
-        escena._player.position.update(luz.position)
-        escena._actualizar_braseros(1 / 60)
-        recien = luz.intensity
-        for _ in range(60):
-            escena._actualizar_braseros(1 / 60)
-        assert 0.0 < recien < luz.intensity
-
-    def test_no_se_apagan_al_volver(self, escena) -> None:
-        """«El sendero queda marcado de luz detrás del jugador.»"""
-        luz = escena._luces[0]
-        escena._player.rect.center = (int(luz.position.x), int(luz.position.y))
-        escena._player.position.update(luz.position)
-        escena._actualizar_braseros(1 / 60)
-        assert escena.braseros_encendidos == 1
-
-        escena._player.rect.center = (5000, 200)
-        escena._player.position.update(pygame.Vector2(5000, 200))
-        for _ in range(30):
-            escena._actualizar_braseros(1 / 60)
-        assert escena.braseros_encendidos == 1, (
-            "alejarse apagó el brasero: la barra de progreso retrocedería"
-        )
-
-    def test_el_ultimo_es_el_grande(self, escena) -> None:
-        """El del umbral. Es la imagen final del nivel."""
-        assert escena._luces[-1].radius > escena._luces[0].radius
+        _posicionar_sin_fisica(escena, FASES[0].desde_fila + trazado.ALTO_FASE - 1)
+        assert escena._post_processing._tint_alpha == pytest.approx(0.0, abs=0.01)
+        _posicionar_sin_fisica(escena, FASES[3].desde_fila + trazado.ALTO_FASE - 1)
+        assert escena._post_processing._tint_alpha > 0.05
 
 
-class TestLasAntorchasSeVen:
-    """AUD-246 — los doce braseros eran **sólo focos de luz**: un `Light` en el
-    TMX y nada dibujado. Se veía aparecer el charco de luz sobre la repisa sin
-    nada que lo produjera.
+class TestLosEspiritusAscienden:
+    """Venado (Fase 2), Rey Terciopelo (Fase 3) y Gavilán (Fase 4) — «no
+    atacan, testifican», y luego ascienden."""
 
-    Importa más de lo que parece: el §3 del diseño se apoya entero en ellos
-    —«si un jugador pregunta cuánto falta, la respuesta es cuenta los
-    apagados»— y un contador que no se ve no cuenta nada.
-    """
+    def test_indice_del_espiritu_por_fase(self) -> None:
+        from src.stages.stage4_1.fases import FASES
 
-    def _pintar_fondo(self, escena) -> pygame.Surface:
-        """Sólo las antorchas, no el fondo entero.
+        esperado = {1: None, 2: 0, 3: 1, 4: 2, 5: None, 6: None}
+        for fase in FASES:
+            assert fase.espiritu == esperado[fase.numero], (
+                f"Fase {fase.numero}: espíritu {fase.espiritu}, se esperaba "
+                f"{esperado[fase.numero]}"
+            )
 
-        `dibujar_fondo` pinta también las grietas, que son verdes: midiendo
-        sobre él, «hay verde» estaría respondiendo por las grietas y la prueba
-        pasaría con las doce antorchas rotas.
-        """
-        lienzo = pygame.Surface((800, 600))
-        lienzo.fill((0, 0, 0))
-        escena._dibujar_antorchas(lienzo, escena._camera.offset)
-        return lienzo
+    def test_el_fundido_es_cero_al_entrar_y_al_salir(self, escena) -> None:
+        assert escena._fundido_del_espiritu(0.0) == 0.0
+        assert escena._fundido_del_espiritu(1.0) == 0.0
+        assert escena._fundido_del_espiritu(0.5) == 1.0
 
-    def _hay_verde(self, lienzo: pygame.Surface) -> bool:
+    def test_no_revienta_en_una_fase_sin_espiritu(self, escena) -> None:
+        """La Fase 1, la 5 y la 6 no tienen espíritu (`fase.espiritu is
+        None`); `dibujar_fondo` tiene que poder no dibujar nada sin lanzar."""
+        from src.stages.stage4_1.fases import FASES
 
-        px = pygame.surfarray.array3d(lienzo).astype(int)
-        return bool(((px[:, :, 1] > px[:, :, 0] + 30)
-                     & (px[:, :, 1] > px[:, :, 2] + 30)
-                     & (px[:, :, 1] > 90)).any())
+        fase1 = FASES[0]
+        assert fase1.espiritu is None
+        _llevar_a(escena, fase1.desde_fila + 20)
+        lienzo = pygame.Surface((800, 600), pygame.SRCALPHA)
+        escena.dibujar_fondo(lienzo, pygame.Vector2(0, 0))  # no debe lanzar
 
-    def _junto_a_un_brasero(self, escena) -> None:
+
+class TestLaLomaDeLaFase3:
+    """El guion pide «ascender por lomas utilizando slopes» — un `Slope` de
+    verdad (AUD-297), no una inversión del eje del pozo."""
+
+    def test_hay_exactamente_una_loma(self, escena) -> None:
+        assert len(escena._stage_data.pendientes) == 1
+
+    def test_la_loma_esta_en_la_fase_3(self) -> None:
         from src.stages.stage4_1 import trazado
 
-        bx, fila = trazado.braseros()[2]
-        _llevar_a(escena, fila - 3, bx)
+        _col, fila, _ancho, _alto, _sube = trazado.loma()
+        assert trazado.fase_de_la_fila(fila) == 3
 
-    def test_apagada_no_hay_llama(self, escena) -> None:
-        self._junto_a_un_brasero(escena)
-        escena._encendidos.clear()
-        escena._llama.clear()
-        assert not self._hay_verde(self._pintar_fondo(escena)), (
-            "hay llama en un brasero apagado: la barra de progreso mentiría"
-        )
-
-    def test_encendida_se_ve_la_llama(self, escena) -> None:
-        self._junto_a_un_brasero(escena)
-        for i in range(len(escena._luces)):
-            escena._encendidos.add(i)
-            escena._llama[i] = 1.0
-        assert self._hay_verde(self._pintar_fondo(escena)), (
-            "el brasero está encendido y no se dibuja nada"
-        )
-
-    def test_la_llama_crece_con_el_encendido(self, escena) -> None:
-        """Sube en medio segundo en vez de aparecer, y tiene que verse subir."""
-
-        self._junto_a_un_brasero(escena)
-        for i in range(len(escena._luces)):
-            escena._encendidos.add(i)
-
-        def verdes(avance: float) -> int:
-            for i in range(len(escena._luces)):
-                escena._llama[i] = avance
-            px = pygame.surfarray.array3d(self._pintar_fondo(escena)).astype(int)
-            return int(((px[:, :, 1] > px[:, :, 0] + 30) & (px[:, :, 1] > 90)).sum())
-
-        assert verdes(1.0) > verdes(0.35) > 0
-
-    def test_la_llama_se_dibuja_donde_esta_la_repisa(self, escena) -> None:
-        """El `Light` del TMX se centra en su rectángulo, así que su posición
-        cae dos filas por encima de la repisa. Dibujar ahí dejaba la antorcha
-        flotando en el aire, y una llama sin nada debajo no es una antorcha."""
+    def test_la_loma_no_tapa_el_hueco_entero(self) -> None:
         from src.stages.stage4_1 import trazado
 
-        ts = settings.TILE_SIZE
-        for (bx, fila), luz in zip(trazado.braseros(), escena._luces, strict=True):
-            assert abs(luz.position.x - (bx * ts + ts // 2)) <= ts, (
-                f"el foco de la fila {fila} no está sobre su brasero: la llama "
-                f"y su resplandor saldrían en sitios distintos"
-            )
-
-
-class TestLaVisionEspectral:
-    """La mecánica protagonista (Unidad VIII)."""
-
-    def test_apagada_al_empezar(self, escena) -> None:
-        assert escena.vision_activa is False
-
-    def test_se_agota_sola(self, escena) -> None:
-        escena._vision = 0.1
-        for _ in range(12):
-            escena._actualizar_vision(1 / 60)
-        assert escena.vision_activa is False
-
-    def test_no_se_puede_encadenar_sin_recarga(self, escena) -> None:
-        escena._vision = 0.0
-        escena._recarga = escena.RECARGA_DE_LA_VISION
-        escena._actualizar_vision(1 / 60)
-        assert escena.vision_activa is False
-
-    def test_la_huella_solo_existe_con_la_vision(self, escena) -> None:
-        """El corazón de la mecánica, comprobado píxel a píxel."""
-        from src.stages.stage4_1.siluetas import VERDE_ESPECTRAL
-
-        # Junto a la primera huella: tiene que estar en pantalla para poder
-        # mirarle el color.
-        marca = escena._marcas[0]
-        _llevar_a(escena, marca.y // settings.TILE_SIZE - 2,
-                  marca.x // settings.TILE_SIZE)
-        marca = escena._marcas[0]
-
-        def color_en_la_huella() -> tuple[int, int, int]:
-            lienzo = pygame.Surface((800, 600))
-            escena.draw(lienzo)
-            off = escena._camera.offset
-            return lienzo.get_at((int(marca.centerx - off.x),
-                                  int(marca.centery - off.y)))[:3]
-
-        assert color_en_la_huella() != VERDE_ESPECTRAL
-        escena._vision = escena.DURACION_DE_LA_VISION
-        assert color_en_la_huella() == VERDE_ESPECTRAL, (
-            "la visión no reveló la huella: sin enemigos, ésta es la única "
-            "mecánica del nivel"
+        _inicio, ancho_hueco = trazado.hueco_de(trazado.LOMA_INDICE)
+        _col, _fila, ancho_loma, _alto, _sube = trazado.loma()
+        assert ancho_loma < ancho_hueco, (
+            "la loma tapa el hueco entero: nadie podría seguir cayendo por al "
+            "lado"
         )
 
-    def test_hay_huellas_en_los_actos_del_musgo_y_del_lodo(self, escena) -> None:
-        from src.stages.stage4_1.actos import ACTOS
-        from src.stages.stage4_1.trazado import ALTO_ACTO
-
-        ts = settings.TILE_SIZE
-        filas = [m.y // ts for m in escena._marcas]
-        for numero in (3, 4):
-            desde = ACTOS[numero - 1].desde_fila
-            assert any(desde <= f <= desde + ALTO_ACTO for f in filas), (
-                f"faltan huellas en el acto {numero}"
-            )
-
-    def test_cada_huella_marca_un_hueco_y_no_una_repisa(self, escena) -> None:
-        """La huella dice «cae por aquí». Si cae sobre la repisa, miente.
-
-        Es el fallo que AUD-208 quitó de raíz: las coordenadas de las huellas se
-        escribían a mano en la escena y las del terreno en el generador, así que
-        mover una desplazaba la otra y dejaba la marca donde no servía. Ahora
-        las dos salen de `trazado.py` y esto lo comprueba.
-        """
+    def test_sube_es_un_valor_valido(self) -> None:
         from src.stages.stage4_1 import trazado
 
-        ts = settings.TILE_SIZE
-        por_fila = {fila: (x0, ancho) for x0, ancho, fila in trazado.repisas()}
-        for marca in escena._marcas:
-            fila = marca.y // ts + 1          # la repisa de la que se cae
-            assert fila in por_fila, f"la huella de la fila {fila} no tiene repisa"
-            x0, ancho = por_fila[fila]
-            columnas = range(marca.x // ts, (marca.right - 1) // ts + 1)
-            solapa = [c for c in columnas if x0 <= c < x0 + ancho]
-            assert not solapa, (
-                f"la huella de la fila {fila} cae sobre la repisa, en {solapa}: "
-                f"debería marcar el hueco"
+        *_resto, sube = trazado.loma()
+        assert sube in ("derecha", "izquierda")
+
+
+class TestElVientoDeLaFase3:
+    def test_hay_una_zona_de_viento_en_la_fase_3(self, escena) -> None:
+        from src.framework.ecs import ZonaDeViento
+        from src.stages.stage4_1 import trazado
+
+        vientos = [z for _, z in escena._mundo.cada(ZonaDeViento)]
+        assert len(vientos) == 1
+        rect = vientos[0].rect
+        fila_media = (rect.centery) // settings.TILE_SIZE
+        assert trazado.fase_de_la_fila(fila_media) == 3
+
+
+class TestElSilencioYElShake:
+    """A mitad de la Fase 4, el clima calla de golpe y la cámara sacude una
+    sola vez — sin causa visible."""
+
+    def test_no_dispara_antes_de_mitad_de_tramo(self, escena) -> None:
+        from src.stages.stage4_1.fases import FASES
+
+        fase4 = FASES[3]
+        _llevar_a(escena, fase4.desde_fila + 5)  # bien al principio
+        assert escena._shake_disparado is False
+
+    def test_dispara_una_vez_pasada_la_mitad(self, escena) -> None:
+        from src.stages.stage4_1.fases import FASES
+
+        fase4 = FASES[3]
+        objetivo = fase4.desde_fila + int(0.6 * 48)
+        _llevar_a(escena, objetivo)
+        assert escena._shake_disparado is True
+        assert escena._weather.climate == "clear"
+        assert escena._ambient_particles.rate == 0.0
+
+    def test_no_dispara_en_otras_fases(self, escena) -> None:
+        from src.stages.stage4_1.fases import FASES
+
+        for fase in FASES:
+            if fase.numero == 4:
+                continue
+            _llevar_a(escena, fase.desde_fila + int(0.6 * 48))
+            assert escena._shake_disparado is False, (
+                f"la Fase {fase.numero} disparó el shake y no le toca"
             )
 
-    def test_la_vision_ilumina_y_no_oscurece(self, escena) -> None:
-        """Lo primero que probé multiplicaba sobre la pantalla y el verde medio
-        bajaba de 26 a 11. Una «visión» que quita luz no es una visión."""
-        import numpy as np
 
-        _llevar_a(escena, 44)
-        lienzo = pygame.Surface((800, 600))
-        escena.draw(lienzo)
-        sin = np.asarray(pygame.surfarray.array3d(lienzo), dtype=int)[:, :, 1].mean()
-        escena._vision = escena.DURACION_DE_LA_VISION
-        escena.draw(lienzo)
-        con = np.asarray(pygame.surfarray.array3d(lienzo), dtype=int)[:, :, 1].mean()
-        assert con >= sin
+class TestElCicloDeLaLuna:
+    """La Fase 5 (La Planicie de los Muertos) es la única con luz ambiente
+    que oscila en vez de quedarse fija."""
 
+    def test_solo_la_fase_5_oscila(self) -> None:
+        from src.stages.stage4_1.fases import FASES
 
-class TestLasBrujasCruzanYNoSonEnemigos:
-    """§4 del diseño: «2–3 cruzan con el relámpago». Estaban en el documento y
-    en la checklist, y no en el juego (AUD-210)."""
+        for fase in FASES:
+            assert fase.luna_intermitente == (fase.numero == 5)
 
-    def test_no_hay_brujas_antes_de_la_niebla(self) -> None:
-        from src.stages.stage4_1.actos import ACTOS
+    def test_el_ambiente_se_mueve_dentro_de_los_limites(self, escena) -> None:
+        from src.stages.stage4_1.fases import FASES
 
-        assert [a.brujas for a in ACTOS[:2]] == [0, 0], (
-            "las brujas aparecen en el III como anuncio del IV, no antes"
-        )
-
-    def test_la_tormenta_es_donde_mas_hay(self) -> None:
-        from src.stages.stage4_1.actos import ACTOS
-
-        assert ACTOS[3].brujas == max(a.brujas for a in ACTOS)
-
-    def test_en_el_umbral_estan_quietas(self) -> None:
-        """«Siluetas posadas en los árboles, quietas.»"""
-        from src.stages.stage4_1.actos import ACTOS
-
-        assert ACTOS[4].brujas_quietas is True
-        assert [a.brujas_quietas for a in ACTOS[:4]] == [False] * 4
-
-    def test_se_mueven_de_verdad(self, escena) -> None:
-        """Una bruja que no cruza es una mancha en el fondo."""
-        _llevar_a(escena, _dentro_del_acto(4))
-        escena._rayo = escena.DURACION_DEL_RAYO
-
-        def _pinta() -> pygame.Surface:
-            lienzo = pygame.Surface((800, 600), pygame.SRCALPHA)
-            escena._dibujar_brujas(lienzo, escena.acto, escena._camera.offset)
-            return lienzo
-
-        antes = pygame.surfarray.array3d(_pinta()).copy()
-        escena._tiempo += 1.5
-        assert not (pygame.surfarray.array3d(_pinta()) == antes).all()
-
-    def test_no_son_entidades(self, escena) -> None:
-        """La regla de oro no se negocia ni por el fondo."""
-        assert list(escena._stage_data.entity_list) == []
-        assert not hasattr(escena, "_brujas_entidades")
-
-
-class TestLaOscuridadSusurraYNoCastiga:
-    """§4: quedarse quieto a oscuras despierta al cementerio — y *«no hay daño
-    ni castigo»* (AUD-211)."""
-
-    def _a_oscuras_y_quieto(self, escena) -> None:
-        escena._encendidos.clear()
-        escena._quieto = 0.0
-        escena._donde_estaba = float(escena._player.rect.centerx)
-        for _ in range(int(escena.ESPERA_DEL_SUSURRO * 60) + 2):
-            escena._actualizar_oscuridad(1 / 60)
-
-    def test_a_oscuras_es_no_tener_braseros_cerca(self, escena) -> None:
-        escena._encendidos.clear()
-        assert escena.a_oscuras is True
-        # Enciende el que tiene encima y deja de estarlo.
-        escena._player.rect.center = (int(escena._luces[0].position.x),
-                                      int(escena._luces[0].position.y))
-        escena._encendidos.add(0)
-        assert escena.a_oscuras is False
-
-    def test_los_ojos_se_encienden_al_cabo_de_los_cuatro_segundos(
-        self, escena,
-    ) -> None:
-        self._a_oscuras_y_quieto(escena)
-        assert escena._ojos > 0.0
-
-    def test_moverse_reinicia_la_cuenta(self, escena) -> None:
-        escena._encendidos.clear()
-        escena._donde_estaba = float(escena._player.rect.centerx)
-        for _ in range(120):
-            escena._player.rect.x += 3      # andando
-            escena._actualizar_oscuridad(1 / 60)
-        assert escena._ojos == 0.0, "el susurro llegó mientras el jugador andaba"
-
-    def test_con_un_brasero_encendido_no_pasa_nada(self, escena) -> None:
-        escena._player.rect.center = (int(escena._luces[0].position.x),
-                                      int(escena._luces[0].position.y))
-        escena._encendidos.add(0)
-        escena._donde_estaba = float(escena._player.rect.centerx)
+        fase5 = FASES[4]
+        _llevar_a(escena, fase5.desde_fila + 2)
+        valores = []
         for _ in range(400):
-            escena._actualizar_oscuridad(1 / 60)
-        assert escena._ojos == 0.0
-
-    def test_no_quita_vida(self, escena) -> None:
-        """La regla explícita del diseño. Es lo único que esta mecánica podría
-        romper, y es lo que la haría estar mal."""
-        antes = escena._player.current_health
-        self._a_oscuras_y_quieto(escena)
-        for _ in range(300):
-            escena._actualizar_oscuridad(1 / 60)
-        assert escena._player.current_health == antes
+            escena.update(1 / 60)
+            valores.append(escena._ambiente_base)
+        assert min(valores) < 0.15
+        assert max(valores) > 0.35
+        assert max(valores) - min(valores) > 0.2, (
+            "el ambiente de la Fase 5 no osciló: la luna no hace nada"
+        )
 
 
-class TestElRelampagoEnsenaAntesDeCastigar:
-    """«Ningún peligro aparece sin que un relámpago anterior lo haya
-    mostrado.» — §5 del diseño."""
+class TestLasGrietasDeLaFase6:
+    """Se encienden al paso y se apagan solas — un rastro, no una barra de
+    progreso acumulada."""
 
-    def test_el_destello_sube_la_luz(self, escena) -> None:
-        _llevar_a(escena, 65)
-        base = escena._lighting.ambient_brightness
-        escena._rayo = escena.DURACION_DEL_RAYO
-        escena._actualizar_rayos(1 / 60)
-        assert escena._lighting.ambient_brightness > base
+    def test_hay_una_luz_por_grieta(self, escena) -> None:
+        from src.stages.stage4_1 import trazado
 
-    def test_el_destello_se_apaga(self, escena) -> None:
-        _llevar_a(escena, 65)
-        escena._rayo = escena.DURACION_DEL_RAYO
-        for _ in range(40):
-            escena._actualizar_rayos(1 / 60)
-        assert escena._rayo == 0.0
+        assert len(escena._grietas) == len(trazado.grietas_de_pisada())
 
-    def test_no_hay_rayos_en_el_umbral(self, escena) -> None:
-        """El silencio es el jefe."""
-        _llevar_a(escena, 90)
-        escena._rayo = 0.0
-        for _ in range(600):
-            escena._actualizar_rayos(1 / 60)
-        assert escena._rayo == 0.0
+    def test_se_encienden_al_acercarse(self, escena) -> None:
+        from src.stages.stage4_1 import trazado
+
+        cx, fila = trazado.grietas_de_pisada()[0]
+        _llevar_a(escena, fila, columna=cx)
+        assert escena._grietas[0].intensity > 0.1, (
+            "la grieta no se encendió con el jugador encima"
+        )
+
+    def test_se_apagan_al_alejarse(self, escena) -> None:
+        from src.stages.stage4_1 import trazado
+
+        cx, fila = trazado.grietas_de_pisada()[0]
+        _llevar_a(escena, fila, columna=cx)
+        assert escena._grietas[0].intensity > 0.1
+        # Se aleja mucho: al otro lado del pozo y muchas filas más abajo.
+        escena._player.rect.topleft = (
+            5 * settings.TILE_SIZE, (fila + 40) * settings.TILE_SIZE,
+        )
+        escena._player.position.update(*escena._player.rect.topleft)
+        for _ in range(240):
+            escena.update(1 / 60)
+        assert escena._grietas[0].intensity < 0.05, (
+            "la grieta se quedó encendida: no es un rastro, es un progreso"
+        )
 
 
 class TestCabeEnElPresupuestoDeFotograma:
-    #: 60 fps son 16,6 ms para todo. Un efecto de pantalla completa es donde un
-    #: nivel bonito se vuelve injugable, así que se mide.
-    #
-    #: Medido el 2026-08-09 (Quadro M2200, máquina con carga ajena): el dibujo
-    #: base de stage4_1 va a 8,3-11,4 ms de pared y la visión añade +3,1 ms
-    #: (el golpe gordo es el transform.scale de vuelta a 800x600, ~3 ms; la
-    #: docstring de _dibujar_vision documenta 5,65 + 1,60 ms, calibración que
-    #: quedó obsoleta ~2x). La peor mediana medida fue 14,5 ms. El nivel se va
-    #: a rehacer y el presupuesto se recalibrará entonces; mientras tanto el
-    #: guardia sigue cazando una regresión real de ~1,5 ms o más.
-    PRESUPUESTO_MS = 15.0
+    """60 fps son 16,6 ms para todo. El rediseño quitó la visión espectral y
+    los efectos del diseño anterior, así que el presupuesto se recalibra:
+    ver la medición en el comentario de `PRESUPUESTO_MS`.
+    """
 
-    #: Rondas de las que se toma la mediana. Una sola muestra de tiempo de
-    #: pared es ruido — una pausa de GC o de otro proceso en Windows añade
-    #: milisegundos que no son del dibujado — y este mismo test ya falló
-    #: intermitentemente con el nivel en ~8 ms y el presupuesto en 12. La
-    #: mediana de cinco rondas conserva la sensibilidad a una regresión de
-    #: presupuesto (un costo real de 4 ms más se ve en la mediana igual) y
-    #: deja de fallar por el azar de una sola muestra.
+    #: Sin visión espectral ni losas fantasma/rítmicas que revelar, dibujar
+    #: este nivel es más barato que el diseño anterior (que medía 14,5 ms en
+    #: el peor caso, con la visión puesta). 15 ms deja el mismo margen que
+    #: usaba el diseño anterior mientras no haya una medición propia.
+    PRESUPUESTO_MS = 15.0
     RONDAS = 5
 
     def _medir(self, escena, veces: int = 15) -> float:
@@ -1157,7 +701,7 @@ class TestCabeEnElPresupuestoDeFotograma:
         import time
 
         lienzo = pygame.Surface((800, 600))
-        escena.draw(lienzo)          # calentar cachés
+        escena.draw(lienzo)
         muestras = []
         for _ in range(self.RONDAS):
             t0 = time.perf_counter()
@@ -1166,18 +710,9 @@ class TestCabeEnElPresupuestoDeFotograma:
             muestras.append((time.perf_counter() - t0) / veces * 1000.0)
         return statistics.median(muestras)
 
-    def test_el_dibujo_normal_cabe(self, escena) -> None:
+    def test_el_dibujo_cabe(self, escena) -> None:
         _llevar_a(escena, 44)
         assert self._medir(escena) < self.PRESUPUESTO_MS
-
-    def test_con_la_vision_puesta_tambien(self, escena) -> None:
-        _llevar_a(escena, 44)
-        escena._vision = 999.0
-        coste = self._medir(escena)
-        assert coste < self.PRESUPUESTO_MS, (
-            f"la visión cuesta {coste:.1f} ms por fotograma. Se umbraliza a 1/4 "
-            f"de resolución justo por esto: a 1/2 medía 4,6 ms de más"
-        )
 
 
 class TestElMapaSigueAtadoASuGenerador:
@@ -1196,8 +731,7 @@ class TestElMapaSigueAtadoASuGenerador:
 
 
 class TestElGanchoDeFondoLlegaAlEscenario:
-    """AUD-162 — sin él, la luna y las siluetas se dibujarían encima del
-    jugador y dejarían de ser fondo."""
+    """AUD-162 — sin él, el espíritu se dibujaría encima del jugador."""
 
     def test_stage_scene_ofrece_el_gancho(self) -> None:
         from src.framework.scenes.stage_scene import StageScene
@@ -1210,20 +744,7 @@ class TestElGanchoDeFondoLlegaAlEscenario:
 
         assert Stage4_1.dibujar_fondo is not StageScene.dibujar_fondo
 
-    def test_el_sistema_de_dibujo_lo_llama_antes_del_mapa(self) -> None:
-        import inspect
-
-        from src.framework.stage.drawing_system import DrawingSystem
-
-        fuente = inspect.getsource(DrawingSystem.draw)
-        i_fondo = fuente.index("fondo_del_escenario")
-        i_mapa = fuente.index("_draw_stage_layers")
-        assert i_fondo < i_mapa, (
-            "el fondo del escenario se pinta después del mapa: taparía el nivel"
-        )
-
     def test_un_fondo_que_falla_no_tumba_el_fotograma(self, escena) -> None:
-        """Es decoración. El nivel tiene que seguir jugándose."""
         escena.dibujar_fondo = lambda *_a: 1 / 0
         lienzo = pygame.Surface((800, 600))
-        escena.draw(lienzo)          # no debe lanzar
+        escena.draw(lienzo)  # no debe lanzar

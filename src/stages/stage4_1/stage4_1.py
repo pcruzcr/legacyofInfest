@@ -57,8 +57,9 @@ if TYPE_CHECKING:
 
 #: La matriz identidad: cada canal de salida es el mismo canal de entrada.
 #: Es lo que representa `gradacion=None` — "color pleno" — cuando hace falta
-#: interpolar hacia o desde ella.
-_IDENTIDAD: tuple[int, ...] = (255, 0, 0, 0, 255, 0, 0, 0, 255)
+#: interpolar hacia o desde ella. Pública (sin `_`) porque las pruebas la
+#: necesitan para comparar contra el objetivo de cada fase.
+IDENTIDAD: tuple[int, ...] = (255, 0, 0, 0, 255, 0, 0, 0, 255)
 
 
 class Stage4_1(StageScene):
@@ -173,9 +174,22 @@ class Stage4_1(StageScene):
         fase = self.fase
         if fase.numero - 1 == self._fase_actual:
             return
-        anterior = FASES[self._fase_actual] if self._fase_actual >= 0 else fase
-        self._gradacion_previa = anterior.gradacion
-        self._tinte_previo = anterior.tinte
+        # Si ya veníamos de una fase, se interpola desde su gradación. Si
+        # ésta es la primera vez que corre `update` —incluido un arranque
+        # en frío que cae directo en una fase avanzada, como al cargar una
+        # partida guardada— no hay «fase anterior» real: se interpola desde
+        # el color pleno, no desde la fase en la que se aterriza. El defecto
+        # que esto reemplaza usaba `fase` (la actual) como si fuera la
+        # anterior, y la gradación aparecía de golpe en vez de interpolar —
+        # invisible arrancando siempre en la Fase 1, donde no hay nada de lo
+        # que venir, y sólo visible saltando a mitad de nivel.
+        if self._fase_actual >= 0:
+            anterior = FASES[self._fase_actual]
+            self._gradacion_previa = anterior.gradacion
+            self._tinte_previo = anterior.tinte
+        else:
+            self._gradacion_previa = None
+            self._tinte_previo = None
         self._fase_actual = fase.numero - 1
 
         self._cambiar_clima(fase.clima)
@@ -196,8 +210,8 @@ class Stage4_1(StageScene):
 
     @staticmethod
     def _lerp_gradacion(a: Gradacion, b: Gradacion, t: float) -> tuple[int, ...]:
-        ga = a if a is not None else _IDENTIDAD
-        gb = b if b is not None else _IDENTIDAD
+        ga = a if a is not None else IDENTIDAD
+        gb = b if b is not None else IDENTIDAD
         return tuple(round(ga[i] + (gb[i] - ga[i]) * t) for i in range(9))
 
     def _actualizar_gradacion(self) -> None:
