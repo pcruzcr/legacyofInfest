@@ -59,6 +59,7 @@ from src.stages.stage4_1.trazado import (  # noqa: E402
     TS,
     TUMBAS_FASE5,
     checkpoints,
+    fase_de_la_columna,
     grietas_de_pisada,
     loma,
     perfil_del_suelo,
@@ -66,37 +67,61 @@ from src.stages.stage4_1.trazado import (  # noqa: E402
 
 DESTINO = PROJECT_ROOT / "assets" / "maps" / "stage4_1" / "stage4_1.tmx"
 
-# Marcador de posición: el tileset propio llega en AUD-468. Reusa el
-# cementerio para no bloquear la geometría en lo que se genera el nuevo.
-TILESET = "../../tilesets/tileset_cemetery.png"
+# AUD-469: el tileset propio de seis familias, una por sección. El GID es
+# `índice + 1` sobre `STAGE4_1_ORDEN` de `tools/generate_all_assets.py` —
+# un contrato que defiende `tests/test_stage4_1.py` (AUD-115: cambiar el
+# orden en un sitio sin cambiarlo en el otro repinta el nivel entero con la
+# baldosa equivocada).
+TILESET = "../../tilesets/tileset_stage4_1.png"
 TS_COLUMNAS = 8
-TS_TOTAL = 64
-TS_IMAGEN_PX = 128
+TS_FILAS = 3
+TS_TOTAL = TS_COLUMNAS * TS_FILAS
+TS_IMAGEN_PX_X = TS_COLUMNAS * TS
+TS_IMAGEN_PX_Y = TS_FILAS * TS
 
 VACIO = 0
-PIEDRA = 2
-RELLENO = 3
+CRIPTA = 2
+CRIPTA_RELLENO = 3
 MURO = 4
-MUSGO = 5
-MUSGO_RELLENO = 6
-LODO = 7
-LODO_RELLENO = 8
-LAPIDA_ALTA = 9
-LOSA = 10
-CRUZ = 11
+BOSQUE = 5
+BOSQUE_RELLENO = 6
+MUSGO = 7
+MUSGO_RELLENO = 8
+LODO = 9
+LODO_RELLENO = 10
+HUESOS = 11
+HUESOS_RELLENO = 12
+QUEMADO = 13
+QUEMADO_RELLENO = 14
+TUMBAS = 15
+TUMBAS_RELLENO = 16
+SAGRADA = 17
+SAGRADA_RELLENO = 18
+LAPIDA_ALTA = 19
+LAPIDA_BAJA = 20
+CRUZ = 21
+CALAVERA = 22
 
+#: Qué baldosa pinta el suelo de cada sección, en `(superficie, relleno)`.
+BALDOSAS_POR_FASE = {
+    1: (CRIPTA, CRIPTA_RELLENO),
+    2: (BOSQUE, BOSQUE_RELLENO),
+    3: (HUESOS, HUESOS_RELLENO),
+    4: (QUEMADO, QUEMADO_RELLENO),
+    5: (TUMBAS, TUMBAS_RELLENO),
+    6: (SAGRADA, SAGRADA_RELLENO),
+}
 BALDOSAS = {
-    "piedra": (PIEDRA, RELLENO),
     "musgo": (MUSGO, MUSGO_RELLENO),
     "lodo": (LODO, LODO_RELLENO),
 }
 
 
-def _material_de(columna: int) -> str:
+def _material_de(columna: int) -> tuple[int, int]:
     for inicio, ancho, material in SEGMENTOS_FASE2:
         if inicio <= columna < inicio + ancho:
-            return material
-    return "piedra"
+            return BALDOSAS[material]
+    return BALDOSAS_POR_FASE[fase_de_la_columna(columna)]
 
 
 def _terreno() -> list[list[int]]:
@@ -106,8 +131,7 @@ def _terreno() -> list[list[int]]:
 
     for x in range(MW):
         superficie = perfil[x]
-        material = _material_de(x)
-        arriba, abajo = BALDOSAS[material]
+        arriba, abajo = _material_de(x)
         g[superficie][x] = arriba
         for fila in range(superficie + 1, MH):
             g[fila][x] = abajo
@@ -120,18 +144,18 @@ def _terreno() -> list[list[int]]:
 
     # El easter egg: dos lápidas.
     suelo_egg = perfil[COLUMNA_LAPIDA_TERESA]
-    g[suelo_egg - 1][COLUMNA_LAPIDA_TERESA] = LOSA
+    g[suelo_egg - 1][COLUMNA_LAPIDA_TERESA] = LAPIDA_BAJA
     g[suelo_egg - 2][COLUMNA_LAPIDA_TERESA] = LAPIDA_ALTA
     suelo_egg2 = perfil[COLUMNA_LAPIDA_HUGO]
-    g[suelo_egg2 - 1][COLUMNA_LAPIDA_HUGO] = LOSA
+    g[suelo_egg2 - 1][COLUMNA_LAPIDA_HUGO] = LAPIDA_BAJA
     g[suelo_egg2 - 2][COLUMNA_LAPIDA_HUGO] = LAPIDA_ALTA
 
-    # Los huesos de la Fase 3 — marcador de posición hasta AUD-468.
+    # Los huesos y calaveras del camino de la Fase 3.
     for col in HUESOS_FASE3:
         fila = perfil[col]
-        g[fila - 1][col] = CRUZ
+        g[fila - 1][col] = CALAVERA
 
-    # Las tumbas de conquistador de la Fase 5 — cruces en el suelo.
+    # Las cruces de conquistador de la Fase 5.
     for col in TUMBAS_FASE5:
         fila = perfil[col]
         g[fila - 1][col] = CRUZ
@@ -305,9 +329,9 @@ tileheight="{TS}" infinite="0" nextlayerid="20" nextobjectid="900">
   <property name="bloom" type="float" value="0.30"/>
   <property name="vignette" type="float" value="0.45"/>
  </properties>
- <tileset firstgid="1" name="tileset_stage0" tilewidth="{TS}" tileheight="{TS}" \
+ <tileset firstgid="1" name="tileset_stage4_1" tilewidth="{TS}" tileheight="{TS}" \
 tilecount="{TS_TOTAL}" columns="{TS_COLUMNAS}">
-  <image source="{TILESET}" width="{TS_IMAGEN_PX}" height="{TS_IMAGEN_PX}"/>
+  <image source="{TILESET}" width="{TS_IMAGEN_PX_X}" height="{TS_IMAGEN_PX_Y}"/>
  </tileset>
 {capa(1, "BG_Far", ceros)}
 {capa(2, "BG_Mid", ceros)}
