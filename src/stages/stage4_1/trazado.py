@@ -1,55 +1,36 @@
 """El trazado del 4-1: un descenso, no un pasillo.
 
-Por qué se rehizo (AUD-225)
-============================
-El nivel era horizontal y estaba lleno de `DeathPit`. Jugado, no funcionaba, y
-por tres razones distintas:
-
-1. **Los fosos contradecían la ficha.** `13_STAGE_4_1.md` lo llama «travesía
-   atmosférica» y prohíbe enemigos porque *«la tensión ya está: es el silencio
-   antes del juez»*. Siete agujeros mortales en el camino convierten eso en un
-   nivel de memorizar caídas, que es justo lo contrario.
-2. **Las `HazardZone` no se ven.** El motor sólo dibuja las que suben —la
-   inundación de AUD-135—; una zona de daño fija espera a que el diseñador
-   pinte pinchos en las baldosas, y aquí no había ninguno pintado. El jugador
-   recibía daño de la nada. Se quitaron todas: lo que queda son grietas que la
-   escena dibuja con luz verde, y que **no hacen daño**.
-3. **Un cementerio no se recorre de lado.** Se baja. El nivel es ahora un pozo
-   de 240 filas: se desciende de repisa en repisa hasta el círculo de piedra.
-
-Por qué caer no mata
---------------------
-El motor **no tiene daño por caída** (comprobado: no existe ninguna constante ni
-ninguna rama que lo aplique). Eso hace que un descenso sea seguro por
-construcción, y es lo que permite quitar los fosos sin sustituirlos por nada:
-la caída deja de ser el castigo y pasa a ser el movimiento.
-
-Lo que sí exige cuidado son las superficies, y ésas se ven:
-
-* **Musgo** (verde, con matas): arrastra hacia el hueco. No hace daño — te
-  mueve. Se resbala hacia el borde, que es de donde hay que salir de todas
-  formas, así que acelera al que entiende y sólo molesta al que se para.
-* **Lodo** (marrón, con raíces): frena. Se camina despacio y la tormenta
-  empuja mientras tanto.
-
-Las dos son `FrictionZone` del motor, y las dos **se pintan con su baldosa**:
-la regla es que ninguna superficie cambie el movimiento sin que se vea por qué.
+Se hereda tal cual del diseño anterior (AUD-225) — ver `docs/niveles/
+13_STAGE_4_1.md` §0 para por qué: un cementerio no se recorre de lado, se
+baja, y esta forma es la que ya se demostró que funciona jugada (repisas en
+zigzag, cero `DeathPit`, cero `HazardZone` fija, cero daño por caída). Lo que
+cambia con el rediseño de las seis fases es **qué hay** en cada tramo, no la
+forma del pozo.
 
 La geometría, y por qué es tan regular
 ---------------------------------------
-Las repisas van cada 5 filas y alternan lado, así que el descenso es un zigzag.
-Cinco filas son 80 px y el salto del jugador llega a 90,25 px medidos de la
-física (`level_metrics.JumpEnvelope`), o sea que **se puede volver a subir**.
-La primera versión usaba seis filas —96 px— para que el pozo fuera de un solo
-sentido; suena bien y jugado es un defecto, porque lo que hay en este nivel son
-epitafios que leer, y pasarse uno de largo lo dejaba perdido. Bajar sigue siendo
-gratis y subir sigue costando un salto puesto donde toca: el nivel se lee como
-un descenso sin encerrar a nadie.
+Las repisas van cada 5 filas y alternan lado, así que el descenso es un
+zigzag. Cinco filas son 80 px y el salto del jugador llega a 90,25 px medidos
+de la física (`level_metrics.JumpEnvelope`), o sea que **se puede volver a
+subir**. Consecutivas se solapan siempre entre las columnas 20 y 40, así que
+desde cualquier repisa se llega andando al hueco de la siguiente — ningún
+descenso puede encerrar a nadie.
 
-Consecutivas se solapan siempre entre las columnas 20 y 40, o sea que desde
-cualquier repisa se llega andando al hueco de la siguiente. Un descenso no puede
-tener un sitio donde el jugador se quede encerrado, y ésta es la forma de
-garantizarlo sin comprobarlo a ojo.
+Lo nuevo de esta versión
+-------------------------
+* **Musgo y lodo en la Fase 2 (El Venado)**, no en dos actos separados: el
+  guion nuevo los pide juntos —*«superficies con musgo que resbalan y otras
+  zonas que frenan el movimiento»*— en el mismo tramo.
+* **Un tramo de slope en la Fase 3 (El Rey Terciopelo)**: la petición del
+  guion de «ascender por lomas» se resuelve con un `Slope` de verdad
+  (`pendientes.py`) metido en el hueco de una repisa, no con una inversión
+  del eje del nivel. Ocupa sólo parte del hueco — el resto queda libre para
+  seguir cayendo, igual que cualquier otra pieza que se mete en un hueco en
+  este nivel.
+* **Grietas que se iluminan al paso en la Fase 6**, no braseros que se
+  quedan encendidos: el guion las describe como *«cada paso... puede
+  activar una luz ambiental»*, un rastro momentáneo, no una barra de
+  progreso acumulada. Las enciende la escena (`stage4_1.py`), no el TMX.
 """
 from __future__ import annotations
 
@@ -57,51 +38,41 @@ from __future__ import annotations
 #: aquí porque el generador corre como script suelto, sin el paquete instalado.
 TS = 16
 
-#: Ancho y alto del mapa, en baldosas. 960 × 3840 px — un pozo.
-MW, MH = 60, 240
+#: Ancho y alto del mapa, en baldosas. 960 × 4608 px — un pozo, seis tramos.
+MW, MH = 60, 288
 
-#: Filas de cada acto. Cinco actos de 48 filas: 768 px, más de una pantalla de
-#: alto (la pantalla mide 600), así que cada acto se lee como un acto.
-ALTO_ACTO = 48
+#: Filas de cada fase. Seis fases de 48 filas: 768 px, más de una pantalla de
+#: alto (la pantalla mide 600), así que cada fase se lee como una fase.
+ALTO_FASE = 48
 
 #: Grosor de los muros laterales, en columnas.
 MURO_ANCHO = 2
 
-#: Cada cuántas filas hay una repisa. **Cinco, y no seis, a propósito.**
-#:
-#: Seis filas son 96 px y el salto del jugador llega a 90,25 medidos de la
-#: física (`level_metrics.JumpEnvelope`): con seis, el descenso era de un solo
-#: sentido. Sonaba bien —«el cementerio no devuelve a nadie»— y jugado es un
-#: defecto: el contenido de este nivel son epitafios que leer y un cielo que
-#: mirar, y pasarse uno de largo lo dejaba perdido para siempre. El calificador
-#: lo dijo con todas las letras: 37 repechos imposibles.
-#:
-#: Con cinco son 80 px, se sube desde el lado abierto de cada repisa y el nivel
-#: sigue leyéndose como un descenso — porque bajar es gratis y subir cuesta un
-#: salto bien puesto.
+#: Cada cuántas filas hay una repisa. Cinco: 80 px, y el salto del jugador
+#: llega a 90,25 medidos — así se puede volver a subir una repisa suelta.
 FILAS_POR_REPISA = 5
 
-#: Grosor de una repisa, en filas. Una sola: con dos, el hueco libre entre una
-#: repisa y la de arriba se quedaba en 48 px y el jugador mide 32.
+#: Grosor de una repisa, en filas. Una sola: con dos, el hueco libre entre
+#: una repisa y la de arriba se quedaba en 48 px y el jugador mide 32.
 GROSOR_REPISA = 1
 
-#: Primera y última repisa. La última deja sitio para el suelo del umbral.
+#: Primera y última repisa. La última deja sitio para el suelo final.
 PRIMERA_FILA = 10
-ULTIMA_FILA = 225
+ULTIMA_FILA = 275
 
-#: El suelo del acto V: firme, de pared a pared. Es el único sitio del nivel
+#: El suelo del umbral: firme, de pared a pared. El único sitio del nivel
 #: donde se puede estar quieto sin que pase nada, y por eso es el final.
-SUELO_FINAL = 230
+SUELO_FINAL = 280
 
 
 def repisas() -> tuple[tuple[int, int, int], ...]:
     """Las repisas del pozo, en `(columna, ancho, fila)`.
 
     Alternan lado: las pares dejan el hueco a la derecha y las impares a la
-    izquierda. El solape entre dos consecutivas nunca baja de 20 columnas, que
-    es lo que impide que exista una repisa desde la que no se alcance el hueco
-    siguiente — `tests/test_stage4_1.py` lo comprueba en vez de confiar en que
-    estos números estén bien.
+    izquierda. El solape entre dos consecutivas nunca baja de 20 columnas, lo
+    que impide que exista una repisa desde la que no se alcance el hueco
+    siguiente — `tests/test_stage4_1.py` lo comprueba en vez de confiar en
+    que estos números estén bien.
     """
     salida: list[tuple[int, int, int]] = []
     for i, fila in enumerate(range(PRIMERA_FILA, ULTIMA_FILA + 1,
@@ -114,73 +85,61 @@ def repisas() -> tuple[tuple[int, int, int], ...]:
     return tuple(salida)
 
 
-def acto_de_la_fila(fila: int) -> int:
-    """El acto, 1 a 5, al que pertenece esa fila del mapa."""
-    return min(5, fila // ALTO_ACTO + 1)
+def fase_de_la_fila(fila: int) -> int:
+    """La fase, 1 a 6, a la que pertenece esa fila del mapa."""
+    return min(6, fila // ALTO_FASE + 1)
 
 
-#: Cada cuántas repisas hay un brasero. Doce braseros sobre 44 repisas.
-CADA_CUANTAS_BRASERO = 4
+#: Cada cuántas repisas hay un punto de reaparición.
+CADA_CUANTAS_CHECKPOINT = 4
 
-#: Todos los braseros van en esta columna, y no en el centro de su repisa.
+#: Todos los checkpoints van en esta columna, y no en el centro de su repisa.
 #:
 #: Es la franja que **todas** las repisas tienen en común (20 a 40), así que
-#: cabe en cualquiera de las dos orientaciones. Dos motivos, uno de dibujo y
-#: otro de herramienta: una columna de fuegos bajando por el eje del pozo se lee
-#: como un camino, y `level_metrics.analyse_checkpoints` ordena los puntos de
-#: reaparición por `(x, y)` — con las `x` alternando entre 21 y 39, la distancia
-#: «entre checkpoints consecutivos» salía de 3.459 px porque el orden era el
-#: equivocado, no porque faltara ninguno.
-COLUMNA_DEL_FUEGO = 30
+#: cabe en cualquiera de las dos orientaciones. `level_metrics.
+#: analyse_checkpoints` ordena los puntos de reaparición por `(x, y)`; con la
+#: `x` fija, la distancia «entre checkpoints consecutivos» mide lo que de
+#: verdad hay que bajar y no un zigzag falso por la alternancia de lado.
+COLUMNA_DEL_CHECKPOINT = 30
 
 
-def braseros() -> tuple[tuple[int, int], ...]:
-    """Los braseros, en `(columna, fila)`. Once en las repisas y uno abajo."""
+def checkpoints() -> tuple[tuple[int, int], ...]:
+    """Los puntos de reaparición, en `(columna, fila)`.
+
+    Uno cada cuatro repisas y uno en el suelo final. Con 54 repisas eso deja
+    tramos de 320 px entre dos consecutivos, por debajo de los 500 que
+    recomienda el calificador.
+    """
+    lista = repisas()
     puestos = [
-        (COLUMNA_DEL_FUEGO, fila)
-        for i, (_x0, _ancho, fila) in enumerate(repisas())
-        if i % CADA_CUANTAS_BRASERO == 1
-    ][:11]
-    puestos.append((COLUMNA_DEL_FUEGO, SUELO_FINAL))   # el doceavo: el umbral
+        (COLUMNA_DEL_CHECKPOINT, fila)
+        for i, (_x0, _ancho, fila) in enumerate(lista)
+        if i % CADA_CUANTAS_CHECKPOINT == 1
+    ]
+    puestos.append((COLUMNA_DEL_CHECKPOINT, SUELO_FINAL))
     return tuple(puestos)
 
 
-#: Reaparecer en el brasero, y no en un punto invisible a mitad del pozo.
-#:
-#: El §10 del diseño dice que «los braseros ya cumplen de marcadores». Esto lo
-#: hace literal: se vuelve al último fuego encendido, que es el que ilumina el
-#: tramo donde acabas de caer. Doce sobre 44 repisas dejan 320 px entre uno y el
-#: siguiente, por debajo de los 500 que el calificador recomienda.
-def checkpoints() -> tuple[tuple[int, int], ...]:
-    return braseros()
-
-
-#: Las repisas de musgo: **arrastran hacia el hueco**. Se eligen por índice y no
-#: por fila para que cambiar el reparto de actos no las descoloque.
-#: Empiezan en el acto III, que es donde el diseño (§1) mete la primera
-#: exigencia de movimiento, y siguen en el IV mezcladas con el lodo.
-#: El acto III son las repisas 18 a 26 y el IV las 27 a 36; el V no lleva
-#: ninguna, porque ahí *«el silencio es el jefe»* y una superficie que empuja no
-#: es silencio.
-INDICES_MUSGO: tuple[int, ...] = (19, 21, 23, 25, 29, 32, 35)
-
-#: Las repisas de lodo: **frenan**. Sólo en el acto IV, donde además sopla el
-#: viento: caminar despacio mientras te empujan es la única exigencia real del
-#: nivel, y no hace daño.
-INDICES_LODO: tuple[int, ...] = (28, 31, 34)
+# ── Fase 2 (El Venado): musgo y lodo, en el mismo tramo ─────────────────────
+#
+# El guion los pide juntos: *«El terreno introduce superficies con musgo que
+# resbalan y otras zonas que frenan el movimiento»*. Se eligen por índice y
+# no por fila para que ajustar la partición de fases no las descoloque. No
+# todas las repisas de la Fase 2 llevan superficie especial — dejar algunas
+# de piedra normal da un sitio donde pararse a mirar, y un tramo donde cada
+# paso resbala deja de leerse como una elección y pasa a ser sólo incómodo.
+INDICES_MUSGO: tuple[int, ...] = (9, 11, 13, 15, 17)
+INDICES_LODO: tuple[int, ...] = (8, 12, 16)
 
 #: Cuánto arrastra el musgo, en px/s, hacia el hueco de su repisa.
-#: `ZonaDeFriccion.arrastre` se aplica a la posición, no a la velocidad, así que
-#: al saltar se suelta — es la cinta de Mega Man 2, no un empujón que se acumula.
+#: `ZonaDeFriccion.arrastre` se aplica a la posición, no a la velocidad, así
+#: que al saltar se suelta — es la cinta de Mega Man 2, no un empujón que se
+#: acumula. Mismo valor medido que el diseño anterior (AUD-236).
 ARRASTRE_DEL_MUSGO = 62.0
 
 #: Cuánto frena el lodo: se anda al 88 % de la velocidad normal.
-#:
-#: `multiplicador` es una escala de velocidad y no un coeficiente de rozamiento
-#: —el jugador reescribe `velocity.x` desde la entrada cada fotograma y esto se
-#: aplica encima—, así que el número **no depende de los fotogramas por
-#: segundo**: medidos 79,20 px/s a 30, a 60 y a 120 (AUD-236). Lo comprueba
-#: `tests/test_stage4_1.py::TestElLodoFrenaIgualEnCualquierMaquina`.
+#: No depende de los fotogramas por segundo (AUD-236: medidos 79,20 px/s a
+#: 30, a 60 y a 120).
 FRENO_DEL_LODO = 0.88
 
 
@@ -198,53 +157,6 @@ def superficies() -> tuple[tuple[int, int, int, str], ...]:
     return tuple(salida)
 
 
-# ── Lo que hace que el pozo dé miedo (AUD-247) ──────────────────────────────
-#
-# Tres ideas, una por acto, y ninguna hace daño. El terror de este nivel no es
-# perder salud —no hay enemigos y no hay trampas— sino **no poder fiarte de lo
-# que ves**: una losa que se rompe, otra que no está hasta que un rayo la
-# enseña, y un tramo entero que aparece y desaparece al compás del órgano.
-#
-# Las tres van en el **hueco** de su repisa, o sea en la ruta de bajada, y
-# ninguna es obligatoria: el hueco mide 17 o 18 columnas y el bloque cuatro, así
-# que siempre se puede caer por al lado. Un descenso donde una mecánica pueda
-# encerrarte es peor que un foso, porque el foso al menos te devuelve al
-# checkpoint.
-
-#: Acto II — losas de tumba que se rompen a golpes. Son atajos: caes antes si
-#: las rompes, y si no, rodeas. El motor las pinta con grietas que cuentan los
-#: golpes que quedan, así que el jugador ve que está avanzando.
-INDICES_ROMPIBLES: tuple[int, ...] = (10, 13, 16)
-#: Golpes que aguantan. Dos: uno sería un secreto y tres, una tarea.
-GOLPES_DE_LA_LOSA = 2
-
-#: Acto III — «La Niebla que Respira». El tramo musical: losas que aparecen y
-#: desaparecen a compás. El acto se llama así desde el primer borrador del
-#: diseño y hasta ahora no respiraba nada.
-INDICES_RITMICAS: tuple[int, ...] = (18, 20, 22, 24, 26)
-#: El patrón, en pulsos. `"x..."` = suena, calla, calla, calla — una losa
-#: presente un pulso de cada cuatro. Con `bpm = 60` un pulso es un segundo y los
-#: cuatro son un acorde entero del órgano, así que la losa entra y sale **con la
-#: música que suena**, no con un temporizador que da la casualidad de coincidir.
-PATRON_RITMICO = "x..."
-#: Cada losa entra un pulso después que la anterior: bajando, se persigue la
-#: que acaba de aparecer debajo. Todas a la vez sería un semáforo.
-DESFASE_RITMICO = 1.0
-
-#: Acto IV — losas fantasma. Están, son sólidas, y **no se ven** hasta que un
-#: relámpago las enseña o la visión espectral las revela. Es el §5 del diseño
-#: llevado a su conclusión: «el relámpago revela los peligros del tramo
-#: siguiente… el jugador memoriza el tramo con cada rayo».
-#:
-#: Que sean plataformas y no peligros es deliberado. Un pincho invisible es una
-#: trampa; un suelo invisible es una pregunta —¿me fío de lo que vi hace tres
-#: segundos?— y esa pregunta es la que da miedo sin castigar a nadie.
-INDICES_FANTASMA: tuple[int, ...] = (29, 31, 33, 35)
-
-#: Ancho de los tres tipos de losa, en baldosas.
-ANCHO_LOSA_EXTRA = 4
-
-
 def hueco_de(indice: int) -> tuple[int, int]:
     """Dónde empieza y cuánto mide el hueco de esa repisa, en baldosas."""
     x0, ancho, _fila = repisas()[indice]
@@ -253,65 +165,50 @@ def hueco_de(indice: int) -> tuple[int, int]:
     return MURO_ANCHO, x0 - MURO_ANCHO
 
 
-def losa_extra(indice: int) -> tuple[int, int]:
-    """La losa que va en el hueco de esa repisa: `(columna, fila)`.
+# ── Fase 3 (El Rey Terciopelo): la loma ─────────────────────────────────────
+#
+# El guion pide «ascender por lomas utilizando slopes». Se resuelve con un
+# `Slope` (AUD-297, `pendientes.py`) metido en el hueco de una repisa de la
+# Fase 3, subiendo del suelo de esa repisa hasta el de la que tiene
+# directamente encima — el mismo tramo de 5 filas (80 px) que separa a
+# cualquier par de repisas consecutivas, así que no hace falta ensanchar el
+# pozo ni tocar la cadencia del zigzag. Ocupa sólo una parte del hueco: el
+# resto sigue libre para caer, igual que cualquier otra pieza que se mete en
+# un hueco en este nivel (la regla del §6 del diseño: nunca tapar el hueco
+# entero).
+LOMA_INDICE = 22
+#: Ancho de la loma, en baldosas — deja el resto del hueco libre.
+ANCHO_DE_LA_LOMA = 10
 
-    Centrada en el hueco, así que quedan libres seis o siete columnas a cada
-    lado: se puede bajar sin tocarla, que es lo que impide que una mecánica
-    encierre a nadie.
+
+def loma() -> tuple[int, int, int, int, str]:
+    """La loma: `(columna, fila_de_abajo, ancho, alto, sube)`.
+
+    `fila_de_abajo` es la fila de la repisa de `LOMA_INDICE`; la loma sube
+    `FILAS_POR_REPISA` filas desde ahí, hasta el nivel de la repisa de
+    encima.
     """
-    inicio, ancho = hueco_de(indice)
-    fila = repisas()[indice][2]
-    return inicio + (ancho - ANCHO_LOSA_EXTRA) // 2, fila
+    inicio, ancho_hueco = hueco_de(LOMA_INDICE)
+    _x0, _ancho, fila = repisas()[LOMA_INDICE]
+    ancho = min(ANCHO_DE_LA_LOMA, ancho_hueco)
+    columna = inicio + (ancho_hueco - ancho) // 2
+    return columna, fila, ancho, FILAS_POR_REPISA, "derecha"
 
 
-def grietas() -> tuple[tuple[int, int, int], ...]:
-    """Las grietas verdes de la pared, en `(columna, fila, alto_en_filas)`.
-
-    **No hacen daño y no son `HazardZone`.** Son luz: marcan el canto de cada
-    repisa para que el borde del que hay que saltar se vea en la oscuridad. Las
-    dibuja la escena (`_dibujar_grietas`), porque una `HazardZone` fija el motor
-    no la pinta y era exactamente el problema que tenía este nivel — daño
-    invisible desde un rectángulo que nadie ve.
-    """
+# ── Fase 6 (El Camino hacia Paburu): grietas que se iluminan al paso ───────
+#
+# El guion: *«Cada paso... puede activar una luz ambiental... se revelan
+# tiles con grietas verdes»*. A diferencia de los braseros del diseño
+# anterior, **no quedan encendidas**: son un rastro momentáneo, no una barra
+# de progreso acumulada. La escena (`stage4_1.py`) las enciende por
+# proximidad y las deja apagarse solas — aquí sólo se calcula dónde van.
+def grietas_de_pisada() -> tuple[tuple[int, int], ...]:
+    """Las grietas de la Fase 6, en `(columna, fila)` — el canto de cada
+    repisa del tramo, que es por donde se pisa al bajar."""
     salida = []
     for x0, ancho, fila in repisas():
-        # En el canto del lado por el que se cae, que es el que importa.
-        borde = x0 if x0 > MURO_ANCHO else x0 + ancho - 1
-        salida.append((borde, fila, 3))
-    return tuple(salida)
-
-
-#: Los nombres de los estudiantes van aquí. Se dejan como marcador de posición
-#: a propósito: el diseño (§7) exige que los cargue el profesor, que todos estén
-#: sin distinción de nota, y que ninguna inscripción se burle de nadie. Escribir
-#: aquí una lista inventada sería justo lo contrario.
-#:
-#: El índice es el de la repisa donde se apoya la lápida.
-EPITAFIOS: tuple[tuple[int, str], ...] = (
-    (9, "[NOMBRE] — Computo Grafico, 2026"),
-    (12, "[NOMBRE] — Procesamiento de Imagenes, 2026"),
-    (15, "[NOMBRE] — Vision por Computadora, 2026"),
-    (41, "[NOMBRE] — Reconocimiento de Patrones, 2026"),
-)
-
-
-def marcas_de_pezuna() -> tuple[tuple[int, int, int], ...]:
-    """Dónde pisar, en `(columna, fila, ancho)` de baldosa.
-
-    Las huellas que revela la visión espectral (§8 del diseño). En un descenso
-    lo que hay que saber no es dónde saltar sino **por dónde caer**, así que
-    marcan el hueco de cada repisa de musgo y de lodo: las superficies que
-    mueven al jugador son las que merecen que mirar tenga premio.
-    """
-    salida = []
-    for i, (x0, ancho, fila) in enumerate(repisas()):
-        if i not in INDICES_MUSGO and i not in INDICES_LODO:
+        if fase_de_la_fila(fila) != 6:
             continue
-        # El hueco: lo que queda de pared a pared quitando la repisa.
-        if x0 == MURO_ANCHO:
-            hueco_x = x0 + ancho
-        else:
-            hueco_x = MURO_ANCHO
-        salida.append((hueco_x, fila, 3))
+        borde = x0 if x0 > MURO_ANCHO else x0 + ancho - 1
+        salida.append((borde, fila))
     return tuple(salida)
