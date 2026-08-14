@@ -1,335 +1,186 @@
 ---
 document_id: "LOI-LVL-4-1D"
-title: "Diseño 4-1 — El Cementerio y La Cegua"
-aliases: ["Diseño del Cementerio", "4-1 Design", "La Cegua"]
-tags: ["level", "zona-final", "design", "folklore", "cegua"]
-description: "Propuesta de diseño del 4-1: progresión ambiental estilo Magus, luna descendente, braseros, tormenta, La Cegua y lápidas de estudiantes"
+title: "Diseño 4-1 — El Cementerio Sagrado"
+aliases: ["Diseño del Cementerio Sagrado", "4-1 Design", "El Despertar de Paburu"]
+tags: ["level", "zona-final", "design", "folklore", "paburu"]
+description: "Diseño del 4-1: seis fases con lenguaje de color propio, los tres espíritus ascendiendo, y el despertar de Paburu"
 source: "docs/niveles/15_DISENO_4_1_EL_CEMENTERIO.md"
 ---
 
-# DISEÑO 4-1 — EL CEMENTERIO Y LA CEGUA
+# DISEÑO 4-1 — EL CEMENTERIO SAGRADO
 
-**Nivel:** 4-1 La Entrada al Cementerio · **Tipo:** Travesía atmosférica (sin enemigos) · **Referencia:** pelea contra Magus (Chrono Trigger)
+**Nivel:** 4-1 · **Tipo:** Travesía atmosférica (sin enemigos) · **Reemplaza**
+al diseño anterior de La Cegua (ver §0 de `13_STAGE_4_1.md`, AUD-462)
 
-> **La idea en una frase.** Que el fondo **pelee junto al jugador**: cada tramo
-> que se avanza enciende braseros, baja la luna, sube la tormenta y acerca a las
-> figuras — como el escenario de Magus que se transforma por fases mientras la
-> pelea avanza. El 4-1 no es un pasillo con decoración: es **un reloj de fondo**
-> donde el jugador siente que el cementerio se está despertando con él.
+> **La idea en una frase.** Jhon y Jin descienden por un cementerio que va
+> cambiando de piel —de color pleno a blanco y negro, a grises, a un tono
+> vintage, a la noche, y de vuelta al color— mientras los espíritus de los
+> tres jefes vencidos (Venado, Rey Terciopelo, Gavilán) ascienden uno a uno.
+> Cuando los tres se han ido, el camino se abre hacia Paburu.
 >
-> Este documento es una **propuesta**: todo lo de aquí cabe dentro de las reglas
-> obligatorias de `13_STAGE_4_1.md` (sin enemigos, visión espectral, cuencos de
-> fuego, día 19:00 → 23:00) y usa solo sistemas que el motor ya tiene: clima
-> (`fog`, `storm`, `rain`), partículas (`embers`, `ash`, `spores`), ciclo
-> día/noche (`start_hour`/`day_length`), luz por focos, capas parallax
-> (BG_Far/BG_Mid) y `HazardZone`.
+> Este documento fija los números: la gradación de color de cada fase (una
+> matriz real, no una descripción), el clima, la geometría y qué sistema del
+> motor resuelve cada pieza. Todo lo de aquí usa sistemas que **ya existen**
+> — `PostProcessing.set_color_grading()`, `WeatherSystem`, `lighting.py`,
+> `pendientes.py` (slopes), `camera.py` (shake) — y hereda del diseño
+> anterior la forma de pozo y la regla de superficies visibles (§0 de la
+> ficha).
 
 ---
 
-## 1. El arco en cinco actos
+## 1. Por qué un pozo y no un pasillo
 
-El nivel se divide en **cinco actos ambientales**. Cada acto cambia cinco
-cosas: los **braseros encendidos**, la **luna** (posición y tamaño), el
-**clima**, el **fondo** (quién se ve) y los **peligros activos**. El jugador
-lee su progreso por el fondo, no por un contador.
+El diseño anterior de este mismo nivel era horizontal y falló jugado (siete
+`DeathPit`, cinco `HazardZone` invisibles, 37 repechos imposibles según el
+calificador — AUD-225). Se rehízo como un descenso de repisas en zigzag y
+funcionó: caer es gratis, subir cuesta un salto puesto donde toca, y nadie
+queda encerrado porque las repisas consecutivas siempre se solapan. Ese
+problema —cómo generar tensión sin combate ni muerte— es exactamente el que
+plantea este guion nuevo, así que se hereda la solución en vez de
+reinventarla.
 
-| Acto | Tramo | Braseros | Luna | Clima | Fondo | Peligros |
-|---|---|---|---|---|---|---|
-| I | La Entrada | 0/12 apagados | Alta y pequeña (~30 px) | `fog` bajo | Lápidas primeras, ecos lejanos (venado) | Ninguno |
-| II | El Sendero de los Nombres | Se encienden 1–6 en secuencia | Baja un tramo (~60 px) | `fog` medio | Lápidas con nombres de estudiantes | Grietas visibles (no activas) |
-| III | La Niebla que Respira | 7–9 | Baja otro tramo (~90 px) | `fog` denso + truenos lejanos | Árboles en la niebla | **Primer tramo de saltos** (grietas pulsantes) |
-| IV | La Tormenta | 10–11 | Casi en el horizonte (~120 px) | `storm` + relámpagos | **La Cegua y las brujas** (aparecen con cada rayo) | Saltos exigentes, losas que ceden |
-| V | El Umbral | 12/12 (el central, grande) | En el suelo del fondo, enorme (~160 px) | Silencio súbito | Cegua inmóvil y lejana; círculo de piedra al fondo | Ninguno (el silencio es el jefe) |
+**Geometría base:** pozo de 60 × 288 baldosas (960 × 4608 px), seis tramos de
+48 filas cada uno (`ALTO_FASE = 48`, la misma partición que ya usaba el
+diseño anterior, con un tramo más). Repisas cada 5 filas (80 px), alternando
+lado — el salto del jugador llega a 90,25 px medidos
+(`level_metrics.JumpEnvelope`), así que siempre se puede volver a subir uno.
 
-**La regla del acto:** entre actos solo cambia el fondo, el clima y la luz —
-**no cambia el esquema de control ni se introduce una mecánica nueva**. Lo que
-cambia es la **sensación de avance**: el cementerio se despierta, y el jugador
-es el que lo despierta.
+## 2. Las seis fases
 
----
+Cada fase fija tres cosas a la vez: **gradación de color** (una matriz 3×3,
+la de verdad que aplica `PostProcessing.apply()`), **clima** (`WeatherSystem`)
+y **geometría** (qué tramo del pozo es). La transición entre fases se
+interpola a lo largo del propio tramo —igual que el diseño anterior
+interpolaba la luna— para que el cambio se vea progresivo, no cortado.
 
-## 2. La luna como reloj (mecánica central)
+| Fase | Filas | Nombre | Gradación | Clima | Partículas |
+|---|---|---|---|---|---|
+| 1 | 0–47 | El Cementerio de Tilarán | Color pleno (sin gradación) | `clear` | `ash`, ligera |
+| 2 | 48–95 | El Venado | → B/N de alto contraste | `rain` → `fog` | `ash` |
+| 3 | 96–143 | El Rey Terciopelo | → Grises neutros | `storm` | `spores` |
+| 4 | 144–191 | El Gavilán | → Sepia/vintage naranja | `rain`, luego calma | `ash` |
+| 5 | 192–239 | La Planicie de los Muertos | → Nocturno azulado | `clear`, viento de fondo | ninguna (oscuridad) |
+| 6 | 240–287 | El Camino hacia Paburu | → Color pleno + verde | `fog` sobrenatural | `spores`, alta |
 
-La luna es la barra de vida del nivel.
+### Las matrices de gradación
 
-- **Posición y tamaño por acto** (tabla del §1): alta-pequeña al empezar,
-  abajo-enorme al terminar. Se implementa como un sprite en la capa `BG_Far`
-  con dos parámetros: `offset_y` (baja con el avance) y `scale` (crece).
-  Entre actos se interpola suavemente (lerp) — el cambio se ve, no se salta.
-- **La luna es el día**: el nivel arranca a las 19:00 (`start_hour = "dusk"`)
-  y termina a las 23:00 (`day_length = 900`). La luna **materializa** lo que el
-  reloj del mundo ya está haciendo: al terminar el nivel, la luna ocupa el
-  lugar donde el día estaba.
-- **La luna es el guiño a Magus**: en la pelea original el fondo se transforma
-  por fases con la barra del jefe; aquí la luna se transforma con el avance.
-  No hace falta que baje en cada píxel — basta con que en los **cinco puntos
-  de acto** esté donde el diseño dice.
+`PostProcessing.set_color_grading(r,g,b, rr,gg,bb, rrr,ggg,bbb)` es una
+matriz 3×3 real: cada canal de salida es una combinación lineal de los tres
+de entrada, dividida entre 255. No es un tinte por encima — es la misma
+operación que un grading de cine.
 
-Valores sugeridos (a calibrar en playtest):
-
-| Acto | offset_y (px desde el tope) | tamaño (px) |
+| Fase | Matriz (r,g,b / rr,gg,bb / rrr,ggg,bbb) | Qué hace |
 |---|---|---|
-| I | 60 | 30 |
-| II | 110 | 60 |
-| III | 170 | 90 |
-| IV | 230 | 120 |
-| V | 300 (al borde del suelo del fondo) | 160 |
+| 1, 6 | `None` (sin gradación) | Color de la imagen sin tocar |
+| 2 | `(87,172,33, 87,172,33, 87,172,33)` | Luminancia estándar (76,150,29 = ITU-R BT.601) con +15 % de ganancia: blanco y negro marcado, no un gris suave |
+| 3 | `(76,150,29, 76,150,29, 76,150,29)` | La misma luminancia sin ganancia: un gris plano y uniforme — se lee como escenario, no como fotografía de época |
+| 4 | `(100,196,48, 89,175,43, 69,136,33)` | Matriz sepia clásica (0.393/0.769/0.189 …, escalada a 255) — el tono vintage se completa con `set_tint` (naranja, alfa bajo) por encima, sin mezclarlo en la matriz |
+| 5 | `(71,140,26, 56,110,26, 51,89,140)` | «Day-for-night»: los canales rojo y verde de salida son luminancia atenuada, el azul de salida conserva más entrada — el clásico truco de cine para simular noche sin oscurecer del todo |
 
----
+La Fase 4 combina la matriz sepia con `set_tint((200, 120, 60), 0.12)`: la
+matriz hace el trabajo tonal (desaturar hacia sepia) y el tinte hace el
+trabajo de color (empujar hacia naranja) — son dos sistemas ya separados en
+`PostProcessing` y no hace falta fundirlos en una sola matriz para lograr el
+efecto.
 
-## 3. Los braseros que se encienden (el primer guiño Magus)
+## 3. Fase 1 — El Cementerio de Tilarán
 
-- **12 braseros** a lo largo del nivel (canónico: cuencos de fuego). El
-  primero está **apagado y frío**; el último —el del umbral— es **grande y
-  central**.
-- Cada brasero se enciende **por proximidad y en secuencia**: al pasar junto a
-  uno, se enciende y **se queda encendido** (no se apaga al retroceder). El
-  sendero queda marcado de luz detrás del jugador — nunca adelante.
-- Al encenderse: llama + partículas `embers` (ascuas) + una **luz puntual**
-  (point light de `lighting.py`). El jugador "compra visión" con avance: la luz
-  que deja detrás es la que le permite ver los peligros cuando regresa (tras
-  morir).
-- **Regla de diseño:** el número de braseros encendidos es la **barra de
-  progreso visual** del nivel. Si un jugador pregunta "¿cuánto falta?", la
-  respuesta es "cuenta los apagados".
+Color pleno, clima en calma. El objetivo es que el jugador reconozca el
+espacio como un cementerio real antes de que empiece lo sobrenatural — la
+misma función que cumplía «La Entrada» en el diseño anterior. Ligera ceniza
+cayendo (`ash`), sin siluetas de espíritu todavía.
 
----
+## 4. Fase 2 — El Venado
 
-## 4. La Cegua y las brujas (folklore costarricense, con respeto)
+La lluvia marca la entrada (`climate = "rain"` al principio del tramo,
+`"fog"` hacia el final) y la imagen se desatura progresivamente hasta el B/N
+de alto contraste. El terreno introduce **musgo** (`FrictionZone`, arrastre
+hacia el hueco de la repisa — la misma superficie y el mismo valor medido que
+el diseño anterior, 62 px/s) y la silueta del Venado aparece en `BG_Mid`
+(reusa `siluetas._venado`, sin arte nuevo). Al llegar al final del tramo, la
+silueta se desvanece hacia arriba: el Venado asciende.
 
-**Nota cultural.** La Cegua es una de las leyendas más conocidas de Costa Rica:
-una mujer hermosa que se revela de noche en los caminos con cabeza de caballo,
-apareciendo a los viajeros. Es parte del patrimonio popular del país — el mismo
-espíritu con el que el juego ya usa al terciopelo o al gavilán camionero. **No
-es un enemigo de combate: es una presencia.** Nunca se dibuja como caricatura,
-nunca se burla de ella, y no recibe daño ni se derrota. La regla del canon:
-tratar lo folclórico con la misma dignidad que lo sagrado.
+## 5. Fase 3 — El Rey Terciopelo
 
-**Cómo aparece (progresión por acto):**
+Escala de grises neutra, tormenta con rayos y viento (`climate = "storm"`,
+`rayos_por_minuto` alto, el mismo relámpago-linterna del diseño anterior que
+revela el tramo siguiente antes de tener que jugarlo). Aquí el pozo
+incorpora **slopes** (`pendientes.py`) en un tramo corto de subida —la
+petición del guion de «ascender por lomas»— resuelto como una loma dentro
+del descenso general, no como una inversión del eje: el jugador sube una
+pendiente corta entre dos repisas y vuelve a bajar, igual que ya se puede
+volver a subir una repisa suelta en el diseño heredado. La silueta enroscada
+del Rey Terciopelo (`siluetas._serpiente`) aparece entre las lápidas de
+piedra. Al ascender, dos pruebas lo comprueban: que el slope es transitable
+sin salto imposible y que la silueta se desvanece al cruzar el umbral del
+tramo.
 
-| Acto | La Cegua | Las brujas |
-|---|---|---|
-| I–II | No visible (solo un susurro opcional lejano, audio bajo) | No visible |
-| III | Silueta entre dos árboles de niebla (BG_Mid, a media distancia) | 1 silueta cruza el fondo en vuelo (BG_Mid, lenta) |
-| IV | **Se ve con cada relámpago**: la silueta aparece un instante, más cerca que en el III, montada, mirando al sendero | 2–3 cruzan con el relámpago; se quedan un segundo en la rama de un árbol |
-| V | Inmóvil y lejana, al borde del círculo de piedra; mira hacia el portal. Al cruzar al 4-2, **no la vemos más** | Siluetas posadas en los árboles, quietas |
+## 6. Fase 4 — El Gavilán
 
-- **Implementación:** sprites estáticos en `BG_Mid` (como los ecos canónicos
-  de los espíritus) — **no son entidades, no tienen colisión ni IA**. El
-  motor ya pinta capas de fondo con parallax: el trabajo es de timing, no de
-  código de enemigos.
-- **El relámpago como linterna:** la Cegua solo se ve en el destello del rayo
-  (ver §5). El jugador **elige mirar** el rayo para verla — o no mirarlo para
-  no verla. Esa elección es la tensión.
-- **Opción de tensión (sin daño):** si el jugador se queda quieto en un tramo
-  sin braseros encendidos (oscuridad) más de ~4 s, un susurro suena y los ojos
-  de la Cegua brillan en el fondo. **No hay daño ni castigo:** es recordatorio
-  de seguir. La regla del nivel es que el miedo nunca cobra vida.
+Vintage naranja, bosque cortado y muerto (árboles secos en `BG_Far`), lluvia
+suave. A media fase, el clima **calla de golpe**: partículas a cero,
+`WeatherSystem.set_climate("clear")` sin transición, silencio de audio
+ambiental. En ese silencio ocurre un **camera shake fuerte y breve, una sola
+vez** (`camera.py`, con dirección — el mismo sistema que ya prueba
+`test_la_sacudida_tiene_direccion.py`), sin causa visible: es la sensación de
+que algo acaba de pasar sin que el jugador lo haya visto. Después, el sonido
+del Gavilán vuelve de forma aislada y aleatoria, con sombras cruzando el
+fondo (reusa el patrón de `_dibujar_brujas`, adaptado a un solo cruce de
+ave). El Gavilán asciende al final del tramo.
 
----
+## 7. Fase 5 — La Planicie de los Muertos
 
-## 5. Lluvia, truenos y relámpagos (clima)
+Nocturno azulado, la fase más oscura del nivel. La luz **no es constante**:
+un ciclo de luna (`lighting.py`, intensidad ambiente oscilando entre un
+mínimo casi nulo y un máximo que revela el entorno, período de varios
+segundos) determina cuándo se ve el tramo y cuándo no. Con la luna oculta, la
+escena es casi invisible — igual que exige el guion. Voces y cánticos
+indígenas se mezclan con el ambiente del bosque (bus de audio `ambiente`,
+volumen bajo). No hay siluetas de espíritu aquí: los tres ya ascendieron: lo
+que queda son las tumbas de los conquistadores, sin dueño que reclamar.
 
-El clima cambia por acto usando el sistema que ya existe (`WeatherSystem` +
-propiedad `climate` del TMX):
+## 8. Fase 6 — El Camino hacia Paburu
 
-| Acto | climate | Partículas | Sonido |
-|---|---|---|---|
-| I | `fog` (bajo) | `ash` (ceniza cayendo, lenta) | Silencio + brisa |
-| II | `fog` | `ash` + `spores` (esporas verdes sutiles) | Crujido de lápidas, viento |
-| III | `fog` (denso) | `ash` + niebla más opaca | **Truenos lejanos** (anuncian el IV) |
-| IV | `storm` | lluvia inclinada (el viento del sistema, ±50–100 px/s) | Truenos cercanos + lluvia |
-| V | `clear` (silencio súbito) | sin partículas | Nada — el silencio es el jefe |
+Color pleno, sin gradación — la imagen «real» vuelve. Niebla sobrenatural
+(`climate = "fog"`, pero con partículas `spores` a ritmo alto en vez de la
+niebla gris habitual: la niebla de este tramo es verde-espectral, no
+climática). Grietas verdes que se revelan **por pisada** — cada repisa que el
+jugador cruza enciende una luz ambiental corta (`lighting.py`, punto que se
+apaga tras el paso, distinto de los braseros del diseño anterior porque
+**no** queda encendida: es un rastro, no un progreso acumulado) y descubre
+tiles con grietas verdes ya presentes en el tileset. Sin sobresaltos: la
+atmósfera es solemne, no de terror. Al fondo del pozo, el `NextTrigger` que
+lleva a `stage4_2_boss_paburu`.
 
-**El relámpago como mecánica de legibilidad:**
+## 9. Lo que se hereda sin cambios del diseño anterior
 
-- Cada relámpago es un **destello que ilumina todo el nivel un instante**
-  (subir el brillo/ambiente con un flash de ~0.4 s — el motor ya interpola
-  luz; aquí se pide un pico momentáneo).
-- El destello **revela**: la Cegua, las brujas, y sobre todo **los peligros del
-  tramo siguiente** (grietas, losas que ceden). El jugador memoriza el tramo
-  con cada rayo: es una **linterna de anticipación**.
-- **Regla de diseño:** ningún peligro aparece sin que un relámpago anterior lo
-  haya mostrado. Si el jugador muere en un tramo de saltos, la culpa es del
-  diseño, no de la oscuridad.
-- El trueno suena con **retardo** tras el destello (efecto clásico): el diseño
-  usa ese retardo como metrónomo de la tensión.
-
----
-
-## 6. Hazards y tramos de salto (los "hazard tiles")
-
-El nivel tiene **dos tramos de salto obligatorios** (Acto III y Acto IV), todos
-construidos con el vocabulario del TMX + una propuesta nueva:
-
-1. **Grietas pulsantes (canónicas):** `HazardZone` de 0.25 con pulso visible —
-   se salta cuando el pulso "respira" hacia afuera. En el Acto III son la
-   presentación; en el IV están combinadas con lluvia.
-2. **Losas que ceden (propuesta nueva):** losas de piedra que aguantan ~1 s
-   cuando se pisan y luego se hunden (hazard temporal — reutiliza `HazardZone`
-   activado por pisada o un objeto `Platform` con temporizador). El jugador debe
-   **correr sin pararse** — es el único "reflejo" del nivel.
-3. **Lápidas derrumbadas como plataformas:** saltos entre bloques de lápida
-   rota; son `Solid`/`Platform` normales. El diseño de salto usa las lápidas como
-   peldaños — el terreno del cementerio es el terreno de juego.
-4. **Regla de los dos peligros:** nunca dos peligros simultáneos sin que el
-   relámpago los haya mostrado (§5). En el Acto IV, la lluvia y el viento
-   "empujan" el salto (el viento de la tormenta desplaza al jugador: los
-   saltos se calculan con el viento a favor del diseño — pequeño, nunca contra
-   la jugabilidad).
-
-**Mapa de saltos sugerido (Actos III–IV):**
-
-```
-   [ÁRBOL DE NIEBLA]      [ÁRBOL DE NIEBLA]
-     │ silueta Cegua         │
- ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐   ← losas que ceden (pisar y seguir)
- SPAWN ── grieta ── grieta ── grieta ── grieta ── PORTAL
-        (salto simple)   (salto doble, se ve con el rayo)
-```
-
----
-
-## 7. Las lápidas con los nombres de los estudiantes
-
-- **Qué:** las lápidas del sendero llevan **inscritos los nombres de los
-  estudiantes del curso**. El profesor carga la lista real (los nombres van en
-  el TMX como texto de las lápidas o en un JSON del stage; se dejan
-  `[NOMBRE]` de placeholder en la entrega).
-- **Reglas de respeto (obligatorias):**
-  - Inscripciones dignas: nombre + (opcional) un descriptor neutral del
-    proyecto ("Cómputo Gráfico", "Procesamiento de Imágenes", curso/año).
-  - **Sin humor cruel**: nada de "aquí yace el que no compiló". El humor
-    académico solo si el profesor lo autoriza explícitamente y es amable.
-  - Los nombres son **todos** los estudiantes, sin distinción de nota — la
-    inscripción es un honor, no un ranking.
-- **Interacción opcional:** al acercarse a una lápida, un `MessageTrigger`
-  muestra un **epitafio corto** (1 línea). Opciones de tono:
-  - Neutral: «Estudiante de la promoción 2026.»
-  - Juego de palabras del curso: «Aprobó el examen final.» / «Su pelea duró
-    más que el compilado.»
-  - Misterioso (coherente con el nivel): «No fue el último en despertar.»
-- **La lápida central** (la más grande, en el Acto V) no lleva nombre: lleva
-  la inscripción **«LA PRUEBA»** — es la puerta del 4-2.
-
----
-
-## 8. La visión espectral (integración con la mecánica existente)
-
-El 4-1 ya tiene visión de umbral (Unidad VIII): al presionar el ataque largo,
-la pantalla se filtra y se revelan **marcas ocultas**. Propuesta de uso en
-este diseño:
-
-- Las marcas ocultas son **huellas de pezuña** — las dejó La Cegua.
-- En el Acto III y IV, las marcas revelan **dónde están las losas que ceden**
-  y **por dónde saltar las grietas** (la visión espectral es la "segunda
-  linterna" del nivel, complementaria al relámpago).
-- **Regla:** con visión espectral, el tramo de saltos del Acto IV se vuelve
-  trivial — es la recompensa de la observación (el jugador que mira, no sufre).
-
----
-
-## 9. El guion ambiental completo (la sensación buscada)
-
-```
-ACTO I — ENTRADA (19:00)          Sin música. Ceniza. La luna alta, fría.
-                                   Un susurro lejano. Nada más.
-ACTO II — LOS NOMBRES             Los braseros se encienden a tu paso.
-                                   Ves tu nombre y los de tus compañeros.
-                                   La luna bajó un tramo. Viento.
-ACTO III — LA NIEBLA QUE RESPIRA  Truenos lejanos. Árboles con siluetas.
-                                   Las grietas respiran. Primeros saltos.
-                                   Una figura entre dos árboles: no te ha
-                                   visto — todavía.
-ACTO IV — LA TORMENTA             Lluvia y relámpagos. Cada rayo te muestra
-                                   el peligro siguiente... y a la Cegua,
-                                   más cerca que antes. Las brujas cruzan.
-                                   Los saltos: corriendo, sin pararse.
-ACTO V — EL UMBRAL                La tormenta cesa. Silencio. La luna toca
-                                   el suelo del fondo, enorme.
-                                   Los 12 braseros arden. La Cegua mira
-                                   desde lejos, inmóvil. La lápida central
-                                   dice «LA PRUEBA».
-                                   Los ecos del venado, el Rey y el Gavilán
-                                   se detienen. El 4-2 comienza.
-```
-
----
-
-## 10. Implementación con los sistemas del motor (resumen)
-
-| Idea | Cómo se hace |
+| Elemento | De dónde |
 |---|---|
-| Clima por acto | Propiedad `climate` del TMX + `WeatherSystem.set_climate()` al cruzar los umbrales de acto (`fog` → `storm` → `clear`) |
-| Partículas | `AmbientParticles`: `ash` (actos I–III), `spores` (II), `embers` en cada brasero encendido |
-| Luna descendente | Sprite en `BG_Far` con offset_y + scale interpolados por acto (lerp) |
-| Braseros | `Platform`/decorativo + luz puntual (`lighting.py`) + `embers`; secuencia por proximidad en el código del stage |
-| Relámpago | Flash de brillo de ~0.4 s (subida momentánea de ambiente) + trueno con retardo; activa la visibilidad de las siluetas |
-| La Cegua y brujas | Sprites estáticos en `BG_Mid` con visibilidad por acto y por relámpago (sin colisión, sin IA) |
-| Lápidas | Capa `Terrain_Detail` + texto en TMX (nombres reales del profesor); `MessageTrigger` opcional en las grandes |
-| Grietas y losas | `HazardZone` (grietas pulsantes) + losas que ceden (Platform con temporizador o HazardZone por pisada — propuesta nueva) |
-| Visión espectral | Ya existe (ataque largo): revela huellas de pezuña y la ruta de saltos |
-| Día/noche | `start_hour = "dusk"` (19:00), `day_length = 900` → 23:00 (la luna lo materializa) |
-| Checkpoints | 1 obligatorio (mitad, tras el Acto II) — los braseros ya cumplen de marcadores |
+| Pozo vertical, repisas en zigzag cada 5 filas | `trazado.py` (AUD-225) |
+| Cero `DeathPit`, cero `HazardZone` fija | Regla de oro heredada |
+| Cero daño por caída | El motor no lo tiene — se sigue aprovechando |
+| Musgo (arrastre) / lodo (freno) como `FrictionZone` visibles | AUD-236 |
+| Verde espectral `(124, 255, 160)` para energía sobrenatural | `siluetas.VERDE_ESPECTRAL` |
+| Checkpoints con tramo máximo medido (≤480 px) | Criterio del calificador ya cumplido antes |
+
+## 10. Lo que queda fuera de esta pasada (a `KNOWN_GAPS.md`)
+
+- **Arte final.** Todo lo de esta versión se construye primero con assets de
+  prueba (tileset y fondos placeholder generados por código) para validar
+  ritmo y lectura visual antes de encargar arte de verdad.
+- **Diálogo de los tres espíritus.** El guion pide líneas para Venado, Rey
+  Terciopelo y Gavilán; el sistema de diálogo (`40_DIALOGUE_SYSTEM.md`) ya
+  existe, pero el texto en sí no se escribe en esta pasada técnica.
+- **Reverberación de audio real.** El mezclador SDL no tiene DSP por zona
+  (límite ya documentado en `90_INVENTARIO_DE_LEVEL_DESIGN.md` §1.1); el
+  «silencio súbito» de la Fase 4 se resuelve bajando el bus de `ambiente` a
+  cero, no con una reverberación que se apaga.
 
 ---
 
-## 11. Checklist de la propuesta
+## 🔗 Documentos relacionados
 
-Construida entera. Cada casilla la defiende una prueba de `tests/test_stage4_1.py`
-(84 en total); lo que se cambió respecto a esta propuesta está en el §0 de la
-ficha, `13_STAGE_4_1.md`.
-
-> **El nivel es vertical (AUD-225).** Esta propuesta lo describe como un corredor
-> horizontal de cinco actos. Jugado no funcionaba —siete fosos mortales y cinco
-> zonas de daño invisibles en una «travesía atmosférica»— y se rehízo como un
-> **descenso**: un pozo de 60 × 240 con 44 repisas que alternan lado. Todo lo
-> demás de este documento se mantiene y sólo cambia de eje: los cinco actos son
-> cinco tramos de profundidad, la luna se queda arriba en el brocal en vez de
-> bajar al horizonte, y los tramos de salto son tramos de caída. Lo que
-> sustituye al peligro son superficies que se ven —musgo que arrastra, lodo que
-> frena—, con la regla de que nada cambia el movimiento del jugador sin que se
-> vea por qué.
-
-- [x] 5 actos con sus cinco parámetros (braseros / luna / clima / fondo / peligros)
-- [x] La luna en las 5 posiciones del §2 (lerp entre actos)
-- [x] 12 braseros en secuencia; luz + ascuas; el último grande y central
-- [x] La Cegua en siluetas de fondo, nunca en combate; visibilidad con relámpagos
-- [x] Brujas cruzando el fondo en el Acto IV *(AUD-210; quietas en el V)*
-- [x] Tramo exigente III (musgo que arrastra) y IV (lodo que frena + viento) —
-      **sin peligro no revelado, y sin peligro mortal**: ninguno hace daño
-- [x] Lápidas con nombres (placeholder `[NOMBRE]`) + lápida central «LA PRUEBA»
-- [x] Clima por acto (`fog` → `storm` → silencio)
-- [x] Visión espectral revelando huellas de pezuña y ruta segura
-- [x] Sin enemigos (regla de oro), portal al 4-2 *(y 12 checkpoints, uno por
-      brasero: el §10 dice que los braseros son los marcadores — AUD-208)*
-- [x] `start_hour` = 19 y `day_length = 900` *(como número: el motor no entiende
-      la cadena `dusk`)*
-- [x] La opción de tensión del §4: quieto y a oscuras, susurro y ojos — **sin
-      daño** *(AUD-211)*
-
-Y lo que se añadió después, todo sin quitar salud a nadie:
-
-- [x] Las antorchas **se ven arder**: cuenco siempre, llama que crece *(AUD-246)*
-- [x] Losas de tumba que se rompen a golpes, en el acto II *(AUD-247)*
-- [x] Un tramo que aparece y desaparece **con el órgano**, en el acto III
-      *(AUD-247, y el reloj musical arreglado en AUD-250)*
-- [x] Losas fantasma que sólo enseña el relámpago o la visión espectral, en el
-      acto IV *(AUD-247)*
-- [x] Suelo de cementerio de verdad: la hoja de baldosas dibujada *(AUD-237)*
-
-El suelo también es del cementerio desde AUD-237. `tileset_cemetery.png` existía
-y eran ocho baldosas de relleno genéricas —piedra lisa, tablones, ladrillo
-rojo—, así que el nivel pintaba con el tileset del prólogo porque el suyo era
-peor. Ahora la hoja se dibuja de verdad: losa de cripta, muro del pozo, lápida
-en dos mitades, cruz, y el musgo y el lodo como **la misma losa con otra
-superficie encima**, que es lo que hace que el jugador entienda por qué resbala.
-
----
-
-## 🔗 Documentos Relacionados
-
-- [[13_STAGE_4_1.md|Ficha 4-1]] — las reglas obligatorias que esta propuesta cumple
-- [[14_BOSS_4_2.md|Jefe final 4-2]] — la puerta al otro lado del umbral
+- [[13_STAGE_4_1.md|Ficha 4-1]] — las reglas obligatorias que este diseño cumple
+- [[14_BOSS_4_2.md|Jefe final 4-2]] — la puerta al otro lado del descenso
 - [[86_ESPECIFICACION_DE_NIVELES_Y_JEFES.md|Especificación de Niveles]] — reglas globales
-- [[65_EL_LORE_EXTENSO.md|El Lore Extenso]] — el cementerio en el canon
+- [[65_EL_LORE_EXTENSO.md|El Lore Extenso]] — el cementerio y Paburu en el canon
