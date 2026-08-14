@@ -108,11 +108,16 @@ def _cegua(ancho: int, alto: int) -> list[tuple[float, float]]:
 def _bruja(ancho: int, alto: int) -> list[tuple[float, float]]:
     """Una figura encorvada cruzando el cielo (AUD-210).
 
-    El diseño (§4) las pone en el acto IV: *«2–3 cruzan con el relámpago; se
-    quedan un segundo en la rama de un árbol»*. Como la Cegua, no son enemigos
-    y no se caricaturizan: es una silueta con capa, alargada por el viaje, y la
-    escoba se lee por la línea horizontal de abajo — no hace falta dibujar más
-    para que se entienda qué es.
+    Diseñada para el pozo vertical de cinco actos (AUD-210, «acto IV: 2–3
+    cruzan con el relámpago») y sin uso desde el rebuild horizontal
+    (AUD-467): la forma quedó dibujada y sin nadie que la llamara. AUD-475
+    le da un papel nuevo en el pasillo de seis fases — la percepción falsa
+    de la Fase 3, ver `Stage4_1._dibujar_bruja` — que además es justo lo
+    que pide la crítica de diseño del dueño (2026-08-14, punto 3): *«el
+    jugador debe dejar de confiar completamente en sus sentidos»*. Como la
+    Cegua, no es enemigo y no se caricaturiza: es una silueta con capa,
+    alargada por el viaje, y la escoba se lee por la línea horizontal de
+    abajo — no hace falta dibujar más para que se entienda qué es.
     """
     w, h = ancho, alto
     return [

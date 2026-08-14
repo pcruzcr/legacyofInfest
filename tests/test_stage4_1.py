@@ -348,6 +348,87 @@ class TestElVientoDeLaFase3:
         assert trazado.fase_de_la_columna(centro_col) == 3
 
 
+class TestLaBrujaEsUnaPercepcionFalsa:
+    """AUD-475 — dos relámpagos de la Fase 3 traen a la Bruja, sin sonido,
+    sin diálogo, sin ningún efecto sobre el estado del nivel. Es la pieza
+    que pide el punto 3 de la crítica de diseño (2026-08-14): sembrar
+    alguna percepción que nunca se confirma, para que el jugador deje de
+    fiarse del patrón antes de que importe de verdad (Fase 4)."""
+
+    def _entrar_a_fase_3(self, escena) -> None:
+        _posicionar_sin_fisica(escena, _dentro_de_la_fase(3))
+        assert escena.fase.numero == 3
+
+    def test_no_se_dibuja_sin_relampago(self, escena, monkeypatch) -> None:
+        from src.stages.stage4_1 import siluetas
+
+        llamadas = []
+        monkeypatch.setattr(
+            siluetas, "dibujar_contorno",
+            lambda *a, **kw: llamadas.append(a),
+        )
+        self._entrar_a_fase_3(escena)
+        escena._rayo = 0.0
+        escena._bruja_este_rayo = True  # aunque esté marcado, sin luz no se ve
+        escena._dibujar_bruja(pygame.Surface((800, 600)), pygame.Vector2())
+        assert llamadas == []
+
+    def test_se_dibuja_solo_en_los_relampagos_marcados(self, escena, monkeypatch) -> None:
+        from src.stages.stage4_1 import siluetas
+
+        llamadas = []
+        monkeypatch.setattr(
+            siluetas, "dibujar_contorno",
+            lambda *a, **kw: llamadas.append(a[1]),  # la forma es el 2º posicional
+        )
+        self._entrar_a_fase_3(escena)
+        escena._rayo = escena.DURACION_DEL_RAYO
+        escena._bruja_este_rayo = False
+        escena._dibujar_bruja(pygame.Surface((800, 600)), pygame.Vector2())
+        assert llamadas == [], "no debería dibujarse en un relámpago sin marcar"
+
+        escena._bruja_este_rayo = True
+        escena._dibujar_bruja(pygame.Surface((800, 600)), pygame.Vector2())
+        assert llamadas == [siluetas._bruja]
+
+    def test_solo_dos_relampagos_de_toda_la_fase_la_traen(self, escena) -> None:
+        """Recorre la fase entera disparando relámpagos a mano y cuenta
+        cuántos de ellos quedan marcados — tiene que ser exactamente
+        `len(RAYOS_CON_BRUJA)`, ni más ni menos, y sólo dentro de la
+        Fase 3."""
+        self._entrar_a_fase_3(escena)
+        marcados = 0
+        for _ in range(8):  # más relámpagos de los que trae RAYOS_CON_BRUJA
+            escena._rayo = 0.0
+            escena._proximo_rayo = 0.0
+            escena._actualizar_rayos(1 / 60)
+            if escena._bruja_este_rayo:
+                marcados += 1
+        assert marcados == len(escena.RAYOS_CON_BRUJA)
+
+    def test_fuera_de_la_fase_3_nunca_se_marca(self, escena) -> None:
+        """Aunque el contador interno coincida por casualidad, sólo cuenta
+        dentro de la Fase 3 — `_actualizar_fase` lo reinicia al entrar."""
+        _posicionar_sin_fisica(escena, _dentro_de_la_fase(1))
+        escena._rayos_en_fase3 = next(iter(escena.RAYOS_CON_BRUJA)) - 1
+        escena._rayo = 0.0
+        escena._proximo_rayo = 0.0
+        escena._actualizar_rayos(1 / 60)
+        assert escena._bruja_este_rayo is False
+
+    def test_no_toca_sonido_ni_dialogo_ni_disparadores(self, escena) -> None:
+        """Es exactamente lo que la vuelve «falsa»: ni un evento del bus, ni
+        un `Disparador`, ni un `MessageTrigger` — sólo dibujo."""
+        self._entrar_a_fase_3(escena)
+        antes = len(escena._stage_data.disparadores)
+        disparados_antes = [mt.triggered for mt in escena._stage_data.message_triggers]
+        escena._rayo = escena.DURACION_DEL_RAYO
+        escena._bruja_este_rayo = True
+        escena._dibujar_bruja(pygame.Surface((800, 600)), pygame.Vector2())
+        assert len(escena._stage_data.disparadores) == antes
+        assert [mt.triggered for mt in escena._stage_data.message_triggers] == disparados_antes
+
+
 class TestLaGradacionYElSonidoPorFase:
     def test_la_gradacion_se_aproxima_al_objetivo_al_final_del_tramo(
         self, escena,

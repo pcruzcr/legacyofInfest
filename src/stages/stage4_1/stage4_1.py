@@ -97,6 +97,15 @@ class Stage4_1(StageScene):
     ESPERA_ENTRE_SOMBRAS: tuple[float, float] = (6.0, 14.0)
     DURACION_DEL_CRUCE = 3.5
 
+    # ── La Bruja: percepción falsa de la Fase 3 (AUD-475) ──────
+    #: En qué relámpagos —contados desde que se entra a la Fase 3— aparece,
+    #: una fracción de segundo, «en la rama de un árbol». Dos, no más: la
+    #: crítica de diseño pide sembrar duda, no un patrón nuevo que aprender
+    #: («si veo la bruja, no pasa nada» sería tan previsible como al revés).
+    #: No hay sonido, no hay diálogo, no cambia nada del estado del nivel —
+    #: es exactamente lo que la vuelve una percepción falsa y no un evento.
+    RAYOS_CON_BRUJA: frozenset[int] = frozenset({2, 4})
+
     # ── El ciclo de luna (Fase 5) ──────────────────────────────
     PERIODO_DE_LA_LUNA = 6.0
     AMBIENTE_MIN_LUNA = 0.06
@@ -130,6 +139,10 @@ class Stage4_1(StageScene):
         #: cruce va (-1 = no está cruzando ahora mismo).
         self._proxima_sombra: float = 0.0
         self._sombra_progreso: float = -1.0
+        #: Cuántos relámpagos han caído desde que se entró a la Fase 3, y si
+        #: el que está cayendo ahora mismo trae a la Bruja (AUD-475).
+        self._rayos_en_fase3: int = 0
+        self._bruja_este_rayo: bool = False
         #: Las luces de las grietas de la Fase 6 — apagadas de fábrica en el
         #: TMX, encendidas por proximidad y no permanentes.
         self._grietas: list[LightSource] = []
@@ -227,6 +240,9 @@ class Stage4_1(StageScene):
         self._aplicar_hora()
         self._proximo_rayo = self._espera_entre_rayos()
         self._actualizar_sonido_de_fase(fase)
+        if fase.numero == 3:
+            self._rayos_en_fase3 = 0
+            self._bruja_este_rayo = False
         if fase.numero == 4:
             self._shake_disparado = False
             self._proximo_grito = self._espera_entre_gritos()
@@ -332,6 +348,11 @@ class Stage4_1(StageScene):
             self._rayo = self.DURACION_DEL_RAYO
             self._proximo_rayo = self._espera_entre_rayos()
             self._play_sfx_named("sfx_environment_screen_shake", volume=0.4)
+            if self.fase.numero == 3:
+                self._rayos_en_fase3 += 1
+                self._bruja_este_rayo = self._rayos_en_fase3 in self.RAYOS_CON_BRUJA
+            else:
+                self._bruja_este_rayo = False
 
     # ── El silencio súbito y el shake (Fase 4) ─────────────────
 
@@ -468,6 +489,7 @@ class Stage4_1(StageScene):
         self._dibujar_decoracion(surface, offset)
         self._dibujar_serpiente_de_fondo(surface, offset)
         self._dibujar_sombra_de_ave(surface, offset)
+        self._dibujar_bruja(surface, offset)
 
     @staticmethod
     def _fundido_del_espiritu(avance: float, liberado: bool) -> float:
@@ -632,5 +654,26 @@ class Stage4_1(StageScene):
             return
         siluetas.dibujar_contorno(
             surface, siluetas._gavilan, x, y, 70, 30,
+            siluetas.SILUETA_OSCURA, alfa,
+        )
+
+    # ── La Bruja: percepción falsa (Fase 3, AUD-475) ────────────
+
+    def _dibujar_bruja(self, surface: pygame.Surface,
+                       offset: pygame.Vector2) -> None:
+        """Se queda «en la rama de un árbol» un instante, sólo en dos de los
+        relámpagos de la Fase 3 — sin sonido, sin diálogo, sin tocar ningún
+        estado del nivel. Es a propósito indistinguible de un efecto de luz:
+        quien la vea no tiene manera de confirmar que era algo."""
+        if self._rayo <= 0.0 or not self._bruja_este_rayo:
+            return
+        x = int(settings.INTERNAL_WIDTH * 0.72)
+        y = 70
+        alfa = int(120 * (self._rayo / self.DURACION_DEL_RAYO))
+        # Silueta oscura, no el blanco frío de la Cegua: a contraluz de un
+        # relámpago se recorta en negro, y son dos presencias distintas —
+        # confundirlas visualmente sería tan malo como caricaturizarlas.
+        siluetas.dibujar_contorno(
+            surface, siluetas._bruja, x, y, 40, 46,
             siluetas.SILUETA_OSCURA, alfa,
         )
