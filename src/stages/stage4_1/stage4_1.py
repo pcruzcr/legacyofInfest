@@ -82,6 +82,11 @@ class Stage4_1(StageScene):
     AVANCE_DEL_SILENCIO = 0.5
     DURACION_DEL_SHAKE = 0.45
     AMPLITUD_DEL_SHAKE = 14.0
+    #: Cada cuánto puede sonar el grito aislado del Gavilán tras el silencio.
+    #: Un rango, no un número fijo: un grito cada N segundos exactos se
+    #: vuelve previsible a la tercera vez — el mismo motivo que ya usa
+    #: `_espera_entre_rayos` para la tormenta de la Fase 3.
+    ESPERA_ENTRE_GRITOS: tuple[float, float] = (4.0, 10.0)
 
     # ── El ciclo de luna (Fase 5) ──────────────────────────────
     PERIODO_DE_LA_LUNA = 6.0
@@ -109,6 +114,9 @@ class Stage4_1(StageScene):
         self._rayo: float = 0.0
         self._proximo_rayo: float = 0.0
         self._shake_disparado: bool = False
+        #: Cuándo suena el próximo grito aislado del Gavilán (Fase 4, sólo
+        #: tras el silencio — ver `_actualizar_grito_del_gavilan`).
+        self._proximo_grito: float = 0.0
         #: Las luces de las grietas de la Fase 6 — apagadas de fábrica en el
         #: TMX, encendidas por proximidad y no permanentes.
         self._grietas: list[LightSource] = []
@@ -144,6 +152,7 @@ class Stage4_1(StageScene):
         self._actualizar_ambiente_de_fase()
         self._actualizar_rayos(dt)
         self._actualizar_silencio_y_shake()
+        self._actualizar_grito_del_gavilan(dt)
         self._actualizar_grietas(dt)
 
     @property
@@ -201,10 +210,34 @@ class Stage4_1(StageScene):
         self._ambiente_base = fase.ambiente
         self._aplicar_hora()
         self._proximo_rayo = self._espera_entre_rayos()
+        self._actualizar_sonido_de_fase(fase)
         if fase.numero == 4:
             self._shake_disparado = False
+            self._proximo_grito = self._espera_entre_gritos()
         if self._banner is not None and fase.numero > 1:
             self._banner.play(f"FASE {fase.numero}", fase.nombre)
+
+    def _actualizar_sonido_de_fase(self, fase: Fase) -> None:
+        """Cruza al ambiente propio de la fase, si tiene uno (AUD-465).
+
+        `WeatherSystem.get_ambient_audio_key()` sólo se consulta una vez, al
+        entrar al escenario — nunca cuando cambia el clima acto a acto o fase
+        a fase. Sin esto, la tormenta de la Fase 3 se ve pero no se oye. Un
+        solo canal de ambiente: cruzar es reemplazar, no apilar, así que una
+        fase sin `sonido_ambiente` (la Fase 1) deja sonando lo que ya sonaba
+        — que para la Fase 1 es nada, el silencio con el que arranca el
+        nivel.
+        """
+        audio = self.audio
+        if audio is None or fase.sonido_ambiente is None:
+            return
+        ruta = settings.ASSETS_DIR / fase.sonido_ambiente
+        if not ruta.exists():
+            return
+        if getattr(audio, "_ambient_active", False):
+            audio.crossfade_ambient(ruta, duration=1.5, volume=0.3)
+        else:
+            audio.play_ambient(ruta, volume=0.3)
 
     # ── Gradación de color (Unidad V) ──────────────────────────
 
@@ -299,9 +332,36 @@ class Stage4_1(StageScene):
         self._shake_disparado = True
         self._cambiar_clima("clear")
         self._ambient_particles.set_effect("", 0.0)
+        # El silencio es también sonoro: la lluvia de fondo corta en seco.
+        # `stop_ambient` no tiene fundido — y aquí es lo que toca: es un
+        # silencio *súbito*, no un fundido a negro.
+        audio = self.audio
+        if audio is not None and getattr(audio, "_ambient_active", False):
+            audio.stop_ambient()
         self._camera.apply_shake(amplitude=self.AMPLITUD_DEL_SHAKE,
                                  duration=self.DURACION_DEL_SHAKE)
         self._play_sfx_named("sfx_environment_cemetery_silence", volume=0.5)
+
+    # ── El grito aislado del Gavilán ────────────────────────────
+
+    def _espera_entre_gritos(self) -> float:
+        return random.uniform(*self.ESPERA_ENTRE_GRITOS)
+
+    def _actualizar_grito_del_gavilan(self, dt: float) -> None:
+        """Tras el silencio, el Gavilán se deja oír de vez en cuando.
+
+        Sin bucle y sin patrón: el guion (§4) pide *«sonidos que pueden
+        reaparecer de forma aislada y aleatoria»*, no un segundo ambiente. Se
+        activa sólo después de `_shake_disparado` — antes del silencio no
+        hay nada que «reaparecer».
+        """
+        fase = self.fase
+        if fase.grito_aislado is None or not self._shake_disparado:
+            return
+        self._proximo_grito -= dt
+        if self._proximo_grito <= 0.0:
+            self._proximo_grito = self._espera_entre_gritos()
+            self._play_sfx_named(fase.grito_aislado, volume=0.6)
 
     # ── Las grietas de la Fase 6 ────────────────────────────────
 
@@ -325,9 +385,11 @@ class Stage4_1(StageScene):
 
     def dibujar_fondo(self, surface: pygame.Surface,
                       offset: pygame.Vector2) -> None:
-        """El espíritu de la fase, detrás del mapa — igual que el diseño
-        anterior pintaba sus siluetas: son recuerdos, no primer plano."""
+        """El espíritu de la fase y su decoración, detrás del mapa — igual
+        que el diseño anterior pintaba sus siluetas: son recuerdos y
+        escenario, no primer plano."""
         self._dibujar_espiritu(surface, offset)
+        self._dibujar_decoracion(surface, offset)
 
     @staticmethod
     def _fundido_del_espiritu(avance: float) -> float:
@@ -364,3 +426,44 @@ class Stage4_1(StageScene):
             surface, forma, x, y, int(alto * 0.9), alto,
             siluetas.VERDE_ESPECTRAL, alfa,
         )
+
+    # ── La decoración propia por fase (AUD-465) ────────────────
+    #
+    #: Dónde se planta cada árbol/cruz, en fracción del ancho de pantalla.
+    #: Repartidas e impares a propósito, igual que `_SITIOS_ESPIRITU`: en
+    #: fila regular se leerían como una valla, no como un paisaje.
+    _SITIOS_BOSQUE_CORTADO: tuple[float, ...] = (0.06, 0.26, 0.48, 0.70, 0.90)
+    _SITIOS_TUMBAS_CONQUISTADOR: tuple[float, ...] = (0.12, 0.34, 0.58, 0.82)
+
+    def _dibujar_decoracion(self, surface: pygame.Surface,
+                            offset: pygame.Vector2) -> None:
+        fase = self.fase
+        if fase.decoracion == "bosque_cortado":
+            self._dibujar_siluetas_de_fondo(
+                surface, offset, siluetas._arbol_cortado,
+                self._SITIOS_BOSQUE_CORTADO, alto=88,
+                color=siluetas.SILUETA_OSCURA, alfa=120, paralaje=0.10,
+            )
+        elif fase.decoracion == "tumbas_conquistador":
+            self._dibujar_siluetas_de_fondo(
+                surface, offset, siluetas._cruz_conquistador,
+                self._SITIOS_TUMBAS_CONQUISTADOR, alto=46,
+                color=siluetas.PIEDRA_FRIA, alfa=90, paralaje=0.08,
+            )
+
+    def _dibujar_siluetas_de_fondo(
+        self, surface: pygame.Surface, offset: pygame.Vector2, forma: object,
+        sitios: tuple[float, ...], alto: int, color: tuple[int, int, int],
+        alfa: int, paralaje: float,
+    ) -> None:
+        """El dibujo genérico que comparten el bosque y las tumbas: una fila
+        repartida de la misma silueta, con parallax lento — están lejos, así
+        que se mueven poco con la cámara. A diferencia del espíritu, no
+        aparecen ni se van: son escenario, no un testigo."""
+        for sitio in sitios:
+            x = int(settings.INTERNAL_WIDTH * sitio
+                    - offset.x * paralaje) % (settings.INTERNAL_WIDTH + 200) - 100
+            siluetas.dibujar_contorno(
+                surface, forma, x, settings.INTERNAL_HEIGHT - alto - 40,
+                int(alto * 0.75), alto, color, alfa,
+            )

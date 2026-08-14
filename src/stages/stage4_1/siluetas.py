@@ -136,6 +136,47 @@ ESPIRITUS: tuple[tuple[str, object], ...] = (
 )
 
 
+# ── Decoración de fondo por fase (AUD-465) ──────────────────────
+#
+# Igual que los espíritus: contornos, no PNG. El proyecto no tiene arte de
+# bosque cortado ni de cruces de conquistador, y dibujar un contorno es
+# honesto —«una forma en la niebla»— mientras que un PNG inventado fingiría
+# ser arte terminado.
+
+#: Silueta oscura para lo que no es espectral: un árbol muerto no brilla.
+SILUETA_OSCURA: tuple[int, int, int] = (24, 20, 30)
+#: Piedra fría, la misma familia que `BLANCO_CEGUA` — las cruces son piedra,
+#: no presencia, así que un blanco algo más apagado.
+PIEDRA_FRIA: tuple[int, int, int] = (188, 196, 204)
+
+
+def _arbol_cortado(ancho: int, alto: int) -> list[tuple[float, float]]:
+    """Un árbol seco, cortado a media altura — «bosque cortado y muerto»
+    (§Fase 4 del diseño). Dos ramas rotas y el tronco en punta astillada, no
+    una copa: lo que distingue un árbol talado de uno que sólo perdió las
+    hojas es que el corte se ve."""
+    w, h = ancho, alto
+    return [
+        (0.42 * w, 1.00 * h), (0.40 * w, 0.55 * h), (0.28 * w, 0.40 * h),
+        (0.36 * w, 0.38 * h), (0.32 * w, 0.18 * h), (0.40 * w, 0.34 * h),
+        (0.46 * w, 0.32 * h), (0.50 * w, 0.04 * h), (0.54 * w, 0.30 * h),
+        (0.60 * w, 0.32 * h), (0.68 * w, 0.16 * h), (0.64 * w, 0.36 * h),
+        (0.72 * w, 0.42 * h), (0.60 * w, 0.56 * h), (0.58 * w, 1.00 * h),
+    ]
+
+
+def _cruz_conquistador(ancho: int, alto: int) -> list[tuple[float, float]]:
+    """Una cruz de piedra, la de los que no volvieron — la Planicie de los
+    Muertos representa también a los conquistadores caídos aquí (§Fase 5)."""
+    w, h = ancho, alto
+    return [
+        (0.41 * w, 1.00 * h), (0.41 * w, 0.36 * h), (0.15 * w, 0.36 * h),
+        (0.15 * w, 0.22 * h), (0.41 * w, 0.22 * h), (0.41 * w, 0.00 * h),
+        (0.59 * w, 0.00 * h), (0.59 * w, 0.22 * h), (0.85 * w, 0.22 * h),
+        (0.85 * w, 0.36 * h), (0.59 * w, 0.36 * h), (0.59 * w, 1.00 * h),
+    ]
+
+
 def dibujar_contorno(
     superficie: pygame.Surface,
     forma: object,

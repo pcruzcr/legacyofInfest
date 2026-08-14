@@ -94,9 +94,12 @@ cayendo (`ash`), sin siluetas de espíritu todavía.
 
 La lluvia marca la entrada (`climate = "rain"` al principio del tramo,
 `"fog"` hacia el final) y la imagen se desatura progresivamente hasta el B/N
-de alto contraste. El terreno introduce **musgo** (`FrictionZone`, arrastre
-hacia el hueco de la repisa — la misma superficie y el mismo valor medido que
-el diseño anterior, 62 px/s) y la silueta del Venado aparece en `BG_Mid`
+de alto contraste. El terreno introduce **musgo y lodo, juntos** —el guion
+los pide en el mismo tramo—: musgo (`FrictionZone`, arrastre hacia el hueco
+de la repisa, 62 px/s) y lodo (frena al 88 %), la misma pareja de superficies
+que ya medía el diseño anterior (AUD-236), reubicada aquí. Un viento de
+bosque sintetizado (`sfx_environment_viento_de_bosque`, AUD-465) sustituye al
+ambiente de lluvia por defecto. La silueta del Venado aparece en el fondo
 (reusa `siluetas._venado`, sin arte nuevo). Al llegar al final del tramo, la
 silueta se desvanece hacia arriba: el Venado asciende.
 
@@ -111,33 +114,51 @@ del descenso general, no como una inversión del eje: el jugador sube una
 pendiente corta entre dos repisas y vuelve a bajar, igual que ya se puede
 volver a subir una repisa suelta en el diseño heredado. La silueta enroscada
 del Rey Terciopelo (`siluetas._serpiente`) aparece entre las lápidas de
-piedra. Al ascender, dos pruebas lo comprueban: que el slope es transitable
-sin salto imposible y que la silueta se desvanece al cruzar el umbral del
-tramo.
+piedra. La tormenta ahora **también se oye**: reusa `sfx_environment_
+storm_ambient` (el fichero ya existía; lo nuevo, AUD-465, es que suena de
+verdad — `WeatherSystem.get_ambient_audio_key()` sólo se consultaba una vez,
+al entrar al escenario, así que la tormenta de esta fase nunca sonó ni en
+este diseño ni en el anterior). Al ascender, dos pruebas lo comprueban: que
+el slope es transitable sin salto imposible y que la silueta se desvanece al
+cruzar el umbral del tramo.
 
 ## 6. Fase 4 — El Gavilán
 
-Vintage naranja, bosque cortado y muerto (árboles secos en `BG_Far`), lluvia
-suave. A media fase, el clima **calla de golpe**: partículas a cero,
-`WeatherSystem.set_climate("clear")` sin transición, silencio de audio
-ambiental. En ese silencio ocurre un **camera shake fuerte y breve, una sola
-vez** (`camera.py`, con dirección — el mismo sistema que ya prueba
-`test_la_sacudida_tiene_direccion.py`), sin causa visible: es la sensación de
-que algo acaba de pasar sin que el jugador lo haya visto. Después, el sonido
-del Gavilán vuelve de forma aislada y aleatoria, con sombras cruzando el
-fondo (reusa el patrón de `_dibujar_brujas`, adaptado a un solo cruce de
-ave). El Gavilán asciende al final del tramo.
+Vintage naranja, bosque cortado y muerto. Los árboles secos **no son un
+fondo TMX** — son contornos dibujados por código
+(`siluetas._arbol_cortado`), el mismo principio honesto que las siluetas de
+los espíritus: el proyecto no tiene arte propio de bosque cortado, y un
+contorno no finge ser una ilustración terminada (AUD-465). Lluvia suave
+(`sfx_environment_rain_ambient`, cruzado al entrar en la fase). A media
+fase, el clima **calla de golpe**: partículas a cero,
+`WeatherSystem.set_climate("clear")` sin transición, y el ambiente sonoro
+corta en seco (`AudioManager.stop_ambient()` — sin fundido: es un silencio
+*súbito*, no un fundido a negro). En ese silencio ocurre un **camera shake
+fuerte y breve, una sola vez** (`camera.py`, con dirección — el mismo
+sistema que ya prueba `test_la_sacudida_tiene_direccion.py`), sin causa
+visible. Después, el grito del Gavilán (`sfx_environment_grito_de_gavilan`,
+sintetizado — un chillido que baja de tono, no una palabra) vuelve de forma
+aislada y aleatoria (cada 4-10 s, `ESPERA_ENTRE_GRITOS`). El Gavilán asciende
+al final del tramo.
+
+**Lo que queda pendiente de esta fase:** sombras de ave cruzando el fondo
+(el patrón de `_dibujar_brujas` del diseño anterior, adaptado a un solo
+cruce) — hoy la presencia del Gavilán es sólo sonora tras el silencio, no
+visual. Ver `KNOWN_GAPS.md` GAP-058.
 
 ## 7. Fase 5 — La Planicie de los Muertos
 
 Nocturno azulado, la fase más oscura del nivel. La luz **no es constante**:
-un ciclo de luna (`lighting.py`, intensidad ambiente oscilando entre un
-mínimo casi nulo y un máximo que revela el entorno, período de varios
-segundos) determina cuándo se ve el tramo y cuándo no. Con la luna oculta, la
-escena es casi invisible — igual que exige el guion. Voces y cánticos
-indígenas se mezclan con el ambiente del bosque (bus de audio `ambiente`,
-volumen bajo). No hay siluetas de espíritu aquí: los tres ya ascendieron: lo
-que queda son las tumbas de los conquistadores, sin dueño que reclamar.
+un ciclo de luna (intensidad ambiente oscilando entre un mínimo casi nulo y
+un máximo que revela el entorno, período de 6 s) determina cuándo se ve el
+tramo y cuándo no. Con la luna oculta, la escena es casi invisible — igual
+que exige el guion. Un coro sin palabras (`sfx_environment_canto_ancestral`,
+sintetizado — tres voces en unísono desafinado, sin fingir una lengua ni una
+ceremonia real: el mismo principio que ya aplica `venado_fase1`) suena bajo
+como ambiente de la fase. No hay siluetas de espíritu aquí: los tres ya
+ascendieron. Lo que queda son las tumbas de los conquistadores —cruces de
+piedra dibujadas por código, `siluetas._cruz_conquistador`—, sin dueño que
+reclamar.
 
 ## 8. Fase 6 — El Camino hacia Paburu
 
@@ -148,9 +169,12 @@ climática). Grietas verdes que se revelan **por pisada** — cada repisa que el
 jugador cruza enciende una luz ambiental corta (`lighting.py`, punto que se
 apaga tras el paso, distinto de los braseros del diseño anterior porque
 **no** queda encendida: es un rastro, no un progreso acumulado) y descubre
-tiles con grietas verdes ya presentes en el tileset. Sin sobresaltos: la
-atmósfera es solemne, no de terror. Al fondo del pozo, el `NextTrigger` que
-lleva a `stage4_2_boss_paburu`.
+tiles con grietas verdes ya presentes en el tileset. Una resonancia sostenida
+(`sfx_environment_resonancia_solemne`, sintetizada con el mismo principio
+aditivo del órgano de `bgm_final_approach` — un acorde de re menor que se
+queda sonando, sin percusión) reemplaza el ambiente por defecto de la niebla.
+Sin sobresaltos: la atmósfera es solemne, no de terror. Al fondo del pozo, el
+`NextTrigger` que lleva a `stage4_2_boss_paburu`.
 
 ## 9. Lo que se hereda sin cambios del diseño anterior
 

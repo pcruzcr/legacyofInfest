@@ -748,3 +748,147 @@ class TestElGanchoDeFondoLlegaAlEscenario:
         escena.dibujar_fondo = lambda *_a: 1 / 0
         lienzo = pygame.Surface((800, 600))
         escena.draw(lienzo)  # no debe lanzar
+
+
+class TestElSonidoDeCadaFase:
+    """AUD-465. `get_ambient_audio_key()` sólo suena una vez, al entrar al
+    escenario — nunca cuando `_actualizar_fase` cambia de clima. Sin cablear
+    esto a mano, la tormenta de la Fase 3 se ve y no se oye."""
+
+    #: La ruta esperada por fase, tal como la escribe `fases.py`. `None` en
+    #: la Fase 1: arranca en silencio, y eso no cambia.
+    _ESPERADO = {
+        1: None,
+        2: "sfx/environment/sfx_environment_viento_de_bosque.wav",
+        3: "sfx/environment/sfx_environment_storm_ambient.wav",
+        4: "sfx/environment/sfx_environment_rain_ambient.wav",
+        5: "sfx/environment/sfx_environment_canto_ancestral.wav",
+        6: "sfx/environment/sfx_environment_resonancia_solemne.wav",
+    }
+
+    def test_la_tabla_de_fases_pide_el_sonido_correcto(self) -> None:
+        from src.stages.stage4_1.fases import FASES
+
+        for fase in FASES:
+            assert fase.sonido_ambiente == self._ESPERADO[fase.numero], (
+                f"Fase {fase.numero}: pide {fase.sonido_ambiente!r}"
+            )
+
+    def test_los_cuatro_ficheros_nuevos_existen(self) -> None:
+        from pathlib import Path
+
+        from src.engine.core import settings
+
+        for nombre in ("viento_de_bosque", "grito_de_gavilan",
+                       "canto_ancestral", "resonancia_solemne"):
+            ruta = (Path(settings.ASSETS_DIR) / "sfx" / "environment"
+                    / f"sfx_environment_{nombre}.wav")
+            assert ruta.exists(), f"falta {ruta}"
+
+    def test_la_fase_2_carga_su_propio_ambiente(self, escena) -> None:
+        from src.engine.core import settings
+        from src.stages.stage4_1.fases import FASES
+
+        fase2 = FASES[1]
+        _llevar_a(escena, fase2.desde_fila + 2)
+        ruta = str(settings.ASSETS_DIR / fase2.sonido_ambiente)
+        assert ruta in escena.audio._ambient_sounds, (
+            "la Fase 2 no cargó su propio ambiente"
+        )
+
+    def test_la_fase_3_de_verdad_suena_a_tormenta(self, escena) -> None:
+        """El defecto que AUD-465 corrige: la tormenta se veía y no se oía,
+        ni en este diseño ni en el anterior."""
+        from src.engine.core import settings
+        from src.stages.stage4_1.fases import FASES
+
+        fase3 = FASES[2]
+        _llevar_a(escena, fase3.desde_fila + 2)
+        ruta = str(settings.ASSETS_DIR / fase3.sonido_ambiente)
+        assert ruta in escena.audio._ambient_sounds
+        assert "storm_ambient" in ruta
+
+    def test_el_silencio_de_la_fase_4_corta_el_ambiente(self, escena) -> None:
+        from src.stages.stage4_1.fases import FASES
+
+        fase4 = FASES[3]
+        objetivo = fase4.desde_fila + int(0.6 * 48)
+        _llevar_a(escena, objetivo)
+        assert escena._shake_disparado is True
+        assert escena.audio._ambient_active is False, (
+            "el ambiente de lluvia seguía sonando después del silencio súbito"
+        )
+
+
+class TestElGritoDelGavilan:
+    """§4 del guion: «los sonidos del Halcón pueden reaparecer de forma
+    aislada y aleatoria» — después del silencio, no antes, y sin bucle."""
+
+    def test_no_suena_antes_del_silencio(self, escena) -> None:
+        from src.stages.stage4_1.fases import FASES
+
+        fase4 = FASES[3]
+        _llevar_a(escena, fase4.desde_fila + 3)  # bien al principio
+        sonidos: list[str] = []
+        escena._play_sfx_named = lambda nombre, volume=1.0: sonidos.append(nombre)
+        for _ in range(300):  # 5 s
+            escena.update(1 / 60)
+        assert "sfx_environment_grito_de_gavilan" not in sonidos
+
+    def test_suena_aislado_tras_el_silencio(self, escena) -> None:
+        from src.stages.stage4_1.fases import FASES
+
+        fase4 = FASES[3]
+        objetivo = fase4.desde_fila + int(0.6 * 48)
+        _llevar_a(escena, objetivo)
+        assert escena._shake_disparado is True
+        sonidos: list[str] = []
+        escena._play_sfx_named = lambda nombre, volume=1.0: sonidos.append(nombre)
+        # Fuerza el primer grito a que suene pronto, para no depender del
+        # azar de `ESPERA_ENTRE_GRITOS` (4-10 s) en una prueba.
+        escena._proximo_grito = 0.05
+        for _ in range(30):
+            escena.update(1 / 60)
+        assert sonidos.count("sfx_environment_grito_de_gavilan") == 1, (
+            f"se esperaba un grito aislado y sonó {sonidos.count('sfx_environment_grito_de_gavilan')} veces"
+        )
+
+    def test_no_suena_en_otras_fases(self, escena) -> None:
+        from src.stages.stage4_1.fases import FASES
+
+        for fase in FASES:
+            if fase.numero == 4:
+                continue
+            assert fase.grito_aislado is None
+
+
+class TestLaDecoracionPorFase:
+    """Contornos dibujados, no PNG — el mismo principio que ya usan los
+    espíritus (AUD-465)."""
+
+    _ESPERADO = {1: None, 2: None, 3: None, 4: "bosque_cortado",
+                 5: "tumbas_conquistador", 6: None}
+
+    def test_la_tabla_pide_la_decoracion_correcta(self) -> None:
+        from src.stages.stage4_1.fases import FASES
+
+        for fase in FASES:
+            assert fase.decoracion == self._ESPERADO[fase.numero]
+
+    def test_las_formas_son_poligonos_validos(self) -> None:
+        from src.stages.stage4_1 import siluetas
+
+        for forma in (siluetas._arbol_cortado, siluetas._cruz_conquistador):
+            puntos = forma(40, 90)
+            assert len(puntos) >= 3
+            assert all(0.0 <= x <= 40 and 0.0 <= y <= 90 for x, y in puntos), (
+                f"{forma.__name__} se sale del rectángulo que declara"
+            )
+
+    def test_no_revienta_dibujando_cada_fase(self, escena) -> None:
+        from src.stages.stage4_1.fases import FASES
+
+        lienzo = pygame.Surface((800, 600), pygame.SRCALPHA)
+        for fase in FASES:
+            _llevar_a(escena, fase.desde_fila + 20)
+            escena.dibujar_fondo(lienzo, pygame.Vector2(0, 0))  # no debe lanzar

@@ -87,31 +87,65 @@ class Fase:
     #: Si las repisas de esta fase encienden una luz corta al pisarlas, sin
     #: quedar encendidas (Fase 6 — un rastro, no un progreso acumulado).
     grietas_por_pisada: bool = False
+    #: Ruta (relativa a `assets/`) del ambiente sonoro de esta fase, o `None`.
+    #:
+    #: `WeatherSystem.get_ambient_audio_key()` sólo se consulta **una vez**,
+    #: al entrar al escenario (`stage_scene.py` en `on_stage_start`) — nunca
+    #: se vuelve a llamar cuando `_actualizar_fase` cambia de clima, así que
+    #: sin este campo la tormenta de la Fase 3 nunca sonaba a tormenta, ni en
+    #: este diseño ni en el anterior. Aquí cada fase pide su propio
+    #: `crossfade_ambient` (AUD-465): la Fase 3 reusa `storm_ambient` —el
+    #: mismo fichero que ya existía, sólo que ahora suena cuando toca— y las
+    #: Fases 2, 5 y 6 usan los tres ambientes nuevos de esa auditoría.
+    sonido_ambiente: str | None = None
+    #: Nombre del grito aislado y aleatorio de esta fase (para
+    #: `_play_sfx_named`), o `None`. Sólo la Fase 4, y sólo después del
+    #: silencio súbito — ver `shake_de_silencio` y §4 del diseño: «los
+    #: sonidos del Halcón pueden reaparecer de forma aislada y aleatoria».
+    grito_aislado: str | None = None
+    #: Qué decoración de fondo dibuja `dibujar_fondo` en esta fase, o `None`.
+    #: `"bosque_cortado"` (Fase 4) y `"tumbas_conquistador"` (Fase 5) — ver
+    #: `siluetas.py`. Contornos dibujados, no PNG: el mismo principio que ya
+    #: usan los espíritus.
+    decoracion: str | None = None
 
 
 #: Las seis fases, en el orden en que se **bajan**. Cada tramo mide
 #: `ALTO_FASE` filas — la misma partición que usa el generador, leída del
 #: mismo sitio — y los umbrales se calculan en vez de escribirse.
+#: Prefijo común de los cuatro ambientes nuevos (AUD-465).
+_AMB = "sfx/environment/sfx_environment_"
+
 FASES: tuple[Fase, ...] = (
     Fase(1, "EL CEMENTERIO DE TILARÁN", 0 * ALTO_FASE, "clear", ("ash", 5.0),
          gradacion=COLOR_PLENO, tinte=None, espiritu=None,
          rayos_por_minuto=0.0, ambiente=0.62),
     Fase(2, "EL VENADO", 1 * ALTO_FASE, "rain", ("ash", 14.0),
          gradacion=BLANCO_Y_NEGRO, tinte=None, espiritu=0,
-         rayos_por_minuto=0.0, ambiente=0.50),
+         rayos_por_minuto=0.0, ambiente=0.50,
+         sonido_ambiente=f"{_AMB}viento_de_bosque.wav"),
     Fase(3, "EL REY TERCIOPELO", 2 * ALTO_FASE, "storm", ("spores", 16.0),
          gradacion=GRISES_NEUTROS, tinte=None, espiritu=1,
-         rayos_por_minuto=10.0, ambiente=0.44, tiene_slopes=True),
+         rayos_por_minuto=10.0, ambiente=0.44, tiene_slopes=True,
+         # Reusa el `storm_ambient` que ya existía: lo nuevo no es el
+         # fichero, es que por fin suena cuando el clima es tormenta.
+         sonido_ambiente="sfx/environment/sfx_environment_storm_ambient.wav"),
     Fase(4, "EL GAVILÁN", 3 * ALTO_FASE, "rain", ("ash", 10.0),
          gradacion=SEPIA_VINTAGE, tinte=(TINTE_VINTAGE, ALFA_TINTE_VINTAGE),
          espiritu=2, rayos_por_minuto=0.0, ambiente=0.48,
-         shake_de_silencio=True),
+         shake_de_silencio=True,
+         sonido_ambiente="sfx/environment/sfx_environment_rain_ambient.wav",
+         grito_aislado="sfx_environment_grito_de_gavilan",
+         decoracion="bosque_cortado"),
     Fase(5, "LA PLANICIE DE LOS MUERTOS", 4 * ALTO_FASE, "clear", ("", 0.0),
          gradacion=NOCTURNO_AZULADO, tinte=None, espiritu=None,
-         rayos_por_minuto=0.0, ambiente=0.16, luna_intermitente=True),
+         rayos_por_minuto=0.0, ambiente=0.16, luna_intermitente=True,
+         sonido_ambiente=f"{_AMB}canto_ancestral.wav",
+         decoracion="tumbas_conquistador"),
     Fase(6, "EL CAMINO HACIA PABURU", 5 * ALTO_FASE, "fog", ("spores", 26.0),
          gradacion=COLOR_PLENO, tinte=None, espiritu=None,
-         rayos_por_minuto=0.0, ambiente=0.60, grietas_por_pisada=True),
+         rayos_por_minuto=0.0, ambiente=0.60, grietas_por_pisada=True,
+         sonido_ambiente=f"{_AMB}resonancia_solemne.wav"),
 )
 
 
