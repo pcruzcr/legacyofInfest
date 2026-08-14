@@ -520,6 +520,60 @@ class TestLaSombraDelGavilan:
         assert escena._sombra_progreso >= 0.0
 
 
+class TestElPisoDeVisibilidadDeLaLuna:
+    """AUD-476 — puntos 9-10 de la crítica de diseño: *«no puedo ver bien»
+    no es lo mismo que «no puedo jugar»*. `AMBIENTE_MIN_LUNA` era 0,06 —
+    casi negro de verdad, sostenido medio ciclo cada 6 s, no un instante."""
+
+    def test_el_minimo_no_baja_del_piso_declarado(self, escena) -> None:
+        """Recorre un ciclo completo de la luna y comprueba que
+        `_ambiente_base` nunca baja de `AMBIENTE_MIN_LUNA` — la propia
+        constante, no un número repetido a mano, para que esta prueba siga
+        protegiendo lo mismo si algún día cambia el valor."""
+        from src.stages.stage4_1.fases import FASES
+
+        fase5 = FASES[4]
+        _posicionar_sin_fisica(escena, fase5.desde_columna + 6)
+        assert escena.fase.numero == 5
+
+        minimo_visto = 1.0
+        for _ in range(int(escena.PERIODO_DE_LA_LUNA * 60) + 10):
+            escena._actualizar_ambiente_de_fase()
+            minimo_visto = min(minimo_visto, escena._ambiente_base)
+            escena._tiempo += 1 / 60
+
+        assert minimo_visto >= escena.AMBIENTE_MIN_LUNA - 1e-6
+
+    def test_el_piso_no_es_mas_oscuro_que_la_referencia_de_paburu(self) -> None:
+        """El propio proyecto ya define cuánto es «casi negro» para un solo
+        instante dramático: la introducción de Paburu baja hasta 0,18
+        (`boss_paburu/intro.py`). El piso de la luna se sostiene mucho más
+        que un instante, así que no debería ser más oscuro que esa
+        referencia — sería un «casi negro» peor que el que el propio juego
+        reserva para su momento más solemne."""
+        from src.stages.stage4_1.stage4_1 import Stage4_1
+
+        REFERENCIA_CASI_NEGRO_DE_PABURU = 0.18
+        assert Stage4_1.AMBIENTE_MIN_LUNA >= REFERENCIA_CASI_NEGRO_DE_PABURU
+
+    def test_el_ciclo_sigue_oscilando_de_verdad(self, escena) -> None:
+        """El arreglo no debe aplanar el ciclo — la luna tiene que seguir
+        subiendo y bajando, sólo que sin tocar fondo."""
+        from src.stages.stage4_1.fases import FASES
+
+        fase5 = FASES[4]
+        _posicionar_sin_fisica(escena, fase5.desde_columna + 6)
+
+        valores = []
+        for _ in range(int(escena.PERIODO_DE_LA_LUNA * 60) + 10):
+            escena._actualizar_ambiente_de_fase()
+            valores.append(escena._ambiente_base)
+            escena._tiempo += 1 / 60
+
+        assert max(valores) == pytest.approx(escena.AMBIENTE_MAX_LUNA, abs=1e-3)
+        assert min(valores) == pytest.approx(escena.AMBIENTE_MIN_LUNA, abs=1e-3)
+
+
 class TestLaSerpienteDeFondo:
     def test_solo_en_la_fase_3(self) -> None:
         from src.stages.stage4_1.fases import FASES

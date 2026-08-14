@@ -111,7 +111,13 @@ se libera (§5.1).
 ### 3.5 Fase 5 — La Planicie de los Muertos (columnas 600–749)
 
 Nocturno azulado, la sección más oscura. Un ciclo de luna (período 6 s)
-determina cuándo se ve el entorno y cuándo no. Tierra desnuda con losas de
+determina cuándo se ve el entorno mejor y cuándo peor — **nunca cuándo no
+se ve nada** (AUD-476, puntos 9-10 de la crítica de diseño 2026-08-14: *«no
+puedo ver bien» ≠ «no puedo jugar»*). El mínimo del ciclo (0,20) no baja de
+la referencia que el propio proyecto ya usa para «casi negro» en un
+instante dramático — la introducción de Paburu, que baja hasta 0,18 y lo
+sostiene un segundo — y aquí se sostiene medio ciclo cada 6 s, no un
+instante, así que va por encima, no igual. Tierra desnuda con losas de
 tumba hundidas — las de los conquistadores que murieron aquí, sin dueño que
 reclamar. Un coro sin palabras (`sfx_environment_canto_ancestral`, AUD-465)
 como ambiente. Sin espíritu de jefe: los tres ya ascendieron.

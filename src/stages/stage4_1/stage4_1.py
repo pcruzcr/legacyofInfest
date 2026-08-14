@@ -108,7 +108,16 @@ class Stage4_1(StageScene):
 
     # ── El ciclo de luna (Fase 5) ──────────────────────────────
     PERIODO_DE_LA_LUNA = 6.0
-    AMBIENTE_MIN_LUNA = 0.06
+    #: AUD-476 — 0.06 era casi negro de verdad, sostenido cada ciclo, no un
+    #: instante. La crítica de diseño (2026-08-14, puntos 9-10) lo señaló:
+    #: *«no puedo ver bien» ≠ «no puedo jugar»* — y el propio proyecto ya
+    #: tiene una referencia de cuánto es «casi negro» para un momento
+    #: dramático: la introducción de Paburu baja hasta 0,18 y lo sostiene
+    #: **un instante** (`boss_paburu/intro.py`, comentario junto a
+    #: `Penumbra`). El mínimo de la luna se sostiene medio ciclo cada
+    #: 6 s, no un instante — así que va por encima de esa referencia, no
+    #: igual, para que siga siendo navegable el rato más largo que dura.
+    AMBIENTE_MIN_LUNA = 0.20
     AMBIENTE_MAX_LUNA = 0.48
 
     # ── Las grietas que se iluminan al paso (Fase 6) ───────────
