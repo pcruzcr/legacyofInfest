@@ -629,6 +629,119 @@ class TestElNivelSePuedeJugar:
         assert escena._stage_data.zone == Stage4_1.ZONE
 
 
+class TestLaLiberacionDeLosEspiritus:
+    """AUD-474 — ascender no es sólo caminar hasta el final de la sección.
+
+    Antes de este lote, `_fundido_del_espiritu` sólo miraba `avance`: quien
+    cruzaba corriendo sin detenerse liberaba al espíritu exactamente igual
+    que quien se paraba a interactuar. La crítica de diseño pegada por el
+    dueño (2026-08-14, puntos 15-16) señaló justo esto: la ascensión debía
+    sentirse como algo que el jugador **hace**, no algo que pasa solo.
+    """
+
+    def test_el_generador_coloca_un_disparador_no_automatico_por_espiritu(
+        self,
+    ) -> None:
+        """Sin `automatico=False` esto no exige ninguna acción — sería el
+        mismo defecto con otro nombre."""
+        import re
+        from pathlib import Path
+
+        from src.stages.stage4_1 import trazado
+        from src.stages.stage4_1.fases import FASES
+
+        tmx = Path("assets/maps/stage4_1/stage4_1.tmx").read_text(encoding="utf-8")
+        con_espiritu = [f for f in FASES if f.espiritu is not None]
+        assert len(con_espiritu) == 3
+        for fase in con_espiritu:
+            evento = trazado.evento_de_liberacion(fase.numero)
+            bloque = re.search(
+                rf'<object[^>]*type="EventTrigger"[^>]*>.*?'
+                rf'name="evento" value="{evento}".*?</object>',
+                tmx, re.S,
+            )
+            assert bloque is not None, f"no hay EventTrigger para {evento}"
+            assert 'name="automatico" type="bool" value="false"' in bloque.group(0), (
+                f"el disparador de {evento} debe exigir el botón de usar"
+            )
+
+    def test_sin_liberar_el_espiritu_no_asciende(self, escena) -> None:
+        """Control: cruzar la sección entera sin pulsar nada dej al
+        espíritu visible hasta el borde — nunca se desvanece."""
+        from src.stages.stage4_1.stage4_1 import Stage4_1
+
+        fundido_al_final = Stage4_1._fundido_del_espiritu(0.98, liberado=False)
+        assert fundido_al_final == 1.0
+
+    def test_liberado_el_espiritu_asciende_igual_que_antes(self) -> None:
+        from src.stages.stage4_1.stage4_1 import Stage4_1
+
+        fundido_al_final = Stage4_1._fundido_del_espiritu(0.98, liberado=True)
+        assert fundido_al_final == pytest.approx(min(1.0, 0.02 / 0.15))
+
+    def test_espiritu_liberado_lee_el_disparador_correcto(self, escena) -> None:
+        from src.framework.stage.interactables import Disparador
+        from src.stages.stage4_1 import trazado
+        from src.stages.stage4_1.fases import FASES
+
+        fase_venado = next(f for f in FASES if f.espiritu == 0)
+        assert escena._espiritu_liberado(fase_venado) is False
+
+        escena._stage_data.disparadores.append(Disparador(
+            rect=pygame.Rect(0, 0, 1, 1),
+            evento=trazado.evento_de_liberacion(fase_venado.numero),
+            automatico=False,
+            disparado=True,
+        ))
+        assert escena._espiritu_liberado(fase_venado) is True
+
+    def test_el_mensaje_final_cuenta_cuantos_se_liberaron(self, escena) -> None:
+        from src.framework.stage.interactables import Disparador
+        from src.stages.stage4_1 import trazado
+        from src.stages.stage4_1.fases import FASES
+
+        def _final() -> str:
+            escena._actualizar_mensaje_final()
+            return next(
+                mt.text for mt in escena._stage_data.message_triggers
+                if mt.text.startswith(trazado.TEXTO_FINAL_BASE)
+            )
+
+        assert _final() == f"{trazado.TEXTO_FINAL_BASE} Ninguno de los espíritus encontró descanso."
+
+        con_espiritu = [f for f in FASES if f.espiritu is not None]
+        escena._stage_data.disparadores.append(Disparador(
+            rect=pygame.Rect(0, 0, 1, 1),
+            evento=trazado.evento_de_liberacion(con_espiritu[0].numero),
+            automatico=False, disparado=True,
+        ))
+        assert "Sólo 1 de 3" in _final()
+
+        for fase in con_espiritu[1:]:
+            escena._stage_data.disparadores.append(Disparador(
+                rect=pygame.Rect(0, 0, 1, 1),
+                evento=trazado.evento_de_liberacion(fase.numero),
+                automatico=False, disparado=True,
+            ))
+        assert _final() == (
+            f"{trazado.TEXTO_FINAL_BASE} Los tres espíritus descansan por fin."
+        )
+
+    def test_el_mensaje_no_se_toca_una_vez_disparado(self, escena) -> None:
+        """No hay que cambiarle el texto a un cartel que el jugador ya
+        está leyendo."""
+        from src.stages.stage4_1 import trazado
+
+        objetivo = next(
+            mt for mt in escena._stage_data.message_triggers
+            if mt.text == trazado.TEXTO_FINAL_BASE
+        )
+        objetivo.triggered = True
+        objetivo.text = "ya se mostró esto"
+        escena._actualizar_mensaje_final()
+        assert objetivo.text == "ya se mostró esto"
+
+
 class TestCabeEnElPresupuestoDeFotograma:
     PRESUPUESTO_MS = 15.0
     RONDAS = 5

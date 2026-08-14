@@ -218,3 +218,19 @@ COLUMNA_LAPIDA_TERESA = 30
 COLUMNA_LAPIDA_HUGO = 34
 NOMBRE_LAPIDA_TERESA = "Teresa Murillo"
 NOMBRE_LAPIDA_HUGO = "Hugo Salazar Castillo"
+
+
+# ── Liberar a los espíritus (AUD-474) ─────────────────────────────────────
+#
+# Nombre del evento del `EventTrigger` que cada espíritu deja junto a su
+# punto de diálogo — compartido entre el generador (que lo coloca) y la
+# escena (que lo escucha), para que no puedan desincronizarse.
+def evento_de_liberacion(numero_de_fase: int) -> str:
+    return f"espiritu_liberado_{numero_de_fase}"
+
+
+#: El mensaje del umbral final, antes de que `Stage4_1` lo ajuste según
+#: cuántos espíritus se liberaron de verdad (ver `_actualizar_mensaje_final`).
+#: El generador lo escribe tal cual; la escena lo busca por este texto
+#: exacto para saber cuál `MessageTrigger` reescribir.
+TEXTO_FINAL_BASE = "Paburu despierta."

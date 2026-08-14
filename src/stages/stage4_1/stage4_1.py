@@ -168,6 +168,7 @@ class Stage4_1(StageScene):
         self._actualizar_grito_del_gavilan(dt)
         self._actualizar_sombra_del_gavilan(dt)
         self._actualizar_grietas(dt)
+        self._actualizar_mensaje_final()
 
     @property
     def fase(self) -> Fase:
@@ -420,6 +421,42 @@ class Stage4_1(StageScene):
             self._intensidad_grieta[i] = actual
             luz.intensity = actual * self.INTENSIDAD_MAX_GRIETA
 
+    def _actualizar_mensaje_final(self) -> None:
+        """AUD-474 — el umbral cuenta cuántos espíritus se liberaron de
+        verdad, no sólo que el jugador llegó hasta ahí.
+
+        Se reescribe cada fotograma, no una sola vez: es barato (una
+        comparación de texto y, como mucho, tres booleanos) y así no importa
+        en qué orden corra frente al sistema que dispara el `MessageTrigger`
+        — cuando el jugador por fin lo toque, el texto ya lleva rato al día.
+        Busca el disparador por su texto **base** (`TEXTO_FINAL_BASE`) y no
+        lo vuelve a tocar una vez que ya se disparó, para no cambiarle el
+        mensaje a media lectura.
+        """
+        if self._stage_data is None:
+            return
+        liberados = sum(
+            1 for fase in FASES
+            if fase.espiritu is not None and self._espiritu_liberado(fase)
+        )
+        total = sum(1 for fase in FASES if fase.espiritu is not None)
+        if liberados == total:
+            texto = (f"{trazado.TEXTO_FINAL_BASE} Los tres espíritus "
+                     f"descansan por fin.")
+        elif liberados == 0:
+            texto = (f"{trazado.TEXTO_FINAL_BASE} Ninguno de los espíritus "
+                     f"encontró descanso.")
+        else:
+            texto = (f"{trazado.TEXTO_FINAL_BASE} Sólo {liberados} de "
+                     f"{total} espíritus descansan.")
+        for mt in self._stage_data.message_triggers:
+            if mt.triggered:
+                continue
+            if mt.text == trazado.TEXTO_FINAL_BASE or mt.text.startswith(
+                trazado.TEXTO_FINAL_BASE,
+            ):
+                mt.text = texto
+
     # ── Dibujo ────────────────────────────────────────────────
 
     def dibujar_fondo(self, surface: pygame.Surface,
@@ -433,16 +470,36 @@ class Stage4_1(StageScene):
         self._dibujar_sombra_de_ave(surface, offset)
 
     @staticmethod
-    def _fundido_del_espiritu(avance: float) -> float:
+    def _fundido_del_espiritu(avance: float, liberado: bool) -> float:
         """0 al entrar y al salir de la fase, 1 en medio.
 
-        Entra en el primer 15 % del tramo y se desvanece —**asciende**— en
-        el último 15 %. El 70 % del centro es donde testifica, quieto salvo
-        por el vaivén.
+        Entra en el primer 15 % del tramo. Si el jugador **liberó** al
+        espíritu de verdad —AUD-474, pulsando el botón de usar junto a él,
+        no sólo caminando cerca— se desvanece en el último 15 % igual que
+        antes. Si no lo liberó, se queda a la vista hasta el borde mismo de
+        la sección: no asciende nadie a quien nadie liberó. Es la diferencia
+        entre observar y hacer que la crítica de diseño (2026-08-14) pedía.
         """
         entra = min(1.0, avance / 0.15)
-        sale = min(1.0, (1.0 - avance) / 0.15)
+        sale = min(1.0, (1.0 - avance) / 0.15) if liberado else 1.0
         return min(entra, sale)
+
+    def _espiritu_liberado(self, fase: Fase) -> bool:
+        """AUD-474 — ¿el jugador pulsó usar junto al espíritu de esta fase?
+
+        `EventTrigger` con `automatico=False` (`tools/generate_stage4_1.py`)
+        sólo se dispara si alguien pulsa el botón de usar estando cerca —
+        caminar por encima no basta. `evento_de_liberacion` es la misma
+        función que usa el generador para nombrar el evento, así que el
+        nombre no puede desincronizarse entre los dos ficheros.
+        """
+        if self._stage_data is None or fase.espiritu is None:
+            return False
+        evento = trazado.evento_de_liberacion(fase.numero)
+        return any(
+            d.evento == evento and d.disparado
+            for d in self._stage_data.disparadores
+        )
 
     def _dibujar_espiritu(self, surface: pygame.Surface,
                           offset: pygame.Vector2) -> None:
@@ -451,12 +508,13 @@ class Stage4_1(StageScene):
             return
         _nombre, forma = siluetas.ESPIRITUS[fase.espiritu]
         avance = self._avance_en_fase(fase)
-        fundido = self._fundido_del_espiritu(avance)
+        liberado = self._espiritu_liberado(fase)
+        fundido = self._fundido_del_espiritu(avance, liberado)
         if fundido <= 0.0:
             return
-        # Asciende de verdad en el último tramo: sube por la pantalla en vez
-        # de sólo desvanecerse en el sitio.
-        ascenso = max(0.0, (avance - 0.85) / 0.15) * 90.0
+        # Asciende de verdad en el último tramo —pero sólo si se liberó—:
+        # sube por la pantalla en vez de sólo desvanecerse en el sitio.
+        ascenso = max(0.0, (avance - 0.85) / 0.15) * 90.0 if liberado else 0.0
         vaiven = math.sin(self._tiempo * 0.35) * 6.0
         x = int(settings.INTERNAL_WIDTH * 0.62
                 - offset.x * 0.12) % (settings.INTERNAL_WIDTH + 260) - 130

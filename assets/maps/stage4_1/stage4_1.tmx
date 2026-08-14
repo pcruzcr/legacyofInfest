@@ -249,103 +249,121 @@
     <property name="dialogue" value="gavilan"/>
    </properties>
   </object>
-  <object id="140" name="FrictionZone_140" type="FrictionZone" x="2720" y="448" width="240" height="32">
+  <object id="140" name="EventTrigger_140" type="EventTrigger" x="3488" y="432" width="48" height="32">
+   <properties>
+    <property name="evento" value="espiritu_liberado_2"/>
+    <property name="automatico" type="bool" value="false"/>
+   </properties>
+  </object>
+  <object id="141" name="EventTrigger_141" type="EventTrigger" x="5888" y="432" width="48" height="32">
+   <properties>
+    <property name="evento" value="espiritu_liberado_3"/>
+    <property name="automatico" type="bool" value="false"/>
+   </properties>
+  </object>
+  <object id="142" name="EventTrigger_142" type="EventTrigger" x="8288" y="432" width="48" height="32">
+   <properties>
+    <property name="evento" value="espiritu_liberado_4"/>
+    <property name="automatico" type="bool" value="false"/>
+   </properties>
+  </object>
+  <object id="143" name="FrictionZone_143" type="FrictionZone" x="2720" y="448" width="240" height="32">
    <properties>
     <property name="multiplicador" type="float" value="0.94"/>
    </properties>
   </object>
-  <object id="141" name="FrictionZone_141" type="FrictionZone" x="3040" y="448" width="240" height="32">
+  <object id="144" name="FrictionZone_144" type="FrictionZone" x="3040" y="448" width="240" height="32">
    <properties>
     <property name="multiplicador" type="float" value="0.88"/>
    </properties>
   </object>
-  <object id="142" name="FrictionZone_142" type="FrictionZone" x="3360" y="448" width="240" height="32">
+  <object id="145" name="FrictionZone_145" type="FrictionZone" x="3360" y="448" width="240" height="32">
    <properties>
     <property name="multiplicador" type="float" value="0.94"/>
    </properties>
   </object>
-  <object id="143" name="FrictionZone_143" type="FrictionZone" x="3680" y="448" width="240" height="32">
+  <object id="146" name="FrictionZone_146" type="FrictionZone" x="3680" y="448" width="240" height="32">
    <properties>
     <property name="multiplicador" type="float" value="0.88"/>
    </properties>
   </object>
-  <object id="144" name="FrictionZone_144" type="FrictionZone" x="4000" y="448" width="240" height="32">
+  <object id="147" name="FrictionZone_147" type="FrictionZone" x="4000" y="448" width="240" height="32">
    <properties>
     <property name="multiplicador" type="float" value="0.94"/>
    </properties>
   </object>
-  <object id="145" name="Slope_145" type="Slope" x="5440" y="320" width="480" height="160">
+  <object id="148" name="Slope_148" type="Slope" x="5440" y="320" width="480" height="160">
    <properties>
     <property name="sube" value="derecha"/>
    </properties>
   </object>
-  <object id="146" name="Slope_146" type="Slope" x="6560" y="320" width="480" height="160">
+  <object id="149" name="Slope_149" type="Slope" x="6560" y="320" width="480" height="160">
    <properties>
     <property name="sube" value="izquierda"/>
    </properties>
   </object>
-  <object id="147" name="WindZone_147" type="WindZone" x="4800" y="0" width="2880" height="608">
+  <object id="150" name="WindZone_150" type="WindZone" x="4800" y="0" width="2880" height="608">
    <properties>
     <property name="fuerza_x" type="float" value="-60.0"/>
     <property name="fuerza_y" type="float" value="0.0"/>
     <property name="periodo" type="float" value="3.2"/>
    </properties>
   </object>
-  <object id="148" name="Light_148" type="Light" x="12160" y="448" width="16" height="16">
+  <object id="151" name="Light_151" type="Light" x="12160" y="448" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="70.0"/>
     <property name="color" value="#7CFFA0"/>
     <property name="intensity" type="float" value="0.0"/>
    </properties>
   </object>
-  <object id="149" name="Light_149" type="Light" x="12480" y="448" width="16" height="16">
+  <object id="152" name="Light_152" type="Light" x="12480" y="448" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="70.0"/>
     <property name="color" value="#7CFFA0"/>
     <property name="intensity" type="float" value="0.0"/>
    </properties>
   </object>
-  <object id="150" name="Light_150" type="Light" x="12800" y="448" width="16" height="16">
+  <object id="153" name="Light_153" type="Light" x="12800" y="448" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="70.0"/>
     <property name="color" value="#7CFFA0"/>
     <property name="intensity" type="float" value="0.0"/>
    </properties>
   </object>
-  <object id="151" name="Light_151" type="Light" x="13120" y="448" width="16" height="16">
+  <object id="154" name="Light_154" type="Light" x="13120" y="448" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="70.0"/>
     <property name="color" value="#7CFFA0"/>
     <property name="intensity" type="float" value="0.0"/>
    </properties>
   </object>
-  <object id="152" name="Light_152" type="Light" x="13440" y="448" width="16" height="16">
+  <object id="155" name="Light_155" type="Light" x="13440" y="448" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="70.0"/>
     <property name="color" value="#7CFFA0"/>
     <property name="intensity" type="float" value="0.0"/>
    </properties>
   </object>
-  <object id="153" name="Light_153" type="Light" x="13760" y="448" width="16" height="16">
+  <object id="156" name="Light_156" type="Light" x="13760" y="448" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="70.0"/>
     <property name="color" value="#7CFFA0"/>
     <property name="intensity" type="float" value="0.0"/>
    </properties>
   </object>
-  <object id="154" name="Light_154" type="Light" x="14080" y="448" width="16" height="16">
+  <object id="157" name="Light_157" type="Light" x="14080" y="448" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="70.0"/>
     <property name="color" value="#7CFFA0"/>
     <property name="intensity" type="float" value="0.0"/>
    </properties>
   </object>
-  <object id="155" name="MessageTrigger_Once_155" type="MessageTrigger_Once" x="14304" y="400" width="32" height="80">
+  <object id="158" name="MessageTrigger_Once_158" type="MessageTrigger_Once" x="14304" y="400" width="32" height="80">
    <properties>
     <property name="text" value="Paburu despierta."/>
    </properties>
   </object>
-  <object id="156" name="NextTrigger_156" type="NextTrigger" x="14304" y="432" width="32" height="48">
+  <object id="159" name="NextTrigger_159" type="NextTrigger" x="14304" y="432" width="32" height="48">
   </object>
  </objectgroup>
  <layer id="9" name="FG_Overlay" width="900" height="38">

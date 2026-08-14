@@ -56,9 +56,11 @@ from src.stages.stage4_1.trazado import (  # noqa: E402
     NOMBRE_LAPIDA_HUGO,
     NOMBRE_LAPIDA_TERESA,
     SEGMENTOS_FASE2,
+    TEXTO_FINAL_BASE,
     TS,
     TUMBAS_FASE5,
     checkpoints,
+    evento_de_liberacion,
     fase_de_la_columna,
     grietas_de_pisada,
     loma,
@@ -277,6 +279,23 @@ def _objetos() -> list[str]:
         obj("MessageTrigger_Once", col * TS, (perfil[col] - 3) * TS, 32, 32,
             dialogue=fase.dialogo_id)
 
+    # ── Liberar a cada espíritu es algo que el jugador hace, no algo
+    # que pasa solo (AUD-474) ────────────────────────────────────
+    #
+    # Antes, el espíritu ascendía por caminar el 85-100% de la sección —
+    # nada distinguía a quien lo vio pasar de quien se detuvo a
+    # escucharlo. Unos pasos después del punto donde habla, un
+    # `EventTrigger` con `automatico=False` exige el botón de usar: quien
+    # no lo pulsa deja al espíritu sin liberar, y `Stage4_1` lo nota (ver
+    # `_espiritu_liberado` y el mensaje final, que cuenta cuántos se
+    # liberaron de verdad).
+    for fase in FASES:
+        if fase.espiritu is None:
+            continue
+        col = fase.desde_columna + 68
+        obj("EventTrigger", col * TS, (perfil[col] - 3) * TS, 48, 32,
+            evento=evento_de_liberacion(fase.numero), automatico=False)
+
     # ── Las superficies de la Fase 2 (musgo y lodo) ────────────
     for inicio, ancho, material in SEGMENTOS_FASE2:
         fila = perfil[inicio]
@@ -305,7 +324,7 @@ def _objetos() -> list[str]:
     # ── El umbral ──────────────────────────────────────────────
     ultima = MW - MURO_ANCHO - 4
     obj("MessageTrigger_Once", ultima * TS, (perfil[ultima] - 5) * TS,
-        2 * TS, 5 * TS, text="Paburu despierta.")
+        2 * TS, 5 * TS, text=TEXTO_FINAL_BASE)
     obj("NextTrigger", ultima * TS, (perfil[ultima] - 3) * TS, 2 * TS, 3 * TS)
 
     return [x for x in o if x]
