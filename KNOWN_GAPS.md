@@ -2332,3 +2332,699 @@ está.
   analizador de rutas (marca la loma como «repecho imposible» y la salida
   como inalcanzable; verificado falso con un recorrido físico real):
   queda como sugerencia aparte, no se arregla en este lote.
+
+## [GAP-059] `stage4_1` Fase 1 — sin anomalía ambigua de fondo, sin memoria espacial, sin capas de sonido natural
+
+- **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/trazado.py`, `src/stages/stage4_1/stage4_1.py`, `tools/generate_stage4_1.py`
+- **Phase:** Revisión de diseño por fases del dueño del proyecto (2026-08-14) —
+  documento «Fase 1 — El Cementerio que Recuerda», comparado contra el
+  estado real por Claude Code el mismo día.
+- **Reason:** El dueño pidió que la Fase 1 funcione como «ancla de
+  realidad»: el jugador debe aprender —sin tutorial— que explorar
+  recompensa, que el fondo puede esconder algo y que el sonido llama la
+  atención, antes de que la Fase 2 empiece a romper esas reglas. Lo que
+  hoy existe cumple la mitad negativa (nada de enemigos, nada de trampas,
+  nada de música intensa: la Fase 1 es la única de las seis sin
+  `sonido_ambiente`) pero no la mitad positiva:
+  - **Cero anomalías ambiguas de fondo.** El único elemento sobrenatural es
+    el fantasma de `_dibujar_fantasma_personal`, y no es ambiguo: tiene un
+    `MessageTrigger` con el nombre escrito encima, sobre el camino
+    principal. No existe el evento que pide el dueño —una silueta que
+    cruza detrás de una tumba menos de un segundo, sin música ni shake,
+    que el jugador puede simplemente no ver.
+  - **Una sola «historia pequeña», no varias.** El diseño pide tumbas con
+    reacciones distintas (una con sonido al acercarse, una que cambia si
+    el jugador vuelve). Hoy sólo hay las dos lápidas del easter egg
+    (Teresa Murillo, Hugo Salazar Castillo), sin variación entre ellas.
+  - **Sin memoria espacial.** Nada en la Fase 1 depende de que el jugador
+    regrese a una zona ya visitada — el punto 10 del dueño («el jugador
+    piensa: estoy seguro de que antes estaba diferente») no tiene ningún
+    gancho en el código.
+  - **El fondo está vacío.** El TMX ya trae `BG_Far`/`BG_Mid`/`BG_Near`
+    como capas separadas (la estructura de tres planos que pide el punto
+    11 existe), pero `tools/generate_stage4_1.py::generar()` las rellena
+    con ceros para las seis fases — ninguna silueta de fondo, ninguna
+    señal a lo lejos.
+  - **Sin capas de sonido natural.** El silencio de la Fase 1 es literal
+    (sin `sonido_ambiente`), no el silencio *poblado* de pájaros, viento,
+    pasos e insectos que describe el dueño — no hay ningún sistema de
+    sonido ambiental en capas, sólo el canal único de `_actualizar_sonido_de_fase`.
+  - **Terreno completamente plano.** `FILA_SUELO` es constante en toda la
+    Fase 1 (la única loma real del nivel es la de la Fase 3) — no hay
+    nada que saltar, ni desniveles pequeños, ni espacios que explorar
+    verticalmente.
+  - **Choque estructural, sin resolver:** el dueño propone un hub pequeño
+    con ramificaciones (Sector A / Sector B / tumba secreta) para la Fase
+    1. Eso contradice la decisión ya tomada en AUD-467
+    (`docs/niveles/13_STAGE_4_1.md` §0): el 4-1 entero es un pasillo
+    horizontal sin bifurcaciones, después de que el dueño rechazara
+    jugada la geometría no lineal del pozo. No se puede cerrar este punto
+    sin que el dueño confirme si quiere reabrir esa decisión o adaptar la
+    idea a bolsillos laterales cortos dentro del pasillo.
+  - **La música no modula por fase.** `BGM_TRACK = "bgm_final_approach"`
+    (`stage4_1.py`) es una sola pista para las seis fases — no hay
+    mecanismo para que la Fase 1 suene distinta de la aproximación final
+    a Paburu, lo que compite con el punto 5 del dueño («guardar el sonido
+    como recurso»).
+- **Resolution plan:** Sin fecha. Depende primero de que el dueño resuelva
+  el choque de estructura (hub vs. pasillo). El resto —anomalía de fondo,
+  historias de tumba adicionales, sonido ambiental en capas, memoria
+  espacial al volver, decoración en `BG_Far`/`BG_Mid`/`BG_Near`— se puede
+  construir dentro del pasillo actual sin reabrir esa geometría. Ver
+  [[GAP-058]] para el fondo de parallax pendiente, que es el mismo hueco
+  visto desde el lado del arte.
+- **Nota (AUD-478, 2026-08-14):** parcialmente resuelto. Se añadió la
+  anomalía ambigua de fondo que pedía el punto 7: una figura sin nombre
+  (`siluetas._figura_lejana`) que aparece hacia la columna 95 —lejos de
+  las lápidas del easter egg, para no confundirse con el fantasma de
+  Teresa— menos de medio segundo, en una ventana aleatoria de 20-40 s, sin
+  tocar sonido, disparadores ni diálogo (mismo principio que la Bruja de
+  la Fase 3, AUD-475; pruebas en `TestLaAnomaliaAmbiguaDeLaFase1`,
+  `tests/test_stage4_1.py`). **Sigue pendiente:** el choque de estructura
+  (sin resolver, no se tocó), varias historias de tumba en vez de una,
+  memoria espacial al volver, decoración en `BG_Far`/`BG_Mid`/`BG_Near`,
+  capas de sonido natural y la música por fase.
+
+## [GAP-060] `stage4_1` Fase 2 — la fricción no es sistémica, el Venado no enseña por comportamiento y no hay progresión de dificultad
+
+- **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/trazado.py` (`SEGMENTOS_FASE2`, `FRENO_DEL_MUSGO`, `FRENO_DEL_LODO`), `src/stages/stage4_1/stage4_1.py`
+- **Phase:** Revisión de diseño por fases del dueño del proyecto (2026-08-14) —
+  documento «Fase 2 — El Sendero del Venado», comparado contra el estado
+  real por Claude Code el mismo día.
+- **Reason:** El dueño pide que la Fase 2 enseñe «mi movimiento depende
+  del mundo» mediante una progresión jugable real (superficie simple →
+  superficies combinadas → superficie + pendiente → superficie + lluvia →
+  dominio) y que el Venado funcione como presencia narrativa que se ve
+  fuera de alcance antes de hablar, no como un NPC que aparece una vez a
+  dar su diálogo. Lo construido hoy es la versión mínima de la mecánica,
+  no la progresión:
+  - **La fricción es estática, no sistémica.** `SEGMENTOS_FASE2` alterna
+    cinco tramos fijos de musgo (0.94) y lodo (0.88) — dos valores
+    constantes durante toda la sección. El punto 14 del dueño pide que la
+    lluvia intensifique el resbalón progresivamente («al principio,
+    musgo = ligeramente resbaladizo; después de lluvia intensa, mucho
+    más»); hoy `FrictionZone.multiplicador` no depende de nada del clima.
+  - **Sin pendientes en la Fase 2.** Las únicas pendientes del nivel
+    (`LOMAS_FASE3`, `trazado.py`) están en la Fase 3. El punto 13 pide
+    que la propia Fase 2 combine «superficies + pendientes» antes de
+    llegar a la Fase 3 — hoy ese paso de la progresión no existe.
+  - **El Venado sólo aparece una vez, al hablar.** `_dibujar_espiritu` lo
+    dibuja únicamente durante el 15 %-85 % del tramo, centrado en el
+    `MessageTrigger` de columna fija (`desde_columna + 60`). No hay
+    apariciones previas parciales «fuera de alcance» —entre árboles, tras
+    una colina, cruzando un claro— que el dueño pide en los puntos 9-12
+    para que el jugador aprenda a seguirlo antes de que hable.
+  - **Sin mecánica de huellas.** El punto 28 propone huellas del Venado
+    como herramienta de navegación (que a veces desaparecen o terminan
+    abruptamente). No existe ningún objeto ni decoración de ese tipo.
+  - **Sin el pequeño desafío de control que pide el punto 8** (una
+    pendiente corta que termina en zona resbaladiza, para que el jugador
+    aprenda a frenar antes de entrar). No hay geometría de ese tipo en la
+    Fase 2.
+  - **Sin zona secundaria opcional** (punto 15: un bosque secundario con
+    una historia, una aparición o una tumba antigua, no obligatorio).
+  - **Sin señales de «el bosque observa»** (punto 16: ramas sin viento,
+    ojos entre árboles, huellas, una figura, hojas desplazándose) más
+    allá de la aparición fija del Venado.
+  - **Sin el momento de «la física vuelve a la normalidad»** tras liberar
+    al espíritu (punto 21) ni un cambio perceptible del entorno en los
+    segundos siguientes antes de que empiece la Fase 3 (punto 22) — la
+    liberación de AUD-474 cambia si el espíritu asciende o no, pero no
+    toca fricción, clima ni iluminación de forma diferenciada.
+  - Lo que sí coincide: cero enemigos, sin combate, sin plataformas de
+    precisión extrema, sin jumpscare, diálogo breve durante la
+    exploración sin pantalla de carga (`Cutscene`/`MessageTrigger`, no
+    una cinemática larga) — el punto 18 y el punto 26 del dueño ya se
+    cumplen.
+- **Resolution plan:** Sin fecha. La fricción escalable por intensidad de
+  lluvia y el paso de «superficie + pendiente» necesitan que `fases.py`
+  deje de tratar cada fase como estática por tramo y empiece a leer del
+  estado de clima actual — un cambio de forma, no sólo de datos. Las
+  apariciones previas del Venado y las huellas de navegación son
+  contenido nuevo en `siluetas.py`/`trazado.py`, sin bloqueo de diseño
+  pendiente (a diferencia de [[GAP-059]], aquí no hay ningún choque con
+  una decisión ya tomada del dueño).
+- **Nota (AUD-479, 2026-08-14):** parcialmente resuelto. El Venado ya no
+  queda encendido todo el tramo antes de hablar: `_venado_visible`
+  (`Stage4_1._actualizar_apariciones_previas_del_venado`) lo hace asomar a
+  destellos de 1,5-3 s cada 4-9 s hasta `AVANCE_ANTES_DEL_DIALOGO`
+  (la misma columna que usa el `MessageTrigger` de diálogo,
+  `trazado.DESVIO_COLUMNA_DIALOGO` — un solo sitio para las dos, para que
+  no puedan desincronizarse); pasado ese punto vuelve al fundido continuo
+  normal, igual que el Rey Terciopelo y el Gavilán (pruebas en
+  `TestLasAparicionesPreviasDelVenado`, `tests/test_stage4_1.py`).
+  **Sigue pendiente:** la fricción no escala con la lluvia, no hay
+  pendientes en la Fase 2, sin mecánica de huellas, sin desafío de
+  control, sin zona secundaria opcional, sin señales de «el bosque
+  observa», y sin el momento de «la física vuelve a la normalidad» tras
+  liberar al espíritu.
+
+## [GAP-061] `stage4_1` Fase 3 — el viento no escala, el rayo no informa y las osamentas son decoración, no arquitectura
+
+- **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/trazado.py` (`LOMAS_FASE3`, `HUESOS_FASE3`), `src/stages/stage4_1/stage4_1.py` (`_actualizar_rayos`), `tools/generate_stage4_1.py` (`WindZone`)
+- **Phase:** Revisión de diseño por fases del dueño del proyecto (2026-08-14) —
+  documento «Fase 3 — El Ascenso de la Serpiente», comparado contra el
+  estado real por Claude Code el mismo día.
+- **Reason:** El dueño pide que la Fase 3 sea el salto jugable de la
+  trilogía inicial: el viento como herramienta que se aprende a leer y
+  usar, el rayo como sistema de información («flashlight natural») y las
+  osamentas como arquitectura que construye el nivel, todo dentro de una
+  sección con «dirección dominante hacia arriba». Lo construido hoy
+  demuestra la mecánica en su forma mínima (viento real, rayo real, loma
+  real, AUD-297/477) pero no la profundidad que pide el diseño:
+  - **No es vertical.** El eje dominante de la Fase 3, como el del resto
+    del 4-1, es horizontal — decisión explícita del dueño en AUD-467.
+    `LOMAS_FASE3` sube de `FILA_SUELO` (30) a `FILA_CIMA` (20): 160 px de
+    desnivel real dentro de un pasillo por lo demás plano, no la
+    ascensión vertical dedicada («slopes, plataformas, paredes, rutas
+    superiores e inferiores») que compara con *Shadow of the Colossus*.
+    Mismo choque estructural que [[GAP-059]] documentó para el hub de la
+    Fase 1: hay que decidir si se reabre el eje vertical o si el diseño
+    se adapta al pasillo.
+  - **El viento no escala ni tiene componente vertical.** `ZonaDeViento`
+    (`components.py`) sí sopla en pulsos (`periodo`, mitad del ciclo
+    encendida) — coincide parcialmente con el punto 8 del dueño— pero el
+    generador coloca un único `WindZone` con `fuerza_x=-60.0`,
+    `fuerza_y=0.0` y `periodo=3.2` para toda la zona de las lomas: una
+    sola intensidad, no la progresión «leve → fuerte → intermitente →
+    combinado con pendientes → combinado con salto» del punto 5. Sin
+    `fuerza_y`, el viento no puede llevar al jugador por un vacío (punto
+    7, «viento = herramienta») — y de hecho no hay ningún vacío que
+    cruzar: el suelo es sólido en toda la Fase 3, así que «usar el
+    viento» no tiene ningún contexto de plataformas donde aplicarse.
+  - **El rayo sube el brillo, no revela nada.** `_actualizar_rayos` sólo
+    escala `ambient_brightness` un instante y dispara un SFX
+    simultáneo — no hay «trueno lejano» antes ni silencio momentáneo
+    (punto 13), y como el ambiente base de la fase ya es 0.44 (visible)
+    todo el tiempo, el rayo no oculta ni revela ninguna plataforma, ruta
+    o criatura (puntos 11-12): sólo satura el brillo que ya había. La
+    Bruja de AUD-475 es la única cosa que aparece sólo durante el rayo,
+    y su función es sembrar duda, no informar sobre una ruta —cumple un
+    mecanismo parecido al que pide el dueño, pero no la función.
+  - **Los huesos son una baldosa de decoración, no arquitectura.**
+    `HUESOS_FASE3` coloca una `CALAVERA` cada 12 columnas sobre el suelo
+    — no hay costillas formando arcos, puentes ni plataformas (punto 4),
+    ni la progresión «una vértebra, luego una columna, luego una
+    estructura gigantesca» (punto 15) que el dueño pide como
+    environmental storytelling de que el camino está construido
+    alrededor de la Serpiente.
+  - **Sin ruta alta/baja con riesgo-recompensa.** El pasillo tiene un
+    único trazado; las dos lomas están sobre ese mismo camino, sin
+    bifurcación entre una ruta segura y una expuesta al viento (puntos
+    10, 17), y los checkpoints se reparten uniformemente cada 28 columnas
+    en todo el mapa (`CADA_CUANTAS_COLUMNAS_CHECKPOINT`,
+    `trazado.checkpoints()`) — no hay un tramo final sin puntos de
+    reaparición que funcione como «demostración de dominio» (punto 22).
+  - **Sin silencio específico antes de la ascensión.** La liberación del
+    Rey Terciopelo usa el mismo mecanismo genérico de las tres fases con
+    espíritu (AUD-474: `EventTrigger` + fundido/ascenso). No hay ningún
+    momento en que la tormenta, el viento y la serpiente de fondo se
+    detengan antes de que aparezca a hablar (puntos 19, 22-24) — el
+    patrón ya existe en el motor (`shake_de_silencio` de la Fase 4 hace
+    algo parecido, cortar el clima de golpe) pero no está aplicado aquí.
+  - **Sin apertura ni consecuencia tras la ascensión.** Punto 25: «queda
+    una apertura» que antes bloqueaba la tormenta. El pasillo siempre
+    estuvo abierto — no hay ningún obstáculo que la partida de la
+    Serpiente elimine.
+  - **La serpiente de fondo es una sola presencia continua**
+    (`_dibujar_serpiente_de_fondo`, vaivén sinusoidal), no la pluralidad
+    ambigua que pide el punto 14 (huesos que parecen moverse, ojos,
+    sombras, restos animados por el viento).
+  - Lo que sí coincide: cero enemigos y ningún combate contra la
+    Serpiente (punto 27); el diálogo se dispara durante la exploración
+    sin cinemática larga (`MessageTrigger_Once` a mitad de sección); la
+    escala de grises y la tormenta con rayos ya transmiten el tono de
+    «tormenta y huesos» del punto 26; y el viento sí tiene una
+    consecuencia física real sobre el jugador (`ZonaDeViento` empuja de
+    verdad, no son sólo partículas), que es la base sobre la que
+    construir la progresión que falta.
+- **Resolution plan:** Sin fecha. Depende primero de la misma decisión de
+  [[GAP-059]] sobre el eje del nivel (si se acepta que la Fase 3 siga
+  siendo mayormente horizontal con desniveles reales, o si se reabre la
+  verticalidad). El resto —escalar `WindZone` en intensidad a lo largo de
+  la sección, dar al rayo una función de revelar en vez de sólo iluminar,
+  convertir algunas calaveras en arquitectura navegable, y aplicar el
+  patrón de silencio de la Fase 4 antes de la ascensión de la Fase 3— no
+  choca con ninguna decisión tomada y se puede construir dentro del
+  pasillo actual.
+- **Nota (AUD-480, 2026-08-14):** parcialmente resuelto. Se aplicó el
+  patrón de silencio de la Fase 4 antes del diálogo del Rey Terciopelo —
+  no idéntico (no es un silencio total ni un shake único): la
+  `ZonaDeViento` real del mapa baja al 10 % de su fuerza en una ventana
+  alrededor de `AVANCE_ANTES_DEL_DIALOGO` y sube de vuelta en cuanto el
+  jugador se aleja, repetible (`Stage4_1._actualizar_pausa_de_la_serpiente`;
+  pruebas en `TestLaPausaDelDialogoDeLaSerpiente`). **Sigue pendiente:** el
+  eje vertical (sin resolver, no se tocó), el rayo como revelador de rutas,
+  las osamentas como arquitectura, y la escalada de intensidad del viento
+  a lo largo de la sección.
+
+## [GAP-062] `stage4_1` Fase 4 — el sonido no tiene dirección, nada cambia tras el silencio y no hay mecánica de quietud
+
+- **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/stage4_1.py` (`_actualizar_silencio_y_shake`, `_actualizar_grito_del_gavilan`, `_actualizar_sombra_del_gavilan`, `_dibujar_sombra_de_ave`), `src/framework/scenes/stage_parts/sonido.py`
+- **Phase:** Revisión de diseño por fases del dueño del proyecto (2026-08-14) —
+  documento «Fase 4 — El Bosque que Observa», comparado contra el estado
+  real por Claude Code el mismo día.
+- **Reason:** El dueño pide que la Fase 4 cambie el tipo de desafío de
+  físico a perceptual: sonido direccional que no siempre dice la verdad,
+  sombras de fondo con eventos propios, cambios de escenario tras el
+  silencio que el jugador debe reconstruir, y una mecánica de quietud
+  donde detenerse revela información. La pieza mejor lograda de las
+  cuatro fases revisadas hasta ahora vive aquí — el silencio súbito y el
+  shake sin causa visible (`_actualizar_silencio_y_shake`) coinciden casi
+  al pixel con el punto 12 del dueño: sin transición musical, sin aviso,
+  `stop_ambient()` sin fundido, un shake único y breve. Pero alrededor de
+  esa pieza faltan las que le dan sentido:
+  - **El grito aislado no tiene dirección, aunque el motor ya sabe
+    hacerlo.** `_actualizar_grito_del_gavilan` llama a
+    `self._play_sfx_named(...)` — sin posición. `AudioManager.play_sfx_at`
+    y el propio helper `_play_sfx_spatial` de `sonido.py` (línea 151) ya
+    hacen paneo estéreo por posición X en el mundo, y otro sistema del
+    motor (`play_sfx_critico`) ya lo usa — el Gavilán simplemente no lo
+    invoca. Es el gap más barato de cerrar de los cuatro: cambiar una
+    llamada, no construir un sistema nuevo. Sin esto, el punto 4 del
+    dueño («pájaro → izquierda, rama → derecha») no tiene ninguna base
+    técnica que lo sostenga hoy, aunque el motor ya la tiene.
+  - **La sombra del Gavilán es siempre el mismo sprite identificable.**
+    `_dibujar_sombra_de_ave` cruza siempre de izquierda a derecha, a la
+    misma altura (`y=80`), con la silueta de `_gavilan` reconocible — el
+    punto 10 pide explícitamente lo contrario: «no debería aparecer como
+    un sprite claramente identificable cada vez... queremos presencia,
+    no exposición» (aparecer detrás, cruzar lateralmente, confundirse con
+    una sombra). Hoy sólo hay una variante de cruce.
+  - **Grito y sombra no están realmente coordinados**, pese a que el
+    comentario de `fases.py` dice que sí («una sombra de ave... cruzando
+    el cielo... coordinada con el grito»): `_proximo_grito` y
+    `_proxima_sombra` son dos temporizadores aleatorios independientes
+    (`ESPERA_ENTRE_GRITOS`, `ESPERA_ENTRE_SOMBRAS`), sin ninguna relación
+    entre sí. Vale la pena corregir el comentario o la implementación,
+    lo que sea cierto.
+  - **Nada del escenario cambia tras el silencio.** El punto 13 es central
+    en el diseño del dueño: un árbol que antes estaba en pie ahora está
+    caído, un camino que antes estaba cerrado ahora está abierto — el
+    jugador reconstruye que «algo ocurrió» sin que se le muestre qué. Hoy
+    el silencio sólo dispara el shake y, más tarde, gritos y una sombra;
+    ninguna decoración ni geometría cambia de estado.
+  - **Sin memoria espacial al volver** (punto 14) — mismo hueco que
+    [[GAP-059]] y [[GAP-060]] documentaron para las Fases 1 y 2: no hay
+    ningún mecanismo en todo `stage4_1` que condicione algo a que el
+    jugador regrese a una zona ya visitada.
+  - **Ninguna anomalía ambigua antes del punto medio de la sección.**
+    Los puntos 6-9 piden que el Halcón empiece a insinuarse mucho antes
+    del silencio (alas que se oyen sin pájaro visible, una figura de
+    fondo que desaparece si el jugador se da la vuelta). Hoy la primera
+    mitad de la Fase 4 es sólo lluvia, partículas de ceniza y los árboles
+    cortados estáticos de `ARBOLES_FASE4` — sin ningún evento.
+  - **El diálogo se dispara por posición fija, no por acumulación de
+    percepción.** El `MessageTrigger_Once` de `dialogo_id="gavilan"` está
+    en `desde_columna + 60`, igual que el de las otras dos fases —no
+    depende de cuánto investigó el jugador (punto 15: «después de varias
+    interacciones perceptuales»).
+  - **Sin sistema de «el Halcón responde a la atención del jugador»**
+    (puntos 17, 19): nada en el código consulta hacia dónde mira o se
+    detiene el jugador para decidir si dispara un evento.
+  - **Sin mecánica de quietud.** El comentario de
+    `_actualizar_gradacion` dice, casi como declaración de principios
+    contraria a lo que pide el dueño: «el cambio se ve al caminar, no al
+    esperar quieto» — y es cierto en todo `stage4_1`: no existe ninguna
+    detección de cuánto tiempo lleva el jugador inmóvil, así que el punto
+    24-25 («detenerse también es jugar») no tiene ningún gancho técnico
+    hoy.
+  - **La lluvia no tiene función perceptual.** Es un canal de clima y un
+    canal de audio ambiente independientes (`_actualizar_sonido_de_fase`)
+    — no hay ningún acoplamiento entre intensidad de lluvia y audibilidad
+    de otro sonido (punto 21-22: un sonido tenue que la lluvia esconde y
+    luego deja oír).
+  - **La ascensión del Gavilán usa la misma fórmula genérica que Venado y
+    Rey Terciopelo** (`_fundido_del_espiritu`, avance 0.85-1.0) — no hay
+    una «ascensión aérea» distinta con aves regresando gradualmente
+    (punto 27); los gritos y sombras siguen su propio temporizador
+    aleatorio sin picar en el momento de la ascensión.
+  - **Sin anomalía final ambigua antes de pasar a la Fase 5** (punto 28):
+    `_actualizar_sombra_del_gavilan` simplemente deja de disparar en
+    cuanto `fase.sombra_de_ave` es falso al cruzar a la Fase 5 — corte
+    limpio, no un último cruce sin confirmar qué era.
+  - **La gradación no tiene picos en momentos sobrenaturales** (punto 3:
+    «naranja envejecido → naranja intenso en los momentos
+    sobrenaturales»): `SEPIA_VINTAGE`/`TINTE_VINTAGE` son constantes
+    durante toda la fase, sin subir de intensidad junto con el grito o
+    la sombra.
+- **Resolution plan:** Sin fecha. El más barato de cerrar es el paneo
+  espacial del grito (`_play_sfx_spatial` ya existe, sólo hay que
+  invocarlo con la posición del Gavilán en vez de `_play_sfx_named`). El
+  resto —variedad en la silueta de la sombra, cambios de escenario tras
+  el silencio, una detección de quietud reutilizable (útil también para
+  otras fases del terror psicológico del proyecto, no sólo ésta), y el
+  acoplamiento lluvia↔audibilidad— son sistemas nuevos, no bloqueados
+  por ninguna decisión de geometría como en [[GAP-059]] y [[GAP-061]].
+- **Nota (AUD-481, 2026-08-14):** parcialmente resuelto — exactamente el
+  ítem más barato del plan de arriba. `_actualizar_grito_del_gavilan` ya
+  llama a `_play_sfx_spatial` con una posición al azar a la izquierda o
+  la derecha del jugador (`_posicion_del_grito`), no al canal ciego
+  `_play_sfx_named` (pruebas en `TestElGritoDelGavilanTieneDireccion`).
+  **Sigue pendiente:** variedad en la silueta de la sombra, cambios de
+  escenario tras el silencio, la detección de quietud, y el acoplamiento
+  lluvia↔audibilidad.
+
+- **Nota (AUD-492, 2026-08-15):** cerrados los dos itemes de percepcion del
+  plan de arriba. Existe la **deteccion de quietud reutilizable** que el plan
+  pedia -- `src/framework/stage/atencion.py`, en el framework y no en el
+  escenario, justo para que la puedan usar otras fases del terror psicologico
+  del proyecto-- y la Fase 4 la usa para dos cosas: el grito del Gavilan suena
+  tres de cada cuatro veces **a la espalda** del jugador, hacia donde no mira
+  (puntos 17 y 19), y **detenerse cuatro segundos adelanta el cruce de la
+  sombra** (puntos 24-25, *«detenerse tambien es jugar»*), con una espera de
+  12 s para que la quietud no se vuelva un grifo. El grito conserva una de
+  cada cuatro apariciones de frente: una regla sin excepcion se aprende y deja
+  de inquietar. Pruebas en `tests/test_el_escenario_observa.py`.
+  **Sigue pendiente:** variedad en la silueta de la sombra, cambios de
+  escenario tras el silencio, y el acoplamiento lluvia<->audibilidad.
+
+## [GAP-063] `stage4_1` Fase 5 — la luna es sólo brillo ambiente, sin eventos atados a la oscuridad ni sonido de navegación
+
+- **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/trazado.py` (`TUMBAS_FASE5`), `src/stages/stage4_1/stage4_1.py` (`_actualizar_ambiente_de_fase`, `_dibujar_decoracion`)
+- **Phase:** Revisión de diseño por fases del dueño del proyecto (2026-08-14) —
+  documento «Fase 5 — La Planicie de los Muertos», comparado contra el
+  estado real por Claude Code el mismo día.
+- **Reason:** El dueño pide que la luna sea «un sistema de información»,
+  no sólo iluminación: eventos que ocurren mientras está oculta y se
+  descubren al volver, sonido que sustituye a la vista como orientación,
+  landmarks distintos entre sí, y un tramo final donde luces verdes
+  reemplazan progresivamente a la luna como guía hacia la Fase 6. Lo
+  construido hoy resuelve bien la mitad ya corregida por AUD-476 (el
+  ciclo nunca llega a negro real: `AMBIENTE_MIN_LUNA=0.20` se eligió a
+  propósito por encima de la referencia de «casi negro» del proyecto,
+  ver el comentario junto a `PERIODO_DE_LA_LUNA` en `stage4_1.py`) pero
+  la luna sigue siendo únicamente una curva de brillo, no un sistema:
+  - **Nada depende de si la luna está arriba o abajo.** `_actualizar_ambiente_de_fase`
+    sólo escribe `_ambiente_base` con una senoidal continua
+    (`PERIODO_DE_LA_LUNA=6.0`s) — ninguna otra función del escenario lee
+    ese valor para decidir si aparece o desaparece algo. El punto 7 del
+    dueño («cuando la luna está oculta pueden ocurrir cosas: una figura
+    aparece, una tumba se abre, una sombra cruza») no tiene ningún gancho
+    técnico: la decoración de la Fase 5 es estática en todo momento.
+  - **Las cruces de conquistador son idénticas y regulares.**
+    `TUMBAS_FASE5 = range(610, 749, 30)` coloca la misma silueta
+    (`_cruz_conquistador`) cada 30 columnas, sin variación — no hay
+    landmarks distintos entre sí (punto 21: árbol muerto, torre, capilla,
+    roca, grupo de tumbas) que permitan al jugador decir «estoy cerca de
+    aquella estructura» en vez de ver la misma cruz repetida.
+  - **Sin figuras, procesiones ni cambios que aparezcan sólo con luz.**
+    Los puntos 5, 16 y 20 (una figura junto a una tumba que sólo se ve
+    iluminada; una procesión lejana que está más cerca la próxima vez que
+    vuelve la luna; una multitud de figuras que desaparece sin
+    explicación) no tienen ningún elemento equivalente — la única
+    decoración de fondo son las cruces estáticas.
+  - **El sonido no es navegación, es un solo bucle ambiental.**
+    `sonido_ambiente = canto_ancestral.wav` es un único canal en volumen
+    constante (`_actualizar_sonido_de_fase`, igual que las demás fases) —
+    no depende de si la luna está arriba, no tiene dirección (mismo hueco
+    que [[GAP-062]] documentó para el grito del Gavilán:
+    `_play_sfx_spatial` existe y sigue sin usarse aquí), y no hay ninguna
+    voz o campana que el jugador pueda seguir para orientarse (puntos
+    12-14) — mucho menos la mezcla deliberada de «información confiable +
+    información ambigua» que pide el punto 14.
+  - **Sin camino que se revele sólo con la luna** (punto 27: un objetivo
+    intermedio — «encontrar el camino iluminado» — antes de seguir hacia
+    Paburu). El pasillo de la Fase 5 es único y siempre transitable
+    igual, con o sin luna.
+  - **Sin la transición de luces verdes al final de la fase** (puntos
+    29-30): el mecanismo que el dueño describe —pequeñas luces verdes que
+    empiezan a sustituir a la luna como guía— ya existe en el motor,
+    pero vive enteramente dentro de la Fase 6 (`GRIETAS_FASE6`,
+    `_actualizar_grietas`, encendido por proximidad). Hoy el corte entre
+    Fase 5 y Fase 6 es seco en la columna 750 — no hay ninguna grieta
+    adelantada asomando en el tramo final de la Fase 5 que anticipe la
+    transición como pide el dueño.
+  - **El ciclo de la luna no evoluciona.** El punto 4 pide un patrón
+    aprendible al principio y «más irregular» después; `PERIODO_DE_LA_LUNA`
+    es una sola constante durante toda la fase, sin ninguna variación de
+    ritmo entre el principio y el final del tramo.
+  - Lo que sí coincide: nunca hay negro absoluto (AUD-476, ver arriba);
+    sin enemigos ni combate; el ciclo es regular y por tanto aprendible
+    (aunque no evolucione, sí cumple la base del punto 4); ninguna
+    plataforma difícil ni laberinto (la Fase 5 es el mismo pasillo llano
+    que el resto del nivel, lo que de hecho ya cumple el punto 25 —
+    «no haría laberintos»); y el uso de cánticos ancestrales sin fingir
+    una lengua real (mismo principio que `canto_ancestral` en AUD-465) ya
+    responde al cuidado que pide el punto 18 sobre no tratar la voz
+    indígena como «sonido tribal = terror».
+- **Resolution plan:** Sin fecha. Lo más aprovechable a corto plazo es
+  extender `GRIETAS_FASE6` unas columnas hacia atrás para que el tramo
+  final de la Fase 5 ya muestre alguna grieta adelantada (la mecánica ya
+  existe, sólo falta que cruce la frontera de sección) y reutilizar
+  `_play_sfx_spatial` (ver [[GAP-062]]) para el canto ancestral. Los
+  eventos atados al estado de la luna (figuras, procesión, cambios de
+  decoración) y la variedad de landmarks son contenido nuevo, sin ningún
+  bloqueo de geometría — a diferencia de [[GAP-059]] y [[GAP-061]], la
+  Fase 5 ya es exactamente el tipo de espacio abierto y legible que pide
+  el dueño; sólo le falta lo que ocurre dentro de él.
+- **Nota (AUD-482, 2026-08-14):** parcialmente resuelto. `GRIETAS_FASE6`
+  empieza ahora en la columna 700, no 760 — las tres primeras (700, 720,
+  740) caen dentro del tramo final de la Fase 5, encendidas por el mismo
+  mecanismo de proximidad de siempre, sin código nuevo (pruebas en
+  `TestLasGrietasAdelantadasDeLaFase5`; TMX regenerado con
+  `tools/generate_stage4_1.py`). **Sigue pendiente:** el canto ancestral
+  sigue sin paneo espacial, y los eventos atados al estado de la luna
+  (figuras, procesión, cambios de decoración) siguen sin construirse.
+
+- **Nota (AUD-488, 2026-08-15):** cerrados los dos primeros puntos. El canto
+  ancestral ya no es solo un bucle de volumen constante: ademas de la cama de
+  ambiente, **llama desde una columna fija** (`trazado.COLUMNA_DEL_CANTO`,
+  745 -- al final de la seccion, de modo que seguirlo lleva hacia la salida y
+  no hacia atras) por `_play_sfx_spatial`, y **sube de volumen cuando la luna
+  se esconde** (`Stage4_1.luna_oculta`, derivada de `_ambiente_base` para que
+  no haya dos senoidales que puedan desincronizarse). Eso cierra a la vez el
+  «el sonido no es navegacion» de los puntos 12-14 y el «nada depende de si la
+  luna esta arriba o abajo» del punto 7, y completa la mezcla de «informacion
+  confiable + informacion ambigua» del punto 14: el canto es la mitad fiable,
+  y el grito del Gavilan --que desde AUD-492 rehuye la mirada del jugador-- la
+  ambigua. Pruebas en `tests/test_el_canto_orienta_en_la_planicie.py`.
+  **Sigue pendiente:** los eventos atados al estado de la luna (figuras,
+  procesion, cambios de decoracion) y la variedad de landmarks.
+
+## [GAP-064] `stage4_1` Fase 6 — sin silueta de Paburu, sin despedida de los espíritus y sin secuencia de despertar antes del corte
+
+- **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/trazado.py` (`GRIETAS_FASE6`, `TEXTO_FINAL_BASE`), `src/stages/stage4_1/stage4_1.py` (`_actualizar_grietas`, `_actualizar_mensaje_final`), `tools/generate_stage4_1.py`
+- **Phase:** Revisión de diseño por fases del dueño del proyecto (2026-08-14) —
+  documento «Fase 6 — El Camino hacia Paburu», comparado contra el estado
+  real por Claude Code el mismo día. Cierra la serie de revisión por fases
+  ([[GAP-059]]…[[GAP-063]] cubren las cinco anteriores).
+- **Reason:** El dueño pide que la Fase 6 sea la resolución emocional del
+  nivel: cada paso «despierta» el mundo, los tres espíritus liberados
+  regresan brevemente como despedida, la escala crece hasta insinuar a
+  Paburu sin mostrarlo completo, y el final es una secuencia sugerida
+  —vibración, shake, silencio, un sonido profundo— no un corte seco. Lo
+  construido hoy tiene ya la pieza central (las grietas que se iluminan
+  al paso, un mecanismo real de «el mundo responde a tu presencia») y el
+  mejor gancho de consecuencia narrativa de las seis fases —el mensaje
+  final varía según cuántos espíritus se liberaron de verdad (AUD-474)—
+  pero le falta casi todo lo que rodea a esa pieza:
+  - **Ninguna silueta de Paburu en el fondo.** Los puntos 7-8 y 22-23
+    piden que la escala crezca hasta «revelar parcialmente el lugar
+    donde está Paburu» — una búsqueda en `src/stages/stage4_1/` confirma
+    que «Paburu» sólo aparece en un comentario comparativo
+    (`stage4_1.py`) y en el texto final (`TEXTO_FINAL_BASE`), nunca como
+    elemento visual. Mismo hueco que [[GAP-059]] documentó para
+    `BG_Far`/`BG_Mid`/`BG_Near`: siguen vacías también en la Fase 6.
+  - **Los espíritus liberados no vuelven a aparecer.** `Fase(6, ...)`
+    tiene `espiritu=None` y ningún código dibuja Venado, Rey Terciopelo
+    ni Gavilán durante esta fase — los puntos 15-16 («Venado en la
+    distancia, Serpiente como energía, Halcón en el cielo... una vez
+    cada uno, como despedida») no tienen ningún gancho: `siluetas.ESPIRITUS`
+    sólo se consulta cuando `fase.espiritu is not None`.
+  - **Sin mirador.** El punto 17 («el jugador mira atrás y ve el camino
+    que recorrió») no tiene ningún mecanismo de cámara — no hay ningún
+    momento en que la cámara se aleje o cambie de encuadre en todo
+    `stage4_1`.
+  - **Las grietas no escalan.** `GRIETAS_FASE6 = range(760, 899, 20)`
+    coloca siete luces a intervalo fijo, la misma densidad del principio
+    al final del tramo, siempre a nivel de suelo — el punto 6 pide que
+    empiecen pocas y aumenten («después suben por las paredes... el
+    entorno completo parece estar conectado por ellas»). Hoy no hay
+    ninguna progresión de densidad ni de altura.
+  - **El final es un corte, no una secuencia.** El punto 25 describe una
+    secuencia de despertar completa antes del corte a `stage4_2_boss_paburu`
+    (vibración del suelo, shake pequeño, parpadeo de las grietas, aves
+    alzando vuelo, la música se detiene, silencio, un sonido profundo).
+    Hoy `_actualizar_mensaje_final` sólo reescribe el texto del
+    `MessageTrigger_Once` según cuántos espíritus se liberaron, y el
+    `NextTrigger` está a un par de baldosas — no hay ningún camera shake,
+    ninguna pausa ni ninguna señal sonora específica del despertar.
+  - **Sin pausa contemplativa antes del final** (puntos 23-24: «uno de
+    los pocos momentos donde sí permitiría una pequeña pausa... deja que
+    la imagen hable») — no existe ningún tramo sin gameplay ni cámara
+    lenta en la Fase 6.
+  - **Sin secreto opcional con los tres espíritus juntos** (punto 32) —
+    no existe ningún objeto ni disparador de ese tipo.
+  - **La música no se construye progresivamente.** Los puntos 13-14
+    piden que el tema musical «nazca del mundo» —una nota, luego otra,
+    luego una textura, luego el tema completo—, pero `BGM_TRACK` es una
+    sola pista para las seis fases (mismo hueco que ya señaló [[GAP-059]]
+    desde el lado de la Fase 1). El motor sí tiene un sistema de capas
+    dinámicas (`framework.audio.DynamicMusicSystem`, calm/combat,
+    referenciado en `stage_scene.py`), pero está diseñado para intensidad
+    de combate, no para revelar instrumentos con el avance narrativo —
+    y `stage4_1` no tiene combate, así que ese eje nunca se mueve aquí.
+  - **El sonido no se «limpia» progresivamente.** Los puntos 12-13
+    (agua, luego aves, luego viento, luego insectos, cada uno asociado a
+    una luz nueva) no tienen equivalente: `sonido_ambiente =
+    resonancia_solemne.wav` es un solo bucle constante, igual que en las
+    otras cinco fases.
+  - **Sin mecánica de revelación de geometría** (punto 10: un hueco que
+    se convierte en camino al activar la energía) — el suelo de la Fase
+    6 es sólido y uniforme (baldosa `SAGRADA`/`SAGRADA_RELLENO`) en todo
+    el tramo, sin ninguna sección oculta que aparezca.
+  - Lo que sí coincide, y es lo mejor logrado de la fase: las grietas
+    verdes por pisada son un mecanismo real de «el mundo responde a tu
+    presencia» (puntos 2-3, aunque por proximidad continua y no por
+    conteo de pasos); la gradación interpola de verdad desde
+    `NOCTURNO_AZULADO` hacia `COLOR_PLENO` a lo largo del tramo (punto 4,
+    aunque como una curva continua, no las etapas narrativas discretas
+    que describe el dueño); cero enemigos y cero trampas en toda la fase
+    cumplen directamente el punto 31; y el mensaje final variable según
+    cuántos espíritus se liberaron de verdad (AUD-474) ya es la
+    consecuencia narrativa medible que pide el punto 26 — de hecho es el
+    ejemplo más fuerte de «agencia del jugador» de las seis fases hasta
+    ahora.
+- **Resolution plan:** Sin fecha. Cierra la revisión de diseño por fases
+  iniciada en [[GAP-059]]. Antes de construir nada de esto conviene que
+  el dueño revise el conjunto de los seis GAP (059-064) de una vez: hay
+  patrones que se repiten en las seis fases —música de una sola pista
+  para todo el nivel, `BG_Far`/`BG_Mid`/`BG_Near` vacíos en las seis, sin
+  memoria espacial en ninguna, sin audio direccional en ninguna pese a
+  que `_play_sfx_spatial` ya existe (ver [[GAP-062]])— y probablemente
+  conviene resolverlos una vez para las seis fases a la vez, no fase por
+  fase, antes de encarar lo específico de cada una (la secuencia de
+  despertar de esta fase, el mirador, la despedida de los espíritus).
+
+## [GAP-065] `stage4_1` como sistema — la progresión de color ya cuenta la historia, la relación jugador↔escenario no siempre
+
+- **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/stage4_1.py`, `src/stages/stage4_1/trazado.py`, `tools/generate_stage4_1.py`
+- **Phase:** Revisión de diseño por fases del dueño del proyecto (2026-08-14) —
+  documento de síntesis «Legacy of InFest — Stage 4.1: La Entrada al
+  Cementerio Sagrado», que mira las seis fases como un sistema único.
+  Comparado contra el estado real por Claude Code el mismo día, después
+  de cerrar la revisión fase por fase en [[GAP-059]]…[[GAP-064]].
+- **Reason:** El documento de síntesis pide algo distinto de los seis
+  anteriores: que el color, el sonido y la relación
+  jugador-escenario funcionen como **un solo lenguaje narrativo continuo**
+  a lo largo de las seis fases, no como seis piezas independientes. Visto
+  así, algunos sistemas del `stage4_1` real ya cumplen ese estándar y
+  otros no:
+  - **La progresión de color es el sistema mejor logrado de todo el
+    nivel — coincide casi exactamente con el documento.** El punto 11
+    pide `Color natural → Blanco y negro → Escala de grises → Vintage
+    naranja → Noche/luz lunar → Full color/verde sobrenatural`; las seis
+    entradas de `FASES` en `fases.py` son, en el mismo orden,
+    `COLOR_PLENO → BLANCO_Y_NEGRO → GRISES_NEUTROS → SEPIA_VINTAGE →
+    NOCTURNO_AZULADO → COLOR_PLENO`, interpoladas de verdad por avance
+    dentro de cada tramo (`_actualizar_gradacion`, AUD-463). Sólo le
+    falta la coda final: el punto 11 pide que la Fase 6 termine en
+    «verde sobrenatural», y hoy `Fase(6, ...)` tiene `tinte=None` — vuelve
+    al color pleno sin ningún tinte verde que marque el despertar (mismo
+    detalle que señaló [[GAP-064]] desde el lado de esa fase).
+  - **La progresión de sonido existe en el orden correcto, pero es una
+    sola capa por fase, nunca una mezcla que evoluciona.** `sonido_ambiente`
+    por fase (`None → viento_de_bosque → storm_ambient → rain_ambient →
+    canto_ancestral → resonancia_solemne`) sigue temáticamente la
+    secuencia del punto 12, pero cada fase es un único bucle de volumen
+    constante (`_actualizar_sonido_de_fase`) — no hay ninguna mezcla que
+    se construya o se limpie con el tiempo. Es el mismo hueco que
+    [[GAP-059]] a [[GAP-064]] repitieron fase por fase, visto ahora como
+    lo que es: no son seis huecos de sonido distintos, es una sola
+    limitación de arquitectura (un canal de ambiente, sin capas).
+  - **De los seis eslabones de la relación jugador↔escenario (§13 del
+    documento), tres están sólidamente construidos y uno prácticamente no
+    existe.** Mapeando cada eslabón contra el código real:
+    - F1 «el jugador observa el escenario» — sólido: cero elementos
+      sobrenaturales que actúen sobre el jugador en la Fase 1.
+    - F2 «el escenario afecta al jugador» — sólido:
+      `ZonaDeFriccion` (musgo/lodo) cambia de verdad la física del
+      jugador.
+    - F3 «el jugador aprende a utilizar el escenario» — a medias:
+      `ZonaDeViento` empuja de verdad, pero sin `fuerza_y` y sin ningún
+      vacío que cruzar (ver [[GAP-061]]), el jugador nunca llega a
+      *usar* el viento como herramienta — sólo lo sufre, igual que en la
+      Fase 2.
+    - **F4 «el escenario parece observar al jugador» — es el eslabón más
+      débil de los seis.** No existe ningún código en `stage4_1.py` que
+      lea la posición, la dirección o el tiempo de quietud del jugador
+      para decidir un evento (ver [[GAP-062]]): los gritos y la sombra
+      del Gavilán corren en temporizadores aleatorios, ciegos a lo que
+      hace el jugador. El escenario no observa a nadie — sólo parece que
+      lo hace por casualidad temporal.
+    - F5 «el escenario oculta información al jugador» — a medias: el
+      ciclo de la luna sí modula cuánto se ve de la pantalla entera
+      (`_actualizar_ambiente_de_fase`), pero como la decoración es
+      estática (ver [[GAP-063]]), no hay ningún contenido específico que
+      esté realmente oculto y se revele — se oculta *brillo*, no
+      *información*.
+    - F6 «el jugador activa y revela el escenario» — sólido: las
+      grietas por pisada son una activación real ligada a la posición
+      del jugador.
+  - **El verdadero clímax mecánico (§20) sí está construido, aunque de
+    forma discreta.** El documento insiste en que liberar a los
+    espíritus, no llegar a Paburu, es el clímax real — y
+    `_actualizar_mensaje_final` (AUD-474) hace de esto algo medible: el
+    texto final de la Fase 6 cambia según cuántos de los tres espíritus
+    se liberaron de verdad. Es el mecanismo más fiel a la síntesis de
+    todo el nivel, y vale la pena no tocarlo al resolver el resto de
+    estos GAP.
+  - **La lista de «lo que evitaría» (§18) se cumple en su totalidad**:
+    cero enemigos, cero coleccionables (no hay un solo objeto
+    `Recogible`/`Collectible` en `tools/generate_stage4_1.py`), cero
+    plataformas de precisión, la Fase 5 nunca llega a negro real
+    (AUD-476), y los tres espíritus se liberan con una sola interacción
+    de botón, no con una lista de misiones.
+  - **El choque estructural ya documentado en [[GAP-059]] y [[GAP-061]]
+    es, visto en conjunto, el mismo choque repetido dos veces**: la Fase
+    1 quiere un hub y la Fase 3 quiere verticalidad, y las dos chocan con
+    la misma decisión de AUD-467 (pasillo horizontal sin bifurcaciones).
+    No son dos preguntas distintas para el dueño — es una sola pregunta
+    sobre el eje del nivel completo.
+- **Resolution plan:** Sin fecha. Esta entrada no añade trabajo nuevo:
+  es la lectura de conjunto de [[GAP-059]]…[[GAP-064]]. Si el dueño
+  quiere priorizar, el orden que se desprende de mirar el sistema
+  completo es: (1) resolver la pregunta del eje horizontal/vertical una
+  sola vez, no fase por fase; (2) construir el eslabón F4 («el escenario
+  observa») como sistema reutilizable de atención del jugador (posición +
+  quietud + dirección), porque es el único de los seis que hoy no existe
+  en absoluto, no sólo que esté incompleto; (3) los tres huecos de
+  infraestructura que se repiten en las seis fases —una sola pista de
+  música, `BG_Far`/`BG_Mid`/`BG_Near` vacíos, y `_play_sfx_spatial` sin
+  usar pese a existir— porque resolverlos una vez sirve a las seis fases
+  a la vez, no a una sola.
+- **Nota (AUD-478…483, 2026-08-14):** parcialmente resuelto. De los tres
+  huecos de infraestructura del punto (3), uno ya se cerró para una fase:
+  `_play_sfx_spatial` ahora sí se usa (el grito del Gavilán, AUD-481 —
+  ver [[GAP-062]]). Se cerró también el detalle señalado del punto de
+  color: la Fase 6 ya declara `tinte=(TINTE_DESPERTAR, ALFA_TINTE_DESPERTAR)`
+  en vez de `None` (AUD-483), así que la progresión de color queda
+  todavía más cerca de lo que pide el punto 11 (pruebas en
+  `TestElTinteDeLaFase6`). También se sumaron piezas de las fases
+  individuales: la anomalía ambigua de la Fase 1 (AUD-478, [[GAP-059]]),
+  las apariciones previas del Venado (AUD-479, [[GAP-060]]), la pausa del
+  diálogo de la Fase 3 (AUD-480, [[GAP-061]]) y las grietas adelantadas
+  de la Fase 5 (AUD-482, [[GAP-063]]). **Sigue pendiente, sin tocar:** el
+  eslabón F4 («el escenario observa») completo, la música de una sola
+  pista para las seis fases, y `BG_Far`/`BG_Mid`/`BG_Near` vacíos.
+- **Nota (AUD-492…488, 2026-08-15):** aplicados los puestos (2) y (3) del
+  plan de resolucion de arriba, que es el orden que el propio documento de
+  sintesis fija.
+  - **(2) El eslabon F4 ya existe.** Era el unico de los seis que no existia
+    en absoluto. `src/framework/stage/atencion.py` (AUD-492) mide quietud,
+    direccion y posicion del jugador, y la Fase 4 decide con eso de que lado
+    suena el grito del Gavilan y cuando cruza su sombra. El escenario ya no
+    corre en temporizadores ciegos: responde.
+  - **(3) Dos de los tres huecos de infraestructura, cerrados.**
+    `_play_sfx_spatial` ya se usa tambien en la Fase 5 (AUD-488, ver
+    [[GAP-063]]), asi que deja de ser «existe y no lo usa nadie»; y la musica
+    dejo de ser una sola pista para las seis fases (AUD-493): `Fase.musica`
+    manda, cinco fases piden silencio y `bgm_final_approach` **entra** en la
+    Fase 6 con un fundido de 2,5 s en vez de sonar desde el primer paso del
+    cementerio. Pruebas en `tests/test_la_musica_del_4_1_entra_tarde.py`.
+  - **Sigue pendiente, sin tocar:** el tercer hueco de infraestructura
+    --`BG_Far`/`BG_Mid`/`BG_Near` vacios en las seis fases-- y la pregunta (1),
+    el eje horizontal/vertical, que es una decision del dueno y no se reabre
+    desde aqui: el pasillo horizontal se decidio en AUD-467 despues de que el
+    dueno jugara y rechazara la geometria no lineal.

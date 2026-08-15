@@ -285,6 +285,7 @@ legacy-of-infest/                      # Raíz real del repositorio
 │   │   │   ├── bloques.py                 # PushBlock y BreakableBlock: empujar y romper (AUD-140)
 │   │   │   ├── interactable_system.py     # InteractableSystem: llaves, puertas, cofres y eventos (F4.1)
 │   │   │   ├── level_mechanics.py         # ControlDeNado, TiempoBala, ScrollForzado (F5.5/F5.6)
+│   │   │   ├── atencion.py                # AUD-492: Atencion: quietud, dirección y posición del jugador
 │   │   │   ├── camera.py                  # Camera: viewport, parallax, sigue al objetivo
 │   │   │   ├── checkpoint.py              # Checkpoint: zona disparadora, ancla de reaparición
 │   │   │   ├── collision_system.py        # CollisionSystem: hitstop, procesamiento de ataques
@@ -351,6 +352,7 @@ legacy-of-infest/                      # Raíz real del repositorio
 │   │   │   ├── sombras_proyectadas.py     # AUD-278: la luz ya no atraviesa las paredes
 │   │   │   ├── hit_effects.py             # HitEffects: configuraciones de ráfaga por tipo de golpe
 │   │   │   ├── damage_numbers.py          # DamageNumberManager: números de daño flotantes
+│   │   │   ├── gradacion.py               # AUD-496: matriz de color 3x3 por píxel (núcleo JIT opcional)
 │   │   │   ├── post_processing.py         # PostProcessing: bloom, viñeta, motion blur
 │   │   │   ├── cielo.py                   #   AUD-426: cielo procedural (degradado desde la altura solar)
 │   │   │   ├── pulso.py                   #   AUD-425: el pulso visual — cámara y luz al compás
