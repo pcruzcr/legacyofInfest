@@ -20,7 +20,7 @@ source: "docs/niveles/10_STAGE_3_2.md"
 | Tamaño de referencia | 1088 × 608 px (68 × 38, implementado — con balcones añade metros verticales) |
 | Tipos de enemigo | 3 (obligatorios) |
 | Enemigos mínimos | 10 (de referencia: 13) |
-| Objetos mínimos | 1 `PlayerSpawn`, 1 `Checkpoint`, 1 `Portal`, 5 coleccionables |
+| Objetos mínimos | 1 `PlayerSpawn`, 1 `Checkpoint`, 1 `NextTrigger`, 5 coleccionables |
 | Día/noche | 05:00 → 08:00, `day_length` 1200 s |
 | Clima | Libre (sugerencia: columnas de polvo en los haces de luz de las claraboyas) |
 | Concepto académico | Unidad VIII (watershed: tres zonas del hall con spawns distintos) + Unidad IV (5 capas) |
@@ -58,7 +58,7 @@ Total mínimo **10 enemigos**. Distribución por zonas del watershed: entrada
 |---|---|---|
 | `PlayerSpawn` | 1 | Entrada del hall |
 | `Checkpoint` | 1 | En el centro (cambio de zona del watershed, obligatorio) |
-| `Portal` | 1 | → 3-3 |
+| `NextTrigger` | 1 | → 3-3 |
 | `MessageTrigger` | 1 | Presenta las zonas (Unidad VIII) |
 | Coleccionables | ≥ 5 | En los balcones (recompensan la subida) |
 | `Platform`/escaleras | 2 | Acceso a los balcones |
@@ -70,7 +70,7 @@ Total mínimo **10 enemigos**. Distribución por zonas del watershed: entrada
  05:00 ── AMANECER ──────────► 08:00
             [balcón IZQ: buitre + halcones]        [balcón DER: buitre + halcones]
                ▲ escalera                             ▲ escalera
- SPAWN ─[P][H]──[P]──[CHECKPOINT]──[H][P]──[H][B]────────── PORTAL
+ SPAWN ─[P][H]──[P]──[CHECKPOINT]──[H][P]──[H][B]────────── NEXTTRIGGER
    zona entrada      zona central                zona balcones
    (2P+2H)           (1P+2H+1B)                  (2P+2H+1B)
    claraboya 1        claraboya 2                claraboya 3

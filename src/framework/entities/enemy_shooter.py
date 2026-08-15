@@ -364,7 +364,10 @@ class EnemyShooter(EnemyBase):
             admite_bash=self.admite_bash,
         )
         self._active_projectiles.append(projectile)
-        self._event_bus.emit(Events.SFX_PROJECTILE_FIRE)
+        # AUD-489 — mismo tratamiento que ya recibe el impacto contra la
+        # pared en otro método de este fichero (línea 143): el disparo
+        # también suena desde donde se dispara, no sólo el impacto.
+        self._event_bus.emit(Events.SFX_PROJECTILE_FIRE, pos=(self.rect.centerx, self.rect.centery))
         return True
 
     def _build_hitbox(self) -> pygame.Rect:

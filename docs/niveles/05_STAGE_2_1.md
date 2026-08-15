@@ -25,7 +25,7 @@ source: "docs/niveles/05_STAGE_2_1.md"
 | Tamaño de referencia | 3200 × 608 px (200 × 38, oficinas implementadas) |
 | Tipos de enemigo | 2 mínimos / 3 máximos |
 | Enemigos mínimos | 8 (de referencia: 12) |
-| Objetos mínimos | 1 `PlayerSpawn`, 1 `Checkpoint`, 1 `Portal`, 5 coleccionables, 1 `HazardZone` |
+| Objetos mínimos | 1 `PlayerSpawn`, 1 `Checkpoint`, 1 `NextTrigger`, 5 coleccionables, 1 `HazardZone` |
 | Día/noche | **17:00 (ATARDECER)** → 20:30, `day_length` 1000 s |
 | Clima | Libre (sugerencia: calima térmica en la planicie / polvo dorado en las oficinas) |
 | Concepto académico | Unidad VII (Canny como visión de cableado) + Unidad VIII (conteo de servidores) |
@@ -71,7 +71,7 @@ Total mínimo **8 enemigos** en ambas variantes.
 |---|---|---|
 | `PlayerSpawn` | 1 | Entrada desde la Zona 1 |
 | `Checkpoint` | 1–2 | Mitad del recorrido y opcional pre-boss |
-| `Portal` | 1 | → 2-2 |
+| `NextTrigger` | 1 | → 2-2 |
 | `HazardZone` | 1+ | Grupos de serpientes (0.25) o rejillas de calor |
 | `MessageTrigger` | 1 | Presenta la Unidad VII |
 | Coleccionables | ≥ 5 | Tras las particiones / entre los postes |
@@ -80,7 +80,7 @@ Total mínimo **8 enemigos** en ambas variantes.
 
 ```
  17:00 ── ATARDECER ──────────► 20:30
- SPAWN ─[T]──[T]────[CHECKPOINT]──[T][V]──[H]──[T][T][V]──[S largo]── PORTAL
+ SPAWN ─[T]──[T]────[CHECKPOINT]──[T][V]──[H]──[T][T][V]──[S largo]── NEXTTRIGGER
    cubículos  │   particiones de vidrio (sin colisión)    │   LED rojos
               └── coleccionables tras las particiones      └── último tercio: 3 carriles
 ```

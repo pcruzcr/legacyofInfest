@@ -92,6 +92,19 @@ OBJETIVOS: tuple[tuple[str, str], ...] = (
      "tests/test_resolucion_de_movimiento.py "
      "tests/test_resolucion_data_hostil.py "
      "tests/test_player_physics.py"),
+    # AUD-486 — el arbitraje de golpe entra al conjunto de CI. Es el módulo
+    # que decide daño, *knockback*, *hit-stop* y el impulso del *bash*
+    # (AUD-305) para cada entidad del juego, y llevaba sin medir pese a
+    # tocar combate en todos los escenarios. Medido igual que AUD-371 midió
+    # `resolucion.py`: con las cinco suites que de verdad lo ejercitan da
+    # **100 % (25/25)** de entrada — ya estaba bien defendido, sólo faltaba
+    # que el gate lo supiera.
+    ("src/framework/stage/collision_system.py",
+     "tests/test_audit_regressions.py "
+     "tests/test_bash_sobre_proyectiles.py "
+     "tests/test_composicion_del_tiempo.py "
+     "tests/test_gameplay_integration.py "
+     "tests/test_new_pipeline_modules.py"),
 )
 
 #: Nota mínima para dar por buena la defensa de un módulo.

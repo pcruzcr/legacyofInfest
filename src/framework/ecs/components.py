@@ -110,6 +110,24 @@ class Transform:
         if self._duenio is not None and hasattr(self._duenio, "facing_direction"):
             self._duenio.facing_direction = valor  # type: ignore[union-attr]
 
+    @property
+    def material_actual(self) -> object | None:
+        """AUD-490 — el material que una `ZonaDeFriccion` impuso este fotograma.
+
+        Mismo patrón que `facing`: sin dueño, o con un dueño que no declaró
+        `_material_de_zona`, no hay nada que leer ni que escribir — una
+        plataforma móvil o un bloque rítmico no tienen física de restitución
+        y no deben reventar porque `sistema_friccion` los recorre igual.
+        """
+        d = self._duenio
+        return getattr(d, "_material_de_zona", None) if d is not None else None
+
+    @material_actual.setter
+    def material_actual(self, valor: object | None) -> None:
+        d = self._duenio
+        if d is not None and hasattr(d, "_material_de_zona"):
+            d._material_de_zona = valor  # type: ignore[union-attr]
+
     def __repr__(self) -> str:
         clase = "vista" if self._duenio is not None else "propio"
         return f"Transform({clase}, pos={tuple(self.posicion)}, rect={tuple(self.rect)})"
@@ -405,6 +423,17 @@ class ZonaDeFriccion:
     rect: pygame.Rect
     multiplicador: float = 1.0
     arrastre: float = 0.0
+    #: AUD-490 — cierra la mitad de GAP-039 que quedaba abierta: la
+    #: restitución (`physics/perfil.Material`) vivía sólo en `PhysicsProfile`,
+    #: un material para todo el contexto, nunca uno distinto en un rincón del
+    #: mapa. Nombre de `physics.perfil.MATERIALES`; `"roca"` — sin rebote — es
+    #: el de siempre a propósito, así que una `FrictionZone` sin declarar
+    #: `material` en los mapas ya entregados sigue comportándose igual.
+    #: `sistema_friccion` traduce el nombre a un `Material` real — la
+    #: traducción vive en el sistema, no aquí, porque este fichero declara
+    #: «datos, sin comportamiento» (ver el docstring del módulo) y decidir
+    #: qué hacer con un nombre desconocido es comportamiento.
+    material: str = "roca"
 
 
 @dataclass(slots=True)

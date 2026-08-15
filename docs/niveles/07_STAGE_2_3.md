@@ -24,7 +24,7 @@ source: "docs/niveles/07_STAGE_2_3.md"
 | Tamaño mínimo | **2400 × 608 px** (150 × 38 tiles, 3 pantallas) |
 | Tipos de enemigo | 3 (obligatorios) |
 | Enemigos mínimos | 10 (de referencia: 12) |
-| Objetos mínimos | 1 `PlayerSpawn`, 2 `Checkpoint`, 1 `Portal`, 5 coleccionables, 1 `HazardZone` |
+| Objetos mínimos | 1 `PlayerSpawn`, 2 `Checkpoint`, 1 `NextTrigger`, 5 coleccionables, 1 `HazardZone` |
 | Día/noche | 23:30 → 02:30, `day_length` 1000 s |
 | Clima | Libre (sugerencia: humo de cables, luz de LED roja pulsante) |
 | Concepto académico | Unidad VII (Canny como visión de cableado) + Unidad VIII (conteo de servidores) |
@@ -37,7 +37,7 @@ source: "docs/niveles/07_STAGE_2_3.md"
 3. **Dos checkpoints obligatorios**: mitad del mar de cubículos y puerta de la sala de servidores.
 4. La mecánica de la Unidad VIII (contar servidores activos con componentes conectados) debe influir en el nivel (puntuación o densidad de peligro).
 5. Las particiones de vidrio son visuales sin colisión (atraviesan): usarlo como diseño, no como accidente.
-6. El último tramo (antes del portal al 2-4) es la combinación total: prepara al jefe.
+6. El último tramo (antes del NextTrigger al 2-4) es la combinación total: prepara al jefe.
 
 ## Día/noche (obligatorio)
 
@@ -60,7 +60,7 @@ Total mínimo **10 enemigos**.
 |---|---|---|
 | `PlayerSpawn` | 1 | Entrada del piso |
 | `Checkpoint` | 2 | Mitad de cubículos + puerta de servidores (obligatorios) |
-| `Portal` | 1 | → 2-4 |
+| `NextTrigger` | 1 | → 2-4 |
 | `HazardZone` | 1+ | Donde se agrupan las serpientes (0.25) |
 | `MessageTrigger` | 1 | Presenta el conteo de servidores (Unidad VIII) |
 | Coleccionables | ≥ 5 | Tras las particiones y en los racks |
@@ -70,7 +70,7 @@ Total mínimo **10 enemigos**.
 
 ```
  23:30 ── NOCHE CERRADA ─────► 02:30
- SPAWN ─[T][S][T]──[CP1]──[T][T][V]──[H]──[T][S][T][V]──[CP2]──[comb. total]── PORTAL
+ SPAWN ─[T][S][T]──[CP1]──[T][T][V]──[H]──[T][S][T][V]──[CP2]──[comb. total]── NEXTTRIGGER
    │        │       │        │                          │         │
  cubículos  particiones (sin colisión)   LED rojos      sala      examen: los 3 carriles
 ```

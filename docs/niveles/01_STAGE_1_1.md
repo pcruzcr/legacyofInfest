@@ -20,7 +20,7 @@ source: "docs/niveles/01_STAGE_1_1.md"
 | Tamaño de referencia | 3840 × 640 px (240 × 40 tiles, implementado) |
 | Tipos de enemigo | 2 mínimos / 3 máximos |
 | Enemigos mínimos | 6 (de referencia: 11) |
-| Objetos mínimos | 1 `PlayerSpawn`, 1 `Checkpoint`, 1 `Portal`, 5 coleccionables, 1 `MessageTrigger` |
+| Objetos mínimos | 1 `PlayerSpawn`, 1 `Checkpoint`, 1 `NextTrigger`, 5 coleccionables, 1 `MessageTrigger` |
 | Día/noche | `morning` 10:00 → 14:00, `day_length` 900 s |
 | Clima | Libre (sugerencia: niebla de montaña en el primer tercio) |
 | Concepto académico | Unidad III (patrullas en Bézier) + Unidad VI (parallax) |
@@ -57,7 +57,7 @@ tercer carril (fondo) y su tramo debe quedar despejado de caminantes.
 |---|---|---|
 | `PlayerSpawn` | 1 | Extremo izquierdo, fila 30 |
 | `Checkpoint` | 1–2 | A la mitad (tras el tramo angosto) y opcional al final |
-| `Portal` | 1 | Extremo derecho → 1-2 |
+| `NextTrigger` | 1 | Extremo derecho → 1-2 |
 | `MessageTrigger` | 1 | Antes del primer enemigo: presenta el concepto |
 | Coleccionables | ≥ 5 | A lo largo del camino; 1-2 fuera de la ruta recta |
 | `Terrain_Detail` | libre | Raíces y piedras decorativas |
@@ -68,7 +68,7 @@ tercer carril (fondo) y su tramo debe quedar despejado de caminantes.
 10:00 ── DÍA ───────────────► 14:00
   x=48       160       288        528       736       992       1184     1472  1552
    │         │         │          │         │         │          │       │     │
- SPAWN ──A──[M]──B──[W]──C──[L]───D──[M]──E──[foso NO]─F──[V]────G──[tirolesa NO]──PORTAL
+ SPAWN ──A──[M]──B──[W]──C──[L]───D──[M]──E──[foso NO]─F──[V]────G──[tirolesa NO]──NEXTTRIGGER
    │         │  volador  │ liana   │   caminantes + rana            pájaros
   mensaje   primer      plataformas    llave/puerta        (sin fosos en Z1:
   (Message) caminante   de un sentido  (2ª solución)        alternativas de altura)
@@ -83,5 +83,5 @@ referencia implementado (240×40) es una versión extendida de este trazado.
 - [ ] Tamaño ≥ 1600×608 px y suelo en y=480
 - [ ] ≥ 6 enemigos, 2–3 tipos, primer encuentro despejado
 - [ ] `start_hour = "morning"` y `day_length = 900`
-- [ ] 1 PlayerSpawn, ≥ 1 Checkpoint, 1 Portal, ≥ 5 coleccionables
+- [ ] 1 PlayerSpawn, ≥ 1 Checkpoint, 1 NextTrigger, ≥ 5 coleccionables
 - [ ] `validate_tmx.py --ci` y `grade_stage.py` en verde

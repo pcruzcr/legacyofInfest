@@ -299,7 +299,6 @@
     <property name="lock_y" value="true" />
    </properties>
   </object>
-  <object id="18" name="NextTrigger_01" type="NextTrigger" x="672" y="192" width="304" height="16" />
  <object id="38" name="DeathPit" type="DeathPit" x="1088" y="582" width="464" height="26" />
   <object id="44" name="Checkpoint_SalaJefe" type="Checkpoint" x="624" y="544" width="24" height="32"><properties><property name="checkpoint_id" type="int" value="1" /></properties></object><object id="45" name="Checkpoint_AntesAbismo" type="Checkpoint" x="1040" y="544" width="24" height="32"><properties><property name="checkpoint_id" type="int" value="2" /></properties></object></objectgroup>
  <objectgroup id="12" name="Design_Notes">

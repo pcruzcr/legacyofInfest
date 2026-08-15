@@ -127,7 +127,10 @@ class HazardSystem:
                 # dieciséis mapas entregados se comportan igual que antes.
                 self._envenenar(player, hz.damage_type)
                 hz.timer = hz.cooldown
-                self._context.event_bus.emit(Events.SFX_HAZARD_ZONE)
+                # AUD-489 — la zona de peligro puede estar a un lado de la
+                # cámara; sonar desde el centro es indistinguible de sonar
+                # desde cualquier parte.
+                self._context.event_bus.emit(Events.SFX_HAZARD_ZONE, pos=player.rect.center)
 
         for dp in stage.death_pits:
             if trigger_rect.colliderect(dp.rect):

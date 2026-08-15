@@ -117,7 +117,9 @@ class EnemyArcher(EnemyBase):
             lifetime=3.0,
         )
         self._active_projectiles.append(projectile)
-        self._event_bus.emit(Events.SFX_PROJECTILE_FIRE)
+        # AUD-489 — el disparo suena desde donde se dispara, no desde el
+        # centro de la cámara.
+        self._event_bus.emit(Events.SFX_PROJECTILE_FIRE, pos=(self.rect.centerx, self.rect.centery))
         return True
 
     def _post_update(self, dt: float) -> None:

@@ -20,7 +20,7 @@ source: "docs/niveles/11_STAGE_3_3.md"
 | Tamaño de referencia | 960 × 608 px (60 × 38, implementado — denso y corto) |
 | Tipos de enemigo | 3 (obligatorios) |
 | Enemigos mínimos | 10 (de referencia: 11) |
-| Objetos mínimos | 1 `PlayerSpawn`, 1 `Checkpoint`, 1 `Portal`, 5 coleccionables, 1 elemento curativo |
+| Objetos mínimos | 1 `PlayerSpawn`, 1 `Checkpoint`, 1 `NextTrigger`, 5 coleccionables, 1 elemento curativo |
 | Día/noche | 08:00 → 11:00, `day_length` 1200 s |
 | Clima | Libre (sugerencia: nubes que pasan y cambian la agresividad aérea — mecánica viva de la Unidad VII) |
 | Concepto académico | Unidad VII (gaussian_blur del cielo) + Unidad III (fuente en Catmull-Rom) |
@@ -56,7 +56,7 @@ Total mínimo **10 enemigos**.
 |---|---|---|
 | `PlayerSpawn` | 1 | Entrada del patio |
 | `Checkpoint` | 1 | A la entrada (obligatorio) |
-| `Portal` | 1 | → 3-4 |
+| `NextTrigger` | 1 | → 3-4 |
 | Fuente curativa | 1 | Centro: Platform + cura 0.25 por activación |
 | Coleccionables | ≥ 5 | Tras las jardineras y el borde de la fuente |
 | `Platform` | 3+ | Jardineras (32 px) |
@@ -66,7 +66,7 @@ Total mínimo **10 enemigos**.
 ```
  08:00 ── MAÑANA ────────────► 11:00
      [Q]           [Q]             [Q]     ← alféizares (fuego cruzado)
- SPAWN ─[P]──[H]────[FUENTE]────[H][P]──[H]── PORTAL
+ SPAWN ─[P]──[H]────[FUENTE]────[H][P]──[H]── NEXTTRIGGER
    │ jardineras cubierta │            │
    [CP]  cielo despejado = halcones agresivos (Unidad VII)
    La fuente cura: la decisión de curarse es el examen

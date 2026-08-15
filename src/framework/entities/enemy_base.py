@@ -591,7 +591,14 @@ class EnemyBase(BaseEntity):
             skill_drop=",".join(s for s in sueltas if s),
         )
         is_large = self.rect.width > 24 or self.rect.height > 28
-        self._event_bus.emit(Events.SFX_ENEMY_DIE_LARGE if is_large else Events.SFX_ENEMY_DIE_SMALL)
+        # AUD-489 — mismo `pos` que `ENEMY_DIED` dos líneas arriba: sin él,
+        # `sonido.py._make_sfx_handler` cae al canal ciego (`_play_sfx_named`)
+        # en vez del posicional (`_play_sfx_spatial`) que ya sabe usar cuando
+        # el evento lo trae.
+        self._event_bus.emit(
+            Events.SFX_ENEMY_DIE_LARGE if is_large else Events.SFX_ENEMY_DIE_SMALL,
+            pos=(self.position.x, self.position.y),
+        )
 
     # ──────────────────────────────────────────────
     # Required overrides (abstract)
@@ -780,7 +787,9 @@ class EnemyBase(BaseEntity):
                 player._parry_window = 0.0
                 self._event_bus.emit(Events.VFX_PARRY, pos=(self.position.x, self.position.y))
                 # AUD-064: parar es la acción más difícil del juego y era muda.
-                self._event_bus.emit(Events.SFX_PLAYER_PARRY)
+                # AUD-489 — mismo `pos` que el efecto visual de la línea de
+                # arriba, para que el sonido venga del mismo sitio que el destello.
+                self._event_bus.emit(Events.SFX_PLAYER_PARRY, pos=(self.position.x, self.position.y))
                 self._contact_cooldown = 0.3
                 return
             player.apply_damage(

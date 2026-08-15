@@ -191,6 +191,77 @@ class TestLosSlopesNoSonRepechosImposibles:
         ), "debería colarse por la ruta honesta, no por la excusa de movilidad"
 
 
+class TestLasCadenasDePendientes:
+    """AUD-477 — el mismo defecto que AUD-472, con una forma nueva.
+
+    AUD-472 conectaba **una** pendiente entre dos plataformas sólidas. Sirve
+    para una rampa que sube hasta una meseta sólida. La reconstrucción de
+    las lomas de la Fase 3 del 4-1 (`trazado.py::altura_de_colision`) ya no
+    pone un bloque sólido en la cima: un recorrido real encontró que un
+    bloque sólido justo al final de una rampa deja al jugador clavado en la
+    unión (el AABB del fotograma usa la `y` con la que la rampa **aún no**
+    llegó del todo a la altura de la meseta), así que ahora la cima es
+    *otra* pendiente, casi plana. Sube → cima → baja son tres `Slope`
+    encadenados por sus extremos, y ninguno de ellos toca directamente una
+    plataforma sólida en ambos lados — sólo el primero y el último, cada
+    uno por un extremo.
+    """
+
+    def _plano_con_loma_de_tres_tramos(self):
+        """Sube, cima llana (también `Pendiente`, no plataforma sólida),
+        baja — la misma forma que las lomas reconstruidas del 4-1, en
+        miniatura y con las mismas dos alturas que ya usa
+        `TestLosSlopesNoSonRepechosImposibles._plano_con_loma`."""
+        import pygame as pg
+
+        from src.framework.stage.pendientes import Pendiente
+
+        baja = pg.Rect(0, 320, 500, 20)     # suelo llano a los dos lados
+        subida = Pendiente(rect=pg.Rect(50, 20, 50, 300), sube_a_la_derecha=True)
+        cima = Pendiente(rect=pg.Rect(100, 20, 100, 1), sube_a_la_derecha=True)
+        bajada = Pendiente(rect=pg.Rect(200, 20, 50, 300), sube_a_la_derecha=False)
+        return [baja], [subida, cima, bajada]
+
+    def test_sin_las_pendientes_el_repecho_es_imposible(self) -> None:
+        """Control: con una sola plataforma sólida no hay nada que conectar
+        — así se sabe que la prueba de abajo mide la cadena, no un montaje
+        que ya pasaría sin ella."""
+        import pygame as pg
+
+        from src.framework.stage.level_metrics import reachable_platforms
+
+        rects, _pendientes = self._plano_con_loma_de_tres_tramos()
+        spawn = pg.Vector2(10, 310)
+        alcanzable = reachable_platforms(rects, spawn)
+        assert alcanzable == {0}
+
+    def test_la_cadena_completa_no_rompe_la_ruta(self) -> None:
+        """Las tres pendientes encadenadas no deben desconectar nada: sigue
+        siendo un único suelo llano, ahora con una loma en medio que se
+        puede subir y bajar caminando."""
+        import pygame as pg
+
+        from src.framework.stage.level_metrics import analyse_geometry, reachable_platforms
+
+        rects, pendientes = self._plano_con_loma_de_tres_tramos()
+        spawn = pg.Vector2(10, 310)
+
+        alcanzable = reachable_platforms(rects, spawn, pendientes=pendientes)
+        assert alcanzable == {0}, (
+            "sigue habiendo una sola plataforma sólida; la cadena no debería "
+            "inventar ni perder ninguna"
+        )
+        informe = analyse_geometry(rects, pendientes=pendientes)
+        assert informe.impossible_ledges == []
+
+    def test_stage4_1_sigue_completable_con_lomas_de_tres_tramos(self) -> None:
+        """Extremo a extremo, contra el mapa real: dos lomas, tres `Slope`
+        cada una, ninguna toca una meseta sólida en su extremo alto."""
+        datos = _calificar("assets/maps/stage4_1/stage4_1.tmx")
+        assert datos["design"]["exit_reachable"] is True
+        assert datos["design"]["orphan_platforms"] == 0
+
+
 class TestLaDeteccionDeMovilidad:
     def test_reconoce_los_componentes_por_su_clase(self) -> None:
         """Se mira el resultado de la carga, no el XML: `Conveyor` y

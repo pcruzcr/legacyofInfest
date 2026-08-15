@@ -72,7 +72,8 @@ class EnemyBrute(EnemyBase):
         self._shockwave_timer = self._shockwave_duration
         self._shockwave_has_hit = False
         self._slam_cooldown = 3.0
-        self._event_bus.emit(Events.SFX_HIT_CONNECT)
+        # AUD-489 — el golpe de suelo suena desde donde golpea el bruto.
+        self._event_bus.emit(Events.SFX_HIT_CONNECT, pos=(self.rect.centerx, self.rect.centery))
         self.state = EnemyState.ALERT
 
     def _post_update(self, dt: float) -> None:

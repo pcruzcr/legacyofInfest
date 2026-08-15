@@ -208,23 +208,87 @@ def _pendiente_edges(
     collision_rects: list[pygame.Rect],
     tolerancia: float = 6.0,
 ) -> set[tuple[int, int]]:
-    """Pares de **índices** de `collision_rects` que conecta cada `Slope`.
+    """Pares de **índices** de `collision_rects` que conecta cada `Slope`,
+    o cadena de `Slope`s (AUD-477).
 
     Para `reachable_platforms`, que recorre por índice y no por identidad de
     rect. Caminar una pendiente no es saltar, así que estos pares se dan por
     conectados sin pasar por la envolvente de salto.
+
+    AUD-477 — por qué hace falta encadenar, no sólo emparejar de a una
+    -------------------------------------------------------------------
+    AUD-472 conectaba **una** pendiente entre dos plataformas sólidas. Sirve
+    para una rampa que sube hasta una meseta sólida. Pero una meseta *sin*
+    bloque sólido debajo —el arreglo real de `stage4_1` para las lomas de la
+    Fase 3 (`trazado.py::altura_de_colision`; un bloque sólido justo al
+    final de la rampa dejaba al jugador clavado en la unión, comprobado
+    jugando de verdad) — dice cada loma como tres `Slope`: sube, cima llana,
+    baja. Ningún extremo de la rampa de subida toca ya una plataforma
+    sólida — toca el extremo de la cima llana, que es *otra* pendiente. Sin
+    encadenar, esa rampa no conectaba nada y la loma entera volvía a salir
+    como inalcanzable, el mismo síntoma que AUD-472 ya había cerrado, con
+    una causa distinta.
+
+    Se agrupan las pendientes en **cadenas** (dos pendientes en la misma
+    cadena si un extremo de una coincide con un extremo de la otra, dentro
+    de la tolerancia) y luego, por cadena, se conectan entre sí todas las
+    plataformas sólidas que toca *cualquier* extremo de *cualquier*
+    pendiente de esa cadena — sin necesidad de un nodo sintético por punto
+    de unión, que habría significado tocar la representación por índices
+    que ya usa `reachable_platforms`.
     """
+    pendientes_validas = [
+        p for p in (pendientes or ())
+        if getattr(p, "rect", None) is not None
+        and getattr(p, "sube_a_la_derecha", None) is not None
+    ]
+    if not pendientes_validas:
+        return set()
+
+    extremos = [_extremos_de_pendiente(p) for p in pendientes_validas]
+    n = len(pendientes_validas)
+    padre = list(range(n))
+
+    def raiz(i: int) -> int:
+        while padre[i] != i:
+            padre[i] = padre[padre[i]]
+            i = padre[i]
+        return i
+
+    def unir(i: int, j: int) -> None:
+        ri, rj = raiz(i), raiz(j)
+        if ri != rj:
+            padre[ri] = rj
+
+    def coincide(pa: tuple[float, float], pb: tuple[float, float]) -> bool:
+        return abs(pa[0] - pb[0]) <= tolerancia and abs(pa[1] - pb[1]) <= tolerancia
+
+    for i in range(n):
+        xi_bajo, yi_bajo, xi_alto, yi_alto = extremos[i]
+        for j in range(i + 1, n):
+            xj_bajo, yj_bajo, xj_alto, yj_alto = extremos[j]
+            for pa in ((xi_bajo, yi_bajo), (xi_alto, yi_alto)):
+                for pb in ((xj_bajo, yj_bajo), (xj_alto, yj_alto)):
+                    if coincide(pa, pb):
+                        unir(i, j)
+
+    cadenas: dict[int, list[int]] = {}
+    for i in range(n):
+        cadenas.setdefault(raiz(i), []).append(i)
+
     aristas: set[tuple[int, int]] = set()
-    for pendiente in pendientes or ():
-        rect = getattr(pendiente, "rect", None)
-        sube = getattr(pendiente, "sube_a_la_derecha", None)
-        if rect is None or sube is None:
-            continue
-        x_bajo, y_bajo, x_alto, y_alto = _extremos_de_pendiente(pendiente)
-        i_bajo = _plataforma_en(collision_rects, x_bajo, y_bajo, tolerancia)
-        i_alto = _plataforma_en(collision_rects, x_alto, y_alto, tolerancia)
-        if i_bajo is not None and i_alto is not None and i_bajo != i_alto:
-            aristas.add((i_bajo, i_alto))
+    for miembros in cadenas.values():
+        plataformas: set[int] = set()
+        for i in miembros:
+            x_bajo, y_bajo, x_alto, y_alto = extremos[i]
+            for x, y in ((x_bajo, y_bajo), (x_alto, y_alto)):
+                idx = _plataforma_en(collision_rects, x, y, tolerancia)
+                if idx is not None:
+                    plataformas.add(idx)
+        lista = list(plataformas)
+        for a in range(len(lista)):
+            for b in range(a + 1, len(lista)):
+                aristas.add((lista[a], lista[b]))
     return aristas
 
 

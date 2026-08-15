@@ -367,7 +367,14 @@ class BossBase(EnemyBase):
     def _start_phase_transition(self) -> None:
         """Begin phase transition: invincible, timer starts."""
         # AUD-064: el momento más importante del combate no hacía ruido.
-        self._event_bus.emit(Events.SFX_BOSS_PHASE_CHANGE)
+        # AUD-489 — sin `pos`, `play_sfx_critico` cae a volumen fijo
+        # (`audio_manager.py:310-316`); con él, usa el suelo de atenuación
+        # que AUD-369 ya construyó para exactamente este caso — un cambio de
+        # fase lejos de la cámara se sigue oyendo, y ahora además con la
+        # distancia real en vez de ignorarla.
+        self._event_bus.emit(
+            Events.SFX_BOSS_PHASE_CHANGE, pos=(self.position.x, self.position.y),
+        )
         self.is_transitioning = True
         self._invincibility_timer = float("inf")
         self.transition_timer = 2.5
