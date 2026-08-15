@@ -50,12 +50,15 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.engine.core import settings
+from src.framework.audio.dynamic_music import resolver_pista_de_musica
 from src.framework.scenes.stage_scene import StageScene
+from src.framework.stage.atencion import Atencion
 from src.stages.stage4_1 import siluetas, trazado
 from src.stages.stage4_1.fases import FASES, Fase, Gradacion, fase_en
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
+    from src.framework.ecs import ZonaDeViento
     from src.framework.vfx.lighting import LightSource
 
 
@@ -91,11 +94,39 @@ class Stage4_1(StageScene):
     #: vuelve previsible a la tercera vez — el mismo motivo que ya usa
     #: `_espera_entre_rayos` para la tormenta de la Fase 3.
     ESPERA_ENTRE_GRITOS: tuple[float, float] = (4.0, 10.0)
+    #: A qué distancia del jugador, en píxeles de mundo, puede sonar el
+    #: grito — a la izquierda o a la derecha por igual (AUD-481). Ni tan
+    #: cerca que se confunda con estar encima del jugador, ni tan lejos
+    #: que el desvanecimiento por distancia (AUD-348) lo deje casi mudo.
+    DISTANCIA_DEL_GRITO: tuple[float, float] = (150.0, 420.0)
     #: Cada cuánto cruza la sombra del Gavilán el cielo, y cuánto tarda en
     #: cruzar. La pieza que el primer intento (AUD-462…466) dejó fuera —
     #: hasta ahora la presencia del Gavilán era sólo sonora.
     ESPERA_ENTRE_SOMBRAS: tuple[float, float] = (6.0, 14.0)
     DURACION_DEL_CRUCE = 3.5
+
+    # ── El escenario observa (AUD-492, GAP-065 §13 eslabón F4) ──
+    #: Cuánto tiene que llevar quieto el jugador para que la Fase 4 le
+    #: responda. Cuatro segundos es mucho más de lo que dura una pausa
+    #: involuntaria y bastante menos de lo que aguanta quien no espera
+    #: nada: quien se detiene a mirar lo consigue, quien atraviesa la fase
+    #: caminando no lo ve nunca — que es exactamente el punto 24-25 de la
+    #: crítica de diseño, *«detenerse también es jugar»*.
+    QUIETUD_QUE_REVELA = 4.0
+    #: Qué proporción de los gritos suena a la espalda del jugador. No 1.0:
+    #: ver el docstring de `_posicion_del_grito`.
+    PROPORCION_DE_GRITOS_A_LA_ESPALDA = 0.75
+    #: Tras responder a una quietud, cuánto tarda en poder volver a
+    #: hacerlo. Sin esta espera, quedarse parado dispararía una sombra tras
+    #: otra y la recompensa por detenerse se convertiría en una fuente
+    #: continua — se aprende a explotar, no a mirar.
+    ESPERA_TRAS_REVELAR = 12.0
+
+    # ── La música por fase (AUD-493) ────────────────────────────
+    #: Cuánto tarda en entrar `MUSICA_DEL_DESPERTAR` en la Fase 6. Largo a
+    #: propósito: llega después de cinco fases sin música, y el guion la
+    #: quiere naciendo del mundo, no arrancando de golpe.
+    FUNDIDO_DE_LA_MUSICA_MS = 2500
 
     # ── La Bruja: percepción falsa de la Fase 3 (AUD-475) ──────
     #: En qué relámpagos —contados desde que se entra a la Fase 3— aparece,
@@ -105,6 +136,40 @@ class Stage4_1(StageScene):
     #: No hay sonido, no hay diálogo, no cambia nada del estado del nivel —
     #: es exactamente lo que la vuelve una percepción falsa y no un evento.
     RAYOS_CON_BRUJA: frozenset[int] = frozenset({2, 4})
+
+    # ── La anomalía ambigua de la Fase 1 (AUD-478, GAP-059) ─────
+    #: Cada cuánto puede aparecer la figura entre las tumbas. Un rango
+    #: amplio y no un número fijo, igual que `ESPERA_ENTRE_GRITOS`: si
+    #: apareciera con reloj, el jugador aprendería el patrón en vez de
+    #: dudar de lo que vio — y podría no aparecer en absoluto en un
+    #: recorrido rápido, que es exactamente el punto («si no la viste, no
+    #: pasa nada»).
+    ESPERA_ENTRE_ANOMALIA_FASE1: tuple[float, float] = (20.0, 40.0)
+    #: Menos de un segundo (punto 7 de la crítica de diseño): lo bastante
+    #: breve para que quien parpadee no la vea.
+    DURACION_ANOMALIA_FASE1 = 0.4
+
+    # ── Las apariciones previas del Venado (Fase 2, AUD-479) ─────
+    #: A qué fracción del tramo llega `DESVIO_COLUMNA_DIALOGO` — de ahí en
+    #: adelante el Venado vuelve al fundido continuo normal, porque ya
+    #: habló y dejó de tener sentido que sólo se le vea a destellos.
+    AVANCE_ANTES_DEL_DIALOGO = trazado.DESVIO_COLUMNA_DIALOGO / trazado.ANCHO_SECCION
+    #: Cada cuánto puede asomar, y cuánto dura cada destello. Más largo que
+    #: la anomalía de la Fase 1 (1,5-3 s, no «menos de un segundo»): aquí
+    #: el jugador sí se supone que reconoce que era un ciervo, sólo que
+    #: fuera de alcance — no que dude si lo vio.
+    ESPERA_ENTRE_APARICIONES_VENADO: tuple[float, float] = (4.0, 9.0)
+    DURACION_APARICION_VENADO: tuple[float, float] = (1.5, 3.0)
+
+    # ── La pausa antes del diálogo de la Serpiente (Fase 3, AUD-480) ─
+    #: A qué fracción del tramo, antes y después de
+    #: `AVANCE_ANTES_DEL_DIALOGO`, el viento está reducido — una ventana
+    #: alrededor del punto donde habla el Rey Terciopelo, no un instante.
+    MARGEN_PAUSA_VIENTO_ANTES = 0.03
+    MARGEN_PAUSA_VIENTO_DESPUES = 0.05
+    #: A qué fracción de su fuerza normal baja el viento durante la pausa.
+    #: No a cero: sigue siendo el mismo bosque ventoso, sólo que respira.
+    FRACCION_VIENTO_EN_PAUSA = 0.1
 
     # ── El ciclo de luna (Fase 5) ──────────────────────────────
     PERIODO_DE_LA_LUNA = 6.0
@@ -119,6 +184,17 @@ class Stage4_1(StageScene):
     #: igual, para que siga siendo navegable el rato más largo que dura.
     AMBIENTE_MIN_LUNA = 0.20
     AMBIENTE_MAX_LUNA = 0.48
+
+    # ── El canto que orienta (Fase 5, AUD-488) ──────────────────
+    #: Cada cuánto llama el canto desde `trazado.COLUMNA_DEL_CANTO`. Un
+    #: rango estrecho, al revés que el grito del Gavilán: éste tiene que
+    #: ser **fiable** para servir de brújula. Un intervalo impredecible
+    #: valdría para inquietar, no para orientarse.
+    ESPERA_ENTRE_CANTOS: tuple[float, float] = (5.0, 7.0)
+    #: Volumen del canto con la luna alta y con la luna oculta. GAP-063
+    #: pide que *algo* dependa del ciclo lunar —hoy no depende nada— y que
+    #: el oído sustituya a la vista: cuanto menos se ve, más claro llama.
+    VOLUMEN_DEL_CANTO: tuple[float, float] = (0.30, 0.75)
 
     # ── Las grietas que se iluminan al paso (Fase 6) ───────────
     DISTANCIA_DE_GRIETA = 40.0
@@ -152,10 +228,44 @@ class Stage4_1(StageScene):
         #: el que está cayendo ahora mismo trae a la Bruja (AUD-475).
         self._rayos_en_fase3: int = 0
         self._bruja_este_rayo: bool = False
+        #: La anomalía ambigua de la Fase 1 (AUD-478): cuánto le queda de
+        #: visible (0 = apagada) y cuándo puede aparecer la próxima vez.
+        self._anomalia_fase1: float = 0.0
+        self._proxima_anomalia_fase1: float = 0.0
+        #: Las apariciones previas del Venado (Fase 2, AUD-479): cuánto le
+        #: queda visible al destello actual, y cuándo asoma el próximo.
+        self._venado_visible: float = 0.0
+        self._proxima_aparicion_venado: float = 0.0
+        #: La pausa del viento antes del diálogo del Rey Terciopelo
+        #: (Fase 3, AUD-480): la `ZonaDeViento` real del mapa (encontrada
+        #: la primera vez que hace falta, no en `__init__` — el ECS del
+        #: escenario todavía no existe aquí), su fuerza original, y si
+        #: está reducida ahora mismo.
+        self._viento_zona: ZonaDeViento | None = None
+        self._viento_fuerza_original: pygame.Vector2 | None = None
+        self._viento_reducido: bool = False
         #: Las luces de las grietas de la Fase 6 — apagadas de fábrica en el
         #: TMX, encendidas por proximidad y no permanentes.
         self._grietas: list[LightSource] = []
         self._intensidad_grieta: dict[int, float] = {}
+        #: Lo que el escenario sabe del jugador (AUD-492): cuánto lleva
+        #: quieto y hacia dónde mira. Es la medida; la decisión de qué
+        #: hacer con ella vive en `_actualizar_quietud_del_gavilan` y en
+        #: `_posicion_del_grito`, no dentro de `Atencion`.
+        self._atencion = Atencion()
+        #: Cuánto falta para que la quietud pueda volver a revelar algo.
+        self._proxima_revelacion: float = 0.0
+        #: Qué pista está sonando ahora mismo (AUD-493). No se puede saber
+        #: todavía —el TMX no está cargado en `__init__`—, así que lo fija
+        #: `on_stage_start`, que corre **después** de que `StageScene`
+        #: arranque la música del mapa. Si aquí se dejara `None` y no se
+        #: corrigiera allí, la primera comparación contra la Fase 1 (que
+        #: pide silencio) daría `None == None` y la música del TMX seguiría
+        #: sonando el nivel entero: el defecto exacto que esto arregla,
+        #: reintroducido por la puerta de atrás.
+        self._musica_sonando: str | None = None
+        #: Cuándo vuelve a llamar el canto de la Fase 5 (AUD-488).
+        self._proximo_canto: float = 0.0
 
     # ── Ciclo de vida ─────────────────────────────────────────
 
@@ -175,6 +285,19 @@ class Stage4_1(StageScene):
         self._grietas = list(self._stage_lights)
         self._intensidad_grieta.clear()
 
+    def on_stage_start(self) -> None:
+        """Anota qué música dejó puesta el motor, para poder quitarla.
+
+        AUD-493 — `StageScene` ya arrancó `bgm_track` del TMX unas líneas
+        antes de llamar aquí. La tabla de fases es la que decide cuándo
+        suena (`fases.MUSICA_DEL_DESPERTAR`), y la Fase 1 pide silencio,
+        así que el primer `update` la va a parar. Para pararla hay que
+        saber que está.
+        """
+        super().on_stage_start()
+        if self._stage_data is not None:
+            self._musica_sonando = self._stage_data.bgm_track or None
+
     # ── Actualización ─────────────────────────────────────────
 
     def update(self, dt: float) -> None:
@@ -182,12 +305,21 @@ class Stage4_1(StageScene):
         if self._player is None or self._stage_data is None:
             return
         self._tiempo += dt
+        # Se mide **antes** que nada: los sistemas que reaccionan a la
+        # atención (el grito y la quietud de la Fase 4) leen el estado de
+        # este fotograma, no el del anterior.
+        self._atencion.observar(self._player, dt)
         self._actualizar_fase()
         self._actualizar_gradacion()
         self._actualizar_ambiente_de_fase()
+        self._actualizar_canto_ancestral(dt)
+        self._actualizar_anomalia_fase1(dt)
+        self._actualizar_apariciones_previas_del_venado(dt)
+        self._actualizar_pausa_de_la_serpiente()
         self._actualizar_rayos(dt)
         self._actualizar_silencio_y_shake()
         self._actualizar_grito_del_gavilan(dt)
+        self._actualizar_quietud_del_gavilan(dt)
         self._actualizar_sombra_del_gavilan(dt)
         self._actualizar_grietas(dt)
         self._actualizar_mensaje_final()
@@ -249,14 +381,29 @@ class Stage4_1(StageScene):
         self._aplicar_hora()
         self._proximo_rayo = self._espera_entre_rayos()
         self._actualizar_sonido_de_fase(fase)
+        self._actualizar_musica_de_fase(fase)
+        if fase.numero == 1:
+            self._anomalia_fase1 = 0.0
+            self._proxima_anomalia_fase1 = self._espera_anomalia_fase1()
+        if fase.numero == 2:
+            self._venado_visible = 0.0
+            self._proxima_aparicion_venado = self._espera_aparicion_venado()
         if fase.numero == 3:
             self._rayos_en_fase3 = 0
             self._bruja_este_rayo = False
+        if fase.numero == 5:
+            self._proximo_canto = random.uniform(*self.ESPERA_ENTRE_CANTOS)
         if fase.numero == 4:
             self._shake_disparado = False
             self._proximo_grito = self._espera_entre_gritos()
             self._sombra_progreso = -1.0
             self._proxima_sombra = self._espera_entre_sombras()
+            self._proxima_revelacion = 0.0
+        # La racha de quietud no cruza de una fase a otra (AUD-492): quien
+        # llegó parado al borde de la sección no ha estado observando
+        # *ésta*, y darle la revelación en el primer fotograma la volvería
+        # gratis.
+        self._atencion.reiniciar()
         if self._banner is not None and fase.numero > 1:
             self._banner.play(f"FASE {fase.numero}", fase.nombre)
 
@@ -281,6 +428,37 @@ class Stage4_1(StageScene):
             audio.crossfade_ambient(ruta, duration=1.5, volume=0.3)
         else:
             audio.play_ambient(ruta, volume=0.3)
+
+    def _actualizar_musica_de_fase(self, fase: Fase) -> None:
+        """Pone —o quita— la música que pide esta fase (AUD-493).
+
+        GAP-059 punto 5, GAP-064 puntos 13-14 y GAP-065 §12 describen el
+        mismo defecto desde tres sitios: una sola pista para las seis
+        fases. Aquí la fase manda, y cinco de las seis piden silencio, de
+        modo que la aproximación a Paburu deja de sonar desde el primer
+        paso del cementerio y pasa a **entrar** en la última sección.
+
+        Sólo actúa cuando la pista pedida cambia. Llamar a `play_music`
+        cada vez que se cruza una frontera reiniciaría el tema desde el
+        principio aunque fuera el mismo, que es el defecto que
+        `_actualizar_fase` ya evita para el clima y las partículas.
+
+        El fundido de entrada no es decorativo: `MUSICA_DEL_DESPERTAR`
+        aparece tras cinco fases de silencio, y sin fundido el corte se
+        oiría como un fallo de reproducción, no como que algo despierta.
+        """
+        if fase.musica == self._musica_sonando:
+            return
+        self._musica_sonando = fase.musica
+        audio = self.audio
+        if audio is None:
+            return
+        if fase.musica is None:
+            audio.stop_music()
+            return
+        pista = resolver_pista_de_musica(fase.musica)
+        if pista is not None:
+            audio.play_music(pista, fundido_ms=self.FUNDIDO_DE_LA_MUSICA_MS)
 
     # ── Gradación de color (Unidad V) ──────────────────────────
 
@@ -334,6 +512,146 @@ class Stage4_1(StageScene):
         self._ambiente_base = (self.AMBIENTE_MIN_LUNA
                                 + (self.AMBIENTE_MAX_LUNA - self.AMBIENTE_MIN_LUNA) * ciclo)
         self._aplicar_hora()
+
+    @property
+    def luna_oculta(self) -> float:
+        """Cuánto está escondida la luna ahora mismo: 0 alta, 1 oculta.
+
+        AUD-488 — se deriva de `_ambiente_base`, que es donde
+        `_actualizar_ambiente_de_fase` escribe el ciclo, para que no haya
+        dos senoidales que puedan desincronizarse. Fuera de la Fase 5 no
+        significa nada y devuelve 0.
+        """
+        if not self.fase.luna_intermitente:
+            return 0.0
+        recorrido = self.AMBIENTE_MAX_LUNA - self.AMBIENTE_MIN_LUNA
+        if recorrido <= 0.0:
+            return 0.0
+        alto = (self._ambiente_base - self.AMBIENTE_MIN_LUNA) / recorrido
+        return max(0.0, min(1.0, 1.0 - alto))
+
+    def _actualizar_canto_ancestral(self, dt: float) -> None:
+        """El canto llama desde un punto fijo, y llama más fuerte a oscuras.
+
+        GAP-063: en la Planicie de los Muertos *«el sonido no es
+        navegación, es un solo bucle ambiental»* —volumen constante, sin
+        dirección— y *«nada depende de si la luna está arriba o abajo»*.
+        Las dos cosas se arreglan con el mismo mecanismo: un canto
+        espacial (`_play_sfx_spatial`, que el motor ya tenía y que hasta
+        AUD-481 no usaba nadie) desde `trazado.COLUMNA_DEL_CANTO`, con el
+        volumen atado al ciclo lunar.
+
+        El bucle de ambiente de la fase no se toca: sigue siendo la cama
+        sonora. Esto es una voz *encima*, que sí tiene sitio en el mundo.
+        """
+        fase = self.fase
+        if not fase.luna_intermitente or self._player is None:
+            return
+        self._proximo_canto -= dt
+        if self._proximo_canto > 0.0:
+            return
+        self._proximo_canto = random.uniform(*self.ESPERA_ENTRE_CANTOS)
+        flojo, fuerte = self.VOLUMEN_DEL_CANTO
+        volumen = flojo + (fuerte - flojo) * self.luna_oculta
+        self._play_sfx_spatial(
+            "sfx_environment_canto_ancestral",
+            trazado.COLUMNA_DEL_CANTO * settings.TILE_SIZE,
+            volume=volumen,
+        )
+
+    # ── La anomalía ambigua de la Fase 1 (AUD-478, GAP-059) ──────
+
+    def _espera_anomalia_fase1(self) -> float:
+        return random.uniform(*self.ESPERA_ENTRE_ANOMALIA_FASE1)
+
+    def _actualizar_anomalia_fase1(self, dt: float) -> None:
+        """Cuenta hacia la próxima aparición de la figura, o hacia que se
+        apague la que ya está visible.
+
+        Sólo corre dentro de la Fase 1 — fuera de ella se apaga sin dejar
+        el contador a medias, igual que `_bruja_este_rayo` se reinicia al
+        salir de la Fase 3. No toca sonido, disparadores ni diálogo: es
+        exactamente lo que la vuelve ambigua y no un evento (mismo
+        principio que la Bruja, AUD-475).
+        """
+        if self.fase.numero != 1:
+            self._anomalia_fase1 = 0.0
+            return
+        if self._anomalia_fase1 > 0.0:
+            self._anomalia_fase1 = max(0.0, self._anomalia_fase1 - dt)
+            return
+        self._proxima_anomalia_fase1 -= dt
+        if self._proxima_anomalia_fase1 <= 0.0:
+            self._anomalia_fase1 = self.DURACION_ANOMALIA_FASE1
+            self._proxima_anomalia_fase1 = self._espera_anomalia_fase1()
+
+    # ── Las apariciones previas del Venado (Fase 2, AUD-479) ─────
+
+    def _espera_aparicion_venado(self) -> float:
+        return random.uniform(*self.ESPERA_ENTRE_APARICIONES_VENADO)
+
+    def _actualizar_apariciones_previas_del_venado(self, dt: float) -> None:
+        """Antes de su diálogo, el Venado se deja ver y desaparece —no es
+        un letrero encendido todo el tramo (GAP-060, puntos 6 y 9-12:
+        *«se detiene, mira, desaparece»*). Deja de aplicar en cuanto el
+        jugador cruza `AVANCE_ANTES_DEL_DIALOGO`: de ahí en adelante
+        `_dibujar_espiritu` vuelve al fundido continuo normal por su
+        cuenta, así que aquí basta con apagar el destello."""
+        fase = self.fase
+        if fase.numero != 2 or not fase.apariciones_previas:
+            self._venado_visible = 0.0
+            return
+        if self._avance_en_fase(fase) >= self.AVANCE_ANTES_DEL_DIALOGO:
+            self._venado_visible = 0.0
+            return
+        if self._venado_visible > 0.0:
+            self._venado_visible = max(0.0, self._venado_visible - dt)
+            return
+        self._proxima_aparicion_venado -= dt
+        if self._proxima_aparicion_venado <= 0.0:
+            self._venado_visible = random.uniform(*self.DURACION_APARICION_VENADO)
+            self._proxima_aparicion_venado = self._espera_aparicion_venado()
+
+    # ── La pausa antes del diálogo de la Serpiente (Fase 3, AUD-480) ─
+
+    def _actualizar_pausa_de_la_serpiente(self) -> None:
+        """Un respiro alrededor del diálogo del Rey Terciopelo (GAP-061,
+        punto 19): *«el jugador alcanza un descanso. El viento se
+        detiene... la Serpiente habla. Después: el viento vuelve.»*
+
+        No es el silencio total de la Fase 4 —eso apaga el clima entero y
+        dispara un shake una sola vez—; aquí sólo baja la fuerza de la
+        `ZonaDeViento` real del mapa a una fracción, y sube de vuelta en
+        cuanto el jugador se aleja del punto del diálogo, tantas veces
+        como haga falta (a diferencia del shake, esto no es «una vez por
+        visita»: el jugador puede ir y volver).
+        """
+        if self.fase.numero != 3:
+            if self._viento_reducido and self._viento_zona is not None:
+                assert self._viento_fuerza_original is not None
+                self._viento_zona.fuerza = self._viento_fuerza_original
+                self._viento_reducido = False
+            return
+        if self._viento_zona is None:
+            from src.framework.ecs import ZonaDeViento
+
+            for _eid, zona in self._mundo.cada(ZonaDeViento):
+                self._viento_zona = zona
+                self._viento_fuerza_original = pygame.Vector2(zona.fuerza)
+                break
+        if self._viento_zona is None or self._viento_fuerza_original is None:
+            return  # el mapa no trae ninguna zona de viento — nada que pausar
+
+        avance = self._avance_en_fase(self.fase)
+        en_pausa = (self.AVANCE_ANTES_DEL_DIALOGO - self.MARGEN_PAUSA_VIENTO_ANTES
+                    <= avance
+                    <= self.AVANCE_ANTES_DEL_DIALOGO + self.MARGEN_PAUSA_VIENTO_DESPUES)
+        if en_pausa and not self._viento_reducido:
+            self._viento_zona.fuerza = self._viento_fuerza_original * self.FRACCION_VIENTO_EN_PAUSA
+            self._viento_reducido = True
+        elif not en_pausa and self._viento_reducido:
+            self._viento_zona.fuerza = self._viento_fuerza_original
+            self._viento_reducido = False
 
     # ── El relámpago de la Fase 3 ──────────────────────────────
 
@@ -395,6 +713,32 @@ class Stage4_1(StageScene):
     def _espera_entre_gritos(self) -> float:
         return random.uniform(*self.ESPERA_ENTRE_GRITOS)
 
+    def _posicion_del_grito(self) -> float:
+        """Una coordenada de mundo a un lado del jugador — AUD-481,
+        GAP-062 puntos 4-5 y 23: *«pájaro → izquierda... ahora desde otra
+        dirección»*. Sin esto, el grito sonaría siempre desde el mismo
+        sitio relativo (centrado, sin paneo), que es exactamente lo que
+        vuelve inútil al oído como herramienta de orientación.
+
+        AUD-492 — el lado ya no es una moneda al aire: la mayoría de las
+        veces suena **a la espalda** del jugador, hacia donde no está
+        mirando (`Atencion.a_su_espalda`). Ése es el eslabón F4 del
+        GAP-065, «el escenario parece observar al jugador»: un grito que
+        cae al azar y uno que evita tu campo de visión producen el mismo
+        histograma de posiciones, pero sólo el segundo hace que el jugador
+        se gire.
+
+        No siempre, sin embargo: una regla sin excepción se aprende y deja
+        de inquietar («si me giro, ahí estará»). Una de cada cuatro veces
+        suena de frente, que es lo que impide leerlo como mecanismo.
+        """
+        if self._player is None:
+            return 0.0
+        distancia = random.uniform(*self.DISTANCIA_DEL_GRITO)
+        if random.random() < self.PROPORCION_DE_GRITOS_A_LA_ESPALDA:
+            return self._atencion.a_su_espalda(distancia)
+        return self._player.rect.centerx + self._atencion.direccion * distancia
+
     def _actualizar_grito_del_gavilan(self, dt: float) -> None:
         """Tras el silencio, el Gavilán se deja oír de vez en cuando.
 
@@ -402,6 +746,11 @@ class Stage4_1(StageScene):
         reaparecer de forma aislada y aleatoria»*, no un segundo ambiente. Se
         activa sólo después de `_shake_disparado` — antes del silencio no
         hay nada que «reaparecer».
+
+        AUD-481 — usa `_play_sfx_spatial` (paneo estéreo real,
+        `AudioManager.play_sfx_at`) en vez del canal ciego
+        `_play_sfx_named` que usaba antes: el motor ya sabía hacer esto,
+        sólo que el Gavilán no se lo pedía.
         """
         fase = self.fase
         if fase.grito_aislado is None or not self._shake_disparado:
@@ -409,7 +758,46 @@ class Stage4_1(StageScene):
         self._proximo_grito -= dt
         if self._proximo_grito <= 0.0:
             self._proximo_grito = self._espera_entre_gritos()
-            self._play_sfx_named(fase.grito_aislado, volume=0.6)
+            self._play_sfx_spatial(fase.grito_aislado, self._posicion_del_grito(), volume=0.6)
+
+    # ── La quietud que revela (AUD-492) ─────────────────────────
+
+    def _actualizar_quietud_del_gavilan(self, dt: float) -> None:
+        """Detenerse en la Fase 4 hace que el Gavilán se deje ver.
+
+        GAP-062 puntos 24-25 (*«detenerse también es jugar»*) y GAP-065
+        §13, eslabón F4. Es la contrapartida exacta del comentario que
+        `_actualizar_gradacion` dejó escrito como declaración de
+        principios —*«el cambio se ve al caminar, no al esperar quieto»*—
+        y que la crítica de diseño señaló como justamente lo contrario de
+        lo que esta fase necesita: en las otras cinco el mundo se revela
+        avanzando, y en la del bosque que observa se revela parándose.
+
+        Qué hace, en concreto: adelanta el cruce de la sombra que ya
+        existía. No inventa un evento nuevo ni enseña nada que el jugador
+        no pudiera ver de todos modos — cambia **quién** decide cuándo
+        ocurre, que era todo el problema del eslabón F4: los
+        temporizadores corrían ciegos a lo que hacía el jugador.
+
+        Sólo después del silencio, igual que el grito: antes de que algo
+        haya pasado no hay nada a lo que el bosque pueda estar
+        respondiendo.
+        """
+        fase = self.fase
+        if not fase.sombra_de_ave or not self._shake_disparado:
+            return
+        if self._proxima_revelacion > 0.0:
+            self._proxima_revelacion -= dt
+            return
+        if not self._atencion.esta_quieto(self.QUIETUD_QUE_REVELA):
+            return
+        self._proxima_revelacion = self.ESPERA_TRAS_REVELAR
+        # Si ya hay una sombra cruzando, no se pisa con otra: la
+        # recompensa por detenerse es que la próxima llegue ya, no que se
+        # solapen dos.
+        if self._sombra_progreso < 0.0:
+            self._sombra_progreso = 0.0
+        self._atencion.reiniciar()
 
     # ── La sombra del Gavilán ────────────────────────────────────
 
@@ -499,6 +887,7 @@ class Stage4_1(StageScene):
         self._dibujar_serpiente_de_fondo(surface, offset)
         self._dibujar_sombra_de_ave(surface, offset)
         self._dibujar_bruja(surface, offset)
+        self._dibujar_anomalia_fase1(surface, offset)
 
     @staticmethod
     def _fundido_del_espiritu(avance: float, liberado: bool) -> float:
@@ -540,7 +929,18 @@ class Stage4_1(StageScene):
         _nombre, forma = siluetas.ESPIRITUS[fase.espiritu]
         avance = self._avance_en_fase(fase)
         liberado = self._espiritu_liberado(fase)
-        fundido = self._fundido_del_espiritu(avance, liberado)
+        # Antes del diálogo, el Venado (Fase 2, AUD-479) sólo se ve
+        # durante sus destellos — `_venado_visible`, que lleva
+        # `_actualizar_apariciones_previas_del_venado`—, no con el fundido
+        # continuo normal. Pasado ese punto vuelve al mismo cálculo que ya
+        # usan el Rey Terciopelo y el Gavilán.
+        antes_del_dialogo = fase.apariciones_previas and avance < self.AVANCE_ANTES_DEL_DIALOGO
+        if antes_del_dialogo:
+            if self._venado_visible <= 0.0:
+                return
+            fundido = 1.0
+        else:
+            fundido = self._fundido_del_espiritu(avance, liberado)
         if fundido <= 0.0:
             return
         # Asciende de verdad en el último tramo —pero sólo si se liberó—:
@@ -684,5 +1084,31 @@ class Stage4_1(StageScene):
         # confundirlas visualmente sería tan malo como caricaturizarlas.
         siluetas.dibujar_contorno(
             surface, siluetas._bruja, x, y, 40, 46,
+            siluetas.SILUETA_OSCURA, alfa,
+        )
+
+    # ── La anomalía ambigua de la Fase 1, dibujo (AUD-478) ──────
+
+    def _dibujar_anomalia_fase1(self, surface: pygame.Surface,
+                                offset: pygame.Vector2) -> None:
+        """La figura entre las tumbas, visible sólo mientras
+        `_anomalia_fase1` cuenta hacia cero — nunca más de
+        `DURACION_ANOMALIA_FASE1` segundos. El alfa cae con el tiempo que
+        queda, así que ni siquiera aparece de golpe: se desvanece desde
+        que se enciende, para que quien mire un instante tarde ya la vea
+        más débil que quien miraba de frente."""
+        if self._anomalia_fase1 <= 0.0:
+            return
+        ts = settings.TILE_SIZE
+        col = trazado.COLUMNA_ANOMALIA_FASE1
+        x = int(col * ts - offset.x)
+        if x < -100 or x > settings.INTERNAL_WIDTH + 100:
+            return
+        fila_suelo = trazado.altura_del_suelo(col)
+        alto = 44
+        y = int(fila_suelo * ts - alto - 10) - int(offset.y)
+        alfa = int(90 * (self._anomalia_fase1 / self.DURACION_ANOMALIA_FASE1))
+        siluetas.dibujar_contorno(
+            surface, siluetas._figura_lejana, x, y, int(alto * 0.6), alto,
             siluetas.SILUETA_OSCURA, alfa,
         )

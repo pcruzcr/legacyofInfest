@@ -27,16 +27,18 @@ ver `tools/generate_all_assets.py::_gen_tileset_stage4_1`). El musgo y el
 lodo de la Fase 2 son dos frenos del mismo tipo (AUD-473), no un arrastre y
 un freno — ver la nota junto a `FRENO_DEL_MUSGO` más abajo.
 
-La loma de la Fase 3
-----------------------
-El guion pide *«ascender por lomas utilizando slopes»*. Aquí es un desnivel
-real: el suelo sube de la fila `FILA_SUELO` (30) a la fila `FILA_CIMA` (20)
-entre las columnas 340 y 370, se mantiene arriba hasta la 410, y baja de
-vuelta hasta la 440. `altura_del_suelo(columna)` calcula la fila del suelo
-para cualquier columna del mapa — el generador la usa para rellenar tierra
-y la escena para colocar decoración a la altura correcta. Dos objetos
-`Slope` (AUD-297) se superponen exactamente a las rampas para que se puedan
-subir y bajar de verdad.
+Las lomas de la Fase 3 (AUD-477)
+-----------------------------------
+El guion pide *«ascender por lomas utilizando slopes»* — en plural.
+`LOMAS_FASE3` son dos desniveles reales, no uno: una curva baja y corta de
+entrada, y una más alta después — el sube-baja-sube-baja que pide el punto
+6 de la crítica de diseño del dueño (2026-08-14), en vez de una sola
+joroba simétrica que en pantalla se lee como «una subida», no como un
+camino que se enrolla. `altura_del_suelo(columna)` calcula la fila del
+suelo para cualquier columna del mapa — el generador la usa para rellenar
+tierra y la escena para colocar decoración a la altura correcta. Cuatro
+objetos `Slope` (AUD-297, dos por loma) se superponen exactamente a las
+rampas para que se puedan subir y bajar de verdad.
 """
 from __future__ import annotations
 
@@ -58,25 +60,45 @@ FILA_SUELO = 30
 #: Grosor de los muros de los extremos, en columnas.
 MURO_ANCHO = 2
 
-# ── La loma de la Fase 3 ─────────────────────────────────────────────────
-LOMA_INICIO_SUBIDA = 340
-LOMA_FIN_SUBIDA = 370
-LOMA_FIN_CIMA = 410
-LOMA_FIN_BAJADA = 440
+# ── Las lomas de la Fase 3 (AUD-477) ──────────────────────────────────────
+#
+# El guion original dice «ascender por LOMAS utilizando slopes» — en
+# plural. La primera versión (AUD-467…470) sólo puso una: una subida, una
+# meseta larga, una bajada — que en pantalla se lee como *una* subida, no
+# como el camino enroscado que pide el punto 6 de la crítica de diseño
+# (2026-08-14): *«el jugador no debería sentir que está subiendo una
+# montaña. Debería sentir que el escenario se está enrollando alrededor de
+# él»*. Dos lomas de distinta altura —una baja, de calentamiento, y la
+# alta, la del «cuello» de la serpiente— dan ese sube-baja-sube-baja que
+# una sola joroba simétrica no daba.
+#
+# Cada entrada es `(columna_inicio_subida, ancho_subida, ancho_cima,
+# ancho_bajada, fila_cima)`. Se quedan dentro de la Fase 3 (columnas
+# 300-449) con margen llano a los dos lados y entre las dos —el disparador
+# de diálogo (columna 360) y el de liberar al espíritu (368) caen en ese
+# llano intermedio, sobre suelo firme de verdad, no a media rampa.
 FILA_CIMA = 20
+LOMAS_FASE3: tuple[tuple[int, int, int, int, int], ...] = (
+    (309, 30, 10, 16, 24),          # la primera curva: más baja, más corta
+    (376, 25, 15, 20, FILA_CIMA),   # la segunda: la más alta de las dos
+)
 
 
 def altura_del_suelo(columna: int) -> int:
     """La fila del suelo en esa columna. `FILA_SUELO` en todas partes salvo
-    en la loma de la Fase 3, que sube y vuelve a bajar."""
-    if LOMA_INICIO_SUBIDA <= columna < LOMA_FIN_SUBIDA:
-        avance = (columna - LOMA_INICIO_SUBIDA) / (LOMA_FIN_SUBIDA - LOMA_INICIO_SUBIDA)
-        return round(FILA_SUELO - avance * (FILA_SUELO - FILA_CIMA))
-    if LOMA_FIN_SUBIDA <= columna < LOMA_FIN_CIMA:
-        return FILA_CIMA
-    if LOMA_FIN_CIMA <= columna < LOMA_FIN_BAJADA:
-        avance = (columna - LOMA_FIN_CIMA) / (LOMA_FIN_BAJADA - LOMA_FIN_CIMA)
-        return round(FILA_CIMA + avance * (FILA_SUELO - FILA_CIMA))
+    en las lomas de la Fase 3, que suben y vuelven a bajar."""
+    for inicio_subida, ancho_subida, ancho_cima, ancho_bajada, fila_cima in LOMAS_FASE3:
+        fin_subida = inicio_subida + ancho_subida
+        fin_cima = fin_subida + ancho_cima
+        fin_bajada = fin_cima + ancho_bajada
+        if inicio_subida <= columna < fin_subida:
+            avance = (columna - inicio_subida) / ancho_subida
+            return round(FILA_SUELO - avance * (FILA_SUELO - fila_cima))
+        if fin_subida <= columna < fin_cima:
+            return fila_cima
+        if fin_cima <= columna < fin_bajada:
+            avance = (columna - fin_cima) / ancho_bajada
+            return round(fila_cima + avance * (FILA_SUELO - fila_cima))
     return FILA_SUELO
 
 
@@ -86,7 +108,8 @@ def perfil_del_suelo() -> tuple[int, ...]:
 
 
 def altura_de_colision(columna: int) -> int:
-    """La fila **sólida** en esa columna — para colisión, no para pintar.
+    """La fila de la superficie en esa columna — para **colocar cosas**
+    (checkpoints, disparadores, decoración), no para generar bloques sólidos.
 
     AUD-470 — por qué no es la misma que `altura_del_suelo`
     -----------------------------------------------------------
@@ -98,16 +121,57 @@ def altura_de_colision(columna: int) -> int:
     y el `Slope` que se superponía nunca llegaba a intervenir porque el
     jugador no conseguía entrar en su rectángulo.
 
-    La solución, la que ya describe `pendientes.py`: la colisión bajo una
-    rampa se queda **plana** —al mismo nivel que el suelo llano de siempre—
-    y es el propio `Slope` el que empuja al jugador hacia arriba según
-    camina, sin ningún escalón sólido de por medio. Sólo la meseta
-    (370-410) es terreno elevado de verdad y necesita su propio suelo
-    sólido, porque ahí no hay ninguna rampa que lo sustituya.
+    AUD-477 — la meseta tampoco puede ser un bloque sólido
+    ----------------------------------------------------------
+    Con la meseta como bloque sólido empezando exactamente donde
+    `Slope.altura_en()` llega a `fila_cima`, un recorrido real
+    (`TestLasLomasDeLaFase3::test_se_sube_y_se_baja_dos_veces_caminando`,
+    caminando de verdad, no teletransportado) se quedaba clavado justo en
+    ese punto — reproducible con cualquier ancho de rampa, incluso una
+    carísimamente suave (probado a mano con 90 columnas de subida, mismo
+    resultado), así que no es la inclinación: es el **orden de resolución
+    por fotograma**. `player.py::_resolve_collision` (el AABB normal, contra
+    `collision_rects`) corre **antes** que `_resolver_pendientes` (el que
+    empuja al jugador por la rampa). El eje X de un fotograma se resuelve
+    con la `y` que dejó el fotograma anterior — la de la rampa, que sólo
+    llega a `fila_cima` en su último píxel matemático, nunca antes, porque
+    eso es lo que hace una recta — así que en el fotograma en que la `x`
+    cruza al territorio de la meseta sólida, la `y` todavía está un puñado
+    de píxeles por debajo: el AABB los ve solapados y frena el eje X ahí,
+    para siempre, porque la `x` congelada hace que `_resolver_pendientes`
+    recalcule la misma `y` de siempre. Ningún ancho de rampa lo evita —se
+    probó, ver el commit— porque el desajuste no depende de la pendiente,
+    depende de que exista una unión dura entre «zona sin bloque sólido» y
+    «bloque sólido» en absoluto.
+
+    La solución real, la que sí funciona: la meseta **tampoco** entra en
+    `collision_rects`. Es un `Pendiente` más — de altura cero, así que
+    `altura_en()` devuelve la misma `y` constante en todo su ancho — y
+    `_colisiones()` (`generate_stage4_1.py`) no le genera ningún bloque
+    sólido (`es_meseta`). De la rampa a la meseta y de la meseta a la
+    bajada, todo el recorrido de una loma es siempre el mismo sistema
+    —pendientes, nunca AABB contra un bloque— y la unión dura que causaba
+    el enganche deja de existir del todo, no sólo se aplaza.
     """
-    if LOMA_FIN_SUBIDA <= columna < LOMA_FIN_CIMA:
-        return FILA_CIMA
+    for inicio_subida, ancho_subida, ancho_cima, _ancho_bajada, fila_cima in LOMAS_FASE3:
+        fin_subida = inicio_subida + ancho_subida
+        fin_cima = fin_subida + ancho_cima
+        if fin_subida <= columna < fin_cima:
+            return fila_cima
     return FILA_SUELO
+
+
+def es_meseta(columna: int) -> bool:
+    """¿Es la cima llana de alguna loma? Esas columnas no llevan bloque
+    sólido (AUD-477, ver `altura_de_colision`): las cubre un `Pendiente`
+    de altura cero, para que nunca haya una unión dura entre pendiente y
+    bloque sólido en el camino de subida de una loma."""
+    for inicio_subida, ancho_subida, ancho_cima, _ancho_bajada, _fila_cima in LOMAS_FASE3:
+        fin_subida = inicio_subida + ancho_subida
+        fin_cima = fin_subida + ancho_cima
+        if fin_subida <= columna < fin_cima:
+            return True
+    return False
 
 
 def perfil_de_colision() -> tuple[int, ...]:
@@ -116,18 +180,62 @@ def perfil_de_colision() -> tuple[int, ...]:
 
 
 def loma() -> tuple[tuple[int, int, int, int, str], ...]:
-    """Los dos `Slope` de la loma: `(columna, fila_arriba, ancho, alto, sube)`.
+    """Los `Slope` de subida y bajada de las lomas: `(columna, fila_arriba,
+    ancho, alto, sube)`, dos por loma, en el orden de `LOMAS_FASE3`
+    (AUD-297/477). La cima llana la da `mesetas_de_las_lomas`, no ésta —
+    tiene una unidad distinta (ver por qué ahí).
 
     El rectángulo de un `Slope` es el triángulo entero (AUD-297): de la fila
     de arriba a la de abajo, de la columna de inicio a la de fin.
     """
-    alto = FILA_SUELO - FILA_CIMA
-    return (
-        (LOMA_INICIO_SUBIDA, FILA_CIMA, LOMA_FIN_SUBIDA - LOMA_INICIO_SUBIDA,
-         alto, "derecha"),
-        (LOMA_FIN_CIMA, FILA_CIMA, LOMA_FIN_BAJADA - LOMA_FIN_CIMA,
-         alto, "izquierda"),
-    )
+    resultado: list[tuple[int, int, int, int, str]] = []
+    for inicio_subida, ancho_subida, ancho_cima, ancho_bajada, fila_cima in LOMAS_FASE3:
+        fin_subida = inicio_subida + ancho_subida
+        fin_cima = fin_subida + ancho_cima
+        alto = FILA_SUELO - fila_cima
+        resultado.append((inicio_subida, fila_cima, ancho_subida, alto, "derecha"))
+        resultado.append((fin_cima, fila_cima, ancho_bajada, alto, "izquierda"))
+    return tuple(resultado)
+
+
+def mesetas_de_las_lomas() -> tuple[tuple[int, int, int], ...]:
+    """Las cimas llanas: `(columna_inicio, fila, ancho)`, en columnas —a
+    diferencia de `loma()`, no lleva alto ni `sube`: es siempre plana.
+
+    Por qué no es un `Slope` más de `alto=0`
+    -------------------------------------------
+    Debería serlo: una cuesta de altura cero es plana de verdad —
+    `Pendiente.altura_en()` devuelve la misma `y` en todo su ancho—, y por
+    eso no necesita, ni debe, ningún bloque sólido debajo (el porqué
+    completo vive en `altura_de_colision`). Pero `StageObjectFactory
+    ._rect_de` (`stage_objetos.py`) trata un `height` de 0 como «sin
+    declarar» (`int(obj.height) or TILE_SIZE`) y le pone una baldosa
+    entera de alto sin avisar — 16 px de repecho donde tenía que haber
+    suelo llano. Se descubrió jugando de verdad, no en una prueba: el
+    jugador caía y se tropezaba exactamente al entrar en la meseta
+    (ninguna prueba anterior miraba la trayectoria fotograma a fotograma
+    ahí dentro).
+
+    La salida: el generador (`tools/generate_stage4_1.py`) coloca esta
+    cima como un `Slope` con 1 **píxel** de alto, no 1 fila — que sigue
+    siendo un valor verdadero (sobrevive el `or TILE_SIZE`) y es
+    indistinguible de plano jugando. Como esa unidad (píxeles, no filas)
+    es distinta de la de `loma()`, esta función devuelve una tupla propia
+    en vez de forzar la de `loma()` a mezclar dos unidades.
+    """
+    resultado: list[tuple[int, int, int]] = []
+    for inicio_subida, ancho_subida, ancho_cima, _ancho_bajada, fila_cima in LOMAS_FASE3:
+        fin_subida = inicio_subida + ancho_subida
+        resultado.append((fin_subida, fila_cima, ancho_cima))
+    return tuple(resultado)
+
+
+def extremos_de_las_lomas() -> tuple[int, int]:
+    """`(primera_columna, última_columna)` que ocupa alguna loma —para
+    zonas (como el `WindZone`) que deben cubrirlas todas, no sólo una."""
+    inicio = min(loma[0] for loma in LOMAS_FASE3)
+    fin = max(loma[0] + loma[1] + loma[2] + loma[3] for loma in LOMAS_FASE3)
+    return inicio, fin
 
 
 def fase_de_la_columna(columna: int) -> int:
@@ -201,9 +309,36 @@ ARBOLES_FASE4: tuple[int, ...] = tuple(range(460, 599, 25))
 # ── Fase 5 (La Planicie de los Muertos): tumbas de conquistadores ────────
 TUMBAS_FASE5: tuple[int, ...] = tuple(range(610, 749, 30))
 
+#: De qué columna viene el canto ancestral de la Fase 5 (AUD-488).
+#:
+#: GAP-063 pide que en la Planicie *«el sonido sustituya a la vista como
+#: orientación»* (puntos 12-14) y observa que hoy no lo hace: el canto es un
+#: bucle de ambiente en volumen constante, sin dirección, y por tanto
+#: inservible para orientarse. Un punto **fijo** es lo que lo convierte en
+#: navegación: el paneo estéreo dice de qué lado queda, y como está al final
+#: de la sección —justo antes de la frontera con la Fase 6 (columna 750)—
+#: caminar hacia el canto es caminar hacia la salida.
+#:
+#: Ésta es la mitad *fiable* de la «mezcla de información confiable e
+#: información ambigua» del punto 14. La ambigua ya existe y es el grito del
+#: Gavilán, que desde AUD-492 hace justo lo contrario: rehúye la mirada del
+#: jugador.
+COLUMNA_DEL_CANTO: int = 745
+
 
 # ── Fase 6 (El Camino hacia Paburu): grietas que se iluminan al paso ─────
-GRIETAS_FASE6: tuple[int, ...] = tuple(range(760, 899, 20))
+#
+# AUD-482, GAP-063 — antes empezaban en la columna 760, diez columnas
+# después de que arrancara la Fase 6 (750): el corte con la Planicie de
+# los Muertos era seco. Los puntos 29-30 del documento de la Fase 5
+# (2026-08-14) piden justo lo contrario: *«pequeñas luces verdes que
+# empiezan a sustituir a la luna como guía»* antes de que termine esa
+# sección. El mecanismo que las enciende (`Stage4_1._actualizar_grietas`,
+# por proximidad) no mira de qué fase es la columna — así que basta con
+# que el rango empiece antes: las tres primeras (700, 720, 740) caen ya
+# en el tramo final de la Fase 5 (columnas 600-749), el resto sigue en la
+# Fase 6 de siempre.
+GRIETAS_FASE6: tuple[int, ...] = tuple(range(700, 899, 20))
 
 
 def grietas_de_pisada() -> tuple[tuple[int, int], ...]:
@@ -218,6 +353,32 @@ COLUMNA_LAPIDA_TERESA = 30
 COLUMNA_LAPIDA_HUGO = 34
 NOMBRE_LAPIDA_TERESA = "Teresa Murillo"
 NOMBRE_LAPIDA_HUGO = "Hugo Salazar Castillo"
+
+
+# ── Dónde caen el diálogo y la liberación de cada espíritu ────────────────
+#
+# A cuántas columnas del inicio de su sección coloca el generador
+# (`tools/generate_stage4_1.py`) el `MessageTrigger` de diálogo y, un poco
+# más adelante, el `EventTrigger` de liberación (AUD-474). Antes eran dos
+# literales (`+ 60`, `+ 68`) repetidos en el generador; ahora también los
+# necesita la escena (AUD-479, GAP-060: las apariciones previas del Venado
+# terminan justo donde empieza su diálogo) — un solo sitio para los dos,
+# para que no puedan desincronizarse, el mismo motivo que ya justificó
+# `evento_de_liberacion` más abajo.
+DESVIO_COLUMNA_DIALOGO = 60
+DESVIO_COLUMNA_LIBERACION = 68
+
+
+# ── La anomalía ambigua de la Fase 1 (AUD-478, GAP-059) ───────────────────
+#
+# La crítica de diseño del dueño (2026-08-14, punto 7) pedía que la Fase 1
+# tuviera algo sobrenatural que no fuera el easter egg personal: una figura
+# que se ve menos de un segundo y nunca se confirma. Lejos de las lápidas
+# (columnas 30/34) para no mezclarse con el fantasma de Teresa —ese sí se
+# confirma con un `MessageTrigger` y un nombre—, y bien entrada la sección
+# para que ocurra cuando el jugador ya se siente cómodo explorando, no en
+# los primeros pasos.
+COLUMNA_ANOMALIA_FASE1 = 95
 
 
 # ── Liberar a los espíritus (AUD-474) ─────────────────────────────────────

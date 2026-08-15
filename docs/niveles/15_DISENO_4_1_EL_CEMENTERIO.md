@@ -67,6 +67,16 @@ columna 30 — **Teresa Murillo** y **Hugo Salazar Castillo**. Un fantasma
 jefe— ronda despacio la tumba de Teresa. Sin fechas ni texto añadido: son
 los dos nombres que dio el dueño del proyecto, nada inventado encima.
 
+**La anomalía ambigua** (AUD-478, GAP-059 — punto 7 de la revisión de
+diseño por fases del dueño, 2026-08-14): hacia la columna 95, lejos de las
+lápidas para no confundirse con el fantasma de Teresa, una figura sin
+nombre aparece menos de medio segundo y se desvanece. Sin sonido, sin
+`MessageTrigger`, sin ningún efecto en el estado del nivel — el mismo
+principio que ya usa la Bruja de la Fase 3 (AUD-475): si el jugador no la
+vio, no pasa nada; si la vio, el juego nunca confirma qué era. Aparece en
+una ventana aleatoria de 20 a 40 s dentro de la Fase 1, así que un
+recorrido rápido puede no encontrarla nunca — eso es a propósito.
+
 ### 3.2 Fase 2 — El Venado (columnas 150–299)
 
 La lluvia marca la entrada, la imagen se desatura hasta blanco y negro de
@@ -78,6 +88,14 @@ soltar el control en ningún otro punto del nivel, y en una partida real se
 veía como el juego congelado) — corregido a un freno como el lodo, sólo que
 más leve. `sfx_environment_viento_de_bosque` (AUD-465) como ambiente. El
 Venado testifica; asciende si el jugador lo libera (AUD-474, ver §5.1).
+
+**Las apariciones previas** (AUD-479, GAP-060 — puntos 6 y 9-12 de la
+revisión de diseño por fases del dueño, 2026-08-14): antes de su diálogo
+(columna `desde_columna + DESVIO_COLUMNA_DIALOGO`), el Venado no queda
+encendido todo el tramo — se deja ver a destellos de 1,5 a 3 s, cada 4 a
+9 s, y desaparece entre uno y otro. Pasado ese punto vuelve al fundido
+continuo normal, el mismo que ya usan el Rey Terciopelo y el Gavilán:
+tiene sentido dejar de ocultarlo una vez que ya habló.
 
 ### 3.3 Fase 3 — El Rey Terciopelo (columnas 300–449)
 
@@ -96,6 +114,12 @@ de los relámpagos** traen a la Bruja un instante, «en la rama de un
 percepción que nunca se confirma (AUD-475, punto 3 de la crítica de
 diseño 2026-08-14).
 
+**La pausa del diálogo** (AUD-480, GAP-061 — punto 19 del documento de la
+Fase 3): alrededor de donde habla el Rey Terciopelo, el viento baja al 10 %
+de su fuerza —no a cero, sigue siendo el mismo bosque ventoso— y vuelve en
+cuanto el jugador se aleja. No es el silencio total de la Fase 4: es un
+respiro más pequeño, repetible tantas veces como el jugador vaya y venga.
+
 ### 3.4 Fase 4 — El Gavilán (columnas 450–599)
 
 Vintage naranja, bosque cortado y muerto — tocones y tierra quemada de
@@ -107,6 +131,13 @@ una sola vez. Después: el grito aislado del Gavilán (AUD-465,
 cruzando el cielo de vez en cuando, coordinada con el grito — la pieza que
 el primer intento dejó fuera (`GAP-058`). El Gavilán testifica; asciende si
 se libera (§5.1).
+
+**El grito tiene dirección** (AUD-481, GAP-062 — puntos 4-5 y 23 del
+documento de la Fase 4: *«pájaro → izquierda... ahora desde otra
+dirección»*): suena con paneo estéreo real (`_play_sfx_spatial`,
+`AudioManager.play_sfx_at`, que ya existía en el motor) desde un punto al
+azar a la izquierda o la derecha del jugador — antes salía por el canal
+ciego, sin dirección.
 
 ### 3.5 Fase 5 — La Planicie de los Muertos (columnas 600–749)
 
@@ -122,13 +153,25 @@ tumba hundidas — las de los conquistadores que murieron aquí, sin dueño que
 reclamar. Un coro sin palabras (`sfx_environment_canto_ancestral`, AUD-465)
 como ambiente. Sin espíritu de jefe: los tres ya ascendieron.
 
+**Las grietas adelantadas** (AUD-482, GAP-063 — puntos 29-30 del documento
+de la Fase 5: *«pequeñas luces verdes que empiezan a sustituir a la luna
+como guía»*): las tres primeras grietas de `GRIETAS_FASE6` (columnas 700,
+720 y 740) caen ya en el tramo final de esta sección — el mismo mecanismo
+de encendido por proximidad de la Fase 6, sin ningún código nuevo, sólo
+adelantando dónde empieza el rango.
+
 ### 3.6 Fase 6 — El Camino hacia Paburu (columnas 750–899)
 
-Color pleno, sin gradación. Niebla sobrenatural (partículas `spores`
-verdes). Grietas que se iluminan al paso, sin quedar encendidas — un
-rastro, no un progreso acumulado (mecánica sin cambios del prototipo).
-`sfx_environment_resonancia_solemne` (AUD-465) como ambiente. Al final,
-`NextTrigger` hacia `stage4_2_boss_paburu`.
+Color pleno, sin gradación — **y ahora tampoco sin tinte** (AUD-483,
+GAP-065 §11): un verde sutil (`TINTE_DESPERTAR`, alfa 0,10) se intensifica
+con el avance, el mismo mecanismo que ya usa el tinte vintage de la Fase 4,
+para que «verde = algo está despertando» tenga una señal visual y no sólo
+la de las grietas. Niebla sobrenatural (partículas `spores` verdes).
+Grietas que se iluminan al paso, sin quedar encendidas — un rastro, no un
+progreso acumulado (mecánica sin cambios del prototipo), que ahora empieza
+a asomar unas columnas antes de que arranque la sección (ver nota de la
+Fase 5). `sfx_environment_resonancia_solemne` (AUD-465) como ambiente. Al
+final, `NextTrigger` hacia `stage4_2_boss_paburu`.
 
 ## 4. La introducción
 

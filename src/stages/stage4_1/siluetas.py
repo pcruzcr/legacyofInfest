@@ -202,6 +202,29 @@ def _fantasma(ancho: int, alto: int) -> list[tuple[float, float]]:
     ]
 
 
+def _figura_lejana(ancho: int, alto: int) -> list[tuple[float, float]]:
+    """La anomalía ambigua de la Fase 1 (AUD-478, GAP-059): una figura
+    entre las tumbas que nunca se confirma.
+
+    Distinta a propósito de `_fantasma`: aquella es el easter egg
+    personal —un recuerdo de familia, con un `MessageTrigger` que dice su
+    nombre—; ésta no tiene nombre, no tiene disparador y no vuelve a
+    aparecer necesariamente en el mismo sitio. El punto 7 de la crítica
+    de diseño del dueño (2026-08-14) para la Fase 1: *«si el jugador no
+    la vio, no pasa nada; si la vio, ¿qué fue eso?»* — la misma regla que
+    ya usa la Bruja de la Fase 3 (AUD-475), aplicada aquí donde no hay
+    ningún relámpago del que colgar el instante. El contorno es
+    deliberadamente más simple que el del fantasma: cuanto menos detalle,
+    menos se puede afirmar sobre qué era.
+    """
+    w, h = ancho, alto
+    return [
+        (0.46 * w, 0.00 * h), (0.34 * w, 0.16 * h), (0.30 * w, 0.50 * h),
+        (0.36 * w, 0.72 * h), (0.26 * w, 1.00 * h), (0.74 * w, 1.00 * h),
+        (0.64 * w, 0.72 * h), (0.70 * w, 0.50 * h), (0.66 * w, 0.16 * h),
+    ]
+
+
 def dibujar_contorno(
     superficie: pygame.Surface,
     forma: object,

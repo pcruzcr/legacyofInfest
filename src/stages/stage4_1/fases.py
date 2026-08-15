@@ -40,6 +40,17 @@ NOCTURNO_AZULADO: Gradacion = (71, 140, 26, 56, 110, 26, 51, 89, 140)
 TINTE_VINTAGE: tuple[int, int, int] = (200, 120, 60)
 ALFA_TINTE_VINTAGE: float = 0.12
 
+#: El verde del despertar de la Fase 6 (AUD-483, GAP-065 §11): el
+#: documento de síntesis pide que la fase termine en «full color / verde
+#: sobrenatural», no en color pleno sin más — *«el verde debe tener
+#: significado... no lo usaría como simple iluminación decorativa»*. Se
+#: interpola con el mismo mecanismo que ya usa el tinte vintage de la
+#: Fase 4, así que se intensifica con el avance del jugador, no de golpe.
+#: Más sutil que el vintage (0,10 contra 0,12): aquí no es decadencia, es
+#: energía que apenas empieza a notarse.
+TINTE_DESPERTAR: tuple[int, int, int] = (110, 255, 150)
+ALFA_TINTE_DESPERTAR: float = 0.10
+
 #: Prefijo común de los cuatro ambientes generados en AUD-465.
 _AMB = "sfx/environment/sfx_environment_"
 
@@ -78,6 +89,37 @@ class Fase:
     serpiente_de_fondo: bool = False
     #: Sombra de ave cruzando el cielo de vez en cuando (Fase 4).
     sombra_de_ave: bool = False
+    #: ¿El espíritu se deja ver a destellos antes de su diálogo, en vez de
+    #: quedar encendido todo el tramo? (Fase 2, AUD-479, GAP-060 puntos 6
+    #: y 9-12: *«se detiene, mira, desaparece»* — el Venado como landmark
+    #: móvil, no como letrero fijo.)
+    apariciones_previas: bool = False
+    #: Qué pista de música debe sonar en esta fase, o `None` para silencio
+    #: (AUD-493). Ver `MUSICA_DEL_DESPERTAR` más abajo para el porqué de
+    #: que cinco de las seis sean `None`.
+    musica: str | None = None
+
+
+#: La única pista de música del nivel, y sólo en la última fase.
+#:
+#: AUD-493, GAP-059 punto 5 / GAP-064 puntos 13-14 / GAP-065 §12. Los tres
+#: GAP señalan el mismo defecto desde tres sitios distintos: `bgm_track` del
+#: TMX es *una sola pista para las seis fases*, así que el tema de la
+#: aproximación final a Paburu sonaba desde el primer paso del nivel. La
+#: carta emocional más fuerte del 4-1 se gastaba en el minuto cero, y las
+#: cuatro ambientaciones que AUD-465 generó por código —viento, tormenta,
+#: lluvia, canto ancestral— competían contra una cama de música constante en
+#: vez de ser lo que el jugador oye.
+#:
+#: El arreglo es la petición literal del dueño, punto 5: *«guardar el sonido
+#: como recurso»*. Las cinco primeras fases se sostienen con su
+#: `sonido_ambiente` y nada más; la música **nace** en la Fase 6, que es
+#: exactamente donde el guion la quiere (*«el tema musical nace del
+#: mundo»*) y donde el nombre de la pista dice que va.
+#:
+#: Nótese que la tabla admite una pista por fase: el día que existan temas
+#: propios para las otras cinco, se escriben aquí y no hay que tocar código.
+MUSICA_DEL_DESPERTAR: str = "bgm_final_approach"
 
 
 FASES: tuple[Fase, ...] = (
@@ -89,7 +131,7 @@ FASES: tuple[Fase, ...] = (
          gradacion=BLANCO_Y_NEGRO, tinte=None, espiritu=0,
          rayos_por_minuto=0.0, ambiente=0.50,
          sonido_ambiente=f"{_AMB}viento_de_bosque.wav",
-         dialogo_id="venado"),
+         dialogo_id="venado", apariciones_previas=True),
     Fase(3, "EL REY TERCIOPELO", 2 * ANCHO_SECCION, "storm", ("spores", 16.0),
          gradacion=GRISES_NEUTROS, tinte=None, espiritu=1,
          rayos_por_minuto=10.0, ambiente=0.44, tiene_slopes=True,
@@ -109,9 +151,11 @@ FASES: tuple[Fase, ...] = (
          sonido_ambiente=f"{_AMB}canto_ancestral.wav",
          decoracion="tumbas_conquistador"),
     Fase(6, "EL CAMINO HACIA PABURU", 5 * ANCHO_SECCION, "fog", ("spores", 26.0),
-         gradacion=COLOR_PLENO, tinte=None, espiritu=None,
-         rayos_por_minuto=0.0, ambiente=0.60, grietas_por_pisada=True,
-         sonido_ambiente=f"{_AMB}resonancia_solemne.wav"),
+         gradacion=COLOR_PLENO, tinte=(TINTE_DESPERTAR, ALFA_TINTE_DESPERTAR),
+         espiritu=None, rayos_por_minuto=0.0, ambiente=0.60,
+         grietas_por_pisada=True,
+         sonido_ambiente=f"{_AMB}resonancia_solemne.wav",
+         musica=MUSICA_DEL_DESPERTAR),
 )
 
 

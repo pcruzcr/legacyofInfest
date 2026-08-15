@@ -289,51 +289,236 @@ class TestLasSuperficiesDeLaFase2:
             assert trazado.fase_de_la_columna(inicio + ancho - 1) == 2
 
 
-class TestLaLomaDeLaFase3:
-    """AUD-297/470 — un `Slope` de verdad, y la colisión bajo la rampa se
-    queda plana para que el `Slope` sea quien suba al jugador."""
+class TestLasAparicionesPreviasDelVenado:
+    """GAP-060/AUD-479 — puntos 6 y 9-12 de la crítica de diseño del dueño
+    para la Fase 2 (2026-08-14): antes de hablar, el Venado se deja ver y
+    desaparece — «se detiene, mira, desaparece» —, no queda encendido todo
+    el tramo como un letrero. Después del punto donde habla (mismo punto
+    que usa `DESVIO_COLUMNA_DIALOGO` para el `MessageTrigger`), vuelve al
+    comportamiento normal de fundido de entrada/salida que ya usan el Rey
+    Terciopelo y el Gavilán."""
 
-    def test_hay_exactamente_dos_slopes(self, escena) -> None:
-        assert len(escena._stage_data.pendientes) == 2
+    def _antes_del_dialogo(self, escena):
+        from src.stages.stage4_1 import trazado
+        from src.stages.stage4_1.fases import FASES
 
-    def test_las_dos_estan_en_la_fase_3(self) -> None:
+        fase2 = FASES[1]
+        col = fase2.desde_columna + trazado.DESVIO_COLUMNA_DIALOGO - 5
+        _posicionar_sin_fisica(escena, col)
+        assert escena.fase.numero == 2
+        return escena
+
+    def test_solo_la_fase_2_lo_activa(self) -> None:
+        from src.stages.stage4_1.fases import FASES
+
+        for fase in FASES:
+            assert fase.apariciones_previas == (fase.numero == 2)
+
+    def test_no_se_dibuja_sin_destello(self, escena, monkeypatch) -> None:
+        from src.stages.stage4_1 import siluetas
+
+        llamadas = []
+        monkeypatch.setattr(
+            siluetas, "dibujar_contorno",
+            lambda *a, **kw: llamadas.append(a),
+        )
+        self._antes_del_dialogo(escena)
+        escena._venado_visible = 0.0
+        escena._dibujar_espiritu(pygame.Surface((800, 600)), pygame.Vector2())
+        assert llamadas == []
+
+    def test_se_dibuja_durante_el_destello(self, escena, monkeypatch) -> None:
+        from src.stages.stage4_1 import siluetas
+
+        llamadas = []
+        monkeypatch.setattr(
+            siluetas, "dibujar_contorno",
+            lambda *a, **kw: llamadas.append(a[1]),  # la forma es el 2º posicional
+        )
+        self._antes_del_dialogo(escena)
+        escena._venado_visible = 1.0
+        escena._dibujar_espiritu(pygame.Surface((800, 600)), pygame.Vector2())
+        assert llamadas == [siluetas.ESPIRITUS[0][1]]
+
+    def test_eventualmente_asoma_antes_del_dialogo(self, escena) -> None:
+        """Forzando el temporizador a cero, igual que ya hace
+        `TestLaSombraDelGavilan.test_cruza_tras_el_silencio`."""
+        self._antes_del_dialogo(escena)
+        escena._proxima_aparicion_venado = 0.0
+        escena._actualizar_apariciones_previas_del_venado(1 / 60)
+        assert escena._venado_visible > 0.0
+
+    def test_se_apaga_al_salir_de_la_fase_2(self, escena) -> None:
+        from src.stages.stage4_1.fases import FASES
+
+        self._antes_del_dialogo(escena)
+        escena._venado_visible = 2.0
+        _posicionar_sin_fisica(escena, FASES[2].desde_columna)
+        escena._actualizar_apariciones_previas_del_venado(1 / 60)
+        assert escena._venado_visible == 0.0
+
+    def test_despues_del_dialogo_vuelve_al_fundido_normal(self, escena) -> None:
+        """Pasado `DESVIO_COLUMNA_DIALOGO`, el Venado ya no depende de
+        `_venado_visible` — se ve con el mismo fundido continuo que usan
+        el Rey Terciopelo y el Gavilán, aunque el destello esté apagado."""
+        from src.stages.stage4_1 import siluetas, trazado
+        from src.stages.stage4_1.fases import FASES
+
+        fase2 = FASES[1]
+        col = fase2.desde_columna + trazado.DESVIO_COLUMNA_DIALOGO + 10
+        _posicionar_sin_fisica(escena, col)
+        escena._venado_visible = 0.0  # el destello está apagado a propósito
+        llamadas = []
+        import unittest.mock
+
+        with unittest.mock.patch.object(
+            siluetas, "dibujar_contorno",
+            lambda *a, **kw: llamadas.append(a[1]),
+        ):
+            escena._dibujar_espiritu(pygame.Surface((800, 600)), pygame.Vector2())
+        assert llamadas == [siluetas.ESPIRITUS[0][1]], (
+            "después del diálogo debe verse igual sin destello activo"
+        )
+
+    def test_no_afecta_a_otras_fases_con_espiritu(self) -> None:
+        from src.stages.stage4_1.fases import FASES
+
+        rey_terciopelo, gavilan = FASES[2], FASES[3]
+        assert rey_terciopelo.apariciones_previas is False
+        assert gavilan.apariciones_previas is False
+
+
+class TestLasLomasDeLaFase3:
+    """AUD-297/470/477 — dos lomas de verdad (`Slope`, una pareja subida-
+    bajada cada una), no una sola joroba. El punto 6 de la crítica de
+    diseño (2026-08-14) pedía que el escenario «se enrolle» alrededor del
+    jugador en vez de leerse como una sola montaña; la colisión bajo cada
+    rampa se queda plana por el mismo motivo que ya documentó AUD-470."""
+
+    def test_hay_exactamente_seis_pendientes(self, escena) -> None:
+        """Dos lomas × (subida, cima llana, bajada) cada una (AUD-477: la
+        cima también es `Pendiente`, no bloque sólido — ver
+        `trazado.altura_de_colision`)."""
+        assert len(escena._stage_data.pendientes) == 6
+
+    def test_todas_estan_en_la_fase_3(self) -> None:
         from src.stages.stage4_1 import trazado
 
         for col, _fila, _ancho, _alto, _sube in trazado.loma():
             assert trazado.fase_de_la_columna(col) == 3
 
-    def test_la_colision_bajo_la_rampa_es_plana(self) -> None:
-        """El bug real que encontró jugarlo (AUD-470): un escalón sólido
-        por columna bloqueaba el paso antes de que el `Slope` interviniera."""
+    def test_la_segunda_loma_es_mas_alta_que_la_primera(self) -> None:
+        """El «cuello» de la serpiente, no dos jorobas iguales."""
         from src.stages.stage4_1 import trazado
 
-        alturas = {
-            trazado.altura_de_colision(c)
-            for c in range(trazado.LOMA_INICIO_SUBIDA, trazado.LOMA_FIN_SUBIDA)
-        }
-        assert alturas == {trazado.FILA_SUELO}, (
-            f"la colisión bajo la rampa ascendente no es plana: {alturas}"
+        primera, segunda = trazado.LOMAS_FASE3
+        fila_cima_primera = primera[4]
+        fila_cima_segunda = segunda[4]
+        assert fila_cima_segunda < fila_cima_primera, (
+            "la segunda loma debería subir más (fila más pequeña) que la "
+            "primera, no al revés ni igual"
         )
 
-    def test_se_sube_de_verdad_caminando(self, escena) -> None:
-        """Recorrido real con física: entra por la izquierda de la rampa y
-        camina hacia la derecha; a mitad de rampa tiene que haber subido."""
+    def test_la_colision_bajo_cada_rampa_es_plana(self) -> None:
+        """El bug real que encontró jugarlo (AUD-470): un escalón sólido
+        por columna bloqueaba el paso antes de que el `Slope` interviniera.
+        Se comprueba en las dos lomas, no sólo en la primera."""
         from src.stages.stage4_1 import trazado
 
-        col_entrada = trazado.LOMA_INICIO_SUBIDA - 5
+        for inicio_subida, ancho_subida, *_resto in trazado.LOMAS_FASE3:
+            alturas = {
+                trazado.altura_de_colision(c)
+                for c in range(inicio_subida, inicio_subida + ancho_subida)
+            }
+            assert alturas == {trazado.FILA_SUELO}, (
+                f"la colisión bajo la rampa que empieza en {inicio_subida} "
+                f"no es plana: {alturas}"
+            )
+
+    def test_hay_llano_de_verdad_entre_las_dos_lomas(self) -> None:
+        """Si no hay un tramo llano entre la bajada de la primera y la
+        subida de la segunda, son una sola joroba con un bache en medio,
+        no dos lomas separadas."""
+        from src.stages.stage4_1 import trazado
+
+        primera, segunda = trazado.LOMAS_FASE3
+        fin_primera = primera[0] + primera[1] + primera[2] + primera[3]
+        inicio_segunda = segunda[0]
+        assert inicio_segunda > fin_primera, (
+            f"la segunda loma (columna {inicio_segunda}) empieza antes de "
+            f"que termine la primera (columna {fin_primera})"
+        )
+        llano = {
+            trazado.altura_de_colision(c)
+            for c in range(fin_primera, inicio_segunda)
+        }
+        assert llano == {trazado.FILA_SUELO}, (
+            f"el tramo entre las dos lomas no es llano: {llano}"
+        )
+
+    def test_se_sube_y_se_baja_dos_veces_caminando(self, escena) -> None:
+        """Recorrido real con física, no teletransportado: entra antes de
+        la primera loma y camina a la derecha sin soltar el botón hasta
+        pasar las dos. Mide la forma de verdad —sube, baja al llano, sube
+        más, baja— en vez de sólo comprobar un delta al final, que es
+        exactamente lo que se le habría escapado a una sola muestra final
+        si las dos lomas se hubieran fundido en una.
+
+        Corta la serie por **columna de mundo conocida**, no por el valor
+        mínimo: `LOMAS_FASE3` ya dice exactamente dónde empieza y termina
+        cada loma, así que no hace falta adivinar dónde está el pico de
+        cada una con un detector genérico — y un detector genérico salió
+        mal en el primer intento (`git log`, este mismo AUD): con la cima
+        de una loma llana durante muchos fotogramas seguidos, buscar
+        `min() + .index()` sólo encuentra el *primer* fotograma de esa
+        meseta, y todo lo anterior ya incluye la subida de la loma
+        siguiente si las dos comparten la misma altura de fondo.
+        """
+        from src.stages.stage4_1 import trazado
+
+        primera, segunda = trazado.LOMAS_FASE3
+        col_entrada = primera[0] - 6
+
         _llevar_a(escena, col_entrada)
-        fila_inicial = escena._player.rect.centery
 
         im = escena.context.input_manager
         im.pump([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RIGHT)])
-        for _ in range(150):  # 2.5 s caminando a la derecha
+        muestras: list[tuple[float, int]] = []
+        for _ in range(1800):  # de sobra para cruzar las dos lomas caminando
             escena.update(1 / 60)
+            col = escena._player.rect.centerx / settings.TILE_SIZE
+            muestras.append((col, escena._player.rect.centery))
         im.pump([pygame.event.Event(pygame.KEYUP, key=pygame.K_RIGHT)])
 
-        subio = fila_inicial - escena._player.rect.centery
-        assert subio > 40, (
-            f"subió {subio} px en 2.5 s de caminata sobre la rampa — "
-            f"debería subir bastante más que eso"
+        def _minimo_entre(desde: float, hasta: float) -> int:
+            en_rango = [cy for col, cy in muestras if desde <= col <= hasta]
+            assert en_rango, (
+                f"el recorrido nunca llegó a las columnas {desde}-{hasta} "
+                f"en los fotogramas medidos — súbele el presupuesto"
+            )
+            return min(en_rango)
+
+        base = muestras[0][1]
+        fin_primera = primera[0] + primera[1] + primera[2] + primera[3]
+        inicio_segunda = segunda[0]
+        fin_segunda = segunda[0] + segunda[1] + segunda[2] + segunda[3]
+
+        cima_primera_loma = _minimo_entre(primera[0], fin_primera)
+        valle = _minimo_entre(fin_primera + 2, inicio_segunda - 2)
+        cima_segunda_loma = _minimo_entre(inicio_segunda, fin_segunda)
+
+        assert cima_primera_loma < base - 40, (
+            f"no subió de verdad en la primera loma: base={base}, "
+            f"mínimo={cima_primera_loma}"
+        )
+        assert valle > cima_primera_loma + 40, (
+            f"no bajó de vuelta al llano entre las dos lomas — se leería "
+            f"como una sola joroba, no dos: valle={valle} vs "
+            f"primera loma={cima_primera_loma}"
+        )
+        assert cima_segunda_loma < cima_primera_loma - 20, (
+            f"la segunda loma debería subir más que la primera: "
+            f"{cima_segunda_loma} vs {cima_primera_loma}"
         )
 
 
@@ -346,6 +531,53 @@ class TestElVientoDeLaFase3:
         assert len(vientos) == 1
         centro_col = vientos[0].rect.centerx // settings.TILE_SIZE
         assert trazado.fase_de_la_columna(centro_col) == 3
+
+
+class TestLaPausaDelDialogoDeLaSerpiente:
+    """GAP-061/AUD-480 — punto 19 de la crítica de diseño para la Fase 3
+    (2026-08-14): *«el jugador alcanza un descanso. El viento se detiene.
+    La tormenta baja. La Serpiente habla. Después: el viento vuelve.»*
+    No es el silencio total de la Fase 4 (eso tiene su propio mecanismo);
+    aquí el viento baja a una fracción de su fuerza alrededor del punto
+    donde habla el Rey Terciopelo."""
+
+    def _viento(self, escena):
+        from src.framework.ecs import ZonaDeViento
+
+        return next(z for _, z in escena._mundo.cada(ZonaDeViento))
+
+    def test_se_reduce_alrededor_del_dialogo(self, escena) -> None:
+        from src.stages.stage4_1 import trazado
+        from src.stages.stage4_1.fases import FASES
+
+        fase3 = FASES[2]
+        original = pygame.Vector2(self._viento(escena).fuerza)
+        col = fase3.desde_columna + trazado.DESVIO_COLUMNA_DIALOGO
+        _posicionar_sin_fisica(escena, col)
+        escena._actualizar_pausa_de_la_serpiente()
+        reducida = self._viento(escena).fuerza
+        assert reducida.length() < original.length() * 0.5
+
+    def test_vuelve_a_su_fuerza_normal_lejos_del_dialogo(self, escena) -> None:
+        from src.stages.stage4_1 import trazado
+        from src.stages.stage4_1.fases import FASES
+
+        fase3 = FASES[2]
+        original = pygame.Vector2(self._viento(escena).fuerza)
+        col_dialogo = fase3.desde_columna + trazado.DESVIO_COLUMNA_DIALOGO
+        _posicionar_sin_fisica(escena, col_dialogo)
+        escena._actualizar_pausa_de_la_serpiente()
+        assert self._viento(escena).fuerza.length() < original.length()
+
+        _posicionar_sin_fisica(escena, fase3.desde_columna + 5)
+        escena._actualizar_pausa_de_la_serpiente()
+        assert self._viento(escena).fuerza == original
+
+    def test_no_toca_el_viento_fuera_de_la_fase_3(self, escena) -> None:
+        original = pygame.Vector2(self._viento(escena).fuerza)
+        _posicionar_sin_fisica(escena, _dentro_de_la_fase(1))
+        escena._actualizar_pausa_de_la_serpiente()
+        assert self._viento(escena).fuerza == original
 
 
 class TestLaBrujaEsUnaPercepcionFalsa:
@@ -520,6 +752,57 @@ class TestLaSombraDelGavilan:
         assert escena._sombra_progreso >= 0.0
 
 
+class TestElGritoDelGavilanTieneDireccion:
+    """GAP-062/AUD-481 — puntos 4-5 y 23 de la crítica de diseño para la
+    Fase 4: *«pájaro → izquierda... ahora desde otra dirección»*. El motor
+    ya sabía hacer paneo estéreo por posición (`_play_sfx_spatial`,
+    `AudioManager.play_sfx_at`); el grito aislado del Gavilán llamaba al
+    canal ciego (`_play_sfx_named`) en su lugar."""
+
+    def _tras_el_silencio(self, escena):
+        from src.stages.stage4_1 import trazado
+        from src.stages.stage4_1.fases import FASES
+
+        fase4 = FASES[3]
+        objetivo = fase4.desde_columna + int(0.6 * trazado.ANCHO_SECCION)
+        _llevar_a(escena, objetivo)
+        assert escena._shake_disparado is True
+        return escena
+
+    def test_usa_el_canal_espacial_no_el_ciego(self, escena, monkeypatch) -> None:
+        # `_play_sfx_named` sigue en uso para OTROS sonidos de la Fase 4
+        # (el silencio súbito, `_actualizar_silencio_y_shake`) — sólo
+        # importa que el grito en concreto no pase por ahí.
+        espaciales = []
+        ciegos = []
+        monkeypatch.setattr(
+            escena, "_play_sfx_spatial",
+            lambda *a, **kw: espaciales.append(a),
+        )
+        monkeypatch.setattr(
+            escena, "_play_sfx_named",
+            lambda *a, **kw: ciegos.append(a),
+        )
+        self._tras_el_silencio(escena)
+        escena._proximo_grito = 0.0
+        escena._actualizar_grito_del_gavilan(1 / 60)
+        assert len(espaciales) == 1
+        assert espaciales[0][0] == "sfx_environment_grito_de_gavilan"
+        assert "sfx_environment_grito_de_gavilan" not in [c[0] for c in ciegos]
+
+    def test_la_direccion_varia_entre_gritos(self, escena, monkeypatch) -> None:
+        posiciones = []
+        monkeypatch.setattr(
+            escena, "_play_sfx_spatial",
+            lambda nombre, world_x, volume=1.0: posiciones.append(world_x),
+        )
+        self._tras_el_silencio(escena)
+        for _ in range(8):
+            escena._proximo_grito = 0.0
+            escena._actualizar_grito_del_gavilan(1 / 60)
+        assert len(set(posiciones)) > 1, "el grito siempre sonó desde el mismo sitio"
+
+
 class TestElPisoDeVisibilidadDeLaLuna:
     """AUD-476 — puntos 9-10 de la crítica de diseño: *«no puedo ver bien»
     no es lo mismo que «no puedo jugar»*. `AMBIENTE_MIN_LUNA` era 0,06 —
@@ -574,6 +857,68 @@ class TestElPisoDeVisibilidadDeLaLuna:
         assert min(valores) == pytest.approx(escena.AMBIENTE_MIN_LUNA, abs=1e-3)
 
 
+class TestLasGrietasAdelantadasDeLaFase5:
+    """GAP-063/AUD-482 — puntos 29-30 del documento de la Fase 5 (2026-08-14):
+    *«pequeñas luces verdes que empiezan a sustituir a la luna como guía»*.
+    El mecanismo ya existe (`GRIETAS_FASE6`, encendido por proximidad) pero
+    vivía enteramente dentro de la Fase 6 — el corte era seco en la
+    columna 750. Ahora unas pocas asoman antes, en el tramo final de la
+    Fase 5."""
+
+    def test_algunas_grietas_caen_en_la_fase_5(self) -> None:
+        from src.stages.stage4_1 import trazado
+
+        fases_de_las_grietas = {
+            trazado.fase_de_la_columna(c) for c in trazado.GRIETAS_FASE6
+        }
+        assert 5 in fases_de_las_grietas, (
+            "ninguna grieta anticipa la transición dentro de la Fase 5"
+        )
+        assert 6 in fases_de_las_grietas, (
+            "las grietas no deberían desaparecer de la Fase 6"
+        )
+
+    def test_las_grietas_de_la_fase_5_siguen_cerca_del_final(self) -> None:
+        """No deberían adelantarse tanto que aparezcan a mitad de la
+        Planicie de los Muertos — sólo en el tramo final, como anticipo."""
+        from src.stages.stage4_1 import trazado
+        from src.stages.stage4_1.fases import FASES
+
+        fase5 = FASES[4]
+        mitad_del_tramo = fase5.desde_columna + trazado.ANCHO_SECCION // 2
+        for col in trazado.GRIETAS_FASE6:
+            if trazado.fase_de_la_columna(col) == 5:
+                assert col > mitad_del_tramo
+
+
+class TestElTinteDeLaFase6:
+    """GAP-065 §11/AUD-483 — el documento de síntesis pide que la Fase 6
+    termine en «full color / verde sobrenatural», no sólo en color pleno
+    sin más: *«el verde debe tener significado... no lo usaría como simple
+    iluminación decorativa»*. Antes `tinte=None`; ahora se intensifica con
+    el avance, igual que ya hace el tinte vintage de la Fase 4."""
+
+    def test_la_fase_6_declara_un_tinte_verde(self) -> None:
+        from src.stages.stage4_1.fases import FASES
+
+        fase6 = FASES[5]
+        assert fase6.tinte is not None
+        (r, g, b), alfa = fase6.tinte
+        assert g > r and g > b, f"el tinte del despertar debería ser verde: {(r, g, b)}"
+        assert 0.0 < alfa <= 0.2, "demasiado fuerte para no leerse como un filtro"
+
+    def test_se_intensifica_al_avanzar_el_tramo(self, escena) -> None:
+        from src.stages.stage4_1 import trazado
+        from src.stages.stage4_1.fases import FASES
+
+        fase6 = FASES[5]
+        _posicionar_sin_fisica(escena, fase6.desde_columna + 3)
+        temprano = escena._post_processing._tint_alpha
+        _posicionar_sin_fisica(escena, fase6.desde_columna + trazado.ANCHO_SECCION - 1)
+        tarde = escena._post_processing._tint_alpha
+        assert tarde > temprano
+
+
 class TestLaSerpienteDeFondo:
     def test_solo_en_la_fase_3(self) -> None:
         from src.stages.stage4_1.fases import FASES
@@ -624,6 +969,89 @@ class TestElEasterEggPersonal:
         from src.stages.stage4_1 import trazado
 
         _llevar_a(escena, trazado.COLUMNA_LAPIDA_TERESA)
+        lienzo = pygame.Surface((800, 600), pygame.SRCALPHA)
+        escena.dibujar_fondo(lienzo, pygame.Vector2(0, 0))
+
+
+class TestLaAnomaliaAmbiguaDeLaFase1:
+    """GAP-059/AUD-478 — el punto 7 de la crítica de diseño del dueño
+    (2026-08-14): «si el jugador no la vio, no pasa nada; si la vio, ¿qué
+    fue eso?». Distinta del fantasma de Teresa —ésa se confirma con un
+    `MessageTrigger` y un nombre; esta anomalía no se confirma nunca: sin
+    sonido, sin disparador, sin diálogo, y visible menos de un segundo."""
+
+    def _entrar_a_fase_1(self, escena) -> None:
+        _posicionar_sin_fisica(escena, _dentro_de_la_fase(1))
+        assert escena.fase.numero == 1
+
+    def test_dura_menos_de_un_segundo(self, escena) -> None:
+        assert escena.DURACION_ANOMALIA_FASE1 < 1.0
+
+    def test_no_se_dibuja_si_no_esta_activa(self, escena, monkeypatch) -> None:
+        from src.stages.stage4_1 import siluetas
+
+        llamadas = []
+        monkeypatch.setattr(
+            siluetas, "dibujar_contorno",
+            lambda *a, **kw: llamadas.append(a),
+        )
+        self._entrar_a_fase_1(escena)
+        escena._anomalia_fase1 = 0.0
+        escena._dibujar_anomalia_fase1(pygame.Surface((800, 600)), pygame.Vector2())
+        assert llamadas == []
+
+    def test_se_dibuja_mientras_esta_activa(self, escena, monkeypatch) -> None:
+        from src.stages.stage4_1 import siluetas, trazado
+
+        llamadas = []
+        monkeypatch.setattr(
+            siluetas, "dibujar_contorno",
+            lambda *a, **kw: llamadas.append(a[1]),  # la forma es el 2º posicional
+        )
+        self._entrar_a_fase_1(escena)
+        escena._anomalia_fase1 = escena.DURACION_ANOMALIA_FASE1
+        # La figura se ancla al mundo, no a la pantalla (a diferencia de la
+        # Bruja) — hay que centrar la cámara sobre su columna para que
+        # caiga dentro de los límites de pantalla que comprueba el dibujo.
+        centro_x = trazado.COLUMNA_ANOMALIA_FASE1 * trazado.TS - settings.INTERNAL_WIDTH / 2
+        escena._dibujar_anomalia_fase1(
+            pygame.Surface((800, 600)), pygame.Vector2(centro_x, 0))
+        assert llamadas == [siluetas._figura_lejana]
+
+    def test_solo_ocurre_dentro_de_la_fase_1(self, escena) -> None:
+        """Al salir de la Fase 1 el contador se apaga — no se queda a
+        medias esperando volver, igual que `_bruja_este_rayo` se reinicia
+        al salir de la Fase 3."""
+        self._entrar_a_fase_1(escena)
+        escena._anomalia_fase1 = escena.DURACION_ANOMALIA_FASE1
+        _posicionar_sin_fisica(escena, _dentro_de_la_fase(2))
+        escena._actualizar_anomalia_fase1(1 / 60)
+        assert escena._anomalia_fase1 == 0.0
+
+    def test_eventualmente_ocurre_dentro_de_la_fase(self, escena) -> None:
+        """Forzando el temporizador a cero —igual que ya hace
+        `TestLaSombraDelGavilan.test_cruza_tras_el_silencio`—, sin
+        depender de cuánto tarde el azar de verdad."""
+        self._entrar_a_fase_1(escena)
+        escena._proxima_anomalia_fase1 = 0.0
+        escena._actualizar_anomalia_fase1(1 / 60)
+        assert escena._anomalia_fase1 > 0.0
+
+    def test_no_toca_sonido_ni_dialogo_ni_disparadores(self, escena) -> None:
+        """Es lo que la vuelve «ambigua» y no un evento: sin bus, sin
+        `Disparador`, sin `MessageTrigger` — sólo dibujo, igual que la
+        Bruja de la Fase 3 (AUD-475)."""
+        self._entrar_a_fase_1(escena)
+        antes = len(escena._stage_data.disparadores)
+        disparados_antes = [mt.triggered for mt in escena._stage_data.message_triggers]
+        escena._anomalia_fase1 = escena.DURACION_ANOMALIA_FASE1
+        escena._dibujar_anomalia_fase1(pygame.Surface((800, 600)), pygame.Vector2())
+        assert len(escena._stage_data.disparadores) == antes
+        assert [mt.triggered for mt in escena._stage_data.message_triggers] == disparados_antes
+
+    def test_no_revienta_dibujandola(self, escena) -> None:
+        self._entrar_a_fase_1(escena)
+        escena._anomalia_fase1 = escena.DURACION_ANOMALIA_FASE1
         lienzo = pygame.Surface((800, 600), pygame.SRCALPHA)
         escena.dibujar_fondo(lienzo, pygame.Vector2(0, 0))
 
@@ -726,18 +1154,82 @@ class TestElDialogoDeLosTresEspiritus:
             assert arbol["start"] in arbol["nodes"]
 
 
-class TestElMapaSigueAtadoASuGenerador:
-    def test_el_tmx_es_el_que_produce_el_script(self) -> None:
-        import sys
-        from pathlib import Path
+def _generador():
+    """El módulo del generador, importable desde `tools/`."""
+    import sys
+    from pathlib import Path
 
-        raiz = Path(__file__).resolve().parent.parent
+    raiz = Path(__file__).resolve().parent.parent
+    if str(raiz / "tools") not in sys.path:
         sys.path.insert(0, str(raiz / "tools"))
-        from generate_stage4_1 import DESTINO, generar
+    import generate_stage4_1
 
-        assert DESTINO.read_text(encoding="utf-8") == generar(), (
-            "stage4_1.tmx no coincide con su generador: ejecuta "
-            "`python tools/generate_stage4_1.py`"
+    return generate_stage4_1
+
+
+class TestElMapaSigueAtadoASuGenerador:
+    """AUD-495 — esto comparaba el TMX con `generar()` **byte a byte**, y
+    dejó de funcionar en cuanto el mapa se abrió en Tiled para pintarle el
+    arte de la Fase 1: al guardar, Tiled sube su `tiledversion`, reordena
+    las propiedades alfabéticamente, normaliza los flotantes (`70.0` → `70`)
+    y cierra los objetos vacíos con `/>`. Ninguna de esas diferencias
+    cambia el nivel, y perseguirlas sería reimplementar el serializador de
+    Tiled — que volvería a cambiar en la versión siguiente.
+
+    Lo que AUD-115 quería proteger de verdad sigue protegido aquí, y con
+    los mismos dientes: que la geometría no se separe de `trazado.py`.
+    """
+
+    def test_la_geometria_es_la_del_generador(self) -> None:
+        fallos = _generador().comparar_geometria()
+        assert not fallos, (
+            "la geometría del mapa ya no es la de trazado.py: "
+            + "; ".join(fallos)
+        )
+
+    def test_el_arte_pintado_a_mano_no_se_compara(self) -> None:
+        """La otra mitad del contrato: las capas de arte son de quien las
+        pinta en Tiled, y el generador no opina sobre ellas."""
+        gen = _generador()
+        geo = gen.geometria_de(gen.DESTINO.read_text(encoding="utf-8"))
+        for capa in gen.CAPAS_DE_ARTE:
+            assert capa not in geo["capas"]
+        assert "Terrain" in geo["capas"], (
+            "el suelo SÍ es del generador y tiene que seguir comparándose"
+        )
+
+    def test_una_diferencia_real_de_geometria_se_nota(self) -> None:
+        """Sin esto, la prueba de arriba pasaría aunque no comparara nada."""
+        gen = _generador()
+        original = gen.geometria_de(gen.generar())
+        movido = gen.geometria_de(gen.generar().replace(
+            '<layer id="4" name="Terrain"', '<layer id="4" name="Terrain" ',
+        ).replace(",2,2,2,2,2,2", ",0,0,0,0,0,0", 1))
+        assert movido != original
+
+
+class TestRegenerarNoBorraElArte:
+    """AUD-495 — el pie de plomo. El 4-1 tiene 13 240 celdas pintadas a
+    mano; `generar()` escribe esas capas a ceros, así que ejecutar el
+    generador sin más las borraba todas y sin aviso."""
+
+    def test_el_mapa_actual_tiene_arte_que_proteger(self) -> None:
+        assert _generador().tiene_arte_pintado() is True
+
+    def test_un_mapa_sin_arte_no_dispara_el_seguro(self, tmp_path) -> None:
+        import xml.etree.ElementTree as ET
+
+        gen = _generador()
+        crudo = gen.generar()
+        raiz = ET.fromstring(crudo)
+        pintadas = [
+            c.get("name") for c in raiz.findall("layer")
+            if c.get("name") in gen.CAPAS_DE_ARTE
+            and any(g.strip() not in ("", "0")
+                    for g in (c.findtext("data") or "").split(","))
+        ]
+        assert pintadas == [], (
+            "lo que produce el generador no debería traer arte pintado"
         )
 
 

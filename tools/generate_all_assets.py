@@ -1230,121 +1230,250 @@ def _cruz(draw, x, base, alto, color):
                    fill=color)
 
 
-def _gen_bg_final_far(path, w=320, h=224):
-    """Capa lejana: cielo, estrellas, colinas y el círculo de piedra.
+# AUD-480 — pixel art de verdad, no vector plano escalado
+# ============================================================
+# Las tres capas de abajo (AUD-209) eran una silueta correcta pero
+# dibujada directamente a la resolución final con las primitivas de PIL:
+# eso da bordes lisos — vector plano, no pixel art, por mucho que el
+# color sea sólido. El dueño lo señaló viendo el resultado (no se veía
+# como las referencias que mandó: verja de hierro, arco con puerta,
+# lápidas con "RIP" tallado, luna grande, árboles muertos).
+#
+# La técnica que sí se lee como pixel art: dibujar en un lienzo **chico**
+# (`_ESCALA_PX` veces más pequeño que el final) y escalar hacia arriba
+# con vecino más cercano (`Image.NEAREST`, nunca `BICUBIC`/`LANCZOS`) —
+# así el bloque de píxel queda visible a propósito, que es lo que
+# distingue el pixel art de un dibujo vectorial con colores planos.
+_ESCALA_PX = 4
 
-    No lleva luna. La dibuja la escena (`stage4_1.py::_dibujar_luna`), porque
-    en este nivel la luna **baja acto a acto**: pintarla aquí la dejaría clavada
-    en el sitio y el reloj del nivel dejaría de moverse.
+#: Fuente de bloque 3×5 para "RIP" tallado en las lápidas — un cuerpo de
+#: letra por píxel del lienzo chico, nada de fuente TrueType: a esta
+#: resolución una tipografía de verdad se volvería ilegible o pediría
+#: anti-aliasing, que rompería el bloque de píxel del resto de la imagen.
+_FUENTE_3X5 = {
+    "R": ["111", "101", "111", "110", "101"],
+    "I": ["111", "010", "010", "010", "111"],
+    "P": ["111", "101", "111", "100", "100"],
+}
+
+
+def _texto_rip(draw, x, y, color):
+    cursor = x
+    for letra in "RIP":
+        for fy, fila in enumerate(_FUENTE_3X5[letra]):
+            for fx, bit in enumerate(fila):
+                if bit == "1":
+                    draw.point((cursor + fx, y + fy), fill=color)
+        cursor += 4
+
+
+def _luna_llena(draw, cx, cy, radio, rng):
+    base, sombra = (232, 226, 190), (206, 198, 158)
+    draw.ellipse((cx - radio, cy - radio, cx + radio, cy + radio), fill=base)
+    for _ in range(6):
+        ang = rng.uniform(0, math.tau)
+        rad = rng.uniform(0, radio * 0.7)
+        px, py = cx + math.cos(ang) * rad, cy + math.sin(ang) * rad
+        cr = rng.uniform(1, max(2, radio * 0.14))
+        draw.ellipse((px - cr, py - cr, px + cr, py + cr), fill=sombra)
+
+
+def _nube_plana(draw, cx, cy, ancho, alto, color):
+    draw.ellipse((cx - ancho, cy - alto, cx + ancho * 0.5, cy + alto), fill=color)
+    draw.ellipse((cx - ancho * 0.3, cy - alto * 1.3, cx + ancho, cy + alto * 0.6),
+                  fill=color)
+
+
+def _arbol_muerto_px(draw, x, base, alto, color, semilla):
+    """Árbol muerto ramificado — pura silueta, sin follaje: la Fase 1
+    todavía no es el bosque cortado de la Fase 4."""
+    r = random.Random(semilla)
+
+    def rama(x, y, ang, largo):
+        if largo < 3:
+            return
+        x2 = x + math.cos(ang) * largo
+        y2 = y - math.sin(ang) * largo
+        draw.line((x, y, x2, y2), fill=color, width=1)
+        if largo > 5:
+            rama(x2, y2, ang + r.uniform(0.4, 0.7), largo * 0.65)
+            rama(x2, y2, ang - r.uniform(0.4, 0.7), largo * 0.65)
+
+    rama(x, base, math.pi / 2 + r.uniform(-0.1, 0.1), alto)
+
+
+def _verja_hierro(draw, x0, x1, base, alto, color, paso=5):
+    """Verja de hierro forjado con punta de lanza — el elemento que más
+    identifica las referencias del dueño, y el que más faltaba en la
+    versión anterior (que sólo tenía barrotes verticales sin remate)."""
+    draw.rectangle((x0, base - alto, x1, base - alto + 1), fill=color)
+    draw.rectangle((x0, base - 2, x1, base - 1), fill=color)
+    x = x0
+    while x < x1:
+        draw.line((x, base - alto, x, base), fill=color)
+        draw.point((x, base - alto - 1), fill=color)
+        x += paso
+
+
+def _arco_con_puerta(draw, cx, base, ancho, alto, color, sombra, reja):
+    """El arco de entrada, a juego con la verja: columnas con junta de
+    mortero, medio círculo, y una puerta de barrotes en el hueco — no un
+    arco vacío, que es lo que hacía el círculo de monolitos de la versión
+    anterior (arte de un diseño de pozo que este pasillo ya no tiene)."""
+    x0, x1 = cx - ancho // 2, cx + ancho // 2
+    col_ancho = max(2, ancho // 7)
+    for cxi, es_der in ((x0, False), (x1 - col_ancho, True)):
+        draw.rectangle((cxi, base - alto, cxi + col_ancho, base), fill=color)
+        if es_der:
+            draw.rectangle((cxi + col_ancho - 1, base - alto, cxi + col_ancho, base),
+                            fill=sombra)
+    arco_r = ancho * 0.42
+    cy = base - alto + arco_r
+    draw.pieslice((cx - arco_r, cy - arco_r, cx + arco_r, cy + arco_r),
+                  180, 360, fill=color)
+    r_int = max(1, arco_r - col_ancho)
+    draw.pieslice((cx - r_int, cy - r_int, cx + r_int, cy + r_int), 180, 360,
+                  fill=CEM_CIELO_ALTO)
+    x = int(cx - r_int + 1)
+    while x < cx + r_int - 1:
+        draw.line((x, cy, x, base), fill=reja)
+        x += 2
+
+
+def _lapida_con_texto(draw, x, base, ancho, alto, color, sombra, con_cruz=False):
+    """Lápida con volumen (sombra plana a un lado, no degradado) y "RIP"
+    o una cruz tallada — la pieza que más faltaba: la versión anterior
+    dibujaba un rectángulo con la cabeza redonda y nada más."""
+    top = base - alto
+    redondeo = max(2, ancho // 3)
+    draw.rectangle((x, top + redondeo, x + ancho, base), fill=color)
+    draw.pieslice((x, top, x + ancho, top + redondeo * 2), 180, 360, fill=color)
+    sw = max(1, ancho // 4)
+    draw.rectangle((x + ancho - sw, top + redondeo, x + ancho, base), fill=sombra)
+    if con_cruz:
+        cx = x + ancho // 2
+        draw.rectangle((cx, top + redondeo + 1, cx, base - 1), fill=(60, 56, 50))
+        draw.rectangle((cx - 1, top + redondeo + 2, cx + 1, top + redondeo + 3),
+                        fill=(60, 56, 50))
+    else:
+        _texto_rip(draw, x + max(1, (ancho - 12) // 2), top + redondeo + 2,
+                   (60, 56, 50))
+
+
+def _gen_bg_final_far(path, w=320, h=224):
+    """Capa lejana: cielo, luna, nubes y colinas — pixel art de verdad
+    (AUD-480): se dibuja a `_ESCALA_PX` veces menos resolución y se
+    escala con vecino más cercano, así el bloque de píxel se ve.
+
+    La luna **no se anima aquí**: la escena (`stage4_1.py`, ciclo de la
+    Fase 5) la mueve por separado. Esta es la luna llena de fondo, visible
+    en las fases donde no hay ciclo — coherente con las referencias, que
+    la ponen grande y fija en el cielo.
     """
     _ensure(path)
-    img = _gradient(w, h, CEM_CIELO_ALTO, CEM_CIELO_BAJO)
+    ew, eh = w // _ESCALA_PX, h // _ESCALA_PX
+    img = Image.new("RGB", (ew, eh))
     draw = ImageDraw.Draw(img)
     rng = random.Random(410)
-    horizonte = int(h * CEM_HORIZONTE)
-    for _ in range(70):
-        sx, sy = rng.randint(0, w - 1), rng.randint(0, int(horizonte * 0.8))
-        br = rng.randint(90, 200)
-        draw.point((sx, sy), fill=(br, br, int(br * 0.95)))
+    horizonte = int(eh * CEM_HORIZONTE)
 
-    # Colinas: dos crestas bajas, la de atrás más clara, para que el horizonte
-    # tenga profundidad sin necesitar más capas.
-    for cresta, tinte in ((horizonte - 16, (26, 20, 40)),
-                          (horizonte, (18, 14, 30))):
-        pts = [(0, h)]
-        for i in range(13):
-            pts.append((i * w // 12, cresta + rng.randint(-7, 7)))
-        pts.append((w, h))
+    for y in range(horizonte):
+        t = y / max(horizonte - 1, 1)
+        c = tuple(int(CEM_CIELO_ALTO[i] + (CEM_CIELO_BAJO[i] - CEM_CIELO_ALTO[i]) * t)
+                   for i in range(3))
+        draw.line((0, y, ew, y), fill=c)
+
+    color_nube = (26, 20, 42)
+    _nube_plana(draw, ew * 0.20, eh * 0.16, ew * 0.05, eh * 0.03, color_nube)
+    _nube_plana(draw, ew * 0.68, eh * 0.10, ew * 0.06, eh * 0.04, color_nube)
+
+    _luna_llena(draw, int(ew * 0.16), int(eh * 0.18), max(4, int(ew * 0.08)), rng)
+
+    # Colinas: dos crestas, la de atrás más clara — profundidad sin capas
+    # de más.
+    for cresta, tinte in ((horizonte - eh * 0.09, (32, 25, 46)),
+                          (horizonte, (20, 15, 32))):
+        pts = [(0, eh)]
+        for i in range(9):
+            pts.append((i * ew // 8, cresta + rng.randint(-2, 2)))
+        pts.append((ew, eh))
         draw.polygon(pts, fill=tinte)
 
-    # El círculo de piedra del acto V (§1 del diseño): siete monolitos en la
-    # línea del horizonte. Se ve desde el primer acto — es el sitio al que se
-    # camina durante todo el nivel, así que tiene que asomar **por encima** del
-    # campo de lápidas de la capa media, no perderse entre ellas.
-    base = horizonte - 10
-    for i, alto in enumerate((26, 36, 44, 50, 44, 36, 26)):
-        mx = int(w * 0.56) + i * 11
-        draw.rectangle((mx, base - alto, mx + 7, base), fill=(40, 36, 54))
-        # El dintel: dos piedras de pie y una encima es lo que hace que se lea
-        # como un círculo ceremonial y no como una valla.
-        if i in (1, 4):
-            draw.rectangle((mx - 2, base - alto - 5, mx + 20, base - alto),
-                           fill=(46, 42, 60))
-    img.save(path)
+    draw.rectangle((0, horizonte, ew, eh), fill=CEM_CIELO_BAJO)
+    img.resize((w, h), Image.NEAREST).save(path)
 
 
 def _gen_bg_final_mid(path, w=640, h=224):
-    """Capa media: el campo de lápidas, en silueta contra el cielo."""
+    """Capa media: la verja de hierro y el arco de entrada — el elemento
+    que más faltaba (AUD-480), calcado de las referencias del dueño."""
     _ensure(path)
-    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    ew, eh = w // _ESCALA_PX, h // _ESCALA_PX
+    img = Image.new("RGBA", (ew, eh), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     rng = random.Random(411)
-    horizonte = int(h * CEM_HORIZONTE)
+    horizonte = int(eh * CEM_HORIZONTE)
 
-    # Dos hileras. La de atrás es más pequeña y más clara: la misma piedra a más
-    # distancia, que es lo que convierte una fila de rectángulos en un campo.
-    for fila, (base, escala, color) in enumerate((
-        (horizonte - 14, 0.7, (44, 42, 56)),
-        (horizonte + 2, 1.0, CEM_PIEDRA),
-    )):
-        x = rng.randint(0, 20)
-        while x < w:
-            alto = int(rng.randint(14, 26) * escala)
-            ancho = int(rng.randint(7, 11) * escala)
-            if rng.random() < 0.25:
-                _cruz(draw, x, base, alto, color)
-            else:
-                _lapida(draw, x, base, ancho, alto, color)
-            # Un resplandor verde muy tenue al pie de algunas: son las que
-            # tienen nombre. El lore le pone al cementerio «luz espectral
-            # verde», y esto es lo que la pone en el fondo y no sólo en las
-            # partículas.
-            if fila == 1 and rng.random() < 0.3:
-                halo = Image.new("RGBA", (24, 12), (0, 0, 0, 0))
-                ImageDraw.Draw(halo).ellipse((0, 0, 23, 11),
-                                             fill=(*CEM_VERDE, 26))
-                img.paste(halo, (x - 6, base - 5), halo)
-            x += int(rng.randint(22, 40) * escala)
+    color_verja = (58, 84, 96)
+    # Un arco por tramo de pantalla, para que se note recorriendo el
+    # pasillo sin que la capa se lea vacía entre uno y otro.
+    paso_arco = int(ew * 0.5)
+    x = paso_arco // 2
+    while x < ew:
+        arco_x0, arco_x1 = x - 9, x + 9
+        _verja_hierro(draw, max(0, x - paso_arco // 2 + 4), arco_x0,
+                      horizonte + 6, 8, color_verja)
+        _verja_hierro(draw, arco_x1, min(ew, x + paso_arco // 2 - 4),
+                      horizonte + 6, 8, color_verja)
+        _arco_con_puerta(draw, x, horizonte + 6, 19, 11,
+                         (100, 108, 118), (70, 76, 86), color_verja)
+        x += paso_arco
 
-    # El suelo del fondo, para que las lápidas se apoyen en algo.
-    draw.rectangle((0, horizonte + 2, w, h), fill=CEM_TIERRA)
-    img.save(path)
+    # Lápidas pequeñas al fondo, entre los arcos.
+    piedra = (78, 76, 90)
+    piedra_sombra = (54, 52, 64)
+    xi = 4
+    while xi < ew:
+        if rng.random() < 0.6:
+            _lapida_con_texto(draw, xi, horizonte + 6, rng.randint(4, 6),
+                              rng.randint(5, 8), piedra, piedra_sombra,
+                              con_cruz=rng.random() < 0.4)
+        xi += rng.randint(10, 16)
+
+    draw.rectangle((0, horizonte + 6, ew, eh), fill=CEM_TIERRA)
+    img.resize((w, h), Image.NEAREST).save(path)
 
 
 def _gen_bg_final_near(path, w=960, h=224):
-    """Capa cercana: árboles secos y la verja."""
+    """Capa cercana: lápidas con "RIP" tallado, árboles muertos y el
+    suelo de pasto sobre tierra — pixel art de verdad (AUD-480)."""
     _ensure(path)
-    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    ew, eh = w // _ESCALA_PX, h // _ESCALA_PX
+    img = Image.new("RGBA", (ew, eh), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     rng = random.Random(412)
-    horizonte = int(h * CEM_HORIZONTE)
-    tronco = (20, 16, 24)
+    horizonte = int(eh * CEM_HORIZONTE)
 
-    def _rama(x, y, angulo, largo, nivel):
-        """Una rama que se parte en dos hasta agotarse. Tres niveles bastan
-        para que el árbol se lea como seco y no como un poste."""
-        if nivel == 0 or largo < 4:
-            return
-        x2 = x + math.cos(angulo) * largo
-        y2 = y - math.sin(angulo) * largo
-        draw.line((x, y, x2, y2), fill=tronco, width=max(1, nivel))
-        _rama(x2, y2, angulo + rng.uniform(0.3, 0.7), largo * 0.62, nivel - 1)
-        _rama(x2, y2, angulo - rng.uniform(0.3, 0.7), largo * 0.62, nivel - 1)
+    color_arbol = (12, 10, 18)
+    for x in range(20, ew, 90):
+        _arbol_muerto_px(draw, x, horizonte + 2, rng.randint(14, 20),
+                         color_arbol, x)
 
-    for tx in range(30, w, 150):
-        suelo = horizonte + 6
-        alto = rng.randint(60, 90)
-        draw.line((tx, suelo, tx, suelo - alto), fill=tronco, width=4)
-        for _ in range(3):
-            _rama(tx, suelo - alto + rng.randint(0, 12),
-                  rng.uniform(0.6, 2.5), alto * 0.45, 3)
+    piedra = (150, 148, 140)
+    piedra_sombra = (108, 106, 100)
+    x = 6
+    while x < ew:
+        ancho, alto = rng.randint(9, 13), rng.randint(9, 15)
+        _lapida_con_texto(draw, x, horizonte + 4, ancho, alto, piedra,
+                          piedra_sombra, con_cruz=rng.random() < 0.35)
+        x += rng.randint(26, 42)
 
-    # La verja: barrotes y pasamanos. Cierra el cementerio por delante.
-    draw.rectangle((0, horizonte - 2, w, horizonte), fill=(26, 24, 32))
-    for bx in range(0, w, 12):
-        draw.rectangle((bx, horizonte - 10, bx + 1, horizonte), fill=(26, 24, 32))
-    draw.rectangle((0, horizonte + 6, w, h), fill=CEM_TIERRA)
-    img.save(path)
+    pasto_alto = max(2, int(eh * 0.05))
+    draw.rectangle((0, horizonte + 4, ew, horizonte + 4 + pasto_alto),
+                    fill=(46, 92, 40))
+    draw.rectangle((0, horizonte + 4, ew, horizonte + 5), fill=(58, 110, 50))
+    draw.rectangle((0, horizonte + 4 + pasto_alto, ew, eh), fill=CEM_TIERRA)
+
+    img.resize((w, h), Image.NEAREST).save(path)
 
 
 # ── Splash/title/story backgrounds ──

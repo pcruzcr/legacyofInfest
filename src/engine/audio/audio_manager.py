@@ -64,18 +64,6 @@ class AudioManager:
         # buses más —voz y ambiente— que antes colgaban de «efectos».
         self.mezcla: Mezclador = Mezclador()
 
-        # Dynamic music layers
-        self._calm_channel: pygame.mixer.Channel | None = None
-        self._combat_channel: pygame.mixer.Channel | None = None
-        self._calm_sound: pygame.mixer.Sound | None = None
-        self._combat_sound: pygame.mixer.Sound | None = None
-        self._intensity: float = 0.0
-        self._target_intensity: float = 0.0
-        self._crossfade_speed: float = 1.0
-        self._calm_volume: float = 1.0
-        self._combat_volume: float = 0.0
-        self._dynamic_music_active: bool = False
-
         # Ambient audio layers
         self._ambient_sound: pygame.mixer.Sound | None = None
         self._ambient_channel: pygame.mixer.Channel | None = None
@@ -90,6 +78,15 @@ class AudioManager:
     # *is* wired into StageScene. Two rival implementations of one feature, one
     # of them dead, is worse than one: it doubles the surface that can rot and
     # makes it unclear which is authoritative. The dead copy has been removed.
+    #
+    # AUD-487: the *fields* that backed it (``_calm_channel``, ``_combat_channel``,
+    # ``_intensity``, five more) survived that cleanup — declared in ``__init__``,
+    # read and written only by ``_stop_layered_channels`` below, which existed
+    # solely to reset them. Nothing outside this file ever referenced any of
+    # them (checked across ``src/``, ``tests/``, ``scripts/``, ``tools/``), so
+    # they were always ``None``/``False`` and the "stop" method always did
+    # nothing. Removed with the method: a reader tracing this class no longer
+    # runs into a second, silently-inert crossfade system that looks live.
 
     def play_music(self, path: str | Path, loops: int = -1, fundido_ms: int = 0) -> None:
         """Play background music. -1 loops = infinite. Falls back silently.
@@ -154,22 +151,6 @@ class AudioManager:
         if self._mixer_listo():
             pygame.mixer.music.stop()
         self._current_music = None
-        self._stop_layered_channels()
-
-    def _stop_layered_channels(self) -> None:
-        """Silence the calm/combat crossfade channels if they are running.
-
-        Retained from the removed dynamic-music layer (see the note above
-        ``play_music``) because the channels are still allocated in ``__init__``
-        and must be stopped when music stops.
-        """
-        self._dynamic_music_active = False
-        if self._calm_channel:
-            self._calm_channel.stop()
-        if self._combat_channel:
-            self._combat_channel.stop()
-        self._calm_sound = None
-        self._combat_sound = None
 
     def pause_music(self) -> None:
         """Pause current music."""

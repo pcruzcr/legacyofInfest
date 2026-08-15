@@ -31,7 +31,9 @@ y contando `entity_list`.
 """
 from __future__ import annotations
 
+import argparse
 import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -45,11 +47,11 @@ from src.stages.stage4_1.trazado import (  # noqa: E402
     ARBOLES_FASE4,
     COLUMNA_LAPIDA_HUGO,
     COLUMNA_LAPIDA_TERESA,
+    DESVIO_COLUMNA_DIALOGO,
+    DESVIO_COLUMNA_LIBERACION,
     FRENO_DEL_LODO,
     FRENO_DEL_MUSGO,
     HUESOS_FASE3,
-    LOMA_FIN_BAJADA,
-    LOMA_INICIO_SUBIDA,
     MH,
     MURO_ANCHO,
     MW,
@@ -60,10 +62,13 @@ from src.stages.stage4_1.trazado import (  # noqa: E402
     TS,
     TUMBAS_FASE5,
     checkpoints,
+    es_meseta,
     evento_de_liberacion,
+    extremos_de_las_lomas,
     fase_de_la_columna,
     grietas_de_pisada,
     loma,
+    mesetas_de_las_lomas,
     perfil_de_colision,
     perfil_del_suelo,
 )
@@ -190,12 +195,24 @@ def _colisiones() -> list[str]:
     # (AUD-470): la colisión de la rampa se queda plana y es el `Slope`
     # quien empuja al jugador hacia arriba — un escalón sólido por columna
     # bloqueaba el paso antes de que el `Slope` llegara a intervenir.
+    #
+    # AUD-477 — las mesetas de las lomas (`es_meseta`) tampoco llevan bloque
+    # sólido: las cubre un `Pendiente` prácticamente plano
+    # (`mesetas_de_las_lomas`, más abajo). Un recorrido real encontró que
+    # una meseta sólida justo al final de una rampa deja al jugador clavado
+    # en la unión —el AABB del fotograma usa la `y` con la que la rampa
+    # **aún no** llegó del todo a la altura de la meseta— sin que importe
+    # cuán suave sea la rampa; el detalle completo vive en
+    # `trazado.py::altura_de_colision`.
     perfil = perfil_de_colision()
     inicio = MURO_ANCHO
     for x in range(MURO_ANCHO + 1, MW - MURO_ANCHO + 1):
-        if x == MW - MURO_ANCHO or perfil[x] != perfil[inicio]:
-            fila = perfil[inicio]
-            solido(inicio * TS, fila * TS, (x - inicio) * TS, (MH - fila) * TS)
+        cambia = (x == MW - MURO_ANCHO or perfil[x] != perfil[inicio]
+                  or es_meseta(x) != es_meseta(inicio))
+        if cambia:
+            if not es_meseta(inicio):
+                fila = perfil[inicio]
+                solido(inicio * TS, fila * TS, (x - inicio) * TS, (MH - fila) * TS)
             inicio = x
 
     return r
@@ -275,7 +292,7 @@ def _objetos() -> list[str]:
     for fase in FASES:
         if fase.dialogo_id is None:
             continue
-        col = fase.desde_columna + 60
+        col = fase.desde_columna + DESVIO_COLUMNA_DIALOGO
         obj("MessageTrigger_Once", col * TS, (perfil[col] - 3) * TS, 32, 32,
             dialogue=fase.dialogo_id)
 
@@ -292,7 +309,7 @@ def _objetos() -> list[str]:
     for fase in FASES:
         if fase.espiritu is None:
             continue
-        col = fase.desde_columna + 68
+        col = fase.desde_columna + DESVIO_COLUMNA_LIBERACION
         obj("EventTrigger", col * TS, (perfil[col] - 3) * TS, 48, 32,
             evento=evento_de_liberacion(fase.numero), automatico=False)
 
@@ -306,14 +323,24 @@ def _objetos() -> list[str]:
             obj("FrictionZone", inicio * TS, (fila - 2) * TS, ancho * TS, 2 * TS,
                 multiplicador=FRENO_DEL_LODO)
 
-    # ── La loma de la Fase 3: dos `Slope` reales ────────────────
+    # ── Las lomas de la Fase 3: dos parejas de `Slope` reales (AUD-477) ──
     for lx, lfila_arriba, lancho, lalto, lsube in loma():
         obj("Slope", lx * TS, lfila_arriba * TS, lancho * TS, lalto * TS,
             sube=lsube)
 
+    # ── Las cimas llanas: 1 px de alto, no 0 (ver `mesetas_de_las_lomas`,
+    # el porqué del píxel en vez de la fila) ──
+    for mx, mfila, mancho in mesetas_de_las_lomas():
+        obj("Slope", mx * TS, mfila * TS, mancho * TS, 1, sube="derecha")
+
     # ── El viento de la Fase 3 («carácter ventoso» de Tilarán) ──
-    obj("WindZone", (LOMA_INICIO_SUBIDA - 40) * TS, 0,
-        (LOMA_FIN_BAJADA - LOMA_INICIO_SUBIDA + 80) * TS, MH * TS,
+    #
+    # Cubre las dos lomas, no sólo la primera que se declaró — el margen
+    # (40 antes, 80 después) es el mismo de siempre, ahora medido desde los
+    # extremos reales de `LOMAS_FASE3` en vez de una sola loma con nombre.
+    _inicio_lomas, _fin_lomas = extremos_de_las_lomas()
+    obj("WindZone", (_inicio_lomas - 40) * TS, 0,
+        (_fin_lomas - _inicio_lomas + 80) * TS, MH * TS,
         fuerza_x=-60.0, fuerza_y=0.0, periodo=3.2)
 
     # ── Las grietas de la Fase 6, apagadas: las enciende la escena ──
@@ -380,13 +407,158 @@ tilecount="{TS_TOTAL}" columns="{TS_COLUMNAS}">
 """
 
 
+#: Las capas que pinta una persona en Tiled y que el generador no produce.
+#: `Terrain` no está aquí: la geometría es del código (`trazado.py`), y que
+#: siga siéndolo es justo lo que defiende `comparar_geometria`.
+CAPAS_DE_ARTE: tuple[str, ...] = (
+    "BG_Far", "BG_Mid", "BG_Near", "Terrain_Detail", "FG_Overlay",
+)
+
+
+def _normalizar(valor: str) -> str:
+    """`0.60`, `0.6` y `70.0` son el mismo número escrito de tres maneras.
+
+    Tiled reescribe los flotantes al guardar (`-60.0` → `-60`), así que
+    compararlos como texto da diferencias que no significan nada.
+    """
+    try:
+        return repr(float(valor))
+    except ValueError:
+        return "\n".join(linea.strip() for linea in valor.strip().splitlines())
+
+
+def _propiedades(nodo: ET.Element) -> dict[str, str]:
+    """Las propiedades de un nodo, ordenadas y con los números normalizados.
+
+    Tiled las reordena alfabéticamente y mueve los textos largos de atributo
+    `value` a contenido del elemento; las dos formas significan lo mismo.
+    """
+    props: dict[str, str] = {}
+    for p in nodo.findall("./properties/property"):
+        nombre = p.get("name", "")
+        crudo = p.get("value")
+        if crudo is None:
+            crudo = p.text or ""
+        props[nombre] = _normalizar(crudo)
+    return props
+
+
+def geometria_de(tmx: str) -> dict[str, object]:
+    """Lo que el generador posee de un mapa, en forma comparable.
+
+    AUD-495. La prueba original comparaba el TMX con `generar()` byte a
+    byte, y eso dejó de funcionar en cuanto el mapa se abrió en Tiled: al
+    guardar, Tiled sube su `tiledversion`, reordena las propiedades
+    alfabéticamente, normaliza los flotantes y cierra los objetos vacíos con
+    `/>`. Ninguna de esas diferencias cambia el nivel.
+
+    Lo que sí importa —y lo que AUD-115 quería proteger de verdad— es que la
+    geometría no se separe de `trazado.py`: si alguien mueve el suelo a mano
+    en Tiled, o cambia el orden de las baldosas en un fichero y no en el
+    otro, el nivel se repinta mal. Eso es lo que se compara aquí.
+
+    Se ignora a propósito: las capas de `CAPAS_DE_ARTE` (son autoría manual),
+    los tilesets añadidos desde Tiled, el orden de las propiedades, el
+    formato de los números y la versión de la herramienta.
+    """
+    raiz = ET.fromstring(tmx)
+    # El CSV se compara por sus números, no por su formato: el generador lo
+    # escribe todo en una línea y Tiled lo parte por filas y deja una coma
+    # al final de cada una. Son el mismo mapa.
+    capas = {
+        c.get("name", ""): ",".join(
+            g.strip() for g in (c.findtext("data") or "").split(",") if g.strip()
+        )
+        for c in raiz.findall("layer")
+        if c.get("name") not in CAPAS_DE_ARTE
+    }
+    grupos: dict[str, list[tuple]] = {}
+    for grupo in raiz.findall("objectgroup"):
+        objetos = []
+        for o in grupo.findall("object"):
+            objetos.append((
+                o.get("id"), o.get("type"),
+                *(_normalizar(o.get(k, "0")) for k in ("x", "y", "width", "height")),
+                tuple(sorted(_propiedades(o).items())),
+            ))
+        grupos[grupo.get("name", "")] = sorted(objetos)
+    return {
+        "dimensiones": (raiz.get("width"), raiz.get("height")),
+        "propiedades": _propiedades(raiz),
+        "capas": capas,
+        "objetos": grupos,
+    }
+
+
+def comparar_geometria() -> list[str]:
+    """Las diferencias reales entre el mapa en disco y su generador."""
+    if not DESTINO.exists():
+        return [f"{DESTINO} no existe: ejecuta el generador"]
+    actual = geometria_de(DESTINO.read_text(encoding="utf-8"))
+    esperado = geometria_de(generar())
+    fallos = []
+    for clave in esperado:
+        if actual[clave] != esperado[clave]:
+            if clave == "capas":
+                for nombre, datos in esperado["capas"].items():  # type: ignore[union-attr]
+                    if actual["capas"].get(nombre) != datos:  # type: ignore[union-attr]
+                        fallos.append(f"la capa {nombre!r} no es la del generador")
+            else:
+                fallos.append(f"{clave} no coincide con el generador")
+    return fallos
+
+
+def tiene_arte_pintado() -> bool:
+    """¿Hay trabajo hecho a mano en el mapa que el generador borraría?"""
+    if not DESTINO.exists():
+        return False
+    raiz = ET.fromstring(DESTINO.read_text(encoding="utf-8"))
+    for capa in raiz.findall("layer"):
+        if capa.get("name") not in CAPAS_DE_ARTE:
+            continue
+        if any(g.strip() not in ("", "0")
+               for g in (capa.findtext("data") or "").split(",")):
+            return True
+    return False
+
+
 def main() -> None:
+    ap = argparse.ArgumentParser(description="Regenera el TMX del 4-1.")
+    ap.add_argument(
+        "--forzar", action="store_true",
+        help="sobrescribe aunque el mapa tenga capas de arte pintadas a mano",
+    )
+    ap.add_argument(
+        "--comprobar", action="store_true",
+        help="no escribe: sólo dice si la geometría del mapa sigue siendo la "
+             "del generador",
+    )
+    args = ap.parse_args()
+
+    if args.comprobar:
+        fallos = comparar_geometria()
+        for f in fallos:
+            print(f"  {f}")
+        print("la geometría coincide" if not fallos else "la geometría NO coincide")
+        raise SystemExit(1 if fallos else 0)
+
+    # AUD-495 — el pie de plomo que faltaba. El 4-1 tiene 13 240 celdas
+    # pintadas a mano en Tiled (parallax y decoración); regenerar sin más
+    # las borraba todas y sin aviso, porque `generar()` escribe esas capas
+    # a ceros. Quien de verdad quiera rehacer el mapa entero lo dice.
+    if tiene_arte_pintado() and not args.forzar:
+        raise SystemExit(
+            f"{DESTINO.name} tiene capas de arte pintadas a mano "
+            f"({', '.join(CAPAS_DE_ARTE)}) y regenerar las borraría.\n"
+            f"Si es lo que quieres, repite con --forzar."
+        )
+
     DESTINO.parent.mkdir(parents=True, exist_ok=True)
     DESTINO.write_text(generar(), encoding="utf-8")
     print(f"escrito {DESTINO.relative_to(PROJECT_ROOT)} "
           f"({MW}×{MH} baldosas, 6 secciones, {len(checkpoints())} checkpoints, "
           f"{len(ARBOLES_FASE4)} tocones, {len(TUMBAS_FASE5)} tumbas, "
-          f"{len(grietas_de_pisada())} grietas, 1 loma, "
+          f"{len(grietas_de_pisada())} grietas, {len(loma()) // 2} lomas, "
           f"0 enemigos, 0 fosos, 0 zonas de daño)")
 
 
