@@ -43,7 +43,7 @@ TILE = 16
 #: misma tabla que `tools/generate_stage0_tmx.OBSTACULOS`; se repite aquí a
 #: propósito para que la prueba falle si el generador cambia sin querer, en vez
 #: de adaptarse en silencio a lo que el generador diga hoy.
-OBSTACULOS_ESPERADOS: tuple[tuple[int, int], ...] = ((10, 2), (46, 3))
+OBSTACULOS_ESPERADOS: tuple[tuple[int, int], ...] = ((10, 2), (50, 3))
 
 
 def _hold(*actions: Action) -> InputManager:

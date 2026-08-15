@@ -25,7 +25,7 @@ from src.engine.utils.surface_pool import get_pool
 from src.framework.entities.base_entity import BaseEntity
 from src.framework.entities.player_state import PlayerStateData
 from src.framework.entities.ranged_weapon import ArcoDelJugador
-from src.framework.physics.perfil import CENITAL, PLATAFORMAS, VUELO, PhysicsProfile
+from src.framework.physics.perfil import CENITAL, PLATAFORMAS, VUELO, Material, PhysicsProfile
 from src.framework.physics.resolucion import (
     EstadoDeMovimiento,
     acercarse_a,
@@ -224,6 +224,15 @@ class Player(BaseEntity):
         # lo lea: el estado canónico arranca con el coyote del perfil, que
         # por defecto vale exactamente lo de `settings`.
         self.perfil = PhysicsProfile.plataformas()
+        #: AUD-490 — GAP-039, la mitad que faltaba: la restitución del perfil
+        #: es una constante para todo el nivel; esto es lo que una
+        #: `ZonaDeFriccion` con `material` puede sobreescribir por región,
+        #: fotograma a fotograma. Lo escribe `sistema_friccion` a través de
+        #: `Transform.material_actual` (la misma vista que ya usa `facing`);
+        #: aquí sólo se declara y se lee. `None` = usar `perfil.material`,
+        #: que es el comportamiento de siempre en los mapas que no declaran
+        #: ninguna zona de este tipo.
+        self._material_de_zona: Material | None = None
         #: AUD-388 — los efectos temporales que lleva encima. Vacío casi
         #: siempre; lo llenan las charcas de veneno, los potenciadores y lo que
         #: venga. Es el mismo componente que llevan los enemigos, y por eso
@@ -1070,6 +1079,29 @@ class Player(BaseEntity):
     # Collision resolution (AABB, axis-separated)
     # ──────────────────────────────────────────────
 
+    def _estado_de_movimiento_para_resolver(self) -> EstadoDeMovimiento:
+        """Construye el `EstadoDeMovimiento` de este fotograma.
+
+        AUD-490 — separado de `_resolve_collision` para que la elección de
+        material (zona vs. perfil) se pueda probar sin construir rects de
+        colisión ni llamar al resolutor entero.
+        """
+        return EstadoDeMovimiento(
+            posicion=self.position,
+            velocidad=self.velocity,
+            ancho=self.rect.width,
+            alto=self.rect.height,
+            en_el_suelo=self.is_grounded,
+            prev_foot_y=self._prev_foot_y,
+            # AUD-396 — el rebote sale del material (GAP-039). Con `ROCA`,
+            # que es el de todos los mapas de hoy, vale 0 y el resolutor
+            # hace exactamente lo de siempre.
+            # AUD-490 — `_material_de_zona` gana si `sistema_friccion` lo
+            # puso este fotograma (una `FrictionZone` con `material`); si
+            # no, se usa el del perfil, que es el comportamiento de siempre.
+            restitucion=(self._material_de_zona or self.perfil.material).restitucion,
+        )
+
     def _resolve_collision(self, dt: float, collision_rects: list[pygame.Rect]) -> None:
         """
         AUD-334 — este método ya no resuelve: delega en el resolutor
@@ -1082,18 +1114,7 @@ class Player(BaseEntity):
         del ledge grab viven ahora en `resolver_eje_x` y `resolver_eje_y`,
         que son el código que las cumple.
         """
-        estado = EstadoDeMovimiento(
-            posicion=self.position,
-            velocidad=self.velocity,
-            ancho=self.rect.width,
-            alto=self.rect.height,
-            en_el_suelo=self.is_grounded,
-            prev_foot_y=self._prev_foot_y,
-            # AUD-396 — el rebote sale del material del perfil (GAP-039). Con
-            # `ROCA`, que es el de todos los mapas de hoy, vale 0 y el
-            # resolutor hace exactamente lo de siempre.
-            restitucion=self.perfil.material.restitucion,
-        )
+        estado = self._estado_de_movimiento_para_resolver()
         eje_x = resolver_eje_x(estado, dt, collision_rects)
         if self.perfil.modo == PLATAFORMAS:
             # AUD-328/335 — sin gravedad no hay cuesta que resolver (pared

@@ -20,7 +20,7 @@ source: "docs/niveles/02_STAGE_1_2.md"
 | Tamaño de referencia | 768 × 608 px (48 × 38 tiles, implementado) |
 | Tipos de enemigo | 2 mínimos / 3 máximos |
 | Enemigos mínimos | 6 (de referencia: 10) |
-| Objetos mínimos | 1 `PlayerSpawn`, 1 `Checkpoint`, 1 `Portal`, 5 coleccionables, 1 `HazardZone` |
+| Objetos mínimos | 1 `PlayerSpawn`, 1 `Checkpoint`, 1 `NextTrigger`, 5 coleccionables, 1 `HazardZone` |
 | Día/noche | 14:00 → 18:00, `day_length` 900 s |
 | Clima | Libre (sugerencia: aire quieto con polvo en los haces de luz) |
 | Concepto académico | Unidad V (iluminación por color: cocina cálida vs. sala fría) |
@@ -56,7 +56,7 @@ Total mínimo **6 enemigos**. Si se usan 2 tipos, la cantidad mínima sube a 8
 |---|---|---|
 | `PlayerSpawn` | 1 | Entrada, izquierda |
 | `Checkpoint` | 1–2 | Tras la sala principal (obligatorio) |
-| `Portal` | 1 | Derecha, salida al campus |
+| `NextTrigger` | 1 | Derecha, salida al campus |
 | `HazardZone` | 1+ | Zona de bandejas del mostrador |
 | `MessageTrigger` | 1 | Presenta la iluminación por color (Unidad V) |
 | Coleccionables | ≥ 5 | En bandejas y estanterías del entrepiso |
@@ -68,7 +68,7 @@ Total mínimo **6 enemigos**. Si se usan 2 tipos, la cantidad mínima sube a 8
  14:00 ── TARDE ───────────► 18:00
  entrada                [entrepiso estanterías - Platform]
    │   mesas │  mesas │  ┌───┬─────┐
- SPAWN ─────[W][W]────[W][C][C][W]── [H] mostrador con HAZARD ─ [cocinero] ─ PORTAL
+ SPAWN ─────[W][W]────[W][C][C][W]── [H] mostrador con HAZARD ─ [cocinero] ─ NEXTTRIGGER
    │          │            │    sala fría (tinte azul)      cocina (tinte cálido)
  Checkpoint tras la sala   entrepiso con coleccionables
 ```

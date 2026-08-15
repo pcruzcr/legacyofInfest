@@ -14,9 +14,19 @@ if TYPE_CHECKING:
 
 class Stage0(StageScene):
     """Stage 0 — Prologue / Learning Hub.
-    6 progressive zones teaching every framework feature through play:
-      A: Movement     B: Basic Combat   C: Ranged Combat
-      D: Verticality  E: Hazards        F: Culmination
+
+    AUD-491 — rediseño completo del trazado (`tools/generate_stage0_tmx.py`).
+    Siete zonas progresivas, en el orden real del `.tmx` de producción:
+      A: primeros pasos        B: contacto y consecuencia
+      C: la ruta vertical       D: fuego de respuesta (con *bash*, AUD-305)
+      E: la llave guardada      F: el foso (con goma, AUD-490)
+      G: todo junto
+
+    Este docstring y `_check_zone_progression`/`_place_collectibles` abajo
+    se derivan del mismo trazado que el generador — antes del rediseño
+    describían un escenario de seis zonas con otros nombres que no existía
+    en ningún `.tmx` real, el mismo defecto que AUD-114 ya había cazado una
+    vez para `docs/07_STAGE0_DESIGN.md`.
     """
 
     STAGE_ID: str = "stage0"
@@ -68,11 +78,16 @@ class Stage0(StageScene):
         self._cutscene = self._cutscenes.reproducir_texto(self.GUION_DE_INTRO)
 
     def _place_collectibles(self) -> None:
+        # AUD-491 — reposicionados junto al trazado nuevo. Las posiciones
+        # viejas (columna 48 en adelante) no correspondían a nada del `.tmx`
+        # anterior ni del actual: eran coordenadas huérfanas, sin relación
+        # con ninguna zona real. Éstas sí caen dentro de las siete zonas del
+        # rediseño — pequeños desvíos del camino principal, no sobre él.
         items = [
-            (48, 27, "swift_feather"),
-            (62, 29, "heart_vessel"),
-            (82, 28, "ancients_rib"),
-            (94, 26, "sunken_crown"),
+            (20, 25, "swift_feather"),   # zona B, sobre el Walker
+            (40, 19, "heart_vessel"),    # zona C, junto a la repisa de hielo
+            (63, 23, "ancients_rib"),    # zona E, junto al combate variado
+            (95, 19, "sunken_crown"),    # zona G, junto al cofre final
         ]
         for col, row, item_id in items:
             x = col * self.TILE
@@ -156,19 +171,24 @@ class Stage0(StageScene):
                     self._dialogue.start_dialogue(self._dialogue_trees[tree_id])
 
     def _check_zone_progression(self) -> None:
+        # AUD-491 — umbrales realineados con el trazado nuevo
+        # (`tools/generate_stage0_tmx.py`): zona B en la columna 14 (el
+        # primer Walker), zona D en la 45 (el arquero con bash) y zona G en
+        # la 82 (el tramo final con viento). Los de antes —16, 52, 85— eran
+        # de un trazado que ya no existe.
         if self._player is None:
             return
         px = self._player.position.x
-        # Zone B — first enemy encounter
-        if px > 16 * self.TILE and 1 not in self._zone_entered:
+        # Zone B — contacto y consecuencia
+        if px > 14 * self.TILE and 1 not in self._zone_entered:
             self._zone_entered.add(1)
             self._tutorial.show("combat", 5.0)
-        # Zone D — verticality
-        if px > 52 * self.TILE and 2 not in self._zone_entered:
+        # Zone D — fuego de respuesta (bash)
+        if px > 45 * self.TILE and 2 not in self._zone_entered:
             self._zone_entered.add(2)
             self._tutorial.show("advanced", 4.0)
-        # Zone F — storm finale
-        if px > 85 * self.TILE and 3 not in self._zone_entered:
+        # Zone G — todo junto, tormenta del clímax
+        if px > 82 * self.TILE and 3 not in self._zone_entered:
             self._zone_entered.add(3)
             # AUD-374 — se le pide al mundo, no al sistema que dibuja la
             # lluvia. Pedírselo al VFX dejaba la humedad en el clima del TMX,

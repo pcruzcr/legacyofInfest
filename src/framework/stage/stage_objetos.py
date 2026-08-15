@@ -710,6 +710,11 @@ class ObjetosDeTiled:
                 rect=rect,
                 multiplicador=f("multiplicador", 1.0),
                 arrastre=f("arrastre", arrastre_defecto),
+                # AUD-490 — GAP-039: nombre de `physics.perfil.MATERIALES`.
+                # "roca" (sin restitución) es el valor de siempre a
+                # propósito: una zona sin declarar `material` no cambia
+                # ningún mapa ya entregado.
+                material=str(props.get("material", "roca")),
             )]
 
         elif obj_type in ("LaserZone", "ShockwaveZone"):

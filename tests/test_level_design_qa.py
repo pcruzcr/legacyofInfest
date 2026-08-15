@@ -219,6 +219,16 @@ class TestPlaythroughBot:
         scene = Stage0(context)
         scene.awake()
         scene.start()
+        # AUD-461 — sin esto, cualquier bot que muera por un peligro
+        # instantáneo (no por daño de combate) revienta con
+        # «SceneManager: no scenes on the stack»: HazardSystem.update()
+        # empuja el GameOverScene leyendo scene_manager.current, que exige
+        # que esta escena esté en la pila. En juego real siempre lo está
+        # —es la única forma en que SceneManager.update() la llama—, pero
+        # este arnés la actualiza a mano. test_muerte_y_game_over.py ya
+        # empuja la escena por el mismo motivo; este ayudante no lo hacía.
+        # Ver test_bot_no_revienta_con_un_peligro_instantaneo.
+        context.scene_manager.push(scene)
         scene.on_enter()
         return scene
 
@@ -302,6 +312,27 @@ class TestPlaythroughBot:
         assert stats["intentos"] == 3
         assert 0.0 <= stats["tasa_exito"] <= 1.0
         assert stats["avance_medio"] >= 0.0
+
+    def test_bot_no_revienta_con_un_peligro_instantaneo(self, context, display) -> None:
+        """AUD-461 — morir en un DeathPit no debe reventar el arnés de bots.
+
+        `HazardSystem.update()` empuja `GameOverScene` leyendo
+        `scene_manager.current`, que exige que la escena esté en la pila del
+        gestor — algo que sólo pasa si `_stage()` la empuja, igual que hace
+        `test_muerte_y_game_over.py`. Antes de AUD-461, `_stage()` no la
+        empujaba y esto reventaba con «SceneManager: no scenes on the stack»
+        en cuanto un bot tocaba un peligro instantáneo en vez de morir por
+        daño de combate (lo único que `run_playthrough` sabe detectar sin
+        que la escena avise por sí misma)."""
+        scene = self._stage(context)
+        try:
+            foso = scene._stage_data.death_pits[0].rect
+            scene._player.rect.midbottom = (foso.centerx, foso.top + 4)
+            for _ in range(60):
+                scene.update(1 / 60)
+        finally:
+            scene.on_exit()
+            scene.destroy()
 
     def test_death_heatmap_groups_by_region(self) -> None:
         """El mapa de calor debe agrupar muertes cercanas en el mismo tramo."""

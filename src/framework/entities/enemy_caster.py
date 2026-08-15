@@ -178,7 +178,8 @@ class EnemyCaster(EnemyBase):
         )
         orb.set_player_ref(self._player_ref)
         self._active_orbs.append(orb)
-        self._event_bus.emit(Events.SFX_PROJECTILE_FIRE)
+        # AUD-489 — el conjuro suena desde el hechicero, no desde la cámara.
+        self._event_bus.emit(Events.SFX_PROJECTILE_FIRE, pos=(self.rect.centerx, self.rect.centery))
         return True
 
     def _post_update(self, dt: float) -> None:

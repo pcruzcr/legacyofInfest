@@ -20,7 +20,7 @@ source: "docs/niveles/09_STAGE_3_1.md"
 | Tamaño de referencia | 1600 × 224 px (100 × 14, implementado) |
 | Tipos de enemigo | 2 mínimos / 3 máximos |
 | Enemigos mínimos | 8 (de referencia: 10) |
-| Objetos mínimos | 1 `PlayerSpawn`, 1 `Checkpoint`, 1 `Portal`, 5 coleccionables |
+| Objetos mínimos | 1 `PlayerSpawn`, 1 `Checkpoint`, 1 `NextTrigger`, 5 coleccionables |
 | Día/noche | **22:00 (NOCHE)** → 05:00, `day_length` 500 s |
 | Clima | Libre (sugerencia: niebla baja rasante que no oculta a los enemigos) |
 | Concepto académico | Unidad VI (losas que se encienden al pisarlas) + Unidad V (HSL de la piedra) |
@@ -56,7 +56,7 @@ Total mínimo **8 enemigos**.
 |---|---|---|
 | `PlayerSpawn` | 1 | Inicio del paseo |
 | `Checkpoint` | 1 | Tras el primer tercio (obligatorio) |
-| `Portal` | 1 | → 3-2 |
+| `NextTrigger` | 1 | → 3-2 |
 | `MessageTrigger` | 1 | Presenta las losas (Unidad VI) |
 | Coleccionables | ≥ 5 | En las jardineras y bordes |
 | `Platform` | 2+ | Jardineras como cubierta |
@@ -66,7 +66,7 @@ Total mínimo **8 enemigos**.
 ```
  22:00 ── NOCHE → ALBA ──────► 05:00
    [arco]   [arco]     [arco]      [arco]
- SPAWN ───[Q]─────[CP]────[Q]────────────── PORTAL
+ SPAWN ───[Q]─────[CP]────[Q]────────────── NEXTTRIGGER
    │ jardineras cubierta    │
    [G][G]  losas se encienden al pisar  [H][H]
    [H] halcón (picado con sombra) · [G] garza · [Q] quetzal en arco

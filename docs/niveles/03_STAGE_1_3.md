@@ -20,7 +20,7 @@ source: "docs/niveles/03_STAGE_1_3.md"
 | Tamaño de referencia | 3200 × 608 px (200 × 38 tiles, implementado) |
 | Tipos de enemigo | 3 (obligatorios: suelo, aire y fondo) |
 | Enemigos mínimos | 10 (de referencia: 10) |
-| Objetos mínimos | 1 `PlayerSpawn`, 1 `Checkpoint`, 1 `Portal`, 5 coleccionables, 1 `HazardZone` |
+| Objetos mínimos | 1 `PlayerSpawn`, 1 `Checkpoint`, 1 `NextTrigger`, 5 coleccionables, 1 `HazardZone` |
 | Día/noche | 18:00 → 22:00, `day_length` 900 s |
 | Clima | Libre (sugerencia: luz polvorienta del ocaso entrando por las ventanas) |
 | Concepto académico | Unidad VIII (umbral: tiza brillante vs. sombra de raíces) + Unidad VI (puertas con ease) |
@@ -57,7 +57,7 @@ demuestra que se dominan los tres arquetipos.
 |---|---|---|
 | `PlayerSpawn` | 1 | Inicio del corredor |
 | `Checkpoint` | 1 | El pizarrón checkpoint (obligatorio con animación) |
-| `Portal` | 1 | Derecha → 1-4 |
+| `NextTrigger` | 1 | Derecha → 1-4 |
 | `HazardZone` | 1+ | Púas entre las raíces (visibles bajo la regla de luz) |
 | `MessageTrigger` | 1 | Explica la mecánica de luz (Unidad VIII) |
 | Coleccionables | ≥ 5 | Repartidos en los 3 salones |
@@ -72,7 +72,7 @@ demuestra que se dominan los tres arquetipos.
    │ C×2, T  │   │ N×2, T  │        │ C, N    │   (T = tiza en pizarrón)
    │ colecc. │   │ easter  │        │ colecc. │
    └──╨──────┘   └──╨──────┘        └──╨──────┘
- SPAWN ───[E][E]──[E]──────[PIZARRÓN-CHECKPOINT]────[E][E][E]──[H púas]── PORTAL
+ SPAWN ───[E][E]──[E]──────[PIZARRÓN-CHECKPOINT]────[E][E][E]──[H púas]── NEXTTRIGGER
           corredor con estudiantes          │        último tercio: los 3 carriles
    zona de luz (tiza) y sombra (raíces)     │
 ```

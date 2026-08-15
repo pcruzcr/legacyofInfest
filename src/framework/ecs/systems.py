@@ -58,6 +58,7 @@ from src.framework.ecs.components import (
     ZonaLetalTemporizada,
 )
 from src.framework.ecs.world import EntityId, World
+from src.framework.physics.perfil import MATERIALES, ROCA
 
 # ══════════════════════════════════════════════════════════════
 # Fase FUERZAS — modifican la velocidad antes de integrarla
@@ -118,7 +119,18 @@ def sistema_friccion(mundo: World, dt: float) -> None:
     la velocidad, saltar desde una cinta conservaría todo su empuje y saldrías
     disparado; sumándolo a la posición, la cinta te lleva mientras la pisas y te
     suelta al saltar, que es lo que hace Mega Man 2.
+
+    AUD-490 — también deja el material de la zona en el dueño del `Transform`
+    (`GAP-039`, la restitución por región). Se limpia **antes** de recorrer las
+    zonas, en su propia pasada: quien salió de una zona de goma el fotograma
+    pasado no debe seguir rebotando como si siguiera dentro, y una entidad
+    puede solapar más de una zona a la vez sólo por accidente de diseño de
+    nivel — la última zona que la toque manda, no la primera.
     """
+    for entidad in mundo.con(Transform, Velocidad):
+        t = mundo.obtener(entidad, Transform)
+        if t is not None:
+            t.material_actual = None
     for _, zona in mundo.cada(ZonaDeFriccion):
         for entidad in mundo.con(Transform, Velocidad):
             t = mundo.obtener(entidad, Transform)
@@ -132,6 +144,8 @@ def sistema_friccion(mundo: World, dt: float) -> None:
             if zona.arrastre:
                 t.posicion.x += zona.arrastre * dt
                 t.rect.x = int(t.posicion.x)
+            if zona.material != "roca":
+                t.material_actual = MATERIALES.get(zona.material, ROCA)
 
 
 def sistema_corriente_de_agua(mundo: World, dt: float) -> None:

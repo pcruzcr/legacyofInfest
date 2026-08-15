@@ -20,7 +20,7 @@ source: "docs/niveles/06_STAGE_2_2.md"
 | Tamaño de referencia | 1920 × 800 px (120 × 50 tiles, implementado) |
 | Tipos de enemigo | 2 mínimos / 3 máximos |
 | Enemigos mínimos | 8 (de referencia: 9) |
-| Objetos mínimos | 1 `PlayerSpawn`, 1 `Checkpoint`, 1 `Portal`, 5 coleccionables, 1 `CameraLock` |
+| Objetos mínimos | 1 `PlayerSpawn`, 1 `Checkpoint`, 1 `NextTrigger`, 5 coleccionables, 1 `CameraLock` |
 | Día/noche | 20:30 → 23:30, `day_length` 1000 s |
 | Clima | Libre (sugerencia: viento nocturno entre las antenas, luces de la ciudad a lo lejos) |
 | Concepto académico | Unidad III (patrullas B-Spline alrededor de antenas) + Unidad IV (scroll vertical) |
@@ -55,7 +55,7 @@ Total mínimo **8 enemigos**. Si se usan solo 2 tipos, el mínimo sube a 10.
 |---|---|---|
 | `PlayerSpawn` | 1 | Estacionamiento, izquierda |
 | `Checkpoint` | 1 | **Al pie de la escalera** (antes del bloque vertical, obligatorio) |
-| `Portal` | 1 | Azotea → 2-3 |
+| `NextTrigger` | 1 | Azotea → 2-3 |
 | `CameraLock` | 1 | Al iniciar la escalera (lock_x=true) |
 | `HazardZone` | 0–1 | Rejilla de calor de la azotea (opcional) |
 | Coleccionables | ≥ 5 | Repartidos en la escalera (recompensan la altura) |
@@ -65,7 +65,7 @@ Total mínimo **8 enemigos**. Si se usan solo 2 tipos, el mínimo sube a 10.
 
 ```
  20:30 ── NOCHE CAYENDO ────► 23:30
-         [AZOTEA: antenas + voladores ×2 + tirador ×1] ── PORTAL
+         [AZOTEA: antenas + voladores ×2 + tirador ×1] ── NEXTTRIGGER
               ▲  escalera de plataformas (Platform)
               │  [CameraLock vertical aquí]
               │  tirador ×1 cubre el salto largo
