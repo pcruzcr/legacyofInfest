@@ -127,3 +127,24 @@ def test_instance_vs_classmethod_independence() -> None:
     img_cls = AssetLoader.load_image("missing_instance_test.png")
     # Different instances → different objects
     assert img_inst is not img_cls
+
+
+def test_evicts_by_memory_budget_not_only_entry_count() -> None:
+    """AUD-484: la caché sólo desalojaba por CANTIDAD de entradas (512), nunca
+    por bytes. Con sprites de 16x16 eso protegía la RAM sin que nadie lo
+    notara — 512 entradas eran unos pocos MB. Con arte de alta resolución,
+    512 entradas pueden ser varios GB: el mismo límite que hoy protege deja de
+    proteger nada. Se fuerza un presupuesto de bytes pequeño (muy por debajo
+    de lo que tardarían 512 entradas en alcanzar) y se comprueba que la caché
+    desaloja por memoria, no sólo por cantidad.
+    """
+    loader = AssetLoader()
+    loader.MAX_CACHED_BYTES = 1_000_000  # 1 MB — muy por debajo de 512 entradas
+    # Los placeholders de "backgrounds" son 320x224 con SRCALPHA (4 bytes/px)
+    # = 286.720 bytes cada uno; 10 de ellos ya son ~2,87 MB, casi 3x el
+    # presupuesto de esta prueba, y muy lejos de las 512 entradas del límite
+    # por cantidad.
+    for i in range(10):
+        loader._load_image(f"backgrounds/no_existe_{i}.png")
+    assert len(loader._images) < 10, "debió desalojar por presupuesto de bytes"
+    assert loader._images_bytes <= loader.MAX_CACHED_BYTES

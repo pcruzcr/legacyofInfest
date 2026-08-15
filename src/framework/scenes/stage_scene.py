@@ -21,7 +21,7 @@ from src.engine.ui.minimap import Minimap
 from src.engine.ui.screen_banner import ScreenBanner
 from src.engine.ui.subtitle_overlay import SubtitleOverlay
 from src.engine.utils.asset_loader import AssetLoader
-from src.framework.audio.dynamic_music import DynamicMusicSystem
+from src.framework.audio.dynamic_music import DynamicMusicSystem, resolver_pista_de_musica
 from src.framework.ecs import systems as ecs_systems
 from src.framework.ecs.scheduler import Planificador
 from src.framework.ecs.world import World
@@ -546,9 +546,15 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         if self._stage_data.bgm_track:
             audio = self.audio
             if audio is not None:
-                bgm_path = settings.ASSETS_DIR / "music" / f"{self._stage_data.bgm_track}.wav"
-                if not bgm_path.exists():
-                    bgm_path = settings.ASSETS_DIR / "music" / f"{self._stage_data.bgm_track}.ogg"
+                # AUD-485 — prefiere el `.ogg` de AUD-484 sobre el `.wav`
+                # original; ver el docstring de `resolver_pista_de_musica`
+                # para por qué el orden contrario ya no protege nada. Si
+                # ninguno existe, se intenta igual con `.wav` para que
+                # `AudioManager.play_music` deje su aviso de siempre en vez
+                # de fallar en silencio.
+                bgm_path = resolver_pista_de_musica(self._stage_data.bgm_track)
+                if bgm_path is None:
+                    bgm_path = settings.ASSETS_DIR / "music" / f"{self._stage_data.bgm_track}.wav"
                 audio.play_music(bgm_path)
             if self._dynamic_music is not None:
                 zone = self._stage_data.zone  # BUG-075 FIX: ya no usa getattr con default 0

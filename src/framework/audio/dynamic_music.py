@@ -9,6 +9,33 @@ if TYPE_CHECKING:
     from src.engine.audio.audio_manager import AudioManager
 
 
+def resolver_pista_de_musica(nombre: str) -> Path | None:
+    """Ruta de `assets/music/<nombre>` prefiriendo `.ogg` sobre `.wav`.
+
+    AUD-485 — AUD-484 convirtió las 78 muestras de audio del proyecto a OGG
+    Vorbis (10,3 MB → 577 KB en la pista más pesada), pero dejó el `.wav`
+    original al lado de cada una: es la forma segura de convertir, no la de
+    terminar la migración. Antes de este cambio, `stage_scene.py` y
+    `_get_track_for_intensity` comprobaban `.wav` primero, así que con los
+    dos ficheros presentes la conversión no ahorraba ni un byte de carga.
+
+    Preferir `.ogg` aquí era **inseguro** hasta comprobarlo: AUD-159 dejó
+    tres `.ogg` mal etiquetados a propósito (en realidad WAV, ver
+    `tests/test_auditoria_157_160.py::TestLaMusicaSuena`) protegidos
+    exactamente por ese orden — «wav gana» los volvía inalcanzables en vez
+    de silenciar un escenario. Medido antes de tocar esto: hoy no hay ningún
+    `.ogg` en `assets/music/` que no sea uno de los 78 recién convertidos por
+    `tools/convert_audio.py`, todos con cabecera `OggS` real. La protección
+    de AUD-159 no tenía nada que proteger ya.
+    """
+    base = settings.ASSETS_DIR / "music"
+    for suffix in (".ogg", ".wav"):
+        candidato = base / f"{nombre}{suffix}"
+        if candidato.exists():
+            return candidato
+    return None
+
+
 class DynamicMusicSystem:
     """Crossfades between traverse/combat/boss music tracks based on intensity."""
 
@@ -60,20 +87,15 @@ class DynamicMusicSystem:
         bgm = self._bgm_base
         if not bgm:
             return None
-        base = settings.ASSETS_DIR / "music"
+        sufijos: tuple[str, ...]
         if level == self.INTENSITY_BOSS:
-            for suffix in ("_boss", "_traverse", ""):
-                candidate = base / f"{bgm}{suffix}.wav"
-                if candidate.exists():
-                    return candidate
+            sufijos = ("_boss", "_traverse", "")
         elif level == self.INTENSITY_COMBAT:
-            for suffix in ("_combat", "_traverse", ""):
-                candidate = base / f"{bgm}{suffix}.wav"
-                if candidate.exists():
-                    return candidate
+            sufijos = ("_combat", "_traverse", "")
         else:
-            for suffix in ("_traverse", ""):
-                candidate = base / f"{bgm}{suffix}.wav"
-                if candidate.exists():
-                    return candidate
+            sufijos = ("_traverse", "")
+        for sufijo in sufijos:
+            pista = resolver_pista_de_musica(f"{bgm}{sufijo}")
+            if pista is not None:
+                return pista
         return None

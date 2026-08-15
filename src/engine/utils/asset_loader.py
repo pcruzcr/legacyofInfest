@@ -73,8 +73,22 @@ class AssetLoader:
     # under this, so eviction only kicks in on pathological churn.
     MAX_CACHED_IMAGES = 512
 
+    # AUD-484: MAX_CACHED_IMAGES bounds the cache by *count*, never by memory.
+    # That was invisible with 16x16 pixel-art sprites — 512 of those are a few
+    # MB — but the bound stops protecting anything the day an asset pipeline
+    # starts shipping high-resolution art: 512 entries of multi-MB textures is
+    # gigabytes, not a "pathological churn" edge case. 256 MiB is generous for
+    # today's pixel-art content (eviction still only kicks in on churn) and is
+    # the ceiling that keeps a future HD asset pass from growing unbounded.
+    MAX_CACHED_BYTES = 256 * 1024 * 1024
+
     def __init__(self) -> None:
         self._images: dict[str, pygame.Surface] = {}
+        # AUD-484: bytes per cached image, keyed the same as ``_images``, so
+        # eviction can subtract the *exact* size freed instead of re-summing
+        # every surface on every insert.
+        self._image_bytes: dict[str, int] = {}
+        self._images_bytes: int = 0
         self._fonts: dict[str, pygame.font.Font] = {}
         self._sounds: dict[str, pygame.mixer.Sound] = {}
         self._missing: set[str] = set()
@@ -105,26 +119,59 @@ class AssetLoader:
     def _clear_cache(self) -> None:
         """Release all cached images/fonts/sounds to free memory."""
         self._images.clear()
+        self._image_bytes.clear()
+        self._images_bytes = 0
         self._fonts.clear()
         self._sounds.clear()
         self._missing.clear()
 
-    def _evict_if_needed(self) -> None:
-        """Drop the oldest cached images once past ``MAX_CACHED_IMAGES``.
+    @staticmethod
+    def _surface_bytes(surface: pygame.Surface) -> int:
+        """Estimate a surface's footprint: width × height × bytes-per-pixel.
 
-        The cache was previously unbounded, and its keys include scale, size,
-        alpha and smoothing — so a single source file requested at several sizes
-        multiplied into several entries with nothing ever reclaiming them.
-        ``dict`` preserves insertion order, which gives us FIFO eviction for
-        free; that is a good enough approximation of LRU for asset loading,
-        where access is dominated by stage-scoped bursts.
+        AUD-484: ignores row padding/pitch, so it under-counts slightly on
+        some platforms — that is fine for an eviction *budget*, the same way
+        the leak detector in ``memoria_de_textura.py`` deliberately has no
+        byte threshold: this number only has to be consistently comparable
+        across surfaces, not byte-exact.
         """
-        overflow = len(self._images) - self.MAX_CACHED_IMAGES
-        if overflow <= 0:
-            return
-        for key in list(self._images)[:overflow]:
+        width, height = surface.get_size()
+        return width * height * surface.get_bytesize()
+
+    def _evict_if_needed(self) -> None:
+        """Drop the oldest cached images past ``MAX_CACHED_IMAGES`` entries
+        or past ``MAX_CACHED_BYTES`` of estimated memory, whichever comes
+        first.
+
+        The cache was previously unbounded by count, and its keys include
+        scale, size, alpha and smoothing — so a single source file requested
+        at several sizes multiplied into several entries with nothing ever
+        reclaiming them. ``dict`` preserves insertion order, which gives us
+        FIFO eviction for free; that is a good enough approximation of LRU
+        for asset loading, where access is dominated by stage-scoped bursts.
+
+        AUD-484: the count bound alone protected memory only by accident —
+        it assumed every entry was cheap. Evicting until *both* budgets are
+        satisfied means a handful of oversized textures gets reclaimed long
+        before 512 entries accumulate, instead of only being caught once the
+        count also happens to overflow.
+        """
+        # Snapshot insertion order *before* mutating the dict — deleting from
+        # ``self._images`` while a live iterator over it is open raises
+        # ``RuntimeError: dictionary changed size during iteration``.
+        candidates = list(self._images)
+        evicted = 0
+        for key in candidates:
+            if (
+                len(self._images) <= self.MAX_CACHED_IMAGES
+                and self._images_bytes <= self.MAX_CACHED_BYTES
+            ):
+                break
+            self._images_bytes -= self._image_bytes.pop(key, 0)
             del self._images[key]
-        logger.debug("AssetLoader: evicted %d cached image(s)", overflow)
+            evicted += 1
+        if evicted:
+            logger.debug("AssetLoader: evicted %d cached image(s)", evicted)
 
     def _resolve(self, path: str | Path) -> Path:
         """Resolve an asset path, refusing to escape the project directory.
@@ -223,6 +270,9 @@ class AssetLoader:
             transform_fn = pygame.transform.smoothscale if smooth else pygame.transform.scale
             image = transform_fn(image, (int(image.get_width() * scale), int(image.get_height() * scale)))
         self._images[key] = image
+        size_bytes = self._surface_bytes(image)
+        self._image_bytes[key] = size_bytes
+        self._images_bytes += size_bytes
         self._evict_if_needed()
         return image
 
