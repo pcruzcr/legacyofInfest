@@ -4,6 +4,10 @@ import numpy as np
 import pygame
 
 from src.engine.core import gpu_effects, settings
+from src.framework.vfx.gradacion import (
+    MATRIZ_IDENTIDAD,
+    aplicar_gradacion,
+)
 
 
 class PostProcessing:
@@ -69,7 +73,15 @@ class PostProcessing:
         rr: int, gg: int, bb: int,
         rrr: int, ggg: int, bbb: int
     ) -> None:
-        self._color_grading = (r, g, b, rr, gg, bb, rrr, ggg, bbb)
+        matriz = (r, g, b, rr, gg, bb, rrr, ggg, bbb)
+        # AUD-496 — la matriz identidad devuelve cada canal tal cual: correrla
+        # cuesta una pasada por los 480 000 píxeles de la pantalla para no
+        # cambiar ni uno. No es un caso rebuscado: los escenarios que
+        # interpolan la gradación de una fase a otra (`stage4_1`) pasan por
+        # ella cada vez que la fase de destino es «color pleno», y entonces
+        # todo el tramo final la aplica sin efecto. Guardar `None` es lo mismo
+        # que `clear_color_grading`, que es exactamente lo que significa.
+        self._color_grading = None if matriz == MATRIZ_IDENTIDAD else matriz
 
     def clear_color_grading(self) -> None:
         self._color_grading = None
@@ -391,15 +403,9 @@ class PostProcessing:
 
         # Color grading — 3x3 color matrix applied per pixel
         if self._color_grading is not None:
-            cr, cg, cb, crr, cgg, cbb, crrr, cggg, cbbb = self._color_grading
             arr = pygame.surfarray.pixels3d(surface)
             try:
-                pr = arr[:,:,0].astype(np.int32)
-                pg = arr[:,:,1].astype(np.int32)
-                pb = arr[:,:,2].astype(np.int32)
-                arr[:,:,0] = np.clip((pr * cr + pg * cg + pb * cb) // 255, 0, 255).astype(np.uint8)
-                arr[:,:,1] = np.clip((pr * crr + pg * cgg + pb * cbb) // 255, 0, 255).astype(np.uint8)
-                arr[:,:,2] = np.clip((pr * crrr + pg * cggg + pb * cbbb) // 255, 0, 255).astype(np.uint8)
+                aplicar_gradacion(arr, self._color_grading)
             finally:
                 del arr
 

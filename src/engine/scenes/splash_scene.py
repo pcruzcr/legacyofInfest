@@ -104,6 +104,23 @@ class SplashScene(BaseScene):
         warmup()
 
     @staticmethod
+    def _precalentar_gradacion() -> None:
+        """Compila el núcleo JIT de la matriz de color (AUD-496).
+
+        Mismo problema que AUD-082 y misma solución: compilar cuesta ~1,1 s y
+        esa primera llamada caería en el primer fotograma de un escenario con
+        gradación —el 4-1 la usa en sus seis fases—, ya dentro de la partida.
+        Aquí el segundo se paga con el jugador esperando y con el mensaje en
+        pantalla.
+
+        Sin el extra `accel` no hay nada que compilar y el paso no hace nada:
+        la gradación cae a su ruta de numpy, más lenta pero idéntica.
+        """
+        from src.framework.vfx.gradacion import precalentar
+
+        precalentar()
+
+    @staticmethod
     def _precalentar_ia() -> None:
         """Carga scikit-learn antes de que lo pida un enemigo.
 
@@ -131,7 +148,8 @@ class SplashScene(BaseScene):
     #: congelación —más que la propia pantalla de inicio— y el logo se quedaba
     #: quieto de una vez. Repartidos, entre uno y otro se dibuja un fotograma y
     #: el fundido sigue avanzando.
-    _WARMUP_STEPS = ("_precalentar_particulas", "_precalentar_ia")
+    _WARMUP_STEPS = ("_precalentar_particulas", "_precalentar_gradacion",
+                     "_precalentar_ia")
 
     #: Qué se le dice al jugador mientras cada paso bloquea — AUD-449.
     #:
@@ -142,6 +160,7 @@ class SplashScene(BaseScene):
     #: deja de parecer un cuelgue.
     _NOMBRES_DE_TAREA: dict[str, str] = {
         "_precalentar_particulas": "Preparando efectos...",
+        "_precalentar_gradacion": "Preparando el color de los escenarios...",
         "_precalentar_ia": "Preparando la inteligencia de los enemigos...",
     }
 
