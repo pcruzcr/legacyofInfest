@@ -483,6 +483,16 @@ class App:
                 # antes, así que no cambia nada de lo que ya funcionaba; lo que
                 # cambia es que un fotograma lento se reparte en varios pasos
                 # en vez de integrarse de una vez.
+                # AUD-498 — antes de los pasos fijos, y con el reloj real.
+                #
+                # `pasos_fijos()` consume el delta escalado, asi que con
+                # `time_scale` a 0.0 no emite ni un paso y `update()` no se
+                # llama. El hit-stop pone justo ese 0.0 al acertar un golpe:
+                # si su cuenta atras viviera dentro del bucle, nadie soltaria
+                # el freno y el juego se quedaria congelado para siempre en
+                # el primer impacto. Este gancho es lo que sigue latiendo.
+                self.scene_manager.actualizar_en_tiempo_real(
+                    getattr(self.clock, "unscaled_dt", dt))
                 for paso in self.clock.pasos_fijos():
                     self.scene_manager.update(paso)
                 # Las transiciones van con el tiempo del fotograma y **no** en

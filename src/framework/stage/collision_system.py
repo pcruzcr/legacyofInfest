@@ -136,6 +136,18 @@ class CollisionSystem:
             self._hitstop_timer -= unscaled_dt
             if self._hitstop_timer <= 0.0:
                 self._hitstop_timer = 0.0
+        self.aplicar_escala_de_hitstop(clock)
+
+    def aplicar_escala_de_hitstop(self, clock: Any = None) -> None:
+        """Registra o retira el factor de tiempo, sin tocar la cuenta atrás.
+
+        AUD-498 — separado de `update_hitstop` porque las dos mitades corren
+        en sitios distintos: descontar el tiempo es cosa del reloj real
+        (`BaseScene.actualizar_en_tiempo_real`, una vez por fotograma), y
+        aplicar el factor es cosa de cada paso de simulación. Juntas en el
+        paso de simulación, la cuenta atrás no avanzaba nunca — con el reloj
+        a cero no hay pasos.
+        """
         if clock is None:
             return
         registrar = getattr(clock, "escalar", None)

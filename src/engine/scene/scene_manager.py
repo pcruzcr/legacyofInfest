@@ -106,6 +106,17 @@ class SceneManager:
         if self._stack:
             self._stack[-1].update(dt)
 
+    def actualizar_en_tiempo_real(self, dt_sin_escalar: float) -> None:
+        """El latido que no depende de `time_scale` (AUD-498).
+
+        Lo llama `App` una vez por fotograma, **fuera** del bucle de pasos
+        fijos. Ver `BaseScene.actualizar_en_tiempo_real` para el porqué: con
+        el reloj a cero no hay pasos, y lo que tenga que soltar el freno no
+        puede vivir dentro de ellos.
+        """
+        if self._stack:
+            self._stack[-1].actualizar_en_tiempo_real(dt_sin_escalar)
+
     def cleanup(self) -> None:
         """Unsubscribe all event listeners. Call when SceneManager is discarded."""
         for event, cb in self._event_refs.items():

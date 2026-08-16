@@ -69,6 +69,19 @@ class BaseScene(abc.ABC):
         """Update logic. Called once per frame while active."""
         ...
 
+    def actualizar_en_tiempo_real(self, dt_sin_escalar: float) -> None:
+        """Lo que tiene que avanzar aunque el mundo esté parado (AUD-498).
+
+        Se llama **una vez por fotograma** con el tiempo real, fuera del
+        acumulador de pasos fijos de `App`. Existe porque `pasos_fijos()`
+        consume el delta escalado: con `time_scale` a 0.0 —lo que hace el
+        hit-stop al acertar un golpe— no emite ni un paso, `update()` no se
+        llama, y cualquier cuenta atrás que viva ahí dentro no termina jamás.
+
+        No es abstracto: las 26 entregas de escenario heredan de aquí y no
+        tienen por qué saber que esto existe. Por defecto no hace nada.
+        """
+
     @abc.abstractmethod
     def draw(self, surface: pygame.Surface) -> None:
         """Render the scene onto the given surface."""

@@ -1092,9 +1092,31 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
                 self.context.event_bus.emit(Events.SFX_HIT_CONNECT)
             self._collision.process_attack(dt, player, stage, self._camera, clock)
         finally:
-            # update_hitstop owns time_scale entirely: it restores 1.0 as soon
-            # as the freeze expires, so no separate restore step is needed.
-            self._collision.update_hitstop(unscaled_dt, clock)
+            # AUD-498 — el descuento del hit-stop ya NO se hace aquí.
+            #
+            # Vivía en este `finally` con el delta sin escalar, que era
+            # correcto por sí solo (AUD-001) y aun así insuficiente: `App`
+            # simula en pasos fijos y `pasos_fijos()` consume el delta
+            # **escalado**, así que con `time_scale` a 0.0 —lo que pone el
+            # propio hit-stop— no llega ni un paso, este método no se ejecuta
+            # y el freno no lo suelta nadie. Un delta bueno no sirve de nada
+            # si a la función no la llama nadie.
+            #
+            # Ahora lo lleva `actualizar_en_tiempo_real`, que corre una vez
+            # por fotograma con el reloj real, igual que ya hacían las
+            # transiciones. Aquí sólo queda registrar el factor del fotograma
+            # en curso, sin descontar tiempo.
+            self._collision.aplicar_escala_de_hitstop(clock)
+
+    def actualizar_en_tiempo_real(self, dt_sin_escalar: float) -> None:
+        """El hit-stop se descuenta aqui, con el reloj real (AUD-498).
+
+        Fuera del acumulador de pasos fijos a proposito: es el unico sitio
+        que sigue corriendo cuando `time_scale` vale 0.0, que es justo lo que
+        el hit-stop provoca. Ver el `finally` de `_update_combat` para la
+        cadena completa.
+        """
+        self._collision.update_hitstop(dt_sin_escalar, self.context.clock)
 
     def _update_camera_map(self, dt: float) -> None:
         stage = self._stage_data
