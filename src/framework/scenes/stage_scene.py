@@ -587,6 +587,11 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         self.on_stage_start()
 
         # Init minimap with stage size
+        # AUD-499 — el hueco lo manda el HUD, que es quien conoce la franja
+        # entera. Antes el minimapa se colocaba solo en el borde derecho y
+        # caía justo encima del cronómetro.
+        if self._hud is not None:
+            self._minimap.colocar(self._hud.minimap_rect())
         self._minimap.set_map_size(*self._stage_data.map_pixel_size)
 
         # Speedrun timer
@@ -629,29 +634,8 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
             # silencio. Ahora el sistema de clima devuelve la ruta del fichero
             # real, y cuando un clima no tiene sonido se dice en el registro
             # en vez de callarse.
-            ruta_relativa = self._weather.get_ambient_audio_key()
-            if ruta_relativa and self.context.audio is not None:
-                ambient_path = settings.ASSETS_DIR / ruta_relativa
-                if ambient_path.exists():
-                    # AUD-149 — se FUNDE si ya había ambiente sonando.
-                    #
-                    # `crossfade_ambient` llevaba meses escrita sin que nadie
-                    # la llamara. Su sitio es justo éste: al volver de una
-                    # sala de jefe o al reaparecer, cortar el ambiente en seco
-                    # y arrancar otro se oye como un fallo. La primera vez no
-                    # hay nada que fundir, así que se arranca normal.
-                    audio = self.context.audio
-                    if getattr(audio, "_ambient_active", False):
-                        audio.crossfade_ambient(ambient_path, duration=1.5,
-                                                volume=0.3)
-                    else:
-                        audio.play_ambient(ambient_path, volume=0.3)
-                else:
-                    logging.getLogger(__name__).warning(
-                        "el clima %r pide %s y no está en el disco",
-                        climate, ambient_path,
-                    )
-            elif self._weather.falta_su_ambiente():
+            self._aplicar_ambiente_del_clima()
+            if self._weather.falta_su_ambiente():
                 logging.getLogger(__name__).warning(
                     "el clima %r no tiene sonido ambiente todavía: falta el "
                     "fichero en assets/sfx/environment/", climate,

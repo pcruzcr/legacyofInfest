@@ -81,11 +81,12 @@ paréntesis, lo que mide en pantalla al multiplicar por 2,5.
 | Elemento | X | Y | Ancho | Alto | En pantalla (×2,5) | Notas |
 |---|---|---|---|---|---|---|
 | Caja de mensajes | 0 | 0 | 320 | 28 | 0,0 800×70 | Capa superior (movida desde abajo en v1.1.0) |
-| Marco del retrato | 2 | 2 | 34 | 34 | 5,5 85×85 | Marco del retrato |
-| Sprite del retrato | 3 | 3 | 32 | 32 | 8,8 80×80 | Sprite interior |
+| Marco del retrato | 2 | 2 | 24 | 24 | 5,5 60×60 | Marco del retrato (AUD-499) |
+| Sprite del retrato | 3 | 3 | 22 | 22 | 8,8 55×55 | Sprite interior, deriva del marco |
 | Fila de corazones | 38 | 6 | 76 | 8 | 95,15 190×20 | Cinco corazones, separación 16 de diseño |
 | Puntuación | 124 | 2 | 128 | 14 | 310,5 320×35 | Puntos y monedas, alineado a la derecha (AUD-219) |
 | Medidor especial | 84 | 30 | 60 | 6 | 210,75 150×15 | Barra del ultimate; oro cuando está llena (AUD-455 rescata las tres barras sin escalar) |
+| Minimapa | 258 | 20 | 62 | 44 | 645,50 155×110 | Debajo del cronómetro (AUD-499) |
 | Estamina | 84 | 40 | 60 | 4 | 210,100 150×10 | Ámbar por debajo de 34 % (AUD-141, AUD-455) |
 | Tiempo bala | 84 | 46 | 60 | 4 | 210,115 150×10 | Azul guardada, blanco en uso (AUD-260, AUD-455) |
 | Caja del temporizador | 258 | 1 | 62 | 16 | 645,2 155×40 | Alineado a la derecha |
@@ -98,7 +99,7 @@ paréntesis, lo que mide en pantalla al multiplicar por 2,5.
 
 ### 3.1 Descripción
 
-El retrato es un sprite de primer plano de 32×32 píxeles del personaje encapuchado, mostrado en la esquina superior izquierda. Es estático (no animado) en juego normal. Se anima en eventos concretos.
+El retrato es un sprite de primer plano de 22×22 de maqueta (55×55 en pantalla) del personaje encapuchado, mostrado en la esquina superior izquierda. Es estático (no animado) en juego normal. Se anima en eventos concretos.
 
 ### 3.2 Estados del retrato
 

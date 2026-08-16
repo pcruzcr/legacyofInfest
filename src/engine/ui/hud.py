@@ -37,6 +37,19 @@ def _rect_escalado(x: int, y: int, w: int, h: int) -> pygame.Rect:
     return pygame.Rect(_e(x), _e(y), _e(w), _e(h))
 
 
+#: El hueco del minimapa, en coordenadas de la maqueta de 320 (AUD-499).
+#:
+#: Vive aquí y no en `minimap.py` porque el HUD es quien conoce la franja
+#: entera: el minimapa solo no puede saber que el cronómetro ocupa el borde
+#: derecho, que es exactamente lo que no sabía cuando se colocaba encima.
+RECUADRO_MINIMAPA_DISENO: tuple[int, int, int, int] = (258, 20, 62, 44)
+
+
+def minimap_rect_por_defecto() -> pygame.Rect:
+    """`RECUADRO_MINIMAPA_DISENO` a la escala de la pantalla real."""
+    return _rect_escalado(*RECUADRO_MINIMAPA_DISENO)
+
+
 def _heart_slot_state(health: float, slot: int) -> str:
     v = max(0.0, min(1.0, health - slot))
     if v >= 1.0:
@@ -72,8 +85,15 @@ class HUD:
         self._pulso_timer: float = 0.0
 
         # Portrait frame (34x34 with 1px border, inner sprite at 3,3)
-        self._portrait_frame_rect = _rect_escalado(2, 2, 34, 34)
-        self._portrait_sprite_rect = _rect_escalado(3, 3, 32, 32)
+        # AUD-499 — el retrato bajó de 34 a 24 de lado (85 px a 60 en
+        # pantalla). A ×2,5 la maqueta heredada daba una cara de 85×85: el
+        # elemento más grande de toda la franja, más ancho que la hilera de
+        # corazones es alta, y el dueño lo describió como «muy grande». La
+        # proporción respecto al diseño de 320 era la correcta; lo que no
+        # aguanta el salto de escala es que un retrato ocupe el 10 % del
+        # ancho de la pantalla.
+        self._portrait_frame_rect = _rect_escalado(2, 2, 24, 24)
+        self._portrait_sprite_rect = _rect_escalado(3, 3, 22, 22)
         self._portrait_fill = None
         self._portrait_edges: dict[str, pygame.Surface] = {}
         self._timer_fill = None
@@ -218,7 +238,12 @@ class HUD:
             try:
                 # AUD-459 — el retrato se subía a 32×32 a pelo; el marco
                 # media 80×80. Misma lección que los corazones.
-                surf = AssetLoader.load_image(path, size=(_e(32), _e(32)))
+                # AUD-499 — el tamaño sale del rectángulo de la maqueta, no
+                # de un 32 escrito aquí. Con el número suelto, mover el marco
+                # dejaba el sprite del tamaño anterior: exactamente lo que
+                # pasó al reducir el retrato, que se salía de su propio marco.
+                destino = self._portrait_sprite_rect.size
+                surf = AssetLoader.load_image(path, size=destino)
                 self._portraits[state] = surf
             except (pygame.error, FileNotFoundError, PermissionError):
                 logger.warning("hud: failed to load portrait %s", state)
@@ -329,6 +354,22 @@ class HUD:
         self._timer_running = False
         self._timer_paused = False
 
+    def minimap_rect(self) -> pygame.Rect:
+        """Dónde cabe el minimapa sin pisar a nadie — AUD-499.
+
+        Lo decide el HUD y no el minimapa porque el HUD es quien conoce la
+        franja entera. El defecto que esto arregla: el minimapa se colocaba
+        solo en `INTERNAL_WIDTH - 84, 4`, en píxeles de pantalla y sin pasar
+        por la escala, mientras el cronómetro ocupaba el borde derecho de la
+        maqueta (258..320 de 320). Los dos reclamaban la misma esquina y se
+        solapaban en 80×38 px.
+
+        Va **debajo** del cronómetro y con su mismo ancho: la franja
+        superior está llena, y alinearlo con el reloj hace que se lea como
+        una columna y no como una caja suelta.
+        """
+        return minimap_rect_por_defecto()
+
     def timer_rect(self) -> pygame.Rect:
         """El marco del cronómetro. Lo consulta la prueba de maqueta."""
         return pygame.Rect(self._timer_bg_rect)
@@ -352,6 +393,10 @@ class HUD:
             "corazones": self.heart_row_rect(),
             "marcador": pygame.Rect(self._score_region),
             "cronometro": self.timer_rect(),
+            # AUD-499 — el minimapa faltaba aquí, y por eso la prueba de «no
+            # se pisan» no cazó que llevaba tiempo encima del reloj. Una
+            # región que no se declara no la vigila nadie.
+            "minimapa": self.minimap_rect(),
         }
 
     @property

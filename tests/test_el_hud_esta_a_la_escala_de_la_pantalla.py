@@ -141,12 +141,31 @@ class TestLosSpritesVanALaEscala:
             escalar(14), escalar(8),
         )
 
-    def test_el_retrato_mide_80x80(self, hud) -> None:
-        """Un retrato de 32×32 dentro de un marco de 85×85 es una miniatura."""
-        from src.engine.ui.theme import escalar
+    def test_el_retrato_va_a_la_escala_de_su_marco(self, hud) -> None:
+        """AUD-499 — el número bajó de 32 a 22 de lado por decisión del dueño.
 
-        assert hud._portraits["normal"].get_size() == (
-            escalar(32), escalar(32),
+        AUD-459 subió el sprite a `escalar(32)` para que llenara un marco de
+        34 de maqueta, y a ×2,5 eso daba una cara de 85×85: el elemento más
+        grande de la franja. Se describió jugando como «muy grande». Lo que
+        se comprueba aquí no es el número —ése es una decisión de diseño y
+        puede volver a moverse— sino la relación que sí tiene que
+        cumplirse: el sprite llena su marco y no lo desborda.
+        """
+        marco = hud.regiones()["retrato"]
+        ancho, alto = hud._portraits["normal"].get_size()
+        assert ancho <= marco.width and alto <= marco.height, (
+            f"el retrato ({ancho}×{alto}) desborda su marco ({marco.size})"
+        )
+        assert ancho >= marco.width * 0.8, (
+            f"el retrato ({ancho}) nada dentro de un marco de {marco.width}"
+        )
+
+    def test_el_retrato_no_se_come_la_franja(self, hud) -> None:
+        """El sintoma reportado, medido: 85 px de 800 era el 10,6 % del ancho."""
+        marco = hud.regiones()["retrato"]
+        assert marco.width <= settings.INTERNAL_WIDTH * 0.09, (
+            f"el retrato ocupa {marco.width / settings.INTERNAL_WIDTH:.1%} del "
+            f"ancho de la pantalla"
         )
 
     def test_la_barra_del_jefe_ocupa_mas_de_la_mitad(self, hud) -> None:
@@ -169,6 +188,32 @@ class TestLosSpritesVanALaEscala:
         assert max(rachas_anchas) >= settings.INTERNAL_WIDTH // 2, (
             "la barra del jefe sigue a la escala de la maqueta de 320 px"
         )
+
+
+class TestElMinimapaTieneSuSitio:
+    """AUD-499 — el minimapa se colocaba solo en el borde derecho, en píxeles
+    de pantalla y sin pasar por la escala, mientras el cronómetro ocupaba el
+    borde derecho de la maqueta. Se solapaban en 80×38 px, y la prueba de «no
+    se pisan» no lo cazaba porque el minimapa no estaba en `regiones()`."""
+
+    def test_esta_declarado_como_region(self, hud) -> None:
+        assert "minimapa" in hud.regiones()
+
+    def test_no_pisa_al_cronometro(self, hud) -> None:
+        r = hud.regiones()
+        assert not r["minimapa"].colliderect(r["cronometro"]), (
+            f"el minimapa {r['minimapa']} está encima del reloj "
+            f"{r['cronometro']}"
+        )
+
+    def test_el_minimapa_suelto_nace_en_el_hueco_del_hud(self, hud) -> None:
+        """Un `Minimap()` sin argumentos —lo que hacen las pruebas y las
+        entregas— tiene que caer donde el HUD dice, no donde él crea."""
+        from src.engine.ui.minimap import Minimap
+
+        m = Minimap()
+        suyo = pygame.Rect(m._minimap_x, m._minimap_y, m._minimap_w, m._minimap_h)
+        assert suyo == hud.minimap_rect()
 
 
 class TestElDocumentoDiceLaVerdad:
