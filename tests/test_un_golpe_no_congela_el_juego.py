@@ -81,6 +81,8 @@ class TestElHitstopSeSueltaSolo:
     """Lo que de verdad importa: que el juego vuelva."""
 
     def _escena_con_hitstop(self):
+        import pygame
+
         from src.engine.audio.audio_manager import AudioManager
         from src.engine.core.event_bus import EventBus
         from src.engine.core.game_context import GameContext
@@ -89,8 +91,6 @@ class TestElHitstopSeSueltaSolo:
         from src.engine.scene.scene_manager import SceneManager
         from src.framework.entities import entity_factory
         from src.stages.stage0.stage0 import Stage0
-
-        import pygame
 
         pygame.init()
         pygame.font.init()
@@ -136,7 +136,7 @@ class TestElHitstopSeSueltaSolo:
     def test_la_pausa_dura_de_verdad(self) -> None:
         """Soltarlo enseguida seria la otra forma de romperlo: el impacto
         dejaria de notarse."""
-        ctx, escena, reloj = self._escena_con_hitstop()
+        ctx, escena, _reloj = self._escena_con_hitstop()
         try:
             escena._collision.trigger_hitstop(0.08)
             ctx.scene_manager.actualizar_en_tiempo_real(1 / 120)
