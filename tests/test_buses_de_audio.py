@@ -538,23 +538,36 @@ class TestLasDosApisDeAmbienteQueNadieLlamaba:
         audio.ajustar_bus(BUS_AMBIENTE, 0.2)
         assert audio._ambient_volume == pytest.approx(0.2)
 
-    def test_la_escena_funde_entre_ambientes(self) -> None:
+    # AUD-500 — estas dos miraban el texto de `stage_scene.py`, y el cableado
+    # del ambiente se mudó a `stage_parts/simulacion.py`, junto a
+    # `_cambiar_clima`, que es quien lo llama. Ahora se mira **el método**:
+    # así siguen protegiendo lo mismo y dejan de romperse cada vez que el
+    # código se coloca donde le corresponde.
+
+    def _fuente_del_ambiente(self) -> str:
         import inspect
 
-        from src.framework.scenes import stage_scene
+        from src.framework.scenes.stage_scene import StageScene
 
-        fuente = inspect.getsource(stage_scene)
-        assert "crossfade_ambient" in fuente, (
+        return inspect.getsource(StageScene._aplicar_ambiente_del_clima)
+
+    def test_la_escena_funde_entre_ambientes(self) -> None:
+        assert "crossfade_ambient" in self._fuente_del_ambiente(), (
             "al volver de una sala de jefe el ambiente cortaría en seco, que "
             "se oye como un fallo"
         )
 
     def test_la_primera_vez_no_funde_nada(self) -> None:
         """No hay ambiente anterior con el que fundir: arrancar normal."""
-        import inspect
-
-        from src.framework.scenes import stage_scene
-
-        fuente = inspect.getsource(stage_scene)
+        fuente = self._fuente_del_ambiente()
         assert "_ambient_active" in fuente
-        assert "play_ambient(ambient_path, volume=0.3)" in fuente
+        assert "play_ambient(" in fuente
+
+    def test_un_clima_sin_ambiente_para_el_anterior(self) -> None:
+        """AUD-500 — la mitad que faltaba, y el defecto reportado jugando:
+        `AMBIENTES["clear"]` es `None`, y sin esto la lluvia seguía sonando
+        sobre un cielo despejado."""
+        assert "stop_ambient" in self._fuente_del_ambiente(), (
+            "el ambiente sólo sabe arrancar: un clima sin sonido deja "
+            "sonando el anterior"
+        )
