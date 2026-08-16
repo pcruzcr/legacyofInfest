@@ -4,7 +4,7 @@ from collections.abc import Sequence
 
 import pygame
 
-from src.engine.core import settings
+from src.engine.ui.hud import minimap_rect_por_defecto
 
 
 class Minimap:
@@ -21,11 +21,37 @@ class Minimap:
         self._activated_checkpoints: set[int] = set()
         self._visible: bool = True
 
-        # Minimap dimensions
-        self._minimap_w: int = 80
-        self._minimap_h: int = 56
-        self._minimap_x: int = x if x is not None else settings.INTERNAL_WIDTH - self._minimap_w - 4
-        self._minimap_y: int = y if y is not None else 4
+        # Minimap dimensions — AUD-499.
+        #
+        # Antes eran 80x56 fijos en `INTERNAL_WIDTH - 84, 4`: píxeles de
+        # pantalla, sin pasar por la escala de interfaz. Eso dejaba una caja
+        # del tamaño del diseño de 320 clavada en el borde de una pantalla de
+        # 800 — pequeña de más y, peor, encima del cronómetro, que ocupa el
+        # borde derecho de la maqueta del HUD.
+        #
+        # Ahora el hueco lo decide el HUD (`HUD.minimap_rect`), que es quien
+        # conoce la franja entera; esto sólo lo obedece. Los valores de aquí
+        # son la reserva para quien construya un `Minimap` suelto —las
+        # pruebas y las entregas de estudiantes lo hacen— y van a la misma
+        # escala que el resto de la interfaz.
+        recuadro = minimap_rect_por_defecto()
+        self._minimap_w: int = recuadro.width
+        self._minimap_h: int = recuadro.height
+        self._minimap_x: int = x if x is not None else recuadro.x
+        self._minimap_y: int = y if y is not None else recuadro.y
+
+    def colocar(self, rect: pygame.Rect) -> None:
+        """Mueve y redimensiona el minimapa a ese recuadro (AUD-499).
+
+        Lo llama `StageScene` con `HUD.minimap_rect()`. Se recalcula la
+        escala porque depende del tamaño: sin esto, cambiar el recuadro
+        dibujaría el mapa con la proporción del anterior.
+        """
+        self._minimap_x, self._minimap_y = rect.x, rect.y
+        self._minimap_w, self._minimap_h = rect.width, rect.height
+        ancho, alto = getattr(self, "_map_size", (0, 0))
+        if ancho and alto:
+            self.set_map_size(ancho, alto)
 
         # Pixel per world unit scaling - auto-calculated
         self._scale: float = 1.0
