@@ -240,6 +240,18 @@ class AudioManager:
                 self._ambient_channel = new_channel
                 self._ambient_volume = volume
                 self._ambient_active = True
+            else:
+                # AUD-500 — no hay canal libre y el viejo ya se mandó apagar.
+                #
+                # Dejar `_ambient_active` en `True` con `_ambient_channel`
+                # apuntando a un canal que se desvanece es peor que quedarse
+                # sin ambiente: varios sitios preguntan por ese campo para
+                # decidir si parar o si fundir (`StageScene._cambiar_clima`,
+                # el silencio de la Fase 4 del 4-1), y con el dato falso
+                # deciden mal. Se dice la verdad: ahora mismo no suena nada.
+                self._ambient_sound = None
+                self._ambient_channel = None
+                self._ambient_active = False
         # AUD-411 — la misma red que `play_ambient` (línea ~217): `Sound` con
         # un `.wav` que se borró o se volvió ilegible lanza
         # `FileNotFoundError`/`OSError`, no `pygame.error`. La gemela lo

@@ -26,6 +26,8 @@ Lo que este módulo aporta al escenario
 """
 from __future__ import annotations
 
+import logging
+
 from src.framework.vfx import pulso
 from src.framework.world import EnvironmentState
 
@@ -279,6 +281,60 @@ class SimulacionDeEscenario:
         """
         self._simulacion.set_clima(nombre)
         self._aplicar_hora()
+        # AUD-500 — y el ambiente sonoro sigue al clima.
+        #
+        # Esta es «la puerta» del clima, pero no tocaba el audio: el ambiente
+        # se cableaba una sola vez en `on_enter` y no volvía a mirarse. El
+        # clima sí cambia en mitad de la partida —el 4-1 lo hace seis veces—,
+        # así que la lluvia del mapa seguía sonando aunque el cielo se
+        # despejara. Va después de `_aplicar_hora`, que es quien deja al
+        # sistema de clima al día para que `get_ambient_audio_key` acierte.
+        self._aplicar_ambiente_del_clima()
+
+    def _aplicar_ambiente_del_clima(self) -> None:
+        """Pone, funde o **quita** el ambiente sonoro que pide el clima.
+
+        AUD-500 — esto vivía dentro de `StageScene.on_enter`, así que se
+        cableaba una sola vez al cargar el escenario y no volvía a mirarse.
+        El clima sí cambia en mitad de la partida —`_cambiar_clima` es su
+        puerta, y el 4-1 la usa seis veces—, de modo que el ambiente se
+        quedaba con el del mapa para siempre. Reportado jugando: *«el sonido
+        de la lluvia queda pegado»*.
+
+        Y no basta con arrancar: `WeatherSystem.AMBIENTES["clear"]` es
+        `None`, así que despejar el cielo tiene que **parar** lo que hubiera.
+        Antes no entraba en ninguna rama y la lluvia seguía sonando sobre un
+        cielo limpio.
+
+        Vive aquí y no en `stage_scene` para que esté junto a `_cambiar_clima`,
+        que es quien lo llama. El `getattr` sobre `self._weather` es el mismo
+        patrón que usa `_clima_efectivo` unas líneas más abajo: una escena
+        mínima —las de las pruebas, las entregas parciales— compone esta
+        parte sin tener sistema de clima, y no debe reventar por eso.
+        """
+        from src.engine.core import settings
+
+        clima = getattr(self, "_weather", None)
+        audio = getattr(getattr(self, "context", None), "audio", None)
+        if clima is None or audio is None:
+            return
+        ruta_relativa = clima.get_ambient_audio_key()
+        if not ruta_relativa:
+            if getattr(audio, "_ambient_active", False):
+                audio.stop_ambient()
+            return
+        ruta = settings.ASSETS_DIR / ruta_relativa
+        if not ruta.exists():
+            logging.getLogger(__name__).warning(
+                "el clima pide %s y no está en el disco", ruta,
+            )
+            return
+        # AUD-149 — se FUNDE si ya había ambiente sonando. Cortar en seco y
+        # arrancar otro se oye como un fallo.
+        if getattr(audio, "_ambient_active", False):
+            audio.crossfade_ambient(ruta, duration=1.5, volume=0.3)
+        else:
+            audio.play_ambient(ruta, volume=0.3)
 
     def _aplicar_clima(self, estado: EnvironmentState) -> None:
         """El mundo dice qué tiempo hace; el VFX lo pinta — AUD-374.

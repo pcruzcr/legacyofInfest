@@ -162,11 +162,32 @@ class TestLaAveriaEsDeVerdad:
             objetivo.write_bytes(respaldo)
         assert objetivo.read_bytes() == antes
 
+    #: Los ficheros exactos que rompen las pruebas de arriba. Si una avería
+    #: se escapara de la copia, se notaría en éstos.
+    TOCADOS = (
+        "assets/maps/stage0/stage0.tmx",
+        "assets/tilesets/tileset_stage0.png",
+        "locale/es.json",
+        "requirements.txt",
+        "docs/STAGE_CREATION.md",
+    )
+
     def test_el_repositorio_de_verdad_no_se_toca(self) -> None:
-        """El seguro que hace inofensivo todo lo anterior."""
+        """El seguro que hace inofensivo todo lo anterior.
+
+        Se comparan **estos** ficheros contra lo que git dice que deberían
+        ser, no el árbol entero. La primera versión exigía un árbol limpio y
+        confundía dos cosas distintas: que una avería se hubiera escapado, y
+        que quien ejecuta las pruebas tenga trabajo sin commitear — que es lo
+        normal mientras se desarrolla, y de hecho la hizo fallar en cuanto
+        toqué un documento sin relación.
+        """
+        # Se pregunta a git y no se comparan bytes: en Windows el árbol de
+        # trabajo tiene CRLF y el objeto guardado LF, así que `git show`
+        # contra el fichero del disco difiere siempre aunque nadie lo haya
+        # tocado. `git status` conoce esa normalización; un `sha256` no.
         estado = subprocess.run(
-            ["git", "status", "--porcelain", "--", "locale", "assets", "docs",
-             "requirements.txt"],
+            ["git", "status", "--porcelain", "--", *self.TOCADOS],
             cwd=RAIZ, capture_output=True, text=True,
         )
         assert estado.stdout.strip() == "", (
