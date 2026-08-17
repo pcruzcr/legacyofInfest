@@ -1774,6 +1774,41 @@ def _tri(freq, t):
     p = 2.0 * ((t * freq) % 1.0)
     return 2.0 * abs(p - 1.0) - 1.0
 
+def _aplicar_reverberacion(samples, rate=SAMPLE_RATE, decaimiento=0.55,
+                            retardo_ms=45.0, ecos=6, cola_extra_s=1.2):
+    """Reverberación horneada en el propio clip (AUD-515, GAP-058).
+
+    El mezclador de este motor (SDL mixer) no tiene DSP en tiempo real: no
+    hay un nudo de «reverb de zona» al que conectar un sonido y que lo
+    devuelva con eco. GAP-058 lo señala para el silencio súbito de la
+    Fase 4 del 4-1 —*«el silencio se resuelve bajando el clima y las
+    partículas a cero, no con una reverberación que se apaga»*— y hasta
+    ahora se dejaba así, sin fecha, por asumir que hacía falta DSP de
+    verdad.
+
+    No hace falta. Todo el audio de este proyecto ya se genera por código
+    (`_gen_sfx`), así que la reverberación se puede **hornear en el propio
+    `.wav`**: varias copias del sonido, retrasadas y cada vez más flojas,
+    sumadas por encima del original — el mismo principio que un comb
+    filter, la base de cualquier reverberación algorítmica, sólo que
+    calculado una vez al generar en vez de en tiempo real. El resultado es
+    más largo que el original (`cola_extra_s` de silencio al final para que
+    el último eco no se corte).
+    """
+    retardo_muestras = max(1, int(rate * retardo_ms / 1000.0))
+    cola_muestras = int(rate * cola_extra_s)
+    salida = list(samples) + [0.0] * cola_muestras
+    ganancia = 1.0
+    for eco in range(1, ecos + 1):
+        ganancia *= decaimiento
+        offset = retardo_muestras * eco
+        for i, s in enumerate(samples):
+            idx = i + offset
+            if idx < len(salida):
+                salida[idx] += s * ganancia
+    return salida
+
+
 def _write_wav(path, samples, rate=SAMPLE_RATE):
     _ensure(path)
     mx = max(abs(s) for s in samples) or 1.0
@@ -1989,7 +2024,11 @@ SFX_CATEGORIES = {
                     # marcador de posición, no un intento de representar una
                     # lengua o una ceremonia real.
                     "viento_de_bosque", "grito_de_gavilan", "canto_ancestral",
-                    "resonancia_solemne"],
+                    "resonancia_solemne",
+                    # AUD-515 — el sonido profundo de la secuencia de
+                    # despertar de la Fase 6 (GAP-064 punto 25), con
+                    # reverberación horneada — ver `_aplicar_reverberacion`.
+                    "despertar_profundo"],
     # AUD-263 — las voces. GAP-031 decía «el motor sabe reproducir voz y no hay
     # ni un solo fichero», y se dejó así a propósito para no cablear mentiras.
     # Pero **todo** el audio de este juego está sintetizado aquí: los pasos, los
@@ -2017,7 +2056,8 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
              "venado_fase1": 0.9, "venado_fase2": 1.1, "venado_muerte": 1.4,
              "rain_ambient": 2.0, "storm_ambient": 2.0, "thunder": 1.6,
              "viento_de_bosque": 2.0, "grito_de_gavilan": 0.7,
-             "canto_ancestral": 3.0, "resonancia_solemne": 4.0}
+             "canto_ancestral": 3.0, "resonancia_solemne": 4.0,
+             "despertar_profundo": 1.6}
     
     dur = t_dur.get(name, 0.3)
     n = int(rate * dur)
@@ -2070,7 +2110,33 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
         # golpe» a mitad de la Fase 4, una vez por visita. Decaer a silencio
         # es exactamente el efecto que pide — quitarle la envolvente sería
         # cambiarle el sentido, no arreglar nada.
+        #
+        # AUD-515, GAP-058 — le faltaba la reverberación que el propio hueco
+        # pedía: *«el silencio se resuelve bajando el clima y las partículas
+        # a cero, no con una reverberación que se apaga»*. `_aplicar_reverberacion`
+        # la hornea encima del hush ya generado, en vez de quitarle la
+        # envolvente que sí es correcta.
         samples = [random.uniform(-0.05, 0.05) * max(0, 1 - i/n) for i in range(n)]
+        samples = _aplicar_reverberacion(samples, rate)
+    elif name == "despertar_profundo":
+        # AUD-515, GAP-064 punto 25 — el «sonido profundo» de la secuencia
+        # de despertar antes del corte a `stage4_2_boss_paburu`. Antes
+        # tomaba prestado `sfx_bosses_phase_change` (un cue de combate, no
+        # de despertar del mundo); éste es un retumbar grave propio, con la
+        # misma reverberación horneada que el silencio de la Fase 4 — las
+        # dos son la misma idea, un espacio sagrado que resuena, así que
+        # comparten el tratamiento.
+        anterior = 0.0
+        samples = []
+        for i in range(n):
+            t_seg = i / rate
+            avance = t_seg / dur
+            crudo = random.uniform(-1.0, 1.0)
+            anterior = anterior * 0.95 + crudo * 0.05   # muy filtrado, muy grave
+            env = min(1.0, avance * 3.0) * max(0.0, 1.0 - avance) ** 1.4
+            samples.append((anterior + _tri(38.0, t_seg) * 0.3) * env * 0.55)
+        samples = _aplicar_reverberacion(samples, rate, decaimiento=0.62, ecos=8,
+                                          cola_extra_s=1.8)
     elif name == "jump":
         samples = [_square(200 + 1200 * (i/(n-1)) if n > 1 else 200, i/rate, 0.5) * (1 - i/n) * 0.3 for i in range(n)]
     elif name in ("short_attack", "long_attack", "hit_connect", "hit", "projectile_fire", "hazard_zone"):
