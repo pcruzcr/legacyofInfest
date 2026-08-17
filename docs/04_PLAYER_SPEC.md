@@ -165,8 +165,10 @@ guarda en el buffer y se gasta al aterrizar, y la rama aérea de `_can_jump()`
 sólo se alcanza desde los estados de suelo. El alcance medido no cambia por
 pulsar saltar en el aire.
 
-No diseñes niveles contando con doble salto, y no trates
-`max_gap_with_air_jump` de `level_metrics.py` como una distancia alcanzable.
+No diseñes niveles contando con doble salto. `level_metrics.py` (AUD-504) ya
+no llama a este número «con salto aéreo»: el campo se renombró a
+`max_gap_expert` porque lo que realmente mide es la técnica de soltar la
+dirección al despegar, no el salto aéreo — que sigue sin disparar.
 
 ### 4.3 Resolución de colisiones
 

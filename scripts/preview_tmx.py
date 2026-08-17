@@ -276,7 +276,7 @@ def _dibujar_diagnostico(lienzo, stage) -> list[str]:
     # Los números del salto, para que el ámbar y el rojo signifiquen algo.
     lineas.append(f"  (el salto cruza {env.max_gap:.0f} px; cómodo hasta "
                   f"{env.max_gap * env.COMFORT:.0f}; con salto aéreo "
-                  f"{env.max_gap_with_air_jump:.0f})")
+                  f"{env.max_gap_expert:.0f})")
     return lineas
 
 
