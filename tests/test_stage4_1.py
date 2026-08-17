@@ -289,6 +289,86 @@ class TestLasSuperficiesDeLaFase2:
             assert trazado.fase_de_la_columna(inicio + ancho - 1) == 2
 
 
+class TestLaFriccionEscalaConLaLluvia:
+    """AUD-513, GAP-060 punto 14: *«al principio, musgo = ligeramente
+    resbaladizo; después de lluvia intensa, mucho más»* — antes
+    `multiplicador` era una constante por material, igual en toda la
+    sección."""
+
+    def _zonas(self, escena):
+        from src.framework.ecs import ZonaDeFriccion
+
+        return list(escena._mundo.cada(ZonaDeFriccion))
+
+    def test_resbala_menos_al_entrar_que_al_final(self, escena) -> None:
+        from src.stages.stage4_1.fases import FASES
+
+        fase2 = FASES[1]
+        _posicionar_sin_fisica(escena, fase2.desde_columna + 1)
+        escena._actualizar_friccion_de_la_lluvia()
+        temprano = {eid: z.multiplicador for eid, z in self._zonas(escena)}
+
+        _posicionar_sin_fisica(escena, fase2.desde_columna + 140)
+        escena._actualizar_friccion_de_la_lluvia()
+        tardio = {eid: z.multiplicador for eid, z in self._zonas(escena)}
+
+        assert temprano.keys() == tardio.keys()
+        for eid in temprano:
+            assert tardio[eid] < temprano[eid], (
+                f"la zona {eid} no resbala más avanzada la sección: "
+                f"{temprano[eid]} -> {tardio[eid]}"
+            )
+
+    def test_las_zonas_siguen_siendo_solo_musgo_y_lodo(self, escena) -> None:
+        """La fricción escalada no debe dejar de frenar ni empezar a
+        acelerar (AUD-236: `multiplicador > 1` se dispara sin tope)."""
+        from src.stages.stage4_1.fases import FASES
+
+        _posicionar_sin_fisica(escena, FASES[1].desde_columna + 149)
+        escena._actualizar_friccion_de_la_lluvia()
+        for _eid, zona in self._zonas(escena):
+            assert 0.0 < zona.multiplicador < 1.0
+
+    def test_no_toca_nada_fuera_de_la_fase_2(self, escena) -> None:
+        from src.stages.stage4_1 import trazado
+
+        _posicionar_sin_fisica(escena, _dentro_de_la_fase(1))
+        escena._actualizar_friccion_de_la_lluvia()
+        zonas = self._zonas(escena)
+        assert {round(z.multiplicador, 6) for _eid, z in zonas} == {
+            round(trazado.FRENO_DEL_MUSGO, 6), round(trazado.FRENO_DEL_LODO, 6),
+        }
+
+    def test_la_fisica_vuelve_a_la_normalidad_tras_liberar_al_venado(
+        self, escena,
+    ) -> None:
+        """Punto 21: *«la física vuelve a la normalidad»* tras liberar al
+        espíritu — no porque el jugador siguiera caminando, sino porque el
+        Venado ya no está atrapado."""
+        from src.stages.stage4_1 import trazado
+        from src.stages.stage4_1.fases import FASES
+
+        fase2 = FASES[1]
+        col = fase2.desde_columna + trazado.DESVIO_COLUMNA_LIBERACION
+        _posicionar_sin_fisica(escena, col)
+        escena._actualizar_friccion_de_la_lluvia()
+        antes = {eid: z.multiplicador for eid, z in self._zonas(escena)}
+
+        evento = trazado.evento_de_liberacion(fase2.numero)
+        liberado = next(
+            d for d in escena._stage_data.disparadores if d.evento == evento)
+        liberado.disparado = True
+
+        escena._actualizar_friccion_de_la_lluvia()
+        despues = {eid: z.multiplicador for eid, z in self._zonas(escena)}
+
+        for eid in antes:
+            assert despues[eid] > antes[eid], (
+                "liberar al Venado debería calmar el bosque (menos "
+                "resbaladizo), no dejarlo igual"
+            )
+
+
 class TestLasAparicionesPreviasDelVenado:
     """GAP-060/AUD-479 — puntos 6 y 9-12 de la crítica de diseño del dueño
     para la Fase 2 (2026-08-14): antes de hablar, el Venado se deja ver y
@@ -559,6 +639,10 @@ class TestLaPausaDelDialogoDeLaSerpiente:
         assert reducida.length() < original.length() * 0.5
 
     def test_vuelve_a_su_fuerza_normal_lejos_del_dialogo(self, escena) -> None:
+        """"Normal" ya no es la fuerza fija del TMX (AUD-513, GAP-061 punto
+        5: la escalada progresiva) — es la fuerza declarada, multiplicada
+        por la curva de esta columna. Lejos de la pausa, vuelve a esa
+        curva, no a la constante del mapa."""
         from src.stages.stage4_1 import trazado
         from src.stages.stage4_1.fases import FASES
 
@@ -569,9 +653,12 @@ class TestLaPausaDelDialogoDeLaSerpiente:
         escena._actualizar_pausa_de_la_serpiente()
         assert self._viento(escena).fuerza.length() < original.length()
 
-        _posicionar_sin_fisica(escena, fase3.desde_columna + 5)
+        columna_lejos = fase3.desde_columna + 5
+        _posicionar_sin_fisica(escena, columna_lejos)
         escena._actualizar_pausa_de_la_serpiente()
-        assert self._viento(escena).fuerza == original
+        factor = escena._factor_de_viento(escena._avance_en_fase(fase3))
+        esperado = original * factor
+        assert self._viento(escena).fuerza.x == pytest.approx(esperado.x, abs=0.5)
 
     def test_no_toca_el_viento_fuera_de_la_fase_3(self, escena) -> None:
         original = pygame.Vector2(self._viento(escena).fuerza)

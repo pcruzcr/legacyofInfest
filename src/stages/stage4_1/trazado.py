@@ -288,6 +288,21 @@ SEGMENTOS_FASE2: tuple[tuple[int, int, str], ...] = (
     (230, 15, "lodo"),
     (250, 15, "musgo"),
 )
+#: Huellas del Venado (AUD-513, GAP-060 punto 28): *«herramienta de
+#: navegación... a veces desaparecen o terminan abruptamente»*. En columnas
+#: relativas al inicio de la Fase 2, antes de `DESVIO_COLUMNA_DIALOGO` (60):
+#: se ven mientras el Venado sigue siendo una presencia que se persigue, no
+#: después de que ya habló. Tres grupos, no un rastro continuo —el hueco
+#: entre 34 y 42 y el corte antes de llegar al diálogo son el «termina
+#: abruptamente»— y espaciado irregular dentro de cada grupo, no una regla
+#: fija: un rastro perfectamente uniforme se lee como decoración de baldosa,
+#: no como pisadas de verdad.
+HUELLAS_FASE2: tuple[int, ...] = (
+    12, 14, 17, 19, 22,
+    26, 28, 31,
+    42, 44, 47, 48, 51,
+)
+
 #: Cuánto frena el musgo: se anda al 94 % — un roce más suave que el lodo.
 FRENO_DEL_MUSGO = 0.94
 #: Cuánto frena el lodo: se anda al 88 %.
@@ -353,6 +368,16 @@ COLUMNA_LAPIDA_TERESA = 30
 COLUMNA_LAPIDA_HUGO = 34
 NOMBRE_LAPIDA_TERESA = "Teresa Murillo"
 NOMBRE_LAPIDA_HUGO = "Hugo Salazar Castillo"
+
+#: AUD-513, GAP-059 punto 2 — *«tumbas con reacciones distintas: una con
+#: sonido al acercarse»*. Antes la única variación de la Fase 1 era el
+#: easter egg (Teresa/Hugo, con nombre y `MessageTrigger`) — una sola
+#: historia, no varias. Ésta reacciona por sonido, no por texto ni
+#: silueta: nadie le pone nombre, y por eso puede repetirse sin que se lea
+#: como el mismo fantasma otra vez. Lejos de las lápidas del easter egg y
+#: de la anomalía ambigua (30/34/95) para que las tres lecturas —recuerdo
+#: de familia, sonido, duda— no se pisen entre sí.
+COLUMNA_TUMBA_SUSURRO = 60
 
 
 # ── Dónde caen el diálogo y la liberación de cada espíritu ────────────────

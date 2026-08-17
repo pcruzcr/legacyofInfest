@@ -314,6 +314,16 @@ def _objetos() -> list[str]:
             evento=evento_de_liberacion(fase.numero), automatico=False)
 
     # ── Las superficies de la Fase 2 (musgo y lodo) ────────────
+    #
+    # AUD-513, GAP-060 punto 14 — la escena escala `multiplicador` con la
+    # intensidad de la lluvia (`Stage4_1._actualizar_friccion_de_la_lluvia`)
+    # reconociendo cada zona por su valor de fábrica, no por `material=`:
+    # el TMX comprometido trae `BG_Far`/`BG_Mid` con arte pintado a mano, y
+    # `tools/generate_stage4_1.py` se niega a regenerarlo sin `--forzar`
+    # (`tiene_arte_pintado()`) — declarar aquí una propiedad que el mapa real
+    # no tiene todavía desincronizaría el generador del `.tmx` comprometido
+    # (`TestElMapaSigueAtadoASuGenerador`, `tests/test_stage4_1.py`) sin
+    # ganar nada, porque nadie va a regenerar sólo por esto.
     for inicio, ancho, material in SEGMENTOS_FASE2:
         fila = perfil[inicio]
         if material == "musgo":

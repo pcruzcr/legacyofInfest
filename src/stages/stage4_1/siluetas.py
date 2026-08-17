@@ -85,6 +85,22 @@ def _gavilan(ancho: int, alto: int) -> list[tuple[float, float]]:
     ]
 
 
+def _sombra_difusa(ancho: int, alto: int) -> list[tuple[float, float]]:
+    """Una mancha que cruza el cielo, sin ala ni pico que la identifiquen
+    (AUD-513, GAP-062 punto 10): *«no debería aparecer como un sprite
+    claramente identificable cada vez... queremos presencia, no
+    exposición»*. La variante que rompe la costumbre de ver siempre al
+    Gavilán en `_gavilan`: un óvalo alargado e irregular — podría ser un
+    ave, una nube baja, o nada."""
+    w, h = ancho, alto
+    return [
+        (0.00 * w, 0.55 * h), (0.10 * w, 0.30 * h), (0.30 * w, 0.15 * h),
+        (0.55 * w, 0.10 * h), (0.78 * w, 0.20 * h), (0.94 * w, 0.42 * h),
+        (1.00 * w, 0.58 * h), (0.86 * w, 0.72 * h), (0.62 * w, 0.82 * h),
+        (0.35 * w, 0.78 * h), (0.14 * w, 0.68 * h),
+    ]
+
+
 def _cegua(ancho: int, alto: int) -> list[tuple[float, float]]:
     """Figura montada, de pie, mirando al sendero.
 
@@ -170,6 +186,24 @@ def _arbol_cortado(ancho: int, alto: int) -> list[tuple[float, float]]:
     ]
 
 
+def _arbol_caido(ancho: int, alto: int) -> list[tuple[float, float]]:
+    """El mismo árbol cortado de `_arbol_cortado`, ahora en el suelo — el
+    cambio de escenario que el silencio súbito de la Fase 4 deja atrás
+    (AUD-513, GAP-062 punto 13: *«un árbol que antes estaba en pie ahora
+    está caído... el jugador reconstruye que algo ocurrió sin que se le
+    muestre qué»*). Tronco horizontal, no vertical — es lo único que hace
+    falta para que se lea «cayó» en vez de «es igual que antes»."""
+    w, h = ancho, alto
+    return [
+        (0.00 * w, 0.82 * h), (0.06 * w, 0.68 * h), (0.20 * w, 0.66 * h),
+        (0.16 * w, 0.56 * h), (0.30 * w, 0.60 * h), (0.28 * w, 0.48 * h),
+        (0.42 * w, 0.52 * h), (0.48 * w, 0.42 * h), (0.58 * w, 0.50 * h),
+        (0.70 * w, 0.46 * h), (0.66 * w, 0.56 * h), (0.80 * w, 0.58 * h),
+        (0.94 * w, 0.70 * h), (0.90 * w, 0.82 * h), (0.60 * w, 0.90 * h),
+        (0.30 * w, 0.90 * h),
+    ]
+
+
 def _cruz_conquistador(ancho: int, alto: int) -> list[tuple[float, float]]:
     """Una cruz de piedra, la de los que no volvieron — la Planicie de los
     Muertos representa también a los conquistadores caídos aquí (§Fase 5)."""
@@ -180,6 +214,42 @@ def _cruz_conquistador(ancho: int, alto: int) -> list[tuple[float, float]]:
         (0.59 * w, 0.00 * h), (0.59 * w, 0.22 * h), (0.85 * w, 0.22 * h),
         (0.85 * w, 0.36 * h), (0.59 * w, 0.36 * h), (0.59 * w, 1.00 * h),
     ]
+
+
+def _cruz_caida(ancho: int, alto: int) -> list[tuple[float, float]]:
+    """Una cruz de piedra, quebrada e inclinada — otro de los que no
+    volvieron, no el mismo de siempre (AUD-513, GAP-063 punto 21: *«árbol
+    muerto, torre, capilla, roca, grupo de tumbas»* — landmarks distintos
+    entre sí, para poder decir «estoy cerca de aquella» en vez de ver la
+    misma cruz repetida)."""
+    w, h = ancho, alto
+    return [
+        (0.10 * w, 1.00 * h), (0.16 * w, 0.66 * h), (0.02 * w, 0.54 * h),
+        (0.08 * w, 0.48 * h), (0.22 * w, 0.58 * h), (0.30 * w, 0.42 * h),
+        (0.42 * w, 0.30 * h), (0.56 * w, 0.20 * h), (0.50 * w, 0.32 * h),
+        (0.62 * w, 0.30 * h), (0.58 * w, 0.42 * h), (0.44 * w, 0.52 * h),
+        (0.34 * w, 0.66 * h), (0.30 * w, 1.00 * h),
+    ]
+
+
+def _grupo_de_tumbas(ancho: int, alto: int) -> list[tuple[float, float]]:
+    """Tres montículos bajos, no una sola cruz — el tercer landmark de la
+    Planicie (AUD-513, GAP-063 punto 21)."""
+    w, h = ancho, alto
+    return [
+        (0.00 * w, 1.00 * h), (0.02 * w, 0.70 * h), (0.16 * w, 0.58 * h),
+        (0.30 * w, 0.68 * h), (0.32 * w, 1.00 * h), (0.36 * w, 0.72 * h),
+        (0.50 * w, 0.52 * h), (0.66 * w, 0.66 * h), (0.68 * w, 1.00 * h),
+        (0.72 * w, 0.78 * h), (0.86 * w, 0.64 * h), (1.00 * w, 0.80 * h),
+        (0.98 * w, 1.00 * h),
+    ]
+
+
+#: Las tres siluetas de landmark de la Planicie de los Muertos, en el orden
+#: en que se reparten por columna (AUD-513, GAP-063 punto 21).
+LANDMARKS_DE_LA_PLANICIE: tuple[object, ...] = (
+    _cruz_conquistador, _cruz_caida, _grupo_de_tumbas,
+)
 
 
 #: Cálido y sobrio — no el blanco frío de la Cegua ni el verde espectral de
@@ -222,6 +292,127 @@ def _figura_lejana(ancho: int, alto: int) -> list[tuple[float, float]]:
         (0.46 * w, 0.00 * h), (0.34 * w, 0.16 * h), (0.30 * w, 0.50 * h),
         (0.36 * w, 0.72 * h), (0.26 * w, 1.00 * h), (0.74 * w, 1.00 * h),
         (0.64 * w, 0.72 * h), (0.70 * w, 0.50 * h), (0.66 * w, 0.16 * h),
+    ]
+
+
+def _horizonte_puntos(
+    ancho_pantalla: int, alto_pantalla: int, desplazamiento_x: float,
+    base_y: float, amplitud: float, frecuencia: float, fase: float,
+) -> list[tuple[float, float]]:
+    """Los vértices de una cresta lejana, continua y determinista.
+
+    Determinista en `desplazamiento_x` (no en el tiempo ni en el número de
+    fotograma) para que la misma columna de mundo produzca siempre la misma
+    silueta — necesario para que el paralaje se lea como una montaña de
+    verdad al desplazarse, no como ruido nuevo cada fotograma.
+
+    AUD-514 — `paso=40` y un solo término de seno, no dos: la primera
+    versión (paso 14, dos senos por punto) medía ~1,6 ms por fotograma
+    ella sola y tumbó `TestCabeEnElPresupuestoDeFotograma` (presupuesto de
+    15 ms, ya ajustado sin esto — `aplicar_gradacion` sola consume ~14,6
+    ms medidos por perfil). Una cresta lejana y difuminada no necesita el
+    detalle de una de primer plano; menos puntos y menos trigonometría por
+    punto no se notan a la distancia a la que se pinta.
+    """
+    paso = 40
+    puntos: list[tuple[float, float]] = [(0.0, float(alto_pantalla))]
+    x = 0
+    while x <= ancho_pantalla + paso:
+        mundo_x = x + desplazamiento_x
+        y = base_y - amplitud * math.sin(mundo_x * frecuencia + fase)
+        puntos.append((float(x), y))
+        x += paso
+    puntos.append((float(ancho_pantalla), float(alto_pantalla)))
+    return puntos
+
+
+#: Lienzo reutilizado por `dibujar_horizonte`, del tamaño de la pantalla
+#: interna. Reutilizado y no creado cada llamada — una `Surface` nueva de
+#: pantalla completa con `SRCALPHA` por fotograma es justo lo que
+#: `TestCabeEnElPresupuestoDeFotograma` (`tests/test_stage4_1.py`) mide y
+#: descarta en el resto del módulo: se cachea una vez por tamaño, igual que
+#: `ProyectorDeSombras._lienzo` (AUD-510).
+_LIENZO_HORIZONTE: pygame.Surface | None = None
+
+
+def _lienzo_horizonte(tamano: tuple[int, int]) -> pygame.Surface:
+    global _LIENZO_HORIZONTE
+    if _LIENZO_HORIZONTE is None or _LIENZO_HORIZONTE.get_size() != tamano:
+        _LIENZO_HORIZONTE = pygame.Surface(tamano, pygame.SRCALPHA)
+    return _LIENZO_HORIZONTE
+
+
+def dibujar_horizonte(
+    superficie: pygame.Surface,
+    ancho_pantalla: int,
+    alto_pantalla: int,
+    desplazamiento_x: float,
+    color: tuple[int, int, int],
+    alfa: int,
+    base_y: float,
+    amplitud: float,
+    frecuencia: float,
+    fase: float = 0.0,
+) -> None:
+    """Una cresta lejana que cruza toda la pantalla — la capa `BG_Far`
+    (GAP-058/059/065: *"BG_Far/BG_Mid/BG_Near siguen vacías en las seis
+    fases"*).
+
+    Procedural y no un contorno fijo repetido, por la misma razón que
+    `dibujar_contorno` prefiere un polígono a un PNG: el proyecto no tiene
+    arte de horizonte para seis paisajes distintos, y una cresta calculada
+    a partir de `frecuencia`/`amplitud`/`base_y` da un perfil propio por
+    fase (una tormenta y un cementerio en calma no comparten silueta) sin
+    fingir ser una ilustración terminada.
+
+    `desplazamiento_x` debe llevar el paralaje ya aplicado (típicamente
+    `offset.x * 0.15` o menos: es el plano más lejano, el que menos se
+    mueve al caminar) — esta función sólo dibuja, no decide cuánto se
+    desplaza.
+    """
+    if alfa <= 0 or ancho_pantalla <= 0 or alto_pantalla <= 0:
+        return
+    puntos = _horizonte_puntos(
+        ancho_pantalla, alto_pantalla, desplazamiento_x,
+        base_y, amplitud, frecuencia, fase,
+    )
+    lienzo = _lienzo_horizonte((ancho_pantalla, alto_pantalla))
+    lienzo.fill((0, 0, 0, 0))
+    pygame.draw.polygon(lienzo, (*color, min(255, alfa)), puntos)
+    superficie.blit(lienzo, (0, 0))
+
+
+#: Silueta gigantesca en el fondo de la Fase 6: el punto de llegada que la
+#: escala del nivel entero insinúa sin mostrar completo (GAP-064, puntos
+#: 7-8 y 22-23: *"la escala crece hasta revelar parcialmente el lugar donde
+#: está Paburu... nunca mostrarlo completo"*). Deliberadamente más simple
+#: que los tres espíritus —una masa y unos cuernos apenas sugeridos, no un
+#: retrato— porque el diseño pide sugerir, no exponer.
+def _paburu(ancho: int, alto: int) -> list[tuple[float, float]]:
+    w, h = ancho, alto
+    return [
+        (0.06 * w, 1.00 * h), (0.02 * w, 0.62 * h), (0.14 * w, 0.40 * h),
+        (0.24 * w, 0.44 * h), (0.20 * w, 0.20 * h), (0.30 * w, 0.02 * h),
+        (0.38 * w, 0.22 * h), (0.36 * w, 0.38 * h), (0.48 * w, 0.30 * h),
+        (0.60 * w, 0.38 * h), (0.58 * w, 0.22 * h), (0.68 * w, 0.02 * h),
+        (0.76 * w, 0.20 * h), (0.72 * w, 0.44 * h), (0.82 * w, 0.40 * h),
+        (0.94 * w, 0.62 * h), (0.90 * w, 1.00 * h),
+    ]
+
+
+#: Una vértebra gigantesca, apilable en columna — la Fase 3 pide que las
+#: osamentas dejen de ser una baldosa de decoración y se lean como
+#: arquitectura (GAP-061, punto 15: *"una vértebra, luego una columna,
+#: luego una estructura gigantesca"*).
+def _vertebra_gigante(ancho: int, alto: int) -> list[tuple[float, float]]:
+    w, h = ancho, alto
+    return [
+        (0.30 * w, 1.00 * h), (0.20 * w, 0.80 * h), (0.24 * w, 0.60 * h),
+        (0.08 * w, 0.52 * h), (0.00 * w, 0.36 * h), (0.14 * w, 0.30 * h),
+        (0.30 * w, 0.38 * h), (0.30 * w, 0.20 * h), (0.50 * w, 0.00 * h),
+        (0.70 * w, 0.20 * h), (0.70 * w, 0.38 * h), (0.86 * w, 0.30 * h),
+        (1.00 * w, 0.36 * h), (0.92 * w, 0.52 * h), (0.76 * w, 0.60 * h),
+        (0.80 * w, 0.80 * h), (0.70 * w, 1.00 * h), (0.50 * w, 0.88 * h),
     ]
 
 

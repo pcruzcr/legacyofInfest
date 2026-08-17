@@ -224,6 +224,13 @@ class Stage4_1(StageScene):
         #: cruce va (-1 = no está cruzando ahora mismo).
         self._proxima_sombra: float = 0.0
         self._sombra_progreso: float = -1.0
+        #: La variante de este cruce (AUD-513, GAP-062 punto 10): si se ve
+        #: la silueta reconocible o una mancha difusa, a qué altura, y en
+        #: qué dirección. Se fija una vez al empezar el cruce
+        #: (`_iniciar_cruce_de_sombra`), no en cada fotograma.
+        self._sombra_es_identificable: bool = False
+        self._sombra_altura: int = 80
+        self._sombra_izquierda_a_derecha: bool = True
         #: Cuántos relámpagos han caído desde que se entró a la Fase 3, y si
         #: el que está cayendo ahora mismo trae a la Bruja (AUD-475).
         self._rayos_en_fase3: int = 0
@@ -244,6 +251,12 @@ class Stage4_1(StageScene):
         self._viento_zona: ZonaDeViento | None = None
         self._viento_fuerza_original: pygame.Vector2 | None = None
         self._viento_reducido: bool = False
+        #: La fricción escala con la lluvia (Fase 2, AUD-513): el
+        #: `multiplicador` de fábrica de cada `ZonaDeFriccion` de musgo/lodo,
+        #: recordado por id de entidad la primera vez que se ve, para poder
+        #: escalarlo desde ahí y no desde lo que quedó del fotograma
+        #: anterior.
+        self._frenos_de_fabrica: dict[int, float] = {}
         #: Las luces de las grietas de la Fase 6 — apagadas de fábrica en el
         #: TMX, encendidas por proximidad y no permanentes.
         self._grietas: list[LightSource] = []
@@ -266,6 +279,17 @@ class Stage4_1(StageScene):
         self._musica_sonando: str | None = None
         #: Cuándo vuelve a llamar el canto de la Fase 5 (AUD-488).
         self._proximo_canto: float = 0.0
+        #: La secuencia de despertar antes del corte a la Fase 4-2
+        #: (AUD-513, GAP-064 punto 25): una sola vez por visita a la Fase 6.
+        self._despertar_disparado: bool = False
+        #: La tumba que susurra (Fase 1, AUD-513): si el próximo
+        #: acercamiento puede volver a sonar.
+        self._susurro_armado: bool = True
+        #: La memoria espacial (Fase 1, AUD-513): cuánto avanzó el jugador
+        #: dentro de la Fase 1, y si volvió atrás lo bastante como para que
+        #: el fantasma deje de comportarse como la primera vez.
+        self._columna_maxima_fase1: float = 0.0
+        self._regreso_a_la_tumba: bool = False
 
     # ── Ciclo de vida ─────────────────────────────────────────
 
@@ -314,7 +338,10 @@ class Stage4_1(StageScene):
         self._actualizar_ambiente_de_fase()
         self._actualizar_canto_ancestral(dt)
         self._actualizar_anomalia_fase1(dt)
+        self._actualizar_tumba_susurrante()
+        self._actualizar_memoria_espacial()
         self._actualizar_apariciones_previas_del_venado(dt)
+        self._actualizar_friccion_de_la_lluvia()
         self._actualizar_pausa_de_la_serpiente()
         self._actualizar_rayos(dt)
         self._actualizar_silencio_y_shake()
@@ -323,6 +350,7 @@ class Stage4_1(StageScene):
         self._actualizar_sombra_del_gavilan(dt)
         self._actualizar_grietas(dt)
         self._actualizar_mensaje_final()
+        self._actualizar_secuencia_de_despertar()
 
     @property
     def fase(self) -> Fase:
@@ -399,6 +427,8 @@ class Stage4_1(StageScene):
             self._sombra_progreso = -1.0
             self._proxima_sombra = self._espera_entre_sombras()
             self._proxima_revelacion = 0.0
+        if fase.numero == 6:
+            self._despertar_disparado = False
         # La racha de quietud no cruza de una fase a otra (AUD-492): quien
         # llegó parado al borde de la sección no ha estado observando
         # *ésta*, y darle la revelación en el primer fotograma la volvería
@@ -585,6 +615,52 @@ class Stage4_1(StageScene):
             self._anomalia_fase1 = self.DURACION_ANOMALIA_FASE1
             self._proxima_anomalia_fase1 = self._espera_anomalia_fase1()
 
+    # ── La tumba que susurra (Fase 1, AUD-513, GAP-059 punto 2) ──
+    #
+    # *«Tumbas con reacciones distintas: una con sonido al acercarse»*.
+    # Se dispara una vez por acercamiento —no un bucle mientras el jugador
+    # esté cerca, que se leería como una zona de ambiente más— y vuelve a
+    # armarse en cuanto el jugador se aleja lo bastante, para que un
+    # segundo acercamiento (a pie, sin recargar el nivel) también lo oiga.
+    DISTANCIA_TUMBA_SUSURRO = 48.0
+    DISTANCIA_REARME_SUSURRO = 100.0
+
+    def _actualizar_tumba_susurrante(self) -> None:
+        if self.fase.numero != 1 or self._player is None:
+            self._susurro_armado = True
+            return
+        distancia = abs(self._player.rect.centerx
+                        - trazado.COLUMNA_TUMBA_SUSURRO * settings.TILE_SIZE)
+        if distancia <= self.DISTANCIA_TUMBA_SUSURRO and self._susurro_armado:
+            self._susurro_armado = False
+            self._play_sfx_spatial(
+                "sfx_environment_cemetery_silence",
+                trazado.COLUMNA_TUMBA_SUSURRO * settings.TILE_SIZE, volume=0.3,
+            )
+        elif distancia > self.DISTANCIA_REARME_SUSURRO:
+            self._susurro_armado = True
+
+    # ── La memoria espacial (Fase 1, AUD-513, GAP-059 punto 10) ──
+    #
+    # *«El jugador piensa: estoy seguro de que antes estaba diferente»*.
+    # Se mide cuánto avanzó el jugador dentro de la Fase 1 —no todo el
+    # nivel: retroceder desde la Fase 2 para volver a la 1 ya es, de por
+    # sí, la acción que el punto describe— y si vuelve a pasar por la
+    # tumba de Teresa después de haber llegado bastante más lejos, el
+    # fantasma deja de comportarse como la primera vez: no desaparece, se
+    # queda a medio desvanecer. Nada de texto nuevo ni de estado que
+    # guardar entre partidas: sólo la lectura visual cambia.
+    UMBRAL_MEMORIA_ESPACIAL = 40
+
+    def _actualizar_memoria_espacial(self) -> None:
+        if self.fase.numero != 1 or self._player is None:
+            return
+        columna = self._player.rect.centerx / settings.TILE_SIZE
+        self._columna_maxima_fase1 = max(self._columna_maxima_fase1, columna)
+        self._regreso_a_la_tumba = (
+            self._columna_maxima_fase1 - columna >= self.UMBRAL_MEMORIA_ESPACIAL
+        )
+
     # ── Las apariciones previas del Venado (Fase 2, AUD-479) ─────
 
     def _espera_aparicion_venado(self) -> float:
@@ -612,18 +688,103 @@ class Stage4_1(StageScene):
             self._venado_visible = random.uniform(*self.DURACION_APARICION_VENADO)
             self._proxima_aparicion_venado = self._espera_aparicion_venado()
 
+    # ── La fricción escala con la lluvia (Fase 2, AUD-513, GAP-060) ──
+    #
+    # Punto 14 del diseño: *«al principio, musgo = ligeramente resbaladizo;
+    # después de lluvia intensa, mucho más»*. `SEGMENTOS_FASE2` declaraba
+    # `multiplicador` como una constante por material —`FRENO_DEL_MUSGO`,
+    # `FRENO_DEL_LODO`— igual en toda la sección: la lluvia se veía y se
+    # oía, pero no tocaba la física.
+    #
+    # No se identifica la zona por `ZonaDeFriccion.material`: el TMX ya
+    # comprometido (`assets/maps/stage4_1/stage4_1.tmx`) trae `BG_Far` y
+    # `BG_Mid` con arte pintado a mano —`tools/generate_stage4_1.py` se negó
+    # a regenerar el mapa al comprobarlo (`tiene_arte_pintado()`), y forzarlo
+    # habría borrado ese trabajo para añadir una sola propiedad— así que el
+    # generador declara `material=` para el día que el mapa se regenere de
+    # verdad, pero esta escena no puede depender de que ya esté ahí. En su
+    # lugar, cada `ZonaDeFriccion` de la Fase 2 se reconoce por su propio
+    # `multiplicador` de fábrica la primera vez que se ve —`FRENO_DEL_MUSGO`
+    # o `FRENO_DEL_LODO`, los dos únicos valores que coloca el generador— y
+    # ese valor de partida es el que la lluvia escala desde entonces, igual
+    # que `_actualizar_pausa_de_la_serpiente` recuerda la fuerza original del
+    # viento antes de tocarla.
+    #
+    # AUD-474 le añade la otra mitad del diseño (punto 21, «la física vuelve
+    # a la normalidad» tras liberar al espíritu): en cuanto el jugador
+    # libera al Venado de verdad, la intensidad deja de subir con el avance
+    # y cae a un valor bajo y fijo — el bosque se calma porque el Venado ya
+    # no está atrapado, no porque el jugador haya caminado más.
+    INTENSIDAD_LLUVIA_INICIAL = 0.35
+    INTENSIDAD_LLUVIA_FINAL = 1.25
+    INTENSIDAD_LLUVIA_TRAS_LIBERAR = 0.15
+    #: Tolerancia para reconocer `FRENO_DEL_MUSGO`/`FRENO_DEL_LODO` de
+    #: fábrica: basta con no confundirlos entre sí ni con otra `FrictionZone`
+    #: (hielo, goma) que este nivel no usa.
+    TOLERANCIA_FRENO_DE_FABRICA = 0.01
+
+    def _intensidad_de_lluvia(self, fase: Fase) -> float:
+        if self._espiritu_liberado(fase):
+            return self.INTENSIDAD_LLUVIA_TRAS_LIBERAR
+        avance = self._avance_en_fase(fase)
+        return (self.INTENSIDAD_LLUVIA_INICIAL
+                + avance * (self.INTENSIDAD_LLUVIA_FINAL - self.INTENSIDAD_LLUVIA_INICIAL))
+
+    def _actualizar_friccion_de_la_lluvia(self) -> None:
+        fase = self.fase
+        if fase.numero != 2:
+            return
+        from src.framework.ecs import ZonaDeFriccion
+
+        intensidad = self._intensidad_de_lluvia(fase)
+        for eid, zona in self._mundo.cada(ZonaDeFriccion):
+            base = self._frenos_de_fabrica.get(eid)
+            if base is None:
+                for candidato in (trazado.FRENO_DEL_MUSGO, trazado.FRENO_DEL_LODO):
+                    if abs(zona.multiplicador - candidato) <= self.TOLERANCIA_FRENO_DE_FABRICA:
+                        base = candidato
+                        break
+                if base is None:
+                    continue  # no es musgo ni lodo: otra ZonaDeFriccion, no se toca
+                self._frenos_de_fabrica[eid] = base
+            # `base` frena hacia 1,0 tanto como haga falta para llegar a la
+            # intensidad de hoy: con intensidad 1,0 el resultado es `base`
+            # tal cual (la referencia con la que se calibró el nivel);
+            # menos que eso resbala menos, más resbala más.
+            zona.multiplicador = 1.0 - (1.0 - base) * intensidad
+
     # ── La pausa antes del diálogo de la Serpiente (Fase 3, AUD-480) ─
 
-    def _actualizar_pausa_de_la_serpiente(self) -> None:
-        """Un respiro alrededor del diálogo del Rey Terciopelo (GAP-061,
-        punto 19): *«el jugador alcanza un descanso. El viento se
-        detiene... la Serpiente habla. Después: el viento vuelve.»*
+    #: AUD-513, GAP-061 punto 5 — el viento leía una única intensidad en
+    #: toda la Fase 3 (*"una sola intensidad, no la progresión leve → fuerte
+    #: → intermitente → combinado con pendientes → combinado con salto"*).
+    #: `_factor_de_viento` da esa curva multiplicando la fuerza declarada en
+    #: el TMX: leve al entrar, en plena fuerza a partir del 60 % del tramo
+    #: —bastante antes de llegar a la segunda loma (`LOMAS_FASE3`, la más
+    #: alta), para que «combinado con pendiente» sí sea cierto cuando el
+    #: jugador la suba— y se queda fuerte el resto. El `periodo` que ya trae
+    #: `ZonaDeViento` sigue dando el pulso intermitente encima de esto, sin
+    #: que haga falta tocarlo.
+    VIENTO_FACTOR_LEVE = 0.35
+    VIENTO_FACTOR_FUERTE = 1.35
+    VIENTO_AVANCE_A_PLENA_FUERZA = 0.6
 
-        No es el silencio total de la Fase 4 —eso apaga el clima entero y
-        dispara un shake una sola vez—; aquí sólo baja la fuerza de la
-        `ZonaDeViento` real del mapa a una fracción, y sube de vuelta en
-        cuanto el jugador se aleja del punto del diálogo, tantas veces
-        como haga falta (a diferencia del shake, esto no es «una vez por
+    def _factor_de_viento(self, avance: float) -> float:
+        t = min(1.0, avance / self.VIENTO_AVANCE_A_PLENA_FUERZA)
+        return self.VIENTO_FACTOR_LEVE + t * (self.VIENTO_FACTOR_FUERTE - self.VIENTO_FACTOR_LEVE)
+
+    def _actualizar_pausa_de_la_serpiente(self) -> None:
+        """La fuerza del viento de la Fase 3, fotograma a fotograma: la
+        escalada progresiva (arriba) multiplicada por la pausa alrededor
+        del diálogo del Rey Terciopelo (GAP-061, punto 19): *«el jugador
+        alcanza un descanso. El viento se detiene... la Serpiente habla.
+        Después: el viento vuelve.»*
+
+        La pausa no es el silencio total de la Fase 4 —eso apaga el clima
+        entero y dispara un shake una sola vez—; aquí sólo baja la fuerza de
+        la `ZonaDeViento` real del mapa a una fracción, y sube de vuelta en
+        cuanto el jugador se aleja del punto del diálogo, tantas veces como
+        haga falta (a diferencia del shake, esto no es «una vez por
         visita»: el jugador puede ir y volver).
         """
         if self.fase.numero != 3:
@@ -646,12 +807,11 @@ class Stage4_1(StageScene):
         en_pausa = (self.AVANCE_ANTES_DEL_DIALOGO - self.MARGEN_PAUSA_VIENTO_ANTES
                     <= avance
                     <= self.AVANCE_ANTES_DEL_DIALOGO + self.MARGEN_PAUSA_VIENTO_DESPUES)
-        if en_pausa and not self._viento_reducido:
-            self._viento_zona.fuerza = self._viento_fuerza_original * self.FRACCION_VIENTO_EN_PAUSA
-            self._viento_reducido = True
-        elif not en_pausa and self._viento_reducido:
-            self._viento_zona.fuerza = self._viento_fuerza_original
-            self._viento_reducido = False
+        factor = self._factor_de_viento(avance)
+        if en_pausa:
+            factor *= self.FRACCION_VIENTO_EN_PAUSA
+        self._viento_zona.fuerza = self._viento_fuerza_original * factor
+        self._viento_reducido = en_pausa
 
     # ── El relámpago de la Fase 3 ──────────────────────────────
 
@@ -739,6 +899,22 @@ class Stage4_1(StageScene):
             return self._atencion.a_su_espalda(distancia)
         return self._player.rect.centerx + self._atencion.direccion * distancia
 
+    #: AUD-513, GAP-062 puntos 21-22 — *«un sonido tenue que la lluvia
+    #: esconde y luego deja oír»*: antes la lluvia era un canal de clima y
+    #: un canal de audio ambiente completamente independientes, sin ningún
+    #: acoplamiento entre los dos. `_intensidad_de_lluvia_fase4` es una
+    #: marea lenta —no ligada a ningún dato de clima real, que este motor
+    #: no expone como intensidad— que sube y baja con el tiempo; cuando
+    #: sube, el grito se escucha más bajo (la lluvia lo tapa), y cuando
+    #: baja, más alto (hay un claro para oírlo).
+    PERIODO_DE_LLUVIA_FASE4 = 9.0
+    VOLUMEN_GRITO: tuple[float, float] = (0.25, 0.75)
+
+    def _intensidad_de_lluvia_fase4(self) -> float:
+        """0 = lluvia en su punto más fuerte (tapa el sonido), 1 = un claro."""
+        fraccion = (math.sin(self._tiempo * math.tau / self.PERIODO_DE_LLUVIA_FASE4) + 1.0) / 2.0
+        return fraccion
+
     def _actualizar_grito_del_gavilan(self, dt: float) -> None:
         """Tras el silencio, el Gavilán se deja oír de vez en cuando.
 
@@ -758,7 +934,11 @@ class Stage4_1(StageScene):
         self._proximo_grito -= dt
         if self._proximo_grito <= 0.0:
             self._proximo_grito = self._espera_entre_gritos()
-            self._play_sfx_spatial(fase.grito_aislado, self._posicion_del_grito(), volume=0.6)
+            claro = self._intensidad_de_lluvia_fase4()
+            volumen = (self.VOLUMEN_GRITO[0]
+                       + claro * (self.VOLUMEN_GRITO[1] - self.VOLUMEN_GRITO[0]))
+            self._play_sfx_spatial(
+                fase.grito_aislado, self._posicion_del_grito(), volume=volumen)
 
     # ── La quietud que revela (AUD-492) ─────────────────────────
 
@@ -796,13 +976,28 @@ class Stage4_1(StageScene):
         # recompensa por detenerse es que la próxima llegue ya, no que se
         # solapen dos.
         if self._sombra_progreso < 0.0:
-            self._sombra_progreso = 0.0
+            self._iniciar_cruce_de_sombra()
         self._atencion.reiniciar()
 
     # ── La sombra del Gavilán ────────────────────────────────────
 
     def _espera_entre_sombras(self) -> float:
         return random.uniform(*self.ESPERA_ENTRE_SOMBRAS)
+
+    #: AUD-513, GAP-062 punto 10 — *«no debería aparecer como un sprite
+    #: claramente identificable cada vez... queremos presencia, no
+    #: exposición»*. Antes cada cruce era el mismo `_gavilan` reconocible, a
+    #: la misma altura, siempre de izquierda a derecha. Las variantes:
+    #: la silueta reconocible (menos de la mitad de las veces) y una forma
+    #: difusa que no se lee como ningún pájaro en concreto —una mancha, no
+    #: un retrato—, a alturas distintas y en las dos direcciones.
+    ALTURAS_DE_CRUCE: tuple[int, int] = (60, 110)
+
+    def _iniciar_cruce_de_sombra(self) -> None:
+        self._sombra_progreso = 0.0
+        self._sombra_es_identificable = random.random() < 0.4
+        self._sombra_altura = random.randint(*self.ALTURAS_DE_CRUCE)
+        self._sombra_izquierda_a_derecha = random.random() < 0.5
 
     def _actualizar_sombra_del_gavilan(self, dt: float) -> None:
         """Cruza el cielo de vez en cuando — la pieza visual que el primer
@@ -819,9 +1014,23 @@ class Stage4_1(StageScene):
             return
         self._proxima_sombra -= dt
         if self._proxima_sombra <= 0.0:
-            self._sombra_progreso = 0.0
+            self._iniciar_cruce_de_sombra()
 
     # ── Las grietas de la Fase 6 ────────────────────────────────
+
+    #: AUD-513, GAP-064 punto 6 — *«empiezan pocas y aumentan... el entorno
+    #: completo parece estar conectado por ellas»*: con `GRIETAS_FASE6` ya
+    #: colocadas en el TMX (`tools/generate_stage4_1.py`, que no se puede
+    #: regenerar sin borrar el arte de `BG_Far`/`BG_Mid` ya pintado a mano —
+    #: ver el comentario de `_actualizar_friccion_de_la_lluvia`, mismo
+    #: motivo), añadir más luces exigiría tocar el mapa comprometido. Se
+    #: consigue el mismo efecto sin luces nuevas: cuanto más avanza el
+    #: jugador en la Fase 6, más lejos se encienden (`DISTANCIA_DE_GRIETA`
+    #: crece) y más tardan en apagarse (`BAJADA_DE_GRIETA` crece) — las
+    #: mismas grietas de siempre, pero más de ellas encendidas a la vez
+    #: cerca del final, que es justo la lectura de «cada vez más conectado».
+    DISTANCIA_DE_GRIETA_FINAL = 90.0
+    BAJADA_DE_GRIETA_FINAL = 4.0
 
     def _actualizar_grietas(self, dt: float) -> None:
         """Se encienden por proximidad y se apagan solas: un rastro, no una
@@ -829,15 +1038,57 @@ class Stage4_1(StageScene):
         anterior)."""
         if self._player is None or not self._grietas:
             return
+        avance = self._avance_en_fase(self.fase) if self.fase.numero == 6 else 0.0
+        distancia = (self.DISTANCIA_DE_GRIETA
+                     + avance * (self.DISTANCIA_DE_GRIETA_FINAL - self.DISTANCIA_DE_GRIETA))
+        bajada = (self.BAJADA_DE_GRIETA
+                  + avance * (self.BAJADA_DE_GRIETA_FINAL - self.BAJADA_DE_GRIETA))
         centro = pygame.Vector2(self._player.rect.center)
         for i, luz in enumerate(self._grietas):
             actual = self._intensidad_grieta.get(i, 0.0)
-            if centro.distance_to(luz.position) <= self.DISTANCIA_DE_GRIETA:
+            if centro.distance_to(luz.position) <= distancia:
                 actual = min(1.0, actual + dt / self.SUBIDA_DE_GRIETA)
             else:
-                actual = max(0.0, actual - dt / self.BAJADA_DE_GRIETA)
+                actual = max(0.0, actual - dt / bajada)
             self._intensidad_grieta[i] = actual
             luz.intensity = actual * self.INTENSIDAD_MAX_GRIETA
+
+    # ── La secuencia de despertar antes del corte (Fase 6) ──────
+    #
+    # AUD-513, GAP-064 punto 25 — el diseño pide una secuencia completa
+    # (vibración, shake, parpadeo de las grietas, la música se detiene,
+    # silencio, un sonido profundo) antes del corte a
+    # `stage4_2_boss_paburu`; hoy `_actualizar_mensaje_final` sólo
+    # reescribe el texto del cartel y el `NextTrigger` está a un par de
+    # baldosas, sin ningún aviso. No se bloquea la entrada del jugador —
+    # este motor no tiene un sistema de cámara lenta/pausa por escena que
+    # `Stage4_1` pueda pedir prestado sin construirlo de cero, y hacerlo
+    # aquí sería la clase de sistema nuevo que el `Resolution plan` del GAP
+    # ya advertía no meter fase por fase— así que la parte que sí se
+    # entrega sin bloquear nada: un shake de cámara y un sonido grave, una
+    # sola vez, cerca del final del tramo.
+    AVANCE_DEL_DESPERTAR = 0.92
+    DURACION_SHAKE_DESPERTAR = 0.6
+    AMPLITUD_SHAKE_DESPERTAR = 8.0
+
+    def _actualizar_secuencia_de_despertar(self) -> None:
+        fase = self.fase
+        if fase.numero != 6 or self._despertar_disparado:
+            return
+        if self._avance_en_fase(fase) < self.AVANCE_DEL_DESPERTAR:
+            return
+        self._despertar_disparado = True
+        # AUD-493 detiene la música con `stop_music`; aquí se corta también
+        # el ambiente, la otra mitad del *«la música se detiene»* del punto
+        # 25 — el mismo `stop_ambient` sin fundido que usa el silencio
+        # súbito de la Fase 4, porque el efecto que se busca es el mismo:
+        # un corte, no un fundido.
+        audio = self.audio
+        if audio is not None and getattr(audio, "_ambient_active", False):
+            audio.stop_ambient()
+        self._camera.apply_shake(amplitude=self.AMPLITUD_SHAKE_DESPERTAR,
+                                 duration=self.DURACION_SHAKE_DESPERTAR)
+        self._play_sfx_named("sfx_bosses_phase_change", volume=0.7)
 
     def _actualizar_mensaje_final(self) -> None:
         """AUD-474 — el umbral cuenta cuántos espíritus se liberaron de
@@ -882,12 +1133,173 @@ class Stage4_1(StageScene):
         """El espíritu de la fase y su decoración, detrás del mapa — igual
         que el diseño anterior pintaba sus siluetas: son recuerdos y
         escenario, no primer plano."""
+        self._dibujar_horizonte(surface, offset)
         self._dibujar_espiritu(surface, offset)
         self._dibujar_decoracion(surface, offset)
+        self._dibujar_huellas_del_venado(surface, offset)
         self._dibujar_serpiente_de_fondo(surface, offset)
+        self._dibujar_columna_de_huesos(surface, offset)
         self._dibujar_sombra_de_ave(surface, offset)
         self._dibujar_bruja(surface, offset)
         self._dibujar_anomalia_fase1(surface, offset)
+        self._dibujar_figura_de_la_luna(surface, offset)
+        self._dibujar_paburu(surface, offset)
+        self._dibujar_despedida_de_los_espiritus(surface, offset)
+
+    # ── Las huellas del Venado (Fase 2, AUD-513, GAP-060 punto 28) ─
+    def _dibujar_huellas_del_venado(self, surface: pygame.Surface,
+                                    offset: pygame.Vector2) -> None:
+        """Marcas de pisada en el suelo, antes de que el Venado hable —
+        *«herramienta de navegación... a veces desaparecen o terminan
+        abruptamente»*. Elipses directas, sin lienzo aparte: son pequeñas y
+        muchas, y crear una superficie por huella costaría más de lo que
+        vale el detalle (ver AUD-514, la misma lección con el horizonte)."""
+        fase = self.fase
+        if fase.numero != 2:
+            return
+        avance = self._avance_en_fase(fase)
+        if avance >= self.AVANCE_ANTES_DEL_DIALOGO:
+            return  # ya habló: de aquí en adelante no queda nada que rastrear
+        ts = settings.TILE_SIZE
+        for i, columna_relativa in enumerate(trazado.HUELLAS_FASE2):
+            columna = fase.desde_columna + columna_relativa
+            x = int(columna * ts - offset.x)
+            if x < -20 or x > settings.INTERNAL_WIDTH + 20:
+                continue
+            fila_suelo = trazado.altura_del_suelo(columna)
+            y = int(fila_suelo * ts - 4) - int(offset.y)
+            desplazado = 3 if i % 2 else -3  # dos patas, no una línea recta
+            pygame.draw.ellipse(
+                surface, siluetas.SILUETA_OSCURA,
+                pygame.Rect(x + desplazado, y, 6, 4),
+            )
+
+    # ── El horizonte lejano: BG_Far (AUD-513, GAP-058/059/065) ───
+    #
+    # `color, base_y (fracción de pantalla), amplitud, frecuencia` por fase.
+    # Frecuencias e intensidades distintas para que las seis crestas no se
+    # lean como la misma silueta repintada: la Fase 3 (tormenta) es la más
+    # alta y quebrada, la Fase 5 (planicie en calma) la más baja y suave.
+    HORIZONTE_POR_FASE: dict[int, tuple[tuple[int, int, int], float, float, float]] = {
+        1: ((40, 34, 46), 0.62, 26.0, 0.010),
+        2: ((28, 34, 26), 0.58, 34.0, 0.014),
+        3: ((22, 22, 30), 0.50, 54.0, 0.018),
+        4: ((46, 32, 24), 0.60, 30.0, 0.012),
+        5: ((24, 26, 40), 0.66, 20.0, 0.008),
+        6: ((30, 40, 34), 0.60, 34.0, 0.011),
+    }
+
+    def _dibujar_horizonte(self, surface: pygame.Surface,
+                           offset: pygame.Vector2) -> None:
+        """La cresta lejana de esta fase — plano `BG_Far`, casi inmóvil."""
+        color, base_frac, amplitud, frecuencia = self.HORIZONTE_POR_FASE[self.fase.numero]
+        siluetas.dibujar_horizonte(
+            surface, settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT,
+            offset.x * 0.15, color, 200,
+            settings.INTERNAL_HEIGHT * base_frac, amplitud, frecuencia,
+        )
+
+    # ── Las osamentas como arquitectura, versión visual (GAP-061) ─
+    #
+    # No es la plataforma navegable que pide el punto 4 del diseño —eso
+    # exige geometría sólida nueva en el generador, fuera del alcance de
+    # este lote— pero sí cierra la mitad visual: en vez de una calavera
+    # suelta cada 12 columnas, una columna vertebral gigantesca se alza
+    # sobre el paisaje cada tramo largo, la progresión «vértebra → columna
+    # → estructura gigantesca» del punto 15, vista desde lejos.
+    COLUMNAS_DE_HUESOS_FASE3: tuple[int, ...] = (320, 400, 430)
+
+    #: AUD-513, GAP-061 — «el rayo sube el brillo, no revela nada» era el
+    #: defecto exacto: `_actualizar_rayos` sólo escalaba `ambient_brightness`
+    #: un instante. Las osamentas gigantes son casi invisibles en la
+    #: penumbra normal de la tormenta (alfa 60) y saltan a plena visibilidad
+    #: durante el relámpago — el rayo revela la arquitectura del paisaje en
+    #: vez de sólo iluminar lo que ya se veía.
+    ALFA_HUESOS_NORMAL = 60
+    ALFA_HUESOS_CON_RAYO = 190
+
+    def _dibujar_columna_de_huesos(self, surface: pygame.Surface,
+                                   offset: pygame.Vector2) -> None:
+        if self.fase.numero != 3:
+            return
+        ts = settings.TILE_SIZE
+        fuerza_rayo = self._rayo / self.DURACION_DEL_RAYO if self._rayo > 0.0 else 0.0
+        alfa = round(
+            self.ALFA_HUESOS_NORMAL
+            + (self.ALFA_HUESOS_CON_RAYO - self.ALFA_HUESOS_NORMAL) * fuerza_rayo)
+        for columna in self.COLUMNAS_DE_HUESOS_FASE3:
+            x = int(columna * ts - offset.x * 0.4)
+            if x < -260 or x > settings.INTERNAL_WIDTH + 260:
+                continue
+            alto = 220
+            y = settings.INTERNAL_HEIGHT - alto - 30
+            siluetas.dibujar_contorno(
+                surface, siluetas._vertebra_gigante, x, y,
+                int(alto * 0.55), alto, siluetas.PIEDRA_FRIA, alfa,
+            )
+
+    # ── La silueta de Paburu (Fase 6, GAP-064 puntos 7-8, 22-23) ──
+    #: A partir de qué avance en la Fase 6 empieza a insinuarse. No desde
+    #: el primer paso: el guion pide que la escala *crezca*, y algo visible
+    #: de entrada no tiene dónde crecer.
+    AVANCE_PARA_PABURU = 0.35
+
+    def _dibujar_paburu(self, surface: pygame.Surface,
+                        offset: pygame.Vector2) -> None:
+        fase = self.fase
+        if fase.numero != 6:
+            return
+        avance = self._avance_en_fase(fase)
+        if avance < self.AVANCE_PARA_PABURU:
+            return
+        # Crece con el avance, nunca revela el todo: el alto tope (0.55 del
+        # ancho de pantalla) sigue dejando la figura cortada por los bordes
+        # y por la niebla del clima de la fase, no un retrato completo.
+        progreso = (avance - self.AVANCE_PARA_PABURU) / (1.0 - self.AVANCE_PARA_PABURU)
+        ancho = int(settings.INTERNAL_WIDTH * (0.30 + 0.25 * progreso))
+        alto = int(ancho * 0.72)
+        x = int(settings.INTERNAL_WIDTH * 0.60 - offset.x * 0.10) - ancho // 2
+        y = settings.INTERNAL_HEIGHT - alto - 10
+        alfa = int(70 * min(1.0, progreso * 1.4))
+        siluetas.dibujar_contorno(
+            surface, siluetas._paburu, x, y, ancho, alto,
+            siluetas.SILUETA_OSCURA, alfa, grosor=3,
+        )
+
+    # ── La despedida de los espíritus (Fase 6, GAP-064 puntos 15-16) ─
+    #: A qué avance dentro de la Fase 6 se deja ver, un instante, cada
+    #: espíritu que el jugador liberó de verdad — en el mismo orden en que
+    #: se liberan (Venado, Rey Terciopelo, Gavilán), repartidos a lo largo
+    #: del tramo para que no aparezcan los tres a la vez.
+    AVANCES_DESPEDIDA: tuple[float, float, float] = (0.15, 0.45, 0.75)
+    DURACION_DESPEDIDA = 0.12
+
+    def _dibujar_despedida_de_los_espiritus(
+        self, surface: pygame.Surface, offset: pygame.Vector2,
+    ) -> None:
+        """*"Venado en la distancia, Serpiente como energía, Halcón en el
+        cielo... una vez cada uno, como despedida"* — sólo los que el
+        jugador liberó de verdad (AUD-474): a quien no se liberó no le
+        queda nada que despedirse."""
+        fase = self.fase
+        if fase.numero != 6:
+            return
+        avance = self._avance_en_fase(fase)
+        for indice_espiritu, avance_despedida in enumerate(self.AVANCES_DESPEDIDA):
+            if abs(avance - avance_despedida) > self.DURACION_DESPEDIDA:
+                continue
+            fase_del_espiritu = next(
+                f for f in FASES if f.espiritu == indice_espiritu)
+            if not self._espiritu_liberado(fase_del_espiritu):
+                continue
+            _nombre, forma = siluetas.ESPIRITUS[indice_espiritu]
+            cercania = 1.0 - abs(avance - avance_despedida) / self.DURACION_DESPEDIDA
+            x = int(settings.INTERNAL_WIDTH * (0.25 + 0.25 * indice_espiritu))
+            y = 140
+            alfa = int(130 * cercania)
+            siluetas.dibujar_contorno(
+                surface, forma, x, y, 90, 70, siluetas.VERDE_ESPECTRAL, alfa,
+            )
 
     @staticmethod
     def _fundido_del_espiritu(avance: float, liberado: bool) -> float:
@@ -965,20 +1377,36 @@ class Stage4_1(StageScene):
     # sitio. `trazado.py` es la fuente de verdad de dónde va cada una — el
     # mismo objeto del que lee el generador del mapa.
 
+    #: AUD-513, GAP-062 punto 13 — qué árbol de `ARBOLES_FASE4` cae tras el
+    #: silencio súbito. El último de la fila y no el primero: el jugador ya
+    #: cruzó los anteriores antes de que el silencio ocurriera a mitad de
+    #: tramo (`AVANCE_DEL_SILENCIO`), así que sólo el último queda por
+    #: delante para poder verlo cambiado en vez de recordarlo cambiado.
+    INDICE_ARBOL_QUE_CAE = -1
+
     def _dibujar_decoracion(self, surface: pygame.Surface,
                             offset: pygame.Vector2) -> None:
         fase = self.fase
         if fase.decoracion == "bosque_cortado":
+            excepcion = None
+            if self._shake_disparado:
+                indice = self.INDICE_ARBOL_QUE_CAE % len(trazado.ARBOLES_FASE4)
+                excepcion = (indice, siluetas._arbol_caido)
             self._dibujar_siluetas_de_fondo(
                 surface, offset, siluetas._arbol_cortado,
                 trazado.ARBOLES_FASE4, alto=88,
                 color=siluetas.SILUETA_OSCURA, alfa=140, paralaje=0.85,
+                forma_excepcion=excepcion,
             )
         elif fase.decoracion == "tumbas_conquistador":
+            # AUD-513, GAP-063 punto 21 — landmarks distintos entre sí, no
+            # la misma cruz cada 30 columnas: cicla entre las tres formas
+            # de `LANDMARKS_DE_LA_PLANICIE`.
             self._dibujar_siluetas_de_fondo(
                 surface, offset, siluetas._cruz_conquistador,
                 trazado.TUMBAS_FASE5, alto=46,
                 color=siluetas.PIEDRA_FRIA, alfa=110, paralaje=0.85,
+                formas_por_indice=siluetas.LANDMARKS_DE_LA_PLANICIE,
             )
         elif fase.decoracion == "lapidas_personales":
             self._dibujar_fantasma_personal(surface, offset)
@@ -987,22 +1415,43 @@ class Stage4_1(StageScene):
         self, surface: pygame.Surface, offset: pygame.Vector2, forma: object,
         columnas: tuple[int, ...], alto: int, color: tuple[int, int, int],
         alfa: int, paralaje: float,
+        forma_excepcion: tuple[int, object] | None = None,
+        formas_por_indice: tuple[object, ...] | None = None,
     ) -> None:
         """El dibujo genérico que comparten el bosque cortado y las tumbas:
         una silueta por columna de mundo, con un parallax casi 1:1 —están
         junto al camino, no en un horizonte lejano— para que se vean
         plantadas en su sitio al pasar por delante, no flotando con la
-        cámara."""
+        cámara.
+
+        `formas_por_indice` cicla una silueta distinta por columna (AUD-513,
+        GAP-063 punto 21: landmarks variados); `forma_excepcion` sustituye
+        una sola columna concreta (AUD-513, GAP-062 punto 13: el árbol que
+        cae). Los dos existen porque piden cosas distintas —una progresión
+        fija por posición contra un cambio puntual de estado— y forzarlos al
+        mismo mecanismo confundiría las dos razones de ser distinto.
+        """
         ts = settings.TILE_SIZE
         ancho_pantalla = settings.INTERNAL_WIDTH
-        for columna in columnas:
+        for indice, columna in enumerate(columnas):
             x = int(columna * ts - offset.x * paralaje)
             if x < -200 or x > ancho_pantalla + 200:
                 continue
+            forma_de_esta = forma
+            if formas_por_indice:
+                forma_de_esta = formas_por_indice[indice % len(formas_por_indice)]
+            if forma_excepcion is not None and forma_excepcion[0] == indice:
+                forma_de_esta = forma_excepcion[1]
             siluetas.dibujar_contorno(
-                surface, forma, x, settings.INTERNAL_HEIGHT - alto - 40,
+                surface, forma_de_esta, x, settings.INTERNAL_HEIGHT - alto - 40,
                 int(alto * 0.75), alto, color, alfa,
             )
+
+    #: AUD-513, GAP-059 punto 10 — cuánto más intenso se ve el fantasma la
+    #: segunda vez, si el jugador volvió tras avanzar bastante. No
+    #: desaparece del todo ni se dobla: lo bastante para notarse sin
+    #: convertirse en un fantasma distinto.
+    ALFA_EXTRA_AL_REGRESAR = 40
 
     def _dibujar_fantasma_personal(self, surface: pygame.Surface,
                                    offset: pygame.Vector2) -> None:
@@ -1010,7 +1459,15 @@ class Stage4_1(StageScene):
         rondando la tumba de Teresa Murillo, junto a la de Hugo Salazar
         Castillo. Distinto de los tres espíritus de jefe —color propio,
         sin ascender, sin fundido de entrada— porque no es uno de ellos:
-        es un recuerdo de familia."""
+        es un recuerdo de familia.
+
+        AUD-513 — la memoria espacial (GAP-059 punto 10, *«estoy seguro de
+        que antes estaba diferente»*): si el jugador avanzó bastante y
+        volvió, `_regreso_a_la_tumba` sube el suelo del vaivén de alfa en
+        vez de dejarlo apagarse tan bajo como la primera vez. No es un
+        fantasma nuevo ni un texto nuevo — es el mismo, un poco más
+        presente, y eso es lo único que hace falta para la duda.
+        """
         ts = settings.TILE_SIZE
         col = trazado.COLUMNA_LAPIDA_TERESA
         x = int(col * ts - offset.x)
@@ -1020,7 +1477,8 @@ class Stage4_1(StageScene):
         alto = 40
         vaiven = math.sin(self._tiempo * 0.5) * 4.0
         y = int(fila_suelo * ts - alto - 20 + vaiven) - int(offset.y)
-        alfa = 90 + int(30 * math.sin(self._tiempo * 0.8))
+        piso = 90 + (self.ALFA_EXTRA_AL_REGRESAR if self._regreso_a_la_tumba else 0)
+        alfa = piso + int(30 * math.sin(self._tiempo * 0.8))
         siluetas.dibujar_contorno(
             surface, siluetas._fantasma, x, y, int(alto * 0.7), alto,
             siluetas.BLANCO_RECUERDO, alfa,
@@ -1053,16 +1511,19 @@ class Stage4_1(StageScene):
             return
         margen = 150
         recorrido = settings.INTERNAL_WIDTH + margen * 2
-        x = int(-margen + self._sombra_progreso * recorrido)
-        y = 80
+        avance = self._sombra_progreso if self._sombra_izquierda_a_derecha \
+            else 1.0 - self._sombra_progreso
+        x = int(-margen + avance * recorrido)
+        y = self._sombra_altura
         # Se desvanece en los dos extremos del cruce: aparecer y
         # desaparecer de golpe en el borde de la pantalla se lee como un
         # error de dibujo, no como un ave que llega de lejos.
         alfa = int(150 * math.sin(self._sombra_progreso * math.pi))
         if alfa <= 0:
             return
+        forma = siluetas._gavilan if self._sombra_es_identificable else siluetas._sombra_difusa
         siluetas.dibujar_contorno(
-            surface, siluetas._gavilan, x, y, 70, 30,
+            surface, forma, x, y, 70, 30,
             siluetas.SILUETA_OSCURA, alfa,
         )
 
@@ -1111,4 +1572,38 @@ class Stage4_1(StageScene):
         siluetas.dibujar_contorno(
             surface, siluetas._figura_lejana, x, y, int(alto * 0.6), alto,
             siluetas.SILUETA_OSCURA, alfa,
+        )
+
+    # ── La figura junto a la tumba, sólo con la luna oculta ─────
+    #
+    # AUD-513, GAP-063 punto 7 — *«cuando la luna está oculta pueden
+    # ocurrir cosas: una figura aparece»*: antes nada en la Fase 5 leía
+    # `luna_oculta` salvo el canto ancestral (AUD-488). Junto a una de las
+    # cruces —no en medio del camino— para que se lea «algo cerca de la
+    # tumba», no «algo en tu camino».
+    UMBRAL_LUNA_OCULTA = 0.75
+
+    def _dibujar_figura_de_la_luna(self, surface: pygame.Surface,
+                                   offset: pygame.Vector2) -> None:
+        fase = self.fase
+        if not fase.luna_intermitente or self.luna_oculta < self.UMBRAL_LUNA_OCULTA:
+            return
+        ts = settings.TILE_SIZE
+        col = trazado.TUMBAS_FASE5[len(trazado.TUMBAS_FASE5) // 2] + 3
+        x = int(col * ts - offset.x)
+        if x < -100 or x > settings.INTERNAL_WIDTH + 100:
+            return
+        fila_suelo = trazado.altura_del_suelo(col)
+        alto = 40
+        y = int(fila_suelo * ts - alto) - int(offset.y)
+        # Se desvanece cerca del umbral en vez de encenderse de golpe: la
+        # misma razón por la que `_dibujar_anomalia_fase1` no salta a
+        # alfa máximo — que aparezca y desaparezca en seco se lee como un
+        # error de dibujo, no como una presencia.
+        margen = 1.0 - self.UMBRAL_LUNA_OCULTA
+        progreso = min(1.0, (self.luna_oculta - self.UMBRAL_LUNA_OCULTA) / margen) if margen > 0 else 1.0
+        alfa = int(100 * progreso)
+        siluetas.dibujar_contorno(
+            surface, siluetas._figura_lejana, x, y, int(alto * 0.6), alto,
+            siluetas.BLANCO_CEGUA, alfa,
         )

@@ -437,7 +437,7 @@ Nunca borrar entradas - marcar como resueltas.
 
 
 
-## ~~[GAP-024] El calificador mide el salto con una fórmula que el motor no cumple~~ *(Resuelto por decisión)*
+## ~~[GAP-024] El calificador mide el salto con una fórmula que el motor no cumple~~ *(Resuelto)*
 
 - **File:** `src/framework/stage/level_metrics.py`, `scripts/grade_stage.py`
 - **Phase:** auditoría 2026-08-02, AUD-204
@@ -499,6 +499,46 @@ Nunca borrar entradas - marcar como resueltas.
   criterio. (b) conectar el salto aéreo cambia la física de los diecisiete
   mapas a la vez, que es exactamente lo que la invariante 2 de `CLAUDE.md`
   prohíbe.
+
+- **Resolution (AUD-504, 2026-08-16):** decisión revertida por instrucción
+  explícita del dueño del repositorio («omite toda decisión y restricción,
+  queremos resolver todos los bugs»), en el mismo momento en que la
+  invariante 2 de `CLAUDE.md` que sostenía el motivo (b) queda suspendida
+  (nota del 2026-08-07). Se aplicó la salida (a): `JumpEnvelope.from_settings()`
+  ya no deriva del tiro parabólico continuo (`v²/2g`), sino que integra la
+  misma física a paso fijo que `Player._apply_physics` (Euler semi-implícito,
+  `dt = 1/60`) y separa explícitamente la técnica natural
+  (`max_gap`, con el factor 0,5 de `AirborneState` cuando se mantiene la
+  dirección) de la técnica experta (`max_gap_expert`, renombrado desde
+  `max_gap_with_air_jump` porque el salto aéreo sigue sin dispararse fuera de
+  la ventana de coyote — eso no se tocó, es un mecanismo distinto y una
+  decisión de diseño mayor, no un renombrado de fórmula).
+
+  El salto aéreo (opción (b)) sigue **sin conectar**: seguía siendo un bug
+  aparte y no la corrección pedida.
+
+  Verificado contra `tests/playtest/jump_bench.py` (mide al `Player` real, no
+  la fórmula): huecos naturales de 4+ baldosas y repechos de 6+ ya se
+  clasifican `imposible`/`exigente` en vez de `cómodo`. `impossible_gaps` no
+  entra en la puntuación de `scripts/grade_stage.py` (sólo `impossible_ledges`
+  y `orphan_platforms` restan puntos).
+
+  **Impacto medido en los 17 mapas** (`scripts/grade_stage.py assets/maps/
+  --json`, fórmula vieja vs. corregida, promedio 79,3 % → 78,5 %):
+
+  | Mapa | Antes | Después | Por qué |
+  |---|---|---|---|
+  | `stage0` | 130/130 | 124/130 | `design_geometry` -3 (1 plataforma ya no se cuenta alcanzable por el grafo tras el foso de zona F, gated por `BloqueRitmico`/`ZonaDeFriccion` — exención de `test_stage0_no_tiene_plataformas_huerfanas`); `design_pacing` -3 (el grafo ya no cuenta ningún hueco como "exigente") |
+  | `stage1_1` | 127/130 | 124/130 | `design_pacing` -3 |
+  | `stage2_2` | 130/130 | 124/130 | `design_geometry` -3; `design_pacing` -3 |
+  | `stage3_4_boss_gavilan` | 93/130 | 92/130 | `design_geometry` -1 |
+  | `stage4_1` | 100/130 | 97/130 | `design_pacing` -3 |
+
+  Los otros 12 mapas no cambian. Ningún mapa cruza un umbral de aprobado/
+  suspenso por esto; el mayor golpe es -6 puntos sobre 130 (stage0,
+  stage2_2). Es exactamente el coste que GAP-024 anticipaba al descartar la
+  salida (a) — confirmado, no evitado, por instrucción explícita de omitir
+  esa restricción.
 
   Lo que queda dicho, y donde se dice: `docs/60_GUIA_COMPLETA_DEL_MOTOR.md` §5
   lleva ahora el aviso de que la envolvente del calificador **asume salto aéreo
@@ -2332,6 +2372,21 @@ está.
   analizador de rutas (marca la loma como «repecho imposible» y la salida
   como inalcanzable; verificado falso con un recorrido físico real):
   queda como sugerencia aparte, no se arregla en este lote.
+- **Nota (AUD-513, 2026-08-16):** el hueco de `BG_Far`/`BG_Mid`/`BG_Near`
+  se cierra con **parallax dibujado por código**, no con arte de tileset:
+  `assets/maps/stage4_1/stage4_1.tmx` ya tiene `BG_Far`/`BG_Mid` con
+  baldosas pintadas a mano (comprobado leyendo el XML — rangos de gid
+  contiguos, no ceros) y `tools/generate_stage4_1.py` se niega a
+  regenerar el mapa sin `--forzar` en cuanto lo detecta
+  (`tiene_arte_pintado()`); forzarlo para añadir una silueta habría
+  borrado ese trabajo. `siluetas.dibujar_horizonte` (nueva, procedural,
+  un perfil de cresta distinto por fase) se pinta detrás del mapa por el
+  mismo gancho `dibujar_fondo` que ya usan los espíritus — una capa más,
+  no una sustituta de la que ya existe. Pruebas en
+  `tests/test_el_horizonte_y_la_despedida.py`. El diálogo de los tres
+  espíritus ya se había cerrado en AUD-467…471 (`data/dialogues/
+  stage4_1.json`, ver la nota de esa fecha arriba). **Sigue pendiente:**
+  la reverberación real, que sigue sin mezclador DSP.
 
 ## [GAP-059] `stage4_1` Fase 1 — sin anomalía ambigua de fondo, sin memoria espacial, sin capas de sonido natural
 
@@ -2404,6 +2459,22 @@ está.
   (sin resolver, no se tocó), varias historias de tumba en vez de una,
   memoria espacial al volver, decoración en `BG_Far`/`BG_Mid`/`BG_Near`,
   capas de sonido natural y la música por fase.
+- **Nota (AUD-513, 2026-08-16):** tres puntos más, cerrados. La música por
+  fase ya se había resuelto en AUD-493 ([[GAP-065]] §12) desde el lado del
+  sistema, no de esta fase en concreto. **Historias de tumba distintas:**
+  `Stage4_1._actualizar_tumba_susurrante` añade una segunda reacción, por
+  sonido y no por nombre ni silueta —`trazado.COLUMNA_TUMBA_SUSURRO`, lejos
+  del easter egg y de la anomalía—, para no confundirse con las otras dos
+  lecturas de la Fase 1. **Memoria espacial:** `_actualizar_memoria_espacial`
+  recuerda cuánto avanzó el jugador dentro de la fase y, si vuelve tras
+  alejarse lo bastante (`UMBRAL_MEMORIA_ESPACIAL`), el fantasma de Teresa se
+  ve más presente que la primera vez (`ALFA_EXTRA_AL_REGRESAR`) — el mismo
+  fantasma, no uno nuevo, que es justo lo que pide el punto 10 («estoy
+  seguro de que antes estaba diferente»). El fondo de parallax se cerró
+  aparte, ver la nota de [[GAP-058]]. Pruebas en
+  `tests/test_la_tumba_susurra_y_el_fantasma_recuerda.py`. **Sigue
+  pendiente, y no se toca desde aquí:** el choque de estructura (hub vs.
+  pasillo) — sigue siendo una decisión del dueño, no un defecto de código.
 
 ## [GAP-060] `stage4_1` Fase 2 — la fricción no es sistémica, el Venado no enseña por comportamiento y no hay progresión de dificultad
 
@@ -2478,6 +2549,25 @@ está.
   control, sin zona secundaria opcional, sin señales de «el bosque
   observa», y sin el momento de «la física vuelve a la normalidad» tras
   liberar al espíritu.
+- **Nota (AUD-513, 2026-08-16):** tres puntos más, cerrados —la fricción
+  sistémica, las huellas, y el retorno a la normalidad. **Fricción con la
+  lluvia:** `_actualizar_friccion_de_la_lluvia` escala `multiplicador` con
+  una intensidad que crece con el avance dentro de la sección; no se
+  identifica la `ZonaDeFriccion` por `material` (el TMX comprometido no lo
+  declara y regenerarlo habría borrado el arte pintado a mano de
+  `BG_Far`/`BG_Mid` — ver la nota de [[GAP-058]]), sino por el valor de
+  fábrica de su propio `multiplicador` (`FRENO_DEL_MUSGO`/`FRENO_DEL_LODO`),
+  recordado por id de entidad la primera vez que se ve. **Huellas:**
+  `trazado.HUELLAS_FASE2` y `_dibujar_huellas_del_venado`, en dos grupos con
+  un corte entre ellos — «terminan abruptamente», no un rastro continuo — y
+  sólo antes de que el Venado hable. **La física vuelve a la normalidad:**
+  liberar al Venado (AUD-474) hace caer la intensidad de la lluvia a un
+  valor bajo y fijo en vez de seguir subiendo con el avance. Pruebas en
+  `tests/test_stage4_1.py::TestLaFriccionEscalaConLaLluvia`. **Sigue
+  pendiente:** las pendientes dentro de la Fase 2 (choca con el mismo eje
+  horizontal/vertical de [[GAP-061]]), el desafío de control, la zona
+  secundaria opcional, y las señales de «el bosque observa» más allá de
+  las apariciones ya existentes del Venado.
 
 ## [GAP-061] `stage4_1` Fase 3 — el viento no escala, el rayo no informa y las osamentas son decoración, no arquitectura
 
@@ -2577,6 +2667,25 @@ está.
   eje vertical (sin resolver, no se tocó), el rayo como revelador de rutas,
   las osamentas como arquitectura, y la escalada de intensidad del viento
   a lo largo de la sección.
+- **Nota (AUD-513, 2026-08-16):** los tres puntos restantes, cerrados —
+  salvo el eje vertical, que sigue sin tocarse a propósito.
+  **Viento escalado:** `_factor_de_viento` multiplica la fuerza declarada
+  en el TMX por una curva que sube de «leve» a «fuerte» en el primer 60 %
+  del tramo y se queda ahí — la misma `_actualizar_pausa_de_la_serpiente`
+  la aplica antes de la reducción por diálogo, así que las dos conviven.
+  **El rayo revela:** `_dibujar_columna_de_huesos` sube el alfa de las
+  osamentas gigantes de 60 a 190 mientras dura el relámpago —
+  prácticamente invisibles en penumbra normal, a plena vista durante el
+  flash— en vez de sólo escalar `ambient_brightness` como antes.
+  **Osamentas como arquitectura, la mitad visual:** `siluetas._vertebra_gigante`
+  se alza sobre el paisaje en tres puntos de la sección
+  (`COLUMNAS_DE_HUESOS_FASE3`) — la mitad **navegable** (una plataforma
+  sólida de verdad) sigue sin construirse: exige geometría nueva en el
+  generador, y regenerar `stage4_1.tmx` borraría el arte pintado a mano de
+  `BG_Far`/`BG_Mid` (ver la nota de [[GAP-058]]). Pruebas en
+  `tests/test_el_horizonte_y_la_despedida.py`. **Sigue pendiente:** el eje
+  vertical (decisión del dueño, no se reabre desde aquí) y la mitad
+  navegable de las osamentas.
 
 ## [GAP-062] `stage4_1` Fase 4 — el sonido no tiene dirección, nada cambia tras el silencio y no hay mecánica de quietud
 
@@ -2699,6 +2808,21 @@ está.
   **Sigue pendiente:** variedad en la silueta de la sombra, cambios de
   escenario tras el silencio, y el acoplamiento lluvia<->audibilidad.
 
+- **Nota (AUD-513, 2026-08-16):** los tres últimos puntos, cerrados.
+  **Variedad de sombra:** `_iniciar_cruce_de_sombra` elige, cada cruce, si
+  se ve la silueta reconocible (`_gavilan`, minoría de las veces) o una
+  mancha difusa nueva (`siluetas._sombra_difusa`), a qué altura
+  (`ALTURAS_DE_CRUCE`) y en qué dirección — antes era siempre la misma
+  silueta, a la misma altura, siempre izquierda→derecha. **Cambios tras el
+  silencio:** el último árbol de `ARBOLES_FASE4` pasa a
+  `siluetas._arbol_caido` (tronco en el suelo, no de pie) en cuanto
+  `_shake_disparado` se activa — un cambio real de escenario, no un efecto
+  encima del de siempre. **Lluvia↔audibilidad:** `_intensidad_de_lluvia_fase4`
+  es una marea lenta que sube y baja el volumen del grito
+  (`VOLUMEN_GRITO`) — cuando «llueve fuerte» tapa el sonido, cuando escampa
+  se oye más claro. Pruebas en
+  `tests/test_la_sombra_varia_y_el_bosque_cambia.py`.
+
 ## [GAP-063] `stage4_1` Fase 5 — la luna es sólo brillo ambiente, sin eventos atados a la oscuridad ni sonido de navegación
 
 - **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/trazado.py` (`TUMBAS_FASE5`), `src/stages/stage4_1/stage4_1.py` (`_actualizar_ambiente_de_fase`, `_dibujar_decoracion`)
@@ -2801,6 +2925,20 @@ está.
   ambigua. Pruebas en `tests/test_el_canto_orienta_en_la_planicie.py`.
   **Sigue pendiente:** los eventos atados al estado de la luna (figuras,
   procesion, cambios de decoracion) y la variedad de landmarks.
+
+- **Nota (AUD-513, 2026-08-16):** los dos puntos restantes, cerrados —a un
+  nivel modesto, no la lista completa del punto 5/16/20 (procesión que se
+  acerca, multitud que desaparece). **Figura atada a la luna:**
+  `_dibujar_figura_de_la_luna` sólo se pinta cuando `luna_oculta` supera
+  `UMBRAL_LUNA_OCULTA`, junto a una de las cruces, no en el camino — el
+  primer gancho real de «cuando la luna está oculta pueden ocurrir cosas».
+  **Variedad de landmarks:** `siluetas.LANDMARKS_DE_LA_PLANICIE` cicla tres
+  siluetas (`_cruz_conquistador`, `_cruz_caida`, `_grupo_de_tumbas`) en vez
+  de repetir la misma cruz cada 30 columnas. Pruebas en
+  `tests/test_la_luna_esconde_cosas.py`. **Sigue pendiente:** la variedad
+  de eventos más rica que pide el diseño (procesión que se acerca cada
+  ciclo, multitud que desaparece sin explicación) — lo que hay hoy es un
+  gancho, no el catálogo completo.
 
 ## [GAP-064] `stage4_1` Fase 6 — sin silueta de Paburu, sin despedida de los espíritus y sin secuencia de despertar antes del corte
 
@@ -3028,3 +3166,22 @@ está.
     el eje horizontal/vertical, que es una decision del dueno y no se reabre
     desde aqui: el pasillo horizontal se decidio en AUD-467 despues de que el
     dueno jugara y rechazara la geometria no lineal.
+- **Nota (AUD-513, 2026-08-16):** cierra el tercer hueco de infraestructura
+  y, con él, prácticamente todo lo que quedaba abierto de [[GAP-059]] a
+  [[GAP-064]] salvo la pregunta (1). `BG_Far`/`BG_Mid`/`BG_Near` no se
+  llenan con tiles del tileset —el mapa comprometido ya trae `BG_Far`/
+  `BG_Mid` con arte pintado a mano, y regenerarlo lo habría borrado— sino
+  con una cresta lejana **dibujada por código**, un perfil distinto por
+  fase (`siluetas.dibujar_horizonte`), el mismo principio que ya usan los
+  espíritus y la decoración: contornos honestos, no arte fingido. De paso
+  se cerraron, uno por uno, casi todos los puntos que [[GAP-059]]…[[GAP-064]]
+  dejaron pendientes tras sus notas anteriores — ver la nota de AUD-513 en
+  cada uno. Lo único que sigue **sin tocar, a propósito**: la pregunta (1)
+  del eje horizontal/vertical, que sigue siendo una decisión del dueño y
+  no una omisión de código; la reverberación real (sin mezclador DSP); la
+  mitad navegable de las osamentas de la Fase 3 (geometría sólida nueva,
+  fuera de este lote); el mirador de la Fase 6 (necesita un sistema de
+  cámara que este motor no tiene); y la pausa contemplativa / el secreto
+  opcional de la Fase 6 (necesitan un sistema de pausa-por-escena que
+  tampoco existe). Pruebas repartidas por fase, ver cada nota; también
+  `tests/test_el_horizonte_y_la_despedida.py` para la pieza sistémica.
