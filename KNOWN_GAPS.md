@@ -2387,6 +2387,21 @@ está.
   espíritus ya se había cerrado en AUD-467…471 (`data/dialogues/
   stage4_1.json`, ver la nota de esa fecha arriba). **Sigue pendiente:**
   la reverberación real, que sigue sin mezclador DSP.
+- **Nota (AUD-515, 2026-08-16):** la reverberación se cierra sin mezclador
+  DSP. El mezclador de este motor no tiene DSP en tiempo real, pero
+  **todo** el audio del proyecto ya se genera por código
+  (`tools/generate_all_assets.py::_gen_sfx`), así que se hornea en el
+  propio `.wav`: `_aplicar_reverberacion` suma varias copias retrasadas y
+  cada vez más flojas del sonido por encima del original —el mismo
+  principio que un comb filter, calculado una vez al generar en vez de en
+  tiempo real— y alarga el clip con la cola que hace falta para que el
+  último eco no se corte. Se aplica al silencio súbito de la Fase 4
+  (`cemetery_silence`, que ya decaía y ahora además resuena) y a un sonido
+  nuevo, `despertar_profundo`, que sustituye al `sfx_bosses_phase_change`
+  prestado que usaba la secuencia de despertar de la Fase 6 ([[GAP-064]]
+  punto 25) — un cue de combate sin relación, cambiado por un retumbar
+  propio con la misma reverberación. Pruebas en
+  `tests/test_la_reverberacion_esta_horneada.py`.
 
 ## [GAP-059] `stage4_1` Fase 1 — sin anomalía ambigua de fondo, sin memoria espacial, sin capas de sonido natural
 
@@ -2475,6 +2490,14 @@ está.
   `tests/test_la_tumba_susurra_y_el_fantasma_recuerda.py`. **Sigue
   pendiente, y no se toca desde aquí:** el choque de estructura (hub vs.
   pasillo) — sigue siendo una decisión del dueño, no un defecto de código.
+- **Decisión confirmada (2026-08-16):** consultado directamente, el dueño
+  mantiene AUD-467: el pasillo horizontal sigue siendo la forma final del
+  nivel. El hub de la Fase 1 que pedía la crítica de diseño **no se
+  construye** — no por costo, sino porque contradice una geometría que ya
+  se jugó, se rechazó una vez (el pozo vertical) y se confirmó de nuevo
+  ahora. Este punto queda cerrado por decisión, igual que se cerraba GAP-024
+  antes de que otra decisión posterior lo reabriera — la diferencia es que
+  aquí la decisión se sostiene.
 
 ## [GAP-060] `stage4_1` Fase 2 — la fricción no es sistémica, el Venado no enseña por comportamiento y no hay progresión de dificultad
 
@@ -2686,7 +2709,11 @@ está.
   `tests/test_el_horizonte_y_la_despedida.py`. **Sigue pendiente:** el eje
   vertical (decisión del dueño, no se reabre desde aquí) y la mitad
   navegable de las osamentas.
-
+- **Decisión confirmada (2026-08-16):** consultado directamente, el dueño
+  mantiene AUD-467 — el pasillo horizontal, no una ascensión vertical
+  dedicada. Misma decisión que [[GAP-059]], la misma pregunta (1) de
+  [[GAP-065]] §14, confirmada una sola vez para el nivel entero. La
+  verticalidad de la Fase 3 **no se construye**.
 ## [GAP-062] `stage4_1` Fase 4 — el sonido no tiene dirección, nada cambia tras el silencio y no hay mecánica de quietud
 
 - **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/stage4_1.py` (`_actualizar_silencio_y_shake`, `_actualizar_grito_del_gavilan`, `_actualizar_sombra_del_gavilan`, `_dibujar_sombra_de_ave`), `src/framework/scenes/stage_parts/sonido.py`
@@ -3034,6 +3061,47 @@ está.
   conviene resolverlos una vez para las seis fases a la vez, no fase por
   fase, antes de encarar lo específico de cada una (la secuencia de
   despertar de esta fase, el mirador, la despedida de los espíritus).
+- **Nota (AUD-513, 2026-08-16):** cuatro puntos cerrados de un lote.
+  **Silueta de Paburu:** `_dibujar_paburu` crece con el avance de la fase
+  y nunca revela el todo (alfa y ancho topados). **Despedida de los
+  espíritus:** `_dibujar_despedida_de_los_espiritus` deja ver un instante,
+  repartidos a lo largo del tramo, a los que el jugador liberó de verdad
+  (AUD-474) — a quien no liberó nada no le queda nada que despedirse.
+  **Las grietas escalan:** más lejos se encienden y más tardan en
+  apagarse cerca del final (`DISTANCIA_DE_GRIETA_FINAL`,
+  `BAJADA_DE_GRIETA_FINAL`) — no hay luces nuevas que colocar sin
+  regenerar el mapa (ver la nota de [[GAP-058]]), así que el «cada vez
+  más conectado» se consigue con las mismas grietas de siempre.
+  **Secuencia de despertar, la mitad que no bloquea:**
+  `_actualizar_secuencia_de_despertar` da el shake y el corte de música,
+  una sola vez cerca del final. Pruebas en
+  `tests/test_el_horizonte_y_la_despedida.py` y
+  `tests/test_el_despertar_de_la_fase_6.py`. **Sigue pendiente entonces:**
+  el mirador, la pausa contemplativa, y un sonido propio en vez de
+  prestado — los tres, resueltos abajo.
+- **Nota (AUD-515, 2026-08-16):** el mirador y la pausa contemplativa
+  (punto 17 y 23-24) se daban por bloqueados —*«necesitan un sistema de
+  cámara/pausa que el motor no tiene»*— y era un diagnóstico equivocado:
+  `CutsceneSystem` ya sabe mover la cámara (`camara x y duración`,
+  `cutscene_guion.py`) y ya se usa en este mismo mapa para la cutscene de
+  introducción, con `bloquea=True` congelando al jugador mientras dura —
+  la pausa contemplativa, literalmente gratis. El mirador es un guión de
+  cutscene nuevo: la cámara se aleja 280 px hacia el camino recorrido, se
+  queda 2,5 s, y vuelve. Se añadió un objeto `Cutscene` nuevo
+  (`COLUMNA_MIRADOR_FASE6`, `trazado.py`) al TMX comprometido con un
+  parche quirúrgico del XML —sólo la capa `Objects`, con el bloque exacto
+  que produce `tools/generate_stage4_1.py::_objetos()`, para que
+  `TestElMapaSigueAtadoASuGenerador` no distinga el mapa del que
+  generaría el código— en vez de regenerar el mapa completo, que habría
+  borrado el arte de `BG_Far`/`BG_Mid` (ver la nota de [[GAP-058]]).
+  De paso, la secuencia de despertar deja de tomar prestado
+  `sfx_bosses_phase_change` (un cue de combate) y usa `despertar_profundo`,
+  un sonido propio con la misma reverberación horneada que el silencio de
+  la Fase 4 (ver la nota de [[GAP-058]]). Pruebas en
+  `tests/test_el_mirador_de_la_fase_6.py`. **Sigue pendiente, sin fecha:**
+  el secreto opcional con los tres espíritus juntos, la música que se
+  construye progresivamente, y el sonido que se «limpia» por capas — los
+  tres son sistemas más grandes que una cutscene, no huecos de una llamada.
 
 ## [GAP-065] `stage4_1` como sistema — la progresión de color ya cuenta la historia, la relación jugador↔escenario no siempre
 
@@ -3185,3 +3253,22 @@ está.
   opcional de la Fase 6 (necesitan un sistema de pausa-por-escena que
   tampoco existe). Pruebas repartidas por fase, ver cada nota; también
   `tests/test_el_horizonte_y_la_despedida.py` para la pieza sistémica.
+- **Nota (AUD-515, 2026-08-16):** dos de los tres «sin tocar» de la nota
+  anterior resultaron estar mal diagnosticados, no bloqueados de verdad.
+  **La reverberación real no necesitaba mezclador DSP:** todo el audio del
+  proyecto ya se genera por código, así que se hornea en el propio `.wav`
+  (`_aplicar_reverberacion`, ver la nota de [[GAP-058]]). **El mirador y la
+  pausa contemplativa no necesitaban un sistema de cámara/pausa nuevo:**
+  `CutsceneSystem` ya lo tenía, y ya se usaba en este mismo mapa para la
+  introducción — sólo hacía falta un guión más (ver la nota de
+  [[GAP-064]]). La pregunta (1), el eje horizontal/vertical, se confirmó
+  directamente con el dueño (2026-08-16, ver las notas de [[GAP-059]] y
+  [[GAP-061]]): AUD-467 se mantiene, no se reabre. Lo que de verdad sigue
+  sin construirse, y por qué cada uno es un sistema aparte y no una
+  llamada más: la mitad navegable de las osamentas de la Fase 3 (geometría
+  sólida nueva — regenerar el mapa borraría el arte de `BG_Far`/`BG_Mid`);
+  el secreto opcional de la Fase 6 (un objeto y un disparador nuevos, la
+  misma limitación de regenerar el mapa); y la música/el sonido que se
+  construyen progresivamente por capas (`DynamicMusicSystem` está pensado
+  para intensidad de combate, no para revelar instrumentos con el avance
+  narrativo, y este nivel no tiene combate).

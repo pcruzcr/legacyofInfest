@@ -86,6 +86,18 @@ class TestLaSecuenciaDeDespertar:
         assert escena._despertar_disparado is True
         assert sonidos, "la secuencia de despertar no reprodujo ningún sonido"
 
+    def test_usa_el_sonido_profundo_propio_no_un_cue_de_jefe(self, escena, monkeypatch) -> None:
+        """AUD-515 — antes tomaba prestado `sfx_bosses_phase_change`, un cue
+        de combate sin relación con «el mundo despierta»."""
+        sonidos = []
+        monkeypatch.setattr(
+            escena, "_play_sfx_named",
+            lambda *a, **kw: sonidos.append(a[0] if a else None),
+        )
+        self._tras_el_despertar(escena, escena.AVANCE_DEL_DESPERTAR + 0.02)
+        escena._actualizar_secuencia_de_despertar()
+        assert sonidos == ["sfx_environment_despertar_profundo"]
+
     def test_no_se_repite_en_la_misma_visita(self, escena, monkeypatch) -> None:
         llamadas = []
         monkeypatch.setattr(

@@ -356,6 +356,19 @@ COLUMNA_DEL_CANTO: int = 745
 GRIETAS_FASE6: tuple[int, ...] = tuple(range(700, 899, 20))
 
 
+# ── El mirador de la Fase 6 (AUD-515, GAP-064 punto 17) ──────────────────
+#
+# *«El jugador mira atrás y ve el camino que recorrió»*. Antes se daba por
+# bloqueado —«necesita un sistema de cámara que este motor no tiene»—, pero
+# `CutsceneSystem` ya sabe mover la cámara (`camara x y duración`,
+# `cutscene_guion.py`) y ya se usa en este mismo mapa para la cutscene de
+# introducción. Columna 860: bien entrada la Fase 6 (750-899) y antes de
+# `Stage4_1.AVANCE_DEL_DESPERTAR` (0,92 del tramo, columna ~888) — el
+# jugador ya vio casi todo el camino cuando se detiene a mirarlo, y todavía
+# le queda tramo por delante hasta el corte.
+COLUMNA_MIRADOR_FASE6: int = 860
+
+
 def grietas_de_pisada() -> tuple[tuple[int, int], ...]:
     return tuple((c, altura_del_suelo(c)) for c in GRIETAS_FASE6)
 

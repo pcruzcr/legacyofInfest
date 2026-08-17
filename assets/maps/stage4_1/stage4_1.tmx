@@ -240,17 +240,12 @@
   <object id="6" type="Solid" x="6656" y="480" width="7712" height="128"/>
  </objectgroup>
  <objectgroup id="8" name="Objects">
-  <object id="101" name="PlayerSpawn_101" type="PlayerSpawn" x="80" y="432" width="16" height="32"/>
-  <object id="102" name="Cutscene_102" type="Cutscene" x="80" y="432">
+  <object id="101" name="PlayerSpawn_101" type="PlayerSpawn" x="80" y="432" width="16" height="32">
+  </object>
+  <object id="102" name="Cutscene_102" type="Cutscene" x="80" y="432" width="0" height="0">
    <properties>
+    <property name="guion" value="fundido entra 1.5&#10;texto Voces: Los espiritus hablan de Paburu, en una lengua antigua.&#10;esperar 2.5&#10;texto Jhon: Este lugar... lo reconozco.&#10;esperar 2.0&#10;fundido sale 1.0&#10;"/>
     <property name="bloquea" type="bool" value="true"/>
-    <property name="guion">fundido entra 1.5
-texto Voces: Los espiritus hablan de Paburu, en una lengua antigua.
-esperar 2.5
-texto Jhon: Este lugar... lo reconozco.
-esperar 2.0
-fundido sale 1.0
-</property>
     <property name="saltable" type="bool" value="true"/>
     <property name="una_vez" type="bool" value="true"/>
    </properties>
@@ -442,20 +437,20 @@ fundido sale 1.0
   </object>
   <object id="140" name="EventTrigger_140" type="EventTrigger" x="3488" y="432" width="48" height="32">
    <properties>
-    <property name="automatico" type="bool" value="false"/>
     <property name="evento" value="espiritu_liberado_2"/>
+    <property name="automatico" type="bool" value="false"/>
    </properties>
   </object>
   <object id="141" name="EventTrigger_141" type="EventTrigger" x="5888" y="432" width="48" height="32">
    <properties>
-    <property name="automatico" type="bool" value="false"/>
     <property name="evento" value="espiritu_liberado_3"/>
+    <property name="automatico" type="bool" value="false"/>
    </properties>
   </object>
   <object id="142" name="EventTrigger_142" type="EventTrigger" x="8288" y="432" width="48" height="32">
    <properties>
-    <property name="automatico" type="bool" value="false"/>
     <property name="evento" value="espiritu_liberado_4"/>
+    <property name="automatico" type="bool" value="false"/>
    </properties>
   </object>
   <object id="143" name="FrictionZone_143" type="FrictionZone" x="2720" y="448" width="240" height="32">
@@ -515,79 +510,79 @@ fundido sale 1.0
   </object>
   <object id="154" name="WindZone_154" type="WindZone" x="4304" y="0" width="3312" height="608">
    <properties>
-    <property name="fuerza_x" type="float" value="-60"/>
-    <property name="fuerza_y" type="float" value="0"/>
+    <property name="fuerza_x" type="float" value="-60.0"/>
+    <property name="fuerza_y" type="float" value="0.0"/>
     <property name="periodo" type="float" value="3.2"/>
    </properties>
   </object>
   <object id="155" name="Light_155" type="Light" x="11200" y="448" width="16" height="16">
    <properties>
+    <property name="radius" type="float" value="70.0"/>
     <property name="color" value="#7CFFA0"/>
-    <property name="intensity" type="float" value="0"/>
-    <property name="radius" type="float" value="70"/>
+    <property name="intensity" type="float" value="0.0"/>
    </properties>
   </object>
   <object id="156" name="Light_156" type="Light" x="11520" y="448" width="16" height="16">
    <properties>
+    <property name="radius" type="float" value="70.0"/>
     <property name="color" value="#7CFFA0"/>
-    <property name="intensity" type="float" value="0"/>
-    <property name="radius" type="float" value="70"/>
+    <property name="intensity" type="float" value="0.0"/>
    </properties>
   </object>
   <object id="157" name="Light_157" type="Light" x="11840" y="448" width="16" height="16">
    <properties>
+    <property name="radius" type="float" value="70.0"/>
     <property name="color" value="#7CFFA0"/>
-    <property name="intensity" type="float" value="0"/>
-    <property name="radius" type="float" value="70"/>
+    <property name="intensity" type="float" value="0.0"/>
    </properties>
   </object>
   <object id="158" name="Light_158" type="Light" x="12160" y="448" width="16" height="16">
    <properties>
+    <property name="radius" type="float" value="70.0"/>
     <property name="color" value="#7CFFA0"/>
-    <property name="intensity" type="float" value="0"/>
-    <property name="radius" type="float" value="70"/>
+    <property name="intensity" type="float" value="0.0"/>
    </properties>
   </object>
   <object id="159" name="Light_159" type="Light" x="12480" y="448" width="16" height="16">
    <properties>
+    <property name="radius" type="float" value="70.0"/>
     <property name="color" value="#7CFFA0"/>
-    <property name="intensity" type="float" value="0"/>
-    <property name="radius" type="float" value="70"/>
+    <property name="intensity" type="float" value="0.0"/>
    </properties>
   </object>
   <object id="160" name="Light_160" type="Light" x="12800" y="448" width="16" height="16">
    <properties>
+    <property name="radius" type="float" value="70.0"/>
     <property name="color" value="#7CFFA0"/>
-    <property name="intensity" type="float" value="0"/>
-    <property name="radius" type="float" value="70"/>
+    <property name="intensity" type="float" value="0.0"/>
    </properties>
   </object>
   <object id="161" name="Light_161" type="Light" x="13120" y="448" width="16" height="16">
    <properties>
+    <property name="radius" type="float" value="70.0"/>
     <property name="color" value="#7CFFA0"/>
-    <property name="intensity" type="float" value="0"/>
-    <property name="radius" type="float" value="70"/>
+    <property name="intensity" type="float" value="0.0"/>
    </properties>
   </object>
   <object id="162" name="Light_162" type="Light" x="13440" y="448" width="16" height="16">
    <properties>
+    <property name="radius" type="float" value="70.0"/>
     <property name="color" value="#7CFFA0"/>
-    <property name="intensity" type="float" value="0"/>
-    <property name="radius" type="float" value="70"/>
+    <property name="intensity" type="float" value="0.0"/>
    </properties>
   </object>
   <object id="163" name="Light_163" type="Light" x="13760" y="448" width="16" height="16">
    <properties>
+    <property name="radius" type="float" value="70.0"/>
     <property name="color" value="#7CFFA0"/>
-    <property name="intensity" type="float" value="0"/>
-    <property name="radius" type="float" value="70"/>
+    <property name="intensity" type="float" value="0.0"/>
    </properties>
   </object>
   <object id="164" name="Light_164" type="Light" x="14080" y="448" width="16" height="16">
    <properties>
+    <property name="radius" type="float" value="70.0"/>
     <property name="color" value="#7CFFA0"/>
-    <property name="intensity" type="float" value="0"/>
-    <property name="radius" type="float" value="70"/>
+    <property name="intensity" type="float" value="0.0"/>
    </properties>
   </object>
   <object id="165" name="MessageTrigger_Once_165" type="MessageTrigger_Once" x="14304" y="400" width="32" height="80">
@@ -595,7 +590,16 @@ fundido sale 1.0
     <property name="text" value="Paburu despierta."/>
    </properties>
   </object>
-  <object id="166" name="NextTrigger_166" type="NextTrigger" x="14304" y="432" width="32" height="48"/>
+  <object id="166" name="NextTrigger_166" type="NextTrigger" x="14304" y="432" width="32" height="48">
+  </object>
+  <object id="167" name="Cutscene_167" type="Cutscene" x="13760" y="416" width="48" height="80">
+   <properties>
+    <property name="guion" value="fundido entra 0.3&#10;camara 13080 180 2.2&#10;esperar 2.5&#10;camara 13360 180 1.6&#10;fundido sale 0.2&#10;"/>
+    <property name="bloquea" type="bool" value="true"/>
+    <property name="saltable" type="bool" value="true"/>
+    <property name="una_vez" type="bool" value="true"/>
+   </properties>
+  </object>
  </objectgroup>
  <layer id="9" name="FG_Overlay" width="900" height="38">
   <data encoding="csv">

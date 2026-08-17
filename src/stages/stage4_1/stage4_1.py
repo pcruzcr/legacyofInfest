@@ -1060,13 +1060,12 @@ class Stage4_1(StageScene):
     # silencio, un sonido profundo) antes del corte a
     # `stage4_2_boss_paburu`; hoy `_actualizar_mensaje_final` sólo
     # reescribe el texto del cartel y el `NextTrigger` está a un par de
-    # baldosas, sin ningún aviso. No se bloquea la entrada del jugador —
-    # este motor no tiene un sistema de cámara lenta/pausa por escena que
-    # `Stage4_1` pueda pedir prestado sin construirlo de cero, y hacerlo
-    # aquí sería la clase de sistema nuevo que el `Resolution plan` del GAP
-    # ya advertía no meter fase por fase— así que la parte que sí se
-    # entrega sin bloquear nada: un shake de cámara y un sonido grave, una
-    # sola vez, cerca del final del tramo.
+    # baldosas, sin ningún aviso. Esto no bloquea la entrada del jugador
+    # —el shake y el sonido grave, una sola vez, cerca del final del
+    # tramo—; el mirador y la pausa contemplativa que sí necesitan
+    # detener al jugador un instante los da un `Cutscene` aparte
+    # (AUD-515, ver `_dibujar_...` no aplica aquí — el guión vive en el
+    # TMX, columna cerca de `AVANCE_DEL_DESPERTAR`), no este método.
     AVANCE_DEL_DESPERTAR = 0.92
     DURACION_SHAKE_DESPERTAR = 0.6
     AMPLITUD_SHAKE_DESPERTAR = 8.0
@@ -1088,7 +1087,12 @@ class Stage4_1(StageScene):
             audio.stop_ambient()
         self._camera.apply_shake(amplitude=self.AMPLITUD_SHAKE_DESPERTAR,
                                  duration=self.DURACION_SHAKE_DESPERTAR)
-        self._play_sfx_named("sfx_bosses_phase_change", volume=0.7)
+        # AUD-515 — antes tomaba prestado `sfx_bosses_phase_change`, un cue
+        # de combate sin relación; ahora un retumbar propio con
+        # reverberación horneada (`_aplicar_reverberacion`,
+        # `tools/generate_all_assets.py`), la misma idea que el silencio de
+        # la Fase 4: un espacio sagrado que resuena.
+        self._play_sfx_named("sfx_environment_despertar_profundo", volume=0.7)
 
     def _actualizar_mensaje_final(self) -> None:
         """AUD-474 — el umbral cuenta cuántos espíritus se liberaron de

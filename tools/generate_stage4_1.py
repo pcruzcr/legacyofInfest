@@ -47,6 +47,7 @@ from src.stages.stage4_1.trazado import (  # noqa: E402
     ARBOLES_FASE4,
     COLUMNA_LAPIDA_HUGO,
     COLUMNA_LAPIDA_TERESA,
+    COLUMNA_MIRADOR_FASE6,
     DESVIO_COLUMNA_DIALOGO,
     DESVIO_COLUMNA_LIBERACION,
     FRENO_DEL_LODO,
@@ -363,6 +364,32 @@ def _objetos() -> list[str]:
     obj("MessageTrigger_Once", ultima * TS, (perfil[ultima] - 5) * TS,
         2 * TS, 5 * TS, text=TEXTO_FINAL_BASE)
     obj("NextTrigger", ultima * TS, (perfil[ultima] - 3) * TS, 2 * TS, 3 * TS)
+
+    # ── El mirador (AUD-515, GAP-064 punto 17) ──────────────────
+    #
+    # Se dispara al entrar el jugador (rectángulo, no punto): la cámara se
+    # aleja hacia atrás, se queda un momento —el jugador no puede moverse
+    # mientras tanto, `bloquea=True`, que es la pausa contemplativa del
+    # punto 23-24— y vuelve. Las coordenadas de cámara son absolutas
+    # (`camara x y duración` no acepta «.» como `mover` sí): se calculan
+    # sobre dónde queda centrado normalmente el jugador en esta columna
+    # (`x·TS - INTERNAL_WIDTH/2`, la misma cuenta que hace `Camera.update`
+    # al seguirlo) y se aleja 280 px a la izquierda, menos que una pantalla
+    # completa (800 px) para que se lea como girar la cabeza, no como
+    # teletransportarse.
+    col_mirador = COLUMNA_MIRADOR_FASE6
+    x_centrado = col_mirador * TS - 400
+    x_alejado = x_centrado - 280
+    y_camara = 180  # altura vertical típica del jugador de pie, centrado
+    guion_mirador = (
+        "fundido entra 0.3\n"
+        f"camara {x_alejado} {y_camara} 2.2\n"
+        "esperar 2.5\n"
+        f"camara {x_centrado} {y_camara} 1.6\n"
+        "fundido sale 0.2\n"
+    )
+    obj("Cutscene", col_mirador * TS, (perfil[col_mirador] - 4) * TS, 3 * TS, 5 * TS,
+        guion=guion_mirador, bloquea=True, saltable=True, una_vez=True)
 
     return [x for x in o if x]
 
