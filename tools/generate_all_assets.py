@@ -438,6 +438,48 @@ def _gen_all_enemies():
         _gen_enemy_sheet(base / f"enemy_fly_{zname}.png", 14, 10, 4, zp["fly"], zp["detail"])
         _gen_enemy_sheet(base / f"enemy_shoot_{zname}.png", 12, 12, 4, zp["shoot"], zp["detail"])
 
+
+def _gen_pez_abismal_sheet(path, w=14, h=10, frames=4):
+    """AUD-519 — el pez abismal de 4.1b: no un bicho con patas como
+    `_gen_enemy_sheet` (esa silueta es de tierra firme, no de fosa), sino
+    una forma alargada, casi sin rasgos, con un único punto que pulsa —el
+    señuelo bioluminiscente— para que se lea como amenaza abisal y no
+    como un pez de acuario. La regla de oro de 4-1 (cero enemigos, la
+    atmósfera es el desafío) se traduce aquí en «una sola criatura, y que
+    apenas se distinga»: el contorno importa menos que el punto de luz
+    que se acerca en la oscuridad.
+
+    14×10 por fotograma, no un tamaño propio: es lo que
+    `EnemyFlying._load_zone_sprites` pide siempre (`self._sprite_fw/fh`),
+    y `EnemyPezAbismal` no lo sobreescribe — cambiar el tamaño aquí sin
+    tocar el otro lado descuadraría el recorte de la hoja de sprites.
+    """
+    cuerpo = (14, 18, 26)
+    borde = (6, 8, 14)
+    luz = (120, 220, 210)
+    imgs = []
+    for f in range(frames):
+        img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(img)
+        # El cuerpo ondula de fotograma a fotograma — un vaivén sinusoidal
+        # simple, no una animación de nado anatómicamente precisa.
+        ondulacion = int(1 * math.sin(f / max(frames - 1, 1) * math.pi * 2))
+        draw.ellipse((1, h // 2 - 3 + ondulacion, w - 4, h // 2 + 3 - ondulacion),
+                     fill=cuerpo, outline=borde)
+        # Cola, apenas un triángulo que se dobla con la ondulación.
+        draw.polygon([
+            (w - 4, h // 2 - 2),
+            (w - 1, h // 2 + ondulacion),
+            (w - 4, h // 2 + 2),
+        ], fill=borde)
+        # El señuelo: pulsa de tamaño, no de posición — es lo primero que
+        # se ve venir en la oscuridad, antes que el cuerpo.
+        pulso = 1 + (f % 2)
+        cx, cy = 2, h // 2
+        draw.ellipse((cx - pulso, cy - pulso, cx + pulso, cy + pulso), fill=luz)
+        imgs.append(img)
+    _save_sheet(path, imgs, w, h)
+
 # ════════════════════════════════════════
 # SECTION 3: BOSS SPRITES
 # ════════════════════════════════════════
@@ -746,6 +788,10 @@ TILESET_THEMES = {
     "tileset_heredia_interior": {"floor": (130,110,90), "wall": (150,130,110), "deco": (110,90,70)},
     "tileset_cemetery": {"floor": (50,50,70), "wall": (70,70,90), "deco": (40,40,60)},
     "tileset_stage4_1": {"floor": (90,80,70), "wall": (58,56,70), "deco": (70,60,50)},
+    # AUD-519 — 4.1b, la variante acuática de 4-1: paleta abisal (nada de
+    # verde ni marrón de superficie), lo bastante oscura para que el pez
+    # abismal se lea como algo que sale de la propia oscuridad.
+    "tileset_stage4_1b": {"floor": (18,32,42), "wall": (10,20,30), "deco": (26,52,58)},
 }
 
 def _gen_gothic_tileset(path, ts=16, cols=8, rows=8):
@@ -2263,7 +2309,8 @@ def main():
     
     print("\n[2/9] Enemy sprites...")
     _gen_all_enemies()
-    
+    _gen_pez_abismal_sheet(A / "sprites" / "enemies" / "stage4_1b" / "enemy_pez_abismal.png")
+
     print("\n[3/9] Boss sprites...")
     _gen_all_bosses()
     
