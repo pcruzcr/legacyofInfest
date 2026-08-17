@@ -114,6 +114,68 @@ class TestLaInterfazNoLaOscureceLaLuzDelMundo:
         )
 
 
+class TestLaRutaSoftwareTambienDibujaLaInterfaz:
+    """AUD-501 — sin tarjeta, `dibujar_ui` no la llamaba nadie.
+
+    `App._draw` parte el dibujo de una escena con ruta de GPU en
+    `dibujar_mundo`/`dibujar_ui` (AUD-343), pero sólo componía la segunda
+    mitad dentro de `if self._use_gl and self._gl_renderer`. En la rama
+    software (`else`, sin tarjeta o con el contexto de GL caído) sólo se
+    llamaba a `dibujar_mundo` y se publicaba esa superficie: el HUD, el
+    diálogo, el minimapa y los subtítulos de cualquier `StageScene` no
+    llegaban nunca a la pantalla. No es un caso de laboratorio: es el camino
+    que corre siempre que el proyecto se abre en una máquina sin ModernGL.
+
+    Se construye la `App` con `__new__` (no `App()`), igual que
+    `test_el_fotograma_sin_escena.py`: lo que se prueba es la ligadura real
+    de `_draw`, no el arranque completo del motor.
+    """
+
+    def _app_sin_gpu(self):
+        from unittest.mock import MagicMock
+
+        from src.engine.core import settings
+        from src.engine.core.app import App
+
+        app = App.__new__(App)
+        tam = (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT)
+        app.internal_surface = pygame.Surface(tam)
+        app._ui_overlay_surface = pygame.Surface(tam, pygame.SRCALPHA)
+
+        escena = MagicMock()
+        escena.dibujar_mundo = MagicMock()
+        escena.dibujar_ui = MagicMock()
+        gestor = MagicMock()
+        gestor.stack_size = 1
+        gestor.current = escena
+        gestor.transition.draw = MagicMock()
+        app.scene_manager = gestor
+
+        app.debug_overlay = MagicMock()
+        app.debug_overlay.visible = False
+        app.clock = MagicMock()
+        app.clock.fps = 60.0
+        # Lo que hoy es siempre cierto en CI y en cualquier máquina sin
+        # ModernGL: es la rama que este bug dejaba muda.
+        app._use_gl = False
+        app._gl_renderer = None
+        return app, escena
+
+    def test_dibujar_ui_se_llama_sin_tarjeta(self) -> None:
+        app, escena = self._app_sin_gpu()
+        app._draw(1 / 60)
+        assert escena.dibujar_ui.called, (
+            "la interfaz no se dibujó en la ruta software: HUD, diálogo, "
+            "minimapa y subtítulos se pierden sin GPU"
+        )
+
+    def test_dibujar_mundo_tambien_se_llama(self) -> None:
+        """La mitad que ya funcionaba no se debe romper al arreglar la otra."""
+        app, escena = self._app_sin_gpu()
+        app._draw(1 / 60)
+        assert escena.dibujar_mundo.called
+
+
 class TestLosEnemigosMuestranSuVida:
     """AUD-091 — sólo los jefes tenían barra.
 

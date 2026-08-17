@@ -2055,7 +2055,21 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
             anterior = anterior * 0.93 + crudo * 0.07
             env = min(1.0, avance * 6.0) * max(0.0, 1.0 - avance) ** 1.8
             samples.append((anterior + _tri(45.0, t_seg) * 0.25) * env * 0.5)
-    elif name in ("jungle_ambient", "datacenter_hum", "wind_indoor", "cemetery_silence"):
+    elif name in ("jungle_ambient", "datacenter_hum", "wind_indoor"):
+        # AUD-511 — mismo defecto que AUD-271 documentó para `rain_ambient`,
+        # sin arreglar aquí: éstos SÍ decaían a cero (`* max(0, 1 - i/n)`).
+        # `weather_system.AMBIENTES` reproduce `wind_indoor` con
+        # `play_ambient(loops=-1)` para los climas «snow» y «fog» — un bucle
+        # de verdad, de 2 s, que caía a silencio y volvía de golpe a volumen
+        # lleno cada vuelta: un clic audible cada 2 segundos, indefinidamente,
+        # mientras dure el clima. Sin envolvente, como `rain_ambient`.
+        samples = [random.uniform(-0.05, 0.05) for _ in range(n)]
+    elif name == "cemetery_silence":
+        # A diferencia de los tres de arriba, este SÍ es un solo disparo: lo
+        # usa `stage4_1._actualizar_silencio_y_shake` para «el clima calla de
+        # golpe» a mitad de la Fase 4, una vez por visita. Decaer a silencio
+        # es exactamente el efecto que pide — quitarle la envolvente sería
+        # cambiarle el sentido, no arreglar nada.
         samples = [random.uniform(-0.05, 0.05) * max(0, 1 - i/n) for i in range(n)]
     elif name == "jump":
         samples = [_square(200 + 1200 * (i/(n-1)) if n > 1 else 200, i/rate, 0.5) * (1 - i/n) * 0.3 for i in range(n)]

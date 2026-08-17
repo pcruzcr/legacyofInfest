@@ -200,6 +200,83 @@ def test_buffered_jump_fires_on_landing() -> None:
     assert player.velocity.y == settings.PLAYER_JUMP_FORCE
 
 
+def _input_con_salto_mantenido():
+    """Un `InputManager` con el salto pulsado y sostenido, no soltado."""
+    from src.engine.input.action_map import DEFAULT_KEY_BINDINGS, Action
+    from src.engine.input.input_manager import InputManager
+
+    im = InputManager()
+    tecla = DEFAULT_KEY_BINDINGS[Action.JUMP][0]
+    im.pump([pygame.event.Event(pygame.KEYDOWN, key=tecla)])
+    return im
+
+
+class TestElCoyoteSeGastaDeVerdad:
+    """AUD-503 — `_can_jump` autorizaba la ventana; nadie la preguntaba
+    desde el aire. Estas pruebas conducen el jugador por el `update()`
+    real —la máquina de estados completa, no `_can_jump()` aislado— que es
+    justo el nivel al que las pruebas antiguas (`test_coyote_time_allows_late_jump`)
+    no llegaban: fijaban el contador a mano y comprobaban la autorización,
+    nunca si algún estado la usaba.
+    """
+
+    def test_saltar_dentro_de_la_ventana_de_coyote_funciona(self) -> None:
+        player = _make_player(y=100.0)
+        player.is_grounded = False
+        player.velocity.y = 10.0  # cayendo, no en un salto activo
+        player._coyote_counter = 0.0
+        dt = 1.0 / 60.0
+
+        # Un fotograma SIN pulsar salto: es lo que de verdad mete al jugador
+        # en `AirborneState` (`IdleState` transiciona a `FallingState` en
+        # cuanto ve `is_grounded=False`). Empezar aquí y no en `IdleState` es
+        # lo que aísla el camino nuevo del "coyote de un fotograma por
+        # accidente" que el propio hallazgo describe: `IdleState` también
+        # sabe saltar, y probar con él activo habría dado un falso positivo.
+        player.update(dt, [])
+        assert player._state_instance.__class__.__name__ == "FallingState"
+
+        im = _input_con_salto_mantenido()
+        # Dos fotogramas más, todavía dentro de PLAYER_COYOTE_FRAMES (6). No
+        # se compara contra `PLAYER_JUMP_FORCE` exacto: la gravedad del
+        # mismo `update()` que dispara el salto ya recorta el impulso antes
+        # de que la prueba lo lea (medido: -366,7 en vez de -380,0 un
+        # fotograma después de saltar). Lo que importa es el cambio de
+        # signo — de cayendo a subiendo con fuerza — que sólo un salto real
+        # produce.
+        disparo = False
+        for _ in range(2):
+            player.update(dt, [], im)
+            if player.velocity.y < -300.0:
+                disparo = True
+                break
+
+        assert disparo, (
+            f"el salto pedido dentro de la ventana de coyote no se ejecutó "
+            f"(velocity.y quedó en {player.velocity.y})"
+        )
+
+    def test_saltar_fuera_de_la_ventana_no_hace_nada(self) -> None:
+        player = _make_player(y=100.0)
+        player.is_grounded = False
+        player.velocity.y = 10.0
+        player._coyote_counter = 0.0
+        player._air_jumps_used = settings.PLAYER_AIR_JUMPS  # sin salto aéreo
+        im = _input_con_salto_mantenido()
+        dt = 1.0 / 60.0
+
+        # Consumir la ventana de coyote SIN pulsar salto todavía.
+        for _ in range(int(settings.PLAYER_COYOTE_FRAMES) + 5):
+            player.update(dt, [])
+
+        velocidad_antes = player.velocity.y
+        player.update(dt, [], im)
+        assert player.velocity.y != settings.PLAYER_JUMP_FORCE, (
+            "un salto pedido después de expirar el coyote SÍ se ejecutó"
+        )
+        assert player.velocity.y > velocidad_antes - 1.0  # sigue cayendo, no saltó
+
+
 def test_horizontal_collision_stops_movement() -> None:
     player = _make_player(y=180.0)
     wall = pygame.Rect(200, 170, 16, 64)

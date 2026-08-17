@@ -422,6 +422,33 @@ class TestPlataformas:
             pytest.fail("la hundible no volvió")
         assert m.obtener(e, Transform).posicion.y == pytest.approx(100.0)
 
+    def test_la_hundible_se_hunde_sola_al_pisarla_nadie_llama_marcar_pisada(self):
+        """AUD-507 — antes hacía falta llamar `marcar_pisada` a mano.
+
+        `marcar_pisada` decía en su propio docstring «lo llama el sistema de
+        colisión», y nada del juego la llamaba: sólo esta suite, invocándola
+        directamente (ver la prueba anterior). Ninguna hundible se hundía
+        nunca pisándola de verdad. Esta prueba no llama `marcar_pisada`: sólo
+        pone a alguien encima, como haría el jugador al aterrizar, y corre el
+        sistema.
+        """
+        m = World()
+        rect = pygame.Rect(0, 100, 32, 8)
+        e = m.crear(Transform(pygame.Vector2(rect.topleft), rect),
+                    PlataformaHundible(retraso=0.2, velocidad_caida=600.0,
+                                       reaparece_en=0.3, y_original=100.0),
+                    Solido(atravesable_desde_abajo=True))
+        pies = pygame.Rect(rect.x, rect.y - 16, 16, 16)
+        m.crear(Transform(pygame.Vector2(pies.topleft), pies),
+                Velocidad(pygame.Vector2(0, 0)), EsJugador())
+
+        for _ in range(90):
+            S.sistema_plataformas_hundibles(m, FRAME)
+            if not m.tiene(e, Solido):
+                break
+        else:
+            pytest.fail("la hundible no se hundió sola al pisarla")
+
     def test_rects_solidos_refleja_el_estado_de_este_fotograma(self):
         m = World()
         e = m.crear(Transform(pygame.Vector2(0, 0), pygame.Rect(0, 0, 16, 16)),
@@ -432,6 +459,30 @@ class TestPlataformas:
             S.sistema_bloques_ritmicos(m, FRAME)
         assert S.rects_solidos(m) == []
         assert m.existe(e)
+
+    def test_rects_solidos_no_se_traga_atravesable_desde_abajo(self):
+        """AUD-508 — `for entidad, _ in mundo.cada(Solido)` tiraba el dato.
+
+        `MovingPlatform` acepta `atravesable="true"` en Tiled y toda
+        `SinkingPlatform` vuelve marcada así (`Solido(atravesable_desde_abajo
+        =True)`, ver `sistema_plataformas_hundibles`), pero `rects_solidos`
+        descartaba el componente entero con el `_` del bucle. `stage_scene.py`
+        suma su resultado a `solidos`, no a `one_way_rects`, así que estas
+        plataformas quedaban bloqueando por todos lados aunque declararan lo
+        contrario. `rects_atravesables_desde_abajo` es la contraparte que
+        `stage_scene.py` debe sumar a `one_way_rects` en su lugar.
+        """
+        m = World()
+        bloquea = m.crear(Transform(pygame.Vector2(0, 0), pygame.Rect(0, 0, 16, 16)),
+                          Solido(atravesable_desde_abajo=False))
+        pasa = m.crear(Transform(pygame.Vector2(20, 0), pygame.Rect(20, 0, 16, 16)),
+                       Solido(atravesable_desde_abajo=True))
+
+        solidos = S.rects_solidos(m)
+        atravesables = S.rects_atravesables_desde_abajo(m)
+
+        assert solidos == [m.obtener(bloquea, Transform).rect]
+        assert atravesables == [m.obtener(pasa, Transform).rect]
 
 
 # ══════════════════════════════════════════════════════════════

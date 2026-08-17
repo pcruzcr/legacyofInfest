@@ -163,6 +163,9 @@ class ProyectorDeSombras:
     def __init__(self) -> None:
         self._rejilla: RejillaEspacial | None = None
         self._indexados: list[pygame.Rect] | None = None
+        #: Lienzo reutilizado para pintar cada cuña, en vez de crear una
+        #: superficie nueva por sombra y por fotograma (AUD-510).
+        self._lienzo: pygame.Surface | None = None
 
     def _cerca_del_foco(self, foco: pygame.Vector2, alcance: float,
                         obstaculos: list[pygame.Rect]) -> list[pygame.Rect]:
@@ -185,13 +188,25 @@ class ProyectorDeSombras:
 
     def proyectar(self, mascara: pygame.Surface, foco: pygame.Vector2,
                   alcance: float, obstaculos: list[pygame.Rect],
-                  camera_offset: pygame.Vector2) -> None:
-        """Pinta de negro la cuña que tapa cada obstáculo.
+                  camera_offset: pygame.Vector2,
+                  piso_ambiente: tuple[int, int, int] = (0, 0, 0)) -> None:
+        """Resta la luz de este foco en la cuña que tapa cada obstáculo.
 
         Se pinta sobre la **máscara de luz**, antes de multiplicarla contra la
-        escena: negro ahí significa «aquí no llega esta luz», que es
+        escena: oscurecer ahí significa «aquí no llega esta luz», que es
         exactamente lo que una sombra es. Pintar sobre la escena directamente
         daría una mancha negra encima del decorado en vez de ausencia de luz.
+
+        AUD-510 — `piso_ambiente` es el mismo relleno con el que `render_map`
+        empieza la máscara (`ambient_color * ambient_brightness`) **antes**
+        de sumar ningún foco. Pintar `(0, 0, 0, 255)` a secas, como hacía
+        antes, no restaba la luz de este foco: la reemplazaba por negro puro,
+        más oscuro que un sitio sin luz — de noche, con `ambient_brightness`
+        alto, una sombra se veía más negra que un rincón fuera del alcance de
+        todo foco. `BLEND_RGBA_MIN` deja el resultado en el mínimo entre lo
+        que ya había y el piso: nunca sube (no ilumina donde no había luz) y
+        nunca baja de ese piso (no perfora por debajo de la oscuridad
+        ambiente de la escena).
         """
         if alcance <= 0.0:
             return
@@ -211,5 +226,18 @@ class ProyectorDeSombras:
                 (pb.x - camera_offset.x, pb.y - camera_offset.y),
                 (pa.x - camera_offset.x, pa.y - camera_offset.y),
             ]
-            pygame.draw.polygon(mascara, (0, 0, 0, 255), poligono)
+            self._pintar_cuna(mascara, poligono, piso_ambiente)
+
+    def _lienzo_de(self, tamano: tuple[int, int]) -> pygame.Surface:
+        if self._lienzo is None or self._lienzo.get_size() != tamano:
+            self._lienzo = pygame.Surface(tamano, pygame.SRCALPHA)
+        return self._lienzo
+
+    def _pintar_cuna(self, mascara: pygame.Surface,
+                     poligono: list[tuple[float, float]],
+                     piso_ambiente: tuple[int, int, int]) -> None:
+        lienzo = self._lienzo_de(mascara.get_size())
+        lienzo.fill((255, 255, 255, 255))
+        pygame.draw.polygon(lienzo, (*piso_ambiente, 255), poligono)
+        mascara.blit(lienzo, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
 

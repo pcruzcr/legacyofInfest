@@ -190,6 +190,46 @@ class TestLosSpritesVanALaEscala:
         )
 
 
+class TestElHudMuestraLaFaseActualDelJefe:
+    """AUD-512 — `set_boss_hud` recibía `phase` (la actual) y lo tiraba:
+    sólo guardaba `phase_count` (el total), y `_draw_boss_hud` renderizaba
+    ``f"PHASE {self._boss_phase_count}"`` — el total, fijo durante toda la
+    pelea, en el sitio donde debía ir la fase actual. `src/stages/
+    boss_venado/` traía un parche a nivel de escena para compensarlo
+    (`_compensate_boss_hud_phase`, H-02); con el motor arreglado, ese parche
+    se ha quitado — habría sobreescrito el `phase_count` correcto con el
+    número de fase actual.
+    """
+
+    def test_set_boss_hud_guarda_la_fase_actual_y_no_solo_el_total(
+        self, hud,
+    ) -> None:
+        hud.set_boss_hud("JEFE", 80.0, 100.0, 1, 3)
+        assert hud._boss_phase == 1
+        assert hud._boss_phase_count == 3
+
+        hud.set_boss_hud("JEFE", 60.0, 100.0, 2, 3)
+        assert hud._boss_phase == 2
+        assert hud._boss_phase_count == 3, (
+            "el total no debe cambiar sólo porque avanzó la fase"
+        )
+
+    def test_el_evento_boss_phase_changed_tambien_actualiza_la_fase_actual(
+        self, hud,
+    ) -> None:
+        """La otra ruta: `BossBase.change_phase` emite `phase` 0-indexado
+        (`self.current_phase`) y `phase_count`. `set_boss_hud`, en cambio, lo
+        recibe ya 1-indexado desde `actualizaciones.py`. Las dos rutas deben
+        acabar de acuerdo tras el mismo cambio de fase."""
+        hud._on_boss_phase_changed(boss_name="JEFE", phase=1, phase_count=3,
+                                   new_max_health=50.0)
+        assert hud._boss_phase == 2, (
+            "el evento manda `phase` 0-indexado; el HUD debe normalizarlo "
+            "igual que `set_boss_hud` (que ya lo recibe +1)"
+        )
+        assert hud._boss_phase_count == 3
+
+
 class TestElMinimapaTieneSuSitio:
     """AUD-499 — el minimapa se colocaba solo en el borde derecho, en píxeles
     de pantalla y sin pasar por la escala, mientras el cronómetro ocupaba el

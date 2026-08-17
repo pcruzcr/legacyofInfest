@@ -42,7 +42,18 @@ class ProgressionSystem:
         checkpoint_position: pygame.Vector2 | None = None
         for cp in checkpoints:
             if not cp.is_activated and cp.check_collision(player.rect):
-                checkpoint_position = pygame.Vector2(cp.rect.center)
+                # AUD-502 — el punto de reaparición es la ESQUINA SUPERIOR
+                # IZQUIERDA de la caja del jugador, la misma convención que
+                # `Player.position`/`set_spawn`. Guardar el centro del
+                # checkpoint y que `StageScene.respawn` lo aplicara a la vez
+                # como esquina (`position`) y como centro (`rect.center`)
+                # dejaba las dos en desacuerdo: `position` gana en el
+                # siguiente fotograma, así que el jugador reaparecía con los
+                # pies media caja por debajo de donde debía.
+                checkpoint_position = pygame.Vector2(
+                    cp.rect.centerx - player.ANCHO_DE_PIE / 2.0,
+                    cp.rect.bottom - player.ALTO_DE_PIE,
+                )
                 self._context.event_bus.emit(Events.SFX_CHECKPOINT)
                 # AUD-439 — hasta el máximo **del jugador**, no hasta la
                 # constante. `Player.max_health` suma reliquias y árbol
@@ -61,8 +72,14 @@ class ProgressionSystem:
                     Events.SAVE_REQUESTED,
                     stage_id=clave,
                     stage_index=self._context.scene_manager.stage_index,
-                    checkpoint_x=player.rect.centerx,
-                    checkpoint_y=player.rect.centery,
+                    # AUD-502 — misma convención que `checkpoint_position` de
+                    # arriba (esquina superior izquierda), no `rect.center`.
+                    # `_aplicar_partida_pendiente` ya recoloca con
+                    # `set_spawn`, que trata su argumento como esquina; guardar
+                    # el centro y cargarlo como esquina desplazaba al jugador
+                    # media caja al recuperar una partida.
+                    checkpoint_x=checkpoint_position.x,
+                    checkpoint_y=checkpoint_position.y,
                     health=player.current_health,
                     # AUD-439 — se guarda el máximo real; anotar la constante
                     # hacía que recargar la partida declarase el tope de

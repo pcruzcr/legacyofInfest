@@ -37,21 +37,18 @@ Description: The engine's CameraLock is a GLOBAL switch (camera.py:63-67 uses
     explicit painter's-order docstring) -- it's a lighting pass, not
     another sprite in the stack.
 
-    H-02 engine bug compensation (hud.py ignores the phase param -- it only
-    stores/renders phase_count, see HUD.set_boss_hud/_draw_boss_hud): remove
-    if fixed. StageScene._update_hud_ui (stage_scene.py ~L1052-1057) calls
-    ``set_boss_hud(name, health, max_health, phase, phase_count)`` every
-    frame with ``phase_count = boss.phase_count`` (the TOTAL phase count,
-    constant 2 for this boss), while ``HUD._draw_boss_hud`` renders
-    ``f"PHASE {self._boss_phase_count}"`` -- i.e. it reads the phase_count
-    slot as if it were the CURRENT phase, and the phase slot is stored
-    nowhere and never read. Net effect: the label reads "PHASE 2" for the
-    entire duration of phase 0. ``_compensate_boss_hud_phase`` below re-calls
-    the HUD's own public ``set_boss_hud`` API AFTER ``super().update(dt)``
-    (so it runs after the engine's own call for this frame and wins),
-    passing the CURRENT 1-indexed phase in the ``phase_count`` slot -- the
-    one the renderer actually reads. See reports/FINDINGS.md H-02 for the
-    full forensic trail (this same pattern was proven pre-reset).
+    H-02 engine bug, FIXED upstream (AUD-512): hud.py used to ignore the
+    ``phase`` param -- it only stored/rendered ``phase_count``, so the label
+    read "PHASE {total}" for the entire fight instead of advancing with the
+    boss. ``HUD`` now has its own ``_boss_phase`` field, ``set_boss_hud``
+    stores it, ``_on_boss_phase_changed`` updates it from the
+    ``BOSS_PHASE_CHANGED`` event too, and ``_draw_boss_hud`` renders it. The
+    per-scene ``_compensate_boss_hud_phase`` workaround that used to live
+    here (re-calling ``set_boss_hud`` after ``super().update(dt)`` with the
+    current phase jammed into the ``phase_count`` slot) is gone: with the
+    engine fixed, that call would have overwritten the real, correct
+    ``phase_count`` with the current phase number instead. See
+    reports/FINDINGS.md H-02 for the original forensic trail.
 
     H-17 arena camera pin (human playtest bug, 2026-07-30): ``Camera``
     (camera.py, unchanged between motor V1 and V2 -- verified byte-for-byte
@@ -272,23 +269,6 @@ class BossVenadoScene(StageScene):
             offset.y + settings.INTERNAL_HEIGHT / 2,
         ))
 
-    def _compensate_boss_hud_phase(self) -> None:
-        """H-02 engine bug compensation (hud.py ignores the phase param --
-        it only stores/renders phase_count; see the module docstring's
-        H-02 section for the full forensic trail): remove if fixed.
-
-        No-ops if there is no HUD yet (before on_enter()/pre-boot) or no
-        live boss (corridor before the fight, or after the death sequence
-        finishes and StageScene's own ``clear_boss_hud()`` takes over)."""
-        boss = self._get_boss()
-        if boss is None or not boss.is_alive or self._hud is None:
-            return
-        current_phase_1indexed = boss.current_phase + 1
-        self._hud.set_boss_hud(
-            boss.boss_name, boss.current_health, boss.phase_max_health,
-            current_phase_1indexed, current_phase_1indexed,
-        )
-
     def update(self, dt: float) -> None:
         in_arena = False
         if self._stage_data is not None and self._player is not None:
@@ -296,7 +276,6 @@ class BossVenadoScene(StageScene):
             self._stage_data.camera_locks = (
                 self._original_camera_locks if in_arena else [])
         super().update(dt)
-        self._compensate_boss_hud_phase()
         # H-17 (see module docstring): must run AFTER super().update(dt) (so
         # it has the final say over camera.offset for this frame) and BEFORE
         # _sync_map_render() (so pyscroll centers on the pinned offset).

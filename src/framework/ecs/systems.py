@@ -234,11 +234,34 @@ def sistema_bloques_ritmicos(mundo: World, dt: float) -> None:
 
 
 def sistema_plataformas_hundibles(mundo: World, dt: float) -> None:
-    """Se hunden al pisarlas y vuelven solas."""
+    """Se hunden al pisarlas y vuelven solas.
+
+    AUD-507 — `marcar_pisada` existía desde que existe esta mecánica, con un
+    docstring que decía «lo llama el sistema de colisión», y nadie la
+    llamaba: sólo la usaba `tests/test_ecs.py` invocándola a mano. Ninguna
+    hundible del juego llegó a hundirse nunca pisándola. El sensor de abajo
+    es el mismo patrón que `sistema_arrastre_de_plataformas` —un rectángulo
+    fino sobre la superficie, `colliderect` contra quien tenga `Transform` y
+    `Velocidad`—, así que detecta al jugador y a cualquier otra cosa capaz de
+    pisar, no sólo a quien tenga la marca `EsJugador`.
+    """
     for entidad, hund in mundo.cada(PlataformaHundible):
         t = mundo.obtener(entidad, Transform)
         if t is None:
             continue
+
+        if (hund._ausente <= 0.0 and not hund._cayendo and hund._pisada <= 0.0):
+            sensor = pygame.Rect(
+                t.rect.x, t.rect.y - MARGEN_PASAJERO,
+                t.rect.width, MARGEN_PASAJERO + 1,
+            )
+            for pisador in mundo.con(Transform, Velocidad):
+                if pisador == entidad:
+                    continue
+                tp = mundo.obtener(pisador, Transform)
+                if tp is not None and sensor.colliderect(tp.rect):
+                    marcar_pisada(mundo, entidad)
+                    break
 
         if hund._ausente > 0.0:
             hund._ausente -= dt
@@ -678,15 +701,42 @@ def _paso_del_acosador(mundo: World, entidad, t, objetivo: pygame.Vector2,
 
 
 def rects_solidos(mundo: World) -> list[pygame.Rect]:
-    """Los rectángulos que bloquean el paso **este fotograma**.
+    """Los rectángulos que bloquean el paso **por todos lados**, este fotograma.
 
     Se recalcula cada fotograma en vez de mantener una lista mutable. Es un poco
     más de trabajo y elimina de un plumazo la clase entera de fallos de
     sincronización: un bloque rítmico que desaparece no tiene que acordarse de
     darse de baja en ninguna lista, porque no hay lista que actualizar.
+
+    AUD-508 — antes recorría `mundo.cada(Solido)` con `for entidad, _ in ...`,
+    tirando el propio componente y con él `atravesable_desde_abajo`. Una
+    `MovingPlatform` con `atravesable="true"` en Tiled y **toda**
+    `SinkingPlatform` al reaparecer (`sistema_plataformas_hundibles` pone
+    `Solido(atravesable_desde_abajo=True)`) declaraban la intención y salían
+    aquí como pared: `stage_scene.py` suma este resultado a `solidos`, no a
+    `one_way_rects`, así que el jugador nunca podía saltar a través de ellas
+    desde abajo aunque el dato dijera que sí. Ver `rects_atravesables_desde_abajo`.
     """
     salida: list[pygame.Rect] = []
-    for entidad, _ in mundo.cada(Solido):
+    for entidad, solido in mundo.cada(Solido):
+        if solido.atravesable_desde_abajo:
+            continue
+        t = mundo.obtener(entidad, Transform)
+        if t is not None:
+            salida.append(t.rect)
+    return salida
+
+
+def rects_atravesables_desde_abajo(mundo: World) -> list[pygame.Rect]:
+    """Los `Solido` dinámicos que sí se cruzan saltando desde abajo (AUD-508).
+
+    Contraparte de `rects_solidos`: el mismo recorrido, filtrado al revés.
+    Quien llama a las dos debe sumar ésta a `one_way_rects`, no a `solidos`.
+    """
+    salida: list[pygame.Rect] = []
+    for entidad, solido in mundo.cada(Solido):
+        if not solido.atravesable_desde_abajo:
+            continue
         t = mundo.obtener(entidad, Transform)
         if t is not None:
             salida.append(t.rect)

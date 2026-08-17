@@ -9,6 +9,7 @@ from src.framework.entities.states.base import PlayerStateBase, _InputSnapshot
 from src.framework.entities.states.helpers import (
     _can_dash,
     _handle_aerial_attack_input,
+    _handle_grounded_jump_input,
     _handle_ultimate_input,
     _handle_wall_jump,
 )
@@ -42,6 +43,24 @@ class AirborneState(PlayerStateBase):
             return
 
         if _handle_wall_jump(player, inp):
+            return
+
+        # AUD-503 — el coyote se gasta AQUÍ o no se gasta nunca. `_can_jump`
+        # ya autorizaba la ventana de gracia (`_coyote_counter <
+        # perfil.coyote_frames`) desde que existe, pero `_handle_grounded_jump_input`
+        # —el único método que la consulta— sólo lo llamaban los estados de
+        # SUELO (`grounded.py`), donde ya se está pisando algo. El único
+        # motivo por el que el coyote parecía funcionar un fotograma es que
+        # `IdleState`/`WalkingState` siguen activos el fotograma exacto en
+        # que se pierde el suelo (la transición a `FallingState` va al final
+        # de su propio `update`); del segundo fotograma en adelante manda
+        # `AirborneState`, que nunca preguntaba. Va antes de reescribir
+        # `velocity.x` para que nada pise el impulso recién puesto, y
+        # `_do_jump` ya distingue un salto de coyote de uno aéreo por sí
+        # solo (`was_truly_airborne`), así que esto no toca el salto aéreo.
+        if (inp.jump_pressed
+                and player._coyote_counter < player.perfil.coyote_frames
+                and _handle_grounded_jump_input(player, inp)):
             return
 
         # AUD-373 — aquí se armaba el buffer del salto a mano:

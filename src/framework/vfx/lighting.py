@@ -274,11 +274,12 @@ class LightSystem:
         # El brillo modula cada canal del tinte, así que un tinte blanco da el
         # gris neutro de siempre y uno cálido tiñe la sombra hacia el naranja.
         b = self.ambient_brightness
-        self._multiplier.fill((
+        piso = (
             int(self.ambient_color[0] * b),
             int(self.ambient_color[1] * b),
             int(self.ambient_color[2] * b),
-        ))
+        )
+        self._multiplier.fill(piso)
 
         # AUD-302 — los degradados van en un lote, uno por foco.
         #
@@ -311,7 +312,8 @@ class LightSystem:
             if self._obstaculos:
                 self._proyector.proyectar(
                     self._multiplier, light.position,
-                    light.get_current_radius(), self._obstaculos, camera_offset)
+                    light.get_current_radius(), self._obstaculos, camera_offset,
+                    piso_ambiente=piso)
 
         if lote is not None:
             lote.volcar(self._multiplier)

@@ -14,7 +14,7 @@ while each state encapsulates its own update logic and transitions.
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import pygame
 
@@ -195,6 +195,14 @@ class Player(BaseEntity):
 
     SHORT_ATTACK = PlayerState.SHORT_ATTACK
     LONG_ATTACK = PlayerState.LONG_ATTACK
+
+    #: AUD-502 — caja de colisión **de pie**, en px. `_update_rect_size` la
+    #: encoge a 20×20 al agacharse, así que un punto de reaparición no se
+    #: puede calcular con `rect.height`: tocar un checkpoint agachado
+    #: dejaría el respawn más abajo de lo debido, que es este mismo defecto
+    #: por otra puerta.
+    ANCHO_DE_PIE: ClassVar[int] = 20
+    ALTO_DE_PIE: ClassVar[int] = 32
 
     # ── State delegation (routes _prefixed gameplay attrs to _state dataclass) ──
 

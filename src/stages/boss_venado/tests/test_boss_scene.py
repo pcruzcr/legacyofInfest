@@ -4,9 +4,7 @@ import types
 import pygame
 
 from src.engine.core import settings
-from src.framework.scenes.stage_scene import StageScene
 from src.framework.stage.camera import Camera
-from src.stages.boss_venado.boss_venado import BossVenado
 from src.stages.boss_venado.boss_venado_scene import (
     ARENA_SETTLE_DURATION,
     ARENA_X0,
@@ -18,30 +16,6 @@ from src.stages.boss_venado.boss_venado_scene import (
 MAP_W, MAP_H = 3280, 608   # boss_venado.tmx (mapa Residencias promovido 2026-07-24)
 
 
-class _HudStub:
-    """Records every set_boss_hud() call -- no rendering, no engine boot."""
-
-    def __init__(self) -> None:
-        self.calls: list[tuple] = []
-
-    def set_boss_hud(self, name, health, max_health, phase, phase_count) -> None:
-        self.calls.append((name, health, max_health, phase, phase_count))
-
-
-def _bare_scene_with_boss(boss) -> tuple[BossVenadoScene, _HudStub]:
-    """Constructing the real scene needs a GameContext/App boot (expensive,
-    same reason the other tests in this file avoid it -- see
-    test_scene_overrides_draw_for_player_halo). ``__new__`` skips __init__
-    and we hand-wire only the attributes update()/_compensate_boss_hud_phase
-    actually touch: _player=None short-circuits the camera-lock branch,
-    _stage_data is a minimal stand-in with just entity_list (all _get_boss()
-    reads), and _hud is the recorder above."""
-    scene = BossVenadoScene.__new__(BossVenadoScene)
-    scene._player = None
-    scene._stage_data = types.SimpleNamespace(entity_list=[boss])
-    hud = _HudStub()
-    scene._hud = hud
-    return scene, hud
 
 
 def test_locks_pure_logic():
@@ -206,57 +180,17 @@ def test_player_halo_never_silently_disabled():
         "the fix was silently weakened")
 
 
-def test_hud_phase_compensation_relabels_current_phase(monkeypatch):
-    """H-02 regression lock (see module docstring + FINDINGS.md H-02): the
-    engine's HUD.set_boss_hud() ignores its own ``phase`` argument and only
-    stores/renders ``phase_count`` -- and StageScene calls it every frame
-    with the constant TOTAL phase count (2), which reads "PHASE 2" for the
-    whole of phase 0. This must go RED if the compensation call in
-    BossVenadoScene.update() is ever removed or neutered.
+def test_scene_no_longer_carries_the_hud_phase_compensation():
+    """H-02, FIXED upstream (AUD-512): `HUD.set_boss_hud` used to ignore its
+    own ``phase`` argument and render `phase_count` (the TOTAL, constant for
+    the whole fight) instead of the current phase. This scene used to carry
+    a `_compensate_boss_hud_phase` workaround, re-calling `set_boss_hud`
+    after `super().update(dt)` with the current phase jammed into the
+    `phase_count` slot -- the one the old, buggy renderer read.
 
-    StageScene.update() itself needs a fully booted engine (physics,
-    camera, entity updates...), which this file's other tests deliberately
-    avoid -- so it's stubbed to a no-op here; only the scene's OWN override
-    (the part this fix lives in) runs for real."""
-    monkeypatch.setattr(StageScene, "update", lambda self, dt: None)
-
-    boss = BossVenado(pygame.Vector2(0, 0))
-    assert boss.current_phase == 0                        # sanity: fresh boss starts in phase 0
-    scene, hud = _bare_scene_with_boss(boss)
-
-    scene.update(1.0 / 60.0)
-
-    assert hud.calls, "update() never re-called set_boss_hud -- compensation missing"
-    name, health, max_health, phase, phase_count = hud.calls[-1]
-    assert (phase, phase_count) == (1, 1), (
-        "compensation must put the CURRENT 1-indexed phase in BOTH slots "
-        "(hud.py renders the phase_count slot) -- phase 0 must show '1', "
-        "not the boss's constant total phase_count (2)")
-    assert (name, health, max_health) == (
-        boss.boss_name, boss.current_health, boss.phase_max_health)
-
-    # Advance to phase 1 (index) and confirm the label follows -- not stuck
-    # at "1" and not silently reverted to the total-count bug.
-    boss.current_phase = 1
-    scene.update(1.0 / 60.0)
-    assert hud.calls[-1][3:] == (2, 2)
-
-
-def test_hud_phase_compensation_skips_dead_or_missing_boss():
-    """No live boss (corridor before the fight, or after death finishes) ->
-    no call. StageScene's own clear_boss_hud() must be left in charge; the
-    compensation re-announcing a dead boss would fight that."""
-    scene = BossVenadoScene.__new__(BossVenadoScene)
-    scene._player = None
-    hud = _HudStub()
-    scene._hud = hud
-
-    scene._stage_data = types.SimpleNamespace(entity_list=[])
-    scene._compensate_boss_hud_phase()
-    assert hud.calls == []
-
-    boss = BossVenado(pygame.Vector2(0, 0))
-    boss.is_alive = False
-    scene._stage_data = types.SimpleNamespace(entity_list=[boss])
-    scene._compensate_boss_hud_phase()
-    assert hud.calls == []
+    Now that `hud.py` tracks `_boss_phase` for real (see
+    `tests/test_el_hud_esta_a_la_escala_de_la_pantalla.py`), that workaround
+    would do actual harm if it came back: it would overwrite the real,
+    correct `phase_count` the engine's own call already set. This just
+    guards against it silently returning."""
+    assert not hasattr(BossVenadoScene, "_compensate_boss_hud_phase")
