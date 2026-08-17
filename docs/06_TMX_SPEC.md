@@ -316,6 +316,9 @@ rectángulo del jugador lo toca.
 - Mínimo 16×32 píxeles.
 - El calificador recomienda **no pasar de 500 px** entre uno y otro. Morir y
   rehacer medio nivel es la forma más rápida de que alguien deje de jugar.
+  Una excepción deliberada y documentada no es un defecto: el 4-1 la rompe
+  a propósito (`KNOWN_GAPS.md`, [GAP-061] nota AUD-516) porque es un
+  escenario psicológico de terror.
 
 El aspecto sale de `assets/sprites/shared/checkpoint.png` y no se sustituye.
 

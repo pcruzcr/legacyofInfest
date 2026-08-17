@@ -1326,15 +1326,24 @@ class TestElNivelSePuedeJugar:
         assert escena._stage_data.spawn_point is not None
         assert len(escena._stage_data.checkpoints) >= 1
 
-    def test_los_checkpoints_no_dejan_tramos_largos(self, escena) -> None:
-        from itertools import pairwise
-
+    def test_hay_seis_checkpoints_uno_por_fase(self, escena) -> None:
+        """AUD-516 — antes había 32 (cada 28 columnas, 448 px), muy por
+        debajo de los 700-1200 px que recomienda `66_GUIA_DE_LEVEL_DESIGN.md`
+        §1 para el caso general. Reaparecer casi al instante anulaba la
+        tensión que pide un escenario *psicológico de terror*: morir no
+        costaba nada. Bajado a uno por fase (6 en total), a propósito muy
+        por encima de esa recomendación general — la propia guía ya admite
+        el tramo «deliberadamente duro» (el foso de Stage 0 es el
+        precedente) y aquí el guion entero es ese tramo."""
         from src.stages.stage4_1 import trazado
 
-        puntos = sorted(trazado.checkpoints(), key=lambda p: p[0])
-        ts = settings.TILE_SIZE
-        for (c1, _f1), (c2, _f2) in pairwise(puntos):
-            assert (c2 - c1) * ts <= 500
+        puntos = trazado.checkpoints()
+        assert len(puntos) <= 6
+        fases_cubiertas = {trazado.fase_de_la_columna(c) for c, _f in puntos}
+        assert fases_cubiertas == {1, 2, 3, 4, 5, 6}, (
+            "cada fase debe tener su propio checkpoint, no dos en la misma "
+            "y ninguna sin cubrir"
+        )
 
     def test_la_escena_y_el_mapa_dicen_la_misma_zona(self, escena) -> None:
         from src.stages.stage4_1.stage4_1 import Stage4_1

@@ -243,17 +243,28 @@ def fase_de_la_columna(columna: int) -> int:
     return min(6, columna // ANCHO_SECCION + 1)
 
 
-#: Cada cuántas columnas hay un punto de reaparición. 28 columnas = 448 px,
-#: por debajo de los 500 px que recomienda el calificador.
-CADA_CUANTAS_COLUMNAS_CHECKPOINT = 28
+#: Uno por fase (AUD-516). Antes había 32 —cada 28 columnas, 448 px—, muy
+#: por debajo del mínimo de 700-1200 px que pide `66_GUIA_DE_LEVEL_DESIGN.md`
+#: §1: un nivel *psicológico de terror* con reaparición casi inmediata no
+#: genera tensión, la anula. Seis puntos —el mismo número que fases— es la
+#: densidad que el guion pide: morir cuesta rehacer una fase entera, no un
+#: tramo de pantalla.
+#:
+#: Cada columna se eligió a mano dentro de su fase, no por fórmula, para
+#: caer siempre en terreno llano y antes del set piece de esa fase, nunca
+#: encima: antes del musgo/lodo de la Fase 2 (`SEGMENTOS_FASE2`, desde 170),
+#: antes de que empiece a subir la primera loma de la Fase 3 (`LOMAS_FASE3`,
+#: desde 309), y bien antes del mirador (`COLUMNA_MIRADOR_FASE6`, 860) y del
+#: umbral del despertar (`Stage4_1.AVANCE_DEL_DESPERTAR`, columna ~888) de
+#: la Fase 6.
+COLUMNAS_CHECKPOINT: tuple[int, ...] = (20, 155, 302, 470, 620, 760)
 
 
 def checkpoints() -> tuple[tuple[int, int], ...]:
     """Los puntos de reaparición, en `(columna, fila)` — a la altura
     **sólida**, no la visual: uno colocado en la fila que pinta la rampa
     quedaría flotando sobre el suelo llano de verdad que hay debajo."""
-    columnas = range(10, MW - MURO_ANCHO - 10, CADA_CUANTAS_COLUMNAS_CHECKPOINT)
-    return tuple((c, altura_de_colision(c)) for c in columnas)
+    return tuple((c, altura_de_colision(c)) for c in COLUMNAS_CHECKPOINT)
 
 
 # ── Fase 2 (El Venado): musgo y lodo ─────────────────────────────────────
