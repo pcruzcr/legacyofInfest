@@ -24,6 +24,14 @@ o sea que matan de un golpe desde un rectángulo que no se ve.
 Formas planas y no sprites, como el resto de lo que el motor dibuja por su
 cuenta: un rectángulo del color correcto siempre se ve, y el estudiante lo
 sustituye por su arte cuando lo tenga.
+
+AUD-509 — la misma auditoría, dos mecánicas más tarde
+-------------------------------------------------------
+`Liana` y `PlataformaHundible` se quedaron fuera del barrido de AUD-242: la
+primera tiene sistema de agarre (`liana_alcanzable`) y estado propio
+(`TrepandoState`) desde F5.14, y la segunda ganó colisión de verdad en
+AUD-507/AUD-508 — las dos seguían siendo un rectángulo invisible por el que
+el jugador subía o se hundía sin ver nada ahí.
 """
 from __future__ import annotations
 
@@ -45,6 +53,15 @@ COLOR_LASER = (255, 90, 70)
 COLOR_LASER_APAGADO = (120, 60, 55)
 COLOR_RESORTE = (230, 190, 70)
 COLOR_MOVIL = (140, 130, 120)
+#: AUD-509 — `Liana` y `PlataformaHundible` no estaban en la lista de «cinco
+#: componentes» del docstring de arriba, ni en ningún otro sitio del árbol:
+#: `liana_alcanzable`/`TrepandoState` mueven al jugador por una cuerda que
+#: nunca se pintaba, y una hundible recién arreglada (AUD-507, AUD-508) para
+#: que se hunda y bloquee de verdad seguía siendo un rectángulo invisible.
+COLOR_LIANA = (90, 140, 60)
+COLOR_LIANA_HOJA = (120, 170, 80)
+COLOR_HUNDIBLE = (120, 100, 80)
+COLOR_HUNDIBLE_PISADA = (170, 90, 70)
 
 
 def dibujar_mecanicas_ecs(surface: pygame.Surface, mundo: World | None,
@@ -52,11 +69,13 @@ def dibujar_mecanicas_ecs(surface: pygame.Surface, mundo: World | None,
     """Pinta los componentes del ECS que el jugador tiene que ver."""
     from src.framework.ecs import (
         BloqueRitmico,
+        PlataformaHundible,
         PlataformaMovil,
         Resorte,
         Transform,
         ZonaLetalTemporizada,
     )
+    from src.framework.ecs.components import Liana
 
     if mundo is None:
         return
@@ -97,3 +116,20 @@ def dibujar_mecanicas_ecs(surface: pygame.Surface, mundo: World | None,
             continue
         pygame.draw.rect(surface, COLOR_MOVIL, r)
         pygame.draw.line(surface, (190, 180, 170), r.topleft, r.topright)
+
+    for _entidad, liana in mundo.cada(Liana):
+        r = liana.rect.move(dx, dy)
+        cx = r.centerx
+        pygame.draw.line(surface, COLOR_LIANA, (cx, r.top), (cx, r.bottom), 3)
+        for y in range(r.top + 6, r.bottom, 14):    # las hojas, para que se lea planta
+            pygame.draw.line(surface, COLOR_LIANA_HOJA, (cx - 5, y), (cx + 5, y), 2)
+
+    for entidad, hund in mundo.cada(PlataformaHundible):
+        if hund._ausente > 0.0:
+            continue    # sumergida del todo: nada que pintar hasta que vuelva
+        r = _rect_de(entidad)
+        if r is None:
+            continue
+        color = COLOR_HUNDIBLE_PISADA if hund._pisada > 0.0 else COLOR_HUNDIBLE
+        pygame.draw.rect(surface, color, r)
+        pygame.draw.rect(surface, (60, 48, 36), r, 1)

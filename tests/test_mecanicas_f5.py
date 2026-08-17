@@ -507,3 +507,31 @@ class TestLasMecanicasDelEcsSeVen:
         mundo = self._mundo_con(PlataformaMovil(
             origen=pg.Vector2(20, 20), destino=pg.Vector2(80, 20)))
         assert self._pintado(mundo)
+
+    def test_una_liana_se_ve(self) -> None:
+        """AUD-509 — `Liana` tiene sistema de agarre y estado propio
+        (`liana_alcanzable`, `TrepandoState`) desde F5.14 y no estaba en el
+        barrido de AUD-242: el jugador subía por una cuerda invisible."""
+        import pygame as pg
+
+        from src.framework.ecs.components import Liana
+
+        mundo = self._mundo_con(Liana(rect=pg.Rect(20, 20, 8, 60)))
+        assert self._pintado(mundo)
+
+    def test_una_hundible_se_ve(self) -> None:
+        """AUD-509 — invisible incluso después de AUD-507/508, que le dieron
+        detección de pisada y colisión atravesable de verdad: sin esto el
+        jugador se hunde en un rectángulo que nunca vio."""
+        from src.framework.ecs import PlataformaHundible
+
+        mundo = self._mundo_con(PlataformaHundible(y_original=20.0))
+        assert self._pintado(mundo)
+
+    def test_una_hundible_sumergida_del_todo_no_se_ve(self) -> None:
+        """Mientras `_ausente > 0` está fuera de juego: no hay nada que pintar
+        hasta que vuelva a `y_original`."""
+        from src.framework.ecs import PlataformaHundible
+
+        mundo = self._mundo_con(PlataformaHundible(y_original=20.0, _ausente=1.0))
+        assert not self._pintado(mundo)

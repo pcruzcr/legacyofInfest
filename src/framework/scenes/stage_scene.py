@@ -726,8 +726,15 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         self._hud.current_time = saved_time
         self._hud.is_countdown = saved_time_limit > 0
         if cp is not None:
-            self._player.position = pygame.Vector2(cp)
-            self._player.rect.center = (int(cp.x), int(cp.y))
+            # AUD-502 — `set_spawn` es la única puerta sancionada para
+            # recolocar al jugador: deja `position` y `rect` de acuerdo y
+            # pone velocidad e inercia a cero. Las dos líneas que había aquí
+            # se la saltaban y aplicaban dos convenciones a la vez —esquina
+            # en `position`, centro en `rect`—, y ganaba la esquina en el
+            # siguiente fotograma (`_update_rect_size` reescribe `rect.x/y`
+            # desde `position`), con los pies media caja por debajo del
+            # suelo.
+            self._player.set_spawn(pygame.Vector2(cp))
         self._player._invincibility_timer = 2.0
         self._post_processing.flash((255, 255, 255), alpha=255, duration=0.3)
         self.context.scene_manager.transition.start_fade_in(0.5)
@@ -962,8 +969,18 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
             moviles = ecs_systems.rects_solidos(self._mundo)
             if moviles:
                 solidos = solidos + moviles
+            # AUD-508 — un `Solido` dinámico con `atravesable_desde_abajo=True`
+            # (una `MovingPlatform` marcada así en Tiled, o cualquier
+            # `SinkingPlatform` al reaparecer) va a `one_way_rects`, no a
+            # `solidos`: antes `rects_solidos` los devolvía todos juntos y el
+            # dato se perdía, así que nunca se podía saltar a través de ellos.
+            atravesables = ecs_systems.rects_atravesables_desde_abajo(self._mundo)
+            one_way_rects = (
+                stage.one_way_rects + atravesables if atravesables
+                else stage.one_way_rects
+            )
 
-            player.update(dt, solidos, im, one_way_rects=stage.one_way_rects,
+            player.update(dt, solidos, im, one_way_rects=one_way_rects,
                           pendientes=stage.pendientes)
             self._nado.update(dt, player, self._mundo, self.context.event_bus)
             self._actualizar_agarres(player, im)
@@ -1248,8 +1265,10 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
                 Events.SAVE_REQUESTED,
                 stage_id=self.stage_key,
                 stage_index=self.context.scene_manager.stage_index,
-                checkpoint_x=self._player.rect.centerx,
-                checkpoint_y=self._player.rect.centery,
+                # AUD-502 — misma convención de esquina superior izquierda
+                # que `ProgressionSystem.process_checkpoints`, no el centro.
+                checkpoint_x=self._player.rect.x,
+                checkpoint_y=self._player.rect.y,
                 health=self._player.current_health,
                 # AUD-439 — el máximo real del jugador, no la constante.
                 max_health=float(self._player.max_health),

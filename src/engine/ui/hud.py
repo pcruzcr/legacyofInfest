@@ -253,6 +253,11 @@ class HUD:
         self._boss_name: str = ""
         self._boss_health: float = 0.0
         self._boss_max_health: float = 0.0
+        #: AUD-512 — la fase ACTUAL, 1-indexada. Existía `_boss_phase_count`
+        #: (el total) y nada guardaba la actual: `set_boss_hud` recibía
+        #: `phase` y lo tiraba, así que el HUD mostraba «PHASE {total}»
+        #: fijo durante toda la pelea en vez de avanzar con el jefe.
+        self._boss_phase: int = 0
         self._boss_phase_count: int = 0
         self._boss_active: bool = False
 
@@ -431,6 +436,7 @@ class HUD:
         self._boss_name = name
         self._boss_health = health
         self._boss_max_health = max_health
+        self._boss_phase = phase
         self._boss_phase_count = phase_count
         self._boss_active = True
 
@@ -445,6 +451,12 @@ class HUD:
         if self._destroyed:
             return
         self._boss_name = str(data.get("boss_name", ""))
+        # AUD-512 — `BossBase.change_phase` emite `phase=self.current_phase`
+        # (0-indexado: el primer valor tras nacer es 0), y `set_boss_hud`
+        # recibe la fase ya 1-indexada desde `actualizaciones.py`
+        # (`current_phase + 1`). El +1 aquí iguala las dos rutas para que no
+        # importe si el HUD se entera por la llamada directa o por el evento.
+        self._boss_phase = cast(int, data.get("phase", 0)) + 1
         self._boss_phase_count = cast(int, data.get("phase_count", 1))
 
     def _on_checkpoint_reached(self, **data: object) -> None:
@@ -814,7 +826,9 @@ class HUD:
         bar_x = (settings.INTERNAL_WIDTH - bar_width) // 2
         bar_y = _e(4)
         # Boss name
-        phase_text = f"PHASE {self._boss_phase_count}" if self._boss_phase_count > 0 else ""
+        # AUD-512 — antes leía `_boss_phase_count` (el total, fijo durante
+        # toda la pelea) donde debía leer la fase actual.
+        phase_text = f"PHASE {self._boss_phase}" if self._boss_phase_count > 0 else ""
         label = f"{self._boss_name}  {phase_text}" if phase_text else self._boss_name
         name_surf = self._font.render(label, True, (200, 180, 120))
         nx = bar_x + (bar_width - name_surf.get_width()) // 2

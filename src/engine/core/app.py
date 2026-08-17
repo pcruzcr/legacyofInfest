@@ -702,6 +702,20 @@ class App:
                 overlay=overlay,
             )
         else:
+            # AUD-501 — sin tarjeta (o con el contexto de GL caído),
+            # `dibujar_ui` no la llamaba nadie: sólo vivía dentro de la rama
+            # `if self._use_gl`. Una `StageScene` que reparte su dibujo entre
+            # `dibujar_mundo`/`dibujar_ui` (AUD-343) pintaba el mundo arriba
+            # y nunca su mitad de interfaz — HUD, diálogo, minimapa,
+            # subtítulos — en el camino software. No hace falta una
+            # superficie de recorte aparte como en la ruta de GPU: aquí no
+            # hay pasadas de post-procesado que la interfaz deba evitar, así
+            # que se dibuja directamente sobre `internal_surface`, igual que
+            # ya hacía `escena.draw()` para las escenas que no dividen su
+            # dibujo.
+            if _soporta(escena, "dibujar_ui"):
+                cast("EscenaConRutaDeGPU", escena).dibujar_ui(
+                    self.internal_surface)
             # AUD-460 — la ventana mide interior × DISPLAY_SCALE y aquí se
             # escala el fotograma hacia ella. Ver `_publicar_software` sobre
             # la historia de AUD-013.

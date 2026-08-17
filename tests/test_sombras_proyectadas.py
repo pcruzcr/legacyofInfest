@@ -119,6 +119,44 @@ class TestLaSombraSeDibuja:
 
         assert mascara.get_at((700, 300))[:3] == (255, 255, 255)
 
+    def test_la_sombra_no_perfora_por_debajo_del_ambiente(self) -> None:
+        """AUD-510 — antes pintaba negro puro sin mirar el ambiente.
+
+        `render_map` empieza la máscara rellena con `ambient_color *
+        ambient_brightness`, no con negro — de noche puede ser, por ejemplo,
+        un gris `(60, 60, 60)`. `proyectar` pintaba `(0, 0, 0, 255)` encima
+        sin condición, así que una sombra siempre acababa más oscura que
+        cualquier rincón sin luz de la escena: la ausencia total de luz
+        (negro) no debería poder ser más profunda que la propia oscuridad
+        ambiente de la noche.
+        """
+        piso = (60, 60, 60)
+        mascara = pygame.Surface((800, 600), pygame.SRCALPHA)
+        mascara.fill((255, 255, 255, 255))
+        proyector = ProyectorDeSombras()
+
+        proyector.proyectar(
+            mascara, pygame.Vector2(100, 300), 400.0,
+            [pygame.Rect(300, 200, 40, 200)], pygame.Vector2(0, 0),
+            piso_ambiente=piso)
+
+        assert mascara.get_at((420, 300))[:3] == piso
+
+    def test_la_sombra_no_baja_del_ambiente_aunque_ya_estuviera_mas_oscuro(
+        self,
+    ) -> None:
+        """El MIN nunca sube: si algo ya estaba más oscuro que el piso, se queda así."""
+        mascara = pygame.Surface((800, 600), pygame.SRCALPHA)
+        mascara.fill((10, 10, 10, 255))
+        proyector = ProyectorDeSombras()
+
+        proyector.proyectar(
+            mascara, pygame.Vector2(100, 300), 400.0,
+            [pygame.Rect(300, 200, 40, 200)], pygame.Vector2(0, 0),
+            piso_ambiente=(60, 60, 60))
+
+        assert mascara.get_at((420, 300))[:3] == (10, 10, 10)
+
 
 class TestApagadoPorDefecto:
     def test_stage_data_lo_declara_apagado(self) -> None:
