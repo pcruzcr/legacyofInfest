@@ -236,6 +236,7 @@ legacy-of-infest/                      # Raíz real del repositorio
 │   │   │   ├── enemy_brute.py             # EnemyBrute: cuerpo a cuerpo pesado + onda de choque
 │   │   │   ├── enemy_caster.py            # EnemyCaster: magia con orbe autoguiado
 │   │   │   ├── enemy_assassin.py          # EnemyAssassin: invisibilidad + estocada
+│   │   │   ├── enemy_pez_abismal.py       # EnemyPezAbismal (AUD-519): persigue, no daña ni se puede dañar
 │   │   │   ├── entity_factory.py          # EntityFactory: creación de enemigos por registro
 │   │   │   ├── flight_strategies.py       # FlightStrategy: patrones de vuelo senoide/bézier/aleatorio
 │   │   │   ├── ai_predictor.py            # BehaviorPredictor: KNN+árbol recomienda táctica de enemigo, consultado en lote por SquadBrain a 4 Hz

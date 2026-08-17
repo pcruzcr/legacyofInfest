@@ -76,6 +76,11 @@ FUERA_DE_LA_CURVA: dict[str, str] = {
     "stage_mecanicas": "laboratorio del profesor, no una parada del juego",
     "stage_cenital": "laboratorio de la vista cenital, no una parada del juego",
     "stage3_4_boss_gavilan": "el jefe no existe (ver 17_BOSS_SPEC §0)",
+    # AUD-519 — el slot de "stage4_1" en `ORDEN` sortea una variante por
+    # partida (AUD-518, `src/stages/stage4_1/selector.py`); una partida
+    # dada juega una sola de las tres, nunca las dos. `stage4_1b` no es
+    # una parada aparte del recorrido, es el mismo slot con otro disfraz.
+    "stage4_1b": "variante del slot stage4_1 (sorteo AUD-518), no otra parada",
 }
 
 #: Una pantalla son 800 px. Medir «por pantalla» y no en absoluto es lo que

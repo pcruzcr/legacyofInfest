@@ -24,14 +24,14 @@ vía `AskUserQuestion` (2026-08-17): un sorteo por partida, para que los
 checkpoints sigan significando algo. Si el sorteo se repitiera en cada
 intento, morir a mitad del nivel acuático podría reaparecer en el aéreo.
 
-Sólo una variante existe todavía
-==================================
-`VARIANTES_DISPONIBLES` tiene una sola entrada hoy: `Stage4_1` (el
-cementerio). El mecanismo — elegir, persistir, no volver a preguntar — ya
-es real y probado (`tests/test_selector_de_stage4_1.py` fuerza un
-catálogo de variantes de mentira para probarlo sin depender de que
-4.1b/4.1c existan). Cuando esos escenarios se construyan, añadir cada uno
-es una línea en el diccionario, no un cambio de arquitectura.
+Qué variantes existen hoy
+===========================
+`VARIANTES_DISPONIBLES` trae `Stage4_1` (el cementerio, AUD-518) y
+`Stage4_1B` (la fosa abisal, AUD-519). Falta la aérea. El mecanismo
+—elegir, persistir, no volver a preguntar— se probó primero contra un
+catálogo de mentira (`tests/test_selector_de_stage4_1.py`) sin depender
+de que ningún escenario real existiera todavía: añadir cada variante de
+verdad fue una línea en el diccionario, no un cambio de arquitectura.
 """
 from __future__ import annotations
 
@@ -50,6 +50,10 @@ logger = logging.getLogger(__name__)
 #: Variante -> ruta punteada de su clase de escena.
 VARIANTES_DISPONIBLES: dict[str, str] = {
     "cementerio": "src.stages.stage4_1.stage4_1.Stage4_1",
+    # AUD-519 — misma travesía horizontal, sumergida: el jugador nada en
+    # vez de caminar, y un pez abismal aparece y persigue sin poder tocar
+    # ni ser tocado. Ver `src/stages/stage4_1b/stage4_1b.py`.
+    "acuatico": "src.stages.stage4_1b.stage4_1b.Stage4_1B",
 }
 
 #: A cuál caer si una partida trae guardada una variante que ya no existe
