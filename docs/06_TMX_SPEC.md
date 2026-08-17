@@ -299,6 +299,7 @@ rectángulo del jugador lo toca.
 | Propiedad | Tipo | Qué es |
 |---|---|---|
 | `checkpoint_id` | entero | Único dentro del escenario, empezando en 0 |
+| `brillo` | booleano, opcional | AUD-517. `true` cambia el aspecto por un área que brilla (un `LightSource` aditivo, frío en espera y dorado al activarse) en vez del sprite/rectángulo de siempre. Por defecto ausente — no cambia nada en un mapa existente |
 
 **Comportamiento:**
 
@@ -320,7 +321,8 @@ rectángulo del jugador lo toca.
   a propósito (`KNOWN_GAPS.md`, [GAP-061] nota AUD-516) porque es un
   escenario psicológico de terror.
 
-El aspecto sale de `assets/sprites/shared/checkpoint.png` y no se sustituye.
+El aspecto sale de `assets/sprites/shared/checkpoint.png` salvo que el mapa
+pida `brillo` (arriba).
 
 ---
 

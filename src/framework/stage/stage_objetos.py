@@ -289,7 +289,13 @@ class ObjetosDeTiled:
             raise FrameworkUsageError("Checkpoint missing required property: checkpoint_id")
         rect = pygame.Rect(obj.x, obj.y, obj.width or 24, obj.height or 32)
         from src.framework.stage.checkpoint import Checkpoint
-        cp = Checkpoint(pygame.Vector2(obj.x, obj.y), rect, int(props["checkpoint_id"]))
+        # AUD-517 — `brillo` opcional: un área que brilla en vez del sprite
+        # fijo de `checkpoint.png` (o su rectángulo de respaldo). Pensado
+        # para 4.1b/4.1c (GAP-065 §4); por defecto ausente, así que ningún
+        # mapa existente cambia de aspecto.
+        brillo = cls._bool_de(props.get("brillo"), por_defecto=False)
+        cp = Checkpoint(pygame.Vector2(obj.x, obj.y), rect, int(props["checkpoint_id"]),
+                         brillo=brillo)
         stage.checkpoints.append(cp)
 
     #: Colores con nombre para la propiedad `color` de un objeto `Light`.
