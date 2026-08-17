@@ -87,7 +87,7 @@ class SceneManager:
     ) -> None:
         self._context = context
         self._stack: list[BaseScene] = []
-        self._stage_queue: list[type[BaseScene]] = []
+        self._stage_queue: list[SceneFactory] = []
         self._stage_index: int = 0
         self._transition = TransitionManager()
         self._title_factory = title_factory or _default_title_factory
@@ -175,8 +175,9 @@ class SceneManager:
         """
         self._transition.asegurar_fundido_de_entrada()
 
-    def set_stage_queue(self, stages: list[type[BaseScene]]) -> None:
-        """Set the ordered list of stage classes to advance through."""
+    def set_stage_queue(self, stages: list[SceneFactory]) -> None:
+        """Set the ordered list of stage classes (or factories, AUD-518) to
+        advance through."""
         self._stage_queue = list(stages)
         self._stage_index = 0
 

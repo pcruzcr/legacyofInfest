@@ -15,6 +15,9 @@ from typing import TYPE_CHECKING
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from src.engine.core.game_context import GameContext
     from src.engine.scene.base_scene import BaseScene
 
 # The canonical stage order (progression sequence for `main.py` and the title menu).
@@ -64,14 +67,48 @@ _STAGE_MODULE_MAP: dict[str, str] = {
     "stage4_2_boss_paburu": "src.stages.boss_paburu.boss_paburu_scene",
 }
 
+# AUD-518 — slots que no resuelven a una clase fija sino a una función
+# fábrica: la función decide qué escena de verdad construir. `stage4_1` es
+# el primer caso (sorteo entre variantes del nivel, persistido en el save,
+# ver `src/stages/stage4_1/selector.py::crear_stage4_1`). Clave: stage_id.
+# Valor: ruta punteada `módulo.función`, no `módulo.Clase` como
+# `_STAGE_MODULE_MAP` — por eso es un diccionario aparte y no una entrada
+# más del de arriba, que siempre busca una subclase de `BaseScene` dentro
+# del módulo.
+#
+# `SceneManager._enter_next_stage` llama `next_stage_class(self._context)`
+# igual para una clase que para una función; no hace falta tocarlo.
+_STAGE_FACTORY_MAP: dict[str, str] = {
+    "stage4_1": "src.stages.stage4_1.selector.crear_stage4_1",
+}
 
-def discover_stages() -> list[type[BaseScene]]:
+
+def discover_stages() -> list[Callable[[GameContext], BaseScene]]:
     """Scans src/stages/ in STAGE_ORDER. Imports each module that exists
-    and finds the BaseScene subclass. Returns ordered list. Skips missing stages."""
+    and finds the BaseScene subclass. Returns ordered list. Skips missing stages.
+
+    A stage_id in `_STAGE_FACTORY_MAP` skips the class search entirely: its
+    factory function decides what to build, possibly differently each call.
+    """
     from src.engine.scene.base_scene import BaseScene
 
-    stages: list[type[BaseScene]] = []
+    stages: list[Callable[[GameContext], BaseScene]] = []
     for stage_id in STAGE_ORDER:
+        fabrica_path = _STAGE_FACTORY_MAP.get(stage_id)
+        if fabrica_path is not None:
+            modulo_path, _, nombre_funcion = fabrica_path.rpartition(".")
+            try:
+                modulo_fabrica = importlib.import_module(modulo_path)
+                stages.append(getattr(modulo_fabrica, nombre_funcion))
+                logger.info(
+                    "StageRegistry: discovered %s -> %s (fábrica)", stage_id, fabrica_path
+                )
+            except (ModuleNotFoundError, AttributeError) as e:
+                logger.error(
+                    "StageRegistry: error loading factory for %s: %s", stage_id, e
+                )
+            continue
+
         module_path = _STAGE_MODULE_MAP.get(
             stage_id, f"src.stages.{stage_id}.{stage_id}"
         )

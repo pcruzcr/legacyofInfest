@@ -218,9 +218,25 @@ class TestLaCadenaLlegaHastaElFinal:
                 break
             sm._on_stage_complete(stage_id=getattr(actual, "stage_key", ""))
 
-        assert recorrido[:-1] == [c.__name__ for c in escenarios], (
-            f"la cadena no recorre los escenarios en orden: {recorrido}"
-        )
+        # AUD-518 — un slot puede resolver a una función fábrica en vez de
+        # a una clase fija (stage4_1: sorteo entre variantes del nivel).
+        # `c.__name__` de una fábrica es el nombre de la función
+        # (`crear_stage4_1`), no el de lo que construye —y lo que
+        # construye puede variar de una partida a otra, así que no hay un
+        # nombre fijo que exigir de antemano. Para esos slots basta con
+        # que la cadena haya construido *algo* en esa posición; el resto
+        # sigue comparándose por nombre exacto de clase.
+        esperado = [
+            c.__name__ if isinstance(c, type) else None
+            for c in escenarios
+        ]
+        for i, (visto, nombre) in enumerate(zip(recorrido[:-1], esperado, strict=True)):
+            if nombre is None:
+                continue
+            assert visto == nombre, (
+                f"la cadena no recorre los escenarios en orden en la "
+                f"posición {i}: {recorrido}"
+            )
         assert recorrido[-1] == "EndCreditsScene", (
             f"terminar el último nivel no lleva a los créditos: "
             f"acabó en {recorrido[-1]}"

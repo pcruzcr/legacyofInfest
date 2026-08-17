@@ -491,3 +491,22 @@ class SaveManager:
         # en ficheros globales fuera de la partida.
         volcar_estado_en(data)
         return self.save(slot, data)
+
+    def fijar_variante_de_stage4_1(self, variante: str) -> None:
+        """Persiste qué variante de 4-1 le tocó a esta partida (AUD-518).
+
+        Read-modify-write sobre la ranura activa, igual que `auto_save` —
+        pero sin pedir el resto del progreso, que aquí no cambia: esto se
+        llama una sola vez, al entrar por primera vez a la Fase 4, no en
+        cada checkpoint. Sin ranura que resolver, no hace nada — quien
+        llama (`crear_stage4_1`) ya comprobó que hay una partida antes de
+        molestarse en sortear algo que guardar.
+        """
+        slot = self.ranura_activa or self.newest_slot()
+        if slot is None:
+            return
+        data = self.load(slot)
+        if data is None:
+            return
+        data.stage4_1_variante = variante
+        self.save(slot, data)

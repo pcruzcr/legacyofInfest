@@ -40,6 +40,17 @@ def sample_data() -> SaveData:
 
 
 class TestSaveData:
+    def test_stage4_1_variante_por_defecto_es_vacia(self) -> None:
+        """AUD-518 — vacío significa «todavía no se sorteó», y también es
+        lo que trae una partida guardada antes de que este campo existiera
+        (aditivo, sin subir `SAVE_VERSION`)."""
+        assert SaveData().stage4_1_variante == ""
+
+    def test_stage4_1_variante_sobrevive_al_roundtrip(self) -> None:
+        data = SaveData(stage4_1_variante="acuatico")
+        restaurada = SaveData.from_dict(data.to_dict())
+        assert restaurada.stage4_1_variante == "acuatico"
+
     def test_to_dict_roundtrip(self) -> None:
         data = SaveData(
             slot_id=2, stage_id="boss_venado", stage_index=1,
@@ -241,3 +252,34 @@ class TestSaveManager:
         assert loaded is not None
         assert loaded.stage_id == "boss_venado"
         assert loaded.health == 1.0
+
+    def test_fijar_variante_de_stage4_1_persiste_sin_tocar_lo_demas(
+        self, save_manager: SaveManager, sample_data: SaveData,
+    ) -> None:
+        """AUD-518 — read-modify-write, como `auto_save`, pero sólo para
+        este campo: el resto del progreso tiene que sobrevivir intacto."""
+        save_manager.save(1, sample_data)
+        save_manager.ranura_activa = 1
+
+        save_manager.fijar_variante_de_stage4_1("acuatico")
+
+        loaded = save_manager.load(1)
+        assert loaded is not None
+        assert loaded.stage4_1_variante == "acuatico"
+        assert loaded.stage_id == "stage0"
+        assert loaded.health == 4.5
+
+    def test_fijar_variante_sin_ranura_activa_usa_la_mas_reciente(
+        self, save_manager: SaveManager, sample_data: SaveData,
+    ) -> None:
+        save_manager.save(1, sample_data)
+        # Sin `ranura_activa` declarada — el mismo respaldo que usa
+        # `auto_save` (AUD-441).
+        save_manager.fijar_variante_de_stage4_1("aereo")
+        loaded = save_manager.load(1)
+        assert loaded is not None
+        assert loaded.stage4_1_variante == "aereo"
+
+    def test_fijar_variante_sin_ninguna_partida_no_revienta(self, save_manager: SaveManager) -> None:
+        save_manager.fijar_variante_de_stage4_1("cementerio")  # no debe lanzar
+        assert list(save_manager.SAVES_DIR.glob("slot_*.json")) == []

@@ -111,6 +111,16 @@ class SaveData(BaseModel):
     #: Una partida nueva nace con la versión actual, que es lo correcto: sus
     #: campos vacíos significan vacío.
     version_original: int = SAVE_VERSION
+    #: AUD-518 — qué variante de 4-1 le tocó a esta partida (cementerio,
+    #: y más adelante acuático/aéreo). Vacío = todavía no se sorteó.
+    #:
+    #: Aditivo, sin subir `SAVE_VERSION` — mismo criterio que
+    #: `character`/`profile_name`: valor por defecto sano, así que una
+    #: partida anterior a este campo se lee con `""` y vuelve a sortear la
+    #: primera vez que llega a la Fase 4, que es exactamente el
+    #: comportamiento correcto para una partida vieja (no había nada que
+    #: preservar).
+    stage4_1_variante: str = ""
     #: AUD-438 — los logros, dentro de la partida y no en un fichero global.
     #:
     #: `AchievementSystem` persistía en `achievements.json`, uno por
