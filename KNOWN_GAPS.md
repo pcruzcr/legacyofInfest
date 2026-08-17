@@ -2714,6 +2714,24 @@ está.
   dedicada. Misma decisión que [[GAP-059]], la misma pregunta (1) de
   [[GAP-065]] §14, confirmada una sola vez para el nivel entero. La
   verticalidad de la Fase 3 **no se construye**.
+- **Nota (AUD-516, 2026-08-17):** resuelto el punto de «los checkpoints se
+  reparten uniformemente cada 28 columnas en todo el mapa... no hay un
+  tramo final sin puntos de reaparición». Petición directa del dueño: el
+  4-1 es un escenario *psicológico de terror* y 32 checkpoints (cada 448
+  px) anulaban la tensión — reaparecer costaba casi nada. Bajado a 6, uno
+  por fase, elegidos a mano en terreno llano antes de cada set piece
+  (`COLUMNAS_CHECKPOINT`, `trazado.py`). El efecto secundario cubre
+  exactamente lo que este punto pedía: desde el último checkpoint (columna
+  760, Fase 6) hasta el final del nivel no hay ningún punto de
+  reaparición — el tramo final, con el mirador y la secuencia de
+  despertar, se recorre sin red. Pruebas actualizadas en
+  `TestElNivelSePuedeJugar::test_hay_seis_checkpoints_uno_por_fase`
+  (`tests/test_stage4_1.py`), que reemplaza la antigua que exigía ≤500 px
+  entre checkpoints — esa regla general de `66_GUIA_DE_LEVEL_DESIGN.md` es
+  justo la que aquí se rompe a propósito. **Sigue pendiente** el resto de
+  este GAP: la progresión de intensidad del viento, el rayo que revela en
+  vez de sólo iluminar, y la mitad navegable de las osamentas.
+
 ## [GAP-062] `stage4_1` Fase 4 — el sonido no tiene dirección, nada cambia tras el silencio y no hay mecánica de quietud
 
 - **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/stage4_1.py` (`_actualizar_silencio_y_shake`, `_actualizar_grito_del_gavilan`, `_actualizar_sombra_del_gavilan`, `_dibujar_sombra_de_ave`), `src/framework/scenes/stage_parts/sonido.py`

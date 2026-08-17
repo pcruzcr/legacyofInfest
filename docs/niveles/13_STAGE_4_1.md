@@ -57,7 +57,7 @@ tramo.
 | Dificultad | ★★☆☆☆ (2/5) — **atmosférica**: el miedo es el desafío |
 | Forma | Horizontal, un único TMX, seis secciones de ~150 baldosas cada una |
 | Tipos de enemigo | **0 — regla de oro: prohibido añadir** |
-| Objetos mínimos | 1 `PlayerSpawn`, 2 `Cutscene` (introducción y mirador de la Fase 6, AUD-515), checkpoints repartidos (≤500 px), 1 `NextTrigger` |
+| Objetos mínimos | 1 `PlayerSpawn`, 2 `Cutscene` (introducción y mirador de la Fase 6, AUD-515), 6 checkpoints —uno por fase, a propósito muy por encima de los 500 px (AUD-516: el terror psicológico exige que morir cueste, no que sea gratis)—, 1 `NextTrigger` |
 | Día/noche | Empieza al atardecer, termina de noche — la Fase 5 es la más oscura del nivel |
 | Clima | Varía por sección; nunca tapa una superficie que cambie el movimiento |
 | Concepto académico | Unidad V (color y gradación) + Unidad VII (clima y partículas) |
