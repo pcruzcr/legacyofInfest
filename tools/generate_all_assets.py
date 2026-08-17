@@ -792,6 +792,10 @@ TILESET_THEMES = {
     # verde ni marrón de superficie), lo bastante oscura para que el pez
     # abismal se lea como algo que sale de la propia oscuridad.
     "tileset_stage4_1b": {"floor": (18,32,42), "wall": (10,20,30), "deco": (26,52,58)},
+    # AUD-520 — 4.1c, la variante aérea: nubes y niebla pálidas, sin
+    # verde ni piedra — las plataformas sólidas tienen que leerse contra
+    # un cielo, no contra tierra.
+    "tileset_stage4_1c": {"floor": (150,150,170), "wall": (110,110,135), "deco": (190,190,205)},
 }
 
 def _gen_gothic_tileset(path, ts=16, cols=8, rows=8):

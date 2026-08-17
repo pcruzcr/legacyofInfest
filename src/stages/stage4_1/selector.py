@@ -26,12 +26,13 @@ intento, morir a mitad del nivel acuático podría reaparecer en el aéreo.
 
 Qué variantes existen hoy
 ===========================
-`VARIANTES_DISPONIBLES` trae `Stage4_1` (el cementerio, AUD-518) y
-`Stage4_1B` (la fosa abisal, AUD-519). Falta la aérea. El mecanismo
-—elegir, persistir, no volver a preguntar— se probó primero contra un
-catálogo de mentira (`tests/test_selector_de_stage4_1.py`) sin depender
-de que ningún escenario real existiera todavía: añadir cada variante de
-verdad fue una línea en el diccionario, no un cambio de arquitectura.
+Las tres: `Stage4_1` (el cementerio, AUD-518), `Stage4_1B` (la fosa
+abisal, AUD-519) y `Stage4_1C` (lo que flota en la niebla, AUD-520). El
+mecanismo —elegir, persistir, no volver a preguntar— se probó primero
+contra un catálogo de mentira (`tests/test_selector_de_stage4_1.py`) sin
+depender de que ningún escenario real existiera todavía: añadir cada
+variante de verdad fue una línea en el diccionario, no un cambio de
+arquitectura.
 """
 from __future__ import annotations
 
@@ -54,6 +55,12 @@ VARIANTES_DISPONIBLES: dict[str, str] = {
     # vez de caminar, y un pez abismal aparece y persigue sin poder tocar
     # ni ser tocado. Ver `src/stages/stage4_1b/stage4_1b.py`.
     "acuatico": "src.stages.stage4_1b.stage4_1b.Stage4_1B",
+    # AUD-520 — la misma travesía, en el aire: sin suelo salvo un colchón
+    # de contención, cruzada con plataformas RhythmBlock que siguen la
+    # música de verdad. A diferencia de las otras dos, el propio nivel
+    # cambia de cara en cada entrada (tres plantillas congeladas, ver
+    # `src/stages/stage4_1c/stage4_1c.py`).
+    "aereo": "src.stages.stage4_1c.stage4_1c.Stage4_1C",
 }
 
 #: A cuál caer si una partida trae guardada una variante que ya no existe
