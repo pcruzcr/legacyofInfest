@@ -16,7 +16,10 @@ Estas pruebas ejecutan al `Player` real sobre huecos y repechos sintéticos
    cambia, estas pruebas fallan y dicen exactamente qué talla de hueco se acaba
    de volver imposible.
 2. **Contraste con el calificador.** Las tres últimas pruebas comparan lo medido
-   con lo que el calificador cree, y documentan dónde no coinciden (GAP-024).
+   con lo que el calificador calcula. Hasta AUD-504 documentaban un
+   desacuerdo real (GAP-024); ahora documentan que `JumpEnvelope` integra la
+   misma física a paso fijo que el jugador y separa técnica natural de
+   técnica experta en vez de confundirlas.
 
 Ninguna prueba de aquí propone cambiar la física. Sólo la miden.
 """
@@ -103,58 +106,61 @@ def test_los_repechos_llegan_a_cinco_baldosas(repechos):
     assert maximo_superable(repechos) == 5
 
 
-# ── Lo medido contra lo que cree el calificador (GAP-024) ──────
+# ── Lo medido contra lo que calcula el calificador (AUD-504, antes GAP-024) ──
 
 
-def test_la_envolvente_analitica_describe_la_tecnica_experta():
-    """85,5 px son 5,34 baldosas: el techo experto, no el natural.
+def test_la_envolvente_separa_tecnica_natural_de_tecnica_experta():
+    """`max_gap` es la técnica natural (2 baldosas); `max_gap_expert`, la de soltar
+    la dirección al despegar (5 baldosas).
 
-    No es un fallo del cálculo —la fórmula es correcta para su supuesto— sino
-    del supuesto: da por hecho que el jugador mantiene la velocidad del suelo
-    durante todo el vuelo, y eso sólo pasa si suelta la dirección.
+    Antes de AUD-504 `JumpEnvelope` calculaba un único número —el techo
+    experto— y lo llamaba `max_gap` sin más, así que `classify_gap` medía a
+    todo el mundo con la vara del jugador que suelta la dirección en el aire.
+    Ahora integra la misma física a paso fijo que `Player._apply_physics`
+    (Euler semi-implícito) y separa las dos técnicas, que es lo que
+    `AirborneState` realmente distingue (`velocity.x *= 0.5` si se mantiene
+    pulsada la dirección).
     """
     env = JumpEnvelope.from_settings()
-    assert int(env.max_gap // TILE) == 5
+    assert int(env.max_gap // TILE) == 2
+    assert int(env.max_gap_expert // TILE) == 5
 
 
-def test_el_calificador_llama_comodo_a_un_hueco_que_nadie_cruza_normal(
+def test_el_calificador_ya_no_llama_comodo_a_un_hueco_que_nadie_cruza_normal(
     huecos_naturales,
 ):
-    """Un hueco de 4 baldosas se califica «cómodo» y es natural-imposible.
+    """Un hueco de 4 baldosas, imposible con entrada natural, ya no es «cómodo».
 
-    Éste es el daño concreto de GAP-024, y cae del lado peor: el calificador no
-    avisa. Un estudiante coloca 64 px de vacío, `grade_stage` se lo aprueba
-    como holgado, y el nivel entregado no se puede pasar sin una técnica que no
-    está documentada en ninguna parte del material del curso.
+    Éste era el daño concreto de GAP-024: el calificador aprobaba como holgado
+    un hueco que el jugador normal no cruza. AUD-504 lo corrige clasificándolo
+    «exigente» (dentro del techo experto, fuera de la comodidad natural), no
+    «imposible» del todo —porque con la técnica de soltar la dirección sí se
+    cruza el 61 % de las veces (`jump_bench`)— pero ya nunca «cómodo».
     """
     env = JumpEnvelope.from_settings()
     cuatro = next(m for m in huecos_naturales if m.baldosas == 4)
 
-    assert env.classify_gap(4 * TILE) == "cómodo"
+    assert env.classify_gap(4 * TILE) != "cómodo"
     assert cuatro.despegues_validos == 0
 
 
-def test_el_alcance_con_salto_aereo_no_lo_alcanza_ninguna_tecnica(
+def test_el_alcance_experto_ya_no_promete_un_salto_aereo_desconectado(
     huecos_expertos,
 ):
-    """`max_gap_with_air_jump` promete 10,69 baldosas y no se cruzan ni 6.
+    """`max_gap_expert` (antes `max_gap_with_air_jump`) ronda las 5 baldosas, no 10,69.
 
-    El término existe porque `PLAYER_AIR_JUMPS = 1`, pero el salto aéreo no está
-    conectado: `AirborneState` sólo guarda la pulsación en `_pending_jump` para
-    gastarla al aterrizar, y la rama de `_can_jump` que autoriza el salto en el
-    aire únicamente se consulta desde los estados de suelo, donde ya se está
-    pisando algo. La constante está, la mecánica no.
-
-    Importa porque `reachable_platforms` y `exit_is_reachable` usan **este**
-    número como alcance de conexión entre plataformas: el grafo de transitabilidad
-    de los 17 mapas se construye con el doble del salto real.
-
-    Si alguien conecta el salto aéreo, esta prueba falla. Eso es lo que se quiere:
-    el número del calificador y el del motor tienen que volver a compararse.
+    El nombre viejo prometía que el salto aéreo sumaba un segundo arco; medido,
+    no dispara —`AirborneState` nunca consulta `_can_jump` fuera de la ventana
+    de coyote, así que la rama de salto aéreo no se alcanza en el aire— y el
+    campo se renombró para dejar de prometerlo. 85,5 px (5,34 baldosas) es el
+    techo de la técnica de soltar la dirección, que sí es real y que
+    `jump_bench` mide al 27 % de margen en la quinta baldosa y al 0 % en la
+    sexta.
     """
     env = JumpEnvelope.from_settings()
     seis = next(m for m in huecos_expertos if m.baldosas == 6)
 
-    assert env.max_gap_with_air_jump / TILE > 10
+    assert env.max_gap_expert / TILE < 6
+    assert env.classify_gap(6 * TILE) == "imposible"
     assert not seis.superable
     assert not medir_hueco(6).superable

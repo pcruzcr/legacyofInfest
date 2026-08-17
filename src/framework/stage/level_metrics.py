@@ -47,29 +47,65 @@ class JumpEnvelope:
     max_height: float
     air_time: float
     max_gap: float
-    max_gap_with_air_jump: float
+    max_gap_expert: float
     tile: int
 
     @classmethod
     def from_settings(cls) -> JumpEnvelope:
+        # AUD-504 — esto calculaba un proyectil continuo (v²/2g), y el
+        # jugador no es un proyectil: `Player._apply_physics` integra con
+        # Euler semi-implícito a paso fijo (`velocity.y += gravedad * dt`,
+        # luego se mueve con esa velocidad), y `AirborneState` sólo mantiene
+        # la velocidad horizontal de suelo (90 px/s) si se **suelta** la
+        # dirección al despegar — mantenerla pulsada (lo que hace cualquiera
+        # sin leer el código) la recorta a la mitad. La fórmula vieja media
+        # la técnica experta y la llamaba "cómoda" para todo el mundo.
+        #
+        # `tests/playtest/jump_bench.py` mide el `Player` real saltando huecos
+        # de verdad y confirma la brecha: con la fórmula vieja (85.5px/171.0px
+        # de hueco, 90.2px de repecho) la técnica NATURAL no cruza ni 4
+        # baldosas (0/49) y el repecho de 6 baldosas ya es 0/49 — el
+        # calificador llamaba "posible" a saltos que nadie completa jugando
+        # normal. Los números de abajo replican el mismo integrador a paso
+        # fijo que usa el jugador, así que suben y bajan solos si cambian
+        # `GRAVITY`/`PLAYER_JUMP_FORCE` en vez de quedar fijos a mano.
         gravity = float(settings.GRAVITY)
         jump = abs(float(settings.PLAYER_JUMP_FORCE))
         speed = float(settings.PLAYER_WALK_SPEED)
+        dt = 1.0 / float(settings.TARGET_FPS)
 
-        height = (jump * jump) / (2.0 * gravity)
-        air_time = 2.0 * jump / gravity
-        gap = speed * air_time
+        velocity = -jump
+        height_offset = 0.0
+        peak_height = 0.0
+        air_time = 0.0
+        while True:
+            velocity += gravity * dt
+            height_offset += velocity * dt
+            air_time += dt
+            peak_height = max(peak_height, -height_offset)
+            if velocity >= 0.0 and height_offset >= 0.0:
+                break
 
-        # Un salto aéreo extra reinicia la velocidad vertical a mitad de vuelo,
-        # así que añade aproximadamente otro arco completo de alcance.
-        air_jumps = int(getattr(settings, "PLAYER_AIR_JUMPS", 0))
-        gap_extended = gap * (1.0 + air_jumps)
+        # AirborneState sólo da la velocidad de suelo completa si se suelta
+        # la dirección al despegar (states/airborne.py); mantenerla pulsada
+        # —la técnica natural— multiplica por 0.5. `max_gap` mide lo que
+        # cruza cualquiera sin trucos; `max_gap_expert` es el techo con la
+        # técnica de soltar la dirección al saltar. El campo se llamaba
+        # `max_gap_with_air_jump` porque asumía que el salto aéreo sumaba un
+        # segundo arco, pero el salto aéreo requiere la habilidad
+        # `skill_double_jump` desbloqueada y, aun desbloqueada, ningún estado
+        # aéreo lo invoca fuera de la ventana de coyote (GAP-024 lo daba por
+        # calculado; medido, no dispara — es un bug aparte, no una feature
+        # que sumar aquí). Renombrado para no prometer una mecánica que no
+        # dispara.
+        gap_natural = speed * 0.5 * air_time
+        gap_expert = speed * air_time
 
         return cls(
-            max_height=height,
+            max_height=peak_height,
             air_time=air_time,
-            max_gap=gap,
-            max_gap_with_air_jump=gap_extended,
+            max_gap=gap_natural,
+            max_gap_expert=gap_expert,
             tile=int(settings.TILE_SIZE),
         )
 
@@ -85,7 +121,7 @@ class JumpEnvelope:
             return "trivial"
         if width <= self.max_gap * self.COMFORT:
             return "cómodo"
-        if width <= self.max_gap_with_air_jump:
+        if width <= self.max_gap_expert:
             return "exigente"
         return "imposible"
 
@@ -428,9 +464,10 @@ def reachable_platforms(
 
     aristas_pendiente = _pendiente_edges(pendientes, collision_rects)
 
-    # Alcance vertical hacia arriba y horizontal, con el salto aéreo incluido.
+    # Alcance vertical hacia arriba y horizontal, con la técnica experta
+    # (soltar la dirección al despegar) como techo de conexión.
     up = env.max_height
-    span = env.max_gap_with_air_jump
+    span = env.max_gap_expert
     # Caer es gratis: cualquier altura hacia abajo es alcanzable.
     DOWN = 10_000.0
 
@@ -498,7 +535,7 @@ def exit_is_reachable(
     reachable = reachable_platforms(collision_rects, spawn, env, pendientes)
     if not reachable:
         return False
-    span = env.max_gap_with_air_jump
+    span = env.max_gap_expert
     for i in reachable:
         rect = collision_rects[i]
         # La salida se considera alcanzada si una plataforma alcanzable queda

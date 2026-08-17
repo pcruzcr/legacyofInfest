@@ -222,12 +222,19 @@ class TestElCalificadorPuntuaDisenoYNoSoloEstructura:
         )
 
     def test_stage0_se_puede_completar(self):
+        """AUD-491 le dio a stage0 un foso que sólo se cruza con
+        `BloqueRitmico`/`ZonaDeFriccion` (zona F), así que `exit_reachable`
+        —el grafo de saltos puro— es honestamente `False`: no modela esas
+        mecánicas (AUD-192). Lo que importa para "se puede terminar" es que
+        la categoría no pierda puntos por ello, que es justo lo que la
+        excepción de movilidad hace.
+        """
         r = self._calificar(TMX_STAGE0)
-        assert r["categories"]["design_completable"]["score"] > 0, (
+        categoria = r["categories"]["design_completable"]
+        assert categoria["score"] == categoria["max"], (
             "el escenario de referencia del juego no se puede terminar según "
-            "el calificador"
+            f"el calificador: {categoria['msg']}"
         )
-        assert r["design"]["exit_reachable"] is True
 
     def test_el_informe_expone_las_metricas_crudas(self):
         """El profesor tiene que poder ver el dato, no sólo la nota."""

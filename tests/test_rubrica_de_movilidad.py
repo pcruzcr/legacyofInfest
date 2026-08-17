@@ -92,18 +92,26 @@ class TestUnNivelConMecanicasNoSeSuspende:
 
 
 class TestUnNivelSinMecanicasSigueJuzgandose:
-    def test_stage0_conserva_su_nota_perfecta(self) -> None:
+    def test_stage1_1_conserva_su_nota_perfecta(self) -> None:
         """La contraparte: sin objetos de movilidad, la métrica sí aplica y
-        stage0 la pasa por la vía normal, no por la excepción."""
-        stage0 = _calificar("assets/maps/stage0/stage0.tmx")
-        categoria = stage0["categories"]["design_completable"]
+        el nivel la pasa por la vía normal, no por la excepción.
+
+        Antes usaba `stage0` como contraejemplo. AUD-491 le añadió
+        `BloqueRitmico` y `ZonaDeFriccion` al foso de la zona F —el primer
+        uso real de esas mecánicas en un nivel jugable, a propósito— así que
+        stage0 pasó a calificarse **por** la excepción de movilidad y dejó de
+        servir para probar la vía sin excepción. `stage1_1` no usa ninguna
+        mecánica de movilidad y sí se prueba.
+        """
+        stage1_1 = _calificar("assets/maps/stage1_1/stage1_1.tmx")
+        categoria = stage1_1["categories"]["design_completable"]
 
         assert categoria["score"] == categoria["max"]
         assert "andando" in categoria["msg"], (
-            f"stage0 no debería pasar por la excepción de movilidad: "
+            f"stage1_1 no debería pasar por la excepción de movilidad: "
             f"{categoria['msg']}"
         )
-        assert stage0["design"]["exit_reachable"] is True
+        assert stage1_1["design"]["exit_reachable"] is True
 
 
 class TestLosSlopesNoSonRepechosImposibles:

@@ -85,12 +85,38 @@ FOSO_X0, FOSO_X1 = 66, 72
 #: obliga a aprovechar el impulso**, medido contra los 72 px reales del
 #: salto del jugador (`tests/playtest/jump_bench.py`). Subir esto exigiría
 #: recalibrar el salto entero, no repintar un nivel.
-OBSTACULOS: tuple[tuple[int, int], ...] = ((10, 2), (50, 3))
+#:
+#: Columna 18 y no 50 (AUD-506): la colina de la zona C ocupa 24-50, y un
+#: obstáculo de pared ahí quedaría enterrado dentro del propio sólido de la
+#: colina —mismo tramo, misma altura, cero efecto—. 18 sigue en terreno llano,
+#: entre el primer obstáculo y el pie de la colina.
+OBSTACULOS: tuple[tuple[int, int], ...] = ((10, 2), (18, 3))
 
 
 def _relleno(y: int) -> int:
     """Alterna las dos baldosas de relleno para que el suelo no se vea liso."""
     return SUELO_RELLENO_A if (y - SUELO_Y) % 2 else SUELO_RELLENO_B
+
+
+#: AUD-506 — fuente única de la colina de la zona C.
+#:
+#: `_terreno()` y `_colisiones()` leían el mismo dibujo de dos sitios
+#: distintos: el primero lo pintaba baldosa a baldosa y el segundo seguía
+#: colocando dos `Platform` de la versión anterior (dos repisas flotando en
+#: otra posición y otra altura), sin relación con la escalera nueva. El
+#: resultado: una colina que se ve y no se pisa — el suelo real seguía siendo
+#: la fila plana de siempre por debajo del dibujo. Con una sola función que
+#: devuelve la altura en baldosas de cada columna, pintar y colisionar no
+#: pueden divergir otra vez.
+def _altura_colina(x: int) -> int:
+    """Altura de la colina en baldosas sobre `SUELO_Y`, o 0 fuera de ella."""
+    if 24 <= x <= 29:
+        return x - 24
+    if 30 <= x <= 44:
+        return 6
+    if 45 <= x <= 50:
+        return 6 - (x - 45)
+    return 0
 
 
 def _terreno() -> list[list[int]]:
@@ -106,19 +132,14 @@ def _terreno() -> list[list[int]]:
             g[y][x] = VACIO
 
     # Zona C — AUD-491 (segunda pasada): una colina de verdad, no dos
-    # repisas flotando sobre suelo llano. La física de la rampa la da el
-    # objeto `Slope` en `_objetos` (AUD-297) — esto sólo pinta el
-    # escalonado que se lee como ladera antes de llegar a la cima.
-    for i, x in enumerate(range(24, 30)):
-        for y in range(SUELO_Y - i, SUELO_Y):
-            g[y][x] = BORDE
-        g[SUELO_Y - i][x] = SUELO_SUPERFICIE
-    for x in range(30, 45):
-        for y in range(SUELO_Y - 6, SUELO_Y):
-            g[y][x] = BORDE
-        g[SUELO_Y - 6][x] = SUELO_SUPERFICIE
-    for i, x in enumerate(range(45, 51)):
-        alto = 6 - i
+    # repisas flotando sobre suelo llano. Escalones de 1 baldosa —se suben
+    # de un salto corto, no hace falta una `Slope` diagonal— y `_colisiones`
+    # usa la misma `_altura_colina` para que el sólido nunca se desvíe del
+    # dibujo (AUD-506: antes se desviaba, y la colina se veía y no se pisaba).
+    for x in range(24, 51):
+        alto = _altura_colina(x)
+        if alto == 0:
+            continue
         for y in range(SUELO_Y - alto, SUELO_Y):
             g[y][x] = BORDE
         g[SUELO_Y - alto][x] = SUELO_SUPERFICIE
@@ -205,9 +226,16 @@ def _objetos() -> list[str]:
     obj("Checkpoint", 22 * TS, suelo - 32, 16, 32, checkpoint_id=0)
 
     # ── Zona C — la ruta vertical, con hielo ────────────────────
+    # AUD-506: todo este bloque se repuso sobre `_altura_colina` — la colina
+    # ahora es sólida (antes se veía y no se pisaba), así que lo que colgaba
+    # o se apoyaba a la altura de las dos `Platform` que había antes tenía
+    # que moverse a la altura real del escalón o la meseta bajo cada objeto.
     obj("MessageTrigger_Once", 25 * TS, suelo - 64, 48, 48,
         text="Sube. Con X te agarras a la liana.")
-    obj("Vine", 33 * TS, (SUELO_Y - 11) * TS, 8, 11 * TS,
+    # La liana cuelga desde encima de la meseta (fila 19) hasta su superficie
+    # (fila 24, `_altura_colina(33) == 6`) — antes bajaba hasta la fila 30 y
+    # el tramo final quedaba enterrado dentro del sólido nuevo de la meseta.
+    obj("Vine", 33 * TS, (SUELO_Y - 11) * TS, 8, 5 * TS,
         velocidad=75.0, ancho_de_agarre=12.0)
     obj("Pickup", 29 * TS, (SUELO_Y - 4) * TS - TS, 16, 16,
         item_id="fragmento_1", automatico=True, mensaje="Fragmento 1 de 3.")
@@ -217,12 +245,12 @@ def _objetos() -> list[str]:
     # AUD-491/AUD-490 — primer uso real de una zona de material. El hielo no
     # es una baldosa distinta: es la misma repisa con una propiedad de
     # física encima, para que se lea «esta repisa está tomada», no «hay tres
-    # tipos de suelo».
-    obj("MessageTrigger_Once", 36 * TS, (SUELO_Y - 8) * TS - 48, 48, 48,
+    # tipos de suelo». Fila 24: la superficie real de la meseta.
+    obj("MessageTrigger_Once", 36 * TS, (SUELO_Y - 6) * TS - 48, 48, 48,
         text="Hielo. Sueltas menos el salto, no mas.")
-    obj("FrictionZone", 36 * TS, (SUELO_Y - 8) * TS, 7 * TS, TS,
+    obj("FrictionZone", 36 * TS, (SUELO_Y - 6) * TS, 7 * TS, TS,
         multiplicador=0.55, material="hielo")
-    obj("Checkpoint", 43 * TS, suelo - 32, 16, 32, checkpoint_id=1)
+    obj("Checkpoint", 43 * TS, (SUELO_Y - 6) * TS - 32, 16, 32, checkpoint_id=1)
 
     # ── Zona D — fuego de respuesta ──────────────────────────────
     # AUD-305/AUD-491 — primer uso real del bash: un proyectil marcado
@@ -322,9 +350,20 @@ def _colisiones() -> list[str]:
     # Obstáculos interiores: lo único del prólogo contra lo que se choca de lado.
     for x, alto in OBSTACULOS:
         solido(x * TS, (SUELO_Y - alto) * TS, TS, alto * TS)
-    # Repisas atravesables desde abajo, que es lo que las hace útiles.
-    solido(26 * TS, (SUELO_Y - 4) * TS, 6 * TS, 8, "Platform")
-    solido(36 * TS, (SUELO_Y - 8) * TS, 7 * TS, 8, "Platform")
+    # AUD-506 — la colina de la zona C, un sólido por columna con
+    # `_altura_colina` (la misma función que pinta `_terreno`), rellenando
+    # desde el escalón hasta el suelo plano de abajo. Antes de esto la colina
+    # se veía y no se pisaba: el suelo real seguía siendo la fila plana bajo
+    # el dibujo, y los dos `Platform` que había aquí eran repisas de un
+    # diseño anterior en otra posición y otra altura.
+    for x in range(24, 51):
+        alto = _altura_colina(x)
+        if alto:
+            solido(x * TS, (SUELO_Y - alto) * TS, TS, alto * TS)
+    # Zona E — la ruta alta bypass, atravesable desde abajo (por eso es
+    # "Platform" y no "Solid": se puede saltar a través de ella y aterrizar
+    # encima, como el bypass gemelo de la zona G, dos líneas más abajo).
+    solido(58 * TS, (SUELO_Y - 9) * TS, 10 * TS, 8, "Platform")
     solido(88 * TS, (SUELO_Y - 9) * TS, 8 * TS, 8, "Platform")
     return r
 

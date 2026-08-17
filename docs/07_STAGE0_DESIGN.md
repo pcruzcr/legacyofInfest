@@ -85,7 +85,7 @@ está en la fila 30 (**y = 480 px**) y el avance es de izquierda a derecha.
 |---|---|---|
 | A | 48 – 220 | moverse, saltar, y el primer obstáculo sólido |
 | B | 224 – 390 | el primer enemigo, inevitable |
-| C | 400 – 700 | plataformas de un sentido, liana, **hielo**, primer salto exigente |
+| C | 384 – 720 | la colina escalonada, liana, **hielo**, primer salto exigente |
 | D | 720 – 895 | combate a distancia, **el *bash*** |
 | E | 912 – 1040 | combate variado cuerpo a cuerpo, llave y puerta cerrada |
 | F | 1024 – 1200 | el foso: salto, bloques rítmicos, o **goma** |
@@ -107,7 +107,11 @@ está demostrando. Tileset `tileset_stage0.png`.
   | x | Alto | Dónde | Para qué |
   |---|---|---|---|
   | 160 | 2 baldosas (32 px) | zona A | se salta desde parado |
-  | 800 | 3 baldosas (48 px) | zona D | obliga a aprovechar el impulso |
+  | 288 | 3 baldosas (48 px) | zona B/C | obliga a aprovechar el impulso |
+
+  AUD-506 movió el segundo de la columna 50 a la 18: la colina de la zona C
+  ocupa las columnas 24–50, y un obstáculo ahí quedaba enterrado dentro del
+  propio sólido de la colina — mismo tramo, misma altura, cero efecto.
 
   El salto del jugador alcanza **72 px** medidos
   (`tests/playtest/jump_bench.py`). Este número **no cambió** con el
@@ -115,12 +119,13 @@ está demostrando. Tileset `tileset_stage0.png`.
   tocarla exige recalibrar `grade_stage.py` y los 16 mapas que comparten su
   vara de medir (ver `KNOWN_GAPS.md`, GAP-036).
 
-- **Plataformas atravesables** (`Platform`, un solo sentido):
+- **Plataformas atravesables** (`Platform`, un solo sentido — no confundir
+  con la colina de la zona C, que es `Solid`: se pisa desde cualquier lado
+  porque es terreno, no una repisa):
 
   | x | y | Ancho | Zona |
   |---|---|---|---|
-  | 416 | 416 | 96 px | C |
-  | 576 | 352 | 112 px | C — la de hielo |
+  | 928 | 336 | 160 px | E — la ruta alta bypass |
   | 1408 | 336 | 128 px | G |
 
 - **Foso:** x 1056 – 1152 (96 px), con `DeathPit` al fondo.
@@ -163,30 +168,39 @@ soluciones —pelear o saltar— se ofrecen a la vez.
 
 ---
 
-### Zona C — plataformas, liana y hielo (x 400 – 700)
+### Zona C — la colina, liana y hielo (x 384 – 816)
 
-**Sistemas:** plataformas de un solo sentido, `Vine` con `TrepandoState`,
-`Pickup`, enemigo volador con trayectoria senoidal, **material por zona**
-(`ZonaDeFriccion`, AUD-490).
+**Sistemas:** terreno sólido escalonado (`_altura_colina`, AUD-506), `Vine`
+con `TrepandoState`, `Pickup`, enemigo volador con trayectoria senoidal,
+**material por zona** (`ZonaDeFriccion`, AUD-490).
+
+AUD-506 sustituyó las dos repisas flotantes del primer rediseño (AUD-491) por
+una colina de verdad: una escalera sólida de un escalón (16 px) por columna
+entre x = 384 y x = 816, sube seis escalones (x 384–464), se aplana en una
+meseta de seis baldosas de alto (x 464–704) y baja los mismos seis escalones
+(x 704–816). Cada escalón es un `Solid` independiente —no una `Slope`
+diagonal— porque 16 px se sube de un salto corto y no hace falta rampa.
 
 - `MessageTrigger_Once` en x = 400: *«Sube. Con X te agarras a la liana.»*
-- Plataforma atravesable en (416, 416).
-- `Pickup` «fragmento_1» en (464, 400).
+- `Pickup` «fragmento_1» en (464, 400), sobre el último escalón de la subida.
 - `Flying` en x = 480: `flight_mode=sine`, amplitud 32, frecuencia 2,0
-  (Unidad III).
-- `Vine` en x = 528, 176 px de largo, `ancho_de_agarre=12`.
+  (Unidad III), sobrevolando la meseta.
+- `Vine` en x = 528, desde la fila 19 hasta la superficie de la meseta (fila
+  24) — 80 px de largo, `ancho_de_agarre=12`. Antes de AUD-506 bajaba hasta
+  el suelo llano (176 px) y su tramo final quedaba enterrado dentro del
+  sólido de la meseta.
 - `MessageTrigger_Once` en x = 576: *«Hielo. Sueltas menos el salto, no
   más.»*
-- **Plataforma de hielo** en (576, 352), 112 px: una `FrictionZone` con
-  `material="hielo"` sobre la misma repisa atravesable, `multiplicador=0.55`
-  — primer uso real de AUD-490 en un nivel jugado. No es una baldosa
-  distinta a propósito: el jugador tiene que leer «esta repisa está tomada»
-  por cómo resbala, no por su color.
+- **Hielo sobre la meseta** en (576, 384), 112 px: una `FrictionZone` con
+  `material="hielo"` sobre la superficie real de la meseta,
+  `multiplicador=0.55` — primer uso real de AUD-490 en un nivel jugado. No es
+  una baldosa distinta a propósito: el jugador tiene que leer «esta repisa
+  está tomada» por cómo resbala, no por su color.
 
-Aquí sigue estando el **salto exigente** que el calificador exige: el desnivel
-entre la primera plataforma y la de hielo no se supera andando.
+El **salto exigente** que el calificador exige lo pone ahora la propia colina:
+subir sus seis escalones seguidos, con hielo esperando en la cima.
 
-**Checkpoint 1:** x = 688.
+**Checkpoint 1:** x = 688, y = 352 (sobre la meseta, no sobre el suelo llano).
 
 ---
 
@@ -298,7 +312,7 @@ Cifras derivadas del `.tmx`; si dejan de cuadrar, la suite avisa.
 | Relics adicionales (Python, fuera del `.tmx`) | 4 — ver §4.2 |
 | Focos `Light` | 12 |
 | Obstáculos sólidos interiores | 2 |
-| Plataformas de un sentido | 3 |
+| Plataformas de un sentido | 2 |
 | Zonas de material (`FrictionZone`) | 2 — hielo (zona C) y goma (zona F) |
 
 ### 4.1 Enemigos

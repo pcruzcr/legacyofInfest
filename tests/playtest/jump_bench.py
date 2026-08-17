@@ -1,16 +1,19 @@
 """Banco de calibración del salto: cuántas baldosas cruza el jugador de verdad.
 
-Por qué medir algo que ya hay una fórmula para calcular (AUD-204)
-------------------------------------------------------------------
-`src/framework/stage/level_metrics.py` deriva la envolvente de salto de la
-física balística: altura ``v²/2g``, tiempo de vuelo ``2v/g``, alcance
-``velocidad × tiempo``. Con eso califica los huecos de los mapas de los
-estudiantes y decide si un nivel es transitable.
+Por qué medir algo que ya hay una fórmula para calcular (AUD-204, AUD-504)
+----------------------------------------------------------------------------
+`src/framework/stage/level_metrics.py` deriva la envolvente de salto
+integrando la misma física a paso fijo que usa `Player._apply_physics`
+(Euler semi-implícito, ``dt = 1/60``), no la fórmula continua del proyectil
+(``v²/2g``). Con eso califica los huecos de los mapas de los estudiantes y
+decide si un nivel es transitable.
 
-Esa fórmula describe un proyectil, no a este jugador. El jugador tiene estados,
-corta el salto si sueltas el botón, cambia de velocidad horizontal al despegar y
+Aun así sigue siendo un modelo, no el jugador. El jugador tiene estados, corta
+el salto si sueltas el botón, cambia de velocidad horizontal al despegar y
 resuelve colisiones por ejes con rectángulos enteros. Ninguna de esas cosas
-aparece en ``v²/2g``, y todas mueven el resultado.
+aparece en la integración aislada, y todas mueven el resultado — por eso este
+banco sigue existiendo después de AUD-504: la fórmula corregida se acerca
+mucho más a lo medido, pero "se acerca" no es "es".
 
 Este banco no calcula: **ejecuta**. Construye un hueco de N baldosas, pone al
 `Player` real encima con el `InputManager` de prueba, y prueba a saltarlo desde
@@ -240,9 +243,10 @@ def tabla() -> str:
         "",
         f"  GRAVITY={settings.GRAVITY}  PLAYER_JUMP_FORCE={settings.PLAYER_JUMP_FORCE}"
         f"  PLAYER_WALK_SPEED={settings.PLAYER_WALK_SPEED}",
-        f"  envolvente analítica: hueco {env.max_gap:.1f}px ({env.max_gap / tile:.2f} bald.)"
-        f", con salto aéreo {env.max_gap_with_air_jump:.1f}px"
-        f" ({env.max_gap_with_air_jump / tile:.2f} bald.)"
+        f"  envolvente calculada: hueco natural {env.max_gap:.1f}px"
+        f" ({env.max_gap / tile:.2f} bald.)"
+        f", hueco experto {env.max_gap_expert:.1f}px"
+        f" ({env.max_gap_expert / tile:.2f} bald.)"
         f", repecho {env.max_height:.1f}px ({env.max_height / tile:.2f} bald.)",
         "",
         "  HUECOS            natural            experta",
