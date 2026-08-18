@@ -60,6 +60,13 @@ class EnemyPezAbismal(EnemyFlying):
     #: por velocidad.
     VELOCIDAD_DE_NADO = 85.0
 
+    #: AUD-529 — el doble de lo que tenía (14×10). Pedido explícito tras
+    #: jugarlo: «debe ser mucho más grande y amenazador». No es el tamaño
+    #: que `EnemyFlying` pide para el resto de voladores (14×10, fijo en
+    #: `_load_zone_sprites`); `_load_extra_sprites` lo sobreescribe abajo.
+    SPRITE_ANCHO = 28
+    SPRITE_ALTO = 20
+
     def __init__(self, spawn_position: pygame.Vector2, event_bus=None) -> None:
         super().__init__(
             spawn_position=spawn_position,
@@ -72,8 +79,12 @@ class EnemyPezAbismal(EnemyFlying):
             damage_on_contact=0.0,
             event_bus=event_bus,
         )
-        self.rect.width = 32
-        self.rect.height = 16
+        # AUD-529 — el rect crece con el sprite (56×32, el doble del
+        # 32×16 anterior) para que siga habiendo margen alrededor de una
+        # silueta más grande; `_load_extra_sprites` hace lo mismo con
+        # `_sprite_fw/_sprite_fh`.
+        self.rect.width = 56
+        self.rect.height = 32
         # AUD-325 — no pisa suelo: nada en agua abierta, igual que un
         # volador no pisa suelo en aire abierto.
         self._hug_slopes = False
@@ -94,12 +105,24 @@ class EnemyPezAbismal(EnemyFlying):
         self._deaggro_margin = 2000.0
 
     def _load_extra_sprites(self, zone: int, fw: int, fh: int) -> None:
-        """Su propio sprite, no el de zona: no existe un volador de
-        "zone4" y, de existirlo, sería un halcón o un cuervo — no encaja
-        con una criatura abisal."""
+        """Su propio sprite, su propio tamaño, no los de zona: no existe
+        un volador de "zone4" y, de existirlo, sería un halcón o un
+        cuervo — no encaja con una criatura abisal.
+
+        AUD-529 — ignora el `fw, fh` que llega (14×10, lo que
+        `EnemyFlying` pide para todos sus voladores) y usa
+        `SPRITE_ANCHO/SPRITE_ALTO` en su lugar, sobreescribiendo también
+        `_sprite_fw/_sprite_fh` — `_load_zone_sprites` ya los dejó en
+        14×10 justo antes de llamar aquí, y el desplazamiento de dibujo
+        (`ox/oy` en `EnemyBase.draw`) los usa para centrar el sprite en el
+        `rect`: sin este ajuste, un sprite más grande que su propio
+        tamaño declarado se recorta o se desplaza mal.
+        """
+        self._sprite_fw = self.SPRITE_ANCHO
+        self._sprite_fh = self.SPRITE_ALTO
         try:
             self._sprite_frames["fly"] = AssetLoader.load_sprite_sheet(
-                SPRITE_PATH, fw, fh)
+                SPRITE_PATH, self.SPRITE_ANCHO, self.SPRITE_ALTO)
         except (pygame.error, FileNotFoundError, PermissionError):
             logger.warning("enemy_pez_abismal: failed to load sprite %s", SPRITE_PATH)
 

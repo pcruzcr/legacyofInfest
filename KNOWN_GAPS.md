@@ -3363,3 +3363,19 @@ está.
   inferior de uno y el superior del otro caían en la misma fila de
   píxeles —justo donde se centra el nombre— y se leía como texto
   tachado. Cada mitad dibuja ahora sólo sus tres lados exteriores.
+  **(AUD-528, mismo reporte "camina sobre el agua"):** `AUD-526` había
+  cerrado la salida errónea del estado de nado, pero el modelo de
+  movimiento seguía siendo gravedad casi constante más un único impulso
+  — sin mantener una tecla, el jugador se hundía sin control y se
+  quedaba posado en el fondo, que es indistinguible de caminar. El eje
+  vertical se mueve ahora con el mismo lenguaje que ya usaba el
+  horizontal: empuje continuo mientras se mantiene salto/arriba o
+  agachar, freno suave al soltar. **(AUD-529)** jugado otra vez: el pez
+  ya se detectaba pero seguía siendo pequeño y silencioso hasta que
+  aparecía en pantalla. Sprite y `rect` al doble de tamaño (28×20 y
+  56×32, antes 14×10/32×16 — el genérico que `EnemyFlying` fija para
+  todos sus voladores), y un sonido grave (`SFX_ENEMIES_PEZ_ABISMAL_ACERCARSE`)
+  que suena en el instante en que `Stage4_1B._invocar_pez` lo aparece
+  fuera de cámara — el jugador lo escucha antes de verlo, pedido
+  explícito para que el terror sea atmosférico y no un sobresalto
+  barato.
