@@ -69,6 +69,39 @@ class Stage4_1B(StageScene):
         self._proxima_aparicion_pez: float = self.ESPERA_ANTES_DE_LA_PRIMERA
         self._pez: EnemyPezAbismal | None = None
         self._tiempo_restante_del_pez: float = 0.0
+        self._fondo_cueva = self._construir_fondo_cueva()
+
+    def _construir_fondo_cueva(self) -> pygame.Surface:
+        """AUD-531 — «el negro debe representar únicamente la ausencia de
+        luz». Sin un fondo pintado, los faroles (`Light`, AUD-531 más
+        abajo) no tienen nada que iluminar: `LightSystem.render` compone
+        con `BLEND_RGB_MULT` — multiplicar por un multiplicador de luz
+        sobre negro puro sigue dando negro puro (0 × n = 0), así que la
+        luz de los faroles era invisible aunque estuviera calculada bien.
+
+        Degradado vertical, roca profunda casi negra abajo y un café algo
+        menos oscuro arriba, cerca de donde cuelgan los faroles — la
+        misma dirección de luz que pide el guion. Constante en X, así que
+        se calcula una sola vez (no en cada fotograma) y se estira al
+        ancho real de pantalla.
+        """
+        alto = settings.INTERNAL_HEIGHT
+        tira = pygame.Surface((1, alto))
+        oscuro = (9, 7, 5)
+        techo = (58, 44, 28)
+        for y in range(alto):
+            t = y / max(1, alto - 1)
+            col = tuple(int(techo[i] + (oscuro[i] - techo[i]) * t) for i in range(3))
+            tira.set_at((0, y), col)
+        return pygame.transform.scale(tira, (settings.INTERNAL_WIDTH, alto))
+
+    def dibujar_fondo(self, surface: pygame.Surface,
+                      offset: pygame.Vector2) -> None:
+        """Roca de cueva, no negro puro — ver `_construir_fondo_cueva`."""
+        if surface.get_size() == self._fondo_cueva.get_size():
+            surface.blit(self._fondo_cueva, (0, 0))
+        else:
+            surface.blit(pygame.transform.scale(self._fondo_cueva, surface.get_size()), (0, 0))
 
     def update(self, dt: float) -> None:
         super().update(dt)

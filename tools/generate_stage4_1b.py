@@ -128,6 +128,21 @@ def _objetos() -> list[str]:
     obj("NextTrigger", (MW - MURO_ANCHO - 8) * TS, (FILA_SUELO - 4) * TS,
         TS * 2, TS * 6)
 
+    # AUD-531 — «en la parte superior del nivel deben colocarse lámparas
+    # que iluminen hacia el agua... un límite visual inalcanzable». El
+    # jugador aparece ya sumergido cerca de la fila 0 (§ arriba) y nunca
+    # llega a la superficie en este nivel — una hilera de faroles cada
+    # ~1200 px marca ese techo sin necesitar geometría sólida: se ve la
+    # luz, no se llega a ella. `warm` es el mismo color que ya usa
+    # `LIGHT_COLORS` para antorchas/lámparas en el resto del motor.
+    # y=80: por debajo de la franja del HUD (retrato/corazones ocupan hasta
+    # ~65 px de pantalla a la escala real, AUD-451) para que la luz se lea
+    # contra el agua y no quede tapada por la interfaz — y sigue siendo la
+    # quinta parte superior de la columna de agua (496 px), bien arriba.
+    for col_lampara in range(6, MW - MURO_ANCHO, 75):
+        obj("Light", col_lampara * TS, 80, radius=170.0, color="warm",
+            intensity=0.9, flicker=True, flicker_speed=1.3, flicker_amount=0.2)
+
     return [x for x in o if x]
 
 

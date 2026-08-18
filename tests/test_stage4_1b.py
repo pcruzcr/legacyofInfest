@@ -117,6 +117,46 @@ class TestElNivelSePuedeJugar:
             "WaterEffect — el agua no tiene ningún rastro visual"
         )
 
+    def test_hay_faroles_declarados(self, escena) -> None:
+        """AUD-531 — pedido: "lámparas que iluminen hacia el agua... un
+        límite visual inalcanzable"."""
+        assert len(escena._stage_data.lights) >= 6, (
+            "4.1b no declara faroles — el techo de la fosa no tiene "
+            "ningún límite visual"
+        )
+
+    def test_el_fondo_no_es_negro_puro(self, escena) -> None:
+        """AUD-531 — `LightSystem.render` compone con `BLEND_RGB_MULT`:
+        multiplicar por un multiplicador de luz sobre negro puro sigue
+        dando negro puro (0 × n = 0). Sin un fondo pintado, los faroles
+        estaban calculados correctamente y eran invisibles igual —
+        comprobado jugando, no una hipótesis."""
+        assert escena._fondo_cueva.get_at((0, 0))[:3] != (0, 0, 0)
+
+    def test_el_farol_se_nota_en_el_fotograma_compuesto(self, escena) -> None:
+        """No basta con que el sistema de luces calcule el foco — tiene
+        que sobrevivir hasta el píxel final, con fondo pintado debajo."""
+        import pygame
+
+        escena._camera.offset.x = 0.0
+        escena._camera.offset.y = 0.0
+        for _ in range(30):
+            escena.update(1 / 60)
+            escena._camera.offset.x = 0.0
+            escena._camera.offset.y = 0.0
+
+        lienzo = pygame.Surface((800, 600))
+        escena.draw(lienzo)
+
+        primer_farol = escena._stage_data.lights[0]
+        fx, fy = int(primer_farol.position[0]), int(primer_farol.position[1])
+        cerca = lienzo.get_at((fx, fy))
+        lejos = lienzo.get_at((min(fx + 400, 799), fy))
+        assert sum(cerca[:3]) > sum(lejos[:3]), (
+            f"el píxel junto al farol ({tuple(cerca)}) no es más claro que "
+            f"uno lejos de cualquier luz ({tuple(lejos)})"
+        )
+
     def test_la_zona_de_agua_cubre_la_columna_por_encima_del_lecho(self, escena) -> None:
         from src.framework.ecs import ZonaDeAgua
 
