@@ -166,13 +166,32 @@ SPRITE_PALETTES: list[tuple[str, set[tuple[int, int, int]]]] = [
         (200, 184, 150), (200, 200, 180), (200, 215, 200), (212, 90, 0),
         (212, 160, 23), (255, 255, 255),
     }),  # 42 file(s), 26 colour(s)
-    ("ui/*.png", {
-        (0, 0, 0), (60, 60, 80), (80, 20, 20), (100, 100, 100),
-        (100, 180, 100), (120, 80, 20), (180, 120, 20), (200, 80, 20),
-        (200, 80, 80), (200, 120, 100), (200, 150, 100), (200, 180, 100),
-        (200, 200, 150), (220, 180, 140), (255, 50, 50), (255, 215, 0),
+    # AUD-527 — `ui/*.png` dejó de cubrir el HUD entero. `heart_*.png` y
+    # `hud_frame.png` pasaron a degradado + antialiasing (decisión del dueño
+    # de modernizar el HUD, `docs/09_HUD_SPEC.md` §1) — ya no son arte
+    # indexado, son pintados, el mismo caso que los tilesets: se miden por
+    # presupuesto de color en `COLOR_BUDGETS`, no por paleta fija. Lo que
+    # sigue aquí sigue siendo pixel art indexado de verdad.
+    ("ui/portrait_*.png", {
+        (0, 0, 0), (60, 60, 80), (100, 100, 100), (200, 80, 80),
+        (200, 120, 100), (220, 180, 140), (255, 255, 255),
+    }),  # 4 file(s), 7 colour(s)
+    ("ui/relic_*.png", {
+        (0, 0, 0), (100, 180, 100), (200, 150, 100), (200, 200, 150),
+        (255, 215, 0), (255, 255, 255),
+    }),  # 5 file(s), 6 colour(s)
+    ("ui/banner_*.png", {
+        (0, 0, 0), (200, 180, 100),
+    }),  # 2 file(s), 2 colour(s)
+    ("ui/heart_sparkle.png", {
         (255, 255, 200), (255, 255, 255),
-    }),  # 25 file(s), 18 colour(s)
+    }),  # 1 file(s), 2 colour(s)
+    ("ui/menu_arrow.png", {
+        (255, 215, 0), (255, 255, 255),
+    }),  # 1 file(s), 2 colour(s)
+    ("ui/message_arrow.png", {
+        (255, 215, 0), (255, 255, 255),
+    }),  # 1 file(s), 2 colour(s)
 ]
 
 WARNINGS: list[str] = []
@@ -287,6 +306,13 @@ COLOR_BUDGETS: list[tuple[str, int]] = [
     # atlas from the source with nearest-neighbour scaling and no lossy
     # round-trip. Tracked as refactor item R-15.
     ("tilesets/*.png", 131072),
+    # AUD-527 — el corazón y el panel de 9-slice del HUD pasaron de relleno
+    # plano a degradado + antialiasing (decisión del dueño de modernizar el
+    # HUD). Miden 77-149 colores hoy; 256 da margen para retocar el
+    # degradado sin ser la barra libre de un tileset — siguen siendo iconos
+    # de unos pocos píxeles, no arte pintado a pantalla completa.
+    ("ui/heart_*.png", 256),
+    ("ui/hud_frame.png", 256),
 ]
 
 

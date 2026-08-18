@@ -64,6 +64,15 @@ Cada recurso listado aquí tiene ruta, formato, dimensiones, restricciones de pa
 | Transparencia | Binaria (totalmente transparente u opaca) O alfa suave (sólo para efectos) |
 | Resolución interna | Todos los recursos se diseñan para el render interno de 800×600 |
 
+> **AUD-527 (2026-08-18) — excepción declarada para el HUD.** Decisión del
+> dueño: modernizar el HUD, rompiendo a propósito "sin antialiasing, sin
+> degradados" para esa capa (`docs/09_HUD_SPEC.md` §1). `heart_*.png` y
+> `hud_frame.png` (`assets/ui/`) llevan ya degradado y antialiasing real; se
+> miden por presupuesto de color en `scripts/validate_assets.py`
+> (`COLOR_BUDGETS`), no por la paleta fija de 16 colores. El resto de esta
+> tabla — jugador, enemigos, jefes, y el resto de `ui/` — sigue
+> exactamente como está: la excepción es del HUD, no del proyecto.
+
 ### 2.2 Formato de hoja de sprites
 
 Todos los sprites animados son **hojas de sprites horizontales**: fotogramas dispuestos de izquierda a derecha, mismo ancho, origen en la esquina superior izquierda.

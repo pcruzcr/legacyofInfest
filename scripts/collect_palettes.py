@@ -50,11 +50,24 @@ ASSETS_DIR = PROJECT_ROOT / "assets"
 # over 100,000 distinct colours, which means it is a rendered or rescaled image
 # rather than hand-placed pixel art. A palette constraint cannot meaningfully
 # describe it, so validate_assets.py checks tilesets for colour *count* instead.
+# AUD-527 — `ui/*.png` dejó de cubrir el HUD entero: `heart_*.png` y
+# `hud_frame.png` pasaron a degradado + antialiasing (decisión del dueño de
+# modernizar el HUD, ver `docs/09_HUD_SPEC.md` §1), así que ya no son arte
+# indexado — son el mismo caso que los tilesets, pintados en vez de
+# paletizados a mano. `validate_assets.py` los mide por presupuesto de
+# color (`COLOR_BUDGETS`), no por paleta fija. Lo que sigue aquí —retratos,
+# reliquias, franja de escenario, flechas, la chispa de curación— sigue
+# siendo pixel art indexado de verdad.
 PALETTE_PATTERNS: tuple[str, ...] = (
     "sprites/player/*.png",
     "sprites/enemies/*.png",
     "sprites/bosses/*.png",
-    "ui/*.png",
+    "ui/portrait_*.png",
+    "ui/relic_*.png",
+    "ui/banner_*.png",
+    "ui/heart_sparkle.png",
+    "ui/menu_arrow.png",
+    "ui/message_arrow.png",
 )
 
 

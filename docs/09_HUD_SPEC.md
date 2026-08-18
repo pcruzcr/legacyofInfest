@@ -39,7 +39,25 @@ El HUD (Heads-Up Display) es la capa persistente en pantalla que comunica al jug
 
 El HUD está implementado en `src/engine/ui/hud.py` y es un sistema del profesorado. Los estudiantes no lo modifican. Pueden disparar elementos del HUD a través del EventBus (`SHOW_MESSAGE`, etc.).
 
-Todos los gráficos del HUD son sprites de pixel art acordes a la estética de la época SNES. Sin antialiasing. Sin degradados. Sin sombras mezcladas por alfa. La transparencia se usa sólo en el fondo de la caja de mensajes de tutorial.
+> **AUD-527 (2026-08-18) — se revierte la convención SNES.** Hasta aquí, la
+> regla era "sin antialiasing, sin degradados, sin sombras mezcladas por
+> alfa". Decisión del dueño: modernizar el HUD de verdad, no dentro de esa
+> restricción. Se mantiene todo lo demás de esta especificación —el
+> maquetado sobre 320 px y su escala a la resolución real (§2), qué región
+> ocupa cada elemento, la prioridad de estados del retrato— porque nada de
+> eso depende del estilo de trazo; sólo cambia **cómo** se pinta cada
+> región, no dónde ni cuándo.
+>
+> Los corazones (generados por `tools/generate_all_assets.py`) llevan
+> ahora degradado vertical y un brillo suave, dibujados a 4× y reducidos con
+> remuestreo para un antialiasing real — no una silueta de píxel cuadrado.
+> El panel de 9-slice (`hud_frame.png`) lleva un degradado y un halo
+> exterior en vez de un relleno plano con borde de 1 px. Las cuatro barras
+> (medidor especial, estamina, tiempo bala, vida de jefe) usan
+> `_dibujar_barra_moderna`: fondo translúcido con esquinas redondeadas,
+> relleno con degradado horizontal, y un halo suave cuando el medidor llega
+> al tope. La transparencia ya no se limita al fondo de la caja de mensajes
+> de tutorial — es parte del lenguaje visual del HUD entero.
 
 ---
 
