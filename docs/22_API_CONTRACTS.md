@@ -4581,10 +4581,10 @@ class TrailSystem:
 
 ```python
 class AmbientParticleSystem:
-    """Partículas de ambiente: polvo, hojas, ascuas, esporas, ceniza — el
-    tipo y el ritmo se declaran en el TMX (`ambient_fx`/`ambient_fx_rate`)."""
+    """Partículas de ambiente: polvo, hojas, ascuas, esporas, ceniza, niebla
+    — el tipo y el ritmo se declaran en el TMX (`ambient_fx`/`ambient_fx_rate`)."""
 
-    TIPOS: tuple[str, ...] = ("dust", "leaves", "embers", "spores", "ash")
+    TIPOS: tuple[str, ...] = ("dust", "leaves", "embers", "spores", "ash", "niebla")
 
     def __init__(self, rng: random.Random | None = None) -> None: ...
     def set_effect(self, particle_type: str, rate: float = 10.0) -> None: ...

@@ -27,7 +27,13 @@ class AmbientParticleSystem:
     #: Tipos reconocidos. Se declaran explícitamente en vez de aceptar
     #: cualquier cadena para que una errata en Tiled se pueda diagnosticar:
     #: escribir "leafs" debe avisar, no dejar el nivel sin partículas y callar.
-    TIPOS: tuple[str, ...] = ("dust", "leaves", "embers", "spores", "ash")
+    # AUD-532 — "niebla": jirones de bruma que derivan despacio en
+    # horizontal, casi sin caer ni subir. 4-1c ("Lo Que Flota en la
+    # Niebla") pedía exactamente esto tras jugarlo — partículas de nube
+    # para dar identidad al vacío bajo el jugador — y no había ningún tipo
+    # existente que sirviera: "dust"/"ash" caen, "embers"/"spores" suben,
+    # y todos son puntuales, no jirones anchos y pálidos.
+    TIPOS: tuple[str, ...] = ("dust", "leaves", "embers", "spores", "ash", "niebla")
 
     def __init__(self, rng: random.Random | None = None) -> None:
         #: AUD-398 — azar propio (GAP-042). Sin semilla nace del global,
@@ -131,4 +137,17 @@ class AmbientParticleSystem:
                 count=1, lifetime=self._rng.uniform(3, 7),
                 size=(1, 2), color=(90, 85, 80), spread=25,
                 gravity=6,
+            )
+        elif self._particle_type == "niebla":
+            # AUD-532 — jirones anchos y pálidos, casi sin verticalidad:
+            # derivan en horizontal (0° o 180°, no un ángulo fijo — la
+            # niebla no sopla siempre hacia el mismo lado) y viven mucho,
+            # para que nunca se sienta el vacío bajo el jugador como aire
+            # vacío de verdad.
+            angulo = 0.0 if self._rng.random() < 0.5 else 180.0
+            self._emitter.emit_directed(
+                sx, sy, angle=angulo, speed=self._rng.uniform(4, 12),
+                count=1, lifetime=self._rng.uniform(6, 11),
+                size=(4, 7), color=(210, 210, 220), spread=8,
+                gravity=0,
             )

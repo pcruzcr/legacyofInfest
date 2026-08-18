@@ -109,6 +109,55 @@ class JumpEnvelope:
             tile=int(settings.TILE_SIZE),
         )
 
+    @classmethod
+    def from_settings_con_viento(cls, viento_x: float) -> JumpEnvelope:
+        """La misma envolvente que `from_settings`, con un `WindZone`
+        constante empujando en horizontal durante todo el salto.
+
+        AUD-534 — 4.1c añade un viento de nivel entero (`fuerza_x` en
+        `tools/generate_stage4_1c.py`) que `_envolvente()` (`trazado.py`)
+        no conocía al calibrar los huecos: `hueco_base`/`jitter_hueco`
+        siguen midiéndose contra `max_gap`/`max_gap_expert` **sin**
+        viento. Este método recalcula el mismo integrador de
+        `from_settings` sumando el viento a la velocidad horizontal cada
+        fotograma —igual que `sistema_viento` hace con
+        `ZonaDeViento.fuerza`— para poder comprobar el hueco real contra
+        el techo real, no contra uno que ignora la propia mecánica que
+        se acaba de añadir.
+        """
+        gravity = float(settings.GRAVITY)
+        jump = abs(float(settings.PLAYER_JUMP_FORCE))
+        speed = float(settings.PLAYER_WALK_SPEED)
+        dt = 1.0 / float(settings.TARGET_FPS)
+
+        velocity = -jump
+        height_offset = 0.0
+        peak_height = 0.0
+        air_time = 0.0
+        # Técnica experta: velocidad de suelo completa desde el despegue,
+        # frenada por el viento fotograma a fotograma — nunca por debajo
+        # de cero, mismo criterio de seguridad que aplica el propio
+        # sistema de viento (empujar no es hacer retroceder).
+        vx = speed
+        alcance = 0.0
+        while True:
+            velocity += gravity * dt
+            height_offset += velocity * dt
+            vx = max(0.0, vx + viento_x * dt)
+            alcance += vx * dt
+            air_time += dt
+            peak_height = max(peak_height, -height_offset)
+            if velocity >= 0.0 and height_offset >= 0.0:
+                break
+
+        return cls(
+            max_height=peak_height,
+            air_time=air_time,
+            max_gap=speed * 0.5 * air_time,
+            max_gap_expert=alcance,
+            tile=int(settings.TILE_SIZE),
+        )
+
     # Margen de seguridad: un salto que requiere el 100% de la envolvente sólo
     # se logra con entrada perfecta. Por encima de este porcentaje el salto es
     # técnicamente posible pero exige precisión de speedrun, lo cual es una

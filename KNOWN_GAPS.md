@@ -3388,4 +3388,22 @@ está.
   n = 0) — 4.1b no pintaba ningún fondo, así que la luz estaba bien
   calculada y era invisible igual. `Stage4_1B.dibujar_fondo` pinta ahora
   un degradado de roca (calculado una sola vez, no por fotograma) para
-  que los faroles tengan algo que iluminar.
+  que los faroles tengan algo que iluminar. **(AUD-533)** `InventoryScene`
+  y `SkillTreeScene` (equipo y árbol de habilidades) estaban completas y
+  probadas y sólo se abrían desde el título — el mismo patrón de
+  "sistema construido, camino real inexistente" de AUD-528/525. Se
+  suman al menú de pausa (`StageScene._abrir_inventario/
+  _abrir_arbol_de_habilidades`, empujando la escena en vez de
+  sustituirla), lo que exigió corregir el lado simétrico:
+  `InventoryScene`/`SkillTreeScene`/`WorldMapScene` salían siempre con
+  `replace(TitleScene(...))`, así que cancelar el inventario abierto en
+  pausa mandaba al jugador al título. Las tres pasan a salir con
+  `pop()` (vuelve a quien las empujó). De paso, el menú de pausa tenía
+  sus tres opciones en inglés — se tradujo completo. **(AUD-534)** el
+  nivel del cielo (4.1c): tablones más angostos (precisión, no plancha),
+  un `WindZone` de nivel entero en contra del avance, y partículas de
+  niebla nuevas (`AmbientParticleSystem.TIPOS` gana "niebla"). El viento
+  resta alcance al salto y `_envolvente()` no lo sabía —
+  `JumpEnvelope.from_settings_con_viento()` recalcula el techo real con
+  viento y `tests/test_stage4_1c.py` comprueba cada hueco generado
+  contra él, no sólo contra la envolvente sin viento.

@@ -37,7 +37,17 @@ que sostienen los otros 25+ escenarios.
 | Mecánica central | `RhythmBlock`/`BloqueRitmico` (F6, ya construido para `stage_mecanicas`) — las plataformas aparecen y desaparecen con la música real (`bpm`/`compas` → `RelojMusical`), cero física nueva |
 | Enemigos | 0 — como el cementerio; el desafío es la travesía y el ritmo, no el combate |
 | Checkpoints | 6, uno por sección — el haz de luz de siempre (AUD-523, universal en los 26 escenarios) |
-| Plantillas | 3, semillas 1/2/3, cada una verificada contra `JumpEnvelope.from_settings()` — la envolvente de salto real del jugador, no un número inventado |
+| Plantillas | 3, semillas 1/2/3, cada una verificada contra `JumpEnvelope.from_settings()` **y** `from_settings_con_viento()` (AUD-534) — la envolvente de salto real, con y sin el viento del nivel |
+
+**AUD-534** — pedido tras jugarlo: tablones más angostos (7 baldosas,
+antes 11 — precisión en vez de plancha), un `WindZone` que cubre el mapa
+entero empujando en contra del avance (constante, -15 px/s²), y
+partículas de niebla (`ambient_fx="niebla"`, tipo de partícula nuevo del
+motor) para darle identidad atmosférica al vacío. El viento resta
+alcance al salto — de 85,5 a 78,6 px en la técnica experta — así que
+`_envolvente()` bajó su jitter de hueco (0,6 → 0,5 del margen hasta el
+techo experto) y `tests/test_stage4_1c.py` comprueba cada hueco generado
+contra la envolvente **con viento**, no sólo la de referencia sin él.
 
 ## 2. Por qué tres plantillas y no generación en vivo
 
