@@ -31,6 +31,7 @@ sys.path.insert(0, str(RAIZ))
 
 from src.stages.stage4_1c.trazado import (  # noqa: E402
     FILA_DE_CONTENCION,
+    FUERZA_DEL_VIENTO_X,
     MH,
     MURO_ANCHO,
     MW,
@@ -135,6 +136,19 @@ def _objetos(ruta) -> list[str]:
     obj("NextTrigger", (ultima.columna + ultima.ancho - 2) * TS,
         (ultima.fila - 4) * TS, TS * 2, TS * 6)
 
+    # AUD-534 — "físicas de viento que empujen al personaje... obligándolo
+    # a calcular sus saltos con máxima precisión". Un solo `WindZone` que
+    # cubre el mapa entero, constante (`periodo=0`) y en contra del avance
+    # (empuja a la izquierda): -15 px/s² es deliberadamente más suave que
+    # el viento de la Fase 3 de 4-1 (-60, `tools/generate_stage4_1.py`) —
+    # ahí el jugador camina por baldosas fijas; aquí cada hueco ya está
+    # calibrado al límite por `_envolvente()` (AUD-520), y el viento resta
+    # alcance a un salto que no tiene margen de sobra. `jitter_hueco` bajó
+    # de 0.6 a 0.5 en la propia envolvente para dejarle sitio a este
+    # empuje sin acercarse al techo de "salto imposible".
+    obj("WindZone", 0, 0, MW * TS, MH * TS,
+        fuerza_x=FUERZA_DEL_VIENTO_X, fuerza_y=0.0, periodo=0.0)
+
     return [x for x in o if x]
 
 
@@ -198,6 +212,13 @@ def generar(semilla: int) -> str:
         # coincidir con la canción a los cinco minutos.
         '  <property name="bpm" type="float" value="100"/>\n',
         '  <property name="compas" type="int" value="4"/>\n',
+        # AUD-534 — pedido tras jugarlo: "partículas de nubes... para
+        # dotar al espacio de identidad". "niebla" es el tipo de
+        # partícula nuevo que pide exactamente este nivel (el propio
+        # nombre del nivel es "Lo Que Flota en la Niebla") — jirones
+        # pálidos que derivan en horizontal, sin subir ni caer.
+        '  <property name="ambient_fx" value="niebla"/>\n',
+        '  <property name="ambient_fx_rate" type="float" value="6.0"/>\n',
         " </properties>\n",
         f' <tileset firstgid="1" name="tileset_stage4_1c" tilewidth="{TS}" '
         f'tileheight="{TS}" tilecount="{TILESET_COLS * TILESET_ROWS}" '

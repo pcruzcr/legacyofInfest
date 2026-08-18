@@ -53,6 +53,15 @@ MH = 38
 #: Grosor de los muros de los extremos, en columnas.
 MURO_ANCHO = 2
 
+#: AUD-534 — px/s² del `WindZone` que cubre el mapa entero
+#: (`tools/generate_stage4_1c.py`), en contra del avance. Fuente única:
+#: el generador lo usa para escribir el TMX, y
+#: `tests/test_stage4_1c.py` lo usa para recalcular la envolvente de
+#: salto CON viento y comprobar que ningún hueco generado la supera —
+#: dos números que se desincronizarían silenciosamente si vivieran cada
+#: uno en su fichero.
+FUERZA_DEL_VIENTO_X: float = -15.0
+
 #: Dónde arranca y aterriza el camino de plataformas.
 FILA_DE_INICIO = 20
 
@@ -89,13 +98,24 @@ def _envolvente() -> tuple[float, float, float, float]:
     techo, es angostar el número de entidades: tablones más anchos y
     huecos que sí aprovechan el hueco cómodo real, en vez de plataformas
     diminutas muy juntas.
+
+    AUD-534 — pedido tras jugarlo: "las plataformas largas deben
+    sustituirse por secciones que exijan precisión milimétrica". Tablones
+    más angostos (7 baldosas, antes 11) sin acercarse al techo de 200 —
+    `tests/test_los_ids_del_ecs_no_crecen.py` sigue siendo quien decide,
+    no una cuenta de cabeza. El viento constante que se añade en el
+    generador (`WindZone`, AUD-534) resta alcance horizontal al salto; el
+    jitter del hueco se reduce de 0.6 a 0.5 del margen hasta el techo
+    experto para no comerse ese margen con el viento en contra —el viento
+    hace la travesía más exigente por sí solo, no hace falta apurar
+    también la geometría.
     """
     from src.framework.stage.level_metrics import JumpEnvelope
 
     e = JumpEnvelope.from_settings()
     hueco_base = e.max_gap * 0.9  # cómodo de verdad, no el techo experto
-    jitter_hueco = (e.max_gap_expert - hueco_base) * 0.6
-    ancho_tablon_base = 11.0 * TS  # tablones largos: menos entidades, más plancha que escalón
+    jitter_hueco = (e.max_gap_expert - hueco_base) * 0.5
+    ancho_tablon_base = 7.0 * TS  # AUD-534: tablones más angostos, precisión en vez de plancha
     jitter_v = e.max_height * 0.35
     return hueco_base, max(0.0, jitter_hueco), ancho_tablon_base, jitter_v
 

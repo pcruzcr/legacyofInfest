@@ -74,6 +74,30 @@ class TestLaRutaEsSiempreCruzable:
                 f"máxima de salto ({envolvente.max_height:.0f}px)"
             )
 
+    @pytest.mark.parametrize("semilla", [1, 2, 3, 4, 5, 42, 100, 999, 7777])
+    def test_ningun_hueco_supera_la_envolvente_con_viento(self, semilla: int) -> None:
+        """AUD-534 — el `WindZone` que cubre 4.1c entero
+        (`FUERZA_DEL_VIENTO_X`) resta alcance horizontal al salto, y
+        `_envolvente()` calibra los huecos contra la envolvente SIN
+        viento. Esta prueba es la que de verdad importa para no romper
+        la garantía de nivel completable: recalcula el techo real, con
+        viento, y lo compara contra los mismos huecos generados.
+        """
+        from src.framework.stage.level_metrics import JumpEnvelope
+
+        envolvente_con_viento = JumpEnvelope.from_settings_con_viento(
+            trazado.FUERZA_DEL_VIENTO_X)
+        ruta = trazado.generar_ruta(semilla)
+        for a, b in pairwise(ruta):
+            hueco_h = (b.columna - (a.columna + a.ancho)) * trazado.TS
+            assert hueco_h <= envolvente_con_viento.max_gap_expert + 1, (
+                f"semilla {semilla}: hueco horizontal {hueco_h}px entre "
+                f"columna {a.columna} y {b.columna} supera el máximo "
+                f"experto CON viento en contra "
+                f"({envolvente_con_viento.max_gap_expert:.1f}px) — el "
+                f"viento podría estar volviendo el nivel incompletable"
+            )
+
     @pytest.mark.parametrize("semilla", [1, 2, 3])
     def test_hay_seis_checkpoints_uno_por_seccion(self, semilla: int) -> None:
         ruta = trazado.generar_ruta(semilla)
