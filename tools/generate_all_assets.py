@@ -856,10 +856,14 @@ TILESET_THEMES = {
     "tileset_heredia_interior": {"floor": (130,110,90), "wall": (150,130,110), "deco": (110,90,70)},
     "tileset_cemetery": {"floor": (50,50,70), "wall": (70,70,90), "deco": (40,40,60)},
     "tileset_stage4_1": {"floor": (90,80,70), "wall": (58,56,70), "deco": (70,60,50)},
-    # AUD-519 — 4.1b, la variante acuática de 4-1: paleta abisal (nada de
-    # verde ni marrón de superficie), lo bastante oscura para que el pez
-    # abismal se lea como algo que sale de la propia oscuridad.
-    "tileset_stage4_1b": {"floor": (18,32,42), "wall": (10,20,30), "deco": (26,52,58)},
+    # AUD-531 — reemplaza la paleta abisal azul de AUD-519. Pedido tras
+    # jugarlo: «el nivel no puede ser totalmente negro. El negro debe
+    # representar únicamente la ausencia de luz; la paleta principal debe
+    # basarse en tonos café para transmitir la sensación de estar dentro
+    # de una cueva». Roca húmeda, no fosa azul — el negro sigue reservado
+    # para lo que de verdad no recibe luz (`ambient_light=0.28` en el
+    # TMX, sin cambios).
+    "tileset_stage4_1b": {"floor": (58,42,28), "wall": (34,24,16), "deco": (78,56,36)},
     # AUD-520 — 4.1c, la variante aérea: nubes y niebla pálidas, sin
     # verde ni piedra — las plataformas sólidas tienen que leerse contra
     # un cielo, no contra tierra.

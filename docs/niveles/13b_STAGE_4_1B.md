@@ -33,7 +33,7 @@ Construido en AUD-519, después de que el dueño pidiera —vía
 |---|---|
 | Dificultad | ★★☆☆☆ (2/5) — atmosférica, como el cementerio |
 | Forma | Horizontal, un único TMX, seis secciones de 150 baldosas — **misma geometría que 4-1** (900×38 baldosas) |
-| Ambientación | Sumergido de principio a fin (`WaterZone` cubre casi toda la columna de aire; `docs/45_SWIMMING_SPEC.md`), lecho marino como referencia de suelo |
+| Ambientación | Sumergido de principio a fin (`WaterZone` cubre casi toda la columna de aire; `docs/45_SWIMMING_SPEC.md`), lecho marino como referencia de suelo. **AUD-531** — cueva, no fosa azul: paleta café/roca húmeda (antes abisal azul, AUD-519), faroles cálidos cerca del techo como límite visual inalcanzable, fondo pintado (`Stage4_1B.dibujar_fondo`) para que esa luz tenga algo que iluminar — el negro queda reservado a la ausencia de luz de verdad |
 | Enemigos | **1** — el pez abismal (`EnemyPezAbismal`), no una regla de oro rota: 4-1 (cementerio) sigue en cero; ésta es la variante que lo introduce |
 | Checkpoints | 6, uno por sección — el haz de luz de siempre (AUD-523, universal en los 26 escenarios) |
 | Día/noche | Congelado, abisal (`day_length=0`, `ambient_light=0.28`) — no hay ciclo día/noche 900 baldosas bajo el agua |

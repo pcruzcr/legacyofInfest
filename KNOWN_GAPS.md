@@ -3378,4 +3378,14 @@ está.
   que suena en el instante en que `Stage4_1B._invocar_pez` lo aparece
   fuera de cámara — el jugador lo escucha antes de verlo, pedido
   explícito para que el terror sea atmosférico y no un sobresalto
-  barato.
+  barato. **(AUD-531)** mismo reporte, la parte de arte: *"el nivel no
+  puede ser totalmente negro... la paleta principal debe basarse en
+  tonos café"* — reemplaza la paleta abisal azul de AUD-519 (roca
+  húmeda, no fosa) y añade una hilera de faroles cerca del techo como
+  límite visual inalcanzable. Al probarlo, los faroles no se veían:
+  `LightSystem.render` compone con `BLEND_RGB_MULT`, y multiplicar por
+  un multiplicador de luz sobre negro puro sigue dando negro puro (0 ×
+  n = 0) — 4.1b no pintaba ningún fondo, así que la luz estaba bien
+  calculada y era invisible igual. `Stage4_1B.dibujar_fondo` pinta ahora
+  un degradado de roca (calculado una sola vez, no por fotograma) para
+  que los faroles tengan algo que iluminar.
