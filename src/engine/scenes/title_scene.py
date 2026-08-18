@@ -253,15 +253,18 @@ class TitleScene(BaseScene):
         elif opt == "WORLD MAP":
             from src.engine.scenes.world_map_scene import WorldMapScene
             self.context.scene_manager.transition.start_fade_out(0.4)
-            self.context.scene_manager.replace(WorldMapScene(self.context))
+            # AUD-533 — `push`, no `replace`: `WorldMapScene` ahora vuelve
+            # con `pop()` (para poder abrirse también desde una partida en
+            # pausa), y `pop` necesita algo debajo que reanudar.
+            self.context.scene_manager.push(WorldMapScene(self.context))
         elif opt == "INVENTORY":
             from src.engine.scenes.inventory_scene import InventoryScene
             self.context.scene_manager.transition.start_fade_out(0.4)
-            self.context.scene_manager.replace(InventoryScene(self.context))
+            self.context.scene_manager.push(InventoryScene(self.context))
         elif opt == "SKILL TREE":
             from src.engine.scenes.skill_tree_scene import SkillTreeScene
             self.context.scene_manager.transition.start_fade_out(0.4)
-            self.context.scene_manager.replace(SkillTreeScene(self.context))
+            self.context.scene_manager.push(SkillTreeScene(self.context))
         elif opt == "SHOP":
             from src.engine.scenes.shop_scene import ShopScene
             self.context.scene_manager.transition.start_fade_out(0.4)

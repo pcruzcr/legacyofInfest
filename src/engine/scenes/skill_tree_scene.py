@@ -102,9 +102,10 @@ class SkillTreeScene(BaseScene):
         self._mensaje_timer = 3.0
 
     def _volver(self) -> None:
-        from src.engine.scenes.title_scene import TitleScene
-
-        self.context.scene_manager.replace(TitleScene(self.context))
+        # AUD-533 — mismo arreglo que `InventoryScene`: `pop()` vuelve a
+        # quien haya empujado esta pantalla (el título o una partida en
+        # pausa), en vez de mandar siempre al título.
+        self.context.scene_manager.pop()
 
     # ── dibujado ──────────────────────────────────────────────────
     def draw(self, surface: pygame.Surface) -> None:

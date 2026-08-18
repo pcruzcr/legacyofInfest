@@ -77,6 +77,10 @@ def _escena():
         ),
         replace=lambda escena: setattr(gestor, "reemplazada_por", escena),
         reemplazada_por=None,
+        # AUD-533 — `InventoryScene` sale ahora con `pop()`, no `replace(...)`,
+        # para poder volver a una partida en pausa y no sólo al título.
+        pop=lambda: setattr(gestor, "salio_por_pop", True),
+        salio_por_pop=False,
     )
     contexto = types.SimpleNamespace(
         input_manager=entrada,
@@ -142,7 +146,7 @@ class TestPonerseYQuitarseLaRopa:
         entrada.pulsar(Action.CANCEL)
         escena.update(0.016)
 
-        assert gestor.reemplazada_por is not None, (
+        assert gestor.salio_por_pop, (
             "sin salida, la pantalla es una trampa"
         )
 
