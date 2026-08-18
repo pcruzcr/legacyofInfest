@@ -206,6 +206,124 @@ class TestNado:
         assert not nado.avisando
 
 
+class TestElNadoEsOmnidireccionalDeVerdad:
+    """AUD-528 — pedido explícito: "el botón de salto debe funcionar como
+    impulso de nado... emulando la sensación de los niveles de agua
+    clásicos de Super Mario Bros". El modelo anterior aplicaba gravedad
+    constante y un único impulso de salto que se recargaba al tocar fondo
+    (AUD-526): sin mantener la tecla, el jugador se hundía sin parar y se
+    quedaba posado en el lecho, indistinguible de caminar — el reporte
+    "camina sobre el agua", reproducido jugando 4-1b sin soltar ninguna
+    tecla durante segundos.
+    """
+
+    def _jugador_nadando(self, y: float = 3000.0):
+        from src.framework.entities.player import Player
+        from src.framework.entities.states import SwimmingState
+
+        jugador = Player(pygame.Vector2(100, y))
+        jugador._change_state_instance(SwimmingState())
+        # Muy hondo y sin techo alcanzable en esta prueba: el objetivo es
+        # el modelo de movimiento, no la transición de salida a la
+        # superficie (que ya prueba `TestNado`).
+        jugador._state_instance._surface_y = -999999.0
+        return jugador
+
+    def _im_con_salto_mantenido(self):
+        from src.engine.input.action_map import DEFAULT_KEY_BINDINGS, Action
+        from src.engine.input.input_manager import InputManager
+
+        im = InputManager()
+        tecla = DEFAULT_KEY_BINDINGS[Action.JUMP][0]
+        im.pump([pygame.event.Event(pygame.KEYDOWN, key=tecla)])
+        return im
+
+    def test_mantener_salto_sigue_acelerando_no_es_un_solo_pulso(self) -> None:
+        """El modelo viejo daba un único impulso de -120 px/s y ya: nada
+        distinguía el primer fotograma pulsado del décimo. El nuevo debe
+        seguir acelerando mientras la tecla sigue abajo."""
+        jugador = self._jugador_nadando()
+        im = self._im_con_salto_mantenido()
+        velocidades = []
+        for _ in range(10):
+            jugador._state_instance.update(jugador, FRAME, im)
+            im.pump([])  # mantiene el estado "held" sin volver a pulsar
+            velocidades.append(jugador.velocity.y)
+        # Estrictamente más negativa cada fotograma hasta el tope: si el
+        # viejo modelo de un solo pulso volviera, la segunda mitad de la
+        # lista sería idéntica a la primera en vez de seguir bajando.
+        assert velocidades[4] < velocidades[0], (
+            f"la velocidad no sigue acelerando con la tecla mantenida: {velocidades}"
+        )
+
+    def test_sin_tecla_frena_en_vez_de_seguir_acelerando(self) -> None:
+        """Soltar todo debe frenar hacia flotar, no acelerar en caída
+        libre — la diferencia entre "nadar" y "hundirse sin control"."""
+        jugador = self._jugador_nadando()
+        im = self._im_con_salto_mantenido()
+        for _ in range(60):
+            jugador._state_instance.update(jugador, FRAME, im)
+            im.pump([])
+        velocidad_subiendo = jugador.velocity.y
+        assert velocidad_subiendo < 0.0, "no llegó a acelerar hacia arriba"
+
+        from src.engine.input.input_manager import InputManager
+        im_vacio = InputManager()
+        for _ in range(20):
+            jugador._state_instance.update(jugador, FRAME, im_vacio)
+        assert jugador.velocity.y > velocidad_subiendo, (
+            "sin tecla pulsada, la velocidad debería frenar hacia arriba "
+            "(hacia 0), no seguir en la misma inercia"
+        )
+        assert jugador.velocity.y < 60.0, (
+            f"sin tecla, el jugador cae a {jugador.velocity.y} px/s — eso "
+            f"es caída libre, no un hundimiento suave"
+        )
+
+    def test_agachar_empuja_hacia_el_fondo(self) -> None:
+        from src.engine.input.action_map import DEFAULT_KEY_BINDINGS, Action
+        from src.engine.input.input_manager import InputManager
+
+        jugador = self._jugador_nadando()
+        im = InputManager()
+        tecla = DEFAULT_KEY_BINDINGS[Action.CROUCH][0]
+        im.pump([pygame.event.Event(pygame.KEYDOWN, key=tecla)])
+        vy_inicial = jugador.velocity.y
+        for _ in range(10):
+            jugador._state_instance.update(jugador, FRAME, im)
+            im.pump([])
+        assert jugador.velocity.y > vy_inicial, (
+            "mantener agachar no empuja hacia abajo"
+        )
+
+    def test_no_hay_contador_de_impulsos_que_se_agote(self) -> None:
+        """El viejo `_swim_boosts` limitaba a un impulso por inmersión
+        (recargado sólo al tocar fondo). Nadar arriba, soltar, y volver a
+        nadar arriba debe funcionar las veces que haga falta."""
+        jugador = self._jugador_nadando()
+        im = self._im_con_salto_mantenido()
+        for _ in range(30):
+            jugador._state_instance.update(jugador, FRAME, im)
+            im.pump([])
+        primera_subida = jugador.velocity.y
+        assert primera_subida < 0.0
+
+        from src.engine.input.input_manager import InputManager
+        im_vacio = InputManager()
+        for _ in range(60):
+            jugador._state_instance.update(jugador, FRAME, im_vacio)
+
+        im2 = self._im_con_salto_mantenido()
+        for _ in range(30):
+            jugador._state_instance.update(jugador, FRAME, im2)
+            im2.pump([])
+        segunda_subida = jugador.velocity.y
+        assert segunda_subida < 0.0, (
+            "la segunda vez que se mantiene salto no empuja hacia arriba: "
+            "sigue habiendo un límite de impulsos"
+        )
+
+
 # ══════════════════════════════════════════════════════════════
 # F5.7 — parry del jefe
 # ══════════════════════════════════════════════════════════════
