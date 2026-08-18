@@ -101,7 +101,17 @@ class WalkingState(PlayerStateBase):
         self._footstep_timer += dt
         if self._footstep_timer >= 0.35:
             self._footstep_timer = 0.0
-            player._event_bus.emit(Events.SFX_PLAYER_FOOTSTEP)
+            # AUD-522 — el musgo resbala y hasta ahora no se oía ni se
+            # veía, sólo se calculaba (`ZonaDeFriccion.inercia`). El
+            # material lo pone `sistema_friccion` en cada fotograma
+            # (`Transform.material_actual`, AUD-490); aquí sólo se lee.
+            material = player._material_de_zona
+            if material is not None and material.nombre == "musgo":
+                pos = (player.position.x, player.position.y)
+                player._event_bus.emit(Events.SFX_PLAYER_FOOTSTEP_MUSGO)
+                player._event_bus.emit(Events.VFX_MUSGO_STEP, pos=pos)
+            else:
+                player._event_bus.emit(Events.SFX_PLAYER_FOOTSTEP)
         inp = _InputSnapshot(input_manager)
 
         if _handle_ultimate_input(player, inp):

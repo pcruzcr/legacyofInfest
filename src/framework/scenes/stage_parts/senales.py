@@ -347,6 +347,15 @@ class SenalesDeEscenario:
         self.context.event_bus.subscribe(Events.VFX_BUBBLE, _on_vfx_bubble)
         self._vfx_handlers[Events.VFX_BUBBLE] = _on_vfx_bubble
 
+        def _on_vfx_musgo_step(**data: Any) -> None:
+            # AUD-522 — el musgo resbala y hasta ahora no se veía.
+            pos = data.get("pos", (0, 0))
+            self._particle_system.get_emitter("musgo").emit(
+                float(pos[0]), float(pos[1]), HitEffects.MUSGO,
+            )
+        self.context.event_bus.subscribe(Events.VFX_MUSGO_STEP, _on_vfx_musgo_step)
+        self._vfx_handlers[Events.VFX_MUSGO_STEP] = _on_vfx_musgo_step
+
         def _on_music_stinger(**data: Any) -> None:
             name = data.get("name", "stinger_boss_phase")
             vol = data.get("volume", 0.8)

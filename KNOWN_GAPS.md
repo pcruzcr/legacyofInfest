@@ -2591,6 +2591,33 @@ está.
   horizontal/vertical de [[GAP-061]]), el desafío de control, la zona
   secundaria opcional, y las señales de «el bosque observa» más allá de
   las apariciones ya existentes del Venado.
+- **Nota (AUD-522, 2026-08-17):** jugado, el musgo y el lodo de AUD-513 no
+  se distinguían de nada — 0,94 contra 0,88 de `multiplicador` es un 6 %
+  de diferencia, imperceptible contra un viento que sí desplaza al
+  jugador de verdad. Petición directa del dueño: *«el musgo resbala como
+  la nieve, el lodo es el que frena»* — dos mecánicas, no dos
+  intensidades del mismo freno.
+
+  El musgo pasa de `multiplicador` a un campo nuevo, `ZonaDeFriccion.inercia`
+  (`components.py`): amortigua la velocidad hacia el objetivo en vez de
+  recortarla —el mismo patrón de `ChaseFlight.DRAG` (AUD-046)— así que
+  soltar la tecla sobre musgo desliza un momento en vez de parar en seco,
+  y sigue acotado por construcción (nunca "se dispara sin tope", el
+  riesgo que AUD-236 ya había descartado para `multiplicador > 1`). El
+  lodo se queda exactamente como estaba: frena con `multiplicador`, sin
+  cambios.
+
+  También ganó lo que le faltaba para notarse: pisada propia
+  (`sfx_player_footstep_musgo`, un chapoteo corto y sordo, distinto del
+  paso normal) y una partícula (`HitEffects.MUSGO`, motas verdosas al
+  pisar) — las dos disparadas por `material="musgo"` en la
+  `FrictionZone`, que hasta ahora tampoco se declaraba. TMX parcheado
+  quirúrgicamente, mismo patrón que el mirador y los checkpoints (sólo la
+  capa `Objects`, ninguna baldosa pintada a mano se toca). Pruebas en
+  `tests/test_el_musgo_resbala.py` y `TestLaFriccionEscalaConLaLluvia`
+  (`tests/test_stage4_1.py`, reescrita para separar musgo de lodo — antes
+  esperaba que las dos escalaran igual). **Sigue pendiente:** todo lo que
+  ya quedaba de la nota de AUD-513, arriba.
 
 ## [GAP-061] `stage4_1` Fase 3 — el viento no escala, el rayo no informa y las osamentas son decoración, no arquitectura
 

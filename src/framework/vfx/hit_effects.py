@@ -60,6 +60,17 @@ class HitEffects:
         friction=0.9, gravity=-30.0,
     )
 
+    #: AUD-522 — el musgo resbala y hasta ahora no se veía: un par de
+    #: motas verdosas que salen despedidas hacia atrás, como si el pie
+    #: apartara musgo suelto. Pocas y breves (2, 0,3 s) — es una pisada,
+    #: no una explosión, y con el temporizador de pisadas a 0,35 s una
+    #: ráfaga más larga se solaparía con la siguiente.
+    MUSGO = BurstConfig(
+        count=2, speed=25.0, lifetime=0.3,
+        size=(2, 3), color=(90, 110, 60), spread=50.0,
+        friction=0.85, gravity=60.0,
+    )
+
     CHARGE_GLOW = BurstConfig(
         count=3, speed=30.0, lifetime=0.2,
         size=(2, 4), color=(255, 200, 50), spread=360.0,

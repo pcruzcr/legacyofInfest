@@ -132,6 +132,7 @@ def sistema_friccion(mundo: World, dt: float) -> None:
         if t is not None:
             t.material_actual = None
     for _, zona in mundo.cada(ZonaDeFriccion):
+        tocando_ahora: set[int] = set()
         for entidad in mundo.con(Transform, Velocidad):
             t = mundo.obtener(entidad, Transform)
             if t is None or not zona.rect.colliderect(t.rect):
@@ -139,13 +140,33 @@ def sistema_friccion(mundo: World, dt: float) -> None:
             v = mundo.obtener(entidad, Velocidad)
             if v is None:
                 continue
-            if zona.multiplicador != 1.0:
+            tocando_ahora.add(entidad)
+            if zona.inercia > 0.0:
+                # AUD-522 — resbalar de verdad: la velocidad de este
+                # fotograma (ya fijada por la entrada) es el objetivo, no
+                # el resultado. Amortiguación exponencial acotada — mismo
+                # patrón que `ChaseFlight.DRAG` (AUD-046) — así que nunca
+                # se aleja del objetivo, sólo tarda en llegar.
+                anterior = zona._vx_mezclada.get(entidad, v.v.x)
+                objetivo = v.v.x
+                tasa = zona.inercia ** dt
+                mezclada = objetivo + (anterior - objetivo) * tasa
+                zona._vx_mezclada[entidad] = mezclada
+                v.v.x = mezclada
+            elif zona.multiplicador != 1.0:
                 v.v.x *= zona.multiplicador
             if zona.arrastre:
                 t.posicion.x += zona.arrastre * dt
                 t.rect.x = int(t.posicion.x)
             if zona.material != "roca":
                 t.material_actual = MATERIALES.get(zona.material, ROCA)
+        if zona.inercia > 0.0 and zona._vx_mezclada:
+            # Quien ya no toca la zona deja de resbalar — sin esto, una
+            # entidad que vuelve a entrar mucho después reanudaría desde
+            # la velocidad con la que salió en vez de desde la de ahora.
+            for entidad in list(zona._vx_mezclada):
+                if entidad not in tocando_ahora:
+                    del zona._vx_mezclada[entidad]
 
 
 def sistema_corriente_de_agua(mundo: World, dt: float) -> None:

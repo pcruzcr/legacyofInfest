@@ -414,7 +414,9 @@ y por encima de 40 px/s casi ninguna ruta da tiempo.
 | `WindZone` | `fuerza_x` | `0` | empuje horizontal en px/s² |
 | | `fuerza_y` | `0` | empuje vertical |
 | |fx `periodo` | `0` | segundos de ciclo. **`0` = constante**; con `3.4` amaina y vuelve, y la solución pasa a ser esperar |
-| `FrictionZone` | `multiplicador` | `1.0` | `0.2` = hielo, `2.0` = barro |
+| `FrictionZone` | `multiplicador` | `1.0` | **frena** — `0.2` = barro pesado, `0.88` = lodo suave. Nunca por encima de 1: se dispara sin tope (AUD-236), no hay un valor "resbaloso pero seguro" por ese lado |
+| | `inercia` | `0.0` | **resbala de verdad** (AUD-522) — fracción de la diferencia con el objetivo que sobrevive un segundo entero. `0` = sin inercia (de siempre); `0.15` ya se siente, cerca de `1` es hielo puro. Acotado por construcción: nunca se aleja del objetivo, sólo tarda en llegar — mutuamente excluyente con `multiplicador` |
+| | `material` | `"roca"` | nombre de `physics.perfil.MATERIALES` (`"roca"`, `"hielo"`, `"musgo"`, `"goma"`) — sólo cambia la restitución (rebote) al aterrizar, no la fricción horizontal |
 | | `arrastre` | `0` | px/s que te lleva |
 | `Conveyor` | igual que `FrictionZone` | `arrastre = 60` | alias con arrastre por defecto: una cinta sin arrastre no es una cinta |
 | `WaterZone` | `corriente_x` | `0` | corriente horizontal |

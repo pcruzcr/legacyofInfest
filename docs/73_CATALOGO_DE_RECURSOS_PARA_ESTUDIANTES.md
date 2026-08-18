@@ -168,7 +168,7 @@ Propiedades por tipo (default) — ver tabla completa de `STAGE_CREATION.md`:
 | `Cutscene` | `guion` (obligatorio, AUD-136) |
 | `Spring` | `impulso` (-520), `rearme` (0.15) |
 | `WindZone` | `fuerza_x`, `fuerza_y`, `periodo` |
-| `FrictionZone`/`Conveyor` | `multiplicador`, `arrastre` |
+| `FrictionZone`/`Conveyor` | `multiplicador` (frena, nunca > 1), `inercia` (resbala, AUD-522), `material`, `arrastre` |
 | `LaserZone`/`ShockwaveZone` | `encendido` (1), `apagado` (1), `desfase` |
 | `WaterZone` | `corriente_x/y` |
 | `MovingPlatform` | `destino_dx/dy`, `velocidad` (40), `espera`, `atravesable` |
