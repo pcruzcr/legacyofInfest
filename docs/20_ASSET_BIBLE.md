@@ -29,7 +29,7 @@ date_processed: "2026-08-12"
 > - **Fotogramas de animación del jugador:** el cuerpo en inglés decía
 >   `player_jump.png` 4 fotogramas, `player_fall.png` 3, `player_crouch.png`
 >   3; el resumen en español decía 3, 2 y 2. Verificado contra
->   `PLAYER_ANIM_MAP` en `src/framework/entities/player.py`: gana el
+>   `_PLAYER_SPRITE_MAP` en `src/framework/entities/player.py`: gana el
 >   resumen — **3, 2 y 2** son los valores reales.
 >
 > **AUD-455 (2026-08-13).** §3 (árbol de directorios) listaba `assets/music/`
@@ -66,12 +66,17 @@ Cada recurso listado aquí tiene ruta, formato, dimensiones, restricciones de pa
 
 > **AUD-527 (2026-08-18) — excepción declarada para el HUD.** Decisión del
 > dueño: modernizar el HUD, rompiendo a propósito "sin antialiasing, sin
-> degradados" para esa capa (`docs/09_HUD_SPEC.md` §1). `heart_*.png` y
-> `hud_frame.png` (`assets/ui/`) llevan ya degradado y antialiasing real; se
-> miden por presupuesto de color en `scripts/validate_assets.py`
-> (`COLOR_BUDGETS`), no por la paleta fija de 16 colores. El resto de esta
-> tabla — jugador, enemigos, jefes, y el resto de `ui/` — sigue
-> exactamente como está: la excepción es del HUD, no del proyecto.
+> degradados" para esa capa (`docs/09_HUD_SPEC.md` §1). `hud_frame.png`
+> (`assets/ui/`) lleva ya degradado y antialiasing real; se mide por
+> presupuesto de color en `scripts/validate_assets.py` (`COLOR_BUDGETS`),
+> no por la paleta fija de 16 colores. El resto de esta tabla — jugador,
+> enemigos, jefes, y el resto de `ui/` — sigue exactamente como está: la
+> excepción es del HUD, no del proyecto.
+>
+> **AUD-535** retiró `heart_*.png` del todo: la vida dejó de ser sprites
+> de corazón y pasó a ser una barra dibujada (`HUD._draw_barra_de_vida`),
+> así que no queda arte de corazón —ni indexado ni con degradado— que
+> catalogar aquí.
 
 ### 2.2 Formato de hoja de sprites
 
@@ -146,7 +151,6 @@ assets/
 │   ├── hud_frame.png
 │   ├── message_arrow.png
 │   ├── menu_arrow.png
-│   ├── heart_sparkle.png
 │   └── relics/
 │       ├── relic_pepita.png
 │       ├── relic_perla.png
@@ -443,20 +447,22 @@ Ubicación: `assets/ui/`
 | `portrait_dead.png` | 32×32 | Retrato del jugador — fallecido |
 | `banner_top.png` | 320×24 | Mitad superior del banner de entrada de escenario |
 | `banner_bottom.png` | 320×24 | Mitad inferior del banner de entrada de escenario |
-| `hud_frame.png` | 36×36 | Marco de retrato (9-slice) |
+| `hud_frame.png` | 36×36 | Panel de fondo del cronómetro (9-slice) — AUD-535: el retrato dejó de usarlo, ahora es circular |
 | `message_arrow.png` | 5×7 | Flecha animada de confirmar (2 fotogramas) |
 | `menu_arrow.png` | 5×8 | Flecha de selección de menú |
-| `heart_sparkle.png` | 8×8 | Brillo de restauración de corazón (4 fotogramas, 12 FPS) |
-| `heart_full.png` | 14×8 | Corazón lleno |
-| `heart_three_quarter.png` | 14×8 | Corazón tres cuartos |
-| `heart_half.png` | 14×8 | Corazón medio |
-| `heart_quarter.png` | 14×8 | Corazón un cuarto |
-| `heart_empty.png` | 14×8 | Contorno de corazón vacío |
 | `relic_pepita.png` | 8×6 | Icono de HUD de la pepita de oro (animado, 3 fotogramas) |
 | `relic_perla.png` | 7×7 | Icono de HUD de la perla negra (animado, 3 fotogramas) |
 | `relic_fragment1.png` | 12×12 | Fragmento de reliquia 1 (cornamenta) — Zona 1 superada |
 | `relic_fragment2.png` | 12×12 | Fragmento de reliquia 2 (espiral) — Zona 2 superada |
 | `relic_fragment3.png` | 12×12 | Fragmento de reliquia 3 (máscara) — Zona 3 superada |
+
+> **AUD-535** — el anillo del retrato, la barra de vida/estamina/carga, el
+> ícono del reloj y el ícono de moneda del marcador **no son ficheros**:
+> se dibujan en código (`_anillo_del_retrato`, `_dibujar_barra_moderna`,
+> `_icono_de_reloj`, `_icono_de_moneda` en `src/engine/ui/hud.py`) y se
+> cachean en memoria por combinación de tamaño/color, no en disco. El
+> ícono de moneda reemplaza al glifo de texto "¤" — que no existe en
+> `assets/fonts/game.ttf` y se leía como un borrón ilegible.
 
 ---
 
@@ -640,7 +646,7 @@ sound = AssetLoader.load_sound(ASSETS_DIR / "sfx" / "player" / "sfx_player_jump.
 bg_far = AssetLoader.load_image(ASSETS_DIR / "backgrounds" / "zone1" / "bg_zone1_far.png")
 
 # Carga de imagen de UI:
-heart = AssetLoader.load_image(ASSETS_DIR / "ui" / "heart_full.png")
+retrato = AssetLoader.load_image(ASSETS_DIR / "ui" / "portrait_normal.png")
 ```
 
 Los estudiantes usan la misma API de `AssetLoader` para sus propios recursos:
