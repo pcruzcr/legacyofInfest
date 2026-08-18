@@ -26,7 +26,6 @@ class SwimmingState(PlayerStateBase):
         self._swim_timer = 0.0
         self._bubble_timer = 0.0
         self._surface_y = player.position.y - 16.0
-        player._swim_boosts = 0
 
     def update(
         self,
@@ -38,8 +37,40 @@ class SwimmingState(PlayerStateBase):
         self._swim_timer += dt
         self._bubble_timer += dt
 
-        player.velocity.y += settings.GRAVITY * 0.3 * dt
-        player.velocity.y = max(-60.0, min(120.0, player.velocity.y))
+        # AUD-528 — nado omnidireccional real, pedido explícito: "el botón
+        # de salto debe funcionar como impulso de nado... emulando la
+        # sensación de los niveles de agua clásicos de Super Mario Bros".
+        #
+        # El modelo anterior aplicaba gravedad constante (`GRAVITY * 0.3`)
+        # y un único impulso de salto que se recargaba al tocar fondo
+        # (AUD-526): sin mantener la tecla pulsada, el jugador se hundía
+        # sin parar y se quedaba posado en el lecho — cuatro segundos de
+        # prueba sin soltar una tecla lo dejan clavado en el fondo,
+        # indistinguible de caminar, que es exactamente el reporte
+        # "camina sobre el agua". El eje vertical ahora se mueve con el
+        # mismo lenguaje que ya usa el horizontal (aceleración mientras se
+        # mantiene la tecla, freno suave al soltarla): flotar en el sitio
+        # es el comportamiento neutral, no hundirse. Mantener salto (o
+        # arriba) empuja hacia la superficie; mantener agachar empuja
+        # hacia el fondo — las dos direcciones son simétricas y continuas,
+        # no un pulso de una vez.
+        empuje_vertical = 0
+        if inp.jump_held or inp.move_y_up:
+            empuje_vertical = -1
+        elif inp.crouch_held:
+            empuje_vertical = 1
+
+        if empuje_vertical != 0:
+            player.velocity.y += empuje_vertical * 90.0 * dt
+            player.velocity.y = max(-100.0, min(100.0, player.velocity.y))
+        else:
+            # Sin tecla vertical: freno hacia flotar en el sitio, no caída
+            # libre. Un peso residual —mucho menor que la gravedad real—
+            # evita que el nado se sienta completamente ingrávido; sigue
+            # habiendo una razón para nadar hacia arriba de vez en cuando.
+            player.velocity.y *= 0.88 ** (dt * 60.0)
+            player.velocity.y += settings.GRAVITY * 0.05 * dt
+            player.velocity.y = max(-100.0, min(60.0, player.velocity.y))
 
         if inp.move_x != 0:
             player.velocity.x += inp.move_x * 60.0 * dt
@@ -47,14 +78,6 @@ class SwimmingState(PlayerStateBase):
             player.facing_direction = inp.move_x
         else:
             player.velocity.x *= 0.9 ** (dt * 60.0)
-
-        if inp.jump_pressed and player._swim_boosts < 1:
-            player.velocity.y = -120.0
-            player._swim_boosts += 1
-            player._event_bus.emit(Events.SFX_PLAYER_JUMP)
-
-        if inp.crouch_held:
-            player.velocity.y += 200.0 * dt
 
         if self._bubble_timer >= 0.3:
             self._bubble_timer = 0.0
@@ -74,14 +97,6 @@ class SwimmingState(PlayerStateBase):
         # autoridad para entrar y salir del agua (comprueba `en_agua()`
         # cada fotograma); duplicar el criterio aquí con `is_grounded`
         # sacaba al jugador del estado sin que el jugador hubiera salido
-        # del agua de verdad.
-        #
-        # `_swim_boosts` sólo se reinicia en `enter()`, y con la salida por
-        # `is_grounded` ya retirada el jugador puede pasar el nivel entero
-        # sin volver a entrar al estado — así que sin este reinicio el
-        # impulso hacia arriba sería de una sola vez por partida entera de
-        # 4.1b, no por inmersión. Tocar fondo es el punto natural para
-        # recargarlo: empujarse desde el lecho marino es la mecánica, no un
-        # descuido.
-        if player.is_grounded:
-            player._swim_boosts = 0
+        # del agua de verdad. Con el empuje vertical continuo de AUD-528
+        # ya no hace falta reiniciar ningún contador de impulsos al tocar
+        # fondo — no hay ningún contador que reiniciar.

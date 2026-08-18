@@ -20,11 +20,24 @@ date_processed: "2026-08-12"
 > gravedad (×0.3), el periodo de burbujas (0.3s) y el máximo de un salto en
 > el agua coinciden exactamente con el código.
 
+> **AUD-528 (2026-08-18) — nado omnidireccional real.** El modelo de §2 de
+> más abajo describía gravedad constante (×0.3) más **un único** impulso de
+> salto que se recargaba sólo al tocar fondo (AUD-526). Jugado sin soltar
+> ninguna tecla: el jugador se hundía sin parar y se quedaba posado en el
+> lecho — indistinguible de caminar, reportado como "camina sobre el
+> agua". Pedido explícito del dueño: nado libre en las cuatro direcciones,
+> salto como impulso **continuo** (mantener la tecla empuja mientras se
+> mantiene), estilo Super Mario Bros. El eje vertical ahora se mueve con
+> el mismo lenguaje que ya usaba el horizontal — aceleración mientras se
+> mantiene la tecla, freno suave al soltarla — con un peso residual muy
+> por debajo de la gravedad real para que flotar en el sitio siga sin ser
+> gratis. La tabla de §2 queda reescrita para reflejarlo.
+
 ---
 
 ## 1. Visión general
 
-Nadar es un estado del jugador (`SwimmingState` en `src/framework/entities/states/swim.py`) que se activa cuando el jugador entra en zonas de agua. Da flotabilidad, gravedad reducida, movimiento horizontal más lento y la mecánica de salto nadando. Se emiten burbujas mientras se nada, como retroalimentación visual.
+Nadar es un estado del jugador (`SwimmingState` en `src/framework/entities/states/swim.py`) que se activa cuando el jugador entra en zonas de agua. Da flotabilidad y movimiento omnidireccional continuo — mantener salto (o arriba) empuja hacia la superficie, mantener agachar empuja hacia el fondo, y soltar cualquiera de las dos frena suavemente en vez de dejar caer en picado. Se emiten burbujas mientras se nada, como retroalimentación visual.
 
 ---
 
@@ -32,14 +45,15 @@ Nadar es un estado del jugador (`SwimmingState` en `src/framework/entities/state
 
 | Propiedad | Valor |
 |----------|-------|
-| Modificador de gravedad | ×0.3 de lo normal |
-| Velocidad vertical máxima | −60 px/s (subir), +120 px/s (hundirse) |
+| Empuje vertical (salto o arriba mantenidos) | 90 px/s² hacia arriba |
+| Empuje vertical (agachar mantenido) | 90 px/s² hacia abajo |
+| Velocidad vertical máxima con empuje | ±100 px/s |
+| Freno al soltar el eje vertical | multiplicador ×0.88/fotograma |
+| Peso residual sin tecla vertical | ×0.05 de la gravedad real |
+| Velocidad vertical máxima sin empuje | −100 px/s (subir), +60 px/s (hundirse) |
 | Aceleración horizontal | 60 px/s² |
 | Velocidad horizontal máxima | ±120 px/s |
 | Desaceleración horizontal | multiplicador ×0.9/fotograma |
-| Velocidad de salto nadando | −120 px/s |
-| Saltos nadando máximos | 1 |
-| Buceo agachado | +200 px/s² |
 | Velocidad de expulsión a la superficie | −200 px/s |
 | Periodo de emisión de burbujas | 0.3 s |
 
