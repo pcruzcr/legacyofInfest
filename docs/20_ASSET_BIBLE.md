@@ -190,6 +190,12 @@ Tamaño de fotograma: **32×32 píxeles** en todas las animaciones.
 | `player_long_attack.png` | 10 | 16 | No | LONG_ATTACK |
 | `player_hurt.png` | 4 | 12 | No | HURT |
 | `player_die.png` | 8 | 10 | No | DYING |
+| `player_swim.png` | 4 | 10 | Sí | SWIMMING |
+
+`player_swim.png` (AUD-525) alterna una patada abierta con la silueta
+cerrada del salto — antes `SWIMMING` reutilizaba `player_jump.png` sin
+variación entre fotogramas, así que nadar se veía como quedarse de pie
+clavado bajo el agua.
 
 **Paleta:**
 El jugador (protagonista encapuchado) usa una paleta restringida de exactamente 12 colores:

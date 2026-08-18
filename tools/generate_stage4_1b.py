@@ -167,6 +167,14 @@ def generar() -> str:
         '  <property name="ambient_light" type="float" value="0.28"/>\n',
         '  <property name="day_length" type="float" value="0"/>\n',
         '  <property name="start_hour" type="float" value="2"/>\n',
+        # AUD-525 — el nivel entero es `ZonaDeAgua` (física: nado, oxígeno,
+        # corriente) pero `WaterEffect` (lo que se ve) es un componente
+        # aparte que hay que encender a propósito (AUD-111) — sin esto la
+        # fosa se juega sumergida y se ve seca. Tinte más verdoso/oscuro que
+        # el azul por defecto de `stage_mecanicas`: abisal, no piscina.
+        '  <property name="water_effect" type="bool" value="true"/>\n',
+        '  <property name="water_tint" value="#0a3038"/>\n',
+        '  <property name="water_alpha" type="float" value="130"/>\n',
         " </properties>\n",
         f' <tileset firstgid="1" name="tileset_stage4_1b" tilewidth="{TS}" '
         f'tileheight="{TS}" tilecount="{TILESET_COLS * TILESET_ROWS}" '

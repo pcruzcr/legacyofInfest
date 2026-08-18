@@ -91,7 +91,11 @@ _PLAYER_SPRITE_MAP: dict[str, tuple[str, int]] = {
     "GRAB": ("player_short_attack.png", 4),
     "THROW": ("player_short_attack.png", 4),
     "SLIDE": ("player_crouch.png", 4),
-    "SWIMMING": ("player_jump.png", 4),
+    # AUD-525 — antes reutilizaba `player_jump.png`: cuatro copias del mismo
+    # fotograma quieto, así que nadar se veía como quedarse clavado de pie
+    # bajo el agua. `player_swim.png` alterna una patada abierta con la
+    # silueta cerrada del salto: hay brazada real entre fotogramas.
+    "SWIMMING": ("player_swim.png", 4),
     # F5.14 — lianas y tirolesas. Reutilizan la hoja de salto: el jugador va
     # colgado, y hasta que haya arte propio es mejor un sprite coherente que
     # uno inventado.

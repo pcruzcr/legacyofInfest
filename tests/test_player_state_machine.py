@@ -52,6 +52,36 @@ def test_cada_valor_del_enum_tiene_sprite_y_velocidad_de_animacion() -> None:
     assert not sin_velocidad, f"estados sin velocidad de animación: {sin_velocidad}"
 
 
+def test_nadar_tiene_hoja_propia_y_no_esta_congelado() -> None:
+    """AUD-525: `SWIMMING` reutilizaba `player_jump.png` — cuatro copias del
+    mismo fotograma quieto (`_gen_player_sprite` no varía entre frames), así
+    que nadar se veía como quedarse de pie clavado bajo el agua. Ahora tiene
+    hoja propia (`player_swim.png`, generada por `_gen_player_swim`) y esa
+    hoja alterna entre dos poses distintas — si algún día alguien la vuelve
+    a apuntar a una hoja ajena o a copias idénticas, esta prueba lo nota.
+    """
+    from src.engine.core import settings
+    from src.engine.utils.asset_loader import AssetLoader
+    from src.framework.entities.player import _PLAYER_SPRITE_MAP
+
+    hoja_swim, frames = _PLAYER_SPRITE_MAP["SWIMMING"]
+    assert hoja_swim != _PLAYER_SPRITE_MAP["JUMPING"][0], (
+        "nadar no debería compartir hoja con saltar: no hay brazada posible "
+        "si son el mismo dibujo"
+    )
+
+    ruta = settings.ASSETS_DIR / "sprites" / "player" / hoja_swim
+    assert ruta.exists(), f"falta la hoja de sprites de nado: {ruta}"
+
+    sheet = AssetLoader.load_sprite_sheet(str(ruta), 32, 32)
+    assert len(sheet) == frames
+    contenidos = {pygame.image.tobytes(f, "RGBA") for f in sheet}
+    assert len(contenidos) > 1, (
+        "todos los fotogramas de nado son idénticos — sigue leyéndose como "
+        "una pose fija, no como movimiento"
+    )
+
+
 def test_initial_state_is_idle() -> None:
     player = Player(pygame.Vector2(50.0, 0.0))
     assert player.state == PlayerState.IDLE

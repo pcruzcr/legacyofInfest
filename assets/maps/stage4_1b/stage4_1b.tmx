@@ -11,6 +11,9 @@
   <property name="ambient_light" type="float" value="0.28"/>
   <property name="day_length" type="float" value="0"/>
   <property name="start_hour" type="float" value="2"/>
+  <property name="water_effect" type="bool" value="true"/>
+  <property name="water_tint" value="#0a3038"/>
+  <property name="water_alpha" type="float" value="130"/>
  </properties>
  <tileset firstgid="1" name="tileset_stage4_1b" tilewidth="16" tileheight="16" tilecount="64" columns="8">
   <image source="../../tilesets/tileset_stage4_1b.png" width="128" height="128"/>

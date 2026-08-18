@@ -104,6 +104,19 @@ class TestElNivelSePuedeJugar:
         for cp in escena._stage_data.checkpoints:
             assert cp._light is not None
 
+    def test_el_agua_se_ve_no_solo_se_siente(self, escena) -> None:
+        """AUD-525: `ZonaDeAgua` es la física (nado, oxígeno, corriente) y
+        `WaterEffect` es lo que se ve — van por separado a propósito
+        (`water_effect.py`), y el TMX nunca encendió el segundo. El nivel se
+        jugaba sumergido de verdad y se veía completamente seco: sin tinte,
+        sin ondas, nada distinguía la fosa de caminar al aire libre.
+        """
+        datos = escena._stage_data
+        assert datos.water_effect is True, (
+            "stage4_1b está sumergido de principio a fin y no enciende "
+            "WaterEffect — el agua no tiene ningún rastro visual"
+        )
+
     def test_la_zona_de_agua_cubre_la_columna_por_encima_del_lecho(self, escena) -> None:
         from src.framework.ecs import ZonaDeAgua
 
