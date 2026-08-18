@@ -1149,7 +1149,9 @@ class HUD:
     @property
     def timer_rect(self) -> pygame.Rect: ...
     @property
-    def heart_row_rect(self) -> pygame.Rect: ...
+    def vida_bar_rect(self) -> pygame.Rect:
+        """AUD-535 — reemplaza a la vieja fila de corazones: la vida es
+        ahora una barra continua."""
     @property
     def score_rect(self) -> pygame.Rect: ...
     @property
@@ -1194,10 +1196,16 @@ class HUD:
     def is_countdown(self, value: bool) -> None: ...
 ```
 
+<!-- cita-historica -->
 > **AUD-455.** Faltaban `set_salud_maxima()` y las propiedades `timer_rect`,
 > `heart_row_rect`, `score_rect`, `regiones`, `ranuras_de_corazon` —
 > verificado contra `src/engine/ui/hud.py`. El resto de la clase ya estaba
 > completo y correcto.
+<!-- /cita-historica -->
+>
+> Ese nombre de corazones se retiró en AUD-535 — `vida_bar_rect` lo
+> reemplaza: la vida dejó de ser una fila de corazones y pasó a ser una
+> barra continua.
 
 <!-- cita-historica -->
 > **AUD-307.** `bind_player` (daba un "retrato" del estado del jugador) **no

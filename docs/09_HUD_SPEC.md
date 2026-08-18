@@ -11,7 +11,7 @@ date_processed: "2026-08-12"
 # Legacy of InFest — Especificación del HUD
 
 **ID del documento:** LOI-HUD-009
-**Versión:** 1.2.0
+**Versión:** 1.3.0
 **Estado:** Oficial
 **Audiencia:** Profesor, ayudantes, asistentes de código
 
@@ -48,16 +48,25 @@ El HUD está implementado en `src/engine/ui/hud.py` y es un sistema del profesor
 > eso depende del estilo de trazo; sólo cambia **cómo** se pinta cada
 > región, no dónde ni cuándo.
 >
-> Los corazones (generados por `tools/generate_all_assets.py`) llevan
-> ahora degradado vertical y un brillo suave, dibujados a 4× y reducidos con
-> remuestreo para un antialiasing real — no una silueta de píxel cuadrado.
 > El panel de 9-slice (`hud_frame.png`) lleva un degradado y un halo
-> exterior en vez de un relleno plano con borde de 1 px. Las cuatro barras
-> (medidor especial, estamina, tiempo bala, vida de jefe) usan
+> exterior en vez de un relleno plano con borde de 1 px. Las barras
+> (vida, estamina, medidor especial, tiempo bala, vida de jefe) usan
 > `_dibujar_barra_moderna`: fondo translúcido con esquinas redondeadas,
 > relleno con degradado horizontal, y un halo suave cuando el medidor llega
 > al tope. La transparencia ya no se limita al fondo de la caja de mensajes
 > de tutorial — es parte del lenguaje visual del HUD entero.
+
+> **AUD-535 (2026-08-18) — rediseño espacial, no sólo de trazo.** AUD-527
+> cambió *cómo* se pintaba cada región; esta auditoría cambia *dónde* vive
+> cada una y qué elementos existen. Pedido explícito del dueño tras jugarlo:
+> retrato circular, la fila de corazones desaparece a favor de tres barras
+> apiladas (vida/estamina/carga) del mismo ancho que el retrato, el
+> marcador se reubica junto al bloque retrato+barras, el cronómetro se
+> centra arriba con un ícono de reloj en vez de la etiqueta "TIME" y baja
+> su umbral de alerta de 30 a 10 segundos, y el minimapa gana bordes
+> totalmente redondeados. Las secciones 2 y 4 de este documento describen
+> el layout **de hoy**; donde el número cambió respecto de AUD-455/AUD-499
+> se cita esta auditoría, no se borra la cifra anterior.
 
 ---
 
@@ -76,6 +85,11 @@ el primero: es el que se lee junto al dibujo del layout.
 
 Todas las coordenadas son en píxeles, origen arriba a la izquierda.
 
+**AUD-535** reubica el bloque de identidad (retrato circular + tres barras
+apiladas) en la esquina superior izquierda, el marcador junto a él, y el
+cronómetro al centro superior — ya no en la esquina derecha, que hoy sólo
+ocupa el minimapa.
+
 ```
 ┌──────────────────────────────────────────────────────────────┐  Y=0
 │  ═══════════════════════════════════════════════════════════  │
@@ -83,33 +97,40 @@ Todas las coordenadas son en píxeles, origen arriba a la izquierda.
 │  │   320×28 de diseño (800×70 en pantalla), arriba          ││
 │  │                                                           │  Y=14
 │  └─────────────────────────────────────────────────────────┘ │
-│  [PORTRAIT]  [♥♥♥♥♥]                          [TIMER: 0:00] │  Y=16
-│   32×32       76×8                               54×12       │
-│                                                               │  Y=28
-│                                                               │
-│                                                               │  Y=224 (diseño)
+│  (o)  [1234  🪙56]           [🕐 00:00]                       │  Y=16
+│  ▬▬▬  puntuación              centrado arriba                │  Y=28
+│  ▬▬▬  vida/estamina/carga                                     │  Y=34..40
+│  ▬▬▬  bajo el retrato                          [minimapa]     │  Y=44..46
+│                                                    redondeado  │  Y=20..64
 └──────────────────────────────────────────────────────────────┘
 ```
 
 ### 2.1 Regiones del HUD
 
-Las columnas X/Y/Ancho/Alto son de **diseño** (pantalla de 320). Entre
-paréntesis, lo que mide en pantalla al multiplicar por 2,5.
+Las columnas X/Y/Ancho/Alto son de **diseño** (maqueta de 320). Entre
+paréntesis, lo medido en pantalla a 800×600 (factor 2,5) — algunas barras
+redondean su alto/paso a un píxel real de diferencia por el redondeo de
+`theme.escalar`, así que la columna de pantalla es la que manda si las dos
+no cuadran a la fracción exacta.
 
-| Elemento | X | Y | Ancho | Alto | En pantalla (×2,5) | Notas |
+| Elemento | X | Y | Ancho | Alto | En pantalla (×2,5, medido) | Notas |
 |---|---|---|---|---|---|---|
 | Caja de mensajes | 0 | 0 | 320 | 28 | 0,0 800×70 | Capa superior (movida desde abajo en v1.1.0) |
-| Marco del retrato | 2 | 2 | 24 | 24 | 5,5 60×60 | Marco del retrato (AUD-499) |
-| Sprite del retrato | 3 | 3 | 22 | 22 | 8,8 55×55 | Sprite interior, deriva del marco |
-| Fila de corazones | 38 | 6 | 76 | 8 | 95,15 190×20 | Cinco corazones, separación 16 de diseño |
-| Puntuación | 124 | 2 | 128 | 14 | 310,5 320×35 | Puntos y monedas, alineado a la derecha (AUD-219) |
-| Medidor especial | 84 | 30 | 60 | 6 | 210,75 150×15 | Barra del ultimate; oro cuando está llena (AUD-455 rescata las tres barras sin escalar) |
-| Minimapa | 258 | 20 | 62 | 44 | 645,50 155×110 | Debajo del cronómetro (AUD-499) |
-| Estamina | 84 | 40 | 60 | 4 | 210,100 150×10 | Ámbar por debajo de 34 % (AUD-141, AUD-455) |
-| Tiempo bala | 84 | 46 | 60 | 4 | 210,115 150×10 | Azul guardada, blanco en uso (AUD-260, AUD-455) |
-| Caja del temporizador | 258 | 1 | 62 | 16 | 645,2 155×40 | Alineado a la derecha |
-| Dígitos del temporizador | 288 | 2 | 32 | 14 | 720,5 80×35 | Formato `M:SS` |
+| Marco del retrato | 2 | 2 | 24 | 24 | 5,5 60×60 | Círculo, no marco 9-slice (AUD-535) |
+| Sprite del retrato | 3 | 3 | 22 | 22 | 8,8 55×55 | Recortado en círculo al cargar (`_recortar_circular`) |
+| Barra de vida | 2 | 28 | 24 | 5 | 5,70 60×12 | Reemplaza la fila de corazones (AUD-535) |
+| Barra de estamina | 2 | 34 | 24 | 5 | 5,84 60×12 | Ámbar por debajo de 34 % (AUD-141) |
+| Barra de carga | 2 | 40 | 24 | 5 | 5,98 60×12 | Medidor especial; oro cuando está llena |
+| Puntuación | 32 | 2 | 92 | 24 | 80,5 230×60 | Junto al bloque de identidad, no en la esquina derecha (AUD-535) |
+| Minimapa | 254 | 20 | 62 | 44 | 635,50 155×110 | Bordes totalmente redondeados (AUD-535); 4px de margen interior |
+| Caja del temporizador | 134 | 2 | 52 | 16 | 335,5 130×40 | Centrada arriba, no pegada al borde derecho (AUD-535) |
+| Ícono del reloj | 137 | 3 | 12 | 12 | 342,8 30×30 | Reemplaza la etiqueta de texto "TIME" |
+| Dígitos del temporizador | 151 | 2 | 34 | 14 | 378,5 85×35 | Formato `M:SS` |
 | Rótulo de escenario | 0 | 88 | 320 | 48 | 0,220 800×120 | Centro de pantalla, entra deslizando |
+
+Tiempo bala y la barra de vida del jefe no tienen fila fija: tiempo bala
+sólo se dibuja si el escenario lo declara (bajo la barra de carga), y la
+barra del jefe sólo mientras hay un jefe activo (arriba, centrada).
 
 ---
 
@@ -130,7 +151,15 @@ El retrato es un sprite de primer plano de 22×22 de maqueta (55×55 en pantalla
 
 ### 3.3 Marco del retrato
 
-El retrato está rodeado de un marco de borde de 1px dibujado del tileset `ui/hud_frame.png`. El marco es un sprite escalable de 9 recortes: las esquinas miden 2×2, los bordes 1px de grosor.
+**AUD-535** — el retrato ya no lleva el marco 9-slice rectangular
+(`ui/hud_frame.png`, que sigue existiendo pero sólo la usa el fondo del
+cronómetro, §5.2). En su lugar: un disco de fondo, el sprite del retrato
+recortado en círculo una sola vez al cargar (`_recortar_circular`, no en
+cada fotograma — mismo criterio de rendimiento que AUD-527 con el
+degradado de las barras) y un anillo dibujado con `_anillo_del_retrato`,
+cacheado por (diámetro, grosor, color). El color del anillo es el mismo
+que antes tenía el marco: gris normal, rojo al recibir daño o crítico,
+gris oscuro al morir.
 
 ### 3.4 Lógica de estado del retrato
 
@@ -150,60 +179,50 @@ Ese temporizador dura 0,8 s desde cada `PLAYER_DAMAGED`. **Es pseudocódigo**: e
 
 ---
 
-## 4. Sistema de corazones
+## 4. Sistema de la barra de vida
 
-### 4.1 Maqueta del medidor de corazones
+> **AUD-535 — sustituye por completo la sección anterior.** Pedido
+> explícito: "se eliminan los corazones clásicos para darle un aspecto
+> más actual". No queda fila de iconos ni sprites `heart_*.png` que
+> cargar — `tools/generate_all_assets.py` ya no los genera y
+> `scripts/validate_assets.py` ya no los exige.
 
-El medidor de corazones muestra cinco iconos en una fila horizontal en X=38, Y=6. Cada icono de corazón mide 14×8 píxeles (formato ancho para claridad SNES). Los corazones se dibujan de izquierda a derecha. El corazón más a la izquierda representa el primer corazón completo; el de más a la derecha, la última fracción.
+### 4.1 Maqueta de la barra de vida
 
-**Separación de corazones:** icono de 14px + 2px de hueco = 16px por espacio. Ancho total: 5×14 + 4×2 = 78px.
+La vida se dibuja como una única barra continua, del mismo ancho que el
+marco del retrato, justo debajo de él (`HUD.vida_bar_rect()`, X=2, Y=28,
+24×5 de maqueta). Es la primera de tres barras apiladas — vida, estamina,
+carga — separadas por 1px de maqueta cada una (`_dibujar_barra_moderna`,
+el mismo lenguaje visual de AUD-527: fondo translúcido redondeado,
+relleno con degradado horizontal, sin halo al llenarse porque a tope de
+vida no hay "logro" que celebrar, a diferencia del medidor especial).
 
-### 4.2 Sprites de icono de corazón
-
-| Estado | Fichero | Descripción |
-|---|---|---|
-| Completo | `ui/heart_full.png` | Corazón sólido, 14×8 px |
-| Tres cuartos | `ui/heart_three_quarter.png` | 25% derecho vacío |
-| Mitad | `ui/heart_half.png` | Mitad derecha vacía |
-| Cuarto | `ui/heart_quarter.png` | Sólo el cuarto izquierdo sólido |
-| Vacío | `ui/heart_empty.png` | Sólo contorno |
-
-### 4.3 Algoritmo de dibujo de corazones
-
-Para cada uno de los cinco espacios de corazón (i = 0 a 4):
+### 4.2 Algoritmo de dibujo
 
 ```python
-heart_value = clamp(current_health - i, 0.0, 1.0)
-
-if heart_value >= 1.0:
-    sprite = "heart_full"
-elif heart_value >= 0.75:
-    sprite = "heart_three_quarter"
-elif heart_value >= 0.50:
-    sprite = "heart_half"
-elif heart_value >= 0.25:
-    sprite = "heart_quarter"
-else:
-    sprite = "heart_empty"
-
-blit(sprite, x=(38 + i * 16), y=6)
+pct = clamp(current_health / max_health, 0.0, 1.0)
+color_fin = (230, 70, 70) if pct > 0.25 else (255, 140, 60)  # ámbar crítico
+dibujar_barra_moderna(vida_bar_rect, pct, color_inicio=(70, 15, 15), color_fin)
 ```
 
-### 4.4 Destello de daño en corazones
+`ranuras_de_corazon` (la propiedad, no el dibujo) sigue existiendo:
+devuelve `max_health` redondeada a entero, y el nombre es historia — lo
+usan la lógica de mejoras permanentes y varias pruebas que preguntan
+"a cuántas unidades de vida equivale esto", no un recuento de sprites.
 
-Al recibir `PLAYER_DAMAGED`, el medidor de corazones hace destellar el corazón perdido:
+### 4.3 Destello de daño y curación
 
-- El icono de corazón que bajó destella entre su nuevo estado y el anterior.
-- Frecuencia del destello: alterna cada 4 fotogramas.
-- Duración del destello: 0.6 segundos (unos 9 destellos a 60 FPS).
+Al recibir `PLAYER_DAMAGED`, la barra entera —no una ranura— destella en
+blanco:
 
-### 4.5 Efecto de curación de corazones
+- Alterna cada 0.1 s durante 0.6 s (reemplaza el "corazón que baja
+  destella" de la fila discreta: una barra continua no tiene ranuras que
+  señalar una a una).
 
-Al recibir `PLAYER_HEALED` (p. ej., tras restaurar vida en un checkpoint):
-
-- Los corazones se llenan de derecha a izquierda, en secuencia.
-- Cada corazón se llena con 0.1 segundos de retraso entre ellos.
-- Se reproduce un pequeño efecto de partícula de brillo en cada corazón al llenarse (sprite: `ui/heart_sparkle.png`, 4 fotogramas, 12 FPS).
+Al recibir `PLAYER_HEALED`, la barra recibe un destello verde aditivo que
+se desvanece en 0.6 s (reemplaza el llenado de derecha a izquierda con
+partícula de brillo por corazón — no hay corazones que llenar en
+secuencia, sólo un porcentaje que sube).
 
 ---
 
@@ -211,25 +230,32 @@ Al recibir `PLAYER_HEALED` (p. ej., tras restaurar vida en un checkpoint):
 
 ### 5.1 Descripción
 
-El temporizador se muestra en la esquina superior derecha del HUD. Muestra el tiempo transcurrido en formato `M:SS` (minutos y segundos). El Stage 0 usa un temporizador ascendente con fines de demostración. Los escenarios de estudiante usan una cuenta atrás descendente (configurable vía `HUD.start_timer(seconds)`).
+**AUD-535** — el temporizador se centra arriba de la pantalla (antes,
+esquina superior derecha) y pierde la etiqueta de texto "TIME": un ícono
+de reloj estilizado (`_icono_de_reloj`, dibujado y cacheado, no un
+sprite) la reemplaza. Muestra el tiempo transcurrido en formato `M:SS`
+(minutos y segundos). El Stage 0 usa un temporizador ascendente con
+fines de demostración. Los escenarios de estudiante usan una cuenta
+atrás descendente (configurable vía `HUD.start_timer(seconds)`).
 
 ### 5.2 Presentación del temporizador
 
 | Propiedad | Valor |
 |---|---|
-| Posición | X=264, Y=24 (ajustado en v1.1.0 por la caja de mensajes arriba) |
-| Ancho | 54 px |
+| Posición | X=134, Y=2 de maqueta — centrado arriba (335,5 de 800 en pantalla; AUD-535, antes pegado al borde derecho) |
+| Ancho | 52 px de maqueta (130 en pantalla) |
+| Ícono | 12×12 de maqueta, borde izquierdo del marco — reemplaza la etiqueta "TIME" (AUD-535) |
 | Formato | `M:SS` (p. ej., `2:34`) |
-| Fuente | **TTF** — `assets/fonts/game.ttf` a tamaño 12, cargada con `AssetLoader.load_font` |
-| Color | Blanco sobre fondo oscuro |
-| Fondo | Rectángulo oscuro sólido detrás de los dígitos |
+| Fuente | **TTF** — `assets/fonts/game.ttf` a tamaño 12, cargada con `theme.font()` |
+| Color | Blanco sobre fondo oscuro; rojo en alerta (§5.3) |
+| Fondo | Panel de 9-slice (`ui/hud_frame.png`) con degradado — el único lugar del HUD que sigue usando ese marco tras AUD-535 |
 
 ### 5.3 Comportamiento del temporizador
 
 - **Ascendente (Stage 0):** cuenta desde `0:00` hacia arriba. No dispara fin de partida.
 - **Descendente (Stage 1–3):** cuenta atrás desde `time_limit`. Al llegar a `0:00`, emite `PLAYER_DIED` (causa fin de partida).
 - **Pausa:** `HUD.pause_timer()` congela la presentación. `HUD.resume_timer()` la reanuda.
-- **Destello con poco tiempo:** cuando quedan ≤30 segundos en una cuenta atrás, los dígitos destellan en rojo a 2 Hz.
+- **Destello con poco tiempo:** cuando quedan ≤`HUD.UMBRAL_DE_ALERTA_S` segundos en una cuenta atrás, el ícono y los dígitos pasan a rojo y destellan a 2 Hz. **AUD-535** bajó el umbral de 30 a 10 segundos — pedido explícito: "cuando resten exactamente 10 segundos, el contador cambiará de color".
 
 ### 5.4 Fuente del temporizador
 
@@ -412,7 +438,7 @@ Si el jugador elige CONTINUAR en la pantalla de fin de partida, se desapila `Gam
 
 1. La pantalla se ilumina desde el negro durante 0.5 segundos.
 2. El jugador reaparece en la posición del checkpoint con una animación de "materialización" (el sprite del jugador se desvanece hacia adentro durante 0.4 segundos, aplicando `set_alpha()` de 0 a 255).
-3. El medidor de corazones del HUD se rellena de 0 a completo con la animación de curación (§4.5).
+3. La barra de vida del HUD se rellena de 0 a completo, con el destello de curación de §4.3.
 4. El temporizador del escenario se reanuda (si es cuenta atrás, no se reinicia — el tiempo restante se conserva).
 
 ### 9.2 Invencibilidad al reaparecer
@@ -427,8 +453,8 @@ El HUD se suscribe a los siguientes eventos del EventBus:
 
 | Evento | Manejador | Efecto |
 |---|---|---|
-| `PLAYER_DAMAGED` | `_on_player_damaged(amount, source)` | Actualiza corazones, dispara el retrato de daño, arranca el destello |
-| `PLAYER_HEALED` | `_on_player_healed(amount)` | Anima el relleno de corazones |
+| `PLAYER_DAMAGED` | `_on_player_damaged(amount, source)` | Baja la barra de vida, dispara el retrato de daño, arranca el destello rojo |
+| `PLAYER_HEALED` | `_on_player_healed(amount)` | Sube la barra de vida, arranca el destello verde |
 | `PLAYER_DIED` | `_on_player_died()` | Fija el retrato a MUERTO; congela el temporizador |
 | `CHECKPOINT_REACHED` | `_on_checkpoint(checkpoint_id)` | Sin cambio de HUD (el checkpoint gestiona lo visual) |
 | `SHOW_MESSAGE` | `_on_show_message(text, duration)` | Muestra la caja de mensajes |

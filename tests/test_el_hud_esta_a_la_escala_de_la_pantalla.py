@@ -55,12 +55,24 @@ def hud(_video):
 
 
 class TestElHudUsaLaPantallaQueHay:
-    def test_el_marcador_no_se_queda_en_el_primer_tercio(self, hud) -> None:
-        """El síntoma medido: el HUD acababa en x=320 de 800."""
+    def test_el_marcador_vive_junto_al_bloque_de_identidad(self, hud) -> None:
+        """AUD-535 — el marcador se reubicó junto al retrato: el pedido
+        explícito era «justo al lado o debajo» del bloque retrato+barras,
+        no perseguir el borde derecho de la pantalla (ese hueco es ahora
+        del cronómetro, centrado arriba — ver el siguiente test). Lo que
+        sí tiene que seguir siendo cierto, para no repetir el síntoma que
+        cazó AUD-451: que no quede metido dentro del propio marco del
+        retrato ni invada el cronómetro.
+        """
         r = hud.score_rect()
-        assert r.right > settings.INTERNAL_WIDTH * 0.5, (
-            f"el marcador acaba en x={r.right} de {settings.INTERNAL_WIDTH}: "
-            f"el HUD sigue maquetado para la pantalla de 320 px"
+        retrato = hud.regiones()["retrato"]
+        assert r.left >= retrato.right, (
+            f"el marcador (x={r.left}) invade el marco del retrato "
+            f"(termina en x={retrato.right})"
+        )
+        assert r.right < hud.timer_rect().left, (
+            f"el marcador (right={r.right}) se mete dentro del cronómetro "
+            f"(empieza en x={hud.timer_rect().left})"
         )
 
     def test_la_banda_del_marcador_da_para_leerlo(self, hud) -> None:
@@ -70,14 +82,25 @@ class TestElHudUsaLaPantallaQueHay:
             f"cifra legible a 800x600"
         )
 
-    def test_el_cronometro_esta_pegado_al_borde_derecho(self, hud) -> None:
-        assert hud.timer_rect().right > settings.INTERNAL_WIDTH * 0.8, (
-            "el cronómetro sigue en el primer tercio de la pantalla"
+    def test_el_cronometro_esta_centrado_arriba(self, hud) -> None:
+        """AUD-535 — pedido explícito: el reloj pasa al «Centro Superior»
+        de la pantalla. Antes (AUD-451) el síntoma era que se quedaba
+        pegado al primer tercio; el rediseño no lo manda al borde
+        derecho, lo centra."""
+        r = hud.timer_rect()
+        centro_pantalla = settings.INTERNAL_WIDTH / 2
+        tolerancia = settings.INTERNAL_WIDTH * 0.1
+        assert abs(r.centerx - centro_pantalla) <= tolerancia, (
+            f"el cronómetro no está centrado arriba: su centro cae en "
+            f"x={r.centerx}, y la pantalla mide {settings.INTERNAL_WIDTH}"
         )
 
-    def test_los_corazones_son_visibles(self, hud) -> None:
-        assert hud.heart_row_rect().height >= 16, (
-            "los corazones siguen a la escala de 320 px"
+    def test_la_barra_de_vida_es_visible(self, hud) -> None:
+        """AUD-535 — reemplaza a `test_los_corazones_son_visibles`: la
+        vida ya no es una fila de corazones (`heart_row_rect`), es una
+        barra continua (`vida_bar_rect`)."""
+        assert hud.vida_bar_rect().height >= 8, (
+            "la barra de vida sigue a la escala de 320 px"
         )
 
 
@@ -128,17 +151,21 @@ class TestLaEscalaSaleDeLaResolucion:
 
 
 class TestLosSpritesVanALaEscala:
-    def test_el_corazon_entero_mide_35x20(self, hud) -> None:
-        """AUD-459 — los rects estaban a ×2,5 y los sprites a pelo.
+    def test_la_barra_de_vida_ocupa_el_ancho_del_retrato(self, hud) -> None:
+        """AUD-535 — reemplaza a `test_el_corazon_entero_mide_35x20`.
 
-        El corazón de 14×8 px dentro de una hilera espaciada a 40 px es la
-        mitad del defecto del «HUD desacomodado»: la maqueta prometía una
-        silueta de 35×20 y en pantalla había una de 14×8.
+        Ya no hay sprites de corazón (`_heart_sprites` se retiró junto con
+        `heart_*.png`): la vida es una barra continua del mismo ancho que
+        el bloque retrato+barras, no una hilera de sprites sueltos a
+        escala. Lo que sigue siendo la misma garantía de fondo —que el
+        elemento no se quede a la escala de 320 px— se comprueba aquí
+        contra el marco del retrato, que es de quien hereda el ancho.
         """
-        from src.engine.ui.theme import escalar
-
-        assert hud._heart_sprites["full"].get_size() == (
-            escalar(14), escalar(8),
+        retrato = hud.regiones()["retrato"]
+        barra = hud.vida_bar_rect()
+        assert barra.width == retrato.width, (
+            f"la barra de vida ({barra.width} px) no comparte ancho con "
+            f"el bloque de identidad ({retrato.width} px)"
         )
 
     def test_el_retrato_va_a_la_escala_de_su_marco(self, hud) -> None:

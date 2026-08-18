@@ -142,12 +142,104 @@ def _dibujar_barra_moderna(
     pygame.draw.rect(surface, (*color_fin, 190), rect, width=1, border_radius=radio)
 
 
+def _recortar_circular(surf: pygame.Surface) -> pygame.Surface:
+    """AUD-535 — recorta `surf` a un círculo inscrito en su rectángulo.
+
+    Se llama una sola vez por retrato al cargar (`__init__`), no en cada
+    `draw()`: una máscara nueva por fotograma sería exactamente el error
+    de rendimiento que AUD-527 ya cazó con el degradado de las barras.
+    """
+    w, h = surf.get_size()
+    mascara = pygame.Surface((w, h), pygame.SRCALPHA)
+    radio = min(w, h) // 2
+    pygame.draw.circle(mascara, (255, 255, 255, 255), (w // 2, h // 2), radio)
+    recortado = surf.copy()
+    recortado.blit(mascara, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    return recortado
+
+
+#: Anillo del retrato — un círculo, no el marco 9-slice rectangular de
+#: antes. Cacheado por (radio, grosor, color): el retrato sólo cambia de
+#: color con el estado del jugador (normal/hurt/critical/dead), un
+#: puñado de combinaciones fijas.
+_CACHE_ANILLOS: dict[tuple[int, int, tuple[int, int, int]], pygame.Surface] = {}
+
+
+def _anillo_del_retrato(diametro: int, grosor: int, color: tuple[int, int, int]) -> pygame.Surface:
+    clave = (diametro, grosor, color)
+    cacheado = _CACHE_ANILLOS.get(clave)
+    if cacheado is not None:
+        return cacheado
+    anillo = pygame.Surface((diametro, diametro), pygame.SRCALPHA)
+    radio = diametro // 2
+    pygame.draw.circle(anillo, (*color, 220), (radio, radio), radio, width=grosor)
+    # Halo suave hacia afuera — el mismo lenguaje que ya usan las barras
+    # al llenarse (AUD-527): un borde duro sobre un fondo oscuro se lee
+    # como pixel art aunque el trazo esté antialiasado.
+    halo = pygame.Surface((diametro, diametro), pygame.SRCALPHA)
+    pygame.draw.circle(halo, (*color, 60), (radio, radio), radio, width=grosor + 2)
+    anillo.blit(halo, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+    _CACHE_ANILLOS[clave] = anillo
+    return anillo
+
+
+#: Ícono del reloj — cacheado por (diámetro, color): sólo cambia entre
+#: el color normal y el de alerta (AUD-535, "un ícono de reloj
+#: estilizado" en vez del texto "TIME").
+_CACHE_ICONOS_RELOJ: dict[tuple[int, tuple[int, int, int]], pygame.Surface] = {}
+
+
+def _icono_de_reloj(diametro: int, color: tuple[int, int, int]) -> pygame.Surface:
+    clave = (diametro, color)
+    cacheado = _CACHE_ICONOS_RELOJ.get(clave)
+    if cacheado is not None:
+        return cacheado
+    icono = pygame.Surface((diametro, diametro), pygame.SRCALPHA)
+    radio = diametro // 2
+    centro = (radio, radio)
+    pygame.draw.circle(icono, color, centro, radio, width=max(1, diametro // 8))
+    # Manecillas: la larga (minutero) hacia arriba, la corta (hora) hacia
+    # la derecha — una pose fija y legible, no una hora real.
+    grosor = max(1, diametro // 8)
+    pygame.draw.line(icono, color, centro, (radio, max(1, radio - int(radio * 0.7))), grosor)
+    pygame.draw.line(icono, color, centro, (radio + int(radio * 0.5), radio), grosor)
+    _CACHE_ICONOS_RELOJ[clave] = icono
+    return icono
+
+
+#: Ícono de moneda del marcador — cacheado por (diámetro, color): un
+#: disco con un brillo, no el glifo "¤" que la fuente no tiene (AUD-535).
+_CACHE_ICONOS_MONEDA: dict[tuple[int, tuple[int, int, int]], pygame.Surface] = {}
+
+
+def _icono_de_moneda(diametro: int, color: tuple[int, int, int]) -> pygame.Surface:
+    clave = (diametro, color)
+    cacheado = _CACHE_ICONOS_MONEDA.get(clave)
+    if cacheado is not None:
+        return cacheado
+    icono = pygame.Surface((diametro, diametro), pygame.SRCALPHA)
+    radio = diametro // 2
+    pygame.draw.circle(icono, color, (radio, radio), radio)
+    borde = (max(0, color[0] - 60), max(0, color[1] - 60), max(0, color[2] - 60))
+    pygame.draw.circle(icono, borde, (radio, radio), radio, width=max(1, diametro // 8))
+    if radio >= 3:
+        pygame.draw.circle(icono, (255, 255, 255, 180),
+                           (radio - radio // 3, radio - radio // 3), max(1, radio // 3))
+    _CACHE_ICONOS_MONEDA[clave] = icono
+    return icono
+
+
 #: El hueco del minimapa, en coordenadas de la maqueta de 320 (AUD-499).
 #:
 #: Vive aquí y no en `minimap.py` porque el HUD es quien conoce la franja
 #: entera: el minimapa solo no puede saber que el cronómetro ocupa el borde
 #: derecho, que es exactamente lo que no sabía cuando se colocaba encima.
-RECUADRO_MINIMAPA_DISENO: tuple[int, int, int, int] = (258, 20, 62, 44)
+# AUD-535 — "se traslada ligeramente hacia el margen interior derecho":
+# antes terminaba justo en el borde de la pantalla (258+62=320, el ancho
+# exacto de la maqueta); ahora deja 4 px de aire, y con la máscara
+# redondeada ese margen es lo que evita que la curva del marco se corte
+# contra el borde real de la ventana.
+RECUADRO_MINIMAPA_DISENO: tuple[int, int, int, int] = (254, 20, 62, 44)
 
 
 def minimap_rect_por_defecto() -> pygame.Rect:
@@ -155,24 +247,15 @@ def minimap_rect_por_defecto() -> pygame.Rect:
     return _rect_escalado(*RECUADRO_MINIMAPA_DISENO)
 
 
-def _heart_slot_state(health: float, slot: int) -> str:
-    v = max(0.0, min(1.0, health - slot))
-    if v >= 1.0:
-        return "full"
-    if v >= 0.75:
-        return "three_quarter"
-    if v >= 0.50:
-        return "half"
-    if v >= 0.25:
-        return "quarter"
-    return "empty"
-
-
 _PORTRAIT_STATES = ("normal", "hurt", "critical", "dead")
 
 
 class HUD:
-    """Heads-up display: hearts, timer, portrait."""
+    """Heads-up display: vida, estamina, carga, reloj, retrato."""
+
+    #: AUD-535 — pedido explícito: "cuando resten exactamente 10
+    #: segundos, el contador cambiará de color". Antes eran 30.
+    UMBRAL_DE_ALERTA_S: int = 10
 
     def __init__(self, event_bus: EventBus) -> None:
         self._event_bus = event_bus
@@ -199,8 +282,6 @@ class HUD:
         # ancho de la pantalla.
         self._portrait_frame_rect = _rect_escalado(2, 2, 24, 24)
         self._portrait_sprite_rect = _rect_escalado(3, 3, 22, 22)
-        self._portrait_fill = None
-        self._portrait_edges: dict[str, pygame.Surface] = {}
         self._timer_fill = None
         self._timer_edges: dict[str, pygame.Surface] = {}
         # Load 9-slice frame from hud_frame.png, pre-scale all variants once
@@ -233,15 +314,10 @@ class HUD:
                 self._frame_edges = src_edges
                 src_fill = raw_frame.subsurface((c, c, fw - 2 * c, fh - 2 * c))
                 self._frame_fill = src_fill
-                # Pre-scale for portrait frame (34x34)
-                pr = self._portrait_frame_rect
-                self._portrait_fill = pygame.transform.scale(src_fill, (pr.width, pr.height))
-                self._portrait_edges = {
-                    "top": pygame.transform.scale(src_edges["top"], (pr.width - 2 * ce, ce)),
-                    "bottom": pygame.transform.scale(src_edges["bottom"], (pr.width - 2 * ce, ce)),
-                    "left": pygame.transform.scale(src_edges["left"], (ce, pr.height - 2 * ce)),
-                    "right": pygame.transform.scale(src_edges["right"], (ce, pr.height - 2 * ce)),
-                }
+                # AUD-535 — el retrato ya no usa este marco 9-slice
+                # rectangular (era el "borde en línea recta" que el pedido
+                # quería quitar); sólo lo sigue usando el fondo del reloj,
+                # que conserva su panel rectangular.
                 # Timer background pre-scaling deferred until _timer_bg_rect is set
             else:
                 self._frame_corners = {}
@@ -253,20 +329,32 @@ class HUD:
             self._frame_edges = {}
             self._frame_fill = None
 
-        self._hearts_x: int = _e(38)
-        self._hearts_y: int = _e(6)
-        self._heart_spacing: int = _e(16)
-        # AUD-219 — marcador de puntos y monedas.
-        #
-        # Va entre los corazones (38..118) y el marco del cronómetro (258..320)
-        # porque es el único hueco libre de la franja superior. Se declara como
-        # región en `09_HUD_SPEC.md` §2.1: el doc es contrato, y una prueba
-        # comprueba que lo que se dibuja cabe en lo que el doc promete.
-        self._score_region = _rect_escalado(124, 2, 128, 14)
+        # AUD-535 — rediseño espacial pedido tras jugarlo: retrato + tres
+        # barras apiladas (vida/estamina/carga) del mismo ancho que el
+        # retrato, en vez de una fila de corazones separada. Las barras
+        # viven justo debajo del marco del retrato (que termina en
+        # y=2+24=26), con 2 px de aire y 1 px de separación entre ellas.
+        ancho_bloque = self._portrait_frame_rect.width
+        x_bloque = self._portrait_frame_rect.x
+        y_barras = self._portrait_frame_rect.bottom + _e(2)
+        alto_barra = _e(5)
+        paso_barra = alto_barra + _e(1)
+        self._vida_bar_rect = pygame.Rect(x_bloque, y_barras, ancho_bloque, alto_barra)
+        self._estamina_bar_rect = pygame.Rect(
+            x_bloque, y_barras + paso_barra, ancho_bloque, alto_barra)
+        self._carga_bar_rect = pygame.Rect(
+            x_bloque, y_barras + paso_barra * 2, ancho_bloque, alto_barra)
+
+        # AUD-219/AUD-535 — marcador de puntos y monedas, reubicado junto
+        # al bloque de identidad (retrato + barras) ahora que los
+        # corazones ya no ocupan la fila horizontal donde vivía antes.
+        self._score_region = _rect_escalado(32, 2, 92, 24)
         self._score: int = 0
         self._coins: int = 0
-        # Timer frame (reuse hud_frame.png 9-slice at timer size 90x16)
-        self._timer_bg_rect = _rect_escalado(258, 1, 62, 16)
+        # AUD-535 — el reloj se centra arriba (antes pegado al borde
+        # derecho) y pierde la etiqueta "TIME": un ícono la reemplaza,
+        # dibujado en `_draw_timer`, no un sprite nuevo que mantener.
+        self._timer_bg_rect = _rect_escalado(134, 2, 52, 16)
         # Pre-scale timer background once (deferred from frame load block)
         self._timer_fill = (
             pygame.transform.scale(
@@ -286,8 +374,11 @@ class HUD:
                 "left": pygame.transform.scale(self._frame_edges["left"], (ce, tr.height - 2 * ce)),
                 "right": pygame.transform.scale(self._frame_edges["right"], (ce, tr.height - 2 * ce)),
             }
-        self._timer_rect = _rect_escalado(288, 2, 32, 14)
-        self._timer_label_rect = _rect_escalado(260, 2, 26, 12)
+        # AUD-535 — el ícono ocupa el borde izquierdo del marco del reloj;
+        # las cifras, el resto. `_timer_label_rect` (el texto "TIME") ya
+        # no existe — el ícono es la etiqueta.
+        self._timer_icon_rect = _rect_escalado(137, 3, 12, 12)
+        self._timer_rect = _rect_escalado(151, 2, 34, 14)
         self._timer_flash_timer: float = 0.0
         self._timer_flash_on: bool = False
         # Load timer font (TTF preferred for readability)
@@ -297,44 +388,18 @@ class HUD:
         # escaló el marcador y el marco del reloj, no la cifra que va dentro).
         self._timer_digit_font: pygame.font.Font = font(_e(12))
 
-        # Heart damage flash state
-        self._heart_flash_timer: float = 0.0
-        self._heart_flash_old_state: str = ""
-        self._heart_flash_slot: int = -1
+        # AUD-535 — antes rastreaban qué ranura de corazón parpadeaba;
+        # con una barra continua no hay ranuras, sólo un destello de color
+        # sobre la barra entera: rojo al recibir daño, verde al curarse.
+        self._vida_flash_timer: float = 0.0
+        self._vida_heal_timer: float = 0.0
 
-        # Heart heal animation state (right→left, sequential multi-heart)
-        self._heal_anim_timer: float = 0.0
-        self._heal_anim_slot_index: int = 0
-        self._heal_anim_slots: list[int] = []
-        self._heal_anim_active: bool = False
-        self._sparkle_frames: list[pygame.Surface] = []
-        self._sparkle_frame: int = 0
-
-        # Load heart sprites
-        self._heart_sprites: dict[str, pygame.Surface] = {}
-        for state in ("full", "three_quarter", "half", "quarter", "empty"):
-            path = settings.ASSETS_DIR / "ui" / f"heart_{state}.png"
-            try:
-                surf = AssetLoader.load_image(path)
-                # AUD-459 — los rects estaban a ×escala (AUD-451) y el sprite
-                # a pelo: un corazón de 14×8 px dentro de una hilera espaciada
-                # a 40 px. El sprite se escala igual que la maqueta.
-                self._heart_sprites[state] = pygame.transform.scale(
-                    surf, (_e(surf.get_width()), _e(surf.get_height())),
-                )
-            except (pygame.error, FileNotFoundError, PermissionError):
-                logger.warning("hud: failed to load heart sprite %s", path)
-                self._heart_sprites[state] = pygame.Surface((_e(14), _e(8)))
-
-        try:
-            sparkle_path = settings.ASSETS_DIR / "ui" / "heart_sparkle.png"
-            self._sparkle_frames = [
-                pygame.transform.scale(f, (_e(8), _e(8)))
-                for f in AssetLoader.load_sprite_sheet(sparkle_path, 8, 8)
-            ]
-        except (pygame.error, FileNotFoundError, PermissionError):
-            logger.warning("hud: failed to load heart_sparkle.png")
-            self._sparkle_frames = []
+        # AUD-535 — pedido explícito: "se eliminan los corazones clásicos
+        # para darle un aspecto más actual". La vida es ahora
+        # `_vida_bar_rect`, una barra continua dibujada con
+        # `_dibujar_barra_moderna` — no queda sprite de corazón que cargar
+        # (`heart_*.png`/`heart_sparkle.png` se retiran del árbol, ver
+        # `tools/generate_all_assets.py`).
 
         # Load portrait sprites
         self._portraits: dict[str, pygame.Surface] = {}
@@ -349,7 +414,12 @@ class HUD:
                 # pasó al reducir el retrato, que se salía de su propio marco.
                 destino = self._portrait_sprite_rect.size
                 surf = AssetLoader.load_image(path, size=destino)
-                self._portraits[state] = surf
+                # AUD-535 — "diseño circular o de bordes redondeados
+                # suaves". Se recorta una sola vez al cargar, no cada
+                # fotograma: multiplicar por una máscara circular en
+                # `draw()` costaría lo mismo que reconstruir el degradado
+                # de las barras cada fotograma (AUD-527, ya cazado una vez).
+                self._portraits[state] = _recortar_circular(surf)
             except (pygame.error, FileNotFoundError, PermissionError):
                 logger.warning("hud: failed to load portrait %s", state)
         self._current_portrait_state: str = "normal"
@@ -424,38 +494,22 @@ class HUD:
     def _on_player_damaged(self, **data: object) -> None:
         if self._destroyed:
             return
-        old_health = self._health
         amount = cast(float, data.get("amount", 1.0))
         self._health = max(0.0, self._health - amount)
         self._hurt_portrait_timer = 0.8
-        # Heart flash: track which slot decreased
-        for slot in range(int(self._max_health)):
-            old_state = _heart_slot_state(old_health, slot)
-            new_state = _heart_slot_state(self._health, slot)
-            if old_state != new_state:
-                self._heart_flash_timer = 0.6
-                self._heart_flash_old_state = old_state
-                self._heart_flash_slot = slot
-                break
+        # AUD-535 — antes rastreaba qué ranura de corazón cambió de
+        # estado; una barra continua no tiene ranuras, sólo un destello
+        # sobre la barra entera (`_draw_barra_de_vida`).
+        if amount > 0.0:
+            self._vida_flash_timer = 0.6
 
     def _on_player_healed(self, **data: object) -> None:
         if self._destroyed:
             return
-        old_health = self._health
         amount = cast(float, data.get("amount", 1.0))
         self._health = min(self._max_health, self._health + amount)
-        # Heal animation: scan right→left, collect ALL changed slots
-        changed_slots: list[int] = []
-        for slot in range(int(self._max_health) - 1, -1, -1):
-            old_state = _heart_slot_state(old_health, slot)
-            new_state = _heart_slot_state(self._health, slot)
-            if old_state != new_state:
-                changed_slots.append(slot)
-        if changed_slots:
-            self._heal_anim_timer = 0.0
-            self._heal_anim_slot_index = 0
-            self._heal_anim_slots = changed_slots
-            self._heal_anim_active = True
+        if amount > 0.0:
+            self._vida_heal_timer = 0.6
 
     def _on_player_died(self, **data: object) -> None:
         if self._destroyed:
@@ -484,14 +538,27 @@ class HUD:
         """El marco del cronómetro. Lo consulta la prueba de maqueta."""
         return pygame.Rect(self._timer_bg_rect)
 
-    def heart_row_rect(self) -> pygame.Rect:
-        """Lo que ocupa la fila de corazones, a la escala actual."""
-        alto = _e(8)
-        ancho = max(1, self.ranuras_de_corazon) * self._heart_spacing
-        return pygame.Rect(self._hearts_x, self._hearts_y, ancho, alto)
+    def vida_bar_rect(self) -> pygame.Rect:
+        """Lo que ocupa la barra de vida, a la escala actual.
+
+        AUD-535 — reemplaza a `heart_row_rect()`: la vida ya no es una
+        fila de corazones, es una barra continua del ancho del retrato.
+        """
+        return pygame.Rect(self._vida_bar_rect)
+
+    def estamina_bar_rect(self) -> pygame.Rect:
+        """Lo que ocupa la barra de estamina, a la escala actual.
+
+        AUD-541 — la prueba de la barra de estamina sondaba píxeles fijos
+        de la maqueta vieja (corazones a la izquierda); el rediseño de
+        AUD-535 apiló las barras bajo el retrato y los píxeles dejaron de
+        tocar la barra. El acceso público evita que una prueba dependa de
+        coordenadas de maqueta.
+        """
+        return pygame.Rect(self._estamina_bar_rect)
 
     def regiones(self) -> dict[str, pygame.Rect]:
-        """Las cuatro zonas de la franja superior — AUD-451.
+        """Las zonas de la franja superior — AUD-451.
 
         Existe para que una prueba pueda comprobar de una vez que ninguna se
         sale de la pantalla ni pisa a otra. Escalar una maqueta sin comprobar
@@ -500,7 +567,7 @@ class HUD:
         """
         return {
             "retrato": pygame.Rect(self._portrait_frame_rect),
-            "corazones": self.heart_row_rect(),
+            "vida": self.vida_bar_rect(),
             "marcador": pygame.Rect(self._score_region),
             "cronometro": self.timer_rect(),
             # AUD-499 — el minimapa faltaba aquí, y por eso la prueba de «no
@@ -511,7 +578,11 @@ class HUD:
 
     @property
     def ranuras_de_corazon(self) -> int:
-        """Cuántos corazones dibuja el marcador ahora mismo — AUD-439."""
+        """Cuántas unidades enteras de vida representa la barra ahora
+        mismo — AUD-439. El nombre («ranuras de corazón») es historia:
+        AUD-535 quitó los corazones, pero el número —vida máxima
+        redondeada a entero— sigue siendo lo que muchas pruebas y la
+        lógica de mejoras permanentes necesitan comprobar."""
         return max(1, int(self._max_health))
 
     def set_salud_maxima(self, maxima: float) -> None:
@@ -609,13 +680,13 @@ class HUD:
         self._hurt_portrait_timer = max(0.0, self._hurt_portrait_timer - dt)
         self._save_notify_timer = max(0.0, self._save_notify_timer - dt)
         self._pulso_timer = max(0.0, self._pulso_timer - dt)
-        self._heart_flash_timer = max(0.0, self._heart_flash_timer - dt)
-        if self._heart_flash_timer <= 0:
-            self._heart_flash_slot = -1
-        # Timer flash at 2Hz when countdown ≤30s
+        self._vida_flash_timer = max(0.0, self._vida_flash_timer - dt)
+        self._vida_heal_timer = max(0.0, self._vida_heal_timer - dt)
+        # AUD-535 — pedido explícito: "cuando resten exactamente 10
+        # segundos, el contador cambiará de color". Antes eran 30.
         if self._timer_running or self._timer_paused:
             total_seconds = int(self._timer)
-            if self._is_countdown and total_seconds <= 30:
+            if self._is_countdown and total_seconds <= self.UMBRAL_DE_ALERTA_S:
                 self._timer_flash_timer += dt
                 if self._timer_flash_timer >= 0.25:
                     self._timer_flash_on = not self._timer_flash_on
@@ -623,15 +694,6 @@ class HUD:
             else:
                 self._timer_flash_on = False
                 self._timer_flash_timer = 0.0
-
-        if self._heal_anim_active:
-            self._sparkle_frame = int(self._heal_anim_timer * 12) % max(len(self._sparkle_frames), 1)
-            self._heal_anim_timer += dt
-            if self._heal_anim_timer >= 0.1:
-                self._heal_anim_timer = 0.0
-                self._heal_anim_slot_index += 1
-                if self._heal_anim_slot_index >= len(self._heal_anim_slots):
-                    self._heal_anim_active = False
 
     def _get_portrait_state(self) -> str:
         if self._health <= 0:
@@ -644,7 +706,7 @@ class HUD:
 
     def draw(self, surface: pygame.Surface) -> None:
         self._draw_portrait(surface)
-        self._draw_hearts(surface)
+        self._draw_barra_de_vida(surface)
         self._draw_special_meter(surface)
         self._draw_estamina(surface)
         self._draw_tiempo_bala(surface)
@@ -667,16 +729,25 @@ class HUD:
         self._score = max(0, int(puntos))
         self._coins = max(0, int(monedas))
 
+    #: AUD-535 — el glifo "¤" (moneda genérica, U+00A4) no existe en la
+    #: fuente del tema: `theme.font().render("¤56", ...)` medía 22 px de
+    #: ancho para tres caracteres —la mitad de lo real— y el trazo salía
+    #: superpuesto, ilegible. El pedido original ya quería "iconos
+    #: sutiles" para el marcador; un ícono dibujado en vez de un glifo
+    #: que la fuente no tiene resuelve las dos cosas a la vez.
+    _ANCHO_ICONO_MONEDA_MAQUETA = 8
+
     def _score_text(self) -> str:
-        return f"{self._score}  ¤{self._coins}"
+        return f"{self._score}  {self._coins}"
 
     def score_rect(self) -> pygame.Rect:
         """Lo que ocupa de verdad el marcador dibujado, no la región reservada.
 
         La usa la prueba que comprueba que cabe donde `09_HUD_SPEC.md` dice, y
-        que no pisa ni los corazones ni el cronómetro.
+        que no pisa ni la barra de vida ni el cronómetro.
         """
         w, h = self._font.size(self._score_text())
+        w += _e(self._ANCHO_ICONO_MONEDA_MAQUETA) + _e(2)
         r = self._score_region
         return pygame.Rect(r.right - w, r.y, w, min(h, r.height))
 
@@ -747,7 +818,7 @@ class HUD:
         """
         r = self.score_rect()
         puntos = self._font.render(str(self._score), True, (235, 235, 210))
-        monedas = self._font.render(f"¤{self._coins}", True, (255, 215, 0))
+        monedas = self._font.render(str(self._coins), True, (255, 215, 0))
         surface.blit(puntos, (r.x, r.y))
 
         # AUD-281 — el rebote. Crece y vuelve, anclado a su borde derecho para
@@ -762,6 +833,10 @@ class HUD:
             monedas = pygame.transform.smoothscale(monedas, (ancho, alto))
 
         surface.blit(monedas, (r.right - monedas.get_width(), r.y))
+        icono = _icono_de_moneda(_e(self._ANCHO_ICONO_MONEDA_MAQUETA), (255, 215, 0))
+        ix = r.right - monedas.get_width() - icono.get_width() - _e(2)
+        iy = r.y + (monedas.get_height() - icono.get_height()) // 2
+        surface.blit(icono, (ix, iy))
 
     def set_special_meter(self, current: float, max_val: float) -> None:
         self._special_current = current
@@ -786,14 +861,17 @@ class HUD:
         self._bala_fraccion = fraccion
         self._bala_activo = activo
 
+    #: AUD-535 — el tiempo bala no es una de las tres barras del bloque
+    #: de identidad (vida/estamina/carga, pedidas explícitamente) — sigue
+    #: siendo la excepción rara (16 de 26 escenarios no la declaran,
+    #: AUD-260), así que se dibuja debajo del bloque, no dentro, con la
+    #: misma anchura para que se lea como parte de la misma columna.
     def _draw_tiempo_bala(self, surface: pygame.Surface) -> None:
         if self._bala_fraccion < 0.0:
             return
-        # AUD-455 — estas tres barras eran la última maqueta sin escalar: el
-        # medidor especial, la estamina y el tiempo bala se dibujaban a 60×4 px
-        # de verdad sobre 800×600, invisibles en la esquina mientras el resto
-        # del HUD (retrato, corazones, marcador, reloj) ya estaba a ×2,5.
-        rect = pygame.Rect(_e(84), _e(46), _e(60), _e(5))
+        rect = pygame.Rect(
+            self._carga_bar_rect.x, self._carga_bar_rect.bottom + _e(3),
+            self._carga_bar_rect.width, self._carga_bar_rect.height)
         pct = max(0.0, min(1.0, self._bala_fraccion))
         # AUD-527 — azul mientras está guardada, blanco mientras se gasta: el
         # jugador tiene que ver **que la está usando** sin apartar la vista
@@ -807,24 +885,23 @@ class HUD:
     def _draw_estamina(self, surface: pygame.Surface) -> None:
         if self._estamina_max <= 0.0:
             return
-        rect = pygame.Rect(_e(84), _e(40), _e(60), _e(5))
         pct = max(0.0, min(1.0, self._estamina_actual / self._estamina_max))
         # AUD-527 — ámbar cuando queda poco: el jugador tiene que poder
         # decidir **antes** de intentar el dash que no va a salir.
         color_fin = (130, 230, 140) if pct > 0.34 else (230, 180, 70)
-        _dibujar_barra_moderna(surface, rect, pct, (30, 70, 40), color_fin,
-                                halo_al_llenar=False)
+        _dibujar_barra_moderna(surface, self._estamina_bar_rect, pct,
+                               (30, 70, 40), color_fin, halo_al_llenar=False)
 
     def _draw_special_meter(self, surface: pygame.Surface) -> None:
-        rect = pygame.Rect(_e(84), _e(30), _e(60), _e(7))
         pct = min(1.0, self._special_current / max(self._special_max, 1.0))
         color_fin = (110, 160, 255) if pct < 1.0 else (255, 225, 60)
-        _dibujar_barra_moderna(surface, rect, pct, (50, 25, 80), color_fin)
+        _dibujar_barra_moderna(surface, self._carga_bar_rect, pct, (50, 25, 80), color_fin)
         if pct >= 1.0:
             flash = (int(pygame.time.get_ticks() / 200) % 2 == 0)
             if flash:
-                label = self._font.render("ULTIMATE READY", True, (255, 220, 50))
-                surface.blit(label, (rect.x, rect.y - _e(14)))
+                label = self._font.render("CARGA LISTA", True, (255, 220, 50))
+                surface.blit(label, (self._carga_bar_rect.x,
+                                     self._carga_bar_rect.y - _e(12)))
 
     def _draw_save_notification(self, surface: pygame.Surface) -> None:
         if self._save_notify_timer <= 0:
@@ -846,73 +923,57 @@ class HUD:
         surface.blit(txt, (tx, ty))
 
     def _draw_portrait(self, surface: pygame.Surface) -> None:
+        """AUD-535 — "diseño circular o de bordes redondeados suaves":
+        el marco 9-slice rectangular se reemplaza por un disco de fondo,
+        el retrato recortado en círculo (`_recortar_circular`, una vez al
+        cargar) y un anillo — no una caja."""
         state = self._get_portrait_state()
         portrait = self._portraits.get(state)
+        r = self._portrait_frame_rect
+        centro = r.center
+        radio = r.width // 2
 
-        # Draw fill (pre-scaled in __init__)
-        if self._portrait_fill:
-            surface.blit(self._portrait_fill, self._portrait_frame_rect)
+        color_map = {"normal": (60, 60, 80), "hurt": (180, 60, 60),
+                     "critical": (200, 40, 40), "dead": (40, 40, 40)}
+        color_anillo = color_map.get(state, (60, 60, 80))
 
-        # Draw portrait sprite
+        pygame.draw.circle(surface, (14, 14, 22), centro, radio)
         if portrait:
             surface.blit(portrait, self._portrait_sprite_rect)
         else:
-            color_map = {"normal": (60, 60, 80), "hurt": (180, 60, 60),
-                         "critical": (200, 40, 40), "dead": (40, 40, 40)}
-            color = color_map.get(state, (60, 60, 80))
-            pygame.draw.rect(surface, color, self._portrait_sprite_rect)
+            pygame.draw.circle(surface, color_anillo, centro,
+                               self._portrait_sprite_rect.width // 2)
 
-        # Draw 9-slice frame with pre-scaled edges
-        if self._frame_corners:
-            r = self._portrait_frame_rect
-            c = _e(2)
-            surface.blit(self._frame_corners["tl"], (r.x, r.y))
-            surface.blit(self._frame_corners["tr"], (r.right - c, r.y))
-            surface.blit(self._frame_corners["bl"], (r.x, r.bottom - c))
-            surface.blit(self._frame_corners["br"], (r.right - c, r.bottom - c))
-            surface.blit(self._portrait_edges["top"], (r.x + c, r.y))
-            surface.blit(self._portrait_edges["bottom"], (r.x + c, r.bottom - c))
-            surface.blit(self._portrait_edges["left"], (r.x, r.y + c))
-            surface.blit(self._portrait_edges["right"], (r.right - c, r.y + c))
-        else:
-            pygame.draw.rect(surface, (100, 100, 140), self._portrait_frame_rect, 1)
+        anillo = _anillo_del_retrato(r.width, max(2, _e(1)), color_anillo)
+        surface.blit(anillo, r.topleft)
 
-    def _draw_hearts(self, surface: pygame.Surface) -> None:
-        slot_count = int(self._max_health)
-        for slot in range(slot_count):
-            state = _heart_slot_state(self._health, slot)
-            x = self._hearts_x + slot * self._heart_spacing
-            y = self._hearts_y
+    def _draw_barra_de_vida(self, surface: pygame.Surface) -> None:
+        """AUD-535 — reemplaza la fila de corazones: "se eliminan los
+        corazones clásicos para darle un aspecto más actual". Misma
+        barra redondeada con degradado que ya usan estamina/carga/tiempo
+        bala (AUD-527), del mismo ancho que el retrato."""
+        pct = max(0.0, min(1.0, self._health / self._max_health))
+        color_fin = (230, 70, 70) if pct > 0.25 else (255, 140, 60)
+        _dibujar_barra_moderna(surface, self._vida_bar_rect, pct,
+                               (70, 15, 15), color_fin, halo_al_llenar=False)
 
-            # Heart damage flash: alternate between old/new state
-            if self._heart_flash_timer > 0 and slot == self._heart_flash_slot:
-                flash_frame = int(self._heart_flash_timer * 10) % 2 == 0
-                if flash_frame and self._heart_flash_old_state:
-                    state = self._heart_flash_old_state
-
-            sprite = self._heart_sprites.get(state)
-            if sprite and sprite.get_width() > 1:
-                surface.blit(sprite, (x, y))
-            else:
-                color_map = {
-                    "empty": (60, 0, 0),
-                    "quarter": (120, 40, 40),
-                    "half": (160, 80, 40),
-                    "three_quarter": (180, 40, 40),
-                    "full": (200, 20, 20),
-                }
-                color = color_map.get(state, (100, 0, 0))
-                rect = pygame.Rect(x, y, _e(14), _e(8))
-                pygame.draw.rect(surface, color, rect)
-                pygame.draw.rect(surface, (255, 50, 50), rect, 1)
-
-            # Heal sparkle effect on current animated slot (right→left, sequential)
-            if (self._heal_anim_active and self._sparkle_frames
-                    and self._heal_anim_slot_index < len(self._heal_anim_slots)):
-                current_slot = self._heal_anim_slots[self._heal_anim_slot_index]
-                if slot == current_slot:
-                    frame_idx = min(self._sparkle_frame, len(self._sparkle_frames) - 1)
-                    surface.blit(self._sparkle_frames[frame_idx], (x, y))
+        # Destello de color sobre la barra entera — rojo al recibir daño,
+        # verde al curarse. Reemplaza el parpadeo por ranura (no hay
+        # ranuras) y la animación de chispas secuencial (no hay "de
+        # derecha a izquierda" en una barra continua).
+        if self._vida_flash_timer > 0.0 and int(self._vida_flash_timer * 10) % 2 == 0:
+            destello = pygame.Surface(self._vida_bar_rect.size, pygame.SRCALPHA)
+            radio = max(2, min(self._vida_bar_rect.height // 2, _e(4)))
+            pygame.draw.rect(destello, (255, 255, 255, 120), destello.get_rect(),
+                             border_radius=radio)
+            surface.blit(destello, self._vida_bar_rect.topleft)
+        elif self._vida_heal_timer > 0.0:
+            alpha = int(140 * min(1.0, self._vida_heal_timer / 0.6))
+            destello = pygame.Surface(self._vida_bar_rect.size, pygame.SRCALPHA)
+            radio = max(2, min(self._vida_bar_rect.height // 2, _e(4)))
+            pygame.draw.rect(destello, (120, 255, 140, alpha), destello.get_rect(),
+                             border_radius=radio)
+            surface.blit(destello, self._vida_bar_rect.topleft, special_flags=pygame.BLEND_RGBA_ADD)
 
     def _draw_boss_hud(self, surface: pygame.Surface) -> None:
         """Draw boss health bar and name at top of screen."""
@@ -963,19 +1024,23 @@ class HUD:
         if not self._timer_running and not self._timer_paused:
             return
         self._draw_timer_background(surface)
-        # Draw "TIME" label at left side of timer background — use same TTF font as digits
-        label_font = self._timer_digit_font or self._font
-        label_surf = label_font.render("TIME", True, (200, 200, 200))
-        surface.blit(label_surf, (self._timer_label_rect.x, self._timer_label_rect.y))
         total_seconds = int(self._timer)
+        # AUD-535 — "se elimina la etiqueta de texto Timer; en su lugar,
+        # un ícono de reloj". `_en_alerta` decide el color del ícono y de
+        # las cifras a la vez: los dos cuentan la misma historia.
+        en_alerta = self._is_countdown and total_seconds <= self.UMBRAL_DE_ALERTA_S
+        color_icono = (255, 90, 90) if en_alerta else (215, 215, 225)
+        icono = _icono_de_reloj(self._timer_icon_rect.width, color_icono)
+        surface.blit(icono, self._timer_icon_rect.topleft)
+
         minutes = total_seconds // 60
         seconds = total_seconds % 60
         time_str = f"{minutes:02d}:{seconds:02d}"
         # 2Hz flash: hide text when flashing
-        flash = self._is_countdown and total_seconds <= 30
+        flash = en_alerta
         if flash and not self._timer_flash_on:
             return
-        color = (255, 255, 255)
+        color = (255, 110, 110) if en_alerta else (255, 255, 255)
         if self._timer_digit_font:
             time_surf = self._timer_digit_font.render(time_str, True, color)
             if time_surf.get_width() > 0:

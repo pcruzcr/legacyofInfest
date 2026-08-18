@@ -74,6 +74,16 @@ class Minimap:
         # u otra según el momento. Un atributo que a veces existe es más difícil
         # de razonar que uno que a veces es None.
         self._bg_surf: pygame.Surface | None = None
+        # AUD-535 — "máscara circular o de bordes totalmente redondeados,
+        # eliminando los bordes cuadrados agresivos". El recuadro no es
+        # cuadrado (62×44 en la maqueta), así que un círculo de verdad
+        # desperdiciaría espacio a los lados; el radio máximo que cabe
+        # (`min(w,h)//2`) da la variante "bordes totalmente redondeados"
+        # que el propio pedido ofrece como alternativa. La máscara se
+        # reconstruye sólo aquí (al colocar/redimensionar), no en cada
+        # `draw()` — mismo criterio de rendimiento que AUD-527.
+        self._radio_del_marco: int = min(self._minimap_w, self._minimap_h) // 2
+        self._mascara_redondeada: pygame.Surface | None = None
 
     def set_map_size(self, world_w: int, world_h: int) -> None:
         self._map_size = (world_w, world_h)
@@ -103,59 +113,71 @@ class Minimap:
         self._checkpoint_positions = checkpoint_positions
         self._activated_checkpoints = activated_checkpoints
 
-    def _world_to_minimap(self, wx: float, wy: float) -> tuple[int, int]:
-        mx = int(self._minimap_x + wx * self._scale)
-        my = int(self._minimap_y + wy * self._scale)
+    def _world_to_minimap_local(self, wx: float, wy: float) -> tuple[int, int]:
+        """Coordenadas dentro del lienzo local del minimapa (0,0 = su
+        propia esquina), no de la pantalla — AUD-535: todo el contenido se
+        compone en `self._bg_surf` antes de recortarlo en redondo."""
+        mx = int(wx * self._scale)
+        my = int(wy * self._scale)
         return mx, my
 
     def draw(self, surface: pygame.Surface) -> None:
         if not self._visible:
             return
 
-        # Background
-        if self._bg_surf is None:
+        if self._bg_surf is None or self._bg_surf.get_size() != (self._minimap_w, self._minimap_h):
             self._bg_surf = pygame.Surface((self._minimap_w, self._minimap_h), pygame.SRCALPHA)
-        bg = self._bg_surf
-        bg.fill((*self._bg_color, 200))
-        surface.blit(bg, (self._minimap_x, self._minimap_y))
-
-        # Border
-        pygame.draw.rect(
-            surface, self._border_color,
-            (self._minimap_x, self._minimap_y, self._minimap_w, self._minimap_h), 1,
-        )
+        lienzo = self._bg_surf
+        lienzo.fill((*self._bg_color, 200))
 
         # Explored areas
         for rect in self._explored_rects:
-            rx = int(self._minimap_x + rect.x * self._scale)
-            ry = int(self._minimap_y + rect.y * self._scale)
+            rx, ry = self._world_to_minimap_local(rect.x, rect.y)
             rw = max(1, int(rect.width * self._scale))
             rh = max(1, int(rect.height * self._scale))
-            pygame.draw.rect(surface, self._explored_color, (rx, ry, rw, rh))
+            pygame.draw.rect(lienzo, self._explored_color, (rx, ry, rw, rh))
 
         # Checkpoints
         for i, (cx, cy) in enumerate(self._checkpoint_positions):
             color = self._checkpoint_color if i in self._activated_checkpoints else (80, 70, 40)
-            mx, my = self._world_to_minimap(cx, cy)
-            pygame.draw.rect(surface, color, (mx - 1, my - 1, 3, 3))
+            mx, my = self._world_to_minimap_local(cx, cy)
+            pygame.draw.rect(lienzo, color, (mx - 1, my - 1, 3, 3))
 
         # Enemies
         for ex, ey in self._enemy_positions:
-            mx, my = self._world_to_minimap(ex, ey)
-            pygame.draw.rect(surface, self._enemy_color, (mx - 1, my - 1, 2, 2))
+            mx, my = self._world_to_minimap_local(ex, ey)
+            pygame.draw.rect(lienzo, self._enemy_color, (mx - 1, my - 1, 2, 2))
 
         # Bosses
         for bx, by in self._boss_positions:
-            mx, my = self._world_to_minimap(bx, by)
-            pygame.draw.rect(surface, self._boss_color, (mx - 2, my - 2, 4, 4))
+            mx, my = self._world_to_minimap_local(bx, by)
+            pygame.draw.rect(lienzo, self._boss_color, (mx - 2, my - 2, 4, 4))
 
         # Player arrow
         px, py = self._player_pos
-        mx, my = self._world_to_minimap(px, py)
+        mx, my = self._world_to_minimap_local(px, py)
         dir_arrow = self._player_dir
         points = [
             (mx + dir_arrow * 3, my),
             (mx - dir_arrow * 2, my - 2),
             (mx - dir_arrow * 2, my + 2),
         ]
-        pygame.draw.polygon(surface, self._player_color, points)
+        pygame.draw.polygon(lienzo, self._player_color, points)
+
+        # AUD-535 — recorte de bordes redondeados: todo lo de arriba se
+        # dibujó en el lienzo local, y aquí se recorta de una sola vez en
+        # vez de recortar cada elemento por separado.
+        if (self._mascara_redondeada is None
+                or self._mascara_redondeada.get_size() != (self._minimap_w, self._minimap_h)):
+            mascara = pygame.Surface((self._minimap_w, self._minimap_h), pygame.SRCALPHA)
+            pygame.draw.rect(mascara, (255, 255, 255, 255), mascara.get_rect(),
+                             border_radius=self._radio_del_marco)
+            self._mascara_redondeada = mascara
+        lienzo.blit(self._mascara_redondeada, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        surface.blit(lienzo, (self._minimap_x, self._minimap_y))
+
+        pygame.draw.rect(
+            surface, self._border_color,
+            (self._minimap_x, self._minimap_y, self._minimap_w, self._minimap_h),
+            width=1, border_radius=self._radio_del_marco,
+        )

@@ -65,7 +65,6 @@ PALETTE_PATTERNS: tuple[str, ...] = (
     "ui/portrait_*.png",
     "ui/relic_*.png",
     "ui/banner_*.png",
-    "ui/heart_sparkle.png",
     "ui/menu_arrow.png",
     "ui/message_arrow.png",
 )

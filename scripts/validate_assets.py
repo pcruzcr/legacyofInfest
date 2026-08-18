@@ -50,12 +50,6 @@ REQUIRED_IMAGES = [
     "sprites/player/player_long_attack.png",
     # UI
     "ui/hud_frame.png",
-    "ui/heart_full.png",
-    "ui/heart_empty.png",
-    "ui/heart_half.png",
-    "ui/heart_quarter.png",
-    "ui/heart_three_quarter.png",
-    "ui/heart_sparkle.png",
     "ui/menu_arrow.png",
     "ui/message_arrow.png",
     "ui/portrait_normal.png",
@@ -183,9 +177,6 @@ SPRITE_PALETTES: list[tuple[str, set[tuple[int, int, int]]]] = [
     ("ui/banner_*.png", {
         (0, 0, 0), (200, 180, 100),
     }),  # 2 file(s), 2 colour(s)
-    ("ui/heart_sparkle.png", {
-        (255, 255, 200), (255, 255, 255),
-    }),  # 1 file(s), 2 colour(s)
     ("ui/menu_arrow.png", {
         (255, 215, 0), (255, 255, 255),
     }),  # 1 file(s), 2 colour(s)
@@ -306,12 +297,13 @@ COLOR_BUDGETS: list[tuple[str, int]] = [
     # atlas from the source with nearest-neighbour scaling and no lossy
     # round-trip. Tracked as refactor item R-15.
     ("tilesets/*.png", 131072),
-    # AUD-527 — el corazón y el panel de 9-slice del HUD pasaron de relleno
-    # plano a degradado + antialiasing (decisión del dueño de modernizar el
-    # HUD). Miden 77-149 colores hoy; 256 da margen para retocar el
-    # degradado sin ser la barra libre de un tileset — siguen siendo iconos
-    # de unos pocos píxeles, no arte pintado a pantalla completa.
-    ("ui/heart_*.png", 256),
+    # AUD-527 — el panel de 9-slice del HUD pasó de relleno plano a
+    # degradado + antialiasing (decisión del dueño de modernizar el HUD).
+    # Mide 77-149 colores hoy; 256 da margen para retocar el degradado sin
+    # ser la barra libre de un tileset — sigue siendo un icono de unos
+    # pocos píxeles, no arte pintado a pantalla completa.
+    # AUD-535 — `heart_*.png` se retiró de aquí junto con los sprites: la
+    # vida dejó de ser una fila de corazones y no queda arte que medir.
     ("ui/hud_frame.png", 256),
 ]
 

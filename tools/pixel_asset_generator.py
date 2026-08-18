@@ -786,16 +786,15 @@ class AssetGenerator:
         print(f"  Generated: {base / 'tileset_stage0.png'}")
     
     def _generate_ui(self) -> None:
-        """Generate basic UI elements."""
+        """Generate basic UI elements.
+
+        AUD-535 — el único elemento que generaba este método era el
+        placeholder `heart_full.png`; la vida dejó de dibujarse como
+        fila de corazones (barra continua, `HUD._draw_barra_de_vida`),
+        así que no queda arte de UI que este generador legado deba
+        producir. `generate_all_assets.py` es el pipeline real de UI.
+        """
         print("📦 Generating UI elements...")
-        base = self.output_dir / "ui"
-        
-        # Simple icon placeholder
-        heart = Image.new('RGBA', (14, 8), (0, 0, 0, 0))
-        draw = ImageDraw.Draw(heart)
-        draw.polygon([(7, 0), (14, 3), (7, 8), (0, 3)], fill=(255, 50, 50, 255))
-        heart.save(base / "heart_full.png")
-        print(f"  Generated: {base / 'heart_full.png'}")
     
     def _generate_audio(self) -> None:
         """Generate SFX and music."""

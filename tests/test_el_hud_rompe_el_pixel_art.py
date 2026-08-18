@@ -40,35 +40,6 @@ def _colores_unicos(surf: pygame.Surface) -> set[tuple[int, int, int, int]]:
     return colores
 
 
-class TestLosCorazonesLlevanDegradado:
-    def test_heart_full_tiene_mas_de_dos_colores_opacos(self) -> None:
-        """Un relleno plano + borde de 1 px + transparente son, como
-        mucho, tres colores. Un degradado con brillo son decenas."""
-        ruta = Path(settings.ASSETS_DIR) / "ui" / "heart_full.png"
-        surf = pygame.image.load(str(ruta)).convert_alpha()
-        opacos = {c for c in _colores_unicos(surf) if c[3] > 0}
-        assert len(opacos) > 15, (
-            f"heart_full.png tiene sólo {len(opacos)} colores opacos: sigue "
-            f"leyéndose como relleno plano, no como degradado"
-        )
-
-    def test_los_bordes_del_corazon_no_son_dentados_de_un_solo_color(self) -> None:
-        """El antialiasing deja píxeles de alfa intermedio en el borde de la
-        silueta — un trazo de píxel cuadrado sólo tiene alfa 0 o 255."""
-        ruta = Path(settings.ASSETS_DIR) / "ui" / "heart_full.png"
-        surf = pygame.image.load(str(ruta)).convert_alpha()
-        alfas_intermedios = sum(
-            1
-            for x in range(surf.get_width())
-            for y in range(surf.get_height())
-            if 0 < surf.get_at((x, y))[3] < 255
-        )
-        assert alfas_intermedios > 0, (
-            "ningún píxel tiene alfa intermedio: el borde sigue siendo un "
-            "escalón duro de pixel art, no una silueta antialiased"
-        )
-
-
 class TestElPanelDelHudLlevaDegradadoYHalo:
     def test_hud_frame_no_es_un_solo_color_plano(self) -> None:
         ruta = Path(settings.ASSETS_DIR) / "ui" / "hud_frame.png"
@@ -114,34 +85,19 @@ class TestLasBarrasSonRedondeadasConDegradado:
 
 
 class TestElValidadorMideElHudModernoPorPresupuesto:
-    """AUD-527 — `heart_*.png` y `hud_frame.png` dejaron de ser arte
-    indexado (paleta fija) y pasaron a ser pintados (degradado +
-    antialiasing), el mismo caso que ya cubrían los tilesets. Sin este
-    cambio, `scripts/validate_assets.py` los marcaba como rotos por tener
-    más colores de los que su antigua paleta fija permitía — no porque el
-    arte estuviera mal, sino porque la regla que lo describía quedó
-    desactualizada (el mismo defecto de fondo que AUD-011 documenta).
+    """AUD-527 — `hud_frame.png` dejó de ser arte indexado (paleta fija) y
+    pasó a ser pintado (degradado + antialiasing), el mismo caso que ya
+    cubrían los tilesets. Sin este cambio, `scripts/validate_assets.py`
+    lo marcaba como roto por tener más colores de los que su antigua
+    paleta fija permitía — no porque el arte estuviera mal, sino porque
+    la regla que lo describía quedó desactualizada (el mismo defecto de
+    fondo que AUD-011 documenta).
+
+    AUD-535 retiró `heart_*.png`: la vida dejó de ser sprites de corazón
+    y pasó a ser una barra dibujada (`HUD._draw_barra_de_vida`), así que
+    no queda arte de corazón que este validador deba medir — las pruebas
+    que lo comprobaban se retiraron con el propio archivo.
     """
-
-    def test_heart_full_ya_no_esta_en_la_paleta_estricta(self) -> None:
-        import fnmatch
-
-        import scripts.validate_assets as va
-
-        assert not any(
-            fnmatch.fnmatch("ui/heart_full.png", patron)
-            for patron, _ in va.SPRITE_PALETTES
-        ), "heart_full.png sigue cayendo en la paleta fija de ui/*.png"
-
-    def test_heart_full_esta_en_el_presupuesto_de_color(self) -> None:
-        import fnmatch
-
-        import scripts.validate_assets as va
-
-        assert any(
-            fnmatch.fnmatch("ui/heart_full.png", patron)
-            for patron, _ in va.COLOR_BUDGETS
-        ), "heart_full.png no tiene presupuesto de color declarado"
 
     def test_hud_frame_esta_en_el_presupuesto_de_color(self) -> None:
         import fnmatch

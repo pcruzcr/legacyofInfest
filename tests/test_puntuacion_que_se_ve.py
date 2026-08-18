@@ -190,7 +190,7 @@ class TestElHudLosDibuja:
         assert r.bottom <= settings.INTERNAL_HEIGHT
         assert r.left >= 0 and r.top >= 0
 
-    def test_no_pisa_ni_los_corazones_ni_el_cronometro(self) -> None:
+    def test_no_pisa_ni_la_barra_de_vida_ni_el_cronometro(self) -> None:
         """Contra la geometría **real** del HUD, no contra la del documento.
 
         `09_HUD_SPEC.md` §2.1 y `hud.py` ya no coincidían antes de AUD-219 —el
@@ -198,16 +198,18 @@ class TestElHudLosDibuja:
         comprobar el solape contra la tabla del doc no diría nada sobre lo que
         se ve en pantalla. Esa divergencia es anterior y queda anotada, no
         arreglada aquí.
+
+        AUD-535 — la fila de corazones (`_hearts_x`/`_hearts_y`/
+        `_heart_spacing`) ya no existe: se comprueba contra `vida_bar_rect()`,
+        la región real que ocupa hoy la vida del jugador.
         """
         hud = self._hud()
         hud.set_score(123456, 99)
         r = hud.score_rect()
 
-        corazones = pygame.Rect(
-            hud._hearts_x, hud._hearts_y, hud._heart_spacing * 5, 12,
-        )
+        vida = hud.vida_bar_rect()
         cronometro = hud._timer_bg_rect
-        assert not r.colliderect(corazones), f"{r} pisa los corazones {corazones}"
+        assert not r.colliderect(vida), f"{r} pisa la barra de vida {vida}"
         assert not r.colliderect(cronometro), f"{r} pisa el cronómetro {cronometro}"
 
 

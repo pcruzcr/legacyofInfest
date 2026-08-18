@@ -1,8 +1,14 @@
 """
 Module: test_hud
 System: tests
-Description: Tests for HUD: heart slot states, timer display,
-event-driven health updates.
+Description: Tests for HUD: timer display, event-driven health updates.
+
+AUD-535 — `TestHeartSlotState` (`_heart_slot_state`) se retiró de aquí:
+la vida dejó de ser una fila de corazones en ranuras discretas y pasó a
+ser una barra continua (`HUD._draw_barra_de_vida`), así que la función
+que traducía "cuánta vida le queda a la ranura N" ya no tiene ranuras
+que traducir. Ver `tests/test_el_barra_de_vida_reemplaza_corazones.py`
+para las pruebas de la barra nueva.
 """
 from __future__ import annotations
 
@@ -11,46 +17,13 @@ import pytest
 
 from src.engine.core import settings
 from src.engine.core.event_bus import EventBus
-from src.engine.ui.hud import HUD, _heart_slot_state
+from src.engine.ui.hud import HUD
 
 
 @pytest.fixture(autouse=True)
 def _init_pygame() -> None:
     if not pygame.get_init():
         pygame.init()
-
-
-class TestHeartSlotState:
-    """Pure function tests for _heart_slot_state."""
-
-    def test_slot_full(self) -> None:
-        assert _heart_slot_state(5.0, 0) == "full"
-        assert _heart_slot_state(5.0, 1) == "full"
-
-    def test_slot_empty(self) -> None:
-        assert _heart_slot_state(0.0, 0) == "empty"
-        assert _heart_slot_state(0.0, 1) == "empty"
-
-    def test_slot_half(self) -> None:
-        assert _heart_slot_state(0.5, 0) == "half"
-
-    def test_slot_three_quarter(self) -> None:
-        assert _heart_slot_state(0.75, 0) == "three_quarter"
-
-    def test_slot_quarter(self) -> None:
-        assert _heart_slot_state(0.25, 0) == "quarter"
-
-    def test_slot_negative_health(self) -> None:
-        assert _heart_slot_state(-1.0, 0) == "empty"
-
-    def test_slot_beyond_max(self) -> None:
-        assert _heart_slot_state(10.0, 0) == "full"
-
-    def test_slot_second_slot_empty(self) -> None:
-        assert _heart_slot_state(1.0, 1) == "empty"
-
-    def test_slot_second_slot_half(self) -> None:
-        assert _heart_slot_state(1.5, 1) == "half"
 
 
 class TestHUD:
