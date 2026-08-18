@@ -233,42 +233,36 @@
   <object id="103" type="Checkpoint" name="Checkpoint_103" x="320" y="480" width="16" height="32">
    <properties>
     <property name="checkpoint_id" type="int" value="1"/>
-    <property name="brillo" type="bool" value="True"/>
    </properties>
   </object>
 
   <object id="104" type="Checkpoint" name="Checkpoint_104" x="2720" y="480" width="16" height="32">
    <properties>
     <property name="checkpoint_id" type="int" value="2"/>
-    <property name="brillo" type="bool" value="True"/>
    </properties>
   </object>
 
   <object id="105" type="Checkpoint" name="Checkpoint_105" x="5120" y="480" width="16" height="32">
    <properties>
     <property name="checkpoint_id" type="int" value="3"/>
-    <property name="brillo" type="bool" value="True"/>
    </properties>
   </object>
 
   <object id="106" type="Checkpoint" name="Checkpoint_106" x="7520" y="480" width="16" height="32">
    <properties>
     <property name="checkpoint_id" type="int" value="4"/>
-    <property name="brillo" type="bool" value="True"/>
    </properties>
   </object>
 
   <object id="107" type="Checkpoint" name="Checkpoint_107" x="9920" y="480" width="16" height="32">
    <properties>
     <property name="checkpoint_id" type="int" value="5"/>
-    <property name="brillo" type="bool" value="True"/>
    </properties>
   </object>
 
   <object id="108" type="Checkpoint" name="Checkpoint_108" x="12320" y="480" width="16" height="32">
    <properties>
     <property name="checkpoint_id" type="int" value="6"/>
-    <property name="brillo" type="bool" value="True"/>
    </properties>
   </object>
 

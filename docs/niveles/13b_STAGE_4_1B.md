@@ -35,7 +35,7 @@ Construido en AUD-519, después de que el dueño pidiera —vía
 | Forma | Horizontal, un único TMX, seis secciones de 150 baldosas — **misma geometría que 4-1** (900×38 baldosas) |
 | Ambientación | Sumergido de principio a fin (`WaterZone` cubre casi toda la columna de aire; `docs/45_SWIMMING_SPEC.md`), lecho marino como referencia de suelo |
 | Enemigos | **1** — el pez abismal (`EnemyPezAbismal`), no una regla de oro rota: 4-1 (cementerio) sigue en cero; ésta es la variante que lo introduce |
-| Checkpoints | 6, uno por sección, con el estilo `brillo` (AUD-517) — un área que brilla, no el sprite de siempre |
+| Checkpoints | 6, uno por sección — el haz de luz de siempre (AUD-523, universal en los 26 escenarios) |
 | Día/noche | Congelado, abisal (`day_length=0`, `ambient_light=0.28`) — no hay ciclo día/noche 900 baldosas bajo el agua |
 | Límite de tiempo | Sin límite |
 
@@ -72,7 +72,7 @@ uno.
 
 - [x] Misma geometría que 4-1 (900×38, seis secciones)
 - [x] `WaterZone` sumergiendo la columna de aire de principio a fin
-- [x] Seis checkpoints con `brillo=true`
+- [x] Seis checkpoints (el haz de luz universal, AUD-523)
 - [x] El pez abismal: aparece, persigue, se retira, sin fugas
 - [x] Tileset propio (paleta abisal) y sprite propio (señuelo
       bioluminiscente que pulsa)

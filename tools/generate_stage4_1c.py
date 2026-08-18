@@ -126,10 +126,10 @@ def _objetos(ruta) -> list[str]:
             obj("RhythmBlock", p.columna * TS, p.fila * TS, p.ancho * TS, TS,
                 patron=p.patron, desfase=p.desfase)
         elif p.checkpoint_id is not None:
-            # AUD-517 — brilla, no el sprite de siempre (pedido explícito
-            # para 4.1b/4.1c).
+            # AUD-523 — el haz de luz es el checkpoint en los 26
+            # escenarios; no hace falta pedirlo.
             obj("Checkpoint", (p.columna + 1) * TS, (p.fila - 2) * TS, 16, 32,
-                checkpoint_id=p.checkpoint_id, brillo=True)
+                checkpoint_id=p.checkpoint_id)
 
     ultima = ruta[-1]
     obj("NextTrigger", (ultima.columna + ultima.ancho - 2) * TS,

@@ -36,7 +36,7 @@ que sostienen los otros 25+ escenarios.
 | Ambientación | Sin suelo salvo un colchón de contención muy por debajo — caer cuesta tiempo, no la partida (misma filosofía "cero muerte instantánea" del cementerio) |
 | Mecánica central | `RhythmBlock`/`BloqueRitmico` (F6, ya construido para `stage_mecanicas`) — las plataformas aparecen y desaparecen con la música real (`bpm`/`compas` → `RelojMusical`), cero física nueva |
 | Enemigos | 0 — como el cementerio; el desafío es la travesía y el ritmo, no el combate |
-| Checkpoints | 6, uno por sección, estilo `brillo` (AUD-517) |
+| Checkpoints | 6, uno por sección — el haz de luz de siempre (AUD-523, universal en los 26 escenarios) |
 | Plantillas | 3, semillas 1/2/3, cada una verificada contra `JumpEnvelope.from_settings()` — la envolvente de salto real del jugador, no un número inventado |
 
 ## 2. Por qué tres plantillas y no generación en vivo
@@ -87,7 +87,7 @@ generador; no hay nada que corregir en la geometría.
 - [x] Tres plantillas TMX, cada una jugable de principio a fin
 - [x] Ruta generada y verificada contra la envolvente de salto real
 - [x] Plataformas `RhythmBlock` sincronizadas con `RelojMusical`
-- [x] Seis checkpoints con `brillo=true`
+- [x] Seis checkpoints (el haz de luz universal, AUD-523)
 - [x] Colchón de contención — caer no mata
 - [x] Tileset propio (paleta de cielo/niebla)
 - [x] Registrado en el sorteo (`selector.VARIANTES_DISPONIBLES["aereo"]`)

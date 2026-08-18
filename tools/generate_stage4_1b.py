@@ -120,11 +120,10 @@ def _objetos() -> list[str]:
     obj("WaterZone", 0, 0, MW * TS, (FILA_SUELO - 1) * TS)
 
     for i, (col, fila) in enumerate(checkpoints(), start=1):
-        # AUD-517 — estilo `brillo`: un área que brilla, pedido
-        # explícitamente para 4.1b/4.1c (no el sprite/rectángulo de
-        # siempre).
+        # AUD-523 — el haz de luz es el checkpoint en los 26 escenarios;
+        # no hace falta pedirlo (`brillo=` ya no es una propiedad).
         obj("Checkpoint", col * TS, (fila - 2) * TS, 16, 32,
-            checkpoint_id=i, brillo=True)
+            checkpoint_id=i)
 
     obj("NextTrigger", (MW - MURO_ANCHO - 8) * TS, (FILA_SUELO - 4) * TS,
         TS * 2, TS * 6)

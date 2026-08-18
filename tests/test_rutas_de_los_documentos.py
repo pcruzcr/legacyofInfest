@@ -125,6 +125,10 @@ MODULOS_RETIRADOS: frozenset[str] = frozenset({
     # decisión anterior sigue siendo interesante— y ya no existen.
     "tests/test_documentacion_bilingue.py",
     "docs/AUDIT_2026-07.en.md",
+    # AUD-523: el sprite de checkpoint se retira por completo — el haz de luz
+    # (AUD-522/523) es ahora el checkpoint en los 26 escenarios, sin sprite
+    # ni fallback. La mención queda como historia de por qué ya no existe.
+    "assets/sprites/shared/checkpoint.png",
 })
 
 #: Estado del jugador: ficheros que el juego **escribe al jugarse** y que
