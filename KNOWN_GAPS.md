@@ -3317,3 +3317,27 @@ está.
   construyen progresivamente por capas (`DynamicMusicSystem` está pensado
   para intensidad de combate, no para revelar instrumentos con el avance
   narrativo, y este nivel no tiene combate).
+- **Nota (AUD-518…523, 2026-08-17):** el sorteo entre tres variantes del
+  slot de la Fase 4 —cementerio (AUD-518), fosa abisal acuática (AUD-519)
+  y niebla aérea musical (AUD-520)— quedó completo y documentado
+  (`docs/niveles/13b_STAGE_4_1B.md`, `13c_STAGE_4_1C.md`, AUD-521). Dos
+  correcciones jugadas después de construir las tres: **(AUD-522)** el
+  musgo/lodo de la Fase 2 (ver la nota de [[GAP-060]]) pasó de "una sola
+  mecánica, dos intensidades imperceptibles" a dos mecánicas de verdad —
+  el musgo resbala (`ZonaDeFriccion.inercia`, nueva), el lodo frena
+  (`multiplicador`, sin cambios) — con pisada y partícula propias.
+  **(AUD-523)** el checkpoint que brillaba opt-in sólo en 4.1b/4.1c
+  (AUD-517) pasó a ser el checkpoint de los 26 escenarios: se retiró
+  `assets/sprites/shared/checkpoint.png` y el rectángulo de respaldo —
+  ya no hay dos caminos de dibujo para un solo resultado final. **(AUD-525,
+  jugado tras un reporte de "no se ve el agua ni que nade el personaje" en
+  4.1b)** dos huecos separados, no uno: el TMX nunca encendía
+  `water_effect` — `ZonaDeAgua` (física: nado, oxígeno, corriente) y
+  `WaterEffect` (lo que se ve) son componentes aparte a propósito
+  (`water_effect.py`, AUD-111), y nadie había prendido el segundo, así que
+  el nivel se jugaba sumergido y se veía seco. Y `SWIMMING` reutilizaba
+  `player_jump.png` — cuatro copias del mismo fotograma quieto, cero
+  brazada — ahora tiene `player_swim.png` propio, alternando una patada
+  abierta con la silueta cerrada del salto. El pez abismal no tenía ningún
+  defecto de código encontrado; queda por comprobar si el tinte de agua ya
+  lo hace más visible por contraste.
