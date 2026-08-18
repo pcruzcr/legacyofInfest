@@ -108,6 +108,41 @@ class TestLaFranjaDelEscenario:
         assert banner.y_superior > 0
         assert banner.y_superior + banner.alto <= settings.INTERNAL_HEIGHT
 
+    def test_la_costura_no_tacha_el_nombre(self, _video) -> None:
+        """AUD-526: `banner_top.png` y `banner_bottom.png` se generaban como
+        un rectángulo cerrado cada una (borde en las cuatro caras). Pegadas
+        sin hueco (`ScreenBanner.draw`), el borde inferior de arriba y el
+        borde superior de abajo caían en la misma fila de píxeles — una
+        línea doble justo donde se centra el nombre del escenario, que se
+        leía como texto tachado. Cada mitad dibuja ahora sólo sus tres lados
+        exteriores: la costura del medio tiene que quedar sin trazo.
+        """
+        from src.engine.utils.asset_loader import AssetLoader
+
+        top = AssetLoader.load_image(
+            settings.ASSETS_DIR / "ui" / "banner_top.png")
+        bottom = AssetLoader.load_image(
+            settings.ASSETS_DIR / "ui" / "banner_bottom.png")
+
+        # El interior, lejos de las esquinas donde sí hay borde lateral
+        # legítimo: si aquí hay algo que no sea el relleno de fondo, es la
+        # costura.
+        fondo_top = top.get_at((10, top.get_height() // 2))
+        costura_top = top.get_at((top.get_width() // 2, top.get_height() - 1))
+        assert costura_top == fondo_top, (
+            f"banner_top.png dibuja algo en su borde inferior "
+            f"({costura_top}) distinto del fondo ({fondo_top}): esa fila "
+            f"cae justo en la costura con banner_bottom.png"
+        )
+
+        fondo_bottom = bottom.get_at((10, bottom.get_height() // 2))
+        costura_bottom = bottom.get_at((bottom.get_width() // 2, 0))
+        assert costura_bottom == fondo_bottom, (
+            f"banner_bottom.png dibuja algo en su borde superior "
+            f"({costura_bottom}) distinto del fondo ({fondo_bottom}): esa "
+            f"fila cae justo en la costura con banner_top.png"
+        )
+
 
 class TestLosSubtitulos:
     def test_se_anclan_en_proporcion_a_la_pantalla(self, _video) -> None:

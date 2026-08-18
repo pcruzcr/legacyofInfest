@@ -3338,6 +3338,28 @@ está.
   el nivel se jugaba sumergido y se veía seco. Y `SWIMMING` reutilizaba
   `player_jump.png` — cuatro copias del mismo fotograma quieto, cero
   brazada — ahora tiene `player_swim.png` propio, alternando una patada
-  abierta con la silueta cerrada del salto. El pez abismal no tenía ningún
-  defecto de código encontrado; queda por comprobar si el tinte de agua ya
-  lo hace más visible por contraste.
+  abierta con la silueta cerrada del salto. **(AUD-526)** jugado otra vez,
+  seguían dos defectos reales, ninguno donde había buscado en AUD-525.
+  **El pez seguía sin verse:** `EnemyFlying` fija `detection_range_x=180,
+  detection_range_y=96` para todos sus subtipos, y `Stage4_1B` lo aparece
+  a propósito justo más allá del borde de cámara —muy por encima de esos
+  180 px en una pantalla de 800—, así que nacía fuera de su propio rango
+  de detección, nunca entraba en ALERT/CHASE, y se retiraba en silencio
+  sin que el jugador llegara a verlo. `EnemyPezAbismal` amplía ahora
+  `detection_range_x/y` y `_deaggro_margin` tras construirse: no necesita
+  detección genérica, `Stage4_1B` ya controla a mano cuándo aparece y
+  cuándo se va. **Nadar seguía pareciendo caminar:** `SwimmingState`
+  saltaba a `IdleState` en cuanto `is_grounded` se activaba —pisar el
+  lecho marino, que está dentro de la propia `ZonaDeAgua`— así que tocar
+  fondo una vez dejaba al jugador caminando el resto del nivel aunque
+  siguiera sumergido. Se retiró esa salida: `ControlDeNado` (que
+  comprueba `en_agua()` cada fotograma) es la única autoridad para entrar
+  y salir del agua. De paso, `_swim_boosts` —antes de una sola vez por
+  entrada al estado— se reinicia al tocar fondo, para que empujarse desde
+  el lecho sea la mecánica y no un tope de una sola vez por partida.
+  Aparte, sin relación con el agua: la franja de nombre de escenario
+  (`ScreenBanner`) dibujaba `banner_top.png`/`banner_bottom.png` como dos
+  rectángulos cerrados en las cuatro caras; pegados sin hueco, el borde
+  inferior de uno y el superior del otro caían en la misma fila de
+  píxeles —justo donde se centra el nombre— y se leía como texto
+  tachado. Cada mitad dibuja ahora sólo sus tres lados exteriores.
