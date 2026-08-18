@@ -116,7 +116,18 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         self._game_over: bool = False
         self._paused: bool = False
         self._pause_selected: int = 0
-        self._pause_options: list[str] = ["Resume", "Save & Quit", "Quit to Title"]
+        # AUD-533 — "Inventario" y "Árbol de Habilidades" se suman al menú
+        # de pausa: `InventoryScene`/`SkillTreeScene` ya existían completas
+        # y probadas, pero sólo eran alcanzables desde el título — el mismo
+        # patrón de "sistema completo, camino real inexistente" que ya
+        # apareció con `SwimmingState` (AUD-528) y `WaterEffect` (AUD-525).
+        # De paso, las tres opciones viejas estaban en inglés pese a la
+        # invariante 5 de CLAUDE.md ("todo en español, sin excepciones") —
+        # se traducen aquí para no dejar un menú a medio traducir.
+        self._pause_options: list[str] = [
+            "Reanudar", "Inventario", "Árbol de habilidades",
+            "Guardar y salir", "Salir al título",
+        ]
         self._debug: bool = False
         #: AUD-289 — entidades que se retiraron por lanzar en `update()`.
         #:
@@ -837,12 +848,28 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
             self._set_paused_side_effects(False)
         if im.is_action_just_pressed(Action.CONFIRM):
             choice = self._pause_options[self._pause_selected]
-            if choice == "Resume":
+            if choice == "Reanudar":
                 self._paused = False
-            elif choice == "Save & Quit":
+            elif choice == "Inventario":
+                self._abrir_inventario()
+            elif choice == "Árbol de habilidades":
+                self._abrir_arbol_de_habilidades()
+            elif choice == "Guardar y salir":
                 self._save_and_quit()
-            elif choice == "Quit to Title":
+            elif choice == "Salir al título":
                 self._quit_to_title()
+
+    def _abrir_inventario(self) -> None:
+        """AUD-533 — empuja `InventoryScene` en vez de sustituir esta
+        escena: al cancelar (`pop()`, ver `InventoryScene`), la partida
+        pausada sigue exactamente donde estaba, no en el título."""
+        from src.engine.scenes.inventory_scene import InventoryScene
+        self.context.scene_manager.push(InventoryScene(self.context))
+
+    def _abrir_arbol_de_habilidades(self) -> None:
+        """Mismo mecanismo que `_abrir_inventario` — ver ese docstring."""
+        from src.engine.scenes.skill_tree_scene import SkillTreeScene
+        self.context.scene_manager.push(SkillTreeScene(self.context))
 
     def _check_player_death(self) -> None:
         if self._player.current_health <= 0 and not self._game_over:

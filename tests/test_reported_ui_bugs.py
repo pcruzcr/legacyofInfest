@@ -271,16 +271,22 @@ class TestElBestiarioVuelveAlTitulo:
         )
 
     def test_usa_el_mismo_patron_que_sus_hermanas(self):
-        """Logros e inventario ya lo hacían bien; ésta se quedó atrás."""
+        """Logros y bestiario sólo se alcanzan desde el título — `replace`
+        de ida y vuelta es correcto para las dos.
+
+        AUD-533 — `inventory_scene` salió deliberadamente de este grupo:
+        ahora se abre también desde el menú de pausa de una partida en
+        curso (`StageScene._abrir_inventario`), así que su salida usa
+        `pop()` (vuelve a quien la empujó, título o partida) en vez de
+        `replace(TitleScene(...))` (que siempre manda al título, aunque
+        se haya abierto a mitad de partida). Ver los comentarios de
+        `inventory_scene.py` y `stage_scene.py::_abrir_inventario`.
+        """
         import inspect
 
-        from src.engine.scenes import (
-            achievement_scene,
-            bestiary_scene,
-            inventory_scene,
-        )
+        from src.engine.scenes import achievement_scene, bestiary_scene
 
-        for modulo in (achievement_scene, inventory_scene, bestiary_scene):
+        for modulo in (achievement_scene, bestiary_scene):
             fuente = inspect.getsource(modulo)
             assert "replace(TitleScene" in fuente, (
                 f"{modulo.__name__} no vuelve al título con `replace`"

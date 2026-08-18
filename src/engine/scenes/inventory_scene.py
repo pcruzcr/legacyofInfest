@@ -93,8 +93,14 @@ class InventoryScene(BaseScene):
         # AUD-220: `CONFIRM` ya no sale. Salía **además** de `CANCEL`, un atajo
         # redundante que ocupaba la única tecla natural para «ponerse esto».
         if im.is_action_just_pressed(Action.CANCEL):
-            from src.engine.scenes.title_scene import TitleScene
-            self.context.scene_manager.replace(TitleScene(self.context))
+            # AUD-533 — antes siempre reemplazaba por `TitleScene`, así que
+            # sólo se podía llegar aquí desde el título (que la abría con
+            # `replace`, el mismo error simétrico). Eso hacía imposible
+            # abrir el inventario a mitad de partida: cancelar te mandaba
+            # al título en vez de devolverte al juego pausado. `pop()`
+            # vuelve a quien haya empujado esta pantalla — el título o una
+            # partida en pausa — sea cual sea.
+            self.context.scene_manager.pop()
             return
         if im.is_action_just_pressed(Action.CONFIRM):
             self._equipar_seleccionado()

@@ -223,8 +223,10 @@ class WorldMapScene(BaseScene):
         if im.is_action_just_pressed(Action.CONFIRM):
             self._entrar(self._nodes[self._selected])
         if im.is_action_just_pressed(Action.CANCEL):
-            from src.engine.scenes.title_scene import TitleScene
-            self.context.scene_manager.replace(TitleScene(self.context))
+            # AUD-533 — mismo arreglo que `InventoryScene`/`SkillTreeScene`:
+            # `pop()` vuelve a quien haya empujado esta pantalla en vez de
+            # mandar siempre al título.
+            self.context.scene_manager.pop()
 
     def _entrar(self, node: dict[str, Any]) -> bool:
         """Abre el escenario del nodo. Devuelve si se pudo.
