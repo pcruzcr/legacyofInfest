@@ -1788,16 +1788,11 @@ def _gen_shared():
     print("  Shared sprites...")
     sd = A / "sprites" / "shared"
     _ensure(sd)
-    # Checkpoint (16x32, 6 frames active)
-    imgs = []
-    for f in range(6):
-        img = Image.new("RGBA", (16, 32), (0,0,0,0))
-        draw = ImageDraw.Draw(img)
-        color = (255, 215, 0) if f > 0 else (120, 120, 120)
-        draw.rectangle((5, 0, 11, 28), fill=(80, 60, 40))
-        draw.ellipse((2, 20, 14, 30), fill=color)
-        imgs.append(img)
-    _save_sheet(sd / "checkpoint.png", imgs, 16, 32)
+    # AUD-523 — `checkpoint.png` generaba el poste con farol que
+    # `Checkpoint` ya no dibuja: el haz de luz (`LightSource`) reemplazó
+    # el sprite en los 26 escenarios, no sólo en 4.1b/4.1c (AUD-517 lo
+    # dejó opt-in; el dueño pidió el reemplazo completo). El archivo se
+    # borró del repositorio junto con este bloque.
 
     # Torch (8x16, 4 frames)
     imgs = []

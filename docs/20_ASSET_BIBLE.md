@@ -109,7 +109,6 @@ assets/
 │   │   └── zone3/
 │   ├── bosses/
 │   └── shared/
-│       ├── checkpoint.png
 │       ├── torch_anim.png
 │       ├── fountain_anim.png
 │       └── spirit_echo_overlay.png
@@ -578,10 +577,14 @@ Ubicación: `assets/sprites/shared/`
 
 | Fichero | Tamaño | Fotogramas | FPS | Descripción |
 |---|---|---|---|---|
-| `checkpoint.png` | 16×32 | 6 (animado), 1 (inactivo) | 8 | Poste de checkpoint — brilla cuando está activo |
 | `torch_anim.png` | 8×16 | 4 | 8 | Animación de llama de antorcha |
 | `fountain_anim.png` | 24×24 | 6 | 10 | Animación de agua de fuente (Zona 3-3) — ⚠️ Marcador de posición |
 | `spirit_echo_overlay.png` | 1×1 | 1 | — | Superposición de tinte alfa para ecos de espíritu — ⚠️ Marcador de posición |
+
+> **AUD-523.** `checkpoint.png` (el poste con farol) se retiró: el
+> checkpoint se dibuja con un haz de luz (`LightSource`,
+> `src/framework/stage/checkpoint.py`) en los 26 escenarios, no con un
+> sprite fijo.
 
 ---
 
