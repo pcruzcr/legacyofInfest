@@ -80,7 +80,13 @@ Entregable 3 debe cumplir las reglas del Entregable 2 **y** las generales.
 | Nivel de travesía | **2** | **3** (regla de `05_ENEMY_SPEC.md`) | **6** (corto) / **10** (largo) | ≤ 8 simultáneos |
 | Nivel de jefe | — | — | los patrones del jefe | los del jefe + ≤ 6 invocados |
 | 4-1 Cementerio | **0** | 0 | 0 (regla de oro: la atmósfera es el desafío) | 0 |
+| 4-1b (variante acuática) | **1** | 1 | 1 (el pez abismal — `damage_on_contact=0`, no participa del combate) | 1 |
 
+- La regla de oro de cero enemigos es del **cementerio**, no del slot
+  `stage4_1` entero: 4-1b (AUD-518/519) la rompe a propósito con una sola
+  criatura que no daña ni se puede dañar — sigue siendo "la atmósfera es
+  el desafío", con una presencia que persigue en vez de testificar. Ver
+  [[niveles/13b_STAGE_4_1B.md]].
 - Todos los enemigos heredan de `EnemyBase` y se colocan como objetos punto en
   la capa `Objects` con su `type` real (`Walker`, `Flying`, `Shooter`, o una
   especie con nombre del bestiario — no existe un tipo genérico `EnemySpawn`).
@@ -296,6 +302,8 @@ Todos en `docs/niveles/`, uno por stage y uno por jefe:
 | `docs/niveles/11_STAGE_3_3.md` | 3-3 El Patio | Travesía | 3 |
 | `docs/niveles/12_BOSS_3_4.md` | 3-4 El Gavilán Camionero Mascarero | Jefe | 2 |
 | `docs/niveles/13_STAGE_4_1.md` | 4-1 La Entrada al Cementerio | Atmosférico (profesor) | — |
+| `docs/niveles/13b_STAGE_4_1B.md` | 4-1b La Fosa Abisal (variante del slot 4-1, AUD-518/519) | Atmosférico, sumergido (profesor) | 1 (el pez abismal, sin daño) |
+| `docs/niveles/13c_STAGE_4_1C.md` | 4-1c Lo Que Flota en la Niebla (variante del slot 4-1, AUD-518/520) | Aéreo, musical (profesor) | — |
 | `docs/niveles/14_BOSS_4_2.md` | 4-2 El Gran Shaman Paburu | Jefe final (profesor) | — |
 
 ---

@@ -469,6 +469,13 @@ Esta zona sólo tiene dos escenarios. No hay recorrido — el cementerio mismo E
 
 ### 6.2 Escenario 4-1 — La Entrada al Cementerio
 
+> **AUD-518 (2026-08-17).** Esta sección describe la geografía canónica
+> del cementerio (el estado real construido está en
+> `docs/niveles/13_STAGE_4_1.md`, no aquí). Desde AUD-518, `stage4_1` es
+> uno de tres slots sorteados por partida — hay una variante acuática
+> (`docs/niveles/13b_STAGE_4_1B.md`) y una aérea musical
+> (`docs/niveles/13c_STAGE_4_1C.md`) que no comparten esta geografía.
+
 **Tipo:** Recorrido + escenario atmosférico previo al jefe
 **Descripción:** Un sendero serpenteante por el cementerio sagrado. Lápidas de piedra ancestrales a ambos lados. Cuencos de fuego ceremoniales que proyectan luz en movimiento. El protagonista camina casi en silencio. Los espíritus de los jefes derrotados aparecen como ecos visuales en el fondo — translúcidos, no hostiles, observando.
 
