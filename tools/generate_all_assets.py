@@ -1753,59 +1753,6 @@ def _gen_all_backgrounds():
 # SECTION 6: UI SPRITES
 # ════════════════════════════════════════
 
-def _gen_ui_hearts():
-    # AUD-527 — el corazón era un relleno plano con un borde de 1 px: la
-    # silueta exacta que `docs/09_HUD_SPEC.md` mandaba ("sin antialiasing,
-    # sin degradados, sin sombras"). Decisión del dueño (2026-08-17, AUD-524):
-    # romper esa convención de verdad. Se dibuja a 4x y se reduce con
-    # remuestreo (antialiasing real, no una silueta de píxel cuadrado), con
-    # degradado vertical claro→oscuro y un brillo suave arriba a la
-    # izquierda — el mismo lenguaje que ya usa `checkpoint.py` para su
-    # disco de luz (AUD-523), aplicado aquí al icono más repetido del HUD.
-    print("  UI hearts...")
-    ui = A / "ui"
-    _ensure(ui)
-    states = {
-        "heart_full.png": ((255, 95, 95), (150, 10, 10)),
-        "heart_three_quarter.png": ((255, 150, 80), (150, 60, 10)),
-        "heart_half.png": ((255, 195, 90), (150, 95, 10)),
-        "heart_quarter.png": ((225, 150, 100), (110, 65, 20)),
-        "heart_empty.png": ((110, 45, 45), (45, 12, 12)),
-    }
-    fw, fh, ss = 14, 8, 4
-    for fname, (claro, oscuro) in states.items():
-        w, h = fw * ss, fh * ss
-        mascara = Image.new("L", (w, h), 0)
-        md = ImageDraw.Draw(mascara)
-        md.ellipse((0, 0, 6 * ss, 6 * ss), fill=255)
-        md.ellipse((8 * ss, 0, 14 * ss, 6 * ss), fill=255)
-        md.polygon([(1 * ss, 4 * ss), (7 * ss, 8 * ss), (13 * ss, 4 * ss)], fill=255)
-
-        degradado = Image.new("RGBA", (w, h))
-        gd = ImageDraw.Draw(degradado)
-        for y in range(h):
-            t = y / max(1, h - 1)
-            col = tuple(int(claro[i] + (oscuro[i] - claro[i]) * t) for i in range(3))
-            gd.line([(0, y), (w, y)], fill=(*col, 255))
-
-        img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-        img.paste(degradado, (0, 0), mascara)
-
-        # Brillo suave arriba-izquierda, recortado a la silueta para que no
-        # se salga del corazón.
-        brillo_alfa = Image.new("L", (w, h), 0)
-        ImageDraw.Draw(brillo_alfa).ellipse(
-            (int(1.5 * ss), 0, int(6.5 * ss), int(3.5 * ss)), fill=150)
-        brillo_alfa = brillo_alfa.filter(ImageFilter.GaussianBlur(ss * 0.7))
-        brillo_alfa = Image.composite(
-            brillo_alfa, Image.new("L", (w, h), 0), mascara)
-        brillo = Image.new("RGBA", (w, h), (255, 255, 255, 0))
-        brillo.putalpha(brillo_alfa)
-        img = Image.alpha_composite(img, brillo)
-
-        img = img.resize((fw, fh), Image.LANCZOS)
-        img.save(ui / fname)
-
 def _gen_ui_portraits():
     print("  UI portraits...")
     ui = A / "ui"
@@ -1888,7 +1835,6 @@ def _gen_ui_misc():
     items = {
         "message_arrow.png": (5, 7, (255, 215, 0)),
         "menu_arrow.png": (5, 8, (255, 215, 0)),
-        "heart_sparkle.png": (8, 8, (255, 255, 200)),
     }
     for fname, (fw, fh, color) in items.items():
         img = Image.new("RGBA", (fw, fh), (0,0,0,0))
@@ -2518,7 +2464,6 @@ def main():
     _gen_all_backgrounds()
     
     print("\n[6/9] UI sprites...")
-    _gen_ui_hearts()
     _gen_ui_portraits()
     _gen_ui_banners()
     _gen_ui_misc()
