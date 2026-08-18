@@ -76,6 +76,48 @@ class TestPersigueConInercia:
         assert pez.state in (EnemyState.ALERT, EnemyState.CHASE)
 
 
+class TestSeDejaVerAlAparecer:
+    """AUD-526 — `Stage4_1B._invocar_pez` lo aparece a propósito justo más
+    allá del borde de la cámara ("nunca dentro del cuadro"), que en una
+    pantalla de 800 px es muchísimo más que los 180/96 px de
+    `detection_range_x/y` que `EnemyFlying` fija para todos sus subtipos.
+    Con esos valores el pez nacía fuera de su propio rango de detección,
+    nunca entraba en ALERT/CHASE, y se retiraba en silencio sin que el
+    jugador llegara a verlo — «no se ve el pez» reportado jugando.
+    """
+
+    def test_el_rango_de_deteccion_supera_la_distancia_real_de_aparicion(
+        self, _video,
+    ) -> None:
+        pez = EnemyPezAbismal(pygame.Vector2(0, 0))
+        # Media pantalla (800 px de ancho interno) más el margen de
+        # aparición (60 px, `Stage4_1B.MARGEN_DE_APARICION_PX`) es la peor
+        # distancia real entre el spawn y un jugador centrado en cámara.
+        distancia_real_de_aparicion = 800 / 2 + 60
+        assert pez.detection_range_x > distancia_real_de_aparicion, (
+            f"detection_range_x={pez.detection_range_x} no cubre la "
+            f"distancia real de aparición ({distancia_real_de_aparicion} "
+            f"px) — el pez nacería fuera de su propio rango otra vez"
+        )
+
+    def test_aparecido_a_la_distancia_real_entra_en_persecucion(
+        self, _video,
+    ) -> None:
+        from src.framework.entities.enemy_base import EnemyState
+
+        # Reproduce el peor caso de `Stage4_1B._invocar_pez`: el jugador en
+        # el centro de una cámara de 800 px, el pez 60 px más allá del
+        # borde.
+        pez = EnemyPezAbismal(pygame.Vector2(460.0, 100.0))
+        pez.set_player_ref(pygame.Rect(0, 100, 20, 32))
+        for _ in range(60):
+            pez.update(1 / 60)
+        assert pez.state in (EnemyState.ALERT, EnemyState.CHASE), (
+            "a la distancia real de aparición, el pez sigue en PATROL: "
+            "nunca detecta al jugador y nunca se deja ver"
+        )
+
+
 class TestDibujaSinReventar:
     def test_draw_no_revienta(self, _video) -> None:
         pez = EnemyPezAbismal(pygame.Vector2(50, 50))

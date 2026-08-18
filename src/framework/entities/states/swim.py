@@ -66,7 +66,22 @@ class SwimmingState(PlayerStateBase):
             player._change_state_instance(JumpingState())
             return
 
+        # AUD-526 — pisar el lecho marino (o cualquier suelo dentro de la
+        # `ZonaDeAgua`, como el de 4.1b) disparaba `is_grounded` y esto
+        # saltaba a `IdleState` aunque el jugador siguiera sumergido: el
+        # efecto de agua seguía en pantalla pero el personaje ya caminaba
+        # como en tierra firme, sin nadar. `ControlDeNado` es la única
+        # autoridad para entrar y salir del agua (comprueba `en_agua()`
+        # cada fotograma); duplicar el criterio aquí con `is_grounded`
+        # sacaba al jugador del estado sin que el jugador hubiera salido
+        # del agua de verdad.
+        #
+        # `_swim_boosts` sólo se reinicia en `enter()`, y con la salida por
+        # `is_grounded` ya retirada el jugador puede pasar el nivel entero
+        # sin volver a entrar al estado — así que sin este reinicio el
+        # impulso hacia arriba sería de una sola vez por partida entera de
+        # 4.1b, no por inmersión. Tocar fondo es el punto natural para
+        # recargarlo: empujarse desde el lecho marino es la mecánica, no un
+        # descuido.
         if player.is_grounded:
-            from src.framework.entities.states import IdleState
-            player._change_state_instance(IdleState())
-            return
+            player._swim_boosts = 0

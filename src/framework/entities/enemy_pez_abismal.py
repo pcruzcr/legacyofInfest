@@ -77,6 +77,21 @@ class EnemyPezAbismal(EnemyFlying):
         # AUD-325 — no pisa suelo: nada en agua abierta, igual que un
         # volador no pisa suelo en aire abierto.
         self._hug_slopes = False
+        # AUD-526 — `Stage4_1B._invocar_pez` lo aparece a propósito justo
+        # más allá del borde de la cámara (§ arriba: "nunca dentro del
+        # cuadro"), que en una pantalla de 800 px de ancho está muy por
+        # encima de los 180/96 px de `detection_range_x/y` que
+        # `EnemyFlying` fija para todos sus subtipos. Sin ampliarlo el pez
+        # nace fuera de su propio rango de detección, nunca entra en
+        # ALERT/CHASE —se queda en el vaivén de "sine" cerca de donde
+        # apareció, fuera de cuadro— y se retira en silencio sin que el
+        # jugador llegue a verlo. El guion pide "aparece de la nada,
+        # persigue": `Stage4_1B` ya controla a mano cuándo aparece y
+        # cuándo se va, así que no necesita detección genérica — necesita
+        # estar alerta desde el fotograma en que existe.
+        self.detection_range_x = 2000.0
+        self.detection_range_y = 600.0
+        self._deaggro_margin = 2000.0
 
     def _load_extra_sprites(self, zone: int, fw: int, fh: int) -> None:
         """Su propio sprite, no el de zona: no existe un volador de

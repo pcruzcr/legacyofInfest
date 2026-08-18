@@ -1787,13 +1787,31 @@ def _gen_ui_portraits():
         img.save(ui / fname)
 
 def _gen_ui_banners():
+    # AUD-526 — cada mitad se dibujaba como un rectángulo cerrado en las
+    # cuatro caras (`draw.rectangle(..., outline=...)`). `ScreenBanner.draw`
+    # las pega una encima de otra sin hueco (`banner_bottom` empieza justo
+    # donde termina `banner_top`), así que el borde inferior de la mitad de
+    # arriba y el borde superior de la mitad de abajo caían en la misma
+    # fila de píxeles: una línea doble exactamente donde se centra el
+    # nombre del escenario — se leía como texto tachado. Cada mitad dibuja
+    # ahora sólo sus tres lados exteriores (arriba+izq+der la de arriba,
+    # abajo+izq+der la de abajo); la costura del medio queda sin trazo.
     print("  UI banners...")
     ui = A / "ui"
-    for fname in ["banner_top.png", "banner_bottom.png"]:
-        img = Image.new("RGBA", (W, 24), (0,0,0,180))
-        draw = ImageDraw.Draw(img)
-        draw.rectangle((0, 0, W-1, 23), outline=(200, 180, 100, 200), width=1)
-        img.save(ui / fname)
+    color = (200, 180, 100, 200)
+    top = Image.new("RGBA", (W, 24), (0, 0, 0, 180))
+    d = ImageDraw.Draw(top)
+    d.line([(0, 0), (W - 1, 0)], fill=color, width=1)
+    d.line([(0, 0), (0, 23)], fill=color, width=1)
+    d.line([(W - 1, 0), (W - 1, 23)], fill=color, width=1)
+    top.save(ui / "banner_top.png")
+
+    bottom = Image.new("RGBA", (W, 24), (0, 0, 0, 180))
+    d = ImageDraw.Draw(bottom)
+    d.line([(0, 23), (W - 1, 23)], fill=color, width=1)
+    d.line([(0, 0), (0, 23)], fill=color, width=1)
+    d.line([(W - 1, 0), (W - 1, 23)], fill=color, width=1)
+    bottom.save(ui / "banner_bottom.png")
 
 def _gen_ui_misc():
     print("  UI misc...")
