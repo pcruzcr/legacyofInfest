@@ -339,6 +339,8 @@ composición nominal de la guía 66. Los mapas marcados `[REF]` son diseño sin
 | 3-3 Patio | `bgm_zone3` | **nublado** (gaussian baja la agresión) | ash | fuente que cura 0.25 | Paloma×3, Halcón×5, Quetzal×3 | decisión de curar vs huir |
 | 3-4 Gavilán | `bgm_zone3_boss` + sfx del gavilán | congelado | plumas | claraboya; vigas | — (14 corazones) | una sola fase; ataques por escribir |
 | 4-1 Entrada cementerio | `cemetery_silence` | niebla espiritual, fog | ash/spores | grietas pulsantes; ecos | **ninguno** (regla de oro) | actos que escalan atmósfera |
+| 4-1b Fosa abisal (variante) | `bgm_splash` | abisal, congelado, `ambient_light=0.28` | — | brillo de checkpoint (AUD-517) | 1 (pez abismal, sin daño) | `WaterZone` de principio a fin; persecución sin combate |
+| 4-1c Niebla (variante) | `bgm_zone1_traverse` | cielo, congelado | — | brillo de checkpoint (AUD-517) | **ninguno** | `RhythmBlock` sincronizado con `bpm`/`compas`; 3 plantillas sorteadas por entrada |
 | 4-2 Paburu | `bgm_paburu` | noche | embers+ash | 4 pilares de llama | — (20 corazones) | Forma 3A/3B; `CONVERGENCE` |
 | Lab mecánicas | usa `bpm`/`compas` | día | — | — | — | bloques rítmicos; viento; plataformas |
 

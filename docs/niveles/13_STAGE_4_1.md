@@ -12,6 +12,14 @@ source: "docs/niveles/13_STAGE_4_1.md"
 **Entregable:** profesorado (no se asigna a estudiantes) · **Zona:** Final —
 El Cementerio Sagrado · **Tipo:** Travesía atmosférica (sin enemigos)
 
+> **AUD-518 (2026-08-17).** Ésta —el cementerio— es una de tres caras que
+> puede tomar el slot `stage4_1`, sorteada una sola vez por partida
+> (`src/stages/stage4_1/selector.py`): [[13b_STAGE_4_1B.md|4-1b, la fosa
+> abisal]] (acuática) y [[13c_STAGE_4_1C.md|4-1c, lo que flota en la
+> niebla]] (aérea, musical) son las otras dos. Todo lo que describe esta
+> ficha —seis fases, cero enemigos, la reconstrucción de AUD-467— sigue
+> siendo exclusivo de esta variante; las otras dos tienen la suya propia.
+
 ## 0. Estado real — segunda reconstrucción (AUD-467)
 
 > **DECISIÓN DEL DUEÑO (2026-08-14, misma fecha que AUD-462, jugada de por

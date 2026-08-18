@@ -1021,7 +1021,15 @@ class SceneManager:
     def replace(self, scene: "BaseScene") -> None:
         """Llama a current.on_exit() → destroy(), luego scene.awake() → start() → on_enter()."""
 
-    def set_stage_queue(self, stages: list[type["BaseScene"]]) -> None: ...
+    def set_stage_queue(
+        self, stages: list[Callable[["GameContext"], "BaseScene"]],
+    ) -> None: ...
+    # AUD-518 — antes era list[type["BaseScene"]]. Un slot puede resolver a
+    # una función fábrica en vez de a una clase fija (stage4_1: sorteo
+    # entre variantes del nivel, ver `src/stages/stage4_1/selector.py`);
+    # SceneManager llama cada entrada igual, `factory(self._context)`, así
+    # que el tipo real siempre fue "algo llamable con el contexto" — la
+    # anotación sólo se puso al día para decirlo.
 
     def set_stage_index(self, index: int) -> None: ...
 
