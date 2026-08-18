@@ -51,6 +51,41 @@ al primer escenario con gradación.
 numba es un extra opcional (`pip install -e ".[accel]"`). Sin él, esto usa
 la ruta de numpy de siempre y el juego funciona igual, sólo que más despacio
 — la misma regla que la invariante 7 aplica a scikit-learn.
+
+AUD-530 — un hilo no bastaba, ocho sí
+--------------------------------------
+`TestCabeEnElPresupuestoDeFotograma::test_el_dibujo_cabe` seguía fallando
+después de AUD-496 pese a que la ruta acelerada estaba activa
+(`gradacion.acelerada()` daba `True`): un perfil del dibujo completo de la
+Fase 4 repartía así los ~13-14 ms típicos, con picos por encima de 15 ms bajo
+la más mínima carga del sistema —
+
+    aplicar_gradacion (serie)   ~5-7 ms   <- seguía siendo el mayor bloque
+    resto del dibujo            ~7-8 ms
+
+El núcleo ya no copiaba nada (AUD-496 lo resolvió); lo que quedaba era la
+propia pasada por 480 000 píxeles en un hilo. La medida, aislada, 800x600,
+matriz sepia:
+
+    njit en serie          11,96 ms
+    njit + parallel/prange   3,86 ms   (~3,1x, no 8x: el límite es el ancho
+                                         de banda de memoria del array, no
+                                         los núcleos)
+    salida                  idéntica píxel a píxel
+
+Repartir por `y` (fila) con `numba.prange` es seguro sin bloqueo ni sección
+crítica porque cada hilo escribe filas que ningún otro hilo toca — no hay
+dato compartido en escritura. La igualdad de salida la sigue comprobando
+`tests/test_la_gradacion_no_copia_la_pantalla.py`, que no cambió: si el
+paralelismo alterase un solo píxel, esa prueba lo vería.
+
+Esto baja el dibujo típico de la Fase 4 a ~13 ms, con margen real bajo el
+presupuesto de 15 en vez de pisarlo. No lo hace inmune al ruido de máquina
+— sigue siendo una medida de milisegundos, y una carga suficiente (otro
+proceso, otra sesión) puede seguir empujarla por encima alguna vez, igual
+que a `test_con_la_vision_puesta_tambien` en el mismo archivo. La diferencia
+es que antes el dibujo *no cabía* casi nunca; ahora cabe casi siempre y sólo
+el ruido del sistema, no el código, explica una falla ocasional.
 """
 from __future__ import annotations
 
@@ -83,7 +118,7 @@ def _compilar() -> Any:
     except ImportError:
         return None
 
-    @numba.njit(cache=True, nogil=True)
+    @numba.njit(cache=True, nogil=True, parallel=True)
     def _kernel(px, m):  # pragma: no cover — lo ejecuta LLVM, no CPython
         # El orden de los bucles no es indiferente: `pixels3d` entrega la
         # pantalla con forma (ancho, alto, 3) pero strides (4, 3200, -1), o
@@ -92,8 +127,16 @@ def _compilar() -> Any:
         # por fuera lee a saltos de 3200 bytes y desperdicia cada línea de
         # caché: medido, 8,42 ms así contra 5,70 ms con `x` por dentro, sin
         # cambiar una sola operación aritmética.
+        #
+        # AUD-530 — `parallel=True` + `prange` sobre `y`: cada hilo escribe
+        # filas propias (no hay dos hilos tocando el mismo píxel), así que
+        # repartir por fila es seguro sin bloqueo ni reducción. Medido en
+        # 800x600 con `nogil=True` ya puesto: 11,96 ms en serie contra 3,86 ms
+        # con 8 hilos (~3,1x, no 8x — la banda de memoria del array, no la
+        # CPU, es el límite; ver `tests/test_stage4_1.py` para el presupuesto
+        # de fotograma completo que motivó medir esto).
         ancho, alto, _ = px.shape
-        for y in range(alto):
+        for y in numba.prange(alto):
             for x in range(ancho):
                 r = np.int32(px[x, y, 0])
                 g = np.int32(px[x, y, 1])
