@@ -28,6 +28,7 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.engine.core import azar, settings
+from src.engine.core.events import Events
 from src.framework.entities.enemy_pez_abismal import EnemyPezAbismal
 from src.framework.scenes.stage_scene import StageScene
 
@@ -105,6 +106,11 @@ class Stage4_1B(StageScene):
         pez.set_player_ref(self._player.rect)
         self._stage_data.entity_list.append(pez)
         self._pez = pez
+        # AUD-529 — «que el jugador lo sienta y lo escuche antes de poder
+        # verlo». El pez nace fuera de cámara a propósito (arriba); este
+        # sonido es el aviso de un segundo o dos antes de que la silueta
+        # entre nadando en cuadro.
+        self.context.event_bus.emit(Events.SFX_ENEMIES_PEZ_ABISMAL_ACERCARSE)
         self._tiempo_restante_del_pez = self._azar.uniform(*self.DURACION_DE_LA_PERSECUCION)
 
     def _retirar_pez(self) -> None:

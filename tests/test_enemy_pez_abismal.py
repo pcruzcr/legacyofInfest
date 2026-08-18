@@ -130,3 +130,71 @@ class TestDibujaSinReventar:
         pez = EnemyPezAbismal(pygame.Vector2(0, 0))
         assert "fly" in pez._sprite_frames
         assert len(pez._sprite_frames["fly"]) > 0
+
+
+class TestEsMasGrandeYAmenazador:
+    """AUD-529 — pedido tras jugarlo: «debe ser mucho más grande y
+    amenazador». Antes compartía el 14×10 que `EnemyFlying` fija para
+    todos sus subtipos — el mismo tamaño que un pájaro de zona1, no una
+    amenaza abisal."""
+
+    def test_el_sprite_es_el_doble_del_generico_de_volador(self, _video) -> None:
+        pez = EnemyPezAbismal(pygame.Vector2(0, 0))
+        assert pez._sprite_fw == 28
+        assert pez._sprite_fh == 20
+
+    def test_el_rect_de_colision_crecio_con_el_sprite(self, _video) -> None:
+        pez = EnemyPezAbismal(pygame.Vector2(0, 0))
+        assert pez.rect.width >= pez._sprite_fw
+        assert pez.rect.height >= pez._sprite_fh
+
+    def test_el_fichero_de_sprite_tiene_el_tamano_declarado(self, _video) -> None:
+        """`_sprite_fw/_sprite_fh` describen cómo se recorta la hoja — si
+        el archivo no mide un múltiplo exacto, el recorte sale mal aunque
+        la carga no reviente."""
+        from src.engine.utils.asset_loader import AssetLoader
+        from src.framework.entities.enemy_pez_abismal import SPRITE_PATH
+
+        surf = AssetLoader.load_image(SPRITE_PATH)
+        assert surf.get_width() % EnemyPezAbismal.SPRITE_ANCHO == 0
+        assert surf.get_height() == EnemyPezAbismal.SPRITE_ALTO
+
+
+class TestSeOyeAntesDeVerse:
+    """AUD-529 — pedido explícito: el pez «no hará daño físico... su
+    función es generar pánico... el jugador debe sentirlo y escucharlo
+    antes de poder verlo»."""
+
+    def test_aparecer_emite_el_sonido_de_aviso(self, _video) -> None:
+        from src.engine.audio.audio_manager import AudioManager
+        from src.engine.core.event_bus import EventBus
+        from src.engine.core.events import Events
+        from src.engine.core.game_context import GameContext
+        from src.engine.core.save_manager import SaveManager
+        from src.engine.input.input_manager import InputManager
+        from src.engine.scene.scene_manager import SceneManager
+        from src.framework.entities import entity_factory
+        from src.stages.stage4_1b.stage4_1b import Stage4_1B
+
+        entity_factory.ensure_registered()
+        bus = EventBus()
+        vistos: list[str] = []
+
+        def _al_sonido(**_data: object) -> None:
+            vistos.append("sonó")
+
+        bus.subscribe(Events.SFX_ENEMIES_PEZ_ABISMAL_ACERCARSE, _al_sonido)
+
+        ctx = GameContext(input_manager=InputManager(), audio_manager=AudioManager(),
+                           scene_manager=None, event_bus=bus, clock=None,
+                           save_manager=SaveManager())
+        ctx.scene_manager = SceneManager(ctx)
+        sc = Stage4_1B(ctx)
+        ctx.scene_manager.push(sc)
+        sc._invocar_pez()
+        bus.dispatch()
+
+        assert vistos, (
+            "aparecer al pez no emite el sonido de aviso — el jugador ya "
+            "no lo escucha antes de verlo"
+        )

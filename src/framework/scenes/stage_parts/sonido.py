@@ -93,6 +93,7 @@ class SonidoDeEscenario:
             Events.SFX_ENVIRONMENT_ONE_WAY_PLATFORM: "sfx_environment_one_way_platform",
             Events.SFX_BOSS_PHASE_CHANGE: "sfx_bosses_phase_change",
             Events.SFX_ENEMIES_PROJECTILE_HIT_WALL: "sfx_enemies_projectile_hit_wall",
+            Events.SFX_ENEMIES_PEZ_ABISMAL_ACERCARSE: "sfx_enemies_pez_abismal_acercarse",
             Events.SFX_BOSSES_GAVILAN_DIVE: "sfx_bosses_gavilan_dive",
             Events.SFX_BOSSES_GAVILAN_MASK_BEAM: "sfx_bosses_gavilan_mask_beam",
             Events.SFX_BOSSES_PABURU_EYE_BEAM: "sfx_bosses_paburu_eye_beam",

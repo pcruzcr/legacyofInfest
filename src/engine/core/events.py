@@ -100,6 +100,10 @@ class Events:
     SFX_ENVIRONMENT_ONE_WAY_PLATFORM: str = "SFX_ENVIRONMENT_ONE_WAY_PLATFORM"
     SFX_BOSS_PHASE_CHANGE: str = "SFX_BOSS_PHASE_CHANGE"
     SFX_ENEMIES_PROJECTILE_HIT_WALL: str = "SFX_ENEMIES_PROJECTILE_HIT_WALL"
+    #: AUD-529 — «se oye antes de verse»: el pez abismal emite este creado
+    #: bajo justo al aparecer (fuera de cámara, GAP-065), un segundo o dos
+    #: antes de que la silueta entre en cuadro nadando.
+    SFX_ENEMIES_PEZ_ABISMAL_ACERCARSE: str = "SFX_ENEMIES_PEZ_ABISMAL_ACERCARSE"
     SFX_BOSSES_GAVILAN_DIVE: str = "SFX_BOSSES_GAVILAN_DIVE"
     SFX_BOSSES_GAVILAN_MASK_BEAM: str = "SFX_BOSSES_GAVILAN_MASK_BEAM"
     SFX_BOSSES_PABURU_EYE_BEAM: str = "SFX_BOSSES_PABURU_EYE_BEAM"

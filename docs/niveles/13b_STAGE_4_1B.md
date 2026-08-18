@@ -57,6 +57,17 @@ cámara en la dirección de avance, persigue 5-9 s, se retira sin dejar
 fugas en `entity_list` — nunca queda un pez huérfano si el jugador muere a
 mitad de la persecución.
 
+**AUD-529 — se oye antes de verse.** Pedido tras jugarlo: *"debe ser mucho
+más grande y amenazador... el jugador debe sentirlo y escucharlo antes de
+poder verlo"*. El sprite pasó de 14×10 (lo que `EnemyFlying` fija para
+todos sus subtipos) a 28×20 propio — `EnemyPezAbismal._load_extra_sprites`
+lo sobreescribe junto con `_sprite_fw/_sprite_fh` y el `rect` de colisión
+(56×32). `Stage4_1B._invocar_pez` emite
+`Events.SFX_ENEMIES_PEZ_ABISMAL_ACERCARSE` —un gemido grave que se desliza,
+registro abisal— en el mismo instante en que el pez nace fuera de cámara:
+el aviso llega uno o dos segundos antes de que la silueta entre nadando en
+cuadro.
+
 ## 3. Reglas obligatorias
 
 Las mismas del cementerio (`13_STAGE_4_1.md` §3), salvo la de cero

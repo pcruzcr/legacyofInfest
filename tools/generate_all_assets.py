@@ -505,7 +505,7 @@ def _gen_all_enemies():
         _gen_enemy_sheet(base / f"enemy_shoot_{zname}.png", 12, 12, 4, zp["shoot"], zp["detail"])
 
 
-def _gen_pez_abismal_sheet(path, w=14, h=10, frames=4):
+def _gen_pez_abismal_sheet(path, w=28, h=20, frames=4):
     """AUD-519 — el pez abismal de 4.1b: no un bicho con patas como
     `_gen_enemy_sheet` (esa silueta es de tierra firme, no de fosa), sino
     una forma alargada, casi sin rasgos, con un único punto que pulsa —el
@@ -515,10 +515,12 @@ def _gen_pez_abismal_sheet(path, w=14, h=10, frames=4):
     apenas se distinga»: el contorno importa menos que el punto de luz
     que se acerca en la oscuridad.
 
-    14×10 por fotograma, no un tamaño propio: es lo que
-    `EnemyFlying._load_zone_sprites` pide siempre (`self._sprite_fw/fh`),
-    y `EnemyPezAbismal` no lo sobreescribe — cambiar el tamaño aquí sin
-    tocar el otro lado descuadraría el recorte de la hoja de sprites.
+    AUD-529 — 28×20 por fotograma, el doble de lo que tenía (14×10).
+    Pedido explícito tras jugarlo: «debe ser mucho más grande y
+    amenazador». Ya no es el tamaño que `EnemyFlying._load_zone_sprites`
+    pide para el resto de voladores — `EnemyPezAbismal._load_extra_sprites`
+    lo sobreescribe a propósito, junto con `_sprite_fw/_sprite_fh` y el
+    `rect` de colisión, así que el recorte de la hoja sigue cuadrando.
     """
     cuerpo = (14, 18, 26)
     borde = (6, 8, 14)
@@ -529,19 +531,19 @@ def _gen_pez_abismal_sheet(path, w=14, h=10, frames=4):
         draw = ImageDraw.Draw(img)
         # El cuerpo ondula de fotograma a fotograma — un vaivén sinusoidal
         # simple, no una animación de nado anatómicamente precisa.
-        ondulacion = int(1 * math.sin(f / max(frames - 1, 1) * math.pi * 2))
-        draw.ellipse((1, h // 2 - 3 + ondulacion, w - 4, h // 2 + 3 - ondulacion),
+        ondulacion = int(2 * math.sin(f / max(frames - 1, 1) * math.pi * 2))
+        draw.ellipse((2, h // 2 - 6 + ondulacion, w - 8, h // 2 + 6 - ondulacion),
                      fill=cuerpo, outline=borde)
         # Cola, apenas un triángulo que se dobla con la ondulación.
         draw.polygon([
-            (w - 4, h // 2 - 2),
-            (w - 1, h // 2 + ondulacion),
-            (w - 4, h // 2 + 2),
+            (w - 8, h // 2 - 4),
+            (w - 1, h // 2 + ondulacion * 2),
+            (w - 8, h // 2 + 4),
         ], fill=borde)
         # El señuelo: pulsa de tamaño, no de posición — es lo primero que
         # se ve venir en la oscuridad, antes que el cuerpo.
-        pulso = 1 + (f % 2)
-        cx, cy = 2, h // 2
+        pulso = 2 + (f % 2) * 2
+        cx, cy = 4, h // 2
         draw.ellipse((cx - pulso, cy - pulso, cx + pulso, cy + pulso), fill=luz)
         imgs.append(img)
     _save_sheet(path, imgs, w, h)
@@ -2196,7 +2198,9 @@ SFX_CATEGORIES = {
     "player": ["jump", "land", "short_attack", "long_attack", "hit_connect", "hurt", "die", "crouch",
                # AUD-522 — el musgo resbala y hasta ahora no se oía.
                "footstep_musgo"],
-    "enemies": ["hit", "die_small", "die_large", "projectile_fire", "projectile_hit_wall"],
+    "enemies": ["hit", "die_small", "die_large", "projectile_fire", "projectile_hit_wall",
+                # AUD-529 — que se oiga antes de verse.
+                "pez_abismal_acercarse"],
     "bosses": ["venado_stomp", "venado_charge", "venado_vine", "rey_spit", "rey_split",
                "gavilan_dive", "gavilan_mask_beam", "paburu_eye_beam", "paburu_wave",
                "phase_change", "relic_appear"],
@@ -2250,7 +2254,8 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
              "rain_ambient": 2.0, "storm_ambient": 2.0, "thunder": 1.6,
              "viento_de_bosque": 2.0, "grito_de_gavilan": 0.7,
              "canto_ancestral": 3.0, "resonancia_solemne": 4.0,
-             "despertar_profundo": 1.6, "footstep_musgo": 0.12}
+             "despertar_profundo": 1.6, "footstep_musgo": 0.12,
+             "pez_abismal_acercarse": 2.2}
     
     dur = t_dur.get(name, 0.3)
     n = int(rate * dur)
@@ -2424,6 +2429,32 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
             anterior = anterior * 0.9 + crudo * 0.1
             env = min(1.0, avance * 20.0) * max(0.0, 1.0 - avance) ** 2.0
             samples.append(anterior * env * 0.3)
+    elif name == "pez_abismal_acercarse":
+        # AUD-529 — «que el jugador lo sienta y lo escuche antes de poder
+        # verlo». `Stage4_1B._invocar_pez` lo dispara al aparecer, fuera
+        # de cámara a propósito (GAP-065 §4) — este sonido es el segundo
+        # o dos de aviso antes de que la silueta entre nadando en cuadro.
+        # Un gemido grave que se desliza —no un pitido fijo, una criatura
+        # respirando/crujiendo bajo el agua— con textura de ruido muy
+        # filtrado encima, no el aullido agudo de `grito_de_gavilan`
+        # (ave rapaz, registro alto): esto es abisal, registro grave.
+        fundamental_inicio = 42.0
+        fundamental_fin = 58.0
+        ruido_previo = 0.0
+        samples = []
+        for i in range(n):
+            t = i / rate
+            avance = t / dur
+            # Ataque lento (se acerca), sostenido, caída hacia el final
+            # (se aleja / se pierde en el agua) — no un golpe seco.
+            env = min(1.0, avance * 2.2) * (1.0 - max(0.0, (avance - 0.6) / 0.4)) ** 1.3
+            f = fundamental_inicio + (fundamental_fin - fundamental_inicio) * avance
+            # Vibrato lento: una criatura, no una sirena.
+            f *= 1.0 + 0.03 * math.sin(2.0 * math.pi * t * 2.2)
+            tono = _tri(f, t) + 0.4 * _tri(f * 2.0, t)
+            crudo = random.uniform(-1.0, 1.0)
+            ruido_previo = ruido_previo * 0.93 + crudo * 0.07
+            samples.append((tono * 0.5 + ruido_previo * 0.35) * env * 0.6)
     elif name.startswith("venado_"):
         # AUD-263 — voz de marcador de posición: una vocalización grave con
         # formantes, no una palabra. Un gruñido con inflexión se lee como «una
