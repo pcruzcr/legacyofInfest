@@ -434,6 +434,31 @@ class ZonaDeFriccion:
     #: «datos, sin comportamiento» (ver el docstring del módulo) y decidir
     #: qué hacer con un nombre desconocido es comportamiento.
     material: str = "roca"
+    #: AUD-522 — resbalar de verdad, no sólo frenar. `multiplicador` sólo
+    #: puede frenar con seguridad: por debajo de 1 recorta la velocidad que
+    #: la entrada ya fijó ese fotograma; por encima de 1 «se dispara sin
+    #: tope» (docstring de arriba, AUD-236) porque nada limita cuánto crece
+    #: sin que la entrada la vuelva a fijar. El hielo/musgo de verdad no es
+    #: "más rápido", es "cuesta pararse": la velocidad sigue apuntando a
+    #: donde la entrada la manda, pero tarda en llegar — la misma
+    #: amortiguación exponencial de `ChaseFlight.DRAG` (AUD-046), acotada
+    #: por construcción porque siempre converge hacia el objetivo, nunca se
+    #: aleja de él.
+    #:
+    #: Fracción de la diferencia con el objetivo que **sobrevive** un
+    #: segundo entero: 0 (por defecto) es sin inercia — el comportamiento de
+    #: siempre, así que ningún mapa entregado cambia — y más cerca de 1 es
+    #: más resbaladizo. Mutuamente excluyente con `multiplicador` (frenar Y
+    #: resbalar a la vez no tiene un significado claro); si ambos se
+    #: declaran, `inercia` gana.
+    inercia: float = 0.0
+    #: Velocidad horizontal mezclada del fotograma anterior, por entidad —
+    #: es lo que hace falta recordar para amortiguar en vez de recortar.
+    #: Vive aquí y no en la entidad porque la entidad no sabe en qué zona
+    #: está; distinto de `_t` en `BloqueRitmico` sólo en que aquello es un
+    #: reloj y esto un mapa, pero el criterio es el mismo: estado mutable
+    #: que un sistema necesita y ningún otro componente puede prestarle.
+    _vx_mezclada: dict[int, float] = field(default_factory=dict)
 
 
 @dataclass(slots=True)

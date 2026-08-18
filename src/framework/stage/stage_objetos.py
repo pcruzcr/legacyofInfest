@@ -721,6 +721,10 @@ class ObjetosDeTiled:
                 # propósito: una zona sin declarar `material` no cambia
                 # ningún mapa ya entregado.
                 material=str(props.get("material", "roca")),
+                # AUD-522 — resbalar de verdad (hielo, musgo mojado) en vez
+                # de sólo frenar. 0 por defecto: ningún mapa entregado
+                # cambia sin declararlo.
+                inercia=f("inercia", 0.0),
             )]
 
         elif obj_type in ("LaserZone", "ShockwaveZone"):

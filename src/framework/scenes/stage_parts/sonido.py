@@ -76,6 +76,7 @@ class SonidoDeEscenario:
             Events.SFX_STAGE_COMPLETE: "sfx_ui_stage_complete",
             Events.SFX_HAZARD_ZONE: "sfx_environment_hazard_zone",
             Events.SFX_PLAYER_FOOTSTEP: "sfx_step",
+            Events.SFX_PLAYER_FOOTSTEP_MUSGO: "sfx_player_footstep_musgo",
             Events.SFX_MENU_HOVER: "sfx_select",
             Events.SFX_MENU_CONFIRM: "sfx_select",
             Events.SFX_MENU_CANCEL: "sfx_ui_menu_cancel",

@@ -23,9 +23,10 @@ Terreno propio, no color encima del mismo suelo
 -------------------------------------------------
 Cada sección tiene su propia familia de baldosa en `tileset_stage4_1.png`
 (cripta, bosque, camino de huesos, bosque quemado, tumbas, piedra sagrada —
-ver `tools/generate_all_assets.py::_gen_tileset_stage4_1`). El musgo y el
-lodo de la Fase 2 son dos frenos del mismo tipo (AUD-473), no un arrastre y
-un freno — ver la nota junto a `FRENO_DEL_MUSGO` más abajo.
+ver `tools/generate_all_assets.py::_gen_tileset_stage4_1`). El musgo de la
+Fase 2 resbala y el lodo frena — dos mecánicas distintas, no un arrastre y
+un freno (AUD-473) ni dos intensidades del mismo freno (AUD-522) — ver la
+nota junto a `RESBALON_DEL_MUSGO` más abajo.
 
 Las lomas de la Fase 3 (AUD-477)
 -----------------------------------
@@ -284,14 +285,27 @@ def checkpoints() -> tuple[tuple[int, int], ...]:
 # prueba (el propio dueño lo vio como «se congela», porque nada más en la
 # pantalla decía que el personaje se movía solo).
 #
-# El campo correcto para «resbaloso» es `multiplicador`, el mismo que ya usa
-# el lodo. Con un matiz: el docstring de `ZonaDeFriccion` avisa de que
-# `multiplicador > 1` «se dispara sin tope» porque se compone cada fotograma
-# mientras el jugador está dentro de la zona — no hay un valor «resbaloso
-# pero seguro» por encima de 1 en este motor. Así que el musgo no frena
-# menos que el lodo por ser más resbaloso: frena **un poco menos fuerte**,
-# con el mismo mecanismo probado (AUD-236), para poder distinguirlo del lodo
-# sin reintroducir el problema del arrastre.
+# El arreglo de entonces fue `multiplicador` — el mismo campo que el lodo,
+# apenas más suave (0,94 contra 0,88) — porque `multiplicador > 1` «se
+# dispara sin tope» (mismo docstring) y no había forma segura de ir más
+# allá de eso.
+#
+# AUD-522 — «el musgo resbala como la nieve, el lodo es el que frena».
+# ----------------------------------------------------------------------
+# Jugado, 0,94 contra 0,88 no se distinguía de nada: seis puntos de
+# diferencia en la velocidad de andar es imperceptible, y el musgo no se
+# sentía resbaloso, sólo un pelín más lento que el lodo. El dueño lo dijo
+# sin rodeos: el musgo tiene que **resbalar** (cuesta pararse, no cuesta
+# andar), el lodo **frena** (cuesta andar, no resbala) — dos mecánicas
+# distintas, no una intensidad distinta de la misma.
+#
+# `ZonaDeFriccion` ganó el campo que faltaba para el musgo: `inercia`
+# (AUD-522, `components.py`). No es `multiplicador` con otro nombre —
+# amortigua la velocidad hacia el objetivo en vez de recortarla, así que
+# soltar la tecla en el musgo seguirá deslizando un momento en vez de
+# parar en seco, y sigue acotado (nunca "se dispara sin tope") porque
+# siempre converge hacia lo que pide la entrada, nunca se aleja de eso. El
+# lodo se queda con `multiplicador` — frena de verdad, sin resbalar.
 SEGMENTOS_FASE2: tuple[tuple[int, int, str], ...] = (
     (170, 15, "musgo"),
     (190, 15, "lodo"),
@@ -314,9 +328,14 @@ HUELLAS_FASE2: tuple[int, ...] = (
     42, 44, 47, 48, 51,
 )
 
-#: Cuánto frena el musgo: se anda al 94 % — un roce más suave que el lodo.
-FRENO_DEL_MUSGO = 0.94
-#: Cuánto frena el lodo: se anda al 88 %.
+#: AUD-522 — el musgo resbala (`inercia`), no frena. 0,15: a un segundo de
+#: soltar la tecla queda el 15 % de la velocidad — se nota de inmediato
+#: (los primeros fotogramas pierden poco) y en torno a 0,4-0,5 s ya se ha
+#: frenado casi del todo, así que un tramo de 15 columnas se cruza
+#: manteniendo el control, no patinando fuera de la pantalla.
+RESBALON_DEL_MUSGO = 0.15
+#: Cuánto frena el lodo: se anda al 88 %. Sin cambios en AUD-522 — el lodo
+#: ya era «cuesta andar», que es justo lo que se le pedía.
 FRENO_DEL_LODO = 0.88
 
 

@@ -51,13 +51,13 @@ from src.stages.stage4_1.trazado import (  # noqa: E402
     DESVIO_COLUMNA_DIALOGO,
     DESVIO_COLUMNA_LIBERACION,
     FRENO_DEL_LODO,
-    FRENO_DEL_MUSGO,
     HUESOS_FASE3,
     MH,
     MURO_ANCHO,
     MW,
     NOMBRE_LAPIDA_HUGO,
     NOMBRE_LAPIDA_TERESA,
+    RESBALON_DEL_MUSGO,
     SEGMENTOS_FASE2,
     TEXTO_FINAL_BASE,
     TS,
@@ -316,20 +316,35 @@ def _objetos() -> list[str]:
 
     # ── Las superficies de la Fase 2 (musgo y lodo) ────────────
     #
-    # AUD-513, GAP-060 punto 14 — la escena escala `multiplicador` con la
-    # intensidad de la lluvia (`Stage4_1._actualizar_friccion_de_la_lluvia`)
-    # reconociendo cada zona por su valor de fábrica, no por `material=`:
-    # el TMX comprometido trae `BG_Far`/`BG_Mid` con arte pintado a mano, y
-    # `tools/generate_stage4_1.py` se niega a regenerarlo sin `--forzar`
-    # (`tiene_arte_pintado()`) — declarar aquí una propiedad que el mapa real
-    # no tiene todavía desincronizaría el generador del `.tmx` comprometido
-    # (`TestElMapaSigueAtadoASuGenerador`, `tests/test_stage4_1.py`) sin
-    # ganar nada, porque nadie va a regenerar sólo por esto.
+    # AUD-513, GAP-060 punto 14 — la escena escala el freno con la
+    # intensidad de la lluvia (`Stage4_1._actualizar_friccion_de_la_lluvia`).
+    # Sigue reconociendo cada zona por su valor de fábrica, no por
+    # `material=`: aunque el musgo ya declara `material="musgo"` desde
+    # AUD-522 (para encender la pisada y la partícula propias,
+    # `states/grounded.py`), la escena no puede depender de que el TMX
+    # comprometido ya lo traiga — `assets/maps/stage4_1/stage4_1.tmx`
+    # sigue con `BG_Far`/`BG_Mid` pintados a mano, y
+    # `tools/generate_stage4_1.py` se niega a regenerar las capas de
+    # baldosa sin `--forzar` (`tiene_arte_pintado()`). Cada cambio de
+    # propiedades de `Objects` se aplica con un parche quirúrgico que sólo
+    # toca esa capa — el mismo patrón que ya usan el mirador (AUD-515) y
+    # los checkpoints (AUD-516) — y éste ya se aplicó, pero la próxima
+    # persona que cambie algo aquí no puede asumir que el mapa real está al
+    # día sin comprobarlo (`TestElMapaSigueAtadoASuGenerador`).
+    #
+    # AUD-522 — el musgo resbala (`inercia`), el lodo frena
+    # (`multiplicador`, sin cambios): son campos distintos a propósito, ver
+    # la nota junto a `RESBALON_DEL_MUSGO` en `trazado.py`.
     for inicio, ancho, material in SEGMENTOS_FASE2:
         fila = perfil[inicio]
         if material == "musgo":
+            # `material="musgo"` (además de `inercia`) es lo que enciende
+            # la pisada y la partícula propias (AUD-522,
+            # `states/grounded.py`): sin declararlo, `Transform.material_actual`
+            # se queda en "roca" y el jugador nunca se entera de que está
+            # sobre musgo salvo por cómo resbala.
             obj("FrictionZone", inicio * TS, (fila - 2) * TS, ancho * TS, 2 * TS,
-                multiplicador=FRENO_DEL_MUSGO)
+                inercia=RESBALON_DEL_MUSGO, material="musgo")
         elif material == "lodo":
             obj("FrictionZone", inicio * TS, (fila - 2) * TS, ancho * TS, 2 * TS,
                 multiplicador=FRENO_DEL_LODO)

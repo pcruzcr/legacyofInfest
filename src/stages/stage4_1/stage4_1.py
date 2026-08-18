@@ -252,11 +252,12 @@ class Stage4_1(StageScene):
         self._viento_fuerza_original: pygame.Vector2 | None = None
         self._viento_reducido: bool = False
         #: La fricción escala con la lluvia (Fase 2, AUD-513): el
-        #: `multiplicador` de fábrica de cada `ZonaDeFriccion` de musgo/lodo,
-        #: recordado por id de entidad la primera vez que se ve, para poder
-        #: escalarlo desde ahí y no desde lo que quedó del fotograma
-        #: anterior.
-        self._frenos_de_fabrica: dict[int, float] = {}
+        #: Qué material de fábrica es cada `ZonaDeFriccion` de la Fase 2
+        #: ("musgo" o "lodo"), recordado por id de entidad la primera vez
+        #: que se ve — AUD-522: desde que el musgo resbala (`inercia`) y el
+        #: lodo frena (`multiplicador`), hace falta saber cuál es cada una
+        #: para escalar el campo correcto, no sólo un número de fábrica.
+        self._frenos_de_fabrica: dict[int, str] = {}
         #: Las luces de las grietas de la Fase 6 — apagadas de fábrica en el
         #: TMX, encendidas por proximidad y no permanentes.
         self._grietas: list[LightSource] = []
@@ -692,9 +693,12 @@ class Stage4_1(StageScene):
     #
     # Punto 14 del diseño: *«al principio, musgo = ligeramente resbaladizo;
     # después de lluvia intensa, mucho más»*. `SEGMENTOS_FASE2` declaraba
-    # `multiplicador` como una constante por material —`FRENO_DEL_MUSGO`,
-    # `FRENO_DEL_LODO`— igual en toda la sección: la lluvia se veía y se
-    # oía, pero no tocaba la física.
+    # una constante por material —fija en toda la sección— así que la
+    # lluvia se veía y se oía, pero no tocaba la física.
+    #
+    # AUD-522 — desde que el musgo resbala (`inercia`) y el lodo frena
+    # (`multiplicador`, sin cambios), son dos campos distintos y hace falta
+    # saber cuál es cada zona para escalar el correcto.
     #
     # No se identifica la zona por `ZonaDeFriccion.material`: el TMX ya
     # comprometido (`assets/maps/stage4_1/stage4_1.tmx`) trae `BG_Far` y
@@ -704,11 +708,10 @@ class Stage4_1(StageScene):
     # generador declara `material=` para el día que el mapa se regenere de
     # verdad, pero esta escena no puede depender de que ya esté ahí. En su
     # lugar, cada `ZonaDeFriccion` de la Fase 2 se reconoce por su propio
-    # `multiplicador` de fábrica la primera vez que se ve —`FRENO_DEL_MUSGO`
-    # o `FRENO_DEL_LODO`, los dos únicos valores que coloca el generador— y
-    # ese valor de partida es el que la lluvia escala desde entonces, igual
-    # que `_actualizar_pausa_de_la_serpiente` recuerda la fuerza original del
-    # viento antes de tocarla.
+    # valor de fábrica la primera vez que se ve —`RESBALON_DEL_MUSGO` en
+    # `inercia` o `FRENO_DEL_LODO` en `multiplicador`, los dos únicos pares
+    # que coloca el generador— igual que `_actualizar_pausa_de_la_serpiente`
+    # recuerda la fuerza original del viento antes de tocarla.
     #
     # AUD-474 le añade la otra mitad del diseño (punto 21, «la física vuelve
     # a la normalidad» tras liberar al espíritu): en cuanto el jugador
@@ -718,7 +721,7 @@ class Stage4_1(StageScene):
     INTENSIDAD_LLUVIA_INICIAL = 0.35
     INTENSIDAD_LLUVIA_FINAL = 1.25
     INTENSIDAD_LLUVIA_TRAS_LIBERAR = 0.15
-    #: Tolerancia para reconocer `FRENO_DEL_MUSGO`/`FRENO_DEL_LODO` de
+    #: Tolerancia para reconocer `RESBALON_DEL_MUSGO`/`FRENO_DEL_LODO` de
     #: fábrica: basta con no confundirlos entre sí ni con otra `FrictionZone`
     #: (hielo, goma) que este nivel no usa.
     TOLERANCIA_FRENO_DE_FABRICA = 0.01
@@ -738,20 +741,26 @@ class Stage4_1(StageScene):
 
         intensidad = self._intensidad_de_lluvia(fase)
         for eid, zona in self._mundo.cada(ZonaDeFriccion):
-            base = self._frenos_de_fabrica.get(eid)
-            if base is None:
-                for candidato in (trazado.FRENO_DEL_MUSGO, trazado.FRENO_DEL_LODO):
-                    if abs(zona.multiplicador - candidato) <= self.TOLERANCIA_FRENO_DE_FABRICA:
-                        base = candidato
-                        break
-                if base is None:
+            tipo = self._frenos_de_fabrica.get(eid)
+            if tipo is None:
+                if abs(zona.inercia - trazado.RESBALON_DEL_MUSGO) <= self.TOLERANCIA_FRENO_DE_FABRICA:
+                    tipo = "musgo"
+                elif abs(zona.multiplicador - trazado.FRENO_DEL_LODO) <= self.TOLERANCIA_FRENO_DE_FABRICA:
+                    tipo = "lodo"
+                else:
                     continue  # no es musgo ni lodo: otra ZonaDeFriccion, no se toca
-                self._frenos_de_fabrica[eid] = base
-            # `base` frena hacia 1,0 tanto como haga falta para llegar a la
-            # intensidad de hoy: con intensidad 1,0 el resultado es `base`
-            # tal cual (la referencia con la que se calibró el nivel);
-            # menos que eso resbala menos, más resbala más.
-            zona.multiplicador = 1.0 - (1.0 - base) * intensidad
+                self._frenos_de_fabrica[eid] = tipo
+            if tipo == "musgo":
+                # Sin lluvia, sin resbalón (0); a intensidad de referencia
+                # (1,0), exactamente `RESBALON_DEL_MUSGO` — con lluvia
+                # intensa (hasta 1,25) resbala más que la referencia.
+                zona.inercia = trazado.RESBALON_DEL_MUSGO * intensidad
+            else:
+                # `FRENO_DEL_LODO` frena hacia 1,0 tanto como haga falta
+                # para llegar a la intensidad de hoy: con intensidad 1,0 el
+                # resultado es el freno de fábrica tal cual; menos que eso
+                # frena menos, más frena más.
+                zona.multiplicador = 1.0 - (1.0 - trazado.FRENO_DEL_LODO) * intensidad
 
     # ── La pausa antes del diálogo de la Serpiente (Fase 3, AUD-480) ─
 

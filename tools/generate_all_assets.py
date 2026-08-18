@@ -2052,7 +2052,9 @@ def _gen_all_music():
 # ════════════════════════════════════════
 
 SFX_CATEGORIES = {
-    "player": ["jump", "land", "short_attack", "long_attack", "hit_connect", "hurt", "die", "crouch"],
+    "player": ["jump", "land", "short_attack", "long_attack", "hit_connect", "hurt", "die", "crouch",
+               # AUD-522 — el musgo resbala y hasta ahora no se oía.
+               "footstep_musgo"],
     "enemies": ["hit", "die_small", "die_large", "projectile_fire", "projectile_hit_wall"],
     "bosses": ["venado_stomp", "venado_charge", "venado_vine", "rey_spit", "rey_split",
                "gavilan_dive", "gavilan_mask_beam", "paburu_eye_beam", "paburu_wave",
@@ -2107,7 +2109,7 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
              "rain_ambient": 2.0, "storm_ambient": 2.0, "thunder": 1.6,
              "viento_de_bosque": 2.0, "grito_de_gavilan": 0.7,
              "canto_ancestral": 3.0, "resonancia_solemne": 4.0,
-             "despertar_profundo": 1.6}
+             "despertar_profundo": 1.6, "footstep_musgo": 0.12}
     
     dur = t_dur.get(name, 0.3)
     n = int(rate * dur)
@@ -2266,6 +2268,21 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
             tremolo = 1.0 + 0.05 * math.sin(2.0 * math.pi * t * 4.5)
             v = sum(_tri(fundamental * h, t) / h for h in armonicos)
             samples.append(v * 0.16 * tremolo)
+    elif name == "footstep_musgo":
+        # AUD-522 — el musgo resbala y hasta ahora no se oía ni se veía.
+        # Un chapoteo corto y sordo: ruido muy filtrado —blando, sin
+        # agudos, nada del crujido de `sfx_step`— con ataque casi
+        # instantáneo y caída rápida, una pisada suelta, no un charco
+        # entero.
+        anterior = 0.0
+        samples = []
+        for i in range(n):
+            t_seg = i / rate
+            avance = t_seg / dur
+            crudo = random.uniform(-1.0, 1.0)
+            anterior = anterior * 0.9 + crudo * 0.1
+            env = min(1.0, avance * 20.0) * max(0.0, 1.0 - avance) ** 2.0
+            samples.append(anterior * env * 0.3)
     elif name.startswith("venado_"):
         # AUD-263 — voz de marcador de posición: una vocalización grave con
         # formantes, no una palabra. Un gruñido con inflexión se lee como «una

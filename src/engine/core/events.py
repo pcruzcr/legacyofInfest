@@ -48,6 +48,10 @@ class Events:
     SFX_PLAYER_JUMP: str = "SFX_PLAYER_JUMP"
     SFX_PLAYER_LAND: str = "SFX_PLAYER_LAND"
     SFX_PLAYER_FOOTSTEP: str = "SFX_PLAYER_FOOTSTEP"
+    SFX_PLAYER_FOOTSTEP_MUSGO: str = "SFX_PLAYER_FOOTSTEP_MUSGO"
+    """AUD-522 — pisada distinta al andar sobre musgo (`material="musgo"`
+    en una `FrictionZone`): el musgo resbala y hasta ahora no se oía ni se
+    veía, sólo se calculaba."""
     SFX_MENU_HOVER: str = "SFX_MENU_HOVER"
     SFX_MENU_CONFIRM: str = "SFX_MENU_CONFIRM"
     SFX_MENU_CANCEL: str = "SFX_MENU_CANCEL"
@@ -64,6 +68,9 @@ class Events:
     """Emitted on ultimate attack. Payload: pos."""
     VFX_BUBBLE: str = "VFX_BUBBLE"
     """Emitted by SwimmingState. Payload: pos."""
+    VFX_MUSGO_STEP: str = "VFX_MUSGO_STEP"
+    """AUD-522 — emitted by WalkingState while on `material="musgo"`.
+    Payload: pos."""
     SFX_PLAYER_SHORT_ATTACK: str = "SFX_PLAYER_SHORT_ATTACK"
     SFX_PLAYER_LONG_ATTACK: str = "SFX_PLAYER_LONG_ATTACK"
     SFX_PLAYER_HURT: str = "SFX_PLAYER_HURT"

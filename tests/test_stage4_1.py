@@ -225,9 +225,11 @@ class TestLasSuperficiesDeLaFase2:
         del jugador. La primera versión lo usaba para el musgo pensando en
         «te arrastra» — el jugador cruzaba el tramo como pasajero, sin
         soltar el control en ningún otro momento del nivel, lo que en una
-        partida real se veía exactamente como el nivel congelado. Las dos
-        superficies frenan (`multiplicador < 1`), sólo que el musgo frena
-        menos que el lodo.
+        partida real se veía exactamente como el nivel congelado.
+
+        AUD-522 — desde entonces las dos superficies dejaron de ser «la
+        misma mecánica, distinta intensidad»: el musgo resbala
+        (`inercia`), el lodo frena (`multiplicador < 1`).
         """
         from src.stages.stage4_1 import trazado
 
@@ -235,32 +237,41 @@ class TestLasSuperficiesDeLaFase2:
         lodo = sum(1 for _i, _a, m in trazado.SEGMENTOS_FASE2 if m == "lodo")
         zonas = self._zonas(escena)
         arrastres = [z for z in zonas if z.arrastre]
-        frenos_de_musgo = [z for z in zonas if z.multiplicador == trazado.FRENO_DEL_MUSGO]
+        resbalones_de_musgo = [z for z in zonas if z.inercia == trazado.RESBALON_DEL_MUSGO]
         frenos_de_lodo = [z for z in zonas if z.multiplicador == trazado.FRENO_DEL_LODO]
 
         assert arrastres == [], (
             f"ninguna superficie de la Fase 2 debe usar arrastre (cinta "
             f"transportadora): {arrastres}"
         )
-        assert len(frenos_de_musgo) == musgo
+        assert len(resbalones_de_musgo) == musgo
         assert len(frenos_de_lodo) == lodo
-        assert all(0.0 < z.multiplicador < 1.0 for z in zonas), (
-            "AUD-236: multiplicador > 1 se dispara sin tope en este motor — "
-            "ninguna zona de la Fase 2 debería usarlo"
+        assert all(z.multiplicador == 1.0 for z in resbalones_de_musgo), (
+            "el musgo resbala con `inercia`, no debería tocar `multiplicador`"
         )
-        assert trazado.FRENO_DEL_MUSGO > trazado.FRENO_DEL_LODO, (
-            "el musgo debe frenar menos que el lodo, no más"
+        assert all(z.inercia == 0.0 for z in frenos_de_lodo), (
+            "el lodo frena con `multiplicador`, no debería tocar `inercia`"
+        )
+        assert all(0.0 < z.multiplicador < 1.0 for z in frenos_de_lodo), (
+            "AUD-236: multiplicador > 1 se dispara sin tope en este motor — "
+            "el lodo no debería usarlo"
+        )
+        assert all(0.0 < z.inercia < 1.0 for z in resbalones_de_musgo), (
+            "la inercia tiene que quedarse acotada entre 0 (sin resbalón) y "
+            "1 (resbalón total)"
         )
 
     def test_el_musgo_no_mueve_a_nadie_sin_velocidad(self) -> None:
-        """AUD-473 — regresión directa del defecto, contra el sistema real.
+        """AUD-473, actualizada en AUD-522 — regresión directa del defecto,
+        contra el sistema real.
 
         Mismo patrón que ya prueba la cinta transportadora de verdad
         (`tests/test_ecs.py::test_la_cinta_arrastra_sin_acumular_velocidad`),
         con la zona de musgo tal como la declara `stage4_1` — para que quede
         constancia de que, a diferencia de una cinta, el musgo **no** mueve
-        a quien está quieto encima: sólo escala la velocidad que ya trae, y
-        con velocidad cero eso es 0 × 0,94 = 0.
+        a quien está quieto encima: la inercia amortigua hacia la velocidad
+        que pide la entrada, y con la entrada pidiendo 0 desde el principio
+        no hay nada de lo que resbalar.
         """
         import pygame
 
@@ -270,7 +281,7 @@ class TestLasSuperficiesDeLaFase2:
 
         m = World()
         m.crear(ZonaDeFriccion(pygame.Rect(0, 0, 200, 200),
-                                multiplicador=trazado.FRENO_DEL_MUSGO))
+                                inercia=trazado.RESBALON_DEL_MUSGO))
         e = m.crear(Transform(pygame.Vector2(10, 10), pygame.Rect(10, 10, 8, 8)),
                     Velocidad(pygame.Vector2(0, 0)))
         for _ in range(120):  # 2 s
@@ -293,12 +304,31 @@ class TestLaFriccionEscalaConLaLluvia:
     """AUD-513, GAP-060 punto 14: *«al principio, musgo = ligeramente
     resbaladizo; después de lluvia intensa, mucho más»* — antes
     `multiplicador` era una constante por material, igual en toda la
-    sección."""
+    sección.
+
+    AUD-522 divide la mecánica en dos campos que escalan en sentidos
+    opuestos: el lodo frena más fuerte con más lluvia (`multiplicador` se
+    acerca a 0), el musgo resbala más fuerte con más lluvia (`inercia` se
+    aleja de 0) — por eso las pruebas de aquí en adelante separan las
+    zonas por tipo en vez de tratarlas como una sola lista.
+    """
 
     def _zonas(self, escena):
         from src.framework.ecs import ZonaDeFriccion
 
         return list(escena._mundo.cada(ZonaDeFriccion))
+
+    def _musgo_y_lodo(self, escena):
+        """Separa las zonas de la Fase 2 por tipo, por el mismo criterio
+        que usa `Stage4_1._actualizar_friccion_de_la_lluvia`: el musgo es
+        la que trae `inercia`, el lodo la que trae `multiplicador`."""
+        musgo, lodo = [], []
+        for eid, z in self._zonas(escena):
+            if z.inercia > 0.0:
+                musgo.append((eid, z))
+            else:
+                lodo.append((eid, z))
+        return musgo, lodo
 
     def test_resbala_menos_al_entrar_que_al_final(self, escena) -> None:
         from src.stages.stage4_1.fases import FASES
@@ -306,37 +336,52 @@ class TestLaFriccionEscalaConLaLluvia:
         fase2 = FASES[1]
         _posicionar_sin_fisica(escena, fase2.desde_columna + 1)
         escena._actualizar_friccion_de_la_lluvia()
-        temprano = {eid: z.multiplicador for eid, z in self._zonas(escena)}
+        musgo_temprano = {eid: z.inercia for eid, z in self._musgo_y_lodo(escena)[0]}
+        lodo_temprano = {eid: z.multiplicador for eid, z in self._musgo_y_lodo(escena)[1]}
 
         _posicionar_sin_fisica(escena, fase2.desde_columna + 140)
         escena._actualizar_friccion_de_la_lluvia()
-        tardio = {eid: z.multiplicador for eid, z in self._zonas(escena)}
+        musgo_tardio = {eid: z.inercia for eid, z in self._musgo_y_lodo(escena)[0]}
+        lodo_tardio = {eid: z.multiplicador for eid, z in self._musgo_y_lodo(escena)[1]}
 
-        assert temprano.keys() == tardio.keys()
-        for eid in temprano:
-            assert tardio[eid] < temprano[eid], (
-                f"la zona {eid} no resbala más avanzada la sección: "
-                f"{temprano[eid]} -> {tardio[eid]}"
+        assert musgo_temprano.keys() == musgo_tardio.keys()
+        for eid in musgo_temprano:
+            assert musgo_tardio[eid] > musgo_temprano[eid], (
+                f"el musgo {eid} no resbala más avanzada la sección: "
+                f"{musgo_temprano[eid]} -> {musgo_tardio[eid]}"
+            )
+        assert lodo_temprano.keys() == lodo_tardio.keys()
+        for eid in lodo_temprano:
+            assert lodo_tardio[eid] < lodo_temprano[eid], (
+                f"el lodo {eid} no frena más avanzada la sección: "
+                f"{lodo_temprano[eid]} -> {lodo_tardio[eid]}"
             )
 
     def test_las_zonas_siguen_siendo_solo_musgo_y_lodo(self, escena) -> None:
         """La fricción escalada no debe dejar de frenar ni empezar a
-        acelerar (AUD-236: `multiplicador > 1` se dispara sin tope)."""
+        acelerar (AUD-236: `multiplicador > 1` se dispara sin tope), y el
+        musgo no debe pasar de resbaloso a arrastrar (`inercia` acotada)."""
         from src.stages.stage4_1.fases import FASES
 
         _posicionar_sin_fisica(escena, FASES[1].desde_columna + 149)
         escena._actualizar_friccion_de_la_lluvia()
-        for _eid, zona in self._zonas(escena):
+        musgo, lodo = self._musgo_y_lodo(escena)
+        for _eid, zona in lodo:
             assert 0.0 < zona.multiplicador < 1.0
+        for _eid, zona in musgo:
+            assert 0.0 < zona.inercia < 1.0
 
     def test_no_toca_nada_fuera_de_la_fase_2(self, escena) -> None:
         from src.stages.stage4_1 import trazado
 
         _posicionar_sin_fisica(escena, _dentro_de_la_fase(1))
         escena._actualizar_friccion_de_la_lluvia()
-        zonas = self._zonas(escena)
-        assert {round(z.multiplicador, 6) for _eid, z in zonas} == {
-            round(trazado.FRENO_DEL_MUSGO, 6), round(trazado.FRENO_DEL_LODO, 6),
+        musgo, lodo = self._musgo_y_lodo(escena)
+        assert {round(z.inercia, 6) for _eid, z in musgo} == {
+            round(trazado.RESBALON_DEL_MUSGO, 6),
+        }
+        assert {round(z.multiplicador, 6) for _eid, z in lodo} == {
+            round(trazado.FRENO_DEL_LODO, 6),
         }
 
     def test_la_fisica_vuelve_a_la_normalidad_tras_liberar_al_venado(
@@ -344,7 +389,9 @@ class TestLaFriccionEscalaConLaLluvia:
     ) -> None:
         """Punto 21: *«la física vuelve a la normalidad»* tras liberar al
         espíritu — no porque el jugador siguiera caminando, sino porque el
-        Venado ya no está atrapado."""
+        Venado ya no está atrapado. «Normalidad» es distinta por campo: el
+        lodo frena menos (`multiplicador` sube), el musgo resbala menos
+        (`inercia` baja)."""
         from src.stages.stage4_1 import trazado
         from src.stages.stage4_1.fases import FASES
 
@@ -352,7 +399,8 @@ class TestLaFriccionEscalaConLaLluvia:
         col = fase2.desde_columna + trazado.DESVIO_COLUMNA_LIBERACION
         _posicionar_sin_fisica(escena, col)
         escena._actualizar_friccion_de_la_lluvia()
-        antes = {eid: z.multiplicador for eid, z in self._zonas(escena)}
+        musgo_antes = {eid: z.inercia for eid, z in self._musgo_y_lodo(escena)[0]}
+        lodo_antes = {eid: z.multiplicador for eid, z in self._musgo_y_lodo(escena)[1]}
 
         evento = trazado.evento_de_liberacion(fase2.numero)
         liberado = next(
@@ -360,12 +408,18 @@ class TestLaFriccionEscalaConLaLluvia:
         liberado.disparado = True
 
         escena._actualizar_friccion_de_la_lluvia()
-        despues = {eid: z.multiplicador for eid, z in self._zonas(escena)}
+        musgo_despues = {eid: z.inercia for eid, z in self._musgo_y_lodo(escena)[0]}
+        lodo_despues = {eid: z.multiplicador for eid, z in self._musgo_y_lodo(escena)[1]}
 
-        for eid in antes:
-            assert despues[eid] > antes[eid], (
-                "liberar al Venado debería calmar el bosque (menos "
+        for eid in musgo_antes:
+            assert musgo_despues[eid] < musgo_antes[eid], (
+                "liberar al Venado debería calmar el musgo (menos "
                 "resbaladizo), no dejarlo igual"
+            )
+        for eid in lodo_antes:
+            assert lodo_despues[eid] > lodo_antes[eid], (
+                "liberar al Venado debería calmar el lodo (menos "
+                "denso), no dejarlo igual"
             )
 
 
