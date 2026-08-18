@@ -11,7 +11,7 @@ import struct
 import wave
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 A = PROJECT_ROOT / "assets"
@@ -1748,22 +1748,56 @@ def _gen_all_backgrounds():
 # ════════════════════════════════════════
 
 def _gen_ui_hearts():
+    # AUD-527 — el corazón era un relleno plano con un borde de 1 px: la
+    # silueta exacta que `docs/09_HUD_SPEC.md` mandaba ("sin antialiasing,
+    # sin degradados, sin sombras"). Decisión del dueño (2026-08-17, AUD-524):
+    # romper esa convención de verdad. Se dibuja a 4x y se reduce con
+    # remuestreo (antialiasing real, no una silueta de píxel cuadrado), con
+    # degradado vertical claro→oscuro y un brillo suave arriba a la
+    # izquierda — el mismo lenguaje que ya usa `checkpoint.py` para su
+    # disco de luz (AUD-523), aplicado aquí al icono más repetido del HUD.
     print("  UI hearts...")
     ui = A / "ui"
     _ensure(ui)
     states = {
-        "heart_full.png": (200, 20, 20),
-        "heart_three_quarter.png": (200, 80, 20),
-        "heart_half.png": (180, 120, 20),
-        "heart_quarter.png": (120, 80, 20),
-        "heart_empty.png": (80, 20, 20),
+        "heart_full.png": ((255, 95, 95), (150, 10, 10)),
+        "heart_three_quarter.png": ((255, 150, 80), (150, 60, 10)),
+        "heart_half.png": ((255, 195, 90), (150, 95, 10)),
+        "heart_quarter.png": ((225, 150, 100), (110, 65, 20)),
+        "heart_empty.png": ((110, 45, 45), (45, 12, 12)),
     }
-    for fname, color in states.items():
-        img = Image.new("RGBA", (14, 8), (0,0,0,0))
-        draw = ImageDraw.Draw(img)
-        draw.ellipse((0, 0, 6, 6), fill=color, outline=(255,255,255,100))
-        draw.ellipse((8, 0, 14, 6), fill=color, outline=(255,255,255,100))
-        draw.polygon([(1,4), (7,8), (13,4)], fill=color, outline=(255,255,255,100))
+    fw, fh, ss = 14, 8, 4
+    for fname, (claro, oscuro) in states.items():
+        w, h = fw * ss, fh * ss
+        mascara = Image.new("L", (w, h), 0)
+        md = ImageDraw.Draw(mascara)
+        md.ellipse((0, 0, 6 * ss, 6 * ss), fill=255)
+        md.ellipse((8 * ss, 0, 14 * ss, 6 * ss), fill=255)
+        md.polygon([(1 * ss, 4 * ss), (7 * ss, 8 * ss), (13 * ss, 4 * ss)], fill=255)
+
+        degradado = Image.new("RGBA", (w, h))
+        gd = ImageDraw.Draw(degradado)
+        for y in range(h):
+            t = y / max(1, h - 1)
+            col = tuple(int(claro[i] + (oscuro[i] - claro[i]) * t) for i in range(3))
+            gd.line([(0, y), (w, y)], fill=(*col, 255))
+
+        img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        img.paste(degradado, (0, 0), mascara)
+
+        # Brillo suave arriba-izquierda, recortado a la silueta para que no
+        # se salga del corazón.
+        brillo_alfa = Image.new("L", (w, h), 0)
+        ImageDraw.Draw(brillo_alfa).ellipse(
+            (int(1.5 * ss), 0, int(6.5 * ss), int(3.5 * ss)), fill=150)
+        brillo_alfa = brillo_alfa.filter(ImageFilter.GaussianBlur(ss * 0.7))
+        brillo_alfa = Image.composite(
+            brillo_alfa, Image.new("L", (w, h), 0), mascara)
+        brillo = Image.new("RGBA", (w, h), (255, 255, 255, 0))
+        brillo.putalpha(brillo_alfa)
+        img = Image.alpha_composite(img, brillo)
+
+        img = img.resize((fw, fh), Image.LANCZOS)
         img.save(ui / fname)
 
 def _gen_ui_portraits():
@@ -1816,8 +1850,36 @@ def _gen_ui_banners():
 def _gen_ui_misc():
     print("  UI misc...")
     ui = A / "ui"
+
+    # AUD-527 — `hud_frame.png` era un relleno plano con un borde de 1 px
+    # blanco: exactamente lo que rompe la decisión del dueño de modernizar
+    # el HUD. El panel ahora lleva un degradado vertical (más claro arriba,
+    # como si lo iluminara una fuente por encima, no una plancha uniforme) y
+    # un halo suave alrededor del borde — dibujado a 4x y reducido con
+    # remuestreo para que el degradado y el halo salgan antialiased de
+    # verdad, no en escalones de píxel. `hud.py` sigue troceándolo en
+    # 9-slice con el mismo tamaño de esquina de siempre: sólo cambia lo que
+    # hay dentro de cada trozo.
+    fw, fh, ss = 36, 36, 4
+    w, h = fw * ss, fh * ss
+    claro, oscuro = (82, 84, 118), (32, 32, 52)
+    fondo = Image.new("RGBA", (w, h))
+    fd = ImageDraw.Draw(fondo)
+    for y in range(h):
+        t = y / max(1, h - 1)
+        col = tuple(int(claro[i] + (oscuro[i] - claro[i]) * t) for i in range(3))
+        fd.line([(0, y), (w, y)], fill=(*col, 235))
+    halo_alfa = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(halo_alfa).rectangle(
+        (0, 0, w - 1, h - 1), outline=255, width=ss * 2)
+    halo_alfa = halo_alfa.filter(ImageFilter.GaussianBlur(ss))
+    halo = Image.new("RGBA", (w, h), (150, 160, 220, 0))
+    halo.putalpha(halo_alfa)
+    panel = Image.alpha_composite(fondo, halo)
+    panel = panel.resize((fw, fh), Image.LANCZOS)
+    panel.save(ui / "hud_frame.png")
+
     items = {
-        "hud_frame.png": (36, 36, (60, 60, 80)),
         "message_arrow.png": (5, 7, (255, 215, 0)),
         "menu_arrow.png": (5, 8, (255, 215, 0)),
         "heart_sparkle.png": (8, 8, (255, 255, 200)),

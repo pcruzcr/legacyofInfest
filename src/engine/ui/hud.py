@@ -37,6 +37,111 @@ def _rect_escalado(x: int, y: int, w: int, h: int) -> pygame.Rect:
     return pygame.Rect(_e(x), _e(y), _e(w), _e(h))
 
 
+# AUD-527 — decisión del dueño (2026-08-17, AUD-524): modernizar el HUD de
+# verdad, rompiendo la convención de `docs/09_HUD_SPEC.md` §1 ("sin
+# antialiasing, sin degradados, sin sombras mezcladas por alfa"). Las barras
+# (especial, estamina, tiempo bala, vida de jefe) eran las últimas piezas que
+# seguían siendo `pygame.draw.rect` a un color plano con un borde de 1 px —
+# el propio lenguaje visual que la spec mandaba. `_relleno_redondeado` y
+# `_dibujar_barra_moderna` son el reemplazo común a las cuatro: relleno con
+# degradado, esquinas redondeadas, y un halo suave cuando la barra llega al
+# tope. Vive aquí y no en `theme.py` porque hoy sólo lo usa el HUD; si otra
+# pantalla necesita el mismo lenguaje, es cuando se mueve.
+#
+# AUD-527 (medido) — la primera versión reconstruía el degradado pixel a
+# pixel (`pygame.draw.line` por columna) **cada fotograma y por cada
+# barra**: `test_stage4_1.py::TestCabeEnElPresupuestoDeFotograma` lo cazó en
+# 30 ms contra un presupuesto de 15. El ancho, el alto y los dos colores de
+# cada barra son casi siempre los mismos fotograma a fotograma —sólo cambia
+# `pct`—, así que el degradado a ancho completo se calcula una sola vez por
+# combinación y se recorta con `subsurface` (una vista, no una copia) para
+# el ancho de relleno de ese fotograma. La caché no tiene límite de tamaño
+# a propósito: las claves posibles son un puñado de tamaños de barra fijos
+# por un puñado de pares de color fijos, nunca crece sin cota.
+_CACHE_RELLENOS: dict[
+    tuple[int, int, int, tuple[int, int, int], tuple[int, int, int]], pygame.Surface,
+] = {}
+
+
+def _relleno_redondeado(
+    w: int, h: int, radio: int, color_inicio: tuple[int, int, int],
+    color_fin: tuple[int, int, int],
+) -> pygame.Surface:
+    """Degradado horizontal a ancho completo, con las cuatro esquinas ya
+    redondeadas — cacheado, ver nota de arriba.
+
+    Una barra parcial recorta una vista (`subsurface`) del lado izquierdo de
+    este relleno: la esquina izquierda sale redondeada porque ya lo está en
+    la imagen completa, y el borde derecho del recorte queda recto — que es
+    exactamente cómo se lee el frente de una barra de progreso llenándose,
+    no hace falta redondearlo también.
+    """
+    w, h = max(1, w), max(1, h)
+    clave = (w, h, radio, color_inicio, color_fin)
+    cacheado = _CACHE_RELLENOS.get(clave)
+    if cacheado is not None:
+        return cacheado
+    surf = pygame.Surface((w, h), pygame.SRCALPHA)
+    for x in range(w):
+        t = x / max(1, w - 1)
+        col = tuple(
+            int(color_inicio[i] + (color_fin[i] - color_inicio[i]) * t)
+            for i in range(3)
+        )
+        pygame.draw.line(surf, (*col, 255), (x, 0), (x, h - 1))
+    mascara = pygame.Surface((w, h), pygame.SRCALPHA)
+    pygame.draw.rect(mascara, (255, 255, 255, 255), mascara.get_rect(), border_radius=radio)
+    surf.blit(mascara, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    _CACHE_RELLENOS[clave] = surf
+    return surf
+
+
+#: Fondo translúcido redondeado de una barra — mismo argumento de caché que
+#: el relleno: tamaño y radio se repiten fotograma a fotograma.
+_CACHE_PANELES: dict[tuple[int, int, int], pygame.Surface] = {}
+
+
+def _panel_redondeado(w: int, h: int, radio: int) -> pygame.Surface:
+    clave = (w, h, radio)
+    cacheado = _CACHE_PANELES.get(clave)
+    if cacheado is not None:
+        return cacheado
+    panel = pygame.Surface((w, h), pygame.SRCALPHA)
+    pygame.draw.rect(panel, (18, 18, 30, 210), panel.get_rect(), border_radius=radio)
+    _CACHE_PANELES[clave] = panel
+    return panel
+
+
+def _dibujar_barra_moderna(
+    surface: pygame.Surface, rect: pygame.Rect, pct: float,
+    color_inicio: tuple[int, int, int], color_fin: tuple[int, int, int],
+    *, halo_al_llenar: bool = True,
+) -> None:
+    """Fondo translúcido redondeado + relleno con degradado + halo opcional.
+
+    `pct` ya viene acotado a [0, 1] por quien llama — esta función sólo
+    dibuja, no valida el dato del jugador.
+    """
+    radio = max(2, min(rect.height // 2, _e(4)))
+    surface.blit(_panel_redondeado(rect.width, rect.height, radio), rect.topleft)
+
+    if pct > 0.0:
+        ancho_relleno = max(1, int(rect.width * pct))
+        relleno_completo = _relleno_redondeado(
+            rect.width, rect.height, radio, color_inicio, color_fin)
+        surface.blit(relleno_completo.subsurface((0, 0, ancho_relleno, rect.height)),
+                     rect.topleft)
+
+        if halo_al_llenar and pct >= 1.0:
+            m = _e(3)
+            halo = pygame.Surface((rect.width + m * 2, rect.height + m * 2), pygame.SRCALPHA)
+            pygame.draw.rect(halo, (*color_fin, 70), halo.get_rect(),
+                             border_radius=radio + m)
+            surface.blit(halo, (rect.x - m, rect.y - m), special_flags=pygame.BLEND_RGBA_ADD)
+
+    pygame.draw.rect(surface, (*color_fin, 190), rect, width=1, border_radius=radio)
+
+
 #: El hueco del minimapa, en coordenadas de la maqueta de 320 (AUD-499).
 #:
 #: Vive aquí y no en `minimap.py` porque el HUD es quien conoce la franja
@@ -688,46 +793,38 @@ class HUD:
         # medidor especial, la estamina y el tiempo bala se dibujaban a 60×4 px
         # de verdad sobre 800×600, invisibles en la esquina mientras el resto
         # del HUD (retrato, corazones, marcador, reloj) ya estaba a ×2,5.
-        bar_x, bar_y, bar_w, bar_h = _e(84), _e(46), _e(60), _e(4)
+        rect = pygame.Rect(_e(84), _e(46), _e(60), _e(5))
         pct = max(0.0, min(1.0, self._bala_fraccion))
-        pygame.draw.rect(surface, (30, 30, 50), (bar_x, bar_y, bar_w, bar_h))
-        if pct > 0:
-            # Azul mientras está guardada, blanco mientras se gasta: el
-            # jugador tiene que ver **que la está usando** sin apartar la
-            # vista del combate, que es cuando la usa.
-            color = (255, 255, 255) if self._bala_activo else (110, 160, 255)
-            pygame.draw.rect(surface, color,
-                             (bar_x, bar_y, int(bar_w * pct), bar_h))
-        pygame.draw.rect(surface, (160, 180, 230), (bar_x, bar_y, bar_w, bar_h), 1)
+        # AUD-527 — azul mientras está guardada, blanco mientras se gasta: el
+        # jugador tiene que ver **que la está usando** sin apartar la vista
+        # del combate, que es cuando la usa. El degradado va del tono
+        # guardado al tono en uso para que el cambio de estado se lea en la
+        # propia barra, no sólo en un color plano que cambia de golpe.
+        color_fin = (255, 255, 255) if self._bala_activo else (110, 160, 255)
+        _dibujar_barra_moderna(surface, rect, pct, (60, 60, 110), color_fin,
+                                halo_al_llenar=False)
 
     def _draw_estamina(self, surface: pygame.Surface) -> None:
         if self._estamina_max <= 0.0:
             return
-        bar_x, bar_y, bar_w, bar_h = _e(84), _e(40), _e(60), _e(4)
+        rect = pygame.Rect(_e(84), _e(40), _e(60), _e(5))
         pct = max(0.0, min(1.0, self._estamina_actual / self._estamina_max))
-        pygame.draw.rect(surface, (25, 45, 30), (bar_x, bar_y, bar_w, bar_h))
-        if pct > 0:
-            # Ámbar cuando queda poco: el jugador tiene que poder decidir
-            # **antes** de intentar el dash que no va a salir.
-            color = (120, 220, 130) if pct > 0.34 else (230, 180, 70)
-            pygame.draw.rect(surface, color,
-                             (bar_x, bar_y, int(bar_w * pct), bar_h))
-        pygame.draw.rect(surface, (150, 210, 160), (bar_x, bar_y, bar_w, bar_h), 1)
+        # AUD-527 — ámbar cuando queda poco: el jugador tiene que poder
+        # decidir **antes** de intentar el dash que no va a salir.
+        color_fin = (130, 230, 140) if pct > 0.34 else (230, 180, 70)
+        _dibujar_barra_moderna(surface, rect, pct, (30, 70, 40), color_fin,
+                                halo_al_llenar=False)
 
     def _draw_special_meter(self, surface: pygame.Surface) -> None:
-        bar_x, bar_y, bar_w, bar_h = _e(84), _e(30), _e(60), _e(6)
+        rect = pygame.Rect(_e(84), _e(30), _e(60), _e(7))
         pct = min(1.0, self._special_current / max(self._special_max, 1.0))
-        bg_color = (40, 20, 60)
-        fill_color = (100, 150, 255) if pct < 1.0 else (255, 220, 50)
-        pygame.draw.rect(surface, bg_color, (bar_x, bar_y, bar_w, bar_h))
-        if pct > 0:
-            pygame.draw.rect(surface, fill_color, (bar_x, bar_y, int(bar_w * pct), bar_h))
-        pygame.draw.rect(surface, (200, 200, 255), (bar_x, bar_y, bar_w, bar_h), 1)
+        color_fin = (110, 160, 255) if pct < 1.0 else (255, 225, 60)
+        _dibujar_barra_moderna(surface, rect, pct, (50, 25, 80), color_fin)
         if pct >= 1.0:
             flash = (int(pygame.time.get_ticks() / 200) % 2 == 0)
             if flash:
                 label = self._font.render("ULTIMATE READY", True, (255, 220, 50))
-                surface.blit(label, (bar_x, bar_y - _e(14)))
+                surface.blit(label, (rect.x, rect.y - _e(14)))
 
     def _draw_save_notification(self, surface: pygame.Surface) -> None:
         if self._save_notify_timer <= 0:
@@ -833,16 +930,16 @@ class HUD:
         name_surf = self._font.render(label, True, (200, 180, 120))
         nx = bar_x + (bar_width - name_surf.get_width()) // 2
         surface.blit(name_surf, (nx, bar_y - _e(2)))
-        # Background bar
-        pygame.draw.rect(surface, (40, 30, 20), (bar_x, bar_y + _e(10), bar_width, bar_height))
-        pygame.draw.rect(surface, (100, 80, 50), (bar_x, bar_y + _e(10), bar_width, bar_height), 1)
-        # Health fill
-        if self._boss_max_health > 0:
-            ratio = max(0.0, self._boss_health / self._boss_max_health)
-            fill_w = int(bar_width * ratio)
-            color = (200, 60, 40) if ratio < 0.3 else (200, 180, 60)
-            if fill_w > 0:
-                pygame.draw.rect(surface, color, (bar_x, bar_y + _e(10), fill_w, bar_height))
+        # AUD-527 — degradado en vez de relleno plano: ámbar mientras el
+        # jefe tiene margen, rojo cuando queda poco. El halo se apaga aquí
+        # a propósito — un jefe a tope de vida no necesita un brillo de
+        # "listo", el que sí lo pide es el medidor especial del jugador.
+        ratio = (max(0.0, self._boss_health / self._boss_max_health)
+                 if self._boss_max_health > 0 else 0.0)
+        color_fin = (210, 70, 50) if ratio < 0.3 else (215, 190, 70)
+        rect = pygame.Rect(bar_x, bar_y + _e(10), bar_width, bar_height)
+        _dibujar_barra_moderna(surface, rect, ratio, (60, 20, 15), color_fin,
+                                halo_al_llenar=False)
 
     def _draw_timer_background(self, surface: pygame.Surface) -> None:
         r = self._timer_bg_rect
