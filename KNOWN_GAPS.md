@@ -3616,21 +3616,12 @@ tanto, el código no cambia: el fallback es el contrato.
   entrada — cada punto cita el parámetro exacto para no perder la receta.
   Los que AUD-551 cerró quedan tachados con su resolución; los que siguen
   abiertos, sin tocar:
-  1. ~~**Pasos por material, por fase** (lodo y pasos de luz).~~
-     *(Resuelto parcialmente en AUD-551 — ver más abajo.)* Sigue sin
-     construirse la variante de grava/tierra de la Fase 1 (ruido rosa
-     85%+cuadrada 15%, pasa-banda 1200Hz±150 aleatorio, ADSR 2/45/0/15ms)
-     ni los pasos ahogados de la Fase 5 (ruido marrón, pasa-bajos 250Hz,
-     ADSR 15/50/0/30ms, tope de volumen 30%) — ninguna de las dos tiene
-     zona de terreno declarada en el TMX todavía, así que no hay
-     chokepoint genérico donde engancharlas sin arriesgar audio doble.
-  2. ~~**Voces de los tres espíritus con síntesis propia** (Rey
-     Terciopelo, Gavilán).~~ *(Resuelto parcialmente en AUD-551 — ver
-     más abajo.)* El Venado sigue usando el timbre genérico de AUD-263
-     (`sfx_voz_venado_fase1`), no la receta específica (diente de
-     sierra+seno 60Hz, LFO de vibrato a 12Hz) — quedó fuera de AUD-551
-     porque ya sonaba algo en su lugar y las otras dos voces no sonaban
-     nada.
+  1. ~~**Pasos por material, por fase** (lodo, pasos de luz, grava,
+     ahogados).~~ *(Resuelto: lodo y paso de luz en AUD-551, grava y
+     ahogado en AUD-554 — ver más abajo.)*
+  2. ~~**Voces de los tres espíritus con síntesis propia.**~~ *(Resuelto:
+     Rey Terciopelo y Gavilán en AUD-551, Venado en AUD-554 — ver más
+     abajo.)*
   3. ~~**Truenos sincronizados con el rayo, no simultáneos.**~~
      *(Resuelto en AUD-551 — ver más abajo.)*
   4. **Paneo LFO de la tormenta.** `storm_ambient` es mono, sin
@@ -3706,13 +3697,36 @@ tanto, el código no cambia: el fallback es el contrato.
     sin consumidor hasta ahora) en `_actualizar_ambiente_de_fase`, con
     el mismo rango `VOLUMEN_DEL_CANTO` que ya usaba la voz espacial.
 
-  Lo que sigue abierto (4, 5, 7 completo, y las mitades de 1/2 descritas
-  arriba) comparte un mismo obstáculo: pide una variante de audio por
-  fase sobre un mismo bucle base, o un filtro/paneo en tiempo real sobre
-  algo que ya está sonando — y el motor sólo sabe hornear `.wav`
-  fijos, no aplicar DSP en vivo. Necesita una decisión de arquitectura
-  (¿generar N variantes por fase? ¿añadir un mezclador con filtros?)
-  antes de que valga la pena escribir código.
+  Lo que sigue abierto (4, 5 y 7) comparte un mismo obstáculo: pide una
+  variante de audio por fase sobre un mismo bucle base, o un
+  filtro/paneo en tiempo real sobre algo que ya está sonando — y el
+  motor sólo sabe hornear `.wav` fijos, no aplicar DSP en vivo.
+- **Resolution plan:** los tres puntos que quedan (4, 5, 7) necesitan la
+  misma decisión de arquitectura antes de escribir código — ¿generar N
+  variantes de `.wav` por fase (una `storm_ambient` ya paneada para 3,
+  una `rain_ambient` ya filtrada para 4, N ecos horneados por sonido de
+  la Fase 6), o darle al motor un mezclador con filtros/paneo en tiempo
+  real que hoy no tiene? Ninguno de los tres es viable como "hornear un
+  `.wav` más" sin decidir esto primero — por eso siguen abiertos pese a
+  que el resto de la receta original ya se cerró.
+- **Resolution — AUD-554 (2026-08-19):** las dos partes de 1/2 que
+  quedaban del "chokepoint disponible":
+  - **Pasos de grava (Fase 1) y ahogados (Fase 5):** ninguna de las dos
+    fases declaraba una `ZonaDeFriccion` propia. Nuevos materiales
+    `grava`/`ahogado` (`perfil.MATERIALES`, sin tocar fricción ni
+    restitución — sólo nombran la zona), dos `FrictionZone` nuevas que
+    cubren cada fase entera (`multiplicador=1.0`, tampoco cambian la
+    física), dos eventos nuevos y dos ramas en `WalkingState`. SFX:
+    `footstep_grava` (ruido rosa 85%+cuadrada 15%, pasa-banda ~1200Hz
+    aleatorizado, ADSR 2/45/0/15ms), `footstep_ahogado` (ruido marrón,
+    pasa-bajos 250Hz, ADSR 15/50/0/30ms, tope de volumen al 30%).
+  - **Voz del Venado, receta propia:** dejó de reusar el timbre de
+    marcador de posición de AUD-263 (`sfx_voz_venado_fase1`).
+    `venado_ancestral`: diente de sierra+seno 60Hz, vibrato de pitch a
+    12Hz (fase acumulada, no `t·freq`, para no saltar de ciclo al
+    variar la frecuencia), pasa-banda barriendo 150→400Hz (pasa-altos
+    fijo + pasa-bajos de corte creciente), reverberación masiva
+    (`_aplicar_reverberacion`, decaimiento 0.7, 14 ecos).
 - **Verificado:** 2026-08-19 (AUD-546) —
   `pytest tests/test_la_musica_del_4_1_entra_tarde.py
   tests/test_auditoria_157_160.py tests/test_stage4_1.py` (con el filtro
@@ -3728,3 +3742,8 @@ tanto, el código no cambia: el fallback es el contrato.
   `scripts/check_doc_symbols.py`, `scripts/check_tmx_coverage.py --ci` y
   `scripts/generate_tmx_reference.py --check` sin errores tras parchear
   el TMX comprometido y generar los siete SFX nuevos.
+  2026-08-19 (AUD-554) — `pytest tests/test_aud_554_pasos_de_grava_ahogado_y_voz_del_venado.py
+  tests/test_gap_070_audio_del_4_1.py tests/test_materiales_de_superficie.py
+  tests/test_stage4_1.py` en verde (273 casos en el barrido de
+  stage4_1/fricción/material); `ruff check`, `validate_tmx.py --ci`,
+  `validate_assets.py` y `check_tmx_coverage.py --ci` sin errores.
