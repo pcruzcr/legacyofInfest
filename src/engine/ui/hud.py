@@ -714,9 +714,20 @@ class HUD:
             total_seconds = int(self._timer)
             if self._is_countdown and total_seconds <= self.UMBRAL_DE_ALERTA_S:
                 self._timer_flash_timer += dt
-                if self._timer_flash_timer >= 0.25:
+                # AUD-553 — "la música acelerará su tempo": `pygame.mixer.
+                # music` no tiene control de tempo (ver la nota junto a
+                # `Events.SFX_TIMER_ALERT_PULSE`), así que lo que sí se
+                # acelera de verdad es el intervalo del pulso — de 0,25s a
+                # los 10s restantes hasta un piso de 0,08s cerca de 0s. El
+                # ritmo lo decide este bucle, no el audio, así que "acelerar"
+                # es simplemente reducir el intervalo, sin DSP de por medio.
+                progreso = 1.0 - max(0.0, min(1.0, self._timer / self.UMBRAL_DE_ALERTA_S))
+                intervalo = 0.25 - (0.25 - 0.08) * progreso
+                if self._timer_flash_timer >= intervalo:
                     self._timer_flash_on = not self._timer_flash_on
                     self._timer_flash_timer = 0.0
+                    if self._timer_flash_on and self._timer_running:
+                        self._event_bus.emit(Events.SFX_TIMER_ALERT_PULSE)
             else:
                 self._timer_flash_on = False
                 self._timer_flash_timer = 0.0

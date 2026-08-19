@@ -119,6 +119,18 @@ class Events:
     SFX_BOSSES_VENADO_CHARGE: str = "SFX_BOSSES_VENADO_CHARGE"
     SFX_BOSSES_VENADO_STOMP: str = "SFX_BOSSES_VENADO_STOMP"
     SFX_BOSSES_VENADO_VINE: str = "SFX_BOSSES_VENADO_VINE"
+    #: AUD-553 — "cuando resten 10 segundos... la música de fondo acelerará
+    #: su tempo". `pygame.mixer.music` transmite el archivo y no expone
+    #: control de tempo/velocidad (ni pygame ni SDL2_mixer lo dan sobre un
+    #: canal en reproducción) — reescalar la pista en caliente exigiría un
+    #: remuestreador propio, la misma clase de DSP en tiempo real que
+    #: `KNOWN_GAPS.md` GAP-070 ya dejó fuera de alcance por el mismo motivo.
+    #: Lo que sí se puede construir sin DSP nuevo: una capa de pulso rítmico
+    #: que se ACELERA de verdad (el ritmo lo controla el bucle del juego,
+    #: no el audio) y se superpone a la música sin tocarla — misma emoción
+    #: ("elevar la tensión"), sin fingir una velocidad de reproducción que
+    #: el motor no tiene.
+    SFX_TIMER_ALERT_PULSE: str = "SFX_TIMER_ALERT_PULSE"
 
     # ── Achievement events ─────────────────────────────────────────
     ACHIEVEMENT_UNLOCKED: str = "ACHIEVEMENT_UNLOCKED"

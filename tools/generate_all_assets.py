@@ -2255,7 +2255,13 @@ SFX_CATEGORIES = {
                "gavilan_dive", "gavilan_mask_beam", "paburu_eye_beam", "paburu_wave",
                "phase_change", "relic_appear"],
     "ui": ["menu_move", "menu_confirm", "menu_cancel", "checkpoint", "stage_banner",
-           "game_over", "heart_restore", "stage_complete"],
+           "game_over", "heart_restore", "stage_complete",
+           # AUD-553 — el pulso de la alerta de los últimos 10 segundos del
+           # reloj (HUD.UMBRAL_DE_ALERTA_S): un solo fichero corto que suena
+           # cada vez más seguido según el propio `HUD.update()` acorta el
+           # intervalo — la aceleración la da el bucle del juego, no el
+           # audio (ver la nota junto a `Events.SFX_TIMER_ALERT_PULSE`).
+           "timer_alert_pulse"],
     "environment": ["jungle_ambient", "datacenter_hum", "wind_indoor", "cemetery_silence",
                     "screen_shake", "hazard_zone", "one_way_platform",
                     # AUD-271 — `rain` y `storm` eran los dos climas que
@@ -2346,7 +2352,11 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
              "footstep_lodo": 0.192, "grillo": 0.55,
              "rey_terciopelo": 1.7, "gavilan": 0.66,
              "paso_de_luz_re": 1.415, "paso_de_luz_fa": 1.415,
-             "paso_de_luz_la": 1.415}
+             "paso_de_luz_la": 1.415,
+             # AUD-553 — corto a propósito: se repite cada vez más seguido
+             # (hasta cada 80ms cerca de 0s), así que si durara más que su
+             # propio intervalo se solaparía consigo mismo.
+             "timer_alert_pulse": 0.12}
     
     dur = t_dur.get(name, 0.3)
     n = int(rate * dur)
@@ -2815,6 +2825,22 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
             samples.append(onda * env * 0.5)
         samples = _aplicar_reverberacion(samples, rate, decaimiento=0.6,
                                           retardo_ms=60.0, ecos=10, cola_extra_s=2.0)
+    elif name == "timer_alert_pulse":
+        # AUD-553 — un "tick" de alarma, no el timbre de recompensa que ya
+        # usan checkpoint/heart_restore/stage_complete (esos suben de tono
+        # y premian; esto tiene que sonar a advertencia, plano y seco).
+        # Cuadrada a 1200Hz con ataque instantáneo y decaimiento corto, más
+        # un seno grave (200Hz) por debajo para darle cuerpo sin suavizarlo.
+        ataque = max(1, int(rate * 0.003))
+        samples = []
+        for i in range(n):
+            t = i / rate
+            if i < ataque:
+                env = i / ataque
+            else:
+                env = max(0.0, 1.0 - (i - ataque) / (n - ataque))
+            samples.append(_square(1200, t, 0.5) * env * 0.35
+                            + math.sin(2.0 * math.pi * 200 * t) * env * 0.15)
     else:
         samples = [0.0] * n
 

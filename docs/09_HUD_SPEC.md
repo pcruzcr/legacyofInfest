@@ -277,7 +277,8 @@ atrás descendente (configurable vía `HUD.start_timer(seconds)`).
 - **Ascendente (Stage 0):** cuenta desde `0:00` hacia arriba. No dispara fin de partida.
 - **Descendente (Stage 1–3):** cuenta atrás desde `time_limit`. Al llegar a `0:00`, emite `PLAYER_DIED` (causa fin de partida).
 - **Pausa:** `HUD.pause_timer()` congela la presentación. `HUD.resume_timer()` la reanuda.
-- **Destello con poco tiempo:** cuando quedan ≤`HUD.UMBRAL_DE_ALERTA_S` segundos en una cuenta atrás, el ícono y los dígitos pasan a rojo y destellan a 2 Hz. **AUD-535** bajó el umbral de 30 a 10 segundos — pedido explícito: "cuando resten exactamente 10 segundos, el contador cambiará de color".
+- **Destello con poco tiempo:** cuando quedan ≤`HUD.UMBRAL_DE_ALERTA_S` segundos en una cuenta atrás, el ícono y los dígitos pasan a rojo y destellan. **AUD-535** bajó el umbral de 30 a 10 segundos — pedido explícito: "cuando resten exactamente 10 segundos, el contador cambiará de color".
+- **Pulso sonoro acelerado (AUD-553):** cada destello emite `Events.SFX_TIMER_ALERT_PULSE` (`sfx_ui_timer_alert_pulse`), y el intervalo entre destellos ya no es fijo — baja de 0,25s a 10s restantes hasta un piso de 0,08s cerca de 0s, interpolado linealmente contra `self._timer`. Es la respuesta a "la música de fondo acelerará su tempo": `pygame.mixer.music` no expone control de tempo sobre un canal en reproducción, así que lo que se acelera de verdad es esta capa de pulso superpuesta — el ritmo lo decide `HUD.update()`, no un DSP que el motor no tiene.
 
 ### 5.4 Fuente del temporizador
 

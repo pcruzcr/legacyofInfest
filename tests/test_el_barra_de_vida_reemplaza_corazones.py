@@ -29,6 +29,7 @@ import pytest
 
 from src.engine.core import settings
 from src.engine.core.event_bus import EventBus
+from src.engine.core.events import Events
 
 
 @pytest.fixture(scope="module")
@@ -199,4 +200,68 @@ class TestElUmbralDeAlertaDelCronometroBajoADiez:
         hud.update(0.3)  # más de 0.25s: ya debió alternar una vez
         assert hud._timer_flash_on or hud._timer_flash_timer > 0.0, (
             "a 10 segundos exactos el cronómetro debería estar en alerta"
+        )
+
+
+class TestElPulsoDeLaAlertaSeAceleraDeVerdad:
+    """AUD-553 — "la música de fondo acelerará su tempo... para elevar la
+    tensión". `pygame.mixer.music` no tiene control de tempo (ver la nota
+    junto a `Events.SFX_TIMER_ALERT_PULSE`); lo que sí se acelera de verdad
+    es el intervalo entre pulsos de esta capa superpuesta — el ritmo lo fija
+    `HUD.update()`, no el audio."""
+
+    def _contar_pulsos(self, hud, segundos_totales: float, paso: float = 0.02) -> int:
+        pulsos = []
+
+        def _al_pulso(**_k):
+            pulsos.append(1)
+
+        hud._event_bus.subscribe(Events.SFX_TIMER_ALERT_PULSE, _al_pulso)
+        transcurrido = 0.0
+        while transcurrido < segundos_totales:
+            hud.update(paso)
+            transcurrido += paso
+            hud._event_bus.dispatch()
+        return len(pulsos)
+
+    def test_emite_el_evento_al_entrar_en_alerta(self, hud) -> None:
+        recibidos = []
+
+        def _al_pulso(**_k):
+            recibidos.append(1)
+
+        hud._event_bus.subscribe(Events.SFX_TIMER_ALERT_PULSE, _al_pulso)
+        hud.start_timer(time_limit=100)
+        hud._timer = 10.0
+        hud.update(0.3)
+        hud._event_bus.dispatch()
+        assert recibidos, "entrar en la alerta de 10s no emitió el pulso"
+
+    def test_pausado_no_emite_pulsos(self, hud) -> None:
+        recibidos = []
+
+        def _al_pulso(**_k):
+            recibidos.append(1)
+
+        hud._event_bus.subscribe(Events.SFX_TIMER_ALERT_PULSE, _al_pulso)
+        hud.start_timer(time_limit=100)
+        hud._timer = 10.0
+        hud.pause_timer()
+        hud.update(0.5)
+        hud._event_bus.dispatch()
+        assert not recibidos, "el reloj en pausa no debería emitir pulsos de audio"
+
+    def test_cerca_de_cero_pulsa_mas_seguido_que_a_los_diez_segundos(self, hud) -> None:
+        hud.start_timer(time_limit=100)
+        hud._timer = 10.0
+        pulsos_al_entrar = self._contar_pulsos(hud, segundos_totales=1.0)
+
+        hud2 = type(hud)(EventBus())
+        hud2.start_timer(time_limit=100)
+        hud2._timer = 0.9
+        pulsos_casi_al_final = self._contar_pulsos(hud2, segundos_totales=1.0)
+
+        assert pulsos_casi_al_final > pulsos_al_entrar, (
+            f"a punto de llegar a 0 debería pulsar más seguido que al "
+            f"entrar en la alerta: {pulsos_casi_al_final} vs {pulsos_al_entrar}"
         )
