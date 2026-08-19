@@ -22,11 +22,14 @@ RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ))
 
 from src.stages.stage4_1b.trazado import (  # noqa: E402
+    FILA_FONDO_AGUA,
     FILA_SUELO,
+    FILA_SUPERFICIE_AGUA,
     MH,
     MURO_ANCHO,
     MW,
     TS,
+    ZONAS_DE_CORRIENTE,
     checkpoints,
 )
 
@@ -119,6 +122,17 @@ def _objetos() -> list[str]:
     # "emerger": este nivel es sumergido de principio a fin.
     obj("WaterZone", 0, 0, MW * TS, (FILA_SUELO - 1) * TS)
 
+    # AUD-543 — corrientes de agua: `WaterZone` adicionales, más angostas,
+    # superpuestas a la de arriba. `sistema_corriente_de_agua` (motor)
+    # suma la `corriente` de **cada** zona que toca al jugador, y una
+    # corriente en cero no hace nada (`continue` inmediato) — así que la
+    # zona grande de arriba (corriente cero, sólo marca "esto es agua") y
+    # estas franjas más angostas conviven sin pisarse.
+    for col_ini, col_fin, corriente_x in ZONAS_DE_CORRIENTE:
+        obj("WaterZone", col_ini * TS, FILA_SUPERFICIE_AGUA * TS,
+            (col_fin - col_ini) * TS, FILA_FONDO_AGUA * TS,
+            corriente_x=corriente_x, corriente_y=0.0)
+
     for i, (col, fila) in enumerate(checkpoints(), start=1):
         # AUD-523 — el haz de luz es el checkpoint en los 26 escenarios;
         # no hace falta pedirlo (`brillo=` ya no es una propiedad).
@@ -190,6 +204,12 @@ def generar() -> str:
         '  <property name="water_effect" type="bool" value="true"/>\n',
         '  <property name="water_tint" value="#0a3038"/>\n',
         '  <property name="water_alpha" type="float" value="130"/>\n',
+        # AUD-543 — «fauna nueva (calamares, peces de colores)» y «coral que
+        # cae»: los tres en un solo tipo de partícula porque un mapa sólo
+        # declara un `ambient_fx` a la vez (`AmbientParticleSystem.TIPOS`,
+        # ver la nota ahí de por qué no son tres tipos separados).
+        '  <property name="ambient_fx" value="vida_abisal"/>\n',
+        '  <property name="ambient_fx_rate" type="float" value="14"/>\n',
         " </properties>\n",
         f' <tileset firstgid="1" name="tileset_stage4_1b" tilewidth="{TS}" '
         f'tileheight="{TS}" tilecount="{TILESET_COLS * TILESET_ROWS}" '

@@ -67,3 +67,47 @@ def checkpoints() -> tuple[tuple[int, int], ...]:
     """Los puntos de reaparición, en `(columna, fila)` — sobre el lecho
     marino, igual que en el 4-1 se apoyan en el suelo sólido."""
     return tuple((c, FILA_SUELO) for c in COLUMNAS_CHECKPOINT)
+
+
+# AUD-543 — «corrientes de agua», pedido tras jugarlo. `ZonaDeAgua.corriente`
+# (`src/framework/ecs/components.py`) ya existía en el motor —lo aplica
+# `sistema_corriente_de_agua`— y ningún escenario lo declaraba nunca: cero
+# menciones de `corriente_x` en los 26 TMX de referencia antes de esto.
+#
+# Sólo empuje horizontal, nunca vertical: `SwimmingState.update` fija
+# `_surface_y` una sola vez, al entrar al estado (la Y del jugador en ese
+# instante), y si luego sube más de 8px por encima de esa referencia sale
+# de nado hacia `JumpingState` — pensado para niveles con una superficie de
+# verdad a la que emerger. 4.1b no tiene superficie (`docs/45_SWIMMING_SPEC.md`,
+# "sumergido de principio a fin"): una corriente vertical fuerte empujaría
+# al jugador fuera del estado de nado en pleno abismo. Se documenta aquí y
+# no se toca `swim.py` — ese comportamiento es correcto para los niveles
+# que sí tienen superficie, y "arreglarlo" sin uno a mano rompería esos.
+#
+# (columna_inicio, columna_fin, corriente_x). El signo sigue la lectura del
+# mapa: positivo empuja hacia la derecha (con el sentido normal de avance),
+# negativo hacia la izquierda (en contra).
+#
+# Magnitud verificada por simulación, no a ojo (el nado no clampa la
+# velocidad total tras sumar la corriente — sólo clampa el empuje que pone
+# el propio jugador — así que el efecto de la corriente sí se acumula
+# fotograma a fotograma en vez de borrarse en el siguiente):
+#   · -30.0 en contra: nadando a fondo, la velocidad converge a un régimen
+#     estable de 90 px/s (contra 120 px/s sin corriente) — un 25% más
+#     lento, un 44% menos de distancia recorrida en los mismos 3 s. Se
+#     nota, no bloquea: a 90 px/s se cruzan los 2400 px de la sección en
+#     ~27 s, bastante menos que cualquier persecución del pez (5-9 s).
+#   · +35.0 / +45.0 a favor: nadando a fondo no cambia casi nada (el tope
+#     de 120 px/s ya estaba saturado sin corriente) — donde sí se nota es
+#     a la deriva, sin tecla pulsada: ahí la corriente empuja a un régimen
+#     estable de ±5 a 6 px/s (antes, cero). Es un efecto sutil a propósito
+#     — "el agua te lleva si dejas de nadar", no un raíl que mueva solo.
+ZONAS_DE_CORRIENTE: tuple[tuple[int, int, float], ...] = (
+    # Sección 2: a favor — un tramo de respiro tras el primer susto del pez.
+    (ANCHO_SECCION * 1, ANCHO_SECCION * 2, 35.0),
+    # Sección 4: en contra — resistencia justo antes de la mitad del tramo,
+    # cuando el pez ya volvió a aparecer al menos una vez.
+    (ANCHO_SECCION * 3, ANCHO_SECCION * 4, -30.0),
+    # Cola de la sección 6: a favor, un empujón final hacia la salida.
+    (ANCHO_SECCION * 5 + 50, ANCHO_SECCION * 6, 45.0),
+)

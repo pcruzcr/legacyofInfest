@@ -33,7 +33,20 @@ class AmbientParticleSystem:
     # para dar identidad al vacío bajo el jugador — y no había ningún tipo
     # existente que sirviera: "dust"/"ash" caen, "embers"/"spores" suben,
     # y todos son puntuales, no jirones anchos y pálidos.
-    TIPOS: tuple[str, ...] = ("dust", "leaves", "embers", "spores", "ash", "niebla")
+    #
+    # AUD-543 — "vida_abisal": la fauna nueva que pedía el reporte de
+    # 4.1b ("calamares, peces de colores") y el "coral que cae", sin
+    # ampliar `ambient_fx` a varias capas simultáneas (cada mapa sigue
+    # declarando un solo tipo — es la misma restricción que ya tenían
+    # "niebla" o "dust"). Un mapa sólo puede pedir un efecto de ambiente
+    # a la vez, así que en vez de tres tipos que compitan por el único
+    # slot del TMX, este es UN tipo que mezcla tres comportamientos: peces
+    # de colores (rápidos, erráticos), calamares (grandes, lentos,
+    # oscuros, casi silueta) y coral desprendido (cae, no flota). Ver
+    # `_spawn` para las proporciones.
+    TIPOS: tuple[str, ...] = (
+        "dust", "leaves", "embers", "spores", "ash", "niebla", "vida_abisal",
+    )
 
     def __init__(self, rng: random.Random | None = None) -> None:
         #: AUD-398 — azar propio (GAP-042). Sin semilla nace del global,
@@ -151,3 +164,43 @@ class AmbientParticleSystem:
                 size=(4, 7), color=(210, 210, 220), spread=8,
                 gravity=0,
             )
+        elif self._particle_type == "vida_abisal":
+            # AUD-543 — ver la nota de `TIPOS` arriba: un tipo, tres
+            # comportamientos, para no pedir un segundo slot de
+            # `ambient_fx` que el mapa no tiene.
+            dado = self._rng.random()
+            if dado < 0.55:
+                # Peces de colores: rápidos, erráticos, viven poco — un
+                # cardumen se lee por la frecuencia de aparición, no por
+                # `count` alto de golpe (eso saturaría la pantalla).
+                angulo = self._rng.uniform(0, 360)
+                color = self._rng.choice((
+                    (255, 150, 60), (255, 210, 90), (120, 190, 255),
+                ))
+                self._emitter.emit_directed(
+                    sx, sy, angle=angulo, speed=self._rng.uniform(20, 45),
+                    count=1, lifetime=self._rng.uniform(1.5, 3.0),
+                    size=(2, 3), color=color, spread=40,
+                    gravity=0,
+                )
+            elif dado < 0.80:
+                # Calamares: grandes, lentos, casi silueta — oscuros contra
+                # el fondo café de la cueva (AUD-531), no un color propio
+                # que compita con los faroles.
+                self._emitter.emit_directed(
+                    sx, sy, angle=self._rng.uniform(160, 200),
+                    speed=self._rng.uniform(6, 14),
+                    count=1, lifetime=self._rng.uniform(5, 9),
+                    size=(6, 9), color=(30, 26, 34), spread=10,
+                    gravity=0,
+                )
+            else:
+                # Coral desprendido: lo único de los tres que cae en vez
+                # de flotar — pedido explícito ("coral que cae").
+                self._emitter.emit_directed(
+                    sx, sy, angle=self._rng.uniform(75, 105),
+                    speed=self._rng.uniform(6, 16),
+                    count=1, lifetime=self._rng.uniform(2, 4),
+                    size=(2, 4), color=(150, 90, 80), spread=20,
+                    gravity=10,
+                )

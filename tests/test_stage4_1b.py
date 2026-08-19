@@ -208,3 +208,81 @@ class TestElPezAbismal:
 
         pez = EnemyPezAbismal(pygame.Vector2(escena._player.rect.center))
         assert pez.damage_on_contact == 0.0
+
+
+class TestLasCorrientesDeAgua:
+    """AUD-543 — «corrientes de agua», pedido tras jugarlo.
+    `ZonaDeAgua.corriente` existía en el motor y ningún nivel lo declaraba.
+    Los números de `trazado.ZONAS_DE_CORRIENTE` están verificados por
+    simulación (ver el comentario junto a la constante), no a ojo: esta
+    clase fija esa evidencia en una prueba, para que quien cambie la
+    magnitud tenga que volver a medir, no volver a adivinar.
+    """
+
+    def test_hay_al_menos_una_zona_a_favor_y_una_en_contra(self) -> None:
+        signos = {1 if fx > 0 else -1 for _, _, fx in trazado.ZONAS_DE_CORRIENTE}
+        assert signos == {1, -1}, (
+            "las corrientes son todas del mismo signo: no hay variedad de "
+            "ritmo (empuje/resistencia) a lo largo del nivel"
+        )
+
+    def test_las_zonas_caen_dentro_del_mapa(self) -> None:
+        for col_ini, col_fin, _fx in trazado.ZONAS_DE_CORRIENTE:
+            assert 0 <= col_ini < col_fin <= trazado.MW
+
+    def test_el_tmx_declara_las_mismas_zonas_que_trazado(self, escena) -> None:
+        from src.framework.ecs import ZonaDeAgua
+
+        zonas = [z for _eid, z in escena._mundo.cada(ZonaDeAgua)
+                 if z.corriente.length_squared() > 0.0]
+        assert len(zonas) == len(trazado.ZONAS_DE_CORRIENTE), (
+            "el TMX generado no trae la misma cantidad de zonas con "
+            "corriente que declara trazado.ZONAS_DE_CORRIENTE — "
+            "¿hace falta correr tools/generate_stage4_1b.py de nuevo?"
+        )
+
+    def test_nadar_en_contra_de_la_corriente_frena_de_verdad(self, escena) -> None:
+        """La cifra medida (no una promesa): 90 px/s en régimen, contra
+        120 px/s sin corriente — un 25% más lento, verificado aquí con el
+        mismo mecanismo que usa el nivel real (`sistema_corriente_de_agua`
+        + `SwimmingState`), no con la fórmula de FUERZAS/dt a mano."""
+        from src.engine.input.action_map import Action
+        from src.framework.ecs import Velocidad, ZonaDeAgua
+        from src.framework.ecs import systems as ecs_systems
+        from src.framework.ecs.world import World
+        from src.framework.entities.player import Player
+        from src.framework.entities.states.swim import SwimmingState
+
+        class _EntradaFalsa:
+            def __init__(self, sostenidas: set) -> None:
+                self._sostenidas = sostenidas
+
+            def is_action_held(self, accion: object) -> bool:
+                return accion in self._sostenidas
+
+            def is_action_pressed(self, accion: object) -> bool:
+                return False
+
+            def pulsada_en_buffer(self, accion: object) -> bool:
+                return False
+
+        jugador = Player(pygame.Vector2(100.0, 100.0))
+        jugador._change_state_instance(SwimmingState())
+        mundo = World()
+        jugador.adoptar_en(mundo)
+        mundo.poner(jugador.entidad, Velocidad(jugador.velocity))
+        mundo.crear(ZonaDeAgua(
+            rect=pygame.Rect(0, 0, 4000, 4000),
+            corriente=pygame.Vector2(-30.0, 0.0)))
+
+        entrada = _EntradaFalsa({Action.MOVE_RIGHT})
+        dt = 1 / 60
+        for _ in range(int(3.0 / dt)):
+            jugador.update(dt, [], entrada)
+            ecs_systems.sistema_corriente_de_agua(mundo, dt)
+
+        assert jugador.velocity.x == pytest.approx(90.0, abs=1.0), (
+            f"la velocidad en régimen contra la corriente es "
+            f"{jugador.velocity.x:.1f} px/s, no ~90: si esto cambió, la "
+            f"nota de `ZONAS_DE_CORRIENTE` también hay que actualizarla"
+        )

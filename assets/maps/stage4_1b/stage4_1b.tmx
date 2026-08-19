@@ -14,6 +14,8 @@
   <property name="water_effect" type="bool" value="true"/>
   <property name="water_tint" value="#0a3038"/>
   <property name="water_alpha" type="float" value="130"/>
+  <property name="ambient_fx" value="vida_abisal"/>
+  <property name="ambient_fx_rate" type="float" value="14"/>
  </properties>
  <tileset firstgid="1" name="tileset_stage4_1b" tilewidth="16" tileheight="16" tilecount="64" columns="8">
   <image source="../../tilesets/tileset_stage4_1b.png" width="128" height="128"/>
@@ -233,45 +235,66 @@
 
   <object id="102" type="WaterZone" name="WaterZone_102" x="0" y="0" width="14400" height="496"/>
 
-  <object id="103" type="Checkpoint" name="Checkpoint_103" x="320" y="480" width="16" height="32">
+  <object id="103" type="WaterZone" name="WaterZone_103" x="2400" y="0" width="2400" height="496">
+   <properties>
+    <property name="corriente_x" type="float" value="35.0"/>
+    <property name="corriente_y" type="float" value="0.0"/>
+   </properties>
+  </object>
+
+  <object id="104" type="WaterZone" name="WaterZone_104" x="7200" y="0" width="2400" height="496">
+   <properties>
+    <property name="corriente_x" type="float" value="-30.0"/>
+    <property name="corriente_y" type="float" value="0.0"/>
+   </properties>
+  </object>
+
+  <object id="105" type="WaterZone" name="WaterZone_105" x="12800" y="0" width="1600" height="496">
+   <properties>
+    <property name="corriente_x" type="float" value="45.0"/>
+    <property name="corriente_y" type="float" value="0.0"/>
+   </properties>
+  </object>
+
+  <object id="106" type="Checkpoint" name="Checkpoint_106" x="320" y="480" width="16" height="32">
    <properties>
     <property name="checkpoint_id" type="int" value="1"/>
    </properties>
   </object>
 
-  <object id="104" type="Checkpoint" name="Checkpoint_104" x="2720" y="480" width="16" height="32">
+  <object id="107" type="Checkpoint" name="Checkpoint_107" x="2720" y="480" width="16" height="32">
    <properties>
     <property name="checkpoint_id" type="int" value="2"/>
    </properties>
   </object>
 
-  <object id="105" type="Checkpoint" name="Checkpoint_105" x="5120" y="480" width="16" height="32">
+  <object id="108" type="Checkpoint" name="Checkpoint_108" x="5120" y="480" width="16" height="32">
    <properties>
     <property name="checkpoint_id" type="int" value="3"/>
    </properties>
   </object>
 
-  <object id="106" type="Checkpoint" name="Checkpoint_106" x="7520" y="480" width="16" height="32">
+  <object id="109" type="Checkpoint" name="Checkpoint_109" x="7520" y="480" width="16" height="32">
    <properties>
     <property name="checkpoint_id" type="int" value="4"/>
    </properties>
   </object>
 
-  <object id="107" type="Checkpoint" name="Checkpoint_107" x="9920" y="480" width="16" height="32">
+  <object id="110" type="Checkpoint" name="Checkpoint_110" x="9920" y="480" width="16" height="32">
    <properties>
     <property name="checkpoint_id" type="int" value="5"/>
    </properties>
   </object>
 
-  <object id="108" type="Checkpoint" name="Checkpoint_108" x="12320" y="480" width="16" height="32">
+  <object id="111" type="Checkpoint" name="Checkpoint_111" x="12320" y="480" width="16" height="32">
    <properties>
     <property name="checkpoint_id" type="int" value="6"/>
    </properties>
   </object>
 
-  <object id="109" type="NextTrigger" name="NextTrigger_109" x="14240" y="448" width="32" height="96"/>
+  <object id="112" type="NextTrigger" name="NextTrigger_112" x="14240" y="448" width="32" height="96"/>
 
-  <object id="110" type="Light" name="Light_110" x="96" y="80">
+  <object id="113" type="Light" name="Light_113" x="96" y="80">
    <properties>
     <property name="radius" type="float" value="170.0"/>
     <property name="color" value="warm"/>
@@ -282,7 +305,7 @@
    </properties>
   </object>
 
-  <object id="111" type="Light" name="Light_111" x="1296" y="80">
+  <object id="114" type="Light" name="Light_114" x="1296" y="80">
    <properties>
     <property name="radius" type="float" value="170.0"/>
     <property name="color" value="warm"/>
@@ -293,7 +316,7 @@
    </properties>
   </object>
 
-  <object id="112" type="Light" name="Light_112" x="2496" y="80">
+  <object id="115" type="Light" name="Light_115" x="2496" y="80">
    <properties>
     <property name="radius" type="float" value="170.0"/>
     <property name="color" value="warm"/>
@@ -304,7 +327,7 @@
    </properties>
   </object>
 
-  <object id="113" type="Light" name="Light_113" x="3696" y="80">
+  <object id="116" type="Light" name="Light_116" x="3696" y="80">
    <properties>
     <property name="radius" type="float" value="170.0"/>
     <property name="color" value="warm"/>
@@ -315,7 +338,7 @@
    </properties>
   </object>
 
-  <object id="114" type="Light" name="Light_114" x="4896" y="80">
+  <object id="117" type="Light" name="Light_117" x="4896" y="80">
    <properties>
     <property name="radius" type="float" value="170.0"/>
     <property name="color" value="warm"/>
@@ -326,7 +349,7 @@
    </properties>
   </object>
 
-  <object id="115" type="Light" name="Light_115" x="6096" y="80">
+  <object id="118" type="Light" name="Light_118" x="6096" y="80">
    <properties>
     <property name="radius" type="float" value="170.0"/>
     <property name="color" value="warm"/>
@@ -337,7 +360,7 @@
    </properties>
   </object>
 
-  <object id="116" type="Light" name="Light_116" x="7296" y="80">
+  <object id="119" type="Light" name="Light_119" x="7296" y="80">
    <properties>
     <property name="radius" type="float" value="170.0"/>
     <property name="color" value="warm"/>
@@ -348,7 +371,7 @@
    </properties>
   </object>
 
-  <object id="117" type="Light" name="Light_117" x="8496" y="80">
+  <object id="120" type="Light" name="Light_120" x="8496" y="80">
    <properties>
     <property name="radius" type="float" value="170.0"/>
     <property name="color" value="warm"/>
@@ -359,7 +382,7 @@
    </properties>
   </object>
 
-  <object id="118" type="Light" name="Light_118" x="9696" y="80">
+  <object id="121" type="Light" name="Light_121" x="9696" y="80">
    <properties>
     <property name="radius" type="float" value="170.0"/>
     <property name="color" value="warm"/>
@@ -370,7 +393,7 @@
    </properties>
   </object>
 
-  <object id="119" type="Light" name="Light_119" x="10896" y="80">
+  <object id="122" type="Light" name="Light_122" x="10896" y="80">
    <properties>
     <property name="radius" type="float" value="170.0"/>
     <property name="color" value="warm"/>
@@ -381,7 +404,7 @@
    </properties>
   </object>
 
-  <object id="120" type="Light" name="Light_120" x="12096" y="80">
+  <object id="123" type="Light" name="Light_123" x="12096" y="80">
    <properties>
     <property name="radius" type="float" value="170.0"/>
     <property name="color" value="warm"/>
@@ -392,7 +415,7 @@
    </properties>
   </object>
 
-  <object id="121" type="Light" name="Light_121" x="13296" y="80">
+  <object id="124" type="Light" name="Light_124" x="13296" y="80">
    <properties>
     <property name="radius" type="float" value="170.0"/>
     <property name="color" value="warm"/>
