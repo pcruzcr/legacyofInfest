@@ -3523,7 +3523,7 @@ tanto, el código no cambia: el fallback es el contrato.
   sin errores; no existe código roto que arreglar, sólo música que
   componer.
 
-## [GAP-069] 4.1b — tiles destructibles: el motor los tiene, pero no bajo el agua
+## ~~[GAP-069] 4.1b — tiles destructibles: el motor los tiene, pero no bajo el agua~~ *(Resuelto)*
 
 - **File:** `src/framework/stage/bloques.py`, `src/framework/entities/states/swim.py`, `src/stages/stage4_1b/`
 - **Phase:** AUD-543 (2026-08-18) — pedido tras jugarlo: "tiles
@@ -3555,18 +3555,32 @@ tanto, el código no cambia: el fallback es el contrato.
   específicamente acuático (por ejemplo, un temporizador de proximidad en
   vez de un golpe), que sería un sistema nuevo y no una reutilización del
   existente.
-- **Resolution plan:** decisión del dueño primero: (a) dar al jugador un
-  ataque acuático (nuevo estado o extensión de `SwimmingState`) y reusar
-  `BreakableBlock` tal cual; o (b) un mecanismo de ruptura por proximidad
-  específico para agua (temporizador mientras el jugador está cerca, sin
-  hitbox), que no toca el sistema de bloques existente. Ninguna de las dos
-  se empieza sin esa decisión — construir la (b) primero y descubrir
-  después que se quería la (a) sería trabajo tirado.
+- **Resolution:** decisión del dueño (2026-08-19): (a), un ataque
+  acuático nuevo. **AUD-558** lo construyó: `SwimAttackState`
+  (`states/swim.py`) — no hereda de `_AttackState` (`states/attack.py`)
+  porque esa base vuelve siempre a `IdleState` y comprueba salto/dash de
+  tierra firme al terminar, ninguno de los dos tiene sentido nadando;
+  escribe su propio ciclo corto (6 fotogramas a 14 fps, frena en vez de
+  detener en seco). `SwimmingState.update` transiciona a él con
+  `Action.SHORT_ATTACK`. `BloqueDestructible.golpear` no se tocó —sigue
+  siendo el mismo `SistemaDeBloques.golpear(player.active_hitbox)`
+  genérico que ya llama `StageScene.update()` cada fotograma— porque el
+  nuevo estado pone un `active_hitbox` real durante sus fotogramas
+  activos, igual que `ShortAttackState` en tierra. Nuevo
+  `PlayerState.SWIM_ATTACK` (reusa el sprite de `SHORT_ATTACK`, sin arte
+  propio). `tools/generate_stage4_1b.py` gana seis `BreakableBlock`, uno
+  por sección, a medio camino entre checkpoints.
 - **Verificado:** 2026-08-18 — lectura completa de `swim.py` (sin
   transición a ataque) y de `bloques.py`/`stage_objetos.py` (el bloque es
   sólido mientras no está roto); `pytest tests/test_stage4_1b.py` (19
   casos) en verde confirma que lo que sí se construyó (corrientes, fauna)
   no depende de esto.
+  2026-08-19 (AUD-558) — `pytest tests/test_el_ataque_acuatico_rompe_bloques.py
+  tests/test_player_state_machine.py tests/test_player_states_extended.py
+  tests/test_stage4_1b.py tests/test_bloques.py` en verde (150 casos en
+  el barrido de player_state/swim/stage4_1b/bloques); `ruff check` y
+  `scripts/validate_tmx.py --ci`/`validate_assets.py` sin errores tras
+  regenerar `stage4_1b.tmx`.
 
 ## [GAP-070] Audio procedural del 4-1 — recetas del dueño: la mayoría construida, quedan las que piden DSP en tiempo real
 

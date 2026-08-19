@@ -96,6 +96,12 @@ _PLAYER_SPRITE_MAP: dict[str, tuple[str, int]] = {
     # bajo el agua. `player_swim.png` alterna una patada abierta con la
     # silueta cerrada del salto: hay brazada real entre fotogramas.
     "SWIMMING": ("player_swim.png", 4),
+    # AUD-558 — GAP-069: el golpe acuático que rompe `BloqueDestructible`
+    # bajo el agua. Reusa la hoja del ataque corto en tierra
+    # (`player_short_attack.png`) — mismo criterio que `GRAB`/`THROW`/
+    # `DASH_ATTACK`/`AERIAL_ATTACK`: sin arte propio, una silueta
+    # coherente vale más que una inventada.
+    "SWIM_ATTACK": ("player_short_attack.png", 6),
     # F5.14 — lianas y tirolesas. Reutilizan la hoja de salto: el jugador va
     # colgado, y hasta que haya arte propio es mejor un sprite coherente que
     # uno inventado.
@@ -129,6 +135,7 @@ _PLAYER_ANIM_FPS: dict[str, float] = {
     "THROW": 16.0,
     "SLIDE": 14.0,
     "SWIMMING": 10.0,
+    "SWIM_ATTACK": 14.0,
     "CLIMBING": 6.0,
     "ZIPLINE": 8.0,
     # AUD-109 — `LEDGE_GRAB` tenía hoja de sprites y **no** tenía velocidad, así
@@ -169,6 +176,7 @@ class PlayerState(str, Enum):
     THROW = "THROW"
     SLIDE = "SLIDE"
     SWIMMING = "SWIMMING"
+    SWIM_ATTACK = "SWIM_ATTACK"
     CLIMBING = "CLIMBING"
     ZIPLINE = "ZIPLINE"
     ULTIMATE = "ULTIMATE"
