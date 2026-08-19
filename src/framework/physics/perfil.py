@@ -100,12 +100,22 @@ GOMA = Material("goma", restitucion=0.6)
 #: sólo para nombrar la zona, no para cambiar cómo frena (eso ya lo hace
 #: `multiplicador`, sin tocar).
 LODO = Material("lodo")
+#: AUD-554 — GAP-070 "Pasos sobre Tierra/Grava": la Fase 1 del 4-1 pisa
+#: suelo normal (sin `ZonaDeFriccion` propia, hasta ahora) y sonaba con el
+#: genérico `sfx_step` que comparten los otros 25 escenarios. Igual que
+#: `LODO`, existe sólo para nombrar la zona y encender la pisada propia —
+#: no cambia fricción ni restitución, el terreno se sigue jugando igual.
+GRAVA = Material("grava")
+#: AUD-554 — GAP-070 "Pasos Ahogados": la Fase 5 pide que los pasos del
+#: jugador bajen de volumen y cedan protagonismo al ambiente nocturno. Mismo
+#: criterio que `GRAVA`/`LODO`: la zona sólo nombra el terreno.
+AHOGADO = Material("ahogado")
 
 #: Los materiales que el motor conoce, por su nombre. Es lo que permite
 #: declararlos desde datos —un TMX, un tileset— sin que el cargador tenga que
 #: importar cada constante.
 MATERIALES: dict[str, Material] = {
-    m.nombre: m for m in (ROCA, HIELO, MUSGO, GOMA, LODO)
+    m.nombre: m for m in (ROCA, HIELO, MUSGO, GOMA, LODO, GRAVA, AHOGADO)
 }
 
 

@@ -355,6 +355,25 @@ def _objetos() -> list[str]:
             obj("FrictionZone", inicio * TS, (fila - 2) * TS, ancho * TS, 2 * TS,
                 multiplicador=FRENO_DEL_LODO, material="lodo")
 
+    # ── El terreno de la Fase 1 y la Fase 5, nombrado (AUD-554,
+    # GAP-070 "Pasos sobre Tierra/Grava" y "Pasos Ahogados") ────────
+    #
+    # Las dos fases son terreno llano de fábrica (`perfil_de_colision()` es
+    # constante a `FILA_SUELO` en todo su tramo — ninguna de las dos declara
+    # `tiene_slopes`), así que una sola `FrictionZone` cubre la fase entera.
+    # `multiplicador=1.0` a propósito: esto **no** cambia cómo se juega,
+    # sólo nombra el terreno para que `states/grounded.py` pueda encenderle
+    # una pisada propia — mismo criterio que ya fijaron `musgo`/`lodo`.
+    fase2, fase5 = FASES[1], FASES[4]
+    fila_fase1 = perfil[MURO_ANCHO + 1]
+    obj("FrictionZone", (MURO_ANCHO + 1) * TS, (fila_fase1 - 2) * TS,
+        (fase2.desde_columna - MURO_ANCHO - 1) * TS, 2 * TS,
+        multiplicador=1.0, material="grava")
+    fila_fase5 = perfil[fase5.desde_columna]
+    obj("FrictionZone", fase5.desde_columna * TS, (fila_fase5 - 2) * TS,
+        (FASES[5].desde_columna - fase5.desde_columna) * TS, 2 * TS,
+        multiplicador=1.0, material="ahogado")
+
     # ── Las lomas de la Fase 3: dos parejas de `Slope` reales (AUD-477) ──
     for lx, lfila_arriba, lancho, lalto, lsube in loma():
         obj("Slope", lx * TS, lfila_arriba * TS, lancho * TS, lalto * TS,

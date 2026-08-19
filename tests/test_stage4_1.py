@@ -319,14 +319,36 @@ class TestLaFriccionEscalaConLaLluvia:
         return list(escena._mundo.cada(ZonaDeFriccion))
 
     def _musgo_y_lodo(self, escena):
-        """Separa las zonas de la Fase 2 por tipo, por el mismo criterio
-        que usa `Stage4_1._actualizar_friccion_de_la_lluvia`: el musgo es
-        la que trae `inercia`, el lodo la que trae `multiplicador`."""
+        """Separa las zonas de la Fase 2 por tipo — leyendo la propia
+        clasificación que ya calculó y cachea `_actualizar_friccion_de_
+        la_lluvia` en `escena._frenos_de_fabrica` (requiere haberla
+        llamado antes), en vez de adivinar por el valor actual de
+        `inercia`/`multiplicador`.
+
+        AUD-554 rompió la versión anterior (`inercia > 0.0` → musgo, si
+        no → lodo): las zonas nuevas de grava/ahogado también tienen
+        `inercia == 0.0` y caían al bote de "lodo" por accidente aunque
+        `_actualizar_friccion_de_la_lluvia` las ignora (no son ni musgo ni
+        lodo de fábrica — `tipo is None` → `continue`, ver el propio
+        método). Se prefiere la caché (exacta incluso después de que la
+        lluvia reescale los valores); si está vacía —fuera de la Fase 2,
+        `_actualizar_friccion_de_la_lluvia` vuelve antes de llenarla—, se
+        cae al mismo criterio de tolerancia que usa la propia escena
+        contra los valores de fábrica, que ahí todavía no se han tocado."""
+        from src.stages.stage4_1 import trazado
+
         musgo, lodo = [], []
         for eid, z in self._zonas(escena):
-            if z.inercia > 0.0:
+            tipo = escena._frenos_de_fabrica.get(eid)
+            if tipo is None:
+                tol = escena.TOLERANCIA_FRENO_DE_FABRICA
+                if abs(z.inercia - trazado.RESBALON_DEL_MUSGO) <= tol:
+                    tipo = "musgo"
+                elif abs(z.multiplicador - trazado.FRENO_DEL_LODO) <= tol:
+                    tipo = "lodo"
+            if tipo == "musgo":
                 musgo.append((eid, z))
-            else:
+            elif tipo == "lodo":
                 lodo.append((eid, z))
         return musgo, lodo
 

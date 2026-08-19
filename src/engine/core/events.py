@@ -57,6 +57,14 @@ class Events:
     """AUD-522 — pisada distinta al andar sobre musgo (`material="musgo"`
     en una `FrictionZone`): el musgo resbala y hasta ahora no se oía ni se
     veía, sólo se calculaba."""
+    #: AUD-554 — GAP-070 "Pasos sobre Tierra/Grava" (Fase 1 del 4-1): antes
+    #: usaba el `SFX_PLAYER_FOOTSTEP` genérico que comparten los otros 25
+    #: escenarios, sin ninguna zona propia que lo distinguiera.
+    SFX_PLAYER_FOOTSTEP_GRAVA: str = "SFX_PLAYER_FOOTSTEP_GRAVA"
+    #: AUD-554 — GAP-070 "Pasos Ahogados" (Fase 5 del 4-1): más grave y a
+    #: menor volumen que el genérico, para ceder protagonismo al ambiente
+    #: nocturno de esa fase.
+    SFX_PLAYER_FOOTSTEP_AHOGADO: str = "SFX_PLAYER_FOOTSTEP_AHOGADO"
     SFX_MENU_HOVER: str = "SFX_MENU_HOVER"
     SFX_MENU_CONFIRM: str = "SFX_MENU_CONFIRM"
     SFX_MENU_CANCEL: str = "SFX_MENU_CANCEL"

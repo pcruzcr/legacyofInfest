@@ -74,7 +74,9 @@ class TestElCatalogo:
     def test_se_pueden_buscar_por_nombre(self) -> None:
         """Es lo que permitirá declararlos desde un TMX o un tileset."""
         assert MATERIALES["goma"] is GOMA
-        assert set(MATERIALES) == {"roca", "hielo", "musgo", "goma", "lodo"}
+        assert set(MATERIALES) == {
+            "roca", "hielo", "musgo", "goma", "lodo", "grava", "ahogado",
+        }
 
     def test_el_lodo_no_cambia_la_fisica_solo_se_nombra(self) -> None:
         """AUD-551 — GAP-070 punto 1: el lodo ya frenaba de verdad por

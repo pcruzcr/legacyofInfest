@@ -1506,13 +1506,18 @@ class Stage4_1(StageScene):
 
     #: AUD-551 — GAP-070 "Diálogo del Venado/de la Serpiente/del
     #: Halcón": `Fase.espiritu` (0/1/2) a la línea de voz que le
-    #: corresponde. El Venado reusa `sfx_voz_venado_fase1` — ya existía
-    #: (AUD-263) pero nadie lo reproducía nunca, el mismo patrón de
-    #: "sistema completo, camino real inexistente" que ya cazaron
-    #: `SwimmingState` y `WaterEffect`; el Rey Terciopelo y el Gavilán
-    #: son voces nuevas.
+    #: corresponde. AUD-551 hizo sonar por primera vez al Venado con
+    #: `sfx_voz_venado_fase1` — ya existía (AUD-263) pero nadie lo
+    #: reproducía nunca, el mismo patrón de "sistema completo, camino real
+    #: inexistente" que ya cazaron `SwimmingState` y `WaterEffect` — como
+    #: solución de paso, porque el Rey Terciopelo y el Gavilán no tenían
+    #: voz en absoluto. AUD-554 le da al Venado su propia receta
+    #: ("La Voz del Bosque": diente de sierra+seno 60Hz, vibrato de pitch
+    #: a 12Hz, pasa-banda barriendo 150→400Hz, reverberación masiva — ver
+    #: `_gen_sfx` en `tools/generate_all_assets.py`), la misma clase de
+    #: recurso que ya tienen los otros dos.
     _VOZ_POR_ESPIRITU: dict[int, str] = {
-        0: "sfx_voz_venado_fase1",
+        0: "sfx_voz_venado_ancestral",
         1: "sfx_voz_rey_terciopelo",
         2: "sfx_voz_gavilan",
     }

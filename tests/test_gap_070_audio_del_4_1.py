@@ -182,7 +182,10 @@ class TestLaVozDeLosEspiritus:
         escena._actualizar_voz_del_espiritu()
         escena._actualizar_voz_del_espiritu()
 
-        assert espia.voces.count("sfx_voz_venado_fase1") == 1, (
+        # AUD-554 — el Venado dejó de reusar la voz de marcador de
+        # posición de AUD-263 y ganó su propia receta ("La Voz del
+        # Bosque").
+        assert espia.voces.count("sfx_voz_venado_ancestral") == 1, (
             f"la voz del Venado debía sonar una sola vez: {espia.voces}"
         )
 
