@@ -2307,7 +2307,12 @@ SFX_CATEGORIES = {
                     # variantes, una por nota de la tríada de Re menor
                     # (293.66/349.23/440.00Hz) — `Stage4_1` elige una al
                     # azar cada vez que una grieta termina de encenderse.
-                    "paso_de_luz_re", "paso_de_luz_fa", "paso_de_luz_la"],
+                    "paso_de_luz_re", "paso_de_luz_fa", "paso_de_luz_la",
+                    # AUD-568 — propuesta "nivel cine" aprobada por el
+                    # dueño: un acorde propio en el instante exacto en
+                    # que un espíritu se libera de verdad (AUD-474), no
+                    # reusado de ningún otro cue del nivel. Ver `_gen_sfx`.
+                    "liberacion_espiritu"],
     # AUD-263 — las voces. GAP-031 decía «el motor sabe reproducir voz y no hay
     # ni un solo fichero», y se dejó así a propósito para no cablear mentiras.
     # Pero **todo** el audio de este juego está sintetizado aquí: los pasos, los
@@ -2375,7 +2380,11 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
              # — la cola de reverberación se suma después, igual que
              # `paso_de_luz_*`).
              "footstep_grava": 0.062, "footstep_ahogado": 0.095,
-             "venado_ancestral": 2.8}
+             "venado_ancestral": 2.8,
+             # AUD-568 — dry: 250ms ataque + 250ms sostenido + 1200ms
+             # relajación = 1.7s; la reverberación añade su propia cola
+             # aparte (ver `_aplicar_reverberacion`).
+             "liberacion_espiritu": 1.7}
     
     dur = t_dur.get(name, 0.3)
     n = int(rate * dur)
@@ -2944,6 +2953,37 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
             samples.append(onda * env * 0.5)
         samples = _aplicar_reverberacion(samples, rate, decaimiento=0.6,
                                           retardo_ms=60.0, ecos=10, cola_extra_s=2.0)
+    elif name == "liberacion_espiritu":
+        # AUD-568 — propuesta "nivel cine": un acorde propio, distinto de
+        # cualquier otro cue del nivel, en el instante exacto en que un
+        # espíritu se libera de verdad (`Stage4_1._espiritu_liberado`
+        # pasando a `True` tras el botón de usar, AUD-474). Misma tríada
+        # de Re menor que ya ancla "algo despierta" en `paso_de_luz_*`
+        # —mismo lenguaje armónico, el mismo despertar—, pero una octava
+        # más grave (D3/F3/A3, no D4/F4/A4) y con una envolvente mucho
+        # más lenta: 250ms de ataque en vez de 15, así que crece como un
+        # alivio sostenido, no como una campanilla que llama la atención.
+        frecuencias = (146.83, 174.61, 220.00)  # D3, F3, A3
+        ataque = max(1, int(rate * 0.25))
+        sostenido = int(rate * 0.25)
+        relajacion = max(1, int(rate * 1.2))
+        samples = []
+        for i in range(n):
+            t = i / rate
+            onda = sum(
+                math.sin(2.0 * math.pi * f * t) * 0.8 + _tri(f, t) * 0.2
+                for f in frecuencias
+            ) / len(frecuencias)
+            if i < ataque:
+                env = i / ataque
+            elif i < ataque + sostenido:
+                env = 1.0
+            else:
+                j = i - ataque - sostenido
+                env = max(0.0, 1.0 - j / relajacion)
+            samples.append(onda * env * 0.45)
+        samples = _aplicar_reverberacion(samples, rate, decaimiento=0.65,
+                                          retardo_ms=70.0, ecos=10, cola_extra_s=2.0)
     elif name == "timer_alert_pulse":
         # AUD-553 — un "tick" de alarma, no el timbre de recompensa que ya
         # usan checkpoint/heart_restore/stage_complete (esos suben de tono
