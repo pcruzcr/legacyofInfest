@@ -124,8 +124,13 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         # De paso, las tres opciones viejas estaban en inglés pese a la
         # invariante 5 de CLAUDE.md ("todo en español, sin excepciones") —
         # se traducen aquí para no dejar un menú a medio traducir.
+        # AUD-549 — "Mapa" se suma: pedido explícito, "que al poner pausa
+        # salga el mapa completo". Ver `WorldMapScene.__init__` para por
+        # qué se abre de sólo lectura desde aquí (`permitir_viajar=False`)
+        # y no con la navegación normal de cuando se entra desde el
+        # título.
         self._pause_options: list[str] = [
-            "Reanudar", "Inventario", "Árbol de habilidades",
+            "Reanudar", "Mapa", "Inventario", "Árbol de habilidades",
             "Guardar y salir", "Salir al título",
         ]
         self._debug: bool = False
@@ -850,6 +855,8 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
             choice = self._pause_options[self._pause_selected]
             if choice == "Reanudar":
                 self._paused = False
+            elif choice == "Mapa":
+                self._abrir_mapa()
             elif choice == "Inventario":
                 self._abrir_inventario()
             elif choice == "Árbol de habilidades":
@@ -858,6 +865,21 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
                 self._save_and_quit()
             elif choice == "Salir al título":
                 self._quit_to_title()
+
+    def _abrir_mapa(self) -> None:
+        """AUD-549 — empuja `WorldMapScene` de sólo lectura.
+
+        `permitir_viajar=False`: `WorldMapScene._entrar` cambia de
+        escenario con `scene_manager.replace(...)`, que sólo sustituye
+        el tope de la pila. Empujada desde aquí, el `StageScene` pausado
+        queda debajo; confirmar un nodo dejaría ese nivel pausado
+        huérfano en el fondo de la pila. De sólo lectura, el jugador ve
+        su progreso y vuelve con Cancelar (`pop()`, mismo mecanismo que
+        `InventoryScene`/`SkillTreeScene`) sin ese riesgo.
+        """
+        from src.engine.scenes.world_map_scene import WorldMapScene
+        self.context.scene_manager.push(
+            WorldMapScene(self.context, permitir_viajar=False))
 
     def _abrir_inventario(self) -> None:
         """AUD-533 — empuja `InventoryScene` en vez de sustituir esta

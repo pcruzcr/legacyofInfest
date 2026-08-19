@@ -153,8 +153,23 @@ class WorldMapScene(BaseScene):
     #: de cuando la lista tenía cinco nodos escritos a mano (AUD-266).
     _SALTO_VERTICAL = NODOS_POR_FILA
 
-    def __init__(self, context: GameContext) -> None:
+    def __init__(self, context: GameContext, *, permitir_viajar: bool = True) -> None:
+        """`permitir_viajar=False` — AUD-549: pedido explícito, "que al
+        poner pausa salga el mapa completo". `_entrar` hace
+        `scene_manager.replace(...)` para cambiar de escenario, y eso
+        asume que esta pantalla está **sola** en la pila (el camino de
+        siempre, desde el título). Empujada desde la pausa de un nivel
+        (`StageScene._abrir_mapa`), la pila trae ese `StageScene` pausado
+        debajo; `replace()` sólo sustituye el tope, así que confirmar un
+        nodo dejaría el nivel en pausa huérfano en el fondo de la pila —
+        nunca destruido, nunca reanudado. En vez de resolver ese caso con
+        una pila que se vacía a medias, la pantalla abierta desde pausa
+        se queda de sólo lectura: se navega y se ve el progreso, pero
+        confirmar un nodo no hace nada. `Cancelar` sigue devolviendo al
+        nivel en pausa con normalidad (`pop()`, AUD-533).
+        """
         super().__init__(context)
+        self._permitir_viajar = permitir_viajar
         self._selected: int = 0
         # AUD-069: fuentes de la escala del tema, a través de su caché.
         self._font_name = font(Theme.FONT_SMALL)
@@ -221,7 +236,13 @@ class WorldMapScene(BaseScene):
         if self._selected != prev:
             self.context.event_bus.emit(Events.SFX_MENU_HOVER)
         if im.is_action_just_pressed(Action.CONFIRM):
-            self._entrar(self._nodes[self._selected])
+            if self._permitir_viajar:
+                self._entrar(self._nodes[self._selected])
+            else:
+                # AUD-549 — de sólo lectura desde la pausa: un pitido de
+                # "no" en vez de silencio, para que quede claro que la
+                # tecla se registró y no hay nada roto.
+                self.context.event_bus.emit(Events.SFX_MENU_CANCEL)
         if im.is_action_just_pressed(Action.CANCEL):
             # AUD-533 — mismo arreglo que `InventoryScene`/`SkillTreeScene`:
             # `pop()` vuelve a quien haya empujado esta pantalla en vez de
@@ -315,7 +336,11 @@ class WorldMapScene(BaseScene):
         # colocados en un mapa, no en una lista— pero la paleta y los atajos
         # ya son los del resto del juego. Antes esta pantalla tenía siete
         # colores propios y un fondo distinto del de todas las demás.
-        top = draw_screen(surface, "MAPA DEL MUNDO", "Elige tu destino")
+        # AUD-549 — el subtítulo dice por qué "Entrar" no hace nada, en
+        # vez de dejar que el jugador lo descubra pulsando en silencio.
+        subtitulo = ("Elige tu destino" if self._permitir_viajar
+                     else "Progreso — vuelve al nivel para seguir jugando")
+        top = draw_screen(surface, "MAPA DEL MUNDO", subtitulo)
 
         posiciones = [self._posicion(n, top) for n in self._nodes]
 
@@ -364,9 +389,9 @@ class WorldMapScene(BaseScene):
                 lx = px - 16 - label.get_width()
             surface.blit(label, (lx, py - 8))
 
-        draw_key_hints(surface, [
-            ("←→↑↓", "Navegar"),
-            ("Enter", "Entrar"),
-            ("Esc", "Volver"),
-        ])
+        pistas = [("←→↑↓", "Navegar")]
+        if self._permitir_viajar:
+            pistas.append(("Enter", "Entrar"))
+        pistas.append(("Esc", "Volver"))
+        draw_key_hints(surface, pistas)
 
