@@ -100,6 +100,46 @@ columnas — hallazgos que CI nunca te va a pedir que arregles.
 > es un detalle menor: es la misma confusión que dejó el CI de AUD-010
 > disparándose sobre `main`/`develop` y sin ejecutarse ni una sola vez.
 
+## Acceso de estudiantes al repositorio (2026-08-19)
+
+El repositorio es **privado**. Cada estudiante se invita como colaborador
+con rol **`Read`** (modo lectura) — pueden clonar y ver las ~26 entregas del
+curso (es el propósito pedagógico del repositorio, ver `CLAUDE.md` §1), pero
+**no** pueden empujar una rama aquí directamente. Para proponer un cambio:
+hacen **fork** del repositorio y abren un **Pull Request** contra `dev` desde
+su fork — el flujo normal de "Proceso de PR" de arriba, sin modificarlo.
+
+`.github/CODEOWNERS` documenta qué carpeta (`src/stages/<nivel>/` y
+`assets/maps/<nivel>/`) le corresponde a cada estudiante. **Aviso real:**
+GitHub sólo hace cumplir CODEOWNERS con una regla de rama protegida
+exigiendo su revisión — y las ramas protegidas son una función de pago
+(GitHub Pro) en un repositorio **privado** (verificado: la API devuelve 403
+"Upgrade to GitHub Pro..." en este repositorio, 2026-08-19). Sin eso,
+CODEOWNERS es informativo, no un bloqueo automático — la barrera real hoy es
+que sólo quien tenga permiso de escritura puede fusionar un PR, y por
+convención de este documento **se revisa a mano** que un PR de un estudiante
+sólo toque su propia carpeta antes de aprobarlo. Si el curso alguna vez paga
+GitHub Pro (o hace público el repositorio), una regla de rama protegida en
+`dev` que exija "Require review from Code Owners" convierte esto en un
+bloqueo automático de verdad.
+
+**Para añadir a un estudiante nuevo:**
+
+1. Necesitas su **usuario de GitHub** (no basta el correo: la invitación de
+   colaborador por API sólo acepta usuario — ver más abajo el porqué).
+2. Invítalo con permiso de lectura:
+   ```powershell
+   gh api -X PUT repos/pcruzcr/legacyofInfest/collaborators/<usuario> -f permission=pull
+   ```
+3. Añade su carpeta a `.github/CODEOWNERS` — dos líneas, `src/stages/<carpeta>/`
+   y `assets/maps/<carpeta>/`, apuntando a `@usuario` (o a su correo, si ya
+   está verificado en su cuenta de GitHub — CODEOWNERS sí acepta correo,
+   la invitación de colaborador no).
+4. Si sólo tienes su correo y no encuentras su usuario, prueba
+   `gh api "search/users?q=CORREO+in:email"` — sólo encuentra cuentas con
+   ese correo marcado como público en su perfil; si no aparece nada, pídele
+   el usuario directamente.
+
 ## Panorama de la arquitectura
 
 ```
