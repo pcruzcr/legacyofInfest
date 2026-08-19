@@ -421,12 +421,27 @@ def _objetos() -> list[str]:
     x_centrado = col_mirador * TS - 400
     x_alejado = x_centrado - 280
     y_camara = 180  # altura vertical típica del jugador de pie, centrado
+    # AUD-571 — propuesta "nivel cine" aprobada por el dueño: "extender el
+    # mirador un poco más". El mirador original volvía al jugador y
+    # cortaba; ahora, tras volver, un tercer barrido —más lento, un poco
+    # hacia arriba— se adelanta hacia donde ya asoma Paburu
+    # (`_dibujar_paburu` lleva visible desde `AVANCE_PARA_PABURU=0.35`,
+    # y el mirador dispara sobre el 0,73 del tramo: para cuando esto
+    # corre, la silueta ya es grande) antes de fundir a negro. No es «ver
+    # de dónde venimos» dos veces —eso ya lo hacía el barrido original—,
+    # es «ver hacia dónde vamos», con un fundido de salida más largo
+    # (0,4 en vez de 0,2) para que el corte final se sienta deliberado.
+    x_hacia_paburu = x_centrado + 200
+    y_hacia_paburu = y_camara - 20
     guion_mirador = (
         "fundido entra 0.3\n"
         f"camara {x_alejado} {y_camara} 2.2\n"
         "esperar 2.5\n"
         f"camara {x_centrado} {y_camara} 1.6\n"
-        "fundido sale 0.2\n"
+        "esperar 0.4\n"
+        f"camara {x_hacia_paburu} {y_hacia_paburu} 2.0\n"
+        "esperar 1.0\n"
+        "fundido sale 0.4\n"
     )
     obj("Cutscene", col_mirador * TS, (perfil[col_mirador] - 4) * TS, 3 * TS, 5 * TS,
         guion=guion_mirador, bloquea=True, saltable=True, una_vez=True)

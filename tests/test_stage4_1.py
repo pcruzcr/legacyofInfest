@@ -1678,6 +1678,77 @@ class TestLaCutsceneDeIntroduccion:
             sc.on_exit()
 
 
+class TestElMiradorFinal:
+    """AUD-515 (el mirador original) / AUD-571 (sexta propuesta "nivel
+    cine" aprobada: "extender el mirador un poco más"). Dos `Cutscene` en
+    total en el TMX —la introducción y el mirador—; `TestLaCutsceneDe
+    Introduccion.test_el_guion_no_tiene_errores_de_sintaxis` sólo valida
+    la primera (`str.index` se queda con la introducción), así que el
+    guion del mirador necesita su propia prueba."""
+
+    @staticmethod
+    def _guiones_de_cutscene() -> list[str]:
+        import sys
+        from pathlib import Path
+
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
+        from generate_stage4_1 import _objetos
+
+        objetos_xml = "\n".join(_objetos())
+        guiones = []
+        inicio = 0
+        marca = 'name="guion" value="'
+        while True:
+            pos = objetos_xml.find('type="Cutscene"', inicio)
+            if pos == -1:
+                break
+            fin_objeto = objetos_xml.index("</object>", pos)
+            bloque = objetos_xml[pos:fin_objeto]
+            i0 = bloque.index(marca) + len(marca)
+            i1 = bloque.index('"', i0)
+            guion = (bloque[i0:i1].replace("&#10;", "\n").replace("&quot;", '"')
+                     .replace("&lt;", "<").replace("&amp;", "&"))
+            guiones.append(guion)
+            inicio = fin_objeto
+        return guiones
+
+    def test_hay_exactamente_dos_cutscenes(self) -> None:
+        assert len(self._guiones_de_cutscene()) == 2
+
+    def test_el_guion_del_mirador_no_tiene_errores_de_sintaxis(self) -> None:
+        from src.framework.stage.cutscene_guion import ContextoDeGuion, analizar_guion
+
+        guion_mirador = self._guiones_de_cutscene()[1]
+        _script, errores = analizar_guion(guion_mirador, ContextoDeGuion())
+        assert errores == [], f"el guion del mirador tiene errores: {errores}"
+
+    def test_el_mirador_se_extendio_hacia_paburu(self) -> None:
+        """AUD-571 — no sólo "de dónde venimos" (el barrido original),
+        también "hacia dónde vamos": un tercer barrido de cámara y un
+        fundido de salida más largo."""
+        guion_mirador = self._guiones_de_cutscene()[1]
+        lineas_camara = [linea for linea in guion_mirador.splitlines()
+                        if linea.startswith("camara")]
+        assert len(lineas_camara) == 3, (
+            f"esperaba tres barridos de cámara, hay {len(lineas_camara)}"
+        )
+        assert "fundido sale 0.4" in guion_mirador
+
+    def test_el_tmx_comprometido_coincide_con_el_generador(self) -> None:
+        """El mismo patrón de disciplina que ya usa `TestElMapaSigueAtado
+        ASuGenerador` para la geometría, aplicado al texto del guion: si
+        alguien edita uno de los dos archivos sin el otro, esto lo dice."""
+        from pathlib import Path
+
+        tmx = Path("assets/maps/stage4_1/stage4_1.tmx").read_text(encoding="utf-8")
+        guion_mirador_generador = self._guiones_de_cutscene()[1]
+        esperado = guion_mirador_generador.replace("\n", "&#10;")
+        assert esperado in tmx, (
+            "el guion del mirador en el TMX comprometido no coincide con "
+            "el que produce hoy tools/generate_stage4_1.py"
+        )
+
+
 class TestElDialogoDeLosTresEspiritus:
     """AUD-244/470 — los árboles se cargan de `data/dialogues/stage4_1.json`."""
 

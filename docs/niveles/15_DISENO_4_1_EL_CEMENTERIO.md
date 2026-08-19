@@ -276,6 +276,16 @@ lejana, y con el factor de paralaje real que ya declara `Camera.
 _parallax_factors["BG_Mid"]` (0,40) — no un número inventado para esta
 pieza sola.
 
+**El mirador, extendido** (AUD-571, propuesta "nivel cine" aprobada por
+el dueño: "extender el mirador un poco más"): el mirador original
+(AUD-515) se alejaba de la escena, volvía al jugador y cortaba a
+negro — "de dónde venimos", una sola vez. Ahora, tras volver, un
+tercer barrido más lento se adelanta hacia donde ya asoma la silueta
+de Paburu antes de fundir — "hacia dónde vamos" — con un fundido de
+salida más largo (0,4s en vez de 0,2) para que el corte final se
+sienta deliberado. Mismo mecanismo de siempre (`camara x y duración`
+del mini-lenguaje de `Cutscene`), sin sistema nuevo.
+
 ## 6. Lo que se hereda sin cambios del primer intento
 
 | Elemento | De dónde |

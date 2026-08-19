@@ -495,7 +495,7 @@
   </object>
   <object id="143" name="Cutscene_143" type="Cutscene" x="13760" y="416" width="48" height="80">
    <properties>
-    <property name="guion" value="fundido entra 0.3&#10;camara 13080 180 2.2&#10;esperar 2.5&#10;camara 13360 180 1.6&#10;fundido sale 0.2&#10;"/>
+    <property name="guion" value="fundido entra 0.3&#10;camara 13080 180 2.2&#10;esperar 2.5&#10;camara 13360 180 1.6&#10;esperar 0.4&#10;camara 13560 160 2.0&#10;esperar 1.0&#10;fundido sale 0.4&#10;"/>
     <property name="bloquea" type="bool" value="true"/>
     <property name="saltable" type="bool" value="true"/>
     <property name="una_vez" type="bool" value="true"/>
