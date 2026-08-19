@@ -19,7 +19,6 @@ class SwimmingState(PlayerStateBase):
         super().__init__(PlayerState.SWIMMING)
         self._swim_timer: float = 0.0
         self._bubble_timer: float = 0.0
-        self._surface_y: float = 0.0
 
     def enter(self, player: Player) -> None:
         super().enter(player)
@@ -27,7 +26,6 @@ class SwimmingState(PlayerStateBase):
         player.velocity.x *= 0.5
         self._swim_timer = 0.0
         self._bubble_timer = 0.0
-        self._surface_y = player.position.y - 16.0
 
     def update(
         self,
@@ -100,12 +98,6 @@ class SwimmingState(PlayerStateBase):
             self._bubble_timer = 0.0
             player._event_bus.emit(Events.VFX_BUBBLE, pos=(player.position.x, player.position.y))
 
-        if player.position.y < self._surface_y - 8.0:
-            player.velocity.y = -200.0
-            from src.framework.entities.states import JumpingState
-            player._change_state_instance(JumpingState())
-            return
-
         # AUD-526 — pisar el lecho marino (o cualquier suelo dentro de la
         # `ZonaDeAgua`, como el de 4.1b) disparaba `is_grounded` y esto
         # saltaba a `IdleState` aunque el jugador siguiera sumergido: el
@@ -117,6 +109,25 @@ class SwimmingState(PlayerStateBase):
         # del agua de verdad. Con el empuje vertical continuo de AUD-528
         # ya no hace falta reiniciar ningún contador de impulsos al tocar
         # fondo — no hay ningún contador que reiniciar.
+        #
+        # AUD-572 — la misma lección, otra vez. Aquí mismo vivía un segundo
+        # criterio duplicado: `_surface_y` se fijaba una sola vez al entrar
+        # (`player.y - 16`) y, si el jugador subía 24px por encima de *ese*
+        # punto, se le expulsaba a `JumpingState` a -200 px/s — pensado para
+        # una piscina pequeña con aire de verdad encima (`stage_mecanicas`).
+        # `src/stages/stage4_1b/trazado.py` ya documentaba el choque: 4-1b
+        # está "sumergido de principio a fin", sin ningún punto real donde
+        # haya aire — así que nadar hacia arriba unos pasos disparaba la
+        # expulsión en pleno abismo, una y otra vez («sigue saltando, no se
+        # siente como un nivel de nada», reporte del dueño 2026-08-19). El
+        # criterio quedaba documentado como problema y sin arreglar porque
+        # "arreglarlo sin uno a mano rompería" la piscina de referencia.
+        # Ya no hace falta ese "uno a mano": `ControlDeNado._salir`
+        # (`level_mechanics.py`) es quien detecta la salida real —
+        # `en_agua()` devolviendo `None`— y ahora es también quien decide
+        # si esa salida se siente como una expulsión hacia arriba (-200
+        # px/s, la piscina) o como una caída normal (4-1b, que nunca deja
+        # de estar `en_agua()`, así que esa rama nunca se ejecuta ahí).
 
 
 class SwimAttackState(PlayerStateBase):

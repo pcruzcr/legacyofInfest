@@ -25,6 +25,17 @@ from src.framework.ecs.systems import en_agua
 #: Nombre con el que la cámara lenta registra su factor en el reloj (AUD-118).
 FUENTE_TIEMPO_BALA: str = "tiempo_bala"
 
+#: AUD-572 — velocidad de expulsión al romper la superficie nadando hacia
+#: arriba, la misma que documentaba `docs/45_SWIMMING_SPEC.md` para el
+#: criterio viejo (`SwimmingState._surface_y`, ya retirado): sigue siendo
+#: un impulso, sólo que ahora lo dispara la salida real de la `ZonaDeAgua`,
+#: no un umbral fijo de 24px desde donde se entró a nadar. Constante de
+#: módulo y no de `ControlDeNado` porque esa clase es un
+#: `@dataclass(slots=True)`: un atributo anotado ahí se vuelve un campo con
+#: slot propio, y `_salir` (un `classmethod`) lo leería como el
+#: descriptor del slot, no como el valor — no como una constante de clase.
+VELOCIDAD_EXPULSION_SUPERFICIE: float = -200.0
+
 if TYPE_CHECKING:
     from src.engine.core.clock import Clock
     from src.framework.ecs.world import World
@@ -132,9 +143,22 @@ class ControlDeNado:
 
     @staticmethod
     def _salir(jugador: Player) -> None:
-        from src.framework.entities.states import FallingState, SwimmingState
+        from src.framework.entities.states import FallingState, JumpingState, SwimmingState
 
-        if isinstance(getattr(jugador, "_state_instance", None), SwimmingState):
+        if not isinstance(getattr(jugador, "_state_instance", None), SwimmingState):
+            return
+        # AUD-572 — romper la superficie nadando hacia arriba se siente
+        # como un impulso, no como dejar de nadar sin más: en una piscina
+        # con aire real encima (`stage_mecanicas`), salir mientras se sube
+        # expulsa hacia arriba, igual que documentaba el mecanismo viejo.
+        # En un nivel sin superficie (4-1b, "sumergido de principio a
+        # fin") `en_agua()` nunca deja de encontrar una `ZonaDeAgua`, así
+        # que esta rama simplemente no se ejecuta ahí — no hace falta
+        # distinguir el nivel a mano.
+        if jugador.velocity.y < 0.0:
+            jugador.velocity.y = VELOCIDAD_EXPULSION_SUPERFICIE
+            jugador._change_state_instance(JumpingState())
+        else:
             jugador._change_state_instance(FallingState())
 
 
