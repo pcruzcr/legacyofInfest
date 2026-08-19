@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pathlib import Path
 
     from src.engine.core.game_context import GameContext
     from src.engine.scene.base_scene import BaseScene
@@ -134,3 +135,43 @@ def discover_stages() -> list[Callable[[GameContext], BaseScene]]:
             logger.error("StageRegistry: error loading %s: %s", stage_id, e)
 
     return stages
+
+
+def carpeta_del_mapa(stage_id: str) -> str:
+    """A qué carpeta de `assets/maps/` corresponde este `stage_id`.
+
+    AUD-548 — los créditos necesitaban saber dónde vive el `.tmx` de cada
+    escenario para leer su `author`, y no existía nada que lo resolviera
+    fuera de `discover_stages()` (que además importa el módulo entero,
+    caro para algo que sólo quiere leer metadatos de un XML). La carpeta
+    de mapas sigue la misma convención que la de `src/stages/`: el
+    penúltimo segmento de la ruta punteada (`_STAGE_MODULE_MAP` o
+    `_STAGE_FACTORY_MAP` si están declarados; si no, `stage_id` tal
+    cual, la convención por defecto `src.stages.{id}.{id}`).
+    """
+    ruta = (_STAGE_FACTORY_MAP.get(stage_id) or _STAGE_MODULE_MAP.get(stage_id)
+            or f"src.stages.{stage_id}.{stage_id}")
+    partes = ruta.split(".")
+    # ["src", "stages", "<carpeta>", ...resto]
+    return partes[2] if len(partes) > 2 else stage_id
+
+
+def ruta_del_mapa(stage_id: str) -> Path | None:
+    """El `.tmx` principal de este `stage_id`, o `None` si no se encuentra.
+
+    "Principal": si la carpeta trae más de un `.tmx` (como `stage4_1c`,
+    con tres plantillas), se queda con el que comparte nombre con la
+    carpeta — la convención que sigue cada escenario de verdad — y si
+    ninguno calza, el primero en orden alfabético; cualquiera de los dos
+    sirve para leer metadatos que hoy son iguales en las tres plantillas.
+    """
+    from src.engine.core import settings
+
+    carpeta = settings.ASSETS_DIR / "maps" / carpeta_del_mapa(stage_id)
+    if not carpeta.is_dir():
+        return None
+    candidato = carpeta / f"{carpeta.name}.tmx"
+    if candidato.exists():
+        return candidato
+    tmxs = sorted(carpeta.glob("*.tmx"))
+    return tmxs[0] if tmxs else None
