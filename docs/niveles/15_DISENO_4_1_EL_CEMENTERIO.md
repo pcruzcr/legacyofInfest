@@ -236,6 +236,14 @@ consecuencia narrativa medible de la interacción. Ninguno de los dos
 estados bloquea el avance: sigue sin haber ningún fallo posible, como pide
 la regla de oro del nivel.
 
+**El resplandor antes del diálogo** (AUD-567, propuesta "nivel cine"
+aprobada por el dueño): en las tres fases con espíritu, un resplandor
+suave crece justo antes del punto donde habla —`_intensidad_resplandor_
+dialogo`, la misma ventana de avance que ya usa `AVANCE_ANTES_DEL_
+DIALOGO`— y se apaga más rápido una vez que ya habló. Separa
+visualmente «está de fondo» de «está hablándome ahora», sin tocar la
+lógica de aparición ni de liberación que ya existía.
+
 ## 6. Lo que se hereda sin cambios del primer intento
 
 | Elemento | De dónde |

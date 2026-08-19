@@ -694,6 +694,50 @@ class TestLosEspiritusUsanSuArteReal:
         assert arr.max() > 0, "no se dibujó nada del espíritu en el lienzo"
 
 
+class TestElResplandorAntesDelDialogo:
+    """AUD-567 — segunda propuesta "nivel cine" aprobada: un resplandor
+    breve justo antes de que hable cada espíritu, para que el momento se
+    lea como una revelación dirigida y no como fondo animado de siempre."""
+
+    def test_es_cero_lejos_del_punto_del_dialogo(self, escena) -> None:
+        assert escena._intensidad_resplandor_dialogo(0.0) == 0.0
+        assert escena._intensidad_resplandor_dialogo(0.5) == 0.0
+
+    def test_es_maximo_justo_en_el_punto_del_dialogo(self, escena) -> None:
+        objetivo = escena.AVANCE_ANTES_DEL_DIALOGO
+        assert escena._intensidad_resplandor_dialogo(objetivo) == pytest.approx(1.0)
+
+    def test_crece_al_acercarse(self, escena) -> None:
+        objetivo = escena.AVANCE_ANTES_DEL_DIALOGO
+        lejos = escena._intensidad_resplandor_dialogo(
+            objetivo - escena.VENTANA_RESPLANDOR_ANTES * 0.9)
+        cerca = escena._intensidad_resplandor_dialogo(
+            objetivo - escena.VENTANA_RESPLANDOR_ANTES * 0.1)
+        assert 0.0 <= lejos < cerca <= 1.0
+
+    def test_se_apaga_despues_del_punto(self, escena) -> None:
+        objetivo = escena.AVANCE_ANTES_DEL_DIALOGO
+        fin = objetivo + escena.VENTANA_RESPLANDOR_DESPUES
+        assert escena._intensidad_resplandor_dialogo(fin) == pytest.approx(0.0, abs=1e-6)
+        assert escena._intensidad_resplandor_dialogo(fin + 0.01) == 0.0
+
+    def test_no_se_dibuja_con_intensidad_cero(self, escena) -> None:
+        import pygame
+
+        lienzo = pygame.Surface((200, 200), pygame.SRCALPHA)
+        escena._dibujar_resplandor_de_dialogo(lienzo, 50, 50, 40, 40, 0.0)
+        arr = pygame.surfarray.pixels_alpha(lienzo)
+        assert arr.max() == 0
+
+    def test_se_dibuja_con_intensidad_positiva(self, escena) -> None:
+        import pygame
+
+        lienzo = pygame.Surface((200, 200), pygame.SRCALPHA)
+        escena._dibujar_resplandor_de_dialogo(lienzo, 50, 50, 40, 40, 1.0)
+        arr = pygame.surfarray.pixels_alpha(lienzo)
+        assert arr.max() > 0
+
+
 class TestLasLomasDeLaFase3:
     """AUD-297/470/477 — dos lomas de verdad (`Slope`, una pareja subida-
     bajada cada una), no una sola joroba. El punto 6 de la crítica de

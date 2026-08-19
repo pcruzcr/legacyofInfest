@@ -197,6 +197,15 @@ class Stage4_1(StageScene):
     #: No a cero: sigue siendo el mismo bosque ventoso, sólo que respira.
     FRACCION_VIENTO_EN_PAUSA = 0.1
 
+    # ── El resplandor antes del diálogo (AUD-567, propuesta "nivel cine") ─
+    #: Cuánto antes de `AVANCE_ANTES_DEL_DIALOGO` empieza a crecer el
+    #: resplandor, y cuánto tarda en apagarse después de pasado ese punto
+    #: (más rápido que crece: una vez que ya habló, no hace falta seguir
+    #: destacándolo).
+    VENTANA_RESPLANDOR_ANTES = 0.08
+    VENTANA_RESPLANDOR_DESPUES = 0.04
+    COLOR_RESPLANDOR_DIALOGO: tuple[int, int, int] = (232, 255, 224)
+
     # ── El ciclo de luna (Fase 5) ──────────────────────────────
     PERIODO_DE_LA_LUNA = 6.0
     #: AUD-476 — 0.06 era casi negro de verdad, sostenido cada ciclo, no un
@@ -1706,6 +1715,13 @@ class Stage4_1(StageScene):
         ancho = int(alto * 0.9)
         y = int(230 + vaiven - ascenso)
         alfa = int(150 * fundido)
+        # AUD-567 — un resplandor breve justo antes de que hable, para que
+        # el momento se lea como una revelación dirigida y no como "el
+        # fondo animado que siempre estuvo ahí". Detrás del espíritu, no
+        # encima: es luz de foco, no un halo sobre su silueta.
+        self._dibujar_resplandor_de_dialogo(
+            surface, x, y, ancho, alto,
+            self._intensidad_resplandor_dialogo(avance))
         # AUD-561 — el arte real del jefe (ver `siluetas.SPRITE_DE_ESPIRITU`)
         # sustituye al contorno de polígono: jugado, «se veía raro», no se
         # leía como venado/serpiente/gavilán. El contorno se queda como red
@@ -1719,6 +1735,45 @@ class Stage4_1(StageScene):
                 surface, forma, x, y, ancho, alto,
                 siluetas.VERDE_ESPECTRAL, alfa,
             )
+
+    def _intensidad_resplandor_dialogo(self, avance: float) -> float:
+        """0 lejos del punto donde habla el espíritu, 1 justo antes —y
+        cae más rápido después, una vez que ya habló (AUD-567)."""
+        objetivo = self.AVANCE_ANTES_DEL_DIALOGO
+        inicio = objetivo - self.VENTANA_RESPLANDOR_ANTES
+        fin = objetivo + self.VENTANA_RESPLANDOR_DESPUES
+        if avance < inicio or avance > fin or objetivo <= inicio:
+            return 0.0
+        if avance <= objetivo:
+            return (avance - inicio) / (objetivo - inicio)
+        return max(0.0, 1.0 - (avance - objetivo) / (fin - objetivo))
+
+    def _dibujar_resplandor_de_dialogo(
+        self, surface: pygame.Surface, x: int, y: int, ancho: int, alto: int,
+        intensidad: float,
+    ) -> None:
+        """Un resplandor suave de foco, aproximado con anillos concéntricos
+        de alfa decreciente — el mismo truco de siempre en este archivo
+        para no depender de un shader de degradado radial."""
+        if intensidad <= 0.0:
+            return
+        radio = int(max(ancho, alto) * 0.65)
+        if radio <= 0:
+            return
+        centro_x = x + ancho // 2
+        centro_y = y + alto // 2
+        lienzo = pygame.Surface((radio * 2, radio * 2), pygame.SRCALPHA)
+        capas = 4
+        for i in range(capas, 0, -1):
+            r = int(radio * i / capas)
+            alfa = int(55 * intensidad * (1.0 - i / (capas + 1)))
+            if alfa <= 0 or r <= 0:
+                continue
+            pygame.draw.circle(
+                lienzo, (*self.COLOR_RESPLANDOR_DIALOGO, alfa),
+                (radio, radio), r,
+            )
+        surface.blit(lienzo, (centro_x - radio, centro_y - radio))
 
     # ── La decoración propia por fase (AUD-465, AUD-467) ────────
     #
