@@ -1785,6 +1785,45 @@ class TestLaLiberacionDeLosEspiritus:
         ))
         assert escena._espiritu_liberado(fase_venado) is True
 
+    def test_el_acorde_de_liberacion_suena_una_vez_al_liberar(self, escena, monkeypatch) -> None:
+        """AUD-568 — propuesta "nivel cine": un acorde propio, distinto
+        de la voz, en el mismo instante en que se libera de verdad."""
+        from src.framework.stage.interactables import Disparador
+        from src.stages.stage4_1 import trazado
+        from src.stages.stage4_1.fases import FASES
+
+        fase_venado = next(f for f in FASES if f.espiritu == 0)
+        _posicionar_sin_fisica(escena, fase_venado.desde_columna + 5)
+
+        sonidos = []
+        monkeypatch.setattr(
+            escena, "_play_sfx_named",
+            lambda nombre, **kw: sonidos.append(nombre),
+        )
+        escena._actualizar_voz_del_espiritu()
+        assert "sfx_environment_liberacion_espiritu" not in sonidos, (
+            "no debería sonar antes de liberarlo"
+        )
+
+        escena._stage_data.disparadores.append(Disparador(
+            rect=pygame.Rect(0, 0, 1, 1),
+            evento=trazado.evento_de_liberacion(fase_venado.numero),
+            automatico=False,
+            disparado=True,
+        ))
+        escena._actualizar_voz_del_espiritu()
+        assert sonidos.count("sfx_environment_liberacion_espiritu") == 1
+
+        # Una segunda pasada del mismo fotograma no debería repetirlo.
+        escena._actualizar_voz_del_espiritu()
+        assert sonidos.count("sfx_environment_liberacion_espiritu") == 1
+
+    def test_el_archivo_del_acorde_de_liberacion_existe(self) -> None:
+        from src.engine.core import settings
+
+        ruta = settings.ASSETS_DIR / "sfx" / "environment" / "sfx_environment_liberacion_espiritu.wav"
+        assert ruta.exists()
+
     def test_el_mensaje_final_cuenta_cuantos_se_liberaron(self, escena) -> None:
         from src.framework.stage.interactables import Disparador
         from src.stages.stage4_1 import trazado

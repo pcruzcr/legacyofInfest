@@ -1665,16 +1665,25 @@ class Stage4_1(StageScene):
         2: "sfx_voz_gavilan",
     }
 
+    #: AUD-568 — propuesta "nivel cine" aprobada por el dueño: un acorde
+    #: propio, distinto de cualquier otro cue del nivel, en el mismo
+    #: instante en que se libera un espíritu — la única consecuencia
+    #: narrativa medible de todo el recorrido (AUD-474) merece un sonido
+    #: que no comparte con nada más.
+    VOLUMEN_ACORDE_LIBERACION = 0.6
+
     def _actualizar_voz_del_espiritu(self) -> None:
-        """Una línea de voz, una vez por espíritu y partida, en el mismo
-        instante en que `_espiritu_liberado` pasa a `True` — el punto
-        donde el guion ya dice que el espíritu habla."""
+        """Una línea de voz y un acorde propio, una vez por espíritu y
+        partida, en el mismo instante en que `_espiritu_liberado` pasa a
+        `True` — el punto donde el guion ya dice que el espíritu habla."""
         fase = self.fase
         if fase.espiritu is None or fase.espiritu in self._espiritus_con_voz:
             return
         if not self._espiritu_liberado(fase):
             return
         self._espiritus_con_voz.add(fase.espiritu)
+        self._play_sfx_named("sfx_environment_liberacion_espiritu",
+                             volume=self.VOLUMEN_ACORDE_LIBERACION)
         linea = self._VOZ_POR_ESPIRITU.get(fase.espiritu)
         if linea is None:
             return

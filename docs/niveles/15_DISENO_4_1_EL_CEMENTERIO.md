@@ -217,6 +217,18 @@ aparece la silueta del espíritu. El texto es breve — un par de líneas en el
 tono del lore existente — y lo revisa el dueño del proyecto; no pretende
 ser definitivo.
 
+**El acorde de liberación** (AUD-568, propuesta "nivel cine" aprobada
+por el dueño): en el mismo instante en que `_espiritu_liberado` pasa a
+`True`, junto a la línea de voz de siempre (AUD-551), suena
+`sfx_environment_liberacion_espiritu` — un acorde propio, generado con
+la misma tríada de Re menor que ya ancla "algo despierta" en las
+grietas de la Fase 6 (`paso_de_luz_*`), pero una octava más grave y con
+una envolvente mucho más lenta (250ms de ataque, no 15) para que se
+sienta como un alivio sostenido y no como una campanilla. La única
+consecuencia narrativa medible de todo el recorrido (ver más abajo)
+tenía, hasta ahora, el mismo tratamiento sonoro que cualquier otro
+evento ambiental del nivel.
+
 ## 5.1 Liberar a los espíritus (AUD-474)
 
 La crítica de diseño que revisó el dueño del proyecto (2026-08-14, puntos
