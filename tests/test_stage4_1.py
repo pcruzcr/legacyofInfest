@@ -475,8 +475,8 @@ class TestLasAparicionesPreviasDelVenado:
 
         llamadas = []
         monkeypatch.setattr(
-            siluetas, "dibujar_contorno",
-            lambda *a, **kw: llamadas.append(a),
+            siluetas, "dibujar_silueta_de_sprite",
+            lambda *a, **kw: llamadas.append(a) or True,
         )
         self._antes_del_dialogo(escena)
         escena._venado_visible = 0.0
@@ -484,17 +484,19 @@ class TestLasAparicionesPreviasDelVenado:
         assert llamadas == []
 
     def test_se_dibuja_durante_el_destello(self, escena, monkeypatch) -> None:
+        """AUD-561 — el arte real del jefe sustituyó al contorno de
+        polígono; se comprueba el archivo del Venado, no la forma."""
         from src.stages.stage4_1 import siluetas
 
         llamadas = []
         monkeypatch.setattr(
-            siluetas, "dibujar_contorno",
-            lambda *a, **kw: llamadas.append(a[1]),  # la forma es el 2º posicional
+            siluetas, "dibujar_silueta_de_sprite",
+            lambda *a, **kw: llamadas.append(a[1]) or True,  # 2º posicional: archivo
         )
         self._antes_del_dialogo(escena)
         escena._venado_visible = 1.0
         escena._dibujar_espiritu(pygame.Surface((800, 600)), pygame.Vector2())
-        assert llamadas == [siluetas.ESPIRITUS[0][1]]
+        assert llamadas == [siluetas.SPRITE_DE_ESPIRITU[0][0]]
 
     def test_eventualmente_asoma_antes_del_dialogo(self, escena) -> None:
         """Forzando el temporizador a cero, igual que ya hace
@@ -528,11 +530,11 @@ class TestLasAparicionesPreviasDelVenado:
         import unittest.mock
 
         with unittest.mock.patch.object(
-            siluetas, "dibujar_contorno",
-            lambda *a, **kw: llamadas.append(a[1]),
+            siluetas, "dibujar_silueta_de_sprite",
+            lambda *a, **kw: llamadas.append(a[1]) or True,
         ):
             escena._dibujar_espiritu(pygame.Surface((800, 600)), pygame.Vector2())
-        assert llamadas == [siluetas.ESPIRITUS[0][1]], (
+        assert llamadas == [siluetas.SPRITE_DE_ESPIRITU[0][0]], (
             "después del diálogo debe verse igual sin destello activo"
         )
 
@@ -542,6 +544,85 @@ class TestLasAparicionesPreviasDelVenado:
         rey_terciopelo, gavilan = FASES[2], FASES[3]
         assert rey_terciopelo.apariciones_previas is False
         assert gavilan.apariciones_previas is False
+
+
+class TestLosEspiritusUsanSuArteReal:
+    """AUD-561 — jugado, las siluetas de polígono «se veían raras»: no se
+    leían como venado, serpiente o gavilán. Los tres fueron jefes de una
+    zona anterior y el proyecto ya tiene su arte real
+    (`assets/sprites/bosses/boss_venado_*.png` etc.); esto comprueba que
+    `_dibujar_espiritu` de verdad usa ese arte, no el contorno de respaldo,
+    cuando el archivo existe — que es el caso normal del repositorio."""
+
+    def test_los_tres_archivos_de_sprite_existen(self) -> None:
+        from src.engine.core import settings
+        from src.stages.stage4_1 import siluetas
+
+        for archivo, _fw, _fh in siluetas.SPRITE_DE_ESPIRITU:
+            ruta = settings.ASSETS_DIR / "sprites" / "bosses" / archivo
+            assert ruta.exists(), f"falta el sprite de espíritu: {ruta}"
+
+    def test_silueta_desde_sprite_da_una_superficie_pintada(self, _video) -> None:
+        """La silueta no puede quedar completamente transparente: eso
+        sería indistinguible de que el recorte falló en silencio."""
+        from src.stages.stage4_1 import siluetas
+
+        archivo, fw, fh = siluetas.SPRITE_DE_ESPIRITU[0]
+        silueta = siluetas.silueta_desde_sprite(archivo, fw, fh, siluetas.VERDE_ESPECTRAL)
+        assert silueta is not None
+        assert silueta.get_size() == (fw, fh)
+        pixeles_pintados = sum(
+            1 for px in range(fw) for py in range(fh)
+            if silueta.get_at((px, py))[3] > 0
+        )
+        assert pixeles_pintados > 0, "la silueta del Venado quedó vacía"
+
+    def test_el_color_de_la_silueta_es_el_pedido(self, _video) -> None:
+        """Todo píxel opaco debe llevar exactamente el color pedido — es una
+        silueta plana, no el sprite a todo color."""
+        from src.stages.stage4_1 import siluetas
+
+        archivo, fw, fh = siluetas.SPRITE_DE_ESPIRITU[2]
+        color = (10, 200, 30)
+        silueta = siluetas.silueta_desde_sprite(archivo, fw, fh, color)
+        assert silueta is not None
+        colores_opacos = {
+            tuple(silueta.get_at((px, py)))[:3]
+            for px in range(fw) for py in range(fh)
+            if silueta.get_at((px, py))[3] > 0
+        }
+        assert colores_opacos == {color}
+
+    def test_dibujar_silueta_de_sprite_devuelve_false_si_falta_el_archivo(self) -> None:
+        import pygame
+
+        from src.stages.stage4_1 import siluetas
+
+        lienzo = pygame.Surface((64, 64), pygame.SRCALPHA)
+        dibujado = siluetas.dibujar_silueta_de_sprite(
+            lienzo, "no_existe_de_verdad.png", 40, 40, 0, 0, 40, 40,
+            siluetas.VERDE_ESPECTRAL, 200,
+        )
+        assert dibujado is False
+
+    def test_dibujar_espiritu_usa_el_sprite_cuando_esta_disponible(self, escena) -> None:
+        """Sin monkeypatch: corre la ruta real de principio a fin y
+        comprueba que algo no transparente terminó en el lienzo.
+
+        Fase 3 (Rey Terciopelo) y no la 1 o la 2: la Fase 1 no tiene
+        espíritu y la Fase 2 sólo se ve a destellos antes de su diálogo
+        (`apariciones_previas`) — la 3 usa el fundido continuo normal sin
+        ninguna condición extra."""
+        import pygame
+
+        from src.stages.stage4_1.fases import FASES
+
+        _posicionar_sin_fisica(escena, FASES[2].desde_columna + 10)
+        assert escena.fase.numero == 3
+        lienzo = pygame.Surface((800, 600), pygame.SRCALPHA)
+        escena._dibujar_espiritu(lienzo, pygame.Vector2())
+        arr = pygame.surfarray.pixels_alpha(lienzo)
+        assert arr.max() > 0, "no se dibujó nada del espíritu en el lienzo"
 
 
 class TestLasLomasDeLaFase3:

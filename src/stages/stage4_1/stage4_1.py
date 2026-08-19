@@ -1545,6 +1545,7 @@ class Stage4_1(StageScene):
         if fase.espiritu is None:
             return
         _nombre, forma = siluetas.ESPIRITUS[fase.espiritu]
+        archivo, ancho_fotograma, alto_fotograma = siluetas.SPRITE_DE_ESPIRITU[fase.espiritu]
         avance = self._avance_en_fase(fase)
         liberado = self._espiritu_liberado(fase)
         # Antes del diálogo, el Venado (Fase 2, AUD-479) sólo se ve
@@ -1568,12 +1569,22 @@ class Stage4_1(StageScene):
         x = int(settings.INTERNAL_WIDTH * 0.62
                 - offset.x * 0.12) % (settings.INTERNAL_WIDTH + 260) - 130
         alto = 120
+        ancho = int(alto * 0.9)
         y = int(230 + vaiven - ascenso)
         alfa = int(150 * fundido)
-        siluetas.dibujar_contorno(
-            surface, forma, x, y, int(alto * 0.9), alto,
-            siluetas.VERDE_ESPECTRAL, alfa,
+        # AUD-561 — el arte real del jefe (ver `siluetas.SPRITE_DE_ESPIRITU`)
+        # sustituye al contorno de polígono: jugado, «se veía raro», no se
+        # leía como venado/serpiente/gavilán. El contorno se queda como red
+        # de seguridad si el sprite no está.
+        dibujado = siluetas.dibujar_silueta_de_sprite(
+            surface, archivo, ancho_fotograma, alto_fotograma,
+            x, y, ancho, alto, siluetas.VERDE_ESPECTRAL, alfa,
         )
+        if not dibujado:
+            siluetas.dibujar_contorno(
+                surface, forma, x, y, ancho, alto,
+                siluetas.VERDE_ESPECTRAL, alfa,
+            )
 
     # ── La decoración propia por fase (AUD-465, AUD-467) ────────
     #

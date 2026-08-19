@@ -17,19 +17,36 @@ por el gancho `dibujar_fondo` que AUD-162 añadió a `StageScene`. Si alguna vez
 alguien quiere que ataquen, tendrá que escribirlas de cero como enemigos — y
 eso rompería la regla de oro del nivel, que es no tener ninguno.
 
-Por qué contornos y no sprites
--------------------------------
-El proyecto no tiene arte de venado, serpiente ni gavilán en vista de fondo, y
-generar un PNG inventado sería arte falso que luego hay que mantener. Un
-contorno dibujado con polígonos es honesto: se lee como «una forma en la
-niebla», que es exactamente lo que el diseño pide, y no finge ser una
-ilustración terminada. Cuando haya arte, se sustituye la función y ya.
+Por qué contornos y no sprites (para la decoración de fase)
+-------------------------------------------------------------
+El proyecto no tiene arte de bosque cortado, cruces de conquistador ni un
+horizonte por fase, y generar un PNG inventado sería arte falso que luego hay
+que mantener. Un contorno dibujado con polígonos es honesto: se lee como «una
+forma en la niebla», que es exactamente lo que el diseño pide, y no finge ser
+una ilustración terminada. Esto sigue siendo cierto para `_arbol_cortado`,
+las cruces, la Cegua y la Bruja — nadie les dio arte propio todavía.
+
+Los tres espíritus SÍ tienen arte (AUD-561)
+---------------------------------------------
+Jugado, el dueño señaló que las siluetas de Venado, Rey Terciopelo y Gavilán
+«se ven raras» — un contorno de polígono no se lee como un venado o un
+gavilán, sólo como una forma abstracta cualquiera. A diferencia del bosque
+cortado o las cruces, el proyecto SÍ tiene arte real de estos tres: cada uno
+fue jefe de una zona anterior (`assets/sprites/bosses/boss_venado_*.png`,
+`boss_rey_*.png`, `boss_gavilan_*.png`). `silueta_desde_sprite` recorta un
+fotograma de ese arte real y lo aplana a un color sólido usando su canal
+alfa como máscara — sigue siendo una silueta, no el jefe a todo color, para
+no leerse como «el jefe está aquí, en combate»; sólo que ahora la forma es
+la de verdad. `ESPIRITUS` (los generadores de polígono de abajo) se
+conservan como red de seguridad si algún día falta el sprite.
 """
 from __future__ import annotations
 
 import math
 
 import pygame
+
+from src.engine.core import settings
 
 #: Verde espectral del cementerio. El mismo del canon y el mismo con el que se
 #: encienden los braseros del mapa.
@@ -149,12 +166,103 @@ def _bruja(ancho: int, alto: int) -> list[tuple[float, float]]:
     ]
 
 
-#: Las tres formas de los vencidos, en el orden en que se derrotan.
+#: Las tres formas de los vencidos, en el orden en que se derrotan. Se
+#: conservan como red de seguridad de `_dibujar_espiritu` — ver
+#: `silueta_desde_sprite` más abajo para el camino principal (AUD-561).
 ESPIRITUS: tuple[tuple[str, object], ...] = (
     ("venado", _venado),
     ("serpiente", _serpiente),
     ("gavilan", _gavilan),
 )
+
+
+# ── Las siluetas de los tres espíritus, desde su arte real (AUD-561) ────
+#
+# `(archivo, ancho de fotograma, alto de fotograma)`, en el mismo orden que
+# `ESPIRITUS` (0=Venado, 1=Rey Terciopelo, 2=Gavilán). Los tamaños de
+# fotograma son los mismos que ya usa cada jefe real para cargar su propia
+# hoja de sprites — `boss_venado.py` (`_load_boss_sprites(..., 48, 48)`),
+# `boss_rey.py` (`"walk": (40, 56)`), `boss_gavilan.py`
+# (`_load_boss_sprites("boss_gavilan", 56, 40)`) — así que el primer
+# fotograma de cada hoja recorta una pose completa, no una mitad de dos
+# fotogramas distintos.
+SPRITE_DE_ESPIRITU: tuple[tuple[str, int, int], ...] = (
+    ("boss_venado_drift.png", 48, 48),
+    ("boss_rey_walk.png", 40, 56),
+    ("boss_gavilan_glide.png", 56, 40),
+)
+
+#: Silueta base (color sólido, tamaño de fotograma original) por
+#: `(archivo, color)`. `None` significa «se buscó y no está» — para no
+#: repetir el intento de carga en cada fotograma dibujado si el archivo de
+#: verdad falta.
+_CACHE_SILUETA_DE_SPRITE: dict[tuple[str, tuple[int, int, int]], pygame.Surface | None] = {}
+
+#: Silueta ya escalada al tamaño de pantalla en que se dibuja, por
+#: `(archivo, color, ancho, alto)`. `pygame.transform.smoothscale` no es
+#: gratis; sin esta caché se pagaría una vez por fotograma dibujado en vez
+#: de una vez por combinación — la misma lección que ya dejó `_lienzo_
+#: horizonte` (AUD-514) con el horizonte lejano.
+_CACHE_SILUETA_ESCALADA: dict[
+    tuple[str, tuple[int, int, int], int, int], pygame.Surface] = {}
+
+
+def silueta_desde_sprite(
+    archivo: str, ancho_fotograma: int, alto_fotograma: int,
+    color: tuple[int, int, int],
+) -> pygame.Surface | None:
+    """El primer fotograma de `archivo`, recortado a silueta plana de
+    `color` usando su canal alfa como máscara. `None` si el archivo no
+    existe — quien llama decide qué hacer (`_dibujar_espiritu` cae al
+    contorno de polígono)."""
+    clave = (archivo, color)
+    if clave in _CACHE_SILUETA_DE_SPRITE:
+        return _CACHE_SILUETA_DE_SPRITE[clave]
+    ruta = settings.ASSETS_DIR / "sprites" / "bosses" / archivo
+    silueta: pygame.Surface | None = None
+    if ruta.exists():
+        hoja = pygame.image.load(str(ruta)).convert_alpha()
+        fotograma = hoja.subsurface(
+            pygame.Rect(0, 0, ancho_fotograma, alto_fotograma)).copy()
+        mascara = pygame.mask.from_surface(fotograma, threshold=10)
+        silueta = mascara.to_surface(
+            setcolor=(*color, 255), unsetcolor=(0, 0, 0, 0))
+    _CACHE_SILUETA_DE_SPRITE[clave] = silueta
+    return silueta
+
+
+def dibujar_silueta_de_sprite(
+    surface: pygame.Surface, archivo: str, ancho_fotograma: int,
+    alto_fotograma: int, x: int, y: int, ancho: int, alto: int,
+    color: tuple[int, int, int], alfa: int,
+) -> bool:
+    """Pinta la silueta de `silueta_desde_sprite`, escalada a `(ancho, alto)`
+    y desvanecida al `alfa` de este fotograma. Devuelve si dibujó algo, para
+    que `_dibujar_espiritu` sepa si hace falta el contorno de respaldo.
+
+    El alfa no se hornea en la silueta cacheada —eso volvería la caché
+    inútil, porque `alfa` cambia con el fundido de entrada y salida en cada
+    fotograma— sino que se aplica sobre una copia con
+    `pygame.BLEND_RGBA_MULT`, el mismo truco que ya usa el motor para
+    combinar un alfa por fotograma con una superficie de alfa por píxel.
+    """
+    if alfa <= 0 or ancho <= 0 or alto <= 0:
+        return False
+    base = silueta_desde_sprite(archivo, ancho_fotograma, alto_fotograma, color)
+    if base is None:
+        return False
+    clave = (archivo, color, ancho, alto)
+    escalada = _CACHE_SILUETA_ESCALADA.get(clave)
+    if escalada is None:
+        escalada = pygame.transform.smoothscale(base, (ancho, alto))
+        _CACHE_SILUETA_ESCALADA[clave] = escalada
+    capa = escalada
+    if alfa < 255:
+        capa = escalada.copy()
+        capa.fill((255, 255, 255, max(0, min(255, alfa))),
+                 special_flags=pygame.BLEND_RGBA_MULT)
+    surface.blit(capa, (x, y))
+    return True
 
 
 # ── Decoración de fondo por fase (AUD-465) ──────────────────────

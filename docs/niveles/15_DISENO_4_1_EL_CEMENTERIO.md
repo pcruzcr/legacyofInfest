@@ -223,12 +223,23 @@ la regla de oro del nivel.
 | El ciclo de luna de la Fase 5 | AUD-463 |
 | Las grietas por pisada de la Fase 6 | AUD-463 |
 | Los cuatro sonidos de ambiente | AUD-465 |
-| El patrón de silueta por contorno | `siluetas.py` |
+| El patrón de silueta por contorno, para la decoración de fase (árboles, cruces, la Cegua, la Bruja) | `siluetas.py` |
 
 Lo que cambia es el eje (columna, no fila), la forma del suelo (terreno
 propio por sección) y todo lo que en el primer intento se aplazó a
 `KNOWN_GAPS.md` GAP-058: cutscene, diálogo, sombra del Gavilán, movimiento
 de la Serpiente, easter egg.
+
+> **AUD-561 — los tres espíritus dejan el contorno por su arte real.**
+> Jugado, las siluetas de polígono del Venado, el Rey Terciopelo y el
+> Gavilán «se veían raras»: no se leían como lo que eran. A diferencia de
+> la decoración de fase (§ arriba), el proyecto sí tiene arte real de los
+> tres —fueron jefes de una zona anterior—, así que `_dibujar_espiritu`
+> ahora recorta el primer fotograma de `boss_venado_drift.png` /
+> `boss_rey_walk.png` / `boss_gavilan_glide.png` y lo aplana a una
+> silueta plana del mismo verde espectral de siempre (no a todo color:
+> sigue siendo un recuerdo, no el jefe en persona). El contorno de
+> polígono se queda como red de seguridad si el sprite faltara.
 
 ---
 
