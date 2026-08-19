@@ -29,7 +29,7 @@ date_processed: "2026-07-31"
 2. [Anatomía de un escenario TMX](#2)
 3. [Propiedades del mapa — las 17](#3)
 4. [Los 78 tipos de objeto, uno por uno](#4)
-5. [El jugador: 26 estados y qué los provoca](#5)
+5. [El jugador: 27 estados y qué los provoca](#5)
 6. [Enemigos: 37 tipos y 13 estados](#6)
 7. [Jefes](#7)
 8. [Iluminación, post-procesado y VFX](#8)
@@ -646,7 +646,7 @@ Prueba tu nivel con `--hora 23`.
 ---
 
 <a id="5"></a>
-## 5. El jugador: 26 estados y qué los provoca
+## 5. El jugador: 27 estados y qué los provoca
 
 ### Controles por defecto
 
@@ -714,7 +714,7 @@ vez, diseña con **3 baldosas**. Los huecos de 4 y 5 son contenido para quien ya
 domina el salto aéreo — colócalos donde fallar cueste poco, no en el camino
 principal. `python -m tests.playtest.jump_bench` imprime la tabla completa.
 
-### Los 26 estados
+### Los 27 estados
 
 | Grupo | Estados |
 |---|---|
@@ -723,12 +723,16 @@ principal. `python -m tests.playtest.jump_bench` imprime la tabla completa.
 | Ataque | `SHORT_ATTACK` `LONG_ATTACK` `CHARGE_ATTACK` `CHARGE_RELEASE` `DASH_ATTACK` `AERIAL_ATTACK` `AERIAL_SLAM` `ULTIMATE` |
 | Defensa | `PARRY` |
 | Agarre | `GRAB` `THROW` `CLIMBING` `ZIPLINE` |
-| Medio | `SWIMMING` |
+| Medio | `SWIMMING` `SWIM_ATTACK` |
 | Daño | `HURT` `DYING` |
 
 Como diseñador no invocas estados: colocas el objeto y el estado ocurre.
 `CLIMBING` necesita una `Vine`, `ZIPLINE` una `Zipline`, `SWIMMING` una
 `WaterZone`, `WALL_SLIDE` un muro vertical de al menos dos baldosas.
+`SWIM_ATTACK` (AUD-558, GAP-069) es el único de los dos "Medio" que sí
+invocas tú: `Action.SHORT_ATTACK` dentro de `SWIMMING` — existe para
+romper `BreakableBlock` bajo el agua, mismo sistema genérico que en
+tierra firme.
 
 **`ULTIMATE`** se carga golpeando y se lanza con `U`. Si tu nivel no da
 enemigos suficientes antes del tramo final, el jugador nunca lo verá.
@@ -992,6 +996,7 @@ decisión. `price` es lo que cuesta en monedas; se vende por la mitad.
 | `hood_ember` | Ember Hood | `head` | +0,5 vida máxima | 40 |
 | `cloak_reed` | Reed Cloak | `body` | +5 % de velocidad | 35 |
 | `cloak_serpent` | Serpent Cloak | `body` | +0,4 de daño | 50 |
+| `cloak_abyssal` | Abyssal Cloak | `body` | +1,5 vida máxima, +0,6 de daño | 90 |
 | `boots_swift` | Swift Boots | `feet` | +8 % de velocidad | 45 |
 | `boots_stone` | Stone Boots | `feet` | +1 vida máxima | 40 |
 
@@ -1001,6 +1006,20 @@ La moneda del juego es un objeto más: `coin`. El saldo se consulta con
 | `item_id` | Nombre | Efecto |
 |---|---|---|
 | `coin` | Coin | moneda de la tienda; sin bonificación |
+
+### Consumibles — se gastan al usarse, no se equipan
+
+AUD-559 — la primera categoría de objeto que no es ropa permanente ni
+mejora recogida en el mapa. `consumible=True` en `ItemDef`;
+`Inventory.usar(item_id)` gasta una unidad y devuelve `heal_hp` (`0.0`
+si no se pudo usar). Quien cura al jugador es quien llama a `usar()`
+—`InventoryScene` no conoce ningún `Player`, es un singleton que
+también se abre desde el título— normalmente reaccionando al evento
+`Events.ITEM_CONSUMED` que la pantalla emite.
+
+| `item_id` | Nombre | Efecto | Precio |
+|---|---|---|---|
+| `tonic_sap` | Sap Tonic | restaura 2 de vida al usarse | 15 |
 
 ### Habilidades — sueltas de jefe
 

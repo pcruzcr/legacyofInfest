@@ -45,13 +45,20 @@ def _con_puntos(n: int) -> None:
 
 
 class TestElCatalogo:
-    def test_hay_tres_ramas(self, arbol) -> None:
-        assert {n.id for n in CATALOGO} == {"vitalidad", "fuerza", "impetu"}
+    def test_hay_cuatro_ramas(self, arbol) -> None:
+        # AUD-559 — "coraza" se suma: propuesta de economía del dueño, una
+        # rama defensiva que no depende de las otras tres.
+        assert {n.id for n in CATALOGO} == {
+            "vitalidad", "fuerza", "impetu", "coraza",
+        }
 
     def test_ninguna_toca_la_fisica(self, arbol) -> None:
-        """Vida, daño y duración del ultimate. Nada que mueva al jugador: un
-        nodo de salto recalificaría los dieciséis mapas."""
-        metodos = {"bonus_corazones", "bonus_dano", "bonus_ultimate"}
+        """Vida, daño, duración del ultimate y daño recibido. Nada que
+        mueva al jugador: un nodo de salto recalificaría los dieciséis
+        mapas."""
+        metodos = {
+            "bonus_corazones", "bonus_dano", "bonus_ultimate", "bonus_defensa",
+        }
         assert {m for m in dir(arbol) if m.startswith("bonus_")} == metodos
 
     def test_la_vitalidad_llega_justo_a_diez_corazones(self, arbol) -> None:

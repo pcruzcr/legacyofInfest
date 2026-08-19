@@ -162,6 +162,15 @@ class Events:
     """
     ITEM_COLLECTED: str = "ITEM_COLLECTED"
     """Emitted by DialogueSystem on dialogue action. Payload: item_id."""
+    #: AUD-559 — un objeto `consumible=True` (`Inventory.usar`) se usó.
+    #: Payload: heal_hp. `InventoryScene` no conoce a ningún `Player` —
+    #: es un singleton que también se abre desde el título, sin ningún
+    #: escenario cargado— así que sólo gasta la unidad y emite; quien
+    #: cure es `StageScene` (`stage_parts/senales.py`), que sí tiene un
+    #: jugador vivo si hay uno. Sin listener (título, o cualquier otro
+    #: contexto sin escenario) el evento no hace nada — no hace falta un
+    #: caso especial en `InventoryScene` para "no hay a quién curar".
+    ITEM_CONSUMED: str = "ITEM_CONSUMED"
     FLAG_SET: str = "FLAG_SET"
     """Emitted by DialogueSystem on dialogue action. Payload: flag."""
     DIALOGUE_FINISHED: str = "DIALOGUE_FINISHED"

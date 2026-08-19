@@ -46,6 +46,18 @@ class ItemDef(BaseModel):
     slot: str | None = None
     #: Precio en monedas. `0` = no se compra ni se vende (mejora/llave).
     price: int = 0
+    #: AUD-559 — propuesta de economía del dueño: la tienda sólo tenía
+    #: ropa permanente, nada que gastarse en un apuro puntual.
+    #: `consumible=True` es la mitad que falta: un objeto que se **usa**
+    #: (una unidad menos, un efecto inmediato) en vez de equiparse o
+    #: acumular estadística para siempre.
+    consumible: bool = False
+    #: Vida que restaura al usarse. Sólo tiene sentido con
+    #: `consumible=True` — separado de `max_hp_bonus` a propósito: ese
+    #: campo es un bono *permanente* que `Inventory._sumar_bonus` suma
+    #: mientras el objeto esté en la mochila (o puesto); esto es un
+    #: efecto de una sola vez que no debe contarse dos veces.
+    heal_hp: float = 0.0
 
 
 _ITEM_DEFS: dict[str, ItemDef] = {
@@ -116,6 +128,26 @@ _ITEM_DEFS: dict[str, ItemDef] = {
         id="boots_stone", name="Botas de piedra",
         description="+1 de vida máxima",
         icon_color=(160, 160, 160), slot="feet", max_hp_bonus=1.0, price=40,
+    ),
+    # AUD-559 — propuesta de economía: los seis objetos de arriba topaban
+    # en 50 monedas — nada le daba sentido a seguir juntando pasada la
+    # mitad del juego. Éste combina dos de los bonos que hasta ahora
+    # sólo aparecían por separado (vida + daño), a precio de gama alta.
+    "cloak_abyssal": ItemDef(
+        id="cloak_abyssal", name="Capa abisal",
+        description="Capa de las profundidades. +1,5 de vida máxima, +0,6 de daño",
+        icon_color=(40, 60, 90), slot="body",
+        max_hp_bonus=1.5, damage_bonus=0.6, price=90,
+    ),
+    # AUD-559 — el primer objeto **consumible** de la tienda: los otros
+    # siete son o ropa permanente o mejoras que se recogen en el mapa.
+    # Nada compraba una segunda oportunidad puntual — sólo estadística
+    # para siempre.
+    "tonic_sap": ItemDef(
+        id="tonic_sap", name="Tónico de savia",
+        description="Se usa una vez: restaura 2 de vida",
+        icon_color=(120, 200, 90), price=15,
+        consumible=True, heal_hp=2.0,
     ),
     # ── Habilidades (drops de jefes) ───────────────────────────────
     "skill_double_jump": ItemDef(
@@ -301,6 +333,29 @@ class Inventory:
                 del self._equipped[defn.slot or ""]
         self.add_coins(defn.price // 2)
         return True
+
+    # ── Consumibles ────────────────────────────────────────────────
+    def usar(self, item_id: str) -> float:
+        """Gasta una unidad de un objeto `consumible=True`. Devuelve
+        `heal_hp` si se pudo usar, `0.0` si no (no es consumible, o no
+        queda ninguno).
+
+        Sólo toca el inventario — no cura a nadie por su cuenta. Curar
+        exige un `Player` vivo, y `Inventory` es un singleton que
+        también vive fuera de una partida (el título abre `InventoryScene`
+        sin ningún escenario cargado); quien llame a esto con un
+        `heal_hp > 0` es responsable de aplicarlo si hay a quién.
+        """
+        defn = _ITEM_DEFS.get(item_id)
+        if defn is None or not defn.consumible:
+            return 0.0
+        if self._items.get(item_id, 0) <= 0:
+            return 0.0
+        self._items[item_id] -= 1
+        if self._items[item_id] <= 0:
+            del self._items[item_id]
+        self.save()
+        return defn.heal_hp
 
     # ── Equipamiento ──────────────────────────────────────────────
     def equip(self, item_id: str) -> bool:

@@ -98,6 +98,19 @@ CATALOGO: tuple[NodoDeHabilidad, ...] = (
         # alargar un ataque flojo, y el jugador lo compraría sin notarlo.
         requiere="fuerza",
     ),
+    # AUD-559 — propuesta de economía: las tres ramas de arriba son todas
+    # variaciones del mismo tipo de mejora (un número que sube). Coraza
+    # abre una rama defensiva de verdad —aguantar más golpe, no pegar más
+    # fuerte ni durar más el ultimate— sin gatillo (no requiere otro nodo):
+    # es una decisión de estilo tan válida desde el primer punto como
+    # cualquiera de las otras tres, no un remate para quien ya invirtió en
+    # fuerza.
+    NodoDeHabilidad(
+        id="coraza",
+        nombre="Coraza",
+        descripcion="-5 % de daño recibido por rango.",
+        rangos=5, por_rango=0.05, coste_base=2, coste_incremento=1,
+    ),
 )
 
 _POR_ID: dict[str, NodoDeHabilidad] = {n.id: n for n in CATALOGO}
@@ -210,6 +223,11 @@ class ArbolDeHabilidades:
     def bonus_ultimate(self) -> float:
         """Segundos extra de ultimate."""
         return self._total("impetu")
+
+    def bonus_defensa(self) -> float:
+        """Fracción de daño recibido que se resta. 0,25 = 25 % menos daño,
+        al tope de los cinco rangos."""
+        return self._total("coraza")
 
     # ── persistencia ──────────────────────────────────────────────
     def to_dict(self) -> dict[str, int]:

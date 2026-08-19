@@ -286,6 +286,11 @@ class Player(BaseEntity):
         #: pantalla del árbol pueda decir cuánto viene de dónde.
         self._bonus_arbol_salud: float = 0.0
         self._bonus_arbol_dano: float = 0.0
+        #: AUD-559 — fracción de daño recibido que resta "Coraza". Se lee
+        #: en `apply_damage`, no en `damage_multiplier` (esa propiedad es
+        #: daño de **salida**; esto es de **entrada** — dos direcciones
+        #: distintas, dos campos distintos).
+        self._bonus_arbol_defensa: float = 0.0
         #: Segundos extra que dura el ultimate. Los lee `UltimateState`.
         self._bonus_ultimate: float = 0.0
         #: AUD-294 — ¿este escenario regala las mecánicas de jefe?
@@ -488,6 +493,7 @@ class Player(BaseEntity):
         self._bonus_arbol_salud = float(arbol.bonus_corazones())
         self._bonus_arbol_dano = float(arbol.bonus_dano())
         self._bonus_ultimate = float(arbol.bonus_ultimate())
+        self._bonus_arbol_defensa = float(arbol.bonus_defensa())
         self._bonus_max_health = float(inventory.get_total_hp_bonus())
         # AUD-070: el inventario guarda el bono de velocidad en **porcentaje**
         # —`swift_feather` declara `speed_bonus=10.0` y se describe como «Move
@@ -685,7 +691,15 @@ class Player(BaseEntity):
 
         from src.engine.core.difficulty import get_config
         cfg = get_config()
-        effective_damage = amount * cfg.incoming_damage_mult
+        # AUD-559 — "Coraza" resta una fracción del daño de entrada,
+        # después del multiplicador de dificultad y no en su lugar: un
+        # jugador que invirtió puntos de habilidad sigue sintiendo el
+        # nivel de dificultad que eligió, sólo que un poco más suave.
+        # `max(0.05, ...)` porque cinco rangos ya llegan a -25 %; sin
+        # tope, un futuro sexto rango podría acercarse peligrosamente a
+        # "invencible", que no es lo que pide la rama.
+        defensa = max(0.05, 1.0 - self._bonus_arbol_defensa)
+        effective_damage = amount * cfg.incoming_damage_mult * defensa
         self._health = max(0.0, self._health - effective_damage)
         self._invincibility_timer = cfg.invincibility_duration
         self._flash_timer = 0.0
