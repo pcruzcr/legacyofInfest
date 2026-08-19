@@ -222,6 +222,22 @@ class Stage4_1(StageScene):
     #: el oído sustituya a la vista: cuanto menos se ve, más claro llama.
     VOLUMEN_DEL_CANTO: tuple[float, float] = (0.30, 0.75)
 
+    # ── La viñeta que respira por fase (AUD-566, propuesta "nivel cine") ─
+    #: Cuánta viñeta pide cada fase (0-0,6, el mismo rango que acepta
+    #: `PostProcessing.set_vignette`). Más cerrada en la tormenta y la
+    #: noche —las dos fases de mayor amenaza sensorial—, casi abierta en
+    #: la Fase 1 (estableciendo el espacio real) y en la Fase 6 (la
+    #: llegada, ya sin terror). Ninguna otra fase del proyecto ajusta la
+    #: viñeta hoy — el motor arranca en 0,4 fijo (`PostProcessing.
+    #: __init__`) y nadie lo toca; 4-1 es el primero.
+    VIGNETTE_POR_FASE: dict[int, float] = {
+        1: 0.35, 2: 0.42, 3: 0.55, 4: 0.48, 5: 0.52, 6: 0.32,
+    }
+    #: De dónde interpola la primera fase — el valor de fábrica del
+    #: motor, no un número inventado, para que el primer paso del
+    #: cementerio no salte de golpe a 0,35.
+    VIGNETTE_BASE_DEL_MOTOR = 0.4
+
     # ── Las grietas que se iluminan al paso (Fase 6) ───────────
     DISTANCIA_DE_GRIETA = 40.0
     SUBIDA_DE_GRIETA = 0.25
@@ -240,6 +256,9 @@ class Stage4_1(StageScene):
         #: gradación de la fase actual a lo largo del tramo.
         self._gradacion_previa: Gradacion = None
         self._tinte_previo: tuple[tuple[int, int, int], float] | None = None
+        #: AUD-566 — de dónde interpola la viñeta de esta fase; se
+        #: actualiza en `_actualizar_fase` igual que `_gradacion_previa`.
+        self._vignette_previa: float = self.VIGNETTE_BASE_DEL_MOTOR
         self._rayo: float = 0.0
         self._proximo_rayo: float = 0.0
         #: AUD-551 — cuenta atrás hasta que suene el trueno de este
@@ -395,6 +414,7 @@ class Stage4_1(StageScene):
         self._atencion.observar(self._player, dt)
         self._actualizar_fase()
         self._actualizar_gradacion()
+        self._actualizar_vignette()
         self._actualizar_ambiente_de_fase()
         self._actualizar_canto_ancestral(dt)
         self._actualizar_anomalia_fase1(dt)
@@ -458,9 +478,11 @@ class Stage4_1(StageScene):
             anterior = FASES[self._fase_actual]
             self._gradacion_previa = anterior.gradacion
             self._tinte_previo = anterior.tinte
+            self._vignette_previa = self.VIGNETTE_POR_FASE[anterior.numero]
         else:
             self._gradacion_previa = None
             self._tinte_previo = None
+            self._vignette_previa = self.VIGNETTE_BASE_DEL_MOTOR
         self._fase_actual = fase.numero - 1
 
         self._cambiar_clima(fase.clima)
@@ -608,6 +630,19 @@ class Stage4_1(StageScene):
             self._post_processing.clear_tint()
         else:
             self._post_processing.set_tint(color, alfa)
+
+    def _actualizar_vignette(self) -> None:
+        """La viñeta respira con cada fase (AUD-566, propuesta "nivel
+        cine" del dueño): más cerrada en la tormenta y la noche, casi
+        abierta al llegar y al salir — para que el ojo se enfoque donde
+        el guion ya quiere que se enfoque, sin depender sólo del color y
+        el clima. Mismo mecanismo de interpolación por avance que ya usa
+        `_actualizar_gradacion`."""
+        fase = self.fase
+        t = self._avance_en_fase(fase)
+        objetivo = self.VIGNETTE_POR_FASE[fase.numero]
+        self._post_processing.set_vignette(
+            self._vignette_previa + (objetivo - self._vignette_previa) * t)
 
     def _actualizar_ambiente_de_fase(self) -> None:
         """El ciclo de luna de la Fase 5: la luz ambiente oscila.

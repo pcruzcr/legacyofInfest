@@ -62,9 +62,10 @@ def escena(_video):
 
 def _posicionar_sin_fisica(escena, columna: float, fila: float | None = None) -> None:
     """Pone al jugador en esa columna **sin simular física** y actualiza
-    sólo la fase y la gradación — para las pruebas que necesitan un
-    `avance` exacto dentro de la sección, sin depender de que la física
-    real (gravedad, colisión) termine en la posición esperada."""
+    la fase, la gradación y la viñeta (AUD-566) — para las pruebas que
+    necesitan un `avance` exacto dentro de la sección, sin depender de
+    que la física real (gravedad, colisión) termine en la posición
+    esperada."""
     from src.stages.stage4_1 import trazado
 
     if fila is None:
@@ -75,6 +76,7 @@ def _posicionar_sin_fisica(escena, columna: float, fila: float | None = None) ->
     escena._player.position.update(float(x), float(y))
     escena._actualizar_fase()
     escena._actualizar_gradacion()
+    escena._actualizar_vignette()
 
 
 def _llevar_a(escena, columna: int, asentar: int = 200) -> None:
@@ -1021,6 +1023,57 @@ class TestLaGradacionYElSonidoPorFase:
         ruta = str(settings.ASSETS_DIR / fase3.sonido_ambiente)
         assert ruta in escena.audio._ambient_sounds
         assert "storm_ambient" in ruta
+
+
+class TestLaVinetaRespiraPorFase:
+    """AUD-566 — primera propuesta "nivel cine" que el dueño aprobó
+    construir: la viñeta ya existía en el motor (`PostProcessing.
+    set_vignette`, base fija de 0,4 desde siempre) pero ningún escenario
+    la tocaba por fase. Mismo mecanismo de interpolación por avance que
+    ya prueba `TestLaGradacionYElSonidoPorFase` para la gradación."""
+
+    def test_se_aproxima_al_objetivo_al_final_del_tramo(self, escena) -> None:
+        from src.stages.stage4_1 import trazado
+        from src.stages.stage4_1.fases import FASES
+        from src.stages.stage4_1.stage4_1 import Stage4_1
+
+        for fase in FASES:
+            _posicionar_sin_fisica(
+                escena, fase.desde_columna + trazado.ANCHO_SECCION - 1)
+            objetivo = Stage4_1.VIGNETTE_POR_FASE[fase.numero]
+            actual = escena._post_processing._vignette_strength
+            assert abs(actual - objetivo) <= 0.02, (
+                f"Fase {fase.numero}: viñeta {actual} lejos de {objetivo}"
+            )
+
+    def test_no_salta_de_golpe_al_entrar(self, escena) -> None:
+        from src.stages.stage4_1.fases import FASES
+        from src.stages.stage4_1.stage4_1 import Stage4_1
+
+        fase1, fase2 = FASES[0], FASES[1]
+        _posicionar_sin_fisica(escena, fase1.desde_columna + 10)
+        _posicionar_sin_fisica(escena, fase2.desde_columna)
+        actual = escena._post_processing._vignette_strength
+        assert abs(actual - Stage4_1.VIGNETTE_POR_FASE[1]) < 0.05
+
+    def test_todas_las_fases_declaran_un_valor_valido(self) -> None:
+        """Dentro del rango que de verdad acepta `set_vignette` (0-0,6)."""
+        from src.stages.stage4_1.fases import FASES
+        from src.stages.stage4_1.stage4_1 import Stage4_1
+
+        for fase in FASES:
+            valor = Stage4_1.VIGNETTE_POR_FASE[fase.numero]
+            assert 0.0 <= valor <= 0.6, f"Fase {fase.numero}: {valor} fuera de rango"
+
+    def test_la_tormenta_y_la_noche_son_las_mas_cerradas(self, escena) -> None:
+        """Lectura directa de la propuesta: la Fase 3 (tormenta) y la
+        Fase 5 (noche) tienen que pedir más viñeta que la Fase 1 y la
+        Fase 6, las dos sin terror activo."""
+        from src.stages.stage4_1.stage4_1 import Stage4_1
+
+        v = Stage4_1.VIGNETTE_POR_FASE
+        assert v[3] > v[1] and v[3] > v[6]
+        assert v[5] > v[1] and v[5] > v[6]
 
 
 class TestElSilencioYElShakeDeLaFase4:

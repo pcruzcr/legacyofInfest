@@ -186,6 +186,16 @@ a asomar unas columnas antes de que arranque la sección (ver nota de la
 Fase 5). `sfx_environment_resonancia_solemne` (AUD-465) como ambiente. Al
 final, `NextTrigger` hacia `stage4_2_boss_paburu`.
 
+**La viñeta respira (AUD-566, propuesta "nivel cine" aprobada por el
+dueño):** cada una de las seis fases pide su propia intensidad de viñeta
+(`Stage4_1.VIGNETTE_POR_FASE`), interpolada por avance con el mismo
+mecanismo que ya usa la gradación de color. Más cerrada en la tormenta
+(Fase 3) y la noche (Fase 5) — las dos de mayor amenaza sensorial—, casi
+abierta en la Fase 1 (estableciendo el espacio real) y en ésta, la Fase
+6 (la llegada, ya sin terror). `PostProcessing.set_vignette` existía en
+el motor desde siempre —base fija de 0,4— pero ningún escenario lo
+tocaba por fase hasta ahora.
+
 ## 4. La introducción
 
 Un objeto `Cutscene` de tipo punto (dispara sin que el jugador tenga que
