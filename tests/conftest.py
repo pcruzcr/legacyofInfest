@@ -58,9 +58,28 @@ def _reset_global_state():
 
     Se instalan las preferencias **de fábrica**, no las del disco. Una prueba
     que necesite otra cosa lo declara con `set_settings()`, que para eso está.
+
+    AUD-545 — `Inventory` también es singleton de proceso, y se coló sin
+    reseteo aquí igual que `AchievementSystem` lo tenía.
+    ------------------------------------------------------------------------
+    `collect()` deja en cola una notificación («ITEM: …») que sólo se
+    consume dibujándola unos fotogramas. Sin resetear el singleton, cualquier
+    prueba que recogiera un objeto dejaba esa notificación pendiente para la
+    siguiente prueba del proceso que construyera una escena — visible o no
+    según cuántos fotogramas corriera esa otra prueba.
+
+    Encontrado así: `test_reported_ui_bugs.py::test_el_hud_conserva_su_brillo`
+    fallaba sólo en la suite completa, con la misma razón de brillo exacta
+    en ejecuciones separadas — bit a bit igual, no un número distinto cada
+    vez, que es la firma de estado compartido y no de una máquina cargada.
+    Comparando pixel a pixel el HUD aislado contra el compuesto completo, la
+    diferencia no estaba en la luz del mundo (que es lo que esa prueba existe
+    para vigilar, AUD-090) sino en un aviso de recogida ajeno dibujado sobre
+    el reloj del HUD, propiedad de una prueba anterior sin relación.
     """
     from src.engine.core import user_settings
     from src.engine.core.achievements import AchievementSystem
+    from src.engine.core.inventory import Inventory
     from src.engine.scenes.demo_layout import clear_demo_font_cache
     from src.engine.ui.theme import clear_font_cache
     from src.engine.utils.asset_loader import AssetLoader
@@ -70,6 +89,7 @@ def _reset_global_state():
     StageLoader.clear_tmx_cache()
     clear_demo_font_cache()
     AchievementSystem._reset_instance()
+    Inventory._reset_instance()
     user_settings.set_settings(user_settings.UserSettings())
     # La caché de fuentes indexa por (ruta, tamaño ya escalado): si sobrevive a
     # un cambio de escala, la prueba siguiente recibe la fuente de la anterior.
