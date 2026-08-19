@@ -1,12 +1,18 @@
 """AUD-547 — jugado, dos cosas del rediseño de AUD-535 seguían sin
 resolverse: el retrato vivía a 5 px reales del borde de la pantalla —
 casi pegado— y el minimapa, pese a su "recorte redondeado", seguía
-siendo un rectángulo de 62×44 con las esquinas muy curvas, no un
-círculo. Pedido explícito tras jugarlo: "nada quede pegado a la
-izquierda o a la derecha o arriba y abajo" y que el minimapa sea
+siendo un rectángulo de 62×44 con las esquinas muy curvas. Pedido
+explícito tras jugarlo: "nada quede pegado a la izquierda o a la
+derecha o arriba y abajo" y (en ese momento) que el minimapa fuera
 circular como el retrato. De paso, las tres barras del bloque de
 identidad (vida/estamina/carga) dejaron de cambiar de color según el
 nivel — ahora son rojo/amarillo/azul fijos, otro pedido explícito.
+
+AUD-560 — el propio dueño revirtió la parte del minimapa: "que el
+minimapa sea rectangular cuadrado", no circular. El recuadro se queda
+cuadrado (eso es lo que pide "cuadrado"); lo que cambia es que ya no
+hay máscara circular — vuelve a ser un rectángulo de esquinas rectas,
+como antes de AUD-547.
 """
 from __future__ import annotations
 
@@ -81,18 +87,24 @@ class TestNingunElementoQuedaPegadoAUnBorde:
             )
 
 
-class TestElMinimapaEsCircularDeVerdad:
+class TestElMinimapaEsRectangularCuadrado:
+    """AUD-560 — revierte AUD-547: pedido explícito del dueño, "que el
+    minimapa sea rectangular cuadrado", no circular. El recuadro sigue
+    siendo cuadrado (44×44, eso es lo que pide "cuadrado"); lo que
+    cambia es que ya no hay máscara — el lienzo entero se pinta, sin
+    recortar las esquinas en redondo."""
+
     def test_el_recuadro_del_minimapa_es_cuadrado(self, hud) -> None:
-        """Un círculo inscrito en un rectángulo no cuadrado recorta
-        contenido de los lados largos — tiene que ser cuadrado para que
-        el círculo sea de verdad, no una aproximación."""
         r = hud.minimap_rect()
         assert r.width == r.height, (
             f"el recuadro del minimapa mide {r.width}×{r.height}: no es "
-            f"cuadrado, así que el círculo inscrito recortaría contenido"
+            f"cuadrado"
         )
 
-    def test_las_esquinas_del_lienzo_quedan_transparentes(self, hud) -> None:
+    def test_las_esquinas_del_lienzo_tambien_se_pintan(self, hud) -> None:
+        """Lo contrario de lo que pedía AUD-547: sin máscara circular,
+        las cuatro esquinas del fondo del minimapa se pintan igual que
+        el centro — no quedan vacías."""
         from src.engine.ui.minimap import Minimap
 
         mm = Minimap()
@@ -103,12 +115,12 @@ class TestElMinimapaEsCircularDeVerdad:
         mm.draw(lienzo)
         r = hud.minimap_rect()
         esquina = lienzo.get_at((r.left, r.top))
-        assert tuple(esquina)[:3] == (0, 0, 0), (
-            "la esquina del minimapa no quedó vacía: el recorte no es "
-            "circular, sigue pintando hasta la esquina cuadrada"
+        assert tuple(esquina)[:3] != (0, 0, 0), (
+            "la esquina del minimapa quedó vacía: sigue recortando en "
+            "redondo en vez de pintar el rectángulo entero"
         )
 
-    def test_el_centro_del_lienzo_si_se_pinta(self, hud) -> None:
+    def test_el_centro_del_lienzo_tambien_se_pinta(self, hud) -> None:
         from src.engine.ui.minimap import Minimap
 
         mm = Minimap()
@@ -120,7 +132,7 @@ class TestElMinimapaEsCircularDeVerdad:
         r = hud.minimap_rect()
         centro = lienzo.get_at(r.center)
         assert tuple(centro)[:3] != (0, 0, 0), (
-            "el centro del minimapa no se pintó: el círculo no se dibujó"
+            "el centro del minimapa no se pintó: el fondo no se dibujó"
         )
 
 
