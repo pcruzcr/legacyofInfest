@@ -129,9 +129,14 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         # qué se abre de sólo lectura desde aquí (`permitir_viajar=False`)
         # y no con la navegación normal de cuando se entra desde el
         # título.
+        # AUD-550 — "Tienda" se suma: mismo defecto que Inventario/Árbol
+        # antes de AUD-533 (`ShopScene` completa y probada, sólo
+        # alcanzable desde el título). Las monedas se ganan jugando; sin
+        # esto sólo se podían gastar volviendo al título a mitad de una
+        # partida en curso.
         self._pause_options: list[str] = [
             "Reanudar", "Mapa", "Inventario", "Árbol de habilidades",
-            "Guardar y salir", "Salir al título",
+            "Tienda", "Guardar y salir", "Salir al título",
         ]
         self._debug: bool = False
         #: AUD-289 — entidades que se retiraron por lanzar en `update()`.
@@ -861,6 +866,8 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
                 self._abrir_inventario()
             elif choice == "Árbol de habilidades":
                 self._abrir_arbol_de_habilidades()
+            elif choice == "Tienda":
+                self._abrir_tienda()
             elif choice == "Guardar y salir":
                 self._save_and_quit()
             elif choice == "Salir al título":
@@ -892,6 +899,13 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         """Mismo mecanismo que `_abrir_inventario` — ver ese docstring."""
         from src.engine.scenes.skill_tree_scene import SkillTreeScene
         self.context.scene_manager.push(SkillTreeScene(self.context))
+
+    def _abrir_tienda(self) -> None:
+        """AUD-550 — mismo mecanismo que `_abrir_inventario`: `ShopScene`
+        sale con `pop()`, así que empujarla aquí devuelve a la partida
+        pausada, no al título."""
+        from src.engine.scenes.shop_scene import ShopScene
+        self.context.scene_manager.push(ShopScene(self.context))
 
     def _check_player_death(self) -> None:
         if self._player.current_health <= 0 and not self._game_over:
