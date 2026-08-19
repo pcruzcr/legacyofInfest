@@ -180,7 +180,12 @@ FASES: tuple[Fase, ...] = (
          rayos_por_minuto=0.0, ambiente=0.16, luna_intermitente=True,
          sonido_ambiente=f"{_AMB}canto_ancestral.wav",
          decoracion="tumbas_conquistador",
-         musica=MUSICA_POR_FASE[4]),
+         musica=MUSICA_POR_FASE[4],
+         # AUD-551 — GAP-070 "Ambiente de Bosque Nocturno": grillos
+         # esporádicos que anclan la fase al entorno físico cuando la
+         # luna se oculta y el canto calla — antes no había ningún
+         # sonido de insecto, sólo el canto ancestral.
+         sonidos_aislados=("sfx_environment_grillo",)),
     Fase(6, "EL CAMINO HACIA PABURU", 5 * ANCHO_SECCION, "fog", ("spores", 26.0),
          gradacion=COLOR_PLENO, tinte=(TINTE_DESPERTAR, ALFA_TINTE_DESPERTAR),
          espiritu=None, rayos_por_minuto=0.0, ambiente=0.60,

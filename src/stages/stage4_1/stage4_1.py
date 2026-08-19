@@ -81,6 +81,12 @@ class Stage4_1(StageScene):
     # ── Relámpagos (Fase 3) ───────────────────────────────────
     DURACION_DEL_RAYO = 0.35
     FUERZA_DEL_RAYO = 0.5
+    #: AUD-551 — GAP-070 punto 3: "cuando el renderizado GPU genere un
+    #: flash... se calcula un retraso de 0.2 a 1.5 segundos antes de
+    #: disparar el sonido del trueno, simulando la distancia real" — la
+    #: luz llega antes que el sonido. Antes el trueno sonaba en el mismo
+    #: fotograma que el flash, instantáneo.
+    ESPERA_DEL_TRUENO: tuple[float, float] = (0.2, 1.5)
 
     # ── El silencio y el shake (Fase 4) ────────────────────────
     #: A qué fracción del tramo ocurre el silencio. A mitad: ni al entrar
@@ -226,6 +232,23 @@ class Stage4_1(StageScene):
         self._tinte_previo: tuple[tuple[int, int, int], float] | None = None
         self._rayo: float = 0.0
         self._proximo_rayo: float = 0.0
+        #: AUD-551 — cuenta atrás hasta que suene el trueno de este
+        #: relámpago; `<= 0.0` y sin `math.inf` significa "no hay
+        #: ninguno pendiente" (`_actualizar_rayos` lo consulta cada
+        #: fotograma con `> 0.0`, así que un valor en reposo de 0.0 no
+        #: dispara nada por accidente).
+        self._trueno_pendiente: float = 0.0
+        #: AUD-551 — GAP-070 "Diálogo de la Serpiente"/"del Halcón": qué
+        #: índices de espíritu (`Fase.espiritu`, 0=Venado/1=Rey
+        #: Terciopelo/2=Gavilán) ya reprodujeron su línea de voz, para
+        #: que suene una sola vez por partida y no en cada fotograma que
+        #: `_espiritu_liberado` sigue devolviendo `True`.
+        self._espiritus_con_voz: set[int] = set()
+        #: AUD-551 — GAP-070 "Pisadas de Energía Verde": qué grietas
+        #: (por índice) ya sonaron su campanilla al terminar de
+        #: encenderse, para no repetirla mientras el jugador se queda
+        #: parado encima con la grieta ya a intensidad máxima.
+        self._grietas_con_campanilla: set[int] = set()
         self._shake_disparado: bool = False
         #: Cuándo suena el próximo grito aislado del Gavilán (Fase 4, sólo
         #: tras el silencio — ver `_actualizar_grito_del_gavilan`).
@@ -372,6 +395,8 @@ class Stage4_1(StageScene):
         self._actualizar_grietas(dt)
         self._actualizar_mensaje_final()
         self._actualizar_secuencia_de_despertar()
+        self._actualizar_voz_del_espiritu()
+        self._actualizar_pasos_de_luz()
 
     @property
     def fase(self) -> Fase:
@@ -580,6 +605,16 @@ class Stage4_1(StageScene):
         self._ambiente_base = (self.AMBIENTE_MIN_LUNA
                                 + (self.AMBIENTE_MAX_LUNA - self.AMBIENTE_MIN_LUNA) * ciclo)
         self._aplicar_hora()
+        # AUD-551 — GAP-070 punto 8: el bucle de ambiente (el canto de
+        # fondo, no la voz espacial que ya modula `_actualizar_canto_
+        # ancestral`) también respira con la luna. Antes sólo la voz
+        # extra lo hacía; el colchón sonoro sonaba a volumen fijo todo
+        # el tramo. Mismo rango que la voz (`VOLUMEN_DEL_CANTO`), para
+        # que las dos capas suban y bajen juntas.
+        audio = self.audio
+        if audio is not None:
+            flojo, fuerte = self.VOLUMEN_DEL_CANTO
+            audio.set_ambient_volume(flojo + (fuerte - flojo) * self.luna_oculta)
 
     @property
     def luna_oculta(self) -> float:
@@ -868,6 +903,16 @@ class Stage4_1(StageScene):
         return random.uniform(0.5, 1.5) * (60.0 / por_minuto)
 
     def _actualizar_rayos(self, dt: float) -> None:
+        # AUD-551 — el trueno pendiente cuenta atrás siempre, no sólo
+        # mientras dura el flash: `DURACION_DEL_RAYO` es 0.35s y la
+        # espera del trueno llega hasta 1.5s, así que el `return`
+        # temprano de abajo (mientras `self._rayo > 0.0`) lo habría
+        # dejado congelado la mayor parte de su cuenta atrás.
+        if self._trueno_pendiente > 0.0:
+            self._trueno_pendiente -= dt
+            if self._trueno_pendiente <= 0.0:
+                self._trueno_pendiente = 0.0
+                self._play_sfx_named("sfx_environment_thunder", volume=0.5)
         if self._rayo > 0.0:
             self._rayo = max(0.0, self._rayo - dt)
             fuerza = (self._rayo / self.DURACION_DEL_RAYO) ** 2
@@ -881,6 +926,9 @@ class Stage4_1(StageScene):
             self._rayo = self.DURACION_DEL_RAYO
             self._proximo_rayo = self._espera_entre_rayos()
             self._play_sfx_named("sfx_environment_screen_shake", volume=0.4)
+            # AUD-551 — GAP-070 punto 3: el trueno de verdad llega
+            # después, no en el mismo fotograma que el flash.
+            self._trueno_pendiente = random.uniform(*self.ESPERA_DEL_TRUENO)
             if self.fase.numero == 3:
                 self._rayos_en_fase3 += 1
                 self._bruja_este_rayo = self._rayos_en_fase3 in self.RAYOS_CON_BRUJA
@@ -1141,6 +1189,36 @@ class Stage4_1(StageScene):
                 actual = max(0.0, actual - dt / bajada)
             self._intensidad_grieta[i] = actual
             luz.intensity = actual * self.INTENSIDAD_MAX_GRIETA
+
+    #: AUD-551 — GAP-070 "Pisadas de Energía Verde": las tres notas de
+    #: la tríada de Re menor, una por variante de la campanilla.
+    NOTAS_DEL_PASO_DE_LUZ: tuple[str, ...] = (
+        "sfx_environment_paso_de_luz_re",
+        "sfx_environment_paso_de_luz_fa",
+        "sfx_environment_paso_de_luz_la",
+    )
+
+    def _actualizar_pasos_de_luz(self) -> None:
+        """Una campanilla de cristal cuando una grieta termina de
+        encenderse del todo — GAP-070: *"cada vez que el pie... enciende
+        una baldosa o grieta"*.
+
+        No es literalmente "cada pisada": las grietas se encienden por
+        proximidad continua (`_actualizar_grietas`), no por contacto
+        discreto, así que lo más fiel a esa mecánica real es sonar
+        cuando una grieta cruza a intensidad máxima — el instante en que
+        termina de "encenderse" para quien la ve. Si se apaga del todo y
+        el jugador vuelve a acercarse, puede volver a sonar.
+        """
+        if self.fase.numero != 6:
+            return
+        for i, intensidad in self._intensidad_grieta.items():
+            if intensidad >= 1.0 and i not in self._grietas_con_campanilla:
+                self._grietas_con_campanilla.add(i)
+                self._play_sfx_named(random.choice(self.NOTAS_DEL_PASO_DE_LUZ),
+                                     volume=0.5)
+            elif intensidad < 1.0 and i in self._grietas_con_campanilla:
+                self._grietas_con_campanilla.discard(i)
 
     # ── La secuencia de despertar antes del corte (Fase 6) ──────
     #
@@ -1425,6 +1503,36 @@ class Stage4_1(StageScene):
             d.evento == evento and d.disparado
             for d in self._stage_data.disparadores
         )
+
+    #: AUD-551 — GAP-070 "Diálogo del Venado/de la Serpiente/del
+    #: Halcón": `Fase.espiritu` (0/1/2) a la línea de voz que le
+    #: corresponde. El Venado reusa `sfx_voz_venado_fase1` — ya existía
+    #: (AUD-263) pero nadie lo reproducía nunca, el mismo patrón de
+    #: "sistema completo, camino real inexistente" que ya cazaron
+    #: `SwimmingState` y `WaterEffect`; el Rey Terciopelo y el Gavilán
+    #: son voces nuevas.
+    _VOZ_POR_ESPIRITU: dict[int, str] = {
+        0: "sfx_voz_venado_fase1",
+        1: "sfx_voz_rey_terciopelo",
+        2: "sfx_voz_gavilan",
+    }
+
+    def _actualizar_voz_del_espiritu(self) -> None:
+        """Una línea de voz, una vez por espíritu y partida, en el mismo
+        instante en que `_espiritu_liberado` pasa a `True` — el punto
+        donde el guion ya dice que el espíritu habla."""
+        fase = self.fase
+        if fase.espiritu is None or fase.espiritu in self._espiritus_con_voz:
+            return
+        if not self._espiritu_liberado(fase):
+            return
+        self._espiritus_con_voz.add(fase.espiritu)
+        linea = self._VOZ_POR_ESPIRITU.get(fase.espiritu)
+        if linea is None:
+            return
+        audio = self.audio
+        if audio is not None and hasattr(audio, "play_voz"):
+            audio.play_voz(linea)
 
     def _dibujar_espiritu(self, surface: pygame.Surface,
                           offset: pygame.Vector2) -> None:

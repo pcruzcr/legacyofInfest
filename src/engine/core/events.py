@@ -49,6 +49,11 @@ class Events:
     SFX_PLAYER_LAND: str = "SFX_PLAYER_LAND"
     SFX_PLAYER_FOOTSTEP: str = "SFX_PLAYER_FOOTSTEP"
     SFX_PLAYER_FOOTSTEP_MUSGO: str = "SFX_PLAYER_FOOTSTEP_MUSGO"
+    #: AUD-551 — GAP-070 punto 1: el lodo (`ZonaDeFriccion.material="lodo"`,
+    #: declarado en Fase 2 del 4-1 desde AUD-522) frenaba de verdad pero
+    #: sonaba igual que caminar en tierra firme — sólo el musgo tenía voz
+    #: propia.
+    SFX_PLAYER_FOOTSTEP_LODO: str = "SFX_PLAYER_FOOTSTEP_LODO"
     """AUD-522 — pisada distinta al andar sobre musgo (`material="musgo"`
     en una `FrictionZone`): el musgo resbala y hasta ahora no se oía ni se
     veía, sólo se calculaba."""

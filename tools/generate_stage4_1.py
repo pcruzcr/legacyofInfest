@@ -346,8 +346,14 @@ def _objetos() -> list[str]:
             obj("FrictionZone", inicio * TS, (fila - 2) * TS, ancho * TS, 2 * TS,
                 inercia=RESBALON_DEL_MUSGO, material="musgo")
         elif material == "lodo":
+            # AUD-551 — `material="lodo"` (además de `multiplicador`) es lo
+            # que enciende la pisada propia (GAP-070 punto 1,
+            # `states/grounded.py`): sin declararlo, `Transform.material_actual`
+            # se queda en `None`/"roca" y el jugador nunca se entera de que
+            # está sobre lodo salvo por cómo frena. Mismo criterio que el
+            # musgo (AUD-522), aplicado al campo que se había quedado corto.
             obj("FrictionZone", inicio * TS, (fila - 2) * TS, ancho * TS, 2 * TS,
-                multiplicador=FRENO_DEL_LODO)
+                multiplicador=FRENO_DEL_LODO, material="lodo")
 
     # ── Las lomas de la Fase 3: dos parejas de `Slope` reales (AUD-477) ──
     for lx, lfila_arriba, lancho, lalto, lsube in loma():

@@ -3551,15 +3551,18 @@ tanto, el código no cambia: el fallback es el contrato.
   casos) en verde confirma que lo que sí se construyó (corrientes, fauna)
   no depende de esto.
 
-## [GAP-070] Audio procedural del 4-1 — recetas del dueño: tres construidas, el resto pendiente de decisión de alcance
+## [GAP-070] Audio procedural del 4-1 — recetas del dueño: la mayoría construida, quedan las que piden DSP en tiempo real
 
 - **File:** `tools/generate_all_assets.py`, `src/stages/stage4_1/stage4_1.py`,
-  `src/stages/stage4_1/fases.py`, `src/framework/audio/dynamic_music.py`
+  `src/stages/stage4_1/fases.py`, `src/framework/audio/dynamic_music.py`,
+  `src/framework/physics/perfil.py`, `src/framework/entities/states/grounded.py`
 - **Phase:** AUD-546 (2026-08-18) — el dueño entregó dos cosas a la vez:
   seis pistas de música de autor (una por fase,
   `assets/music/bgm_stage4_1_fase1..6.mp3`) y un documento extenso de
   "recetas" de síntesis procedural (ruido/ADSR/filtro/LFO exactos) para
   una docena de efectos ambientales del 4-1, fase por fase.
+  **AUD-551 (2026-08-19)** retomó la lista de "no se construyó" y cerró
+  seis piezas más — ver el bloque al final de **Reason**.
 - **Reason:** Lo que AUD-546 completó, con evidencia:
   1. **Música por fase.** `fases.FASES` ya no deja cinco fases en
      silencio (AUD-493, ahora superado) — las seis tienen su propia
@@ -3592,76 +3595,119 @@ tanto, el código no cambia: el fallback es el contrato.
      (`vida_abisal`), no como enemigos ECS nuevos: ver el commit y
      `docs/niveles/13b_STAGE_4_1B.md`.
 
-  Lo que el documento pedía y **no** se construyó — cada punto cita el
-  parámetro exacto para no perder la receta:
-  1. **Pasos por material, por fase.** Cuatro recetas completas
-     (grava/tierra Fase 1: ruido rosa 85%+cuadrada 15%, pasa-banda
-     1200Hz±150 aleatorio, ADSR 2/45/0/15ms; musgo/lodo Fase 2: ruido
-     marrón 80%+seno 80Hz 20%, pasa-bajos 700-800Hz, ADSR 10-12/60-80/0/
-     80-100ms, pitch ±10% aleatorio; pasos ahogados Fase 5: ruido marrón,
-     pasa-bajos 250Hz, ADSR 15/50/0/30ms, tope de volumen 30%; pasos de
-     luz Fase 6: seno 80%+triángulo 20%, ADSR 15/200/30%/1200ms,
-     frecuencia elegida al azar entre las notas de Re menor —293.66,
-     349.23, 440.00Hz). Hoy el jugador ya suena distinto en musgo
-     (`footstep_musgo`, AUD-522) pero no hay variante de grava, pasos
-     ahogados ni pasos de luz — y ninguna está atada al *material* del
-     suelo por fase, que es lo que pide la receta.
-  2. **Voces de los tres espíritus con síntesis propia.** El proyecto
-     ya sintetiza voz de marcador de posición (`venado_fase1/2/muerte`,
-     AUD-263) pero con un timbre genérico, no las recetas específicas:
-     Venado (diente de sierra+seno 60Hz, LFO de vibrato a 12Hz),
-     Serpiente (dos senoidales en batimiento 440/446Hz + ruido rosa
-     filtrado, LFO de amplitud a 25Hz), Halcón (diente de sierra 70%+
-     cuadrada 30% a 1800Hz, modulado en frecuencia por un LFO a 50Hz,
-     sin reverberación a propósito — "seco, posado sobre la cámara").
-  3. **Truenos sincronizados con el rayo, no simultáneos.** Hoy
-     `_actualizar_rayos` dispara `sfx_environment_screen_shake` en el
-     mismo fotograma que el destello — la receta pide un retardo
-     aleatorio de 0.2 a 1.5s entre el flash y el trueno (la luz llega
-     antes que el sonido).
+  Lo que el documento pedía y **no** se construyó cuando se escribió esta
+  entrada — cada punto cita el parámetro exacto para no perder la receta.
+  Los que AUD-551 cerró quedan tachados con su resolución; los que siguen
+  abiertos, sin tocar:
+  1. ~~**Pasos por material, por fase** (lodo y pasos de luz).~~
+     *(Resuelto parcialmente en AUD-551 — ver más abajo.)* Sigue sin
+     construirse la variante de grava/tierra de la Fase 1 (ruido rosa
+     85%+cuadrada 15%, pasa-banda 1200Hz±150 aleatorio, ADSR 2/45/0/15ms)
+     ni los pasos ahogados de la Fase 5 (ruido marrón, pasa-bajos 250Hz,
+     ADSR 15/50/0/30ms, tope de volumen 30%) — ninguna de las dos tiene
+     zona de terreno declarada en el TMX todavía, así que no hay
+     chokepoint genérico donde engancharlas sin arriesgar audio doble.
+  2. ~~**Voces de los tres espíritus con síntesis propia** (Rey
+     Terciopelo, Gavilán).~~ *(Resuelto parcialmente en AUD-551 — ver
+     más abajo.)* El Venado sigue usando el timbre genérico de AUD-263
+     (`sfx_voz_venado_fase1`), no la receta específica (diente de
+     sierra+seno 60Hz, LFO de vibrato a 12Hz) — quedó fuera de AUD-551
+     porque ya sonaba algo en su lugar y las otras dos voces no sonaban
+     nada.
+  3. ~~**Truenos sincronizados con el rayo, no simultáneos.**~~
+     *(Resuelto en AUD-551 — ver más abajo.)*
   4. **Paneo LFO de la tormenta.** `storm_ambient` es mono, sin
      movimiento estéreo; la receta pide un LFO de paneo oscilando
-     -0.8↔0.8 más un LFO de filtro barriendo 400-2200Hz.
+     -0.8↔0.8 más un LFO de filtro barriendo 400-2200Hz. Sigue abierto:
+     el motor no tiene paneo LFO en tiempo real sobre un bucle de
+     ambiente ya en reproducción.
   5. **Lluvia "vintage" de la Fase 4.** La receta pide un filtro
      pasa-banda estrecho (~1500Hz) sobre `rain_ambient` sólo en esta
      fase, para que suene "a través de una radio vieja" — hoy la lluvia
-     suena igual en la Fase 2 y en la Fase 4.
-  6. **Grillos nocturnos de la Fase 5.** No existe ningún SFX de
-     grillo — la fase sólo tiene `canto_ancestral`. La receta: onda
-     cuadrada de pulso estrecho (5-10%) a 4000-6000Hz, ráfagas de 3-4
-     "cri-cri" separadas por 2-5s de silencio, paneo aleatorio por
-     ráfaga.
-  7. **Bus de reverberación de la Fase 6.** `_aplicar_reverberacion`
-     ya hornea cola en sonidos puntuales concretos
-     (`despertar_profundo`, `cemetery_silence`) pero no hay un
-     tratamiento uniforme para *todo* lo que suene en la Fase 6 (los
-     pasos de luz incluidos) — la receta lo pide como "bus", que este
-     motor sin DSP en tiempo real sólo puede aproximar horneando el
-     mismo `_aplicar_reverberacion` en cada SFX nuevo de esa fase.
-  8. **Volumen del canto atado a la luna en tiempo real.** Hoy
-     `canto_ancestral` es un bucle de volumen fijo; la receta pide que
-     su ganancia se multiplique fotograma a fotograma por
-     `luna_intermitente`/la intensidad lunar real de la Fase 5, no que
-     sea un bucle de volumen constante.
-- **Resolution plan:** son ocho piezas independientes, no una sola
-  auditoría — cada una se puede tomar por separado. Sugerido por
-  esfuerzo/impacto: (1) pasos por material reusa el patrón ya probado
-  de `footstep_musgo`, es la más barata; (3) el retardo del trueno es
-  un `random.uniform(0.2, 1.5)` y un temporizador, tan barato como (1);
-  (6) los grillos son un SFX nuevo más el mismo mecanismo de
-  `sonidos_aislados` que ya construyó AUD-546 — cablearlo es directo;
-  (2) las voces piden LFO de FM/batimiento, más síntesis nueva que las
-  anteriores; (4)/(5) piden un filtro que cambie por fase sobre un
-  mismo `.wav` base — hoy cada sonido es un fichero fijo, así que
-  requieren generar variantes por fase o aplicar el filtro en tiempo de
-  reproducción (el motor no tiene esto último); (7)/(8) tocan cómo se
-  mezcla el audio en tiempo real, no sólo qué se genera, y son las que
-  más se alejan de "hornear un `.wav`" — necesitan una decisión de
-  arquitectura antes de escribir código.
-- **Verificado:** 2026-08-19 — `pytest tests/test_la_musica_del_4_1_entra_tarde.py
+     suena igual en la Fase 2 y en la Fase 4. Sigue abierto: requeriría
+     una variante de `.wav` por fase o un filtro en tiempo de
+     reproducción, y el motor no tiene esto último.
+  6. ~~**Grillos nocturnos de la Fase 5.**~~ *(Resuelto en AUD-551 — ver
+     más abajo.)*
+  7. **Bus de reverberación de la Fase 6.** `_aplicar_reverberacion` ya
+     hornea cola en sonidos puntuales concretos (`despertar_profundo`,
+     `cemetery_silence`, y desde AUD-551 también en los tres
+     `paso_de_luz_*`) pero sigue sin haber un tratamiento uniforme para
+     *todo* lo que suene en la Fase 6 — la receta lo pide como "bus",
+     que este motor sin DSP en tiempo real sólo puede aproximar
+     horneando el mismo `_aplicar_reverberacion` sonido por sonido, y
+     eso sigue sin hacerse para el resto del catálogo de esa fase.
+  8. ~~**Volumen del canto atado a la luna en tiempo real.**~~
+     *(Resuelto en AUD-551 — ver más abajo.)*
+- **Resolution — AUD-551 (2026-08-19):** seis piezas cerradas de las
+  ocho, con evidencia:
+  - **Pasos en lodo** (parte de 1): `ZonaDeFriccion` de la Fase 2 ya
+    frenaba con `multiplicador` (AUD-522) pero nunca declaraba
+    `material="lodo"` — sólo el musgo lo hacía — así que
+    `Transform.material_actual` nunca valía "lodo" y no había forma de
+    encenderle una pisada propia. Se dio de alta un `Material("lodo")`
+    en el catálogo (`perfil.MATERIALES`, sin cambiar fricción ni
+    restitución — el freno real sigue siendo el `multiplicador`, sin
+    tocar), se declaró `material="lodo"` en el generador
+    (`tools/generate_stage4_1.py`) y se parcheó quirúrgicamente el TMX
+    comprometido (mismo patrón que el musgo de AUD-522: dos
+    `FrictionZone` objects, ids 118/120). Nuevo evento
+    `Events.SFX_PLAYER_FOOTSTEP_LODO`, nueva rama en
+    `WalkingState.update` (`states/grounded.py`), SFX sintetizado
+    (`footstep_lodo`: ruido marrón 80%+seno 80Hz 20%, pasa-bajos
+    700-800Hz aleatorio, ADSR 11/70/0/90ms, pitch ±10%).
+  - **Campanilla de "paso de luz"** (parte de 1, la mitad de la receta
+    que sí tenía chokepoint disponible): `_intensidad_grieta` (Fase 6)
+    ya rastreaba proximidad continua por grieta; se le añadió
+    detección de flanco (`_grietas_con_campanilla`) para sonar una vez
+    al llegar a máxima intensidad y volver a sonar si se apaga y se
+    reenciende. Tres SFX en Re menor (293.66/349.23/440.00Hz, seno
+    80%+triángulo 20%, ADSR 15/200/30%/1200ms) con
+    `_aplicar_reverberacion` horneada.
+  - **Voz de Rey Terciopelo y Gavilán** (parte de 2): recetas exactas —
+    Rey Terciopelo (ruido rosa 50%+dos senoidales en batimiento
+    440/446Hz 50%, pasa-banda ~5000Hz vía pasa-altos+pasa-bajos en
+    cascada, LFO de amplitud a 25Hz, ADSR 200/300/60%/1200ms); Gavilán
+    (diente de sierra 70%+cuadrada 30% a 1800Hz, FM por un LFO senoidal
+    a 50Hz con 90Hz de profundidad, ADSR 10/150/40%/500ms, **sin**
+    reverberación a propósito). Enganchadas al polling existente de
+    `_espiritu_liberado` con un diccionario nuevo
+    (`Stage4_1._VOZ_POR_ESPIRITU`) y un `set` de "ya sonó" para que cada
+    una hable una sola vez.
+  - **Retardo del trueno** (3): `Stage4_1.ESPERA_DEL_TRUENO = (0.2, 1.5)`
+    y `self._trueno_pendiente`; el flash sigue disparando el
+    screen-shake en el acto, el trueno se agenda y suena tras la
+    espera aleatoria.
+  - **Grillos de la Fase 5** (6): `Fase.sonidos_aislados` (ya
+    generalizado en AUD-546) ganó `sfx_environment_grillo` en la Fase
+    5; SFX nuevo (onda cuadrada 7% de pulso a 4000-6000Hz, ráfaga de
+    3-4 chirridos con tremolo de amplitud a 40Hz).
+  - **Volumen del canto atado a la luna** (8): antes sólo la voz
+    espacial (`_actualizar_canto_ancestral`) escalaba con la luna; el
+    bucle de ambiente de fondo sonaba a volumen fijo. Se añadió una
+    llamada a `AudioManager.set_ambient_volume` (método preexistente,
+    sin consumidor hasta ahora) en `_actualizar_ambiente_de_fase`, con
+    el mismo rango `VOLUMEN_DEL_CANTO` que ya usaba la voz espacial.
+
+  Lo que sigue abierto (4, 5, 7 completo, y las mitades de 1/2 descritas
+  arriba) comparte un mismo obstáculo: pide una variante de audio por
+  fase sobre un mismo bucle base, o un filtro/paneo en tiempo real sobre
+  algo que ya está sonando — y el motor sólo sabe hornear `.wav`
+  fijos, no aplicar DSP en vivo. Necesita una decisión de arquitectura
+  (¿generar N variantes por fase? ¿añadir un mezclador con filtros?)
+  antes de que valga la pena escribir código.
+- **Verificado:** 2026-08-19 (AUD-546) —
+  `pytest tests/test_la_musica_del_4_1_entra_tarde.py
   tests/test_auditoria_157_160.py tests/test_stage4_1.py` (con el filtro
   `-k "not stage4_1b and not stage4_1c"`) y `tests/test_ambience.py
   tests/test_particle_systems.py` en verde (381 casos combinados);
   `scripts/validate_tmx.py --ci` y `scripts/validate_assets.py` sin
   errores tras generar los tres SFX nuevos y relocalizar los tilesets
   de autor que bloqueaban la carga del mapa (ver el commit).
+  2026-08-19 (AUD-551) — `pytest tests/test_gap_070_audio_del_4_1.py
+  tests/test_materiales_de_superficie.py -k "stage4_1 or friccion or
+  musgo or lodo or gap_070 or perfil or material"` en verde (307+
+  casos); `scripts/validate_tmx.py --ci`, `scripts/validate_assets.py`,
+  `scripts/check_doc_symbols.py`, `scripts/check_tmx_coverage.py --ci` y
+  `scripts/generate_tmx_reference.py --check` sin errores tras parchear
+  el TMX comprometido y generar los siete SFX nuevos.

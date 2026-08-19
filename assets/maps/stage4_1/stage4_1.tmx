@@ -351,6 +351,7 @@ fundido sale 1.0
   <object id="118" name="FrictionZone_118" type="FrictionZone" x="3040" y="448" width="240" height="32">
    <properties>
     <property name="multiplicador" type="float" value="0.88"/>
+    <property name="material" value="lodo"/>
    </properties>
   </object>
   <object id="119" name="FrictionZone_119" type="FrictionZone" x="3360" y="448" width="240" height="32">
@@ -362,6 +363,7 @@ fundido sale 1.0
   <object id="120" name="FrictionZone_120" type="FrictionZone" x="3680" y="448" width="240" height="32">
    <properties>
     <property name="multiplicador" type="float" value="0.88"/>
+    <property name="material" value="lodo"/>
    </properties>
   </object>
   <object id="121" name="FrictionZone_121" type="FrictionZone" x="4000" y="448" width="240" height="32">
