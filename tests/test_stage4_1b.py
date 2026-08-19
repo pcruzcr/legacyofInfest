@@ -210,6 +210,30 @@ class TestElPezAbismal:
         assert pez.damage_on_contact == 0.0
 
 
+class TestElAhogamientoNoAplicaEnUnNivelSinSuperficie:
+    """AUD-572 — reporte jugando: "los enemigos hacen daño... la idea es
+    que no hagan daño". El pez no hace daño (arriba); lo que sí lo hacía
+    era `ControlDeNado`, con su límite de aire de fábrica (30s, pensado
+    para una zambullida breve con superficie a la que volver). 4-1b está
+    "sumergido de principio a fin" — sin ningún punto donde `en_agua()`
+    dé `None` — así que el jugador nunca podía recuperar aire y el
+    ahogamiento era sólo cuestión de tiempo, sin ningún enemigo de por
+    medio. La ficha ya pedía "Límite de tiempo: sin límite"."""
+
+    def test_el_dano_por_ahogamiento_esta_apagado(self, escena) -> None:
+        assert escena._nado.dano_por_segundo == 0.0
+
+    def test_flotar_mucho_mas_de_treinta_segundos_no_quita_vida(self, escena) -> None:
+        """30s es el límite de aire de fábrica (`ControlDeNado.aire_
+        maximo`) — antes de este cambio, a partir de ahí se perdía vida
+        sin parar. Se simulan 90s quieto en el agua, el triple."""
+        vida_inicial = escena._player.current_health
+        dt = 1 / 60
+        for _ in range(90 * 60):
+            escena.update(dt)
+        assert escena._player.current_health == vida_inicial
+
+
 class TestLasCorrientesDeAgua:
     """AUD-543 — «corrientes de agua», pedido tras jugarlo.
     `ZonaDeAgua.corriente` existía en el motor y ningún nivel lo declaraba.

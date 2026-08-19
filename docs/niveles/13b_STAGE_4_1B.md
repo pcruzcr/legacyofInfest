@@ -103,6 +103,29 @@ al jugador antes de que su rect llegue a solaparse con el bloque. Añadir
 combate bajo el agua es un cambio de diseño aparte, no un efecto colateral
 de esta pasada — se deja documentado, no construido a medias.
 
+## 2.1 Dos defectos reales, encontrados jugando (AUD-572, 2026-08-19)
+
+Reporte del dueño: *«esta mal hecho no nada sigue saltando... no se siente
+como un nivel de nada... los enemigos hacen daño y la idea es que no
+hagan daño»*.
+
+- **"Sigue saltando":** `SwimmingState` tenía su propio criterio de salida
+  por arriba (`_surface_y`, fijo al entrar al estado, expulsión a los 24px)
+  — pensado para una piscina con superficie real (`stage_mecanicas`), no
+  para un nivel sin ningún punto de salida. Nadar hacia arriba disparaba
+  la expulsión en pleno abismo una y otra vez. Ya estaba documentado como
+  choque conocido en `trazado.py` sin arreglar. Resuelto moviendo el
+  criterio a `ControlDeNado._salir` (la salida **real** de la
+  `ZonaDeAgua`, no un umbral fijo) — ver `docs/45_SWIMMING_SPEC.md` §3.
+- **"Los enemigos hacen daño":** el pez no hacía daño (`damage_on_contact
+  =0.0`, verificado, sin cambios) — el daño real venía del límite de aire
+  de fábrica de `ControlDeNado` (30s, pensado para una zambullida breve).
+  4-1b nunca deja de estar `en_agua()`, así que el aire nunca se
+  recuperaba y el ahogamiento era sólo cuestión de tiempo — confirmado:
+  5→2 de vida en 40s flotando quieto, sin tocar nada ni a nadie.
+  Contradice directamente "Límite de tiempo: sin límite" (§1). Resuelto
+  apagando `dano_por_segundo` para este nivel únicamente.
+
 ## 3. Reglas obligatorias
 
 Las mismas del cementerio (`13_STAGE_4_1.md` §3), salvo la de cero

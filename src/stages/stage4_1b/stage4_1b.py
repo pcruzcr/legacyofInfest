@@ -63,6 +63,20 @@ class Stage4_1B(StageScene):
 
     def __init__(self, context: GameContext) -> None:
         super().__init__(context, Path(self.TMX_PATH))
+        # AUD-572 — `ControlDeNado` (StageScene.__init__) trae de fábrica un
+        # límite de aire de 30s pensado para una zambullida breve con una
+        # superficie a la que volver a respirar. 4-1b no tiene superficie
+        # —está "sumergido de principio a fin" (`trazado.py`, `13b_STAGE_
+        # 4_1B.md`) y el jugador nunca deja de estar `en_agua()`—, así que
+        # con el límite de fábrica el ahogamiento es inevitable: jugado,
+        # se pierde vida sin ningún enemigo de por medio ni forma de
+        # evitarlo (confirmado: 5 → 2 de vida en 40s flotando quieto, sin
+        # tocar nada). La ficha ya documenta "Límite de tiempo: sin
+        # límite" — un reloj de oxígeno que no se puede vencer contradice
+        # esa regla directamente. Se apaga el daño, no la cuenta de aire
+        # entera: si algún día se añade un HUD de oxígeno, la cuenta sigue
+        # existiendo para leerla, sólo que ya no castiga.
+        self._nado.dano_por_segundo = 0.0
         # `azar.generador()` — el generador aislado del proceso (AUD-374),
         # no el global: mismo criterio que `src/stages/stage4_1/selector.py`.
         self._azar = azar.generador()

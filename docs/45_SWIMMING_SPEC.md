@@ -61,11 +61,24 @@ Nadar es un estado del jugador (`SwimmingState` en `src/framework/entities/state
 
 ## 3. Transiciones de estado
 
-- **Entrada:** el jugador se solapa con una zona de agua → el estado pasa a `SWIMMING`. La velocidad vertical se pone a cero al entrar; la horizontal se reduce a la mitad.
-- **Salida:** el jugador sale de la zona de agua → transición al estado de suelo/aire correspondiente.
-- **Y de superficie:** se registra al entrar (`player.y − 16`), se usa para los efectos visuales de superficie.
-- **Expulsión en superficie:** si el jugador sube por encima de `surface_y − 8` px, se le expulsa hacia arriba a −200 px/s hacia `JUMPING`.
+- **Entrada:** `ControlDeNado` (`src/framework/stage/level_mechanics.py`, corre cada fotograma desde `StageScene.update()`) comprueba `en_agua(mundo, jugador.rect)`; si el jugador se solapa con una `ZonaDeAgua` y no estaba ya nadando, el estado pasa a `SWIMMING`. La velocidad vertical se pone a cero al entrar; la horizontal se reduce a la mitad.
+- **Salida:** `ControlDeNado` es la única autoridad para salir del agua — cuando `en_agua()` deja de encontrar una `ZonaDeAgua` (la salida real, no un umbral aproximado), decide a qué estado pasa:
+  - **Expulsión en superficie:** si el jugador subía (`velocity.y < 0`) al salir, se le expulsa hacia arriba a −200 px/s hacia `JUMPING` — el «pop» de romper la superficie nadando.
+  - **Caída normal:** si no, pasa a `FALLING` sin más.
 - **Aterrizaje:** tocar el suelo pasa a `IDLE`.
+
+> **AUD-572 (2026-08-19).** Hasta esta fecha, la salida por arriba la decidía
+> `SwimmingState` con su propio criterio: una `_surface_y` fija al **entrar**
+> (`player.y − 16`), y expulsión en cuanto el jugador subía 24px por encima de
+> *esa* referencia — sin comprobar si de verdad había salido de la
+> `ZonaDeAgua`. Funcionaba en una piscina pequeña con superficie real
+> (`stage_mecanicas`), pero en un nivel "sumergido de principio a fin" sin
+> ningún punto real de salida (4-1b, `docs/niveles/13b_STAGE_4_1B.md`), nadar
+> hacia arriba un poco disparaba la expulsión en pleno abismo una y otra vez
+> — jugado, se reportó como *«sigue saltando, no se siente como un nivel de
+> nada»*. El criterio se movió a `ControlDeNado._salir`, que ya tenía la
+> detección real de salida (`en_agua()`) y sólo le faltaba decidir *cómo*
+> salir.
 
 ---
 
@@ -77,10 +90,13 @@ Un temporizador de burbujas genera partículas visuales de burbuja a intervalos 
 
 ## 5. Estado de implementación
 
-**Fichero:** `src/framework/entities/states/swim.py`
+**Fichero:** `src/framework/entities/states/swim.py` (el estado) y
+`src/framework/stage/level_mechanics.py` (`ControlDeNado`, quien decide
+cuándo entrar y salir — ver AUD-572 arriba)
 **Clase:** `SwimmingState(PlayerStateBase)` con `PlayerState.SWIMMING`
-**Estado:** ✅ Completo — física de natación, flotabilidad, temporizador de burbujas, expulsión en superficie
-**Falta:** sin detección dedicada de zona de agua; depende del sistema de colisión del escenario para disparar el cambio de estado
+**Estado:** ✅ Completo — física de natación, flotabilidad, temporizador de
+burbujas, expulsión en superficie por geometría real (AUD-572), detección de
+zona de agua dedicada (`en_agua()`, `ControlDeNado`)
 
 ---
 ## 🔗 Documentos relacionados

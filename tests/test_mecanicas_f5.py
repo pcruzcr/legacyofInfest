@@ -205,6 +205,64 @@ class TestNado:
         nado.aire = 25.0
         assert not nado.avisando
 
+    def test_nadar_hacia_arriba_dentro_del_agua_no_expulsa(self):
+        """AUD-572 — el criterio viejo (`SwimmingState._surface_y`, ya
+        retirado) expulsaba a `JumpingState` en cuanto el jugador subía
+        24px desde donde había entrado a nadar, sin importar si seguía
+        dentro de la `ZonaDeAgua` — reproducido jugando 4-1b: "sigue
+        saltando, no se siente como un nivel de nada". Con una zona de
+        agua grande de verdad (400px de alto), subir 30px sigue estando
+        muy lejos del borde real."""
+        from src.framework.entities.states import SwimmingState
+
+        jugador, mundo = self._jugador(), self._mundo_con_agua(pygame.Rect(0, 0, 400, 400))
+        nado = ControlDeNado()
+        for _ in range(30):  # ~0,5s a 60fps
+            jugador.rect.y -= 1  # sube 1px por fotograma, 30px en total
+            jugador.position.y = jugador.rect.y
+            nado.update(FRAME, jugador, mundo, None)
+        assert isinstance(jugador._state_instance, SwimmingState), (
+            "se expulsó del nado sin haber salido de la zona de agua de verdad"
+        )
+
+    def test_salir_nadando_hacia_arriba_expulsa_hacia_jumping(self):
+        """La otra mitad del mismo cambio: romper la superficie DE
+        VERDAD —salir de la única `ZonaDeAgua`— mientras se sube sigue
+        dando el mismo impulso hacia arriba que documentaba
+        `docs/45_SWIMMING_SPEC.md`, sólo que ahora lo decide la geometría
+        real, no un umbral fijo desde donde se entró a nadar."""
+        from src.framework.entities.states import JumpingState, SwimmingState
+        from src.framework.stage.level_mechanics import VELOCIDAD_EXPULSION_SUPERFICIE
+
+        jugador, mundo = self._jugador(), self._mundo_con_agua(pygame.Rect(0, 0, 400, 100))
+        nado = ControlDeNado()
+        nado.update(FRAME, jugador, mundo, None)
+        assert isinstance(jugador._state_instance, SwimmingState)
+
+        jugador.velocity.y = -50.0  # subiendo
+        jugador.rect.topleft = (0, 5000)  # fuera de la zona de agua
+        jugador.position.update(0, 5000)
+        nado.update(FRAME, jugador, mundo, None)
+        assert isinstance(jugador._state_instance, JumpingState)
+        assert jugador.velocity.y == VELOCIDAD_EXPULSION_SUPERFICIE
+
+    def test_salir_sin_subir_cae_en_vez_de_expulsar(self):
+        """Salir del agua caminando o hundiéndose no es "romper la
+        superficie" — sigue siendo una caída normal, el comportamiento
+        de siempre."""
+        from src.framework.entities.states import FallingState, SwimmingState
+
+        jugador, mundo = self._jugador(), self._mundo_con_agua(pygame.Rect(0, 0, 400, 100))
+        nado = ControlDeNado()
+        nado.update(FRAME, jugador, mundo, None)
+        assert isinstance(jugador._state_instance, SwimmingState)
+
+        jugador.velocity.y = 20.0  # hundiéndose, no subiendo
+        jugador.rect.topleft = (0, 5000)
+        jugador.position.update(0, 5000)
+        nado.update(FRAME, jugador, mundo, None)
+        assert isinstance(jugador._state_instance, FallingState)
+
 
 class TestElNadoEsOmnidireccionalDeVerdad:
     """AUD-528 — pedido explícito: "el botón de salto debe funcionar como
@@ -223,10 +281,12 @@ class TestElNadoEsOmnidireccionalDeVerdad:
 
         jugador = Player(pygame.Vector2(100, y))
         jugador._change_state_instance(SwimmingState())
-        # Muy hondo y sin techo alcanzable en esta prueba: el objetivo es
-        # el modelo de movimiento, no la transición de salida a la
-        # superficie (que ya prueba `TestNado`).
-        jugador._state_instance._surface_y = -999999.0
+        # AUD-572 — el criterio de "romper la superficie" salió de
+        # `SwimmingState` (vivía en `_surface_y`, un umbral fijo desde
+        # donde se entró a nadar) hacia `ControlDeNado._salir`, que decide
+        # por la salida real de la `ZonaDeAgua`. Esta prueba no pasa
+        # ningún mundo/`ControlDeNado`, así que esa transición nunca se
+        # dispara aquí — no hace falta neutralizarla a mano.
         return jugador
 
     def _im_con_salto_mantenido(self):
