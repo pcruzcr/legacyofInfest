@@ -76,7 +76,19 @@ BORDE = 161                   # remate bajo las repisas
 #: El foso de la zona F, en baldosas. Tres soluciones para el mismo
 #: obstáculo: saltarlo, cronometrar los bloques rítmicos, o cruzar la zona
 #: de goma que rebota — es lo que separa un nivel de un pasillo con examen.
-FOSO_X0, FOSO_X1 = 66, 72
+#:
+#: AUD-536 — el foso medía 6 baldosas (96 px) y la envolvente real del
+#: jugador pone el techo experto en 85,5 px (`JumpEnvelope.max_gap_expert`,
+#: AUD-504): "saltar el foso" —la primera de las tres rutas que el propio
+#: cartel anuncia— era físicamente imposible, y el calificador de referencia
+#: (`grade_stage stage0 --minimo 100`) perdía 3 pts por la plataforma del
+#: otro lado (huérfana para el grafo) y 3 por "ningún salto exigente".
+#: Con 5 baldosas (80 px) el salto entra en la banda exigente (34,2–85,5):
+#: el grafo conecta el otro lado, el nivel vuelve a puntuar 130/130 y la
+#: técnica de soltar la dirección al despegar (documentada en
+#: `level_metrics.JumpEnvelope`) tiene dónde enseñarse. Los bloques
+#: rítmicos y la goma siguen siendo las rutas cómodas.
+FOSO_X0, FOSO_X1 = 67, 72
 
 #: Obstáculos sólidos interiores `(columna, alto en baldosas)`.
 #:

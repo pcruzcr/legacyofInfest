@@ -128,7 +128,11 @@ está demostrando. Tileset `tileset_stage0.png`.
   | 928 | 336 | 160 px | E — la ruta alta bypass |
   | 1408 | 336 | 128 px | G |
 
-- **Foso:** x 1056 – 1152 (96 px), con `DeathPit` al fondo.
+- **Foso:** x 1072 – 1152 (80 px), con `DeathPit` al fondo. AUD-536: antes
+  medía 96 px y "saltar el foso" —la ruta que anuncia el cartel— era
+  físicamente imposible (techo experto 85,5 px, AUD-504); con 80 px el salto
+  es exigente pero posible, y el calificador de referencia vuelve a dar
+  130/130.
 
 ---
 
@@ -238,7 +242,7 @@ dificultad.
   zona a propósito, para que el impulso que exige ya esté aprendido cuando
   llega el combate).
 - `Brute` en x = 1040, 6 de vida, caja de 100 × 60.
-- `LockedDoor` en x = 1040, `key_id=llave_prologo`, con mensaje de bloqueo.
+- `LockedDoor` en x = 1056, `key_id=llave_prologo`, con mensaje de bloqueo.
 
 La llave está **antes** de la puerta: el estudiante ve que un objeto de
 inventario y un obstáculo de geometría resuelven cosas distintas.
@@ -254,21 +258,25 @@ AUD-490), `HazardZone`.
 
 - `MessageTrigger_Once` en x = 1024: *«Salta, cronometra los bloques, o
   prueba la goma.»*
-- Foso en x 1056 – 1152 con `DeathPit` al fondo.
-- Tres `RhythmBlock` en x 1072, 1088 y 1104, a y = 400:
+- Foso en x 1072 – 1152 con `DeathPit` al fondo. El salto de 80 px cae en la
+  banda exigente de la envolvente real (34–85 px): se cruza soltando la
+  dirección al despegar (la técnica que documenta `JumpEnvelope`), y es el
+  único salto exigente del prólogo — justo donde `design_pacing` del
+  calificador lo busca (AUD-536).
+- Tres `RhythmBlock` en x 1088, 1104 y 1120, a y = 400:
   `visible_seg=1.8`, `oculto_seg=1.0`, `desfase` 0, 0,6 y 1,2 — cascada, así
   que la ruta de arriba existe pero hay que cronometrarla.
-- **Zona de goma** en (1040, 576), justo al borde del foso: una
+- **Zona de goma** en (1056, 576), justo al borde del foso: una
   `FrictionZone` con `material="goma"` — aterrizar ahí devuelve el 60 % de
   la velocidad vertical de impacto (`Material.GOMA.restitucion=0.6`) en vez
   de frenar en seco, así que cruza el foso rebotando en dos tiempos. Es la
   **tercera** ruta, no una alternativa decorativa a las otras dos.
 - `HazardZone` en x = 1184, daño 0,25 por tic — el nivel de daño «leve».
 
-Tres formas de pasar: saltar el foso, cronometrar los bloques, o rebotar en la
-goma. Es el sitio del escenario donde más se nota la diferencia entre diseñar
-y poner obstáculos — y ahora demuestra dos mecánicas de movilidad en vez de
-una.
+Tres formas de pasar: saltar el foso (exigente, técnica de soltar la
+dirección — AUD-536), cronometrar los bloques, o rebotar en la goma. Es el
+sitio del escenario donde más se nota la diferencia entre diseñar y poner
+obstáculos — y ahora demuestra dos mecánicas de movilidad en vez de una.
 
 ---
 

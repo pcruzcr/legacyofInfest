@@ -101,13 +101,14 @@ class CinematicasDeEscenario:
         """
         import json
 
+        from src.framework.stage.stage_data import slug_de_stage_id
         from src.framework.ui.dialogue_system import DialogueTree
 
         self._arboles_de_dialogo = {}
         stage_id = str(getattr(self._stage_data, "stage_id", "") or "")
         if not stage_id:
             return
-        ruta = settings.PROJECT_ROOT / "data" / "dialogues" / f"{stage_id}.json"
+        ruta = settings.PROJECT_ROOT / "data" / "dialogues" / f"{slug_de_stage_id(stage_id)}.json"
         if not ruta.is_file():
             return
         try:

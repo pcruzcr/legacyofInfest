@@ -47,7 +47,7 @@ separadas.
 Funde a/desde un color sólido (negro por defecto) durante una duración. Parámetros: booleano `fade_in`, tinte `color`.
 
 ### 2.2 Barrido
-Barrido horizontal que revela la nueva escena. Dirección: `left_to_right` / `right_to_left`. Necesita una instantánea de la superficie anterior.
+Barrido horizontal que revela la nueva escena. Dirección: `left` / `right` (`start_wipe`, en `src/engine/scenes/transition_manager.py`). Necesita una instantánea de la superficie anterior.
 
 ### 2.3 Deslizamiento
 Desliza la escena anterior hacia fuera en una dirección (`left`, `right`, `up`, `down`) para revelar la nueva escena debajo.

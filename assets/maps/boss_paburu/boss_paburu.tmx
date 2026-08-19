@@ -41,7 +41,6 @@
     <property name="lock_y" type="bool" value="true"/>
    </properties>
   </object>
-  <object id="4" type="NextTrigger" name="NextTrigger_01" x="768" y="-64" width="16" height="16"/>
   <object id="5" type="Checkpoint" name="Checkpoint_01" x="64" y="560" width="16" height="32">
    <properties>
     <property name="checkpoint_id" type="int" value="1"/>

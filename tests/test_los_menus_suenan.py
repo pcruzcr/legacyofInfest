@@ -43,9 +43,12 @@ class TestLosTresGestos:
         assert audio.reproducidos[0] == "sfx_select"
 
     def test_hover_confirmar_y_cancelar_tienen_muestra(self) -> None:
+        # AUD-541 — `SFX_VOZ_PABURU` se sumó al mapa: la risa la dispara
+        # `LoadGameScene` al confirmar el personaje, fuera de cualquier
+        # escenario de juego, y el mapa global de menú es su único altavoz.
         assert set(SONIDOS_DE_MENU) == {
             Events.SFX_MENU_HOVER, Events.SFX_MENU_CONFIRM,
-            Events.SFX_MENU_CANCEL,
+            Events.SFX_MENU_CANCEL, Events.SFX_VOZ_PABURU,
         }
 
     def test_las_muestras_son_las_del_escenario(self) -> None:

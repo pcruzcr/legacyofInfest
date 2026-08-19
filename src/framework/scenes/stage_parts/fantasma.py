@@ -24,9 +24,11 @@ class FantasmaDeCarrera:
     # ── AUD-142: el fantasma de tu mejor carrera ──────────────────
     def _ruta_del_fantasma(self):
         from src.engine.core.user_settings import user_data_dir
+        from src.framework.stage.stage_data import slug_de_stage_id
 
         stage_id = getattr(self._stage_data, "stage_id", "") or "sin_id"
-        return user_data_dir() / "saves" / "fantasmas" / f"{stage_id}.json"
+        return (user_data_dir() / "saves" / "fantasmas"
+                / f"{slug_de_stage_id(stage_id)}.json")
 
     def _preparar_fantasma(self) -> None:
         """Empieza a grabar esta carrera y carga la anterior, si la hay."""

@@ -176,7 +176,10 @@ class TestLoQueLlegaDesdeElMapa:
 
 
 class TestLaBarra:
-    def _hud(self, actual: float, maximo: float):
+    def _barra(self, actual: float, maximo: float):
+        """El rect real de la barra — AUD-541: los píxeles fijos de la
+        maqueta vieja dejaron de tocar la barra cuando AUD-535 apiló las
+        barras bajo el retrato."""
         from src.engine.core.event_bus import EventBus
         from src.engine.ui.hud import HUD
 
@@ -185,23 +188,26 @@ class TestLaBarra:
         lienzo = pygame.Surface((800, 600))
         lienzo.fill((0, 0, 0))
         hud._draw_estamina(lienzo)
-        return lienzo
+        return lienzo, hud.estamina_bar_rect()
 
     def test_encendida_se_dibuja(self) -> None:
-        lienzo = self._hud(100, 100)
-        assert lienzo.get_at((225, 103))[:3] != (0, 0, 0)
+        lienzo, r = self._barra(100, 100)
+        assert lienzo.get_at((r.right - 2, r.centery))[:3] != (0, 0, 0)
 
     def test_avisa_en_ambar_cuando_queda_poco(self) -> None:
         """El jugador tiene que poder decidir **antes** de intentar el dash
         que no le va a salir."""
-        llena = self._hud(100, 100).get_at((215, 103))[:3]
-        poca = self._hud(20, 100).get_at((215, 103))[:3]
-        assert llena != poca
+        llena, r = self._barra(100, 100)
+        poca, _ = self._barra(20, 100)
+        assert llena.get_at((r.right - 2, r.centery))[:3] != \
+            poca.get_at((r.right - 2, r.centery))[:3]
 
     def test_vacia_ensena_el_carril_pero_no_el_relleno(self) -> None:
         """Vacía sigue viéndose el hueco de la barra, y eso es lo correcto:
         una barra que desaparece al gastarse no dice cuánto falta."""
-        vacia = self._hud(0, 100).get_at((250, 103))[:3]
-        llena = self._hud(100, 100).get_at((250, 103))[:3]
-        assert vacia != llena
-        assert vacia != (0, 0, 0), "la barra desaparece al vaciarse"
+        vacia, r = self._barra(0, 100)
+        llena, _ = self._barra(100, 100)
+        assert vacia.get_at((r.right - 2, r.centery))[:3] != \
+            llena.get_at((r.right - 2, r.centery))[:3]
+        assert vacia.get_at((r.right - 2, r.centery))[:3] != (0, 0, 0), \
+            "la barra desaparece al vaciarse"

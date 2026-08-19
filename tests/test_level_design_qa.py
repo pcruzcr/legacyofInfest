@@ -142,13 +142,19 @@ class TestStage0Geometry:
         mide la geometría; lo que importa es la topología.
 
         AUD-504: con la envolvente de salto corregida, el foso de la zona F
-        (6 baldosas) deja de ser "alcanzable" por el grafo de saltos —nunca lo
-        fue jugando normal; la fórmula vieja lo tapaba con el alcance de un
-        salto aéreo que no dispara (GAP-024)—. Ese foso se cruza con
+        (6 baldosas) dejó de ser "alcanzable" por el grafo de saltos —nunca
+        lo fue jugando normal; la fórmula vieja lo tapaba con el alcance de
+        un salto aéreo que no dispara (GAP-024)— y ese foso se cruzaba con
         `BloqueRitmico`/`ZonaDeFriccion`, que el grafo no modela, igual que
-        `grade_stage.py` ya exime de `design_completable` a cualquier mapa con
-        mecánicas de movilidad (AUD-192). Aplica la misma exención aquí en vez
-        de fingir que el grafo puede juzgar esa ruta.
+        `grade_stage.py` ya exime de `design_completable` a cualquier mapa
+        con mecánicas de movilidad (AUD-192).
+
+        AUD-536: el foso pasó a 5 baldosas (80 px) —dentro de la banda
+        exigente de la envolvente (34,2–85,5 px)— para que "saltar el foso",
+        la ruta que anuncia el cartel, fuera de verdad posible: el grafo
+        conecta el otro lado y `exit_reachable` vuelve a ser honestamente
+        `True`. La exención de movilidad queda como red de seguridad, no
+        como el argumento.
         """
         from scripts.grade_stage import _tiene_movilidad
         from src.framework.stage.level_metrics import analyse_stage
@@ -170,8 +176,11 @@ class TestStage0Geometry:
         Se siguen midiendo porque le sirven al diseñador para ver dónde el nivel
         exige precisión, pero no cuentan como problema bloqueante.
 
-        AUD-504: mismo caso que `test_exit_is_reachable_from_spawn` — el foso
-        de la zona F sólo se cruza con mecánicas que el grafo no modela.
+        AUD-504: mismo caso que `test_exit_is_reachable_from_spawn` — el
+        foso de la zona F sólo se cruza con mecánicas que el grafo no modela.
+        AUD-536: el foso mide ahora 80 px (exigente, no imposible), pero el
+        grafo sigue sin modelar bloques rítmicos ni goma, así que la
+        exención se mantiene como red de seguridad.
         """
         from scripts.grade_stage import _tiene_movilidad
         from src.framework.stage.level_metrics import analyse_stage
@@ -550,10 +559,11 @@ def test_un_suelo_muy_largo_no_se_confunde_con_un_muro() -> None:
 def test_stage0_no_tiene_plataformas_huerfanas() -> None:
     """El caso real que motivó el cambio.
 
-    AUD-504: la única plataforma huérfana que queda es la del otro lado del
-    foso de la zona F, gated tras `BloqueRitmico`/`ZonaDeFriccion` — ver
-    `test_exit_is_reachable_from_spawn`. `_tiene_movilidad` confirma que es
-    ese caso conocido y no una regresión nueva.
+    AUD-504: la única plataforma huérfana que quedaba era la del otro lado
+    del foso de la zona F, gated tras `BloqueRitmico`/`ZonaDeFriccion`.
+    AUD-536: con el foso a 80 px (exigente, no imposible) el grafo conecta
+    el otro lado y stage0 no tiene ninguna huérfana; el umbral `<= 1` queda
+    para no volver a acusar al mapa de algo que sea culpa del grafo.
     """
     import pygame as pg
 
