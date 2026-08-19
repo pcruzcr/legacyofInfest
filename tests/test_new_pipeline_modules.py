@@ -654,12 +654,18 @@ class TestDrawContext:
 
         from src.framework.stage.drawing_system import DrawContext
         surf = pygame.Surface((320, 224))
+        # AUD-555 — `pause_selected`/`pause_options` (una lista vertical)
+        # se sustituyeron por los campos del panel con pestañas
+        # (`pausa_tabs`/`pausa_tab_index`/`pausa_pestana_activa`/
+        # `pausa_menu_opciones`/`pausa_menu_seleccion`, ver
+        # `PausaDeEscenario`).
         ctx = DrawContext(
-            surface=surf, paused=True, pause_selected=1,
-            pause_options=["Resume", "Quit"], debug=True,
+            surface=surf, paused=True, pausa_tab_index=1,
+            pausa_tabs=("Mapa", "Equipo", "Habilidades", "Menú"),
+            debug=True,
         )
         assert ctx.paused
-        assert ctx.pause_selected == 1
+        assert ctx.pausa_tab_index == 1
         assert ctx.debug
 
 
