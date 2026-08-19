@@ -105,6 +105,7 @@ class SonidoDeEscenario:
             Events.SFX_BOSSES_VENADO_CHARGE: "sfx_bosses_venado_charge",
             Events.SFX_BOSSES_VENADO_STOMP: "sfx_bosses_venado_stomp",
             Events.SFX_BOSSES_VENADO_VINE: "sfx_bosses_venado_vine",
+            Events.SFX_TIMER_ALERT_PULSE: "sfx_ui_timer_alert_pulse",
         }
         for evt, sname in sfx_map.items():
             handler = self._make_sfx_handler(sname, critico=evt in EVENTOS_CRITICOS)
