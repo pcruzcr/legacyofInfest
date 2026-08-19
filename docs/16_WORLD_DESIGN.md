@@ -32,7 +32,7 @@ Legacy of InFest transcurre en cuatro zonas geográficas distintas, cada una arr
 
 Cada zona se subdivide en **cuatro escenarios**. Los escenarios 1–3 son de recorrido y combate. El escenario 4 siempre es una confrontación de jefe o el desafío culminante de esa zona. La excepción es la Zona Final, que sólo tiene dos escenarios — ambos encuentros de jefe.
 
-La narrativa del mundo gira en torno a dos protagonistas — **John** y **Jin** — que llevan reliquias ancestrales (la Pepita de Oro y la Perla) que despiertan a los espíritus de la tierra. Cada espíritu despierto actúa como guardián o antagonista, extraído de la mitología indígena costarricense e imaginería natural.
+La narrativa del mundo gira en torno a dos protagonistas — **John** y **Jill** — que llevan reliquias ancestrales (la Pepita de Oro y la Perla) que despiertan a los espíritus de la tierra. Cada espíritu despierto actúa como guardián o antagonista, extraído de la mitología indígena costarricense e imaginería natural.
 
 ---
 
@@ -461,7 +461,7 @@ El campus de Heredia se ha vuelto el coto de caza de El Gavilán Camionero Masca
 | Atmósfera | Quieta, ancestral, sobrenatural. El aire se siente denso. |
 | Paleta visual | Cielo púrpura-negro profundo, piedra pálida, luz verde espectral, resaltes dorados |
 | Ánimo de BGM | Percusión ritual, zumbido profundo, silencio puntuado por tambores |
-| Función narrativa | El punto de convergencia. Todos los espíritus que John y Jin han derrotado han llevado a este lugar. Paburu espera. |
+| Función narrativa | El punto de convergencia. Todos los espíritus que John y Jill han derrotado han llevado a este lugar. Paburu espera. |
 
 Esta zona sólo tiene dos escenarios. No hay recorrido — el cementerio mismo ES la confrontación. El Escenario 4-1 es la aproximación por los terrenos del cementerio. El Escenario 4-2 es el encuentro con el jefe final.
 
@@ -543,7 +543,7 @@ El escenario o jefe elegido determina qué unidades académicas demuestra el est
 
 | Acto | Evento |
 |---|---|
-| Prólogo | John y Jin llegan al campus universitario. Llevan la Pepita de Oro (John) y la Perla (Jin). |
+| Prólogo | John y Jill llegan al campus universitario. Llevan la Pepita de Oro (John) y la Perla (Jill). |
 | Zona 1 | El bosque despierta a su alrededor. El Venado Sagrado — un ciervo espíritu, huesos ancestrales envueltos en la jungla — se alza para reclamar las reliquias. Derrotado, su espíritu se une a ellos como guía. |
 | Zona 2 | El calor del datacenter los atrae. El Rey Terciopelo — miles de serpientes animando un cuerpo decaído — comanda el espacio. Derrotado, su conocimiento del veneno se une a ellos. |
 | Zona 3 | Un gavilán enmascarado los caza por la sede de Heredia de la universidad. El Gavilán Camionero Mascarero — potenciado por una máscara Tilawa — guarda el camino hacia Paburu. Derrotado, su vista aérea se une a ellos. |

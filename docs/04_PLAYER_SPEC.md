@@ -21,7 +21,7 @@ date_processed: "2026-08-11"
 
 El personaje jugable es una figura encapuchada de identidad indeterminada. La
 capucha no es una elección estética: es un recurso narrativo. El personaje no
-revela deliberadamente si es Jhon o Jin, los dos protagonistas del universo de
+revela deliberadamente si es Jhon o Jill, los dos protagonistas del universo de
 Legacy of InFest. Esa ambigüedad sirve al contexto tutorial del escenario 0: el
 personaje es el avatar del jugador y del estudiante, no un personaje de la
 historia en sentido pleno.

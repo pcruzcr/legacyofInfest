@@ -48,7 +48,7 @@ con cifras medidas se añade según cada pieza vaya aterrizando.
 
 ## 1. Qué es
 
-`stage4_1` es la travesía que conduce a Jhon y Jin hasta el despertar de
+`stage4_1` es la travesía que conduce a Jhon y Jill hasta el despertar de
 Paburu. No es un nivel de combate: es exploración, atmósfera, memoria y
 percepción. Una cutscene de introducción los guía hacia el cementerio con
 voces en lengua indígena que hablan de Paburu. Dentro, los protagonistas son

@@ -26,7 +26,7 @@ date_processed: "2026-08-13"
 
 ## 1. Visión general
 
-Este documento define el marco narrativo completo de Legacy of InFest: la historia de John y Jin, la naturaleza y origen de los cuatro espíritus, el arraigo cultural de la mitología **Tilawa** — la cultura ficticia oficial nombrada en el programa del curso — y el significado de las reliquias.
+Este documento define el marco narrativo completo de Legacy of InFest: la historia de John y Jill, la naturaleza y origen de los cuatro espíritus, el arraigo cultural de la mitología **Tilawa** — la cultura ficticia oficial nombrada en el programa del curso — y el significado de las reliquias.
 
 La narrativa es intencionalmente discreta durante la jugabilidad — se cuenta a través del entorno, el diseño de sprites, la identidad de los jefes, y las tres pantallas de historia que preceden a Stage 0. No se espera que los estudiantes y jugadores se involucren con el trasfondo profundo durante un escenario. La historia enriquece la experiencia de quienes la buscan.
 
@@ -71,7 +71,7 @@ Este arraigo ecológico es intencional: el mundo del juego es reconociblemente c
 
 ## 3. Los protagonistas
 
-El programa oficial define a John y Jin como estudiantes de intercambio que llegan a Costa Rica a estudiar en la Universidad Invenio, cada uno cargando una reliquia ligada a la industria de su familia.
+El programa oficial define a John y Jill como estudiantes de intercambio que llegan a Costa Rica a estudiar en la Universidad Invenio, cada uno cargando una reliquia ligada a la industria de su familia.
 
 ### 3.1 John
 
@@ -81,17 +81,17 @@ John es directo, impaciente, físico. Actúa antes de pensar. En combate, favore
 
 **Nota de diseño:** la identidad de John queda intencionalmente parcialmente oculta en Stage 0 (el protagonista encapuchado). La capucha sólo se levanta en las pantallas de historia. Su diseño de sprite completo se usa desde la Zona 1 en adelante.
 
-### 3.2 Jin
+### 3.2 Jill
 
-Jin es hija de una familia relacionada con la **industria pesquera**. Ella también llegó a Costa Rica como estudiante de intercambio en la Universidad Invenio. Lleva consigo **La Perla** — una extraña perla nacida en un raro coral marino, conectada al negocio pesquero y marítimo de su familia. La reconoce como inusual y la ha estado estudiando desde que llegó.
+Jill es hija de una familia relacionada con la **industria pesquera**. Ella también llegó a Costa Rica como estudiante de intercambio en la Universidad Invenio. Lleva consigo **La Perla** — una extraña perla nacida en un raro coral marino, conectada al negocio pesquero y marítimo de su familia. La reconoce como inusual y la ha estado estudiando desde que llegó.
 
-Jin es metódica, observadora, cautelosa. Piensa antes de actuar. En términos de jugabilidad, su personaje favorece los enfoques a distancia — pero como el framework usa una única entidad de jugador unificada, sus diferencias se expresan sólo en las pantallas de historia y la narrativa ambiental.
+Jill es metódica, observadora, cautelosa. Piensa antes de actuar. En términos de jugabilidad, su personaje favorece los enfoques a distancia — pero como el framework usa una única entidad de jugador unificada, sus diferencias se expresan sólo en las pantallas de historia y la narrativa ambiental.
 
-**Nota de diseño:** la capucha en Stage 0 oculta cuál protagonista es el jugador — John o Jin. Esto es narrativamente intencional: Stage 0 es el "antes" — antes de que las identidades importen, antes de que los espíritus los noten.
+**Nota de diseño:** la capucha en Stage 0 oculta cuál protagonista es el jugador — John o Jill. Esto es narrativamente intencional: Stage 0 es el "antes" — antes de que las identidades importen, antes de que los espíritus los noten.
 
-### 3.3 La relación entre John y Jin
+### 3.3 La relación entre John y Jill
 
-John y Jin no se conocen al comienzo del juego. Llegan al campus el mismo día como estudiantes de intercambio internacional, ambos atraídos por la misma sensación de que algo ha cambiado. Su primer encuentro ocurre entre el Escenario 1-1 y el 1-2 (mostrado en una breve secuencia de sprites de escena cinemática — sin cajas de diálogo, sólo sprites interactuando).
+John y Jill no se conocen al comienzo del juego. Llegan al campus el mismo día como estudiantes de intercambio internacional, ambos atraídos por la misma sensación de que algo ha cambiado. Su primer encuentro ocurre entre el Escenario 1-1 y el 1-2 (mostrado en una breve secuencia de sprites de escena cinemática — sin cajas de diálogo, sólo sprites interactuando).
 
 Viajan juntos desde la Zona 1 en adelante. El juego no define explícitamente su relación como romántica, familiar, o de otro tipo. Esto es intencional — el foco está en el viaje y los espíritus, no en la relación personal de los protagonistas.
 
@@ -99,7 +99,7 @@ Viajan juntos desde la Zona 1 en adelante. El juego no define explícitamente su
 
 ## 4. Las reliquias
 
-El programa oficial nombra el origen preciso de cada reliquia, literalmente: *"Una pepita de oro proveniente de Crucitas. Una extraña perla nacida en un raro coral marino."* Ambas reliquias están conectadas a las industrias familiares de los protagonistas (minería para John, pesca para Jin), reforzando la tensión humano/naturaleza que dispara la historia.
+El programa oficial nombra el origen preciso de cada reliquia, literalmente: *"Una pepita de oro proveniente de Crucitas. Una extraña perla nacida en un raro coral marino."* Ambas reliquias están conectadas a las industrias familiares de los protagonistas (minería para John, pesca para Jill), reforzando la tensión humano/naturaleza que dispara la historia.
 
 ### 4.1 La Pepita
 
@@ -114,20 +114,20 @@ Una pepita pequeña y redondeada de oro puro de **Crucitas** — cálida al tact
 
 ### 4.2 La Perla
 
-Una perla negra profunda, nacida en un raro coral marino — suave, fría, que absorbe la luz en vez de reflejarla. Su origen en un coral raro la liga al trasfondo de la industria pesquera de la familia de Jin. En la tradición costera Tilawa, las perlas negras se asocian con la profundidad, la paciencia, y la memoria del océano. La Perla amplifica la percepción y la defensa — quien la lleva es atraído hacia la observación.
+Una perla negra profunda, nacida en un raro coral marino — suave, fría, que absorbe la luz en vez de reflejarla. Su origen en un coral raro la liga al trasfondo de la industria pesquera de la familia de Jill. En la tradición costera Tilawa, las perlas negras se asocian con la profundidad, la paciencia, y la memoria del océano. La Perla amplifica la percepción y la defensa — quien la lleva es atraído hacia la observación.
 
 **Rol en el juego:**
-- Reliquia que lleva Jin, nacida en un raro coral marino
+- Reliquia que lleva Jill, nacida en un raro coral marino
 - La Forma 3B de Paburu se manifiesta a través de La Perla: la esfera negra, defensiva, metódica
 - La Perla es la segunda llave
 
-**Diseño visual:** perla redonda, sprite de 7×7 px, brillo obsidiana profundo con un destello blanco sutil. Se usa en el HUD como indicador de jugador de Jin.
+**Diseño visual:** perla redonda, sprite de 7×7 px, brillo obsidiana profundo con un destello blanco sutil. Se usa en el HUD como indicador de jugador de Jill.
 
 ### 4.3 Las reliquias y el propósito de Paburu
 
 Paburu no quiere que las reliquias los destruyan. Quiere **poner a prueba a los portadores**. En la tradición espiritual Tilawa, los objetos de poder sólo son válidos en manos de quienes son dignos de sostenerlos. Los cuatro espíritus — venado, serpiente, gavilán, y el propio Paburu — son guardianes de una prueba que ha estado esperando a que lleguen los portadores correctos.
 
-Los espíritus no despertaron porque John y Jin sean amenazas. Despertaron porque la combinación de La Pepita (de Crucitas) y La Perla (del raro coral marino) rompió el equilibrio natural — según el programa: *"La combinación de ambos objetos rompe el equilibrio natural y despierta a Paburu."*
+Los espíritus no despertaron porque John y Jill sean amenazas. Despertaron porque la combinación de La Pepita (de Crucitas) y La Perla (del raro coral marino) rompió el equilibrio natural — según el programa: *"La combinación de ambos objetos rompe el equilibrio natural y despierta a Paburu."*
 
 ---
 
@@ -139,15 +139,15 @@ Los espíritus no despertaron porque John y Jin sean amenazas. Despertaron porqu
 
 **Origen:** el venado vivió en el bosque que rodea la universidad durante años — décadas. Era viejo cuando murió, sus huesos absorbidos lentamente por el sistema de raíces de un árbol ancestral. Cuando La Pepita y La Perla entraron al campus, las raíces del árbol se agitaron y los huesos se ensamblaron.
 
-**Naturaleza:** El Venado Sagrado no está enojado. Es protector. El bosque no odia a John y Jin — no confía en que estén listos. El venado pone a prueba sus reflejos, su paciencia, su capacidad de soportar el contacto con lo salvaje.
+**Naturaleza:** El Venado Sagrado no está enojado. Es protector. El bosque no odia a John y Jill — no confía en que estén listos. El venado pone a prueba sus reflejos, su paciencia, su capacidad de soportar el contacto con lo salvaje.
 
-**Tras la derrota:** el espíritu del venado no desaparece — sigue a John y Jin. Desde la Zona 2 en adelante, la silueta del venado es ocasionalmente visible en las capas de fondo (como sprite BG_Mid). Está observando.
+**Tras la derrota:** el espíritu del venado no desaparece — sigue a John y Jill. Desde la Zona 2 en adelante, la silueta del venado es ocasionalmente visible en las capas de fondo (como sprite BG_Mid). Está observando.
 
 ### 5.2 El Rey Terciopelo — el espíritu de la inteligencia colectiva
 
 **Origen:** las serpientes terciopelo siempre han vivido cerca del datacenter — el calor las atrajo incluso antes de que se construyera. Cuando se construyó el datacenter, las serpientes se adaptaron. Cuando llegaron las reliquias, su susurro colectivo encontró una voz — El Rey.
 
-**Naturaleza:** El Rey Terciopelo no tiene una conciencia singular como la tiene una persona. Es una democracia de veneno — miles de voluntades individuales alineadas hacia un solo propósito. Es alienígena, distribuido, frío. No pone a prueba el valor. Pone a prueba la **adaptabilidad** — ¿pueden John y Jin lidiar con algo que no piensa como ellos?
+**Naturaleza:** El Rey Terciopelo no tiene una conciencia singular como la tiene una persona. Es una democracia de veneno — miles de voluntades individuales alineadas hacia un solo propósito. Es alienígena, distribuido, frío. No pone a prueba el valor. Pone a prueba la **adaptabilidad** — ¿pueden John y Jill lidiar con algo que no piensa como ellos?
 
 **Tras la derrota:** las serpientes se dispersan de vuelta a las paredes y pisos del datacenter. El colectivo se rompe. El Rey, como entidad, se ha ido — pero las serpientes recuerdan. Su conocimiento del veneno se absorbe en La Pepita y La Perla (mecánica de juego: después de la Zona 2, las reliquias pulsan ocasionalmente con luz verde).
 
@@ -155,17 +155,17 @@ Los espíritus no despertaron porque John y Jin sean amenazas. Despertaron porqu
 
 **Origen:** la máscara ceremonial Tilawa se colocó en el campus universitario décadas atrás — un artefacto cultural, exhibido con respeto. Cuando La Pepita y La Perla cruzaron el umbral del edificio, la máscara reconoció qué eran. La criatura más cercana con presencia suficiente era un gavilán chapulinero que había estado anidando en el techo. La máscara lo encontró.
 
-**Naturaleza:** El Gavilán es el único espíritu que se comunica — no con palabras, sino con patrones. Sus ataques son legibles. Sus picadas siguen arcos que se pueden anticipar. El gavilán pone a prueba la capacidad de John y Jin de **reconocer patrones** y responder inteligentemente. (Esto no es coincidencia — refleja directamente el contenido académico de la Unidad IX de Stage 3.)
+**Naturaleza:** El Gavilán es el único espíritu que se comunica — no con palabras, sino con patrones. Sus ataques son legibles. Sus picadas siguen arcos que se pueden anticipar. El gavilán pone a prueba la capacidad de John y Jill de **reconocer patrones** y responder inteligentemente. (Esto no es coincidencia — refleja directamente el contenido académico de la Unidad IX de Stage 3.)
 
-**Tras la derrota:** la máscara se separa del gavilán, que vuelve a su tamaño natural y vuela libre. La máscara no desaparece — flota hacia arriba, hacia el cielo, buscando a Paburu. El gavilán se posa brevemente en una viga y mira a John y Jin antes de partir. Éste es uno de los pocos momentos de calidez del juego.
+**Tras la derrota:** la máscara se separa del gavilán, que vuelve a su tamaño natural y vuela libre. La máscara no desaparece — flota hacia arriba, hacia el cielo, buscando a Paburu. El gavilán se posa brevemente en una viga y mira a John y Jill antes de partir. Éste es uno de los pocos momentos de calidez del juego.
 
 ### 5.4 El Gran Chamán Paburu — el espíritu de la prueba
 
 **Origen:** Paburu fue un gran chamán Tilawa — ancestral, poderoso, exactamente como lo define el programa del curso. Murió realizando un ritual para sellar las reliquias hasta que aparecieran portadores dignos. El sello fue el cementerio sagrado. El sello fue él mismo. Ha estado esperando, sepultado en piedra, a que llegaran los portadores.
 
-**Naturaleza:** Paburu no es el villano. Es la meta. Sus cuatro formas no son desesperación — son estructura. Le muestra a John y Jin la piedra que guardaba las reliquias (Forma 1), el poder de la tradición Tilawa (Forma 2), la naturaleza de las reliquias mismas (Forma 3 — aleatoria, porque las reliquias mismas son inciertas), y finalmente a sí mismo — su verdadera forma espiritual — como el reconocimiento final.
+**Naturaleza:** Paburu no es el villano. Es la meta. Sus cuatro formas no son desesperación — son estructura. Le muestra a John y Jill la piedra que guardaba las reliquias (Forma 1), el poder de la tradición Tilawa (Forma 2), la naturaleza de las reliquias mismas (Forma 3 — aleatoria, porque las reliquias mismas son inciertas), y finalmente a sí mismo — su verdadera forma espiritual — como el reconocimiento final.
 
-**Tras la derrota:** Paburu asciende. No es destruido. Es liberado. Mira a John y Jin con reconocimiento — no exactamente orgullo, pero algo cercano. Las reliquias permanecen con John y Jin. Los espíritus del venado, el rey, y el gavilán se reúnen brevemente alrededor de la forma ascendente de Paburu — no en derrota, sino en ceremonia.
+**Tras la derrota:** Paburu asciende. No es destruido. Es liberado. Mira a John y Jill con reconocimiento — no exactamente orgullo, pero algo cercano. Las reliquias permanecen con John y Jill. Los espíritus del venado, el rey, y el gavilán se reúnen brevemente alrededor de la forma ascendente de Paburu — no en derrota, sino en ceremonia.
 
 El mundo queda en silencio. La prueba está completa. Lo que viene después es la historia de los estudiantes.
 
@@ -179,7 +179,7 @@ Tres pantallas de historia preceden a Stage 0. Son ilustraciones atmosféricas c
 
 **Fondo:** una vista pintada del campus universitario al atardecer — montañas de jungla al fondo, edificios del campus en silueta.
 
-**Sprites:** John (desde el borde izquierdo) y Jin (desde el borde derecho) caminando hacia la entrada del campus. Todavía no se ven.
+**Sprites:** John (desde el borde izquierdo) y Jill (desde el borde derecho) caminando hacia la entrada del campus. Todavía no se ven.
 
 **Texto de leyenda:**
 ```
@@ -193,7 +193,7 @@ ya los esperaba.
 
 **Fondo:** primer plano de una piedra de río (La Pepita brillando en su interior) y una escena costera (La Perla en la arena, en la línea de marea).
 
-**Sprites:** la mano de John recogiendo la pepita (panel izquierdo). La mano de Jin recogiendo la perla (panel derecho).
+**Sprites:** la mano de John recogiendo la pepita (panel izquierdo). La mano de Jill recogiendo la perla (panel derecho).
 
 **Texto de leyenda:**
 ```
@@ -240,7 +240,7 @@ Los estudiantes que construyen escenarios de recorrido deben mantener la siguien
 | Término | Significado |
 |---|---|
 | **La Pepita** | La pepita de oro, de Crucitas — reliquia de John, ligada al negocio minero de su padre |
-| **La Perla** | La perla, nacida en un raro coral marino — reliquia de Jin, ligada a la industria pesquera de su familia |
+| **La Perla** | La perla, nacida en un raro coral marino — reliquia de Jill, ligada a la industria pesquera de su familia |
 | **Crucitas** | Región histórica de minería de oro en el norte de Costa Rica; fuente oficial de La Pepita según el programa |
 | **El Venado Sagrado** | El venado sagrado — jefe de la Zona 1, espíritu del bosque (oficial según el programa) |
 | **El Rey Terciopelo** | El rey terciopelo — jefe de la Zona 2, espíritu serpiente colectivo (oficial según el programa) |

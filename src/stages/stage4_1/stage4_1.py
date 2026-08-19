@@ -5,7 +5,7 @@ Academic Unit: V (color y gradación) + VII (clima y partículas)
 
 NIVEL 4-1 — EL CEMENTERIO SAGRADO
 
-La idea, en una frase: **Jhon y Jin atraviesan seis espacios distintos**, y el
+La idea, en una frase: **Jhon y Jill atraviesan seis espacios distintos**, y el
 cementerio cambia de piel —terreno, color, clima, sonido— en cada uno.
 Reconstruido desde cero (AUD-467…470: ver `docs/niveles/13_STAGE_4_1.md` §0)
 después de que el primer intento (AUD-462…466) heredara el pozo vertical del

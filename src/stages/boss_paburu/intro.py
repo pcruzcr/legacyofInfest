@@ -7,7 +7,7 @@ Description: Secuencia de entrada de El Gran Shaman Paburu — Stage 4-2.
 POR QUÉ EXISTE
 El combate arrancaba en seco: se cargaba la escena y la cabeza ya estaba
 ahí, encendida, atacando. El GDD §4 describe otra cosa — Paburu aparece
-DORMIDO, con los ojos cerrados, y despierta cuando John y Jin entran al
+DORMIDO, con los ojos cerrados, y despierta cuando John y Jill entran al
 cementerio. Ese despertar es su presentación y no estaba en ningún lado.
 
 CÓMO ESTÁ HECHO
