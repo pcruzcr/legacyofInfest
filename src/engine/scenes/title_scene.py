@@ -266,9 +266,13 @@ class TitleScene(BaseScene):
             self.context.scene_manager.transition.start_fade_out(0.4)
             self.context.scene_manager.push(SkillTreeScene(self.context))
         elif opt == "SHOP":
+            # AUD-550 — `.push()`, no `.replace()`: `ShopScene._volver()`
+            # ahora sale con `pop()` (mismo par que
+            # `InventoryScene`/`SkillTreeScene`, AUD-533), así que quien
+            # la abre tiene que quedar debajo en la pila, no sustituido.
             from src.engine.scenes.shop_scene import ShopScene
             self.context.scene_manager.transition.start_fade_out(0.4)
-            self.context.scene_manager.replace(ShopScene(self.context))
+            self.context.scene_manager.push(ShopScene(self.context))
         elif opt == "BESTIARY":
             from src.engine.scenes.bestiary_scene import BestiaryScene
             self.context.scene_manager.transition.start_fade_out(0.4)

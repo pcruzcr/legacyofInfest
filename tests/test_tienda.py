@@ -76,8 +76,12 @@ def _escena():
             start_fade_out=lambda *_a, **_k: None,
         ),
         reemplazada_por=None,
+        salio_por_pop=False,
     )
     gestor.replace = lambda escena: setattr(gestor, "reemplazada_por", escena)
+    # AUD-550 — `ShopScene._volver()` sale con `pop()`, no `replace()`
+    # (mismo par que `InventoryScene`/`SkillTreeScene`, AUD-533).
+    gestor.pop = lambda: setattr(gestor, "salio_por_pop", True)
     contexto = types.SimpleNamespace(
         input_manager=entrada,
         scene_manager=gestor,
@@ -242,12 +246,18 @@ class TestLoQueSeEnsena:
         escena.draw(pygame.Surface((800, 600)))
 
     def test_cancelar_sale(self, _inventario_aislado) -> None:
+        """AUD-550 — `pop()`, no `replace()`: quien abrió la tienda
+        (el título, o una partida en pausa) sigue debajo en la pila."""
         escena, entrada, gestor = _escena()
 
         entrada.pulsar(Action.CANCEL)
         escena.update(0.016)
 
-        assert gestor.reemplazada_por is not None
+        assert gestor.salio_por_pop is True
+        assert gestor.reemplazada_por is None, (
+            "cancelar sigue sustituyendo la escena en vez de volver a "
+            "quien la abrió"
+        )
 
 
 class TestEstaEnchufada:

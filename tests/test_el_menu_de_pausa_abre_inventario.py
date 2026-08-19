@@ -215,6 +215,53 @@ class TestElMapaSeAbreEnPausaDeSoloLectura:
         assert mapa._permitir_viajar is True
 
 
+class TestLaTiendaSeAbreEnPausa:
+    """AUD-550 — mismo defecto que Inventario/Árbol antes de AUD-533:
+    `ShopScene` estaba completa y probada, y sólo se abría desde el
+    título. Las monedas se ganan jugando; sin esto sólo se podían gastar
+    volviendo al título a mitad de una partida en curso."""
+
+    def test_seleccionar_tienda_empuja_la_escena_sin_perder_la_partida(
+        self, _video,
+    ) -> None:
+        from src.engine.scenes.shop_scene import ShopScene
+
+        ctx, sc = _partida()
+        sc._paused = True
+        sc._pause_selected = sc._pause_options.index("Tienda")
+
+        sc._abrir_tienda()
+
+        assert isinstance(ctx.scene_manager.current, ShopScene), (
+            "elegir «Tienda» en pausa no abre ShopScene"
+        )
+        assert ctx.scene_manager.stack_size == 2
+
+    def test_cancelar_la_tienda_vuelve_a_la_partida_pausada_no_al_titulo(
+        self, _video,
+    ) -> None:
+        from src.engine.scenes.title_scene import TitleScene
+
+        ctx, sc = _partida()
+        sc._paused = True
+        sc._abrir_tienda()
+
+        tienda = ctx.scene_manager.current
+        im_falso = type("IM", (), {
+            "is_action_just_pressed": lambda self, a: a == Action.CANCEL,
+        })()
+        ctx.input_manager = im_falso
+        tienda.update(0.016)
+
+        assert ctx.scene_manager.current is sc, (
+            f"cancelar la tienda lleva a "
+            f"{type(ctx.scene_manager.current).__name__}, no de vuelta "
+            f"a la partida pausada"
+        )
+        assert not isinstance(ctx.scene_manager.current, TitleScene)
+        assert sc._paused is True
+
+
 class TestElMenuDePausaEstaEnEspanol:
     def test_ninguna_opcion_de_pausa_esta_en_ingles(self, _video) -> None:
         """AUD-533 — de paso: el menú tenía "Resume"/"Save & Quit"/

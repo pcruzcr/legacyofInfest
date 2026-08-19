@@ -13,8 +13,16 @@ los enemigos terminaban en una cifra del HUD que no compraba nada.
 
 Es una entrada de menú y no un mercader en el mapa: un interactuable nuevo
 obligaría a tocar el cargador de TMX, la rúbrica del calificador y las 26
-entregas existentes. La pantalla, en cambio, se abre desde el título como el
-bestiario o los récords y no cambia nada de lo que ya funciona.
+entregas existentes.
+
+AUD-550 — deja de ser sólo del título. Las monedas se ganan **jugando**
+(AUD-218), así que sólo se podían gastar volviendo al título a mitad de
+una partida en curso — el mismo defecto de alcance que ya tuvieron
+`InventoryScene`/`SkillTreeScene` antes de AUD-533. La tienda se suma al
+menú de pausa (`StageScene._abrir_tienda`, `push()`) y `_volver()` sale
+con `pop()` en vez de `replace(TitleScene(...))`, para volver a quien la
+abrió — el título o la partida pausada — en vez de mandar siempre al
+título.
 
 La lista **sale del catálogo** (`_ITEM_DEFS`), no de una copia escrita a mano:
 un artículo nuevo con `price > 0` aparece aquí solo. Escribirla a mano es como
@@ -124,8 +132,14 @@ class ShopScene(BaseScene):
             self._avisar(_("No tienes ninguno"))
 
     def _volver(self) -> None:
-        from src.engine.scenes.title_scene import TitleScene
-        self.context.scene_manager.replace(TitleScene(self.context))
+        # AUD-550 — mismo defecto simétrico que `InventoryScene` antes de
+        # AUD-533: salía siempre a `TitleScene`, sin importar quién la
+        # hubiera abierto. Las monedas se ganan jugando y sólo se
+        # gastaban volviendo al título — la tienda se suma al menú de
+        # pausa (`StageScene._abrir_tienda`) y necesita `pop()` para
+        # devolver a la partida pausada, no `replace()` para saltarse la
+        # pila entera.
+        self.context.scene_manager.pop()
 
     def update(self, dt: float) -> None:
         if self._aviso_timer > 0.0:
