@@ -11,7 +11,7 @@ date_processed: "2026-08-12"
 # Legacy of InFest — Especificación del HUD
 
 **ID del documento:** LOI-HUD-009
-**Versión:** 1.4.0
+**Versión:** 1.5.0
 **Estado:** Oficial
 **Audiencia:** Profesor, ayudantes, asistentes de código
 
@@ -104,6 +104,15 @@ ocupa el minimapa.
 > estamina, azul→dorado en carga, rojo→naranja en vida): ahora son
 > **rojo/amarillo/azul fijos**, pedido explícito del dueño.
 
+> **AUD-560 (2026-08-19) — se revierte el minimapa circular de AUD-547.**
+> Jugado con el resto del HUD terminado, el dueño pidió explícitamente
+> "que el minimapa sea rectangular cuadrado" — no el círculo que AUD-547
+> había construido. El recuadro se queda cuadrado (44×44: eso es lo que
+> pide "cuadrado"), pero `Minimap.draw()` ya no recorta con
+> `pygame.draw.circle`: pinta el rectángulo entero y traza un borde
+> también rectangular. El resto de AUD-547 (márgenes, colores fijos de
+> las tres barras) no se toca.
+
 ```
 ┌──────────────────────────────────────────────────────────────┐  Y=0
 │  ═══════════════════════════════════════════════════════════  │
@@ -115,7 +124,7 @@ ocupa el minimapa.
 │  ▬▬▬▬   puntuación             centrado arriba                │  Y=32
 │  ▬▬▬▬   rojo/amarillo/azul                                     │  Y=38..44
 │  ▬▬▬▬   bajo el retrato                          ( minimapa )  │  Y=50..56
-│                                                     círculo     │  Y=26..70
+│                                                    cuadrado     │  Y=26..70
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -136,7 +145,7 @@ no cuadran a la fracción exacta.
 | Barra de estamina | 6 | 38 | 24 | 5 | 15,94 60×12 | Amarilla, fija (AUD-547) |
 | Barra de carga | 6 | 43 | 24 | 5 | 15,108 60×12 | Azul, fija (AUD-547) — medidor especial |
 | Puntuación | 36 | 6 | 92 | 24 | 90,15 230×60 | Junto al bloque de identidad, no en la esquina derecha (AUD-535) |
-| Minimapa | 270 | 26 | 44 | 44 | 675,65 110×110 | **Circular de verdad** (AUD-547, antes 62×44 con esquinas redondeadas) |
+| Minimapa | 270 | 26 | 44 | 44 | 675,65 110×110 | Rectangular cuadrado (AUD-560, revierte el círculo de AUD-547) |
 | Caja del temporizador | 134 | 6 | 52 | 16 | 335,15 130×40 | Centrada arriba, no pegada al borde derecho (AUD-535) |
 | Ícono del reloj | 137 | 7 | 12 | 12 | 342,18 30×30 | Reemplaza la etiqueta de texto "TIME" |
 | Dígitos del temporizador | 151 | 6 | 34 | 14 | 378,15 85×35 | Formato `M:SS` |
