@@ -91,12 +91,21 @@ MUSGO = Material("musgo", friccion=2.5)
 #: el jugador pierde el control del personaje varios segundos, que se lee como
 #: un fallo y no como una mecánica.
 GOMA = Material("goma", restitucion=0.6)
+#: AUD-551 — GAP-070 punto 1: el freno del lodo de la Fase 2 del 4-1 ya
+#: existía (`ZonaDeFriccion.multiplicador`, AUD-522), pero la zona nunca
+#: declaraba `material="lodo"` — sólo `musgo` lo hacía — así que
+#: `Transform.material_actual` nunca valía "lodo" y la pisada distinta
+#: (`states/grounded.py`) no tenía forma de encenderse. Fricción y
+#: restitución en su valor de fábrica a propósito: este material existe
+#: sólo para nombrar la zona, no para cambiar cómo frena (eso ya lo hace
+#: `multiplicador`, sin tocar).
+LODO = Material("lodo")
 
 #: Los materiales que el motor conoce, por su nombre. Es lo que permite
 #: declararlos desde datos —un TMX, un tileset— sin que el cargador tenga que
 #: importar cada constante.
 MATERIALES: dict[str, Material] = {
-    m.nombre: m for m in (ROCA, HIELO, MUSGO, GOMA)
+    m.nombre: m for m in (ROCA, HIELO, MUSGO, GOMA, LODO)
 }
 
 

@@ -110,6 +110,13 @@ class WalkingState(PlayerStateBase):
                 pos = (player.position.x, player.position.y)
                 player._event_bus.emit(Events.SFX_PLAYER_FOOTSTEP_MUSGO)
                 player._event_bus.emit(Events.VFX_MUSGO_STEP, pos=pos)
+            elif material is not None and material.nombre == "lodo":
+                # AUD-551 — GAP-070 punto 1: el lodo frenaba de verdad
+                # (`ZonaDeFriccion.multiplicador`, AUD-522) pero sonaba
+                # igual que tierra firme — sólo el musgo tenía voz
+                # propia pese a que los dos se declaran por separado en
+                # Fase 2 del 4-1.
+                player._event_bus.emit(Events.SFX_PLAYER_FOOTSTEP_LODO)
             else:
                 player._event_bus.emit(Events.SFX_PLAYER_FOOTSTEP)
         inp = _InputSnapshot(input_manager)

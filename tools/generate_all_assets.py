@@ -2244,7 +2244,10 @@ def _gen_all_music():
 SFX_CATEGORIES = {
     "player": ["jump", "land", "short_attack", "long_attack", "hit_connect", "hurt", "die", "crouch",
                # AUD-522 — el musgo resbala y hasta ahora no se oía.
-               "footstep_musgo"],
+               "footstep_musgo",
+               # AUD-551 — GAP-070 punto 1: el lodo frenaba de verdad y
+               # sonaba igual que tierra firme.
+               "footstep_lodo"],
     "enemies": ["hit", "die_small", "die_large", "projectile_fire", "projectile_hit_wall",
                 # AUD-529 — que se oiga antes de verse.
                 "pez_abismal_acercarse"],
@@ -2281,7 +2284,18 @@ SFX_CATEGORIES = {
                     # Fase 4 tras el silencio). Ver `_gen_sfx` para los
                     # parámetros exactos — cada uno cita el ADSR y el
                     # filtro del pedido original.
-                    "crujido_seco", "rafaga_viento", "impacto_tension"],
+                    "crujido_seco", "rafaga_viento", "impacto_tension",
+                    # AUD-551 — GAP-070 punto 6: grillos de la Fase 5 (no
+                    # existía ningún SFX de insecto, sólo el canto
+                    # ancestral). Un solo fichero contiene la ráfaga
+                    # entera de 3-4 "cri-cri" — el hueco entre ráfagas ya
+                    # lo da el temporizador de `sonidos_aislados`.
+                    "grillo",
+                    # AUD-551 — GAP-070 "Pisadas de Energía Verde": tres
+                    # variantes, una por nota de la tríada de Re menor
+                    # (293.66/349.23/440.00Hz) — `Stage4_1` elige una al
+                    # azar cada vez que una grieta termina de encenderse.
+                    "paso_de_luz_re", "paso_de_luz_fa", "paso_de_luz_la"],
     # AUD-263 — las voces. GAP-031 decía «el motor sabe reproducir voz y no hay
     # ni un solo fichero», y se dejó así a propósito para no cablear mentiras.
     # Pero **todo** el audio de este juego está sintetizado aquí: los pasos, los
@@ -2291,7 +2305,13 @@ SFX_CATEGORIES = {
     # Son las líneas del venado, el jefe de referencia, en sus dos cambios de
     # fase y en su muerte: lo justo para que `play_voz` tenga un demo real que
     # un estudiante pueda copiar para su propio jefe.
-    "voz": ["venado_fase1", "venado_fase2", "venado_muerte"],
+    # AUD-551 — GAP-070 "Diálogo de la Serpiente"/"Diálogo del Halcón":
+    # el Venado ya tenía voz de marcador de posición (AUD-263); el Rey
+    # Terciopelo y el Gavilán, no. Sintetizadas con las recetas
+    # específicas del pedido (batimiento de dos senoidales para la
+    # serpiente, FM de dos ondas para el halcón) — ver `_gen_sfx`.
+    "voz": ["venado_fase1", "venado_fase2", "venado_muerte",
+            "rey_terciopelo", "gavilan"],
 }
 
 def _gen_sfx(name, rate=SAMPLE_RATE):
@@ -2318,7 +2338,15 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
              # impacto redondea la caída de tono (400ms) más su propio
              # decaimiento y relajación.
              "crujido_seco": 0.153, "rafaga_viento": 1.0,
-             "impacto_tension": 0.955}
+             "impacto_tension": 0.955,
+             # AUD-551 — GAP-070: lodo (ADSR hasta 12+80+0+100ms), la
+             # ráfaga de grillo (tres "cri-cri" con hueco entre ellos),
+             # las voces nuevas (misma duración que da el propio ADSR de
+             # cada receta) y los tres pasos de luz (ADSR 15/200/-/1200ms).
+             "footstep_lodo": 0.192, "grillo": 0.55,
+             "rey_terciopelo": 1.7, "gavilan": 0.66,
+             "paso_de_luz_re": 1.415, "paso_de_luz_fa": 1.415,
+             "paso_de_luz_la": 1.415}
     
     dur = t_dur.get(name, 0.3)
     n = int(rate * dur)
@@ -2633,6 +2661,160 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
                 # percusivo antes de que quede sólo el zumbido grave.
                 valor = _recorte_suave(valor * 1.4)
             samples.append(valor * 0.9)
+    elif name == "footstep_lodo":
+        # AUD-551 — GAP-070 punto 1: ruido marrón (pasa-bajos pesado
+        # sobre ruido blanco, el mismo idioma del resto de este fichero)
+        # 80% + seno a 80Hz 20%, pasa-bajos 700-800Hz aleatorio, ADSR
+        # 11/70/0/90ms, pitch ±10% aleatorio para que ningún paso suene
+        # idéntico ("efecto metralleta").
+        variacion = random.uniform(0.9, 1.1)
+        corte = random.uniform(700.0, 800.0)
+        estado = 0.0
+        ataque = max(1, int(rate * 0.011))
+        decaimiento = int(rate * 0.070)
+        relajacion = max(1, int(rate * 0.090))
+        samples = []
+        for i in range(n):
+            t = i / rate
+            crudo = random.uniform(-1.0, 1.0)
+            estado = _paso_pasa_bajos(crudo, estado, corte, rate)
+            seno = math.sin(2.0 * math.pi * 80.0 * variacion * t)
+            valor = estado * 0.8 + seno * 0.2
+            if i < ataque:
+                env = i / ataque
+            elif i < ataque + decaimiento:
+                env = 1.0 - 0.9 * (i - ataque) / decaimiento
+            else:
+                j = i - ataque - decaimiento
+                env = max(0.0, 0.1 * (1.0 - j / relajacion))
+            samples.append(valor * env * 0.55)
+    elif name == "grillo":
+        # AUD-551 — GAP-070 punto 6: cuadrada de ancho de pulso angosto
+        # (5-10%), 4000-6000Hz, micro-ADSR 1/30/0/10ms por "clic", LFO
+        # de amplitud a 40Hz ("fragmenta el decaimiento, la fricción
+        # rápida de las alas"), ráfaga de 3-4 clics seguidos — el hueco
+        # entre ráfagas lo da el temporizador de `sonidos_aislados`.
+        freq_base = random.uniform(4000.0, 6000.0)
+        n_chirps = random.randint(3, 4)
+        espaciado_s = 0.13
+        samples = [0.0] * n
+        ataque = max(1, int(rate * 0.001))
+        decaimiento = int(rate * 0.030)
+        relajacion = max(1, int(rate * 0.010))
+        n_chirp = ataque + decaimiento + relajacion
+        for c in range(n_chirps):
+            inicio_i = int(c * espaciado_s * rate)
+            for k in range(n_chirp):
+                idx = inicio_i + k
+                if idx >= n:
+                    break
+                t = k / rate
+                onda = _square(freq_base, t, 0.07)
+                tremolo = 0.6 + 0.4 * math.sin(2.0 * math.pi * 40.0 * t)
+                if k < ataque:
+                    env = k / ataque
+                elif k < ataque + decaimiento:
+                    env = 1.0 - (k - ataque) / decaimiento
+                else:
+                    j = k - ataque - decaimiento
+                    env = max(0.0, 1.0 - j / relajacion)
+                samples[idx] += onda * env * tremolo * 0.3
+    elif name == "rey_terciopelo":
+        # AUD-551 — GAP-070 "Diálogo de la Serpiente": ruido rosa +
+        # batimiento de dos senoidales muy cercanas (440/446Hz),
+        # pasa-banda aproximado (pasa-altos 3000Hz seguido de pasa-bajos
+        # 7000Hz — no hay un pasa-banda de verdad en este fichero, se
+        # compone de los dos que ya existen) centrado alrededor de
+        # 5000Hz, LFO de amplitud a 25Hz ("sisea a velocidad
+        # sobrehumana"), ADSR 200/300/60%/1200ms.
+        rosa = _ruido_rosa(n)
+        crudo = []
+        for i in range(n):
+            t = i / rate
+            batimiento = (math.sin(2.0 * math.pi * 440.0 * t)
+                          + math.sin(2.0 * math.pi * 446.0 * t)) * 0.5
+            crudo.append(rosa[i] * 0.5 + batimiento * 0.5)
+        alto = _pasa_altos(crudo, 3000.0, rate)
+        estado = 0.0
+        filtrado = []
+        for v in alto:
+            estado = _paso_pasa_bajos(v, estado, 7000.0, rate)
+            filtrado.append(estado)
+        ataque = max(1, int(rate * 0.200))
+        decaimiento = int(rate * 0.300)
+        relajacion = max(1, int(rate * 1.200))
+        samples = []
+        for i, v in enumerate(filtrado):
+            t = i / rate
+            tremolo = 0.5 + 0.5 * math.sin(2.0 * math.pi * 25.0 * t)
+            if i < ataque:
+                env = i / ataque
+            elif i < ataque + decaimiento:
+                env = 1.0 - 0.4 * (i - ataque) / decaimiento  # 1.0 → 0.6
+            else:
+                j = i - ataque - decaimiento
+                env = max(0.0, 0.6 * (1.0 - j / relajacion))
+            samples.append(v * env * tremolo * 0.6)
+    elif name == "gavilan":
+        # AUD-551 — GAP-070 "Diálogo del Halcón": diente de sierra 70% +
+        # cuadrada 30% a 1800Hz, modulado en frecuencia (FM) por una
+        # senoidal a 50Hz, ADSR 10/150/40%/500ms, seco — sin
+        # reverberación a propósito, "posado directamente sobre la
+        # cámara". Fase acumulada, no `t*freq`: con la frecuencia
+        # variando por la FM, `t*freq` saltaría de ciclo en ciclo.
+        ataque = max(1, int(rate * 0.010))
+        decaimiento = int(rate * 0.150)
+        relajacion = max(1, int(rate * 0.500))
+        fase = 0.0
+        samples = []
+        for i in range(n):
+            t = i / rate
+            freq = 1800.0 + math.sin(2.0 * math.pi * 50.0 * t) * 90.0
+            fase += 2.0 * math.pi * freq / rate
+            ciclo = (fase / (2.0 * math.pi)) % 1.0
+            sierra = 2.0 * ciclo - 1.0
+            cuadrada = 1.0 if ciclo < 0.5 else -1.0
+            onda = sierra * 0.7 + cuadrada * 0.3
+            if i < ataque:
+                env = i / ataque
+            elif i < ataque + decaimiento:
+                env = 1.0 - 0.6 * (i - ataque) / decaimiento  # 1.0 → 0.4
+            else:
+                j = i - ataque - decaimiento
+                env = max(0.0, 0.4 * (1.0 - j / relajacion))
+            samples.append(onda * env * 0.5)
+    elif name.startswith("paso_de_luz_"):
+        # AUD-551 — GAP-070 "Pisadas de Energía Verde": seno 80% +
+        # triángulo 20%, ADSR 15/200/30%/1200ms, una nota fija por
+        # variante — la tríada de Re menor (293.66/349.23/440.00Hz);
+        # `Stage4_1` elige el fichero al azar en cada grieta que termina
+        # de encenderse. Lleva cola de reverberación horneada (GAP-070
+        # punto 7, "bus" de la Fase 6): la receta pide ~3500ms de
+        # decaimiento y 60ms de pre-delay, pero `_aplicar_reverberacion`
+        # es un comb filter de ecos discretos, no una cola continua —
+        # estirarlo a 3500ms de verdad sonaría a cañón, no a santuario.
+        # Se usa el mismo criterio de gusto que ya fijó AUD-515 para
+        # `despertar_profundo`: menos ecos, más juntos, con la cola
+        # extra dando la sensación de espacio sin el eco discreto.
+        freq = {"paso_de_luz_re": 293.66, "paso_de_luz_fa": 349.23,
+                "paso_de_luz_la": 440.00}[name]
+        ataque = max(1, int(rate * 0.015))
+        decaimiento = int(rate * 0.200)
+        relajacion = max(1, int(rate * 1.200))
+        samples = []
+        for i in range(n):
+            t = i / rate
+            onda = math.sin(2.0 * math.pi * freq * t) * 0.8 + _tri(freq, t) * 0.2
+            if i < ataque:
+                env = i / ataque
+            elif i < ataque + decaimiento:
+                env = 1.0 - 0.7 * (i - ataque) / decaimiento  # 1.0 → 0.3
+            else:
+                j = i - ataque - decaimiento
+                env = max(0.0, 0.3 * (1.0 - j / relajacion))
+            samples.append(onda * env * 0.5)
+        samples = _aplicar_reverberacion(samples, rate, decaimiento=0.6,
+                                          retardo_ms=60.0, ecos=10, cola_extra_s=2.0)
     else:
         samples = [0.0] * n
 

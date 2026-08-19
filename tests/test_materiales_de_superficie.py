@@ -31,6 +31,7 @@ import pytest
 from src.framework.physics.perfil import (
     GOMA,
     HIELO,
+    LODO,
     MATERIALES,
     MUSGO,
     ROCA,
@@ -73,7 +74,16 @@ class TestElCatalogo:
     def test_se_pueden_buscar_por_nombre(self) -> None:
         """Es lo que permitirá declararlos desde un TMX o un tileset."""
         assert MATERIALES["goma"] is GOMA
-        assert set(MATERIALES) == {"roca", "hielo", "musgo", "goma"}
+        assert set(MATERIALES) == {"roca", "hielo", "musgo", "goma", "lodo"}
+
+    def test_el_lodo_no_cambia_la_fisica_solo_se_nombra(self) -> None:
+        """AUD-551 — GAP-070 punto 1: el lodo ya frenaba de verdad por
+        `ZonaDeFriccion.multiplicador` (AUD-522); este material existe sólo
+        para que la pisada distinga lodo de tierra firme
+        (`states/grounded.py`), no para tocar la física — mismo criterio
+        que ya usa `musgo` con su `friccion` sin consumidor."""
+        assert LODO.restitucion == 0.0
+        assert MATERIALES["lodo"] is LODO
 
 
 class TestElRebote:
