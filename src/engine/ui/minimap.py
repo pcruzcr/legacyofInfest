@@ -74,15 +74,21 @@ class Minimap:
         # u otra según el momento. Un atributo que a veces existe es más difícil
         # de razonar que uno que a veces es None.
         self._bg_surf: pygame.Surface | None = None
-        # AUD-535 — "máscara circular o de bordes totalmente redondeados,
-        # eliminando los bordes cuadrados agresivos". El recuadro no es
-        # cuadrado (62×44 en la maqueta), así que un círculo de verdad
-        # desperdiciaría espacio a los lados; el radio máximo que cabe
-        # (`min(w,h)//2`) da la variante "bordes totalmente redondeados"
-        # que el propio pedido ofrece como alternativa. La máscara se
-        # reconstruye sólo aquí (al colocar/redimensionar), no en cada
-        # `draw()` — mismo criterio de rendimiento que AUD-527.
+        # AUD-547 — círculo de verdad, no bordes redondeados. AUD-535 dejó
+        # el recuadro rectangular (62×44 de maqueta) y usó el radio máximo
+        # que cabía como aproximación; jugado, seguía leyéndose como un
+        # rectángulo. `HUD.RECUADRO_MINIMAPA_DISENO` pasó a ser cuadrado
+        # (44×44) precisamente para que este círculo sea el círculo
+        # inscrito de verdad, no una aproximación — incluso si alguien
+        # construye un `Minimap` suelto con un rect no cuadrado (las
+        # pruebas lo hacen), `min(w,h)//2` sigue dando el radio máximo que
+        # cabe sin desbordar, así que no revienta, sólo dibuja el círculo
+        # más grande posible. La máscara se reconstruye sólo aquí (al
+        # colocar/redimensionar), no en cada `draw()` — mismo criterio de
+        # rendimiento que AUD-527.
         self._radio_del_marco: int = min(self._minimap_w, self._minimap_h) // 2
+        self._centro_del_marco: tuple[int, int] = (
+            self._minimap_w // 2, self._minimap_h // 2)
         self._mascara_redondeada: pygame.Surface | None = None
 
     def set_map_size(self, world_w: int, world_h: int) -> None:
@@ -164,20 +170,21 @@ class Minimap:
         ]
         pygame.draw.polygon(lienzo, self._player_color, points)
 
-        # AUD-535 — recorte de bordes redondeados: todo lo de arriba se
+        # AUD-547 — recorte circular de verdad: todo lo de arriba se
         # dibujó en el lienzo local, y aquí se recorta de una sola vez en
         # vez de recortar cada elemento por separado.
         if (self._mascara_redondeada is None
                 or self._mascara_redondeada.get_size() != (self._minimap_w, self._minimap_h)):
             mascara = pygame.Surface((self._minimap_w, self._minimap_h), pygame.SRCALPHA)
-            pygame.draw.rect(mascara, (255, 255, 255, 255), mascara.get_rect(),
-                             border_radius=self._radio_del_marco)
+            pygame.draw.circle(mascara, (255, 255, 255, 255),
+                               self._centro_del_marco, self._radio_del_marco)
             self._mascara_redondeada = mascara
         lienzo.blit(self._mascara_redondeada, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
         surface.blit(lienzo, (self._minimap_x, self._minimap_y))
 
-        pygame.draw.rect(
+        pygame.draw.circle(
             surface, self._border_color,
-            (self._minimap_x, self._minimap_y, self._minimap_w, self._minimap_h),
-            width=1, border_radius=self._radio_del_marco,
+            (self._minimap_x + self._centro_del_marco[0],
+             self._minimap_y + self._centro_del_marco[1]),
+            self._radio_del_marco, width=1,
         )

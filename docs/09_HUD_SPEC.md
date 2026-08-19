@@ -11,7 +11,7 @@ date_processed: "2026-08-12"
 # Legacy of InFest — Especificación del HUD
 
 **ID del documento:** LOI-HUD-009
-**Versión:** 1.3.0
+**Versión:** 1.4.0
 **Estado:** Oficial
 **Audiencia:** Profesor, ayudantes, asistentes de código
 
@@ -90,6 +90,20 @@ apiladas) en la esquina superior izquierda, el marcador junto a él, y el
 cronómetro al centro superior — ya no en la esquina derecha, que hoy sólo
 ocupa el minimapa.
 
+> **AUD-547 (2026-08-19) — márgenes de pantalla y minimapa circular.**
+> Jugado, dos cosas del rediseño de AUD-535 seguían sin resolverse: el
+> retrato vivía a 2px de maqueta del borde (5px reales) y el minimapa,
+> pese al recorte redondeado, seguía siendo un rectángulo de 62×44 —
+> **no** un círculo, sólo esquinas muy curvas. `MARGEN_DE_PANTALLA = 6`
+> (constante en `hud.py`) es el margen mínimo que ahora respeta todo
+> elemento junto a un borde real de la ventana (retrato, marcador,
+> cronómetro, minimapa); el minimapa además pasó de 62×44 a **44×44**
+> —cuadrado— para que `pygame.draw.circle` lo recorte en un círculo de
+> verdad, no una aproximación. De paso, las tres barras del bloque de
+> identidad dejaron de cambiar de color según el nivel (verde→ámbar en
+> estamina, azul→dorado en carga, rojo→naranja en vida): ahora son
+> **rojo/amarillo/azul fijos**, pedido explícito del dueño.
+
 ```
 ┌──────────────────────────────────────────────────────────────┐  Y=0
 │  ═══════════════════════════════════════════════════════════  │
@@ -97,11 +111,11 @@ ocupa el minimapa.
 │  │   320×28 de diseño (800×70 en pantalla), arriba          ││
 │  │                                                           │  Y=14
 │  └─────────────────────────────────────────────────────────┘ │
-│  (o)  [1234  🪙56]           [🕐 00:00]                       │  Y=16
-│  ▬▬▬  puntuación              centrado arriba                │  Y=28
-│  ▬▬▬  vida/estamina/carga                                     │  Y=34..40
-│  ▬▬▬  bajo el retrato                          [minimapa]     │  Y=44..46
-│                                                    redondeado  │  Y=20..64
+│   (o)   [1234  🪙56]          [🕐 00:00]                       │  Y=16
+│  ▬▬▬▬   puntuación             centrado arriba                │  Y=32
+│  ▬▬▬▬   rojo/amarillo/azul                                     │  Y=38..44
+│  ▬▬▬▬   bajo el retrato                          ( minimapa )  │  Y=50..56
+│                                                     círculo     │  Y=26..70
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -116,16 +130,16 @@ no cuadran a la fracción exacta.
 | Elemento | X | Y | Ancho | Alto | En pantalla (×2,5, medido) | Notas |
 |---|---|---|---|---|---|---|
 | Caja de mensajes | 0 | 0 | 320 | 28 | 0,0 800×70 | Capa superior (movida desde abajo en v1.1.0) |
-| Marco del retrato | 2 | 2 | 24 | 24 | 5,5 60×60 | Círculo, no marco 9-slice (AUD-535) |
-| Sprite del retrato | 3 | 3 | 22 | 22 | 8,8 55×55 | Recortado en círculo al cargar (`_recortar_circular`) |
-| Barra de vida | 2 | 28 | 24 | 5 | 5,70 60×12 | Reemplaza la fila de corazones (AUD-535) |
-| Barra de estamina | 2 | 34 | 24 | 5 | 5,84 60×12 | Ámbar por debajo de 34 % (AUD-141) |
-| Barra de carga | 2 | 40 | 24 | 5 | 5,98 60×12 | Medidor especial; oro cuando está llena |
-| Puntuación | 32 | 2 | 92 | 24 | 80,5 230×60 | Junto al bloque de identidad, no en la esquina derecha (AUD-535) |
-| Minimapa | 254 | 20 | 62 | 44 | 635,50 155×110 | Bordes totalmente redondeados (AUD-535); 4px de margen interior |
-| Caja del temporizador | 134 | 2 | 52 | 16 | 335,5 130×40 | Centrada arriba, no pegada al borde derecho (AUD-535) |
-| Ícono del reloj | 137 | 3 | 12 | 12 | 342,8 30×30 | Reemplaza la etiqueta de texto "TIME" |
-| Dígitos del temporizador | 151 | 2 | 34 | 14 | 378,5 85×35 | Formato `M:SS` |
+| Marco del retrato | 6 | 6 | 24 | 24 | 15,15 60×60 | Círculo, no marco 9-slice (AUD-535); margen de pantalla (AUD-547) |
+| Sprite del retrato | 7 | 7 | 22 | 22 | 18,18 55×55 | Recortado en círculo al cargar (`_recortar_circular`) |
+| Barra de vida | 6 | 32 | 24 | 5 | 15,80 60×12 | Roja, fija (AUD-547) — reemplaza la fila de corazones (AUD-535) |
+| Barra de estamina | 6 | 38 | 24 | 5 | 15,94 60×12 | Amarilla, fija (AUD-547) |
+| Barra de carga | 6 | 43 | 24 | 5 | 15,108 60×12 | Azul, fija (AUD-547) — medidor especial |
+| Puntuación | 36 | 6 | 92 | 24 | 90,15 230×60 | Junto al bloque de identidad, no en la esquina derecha (AUD-535) |
+| Minimapa | 270 | 26 | 44 | 44 | 675,65 110×110 | **Circular de verdad** (AUD-547, antes 62×44 con esquinas redondeadas) |
+| Caja del temporizador | 134 | 6 | 52 | 16 | 335,15 130×40 | Centrada arriba, no pegada al borde derecho (AUD-535) |
+| Ícono del reloj | 137 | 7 | 12 | 12 | 342,18 30×30 | Reemplaza la etiqueta de texto "TIME" |
+| Dígitos del temporizador | 151 | 6 | 34 | 14 | 378,15 85×35 | Formato `M:SS` |
 | Rótulo de escenario | 0 | 88 | 320 | 48 | 0,220 800×120 | Centro de pantalla, entra deslizando |
 
 Tiempo bala y la barra de vida del jefe no tienen fila fija: tiempo bala
@@ -190,18 +204,26 @@ Ese temporizador dura 0,8 s desde cada `PLAYER_DAMAGED`. **Es pseudocódigo**: e
 ### 4.1 Maqueta de la barra de vida
 
 La vida se dibuja como una única barra continua, del mismo ancho que el
-marco del retrato, justo debajo de él (`HUD.vida_bar_rect()`, X=2, Y=28,
-24×5 de maqueta). Es la primera de tres barras apiladas — vida, estamina,
+marco del retrato, justo debajo de él (`HUD.vida_bar_rect()`, X=6, Y=32,
+24×5 de maqueta — AUD-547 movió el bloque completo al margen de
+pantalla). Es la primera de tres barras apiladas — vida, estamina,
 carga — separadas por 1px de maqueta cada una (`_dibujar_barra_moderna`,
 el mismo lenguaje visual de AUD-527: fondo translúcido redondeado,
 relleno con degradado horizontal, sin halo al llenarse porque a tope de
 vida no hay "logro" que celebrar, a diferencia del medidor especial).
 
+**AUD-547** — las tres barras usan un color fijo cada una, sin variante
+de urgencia: vida roja, estamina amarilla, carga azul. Antes vida y
+estamina viraban a un segundo color al quedar poco (naranja/ámbar) y la
+carga a dorado al llenarse; pedido explícito del dueño para que el color
+identifique **qué** mide cada barra, no también **cuánto** le queda —
+para eso ya está el propio relleno.
+
 ### 4.2 Algoritmo de dibujo
 
 ```python
 pct = clamp(current_health / max_health, 0.0, 1.0)
-color_fin = (230, 70, 70) if pct > 0.25 else (255, 140, 60)  # ámbar crítico
+color_fin = (230, 60, 60)  # rojo fijo (AUD-547)
 dibujar_barra_moderna(vida_bar_rect, pct, color_inicio=(70, 15, 15), color_fin)
 ```
 
