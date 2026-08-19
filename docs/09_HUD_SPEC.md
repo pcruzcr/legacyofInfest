@@ -11,7 +11,7 @@ date_processed: "2026-08-12"
 # Legacy of InFest — Especificación del HUD
 
 **ID del documento:** LOI-HUD-009
-**Versión:** 1.5.0
+**Versión:** 1.6.0
 **Estado:** Oficial
 **Audiencia:** Profesor, ayudantes, asistentes de código
 
@@ -113,6 +113,17 @@ ocupa el minimapa.
 > también rectangular. El resto de AUD-547 (márgenes, colores fijos de
 > las tres barras) no se toca.
 
+> **AUD-565 (2026-08-19) — el hueco de la estamina apagada se colapsa.**
+> Sólo un escenario de los 26 (`stage_mecanicas`) enciende la estamina
+> (AUD-141); en los otros 25 —4-1 incluido— el bloque de tres barras
+> dejaba un tercio en blanco entre la de vida y la de carga, invisible
+> hasta que AUD-535/547 las apiló del mismo ancho bajo el retrato. Ahora
+> `HUD._reflow_bloque_de_identidad()` recoloca la barra de carga: sube a
+> ocupar el sitio de la estamina cuando ésta está apagada, y vuelve a su
+> sitio de siempre en cuanto un escenario la enciende. `_estamina_bar_rect`
+> no cambia de tamaño ni desaparece — sigue existiendo con su ancho de
+> siempre, sólo deja de pintarse y de reservar sitio.
+
 ```
 ┌──────────────────────────────────────────────────────────────┐  Y=0
 │  ═══════════════════════════════════════════════════════════  │
@@ -142,8 +153,8 @@ no cuadran a la fracción exacta.
 | Marco del retrato | 6 | 6 | 24 | 24 | 15,15 60×60 | Círculo, no marco 9-slice (AUD-535); margen de pantalla (AUD-547) |
 | Sprite del retrato | 7 | 7 | 22 | 22 | 18,18 55×55 | Recortado en círculo al cargar (`_recortar_circular`) |
 | Barra de vida | 6 | 32 | 24 | 5 | 15,80 60×12 | Roja, fija (AUD-547) — reemplaza la fila de corazones (AUD-535) |
-| Barra de estamina | 6 | 38 | 24 | 5 | 15,94 60×12 | Amarilla, fija (AUD-547) |
-| Barra de carga | 6 | 43 | 24 | 5 | 15,108 60×12 | Azul, fija (AUD-547) — medidor especial |
+| Barra de estamina | 6 | 38 | 24 | 5 | 15,94 60×12 | Amarilla, fija (AUD-547); sin pintar y sin reservar sitio si el escenario no la enciende (AUD-565) |
+| Barra de carga | 6 | 43 | 24 | 5 | 15,108 60×12 | Azul, fija (AUD-547) — medidor especial; sube una franja si la estamina está apagada (AUD-565) |
 | Puntuación | 36 | 6 | 92 | 24 | 90,15 230×60 | Junto al bloque de identidad, no en la esquina derecha (AUD-535) |
 | Minimapa | 270 | 26 | 44 | 44 | 675,65 110×110 | Rectangular cuadrado (AUD-560, revierte el círculo de AUD-547) |
 | Caja del temporizador | 134 | 6 | 52 | 16 | 335,15 130×40 | Centrada arriba, no pegada al borde derecho (AUD-535) |
