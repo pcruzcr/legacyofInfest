@@ -241,6 +241,26 @@ de la Serpiente, easter egg.
 > sigue siendo un recuerdo, no el jefe en persona). El contorno de
 > polígono se queda como red de seguridad si el sprite faltara.
 
+> **AUD-562 — presencias errantes: más fantasmas, y fauna sin daño para
+> el estrés.** Jugado el nivel completo, dos pedidos más del dueño:
+> *«más fantasmas o figuras que se muevan como fantasma en el fondo»* y
+> *«sería bueno agregar enemigos que no hagan daño... para llenar algo
+> de estrés»*. La segunda petición choca de frente con la regla de oro
+> del nivel (regla 1, `13_STAGE_4_1.md`) — la resolución que aprobó el
+> dueño: fauna decorativa sin `EnemyBase`, misma arquitectura que ya usa
+> la sombra del Gavilán o la serpiente de fondo de la Fase 3. Tres
+> presencias nuevas (`presencias.py`), una por fase de las que no tenían
+> ninguna: un infestado errante en la Fase 2 (el sprite real de
+> `WalkerEstudiante`, no un monstruo inventado — encaja con el lore de
+> la infestación, y refuerza literalmente *«la sensación de que algo
+> observa o sigue al jugador»* que ya pedía el guion de esa fase), un
+> fantasma menor en el camino de huesos de la Fase 3, y otro
+> conquistador errante en la Planicie de los Muertos de la Fase 5 —
+> dándole cuerpo a la línea del propio diseño que ya menciona a los
+> conquistadores sin mostrarlos. Cada una patrulla un tramo corto y
+> aparece/desaparece en ventanas aleatorias, igual que la anomalía de la
+> Fase 1: nunca se confirma qué es.
+
 ---
 
 ## 🔗 Documentos relacionados

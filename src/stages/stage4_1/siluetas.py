@@ -178,28 +178,31 @@ ESPIRITUS: tuple[tuple[str, object], ...] = (
 
 # ── Las siluetas de los tres espíritus, desde su arte real (AUD-561) ────
 #
-# `(archivo, ancho de fotograma, alto de fotograma)`, en el mismo orden que
-# `ESPIRITUS` (0=Venado, 1=Rey Terciopelo, 2=Gavilán). Los tamaños de
-# fotograma son los mismos que ya usa cada jefe real para cargar su propia
-# hoja de sprites — `boss_venado.py` (`_load_boss_sprites(..., 48, 48)`),
-# `boss_rey.py` (`"walk": (40, 56)`), `boss_gavilan.py`
+# `(ruta relativa a assets/, ancho de fotograma, alto de fotograma)`, en el
+# mismo orden que `ESPIRITUS` (0=Venado, 1=Rey Terciopelo, 2=Gavilán). Los
+# tamaños de fotograma son los mismos que ya usa cada jefe real para cargar
+# su propia hoja de sprites — `boss_venado.py` (`_load_boss_sprites(...,
+# 48, 48)`), `boss_rey.py` (`"walk": (40, 56)`), `boss_gavilan.py`
 # (`_load_boss_sprites("boss_gavilan", 56, 40)`) — así que el primer
 # fotograma de cada hoja recorta una pose completa, no una mitad de dos
-# fotogramas distintos.
+# fotogramas distintos. La ruta es relativa a `assets/` completa (no sólo
+# el nombre de archivo) desde AUD-562, que necesitaba reusar el mismo
+# mecanismo con un sprite fuera de `sprites/bosses/`
+# (`sprites/enemies/enemy_walker_walk.png`, ver `presencias.py`).
 SPRITE_DE_ESPIRITU: tuple[tuple[str, int, int], ...] = (
-    ("boss_venado_drift.png", 48, 48),
-    ("boss_rey_walk.png", 40, 56),
-    ("boss_gavilan_glide.png", 56, 40),
+    ("sprites/bosses/boss_venado_drift.png", 48, 48),
+    ("sprites/bosses/boss_rey_walk.png", 40, 56),
+    ("sprites/bosses/boss_gavilan_glide.png", 56, 40),
 )
 
 #: Silueta base (color sólido, tamaño de fotograma original) por
-#: `(archivo, color)`. `None` significa «se buscó y no está» — para no
+#: `(ruta, color)`. `None` significa «se buscó y no está» — para no
 #: repetir el intento de carga en cada fotograma dibujado si el archivo de
 #: verdad falta.
 _CACHE_SILUETA_DE_SPRITE: dict[tuple[str, tuple[int, int, int]], pygame.Surface | None] = {}
 
 #: Silueta ya escalada al tamaño de pantalla en que se dibuja, por
-#: `(archivo, color, ancho, alto)`. `pygame.transform.smoothscale` no es
+#: `(ruta, color, ancho, alto)`. `pygame.transform.smoothscale` no es
 #: gratis; sin esta caché se pagaría una vez por fotograma dibujado en vez
 #: de una vez por combinación — la misma lección que ya dejó `_lienzo_
 #: horizonte` (AUD-514) con el horizonte lejano.
@@ -208,17 +211,17 @@ _CACHE_SILUETA_ESCALADA: dict[
 
 
 def silueta_desde_sprite(
-    archivo: str, ancho_fotograma: int, alto_fotograma: int,
+    ruta_relativa: str, ancho_fotograma: int, alto_fotograma: int,
     color: tuple[int, int, int],
 ) -> pygame.Surface | None:
-    """El primer fotograma de `archivo`, recortado a silueta plana de
-    `color` usando su canal alfa como máscara. `None` si el archivo no
-    existe — quien llama decide qué hacer (`_dibujar_espiritu` cae al
-    contorno de polígono)."""
-    clave = (archivo, color)
+    """El primer fotograma de `assets/<ruta_relativa>`, recortado a silueta
+    plana de `color` usando su canal alfa como máscara. `None` si el
+    archivo no existe — quien llama decide qué hacer (`_dibujar_espiritu`
+    cae al contorno de polígono)."""
+    clave = (ruta_relativa, color)
     if clave in _CACHE_SILUETA_DE_SPRITE:
         return _CACHE_SILUETA_DE_SPRITE[clave]
-    ruta = settings.ASSETS_DIR / "sprites" / "bosses" / archivo
+    ruta = settings.ASSETS_DIR / ruta_relativa
     silueta: pygame.Surface | None = None
     if ruta.exists():
         hoja = pygame.image.load(str(ruta)).convert_alpha()
@@ -232,7 +235,7 @@ def silueta_desde_sprite(
 
 
 def dibujar_silueta_de_sprite(
-    surface: pygame.Surface, archivo: str, ancho_fotograma: int,
+    surface: pygame.Surface, ruta_relativa: str, ancho_fotograma: int,
     alto_fotograma: int, x: int, y: int, ancho: int, alto: int,
     color: tuple[int, int, int], alfa: int,
 ) -> bool:
@@ -248,10 +251,10 @@ def dibujar_silueta_de_sprite(
     """
     if alfa <= 0 or ancho <= 0 or alto <= 0:
         return False
-    base = silueta_desde_sprite(archivo, ancho_fotograma, alto_fotograma, color)
+    base = silueta_desde_sprite(ruta_relativa, ancho_fotograma, alto_fotograma, color)
     if base is None:
         return False
-    clave = (archivo, color, ancho, alto)
+    clave = (ruta_relativa, color, ancho, alto)
     escalada = _CACHE_SILUETA_ESCALADA.get(clave)
     if escalada is None:
         escalada = pygame.transform.smoothscale(base, (ancho, alto))

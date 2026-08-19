@@ -53,7 +53,7 @@ from src.engine.core import settings
 from src.framework.audio.dynamic_music import resolver_pista_de_musica
 from src.framework.scenes.stage_scene import StageScene
 from src.framework.stage.atencion import Atencion
-from src.stages.stage4_1 import siluetas, trazado
+from src.stages.stage4_1 import presencias, siluetas, trazado
 from src.stages.stage4_1.fases import FASES, Fase, Gradacion, fase_en
 
 if TYPE_CHECKING:
@@ -327,6 +327,13 @@ class Stage4_1(StageScene):
         #: el fantasma deje de comportarse como la primera vez.
         self._columna_maxima_fase1: float = 0.0
         self._regreso_a_la_tumba: bool = False
+        #: Las presencias errantes de fondo (Fase 2/3/5, AUD-562): cuánto
+        #: le queda visible a cada una (por `PresenciaErrante.id`) y
+        #: cuándo puede volver a aparecer. Perezoso a propósito — todas
+        #: arrancan "aún no le tocó" la primera vez que se lee su entrada
+        #: en el diccionario, no aquí.
+        self._presencia_visible: dict[str, float] = {}
+        self._presencia_proxima: dict[str, float] = {}
 
     # ── Ciclo de vida ─────────────────────────────────────────
 
@@ -393,6 +400,7 @@ class Stage4_1(StageScene):
         self._actualizar_quietud_del_gavilan(dt)
         self._actualizar_sombra_del_gavilan(dt)
         self._actualizar_grietas(dt)
+        self._actualizar_presencias_errantes(dt)
         self._actualizar_mensaje_final()
         self._actualizar_secuencia_de_despertar()
         self._actualizar_voz_del_espiritu()
@@ -1220,6 +1228,70 @@ class Stage4_1(StageScene):
             elif intensidad < 1.0 and i in self._grietas_con_campanilla:
                 self._grietas_con_campanilla.discard(i)
 
+    # ── Las presencias errantes de fondo (AUD-562) ──────────────
+
+    def _actualizar_presencias_errantes(self, dt: float) -> None:
+        """Cuenta hacia la próxima aparición de cada presencia de
+        `presencias.PRESENCIAS`, o hacia que se apague la que ya está
+        visible — mismo mecanismo que `_actualizar_anomalia_fase1`, una
+        vez por presencia en vez de una sola figura fija."""
+        fase_actual = self.fase.numero
+        for p in presencias.PRESENCIAS:
+            if p.fase != fase_actual:
+                continue
+            visible = self._presencia_visible.get(p.id, 0.0)
+            if visible > 0.0:
+                self._presencia_visible[p.id] = max(0.0, visible - dt)
+                continue
+            proxima = self._presencia_proxima.get(p.id)
+            if proxima is None:
+                proxima = random.uniform(*p.espera)
+            proxima -= dt
+            if proxima <= 0.0:
+                self._presencia_visible[p.id] = random.uniform(*p.duracion)
+                proxima = random.uniform(*p.espera)
+            self._presencia_proxima[p.id] = proxima
+
+    def _dibujar_presencias_errantes(self, surface: pygame.Surface,
+                                     offset: pygame.Vector2) -> None:
+        """Patrulla de ida y vuelta alrededor de `columna_centro`, con la
+        misma lectura de terreno que ya usa `_dibujar_huellas_del_venado`
+        —`trazado.altura_del_suelo`— para que la Fase 3 (con loma de
+        verdad) no deje a nadie flotando sobre el aire ni hundido bajo
+        tierra."""
+        fase_actual = self.fase.numero
+        ts = settings.TILE_SIZE
+        ruta_infestado = "sprites/enemies/enemy_walker_walk.png"
+        for p in presencias.PRESENCIAS:
+            if p.fase != fase_actual:
+                continue
+            if self._presencia_visible.get(p.id, 0.0) <= 0.0:
+                continue
+            avance = (self._tiempo % p.periodo_patrullaje) / p.periodo_patrullaje
+            vaiven = math.sin(avance * math.tau)
+            columna = p.columna_centro + vaiven * p.rango_columnas
+            ancho = int(p.alto * 0.55)
+            x = int(columna * ts - offset.x)
+            if x < -ancho - 20 or x > settings.INTERNAL_WIDTH + 20:
+                continue
+            fila_suelo = trazado.altura_del_suelo(int(columna))
+            y = int(fila_suelo * ts - p.alto) - int(offset.y)
+            dibujado = False
+            if p.tipo == "infestado":
+                # AUD-562 — el sprite real de `WalkerEstudiante`: no es un
+                # monstruo inventado, es otro infectado más, que encaja
+                # con el lore de la infestación mejor que una silueta
+                # genérica de "enemigo".
+                dibujado = siluetas.dibujar_silueta_de_sprite(
+                    surface, ruta_infestado, 20, 16, x, y, ancho, p.alto,
+                    p.color, p.alfa,
+                )
+            if not dibujado:
+                siluetas.dibujar_contorno(
+                    surface, siluetas._fantasma, x, y, ancho, p.alto,
+                    p.color, p.alfa,
+                )
+
     # ── La secuencia de despertar antes del corte (Fase 6) ──────
     #
     # AUD-513, GAP-064 punto 25 — el diseño pide una secuencia completa
@@ -1306,6 +1378,7 @@ class Stage4_1(StageScene):
         escenario, no primer plano."""
         self._dibujar_horizonte(surface, offset)
         self._dibujar_espiritu(surface, offset)
+        self._dibujar_presencias_errantes(surface, offset)
         self._dibujar_decoracion(surface, offset)
         self._dibujar_huellas_del_venado(surface, offset)
         self._dibujar_serpiente_de_fondo(surface, offset)

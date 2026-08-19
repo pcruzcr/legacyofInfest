@@ -113,6 +113,73 @@ class TestLaReglaDeOro:
         assert list(escena._stage_data.hazard_zones) == []
 
 
+class TestLasPresenciasErrantes:
+    """AUD-562 — pedido del dueño: más figuras de fondo, y fauna que no
+    haga daño pero llene de estrés. `presencias.PRESENCIAS` no son
+    entidades — la regla de oro (arriba) sigue en verde con ellas
+    activas."""
+
+    def test_no_agregan_ninguna_entidad(self, escena) -> None:
+        """La misma prueba que `TestLaReglaDeOro`, pero con al menos una
+        presencia forzada a visible — para que quede constancia de que
+        esto no depende de que ninguna esté activa en el momento medido."""
+        from src.stages.stage4_1 import presencias
+
+        for p in presencias.PRESENCIAS:
+            escena._presencia_visible[p.id] = 5.0
+        assert list(escena._stage_data.entity_list) == []
+
+    def test_cada_presencia_solo_vive_en_su_fase(self) -> None:
+        from src.stages.stage4_1 import presencias
+        from src.stages.stage4_1.fases import FASES
+
+        fases_con_presencia = {p.fase for p in presencias.PRESENCIAS}
+        assert fases_con_presencia <= {f.numero for f in FASES}
+
+    def test_eventualmente_aparece(self, escena) -> None:
+        """Forzando el temporizador a cero, igual que ya hace
+        `TestLaSombraDelGavilan.test_cruza_tras_el_silencio`."""
+        from src.stages.stage4_1 import presencias
+
+        p = presencias.PRESENCIAS[0]
+        _posicionar_sin_fisica(escena, p.columna_centro)
+        escena._presencia_proxima[p.id] = 0.0
+        escena._actualizar_presencias_errantes(1 / 60)
+        assert escena._presencia_visible[p.id] > 0.0
+
+    def test_no_se_dibuja_fuera_de_su_fase(self, escena) -> None:
+        from src.stages.stage4_1 import presencias
+        from src.stages.stage4_1.fases import FASES
+
+        p = presencias.PRESENCIAS[0]
+        otra_fase = next(f for f in FASES if f.numero != p.fase)
+        _posicionar_sin_fisica(escena, otra_fase.desde_columna + 10)
+        escena._presencia_visible[p.id] = 5.0
+        lienzo = pygame.Surface((800, 600), pygame.SRCALPHA)
+        escena._dibujar_presencias_errantes(lienzo, pygame.Vector2())
+        arr = pygame.surfarray.pixels_alpha(lienzo)
+        assert arr.max() == 0, "se dibujó una presencia fuera de su fase"
+
+    def test_se_dibuja_visible_dentro_de_su_fase(self, escena) -> None:
+        """Sin monkeypatch: corre la ruta real (incluye el sprite del
+        infestado, que usa `tipo='infestado'`) y comprueba que algo no
+        transparente terminó en el lienzo."""
+        from src.stages.stage4_1 import presencias
+
+        p = next(pr for pr in presencias.PRESENCIAS if pr.tipo == "infestado")
+        _posicionar_sin_fisica(escena, p.columna_centro)
+        escena._presencia_visible[p.id] = 5.0
+        lienzo = pygame.Surface((800, 600), pygame.SRCALPHA)
+        # La cámara real centraría al jugador en pantalla; aquí se imita a
+        # mano para que `columna_centro` caiga dentro del lienzo en vez de
+        # a miles de píxeles de un offset (0, 0).
+        centro_mundo = pygame.Vector2(
+            p.columna_centro * settings.TILE_SIZE - 400, 0)
+        escena._dibujar_presencias_errantes(lienzo, centro_mundo)
+        arr = pygame.surfarray.pixels_alpha(lienzo)
+        assert arr.max() > 0, "el infestado errante no se dibujó"
+
+
 class TestLaGeometriaEsHorizontal:
     """AUD-467 — lo que el veredicto del dueño exigía: un pasillo, no un
     pozo. Más ancho que alto, seis secciones de izquierda a derecha."""
@@ -558,8 +625,8 @@ class TestLosEspiritusUsanSuArteReal:
         from src.engine.core import settings
         from src.stages.stage4_1 import siluetas
 
-        for archivo, _fw, _fh in siluetas.SPRITE_DE_ESPIRITU:
-            ruta = settings.ASSETS_DIR / "sprites" / "bosses" / archivo
+        for ruta_relativa, _fw, _fh in siluetas.SPRITE_DE_ESPIRITU:
+            ruta = settings.ASSETS_DIR / ruta_relativa
             assert ruta.exists(), f"falta el sprite de espíritu: {ruta}"
 
     def test_silueta_desde_sprite_da_una_superficie_pintada(self, _video) -> None:
