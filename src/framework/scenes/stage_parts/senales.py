@@ -132,6 +132,22 @@ class SenalesDeEscenario:
             self.context.event_bus.subscribe(evento, _on_item_picked)
             self._vfx_handlers[evento] = _on_item_picked
 
+        # AUD-559 — el otro lado de `Inventory.usar()`: `InventoryScene`
+        # gasta la unidad y emite, sin saber si hay un jugador vivo a
+        # quien curar (es un singleton, también se abre desde el título).
+        # Aquí sí lo hay — o no se llegaría a suscribir esto.
+        def _on_item_consumed(**data: Any) -> None:
+            if self._player is None:
+                return
+            cantidad = float(data.get("heal_hp", 0.0))
+            if cantidad <= 0.0:
+                return
+            self._player.heal(cantidad)
+            self.context.event_bus.emit(Events.PLAYER_HEALED, amount=cantidad)
+
+        self.context.event_bus.subscribe(Events.ITEM_CONSUMED, _on_item_consumed)
+        self._vfx_handlers[Events.ITEM_CONSUMED] = _on_item_consumed
+
         def _on_warp(**data: Any) -> None:
             """AUD-287 — el salto de una punta del mapa a la otra.
 

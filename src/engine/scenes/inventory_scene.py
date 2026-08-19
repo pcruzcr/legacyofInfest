@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.engine.core import settings
+from src.engine.core.events import Events
 from src.engine.core.i18n import _
 from src.engine.core.inventory import Inventory
 from src.engine.input.action_map import Action
@@ -54,6 +55,10 @@ class InventoryScene(BaseScene):
         #: sacaría a `StageScene` de la pila, no a esta pestaña. El panel
         #: es quien decide qué hace Cancelar cuando embebe.
         self._standalone = standalone
+        #: AUD-559 — aviso breve al usar un consumible (mismo patrón que
+        #: `ShopScene._aviso`).
+        self._aviso: str = ""
+        self._aviso_timer: float = 0.0
 
     def on_enter(self) -> None:
         self.context.scene_manager.transition.start_fade_in(0.5)
@@ -72,28 +77,54 @@ class InventoryScene(BaseScene):
         return [iid for iid in self._inventory.items if iid != "coin"]
 
     def _equipar_seleccionado(self) -> None:
-        """Pone o quita la prenda bajo el cursor.
+        """Pone/quita la prenda bajo el cursor, o usa el consumible.
 
         AUD-220 — GAP-029, conexión 3 de 4. `Inventory.equip()` no tenía un
         solo llamante en la interfaz. Desde AUD-207 la bonificación de la ropa
         **sólo cuenta puesta**, así que sin esta acción comprar ropa dejaba al
         jugador peor que antes: pagaba y no recibía nada.
+
+        AUD-559 — el mismo botón usa un consumible (`Inventory.usar`) si
+        el objeto bajo el cursor lo es: no hace falta un modo aparte
+        para "usar" cuando "equipar" no tiene sentido en ese objeto.
         """
         ids = self._item_ids()
         if not ids:
             return
         item_id = ids[min(self._selected_slot, len(ids) - 1)]
         defn = self._inventory.get_def(item_id)
+        if defn is None:
+            return
+        if defn.consumible:
+            heal = self._inventory.usar(item_id)
+            if heal > 0.0:
+                # AUD-559 — el aviso visible es necesario incluso cuando
+                # hay un jugador vivo: la escena embebida (`PausaDeEscenario`)
+                # también dibuja esta pantalla, y el destello verde del HUD
+                # (`Events.PLAYER_HEALED`) vive detrás de la tira de
+                # pestañas, no aquí. Abierta desde el título (sin partida)
+                # es el único aviso que existe.
+                self._avisar(f"+{heal:g} de vida")
+                self.context.event_bus.emit(Events.ITEM_CONSUMED, heal_hp=heal)
+            return
         # Sin hueco no hay nada que equipar: las mejoras permanentes cuentan
         # por tenerlas, y las habilidades de jefe no se ponen ni se quitan.
-        if defn is None or defn.slot is None or defn.slot == "skill":
+        if defn.slot is None or defn.slot == "skill":
             return
         if self._inventory.get_equipped().get(defn.slot) == item_id:
             self._inventory.unequip(defn.slot)
         else:
             self._inventory.equip(item_id)
 
+    def _avisar(self, texto: str) -> None:
+        self._aviso = texto
+        self._aviso_timer = 1.6
+
     def update(self, dt: float) -> None:
+        if self._aviso_timer > 0.0:
+            self._aviso_timer -= dt
+            if self._aviso_timer <= 0.0:
+                self._aviso = ""
         im = self.input
         if im is None:
             return
@@ -193,6 +224,13 @@ class InventoryScene(BaseScene):
                     )
                     puesto = self._font_desc.render(_("PUESTO"), True, Theme.SUCCESS)
                     surface.blit(puesto, (sx + 4, sy + 2))
+                # AUD-559 — un consumible se agota: mostrar cuántos quedan
+                # es la única forma de saber si ya usaste el último.
+                if defn is not None and defn.consumible:
+                    tengo = self._font_desc.render(
+                        f"x{self._inventory.count(item_id)}", True, Theme.TEXT_MUTED,
+                    )
+                    surface.blit(tengo, (sx + 4, sy + 2))
                 if defn and defn.description and focused:
                     desc_surf = self._font_desc.render(
                         defn.description, True, Theme.TEXT_MUTED,
@@ -200,9 +238,17 @@ class InventoryScene(BaseScene):
                     dx = (settings.INTERNAL_WIDTH - desc_surf.get_width()) // 2
                     surface.blit(desc_surf, (dx, BOTTOM_BAR_Y - 36))
 
+        if self._aviso:
+            aviso_surf = self._font_item.render(self._aviso, True, Theme.SUCCESS)
+            surface.blit(
+                aviso_surf,
+                ((settings.INTERNAL_WIDTH - aviso_surf.get_width()) // 2,
+                 BOTTOM_BAR_Y - 56),
+            )
+
         draw_key_hints(surface, [
             ("←→↑↓", "Navegar"),
-            ("Enter", "Poner / quitar"),
+            ("Enter", "Poner / quitar / usar"),
             ("Esc", "Volver"),
         ])
 
