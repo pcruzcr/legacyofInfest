@@ -44,7 +44,7 @@ Legacy of InFest es un juego de plataformas y acción 2D de estética SNES ambie
 
 ### 2.1 Premisa
 
-John y Jin, dos estudiantes de intercambio, llegan a la Universidad Invenio en Costa Rica. Cada uno trae consigo una reliquia antigua: **La Pepita** (una pepita de oro de Crucitas) y **La Perla** (una extraña perla nacida en un raro coral marino). Sin saberlo, estas reliquias despiertan a los espíritus ancestrales de la tierra —guardianes de la cultura ficticia **Tilawa**— que buscan recuperar las reliquias para restaurar el equilibrio natural.
+John y Jill, dos estudiantes de intercambio, llegan a la Universidad Invenio en Costa Rica. Cada uno trae consigo una reliquia antigua: **La Pepita** (una pepita de oro de Crucitas) y **La Perla** (una extraña perla nacida en un raro coral marino). Sin saberlo, estas reliquias despiertan a los espíritus ancestrales de la tierra —guardianes de la cultura ficticia **Tilawa**— que buscan recuperar las reliquias para restaurar el equilibrio natural.
 
 ### 2.2 Archos narrativos
 
@@ -68,13 +68,13 @@ La narrativa es intencionalmente sobria. Se cuenta a través del entorno, el dis
 
 Hijo de un empresario vinculado a la explotación minera. Porta **La Pepita**. Directo, impaciente, físico. En combate favorece el ataque corto.
 
-### 3.2 Jin
+### 3.2 Jill
 
 Hija de una familia relacionada con la industria pesquera. Porta **La Perla**. Metódica, observadora, cautelosa. Favorece el alcance.
 
 ### 3.3 El protagonista encapuchado
 
-El framework usa **una única entidad de jugador unificada**. En el Stage 0 la capucha oculta qué protagonista controla el jugador —narrativamente intencional: es el "antes" de que los espíritus los noten. Las diferencias entre John y Jin se expresan en pantallas de historia y en el storytelling ambiental.
+El framework usa **una única entidad de jugador unificada**. En el Stage 0 la capucha oculta qué protagonista controla el jugador —narrativamente intencional: es el "antes" de que los espíritus los noten. Las diferencias entre John y Jill se expresan en pantallas de historia y en el storytelling ambiental.
 
 ---
 

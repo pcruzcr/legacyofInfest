@@ -26,7 +26,7 @@ vez: al morir y reaparecer no se repite.
 
 El Gran Shaman Paburu es una figura espiritual Tilawa de poder inmenso, corrompida
 por un duelo antiguo. No pelea para destruir: pelea para **examinar**. La Pepita y
-La Perla que cargan John y Jin son las llaves de su ritual, y necesita ver si son
+La Perla que cargan John y Jill son las llaves de su ritual, y necesita ver si son
 dignos. Sus cuatro formas no son entidades distintas, sino capas de su poder: cada
 una revela más de quién es en realidad.
 
@@ -35,7 +35,7 @@ verde precolombina, semienterrada en el centro del cementerio, con los ojos
 cerrados. Juzga sin mirar — sus ataques son ciegos y mecánicos, exactamente como
 juzgó siglos atrás a Kavë, la portadora a la que condenó por error y por cuya
 muerte se selló a sí mismo. Los siglos de espera no fueron vigilancia: fueron
-penitencia. Cuando John y Jin llegan, Paburu no está furioso, está aterrado de
+penitencia. Cuando John y Jill llegan, Paburu no está furioso, está aterrado de
 volver a equivocarse.
 
 ---
@@ -258,8 +258,10 @@ reimplementadas.
 
 La arena es un TMX de 50 × 38 tiles (800 × 608 px) con las 8 capas obligatorias
 del spec y **tileset propio** (`tileset_paburu.png`, 52 tiles dibujados para este
-stage). Objetos: `PlayerSpawn`, `Checkpoint`, `BossPaburu`, `CameraLock` (bloquea X e
-Y: la pelea es de una sola pantalla) y `NextTrigger`.
+stage). Objetos: `PlayerSpawn`, `Checkpoint`, `BossPaburu` y `CameraLock` (bloquea
+X e Y: la pelea es de una sola pantalla). AUD-538: se eliminó el `NextTrigger`
+fantasma que colgaba en y=-64 — el nivel termina en la escena al vencer al
+jefe, como `boss_venado` y `boss_rey`.
 
 El escenario sigue el croquis del GDD §3.1: cielo púrpura con luna velada y
 montañas y un cementerio lejano en `BG_Far`, ruinas a media distancia en

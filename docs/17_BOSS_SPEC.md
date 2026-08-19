@@ -613,7 +613,7 @@ El patrón de movimiento de la Fase 3 — una combinación de picados y flotaci�
 **Ubicación:** Stage 4-2 — El Cementerio Sagrado
 **Vida:** 20 corazones en total, repartidos en 4 fases (5 por fase)
 
-Paburu es el Gran Shamán — una figura espiritual Tilawa de poder inmenso, corrompida por un duelo antiguo. No pelea para destruir — pelea para **poner a prueba**. La Pepita de Oro y la Perla que llevan John y Jin son las últimas llaves de su ritual. Necesita ver si son dignos.
+Paburu es el Gran Shamán — una figura espiritual Tilawa de poder inmenso, corrompida por un duelo antiguo. No pelea para destruir — pelea para **poner a prueba**. La Pepita de Oro y la Perla que llevan John y Jill son las últimas llaves de su ritual. Necesita ver si son dignos.
 
 Sus cuatro formas no son entidades separadas — son capas de su poder, cada una revelando más de quién es en realidad.
 
@@ -699,7 +699,7 @@ Los tres ecos son instancias de entidad ligeras que usan los mismos sprites que 
 
 **Transición visual:**
 1. La forma de máscara espectral se disuelve
-2. La Pepita de Oro y la Perla vuelan hasta la arena — antes en manos de John y Jin
+2. La Pepita de Oro y la Perla vuelan hasta la arena — antes en manos de John y Jill
 3. La mano de Paburu las atrapa
 4. Se pone la máscara
 5. **En este punto, el juego elige al azar la Forma 3A o la Forma 3B**
@@ -761,7 +761,7 @@ El ataque PULL implementa directamente una atracción gravitacional simplificada
 **Narrativa de la transición:**
 1. La esfera (dorada o negra) se disuelve lentamente
 2. Se materializa una figura alta y antigua — la verdadera forma espiritual de Paburu
-3. Mira a John y Jin durante un largo momento
+3. Mira a John y Jill durante un largo momento
 4. Luego levanta la mano — y empieza la batalla final
 
 **Visual:** una figura espectral alta y delgada. Túnicas de luz fluyente. Cara antigua — pacífica pero inmensa. Ojos que brillan en blanco. Manos que brillan alternando luz dorada y de perla.
@@ -788,7 +788,7 @@ El ataque PULL implementa directamente una atracción gravitacional simplificada
 ### 6.7 Secuencia de derrota de Paburu
 
 1. A 0 de vida: la forma espiritual de Paburu no cae — se eleva
-2. Las reliquias (pepita y perla) vuelan hacia John y Jin respectivamente
+2. Las reliquias (pepita y perla) vuelan hacia John y Jill respectivamente
 3. Paburu extiende los brazos — se mantiene un momento largo (4 segundos de animación)
 4. Los tres guardianes espirituales (venado, serpiente, gavilán) aparecen una última vez — y se inclinan ante Paburu
 5. Paburu también se inclina — y se disuelve en luz dorada

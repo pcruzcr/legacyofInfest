@@ -17,7 +17,7 @@ date_processed: "2026-08-01"
 **Público:** profesorado, estudiantes, artistas, asistentes de código
 
 > **Naturaleza de este documento.** Los documentos LOI-LORE-019, LOI-WORLD-016
-> y LOI-BOSS-017 definen el canon: quiénes son John y Jin, qué son las reliquias,
+> y LOI-BOSS-017 definen el canon: quiénes son John y Jill, qué son las reliquias,
 > quiénes son los cuatro espíritus y dónde ocurre la historia. Este documento no
 > reescribe el canon: lo **expande**. Todo lo que aquí se añade —leyendas,
 > motivos, voces, nombres de objetos del mundo— está escrito para no contradecir
@@ -256,7 +256,7 @@ equilibrio natural. El bosque recordó. Los espíritus despertaron.
 | Acto | Lugar | Lo que pasa |
 |---|---|---|
 | Umbral | Campo de calibración | El cuerpo se mide. El jugador aprende a moverse. |
-| Acto 1 | El campus | El venado despierta. Los animales se desplazan, la selva reclama los edificios. El primer encuentro de John y Jin ocurre entre 1-1 y 1-2: dos siluetas que se cruzan sin palabras. |
+| Acto 1 | El campus | El venado despierta. Los animales se desplazan, la selva reclama los edificios. El primer encuentro de John y Jill ocurre entre 1-1 y 1-2: dos siluetas que se cruzan sin palabras. |
 | Acto 2 | El Datacenter | La tecnología despierta al Rey Terciopelo. El calor del edificio se convierte en un imperio de serpientes. Al caer el Rey, la sabiduría del veneno se absorbe en las reliquias: a veces, en adelante, brillan en verde. |
 | Acto 3 | Sede Heredia | La máscara reconoce a los portadores. El Gavilán Camionero Mascarero los caza por el edificio en silencio de patrones. Al caer, la máscara se desprende y asciende buscando a su chamán. El halcón vuelve a ser un halcón. |
 | Final | El Cementerio Sagrado | Paburu no se esconde: espera. Cuatro formas, cuatro pruebas. Las reliquias son la llave y el peligro. Al final, Paburu asciende en una ceremonia silenciosa —no derrotado, sino liberado— y el mundo queda en calma. |
@@ -265,7 +265,7 @@ equilibrio natural. El bosque recordó. Los espíritus despertaron.
 
 El mundo queda quieto. La prueba terminó. Los espíritus del venado, el Rey y el
 Gavilán se reúnen brevemente alrededor de la forma ascendente de Paburu —no en
-derrota, sino en **ceremonia**—. Las reliquias permanecen con John y Jin. Nadie
+derrota, sino en **ceremonia**—. Las reliquias permanecen con John y Jill. Nadie
 les explica qué significa todo esto. **Lo que viene después es la historia de
 los estudiantes.**
 
@@ -285,14 +285,14 @@ las cosas se pelean solas con él —o él con ellas—. La pepita no lo empuja 
 pelear: **le recuerda que pelear es lo suyo**, y eso le parece normal. Esa
 normalidad es el problema.
 
-### 5.2 Jin
+### 5.2 Jill
 
 Hija de una familia relacionada con la industria pesquera. Metódica, observadora,
 cautelosa; piensa antes de actuar. En gameplay favorece el alcance. Lleva La
 Perla porque "es de la familia" —nacida en un coral raro, sacada por su abuelo
-de una pesca que nadie más recuerda—. Jin no está tranquila con la perla: la ha
+de una pesca que nadie más recuerda—. Jill no está tranquila con la perla: la ha
 estado estudiando desde que llegó, y la perla ha estado estudiándola a ella. La
-perla no refleja la luz; absorbe. Jin nota que desde que la trae ve *demasiado*:
+perla no refleja la luz; absorbe. Jill nota que desde que la trae ve *demasiado*:
 detalles que no debería ver, patrones que no debería haber. No se lo dice a
 nadie. Es la primera en entender —antes que John, antes que el jugador— que el
 viaje no es un accidente.
@@ -301,14 +301,14 @@ viaje no es un accidente.
 
 En el Stage 0, el protagonista lleva capucha. Narrativamente es deliberado: es
 el **antes**, el tiempo en que los espíritus todavía no los notan, en que la
-identidad todavía no importa. Podría ser John o Jin; la historia no lo dice
+identidad todavía no importa. Podría ser John o Jill; la historia no lo dice
 hasta las pantallas. El cuerpo es uno, el framework es uno: el motor usa una
-única entidad de jugador. Las diferencias entre John y Jin se expresan en las
+única entidad de jugador. Las diferencias entre John y Jill se expresan en las
 pantallas de historia y en el entorno —no en la física.
 
 ### 5.4 El primer encuentro
 
-John y Jin no se conocen al llegar. Su primer encuentro ocurre entre el Stage
+John y Jill no se conocen al llegar. Su primer encuentro ocurre entre el Stage
 1-1 y el 1-2, en una secuencia breve de sprites —sin diálogos, solo siluetas
 que se cruzan y se detienen un instante—. A partir de la Zona 1 viajan juntos.
 El juego no define su relación como romántica, familiar o de otra clase: es
@@ -335,7 +335,7 @@ frío, con un resplandor dorado que late. En el HUD es el indicador de John.
 ### 6.2 La Perla — la memoria del coral
 
 Una perla negra y redonda, 7×7 píxeles, con brillo de obsidiana y un destello
-blanco mínimo. Fría. No refleja: absorbe. En el HUD es el indicador de Jin.
+blanco mínimo. Fría. No refleja: absorbe. En el HUD es el indicador de Jill.
 
 - **Qué es:** una perla nacida en un coral marino raro, donde la luz no llega.
 - **Qué hace:** amplifica la percepción y la defensa. Quien la lleva ve más de
@@ -349,7 +349,7 @@ blanco mínimo. Fría. No refleja: absorbe. En el HUD es el indicador de Jin.
 
 Separadas, eran reliquias de familia. **Juntas, cruzando el umbral de un campus
 construido sobre tierra sellada, rompieron el equilibrio natural.** Los
-espíritus no despertaron porque John y Jin fueran amenazas: despertaron porque
+espíritus no despertaron porque John y Jill fueran amenazas: despertaron porque
 la combinación de los dos objetos —el sol y el mar, el norte y la costa, la
 mina y la pesca— era exactamente la señal que la tierra había estado esperando
 desde el ritual de Paburu.
@@ -373,7 +373,7 @@ décadas —años—. Murió viejo. Sus huesos se hundieron en la tierra y fuero
 absorbidos lentamente por las raíces de un árbol antiguo. Cuando las reliquias
 entraron al campus, las raíces se removieron y los huesos **se ensamblaron**.
 
-**Naturaleza.** No está enojado: es protector. El bosque no odia a John y a Jin;
+**Naturaleza.** No está enojado: es protector. El bosque no odia a John y a Jill;
 no confía en que estén listos. El venado prueba los reflejos, la paciencia, la
 capacidad de soportar el contacto con lo salvaje. No camina: **deriva**, como si
 la selva misma lo cargara. Su esqueleto está envuelto en lianas, musgo y
@@ -385,7 +385,7 @@ han herido en serio— su furia no es agresión: es **urgencia**. Barrre con
 lianas. El bosque lo sostiene porque el bosque todavía no ha terminado su
 pregunta.
 
-**Tras la derrota.** Su espíritu no desaparece: **sigue a John y a Jin**. Desde
+**Tras la derrota.** Su espíritu no desaparece: **sigue a John y a Jill**. Desde
 la Zona 2 en adelante, su silueta es ocasionalmente visible en las capas de
 fondo —BG_Mid—. Está observando. Los portadores no ganan un aliado: ganan un
 testigo.
@@ -400,7 +400,7 @@ llegaron, su murmullo colectivo encontró una voz: **El Rey**.
 **Naturaleza.** No es una conciencia singular. Es una **democracia de veneno**:
 miles de voluntades individuales alineadas hacia un solo propósito. Es ajeno,
 distribuido, frío. No prueba el coraje: prueba la **adaptabilidad** —¿pueden
-John y Jin manejar algo que no piensa como ellos?—. Su cuerpo visible es una
+John y Jill manejar algo que no piensa como ellos?—. Su cuerpo visible es una
 masa de serpientes que se sostiene entre dos pilares de servidores, suspendida
 en el aire caliente. En la fase 2, la masa **clasifica**: alterna entre modos
 agresivo, defensivo y disperso —y quien lo mire con ojos de patrones puede
@@ -430,7 +430,7 @@ claraboya: un espacio hecho para cazadores del aire.
 
 **Tras la derrota.** La máscara se desprende del halcón, que vuelve a su tamaño
 natural y **vuela libre**. La máscara no cae: asciende flotando, buscando a
-Paburu. El halcón se posa un instante en una viga, mira a John y a Jin, y se
+Paburu. El halcón se posa un instante en una viga, mira a John y a Jill, y se
 marcha. Es uno de los pocos momentos cálidos del juego.
 
 ### 7.4 El Gran Shaman Paburu — el espíritu de la prueba
@@ -455,7 +455,7 @@ reliquias en sí —y por fin, a él mismo.
 | 4 — El espíritu | Su forma verdadera | El reconocimiento final |
 
 **Tras la derrota.** Paburu **asciende**. No es destruido: es liberado. Mira a
-John y a Jin con reconocimiento —no orgullo exactamente, sino algo parecido—.
+John y a Jill con reconocimiento —no orgullo exactamente, sino algo parecido—.
 Las reliquias permanecen con ellos. Los espíritus del venado, del Rey y del
 Gavilán se reúnen brevemente alrededor de su forma ascendente, no en derrota,
 sino en ceremonia.
@@ -586,7 +586,7 @@ cuando la prueba se completa.
 |---|---|
 | **Tilawa** | La cultura ancestral ficticia nombrada en el sílabo; el pueblo de Paburu. Inspirada en la herencia indígena costarricense y centroamericana, sin usar nombres reales de pueblos, objetos sagrados ni ceremonias vivas. |
 | **La Pepita** | Pepita de oro de Crucitas; reliquia de John. Cálida; amplifica fuerza y velocidad; llave del ritual de Paburu (Forma 3A). |
-| **La Perla** | Perla negra nacida en un coral marino raro; reliquia de Jin. Fría, absorbe la luz; amplifica percepción y defensa; llave del ritual (Forma 3B). |
+| **La Perla** | Perla negra nacida en un coral marino raro; reliquia de Jill. Fría, absorbe la luz; amplifica percepción y defensa; llave del ritual (Forma 3B). |
 | **Crucitas** | Región histórica de minería de oro del norte de Costa Rica; origen de La Pepita. |
 | **El Equilibrio Natural** | La ley Tilawa: todo objeto de poder tiene voluntad y precio; juntas, las reliquias rompen el equilibrio y despiertan a Paburu. |
 | **La Prueba** | El examen de cuatro pasos de los espíritus: reflejos (venado), adaptabilidad (Rey), patrones (Gavilán), verdad (Paburu). |
@@ -596,7 +596,7 @@ cuando la prueba se completa.
 | **El Gran Shaman Paburu** | El chamán que selló las reliquias y se volvió la cerradura; cuatro formas; no es villano, es la meta. |
 | **El Cementerio Sagrado** | El sello; la cerradura; el lugar donde la prueba se completa. |
 | **La Infestación** | El despertar de la tierra por la presencia de las reliquias; la señal, no el desastre. |
-| **Universidad Invenio** | La universidad donde estudian John y Jin; el campus selvático, el datacenter y la sede de Heredia. |
+| **Universidad Invenio** | La universidad donde estudian John y Jill; el campus selvático, el datacenter y la sede de Heredia. |
 | **La Soda / Las Aulas / La Residencia** | La cafetería, los salones y el claro del bosque; la Zona 1 reclamada por la selva. |
 | **El Datacenter** | El edificio de servidores; el imperio del Rey Terciopelo. |
 | **El Bungaló** | La guarida del Gavilán en la última planta de Sede Heredia. |
