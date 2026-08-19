@@ -111,6 +111,16 @@ class Stage4_1(StageScene):
     ESPERA_ENTRE_SOMBRAS: tuple[float, float] = (6.0, 14.0)
     DURACION_DEL_CRUCE = 3.5
 
+    # ── La luna de la Fase 4 (AUD-563) ──────────────────────────
+    #: Posición y radio fijos en pantalla — como `_dibujar_sombra_de_ave`,
+    #: no lleva paralaje: es el cielo, casi inmóvil. Dentro de la banda de
+    #: `ALTURAS_DE_CRUCE` (60-110) para que la sombra, cuando cruza, pase
+    #: cerca de verdad, no en otra franja del cielo.
+    POSICION_LUNA_FASE4: tuple[int, int] = (600, 78)
+    RADIO_LUNA_FASE4 = 22
+    COLOR_LUNA_FASE4: tuple[int, int, int] = (225, 217, 195)
+    ALFA_LUNA_FASE4 = 130
+
     # ── El escenario observa (AUD-492, GAP-065 §13 eslabón F4) ──
     #: Cuánto tiene que llevar quieto el jugador para que la Fase 4 le
     #: responda. Cuatro segundos es mucho más de lo que dura una pausa
@@ -1072,6 +1082,19 @@ class Stage4_1(StageScene):
         `AudioManager.play_sfx_at`) en vez del canal ciego
         `_play_sfx_named` que usaba antes: el motor ya sabía hacer esto,
         sólo que el Gavilán no se lo pedía.
+
+        AUD-563 — pedido del dueño: *«que aparezca el Gavilán por la luna
+        cuando suena»*. Antes el grito y la sombra corrían en
+        temporizadores independientes —podían coincidir por azar o no—;
+        ahora el propio grito dispara el cruce (`_iniciar_cruce_de_sombra`)
+        en el mismo instante, siempre que la luna nueva de la Fase 4
+        (`_dibujar_luna_de_fase4`) esté en el cielo y no haya ya una
+        sombra cruzando (mismo guardián que ya usa
+        `_actualizar_quietud_del_gavilan`, para no solapar dos cruces). El
+        temporizador propio de la sombra (`_actualizar_sombra_del_gavilan`)
+        se queda intacto para la actividad ambiental *entre* gritos —el
+        guion también pide sombras «de vez en cuando», no sólo con el
+        grito.
         """
         fase = self.fase
         if fase.grito_aislado is None or not self._shake_disparado:
@@ -1084,6 +1107,8 @@ class Stage4_1(StageScene):
                        + claro * (self.VOLUMEN_GRITO[1] - self.VOLUMEN_GRITO[0]))
             self._play_sfx_spatial(
                 fase.grito_aislado, self._posicion_del_grito(), volume=volumen)
+            if fase.sombra_de_ave and self._sombra_progreso < 0.0:
+                self._iniciar_cruce_de_sombra()
 
     # ── La quietud que revela (AUD-492) ─────────────────────────
 
@@ -1377,6 +1402,7 @@ class Stage4_1(StageScene):
         que el diseño anterior pintaba sus siluetas: son recuerdos y
         escenario, no primer plano."""
         self._dibujar_horizonte(surface, offset)
+        self._dibujar_luna_de_fase4(surface, offset)
         self._dibujar_espiritu(surface, offset)
         self._dibujar_presencias_errantes(surface, offset)
         self._dibujar_decoracion(surface, offset)
@@ -1794,6 +1820,31 @@ class Stage4_1(StageScene):
         )
 
     # ── La sombra del Gavilán, dibujo (Fase 4) ──────────────────
+
+    def _dibujar_luna_de_fase4(self, surface: pygame.Surface,
+                              offset: pygame.Vector2) -> None:
+        """Una luna nueva en el cielo de la Fase 4 (AUD-563) — el nivel ya
+        va de atardecer a noche cerrada (`13_STAGE_4_1.md` §2, "Empieza al
+        atardecer, termina de noche"), así que una luna pálida en el
+        bosque cortado no desentona, y le da a `_actualizar_grito_del_
+        gavilan` algo real contra lo que sincronizar la sombra: *«que
+        aparezca el Gavilán por la luna cuando suena»*. Se queda fija toda
+        la fase, no intermitente como el ciclo de la Fase 5 — esa
+        intermitencia significa algo distinto allá (la luz que se pierde);
+        aquí sólo hace falta que esté."""
+        if self.fase.numero != 4:
+            return
+        x, y = self.POSICION_LUNA_FASE4
+        lienzo = pygame.Surface(
+            (self.RADIO_LUNA_FASE4 * 2 + 2, self.RADIO_LUNA_FASE4 * 2 + 2),
+            pygame.SRCALPHA,
+        )
+        centro = (self.RADIO_LUNA_FASE4 + 1, self.RADIO_LUNA_FASE4 + 1)
+        pygame.draw.circle(
+            lienzo, (*self.COLOR_LUNA_FASE4, self.ALFA_LUNA_FASE4),
+            centro, self.RADIO_LUNA_FASE4,
+        )
+        surface.blit(lienzo, (x - centro[0], y - centro[1]))
 
     def _dibujar_sombra_de_ave(self, surface: pygame.Surface,
                                offset: pygame.Vector2) -> None:

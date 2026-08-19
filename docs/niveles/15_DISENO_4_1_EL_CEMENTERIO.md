@@ -139,6 +139,19 @@ dirección»*): suena con paneo estéreo real (`_play_sfx_spatial`,
 azar a la izquierda o la derecha del jugador — antes salía por el canal
 ciego, sin dirección.
 
+**Una luna nueva, y la sombra sincronizada de verdad con el grito**
+(AUD-563 — pedido del dueño: *«que aparezca el Gavilán por la luna
+cuando suena»*): antes «coordinada con el grito» era aspiracional —el
+grito y la sombra corrían en temporizadores independientes, sin
+relación real entre sí. Ahora la Fase 4 tiene una luna pálida fija en
+el cielo (`_dibujar_luna_de_fase4`; el nivel ya va de atardecer a
+noche cerrada, así que no desentona) y `_actualizar_grito_del_gavilan`
+dispara el cruce de la sombra en el mismo instante en que suena el
+grito, siempre que no haya ya un cruce en marcha. El temporizador
+propio de la sombra se queda para la actividad ambiental *entre*
+gritos — el guion también pide sombras «de vez en cuando», no sólo
+junto al grito.
+
 ### 3.5 Fase 5 — La Planicie de los Muertos (columnas 600–749)
 
 Nocturno azulado, la sección más oscura. Un ciclo de luna (período 6 s)

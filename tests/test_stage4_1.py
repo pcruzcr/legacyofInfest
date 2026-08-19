@@ -1114,6 +1114,52 @@ class TestElGritoDelGavilanTieneDireccion:
         assert len(set(posiciones)) > 1, "el grito siempre sonó desde el mismo sitio"
 
 
+class TestLaLunaSincronizaLaSombraConElGrito:
+    """AUD-563 — pedido del dueño: *«que aparezca el Gavilán por la luna
+    cuando suena»*. Antes el grito y la sombra corrían en temporizadores
+    independientes, sin relación entre sí."""
+
+    def _tras_el_silencio(self, escena):
+        from src.stages.stage4_1 import trazado
+        from src.stages.stage4_1.fases import FASES
+
+        fase4 = FASES[3]
+        objetivo = fase4.desde_columna + int(0.6 * trazado.ANCHO_SECCION)
+        _llevar_a(escena, objetivo)
+        assert escena._shake_disparado is True
+        return escena
+
+    def test_la_luna_solo_se_ve_en_la_fase_4(self, escena) -> None:
+        from src.stages.stage4_1.fases import FASES
+
+        for fase in FASES:
+            _posicionar_sin_fisica(escena, fase.desde_columna + 5)
+            lienzo = pygame.Surface((800, 600), pygame.SRCALPHA)
+            escena._dibujar_luna_de_fase4(lienzo, pygame.Vector2())
+            arr = pygame.surfarray.pixels_alpha(lienzo)
+            if fase.numero == 4:
+                assert arr.max() > 0, "la luna no se dibujó en la Fase 4"
+            else:
+                assert arr.max() == 0, f"la luna se dibujó en la Fase {fase.numero}"
+
+    def test_el_grito_dispara_la_sombra(self, escena) -> None:
+        self._tras_el_silencio(escena)
+        escena._sombra_progreso = -1.0  # nada cruzando todavía
+        escena._proximo_grito = 0.0
+        escena._actualizar_grito_del_gavilan(1 / 60)
+        assert escena._sombra_progreso >= 0.0
+
+    def test_no_solapa_si_ya_hay_una_sombra_cruzando(self, escena) -> None:
+        """El guardián `_sombra_progreso < 0.0` de `_actualizar_grito_del_
+        gavilan`: si ya hay un cruce en marcha, el grito no lo reinicia a
+        mitad de camino."""
+        self._tras_el_silencio(escena)
+        escena._sombra_progreso = 0.5
+        escena._proximo_grito = 0.0
+        escena._actualizar_grito_del_gavilan(1 / 60)
+        assert escena._sombra_progreso == 0.5
+
+
 class TestElPisoDeVisibilidadDeLaLuna:
     """AUD-476 — puntos 9-10 de la crítica de diseño: *«no puedo ver bien»
     no es lo mismo que «no puedo jugar»*. `AMBIENTE_MIN_LUNA` era 0,06 —
