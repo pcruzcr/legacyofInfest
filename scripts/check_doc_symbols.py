@@ -118,7 +118,7 @@ NO_SON_API: frozenset[str] = frozenset({
     "pytweening", "pydantic", "pydub", "lupa", "ModernGL",
     # Métodos y formatos de pygame (22_API_CONTRACTS los cita como
     # operaciones de superficie) y de pydantic: existen, pero no aquí.
-    "subsurface", "blits", "blit", "ttf", "BaseModel",
+    "subsurface", "blits", "blit", "ttf", "BaseModel", "circle",
     # Convenciones de nombres, no nombres.
     "snake_case", "PascalCase", "camelCase", "kebab_case",
     # Valores de datos y nombres de módulos de curso, no símbolos de código.

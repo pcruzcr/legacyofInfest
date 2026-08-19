@@ -234,12 +234,17 @@ def _icono_de_moneda(diametro: int, color: tuple[int, int, int]) -> pygame.Surfa
 #: Vive aquí y no en `minimap.py` porque el HUD es quien conoce la franja
 #: entera: el minimapa solo no puede saber que el cronómetro ocupa el borde
 #: derecho, que es exactamente lo que no sabía cuando se colocaba encima.
-# AUD-535 — "se traslada ligeramente hacia el margen interior derecho":
-# antes terminaba justo en el borde de la pantalla (258+62=320, el ancho
-# exacto de la maqueta); ahora deja 4 px de aire, y con la máscara
-# redondeada ese margen es lo que evita que la curva del marco se corte
-# contra el borde real de la ventana.
-RECUADRO_MINIMAPA_DISENO: tuple[int, int, int, int] = (254, 20, 62, 44)
+# AUD-547 — "circular de verdad", no un rectángulo de esquinas muy
+# redondeadas: un círculo inscrito en un rectángulo no cuadrado recorta
+# contenido de los lados largos y deja aire de los cortos, así que deja
+# de leerse como un círculo — es exactamente el mismo razonamiento que
+# ya se aplicó al retrato (círculo inscrito en un marco cuadrado). El
+# minimapa pasa de 62×44 a 44×44 —el lado menor de antes— para que
+# `minimap.py` pueda recortarlo con `pygame.draw.circle`, no con
+# `border_radius`. El margen respecto al borde derecho de la pantalla
+# usa la misma constante `MARGEN_DE_PANTALLA` que el resto del HUD
+# (antes eran 4 px sueltos, un caso especial que nadie más seguía).
+RECUADRO_MINIMAPA_DISENO: tuple[int, int, int, int] = (270, 26, 44, 44)
 
 
 def minimap_rect_por_defecto() -> pygame.Rect:
@@ -280,8 +285,20 @@ class HUD:
         # proporción respecto al diseño de 320 era la correcta; lo que no
         # aguanta el salto de escala es que un retrato ocupe el 10 % del
         # ancho de la pantalla.
-        self._portrait_frame_rect = _rect_escalado(2, 2, 24, 24)
-        self._portrait_sprite_rect = _rect_escalado(3, 3, 22, 22)
+        # AUD-547 — pedido explícito tras jugarlo: "nada quede pegado a la
+        # izquierda o a la derecha o arriba y abajo". El retrato vivía en
+        # (2,2) de maqueta —5 px reales del borde—, casi tocando el marco
+        # de la ventana. `MARGEN_DE_PANTALLA` es el margen mínimo que
+        # respeta cualquier elemento que viva junto a un borde real de la
+        # pantalla (no junto a otro elemento del HUD, eso es un gap
+        # aparte); el resto de esta franja deriva sus posiciones del
+        # retrato, así que un solo número mueve todo el bloque de
+        # identidad a la vez.
+        MARGEN_DE_PANTALLA = 6
+        self._portrait_frame_rect = _rect_escalado(
+            MARGEN_DE_PANTALLA, MARGEN_DE_PANTALLA, 24, 24)
+        self._portrait_sprite_rect = _rect_escalado(
+            MARGEN_DE_PANTALLA + 1, MARGEN_DE_PANTALLA + 1, 22, 22)
         self._timer_fill = None
         self._timer_edges: dict[str, pygame.Surface] = {}
         # Load 9-slice frame from hud_frame.png, pre-scale all variants once
@@ -348,13 +365,22 @@ class HUD:
         # AUD-219/AUD-535 — marcador de puntos y monedas, reubicado junto
         # al bloque de identidad (retrato + barras) ahora que los
         # corazones ya no ocupan la fila horizontal donde vivía antes.
-        self._score_region = _rect_escalado(32, 2, 92, 24)
+        # AUD-547 — su x deriva del borde derecho del retrato con el
+        # mismo hueco de 6 px que tenía antes (26+6=32); con el retrato
+        # movido a MARGEN_DE_PANTALLA=6, ese borde ahora cae en 30, así
+        # que el marcador se corre a 36 para conservar el mismo hueco. Su
+        # y usa el mismo margen de pantalla que el retrato — sin esto
+        # quedaría más cerca del borde superior que su propio vecino.
+        self._score_region = _rect_escalado(
+            MARGEN_DE_PANTALLA + 30, MARGEN_DE_PANTALLA, 92, 24)
         self._score: int = 0
         self._coins: int = 0
         # AUD-535 — el reloj se centra arriba (antes pegado al borde
         # derecho) y pierde la etiqueta "TIME": un ícono la reemplaza,
         # dibujado en `_draw_timer`, no un sprite nuevo que mantener.
-        self._timer_bg_rect = _rect_escalado(134, 2, 52, 16)
+        # AUD-547 — y usa el margen de pantalla; x no lo necesita (está
+        # centrado horizontalmente, lejos de ambos bordes laterales).
+        self._timer_bg_rect = _rect_escalado(134, MARGEN_DE_PANTALLA, 52, 16)
         # Pre-scale timer background once (deferred from frame load block)
         self._timer_fill = (
             pygame.transform.scale(
@@ -377,8 +403,8 @@ class HUD:
         # AUD-535 — el ícono ocupa el borde izquierdo del marco del reloj;
         # las cifras, el resto. `_timer_label_rect` (el texto "TIME") ya
         # no existe — el ícono es la etiqueta.
-        self._timer_icon_rect = _rect_escalado(137, 3, 12, 12)
-        self._timer_rect = _rect_escalado(151, 2, 34, 14)
+        self._timer_icon_rect = _rect_escalado(137, MARGEN_DE_PANTALLA + 1, 12, 12)
+        self._timer_rect = _rect_escalado(151, MARGEN_DE_PANTALLA, 34, 14)
         self._timer_flash_timer: float = 0.0
         self._timer_flash_on: bool = False
         # Load timer font (TTF preferred for readability)
@@ -886,16 +912,23 @@ class HUD:
         if self._estamina_max <= 0.0:
             return
         pct = max(0.0, min(1.0, self._estamina_actual / self._estamina_max))
-        # AUD-527 — ámbar cuando queda poco: el jugador tiene que poder
-        # decidir **antes** de intentar el dash que no va a salir.
-        color_fin = (130, 230, 140) if pct > 0.34 else (230, 180, 70)
+        # AUD-547 — pedido explícito: amarillo para la estamina, sin
+        # excepción de color al quedar poca (antes viraba de verde a
+        # ámbar). El propio degradado —oscuro a amarillo pleno— ya
+        # comunica cuánto queda; no hace falta un segundo color en el
+        # camino para leerlo.
+        color_fin = (240, 210, 60)
         _dibujar_barra_moderna(surface, self._estamina_bar_rect, pct,
-                               (30, 70, 40), color_fin, halo_al_llenar=False)
+                               (70, 60, 15), color_fin, halo_al_llenar=False)
 
     def _draw_special_meter(self, surface: pygame.Surface) -> None:
         pct = min(1.0, self._special_current / max(self._special_max, 1.0))
-        color_fin = (110, 160, 255) if pct < 1.0 else (255, 225, 60)
-        _dibujar_barra_moderna(surface, self._carga_bar_rect, pct, (50, 25, 80), color_fin)
+        # AUD-547 — pedido explícito: azul para la carga del ultimate,
+        # constante — antes viraba a dorado al llenarse. El halo de
+        # `_dibujar_barra_moderna` ya marca "lista" al tope; un segundo
+        # color encima era redundante con esa señal.
+        color_fin = (90, 140, 255)
+        _dibujar_barra_moderna(surface, self._carga_bar_rect, pct, (20, 30, 70), color_fin)
         if pct >= 1.0:
             flash = (int(pygame.time.get_ticks() / 200) % 2 == 0)
             if flash:
@@ -953,7 +986,13 @@ class HUD:
         barra redondeada con degradado que ya usan estamina/carga/tiempo
         bala (AUD-527), del mismo ancho que el retrato."""
         pct = max(0.0, min(1.0, self._health / self._max_health))
-        color_fin = (230, 70, 70) if pct > 0.25 else (255, 140, 60)
+        # AUD-547 — pedido explícito: rojo para la vida, sin excepción de
+        # color a poca vida (antes viraba a naranja). La urgencia de
+        # "vida crítica" la sigue marcando el retrato (su anillo pasa a
+        # rojo intenso/oscuro en `_get_portrait_state`) y el destello de
+        # daño de aquí abajo — no hacía falta un segundo canal de color
+        # en la propia barra.
+        color_fin = (230, 60, 60)
         _dibujar_barra_moderna(surface, self._vida_bar_rect, pct,
                                (70, 15, 15), color_fin, halo_al_llenar=False)
 
