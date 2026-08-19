@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 
 def resolver_pista_de_musica(nombre: str) -> Path | None:
-    """Ruta de `assets/music/<nombre>` prefiriendo `.ogg` sobre `.wav`.
+    """Ruta de `assets/music/<nombre>` prefiriendo `.ogg` sobre `.wav` sobre `.mp3`.
 
     AUD-485 — AUD-484 convirtió las 78 muestras de audio del proyecto a OGG
     Vorbis (10,3 MB → 577 KB en la pista más pesada), pero dejó el `.wav`
@@ -27,9 +27,17 @@ def resolver_pista_de_musica(nombre: str) -> Path | None:
     `.ogg` en `assets/music/` que no sea uno de los 78 recién convertidos por
     `tools/convert_audio.py`, todos con cabecera `OggS` real. La protección
     de AUD-159 no tenía nada que proteger ya.
+
+    AUD-546 — `.mp3` se añade al final de la cadena, no delante: las seis
+    pistas de fase del 4-1 (`bgm_stage4_1_fase1..6.mp3`) llegaron como
+    material de autor en ese formato — `pygame.mixer.music.load` lo abre
+    de forma nativa vía SDL_mixer, sin necesitar conversión — y quedar el
+    último de los tres asegura que si algún día se convierten a `.ogg`
+    (con `tools/convert_audio.py`, mismo camino que las 78 anteriores),
+    la pista más liviana gana sin tocar código.
     """
     base = settings.ASSETS_DIR / "music"
-    for suffix in (".ogg", ".wav"):
+    for suffix in (".ogg", ".wav", ".mp3"):
         candidato = base / f"{nombre}{suffix}"
         if candidato.exists():
             return candidato

@@ -3407,3 +3407,261 @@ está.
   `JumpEnvelope.from_settings_con_viento()` recalcula el techo real con
   viento y `tests/test_stage4_1c.py` comprueba cada hueco generado
   contra él, no sólo contra la envolvente sin viento.
+
+## [GAP-066] Rediseño del HUD (AUD-535) — dos piezas del pedido original no se construyeron
+
+- **File:** `src/engine/ui/hud.py`, `docs/09_HUD_SPEC.md`
+- **Phase:** Documento del dueño «Rediseño Integral del HUD: Minimalismo,
+  Modernidad y Funcionalidad», validado por Claude Code y ejecutado como
+  AUD-535 (2026-08-18).
+- **Reason:** AUD-535 construyó la mayor parte del pedido — retrato
+  circular, vida/estamina/carga como tres barras apiladas en vez de
+  corazones, marcador reubicado junto al retrato, cronómetro centrado con
+  ícono de reloj y umbral de alerta bajado a 10 s, minimapa con bordes
+  totalmente redondeados. Dos piezas explícitas del documento quedan sin
+  construir, y se anotan aquí en vez de darlas por hechas:
+  1. **Sincronía del tempo musical con la alerta del cronómetro.** El
+     documento pide que la música acelere cuando el cronómetro entra en
+     alerta (los últimos 10 s, `HUD.UMBRAL_DE_ALERTA_S`). Hoy `_draw_timer`
+     cambia color e ícono, pero no toca `DynamicMusicSystem` — el HUD no
+     tiene ninguna referencia al sistema de audio ni lo necesitaba antes
+     de este pedido. Requiere decidir cómo el HUD (una capa de sólo
+     dibujo) le habla a un sistema de audio sin acoplarlos directamente
+     —probablemente un evento nuevo del `EventBus`, no una llamada
+     directa— antes de escribir el código.
+  2. **Menú de pausa con pestañas al estilo Ocarina of Time.** El
+     documento pide una sola pantalla con pestañas (inventario, mapa,
+     árbol de habilidades) navegable con los gatillos, no pantallas
+     independientes. AUD-533 resolvió la parte funcional —el inventario y
+     el árbol de habilidades ya se abren desde la pausa real, no sólo
+     desde el título— pero cada uno sigue siendo una escena que se
+     apila/desapila (`scene_manager.push`/`pop`) por separado, no una
+     interfaz con pestañas compartiendo una sola pantalla. Construir eso
+     de verdad es una escena nueva (`PauseHubScene` o similar) que
+     compone las tres existentes como paneles, no un cambio dentro de
+     `hud.py`.
+- **Resolution plan:** 1) sincronía del tempo: evento nuevo en el
+  `EventBus` (p. ej. `TIMER_ALERTA`) que el HUD emita al cruzar
+  `UMBRAL_DE_ALERTA_S` y `DynamicMusicSystem` escuche para acelerar; 2)
+  pausa con pestañas: escena `PauseHubScene` que componga inventario,
+  mapa y árbol como paneles de una sola pantalla, navegable con gatillos.
+- **Verificado:** 2026-08-18, `pytest tests/test_hud.py
+  tests/test_el_hud_esta_a_la_escala_de_la_pantalla.py
+  tests/test_el_hud_no_sale_del_reves.py tests/test_el_hud_rompe_el_pixel_art.py
+  tests/test_los_corazones_ganados_se_ven.py
+  tests/test_el_barra_de_vida_reemplaza_corazones.py tests/test_puntuacion_que_se_ve.py`
+  en verde (137 casos) confirma lo que sí se construyó; ningún caso
+  cubre las dos piezas de arriba porque no existe código que probar.
+
+## [GAP-067] Audio de autor pendiente: stinger de fase de jefe y risa de Paburu son placeholders sintetizados
+
+- **File:** `assets/sfx/stingers/stinger_boss_phase_0.wav`,
+  `assets/sfx/stingers/stinger_boss_phase_1.wav`,
+  `assets/sfx/stingers/stinger_boss_phase_2.wav`,
+  `assets/sfx/stingers/stinger_boss_phase_3.wav`,
+  `assets/sfx/voz/sfx_voz_paburu_risa.wav`, `src/framework/audio/menu_sfx.py`
+- **Phase:** AUD-541 (2026-08-18) — se acabó el silencio de dos piezas de
+  audio que el código ya emitía sin que sonara nada: el stinger de cambio
+  de fase (`Events.MUSIC_STINGER` + `stinger_boss_phase_{n}` en
+  `boss_base.py`) y la risa de Paburu (`Events.SFX_VOZ_PABURU` en
+  `LoadGameScene`, pendiente desde AUD-443).
+- **Reason:** Los dos eventos se emitían en silencio porque no había
+  fichero que sonar. AUD-541 los activó con **placeholders sintetizados**
+  por software (acordes ascendentes de ~0.8 s por fase; risa de cuatro
+  estallidos descendentes) y declaró la risa en `SONIDOS_DE_MENU`. Es
+  material de autor: `tools/convert_audio.py` convierte, no genera. Cuando
+  exista la composición/grabación real, basta con sustituir los `.wav`
+  (mismo nombre) y este GAP se cierra. Los `.ogg` de autor se pueden
+generar con `tools/convert_audio.py` desde los `.wav` originales.
+- **Resolution plan:** componer/grabar el material real y sustituir los
+  `.wav` con el mismo nombre (sin tocar código); las variantes `.ogg` se
+  generan con `tools/convert_audio.py`. El stinger debe crecer en tensión
+  con el número de fase, y la risa ser una grabación de actor, no un
+  sintetizador.
+- **Verificado:** 2026-08-18 — `pytest tests/test_los_menus_suenan.py
+  tests/test_audio_wiring.py tests/test_sonidos_sin_emisor.py
+  tests/test_crear_partida_desde_una_ranura_vacia.py` en verde (43 casos);
+  `scripts/validate_assets.py` sin errores; el mapeo de la risa cumple
+  `test_las_muestras_existen_en_el_banco_real`.
+
+## [GAP-068] Pistas `_combat` de `DynamicMusicSystem` — el combate suena a traverse
+
+- **File:** `assets/music/bgm_*.wav/.ogg`, `src/framework/audio/dynamic_music.py`
+- **Phase:** AUD-541 (2026-08-18) — hallazgo de la auditoría de audio: no
+  existe ninguna pista `{bgm}_combat` en `assets/music/`.
+- **Reason:** `_get_track_for_intensity` busca `{bgm}_combat`, luego
+  `{bgm}_traverse` y luego `{bgm}` a secas. La cadena de fallback está
+  documentada en `docs/49_AMBIENT_AUDIO.md` («cuando existen») y funciona:
+  el combate suena con la pista de traverse, sin error. Pero el diseño
+  pide una pista de combate propia, y es material de autor: convertir
+  desde un original con `tools/convert_audio.py` cuando exista. Mientras
+tanto, el código no cambia: el fallback es el contrato.
+- **Resolution plan:** componer una pista de combate por zona y
+  entregarla como `bgm_<zona>_combat.wav` (+`.ogg` vía
+  `tools/convert_audio.py`) para que `_get_track_for_intensity` la
+  encuentre sin tocar código. La intensidad de combate ya está cableada
+  (`INTENSITY_COMBAT`, detección de enemigos vivos).
+- **Verificado:** 2026-08-18 — el fallback se cubre en la batería de audio
+  (`test_audio_wiring.py` y amigos, verdes); `scripts/validate_assets.py`
+  sin errores; no existe código roto que arreglar, sólo música que
+  componer.
+
+## [GAP-069] 4.1b — tiles destructibles: el motor los tiene, pero no bajo el agua
+
+- **File:** `src/framework/stage/bloques.py`, `src/framework/entities/states/swim.py`, `src/stages/stage4_1b/`
+- **Phase:** AUD-543 (2026-08-18) — pedido tras jugarlo: "tiles
+  destructibles, coral que cae, corrientes de agua" para 4.1b. Corrientes
+  y coral/fauna se construyeron en la misma auditoría (ver
+  `docs/niveles/13b_STAGE_4_1B.md`); tiles destructibles se investigó y no.
+- **Reason:** El motor ya tiene un sistema genérico y probado —
+  `BreakableBlock`/`BloqueDestructible`— que otros escenarios podrían
+  reusar sin escribir nada nuevo. La razón por la que 4.1b no puede es
+  estructural, no de esfuerzo:
+  1. `BloqueDestructible.golpear(hitbox)` se llama con
+     `player.active_hitbox` — la caja de ataque. `SwimmingState`
+     (`src/framework/entities/states/swim.py`) no tiene ninguna
+     transición a un estado de ataque: comprobado leyendo el archivo
+     completo, cero menciones de `attack`/`hitbox`/`Action.SHORT_ATTACK`.
+     El jugador no puede atacar mientras nada, en ningún nivel del motor,
+     no sólo en 4.1b.
+  2. Sortear el ataque y romperlo por **contacto del cuerpo** tampoco
+     funciona: mientras no está roto, un `BloqueDestructible` es sólido
+     (`SistemaDeBloques.rects_solidos()` lo incluye), así que la
+     resolución de colisión aparta al jugador antes de que su
+     `rect` llegue a solaparse de verdad con el del bloque —
+     `colliderect()` nunca se vuelve `True` en el punto de contacto
+     normal, sólo en el instante exacto (si acaso) en que se produce el
+     empuje, y no de forma fiable fotograma a fotograma.
+  Cualquier camino real pasa por decidir si el jugador puede atacar bajo
+  el agua —una decisión de diseño de combate, no un efecto colateral de
+  añadir tiles destructibles— o por escribir un mecanismo de ruptura
+  específicamente acuático (por ejemplo, un temporizador de proximidad en
+  vez de un golpe), que sería un sistema nuevo y no una reutilización del
+  existente.
+- **Resolution plan:** decisión del dueño primero: (a) dar al jugador un
+  ataque acuático (nuevo estado o extensión de `SwimmingState`) y reusar
+  `BreakableBlock` tal cual; o (b) un mecanismo de ruptura por proximidad
+  específico para agua (temporizador mientras el jugador está cerca, sin
+  hitbox), que no toca el sistema de bloques existente. Ninguna de las dos
+  se empieza sin esa decisión — construir la (b) primero y descubrir
+  después que se quería la (a) sería trabajo tirado.
+- **Verificado:** 2026-08-18 — lectura completa de `swim.py` (sin
+  transición a ataque) y de `bloques.py`/`stage_objetos.py` (el bloque es
+  sólido mientras no está roto); `pytest tests/test_stage4_1b.py` (19
+  casos) en verde confirma que lo que sí se construyó (corrientes, fauna)
+  no depende de esto.
+
+## [GAP-070] Audio procedural del 4-1 — recetas del dueño: tres construidas, el resto pendiente de decisión de alcance
+
+- **File:** `tools/generate_all_assets.py`, `src/stages/stage4_1/stage4_1.py`,
+  `src/stages/stage4_1/fases.py`, `src/framework/audio/dynamic_music.py`
+- **Phase:** AUD-546 (2026-08-18) — el dueño entregó dos cosas a la vez:
+  seis pistas de música de autor (una por fase,
+  `assets/music/bgm_stage4_1_fase1..6.mp3`) y un documento extenso de
+  "recetas" de síntesis procedural (ruido/ADSR/filtro/LFO exactos) para
+  una docena de efectos ambientales del 4-1, fase por fase.
+- **Reason:** Lo que AUD-546 completó, con evidencia:
+  1. **Música por fase.** `fases.FASES` ya no deja cinco fases en
+     silencio (AUD-493, ahora superado) — las seis tienen su propia
+     pista (`fases.MUSICA_POR_FASE`), cruzando con fundido en cada
+     frontera (`Stage4_1._actualizar_musica_de_fase`).
+     `resolver_pista_de_musica` aprendió a resolver `.mp3` (tercer
+     formato, tras `.ogg`/`.wav`).
+  2. **Las tres "recetas cruciales" del primer mensaje**, construidas
+     con los parámetros exactos pedidos:
+     `sfx_environment_crujido_seco` (ruido blanco, pasa-altos
+     2000-3500Hz aleatorizado por generación, ADSR 3/100/0/50ms),
+     `sfx_environment_rafaga_viento` (ruido rosa, ADSR
+     300/200/50%/500ms, pasa-bajos barrido 300→1200→300Hz, **estéreo
+     de verdad** con paneo -1.0→1.0 — el único `.wav` de dos canales
+     del proyecto, `_write_wav_stereo`), y
+     `sfx_environment_impacto_tension` (senoidal con caída de tono
+     80→30Hz en 400ms, ADSR 5/800/0/150ms, recorte suave en los
+     primeros 100ms). Los tres viven en `_gen_sfx` con las mismas notas
+     que citan la receta original.
+  3. **Sonidos aislados y direccionales por fase**
+     (`Fase.sonidos_aislados`, `Stage4_1._actualizar_sonidos_aislados`):
+     mismo mecanismo que ya tenía el grito del Gavilán (AUD-481,
+     temporizador aleatorio + `_play_sfx_spatial`), generalizado — Fase
+     2 dispara `crujido_seco` (ramas), Fase 3 alterna `crujido_seco`
+     (huesos) y `rafaga_viento`, Fase 4 dispara `rafaga_viento`. El
+     impacto de tensión suena junto al `cemetery_silence` existente en
+     el camera-shake de la Fase 4.
+  4. **Fauna nueva de 4.1b** (calamares, peces de colores, coral que
+     cae) — construida en AUD-543 como un tipo de partícula compuesto
+     (`vida_abisal`), no como enemigos ECS nuevos: ver el commit y
+     `docs/niveles/13b_STAGE_4_1B.md`.
+
+  Lo que el documento pedía y **no** se construyó — cada punto cita el
+  parámetro exacto para no perder la receta:
+  1. **Pasos por material, por fase.** Cuatro recetas completas
+     (grava/tierra Fase 1: ruido rosa 85%+cuadrada 15%, pasa-banda
+     1200Hz±150 aleatorio, ADSR 2/45/0/15ms; musgo/lodo Fase 2: ruido
+     marrón 80%+seno 80Hz 20%, pasa-bajos 700-800Hz, ADSR 10-12/60-80/0/
+     80-100ms, pitch ±10% aleatorio; pasos ahogados Fase 5: ruido marrón,
+     pasa-bajos 250Hz, ADSR 15/50/0/30ms, tope de volumen 30%; pasos de
+     luz Fase 6: seno 80%+triángulo 20%, ADSR 15/200/30%/1200ms,
+     frecuencia elegida al azar entre las notas de Re menor —293.66,
+     349.23, 440.00Hz). Hoy el jugador ya suena distinto en musgo
+     (`footstep_musgo`, AUD-522) pero no hay variante de grava, pasos
+     ahogados ni pasos de luz — y ninguna está atada al *material* del
+     suelo por fase, que es lo que pide la receta.
+  2. **Voces de los tres espíritus con síntesis propia.** El proyecto
+     ya sintetiza voz de marcador de posición (`venado_fase1/2/muerte`,
+     AUD-263) pero con un timbre genérico, no las recetas específicas:
+     Venado (diente de sierra+seno 60Hz, LFO de vibrato a 12Hz),
+     Serpiente (dos senoidales en batimiento 440/446Hz + ruido rosa
+     filtrado, LFO de amplitud a 25Hz), Halcón (diente de sierra 70%+
+     cuadrada 30% a 1800Hz, modulado en frecuencia por un LFO a 50Hz,
+     sin reverberación a propósito — "seco, posado sobre la cámara").
+  3. **Truenos sincronizados con el rayo, no simultáneos.** Hoy
+     `_actualizar_rayos` dispara `sfx_environment_screen_shake` en el
+     mismo fotograma que el destello — la receta pide un retardo
+     aleatorio de 0.2 a 1.5s entre el flash y el trueno (la luz llega
+     antes que el sonido).
+  4. **Paneo LFO de la tormenta.** `storm_ambient` es mono, sin
+     movimiento estéreo; la receta pide un LFO de paneo oscilando
+     -0.8↔0.8 más un LFO de filtro barriendo 400-2200Hz.
+  5. **Lluvia "vintage" de la Fase 4.** La receta pide un filtro
+     pasa-banda estrecho (~1500Hz) sobre `rain_ambient` sólo en esta
+     fase, para que suene "a través de una radio vieja" — hoy la lluvia
+     suena igual en la Fase 2 y en la Fase 4.
+  6. **Grillos nocturnos de la Fase 5.** No existe ningún SFX de
+     grillo — la fase sólo tiene `canto_ancestral`. La receta: onda
+     cuadrada de pulso estrecho (5-10%) a 4000-6000Hz, ráfagas de 3-4
+     "cri-cri" separadas por 2-5s de silencio, paneo aleatorio por
+     ráfaga.
+  7. **Bus de reverberación de la Fase 6.** `_aplicar_reverberacion`
+     ya hornea cola en sonidos puntuales concretos
+     (`despertar_profundo`, `cemetery_silence`) pero no hay un
+     tratamiento uniforme para *todo* lo que suene en la Fase 6 (los
+     pasos de luz incluidos) — la receta lo pide como "bus", que este
+     motor sin DSP en tiempo real sólo puede aproximar horneando el
+     mismo `_aplicar_reverberacion` en cada SFX nuevo de esa fase.
+  8. **Volumen del canto atado a la luna en tiempo real.** Hoy
+     `canto_ancestral` es un bucle de volumen fijo; la receta pide que
+     su ganancia se multiplique fotograma a fotograma por
+     `luna_intermitente`/la intensidad lunar real de la Fase 5, no que
+     sea un bucle de volumen constante.
+- **Resolution plan:** son ocho piezas independientes, no una sola
+  auditoría — cada una se puede tomar por separado. Sugerido por
+  esfuerzo/impacto: (1) pasos por material reusa el patrón ya probado
+  de `footstep_musgo`, es la más barata; (3) el retardo del trueno es
+  un `random.uniform(0.2, 1.5)` y un temporizador, tan barato como (1);
+  (6) los grillos son un SFX nuevo más el mismo mecanismo de
+  `sonidos_aislados` que ya construyó AUD-546 — cablearlo es directo;
+  (2) las voces piden LFO de FM/batimiento, más síntesis nueva que las
+  anteriores; (4)/(5) piden un filtro que cambie por fase sobre un
+  mismo `.wav` base — hoy cada sonido es un fichero fijo, así que
+  requieren generar variantes por fase o aplicar el filtro en tiempo de
+  reproducción (el motor no tiene esto último); (7)/(8) tocan cómo se
+  mezcla el audio en tiempo real, no sólo qué se genera, y son las que
+  más se alejan de "hornear un `.wav`" — necesitan una decisión de
+  arquitectura antes de escribir código.
+- **Verificado:** 2026-08-19 — `pytest tests/test_la_musica_del_4_1_entra_tarde.py
+  tests/test_auditoria_157_160.py tests/test_stage4_1.py` (con el filtro
+  `-k "not stage4_1b and not stage4_1c"`) y `tests/test_ambience.py
+  tests/test_particle_systems.py` en verde (381 casos combinados);
+  `scripts/validate_tmx.py --ci` y `scripts/validate_assets.py` sin
+  errores tras generar los tres SFX nuevos y relocalizar los tilesets
+  de autor que bloqueaban la carga del mapa (ver el commit).

@@ -547,18 +547,6 @@ def aplicar_estado_de(data: SaveData) -> None:
 > `volcar_estado_en`, `aplicar_estado_de`). Verificado contra
 > `src/engine/core/save_manager.py`.
 
-    def list_slots(self) -> list[dict[str, Any]]:
-        """Devuelve metadatos de las ranuras no vacías (slot, stage_id, timestamp, health, max_health)."""
-
-    def has_saves(self) -> bool: ...
-
-    def newest_slot(self) -> int | None: ...
-
-    def auto_save(self, stage_id: str, stage_index: int,
-                  checkpoint_x: float, checkpoint_y: float,
-                  health: float, max_health: float) -> str | None: ...
-```
-
 ---
 
 ## 3. Entrada del motor
@@ -4589,10 +4577,13 @@ class TrailSystem:
 
 ```python
 class AmbientParticleSystem:
-    """Partículas de ambiente: polvo, hojas, ascuas, esporas, ceniza, niebla
-    — el tipo y el ritmo se declaran en el TMX (`ambient_fx`/`ambient_fx_rate`)."""
+    """Partículas de ambiente: polvo, hojas, ascuas, esporas, ceniza, niebla,
+    vida abisal (peces/calamares/coral) — el tipo y el ritmo se declaran en
+    el TMX (`ambient_fx`/`ambient_fx_rate`)."""
 
-    TIPOS: tuple[str, ...] = ("dust", "leaves", "embers", "spores", "ash", "niebla")
+    TIPOS: tuple[str, ...] = (
+        "dust", "leaves", "embers", "spores", "ash", "niebla", "vida_abisal",
+    )
 
     def __init__(self, rng: random.Random | None = None) -> None: ...
     def set_effect(self, particle_type: str, rate: float = 10.0) -> None: ...

@@ -74,6 +74,16 @@ REQUIRED_SOUNDS = [
     "music/bgm_zone3_boss.wav",
     "music/bgm_paburu.wav",
     "music/bgm_final_approach.wav",
+    # AUD-546 — una pista por fase del 4-1, material de autor. Llegaron
+    # como `.mp3` (`resolver_pista_de_musica` ya las encuentra por ese
+    # sufijo) y no como el par `.wav`/`.ogg` del resto de esta lista —
+    # por eso la extensión aquí es la real, no la convención heredada.
+    "music/bgm_stage4_1_fase1.mp3",
+    "music/bgm_stage4_1_fase2.mp3",
+    "music/bgm_stage4_1_fase3.mp3",
+    "music/bgm_stage4_1_fase4.mp3",
+    "music/bgm_stage4_1_fase5.mp3",
+    "music/bgm_stage4_1_fase6.mp3",
     # UI SFX
     "sfx/ui/sfx_ui_menu_move.wav",
     "sfx/ui/sfx_ui_menu_confirm.wav",
@@ -289,6 +299,17 @@ COLOR_BUDGETS: list[tuple[str, int]] = [
     ("story/*.png", 300000),
     ("splash/*.png", 400000),
     ("title/*.png", 400000),
+    # AUD-546 — mismo caso que la nota de `tileset_stage0.png` de abajo,
+    # aplicado a una entrega concreta en vez del genérico `tilesets/*.png`:
+    # `tileset_stage4_1_selva.png` (assets de autor generados por IA,
+    # 1774×887 usados como un tileset de baldosa 16×16 vía Tiled) mide
+    # 250.133 colores — muy por encima del techo general, y por el mismo
+    # motivo que la nota de abajo documenta: un lienzo pintado/generado no
+    # es paleta indexada, y forzarlo a la regla general lo marcaría como
+    # roto sin que el arte lo esté. Entrada específica, no se sube el
+    # techo genérico — el resto de `tilesets/*.png` sigue vigilado a
+    # 131072.
+    ("tilesets/tileset_stage4_1_selva.png", 300000),
     # AUD-011: tileset_stage0.png currently holds 108,187 colours. That is far
     # outside anything a 16x16 tile atlas should need and strongly suggests it
     # was exported from a rescaled or lossily-compressed source rather than

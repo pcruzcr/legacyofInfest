@@ -1917,6 +1917,76 @@ def _tri(freq, t):
     p = 2.0 * ((t * freq) % 1.0)
     return 2.0 * abs(p - 1.0) - 1.0
 
+# AUD-546 — síntesis procedural para las tres "recetas" del dueño
+# (`crujido_seco`, `rafaga_viento`, `impacto_tension`). El resto de este
+# fichero ya sintetiza ruido filtrado a mano con un paso-bajo de un polo
+# (`anterior = anterior*a + crudo*(1-a)`, repetido en línea en
+# `rain_ambient`/`storm_ambient`/etc.); estas tres funciones factorizan
+# ese mismo principio para poder pedirle un pasa-altos, un corte que
+# cambia por muestra (el barrido del viento) y ruido rosa, que ninguna
+# de las recetas anteriores necesitaba.
+
+
+def _pasa_altos(muestras, corte_hz, rate=SAMPLE_RATE):
+    """Pasa-altos de un polo — sólo dejar pasar por encima de `corte_hz`.
+
+    AUD-546 — el pedido original dice *"aleatoriza el corte... cada vez
+    que lo llamas por script"*, es decir, en tiempo de reproducción. Este
+    motor no tiene DSP en tiempo real (`_aplicar_reverberacion` explica
+    la misma limitación para la reverberación): el `.wav` se hornea una
+    vez. `corte_hz` sí se aleatoriza en **tiempo de generación**
+    (`crujido_seco` sortea el corte antes de llamar aquí), que es lo más
+    cerca de "que ningún crujido suene igual" que permite hornear un
+    fichero fijo.
+    """
+    if not muestras:
+        return []
+    rc = 1.0 / (2.0 * math.pi * max(1.0, corte_hz))
+    dt = 1.0 / rate
+    alfa = rc / (rc + dt)
+    salida = [0.0] * len(muestras)
+    salida[0] = muestras[0]
+    for i in range(1, len(muestras)):
+        salida[i] = alfa * (salida[i - 1] + muestras[i] - muestras[i - 1])
+    return salida
+
+
+def _paso_pasa_bajos(muestra, estado_anterior, corte_hz, rate=SAMPLE_RATE):
+    """Un paso de pasa-bajos de un polo, con `corte_hz` que puede cambiar
+    muestra a muestra — lo que necesita `rafaga_viento` para el barrido
+    del filtro (300→1200→300Hz), y que el patrón habitual de este
+    fichero (coeficiente fijo `anterior*a + crudo*(1-a)`) no permite sin
+    recalcular `a` en cada llamada."""
+    rc = 1.0 / (2.0 * math.pi * max(1.0, corte_hz))
+    dt = 1.0 / rate
+    alfa = dt / (rc + dt)
+    return estado_anterior + alfa * (muestra - estado_anterior)
+
+
+def _ruido_rosa(n, rng=random):
+    """Ruido rosa — el filtro económico de tres polos de Paul Kellet, la
+    aproximación estándar que no necesita FFT. Más natural que el ruido
+    blanco puro (menos energía en los agudos estridentes), que es
+    exactamente lo que pide la receta de la ráfaga de viento."""
+    b0 = b1 = b2 = 0.0
+    salida = []
+    for _ in range(n):
+        blanco = rng.uniform(-1.0, 1.0)
+        b0 = 0.99765 * b0 + blanco * 0.0990460
+        b1 = 0.96300 * b1 + blanco * 0.2965164
+        b2 = 0.57000 * b2 + blanco * 1.0526913
+        salida.append((b0 + b1 + b2 + blanco * 0.1848) * 0.2)
+    return salida
+
+
+def _recorte_suave(x):
+    """Saturación suave (soft clipping) vía tangente hiperbólica — el
+    "golpe percusivo" que pide `impacto_tension` para sus primeros
+    100ms, sin el escalón duro de un recorte dígital (`max(-1, min(1,
+    x))`)."""
+    return math.tanh(x)
+
+
 def _aplicar_reverberacion(samples, rate=SAMPLE_RATE, decaimiento=0.55,
                             retardo_ms=45.0, ecos=6, cola_extra_s=1.2):
     """Reverberación horneada en el propio clip (AUD-515, GAP-058).
@@ -1961,6 +2031,33 @@ def _write_wav(path, samples, rate=SAMPLE_RATE):
         wf.setsampwidth(2)
         wf.setframerate(rate)
         wf.writeframes(struct.pack(f"<{len(norm)}h", *norm))
+
+
+def _write_wav_stereo(path, izquierda, derecha, rate=SAMPLE_RATE):
+    """AUD-546 — el único `.wav` de dos canales de este proyecto: el
+    paneo de `rafaga_viento` es el propio pedido (*"panea... para que se
+    sienta que el viento atraviesa el mapa"*), y un paneo de verdad
+    necesita dos canales — `_write_wav` sólo escribe mono. Normaliza los
+    dos canales **juntos**, no cada uno por separado: normalizarlos
+    aparte rompería el balance relativo entre izquierda y derecha que es
+    lo que hace el paneo audible.
+    """
+    _ensure(path)
+    mx = max(
+        max((abs(s) for s in izquierda), default=0.0),
+        max((abs(s) for s in derecha), default=0.0),
+    ) or 1.0
+    n = min(len(izquierda), len(derecha))
+    entrelazado = []
+    for i in range(n):
+        entrelazado.append(int(izquierda[i] / mx * 16383))
+        entrelazado.append(int(derecha[i] / mx * 16383))
+    with wave.open(str(path), "w") as wf:
+        wf.setnchannels(2)
+        wf.setsampwidth(2)
+        wf.setframerate(rate)
+        wf.writeframes(struct.pack(f"<{len(entrelazado)}h", *entrelazado))
+
 
 def _mix(*tracks):
     n = max(len(t) for t in tracks) if tracks else 0
@@ -2175,7 +2272,16 @@ SFX_CATEGORIES = {
                     # AUD-515 — el sonido profundo de la secuencia de
                     # despertar de la Fase 6 (GAP-064 punto 25), con
                     # reverberación horneada — ver `_aplicar_reverberacion`.
-                    "despertar_profundo"],
+                    "despertar_profundo",
+                    # AUD-546 — las tres "recetas" de síntesis del dueño:
+                    # ruido blanco pasa-altos (ramas/huesos, Fases 2-3),
+                    # ruido rosa pasa-bajos barrido con paneo estéreo
+                    # (ráfaga de viento, Fases 3-4), y un golpe de
+                    # sub-graves con caída de tono (el impacto de la
+                    # Fase 4 tras el silencio). Ver `_gen_sfx` para los
+                    # parámetros exactos — cada uno cita el ADSR y el
+                    # filtro del pedido original.
+                    "crujido_seco", "rafaga_viento", "impacto_tension"],
     # AUD-263 — las voces. GAP-031 decía «el motor sabe reproducir voz y no hay
     # ni un solo fichero», y se dejó así a propósito para no cablear mentiras.
     # Pero **todo** el audio de este juego está sintetizado aquí: los pasos, los
@@ -2205,7 +2311,14 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
              "viento_de_bosque": 2.0, "grito_de_gavilan": 0.7,
              "canto_ancestral": 3.0, "resonancia_solemne": 4.0,
              "despertar_profundo": 1.6, "footstep_musgo": 0.12,
-             "pez_abismal_acercarse": 2.2}
+             "pez_abismal_acercarse": 2.2,
+             # AUD-546 — duraciones del pedido original: el crujido es
+             # ~150ms (ataque+decaimiento+relajación), la ráfaga de
+             # viento ocupa el segundo completo del ADSR pedido, y el
+             # impacto redondea la caída de tono (400ms) más su propio
+             # decaimiento y relajación.
+             "crujido_seco": 0.153, "rafaga_viento": 1.0,
+             "impacto_tension": 0.955}
     
     dur = t_dur.get(name, 0.3)
     n = int(rate * dur)
@@ -2424,9 +2537,105 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
                    + _tri(f * 3.0, t) * 0.10)
             # Un poco de aire: sin él suena a sintetizador y no a garganta.
             samples.append((voz + random.uniform(-0.06, 0.06)) * env * 0.35)
+    elif name == "crujido_seco":
+        # AUD-546 — receta del dueño: ruido blanco, pasa-altos 2000-3500Hz
+        # (aleatorizado por generación, ver la nota de `_pasa_altos` más
+        # abajo sobre por qué no es por-reproducción), ADSR
+        # ataque=1-5ms/decaimiento=100ms/sostenimiento=0/relajación=50ms.
+        # Ramas rompiéndose (Fase 2) u osamentas chocando (Fase 3): el
+        # mismo timbre agudo y seco sirve para los dos, es la fuente la
+        # que cambia en la ficción, no el filtro.
+        corte = random.uniform(2000.0, 3500.0)
+        crudo = [random.uniform(-1.0, 1.0) for _ in range(n)]
+        filtrado = _pasa_altos(crudo, corte, rate)
+        ataque = max(1, int(rate * 0.003))       # 3ms, dentro de 1-5ms
+        decaimiento = int(rate * 0.100)
+        relajacion = int(rate * 0.050)
+        samples = []
+        for i, s in enumerate(filtrado):
+            if i < ataque:
+                env = i / ataque
+            elif i < ataque + decaimiento:
+                # Decae hasta un residuo bajo, no hasta cero: sin esto la
+                # relajación no tendría nada que desvanecer (sostenimiento
+                # 0 más decaimiento a 0 dejaría la relajación sonando
+                # silencio).
+                env = 1.0 - 0.85 * (i - ataque) / decaimiento
+            else:
+                j = i - ataque - decaimiento
+                env = max(0.0, 0.15 * (1.0 - j / max(1, relajacion)))
+            samples.append(s * env * 0.5)
+    elif name == "rafaga_viento":
+        # AUD-546 — receta del dueño: ruido rosa, ADSR
+        # 300ms/200ms/50%/500ms (suma exacta: un segundo), pasa-bajos
+        # barrido 300→1200→300Hz por un LFO, paneo de -1.0 a 1.0 durante
+        # el segundo entero. Es el único SFX de este proyecto en estéreo
+        # de verdad —`_gen_all_sfx` lo detecta por que esta rama devuelve
+        # un par (izquierda, derecha), no una lista plana— porque el
+        # paneo direccional es el propio pedido, no un adorno.
+        rosa = _ruido_rosa(n)
+        mono = []
+        estado_filtro = 0.0
+        for i in range(n):
+            t = i / rate
+            # Medio seno: sube de 300 a 1200Hz y vuelve a bajar a 300Hz a
+            # lo largo del segundo — «barre... subiendo y baja de nuevo».
+            frac = math.sin(math.pi * min(1.0, t / dur))
+            corte = 300.0 + 900.0 * frac
+            estado_filtro = _paso_pasa_bajos(rosa[i], estado_filtro, corte, rate)
+            if t < 0.3:
+                env = t / 0.3
+            elif t < 0.5:
+                env = 1.0 - 0.5 * (t - 0.3) / 0.2
+            else:
+                env = 0.5 * max(0.0, 1.0 - (t - 0.5) / 0.5)
+            mono.append(estado_filtro * env * 0.6)
+        izquierda, derecha = [], []
+        for i, s in enumerate(mono):
+            # Paneo lineal de -1.0 (izquierda) a 1.0 (derecha) a lo largo
+            # del segundo — «atraviesa el mapa».
+            pan = -1.0 + 2.0 * (i / max(1, n - 1))
+            izquierda.append(s * (1.0 - pan) * 0.5)
+            derecha.append(s * (1.0 + pan) * 0.5)
+        samples = (izquierda, derecha)
+    elif name == "impacto_tension":
+        # AUD-546 — receta del dueño: onda senoidal con caída de tono de
+        # 80Hz a 30Hz en 400ms, ADSR 5ms/800ms/0/150ms, recorte suave
+        # (soft clip) en los primeros 100ms para el "golpe" percusivo
+        # inicial. El golpe de sub-graves de la Fase 4, justo después del
+        # silencio absoluto — se siente, no sólo se oye.
+        ataque = max(1, int(rate * 0.005))
+        decaimiento = int(rate * 0.800)
+        relajacion = int(rate * 0.150)
+        fase = 0.0
+        samples = []
+        for i in range(n):
+            t = i / rate
+            if t < 0.4:
+                # Caída exponencial de 80 a 30Hz a lo largo de 400ms — un
+                # chirrido descendente, integrado en fase para que la
+                # frecuencia cambie de verdad y no salga con artefactos.
+                freq = 30.0 + 50.0 * math.exp(-5.0 * t / 0.4)
+            else:
+                freq = 30.0
+            fase += 2.0 * math.pi * freq / rate
+            onda = math.sin(fase)
+            if i < ataque:
+                env = i / ataque
+            elif i < ataque + decaimiento:
+                env = 1.0 - 0.92 * (i - ataque) / decaimiento
+            else:
+                j = i - ataque - decaimiento
+                env = max(0.0, 0.08 * (1.0 - j / max(1, relajacion)))
+            valor = onda * env
+            if t < 0.1:
+                # Saturación leve sólo en los primeros 100ms: el golpe
+                # percusivo antes de que quede sólo el zumbido grave.
+                valor = _recorte_suave(valor * 1.4)
+            samples.append(valor * 0.9)
     else:
         samples = [0.0] * n
-    
+
     return samples
 
 def _gen_all_sfx():
@@ -2435,7 +2644,14 @@ def _gen_all_sfx():
         for name in names:
             sdir = A / "sfx" / cat
             samples = _gen_sfx(name)
-            _write_wav(sdir / f"sfx_{cat}_{name}.wav", samples)
+            destino = sdir / f"sfx_{cat}_{name}.wav"
+            # AUD-546 — `rafaga_viento` devuelve (izquierda, derecha) en
+            # vez de una lista plana: es el único SFX en estéreo de
+            # verdad de este proyecto (ver `_write_wav_stereo`).
+            if isinstance(samples, tuple):
+                _write_wav_stereo(destino, *samples)
+            else:
+                _write_wav(destino, samples)
 
 # ════════════════════════════════════════
 # MAIN
