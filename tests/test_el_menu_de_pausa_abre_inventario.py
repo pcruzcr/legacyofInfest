@@ -106,12 +106,12 @@ class TestElPanelDePausaSeAbreEmbebido:
         assert sc._pausa_mapa._permitir_viajar is False
         assert sc._pausa_mapa._standalone is False
 
-    def test_empieza_en_la_pestana_equipo(self, _video) -> None:
+    def test_empieza_en_la_pestana_mapa(self, _video) -> None:
         _ctx, sc = _partida()
         sc._paused = True
         sc._abrir_panel_de_pausa()
         assert sc._pausa_tab == 0
-        assert sc.PESTANAS_DE_PAUSA[sc._pausa_tab] == "Equipo"
+        assert sc.PESTANAS_DE_PAUSA[sc._pausa_tab] == "Mapa"
 
 
 class TestCambiarDePestana:
@@ -145,7 +145,7 @@ class TestLaEntradaSeDelegaALaPestanaActiva:
         ctx, sc = _partida()
         sc._paused = True
         sc._abrir_panel_de_pausa()
-        sc._pausa_tab = 1  # Habilidades
+        sc._pausa_tab = 2  # Habilidades
         # `_dt` lo fija `update()` antes de llamar a `_handle_pause_input`
         # en cada fotograma real (`self._dt = dt`); esta prueba lo salta
         # a propósito para no montar un fotograma entero, así que lo

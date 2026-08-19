@@ -58,9 +58,11 @@ class PausaDeEscenario:
     `stage_parts/__init__.py`."""
 
     #: Las tres primeras son paneles de consulta embebidos; la cuarta es
-    #: una lista de acciones (comprar, guardar, salir).
+    #: una lista de acciones (comprar, guardar, salir). Mapa primero,
+    #: Equipo segundo — el orden que pidió el dueño explícitamente al
+    #: revisar el checklist final.
     PESTANAS_DE_PAUSA: tuple[str, ...] = (
-        "Equipo", "Habilidades", "Mapa", "Menú",
+        "Mapa", "Equipo", "Habilidades", "Menú",
     )
     OPCIONES_DEL_MENU_DE_PAUSA: tuple[str, ...] = (
         "Tienda", "Guardar y salir", "Salir al título",
@@ -109,11 +111,12 @@ class PausaDeEscenario:
 
     def _pestana_de_consulta_activa(self) -> BaseScene | None:
         """La pestaña embebida activa, o `None` en la pestaña "Menú"
-        (índice 3), que no es una de las tres consultas."""
+        (índice 3), que no es una de las tres consultas. Mismo orden que
+        `PESTANAS_DE_PAUSA`: Mapa, Equipo, Habilidades."""
         tab = getattr(self, "_pausa_tab", 0)
         if tab >= 3:
             return None
-        return (self._pausa_equipo, self._pausa_habilidades, self._pausa_mapa)[tab]
+        return (self._pausa_mapa, self._pausa_equipo, self._pausa_habilidades)[tab]
 
     def _handle_pause_input(self) -> None:
         im = self.input
