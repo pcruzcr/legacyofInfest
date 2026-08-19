@@ -40,11 +40,40 @@ from src.engine.core import azar
 
 @pytest.fixture(autouse=True)
 def _restaurar():
-    """El azar es estado global del proceso: se deja como estaba."""
+    """El azar es estado global del proceso: se deja como estaba.
+
+    AUD-544 — «como estaba» era sólo la mitad de la historia. Esta prueba
+    existe justamente porque `random.seed()` y `np.random.seed()` son dos
+    globales distintos (AUD-385, documentado en `azar.sembrar`), y este
+    fixture sólo restauraba el primero. Cada `azar.sembrar(N)` de este
+    fichero deja el generador de NumPy sembrado con el último `N` usado
+    (4242, de `test_sembrar_escribe_la_semilla`, al ser el último en orden de
+    ejecución) y **sin restaurar**, así que se filtraba al resto de la suite:
+    cualquier prueba posterior que construyera un `ParticleEmitter()` sin
+    generador propio heredaba ese estado, y con él una cantidad de sorteos ya
+    consumidos que depende de qué otras pruebas corrieron antes en el mismo
+    proceso.
+
+    Encontrado reproduciendo `test_reported_ui_bugs.py::
+    test_el_hud_conserva_su_brillo`, que fallaba sólo dentro de la suite
+    completa con una razón de brillo idéntica en ejecuciones separadas
+    (0,7463648122122662): esa repetibilidad exacta —no un número distinto
+    cada vez, que es la firma de la carga de máquina— apuntaba a estado
+    compartido, no a inestabilidad de hardware. Aislado con `pytest.main()`
+    arrancando justo después de `test_sembrar_escribe_la_semilla` y
+    sembrando `np.random` con 4242 a mano, las mismas 1701 pruebas
+    siguientes reproducen la misma razón exacta sin tocar `random` del todo:
+    la prueba nunca sembraba antes de construir su escena y heredaba
+    silenciosamente cualquier estado que dejara NumPy.
+    """
+    import numpy as np
+
     previo = azar.semilla_actual()
     estado = random.getstate()
+    estado_numpy = np.random.get_state()
     yield
     random.setstate(estado)
+    np.random.set_state(estado_numpy)
     azar._semilla = previo
 
 
@@ -236,3 +265,46 @@ class TestLaOtraMitad:
         assert fuente.count("semilla=args.semilla") == 3, (
             "alguna ruta de arranque construye `App` sin pasarle la semilla"
         )
+
+
+class TestElFixtureNoFugaNumpy:
+    """AUD-544 — cable trampa para el propio `_restaurar` de este fichero.
+
+    Sin esto, nada impide que alguien vuelva a "simplificar" `_restaurar`
+    a sólo `random.getstate()`/`setstate()` —que es exactamente el estado en
+    que estaba antes de AUD-544— y la fuga a `np.random` reaparece sin que
+    ninguna prueba de este fichero se entere, porque todas pasan igual: la
+    fuga sólo se nota en la prueba de *otro* fichero que construya algo con
+    azar de NumPy sin generador propio.
+    """
+
+    def test_restaurar_repone_tambien_el_estado_de_numpy(self):
+        import numpy as np
+
+        estado_original = np.random.get_state()
+
+        # `__wrapped__` es la función sin envolver por `@pytest.fixture`
+        # (pytest se la deja accesible ahí); se dirige a mano para probar el
+        # propio fixture, no lo que otra prueba haga con él.
+        gen = _restaurar.__wrapped__()
+        next(gen)  # arranca el fixture: guarda el estado de numpy tal cual está aquí
+
+        # Lo mismo que hace cualquier prueba de esta clase: resembrar y
+        # gastar sorteos del generador global de NumPy.
+        azar.sembrar(999999)
+        np.random.uniform(0, 1, 10)
+
+        with pytest.raises(StopIteration):
+            next(gen)  # dispara el teardown del fixture
+
+        estado_repuesto = np.random.get_state()
+        assert estado_repuesto[0] == estado_original[0]
+        assert np.array_equal(estado_repuesto[1], estado_original[1]), (
+            "el teardown de _restaurar no repuso el vector de estado de "
+            "NumPy: la semilla de esta prueba se filtra al resto de la suite"
+        )
+        assert estado_repuesto[2:] == estado_original[2:]
+
+        # Deja todo como estaba antes de esta prueba; el `random` de stdlib
+        # ya lo repone el `_restaurar` que pytest aplica alrededor de ésta.
+        np.random.set_state(estado_original)
