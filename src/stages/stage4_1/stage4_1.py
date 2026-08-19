@@ -122,10 +122,20 @@ class Stage4_1(StageScene):
     #: continua — se aprende a explotar, no a mirar.
     ESPERA_TRAS_REVELAR = 12.0
 
-    # ── La música por fase (AUD-493) ────────────────────────────
-    #: Cuánto tarda en entrar `MUSICA_DEL_DESPERTAR` en la Fase 6. Largo a
-    #: propósito: llega después de cinco fases sin música, y el guion la
-    #: quiere naciendo del mundo, no arrancando de golpe.
+    # ── Sonidos aislados y direccionales (AUD-546) ──────────────
+    #: Cada cuánto puede sonar un crujido/ráfaga de `Fase.sonidos_aislados`.
+    #: Mismo rango que el pedido original: *«cada 8-15 segundos»*. Un
+    #: rango, no un número fijo — mismo motivo que `ESPERA_ENTRE_GRITOS`.
+    ESPERA_ENTRE_SONIDOS_AISLADOS: tuple[float, float] = (8.0, 15.0)
+    #: A qué distancia del jugador, en píxeles de mundo — fuera del cuadro
+    #: visible la mayoría de las veces, que es el punto: *«en los bordes
+    #: de la pantalla»*.
+    DISTANCIA_DEL_SONIDO_AISLADO: tuple[float, float] = (250.0, 500.0)
+
+    # ── La música por fase (AUD-493, ampliado en AUD-546) ───────
+    #: Cuánto tarda en entrar la pista de cada fase. Se aplica en las seis
+    #: fronteras, no sólo en la Fase 6: un corte seco entre pistas se oye
+    #: como un fallo de reproducción, no como una transición de escena.
     FUNDIDO_DE_LA_MUSICA_MS = 2500
 
     # ── La Bruja: percepción falsa de la Fase 3 (AUD-475) ──────
@@ -220,6 +230,9 @@ class Stage4_1(StageScene):
         #: Cuándo suena el próximo grito aislado del Gavilán (Fase 4, sólo
         #: tras el silencio — ver `_actualizar_grito_del_gavilan`).
         self._proximo_grito: float = 0.0
+        #: AUD-546 — cuándo suena el próximo crujido/ráfaga de
+        #: `Fase.sonidos_aislados` (ver `_actualizar_sonidos_aislados`).
+        self._proximo_sonido_aislado: float = 0.0
         #: Cuándo cruza la próxima sombra del Gavilán, y en qué punto de su
         #: cruce va (-1 = no está cruzando ahora mismo).
         self._proxima_sombra: float = 0.0
@@ -311,13 +324,19 @@ class Stage4_1(StageScene):
         self._intensidad_grieta.clear()
 
     def on_stage_start(self) -> None:
-        """Anota qué música dejó puesta el motor, para poder quitarla.
+        """Anota qué música dejó puesta el motor, para no reponerla de más.
 
         AUD-493 — `StageScene` ya arrancó `bgm_track` del TMX unas líneas
-        antes de llamar aquí. La tabla de fases es la que decide cuándo
-        suena (`fases.MUSICA_DEL_DESPERTAR`), y la Fase 1 pide silencio,
-        así que el primer `update` la va a parar. Para pararla hay que
-        saber que está.
+        antes de llamar aquí. La tabla de fases (`fases.FASES`) es la que
+        decide qué suena en cada tramo (`_actualizar_musica_de_fase`), y
+        necesita saber qué ya está sonando para no reiniciar la pista si
+        coincide con la que pide la fase.
+
+        AUD-546 — antes esto existía para **parar** la música del mapa,
+        porque la Fase 1 pedía silencio (`fases.MUSICA_DEL_DESPERTAR`
+        sólo sonaba en la Fase 6). Ahora `bgm_track` del TMX ya es la
+        pista de la Fase 1 (`bgm_stage4_1_fase1`), así que en el caso
+        normal esto sólo confirma que coinciden — no hay nada que parar.
         """
         super().on_stage_start()
         if self._stage_data is not None:
@@ -346,6 +365,7 @@ class Stage4_1(StageScene):
         self._actualizar_pausa_de_la_serpiente()
         self._actualizar_rayos(dt)
         self._actualizar_silencio_y_shake()
+        self._actualizar_sonidos_aislados(dt)
         self._actualizar_grito_del_gavilan(dt)
         self._actualizar_quietud_del_gavilan(dt)
         self._actualizar_sombra_del_gavilan(dt)
@@ -411,6 +431,14 @@ class Stage4_1(StageScene):
         self._proximo_rayo = self._espera_entre_rayos()
         self._actualizar_sonido_de_fase(fase)
         self._actualizar_musica_de_fase(fase)
+        # AUD-546 — se reinicia en cada frontera, tenga o no sonidos
+        # aislados esta fase: sin esto, entrar a una fase silenciosa tras
+        # una fase con crujidos frecuentes heredaría un temporizador ya
+        # casi agotado y el primer crujido de la fase nueva sonaría
+        # sospechosamente rápido.
+        self._proximo_sonido_aislado = (
+            self._espera_entre_sonidos_aislados() if fase.sonidos_aislados else 0.0
+        )
         if fase.numero == 1:
             self._anomalia_fase1 = 0.0
             self._proxima_anomalia_fase1 = self._espera_anomalia_fase1()
@@ -461,22 +489,31 @@ class Stage4_1(StageScene):
             audio.play_ambient(ruta, volume=0.3)
 
     def _actualizar_musica_de_fase(self, fase: Fase) -> None:
-        """Pone —o quita— la música que pide esta fase (AUD-493).
+        """Pone —o quita— la música que pide esta fase (AUD-493, AUD-546).
 
         GAP-059 punto 5, GAP-064 puntos 13-14 y GAP-065 §12 describen el
-        mismo defecto desde tres sitios: una sola pista para las seis
-        fases. Aquí la fase manda, y cinco de las seis piden silencio, de
-        modo que la aproximación a Paburu deja de sonar desde el primer
-        paso del cementerio y pasa a **entrar** en la última sección.
+        defecto original: una sola pista (`bgm_final_approach`) para las
+        seis fases, así que la aproximación a Paburu —la carta emocional
+        más fuerte del nivel— sonaba desde el primer paso del cementerio.
+        AUD-493 lo resolvió reservando esa pista para la Fase 6 y dejando
+        las otras cinco en silencio de música (apoyadas en su
+        `sonido_ambiente`).
+
+        AUD-546 — decisión del dueño: llegó material de autor, una pista
+        distinta por fase (`fases.MUSICA_POR_FASE`). El problema que
+        resolvía AUD-493 ya no existe —no hay una sola pista que se
+        desgaste—, así que las seis fases suenan, cada una con la suya;
+        `Fase.musica` sigue siendo `None` sólo si algún día una fase
+        vuelve a pedir silencio explícito.
 
         Sólo actúa cuando la pista pedida cambia. Llamar a `play_music`
         cada vez que se cruza una frontera reiniciaría el tema desde el
         principio aunque fuera el mismo, que es el defecto que
         `_actualizar_fase` ya evita para el clima y las partículas.
 
-        El fundido de entrada no es decorativo: `MUSICA_DEL_DESPERTAR`
-        aparece tras cinco fases de silencio, y sin fundido el corte se
-        oiría como un fallo de reproducción, no como que algo despierta.
+        El fundido de entrada no es decorativo: entre pistas distintas, un
+        corte seco se oye como un fallo de reproducción, no como una
+        transición de escena.
         """
         if fase.musica == self._musica_sonando:
             return
@@ -876,6 +913,12 @@ class Stage4_1(StageScene):
         self._camera.apply_shake(amplitude=self.AMPLITUD_DEL_SHAKE,
                                  duration=self.DURACION_DEL_SHAKE)
         self._play_sfx_named("sfx_environment_cemetery_silence", volume=0.5)
+        # AUD-546 — «impacto de tensión»: el golpe de sub-graves que se
+        # siente, no sólo se oye, justo cuando la cámara sacude. No
+        # reemplaza a `cemetery_silence` (el hush con reverberación de
+        # fondo): son dos capas del mismo instante, el silencio que se
+        # abre y el golpe que lo rompe.
+        self._play_sfx_named("sfx_environment_impacto_tension", volume=0.7)
 
     # ── El grito aislado del Gavilán ────────────────────────────
 
@@ -907,6 +950,43 @@ class Stage4_1(StageScene):
         if random.random() < self.PROPORCION_DE_GRITOS_A_LA_ESPALDA:
             return self._atencion.a_su_espalda(distancia)
         return self._player.rect.centerx + self._atencion.direccion * distancia
+
+    # ── Sonidos aislados y direccionales (AUD-546) ──────────────
+    #
+    # Crujidos de ramas (Fase 2) u osamentas (Fase 3), ráfagas de viento
+    # (Fase 3 y 4): mismo mecanismo que el grito del Gavilán —temporizador
+    # aleatorio, posición de mundo a un lado del jugador, `_play_sfx_spatial`
+    # para el paneo— generalizado a cualquier fase que declare
+    # `Fase.sonidos_aislados`, con más de un sonido posible por fase.
+
+    def _espera_entre_sonidos_aislados(self) -> float:
+        return random.uniform(*self.ESPERA_ENTRE_SONIDOS_AISLADOS)
+
+    def _posicion_del_sonido_aislado(self) -> float:
+        """Una coordenada de mundo a un lado del jugador, casi siempre
+        fuera del cuadro visible — pedido explícito: *«en los bordes de
+        la pantalla... para generar la sensación de ser observado o
+        seguido»*. A diferencia del grito del Gavilán (AUD-492, que
+        prefiere la espalda del jugador), aquí no hay preferencia de
+        lado: la premisa es "algo se mueve cerca", no "el escenario evita
+        tu mirada" — ese eslabón ya lo cubre el Gavilán en su propia fase.
+        """
+        if self._player is None:
+            return 0.0
+        distancia = random.uniform(*self.DISTANCIA_DEL_SONIDO_AISLADO)
+        lado = -1 if random.random() < 0.5 else 1
+        return self._player.rect.centerx + lado * distancia
+
+    def _actualizar_sonidos_aislados(self, dt: float) -> None:
+        fase = self.fase
+        if not fase.sonidos_aislados:
+            return
+        self._proximo_sonido_aislado -= dt
+        if self._proximo_sonido_aislado <= 0.0:
+            self._proximo_sonido_aislado = self._espera_entre_sonidos_aislados()
+            sonido = random.choice(fase.sonidos_aislados)
+            self._play_sfx_spatial(
+                sonido, self._posicion_del_sonido_aislado(), volume=0.5)
 
     #: AUD-513, GAP-062 puntos 21-22 — *«un sonido tenue que la lluvia
     #: esconde y luego deja oír»*: antes la lluvia era un canal de clima y

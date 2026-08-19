@@ -410,6 +410,12 @@ def _objetos() -> list[str]:
 
 
 def generar() -> str:
+    # AUD-546 — `bgm_track` (abajo, en las propiedades del mapa) es sólo
+    # lo que `StageScene` arranca en el primerísimo fotograma; a partir de
+    # ahí manda `fases.py` (`Fase.musica`, `_actualizar_musica_de_fase`
+    # en `stage4_1.py`) con una pista por fase. Declararlo como la pista
+    # de la Fase 1 —no la del clímax, como antes de AUD-546— evita un
+    # parpadeo de un fotograma con la pista equivocada sonando de más.
     g = _terreno()
     csv_terreno = ",".join(str(g[y][x]) for y in range(MH) for x in range(MW))
     ceros = ",".join(["0"] * (MW * MH))
@@ -426,7 +432,7 @@ tileheight="{TS}" infinite="0" nextlayerid="20" nextobjectid="900">
   <property name="stage_id" value="stage4_1"/>
   <property name="stage_name" value="4-1  EL CEMENTERIO SAGRADO"/>
   <property name="author" value="Equipo docente — Legacy of Infest"/>
-  <property name="bgm_track" value="bgm_final_approach"/>
+  <property name="bgm_track" value="bgm_stage4_1_fase1"/>
   <property name="background_zone" value="final"/>
   <property name="climate" value="clear"/>
   <property name="ambient_fx" value="ash"/>

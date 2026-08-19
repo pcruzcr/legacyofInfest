@@ -98,45 +98,71 @@ class Fase:
     #: (AUD-493). Ver `MUSICA_DEL_DESPERTAR` más abajo para el porqué de
     #: que cinco de las seis sean `None`.
     musica: str | None = None
+    #: AUD-546 — sonidos ambientales aislados y direccionales: crujidos de
+    #: ramas u osamentas, ráfagas de viento. Mismo mecanismo que
+    #: `grito_aislado` (temporizador aleatorio, `_play_sfx_spatial` para
+    #: el paneo), generalizado a una tupla porque una fase puede tener más
+    #: de un tipo de sonido aislado (la Fase 3 pide crujido **y** viento) —
+    #: y no se reusa `grito_aislado` porque ese campo ya tiene su propia
+    #: lógica de volumen atada a la lluvia del Gavilán (Fase 4) que no
+    #: aplica aquí. Vacía por defecto: ninguna fase suena así hasta que lo
+    #: declara.
+    sonidos_aislados: tuple[str, ...] = ()
 
 
-#: La única pista de música del nivel, y sólo en la última fase.
-#:
-#: AUD-493, GAP-059 punto 5 / GAP-064 puntos 13-14 / GAP-065 §12. Los tres
-#: GAP señalan el mismo defecto desde tres sitios distintos: `bgm_track` del
-#: TMX es *una sola pista para las seis fases*, así que el tema de la
-#: aproximación final a Paburu sonaba desde el primer paso del nivel. La
-#: carta emocional más fuerte del 4-1 se gastaba en el minuto cero, y las
-#: cuatro ambientaciones que AUD-465 generó por código —viento, tormenta,
-#: lluvia, canto ancestral— competían contra una cama de música constante en
-#: vez de ser lo que el jugador oye.
-#:
-#: El arreglo es la petición literal del dueño, punto 5: *«guardar el sonido
-#: como recurso»*. Las cinco primeras fases se sostienen con su
-#: `sonido_ambiente` y nada más; la música **nace** en la Fase 6, que es
-#: exactamente donde el guion la quiere (*«el tema musical nace del
-#: mundo»*) y donde el nombre de la pista dice que va.
-#:
-#: Nótese que la tabla admite una pista por fase: el día que existan temas
-#: propios para las otras cinco, se escriben aquí y no hay que tocar código.
+#: La pista que sonaba sólo en la última fase, hasta AUD-546 — ver la nota
+#: junto a `MUSICA_POR_FASE` de por qué dejó de ser la única.
 MUSICA_DEL_DESPERTAR: str = "bgm_final_approach"
+
+#: AUD-546 — decisión del dueño, reversión explícita de AUD-493: llegó
+#: material de autor (`assets/music/bgm_stage4_1_fase1..6.mp3`), una pista
+#: por fase, y el pedido fue «usa los mp3 para cada fase correspondiente
+#: como música de fondo que cambie de acuerdo a cada fase». AUD-493 —cuyo
+#: razonamiento sigue siendo válido para lo que resolvía— hizo que la
+#: música naciera sólo en la Fase 6 porque la única pista disponible
+#: (`bgm_final_approach`) era la del clímax, y sonar desde el minuto cero
+#: la desgastaba. Con seis pistas propias, una por fase, ese problema no
+#: existe: cada fase tiene la suya y el clímax sigue distinguiéndose por
+#: ser la sexta, no por ser la única con música.
+#:
+#: La cama de `sonido_ambiente` (viento, tormenta, lluvia, canto
+#: ancestral) no se toca: suena por el canal de ambiente
+#: (`play_ambient`/`crossfade_ambient`, un `Channel` de mezcla), y la
+#: música por el canal dedicado de `pygame.mixer.music` — son dos
+#: canales distintos y conviven, no compiten.
+MUSICA_POR_FASE: tuple[str, ...] = (
+    "bgm_stage4_1_fase1", "bgm_stage4_1_fase2", "bgm_stage4_1_fase3",
+    "bgm_stage4_1_fase4", "bgm_stage4_1_fase5", "bgm_stage4_1_fase6",
+)
 
 
 FASES: tuple[Fase, ...] = (
     Fase(1, "EL CEMENTERIO DE TILARÁN", 0 * ANCHO_SECCION, "clear", ("ash", 5.0),
          gradacion=COLOR_PLENO, tinte=None, espiritu=None,
          rayos_por_minuto=0.0, ambiente=0.62,
-         decoracion="lapidas_personales"),
+         decoracion="lapidas_personales",
+         musica=MUSICA_POR_FASE[0]),
     Fase(2, "EL VENADO", 1 * ANCHO_SECCION, "rain", ("ash", 14.0),
          gradacion=BLANCO_Y_NEGRO, tinte=None, espiritu=0,
          rayos_por_minuto=0.0, ambiente=0.50,
          sonido_ambiente=f"{_AMB}viento_de_bosque.wav",
-         dialogo_id="venado", apariciones_previas=True),
+         dialogo_id="venado", apariciones_previas=True,
+         musica=MUSICA_POR_FASE[1],
+         # AUD-546 — «crujidos repentinos de madera y maleza rompiéndose
+         # en los bordes de la pantalla... para generar la sensación de
+         # ser observado o seguido».
+         sonidos_aislados=("sfx_environment_crujido_seco",)),
     Fase(3, "EL REY TERCIOPELO", 2 * ANCHO_SECCION, "storm", ("spores", 16.0),
          gradacion=GRISES_NEUTROS, tinte=None, espiritu=1,
          rayos_por_minuto=10.0, ambiente=0.44, tiene_slopes=True,
          sonido_ambiente="sfx/environment/sfx_environment_storm_ambient.wav",
-         dialogo_id="rey_terciopelo", serpiente_de_fondo=True),
+         dialogo_id="rey_terciopelo", serpiente_de_fondo=True,
+         musica=MUSICA_POR_FASE[2],
+         # AUD-546 — «cascabeleo y osamentas» (crujido óseo, el mismo
+         # timbre que las ramas de la Fase 2) y «ráfagas de viento fuerte»
+         # a la vez: la tormenta es la fase más agresiva del nivel.
+         sonidos_aislados=("sfx_environment_crujido_seco",
+                           "sfx_environment_rafaga_viento")),
     Fase(4, "EL GAVILÁN", 3 * ANCHO_SECCION, "rain", ("ash", 10.0),
          gradacion=SEPIA_VINTAGE, tinte=(TINTE_VINTAGE, ALFA_TINTE_VINTAGE),
          espiritu=2, rayos_por_minuto=0.0, ambiente=0.48,
@@ -144,18 +170,23 @@ FASES: tuple[Fase, ...] = (
          sonido_ambiente="sfx/environment/sfx_environment_rain_ambient.wav",
          grito_aislado="sfx_environment_grito_de_gavilan",
          decoracion="bosque_cortado", dialogo_id="gavilan",
-         sombra_de_ave=True),
+         sombra_de_ave=True,
+         musica=MUSICA_POR_FASE[3],
+         # AUD-546 — «ráfagas de viento direccional, aprovechando la
+         # naturaleza ventosa de Tilarán».
+         sonidos_aislados=("sfx_environment_rafaga_viento",)),
     Fase(5, "LA PLANICIE DE LOS MUERTOS", 4 * ANCHO_SECCION, "clear", ("", 0.0),
          gradacion=NOCTURNO_AZULADO, tinte=None, espiritu=None,
          rayos_por_minuto=0.0, ambiente=0.16, luna_intermitente=True,
          sonido_ambiente=f"{_AMB}canto_ancestral.wav",
-         decoracion="tumbas_conquistador"),
+         decoracion="tumbas_conquistador",
+         musica=MUSICA_POR_FASE[4]),
     Fase(6, "EL CAMINO HACIA PABURU", 5 * ANCHO_SECCION, "fog", ("spores", 26.0),
          gradacion=COLOR_PLENO, tinte=(TINTE_DESPERTAR, ALFA_TINTE_DESPERTAR),
          espiritu=None, rayos_por_minuto=0.0, ambiente=0.60,
          grietas_por_pisada=True,
          sonido_ambiente=f"{_AMB}resonancia_solemne.wav",
-         musica=MUSICA_DEL_DESPERTAR),
+         musica=MUSICA_POR_FASE[5]),
 )
 
 

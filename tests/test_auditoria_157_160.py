@@ -170,21 +170,46 @@ class TestLaMusicaSuena:
         de assets los señala para que el profesor decida si son los buenos —
         duran 60 s contra los 8-12 s del marcador de posición— pero cambiarlos
         es una decisión de contenido, no de ingeniería.
+
+        AUD-546 — `.mp3` se suma como tercer formato posible
+        (`resolver_pista_de_musica`: `.ogg` > `.wav` > `.mp3`). Un camino
+        vivo ahora es: `.wav` siempre; `.ogg` sólo si no hay `.wav` al
+        lado; `.mp3` sólo si no hay ni `.wav` ni `.ogg` al lado.
         """
         import wave
 
-        vivos = [p for p in self._musica()
-                 if p.suffix == ".wav" or not p.with_suffix(".wav").exists()]
+        def _vivo(p) -> bool:
+            if p.suffix == ".wav":
+                return True
+            if p.suffix == ".ogg":
+                return not p.with_suffix(".wav").exists()
+            if p.suffix == ".mp3":
+                return (not p.with_suffix(".wav").exists()
+                        and not p.with_suffix(".ogg").exists())
+            return False
+
+        vivos = [p for p in self._musica() if _vivo(p)]
         malos = []
         for p in vivos:
-            esperada = b"RIFF" if p.suffix == ".wav" else b"OggS"
-            if p.read_bytes()[:4] != esperada:
+            cabecera = p.read_bytes()[:4]
+            if p.suffix == ".wav":
+                ok = cabecera == b"RIFF"
+            elif p.suffix == ".ogg":
+                ok = cabecera == b"OggS"
+            else:
+                # ID3v2 es lo que traen las seis pistas de fase del 4-1
+                # (AUD-546); un MP3 sin etiquetas empezaría directo con
+                # el sync de trama (0xFFEx-0xFFFx), no cubierto aquí
+                # porque ningún fichero vivo de este proyecto lo usa hoy.
+                ok = cabecera[:3] == b"ID3"
+            if not ok:
                 malos.append(p.name)
         assert malos == [], (
             f"estas pistas se pueden pedir y no se pueden reproducir: {malos}"
         )
         # y que al menos una sea legible de verdad
-        with wave.open(str(vivos[0])) as w:
+        primera_wav = next(p for p in vivos if p.suffix == ".wav")
+        with wave.open(str(primera_wav)) as w:
             assert w.getnframes() > 0
 
     def test_toda_pista_que_pide_un_escenario_existe(self) -> None:
@@ -197,9 +222,12 @@ class TestLaMusicaSuena:
             texto = tmx.read_text(encoding="utf-8", errors="replace")
             pedidas |= set(re.findall(r'bgm_track" value="([^"]+)"', texto))
 
+        # AUD-546 — `.mp3` es un tercer formato válido para música
+        # (`resolver_pista_de_musica`), no sólo `.wav`/`.ogg`.
         faltan = [t for t in sorted(pedidas)
                   if not (settings.ASSETS_DIR / "music" / f"{t}.wav").exists()
-                  and not (settings.ASSETS_DIR / "music" / f"{t}.ogg").exists()]
+                  and not (settings.ASSETS_DIR / "music" / f"{t}.ogg").exists()
+                  and not (settings.ASSETS_DIR / "music" / f"{t}.mp3").exists()]
         assert faltan == [], f"escenarios que pedirían música inexistente: {faltan}"
 
     def test_el_validador_detecta_una_extension_mentirosa(self, tmp_path) -> None:
