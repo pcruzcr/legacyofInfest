@@ -133,6 +133,17 @@ def _objetos() -> list[str]:
             (col_fin - col_ini) * TS, FILA_FONDO_AGUA * TS,
             corriente_x=corriente_x, corriente_y=0.0)
 
+    # AUD-557 — GAP-069: tiles destructibles, ahora que `SwimAttackState`
+    # (`states/swim.py`) le da al jugador un golpe real bajo el agua.
+    # Uno por sección, a mitad de camino entre dos checkpoints (columnas
+    # 20/170/320/470/620/770) y cerca del lecho —el mismo criterio que
+    # ya usan los faroles: se ve, no hace falta perseguirlo por toda la
+    # columna de agua—. `golpes=1`: aquí son obstáculos de paso, no
+    # secretos escondidos tras varios golpes.
+    for col in (95, 245, 395, 545, 695, 845):
+        obj("BreakableBlock", col * TS, (FILA_SUELO - 3) * TS, TS * 2, TS * 2,
+            golpes=1)
+
     for i, (col, fila) in enumerate(checkpoints(), start=1):
         # AUD-523 — el haz de luz es el checkpoint en los 26 escenarios;
         # no hace falta pedirlo (`brillo=` ya no es una propiedad).

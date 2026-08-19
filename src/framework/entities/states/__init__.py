@@ -60,6 +60,7 @@ from src.framework.entities.states.rope import (
     TrepandoState,
 )
 from src.framework.entities.states.swim import (
+    SwimAttackState,
     SwimmingState,
 )
 from src.framework.entities.states.wall import (
@@ -89,6 +90,7 @@ __all__ = (
     "PlayerStateBase",
     "ShortAttackState",
     "SlideState",
+    "SwimAttackState",
     "SwimmingState",
     "ThrowState",
     "TirolesaState",
