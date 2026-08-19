@@ -113,6 +113,108 @@ class TestElInventarioSeAbreEnPausa:
         assert ctx.scene_manager.stack_size == 2
 
 
+class TestElMapaSeAbreEnPausaDeSoloLectura:
+    """AUD-549 — pedido explícito: "que al poner pausa salga el mapa
+    completo". `WorldMapScene._entrar` cambia de escenario con
+    `replace()`, que sólo sustituye el tope de la pila — empujada desde
+    pausa, confirmar un nodo dejaría el nivel pausado huérfano debajo.
+    De sólo lectura evita ese riesgo sin dejar de mostrar el mapa."""
+
+    def test_seleccionar_mapa_empuja_la_escena_sin_perder_la_partida(
+        self, _video,
+    ) -> None:
+        from src.engine.scenes.world_map_scene import WorldMapScene
+
+        ctx, sc = _partida()
+        sc._paused = True
+        sc._pause_selected = sc._pause_options.index("Mapa")
+
+        sc._abrir_mapa()
+
+        assert isinstance(ctx.scene_manager.current, WorldMapScene), (
+            "elegir «Mapa» en pausa no abre WorldMapScene"
+        )
+        assert ctx.scene_manager.stack_size == 2
+
+    def test_el_mapa_abierto_desde_pausa_no_permite_viajar(
+        self, _video,
+    ) -> None:
+        ctx, sc = _partida()
+        sc._paused = True
+        sc._abrir_mapa()
+
+        mapa = ctx.scene_manager.current
+        assert mapa._permitir_viajar is False, (
+            "el mapa abierto desde pausa debería ser de sólo lectura"
+        )
+
+    def test_confirmar_un_nodo_desde_pausa_no_cambia_de_escenario(
+        self, _video,
+    ) -> None:
+        """El caso que este modo evita: `replace()` sobre una pila con
+        el nivel pausado debajo lo dejaría huérfano, nunca reanudado."""
+        ctx, sc = _partida()
+        sc._paused = True
+        sc._abrir_mapa()
+        mapa = ctx.scene_manager.current
+
+        im_falso = type("IM", (), {
+            "is_action_just_pressed": lambda self, a: a == Action.CONFIRM,
+        })()
+        ctx.input_manager = im_falso
+        mapa.update(0.016)
+
+        assert ctx.scene_manager.current is mapa, (
+            "confirmar un nodo de sólo lectura cambió de escenario"
+        )
+        assert ctx.scene_manager.stack_size == 2, (
+            "la pila cambió de tamaño: el nivel pausado podría haber "
+            "quedado huérfano"
+        )
+
+    def test_cancelar_el_mapa_vuelve_a_la_partida_pausada(
+        self, _video,
+    ) -> None:
+        ctx, sc = _partida()
+        sc._paused = True
+        sc._abrir_mapa()
+
+        im_falso = type("IM", (), {
+            "is_action_just_pressed": lambda self, a: a == Action.CANCEL,
+        })()
+        ctx.input_manager = im_falso
+        ctx.scene_manager.current.update(0.016)
+
+        assert ctx.scene_manager.current is sc, (
+            f"cancelar el mapa lleva a "
+            f"{type(ctx.scene_manager.current).__name__}, no de vuelta "
+            f"a la partida pausada"
+        )
+        assert sc._paused is True
+
+    def test_el_mapa_desde_el_titulo_sigue_permitiendo_viajar(
+        self, _video,
+    ) -> None:
+        """El seguro de siempre: el modo de sólo lectura es exclusivo de
+        la pausa, no un cambio de comportamiento por defecto."""
+        from src.engine.audio.audio_manager import AudioManager
+        from src.engine.core.event_bus import EventBus
+        from src.engine.core.game_context import GameContext
+        from src.engine.core.save_manager import SaveManager
+        from src.engine.input.input_manager import InputManager
+        from src.engine.scene.scene_manager import SceneManager
+        from src.engine.scenes.world_map_scene import WorldMapScene
+
+        ctx = GameContext(
+            input_manager=InputManager(), audio_manager=AudioManager(),
+            scene_manager=None, event_bus=EventBus(), clock=None,
+            save_manager=SaveManager(),
+        )
+        ctx.scene_manager = SceneManager(ctx)
+        mapa = WorldMapScene(ctx)
+        assert mapa._permitir_viajar is True
+
+
 class TestElMenuDePausaEstaEnEspanol:
     def test_ninguna_opcion_de_pausa_esta_en_ingles(self, _video) -> None:
         """AUD-533 — de paso: el menú tenía "Resume"/"Save & Quit"/
