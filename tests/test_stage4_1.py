@@ -738,6 +738,61 @@ class TestElResplandorAntesDelDialogo:
         assert arr.max() > 0
 
 
+class TestElPlanoDeCamaraPorEspiritu:
+    """AUD-569 — cuarta propuesta "nivel cine" aprobada: un barrido de
+    cámara pequeño hacia arriba, hacia donde flota el espíritu, en la
+    misma ventana en que ya crece su resplandor (AUD-567)."""
+
+    def test_no_desplaza_la_camara_lejos_del_dialogo(self, escena) -> None:
+        from src.stages.stage4_1.fases import FASES
+
+        fase_venado = next(f for f in FASES if f.espiritu == 0)
+        _posicionar_sin_fisica(escena, fase_venado.desde_columna + 5)
+        antes = escena._camera.offset.y
+        escena._actualizar_plano_de_dialogo()
+        assert escena._camera.offset.y == pytest.approx(antes)
+
+    def test_sube_la_camara_justo_antes_del_dialogo(self, escena) -> None:
+        from src.stages.stage4_1 import trazado
+        from src.stages.stage4_1.fases import FASES
+
+        fase_venado = next(f for f in FASES if f.espiritu == 0)
+        objetivo_columna = fase_venado.desde_columna + trazado.DESVIO_COLUMNA_DIALOGO
+        _posicionar_sin_fisica(escena, objetivo_columna)
+        antes = escena._camera.offset.y
+        escena._actualizar_plano_de_dialogo()
+        assert escena._camera.offset.y < antes
+
+    def test_no_se_acumula_entre_llamadas(self, escena) -> None:
+        from src.stages.stage4_1 import trazado
+        from src.stages.stage4_1.fases import FASES
+
+        fase_venado = next(f for f in FASES if f.espiritu == 0)
+        objetivo_columna = fase_venado.desde_columna + trazado.DESVIO_COLUMNA_DIALOGO
+        _posicionar_sin_fisica(escena, objetivo_columna)
+        escena._actualizar_plano_de_dialogo()
+        primera = escena._camera.offset.y
+        escena._actualizar_plano_de_dialogo()
+        segunda = escena._camera.offset.y
+        assert primera == pytest.approx(segunda)
+
+    def test_vuelve_a_su_sitio_al_alejarse(self, escena) -> None:
+        from src.stages.stage4_1 import trazado
+        from src.stages.stage4_1.fases import FASES
+
+        fase_venado = next(f for f in FASES if f.espiritu == 0)
+        objetivo_columna = fase_venado.desde_columna + trazado.DESVIO_COLUMNA_DIALOGO
+        _posicionar_sin_fisica(escena, fase_venado.desde_columna + 5)
+        linea_base = escena._camera.offset.y
+        _posicionar_sin_fisica(escena, objetivo_columna)
+        escena._actualizar_plano_de_dialogo()
+        assert escena._camera.offset.y < linea_base
+
+        _posicionar_sin_fisica(escena, fase_venado.desde_columna + 5)
+        escena._actualizar_plano_de_dialogo()
+        assert escena._camera.offset.y == pytest.approx(linea_base)
+
+
 class TestLasLomasDeLaFase3:
     """AUD-297/470/477 — dos lomas de verdad (`Slope`, una pareja subida-
     bajada cada una), no una sola joroba. El punto 6 de la crítica de

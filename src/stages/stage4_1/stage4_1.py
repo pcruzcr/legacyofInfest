@@ -206,6 +206,13 @@ class Stage4_1(StageScene):
     VENTANA_RESPLANDOR_DESPUES = 0.04
     COLOR_RESPLANDOR_DIALOGO: tuple[int, int, int] = (232, 255, 224)
 
+    # ── El plano de cámara por espíritu (AUD-569, propuesta "nivel cine") ─
+    #: Cuánto sube la cámara, en píxeles, en el pico del resplandor
+    #: (AUD-567) — un barrido pequeño y a propósito: el espíritu ya vive
+    #: cerca del centro de la pantalla (`_dibujar_espiritu`), así que no
+    #: hace falta un giro grande para enmarcarlo, sólo levantar la mirada.
+    AMPLITUD_PLANO_ESPIRITU = 20.0
+
     # ── El ciclo de luna (Fase 5) ──────────────────────────────
     PERIODO_DE_LA_LUNA = 6.0
     #: AUD-476 — 0.06 era casi negro de verdad, sostenido cada ciclo, no un
@@ -268,6 +275,11 @@ class Stage4_1(StageScene):
         #: AUD-566 — de dónde interpola la viñeta de esta fase; se
         #: actualiza en `_actualizar_fase` igual que `_gradacion_previa`.
         self._vignette_previa: float = self.VIGNETTE_BASE_DEL_MOTOR
+        #: AUD-569 — el empujón de cámara del fotograma anterior, para
+        #: restarlo antes de aplicar el de éste (mismo patrón que ya usa
+        #: `Camera._aplicar_sacudida` con `_shake_offset`: un desplazamiento
+        #: aditivo temporal no se acumula entre fotogramas).
+        self._nudge_camara_anterior: pygame.Vector2 = pygame.Vector2(0.0, 0.0)
         self._rayo: float = 0.0
         self._proximo_rayo: float = 0.0
         #: AUD-551 — cuenta atrás hasta que suene el trueno de este
@@ -444,6 +456,11 @@ class Stage4_1(StageScene):
         self._actualizar_secuencia_de_despertar()
         self._actualizar_voz_del_espiritu()
         self._actualizar_pasos_de_luz()
+        # AUD-569 — al final: necesita que `Camera.update` (dentro de
+        # `super().update(dt)`, arriba del todo) ya haya corrido este
+        # fotograma, para que el empujón se sume después del seguimiento
+        # normal y no antes.
+        self._actualizar_plano_de_dialogo()
 
     @property
     def fase(self) -> Fase:
@@ -1744,6 +1761,24 @@ class Stage4_1(StageScene):
                 surface, forma, x, y, ancho, alto,
                 siluetas.VERDE_ESPECTRAL, alfa,
             )
+
+    def _actualizar_plano_de_dialogo(self) -> None:
+        """Un barrido de cámara pequeño hacia arriba, hacia donde flota el
+        espíritu, en la misma ventana en que ya crece su resplandor
+        (AUD-567) — «un plano de cámara por espíritu», propuesta "nivel
+        cine" aprobada por el dueño. El desplazamiento es aditivo y
+        temporal: se resta el del fotograma anterior antes de sumar el de
+        éste, el mismo patrón que ya usa `Camera._aplicar_sacudida` con
+        `_shake_offset`, para que no se acumule ni deje la cámara torcida
+        al salir de la ventana."""
+        fase = self.fase
+        intensidad = 0.0
+        if fase.espiritu is not None:
+            intensidad = self._intensidad_resplandor_dialogo(self._avance_en_fase(fase))
+        nuevo = pygame.Vector2(0.0, -self.AMPLITUD_PLANO_ESPIRITU * intensidad)
+        self._camera.offset -= self._nudge_camara_anterior
+        self._camera.offset += nuevo
+        self._nudge_camara_anterior = nuevo
 
     def _intensidad_resplandor_dialogo(self, avance: float) -> float:
         """0 lejos del punto donde habla el espíritu, 1 justo antes —y

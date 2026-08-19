@@ -256,6 +256,15 @@ DIALOGO`— y se apaga más rápido una vez que ya habló. Separa
 visualmente «está de fondo» de «está hablándome ahora», sin tocar la
 lógica de aparición ni de liberación que ya existía.
 
+**El plano de cámara por espíritu** (AUD-569, propuesta "nivel cine"
+aprobada por el dueño): en la misma ventana en que crece el
+resplandor, la cámara sube un barrido pequeño (20px en el pico) hacia
+donde flota el espíritu — un desplazamiento aditivo y temporal, mismo
+patrón que ya usa `Camera._aplicar_sacudida` con el temblor, para que
+no se acumule ni deje la cámara torcida al alejarse. El espíritu ya
+vive cerca del centro de la pantalla, así que no hace falta un giro
+grande para enmarcarlo — sólo levantar la mirada.
+
 ## 6. Lo que se hereda sin cambios del primer intento
 
 | Elemento | De dónde |
