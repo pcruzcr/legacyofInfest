@@ -47,13 +47,18 @@ if TYPE_CHECKING:
 class SkillTreeScene(BaseScene):
     """Gastar puntos de experiencia en estadísticas."""
 
-    def __init__(self, context: GameContext) -> None:
+    def __init__(self, context: GameContext, *, standalone: bool = True) -> None:
         super().__init__(context)
         self._seleccion: int = 0
         self._mensaje: str = ""
         self._mensaje_timer: float = 0.0
         self._font_nodo = font(Theme.FONT_SMALL)
         self._font_desc = font(Theme.FONT_TINY)
+        #: AUD-555 — ver la nota gemela en `InventoryScene.__init__`:
+        #: `False` cuando `PausePanel` embebe esta escena como pestaña
+        #: "Habilidades", donde Cancelar no puede hacer `pop()` de la pila
+        #: real.
+        self._standalone = standalone
 
     def on_enter(self) -> None:
         self._seleccion = 0
@@ -105,7 +110,8 @@ class SkillTreeScene(BaseScene):
         # AUD-533 — mismo arreglo que `InventoryScene`: `pop()` vuelve a
         # quien haya empujado esta pantalla (el título o una partida en
         # pausa), en vez de mandar siempre al título.
-        self.context.scene_manager.pop()
+        if self._standalone:
+            self.context.scene_manager.pop()
 
     # ── dibujado ──────────────────────────────────────────────────
     def draw(self, surface: pygame.Surface) -> None:

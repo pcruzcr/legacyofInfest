@@ -77,7 +77,7 @@ class TestLosMetodosSiguenLlegando:
         from src.framework.stage.drawing_system import DrawingSystem
 
         for nombre in ("draw", "draw_ui", "_draw_entities",
-                       "_draw_inundaciones", "_draw_pause_menu",
+                       "_draw_inundaciones", "_draw_pause_panel",
                        "_escala_de_profundidad"):
             assert getattr(DrawingSystem, nombre).__qualname__.split(".")[0] == (
                 "DrawingSystem"

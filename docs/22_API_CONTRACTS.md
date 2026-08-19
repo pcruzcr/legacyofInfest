@@ -2539,8 +2539,15 @@ class DrawContext:
     msg_box: "MessageBox | None" = None
     banner: "ScreenBanner | None" = None
     paused: bool = False
-    pause_selected: int = 0
-    pause_options: list[str] | None = None
+    # AUD-555 — el panel de pausa con pestañas (Equipo/Habilidades/Mapa/
+    # Menú): `pausa_pestana_activa` es la escena embebida a dibujar en
+    # las tres primeras pestañas, `None` en "Menú" (que se dibuja con
+    # `pausa_menu_opciones`/`pausa_menu_seleccion`, sin escena propia).
+    pausa_tabs: tuple[str, ...] | None = None
+    pausa_tab_index: int = 0
+    pausa_pestana_activa: Any | None = None
+    pausa_menu_opciones: tuple[str, ...] | None = None
+    pausa_menu_seleccion: int = 0
     particle_system: Any | None = None
     damage_numbers: Any | None = None
     ambient_particles: Any | None = None
