@@ -74,6 +74,10 @@ tramo.
 ## 3. Reglas obligatorias
 
 1. **Sin enemigos.** Los ecos de los vencidos testifican, no atacan.
+   *(AUD-562: la fauna decorativa que patrulla en el fondo —
+   `presencias.PRESENCIAS`— no es una excepción: no es `EnemyBase`, no
+   tiene colisión y no se puede tocar. La regla sigue siendo cero
+   entidades de combate, no cero movimiento en el fondo.)*
 2. **Ninguna trampa mortal.** Cero `DeathPit`, cero `HazardZone` fija sin
    representación visual.
 3. **Toda superficie que cambie el movimiento se ve por qué** (musgo,
