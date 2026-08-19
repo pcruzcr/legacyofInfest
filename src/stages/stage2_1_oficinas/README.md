@@ -8,6 +8,8 @@ Nivel horizontal de recorrido y combate, sin jefe.
 - Piso con colision y paredes en ambos bordes
 - 9 enemigos: 4 Walker, 2 Charger, 3 Brute (dificultad creciente izq -> der)
 - Spawn del jugador a la izquierda, salida (NextTrigger) al final
+- 7 checkpoints (checkpoint_id 0-6) espaciados <= 424 px para que morir no
+  reinicie el nivel entero (AUD-537)
 - Fondos parallax (skyline nocturno) e iluminacion de ambiente
 
 ## Archivos

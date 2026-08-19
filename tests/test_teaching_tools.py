@@ -222,12 +222,14 @@ class TestElCalificadorPuntuaDisenoYNoSoloEstructura:
         )
 
     def test_stage0_se_puede_completar(self):
-        """AUD-491 le dio a stage0 un foso que sólo se cruza con
-        `BloqueRitmico`/`ZonaDeFriccion` (zona F), así que `exit_reachable`
-        —el grafo de saltos puro— es honestamente `False`: no modela esas
-        mecánicas (AUD-192). Lo que importa para "se puede terminar" es que
-        la categoría no pierda puntos por ello, que es justo lo que la
-        excepción de movilidad hace.
+        """AUD-491 le dio a stage0 un foso (zona F) con tres rutas: bloques
+        rítmicos, goma y un salto que la física real hacía imposible (96 px
+        contra un techo experto de 85,5 px). AUD-536 lo estrechó a 80 px
+        —exigente pero posible— y `exit_reachable` ya es `True` de verdad.
+        Lo que importa para "se puede terminar" es que la categoría no
+        pierda puntos, que es justo lo que la excepción de movilidad
+        garantiza también para los mapas de estudiantes con mecánicas que
+        el grafo no modela (AUD-192).
         """
         r = self._calificar(TMX_STAGE0)
         categoria = r["categories"]["design_completable"]

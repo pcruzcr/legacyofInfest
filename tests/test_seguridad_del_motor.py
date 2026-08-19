@@ -51,11 +51,23 @@ class TestNadaQueEjecuteCodigoAjeno:
     #: `pickle` y compañía ejecutan código al deserializar. Una partida guardada
     #: en pickle es ejecución arbitraria disfrazada de fichero de guardado, y el
     #: fichero lo puede editar cualquiera.
-    PROHIBIDOS = {"pickle", "cPickle", "marshal", "shelve", "dill"}
+    PROHIBIDOS = {"pickle", "cPickle", "marshal", "shelve", "dill", "joblib"}
+
+    #: `joblib` es `pickle` por debajo, pero la Unidad IX del curso lo usa a
+    #: propósito para cargar modelos entrenados (AUD-038), con la advertencia
+    #: de peligro en el docstring de `load_model`. Esa única excepción está
+    #: documentada; cualquier otro `joblib`/`pickle` nuevo en el motor debe
+    #: tripar la prueba.
+    JOBLIB_SANCIONADO = {
+        "src/framework/processing/pattern_recognition_tools.py",
+    }
 
     def test_el_motor_no_deserializa_con_pickle(self) -> None:
         culpables = []
         for ruta in _modulos_del_motor():
+            rel = str(ruta.relative_to(RAIZ)).replace("\\", "/")
+            if rel in self.JOBLIB_SANCIONADO:
+                continue
             arbol = ast.parse(ruta.read_text(encoding="utf-8"), str(ruta))
             for nodo in ast.walk(arbol):
                 if isinstance(nodo, ast.Import):

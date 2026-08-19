@@ -61,6 +61,18 @@ VISTAS_VALIDAS: frozenset[str] = frozenset({"lateral", "cenital"})
 
 MODOS_DE_CAMARA: frozenset[str] = frozenset({"seguir", "zona_muerta", "sala"})
 
+
+def slug_de_stage_id(stage_id: str) -> str:
+    """Convierte un `stage_id` en un nombre de fichero seguro.
+
+    AUD-539 — el `stage_id` viaja del TMX a rutas de fichero
+    (`stage_parts/fantasma.py`, `stage_parts/cinematicas.py`). Hoy lo
+    ponen las escenas con cadenas fijas, pero defensa en profundidad:
+    un id con `../` leería o escribiría fuera del directorio previsto.
+    """
+    limpio = "".join(c if c.isalnum() or c in "_-" else "_" for c in stage_id)
+    return limpio or "sin_id"
+
 #: F5.3–F5.6 — tipos de Tiled que se convierten en componentes ECS.
 #:
 #: Es un **subconjunto** de `BUILTIN_OBJECT_TYPES`, no una copia: aquélla dice

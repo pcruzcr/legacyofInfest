@@ -211,4 +211,7 @@ def api_students():
 
 if __name__ == "__main__":
     print("Dashboard running at http://localhost:5000")
-    app.run(debug=True, port=5000)
+    # AUD-539 — `debug=True` expone el debugger de Werkzeug (ejecución remota
+    # de código) si el dashboard se sirve desde otra máquina; es una
+    # herramienta local del profesor, no necesita debugger.
+    app.run(debug=False, port=5000)

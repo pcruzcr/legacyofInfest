@@ -381,10 +381,22 @@ def validate_tmx(path: Path) -> bool:
         error(f"Root element is '{tag}', expected 'map'")
         return False
 
-    w = int(root.get("width", 0))
-    h = int(root.get("height", 0))
-    tw = int(root.get("tilewidth", 0))
-    th = int(root.get("tileheight", 0))
+    # AUD-539 — un TMX editado a mano con valores no numéricos reventaba
+    # aquí con un traceback en vez de un error limpio: `int("abc")` no se
+    # captura con `ET.ParseError`. El validador nunca debe morir por el
+    # fichero que valida.
+    def _entero(attr: str, por_defecto: int) -> int:
+        crudo = root.get(attr, "")
+        try:
+            return int(crudo)
+        except (TypeError, ValueError):
+            error(f"'{attr}'='{crudo}' no es un número entero")
+            return por_defecto
+
+    w = _entero("width", 0)
+    h = _entero("height", 0)
+    tw = _entero("tilewidth", 0)
+    th = _entero("tileheight", 0)
 
     if w <= 0 or h <= 0:
         error(f"Invalid map dimensions: {w}x{h}")
@@ -396,7 +408,10 @@ def validate_tmx(path: Path) -> bool:
         error("No tilesets defined")
     for ts in tilesets:
         name = ts.get("name", "")
-        int(ts.get("firstgid", 1))
+        try:
+            int(ts.get("firstgid", 1))
+        except (TypeError, ValueError):
+            error(f"Tileset '{name}': 'firstgid' no es un número entero")
         img = ts.find("image")
         if img is not None:
             src = img.get("source", "")
@@ -463,7 +478,13 @@ def validate_tmx(path: Path) -> bool:
         if encoding != "csv":
             warn(f"Layer '{layer.get('name')}' uses '{encoding}' encoding (expected 'csv')")
         raw = (data.text or "").strip()
-        tile_ids = [int(x) for x in raw.replace("\n", "").split(",") if x.strip()]
+        # AUD-539 — una celda no numérica en el CSV también es un error
+        # limpio, no un traceback: un TMX a medio editar no debe tumbar CI.
+        try:
+            tile_ids = [int(x) for x in raw.replace("\n", "").split(",") if x.strip()]
+        except ValueError as e:
+            error(f"La capa '{layer.get('name')}' tiene una celda no numérica: {e}")
+            continue
         expected = w * h
         if len(tile_ids) != expected:
             # Era un aviso, y por eso llevaba tiempo desatendido en
