@@ -68,6 +68,41 @@ registro abisal— en el mismo instante en que el pez nace fuera de cámara:
 el aviso llega uno o dos segundos antes de que la silueta entre nadando en
 cuadro.
 
+**AUD-543 — corrientes de agua y fauna nueva, pedidas tras jugarlo.**
+`ZonaDeAgua.corriente` (`src/framework/ecs/components.py`) ya existía en el
+motor —lo aplica `sistema_corriente_de_agua`— y ningún escenario de
+referencia lo declaraba nunca. `trazado.ZONAS_DE_CORRIENTE` define tres
+franjas superpuestas a la `WaterZone` grande: sección 2 y la cola de la
+sección 6 empujan a favor, la sección 4 empuja en contra. La magnitud está
+verificada por simulación, no a ojo (`tests/test_stage4_1b.py::
+TestLasCorrientesDeAgua`): nadando a fondo contra la corriente en contra la
+velocidad converge a 90 px/s (25% más lenta que los 120 px/s sin
+corriente) — se nota, no bloquea. Las corrientes a favor apenas cambian
+nada mientras se nada a fondo (el tope de 120 px/s ya está saturado sin
+ellas) — donde sí se notan es a la deriva, sin tecla pulsada.
+
+Fauna nueva (calamares, peces de colores) y "coral que cae" — pedidos en
+el mismo reporte — se resolvieron como un solo tipo de partícula de
+ambiente, `"vida_abisal"` (`AmbientParticleSystem`, ver la nota junto a
+`TIPOS`): un mapa sólo declara un `ambient_fx` a la vez, así que en vez de
+tres tipos que compitieran por ese único slot, éste mezcla tres
+comportamientos —peces rápidos y de colores, calamares grandes y lentos
+casi silueta, y coral desprendido que cae en vez de flotar— con
+proporciones fijas por `_spawn`.
+
+**Lo que se investigó y no se construyó: tiles destructibles.** El motor
+ya tiene un sistema genérico reutilizable (`BreakableBlock`/
+`BloqueDestructible`, `src/framework/stage/bloques.py`), pero se rompe con
+la caja de ataque del jugador, y `SwimmingState`
+(`src/framework/entities/states/swim.py`) no tiene ninguna transición a un
+estado de ataque — el jugador no puede atacar mientras nada. Reusar el
+sistema tal cual dejaría un obstáculo irrompible; forzarlo con contacto
+del cuerpo no funciona porque un `BreakableBlock` sin romper es sólido
+(participa en `rects_solidos()`), así que la resolución de colisión aparta
+al jugador antes de que su rect llegue a solaparse con el bloque. Añadir
+combate bajo el agua es un cambio de diseño aparte, no un efecto colateral
+de esta pasada — se deja documentado, no construido a medias.
+
 ## 3. Reglas obligatorias
 
 Las mismas del cementerio (`13_STAGE_4_1.md` §3), salvo la de cero
@@ -88,9 +123,17 @@ uno.
 - [x] Tileset propio (paleta abisal) y sprite propio (señuelo
       bioluminiscente que pulsa)
 - [x] Registrado en el sorteo (`selector.VARIANTES_DISPONIBLES["acuatico"]`)
+- [x] Corrientes de agua, tres franjas, magnitud verificada por simulación
+      (AUD-543)
+- [x] Fauna nueva y coral que cae — partícula de ambiente `"vida_abisal"`
+      (AUD-543)
 - [x] `tests/test_stage4_1b.py`, `tests/test_enemy_pez_abismal.py`
 
-**Sigue pendiente** (no bloquea el sorteo, es pulido futuro): variedad
-narrativa por sección — el cementerio tiene seis identidades de fase
-propias (`fases.py`); 4-1b hoy es una sola ambientación sostenida de
-principio a fin.
+**Sigue pendiente** (no bloquea el sorteo, es pulido futuro):
+
+- Variedad narrativa por sección — el cementerio tiene seis identidades de
+  fase propias (`fases.py`); 4-1b hoy es una sola ambientación sostenida
+  de principio a fin.
+- Tiles destructibles — investigado en AUD-543, no construido: exige
+  decidir primero si el jugador puede atacar bajo el agua (ver la nota
+  arriba). [[../../KNOWN_GAPS.md|GAP-069]].
