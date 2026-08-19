@@ -2247,7 +2247,13 @@ SFX_CATEGORIES = {
                "footstep_musgo",
                # AUD-551 — GAP-070 punto 1: el lodo frenaba de verdad y
                # sonaba igual que tierra firme.
-               "footstep_lodo"],
+               "footstep_lodo",
+               # AUD-554 — GAP-070 "Pasos sobre Tierra/Grava" (Fase 1) y
+               # "Pasos Ahogados" (Fase 5): las dos piezas de pisadas que
+               # quedaban del pedido original, ahora que las dos fases
+               # tienen su propia `FrictionZone` nombrada (AUD-554,
+               # `tools/generate_stage4_1.py`).
+               "footstep_grava", "footstep_ahogado"],
     "enemies": ["hit", "die_small", "die_large", "projectile_fire", "projectile_hit_wall",
                 # AUD-529 — que se oiga antes de verse.
                 "pez_abismal_acercarse"],
@@ -2316,8 +2322,15 @@ SFX_CATEGORIES = {
     # Terciopelo y el Gavilán, no. Sintetizadas con las recetas
     # específicas del pedido (batimiento de dos senoidales para la
     # serpiente, FM de dos ondas para el halcón) — ver `_gen_sfx`.
+    # AUD-554 — GAP-070 "La Voz del Bosque": el Venado del 4-1 seguía con
+    # el timbre genérico de AUD-263 (`venado_fase1/2/muerte`) mientras el
+    # Rey Terciopelo y el Gavilán ya tenían su receta propia desde
+    # AUD-551 — `venado_ancestral` es la que usa `Stage4_1.
+    # _VOZ_POR_ESPIRITU` al liberarlo. `venado_fase1/2/muerte` se dejan
+    # tal cual: siguen sin ningún disparador propio (código muerto ya
+    # documentado), pero no es a esta pieza a la que le toca resolverlo.
     "voz": ["venado_fase1", "venado_fase2", "venado_muerte",
-            "rey_terciopelo", "gavilan"],
+            "rey_terciopelo", "gavilan", "venado_ancestral"],
 }
 
 def _gen_sfx(name, rate=SAMPLE_RATE):
@@ -2356,7 +2369,13 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
              # AUD-553 — corto a propósito: se repite cada vez más seguido
              # (hasta cada 80ms cerca de 0s), así que si durara más que su
              # propio intervalo se solaparía consigo mismo.
-             "timer_alert_pulse": 0.12}
+             "timer_alert_pulse": 0.12,
+             # AUD-554 — GAP-070: grava (ADSR 2/45/-/15ms), ahogado (ADSR
+             # 15/50/-/30ms), y la voz del Venado (ADSR 600/200/80%/2000ms
+             # — la cola de reverberación se suma después, igual que
+             # `paso_de_luz_*`).
+             "footstep_grava": 0.062, "footstep_ahogado": 0.095,
+             "venado_ancestral": 2.8}
     
     dur = t_dur.get(name, 0.3)
     n = int(rate * dur)
@@ -2556,7 +2575,12 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
             crudo = random.uniform(-1.0, 1.0)
             ruido_previo = ruido_previo * 0.93 + crudo * 0.07
             samples.append((tono * 0.5 + ruido_previo * 0.35) * env * 0.6)
-    elif name.startswith("venado_"):
+    elif name.startswith("venado_") and name != "venado_ancestral":
+        # AUD-554 — `venado_ancestral` también empieza por "venado_" pero
+        # tiene su propia rama, más abajo (la receta de "La Voz del
+        # Bosque"); esta condición evita que el `startswith` genérico se
+        # la coma primero por estar antes en la cadena de `elif`.
+        #
         # AUD-263 — voz de marcador de posición: una vocalización grave con
         # formantes, no una palabra. Un gruñido con inflexión se lee como «una
         # criatura ha dicho algo» sin fingir un idioma, que es lo que hace falta
@@ -2793,6 +2817,101 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
                 j = i - ataque - decaimiento
                 env = max(0.0, 0.4 * (1.0 - j / relajacion))
             samples.append(onda * env * 0.5)
+    elif name == "footstep_grava":
+        # AUD-554 — GAP-070 "Pasos sobre Tierra/Grava" (Fase 1 del 4-1):
+        # 85% ruido rosa + 15% pulso cuadrado corto, pasa-banda ~1200Hz
+        # (pasa-altos seguido de pasa-bajos, mismo idioma que
+        # `rey_terciopelo`), centro aleatorizado ±150Hz por generación
+        # para que ningún paso suene idéntico, ADSR 2/45/0/15ms.
+        centro = random.uniform(1050.0, 1350.0)
+        rosa = _ruido_rosa(n)
+        crudo = [rosa[i] * 0.85 + _square(60.0, i / rate, 0.5) * 0.15
+                 for i in range(n)]
+        alto = _pasa_altos(crudo, max(1.0, centro - 400.0), rate)
+        estado = 0.0
+        filtrado = []
+        for v in alto:
+            estado = _paso_pasa_bajos(v, estado, centro + 400.0, rate)
+            filtrado.append(estado)
+        ataque = max(1, int(rate * 0.002))
+        decaimiento = int(rate * 0.045)
+        relajacion = max(1, int(rate * 0.015))
+        samples = []
+        for i, v in enumerate(filtrado):
+            if i < ataque:
+                env = i / ataque
+            elif i < ataque + decaimiento:
+                env = 1.0 - (i - ataque) / decaimiento
+            else:
+                j = i - ataque - decaimiento
+                env = max(0.0, 1.0 - j / relajacion) if relajacion else 0.0
+            samples.append(v * env * 0.5)
+    elif name == "footstep_ahogado":
+        # AUD-554 — GAP-070 "Pasos Ahogados" (Fase 5 del 4-1): ruido
+        # marrón (pasa-bajos pesado sobre blanco, mismo idioma que
+        # `footstep_lodo`), corte estricto en 250Hz, ADSR 15/50/0/30ms.
+        # "Control de Dinámica": tope de volumen al 30% — horneado en la
+        # amplitud final, no en un parámetro de reproducción aparte.
+        estado = 0.0
+        ataque = max(1, int(rate * 0.015))
+        decaimiento = int(rate * 0.050)
+        relajacion = max(1, int(rate * 0.030))
+        samples = []
+        for i in range(n):
+            crudo = random.uniform(-1.0, 1.0)
+            estado = _paso_pasa_bajos(crudo, estado, 250.0, rate)
+            if i < ataque:
+                env = i / ataque
+            elif i < ataque + decaimiento:
+                env = 1.0 - (i - ataque) / decaimiento
+            else:
+                j = i - ataque - decaimiento
+                env = max(0.0, 1.0 - j / relajacion) if relajacion else 0.0
+            samples.append(estado * env * 0.3)
+    elif name == "venado_ancestral":
+        # AUD-554 — GAP-070 "La Voz del Bosque" (Venado, receta propia en
+        # vez del timbre de marcador de posición de AUD-263): diente de
+        # sierra + seno a 60Hz para el tamaño, LFO de vibrato en el pitch
+        # a 12Hz, ADSR 600/200/80%/2000ms, pasa-banda barriendo 150→400Hz
+        # (envolvente en el filtro — se acerca con pasa-altos fijo en
+        # 150Hz seguido de un pasa-bajos cuyo corte sube linealmente de
+        # 150 a 400Hz, mismo idioma de "bandpass compuesto" que ya usa
+        # `rey_terciopelo`), reverberación masiva para que "suene como si
+        # todo el nivel estuviera hablando a la vez". Fase acumulada como
+        # en `gavilan`: con el vibrato variando la frecuencia instante a
+        # instante, `t * freq` saltaría de ciclo en ciclo.
+        ataque = max(1, int(rate * 0.600))
+        decaimiento = int(rate * 0.200)
+        relajacion = max(1, int(rate * 2.000))
+        fase = 0.0
+        crudo = []
+        for i in range(n):
+            t = i / rate
+            freq = 60.0 * (1.0 + 0.03 * math.sin(2.0 * math.pi * 12.0 * t))
+            fase += 2.0 * math.pi * freq / rate
+            ciclo = (fase / (2.0 * math.pi)) % 1.0
+            sierra = 2.0 * ciclo - 1.0
+            seno = math.sin(2.0 * math.pi * 60.0 * t)
+            crudo.append(sierra * 0.6 + seno * 0.4)
+        alto = _pasa_altos(crudo, 150.0, rate)
+        estado = 0.0
+        filtrado = []
+        for i, v in enumerate(alto):
+            corte = 150.0 + (400.0 - 150.0) * min(1.0, i / n)
+            estado = _paso_pasa_bajos(v, estado, corte, rate)
+            filtrado.append(estado)
+        samples = []
+        for i, v in enumerate(filtrado):
+            if i < ataque:
+                env = i / ataque
+            elif i < ataque + decaimiento:
+                env = 1.0 - 0.2 * (i - ataque) / decaimiento  # 1.0 → 0.8
+            else:
+                j = i - ataque - decaimiento
+                env = max(0.0, 0.8 * (1.0 - j / relajacion))
+            samples.append(v * env * 0.6)
+        samples = _aplicar_reverberacion(samples, rate, decaimiento=0.7,
+                                          retardo_ms=90.0, ecos=14, cola_extra_s=2.5)
     elif name.startswith("paso_de_luz_"):
         # AUD-551 — GAP-070 "Pisadas de Energía Verde": seno 80% +
         # triángulo 20%, ADSR 15/200/30%/1200ms, una nota fija por

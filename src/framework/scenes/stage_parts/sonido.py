@@ -78,6 +78,8 @@ class SonidoDeEscenario:
             Events.SFX_PLAYER_FOOTSTEP: "sfx_step",
             Events.SFX_PLAYER_FOOTSTEP_MUSGO: "sfx_player_footstep_musgo",
             Events.SFX_PLAYER_FOOTSTEP_LODO: "sfx_player_footstep_lodo",
+            Events.SFX_PLAYER_FOOTSTEP_GRAVA: "sfx_player_footstep_grava",
+            Events.SFX_PLAYER_FOOTSTEP_AHOGADO: "sfx_player_footstep_ahogado",
             Events.SFX_MENU_HOVER: "sfx_select",
             Events.SFX_MENU_CONFIRM: "sfx_select",
             Events.SFX_MENU_CANCEL: "sfx_ui_menu_cancel",

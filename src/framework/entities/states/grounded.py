@@ -117,6 +117,13 @@ class WalkingState(PlayerStateBase):
                 # propia pese a que los dos se declaran por separado en
                 # Fase 2 del 4-1.
                 player._event_bus.emit(Events.SFX_PLAYER_FOOTSTEP_LODO)
+            elif material is not None and material.nombre == "grava":
+                # AUD-554 — GAP-070 "Pasos sobre Tierra/Grava" (Fase 1 del
+                # 4-1): mismo mecanismo, terreno nuevo.
+                player._event_bus.emit(Events.SFX_PLAYER_FOOTSTEP_GRAVA)
+            elif material is not None and material.nombre == "ahogado":
+                # AUD-554 — GAP-070 "Pasos Ahogados" (Fase 5 del 4-1).
+                player._event_bus.emit(Events.SFX_PLAYER_FOOTSTEP_AHOGADO)
             else:
                 player._event_bus.emit(Events.SFX_PLAYER_FOOTSTEP)
         inp = _InputSnapshot(input_manager)
