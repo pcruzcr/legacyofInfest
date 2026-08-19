@@ -265,6 +265,17 @@ no se acumule ni deje la cámara torcida al alejarse. El espíritu ya
 vive cerca del centro de la pantalla, así que no hace falta un giro
 grande para enmarcarlo — sólo levantar la mirada.
 
+**El horizonte medio, BG_Mid** (AUD-570, propuesta "nivel cine"
+aprobada por el dueño): `BG_Mid` seguía enteramente vacía en las seis
+fases (GAP-058/059/065 ya lo señalaban). En vez de un sistema nuevo,
+`_dibujar_horizonte_medio` reusa el mismo generador de cresta que ya
+pinta `BG_Far` (`siluetas.dibujar_horizonte`), a una segunda
+profundidad: más cerca del suelo, más quebrada, más opaca, con una
+fase de onda distinta para que no coincida pico con pico con la
+lejana, y con el factor de paralaje real que ya declara `Camera.
+_parallax_factors["BG_Mid"]` (0,40) — no un número inventado para esta
+pieza sola.
+
 ## 6. Lo que se hereda sin cambios del primer intento
 
 | Elemento | De dónde |

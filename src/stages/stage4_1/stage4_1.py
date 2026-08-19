@@ -1463,6 +1463,7 @@ class Stage4_1(StageScene):
         que el diseño anterior pintaba sus siluetas: son recuerdos y
         escenario, no primer plano."""
         self._dibujar_horizonte(surface, offset)
+        self._dibujar_horizonte_medio(surface, offset)
         self._dibujar_luna_de_fase4(surface, offset)
         self._dibujar_espiritu(surface, offset)
         self._dibujar_presencias_errantes(surface, offset)
@@ -1528,6 +1529,48 @@ class Stage4_1(StageScene):
             surface, settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT,
             offset.x * 0.15, color, 200,
             settings.INTERNAL_HEIGHT * base_frac, amplitud, frecuencia,
+        )
+
+    # ── El horizonte medio: BG_Mid (AUD-570, propuesta "nivel cine") ──
+    #
+    # GAP-058/059/065 dejaban constancia de que `BG_Mid` seguía vacía en
+    # las seis fases — sólo estaba `BG_Far` (arriba). Reusa el mismo
+    # generador de cresta (`siluetas.dibujar_horizonte`) a una segunda
+    # profundidad, en vez de inventar un sistema nuevo: más cerca del
+    # suelo (`base_frac` más alto), más quebrada (más amplitud y
+    # frecuencia — el detalle que sólo se nota de cerca) y con el factor
+    # de paralaje real de `BG_Mid` que ya declara `Camera.
+    # _parallax_factors` (0,40) — no un número inventado para esta
+    # pieza, el mismo que ya usa el resto del motor para esa capa.
+    HORIZONTE_MEDIO_POR_FASE: dict[int, tuple[tuple[int, int, int], float, float, float]] = {
+        1: ((58, 50, 64), 0.74, 16.0, 0.022),
+        2: ((42, 50, 38), 0.72, 20.0, 0.026),
+        3: ((34, 34, 44), 0.68, 30.0, 0.030),
+        4: ((64, 46, 34), 0.72, 18.0, 0.024),
+        5: ((36, 38, 54), 0.76, 12.0, 0.018),
+        6: ((44, 58, 48), 0.72, 20.0, 0.024),
+    }
+    #: El mismo factor que `Camera._parallax_factors["BG_Mid"]` — para que
+    #: el fondo se mueva a la velocidad que el resto del motor ya espera
+    #: de esa capa, no a una inventada para esta pieza sola.
+    PARALAJE_BG_MID = 0.40
+
+    def _dibujar_horizonte_medio(self, surface: pygame.Surface,
+                                 offset: pygame.Vector2) -> None:
+        """La cresta a media distancia — plano `BG_Mid`, vacío hasta
+        AUD-570. Más cerca, más quebrada y más opaca que `BG_Far`: es la
+        diferencia entre "una montaña lejana" y "una fila de árboles o
+        tumbas a media distancia"."""
+        color, base_frac, amplitud, frecuencia = (
+            self.HORIZONTE_MEDIO_POR_FASE[self.fase.numero])
+        siluetas.dibujar_horizonte(
+            surface, settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT,
+            offset.x * self.PARALAJE_BG_MID, color, 230,
+            settings.INTERNAL_HEIGHT * base_frac, amplitud, frecuencia,
+            # Una fase distinta a la de BG_Far: si las dos crestas
+            # compartieran fase, coincidirían en los mismos picos y se
+            # leerían como una sola silueta doblada, no dos planos.
+            fase=1.7,
         )
 
     # ── Las osamentas como arquitectura, versión visual (GAP-061) ─

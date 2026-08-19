@@ -793,6 +793,51 @@ class TestElPlanoDeCamaraPorEspiritu:
         assert escena._camera.offset.y == pytest.approx(linea_base)
 
 
+class TestElHorizonteMedio:
+    """AUD-570 — quinta propuesta "nivel cine" aprobada: `BG_Mid` seguía
+    vacía en las seis fases (GAP-058/059/065). Reusa el mismo generador
+    de cresta que ya pinta `BG_Far`, a una segunda profundidad."""
+
+    def test_las_seis_fases_declaran_una_cresta(self) -> None:
+        from src.stages.stage4_1.fases import FASES
+        from src.stages.stage4_1.stage4_1 import Stage4_1
+
+        for fase in FASES:
+            assert fase.numero in Stage4_1.HORIZONTE_MEDIO_POR_FASE
+
+    def test_el_paralaje_coincide_con_el_de_la_camara(self) -> None:
+        """No un número inventado para esta pieza sola: el mismo que ya
+        declara `Camera._parallax_factors["BG_Mid"]` para esa capa."""
+        from src.framework.stage.camera import Camera
+        from src.stages.stage4_1.stage4_1 import Stage4_1
+
+        camara = Camera()
+        assert Stage4_1.PARALAJE_BG_MID == pytest.approx(
+            camara._parallax_factors["BG_Mid"])
+
+    def test_es_mas_cercana_que_el_horizonte_lejano(self, escena) -> None:
+        """`base_frac` más alto (más cerca del suelo) en las seis fases —
+        si no, "medio" y "lejano" serían la misma cresta con otro color."""
+        from src.stages.stage4_1.fases import FASES
+
+        for fase in FASES:
+            lejos = escena.HORIZONTE_POR_FASE[fase.numero][1]
+            medio = escena.HORIZONTE_MEDIO_POR_FASE[fase.numero][1]
+            assert medio > lejos, f"Fase {fase.numero}: BG_Mid no está más cerca que BG_Far"
+
+    def test_se_dibuja_de_verdad(self, escena) -> None:
+        import pygame
+
+        from src.stages.stage4_1.fases import FASES
+
+        for fase in FASES:
+            _posicionar_sin_fisica(escena, fase.desde_columna + 5)
+            lienzo = pygame.Surface((800, 600), pygame.SRCALPHA)
+            escena._dibujar_horizonte_medio(lienzo, pygame.Vector2())
+            arr = pygame.surfarray.pixels_alpha(lienzo)
+            assert arr.max() > 0, f"Fase {fase.numero}: BG_Mid no se dibujó"
+
+
 class TestLasLomasDeLaFase3:
     """AUD-297/470/477 — dos lomas de verdad (`Slope`, una pareja subida-
     bajada cada una), no una sola joroba. El punto 6 de la crítica de
