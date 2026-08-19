@@ -356,6 +356,11 @@ class HUD:
         y_barras = self._portrait_frame_rect.bottom + _e(2)
         alto_barra = _e(5)
         paso_barra = alto_barra + _e(1)
+        # AUD-565 — guardadas para que `_reflow_bloque_de_identidad` pueda
+        # recalcular sólo la `y` de la barra de carga más adelante, sin
+        # repetir la aritmética del bloque.
+        self._y_barras_bloque = y_barras
+        self._paso_barra_bloque = paso_barra
         self._vida_bar_rect = pygame.Rect(x_bloque, y_barras, ancho_bloque, alto_barra)
         self._estamina_bar_rect = pygame.Rect(
             x_bloque, y_barras + paso_barra, ancho_bloque, alto_barra)
@@ -495,6 +500,13 @@ class HUD:
         self._event_bus.subscribe(Events.BOSS_PHASE_CHANGED, self._on_boss_phase_changed)
         self._event_bus.subscribe(Events.CHECKPOINT_REACHED, self._on_checkpoint_reached)
         self._event_bus.subscribe(Events.STAGE_COMPLETE, self._on_stage_complete)
+
+        # AUD-565 — con la estamina apagada de fábrica (el caso normal:
+        # sólo un escenario de los 26 la declara, AUD-141), el bloque
+        # arranca ya colapsado a dos barras, no a tres con un hueco en
+        # blanco a la espera de un `set_estamina` que puede no llegar en
+        # el primer fotograma.
+        self._reflow_bloque_de_identidad()
 
     #
     # destroy(): MUST be called before discarding this HUD instance.
@@ -884,9 +896,33 @@ class HUD:
 
         Un medidor vacío en pantalla en los quince escenarios que no usan
         estamina sería una promesa falsa: el jugador buscaría qué lo llena.
+
+        AUD-565 — «no se dibuja» ya no basta por sí solo: sin esto, el
+        bloque de identidad (AUD-535/547) apilaba las tres barras a
+        posiciones fijas, así que un escenario sin estamina dejaba un
+        hueco en blanco del tamaño de una barra entera entre la de vida y
+        la de carga. `_reflow_bloque_de_identidad` recoloca la barra de
+        carga cada vez que cambia el estado activo/inactivo.
         """
         self._estamina_actual = current
         self._estamina_max = max_val
+        self._reflow_bloque_de_identidad()
+
+    def _reflow_bloque_de_identidad(self) -> None:
+        """AUD-565 — con la estamina apagada, la barra de carga sube a
+        ocupar el sitio que dejaría vacío la de estamina, en vez de que el
+        bloque de identidad se quede con un tercio en blanco.
+
+        `_estamina_bar_rect` no cambia de tamaño ni desaparece: sigue
+        existiendo con su ancho de siempre (lo consultan pruebas y
+        `estamina_bar_rect()`) — sólo deja de pintarse (`_draw_estamina`
+        ya lo hacía por su cuenta) y de reservarle sitio a la barra de
+        abajo.
+        """
+        if self._estamina_max > 0.0:
+            self._carga_bar_rect.y = self._y_barras_bloque + self._paso_barra_bloque * 2
+        else:
+            self._carga_bar_rect.y = self._y_barras_bloque + self._paso_barra_bloque
 
     def set_tiempo_bala(self, fraccion: float, activo: bool) -> None:
         """AUD-260. Con `fraccion` negativa la barra no se dibuja.

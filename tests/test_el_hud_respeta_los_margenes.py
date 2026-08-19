@@ -196,12 +196,58 @@ class TestLasBarrasComparteAnchoYGrosor:
         }
         assert len(alturas) == 1, f"las barras no comparten grosor: {alturas}"
 
-    def test_las_tres_barras_estan_apiladas_en_orden(self, hud) -> None:
+    def test_las_tres_barras_estan_apiladas_en_orden_con_estamina_activa(self, hud) -> None:
         """Vida, luego estamina, luego carga — de arriba abajo, sin huecos
-        raros ni superposición."""
+        raros ni superposición. Sólo es cierto con la estamina encendida
+        (AUD-565): apagada, la carga sube y se salta el hueco de la
+        estamina a propósito — ver `TestElHuecoDeEstaminaSeColapsa`."""
+        hud.set_estamina(50.0, 100.0)
         vida = hud.vida_bar_rect()
         estamina = hud._estamina_bar_rect
         carga = hud._carga_bar_rect
         assert vida.bottom <= estamina.top
         assert estamina.bottom <= carga.top
         assert vida.x == estamina.x == carga.x
+
+
+class TestElHuecoDeEstaminaSeColapsa:
+    """AUD-565 — pedido del dueño: en los 25 escenarios de 26 que no
+    encienden la estamina (`stage_mecanicas` es el único que lo hace,
+    AUD-141), el bloque de identidad se apilaba a tres franjas fijas de
+    todos modos — la de en medio, con la barra de vida, se veía vacía.
+    Ahora la barra de carga ocupa ese sitio cuando la estamina está
+    apagada, sin dejar un tercio del bloque en blanco."""
+
+    def test_por_defecto_la_carga_sube_junto_a_la_vida(self, hud) -> None:
+        """Recién construido, antes de cualquier `set_estamina`: la
+        estamina ya nace apagada (AUD-141), así que el bloque también
+        tiene que nacer colapsado — no esperar al primer fotograma."""
+        vida = hud.vida_bar_rect()
+        carga = hud._carga_bar_rect
+        paso = carga.top - vida.bottom
+        assert 0 <= paso <= 2, f"la carga no subió junto a la vida: hueco de {paso}px"
+
+    def test_se_colapsa_al_apagar_la_estamina_en_marcha(self, hud) -> None:
+        hud.set_estamina(50.0, 100.0)
+        con_estamina = hud._carga_bar_rect.y
+        hud.set_estamina(0.0, 0.0)
+        sin_estamina = hud._carga_bar_rect.y
+        assert sin_estamina < con_estamina, (
+            "la barra de carga no subió al apagarse la estamina"
+        )
+
+    def test_se_expande_de_vuelta_al_encender_la_estamina(self, hud) -> None:
+        colapsada = hud._carga_bar_rect.y
+        hud.set_estamina(50.0, 100.0)
+        assert hud._carga_bar_rect.y > colapsada
+
+    def test_la_estamina_no_pintada_no_deja_franja_vacia(self, hud) -> None:
+        """Con la estamina apagada, no debería quedar ningún hueco entre
+        el final de la barra de vida y el principio de la de carga más
+        allá del mismo paso de 1 px que ya separa cualquier par de
+        barras adyacentes."""
+        hud.set_estamina(0.0, 0.0)
+        vida = hud.vida_bar_rect()
+        carga = hud._carga_bar_rect
+        paso = carga.top - vida.bottom
+        assert 0 <= paso <= 2, f"quedó un hueco de {paso}px entre vida y carga"
