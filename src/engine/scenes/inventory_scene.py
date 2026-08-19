@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 class InventoryScene(BaseScene):
     """Inventory screen — displays collected items in a grid."""
 
-    def __init__(self, context: GameContext) -> None:
+    def __init__(self, context: GameContext, *, standalone: bool = True) -> None:
         super().__init__(context)
         self._inventory: Inventory = context.inventory if hasattr(context, "inventory") else Inventory()
         self._selected_slot: int = 0
@@ -47,6 +47,13 @@ class InventoryScene(BaseScene):
         # objetos nuevos con tamaños inventados.
         self._font_item = font(Theme.FONT_SMALL)
         self._font_desc = font(Theme.FONT_TINY)
+        #: AUD-555 — `False` cuando `PausePanel` la embebe como pestaña
+        #: "Equipo": ahí esta escena nunca está en la cima de la pila (el
+        #: panel la dibuja y actualiza a mano dentro de `StageScene`
+        #: pausada), así que `Action.CANCEL` no puede hacer `pop()` — eso
+        #: sacaría a `StageScene` de la pila, no a esta pestaña. El panel
+        #: es quien decide qué hace Cancelar cuando embebe.
+        self._standalone = standalone
 
     def on_enter(self) -> None:
         self.context.scene_manager.transition.start_fade_in(0.5)
@@ -100,7 +107,8 @@ class InventoryScene(BaseScene):
             # al título en vez de devolverte al juego pausado. `pop()`
             # vuelve a quien haya empujado esta pantalla — el título o una
             # partida en pausa — sea cual sea.
-            self.context.scene_manager.pop()
+            if self._standalone:
+                self.context.scene_manager.pop()
             return
         if im.is_action_just_pressed(Action.CONFIRM):
             self._equipar_seleccionado()

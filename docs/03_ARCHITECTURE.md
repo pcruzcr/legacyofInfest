@@ -179,7 +179,7 @@ legacy-of-infest/                      # Raíz real del repositorio
 │   │   ├── input/
 │   │   │   ├── __init__.py
 │   │   │   ├── input_manager.py           # InputManager: teclado + mando unificados
-│   │   │   └── action_map.py              # ActionMap: enlace abstracto acción → dispositivo
+│   │   │   └── action_map.py              # Action(Enum): enlace abstracto acción → dispositivo
 │   │   │
 │   │   ├── audio/
 │   │   │   ├── __init__.py
@@ -340,6 +340,8 @@ legacy-of-infest/                      # Raíz real del repositorio
 │   │   │       │                         #   HUD, efectos, luz, logros, minimapa y estelas
 │   │   │       ├── dibujo.py              #   AUD-343: draw partido en mundo/UI
 │   │   │       │                          #   y el mapa de luz que viaja a la GPU
+│   │   │       ├── pausa.py               #   AUD-555: panel de pausa con pestañas
+│   │   │       │                          #   (Equipo/Habilidades/Mapa/Menú), Ocarina of Time
 │   │   │       ├── rush.py                #   AUD-261: conduce el Boss Rush —
 │   │   │       │                          #   golpes, tiempo y arrastre de vida
 │   │   │       └── dibujo_mecanicas.py    #   pinta lo del ECS: bloques rítmicos,
@@ -613,7 +615,7 @@ class BaseScene:
 
 #### `engine/input/input_manager.py` — `InputManager`
 
-Abstracción unificada de entrada. Gestiona teclado y mando a través del `ActionMap`. Las entidades consultan acciones, no teclas o botones en crudo.
+Abstracción unificada de entrada. Gestiona teclado y mando a través del enum `Action` de `engine/input/action_map.py`. Las entidades consultan acciones, no teclas o botones en crudo.
 
 **Interfaz pública:**
 - `InputManager.is_action_pressed(action: str) → bool` — verdadero en el fotograma en que se activó la acción.

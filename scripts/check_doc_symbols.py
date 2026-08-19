@@ -119,6 +119,9 @@ NO_SON_API: frozenset[str] = frozenset({
     # Métodos y formatos de pygame (22_API_CONTRACTS los cita como
     # operaciones de superficie) y de pydantic: existen, pero no aquí.
     "subsurface", "blits", "blit", "ttf", "BaseModel", "circle",
+    # AUD-553 — `pygame.mixer.music` citado por su nombre de módulo
+    # completo: la hoja "music" es de pygame, no del repositorio.
+    "music",
     # Convenciones de nombres, no nombres.
     "snake_case", "PascalCase", "camelCase", "kebab_case",
     # Valores de datos y nombres de módulos de curso, no símbolos de código.

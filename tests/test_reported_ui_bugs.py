@@ -276,11 +276,12 @@ class TestElBestiarioVuelveAlTitulo:
 
         AUD-533 — `inventory_scene` salió deliberadamente de este grupo:
         ahora se abre también desde el menú de pausa de una partida en
-        curso (`StageScene._abrir_inventario`), así que su salida usa
-        `pop()` (vuelve a quien la empujó, título o partida) en vez de
+        curso (AUD-555: embebida como pestaña "Equipo" del panel de
+        pausa, `PausaDeEscenario`), así que su salida usa `pop()` (vuelve
+        a quien la empujó, título o partida) en vez de
         `replace(TitleScene(...))` (que siempre manda al título, aunque
         se haya abierto a mitad de partida). Ver los comentarios de
-        `inventory_scene.py` y `stage_scene.py::_abrir_inventario`.
+        `inventory_scene.py` y `stage_parts/pausa.py`.
         """
         import inspect
 

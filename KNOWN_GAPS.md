@@ -3408,7 +3408,7 @@ está.
   viento y `tests/test_stage4_1c.py` comprueba cada hueco generado
   contra él, no sólo contra la envolvente sin viento.
 
-## [GAP-066] Rediseño del HUD (AUD-535) — dos piezas del pedido original no se construyeron
+## ~~[GAP-066] Rediseño del HUD (AUD-535) — dos piezas del pedido original no se construyeron~~ *(Resuelto)*
 
 - **File:** `src/engine/ui/hud.py`, `docs/09_HUD_SPEC.md`
 - **Phase:** Documento del dueño «Rediseño Integral del HUD: Minimalismo,
@@ -3440,18 +3440,35 @@ está.
      de verdad es una escena nueva (`PauseHubScene` o similar) que
      compone las tres existentes como paneles, no un cambio dentro de
      `hud.py`.
-- **Resolution plan:** 1) sincronía del tempo: evento nuevo en el
-  `EventBus` (p. ej. `TIMER_ALERTA`) que el HUD emita al cruzar
-  `UMBRAL_DE_ALERTA_S` y `DynamicMusicSystem` escuche para acelerar; 2)
-  pausa con pestañas: escena `PauseHubScene` que componga inventario,
-  mapa y árbol como paneles de una sola pantalla, navegable con gatillos.
-- **Verificado:** 2026-08-18, `pytest tests/test_hud.py
-  tests/test_el_hud_esta_a_la_escala_de_la_pantalla.py
-  tests/test_el_hud_no_sale_del_reves.py tests/test_el_hud_rompe_el_pixel_art.py
-  tests/test_los_corazones_ganados_se_ven.py
-  tests/test_el_barra_de_vida_reemplaza_corazones.py tests/test_puntuacion_que_se_ve.py`
-  en verde (137 casos) confirma lo que sí se construyó; ningún caso
-  cubre las dos piezas de arriba porque no existe código que probar.
+- **Resolution:** Las dos piezas se cerraron por separado, cada una con
+  el diseño que el plan original anticipaba:
+  1. **AUD-553 (2026-08-19)** — no hay control de tempo real sobre
+     `pygame.mixer.music` (ni pygame ni SDL2_mixer lo dan sobre un canal
+     en reproducción), así que en vez de la sincronía de tempo literal se
+     construyó el evento nuevo que el plan ya proponía
+     (`Events.SFX_TIMER_ALERT_PULSE`, emitido por `HUD.update()` al
+     cruzar `UMBRAL_DE_ALERTA_S`): una capa de pulso rítmico superpuesta
+     a la música que sí se acelera de verdad (0,25s→0,08s a medida que
+     el reloj se acerca a cero), sin fingir una velocidad de reproducción
+     que el motor no tiene. Misma emoción ("elevar la tensión"), mecanismo
+     honesto sobre la limitación real.
+  2. **AUD-555 (2026-08-19)** — panel con pestañas de verdad
+     (`PausaDeEscenario`, `src/framework/scenes/stage_parts/pausa.py`):
+     Equipo/Habilidades/Mapa dejaron de ser tres escenas que se apilan
+     por separado y pasaron a ser paneles embebidos por composición
+     dentro de una sola pantalla de pausa, con `Action.TAB_PREV`/
+     `TAB_NEXT` (coma/punto) para cambiar entre ellas — el "gatillo" que
+     pedía el documento original, adaptado a teclado. La Tienda queda
+     fuera del anillo de pestañas a propósito (no es una consulta, es una
+     transacción) y vive en una cuarta pestaña "Menú" junto a Guardar y
+     salir / Salir al título, empujando `ShopScene` de siempre.
+- **Verificado:** 2026-08-19 — `pytest tests/test_el_barra_de_vida_reemplaza_corazones.py
+  tests/test_el_menu_de_pausa_abre_inventario.py
+  tests/test_particion_de_drawing_system.py tests/test_particion_de_stage_scene.py
+  tests/test_reported_ui_bugs.py tests/test_architecture_doc_matches_tree.py`
+  en verde, más el barrido de pausa/inventario/habilidades/mapa/tienda/
+  action_map (172 casos) y la suite completa. `ruff check` limpio sobre
+  los once ficheros tocados.
 
 ## [GAP-067] Audio de autor pendiente: stinger de fase de jefe y risa de Paburu son placeholders sintetizados
 

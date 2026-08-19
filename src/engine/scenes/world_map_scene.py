@@ -153,23 +153,41 @@ class WorldMapScene(BaseScene):
     #: de cuando la lista tenía cinco nodos escritos a mano (AUD-266).
     _SALTO_VERTICAL = NODOS_POR_FILA
 
-    def __init__(self, context: GameContext, *, permitir_viajar: bool = True) -> None:
+    def __init__(
+        self, context: GameContext, *,
+        permitir_viajar: bool = True, standalone: bool = True,
+    ) -> None:
         """`permitir_viajar=False` — AUD-549: pedido explícito, "que al
         poner pausa salga el mapa completo". `_entrar` hace
         `scene_manager.replace(...)` para cambiar de escenario, y eso
         asume que esta pantalla está **sola** en la pila (el camino de
-        siempre, desde el título). Empujada desde la pausa de un nivel
-        (`StageScene._abrir_mapa`), la pila trae ese `StageScene` pausado
-        debajo; `replace()` sólo sustituye el tope, así que confirmar un
-        nodo dejaría el nivel en pausa huérfano en el fondo de la pila —
-        nunca destruido, nunca reanudado. En vez de resolver ese caso con
-        una pila que se vacía a medias, la pantalla abierta desde pausa
-        se queda de sólo lectura: se navega y se ve el progreso, pero
-        confirmar un nodo no hace nada. `Cancelar` sigue devolviendo al
-        nivel en pausa con normalidad (`pop()`, AUD-533).
+        siempre, desde el título). Embebida en el panel de pausa
+        (`PausaDeEscenario`, AUD-555), la pila trae ese `StageScene`
+        pausado debajo; `replace()` sólo sustituye el tope, así que
+        confirmar un nodo dejaría el nivel en pausa huérfano en el fondo
+        de la pila — nunca destruido, nunca reanudado. En vez de resolver
+        ese caso con una pila que se vacía a medias, la pantalla abierta
+        desde pausa se queda de sólo lectura: se navega y se ve el
+        progreso, pero confirmar un nodo no hace nada.
+
+        `standalone=False` — AUD-555: además de sólo lectura, embebida no
+        está en la cima de la pila real (el panel de pausa la dibuja y
+        actualiza a mano), así que Cancelar tampoco puede hacer `pop()` —
+        eso sacaría al `StageScene` pausado, no a esta pantalla. Con
+        `standalone=False` Cancelar no hace nada aquí dentro; es el panel
+        quien decide qué significa cerrar. Fuera de la pausa (desde el
+        título, `standalone=True` por defecto) Cancelar sigue devolviendo
+        con normalidad (`pop()`, AUD-533).
         """
         super().__init__(context)
         self._permitir_viajar = permitir_viajar
+        #: AUD-555 — `False` cuando `PausePanel` embebe esta escena como
+        #: pestaña "Mapa": ahí nunca está en la cima de la pila real, así
+        #: que Cancelar no puede hacer `pop()` (sacaría a `StageScene`
+        #: pausada). Independiente de `permitir_viajar`: las dos vinieron
+        #: del mismo pedido pero resuelven cosas distintas — una controla
+        #: si confirmar un nodo viaja, la otra si Cancelar cierra la pila.
+        self._standalone = standalone
         self._selected: int = 0
         # AUD-069: fuentes de la escala del tema, a través de su caché.
         self._font_name = font(Theme.FONT_SMALL)
@@ -247,7 +265,8 @@ class WorldMapScene(BaseScene):
             # AUD-533 — mismo arreglo que `InventoryScene`/`SkillTreeScene`:
             # `pop()` vuelve a quien haya empujado esta pantalla en vez de
             # mandar siempre al título.
-            self.context.scene_manager.pop()
+            if self._standalone:
+                self.context.scene_manager.pop()
 
     def _entrar(self, node: dict[str, Any]) -> bool:
         """Abre el escenario del nodo. Devuelve si se pudo.

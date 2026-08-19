@@ -39,6 +39,7 @@ from src.framework.scenes.stage_parts.diagnostico import DiagnosticoDeEscenario
 from src.framework.scenes.stage_parts.dibujo import DibujoDeEscenario
 from src.framework.scenes.stage_parts.fantasma import FantasmaDeCarrera
 from src.framework.scenes.stage_parts.mundo_ecs import MundoDelEscenario
+from src.framework.scenes.stage_parts.pausa import PausaDeEscenario
 from src.framework.scenes.stage_parts.rush import ConduccionDelBossRush
 from src.framework.scenes.stage_parts.senales import SenalesDeEscenario
 from src.framework.scenes.stage_parts.simulacion import SimulacionDeEscenario
@@ -80,7 +81,7 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
                  SenalesDeEscenario, SonidoDeEscenario,
                  DiagnosticoDeEscenario, CinematicasDeEscenario,
                  ArcoDelJugador, MundoDelEscenario, ActualizacionesDeEscenario, DibujoDeEscenario,
-                 FantasmaDeCarrera, ConduccionDelBossRush, BaseScene):
+                 FantasmaDeCarrera, ConduccionDelBossRush, PausaDeEscenario, BaseScene):
     """El escenario jugable: carga un TMX y lo hace jugar.
 
     AUD-152 — los tres primeros padres son **mixins de lectura**, no capas de
@@ -115,29 +116,21 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         self._stage_complete: bool = False
         self._game_over: bool = False
         self._paused: bool = False
-        self._pause_selected: int = 0
-        # AUD-533 — "Inventario" y "Árbol de Habilidades" se suman al menú
-        # de pausa: `InventoryScene`/`SkillTreeScene` ya existían completas
-        # y probadas, pero sólo eran alcanzables desde el título — el mismo
-        # patrón de "sistema completo, camino real inexistente" que ya
-        # apareció con `SwimmingState` (AUD-528) y `WaterEffect` (AUD-525).
-        # De paso, las tres opciones viejas estaban en inglés pese a la
-        # invariante 5 de CLAUDE.md ("todo en español, sin excepciones") —
-        # se traducen aquí para no dejar un menú a medio traducir.
-        # AUD-549 — "Mapa" se suma: pedido explícito, "que al poner pausa
-        # salga el mapa completo". Ver `WorldMapScene.__init__` para por
-        # qué se abre de sólo lectura desde aquí (`permitir_viajar=False`)
-        # y no con la navegación normal de cuando se entra desde el
-        # título.
-        # AUD-550 — "Tienda" se suma: mismo defecto que Inventario/Árbol
-        # antes de AUD-533 (`ShopScene` completa y probada, sólo
-        # alcanzable desde el título). Las monedas se ganan jugando; sin
-        # esto sólo se podían gastar volviendo al título a mitad de una
-        # partida en curso.
-        self._pause_options: list[str] = [
-            "Reanudar", "Mapa", "Inventario", "Árbol de habilidades",
-            "Tienda", "Guardar y salir", "Salir al título",
-        ]
+        # AUD-555 — el menú de pausa dejó de ser una lista vertical que
+        # empuja una escena por opción (AUD-533/549/550) y pasó a ser un
+        # panel con pestañas al estilo Ocarina of Time: "Equipo",
+        # "Habilidades" y "Mapa" son consultas embebidas (`PausaDeEscenario`,
+        # `stage_parts/pausa.py`); "Menú" es la lista corta de acciones
+        # (Tienda/Guardar y salir/Salir al título) que antes vivían sueltas
+        # en `_pause_options`. Los tres atributos `_pausa_*` con instancia
+        # sólo existen mientras `_paused` es `True` — `None` el resto del
+        # tiempo, para no arrastrar tres escenas vivas durante toda la
+        # partida.
+        self._pausa_tab: int = 0
+        self._pausa_menu_seleccion: int = 0
+        self._pausa_equipo: BaseScene | None = None
+        self._pausa_habilidades: BaseScene | None = None
+        self._pausa_mapa: BaseScene | None = None
         self._debug: bool = False
         #: AUD-289 — entidades que se retiraron por lanzar en `update()`.
         #:
@@ -803,12 +796,20 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
             return
         if im.is_action_just_pressed(Action.PAUSE):
             self._paused = not self._paused
-            self._pause_selected = 0
             # AUD-022: HUD.pause_timer / resume_timer existed and were never
             # called, so on a timed stage the countdown kept draining while the
             # player sat in the pause menu — pausing cost you the run. Music
             # likewise kept playing over the pause screen.
             self._set_paused_side_effects(self._paused)
+            # AUD-555 — el panel con pestañas se construye al entrar en
+            # pausa y se destruye al salir (`PausaDeEscenario`); Cancelar
+            # desde dentro del panel lo cierra por su cuenta
+            # (`_handle_pause_input`), así que esto sólo cubre abrir/
+            # cerrar con la propia tecla de pausa.
+            if self._paused:
+                self._abrir_panel_de_pausa()
+            else:
+                self._cerrar_panel_de_pausa()
         if im.is_action_just_pressed(Action.TOGGLE_MUTE):
             audio = self.audio
             if audio is not None:
@@ -845,65 +846,18 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
             else:
                 audio.resume_music()
 
-    def _handle_pause_input(self) -> None:
-        im = self.input
-        if im is None:
-            return
-        if im.is_action_just_pressed(Action.MOVE_DOWN):
-            self._pause_selected = (self._pause_selected + 1) % len(self._pause_options)
-        if im.is_action_just_pressed(Action.MOVE_UP):
-            self._pause_selected = (self._pause_selected - 1) % len(self._pause_options)
-        if im.is_action_just_pressed(Action.CANCEL):
-            self._paused = False
-            self._set_paused_side_effects(False)
-        if im.is_action_just_pressed(Action.CONFIRM):
-            choice = self._pause_options[self._pause_selected]
-            if choice == "Reanudar":
-                self._paused = False
-            elif choice == "Mapa":
-                self._abrir_mapa()
-            elif choice == "Inventario":
-                self._abrir_inventario()
-            elif choice == "Árbol de habilidades":
-                self._abrir_arbol_de_habilidades()
-            elif choice == "Tienda":
-                self._abrir_tienda()
-            elif choice == "Guardar y salir":
-                self._save_and_quit()
-            elif choice == "Salir al título":
-                self._quit_to_title()
-
-    def _abrir_mapa(self) -> None:
-        """AUD-549 — empuja `WorldMapScene` de sólo lectura.
-
-        `permitir_viajar=False`: `WorldMapScene._entrar` cambia de
-        escenario con `scene_manager.replace(...)`, que sólo sustituye
-        el tope de la pila. Empujada desde aquí, el `StageScene` pausado
-        queda debajo; confirmar un nodo dejaría ese nivel pausado
-        huérfano en el fondo de la pila. De sólo lectura, el jugador ve
-        su progreso y vuelve con Cancelar (`pop()`, mismo mecanismo que
-        `InventoryScene`/`SkillTreeScene`) sin ese riesgo.
-        """
-        from src.engine.scenes.world_map_scene import WorldMapScene
-        self.context.scene_manager.push(
-            WorldMapScene(self.context, permitir_viajar=False))
-
-    def _abrir_inventario(self) -> None:
-        """AUD-533 — empuja `InventoryScene` en vez de sustituir esta
-        escena: al cancelar (`pop()`, ver `InventoryScene`), la partida
-        pausada sigue exactamente donde estaba, no en el título."""
-        from src.engine.scenes.inventory_scene import InventoryScene
-        self.context.scene_manager.push(InventoryScene(self.context))
-
-    def _abrir_arbol_de_habilidades(self) -> None:
-        """Mismo mecanismo que `_abrir_inventario` — ver ese docstring."""
-        from src.engine.scenes.skill_tree_scene import SkillTreeScene
-        self.context.scene_manager.push(SkillTreeScene(self.context))
+    # AUD-555 — `_handle_pause_input` (navegación de pestañas, Cancelar) y
+    # la apertura de Equipo/Habilidades/Mapa como consultas embebidas viven
+    # ahora en `PausaDeEscenario` (`stage_parts/pausa.py`): son el panel de
+    # pausa, no el resto de la escena. Sólo `_abrir_tienda` se queda aquí
+    # — la Tienda sigue siendo una escena empujada de verdad, no una
+    # pestaña embebida, y `PausaDeEscenario` la llama por su nombre.
 
     def _abrir_tienda(self) -> None:
-        """AUD-550 — mismo mecanismo que `_abrir_inventario`: `ShopScene`
-        sale con `pop()`, así que empujarla aquí devuelve a la partida
-        pausada, no al título."""
+        """AUD-550 — empuja `ShopScene` de verdad (no una pestaña
+        embebida, ver `PausaDeEscenario`): `ShopScene` sale con `pop()`,
+        así que empujarla aquí devuelve a la partida pausada, no al
+        título."""
         from src.engine.scenes.shop_scene import ShopScene
         self.context.scene_manager.push(ShopScene(self.context))
 

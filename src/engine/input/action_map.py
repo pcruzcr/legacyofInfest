@@ -49,6 +49,14 @@ class Action(Enum):
     #: una existente, y entonces se activaría al saltar o al correr sin
     #: querer. Sólo hace algo en los escenarios que declaran `tiempo_bala`.
     BULLET_TIME = auto()
+    #: AUD-555 — cambiar de pestaña en el menú de pausa (Equipo/Habilidades/
+    #: Mapa/Menú, `PausePanel`). No reutiliza `MOVE_LEFT`/`MOVE_RIGHT`
+    #: a propósito: cada pestaña ya usa esas dos para su propia navegación
+    #: interna (la rejilla del inventario, por ejemplo) — reutilizarlas
+    #: cambiaría de pestaña sin querer cada vez que el jugador mueve el
+    #: cursor dentro de una.
+    TAB_PREV = auto()
+    TAB_NEXT = auto()
 
 
 # Default keyboard bindings: Action -> list of pygame key constants
@@ -84,6 +92,10 @@ DEFAULT_KEY_BINDINGS: dict[Action, list[int]] = {
     # atacar. Se **mantiene pulsada**, no se conmuta: la reserva se gasta
     # mientras dura, así que soltar tiene que devolver el tiempo al momento.
     Action.BULLET_TIME: [pygame.K_q, pygame.K_r],
+    # AUD-555 — coma/punto: el par convencional de "anterior/siguiente" en
+    # muchos juegos, y ninguna de las dos teclas está tomada por otra acción.
+    Action.TAB_PREV: [pygame.K_COMMA],
+    Action.TAB_NEXT: [pygame.K_PERIOD],
 }
 
 # Controller axis/deadzone constants

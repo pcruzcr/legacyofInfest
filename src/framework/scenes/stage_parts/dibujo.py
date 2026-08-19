@@ -14,8 +14,9 @@ que `App` pueda intercalar la tarjeta entre ellas, y la tarjeta que sube es
 `light_surface`, que sólo existe en esta ruta (AUD-343).
 
 Espera de la escena: `_stage_data`, `_player`, `_camera`, `_drawing`, `_hud`,
-`_msg_box`, `_banner`, `_paused`, `_debug`, `_pause_selected`,
-`_pause_options`, `_particle_system`, `_damage_numbers`, `_ambient_particles`,
+`_msg_box`, `_banner`, `_paused`, `_debug`, `_pausa_tab`,
+`_pausa_menu_seleccion`, `_pestana_de_consulta_activa` (de
+`PausaDeEscenario`), `_particle_system`, `_damage_numbers`, `_ambient_particles`,
 `_weather`, `_trail_system`, `_enemy_trail_system`, `_interactables`,
 `_tutorial`, `_learning`, `_dialogue`, `_niebla`, `_agua_vfx`, `_bloques`,
 `_cutscenes`, `_minimap`, `_subtitles`, `_achievements`, `_lighting`,
@@ -32,8 +33,9 @@ class DibujoDeEscenario:
     """El orden de pintado del escenario y su reparto entre CPU y GPU.
 
     Espera de la escena: `_stage_data`, `_player`, `_camera`, `_drawing`,
-    `_hud`, `_msg_box`, `_banner`, `_paused`, `_debug`, `_pause_selected`,
-    `_pause_options`, `_particle_system`, `_damage_numbers`,
+    `_hud`, `_msg_box`, `_banner`, `_paused`, `_debug`, `_pausa_tab`,
+    `_pausa_menu_seleccion`, `_pestana_de_consulta_activa` (de
+    `PausaDeEscenario`), `_particle_system`, `_damage_numbers`,
     `_ambient_particles`, `_weather`, `_trail_system`, `_enemy_trail_system`,
     `_interactables`, `_tutorial`, `_learning`, `_dialogue`, `_niebla`,
     `_agua_vfx`, `_bloques`, `_cutscenes`, `_minimap`, `_subtitles`,
@@ -60,8 +62,19 @@ class DibujoDeEscenario:
             banner=self._banner,
             paused=self._paused,
             debug=self._debug,
-            pause_selected=self._pause_selected,
-            pause_options=self._pause_options,
+            # AUD-555 — el panel de pausa con pestañas: las tres primeras
+            # (Equipo/Habilidades/Mapa) son escenas embebidas que
+            # `PausaDeEscenario` construye al pausar; "Menú" no tiene
+            # escena propia (`_pestana_de_consulta_activa()` devuelve
+            # `None` en su índice) y se dibuja con la lista corta de
+            # `OPCIONES_DEL_MENU_DE_PAUSA`.
+            pausa_tabs=self.PESTANAS_DE_PAUSA if self._paused else None,
+            pausa_tab_index=getattr(self, "_pausa_tab", 0),
+            pausa_pestana_activa=(
+                self._pestana_de_consulta_activa() if self._paused else None
+            ),
+            pausa_menu_opciones=self.OPCIONES_DEL_MENU_DE_PAUSA,
+            pausa_menu_seleccion=getattr(self, "_pausa_menu_seleccion", 0),
             particle_system=self._particle_system,
             damage_numbers=self._damage_numbers,
             ambient_particles=self._ambient_particles,
