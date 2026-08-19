@@ -454,5 +454,33 @@ class Inventory:
             cx += surf.get_width() + 4
 
 
+    @classmethod
+    def _reset_instance(cls) -> None:
+        """Olvida el singleton — para que una prueba no arranque con la mochila
+        de la anterior.
+
+        AUD-545 — `Inventory` es singleton de **proceso**, no de partida:
+        `collect()` deja una notificación en cola (`_collect_notifications`)
+        y `conftest.py` nunca limpiaba esto, a diferencia de `AssetLoader`,
+        `StageLoader` o `AchievementSystem`, que sí tienen su reseteo en
+        `_reset_global_state`. Cualquier prueba que recogiera un objeto dejaba
+        ese aviso «ITEM: …» flotando para la siguiente prueba del proceso que
+        construyera una escena y avanzara unos fotogramas.
+
+        Se encontró así: `test_reported_ui_bugs.py::test_el_hud_conserva_su_
+        brillo` fallaba **sólo** dentro de la suite completa, con la misma
+        razón de brillo exacta (0,7463648122122662) en ejecuciones separadas
+        — esa repetibilidad bit a bit, no un número distinto cada vez, es la
+        firma de estado compartido, no de una máquina cargada. Comparando el
+        HUD aislado contra el compuesto completo pixel a pixel, la diferencia
+        no estaba en la luz ni en las partículas —ambas resultaron idénticas
+        en las dos ejecuciones— sino en un aviso rojo de «ITEM: Vasija de
+        corazón» dibujado sobre el reloj, que `escena._hud.draw()` nunca
+        pinta: lo pinta `Inventory.draw_notifications`, y sólo aparece cuando
+        alguien ha recogido algo en cualquier prueba anterior del proceso.
+        """
+        cls._instance = None
+
+
 def get_inventory() -> Inventory:
     return Inventory()
