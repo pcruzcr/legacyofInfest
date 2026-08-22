@@ -64,6 +64,14 @@ class AudioManager:
         # buses más —voz y ambiente— que antes colgaban de «efectos».
         self.mezcla: Mezclador = Mezclador()
 
+        # AUD-594 — bus de reverberación por zona (GAP-070 punto 7). Este
+        # motor no tiene DSP en tiempo real, así que el «bus» se resuelve
+        # con variantes `_con_eco` horneadas en `tools/generate_all_assets.py`
+        # y una preferencia aquí: con el bus activo, si el banco tiene la
+        # variante del sonido pedido, suena ésta; si no, el original. La
+        # Fase 6 del 4-1 lo enciende al entrar y lo apaga al salir.
+        self._eco_activo: bool = False
+
         # Ambient audio layers
         self._ambient_sound: pygame.mixer.Sound | None = None
         self._ambient_channel: pygame.mixer.Channel | None = None
@@ -162,11 +170,33 @@ class AudioManager:
         if self._mixer_listo():
             pygame.mixer.music.unpause()
 
+    def activar_eco(self, activo: bool) -> None:
+        """Enciende o apaga el bus de reverberación (AUD-594, GAP-070.7).
+
+        Es un estado del mezclador, no de la escena: quien lo enciende está
+        obligado a apagarlo al salir (`Stage4_1.on_exit` lo hace), porque
+        aquí dentro no hay forma de saber que la escena cambió.
+        """
+        self._eco_activo = bool(activo)
+
+    @property
+    def eco_activo(self) -> bool:
+        return self._eco_activo
+
+    def _nombre_con_eco(self, name: str) -> str:
+        """El nombre con variante horneada si existe; el original si no."""
+        if not self._eco_activo or name.endswith("_con_eco"):
+            return name
+        variante = f"{name}_con_eco"
+        return variante if self.sound_bank.contains(variante) else name
+
     def play_sfx(self, name: str, volume: float = 1.0) -> None:
         """Play a sound effect from the sound bank at the current SFX volume."""
         if self._muted:
             return
-        self.sound_bank.play(name, volume=self.mezcla.ganancia(BUS_EFECTOS, volume))
+        self.sound_bank.play(
+            self._nombre_con_eco(name),
+            volume=self.mezcla.ganancia(BUS_EFECTOS, volume))
 
     def play_stinger(self, name: str, volume: float = 0.8) -> None:
         """Play a music stinger (short SFX overlay) without interrupting music."""
@@ -286,7 +316,8 @@ class AudioManager:
         # desvanecimiento completo de AUD-348 para todo lo demás.
         atenuacion = max(suelo, 1.0 - distancia / RADIO_AUDIBLE_EFECTOS)
         self.sound_bank.play(
-            name, volume=self.mezcla.ganancia(BUS_EFECTOS, volume * atenuacion),
+            self._nombre_con_eco(name),
+            volume=self.mezcla.ganancia(BUS_EFECTOS, volume * atenuacion),
             pan=(left, right))
 
     # ── AUD-144: buses y ducking ──────────────────────────────────
