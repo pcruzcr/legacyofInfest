@@ -348,6 +348,7 @@ class StageLoader(ObjetosDeTiled):
                 stage.destructibles.clear()
                 stage.camera_locks.clear()
                 stage.lights.clear()
+                stage.zonas_luz_ambiente.clear()
                 stage.recogibles.clear()
                 stage.cerraduras.clear()
                 stage.cofres.clear()

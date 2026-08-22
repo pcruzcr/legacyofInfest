@@ -95,6 +95,13 @@ def build_table() -> str:
                   "`radius` (px, 80) · `color` (nombre de la paleta o "
                   "`#rrggbb`) · `intensity` (0-1, 0.8) · `flicker` (bool) · "
                   "`flicker_speed` (Hz, 4.0) · `flicker_amount` (0-1, 0.15)"),
+        "AmbientLightZone": ("Rectángulo",
+                             "`valor` (brillo 0-1 dentro de la zona, 1.0 = sin "
+                             "cambio) · `fundido` (px de transición del borde, "
+                             "64). Mientras el jugador esté dentro, la luz "
+                             "ambiental base vale `valor`; en la banda de "
+                             "`fundido` interpola hacia el brillo del mapa "
+                             "(AUD-598)"),
         # ── F4.1 — objetos con los que el jugador interactúa ──────
         "Pickup": ("Rectángulo o punto",
                    "`item_id` **obligatoria** (vale el nombre del objeto en "

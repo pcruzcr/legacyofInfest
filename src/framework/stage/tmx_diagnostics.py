@@ -55,6 +55,9 @@ BUILTIN_OBJECT_TYPES: tuple[str, ...] = (
     "CameraLock",
     "Waypoint",
     "Light",
+    #: AUD-598 — GAP-072.4: brillo ambiental por tramo (el descenso del
+    #: blueprint §46 del 4-1b).
+    "AmbientLightZone",
     #: AUD-136 (D3) — una escena narrativa con su guion en una propiedad.
     "Cutscene",
     #: AUD-140 — bloques que el jugador mueve o rompe.

@@ -288,6 +288,30 @@ class LightSpec:
     flicker_speed: float = 4.0
     flicker_amount: float = 0.15
 
+
+@dataclass
+class ZonaLuzAmbienteSpec:
+    """Un rectángulo que impone brillo ambiental mientras el jugador esté
+    dentro (GAP-072 punto 4, AUD-598).
+
+    El blueprint del 4-1b pide un `ambient_light` que baja por tramos
+    (0.50 → 0.25); la propiedad del mapa es una sola para todo el nivel.
+    Ésta es la pieza que falta: igual que `LightSpec`, es sólo la
+    descripción de lo que dibujó el diseñador en Tiled — la escena decide
+    cómo aplicarla.
+
+    `fundido` es el ancho en px de la banda de transición alrededor del
+    rectángulo: dentro a fondo se aplica `valor`, y a medida que el jugador
+    se acerca al borde desde fuera el valor interpola hacia el base del
+    mapa para que la oscuridad no aparezca de golpe en una línea.
+    """
+
+    rect: pygame.Rect
+    #: Brillo objetivo dentro de la zona, 0 a 1 (1.0 = sin cambio).
+    valor: float = 1.0
+    #: Ancho de la banda de fundido en el borde, en px.
+    fundido: int = 64
+
 @dataclass
 class StageData:
     map_layer: pyscroll.PyscrollGroup
@@ -338,6 +362,10 @@ class StageData:
     destructibles: list[BloqueDestructible] = field(default_factory=list)
     camera_locks: list[CameraLock] = field(default_factory=list)
     lights: list[LightSpec] = field(default_factory=list)
+    #: Zonas de brillo ambiental (GAP-072.4, AUD-598): rectángulos que
+    #: imponen `ambient_light` mientras el jugador esté dentro, con banda
+    #: de fundido en el borde. Vacía = comportamiento de siempre.
+    zonas_luz_ambiente: list[ZonaLuzAmbienteSpec] = field(default_factory=list)
     #: F4.1 — objetos con los que el jugador interactúa.
     recogibles: list[Recogible] = field(default_factory=list)
     cerraduras: list[Cerradura] = field(default_factory=list)

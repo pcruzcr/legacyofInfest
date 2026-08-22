@@ -75,6 +75,12 @@ class MezclaDeAmbiente:
             self._lighting.ambient_brightness = self.AMBIENT_BY_ZONE.get(
                 zone, self.AMBIENT_DEFAULT)
 
+        # AUD-598 — GAP-072.4: las zonas de brillo ambiental del mapa.
+        # Vacía (o ausente, en mapas viejos) = el brillo base manda en todo
+        # el nivel como toda la vida.
+        self._zonas_luz_ambiente = list(
+            getattr(self._stage_data, "zonas_luz_ambiente", []))
+
         self._stage_lights = [
             LightSource(
                 position=pygame.Vector2(*spec.position),
@@ -87,6 +93,46 @@ class MezclaDeAmbiente:
             )
             for spec in getattr(self._stage_data, "lights", [])
         ]
+
+    def _ambiente_base_del_fotograma(self) -> float:
+        """El `_ambiente_base` de ESTE fotograma: el del mapa, salvo que el
+        jugador esté dentro (o cerca, por el fundido) de una
+        `AmbientLightZone` (AUD-598).
+
+        La hora, la estación y el pulso del reloj musical se multiplican
+        ENCIMA de lo que esto devuelva — la zona cambia la base, no la
+        composición. Sin zonas (o sin jugador todavía) devuelve el base
+        estático y el fotograma es idéntico al de siempre.
+        """
+        zonas = getattr(self, "_zonas_luz_ambiente", None)
+        if not zonas:
+            return self._ambiente_base
+        player = getattr(self, "_player", None)
+        if player is None:
+            return self._ambiente_base
+        px, py = player.rect.center
+        elegida = None
+        for z in zonas:
+            if z.rect.collidepoint(px, py):
+                elegida = z          # en solape gana la última declarada
+        if elegida is not None:
+            return elegida.valor
+        # Fuera de todo rectángulo: ¿alguna cerca dentro de su fundido?
+        cercana = None
+        distancia_cercana = 0.0
+        for z in zonas:
+            if z.fundido <= 0 or z.valor == self._ambiente_base:
+                continue
+            dx = max(z.rect.left - px, 0, px - z.rect.right)
+            dy = max(z.rect.top - py, 0, py - z.rect.bottom)
+            d = (dx * dx + dy * dy) ** 0.5
+            if d <= z.fundido and (cercana is None or d < distancia_cercana):
+                cercana, distancia_cercana = z, d
+        if cercana is None:
+            return self._ambiente_base
+        factor = distancia_cercana / max(1, cercana.fundido)   # 0 borde→1 fuera
+        return self._ambiente_base + (
+            cercana.valor - self._ambiente_base) * (1.0 - factor)
 
     #: Bloom permanente por zona cuando el TMX no declara `bloom`.
     #:

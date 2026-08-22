@@ -44,6 +44,7 @@ from src.framework.stage.stage_data import (
     LightSpec,
     MessageTrigger,
     StageData,
+    ZonaLuzAmbienteSpec,
 )
 from src.framework.stage.tmx_diagnostics import (
     TmxObjectProblem,
@@ -115,6 +116,9 @@ class ObjetosDeTiled:
 
             elif obj_type == "Light":
                 cls._handle_light(stage, obj, props)
+
+            elif obj_type == "AmbientLightZone":
+                cls._handle_zona_luz_ambiente(stage, obj, props)
 
             # F4.1 — objetos con los que el jugador interactúa. Pedidos por los
             # estudiantes tras jugar la fase 1: llaves, puertas, jaulas, cofres
@@ -351,6 +355,49 @@ class ObjetosDeTiled:
                 props.get("flicker_speed", 4.0), "light flicker_speed"),
             flicker_amount=max(0.0, min(1.0, cls._safe_float(
                 props.get("flicker_amount", 0.15), "light flicker_amount"))),
+        ))
+
+    @classmethod
+    def _handle_zona_luz_ambiente(
+        cls, stage: StageData, obj: Any, props: dict[str, Any],
+    ) -> None:
+        """Convierte un objeto `AmbientLightZone` de Tiled en una
+        `ZonaLuzAmbienteSpec` (GAP-072.4, AUD-598).
+
+        Propiedades reconocidas:
+
+        ==========  ======  ==================================================
+        propiedad   tipo    significado
+        ==========  ======  ==================================================
+        `valor`     float   brillo ambiental dentro de la zona, 0 a 1
+                            (por defecto 1.0 = sin cambio)
+        `fundido`   float   ancho de la banda de transición del borde, en px
+                            (por defecto 64)
+        ==========  ======  ==================================================
+
+        El rectángulo se toma tal cual se dibujó: es la región donde manda
+        el `valor`, no un punto.
+        """
+        rect = pygame.Rect(
+            int(float(getattr(obj, "x", 0) or 0)),
+            int(float(getattr(obj, "y", 0) or 0)),
+            max(1, int(float(getattr(obj, "width", 0) or 0))),
+            max(1, int(float(getattr(obj, "height", 0) or 0))),
+        )
+
+        def _flave(nombre: str, defecto: float) -> float:
+            # `ObjetosDeTiled` es un mixin: `cls._safe_float` vive en
+            # `StageLoader`, y este manejador también se llama directo desde
+            # las pruebas con la clase sola.
+            try:
+                return float(props.get(nombre, defecto))
+            except (TypeError, ValueError):
+                return defecto
+
+        stage.zonas_luz_ambiente.append(ZonaLuzAmbienteSpec(
+            rect=rect,
+            valor=max(0.0, min(1.0, _flave("valor", 1.0))),
+            fundido=max(0, int(_flave("fundido", 64.0))),
         ))
 
     @classmethod

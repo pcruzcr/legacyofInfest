@@ -316,6 +316,7 @@ Como referencia, mira `src/stages/stage0/stage0.py` y `assets/maps/stage0/`.
 | `CameraLock` | Rectángulo | `lock_x`, `lock_y` (bool) |
 | `Waypoint` | Punto | `owner_id` — ruta para la entidad con ese nombre |
 | `Light` | Punto o rectángulo (se usa el **centro**) | `radius` (px, 80) · `color` (nombre de la paleta o `#rrggbb`) · `intensity` (0-1, 0.8) · `flicker` (bool) · `flicker_speed` (Hz, 4.0) · `flicker_amount` (0-1, 0.15) |
+| `AmbientLightZone` | Rectángulo | `valor` (brillo 0-1 dentro de la zona, 1.0 = sin cambio) · `fundido` (px de transición del borde, 64). Mientras el jugador esté dentro, la luz ambiental base vale `valor`; en la banda de `fundido` interpola hacia el brillo del mapa (AUD-598) |
 | `Cutscene` | Rectángulo o punto | `guion` **obligatoria** · `bloquea` · `saltable` · `una_vez` · `arranca_con`. Punto = al empezar; rectángulo = al entrar |
 | `PushBlock` | Rectángulo | `velocidad` (px/s, 45) · `con_gravedad` |
 | `BreakableBlock` | Rectángulo | `golpes` (int, 1) · `evento_al_romper` |
@@ -396,6 +397,6 @@ propiedad del objeto en Tiled.
 | *(ninguno)* o `Solid` | Colisión AABB completa |
 | `Platform` | Plataforma atravesable desde abajo |
 
-Total aceptado en `Objects`: **69** tipos.
+Total aceptado en `Objects`: **70** tipos.
 
 <!-- END GENERATED: tipos de objeto -->

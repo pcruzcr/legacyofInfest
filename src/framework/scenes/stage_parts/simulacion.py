@@ -196,9 +196,23 @@ class SimulacionDeEscenario:
         # primera versión accedía al atributo directamente y tiraba cinco
         # pruebas con `AttributeError` — un adorno que tumba el fotograma que
         # decora, que es justo lo que AUD-413 vino a corregir en otro sitio.
-        self._lighting.ambient_brightness = min(1.0, max(
-            suelo, self._ambiente_base * estado.factor_ambiente,
-        ) * pulso.factor_de_luz(getattr(self, "_reloj_musical", None)))
+        # AUD-598 — la base del fotograma puede venir de una
+        # `AmbientLightZone` bajo los pies del jugador (GAP-072.4); sin
+        # zonas es el base estático del mapa y nada cambia.
+        #
+        # Cuando una zona manda, el suelo nocturno NO se aplica: la
+        # oscuridad del tramo es diseño del autor, no ciclo horario — un
+        # `valor=0.25` pisado por el suelo de la luna dejaría el tramo tan
+        # claro como el llano y la zona no serviría de nada.
+        base_fotograma = self._ambiente_base_del_fotograma()
+        if base_fotograma != self._ambiente_base:
+            self._lighting.ambient_brightness = min(1.0,
+                base_fotograma * estado.factor_ambiente
+                * pulso.factor_de_luz(getattr(self, "_reloj_musical", None)))
+        else:
+            self._lighting.ambient_brightness = min(1.0, max(
+                suelo, base_fotograma * estado.factor_ambiente,
+            ) * pulso.factor_de_luz(getattr(self, "_reloj_musical", None)))
         self._post_processing.set_base_bloom(
             self._bloom_base_escenario + estado.bloom_extra)
         # El tinte de la hora ya viene compuesto con el de la estación: los dos
