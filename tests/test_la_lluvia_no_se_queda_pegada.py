@@ -57,7 +57,12 @@ class _AudioEspia:
         self.arrancados: list[str] = []
         self.fundidos: list[str] = []
         self.paradas: int = 0
+        self.ecos: list[bool] = []
         self._ambient_active: bool = False
+
+    def activar_eco(self, activo: bool) -> None:
+        # AUD-594 — el bus de reverberación de la Fase 6 pasa por aquí.
+        self.ecos.append(bool(activo))
 
     def play_ambient(self, path, volume: float = 0.5, loops: int = -1) -> None:
         self.arrancados.append(str(path))

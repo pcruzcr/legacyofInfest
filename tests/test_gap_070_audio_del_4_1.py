@@ -49,7 +49,12 @@ class _AudioEspia:
         self.sfx: list[tuple[str, float]] = []
         self.voces: list[str] = []
         self.volumenes_de_ambiente: list[float] = []
+        self.ecos: list[bool] = []
         self._ambient_active = True
+
+    def activar_eco(self, activo: bool) -> None:
+        # AUD-594 — el bus de reverberación de la Fase 6 pasa por aquí.
+        self.ecos.append(bool(activo))
 
     def play_sfx(self, name, volume=1.0, **_k) -> None:
         self.sfx.append((name, volume))

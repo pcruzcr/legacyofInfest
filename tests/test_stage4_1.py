@@ -845,17 +845,21 @@ class TestLasLomasDeLaFase3:
     jugador en vez de leerse como una sola montaña; la colisión bajo cada
     rampa se queda plana por el mismo motivo que ya documentó AUD-470."""
 
-    def test_hay_exactamente_seis_pendientes(self, escena) -> None:
+    def test_hay_exactamente_nueve_pendientes(self, escena) -> None:
         """Dos lomas × (subida, cima llana, bajada) cada una (AUD-477: la
         cima también es `Pendiente`, no bloque sólido — ver
-        `trazado.altura_de_colision`)."""
-        assert len(escena._stage_data.pendientes) == 6
+        `trazado.altura_de_colision`), más el repiso de la Fase 2 con sus
+        tres propias (AUD-580, GAP-060 punto 8)."""
+        assert len(escena._stage_data.pendientes) == 9
 
-    def test_todas_estan_en_la_fase_3(self) -> None:
+    def test_todas_las_lomas_estan_en_la_fase_3(self) -> None:
         from src.stages.stage4_1 import trazado
 
-        for col, _fila, _ancho, _alto, _sube in trazado.loma():
-            assert trazado.fase_de_la_columna(col) == 3
+        for inicio_subida, ancho_subida, ancho_cima, ancho_bajada, _fila in (
+                trazado.LOMAS_FASE3):
+            fin = inicio_subida + ancho_subida + ancho_cima + ancho_bajada
+            for col in range(inicio_subida, fin):
+                assert trazado.fase_de_la_columna(col) == 3
 
     def test_la_segunda_loma_es_mas_alta_que_la_primera(self) -> None:
         """El «cuello» de la serpiente, no dos jorobas iguales."""
@@ -1166,7 +1170,10 @@ class TestLaGradacionYElSonidoPorFase:
         _llevar_a(escena, fase3.desde_columna + 2)
         ruta = str(settings.ASSETS_DIR / fase3.sonido_ambiente)
         assert ruta in escena.audio._ambient_sounds
-        assert "storm_ambient" in ruta
+        # AUD-592 — la tormenta de la Fase 3 es la variante paneada propia
+        # (GAP-070 punto 4); el bucle genérico `storm_ambient` queda para
+        # el clima del resto del juego.
+        assert "tormenta_paneada" in ruta
 
 
 class TestLaVinetaRespiraPorFase:
@@ -1750,11 +1757,14 @@ class TestElMiradorFinal:
 
 
 class TestElDialogoDeLosTresEspiritus:
-    """AUD-244/470 — los árboles se cargan de `data/dialogues/stage4_1.json`."""
+    """AUD-244/470 — los árboles se cargan de `data/dialogues/stage4_1.json`.
+    Desde AUD-581 el fichero trae un cuarto árbol (la tumba que nadie
+    reclama, GAP-060 punto 15); los tres de los espíritus siguen siendo la
+    columna vertebral."""
 
-    def test_los_tres_arboles_se_cargan(self, escena) -> None:
+    def test_los_arboles_se_cargan(self, escena) -> None:
         assert set(escena._arboles_de_dialogo.keys()) == {
-            "venado", "rey_terciopelo", "gavilan",
+            "venado", "rey_terciopelo", "gavilan", "tumba_antigua",
         }
 
     def test_cada_fase_con_espiritu_tiene_su_dialogo(self) -> None:
@@ -1766,16 +1776,17 @@ class TestElDialogoDeLosTresEspiritus:
             else:
                 assert fase.numero != 5 or fase.dialogo_id is None
 
-    def test_el_fichero_es_json_valido_con_tres_arboles(self) -> None:
+    def test_el_fichero_es_json_valido_con_cuatro_arboles(self) -> None:
         import json
         from pathlib import Path
 
         datos = json.loads(
             Path("data/dialogues/stage4_1.json").read_text(encoding="utf-8"))
         assert isinstance(datos, list)
-        assert len(datos) == 3
+        assert len(datos) == 4
         for arbol in datos:
-            assert arbol["id"] in ("venado", "rey_terciopelo", "gavilan")
+            assert arbol["id"] in (
+                "venado", "rey_terciopelo", "gavilan", "tumba_antigua")
             assert arbol["start"] in arbol["nodes"]
 
 

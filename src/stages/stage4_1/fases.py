@@ -141,12 +141,24 @@ FASES: tuple[Fase, ...] = (
          gradacion=COLOR_PLENO, tinte=None, espiritu=None,
          rayos_por_minuto=0.0, ambiente=0.62,
          decoracion="lapidas_personales",
-         musica=MUSICA_POR_FASE[0]),
+         musica=MUSICA_POR_FASE[0],
+         # AUD-577 — GAP-059 «capas de sonido natural»: el silencio de la
+         # Fase 1 debía estar *poblado* («pájaros, viento, pasos e
+         # insectos»), no vacío. Grillos al atardecer (`start_hour=18`) y
+         # ráfagas del viento de Tilarán — los dos sonidos ya existían;
+         # los pasos los pone el material «grava» (AUD-554). Los pájaros
+         # quedan en GAP-070: no hay SFX de ave que reutilizar.
+         sonidos_aislados=("sfx_environment_grillo",
+                           "sfx_environment_rafaga_viento")),
     Fase(2, "EL VENADO", 1 * ANCHO_SECCION, "rain", ("ash", 14.0),
          gradacion=BLANCO_Y_NEGRO, tinte=None, espiritu=0,
          rayos_por_minuto=0.0, ambiente=0.50,
          sonido_ambiente=f"{_AMB}viento_de_bosque.wav",
          dialogo_id="venado", apariciones_previas=True,
+         # AUD-581 — la tumba que nadie reclama: la zona secundaria
+         # opcional del punto 15 (GAP-060), «una historia, una aparición
+         # o una tumba antigua» — basta una, y es la tumba.
+         decoracion="tumba_antigua",
          musica=MUSICA_POR_FASE[1],
          # AUD-546 — «crujidos repentinos de madera y maleza rompiéndose
          # en los bordes de la pantalla... para generar la sensación de
@@ -155,7 +167,12 @@ FASES: tuple[Fase, ...] = (
     Fase(3, "EL REY TERCIOPELO", 2 * ANCHO_SECCION, "storm", ("spores", 16.0),
          gradacion=GRISES_NEUTROS, tinte=None, espiritu=1,
          rayos_por_minuto=10.0, ambiente=0.44, tiene_slopes=True,
-         sonido_ambiente="sfx/environment/sfx_environment_storm_ambient.wav",
+         # AUD-592 — GAP-070 punto 4: la receta del dueño pedía paneo LFO
+         # (-0.8↔0.8) y filtro barriendo 400-2200Hz sobre la tormenta; los
+         # dos LFO van horneados en esta variante estéreo propia (el bucle
+         # genérico del clima, `storm_ambient`, sigue para el resto del
+         # juego). Ver `tools/generate_all_assets.py`.
+         sonido_ambiente="sfx/environment/sfx_environment_tormenta_paneada.wav",
          dialogo_id="rey_terciopelo", serpiente_de_fondo=True,
          musica=MUSICA_POR_FASE[2],
          # AUD-546 — «cascabeleo y osamentas» (crujido óseo, el mismo
@@ -167,7 +184,12 @@ FASES: tuple[Fase, ...] = (
          gradacion=SEPIA_VINTAGE, tinte=(TINTE_VINTAGE, ALFA_TINTE_VINTAGE),
          espiritu=2, rayos_por_minuto=0.0, ambiente=0.48,
          shake_de_silencio=True,
-         sonido_ambiente="sfx/environment/sfx_environment_rain_ambient.wav",
+         # AUD-593 — GAP-070 punto 5: la lluvia de esta fase pasa por un
+         # pasa-banda estrecho (~1500Hz) horneado, «a través de una radio
+         # vieja»; el bucle limpio `rain_ambient` sigue para la Fase 2 y
+         # para el clima del resto del juego. Ver
+         # `tools/generate_all_assets.py`.
+         sonido_ambiente="sfx/environment/sfx_environment_lluvia_de_radio.wav",
          grito_aislado="sfx_environment_grito_de_gavilan",
          decoracion="bosque_cortado", dialogo_id="gavilan",
          sombra_de_ave=True,

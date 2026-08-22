@@ -384,6 +384,34 @@ class Stage4_1(StageScene):
         #: en el diccionario, no aquí.
         self._presencia_visible: dict[str, float] = {}
         self._presencia_proxima: dict[str, float] = {}
+        #: «El bosque observa» (Fase 2, AUD-579, GAP-060 punto 16): el par
+        #: de ojos que se abre en la línea de árboles — cuánto le queda
+        #: abierto, cuándo puede volver a abrirse, y dónde (columna de
+        #: mundo y altura de pantalla, sorteadas por aparición).
+        self._ojos_visibles: float = 0.0
+        self._proxima_aparicion_ojos: float = 0.0
+        self._ojos_columna: float = 0.0
+        self._ojos_altura: float = 0.0
+        #: Las hojas muertas que el viento arrastra (mismo punto). En
+        #: espacio de **pantalla**, no de mundo: son basquilla que pasa
+        #: cerca de la cámara, no objetos del nivel — la misma lectura que
+        #: la serpiente de fondo, que tampoco se ancla a columna alguna.
+        self._hojas: list[dict[str, float]] = []
+        self._proxima_hoja: float = 0.0
+        #: La procesión de la Planicie (Fase 5, AUD-583, GAP-063 punto 16):
+        #: cuántas veces se ha escondido la luna desde que empezó la fase,
+        #: si está asomada ahora, y cómo estaba la luna el fotograma pasado
+        #: — para detectar el borde de subida sin una segunda senoidal.
+        self._procesion_ciclos: int = 0
+        self._procesion_visible: bool = False
+        self._procesion_luna_oculta_antes: bool = False
+        #: La multitud junto a la tumba del medio (mismo punto, punto 20):
+        #: está mientras nadie llega a verla bien.
+        self._multitud_presente: bool = True
+        #: El secreto de los tres espíritus (Fase 6, AUD-584, GAP-064
+        #: punto 32): una sola vez, y sólo mientras dura el fundido.
+        self._secreto_visto: bool = False
+        self._secreto_fundido: float = 0.0
 
     # ── Ciclo de vida ─────────────────────────────────────────
 
@@ -422,6 +450,18 @@ class Stage4_1(StageScene):
         if self._stage_data is not None:
             self._musica_sonando = self._stage_data.bgm_track or None
 
+    def on_exit(self) -> None:
+        """Apaga el bus de reverberación al salir del nivel (AUD-594).
+
+        `activar_eco` es estado del mezclador, compartido por todas las
+        escenas: morir o salir desde la Fase 6 sin apagarlo dejaría el eco
+        colado en la escena siguiente. El cambio de fase ya lo maneja; esto
+        cubre el caso de salir directamente.
+        """
+        if self.audio is not None:
+            self.audio.activar_eco(False)
+        super().on_exit()
+
     # ── Actualización ─────────────────────────────────────────
 
     def update(self, dt: float) -> None:
@@ -452,6 +492,10 @@ class Stage4_1(StageScene):
         self._actualizar_sombra_del_gavilan(dt)
         self._actualizar_grietas(dt)
         self._actualizar_presencias_errantes(dt)
+        self._actualizar_bosque_que_observa(dt)
+        self._actualizar_procesion(dt)
+        self._actualizar_multitud()
+        self._actualizar_secreto_de_los_espiritus(dt)
         self._actualizar_mensaje_final()
         self._actualizar_secuencia_de_despertar()
         self._actualizar_voz_del_espiritu()
@@ -522,6 +566,12 @@ class Stage4_1(StageScene):
         self._proximo_rayo = self._espera_entre_rayos()
         self._actualizar_sonido_de_fase(fase)
         self._actualizar_musica_de_fase(fase)
+        # AUD-594 — GAP-070 punto 7: el bus de reverberación sólo vive en
+        # la Fase 6, el tramo sagrado antes de Paburu. `activar_eco` es
+        # estado del mezclador: entrar aquí lo enciende y cruzar a
+        # cualquier otra fase (o salir del nivel, ver `on_exit`) lo apaga.
+        if self.audio is not None:
+            self.audio.activar_eco(fase.numero == 6)
         # AUD-546 — se reinicia en cada frontera, tenga o no sonidos
         # aislados esta fase: sin esto, entrar a una fase silenciosa tras
         # una fase con crujidos frecuentes heredaría un temporizador ya
@@ -1378,6 +1428,107 @@ class Stage4_1(StageScene):
                     p.color, p.alfa,
                 )
 
+    # ── El bosque observa (Fase 2, AUD-579, GAP-060 punto 16) ───
+    #
+    # *«ramas sin viento, ojos entre árboles, huellas, una figura, hojas
+    # desplazándose»*. Las huellas ya existían (AUD-513) y la figura es el
+    # Venado a destellos (AUD-479); aquí van las dos que faltaban. Las dos
+    # comparten la misma regla de fondo: son presencia, no evento — sin
+    # sonido, sin disparador, sin estado que guardar.
+    ESPERA_ENTRE_OJOS: tuple[float, float] = (6.0, 14.0)
+    DURACION_DE_LOS_OJOS: tuple[float, float] = (2.0, 4.0)
+    #: A qué distancia horizontal del par el jugador lo hace cerrarse.
+    #: Mirar de vuelta los cierra — una señal que aguante la mirada es un
+    #: letrero, no algo que observa.
+    DISTANCIA_QUE_CIERRA_LOS_OJOS = 140.0
+    #: A qué altura de pantalla se abren (fracción), con vaivén por
+    #: aparición: en la línea de árboles, no en el camino.
+    ALTURA_DE_LOS_OJOS = 0.58
+    PARALAJE_DEL_BOSQUE = 0.85
+    INTERVALO_ENTRE_HOJAS: tuple[float, float] = (0.3, 0.9)
+    #: El viento del nivel sopla hacia la izquierda (`fuerza_x=-60` en el
+    #: TMX de la Fase 3, `viento_de_bosque` en la Fase 2): las hojas
+    #: cruzan contra el avance del jugador, no a favor.
+    VIENTO_DE_LAS_HOJAS = -120.0
+    TOPE_DE_HOJAS = 14
+
+    def _actualizar_bosque_que_observa(self, dt: float) -> None:
+        """Los ojos se abren solos y se cierran si alguien se acerca; las
+        hojas caen, cruzan y se van. Fuera de la Fase 2 las dos cosas se
+        apagan sin dejar contadores a medias — el mismo criterio de
+        `_actualizar_anomalia_fase1`."""
+        fase = self.fase
+        if fase.numero != 2:
+            self._ojos_visibles = 0.0
+            self._hojas.clear()
+            return
+        if self._player is not None and self._ojos_visibles > 0.0:
+            distancia = abs(
+                self._player.rect.centerx - self._ojos_columna * settings.TILE_SIZE)
+            if distancia <= self.DISTANCIA_QUE_CIERRA_LOS_OJOS:
+                self._ojos_visibles = 0.0
+                self._proxima_aparicion_ojos = self._espera_entre_ojos()
+        if self._ojos_visibles > 0.0:
+            self._ojos_visibles = max(0.0, self._ojos_visibles - dt)
+        else:
+            self._proxima_aparicion_ojos -= dt
+            if self._proxima_aparicion_ojos <= 0.0:
+                self._ojos_visibles = random.uniform(*self.DURACION_DE_LOS_OJOS)
+                self._proxima_aparicion_ojos = self._espera_entre_ojos()
+                base = fase.desde_columna
+                self._ojos_columna = random.uniform(base + 10,
+                                                    base + trazado.ANCHO_SECCION - 10)
+                self._ojos_altura = (
+                    settings.INTERNAL_HEIGHT * self.ALTURA_DE_LOS_OJOS
+                    + random.uniform(-20.0, 20.0))
+        self._proxima_hoja -= dt
+        if self._proxima_hoja <= 0.0:
+            self._proxima_hoja = random.uniform(*self.INTERVALO_ENTRE_HOJAS)
+            if len(self._hojas) < self.TOPE_DE_HOJAS:
+                self._hojas.append({
+                    "x": float(settings.INTERNAL_WIDTH + 20),
+                    "y": random.uniform(80.0, settings.INTERNAL_HEIGHT * 0.7),
+                    "vaiven": random.uniform(0.0, math.tau),
+                })
+        for hoja in self._hojas:
+            hoja["x"] += self.VIENTO_DE_LAS_HOJAS * dt
+            hoja["vaiven"] += dt * 2.5
+        self._hojas[:] = [h for h in self._hojas if h["x"] >= -20.0]
+
+    def _espera_entre_ojos(self) -> float:
+        return random.uniform(*self.ESPERA_ENTRE_OJOS)
+
+    def _dibujar_bosque_que_observa(self, surface: pygame.Surface,
+                                    offset: pygame.Vector2) -> None:
+        """El dibujo del punto 16: dos puntos pálidos a la altura de la
+        línea de árboles —no en el camino— y hojas oscuras derivando. Los
+        ojos se desvanecen en su último medio segundo, por la misma razón
+        que la anomalía de la Fase 1 no aparece en seco."""
+        if self.fase.numero != 2:
+            return
+        if self._ojos_visibles > 0.0:
+            x = int(self._ojos_columna * settings.TILE_SIZE
+                    - offset.x * self.PARALAJE_DEL_BOSQUE)
+            if -40 <= x <= settings.INTERNAL_WIDTH + 40:
+                alfa = int(150 * min(1.0, self._ojos_visibles / 0.5))
+                y = int(self._ojos_altura)
+                # Dos puntos de 3x2 px: un lienzo diminuto por fotograma
+                # para poder desvanecerlos (`draw.ellipse` no mezcla alfa),
+                # no una superficie cacheada por algo tan barato.
+                lienzo = pygame.Surface((22, 6), pygame.SRCALPHA)
+                pygame.draw.ellipse(lienzo, siluetas.OJOS_DEL_BOSQUE,
+                                    pygame.Rect(0, 2, 3, 2))
+                pygame.draw.ellipse(lienzo, siluetas.OJOS_DEL_BOSQUE,
+                                    pygame.Rect(13, 2, 3, 2))
+                lienzo.fill((255, 255, 255, alfa),
+                            special_flags=pygame.BLEND_RGBA_MULT)
+                surface.blit(lienzo, (x - 8, y - 2))
+        for hoja in self._hojas:
+            x = int(hoja["x"])
+            y = int(hoja["y"] + math.sin(hoja["vaiven"]) * 6.0)
+            pygame.draw.ellipse(surface, siluetas.SILUETA_OSCURA,
+                                pygame.Rect(x, y, 5, 3))
+
     # ── La secuencia de despertar antes del corte (Fase 6) ──────
     #
     # AUD-513, GAP-064 punto 25 — el diseño pide una secuencia completa
@@ -1467,14 +1618,19 @@ class Stage4_1(StageScene):
         self._dibujar_luna_de_fase4(surface, offset)
         self._dibujar_espiritu(surface, offset)
         self._dibujar_presencias_errantes(surface, offset)
+        self._dibujar_bosque_que_observa(surface, offset)
         self._dibujar_decoracion(surface, offset)
         self._dibujar_huellas_del_venado(surface, offset)
         self._dibujar_serpiente_de_fondo(surface, offset)
         self._dibujar_columna_de_huesos(surface, offset)
+        self._dibujar_costillas_navegables(surface, offset)
         self._dibujar_sombra_de_ave(surface, offset)
         self._dibujar_bruja(surface, offset)
         self._dibujar_anomalia_fase1(surface, offset)
         self._dibujar_figura_de_la_luna(surface, offset)
+        self._dibujar_procesion(surface, offset)
+        self._dibujar_multitud(surface, offset)
+        self._dibujar_secreto_de_los_espiritus(surface, offset)
         self._dibujar_paburu(surface, offset)
         self._dibujar_despedida_de_los_espiritus(surface, offset)
 
@@ -1612,6 +1768,31 @@ class Stage4_1(StageScene):
                 int(alto * 0.55), alto, siluetas.PIEDRA_FRIA, alfa,
             )
 
+    def _dibujar_costillas_navegables(self, surface: pygame.Surface,
+                                      offset: pygame.Vector2) -> None:
+        """El puente de costillas (AUD-582, GAP-061): la mitad navegable de
+        las osamentas. Paralaje 1.0 y anclado a `COSTILLA_NAVEGABLE` en
+        mundo — es geometría del plano del jugador, no paisaje; su piso
+        dibujado (la corona plana de `_arco_de_costillas`) es el mismo
+        rectángulo one-way que el generador pone en la capa `Collision`.
+        Llena y con borde, no contorno: lo hueco se leería como trampa."""
+        if self.fase.numero != 3:
+            return
+        col, ancho_cols, fila_cima = trazado.COSTILLA_NAVEGABLE
+        ts = settings.TILE_SIZE
+        x = int(col * ts - offset.x)
+        if x < -200 or x > settings.INTERNAL_WIDTH + 200:
+            return
+        y = int(fila_cima * ts - offset.y)
+        ancho_px = ancho_cols * ts
+        alto_px = (trazado.FILA_SUELO - fila_cima) * ts
+        lienzo = pygame.Surface((ancho_px + 4, alto_px + 4), pygame.SRCALPHA)
+        puntos = [(px + 2, py + 2)
+                  for px, py in siluetas._arco_de_costillas(ancho_px, alto_px)]
+        pygame.draw.polygon(lienzo, (*siluetas.PIEDRA_FRIA, 120), puntos)
+        pygame.draw.polygon(lienzo, (*siluetas.PIEDRA_FRIA, 200), puntos, 2)
+        surface.blit(lienzo, (x - 2, y - 2))
+
     # ── La silueta de Paburu (Fase 6, GAP-064 puntos 7-8, 22-23) ──
     #: A partir de qué avance en la Fase 6 empieza a insinuarse. No desde
     #: el primer paso: el guion pide que la escala *crezca*, y algo visible
@@ -1689,6 +1870,52 @@ class Stage4_1(StageScene):
         entra = min(1.0, avance / 0.15)
         sale = min(1.0, (1.0 - avance) / 0.15) if liberado else 1.0
         return min(entra, sale)
+
+    # ── El secreto de los tres espíritus (Fase 6, AUD-584) ───────
+    #
+    # GAP-064 punto 32 — *«un secreto opcional»*. El cruce de dos sistemas
+    # que ya existían: la quietud que revela (`atencion.Atencion`, AUD-492)
+    # y el registro de quién fue liberado de verdad (AUD-474). Junto al
+    # mirador —doce columnas más allá, para que la pausa de la cutscene no
+    # lo regale— detenerse unos segundos con los tres liberados los reúne
+    # una vez, juntos, antes del final. Sin disparador, sin cartel: quien
+    # nunca se detiene, o no liberó a los tres, no sabe que existe.
+    SEGUNDOS_DE_QUIETUD_DEL_SECRETO = 2.0
+    RADIO_DEL_SECRETO = 140.0
+    DURACION_DEL_SECRETO = 3.0
+
+    def _actualizar_secreto_de_los_espiritus(self, dt: float) -> None:
+        if self._secreto_fundido > 0.0:
+            self._secreto_fundido = max(0.0, self._secreto_fundido - dt)
+        if self._secreto_visto or self.fase.numero != 6 or self._player is None:
+            return
+        distancia = abs(
+            self._player.rect.centerx
+            - trazado.COLUMNA_DEL_SECRETO * settings.TILE_SIZE)
+        if distancia > self.RADIO_DEL_SECRETO:
+            return
+        if not self._atencion.esta_quieto(self.SEGUNDOS_DE_QUIETUD_DEL_SECRETO):
+            return
+        if not all(
+            self._espiritu_liberado(f) for f in FASES if f.espiritu is not None
+        ):
+            return
+        self._secreto_visto = True
+        self._secreto_fundido = self.DURACION_DEL_SECRETO
+
+    def _dibujar_secreto_de_los_espiritus(
+        self, surface: pygame.Surface, offset: pygame.Vector2,
+    ) -> None:
+        if self._secreto_fundido <= 0.0:
+            return
+        cercania = min(1.0, self._secreto_fundido / 0.5)
+        centro_x = settings.INTERNAL_WIDTH // 2
+        for indice_espiritu, (_nombre, forma) in enumerate(siluetas.ESPIRITUS):
+            x = centro_x + (indice_espiritu - 1) * 110
+            siluetas.dibujar_contorno(
+                surface, forma, x - 45, 170, 90, 70,
+                siluetas.VERDE_ESPECTRAL, int(150 * cercania),
+            )
 
     def _espiritu_liberado(self, fase: Fase) -> bool:
         """AUD-474 — ¿el jugador pulsó usar junto al espíritu de esta fase?
@@ -1880,7 +2107,13 @@ class Stage4_1(StageScene):
     def _dibujar_decoracion(self, surface: pygame.Surface,
                             offset: pygame.Vector2) -> None:
         fase = self.fase
-        if fase.decoracion == "bosque_cortado":
+        if fase.decoracion == "tumba_antigua":
+            # AUD-581, GAP-060 punto 15 — una sola pieza, no una fila: la
+            # tumba es un sitio, no un patrón. Más alta que las cruces de
+            # la Planicie y con más presencia (alfa mayor) porque tiene
+            # que bastarle al jugador para leer «aquí hay algo distinto».
+            self._dibujar_tumba_antigua(surface, offset)
+        elif fase.decoracion == "bosque_cortado":
             excepcion = None
             if self._shake_disparado:
                 indice = self.INDICE_ARBOL_QUE_CAE % len(trazado.ARBOLES_FASE4)
@@ -1903,6 +2136,23 @@ class Stage4_1(StageScene):
             )
         elif fase.decoracion == "lapidas_personales":
             self._dibujar_fantasma_personal(surface, offset)
+
+    def _dibujar_tumba_antigua(self, surface: pygame.Surface,
+                               offset: pygame.Vector2) -> None:
+        """La tumba que nadie reclama (AUD-581): una silueta única anclada
+        a `COLUMNA_TUMBA_ANTIGUA`, con el mismo parallax 0.85 de la
+        decoración de fondo — plantada junto al camino, no en el horizonte."""
+        ts = settings.TILE_SIZE
+        x = int(trazado.COLUMNA_TUMBA_ANTIGUA * ts - offset.x * 0.85)
+        if x < -120 or x > settings.INTERNAL_WIDTH + 120:
+            return
+        alto = 64
+        siluetas.dibujar_contorno(
+            surface, siluetas._tumba_antigua, x,
+            settings.INTERNAL_HEIGHT - alto - 40,
+            int(alto * 0.75), alto,
+            siluetas.PIEDRA_FRIA, 130,
+        )
 
     def _dibujar_siluetas_de_fondo(
         self, surface: pygame.Surface, offset: pygame.Vector2, forma: object,
@@ -2125,3 +2375,107 @@ class Stage4_1(StageScene):
             surface, siluetas._figura_lejana, x, y, int(alto * 0.6), alto,
             siluetas.BLANCO_CEGUA, alfa,
         )
+
+    # ── La procesión que se acerca cada ciclo lunar (AUD-583) ────
+    #
+    # GAP-063 punto 16 — *«una procesión lejana que está más cerca la
+    # próxima vez que vuelve la luna»*. AUD-513 dejó el gancho (la figura
+    # que sólo se ve a oscuras); ésta es la versión con memoria: cada vez
+    # que la luna se esconde, la procesión da un paso hacia el jugador.
+    # Tras `CICLOS_DE_LA_PROCESION` pasos ya no vuelven a asomar — una
+    # procesión que se acerca tiene que llegar alguna vez, y llegar sin
+    # que nadie la haya visto de cerca es exactamente el registro del
+    # nivel: presencia, no evento.
+    CICLOS_DE_LA_PROCESION = 4
+
+    #: Cuánto avanza por ciclo: paralaje 0.25 (muy lejos, casi en el
+    #: horizonte) -> 0.55 (a mitad de camino), altura 16 -> 30 px.
+    PARALAJE_INICIAL_DE_LA_PROCESION = 0.25
+    PARALAJE_FINAL_DE_LA_PROCESION = 0.55
+    ALTO_INICIAL_DE_LA_PROCESION = 16
+    ALTO_FINAL_DE_LA_PROCESION = 30
+
+    def _actualizar_procesion(self, dt: float) -> None:
+        fase = self.fase
+        if not fase.luna_intermitente:
+            self._procesion_visible = False
+            return
+        oculta = self.luna_oculta >= self.UMBRAL_LUNA_OCULTA
+        if oculta and not self._procesion_luna_oculta_antes:
+            self._procesion_ciclos += 1
+            self._procesion_visible = (
+                self._procesion_ciclos <= self.CICLOS_DE_LA_PROCESION)
+        elif not oculta:
+            self._procesion_visible = False
+        self._procesion_luna_oculta_antes = oculta
+
+    def _paralaje_de_la_procesion(self) -> float:
+        """Qué tan cerca está la procesión: 0 recién llegada, 1 al tope."""
+        ciclos = min(self._procesion_ciclos, self.CICLOS_DE_LA_PROCESION)
+        progreso = (ciclos - 1) / max(1, self.CICLOS_DE_LA_PROCESION - 1)
+        return max(0.0, min(1.0, progreso))
+
+    def _dibujar_procesion(self, surface: pygame.Surface,
+                           offset: pygame.Vector2) -> None:
+        if not self._procesion_visible:
+            return
+        ts = settings.TILE_SIZE
+        progreso = self._paralaje_de_la_procesion()
+        paralaje = (self.PARALAJE_INICIAL_DE_LA_PROCESION
+                    + (self.PARALAJE_FINAL_DE_LA_PROCESION
+                       - self.PARALAJE_INICIAL_DE_LA_PROCESION) * progreso)
+        alto = int(self.ALTO_INICIAL_DE_LA_PROCESION
+                   + (self.ALTO_FINAL_DE_LA_PROCESION
+                      - self.ALTO_INICIAL_DE_LA_PROCESION) * progreso)
+        ancho = max(6, int(alto * 0.55))
+        base_y = settings.INTERNAL_HEIGHT * 0.62
+        inicio_x = trazado.COLUMNA_DEL_CANTO * ts - offset.x * paralaje
+        for i in range(6):
+            x = int(inicio_x + i * ancho * 2.2)
+            if x < -ancho or x > settings.INTERNAL_WIDTH + ancho:
+                continue
+            y = int(base_y - alto - i * 1.5)
+            siluetas.dibujar_contorno(
+                surface, siluetas._figura_de_pie, x, y, ancho, alto,
+                siluetas.SILUETA_OSCURA, 90,
+            )
+
+    # ── La multitud que desaparece sin explicación (AUD-583) ─────
+    #
+    # GAP-063 punto 20 — *«una multitud de figuras que desaparece sin
+    # explicación»*. Están junto a la tumba del medio
+    # (`trazado.COLUMNA_DE_LA_MULTITUD`) siempre que las veas desde lejos;
+    # cuando el jugador llega a menos de `DISTANCIA_QUE_DISPARA_A_LA_
+    # MULTITUD` px, ya no están — sin animación, sin sonido, sin volver.
+    # Que se esfumen justo cuando llegas a mirarlas bien ES la
+    # explicación que el nivel no da.
+    DISTANCIA_QUE_DISPARA_A_LA_MULTITUD = 220.0
+
+    def _actualizar_multitud(self) -> None:
+        if not self.fase.luna_intermitente or not self._multitud_presente:
+            return
+        if self._player is None:
+            return
+        distancia = abs(
+            self._player.rect.centerx
+            - trazado.COLUMNA_DE_LA_MULTITUD * settings.TILE_SIZE)
+        if distancia <= self.DISTANCIA_QUE_DISPARA_A_LA_MULTITUD:
+            self._multitud_presente = False
+
+    def _dibujar_multitud(self, surface: pygame.Surface,
+                          offset: pygame.Vector2) -> None:
+        if not self.fase.luna_intermitente or not self._multitud_presente:
+            return
+        ts = settings.TILE_SIZE
+        col = trazado.COLUMNA_DE_LA_MULTITUD
+        fila_suelo = trazado.altura_del_suelo(col)
+        for dx, alto in (
+                (-52, 34), (-30, 40), (-8, 36), (18, 42), (44, 33)):
+            x = int(col * ts + dx - offset.x * 0.85)
+            if x < -60 or x > settings.INTERNAL_WIDTH + 60:
+                continue
+            y = int(fila_suelo * ts - alto) - int(offset.y * 0.85)
+            siluetas.dibujar_contorno(
+                surface, siluetas._figura_de_pie, x, y, int(alto * 0.55),
+                alto, siluetas.PIEDRA_FRIA, 110,
+            )

@@ -8,10 +8,19 @@ from __future__ import annotations
 import math
 import random
 import struct
+import sys
 import wave
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter
+
+# AUD-62 / test_salida_de_consola — la consola de Windows usa cp1252 por
+# defecto y este generador imprime «→» y otros caracteres que no existen en
+# esa codificación. Sin reconfigurar la salida, el proceso muere con
+# UnicodeEncodeError a mitad del trabajo — el modo de fallo exacto que el
+# resto de herramientas ya evitó (mismo patrón que check_orphan_systems.py).
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 A = PROJECT_ROOT / "assets"
@@ -548,6 +557,72 @@ def _gen_pez_abismal_sheet(path, w=28, h=20, frames=4):
         imgs.append(img)
     _save_sheet(path, imgs, w, h)
 
+
+def _gen_cangrejo_sheet(path, w=20, h=14, frames=4):
+    """AUD-575 — el cangrejo de la mina inundada. La fauna del nivel es
+    presencia, nunca combate (regla del 4-1b: nada daña), así que el
+    sprite tiene que leerse como *habitante* de la mina: un caparazón
+    café oxidado, pinzas que abren y cierran al andar, ojos en tallos.
+    Vista frontal de cangrejo caminando de lado — como se ve al
+    patrullar el andén del patio de carga (S3) de cara al jugador."""
+    caparazon = (150, 86, 52)
+    caparazon_oscuro = (104, 58, 36)
+    pinza = (120, 66, 40)
+    ojo = (30, 22, 14)
+    imgs = []
+    for f in range(frames):
+        img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(img)
+        paso = f % 2
+        # Caparazón ovalado, más ancho que alto.
+        draw.ellipse((3, 3, w - 3, h - 5), fill=caparazon, outline=caparazon_oscuro)
+        # Pinzas: abren y cierran con el paso (el cangrejo de frente
+        # amenaza con las dos a la vez).
+        abierta = 2 if paso == 0 else 0
+        draw.polygon([(2, h // 2 - 1), (2 - abierta, h // 2 - 4),
+                      (1, h // 2 + 3)], fill=pinza)
+        draw.polygon([(w - 3, h // 2 - 1), (w - 1 + abierta, h // 2 - 4),
+                      (w - 2, h // 2 + 3)], fill=pinza)
+        # Patas: cuatro por lado, alternan.
+        for i in range(4):
+            lx, rx = 2 + i * 1, w - 4 - i * 1
+            ly = h // 2 + 2 + (1 if paso else 0)
+            draw.line((lx, ly, lx - 1, h - 2), fill=caparazon_oscuro)
+            draw.line((rx, ly, rx + 1, h - 2), fill=caparazon_oscuro)
+        # Ojos en tallos: miran fijos al jugador.
+        for ex in (7, w - 8):
+            draw.line((ex, 4, ex, 6), fill=caparazon_oscuro)
+            draw.ellipse((ex - 1, 3, ex + 1, 5), fill=ojo)
+        imgs.append(img)
+    _save_sheet(path, imgs, w, h)
+
+
+def _gen_medusa_sheet(path, w=16, h=14, frames=4):
+    """AUD-575 — la medusa del pozo del drenaje (S4/S5). Presencia como
+    todo el ecosistema: deriva en la columna, no persigue. Se distingue
+    del pez abismal a propósito: el pez es una silueta oscura con un
+    punto de luz que pulsa (amenaza), la medusa es una campana
+    translúcida pálida sin ningún brillo propio (plancton). Los
+    tentáculos ondulan de fotograma a fotograma."""
+    campana = (96, 140, 148)
+    campana_clara = (140, 176, 182)
+    imgs = []
+    for f in range(frames):
+        img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(img)
+        # Campana: medio óvalo, translúcida (alpha 190).
+        fill = (*campana, 190)
+        draw.pieslice((2, 1, w - 2, h - 2), 180, 360, fill=fill)
+        draw.arc((2, 1, w - 2, h - 2), 180, 360, fill=campana_clara)
+        # Tentáculos: cuatro, ondulan con el fotograma.
+        for i in range(4):
+            tx = 4 + i * 3
+            doblez = 1 + (f % 2) * 2 if i % 2 else 1 - (f % 2) * 2
+            draw.line((tx, h // 2, tx + doblez, h - 1),
+                      fill=(*campana_clara, 160), width=1)
+        imgs.append(img)
+    _save_sheet(path, imgs, w, h)
+
 # ════════════════════════════════════════
 # SECTION 3: BOSS SPRITES
 # ════════════════════════════════════════
@@ -882,6 +957,44 @@ def _gen_gothic_tileset(path, ts=16, cols=8, rows=8):
             _pixel_art(draw, ox, oy, tile_data, TILESET_PAL)
     img.save(path)
 
+def _dibujar_tile_procedural(draw, ox, oy, ts, ttype, theme):
+    """Una baldosa del tileset procedural genérico — extraída de
+    `_gen_procedural_tileset` tal cual (mismo dibujo, mismo orden) para
+    que la mina inundada (AUD-575) añada su fila de decoración sin
+    duplicar las ocho genéricas y sin cambiar el aspecto de los
+    tilesets que ya existen."""
+    if ttype == 0:
+        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=theme["floor"])
+    elif ttype == 1:
+        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=theme["wall"])
+        for i in range(3):
+            wc = tuple(min(255,c+20) for c in theme["wall"])
+            draw.line((ox+3+i*5, oy+2, ox+3+i*5, oy+ts-3), fill=wc)
+    elif ttype == 2:
+        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=theme["floor"])
+        draw.rectangle((ox+2, oy+2, ox+ts-3, oy+ts-3), fill=theme["deco"])
+    elif ttype == 3:
+        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=theme["wall"])
+        wc2 = tuple(min(255,c+30) for c in theme["wall"])
+        draw.line((ox, oy, ox+ts-1, oy), fill=wc2)
+    elif ttype == 4:
+        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=(30,60,130))
+        for i in range(3):
+            draw.line((ox+2+i*5, oy+6, ox+6+i*5, oy+6), fill=(50,100,180))
+    elif ttype == 5:
+        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=(100,70,40))
+        for i in range(4):
+            draw.line((ox+2, oy+2+i*4, ox+ts-3, oy+2+i*4), fill=(70,50,30))
+    elif ttype == 6:
+        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=(140,40,40))
+        for i in range(4):
+            draw.polygon([(ox+2+i*4, oy+ts-2), (ox+4+i*4, oy+2), (ox+6+i*4, oy+ts-2)], fill=(180,60,60))
+    elif ttype == 7:
+        pass
+    outline_color = tuple(min(255,c-20) for c in theme["wall"])
+    draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), outline=outline_color, width=1)
+
+
 def _gen_procedural_tileset(path, theme, ts=16, cols=8, rows=8):
     _ensure(path)
     img = Image.new("RGBA", (ts*cols, ts*rows), (0,0,0,0))
@@ -890,36 +1003,160 @@ def _gen_procedural_tileset(path, theme, ts=16, cols=8, rows=8):
         for gx in range(cols):
             ox, oy = gx * ts, gy * ts
             ttype = (gy * cols + gx) % 8
-            if ttype == 0:
-                draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=theme["floor"])
-            elif ttype == 1:
-                draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=theme["wall"])
-                for i in range(3):
-                    wc = tuple(min(255,c+20) for c in theme["wall"])
-                    draw.line((ox+3+i*5, oy+2, ox+3+i*5, oy+ts-3), fill=wc)
-            elif ttype == 2:
-                draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=theme["floor"])
-                draw.rectangle((ox+2, oy+2, ox+ts-3, oy+ts-3), fill=theme["deco"])
-            elif ttype == 3:
-                draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=theme["wall"])
-                wc2 = tuple(min(255,c+30) for c in theme["wall"])
-                draw.line((ox, oy, ox+ts-1, oy), fill=wc2)
-            elif ttype == 4:
-                draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=(30,60,130))
-                for i in range(3):
-                    draw.line((ox+2+i*5, oy+6, ox+6+i*5, oy+6), fill=(50,100,180))
-            elif ttype == 5:
-                draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=(100,70,40))
-                for i in range(4):
-                    draw.line((ox+2, oy+2+i*4, ox+ts-3, oy+2+i*4), fill=(70,50,30))
-            elif ttype == 6:
-                draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=(140,40,40))
-                for i in range(4):
-                    draw.polygon([(ox+2+i*4, oy+ts-2), (ox+4+i*4, oy+2), (ox+6+i*4, oy+ts-2)], fill=(180,60,60))
-            elif ttype == 7:
-                pass
-            outline_color = tuple(min(255,c-20) for c in theme["wall"])
-            draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), outline=outline_color, width=1)
+            _dibujar_tile_procedural(draw, ox, oy, ts, ttype, theme)
+    img.save(path)
+
+
+def _gen_tileset_stage4_1b(path, ts=16, cols=8, rows=10):
+    """AUD-575 — el tileset de la mina inundada: las ocho baldosas
+    genéricas de la paleta café (roca húmeda, AUD-531) más dos filas de
+    decoración propia de la mina:
+
+      GID 65  estalactita grande      — cuelga del techo (BG_Near)
+      GID 66  estalactita pequeña     — cuelga del techo (BG_Near)
+      GID 67  alga                    — la maleza que agarra (Terrain_Detail)
+      GID 68  alga alta               — la maleza que agarra (Terrain_Detail)
+      GID 69  viga oxidada            — la madera del andén del patio
+      GID 70  planta de agua          — coral/planta del lecho
+      GID 71  roca con óxido          — mancha de hierro viejo en el lecho
+      GID 72  soporte con riel        — la maquinaria abandonada
+      GID 73  vagoneta oxidada        — storytelling: "aquí había gente"
+      GID 74  cadena colgante         — la maquinaria abandonada (techo)
+      GID 75  lámpara apagada         — la última, antes del abismo
+      GID 76  pico de mina            — herramienta abandonada en el lecho
+
+    La fila extra es por qué `tools/generate_stage4_1b.py` declara
+    `TILESET_ROWS = 10`: el tilecount del TMX y el alto de la imagen
+    tienen que cuadrar con lo que aquí se dibuja.
+    """
+    theme = TILESET_THEMES["tileset_stage4_1b"]
+    _ensure(path)
+    img = Image.new("RGBA", (ts*cols, ts*rows), (0,0,0,0))
+    draw = ImageDraw.Draw(img)
+    for gy in range(rows - 2):
+        for gx in range(cols):
+            ox, oy = gx * ts, gy * ts
+            ttype = (gy * cols + gx) % 8
+            _dibujar_tile_procedural(draw, ox, oy, ts, ttype, theme)
+
+    # ── la fila de la mina ──────────────────────────────────────
+    roca = theme["floor"]                      # (58,42,28)
+    roca_clara = theme["deco"]                 # (78,56,36)
+    roca_oscura = theme["wall"]                # (34,24,16)
+    oxido = (140, 70, 40)
+    oxido_oscuro = (110, 50, 30)
+    musgo = (70, 82, 46)
+    musgo_claro = (92, 106, 60)
+    madera = (96, 68, 40)
+    planta = (150, 92, 60)
+
+    def tile(gx, dibuja):
+        _dibujar_tile_procedural(draw, gx * ts, (rows - 1) * ts, ts, 7, theme)
+        dibuja(gx * ts, (rows - 1) * ts)
+
+    def estalactita(ox, oy, ancho, alto, con_punta_ligera=True):
+        cx = ox + ts // 2
+        draw.polygon([(cx - ancho // 2, oy), (cx + ancho // 2, oy),
+                      (cx, oy + alto)], fill=roca_oscura, outline=roca)
+        if con_punta_ligera:
+            draw.line((cx, oy + alto - 3, cx, oy + alto), fill=roca)
+
+    tile(0, lambda ox, oy: estalactita(ox, oy, 12, 16))
+    tile(1, lambda ox, oy: estalactita(ox, oy, 8, 11))
+
+    def alga(ox, oy, alta):
+        for i in range(2 if alta else 1):
+            ax = ox + 3 + i * 8
+            pts = [(ax, oy + ts - 1), (ax - 1, oy + 4), (ax + 2, oy + 6),
+                   (ax + 1, oy + ts - 1)]
+            draw.polygon(pts, fill=musgo, outline=musgo_claro)
+
+    tile(2, lambda ox, oy: alga(ox, oy, False))
+    tile(3, lambda ox, oy: alga(ox, oy, True))
+
+    def viga_oxidada(ox, oy):
+        draw.rectangle((ox, oy + 3, ox + ts - 1, oy + 8), fill=madera)
+        draw.line((ox, oy + 5, ox + ts - 1, oy + 5), fill=roca_oscura)
+        draw.rectangle((ox, oy + 10, ox + ts - 1, oy + 12), fill=oxido)
+        draw.ellipse((ox + 4, oy + 5, ox + 6, oy + 7), fill=oxido_oscuro)
+        draw.ellipse((ox + 10, oy + 5, ox + 12, oy + 7), fill=oxido_oscuro)
+
+    tile(4, viga_oxidada)
+
+    def planta_de_agua(ox, oy):
+        cx = ox + ts // 2
+        draw.line((cx, oy + ts - 1, cx, oy + 6), fill=planta)
+        draw.line((cx, oy + 10, cx - 5, oy + 3), fill=planta)
+        draw.line((cx, oy + 8, cx + 5, oy + 2), fill=planta)
+        draw.ellipse((cx - 6, oy + 1, cx - 2, oy + 5), fill=roca_clara)
+        draw.ellipse((cx + 2, oy, cx + 6, oy + 4), fill=roca_clara)
+
+    tile(5, planta_de_agua)
+
+    def roca_con_oxido(ox, oy):
+        _dibujar_tile_procedural(draw, ox, oy, ts, 0, theme)
+        draw.ellipse((ox + 3, oy + 4, ox + 9, oy + 10), fill=oxido)
+        draw.ellipse((ox + 8, oy + 8, ox + 13, oy + 13), fill=oxido_oscuro)
+        draw.line((ox + 5, oy + 6, ox + 11, oy + 12), fill=roca)
+
+    tile(6, roca_con_oxido)
+
+    def soporte_con_riel(ox, oy):
+        draw.rectangle((ox + 6, oy, ox + 9, oy + ts - 1), fill=madera)
+        draw.line((ox + 3, oy + 4, ox + 12, oy + 4), fill=oxido_oscuro)
+        draw.line((ox + 3, oy + 6, ox + 12, oy + 6), fill=oxido)
+        draw.rectangle((ox, oy + 10, ox + ts - 1, oy + 13), fill=roca_oscura)
+
+    tile(7, soporte_con_riel)
+
+    # ── la segunda fila de la mina (AUD-576) ─────────────────────
+    # La narrativa ambiental del blueprint 10/10: la mina se reconoce y
+    # luego se deshace. Vagonetas y herramientas cuentan "aquí había
+    # gente"; la lámpara apagada es el último farol, antes del abismo.
+    def tile2(gx, dibuja):
+        _dibujar_tile_procedural(draw, gx * ts, (rows - 2) * ts, ts, 7, theme)
+        dibuja(gx * ts, (rows - 2) * ts)
+
+    def vagoneta(ox, oy):
+        # Cuerpo de metal oxidado sobre una rueda: la vagoneta de mina.
+        draw.rounded_rectangle(
+            (ox + 2, oy + 5, ox + 13, oy + 12), radius=2, fill=oxido_oscuro,
+            outline=oxido)
+        draw.line((ox + 4, oy + 6, ox + 11, oy + 6), fill=oxido)
+        draw.ellipse((ox + 5, oy + 12, ox + 10, oy + 15), fill=roca_oscura,
+                     outline=oxido)
+        draw.line((ox + 8, oy + 13, ox + 8, oy + 15), fill=roca)
+        draw.rectangle((ox + 6, oy + 8, ox + 9, oy + 11), fill=(40, 26, 16))
+
+    tile2(0, vagoneta)
+
+    def cadena(ox, oy):
+        # Dos eslabones colgando del techo, oxidadas.
+        for ex in (ox + 5, ox + 10):
+            draw.ellipse((ex, oy + 1, ex + 2, oy + 5), outline=oxido_oscuro)
+            draw.ellipse((ex, oy + 5, ex + 2, oy + 9), outline=oxido)
+            draw.ellipse((ex, oy + 9, ex + 2, oy + 13), outline=oxido_oscuro)
+
+    tile2(1, cadena)
+
+    def lampara_apagada(ox, oy):
+        # El farol que ya no alumbra: la caja sin luz, contra la roca.
+        draw.rectangle((ox + 3, oy + 3, ox + 12, oy + 6), fill=madera)
+        draw.rectangle((ox + 4, oy + 6, ox + 11, oy + 12), fill=(22, 16, 12),
+                       outline=roca_oscura)
+        draw.line((ox + 6, oy + 7, ox + 9, oy + 7), fill=roca_oscura)
+
+    tile2(2, lampara_apagada)
+
+    def pico(ox, oy):
+        # Herramienta abandonada: mango de madera y cabeza de hierro.
+        draw.line((ox + 3, oy + 14, ox + 11, oy + 4), fill=madera, width=2)
+        draw.arc((ox + 7, oy + 1, ox + 14, oy + 8), 60, 240,
+                 fill=oxido, width=2)
+        draw.line((ox + 11, oy + 4, ox + 13, oy + 2), fill=oxido_oscuro)
+
+    tile2(3, pico)
+
     img.save(path)
 
 # ── El tileset del cementerio (AUD-237) ──
@@ -1214,6 +1451,8 @@ def _gen_all_tilesets():
             _gen_tileset_cementerio(A / "tilesets" / f"{name}.png")
         elif name == "tileset_stage4_1":
             _gen_tileset_stage4_1(A / "tilesets" / f"{name}.png")
+        elif name == "tileset_stage4_1b":
+            _gen_tileset_stage4_1b(A / "tilesets" / f"{name}.png")
         elif theme == "gothic":
             _gen_gothic_tileset(A / "tilesets" / f"{name}.png")
         else:
@@ -2253,7 +2492,15 @@ SFX_CATEGORIES = {
                # quedaban del pedido original, ahora que las dos fases
                # tienen su propia `FrictionZone` nombrada (AUD-554,
                # `tools/generate_stage4_1.py`).
-               "footstep_grava", "footstep_ahogado"],
+               "footstep_grava", "footstep_ahogado",
+               # AUD-594 — GAP-070 punto 7: variantes `_con_eco` del bus de
+               # reverberación de la Fase 6 (ver `_gen_sfx`): los sonidos
+               # compartidos que suenan durante el recorrido hacia Paburu,
+               # horneados con la misma reverberación que los cues propios
+               # del nivel. `AudioManager.activar_eco(True)` las prefiere.
+               "jump_con_eco", "land_con_eco", "crouch_con_eco",
+               "short_attack_con_eco", "long_attack_con_eco",
+               "hit_connect_con_eco", "hurt_con_eco"],
     "enemies": ["hit", "die_small", "die_large", "projectile_fire", "projectile_hit_wall",
                 # AUD-529 — que se oiga antes de verse.
                 "pez_abismal_acercarse"],
@@ -2267,7 +2514,10 @@ SFX_CATEGORIES = {
            # cada vez más seguido según el propio `HUD.update()` acorta el
            # intervalo — la aceleración la da el bucle del juego, no el
            # audio (ver la nota junto a `Events.SFX_TIMER_ALERT_PULSE`).
-           "timer_alert_pulse"],
+            "timer_alert_pulse",
+            # AUD-594 — el checkpoint del 4-1 Fase 6, por el bus de eco
+            # (ver la nota en "player").
+            "checkpoint_con_eco"],
     "environment": ["jungle_ambient", "datacenter_hum", "wind_indoor", "cemetery_silence",
                     "screen_shake", "hazard_zone", "one_way_platform",
                     # AUD-271 — `rain` y `storm` eran los dos climas que
@@ -2297,6 +2547,16 @@ SFX_CATEGORIES = {
                     # parámetros exactos — cada uno cita el ADSR y el
                     # filtro del pedido original.
                     "crujido_seco", "rafaga_viento", "impacto_tension",
+                    # AUD-592 — GAP-070 punto 4: la tormenta de la Fase 3
+                    # con los dos LFO que pedía la receta del dueño horneados
+                    # en un `.wav` estéreo propio (paneo -0.8↔0.8 y corte de
+                    # filtro barriendo 400-2200Hz). Ver `_gen_sfx`.
+                    "tormenta_paneada",
+                    # AUD-593 — GAP-070 punto 5: la lluvia de la Fase 4
+                    # pasada por un pasa-banda estrecho (~1500Hz), «a través
+                    # de una radio vieja», sin tocar el bucle limpio que
+                    # comparte el clima. Ver `_gen_sfx`.
+                    "lluvia_de_radio",
                     # AUD-551 — GAP-070 punto 6: grillos de la Fase 5 (no
                     # existía ningún SFX de insecto, sólo el canto
                     # ancestral). Un solo fichero contiene la ráfaga
@@ -2338,6 +2598,37 @@ SFX_CATEGORIES = {
             "rey_terciopelo", "gavilan", "venado_ancestral"],
 }
 
+#: AUD-592 — el pico del LFO de paneo de la tormenta de la Fase 3, tal como
+#: lo pide la receta («oscilando -0.8↔0.8»).
+PICO_DE_PANEO_TORMENTA = 0.8
+
+
+def _bucle_sin_clic(muestras, rate=SAMPLE_RATE, fundido_ms=40.0):
+    """Cierra un bucle perfecto: funde la cola con la cabeza (AUD-592).
+
+    Que los LFO cierren ciclo dentro del bucle evita el clic de la
+    **envolvente**, no el del **material**: el ruido crudo es distinto en la
+    primera y en la última muestra, y el salto entre ambas es un chasquido
+    audible cada vuelta (`loops=-1`). La técnica estándar de bucles lo
+    quita así: se renderizan `fundido_ms` extra al final y la cabeza se
+    sustituye por una mezcla a cruz entre esa cola y el arranque — la
+    muestra que suena justo después del borde es continua con la que suena
+    justo antes, porque literalmente empieza siendo la misma.
+
+    Espera recibir `n + fundido` muestras y devuelve exactamente `n`.
+    """
+    fundido = int(rate * fundido_ms / 1000.0)
+    if fundido <= 0 or len(muestras) <= fundido:
+        return list(muestras)
+    cuerpo = list(muestras[:len(muestras) - fundido])
+    cola = list(muestras[len(muestras) - fundido:])
+    salida = []
+    for i in range(fundido):
+        w = i / float(fundido)
+        salida.append(cola[i] * (1.0 - w) + cuerpo[i] * w)
+    return salida + cuerpo[fundido:]
+
+
 def _gen_sfx(name, rate=SAMPLE_RATE):
     t_dur = {"jump": 0.2, "land": 0.1, "short_attack": 0.15, "long_attack": 0.25,
              "hit_connect": 0.1, "hurt": 0.3, "die": 0.5, "crouch": 0.1,
@@ -2363,6 +2654,12 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
              # decaimiento y relajación.
              "crujido_seco": 0.153, "rafaga_viento": 1.0,
              "impacto_tension": 0.955,
+             # AUD-592 — GAP-070 punto 4: bucle de 2s como `storm_ambient`;
+             # los dos LFO (paneo y corte) cierran ciclos enteros dentro de
+             # él para que la vuelta no haga clic.
+             "tormenta_paneada": 2.0,
+             # AUD-593 — GAP-070 punto 5: mismo bucle de 2s de `rain_ambient`.
+             "lluvia_de_radio": 2.0,
              # AUD-551 — GAP-070: lodo (ADSR hasta 12+80+0+100ms), la
              # ráfaga de grillo (tres "cri-cri" con hueco entre ellos),
              # las voces nuevas (misma duración que da el propio ADSR de
@@ -2388,7 +2685,16 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
     
     dur = t_dur.get(name, 0.3)
     n = int(rate * dur)
-    
+
+    # AUD-594 — GAP-070 punto 7: las variantes `_con_eco` del bus de
+    # reverberación de la Fase 6 no tienen receta propia: generan su base y
+    # le hornean encima la misma `_aplicar_reverberacion` que ya llevan los
+    # cues propios del nivel (despertar_profundo, cemetery_silence,
+    # paso_de_luz_*). El sufijo lo lista explícitamente `SFX_CATEGORIES`.
+    if name.endswith("_con_eco"):
+        return _aplicar_reverberacion(_gen_sfx(name[:-len("_con_eco")], rate),
+                                      rate)
+
     if name == "rain_ambient":
         # AUD-271 — lluvia: ruido blanco filtrado, sin envolvente. Es un bucle
         # de ambiente, así que **no** puede decaer: un ambiente que se apaga
@@ -2669,6 +2975,76 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
             izquierda.append(s * (1.0 - pan) * 0.5)
             derecha.append(s * (1.0 + pan) * 0.5)
         samples = (izquierda, derecha)
+    elif name == "tormenta_paneada":
+        # AUD-592 — GAP-070 punto 4: la receta del dueño para la tormenta
+        # de la Fase 3 pedía «un LFO de paneo oscilando -0.8↔0.8 más un
+        # LFO de filtro barriendo 400-2200Hz» sobre el bucle ya en
+        # reproducción. Este motor no tiene DSP en tiempo real, pero cada
+        # `Fase` declara su propio `sonido_ambiente`, así que la respuesta
+        # es hornear una variante estéreo propia — el mismo camino que
+        # demostró `rafaga_viento`, del que ésta se diferencia en que los
+        # dos LFO cierran ciclos **enteros** dentro del bucle de 2s: el
+        # seno vale lo mismo en t=0 que en t=T, y la vuelta del bucle no
+        # hace clic.
+        #
+        # Cuerpo: el mismo ruido blanco muy filtrado con ráfagas lentas de
+        # `storm_ambient` («la tormenta es lluvia con cuerpo»), pasado por
+        # el corte variable — 1300±900Hz, un ciclo por bucle — usando el
+        # paso de `_paso_pasa_bajos` que `rafaga_viento` dejó listo para
+        # cortes muestra a muestra. Se renderizan 40ms extra al final y
+        # `_bucle_sin_clic` los funde con la cabeza: los LFO cierran ciclo,
+        # pero el material crudo no, y sin ese pliegue la vuelta haría clic.
+        mono = []
+        estado_filtro = 0.0
+        anterior = 0.0
+        total = n + int(rate * 0.04)
+        for i in range(total):
+            t = i / rate
+            crudo = random.uniform(-1.0, 1.0)
+            anterior = anterior * 0.82 + crudo * 0.18
+            corte = 1300.0 + 900.0 * math.sin(2.0 * math.pi * i / n)
+            cuerpo_filtrado = _paso_pasa_bajos(anterior, estado_filtro, corte, rate)
+            estado_filtro = cuerpo_filtrado
+            rafaga = 0.75 + 0.25 * math.sin(2.0 * math.pi * t / 2.0)
+            mono.append(cuerpo_filtrado * 0.17 * rafaga)
+        mono = _bucle_sin_clic(mono, rate, fundido_ms=40.0)
+        izquierda, derecha = [], []
+        for i, s in enumerate(mono):
+            pan = PICO_DE_PANEO_TORMENTA * math.sin(2.0 * math.pi * i / n)
+            izquierda.append(s * (1.0 - pan) * 0.5)
+            derecha.append(s * (1.0 + pan) * 0.5)
+        samples = (izquierda, derecha)
+    elif name == "lluvia_de_radio":
+        # AUD-593 — GAP-070 punto 5: la receta pide que la lluvia de la
+        # Fase 4 suene «a través de una radio vieja»: el mismo cuerpo de
+        # `rain_ambient` pasado por un **pasa-banda estrecho alrededor de
+        # 1500Hz** — sólo en esta fase, no en el bucle limpio del clima.
+        # El pasa-banda es una cascada de lo que el fichero ya tiene, con
+        # DOS polos por lado (los un polo son demasiado suaves: dejan un
+        # rumor grave que domina la banda): `_pasa_altos` dos veces por
+        # abajo y dos pasos de `_paso_pasa_bajos` por arriba. Como el
+        # pasa-banda deja pasar mucha menos energía que el paso-bajo
+        # ancho, da igual: los `.wav` se normalizan al escribirlos
+        # (`_write_wav`). El pliegue de `_bucle_sin_clic` evita el clic de
+        # la vuelta.
+        total = n + int(rate * 0.04)
+        base = []
+        anterior = 0.0
+        for _ in range(total):
+            crudo = random.uniform(-1.0, 1.0)
+            anterior = anterior * 0.6 + crudo * 0.4     # lluvia: paso bajo
+            base.append(anterior)
+        banda = _pasa_altos(base, corte_hz=1050.0, rate=rate)
+        banda = _pasa_altos(banda, corte_hz=1050.0, rate=rate)
+        filtrado = []
+        estado_bajo_1 = 0.0
+        estado_bajo_2 = 0.0
+        for x in banda:
+            estado_bajo_1 = _paso_pasa_bajos(x, estado_bajo_1, 1650.0, rate)
+            estado_bajo_2 = _paso_pasa_bajos(estado_bajo_1, estado_bajo_2,
+                                             1650.0, rate)
+            filtrado.append(estado_bajo_2)
+        samples = _bucle_sin_clic(filtrado, rate, fundido_ms=40.0)
     elif name == "impacto_tension":
         # AUD-546 — receta del dueño: onda senoidal con caída de tono de
         # 80Hz a 30Hz en 400ms, ADSR 5ms/800ms/0/150ms, recorte suave
@@ -3036,6 +3412,8 @@ def main():
     print("\n[2/9] Enemy sprites...")
     _gen_all_enemies()
     _gen_pez_abismal_sheet(A / "sprites" / "enemies" / "stage4_1b" / "enemy_pez_abismal.png")
+    _gen_cangrejo_sheet(A / "sprites" / "enemies" / "stage4_1b" / "enemy_cangrejo.png")
+    _gen_medusa_sheet(A / "sprites" / "enemies" / "stage4_1b" / "enemy_medusa.png")
 
     print("\n[3/9] Boss sprites...")
     _gen_all_bosses()
