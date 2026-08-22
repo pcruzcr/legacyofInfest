@@ -21,8 +21,6 @@ import logging
 import random
 from typing import Any
 
-import pygame
-
 from src.engine.core import settings
 from src.engine.core.events import Events
 from src.engine.core.experience import ExperienceSystem
@@ -37,49 +35,6 @@ class SenalesDeEscenario:
     `_damage_numbers`, `_camera`, `_post_processing`, `_player`, audio,
     `_interactables`, `_hud`, `_vfx_handlers` y `_sfx_handlers`.
     """
-
-    #: Lado del recogible de monedas, en píxeles. Del tamaño de una baldosa
-    #: para que se vea y se coja al pasar sin tener que buscarlo.
-    _BOTIN_TAM: int = 16
-
-    def _soltar_botin(self, entity_id: str, pos: Any, skill: str = "") -> None:
-        """Deja el botín donde murió el enemigo: monedas y, si lo declara, su
-        habilidad (AUD-218, AUD-238).
-
-        La cantidad de monedas la decide `score_system.coins_for()`, que es
-        donde vive la tabla por tipo — la misma lectura de `entity_id` que usa
-        la puntuación, para no tener dos formas de decir «esto es un jefe».
-        """
-        interactables = getattr(self, "_interactables", None)
-        if interactables is None:
-            return
-        from src.engine.core.score_system import coins_for
-        from src.framework.stage.interactables import Recogible
-
-        lado = self._BOTIN_TAM
-        cx = int(float(pos[0]))
-        cy = int(float(pos[1]))
-        interactables.soltar_botin(entity_id, Recogible(
-            rect=pygame.Rect(cx - lado // 2, cy - lado // 2, lado, lado),
-            item_id="coin",
-            automatico=True,
-            cantidad=coins_for(entity_id),
-        ))
-        # AUD-238: la reliquia del jefe, **además** de las monedas y no en su
-        # lugar. AUD-263: pueden ser varias, separadas por coma, y se colocan en
-        # fila para que no queden una encima de otra.
-        #
-        # Se descarta lo que no está en el catálogo: un jefe de una entrega con
-        # `skill_drop = "skill_volar"` dejaría en el suelo algo que `collect()`
-        # rechaza, y el jugador lo cogería sin que pasara nada.
-        from src.engine.core.inventory import get_inventory
-        for n, nombre in enumerate(s for s in skill.split(",") if s):
-            if get_inventory().get_def(nombre) is not None:
-                interactables.recogibles.append(Recogible(
-                    rect=pygame.Rect(cx + lado * (n + 1), cy - lado // 2, lado, lado),
-                    item_id=nombre,
-                    automatico=True,
-                ))
 
     def _subscribe_event_handlers(self) -> None:
         # GAP-020 — recogibles que nunca llegaban al inventario.

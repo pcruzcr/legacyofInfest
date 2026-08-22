@@ -37,6 +37,7 @@ from src.framework.scenes.stage_parts.arco import ArcoDelJugador
 from src.framework.scenes.stage_parts.cinematicas import CinematicasDeEscenario
 from src.framework.scenes.stage_parts.diagnostico import DiagnosticoDeEscenario
 from src.framework.scenes.stage_parts.dibujo import DibujoDeEscenario
+from src.framework.scenes.stage_parts.economia import EconomiaDeEscenario
 from src.framework.scenes.stage_parts.fantasma import FantasmaDeCarrera
 from src.framework.scenes.stage_parts.mundo_ecs import MundoDelEscenario
 from src.framework.scenes.stage_parts.pausa import PausaDeEscenario
@@ -79,12 +80,13 @@ if TYPE_CHECKING:
 
 class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
                  SenalesDeEscenario, SonidoDeEscenario,
+                 EconomiaDeEscenario,
                  DiagnosticoDeEscenario, CinematicasDeEscenario,
                  ArcoDelJugador, MundoDelEscenario, ActualizacionesDeEscenario, DibujoDeEscenario,
                  FantasmaDeCarrera, ConduccionDelBossRush, PausaDeEscenario, BaseScene):
     """El escenario jugable: carga un TMX y lo hace jugar.
 
-    AUD-152 — los tres primeros padres son **mixins de lectura**, no capas de
+    AUD-152 - los tres primeros padres son **mixins de lectura**, no capas de
     arquitectura: sólo mueven texto que antes vivía aquí. Ver
     `stage_parts/__init__.py` para el razonamiento completo. El orden importa
     para el MRO en un solo sentido: `BaseScene` va al final, así que cualquier

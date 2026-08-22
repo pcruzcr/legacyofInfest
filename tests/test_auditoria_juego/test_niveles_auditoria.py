@@ -54,6 +54,14 @@ NIVELES: list[tuple[str, str, bool, bool, bool]] = [
         False,
         False,
     ),
+    # AUD-595 — corrige a AUD-586: el NextTrigger de hall NO era un
+    # fantasma. El hook de la escena era un `pass`, pero la completación no
+    # pasa por él: `ProgressionSystem.check_next_trigger` marca el nivel al
+    # tocar el rectángulo, y `hall` es la ranura lineal 3-2 de STAGE_ORDER —
+    # sin salida, la campaña entera queda bloqueada ahí (lo gritan
+    # `test_guardado_y_cadena` y `test_los_next_trigger`). El trigger volvió
+    # al TMX tal estaba; lo que AUD-586 arregló de verdad fue el env del
+    # subprocess del grader y el texto del aviso.
     ("hall", "hall/hall.tmx", True, False, False),
     ("stage3_3_el_patio", "stage3_3_el_patio/stage3_3_el_patio.tmx", True, False, False),
     ("stage3_4_boss_gavilan", "stage3_4_boss_gavilan/stage3_4_boss_gavilan.tmx", False, True, False),

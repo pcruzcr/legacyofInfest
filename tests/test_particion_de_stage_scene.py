@@ -49,6 +49,13 @@ PARTES = {
         "SenalesDeEscenario",
         ("_subscribe_event_handlers", "_unsubscribe_all_handlers"),
     ),
+    # AUD-595 — la economía (el botín que deja cada enemigo) sale de
+    # `senales`: vivía ahí por historia, no por concepto, y el fichero había
+    # vuelto a rozar su presupuesto.
+    "economia": (
+        "EconomiaDeEscenario",
+        ("_soltar_botin",),
+    ),
     # AUD-290 — la mitad sonora sale de `senales`. El docstring de aquel módulo
     # ya decía que eran «dos familias»; compartían fichero hasta que el fichero
     # llegó a su presupuesto.
