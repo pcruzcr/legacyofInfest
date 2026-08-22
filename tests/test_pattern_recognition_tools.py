@@ -21,7 +21,6 @@ from src.framework.processing.pattern_recognition_tools import (
 from src.framework.processing.vision_tools import VisionTools
 
 SAMPLE_DATASET_PATH = Path("assets/datasets/sample_dataset.npz")
-SAMPLE_MODEL_PATH = Path("assets/models/professor_sample.pkl")
 
 
 def _ensure_sample_dataset() -> None:
@@ -44,14 +43,14 @@ def _ensure_sample_dataset() -> None:
 
 
 def _ensure_sample_model() -> TrainedModel:
-    if SAMPLE_MODEL_PATH.exists():
-        return PatternRecognitionTools.load_model(SAMPLE_MODEL_PATH)
+    # AUD-587 — antes cargaba `assets/models/professor_sample.pkl` si
+    # existía (y si no, lo entrenaba y lo ESCRIBÍA en assets/). El binario ya
+    # no se distribuye: el modelo de muestra se entrena desde el dataset,
+    # igual que hace el runtime (F3.3).
     data = np.load(str(SAMPLE_DATASET_PATH))
     X = data["X"].astype(np.float32)
     y = data["y"]
-    model = PatternRecognitionTools.train(X, y, model_type="knn", n_neighbors=5)
-    PatternRecognitionTools.save_model(model, SAMPLE_MODEL_PATH)
-    return model
+    return PatternRecognitionTools.train(X, y, model_type="knn", n_neighbors=5)
 
 
 class TestTraining:

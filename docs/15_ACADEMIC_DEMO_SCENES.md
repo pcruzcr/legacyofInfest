@@ -543,7 +543,7 @@ Los estudiantes usan esta escena para:
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  PATTERN DEMO                                        UNIDAD IX  │
-│  [Modelo: professor_sample | Método: hog | Inferencia: 3 fot.]  │
+│  [Modelo: referencia (entrenado aquí) | Método: hog | Inf.: 3 fot.]  │
 ├────────────────────────┬────────────────────────────────────────┤
 │   SUPERFICIE FUENTE    │   RESULTADO DE CLASIFICACIÓN           │
 │   160×180 px           │   160×180 px                           │
@@ -604,7 +604,7 @@ light_zone   ██           10%
 [gráfico de 512 barras para HOG]
 
 Inferencia: cada 3 fotogramas
-Modelo: professor_sample (knn, k=5)
+Modelo: referencia (entrenado aquí; knn, k=5)
 Característica: hog | Vector: 512
 ```
 
@@ -760,7 +760,7 @@ Este mecanismo permite a los estudiantes validar sus modelos entrenados sin modi
 |---|---|
 | `src/engine/scenes/pattern_demo_scene.py` | Implementación completa |
 | `student_assets/datasets/sample_dataset.npz` | Dataset de 90 muestras, 3 clases (dark_zone, neutral, light_zone) |
-| `student_assets/models/professor_sample.pkl` | k-NN pre-entrenado (k=5) sobre el dataset de muestra |
+| Modelo de referencia entrenado en cada máquina | k-NN (k=5) que la escena entrena desde el dataset al abrirse y cachea fuera del repositorio — AUD-587: ya no se distribuye ningún `.pkl` |
 | 6 modos de operación | Todos los modos de §5.3 implementados |
 | Diálogo de carga de modelo | Entrada de texto con tecla `L` para el modelo del estudiante |
 | Visualización de barras de probabilidad | Barras top-3 con colores de clase |

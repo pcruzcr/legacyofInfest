@@ -294,7 +294,7 @@ Verifica siempre con `python -c "import pygame; print(pygame.version.ver)"`; si 
 ### 10.8 La carga de `joblib`/un modelo falla con un aviso o error de versión
 
 **Causa:** desajuste de versión de scikit-learn entre el momento en que se guardó un `.pkl` y el momento en que se carga.
-**Arreglo:** confirma que tu entorno coincide exactamente con el que generó `assets/models/professor_sample.pkl` — vuelve a ejecutar `pip install -e ".[dev]"` para que no haya deriva de versión local, y avisa al profesor si el desajuste persiste.
+**Arreglo:** el modelo de referencia ya no se distribuye como `.pkl` (AUD-587): el laboratorio lo entrena en tu máquina desde `assets/datasets/sample_dataset.npz`, así que este desajuste no puede venir del modelo de referencia. Si te pasa con un modelo propio, bórralo y reentrena en tu entorno (`pip install -e ".[dev]"` primero, para que no haya deriva de versión local).
 
 ---
 

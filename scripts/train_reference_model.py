@@ -25,13 +25,16 @@ you load is one you generated on your own machine.
 Usage
 -----
     # Rebuild from an image directory (see tools/build_dataset.py for layout)
-    python scripts/train_reference_model.py --data data/shapes/ --out assets/models/professor_sample.pkl
+    python scripts/train_reference_model.py --data data/shapes/ --out modelo.pkl
 
     # Rebuild from a prepared .npz feature file
-    python scripts/train_reference_model.py --npz data/shapes.npz --out assets/models/professor_sample.pkl
+    python scripts/train_reference_model.py --npz data/shapes.npz --out modelo.pkl
 
-    # Verify the committed model still agrees with a freshly trained one
-    python scripts/train_reference_model.py --npz data/shapes.npz --verify assets/models/professor_sample.pkl
+AUD-587 — the committed binary is gone: the runtime trains its reference
+model from `assets/datasets/sample_dataset.npz` (see
+`src/framework/processing/reference_model.py`) and caches it outside the
+repository. This script remains for regenerating a model on purpose — write
+the output anywhere outside version control.
 """
 from __future__ import annotations
 
