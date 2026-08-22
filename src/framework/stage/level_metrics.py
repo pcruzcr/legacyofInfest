@@ -198,6 +198,12 @@ class LevelReport:
     total_platforms: int = 0
     reachable_platforms: int = 0
     exit_reachable: bool = True
+    #: AUD-586 — ¿declara el nivel `NextTrigger`? Las arenas de jefe, el
+    #: `hall` y `stage_cenital` no lo hacen **por diseño** (la salida se
+    #: abre al derrotar, o el mapa no encadena): para ellos la métrica de
+    #: ruta no aplica, y confundir «no se puede medir» con «no se llega»
+    #: suspendía mapas correctos.
+    exit_declared: bool = True
 
     @property
     def orphan_platforms(self) -> int:
@@ -214,7 +220,7 @@ class LevelReport:
         hueco de suelo ancho se cruza por una plataforma superior. Un hueco ancho
         es información para el diseñador, no un fallo.
         """
-        blocking = 0 if self.exit_reachable else 1
+        blocking = 0 if (self.exit_reachable or not self.exit_declared) else 1
         return blocking + len(self.impossible_ledges)
 
     def summary(self) -> str:
@@ -223,7 +229,10 @@ class LevelReport:
         lines.append(f"  huecos exigentes       : {len(self.demanding_gaps)}")
         lines.append(f"  repechos imposibles    : {len(self.impossible_ledges)}")
         lines.append(f"  plataformas alcanzables: {self.reachable_platforms}/{self.total_platforms}")
-        lines.append(f"  salida alcanzable      : {'sí' if self.exit_reachable else 'NO'}")
+        if not self.exit_declared:
+            lines.append("  salida alcanzable      : n/a (sin NextTrigger)")
+        else:
+            lines.append(f"  salida alcanzable      : {'sí' if self.exit_reachable else 'NO'}")
         if self.checkpoint_gaps:
             worst = max(self.checkpoint_gaps)
             lines.append(f"  mayor tramo sin checkpoint: {worst:.0f} px")
@@ -692,6 +701,9 @@ def analyse_stage(stage_data: object) -> LevelReport:
             )
 
     if not getattr(stage_data, "next_trigger", None):
+        # AUD-586 — el dato y la nota se conservan, pero `exit_declared`
+        # deja claro que esto es «no se puede medir», no «no se llega».
+        report.exit_declared = False
         report.notes.append(
             "el nivel no declara NextTrigger: no se puede completar",
         )

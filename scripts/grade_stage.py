@@ -539,7 +539,23 @@ def _grade_design(path: Path, result: dict[str, Any]) -> None:
 
     # 1. ¿Se puede terminar? Es binario y es lo único de la rúbrica que puede
     #    hacer que un nivel valga cero por diseño.
-    if informe.exit_reachable:
+    if not informe.exit_declared:
+        # AUD-586 — F3 de `93_AUDITORIA_ESTRATEGICA_Y_FODA.md` §6: las
+        # arenas de jefe, el `hall` y `stage_cenital` no declaran
+        # `NextTrigger` **por diseño**, y hasta ahora la herramienta los
+        # suspendía por una ruta que no puede existir. Tercera vez con la
+        # misma causa (AUD-192, AUD-472): aplicar la rúbrica equivocada y
+        # suspender por ella es peor que no medir. El dato crudo se conserva
+        # en `result["design"]`, igual que en AUD-192.
+        poner("design_completable", RUBRIC["design_completable"],
+              "sin NextTrigger declarado: la métrica de ruta no aplica")
+        result["warnings"].append(
+            "el nivel no declara NextTrigger: la métrica de ruta no aplica. "
+            "Si es una arena donde la salida se abre al derrotar a un jefe, "
+            "califícalo con scripts/grade_boss.py; si es otro mapa sin "
+            "salida, comprueba a mano que eso es lo que querías"
+        )
+    elif informe.exit_reachable:
         poner("design_completable", RUBRIC["design_completable"],
               "la salida es alcanzable andando desde el spawn")
     elif _tiene_movilidad(stage_data):
