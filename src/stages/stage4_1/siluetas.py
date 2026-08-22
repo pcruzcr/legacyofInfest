@@ -281,6 +281,12 @@ SILUETA_OSCURA: tuple[int, int, int] = (24, 20, 30)
 #: no presencia, así que un blanco algo más apagado.
 PIEDRA_FRIA: tuple[int, int, int] = (188, 196, 204)
 
+#: El brillo pálido de los ojos que se abren entre los árboles de la Fase 2
+#: (AUD-579, GAP-060 punto 16). Cálido y apagado — brillo de ojo de animal a
+#: contraluz, no el verde de los vencidos ni el blanco frío de la Cegua: el
+#: bosque que observa no es un espíritu ni una presencia folclórica.
+OJOS_DEL_BOSQUE: tuple[int, int, int] = (216, 200, 156)
+
 
 def _arbol_cortado(ancho: int, alto: int) -> list[tuple[float, float]]:
     """Un árbol seco, cortado a media altura — «bosque cortado y muerto»
@@ -363,6 +369,51 @@ LANDMARKS_DE_LA_PLANICIE: tuple[object, ...] = (
 )
 
 
+def _tumba_antigua(ancho: int, alto: int) -> list[tuple[float, float]]:
+    """Una losa de piedra ladeada, partida y medio hundida — la tumba que
+    nadie reclama (AUD-581, GAP-060 punto 15). No es una cruz ni un
+    montículo de `_grupo_de_tumbas`: es una tumba **anterior** al
+    camposanto, de otro tiempo y otra gente; por eso su silueta no se
+    parece a ninguna de las que el cementerio puso después."""
+    w, h = ancho, alto
+    return [
+        # La losa, ladeada hacia la derecha.
+        (0.18 * w, 1.00 * h), (0.24 * w, 0.30 * h), (0.30 * w, 0.12 * h),
+        (0.44 * w, 0.00 * h), (0.62 * w, 0.04 * h), (0.72 * w, 0.18 * h),
+        # La grieta del remate: el borde no es limpio, está roto.
+        (0.66 * w, 0.30 * h), (0.74 * w, 0.34 * h), (0.78 * w, 0.26 * h),
+        (0.84 * w, 0.44 * h),
+        # Cae hacia abajo, ya más derecha que izquierda: la inclinación.
+        (0.88 * w, 0.86 * h), (0.94 * w, 0.92 * h), (0.80 * w, 0.96 * h),
+        (0.70 * w, 1.00 * h), (0.30 * w, 1.00 * h),
+    ]
+
+
+def _arco_de_costillas(ancho: int, alto: int) -> list[tuple[float, float]]:
+    """Un arco de costillas a escala de camino — el puente de huesos que sí
+    se cruza (AUD-582, GAP-061: la mitad **navegable** de las osamentas).
+
+    El lomo superior es **plano** a propósito: es el piso de verdad del
+    puente (`COSTILLA_NAVEGABLE` declara un one-way plano), y una forma
+    curva bajo un piso plano se leería como pie que flota. A diferencia
+    de `_vertebra_gigante`, paisaje de fondo, esta forma se dibuja
+    **llena**, no en contorno: es arquitectura sólida del plano del
+    jugador, y lo hueco se leería como trampa."""
+    w, h = ancho, alto
+    return [
+        # El piso: plano en el centro, con los extremos bajando a tierra.
+        (0.00 * w, 0.40 * h), (0.06 * w, 0.06 * h), (0.18 * w, 0.00 * h),
+        (0.82 * w, 0.00 * h), (0.94 * w, 0.06 * h), (1.00 * w, 0.40 * h),
+        # Cae hasta el suelo por la derecha...
+        (1.00 * w, 1.00 * h), (0.86 * w, 1.00 * h),
+        # ...y vuelve por debajo con el vientre del arco: banda, no bloque
+        # — por debajo se pasa, por encima se anda.
+        (0.80 * w, 0.48 * h), (0.64 * w, 0.28 * h), (0.50 * w, 0.24 * h),
+        (0.36 * w, 0.28 * h), (0.20 * w, 0.48 * h), (0.14 * w, 1.00 * h),
+        (0.00 * w, 1.00 * h),
+    ]
+
+
 #: Cálido y sobrio — no el blanco frío de la Cegua ni el verde espectral de
 #: los jefes. El easter egg personal (§7 del diseño, AUD-467) es un
 #: recuerdo de familia, no una presencia folclórica ni un vencido: se
@@ -403,6 +454,26 @@ def _figura_lejana(ancho: int, alto: int) -> list[tuple[float, float]]:
         (0.46 * w, 0.00 * h), (0.34 * w, 0.16 * h), (0.30 * w, 0.50 * h),
         (0.36 * w, 0.72 * h), (0.26 * w, 1.00 * h), (0.74 * w, 1.00 * h),
         (0.64 * w, 0.72 * h), (0.70 * w, 0.50 * h), (0.66 * w, 0.16 * h),
+    ]
+
+
+def _figura_de_pie(ancho: int, alto: int) -> list[tuple[float, float]]:
+    """Una figura encapuchada de pie, para la Fase 5 (AUD-583, GAP-063):
+    la procesión que se acerca cada ciclo lunar y la multitud junto a la
+    tumba del medio.
+
+    Distinta a propósito de `_fantasma` (el recuerdo personal) y de
+    `_figura_lejana` (la anomalía sin nombre de la Fase 1): ésta es una
+    campana cerrada —capucha y túnica sin piernas—, la forma mínima que se
+    lee como «persona en duelo» a la distancia a la que se pinta. Cuanto
+    menos detalle, menos afirma: el diseño pide figuras que no se
+    explican, no personajes con cara.
+    """
+    w, h = ancho, alto
+    return [
+        (0.50 * w, 0.00 * h), (0.36 * w, 0.14 * h), (0.30 * w, 0.40 * h),
+        (0.24 * w, 0.72 * h), (0.20 * w, 1.00 * h), (0.80 * w, 1.00 * h),
+        (0.76 * w, 0.72 * h), (0.70 * w, 0.40 * h), (0.64 * w, 0.14 * h),
     ]
 
 

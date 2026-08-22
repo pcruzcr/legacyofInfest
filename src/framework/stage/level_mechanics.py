@@ -36,6 +36,26 @@ FUENTE_TIEMPO_BALA: str = "tiempo_bala"
 #: descriptor del slot, no como el valor — no como una constante de clase.
 VELOCIDAD_EXPULSION_SUPERFICIE: float = -200.0
 
+#: AUD-573 — estados que `ControlDeNado` respeta mientras el jugador siga
+#: dentro del agua. Son los que tienen sentido sumergidos o los que no se
+#: pueden cortar a mitad: el nado y su ataque acuático, el daño (no se
+#: cancela la animación de dolor a un fotograma) y la muerte. Cualquier
+#: otro —idle, caminar, saltar, caer, ataques de tierra, dash...— es tierra
+#: firme y no existe bajo el agua: se vuelve a nadar. Sin esta lista, la
+#: autoridad del agua (abajo) dependería de que la máquina de estados de
+#: tierra nunca pisara `SwimmingState`, y la máquina de tierra no sabe nada
+#: del agua.
+_ESTADOS_SUBMARINOS: frozenset[str] = frozenset({
+    "SWIMMING",
+    "SWIM_ATTACK",
+    "HURT",
+    "DYING",
+    "CLIMBING",
+    "ZIPLINE",
+    "GRAB",
+    "THROW",
+})
+
 if TYPE_CHECKING:
     from src.engine.core.clock import Clock
     from src.framework.ecs.world import World
@@ -98,14 +118,34 @@ class ControlDeNado:
     def avisando(self) -> bool:
         return 0.0 < self.aire <= self.umbral_aviso
 
+    @property
+    def en_agua(self) -> bool:
+        """¿El jugador está sumergido este fotograma? Lo lee el HUD
+        (GAP-071 resuelto): sólo tiene sentido dibujar la barra de
+        oxígeno mientras se está bajo el agua."""
+        return self._estaba_dentro
+
     def update(self, dt: float, jugador: Player, mundo: World, bus=None) -> None:
         """Un fotograma. Devuelve nada; cambia el estado del jugador si toca."""
         agua: ZonaDeAgua | None = en_agua(mundo, jugador.rect)
         dentro = agua is not None
 
-        if dentro and not self._estaba_dentro:
-            self._entrar(jugador, bus)
-        elif not dentro and self._estaba_dentro:
+        # AUD-573 — dentro del agua, la autoridad es CONTINUA, no de
+        # flanco. Antes sólo se metía al jugador a nadar en el instante de
+        # ENTRAR a la zona: si después la máquina de tierra ponía
+        # `IDLE`/`WALKING` con el jugador ya sumergido —el lecho del 4-1b
+        # está a 16px del borde del agua, `is_grounded=True` casi
+        # siempre— nadie lo devolvía a `SwimmingState`, y el jugador se
+        # quedaba «caminando» por el fondo dentro del agua para siempre
+        # (reproducido en simulación). Cada fotograma sumergido se vuelve
+        # a nadar si el estado actual es de tierra; los estados
+        # submarinos (`_ESTADOS_SUBMARINOS`) se respetan.
+        if dentro:
+            if not self._estaba_dentro:
+                self._entrar(jugador, bus)
+            else:
+                self._reforzar_estado_de_nado(jugador)
+        elif self._estaba_dentro:
             self._salir(jugador)
         self._estaba_dentro = dentro
 
@@ -127,6 +167,23 @@ class ControlDeNado:
             # Se recupera deprisa: el castigo es quedarse dentro, no salir.
             self.aire = min(self.aire_maximo, self.aire + dt * 8.0)
             self._acumulado_dano = 0.0
+
+    @staticmethod
+    def _reforzar_estado_de_nado(jugador: Player) -> None:
+        """AUD-573 — vuelve a nadar si la máquina de tierra pisó el nado.
+
+        Se llama cada fotograma mientras el jugador siga dentro del agua
+        y ya estaba dentro el anterior (el flanco de entrada lo cubre
+        `_entrar`). Es barato: `_change_state_instance` ya ignora el
+        cambio si el estado actual es el mismo, y aquí ni siquiera se
+        llega a llamar salvo que el estado sea de tierra firme.
+        """
+        actual = getattr(jugador, "_state_instance", None)
+        if actual is None or actual.state_enum.value in _ESTADOS_SUBMARINOS:
+            return
+        from src.framework.entities.states import SwimmingState
+
+        jugador._change_state_instance(SwimmingState())
 
     @staticmethod
     def _entrar(jugador: Player, bus) -> None:

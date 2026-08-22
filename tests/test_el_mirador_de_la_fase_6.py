@@ -118,7 +118,13 @@ class TestElGuionDelMiradorNoTieneErroresDeSintaxis:
         _script, errores = analizar_guion(guion, ContextoDeGuion())
         assert errores == [], f"el guion del mirador tiene errores: {errores}"
 
-    def test_tiene_dos_movimientos_de_camara_una_espera_y_dos_fundidos(self) -> None:
+    def test_tiene_tres_movimientos_de_camara_dos_esperas_y_dos_fundidos(self) -> None:
+        """AUD-571 — el contrato cambió con aprobación del dueño («extender
+        el mirador un poco más»): tras alejar hacia el camino recorrido y
+        volver, un tercer barrido se adelanta hacia donde asoma Paburu antes
+        de fundir a negro. La prueba original exigía dos movimientos porque
+        el guion de AUD-515 terminaba al volver; quedarse con ella habría
+        seguido premiando el corte que el dueño pidió quitar."""
         import sys
         from pathlib import Path
 
@@ -140,12 +146,26 @@ class TestElGuionDelMiradorNoTieneErroresDeSintaxis:
         guion = bloque[i0:i1].replace("&#10;", "\n")
         script, _errores = analizar_guion(guion, ContextoDeGuion())
 
-        tipos = [type(a) for a in script._actions]
-        assert tipos.count(CameraMoveAction) == 2, (
-            "el mirador debe alejar la cámara y volver a traerla: dos movimientos"
+        acciones = script._actions
+        tipos = [type(a) for a in acciones]
+        movimientos = [a for a in acciones if isinstance(a, CameraMoveAction)]
+        assert len(movimientos) == 3, (
+            "el mirador debe alejar hacia atrás, volver y mirar hacia Paburu:"
+            " tres movimientos"
         )
-        assert tipos.count(WaitAction) == 1
+        assert tipos.count(WaitAction) == 3
         assert tipos.count(FadeAction) == 2
+        # El orden narrativo, no sólo el conteo: primero mira de dónde
+        # viene (atrás), después vuelve al jugador y por último mira hacia
+        # dónde va (adelante, y un poco hacia arriba).
+        xs = [m._tx for m in movimientos]
+        ys = [m._ty for m in movimientos]
+        assert xs[0] < xs[1] < xs[2], (
+            "los tres barridos deben ir de atrás hacia adelante"
+        )
+        assert ys[2] < ys[1], (
+            "el barrido final hacia Paburu debe subir un poco la mirada"
+        )
 
 
 class TestElMiradorSeDisparaAlEntrar:

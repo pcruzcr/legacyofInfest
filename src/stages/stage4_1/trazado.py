@@ -84,11 +84,36 @@ LOMAS_FASE3: tuple[tuple[int, int, int, int, int], ...] = (
     (376, 25, 15, 20, FILA_CIMA),   # la segunda: la más alta de las dos
 )
 
+# El repiso de la Fase 2 (AUD-580, GAP-060 punto 8) — el desafío de control
+# que pedía el diseño: *«una pendiente corta que termina en zona resbaladiza,
+# para que el jugador aprenda a frenar antes de entrar»*. Subida corta, cima
+# estrecha y bajada que aterriza **directo** en un tramo de musgo
+# (`SEGMENTOS_FASE2`, más abajo): quien baje con velocidad entra patinando en
+# la inercia del musgo (AUD-522). Mismo formato que `LOMAS_FASE3`, y las
+# mismas dos reglas de colisión —sin bloque bajo la rampa (AUD-470) ni en la
+# cima (AUD-477)— porque el porqué es el mismo: una unión dura entre
+# pendiente y bloque clava al jugador, tenga la pendiente 4 filas o 10.
+#
+# Queda dentro de la Fase 2 con margen: arranca en la columna 270, después
+# del último segmento de fricción fijo (250-264) y antes de la Fase 3 (300),
+# y su aterrizaje (284) empalma con el tramo de musgo que lo recoge.
+REPISO_FASE2: tuple[int, int, int, int, int] = (270, 5, 3, 6, 26)
+
+#: Todas las elevaciones del nivel: el repiso de la Fase 2 y las dos lomas
+#: de la Fase 3. Los perfiles —visual, colisión, mesetas— y los `Slope` que
+#: genera el mapa recorren esta tupla; lo que es propio de las lomas (el
+#: alcance del `WindZone`, `extremos_de_las_lomas`) sigue leyendo
+#: `LOMAS_FASE3` a secas, porque el viento es de la Fase 3, no del repiso.
+ELEVACIONES: tuple[tuple[int, int, int, int, int], ...] = (
+    REPISO_FASE2, *LOMAS_FASE3,
+)
+
 
 def altura_del_suelo(columna: int) -> int:
     """La fila del suelo en esa columna. `FILA_SUELO` en todas partes salvo
-    en las lomas de la Fase 3, que suben y vuelven a bajar."""
-    for inicio_subida, ancho_subida, ancho_cima, ancho_bajada, fila_cima in LOMAS_FASE3:
+    en las elevaciones (`ELEVACIONES`: el repiso de la Fase 2 y las lomas
+    de la Fase 3), que suben y vuelven a bajar."""
+    for inicio_subida, ancho_subida, ancho_cima, ancho_bajada, fila_cima in ELEVACIONES:
         fin_subida = inicio_subida + ancho_subida
         fin_cima = fin_subida + ancho_cima
         fin_bajada = fin_cima + ancho_bajada
@@ -154,7 +179,7 @@ def altura_de_colision(columna: int) -> int:
     —pendientes, nunca AABB contra un bloque— y la unión dura que causaba
     el enganche deja de existir del todo, no sólo se aplaza.
     """
-    for inicio_subida, ancho_subida, ancho_cima, _ancho_bajada, fila_cima in LOMAS_FASE3:
+    for inicio_subida, ancho_subida, ancho_cima, _ancho_bajada, fila_cima in ELEVACIONES:
         fin_subida = inicio_subida + ancho_subida
         fin_cima = fin_subida + ancho_cima
         if fin_subida <= columna < fin_cima:
@@ -163,11 +188,11 @@ def altura_de_colision(columna: int) -> int:
 
 
 def es_meseta(columna: int) -> bool:
-    """¿Es la cima llana de alguna loma? Esas columnas no llevan bloque
+    """¿Es la cima llana de alguna elevación? Esas columnas no llevan bloque
     sólido (AUD-477, ver `altura_de_colision`): las cubre un `Pendiente`
     de altura cero, para que nunca haya una unión dura entre pendiente y
-    bloque sólido en el camino de subida de una loma."""
-    for inicio_subida, ancho_subida, ancho_cima, _ancho_bajada, _fila_cima in LOMAS_FASE3:
+    bloque sólido en el camino de subida."""
+    for inicio_subida, ancho_subida, ancho_cima, _ancho_bajada, _fila_cima in ELEVACIONES:
         fin_subida = inicio_subida + ancho_subida
         fin_cima = fin_subida + ancho_cima
         if fin_subida <= columna < fin_cima:
@@ -181,16 +206,17 @@ def perfil_de_colision() -> tuple[int, ...]:
 
 
 def loma() -> tuple[tuple[int, int, int, int, str], ...]:
-    """Los `Slope` de subida y bajada de las lomas: `(columna, fila_arriba,
-    ancho, alto, sube)`, dos por loma, en el orden de `LOMAS_FASE3`
-    (AUD-297/477). La cima llana la da `mesetas_de_las_lomas`, no ésta —
+    """Los `Slope` de subida y bajada de las elevaciones: `(columna,
+    fila_arriba, ancho, alto, sube)`, dos por elevación, en el orden de
+    `ELEVACIONES` (AUD-297/477; el repiso de la Fase 2 entra desde
+    AUD-580). La cima llana la da `mesetas_de_las_lomas`, no ésta —
     tiene una unidad distinta (ver por qué ahí).
 
     El rectángulo de un `Slope` es el triángulo entero (AUD-297): de la fila
     de arriba a la de abajo, de la columna de inicio a la de fin.
     """
     resultado: list[tuple[int, int, int, int, str]] = []
-    for inicio_subida, ancho_subida, ancho_cima, ancho_bajada, fila_cima in LOMAS_FASE3:
+    for inicio_subida, ancho_subida, ancho_cima, ancho_bajada, fila_cima in ELEVACIONES:
         fin_subida = inicio_subida + ancho_subida
         fin_cima = fin_subida + ancho_cima
         alto = FILA_SUELO - fila_cima
@@ -225,7 +251,7 @@ def mesetas_de_las_lomas() -> tuple[tuple[int, int, int], ...]:
     en vez de forzar la de `loma()` a mezclar dos unidades.
     """
     resultado: list[tuple[int, int, int]] = []
-    for inicio_subida, ancho_subida, ancho_cima, _ancho_bajada, fila_cima in LOMAS_FASE3:
+    for inicio_subida, ancho_subida, ancho_cima, _ancho_bajada, fila_cima in ELEVACIONES:
         fin_subida = inicio_subida + ancho_subida
         resultado.append((fin_subida, fila_cima, ancho_cima))
     return tuple(resultado)
@@ -237,6 +263,21 @@ def extremos_de_las_lomas() -> tuple[int, int]:
     inicio = min(loma[0] for loma in LOMAS_FASE3)
     fin = max(loma[0] + loma[1] + loma[2] + loma[3] for loma in LOMAS_FASE3)
     return inicio, fin
+
+
+#: El puente de costillas (AUD-582, GAP-061): la mitad **navegable** de las
+#: osamentas — la plataforma de un sentido que convierte los huesos en
+#: arquitectura que se cruza, no sólo en paisaje que se mira (punto 4 del
+#: diseño: *«costillas formando arcos, puentes... plataformas»*). Es la
+#: primera plataforma del nivel entero. `(columna_inicio, ancho,
+#: fila_de_la_cima)`: 9 columnas de arco, su piso a 2 filas sobre el suelo.
+#:
+#: Va en el llano entre las dos lomas (365-375), por tres razones: ahí el
+#: jugador tiene el ritmo tranquilo para notarla; subir a ella da la vista
+#: de las dos lomas a la vez, la lectura completa de la sección; y no
+#: interfiere con ninguna rampa ni meseta (`loma()`/`mesetas_de_las_lomas`
+#: no tocan estas columnas).
+COSTILLA_NAVEGABLE: tuple[int, int, int] = (366, 9, 28)
 
 
 def fase_de_la_columna(columna: int) -> int:
@@ -312,6 +353,11 @@ SEGMENTOS_FASE2: tuple[tuple[int, int, str], ...] = (
     (210, 15, "musgo"),
     (230, 15, "lodo"),
     (250, 15, "musgo"),
+    # AUD-580: el tramo que recoge el aterrizaje del repiso (`REPISO_
+    # FASE2` termina en la columna 284). Empalma sin llano intermedio —
+    # si no hubiera hueco, no habría nada que aprender: frenas donde
+    # quieras. Con él, bajar con velocidad es entrar patinando.
+    (284, 12, "musgo"),
 )
 #: Huellas del Venado (AUD-513, GAP-060 punto 28): *«herramienta de
 #: navegación... a veces desaparecen o terminan abruptamente»*. En columnas
@@ -327,6 +373,17 @@ HUELLAS_FASE2: tuple[int, ...] = (
     26, 28, 31,
     42, 44, 47, 48, 51,
 )
+
+#: La tumba que nadie reclama (AUD-581, GAP-060 punto 15) — la zona
+#: secundaria opcional de la Fase 2: *«una historia, una aparición o una
+#: tumba antigua»*, basta una. En columna absoluta, justo después de donde
+#: el rastro de huellas se corta (la última huella cae en la columna 201):
+#: las dos señales se amarran — el Venado se detuvo ante la única piedra
+#: más vieja que el cementerio, y el corte abrupto del rastro tiene dueño.
+#: Opcional en atención, no en camino (decisión del dueño, 2026-08-16:
+#: pasillo horizontal, sin bifurcaciones): quien pase de largo no pierde
+#: nada mecánico; quien se acerque, se lleva una historia.
+COLUMNA_TUMBA_ANTIGUA = 204
 
 #: AUD-522 — el musgo resbala (`inercia`), no frena. 0,15: a un segundo de
 #: soltar la tecla queda el 15 % de la velocidad — se nota de inmediato
@@ -370,6 +427,16 @@ TUMBAS_FASE5: tuple[int, ...] = tuple(range(610, 749, 30))
 #: jugador.
 COLUMNA_DEL_CANTO: int = 745
 
+#: Dónde está la multitud que desaparece sin explicación (AUD-583, GAP-063
+#: punto 20): junto a la tumba del medio de la sección (670), lejos de los
+#: checkpoints de 620 y 760 para que nadie llegue a ella reapareciendo.
+#: El diseño pide *«una multitud de figuras que desaparece sin explicación»*:
+#: están ahí siempre que las veas desde lejos; cuando el jugador se acerca
+#: lo bastante para mirarlas bien, ya no están — y no vuelven. No hay
+#: disparador, no hay sonido, no hay estado que guardar: presencia, como el
+#: resto del nivel.
+COLUMNA_DE_LA_MULTITUD: int = 670
+
 
 # ── Fase 6 (El Camino hacia Paburu): grietas que se iluminan al paso ─────
 #
@@ -397,6 +464,13 @@ GRIETAS_FASE6: tuple[int, ...] = tuple(range(700, 899, 20))
 # jugador ya vio casi todo el camino cuando se detiene a mirarlo, y todavía
 # le queda tramo por delante hasta el corte.
 COLUMNA_MIRADOR_FASE6: int = 860
+
+#: Dónde se reúnen los tres espíritus (AUD-584, GAP-064 punto 32): doce
+#: columnas **después** del mirador, no encima. En el mirador la cutscene
+#: congela al jugador (`bloquea=True`) un rato largo — si el secreto
+#: estuviera ahí, todo el que pasara lo vería sin haberlo buscado, y deja
+#: de ser secreto. Un poco más allá, detenerse es una decisión.
+COLUMNA_DEL_SECRETO: int = COLUMNA_MIRADOR_FASE6 + 12
 
 
 def grietas_de_pisada() -> tuple[tuple[int, int], ...]:

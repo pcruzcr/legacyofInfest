@@ -191,7 +191,10 @@ class TestSeOyeAntesDeVerse:
         ctx.scene_manager = SceneManager(ctx)
         sc = Stage4_1B(ctx)
         ctx.scene_manager.push(sc)
-        sc._invocar_pez()
+        # AUD-576 — `_invocar_pez` pide la columna del jugador: la fase
+        # decide cuánto dura la persecución (clímax vs normal). Pasamos
+        # una columna de la zona de persecución (≥ COL_PERSECUCIONES).
+        sc._invocar_pez(col=650)
         bus.dispatch()
 
         assert vistos, (

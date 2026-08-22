@@ -263,6 +263,62 @@ class TestNado:
         nado.update(FRAME, jugador, mundo, None)
         assert isinstance(jugador._state_instance, FallingState)
 
+    def test_pisando_el_lecho_dentro_del_agua_no_salta(self):
+        """AUD-573 — reporte jugando 4-1b: «el personaje no nada». El
+        salto con buffer de `Player.update` se disparaba para CUALQUIER
+        estado con `is_grounded`: posado en el lecho marino (grounded
+        dentro del agua, el caso de 4-1b), pulsar salto lo sacaba
+        disparado con física de tierra en pleno abismo — el mismo salto
+        que la máquina de tierra, bajo el agua. Reproducido en
+        simulación: `SWIMMING` + lecho + JUMP en buffer → `JumpingState`
+        con impulso de salto."""
+        from src.framework.entities.states import SwimmingState
+
+        jugador, mundo, nado = self._jugador(), self._mundo_con_agua(), ControlDeNado()
+        nado.update(FRAME, jugador, mundo, None)
+        assert isinstance(jugador._state_instance, SwimmingState)
+
+        # Un lecho marino justo debajo del jugador, como en 4-1b: el
+        # jugador sigue sumergido (dentro de la ZonaDeAgua) y grounded.
+        lecho = pygame.Rect(0, 82, 400, 100)
+        from src.engine.input.input_manager import InputManager
+
+        im = InputManager()
+        from src.engine.input.action_map import DEFAULT_KEY_BINDINGS, Action
+
+        tecla_salto = DEFAULT_KEY_BINDINGS[Action.JUMP][0]
+        im.pump([pygame.event.Event(pygame.KEYDOWN, key=tecla_salto)])
+
+        jugador.update(FRAME, [lecho], im)
+        assert isinstance(jugador._state_instance, SwimmingState), (
+            "dentro del agua con el lecho bajo los pies, el salto con "
+            "buffer disparó un salto de tierra firme: "
+            f"estado={jugador._state_instance.state_enum.value}"
+        )
+
+    def test_la_maquina_de_tierra_no_gana_dentro_del_agua(self):
+        """AUD-573 — la otra mitad del mismo reporte. `ControlDeNado`
+        metía al jugador a `SwimmingState` sólo en el flanco de ENTRAR:
+        si la máquina de tierra ponía `IDLE`/`WALKING` con el jugador ya
+        sumergido (el lecho del 4-1b, `is_grounded=True`), nadie lo
+        devolvía a nadar — el jugador se quedaba «caminando» por el
+        fondo para siempre. Reproducido en simulación: tras aterrizar,
+        el estado era WALKING dentro del agua, indefinidamente."""
+        from src.framework.entities.states import SwimmingState, WalkingState
+
+        jugador, mundo, nado = self._jugador(), self._mundo_con_agua(), ControlDeNado()
+        nado.update(FRAME, jugador, mundo, None)
+        assert isinstance(jugador._state_instance, SwimmingState)
+
+        jugador._change_state_instance(WalkingState())
+        assert not isinstance(jugador._state_instance, SwimmingState)
+
+        nado.update(FRAME, jugador, mundo, None)  # sigue dentro del agua
+        assert isinstance(jugador._state_instance, SwimmingState), (
+            "el jugador está sumergido y quedó WALKING: nadie lo devolvió "
+            "al estado de nado"
+        )
+
 
 class TestElNadoEsOmnidireccionalDeVerdad:
     """AUD-528 — pedido explícito: "el botón de salto debe funcionar como

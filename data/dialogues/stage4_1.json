@@ -6,12 +6,22 @@
       "n1": {
         "speaker": "El Venado",
         "text": "Corrí por este bosque antes de que fuera un cementerio. Todavía corro, en lo que queda de mí.",
-        "choices": [["...", "n2"]]
+        "choices": [
+          [
+            "...",
+            "n2"
+          ]
+        ]
       },
       "n2": {
         "speaker": "El Venado",
         "text": "Ya testifiqué. Ya basta de correr. Déjenme subir.",
-        "choices": [["Que asciendas.", "__end__"]]
+        "choices": [
+          [
+            "Que asciendas.",
+            "__end__"
+          ]
+        ]
       }
     }
   },
@@ -22,12 +32,22 @@
       "n1": {
         "speaker": "El Rey Terciopelo",
         "text": "Me enrosqué sobre este camino de huesos durante generaciones, guardando lo que ya nadie viene a buscar.",
-        "choices": [["...", "n2"]]
+        "choices": [
+          [
+            "...",
+            "n2"
+          ]
+        ]
       },
       "n2": {
         "speaker": "El Rey Terciopelo",
         "text": "El viento ya me lo dijo: Paburu despierta. Ya no hace falta que guarde nada.",
-        "choices": [["Que asciendas.", "__end__"]]
+        "choices": [
+          [
+            "Que asciendas.",
+            "__end__"
+          ]
+        ]
       }
     }
   },
@@ -38,12 +58,48 @@
       "n1": {
         "speaker": "El Gavilán",
         "text": "Desde arriba lo vi todo: el bosque cortado, el fuego, el silencio que vino después.",
-        "choices": [["...", "n2"]]
+        "choices": [
+          [
+            "...",
+            "n2"
+          ]
+        ]
       },
       "n2": {
         "speaker": "El Gavilán",
         "text": "Ya no queda nada que vigilar desde aquí abajo. Déjenme ganar altura.",
-        "choices": [["Que asciendas.", "__end__"]]
+        "choices": [
+          [
+            "Que asciendas.",
+            "__end__"
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "id": "tumba_antigua",
+    "start": "n1",
+    "nodes": {
+      "n1": {
+        "speaker": "Jhon",
+        "text": "Esta piedra es más vieja que la verja del cementerio. Nadie la cuida, y sin embargo nadie la ha robado.",
+        "choices": [
+          [
+            "...",
+            "n2"
+          ]
+        ]
+      },
+      "n2": {
+        "speaker": "Jhon",
+        "text": "En la piedra sólo se lee una frase: «También yo llegué por otro camino». Que descanse, entonces.",
+        "choices": [
+          [
+            "...",
+            "__end__"
+          ]
+        ]
       }
     }
   }

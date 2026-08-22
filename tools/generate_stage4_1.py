@@ -48,8 +48,11 @@ from src.stages.stage4_1.trazado import (  # noqa: E402
     COLUMNA_LAPIDA_HUGO,
     COLUMNA_LAPIDA_TERESA,
     COLUMNA_MIRADOR_FASE6,
+    COLUMNA_TUMBA_ANTIGUA,
+    COSTILLA_NAVEGABLE,
     DESVIO_COLUMNA_DIALOGO,
     DESVIO_COLUMNA_LIBERACION,
+    ELEVACIONES,
     FRENO_DEL_LODO,
     HUESOS_FASE3,
     MH,
@@ -216,6 +219,18 @@ def _colisiones() -> list[str]:
                 solido(inicio * TS, fila * TS, (x - inicio) * TS, (MH - fila) * TS)
             inicio = x
 
+    # ── El puente de costillas (AUD-582, GAP-061) ──────────────
+    #
+    # `Platform`, no `Solid`: es el piso de un arco que se sube desde
+    # abajo y se cruza por encima — un sólido flotante de 8 px sería un
+    # muro invisible al saltar contra su costado. El one-way sólo sostiene
+    # desde arriba, que es exactamente lo que un puente pide. La mitad
+    # visual la dibuja la escena (`_dibujar_costillas_navegables`)
+    # alineada a estas mismas columnas.
+    col_puente, ancho_puente, fila_puente = COSTILLA_NAVEGABLE
+    solido(col_puente * TS, fila_puente * TS, ancho_puente * TS, 8,
+           tipo="Platform")
+
     return r
 
 
@@ -296,6 +311,15 @@ def _objetos() -> list[str]:
         col = fase.desde_columna + DESVIO_COLUMNA_DIALOGO
         obj("MessageTrigger_Once", col * TS, (perfil[col] - 3) * TS, 32, 32,
             dialogue=fase.dialogo_id)
+
+    # ── La tumba que nadie reclama (AUD-581, GAP-060 punto 15) ──
+    #
+    # La zona secundaria opcional de la Fase 2: «una historia, una
+    # aparición o una tumba antigua» — basta una. Mismo mecanismo que los
+    # espíritus; lo opcional es acercarse a la piedra, no el camino.
+    col = COLUMNA_TUMBA_ANTIGUA
+    obj("MessageTrigger_Once", col * TS, (perfil[col] - 3) * TS, 32, 32,
+        dialogue="tumba_antigua")
 
     # ── Liberar a cada espíritu es algo que el jugador hace, no algo
     # que pasa solo (AUD-474) ────────────────────────────────────
@@ -620,6 +644,41 @@ def tiene_arte_pintado() -> bool:
     return False
 
 
+def preservar_arte() -> None:
+    """AUD-580 — regenera la geometría del mapa en disco sin tocar el arte.
+
+    `--forzar` rehace el mapa entero y borra las capas pintadas a mano;
+    esto es lo contrario: toma el fichero en disco como base —con su
+    parallax, su decoración y todo lo que Tiled haya normalizado— y le
+    sustituye sólo lo que el generador posee: los datos de las capas que
+    no son de `CAPAS_DE_ARTE` y los objectgroups completos. Es la vía para
+    cambios de geometría (`trazado.py`) cuando ya hay arte invertido en el
+    mapa: `--comprobar` sigue siendo quien verifica que no se separaron.
+    """
+    arbol = ET.parse(DESTINO)
+    raiz = arbol.getroot()
+    generado = ET.fromstring(generar())
+
+    por_nombre = {c.get("name"): c for c in raiz.findall("layer")}
+    for capa in generado.findall("layer"):
+        nombre = capa.get("name")
+        if nombre in CAPAS_DE_ARTE:
+            continue
+        destino = por_nombre[nombre].find("data")
+        assert destino is not None, f"la capa {nombre!r} no tiene <data>"
+        destino.text = capa.findtext("data") or ""
+
+    for i, hijo in enumerate(list(raiz)):
+        if hijo.tag != "objectgroup":
+            continue
+        nuevo = next(g for g in generado.findall("objectgroup")
+                     if g.get("name") == hijo.get("name"))
+        raiz.remove(hijo)
+        raiz.insert(i, nuevo)
+
+    arbol.write(DESTINO, encoding="UTF-8", xml_declaration=True)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Regenera el TMX del 4-1.")
     ap.add_argument(
@@ -630,6 +689,11 @@ def main() -> None:
         "--comprobar", action="store_true",
         help="no escribe: sólo dice si la geometría del mapa sigue siendo la "
              "del generador",
+    )
+    ap.add_argument(
+        "--preservar-arte", action="store_true",
+        help="regenera la geometría (capas que no son de arte y objetos) "
+             "dejando intactas las capas de arte pintadas a mano",
     )
     args = ap.parse_args()
 
@@ -644,19 +708,25 @@ def main() -> None:
     # pintadas a mano en Tiled (parallax y decoración); regenerar sin más
     # las borraba todas y sin aviso, porque `generar()` escribe esas capas
     # a ceros. Quien de verdad quiera rehacer el mapa entero lo dice.
-    if tiene_arte_pintado() and not args.forzar:
+    if tiene_arte_pintado() and not args.forzar and not args.preservar_arte:
         raise SystemExit(
             f"{DESTINO.name} tiene capas de arte pintadas a mano "
             f"({', '.join(CAPAS_DE_ARTE)}) y regenerar las borraría.\n"
-            f"Si es lo que quieres, repite con --forzar."
+            f"Si sólo quieres actualizar la geometría, usa --preservar-arte; "
+            f"si de verdad quieres rehacerlo todo, repite con --forzar."
         )
 
     DESTINO.parent.mkdir(parents=True, exist_ok=True)
+    if args.preservar_arte:
+        preservar_arte()
+        print(f"geometría actualizada en {DESTINO.relative_to(PROJECT_ROOT)} "
+              f"(capas de arte intactas)")
+        return
     DESTINO.write_text(generar(), encoding="utf-8")
     print(f"escrito {DESTINO.relative_to(PROJECT_ROOT)} "
           f"({MW}×{MH} baldosas, 6 secciones, {len(checkpoints())} checkpoints, "
           f"{len(ARBOLES_FASE4)} tocones, {len(TUMBAS_FASE5)} tumbas, "
-          f"{len(grietas_de_pisada())} grietas, {len(loma()) // 2} lomas, "
+          f"{len(grietas_de_pisada())} grietas, {len(ELEVACIONES)} elevaciones, "
           f"0 enemigos, 0 fosos, 0 zonas de daño)")
 
 
