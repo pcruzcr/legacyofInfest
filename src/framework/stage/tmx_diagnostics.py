@@ -61,6 +61,9 @@ BUILTIN_OBJECT_TYPES: tuple[str, ...] = (
     #: AUD-600 — GAP-072.2: música por sección (el silencio del abismo en
     #: el 4-1b, blueprint §20/35).
     "MusicZone",
+    #: AUD-601 — GAP-072.3: zoom cinematográfico por zona (revelación del
+    #: pez y cavidad final del 4-1b, blueprint §38/40/53).
+    "CameraZoomZone",
     #: AUD-136 (D3) — una escena narrativa con su guion en una propiedad.
     "Cutscene",
     #: AUD-140 — bloques que el jugador mueve o rompe.

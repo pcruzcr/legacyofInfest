@@ -108,6 +108,11 @@ def build_table() -> str:
                       "fundido, 800). Mientras el jugador esté dentro, la "
                       "sección manda sobre la intensidad de combate; al salir "
                       "vuelve la base del mapa (AUD-600)"),
+        "CameraZoomZone": ("Rectángulo",
+                           "`factor` (>1 acerca, <1 aleja; saturado 0.4-2.5, "
+                           "0.75) · `segundos` (duración del tween, 1.5). "
+                           "Dentro del rectángulo la cámara tiende al factor; "
+                           "fuera vuelve a 1.0. La UI nunca escala (AUD-601)"),
         # ── F4.1 — objetos con los que el jugador interactúa ──────
         "Pickup": ("Rectángulo o punto",
                    "`item_id` **obligatoria** (vale el nombre del objeto en "

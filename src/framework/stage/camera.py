@@ -86,6 +86,16 @@ class Camera:
         self._is_locked_x: bool = False
         self._is_locked_y: bool = False
         self._shake_timer: float = 0.0
+        # AUD-601 — GAP-072.3: el zoom cinematográfico. `zoom` es el factor
+        # VIVO que el dibujo compone; `zoom_deseado` a dónde tiende, y
+        # `_zoom_restante`/`zoom_segundos` el tween lineal en curso. Lo
+        # avanza `_actualizar_zona_de_zoom` (el conductor de las zonas),
+        # no `update()`: éste corta sin target y las cinemáticas corren
+        # también sin él.
+        self.zoom: float = 1.0
+        self.zoom_deseado: float = 1.0
+        self.zoom_segundos: float = 0.0
+        self._zoom_restante: float = 0.0
         self._shake_amplitude: float = 0.0
         #: AUD-282 — eje del golpe, o `None` para la sacudida isótropa de antes.
         self._shake_dir: pygame.Vector2 | None = None
@@ -132,6 +142,32 @@ class Camera:
             "BG_Near": 0.70,
             "Terrain": 1.0,
         }
+
+    def animar_zoom(self, factor: float, segundos: float = 1.5) -> None:
+        """Tiende al `factor` (0.4-2.5) en `segundos`, lineal."""
+        self.zoom_deseado = max(0.4, min(2.5, float(factor)))
+        self.zoom_segundos = max(0.05, float(segundos))
+        self._zoom_restante = self.zoom_segundos
+
+    def fijar_zoom(self, factor: float) -> None:
+        """Zoom instantáneo — pruebas y montajes."""
+        self.zoom_deseado = max(0.4, min(2.5, float(factor)))
+        self.zoom = self.zoom_deseado
+        self.zoom_segundos = 0.0
+        self._zoom_restante = 0.0
+
+    def zoom_avanzar(self, dt: float) -> None:
+        """Un paso del tween hacia `zoom_deseado`. Lineal sobre el tiempo
+        pedido; agotado el tween, clava el objetivo."""
+        if self._zoom_restante > 0.0:
+            paso = min(self._zoom_restante, dt)
+            frac = paso / max(1e-6, self.zoom_segundos)
+            self.zoom += (self.zoom_deseado - self.zoom) * frac
+            self._zoom_restante -= paso
+            if self._zoom_restante <= 0.0:
+                self.zoom = self.zoom_deseado
+        elif abs(self.zoom - self.zoom_deseado) > 1e-4:
+            self.zoom = self.zoom_deseado
 
     def follow(self, target: BaseEntity) -> None:
         """Set the camera to follow this entity."""

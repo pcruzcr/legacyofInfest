@@ -3606,7 +3606,7 @@ está.
      pedía el documento original, adaptado a teclado. La Tienda queda
      fuera del anillo de pestañas a propósito (no es una consulta, es una
      transacción) y vive en una cuarta pestaña "Menú" junto a Guardar y
-## [GAP-072] 4.1b — lo que el blueprint 10/10 pide y el motor actual no puede hacer (corrientes verticales, música por zona, zoom de cámara, luz por zona)
+## ~~[GAP-072] 4.1b — lo que el blueprint 10/10 pide y el motor actual no puede hacer (corrientes verticales, música por zona, zoom de cámara, luz por zona)~~ *(Resuelto — AUD-598/599/600/601)*
 
 El rediseño de AUD-575/576 («La Fosa Abisal») anota como decisión los
 cuatro puntos del diseño 10/10 que el motor no soporta hoy: no se
@@ -3621,6 +3621,28 @@ sepa que se vieron y por qué se dejaron fuera del nivel.
   3. **Zoom de cámara.** La revelación del pez y la cavidad final (blueprint §38/40/53) piden un zoom-out cinematográfico corto; la cámara de escenario no tiene zoom. El fondo pintado y la sombra a escala cumplen la lectura sin mover la cámara.
   4. **Luz ambiental por zona.** El blueprint §46 propone un `ambient_light` decreciente por tramo (0.50 → 0.25). Hoy el `ambient_light` es una sola propiedad del mapa; la degradación se cuenta con **faroles que se apagan** (LUCES, AUD-576) y con las tres variantes de fondo (mina → caverna → abismo), no re-bajando una luz global.
 - **Resolution plan:** cuando el motor tenga corrientes con componente vertical, música por zona o zoom de cámara, volver aquí y construir el tramo/evento correspondiente del 4-1b.
+- **Resolution — AUD-598/599/600/601 (2026-08-21):** los cuatro puntos se
+  construyeron y se aplicaron al 4-1b, cada uno con su prueba fallando
+  antes:
+  1. **Corriente vertical (AUD-599):** el freno neutral del nado apunta a
+     la velocidad del medio (`ControlDeNado.corriente_medio`, suma de las
+     zonas que contienen) en vez de a cero — era ahí donde moría cualquier
+     empuje (~14%). El techo inferior cede ante `max(60, |medio.y|)`. La
+     C4 ↓↓ real vive en el pozo del drenaje (660-740, corriente_y=110).
+  2. **Música por sección (AUD-600):** `MusicZone` (`track`, vacío =
+     silencio; +`fundido_ms`) suprime a la intensidad de combate mientras
+     dura el tramo; al salir vuelve la base. El abismo (650-778) calla.
+  3. **Zoom de cámara (AUD-601):** `Camera.zoom` con tween lineal +
+     `CameraZoomZone` (`factor`, `segundos`); el fotograma del mundo se
+     compone a tamaño alterno y se reescala — la UI nunca escala. Los dos
+     momentos del blueprint: revelación del pez (553-650, ×0.72) y clímax
+     (800-884, ×0.68), ambos alejando.
+  4. **Luz ambiental por zona (AUD-598):** `AmbientLightZone` (`valor`,
+     `fundido` px) manda sobre la base mientras el jugador esté dentro;
+     el descenso §46 (0.42→0.25 por sección) está en el mapa.
+  Especificaciones: `docs/45_SWIMMING_SPEC.md` §2.1 (corrientes),
+  `docs/49_AMBIENT_AUDIO.md` §2.3 (música por sección),
+  `docs/STAGE_CREATION.md` (los tres tipos nuevos generados).
 - **Parcial — AUD-599 (2026-08-21):** el punto 1 (corriente vertical) quedó
   construido y aplicado. La física: el freno neutral del nado apunta ahora
   a la velocidad **del medio** (`player.corriente_medio`, suma de las

@@ -46,7 +46,19 @@ class DibujoDeEscenario:
     def draw(self, surface: pygame.Surface) -> None:
         if self._stage_data is None or self._player is None:
             return
-        self.dibujar_mundo(surface)
+        # AUD-601 — GAP-072.3: el zoom cinematográfico. El mundo se dibuja
+        # a tamaño alterno y se reescala sobre el lienzo; la UI sigue a
+        # tamaño completo — es interfaz, no mundo.
+        zoom = getattr(self._camera, "zoom", 1.0)
+        if abs(zoom - 1.0) < 1e-3:
+            self.dibujar_mundo(surface)
+        else:
+            w, h = surface.get_size()
+            base = pygame.Surface((max(1, int(w / zoom)),
+                                   max(1, int(h / zoom))))
+            self.dibujar_mundo(base)
+            escalado = pygame.transform.smoothscale(base, (w, h))
+            surface.blit(escalado, (0, 0))
         self.dibujar_ui(surface)
 
     def _contexto_de_dibujo(self, surface: pygame.Surface):

@@ -46,6 +46,7 @@ from src.framework.stage.stage_data import (
     StageData,
     ZonaLuzAmbienteSpec,
     ZonaMusicaSpec,
+    ZonaZoomSpec,
 )
 from src.framework.stage.tmx_diagnostics import (
     TmxObjectProblem,
@@ -123,6 +124,9 @@ class ObjetosDeTiled:
 
             elif obj_type == "MusicZone":
                 cls._handle_zona_musica(stage, obj, props)
+
+            elif obj_type == "CameraZoomZone":
+                cls._handle_zona_zoom(stage, obj, props)
 
             # F4.1 — objetos con los que el jugador interactúa. Pedidos por los
             # estudiantes tras jugar la fase 1: llaves, puertas, jaulas, cofres
@@ -434,6 +438,44 @@ class ObjetosDeTiled:
             fundido_ms = 800
         stage.zonas_musica.append(ZonaMusicaSpec(
             rect=rect, track=track, fundido_ms=fundido_ms))
+
+    @classmethod
+    def _handle_zona_zoom(
+        cls, stage: StageData, obj: Any, props: dict[str, Any],
+    ) -> None:
+        """Convierte un objeto `CameraZoomZone` de Tiled en una
+        `ZonaZoomSpec` (GAP-072.3, AUD-601).
+
+        Propiedades reconocidas:
+
+        ============  ======  =============================================
+        propiedad     tipo    significado
+        ============  ======  =============================================
+        `factor`      float   zoom mientras el jugador esté dentro:
+                              >1 acerca, <1 aleja (0.75 por defecto,
+                              saturado a 0.4-2.5)
+        `segundos`    float   duración del tween (1.5)
+        ============  ======  =============================================
+        """
+        rect = pygame.Rect(
+            int(float(getattr(obj, "x", 0) or 0)),
+            int(float(getattr(obj, "y", 0) or 0)),
+            max(1, int(float(getattr(obj, "width", 0) or 0))),
+            max(1, int(float(getattr(obj, "height", 0) or 0))),
+        )
+        try:
+            factor = float(props.get("factor", 0.75))
+        except (TypeError, ValueError):
+            factor = 0.75
+        try:
+            segundos = float(props.get("segundos", 1.5))
+        except (TypeError, ValueError):
+            segundos = 1.5
+        stage.zonas_zoom.append(ZonaZoomSpec(
+            rect=rect,
+            factor=max(0.4, min(2.5, factor)),
+            segundos=max(0.1, segundos),
+        ))
 
     @classmethod
     def _canal_de(cls, props: dict[str, Any]) -> str:

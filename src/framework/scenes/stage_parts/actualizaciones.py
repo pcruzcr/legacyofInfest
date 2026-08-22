@@ -87,7 +87,31 @@ class ActualizacionesDeEscenario:
                 audio.play_music(base)
         return False
 
+    def _actualizar_zona_de_zoom(self, dt: float) -> None:
+        """Las `CameraZoomZone` del mapa conducen el zoom (AUD-600→601,
+        GAP-072.3). Dentro de una zona la cámara tiende a su `factor` en
+        `segundos`; fuera, vuelve a 1.0. El tween lo avanza aquí y no en
+        `Camera.update()`: éste corta sin target y las cinemáticas corren
+        también sin él."""
+        zonas = getattr(self._stage_data, "zonas_zoom", [])
+        player = getattr(self, "_player", None)
+        previa = getattr(self, "_zona_zoom_previa", None)
+        activa = None
+        if zonas and player is not None:
+            for z in zonas:
+                if z.rect.colliderect(player.rect):
+                    activa = z          # en solape gana la última declarada
+        if activa is not previa:
+            cam = self._camera
+            if activa is not None:
+                cam.animar_zoom(activa.factor, activa.segundos)
+            elif previa is not None:
+                cam.animar_zoom(1.0, previa.segundos)
+        self._zona_zoom_previa = activa
+        self._camera.zoom_avanzar(dt)
+
     def _update_audio(self, dt: float) -> None:
+        self._actualizar_zona_de_zoom(dt)
         if self._actualizar_zona_de_musica():
             return
         if self._dynamic_music is None:

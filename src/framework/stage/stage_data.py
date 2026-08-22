@@ -333,6 +333,24 @@ class ZonaMusicaSpec:
     #: Fundido de entrada de la pista, en ms.
     fundido_ms: int = 800
 
+
+@dataclass
+class ZonaZoomSpec:
+    """Un rectángulo que conduce el zoom de cámara mientras el jugador esté
+    dentro (GAP-072 punto 3, AUD-601).
+
+    Los momentos del blueprint (revelación del pez, cavidad final) piden un
+    zoom corto: dentro del rectángulo la cámara tiende a `factor` en
+    `segundos`; fuera, vuelve a 1.0 con la misma duración. El fotograma del
+    mundo se compone a tamaño alterno y se reescala — la UI nunca escala.
+    """
+
+    rect: pygame.Rect
+    #: Factor de zoom: >1 acerca (recorta y amplifica), <1 aleja.
+    factor: float = 1.0
+    #: Duración del tween hacia el factor, en segundos.
+    segundos: float = 1.5
+
 @dataclass
 class StageData:
     map_layer: pyscroll.PyscrollGroup
@@ -391,6 +409,9 @@ class StageData:
     #: imponen una pista (o silencio) mientras el jugador esté dentro.
     #: Vacía = el `bgm_track` del mapa manda en todo el nivel como siempre.
     zonas_musica: list[ZonaMusicaSpec] = field(default_factory=list)
+    #: Zonas de zoom de cámara (GAP-072.3, AUD-601): rectángulos que
+    #: conducen el factor mientras el jugador esté dentro. Vacía = zoom 1.0.
+    zonas_zoom: list[ZonaZoomSpec] = field(default_factory=list)
     #: F4.1 — objetos con los que el jugador interactúa.
     recogibles: list[Recogible] = field(default_factory=list)
     cerraduras: list[Cerradura] = field(default_factory=list)
