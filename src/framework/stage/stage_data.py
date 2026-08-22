@@ -312,6 +312,27 @@ class ZonaLuzAmbienteSpec:
     #: Ancho de la banda de fundido en el borde, en px.
     fundido: int = 64
 
+
+@dataclass
+class ZonaMusicaSpec:
+    """Un rectángulo que manda sobre la música mientras el jugador esté
+    dentro (GAP-072 punto 2, AUD-600).
+
+    El mapa declara un único `bgm_track`; el blueprint del 4-1b pide
+    cambiar de pista por tramo — y su herramienta es el SILENCIO: una zona
+    con `track=""` deja el nivel sin música para que se oiga lo que pasa.
+
+    `track` es el nombre de pista sin extensión (lo resuelve
+    `resolver_pista_de_musica`: .ogg > .wav > .mp3). Al salir de toda
+    zona, vuelve la base del mapa.
+    """
+
+    rect: pygame.Rect
+    #: Nombre de pista, o cadena vacía = silencio deliberado.
+    track: str = ""
+    #: Fundido de entrada de la pista, en ms.
+    fundido_ms: int = 800
+
 @dataclass
 class StageData:
     map_layer: pyscroll.PyscrollGroup
@@ -366,6 +387,10 @@ class StageData:
     #: imponen `ambient_light` mientras el jugador esté dentro, con banda
     #: de fundido en el borde. Vacía = comportamiento de siempre.
     zonas_luz_ambiente: list[ZonaLuzAmbienteSpec] = field(default_factory=list)
+    #: Zonas de música por sección (GAP-072.2, AUD-600): rectángulos que
+    #: imponen una pista (o silencio) mientras el jugador esté dentro.
+    #: Vacía = el `bgm_track` del mapa manda en todo el nivel como siempre.
+    zonas_musica: list[ZonaMusicaSpec] = field(default_factory=list)
     #: F4.1 — objetos con los que el jugador interactúa.
     recogibles: list[Recogible] = field(default_factory=list)
     cerraduras: list[Cerradura] = field(default_factory=list)

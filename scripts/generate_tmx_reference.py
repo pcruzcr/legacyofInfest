@@ -102,6 +102,12 @@ def build_table() -> str:
                              "ambiental base vale `valor`; en la banda de "
                              "`fundido` interpola hacia el brillo del mapa "
                              "(AUD-598)"),
+        "MusicZone": ("Rectángulo",
+                      "`track` (nombre de pista sin extensión; cadena vacía = "
+                      "silencio deliberado) · `fundido_ms` (entrada con "
+                      "fundido, 800). Mientras el jugador esté dentro, la "
+                      "sección manda sobre la intensidad de combate; al salir "
+                      "vuelve la base del mapa (AUD-600)"),
         # ── F4.1 — objetos con los que el jugador interactúa ──────
         "Pickup": ("Rectángulo o punto",
                    "`item_id` **obligatoria** (vale el nombre del objeto en "

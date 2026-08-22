@@ -29,6 +29,7 @@ import pygame
 
 from src.engine.core.inventory import get_inventory
 from src.engine.input.action_map import Action
+from src.framework.audio.dynamic_music import resolver_pista_de_musica
 from src.framework.entities.boss_base import BossBase
 from src.framework.entities.enemy_base import EnemyBase
 
@@ -47,7 +48,48 @@ class ActualizacionesDeEscenario:
     `StageScene.__init__`/`on_enter`. No se instancia suelto.
     """
 
+    def _actualizar_zona_de_musica(self) -> bool:
+        """Las `MusicZone` del mapa: la sección manda sobre el DMS.
+
+        AUD-600 — GAP-072.2. Devuelve `True` cuando el jugador está dentro
+        de una zona: en ese fotograma la intensidad de combate de
+        `DynamicMusicSystem` NO repone su pista (ésta es la supresión que
+        hace que el silencio del abismo sobreviva a un enemigo vivo).
+        Al cambiar de zona se aplica su pista (o silencio); al salir de
+        todas, vuelve la base del mapa.
+        """
+        zonas = getattr(self._stage_data, "zonas_musica", [])
+        player = getattr(self, "_player", None)
+        previa = getattr(self, "_zona_musica_activa", None)
+        activa = None
+        if zonas and player is not None:
+            for z in zonas:
+                if z.rect.colliderect(player.rect):
+                    activa = z          # en solape gana la última declarada
+        self._zona_musica_activa = activa
+        if activa is previa:
+            return activa is not None
+        audio = self.audio
+        if audio is None:
+            return activa is not None
+        if activa is not None:
+            if activa.track == "":
+                audio.stop_music()
+            else:
+                pista = resolver_pista_de_musica(activa.track)
+                if pista is not None:
+                    audio.play_music(pista, fundido_ms=activa.fundido_ms)
+            return True
+        # Salimos de una zona: vuelve la base del mapa.
+        if previa is not None and self._stage_data.bgm_track:
+            base = resolver_pista_de_musica(self._stage_data.bgm_track)
+            if base is not None:
+                audio.play_music(base)
+        return False
+
     def _update_audio(self, dt: float) -> None:
+        if self._actualizar_zona_de_musica():
+            return
         if self._dynamic_music is None:
             return
         stage = self._stage_data

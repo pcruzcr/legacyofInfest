@@ -3633,6 +3633,15 @@ sepa que se vieron y por qué se dejaron fuera del nivel.
   `docs/45_SWIMMING_SPEC.md` §2.1. Quedan abiertos los puntos 2 (música por
   sección), 3 (zoom de cámara) y 4 (luz por zona — resuelto por AUD-598,
   ver abajo).
+- **Parcial — AUD-600 (2026-08-21):** el punto 2 (música por sección)
+  quedó construido y aplicado. Tipo nuevo `MusicZone` (`track`, vacío =
+  silencio deliberado, + `fundido_ms`): mientras el jugador esté dentro,
+  la sección manda sobre `DynamicMusicSystem` — la intensidad de combate
+  no repone su pista hasta salir; al salir de todas las zonas vuelve la
+  base del mapa. El 4-1b declara su tramo real: el abismo de la
+  persecución (columnas 650-778) se queda sin música (blueprint §20/35).
+  Spec: `docs/49_AMBIENT_AUDIO.md` §2.3. Quedan abiertos los puntos 3
+  (zoom de cámara) y 4 (resuelto por AUD-598).
 - **Verificado:** 2026-08-20 — la geometría y los fondos de `trazado.py`/`stage4_1b.py` implementan la intención del blueprint dentro de lo que el motor permite; `validate_tmx.py --ci` en verde y `tests/test_stage4_1b.py` en verde.
      salir / Salir al título, empujando `ShopScene` de siempre.
 - **Verificado:** 2026-08-19 — `pytest tests/test_el_barra_de_vida_reemplaza_corazones.py

@@ -45,6 +45,7 @@ from src.framework.stage.stage_data import (
     MessageTrigger,
     StageData,
     ZonaLuzAmbienteSpec,
+    ZonaMusicaSpec,
 )
 from src.framework.stage.tmx_diagnostics import (
     TmxObjectProblem,
@@ -119,6 +120,9 @@ class ObjetosDeTiled:
 
             elif obj_type == "AmbientLightZone":
                 cls._handle_zona_luz_ambiente(stage, obj, props)
+
+            elif obj_type == "MusicZone":
+                cls._handle_zona_musica(stage, obj, props)
 
             # F4.1 — objetos con los que el jugador interactúa. Pedidos por los
             # estudiantes tras jugar la fase 1: llaves, puertas, jaulas, cofres
@@ -399,6 +403,37 @@ class ObjetosDeTiled:
             valor=max(0.0, min(1.0, _flave("valor", 1.0))),
             fundido=max(0, int(_flave("fundido", 64.0))),
         ))
+
+    @classmethod
+    def _handle_zona_musica(
+        cls, stage: StageData, obj: Any, props: dict[str, Any],
+    ) -> None:
+        """Convierte un objeto `MusicZone` de Tiled en una `ZonaMusicaSpec`
+        (GAP-072.2, AUD-600).
+
+        Propiedades reconocidas:
+
+        ============  ======  =============================================
+        propiedad     tipo    significado
+        ============  ======  =============================================
+        `track`       string  nombre de pista sin extensión; cadena vacía
+                              = silencio deliberado (por defecto "")
+        `fundido_ms`  float   entrada con fundido, en ms (por defecto 800)
+        ============  ======  =============================================
+        """
+        rect = pygame.Rect(
+            int(float(getattr(obj, "x", 0) or 0)),
+            int(float(getattr(obj, "y", 0) or 0)),
+            max(1, int(float(getattr(obj, "width", 0) or 0))),
+            max(1, int(float(getattr(obj, "height", 0) or 0))),
+        )
+        track = str(props.get("track", "") or "")
+        try:
+            fundido_ms = max(0, int(float(props.get("fundido_ms", 800))))
+        except (TypeError, ValueError):
+            fundido_ms = 800
+        stage.zonas_musica.append(ZonaMusicaSpec(
+            rect=rect, track=track, fundido_ms=fundido_ms))
 
     @classmethod
     def _canal_de(cls, props: dict[str, Any]) -> str:

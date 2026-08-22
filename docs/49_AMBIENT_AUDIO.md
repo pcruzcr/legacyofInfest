@@ -45,7 +45,17 @@ La música dinámica es un sistema del framework (`src/framework/audio/dynamic_m
 - `set_intensity(level)` — cambia a `INTENSITY_CALM` (0), `INTENSITY_COMBAT` (1) o `INTENSITY_BOSS` (2), cruzando entre `{bgm}_traverse.wav` / `{bgm}_combat.wav` / `{bgm}_boss.wav` cuando existen
 - `detect_intensity_from_state(has_boss, has_alive_enemies)` — detección automática que usa `StageScene` cada fotograma
 
-### 2.3 Efectos de sonido (SFX)
+### 2.3 Música por sección (AUD-600, GAP-072.2)
+
+Los objetos `MusicZone` del TMX imponen una pista mientras el jugador esté
+dentro de su rectángulo — y su herramienta más útil es el silencio:
+`track=""` deja el nivel sin música (el abismo del 4-1b, blueprint §20/35).
+
+- Mientras el jugador esté dentro de una zona, la intensidad de combate NO repone su pista: `_actualizar_zona_de_musica()` suprime al `DynamicMusicSystem` ese fotograma. Sin esta supresión, un enemigo vivo devolvería la pista de combate y el silencio duraría un suspiro.
+- Al entrar se aplica `track` con `fundido_ms` de fundido; al salir de todas las zonas vuelve la base del mapa (`bgm_track`).
+- En solape gana la última zona declarada. Sin zonas en el mapa, nada cambia.
+
+### 2.4 Efectos de sonido (SFX)
 - `play_sfx(name, volume)` — de un solo disparo, desde `SoundBank`
 - `play_stinger(name, volume)` — acento musical corto superpuesto
 - `play_sfx_at(name, world_x, screen_center_x, volume)` — paneo estéreo según la posición X en el mundo
