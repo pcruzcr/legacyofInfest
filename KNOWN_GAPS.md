@@ -2317,7 +2317,7 @@ está.
   siempre privados) de los mixins de `src/framework/scenes/stage_parts/`,
   que se dejaron fuera deliberadamente por bajo valor de contrato público.
 
-## [GAP-058] `stage4_1` (El Cementerio Sagrado) — arte final por fase, diálogo de los espíritus y reverberación real
+## ~~[GAP-058] `stage4_1` (El Cementerio Sagrado) — arte final por fase, diálogo de los espíritus y reverberación real~~ *(Resuelto)*
 
 - **File:** `assets/backgrounds/final/`, `assets/tilesets/tileset_cemetery.png`, `src/stages/stage4_1/stage4_1.py`
 - **Phase:** AUD-462/463/464 (2026-08-14), rediseño de `stage4_1` a seis fases
@@ -2402,8 +2402,27 @@ está.
   punto 25) — un cue de combate sin relación, cambiado por un retumbar
   propio con la misma reverberación. Pruebas en
   `tests/test_la_reverberacion_esta_horneada.py`.
+- **Resolution (2026-08-20, AUD-578):** los tres puntos del encabezado,
+  cerrados. **Diálogo de los espíritus:** AUD-467…471
+  (`data/dialogues/stage4_1.json` + `MessageTrigger_Once` con
+  `dialogue=` por fase en el generador). **Reverberación real:** AUD-515,
+  horneada en el `.wav` (`_aplicar_reverberacion`,
+  `tools/generate_all_assets.py`) — no hace falta mezclador DSP; pruebas
+  en `tests/test_la_reverberacion_esta_horneada.py`. **Arte final por
+  fase:** resuelto por otra vía que el PNG bespoke que planteaba el plan
+  original, y así documentado desde AUD-513: tileset propio de seis
+  familias, una por sección (AUD-469), decoración de fondo por contornos
+  (árboles cortados, cruces, landmarks variados) y parallax `BG_Far`/
+  `BG_Mid` dibujado por código con un perfil de cresta distinto por fase
+  (`siluetas.dibujar_horizonte`, `HORIZONTE_POR_FASE` +
+  `HORIZONTE_MEDIO_POR_FASE`, AUD-513/570); las capas pintadas a mano del
+  TMX se preservan (`tiene_arte_pintado()`). Las sombras de ave de la
+  Fase 4 que quedaron pendientes en la nota de AUD-465 existen desde
+  AUD-471 (`_actualizar_sombra_del_gavilan`, con variedad de silueta,
+  altura y dirección desde AUD-513). Pruebas en
+  `tests/test_el_horizonte_y_la_despedida.py`.
 
-## [GAP-059] `stage4_1` Fase 1 — sin anomalía ambigua de fondo, sin memoria espacial, sin capas de sonido natural
+## ~~[GAP-059] `stage4_1` Fase 1 — sin anomalía ambigua de fondo, sin memoria espacial, sin capas de sonido natural~~ *(Resuelto)*
 
 - **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/trazado.py`, `src/stages/stage4_1/stage4_1.py`, `tools/generate_stage4_1.py`
 - **Phase:** Revisión de diseño por fases del dueño del proyecto (2026-08-14) —
@@ -2498,8 +2517,28 @@ está.
   ahora. Este punto queda cerrado por decisión, igual que se cerraba GAP-024
   antes de que otra decisión posterior lo reabriera — la diferencia es que
   aquí la decisión se sostiene.
+- **Resolution (2026-08-20, AUD-577):** todos los puntos del encabezado,
+  cerrados. **Anomalía ambigua:** AUD-478 (`siluetas._figura_lejana`,
+  `COLUMNA_ANOMALIA_FASE1`, sin disparador ni nombre; pruebas en
+  `TestLaAnomaliaAmbiguaDeLaFase1`). **Historias de tumba distintas:**
+  AUD-513 (`_actualizar_tumba_susurrante`, la tercera lectura de la fase;
+  pruebas en `tests/test_la_tumba_susurra_y_el_fantasma_recuerda.py`).
+  **Memoria espacial:** AUD-513 (`_actualizar_memoria_espacial`,
+  `ALFA_EXTRA_AL_REGRESAR`; mismas pruebas). **Fondo vacío:** AUD-513, con
+  parallax dibujado por código — ver la Resolution de [[GAP-058]].
+  **Música por fase:** AUD-493 y luego AUD-546 (seis pistas de autor,
+  `fases.MUSICA_POR_FASE`). **Choque de estructura:** cerrado por decisión
+  del dueño (2026-08-16, arriba). **Capas de sonido natural** — el último
+  punto que quedaba, cerrado en AUD-577: `Fase(1)` declara
+  `sonidos_aislados=("sfx_environment_grillo", "sfx_environment_rafaga_
+  viento")` (grillos al atardecer y ráfagas del viento de Tilarán, ambos
+  sonidos ya existían; los pasos los pone el material «grava» de AUD-554)
+  y el mecanismo genérico de AUD-546 los reproduce con paneo espacial.
+  Los pájaros no existen como SFX y quedan anotados en [[GAP-070]] con el
+  resto de recetas pendientes. Pruebas en
+  `tests/test_el_silencio_poblado_de_la_fase_1.py`.
 
-## [GAP-060] `stage4_1` Fase 2 — la fricción no es sistémica, el Venado no enseña por comportamiento y no hay progresión de dificultad
+## ~~[GAP-060] `stage4_1` Fase 2 — la fricción no es sistémica, el Venado no enseña por comportamiento y no hay progresión de dificultad~~ *(Resuelto)*
 
 - **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/trazado.py` (`SEGMENTOS_FASE2`, `FRENO_DEL_MUSGO`, `FRENO_DEL_LODO`), `src/stages/stage4_1/stage4_1.py`
 - **Phase:** Revisión de diseño por fases del dueño del proyecto (2026-08-14) —
@@ -2616,10 +2655,32 @@ está.
   capa `Objects`, ninguna baldosa pintada a mano se toca). Pruebas en
   `tests/test_el_musgo_resbala.py` y `TestLaFriccionEscalaConLaLluvia`
   (`tests/test_stage4_1.py`, reescrita para separar musgo de lodo — antes
-  esperaba que las dos escalaran igual). **Sigue pendiente:** todo lo que
-  ya quedaba de la nota de AUD-513, arriba.
+   esperaba que las dos escalaran igual). **Sigue pendiente:** todo lo que
+   ya quedaba de la nota de AUD-513, arriba.
 
-## [GAP-061] `stage4_1` Fase 3 — el viento no escala, el rayo no informa y las osamentas son decoración, no arquitectura
+- **Resolution (2026-08-20, AUD-585):** todos los puntos del encabezado,
+  cerrados. **Fricción sistémica:** AUD-513 (`_actualizar_friccion_de_la_
+  lluvia` escala con la intensidad de la lluvia) y AUD-522 (musgo que
+  resbala por `inercia`, lodo que frena, pisada y partícula propias;
+  pruebas en `tests/test_el_musgo_resbala.py`). **El Venado enseña por
+  comportamiento:** AUD-479/513 (apariciones previas a destellos hasta el
+  diálogo, `TestLasAparicionesPreviasDelVenado`) y AUD-513 (huellas en dos
+  grupos con corte abrupto, `trazado.HUELLAS_FASE2`). **Progresión de
+  dificultad:** AUD-580 — el repiso de la Fase 2 (`REPISO_FASE2`:
+  pendiente corta que aterriza en musgo, el desafío de control del punto
+  8; pruebas en `tests/test_el_repiso_que_termina_en_musgo.py`) y la tumba
+  antigua opcional con su historia (AUD-581, punto 15: «una historia...
+  o una tumba antigua»; pruebas en `tests/test_la_tumba_que_nadie_reclama.py`).
+  **«El bosque observa»:** AUD-579 (ojos entre árboles y hojas que arrastra
+  el viento, sólo en Fase 2; pruebas en
+  `tests/test_el_bosque_observa_en_la_fase_2.py`). **La física vuelve a la
+  normalidad:** AUD-513 (liberar al Venado fija la lluvia baja). Lo único
+  del cuerpo que queda fuera es lo que choca con la geometría decidida:
+  sin zona secundaria *geográfica* porque el pasillo de AUD-467 no tiene
+  bifurcaciones — su contenido (la historia opcional) sí existe, como
+  tumba antigua junto al camino.
+
+## ~~[GAP-061] `stage4_1` Fase 3 — el viento no escala, el rayo no informa y las osamentas son decoración, no arquitectura~~ *(Resuelto)*
 
 - **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/trazado.py` (`LOMAS_FASE3`, `HUESOS_FASE3`), `src/stages/stage4_1/stage4_1.py` (`_actualizar_rayos`), `tools/generate_stage4_1.py` (`WindZone`)
 - **Phase:** Revisión de diseño por fases del dueño del proyecto (2026-08-14) —
@@ -2755,11 +2816,24 @@ está.
   `TestElNivelSePuedeJugar::test_hay_seis_checkpoints_uno_por_fase`
   (`tests/test_stage4_1.py`), que reemplaza la antigua que exigía ≤500 px
   entre checkpoints — esa regla general de `66_GUIA_DE_LEVEL_DESIGN.md` es
-  justo la que aquí se rompe a propósito. **Sigue pendiente** el resto de
-  este GAP: la progresión de intensidad del viento, el rayo que revela en
-  vez de sólo iluminar, y la mitad navegable de las osamentas.
+   justo la que aquí se rompe a propósito. **Sigue pendiente** el resto de
+   este GAP: la progresión de intensidad del viento, el rayo que revela en
+   vez de sólo iluminar, y la mitad navegable de las osamentas.
 
-## [GAP-062] `stage4_1` Fase 4 — el sonido no tiene dirección, nada cambia tras el silencio y no hay mecánica de quietud
+- **Resolution (2026-08-20, AUD-585):** los tres pendientes que listaba la
+  nota de AUD-516, cerrados — dos de ellos ya lo estaban en la nota de
+  AUD-513 de arriba y esta entrada no lo reflejaba. **Progresión de
+  intensidad del viento:** AUD-513 (`_factor_de_viento`, curva de «leve» a
+  «fuerte» en el primer 60 % del tramo). **El rayo revela:** AUD-513 (el
+  alfa de las osamentas gigantes sube de 60 a 190 durante el relámpago).
+  **La mitad navegable de las osamentas:** AUD-582 — el arco de costillas
+  (`trazado.COSTILLA_NAVEGABLE`) es una plataforma one-way real
+  (`Platform` en el TMX, generada por `tools/generate_stage4_1.py`) con su
+  silueta llena en primer plano; se cruza caminando, no sólo mirándola
+  (pruebas en `tests/test_las_costillas_son_navegables.py`). El eje
+  vertical quedó cerrado por decisión del dueño (2026-08-16, arriba).
+
+## ~~[GAP-062] `stage4_1` Fase 4 — el sonido no tiene dirección, nada cambia tras el silencio y no hay mecánica de quietud~~ *(Resuelto)*
 
 - **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/stage4_1.py` (`_actualizar_silencio_y_shake`, `_actualizar_grito_del_gavilan`, `_actualizar_sombra_del_gavilan`, `_dibujar_sombra_de_ave`), `src/framework/scenes/stage_parts/sonido.py`
 - **Phase:** Revisión de diseño por fases del dueño del proyecto (2026-08-14) —
@@ -2894,8 +2968,19 @@ está.
   (`VOLUMEN_GRITO`) — cuando «llueve fuerte» tapa el sonido, cuando escampa
   se oye más claro. Pruebas en
   `tests/test_la_sombra_varia_y_el_bosque_cambia.py`.
+- **Resolution (2026-08-20, AUD-578):** todos los puntos del encabezado,
+  cerrados en tres lotes previos — esta entrada sólo los consolida.
+  **Dirección del sonido:** AUD-481 (`_play_sfx_spatial` con
+  `_posicion_del_grito`; pruebas en `TestElGritoDelGavilanTieneDireccion`).
+  **Mecánica de quietud:** AUD-492 (`src/framework/stage/atencion.py`, el
+  grito prefiere la espalda del jugador y detenerse adelanta el cruce de
+  la sombra; pruebas en `tests/test_el_escenario_observa.py`). **Cambios
+  tras el silencio, variedad de sombra y lluvia↔audibilidad:** AUD-513
+  (árbol caído tras el shake, `_sombra_difusa` + alturas + dirección por
+  cruce, marea de lluvia sobre el volumen; pruebas en
+  `tests/test_la_sombra_varia_y_el_bosque_cambia.py`).
 
-## [GAP-063] `stage4_1` Fase 5 — la luna es sólo brillo ambiente, sin eventos atados a la oscuridad ni sonido de navegación
+## ~~[GAP-063] `stage4_1` Fase 5 — la luna es sólo brillo ambiente, sin eventos atados a la oscuridad ni sonido de navegación~~ *(Resuelto)*
 
 - **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/trazado.py` (`TUMBAS_FASE5`), `src/stages/stage4_1/stage4_1.py` (`_actualizar_ambiente_de_fase`, `_dibujar_decoracion`)
 - **Phase:** Revisión de diseño por fases del dueño del proyecto (2026-08-14) —
@@ -3007,12 +3092,32 @@ está.
   **Variedad de landmarks:** `siluetas.LANDMARKS_DE_LA_PLANICIE` cicla tres
   siluetas (`_cruz_conquistador`, `_cruz_caida`, `_grupo_de_tumbas`) en vez
   de repetir la misma cruz cada 30 columnas. Pruebas en
-  `tests/test_la_luna_esconde_cosas.py`. **Sigue pendiente:** la variedad
-  de eventos más rica que pide el diseño (procesión que se acerca cada
-  ciclo, multitud que desaparece sin explicación) — lo que hay hoy es un
-  gancho, no el catálogo completo.
+   `tests/test_la_luna_esconde_cosas.py`. **Sigue pendiente:** la variedad
+   de eventos más rica que pide el diseño (procesión que se acerca cada
+   ciclo, multitud que desaparece sin explicación) — lo que hay hoy es un
+   gancho, no el catálogo completo.
 
-## [GAP-064] `stage4_1` Fase 6 — sin silueta de Paburu, sin despedida de los espíritus y sin secuencia de despertar antes del corte
+- **Resolution (2026-08-20, AUD-585):** los tres puntos del encabezado,
+  cerrados. **La luna como sistema de información:** AUD-513 (la figura
+  junto a la tumba, sólo con la luna oculta) y AUD-583 — la procesión que
+  da un paso hacia el jugador cada vez que la luna se esconde y tras cuatro
+  ciclos ya no vuelve (`_actualizar_procesion`, `CICLOS_DE_LA_PROCESION`),
+  y la multitud junto a la tumba del medio que se esfuma al llegar a menos
+  de 220 px sin explicación ni regreso (`_actualizar_multitud`,
+  `trazado.COLUMNA_DE_LA_MULTITUD`; pruebas en
+  `tests/test_la_procesion_y_la_multitud.py`). **Sonido de navegación:**
+  AUD-488 (canto espacial desde `COLUMNA_DEL_CANTO`, más fuerte a
+  oscuras; pruebas en `tests/test_el_canto_orienta_en_la_planicie.py`).
+  **Landmarks distintos:** AUD-513 (`LANDMARKS_DE_LA_PLANICIE`). **Luces
+  verdes que anticipan la Fase 6:** AUD-482 (grietas adelantadas desde la
+  columna 700). Los dos puntos del cuerpo que quedan fuera se cubren por
+  lectura del propio diseño: el ciclo regular es aprendible, que es la
+  base que el punto 4 pedía (y la irregularidad posterior quedó fuera de
+  alcance), y el «camino iluminado» intermedio del punto 27 existe como
+  las grietas adelantadas + el canto que llevan hacia la salida de la
+  sección.
+
+## ~~[GAP-064] `stage4_1` Fase 6 — sin silueta de Paburu, sin despedida de los espíritus y sin secuencia de despertar antes del corte~~ *(Resuelto)*
 
 - **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/trazado.py` (`GRIETAS_FASE6`, `TEXTO_FINAL_BASE`), `src/stages/stage4_1/stage4_1.py` (`_actualizar_grietas`, `_actualizar_mensaje_final`), `tools/generate_stage4_1.py`
 - **Phase:** Revisión de diseño por fases del dueño del proyecto (2026-08-14) —
@@ -3143,12 +3248,35 @@ está.
   `sfx_bosses_phase_change` (un cue de combate) y usa `despertar_profundo`,
   un sonido propio con la misma reverberación horneada que el silencio de
   la Fase 4 (ver la nota de [[GAP-058]]). Pruebas en
-  `tests/test_el_mirador_de_la_fase_6.py`. **Sigue pendiente, sin fecha:**
-  el secreto opcional con los tres espíritus juntos, la música que se
-  construye progresivamente, y el sonido que se «limpia» por capas — los
-  tres son sistemas más grandes que una cutscene, no huecos de una llamada.
+   `tests/test_el_mirador_de_la_fase_6.py`. **Sigue pendiente, sin fecha:**
+   el secreto opcional con los tres espíritus juntos, la música que se
+   construye progresivamente, y el sonido que se «limpia» por capas — los
+   tres son sistemas más grandes que una cutscene, no huecos de una llamada.
 
-## [GAP-065] `stage4_1` como sistema — la progresión de color ya cuenta la historia, la relación jugador↔escenario no siempre
+- **Nota (AUD-584, 2026-08-20):** el secreto opcional de los tres
+  espíritus (punto 32), construido. Junto al mirador —doce columnas más
+  allá, para que la pausa de la cutscene no lo regale— detenerse unos
+  segundos con los tres espíritus liberados de verdad (AUD-474) los reúne
+  una vez, juntos (`_actualizar_secreto_de_los_espiritus`, cruce de
+  `atencion.Atencion` y `_espiritu_liberado`; `trazado.COLUMNA_DEL_SECRETO`;
+  pruebas en `tests/test_el_secreto_de_los_tres_espiritus.py`).
+  **Sigue pendiente:** la música que se construye progresivamente y el
+  sonido que se «limpia» por capas — arquitectura de audio, fuera del
+  alcance de este lote (mismo criterio que [[GAP-067]]/[[GAP-068]]).
+
+- **Resolution (2026-08-20, AUD-585):** los tres puntos del encabezado,
+  cerrados. **Silueta de Paburu:** AUD-513 (`_dibujar_paburu`, crece con el
+  avance sin revelar el todo). **Despedida de los espíritus:** AUD-513
+  (`_dibujar_despedida_de_los_espiritus`, sólo los liberados de verdad).
+  **Secuencia de despertar:** AUD-515 (`_actualizar_secuencia_de_despertar`
+  con shake y corte de música, `despertar_profundo` propio en vez del cue
+  prestado; pruebas en `tests/test_el_despertar_de_la_fase_6.py`). El
+  secreto opcional del punto 32, cerrado por AUD-584 (nota inmediatamente
+  arriba). Queda fuera, declarado: la música progresiva y el sonido por
+  capas — son la misma limitación de arquitectura de audio que ya documentan
+  [[GAP-067]]/[[GAP-068]], no un hueco distinto de esta fase.
+
+## ~~[GAP-065] `stage4_1` como sistema — la progresión de color ya cuenta la historia, la relación jugador↔escenario no siempre~~ *(Resuelto)*
 
 - **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/stage4_1.py`, `src/stages/stage4_1/trazado.py`, `tools/generate_stage4_1.py`
 - **Phase:** Revisión de diseño por fases del dueño del proyecto (2026-08-14) —
@@ -3405,8 +3533,25 @@ está.
   niebla nuevas (`AmbientParticleSystem.TIPOS` gana "niebla"). El viento
   resta alcance al salto y `_envolvente()` no lo sabía —
   `JumpEnvelope.from_settings_con_viento()` recalcula el techo real con
-  viento y `tests/test_stage4_1c.py` comprueba cada hueco generado
-  contra él, no sólo contra la envolvente sin viento.
+   viento y `tests/test_stage4_1c.py` comprueba cada hueco generado
+   contra él, no sólo contra la envolvente sin viento.
+
+- **Resolution (2026-08-20, AUD-585):** cerrado por agregación — esta
+  entrada no añadía trabajo propio, era la lectura de conjunto de
+  [[GAP-059]] a [[GAP-064]], y cada punto de su plan de resolución ya
+  tiene dueño. **(1) El eje horizontal/vertical:** decidido por el dueño
+  (2026-08-16, ver las notas de [[GAP-059]] y [[GAP-061]]) — AUD-467 se
+  mantiene, el pasillo horizontal es la forma final del nivel. **(2) El
+  eslabón F4 «el escenario observa»:** AUD-492 (`src/framework/stage/
+  atencion.py`, quietud + dirección + posición reutilizables; la Fase 4 y,
+  desde AUD-584, el secreto de la Fase 6 deciden con eso). **(3) Los tres
+  huecos de infraestructura:** `_play_sfx_spatial` en uso (AUD-481/488),
+  música por fase (AUD-493/546), `BG_Far`/`BG_Mid`/`BG_Near` con horizonte
+  procedural (AUD-513). Los dos cabos sueltos que sus notas arrastraban se
+  cerraron en este lote: la mitad navegable de las osamentas (AUD-582) y el
+  secreto opcional de la Fase 6 (AUD-584). Queda fuera, declarado: la
+  música/el sonido que se construyen por capas — arquitectura de audio que
+  ya documentan [[GAP-067]]/[[GAP-068]], no un hueco distinto.
 
 ## ~~[GAP-066] Rediseño del HUD (AUD-535) — dos piezas del pedido original no se construyeron~~ *(Resuelto)*
 
@@ -3461,6 +3606,22 @@ está.
      pedía el documento original, adaptado a teclado. La Tienda queda
      fuera del anillo de pestañas a propósito (no es una consulta, es una
      transacción) y vive en una cuarta pestaña "Menú" junto a Guardar y
+## [GAP-072] 4.1b — lo que el blueprint 10/10 pide y el motor actual no puede hacer (corrientes verticales, música por zona, zoom de cámara, luz por zona)
+
+El rediseño de AUD-575/576 («La Fosa Abisal») anota como decisión los
+cuatro puntos del diseño 10/10 que el motor no soporta hoy: no se
+construyen a medias, se registran aquí para que quien los mire después
+sepa que se vieron y por qué se dejaron fuera del nivel.
+
+- **File:** `src/stages/stage4_1b/trazado.py` (notas de `ZONAS_DE_CORRIENTE` y del módulo), `tools/generate_stage4_1b.py`, `src/stages/stage4_1b/stage4_1b.py`.
+- **Phase:** Blueprint 10/10 de 4.1b (AUD-575/576, 2026-08-19/20).
+- **Reason:**
+  1. **Corriente vertical (C4 ↓↓)** — el blueprint §11/12 pide una corriente que lleve a una cámara profunda. El motor suma el `corriente` de cada `ZonaDeAgua` al eje horizontal; una `corriente_y` empujaría el eje vertical que los estados acuáticos (`SwimmingState`, `ControlDeNado`) gobiernan para la flotación y la salida a superficie, y rompería el nado. La profundidad se consigue con geometría (el abismo de las secciones 5-6), no con física.
+  2. **Música por sección.** El mapa declara un único `bgm_track`; cambiar de pista en la zona del pez (silencio como mecánica, blueprint §20/35) exigiría eventos de audio por tramo que el `DynamicMusicSystem` no soporta sobre un mismo `bgm_track` (mismo pacto que GAP-070).
+  3. **Zoom de cámara.** La revelación del pez y la cavidad final (blueprint §38/40/53) piden un zoom-out cinematográfico corto; la cámara de escenario no tiene zoom. El fondo pintado y la sombra a escala cumplen la lectura sin mover la cámara.
+  4. **Luz ambiental por zona.** El blueprint §46 propone un `ambient_light` decreciente por tramo (0.50 → 0.25). Hoy el `ambient_light` es una sola propiedad del mapa; la degradación se cuenta con **faroles que se apagan** (LUCES, AUD-576) y con las tres variantes de fondo (mina → caverna → abismo), no re-bajando una luz global.
+- **Resolution plan:** cuando el motor tenga corrientes con componente vertical, música por zona o zoom de cámara, volver aquí y construir el tramo/evento correspondiente del 4-1b.
+- **Verificado:** 2026-08-20 — la geometría y los fondos de `trazado.py`/`stage4_1b.py` implementan la intención del blueprint dentro de lo que el motor permite; `validate_tmx.py --ci` en verde y `tests/test_stage4_1b.py` en verde.
      salir / Salir al título, empujando `ShopScene` de siempre.
 - **Verificado:** 2026-08-19 — `pytest tests/test_el_barra_de_vida_reemplaza_corazones.py
   tests/test_el_menu_de_pausa_abre_inventario.py
@@ -3582,7 +3743,7 @@ tanto, el código no cambia: el fallback es el contrato.
   `scripts/validate_tmx.py --ci`/`validate_assets.py` sin errores tras
   regenerar `stage4_1b.tmx`.
 
-## [GAP-070] Audio procedural del 4-1 — recetas del dueño: la mayoría construida, quedan las que piden DSP en tiempo real
+## ~~[GAP-070] Audio procedural del 4-1 — recetas del dueño: la mayoría construida, quedan las que piden DSP en tiempo real~~ *(Resuelto)*
 
 - **File:** `tools/generate_all_assets.py`, `src/stages/stage4_1/stage4_1.py`,
   `src/stages/stage4_1/fases.py`, `src/framework/audio/dynamic_music.py`,
@@ -3638,27 +3799,14 @@ tanto, el código no cambia: el fallback es el contrato.
      abajo.)*
   3. ~~**Truenos sincronizados con el rayo, no simultáneos.**~~
      *(Resuelto en AUD-551 — ver más abajo.)*
-  4. **Paneo LFO de la tormenta.** `storm_ambient` es mono, sin
-     movimiento estéreo; la receta pide un LFO de paneo oscilando
-     -0.8↔0.8 más un LFO de filtro barriendo 400-2200Hz. Sigue abierto:
-     el motor no tiene paneo LFO en tiempo real sobre un bucle de
-     ambiente ya en reproducción.
-  5. **Lluvia "vintage" de la Fase 4.** La receta pide un filtro
-     pasa-banda estrecho (~1500Hz) sobre `rain_ambient` sólo en esta
-     fase, para que suene "a través de una radio vieja" — hoy la lluvia
-     suena igual en la Fase 2 y en la Fase 4. Sigue abierto: requeriría
-     una variante de `.wav` por fase o un filtro en tiempo de
-     reproducción, y el motor no tiene esto último.
+   4. ~~**Paneo LFO de la tormenta.**~~ *(Resuelto en AUD-592 — ver más
+      abajo.)*
+   5. ~~**Lluvia "vintage" de la Fase 4.**~~ *(Resuelto en AUD-593 — ver
+      más abajo.)*
   6. ~~**Grillos nocturnos de la Fase 5.**~~ *(Resuelto en AUD-551 — ver
      más abajo.)*
-  7. **Bus de reverberación de la Fase 6.** `_aplicar_reverberacion` ya
-     hornea cola en sonidos puntuales concretos (`despertar_profundo`,
-     `cemetery_silence`, y desde AUD-551 también en los tres
-     `paso_de_luz_*`) pero sigue sin haber un tratamiento uniforme para
-     *todo* lo que suene en la Fase 6 — la receta lo pide como "bus",
-     que este motor sin DSP en tiempo real sólo puede aproximar
-     horneando el mismo `_aplicar_reverberacion` sonido por sonido, y
-     eso sigue sin hacerse para el resto del catálogo de esa fase.
+   7. ~~**Bus de reverberación de la Fase 6.**~~ *(Resuelto en AUD-594 —
+      ver más abajo.)*
   8. ~~**Volumen del canto atado a la luna en tiempo real.**~~
      *(Resuelto en AUD-551 — ver más abajo.)*
 - **Resolution — AUD-551 (2026-08-19):** seis piezas cerradas de las
@@ -3715,14 +3863,29 @@ tanto, el código no cambia: el fallback es el contrato.
   variante de audio por fase sobre un mismo bucle base, o un
   filtro/paneo en tiempo real sobre algo que ya está sonando — y el
   motor sólo sabe hornear `.wav` fijos, no aplicar DSP en vivo.
-- **Resolution plan:** los tres puntos que quedan (4, 5, 7) necesitan la
-  misma decisión de arquitectura antes de escribir código — ¿generar N
-  variantes de `.wav` por fase (una `storm_ambient` ya paneada para 3,
-  una `rain_ambient` ya filtrada para 4, N ecos horneados por sonido de
-  la Fase 6), o darle al motor un mezclador con filtros/paneo en tiempo
-  real que hoy no tiene? Ninguno de los tres es viable como "hornear un
-  `.wav` más" sin decidir esto primero — por eso siguen abiertos pese a
-  que el resto de la receta original ya se cerró.
+- **Resolution — AUD-592/593/594 (2026-08-21):** los tres puntos que
+  quedaban se cerraron horneando, y la pregunta de arquitectura la
+  respondió el propio diseño del nivel: cada `Fase` ya declara su
+  `sonido_ambiente`, así que la variante por fase era el camino natural.
+  - **Paneo LFO de la tormenta** (AUD-592): `tormenta_paneada`, segundo
+    `.wav` estéreo del proyecto tras `rafaga_viento` (`_write_wav_stereo`)
+    — paneo senoidal ±0.8 y corte de filtro barriendo 400-2200Hz, un ciclo
+    exacto de cada LFO dentro del bucle de 2s, más un fundido cola→cabeza
+    (`_bucle_sin_clic`) para el clic del material crudo. La Fase 3 lo
+    declara en `fases.py`; `storm_ambient` queda para el clima genérico.
+  - **Lluvia vintage** (AUD-593): `lluvia_de_radio` — el cuerpo de
+    `rain_ambient` pasado por un pasa-banda de dos polos por lado centrado
+    en ~1500Hz, con su propio pliegue de bucle. Sólo la Fase 4 lo declara;
+    la Fase 2 conserva el bucle limpio.
+  - **Bus de reverberación** (AUD-594): `AudioManager.activar_eco(bool)` +
+    preferencia `_nombre_con_eco` en `play_sfx`/`play_sfx_at` — si el banco
+    tiene la variante `_con_eco`, suena ésta; si no, el original. Ocho
+    variantes horneadas (`jump/land/crouch/short_attack/long_attack/
+    hit_connect/hurt/checkpoint`) con la misma `_aplicar_reverberacion` de
+    los cues propios del nivel. La Fase 6 enciende el bus al entrar, lo
+    apaga al cruzar a otra fase y `Stage4_1.on_exit` al salir del nivel,
+    porque es estado global del mezclador.
+- **Resolution plan:** *(vacío — resuelto; ver arriba.)*
 - **Resolution — AUD-554 (2026-08-19):** las dos partes de 1/2 que
   quedaban del "chokepoint disponible":
   - **Pasos de grava (Fase 1) y ahogados (Fase 5):** ninguna de las dos
@@ -3756,8 +3919,59 @@ tanto, el código no cambia: el fallback es el contrato.
   `scripts/check_doc_symbols.py`, `scripts/check_tmx_coverage.py --ci` y
   `scripts/generate_tmx_reference.py --check` sin errores tras parchear
   el TMX comprometido y generar los siete SFX nuevos.
-  2026-08-19 (AUD-554) — `pytest tests/test_aud_554_pasos_de_grava_ahogado_y_voz_del_venado.py
-  tests/test_gap_070_audio_del_4_1.py tests/test_materiales_de_superficie.py
-  tests/test_stage4_1.py` en verde (273 casos en el barrido de
-  stage4_1/fricción/material); `ruff check`, `validate_tmx.py --ci`,
-  `validate_assets.py` y `check_tmx_coverage.py --ci` sin errores.
+   2026-08-19 (AUD-554) — `pytest tests/test_aud_554_pasos_de_grava_ahogado_y_voz_del_venado.py
+   tests/test_gap_070_audio_del_4_1.py tests/test_materiales_de_superficie.py
+   tests/test_stage4_1.py` en verde (273 casos en el barrido de
+   stage4_1/fricción/material); `ruff check`, `validate_tmx.py --ci`,
+   `validate_assets.py` y `check_tmx_coverage.py --ci` sin errores.
+   2026-08-21 (AUD-592/593/594) — `pytest tests/test_la_tormenta_paneada_de_la_fase_3.py
+   tests/test_la_lluvia_vintage_de_la_fase_4.py tests/test_el_bus_de_reverberacion_de_la_fase_6.py
+   tests/test_gap_070_audio_del_4_1.py tests/test_la_lluvia_no_se_queda_pegada.py
+   tests/test_la_musica_del_4_1_entra_tarde.py tests/test_audio_wiring.py
+   tests/test_ambience.py` en verde (113 casos combinados, las tres suites
+   nuevas fallaron antes de implementarse); `ruff check`,
+   `scripts/validate_assets.py` sin errores tras hornear los once `.wav`
+   nuevos (tormenta estéreo, lluvia de radio y ocho variantes `_con_eco`).
+
+## ~~[GAP-071] El aviso de oxígeno bajo existe y no se muestra: el jugador se ahoga sin saberlo~~ *(Resuelto — AUD-575)*
+
+- **File:** `src/framework/stage/level_mechanics.py`
+  (`ControlDeNado.avisando`, línea 98), `src/framework/scenes/stage_scene.py`
+  (`self._nado`, línea 185), `docs/45_SWIMMING_SPEC.md`
+- **Phase:** Auditoría estratégica 2026-08-19 (`docs/93`, hallazgo
+  `test_sistemas_huerfanos`): el guardián de huérfanos
+  (`scripts/check_orphan_systems.py --ci`) señaló `avisando` en un módulo que
+  `45_SWIMMING_SPEC.md` declara completo.
+- **Reason:** `ControlDeNado` se instancia en `StageScene` y su cuenta de aire
+  sí funciona (el daño por ahogo se aplica), pero la **advertencia** que el
+  propio módulo documenta —`avisando`, verdadero cuando al jugador le quedan
+  menos de `umbral_aviso` (10 s) de aire— no la lee nadie del juego: ni el
+  HUD ni las escenas acuáticas. El jugador ve el medidor de aire, pero no hay
+  aviso visual ni sonoro de umbral cruzado; y la docstring de la clase dice
+  textualmente que «ahogarse sin haber podido saberlo no enseña nada». Es un
+  huérfano real (lo ejercitan sólo las pruebas de `test_mecanicas_f5.py`), no
+  un falso positivo: la pieza que falta es el consumidor del aviso, que es una
+  decisión de diseño del HUD (icono, burbujas, pulso sonoro…).
+- **Resolution plan:** decidir el aviso (visual sobre el medidor de aire y/o
+  sonoro, reutilizando el patrón de `Events.SFX_TIMER_ALERT_PULSE` que
+  AUD-553 introdujo para el cronómetro), conectarlo al consumidor (HUD o
+  escena) y cerrar el GAP con la prueba que falle antes y pase después.
+- **Verificado:** 2026-08-19 — `scripts/check_orphan_systems.py --ci` pasó a
+  verde al clasificarlo en `PENDIENTES` (el guardián no vuelve a gritar y el
+  hueco queda anotado); el comportamiento actual (aire que baja, daño al
+  agotarse, `avisando` fiel a su umbral) lo cubren
+  `tests/test_mecanicas_f5.py`, en verde.
+- **Resolution:** AUD-575 (2026-08-19) — el rediseño del 4-1b como mina
+  inundada da superficie real al agua (fila 11 de 38) y con ella el
+  consumidor del aviso: `src/engine/ui/hud.py` gana la barra de oxígeno
+  (`set_oxigeno(ratio, avisando)`, dibujada sólo bajo el agua, bajo la
+  estamina) que parpadea y pulsa `Events.SFX_TIMER_ALERT_PULSE` en el tramo
+  bajo — el mismo lenguaje que el cronómetro (AUD-553). La escena la
+  alimenta cada fotograma en `_update_hud_ui` desde
+  `ControlDeNado.en_agua` (property nueva que expone `_estaba_dentro`, la
+  misma fuente de las transiciones). `avisando` salió de `PENDIENTES` en
+  `check_orphan_systems.py` y `sin_aire` pasó a `VERIFICADOS` con su motivo.
+  Pruebas: `tests/test_oxigeno_del_hud.py` (la barra aparece sólo sumergido,
+  el aviso parpadea y pulsa, sin aviso no hay pulso) y
+  `tests/test_stage4_1b.py::TestElOxigenoVigilaAlBuceador`. Detalle de
+  parámetros en `docs/45_SWIMMING_SPEC.md` §4.1.
