@@ -82,8 +82,11 @@ def test_sincronizar_scroll_mueve_de_verdad_el_tilemap() -> None:
     from src.framework.stage.stage_loader import StageLoader
 
     ensure_registered()
-    StageLoader.register_entity("Skitter", JungleFrog)
-    StageLoader.register_entity("Bat", CanopyBird)
+    # AUD-591: aquí vivían dos register_entity ("Skitter"/"Bat") que quedaron
+    # huérfanos cuando el TMX pasó a usar "ShooterFrog"/"FlyingBird": ningún
+    # objeto del mapa lleva ya esos tipos, y el validador los llevaba años
+    # avisando como «registro dentro de una función». Las sustituciones reales
+    # ahora las hace el propio módulo de la escena al importarse.
     datos = StageLoader.load(
         "assets/maps/stage1_1/stage1_1.tmx",
     )

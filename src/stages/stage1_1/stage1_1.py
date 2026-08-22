@@ -105,30 +105,29 @@ class Stage1_1_LaEntrada(StageScene):
         return cls.TIPS_INICIO
 
     def __init__(self, context: GameContext) -> None:
-        # StageScene.on_enter() es quien invoca StageLoader.load(), no
-        # __init__ (stage_scene.py:157). Por eso registrar aquí las entidades
-        # propias llega a tiempo, y no hace falta tocar
-        # src/framework/entities/entity_factory.py, que es del profesor.
+        # AUD-591 — el registro de las dos entidades propias vivía aquí
+        # dentro y el validador lo llevaba años avisando: las herramientas que
+        # abren el TMX sin construir la escena (previsualizador, calificador)
+        # no ejecutan `__init__`, así que resolvían esos tipos con la clase
+        # del bestiario. Ahora registra el módulo al importarse (ver abajo),
+        # como hacen boss_paburu (AUD-151) y stage1_3_las_aulas.
         #
         # Se registran sobre dos especies REALES del bestiario del framework
         # (`bestiary_registry.SPECIES`): "ShooterFrog" es la rana dardo y
         # "FlyingBird" el ave de selva, que es exactamente lo que son estas
-        # dos clases.
-        #
-        # Antes se usaban "Skitter" y "Bat", dos nombres que estaban en la
-        # lista del calificador y que ninguna clase reclamaba. Dejó de valer:
-        # el cargador ahora ABORTA el nivel entero ante un type que no esté
-        # registrado, y el calificador carga el TMX por su cuenta sin pasar
-        # por esta escena. Con los nombres inventados el nivel no se podía
-        # analizar y se perdían de golpe los 30 puntos de diseño.
+        # dos clases. Antes se usaban "Skitter" y "Bat", dos nombres que
+        # estaban en la lista del calificador y que ninguna clase reclamaba.
+        # Dejó de valer: el cargador ahora ABORTA el nivel entero ante un
+        # type que no esté registrado, y el calificador carga el TMX por su
+        # cuenta sin pasar por esta escena. Con los nombres inventados el
+        # nivel no se podía analizar y se perdían de golpe los 30 puntos de
+        # diseño.
         #
         # Registrar sobre una especie existente la sustituye para todo el
         # proceso, no solo para este escenario. Es aceptable porque ningún
         # otro escenario del juego coloca estas dos especies, pero conviene
         # saberlo: `register_entity` escribe en un diccionario de clase y no
         # tiene contrapartida para deshacerlo.
-        StageLoader.register_entity("ShooterFrog", JungleFrog)
-        StageLoader.register_entity("FlyingBird", CanopyBird)
         super().__init__(context, Path(self.TMX_PATH))
         self._sunset = SunsetLight()
         self._overlay = DebugOverlay()
@@ -390,3 +389,18 @@ class Stage1_1_LaEntrada(StageScene):
                 [e for e in entidades if isinstance(e, CanopyBird)],
                 [e for e in entidades if isinstance(e, JungleFrog)],
             )
+
+
+# AUD-591 — el registro de las dos entidades propias vivía dentro de
+# `Stage1_1_LaEntrada.__init__` y el validador lo llevaba años avisando
+# («registro dentro de una función»): las herramientas que abren el TMX sin
+# construir la escena —previsualizador, calificador, validador— no ejecutan
+# `__init__`, así que resolvían "ShooterFrog" y "FlyingBird" con la clase del
+# bestiario y salía un pájaro genérico donde debía estar el CanopyBird de la
+# Unidad III, sin que nada fallara. Registrar al importar el módulo hace que
+# jugar, previsualizar, calificar y validar vean el mismo mundo; es lo que el
+# propio aviso ordena y lo que ya practican boss_paburu (AUD-151) y
+# stage1_3_las_aulas. El porqué de los nombres elegidos está comentado en
+# `Stage1_1_LaEntrada.__init__`.
+StageLoader.register_entity("ShooterFrog", JungleFrog)
+StageLoader.register_entity("FlyingBird", CanopyBird)
