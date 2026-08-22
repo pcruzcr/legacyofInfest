@@ -366,6 +366,16 @@ class HUD:
             x_bloque, y_barras + paso_barra, ancho_bloque, alto_barra)
         self._carga_bar_rect = pygame.Rect(
             x_bloque, y_barras + paso_barra * 2, ancho_bloque, alto_barra)
+        # AUD-575 (GAP-071 resuelto) — la barra de oxígeno vive bajo la
+        # estamina, fuera del flujo de `_reflow_bloque_de_identidad`: se
+        # dibuja SOLO cuando hay agua de por medio (`_oxigeno_ratio < 0`
+        # = no se dibuja), así que no le hace falta hueco reservado.
+        self._oxigeno_bar_rect = pygame.Rect(
+            x_bloque, y_barras + paso_barra * 3, ancho_bloque, alto_barra)
+        self._oxigeno_ratio: float = -1.0
+        self._oxigeno_avisando: bool = False
+        self._oxigeno_flash_timer: float = 0.0
+        self._oxigeno_flash_on: bool = False
 
         # AUD-219/AUD-535 — marcador de puntos y monedas, reubicado junto
         # al bloque de identidad (retrato + barras) ahora que los
@@ -744,6 +754,24 @@ class HUD:
                 self._timer_flash_on = False
                 self._timer_flash_timer = 0.0
 
+        # AUD-575 (GAP-071 resuelto) — el aviso de oxígeno bajo: el mismo
+        # lenguaje que el cronómetro (parpadeo + `SFX_TIMER_ALERT_PULSE`),
+        # acelerado cuanto más cerca de quedarse sin aire. Es el aviso que
+        # `ControlDeNado.avisando` lleva declarando desde siempre y que
+        # nadie mostraba — el jugador se ahogaba sin saberlo.
+        if self._oxigeno_ratio >= 0.0 and self._oxigeno_avisando:
+            self._oxigeno_flash_timer += dt
+            progreso = 1.0 - max(0.0, min(1.0, self._oxigeno_ratio))
+            intervalo = 0.40 - (0.40 - 0.14) * progreso
+            if self._oxigeno_flash_timer >= intervalo:
+                self._oxigeno_flash_on = not self._oxigeno_flash_on
+                self._oxigeno_flash_timer = 0.0
+                if self._oxigeno_flash_on:
+                    self._event_bus.emit(Events.SFX_TIMER_ALERT_PULSE)
+        else:
+            self._oxigeno_flash_on = False
+            self._oxigeno_flash_timer = 0.0
+
     def _get_portrait_state(self) -> str:
         if self._health <= 0:
             return "dead"
@@ -758,6 +786,7 @@ class HUD:
         self._draw_barra_de_vida(surface)
         self._draw_special_meter(surface)
         self._draw_estamina(surface)
+        self._draw_oxigeno(surface)
         self._draw_tiempo_bala(surface)
         self._draw_boss_rush(surface)
         self._draw_score(surface)
@@ -908,6 +937,16 @@ class HUD:
         self._estamina_max = max_val
         self._reflow_bloque_de_identidad()
 
+    def set_oxigeno(self, ratio: float, avisando: bool) -> None:
+        """AUD-575 (GAP-071 resuelto) — el aire del buceo. `ratio < 0`
+        significa "no hay agua en juego" y la barra no se dibuja; con el
+        ratio en [0, 1] se dibuja bajo la estamina y, si `avisando`
+        (quedan menos de 10 s), parpadea y pulsa su sonido de alarma —
+        el mismo `SFX_TIMER_ALERT_PULSE` del cronómetro, que ya tiene su
+        consumidor en `SonidoDeEscenario`."""
+        self._oxigeno_ratio = ratio
+        self._oxigeno_avisando = avisando
+
     def _reflow_bloque_de_identidad(self) -> None:
         """AUD-565 — con la estamina apagada, la barra de carga sube a
         ocupar el sitio que dejaría vacío la de estamina, en vez de que el
@@ -967,6 +1006,20 @@ class HUD:
         color_fin = (240, 210, 60)
         _dibujar_barra_moderna(surface, self._estamina_bar_rect, pct,
                                (70, 60, 15), color_fin, halo_al_llenar=False)
+
+    def _draw_oxigeno(self, surface: pygame.Surface) -> None:
+        """AUD-575 (GAP-071 resuelto) — la barra de aire del buceo.
+        Azul de agua, y roja parpadeante en el tramo de aviso: el color
+        del peligro ya es la misma lectura que las luces `blood` del
+        nivel (mina inundada: rojo = no te conviene)."""
+        if self._oxigeno_ratio < 0.0:
+            return
+        pct = max(0.0, min(1.0, self._oxigeno_ratio))
+        if self._oxigeno_avisando and self._oxigeno_flash_on:
+            pct = 0.0
+        color_fin = (255, 70, 60) if self._oxigeno_avisando else (70, 150, 210)
+        _dibujar_barra_moderna(surface, self._oxigeno_bar_rect, pct,
+                               (30, 40, 70), color_fin, halo_al_llenar=False)
 
     def _draw_special_meter(self, surface: pygame.Surface) -> None:
         pct = min(1.0, self._special_current / max(self._special_max, 1.0))

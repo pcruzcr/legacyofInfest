@@ -10,7 +10,7 @@ date_processed: "2026-08-06"
 
 # Índice maestro de documentación
 
-**Fecha:** 13 de agosto de 2026 · **Documentos:** 70 en `docs/` (69 indexados abajo + este índice), más 5 ficheros de la raíz
+**Fecha:** 19 de agosto de 2026 · **Documentos:** 71 en `docs/` (70 indexados abajo + este índice), más 5 ficheros de la raíz
 (`README`, `CLAUDE`, `CONTRIBUTING`, `CHANGELOG` y `KNOWN_GAPS`), que también tienen fila.
 
 > **AUD-455 (2026-08-13).** Decía «4 ficheros» y nombraba cinco — la tabla
@@ -158,6 +158,7 @@ git si hace falta consultarlos.
 | [`89_AUDITORIA_MULTIDISCIPLINAR.md`](89_AUDITORIA_MULTIDISCIPLINAR.md) | Auditoría multidisciplinar agosto 2026 — 16 disciplinas, AUD-310 a AUD-322 |
 | [`91_PLAN_DE_CIERRE.md`](91_PLAN_DE_CIERRE.md) | Plan de cierre — inventario medido de todo lo abierto (gaps, avisos, huecos) y los ocho lotes que lo cierran; `WorldSimulation` es el último rasgo |
 | [`92_CATALOGO_DE_FENOMENOS.md`](92_CATALOGO_DE_FENOMENOS.md) | Catálogo de fenómenos ambientales — los ~90 de la taxonomía contra lo que cuesta cada uno de verdad, y los cinco que no valen la pena |
+| [`93_AUDITORIA_ESTRATEGICA_Y_FODA.md`](93_AUDITORIA_ESTRATEGICA_Y_FODA.md) | Auditoría estratégica — cinco comparativas (Mario, SotN, Zelda OoT, Super Metroid, Dark Souls), estado validado con los 8 validadores, 8 hallazgos, FODA extenso y dirección estratégica |
 
 ---
 

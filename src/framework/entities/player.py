@@ -859,7 +859,23 @@ class Player(BaseEntity):
         # estado ya saltó este fotograma, `_do_jump` dejó `is_grounded` en
         # False y esta condición no se cumple. Aun así se consume la
         # pulsación, porque quien ejecuta una acción es quien la gasta.
-        if input_manager is not None and self.is_grounded:
+        #
+        # AUD-573 — los estados acuáticos no saltan. Antes esto se
+        # disparaba para cualquier estado con `is_grounded`, y en el 4-1b
+        # posarse en el lecho marino (grounded dentro del agua, el lecho
+        # está a 16px del borde de la `ZonaDeAgua`) dejaba saltar al
+        # jugador con física de tierra en pleno abismo — reproducido en
+        # simulación: `SWIMMING` + lecho + JUMP en buffer → `JumpingState`
+        # con impulso de salto, una y otra vez («el personaje no nada»).
+        # El salto es tierra firme; dentro del agua se nada, y el impulso
+        # lo da `SwimmingState`, no `_do_jump`.
+        if (
+            input_manager is not None
+            and self.is_grounded
+            and self._state_instance.state_enum not in (
+                PlayerState.SWIMMING, PlayerState.SWIM_ATTACK,
+            )
+        ):
             from src.engine.input.action_map import Action
             if input_manager.pulsada_en_buffer(Action.JUMP):
                 input_manager.consumir_buffer(Action.JUMP)
@@ -1028,7 +1044,21 @@ class Player(BaseEntity):
         """Apply gravity. Movement integration happens per-axis in _resolve_collision."""
         wall_side = self._wall_side
         self._wall_side = 0
-        if not self.is_grounded:
+        # AUD-573 — el nado gestiona su propio eje Y y no recibe la
+        # gravedad del perfil. `SwimmingState` ya declara su peso residual
+        # (`GRAVITY * 0.05`) pensado como ÚNICA fuerza vertical: con la
+        # gravedad completa encima, el jugador sumergido se hundía a
+        # ~113 px/s en vez de flotar (el freno del nado convergía contra
+        # la gravedad, no contra cero), y posado en un lecho a 16px del
+        # borde del agua —el caso del 4-1b— el empuje de -1.5 px/frame se
+        # cancelaba contra la colisión del suelo antes de despegar: el
+        # jugador no podía nadar hacia arriba de ninguna forma (reporte
+        # «el personaje no nada»). `_apply_physics` es el integrador del
+        # perfil; los estados acuáticos declaran su eje Y completo y el
+        # integrador se lo deja.
+        if not self.is_grounded and self._state_instance.state_enum not in (
+            PlayerState.SWIMMING, PlayerState.SWIM_ATTACK,
+        ):
             gm = self.gravity_multiplier
             # AUD-333 — gravedad, caída máxima y factores de muro salen del
             # perfil: un contexto declara su física, el integrador la lee.

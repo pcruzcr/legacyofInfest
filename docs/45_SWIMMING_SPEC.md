@@ -61,11 +61,11 @@ Nadar es un estado del jugador (`SwimmingState` en `src/framework/entities/state
 
 ## 3. Transiciones de estado
 
-- **Entrada:** `ControlDeNado` (`src/framework/stage/level_mechanics.py`, corre cada fotograma desde `StageScene.update()`) comprueba `en_agua(mundo, jugador.rect)`; si el jugador se solapa con una `ZonaDeAgua` y no estaba ya nadando, el estado pasa a `SWIMMING`. La velocidad vertical se pone a cero al entrar; la horizontal se reduce a la mitad.
+- **Entrada:** `ControlDeNado` (`src/framework/stage/level_mechanics.py`, corre cada fotograma desde `StageScene.update()`) comprueba `en_agua(mundo, jugador.rect)`; si el jugador se solapa con una `ZonaDeAgua` y no estaba ya nadando, el estado pasa a `SWIMMING`. La velocidad vertical se pone a cero al entrar; la horizontal se reduce a la mitad. **Mientras siga dentro del agua, la autoridad es continua (AUD-573):** si la máquina de tierra llega a pisar el estado (`IDLE`/`WALKING`/`JUMPING`...) con el jugador aún sumergido, `ControlDeNado` lo devuelve a `SWIMMING` ese mismo fotograma — los estados de `_ESTADOS_SUBMARINOS` se respetan.
 - **Salida:** `ControlDeNado` es la única autoridad para salir del agua — cuando `en_agua()` deja de encontrar una `ZonaDeAgua` (la salida real, no un umbral aproximado), decide a qué estado pasa:
   - **Expulsión en superficie:** si el jugador subía (`velocity.y < 0`) al salir, se le expulsa hacia arriba a −200 px/s hacia `JUMPING` — el «pop» de romper la superficie nadando.
   - **Caída normal:** si no, pasa a `FALLING` sin más.
-- **Aterrizaje:** tocar el suelo pasa a `IDLE`.
+- **Aterrizaje:** tocar el suelo pasa a `IDLE`. (Dentro del agua esto ya no ocurre: el aterrizaje en un lecho sumergido queda absorbido por la autoridad continua de la entrada — se sigue nadando, AUD-573.)
 
 > **AUD-572 (2026-08-19).** Hasta esta fecha, la salida por arriba la decidía
 > `SwimmingState` con su propio criterio: una `_surface_y` fija al **entrar**
@@ -80,11 +80,67 @@ Nadar es un estado del jugador (`SwimmingState` en `src/framework/entities/state
 > detección real de salida (`en_agua()`) y sólo le faltaba decidir *cómo*
 > salir.
 
+> **AUD-573 (2026-08-19) — la autoridad del agua es continua, y el agua no
+> tiene gravedad de tierra.** Tres defectos que hacían que el nado se
+> sintiera roto en 4-1b (reporte: «el personaje no nada», reproducido en
+> simulación): (1) el salto con buffer de `Player.update` se disparaba para
+> cualquier estado con `is_grounded` — posado en el lecho sumergido,
+> pulsar salto daba un salto de tierra firme en pleno abismo; el buffer
+> ahora excluye `SWIMMING` y `SWIM_ATTACK`. (2) `ControlDeNado` sólo
+> actuaba en el flanco de entrada: si la máquina de tierra ponía
+> `IDLE`/`WALKING` con el jugador ya sumergido, nadie lo devolvía a nadar;
+> ahora **refuerza** `SwimmingState` cada fotograma mientras `en_agua()`
+> devuelva zona (respetando `_ESTADOS_SUBMARINOS`: `SWIMMING`,
+> `SWIM_ATTACK`, `HURT`, `DYING`, `CLIMBING`, `ZIPLINE`, `GRAB`, `THROW`).
+> (3) `_apply_physics` sumaba la **gravedad completa del perfil** al eje Y
+> que el nado ya gestiona (incluido su peso residual de ×0.05): sin teclas,
+> el jugador se hundía a ~113 px/s en vez de flotar, y el empuje no podía
+> despegar del lecho contra la colisión; el integrador ahora deja el eje Y
+> a los estados acuáticos. Medido tras el arreglo: sin input, la velocidad
+> vertical converge a ~5.6 px/s (flotar); con salto mantenido, el jugador
+> despega del lecho y nada hacia la superficie en `SWIMMING` de principio
+> a fin. Ver `tests/test_mecanicas_f5.py` (TestNado) y
+> `tests/test_stage4_1b.py::TestElJugadorNadaNoCaminaPorElLecho`.
+
+> **AUD-575 (2026-08-19) — superficie real y oxígeno activo.** El 4-1b
+> rediseñado (`docs/niveles/13b_STAGE_4_1B.md` §2) ya no es "sumergido de
+> principio a fin": su `WaterZone` arranca en la fila 11 de 38, con once
+> filas de aire con estalactitas por encima. La salida por arriba (§3) dejó
+> de ser teoría: emerger es de verdad salir de la `ZonaDeAgua`. Con
+> superficie, el ahogamiento vuelve a ser el contrapeso del buceo (GAP-071
+> resuelto, ver §4.1): el nivel reactiva `dano_por_segundo=1.0` en su
+> `__init__` y la lectura del aire es `ControlDeNado.en_agua` (property que
+> expone `_estaba_dentro`, la misma fuente que decide las transiciones — no
+> una segunda opinión que pueda desincronizarse).
+
 ---
 
 ## 4. Partículas de burbujas
 
 Un temporizador de burbujas genera partículas visuales de burbuja a intervalos regulares mientras se nada. Implementado en línea en `SwimmingState.update()`: cada 0.3 s el estado emite `Events.VFX_BUBBLE` en la posición del jugador; `StageScene` se suscribe y genera `HitEffects.BUBBLE` desde el emisor `"bubble"`.
+
+---
+
+## 4.1 Oxígeno y ahogamiento (GAP-071 resuelto, AUD-575)
+
+`ControlDeNado` lleva el reloj de aire de cada inmersión. El módulo siempre
+lo declaró (`docstring` de `level_mechanics.py`); GAP-071 era que **nadie
+mostraba el aviso** y el jugador se ahogaba sin haber podido saberlo.
+
+| Propiedad | Valor |
+|----------|-------|
+| `aire_maximo` | 30 s de inmersión continua |
+| `dano_por_segundo` | 1.0 — **configurable por nivel**: `Stage4_1B.__init__` lo reactiva; el resto del juego hereda el 0.0 de fábrica (AUD-572) |
+| `umbral_aviso` | 10 s — `avisando` es `True` mientras `0 < aire <= 10` |
+| Recuperación fuera del agua | 8×/s (`ControlDeNado._recuperar_aire`, sólo si `en_agua` es `False`) |
+| `en_agua` | property → `_estaba_dentro`, la decisión de cada fotograma (AUD-575) |
+| Consumidor del aviso | `src/engine/ui/hud.py` — `set_oxigeno(ratio, avisando)` dibuja la barra de oxígeno bajo la estamina (sólo mientras `ratio >= 0`, es decir, sumergido) y parpadea + pulsa `Events.SFX_TIMER_ALERT_PULSE` en el tramo bajo (AUD-553, mismo lenguaje que el cronómetro). La escena la alimenta en `_update_hud_ui` (`actualizaciones.py`). Ver `tests/test_oxigeno_del_hud.py` |
+
+El oxígeno es **por inmersión, no por nivel**: cada vez que se sale del
+agua el aire vuelve a 30 s. Bucear toda la mina de una tirada es la
+decisión de riesgo; emerger a respirar en las galerías altas y los andenes
+secos, la decisión segura — la alternancia de agua y áreas secas del
+rediseño (AUD-575) existe para que la segunda sea posible.
 
 ---
 
@@ -96,7 +152,8 @@ cuándo entrar y salir — ver AUD-572 arriba)
 **Clase:** `SwimmingState(PlayerStateBase)` con `PlayerState.SWIMMING`
 **Estado:** ✅ Completo — física de natación, flotabilidad, temporizador de
 burbujas, expulsión en superficie por geometría real (AUD-572), detección de
-zona de agua dedicada (`en_agua()`, `ControlDeNado`)
+zona de agua dedicada (`en_agua()`, `ControlDeNado`), oxígeno y ahogamiento
+con aviso de HUD (AUD-575, GAP-071 resuelto)
 
 ---
 ## 🔗 Documentos relacionados

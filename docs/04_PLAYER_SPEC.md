@@ -348,7 +348,7 @@ misma.
 ## 8. Estados
 
 El jugador se gobierna por una máquina de estados finitos: sólo uno activo a la
-vez. El enumerado `PlayerState` declara **26**.
+vez. El enumerado `PlayerState` declara **27**.
 
 > **Corregido el 2026-08-11 (AUD-432).** Este documento decía **19**, dos
 > veces, y su tabla listaba diecinueve. Los siete que faltaban —`CLIMBING`,
@@ -363,6 +363,10 @@ vez. El enumerado `PlayerState` declara **26**.
 > contra las 26 filas de la tabla de §8.1: son **26**, y ambos ya coincidían
 > antes de tocar nada. Se documenta el error de más para que quien vuelva a
 > auditar esta cifra no confíe en la última corrección sin volver a contar.
+>
+> **Recontado el 2026-08-19 (AUD-575):** son **27** — `SWIM_ATTACK`
+> (GAP-069/AUD-557, el ataque acuático) se añadió a `PlayerState` y a esta
+> tabla en la misma fila que ocupa en el código.
 
 ### 8.1 La tabla
 
@@ -388,6 +392,7 @@ vez. El enumerado `PlayerState` declara **26**.
 | `THROW` | Atacar mientras se agarra | Fin de la animación | Ninguna |
 | `SLIDE` | Agacharse con carrera | Fin del temporizador o soltar | Ninguna |
 | `SWIMMING` | Entrar en zona de agua | Salir del agua | Mover, saltar |
+| `SWIM_ATTACK` | Atacar nadando (GAP-069/AUD-557) | Fin de la animación | Ninguna |
 | `CLIMBING` | Agarrarse a una liana | Soltarse o llegar arriba | Mover, saltar |
 | `ZIPLINE` | Engancharse a una tirolesa | Llegar al final o soltarse | Saltar |
 | `ULTIMATE` | Medidor lleno y activación | Fin de la animación | Ninguna |

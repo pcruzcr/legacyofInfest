@@ -79,7 +79,7 @@ rechazarse: escribir `bloom = 5` significa "mucho", no un error de carga.
 | `bloom` | float | 0 – 1 | Halo alrededor de lo brillante. Sube el contraste percibido de los focos sin aclarar las sombras. |
 | `vignette` | float | 0 – 0.6 | Oscurece las esquinas. Conviene subirla al bajar `ambient_light`: un nivel oscuro con encuadre abierto se ve incoherente. |
 | `climate` | string | `clear` `rain` `snow` `fog` `storm` | Precipitación y tinte de color. `storm` añade viento lateral. |
-| `ambient_fx` | string | `dust` `leaves` `embers` `spores` `ash` `none` | Partículas flotantes constantes. `none` lo apaga de forma explícita. |
+| `ambient_fx` | string | `dust` `leaves` `embers` `spores` `ash` `niebla` `vida_abisal` `none` | Partículas flotantes constantes. `none` lo apaga de forma explícita. |
 | `ambient_fx_rate` | float | 0 – 120 | Partículas por segundo. Entre 10 y 20 es un ambiente perceptible sin saturar. |
 | `start_hour` | string o float | 0 – 24 | Hora a la que empieza el escenario. Acepta un nombre (`dawn` `morning` `noon` `afternoon` `dusk` `night` `midnight`), un número (`18.5`) o `HH:MM`. |
 | `season` | string | `spring` `summer` `autumn` `winter` | Estación. Tiñe la paleta, y **sugiere** un clima y unas partículas de aire si no los declaraste. Nunca sobrescribe lo que escribas: `climate = fog` en un mapa de otoño sigue siendo niebla. |
