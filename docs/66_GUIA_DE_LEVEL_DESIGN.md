@@ -90,6 +90,17 @@ Reglas de la curva:
   un jugador no debería repetir más de una pantalla de trabajo tras morir.
   Salvo que el tramo sea deliberadamente duro (el foso del Stage 0 tiene
   checkpoint justo antes).
+
+  > **Excepción declarada — la Zona 4 (AUD-590).** Los cuatro niveles del
+  > cementerio rompen esta regla a propósito, y no es descuido: el dueño pidió
+  > que reaparecer costara algo. `4-1` lleva seis checkpoints, uno por fase,
+  > elegidos a mano antes de cada set piece, porque un escenario *psicológico
+  > de terror* con uno cada 448 px anulaba la tensión (AUD-516); `4-1b` lleva
+  > siete, uno por evento mecánico según su blueprint (AUD-576); las tres
+  > variantes de `4-1c` llevan seis, uno por sección
+  > (`test_hay_seis_checkpoints_uno_por_seccion`). Brechas de ~2300-2600 px
+  > son ahí el diseño, no un defecto: no los «arregles» sin consultar. La
+  > regla de 700–1200 sigue mandando para todo lo demás.
 - **Enemigos en pantalla simultáneos ≤ 8** en niveles de travesía. Por encima
   de eso, el rendimiento y la legibilidad se degradan juntos.
 - **Los jefes no tienen límite de tiempo.** El reloj se oculta al entrar en la
@@ -640,7 +651,7 @@ del datacenter).
 - [ ] Dificultad declarada y acorde al vecino (±1)
 - [ ] Dimensiones del TMX escritas en el README (y verificadas con `validate_tmx.py --ci`)
 - [ ] Máximo 3 tipos de enemigo; primer encuentro presentado sin otras amenazas
-- [ ] Checkpoint cada 700–1200 px; nunca bloqueado por enemigos
+- [ ] Checkpoint cada 700–1200 px; nunca bloqueado por enemigos (excepción declarada de la Zona 4: §1.3, AUD-590)
 - [ ] Ningún hueco obligatorio de más de 3 baldosas (§1.3); los de 3, con ruta alternativa o checkpoint pegado
 - [ ] Ningún repecho obligatorio de más de 5 baldosas (§1.3)
 - [ ] El nivel se ha **jugado** de principio a fin, no sólo calificado
