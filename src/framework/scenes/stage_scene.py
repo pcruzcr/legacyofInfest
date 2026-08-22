@@ -1002,6 +1002,10 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
             player.update(dt, solidos, im, one_way_rects=one_way_rects,
                           pendientes=stage.pendientes)
             self._nado.update(dt, player, self._mundo, self.context.event_bus)
+            # AUD-599 — GAP-072.1: el medio le dice al nado hacia dónde va
+            # el agua. `SwimmingState` usa este vector como objetivo del
+            # arrastre neutral; en tierra firme vale cero y no hace nada.
+            player.corriente_medio = self._nado.corriente_medio
             self._actualizar_agarres(player, im)
             self._interactables.update(
                 dt, player.rect,

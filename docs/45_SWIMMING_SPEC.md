@@ -57,6 +57,28 @@ Nadar es un estado del jugador (`SwimmingState` en `src/framework/entities/state
 | Velocidad de expulsión a la superficie | −200 px/s |
 | Periodo de emisión de burbujas | 0.3 s |
 
+### 2.1 La corriente del medio (AUD-599, GAP-072.1)
+
+Las `ZonaDeAgua` llevan un vector `corriente` completo (`corriente_x`,
+`corriente_y` en el TMX). Dos consumidores, la misma semántica:
+
+| Consumidor | Qué hace con ella |
+|---|---|
+| `sistema_corriente_de_agua` (ECS) | suma `corriente · dt` a la velocidad de **cada entidad** que solapa una zona — jugador incluido |
+| `SwimmingState` (freno neutral) | sin tecla vertical, el arrastre apunta a la velocidad **del medio**, no a cero: `v.y += (medio.y − v.y) · (1 − 0.88^Δ)` |
+
+El segundo es lo que hace SENTIBLE la corriente vertical: apuntar el freno
+a reposo comía cualquier empuje hasta un ~14% de equilibrio. Con el objetivo
+en el medio, soltar todo en una corriente ↓↓ deriva hacia el fondo y nadar
+en contra cuesta pero se puede. El techo inferior (+60 px/s) era del
+nadador: con corriente, el límite a la baja pasa a ser `max(60, |medio.y|)`.
+
+`ControlDeNado.corriente_medio` expone la SUMA de las corrientes de todas
+las zonas que contienen al jugador (la zona grande en calma convive con las
+franjas de corriente sin pisarse), y la escena la entrega al jugador cada
+fotograma (`player.corriente_medio`) para que el estado no tenga que volver
+a preguntarle al mundo. En tierra firme vale `(0, 0)`.
+
 ---
 
 ## 3. Transiciones de estado

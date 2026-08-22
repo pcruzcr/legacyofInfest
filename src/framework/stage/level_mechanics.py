@@ -20,7 +20,6 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.framework.ecs.components import ZonaDeAgua
-from src.framework.ecs.systems import en_agua
 
 #: Nombre con el que la cámara lenta registra su factor en el reloj (AUD-118).
 FUENTE_TIEMPO_BALA: str = "tiempo_bala"
@@ -109,6 +108,24 @@ class ControlDeNado:
     umbral_aviso: float = 10.0
     _estaba_dentro: bool = False
     _acumulado_dano: float = 0.0
+    #: AUD-599 — GAP-072.1: la corriente del medio que rodea al jugador.
+    #: La actualiza `update()` cada fotograma y la lee la escena para
+    #: entregársela al jugador; los estados acuáticos la usan como
+    #: velocidad objetivo del arrastre neutral.
+    _corriente_medio: pygame.Vector2 = field(
+        default_factory=lambda: pygame.Vector2(0.0, 0.0))
+
+    @property
+    def corriente_medio(self) -> pygame.Vector2:
+        """La corriente de la zona de agua que contiene al jugador (o cero).
+
+        Es el vector COMPLETO de la zona — horizontal y vertical: el eje X
+        ya lo aplicaba `sistema_corriente_de_agua` por su cuenta, pero
+        entregarlo aquí también no lo duplica (el sistema ECS suma una
+        aceleración; esto es un dato de consulta) y permite al estado de
+        nado conocer el medio sin volver a preguntarle al mundo.
+        """
+        return self._corriente_medio
 
     @property
     def sin_aire(self) -> bool:
@@ -127,8 +144,20 @@ class ControlDeNado:
 
     def update(self, dt: float, jugador: Player, mundo: World, bus=None) -> None:
         """Un fotograma. Devuelve nada; cambia el estado del jugador si toca."""
-        agua: ZonaDeAgua | None = en_agua(mundo, jugador.rect)
+        # AUD-599 — GAP-072.1: el medio que rodea al jugador es la SUMA de
+        # las corrientes de TODAS las zonas que lo contienen — la misma
+        # semántica que `sistema_corriente_de_agua`, que también suma (la
+        # zona grande en calma convive con las franjas de corriente sin
+        # pisarse; tomar «la primera que encuentre» dependía del orden del
+        # mundo y devolvía cero dentro de una franja).
+        total_corriente = pygame.Vector2(0.0, 0.0)
+        agua: ZonaDeAgua | None = None
+        for _, zona in mundo.cada(ZonaDeAgua):
+            if zona.rect.colliderect(jugador.rect):
+                agua = zona
+                total_corriente += zona.corriente
         dentro = agua is not None
+        self._corriente_medio = total_corriente
 
         # AUD-573 — dentro del agua, la autoridad es CONTINUA, no de
         # flanco. Antes sólo se metía al jugador a nadar en el instante de

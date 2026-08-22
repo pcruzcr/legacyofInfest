@@ -3621,6 +3621,18 @@ sepa que se vieron y por qué se dejaron fuera del nivel.
   3. **Zoom de cámara.** La revelación del pez y la cavidad final (blueprint §38/40/53) piden un zoom-out cinematográfico corto; la cámara de escenario no tiene zoom. El fondo pintado y la sombra a escala cumplen la lectura sin mover la cámara.
   4. **Luz ambiental por zona.** El blueprint §46 propone un `ambient_light` decreciente por tramo (0.50 → 0.25). Hoy el `ambient_light` es una sola propiedad del mapa; la degradación se cuenta con **faroles que se apagan** (LUCES, AUD-576) y con las tres variantes de fondo (mina → caverna → abismo), no re-bajando una luz global.
 - **Resolution plan:** cuando el motor tenga corrientes con componente vertical, música por zona o zoom de cámara, volver aquí y construir el tramo/evento correspondiente del 4-1b.
+- **Parcial — AUD-599 (2026-08-21):** el punto 1 (corriente vertical) quedó
+  construido y aplicado. La física: el freno neutral del nado apunta ahora
+  a la velocidad **del medio** (`player.corriente_medio`, suma de las
+  corrientes de las zonas que lo contienen — `ControlDeNado` la expone, la
+  escena la entrega) en vez de a cero, que era donde se comía cualquier
+  empuje hasta un ~14%. El techo inferior de +60 px/s cede ante
+  `max(60, |medio.y|)`. El 4-1b declara su C4 ↓↓ real
+  (`trazado.ZONAS_DE_CORRIENTE_VERTICAL`: pozo del drenaje, 660-740,
+  corriente_y=110), entregada como `WaterZone` superpuesta. Spec:
+  `docs/45_SWIMMING_SPEC.md` §2.1. Quedan abiertos los puntos 2 (música por
+  sección), 3 (zoom de cámara) y 4 (luz por zona — resuelto por AUD-598,
+  ver abajo).
 - **Verificado:** 2026-08-20 — la geometría y los fondos de `trazado.py`/`stage4_1b.py` implementan la intención del blueprint dentro de lo que el motor permite; `validate_tmx.py --ci` en verde y `tests/test_stage4_1b.py` en verde.
      salir / Salir al título, empujando `ShopScene` de siempre.
 - **Verificado:** 2026-08-19 — `pytest tests/test_el_barra_de_vida_reemplaza_corazones.py

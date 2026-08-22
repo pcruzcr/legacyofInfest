@@ -253,6 +253,11 @@ class Player(BaseEntity):
         #: que es el comportamiento de siempre en los mapas que no declaran
         #: ninguna zona de este tipo.
         self._material_de_zona: Material | None = None
+        #: AUD-599 — GAP-072.1: la corriente del agua que rodea al jugador,
+        #: escrita por la escena cada fotograma desde
+        #: `ControlDeNado.corriente_medio`. La lee `SwimmingState` como la
+        #: velocidad objetivo del arrastre neutral. Cero en tierra firme.
+        self.corriente_medio = pygame.Vector2(0.0, 0.0)
         #: AUD-388 — los efectos temporales que lleva encima. Vacío casi
         #: siempre; lo llenan las charcas de veneno, los potenciadores y lo que
         #: venga. Es el mismo componente que llevan los enemigos, y por eso

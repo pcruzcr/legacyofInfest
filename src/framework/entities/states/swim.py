@@ -79,13 +79,25 @@ class SwimmingState(PlayerStateBase):
             player.velocity.y += empuje_vertical * 90.0 * dt
             player.velocity.y = max(-100.0, min(100.0, player.velocity.y))
         else:
-            # Sin tecla vertical: freno hacia flotar en el sitio, no caída
-            # libre. Un peso residual —mucho menor que la gravedad real—
-            # evita que el nado se sienta completamente ingrávido; sigue
-            # habiendo una razón para nadar hacia arriba de vez en cuando.
-            player.velocity.y *= 0.88 ** (dt * 60.0)
-            player.velocity.y += settings.GRAVITY * 0.05 * dt
-            player.velocity.y = max(-100.0, min(60.0, player.velocity.y))
+            # Sin tecla vertical: freno hacia la velocidad DEL MEDIO, no
+            # hacia cero (AUD-599 — GAP-072.1). Antes el arrastre
+            # multiplicaba por 0.88 apuntando a reposo y se comía cualquier
+            # corriente vertical: un empuje de 120 px/s llegaba a un
+            # equilibrio de ~17 — imposible sentir la C4 ↓↓ del blueprint.
+            # Ahora el objetivo es `corriente_medio` (la velocidad del agua
+            # que rodea al jugador); sin corriente el medio vale cero y el
+            # comportamiento es el mismo de siempre, incluido el peso
+            # residual que tira un poquito al fondo.
+            medio_y = getattr(player, "corriente_medio", None)
+            medio_y = medio_y.y if medio_y is not None else 0.0
+            k = 1.0 - 0.88 ** (dt * 60.0)
+            player.velocity.y += (medio_y - player.velocity.y) * k
+            if medio_y == 0.0:
+                player.velocity.y += settings.GRAVITY * 0.05 * dt
+            # El techo inferior de velocidad era del nadador: con corriente,
+            # el río puede llevar más rápido de lo que uno nada hacia abajo.
+            techo_abajo = max(60.0, abs(medio_y))
+            player.velocity.y = max(-100.0, min(techo_abajo, player.velocity.y))
 
         if inp.move_x != 0:
             player.velocity.x += inp.move_x * 60.0 * dt
