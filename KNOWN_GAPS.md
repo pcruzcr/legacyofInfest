@@ -3631,7 +3631,7 @@ sepa que se vieron y por qué se dejaron fuera del nivel.
   action_map (172 casos) y la suite completa. `ruff check` limpio sobre
   los once ficheros tocados.
 
-## [GAP-067] Audio de autor pendiente: stinger de fase de jefe y risa de Paburu son placeholders sintetizados
+## ~~[GAP-067] Audio de autor pendiente: stinger de fase de jefe y risa de Paburu son placeholders sintetizados~~ *(Resuelto — AUD-596)*
 
 - **File:** `assets/sfx/stingers/stinger_boss_phase_0.wav`,
   `assets/sfx/stingers/stinger_boss_phase_1.wav`,
@@ -3656,13 +3656,28 @@ generar con `tools/convert_audio.py` desde los `.wav` originales.
   generan con `tools/convert_audio.py`. El stinger debe crecer en tensión
   con el número de fase, y la risa ser una grabación de actor, no un
   sintetizador.
+- **Resolution — AUD-596 (2026-08-21):** decisión del dueño: el material de
+  autor no va a llegar y los procedimentales quedan aceptados **como
+  definitivos** — pero definitivo no era el acorde plano de AUD-541. La
+  receta del propio GAP («el stinger debe crecer en tensión con el número
+  de fase») se construyó de verdad en `tools/generate_all_assets.py`
+  (`_gen_stingers_de_fase`/`_gen_risa_paburu`, ya comprometidos y
+  reproducibles): cada fase acumula capa (motivo → tríada+trémolo →
+  tritono+ruido → clúster+rumor de 50 Hz creciente), duración (0.9→1.7 s)
+  y reverberación; la risa son seis sílabas de igual loudness con huecos
+  desiguales y contorno de tono que sube y baja. Lo mide
+  `tests/test_los_stingers_crecen_en_tension.py` sobre los ficheros.
 - **Verificado:** 2026-08-18 — `pytest tests/test_los_menus_suenan.py
   tests/test_audio_wiring.py tests/test_sonidos_sin_emisor.py
   tests/test_crear_partida_desde_una_ranura_vacia.py` en verde (43 casos);
   `scripts/validate_assets.py` sin errores; el mapeo de la risa cumple
   `test_las_muestras_existen_en_el_banco_real`.
+  2026-08-21 (AUD-596) — `pytest tests/test_los_stingers_crecen_en_tension.py`
+  en verde (5 casos; falló antes de regenerar) + la misma batería de arriba
+  (43 casos) re-ejecutada contra los ficheros nuevos;
+  `scripts/validate_assets.py` sin errores; `ruff check` limpio.
 
-## [GAP-068] Pistas `_combat` de `DynamicMusicSystem` — el combate suena a traverse
+## ~~[GAP-068] Pistas `_combat` de `DynamicMusicSystem` — el combate suena a traverse~~ *(Resuelto — AUD-597)*
 
 - **File:** `assets/music/bgm_*.wav/.ogg`, `src/framework/audio/dynamic_music.py`
 - **Phase:** AUD-541 (2026-08-18) — hallazgo de la auditoría de audio: no
@@ -3679,10 +3694,24 @@ tanto, el código no cambia: el fallback es el contrato.
   `tools/convert_audio.py`) para que `_get_track_for_intensity` la
   encuentre sin tocar código. La intensidad de combate ya está cableada
   (`INTENSITY_COMBAT`, detección de enemigos vivos).
+- **Resolution — AUD-597 (2026-08-21):** decisión del dueño: no habrá
+  composición propia, así que la variante se **derivó proceduralmente** de
+  cada pista (`_gen_combat_desde` en `tools/generate_all_assets.py`):
+  misma pieza, mismos canales/rate/duración, con capa rítmica horneada —
+  bombo con caída de tono a 132 BPM, hi-hats de ruido en contratiempos,
+  fundida a cero al cierre del bucle. Siete ficheros nuevos
+  (`bgm_stage0_combat`, `bgm_zone{1,2,3}_combat` y sus tres `_traverse`).
+  Quedan fuera con motivo: `bgm_zoneN_boss` (su base ya es combate) y los
+  mp3 de autor del 4-1/4-1b (curva compuesta por fase). El motor no se
+  tocó: el lookup `{bgm}_combat` existía desde siempre.
 - **Verificado:** 2026-08-18 — el fallback se cubre en la batería de audio
   (`test_audio_wiring.py` y amigos, verdes); `scripts/validate_assets.py`
   sin errores; no existe código roto que arreglar, sólo música que
   componer.
+  2026-08-21 (AUD-597) — `pytest tests/test_las_pistas_de_combate_se_deducen.py`
+  en verde (16 casos: existencia, duración igual a la fuente, más densidad
+  de agudos que la fuente, y `INTENSITY_COMBAT` resolviendo la variante);
+  `scripts/validate_assets.py` sin errores; `ruff check` limpio.
 
 ## ~~[GAP-069] 4.1b — tiles destructibles: el motor los tiene, pero no bajo el agua~~ *(Resuelto)*
 

@@ -3396,6 +3396,302 @@ def _gen_all_sfx():
             else:
                 _write_wav(destino, samples)
 
+
+# ════════════════════════════════════════
+# AUD-596 — stingers de fase de jefe y risa de Paburu (GAP-067)
+# ════════════════════════════════════════
+#
+# Los cuatro `.wav` de `assets/sfx/stingers/` y la risa de
+# `assets/sfx/voz/sfx_voz_paburu_risa.wav` nacieron en AUD-541 como
+# placeholders desechables sin generador comprometido. La decisión del dueño
+# (2026-08-21) los acepta como definitivos **procedimentales**: la receta del
+# propio GAP pedía que «el stinger debe crecer en tensión con el número de
+# fase» — cada fase acumula capa, longitud y graves — y una risa de verdad
+# tiene estallidos irregulares con tono que sube y baja. Viven fuera del
+# catálogo porque sus nombres (`stinger_boss_phase_N`, `sfx_voz_*`) rompen la
+# convención `sfx_<categoria>_<nombre>` y sus rutas son contrato con
+# `boss_base.py` y `menu_sfx.py`.
+
+#: Duración (s) por fase: 0.9 → 1.7. La curva que mide la prueba.
+STINGER_DURACION = (0.9, 1.15, 1.4, 1.7)
+
+#: Nota más grave de cada fase (Hz): a partir de la fase 1 es un **colchón
+#: continuo** bajo todo lo demás, que baja de tono y sube de volumen con la
+#: fase — la energía de graves creciente es lo que mide la prueba.
+STINGER_GRAVE = (164.81, 98.0, 73.42, 55.0)
+
+#: Volumen del colchón de graves por fase (la fase 0 no tiene).
+STINGER_COLCHON = (0.0, 0.18, 0.30, 0.45)
+
+#: Rumor de 50 Hz — el mismo tono en todas las fases con volumen creciente.
+#: Es la capa que mide la prueba (Goertzel a 50 Hz): un tono FIJO que
+#: crece no se confunde con los colchones que bajan de nota ni con la
+#: normalización de cada fichero.
+STINGER_SUB = (0.0, 0.12, 0.26, 0.42)
+
+
+def _gen_stinger_de_fase(fase, rate=SAMPLE_RATE):
+    """Stinger del cambio de fase `fase` (0-3), tensión creciente.
+
+    Capas acumulativas — la fase n lleva todo lo que llevaba la n-1 más su
+    propia voz:
+
+    0 «aviso»     dos notas (mi→si), seno+cuadrada suave;
+    1 «inquietud» tríada menor arpegiada + trémolo de 8 Hz + aliento de
+                  ruido rosa filtrado;
+    2 «alarma»    tritono sostenido + refuerzo una octava abajo + oleada
+                  creciente de ruido;
+    3 «pánico»    clúster + caída de subgraves (90→38 Hz) + reverberación
+                  larga (`_aplicar_reverberacion`).
+    """
+    dur = STINGER_DURACION[fase]
+    n = int(rate * dur)
+    grave = STINGER_GRAVE[fase]
+    salida = [0.0] * n
+
+    def _nota(inicio_s, largo_s, freq, vol=0.5):
+        i0, i1 = int(rate * inicio_s), min(n, int(rate * (inicio_s + largo_s)))
+        for i in range(i0, i1):
+            t = i / rate - inicio_s
+            env = min(1.0, t / 0.02) * max(0.0, 1.0 - t / largo_s) ** 1.5
+            salida[i] += (_tri(freq, i / rate) * 0.6 +
+                          _square(freq * 2, i / rate, 0.4) * 0.18) * env * vol
+
+    # Fase 0+: el motivo de dos notas está siempre.
+    _nota(0.02, dur * 0.38, 164.81)
+    _nota(dur * 0.45, dur * 0.5, 246.94)
+
+    if fase >= 1:  # colchón de graves + rumor de 50 Hz + tríada + trémolo
+        vol_colchon = STINGER_COLCHON[fase]
+        for i in range(n):
+            salida[i] += math.sin(2 * math.pi * grave * i / rate) * vol_colchon
+        for i in range(n):
+            salida[i] += math.sin(2 * math.pi * 50.0 * i / rate) * STINGER_SUB[fase]
+        for k, f in enumerate((220.0, 261.63, 329.63)):
+            _nota(dur * (0.12 + 0.16 * k), dur * 0.34, f, vol=0.32)
+        trem_state = 0.0
+        for i in range(n):
+            trem_state += (math.sin(2 * math.pi * 8 * i / rate) *
+                           math.sin(2 * math.pi * 6.3 * i / rate)) * 0.04
+            if 0 <= i < n:
+                salida[i] += trem_state
+
+    if fase >= 2:  # tritono + octava abajo + oleada de ruido
+        for i in range(int(rate * dur * 0.25), n):
+            t = i / rate
+            env = 0.35 * min(1.0, (t - dur * 0.25) / 0.15)
+            salida[i] += (_square(grave * 2, t, 0.5) * 0.22 +
+                          _square(grave * 2 ** (6 / 12), t, 0.5) * 0.2) * env
+        rosa = _ruido_rosa(n)
+        estado = 0.0
+        for i in range(n):
+            avance = i / n
+            estado_filtro = _paso_pasa_bajos(rosa[i], estado, 1600.0, rate)
+            estado = estado_filtro
+            salida[i] += estado_filtro * 0.07 * avance
+
+    if fase >= 3:  # clúster + caída de subgraves + cola
+        for i in range(int(rate * dur * 0.35), n):
+            t = i / rate
+            env = min(1.0, (t - dur * 0.35) / 0.1) * max(
+                0.0, 1.0 - (t - dur * 0.35) / (dur * 0.65)) ** 1.2
+            salida[i] += (_tri(233.08, t) * 0.28 + _tri(246.94, t) * 0.28 +
+                          _tri(220.0, t) * 0.24) * env
+        for i in range(n):
+            t = i / rate
+            if t < 0.55:
+                f = 90.0 + (38.0 - 90.0) * (t / 0.55)
+                env = min(1.0, t / 0.03) * max(0.0, 1.0 - t / 0.55)
+                salida[i] += math.sin(2 * math.pi * f * t) * env * 0.85
+
+    if fase == 3:
+        salida = _aplicar_reverberacion(salida, rate, decaimiento=0.62,
+                                        ecos=9, cola_extra_s=0.5)
+    return salida
+
+
+def _gen_risa_paburu(rate=SAMPLE_RATE):
+    """La risa de Paburu (GAP-067, AUD-596): seis estallidos irregulares.
+
+    Cada estallido tiene contorno de tono propio — alterna caída y subida,
+    como cualquier risa grabada — sobre un paseo aleatorio de tono base
+    (300-520 Hz) con un formante barriendo 700↔1400 Hz. Los huecos entre
+    estallidos no son metronómicos: aceleran y se frenan.
+    """
+    rng = random.Random(20260821)          # semilla fija: reproducible
+    gaps = (0.075, 0.135, 0.095, 0.165, 0.115)   # 6 estallidos, 5 huecos
+    salidas = []
+    tono = 380.0
+    arranque = 0.06                        # aire antes de la primera sílaba
+    cursor = arranque
+    for k in range(len(gaps) + 1):
+        largo = rng.uniform(0.055, 0.085)
+        n_est = int(rate * largo)
+        tono = max(300.0, min(520.0, tono + rng.uniform(-70, 70)))
+        sube = (k % 2 == 0)
+        f_inicio = tono * (0.82 if sube else 1.14)
+        f_fin = tono * (1.16 if sube else 0.84)
+        est = []
+        for i in range(n_est):
+            frac = i / max(1, n_est - 1)
+            f = f_inicio + (f_fin - f_inicio) * frac
+            formante = 1050.0 + 350.0 * math.sin(math.pi * frac + k)
+            crudo = _square(f, cursor + i / rate, 0.42) * 0.7 + \
+                _tri(f * 2.01, cursor + i / rate) * 0.3
+            paso = _paso_pasa_bajos(crudo, est[-1] if est else 0.0,
+                                    formante, rate)
+            env = min(1.0, frac / 0.15) * max(0.0, 1.0 - frac) ** 0.8
+            est.append(paso * env * (0.75 + 0.25 * rng.random()))
+        # Cada sílaba se normaliza al mismo pico antes de mezclar: sin
+        # esto, la resonancia del formante de una sílaba afortunada
+        # dispara el techo del envolvente y las demás quedan por debajo
+        # de cualquier umbral de segmentación (y suenan desiguales).
+        pico_est = max(abs(x) for x in est) or 1.0
+        est = [x / pico_est * 0.5 for x in est]
+        salidas.append(est)
+        if k < len(gaps):
+            cursor += largo + gaps[k]
+    total = int(rate * (cursor + 0.12))
+    mezcla = [0.0] * total
+    # AUD-596 — la posición de partida de la mezcla es el ARRANQUE fijo,
+    # no `cursor`: cuando el bucle de generación termina, `cursor` ya vale
+    # «principio de la última sílaba» (~1 s), y usarlo aquí apilaba las
+    # seis sílabas al final del fichero, fuera de `total`.
+    cursor_muestras = int(rate * arranque)
+    for est, gap in zip(salidas, [*gaps, 0], strict=True):
+        for i, s in enumerate(est):
+            j = cursor_muestras + i
+            if j < total:
+                mezcla[j] += s
+        cursor_muestras += len(est) + int(rate * gap)
+    pico = max(abs(x) for x in mezcla) or 1.0
+    return [x / pico * 0.8 for x in mezcla]
+
+
+def _gen_stingers_y_risa():
+    print("  Stingers de fase y risa de Paburu (AUD-596)...")
+    for fase in range(4):
+        destino = A / "sfx" / "stingers" / f"stinger_boss_phase_{fase}.wav"
+        _ensure(destino)
+        _write_wav(destino, _gen_stinger_de_fase(fase))
+    destino = A / "sfx" / "voz" / "sfx_voz_paburu_risa.wav"
+    _ensure(destino)
+    _write_wav(destino, _gen_risa_paburu())
+
+
+# ════════════════════════════════════════
+# AUD-597 — variantes `_combat` de las pistas de zona (GAP-068)
+# ════════════════════════════════════════
+#
+# `_get_track_for_intensity` busca `{bgm}_combat` antes que `{bgm}_traverse`
+# desde siempre, pero ningún fichero llevaba ese nombre: el combate sonaba
+# idéntico a la calma. Decisión del dueño (2026-08-21): no habrá composición
+# propia, así que la variante se **deriva** de la pista que ya existe — la
+# misma pieza con una capa rítmica horneada encima (bombo con caída de
+# tono a cada pulso, hi-hats de ruido en los contratiempos, BPM 132), sin
+# tocar código del motor. Quedan fuera los `bgm_zoneN_boss` (su base YA es
+# combate permanente) y los mp3 de autor del 4-1/4-1b (cada fase trae su
+# propia curva compuesta).
+
+#: Pistas base que ganan su `_combat`.
+PISTAS_DE_COMBAT = (
+    "bgm_stage0",
+    "bgm_zone1", "bgm_zone2", "bgm_zone3",
+    "bgm_zone1_traverse", "bgm_zone2_traverse", "bgm_zone3_traverse",
+)
+
+BPM_COMBAT = 132
+
+
+def _gen_combat_desde(nombre, rate=SAMPLE_RATE):
+    """Hornea `assets/music/<nombre>_combat.wav` desde `<nombre>.wav`.
+
+    Misma duración, mismos canales y mismo sample rate que la fuente — es
+    la misma pieza. La capa rítmica se funde a cero en los últimos 100 ms
+    para que la vuelta del bucle no haga clic con un bombo cortado.
+    """
+    import wave as _wave
+
+    origen = A / "music" / f"{nombre}.wav"
+    with _wave.open(str(origen), "rb") as wf:
+        canales = wf.getnchannels()
+        rate_src = wf.getframerate()
+        bruto = wf.readframes(wf.getnframes())
+    # El ritmo se deriva del rate de la fuente: hay pistas a 22050 y otras
+    # a 44100 — la capa tiene que quedar sincronizada en ambas.
+    rate = rate_src
+    enteros = struct.unpack(f"<{len(bruto) // 2}h", bruto)
+    if canales == 2:
+        izq = enteros[0::2]
+        der = enteros[1::2]
+    else:
+        izq = der = enteros
+    n = len(izq)
+    escala = 16384.0
+
+    muestras_beat = int(rate * 60.0 / BPM_COMBAT)
+    medio = muestras_beat // 2
+    cola_fade = int(rate * 0.10)
+    estado_hat = 0.0
+    salida_izq = [0.0] * n
+    salida_der = [0.0] * n
+    for i in range(n):
+        # Fuente, apenas adelgazada para dejar sitio al golpe.
+        v_i = izq[i] / escala * 0.85
+        v_d = der[i] / escala * 0.85
+        pos = i % muestras_beat
+        t_rel = (i % muestras_beat) / rate
+        # Bombo: caída de tono 130→42 Hz en los primeros 90 ms del pulso.
+        if pos < int(rate * 0.09):
+            f = 130.0 + (42.0 - 130.0) * (pos / (rate * 0.09))
+            env = max(0.0, 1.0 - pos / (rate * 0.11)) ** 1.4
+            golpe = math.sin(2 * math.pi *
+                             (f * t_rel + 0.5 * (f - 42.0) * t_rel * t_rel /
+                              max(1e-9, 0.09))
+                             ) * env * 0.55
+            v_i += golpe
+            v_d += golpe
+        # Hi-hat en el contratiempo: ruido por primera diferencia (pasa-altos
+        # pobre pero suficiente para lo que pide el timbre).
+        if medio <= pos < medio + int(rate * 0.03):
+            crudo = random.uniform(-1.0, 1.0)
+            estado_hat += 0.35 * (crudo - estado_hat)
+            chasquido = (crudo - estado_hat) * 0.32
+            v_i += chasquido
+            v_d += chasquido
+        # Fundido de la capa al final del bucle (la fuente sigue entera).
+        restante = n - i
+        if restante < cola_fade:
+            factor = restante / cola_fade
+            base_i = izq[i] / escala
+            base_d = der[i] / escala
+            v_i = base_i + (v_i - base_i) * factor
+            v_d = base_d + (v_d - base_d) * factor
+        salida_izq[i] = math.tanh(v_i)
+        salida_der[i] = math.tanh(v_d)
+    destino = A / "music" / f"{nombre}_combat.wav"
+    _ensure(destino)
+    mx = max(max(abs(x) for x in salida_izq),
+             max(abs(x) for x in salida_der)) or 1.0
+    norm_i = [int(x / mx * 16383) for x in salida_izq]
+    norm_d = [int(x / mx * 16383) for x in salida_der]
+    with _wave.open(str(destino), "w") as wf:
+        wf.setnchannels(canales)
+        wf.setsampwidth(2)
+        wf.setframerate(rate)
+        if canales == 2:
+            intercalado = [v for par in zip(norm_i, norm_d, strict=True)
+                           for v in par]
+        else:
+            intercalado = norm_i
+        wf.writeframes(struct.pack(f"<{len(intercalado)}h", *intercalado))
+
+
+def _gen_pistas_de_combat():
+    print("  Variantes _combat de zona (AUD-597)...")
+    for nombre in PISTAS_DE_COMBAT:
+        _gen_combat_desde(nombre)
+
 # ════════════════════════════════════════
 # MAIN
 # ════════════════════════════════════════
@@ -3405,10 +3701,12 @@ def main():
     print("  Legacy of InFest — Complete Asset Generator")
     print("=" * 60)
     print("\nTotal asset count target: ~250+ files")
-    
+
     print("\n[1/9] Player sprites...")
     _gen_player_all()
-    
+
+    _gen_stingers_y_risa()
+
     print("\n[2/9] Enemy sprites...")
     _gen_all_enemies()
     _gen_pez_abismal_sheet(A / "sprites" / "enemies" / "stage4_1b" / "enemy_pez_abismal.png")
