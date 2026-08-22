@@ -314,7 +314,7 @@ Se serializa la instancia completa del dataclass `TrainedModel` — no sólo el 
 
 | Contexto | Ruta |
 |---|---|
-| Modelo de muestra del profesor | `assets/models/professor_sample.pkl` |
+| Modelo de referencia del profesorado | no se distribuye: se entrena en cada máquina desde `assets/datasets/sample_dataset.npz` y se cachea fuera del repositorio (AUD-587) |
 | Modelo de la entrega de un estudiante | `src/stages/<entrega_del_estudiante>/models/<nombre>.pkl` |
 
 **Nota:** el modelo de un estudiante vive dentro de su propia carpeta de entrega bajo `src/stages/`, no en un directorio de nivel superior aparte.

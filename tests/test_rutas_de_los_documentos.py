@@ -129,6 +129,17 @@ MODULOS_RETIRADOS: frozenset[str] = frozenset({
     # (AUD-522/523) es ahora el checkpoint en los 26 escenarios, sin sprite
     # ni fallback. La mención queda como historia de por qué ya no existe.
     "assets/sprites/shared/checkpoint.png",
+    # AUD-168: el recorte de hojas de sprites lo hace `AssetLoader`; el
+    # empaquetado, `SpriteAtlas`. `docs/22_API_CONTRACTS.md` §5.3 lo cita como
+    # historia del retiro (la cita-histórica explica el porqué, y el porqué es
+    # lo que impide que alguien vuelva a crearlo).
+    "src/engine/utils/spritesheet.py",
+    # AUD-587: el modelo pickle del profesorado se retira — el runtime entrena
+    # el modelo de referencia desde `assets/datasets/sample_dataset.npz` y lo
+    # cachea fuera del repositorio, así que distribuir el binario sólo servía
+    # para que alguien lo deserializara por error. `docs/93` lo cita como
+    # evidencia del hallazgo F2: historia, no una ruta que deba existir.
+    "assets/models/professor_sample.pkl",
 })
 
 #: Estado del jugador: ficheros que el juego **escribe al jugarse** y que

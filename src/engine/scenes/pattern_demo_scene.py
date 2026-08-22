@@ -66,8 +66,11 @@ CLASS_COLORS: list[tuple[int, int, int]] = [
     (200, 80, 255), (80, 255, 200), (255, 140, 80), (200, 200, 200),
 ]
 
+# AUD-587 — `_DEFAULT_MODEL` (assets/models/professor_sample.pkl) quedó
+# huérfano cuando la escena pasó a entrenar el modelo de referencia en esta
+# máquina (F3.3); el binario ya no se distribuye. `_MODEL_DIR` sigue: es
+# donde caen los modelos que la usuaria carga a mano.
 _MODEL_DIR = Path("assets") / "models"
-_DEFAULT_MODEL = _MODEL_DIR / "professor_sample.pkl"
 
 
 class PatternDemoScene(BaseScene):

@@ -3097,8 +3097,10 @@ class PatternDemoScene(BaseScene):
     def __init__(self, context: GameContext) -> None: ...
     # Índice de modo interno 0-5 (6 modos, incluye TREE_VIEW) según
     # 15_ACADEMIC_DEMO_SCENES.md §5.3.
-    # Carga PatternRecognitionTools.load_model(ASSETS_DIR / "models" / "professor_sample.pkl")
-    # en on_enter() por defecto.
+    # En on_enter() entrena el modelo de referencia desde
+    # assets/datasets/sample_dataset.npz (reference_model.obtener_modelo())
+    # y lo cachea fuera del repositorio — AUD-587: no se carga ningún .pkl
+    # por defecto.
 ```
 > **AUD-455.** Eran 0-4 (5 modos); el real es 0-5 (6, falta `TREE_VIEW`).
 > `__init__` recibe `context: GameContext` obligatorio, no `() -> None`.

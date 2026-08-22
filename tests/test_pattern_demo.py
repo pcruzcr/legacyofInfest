@@ -313,3 +313,42 @@ class TestElModeloNoDependeDeLaVersionDeScikitLearn:
         monkeypatch.setattr(
             reference_model, "DATASET", Path("/no/existe/dataset.npz"))
         assert reference_model.entrenar() is None
+
+
+class TestElBinarioPickleYaNoSeDistribuye:
+    """F2 del FODA (docs/93 §6) — el cierre que faltaba de F3.3.
+
+    El runtime ya no carga `professor_sample.pkl` (lo entrena aquí), pero el
+    binario seguía en `assets/`, `validate_assets.py` lo exigía y lo
+    deserializaba en cada CI —con su propio aviso de «unpickling executes
+    arbitrary code»— y las pruebas lo recargaban si existía. Distribuir los
+    datos y el guion (que es la cura desde AUD-038) exige no distribuir el
+    estimador: si el binario no está, nadie puede deserializarlo por error.
+    """
+
+    def test_el_pkl_ya_no_esta_en_assets(self):
+        from pathlib import Path
+
+        assert not Path("assets/models/professor_sample.pkl").exists()
+
+    def test_el_dataset_que_lo_sustituye_si_esta(self):
+        from pathlib import Path
+
+        assert Path("assets/datasets/sample_dataset.npz").exists()
+
+    def test_el_validador_ya_no_exige_ningun_pickle(self):
+        """Lo que `validate_assets` exige de modelos/datasets no puede ser un
+        `.pkl`: exigirlo obliga a deserializarlo para comprobarlo."""
+        import importlib.util
+        from pathlib import Path
+
+        ruta = Path("scripts/validate_assets.py")
+        spec = importlib.util.spec_from_file_location("validate_assets_f2", ruta)
+        modulo = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(modulo)
+        requeridos = [
+            rel for rel in getattr(modulo, "REQUIRED_DATASETS", [])
+            + getattr(modulo, "REQUIRED_MODELS", [])
+            if rel.endswith(".pkl")
+        ]
+        assert not requeridos, f"el validador sigue exigiendo pickles: {requeridos}"

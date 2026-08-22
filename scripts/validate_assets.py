@@ -59,7 +59,12 @@ REQUIRED_IMAGES = [
     "ui/banner_top.png",
     "ui/banner_bottom.png",
 ]
-REQUIRED_MODELS = ["models/professor_sample.pkl"]
+# AUD-587 — antes se exigía `models/professor_sample.pkl`, un binario pickle
+# que el validador mismo deserializaba para comprobarlo (con el aviso de
+# «unpickling executes arbitrary code» de propina). El runtime ya entrena el
+# modelo de referencia desde el dataset (F3.3), así que lo que se distribuye
+# y se exige es el dataset, no el estimador.
+REQUIRED_DATASETS = ["datasets/sample_dataset.npz"]
 REQUIRED_SOUNDS = [
     # Music
     "music/bgm_title.wav",
@@ -84,6 +89,10 @@ REQUIRED_SOUNDS = [
     "music/bgm_stage4_1_fase4.mp3",
     "music/bgm_stage4_1_fase5.mp3",
     "music/bgm_stage4_1_fase6.mp3",
+    # AUD-575 — el tema en loop de la mina inundada (4-1b), material de
+    # autor como las fases del cementerio: llegó como `.mp3` y se registra
+    # con su extensión real, no la convención heredada.
+    "music/4_1_b.mp3",
     # UI SFX
     "sfx/ui/sfx_ui_menu_move.wav",
     "sfx/ui/sfx_ui_menu_confirm.wav",
@@ -145,22 +154,26 @@ SPRITE_PALETTES: list[tuple[str, set[tuple[int, int, int]]]] = [
         (220, 180, 140), (220, 200, 140), (255, 255, 255),
     }),  # 9 file(s), 15 colour(s)
     ("sprites/enemies/*.png", {
-        (0, 0, 0), (6, 8, 14), (14, 18, 26), (30, 80, 30),
-        (40, 10, 10), (40, 120, 60), (50, 30, 80), (50, 150, 100),
-        (60, 45, 30), (60, 60, 120), (60, 120, 60), (80, 30, 30),
-        (80, 50, 20), (80, 60, 120), (80, 100, 40), (80, 150, 200),
-        (100, 20, 20), (100, 60, 60), (100, 60, 100), (100, 75, 45),
-        (120, 40, 20), (120, 50, 180), (120, 80, 40), (120, 100, 60),
-        (120, 220, 210), (140, 110, 70), (160, 120, 200), (180, 50, 50),
-        (180, 60, 30), (180, 100, 220), (180, 140, 220), (200, 80, 240),
-        (200, 120, 240), (200, 160, 240), (220, 60, 60), (220, 100, 255),
-        (220, 140, 255), (220, 180, 255), (240, 80, 80), (240, 120, 255),
-        (240, 160, 255), (255, 100, 100), (255, 120, 120), (255, 140, 255),
-        (255, 255, 255),
-    }),  # 24 file(s), 45 colour(s) — AUD-519 añade el pez abismal de 4.1b:
+        (0, 0, 0), (6, 8, 14), (14, 18, 26), (30, 22, 14),
+        (30, 80, 30), (40, 10, 10), (40, 120, 60), (50, 30, 80),
+        (50, 150, 100), (60, 45, 30), (60, 60, 120), (60, 120, 60),
+        (80, 30, 30), (80, 50, 20), (80, 60, 120), (80, 100, 40),
+        (80, 150, 200), (96, 140, 148), (100, 20, 20), (100, 60, 60),
+        (100, 60, 100), (100, 75, 45), (104, 58, 36), (120, 40, 20),
+        (120, 50, 180), (120, 66, 40), (120, 80, 40), (120, 100, 60),
+        (120, 220, 210), (140, 110, 70), (140, 176, 182), (150, 86, 52),
+        (160, 120, 200), (180, 50, 50), (180, 60, 30), (180, 100, 220),
+        (180, 140, 220), (200, 80, 240), (200, 120, 240), (200, 160, 240),
+        (220, 60, 60), (220, 100, 255), (220, 140, 255), (220, 180, 255),
+        (240, 80, 80), (240, 120, 255), (240, 160, 255), (255, 100, 100),
+        (255, 120, 120), (255, 140, 255), (255, 255, 255),
+    }),  # 26 file(s), 51 colour(s) — AUD-519 añade el pez abismal de 4.1b:
         # (6,8,14) el borde, (14,18,26) el cuerpo, (120,220,210) el señuelo
-        # bioluminiscente. Regenerado con `scripts/collect_palettes.py`,
-        # no a mano (ver el aviso de arriba).
+        # bioluminiscente. AUD-575 añade la fauna de la mina: los óxidos del
+        # cangrejo ((30,22,14), (104,58,36), (120,66,40), (150,86,52)) y los
+        # azules pálidos de la medusa ((96,140,148), (140,176,182)).
+        # Regenerado con `scripts/collect_palettes.py`, no a mano (ver el
+        # aviso de arriba).
     ("sprites/bosses/*.png", {
         (10, 10, 10), (10, 100, 40), (30, 107, 107), (40, 164, 80),
         (45, 74, 30), (50, 160, 80), (60, 60, 60), (60, 100, 50),
@@ -216,14 +229,28 @@ def check_font(path: Path) -> None:
         ERRORS.append(f"[FONT LOAD FAILED] {path}: {e}")
 
 
-def check_model(path: Path) -> None:
+def check_dataset(path: Path) -> None:
+    """Comprueba un dataset de características sin ejecutar nada.
+
+    AUD-587 — sustituye a `check_model`: `np.load(allow_pickle=False)` lee
+    arrays puros y se niega a deserializar objetos, que es justo la
+    propiedad que hacía peligroso exigir un `.pkl` en CI.
+    """
     try:
-        from src.framework.processing.pattern_recognition_tools import (
-            PatternRecognitionTools,
-        )
-        PatternRecognitionTools.load_model(str(path))
+        import numpy as np
+
+        with np.load(str(path), allow_pickle=False) as data:
+            if "X" not in data or "y" not in data:
+                ERRORS.append(
+                    f"[DATASET INCOMPLETE] {path}: faltan las claves X/y"
+                )
+            elif data["X"].shape[0] != data["y"].shape[0]:
+                ERRORS.append(
+                    f"[DATASET MISMATCH] {path}: X e y no tienen la misma "
+                    f"longitud ({data['X'].shape[0]} vs {data['y'].shape[0]})"
+                )
     except Exception as e:
-        ERRORS.append(f"[MODEL LOAD FAILED] {path}: {e}")
+        ERRORS.append(f"[DATASET LOAD FAILED] {path}: {e}")
 
 
 #: Cabecera mágica esperada por extensión de audio.
@@ -460,12 +487,12 @@ def main() -> int:
                 check_color_budget(p, budget)
                 break
 
-    # Models
-    for rel in REQUIRED_MODELS:
+    # Datasets (AUD-587: sustituye a la exigencia del modelo pickle)
+    for rel in REQUIRED_DATASETS:
         p = ASSETS_DIR / rel
-        check_file(p, "Model")
+        check_file(p, "Dataset")
         if p.exists():
-            check_model(p)
+            check_dataset(p)
 
     # Sounds
     for rel in REQUIRED_SOUNDS:
