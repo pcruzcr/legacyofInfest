@@ -41,6 +41,11 @@ import pytest
 
 RAIZ = Path(__file__).resolve().parent.parent
 
+#: Huella de los ficheros TOCADOS al empezar el módulo. La toma la fixture
+#: `copia`, que corre antes de ninguna avería; el seguro del final compara
+#: contra esto y no contra git (ver el docstring de la clase).
+_HUELLA_INICIAL: dict[str, bytes] = {}
+
 
 @pytest.fixture(scope="module")
 def copia(tmp_path_factory) -> Iterator[Path]:
@@ -52,6 +57,15 @@ def copia(tmp_path_factory) -> Iterator[Path]:
     )
     if hecho.returncode != 0:
         pytest.skip(f"no se pudo crear el árbol de prueba: {hecho.stderr[:200]}")
+    # AUD-588 — se fotografía el repositorio real ANTES de romper nada. El
+    # seguro de abajo comparaba contra `git show HEAD`, y eso confundía dos
+    # cosas: una avería escapada y trabajo legítimo sin commitear en un
+    # fichero de la lista TOCADOS (pasó de verdad en la rama 4-1, donde
+    # STAGE_CREATION.md documenta los ambient_fx nuevos). Contra la foto no
+    # hay falso positivo posible: lo que valía antes de las averías vale
+    # después, commiteado o no.
+    for relativo in TestLaAveriaEsDeVerdad.TOCADOS:
+        _HUELLA_INICIAL[relativo] = (RAIZ / relativo).read_bytes()
     try:
         yield destino
     finally:
@@ -172,24 +186,19 @@ class TestLaAveriaEsDeVerdad:
         "docs/STAGE_CREATION.md",
     )
 
-    def test_el_repositorio_de_verdad_no_se_toca(self) -> None:
+    def test_el_repositorio_de_verdad_no_se_toca(self, copia) -> None:
         """El seguro que hace inofensivo todo lo anterior.
 
-        Se comparan **estos** ficheros contra lo que git dice que deberían
-        ser, no el árbol entero. La primera versión exigía un árbol limpio y
-        confundía dos cosas distintas: que una avería se hubiera escapado, y
-        que quien ejecuta las pruebas tenga trabajo sin commitear — que es lo
-        normal mientras se desarrolla, y de hecho la hizo fallar en cuanto
-        toqué un documento sin relación.
+        Compara los ficheros TOCADOS contra la foto que tomó la fixture
+        `copia` al empezar, no contra git: en Windows el árbol de trabajo
+        tiene CRLF y el objeto guardado LF, así que un `git show` contra el
+        disco difiere siempre aunque nadie lo haya tocado; y un árbol con
+        trabajo legítimo sin commitear (lo normal mientras se desarrolla)
+        hacía fallar la versión antigua aunque ninguna avería se hubiera
+        escapado. AUD-588 tiene el detalle.
         """
-        # Se pregunta a git y no se comparan bytes: en Windows el árbol de
-        # trabajo tiene CRLF y el objeto guardado LF, así que `git show`
-        # contra el fichero del disco difiere siempre aunque nadie lo haya
-        # tocado. `git status` conoce esa normalización; un `sha256` no.
-        estado = subprocess.run(
-            ["git", "status", "--porcelain", "--", *self.TOCADOS],
-            cwd=RAIZ, capture_output=True, text=True,
-        )
-        assert estado.stdout.strip() == "", (
-            f"una avería se escapó al repositorio real:\n{estado.stdout}"
-        )
+        escapados = [
+            relativo for relativo, antes in _HUELLA_INICIAL.items()
+            if (RAIZ / relativo).read_bytes() != antes
+        ]
+        assert not escapados, f"una avería se escapó al repositorio real: {escapados}"
