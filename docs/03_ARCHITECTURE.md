@@ -805,7 +805,7 @@ añada):**
 
 #### `framework/stage/stage_data.py` — `StageData` y el vocabulario de Tiled
 
-Separado de `stage_loader.py` en AUD-350 (el cargador era un fichero de 1.886 líneas; ningún cambio de lógica). Contiene el contrato de datos que rellena el cargador: los siete `@dataclass` (`StageData`, `MessageTrigger`, `HazardZone`, `EscenaGuionizada`, `DeathPit`, `CameraLock`, `LightSpec`), los vocabularios de capas/propiedades (`REQUIRED_LAYERS`, `_NUMERIC_PROPS`, `_BOOL_PROPS`), los modos de vista/cámara (`VISTAS_VALIDAS`, `MODOS_DE_CAMARA`) y `_TIPOS_DE_COMPONENTE`. `stage_loader.py` reexporta cada nombre público, así que los sitios de importación no cambiaron.
+Separado de `stage_loader.py` en AUD-350 (el cargador era un fichero de 1.886 líneas; ningún cambio de lógica). Contiene el contrato de datos que rellena el cargador: los ocho `@dataclass` (`StageData`, `MessageTrigger`, `HazardZone`, `EscenaGuionizada`, `DeathPit`, `CameraLock`, `LightSpec`, `ZonaLuzAmbienteSpec` — AUD-598, GAP-072.4), los vocabularios de capas/propiedades (`REQUIRED_LAYERS`, `_NUMERIC_PROPS`, `_BOOL_PROPS`), los modos de vista/cámara (`VISTAS_VALIDAS`, `MODOS_DE_CAMARA`) y `_TIPOS_DE_COMPONENTE`. `stage_loader.py` reexporta cada nombre público, así que los sitios de importación no cambiaron.
 
 #### `framework/stage/stage_objetos.py` — `ObjetosDeTiled`
 

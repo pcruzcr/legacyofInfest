@@ -2347,6 +2347,21 @@ class LightSpec:
     flicker_amount: float = 0.15
 
 @dataclass
+class ZonaLuzAmbienteSpec:
+    """Rectángulo que impone brillo ambiental mientras el jugador esté
+    dentro (AUD-598, GAP-072.4) — dato puro, igual que `LightSpec`.
+
+    `fundido` es el ancho en px de la banda de transición alrededor del
+    rectángulo: dentro a fondo se aplica `valor`, y al acercarse desde
+    fuera el valor interpola hacia el base del mapa para que la oscuridad
+    no aparezca cortada en una línea. Cuando una zona manda, el suelo
+    nocturno del ciclo horario NO se aplica: esa oscuridad es diseño del
+    autor, no hora del día."""
+    rect: pygame.Rect
+    valor: float = 1.0     # brillo objetivo, 0-1 (1.0 = sin cambio)
+    fundido: int = 64
+
+@dataclass
 class StageData:
     map_layer: pyscroll.PyscrollGroup
     map_pixel_size: tuple[int, int] = (0, 0)
@@ -2369,6 +2384,7 @@ class StageData:
     destructibles: list["BloqueDestructible"] = field(default_factory=list)
     camera_locks: list[CameraLock] = field(default_factory=list)
     lights: list[LightSpec] = field(default_factory=list)
+    zonas_luz_ambiente: list[ZonaLuzAmbienteSpec] = field(default_factory=list)   # AUD-598 — GAP-072.4
     recogibles: list["Recogible"] = field(default_factory=list)      # F4.1 — interactuables
     cerraduras: list["Cerradura"] = field(default_factory=list)
     cofres: list["Cofre"] = field(default_factory=list)
