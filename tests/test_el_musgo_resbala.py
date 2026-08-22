@@ -186,6 +186,9 @@ class TestElTmxDeclaraElMaterial:
         # de verdad, aunque la física sí resbale.
         bloques = xml.split("<object ")[1:]
         con_inercia = [b for b in bloques if 'name="inercia"' in b]
-        assert len(con_inercia) == 3
+        # AUD-595 — la cuarta zona es el repiso de la Fase 2 (AUD-580): su
+        # bajada aterriza directo en musgo, y trae su `material` como las
+        # tres originales.
+        assert len(con_inercia) == 4
         for bloque in con_inercia:
             assert 'name="material" value="musgo"' in bloque

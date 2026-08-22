@@ -103,6 +103,13 @@ VERIFICADOS: dict[str, str] = {
         "AUD-291: la llama `_paginas_de_texto` en su mismo módulo, al dibujar "
         "cada diálogo. El barrido sólo ve usos desde fuera del fichero"
     ),
+    "sin_aire": (
+        "AUD-575: predicado del propio `ControlDeNado` (aire <= 0) que su "
+        "`update()` usa en cada fotograma — el barrido sólo cuenta usos desde "
+        "fuera del fichero y no distingue éste. No es código sin invocar; las "
+        "pruebas del oxígeno (AUD-575) lo ejercitan porque es la lectura del "
+        "ahogamiento que el HUD y el jugador comparten"
+    ),
 
     # ── API pública del kit, ofrecida a las escenas de estudiantes ──
     "start_wipe": (
@@ -228,6 +235,33 @@ VERIFICADOS: dict[str, str] = {
         "AUD-355/364: fachada de composición documentada (docs/87 §27 fase 2); "
         "la verja compartida vive en _verja, no aquí, así que no puede divergir"
     ),
+
+    # ── AUD-595: bus de reverberación y HUD, el mismo punto ciego de arriba ──
+    #
+    # `activar_eco`/`eco_activo` los consume Stage4_1 (fase 6 al entrar, las
+    # demás fases y `on_exit` al salir), pero `src/stages/` está fuera del
+    # barrido por la invariante 1 — mismo caso que `play_voz`.
+    "activar_eco": (
+        "AUD-594: lo llama Stage4_1 al cambiar de fase y en on_exit; "
+        "src/stages/ fuera del barrido"
+    ),
+    "eco_activo": (
+        "AUD-594: property de lectura que ejercitan las pruebas del bus; el "
+        "escenario escribe vía activar_eco"
+    ),
+    # Los rectángulos internos de HUD son helpers privados de una clase cuyo
+    # punto de entrada (`draw`, `update`, `set_oxigeno`) sí invoca el motor
+    # desde stage_scene.py; el descuento de cohesión los deja solos porque
+    # sólo `draw()` los llama.
+    "timer_rect": "AUD-595: helper privado que sólo llama HUD.draw(); la clase la consume stage_scene",
+    "vida_bar_rect": "AUD-595: ídem",
+    "estamina_bar_rect": "AUD-595: ídem",
+    "ranuras_de_corazon": "AUD-595: ídem",
+    "score_rect": "AUD-595: ídem",
+    "regiones": (
+        "AUD-595: tabla privada de regiones que recorre HUD.draw() para "
+        "pintar cada barra; consumidor real es el propio draw()"
+    ),
 }
 
 #: Huérfanos **reales**, verificados y ya anotados donde toca. Están aquí para
@@ -244,6 +278,8 @@ PENDIENTES: dict[str, str] = {
     # deuda **de esta clase**. Un huérfano nuevo aparece aquí en cuanto alguien
     # escriba un subsistema y se olvide de enchufarlo, que es exactamente para
     # lo que se escribió este guardián.
+    # AUD-575: `avisando` salió de aquí — GAP-071 se resolvió y ahora lo
+    # consume el HUD (`set_oxigeno` → parpadeo + SFX_TIMER_ALERT_PULSE).
 }
 
 

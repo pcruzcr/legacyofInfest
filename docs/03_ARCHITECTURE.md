@@ -237,6 +237,8 @@ legacy-of-infest/                      # Raíz real del repositorio
 │   │   │   ├── enemy_caster.py            # EnemyCaster: magia con orbe autoguiado
 │   │   │   ├── enemy_assassin.py          # EnemyAssassin: invisibilidad + estocada
 │   │   │   ├── enemy_pez_abismal.py       # EnemyPezAbismal (AUD-519): persigue, no daña ni se puede dañar
+│   │   │   ├── enemy_cangrejo.py          # EnemyCangrejo (AUD-575): patrulla terreno, presencia, no daña
+│   │   │   ├── enemy_medusa.py            # EnemyMedusa (AUD-575): deriva en senoide, presencia, no daña
 │   │   │   ├── entity_factory.py          # EntityFactory: creación de enemigos por registro
 │   │   │   ├── flight_strategies.py       # FlightStrategy: patrones de vuelo senoide/bézier/aleatorio
 │   │   │   ├── ai_predictor.py            # BehaviorPredictor: KNN+árbol recomienda táctica de enemigo, consultado en lote por SquadBrain a 4 Hz
@@ -329,6 +331,7 @@ legacy-of-infest/                      # Raíz real del repositorio
 │   │   │       ├── ambiente.py            #   luz, bloom, viñeta y partículas: la precedencia del TMX
 │   │   │       ├── simulacion.py          #   AUD-362: monta WorldSimulation y consume su EnvironmentState
 │   │   │       ├── senales.py             #   suscripciones al bus: VFX, inventario y warp
+│   │   │       ├── economia.py            #   AUD-595: el botín que deja cada enemigo al morir
 │   │   │       ├── sonido.py              #   AUD-290: la mitad sonora — 38 eventos y su tabla
 │   │   │       ├── diagnostico.py         #   AUD-290: lo que enseña F11 y qué pasa si una
 │   │   │       │                          #   entidad revienta (AUD-283, AUD-289)

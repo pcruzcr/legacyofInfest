@@ -103,6 +103,14 @@ class ActualizacionesDeEscenario:
             # dibujaban nunca.
             if self._player is not None:
                 self._hud.set_salud_maxima(self._player.max_health)
+            # AUD-575 (GAP-071 resuelto) — el aire del buceo llega al HUD
+            # desde el `ControlDeNado` de la escena: ratio real bajo el
+            # agua, y -1 (barra oculta) fuera de ella. La alarma visual y
+            # sonora del tramo bajo la dispara el propio HUD cuando
+            # `avisando` es verdadero.
+            if getattr(self, "_nado", None) is not None and self._nado.aire_maximo > 0.0:
+                ratio = self._nado.aire / self._nado.aire_maximo if self._nado.en_agua else -1.0
+                self._hud.set_oxigeno(ratio, self._nado.avisando)
             self._hud.update(dt)
         self._subtitles.update(dt)
         if self._msg_box:

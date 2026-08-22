@@ -34,6 +34,7 @@ from src.engine.core import inventory as inv_mod
 from src.engine.core.event_bus import EventBus
 from src.engine.core.events import Events
 from src.engine.core.inventory import get_inventory
+from src.framework.scenes.stage_parts.economia import EconomiaDeEscenario
 from src.framework.scenes.stage_parts.senales import SenalesDeEscenario
 from src.framework.scenes.stage_parts.sonido import SonidoDeEscenario
 from src.framework.stage.interactable_system import InteractableSystem
@@ -82,9 +83,10 @@ def _escena():
     escena._post_processing.set_damage_vignette = MagicMock()
     escena._post_processing.set_bloom = MagicMock()
     # Los métodos reales del mixin, enlazados a la escena simulada: es el
-    # código de producción el que corre, no un doble.
-    escena._BOTIN_TAM = SenalesDeEscenario._BOTIN_TAM
-    escena._soltar_botin = SenalesDeEscenario._soltar_botin.__get__(escena)
+    # código de producción el que corre, no un doble. AUD-595: el botín
+    # vive en `EconomiaDeEscenario`, no en `SenalesDeEscenario`.
+    escena._BOTIN_TAM = EconomiaDeEscenario._BOTIN_TAM
+    escena._soltar_botin = EconomiaDeEscenario._soltar_botin.__get__(escena)
     escena._make_sfx_handler = SonidoDeEscenario._make_sfx_handler.__get__(escena)
     escena._play_sfx_named = SonidoDeEscenario._play_sfx_named.__get__(escena)
     escena._play_sfx_spatial = SonidoDeEscenario._play_sfx_spatial.__get__(escena)
