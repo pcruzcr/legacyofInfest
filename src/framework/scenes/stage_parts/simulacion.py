@@ -200,14 +200,17 @@ class SimulacionDeEscenario:
         # `AmbientLightZone` bajo los pies del jugador (GAP-072.4); sin
         # zonas es el base estático del mapa y nada cambia.
         #
-        # Cuando una zona manda, el suelo nocturno NO se aplica: la
-        # oscuridad del tramo es diseño del autor, no ciclo horario — un
-        # `valor=0.25` pisado por el suelo de la luna dejaría el tramo tan
-        # claro como el llano y la zona no serviría de nada.
+        # Cuando una zona manda, su `valor` es la PALABRA FINAL del autor
+        # para ese tramo: se aplica tal cual —sólo lo modula el pulso del
+        # reloj musical— y NO se multiplica por la hora. Multiplicarlo era
+        # oscurecer dos veces: en el 4-1b, mina congelada a las 2 AM
+        # (factor 0.59), el 0.25 del abismo componía a 0.147 — negro sobre
+        # negro. El suelo nocturno tampoco rige aquí: esa oscuridad es
+        # diseño, no ciclo horario.
         base_fotograma = self._ambiente_base_del_fotograma()
         if base_fotograma != self._ambiente_base:
             self._lighting.ambient_brightness = min(1.0,
-                base_fotograma * estado.factor_ambiente
+                base_fotograma
                 * pulso.factor_de_luz(getattr(self, "_reloj_musical", None)))
         else:
             self._lighting.ambient_brightness = min(1.0, max(
