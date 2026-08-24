@@ -551,7 +551,7 @@ class BossBase(EnemyBase):
                 self.pending_summons.extend(spawned)
                 self.on_summon(wave.species_id, len(spawned))
 
-    def on_attack_fired(self, attack_name: str) -> None:
+    def on_attack_fired(self, _attack_name: str) -> None:
         """Gancho: el ataque acaba de pasar de aviso a golpe.
 
         Las subclases lo sobreescriben para generar proyectiles, sacudir la

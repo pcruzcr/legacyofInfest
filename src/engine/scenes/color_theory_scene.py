@@ -94,7 +94,7 @@ def _rgb_to_hex(r: int, g: int, b: int) -> str:
 
 def _draw_slider(surf: pygame.Surface, x: int, y: int, w: int,
                  val: float, color: tuple[int, int, int],
-                 label: str, val_str: str) -> None:
+                 label: str) -> None:
     """Dibuja un deslizador. `x` y `w` van en unidades de autoría (320)."""
     x = _ex(x)
     w = _ex(w)

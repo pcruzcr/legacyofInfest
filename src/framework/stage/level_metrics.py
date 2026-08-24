@@ -460,7 +460,7 @@ def analyse_checkpoints(
     checkpoints: list[object],
     spawn: pygame.Vector2,
     exit_rect: pygame.Rect | None,
-    max_retry_distance: float = 1200.0,
+    _max_retry_distance: float = 1200.0,
 ) -> list[float]:
     """Distancias entre puntos de reaparición consecutivos.
 
