@@ -84,22 +84,17 @@ contrato de 2 movimientos de cámara + 1 espera + 2 fundidos.
 
 ## 4. GAPs formales que siguen abiertos en `KNOWN_GAPS.md`
 
-Son 13. Todos tienen dueño o plan.
+**Cero** (verificado 2026-08-23, AUD-610). Las trece filas que esta tabla
+listaba como abiertas —GAP-058…065 en la rama del cementerio y GAP-067/068/
+070/072 de audio y motor— están resueltas con su prueba: las entradas de
+`KNOWN_GAPS.md` quedaron tachadas con su `Resolution` (AUD-575…601 para el
+4-1/4-1b; AUD-592…597 para audio; AUD-598…601 para el blueprint del 4-1b).
+El último GAP que nació y murió en la misma jornada es el **GAP-073**
+(pantalla de la reencarnación), cerrado por AUD-610.
 
-| GAP | Asunto | Estado |
-|---|---|---|
-| GAP-058 | `stage4_1`: arte final, diálogo, reverberación | rama activa |
-| GAP-059 | Fase 1: anomalía de fondo, memoria espacial, capas sonoras | rama activa |
-| GAP-060 | Fase 2: fricción sistémica, venado, progresión | rama activa |
-| GAP-061 | Fase 3: viento/rayo/osamentas | rama activa |
-| GAP-062 | Fase 4: sonido direccional, quietud | rama activa |
-| GAP-063 | Fase 5: luna, eventos de oscuridad, navegación | rama activa |
-| GAP-064 | Fase 6: silueta Paburu, despedida, despertar | **mirador parcial** (H3); resto rama activa |
-| GAP-065 | `stage4_1` sistema: relación jugador↔escenario | rama activa |
-| GAP-067 | stinger y risa de Paburu (placeholders) | audio de autor |
-| GAP-068 | pistas `_combat` de `DynamicMusicSystem` | audio |
-| GAP-070 | audio procedural con DSP en tiempo real | audio |
-| GAP-072 | 4-1b blueprint 10/10 | **avanzado** (AUD-598/601); falta corriente vertical, música/luz por zona |
+Lo único que queda fuera de `KNOWN_GAPS.md` son las **decisiones del dueño**
+(§5) y el backlog barato de contenido (§6): ni una cosa ni otra son defectos
+del motor.
 
 ---
 
@@ -128,19 +123,23 @@ De `93` §9 (B1–B12) y `90` §4:
 
 ## 7. Plan por fases (orden de cierre)
 
-### R-Z (contenido de la rama) · GAP-059…065 y F4 de 4-1/4-1c
-Cerrar el cementerio GAP por GAP, cada uno con su antes/después. Después el
-4-2 Paburu.
+### R-Z (contenido de la rama) · GAP-059…065 y F4 de 4-1/4-1c — **HECHO**
+El cementerio cerró GAP a GAP, cada uno con su antes/después (AUD-575…601).
 
-### R-C (audio) · GAP-067, 068, 070, C1
-Placeholders de audio de autor y la pista por distancia.
+### R-C (audio) · GAP-067, 068, 070 — **HECHO** (AUD-592…597)
+Stingers con progresión, pistas `_combat` derivadas y las recetas DSP que no
+pedían biblioteca. Lo que exigía DSP externo quedó razonado en su entrada.
 
-### R-M (motor · GAP-072 restos)
-Corriente vertical, música por zona y luz por zona en el 4-1b.
+### R-M (motor · GAP-072 restos) — **HECHO** (AUD-598…601)
+Corriente vertical, música por zona, zoom de cámara y luz por zona en el 4-1b.
 
-### R-D (decisiones)
-Pase del dueño sobre la §5 para dejar `KNOWN_GAPS.md` sin entrada abierta sin
-decisión fechada.
+### R-D (decisiones) — **EN CURSO**
+Pase del dueño sobre la §5 para dejar cada decisión fechada en su sitio.
+
+### AUD-602…610 (2026-08-23) — los cinco defectos del playtesting + economía completa
+Señal de cierre única, daño de los ataques especiales, `ArenaZone`, escala en
+las cajas del jefe (opt-in), tinte por silueta; sinergias Berserker/Titán,
+prestigio con pantalla (`SkillTreeScene`) y prueba del Acosador.
 
 ---
 
@@ -152,11 +151,11 @@ Condición de parada (heredada de `91_PLAN_DE_CIERRE.md`):
 > del dueño, o protegido por invariante.
 
 ```bash
-python scripts/validate_tinx.py --ci    # 22/22
+python scripts/validate_tmx.py --ci    # 22/22
 python scripts/validate_assets.py --ci  # 0 errores
 python scripts/check_orphan_systems.py --ci   # verde
 python scripts/check_doc_symbols.py --ci      # 0 símbolos fantasma
-python scripts/check_tinx_coverage.py --ci    # 74/74
+python scripts/check_tmx_coverage.py --ci    # cobertura correcta
 python scripts/check_translations.py --ci     # catálogos en orden
 ```
 
