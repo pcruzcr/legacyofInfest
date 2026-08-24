@@ -106,6 +106,18 @@ def _video():
 def _entidades(_video):
     entity_factory.ensure_registered()
     yield
+    # AUD-601 — mismo motivo que el desmontaje de test_cadena_de_niveles:
+    # este módulo construye los 16 escenarios y llena la caché de
+    # `AssetLoader` con hojas de sprites escaladas a cada uno. Sin esta
+    # limpieza, la SUITE COMPLETA (que ya trae memoria ocupada por los
+    # módulos anteriores) llegaba al viñeteado de `PostProcessing` con el
+    # equipo thrasheando: el `np.sqrt` de una matriz de 480k entradas pasó
+    # de microsegundos a minutos y el run entero parecía colgado.
+    from src.engine.utils.asset_loader import AssetLoader
+    from src.framework.stage.stage_loader import StageLoader
+
+    AssetLoader.clear_cache()
+    StageLoader.clear_tmx_cache()
 
 
 # ── lectura del TMX crudo (densidad y capas) ─────────────────────

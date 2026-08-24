@@ -10,7 +10,7 @@ date_processed: "2026-08-06"
 
 # Índice maestro de documentación
 
-**Fecha:** 19 de agosto de 2026 · **Documentos:** 71 en `docs/` (70 indexados abajo + este índice), más 5 ficheros de la raíz
+**Fecha:** 20 de agosto de 2026 · **Documentos:** 72 en `docs/` (71 indexados abajo + este índice), más 5 ficheros de la raíz
 (`README`, `CLAUDE`, `CONTRIBUTING`, `CHANGELOG` y `KNOWN_GAPS`), que también tienen fila.
 
 > **AUD-455 (2026-08-13).** Decía «4 ficheros» y nombraba cinco — la tabla
@@ -159,6 +159,7 @@ git si hace falta consultarlos.
 | [`91_PLAN_DE_CIERRE.md`](91_PLAN_DE_CIERRE.md) | Plan de cierre — inventario medido de todo lo abierto (gaps, avisos, huecos) y los ocho lotes que lo cierran; `WorldSimulation` es el último rasgo |
 | [`92_CATALOGO_DE_FENOMENOS.md`](92_CATALOGO_DE_FENOMENOS.md) | Catálogo de fenómenos ambientales — los ~90 de la taxonomía contra lo que cuesta cada uno de verdad, y los cinco que no valen la pena |
 | [`93_AUDITORIA_ESTRATEGICA_Y_FODA.md`](93_AUDITORIA_ESTRATEGICA_Y_FODA.md) | Auditoría estratégica — cinco comparativas (Mario, SotN, Zelda OoT, Super Metroid, Dark Souls), estado validado con los 8 validadores, 8 hallazgos, FODA extenso y dirección estratégica |
+| [`94_CIERRE_DE_GAPS_Y_PLAN_POR_FASES.md`](94_CIERRE_DE_GAPS_Y_PLAN_POR_FASES.md) | Cierre de gaps y plan por fases — estado verificado del árbol: qué hallazgo ya está resuelto, qué GAP sigue abierto, qué decisión espera al dueño, y el orden de cierre |
 
 ---
 
