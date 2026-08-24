@@ -27,6 +27,20 @@ import re
 import sys
 from pathlib import Path
 
+
+def _safe_print(*args, **kwargs) -> None:
+    """Print que no falla con caracteres Unicode en consola Windows cp1252."""
+    try:
+        print(*args, **kwargs)
+    except UnicodeEncodeError:
+        # Reemplazar caracteres no codificables
+        safe_args = []
+        for arg in args:
+            if isinstance(arg, str):
+                arg = arg.encode(sys.stdout.encoding, errors='replace').decode(sys.stdout.encoding)
+            safe_args.append(arg)
+        print(*safe_args, **kwargs)
+
 _RAIZ = Path(__file__).resolve().parent.parent
 if str(_RAIZ) not in sys.path:
     sys.path.insert(0, str(_RAIZ))
@@ -130,11 +144,11 @@ def main() -> int:
         if huerfanas:
             # Huérfana = traducción de algo que ya no existe. Es el síntoma de
             # que alguien renombró una cadena y el catálogo se quedó atrás.
-            print(f"    [AVISO] {len(huerfanas)} entrada(s) sin uso en el código:")
+            _safe_print(f"    [AVISO] {len(huerfanas)} entrada(s) sin uso en el código:")
             for h in huerfanas[:8]:
-                print(f"             {h!r}")
+                _safe_print(f"             {h!r}")
             if len(huerfanas) > 8:
-                print(f"             ... y {len(huerfanas) - 8} más")
+                _safe_print(f"             ... y {len(huerfanas) - 8} más")
             if args.ci:
                 problemas += 1
         if sin_traducir:

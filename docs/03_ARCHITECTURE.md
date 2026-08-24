@@ -200,14 +200,15 @@ legacy-of-infest/                      # Raíz real del repositorio
 │   │   │   └── gpu_present.py            # PresentadorGPU: presentar por SDL2 (AUD-148, opcional)
 │   │   │
 │   │   ├── ui/
-│   │   │   ├── __init__.py
-│   │   │   ├── hud.py                     # HUD: corazones, temporizador, retrato, puntaje
-│   │   │   ├── message_box.py             # MessageBox: texto con desplazamiento, mensajes de tutorial
-│   │   │   ├── screen_banner.py           # ScreenBanner: animación del título de escenario
-│   │   │   ├── minimap.py                 # Minimap: mapa de exploración con niebla de guerra
-│   │   │   ├── subtitle_overlay.py        # SubtitleOverlay: subtítulos de diálogo
-│   │   │   ├── theme.py                   # Theme: paleta de color y estilo de la interfaz
-│   │   │   └── widgets.py                 # Widgets de interfaz reutilizables
+ │   │   │   ├── __init__.py
+ │   │   │   ├── hud.py                     # HUD: corazones, temporizador, retrato, puntaje
+ │   │   │   ├── message_box.py             # MessageBox: texto con desplazamiento, mensajes de tutorial
+ │   │   │   ├── screen_banner.py           # ScreenBanner: animación del título de escenario
+ │   │   │   ├── minimap.py                 # Minimap: mapa de exploración con niebla de guerra
+ │   │   │   ├── subtitle_overlay.py        # SubtitleOverlay: subtítulos de diálogo
+ │   │   │   ├── text_panel.py              # TextPanel: paneles de texto con scroll, chips y ficha de nombre
+ │   │   │   ├── theme.py                   # Theme: paleta de color y estilo de la interfaz
+ │   │   │   └── widgets.py                 # Widgets de interfaz reutilizables
 │   │   │
 │   │   └── utils/
 │   │       ├── __init__.py
@@ -301,7 +302,8 @@ legacy-of-infest/                      # Raíz real del repositorio
 │   │   │   ├── cutscene_guion.py          # analizar_guion: texto de guion a acciones (AUD-136)
 │   │   │   ├── speedrun_mode.py           # SpeedrunTimer: cronómetro global + datos del fantasma
 │   │   │   ├── boss_rush_mode.py          # BossRushMode: enfrentamiento consecutivo de jefes
-│   │   │   ├── day_night.py               # DayNight: sistema de ciclo día/noche
+ │   │   │   ├── combat_manager.py          # CombatManager: reglas de daño, hitstop y efectos de combate
+ │   │   │   ├── day_night.py               # DayNight: sistema de ciclo día/noche
 │   │   │   ├── level_metrics.py           # LevelMetrics: métricas de análisis de escenario
 │   │   │   ├── seasons.py                 # Seasons: efectos visuales estacionales
 │   │   │   └── tmx_diagnostics.py         # TmxDiagnostics: utilidades de validación de TMX
@@ -313,9 +315,10 @@ legacy-of-infest/                      # Raíz real del repositorio
 │   │   │   └── learning_overlay.py        # LearningOverlay: superposición de contexto académico
 │   │   │
 │   │   ├── audio/
-│   │   │   ├── __init__.py
-│   │   │   ├── dynamic_music.py           # DynamicMusic: crossfade calma <-> combate
-│   │   │   └── menu_sfx.py                # AUD-345: los menús también suenan
+ │   │   │   ├── __init__.py
+ │   │   │   ├── dynamic_music.py           # DynamicMusic: crossfade calma <-> combate
+ │   │   │   ├── menu_sfx.py                # AUD-345: los menús también suenan
+ │   │   │   └── audio_layer_mixer.py       # AudioLayerMixer: mezcla por capas (ambiente, música, sfx, voz)
 │   │   │
 │   │   ├── academic/
 │   │   │   ├── __init__.py

@@ -79,10 +79,10 @@ STRINGS_ESPERADOS: set[str] = {
     "Light",
     "Heavy",
     "COMBO STATE MACHINE",
-    "Chain: Z Z X",
+    "Chain: Z \u2192 Z \u2192 X",
     "Combo window",
     "Combo: x{count}",
-    "Combo: -",
+    "Combo: \u2014",
     "Multiplier: {mult}x",
     # pattern_demo_scene.py MODE_NAMES
     "INFERENCE",
@@ -111,7 +111,7 @@ STRINGS_ESPERADOS: set[str] = {
     # quiz_system.py
     "No questions loaded",
     "QUIZ",
-    "Score: {score}",
+    "  {current}/{total}  |  Score: {score}",
 }
 
 
