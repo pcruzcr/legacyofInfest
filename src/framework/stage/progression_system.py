@@ -21,6 +21,15 @@ class ProgressionSystem:
         self._context = context
         self._stage_complete: bool = False
         self._complete_timer: float = 0.0
+        # AUD-602 — candado de disparo único para el cierre del nivel.
+        #
+        # Sin él, `update_complete_timer` devolvía True **en todos los
+        # fotogramas** una vez agotado el temporizador (el contador seguía
+        # bajando sin fondo y `<= 0` seguía siendo cierto), y la escena,
+        # que emite STAGE_COMPLETE cada vez que recibe True, re-publicaba
+        # el evento cada frame hasta fin de sesión — medido por la campaña
+        # de playtesting: 1.255 emisiones en un solo episodio.
+        self._complete_fired: bool = False
 
     def process_checkpoints(
         self, player: Player, stage: StageData,
@@ -115,10 +124,21 @@ class ProgressionSystem:
         return False
 
     def update_complete_timer(self, dt: float) -> bool:
-        if not self._stage_complete:
+        """True una sola vez, cuando el temporizador de cierre llega a cero.
+
+        AUD-602 — antes devolvía True para siempre a partir del agotamiento:
+        el temporizador se decrementaba sin fondo y su condición seguía
+        siendo cierta en cada frame posterior, así que quien lo consultara
+        emitía el cierre del nivel una y otra vez. El candado hace que la
+        segunda llamada y todas las siguientes devuelvan False.
+        """
+        if not self._stage_complete or self._complete_fired:
             return False
         self._complete_timer -= dt
-        return self._complete_timer <= 0
+        if self._complete_timer <= 0:
+            self._complete_fired = True
+            return True
+        return False
 
     @property
     def stage_complete(self) -> bool:
@@ -135,3 +155,4 @@ class ProgressionSystem:
     def reset(self) -> None:
         self._stage_complete = False
         self._complete_timer = 0.0
+        self._complete_fired = False

@@ -808,10 +808,21 @@ class EnemyBase(BaseEntity):
         )
         self._check_player_contact(player)
 
+    def _escalar_local(self, caja: pygame.Rect) -> pygame.Rect:
+        """Gancho de escalado de cajas locales. Identidad por defecto.
+
+        AUD-606 — las subclases que cambian de tamaño en juego (jefes con
+        `escala` por fase) sobreescriben esto para que sus hitbox y hurtbox
+        sigan al cuerpo. Sin el gancho, las cajas se construían con los
+        offsets crudos del sprite base y un jefe ×1.25 pegaba y recibía
+        golpes en el cuerpo que tenía antes de crecer.
+        """
+        return caja
+
     def _update_rects(self) -> None:
         """Recompute hitbox and hurtbox world positions from local offsets."""
-        local_hitbox = self._build_hitbox()
-        local_hurtbox = self._build_hurtbox()
+        local_hitbox = self._escalar_local(self._build_hitbox())
+        local_hurtbox = self._escalar_local(self._build_hurtbox())
 
         self.hitbox = pygame.Rect(
             self.position.x + local_hitbox.x,

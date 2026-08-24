@@ -113,6 +113,11 @@ def build_table() -> str:
                            "0.75) · `segundos` (duración del tween, 1.5). "
                            "Dentro del rectángulo la cámara tiende al factor; "
                            "fuera vuelve a 1.0. La UI nunca escala (AUD-601)"),
+        "ArenaZone": ("Rectángulo",
+                      "— (sin propiedades: la geometría ES la arena). "
+                      "Declara el cuadrilátero real del combate de jefe; sin "
+                      "ninguna, el motor usa el mapa entero. Gana la primera "
+                      "que contenga al jefe (AUD-605)"),
         # ── F4.1 — objetos con los que el jugador interactúa ──────
         "Pickup": ("Rectángulo o punto",
                    "`item_id` **obligatoria** (vale el nombre del objeto en "

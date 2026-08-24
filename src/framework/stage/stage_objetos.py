@@ -128,6 +128,10 @@ class ObjetosDeTiled:
             elif obj_type == "CameraZoomZone":
                 cls._handle_zona_zoom(stage, obj, props)
 
+            # AUD-605 — la arena del jefe, dibujada en Tiled.
+            elif obj_type == "ArenaZone":
+                cls._handle_zona_arena(stage, obj)
+
             # F4.1 — objetos con los que el jugador interactúa. Pedidos por los
             # estudiantes tras jugar la fase 1: llaves, puertas, jaulas, cofres
             # y disparadores de evento.
@@ -475,6 +479,25 @@ class ObjetosDeTiled:
             rect=rect,
             factor=max(0.4, min(2.5, factor)),
             segundos=max(0.1, segundos),
+        ))
+
+    @classmethod
+    def _handle_zona_arena(cls, stage: StageData, obj: Any) -> None:
+        """Convierte un objeto `ArenaZone` de Tiled en el rect de arena
+        del jefe (AUD-605).
+
+        Sin propiedades: la geometría del objeto ES la arena. Un punto
+        (ancho o alto 0) no dice nada y se ignora — una arena degenerada
+        aplastaría al jefe contra su propio centro vía `clamp_to_arena`.
+        """
+        ancho = int(float(getattr(obj, "width", 0) or 0))
+        alto = int(float(getattr(obj, "height", 0) or 0))
+        if ancho <= 0 or alto <= 0:
+            return
+        stage.zonas_arena.append(pygame.Rect(
+            int(float(getattr(obj, "x", 0) or 0)),
+            int(float(getattr(obj, "y", 0) or 0)),
+            ancho, alto,
         ))
 
     @classmethod

@@ -101,6 +101,14 @@ class BossVenado(BossBase):
     # el motor acepta las dos formas y aquí se declaran las dos habilidades.
     skill_drop = ["skill_dash", "skill_parry"]
 
+    # AUD-606 — las cajas de este jefe son CONSTANTES del sprite base 48×48
+    # (`_build_hitbox`/`_build_hurtbox` más abajo), así que sin esta bandera
+    # quedaban con el tamaño de la fase 1 cuando la fase 2 crece ×1.25. Con
+    # ella, el motor escala hitbox/hurtbox ancladas abajo-centro y espeja los
+    # puntos débiles según el facing — por eso `_mirror_weak_point` ya no
+    # existe: el espejo a mano era la compensación por su ausencia.
+    cajas_siguen_al_cuerpo = True
+
     _TELEGRAPH_WARN_COLOR = (230, 90, 60)   # STOMP/CHARGE/VINE_SWEEP warning tint
     _WEAK_POINT_FLASH_HUE = 48.0            # amber/gold crit confirmation, distinct
                                              # from the warning color above and the
@@ -277,33 +285,10 @@ class BossVenado(BossBase):
     def _build_hurtbox(self) -> pygame.Rect:
         return pygame.Rect(9, 4, 30, 40)          # 30x40 centered in 48x48 (local)
 
-    def _mirror_weak_point(self, point: WeakPoint) -> WeakPoint:
-        """Reflect a canonical (facing-right) WeakPoint for the current facing.
-
-        boss_kit.WeakPoint.rect_for() has no notion of facing_direction at
-        all -- verified against the reference boss
-        (reference/v2_boss_profesor/src/boss_venado.py), which never mirrors
-        its own weak points either. But OUR sprite DOES flip horizontally
-        when facing_direction < 0 (boss_base.py draw(),
-        pygame.transform.flip(frame, True, False) within the same 48px-wide
-        canvas as self.rect.width, with zero extra blit offset since
-        self.rect matches the sprite canvas exactly -- see boss_base.py
-        draw(), ox=(rect.width-sprite_fw)//2==0 for this boss). Without this,
-        a hit on the visually-mirrored horns would silently resolve against
-        flanco's rect (or nothing) instead. Mirrors offset.x the same way
-        pygame.transform.flip does: mirrored_x = width - offset.x - size.x.
-        offset.y is untouched -- the flip is horizontal only.
-        """
-        if self.facing_direction >= 0:
-            return point
-        mirrored_x = self.rect.width - point.offset[0] - point.size[0]
-        return WeakPoint(
-            offset=(mirrored_x, point.offset[1]),
-            size=point.size,
-            multiplier=point.multiplier,
-            phases=point.phases,
-            label=point.label,
-        )
+    # AUD-606 — `_mirror_weak_point` retirado: el espejado por facing vive
+    # ahora en `WeakPoint.rect_for(facing=...)`, activado por la bandera de
+    # clase `cajas_siguen_al_cuerpo`. Mantener los dos habría producido un
+    # doble espejo — el punto de vuelta al lado equivocado.
 
     # ──────────────────────────────────────────────
     # Movement
@@ -704,9 +689,14 @@ class BossVenado(BossBase):
         final_damage = damage
         hit_point: WeakPoint | None = None
         if self._player_ref is not None and self.weak_points:
-            facing_points = [self._mirror_weak_point(wp) for wp in self.weak_points]
+            # AUD-606 — sin pre-espejo: `cajas_siguen_al_cuerpo = True` hace
+            # que resolve_weak_point_damage espeje por facing y escale con la
+            # fase dentro del propio motor. Antes este jefe armaba la lista
+            # espejada a mano, que era la compensación mientras el motor no
+            # supiera hacerlo.
             final_damage, hit_point = resolve_weak_point_damage(
-                self, self._player_ref, damage, facing_points, self.current_phase,
+                self, self._player_ref, damage, self.weak_points,
+                self.current_phase,
             )
         self.last_weak_point = hit_point
         if hit_point is not None:
@@ -902,7 +892,14 @@ class BossVenado(BossBase):
         # rect_for() is recomputed every frame against the LIVE self.rect (not
         # cached at hit time) so the flash tracks the boss instead of hanging
         # in the world while it keeps drifting/flying during the ~0.12s flash.
-        rect = self._weak_point_flash_point.rect_for(self.rect)
+        # AUD-606 — con la misma escala de fase y espejo de facing que usa
+        # resolve_weak_point_damage, o el destello se pintaba donde el punto
+        # ya no está (fase 2 crecida, sprite volteado).
+        rect = self._weak_point_flash_point.rect_for(
+            self.rect,
+            escala=self._escala_viva(),
+            facing=self.facing_direction,
+        )
         ox, oy = camera_offset.x, camera_offset.y
         r = rect.move(int(-ox), int(-oy))
         # Unit V: HSV pulse, same technique as _draw_transition_pulse --

@@ -351,6 +351,7 @@ class StageLoader(ObjetosDeTiled):
                 stage.zonas_luz_ambiente.clear()
                 stage.zonas_musica.clear()
                 stage.zonas_zoom.clear()
+                stage.zonas_arena.clear()
                 stage.recogibles.clear()
                 stage.cerraduras.clear()
                 stage.cofres.clear()

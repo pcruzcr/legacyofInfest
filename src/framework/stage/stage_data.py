@@ -412,6 +412,10 @@ class StageData:
     #: Zonas de zoom de cámara (GAP-072.3, AUD-601): rectángulos que
     #: conducen el factor mientras el jugador esté dentro. Vacía = zoom 1.0.
     zonas_zoom: list[ZonaZoomSpec] = field(default_factory=list)
+    #: AUD-605 — arenas de jefe declaradas con `ArenaZone`. La escena le pasa
+    #: al jefe la primera que lo contenga; sin ninguna, mapa completo (como
+    #: siempre). Lista de rects crudos: una arena no es más que geometría.
+    zonas_arena: list[pygame.Rect] = field(default_factory=list)
     #: F4.1 — objetos con los que el jugador interactúa.
     recogibles: list[Recogible] = field(default_factory=list)
     cerraduras: list[Cerradura] = field(default_factory=list)

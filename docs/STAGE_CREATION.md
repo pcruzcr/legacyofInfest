@@ -348,6 +348,7 @@ Como referencia, mira `src/stages/stage0/stage0.py` y `assets/maps/stage0/`.
 | `Vine` | Rectángulo (alto = lo que se trepa) | `ancho_de_agarre` (px, 10) · `velocidad` (px/s de trepada, 70) |
 | `Zipline` | Rectángulo (la esquina es el enganche) | `destino_dx` (px, 96), `destino_dy` (px, 64) **relativos** · `velocidad` (px/s, 190) · `radio_de_enganche` (px, 14) · `solo_de_bajada` (bool, sí) |
 | `BossSpawn` | Punto (dónde entra el jefe) | `boss` (**obligatoria**: el nombre registrado del jefe, p. ej. `BossVenado`). Produce la misma entidad que escribir ese nombre como `type`; sin `boss`, o con uno que no esté registrado, el cargador avisa. Lo pide `17_BOSS_SPEC.md` §8.2 en todo mapa de jefe |
+| `ArenaZone` | Rectángulo | — (sin propiedades: la geometría ES la arena). Declara el cuadrilátero real del combate de jefe; sin ninguna, el motor usa el mapa entero. Gana la primera que contenga al jefe (AUD-605) |
 
 ### Arquetipos de enemigo (capa `Objects`, objetos punto)
 
@@ -399,6 +400,6 @@ propiedad del objeto en Tiled.
 | *(ninguno)* o `Solid` | Colisión AABB completa |
 | `Platform` | Plataforma atravesable desde abajo |
 
-Total aceptado en `Objects`: **72** tipos.
+Total aceptado en `Objects`: **73** tipos.
 
 <!-- END GENERATED: tipos de objeto -->

@@ -42,27 +42,14 @@ class SimulacionDeEscenario:
     def _setup_season(self) -> None:
         """Resuelve la estación del escenario. Ver `framework.stage.seasons`.
 
-        Asigna por la **propiedad**, no por el atributo de respaldo: el
-        `setter` es quien avisa a la simulación. La primera versión escribía
-        `_estacion_nombre` directamente y las pruebas de estaciones se
-        quedaron en rojo — cambiar la estación después de montar el escenario
-        no llegaba al dibujo, que es exactamente el defecto que este cambio
-        viene a cerrar. Que el camino corto no funcione es la propiedad
-        buena: sólo hay una manera de cambiar la estación.
+        Asigna por la **propiedad** —el setter avisa a la simulación—;
+        escribir `_estacion_nombre` a pelo no llegaba al dibujo.
         """
         self._estacion = str(getattr(self._stage_data, "season", "") or "")
 
-    # AUD-362 — `_estacion` pasa a ser una **vista** de la estación que lleva
-    # la simulación, no un objeto aparte. Antes eran dos: la escena guardaba
-    # su `Estacion` y componía la luz con ella, y ahora quien compone es
-    # `WorldSimulation`. Dejar las dos habría sido el defecto de siempre —dos
-    # sistemas con su copia del mismo hecho— y la primera vez que alguien
-    # cambiara una, la otra seguiría mandando en el dibujo.
-    #
-    # Se conserva como atributo (lectura y escritura) porque lo usan
-    # `_setup_ambient_particles`, `_clima_efectivo`, las pruebas y
-    # posiblemente alguna entrega: asignarle una estación sigue funcionando y
-    # ahora, además, llega hasta la luz.
+    # AUD-362 — `_estacion` es una **vista** de la estación de la simulación,
+    # no una copia. Se conserva como atributo (lectura/escritura) porque lo
+    # usan `_setup_ambient_particles`, `_clima_efectivo`, pruebas y entregas.
 
     @property
     def _estacion(self):  # type: ignore[no-untyped-def]
@@ -94,11 +81,9 @@ class SimulacionDeEscenario:
     def _setup_day_night(self) -> None:
         """Arranca el reloj del escenario a partir del TMX.
 
-        F2.1: sin `day_length` el reloj queda congelado en su hora inicial y el
-        escenario se comporta exactamente como antes de esta fase. Es
-        deliberado: un prólogo de tres minutos no gana nada con un ciclo, y
-        obligar a todos los mapas a tener uno sería imponer una decisión de
-        diseño desde el motor.
+        F2.1: sin `day_length` el reloj queda congelado en su hora inicial —
+        un prólogo de tres minutos no gana nada con un ciclo, y obligar a
+        todos los mapas a tenerlo sería imponer diseño desde el motor.
         """
         from src.framework.world import WorldSimulation
 
@@ -132,14 +117,9 @@ class SimulacionDeEscenario:
     HORA_POR_DEFECTO = 12.0
 
     #: Suelo de luz ambiente aplicada. Por debajo de esto el nivel deja de ser
-    #: jugable.
-    #:
-    #: F2.1: el ciclo **multiplica** el ambiente del escenario, así que los dos
-    #: factores se componen. Medido en Stage 0, que declara `ambient_light`
-    #: 0,70: a medianoche el factor 0,35 daba un ambiente aplicado de 0,245 y
-    #: un brillo de pantalla de 12,7 sobre 255. El jugador no ve los enemigos.
-    #: Una noche realista que impide jugar es un defecto, no una decisión
-    #: artística: la hora se comunica con el color, que sí cambia por completo.
+    #: jugable: a medianoche, 0,35 × 0,70 daba un brillo de pantalla de
+    #: 12,7 sobre 255 y el jugador no veía los enemigos (F2.1). La hora se
+    #: comunica con el color, que sí cambia por completo.
     MIN_AMBIENTE = 0.45
 
     #: Cuánto sube el suelo de luz con la luna llena (AUD-362). 0,10 sobre
@@ -150,18 +130,9 @@ class SimulacionDeEscenario:
     def _aplicar_hora(self) -> None:
         """Aplica el ambiente del fotograma: luz, bloom, tinte y agarre.
 
-        AUD-362 — antes esto **componía** la cuenta (hora × estación) además de
-        aplicarla, y hacía lo mismo que `WorldSimulation` hace ahora. Componer
-        y aplicar en el mismo sitio es lo que impedía que nadie más pudiera
-        preguntar por el ambiente: para saber si llovía había que ir a un
-        privado de la escena.
-
-        Ahora la escena **consume** un `EnvironmentState`. Los números son
-        exactamente los de antes —lo fija
-        `test_la_luz_compuesta_es_la_misma_que_calcula_la_escena_hoy` sobre 7
-        horas × 4 estaciones—, así que los dieciséis escenarios existentes se
-        ven igual.
-
+        AUD-362 — la escena **consume** un `EnvironmentState` que compone
+        la simulación; los números son los de antes (lo fija
+        `test_la_luz_compuesta_es_la_misma_que_calcula_la_escena_hoy`).
         Se conserva el nombre porque lo llaman `actualizaciones.py`, las
         pruebas y posiblemente alguna entrega.
         """
@@ -197,16 +168,8 @@ class SimulacionDeEscenario:
         # pruebas con `AttributeError` — un adorno que tumba el fotograma que
         # decora, que es justo lo que AUD-413 vino a corregir en otro sitio.
         # AUD-598 — la base del fotograma puede venir de una
-        # `AmbientLightZone` bajo los pies del jugador (GAP-072.4); sin
-        # zonas es el base estático del mapa y nada cambia.
-        #
-        # Cuando una zona manda, su `valor` es la PALABRA FINAL del autor
-        # para ese tramo: se aplica tal cual —sólo lo modula el pulso del
-        # reloj musical— y NO se multiplica por la hora. Multiplicarlo era
-        # oscurecer dos veces: en el 4-1b, mina congelada a las 2 AM
-        # (factor 0.59), el 0.25 del abismo componía a 0.147 — negro sobre
-        # negro. El suelo nocturno tampoco rige aquí: esa oscuridad es
-        # diseño, no ciclo horario.
+        # `AmbientLightZone` (GAP-072.4); su `valor` es la palabra final del
+        # autor para ese tramo y NO se multiplica por la hora (doble oscurecido).
         base_fotograma = self._ambiente_base_del_fotograma()
         if base_fotograma != self._ambiente_base:
             self._lighting.ambient_brightness = min(1.0,
@@ -233,17 +196,51 @@ class SimulacionDeEscenario:
         if self._lighting is not None:
             self._lighting.set_sombra_solar(estado.direccion_de_sombra)
 
+    def _ambiente_base_del_fotograma(self) -> float:
+        """Brillo base del fotograma con zonas de luz (GAP-072.4, AUD-604).
+
+        Vive aquí —y no en `MezclaDeAmbiente`— porque `_aplicar_hora` es
+        su único llamante y así las escenas mínimas que componen sólo
+        `SimulacionDeEscenario` también lo tienen. Sin jugador o sin
+        zonas: el base estático del mapa y nada cambia. Con ellas manda
+        la **última declarada** que afecte al punto del jugador: dentro
+        del rect su `valor`; en la banda de `fundido` interpola hacia el
+        base; más lejos no existe.
+        """
+        import math
+
+        base = getattr(self, "_ambiente_base", 1.0)
+        rect_jugador = getattr(getattr(self, "_player", None), "rect", None)
+        zonas = list(getattr(self, "_zonas_luz_ambiente", []) or [])
+        if rect_jugador is None or not zonas:
+            return base
+        punto = rect_jugador.center
+        elegido = base
+        for zona in zonas:
+            r = getattr(zona, "rect", None)
+            if r is None:
+                continue
+            if r.collidepoint(punto):
+                elegido = float(getattr(zona, "valor", 1.0))
+                continue
+            fundido = int(getattr(zona, "fundido", 0) or 0)
+            if fundido <= 0:
+                continue
+            dx = max(r.left - punto[0], punto[0] - r.right, 0)
+            dy = max(r.top - punto[1], punto[1] - r.bottom, 0)
+            distancia = math.hypot(dx, dy)
+            if distancia < fundido:
+                # 0 en el borde (= valor) → 1 en el límite del fundido (= base).
+                t = distancia / float(fundido)
+                elegido = base + (
+                    float(getattr(zona, "valor", 1.0)) - base) * (1.0 - t)
+        return elegido
+
     def _aplicar_audio_ambiental(self, estado: EnvironmentState) -> None:
         """El ambiente se oye — AUD-402 (GAP-051).
 
-        `sonido.py` es despacho de efectos por eventos, y nada leía el clima:
-        el canal de ambiente y su bus existían desde AUD-149 y sonaban igual en
-        calma que en tormenta.
-
-        Se **modula** el volumen del bus en vez de fijarlo. Llamar a
-        `set_ambient_volume` con un número propio pisaría la preferencia del
-        jugador, que es lo que ese bus existe para respetar: aquí sólo se
-        multiplica lo que él eligió por lo que hace el tiempo.
+        Se **modula** el volumen del bus en vez de fijarlo: fijarlo pisaría
+        la preferencia del jugador que ese bus existe para respetar.
         """
         # `getattr` sobre el propio `self` y no `self.context` a secas: este
         # mixin lo usan escenas mínimas de prueba que no montan contexto, y una
@@ -263,16 +260,11 @@ class SimulacionDeEscenario:
     def _aplicar_grading(self, estado: EnvironmentState) -> None:
         """La corrección de color, desde el ambiente — AUD-401 (GAP-051).
 
-        La pasada existía en `gl_pipeline.py` con una matriz **fija en el
-        config** que no tocaba nadie: un efecto compilado y alimentado con la
-        identidad, o sea apagado de hecho. Aquí es donde se entera de la hora,
-        de la estación y de la niebla.
-
-        Se publica por `gpu_effects` y no tocando el renderer porque una escena
-        **no puede alcanzarlo**: el contexto expone `usar_gl` y no el objeto,
-        deliberadamente, para que el framework no arrastre ModernGL. Es el mismo
-        canal que usa el bloom. Sin tarjeta, `App` no lee la publicación y no
-        pasa nada — que es exactamente lo que pasaba antes de este lote.
+        La matriz fija de `gl_pipeline` no tocaba nadie: efecto compilado y
+        alimentado con la identidad. Se publica por `gpu_effects` y no
+        tocando el renderer porque la escena **no puede alcanzarlo** — el
+        contexto expone `usar_gl`, deliberadamente, para no arrastrar
+        ModernGL al framework.
         """
         from src.engine.core import gpu_effects
 
@@ -281,20 +273,11 @@ class SimulacionDeEscenario:
     def _cambiar_clima(self, nombre: str) -> None:
         """Cambia el clima del mundo. **Ésta** es la puerta — AUD-374.
 
-        Un escenario que quiera tormenta en su tercer acto la pide aquí, no al
-        sistema que dibuja la lluvia. La diferencia no es de estilo: el clima
-        decide humedad, viento, visibilidad y nubes, y de la humedad cuelga el
-        suelo mojado y el control del jugador (AUD-362). Pedírselo al VFX deja
-        todo eso en el clima del TMX para siempre.
-
-        Medido antes de existir esta puerta, con la secuencia real de
-        `stage4_1` —mapa `fog`, acto `storm` vía `WeatherSystem.set_climate`—:
-        humedad 0,50 y `suelo_mojado` en falso. Sus actos de tormenta **nunca
-        resbalaron**, con el hilo entero construido y consumido. El dato
-        llegaba caducado, que se ve peor que si no llegara.
-
-        El sistema de clima se entera solo: `_aplicar_hora` le pasa el clima y
-        el viento del estado en el mismo sitio donde reparte la luz.
+        Un escenario que quiera tormenta en su tercer acto la pide aquí, no
+        al VFX: el clima decide humedad, viento y visibilidad, y de la
+        humedad cuelga el control del jugador (AUD-362). Medido antes de
+        que existiera: los actos de tormenta del 4-1 **nunca resbalaron**,
+        con el hilo entero construido — el dato llegaba caducado.
         """
         self._simulacion.set_clima(nombre)
         self._aplicar_hora()
@@ -311,23 +294,12 @@ class SimulacionDeEscenario:
     def _aplicar_ambiente_del_clima(self) -> None:
         """Pone, funde o **quita** el ambiente sonoro que pide el clima.
 
-        AUD-500 — esto vivía dentro de `StageScene.on_enter`, así que se
-        cableaba una sola vez al cargar el escenario y no volvía a mirarse.
-        El clima sí cambia en mitad de la partida —`_cambiar_clima` es su
-        puerta, y el 4-1 la usa seis veces—, de modo que el ambiente se
-        quedaba con el del mapa para siempre. Reportado jugando: *«el sonido
-        de la lluvia queda pegado»*.
-
-        Y no basta con arrancar: `WeatherSystem.AMBIENTES["clear"]` es
-        `None`, así que despejar el cielo tiene que **parar** lo que hubiera.
-        Antes no entraba en ninguna rama y la lluvia seguía sonando sobre un
-        cielo limpio.
-
-        Vive aquí y no en `stage_scene` para que esté junto a `_cambiar_clima`,
-        que es quien lo llama. El `getattr` sobre `self._weather` es el mismo
-        patrón que usa `_clima_efectivo` unas líneas más abajo: una escena
-        mínima —las de las pruebas, las entregas parciales— compone esta
-        parte sin tener sistema de clima, y no debe reventar por eso.
+        AUD-500 — vivía en `on_enter`, así que se cableaba una vez y el
+        clima de mitad de partida (el 4-1 cambia seis veces) dejaba la
+        lluvia sonando sobre cielo limpio — *«el sonido de la lluvia queda
+        pegado»*. Y `AMBIENTES["clear"]` es `None`: despejar tiene que
+        **parar** lo que hubiera. El `getattr` tolera escenas mínimas sin
+        sistema de clima, como `_clima_efectivo`.
         """
         from src.engine.core import settings
 
@@ -356,25 +328,11 @@ class SimulacionDeEscenario:
     def _aplicar_clima(self, estado: EnvironmentState) -> None:
         """El mundo dice qué tiempo hace; el VFX lo pinta — AUD-374.
 
-        Antes iba al revés y por dos caminos que no se hablaban: el clima
-        llegaba al `WeatherSystem` como cadena desde `_clima_efectivo()`, y el
-        `EnvironmentState` calculaba el suyo en paralelo. El viento era el caso
-        extremo de esa separación —se calculaba cada fotograma y **nadie lo
-        leía**, mientras el sistema de clima sorteaba uno propio con su
-        segunda tabla de valores.
-
-        La comparación se hace **aquí** y no se delega en la guarda interna de
-        `set_climate`. Las dos evitan que se vacíe el emisor, pero
-        `test_el_acto_se_aplica_una_vez_y_no_en_cada_fotograma` vigila que la
-        llamada no ocurra, no que sea inocua — y con razón: esa prueba salió de
-        una comprobación de mutación, donde reaplicar el clima sin parar dejaba
-        todo en verde. Apoyarse en la guarda ajena convierte un invariante
-        comprobado en una propiedad de la que depende otro módulo sin decirlo.
-
-        El sistema puede no existir todavía —el ambiente se monta antes que
-        los efectos— y una entrega puede no tenerlo: en los dos casos no hay
-        nada que pintar y no es un error, igual que en `_aplicar_agarre` con
-        el jugador.
+        Antes iban por dos caminos que no se hablaban y el viento —se
+        calculaba cada fotograma— **no lo leía nadie**. La comparación se
+        hace aquí y no apoyándose en la guarda interna de `set_climate`:
+        `test_el_acto_se_aplica_una_vez_y_no_en_cada_fotograma` vigila la
+        llamada, no la inocuidad (salió de una comprobación de mutación).
         """
         clima = getattr(self, "_weather", None)
         if clima is None:

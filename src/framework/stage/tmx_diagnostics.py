@@ -131,6 +131,14 @@ BUILTIN_OBJECT_TYPES: tuple[str, ...] = (
     # entra** el jefe que nombra su propiedad `boss`, resuelto por el registro
     # de entidades.
     "BossSpawn",
+    # AUD-605 — los límites de arena del jefe, declarados desde Tiled.
+    #
+    # Hasta aquí la escena le pasaba al jefe **el mapa entero** como arena
+    # (`pygame.Rect(0, 0, *map_pixel_size)`), así que cualquier lógica que
+    # usara el centro de esos límites —el teletransporte de fase— caía en
+    # media pradera. Un `ArenaZone` rectangular declara el cuadrilátero real
+    # del combate; sin él, se conserva el comportamiento de mapa completo.
+    "ArenaZone",
 )
 
 #: Tipos válidos en la capa `Collision`, que se procesa aparte. `Platform`

@@ -78,6 +78,19 @@ if TYPE_CHECKING:
     from src.framework.stage.stage_loader import StageData
 
 
+def _arena_del_jefe(stage_data: StageData, cuerpo: pygame.Rect) -> pygame.Rect:
+    """El cuadrilátero de combate del jefe (AUD-605).
+
+    Gana la primera `ArenaZone` que contenga el centro del jefe. Sin
+    ninguna, mapa completo — el comportamiento histórico que AUD-061
+    introdujo y que seguía siendo lo único disponible desde Tiled.
+    """
+    for zona in stage_data.zonas_arena:
+        if zona.collidepoint(cuerpo.center):
+            return zona
+    return pygame.Rect(0, 0, *stage_data.map_pixel_size)
+
+
 class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
                  SenalesDeEscenario, SonidoDeEscenario,
                  EconomiaDeEscenario,
@@ -473,9 +486,14 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
                 # tenía escrita a mano como ARENA_W = 320 mientras su mapa mide
                 # 640: peleaba en la mitad izquierda y una embestida podía
                 # sacarlo del escenario, dejando el combate sin poder ganarse.
-                enemy.set_arena_bounds(
-                    pygame.Rect(0, 0, *self._stage_data.map_pixel_size),
-                )
+                #
+                # AUD-605 — y el mapa entero tampoco era la respuesta: pasar
+                # `Rect(0, 0, ancho_mapa, alto_mapa)` hacía que cualquier
+                # lógica que usara el centro de los límites —el teletransporte
+                # de fase— cayera en medio del nivel. Un `ArenaZone` en el TMX
+                # declara el cuadrilátero real; ver `_arena_del_jefe`.
+                enemy.set_arena_bounds(_arena_del_jefe(self._stage_data,
+                                                       enemy.rect))
             self._bestiary.record_encounter(Bestiary.id_de(enemy))
 
         self._checkpoints = list(self._stage_data.checkpoints)

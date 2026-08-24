@@ -89,6 +89,24 @@ class BossBase(EnemyBase):
     #: `skill_drop = "skill_dash"` en su clase — una línea, sin tocar nada más.
     skill_drop: str = ""
 
+    #: AUD-606 — ¿las cajas y puntos débiles siguen al cuerpo escalado?
+    #:
+    #: **False por defecto, y no es pereza: es que no hay forma fiable de
+    #: deducirlo.** Un jefe cuyas `_build_hitbox`/`_build_hurtbox` devuelven
+    #: CONSTANTES del sprite base (el patrón del jefe de referencia) necesita
+    #: que el motor escale sus cajas con la fase; uno que ya deriva las cajas
+    #: del rect vivo (`Rect(0, 0, self.rect.width, ...)`, `caja_ajustada`)
+    #: recibiría una DOBLE escala. El motor no puede distinguir un caso de
+    #: otro, así que decide quien declara las cajas:
+    #:
+    #:     class MiJefe(BossBase):
+    #:         cajas_siguen_al_cuerpo = True
+    #:
+    #: Con True, hitbox/hurtbox se escalan ancladas abajo-centro y los
+    #: `WeakPoint` siguen la escala Y el espejado del facing dentro del
+    #: propio `rect_for` — no hace falta espejarlos a mano.
+    cajas_siguen_al_cuerpo: bool = False
+
     #: AUD-279 — un jefe nunca se congela por estar fuera del encuadre.
     #:
     #: Sus fases, sus temporizadores y sus invocaciones corren aunque la cámara
@@ -304,6 +322,42 @@ class BossBase(EnemyBase):
         self.rect.size = (ancho, alto)
         self.rect.bottom, self.rect.centerx = pies, centro
         self.position.update(float(self.rect.x), float(self.rect.y))
+
+    def _escala_viva(self) -> float:
+        """Factor de escala real del cuerpo (AUD-606).
+
+        Derivado del rect vivo y no de `escala_de_fase` para que también
+        cubra a quien redimensione el rect por fuera del protocolo de fases:
+        la caja debe coincidir con el cuerpo que se ve, venga el tamaño de
+        donde venga.
+        """
+        if self._tam_base is None or not self._tam_base[0]:
+            return 1.0
+        return self.rect.width / self._tam_base[0]
+
+    def _escalar_local(self, caja: pygame.Rect) -> pygame.Rect:
+        """Escala hitbox/hurtbox locales con la fase (AUD-606).
+
+        Escalado PURO del offset y del tamaño, sin recentrar: el dibujo
+        (`draw`) ya coloca el sprite escalado centrado sobre el rect vivo,
+        así que el pixel local `p` del sprite base cae en `p * escala` del
+        cuerpo — la caja tiene que caer exactamente igual. Recentrar por
+        nuestra cuenta descolocaría la caja media silueta respecto de lo
+        que se pinta. Sólo actúa en los jefes que declaran
+        `cajas_siguen_al_cuerpo`; ver el comentario del atributo para por
+        qué no puede ser el comportamiento por defecto.
+        """
+        if not self.cajas_siguen_al_cuerpo:
+            return caja
+        escala = self._escala_viva()
+        if escala == 1.0:
+            return caja
+        return pygame.Rect(
+            round(caja.x * escala),
+            round(caja.y * escala),
+            max(1, round(caja.width * escala)),
+            max(1, round(caja.height * escala)),
+        )
 
     @property
     def aturdido(self) -> bool:
@@ -564,8 +618,15 @@ class BossBase(EnemyBase):
     def weak_point_at(self, hit_rect: pygame.Rect) -> WeakPoint | None:
         """El punto débil expuesto que ese golpe alcanza, si alguno."""
         for point in self.weak_points:
+            # AUD-606 — escala de fase y espejado por dirección para los
+            # jefes que declaran `cajas_siguen_al_cuerpo`; el resto conserva
+            # la llamada histórica sin alterar.
             if point.exposed_in(self.current_phase) and hit_rect.colliderect(
-                point.rect_for(self.rect),
+                point.rect_for(
+                    self.rect,
+                    escala=self._escala_viva(),
+                    facing=self.facing_direction,
+                ) if self.cajas_siguen_al_cuerpo else point.rect_for(self.rect),
             ):
                 return point
         return None
@@ -656,10 +717,25 @@ class BossBase(EnemyBase):
                     self._flip_cache[(anim_key, frame_idx)] = cached
                 frame = cached
             if self.is_transitioning:
-                if self._transition_overlay is None or self._transition_overlay.get_size() != frame.get_size():
-                    self._transition_overlay = pygame.Surface(frame.get_size(), pygame.SRCALPHA)
-                self._transition_overlay.fill((200, 200, 0, 80))
-                frame.blit(self._transition_overlay, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+                # AUD-607 — tinte de transición POR SILUETA y sobre una copia.
+                #
+                # Antes se hacía `frame.blit(overlay, BLEND_RGBA_ADD)` sobre
+                # `frame` **directamente**, y `frame` es una superficie
+                # cacheada (`_sprite_frames` o `_flip_cache`): el tinte se
+                # acumulaba fotograma a fotograma en la cache y sobrevivía al
+                # final de la transición, además de cubrir el rectángulo
+                # entero —un cuadrado translúcido— en vez del cuerpo. Ahora:
+                # copia nueva, y el brillo se recorta contra el canal alfa
+                # del sprite (BLEND_RGBA_MIN contra silueta blanqueada).
+                frame = frame.copy()
+                silueta = frame.copy()
+                silueta.fill((255, 255, 255),
+                             special_flags=pygame.BLEND_RGB_MAX)
+                brillo = pygame.Surface(frame.get_size(), pygame.SRCALPHA)
+                brillo.fill((200, 200, 0, 90))
+                brillo.blit(silueta, (0, 0),
+                            special_flags=pygame.BLEND_RGBA_MIN)
+                frame.blit(brillo, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
             else:
                 frame = self._apply_filter(frame)
             # AUD-257 — el sprite sigue a la caja. Sin esto, una fase con

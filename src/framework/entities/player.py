@@ -474,8 +474,21 @@ class Player(BaseEntity):
 
     @property
     def damage_multiplier(self) -> float:
-        """Multiplicador de daño: reliquias y árbol (1,0 = sin bonificación)."""
-        return 1.0 + self._bonus_damage + self._bonus_arbol_dano
+        """Multiplicador de daño: reliquias y árbol (1,0 = sin bonificación).
+
+        AUD-608 — la sinergia **Berserker** (fuerza y coraza al máximo)
+        añade +0,2 con menos de la mitad de vida. Se lee en caliente del
+        árbol para que cargar una partida vieja con menos rangos la pierda,
+        igual que los bonus normales.
+        """
+        total = 1.0 + self._bonus_damage + self._bonus_arbol_dano
+        from src.engine.core.skill_tree import ArbolDeHabilidades
+
+        if ArbolDeHabilidades.get_instance().sinergia_activa("berserker"):
+            tope = max(1.0, self.max_health)
+            if self._health < tope / 2.0:
+                total += 0.2
+        return total
 
     def apply_relic_bonuses(self, inventory: Any) -> None:
         """Recompute stat bonuses from the player's collected relics.
@@ -558,14 +571,46 @@ class Player(BaseEntity):
         1.00 during LONG_ATTACK active frames,
         0.0 otherwise.
         Combo multiplier from settings.COMBO_DAMAGE_MULT[combo_count - 1].
+
+        AUD-603 — los estados de ataque que nacieron después del corto y
+        del largo levantaban `active_hitbox` pero no tenían rama aquí, así
+        que **conectaban y hacían 0.0**: sprite, sonido y combo sí existían,
+        la vida del enemigo no se movía. Reportado en playtesting con el
+        golpe aéreo; el mismo defecto estaba en el resto de ataques
+        especiales, incluido el ultimate cuyo `_damage_mult = 3.0` era
+        inerte al multiplicar una base cero. Valores:
+
+        * AERIAL_ATTACK  0.5 — misma caja y sprite que el corto.
+        * AERIAL_SLAM    1.0 — remate aéreo, caja mayor.
+        * DASH_ATTACK    0.75 — entre ligero y pesado.
+        * SWIM_ATTACK    0.5 — comparte sprite y fotogramas activos
+          con el corto (`states/swim.py`).
+        * THROW          1.0 — un lanzamiento duele.
+        * ULTIMATE       1.0 × `_damage_mult` (3.0) = 3.0 — el mecanismo
+          ya existía; sin base nunca se aplicaba.
+        * CHARGE_RELEASE 1.0 × nivel de carga (1.0/1.5/2.0).
         """
         base = 0.0
         dmg_mult = getattr(self, "_damage_mult", 1.0) * self.damage_multiplier
-        if (self._state_instance.state_enum == PlayerState.SHORT_ATTACK
-                and self._active_hitbox is not None):
+        state = self._state_instance.state_enum
+        if state == PlayerState.SHORT_ATTACK and self._active_hitbox is not None:
             base = 0.5
-        elif (self._state_instance.state_enum == PlayerState.LONG_ATTACK
-                and self._active_hitbox is not None):
+        elif state == PlayerState.LONG_ATTACK and self._active_hitbox is not None:
+            base = 1.0
+        # AUD-603 — las ramas que faltaban (ver docstring).
+        elif state == PlayerState.AERIAL_ATTACK and self._active_hitbox is not None:
+            base = 0.5
+        elif state == PlayerState.AERIAL_SLAM and self._active_hitbox is not None:
+            base = 1.0
+        elif state == PlayerState.DASH_ATTACK and self._active_hitbox is not None:
+            base = 0.75
+        elif state == PlayerState.SWIM_ATTACK and self._active_hitbox is not None:
+            base = 0.5
+        elif state == PlayerState.THROW and self._active_hitbox is not None:
+            base = 1.0
+        elif state == PlayerState.ULTIMATE and self._active_hitbox is not None:
+            base = 1.0
+        elif state == PlayerState.CHARGE_RELEASE and self._active_hitbox is not None:
             base = 1.0
         from src.engine.core.difficulty import get_config
         cfg = get_config()
@@ -706,7 +751,18 @@ class Player(BaseEntity):
         defensa = max(0.05, 1.0 - self._bonus_arbol_defensa)
         effective_damage = amount * cfg.incoming_damage_mult * defensa
         self._health = max(0.0, self._health - effective_damage)
-        self._invincibility_timer = cfg.invincibility_duration
+        # AUD-608 — la sinergia **Titán** (vitalidad e ímpetu al máximo)
+        # estira los i-frames: el jugador tanque vive en el meleé y unos
+        # décimos de gracia es la única defensa que no toca el número de
+        # daño, que coraza ya recorta.
+        from src.engine.core.skill_tree import ArbolDeHabilidades
+
+        extra_titan = (
+            0.3
+            if ArbolDeHabilidades.get_instance().sinergia_activa("titan")
+            else 0.0
+        )
+        self._invincibility_timer = cfg.invincibility_duration + extra_titan
         self._flash_timer = 0.0
 
         # Knockback away from source

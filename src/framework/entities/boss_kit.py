@@ -138,12 +138,28 @@ class WeakPoint:
     #: Etiqueta para el overlay de depuración y el bestiario.
     label: str = "núcleo"
 
-    def rect_for(self, boss_rect: pygame.Rect) -> pygame.Rect:
+    def rect_for(
+        self, boss_rect: pygame.Rect,
+        escala: float = 1.0, facing: int = 1,
+    ) -> pygame.Rect:
+        """El rect del punto débil sobre el cuerpo vivo (AUD-606).
+
+        `escala` multiplica offset y tamaño para seguir al jefe escalado por
+        fase; `facing` espeja el offset X cuando el jefe mira a la izquierda,
+        con la misma fórmula que implica el flip del sprite
+        (`ancho − offset_x − ancho_caja`). Los valores por defecto conservan
+        el comportamiento histórico —offsets crudos sin espejar— para quien
+        llame con la firma vieja.
+        """
+        ox, oy = self.offset
+        w, h = self.size
+        if facing < 0:
+            ox = boss_rect.width - ox - w
         return pygame.Rect(
-            boss_rect.x + self.offset[0],
-            boss_rect.y + self.offset[1],
-            self.size[0],
-            self.size[1],
+            int(boss_rect.x + ox * escala),
+            int(boss_rect.y + oy * escala),
+            max(1, int(w * escala)),
+            max(1, int(h * escala)),
         )
 
     def exposed_in(self, phase: int) -> bool:
@@ -386,10 +402,24 @@ def resolve_weak_point_damage(
     eso premiaría la geometría del solape en lugar de la puntería.
     """
     best: WeakPoint | None = None
+    # AUD-606 — sólo los jefes que declaran `cajas_siguen_al_cuerpo` reciben
+    # escala y espejado en sus puntos débiles: los que ya compensan a mano
+    # (el venado antes de AUD-606) recibirían un doble espejo, que devuelve
+    # el punto al lado equivocado otra vez.
+    sigue = bool(getattr(boss, "cajas_siguen_al_cuerpo", False))
     for point in weak_points:
         if not point.exposed_in(phase):
             continue
-        if hit_rect.colliderect(point.rect_for(boss.rect)) and (
+        rect_punto = (
+            point.rect_for(
+                boss.rect,
+                escala=getattr(boss, "_escala_viva", lambda: 1.0)(),
+                facing=getattr(boss, "facing_direction", 1),
+            )
+            if sigue
+            else point.rect_for(boss.rect)
+        )
+        if hit_rect.colliderect(rect_punto) and (
             best is None or point.multiplier > best.multiplier
         ):
             best = point
