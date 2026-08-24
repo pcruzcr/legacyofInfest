@@ -60,6 +60,12 @@ import pygame
 from src.engine.core import settings, user_settings
 from src.engine.core.events import Events
 from src.engine.input.action_map import Action
+from src.engine.ui.text_panel import (
+    FlujoDeTexto,
+    dibuja_ficha,
+    dibuja_panel,
+    dividir_en_lineas,
+)
 from src.engine.ui.theme import Theme, font
 from src.engine.utils.asset_loader import AssetLoader
 
@@ -111,42 +117,6 @@ def personalizar(texto: str) -> str:
     from src.framework.academic.sesion import SesionAcademica
 
     return texto.replace(MARCA_DE_APODO, SesionAcademica.instancia().apodo)
-
-
-def dividir_en_lineas(
-    texto: str, fuente: pygame.font.Font, ancho_max: int,
-) -> list[str]:
-    """Parte `texto` en líneas que quepan en `ancho_max` píxeles.
-
-    AUD-128 — el defecto que esto corrige.
-
-    Se mide con la fuente **real**, no con un número de caracteres estimado:
-    una tipografía proporcional hace que «iiii» y «MMMM» ocupen anchos muy
-    distintos, y con la escala de accesibilidad al doble cualquier estimación
-    por caracteres se queda corta justo para quien más necesita que no lo haga.
-
-    Una palabra que no cabe entera se deja en su línea y se desborda: partirla
-    a mitad la haría ilegible, y una palabra de 80 caracteres en un diálogo es
-    un error del guion, no un caso que el motor deba maquillar.
-    """
-    if not texto:
-        return []
-    lineas: list[str] = []
-    for parrafo in texto.split("\n"):
-        if not parrafo:
-            lineas.append("")
-            continue
-        actual = ""
-        for palabra in parrafo.split(" "):
-            tentativa = f"{actual} {palabra}".strip()
-            if actual and fuente.size(tentativa)[0] > ancho_max:
-                lineas.append(actual)
-                actual = palabra
-            else:
-                actual = tentativa
-        if actual:
-            lineas.append(actual)
-    return lineas
 
 
 class DialogueNode:
@@ -239,6 +209,14 @@ class DialogueSystem:
         # `pygame.font.Font` directo. `theme.font()` aplica la escala de
         # accesibilidad, cachea, y sobrevive a un `pygame.font.quit()` — los
         # tres motivos por los que existe (AUD-030, AUD-077, AUD-126).
+        #
+        # AUD-611 — paginación y bloque de texto calculados UNA vez por
+        # (nodo, página, escala), no en cada fotograma. La clave invalida
+        # por escala de accesibilidad: subirla a mitad de conversación
+        # re-envuelve el texto al fotograma siguiente.
+        self._clave_flujo: tuple | None = None
+        self._paginas_cache: list[list[str]] = [[]]
+        self._flujo = FlujoDeTexto()
 
     # ── fuentes, siempre a través del tema ─────────────────────
 
@@ -357,9 +335,10 @@ class DialogueSystem:
             if velocidad <= 0.0:
                 self._full_text_visible = True
             else:
+                total = self._caracteres_de_pagina()
                 self._text_progress += velocidad * dt
-                if self._text_progress >= len(self._texto_de_la_pagina()):
-                    self._text_progress = float(len(self._texto_de_la_pagina()))
+                if self._text_progress >= total:
+                    self._text_progress = float(total)
                     self._full_text_visible = True
 
         im = self._context.input_manager
@@ -375,7 +354,7 @@ class DialogueSystem:
         # diálogos en cuanto puede.
         if not self._full_text_visible:
             if confirmar or im.is_action_just_pressed(Action.CANCEL):
-                self._text_progress = float(len(self._texto_de_la_pagina()))
+                self._text_progress = float(self._caracteres_de_pagina())
                 self._full_text_visible = True
             return
 
@@ -404,47 +383,77 @@ class DialogueSystem:
         alto = int(ALTO_CUADRO * self._escala_actual())
         box = pygame.Rect(MARGEN, h - alto - 10, w - MARGEN * 2, alto)
 
-        velo = pygame.Surface(box.size, pygame.SRCALPHA)
-        velo.fill(Theme.OVERLAY)
-        surface.blit(velo, box.topleft)
-        pygame.draw.rect(surface, Theme.BORDER, box, 2,
-                         border_radius=Theme.RADIUS)
+        # AUD-611 — panel del tema: sombra, cuerpo redondeado y borde, en
+        # vez de un velo negro plano. El coste son tres primitivas.
+        dibuja_panel(surface, box)
+        # Filo de acento arriba: marca el cuadro como "voz", no como menú.
+        pygame.draw.line(surface, Theme.ACCENT_DIM,
+                         (box.x + Theme.RADIUS_L, box.y),
+                         (box.right - Theme.RADIUS_L, box.y), 2)
 
         px = box.x + Theme.SPACE_M
-        py = box.y + Theme.SPACE_S
+        py = box.y + Theme.SPACE_S + 2
         lado_retrato = int(48 * self._escala_actual())
         retrato = self._retrato(self._current_node.portrait, lado_retrato)
         if retrato is not None:
             surface.blit(retrato, (px, py))
-            px += lado_retrato + Theme.SPACE_S
+            px += lado_retrato + Theme.SPACE_M
 
-        nombre = self._font_name.render(
-            self._current_node.speaker, True, Theme.ACCENT)
-        surface.blit(nombre, (px, py))
-        y = py + nombre.get_height() + Theme.SPACE_XS
+        # AUD-611 — el nombre va en una FICHA redondeada y no suelto: es la
+        # jerarquía visual de todo diálogo moderno (quien habla se lee de un
+        # vistazo, antes incluso de la primera letra del texto).
+        nombre_surf = self._font_name.render(
+            self._current_node.speaker, True, (24, 26, 44))
+        ficha = pygame.Rect(0, 0,
+                            nombre_surf.get_width() + Theme.SPACE_M,
+                            nombre_surf.get_height() + 6)
+        ficha.topleft = (px, py - 3)
+        surface.blit(nombre_surf, dibuja_ficha(surface, ficha, nombre_surf))
+        y = ficha.bottom + Theme.SPACE_XS + 2
 
-        # AUD-269: se dibuja la página, no el nodo entero. El `break` que había
-        # aquí recortaba lo que no cabía **y no lo enseñaba nunca**.
-        visible = self._texto_de_la_pagina()[:int(self._text_progress)]
-        for linea in visible.splitlines():
-            surface.blit(self._font_text.render(linea, True, Theme.TEXT), (px, y))
-            y += self._font_text.get_height() + 2
+        # AUD-269/611 — se dibuja la página ya envuelta y renderizada una
+        # vez; la máquina de escribir sólo recorta.
+        self._asegura_flujo()
+        self._flujo.dibujar(
+            surface, (px, y), caracteres=int(self._text_progress))
+        y += self._flujo.tamano()[1] + Theme.SPACE_XS
 
         if not self._full_text_visible:
             return
 
         if self._current_node.choices:
             for i, (texto, _) in enumerate(self._current_node.choices):
-                if y + self._font_choice.get_height() > box.bottom:
+                opcion_surf = self._font_choice.render(
+                    texto, True,
+                    (24, 26, 44) if i == self._selected_choice
+                    else Theme.TEXT_MUTED,
+                )
+                if y + opcion_surf.get_height() + 6 > box.bottom - Theme.SPACE_S:
                     break
                 elegido = i == self._selected_choice
-                color = Theme.ACCENT if elegido else Theme.TEXT_MUTED
-                prefijo = "> " if elegido else "  "
-                surface.blit(
-                    self._font_choice.render(f"{prefijo}{texto}", True, color),
-                    (px, y),
+                chip = pygame.Rect(
+                    0, 0, opcion_surf.get_width() + Theme.SPACE_M + 8,
+                    opcion_surf.get_height() + 6,
                 )
-                y += self._font_choice.get_height() + 2
+                chip.topleft = (px, y)
+                # AUD-611 — las opciones son chips: la elegida con fondo de
+                # acento y flecha, las demás apagadas. Antes eran tres líneas
+                # de texto con un "> " delante, indistinguibles del guion.
+                pos_texto = dibuja_ficha(
+                    surface, chip, opcion_surf,
+                    fondo=Theme.ACCENT if elegido else Theme.SURFACE_RAISED,
+                )
+                if elegido:
+                    surface.blit(opcion_surf, pos_texto + pygame.Vector2(10, 0))
+                    pygame.draw.polygon(
+                        surface, (24, 26, 44),
+                        [(chip.x + 8, chip.centery - 4),
+                         (chip.x + 8, chip.centery + 4),
+                         (chip.x + 14, chip.centery)],
+                    )
+                else:
+                    surface.blit(opcion_surf, pos_texto)
+                y += chip.height + 4
         else:
             texto_pista = ("[ENTER]" if self.paginas <= 1
                            else f"[ENTER] {self._pagina + 1}/{self.paginas}")
@@ -466,24 +475,57 @@ class DialogueSystem:
         paso = self._font_text.get_height() + 2
         return max(1, util // paso)
 
+    def _ancho_util_de_texto(self) -> int:
+        w = settings.INTERNAL_WIDTH
+        return max(120, w - MARGEN * 2
+                   - int(48 * self._escala_actual()) - Theme.SPACE_M * 3)
+
+    def _asegura_flujo(self) -> None:
+        """Paginas y bloque de la página actual, si la clave cambió.
+
+        AUD-611 — antes `update()` llamaba `_texto_de_la_pagina()` dos
+        veces por fotograma y cada una re-partía el texto midiendo palabra
+        a palabra con la fuente; con un guion largo eso era medir miles de
+        píxeles sesenta veces por segundo para no cambiar nada.
+        """
+        nodo = self._current_node
+        clave = (
+            id(nodo), self._pagina, self._escala_actual(),
+            self._ancho_util_de_texto(),
+        )
+        if self._clave_flujo == clave:
+            return
+        self._clave_flujo = clave
+        if nodo is None:
+            self._paginas_cache = [[]]
+            self._flujo.preparar("", self._font_text, 10)
+            return
+        lineas = dividir_en_lineas(
+            personalizar(nodo.text), self._font_text,
+            self._ancho_util_de_texto(),
+        )
+        if not lineas:
+            lineas = [""]
+        por_pagina = self._lineas_por_pagina()
+        self._paginas_cache = [
+            lineas[i:i + por_pagina]
+            for i in range(0, len(lineas), por_pagina)
+        ] or [[""]]
+        indice = min(self._pagina, len(self._paginas_cache) - 1)
+        self._flujo.preparar(
+            "\n".join(self._paginas_cache[indice]),
+            self._font_text, settings.INTERNAL_WIDTH,
+            separacion=2,
+        )
+
     def _paginas_de_texto(self) -> list[list[str]]:
         """El texto del nodo, repartido en páginas de líneas."""
-        if self._current_node is None:
-            return [[]]
-        ancho = (settings.INTERNAL_WIDTH - MARGEN * 2
-                 - int(48 * self._escala_actual()) - Theme.SPACE_M * 3)
-        lineas = dividir_en_lineas(
-            personalizar(self._current_node.text), self._font_text, ancho)
-        if not lineas:
-            return [[]]
-        por_pagina = self._lineas_por_pagina()
-        return [lineas[i:i + por_pagina] for i in range(0, len(lineas), por_pagina)]
+        self._asegura_flujo()
+        return self._paginas_cache
 
-    def _texto_de_la_pagina(self) -> str:
-        """Las líneas de la página actual, ya partidas, unidas por salto."""
-        paginas = self._paginas_de_texto()
-        indice = min(self._pagina, len(paginas) - 1)
-        return "\n".join(paginas[indice])
+    def _caracteres_de_pagina(self) -> int:
+        self._asegura_flujo()
+        return self._flujo.caracteres_totales()
 
     @property
     def paginas(self) -> int:

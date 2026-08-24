@@ -53,6 +53,8 @@ class Theme:
     # ── Lines ───────────────────────────────────────────────────
     BORDER: Final[RGB] = (60, 64, 96)
     BORDER_STRONG: Final[RGB] = (100, 106, 150)
+    # Sombra de paneles (RGBA): se blit desplazada 3-4 px bajo el cuerpo.
+    SHADOW: Final[tuple[int, int, int, int]] = (0, 0, 0, 110)
 
     # ── Text ────────────────────────────────────────────────────
     # Three levels only. More than three and hierarchy stops reading.
