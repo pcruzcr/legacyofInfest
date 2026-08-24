@@ -1068,10 +1068,12 @@ experiencia y árbol a cambio de **+5 % de XP permanente** por punto
 (`get_xp_multiplier()`, aplicado en `ExperienceSystem.grant`). Los objetos,
 las monedas y la ropa puesta no se tocan.
 
-> **Estado real:** la mecánica está probada en el motor
-> (`tests/test_las_sinergias_y_el_prestigio.py`) pero todavía no hay pantalla
-> que llame a `reencarnar` — anotado como GAP-073. Las sinergias sí están
-> vivas desde el primer fotograma: las lee el jugador directamente.
+> **Estado real:** todo el ciclo funciona. La pantalla del árbol
+> (`SkillTreeScene`) enseña el prestigio acumulado y, al llegar a nivel 10,
+> la pista **F — Reencarnar** con confirmación en dos pasos. Pruebas:
+> `tests/test_las_sinergias_y_el_prestigio.py` y
+> `tests/test_la_pantalla_del_prestigio.py`. Las sinergias están vivas desde
+> el primer fotograma: las lee el jugador directamente.
 
 **Tu jefe puede conceder una con una línea.** En su clase:
 
