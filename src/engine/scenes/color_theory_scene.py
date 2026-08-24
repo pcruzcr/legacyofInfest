@@ -400,42 +400,31 @@ class ColorTheoryScene(BaseScene):
         ))
 
     def _draw_rgb_ui(self, surface: pygame.Surface, y: int) -> None:
-        _draw_slider(surface, 10, y, 300, self._r / 255, CHANNEL_COLORS[0],
-                     "R", f"{self._r}")
-        _draw_slider(surface, 10, y + FILA * 1, 300, self._g / 255, CHANNEL_COLORS[1],
-                     "G", f"{self._g}")
-        _draw_slider(surface, 10, y + FILA * 2, 300, self._b / 255, CHANNEL_COLORS[2],
-                     "B", f"{self._b}")
+        _draw_slider(surface, 10, y, 300, self._r / 255, CHANNEL_COLORS[0], "R")
+        _draw_slider(surface, 10, y + FILA * 1, 300, self._g / 255, CHANNEL_COLORS[1], "G")
+        _draw_slider(surface, 10, y + FILA * 2, 300, self._b / 255, CHANNEL_COLORS[2], "B")
 
     def _draw_hsv_ui(self, surface: pygame.Surface, y: int) -> None:
-        _draw_slider(surface, 10, y, 300, self._h / 360, (255, 200, 100),
-                     "H", f"{self._h:.0f}°")
-        _draw_slider(surface, 10, y + FILA * 1, 300, self._s, (200, 100, 200),
-                     "S", f"{self._s:.2f}")
-        _draw_slider(surface, 10, y + FILA * 2, 300, self._v, (100, 200, 255),
-                     "V", f"{self._v:.2f}")
+        _draw_slider(surface, 10, y, 300, self._h / 360, (255, 200, 100), "H")
+        _draw_slider(surface, 10, y + FILA * 1, 300, self._s, (200, 100, 200), "S")
+        _draw_slider(surface, 10, y + FILA * 2, 300, self._v, (100, 200, 255), "V")
         hint = self._font_small.render(_("SHIFT to toggle step-by-step algorithm"), True, COLOR_ACCENT)
+        surface.blit(hint, (10, y + 38))
         surface.blit(hint, (10, y + 38))
 
     def _draw_hsl_ui(self, surface: pygame.Surface, y: int) -> None:
-        _draw_slider(surface, 10, y, 300, self._h / 360, (255, 200, 100),
-                     "H", f"{self._h:.0f}°")
-        _draw_slider(surface, 10, y + FILA * 1, 300, self._s, (200, 100, 200),
-                     "S", f"{self._s:.2f}")
-        _draw_slider(surface, 10, y + FILA * 2, 300, self._lightness, (100, 200, 200),
-                     "L", f"{self._lightness:.2f}")
+        _draw_slider(surface, 10, y, 300, self._h / 360, (255, 200, 100), "H")
+        _draw_slider(surface, 10, y + FILA * 1, 300, self._s, (200, 100, 200), "S")
+        _draw_slider(surface, 10, y + FILA * 2, 300, self._lightness, (100, 200, 200), "L")
         hint = self._font_small.render(_("SHIFT to toggle step-by-step algorithm"), True, COLOR_ACCENT)
+        surface.blit(hint, (10, y + 38))
         surface.blit(hint, (10, y + 38))
 
     def _draw_cmyk_ui(self, surface: pygame.Surface, y: int) -> None:
-        _draw_slider(surface, 10, y, 300, self._c, CHANNEL_COLORS[3],
-                     "C", f"{self._c:.2f}")
-        _draw_slider(surface, 10, y + FILA * 1, 300, self._m, (200, 80, 200),
-                     "M", f"{self._m:.2f}")
-        _draw_slider(surface, 10, y + FILA * 2, 300, self._y, (200, 200, 80),
-                     "Y", f"{self._y:.2f}")
-        _draw_slider(surface, 10, y + FILA * 3, 300, self._k, (80, 80, 80),
-                     "K", f"{self._k:.2f}")
+        _draw_slider(surface, 10, y, 300, self._c, CHANNEL_COLORS[3], "C")
+        _draw_slider(surface, 10, y + FILA * 1, 300, self._m, (200, 80, 200), "M")
+        _draw_slider(surface, 10, y + FILA * 2, 300, self._y, (200, 200, 80), "Y")
+        _draw_slider(surface, 10, y + FILA * 3, 300, self._k, (80, 80, 80), "K")
 
     def _draw_all_space_readouts(self, surface: pygame.Surface, y: int) -> None:
         lines = [
@@ -527,8 +516,7 @@ class ColorTheoryScene(BaseScene):
             txt = self._font_small.render(line, True, COLOR_TEXT)
             surface.blit(txt, (10, y + 90 + i * 14))
 
-        _draw_slider(surface, 80, y + FILA * 6, 160, self._alpha, (200, 200, 255),
-                     "Alpha", f"{self._alpha:.2f}")
+        _draw_slider(surface, 80, y + FILA * 6, 160, self._alpha, (200, 200, 255), "Alpha")
 
     def _draw_alpha_formula(self, surface: pygame.Surface, y: int) -> None:
         formula = "out = src * alpha + dst * (1 - alpha)"
