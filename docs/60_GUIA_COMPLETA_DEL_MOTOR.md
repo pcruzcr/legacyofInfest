@@ -257,9 +257,17 @@ efecto, mira la consola antes que el código.
 > `Collision`). El índice decía 77 porque le faltaba subir tras AUD-400
 > (`Objective`); ésa era la única corrección real. Revertido a 78.
 
-El motor acepta **78 tipos**: 39 integrados del framework y 37 enemigos del
+El motor acepta **82 tipos**: 43 integrados del framework y 37 enemigos del
 registro, en la capa `Objects`, más `Solid` y `Platform` en `Collision`.
 Todos los números se convierten a `float` automáticamente.
+
+> Los tres tipos de zona nuevos de AUD-598/600/601 (GAP-072) están en §4:
+> `AmbientLightZone` — brillo ambiental por tramo; `MusicZone` — música por
+> sección, silencio incluido; y `CameraZoomZone` — zoom cinematográfico.
+>
+> AUD-605 añade `ArenaZone`: el cuadrilátero real del combate de jefe, para
+> que sus límites de arena (teletransporte de fase, `clamp_to_arena`) no
+> sean el mapa entero. Ver §4.9.
 
 > Un objeto **punto** (ancho y alto 0) recibe el tamaño de una baldosa, porque
 > un rectángulo de área cero sería imposible de tocar.
@@ -642,6 +650,18 @@ noche el ambiente cae a un suelo de 0,45 y lo único que se ve es lo que tú
 hayas iluminado. Stage 0 llegó a tener sólo el **24 %** de la pantalla por
 encima del umbral de legibilidad a medianoche antes de que lo corrigiéramos.
 Prueba tu nivel con `--hora 23`.
+
+### 4.11 `ArenaZone` — la arena del jefe (AUD-605)
+
+Rectángulo que declara el cuadrilátero real del combate de jefe. Sin ninguna,
+el motor le pasa al jefe el mapa entero como arena (comportamiento histórico);
+con alguna, gana la primera que contenga el centro del jefe.
+
+No tiene propiedades: la geometría del objeto ES la arena. Un punto (ancho o
+alto 0) se ignora. Sirve para cualquier lógica del jefe que use sus límites:
+el teletransporte de fase cae al centro de los límites, así que con el mapa
+entero caía en media pradera. Colócala junto al `BossSpawn`, cubriendo el
+suelo del combate y lo que alcance su salto.
 
 ---
 
@@ -1031,6 +1051,27 @@ y se consultan con `Inventory.has_skill()`.
 | `skill_double_jump` | Double Jump | saltar otra vez en el aire | `BossRey` |
 | `skill_dash` | Dash | impulso rápido hacia delante | `BossVenado` |
 | `skill_parry` | Parry | desviar ataques | — (nadie todavía) |
+
+### Sinergias del árbol y prestigio (AUD-608/609)
+
+El árbol de habilidades (`ArbolDeHabilidades`) paga sus rangos con los puntos
+que deja la experiencia. Llevar **dos ramas al tope** consigue una sinergia —
+no se compra, se tiene:
+
+| Sinergia | Exige | Da |
+|---|---|---|
+| Berserker | fuerza 5 + coraza 5 | +20 % de daño con menos de la mitad de vida |
+| Titán | vitalidad 10 + ímpetu 4 | +0,30 s de invencibilidad al recibir un golpe |
+
+Y con nivel 10, `Inventory.reencarnar(experiencia, arbol)` reinicia
+experiencia y árbol a cambio de **+5 % de XP permanente** por punto
+(`get_xp_multiplier()`, aplicado en `ExperienceSystem.grant`). Los objetos,
+las monedas y la ropa puesta no se tocan.
+
+> **Estado real:** la mecánica está probada en el motor
+> (`tests/test_las_sinergias_y_el_prestigio.py`) pero todavía no hay pantalla
+> que llame a `reencarnar` — anotado como GAP-073. Las sinergias sí están
+> vivas desde el primer fotograma: las lee el jugador directamente.
 
 **Tu jefe puede conceder una con una línea.** En su clase:
 

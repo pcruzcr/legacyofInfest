@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
 from typing import TypedDict
 
 import orjson
@@ -23,14 +22,14 @@ class _NotificationData(TypedDict):
     timer: float
 
 
-#: Dónde vive el inventario del jugador. AUD-337 — nació en
-#: `data/inventory.json`, dentro del árbol del proyecto; una instalación
-#: empaquetada puede tener ese árbol en un sitio de sólo lectura, así que
+#: Dónde vive el inventario del jugador. AUD-337 - nació en
+#: data/inventory.json, dentro del árbol del proyecto; una instalación
+#: empaquetada puede tener ese árbol en un sitio de solo lectura, así que
 #: el estado del jugador va al directorio del usuario, como las partidas
 #: (AUD-157) y los logros. El fichero viejo se migra una vez (no se borra).
 _RUTA_POR_DEFECTO = user_data_dir() / "inventory.json"
 _INVENTORY_PATH = _RUTA_POR_DEFECTO
-#: De dónde se migra: el sitio histórico, sólo lectura en empaquetado.
+#: De dónde se migra: el sitio histórico, solo lectura en empaquetado.
 _RUTA_ANTIGUA = settings.PROJECT_ROOT / "data/inventory.json"
 
 
@@ -42,26 +41,26 @@ class ItemDef(BaseModel):
     max_hp_bonus: float = 0.0
     speed_bonus: float = 0.0
     damage_bonus: float = 0.0
-    #: Ropa equipable. `None` = objeto de mejora o llave, no se equipa.
+    #: Ropa equipable. None = objeto de mejora o llave, no se equipa.
     slot: str | None = None
-    #: Precio en monedas. `0` = no se compra ni se vende (mejora/llave).
+    #: Precio en monedas.  = no se compra ni se vende (mejora/llave).
     price: int = 0
-    #: AUD-559 — propuesta de economía del dueño: la tienda sólo tenía
+    # AUD-559 - la propuesta de economía del dueño: la tienda solo tenía
     #: ropa permanente, nada que gastarse en un apuro puntual.
-    #: `consumible=True` es la mitad que falta: un objeto que se **usa**
+    #: consumible=True es la mitad que falta: un objeto que se **usa**
     #: (una unidad menos, un efecto inmediato) en vez de equiparse o
     #: acumular estadística para siempre.
     consumible: bool = False
     #: Vida que restaura al usarse. Sólo tiene sentido con
-    #: `consumible=True` — separado de `max_hp_bonus` a propósito: ese
-    #: campo es un bono *permanente* que `Inventory._sumar_bonus` suma
-    #: mientras el objeto esté en la mochila (o puesto); esto es un
+    #: consumible=True - separado de max_hp_bonus a propósito: ese
+    #: campo es un bono *permanente* que Inventory._sumar_bonus suma
+    #: mientras el objeto está en la mochila (o puesto); esto es un
     #: efecto de una sola vez que no debe contarse dos veces.
     heal_hp: float = 0.0
 
 
 _ITEM_DEFS: dict[str, ItemDef] = {
-    # ── Mejoras permanentes (se recogen en el mapa) ────────────────
+    # Mejoras permanentes (se recogen en el mapa)
     "heart_vessel": ItemDef(
         id="heart_vessel", name="Vasija de corazón",
         description="+1 de vida máxima",
@@ -88,17 +87,17 @@ _ITEM_DEFS: dict[str, ItemDef] = {
         icon_color=(60, 180, 60), damage_bonus=0.5,
     ),
     "sunken_crown": ItemDef(
-        id="sunken_crown", name="Corona hundida",
+        id="sunk_crown", name="Corona hundida",
         description="+3 de vida máxima, +0,8 de daño",
         icon_color=(220, 200, 40), max_hp_bonus=3.0, damage_bonus=0.8,
     ),
-    # ── Moneda ─────────────────────────────────────────────────────
+    # Moneda
     "coin": ItemDef(
         id="coin", name="Moneda",
         description="La moneda de la tienda",
         icon_color=(255, 215, 0),
     ),
-    # ── Ropa equipable (se compra en la tienda) ────────────────────
+    # Ropa equipable (se compra en la tienda)
     "hood_leaf": ItemDef(
         id="hood_leaf", name="Capucha de hoja",
         description="Capucha de selva. +0,2 de daño",
@@ -129,49 +128,42 @@ _ITEM_DEFS: dict[str, ItemDef] = {
         description="+1 de vida máxima",
         icon_color=(160, 160, 160), slot="feet", max_hp_bonus=1.0, price=40,
     ),
-    # AUD-559 — propuesta de economía: los seis objetos de arriba topaban
-    # en 50 monedas — nada le daba sentido a seguir juntando pasada la
-    # mitad del juego. Éste combina dos de los bonos que hasta ahora
-    # sólo aparecían por separado (vida + daño), a precio de gama alta.
+    # AUD-559 - el objeto "capa abisal" combina vida + daño
     "cloak_abyssal": ItemDef(
         id="cloak_abyssal", name="Capa abisal",
         description="Capa de las profundidades. +1,5 de vida máxima, +0,6 de daño",
         icon_color=(40, 60, 90), slot="body",
         max_hp_bonus=1.5, damage_bonus=0.6, price=90,
     ),
-    # AUD-559 — el primer objeto **consumible** de la tienda: los otros
-    # siete son o ropa permanente o mejoras que se recogen en el mapa.
-    # Nada compraba una segunda oportunidad puntual — sólo estadística
-    # para siempre.
+    # AUD-559 - el primer objeto consumible de la tienda
     "tonic_sap": ItemDef(
         id="tonic_sap", name="Tónico de savia",
         description="Se usa una vez: restaura 2 de vida",
         icon_color=(120, 200, 90), price=15,
         consumible=True, heal_hp=2.0,
     ),
-    # ── Habilidades (drops de jefes) ───────────────────────────────
+    # Habilidades (drops de jefes)
     "skill_double_jump": ItemDef(
         id="skill_double_jump", name="Salto doble",
-        description="Botín de jefe: saltas otra vez en el aire",
+        description="Botón de jefe: saltas otra vez en el aire",
         icon_color=(200, 100, 255), slot="skill",
     ),
     "skill_dash": ItemDef(
         id="skill_dash", name="Impulso",
-        description="Botín de jefe: impulso rápido hacia delante",
+        description="Botón de jefe: impulso rápido hacia delante",
         icon_color=(100, 200, 255), slot="skill",
     ),
     "skill_parry": ItemDef(
         id="skill_parry", name="Parada",
-        description="Botín de jefe: desvías los ataques",
+        description="Botón de jefe: desvías los ataques",
         icon_color=(255, 200, 100), slot="skill",
-    ),
+),
 }
 
 
 def _migrar_inventario() -> None:
     """Migra el fichero viejo una vez, y sólo con la ruta de producción.
-
-    Las pruebas redirigen `_INVENTORY_PATH` a un directorio temporal: ahí no
+    Las pruebas redirigen _INVENTORY_PATH a un directorio temporal: ahí no
     se migra nada, el fichero viejo del repositorio es de desarrollo y no
     tiene por qué colarse en una prueba.
     """
@@ -182,6 +174,12 @@ def _migrar_inventario() -> None:
 class Inventory:
     _instance: Inventory | None = None
     _initialized: bool = False
+
+    #: AUD-609 — nivel mínimo para reencarnar. Diez niveles cuestan
+    #: `_EXP_BASE * 10 * 11 / 2` = 5.500 XP de la curva cuadrática: unas
+    #: cuantas horas de partida. Menos que eso y reencarnar sería un botón
+    #: de rutina en vez de una decisión.
+    NIVEL_DE_REENCARNACION: int = 10
 
     def __new__(cls) -> Inventory:
         if cls._instance is None:
@@ -195,18 +193,16 @@ class Inventory:
         self._initialized = True
         self._items: dict[str, int] = {}
         self._equipped: dict[str, str] = {}
-        self._collect_notifications: list[_NotificationData] = []
-        self._current_notify: _NotificationData | None = None
+        self._collect_notifications: list = []
+        self._current_notify = None
         self._notif_bg: pygame.Surface | None = None
+        # AUD-609 — puntos de prestigio ganados al reencarnar. Vive en el
+        # inventario y no en `ExperienceSystem` porque sobrevive al reseteo
+        # de la experiencia: es exactamente lo que la reencarnación compra.
+        self.prestigio: int = 0
         self.load()
 
     def collect(self, item_id: str, cantidad: int = 1) -> bool:
-        """Entra `cantidad` unidades del objeto y avisa **una vez**.
-
-        AUD-218: el aviso se emite una sola vez por recogida, no una por
-        unidad. Una bolsa de diez monedas encolaba diez notificaciones de tres
-        segundos cada una y tapaba la pantalla medio minuto.
-        """
         if item_id not in _ITEM_DEFS:
             return False
         if cantidad < 1:
@@ -231,27 +227,10 @@ class Inventory:
     def count(self, item_id: str) -> int:
         return self._items.get(item_id, 0)
 
-    def get_def(self, item_id: str) -> ItemDef | None:
+    def get_def(self, item_id: str):
         return _ITEM_DEFS.get(item_id)
 
-    def _sumar_bonus(self, extraer: Callable[[ItemDef], float]) -> float:
-        """Suma un bonus sobre las dos familias de objetos, que cuentan
-        distinto (AUD-207).
-
-        Antes esto recorría `_items` entero multiplicando por la cantidad, sin
-        mirar `_equipped` ni una vez. Con ese cálculo la ropa daba su bonus
-        guardada en la mochila, las dos capuchas apilaban pese a compartir
-        `slot="head"`, y comprar la misma prenda dos veces valía el doble. La
-        tienda vendía números en lugar de ropa, y no había nada que elegir.
-
-        * **Mejoras permanentes** (`slot is None`): se recogen en el mapa y
-          apilan por cantidad. Dos vasijas de corazón son +2 de vida, y así
-          debe seguir — los niveles están diseñados contando con eso.
-        * **Ropa** (`slot` de ropa): cuenta una vez y sólo si está puesta. El
-          hueco es el que obliga a elegir; sin esta regla no es un hueco.
-        * **Habilidades** (`slot="skill"`): no dan estadísticas. No entran por
-          ninguna de las dos ramas porque `equip()` las rechaza.
-        """
+    def _sumar_bonus(self, extraer):
         total = 0.0
         for item_id, count in self._items.items():
             defn = _ITEM_DEFS.get(item_id)
@@ -279,21 +258,17 @@ class Inventory:
     def get_all_collected(self) -> list[tuple[str, int]]:
         return [(iid, cnt) for iid, cnt in self._items.items()]
 
-    # ── Monedas ────────────────────────────────────────────────────
     @property
     def coins(self) -> int:
-        """Saldo de monedas (el item `coin` es la moneda del juego)."""
         return self._items.get("coin", 0)
 
     def add_coins(self, amount: int) -> None:
-        """Suma monedas al saldo y persiste."""
         if amount <= 0:
             return
         self._items["coin"] = self._items.get("coin", 0) + amount
         self.save()
 
     def spend_coins(self, amount: int) -> bool:
-        """Resta monedas si hay saldo. Devuelve `True` si se pudo gastar."""
         if amount <= 0:
             return True
         if self.coins < amount:
@@ -302,9 +277,7 @@ class Inventory:
         self.save()
         return True
 
-    # ── Tienda: comprar y vender ───────────────────────────────────
     def buy(self, item_id: str) -> bool:
-        """Compra un item de ropa/habilidad con monedas. Devuelve `True` si se compró."""
         defn = _ITEM_DEFS.get(item_id)
         if defn is None or defn.price <= 0:
             return False
@@ -315,7 +288,6 @@ class Inventory:
         return True
 
     def sell(self, item_id: str) -> bool:
-        """Vende un item de ropa/habilidad por la mitad de su precio. Devuelve `True` si se vendió."""
         defn = _ITEM_DEFS.get(item_id)
         if defn is None or defn.price <= 0:
             return False
@@ -324,28 +296,12 @@ class Inventory:
         self._items[item_id] -= 1
         if self._items[item_id] <= 0:
             del self._items[item_id]
-            # AUD-207: vender la última copia no la quitaba de `_equipped`, así
-            # que te quedabas el bonus de una prenda que ya no tienes —y podías
-            # repetirlo con cada prenda hasta llevarlas todas puestas sin
-            # ninguna. Se desequipa sólo cuando se va la última: con dos copias
-            # sigues teniendo una que ponerte.
             if self._equipped.get(defn.slot or "") == item_id:
                 del self._equipped[defn.slot or ""]
         self.add_coins(defn.price // 2)
         return True
 
-    # ── Consumibles ────────────────────────────────────────────────
     def usar(self, item_id: str) -> float:
-        """Gasta una unidad de un objeto `consumible=True`. Devuelve
-        `heal_hp` si se pudo usar, `0.0` si no (no es consumible, o no
-        queda ninguno).
-
-        Sólo toca el inventario — no cura a nadie por su cuenta. Curar
-        exige un `Player` vivo, y `Inventory` es un singleton que
-        también vive fuera de una partida (el título abre `InventoryScene`
-        sin ningún escenario cargado); quien llame a esto con un
-        `heal_hp > 0` es responsable de aplicarlo si hay a quién.
-        """
         defn = _ITEM_DEFS.get(item_id)
         if defn is None or not defn.consumible:
             return 0.0
@@ -357,9 +313,7 @@ class Inventory:
         self.save()
         return defn.heal_hp
 
-    # ── Equipamiento ──────────────────────────────────────────────
     def equip(self, item_id: str) -> bool:
-        """Equipa un item de ropa en su slot. Devuelve `True` si se equipó."""
         defn = _ITEM_DEFS.get(item_id)
         if defn is None or defn.slot is None or defn.slot == "skill":
             return False
@@ -370,7 +324,6 @@ class Inventory:
         return True
 
     def unequip(self, slot: str) -> bool:
-        """Quita la ropa del slot. Devuelve `True` si había algo equipado."""
         if slot not in self._equipped:
             return False
         del self._equipped[slot]
@@ -378,37 +331,59 @@ class Inventory:
         return True
 
     def get_equipped(self) -> dict[str, str]:
-        """Devuelve `{slot: item_id}` de la ropa equipada."""
         return dict(self._equipped)
 
     def has_skill(self, skill_id: str) -> bool:
-        """¿Tiene el jugador esta habilidad (drop de jefe)?"""
         return self._items.get(skill_id, 0) > 0
 
+    # ── prestigio (AUD-609) ───────────────────────────────────────
+    def get_xp_multiplier(self) -> float:
+        """Multiplicador de XP por punto de prestigio: +5 % cada uno.
+
+        Lo consume `ExperienceSystem.grant`, así que el beneficio es real
+        desde el primer punto y no depende de ninguna pantalla.
+        """
+        return 1.0 + 0.05 * self.prestigio
+
+    def reencarnar(self, experiencia, arbol) -> bool:
+        """Reinicia la partida progresiva a cambio de un punto de prestigio.
+
+        AUD-609 — el *prestigio* de toda la vida en RPGs: se tira la
+        experiencia (y con ella los rangos del árbol, que se pagaron con
+        sus puntos) y se gana +5 % de XP para siempre. Requiere
+        `NIVEL_DE_REENCARNACION`; todo o nada, como los gastos del motor.
+
+        Los objetos y las monedas NO se tocan: lo que la reencarnación
+        reinicia es el progreso **de habilidad**, no la economía. La ropa
+        comprada sigue puesta; perderla convertiría el prestigio en un castigo.
+
+        Pendiente su pantalla (`GAP-073`): hoy sólo las pruebas y una futura
+        escena de menú la llaman — el mismo orden en que llegó la tienda:
+        primero el motor, después el sitio donde pulsarla.
+        """
+        from src.engine.core.skill_tree import ArbolDeHabilidades
+
+        if experiencia is None or arbol is None:
+            return False
+        if experiencia.nivel < self.NIVEL_DE_REENCARNACION:
+            return False
+        self.prestigio += 1
+        experiencia.reset()
+        if isinstance(arbol, ArbolDeHabilidades):
+            arbol.reset()
+        self.save()
+        return True
+
     def all_items(self) -> dict[str, int]:
-        """Copia de lo que lleva encima. Para volcarlo en la partida (AUD-292)."""
         return dict(self._items)
 
     def restaurar(self, items: dict[str, int],
                   equipado: dict[str, str] | None = None) -> None:
-        """Sustituye el inventario entero por el de una partida — AUD-292.
-
-        **Sustituye, no funde.** Cargar la partida 2 tiene que dejar la cartera
-        de la partida 2; fundirla con lo que hubiera en memoria daría a quien
-        cambia de slot el dinero de los dos, que es exactamente el defecto que
-        esto viene a cerrar.
-
-        Se descarta lo que no está en el catálogo, por lo mismo que `load`: un
-        fichero editado a mano no debe poder meter objetos inventados.
-        """
         self._items = {
             str(k): max(0, int(v))
             for k, v in dict(items or {}).items()
             if k in _ITEM_DEFS and int(v) > 0
         }
-        # Y la ropa con el mismo filtro que `load`: sólo prendas que se tienen
-        # y en su propia ranura. Una partida editada a mano no debe poder
-        # cobrar el bonus de algo que no está en el inventario (AUD-207).
         self._equipped = {
             str(slot): str(iid)
             for slot, iid in dict(equipado or {}).items()
@@ -421,7 +396,13 @@ class Inventory:
 
     def save(self) -> None:
         _migrar_inventario()
-        data = {"items": dict(self._items), "equipped": dict(self._equipped)}
+        data = {
+            "items": dict(self._items),
+            "equipped": dict(self._equipped),
+            # AUD-609 — el prestigio viaja con el inventario: es estado de
+            # partida y sobrevive al reseteo de la experiencia.
+            "prestigio": int(self.prestigio),
+        }
         _INVENTORY_PATH.parent.mkdir(parents=True, exist_ok=True)
         _INVENTORY_PATH.write_bytes(orjson.dumps(data, option=orjson.OPT_INDENT_2))
 
@@ -431,13 +412,13 @@ class Inventory:
             raw = _INVENTORY_PATH.read_bytes()
             data = orjson.loads(raw)
             self._items = {k: v for k, v in data.get("items", {}).items() if k in _ITEM_DEFS}
-            # Solo se restauran slots de ropa válidos (no habilidades).
-            #
-            # AUD-207: y sólo de prendas que de verdad se tienen. Sin el último
-            # filtro, un `inventory.json` editado a mano —o dejado a medias por
-            # un guardado interrumpido— podía declarar puesta una prenda que no
-            # está en `items` y cobrar su bonus gratis. Ahora que los totales
-            # leen `_equipped`, ese fichero es una entrada más que validar.
+            # AUD-609 — un fichero viejo sin la clave deja 0; uno editado a
+            # mano con basura también, que es mejor que un multiplicador
+            # roto. No se aceptan negativos: el prestigio sólo se gana.
+            try:
+                self.prestigio = max(0, int(data.get("prestigio", 0)))
+            except (TypeError, ValueError):
+                self.prestigio = 0
             self._equipped = {
                 slot: item_id
                 for slot, item_id in data.get("equipped", {}).items()
@@ -446,23 +427,6 @@ class Inventory:
                 and defn.slot != "skill"
                 and self._items.get(item_id, 0) > 0
             }
-        # AUD-100 — la corrupción se tragaba en silencio.
-        #
-        # `orjson.JSONEncodeError` **es `TypeError`**, y codificar no puede
-        # fallar dentro de un `loads`: estaba de más. Lo que de verdad atrapa
-        # un fichero corrupto es `ValueError`, del que `orjson.JSONDecodeError`
-        # hereda. Así que el `except` funcionaba, pero por una razón distinta
-        # de la que aparentaba.
-        #
-        # El defecto real era el silencio. Los objetos recogidos se perdían sin una línea en
-        # el registro, y el estudiante veía un inventario vacío sin ninguna pista de por
-        # qué. `ProgresoAcademico.cargar` ya avisaba en el mismo caso; tres
-        # sitios del proyecto hacían lo contrario ante el mismo problema.
-        # AUD-207: «de cero» incluye lo que se lleva puesto. Estas dos ramas
-        # vaciaban `_items` y dejaban `_equipped` como estuviera; daba igual
-        # mientras nadie leyera ese diccionario, pero ahora los totales sí lo
-        # leen: recargar sobre un fichero ilegible conservaba los bonus de una
-        # ropa que ya no está en el inventario.
         except FileNotFoundError:
             logger.debug("inventory: sin fichero previo; se empieza de cero")
             self._items = {}
@@ -508,32 +472,8 @@ class Inventory:
             surface.blit(surf, (cx, by + 8))
             cx += surf.get_width() + 4
 
-
     @classmethod
     def _reset_instance(cls) -> None:
-        """Olvida el singleton — para que una prueba no arranque con la mochila
-        de la anterior.
-
-        AUD-545 — `Inventory` es singleton de **proceso**, no de partida:
-        `collect()` deja una notificación en cola (`_collect_notifications`)
-        y `conftest.py` nunca limpiaba esto, a diferencia de `AssetLoader`,
-        `StageLoader` o `AchievementSystem`, que sí tienen su reseteo en
-        `_reset_global_state`. Cualquier prueba que recogiera un objeto dejaba
-        ese aviso «ITEM: …» flotando para la siguiente prueba del proceso que
-        construyera una escena y avanzara unos fotogramas.
-
-        Se encontró así: `test_reported_ui_bugs.py::test_el_hud_conserva_su_
-        brillo` fallaba **sólo** dentro de la suite completa, con la misma
-        razón de brillo exacta (0,7463648122122662) en ejecuciones separadas
-        — esa repetibilidad bit a bit, no un número distinto cada vez, es la
-        firma de estado compartido, no de una máquina cargada. Comparando el
-        HUD aislado contra el compuesto completo pixel a pixel, la diferencia
-        no estaba en la luz ni en las partículas —ambas resultaron idénticas
-        en las dos ejecuciones— sino en un aviso rojo de «ITEM: Vasija de
-        corazón» dibujado sobre el reloj, que `escena._hud.draw()` nunca
-        pinta: lo pinta `Inventory.draw_notifications`, y sólo aparece cuando
-        alguien ha recogido algo en cualquier prueba anterior del proceso.
-        """
         cls._instance = None
 
 

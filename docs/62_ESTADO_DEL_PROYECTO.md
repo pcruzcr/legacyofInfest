@@ -72,11 +72,11 @@ Tres listas, y la diferencia entre ellas importa:
 
 ### Escenarios y TMX
 
-**78 tipos de objeto en runtime** (39 integrados del framework + 37 del
+**80 tipos de objeto en runtime** (43 integrados del framework + 37 del
 registro una vez descubiertos los escenarios, más `Solid` y `Platform` en
 `Collision`; la referencia de estudiantes `STAGE_CREATION.md` cuenta el
-registro base sin descubrir: 69, y `check_tmx_coverage.py` cuenta
-base+collision: 71), **18 propiedades de mapa**, 8 capas. Incluye las once
+registro base sin descubrir: 73, y `check_tmx_coverage.py` cuenta
+base+collision: 75), **18 propiedades de mapa**, 8 capas. Incluye las once
 mecánicas de la fase 5 —viento, fricción, cinta, láser, onda, agua, plataforma
 móvil, hundible, bloque rítmico, liana, tirolesa— más sigilo con cono de visión
 y perseguidor, y los cuatro interactivos de F4.1.
@@ -113,7 +113,7 @@ daño y efectos de impacto. Todo configurable desde Tiled sin escribir Python.
 
 ### Calidad
 
-* **6.059 casos** recogidos (`pytest --collect-only -q`, 2026-08-20).
+* **6.172 casos** recogidos (`pytest --collect-only -q`, 2026-08-23).
 * 84 pruebas de humo que **arrancan, actualizan y dibujan** cada escena
   (`test_scene_smoke.py` y `test_stage0_smoke.py`).
 * `ruff` limpio, `mypy` en CI con trinquete, validadores en CI.
@@ -335,7 +335,7 @@ ningún software vivo. El techo realista por categoría está en
 | Audio | música dinámica, ambiente, posicional | — | **reloj musical**, buses, ducking |
 | Accesibilidad | 4 ayudas conectadas | — | — |
 | Persistencia | atómica y endurecida | — | — |
-| Calidad | 6.059 pruebas, CI con 5 puertas | cobertura, mypy, docs atadas | mutación, resistencia |
+| Calidad | 6.172 pruebas, CI con 5 puertas | cobertura, mypy, docs atadas | mutación, resistencia |
 | Localización | catálogos completos, política española-única desde AUD-455/2026-08-11 | ver `tests/test_documentacion_en_espanol.py` para el estado vivo | — |
 
 ---

@@ -4047,3 +4047,31 @@ tanto, el código no cambia: el fallback es el contrato.
   el aviso parpadea y pulsa, sin aviso no hay pulso) y
   `tests/test_stage4_1b.py::TestElOxigenoVigilaAlBuceador`. Detalle de
   parámetros en `docs/45_SWIMMING_SPEC.md` §4.1.
+
+---
+
+## [GAP-073] La reencarnación (prestigio) no tiene pantalla: el motor la ofrece y nadie puede pulsarla
+
+- **File:** `src/engine/core/inventory.py` (`Inventory.reencarnar`,
+  `get_xp_multiplier`), `src/engine/core/experience.py`
+  (`ExperienceSystem.grant`), `docs/60_GUIA_COMPLETA_DEL_MOTOR.md` §11
+- **Phase:** Sesión AUD-602…609 (2026-08-23), continuación de la economía
+  de AUD-559.
+- **Reason:** La mecánica de prestigio está completa y probada en el
+  motor —`reencarnar()` exige nivel 10, gana +5 % de XP permanente por
+  punto, resetea experiencia y árbol sin tocar objetos ni monedas, el
+  multiplicador llega de verdad a `grant`, y el prestigio viaja en
+  `inventory.json`— pero **no existe ninguna escena desde donde
+  llamarla**: ni menú, ni pantalla del árbol, ni HUD. Es el mismo patrón
+  que GAP-029 documentó para la tienda entera («catálogo y API, y ningún
+  sitio que la use») antes de que llegara `InventoryScene`.
+- **Impact:** Un jugador no puede gastar el prestigio porque no puede
+  ganarlo; el multiplicador queda en 1.0 toda la partida. El estado no se
+  corrompe por nada: sólo es contenido inalcanzable, la forma suave del
+  defecto recurrente de este repositorio.
+- **Resolution plan:** una entrada de menú o un botón en la futura
+  pantalla del árbol (`docs/87` §3 ya pide esa pantalla para los puntos
+  de habilidad) que muestre nivel actual, beneficio siguiente (+5 %) y
+  pida confirmación explícita — reencarnar destruye progreso y un
+  accidente aquí no tiene vuelta atrás. Cerrar este GAP con la prueba de
+  integración que pulse ese botón.

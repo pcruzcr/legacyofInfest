@@ -116,6 +116,64 @@ CATALOGO: tuple[NodoDeHabilidad, ...] = (
 _POR_ID: dict[str, NodoDeHabilidad] = {n.id: n for n in CATALOGO}
 
 
+@dataclass(frozen=True)
+class Sinergia:
+    """Una prima por completar dos ramas del árbol (AUD-608).
+
+    Por qué existen y no son nodos más
+    ----------------------------------
+    Un nodo que exigiera «fuerza al máximo» sería un nodo con prerrequisito
+    raro: se compra UNA vez y su coste compite con el resto. Una sinergia no
+    se compra —se CONSIGUE—: es el reconocimiento de que el jugador ya pagó
+    dos ramas enteras, y cambia una regla en vez de sumar un número. Esa
+    diferencia es la que hace que llegar al tope de una rama tenga un
+    «además» y no sólo un «ya está».
+
+    Cada sinergia tiene un consumidor real en `Player`; una sinergia sin
+    consumidor sería exactamente el defecto de los campos decorativos
+    (`speed_multiplier`, `escala`, `skill_drop`…) que este repositorio ha
+    cazado ya cinco veces.
+    """
+
+    id: str
+    nombre: str
+    descripcion: str
+    #: Rangos exigidos: {nodo_id: rangos mínimos}.
+    requiere: dict[str, int]
+
+    def cumplida_por(self, rango_de) -> bool:  # type: ignore[no-untyped-def]
+        return all(rango_de(nid) >= minimo
+                   for nid, minimo in self.requiere.items())
+
+
+#: Las sinergias del catálogo. Dos, y las dos con dueño:
+#:
+#: * **Berserker** (fuerza ∙ coraza al máximo) — `Player.damage_multiplier`
+#:   suma +0,2 por debajo de la mitad de vida. Arriesgar con la vida baja ya
+#:   es el hábito que la rama de fuerza enseña; esto lo premia sin tocar la
+#:   física ni el alcance de los golpes.
+#: * **Titán** (vitalidad ∙ ímpetu al máximo) — `Player.take_damage` estira
+#:   los i-frames 0,3 s. El jugador tanque recibe más golpes porque aguanta
+#:   más en el meleé; unos i-frames más largos es la única defensa que no
+#:   anula el daño, que ya está suficientemente recortado por coraza.
+SINERGIAS: tuple[Sinergia, ...] = (
+    Sinergia(
+        id="berserker",
+        nombre="Berserker",
+        descripcion="+20 % de daño mientras tengas menos de la mitad de vida.",
+        requiere={"fuerza": 5, "coraza": 5},
+    ),
+    Sinergia(
+        id="titan",
+        nombre="Titán",
+        descripcion="+0,30 s de invencibilidad cada vez que recibes un golpe.",
+        requiere={"vitalidad": 10, "impetu": 4},
+    ),
+)
+
+_SINERGIA_POR_ID: dict[str, Sinergia] = {s.id: s for s in SINERGIAS}
+
+
 def nodo(nodo_id: str) -> NodoDeHabilidad | None:
     return _POR_ID.get(nodo_id)
 
@@ -228,6 +286,20 @@ class ArbolDeHabilidades:
         """Fracción de daño recibido que se resta. 0,25 = 25 % menos daño,
         al tope de los cinco rangos."""
         return self._total("coraza")
+
+    # ── sinergias (AUD-608) ───────────────────────────────────────
+    def sinergia_activa(self, sinergia_id: str) -> bool:
+        """¿Está conseguida esta sinergia con los rangos actuales?
+
+        Se consulta EN CALIENTE y no se cachea en `from_dict`: vender el
+        concepto de «se consigue, no se compra» incluye que se pierde si
+        una partida antigua carga con menos rangos.
+        """
+        s = _SINERGIA_POR_ID.get(sinergia_id)
+        return s is not None and s.cumplida_por(self.rango)
+
+    def sinergias_activas(self) -> list[str]:
+        return [s.id for s in SINERGIAS if self.sinergia_activa(s.id)]
 
     # ── persistencia ──────────────────────────────────────────────
     def to_dict(self) -> dict[str, int]:

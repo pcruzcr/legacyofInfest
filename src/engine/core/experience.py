@@ -35,6 +35,7 @@ propios tiene que poder hacer progresar al jugador.
 from __future__ import annotations
 
 import logging
+import math
 from typing import TYPE_CHECKING, Any
 
 from src.engine.core.score_system import _tipo_de
@@ -71,6 +72,13 @@ _EXP_MINIMA = 5
 #: con más puntos que hojas que gastar. La cuadrática mantiene el ritmo.
 _EXP_BASE = 100
 
+#: A partir de este nivel, la curva se vuelve logarítmica para evitar que los
+#: últimos niveles sean inalcanzables. GAP-ECO-001.
+_EXP_SOFT_CAP = 50000
+
+#: Factor de crecimiento logarítmico tras el soft cap. GAP-ECO-001.
+_EXP_LOG_FACTOR = 1.15
+
 #: Puntos de habilidad que da subir un nivel.
 PUNTOS_POR_NIVEL = 1
 
@@ -89,19 +97,49 @@ def exp_para_nivel(nivel: int) -> int:
     """Experiencia **total** acumulada que hace falta para alcanzar `nivel`.
 
     El nivel 1 es el de salida y cuesta 0.
+
+    GAP-ECO-001: Curva híbrida — cuadrática hasta _EXP_SOFT_CAP, luego
+    logarítmica para que los niveles altos sean alcanzables.
     """
     if nivel <= 1:
         return 0
-    n = nivel - 1
-    return _EXP_BASE * n * (n + 1) // 2
+    
+    # Curva cuadrática original hasta el soft cap
+    if nivel <= 30:
+        n = nivel - 1
+        return _EXP_BASE * n * (n + 1) // 2
+    
+    # A partir del nivel 31, curva logarítmica para que sea alcanzable
+    # Base a nivel 30: _EXP_BASE * 29 * 30 // 2 = 43500
+    base_30 = _EXP_BASE * 29 * 30 // 2
+    niveles_extra = nivel - 30
+    # Crecimiento logarítmico: cada nivel cuesta un factor logarítmico más
+    # Usamos logaritmo natural para crecimiento suave
+    extra = int(_EXP_SOFT_CAP * math.log1p(niveles_extra * (_EXP_LOG_FACTOR - 1)))
+    return base_30 + extra
 
 
 def nivel_de(exp_total: int) -> int:
-    """El nivel que corresponde a esa experiencia acumulada."""
-    nivel = 1
-    while exp_para_nivel(nivel + 1) <= exp_total:
-        nivel += 1
-    return nivel
+    """El nivel que corresponde a esa experiencia acumulada.
+
+    Inverso de `exp_para_nivel`. Maneja tanto la parte cuadrática como la logarítmica.
+    """
+    # Parte cuadrática (niveles 1-30)
+    if exp_total < 43500:  # exp_para_nivel(30) = 43500
+        nivel = 1
+        while exp_para_nivel(nivel + 1) <= exp_total:
+            nivel += 1
+        return nivel
+    
+    # Parte logarítmica: invertir la fórmula
+    # base_30 = 43500
+    # exp_total = 43500 + _EXP_SOFT_CAP * ln(1 + (n-30) * (e^(1/EXP_SOFT_CAP) - 1))
+    # Despejando: n = 30 + (exp((exp_total - 43500) / _EXP_SOFT_CAP) - 1) / (e^(1/EXP_SOFT_CAP) - 1)
+    ratio = (exp_total - 43500) / _EXP_SOFT_CAP
+    if ratio <= 0:
+        return 30
+    extra_niveles = int(math.expm1(ratio) / (_EXP_LOG_FACTOR - 1))
+    return 30 + max(1, extra_niveles)
 
 
 class ExperienceSystem:
@@ -165,9 +203,16 @@ class ExperienceSystem:
         Devuelve los puntos —y no nada— para que quien lo llame pueda avisar al
         jugador en el momento. Un punto de habilidad que aparece en un menú sin
         que nadie lo anuncie es un punto que no se gasta.
+
+        AUD-609 — la cantidad entra por el multiplicador de prestigio del
+        inventario (+5 % por reencarnación). Import perezoso: el núcleo no
+        puede importar al inventario a nivel de módulo sin un ciclo.
         """
         if cantidad <= 0:
             return 0
+        from src.engine.core.inventory import get_inventory
+
+        cantidad = max(1, round(cantidad * get_inventory().get_xp_multiplier()))
         self._exp += cantidad
         objetivo = (nivel_de(self._exp) - 1) * PUNTOS_POR_NIVEL
         nuevos = objetivo - self._puntos_concedidos
