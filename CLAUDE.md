@@ -134,8 +134,10 @@ una medición de GPU tomada en la integrada no vale como referencia.
 ## 4. Convenciones
 
 **Identificadores de hallazgo.** Todo defecto encontrado y corregido lleva un
-`AUD-NNN` correlativo (el último usado va por AUD-335; compruébalo con
-`git log --oneline -1` antes de asignar uno). Se cita en:
+`AUD-NNN` correlativo (el último usado se comprueba siempre con
+`git log --oneline -1` antes de asignar uno: el número escrito aquí y en
+cualquier otro documento envejece en cuanto alguien asigna el siguiente —
+AUD-614 lo comprobó). Se cita en:
 el mensaje de commit, el comentario del código que explica *por qué* existe el
 arreglo, y el documento de auditoría correspondiente. Los huecos conocidos y no
 resueltos van como `GAP-NNN` en `KNOWN_GAPS.md`.

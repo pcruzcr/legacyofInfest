@@ -48,6 +48,15 @@ SIN_MAPA_A_PROPOSITO: dict[str, str] = {
         "enseñar la mecánica equivocada. Lo ejercita "
         "tests/test_boss_spawn_desde_tiled.py de punta a punta."
     ),
+    "ArenaZone": (
+        "AUD-612. Declara el cuadrilátero real de una arena de jefe "
+        "(AUD-605/606): la pelea queda dentro aunque el mapa siga. Los cuatro "
+        "mapas de jefe que hay usan su tipo directo —o lo retiraron a "
+        "propósito, ver src/stages/boss_venado/tests/test_map_residencias.py— "
+        "y al laboratorio le pasa como con BossSpawn: sin jefe, una arena no "
+        "enseña nada. Lo ejercita de punta a punta "
+        "tests/test_lo_reportado_por_el_playtesting.py."
+    ),
 }
 
 

@@ -112,6 +112,28 @@ def _reset_global_state():
     if pygame.display.get_init():
         pygame.event.clear()
 
+    # AUD-616 — mixer global: canales ocupados por ambientes en bucle
+    # (loops=-1) de tests anteriores. Sin reset, find_channel() devuelve None
+    # y _ambient_active miente. Se para todo y se liberan los canales.
+    if pygame.mixer.get_init():
+        pygame.mixer.stop()
+        # Fuerza liberación real de canales bajo dummy driver
+        for ch in range(pygame.mixer.get_num_channels()):
+            pygame.mixer.Channel(ch).stop()
+
+    # AUD-616 — azar global: random y np.random. GAP-042 aisla con
+    # azar.generador() pero código legado aún usa random.* directo.
+    # Se resiembra ambos para que cada test empiece determinista.
+    import random
+
+    import numpy as np
+
+    from src.engine.core import azar
+    semilla = azar.semilla_actual()
+    if semilla is not None:
+        random.seed(semilla)
+        np.random.seed(semilla % (2**32 - 1))
+
 
 @pytest.fixture
 def sample_surface_32x32(_pygame_init) -> pygame.Surface:

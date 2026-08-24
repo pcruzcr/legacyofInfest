@@ -48,6 +48,7 @@ from src.framework.scenes.stage_parts.sonido import SonidoDeEscenario
 from src.framework.stage import culling
 from src.framework.stage.camera import Camera
 from src.framework.stage.collision_system import CollisionSystem
+from src.framework.stage.combat_manager import CombatManager
 from src.framework.stage.drawing_system import DrawingSystem
 from src.framework.stage.hazard_system import HazardSystem
 from src.framework.stage.interactable_system import InteractableSystem
@@ -555,6 +556,8 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
             destructibles=self._stage_data.destructibles,
             bus=self.context.event_bus,
         )
+        # AUD-616 — delegar orquestación de combate al CombatManager
+        self._combat = CombatManager(self._collision, self._bloques)
         self._configurar_vfx_opcionales()
         # AUD-400 — los objetivos que declara el mapa (GAP-047). Se dan de alta
         # aquí, con el resto del contenido del TMX, para que el sistema esté
@@ -1130,9 +1133,7 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
             # acertó. No hay un sonido de «bloque roto» y no voy a inventar
             # un nombre para un fichero que no existe: eso es exactamente lo
             # que llevaba `05_ENEMY_SPEC.md` prometiendo (AUD-133).
-            if self._bloques is not None and self._bloques.golpear(player.active_hitbox):
-                self.context.event_bus.emit(Events.SFX_HIT_CONNECT)
-            self._collision.process_attack(dt, player, stage, self._camera, clock)
+            self._combat.process_attack(dt, player, stage, self._camera, clock)
         finally:
             # AUD-498 — el descuento del hit-stop ya NO se hace aquí.
             #
@@ -1148,7 +1149,7 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
             # por fotograma con el reloj real, igual que ya hacían las
             # transiciones. Aquí sólo queda registrar el factor del fotograma
             # en curso, sin descontar tiempo.
-            self._collision.aplicar_escala_de_hitstop(clock)
+            self._combat.aplicar_factor_hitstop(clock)
 
     def actualizar_en_tiempo_real(self, dt_sin_escalar: float) -> None:
         """El hit-stop se descuenta aqui, con el reloj real (AUD-498).
@@ -1158,7 +1159,7 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         el hit-stop provoca. Ver el `finally` de `_update_combat` para la
         cadena completa.
         """
-        self._collision.update_hitstop(dt_sin_escalar, self.context.clock)
+        self._combat.update_hitstop(dt_sin_escalar, self.context.clock)
 
     def _update_camera_map(self, dt: float) -> None:
         stage = self._stage_data

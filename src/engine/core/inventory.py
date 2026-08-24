@@ -87,7 +87,11 @@ _ITEM_DEFS: dict[str, ItemDef] = {
         icon_color=(60, 180, 60), damage_bonus=0.5,
     ),
     "sunken_crown": ItemDef(
-        id="sunk_crown", name="Corona hundida",
+        # AUD-611 - AUD-608 dejó aquí `id="sunk_crown"` de arrastre. La clave,
+        # el recogible de stage0 y la documentación dicen `sunken_crown`, y
+        # `restaurar()` descarta los id que no reconoce: un guardado que
+        # referenciara el id del atributo perdería la corona al cargar.
+        id="sunken_crown", name="Corona hundida",
         description="+3 de vida máxima, +0,8 de daño",
         icon_color=(220, 200, 40), max_hp_bonus=3.0, damage_bonus=0.8,
     ),

@@ -125,6 +125,9 @@ class EnemyBase(BaseEntity):
         self._stun_timer: float = 0.0
         #: Última posición conocida del jugador; alimenta el estado SEARCH.
         self._last_seen: pygame.Vector2 | None = None
+        #: Límites de la arena (AUD-615). La escena los fija vía set_arena_bounds.
+        #: None = sin límites; el enemigo puede moverse libremente.
+        self.arena_bounds: pygame.Rect | None = None
         self._contact_cooldown: float = 0.0
         self._hurt_timer: float = 0.0
         self._death_timer: float = 0.0
@@ -1058,6 +1061,30 @@ class EnemyBase(BaseEntity):
         aquí. Se llama después de la guarda, así que un cadáver no lo recibe.
         """
 
+    def set_arena_bounds(self, bounds: pygame.Rect) -> None:
+        """Define los límites dentro de los que el enemigo puede moverse (AUD-615).
+
+        La escena lo llama con la zona de arena declarada en el TMX (ArenaZone).
+        Si no se llama, el enemigo no tiene límites de arena (compatibilidad
+        hacia atrás con entregas existentes).
+        """
+        self.arena_bounds = pygame.Rect(bounds)
+
+    def clamp_to_arena(self, margin: int = 16) -> None:
+        """Devuelve al enemigo dentro de su arena si se ha salido (AUD-615).
+
+        Se aplica a position y rect a la vez para evitar un fotograma de
+        desincronización que usen las comprobaciones de colisión.
+        """
+        if self.arena_bounds is None:
+            return
+        left = self.arena_bounds.left + margin
+        right = self.arena_bounds.right - margin - self.rect.width
+        if right < left:  # arena más estrecha que el enemigo: se centra
+            left = right = self.arena_bounds.centerx - self.rect.width // 2
+        self.position.x = max(left, min(self.position.x, right))
+        self.rect.x = int(self.position.x)
+
     def begin_recovery(self, duration: float | None = None) -> None:
         """Entra en la ventana de castigo. La llaman los estados de ataque."""
         if self.state == EnemyState.DYING:
@@ -1084,6 +1111,8 @@ class EnemyBase(BaseEntity):
         speed = float(getattr(self, "patrol_speed", 40.0))
         self.position.x += self.facing_direction * speed * dt
         self.rect.x = int(self.position.x)
+        # AUD-615: acotar a la arena si existe
+        self.clamp_to_arena()
 
     def _recover_behavior(self, dt: float) -> None:
         """Sin movimiento durante la recuperación: es la ventana de castigo."""
@@ -1097,6 +1126,8 @@ class EnemyBase(BaseEntity):
         speed = float(getattr(self, "alert_speed", 60.0)) * 0.8
         self.position.x -= self.facing_direction * speed * dt
         self.rect.x = int(self.position.x)
+        # AUD-615: acotar a la arena si existe
+        self.clamp_to_arena()
 
     def set_player_ref(self, player_rect: pygame.Rect) -> None:
         """Set or update the reference to the player's rect for detection."""

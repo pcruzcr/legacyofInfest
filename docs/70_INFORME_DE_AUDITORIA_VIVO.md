@@ -2117,3 +2117,62 @@ repositorio que pueda mejorar, y a cambio se arriesgaban las **71 pruebas** que
 lo citan y la curva de dificultad que AUD-151 calibró. Reescribir lo que ya
 está al máximo es trabajo con riesgo alto y ganancia cero — la decisión queda
 anotada aquí para que no haya que volver a medirlo.
+
+---
+
+## Iteración 18 - 2026-08-23 - D1/D2/D3 (gates, consistencia, honestidad de las pruebas)
+
+**Commit auditado:** `b4b68b0` (rama `feature/stage4_1-cementerio-sagrado`,
+árbol limpio salvo volcados `.txt` sin seguimiento).
+
+### Gates ejecutados
+
+| Gate | Resultado | Nota |
+|---|---|---|
+| `pytest tests/` | 6.172 recolectadas: **6.149 pasan / 4 fallan / 19 omitidas**, 1.061 s | los 4 fallos se analizan abajo |
+| `ruff check src/engine src/framework src/stages/stage0 tests/ scripts/ tools/` | verde | |
+| `mypy` (trinquete) | verde, 51 ficheros | |
+| `check_dependency_sync.py` | verde, 13 dependencias de acuerdo | |
+| `check_translations.py --ci` | verde (44 entradas es / 87 en) | |
+| `check_tmx_coverage.py --ci` | verde; referencia stage0 al 100 % | reporta `ArenaZone` y `BossSpawn` sin mapa, con salida informativa |
+| `generate_tmx_reference.py --check` | verde (`STAGE_CREATION.md` al día) | |
+| `validate_assets.py` | verde, 0 errores | |
+| `validate_tmx.py --ci` | 22/22 pasan, aviso en `stage1_1` (especies registradas dentro de función; AUD-591 dejó trinquete repo-wide, el aviso persiste por diseño) | |
+| `grade_stage.py assets/maps/ --json` | 21 mapas, media **78,9 %** | |
+| `grade_boss.py ... --json` | **100 %** | |
+
+### Hallazgos
+
+| ID | Dominio | Sev. | Estado | Qué era |
+|---|---|---|---|---|
+| AUD-611 | D2 | BLOQUEANTE | **CERRADO** | `inventory.py` traía `id="sunk_crown"` dentro de la clave `"sunken_crown"`: arrastre del commit e482f29 (AUD-608/609), cuyo diff además borró comentarios decorativos. La clave, el recogible de `stage0` y cuatro documentos dicen `sunken_crown`; `restaurar()` descarta ids no reconocidos, así que el id falso era una corona que desaparecería al cargar. Restaurado el id; roja: `test_el_catalogo_esta_en_espanol::test_los_identificadores_no_se_traducen`; verdes: ese fichero más `test_aud_559` y `test_el_inventario_cuenta_bien` (51 pasan). |
+| AUD-612 | D2 | BLOQUEANTE | **CERRADO** | AUD-605/606 añadió `ArenaZone` al cargador y quedó huérfana: ningún TMX la coloca y `SIN_MAPA_A_PROPOSITO` (`test_todos_los_tipos_se_usan.py`) no la justificaba, así que el trinquete de AUD-153 se puso rojo con cada suite completa. Mismo tratamiento que `BossSpawn`: justificación escrita (los cuatro mapas de jefe usan su tipo directo o retiraron el marcador a propósito; el laboratorio no tiene jefe), ejercicio punta a punta en `test_lo_reportado_por_el_playtesting.py`. No va en `ALTERNATIVAS` del script de cobertura: ahí sólo caben grafías alternativas de otro tipo, y `ArenaZone` es un tipo real sin mapa por decisión. |
+| AUD-613 | D3 | ALTA | **CERRADO** | `test_con_canal_libre_si_queda_activo` dependía de que el mezclador global tuviera un canal libre: otra prueba con un ambiente en bucle sin parar agotaba los canales y en suite completa `find_channel()` devolvía `None` → `_ambient_active False` → roja intermitente (pasaba en aislamiento). El canal libre se declara ahora igual que su gemelo declara `None`: `Channel(0)` parado e inyectado vía `monkeypatch`. La prueba mide la honestidad de `_ambient_active`, no los canales heredados. |
+| AUD-614 | D2 | BAJA | **CERRADO** | `CLAUDE.md` decía «el último usado va por AUD-335»: trescientos números por detrás de la realidad y podrido por construcción. Retirado el número duro; queda la orden que siempre fue la fuente de verdad (`git log --oneline -1`). |
+
+### Lo que NO se pudo verificar
+
+- El cuarto fallo de la primera corrida,
+  `test_rutas_de_los_documentos[94_CIERRE_DE_GAPS_Y_PLAN_POR_FASES.md]`,
+  pasó en aislamiento y las once rutas que cita el doc 94 existen.
+- La re-corrida de regresión trajo **7 fallos distintos** que en aislamiento
+  pasan (83/84 al releerlos juntos), y la causa quedó identificada con
+  evidencia de sistema de ficheros: **hay un proceso de desarrollo concurrente
+  sobre este mismo árbol**. Entre las dos corridas apareció un módulo nuevo
+  `text_panel.py` bajo `engine/ui/` (creado 21:17, modificado 21:37) y una
+  prueba nueva de «cuadros», ambos sin seguimiento, junto con cambios en
+  `message_box.py`, `theme.py` y el sistema de diálogos — ninguno de esta
+  auditoría. (Las rutas van a medias a propósito: citarlas completas pondría
+  este informe a merced del frente ajeno que las está moviendo.) Los síntomas
+  cuadran: el parpadeo inicial (pytest recolectó 0 pruebas; minutos después,
+  374 ficheros), el `test_ruff_esta_limpio` interno en rojo mientras el ruff
+  externo pasa, y el árbol de `03_ARCHITECTURE.md` que aún no menciona el
+  módulo nuevo del otro frente de trabajo. Ese último es deuda del lote
+  concurrente, no de éste: añadir aquí a mano el árbol del módulo ajeno
+  pisaría cómo decida documentarlo quien lo está escribiendo.
+- Estado honesto de cierre: los cuatro hallazgos AUD-611…AUD-614 están
+  corregidos con sus verdes pegados, y los tres defectos deterministas de la
+  primera corrida no reaparecen en la segunda. Lo que queda en rojo pertenece
+  al frente concurrente y se re-verificará cuando ese árbol se estabilice.
+
+
