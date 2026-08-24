@@ -1,0 +1,81 @@
+# Alcance del comprobador de tipos — el trinquete
+# ================================================
+#
+# AUD-124. `mypy` llevaba meses **configurado en `pyproject.toml` y sin
+# ejecutarse en ninguna parte**. Un tipado declarado que nadie comprueba no es
+# verificación: es documentación con sintaxis de código, y envejece igual de
+# mal que la documentación. Las tres primeras cosas que encontró al ejecutarlo
+# por fin fueron anotaciones que mentían:
+#
+#   * `AchievementSystem._stats: dict[str, int]` guardaba una `list[str]`.
+#   * `App._gl_renderer` sin anotar: mypy lo infería como `None`, así que toda
+#     llamada posterior era un error.
+#   * `SurfacePool._flip_cache: dict[int, ...]` con claves de tres enteros.
+#
+# Por qué una lista y no `src/` entero
+# -------------------------------------
+# Poner el árbol completo bajo mypy hoy daría cientos de errores, y un
+# comprobador que sale en rojo desde el primer día se desactiva en una semana.
+# Es exactamente lo que pasó con ruff antes de AUD-017.
+#
+# Así que esto es un **trinquete**: cada línea es un paquete que ya está
+# limpio. CI comprueba justo esta lista y falla si deja de estarlo.
+# `tests/test_puertas_de_calidad.py` impide que la lista encoja.
+# (AUD-179: esta línea nombraba un fichero de prueba que no existe, así que
+# quien buscara la red de seguridad del trinquete no la encontraba. La prueba
+# sí existía, con otro nombre.)
+#
+# Cómo añadir un paquete
+# ----------------------
+#   python -m mypy src/lo/que/sea --no-incremental
+#   # cuando salga «Success», añádelo aquí abajo
+#
+# No se añade nada con errores «temporalmente». La lista dice la verdad o no
+# sirve de nada.
+#
+# Fuera del trinquete, y a propósito
+# -----------------------------------
+# `src/stages/` no entra nunca: es el código de los estudiantes. Se califica
+# con la rúbrica, no con el comprobador de tipos del motor.
+
+src/engine/core
+src/engine/input
+
+# ── AUD-371: de 2 a 6 paquetes ────────────────────────────────────────
+#
+# El trinquete llevaba desde AUD-124 con dos paquetes, y la razón para no
+# crecer era «el árbol entero daría cientos de errores». Cierto para el árbol
+# entero, y falso para estos cuatro: se midió uno a uno y **ya estaban
+# limpios**. Estaban fuera por inercia, no por deuda.
+#
+# Medición del 2026-08-09, `mypy <paquete> --no-incremental`:
+#
+#   src/engine/audio      0 errores   ← entra
+#   src/engine/scene      0 errores   ← NO entra todavía, ver abajo
+#   src/engine/ui         2 errores   ← entra, arreglados (AUD-371)
+#   src/engine/utils      0 errores   ← entra
+#   src/framework/physics 0 errores   ← entra
+#   src/framework/world   0 errores   ← NO entra todavía, ver abajo
+#   src/framework/ecs    17 errores
+#   src/framework/stage  27 errores
+#
+# Los dos de `engine/ui` eran anotaciones que mentían, de la misma familia que
+# las tres que AUD-124 encontró: un centinela `object()` que se escapaba al
+# tipo de retorno de una función que promete `str | None`, y un
+# `list[list[object]]` que obligaba a castear en cada uso y a dos
+# `# type: ignore`. Arreglar el tipo borró los casts.
+#
+# Por qué `engine/scene` no entra (todavía)
+# -----------------------------------------
+# Entra limpio **él**, y al entrar hace que mypy conozca `BaseScene` de verdad,
+# lo que destapa dos errores en `app.py` —que ya estaba en el trinquete— por el
+# `callable(getattr(...))` de la ruta de GPU. El arreglo está escrito
+# (`EscenaConRutaDeGPU`, AUD-371) y `app.py` tiene ahora mismo trabajo en vuelo
+# de otra sesión, así que no se commitea aquí. Es la fila siguiente del
+# trinquete y no cuesta nada: añadir la línea cuando ese trabajo aterrice.
+#
+# `framework/world` está limpio y también en vuelo (AUD-374). Misma espera.
+src/engine/audio
+src/engine/ui
+src/engine/utils
+src/framework/physics

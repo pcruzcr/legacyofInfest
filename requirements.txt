@@ -1,0 +1,44 @@
+# Runtime dependencies for Legacy of InFest.
+#
+# AUD-007: this file is now kept in sync with the [project].dependencies table
+# in pyproject.toml, which is the single source of truth. It previously listed
+# a different, smaller set than pyproject.toml — following the README's
+# `pip install -r requirements.txt` produced an install that crashed on import
+# because numba, pymunk, pydantic, orjson and pygame-gui were all missing here
+# but imported unguarded by src/.
+#
+#   Full install (recommended):  pip install -e ".[dev]"
+#   Runtime only:                pip install -r requirements.txt
+#
+# Optional extras (the game runs without them, with a documented fallback):
+#   pip install -e ".[accel]"       numba JIT + ModernGL post-processing
+#   pip install -e ".[scripting]"   Lua enemy behaviours
+#   pip install -e ".[audiotools]"  offline audio conversion tooling
+
+# Core engine
+pygame-ce>=2.5
+numpy>=1.26  # AUD-173: sin tope; numpy<2 no tiene ruedas para Python 3.13
+# AUD-235: `pymunk>=6.6` retirado — nadie lo importa. El porqué, en pyproject.
+
+# Data & validation
+pydantic>=2.7
+orjson>=3.10
+
+# UI
+
+# Academic / processing
+scipy>=1.13
+opencv-python>=4.10
+scikit-image>=0.24
+scikit-learn>=1.5
+# AUD-176: suelo de seguridad, ver SUELOS_POR_SEGURIDAD en
+# tests/test_dependencias_coherentes.py
+Pillow>=12.3.0
+
+# Map / level
+pytmx>=3.32
+pyscroll>=2.31
+
+# ML / parallelism
+joblib>=1.4
+matplotlib>=3.10

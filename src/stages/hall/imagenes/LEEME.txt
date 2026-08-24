@@ -1,0 +1,42 @@
+Imagenes — Stage 3-2 "El Hall"
+Jose Pablo Monestel Cruz
+
+Carpeta raiz (entregable final):
+  01_tileset_gavilan_ciudad.png  - tileset real usado en el nivel (60 tiles,
+                                    16x16px, arte propio generado por codigo
+                                    con tools/generate_tileset_gavilan_ciudad.py).
+                                    Mismo archivo que assets/tilesets/tileset_gavilan_ciudad.png.
+  02_tileset_ampliado_4x.png     - el mismo tileset ampliado 4x, para revisar
+                                    el detalle de cada tile.
+  03_mapa_completo_hall.png      - vista completa del mapa final (1088x608px),
+                                    renderizada con scripts/preview_tmx.py.
+  04_captura_juego_real.png      - captura de pantalla real de la ventana del
+                                    juego corriendo "python main.py --stage hall".
+
+imagenes_proceso/ (evidencia del desarrollo):
+  PROCESO.md                     - registro escrito de las iteraciones reales
+                                    del diseno, en orden: bugs encontrados
+                                    (camara, muerte falsa en el pozo, salto
+                                    imposible, golpe con el techo), como se
+                                    diagnosticaron y como se corrigieron.
+  hito_diseno_caminos_convergentes.png
+                                  - captura de un hito intermedio del diseno
+                                    (las dos rutas de plataformas convergiendo
+                                    en la puerta compartida).
+  opciones_diseno_fondo.png      - las 3 propuestas de estilo de fondo
+                                    (skyline irregular + luna / niebla y humo /
+                                    remates escarchados) presentadas antes de
+                                    elegir la opcion A, regenerado byte a byte
+                                    con el script original.
+
+Nota: varias capturas de depuracion intermedias se generaron y se
+mostraron directamente en el chat durante el proceso, pero no todas
+quedaron guardadas como archivo en disco en su momento — por eso el
+registro de esos pasos esta documentado en PROCESO.md con el detalle
+tecnico exacto, en lugar de la imagen original que ya no se puede
+recuperar tal cual se vio en su momento.
+
+Las imagenes de referencia estetica que el estudiante compartio durante
+el diseno (fotografia de un hall gotico, paleta de colores de referencia)
+fueron enviadas directamente en el chat y no existen como archivo en disco
+accesible para incluir aqui.

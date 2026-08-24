@@ -1,0 +1,182 @@
+from __future__ import annotations
+
+import math
+from typing import TYPE_CHECKING
+
+import pygame
+
+from src.engine.core.events import Events
+from src.framework.entities.enemy_base import EnemyBase, EnemyState
+from src.framework.entities.enemy_shooter import Projectile
+
+if TYPE_CHECKING:
+    from src.framework.entities.player import Player
+
+
+class EnemyArcher(EnemyBase):
+    """Archer enemy — fires arcing projectiles at the player.
+    Uses predictive aim and variable arc height.
+    """
+
+    def __init__(
+        self,
+        spawn_position: pygame.Vector2,
+        max_health: float = 2.5,
+        damage_on_contact: float = 0.25,
+        fire_rate: float = 0.4,
+        projectile_speed: float = 90.0,
+        projectile_damage: float = 0.75,
+        zone: int = 0,
+        **kwargs,
+    ) -> None:
+        super().__init__(
+            spawn_position=spawn_position,
+            max_health=max_health,
+            damage_on_contact=damage_on_contact,
+            detection_range_x=220.0,
+            detection_range_y=80.0,
+            hurt_duration=0.35,
+            invincibility_duration=0.35,
+        )
+
+        self._patrol_origin: pygame.Vector2 = pygame.Vector2(spawn_position)
+        # AUD-455: el y del TMX es la esquina superior (semántica nativa de
+        # Tiled); el descuento de altura hacía flotar a todos los enemigos de
+        # suelo. Ver `enemy_walker` para el porqué completo.
+        self.rect.width = 16
+        self.rect.height = 28
+
+        self.fire_rate: float = fire_rate
+        self.projectile_speed: float = projectile_speed
+        self.projectile_damage: float = projectile_damage
+        self._active_projectiles: list[Projectile] = []
+        self._max_projectiles: int = 4
+        self._shoot_cooldown: float = 0.0
+        self._collision_rects: list[pygame.Rect] = []
+        self._fire_anim_timer: float = 0.0
+
+        self._load_zone_sprites(zone, 12, 14)
+
+    def _patrol_behavior(self, dt: float) -> None:
+        """Slow horizontal patrol."""
+        speed = 15.0
+        self.position.x += self.facing_direction * speed * dt
+        distance = abs(self.position.x - self._patrol_origin.x)
+        if distance >= 48:
+            self.facing_direction *= -1
+
+    def _alert_behavior(self, dt: float) -> None:
+        """Face player and fire arcing shots."""
+        self._face_player()
+        self._shoot_cooldown -= dt
+        if self._shoot_cooldown <= 0 and self.fire_rate > 0:
+            self._telegraph_timer = self._telegraph_duration
+            self.state = EnemyState.TELEGRAPHING
+
+    def _firing_behavior(self, dt: float) -> None:
+        """Fire an arcing projectile."""
+        self._face_player()
+        self._fire_anim_timer -= dt
+        if self._fire_anim_timer <= 0:
+            self._fire_arc()
+            self._shoot_cooldown = 1.5 / self.fire_rate if self.fire_rate > 0 else 3.0
+            self._fire_anim_timer = 0.2
+            self.state = EnemyState.ALERT
+
+    def _fire_arc(self) -> bool:
+        """Fire a projectile with arc trajectory toward the player."""
+        if len(self._active_projectiles) >= self._max_projectiles:
+            return False
+        if self._player_ref is None:
+            return False
+
+        dx = self._player_ref.centerx - self.rect.centerx
+        dy = self._player_ref.centery - self.rect.centery
+        dist = math.sqrt(dx * dx + dy * dy)
+        if dist < 1:
+            dist = 1
+
+        # Predict player movement
+        predict_factor = 0.3
+        target_x = self._player_ref.centerx + dx * predict_factor
+        target_y = self._player_ref.centery
+
+        # Calculate arc angle
+        angle = math.atan2(target_y - self.rect.centery, target_x - self.rect.centerx)
+        arc_angle = angle - 0.2  # slight upward arc
+
+        vel = pygame.Vector2(
+            math.cos(arc_angle) * self.projectile_speed,
+            math.sin(arc_angle) * self.projectile_speed - 20.0,
+        )
+
+        projectile = Projectile(
+            spawn_position=pygame.Vector2(self.rect.centerx, self.rect.centery),
+            velocity=vel,
+            damage=self.projectile_damage,
+            lifetime=3.0,
+        )
+        self._active_projectiles.append(projectile)
+        # AUD-489 — el disparo suena desde donde se dispara, no desde el
+        # centro de la cámara.
+        self._event_bus.emit(Events.SFX_PROJECTILE_FIRE, pos=(self.rect.centerx, self.rect.centery))
+        return True
+
+    def _post_update(self, dt: float) -> None:
+        """Update active projectiles and apply gravity to them for arc effect."""
+        for p in self._active_projectiles:
+            p.velocity.y += 400.0 * dt
+            p.update(dt)
+        self.clear_expired_projectiles()
+
+    def clear_expired_projectiles(self) -> None:
+        self._active_projectiles = [p for p in self._active_projectiles if p.is_active]
+
+    def get_projectiles(self) -> list[Projectile]:
+        return self._active_projectiles
+
+    def _check_player_contact(self, player: Player) -> None:
+        """AUD-149 — este método se llamaba `check_player_contact`, sin guion.
+
+        El motor llama al PRIVADO —`StageScene` hace
+        `enemy._check_player_contact(player)`—, y el público es sólo un alias
+        obsoleto que `EnemyBase` conserva para las entregas de estudiantes.
+        Al sobreescribir el público, esta lógica **nunca se ejecutaba en el
+        juego**: la clase estaba completa, probada por su nombre, y el camino
+        real pasaba de largo por la implementación de la base.
+
+        Es el mismo patrón que el sistema de diálogo (AUD-127) y el reloj
+        musical (AUD-139), con un agravante: aquí no faltaba un dato, sino que
+        sobraba un guion bajo.
+        """
+        super()._check_player_contact(player)
+        player_hurtbox = player.hurtbox if hasattr(player, "hurtbox") else player.rect
+        for p in list(self._active_projectiles):
+            if p.is_active and p.rect.colliderect(player_hurtbox):
+                if getattr(player, "_parry_active", False) and getattr(player, "_parry_window", 0) > 0:
+                    p._expired = True
+                    p.is_active = False
+                    player._parry_success = True
+                    player._parry_active = False
+                    player._parry_window = 0.0
+                    self._event_bus.emit(Events.VFX_PARRY, pos=(p.position.x, p.position.y))
+                    # AUD-206: desviar la flecha la borraba y nada más. El
+                    # arquero seguía su rutina y volvía a tensar el arco, así
+                    # que parar a distancia no compraba nada: salía más barato
+                    # apartarse. Aturdirlo es lo que da el hueco para acercarse
+                    # — que es la única recompensa que tiene sentido contra un
+                    # enemigo al que no alcanzas.
+                    self.stun(self.PARRY_STUN_DURATION)
+                else:
+                    player.apply_damage(p.damage, (self.position.x, self.position.y))
+                    p.on_collision()
+
+    def _get_animation_key(self) -> str:
+        return "walk"
+
+    def _build_hurtbox(self) -> pygame.Rect:
+        # AUD-108: el desplazamiento vertical de 4 px dejaba los pies fuera.
+        return self.caja_ajustada(margen_x=1, margen_y=2)
+
+    def _build_hitbox(self) -> pygame.Rect:
+        return self._build_hurtbox()

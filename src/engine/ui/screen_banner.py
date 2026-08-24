@@ -1,0 +1,128 @@
+from __future__ import annotations
+
+import logging
+
+import pygame
+
+from src.engine.core import settings
+from src.engine.ui.theme import Theme, escalar, font
+from src.engine.utils.asset_loader import AssetLoader
+from src.engine.utils.math_utils import ease_in_quad, ease_out_quad
+
+logger = logging.getLogger(__name__)
+
+class ScreenBanner:
+    """Animated stage title banner with two-tone background and bitmap fonts."""
+
+    def __init__(self) -> None:
+        self._stage_id: str = ""
+        self._stage_name: str = ""
+        self._state: str = "idle"
+        self._timer: float = 0.0
+        self._slide_in_duration: float = 0.5
+        self._hold_duration: float = 2.0
+        self._slide_out_duration: float = 0.4
+        self._offset: float = float(settings.INTERNAL_WIDTH * 2)
+        # AUD-453 — la franja se dibujaba con 40 px de alto en y=88, los de
+        # la maqueta de 224. Sobre 600 px eso es un rótulo de escenario que
+        # ocupa la sexta parte de lo que le toca.
+        self._banner_height: int = escalar(40)
+
+        self._banner_top: pygame.Surface | None = None
+        self._banner_bottom: pygame.Surface | None = None
+        try:
+            self._banner_top = AssetLoader.load_image(
+                settings.ASSETS_DIR / "ui" / "banner_top.png",
+                size=(settings.INTERNAL_WIDTH, self._banner_height // 2),
+            )
+            self._banner_bottom = AssetLoader.load_image(
+                settings.ASSETS_DIR / "ui" / "banner_bottom.png",
+                size=(settings.INTERNAL_WIDTH, self._banner_height // 2),
+            )
+        except (pygame.error, FileNotFoundError, PermissionError):
+            logger.warning("screen_banner: failed to load banner images")
+
+        # AUD-451 — por el tema. `theme.font()` ya resuelve `game.ttf` y cae a
+        # la de pygame si falta, así que los tres `try` sobraban, y además
+        # aplica la escala de accesibilidad que aquí no llegaba.
+        self._font_large: pygame.font.Font | None = font(Theme.FONT_TITLE)
+        self._font_medium: pygame.font.Font | None = font(Theme.FONT_HEADING)
+        self._fallback_font = font(Theme.FONT_BODY)
+        self._name_surf: pygame.Surface | None = None
+        self._name_fallback_surf: pygame.Surface | None = None
+
+    @property
+    def alto(self) -> int:
+        """Alto de la franja, ya escalado a la pantalla real."""
+        return self._banner_height
+
+    @property
+    def y_superior(self) -> int:
+        """Dónde empieza la franja. Lo consulta la prueba de maqueta."""
+        return escalar(88)
+
+    def play(self, stage_id: str, stage_name: str) -> None:
+        self._stage_id = stage_id
+        self._stage_name = stage_name
+        self._state = "slide_in"
+        self._timer = 0.0
+        self._offset = float(settings.INTERNAL_WIDTH * 2)
+        self._name_surf = self._font_large.render(self._stage_name, True, (255, 255, 200)) if self._font_large else None
+        self._name_fallback_surf = self._fallback_font.render(self._stage_name, True, (255, 255, 200))
+
+    def update(self, dt: float) -> None:
+        if self._state == "idle":
+            return
+
+        self._timer += dt
+
+        if self._state == "slide_in":
+            progress = min(self._timer / self._slide_in_duration, 1.0)
+            t = ease_out_quad(progress)
+            self._offset = settings.INTERNAL_WIDTH * (2.0 - t)
+            if progress >= 1.0:
+                self._state = "hold"
+                self._timer = 0.0
+
+        elif self._state == "hold":
+            if self._timer >= self._hold_duration:
+                self._state = "slide_out"
+                self._timer = 0.0
+
+        elif self._state == "slide_out":
+            progress = min(self._timer / self._slide_out_duration, 1.0)
+            t = ease_in_quad(progress)
+            self._offset = settings.INTERNAL_WIDTH * (1.0 + t)
+            if progress >= 1.0:
+                self._state = "idle"
+
+    def draw(self, surface: pygame.Surface) -> None:
+        if self._state == "idle":
+            return
+
+        bx = int(self._offset - settings.INTERNAL_WIDTH)
+        by = self.y_superior
+        bw = settings.INTERNAL_WIDTH
+
+        # Draw two-tone banner background
+        if self._banner_top and self._banner_bottom:
+            surface.blit(self._banner_top, (bx, by))
+            surface.blit(self._banner_bottom, (bx, by + self._banner_height // 2))
+        else:
+            top_half = pygame.Rect(bx, by, bw, self._banner_height // 2)
+            bottom_half = pygame.Rect(bx, by + self._banner_height // 2,
+                                      bw, self._banner_height // 2)
+            pygame.draw.rect(surface, (40, 30, 60), top_half)
+            pygame.draw.rect(surface, (60, 40, 80), bottom_half)
+            pygame.draw.rect(surface, (100, 80, 140), (bx, by, bw, self._banner_height), 1)
+
+        # Draw stage name with banner fonts
+        name_surf = self._name_surf or self._name_fallback_surf
+
+        nx = bx + (bw - name_surf.get_width()) // 2
+        ny = by + (self._banner_height - name_surf.get_height()) // 2
+        surface.blit(name_surf, (nx, ny))
+
+    @property
+    def is_active(self) -> bool:
+        return self._state != "idle"

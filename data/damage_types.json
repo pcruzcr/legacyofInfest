@@ -1,0 +1,24 @@
+{
+  "comment": "AUD-387 (GAP-043) — los canales de dano del motor. Anadir uno aqui basta para que exista: `framework/combate/dano.py` lo lee y las resistencias se declaran en Tiled con la propiedad `resistencias` (por ejemplo `veneno:0.5, fuego:2`). Los tres de salida son los que el lore sostiene: veneno aparece ocho veces en 65_EL_LORE_EXTENSO.md y fuego tres; no hay hielo ni electricidad, y un canal sin contenido detras es una caracteristica que nadie usa.",
+  "por_defecto": "fisico",
+  "canales": [
+    {
+      "id": "fisico",
+      "nombre": "Fisico",
+      "descripcion": "Golpes, filos y todo lo que no tiene elemento. Es el canal por defecto: los 32 llamantes de apply_hit que no dicen nada reciben este, asi que el juego de antes de AUD-387 es exactamente el juego con todo fisico.",
+      "color": "#d8d8d8"
+    },
+    {
+      "id": "veneno",
+      "nombre": "Veneno",
+      "descripcion": "La plaga, que es el tema central del juego. Pensado para pegar poco de golpe y seguir pegando con el tiempo (ver el efecto de dano por segundo de GAP-044), no para ser dano fisico con otro nombre.",
+      "color": "#7ec850"
+    },
+    {
+      "id": "fuego",
+      "nombre": "Fuego",
+      "descripcion": "Braseros, antorchas y lo que arde. En el lore es lo que la plaga no soporta, asi que es el canal natural para que una especie infectada sea debil.",
+      "color": "#ff8a3d"
+    }
+  ]
+}

@@ -1,0 +1,454 @@
+"""
+Module: enemy_shooter
+System: framework.entities
+Academic Unit: Unit II (Vectors, Trigonometry), Unit IV (Sprite Animation)
+Description: Shooter enemy that fires projectiles at the player when
+detected. Uses atan2 for angle calculation. Projectile is a lightweight
+sub-entity with velocity, lifetime, and collision.
+"""
+from __future__ import annotations
+
+import logging
+import math
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.framework.entities.player import Player
+
+import pygame
+
+from src.engine.core import settings
+from src.engine.core.events import Events
+from src.engine.utils.asset_loader import AssetLoader
+from src.engine.utils.surface_pool import get_pool
+from src.framework.entities.base_entity import BaseEntity
+from src.framework.entities.enemy_base import EnemyBase, EnemyState
+
+logger = logging.getLogger(__name__)
+
+class Projectile(BaseEntity):
+    """
+    Lightweight projectile entity fired by EnemyShooter.
+    Travels in a straight line at constant velocity.
+    Expires after lifetime or on collision.
+    """
+
+    def __init__(
+        self,
+        spawn_position: pygame.Vector2,
+        velocity: pygame.Vector2,
+        damage: float,
+        lifetime: float = 3.0,
+        gravity: float = 0.0,
+        admite_bash: bool = False,
+    ) -> None:
+        """Initialize the projectile.
+
+        AUD-193 — `gravity` en px/s², **cero por defecto**.
+
+        Los proyectiles de los enemigos vuelan rectos y así deben seguir: son
+        telegrafiados que el jugador aprende a leer, y una parábola los haría
+        impredecibles. El valor por defecto conserva ese comportamiento exacto
+        para las 21 especies sin tocar ninguna.
+
+        La flecha del jugador sí cae, y no por realismo: es lo que convierte
+        apuntar en una habilidad. Con trayectoria recta, dibujar la
+        previsualización sobra —sería una línea— y el tiro no tiene lectura de
+        terreno.
+        """
+        super().__init__(spawn_position)
+        self.velocity: pygame.Vector2 = velocity
+        self.gravity: float = gravity
+        self.damage: float = damage
+        #: AUD-305 — este proyectil se puede usar como impulso (*bash*).
+        #:
+        #: **Falso por defecto, y opt-in por proyectil.** La alternativa —que
+        #: todo proyectil enemigo sirviera— vuelve franqueables huecos que hoy
+        #: no lo son en los dieciséis mapas ya calificados: convierte a cada
+        #: tirador en una plataforma, y con ella cambia la dificultad de mapas
+        #: que nadie ha vuelto a jugar. Así, el autor del escenario decide
+        #: dónde el *bash* es parte del reto y ninguna entrega cambia sola.
+        self.admite_bash: bool = admite_bash
+        self._lifetime: float = lifetime
+        self._elapsed: float = 0.0
+        self._expired: bool = False
+
+        # Small circular hitbox
+        self.rect = pygame.Rect(
+            int(self.position.x) - 2,
+            int(self.position.y) - 2,
+            4,
+            4,
+        )
+        self.layer = 5
+        self._spawn_position: pygame.Vector2 = pygame.Vector2(spawn_position)
+
+    def update(self, dt: float) -> None:
+        """Move projectile and check expiration."""
+        if self._expired:
+            self.is_active = False
+            return
+
+        self._elapsed += dt
+        if self._elapsed >= self._lifetime:
+            self._expired = True
+            self.is_active = False
+            return
+
+        # La gravedad se integra antes de mover, no después: con el orden
+        # inverso el primer fotograma viaja recto y la parábola dibujada por la
+        # previsualización deja de coincidir con la que vuela.
+        if self.gravity:
+            self.velocity.y += self.gravity * dt
+        self.position.x += self.velocity.x * dt
+        self.position.y += self.velocity.y * dt
+        self.rect.center = (int(self.position.x), int(self.position.y))
+
+        # Off-screen cleanup: expire if too far from spawn
+        dx = self.position.x - self._spawn_position.x
+        dy = self.position.y - self._spawn_position.y
+        if (dx * dx + dy * dy) > 4000000:  # 2000px from spawn
+            self._expired = True
+            self.is_active = False
+
+    def draw(
+        self,
+        surface: pygame.Surface,
+        camera_offset: pygame.Vector2,
+    ) -> None:
+        """Draw the projectile as a small yellow circle."""
+        if not self.is_visible or self._expired:
+            return
+
+        screen_x = int(self.position.x - camera_offset.x)
+        screen_y = int(self.position.y - camera_offset.y)
+
+        pygame.draw.circle(surface, (255, 255, 0), (screen_x, screen_y), 4)
+        pygame.draw.circle(
+            surface, (255, 255, 255), (screen_x, screen_y), 4, 1
+        )
+
+    def on_collision(self) -> None:
+        """Handle collision with a solid tile or player.
+
+        AUD-255 — el impacto es la única señal de que un disparo se ha
+        perdido: sin ella, un proyectil que falla desaparece en silencio y el
+        jugador no aprende dónde estaba la cobertura. `SFX_ENEMIES_PROJECTILE_
+        HIT_WALL` tenía fichero y tabla desde el principio, y ningún emisor.
+        """
+        self._expired = True
+        self.is_active = False
+        if self._event_bus is not None:
+            pos = (self.position.x, self.position.y)
+            self._event_bus.emit(Events.SFX_ENEMIES_PROJECTILE_HIT_WALL, pos=pos)
+
+
+class EnemyShooter(EnemyBase):
+    """
+    Shooter enemy — fires projectiles at the player when detected.
+    May be stationary or perform slow patrol.
+    States: PATROL, ALERT (aim), FIRING (fire animation + projectile), HURT, DYING.
+    FIRING state added per 05_ENEMY_SPEC.md §5.5.
+    """
+
+    _ANIM_FPS = {
+        "walk": 6.0, "aim": 8.0, "fire": 16.0, "shoot": 16.0,
+        "hurt": 12.0, "die": 10.0,
+    }
+
+    def __init__(
+        self,
+        spawn_position: pygame.Vector2,
+        fire_rate: float = 0.5,
+        projectile_speed: float = 120.0,
+        projectile_damage: float = 0.5,
+        patrol_length: float = 0.0,
+        max_health: float = 3.0,
+        damage_on_contact: float = 0.25,
+        zone: int = 0,
+        admite_bash: bool = False,
+        **kwargs,
+    ) -> None:
+        """Initialize the shooter enemy."""
+        super().__init__(
+            spawn_position=spawn_position,
+            max_health=max_health,
+            damage_on_contact=damage_on_contact,
+            detection_range_x=200.0,
+            detection_range_y=64.0,
+            hurt_duration=0.4,
+            invincibility_duration=0.4,
+        )
+
+        self.fire_rate: float = fire_rate  # shots per second
+        self.projectile_speed: float = projectile_speed
+        self.projectile_damage: float = projectile_damage
+        #: AUD-305 — se hereda a cada proyectil que dispare este tirador. Se
+        #: declara desde Tiled con `admite_bash` en el objeto del enemigo, que
+        #: es donde el autor del mapa está pensando en el reto.
+        self.admite_bash: bool = admite_bash
+        self.patrol_length: float = patrol_length
+        self._patrol_origin: pygame.Vector2 = pygame.Vector2(spawn_position)
+        self._active_projectiles: list[Projectile] = []
+        self._max_projectiles: int = 3
+        self._shoot_cooldown: float = 0.0
+        self._fire_anim_timer: float = 0.0
+        self._collision_rects: list[pygame.Rect] = []
+
+        # Burst fire state
+        self._burst_count: int = 0
+        self._burst_max: int = 2
+        self._burst_delay: float = 0.12
+        self._burst_timer: float = 0.0
+        self._in_burst: bool = False
+        self._use_burst: bool = False
+        self._predictive_aim: bool = True
+
+        # Rect size — AUD-455: el y del TMX es la esquina superior (semántica
+        # nativa de Tiled), y el descuento de altura hacía flotar a todos los
+        # enemigos de suelo. Ver `enemy_walker` para el porqué completo.
+        self.rect.width = 16
+        self.rect.height = 24
+
+        # Cached surfaces
+        self._telegraph_warn_surf: pygame.Surface | None = None
+        self._telegraph_warn_size: tuple[int, int] = (0, 0)
+
+        # Load sprites
+        self._load_zone_sprites(zone, 12, 12)
+
+    def _load_extra_sprites(self, zone: int, fw: int, fh: int) -> None:
+        """Load aim and fire animation sprites. Generate placeholder if missing."""
+        zone_key = f"zone{zone}" if zone > 0 else "zone1"
+        base = settings.ASSETS_DIR / "sprites" / "enemies" / zone_key
+        colors = {"aim": (180, 100, 220), "fire": (220, 80, 80)}
+        for key, fname in [("aim", f"enemy_aim_{zone_key}.png"),
+                           ("fire", f"enemy_fire_{zone_key}.png")]:
+            path = base / fname
+            try:
+                frames = AssetLoader.load_sprite_sheet(path, fw, fh)
+                self._sprite_frames[key] = frames
+            except (pygame.error, FileNotFoundError, PermissionError):
+                logger.warning("enemy_shooter: failed to load sprite %s", path)
+                placeholder = pygame.Surface((fw, fh), pygame.SRCALPHA)
+                placeholder.fill(colors.get(key, (200, 0, 200)))
+                self._sprite_frames[key] = [placeholder]
+
+    def _check_player_contact(self, player: Player) -> None:
+        """Check body contact against the player. Projectiles can be parried."""
+        super()._check_player_contact(player)
+        player_hurtbox = player.hurtbox if hasattr(player, "hurtbox") else player.rect
+        for p in list(self._active_projectiles):
+            if p.is_active and p.rect.colliderect(player_hurtbox):
+                if getattr(player, "_parry_active", False) and getattr(player, "_parry_window", 0) > 0:
+                    p._expired = True
+                    p.is_active = False
+                    player._parry_success = True
+                    player._parry_active = False
+                    player._parry_window = 0.0
+                    self._event_bus.emit(Events.VFX_PARRY, pos=(p.position.x, p.position.y))
+                    # AUD-206: parar el disparo también interrumpe al tirador.
+                    # El porqué, en `enemy_archer._check_player_contact`.
+                    self.stun(self.PARRY_STUN_DURATION)
+                else:
+                    player.apply_damage(p.damage, (self.position.x, self.position.y))
+                    p.on_collision()
+
+    # AUD-149: aquí había un alias público que repetía el de `EnemyBase`.
+    # Se retira para que la regla quede sin excepciones: **ninguna subclase
+    # define `check_player_contact`**. Este enemigo era el único que lo hacía
+    # bien —sobreescribe el privado—, y su alias de más era justo lo que
+    # despistó a los otros cuatro.
+
+    def get_projectiles(self) -> list[Projectile]:
+        """Return the list of active projectiles."""
+        return self._active_projectiles
+
+    def clear_expired_projectiles(self) -> None:
+        """Remove expired projectiles from the active list."""
+        self._active_projectiles = [
+            p for p in self._active_projectiles if p.is_active
+        ]
+
+    def set_collision_rects(
+        self,
+        rects: list[pygame.Rect],
+        one_way: list[pygame.Rect] | None = None,
+    ) -> None:
+        self._collision_rects = rects
+        self._one_way_rects = one_way if one_way is not None else []
+
+    # ──────────────────────────────────────────────
+    # Behavior implementations
+    # ──────────────────────────────────────────────
+
+    def _patrol_behavior(self, dt: float) -> None:
+        """Slow horizontal movement or stationary (walk animation)."""
+        speed = self.facing_direction * 20.0 * dt
+        if self.patrol_length > 0:
+            self.position.x += speed
+            distance = abs(self.position.x - self._patrol_origin.x)
+            if distance >= self.patrol_length / 2:
+                self.facing_direction *= -1
+
+    def _alert_behavior(self, dt: float) -> None:
+        """Aim phase: face player, aim animation, then transition to TELEGRAPHING."""
+        self._face_player()
+        self._shoot_cooldown -= dt
+        if self.patrol_length > 0:
+            self.position.x += self.facing_direction * 20.0 * dt
+        if self._shoot_cooldown <= 0 and self.fire_rate > 0:
+            self._telegraph_timer = self._telegraph_duration
+            self.state = EnemyState.TELEGRAPHING
+
+    def _firing_behavior(self, dt: float) -> None:
+        """Fire phase: burst fire or single shot."""
+        self._face_player()
+        if self._in_burst:
+            self._burst_timer -= dt
+            if self._burst_timer <= 0:
+                self._fire()
+                self._burst_count += 1
+                if self._burst_count >= self._burst_max:
+                    self._in_burst = False
+                    self._burst_count = 0
+                    self._shoot_cooldown = 2.0 / self.fire_rate if self.fire_rate > 0 else 2.0
+                    self.state = EnemyState.ALERT
+                else:
+                    self._burst_timer = self._burst_delay
+                    self._telegraph_timer = self._telegraph_duration
+                    self.state = EnemyState.TELEGRAPHING
+        else:
+            self._fire_anim_timer -= dt
+            if self._fire_anim_timer <= 0:
+                self._fire()
+                if self._use_burst:
+                    self._in_burst = True
+                    self._burst_count = 1
+                    self._burst_timer = self._burst_delay
+                    self._telegraph_timer = self._telegraph_duration * 0.5
+                    self.state = EnemyState.TELEGRAPHING
+                else:
+                    self._shoot_cooldown = 1.0 / self.fire_rate if self.fire_rate > 0 else 1.0
+                    self.state = EnemyState.ALERT
+
+    def _fire(self) -> bool:
+        """Fire a projectile toward the player. Returns True if fired."""
+        if len(self._active_projectiles) >= self._max_projectiles:
+            return False
+
+        if self._player_ref is None:
+            return False
+
+        # Calculate angle to player (atan2)
+        dx = self._player_ref.centerx - self.rect.centerx
+        dy = self._player_ref.centery - self.rect.centery
+        angle = math.atan2(dy, dx)
+
+        # Create projectile velocity
+        vel = pygame.Vector2(
+            math.cos(angle) * self.projectile_speed,
+            math.sin(angle) * self.projectile_speed,
+        )
+
+        spawn_pos = pygame.Vector2(
+            self.rect.centerx + (self.facing_direction * 10),
+            self.rect.y + 4,
+        )
+
+        projectile = Projectile(
+            spawn_position=spawn_pos,
+            velocity=vel,
+            damage=self.projectile_damage,
+            lifetime=3.0,
+            admite_bash=self.admite_bash,
+        )
+        self._active_projectiles.append(projectile)
+        # AUD-489 — mismo tratamiento que ya recibe el impacto contra la
+        # pared en otro método de este fichero (línea 143): el disparo
+        # también suena desde donde se dispara, no sólo el impacto.
+        self._event_bus.emit(Events.SFX_PROJECTILE_FIRE, pos=(self.rect.centerx, self.rect.centery))
+        return True
+
+    def _build_hitbox(self) -> pygame.Rect:
+        return self._build_hurtbox()
+
+    def _get_animation_key(self) -> str:
+        """Return animation key for non-DYING, non-HURT state."""
+        if self.state in (EnemyState.TELEGRAPHING, EnemyState.FIRING):
+            return "fire"
+        if self.state == EnemyState.ALERT:
+            return "aim"
+        return "walk"
+
+    def _build_hurtbox(self) -> pygame.Rect:
+        """Return local-space hurtbox rect."""
+        # Era `Rect(4, 2, 24, 30)` sobre un cuerpo de 16 × 24: la caja
+        # sobresalía **12 px** por la derecha y 8 por abajo, así que el
+        # jugador recibía daño de un enemigo que no estaba ahí (AUD-108).
+        return self.caja_ajustada(margen_x=1, margen_y=1)
+
+    # ──────────────────────────────────────────────
+    # Sprite rendering
+    # ──────────────────────────────────────────────
+
+    def draw(
+        self,
+        surface: pygame.Surface,
+        camera_offset: pygame.Vector2,
+    ) -> None:
+        """Draw shooter using sprite, then overlay projectiles."""
+        if not self.is_visible or not self.is_alive:
+            return
+
+        screen_x = int(self.position.x - camera_offset.x)
+        screen_y = int(self.position.y - camera_offset.y)
+
+        # Sprite or fallback
+        frames = self._sprite_frames.get(self._get_animation_state())
+        if frames:
+            frame_idx = min(self._animation_frame, len(frames) - 1)
+            if self.facing_direction < 0:
+                flipped_frames = get_pool().get_flipped_frames(frames)
+                frame = flipped_frames[frame_idx]
+            else:
+                frame = frames[frame_idx]
+            ox = (self.rect.width - self._sprite_fw) // 2
+            oy = self.rect.height - self._sprite_fh
+            surface.blit(frame, (screen_x + ox, screen_y + oy))
+        else:
+            pygame.draw.rect(surface, (150, 0, 200),
+                             (screen_x, screen_y, self.rect.width, self.rect.height))
+            pygame.draw.rect(surface, (255, 255, 255),
+                             (screen_x, screen_y, self.rect.width, self.rect.height), 1)
+
+        if self.state == EnemyState.TELEGRAPHING and self._telegraph_timer > 0:
+            progress = 1.0 - (self._telegraph_timer / self._telegraph_duration)
+            radius = 14 + int(progress * 10)
+            alpha = int(200 - progress * 150)
+            size = (radius * 2, radius * 2)
+            if (self._telegraph_warn_surf is None
+                    or self._telegraph_warn_size != size):
+                self._telegraph_warn_surf = pygame.Surface(size, pygame.SRCALPHA)
+                self._telegraph_warn_size = size
+            warn = self._telegraph_warn_surf
+            warn.fill((0, 0, 0, 0))
+            pygame.draw.circle(warn, (255, 150, 0, alpha), (radius, radius), radius, 2)
+            pygame.draw.circle(warn, (255, 100, 0, alpha // 3), (radius, radius), radius - 1)
+            surface.blit(warn, (screen_x + self.rect.width // 2 - radius, screen_y - radius))
+
+        self.clear_expired_projectiles()
+        for p in self._active_projectiles:
+            p.draw(surface, camera_offset)
+
+    def _post_update(self, dt: float) -> None:
+        """Update projectiles after the base template finishes."""
+        for p in self._active_projectiles:
+            p.update(dt)
+            # Check projectile collision with tiles
+            if p.is_active and self._collision_rects:
+                for rect in self._collision_rects:
+                    if p.rect.colliderect(rect):
+                        p.on_collision()
+                        break
+        self.clear_expired_projectiles()

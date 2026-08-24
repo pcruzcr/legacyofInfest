@@ -1,0 +1,230 @@
+name: CI
+
+# AUD-010: this workflow had never executed a single time. It triggered on
+# branches `main` and `develop`; the repository's branches are `prod`, `pprod`
+# and `dev`. Every push and every PR was silently unmatched, so a failing test,
+# an unsatisfiable requirements.lock and a broken build backend all sat in the
+# tree with a green-looking (because empty) CI history.
+on:
+  push:
+    branches: [prod, pprod, dev]
+  pull_request:
+    branches: [prod, pprod, dev]
+  workflow_dispatch:
+  # AUD-147 — la comprobación de mutación corre una vez por semana. El
+  # porqué de no correrla en cada empujón está en el trabajo `mutation`.
+  schedule:
+    - cron: "0 4 * * 1"
+
+env:
+  # SDL needs headless drivers on CI runners or every pygame call aborts.
+  SDL_VIDEODRIVER: dummy
+  SDL_AUDIODRIVER: dummy
+  PYGAME_HIDE_SUPPORT_PROMPT: "1"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Must cover the floor declared by requires-python, otherwise the
+        # minimum supported interpreter is never actually exercised.
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      # AUD-106: se lintea lo que mantiene el equipo docente. Las entregas de
+      # los estudiantes viven en src/stages/ y traen 162 avisos de estilo; no
+      # se corrigen, porque son su codigo y su nota, pero tampoco pueden
+      # tumbar el CI del motor: un equipo que se acostumbra a un CI en rojo
+      # deja de mirarlo, y entonces no protege nada.
+      #
+      # Para revisarlos al calificar:  ruff check src/stages/
+      - name: Lint with ruff
+        run: |
+          ruff check src/engine src/framework src/stages/stage0 \
+            tests/ scripts/ tools/ --output-format=github
+
+      # AUD-124: mypy llevaba meses configurado en pyproject.toml y sin
+      # ejecutarse en ningun sitio. Un tipado que nadie comprueba es
+      # documentacion, no verificacion, y envejece igual de mal. Las tres
+      # primeras cosas que encontro al ejecutarlo eran anotaciones que mentian.
+      #
+      # Se comprueba solo lo que ya esta limpio (mypy_scope.txt) y la lista no
+      # puede encoger. Poner el arbol entero hoy daria cientos de errores, y un
+      # comprobador rojo desde el primer dia se desactiva en una semana.
+      - name: Type-check the ratcheted scope
+        run: |
+          PAQUETES=$(grep -v '^\s*#' mypy_scope.txt | grep -v '^\s*$' | tr '\n' ' ')
+          echo "Comprobando: $PAQUETES"
+          mypy $PAQUETES
+
+      # AUD-125: no habia ningun escaneo de vulnerabilidades. Ni pip-audit, ni
+      # Dependabot, ni CodeQL. El proyecto declara 15 dependencias y arrastra
+      # numpy, scipy, scikit-learn, opencv y pygame: si manana sale un CVE en
+      # cualquiera de ellas, nadie se entera.
+      #
+      # `continue-on-error` a proposito. Un CVE en una transitiva no es motivo
+      # para bloquear la entrega de un estudiante a las once de la noche, pero
+      # si para que aparezca en el resumen del CI. Cuando el equipo tenga
+      # costumbre de mirarlo, se sube a bloqueante.
+      #
+      # AUD-370: llevaba ADEMAS un `|| true`, y esa combinacion anulaba
+      # justamente lo que el parrafo de arriba dice querer. `continue-on-error`
+      # ya impide que el paso tumbe el trabajo, pero lo marca en amarillo en el
+      # resumen; con el `|| true` encima, pip-audit salia con 0 pase lo que
+      # pase y el paso aparecia en VERDE. O sea: un escaneo de vulnerabilidades
+      # que no podia avisar de una vulnerabilidad. Dos redes para la misma
+      # caida, y la segunda tapaba la senal de la primera.
+      - name: Audit dependencies for known vulnerabilities
+        continue-on-error: true
+        run: |
+          pip install pip-audit
+          pip-audit --desc --strict
+
+      - name: Verify dependency manifests agree
+        run: python scripts/check_dependency_sync.py
+
+      # La tabla de tipos de objeto de docs/STAGE_CREATION.md se genera desde
+      # el registro de entidades. Si alguien añade una especie y no regenera,
+      # la guía del estudiante deja de listar un tipo que sí existe — que es
+      # como las 21 especies con nombre acabaron siendo inalcanzables (AUD-057).
+      - name: Verify the student type reference is up to date
+        run: python scripts/generate_tmx_reference.py --check
+
+      # AUD-098: estos dos validadores existían y nadie los ejecutaba salvo a
+      # mano. Un guardián que sólo corre cuando alguien se acuerda garantiza lo
+      # mismo que no tenerlo — es exactamente cómo AUD-010 acabó con un CI
+      # verde que nunca se había ejecutado.
+      - name: Verify translation catalogues
+        run: python scripts/check_translations.py --ci
+
+      # AUD-197 / AUD-199: logros y bestiario ya no guardan texto en el
+      # código, sino en data/*.json. Un json que no se valida es un json que
+      # se pudre en silencio: una clave excluida por tipeño hace que la
+      # pantalla de logros del estudiante salga vacía sin que nadie se entere.
+      - name: Verify achievement and bestiary text data
+        run: |
+          python scripts/check_achievements.py
+          python scripts/check_bestiary.py
+
+      - name: Verify the example map demonstrates every TMX property
+        run: python scripts/check_tmx_coverage.py --ci
+
+      # AUD-365: AUD-307 midio las specs con un comprobador de usar y tirar y
+      # encontro 50 simbolos citados que no existian. Corrigio el documento y
+      # borro el comprobador, asi que nada impedia que volvieran a divergir.
+      # Una spec que promete un simbolo inexistente manda a quien la lee a
+      # programar contra algo que no esta.
+      - name: Verify the specs only promise symbols that exist
+        run: python scripts/check_doc_symbols.py --ci
+
+      - name: Run tests
+        run: |
+          python -m pytest tests/ -v --tb=short \
+            --junitxml=report.xml --cov=src --cov-report=xml
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-report-${{ matrix.python-version }}
+          path: report.xml
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.python-version }}
+          path: coverage.xml
+
+  # AUD-147 — mutación: ¿se enterarían las pruebas si el código cambiara?
+  #
+  # Va en su propio trabajo y **no en cada empujón** a propósito. Cada mutante
+  # arranca pytest, así que una pasada cuesta minutos; metida en el camino de
+  # todos los días, la gente empieza a ignorar CI, que es exactamente lo que
+  # pasó con las seis herramientas de calificación que hubo que arreglar este
+  # mes. Una vez por semana y a mano cuando se quiera: se lee y se actúa.
+  mutation:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Mutation check on the critical modules
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: python scripts/mutation_check.py --ci
+
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      # These steps are informational until the asset/TMX validators are
+      # confirmed green on a clean checkout — see AUD-011. They must not mask
+      # a real failure, so each reports its own status explicitly rather than
+      # being silently `|| true`-ed.
+      - name: Validate assets
+        run: python scripts/validate_assets.py
+
+      - name: Validate TMX maps
+        run: python scripts/validate_tmx.py --ci
+
+      # AUD-370: esto salia con 0 tanto con 100/100 como con 40/100, asi que el
+      # paso no podia fallar nunca. Ahora son dos ordenes con dos trabajos
+      # distintos: la primera exige que el mapa de REFERENCIA —el que los
+      # estudiantes abren para copiar— siga en 100, y la segunda informa de
+      # todos los mapas sin exigir nada, porque una entrega al 59 % es el
+      # resultado del alumno, no un fallo del CI.
+      - name: Grade reference stage
+        run: |
+          python scripts/grade_stage.py assets/maps/stage0 --minimo 100
+          python scripts/grade_stage.py assets/maps/ --json > /dev/null
+
+      # AUD-104: esto calificaba `boss_base.py`, la clase **base** del
+      # framework. No hereda de sí misma ni declara fases, así que sacaba
+      # 0/100 en cada ejecución y nadie lo miraba. Se califica el jefe de
+      # referencia, que es el que los estudiantes copian: si su nota baja, es
+      # que el calificador o el jefe han dejado de estar de acuerdo, y eso hay
+      # que verlo antes de un día de entrega.
+      # AUD-370: mismo defecto. El comentario de arriba lleva desde AUD-104
+      # diciendo «si su nota baja... eso hay que verlo antes de un dia de
+      # entrega», y nadie miraba el numero.
+      - name: Grade reference boss
+        run: python scripts/grade_boss.py src/stages/boss_venado/boss_venado.py --minimo 100

@@ -13,7 +13,7 @@ Visión por Computadora y Reconocimiento de Patrones.
 - Consola de depuración (F11) con FPS, cola de eventos y árbol de módulos; cajas de colisión en F1
 - Atmósfera configurable desde Tiled: iluminación por focos, clima, partículas
   de ambiente, bloom y viñeta — sin escribir una línea de Python
-- 4.788 pruebas automatizadas + validadores de TMX, assets y dependencias en CI
+- 6.172 pruebas automatizadas + validadores de TMX, assets y dependencias en CI
 
 ```
 pip install -r requirements.txt
@@ -61,7 +61,7 @@ src/
   framework/           framework de juego (entidades, escenario, ecs, ia, vfx,
                        ui, procesamiento, académico)
   stages/              el escenario 0 y las entregas de los estudiantes
-tests/                 4.788 pruebas sobre todos los módulos
+tests/                 6.172 pruebas sobre todos los módulos
 tools/                 generadores de mapas
 scripts/               validadores, calificadores y el previsualizador de TMX
 docs/                  documentación completa
@@ -86,4 +86,3 @@ componente del framework, entregable, evidencia de aprendizaje) de cada unidad.
 ## Licencia
 
 Uso educativo — véase el fichero LICENSE.
-

@@ -1,0 +1,343 @@
+[build-system]
+requires = ["setuptools>=64"]
+# AUD-007: was "setuptools.backends._legacy:_Backend", which is not a module
+# setuptools ships. Any `pip install .` / `python -m build` failed immediately
+# with ModuleNotFoundError. build_meta is the real PEP 517 backend.
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "legacyofinfest"
+# AUD-105: esto decía 2.0.0. El producto está en la línea 1.x — la 2.0.0 es la
+# versión *futura*, la del `50_IMPROVEMENT_ROADMAP.md`. Lo más probable es que
+# alguien copiara aquí la versión de un documento: ese fichero lleva su propia
+# cabecera `Version: 4.0.0`, y `51_IMPLEMENTATION_AUDIT.md` la suya `2.0.0`.
+#
+# Decir 2.0.0 cuando se entrega la 1.x no es un detalle cosmético: un
+# estudiante que abre una incidencia diciendo «me pasa en la 2.0.0» está
+# describiendo una versión que no existe, y nadie puede reproducirla.
+#
+# La versión vive **sólo aquí**. `src/__init__.py` la lee del paquete
+# instalado y `tests/test_version_coherence.py` comprueba que coincide con la
+# última entrada del CHANGELOG.
+version = "1.1.0"
+description = "AAA+ 2D/2.5D/3D Metroidvania Engine — Educational Game Engine for Computer Graphics, Image Processing, and Pattern Recognition"
+requires-python = ">=3.11"
+# AUD-007: pyproject.toml is now the SINGLE source of truth for dependencies.
+# requirements.txt is generated from it (`pip-compile`) and previously listed a
+# completely different, much smaller set — following the README's documented
+# `pip install -r requirements.txt` produced an install that could not even
+# import the game, because numba, pymunk, pydantic, orjson and pygame-gui were
+# missing from it but imported unguarded by src/.
+#
+# Packages removed from this list because nothing in the repository imports
+# them: PyYAML, pytweening. Packages demoted to optional extras because the
+# code now degrades gracefully without them: numba, ModernGL, lupa, pydub.
+dependencies = [
+    # Core engine — required to launch
+    "pygame-ce>=2.5",
+    # AUD-173: aquí ponía `numpy>=1.26,<2`, y ese tope hacía **imposible**
+    # instalar el proyecto en Python 3.13.
+    #
+    # La última 1.x es numpy 1.26.4 y sus ruedas llegan hasta Python 3.12; en
+    # 3.13 no hay ninguna, así que `pip install -e ".[dev]"` intenta compilar
+    # numpy desde el código fuente y falla. El CI declara la matriz
+    # 3.11 / 3.12 / 3.13 (`ci.yml`), o sea que **un tercio de la matriz no
+    # podía ni instalar el proyecto**. Es el mismo modo de fallo de AUD-010:
+    # una promesa de compatibilidad que nadie había ejecutado.
+    #
+    # El tope venía de numba, que es un extra opcional: numba 0.60 exigía
+    # numpy<2.1. Un acelerador opcional no puede dictar el suelo de todo el
+    # proyecto — el extra `accel` sube a numba>=0.62, que soporta numpy 2.3.
+    #
+    # Antes de quitarlo se comprobó que el árbol no usa ninguna de las APIs
+    # que numpy 2.0 retiró (`np.float_`, `np.NaN`, `np.in1d`, `np.trapz`,
+    # `np.product`, `np.row_stack`…): cero apariciones en los 446 ficheros.
+    "numpy>=1.26",
+    # AUD-235: aquí estaba `pymunk>=6.6`, y **ningún fichero del árbol lo
+    # importa**. Lo pedía `collision_system.py`, que construía un
+    # `pymunk.Space` con cero cuerpos y llamaba a `step()` en cada fotograma
+    # para integrar un mundo vacío; esa simulación se retiró y la dependencia
+    # se quedó. Su propio módulo lo cuenta en la cabecera.
+    #
+    # No es gratis tenerla de más: pymunk es una extensión en C, y este
+    # proyecto ya se quedó sin poder instalarse en Python 3.13 por una rueda
+    # que no existía (AUD-173). Cada dependencia obligatoria que nadie usa es
+    # una forma más de que `pip install -e .` falle el día de la entrega, a
+    # cambio de nada. Lo vigila `tests/test_dependencias_que_se_usan.py`.
+
+    # Data & validation
+    "pydantic>=2.7",
+    "orjson>=3.10",
+
+    # UI
+
+    # Academic / processing
+    "scipy>=1.13",
+    "opencv-python>=4.10",
+    "scikit-image>=0.24",
+    "scikit-learn>=1.5",
+    # AUD-176: era `>=10.0`. Pillow 12.2.0 y anteriores acumulan diez
+    # vulnerabilidades publicadas, todas corregidas en 12.3.0, y aquí se usa
+    # para decodificar imágenes que llegan de fuera en el pipeline de assets.
+    # El registro y el porqué están en `tests/test_dependencias_coherentes.py`
+    # (`SUELOS_POR_SEGURIDAD`), que es lo que impide que el suelo vuelva a bajar.
+    "Pillow>=12.3.0",
+
+    # Map / level
+    "pytmx>=3.32",
+    "pyscroll>=2.31",
+
+    # ML / parallelism
+    "joblib>=1.4",
+    # AUD-173: subido de 3.8 a 3.10. matplotlib 3.8 es anterior a numpy 2 y no
+    # resuelve con él; 3.9 tuvo problemas conocidos con numpy 2.1. 3.10 es la
+    # primera línea que convive con numpy 2.x sin sobresaltos, y es además la
+    # que `requirements.lock` ya fijaba (3.10.9).
+    "matplotlib>=3.10",
+]
+
+[project.optional-dependencies]
+# Optional accelerators / integrations. The game detects each at import time
+# and falls back to a pure-Python or software path when absent.
+accel = [
+    # AUD-173: subido de 0.60 a 0.62. numba 0.60 exige `numpy<2.1`, y ese
+    # requisito —de un extra que el juego no necesita— era el que mantenía el
+    # tope `numpy<2` en las dependencias base y dejaba a Python 3.13 sin poder
+    # instalar nada. numba 0.62 soporta numpy 2.3.
+    "numba>=0.62",   # JIT for the particle integrator only
+    "ModernGL>=5.10",  # GL post-processing; falls back to software blitting
+]
+scripting = ["lupa>=2.1"]   # Lua enemy behaviours
+audiotools = ["pydub>=0.25"]  # offline asset pipeline (tools/convert_audio.py)
+dev = [
+    "pytest>=8",
+    "pytest-benchmark>=5.2",
+    "pytest-cov>=5",
+    "pytest-mock>=3",
+    "hypothesis>=6",
+    # ── AUD-369 / GAP-034: los dos linters van FIJADOS, no con `>=` ──
+    #
+    # Con `ruff>=0.6`, la definición de «verde» de este proyecto la decidía
+    # quien publicara río arriba esa mañana. No es teórico: pasó. AUD-304
+    # añadió una supresión legítima de LOG004; ruff movió esa regla a preview
+    # en una versión posterior; con la regla apagada la directiva pasó a ser
+    # RUF100 y **el gate de lint quedó en rojo en `dev` sin que cambiara una
+    # sola línea del fichero afectado**. Lo encontró AUD-353, semanas después,
+    # ejecutando el gate a mano.
+    #
+    # El riesgo real no es el rojo: es que un equipo que ve rojos que no ha
+    # causado deja de mirar el CI. Es el razonamiento de AUD-106 —el lint de
+    # las entregas fuera del CI— aplicado a la versión en vez de al alcance.
+    #
+    # Fijar no es congelar. Subir el linter pasa a ser un cambio **revisable**:
+    # su commit, su `AUD-NNN`, y las reglas nuevas se adoptan mirando lo que
+    # encuentran, en vez de descubriéndolas en rojo un lunes. `mypy` va igual
+    # por la misma exposición: un comprobador de tipos que cambia de opinión
+    # solo tumba el trinquete de AUD-124.
+    #
+    # `tests/test_puertas_de_calidad.py` vigila que sigan fijados.
+    # AUD-408 — subido de 0.15.20 a 0.16.1: ruff estabilizó LOG004 en 0.16.0
+    # (la regla del `.exception()` fuera de handler que este proyecto suprime
+    # con motivo en `diagnostico.py`, AUD-304). Con el pin viejo y la directiva
+    # repuesta, el gate quedaría en rojo por RUF100; con el pin nuevo y la
+    # directiva, queda verde en las dos máquinas. La política de arriba es la
+    # misma: subir el linter es un cambio revisable, con su commit y su AUD.
+    "ruff==0.16.1",
+    # AUD-174: faltaba. CI ejecuta `mypy` sobre `mypy_scope.txt` y sólo instala
+    # este extra, así que el paso terminaba en `command not found` y el
+    # trinquete de tipos que AUD-124 puso en marcha no comprobaba nada desde
+    # entonces. Un gate que no se ejecuta es peor que no tenerlo: aparece en el
+    # workflow y en CLAUDE.md, así que nadie vuelve a mirarlo.
+    "mypy==2.2.0",
+]
+build = [
+    "pyinstaller>=6",
+    "nuitka>=2.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# AUD-016: the previous config contained `"ignore::Warning"`, which silences
+# EVERY warning the suite can raise — DeprecationWarning, RuntimeWarning,
+# numpy overflow warnings, pygame's own deprecations. That is a blindfold, not
+# a filter. Only the one genuinely noisy, genuinely harmless message from
+# running SDL under the dummy video driver is suppressed now.
+filterwarnings = [
+    "ignore:no fast renderer available",
+    # pyscroll <2.5 emite un DeprecationWarning interno (`depth argument
+    # deprecated`) al convertir cada baldosa de los mapas TMX. Es ajena al
+    # código del proyecto: el arreglo llega con la próxima versión de la
+    # librería, no desde este repo.
+    "ignore:depth argument deprecated since version 2.4.0",
+]
+
+[tool.ruff]
+# AUD-017: ruff had no configuration at all, so it used its 88-column default
+# while .flake8 declared max-line-length = 120. The two linters disagreed about
+# 882 lines of otherwise-fine code. CI ran ruff, so CI would have failed on
+# every push — had CI ever been triggered (see AUD-010). 120 is the width the
+# codebase is actually written to, so that is the width we enforce.
+line-length = 120
+target-version = "py311"
+extend-exclude = [".venv", "build", "dist", "colab", "web"]
+
+[tool.ruff.lint]
+# Start from the default correctness rules (pyflakes + pycodestyle errors) and
+# add the families that caught real defects during the audit. Deliberately
+# conservative: every rule enabled here is one the team should fix, not
+# suppress.
+select = [
+    "E", "F",      # pycodestyle errors, pyflakes
+    "B",           # flake8-bugbear — caught the loop-variable closures
+    "UP",          # pyupgrade
+    "I",           # import sorting
+    "RUF",         # ruff-specific
+    "LOG", "G",    # logging correctness
+    "DTZ",         # naive datetime — caught the save-timestamp ordering bug
+]
+ignore = [
+    "E203",   # whitespace before ':' — conflicts with common formatters
+    "RUF012", # ClassVar annotations on read-only lookup tables; noisy here
+    # UP017 rewrites `timezone.utc` to `datetime.UTC`, which only exists on
+    # Python 3.11+. The project targets 3.11+, but `timezone.utc` is correct on
+    # every version and costs nothing, so we keep the portable spelling rather
+    # than making the tree unimportable on 3.10 for a cosmetic gain.
+    "UP017",
+    # UP042 rewrites `class X(str, Enum)` to `class X(StrEnum)`. Same 3.11+
+    # availability problem as UP017, and it silently changes semantics: str(X.A)
+    # yields "A" under StrEnum but "X.A" under (str, Enum), which quietly breaks
+    # every f-string and log line that formats one of these enums.
+    "UP042",
+    # Unicode look-alikes: the project is Spanish-language and its docstrings,
+    # comments and UI strings legitimately contain accented characters, en
+    # dashes and box-drawing glyphs. Flagging those is noise, not signal.
+    "RUF001", "RUF002", "RUF003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# The exemptions below are deliberate engineering decisions, not unfixed
+# findings. Each states why the rule does not apply, so a future reader can
+# challenge the reasoning rather than guess at it.
+
+# Tests legitimately assert on private state and shadow fixtures.
+"tests/**" = ["B011"]
+
+# conftest and several test modules MUST set SDL_VIDEODRIVER=dummy *before*
+# pygame is imported, otherwise SDL tries to open a real window and the suite
+# cannot run headless. That inverts the usual imports-first rule by necessity.
+"tests/conftest.py" = ["E402"]
+"tests/test_demo_scenes.py" = ["E402"]
+"tests/test_new_pipeline_modules.py" = ["E402"]
+"tests/test_accessibility.py" = ["E402"]
+"tests/test_audit_regressions.py" = ["E402"]
+"tests/test_visual_regression.py" = ["E402"]
+"tests/benchmarks/**" = ["E402"]
+
+# Offline asset/level generators. These are dense coordinate tables and pixel
+# maps — `pts.append((x, y, c)); pts.append((x+1, y, c))` reads as one row of
+# artwork per line, and splitting or re-wrapping them makes the sprite data
+# harder to read, not easier. They are developer tooling, never imported by
+# the game, and are exercised by their own output being committed.
+"tools/generate_demo_stage0.py" = ["E501", "E702", "E701"]
+"tools/generate_stage0_tmx.py" = ["E501", "E702", "E701"]
+"tools/generate_all_assets.py" = ["E501", "E702", "E701"]
+"tools/pixel_asset_generator.py" = ["E501", "E702", "E701"]
+"tools/generate_assets.py" = ["E501", "E702"]
+
+# Grading and reporting scripts build long human-readable report strings and
+# rubric tables where the natural unit is one line per criterion.
+"scripts/grade_boss.py" = ["E501", "E702"]
+"scripts/grade_stage.py" = ["E501", "E702"]
+"scripts/project_stats.py" = ["E501", "E702", "E701", "E402"]
+"scripts/feedback_generator.py" = ["E501"]
+"scripts/obsidianize.py" = ["E501"]
+"scripts/generate_exam.py" = ["E501"]
+
+# Teaching scenes annotate formulas inline (matrix rows, kernel tables); the
+# lines are long because the maths is, and breaking them obscures the lesson.
+"src/engine/scenes/vector_lab_scene.py" = ["E501"]
+"src/engine/scenes/vision_demo_scene.py" = ["E501"]
+"src/engine/scenes/color_theory_scene.py" = ["E501"]
+"src/engine/scenes/pattern_demo_scene.py" = ["E501"]
+"src/engine/scenes/filter_demo_scene.py" = ["E501"]
+
+# BaseScene's empty lifecycle hooks are intentionally *optional* overrides, not
+# abstract methods: a scene that does not care about on_pause should not be
+# forced to implement it. Marking them @abstractmethod would break every
+# existing scene and every student template.
+"src/engine/scene/base_scene.py" = ["B027"]
+
+# Standalone entry-point scripts must prepend the project root to sys.path
+# before they can import from src/ — the import genuinely cannot come first.
+# This is the one case where E402 describes correct code.
+"tools/build_dataset.py" = ["E402", "E501", "E702"]
+"scripts/validate_assets.py" = ["E402"]
+"scripts/validate_tmx.py" = ["E402", "E501"]
+
+[tool.pylint]
+# Pylint no corre en CI —ahí manda ruff— pero sí corre en el editor de quien
+# tenga la extensión instalada, y sus valores por defecto contradicen los del
+# proyecto. El resultado eran avisos que CI nunca iba a pedir arreglar:
+#
+#     C0114 missing-module-docstring   en un archivo que sí tiene docstring
+#     C0116 missing-function-docstring en cada método público
+#     C0301 line-too-long              a 100 columnas, no a las 120 de aquí
+#
+# Esta sección lo alinea con ruff. No es "silenciar el linter": es que un
+# repositorio con dos linters que piden cosas distintas acaba enseñando a
+# ignorar los dos.
+
+[tool.pylint.main]
+# `.venv` y los directorios generados no son código del proyecto.
+ignore-paths = ["^\\.venv/.*", "^build/.*", "^dist/.*", "^colab/.*", "^web/.*"]
+# Extensiones compiladas: sin esto Pylint no puede inspeccionarlas y afirma
+# cosas falsas con severidad de error, como
+#     E1101: Module 'orjson' has no 'dumps' member
+# sobre una llamada que funciona. Pylint exige listarlas a mano porque para
+# inspeccionarlas tiene que importarlas —es decir, ejecutar código— y no lo
+# hace con cualquier paquete sin permiso explícito.
+extension-pkg-allow-list = ["orjson", "pygame", "pydantic_core", "numpy", "cv2"]
+# Sin esto Pylint no encuentra `src.` al analizar un archivo suelto.
+init-hook = "import sys; sys.path.insert(0, '.')"
+
+[tool.pylint.format]
+# La misma anchura que ruff (ver [tool.ruff] arriba) y que .editorconfig.
+max-line-length = 120
+
+[tool.pylint."messages control"]
+disable = [
+    # Convenciones de docstring: ruff no las exige y el proyecto documenta el
+    # *porqué* en los módulos y clases, no en cada getter de una línea.
+    "missing-module-docstring",
+    "missing-class-docstring",
+    "missing-function-docstring",
+    # Duplicadas con ruff, que ya las cubre y es la fuente de verdad en CI.
+    "line-too-long",           # ruff E501
+    "unused-import",           # ruff F401
+    "unused-variable",         # ruff F841
+    "wrong-import-order",      # ruff I001
+    "ungrouped-imports",       # ruff I001
+    # Métricas de tamaño: opiniones sin umbral acordado en este proyecto.
+    "too-many-arguments",
+    "too-many-instance-attributes",
+    "too-many-locals",
+    "too-many-branches",
+    "too-many-statements",
+    "too-few-public-methods",
+    # El código de juego usa nombres cortos deliberados (dt, dx, dy, fw, fh).
+    "invalid-name",
+    # Los accesos a privados en tests son intencionados y ya están exentos en
+    # la configuración de ruff por el mismo motivo.
+    "protected-access",
+]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+follow_imports = "skip"
+no_strict_optional = true
+check_untyped_defs = true
+disallow_untyped_defs = false
+disallow_any_unimported = false
+warn_return_any = false
+warn_unused_ignores = false

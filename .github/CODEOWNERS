@@ -1,0 +1,65 @@
+# CODEOWNERS — quién revisa qué (acceso de estudiantes al repositorio)
+#
+# Por qué existe este archivo
+# ============================
+# El repositorio es privado y cada estudiante tiene acceso `Read` (modo
+# lectura, sin permiso de escritura directa): pueden clonar y ver las
+# ~26 entregas del curso, pero no pueden empujar una rama aquí. Para
+# proponer un cambio hacen fork y abren un Pull Request contra `dev`
+# (ver `CONTRIBUTING.md`, sección "Proceso de PR").
+#
+# Este archivo es la otra mitad del control de acceso: con la regla de
+# rama protegida en `dev` que exige revisión del "code owner" antes de
+# fusionar, un PR que toque la carpeta de un escenario ajeno no se
+# puede fusionar sin la aprobación del dueño de esa carpeta (o del
+# profesor). No impide que alguien *proponga* el cambio —ya no puede,
+# porque sólo tiene `Read`— pero si en algún momento se sube a `Write`,
+# esto sigue siendo la barrera de fusión.
+#
+# GitHub empareja por la ÚLTIMA regla que coincide con cada ruta, así
+# que las rutas más específicas van después de las generales.
+#
+# Formato: la última coincidencia gana. `@usuario` o `correo@dominio`
+# (el correo tiene que estar verificado en la cuenta de GitHub del
+# estudiante — si todavía no se sabe su usuario, el correo funciona
+# igual una vez que lo verifique).
+
+# ── Stage 1-1 ──
+/src/stages/stage1_1/            fabrizioespinozaarce@gmail.com
+/assets/maps/stage1_1/           fabrizioespinozaarce@gmail.com
+
+# ── Stage 1-2 (La Soda) ──
+/src/stages/stage1_2_la_soda/    josemorice123@gmail.com
+/assets/maps/stage1_2_la_soda/   josemorice123@gmail.com
+
+# ── Stage 1-3 (Las Aulas) ──
+/src/stages/stage1_3_las_aulas/  Yariel3199@gmail.com
+/assets/maps/stage1_3_las_aulas/ Yariel3199@gmail.com
+
+# ── Boss 1-4 — El Venado Sagrado ──
+/src/stages/boss_venado/         josejahel07@gmail.com
+/assets/maps/boss_venado/        josejahel07@gmail.com
+
+# ── Stage 2-1 (Oficinas) ──
+/src/stages/stage2_1_oficinas/   cesarubau142@gmail.com
+/assets/maps/stage2_1_oficinas/  cesarubau142@gmail.com
+
+# ── Stage 2-2 (luna) ──
+/src/stages/stage2_2/            alejandro092709@gmail.com
+/assets/maps/stage2_2/           alejandro092709@gmail.com
+
+# ── Boss 2-4 — El Rey Terciopelo — José Pablo Ramírez (@NieblaVidente) ──
+/src/stages/boss_rey/            @NieblaVidente
+/assets/maps/boss_rey/           @NieblaVidente
+
+# ── Stage 3-2 (Hall) — José Pablo Monestel (@JpMonestelC) ──
+/src/stages/hall/                @JpMonestelC
+/assets/maps/hall/                @JpMonestelC
+
+# ── Stage 3-3 (El Patio) ──
+/src/stages/stage3_3_el_patio/   alvarezrebeca753@gmail.com
+/assets/maps/stage3_3_el_patio/  alvarezrebeca753@gmail.com
+
+# ── Stage 3-4 — Boss Gavilán — Isaac Felipe Morún M. (@PipeDevGit) ──
+/src/stages/stage3_4_boss_gavilan/   @PipeDevGit
+/assets/maps/stage3_4_boss_gavilan/  @PipeDevGit

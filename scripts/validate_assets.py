@@ -1,0 +1,532 @@
+"""
+Script: validate_assets.py
+Description: Validate all game assets (fonts, images, models, maps, sounds).
+Exits with code 0 if all required files exist and load correctly, else 1.
+"""
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+# Add project root to sys.path so that 'src' is importable
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+import pygame
+
+ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
+
+REQUIRED_FONTS = ["fonts/game.ttf"]
+REQUIRED_IMAGES = [
+    # Title screen
+    "title/logo.png",
+    "title/bck1.png",
+    # Splash screen
+    "splash/logo.png",
+    "splash/bck1.png",
+    # Story backgrounds
+    "story/h01.png",
+    "story/h02.png",
+    "story/h03.png",
+    # Stage0 tileset / backgrounds
+    "tilesets/tileset_stage0.png",
+    "backgrounds/stage0/bg_stage0_far.png",
+    "backgrounds/stage0/bg_stage0_mid.png",
+    "backgrounds/stage0/bg_stage0_near.png",
+    # Zone backgrounds
+    "backgrounds/zone1/bg_zone1_far.png",
+    "backgrounds/zone2/bg_zone2_far.png",
+    "backgrounds/zone3/bg_zone3_far.png",
+    # Player sprites
+    "sprites/player/player_idle.png",
+    "sprites/player/player_walk.png",
+    "sprites/player/player_jump.png",
+    "sprites/player/player_fall.png",
+    "sprites/player/player_hurt.png",
+    "sprites/player/player_die.png",
+    "sprites/player/player_crouch.png",
+    "sprites/player/player_short_attack.png",
+    "sprites/player/player_long_attack.png",
+    # UI
+    "ui/hud_frame.png",
+    "ui/menu_arrow.png",
+    "ui/message_arrow.png",
+    "ui/portrait_normal.png",
+    "ui/portrait_hurt.png",
+    "ui/portrait_critical.png",
+    "ui/portrait_dead.png",
+    "ui/banner_top.png",
+    "ui/banner_bottom.png",
+]
+# AUD-587 — antes se exigía `models/professor_sample.pkl`, un binario pickle
+# que el validador mismo deserializaba para comprobarlo (con el aviso de
+# «unpickling executes arbitrary code» de propina). El runtime ya entrena el
+# modelo de referencia desde el dataset (F3.3), así que lo que se distribuye
+# y se exige es el dataset, no el estimador.
+REQUIRED_DATASETS = ["datasets/sample_dataset.npz"]
+REQUIRED_SOUNDS = [
+    # Music
+    "music/bgm_title.wav",
+    "music/bgm_story.wav",
+    "music/bgm_splash.wav",
+    "music/bgm_stage0.wav",
+    "music/bgm_zone1_traverse.wav",
+    "music/bgm_zone1_boss.wav",
+    "music/bgm_zone2_traverse.wav",
+    "music/bgm_zone2_boss.wav",
+    "music/bgm_zone3_traverse.wav",
+    "music/bgm_zone3_boss.wav",
+    "music/bgm_paburu.wav",
+    "music/bgm_final_approach.wav",
+    # AUD-546 — una pista por fase del 4-1, material de autor. Llegaron
+    # como `.mp3` (`resolver_pista_de_musica` ya las encuentra por ese
+    # sufijo) y no como el par `.wav`/`.ogg` del resto de esta lista —
+    # por eso la extensión aquí es la real, no la convención heredada.
+    "music/bgm_stage4_1_fase1.mp3",
+    "music/bgm_stage4_1_fase2.mp3",
+    "music/bgm_stage4_1_fase3.mp3",
+    "music/bgm_stage4_1_fase4.mp3",
+    "music/bgm_stage4_1_fase5.mp3",
+    "music/bgm_stage4_1_fase6.mp3",
+    # AUD-575 — el tema en loop de la mina inundada (4-1b), material de
+    # autor como las fases del cementerio: llegó como `.mp3` y se registra
+    # con su extensión real, no la convención heredada.
+    "music/4_1_b.mp3",
+    # UI SFX
+    "sfx/ui/sfx_ui_menu_move.wav",
+    "sfx/ui/sfx_ui_menu_confirm.wav",
+    "sfx/ui/sfx_ui_menu_cancel.wav",
+    "sfx/ui/sfx_ui_stage_complete.wav",
+    "sfx/ui/sfx_ui_stage_banner.wav",
+    "sfx/ui/sfx_ui_game_over.wav",
+    "sfx/ui/sfx_ui_checkpoint.wav",
+    "sfx/ui/sfx_ui_heart_restore.wav",
+    # Player SFX
+    "sfx/player/sfx_player_jump.wav",
+    "sfx/player/sfx_player_land.wav",
+    "sfx/player/sfx_player_hurt.wav",
+    "sfx/player/sfx_player_die.wav",
+    "sfx/player/sfx_player_crouch.wav",
+    "sfx/player/sfx_player_short_attack.wav",
+    "sfx/player/sfx_player_long_attack.wav",
+    "sfx/player/sfx_player_hit_connect.wav",
+    # Enemies SFX
+    "sfx/enemies/sfx_enemies_hit.wav",
+    "sfx/enemies/sfx_enemies_die_small.wav",
+    "sfx/enemies/sfx_enemies_projectile_fire.wav",
+    "sfx/enemies/sfx_enemies_projectile_hit_wall.wav",
+    # Boss SFX
+    "sfx/bosses/sfx_bosses_venado_charge.wav",
+    "sfx/bosses/sfx_bosses_venado_stomp.wav",
+    "sfx/bosses/sfx_bosses_venado_vine.wav",
+    "sfx/bosses/sfx_bosses_gavilan_dive.wav",
+    "sfx/bosses/sfx_bosses_gavilan_mask_beam.wav",
+    "sfx/bosses/sfx_bosses_paburu_eye_beam.wav",
+    "sfx/bosses/sfx_bosses_paburu_wave.wav",
+    "sfx/bosses/sfx_bosses_phase_change.wav",
+    "sfx/bosses/sfx_bosses_relic_appear.wav",
+    "sfx/bosses/sfx_bosses_rey_spit.wav",
+    "sfx/bosses/sfx_bosses_rey_split.wav",
+]
+
+# Palette definitions: (glob_pattern, set_of_allowed_RGB_tuples)
+#
+# AUD-011: REGENERATE THIS TABLE, DO NOT HAND-EDIT IT:
+#     python scripts/collect_palettes.py
+#
+# These tables went stale when the sprite art was regenerated by
+# tools/pixel_asset_generator.py under a new colour scheme, and the script the
+# comment told you to run (collect_palettes.py) did not exist. The validator
+# then reported eight assets as broken when the art was fine and the *table*
+# was wrong — a CI-blocking failure caused entirely by tooling drift.
+#
+# Note what is NOT here: tilesets and backgrounds. assets/tilesets/tileset_stage0.png
+# holds 108,187 distinct colours and the backgrounds run to several hundred each,
+# because they are painted/rendered images rather than indexed pixel art. A
+# palette constraint cannot describe them; check_color_budget() below bounds
+# their colour count instead.
+SPRITE_PALETTES: list[tuple[str, set[tuple[int, int, int]]]] = [
+    ("sprites/player/*.png", {
+        (15, 20, 35), (20, 30, 60), (20, 35, 65), (35, 50, 75),
+        (40, 50, 90), (40, 60, 100), (60, 60, 80), (65, 85, 110),
+        (80, 55, 30), (80, 80, 110), (100, 80, 50), (200, 180, 100),
+        (220, 180, 140), (220, 200, 140), (255, 255, 255),
+    }),  # 9 file(s), 15 colour(s)
+    ("sprites/enemies/*.png", {
+        (0, 0, 0), (6, 8, 14), (14, 18, 26), (30, 22, 14),
+        (30, 80, 30), (40, 10, 10), (40, 120, 60), (50, 30, 80),
+        (50, 150, 100), (60, 45, 30), (60, 60, 120), (60, 120, 60),
+        (80, 30, 30), (80, 50, 20), (80, 60, 120), (80, 100, 40),
+        (80, 150, 200), (96, 140, 148), (100, 20, 20), (100, 60, 60),
+        (100, 60, 100), (100, 75, 45), (104, 58, 36), (120, 40, 20),
+        (120, 50, 180), (120, 66, 40), (120, 80, 40), (120, 100, 60),
+        (120, 220, 210), (140, 110, 70), (140, 176, 182), (150, 86, 52),
+        (160, 120, 200), (180, 50, 50), (180, 60, 30), (180, 100, 220),
+        (180, 140, 220), (200, 80, 240), (200, 120, 240), (200, 160, 240),
+        (220, 60, 60), (220, 100, 255), (220, 140, 255), (220, 180, 255),
+        (240, 80, 80), (240, 120, 255), (240, 160, 255), (255, 100, 100),
+        (255, 120, 120), (255, 140, 255), (255, 255, 255),
+    }),  # 26 file(s), 51 colour(s) — AUD-519 añade el pez abismal de 4.1b:
+        # (6,8,14) el borde, (14,18,26) el cuerpo, (120,220,210) el señuelo
+        # bioluminiscente. AUD-575 añade la fauna de la mina: los óxidos del
+        # cangrejo ((30,22,14), (104,58,36), (120,66,40), (150,86,52)) y los
+        # azules pálidos de la medusa ((96,140,148), (140,176,182)).
+        # Regenerado con `scripts/collect_palettes.py`, no a mano (ver el
+        # aviso de arriba).
+    ("sprites/bosses/*.png", {
+        (10, 10, 10), (10, 100, 40), (30, 107, 107), (40, 164, 80),
+        (45, 74, 30), (50, 160, 80), (60, 60, 60), (60, 100, 50),
+        (74, 50, 24), (74, 120, 50), (80, 200, 120), (90, 140, 80),
+        (107, 68, 35), (125, 125, 125), (140, 90, 40), (140, 100, 50),
+        (140, 104, 0), (140, 180, 150), (200, 140, 60), (200, 162, 100),
+        (200, 184, 150), (200, 200, 180), (200, 215, 200), (212, 90, 0),
+        (212, 160, 23), (255, 255, 255),
+    }),  # 42 file(s), 26 colour(s)
+    # AUD-527 — `ui/*.png` dejó de cubrir el HUD entero. `heart_*.png` y
+    # `hud_frame.png` pasaron a degradado + antialiasing (decisión del dueño
+    # de modernizar el HUD, `docs/09_HUD_SPEC.md` §1) — ya no son arte
+    # indexado, son pintados, el mismo caso que los tilesets: se miden por
+    # presupuesto de color en `COLOR_BUDGETS`, no por paleta fija. Lo que
+    # sigue aquí sigue siendo pixel art indexado de verdad.
+    ("ui/portrait_*.png", {
+        (0, 0, 0), (60, 60, 80), (100, 100, 100), (200, 80, 80),
+        (200, 120, 100), (220, 180, 140), (255, 255, 255),
+    }),  # 4 file(s), 7 colour(s)
+    ("ui/relic_*.png", {
+        (0, 0, 0), (100, 180, 100), (200, 150, 100), (200, 200, 150),
+        (255, 215, 0), (255, 255, 255),
+    }),  # 5 file(s), 6 colour(s)
+    ("ui/banner_*.png", {
+        (0, 0, 0), (200, 180, 100),
+    }),  # 2 file(s), 2 colour(s)
+    ("ui/menu_arrow.png", {
+        (255, 215, 0), (255, 255, 255),
+    }),  # 1 file(s), 2 colour(s)
+    ("ui/message_arrow.png", {
+        (255, 215, 0), (255, 255, 255),
+    }),  # 1 file(s), 2 colour(s)
+]
+
+WARNINGS: list[str] = []
+ERRORS: list[str] = []
+
+
+def check_file(path: Path, category: str) -> None:
+    if not path.exists():
+        ERRORS.append(f"[MISSING] {category}: {path}")
+    elif not path.is_file():
+        ERRORS.append(f"[NOT FILE] {category}: {path}")
+    elif path.stat().st_size == 0:
+        WARNINGS.append(f"[EMPTY] {category}: {path}")
+
+
+def check_font(path: Path) -> None:
+    try:
+        font = pygame.font.Font(str(path), 8)
+        font.render("Test", True, (255, 255, 255))
+    except Exception as e:
+        ERRORS.append(f"[FONT LOAD FAILED] {path}: {e}")
+
+
+def check_dataset(path: Path) -> None:
+    """Comprueba un dataset de características sin ejecutar nada.
+
+    AUD-587 — sustituye a `check_model`: `np.load(allow_pickle=False)` lee
+    arrays puros y se niega a deserializar objetos, que es justo la
+    propiedad que hacía peligroso exigir un `.pkl` en CI.
+    """
+    try:
+        import numpy as np
+
+        with np.load(str(path), allow_pickle=False) as data:
+            if "X" not in data or "y" not in data:
+                ERRORS.append(
+                    f"[DATASET INCOMPLETE] {path}: faltan las claves X/y"
+                )
+            elif data["X"].shape[0] != data["y"].shape[0]:
+                ERRORS.append(
+                    f"[DATASET MISMATCH] {path}: X e y no tienen la misma "
+                    f"longitud ({data['X'].shape[0]} vs {data['y'].shape[0]})"
+                )
+    except Exception as e:
+        ERRORS.append(f"[DATASET LOAD FAILED] {path}: {e}")
+
+
+#: Cabecera mágica esperada por extensión de audio.
+#:
+#: AUD-159 — siete ficheros `.ogg` de `assets/music/` eran **WAV** (empiezan
+#: por `RIFF`). SDL se fía de la extensión, así que `pygame.mixer.music.load`
+#: los rechazaba con «Not an Ogg Vorbis audio stream» y el escenario se jugaba
+#: **en silencio**: `StageScene` sólo registra un aviso y sigue.
+#:
+#: Costó verlo porque el juego prefiere `.wav` y cae al `.ogg` sólo si no hay
+#: `.wav`. De los siete, cuatro no tenían gemelo —`bgm_boss`, `bgm_zone1`,
+#: `bgm_zone2`, `bgm_zone3`— y ésos eran los que sonaban a nada. Los otros
+#: tres tienen al lado un `.wav` de 8 a 12 segundos que el generador de
+#: assets produce como marcador de posición, así que el juego lleva meses
+#: reproduciendo el marcador en vez de la pista de 60 s que hay en el `.ogg`.
+CABECERAS_DE_AUDIO: dict[str, bytes] = {
+    ".ogg": b"OggS",
+    ".wav": b"RIFF",
+}
+
+
+def check_audio_format(path: Path) -> None:
+    """Que la extensión diga la verdad sobre el contenido."""
+    esperada = CABECERAS_DE_AUDIO.get(path.suffix.lower())
+    if esperada is None:
+        return
+    try:
+        cabecera = path.read_bytes()[:4]
+    except OSError as exc:
+        WARNINGS.append(f"[AUDIO UNREADABLE] {path}: {exc}")
+        return
+    if cabecera != esperada:
+        real = next((ext for ext, magia in CABECERAS_DE_AUDIO.items()
+                     if magia == cabecera), f"desconocido ({cabecera!r})")
+        WARNINGS.append(
+            f"[AUDIO EXTENSION LIES] {path}: la extensión dice "
+            f"«{path.suffix}» y el contenido es {real}. SDL se fía de la "
+            f"extensión, así que este fichero NO se puede reproducir."
+        )
+
+
+def check_sound(path: Path) -> None:
+    """Comprueba que el archivo se pueda decodificar, si hay mezclador.
+
+    Sin mezclador cada sonido produciría un aviso «mixer not initialized» —43
+    en este proyecto—, y un informe con 43 avisos que no son problemas de los
+    assets es un informe que se deja de leer. La ausencia de tarjeta de sonido
+    se anuncia una vez, en `main`.
+    """
+    if not pygame.mixer.get_init():
+        return
+    try:
+        pygame.mixer.Sound(str(path))
+    except Exception as e:
+        WARNINGS.append(f"[SOUND LOAD FAILED] {path}: {e}")
+
+
+# Colour budgets for painted/rendered art, which a fixed palette cannot describe.
+# These are ceilings against uncontrolled growth (a photo pasted in, a PNG saved
+# from a lossy source), not style rules. Worst cases at the time of writing:
+#   - story/h03.png at 196,988 and title/logo.png at 266,590: the splash/story/
+#     title screens are painted 1448x1086 plates (AUD-105) — photo-range colour
+#     counts are their nature, so the ceilings just document them.
+#   - bg_aulas_near.png at 15,785: painted zone background from a student
+#     delivery (AUD-106), the same class.
+#   - bg_stage0_near.png at 195: the original indexed art the 512 budgets were
+#     set for; those lower limits stay.
+# The old 512/1024 budgets predate both replacements and flagged the delivered
+# art as broken — a tooling-drift failure, not an art failure (AUD-011).
+COLOR_BUDGETS: list[tuple[str, int]] = [
+    ("backgrounds/**/*.png", 20000),
+    ("backgrounds/*.png", 512),
+    ("story/*.png", 300000),
+    ("splash/*.png", 400000),
+    ("title/*.png", 400000),
+    # AUD-546 — mismo caso que la nota de `tileset_stage0.png` de abajo,
+    # aplicado a una entrega concreta en vez del genérico `tilesets/*.png`:
+    # `tileset_stage4_1_selva.png` (assets de autor generados por IA,
+    # 1774×887 usados como un tileset de baldosa 16×16 vía Tiled) mide
+    # 250.133 colores — muy por encima del techo general, y por el mismo
+    # motivo que la nota de abajo documenta: un lienzo pintado/generado no
+    # es paleta indexada, y forzarlo a la regla general lo marcaría como
+    # roto sin que el arte lo esté. Entrada específica, no se sube el
+    # techo genérico — el resto de `tilesets/*.png` sigue vigilado a
+    # 131072.
+    ("tilesets/tileset_stage4_1_selva.png", 300000),
+    # AUD-011: tileset_stage0.png currently holds 108,187 colours. That is far
+    # outside anything a 16x16 tile atlas should need and strongly suggests it
+    # was exported from a rescaled or lossily-compressed source rather than
+    # authored as pixel art. The budget is set above the current value so CI is
+    # not permanently red, but this needs an art-side decision — re-export the
+    # atlas from the source with nearest-neighbour scaling and no lossy
+    # round-trip. Tracked as refactor item R-15.
+    ("tilesets/*.png", 131072),
+    # AUD-527 — el panel de 9-slice del HUD pasó de relleno plano a
+    # degradado + antialiasing (decisión del dueño de modernizar el HUD).
+    # Mide 77-149 colores hoy; 256 da margen para retocar el degradado sin
+    # ser la barra libre de un tileset — sigue siendo un icono de unos
+    # pocos píxeles, no arte pintado a pantalla completa.
+    # AUD-535 — `heart_*.png` se retiró de aquí junto con los sprites: la
+    # vida dejó de ser una fila de corazones y no queda arte que medir.
+    ("ui/hud_frame.png", 256),
+]
+
+
+def check_color_budget(path: Path, budget: int) -> None:
+    """Warn when an image uses more distinct colours than its category allows."""
+    try:
+        raw = pygame.image.load(str(path))
+        img = raw.convert_alpha()
+    except Exception as e:
+        ERRORS.append(f"[LOAD FAIL] {path}  ({e})")
+        return
+
+    w, h = img.get_size()
+    na = pygame.surfarray.pixels3d(img)
+    alpha = pygame.surfarray.pixels_alpha(img) if (img.get_flags() & pygame.SRCALPHA) else None
+    seen: set[tuple[int, int, int]] = set()
+    for y in range(h):
+        for x in range(w):
+            if alpha is not None and alpha[x, y] == 0:
+                continue
+            seen.add((int(na[x, y, 0]), int(na[x, y, 1]), int(na[x, y, 2])))
+            if len(seen) > budget:
+                break
+        if len(seen) > budget:
+            break
+    del na
+    if alpha is not None:
+        del alpha
+
+    if len(seen) > budget:
+        rel = path.relative_to(ASSETS_DIR).as_posix()
+        ERRORS.append(
+            f"[COLOR BUDGET] {rel}: over {budget} distinct colours — "
+            f"looks like a lossy or rescaled export rather than authored art"
+        )
+
+
+def check_palette(path: Path) -> None:
+    """Verify that all pixels use only allowed palette colors for the sprite type."""
+    allowed = None
+    rel = path.relative_to(ASSETS_DIR).as_posix()
+    import fnmatch
+    for pattern, palette in SPRITE_PALETTES:
+        if fnmatch.fnmatch(rel, pattern):
+            allowed = palette
+            break
+    if allowed is None:
+        return
+
+    try:
+        raw = pygame.image.load(str(path))
+        img = raw.convert_alpha()
+    except Exception as e:
+        ERRORS.append(f"[LOAD FAIL] {path}  ({e})")
+        return
+
+    w, h = img.get_size()
+    na = pygame.surfarray.pixels3d(img)
+    alpha = pygame.surfarray.pixels_alpha(img) if (img.get_flags() & pygame.SRCALPHA) else None
+    bad: set[tuple[int, int, int]] = set()
+
+    for y in range(h):
+        for x in range(w):
+            if alpha is not None and alpha[x, y] == 0:
+                continue
+            r, g, b = int(na[x, y, 0]), int(na[x, y, 1]), int(na[x, y, 2])
+            if (r, g, b) not in allowed:
+                bad.add((r, g, b))
+                if len(bad) > 20:
+                    break
+        if len(bad) > 20:
+            break
+
+    if bad:
+        s = ", ".join(f"({r},{g},{b})" for r, g, b in sorted(bad)[:10])
+        ERRORS.append(f"[PALETTE] {rel}: {len(bad)} off-palette colors ({s})")
+
+
+def check_map(path: Path) -> None:
+    if not path.exists():
+        ERRORS.append(f"[MISSING MAP] {path}")
+
+
+def main() -> int:
+    pygame.init()
+    # El mezclador es opcional para validar: sólo hace falta si se van a
+    # *reproducir* sonidos, y aquí únicamente se comprueban archivos. Sin esta
+    # guarda, ejecutar el validador en una máquina sin tarjeta de sonido —una
+    # VM, WSL, un contenedor— moría con un traceback de ALSA que no tiene nada
+    # que ver con los assets. En CI funcionaba porque el workflow exporta
+    # SDL_AUDIODRIVER=dummy; quien lo ejecutara desde su portátil sin ese
+    # detalle recibía un error incomprensible sobre un script de validación de
+    # imágenes (AUD-059).
+    try:
+        pygame.mixer.init()
+    except pygame.error as exc:
+        print(f"  (audio no disponible: {exc} — se validan los archivos igual)")
+    pygame.display.set_mode((1, 1))
+
+    print(f"Validating assets in: {ASSETS_DIR}")
+    print()
+
+    # Fonts
+    for rel in REQUIRED_FONTS:
+        p = ASSETS_DIR / rel
+        check_file(p, "Font")
+        if p.exists():
+            check_font(p)
+
+    # Images
+    for rel in REQUIRED_IMAGES:
+        p = ASSETS_DIR / rel
+        check_file(p, "Image")
+
+    # Strict palette validation — indexed pixel art only (see SPRITE_PALETTES).
+    import fnmatch
+    checked: set[Path] = set()
+    for p in sorted(ASSETS_DIR.rglob("*.png")):
+        rel = p.relative_to(ASSETS_DIR).as_posix()
+        if any(fnmatch.fnmatch(rel, pattern) for pattern, _ in SPRITE_PALETTES):
+            if p not in checked:
+                checked.add(p)
+                check_palette(p)
+
+    # Colour-budget validation — painted/rendered art (backgrounds, tilesets).
+    for p in sorted(ASSETS_DIR.rglob("*.png")):
+        rel = p.relative_to(ASSETS_DIR).as_posix()
+        if p in checked:
+            continue
+        for pattern, budget in COLOR_BUDGETS:
+            if fnmatch.fnmatch(rel, pattern):
+                check_color_budget(p, budget)
+                break
+
+    # Datasets (AUD-587: sustituye a la exigencia del modelo pickle)
+    for rel in REQUIRED_DATASETS:
+        p = ASSETS_DIR / rel
+        check_file(p, "Dataset")
+        if p.exists():
+            check_dataset(p)
+
+    # Sounds
+    for rel in REQUIRED_SOUNDS:
+        p = ASSETS_DIR / rel
+        check_file(p, "Sound")
+        if p.exists():
+            check_sound(p)
+
+    # AUD-159 — la extensión de TODO el audio, no sólo el de la lista de
+    # requeridos: los cuatro ficheros que dejaban escenarios mudos no estaban
+    # en `REQUIRED_SOUNDS`, y por eso el validador pasaba en verde mientras el
+    # juego se jugaba en silencio.
+    for p in sorted(ASSETS_DIR.rglob("*")):
+        if p.is_file() and p.suffix.lower() in CABECERAS_DE_AUDIO:
+            check_audio_format(p)
+
+    # Report
+    if WARNINGS:
+        for w in WARNINGS:
+            print(f"  WARNING: {w}")
+
+    if ERRORS:
+        for e in ERRORS:
+            print(f"  ERROR: {e}")
+        print()
+        print(f"  {len(ERRORS)} error(s), {len(WARNINGS)} warning(s)")
+        pygame.quit()
+        return 1
+
+    print("  All assets validated successfully.")
+    print(f"  0 errors, {len(WARNINGS)} warning(s)")
+    pygame.quit()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
