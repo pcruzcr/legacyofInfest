@@ -40,6 +40,7 @@
 
 src/engine/core
 src/engine/input
+src/engine/scene
 
 # ── AUD-371: de 2 a 6 paquetes ────────────────────────────────────────
 #
@@ -51,11 +52,11 @@ src/engine/input
 # Medición del 2026-08-09, `mypy <paquete> --no-incremental`:
 #
 #   src/engine/audio      0 errores   ← entra
-#   src/engine/scene      0 errores   ← NO entra todavía, ver abajo
+#   src/engine/scene      0 errores   ← entra (AUD-614)
 #   src/engine/ui         2 errores   ← entra, arreglados (AUD-371)
 #   src/engine/utils      0 errores   ← entra
 #   src/framework/physics 0 errores   ← entra
-#   src/framework/world   0 errores   ← NO entra todavía, ver abajo
+#   src/framework/world   0 errores   ← entra (AUD-614)
 #   src/framework/ecs    17 errores
 #   src/framework/stage  27 errores
 #
@@ -65,7 +66,7 @@ src/engine/input
 # `list[list[object]]` que obligaba a castear en cada uso y a dos
 # `# type: ignore`. Arreglar el tipo borró los casts.
 #
-# Por qué `engine/scene` no entra (todavía)
+# Por qué `engine/scene` no entra (todavía) — YA ENTRA (AUD-614)
 # -----------------------------------------
 # Entra limpio **él**, y al entrar hace que mypy conozca `BaseScene` de verdad,
 # lo que destapa dos errores en `app.py` —que ya estaba en el trinquete— por el
@@ -74,8 +75,9 @@ src/engine/input
 # de otra sesión, así que no se commitea aquí. Es la fila siguiente del
 # trinquete y no cuesta nada: añadir la línea cuando ese trabajo aterrice.
 #
-# `framework/world` está limpio y también en vuelo (AUD-374). Misma espera.
+# `framework/world` está limpio y también en vuelo (AUD-374). Misma espera. — YA ENTRA (AUD-614)
 src/engine/audio
 src/engine/ui
 src/engine/utils
 src/framework/physics
+src/framework/world
