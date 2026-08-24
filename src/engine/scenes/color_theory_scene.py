@@ -29,6 +29,7 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.engine.core import settings
+from src.engine.core.i18n import _
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
@@ -50,8 +51,14 @@ if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
 
 
-MODE_NAMES = ["RGB EXPLORER", "HSV EXPLORER", "HSL EXPLORER", "CMYK EXPLORER",
-              "ALPHA BLEND", "CHALLENGE"]
+MODE_NAMES = [
+    _("RGB EXPLORER"),
+    _("HSV EXPLORER"),
+    _("HSL EXPLORER"),
+    _("CMYK EXPLORER"),
+    _("ALPHA BLEND"),
+    _("CHALLENGE"),
+]
 
 CHANNEL_COLORS = [(255, 60, 60), (60, 200, 60), (60, 60, 255), (200, 200, 60)]
 SLIDER_H = 10
@@ -407,7 +414,7 @@ class ColorTheoryScene(BaseScene):
                      "S", f"{self._s:.2f}")
         _draw_slider(surface, 10, y + FILA * 2, 300, self._v, (100, 200, 255),
                      "V", f"{self._v:.2f}")
-        hint = self._font_small.render("SHIFT to toggle step-by-step algorithm", True, COLOR_ACCENT)
+        hint = self._font_small.render(_("SHIFT to toggle step-by-step algorithm"), True, COLOR_ACCENT)
         surface.blit(hint, (10, y + 38))
 
     def _draw_hsl_ui(self, surface: pygame.Surface, y: int) -> None:
@@ -417,7 +424,7 @@ class ColorTheoryScene(BaseScene):
                      "S", f"{self._s:.2f}")
         _draw_slider(surface, 10, y + FILA * 2, 300, self._lightness, (100, 200, 200),
                      "L", f"{self._lightness:.2f}")
-        hint = self._font_small.render("SHIFT to toggle step-by-step algorithm", True, COLOR_ACCENT)
+        hint = self._font_small.render(_("SHIFT to toggle step-by-step algorithm"), True, COLOR_ACCENT)
         surface.blit(hint, (10, y + 38))
 
     def _draw_cmyk_ui(self, surface: pygame.Surface, y: int) -> None:

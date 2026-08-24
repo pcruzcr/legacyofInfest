@@ -6,6 +6,7 @@ import orjson
 import pygame
 
 from src.engine.core import settings
+from src.engine.core.i18n import _
 from src.engine.core.user_settings import user_data_dir
 from src.engine.input.action_map import DEFAULT_KEY_BINDINGS, Action
 from src.engine.scene.base_scene import BaseScene
@@ -44,20 +45,20 @@ def _key_name(key: int) -> str:
 
 
 _ACTION_LABELS: dict[Action, str] = {
-    Action.MOVE_LEFT: "Move Left",
-    Action.MOVE_RIGHT: "Move Right",
-    Action.MOVE_UP: "Move Up",
-    Action.MOVE_DOWN: "Move Down",
-    Action.JUMP: "Jump",
-    Action.CROUCH: "Crouch",
-    Action.SHORT_ATTACK: "Attack (Short)",
-    Action.LONG_ATTACK: "Attack (Long)",
-    Action.DASH: "Dash",
-    Action.GRAB: "Grab",
-    Action.RANGED_ATTACK: "Disparar",
-    Action.CONFIRM: "Confirm",
-    Action.CANCEL: "Cancel",
-    Action.PAUSE: "Pause",
+    Action.MOVE_LEFT: _("Move Left"),
+    Action.MOVE_RIGHT: _("Move Right"),
+    Action.MOVE_UP: _("Move Up"),
+    Action.MOVE_DOWN: _("Move Down"),
+    Action.JUMP: _("Jump"),
+    Action.CROUCH: _("Crouch"),
+    Action.SHORT_ATTACK: _("Attack (Short)"),
+    Action.LONG_ATTACK: _("Attack (Long)"),
+    Action.DASH: _("Dash"),
+    Action.GRAB: _("Grab"),
+    Action.RANGED_ATTACK: _("Disparar"),
+    Action.CONFIRM: _("Confirm"),
+    Action.CANCEL: _("Cancel"),
+    Action.PAUSE: _("Pause"),
 }
 
 

@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING
 
 import pygame
 
+from src.engine.core.i18n import _
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
@@ -60,15 +61,20 @@ _ANCHO_COLUMNA = 260
 _CONTENT_TOP = TOP_BAR_H + 4
 _PANEL_TOP = TOP_BAR_H
 
-MODE_NAMES = ["FREE MOVE", "CHASE (normalized)", "ORBIT (dot product)", "DISTANCE CHECK"]
+MODE_NAMES = [
+    _("FREE MOVE"),
+    _("CHASE (normalized)"),
+    _("ORBIT (dot product)"),
+    _("DISTANCE CHECK"),
+]
 
 VECTOR_QUIZZES = [
-    {"question": "What does Vector2.normalize() return?", "options": ["A zero vector", "A unit vector (length=1)", "The vector scaled by 2", "The vector's angle"], "answer": 1},
-    {"question": "What is the dot product of two perpendicular vectors?", "options": ["1", "0", "Their product", "Undefined"], "answer": 1},
-    {"question": "What curve uses 4 control points?", "options": ["Linear", "Quadratic Bezier", "Cubic Bezier", "Catmull-Rom"], "answer": 2},
-    {"question": "What does distance() between two points return?", "options": ["The straight-line length", "The X difference", "The Y difference", "The sum of coordinates"], "answer": 0},
-    {"question": "What does a normalized vector represent?", "options": ["Magnitude only", "Direction only", "Position only", "Speed only"], "answer": 1},
-    {"question": "What is cos(90 degrees)?", "options": ["0", "1", "-1", "0.5"], "answer": 0},
+    {"question": _("What does Vector2.normalize() return?"), "options": [_("A zero vector"), _("A unit vector (length=1)"), _("The vector scaled by 2"), _("The vector's angle")], "answer": 1},
+    {"question": _("What is the dot product of two perpendicular vectors?"), "options": [_("1"), _("0"), _("Their product"), _("Undefined")], "answer": 1},
+    {"question": _("What curve uses 4 control points?"), "options": [_("Linear"), _("Quadratic Bezier"), _("Cubic Bezier"), _("Catmull-Rom")], "answer": 2},
+    {"question": _("What does distance() between two points return?"), "options": [_("The straight-line length"), _("The X difference"), _("The Y difference"), _("The sum of coordinates")], "answer": 0},
+    {"question": _("What does a normalized vector represent?"), "options": [_("Magnitude only"), _("Direction only"), _("Position only"), _("Speed only")], "answer": 1},
+    {"question": _("What is cos(90 degrees)?"), "options": [_("0"), _("1"), _("-1"), _("0.5")], "answer": 0},
 ]
 
 #: Margen que se deja a los puntos para que su círculo y su etiqueta no

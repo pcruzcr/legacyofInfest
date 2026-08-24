@@ -17,6 +17,7 @@ from typing import Any
 import pygame
 
 from src.engine.core import settings
+from src.engine.core.i18n import _
 from src.engine.scenes.demo_common import (
     COLOR_ACCENT,
     COLOR_HIGHLIGHT,
@@ -79,7 +80,7 @@ class QuizManager:
 
     def _current_question(self) -> dict[str, Any]:
         return self._questions[self._current] if self._questions else {
-            "question": "No questions loaded",
+            "question": _("No questions loaded"),
             "options": ["OK"],
             "answer": 0,
         }
@@ -106,7 +107,7 @@ class QuizManager:
         pygame.draw.rect(overlay, (20, 20, 40), (bx, by, box_w, box_h))
         pygame.draw.rect(overlay, COLOR_HIGHLIGHT, (bx, by, box_w, box_h), 1)
 
-        title = self._font_answer.render("QUIZ", True, COLOR_HIGHLIGHT)
+        title = self._font_answer.render(_("QUIZ"), True, COLOR_HIGHLIGHT)
         overlay.blit(title, (bx + 8, by + 6))
 
         qtext = q.get("question", "")
@@ -147,7 +148,11 @@ class QuizManager:
             overlay.blit(rt, (bx + 12, by + box_h - 22))
 
         progress = self._font_question.render(
-            f"  {self._current + 1}/{len(self._questions)}  |  Score: {self._score}/{self._total_answered}",
+            _("  {current}/{total}  |  Score: {score}").format(
+                current=self._current + 1,
+                total=len(self._questions),
+                score=f"{self._score}/{self._total_answered}",
+            ),
             True, COLOR_ACCENT)
         overlay.blit(progress, (bx + 12, by + box_h - 14))
 
