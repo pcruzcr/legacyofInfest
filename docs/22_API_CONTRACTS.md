@@ -1217,6 +1217,8 @@ class MessageBox:
     def caja_rect(self) -> pygame.Rect:
         """Rectángulo del cuadro, ya escalado (AUD-453 — antes usaba la
         maqueta de 224 px fija)."""
+    def rect_del_panel(self) -> pygame.Rect:
+        """Panel visible, centrado y del tamaño del texto (AUD-611)."""
 
     @property
     def is_visible(self) -> bool: ...
@@ -1228,6 +1230,12 @@ class MessageBox:
 > `MessageBox` además recibe el `event_bus` en `__init__`.
 > **AUD-455.** Faltaban `destroy()` y `caja_rect()`. Verificado contra
 > `src/engine/ui/message_box.py`.
+> **AUD-611.** El cuadro se adapta al texto: ajuste de línea por píxeles
+> con la fuente real, panel del tamaño del contenido (`rect_del_panel`),
+> estilo del tema (panel redondeado con sombra) y bloque renderizado una
+> vez por mensaje — la máquina de escribir recorta superficies hechas.
+> Piezas compartidas en `src/engine/ui/text_panel.py`
+> (`FlujoDeTexto`, `dibuja_panel`, `dibuja_ficha`).
 
 ### 7.3 `src/engine/ui/screen_banner.py`
 
