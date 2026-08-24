@@ -4050,11 +4050,12 @@ tanto, el código no cambia: el fallback es el contrato.
 
 ---
 
-## [GAP-073] La reencarnación (prestigio) no tiene pantalla: el motor la ofrece y nadie puede pulsarla
+## ~~[GAP-073] La reencarnación (prestigio) no tiene pantalla: el motor la ofrece y nadie puede pulsarla~~ *(Resuelto — AUD-610)*
 
 - **File:** `src/engine/core/inventory.py` (`Inventory.reencarnar`,
   `get_xp_multiplier`), `src/engine/core/experience.py`
-  (`ExperienceSystem.grant`), `docs/60_GUIA_COMPLETA_DEL_MOTOR.md` §11
+  (`ExperienceSystem.grant`), `src/engine/scenes/skill_tree_scene.py`,
+  `docs/60_GUIA_COMPLETA_DEL_MOTOR.md` §11
 - **Phase:** Sesión AUD-602…609 (2026-08-23), continuación de la economía
   de AUD-559.
 - **Reason:** La mecánica de prestigio está completa y probada en el
@@ -4069,9 +4070,12 @@ tanto, el código no cambia: el fallback es el contrato.
   ganarlo; el multiplicador queda en 1.0 toda la partida. El estado no se
   corrompe por nada: sólo es contenido inalcanzable, la forma suave del
   defecto recurrente de este repositorio.
-- **Resolution plan:** una entrada de menú o un botón en la futura
-  pantalla del árbol (`docs/87` §3 ya pide esa pantalla para los puntos
-  de habilidad) que muestre nivel actual, beneficio siguiente (+5 %) y
-  pida confirmación explícita — reencarnar destruye progreso y un
-  accidente aquí no tiene vuelta atrás. Cerrar este GAP con la prueba de
-  integración que pulse ese botón.
+- **Resolution:** AUD-610 (2026-08-23) — `SkillTreeScene` es la pantalla,
+  porque ahí se ve lo que se pierde: la línea de cabecera enseña
+  «Prestigio N · XP xM» y, al llegar al nivel exigido, la pista **F —
+  Reencarnar**. Confirmación en dos pasos con aviso en color WARNING y
+  Cancelar deshaciendo la pregunta ANTES que salir del menú (perder el
+  menú por perder la pregunta sería la peor de las dos salidas). Pruebas:
+  `tests/test_la_pantalla_del_prestigio.py` (nivel insuficiente no
+  pregunta; dos pulsaciones ejecutan y resetean exp/árbol; Cancelar
+  deshace y luego sale; el camino por `update` llega al mismo sitio).

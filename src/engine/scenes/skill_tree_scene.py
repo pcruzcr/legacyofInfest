@@ -34,6 +34,7 @@ import pygame
 
 from src.engine.core.events import Events
 from src.engine.core.experience import ExperienceSystem
+from src.engine.core.inventory import Inventory
 from src.engine.core.skill_tree import CATALOGO, ArbolDeHabilidades
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
@@ -59,10 +60,15 @@ class SkillTreeScene(BaseScene):
         #: "Habilidades", donde Cancelar no puede hacer `pop()` de la pila
         #: real.
         self._standalone = standalone
+        #: AUD-610 — GAP-073: la reencarnación necesita confirmación en dos
+        #: pasos. Destruye progreso y un accidente aquí no tiene vuelta
+        #: atrás: la primera pulsación pregunta, la segunda ejecuta.
+        self._confirmar_reencarnar: bool = False
 
     def on_enter(self) -> None:
         self._seleccion = 0
         self._mensaje = ""
+        self._confirmar_reencarnar = False
 
     def on_exit(self) -> None:
         pass
@@ -83,8 +89,18 @@ class SkillTreeScene(BaseScene):
             self._mover(1)
         elif im.is_action_just_pressed(Action.CONFIRM):
             self._comprar()
+        elif im.is_action_just_pressed(Action.RANGED_ATTACK):
+            self._intentar_reencarnar()
         elif im.is_action_just_pressed(Action.CANCEL):
-            self._volver()
+            # AUD-610 — si hay una confirmación de reencarnación en marcha,
+            # Cancelar la deshace ANTES de salir: perder la pregunta por
+            # perder el menú sería la peor de las dos salidas.
+            if self._confirmar_reencarnar:
+                self._confirmar_reencarnar = False
+                self._mensaje = ""
+                self._mensaje_timer = 0.0
+            else:
+                self._volver()
 
     def _mover(self, paso: int) -> None:
         self._seleccion = (self._seleccion + paso) % len(CATALOGO)
@@ -106,6 +122,39 @@ class SkillTreeScene(BaseScene):
         self._mensaje = texto
         self._mensaje_timer = 3.0
 
+    # ── reencarnación (AUD-610, GAP-073) ──────────────────────────
+    def _intentar_reencarnar(self) -> None:
+        """Dos pulsaciones para tirar la partida progresiva a cambio de
+        prestigio. La puerta del motor es `Inventory.reencarnar`; ésta es
+        la pantalla que faltaba para poder pulsarla."""
+        inventario = Inventory()
+        exp = ExperienceSystem.get_instance()
+        arbol = ArbolDeHabilidades.get_instance()
+
+        if exp.nivel < Inventory.NIVEL_DE_REENCARNACION:
+            self._avisar(
+                "Reencarnar exige nivel "
+                f"{Inventory.NIVEL_DE_REENCARNACION} (tienes {exp.nivel})."
+            )
+            self.context.event_bus.emit(Events.SFX_MENU_CANCEL)
+            return
+        if not self._confirmar_reencarnar:
+            self._confirmar_reencarnar = True
+            self._avisar(
+                "REENCARNAR: pierdes nivel y árbol. Pulsa F otra vez."
+            )
+            return
+        if inventario.reencarnar(exp, arbol):
+            self._avisar(
+                f"Prestigio {inventario.prestigio}: "
+                "+5 % de experiencia para siempre."
+            )
+            self.context.event_bus.emit(Events.SFX_MENU_CONFIRM)
+        else:
+            self._avisar("No se pudo reencarnar.")
+            self.context.event_bus.emit(Events.SFX_MENU_CANCEL)
+        self._confirmar_reencarnar = False
+
     def _volver(self) -> None:
         # AUD-533 — mismo arreglo que `InventoryScene`: `pop()` vuelve a
         # quien haya empujado esta pantalla (el título o una partida en
@@ -119,6 +168,7 @@ class SkillTreeScene(BaseScene):
 
         arbol = ArbolDeHabilidades.get_instance()
         exp = ExperienceSystem.get_instance()
+        inventario = Inventory()
 
         y = 46
         saldo = self._font_nodo.render(
@@ -127,6 +177,18 @@ class SkillTreeScene(BaseScene):
         )
         surface.blit(saldo, (Theme.SPACE_L, y))
         y += saldo.get_height() + Theme.SPACE_M
+        # AUD-610 — el prestigio se lee donde se decide: multiplicador
+        # actual y qué compraría otro punto.
+        prestigio = self._font_desc.render(
+            f"Prestigio {inventario.prestigio}  ·  "
+            f"XP x{inventario.get_xp_multiplier():.2f}"
+            + (f"  (F: reencarnar, nivel "
+               f"{Inventory.NIVEL_DE_REENCARNACION})"
+               if exp.nivel >= Inventory.NIVEL_DE_REENCARNACION else ""),
+            True, Theme.TEXT_MUTED,
+        )
+        surface.blit(prestigio, (Theme.SPACE_L, y))
+        y += prestigio.get_height() + Theme.SPACE_S
 
         for indice, nodo in enumerate(CATALOGO):
             elegido = indice == self._seleccion
@@ -153,8 +215,12 @@ class SkillTreeScene(BaseScene):
             y += self._font_desc.get_height() + Theme.SPACE_S
 
         if self._mensaje:
-            surface.blit(self._font_desc.render(self._mensaje, True, Theme.ACCENT),
+            color = Theme.WARNING if self._confirmar_reencarnar else Theme.ACCENT
+            surface.blit(self._font_desc.render(self._mensaje, True, color),
                          (Theme.SPACE_L, y + Theme.SPACE_S))
 
-        draw_key_hints(surface, [("↑↓", "Elegir"), ("Enter", "Subir rango"),
-                                 ("Esc", "Volver")])
+        pistas = [("↑↓", "Elegir"), ("Enter", "Subir rango")]
+        if exp.nivel >= Inventory.NIVEL_DE_REENCARNACION:
+            pistas.append(("F", "Reencarnar"))
+        pistas.append(("Esc", "Volver"))
+        draw_key_hints(surface, pistas)
