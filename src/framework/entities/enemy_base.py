@@ -572,6 +572,12 @@ class EnemyBase(BaseEntity):
         self._death_timer = 0.5
         self._flash_counter = 0.0
         self._flash_visible = True
+        # AUD-636 — destello blanco de muerte: se emite ANTES de ENEMY_DIED
+        # para que el destello llegue el mismo fotograma que la sangre.
+        self._event_bus.emit(
+            Events.VFX_KILL_FLASH,
+            pos=(self.position.x, self.position.y),
+        )
         # BUG-058 FIX: Reset _was_alive so revived enemies re-trigger on_enemy_died
         self._was_alive = True
         # BUG-031 FIX: Keep is_alive=True until death animation completes

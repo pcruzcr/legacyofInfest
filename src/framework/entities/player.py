@@ -325,6 +325,14 @@ class Player(BaseEntity):
         self._pendientes: list[Any] = []
         #: ¿Pisaba suelo antes de resolver este fotograma? Ver `_resolve_collision`.
         self._venia_del_suelo: bool = False
+        #: AUD-636 — Squash & Stretch. Factores de escala del sprite, con
+        #: identidad (1.0) como reposo. `_squash_y < 1` aplasta (aterrizaje),
+        #: `> 1` estira (salto); `_squash_x` compensa para conservar el área.
+        #: El decay vive en `_tick_timers`; el dibujado los aplica anclando
+        #: abajo-centro — si el sprite encoge desde su centro flota sobre el
+        #: suelo y deja de leerse como masa.
+        self._squash_x: float = 1.0
+        self._squash_y: float = 1.0
 
         # --- State pattern ---
         self._state_instance: PlayerStateBase
@@ -987,6 +995,20 @@ class Player(BaseEntity):
             offset_y = 0 if self._state_instance.state_enum == PlayerState.CROUCHING else self.rect.height - SPRITE_H
 
             destino = (screen_x + offset_x, screen_y + offset_y)
+
+            # AUD-636 — Squash & Stretch. Sólo se paga el `transform.scale`
+            # cuando hay deformación real: el 99 % de los fotogramas el
+            # jugador está en 1.0/1.0 y este bloque es dos comparaciones.
+            if (self._squash_x != 1.0 or self._squash_y != 1.0):
+                ancho = max(1, int(frame.get_width() * self._squash_x))
+                alto = max(1, int(frame.get_height() * self._squash_y))
+                frame = pygame.transform.scale(frame, (ancho, alto))
+                # Anclado ABAJO-centro: si encoge desde su centro, los pies
+                # flotan sobre el suelo y la masa deja de leerse.
+                dx = (SPRITE_W - ancho) // 2
+                dy = SPRITE_H - alto
+                destino = (screen_x + offset_x + dx, screen_y + offset_y + dy)
+
             dibujar_con_contorno(surface, frame, destino)
             return
 
@@ -1005,8 +1027,54 @@ class Player(BaseEntity):
     # Timer ticking
     # ──────────────────────────────────────────────
 
+    #: AUD-636 — cuánto tarda el squash en volver a identidad, en 1/s.
+    _SQUASH_RETORNO: float = 10.0
+    #: Aplastamiento máximo. A la velocidad de caída máxima (500 px/s) el
+    #: sprite llega a 0,72 de alto — se lee como impacto sin romper la silueta.
+    _SQUASH_MAX: float = 0.28
+
+    def aplicar_squash_por_aterrizaje(self, velocidad_caida: float) -> None:
+        """Aplasta el sprite al aterrizar, proporcional a la caída (AUD-636).
+
+        La proporcionalidad es la mitad del efecto: caer dos baldosas y caer
+        a un pozo no pueden deformar igual, o el grado deja de informar.
+        `fuerza` viaja también en `VFX_LAND_DUST` para que las partículas
+        hereden la misma lectura.
+        """
+        fuerza = max(0.0, min(1.0, abs(velocidad_caida) / settings.PLAYER_MAX_FALL_SPEED))
+        # Umbral: una pisada de escalón no aplasta nada.
+        if fuerza < 0.12:
+            return
+        aplaste = self._SQUASH_MAX * fuerza
+        self._squash_y = 1.0 - aplaste
+        # Conserva el área visual: lo que se pierde en alto se gana en ancho.
+        self._squash_x = 1.0 + aplaste * 0.7
+        self._event_bus.emit(
+            Events.VFX_LAND_DUST,
+            pos=(self.rect.centerx, self.rect.bottom),
+            fuerza=fuerza,
+        )
+
+    def aplicar_stretch_por_salto(self) -> None:
+        """Estira el sprite al despegar (AUD-636). Fijo: todo salto pesa lo
+        mismo porque el impulso es constante (`perfil.salto_impulso`)."""
+        self._squash_y = 1.14
+        self._squash_x = 0.9
+        self._event_bus.emit(
+            Events.VFX_JUMP_DUST,
+            pos=(self.rect.centerx, self.rect.bottom),
+        )
+
     def _tick_timers(self, dt: float) -> None:
         """Tick all cooldown and duration timers."""
+        # AUD-636 — retorno del squash a identidad. Exponencial y acotado:
+        # multiplicar por un factor < 1 converge sin sobrepasar.
+        if self._squash_x != 1.0 or self._squash_y != 1.0:
+            decaimiento = min(1.0, dt * self._SQUASH_RETORNO)
+            self._squash_x += (1.0 - self._squash_x) * decaimiento
+            self._squash_y += (1.0 - self._squash_y) * decaimiento
+            if abs(self._squash_x - 1.0) < 0.005 and abs(self._squash_y - 1.0) < 0.005:
+                self._squash_x = self._squash_y = 1.0
         if self._invincibility_timer > 0:
             self._invincibility_timer -= dt
             period = 0.1
@@ -1246,6 +1314,10 @@ class Player(BaseEntity):
         del ledge grab viven ahora en `resolver_eje_x` y `resolver_eje_y`,
         que son el código que las cumple.
         """
+        # AUD-636 — la velocidad de ANTES de resolver: el resolutor anula
+        # `velocity.y` al aterrizar, y el aplastamiento necesita saber con
+        # cuánta fuerza se llegó al suelo, no que ahora vale cero.
+        vy_antes = self.velocity.y
         estado = self._estado_de_movimiento_para_resolver()
         eje_x = resolver_eje_x(estado, dt, collision_rects)
         if self.perfil.modo == PLATAFORMAS:
@@ -1268,6 +1340,11 @@ class Player(BaseEntity):
         self._venia_del_suelo = estado.venia_del_suelo
         if eje_y.aterrizo_en == "suelo":
             self._event_bus.emit(Events.SFX_PLAYER_LAND)
+            # AUD-636 — sólo si venía CAYENDO: aterrizar tras un salto cortado
+            # (vy ≈ 0) no aplasta ni suelta polvo; la deformación es la señal
+            # de impacto, y sin impacto no hay señal.
+            if vy_antes > 0.0:
+                self.aplicar_squash_por_aterrizaje(vy_antes)
             self._air_dash_count = 0
             self._air_jumps_used = 0
 

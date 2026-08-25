@@ -124,6 +124,9 @@ def _do_jump(player: Player) -> None:
     was_grounded = player.is_grounded
     was_truly_airborne = not was_grounded and player._coyote_counter >= player.perfil.coyote_frames
     player.velocity.y = player.perfil.salto_impulso
+    # AUD-636 — estirar al despegar. Va después de fijar la velocidad para
+    # que el fotograma del impulso ya se vea alargado.
+    player.aplicar_stretch_por_salto()
     player.is_grounded = False
     player._coyote_counter = player.perfil.coyote_frames + 1
     player._jump_cut_applied = False

@@ -266,6 +266,33 @@ class SenalesDeEscenario:
             self._camera.apply_shake(amplitude=4.0, duration=0.2,
                                      direccion=(0.0, 1.0))
 
+        # AUD-636 — polvo de aterrizaje. La fuerza (0-1) escala la cantidad:
+        # una caída corta levanta poco polvo y una larga una nube. El emisor
+        # emite dos ráfagas en vez de inventar un `count` dinámico — el
+        # `BurstConfig` es inmutable por diseño.
+        def _on_vfx_land_dust(**data: Any) -> None:
+            pos = data.get("pos", (0, 0))
+            fuerza = max(0.0, min(1.0, float(data.get("fuerza", 0.5))))
+            self._particle_system.get_emitter("dust").emit(
+                float(pos[0]), float(pos[1]), HitEffects.DUST_LAND,
+            )
+            if fuerza > 0.6:
+                self._particle_system.get_emitter("dust").emit(
+                    float(pos[0]) + 4, float(pos[1]), HitEffects.DUST_LAND,
+                )
+
+        def _on_vfx_jump_dust(**data: Any) -> None:
+            pos = data.get("pos", (0, 0))
+            self._particle_system.get_emitter("dust").emit(
+                float(pos[0]), float(pos[1]), HitEffects.DUST_JUMP,
+            )
+
+        def _on_vfx_kill_flash(**data: Any) -> None:
+            pos = data.get("pos", (0, 0))
+            self._particle_system.get_emitter("dust").emit(
+                float(pos[0]), float(pos[1]), HitEffects.KILL_FLASH,
+            )
+
         def _on_vfx_ultimate(**data: Any) -> None:
             pos = data.get("pos", (0, 0))
             self._particle_system.get_emitter("parry").emit(
@@ -326,6 +353,14 @@ class SenalesDeEscenario:
             )
         self.context.event_bus.subscribe(Events.VFX_MUSGO_STEP, _on_vfx_musgo_step)
         self._vfx_handlers[Events.VFX_MUSGO_STEP] = _on_vfx_musgo_step
+
+        # AUD-636 — polvo de aterrizaje/salto y destello de muerte.
+        self.context.event_bus.subscribe(Events.VFX_LAND_DUST, _on_vfx_land_dust)
+        self._vfx_handlers[Events.VFX_LAND_DUST] = _on_vfx_land_dust
+        self.context.event_bus.subscribe(Events.VFX_JUMP_DUST, _on_vfx_jump_dust)
+        self._vfx_handlers[Events.VFX_JUMP_DUST] = _on_vfx_jump_dust
+        self.context.event_bus.subscribe(Events.VFX_KILL_FLASH, _on_vfx_kill_flash)
+        self._vfx_handlers[Events.VFX_KILL_FLASH] = _on_vfx_kill_flash
 
         def _on_music_stinger(**data: Any) -> None:
             name = data.get("name", "stinger_boss_phase")

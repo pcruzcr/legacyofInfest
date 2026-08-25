@@ -83,6 +83,13 @@ class Events:
     """Emitted on slam attack. Payload: pos."""
     VFX_ULTIMATE: str = "VFX_ULTIMATE"
     """Emitted on ultimate attack. Payload: pos."""
+    #: AUD-636 — polvo de aterrizaje. Payload: pos, fuerza (0-1, proporcional
+    #: a la velocidad de caída). El jugador emite; `senales.py` pinta.
+    VFX_LAND_DUST: str = "VFX_LAND_DUST"
+    #: AUD-636 — polvo de despegue al saltar. Payload: pos.
+    VFX_JUMP_DUST: str = "VFX_JUMP_DUST"
+    #: AUD-636 — destello blanco de muerte enemiga. Payload: pos.
+    VFX_KILL_FLASH: str = "VFX_KILL_FLASH"
     VFX_BUBBLE: str = "VFX_BUBBLE"
     """Emitted by SwimmingState. Payload: pos."""
     VFX_MUSGO_STEP: str = "VFX_MUSGO_STEP"

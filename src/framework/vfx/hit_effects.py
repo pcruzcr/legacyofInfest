@@ -92,6 +92,33 @@ class HitEffects:
         friction=0.88, gravity=-120.0,
     )
 
+    #: AUD-636 — polvo de aterrizaje. Gravedad ligeramente NEGATIVA: el polvo
+    #: se levanta del suelo y flota un instante antes de morir, no cae como
+    #: una piedra. Color tierra neutra — el material específico lo tiñe quien
+    #: quiera más adelante; hoy un solo tono basta y no inventa registro.
+    DUST_LAND = BurstConfig(
+        count=6, speed=40.0, lifetime=0.35,
+        size=(2, 4), color=(165, 152, 130), spread=140.0,
+        friction=0.85, gravity=-40.0,
+    )
+
+    #: AUD-636 — polvo de despegue. Menos cantidad y hacia atrás: es la
+    #: huella del impulso, no una nube.
+    DUST_JUMP = BurstConfig(
+        count=4, speed=30.0, lifetime=0.25,
+        size=(2, 3), color=(170, 160, 140), spread=100.0,
+        friction=0.9, gravity=50.0,
+    )
+
+    #: AUD-636 — destello blanco de muerte. Núcleo corto y blanco encima de
+    #: la sangre roja de siempre: la sangre dice «carne», el destello dice
+    #: «acabó». Los dos juntos se leen en medio segundo sin contar fotogramas.
+    KILL_FLASH = BurstConfig(
+        count=10, speed=70.0, lifetime=0.22,
+        size=(2, 5), color=(255, 255, 255), spread=360.0,
+        friction=0.9,
+    )
+
     @staticmethod
     def get_for_damage(damage: float) -> BurstConfig:
         if damage >= 1.0:
