@@ -371,6 +371,23 @@ class GLRenderer:
         self._create_quad(w, h)
         self._initialized = True
 
+    def set_godray_origin_from_sun(self, altura_solar: float, azimut_solar: float) -> None:
+        """Actualiza `godray_origin` (UV 0-1) a partir de la posición del sol.
+
+        `altura_solar`: -1 (medianoche) a 1 (mediodía).
+        `azimut_solar`: -1 (este) a 1 (oeste), 0 = cenit.
+
+        Convierte a coordenadas UV de pantalla (0-1), donde (0,0) es
+        esquina superior-izquierda y (1,1) inferior-derecha, que es lo
+        que el sombreador de godray espera.
+        """
+        # azimut_solar: -1 (este) -> 1 (oeste). En UV: 0 (izq) -> 1 (der).
+        u = (azimut_solar + 1.0) * 0.5
+        # altura_solar: -1 (noche) -> 1 (mediodía). En UV: 0 (arriba) -> 1 (abajo).
+        # El sol a mediodía (altura=1) debe estar en y=0 (arriba).
+        v = (1.0 - altura_solar) * 0.5
+        self.config.godray_origin = (u, v)
+
     def _create_fbos(self, w: int, h: int) -> None:
         ctx = self.ctx
         if ctx is None:

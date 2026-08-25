@@ -697,6 +697,13 @@ class App:
                 cast("EscenaConRutaDeGPU", escena).dibujar_ui(
                     self._ui_overlay_surface)
                 overlay = self._ui_overlay_surface
+            # AUD-622 — actualiza el origen de los godrays según la posición del sol.
+            # La escena expone su EnvironmentState en `_ambiente` (ambiente.py).
+            if hasattr(escena, "_ambiente") and escena._ambiente is not None:
+                self._gl_renderer.set_godray_origin_from_sun(
+                    escena._ambiente.altura_solar,
+                    escena._ambiente.azimut_solar,
+                )
             self._gl_renderer.render(
                 self.internal_surface, self._current_light_surface(),
                 overlay=overlay,
