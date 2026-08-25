@@ -110,6 +110,9 @@ _PLAYER_SPRITE_MAP: dict[str, tuple[str, int]] = {
     "ULTIMATE": ("player_long_attack.png", 10),
     "AERIAL_ATTACK": ("player_short_attack.png", 6),
     "AERIAL_SLAM": ("player_short_attack.png", 6),
+    # AUD-619 — el pisotón reutiliza la hoja del ataque corto: sin arte
+    # propio, una silueta coherente vale más que una inventada (AUD-558).
+    "GROUND_POUND": ("player_short_attack.png", 6),
     "AIR_CHASE": ("player_jump.png", 3),
     "CHARGE_RELEASE": ("player_short_attack.png", 4),
     "LEDGE_GRAB": ("player_jump.png", 2),
@@ -150,6 +153,9 @@ _PLAYER_ANIM_FPS: dict[str, float] = {
     "ULTIMATE": 16.0,
     "AERIAL_ATTACK": 18.0,
     "AERIAL_SLAM": 16.0,
+    # AUD-619 — la caída del pisotón es corta; a 14 fps recorre la hoja
+    # antes de tocar suelo, que es justo lo que se ve.
+    "GROUND_POUND": 14.0,
     "AIR_CHASE": 12.0,
     "CHARGE_RELEASE": 14.0,
 }
@@ -182,6 +188,7 @@ class PlayerState(str, Enum):
     ULTIMATE = "ULTIMATE"
     AERIAL_ATTACK = "AERIAL_ATTACK"
     AERIAL_SLAM = "AERIAL_SLAM"
+    GROUND_POUND = "GROUND_POUND"
     AIR_CHASE = "AIR_CHASE"
     CHARGE_RELEASE = "CHARGE_RELEASE"
 
