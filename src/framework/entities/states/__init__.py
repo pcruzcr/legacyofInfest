@@ -19,6 +19,7 @@ from src.framework.entities.states.airborne import (
     AirborneState,
     AirChaseState,
     FallingState,
+    GroundPoundState,
     JumpingState,
 )
 from src.framework.entities.states.attack import (
@@ -81,6 +82,7 @@ __all__ = (
     "DyingState",
     "FallingState",
     "GrabState",
+    "GroundPoundState",
     "HurtState",
     "IdleState",
     "JumpingState",

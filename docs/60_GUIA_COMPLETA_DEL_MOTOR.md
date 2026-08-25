@@ -29,7 +29,7 @@ date_processed: "2026-07-31"
 2. [Anatomía de un escenario TMX](#2)
 3. [Propiedades del mapa — las 17](#3)
 4. [Los 78 tipos de objeto, uno por uno](#4)
-5. [El jugador: 27 estados y qué los provoca](#5)
+5. [El jugador: 28 estados y qué los provoca](#5)
 6. [Enemigos: 37 tipos y 13 estados](#6)
 7. [Jefes](#7)
 8. [Iluminación, post-procesado y VFX](#8)
@@ -666,7 +666,7 @@ suelo del combate y lo que alcance su salto.
 ---
 
 <a id="5"></a>
-## 5. El jugador: 27 estados y qué los provoca
+## 5. El jugador: 28 estados y qué los provoca
 
 ### Controles por defecto
 
@@ -734,12 +734,12 @@ vez, diseña con **3 baldosas**. Los huecos de 4 y 5 son contenido para quien ya
 domina el salto aéreo — colócalos donde fallar cueste poco, no en el camino
 principal. `python -m tests.playtest.jump_bench` imprime la tabla completa.
 
-### Los 27 estados
+### Los 28 estados
 
 | Grupo | Estados |
 |---|---|
 | Suelo | `IDLE` `WALKING` `CROUCHING` `SLIDE` |
-| Aire | `JUMPING` `FALLING` `DASHING` `WALL_SLIDE` `LEDGE_GRAB` `AIR_CHASE` |
+| Aire | `JUMPING` `FALLING` `DASHING` `WALL_SLIDE` `LEDGE_GRAB` `AIR_CHASE` `GROUND_POUND` |
 | Ataque | `SHORT_ATTACK` `LONG_ATTACK` `CHARGE_ATTACK` `CHARGE_RELEASE` `DASH_ATTACK` `AERIAL_ATTACK` `AERIAL_SLAM` `ULTIMATE` |
 | Defensa | `PARRY` |
 | Agarre | `GRAB` `THROW` `CLIMBING` `ZIPLINE` |
@@ -753,6 +753,14 @@ Como diseñador no invocas estados: colocas el objeto y el estado ocurre.
 invocas tú: `Action.SHORT_ATTACK` dentro de `SWIMMING` — existe para
 romper `BreakableBlock` bajo el agua, mismo sistema genérico que en
 tierra firme.
+
+**`GROUND_POUND`** (AUD-619) se invoca con abajo mantenido + ataque corto
+en el aire: anula el momentum horizontal, cae recto y, al tocar suelo,
+suelta una onda de daño a ambos lados. Está bajo el candado
+(`skill_ground_pound`), como el dash y el doble salto. No es lo mismo que
+`AERIAL_SLAM`: aquél es el remate de combo aéreo con pogo; éste es una
+herramienta deliberada de posicionamiento accesible desde cualquier
+caída.
 
 **`ULTIMATE`** se carga golpeando y se lanza con `U`. Si tu nivel no da
 enemigos suficientes antes del tramo final, el jugador nunca lo verá.

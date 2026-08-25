@@ -12,6 +12,7 @@ from src.framework.entities.states.helpers import (
     _handle_grounded_jump_input,
     _handle_ultimate_input,
     _handle_wall_jump,
+    _tiene_habilidad,
 )
 
 if TYPE_CHECKING:
@@ -39,6 +40,18 @@ class AirborneState(PlayerStateBase):
             player._change_state_instance(DashingState())
             return
 
+        # AUD-619 — el pisotón aéreo: abajo mantenido + ataque corto en el
+        # aire. Va ANTES del ataque aéreo porque ambos leen `short_attack`,
+        # y sin abajo el ataque corto aéreo de siempre sigue intacto. La
+        # habilidad se consulta como el dash y el doble salto (AUD-238): es
+        # progresión, no un adorno. En tierra nunca llega aquí — esto es
+        # `AirborneState` —, así que el ataque agachado de suelo no cambia.
+        if (inp.crouch_held and inp.short_attack
+                and _tiene_habilidad("skill_ground_pound", player)):
+            from src.framework.entities.states import GroundPoundState
+            player._change_state_instance(GroundPoundState())
+            return
+
         if _handle_aerial_attack_input(player, inp):
             return
 
@@ -58,9 +71,23 @@ class AirborneState(PlayerStateBase):
         # `velocity.x` para que nada pise el impulso recién puesto, y
         # `_do_jump` ya distingue un salto de coyote de uno aéreo por sí
         # solo (`was_truly_airborne`), así que esto no toca el salto aéreo.
-        if (inp.jump_pressed
-                and player._coyote_counter < player.perfil.coyote_frames
-                and _handle_grounded_jump_input(player, inp)):
+        #
+        # AUD-618 (GAP-024) — aquí había una guardia más:
+        #
+        #     if (inp.jump_pressed
+        #             and player._coyote_counter < perfil.coyote_frames
+        #             and _handle_grounded_jump_input(...)):
+        #
+        # Esa condición extra hacía que la pulsación de salto en el aire
+        # sólo se atendiera DENTRO de la ventana de coyote. Pasada ella,
+        # `jump_pressed` caía al vacío aunque `_can_jump` tuviera su rama
+        # aérea completa (saltos restantes + habilidad concedida): el doble
+        # salto estaba escrito, probado por su nombre, e inalcanzable — el
+        # mismo modo de fallo del nado (AUD-573) o del AIR_CHASE (AUD-109).
+        # Sin la guardia, `_can_jump` decide sola los dos casos: dentro del
+        # coyote devuelve el salto normal sin gastar nada, fuera exige la
+        # habilidad y consume un salto aéreo (`_do_jump.was_truly_airborne`).
+        if inp.jump_pressed and _handle_grounded_jump_input(player, inp):
             return
 
         # AUD-373 — aquí se armaba el buffer del salto a mano:
@@ -249,6 +276,105 @@ class AerialAttackState(PlayerStateBase):
             from src.framework.entities.states import FallingState, IdleState
             target = IdleState if player.is_grounded else FallingState
             player._change_state_instance(target())
+
+    def exit(self, player: Player) -> None:
+        player._active_hitbox = None
+
+
+#: AUD-619 — velocidad vertical FIJA del pisotón, en px/s.
+#:
+#: Por encima de la caída normal que el jugador suele llevar (el tope del
+#: perfil es 500) pero por debajo de ella como constante: fijar la velocidad
+#: y no acelerar es lo que hace la caída legible como compromiso — el
+#: jugador soltó el control a cambio de un impacto con área. Que no dependa
+#: de desde qué altura se activó es lo mismo que `Resorte.impulso` impone
+#: en vez de sumar (AUD-131): la altura deja de ser una variable.
+_PISOTON_CAIDA: float = 420.0
+#: La onda de aterrizaje: ancho total y vida, en px y s. El ancho cubre a
+#: ambos lados del cuerpo con margen — un pisotón que sólo daña debajo es
+#: un ataque corto agachado caro.
+_ONDA_ANCHO: float = 72.0
+_ONDA_ALTO: float = 16.0
+_ONDA_DURACION: float = 0.12
+#: Multiplicador durante la onda. Un pisotón que pega lo mismo que un
+#: ataque corto no justifica perder el control aéreo.
+_ONDA_DANO_MULT: float = 1.5
+
+
+class GroundPoundState(PlayerStateBase):
+    """AUD-619 — el pisotón aéreo: abajo + ataque corto en el aire.
+
+    Tres fases en una sola máquina mínima:
+
+    1. **Caída** — momentum horizontal anulado al entrar y velocidad
+       vertical fija hasta tocar suelo. Es la mitad "compromiso" del
+       movimiento: mientras dura, el jugador no dirige.
+    2. **Onda** — al aterrizar, una caja de golpe ancha y baja a AMBOS
+       lados durante `_ONDA_DURACION`, más un `VFX_SLAM` para el polvo y
+       el temblor. La caja pasa por el pipeline de combate existente
+       (`_active_hitbox` → `CollisionSystem`), así que el daño, el
+       knockback y el hit-stop salen gratis.
+    3. **Reposo** — la onda expira y el jugador queda en pie.
+
+    No sustituye a `AerialSlamState`: aquél es el remate de combo aéreo
+    con pogo; éste es una herramienta deliberada de posicionamiento y de
+    daño de área accesible desde cualquier caída.
+    """
+
+    def __init__(self) -> None:
+        from src.framework.entities.player import PlayerState
+        super().__init__(PlayerState.GROUND_POUND)
+        self._aterrizo: bool = False
+        self._onda_restante: float = 0.0
+
+    def enter(self, player: Player) -> None:
+        super().enter(player)
+        player._attack_timer = 0.0
+        player._active_hitbox = None
+        player._hitbox_consumed = False
+        # Cancelar el momentum horizontal ES el pisotón: conservarlo lo
+        # convierte en un ataque diagonal y deja de leerse.
+        player.velocity.x = 0.0
+        player.velocity.y = _PISOTON_CAIDA
+        self._aterrizo = False
+        self._onda_restante = 0.0
+
+    def update(
+        self,
+        player: Player,
+        dt: float,
+        input_manager: InputManager | None,
+    ) -> None:
+        if not self._aterrizo:
+            player.velocity.x = 0.0
+            player.velocity.y = _PISOTON_CAIDA
+            if player.is_grounded:
+                self._aterrizo = True
+                self._onda_restante = _ONDA_DURACION
+                player._event_bus.emit(
+                    Events.VFX_SLAM,
+                    pos=(player.position.x, player.position.y),
+                )
+            return
+
+        # Fase de onda: caja viva mientras dure, luego reposo.
+        self._onda_restante -= dt
+        if self._onda_restante > 0.0:
+            pies = player.rect.bottom
+            centro_x = player.rect.centerx
+            player._active_hitbox = pygame.Rect(
+                int(centro_x - _ONDA_ANCHO / 2),
+                int(pies - _ONDA_ALTO),
+                int(_ONDA_ANCHO),
+                int(_ONDA_ALTO),
+            )
+            player._damage_mult = _ONDA_DANO_MULT
+            return
+
+        player._active_hitbox = None
+        player._damage_mult = 1.0
+        from src.framework.entities.states import IdleState
+        player._change_state_instance(IdleState())
 
     def exit(self, player: Player) -> None:
         player._active_hitbox = None
