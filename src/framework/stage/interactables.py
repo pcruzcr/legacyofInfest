@@ -36,8 +36,12 @@ pygame— y una práctica: así se pueden probar sin abrir una ventana.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 import pygame
+
+if TYPE_CHECKING:
+    from src.framework.entities.player import Player
 
 #: Distancia, en píxeles, a la que el jugador puede accionar algo con el botón
 #: de agarrar. Generosa a propósito: obligar a la precisión de un píxel para
@@ -254,7 +258,7 @@ class SecretExit:
     key_id: str = ""
     descubierto: bool = False
 
-    def revelar(self, player: "Player") -> bool:
+    def revelar(self, player: Player) -> bool:
         """Intenta revelar el secreto. Devuelve True si se revela ahora."""
         if self.descubierto:
             return False
@@ -264,7 +268,7 @@ class SecretExit:
         return True
 
     @staticmethod
-    def _tiene_llave(player: "Player", key_id: str) -> bool:
+    def _tiene_llave(player: Player, key_id: str) -> bool:
         if not key_id:
             return True
         from src.engine.core.inventory import get_inventory
@@ -287,7 +291,7 @@ class SecretRoom:
     tell: str = "sparkle"
     descubierto: bool = False
 
-    def intentar_descubrir(self, player: "Player") -> bool:
+    def intentar_descubrir(self, player: Player) -> bool:
         """Si el jugador entra en el rectángulo y no está descubierto, lo revela."""
         if self.descubierto or not self.rect.colliderect(player.rect):
             return False

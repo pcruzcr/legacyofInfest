@@ -667,6 +667,8 @@ class DrawingSystem(GizmosDeDepuracion):
 
         drawables.sort(key=lambda pair: pair[1])
 
+        escala = self._escala_de_profundidad(stage)
+
         # AUD-273 — las sombras van **todas antes** que las entidades, no cada
         # una justo antes de la suya. Intercaladas, la sombra de un enemigo
         # cercano se pintaría encima de otro que está detrás y más abajo, y se
@@ -688,7 +690,6 @@ class DrawingSystem(GizmosDeDepuracion):
                                          escala=escala_sombra)
             lote.volcar(surface)
 
-        escala = self._escala_de_profundidad(stage)
         for drawable, _depth in drawables:
             # AUD-289 — el `draw` de una entidad de estudiante también puede
             # lanzar, y aquí el daño sería peor que en el `update`: media escena

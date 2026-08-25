@@ -7,17 +7,21 @@ AUD-626 — F5.6 gap-cero: enemigo nadador para zonas de agua reales.
 """
 from __future__ import annotations
 
+import logging
 import math
 from typing import TYPE_CHECKING
 
 import pygame
 
 from src.engine.core import settings
-from src.framework.entities.enemy_base import EnemyBase
+from src.engine.utils.asset_loader import AssetLoader
 from src.framework.ecs.components import ZonaDeAgua
+from src.framework.entities.enemy_base import EnemyBase
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from src.framework.entities.player import Player
+    pass
 
 
 class EnemySwimmer(EnemyBase):
@@ -120,7 +124,6 @@ class EnemySwimmer(EnemyBase):
 
     def _update_water_state(self) -> None:
         """Detecta si el enemigo está en una ZonaDeAgua."""
-        from src.framework.ecs.components import ZonaDeAgua
         # Buscar zona de agua que contenga al enemigo
         # (simplificado: en implementación real se consultaría el mundo ECS)
         pass

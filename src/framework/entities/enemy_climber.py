@@ -7,16 +7,20 @@ AUD-627 — enemigo trepador para lianas y tirolesas.
 """
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 import pygame
 
 from src.engine.core import settings
-from src.framework.entities.enemy_base import EnemyBase
+from src.engine.utils.asset_loader import AssetLoader
 from src.framework.ecs.components import Liana, Tirolesa
+from src.framework.entities.enemy_base import EnemyBase
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from src.framework.entities.player import Player
+    pass
 
 
 class EnemyClimber(EnemyBase):

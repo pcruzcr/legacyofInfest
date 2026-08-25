@@ -30,9 +30,9 @@ from src.framework.stage.interactables import (
     Cofre,
     Disparador,
     Recogible,
-    ZonaDeWarp,
     SecretExit,
     SecretRoom,
+    ZonaDeWarp,
 )
 from src.framework.stage.pendientes import Pendiente
 from src.framework.stage.stage_data import (

@@ -7,19 +7,21 @@ AUD-632 — arquetipo: bombardero aéreo, denegación de zona.
 """
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 import pygame
 
 from src.engine.core import settings
-from src.engine.core import azar
 from src.engine.core.events import Events
-from src.framework.entities.enemy_base import EnemyBase
+from src.engine.utils.asset_loader import AssetLoader
 from src.framework.entities.enemy_flying import EnemyFlying
 from src.framework.entities.enemy_shooter import Projectile
 
+logger = logging.getLogger(__name__)
+
 if TYPE_CHECKING:
-    from src.framework.entities.player import Player
+    pass
 
 
 class EnemyFlyingBomber(EnemyFlying):

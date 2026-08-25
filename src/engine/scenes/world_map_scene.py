@@ -9,6 +9,7 @@ import pygame
 
 from src.engine.core import settings
 from src.engine.core.events import Events
+from src.engine.core.inventory import get_inventory
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.ui.theme import Theme, font
@@ -118,7 +119,7 @@ def construir_nodos() -> list[dict[str, Any]]:
         dx, dy = dispersion_de(stage_id)
         nx = round(margen + nx * (1.0 - 2 * margen) + dx, 4)
         ny = round(margen + ny * (1.0 - 2 * margen) + dy, 4)
-nodos.append({
+        nodos.append({
             "id": stage_id,
             "name": nombre,
             "nx": nx,
@@ -223,7 +224,7 @@ class WorldMapScene(BaseScene):
         # La regla escrita para que se lea: el primero siempre está abierto, y
         # cada uno abre al siguiente.
         from src.engine.core.inventory import get_inventory
-        inv = get_inventory()
+        _inv = get_inventory()
 
         self._nodes = []
         anterior_completado = True      # el primero no depende de nadie
@@ -233,7 +234,11 @@ class WorldMapScene(BaseScene):
             node["completed"] = hecho
             # AUD-635 — desbloqueo por progreso + skill requerido
             skill_req = node.get("requires_skill", "")
-            skill_ok = not skill_req or get_inventory().has_skill(skill_req) or getattr(self, "_habilidades_libres", False)
+            skill_ok = (
+                not skill_req
+                or get_inventory().has_skill(skill_req)
+                or getattr(self, "_habilidades_libres", False)
+            )
             node["unlocked"] = (anterior_completado or hecho) and skill_ok
             anterior_completado = hecho
             self._nodes.append(node)
@@ -384,7 +389,11 @@ class WorldMapScene(BaseScene):
         for idx, node in enumerate(self._nodes):
             focused = idx == self._selected
             skill_req = node.get("requires_skill", "")
-            skill_ok = not skill_req or get_inventory().has_skill(skill_req) or getattr(self, "_habilidades_libres", False)
+            skill_ok = (
+                not skill_req
+                or get_inventory().has_skill(skill_req)
+                or getattr(self, "_habilidades_libres", False)
+            )
             if focused:
                 colour = Theme.ACCENT
             elif node.get("completed"):
@@ -433,4 +442,3 @@ class WorldMapScene(BaseScene):
             pistas.append(("Enter", "Entrar"))
         pistas.append(("Esc", "Volver"))
         draw_key_hints(surface, pistas)
-
