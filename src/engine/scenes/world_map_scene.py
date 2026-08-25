@@ -118,17 +118,19 @@ def construir_nodos() -> list[dict[str, Any]]:
         dx, dy = dispersion_de(stage_id)
         nx = round(margen + nx * (1.0 - 2 * margen) + dx, 4)
         ny = round(margen + ny * (1.0 - 2 * margen) + dy, 4)
-        nodos.append({
+nodos.append({
             "id": stage_id,
             "name": nombre,
             "nx": nx,
             "ny": ny,
             # El escenario se abre por su clase, no por su ruta TMX: la clase
             # es la que registra los tipos de entidad propios del estudiante
-            # (`CuadernoVolador`, `BossRey`…). Construir un `StageScene`
+            # (`CuadernoVolador`, `BossRey`...). Construir un `StageScene`
             # genérico con su TMX cargaría el mapa sin sus enemigos.
             "scene": cls,
             "unlocks": [],
+            # AUD-635 — skill requerido para desbloquear este nodo.
+            "requires_skill": getattr(cls, "REQUIRES_SKILL", "") or "",
         })
     for anterior, siguiente in pairwise(nodos):
         anterior["unlocks"] = [siguiente["id"]]
@@ -220,13 +222,19 @@ class WorldMapScene(BaseScene):
         #
         # La regla escrita para que se lea: el primero siempre está abierto, y
         # cada uno abre al siguiente.
+        from src.engine.core.inventory import get_inventory
+        inv = get_inventory()
+
         self._nodes = []
         anterior_completado = True      # el primero no depende de nadie
         for nd in STAGE_NODES:
             node = dict(nd)
             hecho = node["id"] in completed
             node["completed"] = hecho
-            node["unlocked"] = anterior_completado or hecho
+            # AUD-635 — desbloqueo por progreso + skill requerido
+            skill_req = node.get("requires_skill", "")
+            skill_ok = not skill_req or get_inventory().has_skill(skill_req) or getattr(self, "_habilidades_libres", False)
+            node["unlocked"] = (anterior_completado or hecho) and skill_ok
             anterior_completado = hecho
             self._nodes.append(node)
 
@@ -375,12 +383,16 @@ class WorldMapScene(BaseScene):
 
         for idx, node in enumerate(self._nodes):
             focused = idx == self._selected
+            skill_req = node.get("requires_skill", "")
+            skill_ok = not skill_req or get_inventory().has_skill(skill_req) or getattr(self, "_habilidades_libres", False)
             if focused:
                 colour = Theme.ACCENT
             elif node.get("completed"):
                 colour = Theme.SUCCESS
             elif node.get("unlocked"):
                 colour = Theme.TEXT_MUTED
+            elif not skill_ok and node.get("requires_skill"):
+                colour = Theme.ERROR  # rojo para skill faltante
             else:
                 colour = Theme.TEXT_DIM
             px, py = posiciones[idx]
@@ -390,6 +402,9 @@ class WorldMapScene(BaseScene):
             # que es lo que necesita quien juega con el filtro daltónico.
             radio = 13 if focused else 9
             pygame.draw.circle(surface, colour, (px, py), radio)
+            # AUD-635 — indicador de skill requerida: candado si falta skill
+            if node.get("requires_skill") and not skill_ok:
+                pygame.draw.circle(surface, Theme.ERROR, (px, py), radio + 3, 1)
             # Un aro oscuro separa el marcador del fondo del mapa, que puede
             # ser de cualquier color detrás de un escenario u otro.
             pygame.draw.circle(surface, Theme.BG, (px, py), radio, 1)
@@ -407,6 +422,11 @@ class WorldMapScene(BaseScene):
             if lx + label.get_width() > settings.INTERNAL_WIDTH - 8:
                 lx = px - 16 - label.get_width()
             surface.blit(label, (lx, py - 8))
+            # AUD-635 — tooltip de skill requerida al enfocar nodo bloqueado
+            if focused and node.get("requires_skill") and not skill_ok:
+                tip = f"Requiere: {skill_req}"
+                tip_surf = self._font_name.render(tip, True, Theme.ERROR)
+                surface.blit(tip_surf, (px + 20, py - 8))
 
         pistas = [("←→↑↓", "Navegar")]
         if self._permitir_viajar:
