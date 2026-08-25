@@ -1,0 +1,201 @@
+test_no_hay_entradas_huerfanas(self, idioma):
+        """Una traducción de algo que ya no existe es catálogo podrido.
+
+        Es el síntoma de que alguien renombró una cadena y el catálogo se
+        quedó atrás. El juego sigue funcionando y muestra esa pantalla sin
+        traducir; nadie se entera hasta que un estudiante pregunta.
+        """
+        from scripts.check_translations import todos_los_literales
+
+        datos = json.loads(
+            (RAIZ / "locale" / f"{idioma}.json").read_text(encoding="utf-8"))
+        huerfanas = sorted(set(datos) - todos_los_literales())
+        assert not huerfanas, (
+            f"{len(huerfanas)} entrada(s) de {idioma}.json ya no existen en el "
+            f"código: {huerfanas[:5]}"
+        )
+
+    def test_los_dos_catalogos_no_se_contradicen(self):
+        """Si `es` traduce X→Y, `en` no puede traducir Y→Z distinto de X."""
+        es = i18n.cargar_del_disco("es")
+        en = i18n.cargar_del_disco("en")
+        for original, castellano in es.items():
+            vuelta = en.get(castellano)
+            if vuelta is not None:
+                assert vuelta == original, (
+                    f"ida y vuelta inconsistente: es[{original!r}]={castellano!r} "
+                    f"pero en[{castellano!r}]={vuelta!r}"
+                )
+
+
+class TestLaTraduccionLlegaALasPantallas:
+    """La prueba de cableado: sin esto, todo lo anterior sería teoría."""
+
+    def _titulo_pintado(self, idioma: str, titulo: str) -> pygame.Surface:
+        from src.engine.ui.widgets import draw_screen
+
+        i18n.set_idioma(idioma)
+        lienzo = pygame.Surface((800, 600))
+        draw_screen(lienzo, titulo, "")
+        return lienzo
+
+    def test_el_kit_traduce_el_titulo_sin_que_la_escena_lo_pida(self, display):
+        import numpy as np
+
+        a = self._titulo_pintado("es", "COLLISION LAB")
+        b = self._titulo_pintado("en", "COLLISION LAB")
+        assert not np.array_equal(
+            pygame.surfarray.array3d(a), pygame.surfarray.array3d(b)), (
+            "la pantalla se ve igual en los dos idiomas: el kit no traduce"
+        )
+
+    def test_el_kit_traduce_los_atajos_de_teclado(self, display):
+        import numpy as np
+
+        from src.engine.ui.widgets import draw_key_hints
+
+        def pintar(idioma):
+            i18n.set_idioma(idioma)
+            s = pygame.Surface((800, 600))
+            s.fill((0, 0, 0))
+            draw_key_hints(s, [("Esc", "Volver")])
+            return pygame.surfarray.array3d(s)
+
+        assert not np.array_equal(pintar("es"), pintar("en"))
+
+    def test_una_escena_real_cambia_con_el_idioma(self, display):
+        """Se carga una pantalla del juego, no un lienzo de laboratorio."""
+        import numpy as np
+
+        from src.engine.audio.audio_manager import AudioManager
+        from src.engine.core.event_bus import EventBus
+        from src.engine.core.game_context import GameContext
+        from src.engine.core.save_manager import SaveManager
+        from src.engine.input.input_manager import InputManager
+        from src.engine.scene.scene_manager import SceneManager
+        from src.engine.scenes.inventory_scene import InventoryScene
+
+        ctx = GameContext(
+            input_manager=InputManager(), audio_manager=AudioManager(),
+            scene_manager=None, event_bus=EventBus(), clock=None,
+            save_manager=SaveManager(),
+        )
+        ctx.scene_manager = SceneManager(ctx)
+
+        def pintar(idioma):
+            i18n.set_idioma(idioma)
+            escena = InventoryScene(ctx)
+            escena.on_enter()
+            s = pygame.Surface((800, 600))
+            escena.draw(s)
+            return pygame.surfarray.array3d(s)
+
+        assert not np.array_equal(pintar("es"), pintar("en")), (
+            "la pantalla de inventario se ve idéntica en español e inglés"
+        )
+
+    def test_el_menu_de_titulo_cambia_con_el_idioma(self, display):
+        """AUD-321 — el título era 100 % inglés: sus rótulos se dibujaban
+        tal cual y la pantalla se veía idéntica en español e inglés."""
+        import numpy as np
+
+        from src.engine.audio.audio_manager import AudioManager
+        from src.engine.core.event_bus import EventBus
+        from src.engine.core.game_context import GameContext
+        from src.engine.core.save_manager import SaveManager
+        from src.engine.input.input_manager import InputManager
+        from src.engine.scene.scene_manager import SceneManager
+        from src.engine.scenes.title_scene import TitleScene
+
+        ctx = GameContext(
+            input_manager=InputManager(), audio_manager=AudioManager(),
+            scene_manager=None, event_bus=EventBus(), clock=None,
+            save_manager=SaveManager(),
+        )
+        ctx.scene_manager = SceneManager(ctx)
+
+        def pintar(idioma):
+            i18n.set_idioma(idioma)
+            escena = TitleScene(ctx)
+            escena.on_enter()
+            s = pygame.Surface((800, 600))
+            escena.draw(s)
+            return pygame.surfarray.array3d(s)
+
+        assert not np.array_equal(pintar("es"), pintar("en")), (
+            "el menú del título se ve idéntico en español e inglés"
+        )
+
+    def test_los_rotulos_del_titulo_tienen_traduccion_espanola(self):
+        """AUD-321 — envolver en `_()` no traduce nada si la clave no tiene
+        entrada en el catálogo español: los rótulos del título tienen que
+        estar ahí, con su traducción."""
+        i18n.set_idioma("es")
+        esperado = {
+            "START": "JUGAR",
+            "WORLD MAP": "MAPA MUNDIAL",
+            "INVENTORY": "INVENTARIO",
+            "SKILL TREE": "ÁRBOL DE HABILIDADES",
+            "SHOP": "TIENDA",
+            "BESTIARY": "BESTIARIO",
+            "ACHIEVEMENTS": "LOGROS",
+            "RECORDS": "RÉCORDS",
+            "ACADEMIC DEMOS": "DEMOS ACADÉMICAS",
+            "OPTIONS": "OPCIONES",
+            "QUIT": "SALIR",
+            "CONTINUE": "CONTINUAR",
+        }
+        for clave, traducida in esperado.items():
+            assert i18n._(clave) == traducida, (
+                f"«{clave}» no traduce a «{traducida}» en el catálogo español"
+            )
+
+
+class TestElIdiomaSePersiste:
+    def test_el_ajuste_existe_y_su_valor_por_defecto_es_espanol(self):
+        from src.engine.core.user_settings import UserSettings
+
+        assert UserSettings().language == "es"
+
+    def test_un_idioma_invalido_en_el_config_no_rompe_el_arranque(self):
+        from src.engine.core.user_settings import UserSettings
+
+        ajustes = UserSettings(language="klingon")
+        assert ajustes.language == i18n.IDIOMA_POR_DEFECTO
+
+    def test_se_guarda_y_se_recupera(self, tmp_path):
+        from src.engine.core.user_settings import UserSettings
+
+        destino = tmp_path / "config.json"
+        ajustes = UserSettings(language="en")
+        ajustes.save(destino)
+        assert UserSettings.load(destino).language == "en"
+
+    def test_la_aplicacion_aplica_el_idioma_al_arrancar(self):
+        """Si se aplicara después, las escenas ya creadas se quedarían atrás."""
+        import inspect
+
+        from src.engine.core import app
+
+        fuente = inspect.getsource(app.App)
+        assert "set_idioma" in fuente, (
+            "App no aplica el idioma guardado: el ajuste no tendría efecto "
+            "hasta recrear cada pantalla"
+        )
+
+
+class TestElJugadorPuedeCambiarDeIdioma:
+    """Una traducción que sólo se activa editando config.json no existe."""
+
+    @pytest.fixture
+    def opciones(self, display):
+        from src.engine.audio.audio_manager import AudioManager
+        from src.engine.core.event_bus import EventBus
+        from src.engine.core.game_context import GameContext
+        from src.engine.core.save_manager import SaveManager
+        from src.engine.input.input_manager import InputManager
+        from src.engine.scene.scene_manager import SceneManager
+        from src.engine.scenes.options_scene import OptionsScene
+
+        ctx = GameContext(
+            input_manager=InputManager(), audio_manager=AudioManager()

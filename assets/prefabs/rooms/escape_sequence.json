@@ -1,0 +1,42 @@
+{
+    "name": "escape_sequence",
+    "description": "Secuencia de escape - HazardZone subiendo, bloques hundibles, checkpoint por evento",
+    "pacing": "escape",
+    "width": 30,
+    "height": 12,
+    "properties": {
+        "hazard_zone": {
+            "sube": 18,
+            "sube_hasta": 64,
+            "arranca_con": "ROMPER_PRESA",
+            "damage": 0.5
+        }
+    },
+    "layers": {
+        "Collision": [
+            {"type": "Solid", "x": 0, "y": 176, "width": 480, "height": 16},
+            {"type": "SinkingPlatform", "x": 64, "y": 144, "width": 32, "height": 16, "props": {"retraso": "0.4", "velocidad_caida": "90", "reaparece_en": "3.0"}},
+            {"type": "SinkingPlatform", "x": 128, "y": 144, "width": 32, "height": 16, "props": {"retraso": "0.5", "velocidad_caida": "90", "reaparece_en": "3.0"}},
+            {"type": "SinkingPlatform", "x": 192, "y": 144, "width": 32, "height": 16, "props": {"retraso": "0.6", "velocidad_caida": "90", "reaparece_en": "3.0"}},
+            {"type": "SinkingPlatform", "x": 256, "y": 144, "width": 32, "height": 16, "props": {"retraso": "0.4", "velocidad_caida": "90", "reaparece_en": "3.0"}},
+            {"type": "SinkingPlatform", "x": 320, "y": 144, "width": 32, "height": 16, "props": {"retraso": "0.3", "velocidad_caida": "90", "reaparece_en": "3.0"}},
+            {"type": "SinkingPlatform", "x": 384, "y": 144, "width": 32, "height": 16, "props": {"retraso": "0.5", "velocidad_caida": "90", "reaparece_en": "3.0"}},
+            {"type": "SinkingPlatform", "x": 448, "y": 144, "width": 32, "height": 16, "props": {"retraso": "0.2", "velocidad_caida": "90", "reaparece_en": "3.0"}}
+        ],
+        "Objects": [
+            {"type": "PlayerSpawn", "x": 16, "y": 160},
+            {"type": "EventTrigger", "x": 16, "y": 160, "width": 16, "height": 32, "props": {"evento": "ROMPER_PRESA", "automatico": "true", "una_vez": "true"}},
+            {"type": "HazardZone", "x": 0, "y": 176, "width": 480, "height": 32, "props": {"damage": "0.5", "sube": "18", "sube_hasta": "64", "arranca_con": "ROMPER_PRESA"}},
+            {"type": "SinkingPlatform", "x": 64, "y": 144, "width": 32, "height": 16, "props": {"retraso": "0.4", "velocidad_caida": "90", "reaparece_en": "3.0"}},
+            {"type": "SinkingPlatform", "x": 128, "y": 144, "width": 32, "height": 16, "props": {"retraso": "0.5", "velocidad_caida": "90", "reaparece_en": "3.0"}},
+            {"type": "SinkingPlatform", "x": 192, "y": 144, "width": 32, "height": 16, "props": {"retraso": "0.6", "velocidad_caida": "90", "reaparece_en": "3.0"}},
+            {"type": "SinkingPlatform", "x": 256, "y": 144, "width": 32, "height": 16, "props": {"retraso": "0.4", "velocidad_caida": "90", "reaparece_en": "3.0"}},
+            {"type": "SinkingPlatform", "x": 320, "y": 144, "width": 32, "height": 16, "props": {"retraso": "0.3", "velocidad_caida": "90", "reaparece_en": "3.0"}},
+            {"type": "SinkingPlatform", "x": 384, "y": 144, "width": 32, "height": 16, "props": {"retraso": "0.5", "velocidad_caida": "90", "reaparece_en": "3.0"}},
+            {"type": "SinkingPlatform", "x": 448, "y": 144, "width": 32, "height": 16, "props": {"retraso": "0.2", "velocidad_caida": "90", "reaparece_en": "3.0"}},
+            {"type": "Checkpoint", "x": 16, "y": 144, "width": 16, "height": 32, "props": {"checkpoint_id": "0"}},
+            {"type": "Checkpoint", "x": 240, "y": 144, "width": 16, "height": 32, "props": {"checkpoint_id": "1"}},
+            {"type": "Checkpoint", "x": 464, "y": 144, "width": 16, "height": 32, "props": {"checkpoint_id": "2"}}
+        ]
+    }
+}

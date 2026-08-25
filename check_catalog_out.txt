@@ -1,0 +1,5 @@
+'Chain: Z → Z → X': es=False, en=False
+'Chain: Z Z X': es=True, en=True
+'Combo: -': es=True, en=True
+'Combo: —': es=False, en=False
+'Score: {score}': es=True, en=True

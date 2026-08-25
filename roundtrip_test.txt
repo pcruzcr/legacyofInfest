@@ -1,0 +1,77 @@
+test_los_dos_catalogos_no_se_contradicen(self):
+        """Si `es` traduce X→Y, `en` no puede traducir Y→Z distinto de X."""
+        es = i18n.cargar_del_disco("es")
+        en = i18n.cargar_del_disco("en")
+        for original, castellano in es.items():
+            vuelta = en.get(castellano)
+            if vuelta is not None:
+                assert vuelta == original, (
+                    f"ida y vuelta inconsistente: es[{original!r}]={castellano!r} "
+                    f"pero en[{castellano!r}]={vuelta!r}"
+                )
+
+
+class TestLaTraduccionLlegaALasPantallas:
+    """La prueba de cableado: sin esto, todo lo anterior sería teoría."""
+
+    def _titulo_pintado(self, idioma: str, titulo: str) -> pygame.Surface:
+        from src.engine.ui.widgets import draw_screen
+
+        i18n.set_idioma(idioma)
+        lienzo = pygame.Surface((800, 600))
+        draw_screen(lienzo, titulo, "")
+        return lienzo
+
+    def test_el_kit_traduce_el_titulo_sin_que_la_escena_lo_pida(self, display):
+        import numpy as np
+
+        a = self._titulo_pintado("es", "COLLISION LAB")
+        b = self._titulo_pintado("en", "COLLISION LAB")
+        assert not np.array_equal(
+            pygame.surfarray.array3d(a), pygame.surfarray.array3d(b)), (
+            "la pantalla se ve igual en los dos idiomas: el kit no traduce"
+        )
+
+    def test_el_kit_traduce_los_atajos_de_teclado(self, display):
+        import numpy as np
+
+        from src.engine.ui.widgets import draw_key_hints
+
+        def pintar(idioma):
+            i18n.set_idioma(idioma)
+            s = pygame.Surface((800, 600))
+            s.fill((0, 0, 0))
+            draw_key_hints(s, [("Esc", "Volver")])
+            return pygame.surfarray.array3d(s)
+
+        assert not np.array_equal(pintar("es"), pintar("en"))
+
+    def test_una_escena_real_cambia_con_el_idioma(self, display):
+        """Se carga una pantalla del juego, no un lienzo de laboratorio."""
+        import numpy as np
+
+        from src.engine.audio.audio_manager import AudioManager
+        from src.engine.core.event_bus import EventBus
+        from src.engine.core.game_context import GameContext
+        from src.engine.core.save_manager import SaveManager
+        from src.engine.input.input_manager import InputManager
+        from src.engine.scene.scene_manager import SceneManager
+        from src.engine.scenes.inventory_scene import InventoryScene
+
+        ctx = GameContext(
+            input_manager=InputManager(), audio_manager=AudioManager(),
+            scene_manager=None, event_bus=EventBus(), clock=None,
+            save_manager=SaveManager(),
+        )
+        ctx.scene_manager = SceneManager(ctx)
+
+        def pintar(idioma):
+            i18n.set_idioma(idioma)
+            escena = InventoryScene(ctx)
+            escena.on_enter()
+            s = pygame.Surface((800, 600))
+            escena.draw(s)
+            return pygame.surfarray.array3d(s)
+
+        assert not np.array_equal(pintar("es"), pintar("en")), (
+            "la pantal

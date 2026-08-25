@@ -1,0 +1,1 @@
+src\engine\core\i18n.py:35: titulo = _("ui.inventory")  # → "INVENTARIO" (es) / "Inventory" (en)

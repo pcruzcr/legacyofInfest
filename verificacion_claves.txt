@@ -1,0 +1,8 @@
+keybinding_scene.py: 26 claves canónicas, 0 literales viejos
+vector_lab_scene.py: 37 claves canónicas, 0 literales viejos
+achievements.py: 1 claves canónicas, 0 literales viejos
+color_theory_scene.py: 8 claves canónicas, 0 literales viejos
+combo_demo_scene.py: 11 claves canónicas, 0 literales viejos
+pattern_demo_scene.py: 9 claves canónicas, 0 literales viejos
+vision_demo_scene.py: 11 claves canónicas, 0 literales viejos
+quiz_system.py: 3 claves canónicas, 0 literales viejos

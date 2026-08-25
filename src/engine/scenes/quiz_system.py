@@ -80,7 +80,7 @@ class QuizManager:
 
     def _current_question(self) -> dict[str, Any]:
         return self._questions[self._current] if self._questions else {
-            "question": _("No questions loaded"),
+            "question": _("ui.quiz.no_questions"),
             "options": ["OK"],
             "answer": 0,
         }
@@ -107,7 +107,7 @@ class QuizManager:
         pygame.draw.rect(overlay, (20, 20, 40), (bx, by, box_w, box_h))
         pygame.draw.rect(overlay, COLOR_HIGHLIGHT, (bx, by, box_w, box_h), 1)
 
-        title = self._font_answer.render(_("QUIZ"), True, COLOR_HIGHLIGHT)
+        title = self._font_answer.render(_("ui.quiz"), True, COLOR_HIGHLIGHT)
         overlay.blit(title, (bx + 8, by + 6))
 
         qtext = q.get("question", "")
@@ -148,7 +148,7 @@ class QuizManager:
             overlay.blit(rt, (bx + 12, by + box_h - 22))
 
         progress = self._font_question.render(
-            _("  {current}/{total}  |  Score: {score}").format(
+            _("ui.quiz.progress").format(
                 current=self._current + 1,
                 total=len(self._questions),
                 score=f"{self._score}/{self._total_answered}",

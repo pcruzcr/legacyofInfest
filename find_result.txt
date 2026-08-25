@@ -1,0 +1,5 @@
+emplos y no en código real
+CLAVES_USADAS.discard("ui.inventory_title")
+print(f"Claves canónicas citadas en código: {len(CLAVES_USADAS)}")
+
+# ── 2. Her

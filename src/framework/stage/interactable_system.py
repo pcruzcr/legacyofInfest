@@ -282,6 +282,9 @@ class InteractableSystem:
                 continue
             if not self.llavero.tiene(warp.key_id):
                 continue
+            # AUD-635 — requires_skill: el warp exige una habilidad desbloqueada.
+            if warp.requires_skill and not self.llavero.tiene(warp.requires_skill):
+                continue
 
             warp.usado = True
             warp._espera = warp.enfriamiento

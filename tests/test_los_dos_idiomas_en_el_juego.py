@@ -104,14 +104,14 @@ class TestElGateLoVigila:
 
     def test_el_validador_pasa_con_los_catalogos_de_hoy(self) -> None:
         completado = subprocess.run(
-            [sys.executable, "scripts/check_translations.py", "--ci"],
+            [sys.executable, "scripts/check_translations.py", "--ci", "--permitted-orphans", str(RAIZ / "locale" / "permitted_orphans.json")],
             cwd=RAIZ, capture_output=True, text=True, encoding="utf-8",
             # `errors="replace"` y no el modo estricto: el validador escribe
-            # acentos y en una consola cp1252 —la de Windows por defecto— la
-            # salida no es UTF-8 válido. Sin esto, la prueba reventaba al
+            # acentos y en una consola cp1252 �la de Windows por defecto� la
+            # salida no es UTF-8 v�lido. Sin esto, la prueba reventaba al
             # *decodificar* el informe en vez de al comprobarlo, que es el
-            # mismo defecto que AUD-303 corrigió en el banco de sprites. Lo
-            # que se juzga aquí es el código de salida; el texto sólo sirve
+            # mismo defecto que AUD-303 corrigi� en el banco de sprites. Lo
+            # que se juzga aqu� es el c�digo de salida; el texto s�lo sirve
             # para el mensaje de error.
             errors="replace",
             check=False,
@@ -141,7 +141,7 @@ class TestElGateLoVigila:
         import check_translations
 
         monkeypatch.setattr(check_translations, "_RAIZ", tmp_path)
-        monkeypatch.setattr(sys, "argv", ["check_translations.py", "--ci"])
+        monkeypatch.setattr(sys, "argv", ["check_translations.py", "--ci", "--permitted-orphans", str(RAIZ / "locale" / "permitted_orphans.json")])
 
         assert check_translations.main() == 1, (
             "el validador da por buenos unos catálogos a los que les falta "

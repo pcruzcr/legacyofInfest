@@ -111,6 +111,9 @@ class Cerradura:
     cierra_en: float = 0.0
     _cierre: float = 0.0
 
+    #: AUD-635 — skill_id requerido para abrir la cerradura.
+    requires_skill: str = ""
+
     def abrir(self, temporal: bool = True) -> None:
         """Abre la cerradura y arranca el temporizador si lo tiene."""
         self.abierta = True
@@ -202,6 +205,8 @@ class ZonaDeWarp:
     enfriamiento: float = 0.5
     #: Texto que se enseña al cruzar. Vacío = ninguno.
     mensaje: str = ""
+    #: AUD-635 — skill_id requerido para usar el warp.
+    requires_skill: str = ""
     usado: bool = False
     _espera: float = 0.0
 

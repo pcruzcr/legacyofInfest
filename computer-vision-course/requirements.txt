@@ -1,0 +1,35 @@
+# Dependencias del curso de Visión por Computadora (5 clases)
+#
+# Este fichero es SÓLO del curso. El motor tiene las suyas en el
+# `pyproject.toml` de la raíz y no se tocan: instalar torch en el entorno del
+# motor le añadiría ~2,5 GB y una matriz de compatibilidad CUDA a un
+# repositorio del que copian 26 estudiantes, a cambio de dos apartados
+# conceptuales de una sola clase.
+#
+# Instalación recomendada (sobre el .venv del motor, ya instalado):
+#     pip install -r computer-vision-course/requirements.txt
+
+# ── Ya vienen con el motor; se listan con su suelo por si alguien monta un
+#    entorno limpio sólo para el curso ────────────────────────────────────
+numpy>=1.26
+opencv-python>=4.10
+scikit-image>=0.24
+scikit-learn>=1.5
+scipy>=1.13
+matplotlib>=3.10
+Pillow>=12.3.0
+
+# ── Nueva: tablas de características y comparativas de modelos ───────────
+# Las Clases 3 y 4 la usan para `features.csv` y para las tablas de métricas.
+# `cvcourse.features` degrada al módulo `csv` de la biblioteca estándar si no
+# está, para que un aula sin permisos de instalación no se quede fuera.
+pandas>=2.0
+
+# ── Clase 4, partes C y D — SÓLO EN GOOGLE COLAB ─────────────────────────
+# No se instalan en local a propósito (ver §5.2 de COURSE_ARCHITECTURE.md).
+# En Colab, torch ya viene preinstalado y ultralytics se instala en la primera
+# celda de `notebooks/class04_colab.ipynb` (partes C y D de la Clase 4). En
+# local el notebook degrada con un mensaje y la suite lo verifica igual.
+#
+# torch>=2.0
+# ultralytics>=8.0

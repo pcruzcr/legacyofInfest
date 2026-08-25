@@ -6,144 +6,137 @@ Cualquier literal que el jugador vea en pantalla debe estar en locale/es.json.
 """
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
-from src.engine.core.i18n import cargar_del_disco
+from src.engine.core.i18n import aplanar_catalogo, cargar_del_disco
 
 RAIZ = Path(__file__).resolve().parent.parent
 
-# Strings que el auditoría identificó como visibles y sin _()
-STRINGS_ESPERADOS: set[str] = {
+# Claves canónicas que el auditoría identificó como visibles y deben estar en el catálogo
+CANONICAL_KEYS_ESPERADAS: set[str] = {
     # keybinding_scene.py _ACTION_LABELS
-    "Move Left",
-    "Move Right",
-    "Move Up",
-    "Move Down",
-    "Jump",
-    "Crouch",
-    "Attack (Short)",
-    "Attack (Long)",
-    "Dash",
-    "Grab",
-    "Confirm",
-    "Cancel",
-    "Pause",
+    "ui.move_left",
+    "ui.move_right",
+    "ui.move_up",
+    "ui.move_down",
+    "ui.jump",
+    "ui.crouch",
+    "ui.attack_short",
+    "ui.attack_long",
+    "ui.dash",
+    "ui.grab",
+    "ui.confirm",
+    "ui.cancel",
+    "ui.pause",
     # vector_lab_scene.py MODE_NAMES
-    "FREE MOVE",
-    "CHASE (normalized)",
-    "ORBIT (dot product)",
-    "DISTANCE CHECK",
+    "ui.vector_lab.modes.free_move",
+    "ui.vector_lab.modes.chase",
+    "ui.vector_lab.modes.orbit",
+    "ui.vector_lab.modes.distance",
     # vector_lab_scene.py VECTOR_QUIZZES
-    "What does Vector2.normalize() return?",
-    "A zero vector",
-    "A unit vector (length=1)",
-    "The vector scaled by 2",
-    "The vector's angle",
-    "What is the dot product of two perpendicular vectors?",
-    "1",
-    "0",
-    "Their product",
-    "Undefined",
-    "What curve uses 4 control points?",
-    "Linear",
-    "Quadratic Bezier",
-    "Cubic Bezier",
-    "Catmull-Rom",
-    "What does distance() between two points return?",
-    "The straight-line length",
-    "The X difference",
-    "The Y difference",
-    "The sum of coordinates",
-    "What does a normalized vector represent?",
-    "Magnitude only",
-    "Direction only",
-    "Position only",
-    "Speed only",
-    "What is cos(90 degrees)?",
-    "-1",
-    "0.5",
+    "ui.vector_lab.quiz.q1",
+    "ui.vector_lab.quiz.q1_a",
+    "ui.vector_lab.quiz.q1_b",
+    "ui.vector_lab.quiz.q1_c",
+    "ui.vector_lab.quiz.q1_d",
+    "ui.vector_lab.quiz.q2",
+    "ui.vector_lab.quiz.q2_a",
+    "ui.vector_lab.quiz.q2_b",
+    "ui.vector_lab.quiz.q2_c",
+    "ui.vector_lab.quiz.q2_d",
+    "ui.vector_lab.quiz.q3",
+    "ui.vector_lab.quiz.q3_a",
+    "ui.vector_lab.quiz.q3_b",
+    "ui.vector_lab.quiz.q3_c",
+    "ui.vector_lab.quiz.q3_d",
+    "ui.vector_lab.quiz.q4",
+    "ui.vector_lab.quiz.q4_a",
+    "ui.vector_lab.quiz.q4_b",
+    "ui.vector_lab.quiz.q4_c",
+    "ui.vector_lab.quiz.q4_d",
+    "ui.vector_lab.quiz.q5",
+    "ui.vector_lab.quiz.q5_a",
+    "ui.vector_lab.quiz.q5_b",
+    "ui.vector_lab.quiz.q5_c",
+    "ui.vector_lab.quiz.q5_d",
+    "ui.vector_lab.quiz.q6",
+    "ui.vector_lab.quiz.q6_a",
+    "ui.vector_lab.quiz.q6_b",
+    "ui.vector_lab.quiz.q6_c",
+    "ui.vector_lab.quiz.q6_d",
     # achievements.py:513
-    "Achievement Unlocked: {name}",
+    "ui.achievement_unlocked",
     # color_theory_scene.py MODE_NAMES
-    "RGB EXPLORER",
-    "HSV EXPLORER",
-    "HSL EXPLORER",
-    "CMYK EXPLORER",
-    "ALPHA BLEND",
-    "CHALLENGE",
+    "ui.color_theory_modes.rgb",
+    "ui.color_theory_modes.hsv",
+    "ui.color_theory_modes.hsl",
+    "ui.color_theory_modes.cmyk",
+    "ui.color_theory_modes.alpha",
+    "ui.color_theory_modes.challenge",
     # color_theory_scene.py hints
-    "SHIFT to toggle step-by-step algorithm",
+    "ui.color_theory.shift_toggle",
     # combo_demo_scene.py
-    "Press Z (light) or X (heavy)",
-    "Light",
-    "Heavy",
-    "COMBO STATE MACHINE",
-    "Chain: Z \u2192 Z \u2192 X",
-    "Combo window",
-    "Combo: x{count}",
-    "Combo: \u2014",
-    "Multiplier: {mult}x",
+    "ui.combo.press_z_x",
+    "ui.combo.light",
+    "ui.combo.heavy",
+    "ui.combo_state_machine",
+    "ui.combo.chain",
+    "ui.combo.window",
+    "ui.combo.x",
+    "ui.combo.none",
+    "ui.combo.multiplier",
     # pattern_demo_scene.py MODE_NAMES
-    "INFERENCE",
-    "FEATURE_COMPARE",
-    "CLASS_GRID",
-    "CONFUSION",
-    "PIPELINE",
-    "TREE_VIEW",
+    "ui.pattern_demo.modes.inference",
+    "ui.pattern_demo.modes.feature_compare",
+    "ui.pattern_demo.modes.class_grid",
+    "ui.pattern_demo.modes.confusion",
+    "ui.pattern_demo.modes.pipeline",
+    "ui.pattern_demo.modes.tree_view",
     # pattern_demo_scene.py labels
-    "Source Feature Vector:",
-    "Nearest Training Sample:",
-    "No tree structure available for this model",
+    "ui.pattern_demo.labels.source_feature_vector",
+    "ui.pattern_demo.labels.nearest_training_sample",
+    "ui.pattern_demo.labels.no_tree_structure",
     # vision_demo_scene.py MODE_NAMES
-    "THRESHOLD",
-    "OTSU",
-    "ERODE",
-    "DILATE",
-    "OPEN",
-    "CLOSE",
-    "COMPONENTS",
-    "REGIONS",
-    "WATERSHED",
-    "FEATURES",
+    "ui.vision_demo.modes.threshold",
+    "ui.vision_demo.modes.otsu",
+    "ui.vision_demo.modes.erode",
+    "ui.vision_demo.modes.dilate",
+    "ui.vision_demo.modes.open",
+    "ui.vision_demo.modes.close",
+    "ui.vision_demo.modes.components",
+    "ui.vision_demo.modes.regions",
+    "ui.vision_demo.modes.watershed",
+    "ui.vision_demo.modes.features",
     # vision_demo_scene.py hint
-    "Press I to close intermediate view",
+    "ui.vision_demo.press_i_close",
     # quiz_system.py
-    "No questions loaded",
-    "QUIZ",
-    "  {current}/{total}  |  Score: {score}",
+    "ui.quiz.no_questions",
+    "ui.quiz",
+    "ui.score",
 }
 
 
-def _literales_en_archivo(ruta: Path) -> set[str]:
-    """Extrae literales de cadena simples de un archivo Python."""
-    texto = ruta.read_text(encoding="utf-8", errors="replace")
-    # Busca "..." o '...' que no sean f-strings ni docstrings
-    patron = re.compile(r'(?<!f)"((?:[^"\\]|\\.)*)"|(?<!f)\'((?:[^\'\\]|\\.)*)\'')
-    literales = set()
-    for m in patron.finditer(texto):
-        val = m.group(1) if m.group(1) is not None else m.group(2)
-        if val and not val.startswith(("{", "%", " ", "\n")) and len(val) > 1:
-            literales.add(val)
-    return literales
+def _catalogo_plano(idioma: str) -> dict[str, str]:
+    """Devuelve el catálogo aplanado para un idioma."""
+    return aplanar_catalogo(cargar_del_disco(idioma))
 
 
 def test_todos_los_strings_ui_estan_en_catalogo_es() -> None:
-    """Cada string visible identificado debe tener entrada en es.json."""
-    cat_es = cargar_del_disco("es")
-    faltantes = sorted(s for s in STRINGS_ESPERADOS if s not in cat_es)
+    """Cada clave canónica visible identificada debe tener entrada en es.json."""
+    cat_es = _catalogo_plano("es")
+    faltantes = sorted(k for k in CANONICAL_KEYS_ESPERADAS if k not in cat_es)
     assert not faltantes, (
-        f"{len(faltantes)} strings visibles sin entrada en locale/es.json:\n"
+        f"{len(faltantes)} claves canónicas visibles sin entrada en locale/es.json:\n"
         + "\n".join(f"  {s!r}" for s in faltantes)
     )
 
 
 def test_todos_los_strings_ui_estan_en_catalogo_en() -> None:
-    """Cada string visible debe tener traducción en en.json."""
-    cat_en = cargar_del_disco("en")
-    faltantes = sorted(s for s in STRINGS_ESPERADOS if s not in cat_en)
+    """Cada clave canónica visible debe tener traducción en en.json."""
+    cat_en = _catalogo_plano("en")
+    faltantes = sorted(k for k in CANONICAL_KEYS_ESPERADAS if k not in cat_en)
     assert not faltantes, (
-        f"{len(faltantes)} strings visibles sin entrada en locale/en.json:\n"
+        f"{len(faltantes)} claves canónicas visibles sin entrada en locale/en.json:\n"
         + "\n".join(f"  {s!r}" for s in faltantes)
     )
 

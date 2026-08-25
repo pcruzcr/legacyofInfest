@@ -50,16 +50,16 @@ if TYPE_CHECKING:
 
 
 MODE_NAMES = [
-    _("THRESHOLD"),
-    _("OTSU"),
-    _("ERODE"),
-    _("DILATE"),
-    _("OPEN"),
-    _("CLOSE"),
-    _("COMPONENTS"),
-    _("REGIONS"),
-    _("WATERSHED"),
-    _("FEATURES"),
+    _("ui.vision_demo.modes.threshold"),
+    _("ui.vision_demo.modes.otsu"),
+    _("ui.vision_demo.modes.erode"),
+    _("ui.vision_demo.modes.dilate"),
+    _("ui.vision_demo.modes.open"),
+    _("ui.vision_demo.modes.close"),
+    _("ui.vision_demo.modes.components"),
+    _("ui.vision_demo.modes.regions"),
+    _("ui.vision_demo.modes.watershed"),
+    _("ui.vision_demo.modes.features"),
 ]
 
 FEATURE_METHODS: list[Literal["hog", "lbp", "color_hist", "combined"]] = ["hog", "lbp", "color_hist", "combined"]
@@ -615,7 +615,7 @@ class VisionDemoScene(BaseScene):
             feat_label = self._font_overlay_small.render(f"Descriptor: {method.upper()}", True, COLOR_HIGHLIGHT)
             self._inter_overlay.blit(feat_label, (bx + 6, by + box_h - 30))
 
-        hint = self._font_overlay_small.render(_("Press I to close intermediate view"), True, (100, 100, 140))
+        hint = self._font_overlay_small.render(_("ui.vision_demo.press_i_close"), True, (100, 100, 140))
         self._inter_overlay.blit(hint, (bx + 6, by + box_h - 12))
 
         surface.blit(self._inter_overlay, (0, 0))

@@ -710,6 +710,7 @@ class ObjetosDeTiled:
           dejarlo medio hundido.
         * `automatico` — al tocar (por defecto) o pulsando usar.
         * `una_vez`, `key_id`, `enfriamiento`, `mensaje`.
+        * `requires_skill` — **opcional**, skill_id requerido para usar el warp.
 
         Sin destino no se carga y se avisa. Un warp sin destino no es un warp a
         medio configurar: es un rectángulo que teletransporta al origen del
@@ -722,6 +723,7 @@ class ObjetosDeTiled:
                 "mapa y parecería un fallo del motor.", obj.x, obj.y,
             )
             return
+        requires_skill = str(props.get("requires_skill", "") or "").strip()
         stage.warps.append(ZonaDeWarp(
             rect=cls._rect_de(obj),
             destino=pygame.Vector2(float(props["destino_x"]),
@@ -731,6 +733,7 @@ class ObjetosDeTiled:
             key_id=str(props.get("key_id", "")),
             enfriamiento=float(props.get("enfriamiento", 0.5)),
             mensaje=str(props.get("mensaje", "")),
+            requires_skill=requires_skill,
         ))
 
     @classmethod

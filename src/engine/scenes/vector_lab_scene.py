@@ -62,19 +62,19 @@ _CONTENT_TOP = TOP_BAR_H + 4
 _PANEL_TOP = TOP_BAR_H
 
 MODE_NAMES = [
-    _("FREE MOVE"),
-    _("CHASE (normalized)"),
-    _("ORBIT (dot product)"),
-    _("DISTANCE CHECK"),
+    _("ui.vector_lab.modes.free_move"),
+    _("ui.vector_lab.modes.chase"),
+    _("ui.vector_lab.modes.orbit"),
+    _("ui.vector_lab.modes.distance"),
 ]
 
 VECTOR_QUIZZES = [
-    {"question": _("What does Vector2.normalize() return?"), "options": [_("A zero vector"), _("A unit vector (length=1)"), _("The vector scaled by 2"), _("The vector's angle")], "answer": 1},
-    {"question": _("What is the dot product of two perpendicular vectors?"), "options": [_("1"), _("0"), _("Their product"), _("Undefined")], "answer": 1},
-    {"question": _("What curve uses 4 control points?"), "options": [_("Linear"), _("Quadratic Bezier"), _("Cubic Bezier"), _("Catmull-Rom")], "answer": 2},
-    {"question": _("What does distance() between two points return?"), "options": [_("The straight-line length"), _("The X difference"), _("The Y difference"), _("The sum of coordinates")], "answer": 0},
-    {"question": _("What does a normalized vector represent?"), "options": [_("Magnitude only"), _("Direction only"), _("Position only"), _("Speed only")], "answer": 1},
-    {"question": _("What is cos(90 degrees)?"), "options": [_("0"), _("1"), _("-1"), _("0.5")], "answer": 0},
+    {"question": _("ui.vector_lab.quiz.q1"), "options": [_("ui.vector_lab.quiz.q1_a"), _("ui.vector_lab.quiz.q1_b"), _("ui.vector_lab.quiz.q1_c"), _("ui.vector_lab.quiz.q1_d")], "answer": 1},
+    {"question": _("ui.vector_lab.quiz.q2"), "options": [_("ui.vector_lab.quiz.q2_a"), _("ui.vector_lab.quiz.q2_b"), _("ui.vector_lab.quiz.q2_c"), _("ui.vector_lab.quiz.q2_d")], "answer": 1},
+    {"question": _("ui.vector_lab.quiz.q3"), "options": [_("ui.vector_lab.quiz.q3_a"), _("ui.vector_lab.quiz.q3_b"), _("ui.vector_lab.quiz.q3_c"), _("ui.vector_lab.quiz.q3_d")], "answer": 2},
+    {"question": _("ui.vector_lab.quiz.q4"), "options": [_("ui.vector_lab.quiz.q4_a"), _("ui.vector_lab.quiz.q4_b"), _("ui.vector_lab.quiz.q4_c"), _("ui.vector_lab.quiz.q4_d")], "answer": 0},
+    {"question": _("ui.vector_lab.quiz.q5"), "options": [_("ui.vector_lab.quiz.q5_a"), _("ui.vector_lab.quiz.q5_b"), _("ui.vector_lab.quiz.q5_c"), _("ui.vector_lab.quiz.q5_d")], "answer": 1},
+    {"question": _("ui.vector_lab.quiz.q6"), "options": [_("ui.vector_lab.quiz.q6_a"), _("ui.vector_lab.quiz.q6_b"), _("ui.vector_lab.quiz.q6_c"), _("ui.vector_lab.quiz.q6_d")], "answer": 0},
 ]
 
 #: Margen que se deja a los puntos para que su círculo y su etiqueta no
@@ -171,7 +171,8 @@ class VectorLabScene(BaseScene):
         # TAB — cycle modes
         if im.is_raw_key_pressed(pygame.K_TAB):
             self._mode = (self._mode + 1) % len(MODE_NAMES)
-            self._status_msg = f"Mode: {MODE_NAMES[self._mode]}"
+            self._status_msg = _("ui.vector_lab.status.mode").format(mode=_(MODE_NAMES[self._mode]))
+            self._status_timer = 1.5
             self._status_timer = 1.5
 
         # N — toggle normalized vector
@@ -245,7 +246,7 @@ class VectorLabScene(BaseScene):
         AUD-094: el elemento vivía en la esquina superior izquierda porque
         estas escenas se escribieron para una pantalla de 320x224.
         """
-        _, escenario = area_con_columna(self._ANCHO_COLUMNA)
+        _area, escenario = area_con_columna(self._ANCHO_COLUMNA)
         return Lienzo(AUTHORED_W, AUTHORED_H, area=escenario).rect()
 
     def draw(self, surface: pygame.Surface) -> None:
@@ -265,9 +266,9 @@ class VectorLabScene(BaseScene):
         el lienzo es el trazo.
         """
         surface.fill(COLOR_BG)
-        draw_top_bar(surface, "VECTOR LAB", "UNIT II")
+        draw_top_bar(surface, _("ui.vector_lab"), _("ui.units.unit_ii"))
 
-        _, escenario = area_con_columna(self._ANCHO_COLUMNA)
+        _area, escenario = area_con_columna(self._ANCHO_COLUMNA)
         lienzo = Lienzo(AUTHORED_W, AUTHORED_H, area=escenario)
 
         # Rejilla dentro del escenario, con el paso de autoría escalado
@@ -327,7 +328,7 @@ class VectorLabScene(BaseScene):
         # Mode label
         mode_color = COLOR_HIGHLIGHT if self._mode >= 1 else COLOR_ACCENT
         mode_label = self._font_medium.render(
-            f"  Mode: {MODE_NAMES[self._mode]}  ", True, mode_color)
+            f"  {_(MODE_NAMES[self._mode])}  ", True, mode_color)
         surface.blit(mode_label, (_MARGIN, _CONTENT_TOP))
 
         # Math info panel
@@ -368,5 +369,5 @@ class VectorLabScene(BaseScene):
         self._tutorial.draw(surface)
 
         draw_bottom_bar(surface, (
-            f"  MODE: {MODE_NAMES[self._mode]} | [Q] Quiz [C] Code [T] Tutorial"
+            f"  {_(MODE_NAMES[self._mode])} | [Q] Quiz [C] Code [T] Tutorial"
         ))

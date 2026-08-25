@@ -45,20 +45,20 @@ def _key_name(key: int) -> str:
 
 
 _ACTION_LABELS: dict[Action, str] = {
-    Action.MOVE_LEFT: _("Move Left"),
-    Action.MOVE_RIGHT: _("Move Right"),
-    Action.MOVE_UP: _("Move Up"),
-    Action.MOVE_DOWN: _("Move Down"),
-    Action.JUMP: _("Jump"),
-    Action.CROUCH: _("Crouch"),
-    Action.SHORT_ATTACK: _("Attack (Short)"),
-    Action.LONG_ATTACK: _("Attack (Long)"),
-    Action.DASH: _("Dash"),
-    Action.GRAB: _("Grab"),
-    Action.RANGED_ATTACK: _("Disparar"),
-    Action.CONFIRM: _("Confirm"),
-    Action.CANCEL: _("Cancel"),
-    Action.PAUSE: _("Pause"),
+    Action.MOVE_LEFT: _("ui.move_left"),
+    Action.MOVE_RIGHT: _("ui.move_right"),
+    Action.MOVE_UP: _("ui.move_up"),
+    Action.MOVE_DOWN: _("ui.move_down"),
+    Action.JUMP: _("ui.jump"),
+    Action.CROUCH: _("ui.crouch"),
+    Action.SHORT_ATTACK: _("ui.attack_short"),
+    Action.LONG_ATTACK: _("ui.attack_long"),
+    Action.DASH: _("ui.dash"),
+    Action.GRAB: _("ui.grab"),
+    Action.RANGED_ATTACK: _("ui.ranged_attack"),
+    Action.CONFIRM: _("ui.confirm"),
+    Action.CANCEL: _("ui.cancel"),
+    Action.PAUSE: _("ui.pause"),
 }
 
 
@@ -180,7 +180,7 @@ class KeybindingScene(BaseScene):
         # AUD-069: rejilla de dos columnas, así que la navegación sigue siendo
         # propia; lo que se unifica es la paleta, la tipografía y los atajos.
         start_y = draw_screen(
-            surface, "CONTROLES", "Elige una acción y pulsa Enter para cambiarla",
+            surface, "ui.controls", "ui.choose_action",
         ) + Theme.SPACE_S
 
         cols = self._num_cols
@@ -226,13 +226,13 @@ class KeybindingScene(BaseScene):
 
         if self._waiting_for_key:
             draw_key_hints(surface, [
-                ("Cualquier tecla", "Asignar"),
-                ("Esc", "Cancelar"),
+                ("Cualquier tecla", "ui.nav.assign"),
+                ("Esc", "ui.cancel"),
             ])
         else:
             draw_key_hints(surface, [
-                ("←→↑↓", "Navegar"),
-                ("Enter", "Cambiar"),
-                ("Esc", "Volver"),
+                ("←→↑↓", "ui.nav.navigate"),
+                ("Enter", "ui.change"),
+                ("Esc", "ui.back"),
             ])
 

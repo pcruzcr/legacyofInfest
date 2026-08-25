@@ -13,12 +13,12 @@ import pygame
 
 from src.engine.core import settings
 from src.framework.entities.enemy_base import EnemyBase, EnemyState
-from src.framework.stage.stage_data import HazardZone
 from src.framework.stage.bloques import BloqueEmpujable, BloqueDestructible
 
 if TYPE_CHECKING:
     from src.framework.entities.player import Player
     from src.framework.ecs.world import World
+    from src.framework.stage.stage_data import HazardZone
 
 
 class EnemyTerrainShaper(EnemyBase):
@@ -111,6 +111,7 @@ class EnemyTerrainShaper(EnemyBase):
             )
         elif action == 2:
             # Colocar HazardZone
+            from src.framework.stage.stage_data import HazardZone
             hazard = HazardZone(
                 rect=pygame.Rect(int(x - 24), int(y), 48, 16),
                 damage=0.5,

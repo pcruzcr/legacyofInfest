@@ -52,12 +52,12 @@ if TYPE_CHECKING:
 
 
 MODE_NAMES = [
-    _("RGB EXPLORER"),
-    _("HSV EXPLORER"),
-    _("HSL EXPLORER"),
-    _("CMYK EXPLORER"),
-    _("ALPHA BLEND"),
-    _("CHALLENGE"),
+    _("ui.color_theory_modes.rgb"),
+    _("ui.color_theory_modes.hsv"),
+    _("ui.color_theory_modes.hsl"),
+    _("ui.color_theory_modes.cmyk"),
+    _("ui.color_theory_modes.alpha"),
+    _("ui.color_theory_modes.challenge"),
 ]
 
 CHANNEL_COLORS = [(255, 60, 60), (60, 200, 60), (60, 60, 255), (200, 200, 60)]
@@ -408,7 +408,7 @@ class ColorTheoryScene(BaseScene):
         _draw_slider(surface, 10, y, 300, self._h / 360, (255, 200, 100), "H")
         _draw_slider(surface, 10, y + FILA * 1, 300, self._s, (200, 100, 200), "S")
         _draw_slider(surface, 10, y + FILA * 2, 300, self._v, (100, 200, 255), "V")
-        hint = self._font_small.render(_("SHIFT to toggle step-by-step algorithm"), True, COLOR_ACCENT)
+        hint = self._font_small.render(_("ui.color_theory.shift_toggle"), True, COLOR_ACCENT)
         surface.blit(hint, (10, y + 38))
         surface.blit(hint, (10, y + 38))
 
@@ -416,7 +416,7 @@ class ColorTheoryScene(BaseScene):
         _draw_slider(surface, 10, y, 300, self._h / 360, (255, 200, 100), "H")
         _draw_slider(surface, 10, y + FILA * 1, 300, self._s, (200, 100, 200), "S")
         _draw_slider(surface, 10, y + FILA * 2, 300, self._lightness, (100, 200, 200), "L")
-        hint = self._font_small.render(_("SHIFT to toggle step-by-step algorithm"), True, COLOR_ACCENT)
+        hint = self._font_small.render(_("ui.color_theory.shift_toggle"), True, COLOR_ACCENT)
         surface.blit(hint, (10, y + 38))
         surface.blit(hint, (10, y + 38))
 

@@ -72,7 +72,7 @@ class ComboDemoScene(BaseScene):
         self._combo_count = 0
         self._combo_timer = 0.0
         self._last_type = ""
-        self._hit_log = [_("Press Z (light) or X (heavy)")]
+        self._hit_log = [_("ui.combo.press_z_x")]
 
     def on_exit(self) -> None:
         pass
@@ -116,7 +116,7 @@ class ComboDemoScene(BaseScene):
         self._last_type = atk_type
         idx = min(self._combo_count - 1, len(settings.COMBO_DAMAGE_MULT) - 1)
         mult = settings.COMBO_DAMAGE_MULT[idx]
-        label = _("Light") if atk_type == "SHORT" else _("Heavy")
+        label = _("ui.combo.light") if atk_type == "SHORT" else _("ui.combo.heavy")
         self._hit_log.append(f"{label} hit → COMBO x{self._combo_count} ({mult}x)")
         if len(self._hit_log) > 6:
             self._hit_log.pop(0)
@@ -149,13 +149,13 @@ class ComboDemoScene(BaseScene):
         fondo de un aula.
         """
         surface.fill(COLOR_BG)
-        draw_top_bar(surface, _("COMBO STATE MACHINE"), "Demo")
+        draw_top_bar(surface, _("ui.combo_state_machine"), _("ui.demo"))
 
         area = area_de_contenido()
         cx = area.centerx
         y = area.y + self._MARGEN_SUPERIOR
 
-        title = self._font_medium.render(_("Chain: Z → Z → X"), True, COLOR_HIGHLIGHT)
+        title = self._font_medium.render(_("ui.combo.chain"), True, COLOR_HIGHLIGHT)
         self._centrado(surface, title, y)
         y += title.get_height() + self._SALTO
 
@@ -168,7 +168,7 @@ class ComboDemoScene(BaseScene):
             ratio = max(0.0, min(1.0, self._combo_timer / settings.COMBO_WINDOW))
             pygame.draw.rect(surface, COLOR_ACCENT,
                              (bx, y, int(ancho_barra * ratio), alto_barra))
-        label = self._font_small.render(_("Combo window"), True, COLOR_TEXT)
+        label = self._font_small.render(_("ui.combo.window"), True, COLOR_TEXT)
         self._centrado(surface, label, y + alto_barra + 6)
         y += alto_barra + label.get_height() + self._SALTO + 6
 
@@ -195,10 +195,10 @@ class ComboDemoScene(BaseScene):
         y = ny + radio + self._SALTO
 
         if self._combo_count > 0:
-            count_str = _("Combo: x{count}").format(count=self._combo_count)
+            count_str = _("ui.combo.x").format(count=self._combo_count)
             count_color = COLOR_HIGHLIGHT
         else:
-            count_str = _("Combo: —")
+            count_str = _("ui.combo.none")
             count_color = COLOR_TEXT
         count_txt = self._font_large.render(count_str, True, count_color)
         self._centrado(surface, count_txt, y)
@@ -206,7 +206,7 @@ class ComboDemoScene(BaseScene):
 
         idx = min(max(0, self._combo_count - 1), len(settings.COMBO_DAMAGE_MULT) - 1)
         mult = settings.COMBO_DAMAGE_MULT[idx] if self._combo_count > 0 else 1.0
-        mult_txt = self._font_medium.render(_("Multiplier: {mult}x").format(mult=mult), True, COLOR_ACCENT)
+        mult_txt = self._font_medium.render(_("ui.combo.multiplier").format(mult=mult), True, COLOR_ACCENT)
         self._centrado(surface, mult_txt, y)
         y += mult_txt.get_height() + self._SALTO
 
@@ -218,4 +218,4 @@ class ComboDemoScene(BaseScene):
             self._centrado(surface, self._font_small.render(line, True, COLOR_TEXT), y_log)
             y_log += salto_log
 
-        draw_bottom_bar(surface, _("Z: Light | X: Heavy | ESC: Back"))
+        draw_bottom_bar(surface, _("ui.hints.light_heavy"))
