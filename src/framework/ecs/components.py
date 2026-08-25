@@ -788,3 +788,216 @@ class Acosador:
     #: Segundos hasta volver a aparecer.
     reaparicion: float = 6.0
     _fuera: float = 0.0
+
+
+# ════════════════════════════════════════════════════════════════
+# AUD-634 — Componentes de comportamiento reutilizables (Behavior Components)
+# ═══════════════════════════════════════════════════════════════
+#
+# Estos componentes encapsulan comportamientos reutilizables que antes
+# vivían duplicados en cada clase de enemigo. Ahora se adjuntan a la
+# entidad y los sistemas ECS los ejecutan, permitiendo composición.
+#
+
+
+@dataclass(slots=True)
+class PatrolComponent:
+    """Patrulla horizontal con detección de bordes (ledge detection).
+
+    Extraído de EnemyWalker: permite que cualquier entidad patrulle.
+    """
+
+    patrol_length: float = 96.0
+    patrol_speed: float = 45.0
+    alert_speed: float = 75.0
+    _patrol_origin: pygame.Vector2 = field(default_factory=lambda: pygame.Vector2(0, 0))
+
+    def __post_init__(self):
+        # Se inicializa en el sistema al adjuntar
+        pass
+
+
+@dataclass(slots=True)
+class ChargeComponent:
+    """Embestida con wind-up y stun — extraído de EnemyCharger.
+
+    Fases: wind_up (telegraph) -> charge -> stun (recuperación).
+    """
+
+    charge_speed: float = 250.0
+    charge_duration: float = 0.7
+    wind_up_duration: float = 0.4
+    stun_duration: float = 1.0
+    charge_damage_mult: float = 3.0  # multiplicador de daño en carga
+    _charge_timer: float = 0.0
+    _wind_up_timer: float = 0.0
+    _stun_timer: float = 0.0
+    _is_charging: bool = False
+    _is_winding_up: bool = False
+    _is_stunned: bool = False
+    _charge_dir: int = 1
+
+
+@dataclass(slots=True)
+class PredictiveAimComponent:
+    """Puntería predictiva para proyectiles — extraído de EnemyArcher.
+
+    Calcula lead basado en velocidad del objetivo.
+    """
+
+    predict_factor: float = 0.3
+    projectile_speed: float = 90.0
+    gravity: float = 400.0  # gravedad del proyectil (arco)
+
+
+@dataclass(slots=True)
+class DistanceManagerComponent:
+    """Gestión de distancia ideal — extraído de EnemyCaster.
+
+    Mantiene distancia ideal acercándose/alejándose.
+    """
+
+    ideal_distance: float = 150.0
+    approach_speed: float = 15.0
+    retreat_speed: float = 15.0
+    distance_margin: float = 20.0
+
+
+@dataclass(slots=True)
+class ShieldComponent:
+    """Escudo frontal con HP — extraído de EnemyShielded.
+
+    Bloquea daño frontal, vulnerable por detrás/parry.
+    """
+
+    shield_health: float = 3.0
+    shield_max_health: float = 3.0
+    regen_delay: float = 5.0
+    _regen_timer: float = 0.0
+    _broken: bool = False
+
+
+@dataclass(slots=True)
+class SummonComponent:
+    """Invocación de esbirros — extraído de EnemySummoner / BossBase.
+
+    Spawnea entidades periódicamente, límite de concurrentes.
+    """
+
+    summon_type: str = "WalkerInsect"  # species_id
+    summon_interval: float = 8.0
+    max_minions: int = 3
+    _cooldown: float = 0.0
+    _active_count: int = 0
+
+
+@dataclass(slots=True)
+class BombDropComponent:
+    """Lanzamiento de bombas/área desde el aire — extraído de EnemyFlyingBomber.
+
+    Deja proyectiles de área desde el aire.
+    """
+
+    drop_interval: float = 2.5
+    bomb_damage: float = 1.0
+    bomb_radius: float = 48.0
+    _cooldown: float = 0.0
+
+
+@dataclass(slots=True)
+class TerrainActionComponent:
+    """Modificación de terreno — crea/rompe bloques, coloca hazards.
+
+    Extraído de EnemyTerrainShaper.
+    """
+
+    action_interval: float = 4.0
+    _cooldown: float = 0.0
+    _action_index: int = 0  # 0=create block, 1=break, 2=hazard
+    _action_types: tuple[str, ...] = ("create_block", "break_block", "place_hazard")
+
+
+@dataclass(slots=True)
+class GroundPoundComponent:
+    """Pisotón aéreo — cancelar momentum, caer recto, onda al aterrizar.
+
+    Extraído de GroundPoundState.
+    """
+
+    dive_speed: float = 420.0
+    wave_width: float = 72.0
+    wave_height: float = 16.0
+    wave_duration: float = 0.12
+    damage_mult: float = 1.5
+    _state: str = "dive"  # "dive" | "wave" | "done"
+    _wave_timer: float = 0.0
+
+
+@dataclass(slots=True)
+class ShieldComponent:
+    """Escudo frontal con HP — extraído de EnemyShielded.
+
+    Bloquea daño frontal, vulnerable por detrás/parry.
+    """
+
+    shield_health: float = 3.0
+    shield_max_health: float = 3.0
+    regen_delay: float = 5.0
+    _regen_timer: float = 0.0
+    _broken: bool = False
+
+
+@dataclass(slots=True)
+class SummonComponent:
+    """Invocación de esbirros — extraído de EnemySummoner / BossBase.
+
+    Spawnea entidades periódicamente, límite de concurrentes.
+    """
+
+    summon_type: str = "WalkerInsect"  # species_id
+    summon_interval: float = 8.0
+    max_minions: int = 3
+    _cooldown: float = 0.0
+    _active_count: int = 0
+
+
+@dataclass(slots=True)
+class BombDropComponent:
+    """Lanzamiento de bombas/área desde el aire — extraído de EnemyFlyingBomber.
+
+    Deja proyectiles de área desde el aire.
+    """
+
+    drop_interval: float = 2.5
+    bomb_damage: float = 1.0
+    bomb_radius: float = 48.0
+    _cooldown: float = 0.0
+
+
+@dataclass(slots=True)
+class TerrainActionComponent:
+    """Modificación de terreno — crea/rompe bloques, coloca hazards.
+
+    Extraído de EnemyTerrainShaper.
+    """
+
+    action_interval: float = 4.0
+    _cooldown: float = 0.0
+    _action_index: int = 0  # 0=create block, 1=break, 2=hazard
+    _action_types: tuple[str, ...] = ("create_block", "break_block", "place_hazard")
+
+
+@dataclass(slots=True)
+class GroundPoundComponent:
+    """Pisotón aéreo — cancelar momentum, caer recto, onda al aterrizar.
+
+    Extraído de GroundPoundState.
+    """
+
+    dive_speed: float = 420.0
+    wave_width: float = 72.0
+    wave_height: float = 16.0
+    wave_duration: float = 0.12
+    damage_mult: float = 1.5
+    _state: str = "dive"  # "dive" | "wave" | "done"
+    _wave_timer: float = 0.0
