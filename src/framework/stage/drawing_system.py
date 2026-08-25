@@ -719,6 +719,7 @@ class DrawingSystem(GizmosDeDepuracion):
                 mapa_alto=alto,
                 minimo=float(getattr(stage, "profundidad_min", 1.0)),
                 maximo=float(getattr(stage, "profundidad_max", 1.0)),
+                curva=float(getattr(stage, "profundidad_curva", 1.0)),
             )
         return self._prof
 
