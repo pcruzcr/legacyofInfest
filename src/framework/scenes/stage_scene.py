@@ -900,18 +900,35 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         imitaba. Dibujar los dos sumaría una superposición sobre una
         refracción, que es el defecto que AUD-222 acaba de quitar del bloom.
 
-        La región es la pantalla entera porque eso es exactamente lo que
-        cubre hoy `WaterEffect`: la propiedad `water_effect` del TMX es un
-        booleano de escenario, no un rectángulo. Cuando las zonas de agua del
-        ECS expongan su rect en pantalla, es aquí donde hay que estrecharla —
-        la tubería ya acepta cualquier rectángulo.
+        AUD-623 — la región se publica desde las zonas de agua ECS reales,
+        no la pantalla entera. Se calcula la unión de todas las `ZonaDeAgua`
+        visibles en cámara y se publica su envolvente.
         """
         from src.engine.core import gpu_effects
+        from src.framework.ecs.components import ZonaDeAgua
 
         if gpu_effects.WATER in gpu_effects.effects_on_gpu():
-            gpu_effects.publish_water_region(
-                (0, 0, settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
-            )
+            # Unir todas las zonas de agua visibles en cámara
+            union: pygame.Rect | None = None
+            for _, agua in self._mundo.cada(ZonaDeAgua):
+                if agua.rect.width <= 0 or agua.rect.height <= 0:
+                    continue
+                rect_pantalla = agua.rect.move(-int(self._camera.offset.x), -int(self._camera.offset.y))
+                # Ignorar zonas fuera de pantalla
+                if rect_pantalla.right <= 0 or rect_pantalla.left >= settings.INTERNAL_WIDTH:
+                    continue
+                if rect_pantalla.bottom <= 0 or rect_pantalla.top >= settings.INTERNAL_HEIGHT:
+                    continue
+                # Recortar a pantalla
+                rect_pantalla.clamp_ip(pygame.Rect(0, 0, settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
+                if union is None:
+                    union = rect_pantalla
+                else:
+                    union = union.union(rect_pantalla)
+            if union is not None:
+                gpu_effects.publish_water_region(
+                    (union.left, union.top, union.width, union.height),
+                )
         else:
             self._agua_vfx.draw(surface, self._camera.offset)
 
