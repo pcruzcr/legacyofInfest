@@ -130,18 +130,27 @@ class Sombra:
 
     def dibujar(self, surface: pygame.Surface, cuerpo: pygame.Rect,
                 solidos: list[pygame.Rect], camera_offset: pygame.Vector2,
-                lote: Any = None) -> None:
+                lote: Any = None, escala: float = 1.0) -> None:
         """Pinta la sombra de `cuerpo` sobre el suelo que tenga debajo.
 
         Con `lote`, la encola en vez de dibujarla: quien pinta ocho sombras
         seguidas las suelta todas con una llamada (AUD-302). Sin él se comporta
         exactamente como antes, que es lo que necesitan las entregas que llaman
         a esto por su cuenta.
+        
+        Parámetro `escala` (AUD-624): factor de profundidad 2.5D para escalar
+        la sombra igual que la entidad. 1.0 = sin cambio.
         """
         suelo_y = suelo_bajo(cuerpo, solidos)
         if suelo_y is None:
             return
         ancho, alto, alfa = self.medidas(cuerpo, suelo_y)
+        if alfa <= 0:
+            return
+
+        # AUD-624 — escalar la sombra igual que la entidad en 2.5D
+        ancho = max(4, int(ancho * escala))
+        alto = max(3, int(alto * escala))
         if alfa <= 0:
             return
 

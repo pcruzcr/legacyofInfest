@@ -680,7 +680,12 @@ class DrawingSystem(GizmosDeDepuracion):
             for drawable, _depth in drawables:
                 rect = getattr(drawable, "rect", None)
                 if rect is not None and getattr(drawable, "proyecta_sombra", True):
-                    self._sombra.dibujar(surface, rect, solidos, offset, lote)
+                    # AUD-624 — profundidad 2.5D para la sombra
+                    escala_sombra = 1.0
+                    if escala.activa:
+                        escala_sombra = escala.escala_en(rect.bottom)
+                    self._sombra.dibujar(surface, rect, solidos, offset, lote,
+                                         escala=escala_sombra)
             lote.volcar(surface)
 
         escala = self._escala_de_profundidad(stage)
