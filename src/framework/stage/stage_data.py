@@ -38,6 +38,8 @@ from src.framework.stage.interactables import (
     Disparador,
     Recogible,
     ZonaDeWarp,
+    SecretExit,
+    SecretRoom,
 )
 from src.framework.stage.objetivos import Objetivo
 from src.framework.stage.pendientes import Pendiente
@@ -427,6 +429,10 @@ class StageData:
     #: lo que mueven no es una entidad del mundo, es **el jugador**, y quien lo
     #: posee es la escena.
     warps: list[ZonaDeWarp] = field(default_factory=list)
+    #: AUD-625 — salidas secretas (`SecretExit`) que revelan nodos en el mapa.
+    secret_exits: list[SecretExit] = field(default_factory=list)
+    #: AUD-625 — salas secretas (`SecretRoom`) con tell visual.
+    secret_rooms: list[SecretRoom] = field(default_factory=list)
     #: AUD-297 — el suelo inclinado del mapa.
     #:
     #: Lista aparte de `collision_rects` **a propósito**: si una pendiente

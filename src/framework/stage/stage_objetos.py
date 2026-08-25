@@ -31,6 +31,8 @@ from src.framework.stage.interactables import (
     Disparador,
     Recogible,
     ZonaDeWarp,
+    SecretExit,
+    SecretRoom,
 )
 from src.framework.stage.pendientes import Pendiente
 from src.framework.stage.stage_data import (
@@ -157,6 +159,12 @@ class ObjetosDeTiled:
 
             elif obj_type == "WarpZone":
                 cls._handle_warp(stage, obj, props)
+
+            elif obj_type == "SecretExit":
+                cls._handle_secret_exit(stage, obj, props)
+
+            elif obj_type == "SecretRoom":
+                cls._handle_secret_room(stage, obj, props)
 
             elif obj_type == "Slope":
                 cls._handle_pendiente(stage, obj, props)
@@ -1101,3 +1109,56 @@ class ObjetosDeTiled:
         lock_x = props.get("lock_x", False) in (True, "true", "True", 1, "1")
         lock_y = props.get("lock_y", False) in (True, "true", "True", 1, "1")
         stage.camera_locks.append(CameraLock(rect=rect, lock_x=lock_x, lock_y=lock_y))
+
+    @classmethod
+    def _handle_secret_exit(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
+        """AUD-625 — `SecretExit`: salida oculta que revela un nodo en el mapa del mundo.
+
+        Propiedades:
+        * `secret_id` — **obligatorio**, ID único del secreto.
+        * `automatico` — `true` (default): se revela al tocar; `false`: al pulsar usar.
+        * `una_vez` — `true` (default): solo se descubre una vez.
+        * `key_id` — item/llave requerida para revelarlo (opcional).
+        """
+        secret_id = str(props.get("secret_id", "") or "").strip()
+        if not secret_id:
+            logger.warning(
+                "SecretExit en (%s, %s) sin 'secret_id': se ignora.",
+                getattr(obj, "x", "?"), getattr(obj, "y", "?"),
+            )
+            return
+        automatico = cls._bool_de(props.get("automatico"), por_defecto=True)
+        una_vez = cls._bool_de(props.get("una_vez"), por_defecto=True)
+        key_id = str(props.get("key_id", "") or "").strip()
+        stage.secret_exits.append(SecretExit(
+            rect=cls._rect_de(obj),
+            secret_id=secret_id,
+            automatico=automatico,
+            una_vez=una_vez,
+            key_id=key_id,
+        ))
+
+    @classmethod
+    def _handle_secret_room(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
+        """AUD-625 — `SecretRoom`: sala oculta con tell visual sutil.
+
+        Propiedades:
+        * `secret_id` — **obligatorio**, ID único del secreto.
+        * `recompensa` — item_id opcional que se otorga al descubrirla.
+        * `tell` — tipo de tell visual: "sparkle" (default), "particles", "sound", "none".
+        """
+        secret_id = str(props.get("secret_id", "") or "").strip()
+        if not secret_id:
+            logger.warning(
+                "SecretRoom en (%s, %s) sin 'secret_id': se ignora.",
+                getattr(obj, "x", "?"), getattr(obj, "y", "?"),
+            )
+            return
+        recompensa = str(props.get("recompensa", "") or "").strip()
+        tell = str(props.get("tell", "sparkle") or "sparkle").strip().lower()
+        stage.secret_rooms.append(SecretRoom(
+            rect=cls._rect_de(obj),
+            secret_id=secret_id,
+            recompensa=recompensa,
+            tell=tell,
+        ))

@@ -44,6 +44,10 @@ class Events:
     STAGE_COMPLETE: str = "STAGE_COMPLETE"
     """Emitted by StageScene (next trigger) or BossVenado.on_defeated(). Payload: stage_id."""
 
+    # ── Secrets ───────────────────────────────────────────────────
+    SECRET_FOUND: str = "SECRET_FOUND"
+    """Emitted when a secret is discovered. Payload: secret_id, secret_type (exit/room)."""
+
     # ── SFX events (emitted by entities, played by StageScene) ────
     SFX_PLAYER_JUMP: str = "SFX_PLAYER_JUMP"
     SFX_PLAYER_LAND: str = "SFX_PLAYER_LAND"
