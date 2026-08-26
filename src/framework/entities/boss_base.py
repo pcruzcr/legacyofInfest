@@ -157,6 +157,8 @@ class BossBase(EnemyBase):
         self._completion_fired: bool = False
         self._transition_overlay: pygame.Surface | None = None
         self._flip_cache: dict[tuple[str, int], pygame.Surface] = {}
+        # B-048: cache para sobel (evita recalcular cada frame y evita parpadeo)
+        self._filter_cache: dict[int, pygame.Surface] = {}
 
         # ── Kit de encuentro (AUD-053) ─────────────────────────
         # Antes de esto BossBase sólo sabía de fases. Telegrafiado, puntos
@@ -265,6 +267,7 @@ class BossBase(EnemyBase):
         self,
         damage: float,
         source_position: tuple[float, float],
+        canal: str | None = None,
     ) -> None:
         if not self.is_alive or self.is_transitioning:
             return
@@ -275,7 +278,7 @@ class BossBase(EnemyBase):
             # mismo que estar en transición: aquí el jefe sigue atacando, sólo
             # que golpearlo no sirve hasta que se cumpla lo que la fase pida.
             return
-        super().apply_hit(damage, source_position)
+        super().apply_hit(damage, source_position, canal=canal)
 
         if self.current_health > 0 and self.state != EnemyState.DYING:
             self._check_phase_transition()
@@ -674,23 +677,46 @@ class BossBase(EnemyBase):
         return None
 
     def _apply_filter(self, frame: pygame.Surface) -> pygame.Surface:
-        """Apply the current phase's filter effect to a sprite frame."""
-        self._filter_frame += 1
+        """Apply the current phase's filter effect to a sprite frame (fix B-048).
+
+        Antes devolvía el sobel opaco negro que tapaba al jefe y solo 1 de cada
+        5 frames → parpadeo negro ~12 Hz. Ahora el sobel devuelve contorno con
+        SRCALPHA (ver FilterTools.sobel_edge) y se compone encima del sprite
+        original, cacheando el resultado para no recalcular cada frame pero sin
+        parpadear: cuando hay efecto, siempre se devuelve el frame filtrado.
+        """
         if not self.phases or self.current_phase >= len(self.phases):
-            return frame
-        if self._filter_frame % _APPLY_FILTER_EVERY_N_FRAMES != 0:
             return frame
         phase = self.phases[self.current_phase]
         effect = phase.filter_effect
         if effect is None:
             return frame
+        # Throttle de cómputo pero sin parpadeo: cachear
+        cache_key = id(frame) ^ hash(effect)
+        cached = self._filter_cache.get(cache_key)
+        # Solo recalcular cada N frames o si no hay cache
+        self._filter_frame += 1
+        if cached is not None and self._filter_frame % _APPLY_FILTER_EVERY_N_FRAMES != 0:
+            return cached
         from src.framework.processing.filter_tools import FilterTools
         if effect == "sobel":
-            return FilterTools.sobel_edge(frame)
+            edge = FilterTools.sobel_edge(frame)
+            # Si sobel ya devuelve overlay transparente (sprite con alpha), componer
+            if edge.get_flags() & pygame.SRCALPHA:
+                composited = frame.copy().convert_alpha()
+                # edge ya tiene fondo transparente y borde blanco → blit normal
+                composited.blit(edge, (0, 0))
+                self._filter_cache[cache_key] = composited
+                return composited
+            # Fallback opaco (foto de laboratorio): devolver tal cual
+            self._filter_cache[cache_key] = edge
+            return edge
         if effect == "sobel_x":
             import numpy as np
             k = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], dtype=np.float32)
-            return FilterTools.apply_kernel(frame, k)
+            result = FilterTools.apply_kernel(frame, k)
+            self._filter_cache[cache_key] = result
+            return result
         return frame
 
     def draw(

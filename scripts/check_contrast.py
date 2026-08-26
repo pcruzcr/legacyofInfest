@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
-RAIZ = Path(__file__).resolve().parent.parent if (Path := __import__("pathlib").Path) else None
+RAIZ = Path(__file__).resolve().parent.parent
 
 
 def _lum(rgb):

@@ -166,6 +166,10 @@ class HazardSystem:
         reglas.aplicar(comp, canal)
 
     def _kill_player(self) -> None:
+        # Assist mode: invulnerabilidad total
+        from src.engine.core.user_settings import get
+        if get().assist_invulnerable:
+            return
         self._pending_death = True
         self._death_timer = 0.3
 

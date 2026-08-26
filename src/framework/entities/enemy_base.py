@@ -96,6 +96,8 @@ class EnemyBase(BaseEntity):
         invincibility_duration: float = 0.5,
         deaggro_margin: float = 32.0,
         event_bus=None,
+        species_id: str | None = None,
+        **kwargs,
     ) -> None:
         """Initialize the enemy at the given spawn position."""
         super().__init__(spawn_position, event_bus)
@@ -184,6 +186,14 @@ class EnemyBase(BaseEntity):
         self._hit_tint_timer: float = 0.0
 
         # --- Sprite ---
+        self.species_id: str | None = species_id
+        self._species_id: str | None = species_id
+        if kwargs:
+            # allow extra species params without breaking
+            for k, v in list(kwargs.items()):
+                if k == "species_id":
+                    self.species_id = v
+                    self._species_id = v
         self._sprite_zone: int = 0
         self._sprite_frames: dict[str, list[pygame.Surface]] = {}
         self._sprite_fw: int = 16
@@ -293,6 +303,36 @@ class EnemyBase(BaseEntity):
         self._sprite_fh = fh
         zone_key = f"zone{zone}" if zone > 0 else "zone1"
         base = settings.ASSETS_DIR / "sprites" / "enemies" / zone_key
+        # Species-specific first: try enemy_<species>_walk.png before generic zone fallback
+        species_id = getattr(self, "species_id", None)
+        # SpeciesSpec may have been used to build via bestiary_registry, store it
+        if species_id is None:
+            # try to infer from class params if enemy was built via species
+            species_id = getattr(self, "_species_id", None)
+        loaded = False
+        if species_id:
+            sid = str(species_id).lower()
+            for key, fname in [("walk", f"enemy_{sid}_walk.png"),
+                               ("hurt", f"enemy_{sid}_hurt.png"),
+                               ("die", f"enemy_{sid}_die.png")]:
+                path = base / fname
+                alt = settings.ASSETS_DIR / "sprites" / "enemies" / "species" / f"{species_id}_walk.png"
+                # species folder fallback
+                candidate = path if path.exists() else alt
+                # also check alternate naming: species/<sid>_* 
+                alt2 = settings.ASSETS_DIR / "sprites" / "enemies" / "species" / f"{sid}_{key}.png"
+                if alt2.exists():
+                    candidate = alt2
+                try:
+                    frames = AssetLoader.load_sprite_sheet(candidate, fw, fh)
+                except Exception:
+                    continue
+                if frames:
+                    self._sprite_frames[key] = frames
+                    loaded = True
+            if loaded:
+                self._load_extra_sprites(zone, fw, fh)
+                return
         for key, fname in [("walk", f"enemy_{zone_key}_walk.png"),
                            ("hurt", f"enemy_{zone_key}_hurt.png"),
                            ("die", f"enemy_{zone_key}_die.png")]:
@@ -1012,6 +1052,10 @@ class EnemyBase(BaseEntity):
         de moverse por completo. Lo detectó
         ``test_sine_reverses_at_boundary``: la ausencia del atributo significa
         "esta clase no se rige por longitud de patrulla", no "está quieta".
+
+        AUD-660 — reportado como “default positivo debería ser IDLE”; no se
+        cambia: voladores sin patrol_length deben seguir en PATROL (su lógica
+        de vuelo no usa longitud de patrulla). Verificado por test_sine.
         """
         if not hasattr(self, "patrol_length"):
             return EnemyState.PATROL

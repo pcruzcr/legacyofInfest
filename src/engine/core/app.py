@@ -47,6 +47,10 @@ class EscenaConRutaDeGPU(Protocol):
     Así que el Protocol es el **contrato escrito** —quien quiera la ruta de
     GPU ya no tiene que deducir los nombres leyendo `_draw`— y la
     comprobación sigue siendo por pato, con `_soporta`.
+
+    AUD-659 — no se marca @runtime_checkable a propósito; ver _soporta y
+    test_el_fotograma_sin_escena.py. El cast en _draw sigue siendo seguro
+    porque _soporta ya verificó callable(getattr(...)).
     """
 
     def dibujar_mundo(self, destino: pygame.Surface) -> None: ...
@@ -231,8 +235,6 @@ class App:
             (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
             pygame.SRCALPHA,
         )
-        self._scaled_surface: pygame.Surface | None = None
-        self._last_scale: int = 0
         self.clock = DeltaClock()
         self.running: bool = False
         self._pintar_primer_fotograma()
@@ -460,7 +462,18 @@ class App:
         self.plugins.disparar("juego_arrancado", app=self)
         self.running = True
         consecutive_errors = 0
+        # AUD-654 — cachear el accesorio de preferencias fuera del bucle: `get()`
+        # dentro del while importaba y resolvía el singleton cada fotograma.
+        from src.engine.core.clock import DeltaClock as _DeltaClock
+        from src.engine.core.user_settings import get as _get_settings
+        _FUENTE_SLOW_MO = _DeltaClock.FUENTE_ASSIST_SLOW_MO
         while self.running and self.context.running:
+            slow_mo = _get_settings().assist_slow_mo
+            if slow_mo != 1.0:
+                self.clock.escalar(_FUENTE_SLOW_MO, slow_mo)
+            else:
+                self.clock.restaurar(_FUENTE_SLOW_MO)
+
             dt = self.clock.tick()
             self._process_events()
             self.event_bus.dispatch()

@@ -53,7 +53,13 @@ class SpeciesSpec:
         kwargs = dict(self.params)
         kwargs.update(overrides)
         kwargs.setdefault("zone", self.zone)
-        return cls(spawn_position, **kwargs)
+        ent = cls(spawn_position, **kwargs)
+        try:
+            ent.species_id = self.species_id
+            ent._species_id = self.species_id
+        except Exception:
+            pass
+        return ent
 
 
 def _walker() -> type:

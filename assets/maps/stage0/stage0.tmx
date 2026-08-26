@@ -135,7 +135,7 @@
   </object>
   <object id="208" name="MessageTrigger_Once_208" type="MessageTrigger_Once" x="400" y="416" width="48" height="48">
    <properties>
-    <property name="text" value="Sube. Con X te agarras a la liana."/>
+    <property name="text" value="Sube. Con G o Arriba te agarras a la liana."/>
    </properties>
   </object>
   <object id="209" name="Vine_209" type="Vine" x="528" y="304" width="8" height="80">

@@ -332,6 +332,8 @@ class DrawingSystem(GizmosDeDepuracion):
     _COLOR_JAULA = (120, 120, 135)
     _COLOR_COFRE = (185, 140, 70)
     _COLOR_ABIERTO = (90, 90, 100)
+    _COLOR_PLACA = (90, 170, 120)
+    _COLOR_PLACA_ACTIVA = (130, 220, 160)
 
     def _draw_interactables(
         self, surface: pygame.Surface, sistema: Any, offset: pygame.Vector2,
@@ -393,6 +395,18 @@ class DrawingSystem(GizmosDeDepuracion):
                     surface, (60, 40, 20),
                     (r.left + 2, r.centery), (r.right - 2, r.centery), 2,
                 )
+
+        for placa in getattr(sistema, "placas", ()):
+            r = placa.rect.move(-offset.x, -offset.y)
+            activa = bool(getattr(placa, "activa", False))
+            color = self._COLOR_PLACA_ACTIVA if activa else self._COLOR_PLACA
+            pygame.draw.rect(surface, color, r, border_radius=4)
+            pygame.draw.rect(surface, (30, 60, 40), r, 2, border_radius=4)
+            # Marca interior: hundida cuando activa.
+            if activa:
+                pygame.draw.rect(surface, (40, 90, 60), r.inflate(-6, -6), border_radius=2)
+            else:
+                pygame.draw.rect(surface, (110, 190, 140), r.inflate(-6, -4), border_radius=2)
 
     def draw_ui(self, ctx: DrawContext) -> None:
         """Interfaz en espacio de pantalla. Se dibuja DESPUÉS de la luz.

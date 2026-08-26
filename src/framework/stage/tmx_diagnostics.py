@@ -139,6 +139,12 @@ BUILTIN_OBJECT_TYPES: tuple[str, ...] = (
     # media pradera. Un `ArenaZone` rectangular declara el cuadrilátero real
     # del combate; sin él, se conserva el comportamiento de mapa completo.
     "ArenaZone",
+    # Placa de presión — botón por peso de bloque/jugador que abre puertas
+    # mientras esté pisada (misma lista de sólidos que los bloques).
+    "PressurePlate",
+    "PlacaDePresion",
+    "PlacaPresion",
+    "Boton",
 )
 
 #: Tipos válidos en la capa `Collision`, que se procesa aparte. `Platform`

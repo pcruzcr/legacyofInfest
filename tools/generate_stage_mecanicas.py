@@ -266,6 +266,12 @@ def _objetos() -> list[str]:
         golpes=3)
     obj("BreakableBlock", (6 * SALA + 33) * TS, suelo_px - 2 * TS, TS, 2 * TS,
         golpes=1)
+    # Placa de presión — el bloque encima abre la puerta mientras esté pisada.
+    # Usa la misma lista de sólidos que los bloques (no duplica composición).
+    obj("PressurePlate", (6 * SALA + 29) * TS, suelo_px - TS, 2 * TS, TS,
+        evento="PLACA_LAB", requiere="bloque", mantener=True)
+    obj("Door", (6 * SALA + 35) * TS, suelo_px - 3 * TS, TS, 3 * TS,
+        abre_con="PLACA_LAB", mensaje="La puerta cede mientras el bloque pisa el botón.")
 
     # ── Sala 8: llave, puerta, resorte, interruptor y jaula ───
     #

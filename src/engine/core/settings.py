@@ -17,7 +17,11 @@ TARGET_FPS: int = 60
 # El camino GL (App._init_pygame) y el software (App._abrir_ventana_software)
 # la aplican los dos.
 _raw_scale = os.environ.get("LOI_DISPLAY_SCALE", "1")
-DISPLAY_SCALE: int = max(1, int(_raw_scale) if _raw_scale.isdigit() else 1)
+try:
+    _parsed_scale = int(_raw_scale) if _raw_scale and _raw_scale.lstrip("-").isdigit() else 1
+except ValueError:
+    _parsed_scale = 1
+DISPLAY_SCALE: int = max(1, min(4, _parsed_scale))
 
 # AUD-021: the reference-resolution auto-scale branch that used to live here was
 # unreachable — it required INTERNAL_WIDTH == 320, and INTERNAL_WIDTH is 800.

@@ -59,16 +59,13 @@ class ReverbZoneManager:
             self._current_reverb = "default"
             return "default"
 
-        px, py = player_pos
-        player_pos_vec = (player_pos[0], player_pos[1])
-
         # Find the zone containing the player (first match)
         for zone in self.zones:
-            if zone.rect.collidepoint(player_pos[0], player_pos[1]):
+            if zone.rect.collidepoint(player_pos):
                 if self._active_zone != zone:
                     self._active_zone = zone
                     self._current_reverb = zone.reverb_name
-                    logging.getLogger(__name__).debug(f"Entered reverb zone: {zone.reverb_name}")
+                    logging.getLogger(__name__).debug("Entered reverb zone: %s", zone.reverb_name)
                 return zone.reverb_name
 
         # No zone contains the player

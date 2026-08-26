@@ -232,6 +232,9 @@ class Llavero:
         if key_id:
             self.llaves.add(key_id)
 
+    def gastar(self, key_id: str) -> None:
+        self.llaves.discard(key_id)
+
 
 # ──────────────────────────────────────────────────────────────────────
 # AUD-625 — Salidas secretas y salas secretas (SecretExit / SecretRoom)
@@ -298,8 +301,50 @@ class SecretRoom:
         self.descubierto = True
         return True
 
-    def gastar(self, key_id: str) -> None:
-        self.llaves.discard(key_id)
+
+# ──────────────────────────────────────────────────────────────────────
+# AUD-XXX — Placa de presión (PressurePlate)
+# ──────────────────────────────────────────────────────────────────────
+
+@dataclass
+class PlacaDePresion:
+    """Boton en el suelo que se activa con peso y abre puertas mientras esta pisada.
+
+    Es el eslabon que faltaba entre ``BloqueEmpujable`` (AUD-140) y
+    ``Cerradura.abre_con_evento`` (AUD-132): un ``PushBlock`` encima de la
+    placa abre la puerta cuyo ``abre_con`` coincide con ``evento``, y al
+    quitar el bloque la puerta se cierra (si ``mantener`` es ``True``, el
+    comportamiento de puzzle Sokoban).
+
+    Por que no es un ``Disparador``
+    --------------------------------
+    ``Disparador`` solo mira al jugador y dispara una vez. La placa mira a
+    **bloques empujables** (y opcionalmente al jugador) cada fotograma, y su
+    estado es continuo: ``activa`` mientras haya peso encima. Sin esto, un
+    puzzle de "pon el bloque en el boton" no se podia declarar desde Tiled y
+    obligaba a escribir Python en cada nivel (GAP del usuario 2026-08-26).
+
+    Modos de ``requiere``
+    ----------------------
+    * ``"bloque"`` (defecto) — cualquier ``BloqueEmpujable``.
+    * ``"jugador"`` — el jugador.
+    * ``"ambos"`` — bloque Y jugador a la vez.
+    * ``"cualquiera"`` — bloque O jugador.
+
+    ``mantener`` decide si la puerta se cierra al liberar la placa. Con
+    ``False`` la placa es un interruptor que queda enclavado.
+    """
+
+    rect: pygame.Rect
+    evento: str
+    requiere: str = "bloque"
+    mantener: bool = True
+    una_vez: bool = False
+    mensaje: str = ""
+    activa: bool = False
+    disparada: bool = False
+    # Estado del fotograma anterior — para detectar flancos sin bus.
+    _activa_previa: bool = False
 
 
 def alcanza(jugador: pygame.Rect, objetivo: pygame.Rect, margen: int = ALCANCE_DE_USO) -> bool:

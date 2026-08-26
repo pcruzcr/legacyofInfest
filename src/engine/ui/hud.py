@@ -244,7 +244,7 @@ def _icono_de_moneda(diametro: int, color: tuple[int, int, int]) -> pygame.Surfa
 # `border_radius`. El margen respecto al borde derecho de la pantalla
 # usa la misma constante `MARGEN_DE_PANTALLA` que el resto del HUD
 # (antes eran 4 px sueltos, un caso especial que nadie más seguía).
-RECUADRO_MINIMAPA_DISENO: tuple[int, int, int, int] = (270, 26, 44, 44)
+RECUADRO_MINIMAPA_DISENO: tuple[int, int, int, int] = (270, 6, 44, 44)
 
 
 def minimap_rect_por_defecto() -> pygame.Rect:

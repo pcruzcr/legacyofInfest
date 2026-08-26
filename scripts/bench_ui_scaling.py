@@ -45,6 +45,8 @@ def main() -> int:
 
     problemas = 0
     for escala in escalas:
+        # `problemas` se incrementa si algún texto no cabe en su contenedor
+        # (esto requeriría una lógica de contenedor, por ahora solo medimos)
         original_pref = getattr(user_settings, "preferencia", None)
         user_settings.preferencia = lambda clave, defecto, e=escala: e
 

@@ -73,6 +73,7 @@ _DIRECTORIO = Path(__file__).resolve().parent.parent.parent.parent / "locale"
 _catalogo: dict[str, str] = {}
 _idioma_actual: str = IDIOMA_POR_DEFECTO
 _faltantes: set[str] = set()
+_candado = __import__("threading").RLock()
 
 
 def idioma_actual() -> str:
@@ -96,18 +97,18 @@ def set_idioma(codigo: str) -> str:
             )
         codigo = IDIOMA_POR_DEFECTO
 
-    _idioma_actual = codigo
-    _faltantes.clear()
-
-    ruta = _DIRECTORIO / f"{codigo}.json"
-    try:
-        _catalogo = json.loads(ruta.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        logger.warning("i18n: no existe el catálogo %s; se usa español", ruta)
-        _catalogo = {}
-    except json.JSONDecodeError as e:
-        logger.warning("i18n: catálogo %s mal formado (%s); se usa español", ruta, e)
-        _catalogo = {}
+    with _candado:
+        _idioma_actual = codigo
+        _faltantes.clear()
+        ruta = _DIRECTORIO / f"{codigo}.json"
+        try:
+            _catalogo = json.loads(ruta.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            logger.warning("i18n: no existe el catálogo %s; se usa español", ruta)
+            _catalogo = {}
+        except json.JSONDecodeError as e:
+            logger.warning("i18n: catálogo %s mal formado (%s); se usa español", ruta, e)
+            _catalogo = {}
     return codigo
 
 
@@ -120,13 +121,14 @@ def _(clave: str) -> str:
 
     La clave **debe ser canónica** (p.ej. `ui.cancel`), no el texto visible.
     """
-    if not _catalogo:
-        return clave
-    traducido = _catalogo.get(clave)
-    if traducido is None:
-        _faltantes.add(clave)
-        return clave
-    return traducido
+    with _candado:
+        if not _catalogo:
+            return clave
+        traducido = _catalogo.get(clave)
+        if traducido is None:
+            _faltantes.add(clave)
+            return clave
+        return traducido
 
 
 def faltantes() -> set[str]:

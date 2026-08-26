@@ -749,6 +749,11 @@ class Player(BaseEntity):
         Apply damage to the player. No-op if invincibility is active.
         Emits PLAYER_DAMAGED and potentially PLAYER_DIED.
         """
+        # Assist mode: invulnerabilidad total
+        from src.engine.core.user_settings import get
+        if get().assist_invulnerable:
+            return
+        
         if self._invincibility_timer > 0:
             return
         if self._state_instance.state_enum == PlayerState.DYING:
@@ -948,6 +953,7 @@ class Player(BaseEntity):
         if (
             input_manager is not None
             and self.is_grounded
+            and self.perfil.modo == PLATAFORMAS
             and self._state_instance.state_enum not in (
                 PlayerState.SWIMMING, PlayerState.SWIM_ATTACK,
             )
@@ -1028,10 +1034,10 @@ class Player(BaseEntity):
     # ──────────────────────────────────────────────
 
     #: AUD-636 — cuánto tarda el squash en volver a identidad, en 1/s.
-    _SQUASH_RETORNO: float = 10.0
+    _SQUASH_RETORNO: ClassVar[float] = 10.0
     #: Aplastamiento máximo. A la velocidad de caída máxima (500 px/s) el
     #: sprite llega a 0,72 de alto — se lee como impacto sin romper la silueta.
-    _SQUASH_MAX: float = 0.28
+    _SQUASH_MAX: ClassVar[float] = 0.28
 
     def aplicar_squash_por_aterrizaje(self, velocidad_caida: float) -> None:
         """Aplasta el sprite al aterrizar, proporcional a la caída (AUD-636).

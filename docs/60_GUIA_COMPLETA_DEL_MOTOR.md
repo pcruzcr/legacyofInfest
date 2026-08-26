@@ -491,6 +491,40 @@ registro, y no conseguir que abriera nada. Faltaba el receptor.
 Una puerta cronometrada **nunca se cierra sobre el jugador**: si está dentro,
 el temporizador se prorroga hasta que salga.
 
+**La placa que abre una puerta con un bloque empujable** tampoco necesita
+Python. Es el eslabón entre `PushBlock` (AUD-140) y `abre_con` (AUD-132):
+
+| Objeto | Propiedad | Por defecto | Qué hace |
+|---|---|---|---|
+| `PressurePlate` (`PlacaDePresion`/`Boton`) | `evento` | **obligatoria** | la puerta con `abre_con` igual se abre mientras la placa esté pisada |
+| | `requiere` | `bloque` | `bloque` (un `PushBlock`), `jugador`, `ambos` o `cualquiera` |
+| | `mantener` | `true` | `true` la puerta se cierra al quitar el peso; `false` queda enclavada |
+| | `una_vez` | `false` | `true` solo se activa una vez |
+| | `mensaje` | — | texto al pisarla |
+
+Receta sin código:
+
+```xml
+<object type="PushBlock" x="64" y="128" width="32" height="32"/>
+<object type="PressurePlate" x="128" y="144" width="32" height="16">
+  <properties>
+    <property name="evento" value="ABRIR_PUENTE"/>
+    <property name="requiere" value="bloque"/>
+  </properties>
+</object>
+<object type="Door" x="256" y="96" width="16" height="48">
+  <properties>
+    <property name="abre_con" value="ABRIR_PUENTE"/>
+  </properties>
+</object>
+```
+
+Mientras el bloque esté encima del botón verde, la puerta es un marco; al
+quitarlo se cierra (nunca sobre el jugador). Con `requiere=cualquiera` el
+jugador también la pisa; con `mantener=false` queda abierta para siempre. Usa
+la misma lista de sólidos que los bloques (`con_cerradas`), así que no duplica
+composición y no paga O(n) extra por fotograma.
+
 ### 4.6 Agarres: liana y tirolesa
 
 | Tipo | Propiedad | Por defecto | Qué hace |

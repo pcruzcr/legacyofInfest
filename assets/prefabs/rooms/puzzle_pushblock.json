@@ -22,8 +22,10 @@
             {"type": "BreakableBlock", "x": 224, "y": 112, "width": 32, "height": 32, "props": {"golpes": "1", "evento_al_romper": "ABRIR_CAMINO"}},
             {"type": "LockedDoor", "x": 208, "y": 80, "width": 16, "height": 48, "props": {"key_id": "llave_puzzle", "clase": "puerta", "mensaje_bloqueado": "Se necesita la llave del puzzle"}},
             {"type": "Key", "x": 32, "y": 112, "width": 16, "height": 16, "props": {"item_id": "llave_puzzle", "mensaje": "Has conseguido la llave del puzzle"}},
+            {"type": "PressurePlate", "x": 96, "y": 128, "width": 32, "height": 16, "props": {"evento": "ABRIR_PUENTE_PLACA", "requiere": "bloque", "mantener": "true", "mensaje": "La placa cede bajo el peso"}},
+            {"type": "Door", "x": 176, "y": 80, "width": 16, "height": 48, "props": {"abre_con": "ABRIR_PUENTE_PLACA", "mensaje": "Puente cerrado — pon el bloque en el botón verde"}},
             {"type": "Checkpoint", "x": 16, "y": 128, "width": 16, "height": 32, "props": {"checkpoint_id": "0"}},
-            {"type": "MessageTrigger", "x": 48, "y": 112, "width": 32, "height": 32, "props": {"text": "Empuja los bloques para crear un camino"}}
+            {"type": "MessageTrigger", "x": 48, "y": 112, "width": 32, "height": 32, "props": {"text": "Empuja un bloque al botón verde para abrir el puente (mantener: se cierra al quitarlo)"}}
         ]
     }
 }

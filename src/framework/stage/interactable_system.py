@@ -30,6 +30,7 @@ from src.framework.stage.interactables import (
     Cofre,
     Disparador,
     Llavero,
+    PlacaDePresion,
     Recogible,
     ZonaDeWarp,
     alcanza,
@@ -50,6 +51,9 @@ EVENTO_COFRE = "INTERACT_CHEST_OPENED"
 EVENTO_DISPARADOR = "INTERACT_TRIGGER_FIRED"
 #: AUD-287 — el jugador ha pisado una zona de warp. Lleva `destino` y `origen`.
 EVENTO_WARP = "INTERACT_WARP"
+#: Placa de presión activada / desactivada.
+EVENTO_PLACA_ACTIVADA = "INTERACT_PLATE_ACTIVATED"
+EVENTO_PLACA_DESACTIVADA = "INTERACT_PLATE_DEACTIVATED"
 
 
 class InteractableSystem:
@@ -63,6 +67,7 @@ class InteractableSystem:
         disparadores: list[Disparador] | None = None,
         bus: EventBus | None = None,
         warps: list[ZonaDeWarp] | None = None,
+        placas: list[PlacaDePresion] | None = None,
     ) -> None:
         self.recogibles = list(recogibles or [])
         self.cerraduras = list(cerraduras or [])
@@ -71,6 +76,8 @@ class InteractableSystem:
         #: AUD-287 — zonas de warp. Al final de la firma y con valor por
         #: defecto: las 26 clases de escenario construyen esto por posición.
         self.warps = list(warps or [])
+        #: Placas de presión (PressurePlate) — botones por peso.
+        self.placas: list[PlacaDePresion] = list(placas or [])
         self.llavero = Llavero()
         self._bus = bus
         #: De qué cadáveres ya salió el botín (AUD-218). Vive aquí y no en el
@@ -110,6 +117,160 @@ class InteractableSystem:
         if usar:
             self._abrir_cerraduras(jugador)
             self._abrir_cofres(jugador)
+
+    def actualizar_placas(
+        self,
+        bloques: list[object],
+        jugador: pygame.Rect,
+    ) -> None:
+        """Actualiza las placas de presión con el peso real del nivel.
+
+        Se llama desde ``StageScene._update_gameplay`` DESPUES de que
+        ``SistemaDeBloques.empujar/caer`` hayan dejado los empujables en su
+        sitio definitivo del fotograma, y usa la **misma** lista de solidos
+        (``con_cerradas``) que los bloques para no duplicar composición.
+        Mientras la placa este activa, abre las puertas cuyo ``abre_con``
+        coincida; al liberarse (si ``mantener``) las cierra — nunca sobre el
+        jugador (misma guarda que las cronometradas).
+        """
+        # --- Fase 1: detecta peso y actualiza activa (sin emitir) ---
+        cambios: list[tuple[PlacaDePresion, bool, bool]] = []
+        for placa in self.placas:
+            if placa.una_vez and placa.disparada and placa.activa:
+                # Enclavada para siempre — no re-evalua.
+                continue
+            bloque_presente = False
+            for b in bloques:
+                rect = getattr(b, "rect", None)
+                if rect is None:
+                    continue
+                if self._bloque_sobre_placa(rect, placa.rect):
+                    bloque_presente = True
+                    break
+            jugador_presente = self._jugador_sobre_placa(jugador, placa.rect)
+            requiere = (placa.requiere or "bloque").lower()
+            if requiere == "bloque":
+                activa = bloque_presente
+            elif requiere == "jugador":
+                activa = jugador_presente
+            elif requiere == "ambos":
+                activa = bloque_presente and jugador_presente
+            elif requiere in ("cualquiera", "any", "ambos_o", "either"):
+                activa = bloque_presente or jugador_presente
+            else:
+                activa = bloque_presente
+
+            previa = placa.activa
+            if activa != previa:
+                # ``una_vez`` enclavada no se deja desactivar.
+                if not activa and previa and placa.una_vez:
+                    continue
+                placa._activa_previa = previa
+                placa.activa = activa
+                cambios.append((placa, previa, activa))
+                if activa and placa.una_vez:
+                    placa.disparada = True
+
+        # --- Fase 2: flancos de subida — abre y emite ---
+        for placa, previa, activa in cambios:
+            if activa and not previa:
+                self._emitir(placa.evento)
+                self._emitir(EVENTO_PLACA_ACTIVADA, nombre=placa.evento)
+                abiertas = self.abrir_por_evento(placa.evento)
+                if placa.mensaje:
+                    self._avisar(placa.mensaje)
+                elif abiertas:
+                    self._avisar(f"Placa activada: {placa.evento}")
+            elif not activa and previa:
+                if not placa.mantener:
+                    continue
+                # Si otra placa con el mismo evento sigue activa, no cierres.
+                otro_activo = any(
+                    p is not placa and p.activa and p.evento == placa.evento
+                    for p in self.placas
+                )
+                if otro_activo:
+                    continue
+                cerradas = self._cerrar_por_evento(placa.evento, jugador)
+                self._emitir(EVENTO_PLACA_DESACTIVADA, nombre=placa.evento)
+                if cerradas:
+                    self._avisar(f"Placa liberada: {placa.evento}")
+
+        # --- Fase 3: cierre diferido — si se bloqueo por jugador dentro, reintenta ---
+        # Ocurre fuera de ``cambios``: la placa ya esta inactiva pero la puerta
+        # quedo abierta porque el jugador la pisaba. Al salir, debe cerrarse sin
+        # nuevo flanco (misma guarda que ``_cerrar_las_cronometradas``).
+        eventos_activos = {p.evento for p in self.placas if p.activa}
+        for cerradura in self.cerraduras:
+            if not cerradura.abierta:
+                continue
+            ev = cerradura.abre_con_evento
+            if not ev or ev in eventos_activos:
+                continue
+            # Solo puertas que alguna placa reversible controla.
+            reversible = any(p.evento == ev and p.mantener for p in self.placas)
+            if not reversible:
+                continue
+            # Enclavada por una_vez nunca se cierra.
+            if any(p.evento == ev and p.una_vez and p.disparada for p in self.placas):
+                continue
+            if cerradura.rect.colliderect(jugador):
+                continue
+            cerradura.abierta = False
+            cerradura._cierre = 0.0
+            self._avisar(f"Se ha cerrado algo. ({ev})")
+
+    @staticmethod
+    def _bloque_sobre_placa(bloque: pygame.Rect, placa: pygame.Rect) -> bool:
+        """¿Esta el bloque pisando la placa?
+
+        Un ``BloqueEmpujable`` reposando exactamente sobre la placa toca el
+        borde sin solaparse (bottom == top), asi que ``colliderect`` solo
+        fallaria. Se infla la placa 4 px en vertical (y 2 en horizontal) para
+        capturar tanto el apoyo exacto como el solape interior.
+        """
+        inflada = placa.inflate(4, 8)
+        if inflada.colliderect(bloque):
+            return True
+        # Apoyo exacto: bloque justo encima con solape horizontal.
+        if bloque.right <= placa.left or bloque.left >= placa.right:
+            return False
+        # Distancia vertical entre la base del bloque y el techo de la placa.
+        gap = bloque.bottom - placa.top
+        return -6 <= gap <= placa.height + 6
+
+    @staticmethod
+    def _jugador_sobre_placa(jugador: pygame.Rect, placa: pygame.Rect) -> bool:
+        inflada = placa.inflate(4, 6)
+        if inflada.colliderect(jugador):
+            return True
+        if jugador.right <= placa.left or jugador.left >= placa.right:
+            return False
+        gap = jugador.bottom - placa.top
+        return -6 <= gap <= placa.height + 6
+
+    def _cerrar_por_evento(self, evento: str, jugador: pygame.Rect) -> int:
+        """Cierra las puertas que se abrieron con ``evento`` de una placa.
+
+        Nunca sobre el jugador — misma guarda que ``_cerrar_las_cronometradas``.
+        Devuelve cuantas se cerraron.
+        """
+        if not evento:
+            return 0
+        cerradas = 0
+        for cerradura in self.cerraduras:
+            if not cerradura.abierta:
+                continue
+            if cerradura.abre_con_evento != evento:
+                continue
+            if cerradura.rect.colliderect(jugador):
+                continue
+            cerradura.abierta = False
+            cerradura._cierre = 0.0
+            cerradas += 1
+        if cerradas:
+            self._avisar(f"Se ha cerrado algo. ({cerradas})")
+        return cerradas
 
     # -- reglas ----------------------------------------------------
     def _recoger(self, jugador: pygame.Rect, usar: bool) -> None:

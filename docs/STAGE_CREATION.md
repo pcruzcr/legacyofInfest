@@ -349,6 +349,10 @@ Como referencia, mira `src/stages/stage0/stage0.py` y `assets/maps/stage0/`.
 | `Zipline` | Rectángulo (la esquina es el enganche) | `destino_dx` (px, 96), `destino_dy` (px, 64) **relativos** · `velocidad` (px/s, 190) · `radio_de_enganche` (px, 14) · `solo_de_bajada` (bool, sí) |
 | `BossSpawn` | Punto (dónde entra el jefe) | `boss` (**obligatoria**: el nombre registrado del jefe, p. ej. `BossVenado`). Produce la misma entidad que escribir ese nombre como `type`; sin `boss`, o con uno que no esté registrado, el cargador avisa. Lo pide `17_BOSS_SPEC.md` §8.2 en todo mapa de jefe |
 | `ArenaZone` | Rectángulo | — (sin propiedades: la geometría ES la arena). Declara el cuadrilátero real del combate de jefe; sin ninguna, el motor usa el mapa entero. Gana la primera que contenga al jefe (AUD-605) |
+| `PressurePlate` | Rectángulo (el **botón** del suelo) | `evento` (**obligatoria**: la puerta con `abre_con` igual se abre mientras la placa esté pisada) · `requiere` (`bloque` por defecto, o `jugador`/`ambos`/ `cualquiera`) · `mantener` (bool, true: al quitar el peso la puerta se cierra; false la deja enclavada) · `una_vez` (bool, false) · `mensaje`. Se activa con un `PushBlock` encima y usa la misma lista de sólidos que los bloques (no duplica composición) |
+| `PlacaDePresion` | Rectángulo | Alias de `PressurePlate`, mismas propiedades |
+| `PlacaPresion` | Rectángulo | Alias de `PressurePlate`, mismas propiedades |
+| `Boton` | Rectángulo | Alias de `PressurePlate`, mismas propiedades |
 
 ### Arquetipos de enemigo (capa `Objects`, objetos punto)
 
@@ -400,6 +404,6 @@ propiedad del objeto en Tiled.
 | *(ninguno)* o `Solid` | Colisión AABB completa |
 | `Platform` | Plataforma atravesable desde abajo |
 
-Total aceptado en `Objects`: **73** tipos.
+Total aceptado en `Objects`: **80** tipos.
 
 <!-- END GENERATED: tipos de objeto -->

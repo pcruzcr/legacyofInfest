@@ -29,7 +29,7 @@ class MusicStem:
         self.path = Path(path)
         self.loops = loops
         self.base_volume = max(0.0, min(1.0, volume))
-        self._sound = None
+        self._sound: pygame.mixer.Sound | None = None
         self._channel: pygame.mixer.Channel | None = None
         self._target_volume: float = 0.0
         self._current_volume: float = 0.0
@@ -45,7 +45,7 @@ class MusicStem:
             return True
         except (pygame.error, FileNotFoundError, OSError) as e:
             logging.getLogger(__name__).warning(
-                f"MusicStem '{self.name}' failed to load: {e}"
+                "MusicStem '%s' failed to load: %s", self.name, e
             )
             return False
 

@@ -110,7 +110,7 @@ jobs:
       # mismo que no tenerlo — es exactamente cómo AUD-010 acabó con un CI
       # verde que nunca se había ejecutado.
       - name: Verify translation catalogues
-        run: python scripts/check_translations.py --ci
+        run: python scripts/check_translations.py --ci --permitted-orphans locale/permitted_orphans.json
 
       # AUD-197 / AUD-199: logros y bestiario ya no guardan texto en el
       # código, sino en data/*.json. Un json que no se valida es un json que

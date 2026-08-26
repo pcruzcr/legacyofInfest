@@ -57,6 +57,25 @@ SIN_MAPA_A_PROPOSITO: dict[str, str] = {
         "enseña nada. Lo ejercita de punta a punta "
         "tests/test_lo_reportado_por_el_playtesting.py."
     ),
+    "PlacaDePresion": (
+        "Alias de PressurePlate — mismo objeto con nombre en español. El "
+        "laboratorio coloca PressurePlate; los 3 alias se declaran para que "
+        "Tiled autocomplete en español, pero no necesitan un segundo ejemplo "
+        "en el mismo mapa."
+    ),
+    "PlacaPresion": (
+        "Alias de PressurePlate — ver PlacaDePresion."
+    ),
+    "Boton": (
+        "Alias de PressurePlate — ver PlacaDePresion."
+    ),
+    "BuddyRino": (
+        "Buddy montable — se coloca como objeto puntual y requiere assets propios. "
+        "El laboratorio no los coloca para no mezclar demo de mecánicas con demo "
+        "de buddies; se ejercitan en tests de buddies."
+    ),
+    "BuddyExpresso": "Alias de BuddyRino — mismo motivo.",
+    "BuddyEnguarde": "Alias de BuddyRino — mismo motivo.",
 }
 
 
@@ -176,14 +195,20 @@ class TestLaSalaOchoSePuedeResolver:
     def test_la_puerta_tiene_su_llave_en_el_mapa(self, laboratorio) -> None:
         # El recogible guarda `item_id`, no `key_id`: `Key` es un alias de
         # `Pickup` y el cargador acepta las dos propiedades para nombrarlo.
-        puerta = next(c for c in laboratorio.cerraduras if c.clase == "puerta")
+        # Hay 2 puertas: la de llave y la de placa (abre_con, sin llave). Solo
+        # la de llave debe tener llave en el mapa.
+        puertas_con_llave = [c for c in laboratorio.cerraduras if c.clase == "puerta" and c.key_id]
+        assert puertas_con_llave, "no hay puerta con llave en el laboratorio"
+        puerta = puertas_con_llave[0]
         llaves = {r.item_id for r in laboratorio.recogibles if r.item_id}
         assert puerta.key_id in llaves, (
             f"la puerta pide «{puerta.key_id}» y el mapa reparte {sorted(llaves)}"
         )
 
     def test_la_llave_esta_antes_que_la_puerta(self, laboratorio) -> None:
-        puerta = next(c for c in laboratorio.cerraduras if c.clase == "puerta")
+        puertas_con_llave = [c for c in laboratorio.cerraduras if c.clase == "puerta" and c.key_id]
+        assert puertas_con_llave, "no hay puerta con llave"
+        puerta = puertas_con_llave[0]
         llave = next(r for r in laboratorio.recogibles
                      if r.item_id == puerta.key_id)
         assert llave.rect.x < puerta.rect.x, (

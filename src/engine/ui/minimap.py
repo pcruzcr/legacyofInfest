@@ -39,6 +39,16 @@ class Minimap:
         self._minimap_h: int = recuadro.height
         self._minimap_x: int = x if x is not None else recuadro.x
         self._minimap_y: int = y if y is not None else recuadro.y
+        self._scale: float = 1.0
+        self._bg_color: tuple[int, int, int] = (10, 10, 20)
+        self._border_color: tuple[int, int, int] = (60, 60, 80)
+        self._explored_color: tuple[int, int, int] = (30, 40, 60)
+        self._player_color: tuple[int, int, int] = (100, 220, 255)
+        self._enemy_color: tuple[int, int, int] = (255, 80, 80)
+        self._boss_color: tuple[int, int, int] = (255, 50, 50)
+        self._checkpoint_color: tuple[int, int, int] = (255, 220, 80)
+        self._fog_color: tuple[int, int, int] = (5, 5, 15)
+        self._fow_surf: pygame.Surface | None = None
 
     def colocar(self, rect: pygame.Rect) -> None:
         """Mueve y redimensiona el minimapa a ese recuadro (AUD-499).
@@ -52,20 +62,6 @@ class Minimap:
         ancho, alto = getattr(self, "_map_size", (0, 0))
         if ancho and alto:
             self.set_map_size(ancho, alto)
-
-        # Pixel per world unit scaling - auto-calculated
-        self._scale: float = 1.0
-
-        self._bg_color: tuple[int, int, int] = (10, 10, 20)
-        self._border_color: tuple[int, int, int] = (60, 60, 80)
-        self._explored_color: tuple[int, int, int] = (30, 40, 60)
-        self._player_color: tuple[int, int, int] = (100, 220, 255)
-        self._enemy_color: tuple[int, int, int] = (255, 80, 80)
-        self._boss_color: tuple[int, int, int] = (255, 50, 50)
-        self._checkpoint_color: tuple[int, int, int] = (255, 220, 80)
-        self._fog_color: tuple[int, int, int] = (5, 5, 15)
-
-        self._fow_surf: pygame.Surface | None = None
         # Se declara aquí aunque se cree perezosamente en `draw`. Antes nacía
         # dentro de `draw` tras un `hasattr(self, '_bg_surf')`, lo que significa
         # que entre construir un Minimap y dibujarlo el objeto tenía un

@@ -18,6 +18,7 @@ TRUE_PEAK_LIMIT = -1.0  # dBTP
 class AudioPipeline:
     def __init__(self, cache_dir: Path | None = None) -> None:
         self._cache_dir = cache_dir
+        self._sr: int = 48000
         if cache_dir is not None:
             cache_dir.mkdir(parents=True, exist_ok=True)
 
@@ -34,12 +35,16 @@ class AudioPipeline:
 
     def load_as_wav(self, path: Path, target_sr: int = 44100) -> bytes:
         AudioSegment, normalize, compress_dynamic_range = self._get_pydub()
-        cache_key = f"{path.stem}_{target_sr}hz.wav"
+        try:
+            rel = path.relative_to(Path.cwd())
+        except ValueError:
+            rel = path
+        cache_key = f"{rel.as_posix().replace('/', '_')}_{target_sr}hz.wav"
         cached = self._load_cached(cache_key)
         if cached is not None:
             return cached
         seg = AudioSegment.from_file(str(path))
-        seg = self._normalize(seg, target_sr, normalize, compress_dynamic_range)
+        seg = self._normalize(seg, target_sr, normalize, compress_dynamic_range, 1.0)
         buf = io.BytesIO()
         seg.export(buf, format="wav")
         raw = buf.getvalue()
@@ -49,7 +54,7 @@ class AudioPipeline:
     def load_as_pcm(self, path: Path, target_sr: int = 44100) -> np.ndarray:
         AudioSegment, normalize, compress_dynamic_range = self._get_pydub()
         seg = AudioSegment.from_file(str(path))
-        seg = self._normalize(seg, target_sr, normalize, compress_dynamic_range)
+        seg = self._normalize(seg, target_sr, normalize, compress_dynamic_range, 1.0)
         samples = np.array(seg.get_array_of_samples(), dtype=np.float32)
         samples /= 2 ** (seg.sample_width * 8 - 1)
         if seg.channels == 2:
@@ -73,7 +78,7 @@ class AudioPipeline:
                     },
                 )
             if "reverb_decay" in v:
-                variant = self._apply_reverb(variant, v["reverb_decay"])
+                variant = self._apply_reverb_fallback(variant, 0.3, 0.7, v["reverb_decay"])
             if "low_pass_hz" in v:
                 variant = variant.low_pass_filter(v["low_pass_hz"])
             if "high_pass_hz" in v:
@@ -116,27 +121,22 @@ class AudioPipeline:
         
         # Convert to float [-1, 1]
         if samples.dtype != np.float32:
-            max_int = 2 ** (16 - 1)  # assuming 16-bit
             samples = samples.astype(np.float32) / 32768.0
         
         # K-weighting filter (EBU R128)
         # Pre-filter: high-pass at 1.5 Hz (removes DC) + shelf at 1.5 kHz (+4 dB)
-        # High-pass at 1.5 Hz (very gentle)
-        sos_hp = butter(2, 1.5, btype='highpass', fs=self._sr, output='sos')
-        # Shelf filter at 1.5 kHz (+4 dB boost above 1.5 kHz)
-        # Approximate with high-shelf: gain at 1.5kHz = 4dB
-        sos_hs = butter(2, 1500, btype='highpass', fs=48000, output='sos')
+        # High-pass at 1.5 Hz (very gentle) — usa sample_rate del argumento, no self._sr por defecto
+        sos_hp = butter(2, 1.5, btype='highpass', fs=sample_rate, output='sos')
         
         # For simplicity, we'll use a simplified K-weighting approximation
         # Full implementation would use precise filter coefficients from EBU R128
         
-        # Apply high-pass to remove DC
-        sos_hp = butter(4, 1.5, btype='highpass', fs=self._sr, output='sos')
+        # Apply high-pass to remove DC (usa sample_rate, no self._sr)
+        sos_hp = butter(4, 1.5, btype='highpass', fs=sample_rate, output='sos')
         filtered = sosfilt(sos_hp, samples)
         
-        # Apply shelf filter (high shelf at 1.5kHz with +4dB gain)
-        # Approximate with a simple boost above 1.5kHz
-        sos_shelf = butter(2, 1500, btype='highpass', fs=self._sr, output='sos')
+        # Apply shelf filter (high shelf at 1.5kHz con +4 dB)
+        sos_shelf = butter(2, 1500, btype='highpass', fs=sample_rate, output='sos')
         filtered = sosfilt(sos_shelf, filtered)
         
         # Mean square
@@ -173,7 +173,7 @@ class AudioPipeline:
         
         return self.measure_loudness(samples, seg.frame_rate)
 
-    def normalize_loudness(self, seg, target_lufs: float = LUFS_TARGET) -> None:
+    def normalize_loudness(self, seg, target_lufs: float = LUFS_TARGET):
         """Normalize audio segment to target LUFS (EBU R128)."""
         current_lufs = self.measure_lufs(seg)
         
@@ -183,14 +183,11 @@ class AudioPipeline:
         # Calculate gain needed
         gain_db = LUFS_TARGET - current_lufs
         
-        # Apply gain
-        gain_linear = 10 ** (gain_db / 20.0)
-        
         # Apply gain using pydub
         seg = seg.apply_gain(gain_db)
         
         # Check true peak
-        true_peak = self._measure_true_peak(seg)
+        true_peak: float = self._measure_true_peak(seg)
         if true_peak > TRUE_PEAK_LIMIT:
             # Reduce gain to meet true peak limit
             peak_reduction_db = true_peak - TRUE_PEAK_LIMIT
@@ -221,7 +218,7 @@ class AudioPipeline:
         else:
             oversampled = samples
         
-        true_peak = np.max(np.abs(oversampled))
+        true_peak: float = np.max(np.abs(oversampled))
         if true_peak <= 0:
             return -float('inf')
         return 20 * math.log10(true_peak)
@@ -232,7 +229,7 @@ class AudioPipeline:
         
         Reads input file, normalizes to target LUFS, writes output.
         """
-        AudioSegment, normalize, compress_dynamic_range = self._get_pydub()
+        AudioSegment, _normalize, _compress_dynamic_range = self._get_pydub()
         seg = AudioSegment.from_file(str(input_path))
         
         # Normalize loudness
@@ -243,7 +240,7 @@ class AudioPipeline:
 
     # ── End of Loudness Normalization ────────────────────────────────────
     
-    def _normalize(self, seg, target_sr: int, normalize, compress_dynamic_range, decay: float = 1.0):
+    def _apply_reverb_effect(self, seg, decay: float = 1.0):
         samples = np.array(seg.get_array_of_samples(), dtype=np.float32)
         max_int = 2 ** (seg.sample_width * 8 - 1) - 1
         # AUD-314 — mezclar en int16 envolvía (32767 + eco ≈ 45000 → -20536):
@@ -280,11 +277,10 @@ class AudioPipeline:
         if reverb_name == "default":
             return seg
         
-        reverb_path = Path(str(seg)).replace(".wav", f"_{reverb_name}_reverb.wav")
         # In production, this would load a pre-baked reverb variant
         # For now, apply simple algorithmic reverb as fallback
         return self._apply_reverb_fallback(seg, wet, dry, decay)
 
     def _apply_reverb_fallback(self, seg, wet: float, dry: float, decay: float):
         """Algorithmic reverb fallback when pre-baked variant is missing."""
-        return self._apply_reverb(seg, decay)
+        return self._apply_reverb_effect(seg, decay)

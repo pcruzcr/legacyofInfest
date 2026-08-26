@@ -221,6 +221,9 @@ class SpriteBatchGPU:
         """
         # `_atlas[id]` lanza KeyError con un id desconocido en vez de dibujar
         # con la textura equivocada, que no daría error: daría arte.
+        # AUD-676 — guarda explícita de capacidad antes de escribir la fila
+        if self._cuentas >= len(self._instancias):
+            self._crecer()
         _color, _normales, ancho_atlas, alto_atlas = self._atlas[atlas_id]
         self._atlas_de_cada_orden.append(atlas_id)
         u0, v0, u1, v1 = _rect_a_uv(recorte, ancho_atlas, alto_atlas)
@@ -232,6 +235,8 @@ class SpriteBatchGPU:
         tam_x, tam_y = recorte[2], recorte[3]
         tint = tinte or _TINTE_BLANCO
 
+        # AUD-676 — el check previo ya creció si hacía falta; este post-check
+        # maneja el caso en que acabamos de llenar la última plaza.
         fila = self._instancias[self._cuentas]
         fila[0], fila[1] = x, y
         fila[2], fila[3] = tam_x, tam_y
@@ -240,7 +245,6 @@ class SpriteBatchGPU:
         fila[12:16] = tint
         fila[16] = 1.0 if iluminado else 0.0
         self._cuentas += 1
-
         if self._cuentas >= len(self._instancias):
             self._crecer()
 

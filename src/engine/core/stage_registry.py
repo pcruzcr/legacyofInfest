@@ -22,15 +22,11 @@ if TYPE_CHECKING:
     from src.engine.scene.base_scene import BaseScene
 
 # The canonical stage order (progression sequence for `main.py` and the title menu).
+# Solo stage0 va en el juego; el resto son ejemplos (ver docs/86 y stage_mecanicas/cenital).
+# stage_mecanicas y stage_cenital son laboratorios de ejemplo, no progresión.
+# stage4_1 conecta con stage4_2 para mapa completo (NextTrigger 4_1 → 4_2).
 STAGE_ORDER: list[str] = [
     "stage0",
-    # F5.13 — el laboratorio de mecánicas va justo después del prólogo.
-    #
-    # Ahí y no al final por un motivo: es material didáctico, y el material
-    # didáctico que hay que desbloquear no lo ve nadie. Un estudiante que abre
-    # el juego para ver cómo funciona el viento no debería tener que jugarse
-    # trece niveles antes.
-    "stage_mecanicas",
     "stage1_1", "stage1_2", "stage1_3", "stage1_4_boss_venado",
     "stage2_1", "stage2_2", "stage2_3", "stage2_4_boss_rey",
     "stage3_1", "stage3_2", "stage3_3", "stage3_4_boss_gavilan",

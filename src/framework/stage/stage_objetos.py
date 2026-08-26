@@ -167,6 +167,9 @@ class ObjetosDeTiled:
             elif obj_type == "SecretRoom":
                 cls._handle_secret_room(stage, obj, props)
 
+            elif obj_type in ("PressurePlate", "PlacaDePresion", "PlacaPresion", "Boton"):
+                cls._handle_placa(stage, obj, props)
+
             elif obj_type == "BuddyRino":
                 cls._handle_buddy(stage, obj, props, "BuddyRino")
 
@@ -1199,4 +1202,62 @@ class ObjetosDeTiled:
             secret_id=secret_id,
             recompensa=recompensa,
             tell=tell,
+        ))
+
+    @classmethod
+    def _handle_placa(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
+        """PressurePlate / PlacaDePresion — boton que abre puertas con peso.
+
+        Propiedades:
+        * ``evento`` — **obligatoria**, evento que abre ``Door.abre_con``.
+          Alias: ``evento_al_activar`` / ``abre_con``.
+        * ``requiere`` — ``"bloque"`` (defecto), ``"jugador"``, ``"ambos"``
+          o ``"cualquiera"``.
+        * ``mantener`` — ``true`` (defecto): al quitar el peso la puerta se
+          cierra; ``false`` la deja enclavada.
+        * ``una_vez`` — ``true``: solo se activa una vez.
+        * ``mensaje`` — texto al activarse (opcional).
+        """
+        from src.framework.stage.interactables import PlacaDePresion
+
+        evento = str(
+            props.get("evento")
+            or props.get("evento_al_activar")
+            or props.get("abre_con")
+            or getattr(obj, "name", "")
+            or ""
+        ).strip()
+        if not evento:
+            logger.warning(
+                "PressurePlate en (%s, %s) sin 'evento': se ignora. "
+                "Pon 'evento' = nombre que la puerta escucha en 'abre_con'.",
+                getattr(obj, "x", "?"), getattr(obj, "y", "?"),
+            )
+            return
+        requiere = str(props.get("requiere", "bloque") or "bloque").strip().lower()
+        if requiere not in ("bloque", "jugador", "ambos", "cualquiera", "player", "block"):
+            logger.warning(
+                "PressurePlate en (%s, %s): 'requiere' es %r y solo vale "
+                "'bloque'/'jugador'/'ambos'/'cualquiera'. Se toma 'bloque'.",
+                getattr(obj, "x", "?"), getattr(obj, "y", "?"), requiere,
+            )
+            requiere = "bloque"
+        # Normaliza alias ingles
+        if requiere in ("player",):
+            requiere = "jugador"
+        elif requiere in ("block",):
+            requiere = "bloque"
+        mantener_raw = props.get("mantener")
+        if mantener_raw is None:
+            mantener_raw = props.get("mantener_abierta", props.get("reversible", True))
+        mantener = cls._bool_de(mantener_raw, por_defecto=True)
+        una_vez = cls._bool_de(props.get("una_vez"), por_defecto=False)
+        mensaje = str(props.get("mensaje", "") or "")
+        stage.placas.append(PlacaDePresion(
+            rect=cls._rect_de(obj),
+            evento=evento,
+            requiere=requiere,
+            mantener=mantener,
+            una_vez=una_vez,
+            mensaje=mensaje,
         ))

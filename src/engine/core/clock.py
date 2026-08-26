@@ -102,14 +102,16 @@ FOTOGRAMAS_EN_EL_HISTORIAL: int = 180
 
 #: Nombre de la fuente del hit-stop. `dt_mundo` la ignora a propósito.
 FUENTE_HITSTOP: str = "hitstop"
-
 #: Fuente que usa el asignador directo `clock.time_scale = x`, que se conserva
 #: porque las 26 clases de escenario de los estudiantes lo escriben así.
 FUENTE_MANUAL: str = "manual"
 
-
 class DeltaClock:
     """Delta time en segundos, escalado por la composición de efectos activos."""
+
+    #: Fuente para Assist Mode: cámara lenta global (AUD-648).
+    #: Se aplica como factor multiplicativo global: 0.5 = cámara lenta, 1.0 = normal.
+    FUENTE_ASSIST_SLOW_MO: str = "assist_slow_mo"
 
     def __init__(self) -> None:
         self._clock = pygame.time.Clock()
@@ -133,7 +135,12 @@ class DeltaClock:
         0,0 da 0,0; al soltar el hit-stop vuelve a 0,35 y no a 1,0, que es el
         defecto que esto corrige.
         """
-        self._escalas[fuente] = max(0.0, float(valor))
+        import math
+
+        v = float(valor)
+        if not math.isfinite(v):
+            return
+        self._escalas[fuente] = max(0.0, v)
 
     def restaurar(self, fuente: str) -> None:
         """Retira el factor de `fuente`. Retirar lo que no está no es error."""
@@ -205,7 +212,10 @@ class DeltaClock:
         intentando alcanzarse a sí mismo. Se prefiere ir a cámara lenta antes
         que dejar de responder.
         """
-        self._acumulado += self._dt if dt is None else float(dt)
+        # CLK-02 — clamp explícito: ruta de tests puede inyectar dt arbitrario
+        incoming = self._dt if dt is None else float(dt)
+        incoming = min(incoming, MAX_FRAME_TIME)
+        self._acumulado += incoming
         dados = 0
         while self._acumulado >= FIXED_DT and dados < MAX_PASOS_POR_FOTOGRAMA:
             self._acumulado -= FIXED_DT

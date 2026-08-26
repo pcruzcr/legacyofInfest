@@ -243,7 +243,7 @@ def _objetos() -> list[str]:
     # o se apoyaba a la altura de las dos `Platform` que había antes tenía
     # que moverse a la altura real del escalón o la meseta bajo cada objeto.
     obj("MessageTrigger_Once", 25 * TS, suelo - 64, 48, 48,
-        text="Sube. Con X te agarras a la liana.")
+        text="Sube. Con G o Arriba te agarras a la liana.")
     # La liana cuelga desde encima de la meseta (fila 19) hasta su superficie
     # (fila 24, `_altura_colina(33) == 6`) — antes bajaba hasta la fila 30 y
     # el tramo final quedaba enterrado dentro del sólido nuevo de la meseta.

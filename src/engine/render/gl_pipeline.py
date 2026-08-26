@@ -427,6 +427,15 @@ class GLRenderer:
         ctx = self.ctx
         if ctx is None:
             return
+        # AUD-656/674 — si se recompilan shaders, limpiar VAOs antiguos
+        # (claveados por id(program)); sin esto, programas viejos dejan VAOs huérfanos.
+        for vao in getattr(self, "_vaos", {}).values():
+            try:
+                vao.release()
+            except Exception:
+                pass
+        self._vaos = {}
+        self._quad_vao = None
         self._passthrough_prog = ctx.program(
             vertex_shader=default_vert,
             fragment_shader=passthrough_frag,
@@ -1063,6 +1072,9 @@ class GLRenderer:
         """Dibuja el fotograma sin GL **y lo presenta**.
 
         AUD-437 — presentar es parte de dibujar, y aquí faltaba.
+        AUD-675 — si el contexto GL se perdió, la ventana sigue en modo
+        OPENGL|DOUBLEBUF y el blit normal no publica. Se verifica el modo
+        de la ventana y, si hace falta, se reabre en software antes del blit.
 
         En todo el motor hay dos `display.flip()`: el de `App.run`, que sólo
         corre `if not self._use_gl`, y el del final de `render()`. Con tarjeta,
@@ -1081,6 +1093,18 @@ class GLRenderer:
         sin publicar no ha terminado su trabajo, y dejarlo fuera es justo cómo
         se vuelve a perder cuando aparezca una tercera salida.
         """
+        # AUD-675 — reintento si la ventana sigue en modo OPENGL
+        try:
+            flags = pygame.display.get_surface().get_flags() if pygame.display.get_surface() else 0
+            if flags & pygame.OPENGL:
+                w, h = surface.get_size()
+                # Reabrir sin OPENGL preserva el contenido escalado por App
+                from src.engine.core import settings as _settings
+                pygame.display.set_mode(
+                    (w * _settings.DISPLAY_SCALE, h * _settings.DISPLAY_SCALE)
+                )
+        except Exception:
+            pass
         display_surf = pygame.display.get_surface()
         if display_surf:
             # Se escala al tamaño **real** de la ventana, no a `surface` por

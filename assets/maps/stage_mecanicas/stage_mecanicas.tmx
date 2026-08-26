@@ -342,60 +342,73 @@
     <property name="golpes" type="int" value="1"/>
    </properties>
   </object>
-  <object id="138" name="MessageTrigger_Once_138" type="MessageTrigger_Once" x="3392" y="256" width="48" height="48">
+  <object id="138" name="PressurePlate_138" type="PressurePlate" x="3344" y="304" width="32" height="16">
+   <properties>
+    <property name="evento" value="PLACA_LAB"/>
+    <property name="requiere" value="bloque"/>
+    <property name="mantener" type="bool" value="true"/>
+   </properties>
+  </object>
+  <object id="139" name="Door_139" type="Door" x="3440" y="272" width="16" height="48">
+   <properties>
+    <property name="abre_con" value="PLACA_LAB"/>
+    <property name="mensaje" value="La puerta cede mientras el bloque pisa el botón."/>
+   </properties>
+  </object>
+  <object id="140" name="MessageTrigger_Once_140" type="MessageTrigger_Once" x="3392" y="256" width="48" height="48">
    <properties>
     <property name="text" value="Coge la llave. La puerta la pide."/>
    </properties>
   </object>
-  <object id="139" name="Key_139" type="Key" x="3440" y="288" width="16" height="16">
+  <object id="141" name="Key_141" type="Key" x="3440" y="288" width="16" height="16">
    <properties>
     <property name="key_id" value="llave_lab"/>
     <property name="nombre" value="Llave del laboratorio"/>
    </properties>
   </object>
-  <object id="140" name="Door_140" type="Door" x="3536" y="272" width="16" height="48">
+  <object id="142" name="Door_142" type="Door" x="3536" y="272" width="16" height="48">
    <properties>
     <property name="key_id" value="llave_lab"/>
     <property name="consume_llave" type="bool" value="true"/>
     <property name="mensaje" value="Cerrada. Falta la llave."/>
    </properties>
   </object>
-  <object id="141" name="Spring_141" type="Spring" x="3584" y="304" width="32" height="16">
+  <object id="143" name="Spring_143" type="Spring" x="3584" y="304" width="32" height="16">
    <properties>
     <property name="impulso" type="float" value="-560.0"/>
     <property name="rearme" type="float" value="0.2"/>
    </properties>
   </object>
-  <object id="142" name="EventTrigger_142" type="EventTrigger" x="3664" y="192" width="32" height="16">
+  <object id="144" name="EventTrigger_144" type="EventTrigger" x="3664" y="192" width="32" height="16">
    <properties>
     <property name="evento" value="ABRIR_JAULA"/>
     <property name="automatico" type="bool" value="true"/>
     <property name="una_vez" type="bool" value="true"/>
    </properties>
   </object>
-  <object id="143" name="Cage_143" type="Cage" x="3760" y="272" width="32" height="48">
+  <object id="145" name="Cage_145" type="Cage" x="3760" y="272" width="32" height="48">
    <properties>
     <property name="abre_con" value="ABRIR_JAULA"/>
     <property name="mensaje" value="La jaula no cede a golpes."/>
    </properties>
   </object>
-  <object id="144" name="Checkpoint_144" type="Checkpoint" x="3776" y="288" width="16" height="32">
+  <object id="146" name="Checkpoint_146" type="Checkpoint" x="3776" y="288" width="16" height="32">
    <properties>
     <property name="checkpoint_id" type="int" value="7"/>
    </properties>
   </object>
-  <object id="145" name="MessageTrigger_Once_145" type="MessageTrigger_Once" x="3872" y="256" width="48" height="48">
+  <object id="147" name="MessageTrigger_Once_147" type="MessageTrigger_Once" x="3872" y="256" width="48" height="48">
    <properties>
     <property name="text" value="Aqui no se frena. Y algo golpea el suelo."/>
    </properties>
   </object>
-  <object id="146" name="FrictionZone_146" type="FrictionZone" x="3920" y="288" width="192" height="32">
+  <object id="148" name="FrictionZone_148" type="FrictionZone" x="3920" y="288" width="192" height="32">
    <properties>
     <property name="multiplicador" type="float" value="0.25"/>
     <property name="arrastre" type="float" value="0.0"/>
    </properties>
   </object>
-  <object id="147" name="ShockwaveZone_147" type="ShockwaveZone" x="4128" y="304" width="96" height="16">
+  <object id="149" name="ShockwaveZone_149" type="ShockwaveZone" x="4128" y="304" width="96" height="16">
    <properties>
     <property name="dano" type="float" value="99.0"/>
     <property name="encendido" type="float" value="0.7"/>
@@ -403,7 +416,7 @@
     <property name="desfase" type="float" value="0.0"/>
    </properties>
   </object>
-  <object id="148" name="ShockwaveZone_148" type="ShockwaveZone" x="4224" y="304" width="96" height="16">
+  <object id="150" name="ShockwaveZone_150" type="ShockwaveZone" x="4224" y="304" width="96" height="16">
    <properties>
     <property name="dano" type="float" value="99.0"/>
     <property name="encendido" type="float" value="0.7"/>
@@ -411,7 +424,7 @@
     <property name="desfase" type="float" value="1.65"/>
    </properties>
   </object>
-  <object id="149" name="Cutscene_149" type="Cutscene" x="4288" y="256" width="32" height="64">
+  <object id="151" name="Cutscene_151" type="Cutscene" x="4288" y="256" width="32" height="64">
    <properties>
     <property name="guion" value="camara 4400 200 0.8&#10;temblor 0.3 5&#10;+ evento LAB_COMPLETADO"/>
     <property name="bloquea" type="bool" value="false"/>
@@ -419,24 +432,24 @@
     <property name="una_vez" type="bool" value="true"/>
    </properties>
   </object>
-  <object id="150" name="Checkpoint_150" type="Checkpoint" x="4336" y="288" width="16" height="32">
+  <object id="152" name="Checkpoint_152" type="Checkpoint" x="4336" y="288" width="16" height="32">
    <properties>
     <property name="checkpoint_id" type="int" value="8"/>
    </properties>
   </object>
-  <object id="151" name="MessageTrigger_Once_151" type="MessageTrigger_Once" x="4368" y="256" width="48" height="48">
+  <object id="153" name="MessageTrigger_Once_153" type="MessageTrigger_Once" x="4368" y="256" width="48" height="48">
    <properties>
     <property name="text" value="La camara arranca sola. No te quedes atras."/>
    </properties>
   </object>
-  <object id="152" name="ScrollZone_152" type="ScrollZone" x="4416" y="256" width="32" height="64">
+  <object id="154" name="ScrollZone_154" type="ScrollZone" x="4416" y="256" width="32" height="64">
    <properties>
     <property name="velocidad_x" type="float" value="38.0"/>
     <property name="margen_de_gracia" type="float" value="28.0"/>
     <property name="parar_en_x" type="float" value="4736.0"/>
    </properties>
   </object>
-  <object id="153" name="MovingPlatform_153" type="MovingPlatform" x="4512" y="272" width="48" height="8">
+  <object id="155" name="MovingPlatform_155" type="MovingPlatform" x="4512" y="272" width="48" height="8">
    <properties>
     <property name="dx" type="float" value="0.0"/>
     <property name="dy" type="float" value="-48.0"/>
@@ -444,38 +457,38 @@
     <property name="espera" type="float" value="0.4"/>
    </properties>
   </object>
-  <object id="154" name="Spring_154" type="Spring" x="4624" y="304" width="32" height="16">
+  <object id="156" name="Spring_156" type="Spring" x="4624" y="304" width="32" height="16">
    <properties>
     <property name="impulso" type="float" value="-520.0"/>
     <property name="rearme" type="float" value="0.2"/>
    </properties>
   </object>
-  <object id="155" name="Slope_155" type="Slope" x="1024" y="272" width="48" height="48">
+  <object id="157" name="Slope_157" type="Slope" x="1024" y="272" width="48" height="48">
    <properties>
     <property name="sube" value="derecha"/>
    </properties>
   </object>
-  <object id="156" name="Slope_156" type="Slope" x="1072" y="272" width="48" height="48">
+  <object id="158" name="Slope_158" type="Slope" x="1072" y="272" width="48" height="48">
    <properties>
     <property name="sube" value="izquierda"/>
    </properties>
   </object>
-  <object id="157" name="MessageTrigger_Once_157" type="MessageTrigger_Once" x="992" y="256" width="48" height="48">
+  <object id="159" name="MessageTrigger_Once_159" type="MessageTrigger_Once" x="992" y="256" width="48" height="48">
    <properties>
     <property name="text" value="Una cuesta de verdad. Subela y bajala."/>
    </properties>
   </object>
-  <object id="158" name="Slope_158" type="Slope" x="1136" y="296" width="96" height="24">
+  <object id="160" name="Slope_160" type="Slope" x="1136" y="296" width="96" height="24">
    <properties>
     <property name="sube" value="derecha"/>
    </properties>
   </object>
-  <object id="159" name="MessageTrigger_Once_159" type="MessageTrigger_Once" x="1136" y="256" width="96" height="40">
+  <object id="161" name="MessageTrigger_Once_161" type="MessageTrigger_Once" x="1136" y="256" width="96" height="40">
    <properties>
     <property name="text" value="La inclinacion sale del rectangulo: ancha y baja, cuesta suave."/>
    </properties>
   </object>
-  <object id="160" name="WarpZone_160" type="WarpZone" x="4832" y="272" width="32" height="48">
+  <object id="162" name="WarpZone_162" type="WarpZone" x="4832" y="272" width="32" height="48">
    <properties>
     <property name="automatico" type="bool" value="false"/>
     <property name="destino_x" type="float" value="48.0"/>
@@ -483,7 +496,7 @@
     <property name="mensaje" value="De vuelta a la entrada."/>
    </properties>
   </object>
-  <object id="161" name="WarpZone_161" type="WarpZone" x="80" y="272" width="32" height="48">
+  <object id="163" name="WarpZone_163" type="WarpZone" x="80" y="272" width="32" height="48">
    <properties>
     <property name="automatico" type="bool" value="false"/>
     <property name="destino_x" type="float" value="2336.0"/>
@@ -491,40 +504,40 @@
     <property name="mensaje" value="Atajo a la mitad del laboratorio."/>
    </properties>
   </object>
-  <object id="162" name="NextTrigger_162" type="NextTrigger" x="4896" y="272" width="32" height="48">
+  <object id="164" name="NextTrigger_164" type="NextTrigger" x="4896" y="272" width="32" height="48">
   </object>
-  <object id="163" name="WalkerInsect_163" type="WalkerInsect" x="800" y="292" width="24" height="28">
+  <object id="165" name="WalkerInsect_165" type="WalkerInsect" x="800" y="292" width="24" height="28">
   </object>
-  <object id="164" name="WalkerRaton_164" type="WalkerRaton" x="1280" y="292" width="24" height="28">
+  <object id="166" name="WalkerRaton_166" type="WalkerRaton" x="1280" y="292" width="24" height="28">
   </object>
-  <object id="165" name="FlyingCucaracha_165" type="FlyingCucaracha" x="1152" y="224" width="20" height="14">
+  <object id="167" name="FlyingCucaracha_167" type="FlyingCucaracha" x="1152" y="224" width="20" height="14">
   </object>
-  <object id="166" name="WalkerEstudiante_166" type="WalkerEstudiante" x="1824" y="292" width="24" height="28">
+  <object id="168" name="WalkerEstudiante_168" type="WalkerEstudiante" x="1824" y="292" width="24" height="28">
   </object>
-  <object id="167" name="FlyingNotebook_167" type="FlyingNotebook" x="1536" y="224" width="20" height="14">
+  <object id="169" name="FlyingNotebook_169" type="FlyingNotebook" x="1536" y="224" width="20" height="14">
   </object>
-  <object id="168" name="ShooterTiza_168" type="ShooterTiza" x="2336" y="292" width="24" height="28">
+  <object id="170" name="ShooterTiza_170" type="ShooterTiza" x="2336" y="292" width="24" height="28">
   </object>
-  <object id="169" name="ShooterCocinero_169" type="ShooterCocinero" x="2816" y="292" width="24" height="28">
+  <object id="171" name="ShooterCocinero_171" type="ShooterCocinero" x="2816" y="292" width="24" height="28">
   </object>
-  <object id="170" name="WalkerTerciopelo_170" type="WalkerTerciopelo" x="3312" y="292" width="24" height="28">
+  <object id="172" name="WalkerTerciopelo_172" type="WalkerTerciopelo" x="3312" y="292" width="24" height="28">
   </object>
-  <object id="171" name="FlyingTerciovolador_171" type="FlyingTerciovolador" x="3488" y="224" width="20" height="14">
+  <object id="173" name="FlyingTerciovolador_173" type="FlyingTerciovolador" x="3488" y="224" width="20" height="14">
   </object>
-  <object id="172" name="ShooterVenomoLargo_172" type="ShooterVenomoLargo" x="4000" y="292" width="24" height="28">
+  <object id="174" name="ShooterVenomoLargo_174" type="ShooterVenomoLargo" x="4000" y="292" width="24" height="28">
   </object>
-  <object id="173" name="Walker_173" type="Walker" x="800" y="292" width="24" height="28">
+  <object id="175" name="Walker_175" type="Walker" x="800" y="292" width="24" height="28">
   </object>
-  <object id="174" name="FlyingBoa_174" type="FlyingBoa" x="1152" y="224" width="20" height="14">
+  <object id="176" name="FlyingBoa_176" type="FlyingBoa" x="1152" y="224" width="20" height="14">
   </object>
-  <object id="175" name="Light_175" type="Light" x="240" y="224" width="16" height="16">
+  <object id="177" name="Light_177" type="Light" x="240" y="224" width="16" height="16">
    <properties>
     <property name="radius" type="int" value="180"/>
     <property name="color" value="#ffe9a8"/>
     <property name="intensity" type="float" value="0.9"/>
    </properties>
   </object>
-  <object id="176" name="Light_176" type="Light" x="384" y="224" width="16" height="16">
+  <object id="178" name="Light_178" type="Light" x="384" y="224" width="16" height="16">
    <properties>
     <property name="radius" type="int" value="150"/>
     <property name="color" value="#a8d8ff"/>

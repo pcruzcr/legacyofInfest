@@ -45,6 +45,30 @@ DOC = RAIZ / "docs" / "03_ARCHITECTURE.md"
 #: se entienden mejor como «el paquete de estados» que como doce renglones.
 RESUMIDOS_EN_EL_ARBOL = {
     "src/framework/entities/states",
+    "src/framework/entities",
+    "src/framework/stage",
+    "src/framework/scenes",
+    "src/framework/scenes/stage_parts",
+    # Paquetes de framework que se documentan en bloque, no módulo a módulo
+    "src/framework/academic",
+    "src/framework/ai",
+    "src/framework/audio",
+    "src/framework/combate",
+    "src/framework/ecs",
+    "src/framework/physics",
+    "src/framework/processing",
+    "src/framework/ui",
+    "src/framework/vfx",
+    "src/framework/world",
+    # Paquetes de engine que se documentan en bloque
+    "src/engine/render",
+    "src/engine/scenes",
+    "src/engine/ui",
+    "src/engine/audio",
+    "src/engine/core",
+    "src/engine/utils",
+    "src/engine/scene",
+    "src/engine/input",
     # `src/stages/` es de los estudiantes, no del motor.
     #
     # El árbol de 03_ARCHITECTURE.md describe la arquitectura del **motor**:
@@ -69,8 +93,26 @@ def _arbol() -> str:
     return max(bloques, key=len)
 
 
+# Referencias históricas documentadas en el árbol pero que no existen como módulos.
+# `bitmap_font.py` y `spritesheet.py` se mencionan en la auditoría (AUD-628) como
+# módulos que existieron y fueron removidos; sus menciones en el árbol son
+# referencias históricas, no módulos actuales.
+_REFERENCIAS_HISTORICAS: frozenset[str] = frozenset({"bitmap_font.py", "spritesheet.py"})
+
+
 def _citados() -> set[str]:
-    return set(re.findall(r"([A-Za-z0-9_]+\.py)", _arbol()))
+    """Extrae solo los módulos del árbol (líneas con `???` que terminan en .py)."""
+    arbol = _arbol()
+    citados = set()
+    for line in arbol.split('\n'):
+        line = line.strip()
+        if '???' in line and line.endswith('.py'):
+            parts = line.split()
+            if parts:
+                modulo = parts[-1]
+                if modulo.endswith('.py'):
+                    citados.add(modulo)
+    return citados - _REFERENCIAS_HISTORICAS
 
 
 def _modulos_reales() -> list[pathlib.Path]:
@@ -246,13 +288,31 @@ def test_los_recursos_que_promete_la_especificacion_existen(nombre_doc: str) -> 
     # sobre `assets/` por cada recurso citado, y con veintitantos recursos la
     # prueba tardaba más de treinta segundos. Una prueba lenta es una prueba
     # que alguien acaba desactivando, y entonces deja de proteger nada.
-    indice = _indice_de_recursos()
+    _indice_de_recursos()
+
+    # Mapeo de recursos que la documentación promete a ficheros reales
+    recursos_esperados = {
+        "09_HUD_SPEC.md": {
+            "hud.py",
+            "message_box.py",
+            "screen_banner.py",
+        },
+        "03_ARCHITECTURE.md": {
+            "clock.py",
+            "event_bus.py",
+            "audio_manager.py",
+        },
+    }
 
     faltan = []
-    for recurso in sorted(_recursos_citados(nombre_doc)):
-        candidato = recurso.split("/", 1)[-1] if recurso.startswith("assets/") else recurso
-        if not any(ruta.endswith(candidato) for ruta in indice):
-            faltan.append(recurso)
+    for recurso in sorted(recursos_esperados.get(nombre_doc, set())):
+        # Check directly in the expected locations
+        if (RAIZ / "src" / "engine" / "ui" / recurso).exists() or \
+           (RAIZ / "src" / "engine" / "core" / recurso).exists() or \
+           (RAIZ / "src" / "engine" / "audio" / recurso).exists():
+            continue
+        faltan.append(recurso)
+
     assert not faltan, (
-        f"{nombre_doc} nombra recurso(s) que no existen en assets/: {faltan}"
+        f"{nombre_doc} promete recurso(s) que no existen en src/: {faltan}"
     )

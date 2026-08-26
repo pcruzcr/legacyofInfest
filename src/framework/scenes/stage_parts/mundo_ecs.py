@@ -180,7 +180,14 @@ class MundoDelEscenario:
         actual = getattr(player, "_state_instance", None)
         if isinstance(actual, (TrepandoState, TirolesaState)):
             return
-        if not im.is_action_just_pressed(Action.GRAB):
+        # Liana: GRAB (G/C) o X (ataque corto) — el mensaje de stage0 decía X y
+        # los jugadores lo intentaban con X. Se aceptan ambos y también UP (W).
+        if not (
+            im.is_action_just_pressed(Action.GRAB)
+            or im.is_action_just_pressed(Action.SHORT_ATTACK)
+            or im.is_action_just_pressed(Action.MOVE_UP)
+            or im.is_action_just_pressed(Action.JUMP)
+        ):
             return
 
         cable = ecs_systems.tirolesa_alcanzable(self._mundo, player.rect)

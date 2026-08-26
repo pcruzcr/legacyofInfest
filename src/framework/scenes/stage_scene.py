@@ -416,9 +416,16 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         data = StageLoader.load(self._tmx_path)
         if data is None:
             raise RuntimeError(f"StageScene: failed to load stage from {self._tmx_path}")
+        # AUD-658 — guarda explícita: StageLoader puede devolver None en casos
+        # de TMX corrupto ya reportados vía report.ok; el raise de arriba hace
+        # que _stage_data y _player nunca queden en estado parcial.
+        assert data is not None
         self._stage_data = data
         spawn = self._stage_data.spawn_point
+        assert spawn is not None, "spawn_point no puede ser None tras load exitoso"
         self._player = Player(spawn, event_bus=self.context.event_bus)
+        # AUD-658 — invariante: on_enter siempre deja _player no-None
+        assert self._player is not None
         if hasattr(self._stage_data, "gravity_multiplier"):
             self._player.gravity_multiplier = self._stage_data.gravity_multiplier
         # AUD-129 — la vista del escenario llega al jugador.
@@ -547,6 +554,7 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
             disparadores=self._stage_data.disparadores,
             bus=self.context.event_bus,
             warps=self._stage_data.warps,
+            placas=getattr(self._stage_data, "placas", None),
         )
         self._montar_director_de_escenas()
         # AUD-140 — bloques empujables y destructibles del mapa.
@@ -1001,6 +1009,41 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
                     self._bloques.empujar(player.rect, direccion, dt,
                                           con_cerradas)
                 self._bloques.caer(dt, con_cerradas)
+
+            # AUD-XXX — placas de presión: usan la misma lista de solidos
+            # ``con_cerradas`` que los bloques (no duplican composición) y se
+            # evalúan DESPUÉS de que los bloques se hayan movido, para que el
+            # peso del fotograma ya esté en su sitio definitivo. Si una placa
+            # abre una puerta, se recompone ``solidos`` para que el jugador la
+            # note en este mismo fotograma (sin 1 frame de retardo).
+            if getattr(self._interactables, "placas", None) is not None:
+                try:
+                    bloques_para_placa = (
+                        self._bloques.empujables if self._bloques is not None else []
+                    )
+                    if player is not None:
+                        self._interactables.actualizar_placas(
+                            bloques_para_placa, player.rect,
+                        )
+                        # Recompone cerradas/solidos si alguna puerta cambió.
+                        nuevas_cerradas = self._interactables.rects_solidos()
+                        if len(nuevas_cerradas) != len(cerradas) or nuevas_cerradas != cerradas:
+                            cerradas = nuevas_cerradas
+                            con_cerradas = (
+                                stage.collision_rects + cerradas
+                                if cerradas else stage.collision_rects
+                            )
+                            extra = cerradas + (
+                                self._bloques.rects_solidos()
+                                if self._bloques is not None else []
+                            )
+                            solidos = (
+                                stage.collision_rects + extra if extra else stage.collision_rects
+                            )
+                except Exception:
+                    logging.getLogger(__name__).warning(
+                        "placas: fallo al actualizar", exc_info=True,
+                    )
 
             # F5.3–F5.6 — las mecánicas nuevas corren ANTES que el jugador.
             #

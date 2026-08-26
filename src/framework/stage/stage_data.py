@@ -36,6 +36,7 @@ from src.framework.stage.interactables import (
     Cerradura,
     Cofre,
     Disparador,
+    PlacaDePresion,
     Recogible,
     SecretExit,
     SecretRoom,
@@ -433,6 +434,11 @@ class StageData:
     secret_exits: list[SecretExit] = field(default_factory=list)
     #: AUD-625 — salas secretas (`SecretRoom`) con tell visual.
     secret_rooms: list[SecretRoom] = field(default_factory=list)
+    #: Placas de presión (PressurePlate) — botones que abre un bloque/jugador.
+    #: Se declara en Tiled como ``PressurePlate`` y se consume en
+    #: ``InteractableSystem.actualizar_placas`` con la misma lista de solidos
+    #: que los bloques (AUD-XXX).
+    placas: list[PlacaDePresion] = field(default_factory=list)  # type: ignore[name-defined]
     #: AUD-297 — el suelo inclinado del mapa.
     #:
     #: Lista aparte de `collision_rects` **a propósito**: si una pendiente

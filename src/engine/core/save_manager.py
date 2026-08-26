@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import tempfile
+import threading as _threading
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -27,6 +28,10 @@ _SAVES_HEREDADO = settings.PROJECT_ROOT / "saves"
 #: El `SaveManager` vivo, para que quien necesite saber qué partida se juega
 #: no tenga que recibirlo por parámetro desde el otro extremo del árbol.
 _gestor_activo: SaveManager | None = None
+
+# AUD-657 — candado para `_gestor_activo`. Pygame es single-thread, pero
+# herramientas de calificación y tests paralelos pueden leer/escribir a la vez.
+_candado_gestor = _threading.RLock()
 
 
 def ruta_del_perfil(nombre: str) -> Path:
@@ -53,7 +58,8 @@ def ruta_del_perfil(nombre: str) -> Path:
     peor que compartirlo.
     """
     base = SaveManager.SAVES_DIR
-    ranura = _gestor_activo.ranura_activa if _gestor_activo is not None else None
+    with _candado_gestor:
+        ranura = _gestor_activo.ranura_activa if _gestor_activo is not None else None
     if ranura is None:
         return base / nombre
     return base / f"slot_{ranura}" / nombre
@@ -263,7 +269,8 @@ class SaveManager:
         # consulta para saber en qué carpeta escribe el bestiario y los
         # récords, que no reciben el gestor por parámetro.
         global _gestor_activo
-        _gestor_activo = self
+        with _candado_gestor:
+            _gestor_activo = self
 
     def anotar_tiempo_jugado(self, data: SaveData) -> None:
         """Suma a la partida los segundos jugados desde la última anotación.
@@ -388,7 +395,7 @@ class SaveManager:
         try:
             raw = path.read_bytes()
             datos = SaveData.from_json(raw)
-        except (orjson.JSONEncodeError, OSError, KeyError, ValueError) as e:
+        except (orjson.JSONDecodeError, OSError, KeyError, ValueError) as e:
             logger.warning("SaveManager: corrupt save slot %d: %s", slot, e)
             return None
         if activar:

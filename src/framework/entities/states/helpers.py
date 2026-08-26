@@ -114,6 +114,12 @@ def _can_jump(player: Player) -> bool:
     # es progresión sino un juego roto.
     if player.is_grounded or player._coyote_counter < player.perfil.coyote_frames:
         return True
+    
+    # Assist mode: saltos infinitos sin requerir habilidad
+    from src.engine.core.user_settings import get
+    if get().assist_infinite_jumps:
+        return True
+    
     return (
         player._air_jumps_used < player.perfil.saltos_aereos
         and _tiene_habilidad("skill_double_jump", player)

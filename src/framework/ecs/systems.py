@@ -126,6 +126,12 @@ def sistema_friccion(mundo: World, dt: float) -> None:
     pasado no debe seguir rebotando como si siguiera dentro, y una entidad
     puede solapar más de una zona a la vez sólo por accidente de diseño de
     nivel — la última zona que la toque manda, no la primera.
+
+    AUD-655 — este *clear* global es intencional: el material por defecto es
+    `None` → `ROCA` en el resolutor. Limpiar solo entidades que estuvieron en
+    zona dejaría material pegado al salir; limpiar todas garantiza *reset*
+    determinista. El coste es O(n) con n = entidades con Transform+Velocidad,
+    típicamente <30, despreciable frente a físicas/colisiones.
     """
     for entidad in mundo.con(Transform, Velocidad):
         t = mundo.obtener(entidad, Transform)

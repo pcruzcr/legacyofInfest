@@ -14,10 +14,10 @@ import pygame
 
 from src.engine.core import settings
 from src.engine.utils.asset_loader import AssetLoader
-
-logger = logging.getLogger(__name__)
 from src.framework.ecs.components import RideableComponent
 from src.framework.entities.enemy_base import EnemyBase
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from src.framework.entities.player import Player
