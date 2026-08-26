@@ -53,6 +53,11 @@ class MenuItem:
     ``value`` lets a caller carry arbitrary payload (a scene key, an enum) so
     the scene does not need a parallel list to map index -> meaning, which is
     another place the old hand-rolled menus drifted out of sync.
+
+    AUD-630 — accesibilidad: ``accessible_name`` es lo que un lector de
+    pantalla anuncia cuando el foco llega a esta fila. Por defecto es la
+    etiqueta + el hint (si existe), pero se puede sobreescribir para dar
+    más contexto.
     """
 
     label: str
@@ -62,6 +67,13 @@ class MenuItem:
     # Rendered right-aligned on the row: the current value of a setting, a
     # completion percentage, a key binding.
     trailing: str = ""
+
+    @property
+    def accessible_name(self) -> str:
+        """Lo que un lector de pantalla anuncia al enfocar esta fila."""
+        if self.hint:
+            return f"{self.label}. {self.hint}"
+        return self.label
 
 
 @dataclass
