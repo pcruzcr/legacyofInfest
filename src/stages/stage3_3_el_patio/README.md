@@ -139,7 +139,35 @@ Verificado sin errores de consola durante la carga y el recorrido del nivel.
 
 | ID | X | Y |
 |----|---|---|
-| 0 | 448 | 576 |
+| 0 | 200 | 576 |
+| 1 | 448 | 576 |
+| 2 | 752 | 576 |
+
+## 4b. Coleccionables
+
+3 objetos `Pickup` (`Moneda_01/02/03`) — uno cerca del spawn, uno sobre la
+plataforma media (obliga a subir para agarrarlo), uno cerca de la salida.
+
+## 4c. Migración al motor actualizado (2026-08-26)
+
+El profesor publicó una versión nueva del motor en GitHub
+(`github.com/pcruzcr/legacyofInfest`, rama `dev`). Se migró el trabajo de esta
+carpeta a esa base siguiendo la regla de alcance: **solo se tocaron los
+archivos de `stage3_3_el_patio`**, nada del motor ni de otras entregas.
+
+- El historial local (`8059f94`) resultó ser ancestro directo de `origin/dev`
+  (`2ae7f26`) — no hubo conflictos de fondo.
+- Se validó con las herramientas oficiales del repo:
+  `scripts/validate_tmx.py` (OK) y `scripts/grade_stage.py`
+  (**121/130, 93.1%** tras agregar 2 checkpoints y 3 `Pickup`).
+- Dependencia opcional `moderngl` instalada (requerida por el análisis de
+  diseño del calificador; el juego ya funcionaba sin ella).
+- Dos avisos menores y documentados quedan pendientes, ambos de bajo
+  impacto: el calificador cuenta los muros laterales como "plataformas
+  huérfanas" porque no llegan a 2/3 de la altura del mapa (limitación
+  conocida del propio script, con el mismo caso documentado para Stage 0);
+  y el recorrido no exige ningún salto obligatorio (las plataformas son
+  bonus, no bloquean el camino).
 
 ## 5. Obstáculos y plataformeo
 

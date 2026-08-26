@@ -226,12 +226,27 @@
  </layer>
  <objectgroup id="6" name="Objects">
   <object id="1" type="PlayerSpawn" name="PlayerSpawn_01" x="40" y="576"/>
-  <object id="2" type="Checkpoint" name="Checkpoint_01" x="448" y="576" width="16" height="32">
+  <object id="2" type="Checkpoint" name="Checkpoint_02" x="448" y="576" width="16" height="32">
+   <properties>
+    <property name="checkpoint_id" type="int" value="1"/>
+   </properties>
+  </object>
+  <object id="3" type="NextTrigger" name="NextTrigger_01" x="928" y="512" width="16" height="64"/>
+
+  <object id="4" type="Checkpoint" name="Checkpoint_01" x="200" y="576" width="16" height="32">
    <properties>
     <property name="checkpoint_id" type="int" value="0"/>
    </properties>
   </object>
-  <object id="3" type="NextTrigger" name="NextTrigger_01" x="928" y="512" width="16" height="64"/>
+  <object id="5" type="Checkpoint" name="Checkpoint_03" x="752" y="576" width="16" height="32">
+   <properties>
+    <property name="checkpoint_id" type="int" value="2"/>
+   </properties>
+  </object>
+
+  <object id="6" type="Pickup" name="Moneda_01" x="96" y="560" width="16" height="16"/>
+  <object id="7" type="Pickup" name="Moneda_02" x="592" y="464" width="16" height="16"/>
+  <object id="8" type="Pickup" name="Moneda_03" x="880" y="560" width="16" height="16"/>
 
   <object id="10" type="Walker" name="Walker_01" x="176" y="576">
    <properties>
