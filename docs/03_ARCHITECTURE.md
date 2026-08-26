@@ -37,6 +37,51 @@ date_processed: "2026-08-12"
 
 ---
 
+## 0. Diagrama de dependencias entre paquetes
+
+```mermaid
+graph TD
+    main[main.py] --> App[src.engine.core.app]
+    App --> Core[src.engine.core]
+    App --> SceneMgr[src.engine.scene]
+    App --> Scenes[src.engine.scenes]
+    App --> Framework[src.framework]
+
+    subgraph "src/engine (motor)"
+        Core[core: settings, clock, events, i18n, inventory...]
+        SceneMgr[scene: SceneManager, BaseScene]
+        Scenes[scenes: 42+ escenas]
+        Input[input: InputManager, ActionMap]
+        AudioE[audio: AudioManager, SoundBank, MixerBuses]
+        Render[render: GLRenderer, SpriteBatchGPU]
+        UIEngine[ui: HUD, MessageBox, Theme, Widgets]
+        Utils[utils: AssetLoader, SurfacePool]
+    end
+
+    subgraph "src/framework (juego)"
+        Entities[entities: Player, EnemyBase, BossBase...]
+        ECS[ecs: World, Components, Systems]
+        Stage[stage: StageLoader, Camera, CollisionSystem...]
+        VFX[vfx: ParticleSystem, WeatherSystem, Lighting...]
+        Processing[processing: ColorTools, FilterTools, VisionTools...]
+        Combate[combate: daño y efectos]
+        PhysicsF[physics: Perfiles, Capas, Resolución]
+        Academic[academic: Curriculum, ProgresoAcademico]
+    end
+
+    Scenes --> UIEngine
+    Scenes --> DemoCommon[demo_common / demo_layout]
+    Framework --> Core
+    Framework --> Input
+    Framework --> AudioE
+```
+
+> **AUD-641:** `engine/core`, `ui`, `input`, `audio` y `utils` NO importan
+> `framework`. Verificado por `lint-imports` (4 contracts) y
+> `tests/test_arquitectura_fronteras.py`.
+
+---
+
 ## 1. Estructura completa de carpetas
 
 Todas las rutas de abajo son relativas a la raíz real del repositorio.
@@ -189,6 +234,8 @@ legacy-of-infest/                      # Raíz real del repositorio
 │   │   │   ├── music_clock.py            # RelojMusical: pulsos, compases y latencia (F6)
 │   │   │   ├── mixer_buses.py           # Mezclador: buses y ducking (AUD-144)
 │   │   │   └── polifonia.py             # AUD-280: cuántas veces suena a la vez el mismo efecto
+?   ?   ?   ??? music_stems.py            # MusicStemManager: stems dinamicos con crossfade
+?   ?   ?   ??? reverb_zones.py          # ReverbZoneManager: reverb por zona pre-bakeado
 │   │   ├── render/
 │   │   │   ├── __init__.py
 │   │   │   ├── gl_pipeline.py             # GLRenderer, GLRenderConfig: tubería de ModernGL
@@ -231,6 +278,15 @@ legacy-of-infest/                      # Raíz real del repositorio
 │   │   │   ├── enemy_flying.py            # EnemyFlying: vuelo en senoide o por waypoints
 │   │   │   ├── enemy_shooter.py           # EnemyShooter: emisión de proyectiles, disparador de rango
 │   │   │   ├── boss_base.py               # BossBase: gestor de fases, evento de barra de vida del jefe
+?   ?   ?   ??? enemy_buddies.py           # Buddy system: Rino, Expresso, Enguarde
+?   ?   ?   ??? enemy_climber.py           # Climber enemy: wall climbing behavior
+?   ?   ?   ??? enemy_flying_bomber.py     # Flying bomber: aerial attack pattern
+?   ?   ?   ??? enemy_ice_skater.py        # Ice skater: sliding movement on ice
+?   ?   ?   ??? enemy_parry_teacher.py     # Parry teacher: teaches parry mechanic
+?   ?   ?   ??? enemy_shielded.py          # Shielded enemy: block and counter attacks
+?   ?   ?   ??? enemy_summoner.py          # Summoner: spawns minions
+?   ?   ?   ??? enemy_swimmer.py           # Swimmer: underwater movement
+?   ?   ?   ??? enemy_terrain_shaper.py    # Terrain shaper: creates/destroys blocks
 │   │   │   ├── boss_kit.py                # BossKit: componentes reutilizables de jefe
 │   │   │   ├── enemy_charger.py           # EnemyCharger: preparación + ataque de embestida
 │   │   │   ├── enemy_archer.py            # EnemyArcher: a distancia, disparo en arco
@@ -304,6 +360,7 @@ legacy-of-infest/                      # Raíz real del repositorio
 │   │   │   ├── boss_rush_mode.py          # BossRushMode: enfrentamiento consecutivo de jefes
  │   │   │   ├── combat_manager.py          # CombatManager: reglas de daño, hitstop y efectos de combate
  │   │   │   ├── day_night.py               # DayNight: sistema de ciclo día/noche
+?   ?   ?   ??? prefab_loader.py           # PrefabLoader: carga prefabs declarados en TMX
 │   │   │   ├── level_metrics.py           # LevelMetrics: métricas de análisis de escenario
 │   │   │   ├── seasons.py                 # Seasons: efectos visuales estacionales
 │   │   │   └── tmx_diagnostics.py         # TmxDiagnostics: utilidades de validación de TMX
