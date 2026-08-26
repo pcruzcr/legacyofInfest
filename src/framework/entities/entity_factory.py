@@ -24,6 +24,7 @@ from src.framework.entities.enemy_charger import EnemyCharger
 from src.framework.entities.enemy_flying import EnemyFlying
 from src.framework.entities.enemy_shooter import EnemyShooter
 from src.framework.entities.enemy_walker import EnemyWalker
+from src.framework.entities.enemy_buddies import BuddyRino, BuddyExpresso, BuddyEnguarde
 from src.framework.stage.stage_loader import StageLoader
 
 _registered: bool = False
@@ -68,6 +69,9 @@ def ensure_registered() -> None:
         "Caster": EnemyCaster,
         "Assassin": EnemyAssassin,
         "BossVenado": BossVenado,
+        "BuddyRino": BuddyRino,
+        "BuddyExpresso": BuddyExpresso,
+        "BuddyEnguarde": BuddyEnguarde,
     }
 
     for type_name, entity_class in _ENTITY_REGISTRY.items():

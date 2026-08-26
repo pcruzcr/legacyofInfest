@@ -30,10 +30,11 @@ from src.framework.stage.interactables import (
     Cofre,
     Disparador,
     Recogible,
+    ZonaDeWarp,
     SecretExit,
     SecretRoom,
-    ZonaDeWarp,
 )
+from src.framework.entities.enemy_buddies import BuddyRino, BuddyExpresso, BuddyEnguarde
 from src.framework.stage.pendientes import Pendiente
 from src.framework.stage.stage_data import (
     _BOOL_PROPS,
@@ -165,6 +166,15 @@ class ObjetosDeTiled:
 
             elif obj_type == "SecretRoom":
                 cls._handle_secret_room(stage, obj, props)
+
+            elif obj_type == "BuddyRino":
+                cls._handle_buddy(stage, obj, props, "BuddyRino")
+
+            elif obj_type == "BuddyExpresso":
+                cls._handle_buddy(stage, obj, props, "BuddyExpresso")
+
+            elif obj_type == "BuddyEnguarde":
+                cls._handle_buddy(stage, obj, props, "BuddyEnguarde")
 
             elif obj_type == "Slope":
                 cls._handle_pendiente(stage, obj, props)
@@ -1112,6 +1122,31 @@ class ObjetosDeTiled:
         lock_x = props.get("lock_x", False) in (True, "true", "True", 1, "1")
         lock_y = props.get("lock_y", False) in (True, "true", "True", 1, "1")
         stage.camera_locks.append(CameraLock(rect=rect, lock_x=lock_x, lock_y=lock_y))
+
+    @classmethod
+    def _handle_buddy(cls, stage: StageData, obj: Any, props: dict[str, Any], buddy_type: str) -> None:
+        """Maneja la colocación de buddies (compañeros montables) en el mapa."""
+        if obj.width <= 0 or obj.height <= 0:
+            logger.warning(
+                "buddy sin tamaño en (%s, %s): se ignora",
+                obj.x, obj.y,
+            )
+            return
+        rect = pygame.Rect(int(obj.x), int(obj.y), int(obj.width), int(obj.height))
+        
+        buddy_class_map = {
+            "BuddyRino": BuddyRino,
+            "BuddyExpresso": BuddyExpresso,
+            "BuddyEnguarde": BuddyEnguarde,
+        }
+        
+        buddy_class = buddy_class_map.get(buddy_type)
+        if buddy_class is None:
+            logger.warning("Tipo de buddy desconocido: %s", buddy_type)
+            return
+            
+        buddy = buddy_class(pygame.Vector2(rect.x, rect.y), zone=cls._safe_int(props.get("zone", 0), "zone"))
+        stage.entity_list.append(buddy)
 
     @classmethod
     def _handle_secret_exit(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:

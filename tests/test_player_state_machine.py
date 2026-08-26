@@ -116,6 +116,7 @@ _ENUM_MAP: list[tuple[type[PlayerStateBase], PlayerState]] = [
     # AUD-619 — el pisotón aéreo entra al contrato del enum como los demás.
     (GroundPoundState, PlayerState.GROUND_POUND),
     (AirChaseState, PlayerState.AIR_CHASE),
+    (ChargeReleaseState, PlayerState.CHARGE_RELEASE),
 ]
 
 

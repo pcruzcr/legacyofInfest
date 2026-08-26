@@ -162,7 +162,26 @@ _ITEM_DEFS: dict[str, ItemDef] = {
         description="Botón de jefe: desvías los ataques",
         icon_color=(255, 200, 100), slot="skill",
 ),
-}
+
+    # AUD-637 -- Collectible Identity: nuevos tipos de coleccionables con identidad
+    #: Fragmento de reliquia -- lore del mundo, se entrega en SecretRoom
+    "relic_fragment": ItemDef(
+        id="relic_fragment", name="Fragmento de reliquia",
+        description="Un fragmento de historia olvidada. Cortalo y leelo.",
+        icon_color=(220, 200, 40),
+    ),
+    #: Dato académico -- se entrega en laboratorios/bibliotecas del juego
+    "academic_data": ItemDef(
+        id="academic_data", name="Dato académico",
+        description="Investigacion de campo: conocimiento puro, sin uso inmediato.",
+        icon_color=(100, 180, 255),
+    ),
+    #: Token de compañero -- se gana en SecretRoom y se gasta para invocar buddy
+    "buddy_token": ItemDef(
+        id="buddy_token", name="Token de compañero",
+        description="Un llamado de ayuda. Usalo para invocar un compañero.",
+        icon_color=(200, 180, 220),
+    ),}
 
 
 def _migrar_inventario() -> None:
