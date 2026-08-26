@@ -230,12 +230,24 @@
  <objectgroup id="6" name="Objects">
   <object id="1" type="PlayerSpawn" name="PlayerSpawn_01" x="40" y="576"/>
 
-  <object id="6" type="Pickup" name="Moneda_01" x="128" y="560" width="16" height="16"/>
-  <object id="40" type="Pickup" name="Moneda_02" x="424" y="508" width="16" height="16"/>
-  <object id="41" type="Pickup" name="Moneda_03" x="488" y="460" width="16" height="16"/>
-  <object id="42" type="Pickup" name="Moneda_04" x="552" y="428" width="16" height="16"/>
-  <object id="43" type="Pickup" name="Moneda_05" x="1000" y="560" width="16" height="16"/>
-  <object id="44" type="Pickup" name="Moneda_06" x="1472" y="560" width="16" height="16"/>
+  <object id="6" type="Pickup" name="Moneda_01" x="128" y="560" width="16" height="16">
+   <properties><property name="item_id" value="coin"/></properties>
+  </object>
+  <object id="40" type="Pickup" name="Moneda_02" x="424" y="508" width="16" height="16">
+   <properties><property name="item_id" value="coin"/></properties>
+  </object>
+  <object id="41" type="Pickup" name="Moneda_03" x="488" y="460" width="16" height="16">
+   <properties><property name="item_id" value="coin"/></properties>
+  </object>
+  <object id="42" type="Pickup" name="Moneda_04" x="552" y="428" width="16" height="16">
+   <properties><property name="item_id" value="coin"/></properties>
+  </object>
+  <object id="43" type="Pickup" name="Moneda_05" x="1000" y="560" width="16" height="16">
+   <properties><property name="item_id" value="coin"/></properties>
+  </object>
+  <object id="44" type="Pickup" name="Moneda_06" x="1472" y="560" width="16" height="16">
+   <properties><property name="item_id" value="coin"/></properties>
+  </object>
 
   <object id="4" type="Checkpoint" name="Checkpoint_01" x="320" y="576" width="16" height="32">
    <properties><property name="checkpoint_id" type="int" value="0"/></properties>
