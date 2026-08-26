@@ -1,0 +1,50 @@
+# AUD-641 — frontera hexagonal verificada en CI.
+#
+# Qué vigila y qué no
+# -------------------
+# Los 4 paquetes puros del engine (ui, input, audio, utils) tienen contrato
+# forbidden contra src.framework. Si alguien añade una dependencia framework,
+# lint-imports lo bloquea.
+#
+# src.engine.core NO tiene contract porque contiene app.py (el compositor raíz,
+# que cablea engine+framework) y game_context.py (que referencia SceneManager).
+# Separarlos requiere una refactorización arquitectónica documentada como
+# deuda técnica. El test test_arquitectura_fronteras.py cubre el mismo chequeo
+# con exenciones explícitas por fichero.
+#
+# Instalación: pip install import-linter && lint-imports
+
+[importlinter]
+root_package = src
+
+[importlinter:contract:engine-ui-no-framework]
+name = Engine UI no importa framework
+type = forbidden
+source_modules =
+    src.engine.ui
+forbidden_modules =
+    src.framework
+
+[importlinter:contract:engine-input-no-framework]
+name = Engine input no importa framework
+type = forbidden
+source_modules =
+    src.engine.input
+forbidden_modules =
+    src.framework
+
+[importlinter:contract:engine-audio-no-framework]
+name = Engine audio no importa framework
+type = forbidden
+source_modules =
+    src.engine.audio
+forbidden_modules =
+    src.framework
+
+[importlinter:contract:engine-utils-no-framework]
+name = Engine utils no importa framework
+type = forbidden
+source_modules =
+    src.engine.utils
+forbidden_modules =
+    src.framework
