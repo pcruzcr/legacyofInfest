@@ -18,6 +18,7 @@ import pygame
 
 from src.framework.scenes.stage_scene import StageScene
 from src.stages.stage3_3_el_patio.fountain import Fountain
+from src.stages.stage3_3_el_patio.moneda_fx import MonedaFxController
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -26,7 +27,8 @@ if TYPE_CHECKING:
 class Stage3_3ElPatio(StageScene):
     """Un patio interior con una fuente central, rodeado de aves en alerta.
     Demuestra: vectores explicitos (Unidad II), curvas (Unidad III),
-    representacion de escena via TMX (Unidad IV) y color (Unidad V)."""
+    representacion de escena via TMX (Unidad IV), color (Unidad V),
+    animacion con easing + EventBus (Unidad VI) y filtros (Unidad VII)."""
 
     STAGE_ID: str = "stage3_3_el_patio"
     STAGE_NAME: str = "3-3  EL PATIO"
@@ -41,6 +43,7 @@ class Stage3_3ElPatio(StageScene):
     def __init__(self, context: GameContext) -> None:
         super().__init__(context, Path(self.TMX_PATH))
         self._fountain: Fountain | None = None
+        self._moneda_fx: MonedaFxController | None = None
 
     # ── Optional lifecycle hooks ────────────────────────────────────
     # Override any of these to add custom behavior:
@@ -48,16 +51,24 @@ class Stage3_3ElPatio(StageScene):
     def on_stage_start(self) -> None:
         """Called after the stage loads and setup completes."""
         self._fountain = Fountain(self.FOUNTAIN_POS)
+        # Unidad VI: interaccion propia con el EventBus — se suscribe al
+        # evento del framework que se emite al recoger un Pickup, y anima un
+        # destello con easing en el punto exacto donde se recogio.
+        self._moneda_fx = MonedaFxController(self.events)
 
     def update(self, dt: float) -> None:
         super().update(dt)
         if self._fountain is not None:
             self._fountain.update(dt, self._player)
+        if self._moneda_fx is not None:
+            self._moneda_fx.update(dt)
 
     def draw(self, surface: pygame.Surface) -> None:
         super().draw(surface)
         if self._fountain is not None:
             self._fountain.draw(surface, self._camera.offset)
+        if self._moneda_fx is not None:
+            self._moneda_fx.draw(surface, self._camera.offset)
 
     def on_player_landed(self) -> None:
         """Called when the player first touches ground after being airborne.

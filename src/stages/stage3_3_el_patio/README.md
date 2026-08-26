@@ -4,8 +4,8 @@ assignment_name: "El Patio"
 assignment_id: "stage3_3_el_patio"
 zone: 3
 student_name: "Rebeca"
-units_demonstrated: [II, III, IV, V]
-evaluation_milestone: "Evaluación Práctica I"
+units_demonstrated: [II, III, IV, V, VI, VII]
+evaluation_milestone: "Evaluación Práctica II"
 ---
 
 # Stage 3-3 — El Patio
@@ -124,6 +124,49 @@ out_G = clamp(orig_G · tinte_G / 255, 0, 255)
 out_B = clamp(orig_B · tinte_B / 255, 0, 255)
 
 Se aplica una sola vez, al cargar los 6 cuadros de animación, no en cada frame de juego.
+
+### Unidad VI — Animación con easing + interacción propia de EventBus
+
+Archivos: [`moneda_fx.py`](moneda_fx.py), [`stage3_3_el_patio.py`](stage3_3_el_patio.py),
+usando `ease_out_elastic` de `src/engine/utils/math_utils.py`.
+
+Cuando se recoge una moneda, el motor emite el evento del framework
+`EVENTO_RECOGIDO` (`src/framework/stage/interactable_system.py`) con
+`item_id`, `cantidad` y `pos` (dónde ocurrió). `MonedaFxController` se
+suscribe a ese evento en `on_stage_start()` — es la interacción propia: nadie
+más en el motor sabe que "El Patio" reacciona a que agarren monedas — y por
+cada una crea un `MonedaSparkle` en esa posición exacta.
+
+El destello no crece de forma lineal: su radio en el instante `t` (0 a 1
+sobre 0.5 s) sigue `ease_out_elastic(t)`, que **se pasa de 1 y vuelve**, dando
+el efecto de "rebote" en vez de un crecimiento uniforme:
+
+```
+radio(t) = RADIO_MAX · ease_out_elastic(t)
+alpha(t) = 255 · (1 − t)
+```
+
+### Unidad VII — Filtros (histograma + convolución)
+
+Archivo: [`fountain.py`](fountain.py), usando `FilterTools.compute_histogram`,
+`FilterTools.adjust_brightness` y `FilterTools.gaussian_blur`
+(`src/framework/processing/filter_tools.py`).
+
+**Histograma dirigiendo una decisión:** antes de teñir el sprite de la
+fuente, se calcula su histograma de luminancia y se promedia:
+
+brillo_medio = Σ (i · cantidad_de_píxeles_con_luminancia_i) / total_píxeles, para i en [0, 255]
+
+Si `brillo_medio < 140`, el sprite se aclara con `adjust_brightness(1.35)`
+**antes** de aplicar el tinte dorado — el histograma decide si hace falta el
+paso extra, no un número puesto a ojo.
+
+**Convolución (desenfoque gaussiano):** el aura de luz detrás de la fuente
+sale de desenfocar un círculo blanco sólido con `gaussian_blur(sigma=6.0)`.
+El resultado es un degradado de brillo del centro hacia afuera; ese mismo
+degradado (0 a 255) se reutiliza directamente como canal alfa de la textura
+final, así el halo se funde con el fondo en vez de recortarse como un
+cuadrado.
 
 ## 3. Cómo ejecutar
 
