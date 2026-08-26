@@ -7,19 +7,20 @@ AUD-637 — 3 buddies: Rino (ground charge), Expresso (flying), Enguarde (water)
 """
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 import pygame
 
 from src.engine.core import settings
-from src.engine.core import azar
-from src.engine.core.events import Events
-from src.framework.entities.enemy_base import EnemyBase
+from src.engine.utils.asset_loader import AssetLoader
+
+logger = logging.getLogger(__name__)
 from src.framework.ecs.components import RideableComponent
+from src.framework.entities.enemy_base import EnemyBase
 
 if TYPE_CHECKING:
     from src.framework.entities.player import Player
-    from src.framework.ecs.world import World
 
 
 class BuddyBase(EnemyBase):
@@ -56,7 +57,7 @@ class BuddyBase(EnemyBase):
         
         # Buddy state
         self._is_mounted: bool = False
-        self._rider: 'Player | None' = None
+        self._rider: Player | None = None
         self._follow_distance: float = 60.0
         
         self.rect.width = 24
@@ -102,7 +103,7 @@ class BuddyBase(EnemyBase):
             if dist > self._follow_distance:
                 self.position.x += self.facing_direction * 25.0 * dt
 
-    def mount(self, rider: 'Player') -> bool:
+    def mount(self, rider: Player) -> bool:
         """Attempt to mount this buddy. Returns True if successful."""
         if self._is_mounted or self._rider is not None:
             return False
@@ -155,11 +156,11 @@ class BuddyBase(EnemyBase):
             self.position.y = self._rider.position.y - self._rideable.rider_offset.y
             self._is_mounted = True
             
-    def can_mount(self, player: 'Player') -> bool:
+    def can_mount(self, player: Player) -> bool:
         """Check if player can mount this buddy."""
         return not self._is_mounted and self._rider is None and self.is_alive
 
-    def _check_mount_input(self, player: 'Player') -> bool:
+    def _check_mount_input(self, player: Player) -> bool:
         """Check if player presses mount button near buddy."""
         # Check if player is near buddy and presses grab
         # This is called from player's update or interactable system

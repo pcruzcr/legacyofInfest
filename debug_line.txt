@@ -1,0 +1,30 @@
+231:         """Normalize an audio file to target LUFS (EBU R128).
+232:         
+233:         Reads input file, normalizes to target LUFS, writes output.
+234:         """
+235:         AudioSegment, normalize, compress_dynamic_range = self._get_pydub()
+236:         seg = AudioSegment.from_file(str(input_path))
+237:         
+238:         # Normalize loudness
+239:         seg = self.normalize_loudness(seg, target_lufs=target_lufs)
+240:         
+241:         # Export
+242:         seg.export(str(output_path), format="wav")
+243: 
+244:     # ── End of Loudness Normalization ────────────────────────────────────
+245:     
+246:     def _normalize(self, seg, target_sr: int, normalize, compress_dynamic_range):
+247:         samples = np.array(seg.get_array_of_samples(), dtype=np.float32)
+248:         max_int = 2 ** (seg.sample_width * 8 - 1) - 1
+249:         # AUD-314 — mezclar en int16 envolvía (32767 + eco ≈ 45000 → -20536):
+250:         # se trabaja en [-1, 1] y se recorta antes de volver a int16.
+251:         norm = samples / max_int
+252:         delay_ms = 50
+253:         delay_samples = int(seg.frame_rate * delay_ms / 1000)
+254:         wet = np.zeros_like(norm)
+255:         wet[delay_samples:] = norm[:-delay_samples] * decay
+256:         mixed = np.clip(norm + wet, -1.0, 1.0) * max_int
+257:         return seg._spawn(struct.pack(f"<{len(mixed)}h", *mixed.astype(np.int16)))
+258: 
+259:     def _load_cached(self, name: str) -> bytes | None:
+260:         if self._cache_dir is None:

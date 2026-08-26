@@ -1,0 +1,20 @@
+251:         norm = samples / max_int
+252:         delay_ms = 50
+253:         delay_samples = int(seg.frame_rate * delay_ms / 1000)
+254:         wet = np.zeros_like(norm)
+255:         wet[delay_samples:] = norm[:-delay_samples] * decay
+256:         mixed = np.clip(norm + wet, -1.0, 1.0) * max_int
+257:         return seg._spawn(struct.pack(f"<{len(mixed)}h", *mixed.astype(np.int16)))
+258: 
+259:     def _load_cached(self, name: str) -> bytes | None:
+260:         if self._cache_dir is None:
+251:         norm = samples / max_int
+252:         delay_ms = 50
+253:         delay_samples = int(seg.frame_rate * delay_ms / 1000)
+254:         wet = np.zeros_like(norm)
+255:         wet[delay_samples:] = norm[:-delay_samples] * decay
+256:         mixed = np.clip(norm + wet, -1.0, 1.0) * max_int
+257:         return seg._spawn(struct.pack(f"<{len(mixed)}h", *mixed.astype(np.int16)))
+258: 
+259:     def _load_cached(self, name: str) -> bytes | None:
+260:         if self._cache_dir is None:

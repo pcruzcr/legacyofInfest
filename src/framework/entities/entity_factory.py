@@ -19,12 +19,12 @@ from src.framework.entities.enemy_archer import EnemyArcher
 from src.framework.entities.enemy_assassin import EnemyAssassin
 from src.framework.entities.enemy_base import EnemyBase
 from src.framework.entities.enemy_brute import EnemyBrute
+from src.framework.entities.enemy_buddies import BuddyEnguarde, BuddyExpresso, BuddyRino
 from src.framework.entities.enemy_caster import EnemyCaster
 from src.framework.entities.enemy_charger import EnemyCharger
 from src.framework.entities.enemy_flying import EnemyFlying
 from src.framework.entities.enemy_shooter import EnemyShooter
 from src.framework.entities.enemy_walker import EnemyWalker
-from src.framework.entities.enemy_buddies import BuddyRino, BuddyExpresso, BuddyEnguarde
 from src.framework.stage.stage_loader import StageLoader
 
 _registered: bool = False

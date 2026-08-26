@@ -1,3 +1,8 @@
+from __future__ import annotations
+
+import logging
+
+logger = logging.getLogger(__name__)
 """
 
 
@@ -26,9 +31,9 @@ AUD-633 — arquetipo: modificador de terreno, puzzle dinámico.
 
 
 
-from __future__ import annotations
-
 import logging
+
+logger = logging.getLogger(__name__)
 from typing import TYPE_CHECKING
 
 import pygame

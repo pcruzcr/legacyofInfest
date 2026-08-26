@@ -1,11 +1,18 @@
 from __future__ import annotations
 
 import io
+import math
 import struct
 from pathlib import Path
 from typing import Any
 
 import numpy as np
+from scipy.signal import butter, sosfilt
+
+# EBU R128 constants
+LUFS_TARGET = -23.0
+LUFS_TOLERANCE = 1.0
+TRUE_PEAK_LIMIT = -1.0  # dBTP
 
 
 class AudioPipeline:
@@ -91,13 +98,152 @@ class AudioPipeline:
             converted.append(out)
         return converted
 
-    def _normalize(self, seg, target_sr: int, normalize, compress_dynamic_range):
+    def _normalize(self, seg, target_sr: int, normalize, compress_dynamic_range, decay: float = 1.0):
         seg = seg.set_frame_rate(target_sr).set_channels(1)
         seg = normalize(seg)
         seg = compress_dynamic_range(seg, threshold=-20.0, ratio=4.0)
         return seg
 
-    def _apply_reverb(self, seg, decay: float = 0.3):
+    # ── AUD-638 — Loudness Normalization (EBU R128 / -23 LUFS) ──────────────
+    
+    def measure_loudness(self, samples: np.ndarray, sample_rate: int) -> float:
+        """Measure integrated loudness in LUFS (EBU R128).
+        
+        Returns integrated loudness in LUFS (negative values).
+        """
+        if samples.size == 0:
+            return -float('inf')
+        
+        # Convert to float [-1, 1]
+        if samples.dtype != np.float32:
+            max_int = 2 ** (16 - 1)  # assuming 16-bit
+            samples = samples.astype(np.float32) / 32768.0
+        
+        # K-weighting filter (EBU R128)
+        # Pre-filter: high-pass at 1.5 Hz (removes DC) + shelf at 1.5 kHz (+4 dB)
+        # High-pass at 1.5 Hz (very gentle)
+        sos_hp = butter(2, 1.5, btype='highpass', fs=self._sr, output='sos')
+        # Shelf filter at 1.5 kHz (+4 dB boost above 1.5 kHz)
+        # Approximate with high-shelf: gain at 1.5kHz = 4dB
+        sos_hs = butter(2, 1500, btype='highpass', fs=48000, output='sos')
+        
+        # For simplicity, we'll use a simplified K-weighting approximation
+        # Full implementation would use precise filter coefficients from EBU R128
+        
+        # Apply high-pass to remove DC
+        sos_hp = butter(4, 1.5, btype='highpass', fs=self._sr, output='sos')
+        filtered = sosfilt(sos_hp, samples)
+        
+        # Apply shelf filter (high shelf at 1.5kHz with +4dB gain)
+        # Approximate with a simple boost above 1.5kHz
+        sos_shelf = butter(2, 1500, btype='highpass', fs=self._sr, output='sos')
+        filtered = sosfilt(sos_shelf, filtered)
+        
+        # Mean square
+        mean_square = np.mean(filtered ** 2)
+        
+        if mean_square <= 0:
+            return -float('inf')
+        
+        # LUFS = -0.691 + 10 * log10(mean_square)
+        lufs = -0.691 + 10.0 * math.log10(mean_square)
+        return lufs
+
+    def _get_sample_rate(self, seg) -> int:
+        return seg.frame_rate
+
+    def _get_channels(self, seg) -> int:
+        return seg.channels
+
+    def measure_lufs(self, seg) -> float:
+        """Measure integrated loudness of an audio segment in LUFS."""
+        self._sr = seg.frame_rate
+        samples = np.array(seg.get_array_of_samples(), dtype=np.float32)
+        
+        # Convert to float [-1, 1]
+        max_int = 2 ** (seg.sample_width * 8 - 1)
+        if max_int > 0:
+            samples = samples.astype(np.float32) / max_int
+        else:
+            samples = samples.astype(np.float32)
+        
+        # Handle stereo by averaging channels
+        if seg.channels == 2:
+            samples = samples.reshape(-1, 2).mean(axis=1)
+        
+        return self.measure_loudness(samples, seg.frame_rate)
+
+    def normalize_loudness(self, seg, target_lufs: float = LUFS_TARGET) -> None:
+        """Normalize audio segment to target LUFS (EBU R128)."""
+        current_lufs = self.measure_lufs(seg)
+        
+        if current_lufs == -float('inf'):
+            return seg  # silence
+        
+        # Calculate gain needed
+        gain_db = LUFS_TARGET - current_lufs
+        
+        # Apply gain
+        gain_linear = 10 ** (gain_db / 20.0)
+        
+        # Apply gain using pydub
+        seg = seg.apply_gain(gain_db)
+        
+        # Check true peak
+        true_peak = self._measure_true_peak(seg)
+        if true_peak > TRUE_PEAK_LIMIT:
+            # Reduce gain to meet true peak limit
+            peak_reduction_db = true_peak - TRUE_PEAK_LIMIT
+            seg = seg.apply_gain(-peak_reduction_db)
+        
+        return seg
+
+    def _measure_true_peak(self, seg) -> float:
+        """Measure true peak in dBTP (dB True Peak).
+        
+        True peak is measured by oversampling 4x and finding the maximum
+        sample value.
+        """
+        samples = np.array(seg.get_array_of_samples(), dtype=np.float32)
+        max_int = 2 ** (seg.sample_width * 8 - 1)
+        samples = samples.astype(np.float32) / max_int
+        
+        # Oversample 4x for true peak measurement
+        if len(samples) > 4:
+            # Simple 4x oversampling by zero-padding in frequency domain
+            # For simplicity, we'll just use 4x linear interpolation
+            n = len(samples)
+            oversampled = np.zeros(n * 4)
+            oversampled[::4] = samples
+            # Simple linear interpolation for peak detection
+            for i in range(1, 4):
+                oversampled[i::4] = (samples[:-1] * (1 - i/4) + samples[1:] * (i/4)) if len(samples) > 1 else samples
+        else:
+            oversampled = samples
+        
+        true_peak = np.max(np.abs(oversampled))
+        if true_peak <= 0:
+            return -float('inf')
+        return 20 * math.log10(true_peak)
+
+    def normalize_audio_file(self, input_path: Path, output_path: Path, 
+                              target_lufs: float = LUFS_TARGET) -> None:
+        """Normalize an audio file to target LUFS (EBU R128).
+        
+        Reads input file, normalizes to target LUFS, writes output.
+        """
+        AudioSegment, normalize, compress_dynamic_range = self._get_pydub()
+        seg = AudioSegment.from_file(str(input_path))
+        
+        # Normalize loudness
+        seg = self.normalize_loudness(seg, target_lufs=target_lufs)
+        
+        # Export
+        seg.export(str(output_path), format="wav")
+
+    # ── End of Loudness Normalization ────────────────────────────────────
+    
+    def _normalize(self, seg, target_sr: int, normalize, compress_dynamic_range, decay: float = 1.0):
         samples = np.array(seg.get_array_of_samples(), dtype=np.float32)
         max_int = 2 ** (seg.sample_width * 8 - 1) - 1
         # AUD-314 — mezclar en int16 envolvía (32767 + eco ≈ 45000 → -20536):
@@ -119,3 +265,26 @@ class AudioPipeline:
     def _save_cache(self, name: str, data: bytes) -> None:
         if self._cache_dir is not None:
             (self._cache_dir / name).write_bytes(data)
+
+    # ─────────────────────────────────────────────────────────────────
+    # AUD-639 — Reverb Zones (pre-baked variants)
+    # ─────────────────────────────────────────────────────────────────
+    
+    def apply_reverb(self, seg, reverb_name: str, wet: float = 0.3, 
+                     dry: float = 0.7, decay: float = 1.5):
+        """Apply pre-baked reverb variant to a segment.
+        
+        The reverb variants are pre-baked by \`tools/generate_all_assets.py\`
+        and stored as \`{name}_reverb.wav\` alongside the original.
+        """
+        if reverb_name == "default":
+            return seg
+        
+        reverb_path = Path(str(seg)).replace(".wav", f"_{reverb_name}_reverb.wav")
+        # In production, this would load a pre-baked reverb variant
+        # For now, apply simple algorithmic reverb as fallback
+        return self._apply_reverb_fallback(seg, wet, dry, decay)
+
+    def _apply_reverb_fallback(self, seg, wet: float, dry: float, decay: float):
+        """Algorithmic reverb fallback when pre-baked variant is missing."""
+        return self._apply_reverb(seg, decay)

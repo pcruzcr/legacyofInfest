@@ -21,6 +21,7 @@ import pygame
 
 from src.engine.core import settings
 from src.framework import FrameworkUsageError
+from src.framework.entities.enemy_buddies import BuddyEnguarde, BuddyExpresso, BuddyRino
 from src.framework.stage.bloques import (
     BloqueDestructible,
     BloqueEmpujable,
@@ -30,11 +31,10 @@ from src.framework.stage.interactables import (
     Cofre,
     Disparador,
     Recogible,
-    ZonaDeWarp,
     SecretExit,
     SecretRoom,
+    ZonaDeWarp,
 )
-from src.framework.entities.enemy_buddies import BuddyRino, BuddyExpresso, BuddyEnguarde
 from src.framework.stage.pendientes import Pendiente
 from src.framework.stage.stage_data import (
     _BOOL_PROPS,
