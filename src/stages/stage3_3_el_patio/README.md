@@ -139,50 +139,71 @@ Verificado sin errores de consola durante la carga y el recorrido del nivel.
 
 | ID | X | Y |
 |----|---|---|
-| 0 | 200 | 576 |
-| 1 | 448 | 576 |
-| 2 | 752 | 576 |
+| 0 | 320 | 576 |
+| 1 | 816 | 576 |
+| 2 | 1264 | 576 |
 
 ## 4b. Coleccionables
 
-3 objetos `Pickup` (`Moneda_01/02/03`) — uno cerca del spawn, uno sobre la
-plataforma media (obliga a subir para agarrarlo), uno cerca de la salida.
+6 objetos `Pickup` (`Moneda_01`..`Moneda_06`) — repartidos por el piso y tres
+de ellos sobre la escalera de nubes (premian tomar la ruta de plataformeo).
 
 ## 4c. Migración al motor actualizado (2026-08-26)
 
 El profesor publicó una versión nueva del motor en GitHub
 (`github.com/pcruzcr/legacyofInfest`, rama `dev`). Se migró el trabajo de esta
 carpeta a esa base siguiendo la regla de alcance: **solo se tocaron los
-archivos de `stage3_3_el_patio`**, nada del motor ni de otras entregas.
+archivos de `stage3_3_el_patio`**, nada del motor ni de otras entregas. El
+historial local resultó ser ancestro directo de `origin/dev` — sin conflictos
+de fondo. Se instaló la dependencia opcional `moderngl`, requerida por el
+análisis de diseño del calificador (el juego ya funcionaba sin ella).
 
-- El historial local (`8059f94`) resultó ser ancestro directo de `origin/dev`
-  (`2ae7f26`) — no hubo conflictos de fondo.
-- Se validó con las herramientas oficiales del repo:
-  `scripts/validate_tmx.py` (OK) y `scripts/grade_stage.py`
-  (**121/130, 93.1%** tras agregar 2 checkpoints y 3 `Pickup`).
-- Dependencia opcional `moderngl` instalada (requerida por el análisis de
-  diseño del calificador; el juego ya funcionaba sin ella).
-- Dos avisos menores y documentados quedan pendientes, ambos de bajo
-  impacto: el calificador cuenta los muros laterales como "plataformas
-  huérfanas" porque no llegan a 2/3 de la altura del mapa (limitación
-  conocida del propio script, con el mismo caso documentado para Stage 0);
-  y el recorrido no exige ningún salto obligatorio (las plataformas son
-  bonus, no bloquean el camino).
+## 4d. Rediseño con desplazamiento horizontal y ascenso obligatorio (2026-08-26)
+
+El mapa pasó de 960 a **1600 px de ancho** (100 tiles) para que el
+desplazamiento horizontal de cámara se note de verdad — con 960 px casi no
+había margen de scroll (el viewport ya mide 800 px). El fondo cambió a una
+ambientación diurna de campus, propia (cielo, nubes, árboles, edificio),
+inspirada en una referencia pero no copiada, cargada vía
+`background_zone="stage3_3_el_patio"` desde `assets/backgrounds/stage3_3_el_patio/`.
+
+Se agregó una **zona de ascenso obligatorio** (`docs` del proyecto no tienen
+un objeto tipo "Escalera" real — trepar requeriría tocar `player.py`, fuera
+de alcance — así que el mismo efecto se logra con la técnica estándar de
+plataformas): `Solid_MuroBloqueo` (96×128 px, más alto que el salto máximo
+del jugador, ~87 px) corta el piso por completo entre las columnas 36-41; se
+sortea subiendo por 3 `Platform_NubeSub0{1,2,3}` (nube) y bajando por 2
+`Platform_NubeBaj0{1,2}` al otro lado. Verificado con la función de
+alcanzabilidad real del motor (`level_metrics.reachable_platforms`, con
+`collision_rects` + `one_way_rects` juntos): **17 de 19 rectángulos
+alcanzables desde el spawn** — los 2 no alcanzables son los muros de cierre
+del mapa (correcto, no son plataformas).
+
+**Aviso conocido del calificador automático:** `grade_stage.py` bajó a 1/10
+en "geometría" porque su análisis de plataformas huérfanas solo mira
+`collision_rects` (sólidos) y no ve las plataformas de un solo sentido —
+así que no puede ver el camino de la escalera de nubes, aunque exista y esté
+verificado arriba con la física real. El puntaje total con este rediseño:
+**118/130 (90.8%)**.
 
 ## 5. Obstáculos y plataformeo
 
 | Objeto | Tipo | Notas |
 |---|---|---|
-| `Platform_Step1/2/3` | Un solo sentido | Alturas distintas, para variar el salto entre el spawn y la salida |
-| `Solid_Cajon01/02` | Sólido (16 px) | Hay que saltarlos, están a ras de piso |
-| `HazardZone_01` | Daño 0.25 | Zona de peligro en el tramo medio del recorrido |
+| `Solid_MuroBloqueo` | Sólido (96×128 px) | Corta el piso; obliga a subir por las nubes |
+| `Platform_NubeSub01/02/03` | Un solo sentido | Escalera subiendo, ~48 px de salto cada una |
+| `Platform_NubeBaj01/02` | Un solo sentido | Escalera bajando, del otro lado del muro |
+| `Solid_Roca01/02/03` | Sólido (16 px), roca | Obstáculos de piso — hay que saltarlos |
+| `Solid_CajonMadera01/02/03` | Sólido (16 px), madera | Roca02+Madera02 están pegados: salto más exigente |
+| `HazardZone_01` | Daño 0.25 | Zona de peligro en el tramo final del recorrido |
 | `Solid_Planter01/02` | Sólido (32 px) | Jardineras — también sirven de cobertura contra las aves |
+| `Platform_Fountain` | Un solo sentido | Plataforma de piedra de la fuente, en el centro del nivel |
 
 ## 6. Notas de lógica personalizada
 
 La fuente (`Fountain`, en `fountain.py`) no es un enemigo ni un objeto del registro de
 tipos del TMX: se instancia manualmente en `on_stage_start()` de
-`stage3_3_el_patio.py`, en la posición `FOUNTAIN_POS = (496, 544)`, que coincide con el
+`stage3_3_el_patio.py`, en la posición `FOUNTAIN_POS = (816, 544)`, que coincide con el
 centro del objeto `Platform_Fountain` de la capa `Collision`. Cura 0.25 corazones al
 jugador si se mantiene a menos de 28 px del centro, con un cooldown de 6 segundos.
 
