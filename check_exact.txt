@@ -1,3 +1,0 @@
-'Chain: Z → Z → X': es=False, en=False
-'Combo: —': es=False, en=False
-'  {current}/{total}  |  Score: {score}': es=False, en=False

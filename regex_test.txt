@@ -1,4 +1,0 @@
-Match on test line: 'ui.inventory_title'
-Simple regex match: 'ui.inventory_title'
-Actual line 35: '    titulo = _("ui.inventory_title")  # → "INVENTARIO" (es) / "INVENTORY" (en)'
-Match on actual line: 'ui.inventory_title'

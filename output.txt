@@ -1,4 +1,0 @@
-Line bytes: b'    titulo = _("ui.inventory_title")  # \xe2\x86\x92 "INVENTARIO" (es) / "INVENTORY" (en)'
-Match on raw line: 'ui.inventory_title'
-Matches on line: 3
-  Found: 'ui.inventory_title'

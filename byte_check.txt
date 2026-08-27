@@ -1,8 +1,0 @@
-Found at byte offset: 1315
-Context: ::
-
-    from src.engine.core.i18n import _
-
-    titulo = _("ui.inventory_title")  # → "INVENTARIO" (es) / "INVENTORY" (en)
-
-La clave es un

@@ -38,7 +38,12 @@ Cada nodo contiene:
 - `node_id` — identificador único
 - `speaker` — nombre a mostrar
 - `text` — texto del diálogo (se revela carácter a carácter)
-- `portrait` — nombre de fichero de retrato opcional, 48×48, de `assets/sprites/portraits/`
+- `portrait` — nombre de fichero de retrato de `assets/sprites/portraits/` (48×48 por frame; tira horizontal N×48 si `portrait_frames>1`)
+- `portrait_frames` — 1 (estático, defecto) o N (tira N frames: 0 idle boca cerrada, 1-2 habla, N-1 parpadeo). Ej. `4` + `portrait_fps:8`
+- `portrait_fps` — velocidad de la tira (8 por defecto)
+- `portrait_talking` — `null` (auto = anima mientras escribe), `true`/`false` fuerza
+- `portrait_emotion` — variante opcional (no usado en la lógica, reservado para `maya_enfado.png`)
+- `voice` — `sfx_voz_*` opcional que hace ducking de música al entrar al nodo
 - `choices` — lista opcional de tuplas `(texto_a_mostrar, siguiente_node_id)`
 - `on_enter` / `on_exit` — cadenas de acción guionizada
 
@@ -57,12 +62,16 @@ Gestiona el estado activo, la animación de progreso de texto (30 caracteres/s p
 Formato: `accion:argumento`
 - `give_item:item_id` — emite `ITEM_COLLECTED`
 - `set_flag:flag_name` — emite `FLAG_SET`
+- `complete_objective:id` — emite `OBJECTIVE_REQUESTED` (GAP-047)
+
+### 2.5 Retrato animado (mejora 2026-08-26)
+`DialogueSystem` cachea la tira `portrait` como `N` frames de `48×48` y elige frame por `anim_time*fps + text_progress*0.8`. Mientras `not _full_text_visible` hace lip-sync ciclando `0..N-1`; en reposo queda `0` + parpadeo cada ~3 s (cierra ojos `0.12s` usando último frame). Si el archivo no existe o no es tira, genera placeholder con boca (0 cerrada/1 media/2 abierta/3 blink) y mantiene compatibilidad 1-frame. Escalado por `text_scale` y marco `Theme.BORDER` + brillo `ACCENT_DIM` al hablar.
 
 ---
 
 ## 3. Maqueta visual
 
-Caja de diálogo: 20px de margen desde los bordes de pantalla, 100px de alto, anclada abajo (alto de pantalla − 110). Fondo negro a 200 de alfa. El retrato se dibuja en (30, box_y + 10) a 48×48; el nombre de quien habla en X+56 en dorado (#FFDC96); el texto en gris claro (#DCDCDC) debajo del nombre. Las elecciones se dibujan en box_y + 60 con resalte amarillo en la selección. La pista de continuar "[ENTER]" se muestra en los nodos hoja.
+Caja de diálogo: 20px de margen, `110*escala` de alto, anclada abajo, `Theme.SURFACE` redondeado con sombra `Theme.SHADOW`, filo `ACCENT_DIM` arriba. Retrato `48*escala` en `(box.x+16, box.y+8)` con marco `BORDER` y sombra; brillo `ACCENT_DIM` cuando habla + boca animada. Nombre en ficha `Theme.ACCENT` centrada (`dibuja_ficha`), texto `Theme.TEXT` envuelto por píxeles (`dividir_en_lineas` + `FlujoDeTexto` cache `id(nodo),pagina,escala,ancho`), elecciones como chips `ACCENT/SURFACE_RAISED` con flecha. Pista `[ENTER] p/n` si pagina. Todo escala con `text_scale`.
 
 ---
 
@@ -79,8 +88,9 @@ Caja de diálogo: 20px de margen desde los bordes de pantalla, 100px de alto, an
 
 ## 5. Estado de implementación
 
-**Fichero:** `src/framework/ui/dialogue_system.py` (546 líneas)
-**Estado:** ✅ Completo — diálogo ramificado con retratos, paginación de texto y carga desde datos JSON
+**Fichero:** `src/framework/ui/dialogue_system.py` (546→~680 líneas)
+**Estado:** ✅ Completo + retrato animado — diálogo ramificado con retratos en tira N frames, lip-sync ligado a typewriter (`anim_time*fps + text_progress`), parpadeo `0.12s/3s`, voice por nodo, cache de frames escalados y fallback placeholder. JSON `portrait_frames/portrait_fps/voice` retrocompatibles (1 frame = estático).
+**Assets:** `assets/sprites/portraits/{eco,jhon,jill,venado,rey_terciopelo,gavilan,paburu,narrador}.png` tira `192×48` (4 frames) generados por `tools/generate_all_assets.py::_gen_dialogue_portraits`; ejemplo vivo `data/dialogues/stage4_1.json` (4 árboles con `portrait_frames:4`).
 **Historia:** AUD-127 encontró el sistema completo y **nunca abierto** — `Stage0._check_dialogue_triggers` buscaba un campo `dialogue_tree_id` que `MessageTrigger` no tenía, así que la condición nunca se cumplía. AUD-128 encontró además el desbordamiento de texto que corrige la paginación actual.
 
 ---

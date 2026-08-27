@@ -1,3 +1,0 @@
-en: 'Chain: Z → Z → X' -> 'Chain: Z → Z → X'
-en: 'Cadena: Z → Z → X' -> 'Chain: Z → Z → X'
-es: 'Chain: Z → Z → X' -> 'Cadena: Z → Z → X'

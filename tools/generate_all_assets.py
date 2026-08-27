@@ -2012,6 +2012,68 @@ def _gen_ui_portraits():
         draw.ellipse((18, 8, 21, 11), fill=(0,0,0))
         img.save(ui / fname)
 
+def _gen_dialogue_portraits():
+    print("  Dialogue portraits (animados)...")
+    dest = A / "sprites" / "portraits"
+    dest.mkdir(parents=True, exist_ok=True)
+    # Paletas por personaje — 4 frames cada uno (idle/habla/media/boca abierta + blink)
+    personajes = {
+        "eco": (220, 180, 120),
+        "jhon": (180, 200, 220),
+        "jill": (220, 160, 180),
+        "venado": (180, 220, 160),
+        "rey_terciopelo": (140, 180, 220),
+        "gavilan": (210, 190, 140),
+        "paburu": (200, 160, 120),
+        "narrador": (200, 200, 200),
+    }
+    for nombre, base in personajes.items():
+        # 4 frames horizontales, cada uno 48x48
+        strip = Image.new("RGBA", (48 * 4, 48), (0, 0, 0, 0))
+        for i in range(4):
+            d = ImageDraw.Draw(strip)
+            x0 = i * 48
+            # Fondo cara
+            d.ellipse((x0 + 4, 4, x0 + 44, 36), fill=base, outline=(40, 40, 60))
+            # Ojos
+            if i == 3:  # blink
+                d.line((x0 + 12, 16, x0 + 20, 16), fill=(20, 20, 30), width=2)
+                d.line((x0 + 28, 16, x0 + 36, 16), fill=(20, 20, 30), width=2)
+            else:
+                d.ellipse((x0 + 12, 14, x0 + 20, 20), fill=(255, 255, 255))
+                d.ellipse((x0 + 28, 14, x0 + 36, 20), fill=(255, 255, 255))
+                d.ellipse((x0 + 14, 15, x0 + 18, 19), fill=(20, 20, 30))
+                d.ellipse((x0 + 30, 15, x0 + 34, 19), fill=(20, 20, 30))
+                # Brillo
+                d.ellipse((x0 + 16, 16, x0 + 18, 18), fill=(255, 255, 255))
+                d.ellipse((x0 + 32, 16, x0 + 34, 18), fill=(255, 255, 255))
+            # Boca según frame
+            if i == 0:  # cerrado idle
+                d.line((x0 + 18, 30, x0 + 30, 30), fill=(80, 40, 40), width=2)
+            elif i == 1:  # medio
+                d.ellipse((x0 + 18, 28, x0 + 30, 33), fill=(90, 50, 50), outline=(60, 30, 30))
+            elif i == 2:  # abierto
+                d.ellipse((x0 + 16, 27, x0 + 32, 34), fill=(120, 60, 60), outline=(60, 30, 30))
+                d.rectangle((x0 + 20, 30, x0 + 28, 32), fill=(240, 220, 220))
+            else:  # blink también boca cerrada
+                d.line((x0 + 18, 30, x0 + 30, 30), fill=(80, 40, 40), width=2)
+        strip.save(dest / f"{nombre}.png")
+        # También guarda versión 1-frame estática para compatibilidad vieja
+        # (el primer frame como archivo separado si alguien usa eco.png)
+        # No necesario: el sistema soporta 1 frame del mismo archivo.
+        # Para aliases comunes
+        for alias in [f"{nombre}_normal", f"{nombre}_habla"]:
+            strip.save(dest / f"{alias}.png")
+    # Genérico fallback
+    fallback = Image.new("RGBA", (48 * 4, 48), (0, 0, 0, 0))
+    for i in range(4):
+        d = ImageDraw.Draw(fallback)
+        x0 = i * 48
+        d.rectangle((x0 + 2, 2, x0 + 46, 46), fill=(180, 180, 180), outline=(80, 80, 90))
+        d.text((x0 + 14, 18), "?", fill=(40, 40, 60))
+    fallback.save(dest / "placeholder.png")
+    fallback.save(dest / "default.png")
+
 def _gen_ui_banners():
     # AUD-526 — cada mitad se dibujaba como un rectángulo cerrado en las
     # cuatro caras (`draw.rectangle(..., outline=...)`). `ScreenBanner.draw`
@@ -3724,6 +3786,7 @@ def main():
     
     print("\n[6/9] UI sprites...")
     _gen_ui_portraits()
+    _gen_dialogue_portraits()
     _gen_ui_banners()
     _gen_ui_misc()
     _gen_ui_fonts()

@@ -1,5 +1,0 @@
-Line 35: '    titulo = _("ui.inventory_title")  # → "INVENTARIO" (es) / "INVENTORY" (en)'
-
-Line 35 raw: '    titulo = _("ui.inventory_title")  # → "INVENTARIO" (es) / "INVENTORY" (en)'
-Line 35 bytes: b'    titulo = _("ui.inventory_title")  # \xe2\x86\x92 "INVENTARIO" (es) / "INVENTORY" (en)'
-Match: 'ui.inventory_title'

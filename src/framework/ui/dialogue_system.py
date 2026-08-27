@@ -120,13 +120,26 @@ def personalizar(texto: str) -> str:
 
 
 class DialogueNode:
-    """Un nodo de un árbol de diálogo."""
+    """Un nodo de un árbol de diálogo.
+
+    Campos de retrato animado (compatibles con nodos viejos):
+      portrait_frames: 1 = estático, >1 = tira horizontal N frames.
+      portrait_fps: velocidad (8 por defecto).
+      portrait_talking: si True anima boca mientras escribe; si False, anima idle.
+      portrait_emotion: sufijo opcional para variante (ej. 'enfado' → maya_enfado.png).
+      voice: id de sfx_voz_* opcional para ducking ya existente.
+    """
 
     def __init__(self, node_id: str, speaker: str, text: str,
                  portrait: str | None = None,
                  choices: list[tuple[str, str]] | None = None,
                  on_enter: str | None = None,
-                 on_exit: str | None = None) -> None:
+                 on_exit: str | None = None,
+                 portrait_frames: int = 1,
+                 portrait_fps: float = 8.0,
+                 portrait_talking: bool | None = None,
+                 portrait_emotion: str | None = None,
+                 voice: str | None = None) -> None:
         self.node_id: str = node_id
         self.speaker: str = speaker
         self.text: str = text
@@ -134,6 +147,19 @@ class DialogueNode:
         self.choices: list[tuple[str, str]] = choices or []
         self.on_enter: str | None = on_enter
         self.on_exit: str | None = on_exit
+        # Retrato animado — retrocompatible: 1 frame = estático.
+        try:
+            self.portrait_frames: int = max(1, int(portrait_frames))
+        except (TypeError, ValueError):
+            self.portrait_frames = 1
+        try:
+            self.portrait_fps: float = max(0.0, float(portrait_fps))
+        except (TypeError, ValueError):
+            self.portrait_fps = 8.0
+        # None = auto (habla mientras typewriter activo)
+        self.portrait_talking: bool | None = portrait_talking
+        self.portrait_emotion: str | None = portrait_emotion
+        self.voice: str | None = voice
 
 
 class DialogueTree:
@@ -171,6 +197,18 @@ class DialogueTree:
         """
         nodos: dict[str, DialogueNode] = {}
         for node_id, bruto in (datos.get("nodes") or {}).items():
+            # portrait animado: portrait_frames/portrait_fps opcionales, voice opcional
+            def _bool_o_none(v: object) -> bool | None:
+                if v is None or v == "":
+                    return None
+                if isinstance(v, bool):
+                    return v
+                t = str(v).strip().lower()
+                if t in ("true", "1", "si", "sí", "yes"):
+                    return True
+                if t in ("false", "0", "no"):
+                    return False
+                return None
             nodos[node_id] = DialogueNode(
                 node_id=node_id,
                 speaker=str(bruto.get("speaker", "")),
@@ -181,6 +219,11 @@ class DialogueTree:
                 ],
                 on_enter=bruto.get("on_enter"),
                 on_exit=bruto.get("on_exit"),
+                portrait_frames=bruto.get("portrait_frames", 1),
+                portrait_fps=bruto.get("portrait_fps", 8.0),
+                portrait_talking=_bool_o_none(bruto.get("portrait_talking")),
+                portrait_emotion=bruto.get("portrait_emotion"),
+                voice=bruto.get("voice"),
             )
         return cls(
             tree_id=str(datos.get("id", "")),
@@ -205,6 +248,11 @@ class DialogueSystem:
         #: ENTER y el resto no se mostraba nunca.
         self._pagina: int = 0
         self._portrait_cache: dict[str, pygame.Surface] = {}
+        #: Retrato animado — tira horizontal N frames, lip-sync y parpadeo.
+        self._portrait_anim_cache: dict[str, list[pygame.Surface]] = {}
+        self._anim_time: float = 0.0
+        self._blink_timer: float = 0.0
+        self._blink_duracion: float = 0.12
         # AUD-128: las fuentes ya no se construyen aquí ni con
         # `pygame.font.Font` directo. `theme.font()` aplica la escala de
         # accesibilidad, cachea, y sobrevive a un `pygame.font.quit()` — los
@@ -278,8 +326,20 @@ class DialogueSystem:
         self._pagina = 0
         self._full_text_visible = self._velocidad <= 0.0
         self._selected_choice = 0
+        self._anim_time = 0.0
+        self._blink_timer = 3.0 + (hash(node.node_id) % 20) * 0.1
         if node.on_enter:
             self._execute_action(node.on_enter)
+        # Voz por nodo — ducking ya lo hace start_dialogue, aquí solo dispara SFX.
+        if getattr(node, "voice", None):
+            try:
+                audio = getattr(self._context, "audio", None)
+                if audio is not None and hasattr(audio, "play_voz"):
+                    audio.play_voz(str(node.voice))
+                else:
+                    self._context.event_bus.emit(Events.SFX_VOICE, voice=str(node.voice))
+            except Exception:
+                logger.warning("dialogue_system: no se pudo reproducir voice %s", node.voice, exc_info=True)
 
     def _execute_action(self, action: str) -> None:
         """Ejecuta una acción de guion: `give_item:llave`, `set_flag:x`."""
@@ -329,6 +389,13 @@ class DialogueSystem:
     def update(self, dt: float) -> None:
         if not self._active or self._current_node is None:
             return
+
+        # Tiempo para retrato animado / parpadeo.
+        self._anim_time += dt
+        self._blink_timer -= dt
+        if self._blink_timer <= 0.0:
+            self._blink_timer = 3.0 + (hash(self._current_node.node_id) % 10) * 0.2
+            # El blink se resuelve en draw() mirando _blink_timer < _blink_duracion.
 
         velocidad = self._velocidad
         if not self._full_text_visible:
@@ -394,9 +461,20 @@ class DialogueSystem:
         px = box.x + Theme.SPACE_M
         py = box.y + Theme.SPACE_S + 2
         lado_retrato = int(48 * self._escala_actual())
-        retrato = self._retrato(self._current_node.portrait, lado_retrato)
+        retrato = self._retrato_animado(self._current_node, lado_retrato)
         if retrato is not None:
+            # Marco sutil del retrato — mismo radio que el panel.
+            marco = pygame.Rect(px - 2, py - 2, lado_retrato + 4, lado_retrato + 4)
+            pygame.draw.rect(surface, Theme.BORDER, marco, 1, border_radius=6)
+            # Sombra de retrato
+            sombra = pygame.Surface((lado_retrato, lado_retrato), pygame.SRCALPHA)
+            pygame.draw.rect(sombra, Theme.SHADOW, (0, 0, lado_retrato, lado_retrato), border_radius=6)
+            surface.blit(sombra, (px, py))
             surface.blit(retrato, (px, py))
+            # Brillo de borde cuando habla
+            hablando = not self._full_text_visible and (self._current_node.portrait_frames > 1 or (self._current_node.portrait_talking is None and not self._full_text_visible))
+            if hablando:
+                pygame.draw.rect(surface, Theme.ACCENT_DIM, marco, 1, border_radius=6)
             px += lado_retrato + Theme.SPACE_M
 
         # AUD-611 — el nombre va en una FICHA redondeada y no suelto: es la
@@ -559,29 +637,145 @@ class DialogueSystem:
         return float(user_settings.preferencia("text_scale", 1.0))
 
     def _retrato(self, nombre: str | None, lado: int) -> pygame.Surface | None:
-        """El retrato pedido, o un marcador si no se puede cargar.
-
-        Un retrato que falta no debe dejar hueco ni tumbar la escena: se
-        sustituye por un rectángulo del color de superficie, que se lee como
-        «aquí va una cara» y no como un error.
-        """
+        """Compat: retrato estático (usado por tests viejos)."""
         if not nombre:
             return None
-        clave = f"{nombre}@{lado}"
-        cacheado = self._portrait_cache.get(clave)
-        if cacheado is not None:
-            return cacheado
-        try:
-            imagen = AssetLoader.load_image(
-                settings.ASSETS_DIR / "sprites" / "portraits" / nombre,
-                size=(lado, lado),
-            )
-        except (pygame.error, FileNotFoundError, PermissionError):
-            logger.warning("dialogue_system: no se pudo cargar el retrato %s", nombre)
-            imagen = pygame.Surface((lado, lado))
-            imagen.fill(Theme.SURFACE_RAISED)
-        self._portrait_cache[clave] = imagen
-        return imagen
+        # Delega a animado con 1 frame.
+        dummy = DialogueNode("tmp", "", "", portrait=nombre, portrait_frames=1)
+        return self._retrato_animado(dummy, lado)
+
+    def _retrato_animado(self, nodo: DialogueNode | None, lado: int) -> pygame.Surface | None:
+        """Retrato con tira animada, lip-sync y parpadeo.
+
+        - Si portrait_frames==1: estático cacheado como antes.
+        - Si >1: carga tira horizontal N×lado, cachea lista de frames escalados,
+          elige frame por tiempo. Mientras escribe (not _full_text_visible) hace
+          lip-sync (ciclo rápido); en reposo, idle + parpadeo cada ~3s.
+        """
+        if nodo is None or not nodo.portrait:
+            return None
+        nombre = nodo.portrait
+        frames = max(1, int(getattr(nodo, "portrait_frames", 1) or 1))
+        fps = float(getattr(nodo, "portrait_fps", 8.0) or 8.0)
+        # Auto talking = mientras escribe
+        talking_cfg = getattr(nodo, "portrait_talking", None)
+        hablando = (not self._full_text_visible) if talking_cfg is None else bool(talking_cfg)
+        # Parpadeo: 0.12s de ojos cerrados
+        parpadeando = 0.0 < self._blink_timer < self._blink_duracion if hasattr(self, "_blink_timer") else False
+
+        if frames <= 1:
+            clave = f"{nombre}@{lado}"
+            cacheado = self._portrait_cache.get(clave)
+            if cacheado is not None:
+                # Parpadeo en estático: oscurece levemente 2px arriba
+                if parpadeando:
+                    tmp = cacheado.copy()
+                    pygame.draw.line(tmp, (20, 20, 30), (lado // 4, lado // 3), (3 * lado // 4, lado // 3), 2)
+                    return tmp
+                return cacheado
+            try:
+                imagen = AssetLoader.load_image(
+                    settings.ASSETS_DIR / "sprites" / "portraits" / nombre,
+                    size=(lado, lado),
+                )
+            except (pygame.error, FileNotFoundError, PermissionError):
+                logger.warning("dialogue_system: no se pudo cargar el retrato %s", nombre)
+                imagen = pygame.Surface((lado, lado), pygame.SRCALPHA)
+                imagen.fill(Theme.SURFACE_RAISED)
+                # Cara placeholder con ojos/boca según frames
+                pygame.draw.circle(imagen, (240, 220, 180), (lado // 3, lado // 3), lado // 10)
+                pygame.draw.circle(imagen, (240, 220, 180), (2 * lado // 3, lado // 3), lado // 10)
+                pygame.draw.circle(imagen, (50, 30, 30), (lado // 3, lado // 3), 2)
+                pygame.draw.circle(imagen, (50, 30, 30), (2 * lado // 3, lado // 3), 2)
+            # Cachea estático
+            self._portrait_cache[clave] = imagen
+            if parpadeando:
+                tmp = imagen.copy()
+                pygame.draw.line(tmp, (20, 20, 30), (lado // 4, lado // 3), (3 * lado // 4, lado // 3), 2)
+                return tmp
+            return imagen
+
+        # Animado N frames
+        clave_anim = f"{nombre}@{lado}#{frames}"
+        lista = self._portrait_anim_cache.get(clave_anim)
+        if lista is None:
+            # Carga tira y trocea
+            try:
+                base = AssetLoader.load_image(
+                    settings.ASSETS_DIR / "sprites" / "portraits" / nombre,
+                )
+                # Si es 1:1 y se pidió N>1 pero el archivo es N*lado de ancho, trocea.
+                # Si el archivo no es tira, genera placeholder animado.
+                if base.get_width() < lado * frames // 2:
+                    raise FileNotFoundError
+            except (pygame.error, FileNotFoundError, PermissionError):
+                # Genera tira placeholder: frames con boca distinta
+                base = pygame.Surface((lado * frames, lado), pygame.SRCALPHA)
+                for i in range(frames):
+                    f = pygame.Surface((lado, lado), pygame.SRCALPHA)
+                    f.fill(Theme.SURFACE_RAISED)
+                    # Ojos
+                    pygame.draw.circle(f, (240, 220, 180), (lado // 3, lado // 3), lado // 9)
+                    pygame.draw.circle(f, (240, 220, 180), (2 * lado // 3, lado // 3), lado // 9)
+                    pygame.draw.circle(f, (50, 30, 30), (lado // 3, lado // 3), 2)
+                    pygame.draw.circle(f, (50, 30, 30), (2 * lado // 3, lado // 3), 2)
+                    # Boca: 0 cerrada, 1 abierta, etc.
+                    if i == 0:
+                        pygame.draw.line(f, (80, 40, 40), (lado // 3, 2 * lado // 3), (2 * lado // 3, 2 * lado // 3), 2)
+                    elif i == 1:
+                        pygame.draw.ellipse(f, (80, 40, 40), (lado // 3, 2 * lado // 3 - 3, lado // 3, 6))
+                    elif i == 2:
+                        pygame.draw.ellipse(f, (120, 60, 60), (lado // 3, 2 * lado // 3 - 4, lado // 3, 8))
+                    else:
+                        pygame.draw.line(f, (80, 40, 40), (lado // 3, 2 * lado // 3), (2 * lado // 3, 2 * lado // 3), 1)
+                    base.blit(f, (i * lado, 0))
+                # No cachea base, sigue a troceo
+                sheet = base
+            else:
+                sheet = base
+            # Trocea en frames escalados a lado
+            lista = []
+            fw = sheet.get_width() // frames
+            fh = sheet.get_height()
+            for i in range(frames):
+                rect = pygame.Rect(i * fw, 0, fw, fh)
+                # subsurface puede fallar si fw==0
+                try:
+                    sub = sheet.subsurface(rect)
+                except ValueError:
+                    sub = sheet
+                # Escala a lado
+                if sub.get_size() != (lado, lado):
+                    sub = pygame.transform.smoothscale(sub, (lado, lado)) if lado > 32 else pygame.transform.scale(sub, (lado, lado))
+                # Borde redondeado para retrato
+                # Recorta circular leve? Deja cuadrado con borde del draw() externo
+                lista.append(sub)
+            self._portrait_anim_cache[clave_anim] = lista
+
+        if not lista:
+            return None
+        # Elige frame
+        if parpadeando and len(lista) > 1:
+            # Usa último frame como ojos cerrados si existe
+            idx = len(lista) - 1
+        elif hablando and fps > 0:
+            # Lip-sync: ciclo continuo mientras escribe
+            # Para talking más natural, avanza por carácter: 1 frame cada 2 chars
+            # Combina tiempo y progreso para no ser puramente reloj
+            t = self._anim_time * fps + self._text_progress * 0.8
+            idx = int(t) % len(lista)
+            # Evita quedarse en blink frame si ese es el último
+            if parpadeando:
+                idx = len(lista) - 1
+        else:
+            idx = 0
+        # Clamp
+        idx = max(0, min(idx, len(lista) - 1))
+        surf = lista[idx]
+        if parpadeando and frames <= 1:
+            # Ya manejado arriba, aquí solo animado
+            pass
+        return surf
 
     @property
     def active(self) -> bool:
