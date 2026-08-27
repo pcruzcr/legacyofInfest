@@ -67,7 +67,18 @@ class EnemyPezAbismal(EnemyFlying):
     SPRITE_ANCHO = 28
     SPRITE_ALTO = 20
 
-    def __init__(self, spawn_position: pygame.Vector2, event_bus=None) -> None:
+    def __init__(self, spawn_position: pygame.Vector2, event_bus=None, **kwargs) -> None:
+        # AUD-XXX — aceptar **kwargs para que el factory pueda pasar
+        # max_health/damage_on_contact/flight_mode desde bestiary_registry
+        # sin reventar. Los valores de la tabla se ignoran y mandan los de
+        # la especie (pez inmune de presencia, no enemigo de combate).
+        kwargs.pop("max_health", None)
+        kwargs.pop("damage_on_contact", None)
+        kwargs.pop("flight_mode", None)
+        kwargs.pop("flight_speed", None)
+        kwargs.pop("sine_amplitude", None)
+        kwargs.pop("sine_frequency", None)
+        kwargs.pop("zone", None)
         super().__init__(
             spawn_position=spawn_position,
             flight_mode="sine",

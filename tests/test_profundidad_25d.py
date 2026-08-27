@@ -98,8 +98,13 @@ class TestComoLaLeeElMapa:
     #: ningún estudiante. Se exceptúa por nombre y no relajando la prueba,
     #: porque lo que ésta vigila sigue importando: que **el contenido que ya
     #: existía** no cambie de aspecto por haber añadido la propiedad.
+    #: Modernización 2.5D — stage0 y stage_mecanicas activan profundidad 0.85/1.0
+    #: curva 1.5 + orden_por_y (mantiene estilo pixel, 256, 32 colores, liquidos y
+    #: normal maps).
     LABORATORIOS_QUE_LAS_DEMUESTRAN: frozenset[str] = frozenset({
         "stage_cenital.tmx",
+        "stage0.tmx",
+        "stage_mecanicas.tmx",
     })
 
     def test_ningun_mapa_entregado_las_declara(self) -> None:

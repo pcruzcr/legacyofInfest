@@ -139,6 +139,27 @@ def escalar(valor: int | float) -> int:
     return round(valor * ESCALA_DE_INTERFAZ)
 
 
+def escalar_pixel_art(valor: int | float) -> int:
+    """Escala para arte pixelado: entero, nearest, nunca smooth.
+
+    Para tiles de 16x16 el escalado fraccional (2.5x) debe resolverse con
+    ``pygame.transform.scale`` (vecino mas cercano), nunca ``smoothscale``
+    que difumina el pixel art. Esta funcion devuelve el tamano escalado
+    redondeado a entero para usar con ``scale``: el caller decide la
+    superficie y el metodo, pero el valor viene de aqui para no repetir
+    ``round(valor*ESCALA)`` a mano. Mantiene el estilo pixel a 800x600
+    sin agregar biomas nuevos, solo mas detalle en los 4 zonas."""
+    return round(valor * ESCALA_DE_INTERFAZ)
+
+
+def escalar_suave(valor: int | float) -> int:
+    """Escala para UI no-pixel (fuentes, barras degradadas): puede usar smooth.
+
+    Separar ``escalar_pixel_art`` de ``escalar_suave`` evita que un futuro
+    cambio en HUD use ``smoothscale`` por error sobre baldosas."""
+    return round(valor * ESCALA_DE_INTERFAZ)
+
+
 _font_cache: dict[tuple[str | None, int], pygame.font.Font] = {}
 
 #: Centinela: `None` es una respuesta válida de `_tipografia_del_juego()` —

@@ -308,6 +308,22 @@ def _objetos() -> list[str]:
         dano=25.0, encendido=1.0, apagado=1.5, desfase=0.5)
     obj("Checkpoint", (10 * SALA - 4) * TS, suelo_px - 32, 16, 32, checkpoint_id=10)
 
+    # ── Zonas huérfanas: AmbientLight / Music / Zoom / Friction inercia ──
+    # Estas cuatro mecánicas estaban implementadas y sin ejemplo en el lab
+    # hasta AUD-XXX: se añaden aquí para que ninguna quede sin usar.
+    # AmbientLightZone: sala oscura que baja brillo a 0.45
+    obj("AmbientLightZone", (s9 + 2) * TS, suelo_px - 6 * TS, 8 * TS, 6 * TS,
+        valor=0.45, fundido=32)
+    # MusicZone: silencio deliberado (track="") para que se oiga el ambiente
+    obj("MusicZone", (s9 + 12) * TS, suelo_px - 6 * TS, 8 * TS, 6 * TS,
+        track="", fundido_ms=800)
+    # CameraZoomZone: acerca a 1.4x al entrar a la caverna final
+    obj("CameraZoomZone", (s10 + 2) * TS, suelo_px - 4 * TS, 6 * TS, 8 * TS,
+        factor=1.4, segundos=0.6)
+    # FrictionZone con inercia (hielo resbaladizo real, no sólo multiplicador)
+    obj("FrictionZone", (s8 + 18) * TS, suelo_px - 2 * TS, 6 * TS, 2 * TS,
+        multiplicador=1.0, arrastre=0.0, material="hielo", inercia=0.85)
+
     # WarpZones — atajo de vuelta
     obj("WarpZone", (MW - 8) * TS, suelo_px - 3 * TS, 2 * TS, 3 * TS,
         automatico=False, destino_x=float(3 * TS), destino_y=float(suelo_px),
@@ -334,6 +350,47 @@ def _objetos() -> list[str]:
     # Dos genéricos extra para variedad sin saturar
     obj("Walker", (SALA + 20) * TS, suelo_px - 28, 24, 28)
     obj("FlyingBoa", (2 * SALA + 12) * TS, suelo_px - 6 * TS, 20, 14)
+
+    # ── Balanceo 6 especies de 1 instancia → 4-5 (AUD — cobertura nominal) ──
+    # Cada una pasa de 1 global a 4-5 repartiendo 3 copias extra en el lab.
+    fauna_balanceo = [
+        # WalkerSerpientePequena: 1 en stage2_2 + 3 aquí = 4
+        ("WalkerSerpientePequena", 1, 20), ("WalkerSerpientePequena", 4, 8), ("WalkerSerpientePequena", 6, 20),
+        # WalkerTerciopelo: 1 arriba (sala6) + 3 = 4
+        ("WalkerTerciopelo", 1, 14), ("WalkerTerciopelo", 3, 18), ("WalkerTerciopelo", 8, 12),
+        # ShooterVenomoLargo: 1 arriba (sala8) + 3 = 4
+        ("ShooterVenomoLargo", 2, 22), ("ShooterVenomoLargo", 4, 20), ("ShooterVenomoLargo", 9, 8),
+        # FlyingTerciovolador: 1 arriba (sala7) + 3 = 4
+        ("FlyingTerciovolador", 1, 22), ("FlyingTerciovolador", 5, 18), ("FlyingTerciovolador", 9, 14),
+        # ShooterSerpienteArbol: 1 en stage2_2 + 3 aquí = 4
+        ("ShooterSerpienteArbol", 2, 6), ("ShooterSerpienteArbol", 5, 6), ("ShooterSerpienteArbol", 7, 18),
+        # WalkerRaton: 1 arriba (sala2) + 3 = 4
+        ("WalkerRaton", 1, 12), ("WalkerRaton", 4, 12), ("WalkerRaton", 6, 8),
+    ]
+    for especie, sala, dx in fauna_balanceo:
+        x = (sala * SALA + dx) * TS
+        if especie.startswith("Flying"):
+            obj(especie, x, suelo_px - 6 * TS, 20, 14)
+        else:
+            obj(especie, x, suelo_px - 28, 24, 28)
+
+    # ── Nuevas especies huérfanas + 5 arquetipos llenos (demostración en lab) ──
+    # Una instancia por sala para que check_tmx_coverage no las marque huérfanas;
+    # el balance real (4-5) se completa en stage2_1/3_1 y aquí.
+    nuevas = [
+        ("Shielded", 2, 14), ("Swimmer", 6, 10), ("Climber", 1, 18), ("FlyingBomber", 3, 10),
+        ("TerrainShaper", 8, 18), ("Summoner", 7, 22), ("ArcherQuetzal", 3, 20), ("BruteGolemHielo", 4, 14),
+        ("ChargerWolf", 5, 22), ("CasterHealer", 6, 18), ("AssassinSombra", 9, 20), ("Cangrejo", 5, 4),
+        ("Medusa", 6, 6), ("PezAbismal", 6, 8),
+    ]
+    for especie, sala, dx in nuevas:
+        x = (sala * SALA + dx) * TS
+        if especie.startswith("Flying") or especie in ("Medusa", "PezAbismal"):
+            obj(especie, x, suelo_px - 6 * TS, 20, 14)
+        elif especie in ("Cangrejo",):
+            obj(especie, x, suelo_px - 28, 22, 16)
+        else:
+            obj(especie, x, suelo_px - 28, 24, 28)
 
     # Luces — 2 focos con sombras proyectadas (coste medido)
     obj("Light", (SALA // 2) * TS, (SUELO_Y - 6) * TS, 16, 16,
@@ -408,10 +465,14 @@ tileheight="{TS}" infinite="0" nextlayerid="20" nextobjectid="900">
   <property name="water_amplitude" type="float" value="6"/>
   <property name="water_frequency" type="float" value="0.04"/>
   <property name="water_speed" type="float" value="1.5"/>
-  <property name="estamina" type="float" value="100"/>
-  <property name="tiempo_bala" type="float" value="3"/>
-  <property name="habilidades_libres" type="bool" value="true"/>
-  <property name="sombras_proyectadas" type="bool" value="true"/>
+   <property name="estamina" type="float" value="100"/>
+   <property name="tiempo_bala" type="float" value="3"/>
+   <property name="habilidades_libres" type="bool" value="true"/>
+   <property name="profundidad_min" type="float" value="0.85"/>
+   <property name="profundidad_max" type="float" value="1.0"/>
+   <property name="profundidad_curva" type="float" value="1.5"/>
+   <property name="orden_por_y" type="bool" value="true"/>
+   <property name="sombras_proyectadas" type="bool" value="true"/>
   <property name="god_rays" type="float" value="0.35"/>
  </properties>
  <tileset firstgid="1" name="tileset_stage0" tilewidth="{TS}" tileheight="{TS}" \

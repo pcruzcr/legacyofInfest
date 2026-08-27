@@ -128,6 +128,12 @@ class Sombra:
         alto = max(3, int(ancho * 0.34))
         return ancho, alto, int(ALFA_MAXIMO * cercania)
 
+    def _escalar_nearest(self, surf: pygame.Surface, w: int, h: int) -> pygame.Surface:
+        """Reescala nearest para sombras 2.5D sin difuminar."""
+        if surf.get_size() == (w, h):
+            return surf
+        return pygame.transform.scale(surf, (w, h))
+
     def dibujar(self, surface: pygame.Surface, cuerpo: pygame.Rect,
                 solidos: list[pygame.Rect], camera_offset: pygame.Vector2,
                 lote: Any = None, escala: float = 1.0) -> None:
@@ -137,9 +143,17 @@ class Sombra:
         seguidas las suelta todas con una llamada (AUD-302). Sin él se comporta
         exactamente como antes, que es lo que necesitan las entregas que llaman
         a esto por su cuenta.
-        
+
         Parámetro `escala` (AUD-624): factor de profundidad 2.5D para escalar
         la sombra igual que la entidad. 1.0 = sin cambio.
+
+        Pixel art: la elipse se dibuja a la talla final con ``SRCALPHA`` y se
+        coloca con coordenadas enteras; si se reescala, se usa
+        ``pygame.transform.scale`` (nearest), nunca ``smoothscale``, para no
+        difuminar el borde pixelado. 32 colores del tileset no entran aquí:
+        la sombra es sólo alfa, pero respetar nearest mantiene el resto de la
+        escena nítida cuando ``DrawingSystem._dibujar_con_profundidad`` escala
+        la entidad y su sombra a la vez.
         """
         suelo_y = suelo_bajo(cuerpo, solidos)
         if suelo_y is None:

@@ -421,6 +421,207 @@ Cuando el jugador entra en el rango de detección, el gavilán pasa a un picado:
 
 **Nota de comportamiento:** rango de detección muy largo — 240px significa que puede enganchar al jugador desde fuera de pantalla al principio del Hall. Combinado con los picados del gavilán, crea situaciones de fuego cruzado.
 
+### 2.8 `Shielded` — Guardia con escudo (Datacenter)
+
+| Propiedad | Valor |
+|---|---|
+| Clase base | `EnemyShielded` |
+| Aparece en | Stage 2-1, 2-2 |
+| Vida | 3.0 corazones |
+| Daño de contacto | 0.50 corazones |
+| Vida de escudo | 3.0 |
+| Velocidad de patrulla | 35 px/s |
+| Longitud de patrulla | 80 px |
+
+**Visual:** guardia con escudo frontal metálico. Sprite: `Shielded_walk.png` 16×24 (placeholder). El escudo bloquea daño frontal.
+
+---
+
+### 2.9 `Swimmer` — Nadador de esclusa
+
+| Propiedad | Valor |
+|---|---|
+| Clase base | `EnemySwimmer` |
+| Aparece en | Stage 2-2, 4-1b |
+| Vida | 2.0 corazones |
+| Daño de contacto | 0.50 corazones |
+| Velocidad de nado | 70 px/s |
+
+**Visual:** nadador con aletas, deriva con corriente. Sprite: `Swimmer_walk.png` 16×24.
+
+---
+
+### 2.10 `FlyingBomber` — Bombardero de datacenter
+
+| Propiedad | Valor |
+|---|---|
+| Clase base | `EnemyFlyingBomber` |
+| Aparece en | Stage 2-1, 2-2 |
+| Vida | 2.0 corazones |
+| Daño de contacto | 0.50 corazones |
+| Modo de vuelo | Seno |
+| Amplitud senoidal | 30 px |
+| Frecuencia senoidal | 1.0 Hz |
+
+**Visual:** dron bombardero. Sprite: `FlyingBomber_walk.png` 16×24.
+
+---
+
+### 2.11 `BruteGolemHielo` — Gólem de hielo (Datacenter)
+
+| Propiedad | Valor |
+|---|---|
+| Clase base | `EnemyBrute` |
+| Aparece en | Stage 2-1 |
+| Vida | 3.5 corazones |
+| Daño de contacto | 0.75 corazones |
+
+**Visual:** gólem de hielo que ejecuta ground slam. Sprite: `BruteGolemHielo_walk.png` 16×24.
+
+---
+
+### 2.12 `ChargerWolf` — Lobo de planicie
+
+| Propiedad | Valor |
+|---|---|
+| Clase base | `EnemyCharger` |
+| Aparece en | Stage 2-1, 2-2 |
+| Vida | 3.5 corazones |
+| Daño de contacto | 1.00 corazones |
+| Velocidad de carga | 250 px/s |
+
+**Visual:** lobo que carga con telegraph. Sprite: `ChargerWolf_walk.png` 16×24.
+
+---
+
+### 1.10 `Climber` — Trepador de lianas
+
+| Propiedad | Valor |
+|---|---|
+| Clase base | `EnemyClimber` |
+| Aparece en | Stage 1-1, stage_mecanicas |
+| Vida | 2.0 corazones |
+| Daño de contacto | 0.50 corazones |
+| Velocidad de trepa | 70 px/s |
+
+**Visual:** trepador que usa Liana y Tirolesa. Sprite: `Climber_walk.png` 16×24.
+
+---
+
+### 3.6 `ArcherQuetzal` — Arquero quetzal
+
+| Propiedad | Valor |
+|---|---|
+| Clase base | `EnemyArcher` |
+| Aparece en | Stage 3-1, 3-2 |
+| Vida | 2.5 corazones |
+| Daño de contacto | 0.25 corazones |
+| Cadencia de disparo | 0.5 disparos/s |
+| Velocidad de proyectil | 110 px/s |
+| Daño de proyectil | 0.50 corazones |
+
+**Visual:** quetzal arquero con tiro en arco. Sprite: `ArcherQuetzal_walk.png` 16×24.
+
+---
+
+### 3.7 `CasterHealer` — Curandero de Heredia
+
+| Propiedad | Valor |
+|---|---|
+| Clase base | `EnemyCaster` |
+| Aparece en | Stage 3-2, 3-3 |
+| Vida | 2.5 corazones |
+| Daño de contacto | 0.25 corazones |
+
+**Visual:** curandero con orbe perseguidor. Sprite: `CasterHealer_walk.png` 16×24.
+
+---
+
+### 3.8 `TerrainShaper` — Modelador de terreno
+
+| Propiedad | Valor |
+|---|---|
+| Clase base | `EnemyTerrainShaper` |
+| Aparece en | Stage 3-3 |
+| Vida | 3.0 corazones |
+| Daño de contacto | 0.50 corazones |
+| Longitud de patrulla | 80 px |
+
+**Visual:** modelador que crea bloques y hazards. Sprite: `TerrainShaper_walk.png` 16×24.
+
+---
+
+### 3.9 `Summoner` — Invocador de Heredia
+
+| Propiedad | Valor |
+|---|---|
+| Clase base | `EnemySummoner` |
+| Aparece en | Stage 3-2, 3-3 |
+| Vida | 4.0 corazones |
+| Daño de contacto | 0.50 corazones |
+| Longitud de patrulla | 60 px |
+
+**Visual:** invocador que genera esbirros. Sprite: `Summoner_walk.png` 16×24.
+
+---
+
+### 4.6 `Cangrejo` — Cangrejo de mina (presencia)
+
+| Propiedad | Valor |
+|---|---|
+| Clase base | `EnemyCangrejo` |
+| Aparece en | Stage 4-1b (S3) |
+| Vida | 1.0 corazón |
+| Daño de contacto | 0.00 corazones |
+| Velocidad de patrulla | 22 px/s |
+| Longitud de patrulla | 80 px |
+
+**Visual:** cangrejo de la mina, no daña. Sprite: `Cangrejo_walk.png` 16×24.
+
+---
+
+### 4.7 `Medusa` — Medusa de pozo (presencia)
+
+| Propiedad | Valor |
+|---|---|
+| Clase base | `EnemyMedusa` |
+| Aparece en | Stage 4-1b (S4/S5) |
+| Vida | 1.0 corazón |
+| Daño de contacto | 0.00 corazones |
+| Modo de vuelo | Seno |
+| Amplitud senoidal | 14 px |
+| Frecuencia senoidal | 0.4 Hz |
+
+**Visual:** medusa translúcida que deriva. Sprite: `Medusa_walk.png` 16×24.
+
+---
+
+### 4.8 `PezAbismal` — Pez abismal (presencia)
+
+| Propiedad | Valor |
+|---|---|
+| Clase base | `EnemyPezAbismal` |
+| Aparece en | Stage 4-1b (S2) |
+| Vida | 1.0 corazón |
+| Daño de contacto | 0.00 corazones |
+| Modo de vuelo | Seno + chase |
+| Velocidad de vuelo | 85 px/s |
+
+**Visual:** pez oscuro con luz pulsante. Sprite: `PezAbismal_walk.png` 16×24.
+
+---
+
+### 4.9 `AssassinSombra` — Sombra del cementerio
+
+| Propiedad | Valor |
+|---|---|
+| Clase base | `EnemyAssassin` |
+| Aparece en | Stage 4-1b, 4-1c |
+| Vida | 2.0 corazones |
+| Daño de contacto | 0.50 corazones |
+
+**Visual:** sombra sigilosa del cementerio. Sprite: `AssassinSombra_walk.png` 16×24.
+
 ---
 
 ## 5. Zona final — Enemigos del cementerio
@@ -464,6 +665,20 @@ Los Ecos espirituales se implementan como instancias de entidad temporales que u
 | E-303 | ShooterQuetzal | 3 | 3-1 a 3-3 | Shooter | 2.5 | — | 0.25 |
 | E-304 | WalkerPalom | 3 | 3-2, 3-3 | Walker | 2.5 | 0.50 | — |
 | E-305 | ShooterBuitre | 3 | 3-2 | Shooter | 3.5 | — | 0.50 |
+| E-208 | Shielded | 2 | 2-1, 2-2 | Shielded | 3.0 | 0.50 | — |
+| E-209 | Swimmer | 2 | 2-2, 4-1b | Swimmer | 2.0 | 0.50 | — |
+| E-210 | FlyingBomber | 2 | 2-1, 2-2 | FlyingBomber | 2.0 | 0.50 | — |
+| E-211 | BruteGolemHielo | 2 | 2-1 | Brute | 3.5 | 0.75 | — |
+| E-212 | ChargerWolf | 2 | 2-1, 2-2 | Charger | 3.5 | 1.00 | — |
+| E-110 | Climber | 1 | 1-1, mecánicas | Climber | 2.0 | 0.50 | — |
+| E-306 | ArcherQuetzal | 3 | 3-1, 3-2 | Archer | 2.5 | 0.25 | 0.50 |
+| E-307 | CasterHealer | 3 | 3-2, 3-3 | Caster | 2.5 | 0.25 | 0.50 |
+| E-308 | TerrainShaper | 3 | 3-3 | TerrainShaper | 3.0 | 0.50 | — |
+| E-309 | Summoner | 3 | 3-2, 3-3 | Summoner | 4.0 | 0.50 | — |
+| E-401 | Cangrejo | 4 | 4-1b | Cangrejo | 1.0 | 0.00 | — |
+| E-402 | Medusa | 4 | 4-1b | Medusa | 1.0 | 0.00 | — |
+| E-403 | PezAbismal | 4 | 4-1b | PezAbismal | 1.0 | 0.00 | — |
+| E-404 | AssassinSombra | 4 | 4-1b, 4-1c | Assassin | 2.0 | 0.50 | — |
 
 ---
 

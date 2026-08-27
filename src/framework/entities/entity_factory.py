@@ -20,10 +20,19 @@ from src.framework.entities.enemy_assassin import EnemyAssassin
 from src.framework.entities.enemy_base import EnemyBase
 from src.framework.entities.enemy_brute import EnemyBrute
 from src.framework.entities.enemy_buddies import BuddyEnguarde, BuddyExpresso, BuddyRino
+from src.framework.entities.enemy_cangrejo import EnemyCangrejo
 from src.framework.entities.enemy_caster import EnemyCaster
 from src.framework.entities.enemy_charger import EnemyCharger
+from src.framework.entities.enemy_climber import EnemyClimber
 from src.framework.entities.enemy_flying import EnemyFlying
+from src.framework.entities.enemy_flying_bomber import EnemyFlyingBomber
+from src.framework.entities.enemy_medusa import EnemyMedusa
+from src.framework.entities.enemy_pez_abismal import EnemyPezAbismal
+from src.framework.entities.enemy_shielded import EnemyShielded
 from src.framework.entities.enemy_shooter import EnemyShooter
+from src.framework.entities.enemy_summoner import EnemySummoner
+from src.framework.entities.enemy_swimmer import EnemySwimmer
+from src.framework.entities.enemy_terrain_shaper import EnemyTerrainShaper
 from src.framework.entities.enemy_walker import EnemyWalker
 from src.framework.stage.stage_loader import StageLoader
 
@@ -68,6 +77,15 @@ def ensure_registered() -> None:
         "Brute": EnemyBrute,
         "Caster": EnemyCaster,
         "Assassin": EnemyAssassin,
+        "Shielded": EnemyShielded,
+        "Swimmer": EnemySwimmer,
+        "Cangrejo": EnemyCangrejo,
+        "Medusa": EnemyMedusa,
+        "PezAbismal": EnemyPezAbismal,
+        "Climber": EnemyClimber,
+        "FlyingBomber": EnemyFlyingBomber,
+        "TerrainShaper": EnemyTerrainShaper,
+        "Summoner": EnemySummoner,
         "BossVenado": BossVenado,
         "BuddyRino": BuddyRino,
         "BuddyExpresso": BuddyExpresso,

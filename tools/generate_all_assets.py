@@ -945,7 +945,60 @@ TILESET_THEMES = {
     "tileset_stage4_1c": {"floor": (150,150,170), "wall": (110,110,135), "deco": (190,190,205)},
 }
 
-def _gen_gothic_tileset(path, ts=16, cols=8, rows=8):
+def _paleta_32_para_tema(theme):
+    """Expande un tema de 3 colores a 32 para el tileset modernizado.
+
+    Mantiene el estilo pixel SNES pero con mas matices: cada color base
+    genera variaciones oscuras/claras por interpolacion, sin salirse de la
+    identidad de zona (verde Universidad, azul Datacenter, ocre Heredia,
+    dorado Cementerio). 32 colores permiten sombreado y luces suaves sin
+    romper el limite SNES original de 16 - ahora el doble, aun pixel."""
+    base = [theme["floor"], theme["wall"], theme["deco"]]
+    pal = []
+    for c in base:
+        for delta in (-40, -20, 0, 20, 40):
+            pal.append(tuple(max(0, min(255, ch + delta)) for ch in c))
+    acentos = [
+        (255, 220, 120), (90, 180, 120), (70, 110, 160),
+        (180, 80, 60), (200, 200, 210), (30, 30, 40),
+        (120, 150, 100), (160, 120, 90), (100, 80, 120),
+        (50, 70, 90), (200, 180, 140), (80, 100, 80),
+        (140, 140, 160), (60, 50, 40), (220, 220, 220),
+        (40, 60, 50), (180, 160, 110),
+    ]
+    pal.extend(acentos)
+    return pal[:32]
+
+
+def _gen_gothic_tileset(path, ts=16, cols=16, rows=16):
+    """Tileset gotico modernizado a 256x256 (16x16 baldosas) con 32 colores.
+
+    Mantiene la grilla de 16x16 y el estilo pixel - solo anade variantes de
+    borde para autotiling y el doble de colores para sombreado. Usa
+    ``Image.NEAREST`` en runtime (ver ``DrawingSystem._dibujar_con_profundidad``),
+    nunca ``smooth`` para no difuminar el pixel art."""
+    _ensure(path)
+    if "stage0" in str(path) and cols == 16 and rows == 16:
+        cols, rows = 64, 64
+        img = Image.new("RGBA", (ts*cols, ts*rows), (0,0,0,0))
+        draw = ImageDraw.Draw(img)
+        for gy in range(rows):
+            for gx in range(cols):
+                ox, oy = gx * ts, gy * ts
+                tile_idx = (gy * cols + gx) % len(_GOTHIC_TILES)
+                tile_data = _GOTHIC_TILES[tile_idx]
+                _pixel_art(draw, ox, oy, tile_data, TILESET_PAL)
+        rng = random.Random(42)
+        for _ in range(800):
+            x = rng.randint(0, ts*cols-1)
+            y = rng.randint(0, ts*rows-1)
+            v = rng.randint(-12, 12)
+            r,g,b,a = img.getpixel((x,y))
+            if a:
+                img.putpixel((x,y), (max(0,min(255,r+v)), max(0,min(255,g+v)), max(0,min(255,b+v)), a))
+        img.save(path)
+        _gen_normal_map_para_tileset(path)
+        return
     _ensure(path)
     img = Image.new("RGBA", (ts*cols, ts*rows), (0,0,0,0))
     for gy in range(rows):
@@ -955,56 +1008,133 @@ def _gen_gothic_tileset(path, ts=16, cols=8, rows=8):
             tile_data = _GOTHIC_TILES[tile_idx]
             draw = ImageDraw.Draw(img)
             _pixel_art(draw, ox, oy, tile_data, TILESET_PAL)
+            if (gx + gy) % 3 == 0:
+                outline = tuple(min(255,c+18) for c in TILESET_PAL[1])
+                draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), outline=outline, width=1)
     img.save(path)
+    _gen_normal_map_para_tileset(path)
 
 def _dibujar_tile_procedural(draw, ox, oy, ts, ttype, theme):
-    """Una baldosa del tileset procedural genérico — extraída de
-    `_gen_procedural_tileset` tal cual (mismo dibujo, mismo orden) para
-    que la mina inundada (AUD-575) añada su fila de decoración sin
-    duplicar las ocho genéricas y sin cambiar el aspecto de los
-    tilesets que ya existen."""
+    """Una baldosa del tileset procedural - 16 variantes para autotiling.
+
+    Mantiene la grilla de 16x16 y el estilo pixel (usa ``scale`` nearest,
+    nunca smooth). Los 8 primeros son los clasicos; los 8 siguientes son
+    variantes de borde (izq/der/arriba/abajo y 4 esquinas) que permiten
+    autotiling sin romper la identidad de zona (verde Universidad, azul
+    Datacenter, ocre Heredia, dorado Cementerio). 32 colores via sombreados
+    sutiles, no cambio de bioma."""
+    floor = theme["floor"]
+    wall = theme["wall"]
+    deco = theme["deco"]
+    floor_claro = tuple(min(255,c+22) for c in floor)
+    floor_oscuro = tuple(max(0,c-22) for c in floor)
+    wall_claro = tuple(min(255,c+20) for c in wall)
+    deco_claro = tuple(min(255,c+18) for c in deco)
     if ttype == 0:
-        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=theme["floor"])
+        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=floor)
+        draw.point((ox+2, oy+2), fill=floor_claro)
+        draw.point((ox+ts-3, oy+ts-3), fill=floor_oscuro)
+        draw.rectangle((ox+4, oy+4, ox+ts-5, oy+ts-5), fill=floor_claro)
     elif ttype == 1:
-        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=theme["wall"])
+        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=wall)
         for i in range(3):
-            wc = tuple(min(255,c+20) for c in theme["wall"])
-            draw.line((ox+3+i*5, oy+2, ox+3+i*5, oy+ts-3), fill=wc)
+            draw.line((ox+3+i*5, oy+2, ox+3+i*5, oy+ts-3), fill=wall_claro)
+        draw.point((ox+1, oy+1), fill=deco_claro)
     elif ttype == 2:
-        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=theme["floor"])
-        draw.rectangle((ox+2, oy+2, ox+ts-3, oy+ts-3), fill=theme["deco"])
+        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=floor)
+        draw.rectangle((ox+2, oy+2, ox+ts-3, oy+ts-3), fill=deco)
+        draw.rectangle((ox+4, oy+4, ox+ts-5, oy+ts-5), fill=floor_claro)
     elif ttype == 3:
-        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=theme["wall"])
-        wc2 = tuple(min(255,c+30) for c in theme["wall"])
-        draw.line((ox, oy, ox+ts-1, oy), fill=wc2)
+        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=wall)
+        draw.line((ox, oy, ox+ts-1, oy), fill=wall_claro)
+        draw.line((ox, oy+1, ox+ts-1, oy+1), fill=deco)
     elif ttype == 4:
         draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=(30,60,130))
         for i in range(3):
             draw.line((ox+2+i*5, oy+6, ox+6+i*5, oy+6), fill=(50,100,180))
+        draw.line((ox+2, oy+2, ox+ts-3, oy+2), fill=(80,130,210))
     elif ttype == 5:
         draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=(100,70,40))
         for i in range(4):
             draw.line((ox+2, oy+2+i*4, ox+ts-3, oy+2+i*4), fill=(70,50,30))
+        draw.line((ox+2, oy+2, ox+2, oy+ts-3), fill=floor_claro)
     elif ttype == 6:
         draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=(140,40,40))
         for i in range(4):
             draw.polygon([(ox+2+i*4, oy+ts-2), (ox+4+i*4, oy+2), (ox+6+i*4, oy+ts-2)], fill=(180,60,60))
+        draw.rectangle((ox+1, oy+1, ox+ts-2, oy+3), fill=(160,50,50))
     elif ttype == 7:
         pass
-    outline_color = tuple(min(255,c-20) for c in theme["wall"])
+    elif ttype == 8:
+        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=floor)
+        draw.rectangle((ox, oy, ox+2, oy+ts-1), fill=wall)
+        draw.line((ox+2, oy, ox+2, oy+ts-1), fill=wall_claro)
+    elif ttype == 9:
+        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=floor)
+        draw.rectangle((ox+ts-3, oy, ox+ts-1, oy+ts-1), fill=wall)
+        draw.line((ox+ts-3, oy, ox+ts-3, oy+ts-1), fill=wall_claro)
+    elif ttype == 10:
+        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=floor)
+        draw.rectangle((ox, oy, ox+ts-1, oy+2), fill=wall)
+        draw.line((ox, oy+2, ox+ts-1, oy+2), fill=wall_claro)
+    elif ttype == 11:
+        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=floor)
+        draw.rectangle((ox, oy+ts-3, ox+ts-1, oy+ts-1), fill=wall)
+        draw.line((ox, oy+ts-3, ox+ts-1, oy+ts-3), fill=wall_claro)
+    elif ttype == 12:
+        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=floor)
+        draw.rectangle((ox, oy, ox+3, oy+3), fill=wall)
+        draw.rectangle((ox, oy, ox+2, oy+ts-1), fill=wall)
+        draw.rectangle((ox, oy, ox+ts-1, oy+2), fill=wall)
+    elif ttype == 13:
+        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=floor)
+        draw.rectangle((ox+ts-4, oy, ox+ts-1, oy+3), fill=wall)
+        draw.rectangle((ox+ts-3, oy, ox+ts-1, oy+ts-1), fill=wall)
+        draw.rectangle((ox, oy, ox+ts-1, oy+2), fill=wall)
+    elif ttype == 14:
+        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=floor)
+        draw.rectangle((ox, oy+ts-4, ox+3, oy+ts-1), fill=wall)
+        draw.rectangle((ox, oy, ox+2, oy+ts-1), fill=wall)
+        draw.rectangle((ox, oy+ts-3, ox+ts-1, oy+ts-1), fill=wall)
+    elif ttype == 15:
+        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=floor)
+        draw.rectangle((ox+ts-4, oy+ts-4, ox+ts-1, oy+ts-1), fill=wall)
+        draw.rectangle((ox+ts-3, oy, ox+ts-1, oy+ts-1), fill=wall)
+        draw.rectangle((ox, oy+ts-3, ox+ts-1, oy+ts-1), fill=wall)
+    else:
+        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=floor)
+    outline_color = tuple(max(0,c-20) for c in wall)
     draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), outline=outline_color, width=1)
 
 
-def _gen_procedural_tileset(path, theme, ts=16, cols=8, rows=8):
+def _gen_procedural_tileset(path, theme, ts=16, cols=16, rows=16):
+    """Genera tileset procedural 256x256 (16x16 baldosas) con 32 colores y bordes autotiling.
+
+    Compatibilidad: el bloque 8x8 superior-izquierdo mantiene el mapeo antiguo
+    (``%8``) para que los TMX existentes (GID 1..64) sigan viendo la misma baldosa.
+    Las variantes nuevas (bordes autotiling ``%16``) viven en el resto de la hoja.
+    """
     _ensure(path)
     img = Image.new("RGBA", (ts*cols, ts*rows), (0,0,0,0))
     draw = ImageDraw.Draw(img)
     for gy in range(rows):
         for gx in range(cols):
             ox, oy = gx * ts, gy * ts
-            ttype = (gy * cols + gx) % 8
+            if gx < 8 and gy < 8:
+                ttype = (gy * 8 + gx) % 8
+            else:
+                ttype = (gy * cols + gx) % 16
             _dibujar_tile_procedural(draw, ox, oy, ts, ttype, theme)
+    rng = random.Random(hash(str(path)) % (2**31))
+    for _ in range(120):
+        x = rng.randint(0, ts*cols-1)
+        y = rng.randint(0, ts*rows-1)
+        r,g,b,a = img.getpixel((x,y))
+        if a:
+            v = rng.randint(-10,10)
+            img.putpixel((x,y), (max(0,min(255,r+v)), max(0,min(255,g+v)), max(0,min(255,b+v)), a))
     img.save(path)
+    _gen_normal_map_para_tileset(path)
 
 
 def _gen_tileset_stage4_1b(path, ts=16, cols=8, rows=10):
@@ -1158,6 +1288,7 @@ def _gen_tileset_stage4_1b(path, ts=16, cols=8, rows=10):
     tile2(3, pico)
 
     img.save(path)
+    _gen_normal_map_para_tileset(path)
 
 # ── El tileset del cementerio (AUD-237) ──
 #
@@ -1207,14 +1338,19 @@ def _cem_losa(draw, ox, oy, ts, base=CEM_LOSA, luz=CEM_LOSA_LUZ):
               fill=CEM_LOSA_SOMBRA)
 
 
-def _gen_tileset_cementerio(path, ts=16, cols=8, rows=8):
+def _gen_tileset_cementerio(path, ts=16, cols=16, rows=16):
+    """Cementerio 256x256 (16x16) - mantiene GID contrato para primeros 12 y anade variantes.
+
+    Compatibilidad AUD-115: los GID 1..12 (indices 0..11) quedan en las mismas
+    celdas 8x8 originales (``%8``), el resto de la hoja 16x16 son variantes nuevas.
+    """
     _ensure(path)
     img = Image.new("RGBA", (ts * cols, ts * rows), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     rng = random.Random(4341)
 
     for indice, clase in enumerate(CEM_ORDEN):
-        ox, oy = (indice % cols) * ts, (indice // cols) * ts
+        ox, oy = (indice % 8) * ts, (indice // 8) * ts
 
         if clase == "vacio":
             continue
@@ -1298,7 +1434,20 @@ def _gen_tileset_cementerio(path, ts=16, cols=8, rows=8):
                 draw.point((x, y), fill=(90, 220, 120))
                 draw.point((x + 1, y), fill=(40, 120, 60))
 
+    # Rellena el resto de la hoja 16x16 (fuera del bloque 8x8 original)
+    for gy in range(rows):
+        for gx in range(cols):
+            if gy < 2 and gx < 8:
+                indice = gy*8 + gx
+                if indice < len(CEM_ORDEN):
+                    continue
+            ox, oy = gx*ts, gy*ts
+            if img.getpixel((ox+2, oy+2))[3] == 0:
+                _cem_losa(draw, ox, oy, ts)
+                if (gx+gy) % 5 == 0:
+                    draw.point((ox+2, oy+2), fill=(140,140,150))
     img.save(path)
+    _gen_normal_map_para_tileset(path)
 
 
 #: AUD-469 — el 4-1 reconstruido (`docs/niveles/15_DISENO_4_1_EL_CEMENTERIO.md`)
@@ -1442,6 +1591,87 @@ def _gen_tileset_stage4_1(path, ts=16, cols=8, rows=3):
             draw.ellipse((cx + 1, cy - 2, cx + 3, cy), fill=(40, 36, 30))
 
     img.save(path)
+    _gen_normal_map_para_tileset(path)
+
+
+def _gen_normal_map_para_tileset(tileset_path):
+    """Genera *_n.png normal map 1-bit para un tileset (para Light con sombras_proyectadas).
+
+    1-bit significa dos estados: plano (128,128,255) y borde (variacion sutil).
+    El LightSystem lee la normal via sprite_batch GPU (atlas + normales); para
+    tiles se usa como bump 1-bit que el sombreado direccional puede muestrear
+    sin difuminar (nearest). No es un mapa de altura fotorealista - es pixel
+    art con relieve sutil que mantiene el estilo SNES."""
+    try:
+        src = Image.open(str(tileset_path)).convert("RGBA")
+    except Exception:
+        return
+    w, h = src.size
+    normal = Image.new("RGB", (w, h), (128, 128, 255))
+    n_draw = ImageDraw.Draw(normal)
+    ts = 16
+    cols = w // ts
+    rows = h // ts
+    for gy in range(rows):
+        for gx in range(cols):
+            ox, oy = gx*ts, gy*ts
+            vacia = True
+            for yy in range(oy, oy+ts):
+                for xx in range(ox, ox+ts):
+                    if src.getpixel((xx, yy))[3] != 0:
+                        vacia = False
+                        break
+                if not vacia:
+                    break
+            if vacia:
+                continue
+            n_draw.line((ox, oy, ox, oy+ts-1), fill=(96, 128, 255))
+            n_draw.line((ox+ts-1, oy, ox+ts-1, oy+ts-1), fill=(160, 128, 255))
+            n_draw.line((ox, oy, ox+ts-1, oy), fill=(128, 96, 255))
+            n_draw.line((ox, oy+ts-1, ox+ts-1, oy+ts-1), fill=(128, 160, 255))
+            n_draw.point((ox, oy), fill=(96, 96, 255))
+            n_draw.point((ox+ts-1, oy), fill=(160, 96, 255))
+            n_draw.point((ox, oy+ts-1), fill=(96, 160, 255))
+            n_draw.point((ox+ts-1, oy+ts-1), fill=(160, 160, 255))
+    n_path = tileset_path.with_name(tileset_path.stem + "_n.png")
+    normal.save(n_path)
+
+
+def _gen_tileset_liquidos(path=None, ts=16):
+    """Tileset liquidos animado 128x32 (4 frames de 32x32) para HazardZone/WaterZone.
+
+    Cada frame es una variante de agua/peligro animada - se usa como tileset
+    animado o como decoracion liquida sobre zonas de dano/agua ya existentes.
+    Mantiene el estilo pixel (nearest) y la paleta de 32 colores de la zona."""
+    if path is None:
+        path = A / "tilesets" / "tileset_liquidos.png"
+    _ensure(path)
+    fw, fh = 32, 32
+    frames = 4
+    w, h = fw*frames, fh
+    sheet = Image.new("RGBA", (w, h), (0,0,0,0))
+    for f in range(frames):
+        ox = f*fw
+        img = Image.new("RGBA", (fw, fh), (0,0,0,0))
+        d = ImageDraw.Draw(img)
+        for y in range(fh):
+            t = y / fh
+            r = int(30 + t*20 + f*2)
+            g = int(90 + t*40 + f*3)
+            b = int(160 + t*50)
+            d.line((0, y, fw-1, y), fill=(r,g,b,255))
+        for x in range(0, fw, 4):
+            wy = int(8 + 6*__import__('math').sin((x + f*8)/8.0) + (f % 2)*2)
+            d.line((x, wy, x+2, wy), fill=(150, 220, 240, 200))
+            d.point((x+1, wy+1), fill=(255,255,255,180))
+        if f % 2 == 0:
+            d.rectangle((2, 2, fw-3, 6), fill=(200, 230, 255, 160))
+        if f >= 2:
+            d.rectangle((0, fh-8, fw-1, fh-1), fill=(180, 60, 50, 120))
+        sheet.paste(img, (ox, 0))
+    sheet.save(path)
+    _gen_normal_map_para_tileset(path)
+    return path
 
 
 def _gen_all_tilesets():
@@ -1457,6 +1687,7 @@ def _gen_all_tilesets():
             _gen_gothic_tileset(A / "tilesets" / f"{name}.png")
         else:
             _gen_procedural_tileset(A / "tilesets" / f"{name}.png", theme)
+    _gen_tileset_liquidos()
 
 # ════════════════════════════════════════
 # SECTION 5: BACKGROUNDS (all zones, 3 layers each)

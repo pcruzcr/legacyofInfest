@@ -57,12 +57,14 @@ Cada recurso listado aquí tiene ruta, formato, dimensiones, restricciones de pa
 |---|---|
 | Formato de píxel | PNG con canal alfa (RGBA) |
 | Profundidad de color | 8 bits por canal |
-| Restricción de paleta | Máximo 16 colores por hoja de sprites |
+| Restricción de paleta | Máximo 32 colores por tileset (16 SNES + 16 matices para sombreado/bordes autotiling), 16 para sprites |
 | Paleta global | Máximo 256 colores en todo el juego |
-| Tamaño de píxel | 1:1 — sin renderizado de subpíxeles |
-| Anti-aliasing | Nunca |
+| Tamaño de píxel | 1:1 — sin renderizado de subpíxeles (escalado con ``pygame.transform.scale`` nearest, nunca ``smoothscale`` para tiles) |
+| Anti-aliasing | Nunca en tiles/sprites (sí en HUD moderno degradado, AUD-527) |
 | Transparencia | Binaria (totalmente transparente u opaca) O alfa suave (sólo para efectos) |
 | Resolución interna | Todos los recursos se diseñan para el render interno de 800×600 |
+| 2.5D / Profundidad | `profundidad_min 0.85 profundidad_max 1.0 profundidad_curva 1.5 orden_por_y true` + `sombras_proyectadas true` (AUD-277/339) en `stage0`/`stage_mecanicas` |
+| Iluminación | `Light` con normal maps 1-bit `*_n.png` para sombras proyectadas |
 
 > **AUD-527 (2026-08-18) — excepción declarada para el HUD.** Decisión del
 > dueño: modernizar el HUD, rompiendo a propósito "sin antialiasing, sin
@@ -96,7 +98,9 @@ Alto de la hoja = alto_fotograma (una sola fila — sin hojas multifila)
 | Tamaño de baldosa | 16×16 píxeles |
 | Disposición de hoja | Cuadrícula por filas |
 | Máximo de baldosas por conjunto | 256 |
-| Dimensiones de hoja | 128×128 px (cuadrícula de 8×8 baldosas) |
+| Dimensiones de hoja | 256×256 px (cuadrícula de 16×16 baldosas) — 32 colores, variantes de borde para autotiling (mantiene grilla 16×16, sólo más variantes) |
+| Normal map | `*_n.png` 1-bit (128,128,255 plano + 4 direcciones de borde) para `Light` con `sombras_proyectadas` |
+| Tileset líquido | `tileset_liquidos.png` 128×32 animado 4f para `HazardZone`/`WaterZone` (estilo pixel, nearest) |
 
 ### 2.4 Estándares de audio
 
@@ -351,16 +355,17 @@ Ubicación: `assets/tilesets/`
 
 | Fichero | Se usa en | Tema | Tamaño |
 |---|---|---|---|
-| `tileset_stage0.png` | Stage 0 | Corredor de piedra neutral | 1024×1024 |
-| `tileset_jungle_stone.png` | Zona 1, escenarios 1-1, 1-4 | Jungla de montaña con piedra | 128×128 |
-| `tileset_cafeteria.png` | Zona 1, escenario 1-2 | Cafetería interior, piso ajedrezado | 128×128 |
-| `tileset_aulas.png` | Zona 1, escenario 1-3 | Interior de aula, madera y yeso | 128×128 |
-| `tileset_planicie.png` | Zona 2, escenario 2-1 | Llanura agrícola abierta | 128×128 |
-| `tileset_datacenter_ext.png` | Zona 2, escenario 2-2 | Exterior de concreto, antenas | 128×128 |
-| `tileset_datacenter.png` | Zona 2, escenarios 2-3, 2-4 | Piso de acero, mamparas de vidrio, servidores | 128×128 |
-| `tileset_heredia_stone.png` | Zona 3, escenarios 3-1, 3-4 | Sendero de piedra y arquitectura de bungaló | 128×128 |
-| `tileset_heredia_interior.png` | Zona 3, escenarios 3-2, 3-3 | Salón interior, patio | 128×128 |
-| `tileset_cemetery.png` | Zona Final | Lápidas, tallas ceremoniales | 128×128 |
+| `tileset_stage0.png` | Stage 0 | Corredor de piedra neutral | 1024×1024 + `tileset_stage0_n.png` |
+| `tileset_jungle_stone.png` | Zona 1, escenarios 1-1, 1-4 | Jungla de montaña con piedra | 256×256 + `_n.png` |
+| `tileset_cafeteria.png` | Zona 1, escenario 1-2 | Cafetería interior, piso ajedrezado | 256×256 + `_n.png` |
+| `tileset_aulas.png` | Zona 1, escenario 1-3 | Interior de aula, madera y yeso | 256×256 + `_n.png` |
+| `tileset_planicie.png` | Zona 2, escenario 2-1 | Llanura agrícola abierta | 256×256 + `_n.png` |
+| `tileset_datacenter_ext.png` | Zona 2, escenario 2-2 | Exterior de concreto, antenas | 256×256 + `_n.png` |
+| `tileset_datacenter.png` | Zona 2, escenarios 2-3, 2-4 | Piso de acero, mamparas de vidrio, servidores | 256×256 + `_n.png` |
+| `tileset_heredia_stone.png` | Zona 3, escenarios 3-1, 3-4 | Sendero de piedra y arquitectura de bungaló | 256×256 + `_n.png` |
+| `tileset_heredia_interior.png` | Zona 3, escenarios 3-2, 3-3 | Salón interior, patio | 256×256 + `_n.png` |
+| `tileset_cemetery.png` | Zona Final | Lápidas, tallas ceremoniales | 256×256 + `_n.png` |
+| `tileset_liquidos.png` | HazardZone/WaterZone | Líquido animado 4f (agua/peligro) | 128×32 (4×32×32) + `_n.png` |
 
 ### 7.1 Categorías de baldosas del tileset
 

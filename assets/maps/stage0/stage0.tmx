@@ -15,10 +15,13 @@
   <property name="day_length" type="float" value="420"/>
   <property name="season" value="autumn"/>
   <property name="zone" type="int" value="0"/>
-  <property name="bloom" type="float" value="0.18"/>
-  <property name="vignette" type="float" value="0.30"/>
-  <property name="profundidad_curva" type="float" value="1.0"/>
-  <property name="orden_por_y" type="bool" value="false"/>
+   <property name="bloom" type="float" value="0.18"/>
+   <property name="vignette" type="float" value="0.30"/>
+   <property name="profundidad_min" type="float" value="0.85"/>
+   <property name="profundidad_max" type="float" value="1.0"/>
+   <property name="profundidad_curva" type="float" value="1.5"/>
+   <property name="orden_por_y" type="bool" value="true"/>
+   <property name="sombras_proyectadas" type="bool" value="true"/>
   <property name="ambient_fx" value="spores"/>
   <property name="ambient_fx_rate" type="float" value="14"/>
  </properties>

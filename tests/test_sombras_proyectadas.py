@@ -184,7 +184,10 @@ class TestApagadoPorDefecto:
         # Se exceptúa por nombre y no relajando la prueba: lo que ésta vigila
         # sigue importando, que es que **el contenido entregado** no cambie de
         # coste por haber añadido la característica.
-        inesperados = sorted(set(con_prop) - {"stage_mecanicas.tmx"})
+        # Modernización 2.5D — stage0 también activa sombras con normal maps
+        # 1-bit y profondeur 0.85/1.0 para demostrar la iluminación 2.5D en
+        # prólogo sin cambiar coste de entregas.
+        inesperados = sorted(set(con_prop) - {"stage_mecanicas.tmx", "stage0.tmx"})
         assert not inesperados, f"ya lo usaban: {inesperados}"
 
     def test_el_laboratorio_si_las_enciende(self) -> None:

@@ -25,10 +25,14 @@
   <property name="water_amplitude" type="float" value="6"/>
   <property name="water_frequency" type="float" value="0.04"/>
   <property name="water_speed" type="float" value="1.5"/>
-  <property name="estamina" type="float" value="100"/>
-  <property name="tiempo_bala" type="float" value="3"/>
-  <property name="habilidades_libres" type="bool" value="true"/>
-  <property name="sombras_proyectadas" type="bool" value="true"/>
+   <property name="estamina" type="float" value="100"/>
+   <property name="tiempo_bala" type="float" value="3"/>
+   <property name="habilidades_libres" type="bool" value="true"/>
+   <property name="profundidad_min" type="float" value="0.85"/>
+   <property name="profundidad_max" type="float" value="1.0"/>
+   <property name="profundidad_curva" type="float" value="1.5"/>
+   <property name="orden_por_y" type="bool" value="true"/>
+   <property name="sombras_proyectadas" type="bool" value="true"/>
   <property name="god_rays" type="float" value="0.35"/>
  </properties>
  <tileset firstgid="1" name="tileset_stage0" tilewidth="16" tileheight="16" tilecount="4096" columns="64">
@@ -516,7 +520,33 @@
     <property name="checkpoint_id" type="int" value="10"/>
    </properties>
   </object>
-  <object id="173" name="WarpZone_173" type="WarpZone" x="4832" y="272" width="32" height="48">
+  <object id="173" name="AmbientLightZone_173" type="AmbientLightZone" x="3872" y="224" width="128" height="96">
+   <properties>
+    <property name="valor" type="float" value="0.45"/>
+    <property name="fundido" type="int" value="32"/>
+   </properties>
+  </object>
+  <object id="174" name="MusicZone_174" type="MusicZone" x="4032" y="224" width="128" height="96">
+   <properties>
+    <property name="track" value=""/>
+    <property name="fundido_ms" type="int" value="800"/>
+   </properties>
+  </object>
+  <object id="175" name="CameraZoomZone_175" type="CameraZoomZone" x="4352" y="256" width="96" height="128">
+   <properties>
+    <property name="factor" type="float" value="1.4"/>
+    <property name="segundos" type="float" value="0.6"/>
+   </properties>
+  </object>
+  <object id="176" name="FrictionZone_176" type="FrictionZone" x="3648" y="288" width="96" height="32">
+   <properties>
+    <property name="multiplicador" type="float" value="1.0"/>
+    <property name="arrastre" type="float" value="0.0"/>
+    <property name="material" value="hielo"/>
+    <property name="inercia" type="float" value="0.85"/>
+   </properties>
+  </object>
+  <object id="177" name="WarpZone_177" type="WarpZone" x="4832" y="272" width="32" height="48">
    <properties>
     <property name="automatico" type="bool" value="false"/>
     <property name="destino_x" type="float" value="48.0"/>
@@ -524,7 +554,7 @@
     <property name="mensaje" value="De vuelta a la entrada."/>
    </properties>
   </object>
-  <object id="174" name="WarpZone_174" type="WarpZone" x="80" y="272" width="32" height="48">
+  <object id="178" name="WarpZone_178" type="WarpZone" x="80" y="272" width="32" height="48">
    <properties>
     <property name="automatico" type="bool" value="false"/>
     <property name="destino_x" type="float" value="2336.0"/>
@@ -532,40 +562,104 @@
     <property name="mensaje" value="Atajo a la mitad."/>
    </properties>
   </object>
-  <object id="175" name="NextTrigger_175" type="NextTrigger" x="4896" y="272" width="32" height="48">
+  <object id="179" name="NextTrigger_179" type="NextTrigger" x="4896" y="272" width="32" height="48">
   </object>
-  <object id="176" name="WalkerInsect_176" type="WalkerInsect" x="608" y="292" width="24" height="28">
+  <object id="180" name="WalkerInsect_180" type="WalkerInsect" x="608" y="292" width="24" height="28">
   </object>
-  <object id="177" name="WalkerRaton_177" type="WalkerRaton" x="1120" y="292" width="24" height="28">
+  <object id="181" name="WalkerRaton_181" type="WalkerRaton" x="1120" y="292" width="24" height="28">
   </object>
-  <object id="178" name="FlyingCucaracha_178" type="FlyingCucaracha" x="1024" y="224" width="20" height="14">
+  <object id="182" name="FlyingCucaracha_182" type="FlyingCucaracha" x="1024" y="224" width="20" height="14">
   </object>
-  <object id="179" name="WalkerEstudiante_179" type="WalkerEstudiante" x="1632" y="292" width="24" height="28">
+  <object id="183" name="WalkerEstudiante_183" type="WalkerEstudiante" x="1632" y="292" width="24" height="28">
   </object>
-  <object id="180" name="FlyingNotebook_180" type="FlyingNotebook" x="1472" y="224" width="20" height="14">
+  <object id="184" name="FlyingNotebook_184" type="FlyingNotebook" x="1472" y="224" width="20" height="14">
   </object>
-  <object id="181" name="ShooterTiza_181" type="ShooterTiza" x="2144" y="292" width="24" height="28">
+  <object id="185" name="ShooterTiza_185" type="ShooterTiza" x="2144" y="292" width="24" height="28">
   </object>
-  <object id="182" name="ShooterCocinero_182" type="ShooterCocinero" x="2624" y="292" width="24" height="28">
+  <object id="186" name="ShooterCocinero_186" type="ShooterCocinero" x="2624" y="292" width="24" height="28">
   </object>
-  <object id="183" name="WalkerTerciopelo_183" type="WalkerTerciopelo" x="3104" y="292" width="24" height="28">
+  <object id="187" name="WalkerTerciopelo_187" type="WalkerTerciopelo" x="3104" y="292" width="24" height="28">
   </object>
-  <object id="184" name="FlyingTerciovolador_184" type="FlyingTerciovolador" x="3392" y="224" width="20" height="14">
+  <object id="188" name="FlyingTerciovolador_188" type="FlyingTerciovolador" x="3392" y="224" width="20" height="14">
   </object>
-  <object id="185" name="ShooterVenomoLargo_185" type="ShooterVenomoLargo" x="3936" y="292" width="24" height="28">
+  <object id="189" name="ShooterVenomoLargo_189" type="ShooterVenomoLargo" x="3936" y="292" width="24" height="28">
   </object>
-  <object id="186" name="Walker_186" type="Walker" x="800" y="292" width="24" height="28">
+  <object id="190" name="Walker_190" type="Walker" x="800" y="292" width="24" height="28">
   </object>
-  <object id="187" name="FlyingBoa_187" type="FlyingBoa" x="1152" y="224" width="20" height="14">
+  <object id="191" name="FlyingBoa_191" type="FlyingBoa" x="1152" y="224" width="20" height="14">
   </object>
-  <object id="188" name="Light_188" type="Light" x="240" y="224" width="16" height="16">
+  <object id="192" name="WalkerSerpientePequena_192" type="WalkerSerpientePequena" x="800" y="292" width="24" height="28">
+  </object>
+  <object id="193" name="WalkerSerpientePequena_193" type="WalkerSerpientePequena" x="2048" y="292" width="24" height="28">
+  </object>
+  <object id="194" name="WalkerSerpientePequena_194" type="WalkerSerpientePequena" x="3200" y="292" width="24" height="28">
+  </object>
+  <object id="195" name="WalkerTerciopelo_195" type="WalkerTerciopelo" x="704" y="292" width="24" height="28">
+  </object>
+  <object id="196" name="WalkerTerciopelo_196" type="WalkerTerciopelo" x="1728" y="292" width="24" height="28">
+  </object>
+  <object id="197" name="WalkerTerciopelo_197" type="WalkerTerciopelo" x="4032" y="292" width="24" height="28">
+  </object>
+  <object id="198" name="ShooterVenomoLargo_198" type="ShooterVenomoLargo" x="1312" y="292" width="24" height="28">
+  </object>
+  <object id="199" name="ShooterVenomoLargo_199" type="ShooterVenomoLargo" x="2240" y="292" width="24" height="28">
+  </object>
+  <object id="200" name="ShooterVenomoLargo_200" type="ShooterVenomoLargo" x="4448" y="292" width="24" height="28">
+  </object>
+  <object id="201" name="FlyingTerciovolador_201" type="FlyingTerciovolador" x="832" y="224" width="20" height="14">
+  </object>
+  <object id="202" name="FlyingTerciovolador_202" type="FlyingTerciovolador" x="2688" y="224" width="20" height="14">
+  </object>
+  <object id="203" name="FlyingTerciovolador_203" type="FlyingTerciovolador" x="4544" y="224" width="20" height="14">
+  </object>
+  <object id="204" name="ShooterSerpienteArbol_204" type="ShooterSerpienteArbol" x="1056" y="292" width="24" height="28">
+  </object>
+  <object id="205" name="ShooterSerpienteArbol_205" type="ShooterSerpienteArbol" x="2496" y="292" width="24" height="28">
+  </object>
+  <object id="206" name="ShooterSerpienteArbol_206" type="ShooterSerpienteArbol" x="3648" y="292" width="24" height="28">
+  </object>
+  <object id="207" name="WalkerRaton_207" type="WalkerRaton" x="672" y="292" width="24" height="28">
+  </object>
+  <object id="208" name="WalkerRaton_208" type="WalkerRaton" x="2112" y="292" width="24" height="28">
+  </object>
+  <object id="209" name="WalkerRaton_209" type="WalkerRaton" x="3008" y="292" width="24" height="28">
+  </object>
+  <object id="210" name="Shielded_210" type="Shielded" x="1184" y="292" width="24" height="28">
+  </object>
+  <object id="211" name="Swimmer_211" type="Swimmer" x="3040" y="292" width="24" height="28">
+  </object>
+  <object id="212" name="Climber_212" type="Climber" x="768" y="292" width="24" height="28">
+  </object>
+  <object id="213" name="FlyingBomber_213" type="FlyingBomber" x="1600" y="224" width="20" height="14">
+  </object>
+  <object id="214" name="TerrainShaper_214" type="TerrainShaper" x="4128" y="292" width="24" height="28">
+  </object>
+  <object id="215" name="Summoner_215" type="Summoner" x="3712" y="292" width="24" height="28">
+  </object>
+  <object id="216" name="ArcherQuetzal_216" type="ArcherQuetzal" x="1760" y="292" width="24" height="28">
+  </object>
+  <object id="217" name="BruteGolemHielo_217" type="BruteGolemHielo" x="2144" y="292" width="24" height="28">
+  </object>
+  <object id="218" name="ChargerWolf_218" type="ChargerWolf" x="2752" y="292" width="24" height="28">
+  </object>
+  <object id="219" name="CasterHealer_219" type="CasterHealer" x="3168" y="292" width="24" height="28">
+  </object>
+  <object id="220" name="AssassinSombra_220" type="AssassinSombra" x="4640" y="292" width="24" height="28">
+  </object>
+  <object id="221" name="Cangrejo_221" type="Cangrejo" x="2464" y="292" width="22" height="16">
+  </object>
+  <object id="222" name="Medusa_222" type="Medusa" x="2976" y="224" width="20" height="14">
+  </object>
+  <object id="223" name="PezAbismal_223" type="PezAbismal" x="3008" y="224" width="20" height="14">
+  </object>
+  <object id="224" name="Light_224" type="Light" x="240" y="224" width="16" height="16">
    <properties>
     <property name="radius" type="int" value="180"/>
     <property name="color" value="#ffe9a8"/>
     <property name="intensity" type="float" value="0.9"/>
    </properties>
   </object>
-  <object id="189" name="Light_189" type="Light" x="384" y="224" width="16" height="16">
+  <object id="225" name="Light_225" type="Light" x="384" y="224" width="16" height="16">
    <properties>
     <property name="radius" type="int" value="150"/>
     <property name="color" value="#a8d8ff"/>
