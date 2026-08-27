@@ -2121,6 +2121,7 @@ TILESET_THEMES = {
     "tileset_stage4_1_fase5": {"floor": (46,52,72), "wall": (32,36,58), "deco": (72,66,52)},
     "tileset_stage4_1_fase6": {"floor": (64,72,66), "wall": (48,56,52), "deco": (94,148,102)},
     "tileset_stage4_1b": {"floor": (58,42,28), "wall": (34,24,16), "deco": (78,56,36)},
+    "tileset_stage4_1b_caverna": {"floor": (52,38,24), "wall": (30,22,14), "deco": (70,50,30)},
     "tileset_stage4_1c": {"floor": (150,150,170), "wall": (110,110,135), "deco": (190,190,205)},
 }
 
@@ -2645,6 +2646,131 @@ def _gen_tileset_stage4_1b(path, ts=16, cols=16, rows=16):
 
     tile2(3, pico)
 
+    img.save(path)
+    _gen_normal_map_para_tileset(path)
+
+
+def _gen_tileset_stage4_1b_caverna(path, ts=16, cols=16, rows=16):
+    """Gate 8 — caverna: misma estructura que mina pero paleta más oscura/húmeda.
+
+    No es bioma nuevo: es variación café mina con más azul/teal húmedo y piedra
+    más cerrada, manteniendo el café como identidad. Usa dithering Bayer 4×4
+    en todas las losas (heredado de _dibujar_tile_procedural) y las dos filas
+    decorativas con estalactitas/cadenas pero tonos más fríos.
+    """
+    # Reutiliza lógica de mina pero con theme caverna (ya registrado)
+    theme = TILESET_THEMES["tileset_stage4_1b_caverna"]
+    _ensure(path)
+    img = Image.new("RGBA", (ts*cols, ts*rows), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    for gy in range(rows - 2):
+        for gx in range(cols):
+            ox, oy = gx * ts, gy * ts
+            ttype = (gy * cols + gx) % 8
+            _dibujar_tile_procedural(draw, ox, oy, ts, ttype, theme)
+    # Filas decorativas caverna: mismas siluetas pero tonos fríos
+    roca = theme["floor"]  # (52,38,24)
+    roca_clara = theme["deco"]  # (70,50,30)
+    roca_oscura = theme["wall"]  # (30,22,14)
+    oxido = (110, 60, 36)
+    oxido_oscuro = (85, 42, 26)
+    musgo = (58, 70, 42)
+    musgo_claro = (78, 92, 56)
+    madera = (84, 60, 36)
+    planta = (120, 82, 52)
+
+    def tile(gx, dibuja):
+        _dibujar_tile_procedural(draw, gx * ts, (rows - 1) * ts, ts, 7, theme)
+        dibuja(gx * ts, (rows - 1) * ts)
+
+    def estalactita(ox, oy, ancho, alto):
+        cx = ox + ts // 2
+        draw.polygon([(cx - ancho // 2, oy), (cx + ancho // 2, oy), (cx, oy + alto)],
+                     fill=roca_oscura, outline=roca)
+        draw.line((cx, oy + alto - 3, cx, oy + alto), fill=roca)
+
+    tile(0, lambda ox, oy: estalactita(ox, oy, 12, 16))
+    tile(1, lambda ox, oy: estalactita(ox, oy, 8, 11))
+
+    def alga(ox, oy, alta):
+        for i in range(2 if alta else 1):
+            ax = ox + 3 + i * 8
+            pts = [(ax, oy + ts - 1), (ax - 1, oy + 4), (ax + 2, oy + 6), (ax + 1, oy + ts - 1)]
+            draw.polygon(pts, fill=musgo, outline=musgo_claro)
+
+    tile(2, lambda ox, oy: alga(ox, oy, False))
+    tile(3, lambda ox, oy: alga(ox, oy, True))
+
+    def viga_oxidada(ox, oy):
+        draw.rectangle((ox, oy + 3, ox + ts - 1, oy + 8), fill=madera)
+        draw.line((ox, oy + 5, ox + ts - 1, oy + 5), fill=roca_oscura)
+        draw.rectangle((ox, oy + 10, ox + ts - 1, oy + 12), fill=oxido)
+        draw.ellipse((ox + 4, oy + 5, ox + 6, oy + 7), fill=oxido_oscuro)
+        draw.ellipse((ox + 10, oy + 5, ox + 12, oy + 7), fill=oxido_oscuro)
+
+    tile(4, viga_oxidada)
+
+    def planta_de_agua(ox, oy):
+        cx = ox + ts // 2
+        draw.line((cx, oy + ts - 1, cx, oy + 6), fill=planta)
+        draw.line((cx, oy + 10, cx - 5, oy + 3), fill=planta)
+        draw.line((cx, oy + 8, cx + 5, oy + 2), fill=planta)
+        draw.ellipse((cx - 6, oy + 1, cx - 2, oy + 5), fill=roca_clara)
+        draw.ellipse((cx + 2, oy, cx + 6, oy + 4), fill=roca_clara)
+
+    tile(5, planta_de_agua)
+
+    def roca_con_oxido(ox, oy):
+        _dibujar_tile_procedural(draw, ox, oy, ts, 0, theme)
+        draw.ellipse((ox + 3, oy + 4, ox + 9, oy + 10), fill=oxido)
+        draw.ellipse((ox + 8, oy + 8, ox + 13, oy + 13), fill=oxido_oscuro)
+        draw.line((ox + 5, oy + 6, ox + 11, oy + 12), fill=roca)
+
+    tile(6, roca_con_oxido)
+
+    def soporte_con_riel(ox, oy):
+        draw.rectangle((ox + 6, oy, ox + 9, oy + ts - 1), fill=madera)
+        draw.line((ox + 3, oy + 4, ox + 12, oy + 4), fill=oxido_oscuro)
+        draw.line((ox + 3, oy + 6, ox + 12, oy + 6), fill=oxido)
+        draw.rectangle((ox, oy + 10, ox + ts - 1, oy + 13), fill=roca_oscura)
+
+    tile(7, soporte_con_riel)
+
+    def tile2(gx, dibuja):
+        _dibujar_tile_procedural(draw, gx * ts, (rows - 2) * ts, ts, 7, theme)
+        dibuja(gx * ts, (rows - 2) * ts)
+
+    def vagoneta(ox, oy):
+        draw.rounded_rectangle((ox + 2, oy + 5, ox + 13, oy + 12), radius=2,
+                               fill=oxido_oscuro, outline=oxido)
+        draw.line((ox + 4, oy + 6, ox + 11, oy + 6), fill=oxido)
+        draw.ellipse((ox + 5, oy + 12, ox + 10, oy + 15), fill=roca_oscura, outline=oxido)
+        draw.line((ox + 8, oy + 13, ox + 8, oy + 15), fill=roca)
+        draw.rectangle((ox + 6, oy + 8, ox + 9, oy + 11), fill=(36, 22, 14))
+
+    tile2(0, vagoneta)
+
+    def cadena(ox, oy):
+        for ex in (ox + 5, ox + 10):
+            draw.ellipse((ex, oy + 1, ex + 2, oy + 5), outline=oxido_oscuro)
+            draw.ellipse((ex, oy + 5, ex + 2, oy + 9), outline=oxido)
+            draw.ellipse((ex, oy + 9, ex + 2, oy + 13), outline=oxido_oscuro)
+
+    tile2(1, cadena)
+
+    def lampara_apagada(ox, oy):
+        draw.rectangle((ox + 3, oy + 3, ox + 12, oy + 6), fill=madera)
+        draw.rectangle((ox + 4, oy + 6, ox + 11, oy + 12), fill=(20, 14, 10), outline=roca_oscura)
+        draw.line((ox + 6, oy + 7, ox + 9, oy + 7), fill=roca_oscura)
+
+    tile2(2, lampara_apagada)
+
+    def pico(ox, oy):
+        draw.line((ox + 3, oy + 14, ox + 11, oy + 4), fill=madera, width=2)
+        draw.arc((ox + 7, oy + 1, ox + 14, oy + 8), 60, 240, fill=oxido, width=2)
+        draw.line((ox + 11, oy + 4, ox + 13, oy + 2), fill=oxido_oscuro)
+
+    tile2(3, pico)
     img.save(path)
     _gen_normal_map_para_tileset(path)
 
@@ -3357,6 +3483,11 @@ def _gen_all_tilesets():
                 _gen_procedural_tileset(A / "tilesets" / f"{name}.png", theme)
         elif name == "tileset_stage4_1b":
             _gen_tileset_stage4_1b(A / "tilesets" / f"{name}.png")
+        elif name == "tileset_stage4_1b_caverna":
+            # Gate 8 — caverna usa misma base café mina pero más oscura y húmeda,
+            # misma estructura que stage4_1b (2 filas decorativas), sin bioma nuevo,
+            # sólo variación de paleta + Bayer para no romper identidad mina.
+            _gen_tileset_stage4_1b_caverna(A / "tilesets" / f"{name}.png")
         elif theme == "gothic":
             _gen_gothic_tileset(A / "tilesets" / f"{name}.png")
         else:
@@ -3965,6 +4096,152 @@ def _gen_bg_stage4_1_fase6(path=None, w=W, h=H):
     img.resize((w, h), Image.NEAREST).save(path)
 
 
+# ── Stage4_1b — La Fosa Abisal / Mina Inundada — Gate 8 fondos 800×600 ──
+# Parallax 0.15/0.35/0.60 — masas rocosas + niebla teal, dithering Bayer, sin bioma nuevo
+
+def _gen_bg_stage4_1b_far(path, w=W, h=H):
+    """Far: cielo mina degradado café→teal profundo, siluetas rocosas lejanas Bayer, niebla teal translúcida."""
+    _ensure(path)
+    ew, eh = w // _ESCALA_PX, h // _ESCALA_PX
+    img = Image.new("RGB", (ew, eh))
+    draw = ImageDraw.Draw(img)
+    rng = random.Random(441)
+    horizonte = int(eh * CEM_HORIZONTE)
+    top, bot = (18, 14, 12), (32, 56, 62)  # café oscuro → teal profundo
+    for y in range(horizonte):
+        t = y / max(horizonte - 1, 1)
+        c = tuple(int(top[i] + (bot[i] - top[i]) * t) for i in range(3))
+        draw.line((0, y, ew, y), fill=c)
+    # Siluetas lejanas Bayer dithered
+    far_rock = (28, 24, 18)
+    for cresta_f, tinte in ((horizonte - eh * 0.10, (34, 28, 22)), (horizonte - eh * 0.06, far_rock)):
+        cresta = int(cresta_f)
+        pts = [(0, eh)]
+        for i in range(9):
+            pts.append((i * ew // 8, cresta + rng.randint(-2, 2)))
+        pts.append((ew, eh))
+        draw.polygon(pts, fill=tinte)
+        # Bayer detalle en borde superior de la masa
+        for x in range(0, ew, 2):
+            if BAYER_4X4[cresta % 4][x % 4] < 6:
+                draw.point((x, cresta), fill=tuple(max(0, c - 10) for c in tinte))
+    # Niebla teal baja translúcida con Bayer
+    for y in range(int(horizonte * 0.55), horizonte):
+        for x in range(0, ew, 3):
+            if BAYER_4X4[y % 4][x % 4] < 5:
+                r, g, b = img.getpixel((x, y))
+                # teal (38,96,110) overlay sutil
+                nr = int(r * 0.88 + 38 * 0.12)
+                ng = int(g * 0.88 + 96 * 0.12)
+                nb = int(b * 0.88 + 110 * 0.12)
+                img.putpixel((x, y), (nr, ng, nb))
+    # Luces lejanas (faroles reflejados en niebla) — puntos cálidos muy tenues
+    for x in (int(ew * 0.22), int(ew * 0.58), int(ew * 0.82)):
+        draw.point((x, horizonte - 3), fill=(68, 54, 32))
+        if BAYER_4X4[(horizonte - 2) % 4][x % 4] < 10:
+            draw.point((x + 1, horizonte - 3), fill=(92, 72, 42))
+    draw.rectangle((0, horizonte, ew, eh), fill=(26, 38, 42))
+    img.resize((w, h), Image.NEAREST).save(path)
+
+
+def _gen_bg_stage4_1b_mid(path, w=W, h=H):
+    """Mid: masas rocosas medias con vetas, dithering Bayer, niebla teal media."""
+    _ensure(path)
+    ew, eh = w // _ESCALA_PX, h // _ESCALA_PX
+    img = Image.new("RGBA", (ew, eh), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    rng = random.Random(442)
+    horizonte = int(eh * CEM_HORIZONTE)
+    # Masas medias: columnas y bloques rocosos café con oclusión Bayer
+    rock_mid = (58, 42, 28)
+    rock_dark = (36, 26, 16)
+    rock_light = (78, 56, 36)
+    for cx in range(int(ew * 0.10), ew, int(ew * 0.22)):
+        base = horizonte + 4
+        ancho = rng.randint(8, 14)
+        alto = rng.randint(14, 22)
+        x0, x1 = cx - ancho // 2, cx + ancho // 2
+        y0 = base - alto
+        draw.rectangle((x0, y0, x1, base), fill=rock_mid, outline=rock_dark)
+        # Veta Bayer vertical
+        for y in range(y0 + 2, base, 4):
+            for x in range(x0 + 1, x1, 2):
+                if BAYER_4X4[y % 4][x % 4] < 6:
+                    draw.point((x, y), fill=rock_light)
+        # Oclusión esquina Bayer
+        for dy in range(3):
+            for dx in range(3):
+                if BAYER_4X4[(y0 + dy) % 4][(x0 + dx) % 4] < 7:
+                    draw.point((x0 + dx, y0 + dy), fill=rock_dark)
+        # Vigas entre masas (rieles oxidados)
+        if rng.random() < 0.5:
+            nx = cx + ancho // 2 + rng.randint(4, 8)
+            draw.line((x1, base - alto // 2, x1 + 6, base - alto // 2), fill=(110, 60, 36))
+            draw.line((x1, base - alto // 2 + 2, x1 + 6, base - alto // 2 + 2), fill=(84, 42, 26))
+    # Niebla teal intermedia horizontal Bayer
+    for y in range(horizonte - 8, horizonte + 6):
+        for x in range(0, ew, 2):
+            if BAYER_4X4[y % 4][x % 4] < 4:
+                draw.point((x, y), fill=(58, 96, 110, 45))
+    draw.rectangle((0, horizonte + 4, ew, eh), fill=(0, 0, 0, 0))
+    # Suelo con raíces sutiles (no sólido)
+    draw.rectangle((0, horizonte + 4, ew, eh), fill=(22, 18, 14, 0))
+    img.resize((w, h), Image.NEAREST).save(path)
+
+
+def _gen_bg_stage4_1b_near(path, w=W, h=H):
+    """Near: rocas cercanas con detalle alto, vetas, musgo, niebla teal densa Bayer."""
+    _ensure(path)
+    ew, eh = w // _ESCALA_PX, h // _ESCALA_PX
+    img = Image.new("RGBA", (ew, eh), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    rng = random.Random(443)
+    horizonte = int(eh * CEM_HORIZONTE)
+    rock_mid = (58, 42, 28)
+    rock_dark = (30, 20, 12)
+    rock_light = (88, 66, 42)
+    musgo = (62, 76, 48)
+    # Pilares cercanos con detalle Bayer + musgo
+    for px in range(0, ew, 22):
+        x0 = px + rng.randint(-3, 3)
+        wcol = rng.randint(10, 16)
+        x1 = x0 + wcol
+        base = horizonte + rng.randint(2, 6)
+        alto = rng.randint(18, 28)
+        y0 = base - alto
+        draw.rectangle((x0, y0, x1, eh), fill=rock_mid)
+        draw.rectangle((x0, y0, x1, y0 + 3), fill=rock_light)
+        # Vetado diagonal Bayer
+        for y in range(y0 + 6, eh, 6):
+            for x in range(x0 + 2, x1 - 2, 4):
+                if BAYER_4X4[y % 4][x % 4] < 5:
+                    draw.point((x, y), fill=rock_dark)
+        # Musgo / óxido en vetas
+        if rng.random() < 0.6:
+            for y in range(base - 6, base, 2):
+                draw.point((x0 + 2, y), fill=musgo)
+                if BAYER_4X4[y % 4][(x0 + 2) % 4] < 8:
+                    draw.point((x0 + 3, y), fill=tuple(min(255, c + 12) for c in musgo))
+        # Cadenas translúcidas colgando (no bloquean) — eslabones
+        if rng.random() < 0.4:
+            cx = (x0 + x1) // 2
+            for ey in range(y0 + 2, y0 + alto, 6):
+                draw.ellipse((cx - 1, ey, cx + 1, ey + 4), outline=(110, 80, 50, 140))
+    # Niebla teal densa baja con Bayer
+    for y in range(horizonte - 4, horizonte + 10):
+        for x in range(0, ew, 2):
+            b = BAYER_4X4[y % 4][x % 4]
+            if b < 6:
+                # teal translúcido
+                overlay = (42, 108, 122, 55) if b < 3 else (52, 88, 102, 35)
+                draw.point((x, y), fill=overlay)
+    # Suelo textura
+    for y in range(horizonte + 6, eh, 4):
+        for x in range(0, ew, 6):
+            if BAYER_4X4[y % 4][x % 4] < 3:
+                draw.point((x, y), fill=(40, 30, 20, 90))
+    img.resize((w, h), Image.NEAREST).save(path)
+
 # ── Splash/title/story backgrounds ──
 
 def _gen_bg_splash(path, w=320, h=224):
@@ -4099,6 +4376,18 @@ def _gen_all_backgrounds():
             _gen_bg_final_mid(p / "bg_final_mid.png", W, H)
         else:
             _gen_bg_final_near(p / "bg_final_near.png", W, H)
+
+    # Gate 8 — La Fosa Abisal / Mina inundada: 3 capas 800×600 con masas rocosas parallax y niebla teal
+    # Far: degradado café oscuro→teal profundo con siluetas lejanas, Mid: masas medias con detalle Bayer, Near: rocas cercanas con vetas + niebla translúcida
+    for layer in ("far", "mid", "near"):
+        p = A / "backgrounds" / "stage4_1b"
+        _ensure(p)
+        if layer == "far":
+            _gen_bg_stage4_1b_far(p / "bg_stage4_1b_far.png", W, H)
+        elif layer == "mid":
+            _gen_bg_stage4_1b_mid(p / "bg_stage4_1b_mid.png", W, H)
+        else:
+            _gen_bg_stage4_1b_near(p / "bg_stage4_1b_near.png", W, H)
     # 6 fases — 3 backgrounds 800×600 por fase con _ESCALA_PX=4 (cielo Tilarán, B&W, calaveras, bosque cortado, noche luna, neblina verde)
     for n in range(1, 7):
         func = globals().get(f"_gen_bg_stage4_1_fase{n}")
