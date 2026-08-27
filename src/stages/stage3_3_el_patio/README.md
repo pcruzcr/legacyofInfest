@@ -103,9 +103,9 @@ porque a diferencia del cuarto del jefe, El Patio no tiene pared de fondo.
 
 | Objeto TMX (`type`) | Nombre narrativo | Cantidad | Notas |
 |---|---|---|---|
-| `Walker` | WalkerPalom | 3 | Patrulla el piso, `patrol_speed=30`, `alert_speed=55` |
-| `Flying` | FlyingHalcon | 5 | Vuelo `sine`, con picado en alerta (ya incluido en `EnemyFlying`) |
-| `Shooter` | ShooterQuetzal | 3 | Estacionarios, en las ventanas de los muros, `fire_rate=0.8` |
+| `Walker` | WalkerPalom | 7 | Patrulla el piso, `patrol_speed=30`, `alert_speed=55` |
+| `Flying` | FlyingHalcon | 15 | Vuelo `sine`, con picado en alerta (ya incluido en `EnemyFlying`) |
+| `Shooter` | ShooterQuetzal | 8 | Estacionarios, en las ventanas de los muros, `fire_rate=0.8` |
 
 Todos con la propiedad `zone=3` para cargar los sprites de zona correctos automáticamente.
 
@@ -185,11 +185,16 @@ Verificado sin errores de consola durante la carga y el recorrido del nivel.
 | 0 | 320 | 576 |
 | 1 | 816 | 576 |
 | 2 | 1264 | 576 |
+| 3 | 1650 | 576 |
+| 4 | 2130 | 576 |
 
 ## 4b. Coleccionables
 
-6 objetos `Pickup` (`Moneda_01`..`Moneda_06`) — repartidos por el piso y tres
-de ellos sobre la escalera de nubes (premian tomar la ruta de plataformeo).
+10 objetos `Pickup` repartidos por el piso y sobre las escaleras de nubes
+(premian tomar la ruta de plataformeo). Cada uno lleva la propiedad
+`item_id="coin"`: sin ella el HUD no las cuenta, porque el contador de monedas
+sólo suma los objetos cuyo `item_id` es exactamente `"coin"` (si falta, el
+motor usa el `name` del objeto y la moneda queda fuera del contador).
 
 ## 4c. Migración al motor actualizado (2026-08-26)
 
@@ -259,16 +264,53 @@ Puntaje con las tres correcciones aplicadas: **124/130 (95,4%)** — subió de
 explicado arriba, un límite conocido y documentado de la herramienta, no un
 error de diseño.
 
+## 4f. Nivel largo y más dificultad (2026-08-27)
+
+El mapa creció de 100 a **150 tiles (2400×608 px)**. Como el viewport interno
+del motor mide 800×600 px (`src/engine/core/settings.py`), eso deja **3 pantallas
+completas** de desplazamiento horizontal en lugar de 1, que era lo que se
+pedía: que el scroll se note.
+
+Lo que se añadió al alargarlo, manteniendo la misma dificultad relativa por
+tramo (no hay tramos vacíos de relleno):
+
+| | Antes (v3) | Ahora (v4) |
+|---|---|---|
+| Ancho del mapa | 100 tiles (1600 px) | **150 tiles (2400 px)** |
+| Enemigos | 12 | **30** (7 `Walker`, 15 `Flying`, 8 `Shooter`) |
+| Zonas de ascenso obligatorio | 1 | **2** (columnas 26 y 96) |
+| Monedas (`Pickup`) | 5 | **10** |
+| Checkpoints | 3 | **5** |
+| `HazardZone` | 1 | **3** |
+| Obstáculos de piso | 6 | **8** (rocas + cajones de madera) |
+
+**Sobre los enemigos:** el roster de la zona 3 es de aves, y el registro de
+tipos del motor (`entity_factory.py`) sólo reconoce `Walker`, `Flying` y
+`Shooter` — no existe un tipo "murciélago" ni "dron", y inventarlo obligaría a
+tocar código del profesor, que está fuera de alcance. El efecto de enjambre se
+consigue con la densidad de `Flying` (15 halcones), que es el tipo aéreo real
+del motor.
+
+**Segunda zona de ascenso:** se generó con la misma función que la primera
+(`zona_de_ascenso()` en el script generador), así que repite la geometría ya
+verificada: muro de 6 tiles de ancho × 8 de alto (128 px, por encima del salto
+máximo de ~87 px), 3 nubes subiendo antes y 2 bajando después.
+
+Puntaje del calificador automático con el nivel v4: **124/130 (95,4%)**, con
+`design_pacing` en 8/8 (reconoce "2 saltos exigentes"). El único aviso que
+queda es el de `Solid_MuroBloqueo` explicado en 4d — ahora aparece dos veces,
+una por zona de ascenso, por la misma razón conocida.
+
 ## 5. Obstáculos y plataformeo
 
 | Objeto | Tipo | Notas |
 |---|---|---|
-| `Solid_MuroBloqueo` | Sólido (96×128 px) | Corta el piso; obliga a subir por las nubes |
+| `Solid_MuroBloqueo01/02` | Sólido (96×128 px) | Cortan el piso; obligan a subir por las nubes |
 | `Platform_NubeSub01/02/03` | Un solo sentido | Escalera subiendo, ~48 px de salto cada una |
 | `Platform_NubeBaj01/02` | Un solo sentido | Escalera bajando, del otro lado del muro |
-| `Solid_Roca01/02/03` | Sólido (16 px), roca | Obstáculos de piso — hay que saltarlos |
-| `Solid_CajonMadera01/02/03` | Sólido (16 px), madera | Roca02+Madera02 están pegados: salto más exigente |
-| `HazardZone_01` | Daño 0.25 | Zona de peligro en el tramo final del recorrido |
+| `Solid_Roca01…04` | Sólido (16 px), roca | Obstáculos de piso — hay que saltarlos |
+| `Solid_CajonMadera01…04` | Sólido (16 px), madera | Algunos van pegados a una roca: salto más exigente |
+| `HazardZone_01/02/03` | Daño 0.25 | Tres zonas de peligro repartidas por el recorrido |
 | `Solid_Planter01/02` | Sólido (32 px) | Jardineras — también sirven de cobertura contra las aves |
 | `Platform_Fountain` | Un solo sentido | Plataforma de piedra de la fuente, en el centro del nivel |
 
@@ -276,7 +318,7 @@ error de diseño.
 
 La fuente (`Fountain`, en `fountain.py`) no es un enemigo ni un objeto del registro de
 tipos del TMX: se instancia manualmente en `on_stage_start()` de
-`stage3_3_el_patio.py`, en la posición `FOUNTAIN_POS = (816, 544)`, que coincide con el
+`stage3_3_el_patio.py`, en la posición `FOUNTAIN_POS = (1200, 544)`, que coincide con el
 centro del objeto `Platform_Fountain` de la capa `Collision`. Cura 0.25 corazones al
 jugador si se mantiene a menos de 28 px del centro, con un cooldown de 6 segundos.
 

@@ -36,9 +36,9 @@ class Stage3_3ElPatio(StageScene):
 
     TMX_PATH = "assets/maps/stage3_3_el_patio/stage3_3_el_patio.tmx"
 
-    # Debe coincidir con el objeto Platform_Fountain del TMX (x=784, y=544,
-    # width=64) -> centro en x = 784 + 64/2 = 816.
-    FOUNTAIN_POS = pygame.Vector2(816, 544)
+    # Debe coincidir con el objeto Platform_Fountain del TMX (x=1168, y=544,
+    # width=64) -> centro en x = 1168 + 64/2 = 1200.
+    FOUNTAIN_POS = pygame.Vector2(1200, 544)
 
     def __init__(self, context: GameContext) -> None:
         super().__init__(context, Path(self.TMX_PATH))
