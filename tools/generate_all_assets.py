@@ -2495,10 +2495,10 @@ def _gen_procedural_tileset(path, theme, ts=16, cols=16, rows=16):
     _gen_normal_map_para_tileset(path)
 
 
-def _gen_tileset_stage4_1b(path, ts=16, cols=8, rows=10):
-    """AUD-575 — el tileset de la mina inundada: las ocho baldosas
+def _gen_tileset_stage4_1b(path, ts=16, cols=16, rows=16):
+    """AUD-575/677 — el tileset de la mina inundada 256×256 (16×16): las ocho baldosas
     genéricas de la paleta café (roca húmeda, AUD-531) más dos filas de
-    decoración propia de la mina:
+    decoración propia de la mina (ahora distribuidas en 16×16 para 256 tiles):
 
       GID 65  estalactita grande      — cuelga del techo (BG_Near)
       GID 66  estalactita pequeña     — cuelga del techo (BG_Near)
