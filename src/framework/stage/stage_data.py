@@ -105,6 +105,9 @@ class MessageTrigger:
     rect: pygame.Rect
     text: str
     triggered: bool = False
+    #: Segundos que permanece visible el mensaje (reporte Guillermo 6).
+    #: Leído del TMX `duration`; 8.0 conserva el hardcode histórico.
+    duration: float = 8.0
     #: Árbol de diálogo que abre este disparador, si abre alguno (AUD-127).
     #:
     #: `Stage0._check_dialogue_triggers` leía este dato con

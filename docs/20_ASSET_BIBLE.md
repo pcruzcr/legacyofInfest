@@ -51,20 +51,20 @@ Cada recurso listado aquí tiene ruta, formato, dimensiones, restricciones de pa
 
 ## 2. Estándares globales de recursos
 
-### 2.1 Estándares visuales
+### 2.1 Estándares visuales — PSX 2D Alta Calidad (Tributo Vintage Moderno)
 
 | Propiedad | Estándar |
 |---|---|
-| Formato de píxel | PNG con canal alfa (RGBA) |
-| Profundidad de color | 8 bits por canal |
-| Restricción de paleta | Máximo 32 colores por tileset (16 SNES + 16 matices para sombreado/bordes autotiling), 16 para sprites |
-| Paleta global | Máximo 256 colores en todo el juego |
-| Tamaño de píxel | 1:1 — sin renderizado de subpíxeles (escalado con ``pygame.transform.scale`` nearest, nunca ``smoothscale`` para tiles) |
-| Anti-aliasing | Nunca en tiles/sprites (sí en HUD moderno degradado, AUD-527) |
-| Transparencia | Binaria (totalmente transparente u opaca) O alfa suave (sólo para efectos) |
-| Resolución interna | Todos los recursos se diseñan para el render interno de 800×600 |
-| 2.5D / Profundidad | `profundidad_min 0.85 profundidad_max 1.0 profundidad_curva 1.5 orden_por_y true` + `sombras_proyectadas true` (AUD-277/339) en `stage0`/`stage_mecanicas` |
-| Iluminación | `Light` con normal maps 1-bit `*_n.png` para sombras proyectadas |
+| Formato de píxel | PNG con canal alfa (RGBA) **32-bit** |
+| Profundidad de color | **32 bits por píxel (8bpc RGBA) — paleta extendida real**, hasta **256+ colores por tileset/sprite** con dithering ordenado PSX para degradados, sin banding. Se mantiene estética pixel 1:1 pero con riqueza cromática moderna. |
+| Restricción de paleta | **Extendida:** 64-128 colores por tileset, 32-64 por sprite, **1024 global** — permite detalle (madera veteada, piedra con oclusión, metal con reflejo) sin perder legibilidad. Se valida con presupuesto laxo, no con límite SNES estricto. |
+| Tamaño de píxel | 1:1 — sin subpíxeles (escalado `nearest` para tiles/sprites, `smoothscale` solo HUD) |
+| Anti-aliasing | Nunca en tiles/sprites (sí en HUD `hud_frame` degradado `LANCZOS` AUD-527) |
+| Transparencia | Binaria O alfa suave para efectos (humo, agua, luces) |
+| Resolución interna | 800×600 — todo se diseña nativo 800×600, sin estirar 320×224 |
+| 2.5D / Profundidad | `profundidad_min 0.85 profundidad_max 1.0 profundidad_curva 1.5 orden_por_y true` + `sombras_proyectadas true` (AUD-277/339) |
+| Iluminación | `Light` con normal maps **8-bit** `*_n.png` (8 dirs + esquinas) + sombras dithered PSX, bloom suave |
+| Estilo | **PSX 2D Tributo Vintage Moderno:** pixel art nítido con detalle HD, dithering Bayer 4×4 para sombras, outline 1px, paleta por zona con acentos, normal maps para luz, sin blur salvo HUD |
 
 > **AUD-527 (2026-08-18) — excepción declarada para el HUD.** Decisión del
 > dueño: modernizar el HUD, rompiendo a propósito "sin antialiasing, sin

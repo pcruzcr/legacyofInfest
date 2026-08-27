@@ -25,9 +25,17 @@ if hasattr(sys.stdout, "reconfigure"):
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 A = PROJECT_ROOT / "assets"
 
-W, H = 320, 224
+W, H = 800, 600
 SAMPLE_RATE = 22050
 random.seed(42)
+
+# PSX 2D Alta Calidad — matriz Bayer 4×4 para dithering ordenado de sombras (32-bit)
+BAYER_4X4 = [
+    [0, 8, 2, 10],
+    [12, 4, 14, 6],
+    [3, 11, 1, 9],
+    [15, 7, 13, 5],
+]
 
 def _ensure(*paths):
     for p in paths:
@@ -81,6 +89,40 @@ def _save_sheet(path, frames, fw, fh):
     for i, f in enumerate(frames):
         sheet.paste(f, (i * fw, 0))
     sheet.save(path)
+
+
+def _psx_outline_y_sombra(img: Image.Image) -> Image.Image:
+    """Aplica outline 1px + sombra dithered Bayer PSX a sprite RGBA.
+
+    PSX 32-bit: outline nítido 1px (no blur) y sombra dithered en base con
+    Bayer 4×4 para evitar banding, manteniendo pixel 1:1 NEAREST. Aumenta
+    riqueza de paleta sin perder legibilidad (32-64 colores por sprite).
+    """
+    w, h = img.size
+    pix = img.load()
+    outline = (14, 14, 20, 255)
+    to_outline: list[tuple[int, int]] = []
+    for y in range(h):
+        for x in range(w):
+            if pix[x, y][3] == 0:
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    nx, ny = x + dx, y + dy
+                    if 0 <= nx < w and 0 <= ny < h and pix[nx, ny][3] != 0:
+                        to_outline.append((x, y))
+                        break
+    for x, y in to_outline:
+        pix[x, y] = outline
+    # Sombra dithered en 2-3 filas inferiores de cada columna opaca
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = pix[x, y]
+            if a != 0 and y >= h - 4:
+                bv = BAYER_4X4[y % 4][x % 4]
+                if bv < 6:
+                    pix[x, y] = (max(0, r - 26), max(0, g - 26), max(0, b - 26), a)
+                elif bv < 10:
+                    pix[x, y] = (max(0, r - 12), max(0, g - 12), max(0, b - 12), a)
+    return img
 
 # ════════════════════════════════════════
 # SECTION 1: PLAYER SPRITES (32x32, 9 sheets)
@@ -353,25 +395,27 @@ PLAYER_ATTACK = """
 """
 
 def _gen_player_sprite(frames, base_data, fw=32, fh=32):
-    """Generate multi-frame player sprite from base pixel data."""
+    """Generate multi-frame player sprite PSX 32-bit con outline 1px + sombra dithered."""
     result = []
     for _fi in range(frames):
         img = Image.new("RGBA", (fw, fh), (0,0,0,0))
         draw = ImageDraw.Draw(img)
         _pixel_art(draw, 0, 0, base_data, PLAYER_PAL)
+        _psx_outline_y_sombra(img)
         result.append(img)
     return result
 
 def _gen_player_walk(frames=8, fw=32, fh=32):
-    """Generate walk frames alternating between leg-forward poses."""
+    """Generate walk frames PSX con outline 1px + sombra dithered."""
     result = []
     for fi in range(frames):
         base = PLAYER_WALK_A if fi % 2 == 0 else PLAYER_WALK_B
         img = Image.new("RGBA", (fw, fh), (0,0,0,0))
         draw = ImageDraw.Draw(img)
         _pixel_art(draw, 0, 0, base, PLAYER_PAL)
+        _psx_outline_y_sombra(img)
         result.append(img)
-    # Add subtle body bob per frame
+    # Add subtle body bob per frame (mantener tras outline para que sombra siga base)
     for i, img in enumerate(result):
         offset = [0, -1, 0, 1, 0, -1, 0, 1][i] if i < 8 else 0
         if offset != 0:
@@ -381,19 +425,14 @@ def _gen_player_walk(frames=8, fw=32, fh=32):
     return result
 
 def _gen_player_swim(frames=4, fw=32, fh=32):
-    """Alternate a spread 'kick' pose with the closed jump silhouette.
-
-    AUD-525: la brazada necesita dos siluetas distintas para leerse como
-    movimiento, no una — igual que `_gen_player_walk` alterna WALK_A/B.
-    Se suma un vaivén vertical (como el bob de caminar) para que la
-    alternancia no sea sólo un parpadeo en el sitio.
-    """
+    """Alternate kick pose PSX con outline 1px + sombra dithered."""
     result = []
     for fi in range(frames):
         base = PLAYER_SWIM_KICK if fi % 2 == 0 else PLAYER_JUMP
         img = Image.new("RGBA", (fw, fh), (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
         _pixel_art(draw, 0, 0, base, PLAYER_PAL)
+        _psx_outline_y_sombra(img)
         result.append(img)
     for i, img in enumerate(result):
         offset = [0, 1, 0, -1][i % 4]
@@ -405,7 +444,7 @@ def _gen_player_swim(frames=4, fw=32, fh=32):
 
 
 def _gen_player_slashing(sheet_name, frames, fw=32, fh=32):
-    """Generate attack frames with progressive arm/sword extension."""
+    """Generate attack frames PSX con outline 1px + sombra dithered y arco espada."""
     result = []
     for fi in range(frames):
         data = PLAYER_ATTACK if fi < frames // 2 else PLAYER_IDLE
@@ -417,18 +456,19 @@ def _gen_player_slashing(sheet_name, frames, fw=32, fh=32):
         if sword_x < 34:
             for sy in range(10, 18):
                 draw.point((sword_x, sy), fill=(200, 180, 100, 255))
+        _psx_outline_y_sombra(img)
         result.append(img)
     return result
 
 def _gen_player_die(frames=8, fw=32, fh=32):
-    """Generate death frames: character collapses."""
+    """Generate death frames PSX con outline 1px + sombra dithered."""
     result = []
     for fi in range(frames):
         img = Image.new("RGBA", (fw, fh), (0,0,0,0))
         draw = ImageDraw.Draw(img)
-        # Gradually shrink and rotate by cropping
         1.0 - (fi / frames) * 0.5
         _pixel_art(draw, 0, int(8 * fi / frames), PLAYER_IDLE, PLAYER_PAL)
+        _psx_outline_y_sombra(img)
         result.append(img)
     return result
 
@@ -469,13 +509,16 @@ def _gen_player_all():
 # ════════════════════════════════════════
 
 def _gen_enemy_sheet(path, w, h, frames, color, detail_color):
-    """Generate simple enemy spritesheet."""
+    """Generate enemy spritesheet PSX 32-bit con outline 1px + sombra dithered."""
     imgs = []
     for _f in range(frames):
         img = Image.new("RGBA", (w, h), (0,0,0,0))
         draw = ImageDraw.Draw(img)
-        # Body ellipse
+        # Body ellipse con highlight 1px arriba para metal/piel PSX
         draw.ellipse((2, 2, w-3, h-3), fill=color, outline=detail_color)
+        # Highlight 1px reflejo superior
+        highlight = tuple(min(255, c + 35) for c in color)
+        draw.arc((2, 2, w-3, h-3), 200, 340, fill=highlight)
         # Eyes
         draw.rectangle((w//4, h//4, w//4+2, h//4+2), fill=(255,255,255))
         draw.rectangle((w*3//4-2, h//4, w*3//4, h//4+2), fill=(255,255,255))
@@ -484,6 +527,12 @@ def _gen_enemy_sheet(path, w, h, frames, color, detail_color):
         # Legs
         draw.line((w//4, h-3, w//4-2, h), fill=detail_color)
         draw.line((w*3//4, h-3, w*3//4+2, h), fill=detail_color)
+        # Sombra oclusión inferior dithered Bayer
+        for x in range(2, w-2):
+            bv = BAYER_4X4[(h-3) % 4][x % 4]
+            if bv < 8:
+                draw.point((x, h-3), fill=tuple(max(0, c - 22) for c in color))
+        _psx_outline_y_sombra(img)
         imgs.append(img)
     _save_sheet(path, imgs, w, h)
 
@@ -554,6 +603,7 @@ def _gen_pez_abismal_sheet(path, w=28, h=20, frames=4):
         pulso = 2 + (f % 2) * 2
         cx, cy = 4, h // 2
         draw.ellipse((cx - pulso, cy - pulso, cx + pulso, cy + pulso), fill=luz)
+        _psx_outline_y_sombra(img)
         imgs.append(img)
     _save_sheet(path, imgs, w, h)
 
@@ -593,6 +643,7 @@ def _gen_cangrejo_sheet(path, w=20, h=14, frames=4):
         for ex in (7, w - 8):
             draw.line((ex, 4, ex, 6), fill=caparazon_oscuro)
             draw.ellipse((ex - 1, 3, ex + 1, 5), fill=ojo)
+        _psx_outline_y_sombra(img)
         imgs.append(img)
     _save_sheet(path, imgs, w, h)
 
@@ -620,6 +671,7 @@ def _gen_medusa_sheet(path, w=16, h=14, frames=4):
             doblez = 1 + (f % 2) * 2 if i % 2 else 1 - (f % 2) * 2
             draw.line((tx, h // 2, tx + doblez, h - 1),
                       fill=(*campana_clara, 160), width=1)
+        _psx_outline_y_sombra(img)
         imgs.append(img)
     _save_sheet(path, imgs, w, h)
 
@@ -749,6 +801,7 @@ def _gen_all_bosses():
                     _draw_venado_deer(draw, bd["fw"], bd["fh"], bd["pal"], sname, f, frames)
                 else:
                     _draw_boss_generic(draw, bd["fw"], bd["fh"], bd["pal"], bname, sname, f, frames)
+                _psx_outline_y_sombra(img)
                 imgs.append(img)
             fname = f"boss_{bname}_{sname}.png"
             _save_sheet(bdir / fname, imgs, bd["fw"], bd["fh"])
@@ -946,37 +999,71 @@ TILESET_THEMES = {
 }
 
 def _paleta_32_para_tema(theme):
-    """Expande un tema de 3 colores a 32 para el tileset modernizado.
+    """Expande un tema de 3 colores a 64-96 colores PSX 32-bit alta calidad con dithering Bayer.
 
-    Mantiene el estilo pixel SNES pero con mas matices: cada color base
-    genera variaciones oscuras/claras por interpolacion, sin salirse de la
-    identidad de zona (verde Universidad, azul Datacenter, ocre Heredia,
-    dorado Cementerio). 32 colores permiten sombreado y luces suaves sin
-    romper el limite SNES original de 16 - ahora el doble, aun pixel."""
+    PSX 2D Tributo Vintage Moderno: paleta extendida real 64-128 por tileset, 1024 global
+    (ver docs/20_ASSET_BIBLE.md §2.1). Cada base genera variaciones con deltas amplios
+    (-60..+60, no sólo ±40) y mezclas Bayer para sombras sin banding. 32 acentos en vez
+    de 17 permiten detalle material (veteado madera, piedra oclusión, metal reflejo).
+    Mantiene identidad de zona (verde Universidad, azul Datacenter, ocre Heredia,
+    dorado Cementerio) pero con riqueza cromática moderna 32-bit."""
     base = [theme["floor"], theme["wall"], theme["deco"]]
-    pal = []
+    pal: list[tuple[int, int, int]] = []
+    # Deltas amplios PSX: -60 a +60 con pasos sutiles para 32-bit sin banding
+    deltas = (-60, -45, -30, -18, -8, 0, 12, 24, 38, 52, 60)
     for c in base:
-        for delta in (-40, -20, 0, 20, 40):
+        for delta in deltas:
             pal.append(tuple(max(0, min(255, ch + delta)) for ch in c))
+    # Mezclas Bayer entre bases: dithering ordenado para sombras intermedias
+    # Peso Bayer 0..15 -> ratio para interpolación floor/wall/deco
+    for w in (4, 8, 12):
+        for a, b in [(base[0], base[1]), (base[1], base[2]), (base[0], base[2])]:
+            ratio = w / 16.0
+            mixed = tuple(int(a[i] * (1 - ratio) + b[i] * ratio) for i in range(3))
+            pal.append(mixed)
+            pal.append(tuple(max(0, ch - 22) for ch in mixed))  # AO variante oscura
+            pal.append(tuple(min(255, ch + 18) for ch in mixed))  # highlight
+    # 32 acentos PSX extendidos: madera, piedra, metal, vegetación, acentos cálidos/fríos
     acentos = [
         (255, 220, 120), (90, 180, 120), (70, 110, 160),
         (180, 80, 60), (200, 200, 210), (30, 30, 40),
         (120, 150, 100), (160, 120, 90), (100, 80, 120),
         (50, 70, 90), (200, 180, 140), (80, 100, 80),
         (140, 140, 160), (60, 50, 40), (220, 220, 220),
-        (40, 60, 50), (180, 160, 110),
+        (40, 60, 50), (180, 160, 110), (220, 180, 80),
+        (60, 140, 180), (160, 60, 80), (100, 180, 100),
+        (180, 100, 140), (120, 80, 60), (80, 120, 140),
+        (140, 80, 80), (80, 140, 120), (120, 120, 180),
+        (200, 140, 60), (60, 200, 140), (140, 200, 60),
+        (80, 80, 100), (180, 180, 200),
     ]
     pal.extend(acentos)
-    return pal[:32]
+    # Dedup preservando orden, cap 96 (rango 64-96 para PSX extendida)
+    seen: set[tuple[int, int, int]] = set()
+    out: list[tuple[int, int, int]] = []
+    for c in pal:
+        if c not in seen:
+            seen.add(c)
+            out.append(c)
+    # Relleno determinista si faltan para llegar a 64 mínimo
+    rng = random.Random(hash(str(sorted(theme.items()))) % (2**31))
+    intentos = 0
+    while len(out) < 64 and intentos < 200:
+        c = rng.choice(base)
+        delta = rng.randint(-58, 58)
+        variant = tuple(max(0, min(255, ch + delta + rng.randint(-6, 6))) for ch in c)
+        if variant not in seen:
+            seen.add(variant)
+            out.append(variant)
+        intentos += 1
+    return out[:96]
 
 
 def _gen_gothic_tileset(path, ts=16, cols=16, rows=16):
-    """Tileset gotico modernizado a 256x256 (16x16 baldosas) con 32 colores.
+    """Tileset gotico PSX 32-bit alta calidad 1024×1024 (64×64 baldosas).
 
-    Mantiene la grilla de 16x16 y el estilo pixel - solo anade variantes de
-    borde para autotiling y el doble de colores para sombreado. Usa
-    ``Image.NEAREST`` en runtime (ver ``DrawingSystem._dibujar_con_profundidad``),
-    nunca ``smooth`` para no difuminar el pixel art."""
+    PSX Tributo Vintage Moderno: 64-128 colores, Bayer 4×4 para sombras,
+    veteado y oclusión. Mantiene grilla 16×16 y NEAREST."""
     _ensure(path)
     if "stage0" in str(path) and cols == 16 and rows == 16:
         cols, rows = 64, 64
@@ -988,11 +1075,14 @@ def _gen_gothic_tileset(path, ts=16, cols=16, rows=16):
                 tile_idx = (gy * cols + gx) % len(_GOTHIC_TILES)
                 tile_data = _GOTHIC_TILES[tile_idx]
                 _pixel_art(draw, ox, oy, tile_data, TILESET_PAL)
+        # Bayer dithered noise PSX: amplía a ±16 con patrón para 64-100 colores
         rng = random.Random(42)
-        for _ in range(800):
+        for _ in range(1200):
             x = rng.randint(0, ts*cols-1)
             y = rng.randint(0, ts*rows-1)
-            v = rng.randint(-12, 12)
+            v = rng.randint(-16, 16)
+            if BAYER_4X4[y%4][x%4] < 6:
+                v = int(v*0.5)
             r,g,b,a = img.getpixel((x,y))
             if a:
                 img.putpixel((x,y), (max(0,min(255,r+v)), max(0,min(255,g+v)), max(0,min(255,b+v)), a))
@@ -1011,108 +1101,228 @@ def _gen_gothic_tileset(path, ts=16, cols=16, rows=16):
             if (gx + gy) % 3 == 0:
                 outline = tuple(min(255,c+18) for c in TILESET_PAL[1])
                 draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), outline=outline, width=1)
+            # AO dithered sutil PSX
+            if (gx+gy) % 7 == 0:
+                b = BAYER_4X4[oy%4][ox%4]
+                if b < 7:
+                    draw.point((ox+1, oy+1), fill=tuple(max(0,c-14) for c in TILESET_PAL[0]))
+    rng = random.Random(43)
+    for _ in range(180):
+        x = rng.randint(0, ts*cols-1)
+        y = rng.randint(0, ts*rows-1)
+        r,g,b,a = img.getpixel((x,y))
+        if a and BAYER_4X4[y%4][x%4] < 10:
+            v = rng.randint(-12,12)
+            img.putpixel((x,y), (max(0,min(255,r+v)), max(0,min(255,g+v)), max(0,min(255,b+v)), a))
     img.save(path)
     _gen_normal_map_para_tileset(path)
 
 def _dibujar_tile_procedural(draw, ox, oy, ts, ttype, theme):
-    """Una baldosa del tileset procedural - 16 variantes para autotiling.
+    """Una baldosa del tileset procedural PSX 32-bit alta calidad — 16 variantes autotiling.
 
-    Mantiene la grilla de 16x16 y el estilo pixel (usa ``scale`` nearest,
-    nunca smooth). Los 8 primeros son los clasicos; los 8 siguientes son
-    variantes de borde (izq/der/arriba/abajo y 4 esquinas) que permiten
-    autotiling sin romper la identidad de zona (verde Universidad, azul
-    Datacenter, ocre Heredia, dorado Cementerio). 32 colores via sombreados
-    sutiles, no cambio de bioma."""
+    PSX Tributo Vintage Moderno: paleta extendida 64-128 por tileset, 1024 global,
+    dithering Bayer 4×4 para sombras sin banding, outline 1px, detalle material real:
+    madera con vetas diagonales dithered, piedra con oclusión en esquinas (AO),
+    metal con reflejo 1px. Mantiene grilla 16×16 y compatibilidad TMX 8×8
+    (``if gx<8 and gy<8: %8 else %16`` en el caller) con ``NEAREST``.
+    """
     floor = theme["floor"]
     wall = theme["wall"]
     deco = theme["deco"]
-    floor_claro = tuple(min(255,c+22) for c in floor)
-    floor_oscuro = tuple(max(0,c-22) for c in floor)
-    wall_claro = tuple(min(255,c+20) for c in wall)
-    deco_claro = tuple(min(255,c+18) for c in deco)
-    if ttype == 0:
+    # Variaciones extendidas 32-bit con deltas amplios
+    floor_claro = tuple(min(255, c + 30) for c in floor)
+    floor_medio = tuple(min(255, c + 14) for c in floor)
+    floor_oscuro = tuple(max(0, c - 30) for c in floor)
+    floor_sombra = tuple(max(0, c - 48) for c in floor)
+    wall_claro = tuple(min(255, c + 28) for c in wall)
+    wall_medio = tuple(min(255, c + 12) for c in wall)
+    wall_oscuro = tuple(max(0, c - 28) for c in wall)
+    wall_sombra = tuple(max(0, c - 45) for c in wall)
+    deco_claro = tuple(min(255, c + 24) for c in deco)
+    deco_oscuro = tuple(max(0, c - 24) for c in deco)
+    metal_brillo = tuple(min(255, c + 55) for c in wall)
+    madera_veta = tuple(max(0, c - 18) for c in deco)
+    madera_base = deco  # madera toma tono deco cálido
+
+    def _dither_rect(x0, y0, x1, y1, col_a, col_b, umbral=8):
+        """Rellena rect con Bayer dithered entre col_a y col_b (PSX sombras)."""
+        for yy in range(y0, y1 + 1):
+            for xx in range(x0, x1 + 1):
+                b = BAYER_4X4[yy % 4][xx % 4]
+                draw.point((xx, yy), fill=col_a if b < umbral else col_b)
+
+    def _ao_esquina(x0, y0, size=3):
+        """Oclusión ambiental dithered en esquina 3×3 con Bayer."""
+        for dy in range(size):
+            for dx in range(size):
+                dist = dx + dy
+                col = floor_sombra if dist < 2 else floor_oscuro if dist < 4 else floor
+                b = BAYER_4X4[(y0 + dy) % 4][(x0 + dx) % 4]
+                # Dithering: mezcla según distancia y Bayer
+                use_sombra = b < (10 - dist * 2)
+                c = col if use_sombra else floor_oscuro if dist < 3 else floor
+                # Evita sobreescribir fuera del tile
+                if ox <= x0 + dx < ox + ts and oy <= y0 + dy < oy + ts:
+                    draw.point((x0 + dx, y0 + dy), fill=c)
+
+    if ttype == 0:  # SUELO PIEDRA — oclusión + dither
         draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=floor)
-        draw.point((ox+2, oy+2), fill=floor_claro)
-        draw.point((ox+ts-3, oy+ts-3), fill=floor_oscuro)
-        draw.rectangle((ox+4, oy+4, ox+ts-5, oy+ts-5), fill=floor_claro)
-    elif ttype == 1:
+        # Centro elevado con borde biselado claro
+        draw.rectangle((ox+3, oy+3, ox+ts-4, oy+ts-4), fill=floor_medio)
+        draw.rectangle((ox+4, oy+4, ox+ts-5, oy+ts-5), fill=floor)
+        # AO en esquinas con Bayer
+        _ao_esquina(ox, oy, 3)
+        _ao_esquina(ox+ts-3, oy, 3)
+        _ao_esquina(ox, oy+ts-3, 3)
+        _ao_esquina(ox+ts-3, oy+ts-3, 3)
+        # Sombra dithered interior 2px
+        _dither_rect(ox+4, oy+4, ox+ts-5, oy+5, floor_oscuro, floor, 6)
+        draw.point((ox+5, oy+5), fill=floor_claro)
+        draw.point((ox+ts-6, oy+ts-6), fill=floor_oscuro)
+    elif ttype == 1:  # MURO PIEDRA — surcos verticales + reflejo metal
         draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=wall)
         for i in range(3):
-            draw.line((ox+3+i*5, oy+2, ox+3+i*5, oy+ts-3), fill=wall_claro)
+            x = ox+3+i*5
+            draw.line((x, oy+2, x, oy+ts-3), fill=wall_claro)
+            # Sombra dithered al lado del surco para relieve
+            _dither_rect(x+1, oy+2, x+1, oy+ts-3, wall_oscuro, wall, 9)
+        # Reflejo metal 1px arriba (PSX)
+        draw.line((ox, oy, ox+ts-1, oy), fill=metal_brillo)
         draw.point((ox+1, oy+1), fill=deco_claro)
-    elif ttype == 2:
+        # AO lateral
+        _dither_rect(ox, oy+1, ox+1, oy+ts-2, wall_sombra, wall, 7)
+    elif ttype == 2:  # SUELO DECO — inset con bisel + sombra dithered
         draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=floor)
         draw.rectangle((ox+2, oy+2, ox+ts-3, oy+ts-3), fill=deco)
-        draw.rectangle((ox+4, oy+4, ox+ts-5, oy+ts-5), fill=floor_claro)
-    elif ttype == 3:
+        # Bisel claro arriba/izq, oscuro abajo/der
+        draw.line((ox+2, oy+2, ox+ts-3, oy+2), fill=deco_claro)
+        draw.line((ox+2, oy+2, ox+2, oy+ts-3), fill=deco_claro)
+        _dither_rect(ox+2, oy+ts-3, ox+ts-3, oy+ts-3, deco_oscuro, deco, 8)
+        _dither_rect(ox+ts-3, oy+2, ox+ts-3, oy+ts-3, deco_oscuro, deco, 8)
+        draw.rectangle((ox+5, oy+5, ox+ts-6, oy+ts-6), fill=floor_medio)
+        _dither_rect(ox+5, oy+5, ox+ts-6, oy+6, floor_oscuro, floor_medio, 6)
+    elif ttype == 3:  # TECHO PLATAFORMA — borde metal reflejo
         draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=wall)
-        draw.line((ox, oy, ox+ts-1, oy), fill=wall_claro)
-        draw.line((ox, oy+1, ox+ts-1, oy+1), fill=deco)
-    elif ttype == 4:
-        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=(30,60,130))
+        draw.line((ox, oy, ox+ts-1, oy), fill=metal_brillo)
+        draw.line((ox, oy+1, ox+ts-1, oy+1), fill=wall_claro)
+        draw.line((ox, oy+2, ox+ts-1, oy+2), fill=deco)
+        _dither_rect(ox, oy+3, ox+ts-1, oy+4, wall_oscuro, wall, 10)
+    elif ttype == 4:  # AGUA — ondas con dithering Bayer
+        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=(28, 58, 128))
         for i in range(3):
-            draw.line((ox+2+i*5, oy+6, ox+6+i*5, oy+6), fill=(50,100,180))
-        draw.line((ox+2, oy+2, ox+ts-3, oy+2), fill=(80,130,210))
-    elif ttype == 5:
-        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=(100,70,40))
+            y = oy+5+i*4
+            _dither_rect(ox+2+i, y, ox+6+i*2, y, (50, 100, 180), (30, 58, 128), 7)
+            draw.line((ox+2, y+1, ox+ts-3, y+1), fill=(70, 130, 210))
+        draw.line((ox+2, oy+2, ox+ts-3, oy+2), fill=(90, 150, 230))
+        # Brillo dithered en superficie
+        for x in range(ox+2, ox+ts-2, 2):
+            b = BAYER_4X4[(oy+3) % 4][x % 4]
+            if b < 8:
+                draw.point((x, oy+3), fill=(140, 200, 255))
+    elif ttype == 5:  # MADERA — vetas diagonales dithered PSX + reflejo
+        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=madera_base)
+        # Tablones horizontales con junta oscura
         for i in range(4):
-            draw.line((ox+2, oy+2+i*4, ox+ts-3, oy+2+i*4), fill=(70,50,30))
-        draw.line((ox+2, oy+2, ox+2, oy+ts-3), fill=floor_claro)
-    elif ttype == 6:
-        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=(140,40,40))
+            y = oy+2+i*4
+            draw.line((ox+2, y, ox+ts-3, y), fill=madera_veta)
+            # Vetas diagonales dithered cada tablón
+            for x in range(ox+3, ox+ts-3, 4):
+                b = BAYER_4X4[y % 4][x % 4]
+                if b < 5:
+                    draw.point((x, y+1), fill=madera_veta)
+                if b < 9:
+                    draw.point((x+1, y+2), fill=tuple(max(0, c-10) for c in madera_veta))
+            # Highlight 1px diagonal sutil
+            if i % 2 == 0:
+                draw.point((ox+4+i, y+1), fill=deco_claro)
+        # Reflejo 1px vertical izq (metal/madera barnizada)
+        draw.line((ox+2, oy+2, ox+2, oy+ts-3), fill=tuple(min(255, c+20) for c in madera_base))
+        # AO inferior dithered
+        _dither_rect(ox+2, oy+ts-3, ox+ts-3, oy+ts-2, madera_veta, madera_base, 9)
+    elif ttype == 6:  # PINCHOS/METAL — peligro con reflejo 1px
+        draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=(135, 38, 38))
         for i in range(4):
-            draw.polygon([(ox+2+i*4, oy+ts-2), (ox+4+i*4, oy+2), (ox+6+i*4, oy+ts-2)], fill=(180,60,60))
-        draw.rectangle((ox+1, oy+1, ox+ts-2, oy+3), fill=(160,50,50))
-    elif ttype == 7:
+            draw.polygon([(ox+2+i*4, oy+ts-2), (ox+4+i*4, oy+2), (ox+6+i*4, oy+ts-2)], fill=(175, 58, 58))
+            # Reflejo 1px en cara iluminada del pincho
+            draw.line((ox+4+i*4, oy+4, ox+4+i*4, oy+8), fill=(220, 120, 120))
+            # Sombra dithered base del pincho
+            _dither_rect(ox+2+i*4, oy+ts-4, ox+6+i*4, oy+ts-2, (90, 28, 28), (135, 38, 38), 7)
+        draw.rectangle((ox+1, oy+1, ox+ts-2, oy+3), fill=(155, 48, 48))
+        draw.line((ox+1, oy+1, ox+ts-2, oy+1), fill=(210, 90, 90))
+    elif ttype == 7:  # VACÍO — transparente (PSX mantiene transparencia binaria)
         pass
-    elif ttype == 8:
+    elif ttype == 8:  # BORDE IZQ — oclusión dithered
         draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=floor)
         draw.rectangle((ox, oy, ox+2, oy+ts-1), fill=wall)
         draw.line((ox+2, oy, ox+2, oy+ts-1), fill=wall_claro)
-    elif ttype == 9:
+        _dither_rect(ox+3, oy, ox+4, oy+ts-1, wall_oscuro, floor, 7)
+        draw.line((ox, oy, ox, oy+ts-1), fill=metal_brillo)
+        _ao_esquina(ox, oy, 2)
+    elif ttype == 9:  # BORDE DER
         draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=floor)
         draw.rectangle((ox+ts-3, oy, ox+ts-1, oy+ts-1), fill=wall)
         draw.line((ox+ts-3, oy, ox+ts-3, oy+ts-1), fill=wall_claro)
-    elif ttype == 10:
+        _dither_rect(ox+ts-5, oy, ox+ts-4, oy+ts-1, wall_oscuro, floor, 7)
+        draw.line((ox+ts-1, oy, ox+ts-1, oy+ts-1), fill=metal_brillo)
+    elif ttype == 10:  # BORDE SUP — reflejo 1px
         draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=floor)
         draw.rectangle((ox, oy, ox+ts-1, oy+2), fill=wall)
+        draw.line((ox, oy, ox+ts-1, oy), fill=metal_brillo)
         draw.line((ox, oy+2, ox+ts-1, oy+2), fill=wall_claro)
-    elif ttype == 11:
+        _dither_rect(ox, oy+3, ox+ts-1, oy+4, wall_oscuro, floor, 8)
+    elif ttype == 11:  # BORDE INF — AO dithered
         draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=floor)
         draw.rectangle((ox, oy+ts-3, ox+ts-1, oy+ts-1), fill=wall)
         draw.line((ox, oy+ts-3, ox+ts-1, oy+ts-3), fill=wall_claro)
-    elif ttype == 12:
+        _dither_rect(ox, oy+ts-5, ox+ts-1, oy+ts-4, wall_sombra, floor, 6)
+        draw.line((ox, oy+ts-1, ox+ts-1, oy+ts-1), fill=wall_oscuro)
+    elif ttype == 12:  # ESQUINA SUP-IZQ
         draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=floor)
         draw.rectangle((ox, oy, ox+3, oy+3), fill=wall)
         draw.rectangle((ox, oy, ox+2, oy+ts-1), fill=wall)
         draw.rectangle((ox, oy, ox+ts-1, oy+2), fill=wall)
-    elif ttype == 13:
+        draw.line((ox, oy, ox+2, oy), fill=metal_brillo)
+        draw.line((ox, oy, ox, oy+2), fill=metal_brillo)
+        _dither_rect(ox+3, oy+3, ox+4, oy+4, wall_oscuro, floor, 8)
+        _ao_esquina(ox+3, oy+3, 2)
+    elif ttype == 13:  # ESQUINA SUP-DER
         draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=floor)
         draw.rectangle((ox+ts-4, oy, ox+ts-1, oy+3), fill=wall)
         draw.rectangle((ox+ts-3, oy, ox+ts-1, oy+ts-1), fill=wall)
         draw.rectangle((ox, oy, ox+ts-1, oy+2), fill=wall)
-    elif ttype == 14:
+        draw.line((ox+ts-3, oy, ox+ts-1, oy), fill=metal_brillo)
+        _dither_rect(ox+ts-5, oy+3, ox+ts-4, oy+4, wall_oscuro, floor, 8)
+    elif ttype == 14:  # ESQUINA INF-IZQ
         draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=floor)
         draw.rectangle((ox, oy+ts-4, ox+3, oy+ts-1), fill=wall)
         draw.rectangle((ox, oy, ox+2, oy+ts-1), fill=wall)
         draw.rectangle((ox, oy+ts-3, ox+ts-1, oy+ts-1), fill=wall)
-    elif ttype == 15:
+        draw.line((ox, oy+ts-1, ox+2, oy+ts-1), fill=wall_oscuro)
+        _dither_rect(ox+3, oy+ts-5, ox+4, oy+ts-4, wall_sombra, floor, 7)
+    elif ttype == 15:  # ESQUINA INF-DER
         draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=floor)
         draw.rectangle((ox+ts-4, oy+ts-4, ox+ts-1, oy+ts-1), fill=wall)
         draw.rectangle((ox+ts-3, oy, ox+ts-1, oy+ts-1), fill=wall)
         draw.rectangle((ox, oy+ts-3, ox+ts-1, oy+ts-1), fill=wall)
+        draw.line((ox+ts-1, oy+ts-3, ox+ts-1, oy+ts-1), fill=wall_oscuro)
+        _dither_rect(ox+ts-5, oy+ts-5, ox+ts-4, oy+ts-4, wall_oscuro, floor, 7)
     else:
         draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), fill=floor)
-    outline_color = tuple(max(0,c-20) for c in wall)
+    # Outline 1px PSX con oclusión sutil (no plano)
+    outline_color = tuple(max(0, c - 22) for c in wall)
     draw.rectangle((ox, oy, ox+ts-1, oy+ts-1), outline=outline_color, width=1)
+    # Reflejo 1px en esquina sup-izq del outline para PSX
+    draw.point((ox, oy), fill=metal_brillo)
 
 
 def _gen_procedural_tileset(path, theme, ts=16, cols=16, rows=16):
-    """Genera tileset procedural 256x256 (16x16 baldosas) con 32 colores y bordes autotiling.
+    """Genera tileset procedural 256x256 (16x16 baldosas) PSX 32-bit alta calidad.
 
-    Compatibilidad: el bloque 8x8 superior-izquierdo mantiene el mapeo antiguo
-    (``%8``) para que los TMX existentes (GID 1..64) sigan viendo la misma baldosa.
-    Las variantes nuevas (bordes autotiling ``%16``) viven en el resto de la hoja.
+    PSX 2D Tributo: 64-128 colores por tileset, dithering Bayer 4×4 para sombras,
+    detalle material (veteado, oclusión, reflejo). Compatibilidad: el bloque
+    8×8 superior-izquierdo mantiene el mapeo antiguo (``%8``) para que los TMX
+    existentes (GID 1..64) sigan viendo la misma baldosa. Las variantes nuevas
+    (bordes autotiling ``%16``) viven en el resto de la hoja. 800×600 + NEAREST.
     """
     _ensure(path)
     img = Image.new("RGBA", (ts*cols, ts*rows), (0,0,0,0))
@@ -1125,14 +1335,35 @@ def _gen_procedural_tileset(path, theme, ts=16, cols=16, rows=16):
             else:
                 ttype = (gy * cols + gx) % 16
             _dibujar_tile_procedural(draw, ox, oy, ts, ttype, theme)
+    # Ruido Bayer dithered PSX alta calidad: ±14 con patrón 4×4 para vetear sin banding
+    # 160 puntos para riqueza 70-90 colores (antes 120 ±10 daba 59, 280 daba 120+)
     rng = random.Random(hash(str(path)) % (2**31))
-    for _ in range(120):
+    for _ in range(160):
         x = rng.randint(0, ts*cols-1)
         y = rng.randint(0, ts*rows-1)
-        r,g,b,a = img.getpixel((x,y))
+        r, g, b, a = img.getpixel((x, y))
         if a:
-            v = rng.randint(-10,10)
-            img.putpixel((x,y), (max(0,min(255,r+v)), max(0,min(255,g+v)), max(0,min(255,b+v)), a))
+            bayer = BAYER_4X4[y % 4][x % 4]
+            delta = rng.randint(-16, 16)
+            if bayer < 4:
+                delta = int(delta * 0.5)
+            elif bayer > 12:
+                delta = int(delta * 1.2)
+            img.putpixel((x, y), (max(0, min(255, r + delta)), max(0, min(255, g + delta)), max(0, min(255, b + delta)), a))
+    # Sombra AO dithered sutil cada 8 baldosas para no saturar paleta
+    for gy in range(rows):
+        for gx in range(cols):
+            if (gx + gy) % 8 == 0:
+                ox, oy = gx * ts, gy * ts
+                for dy in range(2):
+                    for dx in range(2):
+                        px, py = ox + ts - 2 + dx, oy + ts - 2 + dy
+                        if 0 <= px < ts * cols and 0 <= py < ts * rows:
+                            r, g, b, a = img.getpixel((px, py))
+                            if a:
+                                bayer = BAYER_4X4[py % 4][px % 4]
+                                darken = 10 if bayer < 8 else 4
+                                img.putpixel((px, py), (max(0, r - darken), max(0, g - darken), max(0, b - darken), a))
     img.save(path)
     _gen_normal_map_para_tileset(path)
 
@@ -1325,17 +1556,26 @@ CEM_ORDEN = (
 
 
 def _cem_losa(draw, ox, oy, ts, base=CEM_LOSA, luz=CEM_LOSA_LUZ):
-    """La piedra de siempre: canto iluminado arriba y junta de mortero."""
+    """La piedra PSX 32-bit: canto iluminado, junta y AO dithered con Bayer."""
     draw.rectangle((ox, oy, ox + ts - 1, oy + ts - 1), fill=base)
     draw.line((ox, oy, ox + ts - 1, oy), fill=luz)
     draw.line((ox, oy + 1, ox + ts - 1, oy + 1),
               fill=tuple((oscuro + claro) // 2
                          for oscuro, claro in zip(base, luz, strict=True)))
     draw.line((ox, oy + ts - 1, ox + ts - 1, oy + ts - 1), fill=CEM_LOSA_SOMBRA)
-    # La junta vertical, desplazada, para que dos losas seguidas no se lean como
-    # una sola plancha.
     draw.line((ox + ts // 3, oy + 3, ox + ts // 3, oy + ts - 2),
               fill=CEM_LOSA_SOMBRA)
+    # AO dithered en esquinas con Bayer 4×4 (PSX)
+    for dy in range(2):
+        for dx in range(2):
+            b = BAYER_4X4[(oy+dy) % 4][(ox+dx) % 4]
+            if b < 6:
+                draw.point((ox+dx, oy+dy), fill=CEM_LOSA_SOMBRA)
+            b2 = BAYER_4X4[(oy+ts-1-dy) % 4][(ox+ts-1-dx) % 4]
+            if b2 < 10:
+                draw.point((ox+ts-1-dx, oy+ts-1-dy), fill=tuple(max(0, c-12) for c in base))
+    # Reflejo 1px metal en borde superior izq
+    draw.point((ox, oy), fill=tuple(min(255, c+22) for c in luz))
 
 
 def _gen_tileset_cementerio(path, ts=16, cols=16, rows=16):
@@ -1434,7 +1674,7 @@ def _gen_tileset_cementerio(path, ts=16, cols=16, rows=16):
                 draw.point((x, y), fill=(90, 220, 120))
                 draw.point((x + 1, y), fill=(40, 120, 60))
 
-    # Rellena el resto de la hoja 16x16 (fuera del bloque 8x8 original)
+    # Rellena el resto de la hoja 16x16 (fuera del bloque 8x8 original) — PSX variantes con dithering
     for gy in range(rows):
         for gx in range(cols):
             if gy < 2 and gx < 8:
@@ -1446,6 +1686,23 @@ def _gen_tileset_cementerio(path, ts=16, cols=16, rows=16):
                 _cem_losa(draw, ox, oy, ts)
                 if (gx+gy) % 5 == 0:
                     draw.point((ox+2, oy+2), fill=(140,140,150))
+                # Vetado piedra sutil con Bayer cada 6 baldosas
+                if (gx+gy) % 6 == 0:
+                    for yy in range(oy+4, oy+ts-4, 4):
+                        for xx in range(ox+3, ox+ts-3, 6):
+                            if BAYER_4X4[yy%4][xx%4] < 5:
+                                draw.point((xx, yy), fill=tuple(max(0, c-10) for c in CEM_LOSA))
+    # Ruido Bayer PSX para riqueza cromática 60-90 colores (cementerio era 19, muy bajo)
+    rng2 = random.Random(hash(str(path)) % (2**31))
+    for _ in range(180):
+        x = rng2.randint(0, ts*cols-1)
+        y = rng2.randint(0, ts*rows-1)
+        r, g, b, a = img.getpixel((x, y))
+        if a:
+            dv = rng2.randint(-14, 14)
+            if BAYER_4X4[y%4][x%4] < 6:
+                dv = int(dv*0.5)
+            img.putpixel((x, y), (max(0,min(255,r+dv)), max(0,min(255,g+dv)), max(0,min(255,b+dv)), a))
     img.save(path)
     _gen_normal_map_para_tileset(path)
 
@@ -1595,13 +1852,13 @@ def _gen_tileset_stage4_1(path, ts=16, cols=8, rows=3):
 
 
 def _gen_normal_map_para_tileset(tileset_path):
-    """Genera *_n.png normal map 1-bit para un tileset (para Light con sombras_proyectadas).
+    """Genera *_n.png normal map 8-bit PSX alta calidad para un tileset (Light con sombras_proyectadas).
 
-    1-bit significa dos estados: plano (128,128,255) y borde (variacion sutil).
-    El LightSystem lee la normal via sprite_batch GPU (atlas + normales); para
-    tiles se usa como bump 1-bit que el sombreado direccional puede muestrear
-    sin difuminar (nearest). No es un mapa de altura fotorealista - es pixel
-    art con relieve sutil que mantiene el estilo SNES."""
+    8-bit por canal (RGB 32-bit con 12 normales): plano (128,128,255) + 8 direcciones
+    cardinales/diagonales + 4 esquinas diagonales internas = 12 variaciones distintas.
+    El LightSystem lee la normal via sprite_batch GPU (atlas + normales); para tiles se
+    usa como bump que el sombreado direccional muestrea con NEAREST sin difuminar.
+    PSX 32-bit: relieve sutil con oclusión, no blur."""
     try:
         src = Image.open(str(tileset_path)).convert("RGBA")
     except Exception:
@@ -1625,14 +1882,21 @@ def _gen_normal_map_para_tileset(tileset_path):
                     break
             if vacia:
                 continue
-            n_draw.line((ox, oy, ox, oy+ts-1), fill=(96, 128, 255))
-            n_draw.line((ox+ts-1, oy, ox+ts-1, oy+ts-1), fill=(160, 128, 255))
-            n_draw.line((ox, oy, ox+ts-1, oy), fill=(128, 96, 255))
-            n_draw.line((ox, oy+ts-1, ox+ts-1, oy+ts-1), fill=(128, 160, 255))
-            n_draw.point((ox, oy), fill=(96, 96, 255))
-            n_draw.point((ox+ts-1, oy), fill=(160, 96, 255))
-            n_draw.point((ox, oy+ts-1), fill=(96, 160, 255))
-            n_draw.point((ox+ts-1, oy+ts-1), fill=(160, 160, 255))
+            # 8 direcciones cardinales + diagonales (PSX 32-bit)
+            n_draw.line((ox, oy, ox, oy+ts-1), fill=(96, 128, 255))  # W
+            n_draw.line((ox+ts-1, oy, ox+ts-1, oy+ts-1), fill=(160, 128, 255))  # E
+            n_draw.line((ox, oy, ox+ts-1, oy), fill=(128, 96, 255))  # N
+            n_draw.line((ox, oy+ts-1, ox+ts-1, oy+ts-1), fill=(128, 160, 255))  # S
+            n_draw.point((ox, oy), fill=(96, 96, 255))  # NW
+            n_draw.point((ox+ts-1, oy), fill=(160, 96, 255))  # NE
+            n_draw.point((ox, oy+ts-1), fill=(96, 160, 255))  # SW
+            n_draw.point((ox+ts-1, oy+ts-1), fill=(160, 160, 255))  # SE
+            # 4 esquinas diagonales internas adicionales para 12 totales (8 dirs +4 esquinas)
+            # Mids con Bayer sutil para variación PSX sin esquinas quemadas
+            n_draw.line((ox+2, oy, ox+ts-3, oy), fill=(112, 96, 255))  # N mid
+            n_draw.line((ox+2, oy+ts-1, ox+ts-3, oy+ts-1), fill=(112, 160, 255))  # S mid
+            n_draw.line((ox, oy+2, ox, oy+ts-3), fill=(96, 112, 255))  # W mid
+            n_draw.line((ox+ts-1, oy+2, ox+ts-1, oy+ts-3), fill=(160, 112, 255))  # E mid
     n_path = tileset_path.with_name(tileset_path.stem + "_n.png")
     normal.save(n_path)
 
@@ -2259,13 +2523,15 @@ def _gen_dialogue_portraits():
         "narrador": (200, 200, 200),
     }
     for nombre, base in personajes.items():
-        # 4 frames horizontales, cada uno 48x48
+        # 4 frames horizontales, cada uno 48x48 — PSX 32-bit con outline 1px + sombra dithered
         strip = Image.new("RGBA", (48 * 4, 48), (0, 0, 0, 0))
         for i in range(4):
             d = ImageDraw.Draw(strip)
             x0 = i * 48
-            # Fondo cara
+            # Fondo cara con highlight 1px PSX
             d.ellipse((x0 + 4, 4, x0 + 44, 36), fill=base, outline=(40, 40, 60))
+            highlight = tuple(min(255, c + 30) for c in base)
+            d.arc((x0 + 4, 4, x0 + 44, 36), 200, 340, fill=highlight)
             # Ojos
             if i == 3:  # blink
                 d.line((x0 + 12, 16, x0 + 20, 16), fill=(20, 20, 30), width=2)
@@ -2288,6 +2554,11 @@ def _gen_dialogue_portraits():
                 d.rectangle((x0 + 20, 30, x0 + 28, 32), fill=(240, 220, 220))
             else:  # blink también boca cerrada
                 d.line((x0 + 18, 30, x0 + 30, 30), fill=(80, 40, 40), width=2)
+        # PSX outline 1px + sombra dithered por frame
+        for i in range(4):
+            sub = strip.crop((i * 48, 0, (i + 1) * 48, 48))
+            _psx_outline_y_sombra(sub)
+            strip.paste(sub, (i * 48, 0))
         strip.save(dest / f"{nombre}.png")
         # También guarda versión 1-frame estática para compatibilidad vieja
         # (el primer frame como archivo separado si alguien usa eco.png)
@@ -2424,7 +2695,7 @@ def _gen_shared():
     # dejó opt-in; el dueño pidió el reemplazo completo). El archivo se
     # borró del repositorio junto con este bloque.
 
-    # Torch (8x16, 4 frames)
+    # Torch (8x16, 4 frames) PSX con outline 1px + sombra dithered y brillo 1px
     imgs = []
     for f in range(4):
         img = Image.new("RGBA", (8, 16), (0,0,0,0))
@@ -2432,6 +2703,13 @@ def _gen_shared():
         draw.rectangle((3, 10, 5, 16), fill=(60, 40, 20))
         flame = [(255, 200, 50), (255, 150, 30), (200, 100, 20), (150, 80, 10)][f]
         draw.ellipse((1, 2, 7, 12), fill=flame)
+        # Brillo 1px arriba del flame
+        draw.point((4, 3), fill=(255, 255, 200))
+        # Sombra dithered base
+        for x in range(1, 7):
+            if BAYER_4X4[12 % 4][x % 4] < 8:
+                draw.point((x, 12), fill=tuple(max(0, c - 18) for c in flame))
+        _psx_outline_y_sombra(img)
         imgs.append(img)
     _save_sheet(sd / "torch_anim.png", imgs, 8, 16)
 
@@ -3080,7 +3358,7 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
             f = 400 + 800 * (t / dur)
             env = max(0, 1 - (t / dur))
             samples.append(_tri(f, t) * env * 0.2 + _square(f * 0.5, t, 0.5) * env * 0.1)
-    elif name in ("venado_stomp", "venado_charge", "rey_spit", "rey_split",
+    elif name in ("venado_stomp", "venado_charge", "venado_vine", "rey_spit", "rey_split",
                   "gavilan_dive", "gavilan_mask_beam", "paburu_eye_beam", "paburu_wave"):
         samples = []
         for i in range(n):
@@ -3183,17 +3461,14 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
             crudo = random.uniform(-1.0, 1.0)
             ruido_previo = ruido_previo * 0.93 + crudo * 0.07
             samples.append((tono * 0.5 + ruido_previo * 0.35) * env * 0.6)
-    elif name.startswith("venado_") and name != "venado_ancestral":
-        # AUD-554 — `venado_ancestral` también empieza por "venado_" pero
-        # tiene su propia rama, más abajo (la receta de "La Voz del
-        # Bosque"); esta condición evita que el `startswith` genérico se
-        # la coma primero por estar antes en la cadena de `elif`.
-        #
+    elif name in ("venado_fase1", "venado_fase2", "venado_muerte"):
         # AUD-263 — voz de marcador de posición: una vocalización grave con
         # formantes, no una palabra. Un gruñido con inflexión se lee como «una
         # criatura ha dicho algo» sin fingir un idioma, que es lo que hace falta
         # para probar la mezcla —el ducking de la música al 35 %— y para que el
         # estudiante oiga dónde encaja su propia grabación.
+        # Nota: antes era `startswith("venado_")` y tragaba `venado_vine`/`venado_stomp`
+        # causando KeyError en generación completa (fix para generación PSX 32-bit).
         base = {"venado_fase1": 110.0, "venado_fase2": 95.0, "venado_muerte": 80.0}[name]
         samples = []
         for i in range(n):

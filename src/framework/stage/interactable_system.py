@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING
 
 import pygame
 
+from src.engine.core.events import Events
 from src.framework.stage.interactables import (
     Cerradura,
     Cofre,
@@ -461,6 +462,13 @@ class InteractableSystem:
     def _avisar(self, texto: str, duracion: float = 2.0) -> None:
         self.mensaje = texto
         self.mensaje_timer = duracion
+        # Fix reporte Guillermo 7b: el mensaje de bloqueo quedaba invisible.
+        # Además de guardar estado interno, se emite al bus para que MessageBox/HUD lo pinte.
+        if texto and self._bus is not None:
+            try:
+                self._bus.emit(Events.SHOW_MESSAGE, text=texto, duration=duracion)
+            except Exception:
+                pass
 
     def _emitir(self, evento: str, **datos: object) -> None:
         if self._bus is None:

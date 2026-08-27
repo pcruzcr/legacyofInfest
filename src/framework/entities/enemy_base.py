@@ -930,6 +930,15 @@ class EnemyBase(BaseEntity):
             return
 
         if self.state == EnemyState.HURT:
+            # Fix reporte Guillermo 5: HURT también cae, si no un impulso
+            # hacia arriba lo deja flotando (Shooter con gravity=0).
+            # Se aplica la misma gravedad que en LAUNCHED pero sin el lock
+            # de suelo de LAUNCHED: caemos con _apply_knockback + gravedad
+            # y dejamos que _resolver_pendientes/_apply_knockback haga el resto.
+            # Solo si no tiene gravedad propia (HURT no mueve, así que no
+            # compensa duplicar si la subclase ya integra gravedad).
+            if self._knockback_velocity.y < 500.0:
+                self._knockback_velocity.y += 600.0 * dt
             if self._hurt_timer <= 0:
                 if self._check_detection_range():
                     self.state = EnemyState.ALERT

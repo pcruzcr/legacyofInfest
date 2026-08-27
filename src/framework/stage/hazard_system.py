@@ -107,7 +107,7 @@ class HazardSystem:
                     )
                 else:
                     self._context.event_bus.emit(
-                        Events.SHOW_MESSAGE, text=mt.text, duration=8.0
+                        Events.SHOW_MESSAGE, text=mt.text, duration=getattr(mt, "duration", 8.0)
                     )
 
         for hz in stage.hazard_zones:

@@ -49,14 +49,26 @@ class DibujoDeEscenario:
         # AUD-601 — GAP-072.3: el zoom cinematográfico. El mundo se dibuja
         # a tamaño alterno y se reescala sobre el lienzo; la UI sigue a
         # tamaño completo — es interfaz, no mundo.
+        # Fix reporte Guillermo 3: antes recortaba desde la esquina superior
+        # izquierda de la cámara, dejando al jugador fuera del cuadro con zoom
+        # >1.2 y suelo cerca del borde inferior. Ahora el recorte se centra en
+        # el mismo punto que el viewport original.
         zoom = getattr(self._camera, "zoom", 1.0)
         if abs(zoom - 1.0) < 1e-3:
             self.dibujar_mundo(surface)
         else:
             w, h = surface.get_size()
-            base = pygame.Surface((max(1, int(w / zoom)),
-                                   max(1, int(h / zoom))))
+            base_w, base_h = max(1, int(w / zoom)), max(1, int(h / zoom))
+            base = pygame.Surface((base_w, base_h))
+            # Centrar el recorte: mismo centro que el viewport original
+            # (evita que el jugador desaparezca con zoom 1.25 en borde inferior)
+            orig_cx = self._camera.offset.x + w / 2.0
+            orig_cy = self._camera.offset.y + h / 2.0
+            saved_offset = pygame.Vector2(self._camera.offset)
+            self._camera.offset.x = orig_cx - base_w / 2.0
+            self._camera.offset.y = orig_cy - base_h / 2.0
             self.dibujar_mundo(base)
+            self._camera.offset = saved_offset
             escalado = pygame.transform.smoothscale(base, (w, h))
             surface.blit(escalado, (0, 0))
         self.dibujar_ui(surface)

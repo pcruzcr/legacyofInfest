@@ -253,32 +253,25 @@ class DrawingSystem(GizmosDeDepuracion):
                     (visible.left, r.top), (visible.right, r.top), 2,
                 )
 
-    #: Rojo de aviso para las zonas de daño fijas. Deliberadamente distinto del
-    #: turquesa de la inundación: son dos cosas distintas y el jugador tiene que
-    #: poder separarlas de un vistazo.
-    _COLOR_PELIGRO = (215, 70, 55, 255)
-    _COLOR_BORDE_PELIGRO = (255, 160, 120)
+    #: PSX 2D Tributo — peligro con textura, no cuadro rojo plano.
+    #: Se mantiene distinción con turquesa de inundación, pero con dithering
+    #: y patrón de pinchos sutil para que parezca elemento del mundo, no debug.
+    _COLOR_PELIGRO = (165, 45, 35, 210)
+    _COLOR_BORDE_PELIGRO = (220, 130, 90)
+    _COLOR_PELIGRO_DITHER = (195, 75, 50, 180)
 
     def _draw_zonas_de_dano(
         self, surface: pygame.Surface, stage: StageData,
         offset: pygame.Vector2,
     ) -> None:
-        """Pinta las zonas de daño **fijas** (AUD-228).
+        """Pinta las zonas de daño **fijas** con arte PSX, no cuadro rojo plano.
 
-        Hasta ahora el motor sólo dibujaba las que suben. El contrato implícito
-        para las fijas era que el diseñador pintara pinchos o lava en las
-        baldosas y que el rectángulo sólo marcara dónde duele — pero ese
-        contrato no estaba escrito en ninguna parte y no se cumplía. Los dos
-        únicos mapas del proyecto con una `HazardZone` fija son `stage0`, que es
-        el que los estudiantes copian, y `stage3_3_el_patio`, y **ninguno de los
-        dos** tenía arte debajo: se perdía salud desde un rectángulo invisible.
-
-        El comentario de `_draw_inundaciones` ya decía la regla —«una zona de
-        daño que no se ve es una trampa»— y sólo se la aplicaba al agua.
-
-        Late en vez de estar fija porque un tinte quieto se lee como parte del
-        decorado, y lo que hay que comunicar es que eso está **activo**. Un mapa
-        que sí trae su propio arte apaga esto con `visible=false` en el TMX.
+        AUD-228 original pintaba rectángulo rojo pulsante porque ningún mapa
+        tenía arte de pinchos. Ahora los tilesets incluyen variantes de
+        pinchos/lava con dithering PSX, así que el rectángulo es solo
+        refuerzo sutil cuando `avisar=True`. Con `visible=false` en TMX el
+        diseñador lo apaga porque su arte ya comunica el peligro.
+        Se mantiene distinción con turquesa de inundación, pero con textura.
         """
         zonas = [
             hz for hz in getattr(stage, "hazard_zones", ())
@@ -289,21 +282,37 @@ class DrawingSystem(GizmosDeDepuracion):
         if not zonas:
             return
 
+        # Genera textura PSX dithered con patrón de pinchos diagonal sutil
         ancho, alto = surface.get_size()
-        tinte = self._peligro_cache
-        if tinte is None or tinte.get_size() != (ancho, alto):
-            # Una sola superficie, cacheada al tamaño de la pantalla y recortada
-            # con `area=`. Repintar un rectángulo con alfa cada fotograma es la
-            # asignación por fotograma que AUD-023 vino a quitar.
+        cache_key = (ancho, alto, self._COLOR_PELIGRO, self._COLOR_PELIGRO_DITHER)
+        # Reusa cache si tamaño y colores coinciden
+        if getattr(self, "_peligro_cache_key", None) != cache_key or self._peligro_cache is None or self._peligro_cache.get_size() != (ancho, alto):
             tinte = pygame.Surface((ancho, alto), pygame.SRCALPHA)
-            tinte.fill(self._COLOR_PELIGRO)
+            # Base con dithering Bayer 2x2 para evitar banding PSX
+            bayer = [[0, 8], [12, 4]]
+            for y in range(0, alto, 2):
+                for x in range(0, ancho, 2):
+                    for dy in range(2):
+                        for dx in range(2):
+                            if y+dy < alto and x+dx < ancho:
+                                use_dither = bayer[dy][dx] < 8
+                                col = self._COLOR_PELIGRO_DITHER if use_dither else self._COLOR_PELIGRO
+                                tinte.set_at((x+dx, y+dy), col)
+            # Patrón diagonal de pinchos cada 8px (PSX)
+            for y in range(0, alto, 8):
+                for x in range(0, ancho, 8):
+                    # Pequeña línea diagonal 3px
+                    if (x + y) % 16 == 0:
+                        pygame.draw.line(tinte, (255, 180, 130, 90), (x, y), (x+3, y+3), 1)
             self._peligro_cache = tinte
+            self._peligro_cache_key = cache_key
+        else:
+            tinte = self._peligro_cache
 
-        # El pulso viene del reloj de SDL y no de un `dt` acumulado: este método
-        # no recibe delta, y pedirlo obligaría a tocar la firma de `draw` y las
-        # 26 escenas que la usan.
-        fase = (pygame.time.get_ticks() % 1400) / 1400.0
-        tinte.set_alpha(int(48 + 42 * (1.0 - abs(fase * 2.0 - 1.0))))
+        # Pulso más sutil que antes (PSX no late fuerte)
+        fase = (pygame.time.get_ticks() % 2000) / 2000.0
+        alpha_base = int(28 + 18 * (1.0 - abs(fase * 2.0 - 1.0)))
+        tinte.set_alpha(alpha_base)
 
         pantalla = surface.get_rect()
         for hz in zonas:
@@ -315,13 +324,15 @@ class DrawingSystem(GizmosDeDepuracion):
                 tinte, visible.topleft,
                 pygame.Rect(0, 0, visible.width, visible.height),
             )
-            # El borde superior, opaco: es el que dice exactamente dónde empieza
-            # a doler, y es la única decisión que el jugador toma aquí.
+            # Borde superior con dithering sutil, no rojo neón
             if pantalla.top <= r.top <= pantalla.bottom:
                 pygame.draw.line(
                     surface, self._COLOR_BORDE_PELIGRO,
                     (visible.left, r.top), (visible.right, r.top), 1,
                 )
+                # Segunda línea punteada 1px abajo para efecto PSX
+                for x in range(visible.left, visible.right, 4):
+                    surface.set_at((x, r.top + 1), self._COLOR_BORDE_PELIGRO)
 
     #: Colores de los objetos interactivos. Se dibujan con formas planas y no
     #: con sprites porque el motor no puede suponer qué arte tiene cada

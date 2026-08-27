@@ -593,8 +593,20 @@ class App:
             # dibuja el mundo y la interfaz por separado: el mundo entra en la
             # cadena de pasadas y la interfaz se compone después. Para todo lo
             # demás, `draw` sigue siendo el dibujo entero de una vez.
+            # Fix reporte Guillermo 4: si la subclase sobreescribe `draw()`
+            # (nombre que uno esperaría extender), respetarlo. `DibujoDeEscenario`
+            # es el contrato GPU; una subclase que trae su propio `draw` ya
+            # dijo que quiere controlar el orden.
             escena = self.scene_manager.current
-            if _soporta(escena, "dibujar_mundo"):
+            # ¿la clase concreta trae su propio draw distinto del de DibujoDeEscenario?
+            try:
+                from src.framework.scenes.stage_parts.dibujo import DibujoDeEscenario
+                sobreescribe_draw = type(escena).draw is not DibujoDeEscenario.draw
+            except Exception:
+                sobreescribe_draw = False
+            if sobreescribe_draw:
+                escena.draw(self.internal_surface)
+            elif _soporta(escena, "dibujar_mundo"):
                 cast("EscenaConRutaDeGPU", escena).dibujar_mundo(
                     self.internal_surface)
             else:

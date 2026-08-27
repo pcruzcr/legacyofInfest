@@ -227,8 +227,11 @@ class ObjetosDeTiled:
         # ninguno de los dos, que es lo que ocurriría si uno tuviera prioridad
         # sobre el otro en silencio.
         arbol = str(props.get("dialogue", "") or props.get("dialogue_tree", ""))
+        dur = cls._safe_float(props.get("duration", 8.0), "MessageTrigger.duration")
+        if dur <= 0:
+            dur = 8.0
         stage.message_triggers.append(
-            MessageTrigger(rect=rect, text=text, dialogue_tree_id=arbol),
+            MessageTrigger(rect=rect, text=text, dialogue_tree_id=arbol, duration=dur),
         )
 
     @classmethod

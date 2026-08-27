@@ -176,6 +176,16 @@ class SenalesDeEscenario:
         self._vfx_handlers[Events.SHOW_DIALOGUE] = _on_show_dialogue
 
         def _on_enemy_died(**data: Any) -> None:
+            # Fix reporte Guillermo 7c: las cerraduras con abre_con_evento no se
+            # abrían si el evento no venía de un Disparador del mapa. Ahora
+            # cualquier ENEMY_DIED intenta abrir lo que escuche ese nombre, sin
+            # obligar a la escena a llamar a abrir_por_evento a mano.
+            try:
+                for evt in (str(data.get("entity_id", "")), Events.ENEMY_DIED, str(data.get("skill_drop", ""))):
+                    if evt:
+                        self._interactables.abrir_por_evento(evt)
+            except Exception:
+                pass
             pos = data.get("position", (0, 0))
             self._particle_system.get_emitter("death").emit(
                 float(pos[0]), float(pos[1]), HitEffects.DEATH,
@@ -372,6 +382,24 @@ class SenalesDeEscenario:
         self._vfx_handlers[Events.MUSIC_STINGER] = _on_music_stinger
 
         self._subscribe_sfx_handlers()
+
+        # Fix reporte Guillermo 7c: cerraduras que se abren por evento del mapa
+        # (TMX `abre_con`) no solo por Disparador. Se suscribe a cada evento
+        # distinto declarado en las cerraduras del nivel, para que un
+        # ENEMY_DIED del cocinero o un evento custom abra sin código en la escena.
+        for cerradura in getattr(self._interactables, "cerraduras", []):
+            evt = str(getattr(cerradura, "abre_con_evento", "") or "")
+            if evt and evt not in self._vfx_handlers and evt not in self._sfx_handlers:
+                def _make_opener(ev: str = evt) -> Any:
+                    def _opener(**_data: Any) -> None:
+                        try:
+                            self._interactables.abrir_por_evento(ev)
+                        except Exception:
+                            pass
+                    return _opener
+                handler = _make_opener()
+                self.context.event_bus.subscribe(evt, handler)
+                self._vfx_handlers[evt] = handler
 
         # SAVE_REQUESTED handler — persists game on checkpoint / save & quit
         def _on_save_requested(**data: Any) -> None:
