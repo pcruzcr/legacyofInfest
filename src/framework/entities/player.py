@@ -84,7 +84,9 @@ _PLAYER_SPRITE_MAP: dict[str, tuple[str, int]] = {
     "HURT": ("player_hurt.png", 4),
     "DYING": ("player_die.png", 8),
     "DASHING": ("player_walk.png", 4),
-    "PARRY": ("player_hurt.png", 4),
+    # AUD-XXX — parry ya no reutiliza hurt: hoja propia con bloqueo vertical y chispa,
+    # 2 piernas y espada separada (antes hurt era copia de idle con 3 piernas).
+    "PARRY": ("player_parry.png", 4),
     "CHARGE_ATTACK": ("player_short_attack.png", 4),
     "DASH_ATTACK": ("player_short_attack.png", 4),
     "WALL_SLIDE": ("player_jump.png", 2),
@@ -102,11 +104,11 @@ _PLAYER_SPRITE_MAP: dict[str, tuple[str, int]] = {
     # `DASH_ATTACK`/`AERIAL_ATTACK`: sin arte propio, una silueta
     # coherente vale más que una inventada.
     "SWIM_ATTACK": ("player_short_attack.png", 6),
-    # F5.14 — lianas y tirolesas. Reutilizan la hoja de salto: el jugador va
-    # colgado, y hasta que haya arte propio es mejor un sprite coherente que
-    # uno inventado.
-    "CLIMBING": ("player_jump.png", 2),
-    "ZIPLINE": ("player_jump.png", 2),
+    # F5.14 — lianas y tirolesas. Reutilizaban `player_jump.png` (pose de salto
+    # genérica) — ahora hojas propias colgado/tirolesa con ancla abajo-centro
+    # idéntica al resto (2 piernas, espada separada, outline 1px, Bayer).
+    "CLIMBING": ("player_climb.png", 4),
+    "ZIPLINE": ("player_zipline.png", 2),
     "ULTIMATE": ("player_long_attack.png", 10),
     "AERIAL_ATTACK": ("player_short_attack.png", 6),
     "AERIAL_SLAM": ("player_short_attack.png", 6),
@@ -997,8 +999,11 @@ class Player(BaseEntity):
                 frame = flipped_frames[frame_idx]
 
             # Center the 32-wide sprite on the 20-wide collision rect
+            # AUD-XXX — ancla abajo-centro idéntica para TODAS las hojas (antes CROUCHING
+            # usaba 0 y quedaba 12px por debajo del suelo; ahora rect.height - SPRITE_H
+            # = -12 para agachado y 0 para de pie, pies siempre en rect.bottom).
             offset_x = (self.rect.width - SPRITE_W) // 2
-            offset_y = 0 if self._state_instance.state_enum == PlayerState.CROUCHING else self.rect.height - SPRITE_H
+            offset_y = self.rect.height - SPRITE_H
 
             destino = (screen_x + offset_x, screen_y + offset_y)
 

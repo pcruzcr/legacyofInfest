@@ -241,6 +241,11 @@ class EnemyBase(BaseEntity):
         self._tick_cooldowns(dt)
         self._advance_animation(dt)
         self._post_update(dt)
+        # AUD-667 — anclaje al suelo plano para que HURT/DYING no desplacen
+        # `rect.bottom`. Evita que el cambio de sprite o el retroceso deje al
+        # enemigo levitando por un decimales de colisión. No afecta a
+        # LAUNCHED/DYING ni a voladores.
+        self._mantener_en_suelo()
         # AUD-325 — el suelo inclinado, al final: las subclases mueven la
         # posición en distintos puntos (estado, knockback, `_post_update`),
         # y éste es el único lugar que las ve a todas.
@@ -423,8 +428,13 @@ class EnemyBase(BaseEntity):
                 frame = flipped_frames[frame_idx]
             else:
                 frame = frames[frame_idx]
-            ox = (self.rect.width - self._sprite_fw) // 2
-            oy = self.rect.height - self._sprite_fh
+            # AUD-667 — anclaje abajo-centro independiente del sprite.
+            # Usar el tamaño real del frame y no `_sprite_fw/_sprite_fh` evita
+            # que HURT/DYING con altura distinta desplace `rect` o `position`:
+            # el cuerpo (`rect`) manda y el dibujo se adapta al frame, igual
+            # que `player.py:draw` hace con `SPRITE_W/H`.
+            ox = (self.rect.width - frame.get_width()) // 2
+            oy = self.rect.height - frame.get_height()
             destino = (screen_x + ox, screen_y + oy)
             # AUD-304 — el contorno de AUD-190, disponible también aquí. Se
             # consulta cada fotograma y no se cachea en el enemigo a propósito:
@@ -584,15 +594,21 @@ class EnemyBase(BaseEntity):
         dx = self.position.x - source_position[0]
         dir_x = 1 if dx >= 0 else -1
         kb_power = 80.0 if self._hitstun_type == "light" else 150.0
+        # AUD-667 — los enemigos de suelo no deben salir del piso por HURT.
+        # El impulso vertical hacía que `rect.bottom` subiera y, con la
+        # resolución por colisión en flotantes, quedara despegado o con
+        # deriva. Sólo LAUNCHED tiene impulso vertical real; HURT se limita
+        # a retroceso horizontal. Los voladores (`_hug_slopes=False`) conservan
+        # el impulso porque no pisan suelo.
         if self._hitstun_type == "launch":
             self._knockback_velocity.x = dir_x * kb_power * 0.5
             self._knockback_velocity.y = -250.0
         elif self._hitstun_type == "heavy":
             self._knockback_velocity.x = dir_x * kb_power
-            self._knockback_velocity.y = -100.0
+            self._knockback_velocity.y = -100.0 if not self._hug_slopes else 0.0
         else:
             self._knockback_velocity.x = dir_x * kb_power
-            self._knockback_velocity.y = -30.0
+            self._knockback_velocity.y = -30.0 if not self._hug_slopes else 0.0
 
         if self.current_health <= 0:
             self._die()
@@ -782,6 +798,34 @@ class EnemyBase(BaseEntity):
         if superficie is not None:
             self.position.y = float(superficie) - self.rect.height
 
+    def _mantener_en_suelo(self) -> None:
+        """Mantiene `rect.bottom` anclado al suelo plano (AUD-667)."""
+        if not self._hug_slopes:
+            return
+        if self.state in (EnemyState.LAUNCHED, EnemyState.DYING):
+            return
+        if self._is_airborne:
+            return
+        todos = self._collision_rects + self._one_way_rects
+        if not todos:
+            return
+        feet_y = self.position.y + self.rect.height
+        cx = self.rect.centerx
+        for r in todos:
+            if r.left < cx < r.right:
+                if abs(feet_y - r.top) <= 2.0 or (r.top <= feet_y < r.bottom):
+                    self.position.y = float(r.top - self.rect.height)
+                    self.rect.y = int(self.position.y)
+                    self._knockback_velocity.y = 0.0
+                    self._update_rects()
+                    break
+                if feet_y > r.top and feet_y - r.top < 4.0:
+                    self.position.y = float(r.top - self.rect.height)
+                    self.rect.y = int(self.position.y)
+                    self._knockback_velocity.y = 0.0
+                    self._update_rects()
+                    break
+
     def _update_invincibility(self, dt: float) -> None:
         """Tick down invincibility timer and toggle flash."""
         if self._invincibility_timer > 0:
@@ -820,7 +864,9 @@ class EnemyBase(BaseEntity):
                 dx = self.position.x - player.position.x
                 dir_x = 1 if dx >= 0 else -1
                 self._knockback_velocity.x = dir_x * 200.0
-                self._knockback_velocity.y = -150.0
+                # AUD-667 — en suelo el parry no levanta al enemigo (mismo
+                # motivo que `apply_hit`); el retroceso es horizontal.
+                self._knockback_velocity.y = -150.0 if not self._hug_slopes else 0.0
                 self._hurt_timer = 0.3  # sólo el tinte del golpe, no el estado
                 # AUD-206: aquí ponía `state = HURT`, y HURT es el estado en el
                 # que cae el enemigo con un golpe normal — sale de él directo a
@@ -918,10 +964,15 @@ class EnemyBase(BaseEntity):
 
         if self.state == EnemyState.LAUNCHED:
             self._knockback_velocity.y += 600.0 * dt  # gravity during launch
-            if self.position.y >= self._ground_y:
+            # AUD-667 — sólo aterrizar cuando se va cayendo y se alcanzó el
+            # suelo; antes se comprobaba `y >= ground` incluso subiendo y en
+            # el primer fotograma `y == ground`, lo que anulaba el impulso
+            # de lanzamiento y dejaba al enemigo pegado.
+            if self._knockback_velocity.y >= 0 and self.position.y >= self._ground_y:
                 self.position.y = self._ground_y
                 self._knockback_velocity.y = 0.0
                 self._knockback_velocity.x = 0.0
+                self._is_airborne = False
                 if self._hurt_timer <= 0:
                     if self._check_detection_range():
                         self.state = EnemyState.ALERT
@@ -937,7 +988,12 @@ class EnemyBase(BaseEntity):
             # y dejamos que _resolver_pendientes/_apply_knockback haga el resto.
             # Solo si no tiene gravedad propia (HURT no mueve, así que no
             # compensa duplicar si la subclase ya integra gravedad).
-            if self._knockback_velocity.y < 500.0:
+            # AUD-667 — los enemigos de suelo no tienen caída en HURT porque
+            # su velocidad vertical es 0 (ver `apply_hit`); aplicar gravedad
+            # aquí los hundiría y la corrección por colisión dejaría deriva.
+            if self._hug_slopes and not self._is_airborne:
+                self._knockback_velocity.y = 0.0
+            elif self._knockback_velocity.y < 500.0:
                 self._knockback_velocity.y += 600.0 * dt
             if self._hurt_timer <= 0:
                 if self._check_detection_range():

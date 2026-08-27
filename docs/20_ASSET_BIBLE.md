@@ -208,21 +208,42 @@ Tamaño de fotograma: **32×32 píxeles** en todas las animaciones.
 | `player_hurt.png` | 4 | 12 | No | HURT |
 | `player_die.png` | 8 | 10 | No | DYING |
 | `player_swim.png` | 4 | 10 | Sí | SWIMMING |
+| `player_parry.png` | 4 | 16 | No | PARRY |
+| `player_climb.png` | 4 | 6 | Sí | CLIMBING |
+| `player_zipline.png` | 2 | 8 | Sí | ZIPLINE |
+
+> **AUD-XXX — PSX 32-bit HQ encapuchado oscuro, 2 piernas, espada separada.**
+> Esta fila fija el defecto de *tres piernas*: la espada se dibujaba como una pierna
+> (mismo color/posición que las piernas en `PLAYER_IDLE`/`PLAYER_JUMP` y en los
+> ataques el arco caía sobre la columna central del sprite). Ahora **siempre 2
+> piernas** (columnas en `x=11` y `x=18`, ancho 4px, pies en `y=27`, anchor
+> abajo-centro idéntico en las 13 hojas, `offset_x=-6`, `offset_y=rect.height-32`
+> en `player.py:draw`) y la **espada es arma separada** (metálica clara
+> `220,224,236` + highlight `255,255,255`, nunca `42,52,92` de pierna, con
+> empuñadura cruz `182,162,90`). Cada estado tiene pose distinta y legible
+> (no copia `IDLE`): `fall` ≠ `jump` (caída con brazos abiertos y estela),
+> `hurt` ≠ `idle` (retroceso rojizo), `climb`/`zipline` ≠ `jump` (colgado con
+> manos arriba/cable), `parry` (bloqueo vertical con chispa). Outline 1px
+> `(14,14,20)` y sombra dithered Bayer 4×4 en base 4px (`_psx_outline_y_sombra`).
 
 `player_swim.png` (AUD-525) alterna una patada abierta con la silueta
 cerrada del salto — antes `SWIMMING` reutilizaba `player_jump.png` sin
 variación entre fotogramas, así que nadar se veía como quedarse de pie
 clavado bajo el agua.
 
-**Paleta:**
-El jugador (protagonista encapuchado) usa una paleta restringida de exactamente 12 colores:
-- 3 tonos de sombra de capucha (gris azulado oscuro, medio, gris claro)
-- 2 tonos de piel (canela cálida, sombra)
-- 2 tonos de tela (azul marino oscuro, medio)
-- 2 tonos de cuerda/cinturón (marrón, marrón oscuro)
-- 1 brillo de ojos (dorado pálido — visible sólo en escenas muy oscuras)
-- 1 negro puro (contorno)
-- 1 transparente puro
+**Paleta — PSX 32-bit HQ extendida (36 colores, no SNES 16):**
+El jugador encapuchado oscuro usa paleta extendida **32-bit RGBA 36 colores**
+(outline `(14,14,20)`, 12 antiguos → 36 actuales):
+- 4 tonos capucha oscura (`18,22,38`, `34,40,68`, `54,60,92`, `78,86,118`)
+- 3 piel (`130,90,60` sombra, `190,135,95` medio, `235,195,150` luz)
+- 4 tela/túnica (`38,48,86`, `58,70,118`, `84,96,144`, `108,120,168` highlight)
+- 3 pierna (`42,52,92`, `60,72,122`, `78,90,148`)
+- 2 bota (`62,42,28`, `42,28,18`)
+- 5 espada (`222,224,236` hoja, `188,192,210` medio, `148,158,180` sombra, `182,162,90` empuñadura, `255,255,255` brillo)
+- 3 cinturón (`110,82,48`, `78,58,32`, `192,162,92` hebilla)
+- 2 ojos (`245,210,90`, `180,140,40`)
+- extras Bayer/highlight (`220,190,120`, `180,220,255`, `255,180,180`, `255,255,180`) + outline + transparente
+- **Ancla:** todas las hojas **abajo-centro** (`y=27` pies, `bottom=28` con outline), centrado `x=-6` sobre colisión 20px.
 
 ---
 

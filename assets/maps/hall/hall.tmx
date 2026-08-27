@@ -11,7 +11,7 @@
   <property name="climate" value="clear"/>
   <property name="ambient_light" type="float" value="0.85"/>
  </properties>
- <tileset firstgid="1" name="tileset_gavilan_ciudad" tilewidth="16" tileheight="16" tilecount="60" columns="8">
+ <tileset firstgid="1" name="tileset_gavilan_ciudad" tilewidth="16" tileheight="16" tilecount="64" columns="8">
   <image source="../../tilesets/tileset_gavilan_ciudad.png" width="128" height="128"/>
  </tileset>
  <layer id="1" name="BG_Far" width="68" height="38">

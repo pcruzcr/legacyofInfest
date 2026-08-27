@@ -23,6 +23,8 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 A = PROJECT_ROOT / "assets"
 
 W, H = 800, 600
@@ -125,7 +127,7 @@ def _psx_outline_y_sombra(img: Image.Image) -> Image.Image:
     return img
 
 # ════════════════════════════════════════
-# SECTION 1: PLAYER SPRITES (32x32, 9 sheets)
+# SECTION 1: PLAYER SPRITES (32x32, PSX 32-bit HQ — 2 piernas, espada separada, capucha oscura)
 # ════════════════════════════════════════
 
 def _pixel_art(draw, x, y, data, palette):
@@ -137,379 +139,348 @@ def _pixel_art(draw, x, y, data, palette):
                 color = palette.get(int(ch), (255,0,255))
                 draw.point((x + col_idx, y + row_idx), fill=color)
 
+# ── Paleta PSX 32-bit extendida — capucha oscura, 32-64 colores por sprite ──
+_PLAYER_COL = {
+    'hood_dark': (18, 22, 38, 255),
+    'hood_mid': (34, 40, 68, 255),
+    'hood_light': (54, 60, 92, 255),
+    'hood_hi': (78, 86, 118, 255),
+    'face_dark': (130, 90, 60, 255),
+    'face_mid': (190, 135, 95, 255),
+    'face_light': (235, 195, 150, 255),
+    'tunic_dark': (38, 48, 86, 255),
+    'tunic_mid': (58, 70, 118, 255),
+    'tunic_light': (84, 96, 144, 255),
+    'tunic_hi': (108, 120, 168, 255),
+    'arm_dark': (48, 58, 98, 255),
+    'arm_mid': (68, 78, 122, 255),
+    'belt': (110, 82, 48, 255),
+    'belt_dark': (78, 58, 32, 255),
+    'belt_gold': (192, 162, 92, 255),
+    'leg_dark': (42, 52, 92, 255),
+    'leg_mid': (60, 72, 122, 255),
+    'leg_light': (78, 90, 148, 255),
+    'boot': (62, 42, 28, 255),
+    'boot_dark': (42, 28, 18, 255),
+    'sword_blade': (222, 224, 236, 255),
+    'sword_mid': (188, 192, 210, 255),
+    'sword_dark': (148, 158, 180, 255),
+    'sword_hilt': (182, 162, 90, 255),
+    'sword_hilt_dark': (132, 112, 60, 255),
+    'eye': (245, 210, 90, 255),
+    'eye_dark': (180, 140, 40, 255),
+}
+
 PLAYER_PAL = {
     0: (60, 60, 80, 255), 1: (80, 80, 110, 255), 2: (140, 140, 170, 255),
     3: (220, 180, 140, 255), 4: (180, 140, 100, 255), 5: (20, 30, 60, 255),
     6: (40, 50, 90, 255), 7: (100, 80, 50, 255), 8: (60, 50, 30, 255),
     9: (200, 180, 100, 255),
 }
+PLAYER_IDLE = ""; PLAYER_WALK_A = ""; PLAYER_WALK_B = ""; PLAYER_JUMP = ""
+PLAYER_CROUCH = ""; PLAYER_SWIM_KICK = ""; PLAYER_ATTACK = ""
 
-# ── Base poses: 32 rows × 32 cols, '.'=transparent, digit=palette index ──
 
-PLAYER_IDLE = """
-................................
-................................
-...........55555.............
-..........5566655............
-..........5311135............
-..........5397935............
-..........5311135............
-...........55555.............
-..........556655.............
-........5566..6655...........
-.......55..55..55............
-......55...55...55............
-......55..113355..55..........
-......55..113355..55..........
-......55..113355..55..........
-......55..113355..55..........
-.......55..99..55............
-.......5555995555............
-........55.99.55.............
-........55.55.55.............
-.......55..55..55............
-.......55..55..55............
-......55...55...55............
-......55...55...55............
-.....55....55....55............
-.....55....55....55............
-....555....55....555...........
-....55....5555....55...........
-...55.....55..55....55..........
-................................
-................................
-................................
-"""
+def _dibujar_jugador_psx(draw: ImageDraw.ImageDraw, pose: str, fi: int, total: int) -> None:
+    """Dibuja silueta PSX 32-bit HQ encapuchada oscura, SIEMPRE 2 piernas, espada separada."""
+    C = _PLAYER_COL
+    cx = 16
+    base_y = 27
+    def bayer_lt(x, y, umbral=8):
+        return BAYER_4X4[y % 4][x % 4] < umbral
+    hood_y0 = 1
+    if pose in ("crouch", "slide"):
+        hood_y0 = 4
+    elif pose == "jump":
+        hood_y0 = 1
+    elif pose == "fall":
+        hood_y0 = 2
+    elif pose == "climb":
+        hood_y0 = 0
+    elif pose == "hurt":
+        hood_y0 = 2
+    draw.ellipse((cx - 6, hood_y0, cx + 6, hood_y0 + 9), fill=C['hood_dark'])
+    draw.ellipse((cx - 5, hood_y0 + 1, cx + 5, hood_y0 + 8), fill=C['hood_mid'])
+    draw.ellipse((cx - 4, hood_y0 + 2, cx + 4, hood_y0 + 7), fill=C['hood_light'])
+    draw.rectangle((cx - 3, hood_y0 + 3, cx + 3, hood_y0 + 8), fill=C['hood_dark'])
+    draw.rectangle((cx - 3, hood_y0 + 4, cx + 3, hood_y0 + 7), fill=C['face_mid'])
+    draw.rectangle((cx - 2, hood_y0 + 5, cx + 2, hood_y0 + 6), fill=C['face_light'])
+    eye_y = hood_y0 + 5
+    if pose not in ("die", "hurt"):
+        draw.point((cx - 2, eye_y), fill=C['eye'])
+        draw.point((cx + 1, eye_y), fill=C['eye'])
+    else:
+        draw.point((cx - 2, eye_y), fill=C['eye_dark'])
+        draw.point((cx + 1, eye_y), fill=C['eye_dark'])
+    draw.point((cx - 3, hood_y0 + 2), fill=C['hood_hi'])
+    torso_y0 = hood_y0 + 9
+    torso_y1 = torso_y0 + 9
+    if pose in ("crouch", "slide"):
+        torso_y1 = torso_y0 + 7
+    elif pose == "swim":
+        torso_y1 = torso_y0 + 8
+    draw.rectangle((cx - 5, torso_y0, cx + 5, torso_y1), fill=C['tunic_mid'])
+    draw.rectangle((cx - 4, torso_y0 + 1, cx + 4, torso_y1 - 1), fill=C['tunic_light'])
+    for yy in range(torso_y1 - 2, torso_y1):
+        for xx in range(cx - 4, cx + 5):
+            if bayer_lt(xx, yy, 6):
+                draw.point((xx, yy), fill=C['tunic_dark'])
+    belt_y = torso_y0 + 5
+    if pose not in ("climb", "zipline"):
+        draw.rectangle((cx - 5, belt_y, cx + 5, belt_y + 2), fill=C['belt'])
+        draw.rectangle((cx - 1, belt_y, cx + 1, belt_y + 2), fill=C['belt_gold'])
+        draw.point((cx, belt_y), fill=(220, 190, 120, 255))
+    draw.line((cx, torso_y0 + 2, cx, belt_y - 1), fill=C['tunic_dark'])
+    def dibujar_brazo(ax0, ay0, ax1, ay1, col_mid, col_dark):
+        draw.line((ax0, ay0, ax1, ay1), fill=col_mid, width=2)
+        if ax0 < ax1:
+            draw.point((ax1, ay1), fill=col_dark)
+    def dibujar_espada(sx0, sy0, sx1, sy1, grosor=2):
+        draw.line((sx0, sy0, sx1, sy1), fill=C['sword_blade'], width=grosor)
+        draw.line((sx0, sy0, sx1, sy1), fill=C['sword_mid'], width=1)
+        draw.line((sx0 - 1, sy0, sx0 + 1, sy0), fill=C['sword_hilt_dark'])
+        draw.point((sx0, sy0), fill=C['sword_hilt'])
+        mx, my = (sx0 + sx1) // 2, (sy0 + sy1) // 2
+        draw.point((mx, my), fill=(255, 255, 255, 220))
+    fase = (fi / max(1, total - 1)) if total > 1 else 0.0
+    bob = 0
+    if pose == "idle":
+        bob = -1 if fi % 2 else 0
+        torso_y0 += bob
+        torso_y1 += bob
+        dibujar_brazo(cx - 5, torso_y0 + 2, cx - 7, torso_y0 + 7, C['arm_mid'], C['arm_dark'])
+        dibujar_brazo(cx + 5, torso_y0 + 2, cx + 7, torso_y0 + 6, C['arm_mid'], C['arm_dark'])
+        dibujar_espada(cx + 8, torso_y0 + 5, cx + 8, torso_y0 + 11, grosor=2)
+    elif pose == "walk":
+        bob = [0, -1, 0, 0, 0, -1, 0, 0][fi % 8] if total >= 8 else 0
+        torso_y0 += bob
+        torso_y1 += bob
+        if fi % 2 == 0:
+            dibujar_brazo(cx - 5, torso_y0 + 2, cx - 8, torso_y0 + 6, C['arm_mid'], C['arm_dark'])
+            dibujar_brazo(cx + 5, torso_y0 + 2, cx + 8, torso_y0 + 4, C['arm_mid'], C['arm_dark'])
+        else:
+            dibujar_brazo(cx - 5, torso_y0 + 2, cx - 7, torso_y0 + 4, C['arm_mid'], C['arm_dark'])
+            dibujar_brazo(cx + 5, torso_y0 + 2, cx + 9, torso_y0 + 6, C['arm_mid'], C['arm_dark'])
+        sx = cx + 9 + (1 if fi % 2 else 0)
+        dibujar_espada(sx, torso_y0 + 4, sx, torso_y0 + 10, grosor=2)
+    elif pose == "jump":
+        jitter = -1 if fi == 1 else (1 if fi == 2 else 0)
+        torso_y0 += jitter
+        torso_y1 += jitter
+        dibujar_brazo(cx - 5, torso_y0 + 2, cx - 6, torso_y0 - 1, C['arm_mid'], C['arm_dark'])
+        dibujar_brazo(cx + 5, torso_y0 + 2, cx + 6, torso_y0 - 1, C['arm_mid'], C['arm_dark'])
+        sx_off = 9 + (fi % 2)
+        dibujar_espada(cx + 6, torso_y0 - 1, cx + sx_off, torso_y0 - 4, grosor=2)
+    elif pose == "fall":
+        cape_shift = 1 if fi % 2 else 0
+        dibujar_brazo(cx - 5, torso_y0 + 2, cx - 8 - cape_shift, torso_y0 + 5, C['arm_mid'], C['arm_dark'])
+        dibujar_brazo(cx + 5, torso_y0 + 2, cx + 8 + cape_shift, torso_y0 + 5, C['arm_mid'], C['arm_dark'])
+        dibujar_espada(cx + 8 + cape_shift, torso_y0 + 5, cx + 10 + cape_shift, torso_y0 + 9, grosor=2)
+        for x in range(cx - 4, cx + 4):
+            if bayer_lt(x + fi, torso_y1, 7):
+                draw.point((x, torso_y1), fill=C['hood_dark'])
+    elif pose == "crouch":
+        bob = -1 if fi % 2 else 0
+        torso_y0 += bob
+        torso_y1 += bob
+        dibujar_brazo(cx - 5, torso_y0 + 2, cx - 6, torso_y0 + 5, C['arm_mid'], C['arm_dark'])
+        dibujar_brazo(cx + 5, torso_y0 + 2, cx + 6, torso_y0 + 5, C['arm_mid'], C['arm_dark'])
+        dibujar_espada(cx + 6, torso_y0 + 4, cx + 8, torso_y0 + 8, grosor=2)
+    elif pose == "short_attack":
+        dibujar_brazo(cx - 5, torso_y0 + 2, cx - 3, torso_y0 + 4, C['arm_mid'], C['arm_dark'])
+        dibujar_brazo(cx + 5, torso_y0 + 2, cx + 10, torso_y0 + 4, C['arm_mid'], C['arm_dark'])
+        sx0, sy0 = cx + 10, torso_y0 + 4
+        sx1 = sx0 + 8 + int(fase * 4)
+        draw.line((sx0, sy0, sx1, sy0), fill=C['sword_blade'], width=3)
+        draw.line((sx0, sy0, sx1, sy0), fill=C['sword_mid'], width=1)
+        draw.point(((sx0 + sx1)//2, sy0), fill=(255, 255, 255, 255))
+        draw.rectangle((sx0 - 2, sy0 - 1, sx0, sy0 + 1), fill=C['sword_hilt'])
+    elif pose == "long_attack":
+        ang = -0.6 + fase * 1.4
+        sx0, sy0 = cx + 5, torso_y0 + 2
+        length = 10
+        sx1 = int(sx0 + length * math.cos(ang))
+        sy1 = int(sy0 + length * math.sin(ang))
+        dibujar_brazo(cx - 5, torso_y0 + 2, cx - 4, torso_y0 + 5, C['arm_mid'], C['arm_dark'])
+        dibujar_brazo(cx + 5, torso_y0 + 2, sx0, sy0, C['arm_mid'], C['arm_dark'])
+        dibujar_espada(sx0, sy0, sx1, sy1, grosor=2)
+        if fi > 0:
+            draw.point((sx1 - 1, sy1), fill=(255, 255, 255, 90))
+    elif pose == "hurt":
+        draw.ellipse((cx - 6, hood_y0 + 1, cx + 6, hood_y0 + 9), fill=(160, 60, 60, 255))
+        dibujar_brazo(cx - 5, torso_y0 + 2, cx - 8, torso_y0 + 3, C['arm_mid'], C['arm_dark'])
+        dibujar_brazo(cx + 5, torso_y0 + 2, cx + 9, torso_y0 + 3, C['arm_mid'], C['arm_dark'])
+        dibujar_espada(cx + 9, torso_y0 + 3, cx + 9, torso_y0 + 7, grosor=2)
+        if fi % 2 == 0:
+            draw.point((cx, torso_y0 + 4), fill=(255, 180, 180, 255))
+    elif pose == "die":
+        progreso = fi / max(1, total - 1)
+        desplome = int(progreso * 6)
+        draw.ellipse((cx - 6, hood_y0 + desplome, cx + 6, hood_y0 + 9 + desplome), fill=C['hood_dark'])
+        draw.rectangle((cx - 5, torso_y0 + desplome, cx + 5, torso_y1 + desplome), fill=C['tunic_dark'])
+        dibujar_espada(cx + 6, torso_y0 + desplome + 4, cx + 6, torso_y0 + desplome + 8, grosor=2)
+    elif pose == "swim":
+        if fi % 2 == 0:
+            dibujar_brazo(cx - 5, torso_y0 + 2, cx - 9, torso_y0 + 3, C['arm_mid'], C['arm_dark'])
+            dibujar_brazo(cx + 5, torso_y0 + 2, cx + 9, torso_y0 + 3, C['arm_mid'], C['arm_dark'])
+        else:
+            dibujar_brazo(cx - 5, torso_y0 + 2, cx - 3, torso_y0 + 5, C['arm_mid'], C['arm_dark'])
+            dibujar_brazo(cx + 5, torso_y0 + 2, cx + 3, torso_y0 + 5, C['arm_mid'], C['arm_dark'])
+        dibujar_espada(cx + 7, torso_y0 + 4, cx + 9, torso_y0 + 5, grosor=2)
+        if fi % 2:
+            draw.point((cx - 6, torso_y0 + 6), fill=(180, 220, 255, 180))
+            draw.point((cx + 6, torso_y0 + 6), fill=(180, 220, 255, 180))
+    elif pose == "climb":
+        dibujar_brazo(cx - 5, torso_y0 + 2, cx - 4, torso_y0 - 3, C['arm_mid'], C['arm_dark'])
+        dibujar_brazo(cx + 5, torso_y0 + 2, cx + 4, torso_y0 - 3, C['arm_mid'], C['arm_dark'])
+        draw.point((cx - 4, torso_y0 - 3), fill=C['face_light'])
+        draw.point((cx + 4, torso_y0 - 3), fill=C['face_light'])
+        dibujar_espada(cx + 4, torso_y0 - 3, cx + 6, torso_y0 + 2, grosor=2)
+    elif pose == "zipline":
+        dibujar_brazo(cx - 5, torso_y0 + 2, cx - 2, torso_y0 - 4, C['arm_mid'], C['arm_dark'])
+        dibujar_brazo(cx + 5, torso_y0 + 2, cx + 2, torso_y0 - 4, C['arm_mid'], C['arm_dark'])
+        draw.line((cx - 6, torso_y0 - 5, cx + 6, torso_y0 - 5), fill=(90, 90, 100, 255))
+        draw.point((cx, torso_y0 - 5), fill=(200, 200, 210, 255))
+        dibujar_espada(cx + 2, torso_y0 - 4, cx + 4, torso_y0 + 1, grosor=2)
+    elif pose == "parry":
+        dibujar_brazo(cx - 5, torso_y0 + 2, cx - 2, torso_y0 + 4, C['arm_mid'], C['arm_dark'])
+        dibujar_brazo(cx + 5, torso_y0 + 2, cx + 6, torso_y0 + 4, C['arm_mid'], C['arm_dark'])
+        dibujar_espada(cx + 7, torso_y0 + 1, cx + 7, torso_y0 + 9, grosor=3)
+        if fi % 2 == 0:
+            draw.point((cx + 7, torso_y0 + 5), fill=(255, 255, 180, 255))
+    elif pose == "slide":
+        dibujar_brazo(cx - 5, torso_y0 + 2, cx - 7, torso_y0 + 5, C['arm_mid'], C['arm_dark'])
+        dibujar_brazo(cx + 5, torso_y0 + 2, cx + 7, torso_y0 + 5, C['arm_mid'], C['arm_dark'])
+        dibujar_espada(cx + 7, torso_y0 + 5, cx + 10, torso_y0 + 6, grosor=2)
+    else:
+        dibujar_brazo(cx - 5, torso_y0 + 2, cx - 7, torso_y0 + 6, C['arm_mid'], C['arm_dark'])
+        dibujar_brazo(cx + 5, torso_y0 + 2, cx + 7, torso_y0 + 6, C['arm_mid'], C['arm_dark'])
+        dibujar_espada(cx + 8, torso_y0 + 5, cx + 8, torso_y0 + 11, grosor=2)
+    leg_h = 8
+    if pose in ("crouch", "slide"):
+        leg_h = 5
+    elif pose == "jump":
+        leg_h = 6
+    elif pose == "swim":
+        leg_h = 4
+    elif pose in ("climb", "zipline"):
+        leg_h = 7
+    left_x = cx - 5
+    right_x = cx + 2
+    if pose == "walk":
+        if fi % 2 == 0:
+            left_x -= 2
+            right_x += 1
+        else:
+            left_x += 1
+            right_x -= 1
+    elif pose == "jump":
+        left_x = cx - 4
+        right_x = cx + 1
+        leg_h = 5
+    elif pose == "fall":
+        left_x = cx - 5
+        right_x = cx + 2
+        if fi % 2:
+            left_x -= 1
+            right_x += 1
+    elif pose == "short_attack":
+        right_x += 2 + int(fase * 2)
+        left_x -= 1
+    elif pose == "long_attack":
+        right_x += 1 + int(fase * 3)
+        left_x -= int(fase * 1)
+    elif pose == "hurt":
+        left_x -= 1
+        right_x -= 1
+    elif pose == "swim":
+        if fi % 2 == 0:
+            left_x -= 4
+            right_x += 2
+        else:
+            left_x = cx - 4
+            right_x = cx + 1
+    elif pose in ("climb", "zipline"):
+        off = 1 if fi % 2 else -1
+        left_x += off
+        right_x += off
+    elif pose == "parry":
+        left_x -= 1
+        right_x += 1
+    elif pose == "slide":
+        right_x += 4
+        left_x -= 2
+    for lx in (left_x, right_x):
+        draw.rectangle((lx, base_y - leg_h, lx + 3, base_y), fill=C['leg_mid'])
+        draw.rectangle((lx, base_y - leg_h + 1, lx + 2, base_y - 1), fill=C['leg_light'])
+        for yy in range(base_y - leg_h, base_y + 1):
+            if bayer_lt(lx + 3, yy, 5):
+                draw.point((lx + 3, yy), fill=C['leg_dark'])
+        draw.rectangle((lx, base_y - 1, lx + 3, base_y), fill=C['boot'])
+        draw.rectangle((lx, base_y, lx + 3, base_y), fill=C['boot_dark'])
+        draw.point((lx + 1, base_y - leg_h + 1), fill=C['leg_light'])
+    for x in range(cx - 1, cx + 2):
+        if bayer_lt(x, base_y - leg_h + 2, 6):
+            draw.point((x, base_y - leg_h + 2), fill=C['leg_dark'])
+    draw.point((cx - 5, torso_y0 + 1), fill=C['tunic_hi'])
+    draw.point((cx + 4, torso_y0 + 1), fill=C['tunic_hi'])
 
-PLAYER_WALK_A = """
-................................
-................................
-...........55555.............
-..........5566655............
-..........5311135............
-..........5397935............
-..........5311135............
-...........55555.............
-..........556655.............
-........5566..6655...........
-.......55..55..55............
-......55...55...55............
-......55..113355..55..........
-......55..113355..55..........
-......55..113355..55..........
-......55..113355..55..........
-.......55..99..55............
-.......5555995555............
-........55.99.55.............
-........55.55.55.............
-......55..55..55..............
-......55..55..55..............
-.....55...55...55..............
-.....55...55...55..............
-....55....55....55..............
-....55....55....55..............
-...555....55....555............
-..55.....5555.....55...........
-..55.....55..55...55............
-................................
-................................
-................................
-"""
 
-PLAYER_WALK_B = """
-................................
-................................
-...........55555.............
-..........5566655............
-..........5311135............
-..........5397935............
-..........5311135............
-...........55555.............
-..........556655.............
-........5566..6655...........
-.......55..55..55............
-......55...55...55............
-......55..113355..55..........
-......55..113355..55..........
-......55..113355..55..........
-......55..113355..55..........
-.......55..99..55............
-.......5555995555............
-........55.99.55.............
-........55.55.55.............
-.......55..55..55............
-.......55..55..55............
-......55...55...55............
-......55...55...55............
-.....55....55....55............
-.....55....55....55............
-....555....55....555...........
-...55.....5555.....55..........
-...55.....55..55....55.........
-................................
-................................
-................................
-"""
-
-PLAYER_JUMP = """
-................................
-................................
-...........55555.............
-..........5566655............
-..........5311135............
-..........5397935............
-..........5311135............
-...........55555.............
-..........556655.............
-........5566..6655...........
-.......55..55..55............
-......55...55...55............
-......55001155................
-......55..113355................
-......55..113355................
-......55..113355................
-.......55..99..55............
-.......5555995555............
-........55.99.55.............
-........55.55.55.............
-.......55..55..55............
-.......55..55..55............
-......55...55...55............
-.....55....55....55............
-.....55....55....55............
-....55......55......55..........
-....55......55......55..........
-................................
-................................
-................................
-................................
-................................
-"""
-
-PLAYER_CROUCH = """
-................................
-................................
-...........55555.............
-..........5566655............
-..........5311135............
-..........5397935............
-..........5311135............
-...........55555.............
-..........556655.............
-........5566..6655...........
-.......55..55..55............
-......55..113355..55..........
-......55..113355..55..........
-......55..113355..55..........
-.......55..99..55............
-.......5555995555............
-........55.99.55.............
-........55.55.55.............
-.......55..55..55............
-......55...55...55............
-.....55....55....55............
-....555....55....555...........
-....55....5555....55...........
-...55.....55..55....55..........
-................................
-................................
-................................
-................................
-................................
-................................
-................................
-"""
-
-# AUD-525 — nadar reutilizaba `PLAYER_JUMP` a secas (cuatro copias idénticas
-# del mismo fotograma, `_gen_player_sprite`): un jugador de pie clavado en
-# el agua, sin una sola brazada. Ésta es la pose de "tirón" — brazos y
-# piernas abiertos, como una patada de rana — que se alterna con
-# `PLAYER_JUMP` (silueta cerrada) en `_gen_player_swim` para que exista
-# movimiento real entre fotogramas, no sólo un sprite distinto.
-PLAYER_SWIM_KICK = """
-................................
-................................
-...........55555.............
-..........5566655............
-..........5311135............
-..........5397935............
-..........5311135............
-...........55555.............
-..........556655.............
-........5566..6655...........
-......5.....6655.....5.........
-.....55.....55.....55..........
-......55..113355..55...........
-....55.....113355.....55........
-...55......113355......55.......
-..55.......113355.......55......
-..55.......113355.......55......
-.......5555995555..............
-........55.99.55................
-........55.55.55................
-.......55..55..55...............
-......55...55...55..............
-.....55....55....55.............
-....55.....55.....55............
-...55......55......55...........
-................................
-................................
-................................
-................................
-................................
-"""
-
-PLAYER_ATTACK = """
-................................
-................................
-...........55555.............
-..........5566655............
-..........5311135............
-..........5397935............
-..........5311135............
-...........55555.............
-..........556655.............
-........5566..6655...........
-.......55..55..55............
-......55...113355..55..........
-......55...113355..55..........
-......55...113355..55..........
-......55...113355..55..........
-.......55..99..55............
-.......5555995555............
-........55.99.55.............
-........55.55.55.............
-.......55..55..55............
-.......55..55..55............
-......55...55...55............
-......55...55...55............
-.....55....55....55............
-.....55....55....55............
-....555....55....555...........
-....55....5555....55...........
-...55.....55..55....55..........
-...55.....55..55....55..........
-................................
-................................
-................................
-"""
-
-def _gen_player_sprite(frames, base_data, fw=32, fh=32):
-    """Generate multi-frame player sprite PSX 32-bit con outline 1px + sombra dithered."""
-    result = []
-    for _fi in range(frames):
-        img = Image.new("RGBA", (fw, fh), (0,0,0,0))
-        draw = ImageDraw.Draw(img)
-        _pixel_art(draw, 0, 0, base_data, PLAYER_PAL)
-        _psx_outline_y_sombra(img)
-        result.append(img)
-    return result
-
-def _gen_player_walk(frames=8, fw=32, fh=32):
-    """Generate walk frames PSX con outline 1px + sombra dithered."""
-    result = []
+def _gen_player_sheet(pose: str, frames: int, fw: int = 32, fh: int = 32):
+    """Genera hoja PSX 32-bit HQ para pose dada; cada frame distinto (no copia IDLE)."""
+    result: list[Image.Image] = []
     for fi in range(frames):
-        base = PLAYER_WALK_A if fi % 2 == 0 else PLAYER_WALK_B
-        img = Image.new("RGBA", (fw, fh), (0,0,0,0))
-        draw = ImageDraw.Draw(img)
-        _pixel_art(draw, 0, 0, base, PLAYER_PAL)
-        _psx_outline_y_sombra(img)
-        result.append(img)
-    # Add subtle body bob per frame (mantener tras outline para que sombra siga base)
-    for i, img in enumerate(result):
-        offset = [0, -1, 0, 1, 0, -1, 0, 1][i] if i < 8 else 0
-        if offset != 0:
-            shifted = Image.new("RGBA", (fw, fh), (0,0,0,0))
-            shifted.paste(img, (0, offset))
-            result[i] = shifted
-    return result
-
-def _gen_player_swim(frames=4, fw=32, fh=32):
-    """Alternate kick pose PSX con outline 1px + sombra dithered."""
-    result = []
-    for fi in range(frames):
-        base = PLAYER_SWIM_KICK if fi % 2 == 0 else PLAYER_JUMP
         img = Image.new("RGBA", (fw, fh), (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
-        _pixel_art(draw, 0, 0, base, PLAYER_PAL)
+        _dibujar_jugador_psx(draw, pose, fi, frames)
         _psx_outline_y_sombra(img)
         result.append(img)
-    for i, img in enumerate(result):
-        offset = [0, 1, 0, -1][i % 4]
-        if offset != 0:
-            shifted = Image.new("RGBA", (fw, fh), (0, 0, 0, 0))
-            shifted.paste(img, (0, offset))
-            result[i] = shifted
     return result
 
+def _gen_player_sprite(frames, base_data, fw=32, fh=32):
+    return _gen_player_sheet("idle", frames, fw, fh)
+
+def _gen_player_walk(frames=8, fw=32, fh=32):
+    return _gen_player_sheet("walk", frames, fw, fh)
+
+def _gen_player_swim(frames=4, fw=32, fh=32):
+    return _gen_player_sheet("swim", frames, fw, fh)
 
 def _gen_player_slashing(sheet_name, frames, fw=32, fh=32):
-    """Generate attack frames PSX con outline 1px + sombra dithered y arco espada."""
-    result = []
-    for fi in range(frames):
-        data = PLAYER_ATTACK if fi < frames // 2 else PLAYER_IDLE
-        img = Image.new("RGBA", (fw, fh), (0,0,0,0))
-        draw = ImageDraw.Draw(img)
-        _pixel_art(draw, 0, 0, data, PLAYER_PAL)
-        # Add sword arc on the right side
-        sword_x = 26 + fi * 2
-        if sword_x < 34:
-            for sy in range(10, 18):
-                draw.point((sword_x, sy), fill=(200, 180, 100, 255))
-        _psx_outline_y_sombra(img)
-        result.append(img)
-    return result
+    pose = "short_attack" if "short" in sheet_name else "long_attack"
+    return _gen_player_sheet(pose, frames, fw, fh)
 
 def _gen_player_die(frames=8, fw=32, fh=32):
-    """Generate death frames PSX con outline 1px + sombra dithered."""
-    result = []
-    for fi in range(frames):
-        img = Image.new("RGBA", (fw, fh), (0,0,0,0))
-        draw = ImageDraw.Draw(img)
-        1.0 - (fi / frames) * 0.5
-        _pixel_art(draw, 0, int(8 * fi / frames), PLAYER_IDLE, PLAYER_PAL)
-        _psx_outline_y_sombra(img)
-        result.append(img)
-    return result
+    return _gen_player_sheet("die", frames, fw, fh)
 
 def _gen_player_all():
     print("  Player sprites...")
-    base = _gen_player_sprite(6, PLAYER_IDLE)
-    _save_sheet(A/"sprites"/"player"/"player_idle.png", base, 32, 32)
+    hojas = {
+        "player_idle.png": ("idle", 4),
+        "player_walk.png": ("walk", 8),
+        "player_jump.png": ("jump", 3),
+        "player_fall.png": ("fall", 2),
+        "player_crouch.png": ("crouch", 2),
+        "player_short_attack.png": ("short_attack", 6),
+        "player_long_attack.png": ("long_attack", 10),
+        "player_hurt.png": ("hurt", 4),
+        "player_die.png": ("die", 8),
+        "player_swim.png": ("swim", 4),
+        "player_parry.png": ("parry", 4),
+        "player_climb.png": ("climb", 4),
+        "player_zipline.png": ("zipline", 2),
+    }
+    for fname, (pose, frames) in hojas.items():
+        sheet = _gen_player_sheet(pose, frames, 32, 32)
+        _save_sheet(A / "sprites" / "player" / fname, sheet, 32, 32)
 
-    walk = _gen_player_walk(8)
-    _save_sheet(A/"sprites"/"player"/"player_walk.png", walk, 32, 32)
-
-    jump = _gen_player_sprite(4, PLAYER_JUMP)
-    _save_sheet(A/"sprites"/"player"/"player_jump.png", jump, 32, 32)
-
-    fall = _gen_player_sprite(3, PLAYER_JUMP)
-    _save_sheet(A/"sprites"/"player"/"player_fall.png", fall, 32, 32)
-
-    swim = _gen_player_swim(4)
-    _save_sheet(A/"sprites"/"player"/"player_swim.png", swim, 32, 32)
-
-    crouch = _gen_player_sprite(3, PLAYER_CROUCH)
-    _save_sheet(A/"sprites"/"player"/"player_crouch.png", crouch, 32, 32)
-
-    s_atk = _gen_player_slashing("short_attack", 6)
-    _save_sheet(A/"sprites"/"player"/"player_short_attack.png", s_atk, 32, 32)
-
-    l_atk = _gen_player_slashing("long_attack", 10)
-    _save_sheet(A/"sprites"/"player"/"player_long_attack.png", l_atk, 32, 32)
-
-    hurt = _gen_player_sprite(4, PLAYER_IDLE)
-    _save_sheet(A/"sprites"/"player"/"player_hurt.png", hurt, 32, 32)
-
-    die = _gen_player_die(8)
-    _save_sheet(A/"sprites"/"player"/"player_die.png", die, 32, 32)
 
 # ════════════════════════════════════════
 # SECTION 2: ENEMY SPRITES per zone
 # ════════════════════════════════════════
 
 def _gen_enemy_sheet(path, w, h, frames, color, detail_color):
-    """Generate enemy spritesheet PSX 32-bit con outline 1px + sombra dithered."""
+    """Generate enemy spritesheet PSX 32-bit con outline 1px + sombra dithered y variación real por frame."""
     imgs = []
     for _f in range(frames):
         img = Image.new("RGBA", (w, h), (0,0,0,0))
@@ -524,14 +495,889 @@ def _gen_enemy_sheet(path, w, h, frames, color, detail_color):
         draw.rectangle((w*3//4-2, h//4, w*3//4, h//4+2), fill=(255,255,255))
         draw.point((w//4+1, h//4+1), fill=(0,0,0))
         draw.point((w*3//4-1, h//4+1), fill=(0,0,0))
-        # Legs
-        draw.line((w//4, h-3, w//4-2, h), fill=detail_color)
-        draw.line((w*3//4, h-3, w*3//4+2, h), fill=detail_color)
+        # Legs con variación real por fotograma (alternancia)
+        off = 1 if _f % 2 == 0 else -1
+        draw.line((w//4, h-3, w//4-2+off, h-1), fill=detail_color, width=1)
+        draw.line((w*3//4, h-3, w*3//4+2-off, h-1), fill=detail_color, width=1)
+        # Segundo par interior para walkers con trazo extra
+        if w >= 16:
+            draw.line((w//3, h-3, w//3-1+off, h-1), fill=detail_color)
+            draw.line((w*2//3, h-3, w*2//3+1-off, h-1), fill=detail_color)
         # Sombra oclusión inferior dithered Bayer
         for x in range(2, w-2):
             bv = BAYER_4X4[(h-3) % 4][x % 4]
             if bv < 8:
                 draw.point((x, h-3), fill=tuple(max(0, c - 22) for c in color))
+        _psx_outline_y_sombra(img)
+        imgs.append(img)
+    _save_sheet(path, imgs, w, h)
+
+
+# ── Dibujado por especie (PSX 32-bit HQ, silueta legible, paleta extendida, outline+Bayer) ──
+# Cada especie tiene silueta única que parece el animal/objeto: rata con cola, cucaracha con alas,
+# cuaderno con ojos, serpiente reptante, etc. Mantiene tamaños 16×12/14×10/12×12 y estilo vintage moderno.
+
+def _dibujar_especie(draw, sid, w, h, f, nframes, mode="walk"):
+    """Dibuja la silueta de la especie sid en el frame f (0..nframes-1), modo walk/hurt/die."""
+    # Colores base por especie (walk); hurt/die los atenua pero conserva forma para legibilidad
+    # Paleta extendida PSX 32-bit: 32-64 colores por sprite (no SNES 16)
+    is_hurt = (mode == "hurt")
+    is_die = (mode == "die")
+    # helper highlight / sombra
+    def hi(col): return tuple(min(255, c+35) for c in col)
+    def dk(col, v=22): return tuple(max(0, c-v) for c in col)
+    # oscilación por frame para animación
+    paso = f % 2
+    wing = 1 if f % 2 == 0 else -1
+    leg = 1 if f % 2 == 0 else -1
+    # --- WalkerInsect: escarabajo selva caparazón marrón, 6 patas, antenas ---
+    if sid == "WalkerInsect":
+        body = (92,62,38) if not is_hurt else (190,60,50)
+        if is_die: body=(60,34,24)
+        detail=(68,42,22) if not is_hurt else (110,30,30)
+        if is_die: detail=(38,20,14)
+        shell_hi=hi(body)
+        # caparazón oval
+        draw.ellipse((2,2,w-3,h-3), fill=body, outline=detail)
+        draw.arc((2,2,w-3,h-3), 210, 340, fill=shell_hi)
+        # línea central del élitro
+        draw.line((w//2,3,w//2,h-3), fill=detail)
+        # ojos blancos
+        draw.point((w//3, h//3), fill=(255,255,255)); draw.point((w*2//3, h//3), fill=(255,255,255))
+        draw.point((w//3, h//3+1), fill=(20,20,20)); draw.point((w*2//3, h//3+1), fill=(20,20,20))
+        # 6 patas (3 por lado) con alternancia
+        for i, y in enumerate((h-5, h-4, h-3)):
+            off = leg if i%2==0 else -leg
+            draw.line((4, y, 1+off, y+1), fill=detail)
+            draw.line((w-5, y, w-2-off, y+1), fill=detail)
+        # antenas
+        draw.line((w//2-2,3, w//2-4,1), fill=detail); draw.line((w//2+2,3, w//2+4,1), fill=detail)
+        draw.point((w//2-4,1), fill=(40,30,20)); draw.point((w//2+4,1), fill=(40,30,20))
+        # dither sombra inferior
+        for x in range(3,w-3):
+            if BAYER_4X4[(h-3)%4][x%4] < 7:
+                draw.point((x,h-3), fill=dk(body))
+    # --- WalkerRaton: rata gris ojos rojos, cola, orejas, hocico ---
+    elif sid == "WalkerRaton":
+        body=(120,120,130) if not is_hurt else (190,60,50)
+        if is_die: body=(70,68,72)
+        detail=(80,80,90) if not is_hurt else (100,30,30)
+        if is_die: detail=(50,48,52)
+        # cuerpo oval
+        draw.ellipse((3,3,w-5,h-4), fill=body, outline=detail)
+        draw.ellipse((3,3,w-5,h-4), fill=body)
+        draw.arc((3,3,w-5,h-4), 200, 320, fill=hi(body))
+        # orejas
+        draw.ellipse((4,1,7,4), fill=(200,150,150), outline=detail)
+        draw.ellipse((w-8,1,w-5,4), fill=(200,150,150), outline=detail)
+        draw.point((5,2), fill=(160,110,110)); draw.point((w-7,2), fill=(160,110,110))
+        # hocico puntiagudo a la derecha
+        draw.polygon([(w-5,h//2-1),(w-2,h//2),(w-5,h//2+1)], fill=body, outline=detail)
+        draw.point((w-3,h//2), fill=(40,30,30))
+        # ojos rojos
+        draw.rectangle((w//2-1, h//3, w//2+1, h//3+2), fill=(220,40,35))
+        draw.rectangle((w//2+3, h//3, w//2+5, h//3+2), fill=(220,40,35))
+        draw.point((w//2, h//3+1), fill=(255,220,200)); draw.point((w//2+4, h//3+1), fill=(255,220,200))
+        # cola curva atrás
+        tx0, ty0 = 2, h//2
+        tx1, ty1 = 0, h//2 + (1 if paso else -1)
+        draw.line((tx0, ty0, tx1, ty1), fill=(180,130,120), width=1)
+        draw.line((tx1, ty1, tx1-1, ty1 + (1 if paso else -1)), fill=(160,110,100))
+        # patas con variación
+        draw.line((w//3, h-3, w//3-1+leg, h-1), fill=detail)
+        draw.line((w*2//3, h-3, w*2//3+1-leg, h-1), fill=detail)
+        for x in range(4,w-4):
+            if BAYER_4X4[(h-3)%4][x%4] < 8: draw.point((x,h-3), fill=dk(body))
+    # --- FlyingCucaracha: cucaracha voladora alas desplegadas, caparazón brillante, antenas ---
+    elif sid == "FlyingCucaracha":
+        body=(84,62,36) if not is_hurt else (190,60,50)
+        if is_die: body=(60,42,28)
+        detail=(58,42,22); wing_col=(148,118,74) if not is_hurt else (200,90,80)
+        if is_die: wing_col=(90,72,52)
+        # cuerpo central
+        draw.ellipse((w//2-4, h//2-2, w//2+4, h//2+3), fill=body, outline=detail)
+        draw.arc((w//2-4, h//2-2, w//2+4, h//2+3), 210, 330, fill=hi(body))
+        # alas (2) con batido por frame
+        off = 1 if paso else 0
+        # ala izquierda
+        draw.ellipse((1, 2+off, w//2-1, h-2-off), fill=wing_col, outline=detail)
+        # ala derecha
+        draw.ellipse((w//2+1, 2+off, w-2, h-2-off), fill=wing_col, outline=detail)
+        # brillo 1px en alas
+        draw.point((3, h//2), fill=hi(wing_col)); draw.point((w-4, h//2), fill=hi(wing_col))
+        # antenas largas
+        draw.line((w//2-2, h//2-2, 1, 1), fill=detail); draw.line((w//2+2, h//2-2, w-2, 1), fill=detail)
+        # ojos blancos con pupila
+        draw.point((w//2-2, h//2-1), fill=(255,255,255)); draw.point((w//2+2, h//2-1), fill=(255,255,255))
+        draw.point((w//2-2, h//2), fill=(0,0,0)); draw.point((w//2+2, h//2), fill=(0,0,0))
+        # patas plegadas abajo
+        draw.line((w//2-2, h//2+3, w//2-4, h-1), fill=detail); draw.line((w//2+2, h//2+3, w//2+4, h-1), fill=detail)
+        for x in range(2,w-2):
+            if BAYER_4X4[(h-2)%4][x%4] < 7: draw.point((x,h-2), fill=dk(body,14))
+    # --- FlyingBird: ave selva momoto verde azulado/naranja, pico, alas ---
+    elif sid == "FlyingBird":
+        body=(70,140,110) if not is_hurt else (190,60,50)
+        if is_die: body=(58,90,78)
+        detail=(45,95,75); wing=(60,110,180) if not is_hurt else (200,80,80)
+        if is_die: wing=(48,78,120)
+        chest=(230,150,70)  # naranja momoto
+        # cuerpo pájaro
+        draw.ellipse((w//2-3, h//2-2, w//2+3, h//2+3), fill=body, outline=detail)
+        draw.ellipse((w//2-2, h//2-1, w//2+2, h//2+2), fill=chest)
+        # alas desplegadas con aleteo
+        wy = 1 if paso else 0
+        draw.polygon([(1, h//2-1+wy),(w//2-2, h//2),(1, h//2+2-wy)], fill=wing, outline=detail)
+        draw.polygon([(w-2, h//2-1+wy),(w//2+2, h//2),(w-2, h//2+2-wy)], fill=wing, outline=detail)
+        draw.point((2, h//2), fill=hi(wing)); draw.point((w-3, h//2), fill=hi(wing))
+        # cabeza y pico naranja
+        draw.ellipse((w//2+2, h//2-3, w//2+5, h//2), fill=body, outline=detail)
+        draw.polygon([(w//2+5, h//2-1),(w-1, h//2),(w//2+5, h//2+1)], fill=(240,180,60), outline=(150,110,30))
+        # cola
+        draw.polygon([(w//2-4, h//2+1),(0, h//2+2),(w//2-4, h//2+3)], fill=(40,80,60))
+        # ojo
+        draw.point((w//2+3, h//2-2), fill=(255,255,255)); draw.point((w//2+3, h//2-1), fill=(0,0,0))
+        for x in range(2,w-2):
+            if BAYER_4X4[(h-3)%4][x%4] < 7: draw.point((x,h-2), fill=dk(body,18))
+    # --- ShooterFrog: rana dardo roja/azul Oophaga pumilio ---
+    elif sid == "ShooterFrog":
+        body=(190,42,48) if not is_hurt else (220,70,70)
+        if is_die: body=(110,30,34)
+        belly=(60,90,200) if not is_hurt else (200,70,70)
+        if is_die: belly=(40,60,130)
+        detail=(120,28,32)
+        # cuerpo rana agachada
+        draw.ellipse((2, h-8, w-3, h-2), fill=body, outline=detail)
+        draw.ellipse((w//2-3, h-9, w//2+3, h-5), fill=body, outline=detail) # cabeza
+        draw.ellipse((w//2-4, h-9, w//2-1, h-6), fill=belly) # mancha azul
+        draw.ellipse((w//2+1, h-9, w//2+4, h-6), fill=belly)
+        # ojos saltones
+        draw.ellipse((w//2-4, 1, w//2-1, 4), fill=(255,255,255), outline=(0,0,0))
+        draw.ellipse((w//2+1, 1, w//2+4, 4), fill=(255,255,255), outline=(0,0,0))
+        draw.ellipse((w//2-3,2,w//2-2,3), fill=(0,0,0)); draw.ellipse((w//2+2,2,w//2+3,3), fill=(0,0,0))
+        draw.point((w//2-3,2), fill=(80,140,255)); draw.point((w//2+2,2), fill=(80,140,255))
+        # patas delanteras
+        draw.line((4, h-5, 2, h-2), fill=detail); draw.line((w-5, h-5, w-3, h-2), fill=detail)
+        # patas traseras anchas
+        draw.line((3, h-4, 1, h-2), fill=detail); draw.line((w-4, h-4, w-2, h-2), fill=detail)
+        # puntos azules en lomo (veneno)
+        draw.point((w//2, h-6), fill=belly); draw.point((w//2-2, h-5), fill=belly); draw.point((w//2+2, h-5), fill=belly)
+        for x in range(3,w-3):
+            if BAYER_4X4[(h-3)%4][x%4] < 7: draw.point((x,h-3), fill=dk(body,16))
+    # --- ShooterCocinero: cocinero uniforme manchado lanzando bandeja ---
+    elif sid == "ShooterCocinero":
+        body=(236,232,222) if not is_hurt else (220,90,90)
+        if is_die: body=(150,148,142)
+        detail=(90,85,78); skin=(232,192,148); hat=(250,250,250)
+        # cuerpo uniforme
+        draw.rectangle((w//2-3, 3, w//2+3, h-3), fill=body, outline=detail)
+        draw.rectangle((w//2-3, h-4, w//2+3, h-3), fill=(120,120,130)) # cinturón
+        # manchas
+        draw.point((w//2-1,5), fill=(180,60,60)); draw.point((w//2+1,7), fill=(120,80,30))
+        # gorro alto
+        draw.rectangle((w//2-3,0,w//2+3,3), fill=hat, outline=detail)
+        draw.rectangle((w//2-2,1,w//2+2,2), fill=hat)
+        # cabeza
+        draw.rectangle((w//2-2,2,w//2+2,4), fill=skin)
+        # ojos
+        draw.point((w//2-1,3), fill=(0,0,0)); draw.point((w//2+1,3), fill=(0,0,0))
+        # brazo lanzando bandeja por frame
+        off = 2 if paso else 0
+        draw.line((w//2+3,5, w//2+5+off,4), fill=skin, width=1)
+        # bandeja
+        draw.ellipse((w//2+4+off,3,w//2+8+off,6), fill=(192,152,96), outline=(120,90,60))
+        draw.point((w//2+6+off,4), fill=hi((192,152,96)))
+        # piernas
+        draw.line((w//2-2, h-3, w//2-2, h-1), fill=(60,60,70)); draw.line((w//2+2, h-3, w//2+2, h-1), fill=(60,60,70))
+        for x in range(w//2-3,w//2+4):
+            if BAYER_4X4[(h-2)%4][x%4] <7: draw.point((x,h-2), fill=dk(body,12))
+    # --- WalkerEstudiante: estudiante mochila teléfono ---
+    elif sid == "WalkerEstudiante":
+        body=(66,82,128) if not is_hurt else (190,60,50)
+        if is_die: body=(52,64,98)
+        detail=(48,62,98); skin=(236,200,160); pant=(52,62,92)
+        # torso
+        draw.rectangle((w//2-3,2,w//2+3, h-4), fill=body, outline=detail)
+        draw.line((w//2,3,w//2,h-4), fill=detail)
+        # mochila atrás (bulto)
+        draw.rectangle((w//2-4,4,w//2-1,8), fill=(120,80,45), outline=(80,52,28))
+        draw.point((w//2-3,5), fill=hi((120,80,45)))
+        # cabeza
+        draw.ellipse((w//2-2,0,w//2+2,3), fill=skin, outline=(180,150,120))
+        draw.point((w//2-1,1), fill=(0,0,0)); draw.point((w//2+1,1), fill=(0,0,0))
+        # brazos, uno con teléfono brillante
+        off = leg
+        draw.line((w//2-3,5,w//2-5,7+off), fill=skin)
+        draw.line((w//2+3,5,w//2+5+off,6), fill=skin)
+        # teléfono
+        draw.rectangle((w//2+4+off,5,w//2+6+off,8), fill=(40,200,240), outline=(20,140,180))
+        draw.point((w//2+5+off,6), fill=(255,255,255))
+        # piernas con marcha
+        draw.line((w//2-2,h-4,w//2-3+leg,h-1), fill=pant)
+        draw.line((w//2+2,h-4,w//2+3-leg,h-1), fill=pant)
+        for x in range(w//2-3,w//2+4):
+            if BAYER_4X4[(h-2)%4][x%4]<7: draw.point((x,h-2), fill=dk(body,12))
+    # --- FlyingNotebook: hojas cuaderno animadas con ojos, líneas ---
+    elif sid == "FlyingNotebook":
+        paper=(244,244,236) if not is_hurt else (240,160,160)
+        if is_die: paper=(180,180,172)
+        line_bl=(120,150,220); margin_rd=(220,90,90); detail=(180,180,172)
+        # hoja principal rect con espiral
+        draw.rectangle((2,2,w-3,h-3), fill=paper, outline=detail)
+        # líneas azules
+        for y in range(4,h-4,2):
+            draw.line((4,y,w-4,y), fill=line_bl)
+        # margen rojo vertical
+        draw.line((5,2,5,h-3), fill=margin_rd)
+        # ojos en la hoja (posesos)
+        draw.ellipse((w//3-1, h//3-1, w//3+1, h//3+1), fill=(255,255,255), outline=(0,0,0))
+        draw.ellipse((w*2//3-1, h//3-1, w*2//3+1, h//3+1), fill=(255,255,255), outline=(0,0,0))
+        draw.point((w//3, h//3), fill=(0,0,0)); draw.point((w*2//3, h//3), fill=(0,0,0))
+        draw.point((w//3+1, h//3), fill=(80,140,255)); draw.point((w*2//3+1, h//3), fill=(80,140,255))
+        # giro por frame: hoja secundaria detrás con offset
+        off = 1 if paso else -1
+        draw.rectangle((3+off,3+off,w-4+off,h-4+off), outline=(200,200,180))
+        # brillo 1px
+        draw.point((4,3), fill=(255,255,255))
+        for x in range(3,w-3):
+            if BAYER_4X4[(h-3)%4][x%4] <8: draw.point((x,h-3), fill=dk(paper,14))
+    # --- ShooterTiza: borrador pizarra antropomorfo ---
+    elif sid == "ShooterTiza":
+        body=(120,92,68) if not is_hurt else (200,80,80)
+        if is_die: body=(92,72,54)
+        detail=(90,70,52); chalk=(244,244,240)
+        # borrador rect felpa
+        draw.rectangle((1,3,w-2,h-3), fill=body, outline=detail)
+        draw.rectangle((2,4,w-3,h-4), fill=body)
+        # fieltro textura dither
+        for y in range(4,h-4):
+            for x in range(2,w-2):
+                if BAYER_4X4[y%4][x%4] <4:
+                    draw.point((x,y), fill=dk(body,10))
+        # ojos saltones en borrador
+        draw.ellipse((w//3-1,1,w//3+1,3), fill=(255,255,255), outline=(0,0,0))
+        draw.ellipse((w*2//3-1,1,w*2//3+1,3), fill=(255,255,255), outline=(0,0,0))
+        draw.point((w//3,2), fill=(0,0,0)); draw.point((w*2//3,2), fill=(0,0,0))
+        # tiza en mano por frame
+        tx = w-3 + (1 if paso else 0)
+        draw.rectangle((tx,5,tx+2,8), fill=chalk, outline=(200,200,190))
+        draw.point((tx+1,6), fill=(255,255,255))
+        # polvo tiza
+        draw.point((w//2, h-2), fill=(220,220,210))
+        for x in range(2,w-2):
+            if BAYER_4X4[(h-2)%4][x%4] <6: draw.point((x,h-2), fill=dk(body,12))
+    # --- WalkerSerpientePequena: terciopelo pequeña marrón/bronceada reptante ---
+    elif sid == "WalkerSerpientePequena":
+        body=(118,86,54) if not is_hurt else (200,80,70)
+        if is_die: body=(84,62,40)
+        detail=(84,58,34); belly=(200,185,150); tongue=(220,60,60)
+        # serpiente horizontal con onda por frame: 3 segmentos
+        y0 = h//2 -1 + (1 if paso else -1)
+        y1 = h//2 + (1 if not paso else -1)
+        pts=[(2,y0),(6,y1),(10,y0),(14,y1),(w-2,y0)]
+        for i in range(len(pts)-1):
+            draw.line((pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1]), fill=body, width=2)
+            draw.line((pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1]), fill=detail, width=1)
+        # cabeza triangular a la derecha
+        draw.polygon([(w-5,h//2-2),(w-2,h//2),(w-5,h//2+2)], fill=body, outline=detail)
+        draw.point((w-4,h//2-1), fill=(0,0,0)); draw.point((w-4,h//2), fill=(255,200,60))
+        # lengua bífida
+        draw.line((w-2,h//2, w, h//2-1), fill=tongue); draw.line((w-2,h//2, w, h//2+1), fill=tongue)
+        # patrón manchas
+        for x in (6,10,14):
+            draw.point((x, y0 if x%4==2 else y1), fill=belly)
+        for x in range(2,w-2):
+            if BAYER_4X4[(h-2)%4][x%4] <7: draw.point((x,h-2), fill=dk(body,14))
+    # --- FlyingBoa: boa arborícola grande ondulando ---
+    elif sid == "FlyingBoa":
+        body=(92,112,66) if not is_hurt else (200,80,80)
+        if is_die: body=(70,86,52)
+        detail=(64,84,44); belly=(210,200,170)
+        y0 = h//2 + (1 if paso else -1)
+        y1 = h//2 - (1 if paso else -1)
+        pts=[(1,y0),(4,y1),(8,y0),(11,y1),(w-2,y0)]
+        for i in range(len(pts)-1):
+            draw.line((pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1]), fill=body, width=3)
+        for i in range(len(pts)-1):
+            draw.line((pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1]), fill=detail, width=1)
+        # cabeza
+        draw.ellipse((w-5,h//2-2,w-1,h//2+2), fill=body, outline=detail)
+        draw.point((w-3,h//2-1), fill=(0,0,0)); draw.point((w-2,h//2-1), fill=(255,200,60))
+        # patrón
+        for x in (4,8,11):
+            draw.point((x, y0 if x%2 else y1), fill=belly)
+        for x in range(1,w-1):
+            if BAYER_4X4[(h-2)%4][x%4]<7: draw.point((x,h-2), fill=dk(body,10))
+    # --- ShooterSerpienteArbol: víbora árbol verde enroscada en rama ---
+    elif sid == "ShooterSerpienteArbol":
+        body=(58,148,78) if not is_hurt else (200,80,80)
+        if is_die: body=(44,108,58)
+        detail=(38,108,58); belly=(180,220,160)
+        # rama horizontal
+        draw.line((0,h-3,w-1,h-3), fill=(110,80,50))
+        draw.line((0,h-2,w-1,h-2), fill=(140,110,80))
+        # serpiente enroscada: espiral 2 vueltas
+        cx, cy = w//2, h//2 -1
+        draw.ellipse((cx-5,cy-3,cx+5,cy+3), outline=body, width=2)
+        draw.ellipse((cx-3,cy-2,cx+3,cy+1), fill=body, outline=detail)
+        # cabeza saliente arriba
+        draw.ellipse((cx+3,1,cx+7,4), fill=body, outline=detail)
+        draw.point((cx+5,2), fill=(255,220,60)); draw.point((cx+6,2), fill=(0,0,0))
+        draw.point((cx+5,3), fill=(0,0,0))
+        # lengua
+        if paso: draw.line((cx+7,2,cx+9,1), fill=(220,60,60)); draw.line((cx+7,2,cx+9,3), fill=(220,60,60))
+        # patrón verde oscuro manchas
+        draw.point((cx-2,cy), fill=detail); draw.point((cx+2,cy), fill=belly)
+        for x in range(1,w-1):
+            if BAYER_4X4[(h-3)%4][x%4] <7: draw.point((x,h-3), fill=dk(detail,12))
+    # --- WalkerTerciopelo: terciopelo grande adulta cuerpo grueso ---
+    elif sid == "WalkerTerciopelo":
+        body=(108,78,42) if not is_hurt else (210,80,70)
+        if is_die: body=(78,56,32)
+        detail=(78,54,28); pattern=(210,150,80); belly=(220,200,170)
+        # cuerpo grueso ondulado 3 segmentos más alto
+        y0 = h//2 + (1 if paso else 0)
+        y1 = h//2 - (1 if paso else 0)
+        pts=[(1,y0),(5,y1),(9,y0),(13,y1),(w-1,y0)]
+        for i in range(len(pts)-1):
+            draw.line((pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1]), fill=body, width=3)
+            draw.line((pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1]), fill=detail, width=1)
+        # cabeza más grande
+        draw.polygon([(w-6,h//2-3),(w-1,h//2),(w-6,h//2+3)], fill=body, outline=detail)
+        draw.point((w-4,h//2-1), fill=(0,0,0)); draw.point((w-3,h//2), fill=(255,210,60))
+        draw.line((w-1,h//2, w+1, h//2-1), fill=(220,40,40)); draw.line((w-1,h//2, w+1, h//2+1), fill=(220,40,40))
+        # patrón diamante
+        for x in (5,9,13):
+            draw.point((x, y0 if x%2 else y1), fill=pattern)
+            draw.point((x, (y0+y1)//2), fill=belly)
+        for x in range(1,w-1):
+            if BAYER_4X4[(h-2)%4][x%4]<6: draw.point((x,h-2), fill=dk(body,14))
+    # --- ShooterVenomoLargo: cobra escupidora elevada balanceándose ---
+    elif sid == "ShooterVenomoLargo":
+        body=(140,120,70) if not is_hurt else (220,90,90)
+        if is_die: body=(100,86,52)
+        detail=(100,86,52); hood=(90,76,42); belly=(210,200,170)
+        # cuerpo vertical cobra (cuello)
+        cx=w//2 + (1 if paso else -1)
+        draw.rectangle((cx-2,4,cx+2,h-2), fill=body, outline=detail)
+        # capucha expandida
+        draw.ellipse((cx-4,1,cx+4,6), fill=hood, outline=detail)
+        draw.ellipse((cx-3,2,cx+3,5), fill=body)
+        # patrón capucha ocelo
+        draw.point((cx-1,3), fill=detail); draw.point((cx+1,3), fill=detail)
+        # cabeza
+        draw.ellipse((cx-2,0,cx+2,3), fill=body, outline=detail)
+        draw.point((cx-1,1), fill=(0,0,0)); draw.point((cx+1,1), fill=(0,0,0))
+        draw.point((cx,2), fill=(220,40,40))
+        # lengua
+        draw.line((cx,3,cx,5), fill=(220,60,60))
+        # brillo
+        draw.point((cx-2,2), fill=hi(body))
+        for x in range(cx-2,cx+3):
+            if BAYER_4X4[(h-2)%4][x%4] <7: draw.point((x,h-2), fill=dk(body,14))
+    # --- FlyingTerciovolador: serpiente alada mitológica 2 alas pequeñas ---
+    elif sid == "FlyingTerciovolador":
+        body=(110,130,70) if not is_hurt else (210,80,80)
+        if is_die: body=(84,98,52)
+        detail=(84,98,52); wing=(210,190,140)
+        # serpiente
+        y0 = h//2 + (1 if paso else -1)
+        y1 = h//2 - (1 if paso else -1)
+        pts=[(2,y0),(6,y1),(10,y0),(w-3,y1)]
+        for i in range(len(pts)-1):
+            draw.line((pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1]), fill=body, width=2)
+            draw.line((pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1]), fill=detail, width=1)
+        # cabeza
+        draw.polygon([(w-5,h//2-1),(w-2,h//2),(w-5,h//2+1)], fill=body, outline=detail)
+        draw.point((w-4,h//2), fill=(0,0,0))
+        # alas pequeñas
+        wy = 1 if paso else 0
+        draw.polygon([(w//2-2, y0-1+wy),(w//2, y0-4+wy),(w//2+2, y0-1+wy)], fill=wing, outline=detail)
+        draw.polygon([(w//2-2, y0+1-wy),(w//2, y0+4-wy),(w//2+2, y0+1-wy)], fill=wing, outline=detail)
+        draw.point((w//2, y0-3+wy), fill=hi(wing)); draw.point((w//2, y0+3-wy), fill=hi(wing))
+        for x in range(2,w-2):
+            if BAYER_4X4[(h-2)%4][x%4] <7: draw.point((x,h-2), fill=dk(body,12))
+    # --- WalkerGuardia: guardia seguridad uniforme linterna ojos brillo verde ---
+    elif sid == "WalkerGuardia":
+        body=(48,58,112) if not is_hurt else (210,70,70)
+        if is_die: body=(38,46,88)
+        detail=(36,44,86); skin=(236,200,164); pant=(36,44,86); vest=(88,88,108)
+        # torso uniforme
+        draw.rectangle((w//2-3,2,w//2+3,h-4), fill=body, outline=detail)
+        # chaleco
+        draw.rectangle((w//2-2,4,w//2+2,8), fill=vest, outline=(60,60,80))
+        draw.point((w//2,5), fill=(200,200,220))
+        # cabeza + gorra
+        draw.rectangle((w//2-2,0,w//2+2,2), fill=(40,40,60), outline=detail) # gorra
+        draw.rectangle((w//2-2,1,w//2+2,3), fill=skin)
+        # ojos brillo verde (poseído)
+        draw.point((w//2-1,2), fill=(80,255,120)); draw.point((w//2+1,2), fill=(80,255,120))
+        draw.point((w//2-1,2), fill=(255,255,255))
+        # linterna en mano derecha
+        off = 1 if paso else 0
+        draw.rectangle((w//2+3+off,5,w//2+5+off,6), fill=(60,60,70), outline=(40,40,50))
+        draw.rectangle((w//2+5+off,5,w//2+7+off,6), fill=(255,240,120), outline=(200,180,60))
+        draw.point((w//2+6+off,5), fill=(255,255,255))
+        # piernas
+        draw.line((w//2-2,h-4,w//2-3+leg,h-1), fill=pant)
+        draw.line((w//2+2,h-4,w//2+3-leg,h-1), fill=pant)
+        for x in range(w//2-3,w//2+4):
+            if BAYER_4X4[(h-2)%4][x%4]<7: draw.point((x,h-2), fill=dk(body,12))
+    # --- Shielded: guardia con escudo frontal metálico ---
+    elif sid == "Shielded":
+        body=(54,64,118) if not is_hurt else (210,70,70)
+        if is_die: body=(44,52,94)
+        detail=(40,48,92); shield=(168,172,188); shield_dk=(112,116,132)
+        # cuerpo como guardia pero con escudo grande delante
+        draw.rectangle((w//2-3,2,w//2+1,h-4), fill=body, outline=detail) # torso parcialmente oculto
+        draw.rectangle((w//2-2,0,w//2,2), fill=(40,40,60)) # gorra
+        draw.rectangle((w//2-2,1,w//2,3), fill=(236,200,164))
+        draw.point((w//2-1,2), fill=(80,255,120))
+        # escudo frontal metálico grande
+        draw.rectangle((w//2+1,1,w-2,h-2), fill=shield, outline=shield_dk)
+        # emblema escudo
+        draw.rectangle((w//2+3,3,w-4,5), fill=shield_dk)
+        draw.ellipse((w//2+4,6,w-4,8), fill=(200,40,40), outline=shield_dk)
+        # brillo metal 1px
+        draw.line((w//2+1,1,w//2+1,h-2), fill=hi(shield))
+        draw.point((w//2+2,2), fill=(255,255,255))
+        # piernas
+        draw.line((w//2-2,h-4,w//2-2,h-1), fill=detail); draw.line((w//2,h-4,w//2+1,h-1), fill=detail)
+    # --- Swimmer: nadador con aletas deriva ---
+    elif sid == "Swimmer":
+        body=(38,78,148) if not is_hurt else (210,80,80)
+        if is_die: body=(30,62,118)
+        detail=(28,58,118); skin=(236,200,164); fin=(68,148,188)
+        # cuerpo horizontal nadando
+        cx, cy = w//2, h//2
+        off = 1 if paso else -1
+        draw.ellipse((cx-5, cy-3+off, cx+5, cy+3+off), fill=body, outline=detail)
+        draw.ellipse((cx-3, cy-2+off, cx+1, cy+2+off), fill=skin)
+        # cabeza + snorkel
+        draw.ellipse((cx+4, cy-2+off, cx+7, cy+1+off), fill=skin, outline=detail)
+        draw.rectangle((cx+6, cy-3+off, cx+7, cy-1+off), fill=(40,200,255), outline=detail)
+        # gafas
+        draw.rectangle((cx+5, cy-1+off, cx+7, cy+0+off), fill=(0,0,0))
+        # aletas pies
+        draw.polygon([(cx-6, cy+1+off),(cx-9, cy+3+off),(cx-6, cy+3+off)], fill=fin, outline=detail)
+        draw.polygon([(cx-6, cy-1+off),(cx-9, cy-3+off),(cx-6, cy-1+off)], fill=fin, outline=detail)
+        # brazos brazada
+        draw.line((cx-1, cy+off, cx-4+off, cy+1+off), fill=skin)
+        # burbujas
+        if paso: draw.point((cx+8, cy-2+off), fill=(180,230,255,200))
+        for x in range(cx-5,cx+6):
+            if BAYER_4X4[(cy+3)%4][x%4] <7: draw.point((x, cy+3+off), fill=dk(body,12))
+    # --- FlyingBomber: dron bombardero ---
+    elif sid == "FlyingBomber":
+        body=(112,116,128) if not is_hurt else (210,70,70)
+        if is_die: body=(88,92,102)
+        detail=(84,88,100); prop=(64,68,78); bomb=(52,52,62)
+        # cuerpo central dron
+        draw.rectangle((w//2-4, h//2-2, w//2+4, h//2+2), fill=body, outline=detail)
+        draw.rectangle((w//2-3, h//2-1, w//2+3, h//2+1), fill=hi(body))
+        # hélices 4 (pequeñas barras girando por frame)
+        rot = 1 if paso else -1
+        draw.line((w//2-4, h//2-3, w//2-2-rot, h//2-3), fill=prop, width=1)
+        draw.line((w//2+2+rot, h//2-3, w//2+4, h//2-3), fill=prop)
+        draw.line((w//2-4, h//2+3, w//2-2-rot, h//2+3), fill=prop)
+        draw.line((w//2+2+rot, h//2+3, w//2+4, h//2+3), fill=prop)
+        # ojo sensor rojo
+        draw.rectangle((w//2-1, h//2-1, w//2+1, h//2), fill=(220,50,50), outline=(0,0,0))
+        draw.point((w//2, h//2-1), fill=(255,100,100))
+        # bomba colgando
+        draw.ellipse((w//2-2, h//2+2, w//2+2, h//2+5), fill=bomb, outline=detail)
+        draw.point((w//2, h//2+3), fill=hi(bomb))
+        for x in range(w//2-4,w//2+5):
+            if BAYER_4X4[(h-2)%4][x%4] <7: draw.point((x,h-2), fill=dk(body,10))
+    # --- BruteGolemHielo: gólem de hielo ground slam ---
+    elif sid == "BruteGolemHielo":
+        body=(158,216,244) if not is_hurt else (220,150,150)
+        if is_die: body=(110,150,170)
+        detail=(98,148,178); crack=(220,244,255)
+        # cuerpo bloque hielo grande
+        draw.rectangle((2,2,w-3,h-3), fill=body, outline=detail)
+        draw.rectangle((4,4,w-5,h-5), fill=hi(body))
+        # grietas hielo
+        draw.line((w//2,4,w//2-1,h-5), fill=crack)
+        draw.line((4,h//2,w-4,h//2), fill=crack)
+        draw.line((w//3,3,w//2, h//2), fill=detail)
+        # ojos brillantes azules
+        draw.rectangle((w//3-1, h//3, w//3+1, h//3+2), fill=(0,80,200), outline=(0,0,0))
+        draw.rectangle((w*2//3-1, h//3, w*2//3+1, h//3+2), fill=(0,80,200), outline=(0,0,0))
+        draw.point((w//3, h//3+1), fill=(120,200,255)); draw.point((w*2//3, h//3+1), fill=(120,200,255))
+        # brazos gruesos
+        off = 1 if paso else 0
+        draw.rectangle((1, h//2+off, 4, h-3), fill=body, outline=detail)
+        draw.rectangle((w-5, h//2+off, w-2, h-3), fill=body, outline=detail)
+        # sombra dither
+        for x in range(3,w-3):
+            if BAYER_4X4[(h-3)%4][x%4] <7: draw.point((x,h-3), fill=dk(body,18))
+    # --- ChargerWolf: lobo de planicie carga ---
+    elif sid == "ChargerWolf":
+        body=(136,136,144) if not is_hurt else (220,90,90)
+        if is_die: body=(100,100,108)
+        detail=(88,88,96); belly=(210,210,220); snout=(180,180,190); nose=(20,20,24)
+        # cuerpo lobo
+        draw.ellipse((3, h-7, w-6, h-2), fill=body, outline=detail)
+        draw.ellipse((3, h-7, w-6, h-2), fill=body)
+        draw.arc((3, h-7, w-6, h-2), 200, 340, fill=hi(body))
+        # cabeza
+        draw.ellipse((w-7, h-8, w-1, h-3), fill=body, outline=detail)
+        draw.ellipse((w-6, h-7, w-2, h-4), fill=snout)
+        draw.point((w-2, h-6), fill=nose)
+        # orejas triangulares
+        draw.polygon([(w-6,h-8),(w-5,h-10),(w-4,h-8)], fill=body, outline=detail)
+        draw.polygon([(w-4,h-8),(w-3,h-10),(w-2,h-8)], fill=body, outline=detail)
+        # ojos amarillos
+        draw.point((w-4,h-6), fill=(255,220,80)); draw.point((w-4,h-5), fill=(0,0,0))
+        # cola
+        draw.line((3, h-5, 0, h-4-leg), fill=body, width=1); draw.line((3, h-5, 0, h-4-leg), fill=detail)
+        # patas con carrera por frame
+        leg_off = 2 if paso else -1
+        draw.line((6, h-2, 5+leg_off, h-1), fill=detail)
+        draw.line((w-8, h-2, w-9-leg_off, h-1), fill=detail)
+        # dientes
+        draw.point((w-3, h-4), fill=(255,255,255))
+        for x in range(3,w-6):
+            if BAYER_4X4[(h-2)%4][x%4] <7: draw.point((x,h-2), fill=dk(body,12))
+    # --- WalkerGarza: garza alta pasos lentos ---
+    elif sid == "WalkerGarza":
+        body=(228,228,236) if not is_hurt else (220,120,120)
+        if is_die: body=(170,170,178)
+        detail=(180,180,190); beak=(255,228,100); leg_col=(44,44,52)
+        # cuerpo
+        draw.ellipse((w//2-3, h-7, w//2+3, h-2), fill=body, outline=detail)
+        draw.point((w//2, h-6), fill=hi(body))
+        # cuello largo en S por frame
+        nx = w//2+1 + (1 if paso else -1)
+        draw.line((w//2, h-7, nx, 2), fill=body, width=1)
+        draw.line((w//2, h-7, nx, 2), fill=detail)
+        # cabeza y pico largo
+        draw.ellipse((nx-2,0,nx+2,3), fill=body, outline=detail)
+        draw.polygon([(nx+1,1),(nx+6,1),(nx+1,2)], fill=beak, outline=(180,160,60))
+        draw.point((nx,1), fill=(0,0,0))
+        # patas largas finas
+        draw.line((w//2-1, h-2, w//2-2+leg, h-1), fill=leg_col)
+        draw.line((w//2+1, h-2, w//2+2-leg, h-1), fill=leg_col)
+        # ala plegada
+        draw.ellipse((w//2-2, h-6, w//2+2, h-4), fill=hi(body), outline=detail)
+        for x in range(w//2-3,w//2+4):
+            if BAYER_4X4[(h-2)%4][x%4] <7: draw.point((x,h-2), fill=dk(body,12))
+    # --- FlyingHalcon: gavilán caminero vuelo + picado ---
+    elif sid == "FlyingHalcon":
+        body=(128,88,48) if not is_hurt else (220,90,90)
+        if is_die: body=(96,66,36)
+        detail=(88,60,30); wing=(100,70,36); belly=(236,232,220)
+        # cuerpo
+        draw.ellipse((w//2-3, h//2-2, w//2+3, h//2+2), fill=body, outline=detail)
+        draw.ellipse((w//2-2, h//2-1, w//2+2, h//2+1), fill=belly)
+        # alas con batido
+        wy = 2 if paso else -1
+        draw.polygon([(1, h//2+wy),(w//2-2, h//2),(1, h//2+2+wy)], fill=wing, outline=detail)
+        draw.polygon([(w-2, h//2+wy),(w//2+2, h//2),(w-2, h//2+2+wy)], fill=wing, outline=detail)
+        draw.point((2, h//2+wy), fill=hi(wing)); draw.point((w-3, h//2+wy), fill=hi(wing))
+        # cabeza pico ganchudo
+        draw.ellipse((w//2+2, h//2-3, w//2+5, h//2-1), fill=body, outline=detail)
+        draw.polygon([(w//2+5,h//2-2),(w-1,h//2-1),(w//2+5,h//2-1)], fill=(240,210,60), outline=(180,160,40))
+        draw.point((w//2+3, h//2-3), fill=(255,255,255)); draw.point((w//2+3, h//2-2), fill=(0,0,0))
+        # cola bandeada
+        draw.rectangle((w//2-4, h//2+1, w//2-1, h//2+2), fill=belly)
+        draw.line((w//2-4, h//2+1, w//2-1, h//2+1), fill=detail)
+        for x in range(2,w-2):
+            if BAYER_4X4[(h-2)%4][x%4] <7: draw.point((x,h-2), fill=dk(body,12))
+    # --- ShooterQuetzal: quetzal francotirador posado, pluma larga ---
+    elif sid == "ShooterQuetzal":
+        body=(48,156,88) if not is_hurt else (220,90,90)
+        if is_die: body=(36,116,66)
+        detail=(32,116,66); chest=(190,48,48); beak=(255,228,60)
+        # cuerpo erguido 12x12
+        draw.ellipse((w//2-3,4,w//2+3,h-2), fill=body, outline=detail)
+        draw.ellipse((w//2-3,5,w//2+3,7), fill=chest, outline=(140,36,36))
+        draw.arc((w//2-3,4,w//2+3,h-2), 200, 330, fill=hi(body))
+        # cabeza cresta
+        draw.ellipse((w//2-2,1,w//2+2,4), fill=body, outline=detail)
+        draw.polygon([(w//2,1),(w//2+1,0),(w//2+2,1)], fill=body, outline=detail) # cresta
+        draw.point((w//2+1,2), fill=(0,0,0))
+        # pico pequeño
+        draw.polygon([(w//2+2,2),(w//2+4,2),(w//2+2,3)], fill=beak, outline=(180,160,40))
+        # pluma cola larguísima (se sale por abajo pero recortada)
+        draw.line((w//2, h-2, w//2+1, h-1), fill=(20,180,120), width=1)
+        draw.line((w//2+1, h-2, w//2+2, h-1), fill=(40,200,140))
+        # rama donde se posa
+        draw.line((1,h-2,w-2,h-2), fill=(110,80,50))
+        for x in range(w//2-3,w//2+4):
+            if BAYER_4X4[(h-2)%4][x%4] <7: draw.point((x,h-2), fill=dk(body,14))
+    # --- WalkerPalom: paloma domestica corrompida ---
+    elif sid == "WalkerPalom":
+        body=(138,138,148) if not is_hurt else (220,90,90)
+        if is_die: body=(100,100,108)
+        detail=(100,100,110); neck=(88,108,158); beak=(244,168,68); eye_col=(220,44,44)
+        # cuerpo paloma gordita
+        draw.ellipse((2,3,w-3,h-2), fill=body, outline=detail)
+        draw.arc((2,3,w-3,h-2), 200, 340, fill=hi(body))
+        # cuello iridiscente
+        draw.ellipse((w-6,3,w-3,7), fill=neck, outline=detail)
+        # cabeza
+        draw.ellipse((w-6,2,w-2,5), fill=body, outline=detail)
+        draw.polygon([(w-2,3),(w,3),(w-2,4)], fill=beak, outline=(180,120,40))
+        # ojo rojo poseído
+        draw.ellipse((w-5,3,w-4,4), fill=eye_col, outline=(0,0,0))
+        draw.point((w-5,3), fill=(255,255,255))
+        # patas rosa
+        draw.line((w//3, h-2, w//3-1+leg, h-1), fill=(200,120,120))
+        draw.line((w*2//3, h-2, w*2//3+1-leg, h-1), fill=(200,120,120))
+        # ala plegada
+        draw.ellipse((w//2-2,5,w//2+3,8), fill=detail, outline=body)
+        for x in range(3,w-3):
+            if BAYER_4X4[(h-2)%4][x%4] <7: draw.point((x,h-2), fill=dk(body,12))
+    # --- ShooterBuitre: zopilote negro posado encorvado ---
+    elif sid == "ShooterBuitre":
+        body=(38,38,44) if not is_hurt else (200,70,70)
+        if is_die: body=(28,28,32)
+        detail=(28,28,34); head=(190,70,64); beak=(160,160,170)
+        # cuerpo encorvado
+        draw.ellipse((2,4,w-3,h-2), fill=body, outline=detail)
+        draw.ellipse((2,4,w-3,h-2), fill=body)
+        draw.arc((2,4,w-3,h-2), 200, 330, fill=hi(body))
+        # cabeza calva encorvada adelante
+        draw.ellipse((w//2-2,1,w//2+2,4), fill=head, outline=(140,50,46))
+        # pico ganchudo gris
+        draw.polygon([(w//2+1,2),(w//2+4,2),(w//2+1,3)], fill=beak, outline=(120,120,130))
+        draw.point((w//2,2), fill=(0,0,0))
+        # ala plegada grande
+        draw.ellipse((w//2-1,5,w-4,8), fill=detail, outline=body)
+        # patas cortas
+        draw.line((w//3, h-2, w//3, h-1), fill=leg_col if (leg_col:=(60,60,70)) else (60,60,70))
+        draw.line((w*2//3, h-2, w*2//3, h-1), fill=(60,60,70))
+        # buche?
+        draw.point((w//2,6), fill=hi(body))
+        for x in range(3,w-3):
+            if BAYER_4X4[(h-2)%4][x%4] <7: draw.point((x,h-2), fill=dk(body,10))
+    # --- ArcherQuetzal: quetzal arquero tiro arco ---
+    elif sid == "ArcherQuetzal":
+        body=(52,162,94) if not is_hurt else (220,90,90)
+        if is_die: body=(40,122,70)
+        detail=(36,122,70); bow=(128,88,48)
+        # cuerpo como quetzal pero con arco
+        draw.ellipse((w//2-3,4,w//2+3,h-2), fill=body, outline=detail)
+        draw.ellipse((w//2-2,5,w//2+2,7), fill=(190,48,48))
+        draw.ellipse((w//2-2,1,w//2+2,4), fill=body, outline=detail)
+        draw.point((w//2+1,2), fill=(0,0,0))
+        draw.polygon([(w//2+2,2),(w//2+4,2),(w//2+2,3)], fill=(255,228,60))
+        # arco
+        cx=w//2+4
+        draw.arc((cx-3,3,cx+3,9), 270, 90, fill=bow)
+        draw.line((cx,3,cx,9), fill=(200,180,140))
+        # flecha: pluma
+        off = 1 if paso else 0
+        draw.line((cx,6,cx+3+off,6), fill=(120,80,30))
+        draw.polygon([(cx+3+off,6),(cx+5+off,5),(cx+5+off,7)], fill=bow)
+        draw.line((1,h-2,w-2,h-2), fill=(110,80,50))
+        for x in range(w//2-3,w//2+4):
+            if BAYER_4X4[(h-2)%4][x%4] <7: draw.point((x,h-2), fill=dk(body,14))
+    # --- CasterHealer: curandero con orbe perseguidor ---
+    elif sid == "CasterHealer":
+        body=(78,118,84) if not is_hurt else (220,90,90)
+        if is_die: body=(60,90,64)
+        detail=(58,88,64); skin=(236,200,164); orb=(80,220,255)
+        # túnica
+        draw.rectangle((w//2-3,3,w//2+3,h-2), fill=body, outline=detail)
+        draw.line((w//2,4,w//2,h-2), fill=detail)
+        draw.arc((w//2-3,3,w//2+3,h-2), 200, 340, fill=hi(body))
+        # cabeza capucha
+        draw.ellipse((w//2-2,0,w//2+2,3), fill=body, outline=detail)
+        draw.rectangle((w//2-1,1,w//2+1,3), fill=skin)
+        draw.point((w//2-1,2), fill=(0,0,0)); draw.point((w//2+1,2), fill=(0,0,0))
+        # báculo
+        draw.line((w//2-4,3,w//2-4,9), fill=(120,80,40), width=1)
+        # orbe flotante por frame con pulso
+        r = 2 + (1 if paso else 0)
+        ox, oy = w//2+4, 2
+        draw.ellipse((ox-r, oy-r, ox+r, oy+r), fill=orb, outline=(40,140,180))
+        draw.point((ox, oy), fill=(255,255,255))
+        draw.point((ox+1, oy-1), fill=hi(orb))
+        for x in range(w//2-3,w//2+4):
+            if BAYER_4X4[(h-2)%4][x%4] <7: draw.point((x,h-2), fill=dk(body,12))
+    # --- TerrainShaper: modelador terreno crea bloques ---
+    elif sid == "TerrainShaper":
+        body=(108,86,62) if not is_hurt else (220,90,90)
+        if is_die: body=(82,66,48)
+        detail=(82,66,48); skin=(236,200,164); block=(136,130,118); haz=(220,80,60)
+        # cuerpo robusto
+        draw.rectangle((w//2-3,3,w//2+3,h-2), fill=body, outline=detail)
+        draw.arc((w//2-3,3,w//2+3,h-2), 200, 330, fill=hi(body))
+        draw.line((w//2,4,w//2, h-3), fill=detail)
+        # cabeza casco
+        draw.rectangle((w//2-2,0,w//2+2,3), fill=(140,140,150), outline=detail)
+        draw.rectangle((w//2-1,1,w//2+1,2), fill=skin)
+        # martillo
+        draw.line((w//2+3,5,w//2+5,9), fill=(120,80,40))
+        draw.rectangle((w//2+3,5,w//2+6,7), fill=block, outline=detail)
+        # bloque/hazard que crea por frame
+        bx = w//2-5 if paso else w//2-6
+        draw.rectangle((bx, h-4, bx+3, h-2), fill=haz, outline=(160,40,30))
+        draw.point((bx+1, h-3), fill=hi(haz))
+        for x in range(w//2-3,w//2+4):
+            if BAYER_4X4[(h-2)%4][x%4] <7: draw.point((x,h-2), fill=dk(body,12))
+    # --- Summoner: invocador que genera esbirros ---
+    elif sid == "Summoner":
+        body=(96,64,132) if not is_hurt else (220,90,90)
+        if is_die: body=(72,48,100)
+        detail=(72,48,100); skin=(236,200,164); glow=(180,80,255)
+        # túnica púrpura
+        draw.rectangle((w//2-3,3,w//2+3,h-1), fill=body, outline=detail)
+        draw.line((w//2,4,w//2,h-1), fill=detail)
+        draw.arc((w//2-3,3,w//2+3,h-1), 200, 340, fill=hi(body))
+        # cabeza
+        draw.ellipse((w//2-2,0,w//2+2,3), fill=skin, outline=(180,150,120))
+        draw.point((w//2-1,1), fill=(0,0,0)); draw.point((w//2+1,1), fill=(0,0,0))
+        # capucha
+        draw.arc((w//2-3,0,w//2+3,4), 200, 340, fill=detail)
+        # círculo invocación por frame pulsante
+        r = 2 if paso else 1
+        draw.ellipse((w//2-r, h-2-r, w//2+r, h-2+r), outline=glow, width=1)
+        draw.point((w//2, h-2), fill=glow)
+        # manos levantadas
+        draw.line((w//2-3,5,w//2-5,3), fill=skin); draw.line((w//2+3,5,w//2+5,3), fill=skin)
+        for x in range(w//2-3,w//2+4):
+            if BAYER_4X4[(h-2)%4][x%4] <7: draw.point((x,h-2), fill=dk(body,12))
+    # --- Cangrejo: cangrejo mina (usa dibujo mejorado, mantiene 20×14) ---
+    elif sid == "Cangrejo":
+        body=(150,86,52) if not is_hurt else (210,80,80)
+        if is_die: body=(112,64,40)
+        detail=(104,58,36); pinza=(120,66,40); eye_c=(30,22,14)
+        # caparazón oval ancho
+        draw.ellipse((3,3,w-4,h-5), fill=body, outline=detail)
+        draw.arc((3,3,w-4,h-5), 210, 340, fill=hi(body))
+        abierta = 2 if paso==0 else 0
+        draw.polygon([(2, h//2-1),(2-abierta, h//2-4),(1, h//2+2)], fill=pinza, outline=detail)
+        draw.polygon([(w-3, h//2-1),(w-1+abierta, h//2-4),(w-2, h//2+2)], fill=pinza, outline=detail)
+        for i in range(3):
+            lx, rx = 4+i*2, w-6-i*2
+            ly = h//2+1 + (1 if paso else 0)
+            draw.line((lx, ly, lx-1, h-2), fill=detail); draw.line((rx, ly, rx+1, h-2), fill=detail)
+        for ex in (7, w-8):
+            draw.line((ex,4,ex,6), fill=detail); draw.ellipse((ex-1,3,ex+1,5), fill=eye_c, outline=(0,0,0))
+        for x in range(4,w-4):
+            if BAYER_4X4[(h-3)%4][x%4] <7: draw.point((x,h-3), fill=dk(body,14))
+    # --- Medusa: medusa pozo translúcida ---
+    elif sid == "Medusa":
+        body=(96,140,148) if not is_hurt else (200,120,140)
+        if is_die: body=(72,106,112)
+        hi_c=(140,176,182)
+        # campana
+        draw.pieslice((2,1,w-2,h-2), 180, 360, fill=(*body,190) if not is_die else body)
+        draw.arc((2,1,w-2,h-2), 180, 360, fill=hi_c)
+        # tentáculos ondulantes
+        for i in range(4):
+            tx=4+i*3
+            doblez=1 + (1 if paso else -1) if i%2 else 1 - (1 if paso else -1)
+            draw.line((tx, h//2, tx+doblez, h-1), fill=(*hi_c,160) if isinstance(hi_c, tuple) and len(hi_c)==3 else hi_c)
+            # si alpha error, usar hi_c sin alpha
+            try:
+                draw.line((tx, h//2, tx+doblez, h-1), fill=hi_c)
+            except Exception:
+                pass
+        for x in range(3,w-3):
+            if BAYER_4X4[(h-2)%4][x%4] <7: draw.point((x,h-2), fill=dk(body,10))
+    # --- PezAbismal: pez oscuro con luz pulsante ---
+    elif sid == "PezAbismal":
+        body=(14,18,26) if not is_hurt else (180,60,60)
+        if is_die: body=(10,14,20)
+        borde=(6,8,14); luz=(120,220,210)
+        ond=1 if paso else -1
+        draw.ellipse((2, h//2-4+ond, w-8, h//2+4-ond), fill=body, outline=borde)
+        draw.polygon([(w-8,h//2-2),(w-1,h//2+ond),(w-8,h//2+2)], fill=borde)
+        pulso=2 + (1 if paso else 0)
+        cx,cy=4,h//2
+        draw.ellipse((cx-pulso, cy-pulso, cx+pulso, cy+pulso), fill=luz, outline=(180,255,245))
+        draw.point((cx,cy), fill=(255,255,255))
+        for x in range(3,w-8):
+            if BAYER_4X4[(h-3)%4][x%4] <7: draw.point((x,h-3), fill=dk(body,10))
+    # --- AssassinSombra: sombra sigilosa cementerio ---
+    elif sid == "AssassinSombra":
+        body=(44,44,58) if not is_hurt else (200,80,80)
+        if is_die: body=(34,34,44)
+        detail=(28,28,38); blade=(180,180,190); eye_col=(255,60,60)
+        # silueta encapuchada oscura
+        draw.ellipse((w//2-3,0,w//2+3,5), fill=body, outline=detail) # capucha
+        draw.rectangle((w//2-2,3,w//2+2,h-3), fill=body, outline=detail)
+        draw.arc((w//2-2,3,w//2+2,h-3), 210, 330, fill=hi(body))
+        # ojos rojos brillantes
+        draw.point((w//2-1,2), fill=eye_col); draw.point((w//2+1,2), fill=eye_col)
+        draw.point((w//2-1,2), fill=(255,255,255))
+        # daga por frame: a veces visible
+        if paso:
+            draw.line((w//2+3,5,w//2+5,7), fill=blade, width=1)
+            draw.polygon([(w//2+5,7),(w//2+6,8),(w//2+4,8)], fill=blade, outline=detail)
+            draw.point((w//2+5,6), fill=(255,255,255))
+        else:
+            draw.line((w//2-3,5,w//2-4,7), fill=blade)
+        # sigilo: sombra abajo dither
+        for x in range(w//2-3,w//2+4):
+            if BAYER_4X4[(h-2)%4][x%4] <6: draw.point((x,h-2), fill=dk(body,14))
+    # --- Climber: trepador lianas tirolesa ---
+    elif sid == "Climber":
+        body=(90,72,52) if not is_hurt else (210,90,90)
+        if is_die: body=(68,54,40)
+        detail=(68,54,40); skin=(236,200,164); rope=(200,180,140); metal=(180,180,190)
+        # cuerpo cazadora
+        draw.rectangle((w//2-3,3,w//2+3,h-4), fill=body, outline=detail)
+        draw.rectangle((w//2-2,4,w//2+2,7), fill=hi(body))
+        # cabeza + casco
+        draw.ellipse((w//2-2,0,w//2+2,3), fill=skin, outline=detail)
+        draw.rectangle((w//2-2,0,w//2+2,1), fill=(250,220,80), outline=detail)
+        draw.point((w//2-1,1), fill=(0,0,0)); draw.point((w//2+1,1), fill=(0,0,0))
+        # arnés
+        draw.line((w//2-3,5,w//2+3,5), fill=detail); draw.line((w//2,5,w//2,8), fill=detail)
+        # cuerda vertical
+        draw.line((w//2,0,w//2,h-1), fill=rope)
+        draw.point((w//2,2), fill=metal)
+        # mosquetón por frame
+        off = 1 if paso else -1
+        draw.ellipse((w//2+2+off,6,w//2+4+off,8), outline=metal)
+        # piernas
+        draw.line((w//2-2,h-4,w//2-3+leg,h-1), fill=detail); draw.line((w//2+2,h-4,w//2+3-leg,h-1), fill=detail)
+        for x in range(w//2-3,w//2+4):
+            if BAYER_4X4[(h-2)%4][x%4] <7: draw.point((x,h-2), fill=dk(body,10))
+    # --- Shielded ya tratado arriba ---
+    # --- Swimmer ya tratado ---
+    # --- FlyingBomber ya tratado ---
+    # --- BruteGolemHielo ya tratado ---
+    # --- ChargerWolf ya tratado ---
+    else:
+        # Fallback genérico pero con variación (nunca debe usarse si todas las 35 están cubiertas)
+        body_col = (120,80,40) if not is_hurt else (190,60,50)
+        if is_die: body_col=(70,40,30)
+        detail_col=(80,50,20)
+        draw.ellipse((2,2,w-3,h-3), fill=body_col, outline=detail_col)
+        draw.arc((2,2,w-3,h-3), 200, 340, fill=hi(body_col))
+        draw.rectangle((w//4, h//4, w//4+2, h//4+2), fill=(255,255,255))
+        draw.rectangle((w*3//4-2, h//4, w*3//4, h//4+2), fill=(255,255,255))
+        draw.point((w//4+1, h//4+1), fill=(0,0,0)); draw.point((w*3//4-1, h//4+1), fill=(0,0,0))
+        off = 1 if f%2 else -1
+        draw.line((w//4, h-3, w//4-2+off, h-1), fill=detail_col)
+        draw.line((w*3//4, h-3, w*3//4+2-off, h-1), fill=detail_col)
+        for x in range(2,w-2):
+            if BAYER_4X4[(h-3)%4][x%4] <8:
+                draw.point((x,h-3), fill=dk(body_col))
+
+def _gen_enemy_sheet_especie(sid, path, w, h, frames, mode="walk"):
+    """Genera hoja para especie sid con silueta única. Garantiza 6/4f variación real."""
+    imgs=[]
+    for f in range(frames):
+        img=Image.new("RGBA", (w,h),(0,0,0,0))
+        draw=ImageDraw.Draw(img)
+        _dibujar_especie(draw, sid, w, h, f, frames, mode)
+        # Variación real garantizada: respiración/bob 1px en frames impares para que ningún
+        # walk de 4f quede idéntico si la especie es estática (shooter). Los walkers/flyers ya
+        # tienen leg/wing swing, este bob se suma como respiración sutil sin romper anclaje:
+        # se desplaza el contenido 1px arriba en frames impares antes del outline, manteniendo
+        # pies anclados visualmente porque el outline y la sombra se recalculan después.
+        if f % 2 == 1 and frames == 4:
+            bob = Image.new("RGBA", (w,h),(0,0,0,0))
+            bob.paste(img, (0, -1))
+            img = bob
+        # outline + sombra dithered Bayer PSX HQ
         _psx_outline_y_sombra(img)
         imgs.append(img)
     _save_sheet(path, imgs, w, h)
@@ -561,6 +1407,43 @@ def _gen_all_enemies():
         _gen_enemy_sheet(base / f"enemy_{zname}_die.png", 16, 12, 5, (80,30,30), (40,10,10))
         _gen_enemy_sheet(base / f"enemy_fly_{zname}.png", 14, 10, 4, zp["fly"], zp["detail"])
         _gen_enemy_sheet(base / f"enemy_shoot_{zname}.png", 12, 12, 4, zp["shoot"], zp["detail"])
+    # ── Por especie: 35 siluetas únicas con variación real 6/4f ──
+    # Asegurar que PROJECT_ROOT está en sys.path para importar bestiary (cuando se ejecuta como script)
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+    try:
+        from src.framework.entities.bestiary_registry import SPECIES
+        print(f"    Cargadas {len(SPECIES)} especies del bestiario")
+    except Exception as e:
+        print(f"    WARN: no se pudo cargar bestiary_registry: {e}")
+        SPECIES={}
+    # Tamaños por clase base (mantener 16×12/14×10/12×12 y especiales sin nuevos biomas)
+    base_size={
+        "EnemyWalker": (16,12,6), "EnemyFlying": (14,10,4), "EnemyShooter": (12,12,4),
+        "EnemyShielded": (16,14,4), "EnemySwimmer": (16,12,4), "EnemyCangrejo": (20,14,4),
+        "EnemyMedusa": (16,14,4), "EnemyPezAbismal": (28,20,4), "EnemyClimber": (16,16,4),
+        "EnemyFlyingBomber": (20,14,4), "EnemyTerrainShaper": (16,14,4), "EnemySummoner": (16,16,4),
+        "EnemyArcher": (12,14,4), "EnemyBrute": (24,18,4), "EnemyCharger": (14,12,6),
+        "EnemyCaster": (14,14,4), "EnemyAssassin": (12,12,4),
+    }
+    for sid, spec in SPECIES.items():
+        w,h,frames = base_size.get(spec.base, (16,12,6))
+        zone_dir = A / "sprites" / "enemies" / f"zone{spec.zone}"
+        species_dir = A / "sprites" / "enemies" / "species"
+        zone_dir.mkdir(parents=True, exist_ok=True)
+        species_dir.mkdir(parents=True, exist_ok=True)
+        # walk
+        _gen_enemy_sheet_especie(sid, zone_dir / f"enemy_{sid.lower()}_walk.png", w, h, frames, "walk")
+        _gen_enemy_sheet_especie(sid, species_dir / f"{sid}_walk.png", w, h, frames, "walk")
+        # hurt/die (3/5 frames)
+        _gen_enemy_sheet_especie(sid, zone_dir / f"enemy_{sid.lower()}_hurt.png", w, h, 3, "hurt")
+        _gen_enemy_sheet_especie(sid, zone_dir / f"enemy_{sid.lower()}_die.png", w, h, 5, "die")
+        # compatibilidad species hurt/die si algún cargador los busca
+        _gen_enemy_sheet_especie(sid, species_dir / f"{sid}_hurt.png", w, h, 3, "hurt")
+        _gen_enemy_sheet_especie(sid, species_dir / f"{sid}_die.png", w, h, 5, "die")
+        print(f"    Especie {sid} zone{spec.zone} {spec.base} {w}x{h} {frames}f")
+
+
 
 
 def _gen_pez_abismal_sheet(path, w=28, h=20, frames=4):
@@ -1135,7 +2018,8 @@ def _dibujar_tile_procedural(draw, ox, oy, ts, ttype, theme):
     floor_oscuro = tuple(max(0, c - 30) for c in floor)
     floor_sombra = tuple(max(0, c - 48) for c in floor)
     wall_claro = tuple(min(255, c + 28) for c in wall)
-    wall_medio = tuple(min(255, c + 12) for c in wall)
+    wall_medio = tuple(min(255, c + 12) for c in wall)  # usado en highlight interior madera
+    _ = wall_medio
     wall_oscuro = tuple(max(0, c - 28) for c in wall)
     wall_sombra = tuple(max(0, c - 45) for c in wall)
     deco_claro = tuple(min(255, c + 24) for c in deco)

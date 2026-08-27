@@ -15,7 +15,7 @@
   <property name="ambient_fx" type="string" value="leaves"/>
   <property name="ambient_fx_rate" type="float" value="10"/>
  </properties>
- <tileset firstgid="1" name="tileset_residencias_crepusculo" tilewidth="16" tileheight="16" tilecount="266" columns="12">
+ <tileset firstgid="1" name="tileset_residencias_crepusculo" tilewidth="16" tileheight="16" tilecount="276" columns="12">
   <image source="../../tilesets/tileset_residencias_crepusculo.png" width="192" height="368" trans="000000"/>
  </tileset>
  <layer id="1" name="BG_Far" width="205" height="38">
