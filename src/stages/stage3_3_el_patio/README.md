@@ -222,12 +222,42 @@ alcanzabilidad real del motor (`level_metrics.reachable_platforms`, con
 alcanzables desde el spawn** — los 2 no alcanzables son los muros de cierre
 del mapa (correcto, no son plataformas).
 
-**Aviso conocido del calificador automático:** `grade_stage.py` bajó a 1/10
-en "geometría" porque su análisis de plataformas huérfanas solo mira
-`collision_rects` (sólidos) y no ve las plataformas de un solo sentido —
-así que no puede ver el camino de la escalera de nubes, aunque exista y esté
-verificado arriba con la física real. El puntaje total con este rediseño:
-**118/130 (90.8%)**.
+**Aviso conocido del calificador automático:** `grade_stage.py` cuenta como
+"plataforma huérfana" cualquier rectángulo sólido que no llegue a 2/3 del
+alto del mapa y no sea alcanzable por salto — así clasificaba tanto los
+muros de cierre (corregido, ver 4e) como `Solid_MuroBloqueo`. A este último
+sí lo sigue marcando, porque su análisis de plataformas huérfanas solo mira
+`collision_rects` (sólidos) y no ve las plataformas de un solo sentido — no
+puede ver el camino de la escalera de nubes, aunque exista y esté verificado
+arriba con la física real del motor.
+
+## 4e. Correcciones de la retroalimentación del profesor (2026-08-26)
+
+El profesor calificó la primera entrega en 80,8% y señaló tres problemas.
+Se corrigieron los tres para esta entrega:
+
+1. **"Dos plataformas sin ruta desde el spawn"** — eran `Solid_WallLeft` y
+   `Solid_WallRight`. El calificador solo excluye del análisis de geometría a
+   un rectángulo si mide **al menos 2/3 del alto del mapa** (aquí, ~405 px) y
+   es más alto que ancho; con los muros terminando en la fila 20 (donde
+   empieza el cielo) medían apenas 256/192 px. Se bajaron a la fila 0 —dan la
+   vuelta completa del mapa—, con lo que ahora miden 576/512 px y se
+   reconocen correctamente como muros de cierre, no como plataformas. Al
+   medir solo 2 columnas de ancho, esto no tapa el fondo/cielo en el resto
+   del mapa.
+2. **`HazardZone` en la capa `Collision`** — `_load_collision()` no lee la
+   propiedad `type` de esa capa (solo distingue `Platform` de todo lo
+   demás), así que `HazardZone_01` se estaba cargando como **piso sólido**:
+   el efecto contrario al buscado. Se movió a la capa `Objects`, que es
+   donde `_process_objects()` sí reconoce el tipo `HazardZone` y aplica el
+   daño.
+3. **Falta `author`** — se agregó `author="Rebeca Arce A."` a las
+   propiedades del mapa.
+
+Puntaje con las tres correcciones aplicadas: **124/130 (95,4%)** — subió de
+90,8% a 95,4%. El único aviso que queda es el de `Solid_MuroBloqueo`
+explicado arriba, un límite conocido y documentado de la herramienta, no un
+error de diseño.
 
 ## 5. Obstáculos y plataformeo
 
