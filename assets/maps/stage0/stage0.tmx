@@ -113,6 +113,7 @@
   <object id="204" name="MessageTrigger_Once_204" type="MessageTrigger_Once" x="80" y="416" width="48" height="48">
    <properties>
     <property name="text" value="Flechas para moverte. Espacio para saltar."/>
+    <property name="dialogue" value="intro_prologo"/>
    </properties>
   </object>
   <object id="205" name="MessageTrigger_Once_205" type="MessageTrigger_Once" x="224" y="416" width="48" height="48">
@@ -213,78 +214,91 @@
     <property name="mensaje" value="Has cogido la llave."/>
    </properties>
   </object>
-  <object id="222" name="Charger_222" type="Charger" x="992" y="456" width="28" height="24">
+  <object id="222" name="PushBlock_222" type="PushBlock" x="960" y="448" width="32" height="32">
+   <properties>
+    <property name="velocidad" type="float" value="45.0"/>
+   </properties>
+  </object>
+  <object id="223" name="PressurePlate_223" type="PressurePlate" x="1008" y="464" width="32" height="16">
+   <properties>
+    <property name="evento" value="PLACA_PROLOGO"/>
+    <property name="requiere" value="bloque"/>
+    <property name="mantener" type="bool" value="true"/>
+   </properties>
+  </object>
+  <object id="224" name="Charger_224" type="Charger" x="992" y="456" width="28" height="24">
    <properties>
     <property name="charge_speed" type="float" value="250.0"/>
    </properties>
   </object>
-  <object id="223" name="Brute_223" type="Brute" x="1040" y="420" width="100" height="60">
+  <object id="225" name="Brute_225" type="Brute" x="1040" y="420" width="100" height="60">
    <properties>
     <property name="max_health" type="float" value="6.0"/>
    </properties>
   </object>
-  <object id="224" name="LockedDoor_224" type="LockedDoor" x="1056" y="432" width="16" height="48">
+  <object id="226" name="LockedDoor_226" type="LockedDoor" x="1056" y="432" width="16" height="48">
    <properties>
     <property name="key_id" value="llave_prologo"/>
     <property name="clase" value="puerta"/>
     <property name="mensaje_bloqueado" value="Cerrada. Busca la llave."/>
+    <property name="abre_con" value="PLACA_PROLOGO"/>
    </properties>
   </object>
-  <object id="225" name="Checkpoint_225" type="Checkpoint" x="1040" y="448" width="16" height="32">
+  <object id="227" name="Checkpoint_227" type="Checkpoint" x="1040" y="448" width="16" height="32">
    <properties>
     <property name="checkpoint_id" type="int" value="3"/>
    </properties>
   </object>
-  <object id="226" name="MessageTrigger_Once_226" type="MessageTrigger_Once" x="1040" y="416" width="48" height="48">
+  <object id="228" name="MessageTrigger_Once_228" type="MessageTrigger_Once" x="1040" y="416" width="48" height="48">
    <properties>
     <property name="text" value="Salta, cronometra los bloques, o prueba la goma."/>
    </properties>
   </object>
-  <object id="227" name="DeathPit_227" type="DeathPit" x="1072" y="576" width="80" height="32"/>
-  <object id="228" name="RhythmBlock_228" type="RhythmBlock" x="1088" y="400" width="16" height="16">
+  <object id="229" name="DeathPit_229" type="DeathPit" x="1072" y="576" width="80" height="32"/>
+  <object id="230" name="RhythmBlock_230" type="RhythmBlock" x="1088" y="400" width="16" height="16">
    <properties>
     <property name="visible_seg" type="float" value="1.8"/>
     <property name="oculto_seg" type="float" value="1.0"/>
     <property name="desfase" type="float" value="0.0"/>
    </properties>
   </object>
-  <object id="229" name="RhythmBlock_229" type="RhythmBlock" x="1104" y="400" width="16" height="16">
+  <object id="231" name="RhythmBlock_231" type="RhythmBlock" x="1104" y="400" width="16" height="16">
    <properties>
     <property name="visible_seg" type="float" value="1.8"/>
     <property name="oculto_seg" type="float" value="1.0"/>
     <property name="desfase" type="float" value="0.6"/>
    </properties>
   </object>
-  <object id="230" name="RhythmBlock_230" type="RhythmBlock" x="1120" y="400" width="16" height="16">
+  <object id="232" name="RhythmBlock_232" type="RhythmBlock" x="1120" y="400" width="16" height="16">
    <properties>
     <property name="visible_seg" type="float" value="1.8"/>
     <property name="oculto_seg" type="float" value="1.0"/>
     <property name="desfase" type="float" value="1.2"/>
    </properties>
   </object>
-  <object id="231" name="FrictionZone_231" type="FrictionZone" x="1056" y="576" width="16" height="32">
+  <object id="233" name="FrictionZone_233" type="FrictionZone" x="1056" y="576" width="16" height="32">
    <properties>
     <property name="material" value="goma"/>
    </properties>
   </object>
-  <object id="232" name="HazardZone_232" type="HazardZone" x="1184" y="464" width="48" height="16">
+  <object id="234" name="HazardZone_234" type="HazardZone" x="1184" y="464" width="48" height="16">
    <properties>
     <property name="damage" type="float" value="0.25"/>
    </properties>
   </object>
-  <object id="233" name="MessageTrigger_Once_233" type="MessageTrigger_Once" x="1312" y="416" width="48" height="48">
+  <object id="235" name="MessageTrigger_Once_235" type="MessageTrigger_Once" x="1312" y="416" width="48" height="48">
    <properties>
     <property name="text" value="El viento empuja. Espera a que amaine. U es el ataque definitivo."/>
    </properties>
   </object>
-  <object id="234" name="WindZone_234" type="WindZone" x="1344" y="320" width="160" height="160">
+  <object id="236" name="WindZone_236" type="WindZone" x="1344" y="320" width="160" height="160">
    <properties>
     <property name="fuerza_x" type="float" value="210.0"/>
     <property name="fuerza_y" type="float" value="0.0"/>
     <property name="periodo" type="float" value="3.4"/>
    </properties>
   </object>
-  <object id="235" name="Shooter_235" type="Shooter" x="1392" y="456" width="16" height="24">
+  <object id="237" name="Shooter_237" type="Shooter" x="1392" y="456" width="16" height="24">
    <properties>
     <property name="fire_rate" type="float" value="2.0"/>
     <property name="projectile_speed" type="float" value="100.0"/>
@@ -293,44 +307,44 @@
     <property name="patrol_speed" type="float" value="30.0"/>
    </properties>
   </object>
-  <object id="236" name="Assassin_236" type="Assassin" x="1440" y="456" width="16" height="24"/>
-  <object id="237" name="Walker_237" type="Walker" x="1488" y="452" width="24" height="28">
+  <object id="238" name="Assassin_238" type="Assassin" x="1440" y="456" width="16" height="24"/>
+  <object id="239" name="Walker_239" type="Walker" x="1488" y="452" width="24" height="28">
    <properties>
     <property name="max_health" type="float" value="2.0"/>
    </properties>
   </object>
-  <object id="238" name="Pickup_238" type="Pickup" x="1472" y="320" width="16" height="16">
+  <object id="240" name="Pickup_240" type="Pickup" x="1472" y="320" width="16" height="16">
    <properties>
     <property name="item_id" value="fragmento_3"/>
     <property name="automatico" type="bool" value="true"/>
     <property name="mensaje" value="Fragmento 3 de 3."/>
    </properties>
   </object>
-  <object id="239" name="Chest_239" type="Chest" x="1504" y="320" width="16" height="16">
+  <object id="241" name="Chest_241" type="Chest" x="1504" y="320" width="16" height="16">
    <properties>
     <property name="contenido" value="reliquia_prologo"/>
     <property name="mensaje" value="Una reliquia del prologo."/>
    </properties>
   </object>
-  <object id="240" name="Zipline_240" type="Zipline" x="1488" y="320" width="8" height="8">
+  <object id="242" name="Zipline_242" type="Zipline" x="1488" y="320" width="8" height="8">
    <properties>
     <property name="destino_dx" type="int" value="80"/>
     <property name="destino_dy" type="int" value="128"/>
     <property name="velocidad" type="float" value="200.0"/>
    </properties>
   </object>
-  <object id="241" name="CameraLock_241" type="CameraLock" x="1376" y="0" width="224" height="608">
+  <object id="243" name="CameraLock_243" type="CameraLock" x="1376" y="0" width="224" height="608">
    <properties>
     <property name="lock_y" type="bool" value="true"/>
    </properties>
   </object>
-  <object id="242" name="Checkpoint_242" type="Checkpoint" x="1424" y="448" width="16" height="32">
+  <object id="244" name="Checkpoint_244" type="Checkpoint" x="1424" y="448" width="16" height="32">
    <properties>
     <property name="checkpoint_id" type="int" value="4"/>
    </properties>
   </object>
-  <object id="243" name="NextTrigger_243" type="NextTrigger" x="1552" y="432" width="32" height="48"/>
-  <object id="244" name="Light_244" type="Light" x="96" y="400" width="16" height="16">
+  <object id="245" name="NextTrigger_245" type="NextTrigger" x="1552" y="432" width="32" height="48"/>
+  <object id="246" name="Light_246" type="Light" x="96" y="400" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="150.0"/>
     <property name="color" value="fire"/>
@@ -340,77 +354,77 @@
     <property name="flicker_amount" type="float" value="0.18"/>
    </properties>
   </object>
-  <object id="245" name="Light_245" type="Light" x="224" y="384" width="16" height="16">
+  <object id="247" name="Light_247" type="Light" x="224" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="140.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.85"/>
    </properties>
   </object>
-  <object id="246" name="Light_246" type="Light" x="352" y="384" width="16" height="16">
+  <object id="248" name="Light_248" type="Light" x="352" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="150.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.9"/>
    </properties>
   </object>
-  <object id="247" name="Light_247" type="Light" x="480" y="384" width="16" height="16">
+  <object id="249" name="Light_249" type="Light" x="480" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="160.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.85"/>
    </properties>
   </object>
-  <object id="248" name="Light_248" type="Light" x="608" y="384" width="16" height="16">
+  <object id="250" name="Light_250" type="Light" x="608" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="140.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.9"/>
    </properties>
   </object>
-  <object id="249" name="Light_249" type="Light" x="736" y="384" width="16" height="16">
+  <object id="251" name="Light_251" type="Light" x="736" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="150.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.85"/>
    </properties>
   </object>
-  <object id="250" name="Light_250" type="Light" x="864" y="384" width="16" height="16">
+  <object id="252" name="Light_252" type="Light" x="864" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="160.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.9"/>
    </properties>
   </object>
-  <object id="251" name="Light_251" type="Light" x="992" y="384" width="16" height="16">
+  <object id="253" name="Light_253" type="Light" x="992" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="140.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.85"/>
    </properties>
   </object>
-  <object id="252" name="Light_252" type="Light" x="1120" y="384" width="16" height="16">
+  <object id="254" name="Light_254" type="Light" x="1120" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="150.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.9"/>
    </properties>
   </object>
-  <object id="253" name="Light_253" type="Light" x="1248" y="384" width="16" height="16">
+  <object id="255" name="Light_255" type="Light" x="1248" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="160.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.85"/>
    </properties>
   </object>
-  <object id="254" name="Light_254" type="Light" x="1376" y="384" width="16" height="16">
+  <object id="256" name="Light_256" type="Light" x="1376" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="140.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.9"/>
    </properties>
   </object>
-  <object id="255" name="Light_255" type="Light" x="1504" y="384" width="16" height="16">
+  <object id="257" name="Light_257" type="Light" x="1504" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="150.0"/>
     <property name="color" value="warm"/>

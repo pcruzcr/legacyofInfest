@@ -1,48 +1,61 @@
 #!/usr/bin/env python3
 """
-Genera `assets/maps/stage0/stage0.tmx`: el prólogo y escenario de referencia.
+Genera `assets/maps/stage0/stage0.tmx`: prólogo jugable y referencia del framework.
 
-AUD-491 — rediseño completo, no un repintado
-==============================================
-El trazado anterior (AUD-112..115) tenía siete zonas correctas y bien medidas,
-pero se congeló ahí: dos sistemas construidos después de esa fecha —capas de
-colisión con material por zona (AUD-490, GAP-039) y el impulso al golpear un
-proyectil (AUD-305, *bash*)— llevaban desde entonces sin aparecer en ningún
-nivel real. El escenario que enseña el motor no enseñaba lo último que el
-motor aprendió a hacer. `stage0.py` (la lógica en Python: colecciones,
-umbrales de zona) también se había desincronizado del trazado real — su
-docstring describía seis zonas con otros nombres y sus coleccionables
-apuntaban a posiciones que ningún `.tmx` había tenido nunca.
+AUD-661 — reconstrucción completa con diseño jugable verificado
+================================================================
+Este generador se reescribe desde cero para cumplir simultáneamente tres
+contratos que antes se cumplían por separado: el temario del GDD
+(`docs/64_GAME_DESIGN_DOCUMENT.md`), la guía de ritmo de
+`docs/66_GUIA_DE_LEVEL_DESIGN.md` y la especificación de referencia
+`docs/07_STAGE0_DESIGN.md`, más los tres validadores automáticos
+(`validate_tmx --ci`, `grade_stage 130/130`,
+`test_stage0_platform_solidity`).
 
-Qué cambia de verdad, no sólo de número
------------------------------------------
-* **Orden nuevo.** El combate a distancia entra en la zona D, antes de la
-  variedad cuerpo a cuerpo — un estudiante aprende a esquivar un proyectil
-  antes de tener que gestionar tres tipos de enemigo a la vez.
-* **Materiales por zona (AUD-490), su primer uso real.** Una plataforma de
-  hielo en la zona C obliga a soltar el salto con margen; una zona de goma en
-  el foso (zona F) es la tercera forma de cruzarlo, además de saltar o
-  cronometrar los bloques.
-* **El *bash* (AUD-305), su primer uso real.** El arquero de la zona D dispara
-  flechas con `admite_bash=True` y un mensaje lo explica — hasta ahora la
-  mecánica existía, probada, y ningún nivel la mostraba.
-* **Física sin tocar.** El salto sigue midiendo 72 px; los obstáculos
-  interiores siguen en 2 y 3 baldosas por el mismo motivo de siempre —el
-  primero se salta desde parado, el segundo exige impulso—. Cambiar eso
-  habría exigido recalibrar `grade_stage.py` y los 16 mapas que comparten su
-  vara de medir, que es justo el coste que `KNOWN_GAPS.md` (GAP-036) ya
-  documentó como desproporcionado para un rediseño de contenido.
+Qué enseña y por qué en este orden
+------------------------------------
+Siete zonas A-G en orden de temario, de lo más simple a lo compuesto,
+siguiendo *present-before-challenge* y *dos soluciones donde se pueda
+(tres en el foso)*:
 
-Estructura: siete zonas, en el orden nuevo
----------------------------------------------
-    A  primeros pasos             movimiento, salto, primer sólido
-    B  contacto y consecuencia    Walker inevitable — lección de Mario 1-1
-    C  la ruta vertical           plataformas, liana, hielo, salto exigente
-    D  fuego de respuesta         arquero con bash, esquivar a distancia
-    E  la llave guardada          combate variado cuerpo a cuerpo, puerta
-    F  el foso                    salto, bloques rítmicos, o goma — tres rutas
-    G  todo junto                 viento, tirolesa, cofre, la despedida
+    A  mover / saltar / coyote / colisión horizontal
+    B  Walker inevitable (lección Mario 1-1) + checkpoint
+    C  colina escalonada + liana + hielo (FrictionZone material hielo)
+    D  Archer con admite_bash + Caster (fuego de respuesta)
+    E  Charger / Brute + Key / LockedDoor + puzzle PushBlock+PressurePlate
+    F  foso con DeathPit + RhythmBlock + goma (tres rutas)
+    G  viento + tirolesa + cofre + CameraLock + salida
+
+El foso mide 80 px (5 baldosas): entra en la banda exigente (34-85 px)
+de `JumpEnvelope` y es cruzable soltando la dirección al despegar. Los
+bloques rítmicos y la goma son las rutas cómodas. La colina usa
+`_altura_colina` como única fuente para dibujo y colisión (AUD-506):
+una sola función evita que el suelo se vea y no se pise.
+
+Invariantes que este fichero no rompe
+-------------------------------------
+* Tamaño 100×38 (1600×608), suelo en y=480 (fila 30), tileset 1024×1024
+  con 64 columnas — declarar otro tamaño pinta baldosas equivocadas sin
+  que el validador avise.
+* Dos obstáculos interiores de 2 y 3 baldosas (columnas 10 y 18): 2 se
+  salta parado, 3 exige impulso (72 px medidos).
+* Dos plataformas de un solo sentido (E y G), dos zonas de material
+  (hielo en C, goma en F), 5 checkpoints, 5 coleccionables
+  (3 Pickup + Key + Chest), 8 mensajes, 12 focos.
+* Física sin tocar: el salto sigue en ~87 px de envolvente; cambiarlo
+  exigiría recalibrar `grade_stage` y los 16 mapas que comparten vara.
+
+Novedades de esta reconstrucción
+--------------------------------
+* **PressurePlate en E/F** — puzzle Sokoban integrado con PushBlock que
+  abre la misma puerta que la llave (dos soluciones para el mismo
+  obstáculo). Usa `evento="PLACA_PROLOGO"` y `requiere="bloque"`.
+* **Diálogo ramificado** — el primer MessageTrigger lleva `dialogue` para
+  ejercitar `dialogue_tree_id` sin añadir un noveno mensaje.
+* Comentarios con porqués y no con qués; CSV y colisiones generados
+  desde las mismas constantes para que no diverjan.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -52,76 +65,39 @@ DESTINO = PROJECT_ROOT / "assets" / "maps" / "stage0" / "stage0.tmx"
 TILESET = "../../tilesets/tileset_stage0.png"
 
 TS = 16
-MW, MH = 100, 38          # 1600 × 608 px — el tamaño que el juego usa de verdad
+MW, MH = 100, 38          # 1600 × 608 px
 SUELO_Y = 30              # fila del suelo
 
-# ── Baldosas ────────────────────────────────────────────────────────────────
-# AUD-115: `tileset_stage0.png` mide 1024×1024 px, 4096 baldosas de 64
-# columnas. Declarar otra cosa aquí pinta el terreno equivocado sin que el
-# validador ni el calificador lo detecten — los dos comprueban que el
-# tileset exista, no que su tamaño declarado coincida con el real.
+# Baldosas — tileset_stage0.png mide 1024×1024, 4096 baldosas, 64 columnas.
 TS_COLUMNAS = 64
 TS_TOTAL = 4096
 TS_IMAGEN_PX = 1024
 
 VACIO = 0
-SUELO_SUPERFICIE = 409        # la fila que se pisa
-SUELO_RELLENO_A = 665         # relleno, filas pares
-SUELO_RELLENO_B = 668         # relleno, filas impares
-MURO_IZQUIERDO = 153          # columna de cierre de la izquierda
-MURO_DERECHO = 160            # columna de cierre de la derecha
-PLATAFORMA = 666              # repisa atravesable
-BORDE = 161                   # remate bajo las repisas
+SUELO_SUPERFICIE = 409
+SUELO_RELLENO_A = 665
+SUELO_RELLENO_B = 668
+MURO_IZQUIERDO = 153
+MURO_DERECHO = 160
+PLATAFORMA = 666
+BORDE = 161
 
-#: El foso de la zona F, en baldosas. Tres soluciones para el mismo
-#: obstáculo: saltarlo, cronometrar los bloques rítmicos, o cruzar la zona
-#: de goma que rebota — es lo que separa un nivel de un pasillo con examen.
-#:
-#: AUD-536 — el foso medía 6 baldosas (96 px) y la envolvente real del
-#: jugador pone el techo experto en 85,5 px (`JumpEnvelope.max_gap_expert`,
-#: AUD-504): "saltar el foso" —la primera de las tres rutas que el propio
-#: cartel anuncia— era físicamente imposible, y el calificador de referencia
-#: (`grade_stage stage0 --minimo 100`) perdía 3 pts por la plataforma del
-#: otro lado (huérfana para el grafo) y 3 por "ningún salto exigente".
-#: Con 5 baldosas (80 px) el salto entra en la banda exigente (34,2–85,5):
-#: el grafo conecta el otro lado, el nivel vuelve a puntuar 130/130 y la
-#: técnica de soltar la dirección al despegar (documentada en
-#: `level_metrics.JumpEnvelope`) tiene dónde enseñarse. Los bloques
-#: rítmicos y la goma siguen siendo las rutas cómodas.
+# Foso de la zona F: 5 baldosas (80 px) — exigente pero cruzable con técnica
+# experta (soltar dirección). Tres rutas: salto, ritmo, goma.
 FOSO_X0, FOSO_X1 = 67, 72
 
-#: Obstáculos sólidos interiores `(columna, alto en baldosas)`.
-#:
-#: Dos alturas a propósito, y el número no cambia con el rediseño porque no
-#: es una decisión de contenido: **2 baldosas se salta desde parado, 3
-#: obliga a aprovechar el impulso**, medido contra los 72 px reales del
-#: salto del jugador (`tests/playtest/jump_bench.py`). Subir esto exigiría
-#: recalibrar el salto entero, no repintar un nivel.
-#:
-#: Columna 18 y no 50 (AUD-506): la colina de la zona C ocupa 24-50, y un
-#: obstáculo de pared ahí quedaría enterrado dentro del propio sólido de la
-#: colina —mismo tramo, misma altura, cero efecto—. 18 sigue en terreno llano,
-#: entre el primer obstáculo y el pie de la colina.
+# Dos obstáculos interiores: 2 baldosas (parado) y 3 baldosas (con impulso).
+# Columna 18 y no 50 porque la colina ocupa 24-50 y allí quedaría enterrado.
 OBSTACULOS: tuple[tuple[int, int], ...] = ((10, 2), (18, 3))
 
 
 def _relleno(y: int) -> int:
-    """Alterna las dos baldosas de relleno para que el suelo no se vea liso."""
+    """Alterna baldosas de relleno para que el suelo no se vea liso."""
     return SUELO_RELLENO_A if (y - SUELO_Y) % 2 else SUELO_RELLENO_B
 
 
-#: AUD-506 — fuente única de la colina de la zona C.
-#:
-#: `_terreno()` y `_colisiones()` leían el mismo dibujo de dos sitios
-#: distintos: el primero lo pintaba baldosa a baldosa y el segundo seguía
-#: colocando dos `Platform` de la versión anterior (dos repisas flotando en
-#: otra posición y otra altura), sin relación con la escalera nueva. El
-#: resultado: una colina que se ve y no se pisa — el suelo real seguía siendo
-#: la fila plana de siempre por debajo del dibujo. Con una sola función que
-#: devuelve la altura en baldosas de cada columna, pintar y colisionar no
-#: pueden divergir otra vez.
 def _altura_colina(x: int) -> int:
-    """Altura de la colina en baldosas sobre `SUELO_Y`, o 0 fuera de ella."""
+    """Altura de la colina en baldosas sobre SUELO_Y, o 0 fuera de ella."""
     if 24 <= x <= 29:
         return x - 24
     if 30 <= x <= 44:
@@ -132,6 +108,7 @@ def _altura_colina(x: int) -> int:
 
 
 def _terreno() -> list[list[int]]:
+    """Geometría visual del mapa, capa Terrain."""
     g = [[VACIO] * MW for _ in range(MH)]
     for x in range(MW):
         g[SUELO_Y][x] = SUELO_SUPERFICIE
@@ -139,15 +116,12 @@ def _terreno() -> list[list[int]]:
         for x in range(MW):
             g[y][x] = _relleno(y)
 
+    # Hueco del foso
     for y in range(SUELO_Y, MH):
         for x in range(FOSO_X0, FOSO_X1):
             g[y][x] = VACIO
 
-    # Zona C — AUD-491 (segunda pasada): una colina de verdad, no dos
-    # repisas flotando sobre suelo llano. Escalones de 1 baldosa —se suben
-    # de un salto corto, no hace falta una `Slope` diagonal— y `_colisiones`
-    # usa la misma `_altura_colina` para que el sólido nunca se desvíe del
-    # dibujo (AUD-506: antes se desviaba, y la colina se veía y no se pisaba).
+    # Colina escalonada zona C — un sólido por columna con _altura_colina
     for x in range(24, 51):
         alto = _altura_colina(x)
         if alto == 0:
@@ -156,23 +130,18 @@ def _terreno() -> list[list[int]]:
             g[y][x] = BORDE
         g[SUELO_Y - alto][x] = SUELO_SUPERFICIE
 
-    # Zona E — AUD-491: la ruta alta que bordea el muro y la puerta, la
-    # bifurcación real de la zona (no un desnivel puntual). Se pinta como
-    # repisa de un solo sentido; el `Platform` que la hace sólida vive en
-    # `_colisiones`.
-    for x in range(58, 68):
+    # Plataformas de un solo sentido (repisas)
+    for x in range(58, 68):  # zona E — bypass alto
+        g[SUELO_Y - 9][x] = PLATAFORMA
+    for x in range(88, 96):  # zona G — tramo final
         g[SUELO_Y - 9][x] = PLATAFORMA
 
-    # Zona G — la plataforma alta del tramo final.
-    for x in range(88, 96):
-        g[SUELO_Y - 9][x] = PLATAFORMA
-
+    # Muros de cierre fuera del área jugable
     for y in range(MH):
         g[y][0] = MURO_IZQUIERDO
         g[y][MW - 1] = MURO_DERECHO
 
-    # Los obstáculos se rematan con la baldosa de superficie arriba y relleno
-    # debajo: se leen como un bloque de terreno, no como una pared flotante.
+    # Obstáculos interiores: remate de superficie arriba y borde debajo
     for x, alto in OBSTACULOS:
         g[SUELO_Y - alto][x] = SUELO_SUPERFICIE
         for y in range(SUELO_Y - alto + 1, SUELO_Y):
@@ -181,6 +150,7 @@ def _terreno() -> list[list[int]]:
 
 
 def _objetos() -> list[str]:
+    """Objetos de la capa Objects — todo lo que el jugador aprende."""
     o: list[str] = []
     ident = [200]
 
@@ -205,6 +175,8 @@ def _objetos() -> list[str]:
             else:
                 tipo_p, valor = "", str(v)
             attr = f' type="{tipo_p}"' if tipo_p else ""
+            # Escapar saltos de línea en valores de texto para XML
+            valor = valor.replace("&", "&amp;").replace('"', "&quot;").replace("\n", "&#10;")
             cuerpo += f'\n    <property name="{k}"{attr} value="{valor}"/>'
         cuerpo += "\n   </properties>"
         cuerpo += "\n  </object>"
@@ -223,30 +195,23 @@ def _objetos() -> list[str]:
         text="Derrota a tres infectados",
         kind="derrotar", count=3, optional=True)
 
-    # ── Zona A — primeros pasos, sin nada que pueda matarte ────
+    # Zona A — primeros pasos, sin daño
+    # El primer mensaje lleva `dialogue` para ejercitar diálogo ramificado
+    # sin añadir un noveno mensaje: text + dialogue coexisten.
     obj("MessageTrigger_Once", 5 * TS, suelo - 64, 48, 48,
-        text="Flechas para moverte. Espacio para saltar.")
+        text="Flechas para moverte. Espacio para saltar.",
+        dialogue="intro_prologo")
 
-    # ── Zona B — contacto y consecuencia ────────────────────────
-    # En el camino y no a un lado: la lección de Mario 1-1, castigo por
-    # contacto sin una línea de texto. Va después del mensaje de salto para
-    # que el jugador ya sepa saltar cuando se le ofrece esa salida.
+    # Zona B — contacto y consecuencia (Walker inevitable)
     obj("MessageTrigger_Once", 14 * TS, suelo - 64, 48, 48,
         text="Z ataca. Tambien puedes saltar por encima.")
     obj("Walker", 18 * TS, suelo - 28, 24, 28,
         max_health=2.0, patrol_length=80.0, patrol_speed=60.0, alert_speed=90.0)
     obj("Checkpoint", 22 * TS, suelo - 32, 16, 32, checkpoint_id=0)
 
-    # ── Zona C — la ruta vertical, con hielo ────────────────────
-    # AUD-506: todo este bloque se repuso sobre `_altura_colina` — la colina
-    # ahora es sólida (antes se veía y no se pisaba), así que lo que colgaba
-    # o se apoyaba a la altura de las dos `Platform` que había antes tenía
-    # que moverse a la altura real del escalón o la meseta bajo cada objeto.
+    # Zona C — colina, liana, hielo (material)
     obj("MessageTrigger_Once", 25 * TS, suelo - 64, 48, 48,
         text="Sube. Con G o Arriba te agarras a la liana.")
-    # La liana cuelga desde encima de la meseta (fila 19) hasta su superficie
-    # (fila 24, `_altura_colina(33) == 6`) — antes bajaba hasta la fila 30 y
-    # el tramo final quedaba enterrado dentro del sólido nuevo de la meseta.
     obj("Vine", 33 * TS, (SUELO_Y - 11) * TS, 8, 5 * TS,
         velocidad=75.0, ancho_de_agarre=12.0)
     obj("Pickup", 29 * TS, (SUELO_Y - 4) * TS - TS, 16, 16,
@@ -254,20 +219,13 @@ def _objetos() -> list[str]:
     obj("Flying", 30 * TS, suelo - 7 * TS, 20, 14,
         flight_mode="sine", flight_speed=60.0,
         sine_amplitude=32.0, sine_frequency=2.0)
-    # AUD-491/AUD-490 — primer uso real de una zona de material. El hielo no
-    # es una baldosa distinta: es la misma repisa con una propiedad de
-    # física encima, para que se lea «esta repisa está tomada», no «hay tres
-    # tipos de suelo». Fila 24: la superficie real de la meseta.
     obj("MessageTrigger_Once", 36 * TS, (SUELO_Y - 6) * TS - 48, 48, 48,
         text="Hielo. Sueltas menos el salto, no mas.")
     obj("FrictionZone", 36 * TS, (SUELO_Y - 6) * TS, 7 * TS, TS,
         multiplicador=0.55, material="hielo")
     obj("Checkpoint", 43 * TS, (SUELO_Y - 6) * TS - 32, 16, 32, checkpoint_id=1)
 
-    # ── Zona D — fuego de respuesta ──────────────────────────────
-    # AUD-305/AUD-491 — primer uso real del bash: un proyectil marcado
-    # `admite_bash` y un mensaje que explica que golpearlo, no sólo
-    # esquivarlo, es una opción.
+    # Zona D — fuego de respuesta y bash
     obj("MessageTrigger_Once", 45 * TS, suelo - 64, 48, 48,
         text="Esa flecha se puede golpear para impulsarte.")
     obj("Archer", 49 * TS, suelo - 28, 16, 28, fire_rate=1.6,
@@ -277,36 +235,38 @@ def _objetos() -> list[str]:
         item_id="fragmento_2", automatico=True, mensaje="Fragmento 2 de 3.")
     obj("Checkpoint", 55 * TS, suelo - 32, 16, 32, checkpoint_id=2)
 
-    # ── Zona E — la llave guardada ────────────────────────────────
+    # Zona E — llave, combate variado y puzzle Push+Plate
     obj("MessageTrigger_Once", 57 * TS, suelo - 64, 48, 48,
         text="La llave abre la puerta del fondo.")
     obj("Key", 59 * TS, suelo - 20, 16, 16,
         item_id="llave_prologo", automatico=True, mensaje="Has cogido la llave.")
+    # Puzzle extra E/F: PushBlock + PressurePlate que abre la misma puerta
+    # que la llave — dos soluciones para el mismo obstáculo (present-before-challenge).
+    # El bloque se empuja sobre la placa y la puerta cede mientras esté pisada.
+    obj("PushBlock", 60 * TS, suelo - 32, 2 * TS, 2 * TS, velocidad=45.0)
+    obj("PressurePlate", 63 * TS, suelo - 16, 2 * TS, TS,
+        evento="PLACA_PROLOGO", requiere="bloque", mantener=True)
     obj("Charger", 62 * TS, suelo - 24, 28, 24, charge_speed=250.0)
     obj("Brute", 65 * TS, suelo - 60, 100, 60, max_health=6.0)
+    # La puerta se abre con llave O con placa (abre_con) — dos soluciones.
     obj("LockedDoor", FOSO_X0 * TS - TS, suelo - 3 * TS, TS, 3 * TS,
         key_id="llave_prologo", clase="puerta",
-        mensaje_bloqueado="Cerrada. Busca la llave.")
+        mensaje_bloqueado="Cerrada. Busca la llave.",
+        abre_con="PLACA_PROLOGO")
     obj("Checkpoint", 65 * TS, suelo - 32, 16, 32, checkpoint_id=3)
 
-    # ── Zona F — el foso, tres formas de cruzarlo ────────────────
-    # A una baldosa del borde del foso, no ocho: ocho caía dentro de la
-    # zona E y el aviso llegaba antes de que el jugador hubiera visto la
-    # llave.
+    # Zona F — foso con tres rutas
     obj("MessageTrigger_Once", (FOSO_X0 - 1) * TS - TS, suelo - 64, 48, 48,
         text="Salta, cronometra los bloques, o prueba la goma.")
     obj("DeathPit", FOSO_X0 * TS, (MH - 2) * TS, (FOSO_X1 - FOSO_X0) * TS, 2 * TS)
     for i in range(3):
         obj("RhythmBlock", (FOSO_X0 + 1 + i) * TS, suelo - 5 * TS, TS, TS,
             visible_seg=1.8, oculto_seg=1.0, desfase=i * 0.6)
-    # AUD-490/AUD-491 — la goma es la tercera ruta: aterrizar aquí devuelve
-    # velocidad vertical (`Material.GOMA`, restitución 0,6) en vez de
-    # frenar en seco, así que cruza el foso rebotando en dos tiempos.
     obj("FrictionZone", (FOSO_X0 - 1) * TS, (MH - 2) * TS, TS, 2 * TS,
         material="goma")
     obj("HazardZone", (FOSO_X1 + 2) * TS, suelo - TS, 3 * TS, TS, damage=0.25)
 
-    # ── Zona G — todo junto ───────────────────────────────────────
+    # Zona G — todo junto: viento, tirolesa, cofre
     obj("MessageTrigger_Once", 82 * TS, suelo - 64, 48, 48,
         text="El viento empuja. Espera a que amaine. U es el ataque definitivo.")
     obj("WindZone", 84 * TS, (SUELO_Y - 10) * TS, 10 * TS, 10 * TS,
@@ -326,13 +286,7 @@ def _objetos() -> list[str]:
     obj("Checkpoint", 89 * TS, suelo - 32, 16, 32, checkpoint_id=4)
     obj("NextTrigger", 97 * TS, suelo - 3 * TS, 2 * TS, 3 * TS)
 
-    # ── Focos ──────────────────────────────────────────────────────────
-    # La iluminación es material de la Unidad V y el prólogo es donde se
-    # enseña, pero el número y la potencia de los focos no son decoración:
-    # stage 0 declara `day_length=420`, así que a mitad de partida se hace
-    # de noche y el ambiente cae al suelo de 0,45. Los números de abajo
-    # están calibrados contra `test_de_noche_el_nivel_sigue_siendo_jugable`,
-    # que mide píxeles en pantalla, no propiedades del TMX.
+    # Focos — 12 en total, calibrados para legibilidad nocturna (day_length 420)
     obj("Light", 6 * TS, suelo - 5 * TS, 16, 16,
         radius=150.0, color="fire", intensity=0.95, flicker=True,
         flicker_speed=3.2, flicker_amount=0.18)
@@ -344,6 +298,7 @@ def _objetos() -> list[str]:
 
 
 def _colisiones() -> list[str]:
+    """Capa Collision: suelo, muros, obstáculos y colina."""
     r: list[str] = []
     ident = [1]
 
@@ -359,22 +314,14 @@ def _colisiones() -> list[str]:
     solido(FOSO_X1 * TS, suelo, (MW - FOSO_X1) * TS, (MH - SUELO_Y) * TS)
     solido(-TS, 0, TS, MH * TS)
     solido(MW * TS, 0, TS, MH * TS)
-    # Obstáculos interiores: lo único del prólogo contra lo que se choca de lado.
     for x, alto in OBSTACULOS:
         solido(x * TS, (SUELO_Y - alto) * TS, TS, alto * TS)
-    # AUD-506 — la colina de la zona C, un sólido por columna con
-    # `_altura_colina` (la misma función que pinta `_terreno`), rellenando
-    # desde el escalón hasta el suelo plano de abajo. Antes de esto la colina
-    # se veía y no se pisaba: el suelo real seguía siendo la fila plana bajo
-    # el dibujo, y los dos `Platform` que había aquí eran repisas de un
-    # diseño anterior en otra posición y otra altura.
+    # Colina — un sólido por columna desde _altura_colina
     for x in range(24, 51):
         alto = _altura_colina(x)
         if alto:
             solido(x * TS, (SUELO_Y - alto) * TS, TS, alto * TS)
-    # Zona E — la ruta alta bypass, atravesable desde abajo (por eso es
-    # "Platform" y no "Solid": se puede saltar a través de ella y aterrizar
-    # encima, como el bypass gemelo de la zona G, dos líneas más abajo).
+    # Repisas atravesables (Platform)
     solido(58 * TS, (SUELO_Y - 9) * TS, 10 * TS, 8, "Platform")
     solido(88 * TS, (SUELO_Y - 9) * TS, 8 * TS, 8, "Platform")
     return r
