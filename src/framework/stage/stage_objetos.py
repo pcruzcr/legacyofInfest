@@ -829,6 +829,7 @@ class ObjetosDeTiled:
             BloqueRitmico,
             ConoDeVision,
             Liana,
+            LianaSalto,
             PlataformaHundible,
             PlataformaMovil,
             Resorte,
@@ -993,6 +994,15 @@ class ObjetosDeTiled:
                 velocidad=f("velocidad", 70.0),
                 amplitud=f("amplitud", 0.0),
                 periodo=f("periodo", 0.0),
+            )]
+
+        elif obj_type in ("VineSwing", "LianaSalto", "RopeSwing"):
+            grupo = [LianaSalto(
+                rect=rect,
+                largo=int(f("largo", 48.0)),
+                amplitud=f("amplitud", 32.0),
+                periodo=f("periodo", 1.8),
+                radio_agarre=int(f("radio_agarre", 18.0)),
             )]
 
         elif obj_type == "Zipline":

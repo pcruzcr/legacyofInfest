@@ -43,6 +43,7 @@ from src.framework.ecs.components import (
     Efectos,
     EsJugador,
     Liana,
+    LianaSalto,
     Navegante,
     PlataformaHundible,
     PlataformaMovil,
@@ -437,6 +438,39 @@ def sistema_lianas_moviles(mundo: World, dt: float) -> None:
                         t.rect.x += delta
 
 
+def sistema_lianas_salto(mundo: World, dt: float) -> None:
+    """Liana de salto — colgante con pendulo para saltar de una a otra.
+
+    Distinta a Vine de trepar: aquí te cuelgas y te balanceas, no subes.
+    Usa _origen_x + sin(t*2π/periodo)*amplitud, periodo 0 = fija colgante.
+    Arrastra a quien esté en BalanceoEnLianaSaltoState.
+    """
+    import math as _math
+    for _, ls in mundo.cada(LianaSalto):
+        if ls.amplitud <= 0.0 or ls.periodo <= 0.0:
+            continue
+        if ls._t == 0.0 and ls._origen_x == 0.0:
+            ls._origen_x = float(ls.rect.x)
+        ls._t += dt
+        nuevo_x = ls._origen_x + _math.sin(ls._t * 2 * _math.pi / ls.periodo) * ls.amplitud
+        delta = int(nuevo_x) - ls.rect.x
+        if delta != 0:
+            ls.rect.x = int(nuevo_x)
+            from src.framework.entities.states.rope import BalanceoEnLianaSaltoState
+            for eid in mundo.con(Transform, EsJugador):
+                t = mundo.obtener(eid, Transform)
+                if t is None:
+                    continue
+                duenio = getattr(t, "_duenio", None)
+                if duenio is not None:
+                    estado = getattr(duenio, "_state_instance", None)
+                    if isinstance(estado, BalanceoEnLianaSaltoState) and getattr(estado, "_liana_salto", None) is ls:
+                        duenio.position.x += float(delta)
+                        duenio.rect.x += delta
+                        t.posicion.x += float(delta)
+                        t.rect.x += delta
+
+
 def liana_alcanzable(mundo: World, rect: pygame.Rect) -> Liana | None:
     """La liana que el jugador puede agarrar ahora mismo, si hay alguna.
 
@@ -450,6 +484,30 @@ def liana_alcanzable(mundo: World, rect: pygame.Rect) -> Liana | None:
         if zona.colliderect(rect):
             return liana
     return None
+
+
+def liana_salto_alcanzable(mundo: World, rect: pygame.Rect) -> LianaSalto | None:
+    """La liana de salto más cercana en aire — radio generoso para salto entre lianas.
+
+    Distinta a liana_alcanzable: aquí el agarre es en aire y con radio circular,
+    no rect inflado. Permite engancharse saltando hacia la siguiente liana.
+    """
+    import math as _math
+    centro = pygame.Vector2(rect.center)
+    mejor: LianaSalto | None = None
+    mejor_dist = float("inf")
+    for _, ls in mundo.cada(LianaSalto):
+        # Punto de anclaje es top-center, el jugador debe llegar al rect de la cuerda
+        # Usa distancia al rect inflado por radio_agarre
+        zona = ls.rect.inflate(ls.radio_agarre * 2, ls.radio_agarre)
+        # También permite agarre circular alrededor del anclaje
+        anclaje = pygame.Vector2(ls.rect.centerx, ls.rect.top + 8)
+        dist = (centro - anclaje).length()
+        if zona.colliderect(rect) or dist < ls.radio_agarre * 1.5:
+            if dist < mejor_dist:
+                mejor_dist = dist
+                mejor = ls
+    return mejor
 
 
 def tirolesa_alcanzable(mundo: World, rect: pygame.Rect) -> Tirolesa | None:

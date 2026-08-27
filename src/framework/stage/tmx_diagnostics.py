@@ -124,6 +124,9 @@ BUILTIN_OBJECT_TYPES: tuple[str, ...] = (
     # de la columna, no dentro, y para subir tiene que saltar — que es justo lo
     # que una liana existe para evitar.
     "Vine",            # DKC (Ropey Rampage), Zelda, Spelunky, Castlevania
+    "VineSwing",       # DKC Jungle Swing — liana colgante para saltar de una a otra (distinta a Vine de trepar)
+    "LianaSalto",
+    "RopeSwing",
     "Zipline",         # DKC, Rayman, Ori
     # AUD-259 — `17_BOSS_SPEC.md` §8.2 exige un `BossSpawn` en todo mapa de
     # jefe desde que se escribió, y el cargador no lo conocía: quien siguiera

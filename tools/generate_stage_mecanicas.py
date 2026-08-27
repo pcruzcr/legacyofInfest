@@ -399,6 +399,13 @@ def _objetos() -> list[str]:
         velocidad=75.0, ancho_de_agarre=14.0, amplitud=32.0, periodo=2.0)
     obj("MessageTrigger_Once", (8 * SALA + 8) * TS, suelo_px - 64, 48, 32,
         text="Liana fija y liana que se mueve — agarrate con G y trepa con arriba/abajo")
+    # Lianas de salto — pareja para saltar de una a otra (distintas a la de trepar)
+    obj("VineSwing", (9 * SALA + 8) * TS, (SUELO_Y - 14) * TS, 16, 14,
+        largo=48, amplitud=28.0, periodo=1.6, radio_agarre=20)
+    obj("VineSwing", (9 * SALA + 14) * TS, (SUELO_Y - 14) * TS, 16, 14,
+        largo=48, amplitud=28.0, periodo=1.6, radio_agarre=20)
+    obj("MessageTrigger_Once", (9 * SALA + 6) * TS, suelo_px - 64, 64, 32,
+        text="Lianas de salto — colgate, balanceate y salta a la siguiente")
 
     # Luces — 2 focos con sombras proyectadas (coste medido)
     obj("Light", (SALA // 2) * TS, (SUELO_Y - 6) * TS, 16, 16,

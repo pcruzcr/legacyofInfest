@@ -93,7 +93,8 @@ def slug_de_stage_id(stage_id: str) -> str:
 _TIPOS_DE_COMPONENTE: frozenset[str] = frozenset({
     "WindZone", "FrictionZone", "Conveyor", "LaserZone", "ShockwaveZone",
     "WaterZone", "MovingPlatform", "RhythmBlock", "SinkingPlatform",
-    "Guard", "Stalker", "Vine", "Zipline", "Spring",
+    "Guard", "Stalker", "Vine", "VineSwing", "LianaSalto", "RopeSwing",
+    "Zipline", "Spring",
 })
 
 if TYPE_CHECKING:

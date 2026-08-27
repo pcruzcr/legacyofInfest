@@ -217,6 +217,14 @@ def _objetos() -> list[str]:
     # Liana móvil — se balancea 28px con periodo 2.2s y arrastra al trepador (PSX HQ)
     obj("Vine", 38 * TS, (SUELO_Y - 11) * TS, 8, 4 * TS,
         velocidad=70.0, ancho_de_agarre=14.0, amplitud=28.0, periodo=2.2)
+    # Lianas de salto — colgantes para saltar de una a otra (distintas a la de trepar)
+    # Se colocan en pareja con separación 80px (~5 baldosas) para salto con impulso 220px/s
+    obj("VineSwing", 72 * TS, (SUELO_Y - 14) * TS, 16, 14,
+        largo=48, amplitud=32.0, periodo=1.8, radio_agarre=18)
+    obj("VineSwing", 77 * TS, (SUELO_Y - 14) * TS, 16, 14,
+        largo=48, amplitud=32.0, periodo=1.8, radio_agarre=18)
+    obj("MessageTrigger_Once", 71 * TS, suelo - 64, 48, 32,
+        text="Lianas de salto — colgate y salta de una a otra con impulso")
     obj("Pickup", 29 * TS, (SUELO_Y - 4) * TS - TS, 16, 16,
         item_id="fragmento_1", automatico=True, mensaje="Fragmento 1 de 3.")
     obj("Flying", 30 * TS, suelo - 7 * TS, 20, 14,

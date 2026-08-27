@@ -652,6 +652,35 @@ class Liana:
 
 
 @dataclass(slots=True)
+class LianaSalto:
+    """Rope colgante para saltar de una a otra — distinta a la liana de escalar.
+
+    No se trepa verticalmente: te cuelgas, te balanceas (pendulo) y saltas
+    con impulso para alcanzar la siguiente. Es la liana de DKC / Jungle
+    Book, no la enredadera de Zelda. Por eso es otro componente y no un
+    flag en Liana: geometría, agarre y estado son distintos.
+    """
+
+    rect: pygame.Rect
+    #: Largo visual de la cuerda (px) — solo dibujo, la colisión es el rect.
+    largo: int = 48
+    #: Amplitud de balanceo en px (0 = colgante fijo, >0 = pendulo)
+    amplitud: float = 32.0
+    #: Periodo de oscilación en s (2.0 = balanceo natural)
+    periodo: float = 1.8
+    #: Radio de agarre en aire (px) — generoso para no fallar el salto.
+    radio_agarre: int = 18
+    _t: float = 0.0
+    _origen_x: float = 0.0
+
+    def __post_init__(self) -> None:
+        try:
+            self._origen_x = float(self.rect.x)
+        except Exception:
+            self._origen_x = 0.0
+
+
+@dataclass(slots=True)
 class Tirolesa:
     """Cable en diagonal por el que se desliza. DKC, Rayman, Ori.
 

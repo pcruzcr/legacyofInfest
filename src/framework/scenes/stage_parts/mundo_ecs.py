@@ -80,6 +80,10 @@ class MundoDelEscenario:
             ecs_systems.sistema_lianas_moviles,
         )
         p.registrar(
+            Fase.ESCENARIO + 3, "lianas_salto",
+            ecs_systems.sistema_lianas_salto,
+        )
+        p.registrar(
             Fase.ARRASTRE, "arrastre", ecs_systems.sistema_arrastre_de_plataformas,
         )
         # La fricción va en ZONAS y no en FUERZAS porque arrastra posición, no
@@ -178,12 +182,36 @@ class MundoDelEscenario:
         el fallo que más se repite en los juegos que las tienen.
         """
         from src.framework.entities.states import TirolesaState, TrepandoState
+        from src.framework.entities.states.rope import BalanceoEnLianaSaltoState
 
         if player is None or im is None:
             return
         actual = getattr(player, "_state_instance", None)
-        if isinstance(actual, (TrepandoState, TirolesaState)):
+        if isinstance(actual, (TrepandoState, TirolesaState, BalanceoEnLianaSaltoState)):
             return
+        # Liana de salto — se puede agarrar en el aire saltando de una a otra,
+        # sin necesidad de pulsar GRAB con precisión. Si el jugador está en
+        # JUMPING/FALLING cerca de una LianaSalto, se engancha automáticamente
+        # con GRAB/JUMP o incluso solo por proximidad en caída.
+        # Esto permite saltar de una liana a otra como en DKC.
+        liana_salto = ecs_systems.liana_salto_alcanzable(self._mundo, player.rect)
+        if liana_salto is not None:
+            # En aire, agarra con JUMP/GRAB o por proximidad si cae
+            en_aire = not player.is_grounded
+            pulso_agarre = (
+                im.is_action_just_pressed(Action.GRAB)
+                or im.is_action_just_pressed(Action.SHORT_ATTACK)
+                or im.is_action_just_pressed(Action.MOVE_UP)
+                or im.is_action_just_pressed(Action.JUMP)
+            )
+            # Si está en aire y muy cerca, agarra incluso sin pulsar (para salto fluido)
+            cerca_en_aire = en_aire and im.is_action_held(Action.GRAB) or pulso_agarre
+            # También permite agarre automático si viene de un salto entre lianas
+            # (player ya está en JUMPING/FALLING y la liana está a distancia de salto)
+            if pulso_agarre or (en_aire and liana_salto.rect.colliderect(player.rect.inflate(24, 24))):
+                player._change_state_instance(BalanceoEnLianaSaltoState(liana_salto))
+                return
+        # Liana clásica y tirolesa — requieren pulsar
         # Liana: GRAB (G/C) o X (ataque corto) — el mensaje de stage0 decía X y
         # los jugadores lo intentaban con X. Se aceptan ambos y también UP (W).
         if not (
