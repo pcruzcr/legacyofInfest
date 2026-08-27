@@ -76,6 +76,10 @@ class MundoDelEscenario:
             ecs_systems.sistema_plataformas_hundibles,
         )
         p.registrar(
+            Fase.ESCENARIO + 3, "lianas_moviles",
+            ecs_systems.sistema_lianas_moviles,
+        )
+        p.registrar(
             Fase.ARRASTRE, "arrastre", ecs_systems.sistema_arrastre_de_plataformas,
         )
         # La fricción va en ZONAS y no en FUERZAS porque arrastra posición, no

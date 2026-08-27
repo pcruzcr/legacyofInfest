@@ -394,6 +394,49 @@ def sistema_zonas_letales(mundo: World, dt: float) -> None:
                 s.actual = max(0.0, s.actual - zona.dano)
 
 
+def sistema_lianas_moviles(mundo: World, dt: float) -> None:
+    """Liana que se balancea — amplitud>0 oscila como péndulo y arrastra al trepador.
+
+    PSX HQ 2.5D: una liana estática es un palo; una que se mueve es un reto de
+    timing y una lectura de física. Usa _origen_x + sin(t*2π/periodo)*amplitud,
+    con periodo 0 = estática. Arrastra a quien esté en TrepandoState agarrado a
+    esa liana (delta x aplicado a su Transform y a su rect).
+    """
+    import math as _math
+    for _, liana in mundo.cada(Liana):
+        if liana.amplitud <= 0.0 or liana.periodo <= 0.0:
+            continue
+        # Guarda origen la primera vez
+        if abs(liana._origen_x) < 0.5 and liana._origen_x == 0.0:
+            # Si rect.x es 0 por casualidad, no confundir con no inicializado
+            # Usa flag: si _t==0 y amplitud>0, inicializa
+            if liana._t == 0.0:
+                liana._origen_x = float(liana.rect.x)
+        liana._t += dt
+        nuevo_x = liana._origen_x + _math.sin(liana._t * 2 * _math.pi / liana.periodo) * liana.amplitud
+        delta = int(nuevo_x) - liana.rect.x
+        if delta != 0:
+            liana.rect.x = int(nuevo_x)
+            # Arrastra a trepadores agarrados a esta liana
+            from src.framework.entities.states.rope import TrepandoState
+            for eid in mundo.con(Transform, EsJugador):
+                t = mundo.obtener(eid, Transform)
+                if t is None:
+                    continue
+                # Busca si el jugador está trepando esta liana (via estado)
+                # Accede al Player real si es vista
+                duenio = getattr(t, "_duenio", None)
+                if duenio is not None:
+                    estado = getattr(duenio, "_state_instance", None)
+                    if isinstance(estado, TrepandoState) and getattr(estado, "liana", None) is liana:
+                        # Mueve al jugador con la liana
+                        duenio.position.x += float(delta)
+                        duenio.rect.x += delta
+                        # También mueve su Transform vista
+                        t.posicion.x += float(delta)
+                        t.rect.x += delta
+
+
 def liana_alcanzable(mundo: World, rect: pygame.Rect) -> Liana | None:
     """La liana que el jugador puede agarrar ahora mismo, si hay alguna.
 

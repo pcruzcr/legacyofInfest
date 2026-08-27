@@ -214,6 +214,9 @@ def _objetos() -> list[str]:
         text="Sube. Con G o Arriba te agarras a la liana.")
     obj("Vine", 33 * TS, (SUELO_Y - 11) * TS, 8, 5 * TS,
         velocidad=75.0, ancho_de_agarre=12.0)
+    # Liana móvil — se balancea 28px con periodo 2.2s y arrastra al trepador (PSX HQ)
+    obj("Vine", 38 * TS, (SUELO_Y - 11) * TS, 8, 4 * TS,
+        velocidad=70.0, ancho_de_agarre=14.0, amplitud=28.0, periodo=2.2)
     obj("Pickup", 29 * TS, (SUELO_Y - 4) * TS - TS, 16, 16,
         item_id="fragmento_1", automatico=True, mensaje="Fragmento 1 de 3.")
     obj("Flying", 30 * TS, suelo - 7 * TS, 20, 14,

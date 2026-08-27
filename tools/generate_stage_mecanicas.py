@@ -392,6 +392,14 @@ def _objetos() -> list[str]:
         else:
             obj(especie, x, suelo_px - 28, 24, 28)
 
+    # Liana fija + liana móvil que se balancea y arrastra al trepador
+    obj("Vine", (4 * SALA + 15) * TS, (SUELO_Y - 8) * TS, 8, 6 * TS,
+        velocidad=70.0, ancho_de_agarre=12.0, amplitud=0.0, periodo=0.0)
+    obj("Vine", (8 * SALA + 12) * TS, (SUELO_Y - 10) * TS, 8, 5 * TS,
+        velocidad=75.0, ancho_de_agarre=14.0, amplitud=32.0, periodo=2.0)
+    obj("MessageTrigger_Once", (8 * SALA + 8) * TS, suelo_px - 64, 48, 32,
+        text="Liana fija y liana que se mueve — agarrate con G y trepa con arriba/abajo")
+
     # Luces — 2 focos con sombras proyectadas (coste medido)
     obj("Light", (SALA // 2) * TS, (SUELO_Y - 6) * TS, 16, 16,
         radius=180, color="#ffe9a8", intensity=0.9)

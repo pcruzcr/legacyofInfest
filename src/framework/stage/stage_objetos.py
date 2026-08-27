@@ -991,6 +991,8 @@ class ObjetosDeTiled:
                 rect=rect,
                 ancho_de_agarre=int(f("ancho_de_agarre", 10.0)),
                 velocidad=f("velocidad", 70.0),
+                amplitud=f("amplitud", 0.0),
+                periodo=f("periodo", 0.0),
             )]
 
         elif obj_type == "Zipline":

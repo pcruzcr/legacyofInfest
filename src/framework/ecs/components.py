@@ -636,6 +636,19 @@ class Liana:
     ancho_de_agarre: int = 10
     #: Velocidad de subida y bajada, px/s.
     velocidad: float = 70.0
+    #: Balanceo horizontal PSX — amplitud en px y periodo en s. 0 = estática.
+    #: Con amplitud>0 la liana oscila como péndulo y arrastra al trepador.
+    amplitud: float = 0.0
+    periodo: float = 0.0
+    _t: float = 0.0
+    _origen_x: float = 0.0
+
+    def __post_init__(self) -> None:
+        # Guarda origen para oscilación estable
+        try:
+            self._origen_x = float(self.rect.x)
+        except Exception:
+            self._origen_x = 0.0
 
 
 @dataclass(slots=True)
