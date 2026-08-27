@@ -2113,19 +2113,14 @@ TILESET_THEMES = {
     "tileset_datacenter": {"floor": (90,90,110), "wall": (110,110,130), "deco": (70,70,90)},
     "tileset_heredia_stone": {"floor": (100,90,80), "wall": (120,110,100), "deco": (80,70,60)},
     "tileset_heredia_interior": {"floor": (130,110,90), "wall": (150,130,110), "deco": (110,90,70)},
-    "tileset_cemetery": {"floor": (50,50,70), "wall": (70,70,90), "deco": (40,40,60)},
-    "tileset_stage4_1": {"floor": (90,80,70), "wall": (58,56,70), "deco": (70,60,50)},
-    # AUD-531 — reemplaza la paleta abisal azul de AUD-519. Pedido tras
-    # jugarlo: «el nivel no puede ser totalmente negro. El negro debe
-    # representar únicamente la ausencia de luz; la paleta principal debe
-    # basarse en tonos café para transmitir la sensación de estar dentro
-    # de una cueva». Roca húmeda, no fosa azul — el negro sigue reservado
-    # para lo que de verdad no recibe luz (`ambient_light=0.28` en el
-    # TMX, sin cambios).
+    # ── EL CEMENTERIO SAGRADO — 6 fases, una paleta por fase (guion 6 fases + intro) ──
+    "tileset_stage4_1_fase1": {"floor": (96,112,76), "wall": (72,84,68), "deco": (148,132,108)},
+    "tileset_stage4_1_fase2": {"floor": (68,70,66), "wall": (48,50,46), "deco": (98,106,84)},
+    "tileset_stage4_1_fase3": {"floor": (152,148,132), "wall": (98,96,88), "deco": (78,76,68)},
+    "tileset_stage4_1_fase4": {"floor": (82,64,48), "wall": (58,48,38), "deco": (176,124,78)},
+    "tileset_stage4_1_fase5": {"floor": (46,52,72), "wall": (32,36,58), "deco": (72,66,52)},
+    "tileset_stage4_1_fase6": {"floor": (64,72,66), "wall": (48,56,52), "deco": (94,148,102)},
     "tileset_stage4_1b": {"floor": (58,42,28), "wall": (34,24,16), "deco": (78,56,36)},
-    # AUD-520 — 4.1c, la variante aérea: nubes y niebla pálidas, sin
-    # verde ni piedra — las plataformas sólidas tienen que leerse contra
-    # un cielo, no contra tierra.
     "tileset_stage4_1c": {"floor": (150,150,170), "wall": (110,110,135), "deco": (190,190,205)},
 }
 
@@ -2983,6 +2978,286 @@ def _gen_tileset_stage4_1(path, ts=16, cols=8, rows=3):
     _gen_normal_map_para_tileset(path)
 
 
+# ════════════════════════════════════════════════════════════════════
+#  AUD-?? — 6 tilesets stage4_1 fase por fase (guion 6 fases + intro)
+#  Cada tileset 256×256 (16×16 baldosas 16px) — PSX 32-bit, 800×600 NEAREST,
+#  Bayer 4×4, paleta extendida 64-96 colores + dithering, variantes
+#  autotiling 16 tipos, *_n.png 12 normales. tileset_liquidos no necesario aquí.
+#  W,H 800,600, estilo pixel PSX vintage moderno, 32-bit.
+# ════════════════════════════════════════════════════════════════════
+
+def _gen_tileset_stage4_1_fase1(path=None, ts=16, cols=16, rows=16):
+    """F1 Tilarán a color con easter egg Teresa/Hugo — 256×256 PSX 32-bit."""
+    if path is None:
+        path = A / "tilesets" / "tileset_stage4_1_fase1.png"
+    theme = TILESET_THEMES["tileset_stage4_1_fase1"]
+    _ensure(path)
+    img = Image.new("RGBA", (ts * cols, ts * rows), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    rng = random.Random(4101)
+    for gy in range(rows):
+        for gx in range(cols):
+            ox, oy = gx * ts, gy * ts
+            ttype = (gy * 8 + gx) % 8 if gx < 8 and gy < 8 else (gy * cols + gx) % 16
+            _dibujar_tile_procedural(draw, ox, oy, ts, ttype, theme)
+    for tx, ty, con_cruz in [(10, 2, False), (13, 2, True)]:
+        ox, oy = tx * ts, ty * ts
+        _dibujar_tile_procedural(draw, ox, oy, ts, 0, theme)
+        if not con_cruz:
+            draw.rectangle((ox + 3, oy + 2, ox + ts - 4, oy + ts - 2), fill=(148, 132, 108))
+            draw.ellipse((ox + 3, oy + 1, ox + ts - 4, oy + 9), fill=(148, 132, 108))
+            draw.line((ox + 3, oy + 2, ox + 3, oy + ts - 2), fill=(178, 162, 128))
+            for px in (ox + 5, ox + 7, ox + 9):
+                draw.point((px, oy + 10), fill=(68, 58, 44))
+        else:
+            draw.rectangle((ox + 6, oy + 3, ox + 8, oy + ts - 2), fill=(148, 132, 108))
+            draw.rectangle((ox + 3, oy + 6, ox + ts - 4, oy + 8), fill=(148, 132, 108))
+            draw.line((ox + 6, oy + 3, ox + 6, oy + ts - 2), fill=(178, 162, 128))
+    rng2 = random.Random(hash(str(path)) % (2**31))
+    for _ in range(100):
+        x = rng2.randint(0, ts*cols-1); y = rng2.randint(0, ts*rows-1)
+        r, g, b, a = img.getpixel((x, y))
+        if a:
+            dv = rng2.randint(-16, 16)
+            if BAYER_4X4[y % 4][x % 4] < 6:
+                dv = int(dv*0.5)
+            img.putpixel((x, y), (max(0, min(255, r+dv)), max(0, min(255, g+dv)), max(0, min(255, b+dv)), a))
+    img.save(path)
+    _gen_normal_map_para_tileset(path)
+
+
+def _gen_tileset_stage4_1_fase2(path=None, ts=16, cols=16, rows=16):
+    """F2 Venado B&W bosque con musgo resbaladizo (inercia 0.15) y lodo freno (0.88), loma Slope — 256×256 PSX 32-bit."""
+    if path is None:
+        path = A / "tilesets" / "tileset_stage4_1_fase2.png"
+    theme = TILESET_THEMES["tileset_stage4_1_fase2"]
+    _ensure(path)
+    img = Image.new("RGBA", (ts * cols, ts * rows), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    rng = random.Random(4102)
+    for gy in range(rows):
+        for gx in range(cols):
+            ox, oy = gx * ts, gy * ts
+            ttype = (gy * 8 + gx) % 8 if gx < 8 and gy < 8 else (gy * cols + gx) % 16
+            if ttype == 2:
+                _dibujar_tile_procedural(draw, ox, oy, ts, 0, theme)
+                claro, oscuro = (98, 106, 84), (68, 76, 58)
+                draw.rectangle((ox, oy, ox + ts - 1, oy + 5), fill=claro)
+                draw.line((ox, oy + 5, ox + ts - 1, oy + 5), fill=oscuro)
+                for mx in range(ox + 1, ox + ts - 1, 3):
+                    alto = rng.randint(2, 4)
+                    draw.line((mx, oy - alto + 6, mx, oy + 6), fill=claro)
+                draw.rectangle((ox, oy, ox + ts - 1, oy + ts - 1), outline=tuple(max(0, c-22) for c in theme["wall"]), width=1)
+                draw.point((ox, oy), fill=tuple(min(255, c+55) for c in theme["wall"]))
+                continue
+            elif ttype == 5:
+                _dibujar_tile_procedural(draw, ox, oy, ts, 0, theme)
+                claro2, oscuro2 = (88, 78, 62), (58, 48, 34)
+                draw.rectangle((ox, oy, ox + ts - 1, oy + 5), fill=claro2)
+                draw.line((ox, oy + 5, ox + ts - 1, oy + 5), fill=oscuro2)
+                for _ in range(2):
+                    ry = rng.randint(oy + 1, oy + 4)
+                    draw.line((ox, ry, ox + ts - 1, ry + rng.randint(-1, 1)), fill=oscuro2)
+                draw.rectangle((ox, oy, ox + ts - 1, oy + ts - 1), outline=tuple(max(0, c-22) for c in theme["wall"]), width=1)
+                draw.point((ox, oy), fill=tuple(min(255, c+55) for c in theme["wall"]))
+                continue
+            _dibujar_tile_procedural(draw, ox, oy, ts, ttype, theme)
+    rng2 = random.Random(hash(str(path)) % (2**31))
+    for _ in range(100):
+        x = rng2.randint(0, ts*cols-1); y = rng2.randint(0, ts*rows-1)
+        r, g, b, a = img.getpixel((x, y))
+        if a:
+            dv = rng2.randint(-16, 16)
+            if BAYER_4X4[y % 4][x % 4] < 6:
+                dv = int(dv*0.5)
+            img.putpixel((x, y), (max(0, min(255, r+dv)), max(0, min(255, g+dv)), max(0, min(255, b+dv)), a))
+    img.save(path)
+    _gen_normal_map_para_tileset(path)
+
+
+def _gen_tileset_stage4_1_fase3(path=None, ts=16, cols=16, rows=16):
+    """F3 Serpiente escala grises, lomas Slope, tormenta rayos/viento, serpientes/huesos fondo — 256×256 PSX 32-bit."""
+    if path is None:
+        path = A / "tilesets" / "tileset_stage4_1_fase3.png"
+    theme = TILESET_THEMES["tileset_stage4_1_fase3"]
+    _ensure(path)
+    img = Image.new("RGBA", (ts * cols, ts * rows), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    rng = random.Random(4103)
+    for gy in range(rows):
+        for gx in range(cols):
+            ox, oy = gx * ts, gy * ts
+            ttype = (gy * 8 + gx) % 8 if gx < 8 and gy < 8 else (gy * cols + gx) % 16
+            if ttype == 2:
+                _dibujar_tile_procedural(draw, ox, oy, ts, 0, theme)
+                draw.arc((ox + 1, oy + 4, ox + ts - 2, oy + ts + 4), 200, 340, fill=(120, 112, 92))
+                draw.rectangle((ox, oy, ox + ts - 1, oy + ts - 1), outline=tuple(max(0, c-22) for c in theme["wall"]), width=1)
+                draw.point((ox, oy), fill=tuple(min(255, c+55) for c in theme["wall"]))
+                continue
+            elif ttype == 6:
+                _dibujar_tile_procedural(draw, ox, oy, ts, 0, theme)
+                cx, cy = ox + ts // 2, oy + ts // 2
+                draw.ellipse((cx - 5, cy - 5, cx + 5, cy + 3), fill=(228, 220, 200))
+                draw.ellipse((cx - 3, cy - 2, cx - 1, cy), fill=(40, 36, 30))
+                draw.ellipse((cx + 1, cy - 2, cx + 3, cy), fill=(40, 36, 30))
+                draw.rectangle((ox, oy, ox + ts - 1, oy + ts - 1), outline=tuple(max(0, c-22) for c in theme["wall"]), width=1)
+                draw.point((ox, oy), fill=tuple(min(255, c+55) for c in theme["wall"]))
+                continue
+            _dibujar_tile_procedural(draw, ox, oy, ts, ttype, theme)
+    rng2 = random.Random(hash(str(path)) % (2**31))
+    for _ in range(100):
+        x = rng2.randint(0, ts*cols-1); y = rng2.randint(0, ts*rows-1)
+        r, g, b, a = img.getpixel((x, y))
+        if a:
+            dv = rng2.randint(-16, 16)
+            if BAYER_4X4[y % 4][x % 4] < 6:
+                dv = int(dv*0.5)
+            img.putpixel((x, y), (max(0, min(255, r+dv)), max(0, min(255, g+dv)), max(0, min(255, b+dv)), a))
+    img.save(path)
+    _gen_normal_map_para_tileset(path)
+
+
+def _gen_tileset_stage4_1_fase4(path=None, ts=16, cols=16, rows=16):
+    """F4 Halcón bosque cortado vintage naranja, lluvia, sombras, silencio 0.5 + shake 14/0.45, luna 600,78 — 256×256 PSX 32-bit."""
+    if path is None:
+        path = A / "tilesets" / "tileset_stage4_1_fase4.png"
+    theme = TILESET_THEMES["tileset_stage4_1_fase4"]
+    _ensure(path)
+    img = Image.new("RGBA", (ts * cols, ts * rows), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    rng = random.Random(4104)
+    for gy in range(rows):
+        for gx in range(cols):
+            ox, oy = gx * ts, gy * ts
+            ttype = (gy * 8 + gx) % 8 if gx < 8 and gy < 8 else (gy * cols + gx) % 16
+            if ttype == 5:
+                _dibujar_tile_procedural(draw, ox, oy, ts, 0, theme)
+                draw.rectangle((ox + 5, oy + 6, ox + ts - 6, oy + ts - 2), fill=(58, 48, 38))
+                draw.rectangle((ox + 6, oy + 6, ox + ts - 7, oy + ts - 4), fill=(82, 64, 48))
+                draw.ellipse((ox + 5, oy + 5, ox + ts - 6, oy + 9), fill=(96, 78, 58), outline=(58, 48, 38))
+                draw.rectangle((ox, oy, ox + ts - 1, oy + ts - 1), outline=tuple(max(0, c-22) for c in theme["wall"]), width=1)
+                draw.point((ox, oy), fill=tuple(min(255, c+55) for c in theme["wall"]))
+                continue
+            elif ttype == 2:
+                _dibujar_tile_procedural(draw, ox, oy, ts, 0, theme)
+                for _ in range(3):
+                    px = rng.randint(ox + 2, ox + ts - 3); py = rng.randint(oy + 2, oy + ts - 3)
+                    draw.point((px, py), fill=(90, 50, 30))
+                draw.rectangle((ox, oy, ox + ts - 1, oy + ts - 1), outline=tuple(max(0, c-22) for c in theme["wall"]), width=1)
+                draw.point((ox, oy), fill=tuple(min(255, c+55) for c in theme["wall"]))
+                continue
+            _dibujar_tile_procedural(draw, ox, oy, ts, ttype, theme)
+    rng2 = random.Random(hash(str(path)) % (2**31))
+    for _ in range(100):
+        x = rng2.randint(0, ts*cols-1); y = rng2.randint(0, ts*rows-1)
+        r, g, b, a = img.getpixel((x, y))
+        if a:
+            dv = rng2.randint(-16, 16)
+            if BAYER_4X4[y % 4][x % 4] < 6:
+                dv = int(dv*0.5)
+            img.putpixel((x, y), (max(0, min(255, r+dv)), max(0, min(255, g+dv)), max(0, min(255, b+dv)), a))
+    img.save(path)
+    _gen_normal_map_para_tileset(path)
+
+
+def _gen_tileset_stage4_1_fase5(path=None, ts=16, cols=16, rows=16):
+    """F5 Planicie noche luna 6.0s 0.20-0.48, conquistadores, cánticos, luz revela eventos — 256×256 PSX 32-bit."""
+    if path is None:
+        path = A / "tilesets" / "tileset_stage4_1_fase5.png"
+    theme = TILESET_THEMES["tileset_stage4_1_fase5"]
+    _ensure(path)
+    img = Image.new("RGBA", (ts * cols, ts * rows), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    rng = random.Random(4105)
+    for gy in range(rows):
+        for gx in range(cols):
+            ox, oy = gx * ts, gy * ts
+            ttype = (gy * 8 + gx) % 8 if gx < 8 and gy < 8 else (gy * cols + gx) % 16
+            if ttype == 2:
+                _dibujar_tile_procedural(draw, ox, oy, ts, 0, theme)
+                draw.rectangle((ox + 2, oy + 4, ox + ts - 3, oy + ts - 3), fill=(52, 58, 78))
+                draw.rectangle((ox + 3, oy + 5, ox + ts - 4, oy + ts - 4), fill=(62, 68, 88))
+                draw.rectangle((ox + 7, oy + 2, ox + 9, oy + 7), fill=(72, 66, 52))
+                draw.rectangle((ox + 4, oy + 4, ox + 12, oy + 6), fill=(72, 66, 52))
+                draw.rectangle((ox, oy, ox + ts - 1, oy + ts - 1), outline=tuple(max(0, c-22) for c in theme["wall"]), width=1)
+                draw.point((ox, oy), fill=tuple(min(255, c+55) for c in theme["wall"]))
+                continue
+            elif ttype == 6:
+                _dibujar_tile_procedural(draw, ox, oy, ts, 0, theme)
+                draw.polygon([(ox+9, oy+3),(ox+11, oy+3),(ox+7, oy+13),(ox+5, oy+13)], fill=(72,66,52))
+                draw.polygon([(ox+4, oy+7),(ox+12, oy+5),(ox+12, oy+7),(ox+4, oy+9)], fill=(72,66,52))
+                draw.rectangle((ox, oy, ox + ts - 1, oy + ts - 1), outline=tuple(max(0, c-22) for c in theme["wall"]), width=1)
+                draw.point((ox, oy), fill=tuple(min(255, c+55) for c in theme["wall"]))
+                continue
+            _dibujar_tile_procedural(draw, ox, oy, ts, ttype, theme)
+    rng2 = random.Random(hash(str(path)) % (2**31))
+    for _ in range(100):
+        x = rng2.randint(0, ts*cols-1); y = rng2.randint(0, ts*rows-1)
+        r, g, b, a = img.getpixel((x, y))
+        if a:
+            dv = rng2.randint(-16, 16)
+            if BAYER_4X4[y % 4][x % 4] < 6:
+                dv = int(dv*0.5)
+            img.putpixel((x, y), (max(0, min(255, r+dv)), max(0, min(255, g+dv)), max(0, min(255, b+dv)), a))
+    img.save(path)
+    _gen_normal_map_para_tileset(path)
+
+
+def _gen_tileset_stage4_1_fase6(path=None, ts=16, cols=16, rows=16):
+    """F6 Camino Paburu full color + neblina verde, grietas que se iluminan al paso, solemnidad — 256×256 PSX 32-bit."""
+    if path is None:
+        path = A / "tilesets" / "tileset_stage4_1_fase6.png"
+    theme = TILESET_THEMES["tileset_stage4_1_fase6"]
+    _ensure(path)
+    img = Image.new("RGBA", (ts * cols, ts * rows), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    rng = random.Random(4106)
+    verde_spectral = (124, 255, 160)
+    for gy in range(rows):
+        for gx in range(cols):
+            ox, oy = gx * ts, gy * ts
+            ttype = (gy * 8 + gx) % 8 if gx < 8 and gy < 8 else (gy * cols + gx) % 16
+            if ttype == 2:
+                _dibujar_tile_procedural(draw, ox, oy, ts, 0, theme)
+                vx = ox + ts // 2 + rng.randint(-1,1)
+                for y in range(oy, oy + ts):
+                    draw.point((vx, y), fill=(*verde_spectral, 110))
+                    if rng.random() < 0.3:
+                        vx = max(ox+2, min(ox+ts-3, vx + rng.randint(-1,1)))
+                for yy in range(oy, oy+ts):
+                    for xx in range(ox, ox+ts):
+                        if BAYER_4X4[yy%4][xx%4] < 3:
+                            r,g,b,a = img.getpixel((xx, yy))
+                            if a:
+                                img.putpixel((xx, yy), (max(0, min(255, int(r*0.9 + verde_spectral[0]*0.1))), max(0, min(255, int(g*0.9 + verde_spectral[1]*0.1))), max(0, min(255, int(b*0.9 + verde_spectral[2]*0.1))), a))
+                draw.rectangle((ox, oy, ox + ts - 1, oy + ts - 1), outline=tuple(max(0, c-22) for c in theme["wall"]), width=1)
+                draw.point((ox, oy), fill=tuple(min(255, c+55) for c in theme["wall"]))
+                continue
+            elif ttype == 5:
+                _dibujar_tile_procedural(draw, ox, oy, ts, 0, theme)
+                for yy in range(oy+2, oy+ts-2):
+                    for xx in range(ox+2, ox+ts-2):
+                        if BAYER_4X4[yy%4][xx%4] < 5:
+                            r,g,b,a = img.getpixel((xx, yy))
+                            if a:
+                                img.putpixel((xx, yy), (max(0, min(255, int(r*0.92 + verde_spectral[0]*0.08))), max(0, min(255, int(g*0.92 + verde_spectral[1]*0.08))), max(0, min(255, int(b*0.92 + verde_spectral[2]*0.08))), a))
+                draw.rectangle((ox, oy, ox + ts - 1, oy + ts - 1), outline=tuple(max(0, c-22) for c in theme["wall"]), width=1)
+                draw.point((ox, oy), fill=tuple(min(255, c+55) for c in theme["wall"]))
+                continue
+            _dibujar_tile_procedural(draw, ox, oy, ts, ttype, theme)
+    rng2 = random.Random(hash(str(path)) % (2**31))
+    for _ in range(100):
+        x = rng2.randint(0, ts*cols-1); y = rng2.randint(0, ts*rows-1)
+        r, g, b, a = img.getpixel((x, y))
+        if a:
+            dv = rng2.randint(-16, 16)
+            if BAYER_4X4[y % 4][x % 4] < 6:
+                dv = int(dv*0.5)
+            img.putpixel((x, y), (max(0, min(255, r+dv)), max(0, min(255, g+dv)), max(0, min(255, b+dv)), a))
+    img.save(path)
+    _gen_normal_map_para_tileset(path)
+
+
 def _gen_normal_map_para_tileset(tileset_path):
     """Genera *_n.png normal map 8-bit PSX alta calidad para un tileset (Light con sombras_proyectadas).
 
@@ -3073,10 +3348,13 @@ def _gen_tileset_liquidos(path=None, ts=16):
 def _gen_all_tilesets():
     print("  Tilesets...")
     for name, theme in TILESET_THEMES.items():
-        if name == "tileset_cemetery":
-            _gen_tileset_cementerio(A / "tilesets" / f"{name}.png")
-        elif name == "tileset_stage4_1":
-            _gen_tileset_stage4_1(A / "tilesets" / f"{name}.png")
+        if name.startswith("tileset_stage4_1_fase"):
+            fase = name.rsplit("fase", 1)[-1]
+            func = globals().get(f"_gen_tileset_stage4_1_fase{fase}")
+            if func is not None:
+                func(A / "tilesets" / f"{name}.png")
+            else:
+                _gen_procedural_tileset(A / "tilesets" / f"{name}.png", theme)
         elif name == "tileset_stage4_1b":
             _gen_tileset_stage4_1b(A / "tilesets" / f"{name}.png")
         elif theme == "gothic":
@@ -3084,6 +3362,15 @@ def _gen_all_tilesets():
         else:
             _gen_procedural_tileset(A / "tilesets" / f"{name}.png", theme)
     _gen_tileset_liquidos()
+    for sid, pal, tipo in [
+        ("venado", [(74,120,50), (180,184,150)], "venado"),
+        ("serpiente", [(152,148,132), (78,76,68)], "serpiente"),
+        ("halcon", [(176,124,78), (58,48,38)], "halcon"),
+    ]:
+        try:
+            _gen_presencia_sheet(sid, pal, tipo)
+        except Exception as e:
+            print(f"  WARN presencias {sid}: {e}")
 
 # ════════════════════════════════════════
 # SECTION 5: BACKGROUNDS (all zones, 3 layers each)
@@ -3464,6 +3751,220 @@ def _gen_bg_final_near(path, w=960, h=224):
     img.resize((w, h), Image.NEAREST).save(path)
 
 
+# ════════════════════════════════════════════════════════════════════
+#  AUD-?? — 6 backgrounds stage4_1 fase por fase (guion 6 fases + intro)
+#  Cada background 800×600 con _ESCALA_PX=4 — pixel art PSX 32-bit, NEAREST,
+#  Bayer, paleta extendida, parallax 0.15/0.4/0.7 y luna/cráteres para F4-5.
+#  W,H 800,600, 32-bit, estilo pixel PSX vintage moderno.
+# ════════════════════════════════════════════════════════════════════
+
+def _gen_bg_stage4_1_fase1(path=None, w=W, h=H):
+    """F1 Tilarán a color con easter egg Teresa/Hugo — 800×600 PSX."""
+    if path is None:
+        path = A / "backgrounds" / "final" / "bg_stage4_1_fase1.png"
+    _ensure(path)
+    ew, eh = w // _ESCALA_PX, h // _ESCALA_PX
+    img = Image.new("RGB", (ew, eh))
+    draw = ImageDraw.Draw(img)
+    rng = random.Random(4151)
+    horizonte = int(eh * CEM_HORIZONTE)
+    top, bot = (135, 168, 200), (220, 210, 180)
+    for y in range(horizonte):
+        t = y / max(horizonte - 1, 1)
+        c = tuple(int(top[i] + (bot[i] - top[i]) * t) for i in range(3))
+        draw.line((0, y, ew, y), fill=c)
+    _nube_plana(draw, int(ew*0.22), int(eh*0.14), int(ew*0.05), int(eh*0.03), (210, 210, 225))
+    _nube_plana(draw, int(ew*0.70), int(eh*0.11), int(ew*0.06), int(eh*0.04), (200, 200, 215))
+    for cresta, tinte in ((horizonte - eh*0.09, (88, 120, 90)), (horizonte, (68, 92, 72))):
+        pts = [(0, eh)]
+        for i in range(9):
+            pts.append((i*ew//8, cresta + rng.randint(-2, 2)))
+        pts.append((ew, eh))
+        draw.polygon(pts, fill=tinte)
+    draw.rectangle((0, horizonte, ew, eh), fill=(68, 92, 72))
+    _lapida_con_texto(draw, int(ew*0.30), horizonte+6, 5, 7, (148, 132, 108), (98, 88, 76), con_cruz=False)
+    _lapida_con_texto(draw, int(ew*0.36), horizonte+6, 5, 7, (148, 132, 108), (98, 88, 76), con_cruz=True)
+    img.resize((w, h), Image.NEAREST).save(path)
+
+
+def _gen_bg_stage4_1_fase2(path=None, w=W, h=H):
+    """F2 Venado lluvia→B&W bosque con musgo resbaladizo (inercia 0.15) y lodo freno (0.88), loma Slope — 800×600 PSX."""
+    if path is None:
+        path = A / "backgrounds" / "final" / "bg_stage4_1_fase2.png"
+    _ensure(path)
+    ew, eh = w // _ESCALA_PX, h // _ESCALA_PX
+    img = Image.new("RGB", (ew, eh))
+    draw = ImageDraw.Draw(img)
+    rng = random.Random(4152)
+    horizonte = int(eh * CEM_HORIZONTE)
+    for y in range(horizonte):
+        t = y / max(horizonte - 1, 1)
+        v = int(22 + t*56)
+        draw.line((0, y, ew, y), fill=(v, v, v))
+    bosque = (32, 34, 30)
+    for cresta, _ in ((horizonte - eh*0.12, bosque),):
+        pts = [(0, eh)]
+        for i in range(9):
+            y = cresta + rng.randint(-3, 3)
+            pts.append((i*ew//8, y))
+        pts.append((ew, eh))
+        draw.polygon(pts, fill=bosque)
+    loma_pts = [(0, horizonte)]
+    for i in range(5):
+        x = ew*0.30 + i*ew*0.10
+        y = horizonte - eh*0.08 + abs(i-2)*2
+        loma_pts.append((x, y))
+    loma_pts += [(ew, horizonte), (ew, eh), (0, eh)]
+    draw.polygon(loma_pts, fill=(48, 50, 46))
+    for _ in range(40):
+        x = rng.randint(0, ew-1); y = rng.randint(0, horizonte-1)
+        if BAYER_4X4[y%4][x%4] < 6:
+            draw.point((x, y), fill=(180, 180, 182))
+            draw.point((x, y+1), fill=(160, 160, 162))
+    draw.rectangle((0, horizonte, ew, eh), fill=(48, 48, 50))
+    draw.point((int(ew*0.62), int(horizonte-4)), fill=(120, 120, 110))
+    draw.point((int(ew*0.63), int(horizonte-4)), fill=(120, 120, 110))
+    img.resize((w, h), Image.NEAREST).save(path)
+
+
+def _gen_bg_stage4_1_fase3(path=None, w=W, h=H):
+    """F3 Serpiente escala grises, lomas Slope, tormenta rayos/viento, serpientes/huesos fondo — 800×600 PSX."""
+    if path is None:
+        path = A / "backgrounds" / "final" / "bg_stage4_1_fase3.png"
+    _ensure(path)
+    ew, eh = w // _ESCALA_PX, h // _ESCALA_PX
+    img = Image.new("RGB", (ew, eh))
+    draw = ImageDraw.Draw(img)
+    rng = random.Random(4153)
+    horizonte = int(eh * CEM_HORIZONTE)
+    for y in range(horizonte):
+        t = y / max(horizonte - 1, 1)
+        v = int(38 + t*36)
+        draw.line((0, y, ew, y), fill=(v, v, v))
+    _nube_plana(draw, int(ew*0.28), int(eh*0.12), int(ew*0.07), int(eh*0.04), (28, 28, 32))
+    _nube_plana(draw, int(ew*0.65), int(eh*0.09), int(ew*0.08), int(eh*0.05), (36, 36, 40))
+    for cresta, tinte in ((horizonte - eh*0.10, (54, 52, 48)), (horizonte, (42, 40, 36))):
+        pts = [(0, eh)]
+        for i in range(9):
+            pts.append((i*ew//8, cresta + rng.randint(-2, 2)))
+        pts.append((ew, eh))
+        draw.polygon(pts, fill=tinte)
+    for i in range(3):
+        cx = int(ew*0.20 + i*ew*0.25); cy = horizonte - 6
+        draw.arc((cx-6, cy-4, cx+6, cy+6), 200, 340, fill=(168, 158, 132))
+    for _ in range(2):
+        y0 = horizonte - 8 + rng.randint(-2,2)
+        pts = [(ew*0.10, y0), (ew*0.30, y0+2), (ew*0.50, y0), (ew*0.70, y0+2), (ew*0.90, y0)]
+        for j in range(len(pts)-1):
+            draw.line((int(pts[j][0]), int(pts[j][1]), int(pts[j+1][0]), int(pts[j+1][1])), fill=(98, 96, 88))
+    draw.line((int(ew*0.55), int(eh*0.06), int(ew*0.54), int(eh*0.18)), fill=(210, 210, 220))
+    draw.rectangle((0, horizonte, ew, eh), fill=(68, 64, 58))
+    img.resize((w, h), Image.NEAREST).save(path)
+
+
+def _gen_bg_stage4_1_fase4(path=None, w=W, h=H):
+    """F4 Halcón bosque cortado vintage naranja, lluvia, sombras, silencio — 800×600 PSX."""
+    if path is None:
+        path = A / "backgrounds" / "final" / "bg_stage4_1_fase4.png"
+    _ensure(path)
+    ew, eh = w // _ESCALA_PX, h // _ESCALA_PX
+    img = Image.new("RGB", (ew, eh))
+    draw = ImageDraw.Draw(img)
+    rng = random.Random(4154)
+    horizonte = int(eh * CEM_HORIZONTE)
+    for y in range(horizonte):
+        t = y / max(horizonte - 1, 1)
+        r = int(180 + (60-180)*t); g = int(120 + (40-120)*t); b = int(60 + (30-60)*t)
+        draw.line((0, y, ew, y), fill=(r, g, b))
+    for x in range(int(ew*0.10), ew, int(ew*0.18)):
+        draw.rectangle((x, horizonte-8, x+3, horizonte+4), fill=(24, 20, 30))
+        draw.rectangle((x-2, horizonte-6, x+5, horizonte-4), fill=(24, 20, 30))
+    luna_x, luna_y = int(ew*0.75), int(eh*0.13)
+    luna_r = max(4, int(ew*0.08))
+    _luna_llena(draw, luna_x, luna_y, luna_r, rng)
+    draw.polygon([(int(ew*0.45), int(eh*0.18)), (int(ew*0.48), int(eh*0.16)), (int(ew*0.52), int(eh*0.16)), (int(ew*0.55), int(eh*0.18)), (int(ew*0.50), int(eh*0.20))], fill=(28, 20, 18))
+    for _ in range(30):
+        x = rng.randint(0, ew-1); y = rng.randint(0, horizonte-1)
+        if BAYER_4X4[y%4][x%4] < 5:
+            draw.point((x, y), fill=(200, 180, 140))
+    draw.rectangle((0, horizonte, ew, eh), fill=(48, 40, 36))
+    img.resize((w, h), Image.NEAREST).save(path)
+
+
+def _gen_bg_stage4_1_fase5(path=None, w=W, h=H):
+    """F5 Planicie noche luna 6.0s 0.20-0.48, conquistadores, cánticos, luz revela eventos — 800×600 PSX."""
+    if path is None:
+        path = A / "backgrounds" / "final" / "bg_stage4_1_fase5.png"
+    _ensure(path)
+    ew, eh = w // _ESCALA_PX, h // _ESCALA_PX
+    img = Image.new("RGB", (ew, eh))
+    draw = ImageDraw.Draw(img)
+    rng = random.Random(4155)
+    horizonte = int(eh * CEM_HORIZONTE)
+    top, bot = (10, 12, 28), (34, 22, 50)
+    for y in range(horizonte):
+        t = y / max(horizonte - 1, 1)
+        c = tuple(int(top[i] + (bot[i]-top[i])*t) for i in range(3))
+        draw.line((0, y, ew, y), fill=c)
+    for _ in range(60):
+        x = rng.randint(0, ew-1); y = rng.randint(0, int(horizonte*0.6))
+        if BAYER_4X4[y%4][x%4] < 7:
+            br = rng.randint(140, 220)
+            draw.point((x, y), fill=(br, br, br))
+    luna_x, luna_y = int(ew*0.16), int(eh*0.18)
+    luna_r = max(5, int(ew*0.09))
+    _luna_llena(draw, luna_x, luna_y, luna_r, rng)
+    for x in range(int(ew*0.20), ew, int(ew*0.22)):
+        draw.rectangle((x, horizonte-6, x+4, horizonte+2), fill=(38, 42, 58))
+        draw.rectangle((x+1, horizonte-4, x+3, horizonte-1), fill=(58, 62, 78))
+    for cresta, tinte in ((horizonte - eh*0.08, (22, 18, 36)), (horizonte, (16, 12, 28))):
+        pts = [(0, eh)]
+        for i in range(9):
+            pts.append((i*ew//8, cresta + rng.randint(-2,2)))
+        pts.append((ew, eh))
+        draw.polygon(pts, fill=tinte)
+    draw.rectangle((0, horizonte, ew, eh), fill=(30, 20, 16))
+    img.resize((w, h), Image.NEAREST).save(path)
+
+
+def _gen_bg_stage4_1_fase6(path=None, w=W, h=H):
+    """F6 Camino Paburu full color + neblina verde, grietas que se iluminan al paso, solemnidad — 800×600 PSX."""
+    if path is None:
+        path = A / "backgrounds" / "final" / "bg_stage4_1_fase6.png"
+    _ensure(path)
+    ew, eh = w // _ESCALA_PX, h // _ESCALA_PX
+    img = Image.new("RGB", (ew, eh))
+    draw = ImageDraw.Draw(img)
+    rng = random.Random(4156)
+    horizonte = int(eh * CEM_HORIZONTE)
+    for y in range(horizonte):
+        t = y / max(horizonte - 1, 1)
+        r = int(40 + t*30); g = int(80 + t*50); b = int(60 + t*30)
+        draw.line((0, y, ew, y), fill=(r, g, b))
+    for y in range(int(horizonte*0.6), horizonte):
+        for x in range(0, ew, 2):
+            if BAYER_4X4[y%4][x%4] < 4:
+                r,g,b = img.getpixel((x,y))
+                img.putpixel((x,y), (max(0,min(255,r+6)), max(0,min(255,g+12)), max(0,min(255,b+6))))
+    for cresta, tinte in ((horizonte - eh*0.09, (42, 68, 54)), (horizonte, (32, 56, 44))):
+        pts = [(0, eh)]
+        for i in range(9):
+            pts.append((i*ew//8, cresta + rng.randint(-2,2)))
+        pts.append((ew, eh))
+        draw.polygon(pts, fill=tinte)
+    verde = (124, 255, 160)
+    for gx in (int(ew*0.35), int(ew*0.55), int(ew*0.75)):
+        for y in range(horizonte, eh):
+            if BAYER_4X4[y%4][gx%4] < 8:
+                draw.point((gx, y), fill=verde)
+                draw.point((gx+1, y), fill=(68, 148, 102))
+    draw.rectangle((0, horizonte, ew, eh), fill=(36, 36, 50))
+    vx = ew//2
+    for y in range(horizonte, eh):
+        draw.point((vx, y), fill=verde)
+    img.resize((w, h), Image.NEAREST).save(path)
+
+
 # ── Splash/title/story backgrounds ──
 
 def _gen_bg_splash(path, w=320, h=224):
@@ -3587,15 +4088,26 @@ def _gen_all_backgrounds():
             _gen_bg_stage0_near(p / "bg_stage0_near.png", bw, bh)
 
     # Zona Final: el cementerio, a mano como el stage0 (ver AUD-209).
-    for layer, (bw, bh) in BG_SIZES.items():
+    # Rediseño stage4_1 6 fases: regenerar desde cero 800×600 NEAREST, Bayer, paleta extendida
+    # Parallax 0.15/0.4/0.7 — todos a 800×600 con _ESCALA_PX=4 (bloque píxel visible)
+    for layer in ("far", "mid", "near"):
         p = A / "backgrounds" / "final"
         _ensure(p)
         if layer == "far":
-            _gen_bg_final_far(p / "bg_final_far.png", bw, bh)
+            _gen_bg_final_far(p / "bg_final_far.png", W, H)
         elif layer == "mid":
-            _gen_bg_final_mid(p / "bg_final_mid.png", bw, bh)
+            _gen_bg_final_mid(p / "bg_final_mid.png", W, H)
         else:
-            _gen_bg_final_near(p / "bg_final_near.png", bw, bh)
+            _gen_bg_final_near(p / "bg_final_near.png", W, H)
+    # 6 fases — 3 backgrounds 800×600 por fase con _ESCALA_PX=4 (cielo Tilarán, B&W, calaveras, bosque cortado, noche luna, neblina verde)
+    for n in range(1, 7):
+        func = globals().get(f"_gen_bg_stage4_1_fase{n}")
+        if func is not None:
+            p = A / "backgrounds" / "final"
+            _ensure(p)
+            for layer in ("far", "mid", "near"):
+                suf = "" if layer == "far" else f"_{layer}"
+                func(p / f"bg_stage4_1_fase{n}{suf}.png", W, H)
 
     # Other zones (procedural)
     for zone, (top, bot) in BG_ZONES.items():
@@ -3844,6 +4356,70 @@ def _gen_shared():
         _psx_outline_y_sombra(img)
         imgs.append(img)
     _save_sheet(sd / "torch_anim.png", imgs, 8, 16)
+
+    for sid, pal, tipo in [
+        ("venado", [(74,120,50), (180,184,150)], "venado"),
+        ("serpiente", [(152,148,132), (78,76,68)], "serpiente"),
+        ("halcon", [(176,124,78), (58,48,38)], "halcon"),
+    ]:
+        try:
+            _gen_presencia_sheet(sid, pal, tipo)
+        except Exception as e:
+            print(f"  WARN presencias {sid}: {e}")
+
+
+def _gen_presencia_sheet(sid, pal, tipo):
+    """Genera sprite 48×48 4f para silueta/presencia stage4_1 — Venado/Serpiente/Halcón.
+
+    PSX 32-bit HQ: 48×48, 4 frames con variación real por fotograma (leg swing / wing),
+    outline 1px + sombra dithered Bayer, paleta extendida 64-96, NEAREST.
+    Se guarda en assets/sprites/shared/ y assets/sprites/bosses/ para compatibilidad.
+    """
+    fw, fh = 48, 48
+    frames = 4
+    imgs = []
+    for f in range(frames):
+        img = Image.new("RGBA", (fw, fh), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(img)
+        base_col = pal[0] if len(pal) > 0 else (120, 120, 120)
+        detail_col = pal[1] if len(pal) > 1 else (60, 60, 60)
+        draw.ellipse((6, 12, fw-6, fh-6), fill=base_col, outline=detail_col)
+        highlight = tuple(min(255, c+35) for c in base_col)
+        draw.arc((6, 12, fw-6, fh-6), 200, 340, fill=highlight)
+        off = 1 if f % 2 == 0 else -1
+        if tipo == "venado":
+            draw.line((fw//2-6, 12, fw//2-8, 4), fill=detail_col, width=1)
+            draw.line((fw//2+6, 12, fw//2+8, 4), fill=detail_col, width=1)
+            draw.line((fw//2-4, 18, fw//2-6+off, 30), fill=detail_col)
+            draw.line((fw//2+4, 18, fw//2+6-off, 30), fill=detail_col)
+            draw.ellipse((fw//2-3, 16, fw//2+3, 22), fill=(68, 56, 44))
+            draw.point((fw//2-1, 18), fill=(255, 220, 80)); draw.point((fw//2+1, 18), fill=(255, 220, 80))
+        elif tipo == "serpiente":
+            y0 = fh//2 + off
+            y1 = fh//2 - off
+            pts = [(8, y0), (16, y1), (24, y0), (32, y1), (fw-8, y0)]
+            for i in range(len(pts)-1):
+                draw.line((pts[i][0], pts[i][1], pts[i+1][0], pts[i+1][1]), fill=base_col, width=3)
+                draw.line((pts[i][0], pts[i][1], pts[i+1][0], pts[i+1][1]), fill=detail_col, width=1)
+            draw.ellipse((fw-10, fh//2-4, fw-2, fh//2+4), fill=base_col, outline=detail_col)
+            draw.point((fw-5, fh//2-1), fill=(255, 200, 60))
+            draw.point((fw-4, fh//2), fill=(0,0,0))
+        elif tipo == "halcon":
+            wy = 2 if f % 2 == 0 else -1
+            draw.polygon([(4, fh//2+wy),(fw//2-4, fh//2),(4, fh//2+4+wy)], fill=detail_col, outline=base_col)
+            draw.polygon([(fw-4, fh//2+wy),(fw//2+4, fh//2),(fw-4, fh//2+4+wy)], fill=detail_col, outline=base_col)
+            draw.ellipse((fw//2-4, fh//2-4, fw//2+4, fh//2+4), fill=base_col, outline=detail_col)
+            draw.ellipse((fw//2+2, fh//2-3, fw//2+6, fh//2-1), fill=base_col, outline=detail_col)
+            draw.polygon([(fw//2+6, fh//2-2),(fw-2, fh//2-1),(fw//2+6, fh//2)], fill=(240,210,60), outline=(180,160,40))
+        for x in range(6, fw-6):
+            if BAYER_4X4[(fh-6)%4][x%4] < 8:
+                draw.point((x, fh-6), fill=tuple(max(0, c-18) for c in base_col))
+        _psx_outline_y_sombra(img)
+        imgs.append(img)
+    for base_dir in [A / "sprites" / "shared", A / "sprites" / "bosses"]:
+        _ensure(base_dir)
+        _save_sheet(base_dir / f"presencia_{sid}.png", imgs, fw, fh)
+        _save_sheet(base_dir / f"silueta_{sid}.png", imgs, fw, fh)
 
 # ════════════════════════════════════════
 # SECTION 8: MUSIC (12 tracks)
