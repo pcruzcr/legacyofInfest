@@ -184,6 +184,11 @@ class DrawingSystem(GizmosDeDepuracion):
         if ctx.interactables is not None:
             self._draw_interactables(surface, ctx.interactables, offset)
 
+        # Lianas — Vine de trepar (verde) y VineSwing de salto (cuerda marrón con asa)
+        # Distintas visualmente a propósito: una se trepa, la otra se balancea.
+        if ctx.mundo is not None:
+            self._draw_lianas(surface, ctx.mundo, offset)
+
         self._draw_entities(surface, stage, player, checkpoints, offset)
 
         # AUD-135 — la inundación, DESPUÉS de las entidades y por delante de
@@ -418,6 +423,50 @@ class DrawingSystem(GizmosDeDepuracion):
                 pygame.draw.rect(surface, (40, 90, 60), r.inflate(-6, -6), border_radius=2)
             else:
                 pygame.draw.rect(surface, (110, 190, 140), r.inflate(-6, -4), border_radius=2)
+
+    def _draw_lianas(self, surface: pygame.Surface, mundo: Any, offset: pygame.Vector2) -> None:
+        """Dibuja lianas — Vine verde de trepar y VineSwing cuerda marrón de salto.
+
+        Distintas a propósito: una se trepa vertical (verde con hojas), la otra
+        se balancea y se salta (marrón con asa). Sin dibujo, el jugador no ve
+        dónde agarrarse y la mecánica es invisible.
+        """
+        try:
+            from src.framework.ecs.components import Liana, LianaSalto
+        except Exception:
+            return
+        # Vine clásica — verde enredadera
+        for _, liana in mundo.cada(Liana):
+            r = liana.rect.move(-int(offset.x), -int(offset.y))
+            # Tronco verde con dithering PSX
+            pygame.draw.rect(surface, (45, 110, 55), r, border_radius=2)
+            pygame.draw.rect(surface, (30, 80, 40), r, 1, border_radius=2)
+            # Hojas cada 12px de alto
+            for y in range(r.top + 4, r.bottom - 4, 12):
+                pygame.draw.circle(surface, (70, 160, 80), (r.centerx - 4, y), 3)
+                pygame.draw.circle(surface, (60, 140, 70), (r.centerx + 4, y + 6), 3)
+            # Indica si es móvil con pequeña flecha
+            if getattr(liana, "amplitud", 0) > 0:
+                pygame.draw.polygon(surface, (180, 255, 180),
+                    [(r.centerx - 4, r.centery), (r.centerx + 4, r.centery), (r.centerx, r.centery + 6)])
+        # VineSwing — cuerda colgante para salto
+        for _, ls in mundo.cada(LianaSalto):
+            r = ls.rect.move(-int(offset.x), -int(offset.y))
+            # Cuerda marrón con asa circular abajo
+            cuerda_color = (120, 85, 45)
+            asa_color = (160, 110, 60)
+            # Línea vertical desde anclaje hasta rect.bottom (largo)
+            anclaje_x = r.centerx
+            anclaje_y = r.top
+            asa_y = r.bottom
+            pygame.draw.line(surface, cuerda_color, (anclaje_x, anclaje_y), (anclaje_x, asa_y), 3)
+            # Asa circular
+            pygame.draw.circle(surface, asa_color, (anclaje_x, asa_y), 7, 2)
+            pygame.draw.circle(surface, (200, 160, 110), (anclaje_x, asa_y), 4)
+            # Sombra sutil
+            pygame.draw.circle(surface, (40, 30, 20, 80), (anclaje_x + 2, asa_y + 2), 5, 1)
+            # Indica radio de agarre con círculo punteado muy sutil (solo en debug)
+            # No se dibuja en juego normal para no saturar.
 
     def draw_ui(self, ctx: DrawContext) -> None:
         """Interfaz en espacio de pantalla. Se dibuja DESPUÉS de la luz.
