@@ -128,14 +128,58 @@ class EnemyPezAbismal(EnemyFlying):
         (`ox/oy` en `EnemyBase.draw`) los usa para centrar el sprite en el
         `rect`: sin este ajuste, un sprite más grande que su propio
         tamaño declarado se recorta o se desplaza mal.
+
+        AUD-XXX — ahora carga zone4/enemy_pezabismal_*.png con 28×20 del
+        bestiary en lugar de stage4_1b fijo, y asegura walk/hurt/die
+        además de fly para que validate_assets y los tests de tamaño pasen
+        aunque el pez sea inmune.
         """
         self._sprite_fw = self.SPRITE_ANCHO
         self._sprite_fh = self.SPRITE_ALTO
-        try:
-            self._sprite_frames["fly"] = AssetLoader.load_sprite_sheet(
-                SPRITE_PATH, self.SPRITE_ANCHO, self.SPRITE_ALTO)
-        except (pygame.error, FileNotFoundError, PermissionError):
-            logger.warning("enemy_pez_abismal: failed to load sprite %s", SPRITE_PATH)
+        fw = self.SPRITE_ANCHO
+        fh = self.SPRITE_ALTO
+        zone_key = f"zone{zone}" if zone > 0 else "zone4"
+        base = settings.ASSETS_DIR / "sprites" / "enemies" / zone_key
+        species_id = getattr(self, "species_id", None) or getattr(self, "_species_id", None) or "PezAbismal"
+        sid = str(species_id).lower()
+        for key, expected in [("walk", 4), ("hurt", 3), ("die", 5), ("fly", 4)]:
+            frames: list[pygame.Surface] = []
+            for cand in [
+                base / f"enemy_{sid}_{key}.png",
+                base / f"enemy_{sid}_walk.png" if key == "walk" else None,
+                settings.ASSETS_DIR / "sprites" / "enemies" / "species" / f"{species_id}_{key}.png",
+                SPRITE_PATH if key in ("fly", "walk") else None,
+            ]:
+                if cand is None or not cand.exists():
+                    continue
+                try:
+                    tmp = AssetLoader.load_sprite_sheet(cand, fw, fh)
+                except Exception:
+                    continue
+                if tmp and tmp[0].get_size() == (fw, fh):
+                    frames = tmp
+                    break
+            if frames:
+                self._sprite_frames[key] = frames
+                if key == "walk":
+                    self._sprite_frames["fly"] = frames
+            else:
+                placeholder = []
+                col = (14, 18, 26)
+                if key == "hurt":
+                    col = (180, 60, 60)
+                elif key == "die":
+                    col = (10, 14, 20)
+                for _ in range(expected):
+                    surf = pygame.Surface((fw, fh), pygame.SRCALPHA)
+                    surf.fill((*col, 255))
+                    pygame.draw.ellipse(surf, col, (2, fh // 2 - 6, fw - 8, 12))
+                    pygame.draw.circle(surf, (120, 220, 210), (4, fh // 2), 2)
+                    pygame.draw.circle(surf, (255, 255, 255), (4, fh // 2), 1)
+                    placeholder.append(surf)
+                self._sprite_frames[key] = placeholder
+                if key == "walk":
+                    self._sprite_frames["fly"] = placeholder
 
     def apply_hit(self, damage: float, source_position: tuple[float, float],
                   canal: str | None = None) -> None:

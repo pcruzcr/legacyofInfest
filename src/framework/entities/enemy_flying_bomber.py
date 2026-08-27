@@ -60,13 +60,51 @@ class EnemyFlyingBomber(EnemyFlying):
     def _load_extra_sprites(self, zone: int, fw: int, fh: int) -> None:
         zone_key = f"zone{zone}" if zone > 0 else "zone1"
         base = settings.ASSETS_DIR / "sprites" / "enemies" / zone_key
-        for key, fname in [("fly", f"enemy_bomber_{zone_key}_fly.png"), ("drop", f"enemy_bomber_{zone_key}_drop.png")]:
-            path = base / fname
-            try:
-                frames = AssetLoader.load_sprite_sheet(path, 20, 14)
+        species_id = getattr(self, "species_id", None) or getattr(self, "_species_id", None)
+        sid = str(species_id).lower() if species_id else None
+        for key in ("fly", "drop"):
+            frames: list[pygame.Surface] = []
+            if sid:
+                for cand in [
+                    base / f"enemy_{sid}_{key}.png",
+                    base / f"enemy_{sid}_fly.png" if key == "fly" else None,
+                    settings.ASSETS_DIR / "sprites" / "enemies" / "species" / f"{species_id}_{key}.png",
+                ]:
+                    if cand is None or not cand.exists():
+                        continue
+                    try:
+                        tmp = AssetLoader.load_sprite_sheet(cand, fw, fh)
+                    except Exception:
+                        continue
+                    if tmp and tmp[0].get_size() == (fw, fh):
+                        frames = tmp
+                        break
+            if not frames:
+                # legacy genérico
+                legacy = base / f"enemy_bomber_{zone_key}_{key}.png"
+                if legacy.exists():
+                    try:
+                        tmp = AssetLoader.load_sprite_sheet(legacy, fw, fh)
+                    except Exception:
+                        tmp = []
+                    if tmp and tmp[0].get_size() == (fw, fh):
+                        frames = tmp
+            if frames:
                 self._sprite_frames[key] = frames
-            except (pygame.error, FileNotFoundError, PermissionError):
-                logger.warning("enemy_flying_bomber: failed to load sprite %s", path)
+            else:
+                placeholder = []
+                col = (112, 116, 128)
+                for _ in range(4):
+                    surf = pygame.Surface((fw, fh), pygame.SRCALPHA)
+                    surf.fill((*col, 255))
+                    # hélices
+                    pygame.draw.rect(surf, (64, 68, 78), (2, 1, fw - 4, 2))
+                    pygame.draw.ellipse(surf, (40, 40, 50), (fw // 2 - 2, fh - 4, 4, 3))
+                    pygame.draw.rect(surf, (255, 255, 255), surf.get_rect(), 1)
+                    if key == "drop":
+                        pygame.draw.ellipse(surf, (80, 80, 90), (fw // 2 - 2, fh - 6, 4, 4))
+                    placeholder.append(surf)
+                self._sprite_frames[key] = placeholder
 
     def _alert_behavior(self, dt: float) -> None:
         super()._alert_behavior(dt)
@@ -95,23 +133,6 @@ class EnemyFlyingBomber(EnemyFlying):
 
     def _get_animation_key(self) -> str:
         return "fly"
-
-    def _build_hurtbox(self) -> pygame.Rect:
-        return self.caja_ajustada(margen_x=2, margen_y=1)
-
-    def _build_hitbox(self) -> pygame.Rect:
-        return self._build_hurtbox()
-
-    def _load_extra_sprites(self, zone: int, fw: int, fh: int) -> None:
-        zone_key = f"zone{zone}" if zone > 0 else "zone1"
-        base = settings.ASSETS_DIR / "sprites" / "enemies" / zone_key
-        for key, fname in [("fly", f"enemy_bomber_{zone_key}_fly.png"), ("drop", f"enemy_bomber_{zone_key}_drop.png")]:
-            path = base / fname
-            try:
-                frames = AssetLoader.load_sprite_sheet(path, 20, 14)
-                self._sprite_frames[key] = frames
-            except (pygame.error, FileNotFoundError, PermissionError):
-                logger.warning("enemy_flying_bomber: failed to load sprite %s", path)
 
     def _build_hurtbox(self) -> pygame.Rect:
         return self.caja_ajustada(margen_x=2, margen_y=1)

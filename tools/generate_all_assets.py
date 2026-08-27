@@ -530,6 +530,211 @@ def _dibujar_especie(draw, sid, w, h, f, nframes, mode="walk"):
     paso = f % 2
     wing = 1 if f % 2 == 0 else -1
     leg = 1 if f % 2 == 0 else -1
+    # ── Estados extra PSX 32-bit con silueta única (no elipse genérica) ──
+    # Cada arquetipo tiene al menos un estado extra con forma distinta:
+    # Charger wind_up/charge/stun con cuernos, Brute attack con masa,
+    # Shielded shield con placa, Swimmer swim horizontal, Climber climb/zipline con cuerda, etc.
+    if mode in ("wind_up", "charge", "stun", "attack", "shield", "swim", "climb", "zipline", "cast", "drop", "action", "fly"):
+        # ChargerWolf — lobo carga
+        if sid == "ChargerWolf":
+            body = (136, 136, 144)
+            detail = (88, 88, 96)
+            if mode == "wind_up":
+                # agachado, cuernos hacia atrás, patas recogidas, polvo en patas
+                draw.ellipse((3, h - 7, w - 6, h - 2), fill=body, outline=detail)
+                draw.ellipse((w - 7, h - 8, w - 1, h - 3), fill=body, outline=detail)
+                # cuernos pequeños hacia atrás
+                draw.polygon([(w - 6, h - 10), (w - 8, h - 12), (w - 4, h - 10)], fill=(220, 220, 220), outline=detail)
+                draw.polygon([(w - 4, h - 10), (w - 2, h - 12), (w, h - 10)], fill=(220, 220, 220), outline=detail)
+                draw.point((w - 4, h - 6), fill=(255, 220, 80))
+                # patas recogidas
+                draw.line((6, h - 2, 6, h - 1), fill=detail)
+                draw.line((w - 8, h - 2, w - 8, h - 1), fill=detail)
+                for x in range(3, w - 6):
+                    if BAYER_4X4[(h - 2) % 4][x % 4] < 7:
+                        draw.point((x, h - 2), fill=dk(body, 12))
+                return
+            elif mode == "charge":
+                # estirado, cuernos hacia adelante, estela
+                draw.ellipse((1, h // 2 - 2, w - 2, h // 2 + 3), fill=body, outline=detail)
+                draw.ellipse((w - 6, h // 2 - 2, w, h // 2 + 2), fill=body, outline=detail)
+                # cuernos largos hacia adelante
+                draw.line((w - 4, h // 2 - 1, w, h // 2 - 2), fill=(240, 240, 240), width=1)
+                draw.line((w - 4, h // 2 + 1, w, h // 2 + 2), fill=(240, 240, 240), width=1)
+                draw.point((w - 4, h // 2 - 1), fill=(255, 220, 80))
+                # estela polvo
+                for i in range(3):
+                    draw.point((2 + i, h // 2 + (1 if paso else -1)), fill=(180, 180, 190))
+                return
+            elif mode == "stun":
+                # mareado estrellas alrededor
+                draw.ellipse((3, 3, w - 4, h - 4), fill=(100, 100, 108), outline=detail)
+                draw.ellipse((w // 2 - 3, h // 2 - 2, w // 2 + 3, h // 2 + 2), fill=body, outline=detail)
+                draw.point((w // 2 - 2, 1), fill=(255, 255, 100))
+                draw.point((w // 2 + 2, 1), fill=(255, 255, 100))
+                draw.point((w // 2, 2), fill=(255, 255, 180))
+                # ojos en X
+                draw.line((w // 2 - 1, h // 2 - 1, w // 2 + 1, h // 2 + 1), fill=(80, 40, 40))
+                draw.line((w // 2 + 1, h // 2 - 1, w // 2 - 1, h // 2 + 1), fill=(80, 40, 40))
+                return
+        # BruteGolemHielo — gólem con masa
+        if sid == "BruteGolemHielo" and mode == "attack":
+            body = (158, 216, 244)
+            detail = (98, 148, 178)
+            # cuerpo bloque
+            draw.rectangle((2, 3, w - 3, h - 3), fill=body, outline=detail)
+            draw.rectangle((4, 5, w - 5, h - 5), fill=hi(body))
+            # brazos levantados con masa enorme arriba
+            draw.rectangle((w // 2 - 6, 0, w // 2 + 6, 4), fill=(120, 100, 80), outline=detail)
+            draw.rectangle((w // 2 - 4, 1, w // 2 + 4, 3), fill=(160, 140, 110))
+            # ojos enfadados
+            draw.rectangle((w // 3 - 1, h // 3, w // 3 + 1, h // 3 + 2), fill=(220, 60, 40), outline=(0, 0, 0))
+            draw.rectangle((w * 2 // 3 - 1, h // 3, w * 2 // 3 + 1, h // 3 + 2), fill=(220, 60, 40), outline=(0, 0, 0))
+            for x in range(3, w - 3):
+                if BAYER_4X4[(h - 3) % 4][x % 4] < 7:
+                    draw.point((x, h - 3), fill=dk(body, 18))
+            return
+        # Shielded — guardia con escudo placa frontal
+        if sid == "Shielded" and mode == "shield":
+            body = (54, 64, 118)
+            detail = (40, 48, 92)
+            shield = (168, 172, 188)
+            shield_dk = (112, 116, 132)
+            draw.rectangle((w // 2 - 3, 2, w // 2 + 1, h - 4), fill=body, outline=detail)
+            draw.ellipse((w // 2 - 2, 0, w // 2, 3), fill=(40, 40, 60), outline=detail)
+            draw.rectangle((w // 2 - 2, 1, w // 2, 3), fill=(236, 200, 164))
+            # escudo metálico grande delante
+            draw.rectangle((w // 2 + 1, 1, w - 2, h - 2), fill=shield, outline=shield_dk)
+            draw.rectangle((w // 2 + 3, 3, w - 4, 5), fill=shield_dk)
+            draw.ellipse((w // 2 + 4, 6, w - 4, 8), fill=(200, 40, 40), outline=shield_dk)
+            draw.line((w // 2 + 1, 1, w // 2 + 1, h - 2), fill=hi(shield))
+            return
+        # Swimmer — nadador horizontal con aletas
+        if sid == "Swimmer" and mode == "swim":
+            body = (38, 78, 148)
+            detail = (28, 58, 118)
+            skin = (236, 200, 164)
+            fin = (68, 148, 188)
+            cx, cy = w // 2, h // 2
+            off = 1 if paso else -1
+            draw.ellipse((cx - 5, cy - 3 + off, cx + 5, cy + 3 + off), fill=body, outline=detail)
+            draw.ellipse((cx - 3, cy - 2 + off, cx + 1, cy + 2 + off), fill=skin)
+            draw.ellipse((cx + 4, cy - 2 + off, cx + 7, cy + 1 + off), fill=skin, outline=detail)
+            draw.polygon([(cx - 6, cy + 1 + off), (cx - 9, cy + 3 + off), (cx - 6, cy + 3 + off)], fill=fin, outline=detail)
+            draw.polygon([(cx - 6, cy - 1 + off), (cx - 9, cy - 3 + off), (cx - 6, cy - 1 + off)], fill=fin, outline=detail)
+            draw.ellipse((cx + 5, cy - 1 + off, cx + 7, cy + 0 + off), fill=(0, 0, 0))
+            return
+        # Climber — trepador
+        if sid == "Climber":
+            if mode == "climb":
+                body = (90, 72, 52)
+                detail = (68, 54, 40)
+                skin = (236, 200, 164)
+                rope = (200, 180, 140)
+                metal = (180, 180, 190)
+                cx = w // 2
+                draw.rectangle((cx - 3, 3, cx + 3, h - 4), fill=body, outline=detail)
+                draw.rectangle((cx - 2, 4, cx + 2, 7), fill=hi(body))
+                draw.ellipse((cx - 2, 0, cx + 2, 3), fill=skin, outline=detail)
+                draw.rectangle((cx - 2, 0, cx + 2, 1), fill=(250, 220, 80), outline=detail)
+                # cuerda vertical tensa
+                draw.line((cx, 0, cx, h - 1), fill=rope)
+                draw.point((cx, 2), fill=metal)
+                # mosquetón
+                off = 1 if paso else -1
+                draw.ellipse((cx + 2 + off, 6, cx + 4 + off, 8), outline=metal)
+                draw.line((cx - 2, h - 4, cx - 3 + leg, h - 1), fill=detail)
+                draw.line((cx + 2, h - 4, cx + 3 - leg, h - 1), fill=detail)
+                return
+            elif mode == "zipline":
+                body = (90, 72, 52)
+                detail = (68, 54, 40)
+                skin = (236, 200, 164)
+                cx = w // 2
+                draw.rectangle((cx - 3, 3, cx + 3, h - 4), fill=body, outline=detail)
+                draw.ellipse((cx - 2, 0, cx + 2, 3), fill=skin, outline=detail)
+                # cable horizontal
+                draw.line((0, 2, w - 1, 2), fill=(90, 90, 100))
+                draw.line((cx - 4, 2, cx + 4, 6), fill=(200, 180, 140))
+                draw.line((cx - 5, 3, cx - 1, 6), fill=skin)
+                draw.line((cx + 1, 3, cx + 5, 6), fill=skin)
+                draw.rectangle((cx - 1, 2, cx + 1, 4), fill=(180, 180, 190), outline=detail)
+                return
+        # AssassinSombra — daga
+        if sid == "AssassinSombra" and mode == "attack":
+            body = (44, 44, 58)
+            detail = (28, 28, 38)
+            blade = (180, 180, 190)
+            draw.ellipse((w // 2 - 3, 0, w // 2 + 3, 5), fill=body, outline=detail)
+            draw.rectangle((w // 2 - 2, 3, w // 2 + 2, h - 3), fill=body, outline=detail)
+            draw.point((w // 2 - 1, 2), fill=(255, 60, 60))
+            draw.point((w // 2 + 1, 2), fill=(255, 60, 60))
+            # daga extendida al frente
+            draw.line((w // 2 + 2, h // 2, w - 1, h // 2), fill=blade, width=1)
+            draw.polygon([(w - 1, h // 2 - 1), (w, h // 2), (w - 1, h // 2 + 1)], fill=blade, outline=detail)
+            draw.point((w - 2, h // 2), fill=(255, 255, 255))
+            return
+        # TerrainShaper — acción con bloque
+        if sid == "TerrainShaper" and mode == "action":
+            body = (108, 86, 62)
+            detail = (82, 66, 48)
+            draw.rectangle((w // 2 - 3, 3, w // 2 + 3, h - 2), fill=body, outline=detail)
+            draw.rectangle((w // 2 - 2, 0, w // 2 + 2, 3), fill=(140, 140, 150), outline=detail)
+            # martillo levantado
+            draw.line((w // 2 + 3, 2, w // 2 + 3, 8), fill=(120, 80, 40))
+            draw.rectangle((w // 2 + 2, 0, w // 2 + 5, 3), fill=(136, 130, 118), outline=detail)
+            # bloque brillante que crea
+            draw.rectangle((w // 2 - 5, h - 4, w // 2 - 2, h - 2), fill=(220, 80, 60), outline=(160, 40, 30))
+            return
+        # Summoner / CasterHealer — casteo con orbe/báculo
+        if sid in ("Summoner", "CasterHealer") and mode == "cast":
+            body = (96, 64, 132) if sid == "Summoner" else (78, 118, 84)
+            detail = (72, 48, 100) if sid == "Summoner" else (58, 88, 64)
+            skin = (236, 200, 164)
+            glow = (180, 80, 255) if sid == "Summoner" else (80, 220, 255)
+            draw.rectangle((w // 2 - 3, 3, w // 2 + 3, h - 2), fill=body, outline=detail)
+            draw.ellipse((w // 2 - 2, 0, w // 2 + 2, 3), fill=skin, outline=detail)
+            draw.arc((w // 2 - 3, 0, w // 2 + 3, 4), 200, 340, fill=detail)
+            # orbe flotante pulsante
+            r = 2 + (1 if paso else 0)
+            ox, oy = w // 2 + 4, 2
+            draw.ellipse((ox - r, oy - r, ox + r, oy + r), fill=glow, outline=(40, 140, 180))
+            draw.point((ox, oy), fill=(255, 255, 255))
+            return
+        # FlyingBomber drop
+        if sid == "FlyingBomber" and mode == "drop":
+            body = (112, 116, 128)
+            detail = (84, 88, 100)
+            draw.rectangle((w // 2 - 4, h // 2 - 2, w // 2 + 4, h // 2 + 2), fill=body, outline=detail)
+            draw.rectangle((w // 2 - 3, h // 2 - 1, w // 2 + 3, h // 2 + 1), fill=hi(body))
+            # bomba cayendo
+            draw.ellipse((w // 2 - 2, h // 2 + 2, w // 2 + 2, h // 2 + 5), fill=(52, 52, 62), outline=detail)
+            draw.ellipse((w // 2 - 1, h // 2 - 1, w // 2 + 1, h // 2), fill=(220, 50, 50), outline=(0, 0, 0))
+            return
+        if sid == "FlyingBomber" and mode == "fly":
+            # reutiliza walk de bomber pero con hélices más abiertas
+            body = (112, 116, 128)
+            detail = (84, 88, 100)
+            draw.rectangle((w // 2 - 4, h // 2 - 2, w // 2 + 4, h // 2 + 2), fill=body, outline=detail)
+            rot = 1 if paso else -1
+            draw.line((w // 2 - 4, h // 2 - 3, w // 2 - 2 - rot, h // 2 - 3), fill=(64, 68, 78), width=1)
+            draw.line((w // 2 + 2 + rot, h // 2 - 3, w // 2 + 4, h // 2 - 3), fill=(64, 68, 78))
+            draw.ellipse((w // 2 - 1, h // 2 - 1, w // 2 + 1, h // 2), fill=(220, 50, 50), outline=(0, 0, 0))
+            return
+        # Fallback genérico pero con variación y no elipse plana vacía — cada extra usa forma del walk pero con overlay distintivo
+        # Si el sid no tuvo rama específica arriba y el modo es extra, derivar al walk con marca de estado
+        if mode not in ("walk", "hurt", "die"):
+            # dibujar walk base pero añadir distintivo por modo (ej. wind_up, shield) para no dejar elipse genérica
+            # Recursión: dibujar walk luego overlay
+            _dibujar_especie(draw, sid, w, h, f, nframes, "walk")
+            # overlay pequeño por modo para distinguir
+            if mode == "attack":
+                draw.line((w - 3, h // 2, w - 1, h // 2), fill=(220, 180, 60), width=1)
+            elif mode == "shield":
+                draw.rectangle((w // 2 + 1, 1, w - 2, h - 2), outline=(168, 172, 188))
+            elif mode in ("cast", "action"):
+                draw.point((w // 2, 1), fill=(180, 80, 255))
+            return
     # --- WalkerInsect: escarabajo selva caparazón marrón, 6 patas, antenas ---
     if sid == "WalkerInsect":
         body = (92,62,38) if not is_hurt else (190,60,50)
@@ -1426,6 +1631,33 @@ def _gen_all_enemies():
         "EnemyArcher": (12,14,4), "EnemyBrute": (24,18,4), "EnemyCharger": (14,12,6),
         "EnemyCaster": (14,14,4), "EnemyAssassin": (12,12,4),
     }
+    # ── Extras por arquetipo con silueta única PSX 32-bit ──
+    extras_por_sid: dict[str, list[tuple[str, int]]] = {
+        "Climber": [("climb", 4), ("zipline", 4)],
+        "Swimmer": [("swim", 4)],
+        "Shielded": [("shield", 4)],
+        "ChargerWolf": [("wind_up", 3), ("charge", 4), ("stun", 3)],
+        "BruteGolemHielo": [("attack", 4)],
+        "AssassinSombra": [("attack", 4)],
+        "CasterHealer": [("cast", 4)],
+        "Summoner": [("cast", 4)],
+        "TerrainShaper": [("action", 4)],
+        "FlyingBomber": [("fly", 4), ("drop", 4)],
+        "ArcherQuetzal": [("walk", 4)],  # asegurar Archer walk 12×14 correcto (ya está arriba, pero por si acaso)
+    }
+    # extras por base para cubrir todos los 35 aunque el sid sea distinto (ej. ArcherQuetzal usa EnemyArcher)
+    extras_por_base: dict[str, list[tuple[str, int]]] = {
+        "EnemyClimber": [("climb", 4), ("zipline", 4)],
+        "EnemySwimmer": [("swim", 4)],
+        "EnemyShielded": [("shield", 4)],
+        "EnemyCharger": [("wind_up", 3), ("charge", 4), ("stun", 3)],
+        "EnemyBrute": [("attack", 4)],
+        "EnemyAssassin": [("attack", 4)],
+        "EnemyCaster": [("cast", 4)],
+        "EnemyTerrainShaper": [("action", 4)],
+        "EnemySummoner": [("cast", 4)],
+        "EnemyFlyingBomber": [("fly", 4), ("drop", 4)],
+    }
     for sid, spec in SPECIES.items():
         w,h,frames = base_size.get(spec.base, (16,12,6))
         zone_dir = A / "sprites" / "enemies" / f"zone{spec.zone}"
@@ -1441,6 +1673,22 @@ def _gen_all_enemies():
         # compatibilidad species hurt/die si algún cargador los busca
         _gen_enemy_sheet_especie(sid, species_dir / f"{sid}_hurt.png", w, h, 3, "hurt")
         _gen_enemy_sheet_especie(sid, species_dir / f"{sid}_die.png", w, h, 5, "die")
+        # extras propios con w,h del bestiary y silueta única
+        extras = extras_por_sid.get(sid, []) + extras_por_base.get(spec.base, [])
+        # dedup por key
+        seen = set()
+        uniq = []
+        for k, fcnt in extras:
+            if k not in seen:
+                seen.add(k)
+                # evitar regenerar walk si ya existe (caso ArcherQuetzal walk extra)
+                if k == "walk":
+                    continue
+                uniq.append((k, fcnt))
+        for key, fcnt in uniq:
+            _gen_enemy_sheet_especie(sid, zone_dir / f"enemy_{sid.lower()}_{key}.png", w, h, fcnt, key)
+            _gen_enemy_sheet_especie(sid, species_dir / f"{sid}_{key}.png", w, h, fcnt, key)
+            print(f"      + extra {sid} {key} {w}x{h} {fcnt}f")
         print(f"    Especie {sid} zone{spec.zone} {spec.base} {w}x{h} {frames}f")
 
 

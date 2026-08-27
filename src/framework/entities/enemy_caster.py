@@ -8,9 +8,15 @@ import pygame
 if TYPE_CHECKING:
     from src.framework.entities.player import Player
 
+from src.engine.core import settings
 from src.engine.core.events import Events
+from src.engine.utils.asset_loader import AssetLoader
 from src.framework.entities.base_entity import BaseEntity
 from src.framework.entities.enemy_base import EnemyBase, EnemyState
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class HomingOrb(BaseEntity):
@@ -221,7 +227,45 @@ class EnemyCaster(EnemyBase):
                     player.apply_damage(o.damage, (self.position.x, self.position.y))
                     o.on_collision()
 
+    def _load_extra_sprites(self, zone: int, fw: int, fh: int) -> None:
+        zone_key = f"zone{zone}" if zone > 0 else "zone1"
+        base = settings.ASSETS_DIR / "sprites" / "enemies" / zone_key
+        species_id = getattr(self, "species_id", None) or getattr(self, "_species_id", None)
+        sid = str(species_id).lower() if species_id else None
+        for key in ("cast",):
+            frames: list[pygame.Surface] = []
+            if sid:
+                for cand in [
+                    base / f"enemy_{sid}_{key}.png",
+                    settings.ASSETS_DIR / "sprites" / "enemies" / "species" / f"{species_id}_{key}.png",
+                ]:
+                    if not cand.exists():
+                        continue
+                    try:
+                        tmp = AssetLoader.load_sprite_sheet(cand, fw, fh)
+                    except Exception:
+                        continue
+                    if tmp and tmp[0].get_size() == (fw, fh):
+                        frames = tmp
+                        break
+            if frames:
+                self._sprite_frames[key] = frames
+            else:
+                placeholder = []
+                col = (78, 118, 84)
+                for _ in range(4):
+                    surf = pygame.Surface((fw, fh), pygame.SRCALPHA)
+                    surf.fill((*col, 255))
+                    pygame.draw.circle(surf, (80, 220, 255), (fw // 2 + 3, fh // 3), 2)
+                    pygame.draw.circle(surf, (255, 255, 255), (fw // 2 + 3, fh // 3), 1)
+                    pygame.draw.rect(surf, (255, 255, 255), surf.get_rect(), 1)
+                    placeholder.append(surf)
+                self._sprite_frames[key] = placeholder
+
     def _get_animation_key(self) -> str:
+        # cast se muestra durante TELEGRAPHING/FIRING si hay sheet
+        if self.state in (EnemyState.TELEGRAPHING, EnemyState.FIRING) and "cast" in self._sprite_frames:
+            return "cast"
         return "walk"
 
     def _build_hurtbox(self) -> pygame.Rect:

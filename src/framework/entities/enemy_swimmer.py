@@ -72,13 +72,54 @@ class EnemySwimmer(EnemyBase):
     def _load_extra_sprites(self, zone: int, fw: int, fh: int) -> None:
         zone_key = f"zone{zone}" if zone > 0 else "zone1"
         base = settings.ASSETS_DIR / "sprites" / "enemies" / zone_key
-        for key, fname in [("swim", f"enemy_swim_{zone_key}.png")]:
-            path = base / fname
-            try:
-                frames = AssetLoader.load_sprite_sheet(path, 24, 16)
-                self._sprite_frames[key] = frames
-            except (pygame.error, FileNotFoundError, PermissionError):
-                logger.warning("enemy_swimmer: failed to load sprite %s", path)
+        species_id = getattr(self, "species_id", None) or getattr(self, "_species_id", None)
+        sid = str(species_id).lower() if species_id else None
+        frames: list[pygame.Surface] = []
+        if sid:
+            for cand in [
+                base / f"enemy_{sid}_swim.png",
+                base / f"enemy_{sid}_walk.png",
+                settings.ASSETS_DIR / "sprites" / "enemies" / "species" / f"{species_id}_swim.png",
+            ]:
+                if not cand.exists():
+                    continue
+                try:
+                    tmp = AssetLoader.load_sprite_sheet(cand, fw, fh)
+                except Exception:
+                    continue
+                if tmp and tmp[0].get_size() == (fw, fh):
+                    frames = tmp
+                    break
+        if not frames:
+            for legacy in [base / f"enemy_swim_{zone_key}.png", base / f"enemy_swim_{zone_key}.png"]:
+                if not legacy.exists():
+                    continue
+                try:
+                    tmp = AssetLoader.load_sprite_sheet(legacy, fw, fh)
+                except Exception:
+                    continue
+                if tmp and tmp[0].get_size() == (fw, fh):
+                    frames = tmp
+                    break
+        if frames:
+            self._sprite_frames["swim"] = frames
+            # walk también usa swim para nadador; asegurar que walk no quede vacío
+            if "walk" not in self._sprite_frames or not self._sprite_frames["walk"]:
+                self._sprite_frames["walk"] = frames
+        else:
+            placeholder = []
+            col = (38, 78, 148)
+            for _ in range(4):
+                surf = pygame.Surface((fw, fh), pygame.SRCALPHA)
+                surf.fill((*col, 255))
+                pygame.draw.ellipse(surf, tuple(min(255, c + 30) for c in col), (1, 1, fw - 2, fh - 2))
+                pygame.draw.rect(surf, (255, 255, 255), surf.get_rect(), 1)
+                # aletas mínimas
+                pygame.draw.polygon(surf, (68, 148, 188), [(fw - 2, fh // 2), (fw - 1, fh // 2 - 2), (fw - 1, fh // 2 + 2)])
+                placeholder.append(surf)
+            self._sprite_frames["swim"] = placeholder
+            if "walk" not in self._sprite_frames or not self._sprite_frames["walk"]:
+                self._sprite_frames["walk"] = placeholder
 
     def _patrol_behavior(self, dt: float) -> None:
         # Nadar en patrón: seguir corriente + explorar

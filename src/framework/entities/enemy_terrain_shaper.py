@@ -65,16 +65,47 @@ class EnemyTerrainShaper(EnemyBase):
     def _load_extra_sprites(self, zone: int, fw: int, fh: int) -> None:
         zone_key = f"zone{zone}" if zone > 0 else "zone1"
         base = settings.ASSETS_DIR / "sprites" / "enemies" / zone_key
-        for key, fname in [
-            ("walk", f"enemy_shaper_{zone_key}_walk.png"),
-            ("action", f"enemy_shaper_{zone_key}_action.png"),
-        ]:
-            path = base / fname
-            try:
-                frames = AssetLoader.load_sprite_sheet(path, 24, 20)
+        species_id = getattr(self, "species_id", None) or getattr(self, "_species_id", None)
+        sid = str(species_id).lower() if species_id else None
+        for key in ("action",):
+            frames: list[pygame.Surface] = []
+            if sid:
+                for cand in [
+                    base / f"enemy_{sid}_{key}.png",
+                    settings.ASSETS_DIR / "sprites" / "enemies" / "species" / f"{species_id}_{key}.png",
+                ]:
+                    if not cand.exists():
+                        continue
+                    try:
+                        tmp = AssetLoader.load_sprite_sheet(cand, fw, fh)
+                    except Exception:
+                        continue
+                    if tmp and tmp[0].get_size() == (fw, fh):
+                        frames = tmp
+                        break
+            if not frames:
+                legacy = base / f"enemy_shaper_{zone_key}_{key}.png"
+                if legacy.exists():
+                    try:
+                        tmp = AssetLoader.load_sprite_sheet(legacy, fw, fh)
+                    except Exception:
+                        tmp = []
+                    if tmp and tmp[0].get_size() == (fw, fh):
+                        frames = tmp
+            if frames:
                 self._sprite_frames[key] = frames
-            except (pygame.error, FileNotFoundError, PermissionError):
-                logger.warning("enemy_terrain_shaper: failed to load sprite %s", path)
+            else:
+                placeholder = []
+                col = (108, 86, 62)
+                for _ in range(4):
+                    surf = pygame.Surface((fw, fh), pygame.SRCALPHA)
+                    surf.fill((*col, 255))
+                    # martillo/bloque mínimo
+                    pygame.draw.rect(surf, (136, 130, 118), (fw // 2, fh // 2 - 2, 4, 4))
+                    pygame.draw.rect(surf, (120, 80, 40), (fw // 2 + 1, fh // 2 + 2, 2, 4))
+                    pygame.draw.rect(surf, (255, 255, 255), surf.get_rect(), 1)
+                    placeholder.append(surf)
+                self._sprite_frames[key] = placeholder
 
     def _patrol_behavior(self, dt: float) -> None:
         speed = 25.0

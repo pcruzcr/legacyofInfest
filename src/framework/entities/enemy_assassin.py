@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 import pygame
 
+from src.engine.core import settings
 from src.engine.core.events import Events
+from src.engine.utils.asset_loader import AssetLoader
 from src.framework.entities.enemy_base import EnemyBase
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from src.framework.entities.player import Player
@@ -107,6 +112,43 @@ class EnemyAssassin(EnemyBase):
 
         flank_dir = 1 if dx < 0 else -1
         self.position.x += flank_dir * 80.0 * dt
+
+    def _load_extra_sprites(self, zone: int, fw: int, fh: int) -> None:
+        zone_key = f"zone{zone}" if zone > 0 else "zone1"
+        base = settings.ASSETS_DIR / "sprites" / "enemies" / zone_key
+        species_id = getattr(self, "species_id", None) or getattr(self, "_species_id", None)
+        sid = str(species_id).lower() if species_id else None
+        for key in ("attack",):
+            frames: list[pygame.Surface] = []
+            if sid:
+                for cand in [
+                    base / f"enemy_{sid}_{key}.png",
+                    settings.ASSETS_DIR / "sprites" / "enemies" / "species" / f"{species_id}_{key}.png",
+                ]:
+                    if not cand.exists():
+                        continue
+                    try:
+                        tmp = AssetLoader.load_sprite_sheet(cand, fw, fh)
+                    except Exception:
+                        continue
+                    if tmp and tmp[0].get_size() == (fw, fh):
+                        frames = tmp
+                        break
+            if frames:
+                self._sprite_frames[key] = frames
+            else:
+                placeholder = []
+                col = (44, 44, 58)
+                for _ in range(4):
+                    surf = pygame.Surface((fw, fh), pygame.SRCALPHA)
+                    surf.fill((*col, 255))
+                    # daga extendida para attack
+                    pygame.draw.ellipse(surf, tuple(min(255, c + 30) for c in col), (1, 1, fw - 2, fh - 2))
+                    pygame.draw.line(surf, (180, 180, 190), (fw // 2, fh // 2), (fw - 1, fh // 2))
+                    pygame.draw.polygon(surf, (220, 220, 230), [(fw - 1, fh // 2 - 1), (fw - 1, fh // 2 + 1), (fw - 3, fh // 2)])
+                    pygame.draw.rect(surf, (255, 255, 255), surf.get_rect(), 1)
+                    placeholder.append(surf)
+                self._sprite_frames[key] = placeholder
 
     def _get_animation_key(self) -> str:
         if self._is_lunging:

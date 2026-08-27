@@ -302,48 +302,105 @@ class EnemyBase(BaseEntity):
         return self._death_timer
 
     def _load_zone_sprites(self, zone: int, fw: int, fh: int) -> None:
-        """Load zone-specific enemy sprite sheets."""
+        """Load zone-specific enemy sprite sheets.
+
+        AUD-XXX — corrección del bug de early-return y recorte garbled.
+
+        * Cada estado (walk/hurt/die) se intenta por separado: primero
+          ``enemy_{sid}_{key}.png`` en la carpeta de zona, luego en
+          ``species/``. Si falta tras probar ``fw,fh`` con
+          ``AssetLoader``, se intenta el genérico de zona con el mismo
+          ``fw,fh``. Sólo si también falla (``frames==[]`` o recorte
+          garbled — ``0 filas`` cuando ``fh`` no divide la hoja —) se
+          genera un placeholder coloreado por zona para que nunca quede
+          un cuadro rojo.
+        * No hay early-return global: que walk exista no exime de probar
+          hurt/die, que es justo lo que dejaba HURT/DYING en rojo.
+        * La validación ``frames[0].get_size()==(fw,fh)`` detecta el caso
+          ``Archer 12×14 sobre hoja 16×12 → 0 filas`` donde el recorte da
+          ``[]`` o frames de tamaño inesperado y fuerza el fallback.
+        """
         self._sprite_zone = zone
         self._sprite_fw = fw
         self._sprite_fh = fh
         zone_key = f"zone{zone}" if zone > 0 else "zone1"
         base = settings.ASSETS_DIR / "sprites" / "enemies" / zone_key
-        # Species-specific first: try enemy_<species>_walk.png before generic zone fallback
         species_id = getattr(self, "species_id", None)
-        # SpeciesSpec may have been used to build via bestiary_registry, store it
         if species_id is None:
-            # try to infer from class params if enemy was built via species
             species_id = getattr(self, "_species_id", None)
-        loaded = False
-        if species_id:
-            sid = str(species_id).lower()
-            for key, fname in [("walk", f"enemy_{sid}_walk.png"),
-                               ("hurt", f"enemy_{sid}_hurt.png"),
-                               ("die", f"enemy_{sid}_die.png")]:
-                path = base / fname
-                alt = settings.ASSETS_DIR / "sprites" / "enemies" / "species" / f"{species_id}_walk.png"
-                # species folder fallback
-                candidate = path if path.exists() else alt
-                # also check alternate naming: species/<sid>_* 
-                alt2 = settings.ASSETS_DIR / "sprites" / "enemies" / "species" / f"{sid}_{key}.png"
-                if alt2.exists():
-                    candidate = alt2
-                try:
-                    frames = AssetLoader.load_sprite_sheet(candidate, fw, fh)
-                except Exception:
+        # Colores por zona para placeholder (si no hay arte)
+        ZONE_PLACEHOLDER = {
+            1: (120, 80, 40),
+            2: (60, 120, 60),
+            3: (80, 60, 120),
+            4: (100, 90, 70),
+        }
+        base_col = ZONE_PLACEHOLDER.get(zone, (120, 80, 40))
+        for key, fname_generic, expected, placeholder_col in [
+            ("walk", f"enemy_{zone_key}_walk.png", 6, base_col),
+            ("hurt", f"enemy_{zone_key}_hurt.png", 3, (200, 60, 60)),
+            ("die", f"enemy_{zone_key}_die.png", 5, (80, 30, 30)),
+        ]:
+            frames: list[pygame.Surface] = []
+            # 1) intento especie-específico con fw,fh correctos
+            if species_id:
+                sid = str(species_id).lower()
+                candidates = [
+                    base / f"enemy_{sid}_{key}.png",
+                    settings.ASSETS_DIR / "sprites" / "enemies" / "species" / f"{species_id}_{key}.png",
+                    settings.ASSETS_DIR / "sprites" / "enemies" / "species" / f"{sid}_{key}.png",
+                ]
+                # compat: el walk legacy a veces se guardó como {sid}_walk.png sin key
+                if key == "walk":
+                    candidates.append(
+                        settings.ASSETS_DIR / "sprites" / "enemies" / "species" / f"{species_id}_walk.png"
+                    )
+                for cand in candidates:
+                    if not cand.exists():
+                        continue
+                    try:
+                        tmp = AssetLoader.load_sprite_sheet(cand, fw, fh)
+                    except Exception:
+                        continue
+                    if tmp and len(tmp) > 0 and tmp[0].get_size() == (fw, fh):
+                        frames = tmp
+                        break
+                    # recorte garbled (0 filas o tamaño inesperado) → tratar como fallo y probar siguiente candidato
                     continue
                 if frames:
                     self._sprite_frames[key] = frames
-                    loaded = True
-            if loaded:
-                self._load_extra_sprites(zone, fw, fh)
-                return
-        for key, fname in [("walk", f"enemy_{zone_key}_walk.png"),
-                           ("hurt", f"enemy_{zone_key}_hurt.png"),
-                           ("die", f"enemy_{zone_key}_die.png")]:
-            path = base / fname
-            frames = AssetLoader.load_sprite_sheet(path, fw, fh)
-            self._sprite_frames[key] = frames
+                    continue
+            # 2) fallback genérico de zona, pero sólo si el archivo existe y el recorte cuadra
+            generic_path = base / fname_generic
+            if generic_path.exists():
+                try:
+                    gen = AssetLoader.load_sprite_sheet(generic_path, fw, fh)
+                except Exception:
+                    gen = []
+                if gen and len(gen) > 0 and gen[0].get_size() == (fw, fh):
+                    # genérico válido con fw,fh — aceptar aunque el conteo no coincida exactamente,
+                    # pero evitar el caso 12×14 sobre 16×12 que da 0 filas ([] ya filtrado)
+                    self._sprite_frames[key] = gen
+                    continue
+            # 3) placeholder coloreado por zona si frames==[] o garbled
+            placeholder: list[pygame.Surface] = []
+            col = placeholder_col
+            hi = tuple(min(255, c + 30) for c in col)
+            for _ in range(expected):
+                surf = pygame.Surface((fw, fh), pygame.SRCALPHA)
+                surf.fill((*col, 255))
+                # silueta mínima para que no sea un rectángulo rojo genérico
+                if fw >= 6 and fh >= 6:
+                    pygame.draw.ellipse(surf, hi, (1, 1, fw - 2, fh - 2))
+                    pygame.draw.ellipse(surf, col, (2, 2, fw - 4, fh - 4))
+                    if fw >= 10 and fh >= 6:
+                        pygame.draw.circle(surf, (255, 255, 255), (fw // 3, fh // 3), 1)
+                        pygame.draw.circle(surf, (255, 255, 255), (2 * fw // 3, fh // 3), 1)
+                        pygame.draw.circle(surf, (40, 40, 40), (fw // 3, fh // 3 + 1), 1)
+                        pygame.draw.circle(surf, (40, 40, 40), (2 * fw // 3, fh // 3 + 1), 1)
+                    pygame.draw.rect(surf, (255, 255, 255), surf.get_rect(), 1)
+                placeholder.append(surf)
+            self._sprite_frames[key] = placeholder
         self._load_extra_sprites(zone, fw, fh)
 
     def _load_extra_sprites(self, zone: int, fw: int, fh: int) -> None:

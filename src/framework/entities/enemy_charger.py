@@ -1,8 +1,14 @@
 from __future__ import annotations
 
+import logging
+
 import pygame
 
+from src.engine.core import settings
+from src.engine.utils.asset_loader import AssetLoader
 from src.framework.entities.enemy_base import EnemyBase
+
+logger = logging.getLogger(__name__)
 
 
 class EnemyCharger(EnemyBase):
@@ -128,6 +134,69 @@ class EnemyCharger(EnemyBase):
                 self._is_winding_up = True
                 self._wind_up_timer = self._wind_up_duration
                 self.damage_on_contact = 1.5
+
+    def _load_extra_sprites(self, zone: int, fw: int, fh: int) -> None:
+        zone_key = f"zone{zone}" if zone > 0 else "zone1"
+        base = settings.ASSETS_DIR / "sprites" / "enemies" / zone_key
+        species_id = getattr(self, "species_id", None) or getattr(self, "_species_id", None)
+        sid = str(species_id).lower() if species_id else None
+        for key, expected in [("wind_up", 3), ("charge", 4), ("stun", 3)]:
+            frames: list[pygame.Surface] = []
+            if sid:
+                for cand in [
+                    base / f"enemy_{sid}_{key}.png",
+                    settings.ASSETS_DIR / "sprites" / "enemies" / "species" / f"{species_id}_{key}.png",
+                ]:
+                    if not cand.exists():
+                        continue
+                    try:
+                        tmp = AssetLoader.load_sprite_sheet(cand, fw, fh)
+                    except Exception:
+                        continue
+                    if tmp and tmp[0].get_size() == (fw, fh):
+                        frames = tmp
+                        break
+            if not frames:
+                # legacy genérico por si existe
+                legacy = base / f"enemy_{key}_{zone_key}.png"
+                if legacy.exists():
+                    try:
+                        tmp = AssetLoader.load_sprite_sheet(legacy, fw, fh)
+                    except Exception:
+                        tmp = []
+                    if tmp and tmp[0].get_size() == (fw, fh):
+                        frames = tmp
+            if frames:
+                self._sprite_frames[key] = frames
+            else:
+                # placeholder con cuernos / mareo para distinguir de walk
+                placeholder = []
+                col = (136, 136, 144)
+                for _ in range(expected):
+                    surf = pygame.Surface((fw, fh), pygame.SRCALPHA)
+                    surf.fill((*col, 255))
+                    if key == "wind_up":
+                        # agachado, cuernos hacia atrás
+                        pygame.draw.ellipse(surf, (88, 88, 96), (1, fh // 2, fw - 2, fh // 2 - 1))
+                        # cuernos
+                        pygame.draw.polygon(surf, (220, 220, 220), [(2, 2), (4, 0), (6, 2)])
+                        pygame.draw.polygon(surf, (220, 220, 220), [(fw - 6, 2), (fw - 4, 0), (fw - 2, 2)])
+                    elif key == "charge":
+                        # estirado, polvo Bayer
+                        pygame.draw.ellipse(surf, col, (0, 2, fw - 1, fh - 4))
+                        pygame.draw.polygon(surf, (220, 220, 220), [(fw - 4, fh // 2), (fw - 1, fh // 2 - 1), (fw - 1, fh // 2 + 1)])
+                        # cuernos hacia adelante
+                        pygame.draw.line(surf, (200, 200, 210), (fw - 8, 2), (fw - 2, 0))
+                        pygame.draw.line(surf, (200, 200, 210), (fw - 8, 3), (fw - 2, 1))
+                    else:  # stun
+                        pygame.draw.ellipse(surf, (100, 100, 108), (1, 1, fw - 2, fh - 2))
+                        # estrellas mareo
+                        pygame.draw.circle(surf, (255, 255, 100), (fw // 2 - 2, 2), 1)
+                        pygame.draw.circle(surf, (255, 255, 100), (fw // 2 + 2, 2), 1)
+                        pygame.draw.circle(surf, (255, 255, 100), (fw // 2, 4), 1)
+                    pygame.draw.rect(surf, (255, 255, 255), surf.get_rect(), 1)
+                    placeholder.append(surf)
+                self._sprite_frames[key] = placeholder
 
     def _get_animation_key(self) -> str:
         if self._is_winding_up:

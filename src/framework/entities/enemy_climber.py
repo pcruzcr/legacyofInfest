@@ -67,13 +67,58 @@ class EnemyClimber(EnemyBase):
     def _load_extra_sprites(self, zone: int, fw: int, fh: int) -> None:
         zone_key = f"zone{zone}" if zone > 0 else "zone1"
         base = settings.ASSETS_DIR / "sprites" / "enemies" / zone_key
-        for key, fname in [("climb", f"enemy_climb_{zone_key}.png"), ("zipline", f"enemy_zipline_{zone_key}.png")]:
-            path = base / fname
-            try:
-                frames = AssetLoader.load_sprite_sheet(path, 20, 24)
+        species_id = getattr(self, "species_id", None) or getattr(self, "_species_id", None)
+        sid = str(species_id).lower() if species_id else None
+        for key in ("climb", "zipline"):
+            frames: list[pygame.Surface] = []
+            # 1) especie-específico con fw,fh correctos (16×16)
+            if sid:
+                for cand in [
+                    base / f"enemy_{sid}_{key}.png",
+                    settings.ASSETS_DIR / "sprites" / "enemies" / "species" / f"{species_id}_{key}.png",
+                ]:
+                    if not cand.exists():
+                        continue
+                    try:
+                        tmp = AssetLoader.load_sprite_sheet(cand, fw, fh)
+                    except Exception:
+                        continue
+                    if tmp and tmp[0].get_size() == (fw, fh):
+                        frames = tmp
+                        break
+            # 2) genérico de zona legacy (20×24) — sólo si fw,fh cuadra, si no ignorar
+            if not frames:
+                for legacy in [
+                    base / f"enemy_climb_{zone_key}.png" if key == "climb" else base / f"enemy_zipline_{zone_key}.png",
+                    base / f"enemy_{key}_{zone_key}.png",
+                ]:
+                    if not legacy.exists():
+                        continue
+                    try:
+                        tmp = AssetLoader.load_sprite_sheet(legacy, fw, fh)
+                    except Exception:
+                        continue
+                    if tmp and tmp[0].get_size() == (fw, fh):
+                        frames = tmp
+                        break
+            if frames:
                 self._sprite_frames[key] = frames
-            except (pygame.error, FileNotFoundError, PermissionError):
-                logger.warning("enemy_climber: failed to load sprite %s", path)
+            else:
+                # placeholder coloreado: no dejar en rojo
+                placeholder = []
+                col = (90, 72, 52) if key == "climb" else (160, 160, 180)
+                for _ in range(4):
+                    surf = pygame.Surface((fw, fh), pygame.SRCALPHA)
+                    surf.fill((*col, 255))
+                    pygame.draw.ellipse(surf, tuple(min(255, c + 30) for c in col), (1, 1, fw - 2, fh - 2))
+                    pygame.draw.rect(surf, (255, 255, 255), surf.get_rect(), 1)
+                    # cuerda/tirolesa mínima
+                    if key == "climb":
+                        pygame.draw.line(surf, (200, 180, 140), (fw // 2, 0), (fw // 2, fh - 1))
+                    else:
+                        pygame.draw.line(surf, (180, 180, 190), (0, fh // 3), (fw - 1, fh // 3))
+                    placeholder.append(surf)
+                self._sprite_frames[key] = placeholder
 
     def _patrol_behavior(self, dt: float) -> None:
         # Comportamiento de patrulla: buscar liana/tirolesa cercana

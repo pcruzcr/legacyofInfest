@@ -53,10 +53,32 @@ class SpeciesSpec:
         kwargs = dict(self.params)
         kwargs.update(overrides)
         kwargs.setdefault("zone", self.zone)
-        ent = cls(spawn_position, **kwargs)
+        # AUD-XXX — el species_id debe estar disponible antes de que
+        # EnemyBase._load_zone_sprites intente cargar
+        # enemy_{sid}_{key}.png; antes se fijaba después de construir y
+        # nunca se recargaban los sprites, dejando walk/hurt/die en
+        # placeholder genérico o rojo cuando fw,fh no cuadraba.
+        # Se pasa también como kwarg por si la subclase lo recoge en su
+        # __init__; si lo ignora, se reasigna tras construir y se fuerza
+        # recarga.
+        kwargs.setdefault("species_id", self.species_id)
+        try:
+            ent = cls(spawn_position, **kwargs)
+        except TypeError:
+            # la subclase no acepta species_id → construir sin él y fijar después
+            kwargs.pop("species_id", None)
+            ent = cls(spawn_position, **kwargs)
         try:
             ent.species_id = self.species_id
             ent._species_id = self.species_id
+        except Exception:
+            pass
+        # Recarga con species_id ya conocido para que el fallback por zona
+        # use fw,fh correctos y no quede garbled (ej. Archer 12×14 sobre
+        # hoja 16×12 → 0 filas).
+        try:
+            if hasattr(ent, "_sprite_fw") and hasattr(ent, "_sprite_fh") and hasattr(ent, "_sprite_zone"):
+                ent._load_zone_sprites(ent._sprite_zone, ent._sprite_fw, ent._sprite_fh)
         except Exception:
             pass
         return ent
