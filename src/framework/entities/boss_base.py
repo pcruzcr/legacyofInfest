@@ -189,6 +189,17 @@ class BossBase(EnemyBase):
         #: leerlo aquí guardaría el tamaño equivocado.
         self._tam_base: tuple[int, int] | None = None
 
+    def __setattr__(self, name: str, value: object) -> None:
+        # AUD-XXX: is_visible=False debe interrumpir el ataque en curso
+        # inmediatamente, no solo en el proximo tick.
+        object.__setattr__(self, name, value)
+        if name == "is_visible" and value is False:
+            try:
+                atk = object.__getattribute__(self, "attacks")
+                atk.interrupt()
+            except AttributeError:
+                pass
+
     @property
     def completion_fired(self) -> bool:
         return self._completion_fired
@@ -269,6 +280,8 @@ class BossBase(EnemyBase):
         source_position: tuple[float, float],
         canal: str | None = None,
     ) -> None:
+        if not self.is_visible:
+            return
         if not self.is_alive or self.is_transitioning:
             return
         if self._invincibility_timer > 0:
@@ -486,6 +499,10 @@ class BossBase(EnemyBase):
 
     def _pre_update(self, dt: float) -> bool:
         """Handle phase transitions. Return True to skip normal update."""
+        # AUD-XXX: si el jefe está invisible, no avanza fase ni ataques
+        if not self.is_visible:
+            self.attacks.interrupt()
+            return False
         if self.is_transitioning:
             self.transition_timer -= dt
             if self.transition_timer <= 0:
@@ -513,6 +530,10 @@ class BossBase(EnemyBase):
         animación y el HUD leen de ahí; la máquina de estados sigue siendo la
         dueña del estado.
         """
+        # AUD-XXX: invisible no telegrafia ni invoca
+        if not self.is_visible:
+            self.attacks.interrupt()
+            return
         self.summons.update(dt)
 
         if self.state == EnemyState.DYING or not self.is_alive:
@@ -620,6 +641,8 @@ class BossBase(EnemyBase):
 
     def weak_point_at(self, hit_rect: pygame.Rect) -> WeakPoint | None:
         """El punto débil expuesto que ese golpe alcanza, si alguno."""
+        if not self.is_visible:
+            return None
         for point in self.weak_points:
             # AUD-606 — escala de fase y espejado por dirección para los
             # jefes que declaran `cajas_siguen_al_cuerpo`; el resto conserva
