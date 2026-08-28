@@ -12,6 +12,12 @@ numéricas y booleanas de enemigo (AUD-305) y las siete dataclasses que
 `StageLoader.load()` rellena (`StageData` y las que sus listas contienen).
 `_TIPOS_DE_COMPONENTE` también, porque declara qué tipos de Tiled existen:
 vive junto a los tipos que construye.
+
+AUD-P0 — StageData partido por dominio (física, atmósfera, progresión).
+55+ campos no se leen en un `Ctrl+F`: la partición por dominio permite
+abrir sólo lo que toca (p. ej. atmósfera para niebla/agua) sin cargar
+la progresión. StageData queda como fachada con `__getattr__` para que
+`StageLoader` y los 16 mapas sigan funcionando sin tocar una línea.
 """
 
 from __future__ import annotations
@@ -20,7 +26,7 @@ from dataclasses import (
     dataclass,
     field,
 )
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pygame
 import pyscroll
@@ -358,46 +364,85 @@ class ZonaZoomSpec:
     #: Duración del tween hacia el factor, en segundos.
     segundos: float = 1.5
 
+# ── P0: StageData partido por dominio ──────────────────────────
+
 @dataclass
-class StageData:
-    map_layer: pyscroll.PyscrollGroup
-    map_pixel_size: tuple[int, int] = (0, 0)
+class StagePhysics:
+    """Dominio físico: colisión, gravedad y profundidad 2.5D."""
+
     collision_rects: list[pygame.Rect] = field(default_factory=list)
     one_way_rects: list[pygame.Rect] = field(default_factory=list)
-    #: AUD-426 — cielo procedural en vez de un PNG de cielo.
-    #:
-    #: Apagado por defecto: un degradado calculado debajo de un fondo que ya
-    #: trae su cielo pintado no se vería y costaría, y un mapa sin fondo
-    #: pasaría de `BG_COLOR` a un degradado sin que nadie lo hubiera pedido.
-    #: Lo enciende la propiedad de mapa `cielo`.
-    cielo: bool = False
     #: AUD-395 — las mismas cajas, indexadas por clase de sólido (GAP-038).
-    #:
-    #: Se publica **aparte** y no sustituyendo a las dos listas de arriba por
-    #: el mismo motivo que `velocidades_parallax` unas líneas más abajo: esas
-    #: dos las leen las veintiséis entregas, el arco del jefe, la cámara y el
-    #: calificador de escenarios. Cambiarles el tipo para ganar capas habría
-    #: sido pagar la característica con todo el contenido del curso.
-    #:
-    #: Las dos vistas dicen lo mismo; la que manda al construirlas es ésta, y
-    #: `StageLoader._load_collision` las llena a la vez.
     capas: MapaDeCapas = field(default_factory=MapaDeCapas)
-    #: AUD-400 — los objetivos que este mapa declara (GAP-047). Vacía en los
-    #: diecisiete mapas anteriores, y un escenario sin objetivos no tiene nada
-    #: pendiente: por eso añadirlos no cambia ninguno.
+    #: AUD-297 — el suelo inclinado del mapa.
+    pendientes: list[Pendiente] = field(default_factory=list)
+    gravity_multiplier: float = 1.0
+    #: AUD-277 — 2.5D: escala de las entidades según su altura en el mapa.
+    profundidad_min: float = 1.0
+    profundidad_max: float = 1.0
+    #: AUD-339 — 2.5D fase 6. Curva de la escala por profundidad
+    profundidad_curva: float = 1.0
+    #: AUD-339 — 2.5D fase 6. Orden por Y del pintor, opcional
+    orden_por_y: bool = False
+    #: AUD-278 — sombras proyectadas desde los focos.
+    sombras_proyectadas: bool = False
+
+
+@dataclass
+class StageAtmosphere:
+    """Dominio atmosférico: luz, clima, agua, partículas y fondo."""
+
+    #: AUD-426 — cielo procedural
+    cielo: bool = False
+    background_layers: list[pygame.Surface] = field(default_factory=list)
+    background_factors: list[float] = field(default_factory=list)
+    lights: list[LightSpec] = field(default_factory=list)
+    #: Zonas de brillo ambiental (GAP-072.4, AUD-598)
+    zonas_luz_ambiente: list[ZonaLuzAmbienteSpec] = field(default_factory=list)
+    #: Zonas de música por sección (GAP-072.2, AUD-600)
+    zonas_musica: list[ZonaMusicaSpec] = field(default_factory=list)
+    #: Zonas de zoom de cámara (GAP-072.3, AUD-601)
+    zonas_zoom: list[ZonaZoomSpec] = field(default_factory=list)
+    climate: str = ""
+    #: Brillo ambiente del escenario, de 0 a 1. None = no declarado
+    ambient_light: float | None = None
+    #: Bloom permanente del escenario, 0 a 1. None = no declarado.
+    bloom: float | None = None
+    #: Viñeta del escenario, 0 a 0,6. None = no declarado.
+    vignette: float | None = None
+    #: Partículas de ambiente: tipo y partículas por segundo.
+    ambient_fx: str = ""
+    ambient_fx_rate: float | None = None
+    #: Hora inicial del escenario, 0 a 24. None = no declarada (mediodía).
+    start_hour: float | None = None
+    #: Segundos reales que dura un ciclo completo. 0 congela el reloj
+    day_length: float = 0.0
+    #: Estación del escenario.
+    season: str = ""
+    #: AUD-111 — radio en píxeles de la niebla de guerra. 0 = apagada.
+    fog_of_war: float = 0.0
+    #: AUD-111 — capa de ondas de agua sobre la escena.
+    water_effect: bool = False
+    #: AUD-240 — los cinco mandos del agua, desde el mapa.
+    water_speed: float = 1.5
+    water_amplitude: int = 4
+    water_frequency: float = 0.04
+    water_alpha: int = 100
+    water_tint: tuple[int, int, int] = (40, 80, 160)
+    #: AUD-226 — fuerza de los rayos de luz volumétricos. 0 = apagados.
+    god_rays: float = 0.0
+
+
+@dataclass
+class StageProgression:
+    """Dominio de progresión: objetivos, entidades y metadatos del nivel."""
+
+    #: AUD-400 — los objetivos que este mapa declara (GAP-047).
     objetivos: list[Objetivo] = field(default_factory=list)
     entity_list: list[BaseEntity] = field(default_factory=list)
-    checkpoints: list[Checkpoint] = field(default_factory=list)
+    checkpoints: list[Checkpoint] = field(default_factory=list)  # type: ignore[name-defined]
     spawn_point: pygame.Vector2 = field(default_factory=lambda: pygame.Vector2(0, 0))
     next_trigger: pygame.Rect | None = None
-    background_layers: list[pygame.Surface] = field(default_factory=list)
-    #: AUD-272 — velocidad de parallax de cada capa de `background_layers`, en
-    #: el mismo orden. Se publica aparte en vez de cambiar el tipo de la lista
-    #: porque `background_layers` lo leen las entregas.
-    #:
-    #: Vacía significa «usa la tabla por índice de siempre», que es lo que hace
-    #: un `StageData` construido a mano.
-    background_factors: list[float] = field(default_factory=list)
     message_triggers: list[MessageTrigger] = field(default_factory=list)
     hazard_zones: list[HazardZone] = field(default_factory=list)
     death_pits: list[DeathPit] = field(default_factory=list)
@@ -407,21 +452,7 @@ class StageData:
     empujables: list[BloqueEmpujable] = field(default_factory=list)
     destructibles: list[BloqueDestructible] = field(default_factory=list)
     camera_locks: list[CameraLock] = field(default_factory=list)
-    lights: list[LightSpec] = field(default_factory=list)
-    #: Zonas de brillo ambiental (GAP-072.4, AUD-598): rectángulos que
-    #: imponen `ambient_light` mientras el jugador esté dentro, con banda
-    #: de fundido en el borde. Vacía = comportamiento de siempre.
-    zonas_luz_ambiente: list[ZonaLuzAmbienteSpec] = field(default_factory=list)
-    #: Zonas de música por sección (GAP-072.2, AUD-600): rectángulos que
-    #: imponen una pista (o silencio) mientras el jugador esté dentro.
-    #: Vacía = el `bgm_track` del mapa manda en todo el nivel como siempre.
-    zonas_musica: list[ZonaMusicaSpec] = field(default_factory=list)
-    #: Zonas de zoom de cámara (GAP-072.3, AUD-601): rectángulos que
-    #: conducen el factor mientras el jugador esté dentro. Vacía = zoom 1.0.
-    zonas_zoom: list[ZonaZoomSpec] = field(default_factory=list)
-    #: AUD-605 — arenas de jefe declaradas con `ArenaZone`. La escena le pasa
-    #: al jefe la primera que lo contenga; sin ninguna, mapa completo (como
-    #: siempre). Lista de rects crudos: una arena no es más que geometría.
+    #: AUD-605 — arenas de jefe declaradas con `ArenaZone`.
     zonas_arena: list[pygame.Rect] = field(default_factory=list)
     #: F4.1 — objetos con los que el jugador interactúa.
     recogibles: list[Recogible] = field(default_factory=list)
@@ -429,70 +460,25 @@ class StageData:
     cofres: list[Cofre] = field(default_factory=list)
     disparadores: list[Disparador] = field(default_factory=list)
     #: AUD-287 — zonas de warp declaradas con `WarpZone`.
-    #:
-    #: Lista aparte y no un componente ECS por lo mismo que `scroll_forzados`:
-    #: lo que mueven no es una entidad del mundo, es **el jugador**, y quien lo
-    #: posee es la escena.
     warps: list[ZonaDeWarp] = field(default_factory=list)
     #: AUD-625 — salidas secretas (`SecretExit`) que revelan nodos en el mapa.
     secret_exits: list[SecretExit] = field(default_factory=list)
     #: AUD-625 — salas secretas (`SecretRoom`) con tell visual.
     secret_rooms: list[SecretRoom] = field(default_factory=list)
-    #: Placas de presión (PressurePlate) — botones que abre un bloque/jugador.
-    #: Se declara en Tiled como ``PressurePlate`` y se consume en
-    #: ``InteractableSystem.actualizar_placas`` con la misma lista de solidos
-    #: que los bloques (AUD-XXX).
+    #: Placas de presión (PressurePlate)
     placas: list[PlacaDePresion] = field(default_factory=list)  # type: ignore[name-defined]
-    #: AUD-297 — el suelo inclinado del mapa.
-    #:
-    #: Lista aparte de `collision_rects` **a propósito**: si una pendiente
-    #: entrara ahí, el eje X la trataría como pared y el jugador se pararía en
-    #: seco al pie de la rampa.
-    pendientes: list[Pendiente] = field(default_factory=list)
-    #: AUD-294 — este mapa regala las mecánicas de jefe.
-    #:
-    #: Para un escenario nuevo que quiera jugarse suelto, sin la campaña
-    #: detrás. Los mapas entregados **no** la necesitan: van por la lista de
-    #: `settings`, para no tener que tocar sus ficheros.
-    habilidades_libres: bool = False
     #: AUD-249 — scroll forzado declarado desde Tiled con `ScrollZone`.
-    #:
-    #: No es un componente ECS: `ScrollForzado` mueve la **cámara**, no una
-    #: entidad, y los sistemas del ECS trabajan sobre entidades. Va aquí, junto
-    #: al resto de lo que el mapa declara y la escena consume.
-    scroll_forzados: list[ScrollForzado] = field(default_factory=list)
+    scroll_forzados: list[ScrollForzado] = field(default_factory=list)  # type: ignore[name-defined]
     #: F5.3–F5.6 — componentes ECS declarados desde el TMX.
-    #:
-    #: Se guardan como una lista de componentes sueltos y no como una lista por
-    #: tipo. Con doce mecánicas nuevas, doce campos más aquí harían de
-    #: `StageData` un catálogo que hay que ampliar cada vez, y la escena tendría
-    #: que enterarse de cada uno. Así, la escena los vuelca al mundo ECS de una
-    #: pasada y los sistemas encuentran lo suyo por el tipo del componente, que
-    #: es justo lo que ECS resuelve bien.
     componentes: list[list[object]] = field(default_factory=list)
     zone: int = 0
     stage_id: str = ""
     stage_name: str = ""
     time_limit: int = 0
     bgm_track: str = ""
-    gravity_multiplier: float = 1.0
     #: Punto de vista del escenario: `"lateral"` o `"cenital"` (AUD-129).
-    #:
-    #: Cenital es la vista desde arriba de Zelda, Hotline Miami o la sala de
-    #: cámaras de César Ubáu: sin gravedad, movimiento libre en dos ejes y sin
-    #: plataformas de un solo sentido —desde arriba, una repisa atravesable es
-    #: un muro invisible—.
-    #:
-    #: Se declara por escenario y no por zona: el mismo mundo puede tener un
-    #: sótano cenital y un exterior lateral, que es justo lo que hace que
-    #: valga la pena tener las dos vistas.
     vista: str = "lateral"
     #: AUD-137 (F6) — el compás del escenario.
-    #:
-    #: `bpm = 0` significa «este escenario no es rítmico», que es el caso de
-    #: casi todos, y entonces el reloj musical ni se construye. Un motor que
-    #: obligara a declarar un tempo para hacer un nivel normal estaría
-    #: cobrando a todo el mundo el precio de una función que usan pocos.
     bpm: float = 0.0
     #: Pulsos por compás. 4 es lo normal; 3 da un vals, 7 da un compás raro.
     compas: int = 4
@@ -500,83 +486,80 @@ class StageData:
     desfase_audio: float = 0.0
     #: AUD-143 — modo de cámara: `seguir`, `zona_muerta` o `sala`.
     camara: str = "seguir"
-    #: AUD-141 — máximo del medidor de estamina. **`0` = apagado**, que es el
-    #: caso de los quince escenarios entregados: encenderla para todos
-    #: cambiaría cómo se juegan sin que sus autores lo pidan.
+    #: AUD-141 — máximo del medidor de estamina. `0` = apagado
     estamina: float = 0.0
-    #: AUD-260 — segundos de reserva de tiempo bala. **`0` = apagado**, por la
-    #: misma razón que la estamina: los dieciséis escenarios entregados están
-    #: calificados y encenderles una mecánica nueva cambiaría el juego que sus
-    #: autores diseñaron.
+    #: AUD-260 — segundos de reserva de tiempo bala. `0` = apagado
     tiempo_bala: float = 0.0
-    #: AUD-277 — 2.5D: escala de las entidades según su altura en el mapa.
-    #: `min` es la de lo más lejano (arriba) y `max` la de lo más cercano
-    #: (abajo). **Iguales = apagado**, que es el valor por defecto y el de los
-    #: dieciséis mapas entregados.
-    profundidad_min: float = 1.0
-    profundidad_max: float = 1.0
-    #: AUD-339 — 2.5D fase 6. Curva de la escala por profundidad: 1.0 es la
-    #: interpolación lineal de AUD-277; con más de 1.0 las filas del fondo se
-    #: encogen más rápido, como en una perspectiva de verdad.
-    profundidad_curva: float = 1.0
-    #: AUD-339 — 2.5D fase 6. Orden por Y del pintor, **opcional**: con
-    #: `False` (por defecto) se mantiene el orden por `rect.centery` de
-    #: AUD-067; con `True` las entidades se ordenan por su **ancla de
-    #: profundidad** —`depth_y` si la entidad lo declara, si no sus pies
-    #: (`rect.bottom`)—, el mismo ancla que usa la escala: lo que se escala
-    #: igual se ordena igual.
-    orden_por_y: bool = False
-    #: AUD-278 — sombras proyectadas desde los focos. **Apagadas por defecto**:
-    #: cuestan una proyección por foco y por obstáculo, y el reporte 87 §11 las
-    #: dejó anotadas como «viable, con coste».
-    sombras_proyectadas: bool = False
-    climate: str = ""
-    #: Brillo ambiente del escenario, de 0 (oscuridad total) a 1 (sin
-    #: oscurecer). `None` significa "no declarado": la escena caerá a su tabla
-    #: por zona. Se distingue de 1.0 a propósito, porque 1.0 es una decisión
-    #: explícita de diseño —"este nivel es a plena luz"— y `None` es la
-    #: ausencia de decisión.
-    ambient_light: float | None = None
-    #: Bloom permanente del escenario, 0 a 1. `None` = no declarado.
-    bloom: float | None = None
-    #: Viñeta del escenario, 0 a 0,6. `None` = no declarado.
-    vignette: float | None = None
-    #: Partículas de ambiente: tipo y partículas por segundo. Cadena vacía =
-    #: no declarado; la escena caerá a su tabla por zona.
-    ambient_fx: str = ""
-    ambient_fx_rate: float | None = None
-    #: Hora inicial del escenario, 0 a 24. `None` = no declarada (mediodía).
-    start_hour: float | None = None
-    #: Segundos reales que dura un ciclo completo. 0 congela el reloj, que es
-    #: el comportamiento de un escenario sin ciclo día/noche.
-    day_length: float = 0.0
-    #: Estación del escenario. Cadena vacía = no declarada; la escena usará la
-    #: de por defecto. Las estaciones no avanzan solas: un escenario dura
-    #: minutos y cambiar de invierno a primavera a mitad sería ruido.
-    season: str = ""
-    #: AUD-111 — radio en píxeles de la niebla de guerra. 0 = apagada.
-    fog_of_war: float = 0.0
-    #: AUD-111 — capa de ondas de agua sobre la escena.
-    water_effect: bool = False
-    #: AUD-240 — los cinco mandos del agua, desde el mapa.
-    #:
-    #: `docs/47` los documenta desde el principio y decía «all adjustable via
-    #: `set_params()`». Nadie llamaba a `set_params`: `StageScene` construía un
-    #: `WaterEffect()` con los valores por defecto, así que **toda el agua del
-    #: juego era idéntica** y los cinco mandos eran inalcanzables desde el
-    #: contenido. Los valores de aquí son exactamente los que `WaterEffect` usa
-    #: por defecto, para que un mapa que no diga nada se vea igual que antes.
-    water_speed: float = 1.5
-    water_amplitude: int = 4
-    water_frequency: float = 0.04
-    water_alpha: int = 100
-    water_tint: tuple[int, int, int] = (40, 80, 160)
-    #: AUD-226 — fuerza de los rayos de luz volumétricos. 0 = apagados.
-    #: Sólo hacen algo con el camino GL: son una pasada de sombreador y no
-    #: tienen equivalente por CPU, así que un escenario que los pida se ve
-    #: igual que siempre en una máquina sin ModernGL. El foco no se declara
-    #: aquí —lo elige la escena, que es quien sabe qué luz hay en pantalla.
-    god_rays: float = 0.0
+    #: AUD-294 — este mapa regala las mecánicas de jefe.
+    habilidades_libres: bool = False
+
+
+class StageData:
+    """Fachada que expone los tres dominios como un único objeto.
+
+    Mantiene compatibilidad: `stage.collision_rects` sigue funcionando porque
+    `__getattr__` delega a `physics`, `atmosphere` o `progression`. El cargador
+    puede seguir haciendo `StageData(map_layer=..., collision_rects=..., ...)`
+    con kwargs planos y se reparten solos. Los accesos nuevos pueden usar
+    `stage.physics` / `stage.atmosphere` / `stage.progression` directamente.
+    """
+
+    def __init__(
+        self,
+        map_layer: pyscroll.PyscrollGroup,
+        map_pixel_size: tuple[int, int] = (0, 0),
+        physics: StagePhysics | None = None,
+        atmosphere: StageAtmosphere | None = None,
+        progression: StageProgression | None = None,
+        **kwargs: Any,
+    ) -> None:
+        object.__setattr__(self, "map_layer", map_layer)
+        object.__setattr__(self, "map_pixel_size", map_pixel_size)
+        object.__setattr__(self, "physics", physics if physics is not None else StagePhysics())
+        object.__setattr__(self, "atmosphere", atmosphere if atmosphere is not None else StageAtmosphere())
+        object.__setattr__(self, "progression", progression if progression is not None else StageProgression())
+        # Reparte kwargs planos a su dominio para compat con StageLoader
+        for k, v in kwargs.items():
+            if hasattr(self.physics, k):
+                setattr(self.physics, k, v)
+            elif hasattr(self.atmosphere, k):
+                setattr(self.atmosphere, k, v)
+            elif hasattr(self.progression, k):
+                setattr(self.progression, k, v)
+            else:
+                # Campo desconocido: lo guarda en la fachada para no perderlo
+                object.__setattr__(self, k, v)
+
+    def __getattr__(self, name: str) -> Any:
+        # Sólo se llama si el atributo no se encontró por vía normal
+        for sub in (object.__getattribute__(self, "physics"),
+                    object.__getattribute__(self, "atmosphere"),
+                    object.__getattribute__(self, "progression")):
+            if hasattr(sub, name):
+                return getattr(sub, name)
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name in {"map_layer", "map_pixel_size", "physics", "atmosphere", "progression"}:
+            object.__setattr__(self, name, value)
+            return
+        # Si ya existe en algún sub-objeto, delega la escritura
+        for sub_name in ("physics", "atmosphere", "progression"):
+            try:
+                sub = object.__getattribute__(self, sub_name)
+            except AttributeError:
+                continue
+            if hasattr(sub, name):
+                setattr(sub, name, value)
+                return
+        # Si no, crea en la fachada
+        object.__setattr__(self, name, value)
+
+    def __dir__(self) -> list[str]:
+        base = set(super().__dir__())
+        for sub in (self.physics, self.atmosphere, self.progression):
+            base.update(dir(sub))
+        return sorted(base)
 
 REQUIRED_LAYERS: tuple[str, ...] = (
     "BG_Far", "BG_Mid", "BG_Near", "Terrain",

@@ -31,21 +31,33 @@ def _handle_charge_input(player: Player, inp: _InputSnapshot) -> bool:
 
 
 def _handle_wall_jump(player: Player, inp: _InputSnapshot) -> bool:
-    if player._can_wall_jump and inp.jump_pressed:
-        wall_dir = player._wall_side
-        player._air_jumps_used = 0
-        player.velocity.y = player.perfil.salto_impulso * 0.85
-        player.is_grounded = False
-        player._coyote_counter = player.perfil.coyote_frames + 1
-        player._jump_cut_applied = False
-        player._wall_side = 0
-        player._can_wall_jump = False
-        player.facing_direction = -wall_dir
-        from src.framework.entities.states import JumpingState
-        player._change_state_instance(JumpingState())
-        player._event_bus.emit(Events.SFX_PLAYER_JUMP)
-        return True
-    return False
+    # AUD-XXX — cadena global 3× con cooldown 0.15s (P0): antes solo 1 sin cooldown y sin impulso x
+    if not player._can_wall_jump or not inp.jump_pressed:
+        return False
+    if getattr(player, "_wall_jump_cooldown", 0.0) > 0:
+        return False
+    if getattr(player, "_wall_jump_count", 3) <= 0:
+        return False
+    wall_dir = player._wall_side
+    player._air_jumps_used = 0
+    # -320y/90x (AUD-663 4_1b) — el 0.85 de salto_impulso es ~-323, idéntico a -320
+    player.velocity.y = -320.0
+    player.velocity.x = float(-wall_dir) * 90.0
+    player.is_grounded = False
+    player._coyote_counter = player.perfil.coyote_frames + 1
+    player._jump_cut_applied = False
+    player._wall_side = 0
+    player._can_wall_jump = False
+    player.facing_direction = -wall_dir
+    # cadena y cooldown
+    if hasattr(player, "_wall_jump_count"):
+        player._wall_jump_count = max(0, int(player._wall_jump_count) - 1)
+    if hasattr(player, "_wall_jump_cooldown"):
+        player._wall_jump_cooldown = 0.15
+    from src.framework.entities.states import JumpingState
+    player._change_state_instance(JumpingState())
+    player._event_bus.emit(Events.SFX_PLAYER_JUMP)
+    return True
 
 
 def _handle_grounded_attack_input(

@@ -1102,6 +1102,11 @@ class Player(BaseEntity):
             self._cooldown_timer -= dt
         if self._dash_cooldown > 0:
             self._dash_cooldown -= dt
+        # AUD-XXX — cadena wall-jump 3× con cooldown 0.15
+        if self._wall_jump_cooldown > 0:
+            self._wall_jump_cooldown -= dt
+            if self._wall_jump_cooldown < 0:
+                self._wall_jump_cooldown = 0.0
         if self.combo_timer > 0:
             self.combo_timer -= dt
             if self.combo_timer <= 0:
@@ -1358,6 +1363,8 @@ class Player(BaseEntity):
                 self.aplicar_squash_por_aterrizaje(vy_antes)
             self._air_dash_count = 0
             self._air_jumps_used = 0
+            # AUD-XXX — cadena wall-jump: al tocar suelo se reinicia
+            self._wall_jump_count = 3
 
     def _resolver_pendientes(self, dt: float) -> None:
         """AUD-334 — delega en `resolver_cuestas`; los pies sobre la cuesta.
@@ -1394,6 +1401,7 @@ class Player(BaseEntity):
         if contacto.aterrizo:
             self._air_dash_count = 0
             self._air_jumps_used = 0
+            self._wall_jump_count = 3
 
     def _resolve_one_way_collision(self, dt: float, one_way_rects: list[pygame.Rect]) -> None:
         """AUD-334 — delega en `resolver_repisas`.
@@ -1425,6 +1433,7 @@ class Player(BaseEntity):
         if contacto.aterrizo:
             self._air_dash_count = 0
             self._air_jumps_used = 0
+            self._wall_jump_count = 3
         if contacto.aterrizo_desde_el_aire and self._event_bus is not None:
             self._event_bus.emit(Events.SFX_ENVIRONMENT_ONE_WAY_PLATFORM)
 

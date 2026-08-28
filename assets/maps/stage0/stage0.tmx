@@ -376,7 +376,12 @@
    </properties>
   </object>
   <object id="249" name="NextTrigger_249" type="NextTrigger" x="1552" y="432" width="32" height="48"/>
-  <object id="250" name="Light_250" type="Light" x="96" y="400" width="16" height="16">
+  <object id="250" name="Slope_250" type="Slope" x="320" y="456" width="96" height="24">
+   <properties>
+    <property name="sube" value="suave"/>
+   </properties>
+  </object>
+  <object id="251" name="Light_251" type="Light" x="96" y="400" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="150.0"/>
     <property name="color" value="fire"/>
@@ -386,77 +391,77 @@
     <property name="flicker_amount" type="float" value="0.18"/>
    </properties>
   </object>
-  <object id="251" name="Light_251" type="Light" x="224" y="384" width="16" height="16">
+  <object id="252" name="Light_252" type="Light" x="224" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="140.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.85"/>
    </properties>
   </object>
-  <object id="252" name="Light_252" type="Light" x="352" y="384" width="16" height="16">
+  <object id="253" name="Light_253" type="Light" x="352" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="150.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.9"/>
    </properties>
   </object>
-  <object id="253" name="Light_253" type="Light" x="480" y="384" width="16" height="16">
+  <object id="254" name="Light_254" type="Light" x="480" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="160.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.85"/>
    </properties>
   </object>
-  <object id="254" name="Light_254" type="Light" x="608" y="384" width="16" height="16">
+  <object id="255" name="Light_255" type="Light" x="608" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="140.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.9"/>
    </properties>
   </object>
-  <object id="255" name="Light_255" type="Light" x="736" y="384" width="16" height="16">
+  <object id="256" name="Light_256" type="Light" x="736" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="150.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.85"/>
    </properties>
   </object>
-  <object id="256" name="Light_256" type="Light" x="864" y="384" width="16" height="16">
+  <object id="257" name="Light_257" type="Light" x="864" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="160.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.9"/>
    </properties>
   </object>
-  <object id="257" name="Light_257" type="Light" x="992" y="384" width="16" height="16">
+  <object id="258" name="Light_258" type="Light" x="992" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="140.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.85"/>
    </properties>
   </object>
-  <object id="258" name="Light_258" type="Light" x="1120" y="384" width="16" height="16">
+  <object id="259" name="Light_259" type="Light" x="1120" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="150.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.9"/>
    </properties>
   </object>
-  <object id="259" name="Light_259" type="Light" x="1248" y="384" width="16" height="16">
+  <object id="260" name="Light_260" type="Light" x="1248" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="160.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.85"/>
    </properties>
   </object>
-  <object id="260" name="Light_260" type="Light" x="1376" y="384" width="16" height="16">
+  <object id="261" name="Light_261" type="Light" x="1376" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="140.0"/>
     <property name="color" value="warm"/>
     <property name="intensity" type="float" value="0.9"/>
    </properties>
   </object>
-  <object id="261" name="Light_261" type="Light" x="1504" y="384" width="16" height="16">
+  <object id="262" name="Light_262" type="Light" x="1504" y="384" width="16" height="16">
    <properties>
     <property name="radius" type="float" value="150.0"/>
     <property name="color" value="warm"/>

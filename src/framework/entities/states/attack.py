@@ -96,15 +96,28 @@ class DashAttackState(PlayerStateBase):
         from src.framework.entities.player import PlayerState
         super().__init__(PlayerState.DASH_ATTACK)
         self._timer: float = 0.0
+        self._dir_x: float = 0.0
+        self._dir_y: float = 0.0
+        self._dir_init: bool = False
 
     def enter(self, player: Player) -> None:
         super().enter(player)
         player._attack_timer = 0.0
         player._active_hitbox = None
         player._hitbox_consumed = False
+        # P0: 8-dir dash attack — dirección se resuelve en update con input; fallback a facing
         player.velocity.x = float(player.facing_direction) * settings.PLAYER_DASH_SPEED * 0.7
         player.velocity.y = 0.0
+        self._dir_init = False
         player._invincibility_timer = max(player._invincibility_timer, 0.1)
+        # P0: VFX_SLAM y estamina check
+        if not player.hay_estamina_para_correr:
+            pass
+        try:
+            from src.engine.core.events import Events as _Ev
+            player._event_bus.emit(_Ev.VFX_SLAM, pos=(player.position.x, player.position.y))
+        except Exception:
+            pass
 
     def update(
         self,
@@ -113,18 +126,45 @@ class DashAttackState(PlayerStateBase):
         input_manager: InputManager | None,
     ) -> None:
         self._timer += dt
+        inp = _InputSnapshot(input_manager)
+        # P0: 8-dir — inicializa dirección del dash-attack al primer fotograma
+        if not self._dir_init:
+            if inp.move_x != 0 or inp.move_y != 0:
+                dx = float(inp.move_x)
+                dy = float(inp.move_y)
+            else:
+                dx = float(player.facing_direction)
+                dy = 0.0
+            if dx != 0.0 and dy != 0.0:
+                dx *= 0.70710678
+                dy *= 0.70710678
+            self._dir_x = dx
+            self._dir_y = dy
+            self._dir_init = True
+            if self._dir_x > 0:
+                player.facing_direction = 1
+            elif self._dir_x < 0:
+                player.facing_direction = -1
+            # aplicar velocidad 8-dir al inicio del ataque
+            player.velocity.x = self._dir_x * settings.PLAYER_DASH_SPEED * 0.7
+            player.velocity.y = self._dir_y * settings.PLAYER_DASH_SPEED * 0.7
 
         if self._timer < 0.1 and not player._hitbox_consumed:
             cx = player.rect.centerx
             cy = player.rect.centery
             w, h = 40, 20
-            hx = cx + (10 * player.facing_direction) - (w // 2)
-            hy = cy - 4 - (h // 2)
+            # P0: hitbox sigue la dirección 8-dir (usa _dir_x/_dir_y si inicializado)
+            off_x = 10 * (self._dir_x if self._dir_init else float(player.facing_direction))
+            off_y = -4 + (6 * self._dir_y if self._dir_init and self._dir_y != 0 else 0)
+            hx = cx + int(off_x) - (w // 2)
+            hy = cy + int(off_y) - (h // 2)
             player._active_hitbox = pygame.Rect(hx, hy, w, h)
         else:
             player._active_hitbox = None
 
+        # fricción en ambos ejes para 8-dir
         player.velocity.x *= 0.92 ** (dt * 60.0)
+        player.velocity.y *= 0.92 ** (dt * 60.0)
 
         if self._timer >= 0.25:
             player._active_hitbox = None

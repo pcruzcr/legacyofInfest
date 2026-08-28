@@ -15,7 +15,7 @@ que recortan en vez de rechazar (`_parse_unit_prop`).
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pygame
 
@@ -61,6 +61,16 @@ from src.framework.stage.tmx_diagnostics import (
 logger = logging.getLogger(__name__)
 
 class ObjetosDeTiled:
+    # Para mypy: el mixin espera que StageLoader provea estos miembros
+    _entity_registry: dict[str, Any] = {}  # type: ignore[assignment]
+    _registro_historico: dict[str, Any] = {}  # type: ignore[assignment]
+    if TYPE_CHECKING:
+        @classmethod
+        def _safe_float(cls, value: Any, name: str) -> float: ...  # type: ignore[no-redef]
+
+        @classmethod
+        def _safe_int(cls, value: Any, name: str) -> int: ...  # type: ignore[no-redef]
+
     @classmethod
     def _process_objects(
         cls,
@@ -704,10 +714,20 @@ class ObjetosDeTiled:
         propiedad sin el código delante.
         """
         sube = str(props.get("sube", "derecha")).strip().lower()
+        # AUD-590 — colina suave 6×24 que usa `_altura_colina` de
+        # `generate_stage0_tmx.py:99` / `trazado.py:54`. Se expone como prop
+        # `sube="suave"` para demo en stage0 y stage_mecanicas.
+        if sube == "suave":
+            stage.pendientes.append(Pendiente(
+                rect=cls._rect_de(obj),
+                sube_a_la_derecha=True,
+                suave=True,
+            ))
+            return
         if sube not in ("derecha", "izquierda"):
             logger.warning(
-                "Slope en (%s, %s): `sube` es %r y sólo vale 'derecha' o "
-                "'izquierda'. Se toma 'derecha'.", obj.x, obj.y, sube)
+                "Slope en (%s, %s): `sube` es %r y sólo vale 'derecha', "
+                "'izquierda' o 'suave'. Se toma 'derecha'.", obj.x, obj.y, sube)
             sube = "derecha"
         stage.pendientes.append(Pendiente(
             rect=cls._rect_de(obj),

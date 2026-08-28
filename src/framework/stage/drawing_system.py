@@ -291,7 +291,7 @@ class DrawingSystem(GizmosDeDepuracion):
         ancho, alto = surface.get_size()
         cache_key = (ancho, alto, self._COLOR_PELIGRO, self._COLOR_PELIGRO_DITHER)
         # Reusa cache si tamaño y colores coinciden
-        if getattr(self, "_peligro_cache_key", None) != cache_key or self._peligro_cache is None or self._peligro_cache.get_size() != (ancho, alto):
+        if getattr(self, "_peligro_cache_key", None) != cache_key or self._peligro_cache is None or self._peligro_cache.get_size() != (ancho, alto):  # noqa: E501
             tinte = pygame.Surface((ancho, alto), pygame.SRCALPHA)
             # Base con dithering Bayer 2x2 para evitar banding PSX
             bayer = [[0, 8], [12, 4]]

@@ -341,7 +341,8 @@ _EXTRA_ZONA2 = [
 
 _EXTRA_ZONA3 = [
     SpeciesSpec("ArcherQuetzal", "EnemyArcher", 3, "Arquero quetzal", {
-        "max_health": 2.5, "damage_on_contact": 0.25, "fire_rate": 0.5, "projectile_speed": 110.0, "projectile_damage": 0.5,
+        "max_health": 2.5, "damage_on_contact": 0.25, "fire_rate": 0.5,
+        "projectile_speed": 110.0, "projectile_damage": 0.5,
     }),
     SpeciesSpec("CasterHealer", "EnemyCaster", 3, "Curandero de Heredia", {
         "max_health": 2.5, "damage_on_contact": 0.25,

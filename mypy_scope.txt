@@ -81,3 +81,4 @@ src/engine/ui
 src/engine/utils
 src/framework/physics
 src/framework/world
+src/framework/stage

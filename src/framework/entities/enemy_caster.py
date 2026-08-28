@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import math
 from typing import TYPE_CHECKING
 
@@ -13,8 +14,6 @@ from src.engine.core.events import Events
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.entities.base_entity import BaseEntity
 from src.framework.entities.enemy_base import EnemyBase, EnemyState
-
-import logging
 
 logger = logging.getLogger(__name__)
 

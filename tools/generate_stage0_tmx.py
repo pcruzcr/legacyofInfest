@@ -297,6 +297,10 @@ def _objetos() -> list[str]:
     obj("Checkpoint", 89 * TS, suelo - 32, 16, 32, checkpoint_id=4)
     obj("NextTrigger", 97 * TS, suelo - 3 * TS, 2 * TS, 3 * TS)
 
+    # AUD-590 — pendiente suave 6×24 demo que usa `_altura_colina` (curva en S)
+    # 20*TS=320, suelo-24=456, 96×24 (6×1.5 baldosas) con sube="suave"
+    obj("Slope", 20 * TS, suelo - 24, 6 * TS, 24, sube="suave")
+
     # Focos — 12 en total, calibrados para legibilidad nocturna (day_length 420)
     obj("Light", 6 * TS, suelo - 5 * TS, 16, 16,
         radius=150.0, color="fire", intensity=0.95, flicker=True,

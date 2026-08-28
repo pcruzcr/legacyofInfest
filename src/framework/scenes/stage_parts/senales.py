@@ -259,6 +259,16 @@ class SenalesDeEscenario:
             self._camera.apply_shake(amplitude=3.0, duration=0.15)
             self._post_processing.flash((100, 200, 255), alpha=120, duration=0.1)
             self._post_processing.set_bloom(0.3, duration=0.15)
+            # P0: hit-stop 8f (0.133s) con FUENTE_HITSTOP — congela mundo y no la música (clock.py:104)
+            try:
+                if hasattr(self, "_collision") and self._collision is not None:
+                    self._collision.trigger_hitstop(8.0 / 60.0)
+                elif hasattr(self, "context") and getattr(self.context, "clock", None) is not None:
+                    from src.engine.core.clock import FUENTE_HITSTOP
+                    self.context.clock.escalar(FUENTE_HITSTOP, 0.0)
+                    # la restauración la hace CollisionSystem.update_hitstop con unscaled_dt
+            except Exception:
+                pass
 
         def _on_vfx_charge(**data: Any) -> None:
             pos = data.get("pos", (0, 0))

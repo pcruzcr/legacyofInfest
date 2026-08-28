@@ -76,6 +76,13 @@ SIN_MAPA_A_PROPOSITO: dict[str, str] = {
     ),
     "BuddyExpresso": "Alias de BuddyRino — mismo motivo.",
     "BuddyEnguarde": "Alias de BuddyRino — mismo motivo.",
+    "LianaSalto": (
+        "Alias de VineSwing — mismo objeto con nombre en español. El "
+        "laboratorio coloca VineSwing; los 2 alias se declaran para que "
+        "Tiled autocomplete en español, pero no necesitan un segundo ejemplo "
+        "en el mismo mapa."
+    ),
+    "RopeSwing": "Alias de VineSwing — ver LianaSalto.",
 }
 
 

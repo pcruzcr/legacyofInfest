@@ -143,9 +143,12 @@ class EnemyAssassin(EnemyBase):
                     surf = pygame.Surface((fw, fh), pygame.SRCALPHA)
                     surf.fill((*col, 255))
                     # daga extendida para attack
-                    pygame.draw.ellipse(surf, tuple(min(255, c + 30) for c in col), (1, 1, fw - 2, fh - 2))
+                    pygame.draw.ellipse(
+                        surf, tuple(min(255, c + 30) for c in col), (1, 1, fw - 2, fh - 2))
                     pygame.draw.line(surf, (180, 180, 190), (fw // 2, fh // 2), (fw - 1, fh // 2))
-                    pygame.draw.polygon(surf, (220, 220, 230), [(fw - 1, fh // 2 - 1), (fw - 1, fh // 2 + 1), (fw - 3, fh // 2)])
+                    pygame.draw.polygon(
+                        surf, (220, 220, 230),
+                        [(fw - 1, fh // 2 - 1), (fw - 1, fh // 2 + 1), (fw - 3, fh // 2)])
                     pygame.draw.rect(surf, (255, 255, 255), surf.get_rect(), 1)
                     placeholder.append(surf)
                 self._sprite_frames[key] = placeholder

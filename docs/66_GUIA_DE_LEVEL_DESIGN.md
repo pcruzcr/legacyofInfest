@@ -96,11 +96,15 @@ Reglas de la curva:
   > que reaparecer costara algo. `4-1` lleva seis checkpoints, uno por fase,
   > elegidos a mano antes de cada set piece, porque un escenario *psicológico
   > de terror* con uno cada 448 px anulaba la tensión (AUD-516); `4-1b` lleva
-  > siete, uno por evento mecánico según su blueprint (AUD-576); las tres
-  > variantes de `4-1c` llevan seis, uno por sección
-  > (`test_hay_seis_checkpoints_uno_por_seccion`). Brechas de ~2300-2600 px
-  > son ahí el diseño, no un defecto: no los «arregles» sin consultar. La
-  > regla de 700–1200 sigue mandando para todo lo demás.
+  > siete, uno por evento mecánico según su blueprint (AUD-576) — **CP5
+  > 9300→CP6 12450 gap 3150 px (AUD-590) es a propósito: el abismo sin luz
+  > ni música es el set piece, y CP7 13300 es opcional de salida, no de
+  > densidad** (`tools/generate_stage4_1b.py:88` `CHECKPOINTS_X` y
+  > `src/stages/stage4_1b/trazado.py:27` `COLUMNAS_CHECKPOINT` ya lo
+  > exponen como séptimo opcional); las tres variantes de `4-1c` llevan seis,
+  > uno por sección (`test_hay_seis_checkpoints_uno_por_seccion`). Brechas de
+  > ~2300-3150 px son ahí el diseño, no un defecto: no los «arregles» sin
+  > consultar. La regla de 700–1200 sigue mandando para todo lo demás.
 - **Enemigos en pantalla simultáneos ≤ 8** en niveles de travesía. Por encima
   de eso, el rendimiento y la legibilidad se degradan juntos.
 - **Los jefes no tienen límite de tiempo.** El reloj se oculta al entrar en la

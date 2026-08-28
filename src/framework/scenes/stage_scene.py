@@ -198,6 +198,9 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         # los usan sería pagar por nada.
         self._niebla = None
         self._agua_vfx = None
+        # P0 — caché de unión de agua O(n) → O(1) si no cambia (id + rect.topleft)
+        self._agua_union_cache: pygame.Rect | None = None
+        self._agua_version: tuple[tuple[int, tuple[int, int]], ...] | None = None
         self._nado = ControlDeNado()
         self._tiempo_bala = TiempoBala()
         self._scroll_forzado = ScrollForzado()
@@ -911,31 +914,48 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         AUD-623 — la región se publica desde las zonas de agua ECS reales,
         no la pantalla entera. Se calcula la unión de todas las `ZonaDeAgua`
         visibles en cámara y se publica su envolvente.
+
+        P0 — caché O(n) → O(1): guarda `self._agua_union_cache` (unión en mundo)
+        y `self._agua_version` (tupla de `id` + `rect.topleft` por zona) y
+        recalcula sólo si `len(ZonaDeAgua)` o algún `rect` cambia.
         """
         from src.engine.core import gpu_effects
         from src.framework.ecs.components import ZonaDeAgua
 
         if gpu_effects.WATER in gpu_effects.effects_on_gpu():
-            # Unir todas las zonas de agua visibles en cámara
-            union: pygame.Rect | None = None
-            for _, agua in self._mundo.cada(ZonaDeAgua):
-                if agua.rect.width <= 0 or agua.rect.height <= 0:
-                    continue
-                rect_pantalla = agua.rect.move(-int(self._camera.offset.x), -int(self._camera.offset.y))
-                # Ignorar zonas fuera de pantalla
+            # Versión que cambia si hay más/menos agua o si alguna se movió
+            # Spec: usa `id` + `rect.topleft`; incluimos tamaño implícitamente
+            # via rect copy, pero la clave es topleft como pide el enunciado.
+            version: tuple[tuple[int, tuple[int, int]], ...] = tuple(
+                (id(agua), (agua.rect.x, agua.rect.y)) for _, agua in self._mundo.cada(ZonaDeAgua)
+            )
+            world_union: pygame.Rect | None
+            if self._agua_version != version:
+                # Recalcula unión en mundo O(n) — sólo cuando cambia el agua
+                world_union = None
+                for _, agua in self._mundo.cada(ZonaDeAgua):
+                    if agua.rect.width <= 0 or agua.rect.height <= 0:
+                        continue
+                    if world_union is None:
+                        world_union = agua.rect.copy()
+                    else:
+                        world_union = world_union.union(agua.rect)
+                self._agua_union_cache = world_union
+                self._agua_version = version
+            else:
+                world_union = self._agua_union_cache
+
+            if world_union is not None:
+                # Lleva la unión del mundo a pantalla O(1) — clamp y publish
+                rect_pantalla = world_union.move(-int(self._camera.offset.x), -int(self._camera.offset.y))
+                # Culling si totalmente fuera de pantalla (evita publish innecesario)
                 if rect_pantalla.right <= 0 or rect_pantalla.left >= settings.INTERNAL_WIDTH:
-                    continue
+                    return
                 if rect_pantalla.bottom <= 0 or rect_pantalla.top >= settings.INTERNAL_HEIGHT:
-                    continue
-                # Recortar a pantalla
+                    return
                 rect_pantalla.clamp_ip(pygame.Rect(0, 0, settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
-                if union is None:
-                    union = rect_pantalla
-                else:
-                    union = union.union(rect_pantalla)
-            if union is not None:
                 gpu_effects.publish_water_region(
-                    (union.left, union.top, union.width, union.height),
+                    (rect_pantalla.left, rect_pantalla.top, rect_pantalla.width, rect_pantalla.height),
                 )
         else:
             self._agua_vfx.draw(surface, self._camera.offset)

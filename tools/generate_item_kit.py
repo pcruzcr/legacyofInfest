@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Generate shared item sprites: coin, key, chest, door, push block."""
-from pathlib import Path
 import sys
+from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from PIL import Image, ImageDraw
 
@@ -37,7 +38,7 @@ for i in range(6):
         d.ellipse([x0+2,4,x0+widths-2,8], fill=(255,255,180,255))
     frames.append(img)
 sheet=Image.new("RGBA",(16*6,16),(0,0,0,0))
-for i,f in enumerate(frames): sheet.paste(f,(i*16,0))
+for i,f in enumerate(frames): sheet.paste(f,(i*16,0))  # noqa: E701
 sheet.save(OUT/"coin_anim.png")
 print(f"Generated {OUT/'coin_anim.png'}")
 
@@ -62,14 +63,14 @@ for name, col in [("key_red.png",(220,40,40)), ("key_blue.png",(40,120,220))]:
     datas=im.getdata()
     new=[]
     for r,g,b,a in datas:
-        if a==0: new.append((r,g,b,a))
+        if a==0: new.append((r,g,b,a))  # noqa: E701
         else:
             # simple tint overlay
             nr = int(r*0.7 + col[0]*0.3)
             ng = int(g*0.7 + col[1]*0.3)
             nb = int(b*0.7 + col[2]*0.3)
             new.append((nr,ng,nb,a))
-    im2=Image.new("RGBA", im.size); im2.putdata(new)
+    im2=Image.new("RGBA", im.size); im2.putdata(new)  # noqa: E702
     im2.save(OUT/name)
     print(f"Generated {OUT/name}")
 
@@ -110,7 +111,7 @@ for f in range(4):
         d.rectangle([2,8,21,13], fill=(140,110,70,255), outline=(60,40,20,255))
     frames.append(im)
 sheet=Image.new("RGBA",(24*4,16),(0,0,0,0))
-for i,f in enumerate(frames): sheet.paste(f,(i*24,0))
+for i,f in enumerate(frames): sheet.paste(f,(i*24,0))  # noqa: E701
 sheet.save(OUT/"chest_anim.png")
 print(f"Generated {OUT/'chest_anim.png'}")
 

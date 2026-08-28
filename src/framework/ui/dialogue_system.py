@@ -472,7 +472,7 @@ class DialogueSystem:
             surface.blit(sombra, (px, py))
             surface.blit(retrato, (px, py))
             # Brillo de borde cuando habla
-            hablando = not self._full_text_visible and (self._current_node.portrait_frames > 1 or (self._current_node.portrait_talking is None and not self._full_text_visible))
+            hablando = not self._full_text_visible and (self._current_node.portrait_frames > 1 or (self._current_node.portrait_talking is None and not self._full_text_visible))  # noqa: E501
             if hablando:
                 pygame.draw.rect(surface, Theme.ACCENT_DIM, marco, 1, border_radius=6)
             px += lado_retrato + Theme.SPACE_M
@@ -746,7 +746,7 @@ class DialogueSystem:
                     sub = sheet
                 # Escala a lado
                 if sub.get_size() != (lado, lado):
-                    sub = pygame.transform.smoothscale(sub, (lado, lado)) if lado > 32 else pygame.transform.scale(sub, (lado, lado))
+                    sub = pygame.transform.smoothscale(sub, (lado, lado)) if lado > 32 else pygame.transform.scale(sub, (lado, lado))  # noqa: E501
                 # Borde redondeado para retrato
                 # Recorta circular leve? Deja cuadrado con borde del draw() externo
                 lista.append(sub)

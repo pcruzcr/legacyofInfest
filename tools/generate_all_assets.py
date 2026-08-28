@@ -3120,7 +3120,7 @@ def _gen_tileset_stage4_1_fase1(path=None, ts=16, cols=16, rows=16):
     _ensure(path)
     img = Image.new("RGBA", (ts * cols, ts * rows), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
-    rng = random.Random(4101)
+    rng = random.Random(4101)  # noqa: F841
     for gy in range(rows):
         for gx in range(cols):
             ox, oy = gx * ts, gy * ts
@@ -3209,7 +3209,7 @@ def _gen_tileset_stage4_1_fase3(path=None, ts=16, cols=16, rows=16):
     _ensure(path)
     img = Image.new("RGBA", (ts * cols, ts * rows), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
-    rng = random.Random(4103)
+    rng = random.Random(4103)  # noqa: F841
     for gy in range(rows):
         for gx in range(cols):
             ox, oy = gx * ts, gy * ts
@@ -3294,7 +3294,7 @@ def _gen_tileset_stage4_1_fase5(path=None, ts=16, cols=16, rows=16):
     _ensure(path)
     img = Image.new("RGBA", (ts * cols, ts * rows), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
-    rng = random.Random(4105)
+    rng = random.Random(4105)  # noqa: F841
     for gy in range(rows):
         for gx in range(cols):
             ox, oy = gx * ts, gy * ts
@@ -4175,7 +4175,7 @@ def _gen_bg_stage4_1b_mid(path, w=W, h=H):
                     draw.point((x0 + dx, y0 + dy), fill=rock_dark)
         # Vigas entre masas (rieles oxidados)
         if rng.random() < 0.5:
-            nx = cx + ancho // 2 + rng.randint(4, 8)
+            nx = cx + ancho // 2 + rng.randint(4, 8)  # noqa: F841
             draw.line((x1, base - alto // 2, x1 + 6, base - alto // 2), fill=(110, 60, 36))
             draw.line((x1, base - alto // 2 + 2, x1 + 6, base - alto // 2 + 2), fill=(84, 42, 26))
     # Niebla teal intermedia horizontal Bayer

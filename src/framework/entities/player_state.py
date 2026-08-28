@@ -87,6 +87,9 @@ class PlayerStateData:
     can_wall_jump: bool = False
     can_ledge_grab: bool = False
     ledge_grab_timer: float = 0.0
+    # AUD-XXX — cadena de wall-jump (P0): 3 saltos con cooldown 0.15s
+    wall_jump_count: int = 3
+    wall_jump_cooldown: float = 0.0
 
     def reset(self) -> None:
         """Reset all state to defaults (used on respawn)."""
@@ -126,3 +129,5 @@ class PlayerStateData:
         self.can_wall_jump = False
         self.can_ledge_grab = False
         self.ledge_grab_timer = 0.0
+        self.wall_jump_count = 3
+        self.wall_jump_cooldown = 0.0

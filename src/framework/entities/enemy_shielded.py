@@ -89,7 +89,7 @@ class EnemyShielded(EnemyBase):
                         frames = tmp
                         break
             if not frames:
-                for legacy in [base / f"enemy_shielded_{zone_key}_shield.png", base / f"enemy_shielded_{zone_key}_walk.png"]:
+                for legacy in [base / f"enemy_shielded_{zone_key}_shield.png", base / f"enemy_shielded_{zone_key}_walk.png"]:  # noqa: E501
                     if not legacy.exists():
                         continue
                     try:
@@ -111,7 +111,7 @@ class EnemyShielded(EnemyBase):
                     surf.fill((*col, 255))
                     # escudo frontal grande
                     pygame.draw.rect(surf, shield_col, (fw // 2, 1, fw // 2 - 1, fh - 2))
-                    pygame.draw.rect(surf, tuple(max(0, c - 40) for c in shield_col), (fw // 2, 1, fw // 2 - 1, fh - 2), 1)
+                    pygame.draw.rect(surf, tuple(max(0, c - 40) for c in shield_col), (fw // 2, 1, fw // 2 - 1, fh - 2), 1)  # noqa: E501
                     pygame.draw.rect(surf, (255, 255, 255), surf.get_rect(), 1)
                     placeholder.append(surf)
                 self._sprite_frames[key] = placeholder

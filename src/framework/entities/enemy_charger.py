@@ -184,7 +184,7 @@ class EnemyCharger(EnemyBase):
                     elif key == "charge":
                         # estirado, polvo Bayer
                         pygame.draw.ellipse(surf, col, (0, 2, fw - 1, fh - 4))
-                        pygame.draw.polygon(surf, (220, 220, 220), [(fw - 4, fh // 2), (fw - 1, fh // 2 - 1), (fw - 1, fh // 2 + 1)])
+                        pygame.draw.polygon(surf, (220, 220, 220), [(fw - 4, fh // 2), (fw - 1, fh // 2 - 1), (fw - 1, fh // 2 + 1)])  # noqa: E501
                         # cuernos hacia adelante
                         pygame.draw.line(surf, (200, 200, 210), (fw - 8, 2), (fw - 2, 0))
                         pygame.draw.line(surf, (200, 200, 210), (fw - 8, 3), (fw - 2, 1))

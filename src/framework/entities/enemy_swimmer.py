@@ -115,7 +115,7 @@ class EnemySwimmer(EnemyBase):
                 pygame.draw.ellipse(surf, tuple(min(255, c + 30) for c in col), (1, 1, fw - 2, fh - 2))
                 pygame.draw.rect(surf, (255, 255, 255), surf.get_rect(), 1)
                 # aletas mínimas
-                pygame.draw.polygon(surf, (68, 148, 188), [(fw - 2, fh // 2), (fw - 1, fh // 2 - 2), (fw - 1, fh // 2 + 2)])
+                pygame.draw.polygon(surf, (68, 148, 188), [(fw - 2, fh // 2), (fw - 1, fh // 2 - 2), (fw - 1, fh // 2 + 2)])  # noqa: E501
                 placeholder.append(surf)
             self._sprite_frames["swim"] = placeholder
             if "walk" not in self._sprite_frames or not self._sprite_frames["walk"]:

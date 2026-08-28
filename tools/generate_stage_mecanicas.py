@@ -188,7 +188,8 @@ def _objetos() -> list[str]:
     # ── Sala 4: bloques rítmicos sobre hueco exigente ───
     obj("MessageTrigger_Once", (3 * SALA + 2) * TS, suelo_px - 64, 48, 48,
         text="Aparecen a compas. Cuenta antes de saltar.")
-    patrones = ["", "", "x.x.", ".x.x"]
+    # P0: sala musical bpm120 x.x./.x.x con RelojMusical (engine/audio/music_clock.py:1001) — todos musicales
+    patrones = ["x.x.", ".x.x", "x.x.", ".x.x"]
     for i in range(4):
         obj("RhythmBlock", (HUECO_X0 + i * 2) * TS, suelo_px - 2 * TS,
             2 * TS, TS, visible_seg=1.6, oculto_seg=1.2, desfase=i * 0.7,
@@ -217,16 +218,27 @@ def _objetos() -> list[str]:
         corriente_x=25.0, corriente_y=0.0)
     obj("Checkpoint", (6 * SALA - 4) * TS, suelo_px - 32, 16, 32, checkpoint_id=6)
 
-    # ── Sala 7: sigilo + Sokoban ───
+    # ── Sala 7: sigilo + Sokoban + kit aéreo tutorial (P0) ───
     obj("MessageTrigger_Once", (6 * SALA + 2) * TS, suelo_px - 64, 48, 48,
         text="Te estan mirando. Y algo te sigue.")
+    # P0: 2×Guard 60°+Stalker+LockedDoor (docs/60_GUIDA:17) — semiangulo 30° = 60° total, barrido 60°
     obj("Guard", (6 * SALA + 12) * TS, suelo_px - 2 * TS, TS, 2 * TS,
-        mira_x=-1.0, mira_y=0.0, alcance=180.0, semiangulo=28.0,
-        barrido=35.0, velocidad_barrido=40.0)
+        mira_x=-1.0, mira_y=0.0, alcance=180.0, semiangulo=30.0,
+        barrido=60.0, velocidad_barrido=40.0)
     obj("Guard", (6 * SALA + 22) * TS, suelo_px - 2 * TS, TS, 2 * TS,
-        mira_x=1.0, mira_y=0.0, alcance=180.0, semiangulo=28.0)
+        mira_x=1.0, mira_y=0.0, alcance=180.0, semiangulo=30.0,
+        barrido=60.0, velocidad_barrido=40.0)
     obj("Stalker", (6 * SALA + 4) * TS, suelo_px - 2 * TS, TS, 2 * TS,
         velocidad=42.0, distancia_retirada=420.0, reaparicion=7.0)
+    # P0: LockedDoor para sigilo — requiere llave escondida (evitar ser visto)
+    obj("Key", (6 * SALA + 8) * TS, suelo_px - 2 * TS, TS, TS,
+        key_id="llave_sigilo", nombre="Llave sigilosa")
+    obj("LockedDoor", (6 * SALA + 34) * TS, suelo_px - 3 * TS, TS, 3 * TS,
+        key_id="llave_sigilo", consume_llave=True,
+        mensaje="Cerrada. Evita los conos para la llave.")
+    # P0: kit aéreo tutorial HUD combo + VFX_SLAM (AERIAL→AIR_CHASE→SLAM)
+    obj("MessageTrigger_Once", (6 * SALA + 14) * TS, suelo_px - 64, 48, 32,
+        text="Aereo: golpea → persigue → remata. Mira el combo HUD y el destello.")
     obj("Checkpoint", (6 * SALA + 26) * TS, suelo_px - 32, 16, 32, checkpoint_id=7)
     # Sokoban: Push + Breakable + PressurePlate → Door
     obj("MessageTrigger_Once", (6 * SALA + 25) * TS, suelo_px - 64, 48, 48,
@@ -281,6 +293,8 @@ def _objetos() -> list[str]:
     obj("Slope", (s9 + 8) * TS, suelo_px - 3 * TS, 3 * TS, 3 * TS, sube="derecha")
     obj("Slope", (s9 + 11) * TS, suelo_px - 3 * TS, 3 * TS, 3 * TS, sube="izquierda")
     obj("Slope", (s9 + 14) * TS, suelo_px - 24, 6 * TS, 24, sube="derecha")
+    # AUD-590 — pendiente suave 6×24 demo con curva en S (coseno) que usa `_altura_colina`
+    obj("Slope", (s9 + 17) * TS, suelo_px - 24, 6 * TS, 24, sube="suave")
     # Cutscene corta con temblor+evento — guion con saltos de línea escapados
     obj("Cutscene", (s9 + 26) * TS, suelo_px - 4 * TS, 2 * TS, 4 * TS,
         guion="camara 4400 200 0.8\ntemblor 0.3 5\n+ evento LAB_COMPLETADO",

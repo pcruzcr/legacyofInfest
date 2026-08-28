@@ -53,6 +53,9 @@ class GizmosDeDepuracion:
     #: longitud no significaría nada. Así la flecha es una predicción legible.
     _GIZMO_SEGUNDOS: float = 0.25
 
+    # Mixin espera que DrawingSystem lo provea; se declara para mypy.
+    _debug_font: pygame.font.Font
+
     def _draw_debug(
         self, surface: pygame.Surface, stage: StageData | None,
         player: Player | None, camera: Camera, offset: pygame.Vector2,

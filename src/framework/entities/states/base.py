@@ -42,6 +42,7 @@ class _InputSnapshot:
         "jump_pressed",
         "long_attack",
         "move_x",
+        "move_y",
         "move_y_up",
         "short_attack",
     )
@@ -58,6 +59,7 @@ class _InputSnapshot:
         # F5.14 — subir. Hasta las lianas no hacía falta: MOVE_UP existía en
         # `Action` y no lo leía nadie, así que pulsar arriba no hacía nada.
         move_y_up = False
+        move_y = 0
         # AUD-373 — el dash que se pulsó hace unos fotogramas y todavía vale.
         #
         # Va en un campo aparte y **no** dentro de `dash_pressed` a propósito:
@@ -81,11 +83,16 @@ class _InputSnapshot:
             dash_pressed = im.is_action_pressed(Action.DASH)
             grab_pressed = im.is_action_pressed(Action.GRAB)
             move_y_up = im.is_action_held(Action.MOVE_UP)
+            if im.is_action_held(Action.MOVE_UP):
+                move_y -= 1
+            if im.is_action_held(Action.MOVE_DOWN):
+                move_y += 1
             dash_en_buffer = im.pulsada_en_buffer(Action.DASH)
 
         self._im = im
         self.dash_en_buffer = dash_en_buffer
         self.move_x = move_x
+        self.move_y = move_y
         self.move_y_up = move_y_up
         self.jump_pressed = jump_pressed
         self.jump_held = jump_held

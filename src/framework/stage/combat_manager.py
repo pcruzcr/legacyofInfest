@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from src.framework.entities.player import Player
-    from src.framework.stage.bloques import BloqueManager
+    from src.framework.stage.bloques import SistemaDeBloques
     from src.framework.stage.camera import Camera
     from src.framework.stage.collision_system import CollisionSystem
     from src.framework.stage.stage_loader import StageData
@@ -36,7 +36,7 @@ class CombatManager:
     def __init__(
         self,
         collision: CollisionSystem,
-        bloques: BloqueManager | None = None,
+        bloques: SistemaDeBloques | None = None,
     ) -> None:
         self._collision = collision
         self._bloques = bloques

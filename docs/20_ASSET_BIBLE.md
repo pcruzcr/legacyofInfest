@@ -278,6 +278,19 @@ Donde `N` es el número de zona (1–3). Todos los sprites usan tamaño de
 fotograma 16×16 (marcador de posición; el tamaño real depende del reemplazo
 temático).
 
+> **AUD-455 / AUD-590 — alias `LaSodaWalkerRaton` vs `WalkerRaton` (37 vs 36).**
+> `tests/test_bestiary_roster.py` ya parsea el roster y el código sin queja:
+> el bestiario registra 35 especies (`WalkerInsect`, `WalkerRaton`, etc.) y
+> `src/stages/stage1_2_la_soda/stage1_2_la_soda.py` registra dos alias con
+> prefijo `LaSoda` (`LaSodaWalkerRaton`, `LaSodaFlyingCucaracha`) para **no
+> pisar** el registro del bestiario del motor (ver `entity_factory.py:35`).
+> El conteo de *strings* válidos para `type` es por tanto **37** (35 + 2
+> alias); el conteo de *especies del roster* sigue siendo **35/36** según si
+> se cuenta el genérico `Walker`/`Flying`/`Shooter`. No es divergencia:
+> es a propósito para que la entrega de la soda no sustituya la especie base
+> y el validador lo avise (`stage1_1.tmx` usa `WalkerInsect` directo y por
+> eso ve el `[WARN]` de sustitución). No «arregles» el alias sin consultar.
+
 ---
 
 ## 6. Sprites de jefes

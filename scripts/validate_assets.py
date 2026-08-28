@@ -83,12 +83,9 @@ REQUIRED_SOUNDS = [
     # como `.mp3` (`resolver_pista_de_musica` ya las encuentra por ese
     # sufijo) y no como el par `.wav`/`.ogg` del resto de esta lista —
     # por eso la extensión aquí es la real, no la convención heredada.
-    "music/bgm_stage4_1_fase1.mp3",
-    "music/bgm_stage4_1_fase2.mp3",
-    "music/bgm_stage4_1_fase3.mp3",
-    "music/bgm_stage4_1_fase4.mp3",
-    "music/bgm_stage4_1_fase5.mp3",
-    "music/bgm_stage4_1_fase6.mp3",
+    # Retiradas en AUD-683/684 con stage4_1 (wipe para rehacer desde cero):
+    # stage4_1.tmx y sus 6 fases ya no existen, así que no se exigen.
+    # Se dejarán de nuevo cuando stage4_1 se recree con su blueprint.
     # AUD-575 — el tema en loop de la mina inundada (4-1b), material de
     # autor como las fases del cementerio: llegó como `.mp3` y se registra
     # con su extensión real, no la convención heredada.
@@ -634,6 +631,56 @@ def check_palette(path: Path) -> None:
         ERRORS.append(f"[PALETTE] {rel}: {len(bad)} off-palette colors ({s})")
 
 
+def _ensure_voz_placeholders() -> None:
+    """GAP-031 — genera placeholders sfx_voz_* si faltan en assets/sfx/voz/.
+
+    `DialogueNode.voice` (src/framework/ui/dialogue_system.py:122) ya
+    soporta 4f + voice + lip-sync (docs/42_CUTSCENE_SYSTEM.md:74
+    DialogoArbol) y `AudioManager.play_voz` hace ducking al 35%.
+    Sin fichero en disco la línea es muda en silencio: el validador la
+    crea como tono corto (440Hz 0.4s, mono 22050Hz) para que el flujo
+    completo exista y las pruebas de diálogo no dependan de binarios
+    trackeados a mano. Idempotente: no sobrescribe lo que ya existe.
+    """
+    import math
+    import struct
+    import wave
+
+    voz_dir = ASSETS_DIR / "sfx" / "voz"
+    voz_dir.mkdir(parents=True, exist_ok=True)
+    # Catálogo que el motor ya entiende (tools/generate_all_assets.py SFX_CATEGORIES["voz"]
+    # + la risa de Paburu que vive fuera del catálogo por nombre).
+    esperados = [
+        "sfx_voz_venado_fase1.wav",
+        "sfx_voz_venado_fase2.wav",
+        "sfx_voz_venado_muerte.wav",
+        "sfx_voz_venado_ancestral.wav",
+        "sfx_voz_rey_terciopelo.wav",
+        "sfx_voz_gavilan.wav",
+        "sfx_voz_paburu_risa.wav",
+    ]
+    for nombre in esperados:
+        p = voz_dir / nombre
+        if p.exists() and p.stat().st_size > 0:
+            continue
+        try:
+            rate = 22050
+            dur = 0.4
+            n = int(rate * dur)
+            with wave.open(str(p), "w") as wf:
+                wf.setnchannels(1)
+                wf.setsampwidth(2)
+                wf.setframerate(rate)
+                for i in range(n):
+                    t = i / rate
+                    env = min(1.0, t / 0.02) * max(0.0, 1.0 - t / dur)
+                    s = int(18000 * math.sin(2 * math.pi * 440.0 * t) * env)
+                    wf.writeframes(struct.pack("<h", max(-32767, min(32767, s))))
+            WARNINGS.append(f"[VOZ PLACEHOLDER] generado {p.relative_to(ASSETS_DIR)}")
+        except Exception as exc:
+            WARNINGS.append(f"[VOZ PLACEHOLDER FALLÓ] {p}: {exc}")
+
+
 def check_map(path: Path) -> None:
     if not path.exists():
         ERRORS.append(f"[MISSING MAP] {path}")
@@ -696,6 +743,13 @@ def main() -> int:
         check_file(p, "Dataset")
         if p.exists():
             check_dataset(p)
+
+    # AUD-031 — voces huérfanas: placeholders si faltan en assets/sfx/voz/
+    # GAP-031 decía «el motor sabe reproducir voz y no hay un solo fichero».
+    # Todo el audio se genera en tools/generate_all_assets.py; si faltan,
+    # se crea un placeholder corto (tono 440Hz 0.4s) para que play_voz no
+    # falle en silencio y el validador no dependa de un commit de binarios.
+    _ensure_voz_placeholders()
 
     # Sounds
     for rel in REQUIRED_SOUNDS:

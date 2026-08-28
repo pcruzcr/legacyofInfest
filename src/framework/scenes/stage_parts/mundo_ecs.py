@@ -205,7 +205,7 @@ class MundoDelEscenario:
                 or im.is_action_just_pressed(Action.JUMP)
             )
             # Si está en aire y muy cerca, agarra incluso sin pulsar (para salto fluido)
-            cerca_en_aire = en_aire and im.is_action_held(Action.GRAB) or pulso_agarre
+            cerca_en_aire = (en_aire and im.is_action_held(Action.GRAB)) or pulso_agarre  # noqa: F841
             # También permite agarre automático si viene de un salto entre lianas
             # (player ya está en JUMPING/FALLING y la liana está a distancia de salto)
             if pulso_agarre or (en_aire and liana_salto.rect.colliderect(player.rect.inflate(24, 24))):
