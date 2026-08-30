@@ -70,3 +70,10 @@ saves/academico/
 temp_grade.json
 temp2.json
 
+
+# Entregas zip
+"entrega 2/"
+
+
+src/tools/__pycache__/
+
